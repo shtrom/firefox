@@ -1,3 +1,5 @@
+Firefox-like repository for prod-accurate testing of the conduite suite.
+
 An explanation of the Firefox Source Code Directory Structure and links to
 project pages with documentation can be found at:
 
