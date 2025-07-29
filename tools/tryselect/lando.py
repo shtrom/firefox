@@ -154,14 +154,16 @@ class Auth0Config:
 
         See https://auth0.com/docs/api/authentication#get-device-code for more.
         """
+        data = {
+            "client_id": self.client_id,
+            "scope": self.scope,
+        }
+        if self.audience:
+            data["audience"] = self.audience
         response = requests.post(
             self.device_code_url,
             headers={"Content-Type": "application/x-www-form-urlencoded"},
-            data={
-                "audience": self.audience,
-                "client_id": self.client_id,
-                "scope": self.scope,
-            },
+            data=data,
         )
 
         response.raise_for_status()
@@ -429,8 +431,9 @@ def push_to_lando_try(
         # Other VCS types (namely `src`) are unsupported.
         raise ValueError(f"Try push via Lando is not supported for `{vcs.name}`.")
 
-    # Use Lando Prod unless the `LANDO_TRY_USE_DEV` environment variable is defined.
-    lando_config_section = (
+    # Use LANDO_TRY_CONFIG so select which confirugation section from .lando.ini to use.
+    # Default to using Lando Prod unless the `LANDO_TRY_USE_DEV` environment variable is defined.
+    lando_config_section = os.getenv("LANDO_TRY_CONFIG") or (
         "lando-prod" if not os.getenv("LANDO_TRY_USE_DEV") else "lando-dev"
     )
 
