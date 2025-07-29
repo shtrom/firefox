@@ -120,8 +120,8 @@ class Auth0Config:
 
     domain: str
     client_id: str
-    audience: str
     scope: str
+    audience: str | None = None
     algorithms: list[str] = field(default_factory=lambda: ["RS256"])
 
     @property
@@ -355,12 +355,17 @@ class LandoAPI:
         if not parser.has_section(section):
             raise ValueError(f"Lando config file does not have a {section} section.")
 
-        auth0 = Auth0Config(
-            domain=parser.get(section, "auth0_domain"),
-            client_id=parser.get(section, "auth0_client_id"),
-            audience=parser.get(section, "auth0_audience"),
-            scope=parser.get(section, "auth0_scope"),
-        )
+        config = {
+            "domain": parser.get(section, "auth0_domain"),
+            "client_id": parser.get(section, "auth0_client_id"),
+            "scope": parser.get(section, "auth0_scope"),
+        }
+        try:
+            config["audience"] = parser.get(section, "auth0_audience")
+        except configparser.NoOptionError:
+            pass
+
+        auth0 = Auth0Config(**config)
 
         token = auth0.get_token()
 
