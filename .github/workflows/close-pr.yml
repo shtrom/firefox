@@ -1,20 +1,52 @@
-name: close pull request
+name: Close Pull Request
 on:
   pull_request_target:
     types: [opened, reopened]
+
+env:
+  ALLOWED_TEAM: lando-github-pilot
+  ALLOWED_PATHS: |
+    mobile/
+
 jobs:
-  run:
+  close-pr:
     runs-on: ubuntu-latest
     steps:
-      - name: checkout
-        uses: actions/checkout@v4
-        with:
-          sparse-checkout: "README.txt"
-          sparse-checkout-cone-mode: false
-      - name: close
+      - name: Check team membership
+        id: team
         env:
           GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.number }}
+          GH_REPO: ${{ github.repository }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
-          gh pr close ${{ env.PR }} --comment "(Automated Close) Please do not file pull requests here, see https://firefox-source-docs.mozilla.org/contributing/how_to_submit_a_patch.html"
-          gh pr lock ${{ env.PR }}
+          ORG=$(echo ${GH_REPO} | cut -d'/' -f1)
+          if gh api "/orgs/${ORG}/teams/${ALLOWED_TEAM}/memberships/${AUTHOR}" --silent 2>/dev/null; then
+            echo "is_member=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_member=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check allowed paths
+        id: paths
+        if: steps.team.outputs.is_member == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          PATTERN=$(echo "${ALLOWED_PATHS}" | xargs | tr ' ' '|')
+          if gh pr view ${PR} --json files --jq '.files[].path' | grep -vE "^(${PATTERN})"; then
+            echo "only_allowed=false" >> $GITHUB_OUTPUT
+          else
+            echo "only_allowed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Close PR
+        if: steps.team.outputs.is_member != 'true' || steps.paths.outputs.only_allowed != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr close ${PR} --comment "(Automated Close) Please do not file pull requests here, see https://firefox-source-docs.mozilla.org/contributing/how_to_submit_a_patch.html"
+          gh pr lock ${PR}
