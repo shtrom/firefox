@@ -1,3 +1,17 @@
+# Firefox Infra-Testing
+
+This is a test repository set-up to test the workflow infrastructure for
+Firefox. You can push patches using [the usual
+workflows](https://moz-conduit.readthedocs.io/en/latest/), or via the `lando`
+CLI.
+
+Note that only the `autoland` branch is getting synced all the way to
+HgMO, at https://hg-edge.mozilla.org/conduit-testing/infra-testing.
+
+From time-to-time, it may be required to sync this repository with the official
+Firefox repo. See [bug 2016626](https://bugzilla.mozilla.org/show_bug.cgi?id=2016626)
+for some instructions.
+
 ![Firefox Browser](./docs/readme/readme-banner.svg)
 
 [Firefox](https://firefox.com/) is a fast, reliable and private web browser from the non-profit [Mozilla organization](https://mozilla.org/).
