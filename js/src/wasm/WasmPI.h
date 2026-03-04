@@ -155,7 +155,11 @@ class SuspenderObject : public NativeObject {
   static SuspenderObject* create(JSContext* cx);
 
   SuspenderState state() const {
-    return (SuspenderState)getFixedSlot(StateSlot).toInt32();
+    const Value& state = getFixedSlot(StateSlot);
+    if (state.isUndefined()) {
+      return SuspenderState::Moribund;
+    }
+    return (SuspenderState)state.toInt32();
   }
   void setState(SuspenderState state) {
     setFixedSlot(StateSlot, JS::Int32Value((int32_t)state));
@@ -322,15 +326,9 @@ class SuspenderObject : public NativeObject {
 };
 
 JSFunction* WasmSuspendingFunctionCreate(JSContext* cx, HandleObject func,
-                                         wasm::ValTypeVector&& params,
-                                         wasm::ValTypeVector&& results);
-
-JSFunction* WasmSuspendingFunctionCreate(JSContext* cx, HandleObject func,
                                          const FuncType& type);
 
-JSFunction* WasmPromisingFunctionCreate(JSContext* cx, HandleObject func,
-                                        wasm::ValTypeVector&& params,
-                                        wasm::ValTypeVector&& results);
+JSFunction* WasmPromisingFunctionCreate(JSContext* cx, HandleObject func);
 
 SuspenderObject* CurrentSuspender(Instance* instance, int reserved);
 

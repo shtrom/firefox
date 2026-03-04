@@ -9,7 +9,9 @@
 #include "mozilla/AlreadyAddRefed.h"  // already_AddRefed
 #include "mozilla/HoldDropJSObjects.h"
 #include "mozilla/RefPtr.h"     // RefPtr, mozilla::MakeRefPtr
-#include "mozilla/UniquePtr.h"  // mozilla::UniquePtr
+#include "mozilla/Sprintf.h"    // SprintfLiteral
+#include "mozilla/UniquePtr.h"  // mozilla::UniquePtr, mozilla::MakeUnique
+#include "nsIURI.h"             // nsIURI::GetSpecOrDefault
 
 #include "mozilla/dom/ScriptLoadContext.h"  // ScriptLoadContext
 #include "jsfriendapi.h"
@@ -26,6 +28,10 @@ namespace JS::loader {
 
 MOZ_DEFINE_MALLOC_SIZE_OF(LoadedScriptMallocSizeOf)
 
+// LoadedScript itself doesn't have to be cycle-collected,
+// but ModuleScript subclass needs cycle-collection.
+//
+// Provide a base class that does nothing.
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(LoadedScript)
   NS_INTERFACE_MAP_ENTRY(nsISupports)
 NS_INTERFACE_MAP_END
@@ -40,9 +46,24 @@ NS_INTERFACE_MAP_END
 // Fields that can be modified by other threads shouldn't be touched by
 // the cycle collection.
 //
-// NOTE: nsIURI doesn't have to be touched here because it cannot be a part
-//       of cycle.
-NS_IMPL_CYCLE_COLLECTION(LoadedScript, mFetchOptions, mCacheEntry)
+// Currently there's no field that can form a cycle at this point.
+// If you're adding any field here, please make sure the field is not modified
+// by other threads.
+NS_IMPL_CYCLE_COLLECTION_CLASS(LoadedScript)
+NS_IMPL_CYCLE_COLLECTION_UNLINK_0(LoadedScript)
+NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN_INTERNAL(LoadedScript)
+  if (MOZ_UNLIKELY(cb.WantDebugInfo())) {
+    char name[512];
+    nsAutoCString spec;
+    if (tmp->mURI) {
+      spec = tmp->mURI->GetSpecOrDefault();
+    }
+    SprintfLiteral(name, "LoadedScript %s", spec.get());
+    cb.DescribeRefCountedNode(tmp->mRefCnt.get(), name);
+  } else {
+    NS_IMPL_CYCLE_COLLECTION_DESCRIBE(LoadedScript, tmp->mRefCnt.get())
+  }
+NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
 
 NS_IMPL_CYCLE_COLLECTING_ADDREF(LoadedScript)
 NS_IMPL_CYCLE_COLLECTING_RELEASE(LoadedScript)
@@ -85,6 +106,11 @@ LoadedScript::LoadedScript(const LoadedScript& aOther)
   MOZ_DIAGNOSTIC_ASSERT(mStencil);
   MOZ_ASSERT(!mScriptData);
   MOZ_ASSERT(mSRIAndSerializedStencil.empty());
+
+  if (aOther.mSRIMetadata) {
+    mSRIMetadata =
+        mozilla::MakeUnique<mozilla::dom::SRIMetadata>(*aOther.mSRIMetadata);
+  }
 }
 
 LoadedScript::~LoadedScript() {
@@ -128,6 +154,14 @@ LoadedScript::CollectReports(nsIHandleReportCallback* aHandleReport,
 size_t LoadedScript::SizeOfIncludingThis(
     mozilla::MallocSizeOf aMallocSizeOf) const {
   size_t bytes = aMallocSizeOf(this);
+
+  if (mFetchOptions) {
+    bytes += mFetchOptions->SizeOfIncludingThis(aMallocSizeOf);
+  }
+
+  if (mSRIMetadata) {
+    bytes += mSRIMetadata->SizeOfIncludingThis(aMallocSizeOf);
+  }
 
   if (IsTextSource()) {
     if (IsUTF16Text()) {
@@ -235,6 +269,28 @@ void LoadedScript::SetBaseURLFromChannelAndOriginalURI(nsIChannel* aChannel,
   } else {
     aChannel->GetURI(getter_AddRefs(mBaseURL));
   }
+}
+
+void LoadedScript::SetSRIMetadata(
+    const mozilla::dom::SRIMetadata& aSRIMetadata) {
+  if (aSRIMetadata.IsEmpty()) {
+    return;
+  }
+
+  mSRIMetadata = mozilla::MakeUnique<mozilla::dom::SRIMetadata>(aSRIMetadata);
+}
+
+bool LoadedScript::IsSRIMetadataReusableBy(
+    const mozilla::dom::SRIMetadata& aSRIMetadata) {
+  if (aSRIMetadata.IsEmpty()) {
+    return true;
+  }
+
+  if (!mSRIMetadata) {
+    return false;
+  }
+
+  return aSRIMetadata.CanTrustBeDelegatedTo(*mSRIMetadata);
 }
 
 inline void CheckModuleScriptPrivate(LoadedScript* script,
@@ -400,6 +456,13 @@ void ModuleScript::SetModuleRecord(Handle<JSObject*> aModuleRecord) {
     SetModulePrivate(mModuleRecord, PrivateValue(this));
   }
 
+#ifdef DEBUG
+  // Sync the [[PreloadSlot]] in ModuleObject.
+  if (mModuleRecord) {
+    SetModulePreload(mModuleRecord, mForPreload);
+  }
+#endif
+
   mozilla::HoldJSObjects(this);
 }
 
@@ -423,7 +486,37 @@ void ModuleScript::SetErrorToRethrow(const Value& aError) {
   mErrorToRethrow = aError;
 }
 
-void ModuleScript::SetForPreload(bool aValue) { mForPreload = aValue; }
+void ModuleScript::SetForPreload(bool aValue) {
+  mForPreload = aValue;
+#ifdef DEBUG
+  if (ModuleRecord()) {
+    SetModulePreload(ModuleRecord(), aValue);
+  }
+#endif
+}
 void ModuleScript::SetHadImportMap(bool aValue) { mHadImportMap = aValue; }
+
+ResolvedModuleSet* ModuleScript::GetPreloadedResolvedSet() {
+  if (!mPreloadedResolvedSet) {
+    mPreloadedResolvedSet = mozilla::MakeUnique<ResolvedModuleSet>();
+  }
+
+  return mPreloadedResolvedSet.get();
+}
+
+void ModuleScript::ResetPreload() {
+  MOZ_ASSERT(mForPreload);
+  if (mModuleRecord) {
+    ResetPreloadedModule(mModuleRecord);
+  }
+
+  if (HasParseError()) {
+    mParseError = UndefinedValue();
+  }
+
+  if (HasErrorToRethrow()) {
+    mErrorToRethrow = UndefinedValue();
+  }
+}
 
 }  // namespace JS::loader

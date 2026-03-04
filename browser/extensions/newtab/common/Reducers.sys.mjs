@@ -130,10 +130,6 @@ export const INITIAL_STATE = {
     // For can be a queue in the future, but for now is one item
     toastQueue: [],
   },
-  Personalization: {
-    lastUpdated: null,
-    initialized: false,
-  },
   InferredPersonalization: {
     initialized: false,
     lastUpdated: null,
@@ -156,11 +152,15 @@ export const INITIAL_STATE = {
     categories: [],
     uploadedWallpaper: "",
   },
+  SectionsLayout: {
+    configs: {},
+  },
   Weather: {
     initialized: false,
     lastUpdated: null,
     query: "",
     suggestions: [],
+    hourlyForecasts: [],
     locationData: {
       city: "",
       adminArea: "",
@@ -204,6 +204,9 @@ export const INITIAL_STATE = {
       startTime: null,
       isRunning: false,
     },
+  },
+  ExternalComponents: {
+    components: [],
   },
 };
 
@@ -597,7 +600,7 @@ function Messages(prevState = INITIAL_STATE.Messages, action) {
         portID: action.data.portID || "",
       };
     case at.MESSAGE_TOGGLE_VISIBILITY:
-      return { ...prevState, isVisible: action.data };
+      return { ...prevState, isVisible: action.data.isVisible };
     default:
       return prevState;
   }
@@ -617,25 +620,6 @@ function Pocket(prevState = INITIAL_STATE.Pocket, action) {
           useCta: action.data.use_cta,
         },
       };
-    default:
-      return prevState;
-  }
-}
-
-function Personalization(prevState = INITIAL_STATE.Personalization, action) {
-  switch (action.type) {
-    case at.DISCOVERY_STREAM_PERSONALIZATION_LAST_UPDATED:
-      return {
-        ...prevState,
-        lastUpdated: action.data.lastUpdated,
-      };
-    case at.DISCOVERY_STREAM_PERSONALIZATION_INIT:
-      return {
-        ...prevState,
-        initialized: true,
-      };
-    case at.DISCOVERY_STREAM_PERSONALIZATION_RESET:
-      return { ...INITIAL_STATE.Personalization };
     default:
       return prevState;
   }
@@ -986,10 +970,8 @@ function Search(prevState = INITIAL_STATE.Search, action) {
   switch (action.type) {
     case at.DISABLE_SEARCH:
       return Object.assign({ ...prevState, disable: true });
-    case at.FAKE_FOCUS_SEARCH:
-      return Object.assign({ ...prevState, fakeFocus: true });
     case at.SHOW_SEARCH:
-      return Object.assign({ ...prevState, disable: false, fakeFocus: false });
+      return Object.assign({ ...prevState, disable: false });
     default:
       return prevState;
   }
@@ -1011,6 +993,15 @@ function Wallpapers(prevState = INITIAL_STATE.Wallpapers, action) {
       return { ...prevState, categories: action.data };
     case at.WALLPAPERS_CUSTOM_SET:
       return { ...prevState, uploadedWallpaper: action.data };
+    default:
+      return prevState;
+  }
+}
+
+function SectionsLayout(prevState = INITIAL_STATE.SectionsLayout, action) {
+  switch (action.type) {
+    case at.SECTIONS_LAYOUT_UPDATE:
+      return { ...prevState, configs: action.data.configs };
     default:
       return prevState;
   }
@@ -1050,7 +1041,8 @@ function Weather(prevState = INITIAL_STATE.Weather, action) {
       return {
         ...prevState,
         suggestions: action.data.suggestions,
-        lastUpdated: action.data.date,
+        hourlyForecasts: action.data.hourlyForecasts || [],
+        lastUpdated: action.data.lastUpdated,
         locationData: action.data.locationData || prevState.locationData,
         initialized: true,
       };
@@ -1179,6 +1171,18 @@ function ListsWidget(prevState = INITIAL_STATE.ListsWidget, action) {
   }
 }
 
+function ExternalComponents(
+  prevState = INITIAL_STATE.ExternalComponents,
+  action
+) {
+  switch (action.type) {
+    case at.REFRESH_EXTERNAL_COMPONENTS:
+      return { ...prevState, components: action.data };
+    default:
+      return prevState;
+  }
+}
+
 export const reducers = {
   TopSites,
   App,
@@ -1189,12 +1193,13 @@ export const reducers = {
   Messages,
   Notifications,
   Pocket,
-  Personalization,
   InferredPersonalization,
   DiscoveryStream,
   Search,
   TimerWidget,
   ListsWidget,
   Wallpapers,
+  SectionsLayout,
   Weather,
+  ExternalComponents,
 };

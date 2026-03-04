@@ -4,6 +4,7 @@
 
 import bisect
 import errno
+import functools
 import inspect
 import json
 import os
@@ -24,7 +25,7 @@ import mozpack.path as mozpath
 from mozbuild import makeutil
 from mozbuild.nodeutil import package_setup
 from mozbuild.preprocessor import Preprocessor
-from mozbuild.util import FileAvoidWrite, ensure_unicode, memoize
+from mozbuild.util import FileAvoidWrite, ensure_unicode
 from mozpack.chrome.manifest import ManifestEntry, ManifestInterfaces
 from mozpack.errors import ErrorMessage, errors
 from mozpack.executables import elfhack, is_executable, may_elfhack, may_strip, strip
@@ -926,7 +927,8 @@ class BaseFinder:
         """
         Iterates over all files under the base directory (excluding files
         starting with a '.' and files at any level under a directory starting
-        with a '.').
+        with a '.')::
+
             for path, file in finder:
                 ...
         """
@@ -958,7 +960,7 @@ class BaseFinder:
         if path.endswith((".ftl", ".properties")):
             return MinifiedCommentStripped(file)
 
-        if path.endswith((".js", ".jsm", ".mjs")):
+        if path.endswith((".js", ".mjs")):
             file_path = mozpath.normsep(path)
             filename = mozpath.basename(file_path)
             # Don't minify prefs files because they use a custom parser that's stricter than JS
@@ -1091,10 +1093,12 @@ class FileFinder(BaseFinder):
         """
         Actual implementation of FileFinder.find() when the given pattern
         contains globbing patterns ('*' or '**'). This is meant to be an
-        equivalent of:
+        equivalent of::
+
             for p, f in self:
                 if mozpath.match(p, pattern):
                     yield p, f
+
         but avoids scanning the entire tree.
         """
         if not pattern:
@@ -1253,13 +1257,11 @@ class MercurialRevisionFinder(BaseFinder):
 
         # Immediately populate the list of files in the repo since nearly every
         # operation requires this list.
-        out = self._client.rawcommand(
-            [
-                b"files",
-                b"--rev",
-                self._rev.encode(),
-            ]
-        )
+        out = self._client.rawcommand([
+            b"files",
+            b"--rev",
+            self._rev.encode(),
+        ])
         for relpath in out.splitlines():
             # Mercurial may use \ as path separator on Windows. So use
             # normpath().
@@ -1304,7 +1306,7 @@ class FileListFinder(BaseFinder):
     def __init__(self, files):
         self._files = sorted(files)
 
-    @memoize
+    @functools.cache
     def _match(self, pattern):
         """Return a sorted list of all files matching the given pattern."""
         # We don't use the utility _find_helper method because it's not tuned

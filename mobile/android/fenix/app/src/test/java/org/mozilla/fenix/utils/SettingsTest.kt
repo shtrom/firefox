@@ -31,6 +31,7 @@ import org.mozilla.fenix.nimbus.FakeNimbusEventStore
 import org.mozilla.fenix.settings.PhoneFeature
 import org.mozilla.fenix.settings.ShortcutType
 import org.mozilla.fenix.settings.deletebrowsingdata.DeleteBrowsingDataOnQuitType
+import org.mozilla.fenix.wallpapers.Wallpaper
 import org.robolectric.RobolectricTestRunner
 import java.util.Calendar
 
@@ -142,6 +143,13 @@ class SettingsTest {
 
         // Then
         assertEquals("Mozilla", settings.defaultSearchEngineName)
+    }
+
+    @Test
+    fun defaultWallpaperIsEdgeToEdge() {
+        // When just created
+        // Then
+        assertEquals(Wallpaper.EdgeToEdge.name, settings.currentWallpaperName)
     }
 
     @Test
@@ -1338,6 +1346,7 @@ class SettingsTest {
 
     @Test
     fun `GIVEN toolbar customization is disabled WHEN reading toolbarSimpleShortcut THEN NEW_TAB is returned regardless of stored key`() {
+        settings.shouldShowToolbarCustomization = false
         settings.toolbarSimpleShortcutKey = ShortcutType.SHARE.value
 
         val result = settings.toolbarSimpleShortcut
@@ -1355,6 +1364,7 @@ class SettingsTest {
 
     @Test
     fun `GIVEN toolbar customization is disabled WHEN reading toolbarExpandedShortcut THEN BOOKMARK is returned regardless of stored key`() {
+        settings.shouldShowToolbarCustomization = false
         settings.toolbarExpandedShortcutKey = ShortcutType.NEW_TAB.value
 
         val result = settings.toolbarExpandedShortcut

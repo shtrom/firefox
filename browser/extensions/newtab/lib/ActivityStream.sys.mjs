@@ -30,6 +30,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
   DEFAULT_SITES: "resource://newtab/lib/DefaultSites.sys.mjs",
   DefaultPrefs: "resource://newtab/lib/ActivityStreamPrefs.sys.mjs",
   DiscoveryStreamFeed: "resource://newtab/lib/DiscoveryStreamFeed.sys.mjs",
+  ExternalComponentsFeed:
+    "resource://newtab/lib/ExternalComponentsFeed.sys.mjs",
   FaviconFeed: "resource://newtab/lib/FaviconFeed.sys.mjs",
   HighlightsFeed: "resource://newtab/lib/HighlightsFeed.sys.mjs",
   ListsFeed: "resource://newtab/lib/Widgets/ListsFeed.sys.mjs",
@@ -40,10 +42,9 @@ ChromeUtils.defineESModuleGetters(lazy, {
   NimbusFeatures: "resource://nimbus/ExperimentAPI.sys.mjs",
   PrefsFeed: "resource://newtab/lib/PrefsFeed.sys.mjs",
   PlacesFeed: "resource://newtab/lib/PlacesFeed.sys.mjs",
-  RecommendationProvider:
-    "resource://newtab/lib/RecommendationProvider.sys.mjs",
   Region: "resource://gre/modules/Region.sys.mjs",
   SectionsFeed: "resource://newtab/lib/SectionsManager.sys.mjs",
+  SectionsLayoutFeed: "resource://newtab/lib/SectionsLayoutFeed.sys.mjs",
   StartupCacheInit: "resource://newtab/lib/StartupCacheInit.sys.mjs",
   Store: "resource://newtab/lib/Store.sys.mjs",
   SystemTickFeed: "resource://newtab/lib/SystemTickFeed.sys.mjs",
@@ -115,6 +116,9 @@ const PREF_IMAGE_PROXY_ENABLED =
   "browser.newtabpage.activity-stream.discoverystream.imageProxy.enabled";
 
 const PREF_IMAGE_PROXY_ENABLED_STORE = "discoverystream.imageProxy.enabled";
+
+export const PREF_DEFAULT_VALUE_TOPSITES_ENABLED = true;
+export const PREF_DEFAULT_VALUE_TOPSTORIES_ENABLED = true;
 
 export const WEATHER_OPTIN_REGIONS = [
   "AT", // Austria
@@ -253,7 +257,7 @@ export const PREFS_CONFIG = new Map([
     "feeds.topsites",
     {
       title: "Displays Top Sites on the New Tab Page",
-      value: true,
+      value: PREF_DEFAULT_VALUE_TOPSITES_ENABLED,
     },
   ],
   [
@@ -314,14 +318,6 @@ export const PREFS_CONFIG = new Map([
     {
       title:
         "Boolean flag to turn download Firefox for mobile promo variant C on and off",
-      value: false,
-    },
-  ],
-  [
-    "discoverystream.refinedCardsLayout.enabled",
-    {
-      title:
-        "Boolean flag enable layout and styling refinements for content and ad cards across different card sizes",
       value: false,
     },
   ],
@@ -458,15 +454,24 @@ export const PREFS_CONFIG = new Map([
     {
       title:
         "Toggle the weather widget to include a text summary of the current conditions",
-      value: "simple",
+      value: "detailed",
     },
   ],
   [
-    "weather.placement",
+    "weather.reportEndpoint",
     {
       title:
-        "weather widget can be rendered in a variety of positions. Either in `header` or `sections`",
-      value: "header",
+        "Temporary measure for trainhopping. This adds the Merino endpoint for the weather report",
+      value: "https://merino.services.mozilla.com/api/v1/suggest",
+    },
+  ],
+  [
+    "weather.hourlyEndpoint",
+    {
+      title:
+        "Temporary measure for trainhopping. This adds the Merino endpoint for the hourly forecasts to display in Weather Forecast widget",
+      value:
+        "https://merino.services.mozilla.com/api/v1/weather/hourly-forecasts",
     },
   ],
   [
@@ -589,6 +594,13 @@ export const PREFS_CONFIG = new Map([
     {
       title: "Number of rows of Highlights to display",
       value: 1,
+    },
+  ],
+  [
+    "feeds.section.topstories",
+    {
+      title: "Whether top stories are enabled by default.",
+      value: PREF_DEFAULT_VALUE_TOPSTORIES_ENABLED,
     },
   ],
   [
@@ -726,7 +738,7 @@ export const PREFS_CONFIG = new Map([
     {
       title:
         "Boolean flag to enable personalized sections layout. Allows users to follow/unfollow topic sections.",
-      value: false,
+      value: true,
     },
   ],
   [
@@ -734,7 +746,7 @@ export const PREFS_CONFIG = new Map([
     {
       title:
         "Boolean flag to enable the setions management panel in Customize menu",
-      value: false,
+      value: true,
     },
   ],
   [
@@ -768,17 +780,24 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
-    "discoverystream.dailyBrief.enabled",
-    {
-      title: "Boolean flag to enable the daily brief section",
-      value: false,
-    },
-  ],
-  [
     "discoverystream.dailyBrief.sectionId",
     {
       title: "sectionId for the Daily brief section",
       value: "top_stories_section",
+    },
+  ],
+  [
+    "discoverystream.dailyBrief.enabled",
+    {
+      title: "Boolean flag to enable daily briefing",
+      value: false,
+    },
+  ],
+  [
+    "discoverystream.sections.layout",
+    {
+      title: "CSV string of section layouts configs",
+      value: "7-double-row-2-ad",
     },
   ],
   [
@@ -1120,6 +1139,42 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
+    "widgets.weatherForecast.enabled",
+    {
+      title: "Enables the weather forecast widget",
+      value: true,
+    },
+  ],
+  [
+    "widgets.system.weatherForecast.enabled",
+    {
+      title: "Enables the weather forecast widget experiment in Nimbus",
+      value: false,
+    },
+  ],
+  [
+    "widgets.weatherForecast.interaction",
+    {
+      title:
+        "Boolean flag for determining if a user has interacted with the weather forecast widget",
+      value: false,
+    },
+  ],
+  [
+    "widgets.feedback.enabled",
+    {
+      title: "Enables the feedback link in the widgets container",
+      value: false,
+    },
+  ],
+  [
+    "widgets.hideAllToast.enabled",
+    {
+      title: "Shows a toast when all widgets are hidden via the X button",
+      value: false,
+    },
+  ],
+  [
     "improvesearch.noDefaultSearchTile",
     {
       title: "Remove tiles that are the same as the default search",
@@ -1347,13 +1402,14 @@ export const PREFS_CONFIG = new Map([
     "discoverystream.publisherFavicon.enabled",
     {
       title: "Enables publisher favicons on recommended stories",
-      value: false,
+      value: true,
     },
   ],
   [
     "discoverystream.sections.clientLayout.enabled",
     {
-      title: "Enables client side layout for recommended stories",
+      title:
+        "Enables client side and remote settings layout for recommended stories",
       value: false,
     },
   ],
@@ -1368,6 +1424,20 @@ export const PREFS_CONFIG = new Map([
           "app.support.baseURL"
         );
         return `${baseUrl}new-tab`;
+      },
+    },
+  ],
+  [
+    "privacyInfo.url",
+    {
+      title: "Link to HNT's sponsor privacy page",
+      getValue: () => {
+        // Services.urlFormatter completes the in-product SUMO page URL:
+        // https://support.mozilla.org/1/firefox/%VERSION%/%OS%/%LOCALE%/sponsor-privacy
+        const baseUrl = Services.urlFormatter.formatURLPref(
+          "app.support.baseURL"
+        );
+        return `${baseUrl}sponsor-privacy`;
       },
     },
   ],
@@ -1399,10 +1469,32 @@ export const PREFS_CONFIG = new Map([
       value: true,
     },
   ],
+  [
+    "activationWindow.variant",
+    {
+      title:
+        "Set to the activation window variant if in activation window mode, otherwise the empty string.",
+      value: "",
+    },
+  ],
+  [
+    "selfLoading.enabled",
+    {
+      title:
+        "Communicates to AboutNewTabChild whether or not it should load the classic scripts or do nothing.",
+      value: false,
+    },
+  ],
 ]);
 
 // Array of each feed's FEEDS_CONFIG factory and values to add to PREFS_CONFIG
 const FEEDS_DATA = [
+  {
+    name: "startupcacheinit",
+    factory: () => new lazy.StartupCacheInit(),
+    title: "Sends a copy of the state to the startup cache newtab",
+    value: true,
+  },
   {
     name: "aboutpreferences",
     factory: () => new lazy.AboutPreferences(),
@@ -1431,12 +1523,6 @@ const FEEDS_DATA = [
     name: "sections",
     factory: () => new lazy.SectionsFeed(),
     title: "Manages sections",
-    value: true,
-  },
-  {
-    name: "startupcacheinit",
-    factory: () => new lazy.StartupCacheInit(),
-    title: "Sends a copy of the state to the startup cache newtab",
     value: true,
   },
   {
@@ -1525,21 +1611,21 @@ const FEEDS_DATA = [
     value: true,
   },
   {
-    name: "recommendationprovider",
-    factory: () => new lazy.RecommendationProvider(),
-    title: "Handles setup and interaction for the personality provider",
-    value: true,
-  },
-  {
     name: "discoverystreamfeed",
     factory: () => new lazy.DiscoveryStreamFeed(),
     title: "Handles new pocket ui for the new tab page",
     value: true,
   },
   {
+    name: "sectionslayoutfeed",
+    factory: () => new lazy.SectionsLayoutFeed(),
+    title: "Fetches section layout configurations from Remote Settings",
+    value: true,
+  },
+  {
     name: "wallpaperfeed",
     factory: () => new lazy.WallpaperFeed(),
-    title: "Handles fetching and managing wallpaper data from RemoteSettings",
+    title: "Handles fetching and managing wallpaper data from Remote Settings",
     value: true,
   },
   {
@@ -1592,6 +1678,12 @@ const FEEDS_DATA = [
     title: "Handles the data for the Timer widget",
     value: true,
   },
+  {
+    name: "externalcomponentsfeed",
+    factory: () => new lazy.ExternalComponentsFeed(),
+    title: "Handles updating the registry of external components",
+    value: true,
+  },
 ];
 
 const FEEDS_CONFIG = new Map();
@@ -1603,14 +1695,30 @@ for (const config of FEEDS_DATA) {
 }
 
 export class ActivityStream {
+  #createdInstant = null;
+
   /**
    * constructor - Initializes an instance of ActivityStream
+   *
+   * @param {Temporal.Instant} [createdInstant=null]
+   *   The creation time of the current user profile.
    */
-  constructor() {
+  constructor(createdInstant) {
     this.initialized = false;
     this.store = new lazy.Store();
     this._defaultPrefs = new lazy.DefaultPrefs(PREFS_CONFIG);
     this._proxyRegistered = false;
+    this.#createdInstant = createdInstant ?? null;
+  }
+
+  /**
+   * Returns a Temporal.Instant for when the user profile was created, or null
+   * if that value was never passed to us in the constructor.
+   *
+   * @type {Temporal.Instant}
+   */
+  get createdInstant() {
+    return this.#createdInstant;
   }
 
   get feeds() {

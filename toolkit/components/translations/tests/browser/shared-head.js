@@ -133,6 +133,51 @@ function languageModelNames(languagePairs) {
 }
 
 /**
+ * Start an HTTP server that serves page.html with the provided HTML.
+ * Explicitly encode the text as UTF-8 to correctly handle characters outside Latin-1,
+ * which the HttpServer renders incorrectly by default.
+ *
+ * @param {string} html
+ * @param {number} statusCode
+ */
+function serveOnce(html, statusCode = 200) {
+  /** @type {import("../../../../../netwerk/test/httpserver/httpd.sys.mjs")} */
+  const { HttpServer } = ChromeUtils.importESModule(
+    "resource://testing-common/httpd.sys.mjs"
+  );
+  info("Create server");
+  const server = new HttpServer();
+
+  const { promise, resolve } = Promise.withResolvers();
+  const encoder = new TextEncoder();
+  const htmlUtf8 = encoder.encode(html);
+
+  server.registerPathHandler("/page.html", (request, response) => {
+    info("Request received for: " + url);
+    response.setHeader("Content-Type", "text/html; charset=utf-8");
+    response.setStatusLine(request.httpVersion, statusCode);
+
+    const binaryOutputStream = Cc[
+      "@mozilla.org/binaryoutputstream;1"
+    ].createInstance(Ci.nsIBinaryOutputStream);
+
+    binaryOutputStream.setOutputStream(response.bodyOutputStream);
+    binaryOutputStream.writeByteArray(htmlUtf8);
+
+    resolve(server.stop());
+  });
+
+  server.start(-1);
+
+  let { primaryHost, primaryPort } = server.identity;
+  // eslint-disable-next-line @microsoft/sdl/no-insecure-url
+  const url = `http://${primaryHost}:${primaryPort}/page.html`;
+  info("Server listening for: " + url);
+
+  return { url, serverClosed: promise };
+}
+
+/**
  * Loads a new page in the given browser at the given URL.
  *
  * @param {object} browser
@@ -151,19 +196,48 @@ async function loadNewPage(browser, url) {
  * The mochitest runs in the parent process. This function opens up a new tab,
  * opens up about:translations, and passes the test requirements into the content process.
  *
+ * @param {object} [options={}]
+ * @param {boolean} [options.disabled]
+ *        When true, ensures that Translations is disabled via pref before opening the page.
+ * @param {Array<{fromLang: string, toLang: string}>} [options.languagePairs=LANGUAGE_PAIRS]
+ *        Language pairs that should be available in Remote Settings mocks.
+ * @param {Array<[string, any]>} [options.prefs]
+ *        Preference tuples to push before the page loads.
+ * @param {boolean} [options.autoDownloadFromRemoteSettings=false]
+ *        When true, Remote Settings downloads resolve automatically.
+ *        When false, resolveDownloads or rejectDownloads must be manually called.
+ * @param {number} [options.copyButtonResetDelay]
+ *        Overrides the copy button reset timeout ms to be shorter for testing.
+ * @param {boolean} [options.requireManualCopyButtonReset]
+ *        When true, copy button resets must be triggered manually by tests.
+ * @returns {Promise<{
+ *   aboutTranslationsTestUtils: AboutTranslationsTestUtils,
+ *   cleanup: () => Promise<void>
+ * }>}
  */
 async function openAboutTranslations({
   disabled,
   languagePairs = LANGUAGE_PAIRS,
   prefs,
   autoDownloadFromRemoteSettings = false,
+  copyButtonResetDelay,
+  requireManualCopyButtonReset,
 } = {}) {
+  if (
+    copyButtonResetDelay !== undefined &&
+    requireManualCopyButtonReset !== undefined
+  ) {
+    throw new Error(
+      "copyButtonResetDelay and requireManualCopyButtonReset cannot both be defined."
+    );
+  }
   await SpecialPowers.pushPrefEnv({
     set: [
       // Enabled by default.
       ["browser.translations.enable", !disabled],
       ["browser.translations.logLevel", "All"],
       ["browser.translations.mostRecentTargetLanguages", ""],
+      ["dom.events.testing.asyncClipboard", true],
       [USE_LEXICAL_SHORTLIST_PREF, false],
       ...(prefs ?? []),
     ],
@@ -175,12 +249,15 @@ async function openAboutTranslations({
   const selectors = {
     pageHeader: "header#about-translations-header",
     mainUserInterface: "section#about-translations-main-user-interface",
-    sourceLanguageSelector: "select#about-translations-source-select",
-    targetLanguageSelector: "select#about-translations-target-select",
-    detectLanguageOption: "option#about-translations-detect-language-option",
+    sourceLanguageSelector: "moz-select#about-translations-source-select",
+    targetLanguageSelector: "moz-select#about-translations-target-select",
+    detectLanguageOption:
+      "moz-option#about-translations-detect-language-label-option",
     swapLanguagesButton: "moz-button#about-translations-swap-languages-button",
-    sourceTextArea: "textarea#about-translations-source-textarea",
-    targetTextArea: "textarea#about-translations-target-textarea",
+    sourceSectionTextArea: "textarea#about-translations-source-textarea",
+    targetSectionTextArea: "textarea#about-translations-target-textarea",
+    clearButton: "moz-button#about-translations-clear-button",
+    copyButton: "moz-button#about-translations-copy-button",
     unsupportedInfoMessage:
       "moz-message-bar#about-translations-unsupported-info-message",
     languageLoadErrorMessage:
@@ -246,13 +323,33 @@ async function openAboutTranslations({
     autoDownloadFromRemoteSettings
   );
 
+  let originalCopyButtonResetDelay;
+
   if (!disabled) {
     await aboutTranslationsTestUtils.waitForReady();
+
+    if (requireManualCopyButtonReset !== undefined) {
+      await aboutTranslationsTestUtils.setManualCopyButtonResetEnabled(
+        requireManualCopyButtonReset
+      );
+    } else if (copyButtonResetDelay !== undefined) {
+      originalCopyButtonResetDelay =
+        await aboutTranslationsTestUtils.getCopyButtonResetDelay();
+      await aboutTranslationsTestUtils.setCopyButtonResetDelay(
+        copyButtonResetDelay
+      );
+    }
   }
 
   return {
     aboutTranslationsTestUtils,
     async cleanup() {
+      await aboutTranslationsTestUtils.setManualCopyButtonResetEnabled(false);
+      if (originalCopyButtonResetDelay) {
+        await aboutTranslationsTestUtils.setCopyButtonResetDelay(
+          originalCopyButtonResetDelay
+        );
+      }
       await loadBlankPage();
       BrowserTestUtils.removeTab(tab);
 
@@ -260,8 +357,7 @@ async function openAboutTranslations({
       await EngineProcess.destroyTranslationsEngine();
 
       await SpecialPowers.popPrefEnv();
-      TestTranslationsTelemetry.reset();
-      Services.fog.testResetFOG();
+      TestTranslationsTelemetry.cleanup();
     },
   };
 }
@@ -2343,7 +2439,7 @@ async function setupActorTest({
       await EngineProcess.destroyTranslationsEngine();
       BrowserTestUtils.removeTab(tab);
       await removeMocks();
-      TestTranslationsTelemetry.reset();
+      TestTranslationsTelemetry.cleanup();
       return SpecialPowers.popPrefEnv();
     },
   };
@@ -2611,11 +2707,44 @@ async function ensureWindowSize(win, width, height) {
   await resizePromise;
 }
 
+/**
+ * Load a translations test page in a new tab and wire up utilities used by the browser tests.
+ *
+ * Exactly one of `page` or `html` must be provided. Supplying `page` will navigate to a
+ * pre-defined test-file URL, while providing `html` serves the markup from a local server.
+ *
+ * @param {object} [options]
+ * @param {Array<{fromLang: string, toLang: string}>} [options.languagePairs]
+ * @param {boolean} [options.endToEndTest=false]
+ * @param {boolean} [options.autoDownloadFromRemoteSettings=false]
+ * @param {string} [options.page] - Fixture URL to load. Mutually exclusive with `html`.
+ * @param {string} [options.html] - Raw HTML markup to serve once. Mutually exclusive with `page`.
+ * @param {Array<[string, any]>} [options.prefs]
+ * @param {boolean} [options.autoOffer]
+ * @param {string[]} [options.permissionsUrls]
+ * @param {string[]} [options.systemLocales=["en"]]
+ * @param {string[]} [options.appLocales]
+ * @param {string[]} [options.webLanguages]
+ * @param {string} [options.architecture]
+ * @param {boolean} [options.contentEagerMode=false]
+ * @param {WindowProxy} [options.win=window]
+ * @returns {Promise<{
+ *   tab: object,
+ *   remoteClients: (Record<string, any> | null),
+ *   cleanup: () => Promise<void>,
+ *   resolveDownloads: (count: number) => Promise<void>,
+ *   rejectDownloads: (count: number) => Promise<void>,
+ *   resolveBulkDownloads: (expectations: { expectedWasmDownloads: number, expectedLanguagePairDownloads: number }) => Promise<void>,
+ *   rejectBulkDownloads: (expectations: { expectedWasmDownloads: number, expectedLanguagePairDownloads: number }) => Promise<void>,
+ *   runInPage: RunInPageFn
+ * }>}
+ */
 async function loadTestPage({
   languagePairs,
   endToEndTest = false,
   autoDownloadFromRemoteSettings = false,
   page,
+  html,
   prefs,
   autoOffer,
   permissionsUrls,
@@ -2626,7 +2755,17 @@ async function loadTestPage({
   contentEagerMode = false,
   win = window,
 }) {
-  info(`Loading test page starting at url: ${page}`);
+  // Just one argument should be set
+  const hasPage = page !== undefined;
+  const hasHtml = html !== undefined;
+
+  if (hasPage === hasHtml) {
+    throw new Error(
+      "Provide either the `page` or the `html` option when loading a test page."
+    );
+  }
+
+  const { url, serverClosed } = hasHtml ? serveOnce(html) : {};
 
   // If there are multiple windows, only do the first time setup on the main window.
   const isFirstTimeSetup = win === window;
@@ -2722,7 +2861,13 @@ async function loadTestPage({
     );
   }
 
-  await loadNewPage(tab.linkedBrowser, page);
+  if (page) {
+    info(`Loading test page starting at url: ${page}`);
+    await loadNewPage(tab.linkedBrowser, page);
+  } else {
+    info(`Loading test html at: ${url}`);
+    await loadNewPage(tab.linkedBrowser, url);
+  }
 
   if (autoOffer && TranslationsParent.shouldAlwaysOfferTranslations()) {
     info("Waiting for the popup to be automatically shown.");
@@ -2823,12 +2968,14 @@ async function loadTestPage({
       if (cleanupLocales) {
         await cleanupLocales();
       }
+      if (serverClosed) {
+        await serverClosed;
+      }
       restoreA11yUtils();
-      Services.fog.testResetFOG();
       TranslationsParent.testAutomaticPopup = false;
       TranslationsParent.resetHostsOffered();
       BrowserTestUtils.removeTab(tab);
-      TestTranslationsTelemetry.reset();
+      TestTranslationsTelemetry.cleanup();
       return Promise.all([
         SpecialPowers.popPrefEnv(),
         SpecialPowers.popPermissions(),
@@ -3556,7 +3703,7 @@ async function setupAboutPreferences(
     BrowserTestUtils.removeTab(tab);
     await removeMocks();
     await SpecialPowers.popPrefEnv();
-    TestTranslationsTelemetry.reset();
+    TestTranslationsTelemetry.cleanup();
   }
 
   return {
@@ -3671,8 +3818,9 @@ async function mockLocales({ systemLocales, appLocales, webLanguages }) {
 class TestTranslationsTelemetry {
   static #previousFlowId = null;
 
-  static reset() {
+  static cleanup() {
     TestTranslationsTelemetry.#previousFlowId = null;
+    Services.fog.testResetFOG();
   }
 
   /**
@@ -4049,10 +4197,17 @@ async function destroyTranslationsEngine() {
 }
 
 class AboutTranslationsTestUtils {
+  static AnyEventDetail = Symbol("AboutTranslationsTestUtils.AnyEventDetail");
+
   /**
    * A collection of custom events that the about:translations document may dispatch.
    */
   static Events = class Events {
+    /**
+     * Event fired when the enabled state of the Translations feature changes.
+     */
+    static EnabledStateChanged = "AboutTranslationsTest:EnabledStateChanged";
+
     /**
      * Event fired when the detected language updates.
      *
@@ -4107,6 +4262,50 @@ class AboutTranslationsTestUtils {
     static TranslationComplete = "AboutTranslationsTest:TranslationComplete";
 
     /**
+     * Event fired when the copy button becomes enabled.
+     *
+     * @type {string}
+     */
+    static CopyButtonEnabled = "AboutTranslationsTest:CopyButtonEnabled";
+
+    /**
+     * Event fired when the copy button becomes disabled.
+     *
+     * @type {string}
+     */
+    static CopyButtonDisabled = "AboutTranslationsTest:CopyButtonDisabled";
+
+    /**
+     * Event fired when the copy button shows the "copied" feedback state.
+     *
+     * @type {string}
+     */
+    static CopyButtonShowCopied = "AboutTranslationsTest:CopyButtonShowCopied";
+
+    /**
+     * Event fired when the copy button exits the "copied" feedback state.
+     *
+     * @type {string}
+     */
+    static CopyButtonReset = "AboutTranslationsTest:CopyButtonReset";
+
+    /**
+     * Event fired when the clear button becomes visible.
+     *
+     * @type {string}
+     */
+    static SourceTextClearButtonShown =
+      "AboutTranslationsTest:SourceTextClearButtonShown";
+
+    /**
+     * Event fired when the clear button becomes hidden.
+     *
+     * @type {string}
+     */
+    static SourceTextClearButtonHidden =
+      "AboutTranslationsTest:SourceTextClearButtonHidden";
+
+    /**
      * Event fired when the page layout changes.
      *
      * @type {string}
@@ -4115,12 +4314,19 @@ class AboutTranslationsTestUtils {
       "AboutTranslationsTest:PageOrientationChanged";
 
     /**
-     * Event fired when the source/target textarea heights change.
+     * Event fired when the source/target section heights change.
      *
      * @type {string}
      */
-    static TextAreaHeightsChanged =
-      "AboutTranslationsTest:TextAreaHeightsChanged";
+    static SectionHeightsChanged =
+      "AboutTranslationsTest:SectionHeightsChanged";
+
+    /**
+     * Event fired when the source text is cleared programmatically.
+     *
+     * @type {string}
+     */
+    static ClearSourceText = "AboutTranslationsTest:ClearSourceText";
 
     /**
      * Event fired when the target text is cleared programmatically.
@@ -4327,11 +4533,13 @@ class AboutTranslationsTestUtils {
     try {
       await this.#runInPage(
         (selectors, { language }) => {
-          const selector = content.document.querySelector(
-            selectors.sourceLanguageSelector
+          const selector = Cu.waiveXrays(
+            content.document.querySelector(selectors.sourceLanguageSelector)
           );
           selector.value = language;
-          selector.dispatchEvent(new content.Event("input"));
+          selector.dispatchEvent(
+            new content.Event("change", { bubbles: true })
+          );
         },
         { language }
       );
@@ -4350,11 +4558,13 @@ class AboutTranslationsTestUtils {
     try {
       await this.#runInPage(
         (selectors, { language }) => {
-          const selector = content.document.querySelector(
-            selectors.targetLanguageSelector
+          const selector = Cu.waiveXrays(
+            content.document.querySelector(selectors.targetLanguageSelector)
           );
           selector.value = language;
-          selector.dispatchEvent(new content.Event("input"));
+          selector.dispatchEvent(
+            new content.Event("change", { bubbles: true })
+          );
         },
         { language }
       );
@@ -4374,13 +4584,92 @@ class AboutTranslationsTestUtils {
       await this.#runInPage(
         (selectors, { value }) => {
           const textArea = content.document.querySelector(
-            selectors.sourceTextArea
+            selectors.sourceSectionTextArea
           );
           textArea.value = value;
           textArea.dispatchEvent(new content.Event("input"));
         },
         { value }
       );
+    } catch (error) {
+      AboutTranslationsTestUtils.#reportTestFailure(error);
+    }
+  }
+
+  /**
+   * Overrides the duration that the copy button remains in its copied state.
+   *
+   * @param {number} ms
+   */
+  async setCopyButtonResetDelay(ms) {
+    try {
+      await this.#runInPage(
+        (_, { delayMs }) => {
+          const { window } = content;
+          Cu.waiveXrays(window).COPY_BUTTON_RESET_DELAY = delayMs;
+        },
+        { delayMs: ms }
+      );
+    } catch (error) {
+      AboutTranslationsTestUtils.#reportTestFailure(error);
+    }
+  }
+
+  /**
+   * Returns the current copy button reset delay applied within the page.
+   *
+   * @returns {Promise<number>}
+   */
+  async getCopyButtonResetDelay() {
+    try {
+      return await this.#runInPage(() => {
+        const { window } = content;
+        return Cu.waiveXrays(window).COPY_BUTTON_RESET_DELAY;
+      });
+    } catch (error) {
+      AboutTranslationsTestUtils.#reportTestFailure(error);
+    }
+
+    return NaN;
+  }
+
+  /**
+   * Enables or disables manual copy button resets for testing.
+   *
+   * When enabled, tests are expected to reset the copy button manually.
+   * When disabled (default), the copy button resets based on its reset timeout.
+   *
+   * @param {boolean} enabled
+   */
+  async setManualCopyButtonResetEnabled(enabled) {
+    logAction(enabled);
+    try {
+      await this.#runInPage(
+        (_, { enabled }) => {
+          const { window } = content;
+          Cu.waiveXrays(window).testManualCopyButtonReset = enabled;
+        },
+        { enabled }
+      );
+    } catch (error) {
+      AboutTranslationsTestUtils.#reportTestFailure(error);
+    }
+  }
+
+  /**
+   * Manually resets the copy button.
+   */
+  async resetCopyButton() {
+    logAction();
+    try {
+      await this.#runInPage(() => {
+        const { window } = content;
+        const aboutTranslations = Cu.waiveXrays(window).aboutTranslations;
+        if (!aboutTranslations) {
+          throw new Error("aboutTranslations instance is unavailable.");
+        }
+        aboutTranslations.testResetCopyButton();
+      });
     } catch (error) {
       AboutTranslationsTestUtils.#reportTestFailure(error);
     }
@@ -4404,8 +4693,23 @@ class AboutTranslationsTestUtils {
   }
 
   /**
+   * Clicks the copy button in the about:translations UI.
+   */
+  async clickCopyButton() {
+    logAction();
+    try {
+      await this.#runInPage(selectors => {
+        const button = content.document.querySelector(selectors.copyButton);
+        button.click();
+      });
+    } catch (error) {
+      AboutTranslationsTestUtils.#reportTestFailure(error);
+    }
+  }
+
+  /**
    * Waits for the specified AboutTranslations event to fire, then returns its detail payload.
-   * Rejects if the event doesn’t fire within three seconds.
+   * Rejects if the event doesn’t fire within the given time limit.
    *
    * @param {string} eventName
    * @returns {Promise<any>}
@@ -4422,15 +4726,16 @@ class AboutTranslationsTestUtils {
           );
         });
 
+        const timeoutMS = 10_000;
         const timeoutPromise = new Promise((_, reject) => {
           setTimeout(
             () =>
               reject(
                 new Error(
-                  `Event "${eventName}" did not fire within three seconds.`
+                  `Event "${eventName}" did not fire within ${timeoutMS / 1000} seconds.`
                 )
               ),
-            3000
+            timeoutMS
           );
         });
 
@@ -4482,6 +4787,9 @@ class AboutTranslationsTestUtils {
 
       for (const [eventName, expectedDetail] of expected) {
         const actualDetail = await expectedEventWaiters[eventName];
+        if (expectedDetail === AboutTranslationsTestUtils.AnyEventDetail) {
+          continue;
+        }
         is(
           JSON.stringify(actualDetail ?? {}),
           JSON.stringify(expectedDetail ?? {}),
@@ -4529,7 +4837,7 @@ class AboutTranslationsTestUtils {
       pageResult = await this.#runInPage(
         selectors => {
           const textArea = content.document.querySelector(
-            selectors.sourceTextArea
+            selectors.sourceSectionTextArea
           );
           return {
             hasPlaceholder: textArea.hasAttribute("placeholder"),
@@ -4597,7 +4905,7 @@ class AboutTranslationsTestUtils {
       pageResult = await this.#runInPage(
         selectors => {
           const textArea = content.document.querySelector(
-            selectors.targetTextArea
+            selectors.targetSectionTextArea
           );
           return {
             hasPlaceholder: textArea.hasAttribute("placeholder"),
@@ -4663,16 +4971,16 @@ class AboutTranslationsTestUtils {
     let pageResult = {};
     try {
       pageResult = await this.#runInPage(selectors => {
-        const selector = content.document.querySelector(
-          selectors.sourceLanguageSelector
+        const selector = Cu.waiveXrays(
+          content.document.querySelector(selectors.sourceLanguageSelector)
         );
         const detectOptionElement = content.document.querySelector(
           selectors.detectLanguageOption
         );
         return {
           actualValue: selector.value,
-          optionValues: Array.from(selector.options).map(
-            option => option.value
+          optionValues: Array.from(selector.querySelectorAll("moz-option")).map(
+            option => option.getAttribute("value")
           ),
           detectLanguageAttribute:
             detectOptionElement?.getAttribute("language") ?? null,
@@ -4737,12 +5045,12 @@ class AboutTranslationsTestUtils {
     try {
       pageResult = await this.#runInPage(
         selectors => {
-          const selector = content.document.querySelector(
-            selectors.targetLanguageSelector
+          const selector = Cu.waiveXrays(
+            content.document.querySelector(selectors.targetLanguageSelector)
           );
-          const optionValues = Array.from(selector.options).map(
-            option => option.value
-          );
+          const optionValues = Array.from(
+            selector.querySelectorAll("moz-option")
+          ).map(option => option.getAttribute("value"));
           return {
             actualValue: selector.value,
             optionValues,
@@ -4810,8 +5118,8 @@ class AboutTranslationsTestUtils {
         let pageResult = {};
         try {
           pageResult = await this.#runInPage(selectors => {
-            const selector = content.document.querySelector(
-              selectors.sourceLanguageSelector
+            const selector = Cu.waiveXrays(
+              content.document.querySelector(selectors.sourceLanguageSelector)
             );
             return { actualValue: selector.value };
           });
@@ -4851,8 +5159,8 @@ class AboutTranslationsTestUtils {
 
     if (defaultValue !== undefined) {
       const expectedIdentifier = defaultValue
-        ? "about-translations-detect-default"
-        : "about-translations-detect-language";
+        ? "about-translations-detect-default-label"
+        : "about-translations-detect-language-label";
       is(
         localizationId,
         expectedIdentifier,
@@ -4909,6 +5217,197 @@ class AboutTranslationsTestUtils {
   }
 
   /**
+   * Retrieves the current state of the copy button.
+   *
+   * @returns {Promise<{exists: boolean, isDisabled: boolean, isCopied: boolean, l10nId: string}>}
+   */
+  async getCopyButtonState() {
+    await doubleRaf(document);
+
+    try {
+      return await this.#runInPage(selectors => {
+        const { document } = content;
+        const button = document.querySelector(selectors.copyButton);
+        return {
+          exists: !!button,
+          isDisabled: button?.hasAttribute("disabled") ?? true,
+          isCopied: button?.classList.contains("copied") ?? false,
+          l10nId: button?.getAttribute("data-l10n-id") ?? "",
+        };
+      });
+    } catch (error) {
+      AboutTranslationsTestUtils.#reportTestFailure(error);
+    }
+
+    return {
+      exists: false,
+      isDisabled: true,
+      isCopied: false,
+      l10nId: "",
+    };
+  }
+
+  /**
+   * Asserts properties of the copy button.
+   *
+   * @param {object} options
+   * @param {boolean} [options.visible=true]
+   * @param {boolean} [options.enabled=false]
+   * @param {boolean} [options.copied]
+   * @param {string} [options.l10nId]
+   * @returns {Promise<void>}
+   */
+  async assertCopyButton({
+    visible = true,
+    enabled = false,
+    copied,
+    l10nId,
+  } = {}) {
+    const {
+      exists,
+      isDisabled,
+      isCopied,
+      l10nId: actualL10nId,
+    } = await this.getCopyButtonState();
+
+    ok(exists, "Expected copy button to be present.");
+
+    await this.assertIsVisible({
+      pageHeader: true,
+      mainUserInterface: true,
+      sourceLanguageSelector: true,
+      targetLanguageSelector: true,
+      copyButton: visible,
+      swapLanguagesButton: true,
+      sourceSectionTextArea: true,
+      targetSectionTextArea: true,
+    });
+
+    if (enabled !== undefined) {
+      if (enabled) {
+        ok(!isDisabled, "Expected copy button to be enabled.");
+      } else {
+        ok(isDisabled, "Expected copy button to be disabled.");
+      }
+    }
+
+    if (copied !== undefined) {
+      if (copied) {
+        ok(isCopied, "Expected copy button to show the copied state.");
+      } else {
+        ok(!isCopied, "Expected copy button to show the default state.");
+      }
+    }
+
+    if (l10nId !== undefined) {
+      is(
+        actualL10nId,
+        l10nId,
+        `Expected copy button to use the "${l10nId}" localization id.`
+      );
+    }
+  }
+
+  /**
+   * Retrieves the state of the clear button.
+   *
+   * @returns {Promise<{exists: boolean, hidden: boolean, tabIndex: string | null}>}
+   */
+  async getSourceClearButtonState() {
+    await doubleRaf(document);
+
+    try {
+      return await this.#runInPage(selectors => {
+        const button = content.document.querySelector(selectors.clearButton);
+        return {
+          exists: !!button,
+          hidden: button?.hasAttribute("hidden") ?? true,
+          tabIndex: button?.getAttribute("tabindex") ?? null,
+        };
+      });
+    } catch (error) {
+      AboutTranslationsTestUtils.#reportTestFailure(error);
+    }
+
+    return {
+      exists: false,
+      hidden: true,
+      tabIndex: null,
+    };
+  }
+
+  /**
+   * Asserts properties of the clear button.
+   *
+   * @param {object} options
+   * @param {boolean} [options.visible=false]
+   * @param {string}  [options.tabIndex="-1"]
+   * @returns {Promise<void>}
+   */
+  async assertSourceClearButton({ visible = false, tabIndex = "-1" } = {}) {
+    const {
+      exists,
+      hidden,
+      tabIndex: actualTabIndex,
+    } = await this.getSourceClearButtonState();
+
+    ok(exists, "Expected clear button to be present.");
+
+    if (visible) {
+      ok(!hidden, "Expected clear button to be visible.");
+    } else {
+      ok(hidden, "Expected clear button to be hidden.");
+    }
+
+    if (tabIndex !== undefined) {
+      is(
+        actualTabIndex,
+        tabIndex,
+        `Expected clear button tabindex to be "${tabIndex}".`
+      );
+    }
+  }
+
+  /**
+   * Clicks the clear button.
+   *
+   * @returns {Promise<void>}
+   */
+  async clickClearButton() {
+    await doubleRaf(document);
+    try {
+      await this.#runInPage(selectors => {
+        const clearButton = content.document.querySelector(
+          selectors.clearButton
+        );
+        clearButton.click();
+      });
+    } catch (error) {
+      AboutTranslationsTestUtils.#reportTestFailure(error);
+    }
+  }
+
+  /**
+   * Retrieves the current value of the target textarea.
+   *
+   * @returns {Promise<string>}
+   */
+  async getTargetTextAreaValue() {
+    await doubleRaf(document);
+    try {
+      return await this.#runInPage(selectors => {
+        const textarea = content.document.querySelector(
+          selectors.targetSectionTextArea
+        );
+        return textarea?.value ?? "";
+      });
+    } catch (error) {
+      AboutTranslationsTestUtils.#reportTestFailure(error);
+    }
+    return "";
+  }
+
+  /**
    * Asserts that the target textarea shows the translating placeholder.
    *
    * @returns {Promise<void>}
@@ -4921,7 +5420,7 @@ class AboutTranslationsTestUtils {
     try {
       actualValue = await this.#runInPage(selectors => {
         const textarea = content.document.querySelector(
-          selectors.targetTextArea
+          selectors.targetSectionTextArea
         );
         return textarea.value;
       });
@@ -4982,7 +5481,7 @@ class AboutTranslationsTestUtils {
     try {
       actualValue = await this.#runInPage(selectors => {
         const textarea = content.document.querySelector(
-          selectors.targetTextArea
+          selectors.targetSectionTextArea
         );
         return textarea.value;
       });
@@ -5090,9 +5589,12 @@ class AboutTranslationsTestUtils {
    * @param {boolean} [options.mainUserInterface=false]
    * @param {boolean} [options.sourceLanguageSelector=false]
    * @param {boolean} [options.targetLanguageSelector=false]
+   * @param {boolean} [options.clearButton=undefined]
+   * The clear button visibility is automatically determined from source text if undefined.
+   * @param {boolean} [options.copyButton=false]
    * @param {boolean} [options.swapLanguagesButton=false]
-   * @param {boolean} [options.sourceTextArea=false]
-   * @param {boolean} [options.targetTextArea=false]
+   * @param {boolean} [options.sourceSectionTextArea=false]
+   * @param {boolean} [options.targetSectionTextArea=false]
    * @param {boolean} [options.unsupportedInfoMessage=false]
    * @param {boolean} [options.languageLoadErrorMessage=false]
    * @returns {Promise<void>}
@@ -5102,9 +5604,11 @@ class AboutTranslationsTestUtils {
     mainUserInterface = false,
     sourceLanguageSelector = false,
     targetLanguageSelector = false,
+    clearButton = undefined,
+    copyButton = false,
     swapLanguagesButton = false,
-    sourceTextArea = false,
-    targetTextArea = false,
+    sourceSectionTextArea = false,
+    targetSectionTextArea = false,
     unsupportedInfoMessage = false,
     languageLoadErrorMessage = false,
   } = {}) {
@@ -5112,6 +5616,16 @@ class AboutTranslationsTestUtils {
     await doubleRaf(document);
 
     try {
+      if (clearButton === undefined) {
+        const sourceTextAreaValue = await this.#runInPage(selectors => {
+          const sourceTextArea = content.document.querySelector(
+            selectors.sourceSectionTextArea
+          );
+          return sourceTextArea?.value ?? "";
+        });
+        clearButton = Boolean(sourceTextAreaValue.trim());
+      }
+
       const visibilityMap = await this.#runInPage(selectors => {
         const { document, window } = content;
         const isElementVisible = selector => {
@@ -5128,6 +5642,7 @@ class AboutTranslationsTestUtils {
           const { display, visibility } = computedStyle;
           return !(display === "none" || visibility === "hidden");
         };
+
         return {
           pageHeader: isElementVisible(selectors.pageHeader),
           mainUserInterface: isElementVisible(selectors.mainUserInterface),
@@ -5137,9 +5652,15 @@ class AboutTranslationsTestUtils {
           targetLanguageSelector: isElementVisible(
             selectors.targetLanguageSelector
           ),
+          clearButton: isElementVisible(selectors.clearButton),
+          copyButton: isElementVisible(selectors.copyButton),
           swapLanguagesButton: isElementVisible(selectors.swapLanguagesButton),
-          sourceTextArea: isElementVisible(selectors.sourceTextArea),
-          targetTextArea: isElementVisible(selectors.targetTextArea),
+          sourceSectionTextArea: isElementVisible(
+            selectors.sourceSectionTextArea
+          ),
+          targetSectionTextArea: isElementVisible(
+            selectors.targetSectionTextArea
+          ),
           unsupportedInfoMessage: isElementVisible(
             selectors.unsupportedInfoMessage
           ),
@@ -5149,10 +5670,15 @@ class AboutTranslationsTestUtils {
         };
       });
 
-      const assertVisibility = (expectedVisibility, actualVisibility, label) =>
+      const assertVisibility = (
+        expectedVisibility,
+        actualVisibility,
+        label
+      ) => {
         expectedVisibility
           ? ok(actualVisibility, `Expected ${label} to be visible.`)
           : ok(!actualVisibility, `Expected ${label} to be hidden.`);
+      };
 
       assertVisibility(pageHeader, visibilityMap.pageHeader, "page header");
       assertVisibility(
@@ -5170,19 +5696,21 @@ class AboutTranslationsTestUtils {
         visibilityMap.targetLanguageSelector,
         "target-language selector"
       );
+      assertVisibility(copyButton, visibilityMap.copyButton, "copy button");
       assertVisibility(
         swapLanguagesButton,
         visibilityMap.swapLanguagesButton,
         "swap-languages button"
       );
       assertVisibility(
-        sourceTextArea,
-        visibilityMap.sourceTextArea,
+        sourceSectionTextArea,
+        visibilityMap.sourceSectionTextArea,
         "source textarea"
       );
+      assertVisibility(clearButton, visibilityMap.clearButton, "clear button");
       assertVisibility(
-        targetTextArea,
-        visibilityMap.targetTextArea,
+        targetSectionTextArea,
+        visibilityMap.targetSectionTextArea,
         "target textarea"
       );
       assertVisibility(

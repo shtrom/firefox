@@ -290,22 +290,18 @@ def extract_unittests_from_args(args, environ, manifest_path):
     active_tests = mp.active_tests(exists=False, disabled=False, **environ)
     suffix = ".exe" if mozinfo.isWin else ""
     if binary_path:
-        tests.extend(
-            [
-                (
-                    os.path.join(binary_path, test["relpath"] + suffix),
-                    int(test.get("requesttimeoutfactor", 1)),
-                )
-                for test in active_tests
-            ]
-        )
+        tests.extend([
+            (
+                os.path.join(binary_path, test["relpath"] + suffix),
+                int(test.get("requesttimeoutfactor", 1)),
+            )
+            for test in active_tests
+        ])
     else:
-        tests.extend(
-            [
-                (test["path"] + suffix, int(test.get("requesttimeoutfactor", 1)))
-                for test in active_tests
-            ]
-        )
+        tests.extend([
+            (test["path"] + suffix, int(test.get("requesttimeoutfactor", 1)))
+            for test in active_tests
+        ])
 
     # Manually confirm that all tests named in the manifest exist.
     errors = False
@@ -373,9 +369,7 @@ def main():
             file=sys.stderr,
         )
         sys.exit(1)
-    log = mozlog.commandline.setup_logging(
-        "cppunittests", options, {"tbpl": sys.stdout}
-    )
+    log = mozlog.commandline.setup_logging("cppunittests", options, {"raw": sys.stdout})
     try:
         result = run_test_harness(options, args)
     except Exception as e:

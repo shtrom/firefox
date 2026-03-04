@@ -145,6 +145,8 @@ skip-if = [
 
 ["browser_net_cache_details.js"]
 
+["browser_net_cache_svg_size.js"]
+
 ["browser_net_cached-status.js"]
 skip-if = [
   "verify", # Bug 1975964
@@ -264,6 +266,7 @@ skip-if = [
   "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'", # Bug 1479782
   "os == 'mac' && os_version == '14.70' && arch == 'x86_64'", # Bug 1479782
   "os == 'win' && os_version == '11.26100' && arch == 'x86_64'", # Bug 1479782
+  "os == 'win' && os_version == '11.26200' && arch == 'x86_64'", # Bug 1479782
 ]
 
 ["browser_net_header-docs.js"]
@@ -336,6 +339,8 @@ fail-if = [
 
 ["browser_net_leak_on_tab_close.js"]
 
+["browser_net_non_ascii_headers.js"]
+
 ["browser_net_offline_mode.js"]
 
 ["browser_net_open_in_debugger.js"]
@@ -367,6 +372,7 @@ fail-if = [
 ["browser_net_persistent_logs.js"]
 skip-if = [
   "os == 'win' && os_version == '11.26100' && arch == 'x86_64' && debug", # Bug 1661612
+  "os == 'win' && os_version == '11.26200' && arch == 'x86_64' && debug", # Bug 1661612
 ]
 
 ["browser_net_post-data-json-payloads.js"]
@@ -390,6 +396,8 @@ skip-if = [
 ["browser_net_req-resp-bodies.js"]
 
 ["browser_net_requests_with_empty_response.js"]
+
+["browser_net_requests-keep-alive.js"]
 
 ["browser_net_response_CORS_blocked.js"]
 
@@ -448,6 +456,7 @@ skip-if = [
   "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11'", # Bug 1667115
   "os == 'mac' && os_version == '14.70' && arch == 'x86_64'", # Bug 1667115
   "os == 'win' && os_version == '11.26100' && arch == 'x86_64'", # Bug 1667115
+  "os == 'win' && os_version == '11.26200' && arch == 'x86_64'", # Bug 1667115
 ]
 
 ["browser_net_simple-request-details.js"]
@@ -539,6 +548,8 @@ fail-if = [
 ["browser_net_use_as_fetch.js"]
 
 ["browser_net_view-source-debugger.js"]
+
+["browser_net_view-source-requests.js"]
 
 ["browser_net_waterfall-click.js"]
 

@@ -400,7 +400,11 @@ class InactivePropertyHelper {
       // clear property used on non-floating elements.
       {
         invalidProperties: ["clear"],
-        when: () => !this.isBlockLevel(),
+        when: () =>
+          !this.isBlockLevel() &&
+          // The br element is a special case and allows clear for backwards compatibility to make its clear attribute work.
+          // https://html.spec.whatwg.org/multipage/rendering.html#phrasing-content-3
+          this.localName != "br",
         fixId: "inactive-css-not-block-fix",
         msgId: "inactive-css-not-block",
       },
@@ -667,6 +671,27 @@ class InactivePropertyHelper {
         when: () => !this.hasPrincipalBox,
         fixId: "inactive-css-no-principal-box-fix",
         msgId: "inactive-css-no-principal-box",
+      },
+      // position-area used on element which is not absolutely positionned and the
+      // declaration isn't in a @position-try rule.
+      {
+        invalidProperties: ["position-area"],
+        when: () =>
+          !this.isAbsolutelyPositioned &&
+          ChromeUtils.getClassName(this.cssRule) !== "CSSPositionTryRule",
+        msgId: "inactive-css-not-absolutely-positioned-item",
+        fixId: "inactive-css-not-absolutely-positioned-item-fix",
+      },
+      // position-area for absolutely positionned element without default anchor element,
+      // and the declaration isn't in a @position-try rule.
+      {
+        invalidProperties: ["position-area"],
+        when: () =>
+          this.isAbsolutelyPositioned &&
+          !this.hasDefaultAnchorElement() &&
+          ChromeUtils.getClassName(this.cssRule) !== "CSSPositionTryRule",
+        msgId: "inactive-css-no-default-anchor",
+        fixId: "inactive-css-no-default-anchor-fix",
       },
     ];
   }
@@ -1618,6 +1643,10 @@ class InactivePropertyHelper {
     // Only 'horizontal-tb' has a horizontal writing mode.
     // See https://drafts.csswg.org/css-writing-modes-4/#propdef-writing-mode
     return computedStyle(node).writingMode !== "horizontal-tb";
+  }
+
+  hasDefaultAnchorElement() {
+    return InspectorUtils.getAnchorFor(this.node) !== null;
   }
 
   /**

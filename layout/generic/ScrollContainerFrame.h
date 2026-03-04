@@ -999,7 +999,7 @@ class ScrollContainerFrame : public nsContainerFrame,
   void MarkNotRecentlyScrolled();
   nsExpirationState* GetExpirationState() { return &mActivityExpirationState; }
 
-  bool UsesOverlayScrollbars() const;
+  bool UseOverlayScrollbars() const;
   bool IsLastSnappedTarget(const nsIFrame* aFrame) const;
 
   // If aBuilder is non-null, returns the value cached on aBuilder. Pass null
@@ -1053,13 +1053,8 @@ class ScrollContainerFrame : public nsContainerFrame,
   ScrollContainerFrame(ComputedStyle* aStyle, nsPresContext* aPresContext,
                        nsIFrame::ClassID aID, bool aIsRoot);
   ~ScrollContainerFrame();
-  void SetSuppressScrollbarUpdate(bool aSuppress) {
-    mSuppressScrollbarUpdate = aSuppress;
-  }
   bool GuessHScrollbarNeeded(const ScrollReflowInput& aState);
   bool GuessVScrollbarNeeded(const ScrollReflowInput& aState);
-
-  bool IsScrollbarUpdateSuppressed() const { return mSuppressScrollbarUpdate; }
 
   // Return whether we're in an "initial" reflow.  Some reflows with
   // NS_FRAME_FIRST_REFLOW set are NOT "initial" as far as we're concerned.
@@ -1153,6 +1148,10 @@ class ScrollContainerFrame : public nsContainerFrame,
     }
     mScrollPort = aNewScrollPort;
   }
+
+  // Gets the node that is a suitable scroll event target for our events.
+  enum class RootTargetsDocument : bool { No, Yes };
+  RefPtr<nsINode> ScrollEventTargetNode(RootTargetsDocument) const;
 
   /**
    * Return the 'optimal viewing region' as a rect suitable for use by
@@ -1449,10 +1448,6 @@ class ScrollContainerFrame : public nsContainerFrame,
   bool mDidHistoryRestore : 1;
   // Is this the scrollframe for the document's viewport?
   bool mIsRoot : 1;
-  // If true, don't try to layout the scrollbars in Reflow().  This can be
-  // useful if multiple passes are involved, because we don't want to place the
-  // scrollbars at the wrong size.
-  bool mSuppressScrollbarUpdate : 1;
   // If true, we skipped a scrollbar layout due to mSuppressScrollbarUpdate
   // being set at some point.  That means we should lay out scrollbars even if
   // it might not strictly be needed next time mSuppressScrollbarUpdate is

@@ -10,11 +10,12 @@
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
-  IPPStartupCache: "resource:///modules/ipprotection/IPPStartupCache.sys.mjs",
+  IPPStartupCache:
+    "moz-src:///browser/components/ipprotection/IPPStartupCache.sys.mjs",
   IPProtectionService:
-    "resource:///modules/ipprotection/IPProtectionService.sys.mjs",
+    "moz-src:///browser/components/ipprotection/IPProtectionService.sys.mjs",
   IPProtectionStates:
-    "resource:///modules/ipprotection/IPProtectionService.sys.mjs",
+    "moz-src:///browser/components/ipprotection/IPProtectionService.sys.mjs",
   RemoteSettings: "resource://services-settings/remote-settings.sys.mjs",
 });
 
@@ -214,6 +215,9 @@ export class IPProtectionServerlistBase {
     }
 
     const city = usa.cities.find(c => c.servers.length);
+    if (!city) {
+      return null;
+    }
     return {
       city,
       country: usa,

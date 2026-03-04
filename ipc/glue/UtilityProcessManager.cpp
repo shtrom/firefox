@@ -29,9 +29,9 @@
 
 #include "mozilla/GeckoArgs.h"
 
-#ifndef MOZ_NO_SMART_CARDS
+#if defined(NIGHTLY_BUILD) && !defined(MOZ_NO_SMART_CARDS)
 #  include "mozilla/psm/PPKCS11ModuleChild.h"
-#endif  // !MOZ_NO_SMART_CARDS
+#endif  // NIGHTLY_BUILD && !MOZ_NO_SMART_CARDS
 
 namespace mozilla::ipc {
 
@@ -291,6 +291,12 @@ UtilityProcessManager::StartUtility(RefPtr<Actor> aActor,
         // The tests within browser_utility_multipleAudio.js should be able to
         // catch that behavior.
         if (!aActor->CanSend()) {
+          if (!utilityParent->CanSend()) {
+            NS_WARNING("Utility process died before IPC could be established");
+            return RetPromise::CreateAndReject(
+                LaunchError("UPM::UtilityParent died"), __func__);
+          }
+
           nsresult rv = aActor->BindToUtilityProcess(utilityParent);
           if (NS_FAILED(rv)) {
             MOZ_ASSERT(false, "Protocol endpoints failure");
@@ -518,7 +524,7 @@ UtilityProcessManager::CreateWinFileDialogActor() {
 
 #endif  // XP_WIN
 
-#ifndef MOZ_NO_SMART_CARDS
+#if defined(NIGHTLY_BUILD) && !defined(MOZ_NO_SMART_CARDS)
 RefPtr<UtilityProcessManager::PKCS11ModulePromise>
 UtilityProcessManager::StartPKCS11Module() {
   using RetPromise = PKCS11ModulePromise;
@@ -541,7 +547,7 @@ UtilityProcessManager::StartPKCS11Module() {
         return RetPromise::CreateAndReject(std::move(aError), __func__);
       });
 }
-#endif  // !MOZ_NO_SMART_CARDS
+#endif  // NIGHTLY_BUILD && !MOZ_NO_SMART_CARDS
 
 bool UtilityProcessManager::IsProcessLaunching(SandboxingKind aSandbox) {
   MOZ_ASSERT(NS_IsMainThread());

@@ -539,7 +539,8 @@ void HTMLLinkElement::
       return;
     }
 
-    if (!StaticPrefs::network_modulepreload()) {
+    if (!StaticPrefs::network_modulepreload() &&
+        !StaticPrefs::dom_multiple_import_maps_enabled()) {
       // Keep behavior from https://phabricator.services.mozilla.com/D149371,
       // prior to main implementation of modulepreload
       moduleLoader->DisallowImportMaps();
@@ -579,7 +580,9 @@ void HTMLLinkElement::
 
     // https://html.spec.whatwg.org/multipage/webappapis.html#fetch-a-modulepreload-module-script-graph
     // Step 1. Disallow further import maps given settings object.
-    moduleLoader->DisallowImportMaps();
+    if (!StaticPrefs::dom_multiple_import_maps_enabled()) {
+      moduleLoader->DisallowImportMaps();
+    }
 
     StartPreload(nsIContentPolicy::TYPE_SCRIPT);
     return;
@@ -677,11 +680,10 @@ void HTMLLinkElement::UpdatePreload(nsAtom* aName, const nsAttrValue* aValue,
     }
   } else {
     MOZ_ASSERT(aName == nsGkAtoms::media);
-    nsAutoString oldMedia;
-    if (aOldValue) {
-      aOldValue->ToString(oldMedia);
-    }
-    if (net::CheckPreloadAttrs(asAttr, mimeType, oldMedia, OwnerDoc())) {
+    // Device might have changed since we evaluated the old media query. We
+    // already checked that the new query matches. If we have mPreload,
+    // nothing changes.
+    if (mPreload) {
       oldPolicyType = asPolicyType;
     } else {
       oldPolicyType = nsIContentPolicy::TYPE_INVALID;

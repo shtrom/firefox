@@ -39,7 +39,6 @@
 #include "js/Modules.h"  // JS::Module{DynamicImport,Metadata,Resolve}Hook
 #include "js/ScriptPrivate.h"
 #include "js/shadow/Zone.h"
-#include "js/ShadowRealmCallbacks.h"
 #include "js/Stack.h"
 #include "js/StreamConsumer.h"
 #include "js/Symbol.h"
@@ -432,9 +431,6 @@ struct JSRuntime {
   bool getHostDefinedData(JSContext* cx,
                           JS::MutableHandle<JSObject*> data) const;
 
-  bool enqueuePromiseJob(JSContext* cx, js::HandleFunction job,
-                         js::HandleObject promise,
-                         js::HandleObject hostDefinedData);
   void addUnhandledRejectedPromise(JSContext* cx, js::HandleObject promise);
   void removeUnhandledRejectedPromise(JSContext* cx, js::HandleObject promise);
 
@@ -583,6 +579,21 @@ struct JSRuntime {
   js::MainThreadData<js::ScriptEnvironmentPreparer*> scriptEnvironmentPreparer;
 
   js::MainThreadData<JS::CTypesActivityCallback> ctypesActivityCallback;
+
+ private:
+  // Script sources to compress off-thread. Only accessed by the main thread or
+  // off-thread GC sweeping (GCRuntime::sweepCompressionTasks).
+  using PendingCompressions =
+      js::Vector<js::PendingSourceCompressionEntry, 4, js::SystemAllocPolicy>;
+  js::MainThreadOrGCTaskData<PendingCompressions> pendingCompressions_;
+
+ public:
+  [[nodiscard]] bool addPendingCompressionEntry(js::ScriptSource* source) {
+    return pendingCompressions().emplaceBack(this, source);
+  }
+  PendingCompressions& pendingCompressions() {
+    return pendingCompressions_.ref();
+  }
 
  private:
   js::WriteOnceData<const JSClass*> windowProxyClass_;
@@ -975,7 +986,7 @@ struct JSRuntime {
   js::MainThreadData<JS::AfterWaitCallback> afterWaitCallback;
 
  public:
-  void reportAllocationOverflow() {
+  void reportAllocOverflow() {
     js::ReportAllocationOverflow(static_cast<JSContext*>(nullptr));
   }
 
@@ -1141,20 +1152,6 @@ struct JSRuntime {
 #endif  // defined(NIGHTLY_BUILD)
 
  public:
-  JS::GlobalInitializeCallback getShadowRealmInitializeGlobalCallback() {
-    return shadowRealmInitializeGlobalCallback;
-  }
-
-  JS::GlobalCreationCallback getShadowRealmGlobalCreationCallback() {
-    return shadowRealmGlobalCreationCallback;
-  }
-
-  js::MainThreadData<JS::GlobalInitializeCallback>
-      shadowRealmInitializeGlobalCallback;
-
-  js::MainThreadData<JS::GlobalCreationCallback>
-      shadowRealmGlobalCreationCallback;
-
   js::MainThreadData<js::RuntimeFuses> runtimeFuses;
 };
 

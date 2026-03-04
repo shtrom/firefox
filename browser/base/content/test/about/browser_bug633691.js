@@ -58,8 +58,10 @@ add_task(async function testTrue() {
         await ContentTaskUtils.waitForCondition(
           () => content.document.readyState == "interactive"
         );
-        const netErrorCard =
-          content.document.querySelector("net-error-card").wrappedJSObject;
+        const netErrorCardElement = await ContentTaskUtils.waitForCondition(
+          () => content.document.querySelector("net-error-card")
+        );
+        const netErrorCard = netErrorCardElement.wrappedJSObject;
         Assert.ok(netErrorCard.advancedButton, "Advanced content should exist");
         Assert.ok(
           !netErrorCard.advancedContainer,

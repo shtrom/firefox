@@ -4,103 +4,124 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-/* eslint-disable-next-line mozilla/reject-import-system-module-from-non-system */
-import { getFxAccountsSingleton } from "resource://gre/modules/FxAccounts.sys.mjs";
+import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
+
+import { ToolRoleOpts } from "moz-src:///browser/components/aiwindow/ui/modules/ChatMessage.sys.mjs";
 import { openAIEngine } from "moz-src:///browser/components/aiwindow/models/Utils.sys.mjs";
 import {
-  OAUTH_CLIENT_ID,
-  SCOPE_PROFILE,
-} from "resource://gre/modules/FxAccountsCommon.sys.mjs";
+  toolsConfig,
+  getOpenTabs,
+  searchBrowsingHistory,
+  GetPageContent,
+  RunSearch,
+  getUserMemories,
+} from "moz-src:///browser/components/aiwindow/models/Tools.sys.mjs";
+import { extractValidUrls } from "moz-src:///browser/components/aiwindow/models/ChatUtils.sys.mjs";
+import {
+  extractMarkdownLinks,
+  validateCitedUrls,
+} from "moz-src:///browser/components/aiwindow/models/CitationParser.sys.mjs";
+
+const lazy = {};
+ChromeUtils.defineESModuleGetters(lazy, {
+  AIWindow:
+    "moz-src:///browser/components/aiwindow/ui/modules/AIWindow.sys.mjs",
+});
 
 /**
  * Chat
  */
-export const Chat = {
-  toolMap: {}, // TODO can import toolMap
+export const Chat = {};
 
-  async _getFxAccountToken() {
-    try {
-      const fxAccounts = getFxAccountsSingleton();
-      const token = await fxAccounts.getOAuthToken({
-        // Scope needs to be updated in accordance with https://bugzilla.mozilla.org/show_bug.cgi?id=2005290
-        scope: SCOPE_PROFILE,
-        client_id: OAUTH_CLIENT_ID,
-      });
-      return token;
-    } catch (error) {
-      console.warn("Error obtaining FxA token:", error);
-      return null;
-    }
+XPCOMUtils.defineLazyPreferenceGetter(
+  Chat,
+  "modelId",
+  "browser.smartwindow.model",
+  "qwen3-235b-a22b-instruct-2507-maas"
+);
+
+Object.assign(Chat, {
+  toolMap: {
+    get_open_tabs: getOpenTabs,
+    search_browsing_history: searchBrowsingHistory,
+    get_page_content: GetPageContent.getPageContent,
+    run_search: RunSearch.runSearch.bind(RunSearch),
+    get_user_memories: getUserMemories,
   },
 
   /**
    * Stream assistant output with tool-call support.
    * Yields assistant text chunks as they arrive. If the model issues tool calls,
    * we execute them locally, append results to the conversation, and continue
-   * streaming the model’s follow-up answer. Repeats until no more tool calls.
+   * streaming the model's follow-up answer. Repeats until no more tool calls.
    *
-   * @param {Array<{role:string, content?:string, tool_call_id?:string, tool_calls?:any}>} messages
+   * @param {ChatConversation} conversation
+   * @param {openAIEngine} engineInstance
+   * @param {object} [context]
+   * @param {BrowsingContext} [context.browsingContext]
    * @yields {string} Assistant text chunks
    */
-  async *fetchWithHistory(messages) {
-    const engineInstance = await openAIEngine.build();
-    // Note FXA token fetching disabled for now - this is still in progress
-    // We can flip this switch on when more realiable
-    const fxAccountToken = await this._getFxAccountToken();
+  async *fetchWithHistory(conversation, engineInstance, context = {}) {
+    const fxAccountToken = await openAIEngine.getFxAccountToken();
 
-    // We'll mutate a local copy of the thread as we loop
-    let convo = Array.isArray(messages) ? [...messages] : [];
+    const toolRoleOpts = new ToolRoleOpts(this.modelId);
+    const currentTurn = conversation.currentTurnIndex();
+    const config = engineInstance.getConfig(engineInstance.feature);
+    const inferenceParams = config?.parameters || {};
 
-    // Helper to run the model once (streaming) on current convo
+    const allAllowedUrls = new Set();
+    let fullResponseText = "";
+
     const streamModelResponse = () =>
       engineInstance.runWithGenerator({
         streamOptions: { enabled: true },
         fxAccountToken,
         tool_choice: "auto",
-        // tools: Add your tools configuration here,
-        args: convo,
+        tools: toolsConfig,
+        args: conversation.getMessagesInOpenAiFormat(),
+        ...inferenceParams,
       });
 
-    // Keep calling until the model finishes without requesting tools
     while (true) {
       let pendingToolCalls = null;
 
-      // 1) First pass: stream tokens; capture any toolCalls
-      for await (const chunk of streamModelResponse()) {
-        // Stream assistant text to the UI
-        if (chunk?.text) {
-          yield chunk.text;
-        }
+      try {
+        for await (const chunk of streamModelResponse()) {
+          if (chunk?.text) {
+            fullResponseText += chunk.text;
+            yield chunk.text;
+          }
 
-        // Capture tool calls (do not echo raw tool plumbing to the user)
-        if (chunk?.toolCalls?.length) {
-          pendingToolCalls = chunk.toolCalls;
+          if (chunk?.toolCalls?.length) {
+            pendingToolCalls = chunk.toolCalls;
+          }
         }
+      } catch (err) {
+        console.error("fetchWithHistory streaming error:", err);
+        throw err;
       }
 
-      // 2) Watch for tool calls; if none, we are done
       if (!pendingToolCalls || pendingToolCalls.length === 0) {
+        this._validateCitations(fullResponseText, allAllowedUrls);
         return;
       }
 
-      // 3) Build the assistant tool_calls message exactly as expected by the API
-      const assistantToolMsg = {
-        role: "assistant",
-        tool_calls: pendingToolCalls.map(toolCall => ({
-          id: toolCall.id,
-          type: "function",
-          function: {
-            name: toolCall.function.name,
-            arguments: toolCall.function.arguments,
-          },
-        })),
-      };
+      // @todo Bug 2006159 - Implement parallel tool calling
+      const tool_calls = pendingToolCalls.slice(0, 1).map(toolCall => ({
+        id: toolCall.id,
+        type: "function",
+        function: {
+          name: toolCall.function.name,
+          arguments: toolCall.function.arguments || "{}",
+        },
+      }));
+      conversation.addAssistantMessage("function", { tool_calls });
 
-      // 4) Execute each tool locally and create a tool message with the result
-      const toolResultMessages = [];
+      lazy.AIWindow.chatStore?.updateConversation(conversation).catch(() => {});
+
       for (const toolCall of pendingToolCalls) {
         const { id, function: functionSpec } = toolCall;
-        const name = functionSpec?.name || "";
+        const toolName = functionSpec?.name || "";
         let toolParams = {};
 
         try {
@@ -108,47 +129,154 @@ export const Chat = {
             ? JSON.parse(functionSpec.arguments)
             : {};
         } catch {
-          toolResultMessages.push({
-            role: "tool",
+          const content = {
             tool_call_id: id,
-            content: JSON.stringify({ error: "Invalid JSON arguments" }),
-          });
+            body: { error: "Invalid JSON arguments" },
+          };
+          conversation.addToolCallMessage(content, currentTurn, toolRoleOpts);
           continue;
         }
 
-        let result;
-        try {
-          // Call the appropriate tool by name
-          const toolFunc = this.toolMap[name];
-          if (typeof toolFunc !== "function") {
-            throw new Error(`No such tool: ${name}`);
-          }
-
-          result = await toolFunc(toolParams);
-
-          // Create special tool call log message to show in the UI log panel
-          const assistantToolCallLogMsg = {
-            role: "assistant",
-            content: `Tool Call: ${name} with parameters: ${JSON.stringify(
-              toolParams
-            )}`,
-            type: "tool_call_log",
-            result,
-          };
-          convo.push(assistantToolCallLogMsg);
-          yield assistantToolCallLogMsg;
-        } catch (e) {
-          result = { error: `Tool execution failed: ${String(e)}` };
+        if (toolName === "run_search") {
+          yield { searching: true, query: toolParams.query };
         }
 
-        toolResultMessages.push({
-          role: "tool",
-          tool_call_id: id,
-          content: typeof result === "string" ? result : JSON.stringify(result),
-        });
-      }
+        let result, searchHandoffBrowser;
+        try {
+          const toolFunc = this.toolMap[toolName];
+          if (typeof toolFunc !== "function") {
+            throw new Error(`No such tool: ${toolName}`);
+          }
 
-      convo = [...convo, assistantToolMsg, ...toolResultMessages];
+          const hasParams = toolParams && !!Object.keys(toolParams).length;
+          const params = hasParams ? toolParams : undefined;
+
+          if (toolName === "run_search") {
+            if (!context.browsingContext) {
+              console.error(
+                "run_search: No browsingContext provided, aborting search handoff"
+              );
+              return;
+            }
+            searchHandoffBrowser = context.browsingContext.embedderElement;
+            result = await toolFunc(params ?? {}, context);
+          } else {
+            result = await (hasParams ? toolFunc(params) : toolFunc());
+          }
+
+          this._collectAllowedUrlsFromToolCall(
+            toolName,
+            result,
+            allAllowedUrls
+          );
+
+          const content = { tool_call_id: id, body: result, name: toolName };
+          conversation.addToolCallMessage(content, currentTurn, toolRoleOpts);
+        } catch (e) {
+          result = { error: `Tool execution failed: ${String(e)}` };
+          const content = { tool_call_id: id, body: result };
+          conversation.addToolCallMessage(content, currentTurn, toolRoleOpts);
+        }
+
+        lazy.AIWindow.chatStore
+          ?.updateConversation(conversation)
+          .catch(() => {});
+
+        if (toolName === "run_search") {
+          const win = searchHandoffBrowser?.ownerGlobal;
+          if (!win || win.closed) {
+            console.error(
+              "run_search: Associated window not available or closed, aborting search handoff"
+            );
+            return;
+          }
+
+          const searchHandoffTab =
+            win.gBrowser.getTabForBrowser(searchHandoffBrowser);
+          if (!searchHandoffTab) {
+            console.error(
+              "run_search: Original tab no longer exists, aborting search handoff"
+            );
+            return;
+          }
+          if (!searchHandoffTab.selected) {
+            win.gBrowser.selectedTab = searchHandoffTab;
+          }
+
+          lazy.AIWindow.openSidebarAndContinue(win, conversation);
+          return;
+        }
+
+        // @todo Bug 2006159 - Implement parallel tool calling
+        break;
+      }
     }
   },
-};
+
+  /**
+   * Collect allowed URLs from tool results for citation validation.
+   *
+   * @param {string} toolName - Name of the tool
+   * @param {*} result - Tool result
+   * @param {Set<string>} allAllowedUrls - Set to add URLs to
+   */
+  _collectAllowedUrlsFromToolCall(toolName, result, allAllowedUrls) {
+    if (toolName === "get_open_tabs" && Array.isArray(result)) {
+      for (const url of extractValidUrls(result)) {
+        allAllowedUrls.add(url);
+      }
+    } else if (toolName === "search_browsing_history") {
+      let parsed = result;
+      if (typeof result === "string") {
+        try {
+          parsed = JSON.parse(result);
+        } catch {
+          return;
+        }
+      }
+      if (parsed?.results && Array.isArray(parsed.results)) {
+        for (const url of extractValidUrls(parsed.results)) {
+          allAllowedUrls.add(url);
+        }
+      }
+    }
+  },
+
+  /**
+   * Validate citations in the response against allowed URLs.
+   *
+   * @param {string} responseText - Full response text
+   * @param {Set<string>} allAllowedUrls - Set of allowed URLs
+   */
+  _validateCitations(responseText, allAllowedUrls) {
+    if (!responseText) {
+      return null;
+    }
+
+    const links = extractMarkdownLinks(responseText);
+    if (links.length === 0) {
+      return null;
+    }
+
+    const citedUrls = links.map(link => link.url);
+
+    if (allAllowedUrls.size === 0) {
+      console.warn(
+        `Citation validation: 0 valid, ${citedUrls.length} invalid ` +
+          `(no tool sources provided)`
+      );
+      return null;
+    }
+
+    const validation = validateCitedUrls(citedUrls, [...allAllowedUrls]);
+
+    if (validation.invalid.length) {
+      console.warn(
+        `Citation validation: ${validation.valid.length} valid, ` +
+          `${validation.invalid.length} invalid (rate: ${(validation.validationRate * 100).toFixed(1)}%)`
+      );
+    }
+
+    return validation;
+  },
+});

@@ -234,6 +234,11 @@ RemoteAccessible* DocAccessibleParent::CreateAcc(
     return nullptr;
   }
 
+  if (aAccData.GenericTypes() & eDocument) {
+    MOZ_ASSERT_UNREACHABLE("Invalid acc type");
+    return nullptr;
+  }
+
   newProxy = new RemoteAccessible(aAccData.ID(), this, aAccData.Role(),
                                   aAccData.Type(), aAccData.GenericTypes(),
                                   aAccData.RoleMapEntryIndex());
@@ -269,6 +274,9 @@ void DocAccessibleParent::AttachChild(RemoteAccessible* aParent,
       }
       MOZ_ASSERT(bridge->GetEmbedderAccessibleDoc() == this);
       if (DocAccessibleParent* childDoc = bridge->GetDocAccessibleParent()) {
+        MOZ_DIAGNOSTIC_ASSERT(!childDoc->RemoteParent(),
+                              "Pending OOP child doc shouldn't have parent "
+                              "once new OuterDoc is attached");
         AddChildDoc(childDoc, aChild->ID(), false);
       }
       return true;
@@ -476,7 +484,7 @@ mozilla::ipc::IPCResult DocAccessibleParent::RecvCaretMoveEvent(
     const uint64_t& aID, const LayoutDeviceIntRect& aCaretRect,
     const int32_t& aOffset, const bool& aIsSelectionCollapsed,
     const bool& aIsAtEndOfLine, const int32_t& aGranularity,
-    const bool& aFromUser) {
+    const bool& aFromUser, const bool& aSuppressEvent) {
   ACQUIRE_ANDROID_LOCK
   if (mShutdown) {
     return IPC_OK();
@@ -498,6 +506,11 @@ mozilla::ipc::IPCResult DocAccessibleParent::RecvCaretMoveEvent(
     // forward and then unselecting backward.
     mTextSelections.ClearAndRetainStorage();
     mTextSelections.AppendElement(TextRangeData(aID, aID, aOffset, aOffset));
+  }
+
+  if (aSuppressEvent) {
+    // We're just updating the cached caret, not notifying clients.
+    return IPC_OK();
   }
 
   PlatformCaretMoveEvent(proxy, aOffset, aIsSelectionCollapsed, aGranularity,
@@ -604,6 +617,18 @@ mozilla::ipc::IPCResult DocAccessibleParent::RecvMutationEvents(
 
 mozilla::ipc::IPCResult DocAccessibleParent::RecvRequestAckMutationEvents() {
   if (!mShutdown) {
+    if (!mIsInitialTreeDone) {
+      // This is the first request for an ACK, which means we now have the
+      // initial tree.
+      mIsInitialTreeDone = true;
+      // If this document is already bound to its embedder, fire a reorder event
+      // to notify the client that the embedded document is available. If not,
+      // this will be handled when this document is bound in AddChildDoc.
+      if (RemoteAccessible* parent = RemoteParent()) {
+        parent->Document()->FireEvent(parent,
+                                      nsIAccessibleEvent::EVENT_REORDER);
+      }
+    }
     (void)SendAckMutationEvents();
   }
   return IPC_OK();
@@ -756,7 +781,6 @@ mozilla::ipc::IPCResult DocAccessibleParent::RecvAccessiblesWillMove(
   return IPC_OK();
 }
 
-#if !defined(XP_WIN)
 mozilla::ipc::IPCResult DocAccessibleParent::RecvAnnouncementEvent(
     const uint64_t& aID, const nsAString& aAnnouncement,
     const uint16_t& aPriority) {
@@ -771,9 +795,7 @@ mozilla::ipc::IPCResult DocAccessibleParent::RecvAnnouncementEvent(
     return IPC_OK();
   }
 
-#  if defined(ANDROID)
   PlatformAnnouncementEvent(target, aAnnouncement, aPriority);
-#  endif
 
   if (!nsCoreUtils::AccEventObserversExist()) {
     return IPC_OK();
@@ -788,7 +810,6 @@ mozilla::ipc::IPCResult DocAccessibleParent::RecvAnnouncementEvent(
 
   return IPC_OK();
 }
-#endif  // !defined(XP_WIN)
 
 mozilla::ipc::IPCResult DocAccessibleParent::RecvTextSelectionChangeEvent(
     const uint64_t& aID, nsTArray<TextRangeData>&& aSelection) {
@@ -883,6 +904,11 @@ mozilla::ipc::IPCResult DocAccessibleParent::RecvBindChildDoc(
 ipc::IPCResult DocAccessibleParent::AddChildDoc(DocAccessibleParent* aChildDoc,
                                                 uint64_t aParentID,
                                                 bool aCreating) {
+  if (aChildDoc->RemoteParent()) {
+    return IPC_FAIL(this,
+                    "Attempt to add child doc which already has a parent");
+  }
+
   // We do not use GetAccessible here because we want to be sure to not get the
   // document it self.
   ProxyEntry* e = mAccessibles.GetEntry(aParentID);
@@ -931,11 +957,20 @@ ipc::IPCResult DocAccessibleParent::AddChildDoc(DocAccessibleParent* aChildDoc,
       aChildDoc->SetEmulatedWindowHandle(mEmulatedWindowHandle);
     }
 #endif  // defined(XP_WIN)
-    // We need to fire a reorder event on the outer doc accessible.
-    // For same-process documents, this is fired by the content process, but
-    // this isn't possible when the document is in a different process to its
-    // embedder.
-    // FireEvent fires both OS and XPCOM events.
+  }
+  // We need to fire a reorder event on the embedder. We do this here rather
+  // than in the content process for two reasons:
+  // 1. It isn't possible for the content process to fire a reorder event on the
+  // embedder when the embedded document is in a different process to its
+  // embedder.
+  // 2. Doing it here ensures that the event is fired after the child document
+  // is bound. Otherwise, there could be a short period where the content
+  // process has fired the reorder event, but the child document isn't bound
+  // yet.
+  // However, if the initial tree hasn't been received yet, we don't want to
+  // fire the reorder event yet. That gets handled in
+  // RecvRequestAckMutationEvents.
+  if (aChildDoc->mIsInitialTreeDone) {
     FireEvent(outerDoc, nsIAccessibleEvent::EVENT_REORDER);
   }
 

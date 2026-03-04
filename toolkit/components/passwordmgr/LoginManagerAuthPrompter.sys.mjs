@@ -185,14 +185,17 @@ LoginManagerAuthPromptFactory.prototype = {
       return;
     }
 
-    let hasLogins = Services.logins.countLogins(origin, null, httpRealm) > 0;
+    let hasLogins =
+      (await Services.logins.countLoginsAsync(origin, null, httpRealm)) > 0;
     if (
       !hasLogins &&
       lazy.LoginHelper.schemeUpgrades &&
       origin.startsWith("https://")
     ) {
       let httpOrigin = origin.replace(/^https:\/\//, "http://");
-      hasLogins = Services.logins.countLogins(httpOrigin, null, httpRealm) > 0;
+      hasLogins =
+        (await Services.logins.countLoginsAsync(httpOrigin, null, httpRealm)) >
+        0;
     }
     // We don't depend on saved logins.
     if (!hasLogins) {
@@ -492,7 +495,7 @@ LoginManagerAuthPrompter.prototype = {
       await this._updateLogin(selectedLogin, newLogin);
     } else {
       this.log("Login unchanged, no further action needed.");
-      Services.logins.recordPasswordUse(
+      await Services.logins.recordPasswordUseAsync(
         selectedLogin,
         this._inPrivateBrowsing,
         "PromptLogin",
@@ -784,7 +787,7 @@ LoginManagerAuthPrompter.prototype = {
         this._factory._setPendingSavePrompt(promptBrowser, savePrompt);
       } else {
         this.log("Login unchanged, no further action needed.");
-        Services.logins.recordPasswordUse(
+        await Services.logins.recordPasswordUseAsync(
           selectedLogin,
           this._inPrivateBrowsing,
           "AuthLogin",
@@ -911,7 +914,7 @@ LoginManagerAuthPrompter.prototype = {
     propBag.setProperty("timePasswordChanged", now);
     propBag.setProperty("timeLastUsed", now);
     propBag.setProperty("timesUsedIncrement", 1);
-    // Note that we don't call `recordPasswordUse` so we won't potentially record
+    // Note that we don't call `recordPasswordUseAsync` so we won't potentially record
     // both a use and a save/update. See bug 1640096.
     await Services.logins.modifyLoginAsync(login, propBag);
   },

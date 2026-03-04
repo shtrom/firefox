@@ -164,15 +164,6 @@ linux64-zucchini-bin:
             - third_party/zucchini/
             - tools/zucchini/
 
-linux64-upx:
-    description: "UPX build"
-    treeherder:
-        symbol: TL(upx)
-        tier: 1
-    run:
-        script: build-upx.sh
-        toolchain-artifact: public/build/upx.tar.zst
-
 linux64-msix-packaging:
     description: "msix-packaging build"
     treeherder:
@@ -217,7 +208,7 @@ macosx64-xz:
         toolchain-artifact: public/build/xz.tar.zst
     fetches:
         fetch:
-            - xz-5.8.1
+            - xz
         toolchain:
             - macosx64-clang-toolchain
             - macosx64-sdk-toolchain
@@ -256,7 +247,7 @@ macosx-custom-car:
         toolchain-artifact: public/build/car_macosx.tar.zst
     fetches:
         toolchain:
-            - MacOSX26.1.sdk
+            - MacOSX26.2.sdk
 
 macosx-arm64-custom-car:
     description: "Custom chromium-as-release build for mac (apple silicon)"
@@ -292,7 +283,7 @@ macosx-arm64-custom-car:
         toolchain-artifact: public/build/car_macosx_arm.tar.zst
     fetches:
         toolchain:
-            - MacOSX26.1.sdk
+            - MacOSX26.2.sdk
 
 android-custom-car:
     description: "Custom chromium-as-release build for Android"
@@ -407,6 +398,23 @@ browsertime:
             - 'tools/browsertime/package-lock.json'
             - 'tools/browsertime/mach_commands.py'
         toolchain-artifact: public/build/browsertime.tar.zst
+    fetches:
+        toolchain:
+            - linux64-node
+
+puppeteer-build:
+    description: "Build Puppeteer with all dependencies and artifacts"
+    treeherder:
+        symbol: TL(puppeteer-build)
+    run:
+        script: puppeteer-build.sh
+        sparse-profile: null
+        resources:
+            - 'remote/test/puppeteer/package.json'
+            - 'remote/test/puppeteer/package-lock.json'
+            - 'remote/test/puppeteer/test/package.json'
+            - 'remote/test/puppeteer/test/TestExpectations.json'
+        toolchain-artifact: public/build/puppeteer-build.tar.zst
     fetches:
         toolchain:
             - linux64-node
@@ -758,23 +766,6 @@ win64-vs2022-car:
             - build/vs/vs2022-car.yaml
         toolchain-artifact: project/gecko/vs/vs.tar.zst
 
-win64-vs2022:
-    description: "VS 2022"
-    attributes:
-        local-toolchain: true
-    treeherder:
-        symbol: TW64(msvc2022)
-    worker:
-        env:
-            MACH_BUILD_PYTHON_NATIVE_PACKAGE_SOURCE: system
-    run:
-        script: get_vs.py
-        arguments:
-            - build/vs/vs2022.yaml
-        resources:
-            - build/vs/vs2022.yaml
-        toolchain-artifact: project/gecko/vs/vs.tar.zst
-
 win64-vs2026:
     description: "VS 2026"
     attributes:
@@ -841,23 +832,6 @@ win64-aarch64-WindowsAppSDK:
     fetches:
         fetch:
             - windowsappsdk-redist
-
-win64-aarch64-vs2022:
-    description: "VS 2022"
-    attributes:
-        local-toolchain: true
-    treeherder:
-        symbol: TWA64(msvc2022)
-    worker:
-        env:
-            MACH_BUILD_PYTHON_NATIVE_PACKAGE_SOURCE: system
-    run:
-        script: get_vs.py
-        arguments:
-            - build/vs/vs2022-aarch64.yaml
-        resources:
-            - build/vs/vs2022-aarch64.yaml
-        toolchain-artifact: project/gecko/vs/vs.tar.zst
 
 win64-aarch64-vs2026:
     description: "VS 2026 (AArch64)"

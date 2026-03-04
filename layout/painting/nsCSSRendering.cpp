@@ -36,7 +36,6 @@
 #include "mozilla/gfx/Logging.h"
 #include "mozilla/gfx/PathHelpers.h"
 #include "nsBlockFrame.h"
-#include "nsCSSAnonBoxes.h"
 #include "nsCSSColorUtils.h"
 #include "nsCSSFrameConstructor.h"
 #include "nsCSSProps.h"
@@ -1042,11 +1041,12 @@ void nsCSSRendering::PaintNonThemedOutline(nsPresContext* aPresContext,
   PrintAsStringNewline();
 }
 
-void nsCSSRendering::PaintFocus(nsPresContext* aPresContext,
-                                DrawTarget* aDrawTarget,
-                                const nsRect& aFocusRect, nscolor aColor) {
+nsCSSBorderRenderer nsCSSRendering::GetBorderRendererForFocus(
+    nsIFrame* aForFrame, DrawTarget* aDrawTarget, const nsRect& aFocusRect,
+    nscolor aColor) {
+  auto* pc = aForFrame->PresContext();
   nscoord oneCSSPixel = nsPresContext::CSSPixelsToAppUnits(1);
-  nscoord oneDevPixel = aPresContext->DevPixelsToAppUnits(1);
+  nscoord oneDevPixel = pc->DevPixelsToAppUnits(1);
 
   Rect focusRect(NSRectToRect(aFocusRect, oneDevPixel));
 
@@ -1066,15 +1066,9 @@ void nsCSSRendering::PaintFocus(nsPresContext* aPresContext,
   // something that CSS can style, this function will then have access
   // to a ComputedStyle and can use the same logic that PaintBorder
   // and PaintOutline do.)
-  //
-  // WebRender layers-free mode don't use PaintFocus function. Just assign
-  // the backface-visibility to true for this case.
-  nsCSSBorderRenderer br(aPresContext, aDrawTarget, focusRect, focusRect,
-                         focusStyles, focusWidths, focusRadii, focusColors,
-                         true, Nothing());
-  br.DrawBorders();
-
-  PrintAsStringNewline();
+  return nsCSSBorderRenderer(pc, aDrawTarget, focusRect, focusRect, focusStyles,
+                             focusWidths, focusRadii, focusColors,
+                             !aForFrame->BackfaceIsHidden(), Nothing());
 }
 
 // Thebes Border Rendering Code End

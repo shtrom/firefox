@@ -124,7 +124,7 @@ use crate::scene::SceneProperties;
 use crate::spatial_tree::CoordinateSystemId;
 use crate::surface::{SurfaceDescriptor, SurfaceTileDescriptor, get_surface_rects};
 pub use crate::surface::{SurfaceIndex, SurfaceInfo, SubpixelMode};
-pub use crate::surface::{calculate_screen_uv, calculate_uv_rect_kind};
+pub use crate::surface::calculate_screen_uv;
 use smallvec::SmallVec;
 use std::{mem, u8, u32};
 use std::ops::Range;
@@ -572,9 +572,6 @@ pub struct PicturePrimitive {
     /// transform animation and/or scrolling.
     pub segments_are_valid: bool,
 
-    /// Set to true if we know for sure the picture is fully opaque.
-    pub is_opaque: bool,
-
     /// Requested raster space for this picture
     pub raster_space: RasterSpace,
 
@@ -674,7 +671,6 @@ impl PicturePrimitive {
             spatial_node_index,
             prev_local_rect: LayoutRect::zero(),
             segments_are_valid: false,
-            is_opaque: false,
             raster_space,
             flags,
             clip_root: None,
@@ -1743,6 +1739,9 @@ fn prepare_tiled_picture_surface(
                     );
                 }
             } else {
+                // Track that actual tile rasterization is occurring
+                frame_state.composite_state.did_rasterize_any_tile = true;
+
                 // Add this dirty rect to the dirty region tracker. This must be done outside the if statement below,
                 // so that we include in the dirty region tiles that are handled by a background color only (no
                 // surface allocation).

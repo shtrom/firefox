@@ -242,7 +242,7 @@ fn((t) => {
     colorAttachments.push(t.getColorAttachment(colorTexture));
   }
   const shouldError =
-  !isTextureFormatColorRenderable(t.device, format) ||
+  !isTextureFormatColorRenderable(t.device.features, format) ||
   computeBytesPerSampleFromFormats(range(attachmentCount, () => format)) >
   t.device.limits.maxColorAttachmentBytesPerSample;
 
@@ -741,9 +741,14 @@ fn((t) => {
   t.skipIfTextureFormatNotSupported(format);
   t.skipIfTextureFormatNotUsableAsRenderAttachment(format);
 
+  // MAINTENANCE_TODO(#4509): Remove this when TRANSIENT_ATTACHMENT is added to the WebGPU spec.
+  if (transientTexture) {
+    t.skipIfTransientAttachmentNotSupported();
+  }
+
   const usage = transientTexture ?
-  GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TRANSIENT_ATTACHMENT :
-  GPUTextureUsage.RENDER_ATTACHMENT;
+  GPUConst.TextureUsage.RENDER_ATTACHMENT | GPUConst.TextureUsage.TRANSIENT_ATTACHMENT :
+  GPUConst.TextureUsage.RENDER_ATTACHMENT;
 
   const texture = t.createTestTexture({ usage });
 
@@ -889,7 +894,7 @@ desc(
 paramsSimple([
 { usage: GPUConst.TextureUsage.COPY_SRC | GPUConst.TextureUsage.COPY_DST },
 { usage: GPUConst.TextureUsage.STORAGE_BINDING | GPUConst.TextureUsage.TEXTURE_BINDING },
-{ usage: GPUConst.TextureUsage.STORAGE_BINDING | GPUConst.TextureUsage.STORAGE },
+{ usage: GPUConst.TextureUsage.STORAGE_BINDING | GPUConst.TextureUsage.STORAGE_BINDING },
 { usage: GPUConst.TextureUsage.RENDER_ATTACHMENT | GPUConst.TextureUsage.TEXTURE_BINDING }]
 ).
 fn((t) => {
@@ -1124,9 +1129,14 @@ fn((t) => {
 
   t.skipIfTextureFormatNotSupported(format);
 
+  // MAINTENANCE_TODO(#4509): Remove this when TRANSIENT_ATTACHMENT is added to the WebGPU spec.
+  if (transientTexture) {
+    t.skipIfTransientAttachmentNotSupported();
+  }
+
   const usage = transientTexture ?
-  GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TRANSIENT_ATTACHMENT :
-  GPUTextureUsage.RENDER_ATTACHMENT;
+  GPUConst.TextureUsage.RENDER_ATTACHMENT | GPUConst.TextureUsage.TRANSIENT_ATTACHMENT :
+  GPUConst.TextureUsage.RENDER_ATTACHMENT;
   const depthAttachment = t.createTextureTracked({
     format,
     size: { width: 1, height: 1, depthOrArrayLayers: 1 },
@@ -1242,7 +1252,7 @@ fn((t) => {
   const colorAttachment = t.getColorAttachment(multisampledColorTexture);
   colorAttachment.resolveTarget = resolveTarget.createView();
 
-  t.tryRenderPass(isTextureFormatResolvable(t.device, format), {
+  t.tryRenderPass(isTextureFormatResolvable(t.device.features, format), {
     colorAttachments: [colorAttachment]
   });
 });

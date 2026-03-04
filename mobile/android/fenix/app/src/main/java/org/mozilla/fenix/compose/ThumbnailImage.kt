@@ -24,11 +24,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.trace
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.state.TabSessionState
 import mozilla.components.browser.state.state.createTab
@@ -38,6 +40,7 @@ import mozilla.components.concept.base.images.ImageLoadRequest
 import mozilla.components.concept.engine.utils.ABOUT_HOME_URL
 import org.mozilla.fenix.R
 import org.mozilla.fenix.components.components
+import org.mozilla.fenix.tabstray.TabsTrayTraceTag
 import org.mozilla.fenix.theme.FirefoxTheme
 
 private val FallbackIconSize = 36.dp
@@ -45,7 +48,7 @@ private val FallbackIconSize = 36.dp
 /**
  * Thumbnail belonging to a [TabSessionState]. Asynchronously fetches the bitmap from storage.
  *
- * @param tab The [TabSessionState] of the thumbnail to fetch.
+ * @param tabThumbnailImageData The image data of the thumbnail to fetch.
  * @param thumbnailSizePx The requested size of the thumbnail in pixels.
  * @param alignment [Alignment] used to draw the image content.
  * @param modifier [Modifier] used to draw the image content.
@@ -54,16 +57,16 @@ private val FallbackIconSize = 36.dp
  */
 @Composable
 fun ThumbnailImage(
-    tab: TabSessionState,
+    tabThumbnailImageData: TabThumbnailImageData,
     thumbnailSizePx: Int,
     alignment: Alignment,
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
 ) {
     val request = ImageLoadRequest(
-        id = tab.id,
+        id = tabThumbnailImageData.tabId,
         size = thumbnailSizePx,
-        isPrivate = tab.content.private,
+        isPrivate = tabThumbnailImageData.isPrivate,
     )
 
     ThumbnailImage(
@@ -72,7 +75,8 @@ fun ThumbnailImage(
         alignment = alignment,
         fallbackContent = {
             FallbackContent(
-                tab = tab,
+                tabUrl = tabThumbnailImageData.tabUrl,
+                icon = tabThumbnailImageData.tabIcon,
                 modifier = modifier,
                 contentDescription = contentDescription,
             )
@@ -100,45 +104,47 @@ fun ThumbnailImage(
     if (inComposePreview) {
         Box(modifier = modifier)
     } else {
-        var state by remember { mutableStateOf(ThumbnailImageState(null, false)) }
-        val scope = rememberCoroutineScope()
-        val storage = components.core.thumbnailStorage
+        trace(TabsTrayTraceTag.TRACE_THUMBNAIL_IMAGE_CREATION) {
+            var state by remember { mutableStateOf(ThumbnailImageState(null, false)) }
+            val scope = rememberCoroutineScope()
+            val storage = components.core.thumbnailStorage
 
-        DisposableEffect(Unit) {
-            if (!state.hasLoaded) {
-                scope.launch {
-                    val thumbnailBitmap = storage.loadThumbnail(request).await()
-                    thumbnailBitmap?.prepareToDraw()
+            DisposableEffect(Unit) {
+                if (!state.hasLoaded) {
+                    scope.launch {
+                        val thumbnailBitmap = storage.loadThumbnail(request).await()
+                        thumbnailBitmap?.prepareToDraw()
+                        state = ThumbnailImageState(
+                            bitmap = thumbnailBitmap,
+                            hasLoaded = true,
+                        )
+                    }
+                }
+
+                onDispose {
+                    // Recycle the bitmap to liberate the RAM. Without this, a list of [ThumbnailImage]
+                    // will bloat the memory. This is a trade-off, however, as the bitmap
+                    // will be re-fetched if this Composable is disposed and re-loaded.
+                    state.bitmap?.recycle()
                     state = ThumbnailImageState(
-                        bitmap = thumbnailBitmap,
-                        hasLoaded = true,
+                        bitmap = null,
+                        hasLoaded = false,
                     )
                 }
             }
 
-            onDispose {
-                // Recycle the bitmap to liberate the RAM. Without this, a list of [ThumbnailImage]
-                // will bloat the memory. This is a trade-off, however, as the bitmap
-                // will be re-fetched if this Composable is disposed and re-loaded.
-                state.bitmap?.recycle()
-                state = ThumbnailImageState(
-                    bitmap = null,
-                    hasLoaded = false,
-                )
-            }
-        }
-
-        if (state.bitmap == null && state.hasLoaded) {
-            fallbackContent()
-        } else {
-            state.bitmap?.let { bitmap ->
-                Image(
-                    bitmap = bitmap.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = modifier,
-                    contentScale = contentScale,
-                    alignment = alignment,
-                )
+            if (state.bitmap == null && state.hasLoaded) {
+                fallbackContent()
+            } else {
+                state.bitmap?.let { bitmap ->
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = modifier,
+                        contentScale = contentScale,
+                        alignment = alignment,
+                    )
+                }
             }
         }
     }
@@ -149,14 +155,16 @@ fun ThumbnailImage(
  *
  * If a favicon is available through [tab], this icon will be used. Otherwise, a new favicon will be fetched.
  *
- * @param tab [TabSessionState] containing the tab data and potential fallback favicon.
+ * @param tabUrl The tab's URL
+ * @param icon Icon used for fallback content
  * @param modifier [Modifier] used to draw the image content.
  * @param contentDescription Optional text used by accessibility services to describe what this content
  * represents.
  */
 @Composable
 private fun FallbackContent(
-    tab: TabSessionState,
+    tabUrl: String,
+    icon: ImageBitmap?,
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
 ) {
@@ -166,7 +174,6 @@ private fun FallbackContent(
             .fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        val icon = tab.content.icon?.asImageBitmap()
         if (icon != null) {
             LaunchedEffect(icon) {
                 icon.prepareToDraw()
@@ -180,7 +187,7 @@ private fun FallbackContent(
                     .clip(RoundedCornerShape(8.dp)),
                 contentScale = ContentScale.FillWidth,
             )
-        } else if (tab.content.url == ABOUT_HOME_URL) {
+        } else if (tabUrl == ABOUT_HOME_URL) {
             Image(
                 painter = painterResource(id = R.drawable.ic_firefox),
                 contentDescription = null,
@@ -190,7 +197,7 @@ private fun FallbackContent(
             )
         } else {
             Favicon(
-                url = tab.content.url,
+                url = tabUrl,
                 size = FallbackIconSize,
             )
         }
@@ -222,7 +229,10 @@ private fun ThumbnailImagePreview() {
             )
 
             ThumbnailImage(
-                tab = createTab(url = "www.mozilla.com", title = "Mozilla"),
+                tabThumbnailImageData = createTab(
+                    url = "www.mozilla.com",
+                    title = "Mozilla",
+                ).thumbnailImageData(),
                 thumbnailSizePx = 100,
                 alignment = Alignment.Center,
                 modifier = Modifier
@@ -231,7 +241,8 @@ private fun ThumbnailImagePreview() {
             )
 
             FallbackContent(
-                tab = createTab(url = ABOUT_HOME_URL, title = "Mozilla"),
+                tabUrl = ABOUT_HOME_URL,
+                icon = null,
                 modifier = Modifier.size(50.dp),
             )
         }

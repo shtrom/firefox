@@ -95,7 +95,7 @@ class MultitaskingTest : TestSetup() {
         browserScreen {
             verifyNumberOfTabsOpened(4)
         }.openTabsTray {
-            verifyTabsOrder(tab1.title, tab3.title, tab2.title, customTabPage.title)
+            verifyTabsOrder("Add new tab", tab1.title, tab3.title, tab2.title, customTabPage.title)
         }.selectTab(tab1.title) {
             verifyPageContent("Tab 1")
         }.clearBrowsingData {
@@ -120,11 +120,14 @@ class MultitaskingTest : TestSetup() {
             openLinkInNewTab()
             verifyNumberOfTabsOpened(3)
         }.openTabsTray {
-            verifyTabsOrder(tab1.title, tab3.title, tab2.title)
+            verifyTabsOrder("Add new tab", tab1.title, tab3.title, tab2.title)
         }.closeTab(tab1.title) {
         }.openTabsTray {
-            verifyTabsOrder(tab3.title, tab2.title)
+            verifyTabsOrder("Add new tab", tab3.title, tab2.title)
         }.closeTab(tab3.title) {
+        }.openTabsTray {
+            verifyTabsOrder("Add new tab", tab2.title)
+        }.closeTab(tab2.title) {
             verifyTabsCounterNotShown()
         }
     }
@@ -144,6 +147,35 @@ class MultitaskingTest : TestSetup() {
         }.openTabsTray {
             verifyCloseTabButton(tab1.title)
             verifyCloseTabButton(tab2.title)
+        }
+    }
+
+    @SmokeTest
+    @Test
+    fun verifyTheTabsTrayAddNewTabButtonTest() {
+        val tab1 = webServer.getGenericTabAsset(1)
+        val tab2 = webServer.getGenericTabAsset(2)
+        val tab3 = webServer.getGenericTabAsset(3)
+
+        searchScreen {
+        }.loadPage(tab1.url) {
+        }.openTabsTray {
+            verifyTheAddNewTabButtonIsDisplayed()
+            verifyTabsOrder("Add new tab", tab1.title)
+            verifyTheCloseOtherTabsButtonIsDisplayed()
+        }.clickTheAddNewTabButton {
+        }
+
+        searchScreen {
+        }.loadPage(tab2.url) {
+            verifyNumberOfTabsOpened(2)
+        }.openTabsTray {
+        }.clickTheAddNewTabButton {
+        }
+
+        searchScreen {
+        }.loadPage(tab3.url) {
+            verifyNumberOfTabsOpened(3)
         }
     }
 }

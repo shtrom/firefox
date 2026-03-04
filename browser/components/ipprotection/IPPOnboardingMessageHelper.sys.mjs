@@ -7,8 +7,10 @@ import { ONBOARDING_PREF_FLAGS } from "chrome://browser/content/ipprotection/ipp
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
-  IPPProxyManager: "resource:///modules/ipprotection/IPPProxyManager.sys.mjs",
-  IPPProxyStates: "resource:///modules/ipprotection/IPPProxyManager.sys.mjs",
+  IPPProxyManager:
+    "moz-src:///browser/components/ipprotection/IPPProxyManager.sys.mjs",
+  IPPProxyStates:
+    "moz-src:///browser/components/ipprotection/IPPProxyManager.sys.mjs",
 });
 
 const ONBOARDING_MESSAGE_MASK_PREF =
@@ -23,6 +25,7 @@ const PERM_NAME = "ipp-vpn";
  */
 class IPPOnboardingMessageHelper {
   #observingPermChanges = false;
+  #autostartPrefObserver = null;
 
   constructor() {
     this.handleEvent = this.#handleEvent.bind(this);
@@ -36,9 +39,9 @@ class IPPOnboardingMessageHelper {
       this.#observingPermChanges = true;
     }
 
-    Services.prefs.addObserver(AUTOSTART_PREF, () =>
-      this.setOnboardingFlag(ONBOARDING_PREF_FLAGS.EVER_TURNED_ON_AUTOSTART)
-    );
+    this.#autostartPrefObserver = () =>
+      this.setOnboardingFlag(ONBOARDING_PREF_FLAGS.EVER_TURNED_ON_AUTOSTART);
+    Services.prefs.addObserver(AUTOSTART_PREF, this.#autostartPrefObserver);
 
     let autoStartPref = Services.prefs.getBoolPref(AUTOSTART_PREF, false);
     if (autoStartPref) {
@@ -59,6 +62,14 @@ class IPPOnboardingMessageHelper {
     if (this.#observingPermChanges) {
       Services.obs.removeObserver(this, "perm-changed");
       this.#observingPermChanges = false;
+    }
+
+    if (this.#autostartPrefObserver) {
+      Services.prefs.removeObserver(
+        AUTOSTART_PREF,
+        this.#autostartPrefObserver
+      );
+      this.#autostartPrefObserver = null;
     }
 
     lazy.IPPProxyManager.removeEventListener(

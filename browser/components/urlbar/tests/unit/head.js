@@ -17,6 +17,7 @@ ChromeUtils.defineESModuleGetters(this, {
   HttpServer: "resource://testing-common/httpd.sys.mjs",
   PlacesTestUtils: "resource://testing-common/PlacesTestUtils.sys.mjs",
   PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
+  SearchService: "moz-src:///toolkit/components/search/SearchService.sys.mjs",
   SearchTestUtils: "resource://testing-common/SearchTestUtils.sys.mjs",
   TestUtils: "resource://testing-common/TestUtils.sys.mjs",
   UrlbarController:
@@ -24,7 +25,9 @@ ChromeUtils.defineESModuleGetters(this, {
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
   UrlbarProviderOpenTabs:
     "moz-src:///browser/components/urlbar/UrlbarProviderOpenTabs.sys.mjs",
-  UrlbarProvidersManager:
+  UrlbarProviderSearchSuggestions:
+    "moz-src:///browser/components/urlbar/UrlbarProviderSearchSuggestions.sys.mjs",
+  ProvidersManager:
     "moz-src:///browser/components/urlbar/UrlbarProvidersManager.sys.mjs",
   UrlbarResult: "moz-src:///browser/components/urlbar/UrlbarResult.sys.mjs",
   UrlbarTokenizer:
@@ -199,10 +202,9 @@ function registerBasicTestProvider(results = [], onCancel, type, name) {
     type,
     name,
   });
-  UrlbarProvidersManager.registerProvider(provider);
-  registerCleanupFunction(() =>
-    UrlbarProvidersManager.unregisterProvider(provider)
-  );
+  let providersManager = ProvidersManager.getInstanceForSap("urlbar");
+  providersManager.registerProvider(provider);
+  registerCleanupFunction(() => providersManager.unregisterProvider(provider));
   return provider;
 }
 
@@ -225,7 +227,7 @@ function makeTestServer(port = -1) {
  *   Options for the check.
  * @param {string} [options.name]
  *   The name of the engine to install.
- * @returns {nsISearchEngine} The new engine.
+ * @returns {SearchEngine} The new engine.
  */
 async function addTestSuggestionsEngine(
   suggestionsFn = null,
@@ -249,7 +251,7 @@ async function addTestSuggestionsEngine(
     suggest_url: `http://localhost:${server.identity.primaryPort}/suggest`,
     suggest_url_get_params: "?q={searchTerms}",
   });
-  let engine = Services.search.getEngineByName(name);
+  let engine = SearchService.getEngineByName(name);
   return engine;
 }
 
@@ -262,7 +264,7 @@ async function addTestSuggestionsEngine(
  *        responses. See bug 1626897.
  *        NOTE: Consumers specifying suggestionsFn must include searchStr as a
  *              part of the array returned by suggestionsFn.
- * @returns {nsISearchEngine} The new engine.
+ * @returns {SearchEngine} The new engine.
  */
 async function addTestTailSuggestionsEngine(suggestionsFn = null) {
   // This port number should match the number in engine-tail-suggestions.xml.
@@ -304,7 +306,7 @@ async function addTestTailSuggestionsEngine(suggestionsFn = null) {
     suggest_url: `http://localhost:${server.identity.primaryPort}/suggest`,
     suggest_url_get_params: "?q={searchTerms}",
   });
-  let engine = Services.search.getEngineByName("Tail Suggestions");
+  let engine = SearchService.getEngineByName("Tail Suggestions");
   return engine;
 }
 
@@ -386,7 +388,7 @@ function testEngine_setup() {
   add_setup(async () => {
     await cleanupPlaces();
     let engine = await addTestSuggestionsEngine();
-    let oldDefaultEngine = await Services.search.getDefault();
+    let oldDefaultEngine = await SearchService.getDefault();
 
     registerCleanupFunction(async () => {
       Services.prefs.clearUserPref("browser.urlbar.suggest.searches");
@@ -394,16 +396,13 @@ function testEngine_setup() {
       Services.prefs.clearUserPref(
         "browser.search.separatePrivateDefault.ui.enabled"
       );
-      Services.search.setDefault(
+      SearchService.setDefault(
         oldDefaultEngine,
-        Ci.nsISearchService.CHANGE_REASON_UNKNOWN
+        SearchService.CHANGE_REASON.UNKNOWN
       );
     });
 
-    Services.search.setDefault(
-      engine,
-      Ci.nsISearchService.CHANGE_REASON_UNKNOWN
-    );
+    SearchService.setDefault(engine, SearchService.CHANGE_REASON.UNKNOWN);
     Services.prefs.setBoolPref(
       "browser.search.separatePrivateDefault.ui.enabled",
       false
@@ -477,11 +476,6 @@ function makeBookmarkResult(
             "awesome-bar-result-menu"
           : undefined,
     },
-    highlights: {
-      url: UrlbarUtils.HIGHLIGHT.TYPED,
-      title: UrlbarUtils.HIGHLIGHT.TYPED,
-      tags: UrlbarUtils.HIGHLIGHT.TYPED,
-    },
   });
 }
 
@@ -512,10 +506,6 @@ function makeFormHistoryResult(queryContext, { suggestion, engineName }) {
       helpUrl:
         Services.urlFormatter.formatURLPref("app.support.baseURL") +
         "awesome-bar-result-menu",
-    },
-    highlights: {
-      suggestion: UrlbarUtils.HIGHLIGHT.SUGGESTED,
-      title: UrlbarUtils.HIGHLIGHT.SUGGESTED,
     },
   });
 }
@@ -553,11 +543,6 @@ function makeOmniboxResult(
       keyword,
       icon: UrlbarUtils.ICON.EXTENSION,
     },
-    highlights: {
-      title: UrlbarUtils.HIGHLIGHT.TYPED,
-      content: UrlbarUtils.HIGHLIGHT.TYPED,
-      keyword: UrlbarUtils.HIGHLIGHT.TYPED,
-    },
   });
 }
 
@@ -594,10 +579,6 @@ function makeTabSwitchResult(
       icon: typeof iconUri != "undefined" ? iconUri : `page-icon:${uri}`,
       userContextId: userContextId || 0,
       tabGroup,
-    },
-    highlights: {
-      url: UrlbarUtils.HIGHLIGHT.TYPED,
-      title: UrlbarUtils.HIGHLIGHT.TYPED,
     },
   });
 }
@@ -638,12 +619,6 @@ function makeKeywordSearchResult(
       input: queryContext.searchString,
       postData: postData || null,
       icon: typeof iconUri != "undefined" ? iconUri : `page-icon:${uri}`,
-    },
-    highlights: {
-      title: UrlbarUtils.HIGHLIGHT.TYPED,
-      url: UrlbarUtils.HIGHLIGHT.TYPED,
-      keyword: UrlbarUtils.HIGHLIGHT.TYPED,
-      input: UrlbarUtils.HIGHLIGHT.TYPED,
     },
   });
 }
@@ -691,11 +666,6 @@ function makeRemoteTabResult(
     type: UrlbarUtils.RESULT_TYPE.REMOTE_TAB,
     source: UrlbarUtils.RESULT_SOURCE.TABS,
     payload,
-    highlights: {
-      url: UrlbarUtils.HIGHLIGHT.TYPED,
-      title: UrlbarUtils.HIGHLIGHT.TYPED,
-      device: UrlbarUtils.HIGHLIGHT.TYPED,
-    },
   });
 }
 
@@ -839,8 +809,10 @@ function makeSearchResult(
   }
 
   if (isRichSuggestion) {
-    payload.icon =
-      "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+    payload.icon = UrlbarUtils.getRemoteIconUrl(
+      "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==",
+      UrlbarProviderSearchSuggestions.RICH_ICON_SIZE
+    );
     payload.description = "description";
   }
 
@@ -851,13 +823,6 @@ function makeSearchResult(
     isRichSuggestion,
     providerName,
     payload,
-    highlights: {
-      engine: UrlbarUtils.HIGHLIGHT.TYPED,
-      suggestion: UrlbarUtils.HIGHLIGHT.SUGGESTED,
-      tail: UrlbarUtils.HIGHLIGHT.SUGGESTED,
-      keyword: providesSearchMode ? UrlbarUtils.HIGHLIGHT.TYPED : undefined,
-      query: UrlbarUtils.HIGHLIGHT.TYPED,
-    },
   });
 }
 
@@ -935,12 +900,6 @@ function makeVisitResult(
     heuristic,
     providerName,
     payload,
-    highlights: {
-      url: UrlbarUtils.HIGHLIGHT.TYPED,
-      title: UrlbarUtils.HIGHLIGHT.TYPED,
-      fallbackTitle: UrlbarUtils.HIGHLIGHT.TYPED,
-      tags: UrlbarUtils.HIGHLIGHT.TYPED,
-    },
   });
 }
 
@@ -980,10 +939,6 @@ function makeCalculatorResult(queryContext, { value }) {
  *  Original input length.
  * @param {boolean} [options.showOnboardingLabel]
  *   Whether the “press Tab” hint should appear.
- * @param {boolean} [options.providesSearchMode]
- *   Whether selecting an action enters a search mode.
- * @param {string | null} [options.engine]
- *   The engine name, if providesSearchMode is true.
  * @returns {UrlbarResult}
  */
 function makeGlobalActionsResult({
@@ -991,8 +946,6 @@ function makeGlobalActionsResult({
   query,
   inputLength,
   showOnboardingLabel = false,
-  providesSearchMode = false,
-  engine,
 }) {
   const payload = {
     actionsResults,
@@ -1001,8 +954,6 @@ function makeGlobalActionsResult({
     input: query,
     inputLength,
     showOnboardingLabel,
-    providesSearchMode,
-    engine,
   };
 
   return new UrlbarResult({
@@ -1029,7 +980,8 @@ function makeGlobalActionsResult({
  *   The value that would be filled if the autofill result was confirmed.
  *   Has no effect if `autofilled` is not specified.
  * @param {object} [options.conditionalPayloadProperties]
- *   An object mapping payload property names to objects { optional, ignore }.
+ *   An object mapping payload property names to objects
+ *   { optional, ignore, custom }.
  *   See the code below.
  * @param {Array} options.matches
  *   An array of UrlbarResults.
@@ -1198,6 +1150,11 @@ async function check_results({
           condition?.ignore ||
           (condition?.optional && !expected.hasOwnProperty(key))
         ) {
+          continue;
+        }
+
+        if (condition?.custom?.(i, actual)) {
+          // The custom assertion consumed this assertion.
           continue;
         }
 

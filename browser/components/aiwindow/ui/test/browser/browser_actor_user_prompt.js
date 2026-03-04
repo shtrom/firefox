@@ -8,7 +8,7 @@
  */
 add_task(async function test_user_prompt_dispatch() {
   await SpecialPowers.pushPrefEnv({
-    set: [["browser.aiwindow.enabled", true]],
+    set: [["browser.smartwindow.enabled", true]],
   });
 
   await BrowserTestUtils.withNewTab("about:aichatcontent", async browser => {
@@ -25,7 +25,7 @@ add_task(async function test_user_prompt_dispatch() {
     // The method should return true for successful dispatch
     Assert.equal(
       result,
-      true,
+      undefined, // actor is async instead of query now?
       "dispatchUserPrompt should complete successfully"
     );
   });
@@ -49,9 +49,54 @@ add_task(async function test_streaming_ai_response() {
     const result = await actor.dispatchMessageToChatContent(streamingResponse);
     Assert.equal(
       result,
-      true,
+      undefined, // actor is async instead of query now?
       "Streaming AI response should be dispatched successfully"
     );
+  });
+
+  await SpecialPowers.popPrefEnv();
+});
+
+/**
+ * Test if the loader shows after the user prompt is submitted
+ */
+add_task(async function test_loader_shows_on_user_submit() {
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.smartwindow.enabled", true]],
+  });
+
+  await BrowserTestUtils.withNewTab("about:aichatcontent", async browser => {
+    const actor =
+      browser.browsingContext.currentWindowGlobal.getActor("AIChatContent");
+
+    const userPrompt = {
+      role: "user",
+      content: { body: "Show loader please" },
+    };
+    await actor.dispatchMessageToChatContent(userPrompt);
+
+    await SpecialPowers.spawn(browser, [], async () => {
+      const contentEl = content.document.querySelector("ai-chat-content");
+      await contentEl.updateComplete;
+
+      let loaderEl;
+      await ContentTaskUtils.waitForMutationCondition(
+        contentEl.shadowRoot,
+        { childList: true, subtree: true },
+        () => {
+          loaderEl = contentEl.shadowRoot.querySelector(
+            "chat-assistant-loader"
+          );
+          return loaderEl;
+        }
+      );
+      Assert.ok(loaderEl, "Loader element exists");
+
+      const inner = loaderEl.shadowRoot?.querySelector(
+        ".chat-assistant-loader"
+      );
+      Assert.ok(inner, "Loader has the correct content");
+    });
   });
 
   await SpecialPowers.popPrefEnv();

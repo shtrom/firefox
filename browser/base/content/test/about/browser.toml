@@ -47,6 +47,7 @@ support-files = [
 ["browser_aboutDialog_distribution.js"]
 skip-if = [
   "os == 'win' && os_version == '11.26100' && arch == 'x86_64' && msix && verify-standalone",
+  "os == 'win' && os_version == '11.26200' && arch == 'x86_64' && msix && verify-standalone",
 ]
 
 ["browser_aboutNetError.js"]
@@ -68,9 +69,13 @@ support-files = [
   "csp_iframe.sjs",
 ]
 
+["browser_aboutNetError_emptyResponse.js"]
+
 ["browser_aboutNetError_httpAuthDisabled.js"]
 
 ["browser_aboutNetError_internet_connection_offline.js"]
+
+["browser_aboutNetError_invalid_cert_noUserFix.js"]
 
 ["browser_aboutNetError_invalid_header.js"]
 support-files = [
@@ -85,6 +90,7 @@ support-files = [
 ["browser_aboutNetError_trr.js"]
 skip-if = [
   "os == 'win' && os_version == '11.26100' && arch == 'x86_64' && asan", # Bug 1831977
+  "os == 'win' && os_version == '11.26200' && arch == 'x86_64' && asan", # Bug 1831977
   "socketprocess_networking",
 ]
 
@@ -133,3 +139,5 @@ skip-if = [
 ["browser_bug435325.js"]
 
 ["browser_bug633691.js"]
+
+["browser_bug2008464.js"]

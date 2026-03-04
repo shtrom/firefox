@@ -24,7 +24,6 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
-import android.view.WindowManager.LayoutParams.FLAG_SECURE
 import androidx.activity.BackEventCompat
 import androidx.annotation.CallSuper
 import androidx.annotation.IdRes
@@ -76,6 +75,7 @@ import mozilla.components.support.ktx.android.content.share
 import mozilla.components.support.ktx.android.view.setupPersistentInsets
 import mozilla.components.support.locale.LocaleAwareAppCompatActivity
 import mozilla.components.support.utils.BootUtils
+import mozilla.components.support.utils.Browsers
 import mozilla.components.support.utils.BrowsersCache
 import mozilla.components.support.utils.BuildManufacturerChecker
 import mozilla.components.support.utils.SafeIntent
@@ -90,7 +90,9 @@ import org.mozilla.fenix.GleanMetrics.SplashScreen
 import org.mozilla.fenix.GleanMetrics.StartOnHome
 import org.mozilla.fenix.addons.ExtensionsProcessDisabledBackgroundController
 import org.mozilla.fenix.addons.ExtensionsProcessDisabledForegroundController
+import org.mozilla.fenix.bindings.BrowsingModeBinding
 import org.mozilla.fenix.bindings.ExternalAppLinkStatusBinding
+import org.mozilla.fenix.bindings.SummarizeToolbarHighlightBinding
 import org.mozilla.fenix.bookmarks.DesktopFolders
 import org.mozilla.fenix.browser.browsingmode.BrowsingMode
 import org.mozilla.fenix.browser.browsingmode.BrowsingModeManager
@@ -161,7 +163,6 @@ import org.mozilla.fenix.splashscreen.DefaultSplashScreenStorage
 import org.mozilla.fenix.splashscreen.FetchExperimentsOperation
 import org.mozilla.fenix.splashscreen.SplashScreenManager
 import org.mozilla.fenix.tabhistory.TabHistoryDialogFragment
-import org.mozilla.fenix.tabstray.TabsTrayFragment
 import org.mozilla.fenix.theme.DefaultThemeManager
 import org.mozilla.fenix.theme.StatusBarColorManager
 import org.mozilla.fenix.theme.ThemeManager
@@ -197,7 +198,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
         WebExtensionPopupObserver(components.core.store, ::openPopup)
     }
 
-    val webExtensionPromptFeature by lazy {
+    private val webExtensionPromptFeature by lazy {
         WebExtensionPromptFeature(
             store = components.core.store,
             context = this@HomeActivity,
@@ -205,6 +206,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
             navController = navHost.navController,
             onLinkClicked = { url, shouldOpenInBrowser ->
                 if (shouldOpenInBrowser) {
+                    @Suppress("DEPRECATION")
                     openToBrowserAndLoad(
                         searchTermOrURL = url,
                         newTab = true,
@@ -254,12 +256,31 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
         )
     }
 
+    private val browsingModeBinding by lazy {
+        BrowsingModeBinding(
+            window = window,
+            settings = settings(),
+            store = components.appStore,
+            themeManagerProvider = { if (::themeManager.isInitialized) themeManager else null },
+            browsingModeManager = browsingModeManager,
+        )
+    }
+
     private val externalAppLinkStatusBinding by lazy {
         ExternalAppLinkStatusBinding(
             settings = settings(),
             appLinksUseCases = components.useCases.appLinksUseCases,
             browserStore = components.core.store,
             appStore = components.appStore,
+        )
+    }
+
+    private val summarizeToolbarHighlightBinding by lazy {
+        SummarizeToolbarHighlightBinding(
+            appStore = components.appStore,
+            featureDiscoverySettings = components.core.summarizeFeatureDiscoverySettings,
+            browserStore = components.core.store,
+            mainDispatcher = Main,
         )
     }
 
@@ -297,7 +318,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
 
     private val externalSourceIntentProcessors by lazy {
         listOf(
-            HomeDeepLinkIntentProcessor(this),
+            HomeDeepLinkIntentProcessor(components.appStore, this),
             SpeechProcessingIntentProcessor(this, components.core.store),
             AssistIntentProcessor(),
             StartSearchIntentProcessor(),
@@ -305,7 +326,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
             OpenSpecificTabIntentProcessor(this),
             OpenPasswordManagerIntentProcessor(),
             OpenRecentlyClosedIntentProcessor(),
-            ReEngagementIntentProcessor(this, settings()),
+            ReEngagementIntentProcessor(components.appStore, this),
         )
     }
 
@@ -395,7 +416,6 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
         // Changing a language on the Language screen restarts the activity, but the activity keeps
         // the old layout direction. We have to update the direction manually.
         window.decorView.layoutDirection = Locale.getDefault().layoutDirection
-        window.setupPersistentInsets()
 
         binding = ActivityHomeBinding.inflate(layoutInflater)
         val isLauncherIntent = intent.toSafeIntent().isLauncherIntent
@@ -539,16 +559,22 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
             serviceWorkerSupport,
             aboutHomeBinding,
             crashReporterBinding,
+            browsingModeBinding,
             defaultTopSitesBinding,
             TopSitesRefresher(
                 settings = settings(),
-                topSitesProvider = components.core.marsTopSitesProvider,
+                topSitesProvider = if (settings().enableMozillaAdsClient) {
+                    components.core.macTopSitesProvider
+                } else {
+                    components.core.marsTopSitesProvider
+                },
                 startupPathProvider = startupPathProvider,
                 visualCompletenessQueue = components.performance.visualCompletenessQueue,
             ),
             downloadSnackbar,
             privateBrowsingLockFeature,
             externalAppLinkStatusBinding,
+            summarizeToolbarHighlightBinding,
         )
 
         if (!isCustomTabIntent(intent)) {
@@ -620,7 +646,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
     @VisibleForTesting
     internal fun maybeShowSetAsDefaultBrowserPrompt(
         shouldShowSetAsDefaultPrompt: Boolean = settings().shouldShowSetAsDefaultPrompt(),
-        isDefaultBrowser: Boolean = BrowsersCache.all(applicationContext).isDefaultBrowser,
+        isDefaultBrowser: Boolean = Browsers.isDefaultBrowser(applicationContext),
         isTheCorrectBuildVersion: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q,
     ) {
         if (shouldShowSetAsDefaultPrompt && !isDefaultBrowser && isTheCorrectBuildVersion) {
@@ -689,7 +715,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
         )
 
         binding.root.doOnLayout {
-            if (browsingModeManager.mode.isPrivate) {
+            if (components.appStore.state.mode.isPrivate) {
                 it.announcePrivateModeForAccessibility()
             }
         }
@@ -699,6 +725,8 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
                 if (components.appStore.state.wasNativeDefaultBrowserPromptShown) {
                     Metrics.defaultBrowserChangedViaNativeSystemPrompt.record(NoExtras())
                 }
+
+                components.appStore.dispatch(AppAction.UpdateDefaultBrowserStatus(true))
                 Events.defaultBrowserChanged.record(NoExtras())
             }
 
@@ -732,6 +760,8 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
     final override fun onStart() {
         // DO NOT MOVE ANYTHING ABOVE THIS getProfilerTime CALL.
         val startProfilerTime = components.core.engine.profiler?.getProfilerTime()
+
+        window.setupPersistentInsets()
 
         components.termsOfUseManager.onStart()
 
@@ -845,7 +875,6 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
         )
 
         components.core.contileTopSitesUpdater.stopPeriodicWork()
-        components.core.pocketStoriesService.stopPeriodicSponsoredStoriesRefresh()
         components.core.pocketStoriesService.stopPeriodicContentRecommendationsRefresh()
         components.core.pocketStoriesService.stopPeriodicSponsoredContentsRefresh()
         privateNotificationObserver?.stop()
@@ -927,19 +956,8 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
             listOf(
                 CrashReporterIntentProcessor(components.appStore),
             ) + externalSourceIntentProcessors
-        val intentHandled =
-            intentProcessors.any { it.process(intent, navHost.navController, this.intent, settings()) }
+        intentProcessors.forEach { it.process(intent, navHost.navController, this.intent, settings()) }
         browsingModeManager.updateMode(intent)
-
-        if (intentHandled) {
-            supportFragmentManager
-                .primaryNavigationFragment
-                ?.childFragmentManager
-                ?.fragments
-                ?.lastOrNull()
-                ?.let { it as? TabsTrayFragment }
-                ?.also { it.dismissAllowingStateLoss() }
-        }
     }
 
     /**
@@ -1160,7 +1178,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
     private fun setupTheme() {
         themeManager = createThemeManager()
         // ExternalAppBrowserActivity exclusively handles it's own theming unless in private mode.
-        if (this !is ExternalAppBrowserActivity || browsingModeManager.mode.isPrivate) {
+        if (this !is ExternalAppBrowserActivity || settings().openLinksInAPrivateTab) {
             themeManager.setActivityTheme(this)
             themeManager.applyStatusBarTheme(this)
         }
@@ -1230,6 +1248,11 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
      * was opened from history.
      * @param additionalHeaders The extra headers to use when loading the URL.
      */
+    @Deprecated(
+        message = "Use NavController.openToBrowser() and " +
+            "components.useCases.fenixBrowserUseCases.loadUrlOrSearch() instead",
+        level = DeprecationLevel.WARNING,
+    )
     fun openToBrowserAndLoad(
         searchTermOrURL: String,
         newTab: Boolean,
@@ -1247,7 +1270,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
             searchTermOrURL = searchTermOrURL,
             newTab = newTab,
             forceSearch = forceSearch,
-            private = browsingModeManager.mode.isPrivate,
+            private = components.appStore.state.mode.isPrivate,
             searchEngine = engine,
             flags = flags,
             historyMetadata = historyMetadata,
@@ -1272,7 +1295,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
 
         // Normal tabs + cold start -> Should go back to browser if we had any tabs open when we left last
         // except for PBM + Cold Start there won't be any tabs since they're evicted so we never will navigate
-        if (settings().shouldReturnToBrowser && !browsingModeManager.mode.isPrivate) {
+        if (settings().shouldReturnToBrowser && !components.appStore.state.mode.isPrivate) {
             // Navigate to home first (without rendering it) to add it to the back stack.
             openToBrowser(BrowserDirection.FromGlobal, null)
         }
@@ -1312,27 +1335,18 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
             intent = intent,
             settings = components.settings,
             onModeChange = { newMode ->
-                updateSecureWindowFlags(newMode)
-
-                if (::themeManager.isInitialized) {
-                    themeManager.currentTheme = newMode
-                }
-
                 components.appStore.dispatch(AppAction.BrowsingModeManagerModeChanged(mode = newMode))
             },
         )
     }
 
-    private fun updateSecureWindowFlags(mode: BrowsingMode = browsingModeManager.mode) {
-        if (mode == BrowsingMode.Private && !settings().shouldSecureModeBeOverridden) {
-            window.addFlags(FLAG_SECURE)
-        } else {
-            window.clearFlags(FLAG_SECURE)
-        }
-    }
-
     private fun createThemeManager(): ThemeManager {
-        return DefaultThemeManager(browsingModeManager.mode, this)
+        val mode = if (this is ExternalAppBrowserActivity && !settings().openLinksInAPrivateTab) {
+            BrowsingMode.Normal
+        } else {
+            components.appStore.state.mode
+        }
+        return DefaultThemeManager(mode, this)
     }
 
     private fun openPopup(webExtensionState: WebExtensionState) {
@@ -1446,7 +1460,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
 
     @VisibleForTesting
     internal fun showCrashReporter(crashIDs: List<String>?, ctxt: Context) {
-        if (!settings().useNewCrashReporterDialog) {
+        if (!settings().useNewCrashReporterFlow) {
             return
         }
 

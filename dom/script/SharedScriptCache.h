@@ -7,8 +7,9 @@
 #ifndef mozilla_dom_SharedScriptCache_h
 #define mozilla_dom_SharedScriptCache_h
 
-#include "PLDHashTable.h"                    // PLDHashEntryHdr
-#include "js/loader/LoadedScript.h"          // JS::loader::LoadedScript
+#include "PLDHashTable.h"            // PLDHashEntryHdr
+#include "js/TypeDecls.h"            // JSContext, JS::MutableHandle, JS::Value
+#include "js/loader/LoadedScript.h"  // JS::loader::LoadedScript
 #include "js/loader/ScriptFetchOptions.h"    // JS::loader::ScriptFetchOptions
 #include "js/loader/ScriptKind.h"            // JS::loader::ScriptKind
 #include "js/loader/ScriptLoadRequest.h"     // JS::loader::ScriptLoadRequest
@@ -20,8 +21,8 @@
 #include "mozilla/ThreadSafety.h"            // MOZ_GUARDED_BY
 #include "mozilla/WeakPtr.h"                 // SupportsWeakPtr
 #include "mozilla/dom/CacheExpirationTime.h"  // CacheExpirationTime
-#include "mozilla/dom/SRIMetadata.h"          // mozilla::dom::SRIMetadata
 #include "nsIMemoryReporter.h"  // nsIMemoryReporter, NS_DECL_NSIMEMORYREPORTER
+#include "nsIObserver.h"        // nsIObserver
 #include "nsIPrincipal.h"       // nsIPrincipal
 #include "nsISupports.h"        // nsISupports, NS_DECL_ISUPPORTS
 #include "nsStringFwd.h"        // nsACString
@@ -45,8 +46,6 @@ class ScriptHashKey : public PLDHashEntryHdr {
         mKind(aKey.mKind),
         mCORSMode(aKey.mCORSMode),
         mReferrerPolicy(aKey.mReferrerPolicy),
-        mSRIMetadata(aKey.mSRIMetadata),
-        mNonce(aKey.mNonce),
         mHintCharset(aKey.mHintCharset) {
     MOZ_COUNT_CTOR(ScriptHashKey);
   }
@@ -61,8 +60,6 @@ class ScriptHashKey : public PLDHashEntryHdr {
         mKind(std::move(aKey.mKind)),
         mCORSMode(std::move(aKey.mCORSMode)),
         mReferrerPolicy(std::move(aKey.mReferrerPolicy)),
-        mSRIMetadata(std::move(aKey.mSRIMetadata)),
-        mNonce(std::move(aKey.mNonce)),
         mHintCharset(std::move(aKey.mHintCharset)) {
     MOZ_COUNT_CTOR(ScriptHashKey);
   }
@@ -77,6 +74,29 @@ class ScriptHashKey : public PLDHashEntryHdr {
                 const nsCOMPtr<nsIURI> aURI);
   explicit ScriptHashKey(const ScriptLoadData& aLoadData);
 
+  // Create a key which can be used only for lookup.
+  // aKey is the result of ToStringForLookup.
+  static Maybe<ScriptHashKey> FromStringsForLookup(
+      const nsACString& aKey, const nsACString& aURI,
+      const nsACString& aHintCharset);
+
+ private:
+  ScriptHashKey(nsIURI* aURI, nsIPrincipal* aPartitionPrincipal,
+                JS::loader::ScriptKind aKind, CORSMode aCORSMode,
+                mozilla::dom::ReferrerPolicy aReferrerPolicy,
+                const nsString& aHintCharset)
+      : PLDHashEntryHdr(),
+        mURI(aURI),
+        mPartitionPrincipal(aPartitionPrincipal),
+        mLoaderPrincipal(nullptr),
+        mKind(aKind),
+        mCORSMode(aCORSMode),
+        mReferrerPolicy(aReferrerPolicy),
+        mHintCharset(aHintCharset) {
+    MOZ_COUNT_CTOR(ScriptHashKey);
+  }
+
+ public:
   MOZ_COUNTED_DTOR(ScriptHashKey)
 
   const ScriptHashKey& GetKey() const { return *this; }
@@ -100,6 +120,12 @@ class ScriptHashKey : public PLDHashEntryHdr {
 
   enum { ALLOW_MEMMOVE = true };
 
+  // Stringifies this key's information for the aKey parameter for the
+  // FromStringsForLookup.
+  // This stringifies a subset of the fields, which cannot be directly
+  // extracted from the channel.
+  void ToStringForLookup(nsACString& aResult);
+
  protected:
   // Order the fields from the most important one as much as possible, while
   // packing them, in order to use the same order between the definition and
@@ -120,9 +146,6 @@ class ScriptHashKey : public PLDHashEntryHdr {
   const JS::loader::ScriptKind mKind;
   const CORSMode mCORSMode;
   const mozilla::dom::ReferrerPolicy mReferrerPolicy;
-
-  const SRIMetadata mSRIMetadata;
-  const nsString mNonce;
 
   // charset attribute for classic script.
   // module always use UTF-8.
@@ -191,7 +214,8 @@ struct SharedScriptCacheTraits {
 
 class SharedScriptCache final
     : public SharedSubResourceCache<SharedScriptCacheTraits, SharedScriptCache>,
-      public nsIMemoryReporter {
+      public nsIMemoryReporter,
+      public nsIObserver {
  public:
   using Base =
       SharedSubResourceCache<SharedScriptCacheTraits, SharedScriptCache>;
@@ -201,6 +225,11 @@ class SharedScriptCache final
 
   SharedScriptCache();
   void Init();
+
+  NS_IMETHOD Observe(nsISupports* aSubject, const char* aTopic,
+                     const char16_t* aData) override {
+    return Base::DoObserve(aSubject, aTopic, aData);
+  }
 
   bool MaybeScheduleUpdateDiskCache();
   void UpdateDiskCache();
@@ -222,10 +251,17 @@ class SharedScriptCache final
 
   static void Invalidate();
 
+  static bool GetCachedScriptSource(JSContext* aCx, const nsACString& aKey,
+                                    const nsACString& aURI,
+                                    const nsACString& aHintCharset,
+                                    JS::MutableHandle<JS::Value> aRetval);
+
   static void PrepareForLastCC();
 
  protected:
   ~SharedScriptCache();
+
+  bool ShouldIgnoreMemoryPressure() override;
 
  private:
   class EncodeItem {

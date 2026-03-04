@@ -13,7 +13,7 @@ from urllib.parse import quote
 
 import pytest
 import webdriver
-from PIL import Image
+from PIL import Image, ImageChops
 from webdriver.bidi.error import InvalidArgumentException, NoSuchFrameException
 from webdriver.bidi.modules.script import ContextTarget
 
@@ -528,7 +528,7 @@ class Client:
             wait="interactive",
         )
         await self.session.bidi_session.script.evaluate(
-            expression=f"window.browser.extension.getBackgroundPage().{waitFor}.ready()",
+            expression=f"window.browser.extension.getBackgroundPage().{waitFor}.allSettled()",
             target=ContextTarget(context["context"]),
             await_promise=True,
         )
@@ -1523,9 +1523,9 @@ class Client:
             )
             time.sleep(0.5)
             without_scrollbar = trending_list.screenshot()
-            assert (
-                with_scrollbar == without_scrollbar
-            ), "scrollbar does not cover any text"
+            assert with_scrollbar == without_scrollbar, (
+                "scrollbar does not cover any text"
+            )
 
     def test_for_fastclick(self, element):
         # FastClick cancels touchend, breaking default actions on Fenix.
@@ -1560,7 +1560,7 @@ class Client:
     async def test_aceomni_pan_and_zoom_works(self, url):
         await self.navigate(url, wait="none")
         img = self.await_css("#imageZoom", is_displayed=True)
-        await self.stall(1)
+        await self.stall(2)
 
         def get_zoom_x():
             return self.execute_script(
@@ -1608,11 +1608,17 @@ class Client:
         except webdriver.error.StaleElementReferenceException:
             return False
 
-    def is_one_solid_color(self, element, max_fuzz=8):
+    def diff_images(self, img1b64, img2b64):
+        img1 = Image.open(BytesIO(b64decode(img1b64))).convert("RGB")
+        img2 = Image.open(BytesIO(b64decode(img2b64))).convert("RGB")
+        return ImageChops.difference(img1, img2)
+
+    def is_one_solid_color(self, image, max_fuzz=8):
         # max_fuzz is needed as screenshots can have slight color bleeding/fringing
-        shotb64 = element.screenshot()
-        shot = Image.open(BytesIO(b64decode(shotb64))).convert("RGB")
-        for min, max in shot.getextrema():
+        if isinstance(image, webdriver.client.WebElement):
+            shotb64 = image.screenshot()
+            image = Image.open(BytesIO(b64decode(shotb64))).convert("RGB")
+        for min, max in image.getextrema():
             if max - min > max_fuzz:
                 return False
         return True

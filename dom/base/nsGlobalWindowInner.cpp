@@ -994,11 +994,23 @@ nsGlobalWindowInner::nsGlobalWindowInner(nsGlobalWindowOuter* aOuterWindow,
 #ifdef DEBUG
   mSerial = nsContentUtils::InnerOrOuterWindowCreated();
 
-  MOZ_LOG(gDocShellAndDOMWindowLeakLogging, LogLevel::Info,
-          ("++DOMWINDOW == %d (%p) [pid = %d] [serial = %d] [outer = %p]\n",
-           nsContentUtils::GetCurrentInnerOrOuterWindowCount(),
-           static_cast<void*>(ToCanonicalSupports(this)), getpid(), mSerial,
-           static_cast<void*>(ToCanonicalSupports(aOuterWindow))));
+  if (MOZ_LOG_TEST(gDocShellAndDOMWindowLeakLogging, LogLevel::Info)) {
+    MOZ_LOG(gDocShellAndDOMWindowLeakLogging, LogLevel::Info,
+            ("++DOMWINDOW == %d (%p) [pid = %d] [serial = %d] [outer = %p]\n",
+             nsContentUtils::GetCurrentInnerOrOuterWindowCount(),
+             static_cast<void*>(ToCanonicalSupports(this)), getpid(), mSerial,
+             static_cast<void*>(ToCanonicalSupports(aOuterWindow))));
+
+    nsCOMPtr<nsIObserverService> obs = mozilla::services::GetObserverService();
+    if (obs) {
+      nsString data;
+      data.AppendPrintf(
+          "serial=%d address=0x%" PRIxPTR " type=inner outer=0x%" PRIxPTR,
+          mSerial, reinterpret_cast<uintptr_t>(ToCanonicalSupports(this)),
+          reinterpret_cast<uintptr_t>(ToCanonicalSupports(aOuterWindow)));
+      obs->NotifyObservers(nullptr, "debug-domwindow-created", data.get());
+    }
+  }
 #endif
 
   MOZ_LOG(gDOMLeakPRLogInner, LogLevel::Debug,
@@ -1083,6 +1095,23 @@ nsGlobalWindowInner::~nsGlobalWindowInner() {
          nsContentUtils::GetCurrentInnerOrOuterWindowCount(),
          static_cast<void*>(ToCanonicalSupports(this)), getpid(), mSerial,
          static_cast<void*>(ToCanonicalSupports(outer)), url.get()));
+
+    uint32_t serial = mSerial;
+    NS_DispatchToMainThread(
+        NS_NewRunnableFunction(
+            "TestDOMWindowDestroyed",
+            [serial, url = std::move(url)] {
+              nsCOMPtr<nsIObserverService> obs =
+                  mozilla::services::GetObserverService();
+              if (obs) {
+                nsString data;
+                data.AppendPrintf("serial=%d type=inner url=%s", serial,
+                                  url.get());
+                obs->NotifyObservers(nullptr, "debug-domwindow-destroyed",
+                                     data.get());
+              }
+            }),
+        NS_DISPATCH_FALLIBLE);
   }
 #endif
   MOZ_LOG(gDOMLeakPRLogInner, LogLevel::Debug,
@@ -1275,6 +1304,7 @@ void nsGlobalWindowInner::FreeInnerObjects() {
   mConsole = nullptr;
   mCookieStore = nullptr;
   mDocumentPiP = nullptr;
+  mCloseWatcherManager = nullptr;
 
   mPaintWorklet = nullptr;
 
@@ -1577,6 +1607,7 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN(nsGlobalWindowInner)
       !tmp->mWindowGlobalChild || tmp->mWindowGlobalChild->IsClosed(),
       "How are we unlinking a window before its actor has been destroyed?");
   NS_IMPL_CYCLE_COLLECTION_UNLINK(mWindowGlobalChild)
+  NS_IMPL_CYCLE_COLLECTION_UNLINK(mCloseWatcherManager)
 
   NS_IMPL_CYCLE_COLLECTION_UNLINK(mMenubar)
   NS_IMPL_CYCLE_COLLECTION_UNLINK(mToolbar)
@@ -2109,7 +2140,7 @@ void nsGlobalWindowInner::UpdateParentTarget() {
     eventTarget = mChromeEventHandler;
   }
 
-  mParentTarget = eventTarget;
+  mParentTarget = std::move(eventTarget);
 }
 
 EventTarget* nsGlobalWindowInner::GetTargetForDOMEvent() {
@@ -2681,6 +2712,42 @@ bool nsGlobalWindowInner::SynthesizeMouseEvent(
       CSSPoint(aOffsetX, aOffsetY), offset, presShell->GetPresContext());
   auto result = nsContentUtils::SynthesizeMouseEvent(
       presShell, widget, aType, refPoint, aMouseEventData, aOptions, aCallback);
+  if (result.isErr()) {
+    aError.Throw(result.unwrapErr());
+    return false;
+  }
+
+  return result.unwrap();
+}
+
+bool nsGlobalWindowInner::SynthesizeTouchEvent(
+    const nsAString& aType, const nsTArray<SynthesizeTouchEventData>& aTouches,
+    const int32_t aModifiers, const SynthesizeTouchEventOptions& aOptions,
+    const Optional<OwningNonNull<VoidFunction>>& aCallback,
+    mozilla::ErrorResult& aError) {
+  nsIDocShell* docShell = GetDocShell();
+  RefPtr<PresShell> presShell = docShell ? docShell->GetPresShell() : nullptr;
+  if (!presShell) {
+    aError.Throw(NS_ERROR_FAILURE);
+    return false;
+  }
+
+  nsPoint offset;
+  nsCOMPtr<nsIWidget> widget = nsContentUtils::GetWidget(presShell, &offset);
+  if (!widget) {
+    aError.Throw(NS_ERROR_FAILURE);
+    return false;
+  }
+
+  RefPtr<nsPresContext> presContext = mDoc->GetPresContext();
+  if (!presContext) {
+    aError.Throw(NS_ERROR_FAILURE);
+    return false;
+  }
+
+  auto result = nsContentUtils::SynthesizeTouchEvent(
+      presContext, widget, offset, aType, aTouches, aModifiers, aOptions,
+      aCallback);
   if (result.isErr()) {
     aError.Throw(result.unwrapErr());
     return false;
@@ -3884,6 +3951,13 @@ void nsGlobalWindowInner::ResizeBy(int32_t aWidthDif, int32_t aHeightDif,
                                    ErrorResult& aError) {
   FORWARD_TO_OUTER_OR_THROW(
       ResizeByOuter, (aWidthDif, aHeightDif, aCallerType, aError), aError, );
+}
+
+void nsGlobalWindowInner::MoveResize(int32_t aX, int32_t aY, int32_t aWidth,
+                                     int32_t aHeight, ErrorResult& aError) {
+  const auto callerType = CallerType::System;  // We're ChromeOnly
+  FORWARD_TO_OUTER_OR_THROW(
+      MoveResizeOuter, (aX, aY, aWidth, aHeight, callerType, aError), aError, );
 }
 
 void nsGlobalWindowInner::SizeToContent(
@@ -7378,7 +7452,7 @@ int16_t nsGlobalWindowInner::Orientation(CallerType aCallerType) {
   uint16_t screenAngle = Screen()->GetOrientationAngle();
   if (nsIGlobalObject::ShouldResistFingerprinting(
           aCallerType, RFPTarget::ScreenOrientation)) {
-    CSSIntSize size = mBrowsingContext->GetTopInnerSizeForRFP();
+    CSSIntSize size = mBrowsingContext->TopInnerSizeSpoofedForRFP();
     screenAngle = nsRFPService::ViewportSizeToAngle(size.width, size.height);
   }
   int16_t angle = AssertedCast<int16_t>(screenAngle);
@@ -7515,19 +7589,6 @@ Worklet* nsGlobalWindowInner::GetPaintWorklet(ErrorResult& aRv) {
   }
 
   return mPaintWorklet;
-}
-
-void nsGlobalWindowInner::GetRegionalPrefsLocales(
-    nsTArray<nsString>& aLocales) {
-  MOZ_ASSERT(mozilla::intl::LocaleService::GetInstance());
-
-  AutoTArray<nsCString, 10> rpLocales;
-  mozilla::intl::LocaleService::GetInstance()->GetRegionalPrefsLocales(
-      rpLocales);
-
-  for (const auto& loc : rpLocales) {
-    aLocales.AppendElement(NS_ConvertUTF8toUTF16(loc));
-  }
 }
 
 void nsGlobalWindowInner::GetWebExposedLocales(nsTArray<nsString>& aLocales) {

@@ -10,7 +10,6 @@ import androidx.test.filters.SdkSuppress
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.mozilla.fenix.customannotations.SkipLeaks
@@ -290,7 +289,7 @@ class SettingsSearchTest : TestSetup() {
             changeDefaultSearchEngine(customSearchEngine.title)
             pressBack()
             openManageShortcutsMenu()
-            verifyEngineListContains(customSearchEngine.title, shouldExist = true)
+            verifyEngineListContains(customSearchEngine.title, shouldExist = false)
             pressBack()
         }.goBack {
             verifySettingsOptionSummary("Search", customSearchEngine.title)
@@ -468,8 +467,7 @@ class SettingsSearchTest : TestSetup() {
     @SmokeTest
     @Test
     fun verifyShowSearchSuggestionsToggleTest() {
-        homeScreen(composeTestRule) {
-        }.openSearch {
+        searchScreen(composeTestRule) {
             // The Google related suggestions aren't always displayed on cold run
             // Bugzilla ticket: https://bugzilla.mozilla.org/show_bug.cgi?id=1813587
             clickSearchSelectorButton()
@@ -554,30 +552,26 @@ class SettingsSearchTest : TestSetup() {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/412927
-    @Ignore("Disabled after enabling the composable toolbar and main menu: https://bugzilla.mozilla.org/show_bug.cgi?id=2006295")
     @Test
     fun verifyShowClipboardSuggestionsToggleTest() {
         val link = "https://www.mozilla.org/en-US/"
         setTextToClipBoard(appContext, link)
 
+        homeScreen(composeTestRule) {
+        }.openSearch {
+        }
         navigationToolbar(composeTestRule) {
-            verifyClipboardSuggestionsAreDisplayed(link, true)
+            verifyClipboardSuggestionsAreDisplayed(true)
         }.visitLinkFromClipboard {
             waitForPageToLoad(pageLoadWaitingTime = waitingTimeLong)
         }.openTabDrawer(composeTestRule) {
         }.openNewTab {
         }
         navigationToolbar(composeTestRule) {
-            // After visiting the link from clipboard it shouldn't be displayed again
-            verifyClipboardSuggestionsAreDisplayed(shouldBeDisplayed = false)
-        }.goBackToHomeScreen {
-            setTextToClipBoard(appContext, link)
-        }.openTabDrawer {
-        }.openNewTab {
+            verifyClipboardSuggestionsAreDisplayed(shouldBeDisplayed = true)
         }
-        navigationToolbar(composeTestRule) {
-            verifyClipboardSuggestionsAreDisplayed(link, true)
-        }.goBackToHomeScreen {
+        searchScreen(composeTestRule) {
+        }.dismissSearchBar {
         }.openThreeDotMenu {
         }.clickSettingsButton {
         }.openSearchSubMenu {
@@ -591,7 +585,7 @@ class SettingsSearchTest : TestSetup() {
         }.openNewTab {
         }
         navigationToolbar(composeTestRule) {
-            verifyClipboardSuggestionsAreDisplayed(link, false)
+            verifyClipboardSuggestionsAreDisplayed(false)
         }
     }
 
@@ -640,12 +634,11 @@ class SettingsSearchTest : TestSetup() {
             verifyEnginesShortcutsListHeader()
             verifyManageShortcutsList(composeTestRule)
             verifySearchShortcutChecked(
-                EngineShortcut(name = "Google", checkboxIndex = 1, isChecked = true),
-                EngineShortcut(name = "Bing", checkboxIndex = 4, isChecked = true),
-                EngineShortcut(name = "DuckDuckGo", checkboxIndex = 7, isChecked = true),
-                EngineShortcut(name = "Wikipedia (en)", checkboxIndex = 10, isChecked = true),
-                EngineShortcut(name = "Reddit", checkboxIndex = 13, isChecked = false),
-                EngineShortcut(name = "YouTube", checkboxIndex = 16, isChecked = false),
+                EngineShortcut(name = "Bing", checkboxIndex = 1, isChecked = true),
+                EngineShortcut(name = "DuckDuckGo", checkboxIndex = 4, isChecked = true),
+                EngineShortcut(name = "Wikipedia (en)", checkboxIndex = 7, isChecked = true),
+                EngineShortcut(name = "Reddit", checkboxIndex = 10, isChecked = false),
+                EngineShortcut(name = "YouTube", checkboxIndex = 13, isChecked = false),
             )
         }
     }
@@ -659,14 +652,12 @@ class SettingsSearchTest : TestSetup() {
         }.clickSettingsButton {
         }.openSearchSubMenu {
             openManageShortcutsMenu()
-            selectSearchShortcut(EngineShortcut(name = "Google", checkboxIndex = 1))
-            selectSearchShortcut(EngineShortcut(name = "Reddit", checkboxIndex = 13))
-            selectSearchShortcut(EngineShortcut(name = "YouTube", checkboxIndex = 16))
+            selectSearchShortcut(EngineShortcut(name = "Reddit", checkboxIndex = 10))
+            selectSearchShortcut(EngineShortcut(name = "YouTube", checkboxIndex = 13))
             exitMenu()
         }
         searchScreen(composeTestRule) {
             clickSearchSelectorButton()
-            verifySearchShortcutList("Google", isSearchEngineDisplayed = false)
             verifySearchShortcutList("YouTube", isSearchEngineDisplayed = true)
             verifySearchShortcutList("Reddit", isSearchEngineDisplayed = true)
         }

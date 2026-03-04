@@ -6,6 +6,7 @@ package org.mozilla.fenix.ui
 
 import android.content.res.Configuration
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.mozilla.fenix.customannotations.SkipLeaks
@@ -173,6 +174,23 @@ class SettingsCustomizeTest : TestSetup() {
         }.clickSettingsButton {
         }.openCustomizeSubMenu {
             verifyAppIconOption(composeTestRule, "Dark")
+        }
+    }
+
+    // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3333174
+    @Test
+    fun verifyTheToolbarLayoutSectionTest() {
+        homeScreen(composeTestRule) {
+        }.openThreeDotMenu {
+        }.clickSettingsButton {
+        }.openCustomizeSubMenu {
+            verifyToolbarLayout()
+            verifyToolbarLayoutPreference("Simple")
+            selectExpandedToolbarLayout()
+            clickBottomToolbarToggle()
+            verifyAddressBarPositionPreference("Bottom")
+            verifyToolbarLayout()
+            verifyToolbarLayoutPreference("Expanded")
         }
     }
 }

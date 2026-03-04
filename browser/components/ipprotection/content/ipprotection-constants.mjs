@@ -19,6 +19,12 @@ export const LINKS = Object.freeze({
 
 export const ERRORS = Object.freeze({
   GENERIC: "generic-error",
+  NETWORK: "network-error",
+  TIMEOUT: "timeout-error", // Activation took too long and was aborted
+  MISSING_PROMISE: "missing-activation-promise", // Expected promise was not returned
+  MISSING_ABORT: "missing-abort-controller", // Expected abort controller was not returned
+  PASS_UNAVAILABLE: "pass-unavailable", // No pass was returned from the server
+  SERVER_NOT_FOUND: "server-not-found", // No server was found for the location
 });
 
 export const SIGNIN_DATA = Object.freeze({
@@ -41,3 +47,12 @@ export const ONBOARDING_PREF_FLAGS = {
   EVER_USED_SITE_EXCEPTIONS: 1 << 1,
   EVER_TURNED_ON_VPN: 1 << 2,
 };
+
+export const BANDWIDTH = Object.freeze({
+  BYTES_IN_GB: Math.pow(2, 30),
+  BYTES_IN_MB: Math.pow(2, 20),
+  MAX_IN_GB: 50,
+  FIRST_THRESHOLD: 0.5,
+  SECOND_THRESHOLD: 0.25,
+  THIRD_THRESHOLD: 0.1,
+});

@@ -81,7 +81,7 @@ bool IMEStateManager::sInstalledMenuKeyboardListener = false;
 bool IMEStateManager::sIsGettingNewIMEState = false;
 bool IMEStateManager::sCleaningUpForStoppingIMEStateManagement = false;
 bool IMEStateManager::sIsActive = false;
-MOZ_RUNINIT Maybe<IMEStateManager::PendingFocusedBrowserSwitchingData>
+Maybe<IMEStateManager::PendingFocusedBrowserSwitchingData>
     IMEStateManager::sPendingFocusedBrowserSwitchingData;
 
 class PseudoFocusChangeRunnable : public Runnable {
@@ -1937,7 +1937,7 @@ MOZ_CAN_RUN_SCRIPT static void GetActionHint(const IMEState& aState,
   // return won't submit the form, use "maybenext".
   bool willSubmit = false;
   bool isLastElement = false;
-  HTMLFormElement* formElement = inputElement->GetForm();
+  HTMLFormElement* formElement = inputElement->GetFormInternal();
   // is this a form and does it have a default submit element?
   if (formElement) {
     if (formElement->IsLastActiveElement(inputElement)) {

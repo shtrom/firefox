@@ -209,13 +209,29 @@ class BookmarksRobot(private val composeTestRule: ComposeTestRule) {
         Log.i(TAG, "clickParentFolderSelector: Clicked folder selector")
     }
 
+    fun expandSelectableFolder(title: String) {
+        Log.i(TAG, "expandSelectableFolder: Trying to click expand select folder selector")
+        composeTestRule.expandBookmarkFolderSelector(title).performClick()
+        Log.i(TAG, "expandSelectableFolder: Clicked expand select folder selector")
+    }
+
+    fun closeSelectableFolder(title: String) {
+        Log.i(TAG, "closeSelectableFolder: Trying to click close select folder selector")
+        composeTestRule.expandBookmarkFolderSelector(title).performClick()
+        Log.i(TAG, "closeSelectableFolder: Clicked close select folder selector")
+    }
+
     fun selectFolder(title: String) {
         Log.i(TAG, "selectFolder: Trying to click folder with title: $title")
         composeTestRule.onNodeWithText(title).performClick()
         Log.i(TAG, "selectFolder: Clicked folder with title: $title")
     }
 
+    @OptIn(ExperimentalTestApi::class)
     fun longClickBookmarkedItem(title: String) {
+        Log.i(TAG, "longClickBookmarkedItem: Waiting for $waitingTime for bookmark with title: $title to exist")
+        composeTestRule.waitUntilAtLeastOneExists(hasText(title), waitingTime)
+        Log.i(TAG, "longClickBookmarkedItem: Waited for $waitingTime for bookmark with title: $title to exist")
         Log.i(TAG, "longClickBookmarkedItem: Trying to long click bookmark with title: $title")
         composeTestRule.onNodeWithText(title).performTouchInput { longClick(durationMillis = LONG_CLICK_DURATION) }
         Log.i(TAG, "longClickBookmarkedItem: Long clicked bookmark with title: $title")
@@ -241,7 +257,11 @@ class BookmarksRobot(private val composeTestRule: ComposeTestRule) {
     }
 
     class Transition(private val composeTestRule: ComposeTestRule) {
+        @OptIn(ExperimentalTestApi::class)
         fun openThreeDotMenu(bookmarkedItem: String, interact: ThreeDotMenuBookmarksRobot.() -> Unit): ThreeDotMenuBookmarksRobot.Transition {
+            Log.i(TAG, "openThreeDotMenu: Waiting for $waitingTime for the bookmarked item $bookmarkedItem three dot button to exist")
+            composeTestRule.waitUntilAtLeastOneExists(hasContentDescription("Item Menu for $bookmarkedItem"), waitingTime)
+            Log.i(TAG, "openThreeDotMenu: Waited for $waitingTime for the bookmarked item $bookmarkedItem three dot button to exist")
             Log.i(TAG, "openThreeDotMenu: Trying to click three dot button for bookmark item: $bookmarkedItem")
             composeTestRule.threeDotMenuButton(bookmarkedItem).performClick()
             Log.i(TAG, "openThreeDotMenu: Clicked three dot button for bookmark item: $bookmarkedItem")
@@ -314,6 +334,12 @@ private fun ComposeTestRule.bookmarkNameEditBox() =
 
 private fun ComposeTestRule.bookmarkFolderSelector() =
     onNodeWithText("Bookmarks")
+
+private fun ComposeTestRule.expandBookmarkFolderSelector(title: String) =
+    onNodeWithContentDescription(getStringResource(R.string.bookmark_select_folder_expand_folder_content_description, title))
+
+private fun ComposeTestRule.closeBookmarkFolderSelector(title: String) =
+    onNodeWithContentDescription(getStringResource(R.string.bookmark_select_folder_close_folder_content_description, title))
 
 private fun ComposeTestRule.bookmarkURLEditBox() =
     onNodeWithTag(EDIT_BOOKMARK_ITEM_URL_TEXT_FIELD)

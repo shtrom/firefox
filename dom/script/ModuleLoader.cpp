@@ -26,6 +26,7 @@
 #include "mozilla/CycleCollectedJSContext.h"
 #include "mozilla/LoadInfo.h"
 #include "mozilla/Maybe.h"
+#include "mozilla/StaticPrefs_dom.h"
 #include "mozilla/StyleSheet.h"
 #include "mozilla/StyleSheetInlines.h"
 #include "mozilla/dom/AutoEntryScript.h"
@@ -97,7 +98,7 @@ bool ModuleLoader::CanStartLoad(ModuleLoadRequest* aRequest, nsresult* aRvOut) {
 
 nsresult ModuleLoader::StartFetch(ModuleLoadRequest* aRequest) {
   if (aRequest->IsCachedStencil()) {
-    GetScriptLoader()->EmulateNetworkEvents(aRequest);
+    GetScriptLoader()->EmulateNetworkEvents(aRequest, Nothing());
     SetModuleFetchStarted(aRequest);
     return aRequest->OnFetchComplete(NS_OK);
   }
@@ -130,7 +131,8 @@ nsresult ModuleLoader::StartFetch(ModuleLoadRequest* aRequest) {
 
   // https://html.spec.whatwg.org/multipage/webappapis.html#fetch-an-import()-module-script-graph
   // Step 1. Disallow further import maps given settings object.
-  if (!aRequest->GetScriptLoadContext()->IsPreload()) {
+  if (!aRequest->GetScriptLoadContext()->IsPreload() &&
+      !StaticPrefs::dom_multiple_import_maps_enabled()) {
     LOG(("ScriptLoadRequest (%p): Disallow further import maps.", aRequest));
     DisallowImportMaps();
   }
@@ -240,18 +242,9 @@ nsresult ModuleLoader::CompileJavaScriptOrWasmModule(
 
 #ifdef NIGHTLY_BUILD
   if (aRequest->HasWasmMimeTypeEssence()) {
-    MOZ_ASSERT(aRequest->IsTextSource());
-
-    ModuleLoader::MaybeSourceText maybeSource;
-    nsresult rv = aRequest->GetScriptSource(aCx, &maybeSource,
-                                            aRequest->mLoadContext.get());
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    auto compile = [&](auto& source) {
-      return JS::CompileWasmModule(aCx, aOptions, source);
-    };
-
-    auto* wasmModule = maybeSource.mapNonEmpty(compile);
+    MOZ_ASSERT(aRequest->IsWasmBytes());
+    auto* wasmModule =
+        JS::CompileWasmModule(aCx, aOptions, aRequest->WasmBytes());
     if (!wasmModule) {
       return NS_ERROR_FAILURE;
     }
@@ -260,6 +253,7 @@ nsresult ModuleLoader::CompileJavaScriptOrWasmModule(
     return NS_OK;
   }
 #endif
+  MOZ_ASSERT(!aRequest->IsWasmBytes());
 
   if (aRequest->IsCachedStencil()) {
     JS::InstantiateOptions instantiateOptions(aOptions);
@@ -504,6 +498,9 @@ already_AddRefed<ModuleLoadRequest> ModuleLoader::CreateRequest(
     MOZ_ASSERT(root);
     LoadContextBase* loadContext = root->mLoadContext;
     context->mScriptMode = loadContext->AsWindowContext()->mScriptMode;
+    if (loadContext->AsWindowContext()->mIsPreload) {
+      context->mIsPreload = true;
+    }
     kind = ModuleLoadRequest::Kind::StaticImport;
   }
 

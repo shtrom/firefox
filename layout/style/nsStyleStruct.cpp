@@ -355,7 +355,9 @@ AnchorPosResolutionParams::AutoResolutionOverrideParams::
               // It is presumed that this is called on a reflowed frame.
               return false;
             }
-            return references->Lookup(references->mDefaultAnchorName)->isSome();
+            const auto* entry = references->Lookup(
+                {references->mDefaultAnchorName, references->mAnchorTreeScope});
+            return entry && entry->isSome();
           }())} {}
 
 AnchorResolvedMargin AnchorResolvedMarginHelper::ResolveAnchor(
@@ -818,7 +820,6 @@ nsStyleSVG::nsStyleSVG()
       mShapeRendering(StyleShapeRendering::Auto),
       mStrokeLinecap(StyleStrokeLinecap::Butt),
       mStrokeLinejoin(StyleStrokeLinejoin::Miter),
-      mDominantBaseline(StyleDominantBaseline::Auto),
       mTextAnchor(StyleTextAnchor::Start) {
   MOZ_COUNT_CTOR(nsStyleSVG);
 }
@@ -844,7 +845,6 @@ nsStyleSVG::nsStyleSVG(const nsStyleSVG& aSource)
       mShapeRendering(aSource.mShapeRendering),
       mStrokeLinecap(aSource.mStrokeLinecap),
       mStrokeLinejoin(aSource.mStrokeLinejoin),
-      mDominantBaseline(aSource.mDominantBaseline),
       mTextAnchor(aSource.mTextAnchor) {
   MOZ_COUNT_CTOR(nsStyleSVG);
 }
@@ -900,7 +900,6 @@ nsChangeHint nsStyleSVG::CalcDifference(const nsStyleSVG& aNewData) const {
       mStrokeMiterlimit != aNewData.mStrokeMiterlimit ||
       mStrokeLinecap != aNewData.mStrokeLinecap ||
       mStrokeLinejoin != aNewData.mStrokeLinejoin ||
-      mDominantBaseline != aNewData.mDominantBaseline ||
       mTextAnchor != aNewData.mTextAnchor) {
     return hint | nsChangeHint_NeedReflow | nsChangeHint_RepaintFrame;
   }
@@ -1087,7 +1086,7 @@ nsStylePosition::nsStylePosition()
       mHeight(StyleSize::Auto()),
       mMinHeight(StyleSize::Auto()),
       mMaxHeight(StyleMaxSize::None()),
-      mPositionAnchor(StylePositionAnchor::None()),
+      mPositionAnchor(StylePositionAnchorKeyword::None()),
       mPositionVisibility(StylePositionVisibility::ANCHORS_VISIBLE),
       mPositionTryFallbacks(StylePositionTryFallbacks()),
       mPositionTryOrder(StylePositionTryOrder::Normal),
@@ -1105,7 +1104,7 @@ nsStylePosition::nsStylePosition()
       mFlexDirection(StyleFlexDirection::Row),
       mFlexWrap(StyleFlexWrap::Nowrap),
       mObjectFit(StyleObjectFit::Fill),
-      mBoxSizing(StyleBoxSizing::Content),
+      mBoxSizing(StyleBoxSizing::ContentBox),
       mOrder(0),
       mFlexGrow(0.0f),
       mFlexShrink(1.0f),
@@ -1607,41 +1606,57 @@ static bool GradientItemsAreOpaque(
 
 template <>
 bool StyleGradient::IsOpaque() const {
-  if (IsLinear()) {
-    return GradientItemsAreOpaque(AsLinear().items.AsSpan());
+  switch (tag) {
+    case Tag::Linear:
+      return GradientItemsAreOpaque(AsLinear().items.AsSpan());
+    case Tag::Radial:
+      return GradientItemsAreOpaque(AsRadial().items.AsSpan());
+    case Tag::Conic:
+      return GradientItemsAreOpaque(AsConic().items.AsSpan());
   }
-  if (IsRadial()) {
-    return GradientItemsAreOpaque(AsRadial().items.AsSpan());
-  }
-  return GradientItemsAreOpaque(AsConic().items.AsSpan());
+  MOZ_ASSERT_UNREACHABLE("Unexpected gradient type");
+  return false;
 }
 
 template <>
 bool StyleImage::IsOpaque() const {
-  if (IsImageSet()) {
-    return FinalImage().IsOpaque();
+  switch (tag) {
+    case Tag::ImageSet:
+      return FinalImage().IsOpaque();
+    case Tag::Gradient:
+      return AsGradient()->IsOpaque();
+    case Tag::Url: {
+      if (!IsComplete()) {
+        return false;
+      }
+      MOZ_ASSERT(GetImageRequest(), "should've returned earlier above");
+      nsCOMPtr<imgIContainer> imageContainer;
+      GetImageRequest()->GetImage(getter_AddRefs(imageContainer));
+      MOZ_ASSERT(imageContainer, "IsComplete() said image container is ready");
+      return imageContainer->WillDrawOpaqueNow();
+    }
+    case Tag::CrossFade:
+      for (const auto& el : AsCrossFade()->elements.AsSpan()) {
+        if (el.image.IsColor()) {
+          if (el.image.AsColor().MaybeTransparent()) {
+            return false;
+          }
+          continue;
+        }
+        MOZ_ASSERT(el.image.IsImage());
+        if (!el.image.AsImage().IsOpaque()) {
+          return false;
+        }
+      }
+      return true;
+    case Tag::LightDark:
+      MOZ_FALLTHROUGH_ASSERT("Should be computed already");
+    case Tag::Element:
+    case Tag::MozSymbolicIcon:
+    case Tag::None:
+      break;
   }
-
-  if (!IsComplete()) {
-    return false;
-  }
-
-  if (IsGradient()) {
-    return AsGradient()->IsOpaque();
-  }
-
-  if (IsElement() || IsMozSymbolicIcon()) {
-    return false;
-  }
-
-  MOZ_ASSERT(IsImageRequestType(), "unexpected image type");
-  MOZ_ASSERT(GetImageRequest(), "should've returned earlier above");
-
-  nsCOMPtr<imgIContainer> imageContainer;
-  GetImageRequest()->GetImage(getter_AddRefs(imageContainer));
-  MOZ_ASSERT(imageContainer, "IsComplete() said image container is ready");
-
-  return imageContainer->WillDrawOpaqueNow();
+  return false;
 }
 
 template <>
@@ -2223,7 +2238,8 @@ bool StyleAnimation::operator==(const StyleAnimation& aOther) const {
          mName == aOther.mName && mDirection == aOther.mDirection &&
          mFillMode == aOther.mFillMode && mPlayState == aOther.mPlayState &&
          mIterationCount == aOther.mIterationCount &&
-         mComposition == aOther.mComposition && mTimeline == aOther.mTimeline;
+         mComposition == aOther.mComposition && mTimeline == aOther.mTimeline &&
+         mRangeStart == aOther.mRangeStart && mRangeEnd == aOther.mRangeEnd;
 }
 
 // --------------------
@@ -2278,13 +2294,14 @@ nsStyleDisplay::nsStyleDisplay()
                        {0.}},
       mChildPerspective(StylePerspective::None()),
       mPerspectiveOrigin(Position::FromPercentage(0.5f)),
-      mVerticalAlign(
-          StyleVerticalAlign::Keyword(StyleVerticalAlignKeyword::Baseline)),
+      mAlignmentBaseline(StyleAlignmentBaseline::Baseline),
+      mBaselineShift(StyleBaselineShift::Length(LengthPercentage::Zero())),
       mBaselineSource(StyleBaselineSource::Auto),
       mWebkitLineClamp(0),
       mShapeMargin(LengthPercentage::Zero()),
       mShapeOutside(StyleShapeOutside::None()),
-      mAnchorScope(StyleAnchorScope::None()) {
+      mAnchorScope(StyleScopedNameKeyword::None()),
+      mTimelineScope(StyleScopedNameKeyword::None()) {
   MOZ_COUNT_CTOR(nsStyleDisplay);
 }
 
@@ -2335,14 +2352,16 @@ nsStyleDisplay::nsStyleDisplay(const nsStyleDisplay& aSource)
       mTransformOrigin(aSource.mTransformOrigin),
       mChildPerspective(aSource.mChildPerspective),
       mPerspectiveOrigin(aSource.mPerspectiveOrigin),
-      mVerticalAlign(aSource.mVerticalAlign),
+      mAlignmentBaseline(aSource.mAlignmentBaseline),
+      mBaselineShift(aSource.mBaselineShift),
       mBaselineSource(aSource.mBaselineSource),
       mWebkitLineClamp(aSource.mWebkitLineClamp),
       mShapeImageThreshold(aSource.mShapeImageThreshold),
       mShapeMargin(aSource.mShapeMargin),
       mShapeOutside(aSource.mShapeOutside),
       mAnchorName(aSource.mAnchorName),
-      mAnchorScope(aSource.mAnchorScope) {
+      mAnchorScope(aSource.mAnchorScope),
+      mTimelineScope(aSource.mTimelineScope) {
   MOZ_COUNT_CTOR(nsStyleDisplay);
 }
 
@@ -2580,7 +2599,8 @@ nsChangeHint nsStyleDisplay::CalcDifference(
   }
 
   if (mWebkitLineClamp != aNewData.mWebkitLineClamp ||
-      mVerticalAlign != aNewData.mVerticalAlign ||
+      mAlignmentBaseline != aNewData.mAlignmentBaseline ||
+      mBaselineShift != aNewData.mBaselineShift ||
       mBaselineSource != aNewData.mBaselineSource) {
     // XXX Can this just be AllReflowHints + RepaintFrame, and be included in
     // the block below?
@@ -2719,7 +2739,8 @@ nsChangeHint nsStyleDisplay::CalcDifference(
                 mContain != aNewData.mContain ||
                 mContainerName != aNewData.mContainerName ||
                 mAnchorName != aNewData.mAnchorName ||
-                mAnchorScope != aNewData.mAnchorScope)) {
+                mAnchorScope != aNewData.mAnchorScope ||
+                mTimelineScope != aNewData.mTimelineScope)) {
     hint |= nsChangeHint_NeutralChange;
   }
 
@@ -2766,8 +2787,9 @@ nsStyleVisibility::nsStyleVisibility(const Document& aDocument)
       mImageRendering(StyleImageRendering::Auto),
       mWritingMode(StyleWritingModeProperty::HorizontalTb),
       mTextOrientation(StyleTextOrientation::Mixed),
-      mMozBoxCollapse(StyleMozBoxCollapse::Flex),
+      mMozBoxCollapse(StyleBoxCollapse::Flex),
       mPrintColorAdjust(StylePrintColorAdjust::Economy),
+      mDominantBaseline(StyleDominantBaseline::Auto),
       mImageOrientation(StyleImageOrientation::FromImage) {
   MOZ_COUNT_CTOR(nsStyleVisibility);
 }
@@ -2780,6 +2802,7 @@ nsStyleVisibility::nsStyleVisibility(const nsStyleVisibility& aSource)
       mTextOrientation(aSource.mTextOrientation),
       mMozBoxCollapse(aSource.mMozBoxCollapse),
       mPrintColorAdjust(aSource.mPrintColorAdjust),
+      mDominantBaseline(aSource.mDominantBaseline),
       mImageOrientation(aSource.mImageOrientation) {
   MOZ_COUNT_CTOR(nsStyleVisibility);
 }
@@ -2789,12 +2812,14 @@ nsChangeHint nsStyleVisibility::CalcDifference(
   nsChangeHint hint = nsChangeHint(0);
 
   if (mDirection != aNewData.mDirection ||
-      mWritingMode != aNewData.mWritingMode) {
+      mWritingMode != aNewData.mWritingMode ||
+      mTextOrientation != aNewData.mTextOrientation) {
     // It's important that a change in mWritingMode results in frame
     // reconstruction, because it may affect intrinsic size (see
     // nsSubDocumentFrame::GetIntrinsicISize/BSize).
-    // Also, the used writing-mode value is now a field on nsIFrame and some
-    // classes (e.g. table rows/cells) copy their value from an ancestor.
+    // Also, the used WritingMode value is now a field on nsIFrame and some
+    // classes (e.g. table rows/cells) copy their value from an ancestor, and
+    // that is a combo of direction+writing-mode+text-orientation.
     return nsChangeHint_ReconstructFrame;
   }
   if (mImageOrientation != aNewData.mImageOrientation) {
@@ -2812,8 +2837,8 @@ nsChangeHint nsStyleVisibility::CalcDifference(
       hint |= NS_STYLE_HINT_VISUAL;
     }
   }
-  if (mTextOrientation != aNewData.mTextOrientation ||
-      mMozBoxCollapse != aNewData.mMozBoxCollapse) {
+  if (mMozBoxCollapse != aNewData.mMozBoxCollapse ||
+      mDominantBaseline != aNewData.mDominantBaseline) {
     hint |= NS_STYLE_HINT_REFLOW;
   }
   if (mImageRendering != aNewData.mImageRendering) {
@@ -2925,7 +2950,8 @@ nsStyleTextReset::nsStyleTextReset()
       mTextDecorationColor(StyleColor::CurrentColor()),
       mTextDecorationThickness(StyleTextDecorationLength::Auto()),
       mTextDecorationInset(StyleTextDecorationInset::Length(
-          StyleLength::Zero(), StyleLength::Zero())) {
+          StyleLength::Zero(), StyleLength::Zero())),
+      mTextBoxTrim(StyleTextBoxTrim::NONE) {
   MOZ_COUNT_CTOR(nsStyleTextReset);
 }
 
@@ -2937,14 +2963,16 @@ nsStyleTextReset::nsStyleTextReset(const nsStyleTextReset& aSource)
       mInitialLetter(aSource.mInitialLetter),
       mTextDecorationColor(aSource.mTextDecorationColor),
       mTextDecorationThickness(aSource.mTextDecorationThickness),
-      mTextDecorationInset(aSource.mTextDecorationInset) {
+      mTextDecorationInset(aSource.mTextDecorationInset),
+      mTextBoxTrim(aSource.mTextBoxTrim) {
   MOZ_COUNT_CTOR(nsStyleTextReset);
 }
 
 nsChangeHint nsStyleTextReset::CalcDifference(
     const nsStyleTextReset& aNewData) const {
   if (mUnicodeBidi != aNewData.mUnicodeBidi ||
-      mInitialLetter != aNewData.mInitialLetter) {
+      mInitialLetter != aNewData.mInitialLetter ||
+      mTextBoxTrim != aNewData.mTextBoxTrim) {
     return NS_STYLE_HINT_REFLOW;
   }
 
@@ -3003,6 +3031,7 @@ nsStyleText::nsStyleText(const Document& aDocument)
       mTabSize(StyleNonNegativeLengthOrNumber::Number(8.f)),
       mWordSpacing(LengthPercentage::Zero()),
       mLetterSpacing(LengthPercentage::Zero()),
+      mTextBoxEdge(StyleTextBoxEdge::Auto()),
       mTextUnderlineOffset(LengthPercentageOrAuto::Auto()),
       mTextDecorationSkipInk(StyleTextDecorationSkipInk::Auto),
       mTextUnderlinePosition(StyleTextUnderlinePosition::AUTO),
@@ -3039,6 +3068,7 @@ nsStyleText::nsStyleText(const nsStyleText& aSource)
       mWordSpacing(aSource.mWordSpacing),
       mLetterSpacing(aSource.mLetterSpacing),
       mTextIndent(aSource.mTextIndent),
+      mTextBoxEdge(aSource.mTextBoxEdge),
       mTextUnderlineOffset(aSource.mTextUnderlineOffset),
       mTextDecorationSkipInk(aSource.mTextDecorationSkipInk),
       mTextUnderlinePosition(aSource.mTextUnderlinePosition),
@@ -3078,6 +3108,7 @@ nsChangeHint nsStyleText::CalcDifference(const nsStyleText& aNewData) const {
       (mTextSizeAdjust != aNewData.mTextSizeAdjust) ||
       (mLetterSpacing != aNewData.mLetterSpacing) ||
       (mTextIndent != aNewData.mTextIndent) ||
+      (mTextBoxEdge != aNewData.mTextBoxEdge) ||
       (mTextJustify != aNewData.mTextJustify) ||
       (mWordSpacing != aNewData.mWordSpacing) ||
       (mTabSize != aNewData.mTabSize) ||
@@ -3290,6 +3321,8 @@ nsStyleUIReset::nsStyleUIReset()
       mAnimationIterationCountCount(1),
       mAnimationCompositionCount(1),
       mAnimationTimelineCount(1),
+      mAnimationRangeStartCount(1),
+      mAnimationRangeEndCount(1),
       mScrollTimelines(
           nsStyleAutoArray<StyleScrollTimeline>::WITH_SINGLE_INITIAL_ELEMENT),
       mScrollTimelineNameCount(1),
@@ -3332,6 +3365,8 @@ nsStyleUIReset::nsStyleUIReset(const nsStyleUIReset& aSource)
       mAnimationIterationCountCount(aSource.mAnimationIterationCountCount),
       mAnimationCompositionCount(aSource.mAnimationCompositionCount),
       mAnimationTimelineCount(aSource.mAnimationTimelineCount),
+      mAnimationRangeStartCount(aSource.mAnimationRangeStartCount),
+      mAnimationRangeEndCount(aSource.mAnimationRangeEndCount),
       mScrollTimelines(aSource.mScrollTimelines.Clone()),
       mScrollTimelineNameCount(aSource.mScrollTimelineNameCount),
       mScrollTimelineAxisCount(aSource.mScrollTimelineAxisCount),
@@ -3411,6 +3446,8 @@ nsChangeHint nsStyleUIReset::CalcDifference(
            aNewData.mAnimationIterationCountCount ||
        mAnimationCompositionCount != aNewData.mAnimationCompositionCount ||
        mAnimationTimelineCount != aNewData.mAnimationTimelineCount ||
+       mAnimationRangeStartCount != aNewData.mAnimationRangeStartCount ||
+       mAnimationRangeEndCount != aNewData.mAnimationRangeEndCount ||
        mIMEMode != aNewData.mIMEMode ||
        mWindowOpacity != aNewData.mWindowOpacity ||
        mMozWindowInputRegionMargin != aNewData.mMozWindowInputRegionMargin ||

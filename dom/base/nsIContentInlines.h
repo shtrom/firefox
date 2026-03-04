@@ -25,7 +25,9 @@ inline bool nsIContent::IsInChromeDocument() const {
 }
 
 inline void nsIContent::SetPrimaryFrame(nsIFrame* aFrame) {
-  MOZ_ASSERT(IsInUncomposedDoc() || IsInShadowTree(), "This will end badly!");
+  MOZ_ASSERT(!aFrame || IsInUncomposedDoc() || IsInShadowTree(),
+             "This will end badly!");
+  MOZ_ASSERT(!aFrame || IsInComposedDoc(), "This will end badly!");
 
   // <area> is known to trigger this, see bug 749326 and bug 135040.
   MOZ_ASSERT(IsHTMLElement(nsGkAtoms::area) || !aFrame || !mPrimaryFrame ||
@@ -46,14 +48,6 @@ inline void nsIContent::SetPrimaryFrame(nsIFrame* aFrame) {
   }
 
   mPrimaryFrame = aFrame;
-}
-
-inline mozilla::dom::ShadowRoot* nsIContent::GetShadowRoot() const {
-  if (!IsElement()) {
-    return nullptr;
-  }
-
-  return AsElement()->GetShadowRoot();
 }
 
 template <nsINode::FlattenedParentType aType>
@@ -251,8 +245,7 @@ inline void nsIContent::HandleShadowDOMRelatedInsertionSteps(bool aHadParent) {
   }
 }
 
-inline void nsIContent::HandleShadowDOMRelatedRemovalSteps(bool aNullParent,
-                                                           bool aInBatch) {
+inline void nsIContent::HandleShadowDOMRelatedRemovalSteps(bool aNullParent) {
   using mozilla::dom::Element;
   using mozilla::dom::ShadowRoot;
 
@@ -262,7 +255,7 @@ inline void nsIContent::HandleShadowDOMRelatedRemovalSteps(bool aNullParent,
     // (with already disconnected anonymous content subtrees).
     if (Element* parentElement = Element::FromNodeOrNull(mParent)) {
       if (ShadowRoot* shadow = parentElement->GetShadowRoot()) {
-        shadow->MaybeUnslotHostChild(*this, aInBatch);
+        shadow->MaybeUnslotHostChild(*this);
       }
       HandleInsertionToOrRemovalFromSlot();
     }

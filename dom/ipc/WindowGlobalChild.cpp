@@ -586,15 +586,10 @@ mozilla::ipc::IPCResult WindowGlobalChild::RecvRestoreTabContent(
   return IPC_OK();
 }
 
-IPCResult WindowGlobalChild::RecvRawMessage(
-    const JSActorMessageMeta& aMeta, JSIPCValue&& aData,
-    const UniquePtr<ClonedMessageData>& aStack) {
-  UniquePtr<StructuredCloneData> stack;
-  if (aStack) {
-    stack = MakeUnique<StructuredCloneData>();
-    stack->BorrowFromClonedMessageData(*aStack);
-  }
-  ReceiveRawMessage(aMeta, std::move(aData), std::move(stack));
+IPCResult WindowGlobalChild::RecvRawMessage(const JSActorMessageMeta& aMeta,
+                                            JSIPCValue&& aData,
+                                            StructuredCloneData* aStack) {
+  ReceiveRawMessage(aMeta, std::move(aData), aStack);
   return IPC_OK();
 }
 
@@ -622,7 +617,9 @@ IPCResult WindowGlobalChild::RecvProcessCloseRequest(
   RefPtr<nsFocusManager> focusManager = nsFocusManager::GetFocusManager();
   RefPtr<dom::BrowsingContext> focusedContext =
       focusManager ? focusManager->GetFocusedBrowsingContext() : nullptr;
-  MOZ_ASSERT(focusedContext, "Cannot find focused context");
+  if (!focusedContext) {
+    return IPC_OK();
+  }
   // Only the currently focused context's CloseWatcher should be processed.
   if (RefPtr<Document> doc = focusedContext->GetExtantDocument()) {
     RefPtr<nsPIDOMWindowInner> win = doc->GetInnerWindow();

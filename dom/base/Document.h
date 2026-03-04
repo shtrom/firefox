@@ -4,8 +4,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef mozilla_dom_Document_h___
-#define mozilla_dom_Document_h___
+#ifndef mozilla_dom_Document_h_
+#define mozilla_dom_Document_h_
 
 #include <bitset>
 #include <cstddef>
@@ -130,7 +130,6 @@ class ElementCreationOptionsOrString;
 class InfallibleAllocPolicy;
 class JSObject;
 class JSTracer;
-class PLDHashTable;
 class PolicyContainer;
 class gfxUserFontSet;
 class mozIDOMWindowProxy;
@@ -356,7 +355,7 @@ class PostMessageEvent;
 
 #define DEPRECATED_OPERATION(_op) e##_op,
 enum class DeprecatedOperations : uint16_t {
-#include "nsDeprecatedOperationList.h"
+#include "nsDeprecatedOperationList.inc"
   eDeprecatedOperationCount
 };
 #undef DEPRECATED_OPERATION
@@ -1313,19 +1312,13 @@ class Document : public nsINode,
 
   StorageAccessAPIHelper::PerformPermissionGrant CreatePermissionGrantPromise(
       nsPIDOMWindowInner* aInnerWindow, nsIPrincipal* aPrincipal,
-      bool aHasUserInteraction, bool aRequireUserInteraction,
-      const Maybe<nsCString>& aTopLevelBaseDomain, bool aFrameOnly);
+      bool aHasUserInteraction, bool aRequireUserInteraction, bool aFrameOnly);
 
   already_AddRefed<Promise> RequestStorageAccess(ErrorResult& aRv);
 
   already_AddRefed<Promise> RequestStorageAccessForOrigin(
       const nsAString& aThirdPartyOrigin, const bool aRequireUserInteraction,
       ErrorResult& aRv);
-
-  already_AddRefed<Promise> RequestStorageAccessUnderSite(
-      const nsAString& aSerializedSite, ErrorResult& aRv);
-  already_AddRefed<Promise> CompleteStorageAccessRequestFromSite(
-      const nsAString& aSerializedOrigin, ErrorResult& aRv);
 
   bool UseRegularPrincipal() const;
 
@@ -1610,6 +1603,7 @@ class Document : public nsINode,
   nsresult InitIntegrityPolicy(nsIChannel* aChannel);
   nsresult InitCOEP(nsIChannel* aChannel);
   nsresult InitDocPolicy(nsIChannel* aChannel);
+  nsresult InitTLSCertificateBinding(nsIChannel* aChannel);
 
   nsresult InitReferrerInfo(nsIChannel* aChannel);
 
@@ -1985,6 +1979,11 @@ class Document : public nsINode,
   MOZ_CAN_RUN_SCRIPT bool TryAutoFocusCandidate(Element& aElement);
 
  public:
+  void SetAncestorOriginsList(nsTArray<nsString>&& aAncestorOriginsList);
+  Span<const nsString> GetAncestorOriginsList() const;
+  // https://html.spec.whatwg.org/#concept-location-ancestor-origins-list
+  already_AddRefed<DOMStringList> AncestorOrigins() const;
+
   // Removes all the elements with fullscreen flag set from the top layer, and
   // clears their fullscreen flag.
   void CleanupFullscreenState();
@@ -3366,7 +3365,7 @@ class Document : public nsINode,
 
 #define DOCUMENT_WARNING(_op) e##_op,
   enum DocumentWarnings {
-#include "nsDocumentWarningList.h"
+#include "nsDocumentWarningList.inc"
     eDocumentWarningCount
   };
 #undef DOCUMENT_WARNING
@@ -3385,6 +3384,9 @@ class Document : public nsINode,
 
   // Posts an event to call UpdateVisibilityState.
   void PostVisibilityUpdateEvent();
+
+  // https://html.spec.whatwg.org/#reveal
+  void Reveal();
 
   bool IsSyntheticDocument() const { return mIsSyntheticDocument; }
 
@@ -3698,6 +3700,12 @@ class Document : public nsINode,
    */
   already_AddRefed<nsDOMCaretPosition> CaretPositionFromPoint(
       float aX, float aY, const CaretPositionFromPointOptions& aOptions);
+
+  /**
+   * Wrapper around CaretPositionFromPoint that returns Range instead of
+   * CaretPosition.
+   */
+  already_AddRefed<nsRange> CaretRangeFromPoint(int32_t aX, int32_t aY);
 
   Element* GetScrollingElement();
   // A way to check whether a given element is what would get returned from
@@ -5239,6 +5247,9 @@ class Document : public nsINode,
   // while a paste event is being handled in JS.
   bool mClipboardCopyTriggered : 1;
 
+  // https://html.spec.whatwg.org/#has-been-revealed
+  bool mHasBeenRevealed : 1;
+
   // The fingerprinting protections overrides for this document. The value will
   // override the default enabled fingerprinting protections for this document.
   // This will only get populated if these is one that comes from the local
@@ -5328,6 +5339,8 @@ class Document : public nsINode,
 
  private:
   nsCString mContentType;
+
+  nsTArray<nsString> mAncestorOriginsList;
 
  protected:
   // The document's security info
@@ -5499,11 +5512,18 @@ class Document : public nsINode,
   // https://drafts.csswg.org/css-viewport/#interactive-widget-section
   dom::InteractiveWidget mInteractiveWidgetMode;
 
-  // XXXdholbert This should really be modernized to a nsTHashMap or similar,
-  // though note that the modernization will need to take care to also convert
-  // the special hash_table_ops logic (e.g. how SubDocClearEntry clears the
-  // parent document as part of cleaning up an entry in this table).
-  UniquePtr<PLDHashTable> mSubDocuments;
+  // Custom deleter for a `unique_ptr<Document>` which first clears the
+  // ParentDocument edge, then releases the held reference to the document.
+  struct ClearParentDocumentDeleter {
+    void operator()(Document* aDocument) {
+      aDocument->SetParentDocument(nullptr);
+      NS_RELEASE(aDocument);
+    }
+  };
+
+  nsTHashMap<RefPtr<Element>,
+             std::unique_ptr<Document, ClearParentDocumentDeleter>>
+      mSubDocuments;
 
   class HeaderData;
   UniquePtr<HeaderData> mHeaderData;
@@ -5769,6 +5789,8 @@ class Document : public nsINode,
   RefPtr<class FragmentDirective> mFragmentDirective;
   UniquePtr<RadioGroupContainer> mRadioGroupContainer;
 
+  nsCOMPtr<nsIURI> mTLSCertificateBindingURI;
+
  public:
   // Needs to be public because the bindings code pokes at it.
   JS::ExpandoAndGeneration mExpandoAndGeneration;
@@ -5791,6 +5813,10 @@ class Document : public nsINode,
                                               const nsAString& aHTML,
                                               const SetHTMLOptions& aOptions,
                                               ErrorResult& aError);
+
+  nsIURI* GetTlsCertificateBindingURI() const {
+    return mTLSCertificateBindingURI;
+  }
 };
 
 enum class SyncOperationBehavior { eSuspendInput, eAllowInput };
@@ -5958,4 +5984,4 @@ inline nsISupports* ToSupports(mozilla::dom::Document* aDoc) {
   return static_cast<nsINode*>(aDoc);
 }
 
-#endif /* mozilla_dom_Document_h___ */
+#endif /* mozilla_dom_Document_h_ */

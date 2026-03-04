@@ -24,8 +24,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,22 +39,22 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
-import mozilla.components.browser.state.state.createTab
 import mozilla.components.compose.base.button.ExtendedFloatingActionButton
 import mozilla.components.compose.base.button.FloatingActionButtonDefaults
+import mozilla.components.compose.base.button.TextButton
 import mozilla.components.compose.base.menu.DropdownMenu
 import mozilla.components.compose.base.menu.MenuItem
 import mozilla.components.compose.base.modifier.animateRotation
 import mozilla.components.compose.base.text.Text
 import mozilla.components.compose.base.theme.surfaceDimVariant
-import mozilla.components.lib.state.ext.observeAsState
 import org.mozilla.fenix.R
-import org.mozilla.fenix.tabstray.Page
-import org.mozilla.fenix.tabstray.TabsTrayAction
-import org.mozilla.fenix.tabstray.TabsTrayState
-import org.mozilla.fenix.tabstray.TabsTrayState.Mode
-import org.mozilla.fenix.tabstray.TabsTrayStore
 import org.mozilla.fenix.tabstray.TabsTrayTestTag
+import org.mozilla.fenix.tabstray.data.createTab
+import org.mozilla.fenix.tabstray.redux.action.TabsTrayAction
+import org.mozilla.fenix.tabstray.redux.state.Page
+import org.mozilla.fenix.tabstray.redux.state.TabsTrayState
+import org.mozilla.fenix.tabstray.redux.state.TabsTrayState.Mode
+import org.mozilla.fenix.tabstray.redux.store.TabsTrayStore
 import org.mozilla.fenix.theme.FirefoxTheme
 import androidx.compose.material3.FloatingActionButtonDefaults as M3FloatingActionButtonDefaults
 import mozilla.components.ui.icons.R as iconsR
@@ -92,7 +92,7 @@ internal fun TabManagerFloatingToolbar(
     onAccountSettingsClick: () -> Unit,
     onDeleteAllTabsClick: () -> Unit,
 ) {
-    val state by tabsTrayStore.observeAsState(initialValue = tabsTrayStore.state) { it }
+    val state by tabsTrayStore.stateFlow.collectAsState()
     val privateTabsLocked = pbmLocked && state.selectedPage == Page.PrivateTabs
 
     AnimatedVisibility(
@@ -102,11 +102,12 @@ internal fun TabManagerFloatingToolbar(
         exit = fadeOut(),
     ) {
         Row(
+            modifier = Modifier.padding(horizontal = FirefoxTheme.layout.space.static200),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier.weight(1f),
-                contentAlignment = Alignment.CenterEnd,
+                contentAlignment = Alignment.CenterStart,
             ) {
                 FloatingToolbarActions(
                     state = state,
@@ -130,7 +131,7 @@ internal fun TabManagerFloatingToolbar(
 
             Box(
                 modifier = Modifier.weight(1f),
-                contentAlignment = Alignment.CenterStart,
+                contentAlignment = Alignment.CenterEnd,
             ) {
                 FloatingToolbarFAB(
                     state = state,
@@ -329,18 +330,16 @@ private fun CloseAllTabsConfirmationDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(
-                    text = stringResource(R.string.tab_manager_close_all_tabs_dialog_confirm),
-                )
-            }
+            TextButton(
+                text = stringResource(R.string.tab_manager_close_all_tabs_dialog_confirm),
+                onClick = onConfirm,
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(
-                    text = stringResource(R.string.tab_manager_close_all_tabs_dialog_cancel),
-                )
-            }
+            TextButton(
+                text = stringResource(R.string.tab_manager_close_all_tabs_dialog_cancel),
+                onClick = onDismiss,
+            )
         },
     )
 }
@@ -470,7 +469,7 @@ private class TabManagerFloatingToolbarParameterProvider :
                 state = TabsTrayState(
                     selectedPage = Page.PrivateTabs,
                     tabSearchEnabled = true,
-                    privateTabs = listOf(createTab(url = "url", private = true)),
+                    privateTabs = listOf(createTab(url = "url")),
                 ),
                 expanded = false,
             ),
@@ -478,7 +477,7 @@ private class TabManagerFloatingToolbarParameterProvider :
                 state = TabsTrayState(
                     selectedPage = Page.PrivateTabs,
                     tabSearchEnabled = true,
-                    privateTabs = listOf(createTab(url = "url", private = true)),
+                    privateTabs = listOf(createTab(url = "url")),
                 ),
                 expanded = true,
             ),

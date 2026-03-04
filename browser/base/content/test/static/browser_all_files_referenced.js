@@ -202,9 +202,6 @@ var allowlist = [
 
   { file: "resource://gre/greprefs.js" },
 
-  // layout/mathml/nsMathMLChar.cpp
-  { file: "resource://gre/res/fonts/mathfontUnicode.properties" },
-
   // toolkit/mozapps/extensions/AddonContentPolicy.cpp
   { file: "resource://gre/localization/en-US/toolkit/global/cspErrors.ftl" },
 
@@ -313,7 +310,9 @@ var allowlist = [
 
   // Referenced programmatically
   { file: "chrome://browser/content/backup/BackupManifest.1.schema.json" },
+  { file: "chrome://browser/content/backup/BackupManifest.2.schema.json" },
   { file: "chrome://browser/content/backup/ArchiveJSONBlock.1.schema.json" },
+  { file: "chrome://browser/content/backup/ArchiveJSONBlock.2.schema.json" },
 
   // Bug 1733498 - Migrate necko errors l10n strings from .properties to Fluent
   {
@@ -331,45 +330,13 @@ var allowlist = [
   {
     file: "resource://app/modules/backup/CookiesBackupResource.sys.mjs",
   },
-  // Bug 2000945 - Move query intent detection to AI-window r?mardak (backed out due to unused file)
+
+  // Bug 1996315: QR code generation modules
   {
-    file: "moz-src:///browser/components/aiwindow/models/IntentClassifier.sys.mjs",
+    file: "moz-src:///browser/components/qrcode/QRCodeGenerator.sys.mjs",
   },
-  // Bug 2000961 - Add ChatStore.sys.mjs module
   {
-    file: "moz-src:///browser/components/aiwindow/ui/modules/ChatStore.sys.mjs",
-  },
-  // Bug 2002840 - add function to return real time info injection message & tests (backed out due to unused file)
-  {
-    file: "moz-src:///browser/components/aiwindow/models/ChatUtils.sys.mjs",
-  },
-  // Bug 2003623 - Add assistant system prompt
-  {
-    file: "moz-src:///browser/components/aiwindow/models/prompts/AssistantPrompts.sys.mjs",
-  },
-  // Bug 2002638 - Move search browsing history to AI-window r?mardak (backed out due to unused file)
-  {
-    file: "moz-src:///browser/components/aiwindow/models/Tools.sys.mjs",
-  },
-  // Bug 2004888 - [FirstRun] Create Firstrun.html opening firstrun welcome screen
-  {
-    file: "chrome://browser/content/aiwindow/firstrun.html",
-  },
-  // Bug 2005768 - Insights scheduler for generation from history
-  {
-    file: "moz-src:///browser/components/aiwindow/models/InsightsHistoryScheduler.sys.mjs",
-  },
-  // Bug 2000987 - get user messages from chat source
-  {
-    file: "moz-src:///browser/components/aiwindow/models/InsightsChatSource.sys.mjs",
-  },
-  // Bug 2003303 - Implement Title Generation (backed out due to unused file)
-  {
-    file: "moz-src:///browser/components/aiwindow/models/TitleGeneration.sys.mjs",
-  },
-  // Bug 2006090 - Insight updation - Day 0 and incremental updates from Chat history
-  {
-    file: "moz-src:///browser/components/aiwindow/models/InsightsConversationScheduler.sys.mjs",
+    file: "moz-src:///browser/components/qrcode/QRCodeWorker.sys.mjs",
   },
 ];
 

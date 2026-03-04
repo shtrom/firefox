@@ -470,6 +470,15 @@ struct ReflowInput : public SizeComputationInput {
     // unconstrained.
     bool mIsInLastColumnBalancingReflow : 1;
 
+    // We have an ancestor nsColumnSetFrame performing a measuring reflow. The
+    // available block-size becomes unconstrained.
+    //
+    // Note: only the top-level fragmentainer (multicol or print page sequence)
+    // can initiate a measuring reflow, so nested fragmentainers will do a
+    // measuring reflow only when the top-level one is doing it. See
+    // nsColumnSetFrame::Reflow() and nsPageSequenceFrame::Reflow() for details.
+    bool mIsInFragmentainerMeasuringReflow : 1;
+
     // True if ColumnSetWrapperFrame has a constrained block-size, and is going
     // to consume all of its block-size in this fragment. This bit is passed to
     // nsColumnSetFrame to determine whether to give up balancing and create

@@ -229,14 +229,20 @@ add_task(async function test_restore_from_backup() {
     restoreFromBackup.confirmButtonEl.click();
 
     await restorePromise.then(e => {
-      let mockEvent = {
-        backupFile: mockBackupFile.path,
-        backupPassword: "h-*@Vfge3_hGxdpwqr@w",
-      };
-      Assert.deepEqual(
-        e.detail,
-        mockEvent,
-        "Event should contain the file and password"
+      Assert.equal(
+        e.detail.backupFile,
+        mockBackupFile.path,
+        "Event should contain the file path"
+      );
+      Assert.equal(
+        e.detail.backupPassword,
+        "h-*@Vfge3_hGxdpwqr@w",
+        "Event should contain the password"
+      );
+      Assert.equal(
+        e.detail.restoreType,
+        "add",
+        "restoreType should default to 'add'"
       );
     });
 
@@ -324,12 +330,6 @@ add_task(async function test_restore_in_progress() {
       restoreFromBackup.filePicker.value,
       "",
       "File picker has no value assigned automatically"
-    );
-
-    Assert.equal(
-      restoreFromBackup.filePicker.tagName.toLowerCase(),
-      "input",
-      "File picker should be an input when aboutWelcomeEmbedded is false"
     );
 
     // There is a backup file, but it is not a valid one
@@ -420,85 +420,84 @@ add_task(async function test_restore_in_progress() {
 });
 
 /**
- * Tests that the restore component uses a textarea when aboutWelcomeEmbedded is true
- * as well as the associated functionality for said textarea
+ * Tests that the restore component uses a textarea and that the textarea
+ * automatically resizes as needed.
  */
-add_task(
-  async function test_restore_from_backup_aboutwelcome_embedded_textarea() {
-    await BrowserTestUtils.withNewTab(
-      "about:preferences#sync",
-      async browser => {
-        let sandbox = sinon.createSandbox();
-        let { restoreFromBackup } = await initializedBackupWidgets(browser);
+add_task(async function test_restore_from_backup_embedded_textarea() {
+  await BrowserTestUtils.withNewTab("about:preferences#sync", async browser => {
+    let { settings, restoreFromBackup } =
+      await initializedBackupWidgets(browser);
+    let sandbox = sinon.createSandbox();
 
-        restoreFromBackup.backupServiceState = {
-          ...restoreFromBackup.backupServiceState,
-          backupFileToRestore: "",
-        };
-
-        // When aboutWelcomeEmbedded is false, the file picker should be an input
-        Assert.equal(
-          restoreFromBackup.filePicker.tagName.toLowerCase(),
-          "input",
-          "File picker should be an input when aboutWelcomeEmbedded is false"
-        );
-
-        restoreFromBackup.aboutWelcomeEmbedded = true;
-        await restoreFromBackup.updateComplete;
-        let resizeTextareaSpy = sandbox.spy(
-          restoreFromBackup,
-          "resizeTextarea"
-        );
-
-        const textarea = restoreFromBackup.shadowRoot.querySelector(
-          "#backup-filepicker-input"
-        );
-
-        Assert.ok(
-          textarea,
-          "textarea should be present after setting aboutWelcomeEmbedded to true"
-        );
-        Assert.equal(
-          textarea.tagName.toLowerCase(),
-          "textarea",
-          "File picker should be a textarea when aboutWelcomeEmbedded is true"
-        );
-        Assert.equal(
-          textarea.getAttribute("rows"),
-          "1",
-          "Textarea should have rows=1"
-        );
-
-        // Test resize functionality when content changes
-        const initialHeight = textarea.style.height;
-        Assert.ok(initialHeight, "Textarea should have an initial height set");
-
-        const longPath =
-          "/a/very/long/path/to/a/backup/file/that/would/wrap/multiple/lines.html";
-        textarea.value = longPath;
-        restoreFromBackup.resizeTextarea();
-
-        const newHeight = textarea.style.height;
-        Assert.notEqual(
-          newHeight,
-          initialHeight,
-          "Textarea height should change when content is added"
-        );
-
-        // The text area resize function should also be called
-        // when the resize event occurs on the window
-        window.dispatchEvent(new Event("resize"));
-
-        Assert.ok(
-          resizeTextareaSpy.calledOnce,
-          "resizeTextarea should be called when window resize event is fired"
-        );
-
-        sandbox.restore();
-      }
+    // We want to close it and reopen to see whether resizeTextarea is called.
+    settings.dispatchEvent(new CustomEvent("dialogCancel"));
+    let resizeTextareaSpy = sandbox.spy(restoreFromBackup, "resizeTextarea");
+    settings.restoreFromBackupButtonEl.click();
+    await settings.updateComplete;
+    Assert.equal(
+      resizeTextareaSpy.callCount,
+      1,
+      "resizeTextarea was called when the dialog opened"
     );
-  }
-);
+
+    const textarea = restoreFromBackup.shadowRoot.querySelector(
+      "#backup-filepicker-input"
+    );
+
+    Assert.ok(textarea, "textarea should be present");
+    Assert.equal(
+      textarea.tagName.toLowerCase(),
+      "textarea",
+      "File picker should be a textarea"
+    );
+    Assert.equal(
+      textarea.getAttribute("rows"),
+      "1",
+      "Textarea should have rows=1"
+    );
+
+    // Test resize functionality when content changes
+    const initialHeight = textarea.style.height;
+    Assert.ok(initialHeight, "Textarea should have an initial height set");
+
+    const longPath =
+      "/a/very/long/path/to/a/backup/file/that/would/wrap/multiple/lines.html";
+    restoreFromBackup.backupServiceState.backupFileToRestore = longPath;
+    restoreFromBackup.requestUpdate();
+    await restoreFromBackup.updateComplete;
+    Assert.equal(
+      resizeTextareaSpy.callCount,
+      2,
+      "resizeTextarea was called when the content changed"
+    );
+
+    let heightRule = textarea.style.height;
+    textarea.style.height = "auto";
+    Assert.equal(
+      heightRule,
+      textarea.scrollHeight + "px",
+      "Textarea height should contain all content once content is added"
+    );
+    textarea.style.height = heightRule;
+
+    // The text area resize function should also be called
+    // when the resize event occurs on the window
+    let promise = BrowserTestUtils.waitForEvent(
+      browser.contentWindow,
+      "resize"
+    );
+    browser.contentWindow.dispatchEvent(new Event("resize"));
+    await promise;
+
+    Assert.equal(
+      resizeTextareaSpy.callCount,
+      3,
+      "resizeTextarea should be called when window resize event is fired"
+    );
+
+    sandbox.restore();
+  });
+});
 
 /**
  * Tests that the backup file info is displayed when backupFileInfo is present
@@ -539,7 +538,7 @@ add_task(async function test_restore_backup_file_info_display() {
 
     Assert.equal(
       fileInfoSpan.getAttribute("data-l10n-id"),
-      "backup-file-creation-date-and-device",
+      "backup-file-creation-metadata",
       "Should have the correct l10n id"
     );
 
@@ -594,27 +593,11 @@ add_task(async function test_support_links_non_embedded() {
       "aboutWelcomeEmbedded should be falsy"
     );
 
-    // Test the 'no backup file' link
-    let noBackupFileLink = restoreFromBackup.shadowRoot.querySelector(
-      "#restore-from-backup-no-backup-file-link"
+    // Test the main support link
+    let supportLink = restoreFromBackup.shadowRoot.querySelector(
+      "#restore-from-backup-support-link"
     );
-    assertNonEmbeddedSupportLink(noBackupFileLink, "'No backup file' link");
-
-    // Test the description link
-    restoreFromBackup.backupServiceState = {
-      ...restoreFromBackup.backupServiceState,
-      backupFileInfo: {
-        date: new Date(),
-        deviceName: "test-device",
-        isEncrypted: false,
-      },
-    };
-    await restoreFromBackup.updateComplete;
-
-    let descriptionLink = restoreFromBackup.shadowRoot.querySelector(
-      "#restore-from-backup-learn-more-link"
-    );
-    assertNonEmbeddedSupportLink(descriptionLink, "Description link");
+    assertNonEmbeddedSupportLink(supportLink, "Main support link");
 
     // Test the incorrect password link
     restoreFromBackup.backupServiceState = {
@@ -632,6 +615,53 @@ add_task(async function test_support_links_non_embedded() {
       "#backup-incorrect-password-support-link"
     );
     assertNonEmbeddedSupportLink(passwordErrorLink, "Password error link");
+  });
+});
+
+add_task(async function test_selectableProfilesAllowed_toggles_restore_ui() {
+  await BrowserTestUtils.withNewTab("about:preferences#sync", async browser => {
+    let { restoreFromBackup } = await initializedBackupWidgets(browser);
+    let bs = BackupService.get();
+    let sandbox = sinon.createSandbox();
+
+    sandbox.stub(SelectableProfileService, "isEnabled").get(() => false);
+    bs.onUpdateProfilesEnabledState();
+
+    await BrowserTestUtils.waitForCondition(
+      () =>
+        restoreFromBackup.shadowRoot.querySelector(
+          "moz-message-bar[type='info']"
+        ),
+      "Waiting for info message bar to appear when profiles are disabled"
+    );
+
+    Assert.ok(
+      !restoreFromBackup.shadowRoot.querySelector(
+        "#restore-from-backup-type-group"
+      ),
+      "Radio group should not be shown when profiles are disabled"
+    );
+
+    sandbox.restore();
+    sandbox.stub(SelectableProfileService, "isEnabled").get(() => true);
+    bs.onUpdateProfilesEnabledState();
+
+    await BrowserTestUtils.waitForCondition(
+      () =>
+        restoreFromBackup.shadowRoot.querySelector(
+          "#restore-from-backup-type-group"
+        ),
+      "Waiting for radio group to appear when profiles are enabled"
+    );
+
+    Assert.ok(
+      !restoreFromBackup.shadowRoot.querySelector(
+        "moz-message-bar[type='info']"
+      ),
+      "Info message bar should not be shown when profiles are enabled"
+    );
+
+    sandbox.restore();
   });
 });
 

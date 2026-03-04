@@ -12,8 +12,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.material.snackbar.Snackbar.LENGTH_INDEFINITE
 import com.google.android.material.snackbar.Snackbar.LENGTH_LONG
 import com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
-import io.mockk.every
-import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -35,6 +33,7 @@ import mozilla.components.support.test.argumentCaptor
 import mozilla.components.support.test.eq
 import mozilla.components.support.test.mock
 import mozilla.components.support.test.robolectric.testContext
+import mozilla.components.support.test.whenever
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -64,11 +63,11 @@ import org.mozilla.fenix.components.appstate.snackbar.SnackbarState.ShareTabsFai
 import org.mozilla.fenix.components.appstate.snackbar.SnackbarState.ShareToAppFailed
 import org.mozilla.fenix.components.appstate.snackbar.SnackbarState.SharedTabsSuccessfully
 import org.mozilla.fenix.components.appstate.snackbar.SnackbarState.ShortcutAdded
+import org.mozilla.fenix.components.appstate.snackbar.SnackbarState.ShowSnackbar
 import org.mozilla.fenix.components.appstate.snackbar.SnackbarState.TranslationInProgress
 import org.mozilla.fenix.components.appstate.snackbar.SnackbarState.UserAccountAuthenticated
 import org.mozilla.fenix.components.appstate.snackbar.SnackbarState.WebCompatReportSent
 import org.mozilla.fenix.components.metrics.MetricsUtils.BookmarkAction.Source
-import org.mozilla.fenix.ext.settings
 import org.mozilla.fenix.ext.tabClosedUndoMessage
 import org.mozilla.fenix.utils.Settings
 import org.mozilla.fenix.utils.getSnackbarTimeout
@@ -85,10 +84,8 @@ class SnackbarBindingTest {
 
     @Before
     fun setup() = runTest(testDispatcher) {
-        settings = mockk(relaxed = true) {
-            every { accessibilityServicesEnabled } returns false
-        }
-        every { testContext.settings() } returns settings
+        settings = mock()
+        whenever(settings.accessibilityServicesEnabled).thenReturn(false)
     }
 
     @Test
@@ -158,6 +155,25 @@ class SnackbarBindingTest {
         assertEquals(None(Dismiss(None())), appStore.state.snackbarState)
         verify(snackbarDelegate).dismiss()
     }
+
+    @Test
+    fun `WHEN show snackbar action is dispatched with a title THEN display the snackbar with that title`() =
+        runTest(testDispatcher) {
+            val customTitle = "Custom Title"
+            val binding = buildSnackbarBinding()
+            binding.start()
+
+            appStore.dispatch(SnackbarAction.ShowSnackbar(customTitle))
+            waitForStoreToSettle()
+
+            verify(snackbarDelegate).show(
+                text = customTitle,
+                duration = LENGTH_SHORT,
+                isError = false,
+            )
+
+            assertEquals(None(ShowSnackbar(customTitle)), appStore.state.snackbarState)
+        }
 
     @Test
     fun `GIVEN bookmark's parent is a root node WHEN the bookmark added state is observed THEN display friendly title`() = runTest(testDispatcher) {
@@ -556,7 +572,6 @@ class SnackbarBindingTest {
             contentLength = 5242880,
             status = DownloadState.Status.DOWNLOADING,
             directoryPath = "downloads",
-            destinationDirectory = "Environment.DIRECTORY_MUSIC",
             private = true,
             createdTime = 33,
             etag = "etag",
@@ -590,7 +605,6 @@ class SnackbarBindingTest {
             contentLength = 5242880,
             status = DownloadState.Status.DOWNLOADING,
             directoryPath = "downloads",
-            destinationDirectory = "Environment.DIRECTORY_MUSIC",
             private = true,
             createdTime = 33,
             etag = "etag",
@@ -672,7 +686,7 @@ class SnackbarBindingTest {
 
     private fun buildSnackbarBinding(
         context: Context = testContext,
-        browserStore: BrowserStore = mock(),
+        browserStore: BrowserStore = BrowserStore(),
         appStore: AppStore = this.appStore,
         snackbarDelegate: FenixSnackbarDelegate = this.snackbarDelegate,
         navController: NavController = this.navController,

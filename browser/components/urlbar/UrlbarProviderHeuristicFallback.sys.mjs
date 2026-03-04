@@ -44,9 +44,11 @@ export class UrlbarProviderHeuristicFallback extends UrlbarProvider {
    * Whether this provider should be invoked for the given context.
    * If this method returns false, the providers manager won't start a query
    * with this provider, to save on resources.
+   *
+   * @param {UrlbarQueryContext} queryContext
    */
-  async isActive() {
-    return true;
+  async isActive(queryContext) {
+    return !!queryContext.searchString.length;
   }
 
   /**
@@ -69,7 +71,8 @@ export class UrlbarProviderHeuristicFallback extends UrlbarProvider {
     let instance = this.queryInstance;
 
     if (queryContext.sapName != "searchbar") {
-      let result = this._matchUnknownUrl(queryContext);
+      let result =
+        UrlbarProviderHeuristicFallback.matchUnknownUrl(queryContext);
       if (result) {
         addCallback(this, result);
         // Since we can't tell if this is a real URL and whether the user wants
@@ -124,9 +127,7 @@ export class UrlbarProviderHeuristicFallback extends UrlbarProvider {
     }
   }
 
-  // TODO (bug 1054814): Use visited URLs to inform which scheme to use, if the
-  // scheme isn't specificed.
-  _matchUnknownUrl(queryContext) {
+  static matchUnknownUrl(queryContext) {
     // The user may have typed something like "word?" to run a search.  We
     // should not convert that to a URL.  We should also never convert actual
     // URLs into URL results when search mode is active or a search mode
@@ -332,9 +333,6 @@ export class UrlbarProviderHeuristicFallback extends UrlbarProvider {
         query,
         title: query,
         keyword,
-      },
-      highlights: {
-        engine: UrlbarUtils.HIGHLIGHT.TYPED,
       },
     });
   }

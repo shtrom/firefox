@@ -325,6 +325,13 @@ export class LoginManagerRustStorage {
     throw Components.Exception("loginIsDeleted", Cr.NS_ERROR_NOT_IMPLEMENTED);
   }
 
+  loginIsDeletedAsync(_guid) {
+    throw Components.Exception(
+      "loginIsDeletedAsync",
+      Cr.NS_ERROR_NOT_IMPLEMENTED
+    );
+  }
+
   addWithMeta(login) {
     return this.#storageAdapter.addWithMeta(login);
   }
@@ -409,6 +416,12 @@ export class LoginManagerRustStorage {
     this.#storageAdapter.touch(oldStoredLogin.guid);
   }
 
+  async recordPasswordUseAsync(login) {
+    let result = this.recordPasswordUse(login);
+    // Emulate being async:
+    return Promise.resolve(result);
+  }
+
   async recordBreachAlertDismissal(_loginGUID) {
     throw Components.Exception(
       "recordBreachAlertDismissal",
@@ -428,7 +441,7 @@ export class LoginManagerRustStorage {
    * fails due to a corrupt entry, the login is not included in
    * the resulting array.
    *
-   * @resolve {nsILoginInfo[]}
+   * @returns {Promise<nsILoginInfo[]>}
    */
   async getAllLogins(includeDeleted) {
     // `includeDeleted` is currentlty unsupported
@@ -616,6 +629,13 @@ export class LoginManagerRustStorage {
     this.#storageAdapter.delete(idToDelete);
   }
 
+  async removeLoginAsync(login, _fromSync) {
+    let result = this.removeLogin(login, _fromSync);
+
+    // Emulate being async:
+    return Promise.resolve(result);
+  }
+
   /**
    * Removes all logins from local storage, including FxA Sync key.
    *
@@ -624,6 +644,10 @@ export class LoginManagerRustStorage {
    */
   removeAllLogins() {
     this.#removeLogins(false, true);
+  }
+
+  async removeAllLoginsAsync() {
+    this.removeAllLogins();
   }
 
   /**
@@ -635,6 +659,10 @@ export class LoginManagerRustStorage {
    */
   removeAllUserFacingLogins(fullyRemove) {
     this.#removeLogins(fullyRemove, false);
+  }
+
+  async removeAllUserFacingLoginsAsync(fullyRemove) {
+    this.removeAllUserFacingLogins(fullyRemove);
   }
 
   /**
@@ -716,6 +744,12 @@ export class LoginManagerRustStorage {
 
     this.log(`Counted ${logins.length} logins.`);
     return logins.length;
+  }
+
+  async countLoginsAsync(origin, formActionOrigin, httpRealm) {
+    let result = this.countLogins(origin, formActionOrigin, httpRealm);
+    // Emulate being async:
+    return Promise.resolve(result);
   }
 
   addPotentiallyVulnerablePassword(_login) {

@@ -32,6 +32,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
 });
 
 /**
+ * @import {SearchEngine} from "moz-src:///toolkit/components/search/SearchEngine.sys.mjs"
  * @import {SearchSuggestionController} from "moz-src:///toolkit/components/search/SearchSuggestionController.sys.mjs"
  */
 
@@ -69,6 +70,9 @@ function looksLikeUrl(str, ignoreAlphanumericHosts = false) {
  * Class used to create the provider.
  */
 export class UrlbarProviderSearchSuggestions extends UrlbarProvider {
+  // Rich suggestions icon size in px.
+  static RICH_ICON_SIZE = 28;
+
   constructor() {
     super();
   }
@@ -226,8 +230,9 @@ export class UrlbarProviderSearchSuggestions extends UrlbarProvider {
    * @param {UrlbarQueryContext} queryContext
    * @param {(provider: UrlbarProvider, result: UrlbarResult) => void} addCallback
    *   Callback invoked by the provider to add a new result.
+   * @param {UrlbarController} controller The UrlbarController instance.
    */
-  async startQuery(queryContext, addCallback) {
+  async startQuery(queryContext, addCallback, controller) {
     let instance = this.queryInstance;
 
     let aliasEngine = await this._maybeGetAlias(queryContext);
@@ -289,7 +294,8 @@ export class UrlbarProviderSearchSuggestions extends UrlbarProvider {
       queryContext,
       engine,
       query,
-      alias
+      alias,
+      controller.browserWindow
     );
 
     if (!results || instance != this.queryInstance) {
@@ -341,7 +347,7 @@ export class UrlbarProviderSearchSuggestions extends UrlbarProvider {
         },
         {
           name: RESULT_MENU_COMMANDS.TRENDING_HELP,
-          l10n: { id: "urlbar-result-menu-trending-why" },
+          l10n: { id: "urlbar-result-menu-learn-more" },
         },
       ]);
     }
@@ -380,7 +386,13 @@ export class UrlbarProviderSearchSuggestions extends UrlbarProvider {
    */
   #suggestionsController;
 
-  async #fetchSearchSuggestions(queryContext, engine, searchString, alias) {
+  async #fetchSearchSuggestions(
+    queryContext,
+    engine,
+    searchString,
+    alias,
+    win
+  ) {
     if (!engine) {
       return null;
     }
@@ -421,6 +433,11 @@ export class UrlbarProviderSearchSuggestions extends UrlbarProvider {
       }
     }
 
+    // Show local results of all engines in search bar.
+    let restrictToEngine =
+      queryContext.sapName != "searchbar" &&
+      this._isTokenOrRestrictionPresent(queryContext);
+
     // See `SearchSuggestionsController.fetch` documentation for a description
     // of `fetchData`.
     let fetchData = await this.#suggestionsController.fetch({
@@ -428,7 +445,7 @@ export class UrlbarProviderSearchSuggestions extends UrlbarProvider {
       inPrivateBrowsing: queryContext.isPrivate,
       engine,
       userContextId: queryContext.userContextId,
-      restrictToEngine: this._isTokenOrRestrictionPresent(queryContext),
+      restrictToEngine,
       dedupeRemoteAndLocal: false,
       fetchTrending: this.#shouldFetchTrending(queryContext),
       maxLocalResults,
@@ -495,10 +512,13 @@ export class UrlbarProviderSearchSuggestions extends UrlbarProvider {
         let query = searchString.trim();
         let suggestion = entry.value;
         let title;
+        let titleHighlight;
         if (tail && entry.tailOffsetIndex >= 0) {
           title = tail;
+          titleHighlight = UrlbarUtils.HIGHLIGHT.SUGGESTED;
         } else if (suggestion) {
           title = suggestion;
+          titleHighlight = UrlbarUtils.HIGHLIGHT.SUGGESTED;
         } else {
           title = query;
         }
@@ -520,14 +540,17 @@ export class UrlbarProviderSearchSuggestions extends UrlbarProvider {
               trending: entry.trending,
               description: entry.description || undefined,
               query,
-              icon: !entry.value ? await engine.getIconURL() : entry.icon,
+              icon: !entry.value
+                ? await engine.getIconURL()
+                : UrlbarUtils.getRemoteIconUrl(
+                    entry.icon,
+                    UrlbarProviderSearchSuggestions.RICH_ICON_SIZE,
+                    win
+                  ),
               helpUrl: entry.trending ? TRENDING_HELP_URL : undefined,
             },
             highlights: {
-              engine: UrlbarUtils.HIGHLIGHT.TYPED,
-              suggestion: UrlbarUtils.HIGHLIGHT.SUGGESTED,
-              tail: UrlbarUtils.HIGHLIGHT.SUGGESTED,
-              keyword: UrlbarUtils.HIGHLIGHT.TYPED,
+              title: titleHighlight,
             },
           })
         );
@@ -544,7 +567,7 @@ export class UrlbarProviderSearchSuggestions extends UrlbarProvider {
   /**
    * @typedef {object} EngineAlias
    *
-   * @property {nsISearchEngine} engine
+   * @property {SearchEngine} engine
    *   The search engine
    * @property {string} alias
    *   The search engine's alias

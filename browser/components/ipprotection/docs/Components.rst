@@ -33,7 +33,6 @@ A diagram of all the main components is the following:
        IPPEnrollAndEntitleManager["Enroll & Entitle Manager"]
        IPPProxyManager
        UIHelper["UI Helper"]
-       IPPVPNAddonHelper["VPN Add-on Helper"]
        IPPAutoStart["Auto-Start Helper"]
        IPPEarlyStartupFilter["Early Startup Filter Helper"]
        IPPNimbusHelper["Nimbus Eligibility Helper"]
@@ -42,7 +41,6 @@ A diagram of all the main components is the following:
      %% Proxy stack
      subgraph Proxy
        IPPChannelFilter
-       IPProtectionUsage
        IPPNetworkErrorObserver
        GuardianClient
      end
@@ -57,7 +55,6 @@ A diagram of all the main components is the following:
 
      %% Proxy wiring
      IPPProxyManager --> IPPChannelFilter
-     IPPProxyManager --> IPProtectionUsage
      IPPProxyManager --> IPPNetworkErrorObserver
      IPPNetworkErrorObserver -- "error events (401)" --> IPPProxyManager
 
@@ -124,10 +121,6 @@ UIHelper
 AccountResetHelper
   Resets stored account information and stops the proxy when the account becomes
   unavailable.
-
-IPPVPNAddonHelper
-  Monitors the installation of the Mozilla VPN add‑on and removes the UI when
-  appropriate.
 
 IPPNimbusHelper
   Monitors the Nimbus feature (``NimbusFeatures.ipProtection``) and triggers a

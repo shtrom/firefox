@@ -3,8 +3,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-import { makeGuid } from "./ChatUtils.sys.mjs";
-
 /**
  * A message in a conversation.
  */
@@ -23,9 +21,9 @@ export class ChatMessage {
   convId;
   pageUrl;
   turnIndex;
-  insightsEnabled;
-  insightsFlagSource;
-  insightsApplied;
+  memoriesEnabled;
+  memoriesFlagSource;
+  memoriesApplied;
   webSearchQueries;
 
   /**
@@ -35,9 +33,9 @@ export class ChatMessage {
    * @param {object} param.content - The message content object
    * @param {number} param.turnIndex - The message turn, different than ordinal,
    * prompt/reply for example would be one turn
-   * @param {string} [param.pageUrl = null] - A URL object defining which page
+   * @param {URL} [param.pageUrl = null] - A URL object defining which page
    * the user was on when submitting a message if role == user
-   * @param {string} [param.id = makeGuid()] - The row.message_id of the
+   * @param {string} [param.id = crypto.randomUUID()] - The row.message_id of the
    * message in the database
    * @param {number} [param.createdDate = Date.now()] - The date the message was
    * sent/stored in the database
@@ -46,14 +44,14 @@ export class ChatMessage {
    * null if its the first message of the converation
    * @param {string} [param.convId = null] - The id of the conversation the
    * message belongs to
-   * @param {?boolean} param.insightsEnabled - Whether insights were enabled
+   * @param {?boolean} param.memoriesEnabled - Whether memories were enabled
    * when the message was submitted if role == assistant
-   * @param {InsightsFlagSource} param.insightsFlagSource - How the
-   * insightsEnabled flag was determined if role == assistant, one of
-   * INSIGHTS_FLAG_SOURCE.GLOBAL, INSIGHTS_FLAG_SOURCE.CONVERSATION,
-   * INSIGHTS_FLAG_SOURCE.MESSAGE_ONCE
-   * @param {?Array<string>} param.insightsApplied - List of strings of insights
-   * that were applied to a response if insightsEnabled == true
+   * @param {MemoriesFlagSource} param.memoriesFlagSource - How the
+   * memoriesEnabled flag was determined if role == assistant, one of
+   * MEMORIES_FLAG_SOURCE.GLOBAL, MEMORIES_FLAG_SOURCE.CONVERSATION,
+   * MEMORIES_FLAG_SOURCE.MESSAGE_ONCE
+   * @param {?Array<string>} param.memoriesApplied - List of strings of memories
+   * that were applied to a response if memoriesEnabled == true
    * @param {?Array<string>} param.webSearchQueries - List of strings of web
    * search queries that were applied to a response if role == assistant
    * @param {object} [param.params = null] - Model params used if role == assistant|tool
@@ -78,13 +76,13 @@ export class ChatMessage {
     content,
     turnIndex,
     pageUrl = null,
-    id = makeGuid(),
+    id = crypto.randomUUID(),
     createdDate = Date.now(),
     parentMessageId = null,
     convId = null,
-    insightsEnabled = null,
-    insightsFlagSource = null,
-    insightsApplied = null,
+    memoriesEnabled = null,
+    memoriesFlagSource = null,
+    memoriesApplied = null,
     webSearchQueries = null,
     params = null,
     usage = null,
@@ -104,11 +102,11 @@ export class ChatMessage {
     this.usage = usage;
     this.content = content;
     this.convId = convId;
-    this.pageUrl = pageUrl ? new URL(pageUrl) : null;
+    this.pageUrl = pageUrl;
     this.turnIndex = turnIndex;
-    this.insightsEnabled = insightsEnabled;
-    this.insightsFlagSource = insightsFlagSource;
-    this.insightsApplied = insightsApplied;
+    this.memoriesEnabled = memoriesEnabled;
+    this.memoriesFlagSource = memoriesFlagSource;
+    this.memoriesApplied = memoriesApplied;
     this.webSearchQueries = webSearchQueries;
   }
 }
@@ -118,9 +116,9 @@ export class ChatMessage {
  * role of assistant
  */
 export class AssistantRoleOpts {
-  insightsEnabled;
-  insightsFlagSource;
-  insightsApplied;
+  memoriesEnabled;
+  memoriesFlagSource;
+  memoriesApplied;
   webSearchQueries;
   params;
   usage;
@@ -130,23 +128,27 @@ export class AssistantRoleOpts {
    * @param {string} [modelId=null]
    * @param {object} [params=null] - The model params used
    * @param {object} [usage=null] - Token usage data for the current response
-   * @param {boolean} [insightsEnabled=false] - Whether insights were enabled when the message was submitted
-   * @param {import("moz-src:///browser/components/aiwindow/ui/modules/ChatStorage.sys.mjs").InsightsFlagSource} [insightsFlagSource=null] - How the insightsEnabled flag was determined
-   * @param {?Array<string>} [insightsApplied=[]] - List of strings of insights that were applied to a response
-   * @param {?Array<string>} [webSearchQueries=[]] - List of strings of web search queries that were applied to a response
+   * @param {boolean} [memoriesEnabled=false] - Whether memories were enabled
+   * when the message was submitted
+   * @param {MemoriesFlagSource} [memoriesFlagSource=null] - How the memoriesEnabled
+   * flag was determined
+   * @param {?Array<string>} [memoriesApplied=[]] - List of strings of memories
+   * that were applied to a response
+   * @param {?Array<string>} [webSearchQueries=[]] - List of strings of web search
+   * queries that were applied to a response
    */
   constructor(
     modelId = null,
     params = null,
     usage = null,
-    insightsEnabled = false,
-    insightsFlagSource = null,
-    insightsApplied = [],
+    memoriesEnabled = false,
+    memoriesFlagSource = null,
+    memoriesApplied = [],
     webSearchQueries = []
   ) {
-    this.insightsEnabled = insightsEnabled;
-    this.insightsFlagSource = insightsFlagSource;
-    this.insightsApplied = insightsApplied;
+    this.memoriesEnabled = memoriesEnabled;
+    this.memoriesFlagSource = memoriesFlagSource;
+    this.memoriesApplied = memoriesApplied;
     this.webSearchQueries = webSearchQueries;
     this.params = params;
     this.usage = usage;
@@ -175,14 +177,25 @@ export class ToolRoleOpts {
  */
 export class UserRoleOpts {
   revisionRootMessageId;
+  memoriesEnabled;
+  memoriesFlagSource;
+  contextMentions;
 
   /**
-   * @param {string} [revisionRootMessageId=undefined]
+   * @param {string|object} [opts]
    */
-  constructor(revisionRootMessageId) {
+  constructor({
+    revisionRootMessageId = null,
+    memoriesEnabled = null,
+    memoriesFlagSource = null,
+    contextMentions = null,
+  } = {}) {
     if (revisionRootMessageId) {
       this.revisionRootMessageId = revisionRootMessageId;
     }
+    this.memoriesEnabled = memoriesEnabled;
+    this.memoriesFlagSource = memoriesFlagSource;
+    this.contextMentions = contextMentions;
   }
 }
 
@@ -209,5 +222,59 @@ export class ChatMinimal {
 
   get title() {
     return this.#title;
+  }
+}
+
+/**
+ * Used to retrieve chat entries for Chat History view
+ */
+export class ChatHistoryResult {
+  #convId;
+  #title;
+  #createdDate;
+  #updatedDate;
+  #urls;
+
+  constructor({ convId, title, createdDate, updatedDate, urls }) {
+    this.#convId = convId;
+    this.#title = title;
+    this.#createdDate = createdDate;
+    this.#updatedDate = updatedDate;
+    this.#urls = urls;
+  }
+
+  /**
+   * @returns {string}
+   */
+  get convId() {
+    return this.#convId;
+  }
+
+  /**
+   * @returns {string}
+   */
+  get title() {
+    return this.#title;
+  }
+
+  /**
+   * @returns {Date}
+   */
+  get createdDate() {
+    return this.#createdDate;
+  }
+
+  /**
+   * @returns {Date}
+   */
+  get updatedDate() {
+    return this.#updatedDate;
+  }
+
+  /**
+   * @returns {Array<URL>}
+   */
+  get urls() {
+    return this.#urls;
   }
 }

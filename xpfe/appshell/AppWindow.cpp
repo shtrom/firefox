@@ -242,6 +242,7 @@ nsresult AppWindow::Initialize(nsIAppWindow* aParent, nsIAppWindow* aOpener,
   NS_ENSURE_SUCCESS(mDocShell->InitWindow(mWindow, r.X(), r.Y(), r.Width(),
                                           r.Height(), aOpenWindowInfo, nullptr),
                     NS_ERROR_FAILURE);
+  NS_ENSURE_TRUE(mDocShell->GetDocument(), NS_ERROR_FAILURE);
 
   // Attach a WebProgress listener.during initialization...
   mDocShell->AddProgressListener(this, nsIWebProgress::NOTIFY_STATE_NETWORK);
@@ -1080,31 +1081,6 @@ NS_IMETHODIMP AppWindow::ForceRoundedDimensions() {
   SetPrimaryContentSize(targetSizeDev.width, targetSizeDev.height);
 
   return NS_OK;
-}
-
-void AppWindow::OnChromeLoaded() {
-  nsresult rv = EnsureContentTreeOwner();
-
-  if (NS_SUCCEEDED(rv)) {
-    mChromeLoaded = true;
-    ApplyChromeFlags();
-    SyncAttributesToWidget();
-    if (RefPtr ps = GetPresShell()) {
-      // Sync window properties now, before showing the window.
-      ps->SyncWindowPropertiesIfNeeded();
-    }
-    if (mWindow) {
-      SizeShell();
-      if (mShowAfterLoad) {
-        SetVisibility(true);
-      }
-      AddTooltipSupport();
-    }
-    // At this point the window may have been closed already during Show() or
-    // SyncAttributesToWidget(), so AppWindow::Destroy may already have been
-    // called. Take care!
-  }
-  mPersistentAttributesMask += AllPersistentAttributes();
 }
 
 bool AppWindow::NeedsTooltipListener() {
@@ -2012,9 +1988,7 @@ void AppWindow::MaybeSavePersistentMiscAttributes(
       (void)SetPersistentValue(nsGkAtoms::sizemode, sizeString);
     }
   }
-  aRootElement.SetAttribute(u"gtktiledwindow"_ns,
-                            mWindow->IsTiled() ? u"true"_ns : u"false"_ns,
-                            IgnoreErrors());
+  aRootElement.SetBoolAttr(nsGkAtoms::gtktiledwindow, mWindow->IsTiled());
 }
 
 void AppWindow::SavePersistentAttributes(
@@ -2363,18 +2337,6 @@ void AppWindow::ApplyChromeFlags() {
   // so no need to compare to the old value.
   IgnoredErrorResult rv;
   root->SetAttribute(u"chromehidden"_ns, newvalue, rv);
-
-  // Also set the IsDocumentPiP on the chrome browsing context
-  if ((mChromeFlags &
-       nsIWebBrowserChrome::CHROME_DOCUMENT_PICTURE_IN_PICTURE) ==
-      nsIWebBrowserChrome::CHROME_DOCUMENT_PICTURE_IN_PICTURE) {
-    nsCOMPtr<mozIDOMWindowProxy> windowProxy;
-    GetWindowDOMWindow(getter_AddRefs(windowProxy));
-    if (nsCOMPtr<nsPIDOMWindowOuter> window = do_QueryInterface(windowProxy)) {
-      nsresult rv = window->GetBrowsingContext()->SetIsDocumentPiP(true);
-      NS_ENSURE_SUCCESS_VOID(rv);
-    }
-  }
 }
 
 NS_IMETHODIMP
@@ -3035,6 +2997,63 @@ void AppWindow::PersistentAttributesDirty(PersistentAttributes aAttributes,
 
 void AppWindow::FirePersistenceTimer() { SavePersistentAttributes(); }
 
+void AppWindow::OnChromeLoaded() {
+  MOZ_ASSERT(!mChromeLoaded);
+
+  mChromeLoaded = true;
+  mLockedUntilChromeLoad = false;
+
+#ifdef USE_NATIVE_MENUS
+  ///////////////////////////////
+  // Find the Menubar DOM  and Load the menus, hooking them up to the loaded
+  // commands
+  ///////////////////////////////
+  if (!gfxPlatform::IsHeadless()) {
+    if (RefPtr<Document> menubarDoc = mDocShell->GetExtantDocument()) {
+      if (mIsHiddenWindow || !sWaitingForHiddenWindowToLoadNativeMenus) {
+        BeginLoadNativeMenus(menubarDoc, mWindow);
+      } else {
+        sLoadNativeMenusListeners.EmplaceBack(menubarDoc, mWindow);
+      }
+    }
+  }
+#endif  // USE_NATIVE_MENUS
+
+  nsresult rv = EnsureContentTreeOwner();
+
+  if (NS_SUCCEEDED(rv)) {
+    ApplyChromeFlags();
+    SyncAttributesToWidget();
+    if (RefPtr ps = GetPresShell()) {
+      // Sync window properties now, before showing the window.
+      ps->SyncWindowPropertiesIfNeeded();
+    }
+    if (mWindow) {
+      SizeShell();
+      if (mShowAfterLoad) {
+        SetVisibility(true);
+      }
+      AddTooltipSupport();
+    }
+    // At this point the window may have been closed already during Show() or
+    // SyncAttributesToWidget(), so AppWindow::Destroy may already have been
+    // called. Take care!
+  }
+  mPersistentAttributesMask += AllPersistentAttributes();
+}
+
+NS_IMETHODIMP
+AppWindow::ShowInitialViewer() {
+  NS_ENSURE_FALSE(mChromeLoaded, NS_ERROR_UNEXPECTED);
+
+  MOZ_ASSERT(mDocShell->GetDocument()->IsUncommittedInitialDocument(),
+             "This method is for showing the initial document, not the result "
+             "of a some navigation");
+
+  OnChromeLoaded();
+  return NS_OK;
+}
+
 //----------------------------------------
 // nsIWebProgessListener implementation
 //----------------------------------------
@@ -3067,25 +3086,6 @@ AppWindow::OnStateChange(nsIWebProgress* aProgress, nsIRequest* aRequest,
     nsPIDOMWindowOuter* rootPWin = eventPWin->GetPrivateRoot();
     if (eventPWin != rootPWin) return NS_OK;
   }
-
-  mChromeLoaded = true;
-  mLockedUntilChromeLoad = false;
-
-#ifdef USE_NATIVE_MENUS
-  ///////////////////////////////
-  // Find the Menubar DOM  and Load the menus, hooking them up to the loaded
-  // commands
-  ///////////////////////////////
-  if (!gfxPlatform::IsHeadless()) {
-    if (RefPtr<Document> menubarDoc = mDocShell->GetExtantDocument()) {
-      if (mIsHiddenWindow || !sWaitingForHiddenWindowToLoadNativeMenus) {
-        BeginLoadNativeMenus(menubarDoc, mWindow);
-      } else {
-        sLoadNativeMenusListeners.EmplaceBack(menubarDoc, mWindow);
-      }
-    }
-  }
-#endif  // USE_NATIVE_MENUS
 
   OnChromeLoaded();
 

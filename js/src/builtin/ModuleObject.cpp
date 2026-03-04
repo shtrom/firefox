@@ -66,6 +66,17 @@ static JS::ModuleType ValueToModuleType(const Value& value) {
   return static_cast<JS::ModuleType>(i);
 }
 
+static Value ImportPhaseToValue(ImportPhase phase) {
+  static_assert(size_t(ImportPhase::Limit) <= INT32_MAX);
+  return Int32Value(int32_t(phase));
+}
+
+static ImportPhase ValueToImportPhase(const Value& value) {
+  int32_t i = value.toInt32();
+  MOZ_ASSERT(i >= 0 && i <= int32_t(ImportPhase::Limit));
+  return static_cast<ImportPhase>(i);
+}
+
 #define DEFINE_ATOM_ACCESSOR_METHOD(cls, name, slot) \
   JSAtom* cls::name() const {                        \
     Value value = getReservedSlot(slot);             \
@@ -212,6 +223,10 @@ JS::ModuleType ModuleRequestObject::moduleType() const {
   return ValueToModuleType(getReservedSlot(ModuleTypeSlot));
 }
 
+ImportPhase ModuleRequestObject::phase() const {
+  return ValueToImportPhase(getReservedSlot(PhaseSlot));
+}
+
 static bool GetModuleType(JSContext* cx,
                           Handle<ImportAttributeVector> maybeAttributes,
                           JS::ModuleType& moduleType) {
@@ -249,19 +264,20 @@ bool ModuleRequestObject::isInstance(HandleValue value) {
 /* static */
 ModuleRequestObject* ModuleRequestObject::create(
     JSContext* cx, Handle<JSAtom*> specifier,
-    Handle<ImportAttributeVector> maybeAttributes) {
+    Handle<ImportAttributeVector> maybeAttributes, ImportPhase phase) {
   JS::ModuleType moduleType = JS::ModuleType::JavaScript;
   if (!GetModuleType(cx, maybeAttributes, moduleType)) {
     return nullptr;
   }
 
-  return create(cx, specifier, moduleType);
+  return create(cx, specifier, moduleType, phase);
 }
 
 /* static */
 ModuleRequestObject* ModuleRequestObject::create(JSContext* cx,
                                                  Handle<JSAtom*> specifier,
-                                                 JS::ModuleType moduleType) {
+                                                 JS::ModuleType moduleType,
+                                                 ImportPhase phase) {
   ModuleRequestObject* self =
       NewObjectWithGivenProto<ModuleRequestObject>(cx, nullptr);
   if (!self) {
@@ -270,6 +286,7 @@ ModuleRequestObject* ModuleRequestObject::create(JSContext* cx,
 
   self->initReservedSlot(SpecifierSlot, StringOrNullValue(specifier));
   self->initReservedSlot(ModuleTypeSlot, ModuleTypeToValue(moduleType));
+  self->initReservedSlot(PhaseSlot, ImportPhaseToValue(phase));
 
   return self;
 }
@@ -924,8 +941,9 @@ bool ModuleObject::isInstance(HandleValue value) {
 }
 
 bool ModuleObject::hasCyclicModuleFields() const {
-  // This currently only returns false if we GC during initialization.
-  return !getReservedSlot(CyclicModuleFieldsSlot).isUndefined();
+  bool result = !getReservedSlot(CyclicModuleFieldsSlot).isUndefined();
+  MOZ_ASSERT_IF(result, !hasSyntheticModuleFields());
+  return result;
 }
 
 CyclicModuleFields* ModuleObject::cyclicModuleFields() {
@@ -1160,7 +1178,8 @@ void ModuleObject::setStatus(ModuleStatus newStatus) {
   // Note that under OOM conditions we can fail the module linking process even
   // after modules have been marked as linked.
   MOZ_ASSERT((status() <= ModuleStatus::Linked &&
-              newStatus == ModuleStatus::Unlinked) ||
+              (newStatus == ModuleStatus::Unlinked ||
+               newStatus == ModuleStatus::New)) ||
                  newStatus > status(),
              "New module status inconsistent with current status");
 
@@ -1324,6 +1343,16 @@ void ModuleObject::setMetaObject(JSObject* obj) {
   cyclicModuleFields()->metaObject = obj;
 }
 
+#ifdef DEBUG
+void ModuleObject::setPreload(bool isPreload) {
+  setReservedSlot(PreloadSlot, BooleanValue(isPreload));
+}
+
+bool ModuleObject::isPreload() const {
+  return getReservedSlot(PreloadSlot).toBoolean();
+}
+#endif
+
 /* static */
 void ModuleObject::trace(JSTracer* trc, JSObject* obj) {
   ModuleObject& module = obj->as<ModuleObject>();
@@ -1465,7 +1494,9 @@ bool ModuleObject::createSyntheticEnvironment(JSContext* cx,
     return false;
   }
 
-  MOZ_ASSERT(env->shape()->propMapLength() == values.length());
+  // We expect one property per synthetic value plus one for the *namespace*
+  // binding.
+  MOZ_ASSERT(env->shape()->propMapLength() == values.length() + 1);
 
   for (uint32_t i = 0; i < values.length(); i++) {
     env->setAliasedBinding(env->firstSyntheticValueSlot() + i, values[i]);
@@ -2073,6 +2104,19 @@ bool ModuleBuilder::processImport(frontend::BinaryNode* importNode) {
 
   return true;
 }
+
+#ifdef ENABLE_SOURCE_PHASE_IMPORTS
+bool ModuleBuilder::processImportSource(frontend::BinaryNode* importNode) {
+  using namespace js::frontend;
+
+  MOZ_ASSERT(importNode->isKind(ParseNodeKind::ImportSourceDecl));
+
+  // TODO: Support for import source will be added in Bug 2011284.
+  // For now, we'll return true rather than signal an error, so we
+  // can write tests for parsing.
+  return true;
+}
+#endif
 
 bool ModuleBuilder::processExport(frontend::ParseNode* exportNode) {
   using namespace js::frontend;

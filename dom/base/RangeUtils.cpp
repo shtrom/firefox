@@ -149,7 +149,11 @@ bool RangeUtils::IsValidPoints(
   }
 
   const Maybe<int32_t> order =
-      nsContentUtils::ComparePoints(aStartBoundary, aEndBoundary);
+      aStartBoundary.GetTreeKind() == TreeKind::Flat
+          ? nsContentUtils::ComparePoints<TreeKind::Flat>(aStartBoundary,
+                                                          aEndBoundary)
+          : nsContentUtils::ComparePoints<TreeKind::DOM>(aStartBoundary,
+                                                         aEndBoundary);
   if (!order) {
     MOZ_ASSERT_UNREACHABLE();
     return false;
@@ -240,8 +244,7 @@ nsresult RangeUtils::CompareNodeToRangeBoundaries(
     parent = aNode;
     nodeStart = 0;
     nodeEnd = aNode->GetChildCount();
-  } else if (const HTMLSlotElement* slotAsParent =
-                 HTMLSlotElement::FromNode(parent);
+  } else if (const auto* slotAsParent = HTMLSlotElement::FromNode(parent);
              slotAsParent && aKind == TreeKind::Flat) {
     // aNode is a slotted content, use the index in the assigned nodes
     // to represent this node.
@@ -299,6 +302,17 @@ nsresult RangeUtils::CompareNodeToRangeBoundaries(
 }
 
 // static
+RawRangeBoundary ShadowDOMSelectionHelpers::StartRef(
+    const AbstractRange* aRange,
+    AllowRangeCrossShadowBoundary aAllowCrossShadowBoundary) {
+  MOZ_ASSERT(aRange);
+  return (StaticPrefs::dom_shadowdom_selection_across_boundary_enabled() &&
+          aAllowCrossShadowBoundary == AllowRangeCrossShadowBoundary::Yes)
+             ? aRange->MayCrossShadowBoundaryStartRef().AsRaw()
+             : aRange->StartRef().AsRaw();
+}
+
+// static
 nsINode* ShadowDOMSelectionHelpers::GetStartContainer(
     const AbstractRange* aRange,
     AllowRangeCrossShadowBoundary aAllowCrossShadowBoundary) {
@@ -318,6 +332,17 @@ uint32_t ShadowDOMSelectionHelpers::StartOffset(
           aAllowCrossShadowBoundary == AllowRangeCrossShadowBoundary::Yes)
              ? aRange->MayCrossShadowBoundaryStartOffset()
              : aRange->StartOffset();
+}
+
+// static
+RawRangeBoundary ShadowDOMSelectionHelpers::EndRef(
+    const AbstractRange* aRange,
+    AllowRangeCrossShadowBoundary aAllowCrossShadowBoundary) {
+  MOZ_ASSERT(aRange);
+  return (StaticPrefs::dom_shadowdom_selection_across_boundary_enabled() &&
+          aAllowCrossShadowBoundary == AllowRangeCrossShadowBoundary::Yes)
+             ? aRange->MayCrossShadowBoundaryEndRef().AsRaw()
+             : aRange->EndRef().AsRaw();
 }
 
 // static

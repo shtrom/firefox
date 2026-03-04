@@ -15,11 +15,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "jsnum.h"
 #include "jspubtd.h"
 #include "NamespaceImports.h"
 
 #include "builtin/intl/DateTimeFormat.h"
+#include "builtin/Number.h"
 #include "builtin/temporal/Calendar.h"
 #include "builtin/temporal/Duration.h"
 #include "builtin/temporal/Int96.h"
@@ -315,7 +315,7 @@ BigInt* js::temporal::ToBigInt(JSContext* cx,
  */
 EpochNanoseconds js::temporal::GetUTCEpochNanoseconds(
     const ISODateTime& isoDateTime) {
-  MOZ_ASSERT(ISODateTimeWithinLimits(isoDateTime));
+  MOZ_ASSERT(IsValidISODateTime(isoDateTime));
 
   const auto& [date, time] = isoDateTime;
 

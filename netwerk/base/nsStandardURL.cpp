@@ -200,7 +200,7 @@ const nsACString& nsStandardURL::nsSegmentEncoder::EncodeSegment(
 
 #ifdef DEBUG_DUMP_URLS_AT_SHUTDOWN
 static StaticMutex gAllURLsMutex MOZ_UNANNOTATED;
-MOZ_RUNINIT static LinkedList<nsStandardURL> gAllURLs;
+constinit static LinkedList<nsStandardURL> gAllURLs;
 #endif
 
 nsStandardURL::nsStandardURL(bool aSupportsFileURL, bool aTrackURL)
@@ -2887,6 +2887,12 @@ nsresult nsStandardURL::SetQueryWithEncoding(const nsACString& input,
     queryLen = buf.Length();
   }
 
+  // Check the final length after encoding
+  if (mSpec.Length() - mQuery.mLen + queryLen >
+      StaticPrefs::network_standard_url_max_length()) {
+    return NS_ERROR_MALFORMED_URI;
+  }
+
   int32_t shift = ReplaceSegment(mQuery.mPos, mQuery.mLen, query, queryLen);
 
   if (shift) {
@@ -2955,6 +2961,12 @@ nsresult nsStandardURL::SetRef(const nsACString& input) {
   if (encoded) {
     ref = buf.get();
     refLen = buf.Length();
+  }
+
+  // Check the final length after encoding
+  if (mSpec.Length() - mRef.mLen + refLen >
+      StaticPrefs::network_standard_url_max_length()) {
+    return NS_ERROR_MALFORMED_URI;
   }
 
   int32_t shift = ReplaceSegment(mRef.mPos, mRef.mLen, ref, refLen);

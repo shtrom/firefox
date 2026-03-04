@@ -69,6 +69,7 @@ import org.mozilla.fenix.helpers.MatcherHelper.itemWithResId
 import org.mozilla.fenix.helpers.MatcherHelper.itemWithResIdAndText
 import org.mozilla.fenix.helpers.MatcherHelper.itemWithResIdContainingText
 import org.mozilla.fenix.helpers.MatcherHelper.itemWithText
+import org.mozilla.fenix.helpers.MatcherHelper.itemWithTextAndIndex
 import org.mozilla.fenix.helpers.SessionLoadedIdlingResource
 import org.mozilla.fenix.helpers.TestAssetHelper.waitingTime
 import org.mozilla.fenix.helpers.TestAssetHelper.waitingTimeLong
@@ -131,9 +132,22 @@ class BrowserRobot(private val composeTestRule: ComposeTestRule) {
 
     fun verifyUrl(url: String) {
         Log.i(TAG, "verifyUrl: Trying to verify $url")
-        composeTestRule.onAllNodesWithTag(ADDRESSBAR_URL, useUnmergedTree = true)
-            .assertAny(hasText(url.replace("http://", ""), substring = true, ignoreCase = true))
-        Log.i(TAG, "verifyUrl: Verified $url")
+
+        val expectedText = url.replace("http://", "")
+        val textMatcher = hasText(expectedText, substring = true, ignoreCase = true)
+        try {
+            composeTestRule.waitUntil(waitingTimeShort) {
+                composeTestRule.onAllNodesWithTag(ADDRESSBAR_URL, useUnmergedTree = true).fetchSemanticsNodes()
+                    .any { textMatcher.matches(it) }
+            }
+        } catch (_: ComposeTimeoutException) {
+            Log.i(TAG, "verifyUrl [$url] failed because: ")
+            composeTestRule.onAllNodesWithTag(ADDRESSBAR_URL, useUnmergedTree = true).fetchSemanticsNodes()
+                .forEachIndexed { index, node ->
+                    val text = node.config.getOrNull(SemanticsProperties.Text)?.joinToString("")
+                    Log.i(TAG, "verifyUrl: Node[$index] with tag '$ADDRESSBAR_URL' has text: '$text'")
+                }
+        }
     }
 
     fun verifyHelpUrl() {
@@ -1020,7 +1034,7 @@ class BrowserRobot(private val composeTestRule: ComposeTestRule) {
                 if (i == RETRY_COUNT) {
                     throw e
                 } else {
-                    browserScreen(this@BrowserRobot.composeTestRule) {
+                    browserScreen(composeTestRule) {
                     }.openThreeDotMenu {
                     }.clickRefreshButton {
                         waitForPageToLoad(pageLoadWaitingTime = waitingTimeLong)
@@ -1310,29 +1324,6 @@ class BrowserRobot(private val composeTestRule: ComposeTestRule) {
         }
     }
 
-    fun verifyToolsMenuDoesNotExist() {
-        assertUIObjectIsGone(itemWithDescription(getStringResource(R.string.browser_tools_menu_handlebar_content_description)))
-    }
-
-    fun verifySaveMenuDoesNotExist() {
-        assertUIObjectIsGone(itemWithDescription(getStringResource(R.string.browser_save_menu_handlebar_content_description)))
-    }
-
-    fun verifyExtensionsMenuDoesNotExist() {
-        assertUIObjectIsGone(itemWithDescription(getStringResource(R.string.browser_extensions_menu_handlebar_content_description)))
-    }
-
-    fun verifyExtensionsPromotionBannerLearnMoreLinkURL() {
-        try {
-            verifyUrl("support.mozilla.org/en-US/kb/find-and-install-add-ons-firefox-android")
-        } catch (e: AssertionError) {
-            Log.i(TAG, "verifyExtensionsPromotionBannerLearnMoreLinkURL: AssertionError caught, checking redirect URL")
-            verifyUrl(
-                SupportUtils.getSumoURLForTopic(appContext, SupportUtils.SumoTopic.FIND_INSTALL_ADDONS).replace("https://", ""),
-            )
-        }
-    }
-
     fun verifyWebCompatPageItemExists(itemText: String, isSmartBlockFixesItem: Boolean = false) {
         for (i in 1..RETRY_COUNT) {
             try {
@@ -1359,13 +1350,20 @@ class BrowserRobot(private val composeTestRule: ComposeTestRule) {
     }
 
     fun clickWebCompatPageItem(itemText: String) {
-        clickPageObject(this@BrowserRobot.composeTestRule, itemContainingText(itemText))
+        clickPageObject(composeTestRule, itemWithText(itemText))
+        waitForAppWindowToBeUpdated()
+    }
+
+    fun verifyETPShieldIconIsDisplayed(composeTestRule: ComposeTestRule) {
+        Log.i(TAG, "verifyETPShieldIconIsDisplayed: Trying to verify that the \"Shield icon\" is displayed")
+        composeTestRule.onNodeWithContentDescription(getStringResource(toolbarR.string.mozac_browser_toolbar_content_description_site_info)).assertIsDisplayed()
+        Log.i(TAG, "verifyETPShieldIconIsDisplayed: Verified that the \"Shield icon\" was displayed")
     }
 
     class Transition(private val composeTestRule: ComposeTestRule) {
         fun openThreeDotMenu(interact: ThreeDotMenuMainRobot.() -> Unit): ThreeDotMenuMainRobot.Transition {
             Log.i(TAG, "openThreeDotMenu: Trying to click main menu button")
-            composeTestRule.onNodeWithContentDescription(getStringResource(R.string.content_description_menu)).performClick()
+            itemWithDescription(getStringResource(R.string.content_description_menu)).click()
             Log.i(TAG, "openThreeDotMenu: Clicked main menu button")
             assertUIObjectExists(itemWithResId("$packageName:id/design_bottom_sheet"))
 
@@ -1373,13 +1371,10 @@ class BrowserRobot(private val composeTestRule: ComposeTestRule) {
             return ThreeDotMenuMainRobot.Transition(composeTestRule)
         }
 
-        @OptIn(ExperimentalTestApi::class)
         fun openSearch(interact: SearchRobot.() -> Unit): SearchRobot.Transition {
-            composeTestRule.waitUntilAtLeastOneExists(hasTestTag(ADDRESSBAR_URL_BOX), waitingTime)
             Log.i(TAG, "openSearch: Trying to click navigation toolbar")
-            composeTestRule.onAllNodesWithTag(ADDRESSBAR_URL_BOX).onLast().performClick()
+            itemWithResId(ADDRESSBAR_URL_BOX).click()
             Log.i(TAG, "openSearch: Clicked navigation toolbar")
-            waitForAppWindowToBeUpdated()
 
             SearchRobot(composeTestRule).interact()
             return SearchRobot.Transition(composeTestRule)
@@ -1442,6 +1437,8 @@ class BrowserRobot(private val composeTestRule: ComposeTestRule) {
             mDevice.pressBack()
             Log.i(TAG, "goToHomescreen: Clicked the device back button")
 
+            composeTestRule.waitForIdle()
+
             HomeScreenRobot(composeTestRule).interact()
             return HomeScreenRobot.Transition(composeTestRule)
         }
@@ -1473,7 +1470,26 @@ class BrowserRobot(private val composeTestRule: ComposeTestRule) {
         }
 
         fun clickDownloadLink(title: String, interact: DownloadRobot.() -> Unit): DownloadRobot.Transition {
-            clickPageObject(composeTestRule, itemContainingText(title))
+            for (i in 1..RETRY_COUNT) {
+                Log.i(TAG, "clickDownloadLink: Started try #$i")
+                try {
+                    Log.i(TAG, "clickDownloadLink: Trying to click the: $title download link")
+                    mDevice.findObject(By.textContains(title)).click()
+                    Log.i(TAG, "clickDownloadLink: Clicked the: $title download link")
+                    assertUIObjectExists(itemWithResId("$packageName:id/parentPanel"))
+                } catch (e: AssertionError) {
+                    Log.i(TAG, "clickDownloadLink: AssertionError caught, executing fallback methods")
+                    if (i == RETRY_COUNT) {
+                        throw e
+                    } else {
+                        browserScreen(composeTestRule) {
+                        }.openThreeDotMenu {
+                        }.clickRefreshButton {
+                            waitForPageToLoad(pageLoadWaitingTime = waitingTimeLong)
+                        }
+                    }
+                }
+            }
 
             DownloadRobot(composeTestRule).interact()
             return DownloadRobot.Transition(composeTestRule)

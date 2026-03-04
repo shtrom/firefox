@@ -100,7 +100,7 @@ class Selection;
 
 enum class DisplayListArenaObjectId {
 #define DISPLAY_LIST_ARENA_OBJECT(name_) name_,
-#include "nsDisplayListArenaTypes.h"
+#include "nsDisplayListArenaTypes.inc"
 #undef DISPLAY_LIST_ARENA_OBJECT
   COUNT
 };
@@ -200,28 +200,7 @@ struct ActiveScrolledRoot {
   }
 
   static const ActiveScrolledRoot* LowestCommonAncestor(
-      const ActiveScrolledRoot* aOne, const ActiveScrolledRoot* aTwo) {
-    uint32_t depth1 = Depth(aOne);
-    uint32_t depth2 = Depth(aTwo);
-    if (depth1 > depth2) {
-      for (uint32_t i = 0; i < (depth1 - depth2); ++i) {
-        MOZ_ASSERT(aOne);
-        aOne = aOne->mParent;
-      }
-    } else if (depth1 < depth2) {
-      for (uint32_t i = 0; i < (depth2 - depth1); ++i) {
-        MOZ_ASSERT(aTwo);
-        aTwo = aTwo->mParent;
-      }
-    }
-    while (aOne != aTwo) {
-      MOZ_ASSERT(aOne);
-      MOZ_ASSERT(aTwo);
-      aOne = aOne->mParent;
-      aTwo = aTwo->mParent;
-    }
-    return aOne;
-  }
+      const ActiveScrolledRoot* aOne, const ActiveScrolledRoot* aTwo);
 
   static const ActiveScrolledRoot* PickDescendant(
       const ActiveScrolledRoot* aOne, const ActiveScrolledRoot* aTwo) {
@@ -280,6 +259,8 @@ struct ActiveScrolledRoot {
   ASRKind mKind = ASRKind::Scroll;
 
   NS_INLINE_DECL_REFCOUNTING(ActiveScrolledRoot)
+
+  void AssertDepthInvariant() const;
 
  private:
   ActiveScrolledRoot() : mDepth(0) {}
@@ -980,7 +961,7 @@ class nsDisplayListBuilder {
   static_assert(size_t(DisplayItemType::TYPE_##name_) ==     \
                     size_t(DisplayListArenaObjectId::name_), \
                 "");
-#include "nsDisplayItemTypesList.h"
+#include "nsDisplayItemTypesList.inc"
     static_assert(size_t(DisplayItemType::TYPE_MAX) ==
                       size_t(DisplayListArenaObjectId::CLIPCHAIN),
                   "");
@@ -2787,16 +2768,6 @@ class nsDisplayItem {
   virtual bool NeedsGeometryUpdates() const { return false; }
 
   /**
-   * When this item is rendered using fallback rendering, whether it should use
-   * blob rendering (i.e. a recording DrawTarget), as opposed to a pixel-backed
-   * DrawTarget.
-   * Some items, such as those calling into the native themed widget machinery,
-   * are more efficiently painted without blob recording. Those should return
-   * false here.
-   */
-  virtual bool ShouldUseBlobRenderingForFallback() const { return true; }
-
-  /**
    * If this has a child list where the children are in the same coordinate
    * system as this item (i.e., they have the same reference frame),
    * return the list.
@@ -4515,10 +4486,6 @@ class nsDisplayThemedBackground : public nsPaintedDisplayItem {
       layers::RenderRootStateManager* aManager,
       nsDisplayListBuilder* aDisplayListBuilder) override;
 
-  bool ShouldUseBlobRenderingForFallback() const override {
-    return !XRE_IsParentProcess();
-  }
-
   /**
    * GetBounds() returns the background painting area.
    */
@@ -4844,12 +4811,6 @@ class nsDisplayOutline final : public nsPaintedDisplayItem {
   MOZ_COUNTED_DTOR_FINAL(nsDisplayOutline)
 
   NS_DISPLAY_DECL_NAME("Outline", TYPE_OUTLINE)
-
-  bool ShouldUseBlobRenderingForFallback() const override {
-    MOZ_ASSERT(IsThemedOutline(),
-               "The only fallback path we have is for themed outlines");
-    return !XRE_IsParentProcess();
-  }
 
   bool CreateWebRenderCommands(
       wr::DisplayListBuilder& aBuilder, wr::IpcResourceUpdateQueue& aResources,

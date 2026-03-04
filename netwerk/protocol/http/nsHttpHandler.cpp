@@ -13,6 +13,7 @@
 #include "nsCORSListenerProxy.h"
 #include "nsError.h"
 #include "nsHttp.h"
+#include "nsHttpConnectionMgr.h"
 #include "nsHttpHandler.h"
 #include "nsHttpChannel.h"
 #include "nsHTTPCompressConv.h"
@@ -37,6 +38,7 @@
 #include "mozilla/Sprintf.h"
 #include "mozilla/StaticPrefs_network.h"
 #include "mozilla/StaticPrefs_privacy.h"
+#include "mozilla/StaticPrefs_security.h"
 #include "mozilla/StoragePrincipalHelper.h"
 #include "nsAsyncRedirectVerifyHelper.h"
 #include "nsSocketTransportService2.h"
@@ -64,6 +66,7 @@
 #include "nsCharSeparatedTokenizer.h"
 #include "nsRFPService.h"
 #include "mozilla/net/rust_helper.h"
+#include "SerializedLoadContext.h"
 
 #include "mozilla/net/HttpConnectionMgrParent.h"
 #include "mozilla/net/NeckoChild.h"
@@ -219,9 +222,11 @@ static nsCString ImageAcceptHeader() {
   mimeTypes.Append("image/avif,");
 #endif
 
+#ifdef MOZ_JXL
   if (mozilla::StaticPrefs::image_jxl_enabled()) {
     mimeTypes.Append("image/jxl,");
   }
+#endif
 
   mimeTypes.Append("image/webp,");
 
@@ -244,9 +249,11 @@ static nsCString DocumentAcceptHeader() {
     mimeTypes.Append("image/avif,");
 #endif
 
+#ifdef MOZ_JXL
     if (mozilla::StaticPrefs::image_jxl_enabled()) {
       mimeTypes.Append("image/jxl,");
     }
+#endif
 
     mimeTypes.Append("image/webp,image/png,image/svg+xml,");
   }
@@ -364,6 +371,7 @@ nsresult nsHttpHandler::Init() {
   if (!IsNeckoChild()) {
     if (XRE_IsParentProcess()) {
       mDictionaryCache = DictionaryCache::GetInstance();
+      // mDictionaryCache can be null if shutdown has occurred
 
       std::bitset<3> usageOfHTTPSRRPrefs;
       usageOfHTTPSRRPrefs[0] = StaticPrefs::network_dns_upgrade_with_https_rr();
@@ -671,7 +679,7 @@ nsresult nsHttpHandler::AddAcceptAndDictionaryHeaders(
   // Add the "Accept-Encoding" header and possibly Dictionary headers
   if (aSecure) {
     // The dictionary info may require us to check the cache.
-    if (StaticPrefs::network_http_dictionaries_enable()) {
+    if (StaticPrefs::network_http_dictionaries_enable() && mDictionaryCache) {
       // Note: this is async; the lambda can happen later
       // aCallback will now be owned by GetDictionaryFor
       guard.release();
@@ -2443,8 +2451,11 @@ nsresult nsHttpHandler::SpeculativeConnectInternal(
     Maybe<OriginAttributes>&& aOriginAttributes,
     nsIInterfaceRequestor* aCallbacks, bool anonymous) {
   if (IsNeckoChild()) {
+    nsCOMPtr<nsILoadContext> loadContext = do_GetInterface(aCallbacks);
+
     gNeckoChild->SendSpeculativeConnect(
-        aURI, aPrincipal, std::move(aOriginAttributes), anonymous);
+        nullptr, IPC::SerializedLoadContext(loadContext), aURI, aPrincipal,
+        std::move(aOriginAttributes), anonymous);
     return NS_OK;
   }
 

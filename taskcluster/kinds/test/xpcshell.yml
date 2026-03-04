@@ -62,7 +62,6 @@ xpcshell:
                 by-test-platform:
                     .*-asan.*: []
                     .*-ccov.*: []
-                    linux1804-64.*/opt: ['trunk']
                     linux2404-64.*/opt: ['trunk']
                     windows11-64.*/opt: ['trunk']
                     default: []
@@ -70,7 +69,6 @@ xpcshell:
                 by-test-platform:
                     android-em.*/debug-isolated-process: []
                     android.*: built-projects
-                    linux1804-64.*: ['mozilla-central']
                     linux2404-64.*: ['mozilla-central']
                     default: []
             msix:
@@ -90,22 +88,19 @@ xpcshell:
                     .*-wayland.*: []
                     windows.*-asan/opt: []  # No XPCShell on ASAN yet
                     default: built-projects
-    chunks:
-        by-variant:
-            inc-origin-init: dynamic
-            default:
-                by-test-platform:
-                    .*-asan.*/opt: 4
-                    .*-ccov.*: 8
-                    .*-tsan(-qr)?/opt: 10
-                    android-em-14.*/debug: 16
-                    android-em-14.*/opt: 8
-                    android.*/debug: 10
-                    android.*/opt: 5
-                    macosx.*: 2
-                    linux1804-64.*/opt: 2
-                    linux2404-64.*/opt: 2
-                    default: 4
+    chunks: dynamic
+    default-chunks:
+        by-test-platform:
+            .*-asan.*/opt: 4
+            .*-ccov.*: 8
+            .*-tsan(-qr)?/opt: 10
+            android-em-14.*/debug: 16
+            android-em-14.*/opt: 8
+            android.*/debug: 10
+            android.*/opt: 5
+            macosx.*: 2
+            linux2404-64.*/opt: 2
+            default: 4
     timeoutfactor:
         by-test-platform:
             android-em-14.*: 2
@@ -147,12 +142,6 @@ xpcshell:
     fetches:
         toolchain:
             by-test-platform:
-                linux1804.*:
-                    - linux64-node
-                    - linux64-minidump-stackwalk
-                    - linux64-fix-stacks
-                    - linux-python-dbusmock
-                    - linux64-1804-dbus-python
                 linux2204.*:
                     - linux64-node
                     - linux64-minidump-stackwalk

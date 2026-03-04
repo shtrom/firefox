@@ -94,6 +94,12 @@ option(
 )
 set_config("MOZ_DISTRIBUTION_ID", depends("--with-distribution-id")(lambda v: v[0]))
 
+option(
+    "--built-by-mozilla",
+    help="Enable Mozilla official build designation",
+)
+set_config("BUILT_BY_MOZILLA", depends("--built-by-mozilla")(lambda v: bool(v) or None))
+set_define("BUILT_BY_MOZILLA", depends("--built-by-mozilla")(lambda v: bool(v) or None))
 
 @depends("MOZ_APP_VENDOR", build_project)
 def check_moz_app_vendor(moz_app_vendor, build_project):
@@ -104,7 +110,7 @@ def check_moz_app_vendor(moz_app_vendor, build_project):
 # Set the MOZ_CONFIGURE_OPTIONS variable with all the options that
 # were passed somehow (environment, command line, mozconfig)
 @dependable
-@imports(_from="mozbuild.shellutil", _import="quote")
+@imports(_from="mozshellutil", _import="quote")
 @imports(_from="mozbuild.util", _import="ensure_unicode")
 @imports(_from="mozbuild.util", _import="system_encoding")
 @imports("__sandbox__")
@@ -169,18 +175,12 @@ set_config("MOZ_FOLD_LIBS", fold_libs)
 option("--disable-gecko-profiler", help="Disable the Gecko profiler")
 
 
-@depends("--disable-gecko-profiler", target)
-def gecko_profiler(enable_gecko_profiler, target):
+@depends("--disable-gecko-profiler")
+def gecko_profiler(enable_gecko_profiler):
     if not enable_gecko_profiler:
+        log.warning("--disable-gecko-profiler is deprecated see https://bugzilla.mozilla.org/show_bug.cgi?id=1635350")
         return False
-
-    if target.os == "Android":
-        return target.cpu in ("aarch64", "arm", "x86", "x86_64")
-    elif target.kernel == "Linux":
-        return target.cpu in ("aarch64", "arm", "x86", "x86_64", "mips64")
-    elif target.kernel == "FreeBSD":
-        return target.cpu in ("aarch64", "x86_64")
-    return target.kernel in ("Darwin", "WINNT")
+    return True
 
 
 @depends(gecko_profiler)
@@ -746,27 +746,7 @@ def gl_provider_define(provider):
 
 
 set_define("MOZ_GL_PROVIDER", gl_provider_define)
-
-
-@depends(gl_provider, toolkit_gtk)
-def gl_default_provider(value, toolkit_gtk):
-    if value:
-        return value
-    elif toolkit_gtk:
-        return "EGL"
-
-
 set_config("MOZ_GL_PROVIDER", gl_provider)
-set_config("MOZ_GL_DEFAULT_PROVIDER", gl_default_provider)
-
-
-@depends(gl_default_provider)
-def gl_provider_define(provider):
-    if provider:
-        return "GL_PROVIDER_%s" % provider
-
-
-set_define(gl_provider_define, True)
 
 
 # PDF printing
@@ -1203,7 +1183,8 @@ include("../build/moz.configure/keyfiles.configure")
 
 simple_keyfile("Mozilla API")
 
-simple_keyfile("Google Location Service API")
+with only_when(depends(target.os)(lambda os: os != "Android")):
+    simple_keyfile("Google Location Service API")
 
 simple_keyfile("Google Safebrowsing API")
 
@@ -1274,7 +1255,6 @@ def printing(value):
 
 set_config("NS_PRINTING", printing)
 set_define("NS_PRINTING", printing)
-set_define("NS_PRINT_PREVIEW", printing)
 
 
 # Speech-dispatcher support
@@ -1770,7 +1750,7 @@ with only_when("--enable-compile-environment"):
                     "int main() { return 0; }\nint (*ptr)() = main;",
                     pack_rel_relocs
                     + ["-pie", "-o", path]
-                    + (extra_toolchain_flags or [])
+                    + extra_toolchain_flags
                     + linker_ldflags,
                     wrapper=c_compiler.wrapper,
                     onerror=lambda: None,
@@ -2773,7 +2753,7 @@ with only_when(target_is_windows):
         dxc_dll_path,
         when=dxc_supports_target,
     )
-    @checking("for dxcompiler.dll")
+    @checking("for dxcompiler.dll", lambda x: x.dxc_path if x.enabled else "not found")
     @imports("os.path")
     def dxcompiler(target, artifact, windows_sdk_dir, dxc_path):
         if not windows_sdk_dir and not artifact:
@@ -4093,6 +4073,17 @@ option(
 )
 
 set_config("MOZ_SYSTEM_POLICIES", True, when="--enable-system-policies")
+
+# System preferences
+# ==============================================================
+
+option(
+    "--disable-system-preferences",
+    help="Disable reading preferences from /etc/firefox",
+)
+
+set_config("MOZ_SYSTEM_PREFERENCES", True, when="--enable-system-preferences")
+set_define("MOZ_SYSTEM_PREFERENCES", True, when="--enable-system-preferences")
 
 # Allow disabling the creation a legacy profile
 # ==============================================================

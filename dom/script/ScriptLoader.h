@@ -256,7 +256,6 @@ class ScriptLoader final : public JS::loader::ScriptLoaderInterface {
   ModuleLoader* GetModuleLoader() { return mModuleLoader; }
 
   void RegisterContentScriptModuleLoader(ModuleLoader* aLoader);
-  void RegisterShadowRealmModuleLoader(ModuleLoader* aLoader);
 
   /**
    *  Check whether to speculatively OMT parse scripts as soon as
@@ -353,8 +352,7 @@ class ScriptLoader final : public JS::loader::ScriptLoaderInterface {
    * loading the script. The streamed content is expected to be stored on the
    * aRequest argument.
    */
-  nsresult OnStreamComplete(nsIIncrementalStreamLoader* aLoader,
-                            ScriptLoadRequest* aRequest,
+  nsresult OnStreamComplete(nsIChannel* aChannel, ScriptLoadRequest* aRequest,
                             nsresult aChannelStatus, nsresult aSRIStatus,
                             SRICheckDataVerifier* aSRIDataVerifier);
 
@@ -493,12 +491,12 @@ class ScriptLoader final : public JS::loader::ScriptLoaderInterface {
   /**
    * Helper function to notify network observers for cached request.
    */
-  void EmulateNetworkEvents(ScriptLoadRequest* aRequest);
+  void EmulateNetworkEvents(ScriptLoadRequest* aRequest,
+                            const Maybe<nsAutoString>& aCharsetForPreload);
 
   void NotifyObserversForCachedScript(
-      nsIURI* aURI, nsINode* aContext, nsIPrincipal* aTriggeringPrincipal,
-      nsSecurityFlags aSecurityFlags, nsContentPolicyType aContentPolicyType,
-      SubResourceNetworkMetadataHolder* aNetworkMetadata);
+      ScriptLoadRequest* aRequest,
+      const Maybe<nsAutoString>& aCharsetForPreload);
 
   /**
    * Unblocks the creator parser of the parser-blocking scripts.
@@ -640,8 +638,8 @@ class ScriptLoader final : public JS::loader::ScriptLoaderInterface {
    */
   bool ReadyToExecuteScripts() { return mEnabled && !mBlockerCount; }
 
-  nsresult VerifySRI(ScriptLoadRequest* aRequest,
-                     nsIIncrementalStreamLoader* aLoader, nsresult aSRIStatus,
+  nsresult VerifySRI(ScriptLoadRequest* aRequest, nsIChannel* aChannel,
+                     nsresult aSRIStatus,
                      SRICheckDataVerifier* aSRIDataVerifier) const;
 
   nsresult SaveSRIHash(ScriptLoadRequest* aRequest,
@@ -653,6 +651,8 @@ class ScriptLoader final : public JS::loader::ScriptLoaderInterface {
   void ReportWarningToConsole(
       ScriptLoadRequest* aRequest, const char* aMessageName,
       const nsTArray<nsString>& aParams = nsTArray<nsString>()) const override;
+
+  bool IsImportMapSupported() const override { return true; }
 
   void ReportPreloadErrorsToConsole(ScriptLoadRequest* aRequest);
 
@@ -795,8 +795,7 @@ class ScriptLoader final : public JS::loader::ScriptLoaderInterface {
   int32_t PhysicalSizeOfMemoryInGB();
 
   nsresult PrepareLoadedRequest(ScriptLoadRequest* aRequest,
-                                nsIIncrementalStreamLoader* aLoader,
-                                nsresult aStatus);
+                                nsIChannel* aChannel, nsresult aStatus);
 
   void AddDeferRequest(ScriptLoadRequest* aRequest);
   void AddAsyncRequest(ScriptLoadRequest* aRequest);
@@ -937,7 +936,6 @@ class ScriptLoader final : public JS::loader::ScriptLoaderInterface {
 
   RefPtr<ModuleLoader> mModuleLoader;
   nsTArray<RefPtr<ModuleLoader>> mWebExtModuleLoaders;
-  nsTArray<RefPtr<ModuleLoader>> mShadowRealmModuleLoaders;
 
   RefPtr<SharedScriptCache> mCache;
 
