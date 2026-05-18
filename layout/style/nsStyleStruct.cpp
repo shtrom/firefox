@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -1086,7 +1084,7 @@ nsStylePosition::nsStylePosition()
       mHeight(StyleSize::Auto()),
       mMinHeight(StyleSize::Auto()),
       mMaxHeight(StyleMaxSize::None()),
-      mPositionAnchor(StylePositionAnchorKeyword::None()),
+      mPositionAnchor(StylePositionAnchorKeyword::Normal()),
       mPositionVisibility(StylePositionVisibility::ANCHORS_VISIBLE),
       mPositionTryFallbacks(StylePositionTryFallbacks()),
       mPositionTryOrder(StylePositionTryOrder::Normal),
@@ -1635,6 +1633,8 @@ bool StyleImage::IsOpaque() const {
       MOZ_ASSERT(imageContainer, "IsComplete() said image container is ready");
       return imageContainer->WillDrawOpaqueNow();
     }
+    case Tag::Image:
+      return !AsImage()->MaybeTransparent();
     case Tag::CrossFade:
       for (const auto& el : AsCrossFade()->elements.AsSpan()) {
         if (el.image.IsColor()) {
@@ -1667,6 +1667,7 @@ bool StyleImage::IsComplete() const {
     case Tag::Gradient:
     case Tag::Element:
     case Tag::MozSymbolicIcon:
+    case Tag::Image:
       return true;
     case Tag::Url: {
       if (!IsResolved()) {
@@ -1699,6 +1700,7 @@ bool StyleImage::IsSizeAvailable() const {
   switch (tag) {
     case Tag::None:
       return false;
+    case Tag::Image:
     case Tag::Gradient:
     case Tag::Element:
     case Tag::MozSymbolicIcon:
@@ -1990,10 +1992,10 @@ static bool SizeDependsOnPositioningAreaSize(const StyleBackgroundSize& aSize,
     return false;
   }
 
-  // Gradient rendering depends on frame size when auto is involved because
-  // gradients have no intrinsic ratio or dimensions, and therefore the relevant
-  // dimension is "treat[ed] as 100%".
-  if (aImage.IsGradient()) {
+  // Gradient and image() rendering depends on frame size when auto is involved
+  // because they have no intrinsic ratio or dimensions, and therefore the
+  // relevant dimension is "treat[ed] as 100%".
+  if (aImage.IsGradient() || aImage.IsImage()) {
     return true;
   }
 
@@ -2299,9 +2301,7 @@ nsStyleDisplay::nsStyleDisplay()
       mBaselineSource(StyleBaselineSource::Auto),
       mWebkitLineClamp(0),
       mShapeMargin(LengthPercentage::Zero()),
-      mShapeOutside(StyleShapeOutside::None()),
-      mAnchorScope(StyleScopedNameKeyword::None()),
-      mTimelineScope(StyleScopedNameKeyword::None()) {
+      mShapeOutside(StyleShapeOutside::None()) {
   MOZ_COUNT_CTOR(nsStyleDisplay);
 }
 
@@ -2360,8 +2360,7 @@ nsStyleDisplay::nsStyleDisplay(const nsStyleDisplay& aSource)
       mShapeMargin(aSource.mShapeMargin),
       mShapeOutside(aSource.mShapeOutside),
       mAnchorName(aSource.mAnchorName),
-      mAnchorScope(aSource.mAnchorScope),
-      mTimelineScope(aSource.mTimelineScope) {
+      mAnchorScope(aSource.mAnchorScope) {
   MOZ_COUNT_CTOR(nsStyleDisplay);
 }
 
@@ -2441,8 +2440,18 @@ static bool ScrollbarGenerationChanged(const nsStyleDisplay& aOld,
 static bool AppearanceValueAffectsFrames(StyleAppearance aAppearance,
                                          StyleAppearance aDefaultAppearance) {
   switch (aAppearance) {
+    case StyleAppearance::Base:
+      return aDefaultAppearance == StyleAppearance::Menulist ||
+             aDefaultAppearance == StyleAppearance::Listbox ||
+             aDefaultAppearance == StyleAppearance::Checkbox ||
+             aDefaultAppearance == StyleAppearance::Radio;
+    case StyleAppearance::BaseSelect:
+      // <select> doesn't construct an nsComboboxControlFrame with base
+      // appearance.
+      return aDefaultAppearance == StyleAppearance::Menulist ||
+             aDefaultAppearance == StyleAppearance::Listbox;
     case StyleAppearance::None:
-      // Checkbox / radio with appearance none doesn't construct an
+      // Checkbox / radio with appearance: none don't construct an
       // nsCheckboxRadioFrame.
       return aDefaultAppearance == StyleAppearance::Checkbox ||
              aDefaultAppearance == StyleAppearance::Radio;
@@ -2739,8 +2748,7 @@ nsChangeHint nsStyleDisplay::CalcDifference(
                 mContain != aNewData.mContain ||
                 mContainerName != aNewData.mContainerName ||
                 mAnchorName != aNewData.mAnchorName ||
-                mAnchorScope != aNewData.mAnchorScope ||
-                mTimelineScope != aNewData.mTimelineScope)) {
+                mAnchorScope != aNewData.mAnchorScope)) {
     hint |= nsChangeHint_NeutralChange;
   }
 
@@ -3300,7 +3308,7 @@ nsStyleUIReset::nsStyleUIReset()
       mIMEMode(StyleImeMode::Auto),
       mWindowDragging(StyleWindowDragging::Default),
       mWindowShadow(StyleWindowShadow::Auto),
-      mWindowOpacity(1.0),
+      mFieldSizing(StyleFieldSizing::Fixed),
       mMozWindowInputRegionMargin(StyleLength::Zero()),
       mTransitions(
           nsStyleAutoArray<StyleTransition>::WITH_SINGLE_INITIAL_ELEMENT),
@@ -3309,6 +3317,7 @@ nsStyleUIReset::nsStyleUIReset()
       mTransitionDelayCount(1),
       mTransitionPropertyCount(1),
       mTransitionBehaviorCount(1),
+      mWindowOpacity(1.0),
       mAnimations(
           nsStyleAutoArray<StyleAnimation>::WITH_SINGLE_INITIAL_ELEMENT),
       mAnimationTimingFunctionCount(1),
@@ -3332,8 +3341,7 @@ nsStyleUIReset::nsStyleUIReset()
       mViewTimelineNameCount(1),
       mViewTimelineAxisCount(1),
       mViewTimelineInsetCount(1),
-      mFieldSizing(StyleFieldSizing::Fixed),
-      mViewTransitionName(StyleViewTransitionName::None()) {
+      mViewTransitionName(StyleAtom{nsGkAtoms::none}) {
   MOZ_COUNT_CTOR(nsStyleUIReset);
 }
 
@@ -3345,7 +3353,7 @@ nsStyleUIReset::nsStyleUIReset(const nsStyleUIReset& aSource)
       mIMEMode(aSource.mIMEMode),
       mWindowDragging(aSource.mWindowDragging),
       mWindowShadow(aSource.mWindowShadow),
-      mWindowOpacity(aSource.mWindowOpacity),
+      mFieldSizing(aSource.mFieldSizing),
       mMozWindowInputRegionMargin(aSource.mMozWindowInputRegionMargin),
       mMozWindowTransform(aSource.mMozWindowTransform),
       mTransitions(aSource.mTransitions.Clone()),
@@ -3354,6 +3362,7 @@ nsStyleUIReset::nsStyleUIReset(const nsStyleUIReset& aSource)
       mTransitionDelayCount(aSource.mTransitionDelayCount),
       mTransitionPropertyCount(aSource.mTransitionPropertyCount),
       mTransitionBehaviorCount(aSource.mTransitionBehaviorCount),
+      mWindowOpacity(aSource.mWindowOpacity),
       mAnimations(aSource.mAnimations.Clone()),
       mAnimationTimingFunctionCount(aSource.mAnimationTimingFunctionCount),
       mAnimationDurationCount(aSource.mAnimationDurationCount),
@@ -3374,9 +3383,9 @@ nsStyleUIReset::nsStyleUIReset(const nsStyleUIReset& aSource)
       mViewTimelineNameCount(aSource.mViewTimelineNameCount),
       mViewTimelineAxisCount(aSource.mViewTimelineAxisCount),
       mViewTimelineInsetCount(aSource.mViewTimelineInsetCount),
-      mFieldSizing(aSource.mFieldSizing),
       mViewTransitionName(aSource.mViewTransitionName),
-      mViewTransitionClass(aSource.mViewTransitionClass) {
+      mViewTransitionClass(aSource.mViewTransitionClass),
+      mTimelineScope(aSource.mTimelineScope) {
   MOZ_COUNT_CTOR(nsStyleUIReset);
 }
 
@@ -3391,7 +3400,7 @@ nsChangeHint nsStyleUIReset::CalcDifference(
     hint |= nsChangeHint_RepaintFrame;
   }
   if (mFieldSizing != aNewData.mFieldSizing) {
-    hint |= nsChangeHint_NeutralChange;
+    hint |= nsChangeHint_AllReflowHints;
   }
   if (mScrollbarWidth != aNewData.mScrollbarWidth) {
     // For scrollbar-width change, we need some special handling similar
@@ -3413,7 +3422,7 @@ nsChangeHint nsStyleUIReset::CalcDifference(
     hint |= nsChangeHint_SchedulePaint;
   }
 
-  if (mViewTransitionName != aNewData.mViewTransitionName) {
+  if (mViewTransitionName.value != aNewData.mViewTransitionName.value) {
     if (HasViewTransitionName() != aNewData.HasViewTransitionName()) {
       hint |= nsChangeHint_RepaintFrame;
     } else {
@@ -3421,7 +3430,7 @@ nsChangeHint nsStyleUIReset::CalcDifference(
     }
   }
 
-  if (mViewTransitionClass != aNewData.mViewTransitionClass) {
+  if (mViewTransitionClass.value != aNewData.mViewTransitionClass.value) {
     hint |= nsChangeHint_NeutralChange;
   }
 
@@ -3458,20 +3467,12 @@ nsChangeHint nsStyleUIReset::CalcDifference(
        mViewTimelines != aNewData.mViewTimelines ||
        mViewTimelineNameCount != aNewData.mViewTimelineNameCount ||
        mViewTimelineAxisCount != aNewData.mViewTimelineAxisCount ||
-       mViewTimelineInsetCount != aNewData.mViewTimelineInsetCount)) {
+       mViewTimelineInsetCount != aNewData.mViewTimelineInsetCount ||
+       mTimelineScope != aNewData.mTimelineScope)) {
     hint |= nsChangeHint_NeutralChange;
   }
 
   return hint;
-}
-
-StyleScrollbarWidth nsStyleUIReset::ScrollbarWidth() const {
-  if (MOZ_UNLIKELY(StaticPrefs::layout_css_scrollbar_width_thin_disabled())) {
-    if (mScrollbarWidth == StyleScrollbarWidth::Thin) {
-      return StyleScrollbarWidth::Auto;
-    }
-  }
-  return mScrollbarWidth;
 }
 
 //-----------------------
@@ -3861,10 +3862,10 @@ IntrinsicSize ContainSizeAxes::ContainIntrinsicSize(
   IntrinsicSize result(aUncontainedSize);
   const auto wm = aFrame.GetWritingMode();
   if (Maybe<nscoord> containBSize = ContainIntrinsicBSize(aFrame)) {
-    result.BSize(wm) = containBSize;
+    result.BSize(wm) = std::move(containBSize);
   }
   if (Maybe<nscoord> containISize = ContainIntrinsicISize(aFrame)) {
-    result.ISize(wm) = containISize;
+    result.ISize(wm) = std::move(containISize);
   }
   return result;
 }

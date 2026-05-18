@@ -44,6 +44,9 @@ skip-if = [
 ["browser_privatebrowsing_about_default_promo.js"]
 
 ["browser_privatebrowsing_about_focus_promo.js"]
+skip-if = [
+  "os == 'win' && standalone", # Bug 2028646
+]
 
 ["browser_privatebrowsing_about_nimbus.js"]
 

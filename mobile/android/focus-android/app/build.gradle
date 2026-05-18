@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.python.envs.plugin)
+    id 'org.mozilla.conventions.zip-test-reports'
     id 'org.mozilla.nimbus-gradle-plugin'
 }
 
@@ -28,10 +29,6 @@ def generatedLocaleListDir = new File(generatedLocaleListBaseDir, "org/mozilla/f
 def generatedLocaleListFilename = "LocalesList.kt"
 
 import com.android.build.api.variant.FilterConfiguration
-import com.google.android.gms.oss.licenses.plugin.DependencyTask
-import groovy.json.JsonOutput
-
-import static org.gradle.api.tasks.testing.TestResult.ResultType
 
 android {
     if (project.hasProperty("testBuildType")) {
@@ -262,6 +259,7 @@ dependencies {
     implementation project(':components:browser-state')
     implementation project(':components:browser-toolbar')
     implementation project(':components:compose-awesomebar')
+    implementation project(':components:compose-base')
     implementation project(':components:compose-cfr')
     implementation project(':components:concept-awesomebar')
     implementation project(':components:concept-engine')
@@ -327,7 +325,7 @@ dependencies {
     implementation libs.androidx.lifecycle.process
     implementation libs.androidx.lifecycle.viewmodel
     implementation libs.androidx.palette
-    implementation libs.androidx.preferences
+    implementation libs.androidx.preference
     implementation libs.androidx.recyclerview
     implementation libs.androidx.savedstate
     implementation libs.androidx.transition
@@ -353,6 +351,7 @@ dependencies {
     testImplementation platform(libs.junit.bom)
     testImplementation libs.junit.jupiter
     testRuntimeOnly libs.junit.platform.launcher
+    testImplementation libs.kotlin.test
     testImplementation libs.kotlinx.coroutines.test
     testImplementation libs.mockito
     testImplementation libs.mockwebserver
@@ -364,6 +363,7 @@ dependencies {
     constraints {
         implementation(libs.androidx.concurrent)
     }
+    androidTestImplementation project(':components:support-android-test')
     androidTestImplementation libs.androidx.concurrent
     androidTestImplementation libs.androidx.test.core
     androidTestImplementation libs.androidx.test.espresso.core
@@ -374,7 +374,17 @@ dependencies {
     androidTestImplementation libs.androidx.test.monitor
     androidTestImplementation libs.androidx.test.runner
     androidTestImplementation libs.androidx.test.uiautomator
+    androidTestImplementation libs.kotlin.test
     androidTestImplementation libs.mockwebserver
+    androidTestImplementation libs.okhttp
+    androidTestRuntimeOnly libs.okio
+    constraints {
+        // Various AndroidX dependencies pull in 1.1.1 transitively; OkHttp 5 requires 1.2.0.
+        implementation(libs.androidx.startup.runtime)
+        // okhttp is test-only; prevents older releases being resolved on the main classpath.
+        implementation(libs.okio)
+    }
+
     androidTestUtil libs.androidx.test.orchestrator
 
     lintChecks project(':components:tooling-lint')
@@ -562,10 +572,10 @@ def enabledLocales = project.provider { getEnabledLocales() }
 
 tasks.register('generateLocaleList') {
     def localeList = file(new File(generatedLocaleListDir, generatedLocaleListFilename))
-    
+
     inputs.property("enabledLocales", enabledLocales)
     outputs.file(localeList)
-    
+
     doLast {
         generatedLocaleListDir.mkdir()
         localeList.delete()
@@ -646,102 +656,8 @@ if (project.hasProperty("coverage")) {
     }
 }
 
-// -------------------------------------------------------------------------------------------------
-// Task for printing APK information for the requested variant
-// Taskgraph Usage: "./gradlew printVariants
-// -------------------------------------------------------------------------------------------------
-tasks.register('printVariants') {
-    def variants = project.provider { android.applicationVariants.collect { variant -> [
-            apks: variant.outputs.collect { output -> [
-                    abi: output.getFilter(FilterConfiguration.FilterType.ABI.name()),
-                    fileName: output.outputFile.name
-            ]},
-            build_type: variant.buildType.name,
-            name: variant.name,
-    ]}}
-    def outputFile = new File(projectDir, "build/printVariants.json")
-    doLast {
-        // AndroidTest is a special case not included above
-        variants.get().add([
-            apks: [[
-                abi: 'noarch',
-                fileName: 'app-debug-androidTest.apk',
-            ]],
-            build_type: 'androidTest',
-            name: 'androidTest',
-        ])
-        def json = JsonOutput.toJson(variants.get())
-        outputFile.parentFile.mkdirs()
-        outputFile.text = json
-        logger.debug("Wrote variant info to $outputFile")
-    }
-}
-
-// Fix for Gradle 9 strictness: Ensure CleanUp runs before DependencyTask
-tasks.withType(DependencyTask).configureEach { task ->
-    // The OSS plugin creates a "LicensesCleanUp" task for every "DependencyTask"
-    // e.g., nightlyOssDependencyTask -> nightlyOssLicensesCleanUp
-    def cleanUpTaskName = task.name.replace("DependencyTask", "LicensesCleanUp")
-
-    // make the dependency task depend on its cleanup task.
-    task.dependsOn(tasks.named(cleanUpTaskName))
-}
-
-afterEvaluate {
-
-    // Format test output. Copied from Fenix, which was ported from AC #2401
-    tasks.withType(Test).configureEach {
-        systemProperty "robolectric.logging", "stdout"
-        systemProperty "logging.test-mode", "true"
-
-        testLogging.events = []
-
-        beforeSuite { descriptor ->
-            if (descriptor.getClassName() != null) {
-                println("\nSUITE: " + descriptor.getClassName())
-            }
-        }
-
-        beforeTest { descriptor ->
-            println("  TEST: " + descriptor.getName())
-        }
-
-        onOutput { descriptor, event ->
-            it.logger.lifecycle("    " + event.message.trim())
-        }
-
-        afterTest { descriptor, result ->
-            switch (result.getResultType()) {
-                case ResultType.SUCCESS:
-                    println("  SUCCESS")
-                    break
-
-                case ResultType.FAILURE:
-                    def testId = descriptor.getClassName() + "." + descriptor.getName()
-                    println("  TEST-UNEXPECTED-FAIL | " + testId + " | " + result.getException())
-                    break
-
-                case ResultType.SKIPPED:
-                    println("  SKIPPED")
-                    break
-            }
-            it.logger.lifecycle("")
-        }
-    }
-}
-
-tasks.register("ktlint", Exec) {
-    group = "verification"
-    description = "Check Kotlin code style."
-    workingDir file("${gradle.mozconfig.topsrcdir}")
-    commandLine "./mach", "gradle", "-p", "mobile/android/focus-android", ":ktlint"
-}
-
-tasks.register("ktlintFormat", Exec) {
-    group = "formatting"
-    description = "Fix Kotlin code style deviations."
-    workingDir file("${gradle.mozconfig.topsrcdir}")
-    commandLine "./mach", "gradle", "-p", "mobile/android/focus-android", ":ktlintFormat"
+mozilla {
+    ktlintSourcePaths = ["src/**/*.kt", "!**/build/**/*.kt"]
 }
 
 tasks.register("detekt", Exec) {

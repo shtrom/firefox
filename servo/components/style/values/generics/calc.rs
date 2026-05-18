@@ -182,11 +182,64 @@ pub enum SortKey {
     Other,
 }
 
+/// Fallback type for anchor functions within `calc()`.
+/// Ideally, the fallback type is initial type of the property (e.g.
+/// `GenericInset` for `left`), but that causes circular reference.
+/// TODO(dshin, bug 2034100): Investigate ways to not require this.
+/// This handles the parsing of unitless zeros, as well as ensuring
+/// that e.g. `calc(anchor(--foo left, 1px) + 10%)` round trips
+/// (sorting aside), instead of becoming
+/// `calc(anchor(--foo left, calc(1px)) + 10%)`.
+#[repr(C)]
+#[derive(
+    Clone,
+    Debug,
+    Deserialize,
+    MallocSizeOf,
+    PartialEq,
+    Serialize,
+    ToAnimatedZero,
+    ToResolvedValue,
+    ToShmem,
+)]
+pub struct GenericAnchorFunctionFallback<L> {
+    /// Was this node parsed as a calc node?
+    #[animation(constant)]
+    is_calc_node: bool,
+    /// The parsed fallback value. Stored as a calc node to break
+    /// the circular reference.
+    pub node: GenericCalcNode<L>,
+}
+
+impl<L> GenericAnchorFunctionFallback<L> {
+    /// Create a new anchor function fallback value.
+    pub fn new(is_calc_node: bool, node: GenericCalcNode<L>) -> Self {
+        Self { is_calc_node, node }
+    }
+}
+
+impl<L: CalcNodeLeaf> ToCss for GenericAnchorFunctionFallback<L> {
+    fn to_css<W>(&self, dest: &mut CssWriter<W>) -> fmt::Result
+    where
+        W: Write,
+    {
+        self.node.to_css_impl(
+            dest,
+            if self.is_calc_node {
+                ArgumentLevel::CalculationRoot
+            } else {
+                ArgumentLevel::ArgumentRoot
+            },
+        )
+    }
+}
+
 /// `anchor()` function used in math functions.
 pub type GenericCalcAnchorFunction<L> =
-    GenericAnchorFunction<Box<GenericCalcNode<L>>, Box<GenericCalcNode<L>>>;
+    GenericAnchorFunction<Box<GenericCalcNode<L>>, Box<GenericAnchorFunctionFallback<L>>>;
 /// `anchor-size()` function used in math functions.
-pub type GenericCalcAnchorSizeFunction<L> = GenericAnchorSizeFunction<Box<GenericCalcNode<L>>>;
+pub type GenericCalcAnchorSizeFunction<L> =
+    GenericAnchorSizeFunction<Box<GenericAnchorFunctionFallback<L>>>;
 
 /// A generic node in a calc expression.
 ///
@@ -448,6 +501,7 @@ pub trait CalcNodeLeaf: Clone + Sized + PartialEq + ToCss + ToTyped {
 }
 
 /// The level of any argument being serialized in `to_css_impl`.
+#[derive(Clone)]
 enum ArgumentLevel {
     /// The root of a calculation tree.
     CalculationRoot,
@@ -897,7 +951,12 @@ impl<L: CalcNodeLeaf> CalcNode<L> {
                 fallback: f
                     .fallback
                     .as_ref()
-                    .map(|fb| Box::new(fb.map_leaves_internal(map)))
+                    .map(|fb| {
+                        Box::new(GenericAnchorFunctionFallback::new(
+                            fb.is_calc_node,
+                            fb.node.map_leaves_internal(map),
+                        ))
+                    })
                     .into(),
             })),
             Self::AnchorSize(ref f) => CalcNode::AnchorSize(Box::new(GenericAnchorSizeFunction {
@@ -906,7 +965,12 @@ impl<L: CalcNodeLeaf> CalcNode<L> {
                 fallback: f
                     .fallback
                     .as_ref()
-                    .map(|fb| Box::new(fb.map_leaves_internal(map)))
+                    .map(|fb| {
+                        Box::new(GenericAnchorFunctionFallback::new(
+                            fb.is_calc_node,
+                            fb.node.map_leaves_internal(map),
+                        ))
+                    })
                     .into(),
             })),
         }
@@ -1440,7 +1504,7 @@ impl<L: CalcNodeLeaf> CalcNode<L> {
                             if value_or_stop!(value.is_negative_leaf())
                                 && !value_or_stop!(value.is_zero_leaf())
                             {
-                                value_or_stop!(value.coerce_to_value(f32::INFINITY));
+                                value_or_stop!(value.coerce_to_value(-f32::INFINITY));
                                 replace_self_with!(&mut **value);
                                 return;
                             } else if value_or_stop!(value.is_negative_leaf())
@@ -1739,12 +1803,12 @@ impl<L: CalcNodeLeaf> CalcNode<L> {
                     n.simplify_and_sort();
                 }
                 if let Some(fallback) = f.fallback.as_mut() {
-                    fallback.simplify_and_sort();
+                    fallback.node.simplify_and_sort();
                 }
             },
             Self::AnchorSize(ref mut f) => {
                 if let Some(fallback) = f.fallback.as_mut() {
-                    fallback.simplify_and_sort();
+                    fallback.node.simplify_and_sort();
                 }
             },
         }
@@ -1830,13 +1894,14 @@ impl<L: CalcNodeLeaf> CalcNode<L> {
                     true
                 },
             },
-            Self::Leaf(_) | Self::Anchor(_) | Self::AnchorSize(_) => match level {
+            Self::Leaf(_) => match level {
                 ArgumentLevel::CalculationRoot => {
                     dest.write_str("calc(")?;
                     true
                 },
                 ArgumentLevel::ArgumentRoot | ArgumentLevel::Nested => false,
             },
+            Self::Anchor(_) | Self::AnchorSize(_) => false,
         };
 
         match *self {
@@ -1949,34 +2014,44 @@ impl<L: CalcNodeLeaf> CalcNode<L> {
         Ok(())
     }
 
-    fn to_typed_impl(&self, level: ArgumentLevel) -> Option<TypedValue> {
+    fn to_typed_impl(
+        &self,
+        dest: &mut ThinVec<TypedValue>,
+        level: ArgumentLevel,
+    ) -> Result<(), ()> {
         // XXX Only supporting Sum and Leaf for now
         match *self {
             Self::Sum(ref children) => {
                 let mut values = ThinVec::new();
                 for child in &**children {
-                    if let Some(TypedValue::Numeric(inner)) =
-                        child.to_typed_impl(ArgumentLevel::Nested)
-                    {
+                    let nested = CalcNodeWithLevel {
+                        node: child,
+                        level: ArgumentLevel::Nested,
+                    };
+                    if let Some(TypedValue::Numeric(inner)) = nested.to_typed_value() {
                         values.push(inner);
                     }
                 }
-                Some(TypedValue::Numeric(NumericValue::Sum(MathSum { values })))
+                dest.push(TypedValue::Numeric(NumericValue::Sum(MathSum { values })));
+                Ok(())
             },
-            Self::Leaf(ref l) => match l.to_typed() {
-                Some(TypedValue::Numeric(inner)) => match level {
-                    ArgumentLevel::CalculationRoot => {
-                        Some(TypedValue::Numeric(NumericValue::Sum(MathSum {
-                            values: ThinVec::from([inner]),
-                        })))
-                    },
-                    ArgumentLevel::ArgumentRoot | ArgumentLevel::Nested => {
-                        Some(TypedValue::Numeric(inner))
-                    },
+            Self::Leaf(ref l) => match l.to_typed_value() {
+                Some(TypedValue::Numeric(inner)) => {
+                    match level {
+                        ArgumentLevel::CalculationRoot => {
+                            dest.push(TypedValue::Numeric(NumericValue::Sum(MathSum {
+                                values: ThinVec::from([inner]),
+                            })));
+                        },
+                        ArgumentLevel::ArgumentRoot | ArgumentLevel::Nested => {
+                            dest.push(TypedValue::Numeric(inner));
+                        },
+                    }
+                    Ok(())
                 },
-                _ => None,
+                _ => Err(()),
             },
-            _ => None,
+            _ => Err(()),
         }
     }
 
@@ -2007,8 +2082,19 @@ impl<L: CalcNodeLeaf> ToCss for CalcNode<L> {
 }
 
 impl<L: CalcNodeLeaf> ToTyped for CalcNode<L> {
-    fn to_typed(&self) -> Option<TypedValue> {
-        self.to_typed_impl(ArgumentLevel::CalculationRoot)
+    fn to_typed(&self, dest: &mut ThinVec<TypedValue>) -> Result<(), ()> {
+        self.to_typed_impl(dest, ArgumentLevel::CalculationRoot)
+    }
+}
+
+struct CalcNodeWithLevel<'a, L> {
+    node: &'a CalcNode<L>,
+    level: ArgumentLevel,
+}
+
+impl<'a, L: CalcNodeLeaf> ToTyped for CalcNodeWithLevel<'a, L> {
+    fn to_typed(&self, dest: &mut ThinVec<TypedValue>) -> Result<(), ()> {
+        self.node.to_typed_impl(dest, self.level.clone())
     }
 }
 

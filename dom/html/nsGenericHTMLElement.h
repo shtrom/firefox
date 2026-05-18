@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -40,8 +38,10 @@ class EventListenerManager;
 class PresState;
 namespace dom {
 class BooleanOrUnrestrictedDoubleOrString;
+class EditContext;
 class ElementInternals;
 class HTMLFormElement;
+class NodeList;
 class OwningBooleanOrUnrestrictedDoubleOrString;
 class TogglePopoverOptionsOrBoolean;
 enum class FetchPriority : uint8_t;
@@ -209,7 +209,6 @@ class nsGenericHTMLElement : public nsGenericHTMLElementBase {
       mozilla::dom::PopoverVisibilityState aOldState, Element* aSource);
   MOZ_CAN_RUN_SCRIPT void RunPopoverToggleEventTask(
       mozilla::dom::PopoverToggleEventTask* aTask,
-      mozilla::dom::PopoverVisibilityState aOldState,
       mozilla::dom::Element* aSource);
   MOZ_CAN_RUN_SCRIPT void ShowPopover(
       const mozilla::dom::ShowPopoverOptions& aOptions, ErrorResult& aRv);
@@ -300,6 +299,10 @@ class nsGenericHTMLElement : public nsGenericHTMLElementBase {
     SetHTMLAttr(nsGkAtoms::autocorrect, aAutocorrect ? u"on"_ns : u"off"_ns,
                 aError);
   }
+
+  mozilla::dom::EditContext* GetEditContext() const;
+  MOZ_CAN_RUN_SCRIPT void SetEditContext(mozilla::dom::EditContext* aContext,
+                                         mozilla::ErrorResult& aRv);
 
   /**
    * Determine whether an attribute is an event (onclick, etc.)
@@ -694,8 +697,8 @@ class nsGenericHTMLElement : public nsGenericHTMLElementBase {
   static bool MatchLabelsElement(Element* aElement, int32_t aNamespaceID,
                                  nsAtom* aAtom, void* aData);
 
-  already_AddRefed<nsINodeList> LabelsForBindings();
-  already_AddRefed<nsINodeList> LabelsInternal();
+  already_AddRefed<mozilla::dom::NodeList> LabelsForBindings();
+  already_AddRefed<mozilla::dom::NodeList> LabelsInternal();
 
   static bool LegacyTouchAPIEnabled(JSContext* aCx, JSObject* aObj);
 
@@ -1469,6 +1472,7 @@ NS_DECLARE_NS_NEW_HTML_ELEMENT(Pre)
 NS_DECLARE_NS_NEW_HTML_ELEMENT(Progress)
 NS_DECLARE_NS_NEW_HTML_ELEMENT(Script)
 NS_DECLARE_NS_NEW_HTML_ELEMENT(Select)
+NS_DECLARE_NS_NEW_HTML_ELEMENT(SelectedContent)
 NS_DECLARE_NS_NEW_HTML_ELEMENT(Slot)
 NS_DECLARE_NS_NEW_HTML_ELEMENT(Source)
 NS_DECLARE_NS_NEW_HTML_ELEMENT(Span)

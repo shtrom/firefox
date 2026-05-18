@@ -187,7 +187,7 @@ class Browsertime(Perftest, metaclass=ABCMeta):
             ):
                 if self.browser_version:
                     bvers = str(self.browser_version)
-                    chromedriver_version = bvers.split(".")[0]
+                    chromedriver_version = bvers.split(".", 1)[0]
                 else:
                     chromedriver_version = DEFAULT_CHROMEVERSION
 
@@ -430,6 +430,12 @@ class Browsertime(Perftest, metaclass=ABCMeta):
                 else "false"
             ),
         ]
+
+        moz_log_settings = os.environ.get("MOZ_LOG")
+        if moz_log_settings:
+            LOG.info(f"Passing MOZ_LOG settings to browsertime: {moz_log_settings}")
+            browsertime_options.extend(["--firefox.collectMozLog", "true"])
+            browsertime_options.extend(["--firefox.setMozLog", moz_log_settings])
 
         if test.get("perfstats") == "true":
             # Take a non-standard approach for perfstats as we
@@ -824,6 +830,11 @@ class Browsertime(Perftest, metaclass=ABCMeta):
         # if geckoProfile enabled, give browser more time for profiling
         if self.config["gecko_profile"] is True:
             bt_timeout += 5 * 60
+
+        # if simpleperf enabled, give browser more time for profiling
+        if self.config["simpleperf"] is True:
+            bt_timeout += 5 * 60
+
         return bt_timeout
 
     @staticmethod
@@ -946,6 +957,10 @@ class Browsertime(Perftest, metaclass=ABCMeta):
             self.kill(proc)
 
         self.run_test_setup(test)
+
+        if self.config.get("simpleperf"):
+            self._init_simpleperf_profiling(test)
+
         # timeout is a single page-load timeout value (ms) from the test INI
         # this will be used for btime --timeouts.pageLoad
         cmd = self._compose_cmd(test, timeout)

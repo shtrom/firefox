@@ -49,6 +49,28 @@ const TOP_SITES_USER_VALUE_TEMP_PREF =
   "activationWindow.temp.topSitesUserValue";
 const TOP_STORIES_USER_VALUE_TEMP_PREF =
   "activationWindow.temp.topStoriesUserValue";
+const PREF_DEFAULTS = [
+  { type: "bool", key: "logowordmark.alwaysVisible", defaultValue: false },
+  { type: "bool", key: "feeds.section.topstories", defaultValue: false },
+  { type: "bool", key: "discoverystream.enabled", defaultValue: false },
+  {
+    type: "bool",
+    key: "discoverystream.hardcoded-basic-layout",
+    defaultValue: false,
+  },
+  { type: "string", key: "discoverystream.spocs-endpoint", defaultValue: "" },
+  {
+    type: "string",
+    key: "discoverystream.spocs-endpoint-query",
+    defaultValue: "",
+  },
+  {
+    type: "string",
+    key: "discoverystream.sections.personalization.inferred.debug.override",
+    defaultValue: "",
+  },
+  { type: "string", key: "newNewtabExperience.colors", defaultValue: "" },
+];
 
 ChromeUtils.defineLazyGetter(lazy, "logConsole", function () {
   return console.createInstance({
@@ -226,6 +248,48 @@ export class PrefsFeed {
       return accumulator;
     }, {});
 
+    // Bug 2021055: Write weather.display to the default branch so Nimbus sets
+    // the initial value without overriding an explicit user choice (user branch
+    // always takes precedence over the default branch).
+    if (valueObj.widgets?.weatherForecastEnabled && valueObj.weather?.display) {
+      Services.prefs
+        .getDefaultBranch(this._prefs._branchStr)
+        .setStringPref("weather.display", valueObj.weather.display);
+    }
+
+    // Write widgets.weather.size to the default branch so trainhop overrides
+    // the migration default computed by getWeatherWidgetSize() while a user's
+    // explicit size pick (user branch) still wins.
+    if (
+      typeof valueObj.widgets?.weatherSize === "string" &&
+      valueObj.widgets.weatherSize
+    ) {
+      Services.prefs
+        .getDefaultBranch(this._prefs._branchStr)
+        .setStringPref("widgets.weather.size", valueObj.widgets.weatherSize);
+    }
+
+    // Write topSitesRows to the default branch to enable experiments with
+    // the default row count without overriding an explicit user choice.
+    if (valueObj.topSites?.topSitesRows) {
+      Services.prefs
+        .getDefaultBranch(this._prefs._branchStr)
+        .setIntPref("topSitesRows", valueObj.topSites.topSitesRows);
+    }
+
+    // Write initialWallpaper to the user branch so it persists after the
+    // experiment ends. The guard prevents overwriting an existing value or a
+    // user's explicit wallpaper choice that has already cleared it.
+    if (
+      valueObj.wallpaper?.initialWallpaper &&
+      !this._prefs.get("newtabWallpapers.initialWallpaper")
+    ) {
+      this._prefs.set(
+        "newtabWallpapers.initialWallpaper",
+        valueObj.wallpaper.initialWallpaper
+      );
+    }
+
     return valueObj;
   }
 
@@ -236,14 +300,8 @@ export class PrefsFeed {
    *
    */
   _getAdsBackendFeatures() {
-    /**
-     * @backward-compat { version 149 }
-     *
-     * We can replace `adsBackend?` with `adsBackend` once 149 hits the
-     * release channel.
-     */
     const allEnrollments =
-      lazy.NimbusFeatures.adsBackend?.getAllEnrollments() || [];
+      lazy.NimbusFeatures.adsBackend.getAllEnrollments() || [];
 
     const valueObj = {};
     allEnrollments.reduce((accumulator, currentValue) => {
@@ -286,6 +344,17 @@ export class PrefsFeed {
    */
   onPocketExperimentUpdated(event, reason) {
     const value = lazy.NimbusFeatures.pocketNewtab.getAllVariables() || {};
+
+    if (
+      value.currentWallpaper &&
+      !this._prefs.get("newtabWallpapers.initialWallpaper")
+    ) {
+      this._prefs.set(
+        "newtabWallpapers.initialWallpaper",
+        value.currentWallpaper
+      );
+    }
+
     // Loaded experiments are set up inside init()
     if (
       reason !== "feature-experiment-loaded" &&
@@ -401,13 +470,7 @@ export class PrefsFeed {
     );
     lazy.NimbusFeatures.newtabWidgets.onUpdate(this.onWidgetsUpdated);
     lazy.NimbusFeatures.newtabOhttpImages.onUpdate(this.onOhttpImagesUpdated);
-    /**
-     * @backward-compat { version 149 }
-     *
-     * We can replace `adsBackend?` with `adsBackend` once 149 hits the
-     * release channel.
-     */
-    lazy.NimbusFeatures.adsBackend?.onUpdate(this.onAdsBackendUpdated);
+    lazy.NimbusFeatures.adsBackend.onUpdate(this.onAdsBackendUpdated);
 
     // Get the initial value of each activity stream pref
     const values = {};
@@ -461,19 +524,28 @@ export class PrefsFeed {
     values.featureConfig = lazy.NimbusFeatures.newtab.getAllVariables() || {};
     values.pocketConfig =
       lazy.NimbusFeatures.pocketNewtab.getAllVariables() || {};
+    if (
+      values.pocketConfig.currentWallpaper &&
+      !this._prefs.get("newtabWallpapers.initialWallpaper")
+    ) {
+      this._prefs.set(
+        "newtabWallpapers.initialWallpaper",
+        values.pocketConfig.currentWallpaper
+      );
+    }
     values.smartShortcutsConfig =
       lazy.NimbusFeatures.newtabSmartShortcuts.getAllVariables() || {};
     values.widgetsConfig =
       lazy.NimbusFeatures.newtabWidgets.getAllVariables() || {};
     values.trainhopConfig = this._getTrainhopConfig();
     values.adsBackendConfig = this._getAdsBackendFeatures();
-    this._setBoolPref(values, "logowordmark.alwaysVisible", false);
-    this._setBoolPref(values, "feeds.section.topstories", false);
-    this._setBoolPref(values, "discoverystream.enabled", false);
-    this._setBoolPref(values, "discoverystream.hardcoded-basic-layout", false);
-    this._setStringPref(values, "discoverystream.spocs-endpoint", "");
-    this._setStringPref(values, "discoverystream.spocs-endpoint-query", "");
-    this._setStringPref(values, "newNewtabExperience.colors", "");
+    for (const { type, key, defaultValue } of PREF_DEFAULTS) {
+      if (type === "bool") {
+        this._setBoolPref(values, key, defaultValue);
+      } else if (type === "string") {
+        this._setStringPref(values, key, defaultValue);
+      }
+    }
 
     // Set the initial state of all prefs in redux
     this.store.dispatch(
@@ -508,13 +580,7 @@ export class PrefsFeed {
     );
     lazy.NimbusFeatures.newtabWidgets.offUpdate(this.onWidgetsUpdated);
     lazy.NimbusFeatures.newtabOhttpImages.offUpdate(this.onOhttpImagesUpdated);
-    /**
-     * @backward-compat { version 149 }
-     *
-     * We can replace `adsBackend?` with `adsBackend` once 149 hits the
-     * release channel.
-     */
-    lazy.NimbusFeatures.adsBackend?.offUpdate(this.onAdsBackendUpdated);
+    lazy.NimbusFeatures.adsBackend.offUpdate(this.onAdsBackendUpdated);
 
     if (this.geo === "") {
       Services.obs.removeObserver(this, lazy.Region.REGION_TOPIC);

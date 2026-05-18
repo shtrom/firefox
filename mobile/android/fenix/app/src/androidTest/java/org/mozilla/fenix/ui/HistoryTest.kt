@@ -4,17 +4,16 @@
 
 package org.mozilla.fenix.ui
 
-import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.test.espresso.Espresso.openActionBarOverflowOrOptionsMenu
 import androidx.test.espresso.Espresso.pressBack
 import androidx.test.filters.SdkSuppress
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.mozilla.fenix.R
 import org.mozilla.fenix.customannotations.SkipLeaks
 import org.mozilla.fenix.customannotations.SmokeTest
 import org.mozilla.fenix.helpers.AppAndSystemHelper.registerAndCleanupIdlingResources
+import org.mozilla.fenix.helpers.FenixTestRule
 import org.mozilla.fenix.helpers.HomeActivityIntentTestRule
 import org.mozilla.fenix.helpers.MockBrowserDataHelper.createHistoryItem
 import org.mozilla.fenix.helpers.RecyclerViewIdlingResource
@@ -24,22 +23,27 @@ import org.mozilla.fenix.helpers.TestHelper.exitMenu
 import org.mozilla.fenix.helpers.TestHelper.longTapSelectItem
 import org.mozilla.fenix.helpers.TestHelper.mDevice
 import org.mozilla.fenix.helpers.TestHelper.verifySnackBarText
-import org.mozilla.fenix.helpers.TestSetup
 import org.mozilla.fenix.helpers.perf.DetectMemoryLeaksRule
 import org.mozilla.fenix.ui.robots.browserScreen
 import org.mozilla.fenix.ui.robots.historyMenu
 import org.mozilla.fenix.ui.robots.homeScreen
 import org.mozilla.fenix.ui.robots.multipleSelectionToolbar
 import org.mozilla.fenix.ui.robots.navigationToolbar
+import androidx.compose.ui.test.junit4.v2.AndroidComposeTestRule as AndroidComposeTestRuleV2
 
 /**
  *  Tests for verifying basic functionality of history
  *
  */
-class HistoryTest : TestSetup() {
-    @get:Rule
+class HistoryTest {
+    @get:Rule(order = 0)
+    val fenixTestRule: FenixTestRule = FenixTestRule()
+
+    private val mockWebServer get() = fenixTestRule.mockWebServer
+
+    @get:Rule(order = 1)
     val composeTestRule =
-        AndroidComposeTestRule(
+        AndroidComposeTestRuleV2(
             HomeActivityIntentTestRule(
                 // workaround for toolbar at top position by default
                 // remove with https://bugzilla.mozilla.org/show_bug.cgi?id=1917640
@@ -47,8 +51,8 @@ class HistoryTest : TestSetup() {
             ),
         ) { it.activity }
 
-    @get:Rule
-    val memoryLeaksRule = DetectMemoryLeaksRule()
+    @get:Rule(order = 2)
+    val memoryLeaksRule = DetectMemoryLeaksRule(composeTestRule = { composeTestRule })
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/243285
     @Test
@@ -283,7 +287,6 @@ class HistoryTest : TestSetup() {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/1715627
-    @Ignore("Disabled after enabling the composable toolbar and main menu: https://bugzilla.mozilla.org/show_bug.cgi?id=2006295")
     @Test
     fun verifySearchHistoryViewTest() {
         val defaultWebPage = mockWebServer.getGenericAsset(1)
@@ -297,8 +300,8 @@ class HistoryTest : TestSetup() {
             verifySearchSelectorButton()
             verifySearchEngineIcon("History")
             verifySearchBarPlaceholder("Search history")
-            verifySearchBarPosition(true)
-            tapOutsideToDismissSearchBar()
+            verifySearchBarPosition()
+            tapOutsideToDismissSearchBar(defaultWebPage.url.toString())
             verifySearchToolbar(false)
             exitMenu()
         }
@@ -316,7 +319,7 @@ class HistoryTest : TestSetup() {
         }.clickHistoryButton {
         }.clickSearchButton {
             verifySearchToolbar(true)
-            verifySearchBarPosition(false)
+            verifySearchBarPosition()
             pressBack()
         }
         historyMenu(composeTestRule) {

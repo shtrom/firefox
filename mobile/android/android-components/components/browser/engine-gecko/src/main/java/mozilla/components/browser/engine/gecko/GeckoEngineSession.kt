@@ -12,7 +12,7 @@ import androidx.core.net.toUri
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import mozilla.components.browser.engine.gecko.ext.isExcludedForTrackingProtection
 import mozilla.components.browser.engine.gecko.fetch.toResponse
@@ -37,7 +37,9 @@ import mozilla.components.concept.engine.history.HistoryItem
 import mozilla.components.concept.engine.history.HistoryTrackingDelegate
 import mozilla.components.concept.engine.manifest.WebAppManifest
 import mozilla.components.concept.engine.manifest.WebAppManifestParser
+import mozilla.components.concept.engine.pageextraction.ContentParams
 import mozilla.components.concept.engine.pageextraction.PageExtractionError
+import mozilla.components.concept.engine.pageextraction.PageMetadata
 import mozilla.components.concept.engine.request.RequestInterceptor
 import mozilla.components.concept.engine.request.RequestInterceptor.InterceptionResponse
 import mozilla.components.concept.engine.translate.TranslationError
@@ -81,6 +83,7 @@ import org.mozilla.geckoview.GeckoSession.APP_LINK_LAUNCH_TYPE_WARM
 import org.mozilla.geckoview.GeckoSession.NavigationDelegate
 import org.mozilla.geckoview.GeckoSession.PermissionDelegate.ContentPermission
 import org.mozilla.geckoview.GeckoSessionSettings
+import org.mozilla.geckoview.PageExtractionController
 import org.mozilla.geckoview.WebRequestError
 import org.mozilla.geckoview.WebResponse
 import java.security.cert.X509Certificate
@@ -104,9 +107,9 @@ class GeckoEngineSession(
             .build()
         GeckoSession(settings)
     },
-    private val context: CoroutineContext = Dispatchers.IO,
+    context: CoroutineContext = Dispatchers.IO,
     openGeckoSession: Boolean = true,
-) : CoroutineScope, EngineSession() {
+) : EngineSession() {
 
     // This logger is temporary and parsed by FNPRMS for performance measurements. It can be
     // removed once FNPRMS is replaced: https://github.com/mozilla-mobile/android-components/issues/8662
@@ -126,7 +129,8 @@ class GeckoEngineSession(
     // The Gecko site permissions for the loaded site.
     internal var geckoPermissions: List<ContentPermission> = emptyList()
 
-    internal var job: Job = Job()
+    internal val job: Job = SupervisorJob()
+    private val scope = CoroutineScope(context + job)
     private var canGoBack: Boolean = false
     private var canGoForward: Boolean = false
 
@@ -151,9 +155,6 @@ class GeckoEngineSession(
     }
 
     internal var initialLoad = true
-
-    override val coroutineContext: CoroutineContext
-        get() = context + job
 
     init {
         createGeckoSession(shouldOpen = openGeckoSession)
@@ -451,7 +452,7 @@ class GeckoEngineSession(
         // store thread. Since this notification can be delayed until an observer
         // is registered we switch to the main scope to make sure we're not notifying
         // on the store thread.
-        MainScope().launch {
+        scope.launch(Dispatchers.Main) {
             observer.onTrackerBlockingEnabledChange(enabled)
         }
     }
@@ -860,8 +861,15 @@ class GeckoEngineSession(
      * See [EngineSession.getPageContent]
      */
     @OptIn(ExperimentalGeckoViewApi::class)
-    override fun getPageContent(onResult: (String) -> Unit, onException: (Throwable) -> Unit) {
-        geckoSession.sessionPageExtractor.pageContent
+    override fun getPageContent(
+        options: ContentParams,
+        onResult: (String) -> Unit,
+        onException: (Throwable) -> Unit,
+    ) {
+        val geckoViewOptions = PageExtractionController.ContentParams(
+            options.removeBoilerplate,
+        )
+        geckoSession.sessionPageExtractor.getPageContent(geckoViewOptions)
             .then(
                 { content ->
                     if (content == null) {
@@ -869,6 +877,38 @@ class GeckoEngineSession(
                         return@then GeckoResult()
                     }
                     onResult(content)
+                    GeckoResult<Unit>()
+                },
+                { error ->
+                    onException(error.intoPageExtractionError())
+                    GeckoResult()
+                },
+            )
+    }
+
+    /**
+     * See [EngineSession.getPageMetadata]
+     */
+    @OptIn(ExperimentalGeckoViewApi::class)
+    override fun getPageMetadata(
+        onResult: (PageMetadata) -> Unit,
+        onException: (Throwable) -> Unit,
+    ) {
+        geckoSession.sessionPageExtractor.pageMetadata
+            .then(
+                { metadata ->
+                    if (metadata == null) {
+                        onException(PageExtractionError.UnexpectedNull())
+                        return@then GeckoResult()
+                    }
+                    onResult(
+                        PageMetadata(
+                            structuredDataTypes = metadata.structuredDataTypes.toList(),
+                            wordCount = metadata.wordCount,
+                            language = metadata.language,
+                            isReaderable = metadata.isReaderable,
+                        ),
+                    )
                     GeckoResult<Unit>()
                 },
                 { error ->
@@ -954,6 +994,9 @@ class GeckoEngineSession(
                 }
             }
 
+            if (hasUserGesture) {
+                pageLoadingUrl = url
+            }
             currentUrl = url
             initialLoad = false
             initialLoadRequest = null
@@ -1255,7 +1298,7 @@ class GeckoEngineSession(
                 else -> null
             }
 
-            return launchGeckoResult {
+            return scope.launchGeckoResult {
                 delegate.onVisited(url, PageVisit(visitType, redirectSource))
                 true
             }
@@ -1271,7 +1314,7 @@ class GeckoEngineSession(
 
             val delegate = settings.historyTrackingDelegate ?: return GeckoResult.fromValue(null)
 
-            return launchGeckoResult {
+            return scope.launchGeckoResult {
                 val visits = delegate.getVisited(urls.toList())
                 visits.toBooleanArray()
             }
@@ -1395,7 +1438,7 @@ class GeckoEngineSession(
                                 // delegate before the session is closed (and the corresponding coroutine
                                 // job is cancelled). Observers will always be notified of the title
                                 // change though.
-                                launch(coroutineContext) {
+                                scope.launch {
                                     delegate.onTitleChanged(url, title ?: "")
                                 }
                             }
@@ -1412,7 +1455,7 @@ class GeckoEngineSession(
                 currentUrl?.let { url ->
                     settings.historyTrackingDelegate?.let { delegate ->
                         if (delegate.shouldStoreUri(url)) {
-                            launch(coroutineContext) {
+                            scope.launch {
                                 delegate.onPreviewImageChange(url, previewImageUrl)
                             }
                         }
@@ -1653,6 +1696,7 @@ class GeckoEngineSession(
         defaultSettings?.clearColor?.let { geckoSession.compositorController.clearColor = it }
 
         if (shouldOpen) {
+            runtime.warmUp()
             geckoSession.open(runtime)
         }
 

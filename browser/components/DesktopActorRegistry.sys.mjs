@@ -39,6 +39,7 @@ let JSPROCESSACTORS = {
         "moz-src:///browser/components/mozcachedohttp/actors/MozCachedOHTTPParent.sys.mjs",
     },
     includeParent: true,
+    remoteTypes: ["parent", "privilegedabout"],
   },
 
   RefreshBlockerObserver: {
@@ -232,16 +233,18 @@ let JSWINDOWACTORS = {
       esModuleURI:
         "moz-src:///browser/components/aiwindow/ui/actors/AIChatContentChild.sys.mjs",
       events: {
-        "AIChatContent:DispatchSearch": { wantUntrusted: true },
         "AIChatContent:DispatchFollowUp": { wantUntrusted: true },
         "AIChatContent:Ready": { wantUntrusted: true },
         "AIChatContent:DispatchAction": { wantUntrusted: true },
         "AIChatContent:OpenLink": { wantUntrusted: true },
         "AIChatContent:DispatchNewChat": { wantUntrusted: true },
+        "AIChatContent:AccountSignIn": { wantUntrusted: true },
+        "AIChatContent:ToolUIUpdate": { wantUntrusted: true },
       },
     },
     allFrames: true,
     matches: ["about:aichatcontent"],
+    remoteTypes: ["privilegedabout"],
     enablePreference: "browser.smartwindow.enabled",
   },
 
@@ -284,6 +287,7 @@ let JSWINDOWACTORS = {
           wantUntrusted: true,
         },
         "BackupUI:ErrorBarDismissed": { wantUntrusted: true },
+        "BackupUI:FindBackupsInWellKnownLocations": { wantUntrusted: true },
       },
     },
     includeChrome: true,
@@ -293,7 +297,10 @@ let JSWINDOWACTORS = {
       "about:settings*",
       "about:welcome*",
       "chrome://browser/content/spotlight.html",
+      "about:newtab*",
+      "about:home*",
     ],
+    remoteTypes: ["parent", "privilegedabout"],
   },
 
   BlockedSite: {
@@ -458,6 +465,8 @@ let JSWINDOWACTORS = {
         "MozDOMFullscreen:NewOrigin": {},
         "MozDOMFullscreen:Exit": {},
         "MozDOMFullscreen:Exited": {},
+        "MozDOMFullscreen:WarnAboutKeyboardLock": {},
+        "MozDOMFullscreen:UpdateKeyboardLock": {},
       },
     },
 
@@ -561,6 +570,7 @@ let JSWINDOWACTORS = {
       "about:deleteprofile",
       "about:newprofile",
       "about:opentabs",
+      "about:aichatcontent",
     ],
   },
 
@@ -712,7 +722,8 @@ let JSWINDOWACTORS = {
 
   ScreenshotsComponent: {
     parent: {
-      esModuleURI: "resource:///modules/ScreenshotsUtils.sys.mjs",
+      esModuleURI:
+        "moz-src:///browser/components/screenshots/ScreenshotsUtils.sys.mjs",
     },
     child: {
       esModuleURI: "resource:///actors/ScreenshotsComponentChild.sys.mjs",
@@ -732,10 +743,12 @@ let JSWINDOWACTORS = {
 
   ScreenshotsHelper: {
     parent: {
-      esModuleURI: "resource:///modules/ScreenshotsUtils.sys.mjs",
+      esModuleURI:
+        "moz-src:///browser/components/screenshots/ScreenshotsUtils.sys.mjs",
     },
     child: {
-      esModuleURI: "resource:///modules/ScreenshotsHelperChild.sys.mjs",
+      esModuleURI:
+        "moz-src:///browser/components/screenshots/ScreenshotsHelperChild.sys.mjs",
     },
     allFrames: true,
     enablePreference: "screenshots.browser.component.enabled",
@@ -800,7 +813,13 @@ let JSWINDOWACTORS = {
         DOMDocElementInserted: {},
       },
     },
-    matches: ["about:asrouter*", "about:welcome*", "about:privatebrowsing*"],
+    matches: [
+      "about:asrouter*",
+      "about:welcome*",
+      "about:privatebrowsing*",
+      "about:newtab*",
+      "about:home*",
+    ],
     remoteTypes: ["privilegedabout"],
   },
 

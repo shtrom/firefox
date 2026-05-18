@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -180,9 +178,7 @@ class MOZ_STACK_CLASS AutoImageBridgeParentAsyncMessageSender final {
   ~AutoImageBridgeParentAsyncMessageSender() {
     mImageBridge->SendPendingAsyncMessages();
     if (mToDestroy) {
-      for (const auto& op : *mToDestroy) {
-        mImageBridge->DestroyActor(op);
-      }
+      mImageBridge->DestroyActors(*mToDestroy);
     }
   }
 
@@ -301,17 +297,19 @@ mozilla::ipc::IPCResult ImageBridgeParent::RecvReleaseCompositable(
   return IPC_OK();
 }
 
-PTextureParent* ImageBridgeParent::AllocPTextureParent(
+already_AddRefed<PTextureParent> ImageBridgeParent::AllocPTextureParent(
     const SurfaceDescriptor& aSharedData, ReadLockDescriptor& aReadLock,
     const LayersBackend& aLayersBackend, const TextureFlags& aFlags,
     const uint64_t& aSerial, const wr::MaybeExternalImageId& aExternalImageId) {
+  if (aExternalImageId.isSome()) {
+    uint32_t ns = static_cast<uint32_t>(wr::AsUint64(*aExternalImageId) >> 32);
+    if (ns == 0) {
+      return nullptr;
+    }
+  }
   return TextureHost::CreateIPDLActor(this, aSharedData, std::move(aReadLock),
                                       aLayersBackend, aFlags, mContentId,
                                       aSerial, aExternalImageId);
-}
-
-bool ImageBridgeParent::DeallocPTextureParent(PTextureParent* actor) {
-  return TextureHost::DestroyIPDLActor(actor);
 }
 
 PMediaSystemResourceManagerParent*
@@ -327,7 +325,7 @@ bool ImageBridgeParent::DeallocPMediaSystemResourceManagerParent(
 }
 
 void ImageBridgeParent::SendAsyncMessage(
-    const nsTArray<AsyncParentMessageData>& aMessage) {
+    Span<const AsyncParentMessageData> aMessage) {
   (void)SendParentAsyncMessages(aMessage);
 }
 
@@ -429,7 +427,8 @@ void ImageBridgeParent::NotifyNotUsed(PTextureParent* aTexture,
   }
 
   uint64_t textureId = TextureHost::GetTextureSerial(aTexture);
-  mPendingAsyncMessage.push_back(OpNotifyNotUsed(textureId, aTransactionId));
+  mPendingAsyncMessage.AppendElement(
+      OpNotifyNotUsed(textureId, aTransactionId));
 
   if (!IsAboutToSendAsyncMessages()) {
     SendPendingAsyncMessages();

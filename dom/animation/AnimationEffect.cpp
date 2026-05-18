@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -45,9 +43,23 @@ nsISupports* AnimationEffect::GetParentObject() const {
   return ToSupports(mDocument);
 }
 
-// https://drafts.csswg.org/web-animations/#current
+// https://drafts.csswg.org/web-animations-1/#current
 bool AnimationEffect::IsCurrent() const {
-  if (!mAnimation || mAnimation->PlayState() == AnimationPlayState::Finished) {
+  if (!mAnimation) {
+    return false;
+  }
+
+  // An animation effect is current if it is associated with an animation not
+  // in the idle play state with a non-null associated timeline that is not
+  // monotonically increasing.
+  // https://drafts.csswg.org/web-animations-1/#current (fourth bullet)
+  const AnimationTimeline* timeline = mAnimation->GetTimeline();
+  if (timeline && !timeline->IsMonotonicallyIncreasing() &&
+      mAnimation->PlayState() != AnimationPlayState::Idle) {
+    return true;
+  }
+
+  if (mAnimation->PlayState() == AnimationPlayState::Finished) {
     return false;
   }
 
@@ -73,7 +85,7 @@ void AnimationEffect::SetSpecifiedTiming(TimingParams&& aTiming) {
     return;
   }
 
-  mTiming = aTiming;
+  mTiming = std::move(aTiming);
 
   UpdateNormalizedTiming();
 
@@ -262,7 +274,10 @@ ComputedTiming AnimationEffect::GetComputedTimingAt(
     progress = fn->At(progress, result.mBeforeFlag);
   }
 
-  MOZ_ASSERT(std::isfinite(progress), "Progress value should be finite");
+  if (!std::isfinite(progress)) {
+    return result;
+  }
+
   result.mProgress.SetValue(progress);
   return result;
 }
@@ -347,17 +362,29 @@ void AnimationEffect::UpdateTiming(const OptionalEffectTiming& aTiming,
   SetSpecifiedTiming(std::move(timing));
 }
 
+// FIXME: We currently update the normalized timing eagerly, and this may cause
+// unnecessary calculation. The alternative way is to update it lazily and only
+// when needed. In order words, we could set a flag, and update the normalized
+// timing only when we need to use the normalized timing.
 void AnimationEffect::UpdateNormalizedTiming() {
   mNormalizedTiming.reset();
 
-  if (!mAnimation || !mAnimation->UsingScrollTimeline()) {
+  if (!mAnimation) {
     return;
   }
 
-  // Since `mAnimation` has a scroll timeline, we can be sure `GetTimeline()`
-  // and `TimelineDuration()` will not return null.
-  mNormalizedTiming.emplace(
-      mTiming.Normalize(mAnimation->GetTimeline()->TimelineDuration().Value()));
+  const auto* timeline = mAnimation->GetTimeline();
+  // Skip time-based timeline. Only scroll timeline and view timeline update the
+  // normalized timing.
+  if (!timeline || timeline->IsMonotonicallyIncreasing()) {
+    return;
+  }
+
+  const Nullable<TimeDuration>& timelineDuration =
+      timeline->TimelineDuration(mAnimation->GetTimelineRange());
+  MOZ_ASSERT(!timelineDuration.IsNull(),
+             "We always have a timeline duration even for 0 duration");
+  mNormalizedTiming.emplace(mTiming.Normalize(timelineDuration.Value()));
 }
 
 Nullable<TimeDuration> AnimationEffect::GetLocalTime() const {

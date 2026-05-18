@@ -10,11 +10,11 @@ const { IPProtection, IPProtectionWidget } = ChromeUtils.importESModule(
 );
 
 const { IPProtectionService, IPProtectionStates } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/ipprotection/IPProtectionService.sys.mjs"
+  "moz-src:///toolkit/components/ipprotection/IPProtectionService.sys.mjs"
 );
 
 const { IPPProxyManager, IPPProxyStates } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/ipprotection/IPPProxyManager.sys.mjs"
+  "moz-src:///toolkit/components/ipprotection/IPPProxyManager.sys.mjs"
 );
 
 const { IPProtectionAlertManager } = ChromeUtils.importESModule(
@@ -22,11 +22,11 @@ const { IPProtectionAlertManager } = ChromeUtils.importESModule(
 );
 
 const { IPPSignInWatcher } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/ipprotection/IPPSignInWatcher.sys.mjs"
+  "moz-src:///toolkit/components/ipprotection/fxa/IPPSignInWatcher.sys.mjs"
 );
 
-const { IPPEnrollAndEntitleManager } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/ipprotection/IPPEnrollAndEntitleManager.sys.mjs"
+const { IPPFxaAuthProvider } = ChromeUtils.importESModule(
+  "moz-src:///toolkit/components/ipprotection/fxa/IPPFxaAuthProvider.sys.mjs"
 );
 
 const { HttpServer, HTTP_403 } = ChromeUtils.importESModule(
@@ -38,7 +38,7 @@ const { NimbusTestUtils } = ChromeUtils.importESModule(
 );
 
 const { Server } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/ipprotection/IPProtectionServerlist.sys.mjs"
+  "moz-src:///toolkit/components/ipprotection/IPProtectionServerlist.sys.mjs"
 );
 
 ChromeUtils.defineESModuleGetters(this, {
@@ -49,16 +49,24 @@ ChromeUtils.defineESModuleGetters(this, {
 });
 
 const { ProxyPass, ProxyUsage, Entitlement } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/ipprotection/GuardianClient.sys.mjs"
+  "moz-src:///toolkit/components/ipprotection/GuardianTypes.sys.mjs"
 );
 const { RemoteSettings } = ChromeUtils.importESModule(
   "resource://services-settings/remote-settings.sys.mjs"
 );
 
+const { SpecialMessageActions } = ChromeUtils.importESModule(
+  "resource://messaging-system/lib/SpecialMessageActions.sys.mjs"
+);
+
 // Adapted from devtools/client/performance-new/test/browser/helpers.js
-function waitForPanelEvent(document, eventName) {
+function waitForPanelEvent(
+  document,
+  eventName,
+  viewId = "PanelUI-ipprotection"
+) {
   return BrowserTestUtils.waitForEvent(document, eventName, false, event => {
-    if (event.target.getAttribute("viewId") === "PanelUI-ipprotection") {
+    if (event.target.getAttribute("viewId") === viewId) {
       return true;
     }
     return false;
@@ -98,7 +106,11 @@ const defaultState = new IPProtectionPanel().state;
 async function openPanel(state, win = window) {
   let panel = IPProtection.getPanel(win);
   if (state) {
-    panel.setState(state);
+    panel.setState({
+      isEnrolling: false,
+      unauthenticated: false,
+      ...state,
+    });
   }
 
   let panelShownPromise = waitForPanelEvent(win.document, "popupshown");
@@ -148,13 +160,16 @@ async function setPanelState(state = defaultState, win = window) {
  * Closes the IP Protection panel and resets the state to the default.
  *
  * @param {Window} win - The window the panel is in.
+ * @param {boolean} resetState - Whether to reset the panel state to default before closing.
  * @returns {Promise<void>}
  */
-async function closePanel(win = window) {
+async function closePanel(win = window, resetState = true) {
   // Reset the state
   let panel = IPProtection.getPanel(win);
 
-  panel.setState(defaultState);
+  if (resetState) {
+    panel.setState(defaultState);
+  }
   // Close the panel
   let panelHiddenPromise = waitForPanelEvent(win.document, "popuphidden");
   panel.close();
@@ -168,10 +183,12 @@ async function closePanel(win = window) {
  * Does not proxy anything really.
  * Given it refuses the proxy connection, it will be removed from as proxy-info of the channel.
  *
- * @param {*} testFn
- * @param {Function<Promise<void>>} handler - A custom path handler for "/" requests.
+ * Use with `await using` for automatic cleanup:
+ *   await using proxyInfo = withProxyServer();
+ *
+ * @param {Function} [handler] - A custom path handler for "/" and "CONNECT" requests.
  */
-async function withProxyServer(testFn, handler) {
+function withProxyServer(handler) {
   const server = new HttpServer();
   let { promise, resolve } = Promise.withResolvers();
 
@@ -217,7 +234,7 @@ async function withProxyServer(testFn, handler) {
   server.identity.add("http", "example.com", "443");
 
   server.start(-1);
-  await testFn({
+  return {
     server: new Server({
       hostname: "localhost",
       port: server.identity.primaryPort,
@@ -233,8 +250,10 @@ async function withProxyServer(testFn, handler) {
     }),
     type: "http",
     gotConnection: promise,
-  });
-  return server;
+    async [Symbol.asyncDispose]() {
+      await new Promise(r => server.stop(r));
+    },
+  };
 }
 /* exported withProxyServer */
 
@@ -246,8 +265,7 @@ let DEFAULT_EXPERIMENT = {
 /* exported SETUP_EXPERIMENT */
 
 let DEFAULT_SERVICE_STATUS = {
-  isSignedIn: false,
-  isEnrolledAndEntitled: undefined,
+  isReady: false,
   canEnroll: true,
   entitlement: {
     status: 200,
@@ -260,18 +278,65 @@ let DEFAULT_SERVICE_STATUS = {
     pass: makePass(),
     usage: makeUsage(),
   },
+  usageInfo: makeUsage(),
+  signInFlow: true,
 };
 /* exported DEFAULT_SERVICE_STATUS */
 
 let STUBS = {
-  isEnrolledAndEntitled: undefined,
+  isReady: undefined,
   hasUpgraded: undefined,
-  enroll: undefined,
-  fetchUserInfo: undefined,
+  isEnrolling: undefined,
+  updateEntitlement: undefined,
+  checkForUpgrade: undefined,
+  enrollAndEntitle: undefined,
   fetchProxyPass: undefined,
-  isLinkedToGuardian: undefined,
+  fetchProxyUsage: undefined,
+  getEntitlement: undefined,
+  fxaSignInFlow: undefined,
 };
 /* exported STUBS */
+
+async function waitForServiceInitialized() {
+  if (IPProtectionService.state !== IPProtectionStates.UNINITIALIZED) {
+    return;
+  }
+  await BrowserTestUtils.waitForEvent(
+    IPProtectionService,
+    "IPProtectionService:StateChanged",
+    false,
+    () => IPProtectionService.state !== IPProtectionStates.UNINITIALIZED
+  );
+}
+/* exported waitForServiceInitialized */
+
+async function waitForServiceState(state) {
+  if (IPProtectionService.state === state) {
+    return;
+  }
+
+  await BrowserTestUtils.waitForEvent(
+    IPProtectionService,
+    "IPProtectionService:StateChanged",
+    false,
+    () => IPProtectionService.state === state
+  );
+}
+/* exported waitForServiceState */
+
+async function waitForProxyState(state) {
+  if (IPPProxyManager.state === state) {
+    return;
+  }
+
+  await BrowserTestUtils.waitForEvent(
+    IPPProxyManager,
+    "IPPProxyManager:StateChanged",
+    false,
+    () => IPPProxyManager.state === state
+  );
+}
+/* exported waitForProxyState */
 
 let setupSandbox = sinon.createSandbox();
 add_setup(async function setupVPN() {
@@ -285,9 +350,15 @@ add_setup(async function setupVPN() {
     set: [["browser.ipProtection.enabled", true]],
   });
 
+  await waitForServiceInitialized();
+
   registerCleanupFunction(async () => {
     cleanupService();
+
     Services.prefs.clearUserPref("browser.ipProtection.enabled");
+
+    await waitForServiceState(IPProtectionStates.UNINITIALIZED);
+
     setupSandbox.restore();
     CustomizableUI.reset();
     Services.prefs.clearUserPref(IPProtectionWidget.ADDED_PREF);
@@ -298,55 +369,72 @@ add_setup(async function setupVPN() {
     Services.prefs.clearUserPref("browser.ipProtection.locationListCache");
     Services.prefs.clearUserPref("browser.ipProtection.usageCache");
     Services.prefs.clearUserPref("browser.ipProtection.onboardingMessageMask");
-    Services.prefs.clearUserPref("browser.ipProtection.egressLocationEnabled");
     Services.prefs.clearUserPref("browser.ipProtection.bandwidthThreshold");
+    Services.prefs.clearUserPref(
+      "browser.ipProtection.bandwidthWarningDismissedThreshold"
+    );
     Services.prefs.clearUserPref("browser.ipProtection.userEnabled");
+    Services.prefs.clearUserPref(
+      "browser.ipProtection.openedPanelWithLocation"
+    );
+    Services.prefs.clearUserPref(
+      "browser.ipProtection.locationButtonBadgeDismissed"
+    );
   });
 });
 
 function setupStubs(stubs = STUBS) {
-  stubs.isSignedIn = setupSandbox.stub(IPPSignInWatcher, "isSignedIn");
-  stubs.isEnrolledAndEntitled = setupSandbox.stub(
-    IPPEnrollAndEntitleManager,
-    "isEnrolledAndEntitled"
-  );
-  stubs.hasUpgraded = setupSandbox.stub(
-    IPPEnrollAndEntitleManager,
-    "hasUpgraded"
-  );
+  setupSandbox.stub(IPPFxaAuthProvider, "aboutToStart").resolves(null);
+  stubs.isReady = setupSandbox.stub(IPPFxaAuthProvider, "isReady");
+  stubs.hasUpgraded = setupSandbox.stub(IPPFxaAuthProvider, "hasUpgraded");
+  // Stub isEnrolling, updateEntitlement, and checkForUpgrade
+  // to prevent loading skeleton from rendering unexpectedly during tests.
+  stubs.isEnrolling = setupSandbox
+    .stub(IPPFxaAuthProvider, "isEnrolling")
+    .get(() => false);
+  stubs.updateEntitlement = setupSandbox
+    .stub(IPPFxaAuthProvider, "updateEntitlement")
+    .resolves();
+  stubs.checkForUpgrade = setupSandbox
+    .stub(IPPFxaAuthProvider, "checkForUpgrade")
+    .resolves();
 
-  const guardianStub = {
-    enroll: setupSandbox.stub(),
-    fetchUserInfo: setupSandbox.stub(),
-    fetchProxyPass: setupSandbox.stub(),
-    isLinkedToGuardian: setupSandbox.stub().resolves(false),
-  };
-  stubs.enroll = guardianStub.enroll;
-  stubs.fetchUserInfo = guardianStub.fetchUserInfo;
-  stubs.fetchProxyPass = guardianStub.fetchProxyPass;
-  stubs.isLinkedToGuardian = guardianStub.isLinkedToGuardian;
-
-  setupSandbox.stub(IPProtectionService, "guardian").get(() => guardianStub);
+  stubs.enrollAndEntitle = setupSandbox.stub(
+    IPPFxaAuthProvider,
+    "enrollAndEntitle"
+  );
+  stubs.fetchProxyPass = setupSandbox.stub(
+    IPPFxaAuthProvider,
+    "fetchProxyPass"
+  );
+  stubs.fetchProxyUsage = setupSandbox.stub(
+    IPPFxaAuthProvider,
+    "fetchProxyUsage"
+  );
+  stubs.getEntitlement = setupSandbox
+    .stub(IPPFxaAuthProvider, "getEntitlement")
+    .resolves({ entitlement: DEFAULT_SERVICE_STATUS.entitlement?.entitlement });
+  stubs.fxaSignInFlow = setupSandbox.stub(
+    SpecialMessageActions,
+    "fxaSignInFlow"
+  );
 }
 /* exported setupStubs */
 
 function setupService(
   {
-    isSignedIn,
-    isEnrolledAndEntitled,
+    isReady,
     hasUpgraded,
     canEnroll,
     entitlement,
     proxyPass,
+    usageInfo,
+    signInFlow,
   } = DEFAULT_SERVICE_STATUS,
   stubs = STUBS
 ) {
-  if (typeof isSignedIn != "undefined") {
-    stubs.isSignedIn.get(() => isSignedIn);
-  }
-
-  if (typeof isEnrolledAndEntitled != "undefined") {
-    stubs.isEnrolledAndEntitled.get(() => isEnrolledAndEntitled);
+  if (typeof isReady != "undefined") {
+    stubs.isReady.get(() => isReady);
   }
 
   if (typeof hasUpgraded != "undefined") {
@@ -354,19 +442,28 @@ function setupService(
   }
 
   if (typeof canEnroll != "undefined") {
-    stubs.enroll.resolves({
-      ok: canEnroll,
+    stubs.enrollAndEntitle.resolves({
+      isEnrolledAndEntitled: canEnroll,
+      entitlement: canEnroll
+        ? DEFAULT_SERVICE_STATUS.entitlement?.entitlement
+        : undefined,
     });
   }
 
   if (typeof entitlement != "undefined") {
-    stubs.fetchUserInfo.resolves(entitlement);
-  } else {
-    stubs.fetchUserInfo.resolves(DEFAULT_SERVICE_STATUS.entitlement);
+    stubs.getEntitlement.resolves({ entitlement: entitlement?.entitlement });
   }
 
   if (typeof proxyPass != "undefined") {
     stubs.fetchProxyPass.resolves(proxyPass);
+  }
+
+  if (typeof usageInfo != "undefined") {
+    stubs.fetchProxyUsage.resolves(usageInfo);
+  }
+
+  if (typeof signInFlow != "undefined") {
+    stubs.fxaSignInFlow.resolves(signInFlow);
   }
 }
 /* exported setupService */
@@ -417,13 +514,8 @@ async function cleanupExperiment() {
  */
 function createTestEntitlement(overrides = {}) {
   return new Entitlement({
-    autostart: false,
-    created_at: "2023-01-01T12:00:00.000Z",
-    limited_bandwidth: false,
-    location_controls: false,
     subscribed: false,
     uid: 42,
-    website_inclusion: false,
     maxBytes: "0",
     ...overrides,
   });
@@ -455,7 +547,7 @@ function makePass(
 function makeUsage(
   max = "5368709120",
   remaining = "4294967296",
-  reset = "2026-01-01T00:00:00.000Z"
+  reset = Temporal.Now.instant().add({ hours: 24 }).toString()
 ) {
   return new ProxyUsage(max, remaining, reset);
 }
@@ -553,3 +645,46 @@ function checkBandwidth(bandwidthEl, bandwidthUsage) {
     `MB used ${bandwidthUsage.mbCount} times`
   );
 }
+
+async function checkStatusBoxAriaLabel(statusBox) {
+  let titleEl = statusBox.titleEl;
+  Assert.ok(titleEl, "Status box title should be present");
+
+  await BrowserTestUtils.waitForMutationCondition(
+    titleEl,
+    { attributes: true, attributeFilter: ["aria-label"] },
+    () => titleEl.hasAttribute("aria-label")
+  );
+
+  Assert.equal(
+    titleEl.getAttribute("aria-label"),
+    titleEl.textContent.trim(),
+    "Status box title aria-label should match the displayed text"
+  );
+}
+/* exported checkStatusBoxAriaLabel */
+
+// Borrowed from browser_PanelMultiView_keyboard.js
+async function expectFocusAfterKey(aKey, aFocus) {
+  let res = aKey.match(/^(Shift\+)?(.+)$/);
+  let shift = Boolean(res[1]);
+  let key;
+  if (res[2].length == 1) {
+    key = res[2]; // Character.
+  } else {
+    key = "KEY_" + res[2]; // Tab, ArrowRight, etc.
+  }
+  info("Waiting for focus on " + aFocus.id);
+  // Attempts to capture a nested button element (ie. inside of a moz-button)
+  let focused = BrowserTestUtils.waitForEvent(
+    aFocus.buttonEl ?? aFocus,
+    "focus"
+  );
+  EventUtils.synthesizeKey(key, { shiftKey: shift });
+  await focused;
+  ok(
+    true,
+    `${aFocus.id || "unidentified element"} focused after [${aKey}] pressed`
+  );
+}
+/* exported expectFocusAfterKey */

@@ -3,19 +3,11 @@
 
 "use strict";
 
-const { openAIEngine } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/aiwindow/models/Utils.sys.mjs"
-);
-
 const { OAUTH_CLIENT_ID, SCOPE_PROFILE_UID, SCOPE_SMART_WINDOW } =
   ChromeUtils.importESModule("resource://gre/modules/FxAccountsCommon.sys.mjs");
 
 const { getFxAccountsSingleton } = ChromeUtils.importESModule(
   "resource://gre/modules/FxAccounts.sys.mjs"
-);
-
-const { sinon } = ChromeUtils.importESModule(
-  "resource://testing-common/Sinon.sys.mjs"
 );
 
 add_task(async function test_getFxAccountToken_passes_correct_scope() {
@@ -220,6 +212,46 @@ add_task(async function test_runWithAuth_fails_after_retry_401() {
     runStub.restore();
     removeCachedTokenStub.restore();
     getFxAccountTokenStub.restore();
+  }
+});
+
+// Test 401 error is thrown immediately when custom endpoint is set (no retry)
+add_task(async function test_runWithAuth_throws_401_with_custom_endpoint() {
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.smartwindow.endpoint", "https://example.test/v1"]],
+  });
+
+  try {
+    const engine = await openAIEngine.build("chat");
+    const testContent = { messages: [{ role: "user", content: "test" }] };
+    const expectedError = new Error("Request failed with 401 status code");
+
+    const runStub = sinon
+      .stub(engine.engineInstance, "run")
+      .rejects(expectedError);
+    const fxAccounts = getFxAccountsSingleton();
+    const removeCachedTokenStub = sinon
+      .stub(fxAccounts, "removeCachedOAuthToken")
+      .resolves();
+
+    try {
+      await Assert.rejects(
+        engine._runWithAuth(testContent),
+        ex => ex === expectedError,
+        "_runWithAuth should throw 401 immediately when custom endpoint is set"
+      );
+
+      Assert.ok(runStub.calledOnce, "engine.run should be called once");
+      Assert.ok(
+        removeCachedTokenStub.notCalled,
+        "removeCachedOAuthToken should not be called when custom endpoint is set"
+      );
+    } finally {
+      runStub.restore();
+      removeCachedTokenStub.restore();
+    }
+  } finally {
+    await SpecialPowers.popPrefEnv();
   }
 });
 

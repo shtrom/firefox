@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -355,12 +353,9 @@ static void AddX11Dependencies(SandboxBroker::Policy* policy) {
   policy->AddPath(SandboxBroker::MAY_CONNECT, bumblebeeSocket);
 
 #if defined(MOZ_WIDGET_GTK) && defined(MOZ_X11)
-  // Allow local X11 connections, for several purposes:
+  // Allow local X11 connections, if:
   //
-  // * for content processes to use WebGL when the browser is in headless
-  //   mode, by opening the X display if/when needed
-  //
-  // * if Primus or VirtualGL is used, to contact the secondary X server
+  // * Primus or VirtualGL is used, to contact the secondary X server
   static const bool kIsX11 =
       !mozilla::widget::GdkIsWaylandDisplay() && PR_GetEnv("DISPLAY");
   if (kIsX11) {

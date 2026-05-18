@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -17,9 +18,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
+import mozilla.components.compose.base.theme.information
 import org.mozilla.fenix.R
 import org.mozilla.fenix.components.menu.store.SummarizationMenuState
 import org.mozilla.fenix.components.menu.store.TranslationInfo
+import org.mozilla.fenix.compose.StatusBadge
 import org.mozilla.fenix.theme.FirefoxTheme
 import org.mozilla.fenix.theme.PreviewThemeProvider
 import org.mozilla.fenix.theme.Theme
@@ -41,6 +44,7 @@ internal fun MoreSettingsSubmenu(
     showShortcuts: Boolean,
     isAndroidAutomotiveAvailable: Boolean,
     summarizationMenuState: SummarizationMenuState,
+    isPrivate: Boolean,
     onWebCompatReporterClick: () -> Unit,
     onSummarizePageMenuExposed: () -> Unit,
     onSummarizePageClick: () -> Unit,
@@ -50,6 +54,7 @@ internal fun MoreSettingsSubmenu(
     onSaveAsPDFMenuClick: () -> Unit,
     onPrintMenuClick: () -> Unit,
     onOpenInAppMenuClick: () -> Unit,
+    onMoveToNonPrivateTabMenuClick: () -> Unit,
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -62,6 +67,10 @@ internal fun MoreSettingsSubmenu(
             summarizationMenuState = summarizationMenuState,
             onSummarizePageMenuExposed = onSummarizePageMenuExposed,
             onSummarizePageClick = onSummarizePageClick,
+        )
+        MoveToNonPrivateTabMenuItem(
+            isPrivate = isPrivate,
+            onMoveToNonPrivateTabMenuClick = onMoveToNonPrivateTabMenuClick,
         )
         WebCompatReporterMenuItem(
             isWebCompatReporterSupported = isWebCompatReporterSupported,
@@ -135,17 +144,26 @@ private fun SummarizationMenuItem(
         } else {
             MenuItemState.DISABLED
         }
+
+        val containerColor = if (summarizationMenuState.enabled) {
+            MaterialTheme.colorScheme.information
+        } else {
+            MaterialTheme.colorScheme.information.copy(alpha = 0.38f)
+        }
+
         MenuItem(
             label = stringResource(id = R.string.browser_menu_summarize_page),
+            labelModifier = Modifier.wrapContentWidth(),
             beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_lightning_24),
             isBeforeIconHighlighted = summarizationMenuState.highlighted,
             onClick = onSummarizePageClick,
             state = state,
             afterContent = {
                 if (summarizationMenuState.showNewFeatureBadge) {
-                    Badge(
-                        badgeText = stringResource(R.string.browser_menu_summarize_page_badge),
-                        state = state,
+                    StatusBadge(
+                        containerColor = containerColor,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        status = stringResource(R.string.browser_menu_summarize_page_badge),
                     )
                 }
             },
@@ -211,6 +229,20 @@ private fun SaveToCollectionMenuItem(
         beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_collection_24),
         onClick = onSaveToCollectionMenuClick,
     )
+}
+
+@Composable
+private fun MoveToNonPrivateTabMenuItem(
+    isPrivate: Boolean,
+    onMoveToNonPrivateTabMenuClick: () -> Unit,
+) {
+    if (isPrivate) {
+        MenuItem(
+            label = stringResource(id = R.string.browser_menu_move_to_non_private_tab),
+            beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_external_link_24),
+            onClick = onMoveToNonPrivateTabMenuClick,
+        )
+    }
 }
 
 @Composable
@@ -355,6 +387,7 @@ private fun MoreSettingsSubmenuPreview(
                         highlighted = true,
                         showNewFeatureBadge = true,
                     ),
+                    isPrivate = true,
                     onWebCompatReporterClick = {},
                     onSummarizePageMenuExposed = {},
                     onSummarizePageClick = {},
@@ -364,6 +397,7 @@ private fun MoreSettingsSubmenuPreview(
                     onSaveAsPDFMenuClick = {},
                     onPrintMenuClick = {},
                     onOpenInAppMenuClick = {},
+                    onMoveToNonPrivateTabMenuClick = {},
                 )
             }
         }
@@ -402,6 +436,7 @@ private fun MoreSettingsSubmenuDisabledOpenPreview(
                     showShortcuts = true,
                     isAndroidAutomotiveAvailable = false,
                     summarizationMenuState = SummarizationMenuState.Default,
+                    isPrivate = false,
                     onWebCompatReporterClick = {},
                     onSummarizePageMenuExposed = {},
                     onSummarizePageClick = {},
@@ -411,6 +446,7 @@ private fun MoreSettingsSubmenuDisabledOpenPreview(
                     onSaveAsPDFMenuClick = {},
                     onPrintMenuClick = {},
                     onOpenInAppMenuClick = {},
+                    onMoveToNonPrivateTabMenuClick = {},
                 )
             }
         }

@@ -18,13 +18,13 @@ use crate::computed_value_flags::ComputedValueFlags;
 use crate::context::QuirksMode;
 use crate::custom_properties::ComputedCustomProperties;
 use crate::derives::*;
+use crate::device::Device;
 use crate::font_metrics::{FontMetrics, FontMetricsOrientation};
-use crate::media_queries::Device;
 #[cfg(feature = "gecko")]
 use crate::properties;
 use crate::properties::{ComputedValues, StyleBuilder};
 use crate::rule_cache::RuleCacheConditions;
-use crate::rule_tree::CascadeLevel;
+use crate::rule_tree::{CascadeLevel, RuleCascadeFlags};
 use crate::stylesheets::container_rule::{
     ContainerInfo, ContainerSizeQuery, ContainerSizeQueryResult,
 };
@@ -196,11 +196,10 @@ pub struct Context<'a> {
     /// The quirks mode of this context.
     pub quirks_mode: QuirksMode,
 
-    /// Whether this computation is being done for a SMIL animation.
+    /// Whether this computation is being done for animation.
     ///
-    /// This is used to allow certain properties to generate out-of-range
-    /// values, which SMIL allows.
-    pub for_smil_animation: bool,
+    /// Allows opacity to interpolate out-of-range values
+    pub for_animation: bool,
 
     /// Returns the container information to evaluate a given container query.
     pub container_info: Option<ContainerInfo>,
@@ -217,6 +216,12 @@ pub struct Context<'a> {
 
     /// The cascade level in the shadow tree hierarchy.
     pub scope: CascadeLevel,
+
+    /// The set of RuleCascadeFlags whose rules should be included during the
+    /// cascade. STARTING_STYLE is set from the caller for re-cascade.
+    /// APPEARANCE_BASE is added dynamically after the appearance property is
+    /// resolved to a non-None value.
+    pub included_cascade_flags: RuleCascadeFlags,
 
     /// Container size query for this context.
     container_size_query: RefCell<ContainerSizeQuery<'a>>,
@@ -243,11 +248,12 @@ impl<'a> Context<'a> {
             in_media_query: true,
             in_container_query: false,
             quirks_mode,
-            for_smil_animation: false,
+            for_animation: false,
             container_info: None,
             for_non_inherited_property: false,
             rule_cache_conditions: RefCell::new(&mut conditions),
             scope: CascadeLevel::same_tree_author_normal(),
+            included_cascade_flags: RuleCascadeFlags::empty(),
             container_size_query: RefCell::new(ContainerSizeQuery::none()),
         };
         f(&context)
@@ -280,11 +286,12 @@ impl<'a> Context<'a> {
             in_media_query: false,
             in_container_query: true,
             quirks_mode,
-            for_smil_animation: false,
+            for_animation: false,
             container_info,
             for_non_inherited_property: false,
             rule_cache_conditions: RefCell::new(&mut conditions),
             scope: CascadeLevel::same_tree_author_normal(),
+            included_cascade_flags: RuleCascadeFlags::empty(),
             container_size_query: RefCell::new(container_size_query),
         };
 
@@ -297,7 +304,14 @@ impl<'a> Context<'a> {
         quirks_mode: QuirksMode,
         rule_cache_conditions: &'a mut RuleCacheConditions,
         container_size_query: ContainerSizeQuery<'a>,
+        mut included_cascade_flags: RuleCascadeFlags,
     ) -> Self {
+        if builder
+            .flags()
+            .intersects(ComputedValueFlags::IS_IN_APPEARANCE_BASE_SUBTREE)
+        {
+            included_cascade_flags.insert(RuleCascadeFlags::APPEARANCE_BASE);
+        }
         Self {
             builder,
             cached_system_font: None,
@@ -305,10 +319,11 @@ impl<'a> Context<'a> {
             in_container_query: false,
             quirks_mode,
             container_info: None,
-            for_smil_animation: false,
+            for_animation: false,
             for_non_inherited_property: false,
             rule_cache_conditions: RefCell::new(rule_cache_conditions),
             scope: CascadeLevel::same_tree_author_normal(),
+            included_cascade_flags,
             container_size_query: RefCell::new(container_size_query),
         }
     }
@@ -316,7 +331,6 @@ impl<'a> Context<'a> {
     /// Creates a context suitable for computing animations.
     pub fn new_for_animation(
         builder: StyleBuilder<'a>,
-        for_smil_animation: bool,
         quirks_mode: QuirksMode,
         rule_cache_conditions: &'a mut RuleCacheConditions,
         container_size_query: ContainerSizeQuery<'a>,
@@ -328,10 +342,11 @@ impl<'a> Context<'a> {
             in_container_query: false,
             quirks_mode,
             container_info: None,
-            for_smil_animation,
+            for_animation: true,
             for_non_inherited_property: false,
             rule_cache_conditions: RefCell::new(rule_cache_conditions),
             scope: CascadeLevel::same_tree_author_normal(),
+            included_cascade_flags: RuleCascadeFlags::empty(),
             container_size_query: RefCell::new(container_size_query),
         }
     }
@@ -351,10 +366,11 @@ impl<'a> Context<'a> {
             in_container_query: false,
             quirks_mode: stylist.quirks_mode(),
             container_info: None,
-            for_smil_animation: false,
+            for_animation: false,
             for_non_inherited_property: false,
             rule_cache_conditions: RefCell::new(rule_cache_conditions),
             scope: CascadeLevel::same_tree_author_normal(),
+            included_cascade_flags: RuleCascadeFlags::empty(),
             container_size_query: RefCell::new(ContainerSizeQuery::none()),
         }
     }
@@ -775,7 +791,7 @@ impl ToComputedValue for specified::AngleOrPercentage {
 
     #[inline]
     fn to_computed_value(&self, context: &Context) -> AngleOrPercentage {
-        match *self {
+        match self {
             specified::AngleOrPercentage::Percentage(percentage) => {
                 AngleOrPercentage::Percentage(percentage.to_computed_value(context))
             },
@@ -917,6 +933,16 @@ pub enum NumberOrPercentage {
     Number(Number),
 }
 
+impl NumberOrPercentage {
+    /// Get the underlying value of this number or percentage.
+    pub fn value(&self) -> f32 {
+        match self {
+            NumberOrPercentage::Percentage(p) => p.0,
+            NumberOrPercentage::Number(n) => *n,
+        }
+    }
+}
+
 impl ClampToNonNegative for NumberOrPercentage {
     fn clamp_to_non_negative(self) -> Self {
         match self {
@@ -933,7 +959,7 @@ impl ToComputedValue for specified::NumberOrPercentage {
 
     #[inline]
     fn to_computed_value(&self, context: &Context) -> NumberOrPercentage {
-        match *self {
+        match self {
             specified::NumberOrPercentage::Percentage(percentage) => {
                 NumberOrPercentage::Percentage(percentage.to_computed_value(context))
             },

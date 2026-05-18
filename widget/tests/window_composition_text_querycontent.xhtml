@@ -12,16 +12,16 @@
 
   <panel id="panel" hidden="true" orient="vertical">
     <vbox id="vbox">
-      <html:textarea id="textbox" cols="20" rows="4" style="font-size: 36px;"/>
+      <html:textarea id="textbox" cols="20" rows="4" style="font-size: 36px; line-height: 2;"/>
     </vbox>
   </panel>
 
 <body  xmlns="http://www.w3.org/1999/xhtml">
 <div id="display">
 <div id="div" style="margin: 0; padding: 0; font-size: 36px;">Here is a text frame.</div>
-<textarea style="margin: 0; font-family: -moz-fixed;" id="textarea" cols="20" rows="4"></textarea><br/>
+<textarea style="margin: 0; font-family: monospace;" id="textarea" cols="20" rows="4"></textarea><br/>
 <iframe id="iframe" width="300" height="150"
-        src="data:text/html,&lt;textarea id='textarea' cols='20' rows='4'&gt;&lt;/textarea&gt;"></iframe><br/>
+        src="data:text/html,&lt;textarea id='textarea' cols='20' style='line-height: 2' rows='4'&gt;&lt;/textarea&gt;"></iframe><br/>
 <iframe id="iframe2" width="300" height="150"
         src="data:text/html,&lt;body onload='document.designMode=%22on%22'&gt;body content&lt;/body&gt;"></iframe><br/>
 <iframe id="iframe3" width="300" height="150"
@@ -411,10 +411,10 @@ function checkRectArray(aQueryTextRectArrayResult, aExpectedTextRectArray, aMess
 
 function checkRectContainsRect(aRect, aContainer, aMessage)
 {
-  let container = { left: Math.ceil(aContainer.left),
-                    top:  Math.ceil(aContainer.top),
-                    width: Math.floor(aContainer.width),
-                    height: Math.floor(aContainer.height) };
+  let container = { left: Math.floor(aContainer.left),
+                    top:  Math.floor(aContainer.top),
+                    width: Math.ceil(aContainer.width),
+                    height: Math.ceil(aContainer.height) };
 
   let ret = container.left <= aRect.left &&
             container.top <= aRect.top &&
@@ -11312,6 +11312,73 @@ function runCompositionOnlyWhiteSpace() {
   );
 }
 
+function runCompositionTestFollowedByPreformattedLinefeed() {
+  const desc = "runCompositionTestFollowedByPreformattedLinefeed";
+  const selection = windowOfContenteditable.getSelection();
+  contenteditable.innerHTML = "<p>A</p>";
+  contenteditable.focus();
+  {
+    contenteditable.innerHTML = "<div style=white-space:pre>abc\n</div>";
+    const preformattedDiv = contenteditable.querySelector("div[style]");
+    selection.collapse(preformattedDiv.firstChild, "abc".length);
+    synthesizeCompositionChange({
+      composition: {
+        string: "X",
+        clauses: [
+          { length: 1, attr: COMPOSITION_ATTR_RAW_CLAUSE },
+        ],
+      },
+      caret: { start: 1, length: 0 },
+    });
+    is(
+      preformattedDiv.innerHTML,
+      "abcX\n",
+      `${desc}: The following preformatted linefeed shouldn't be deleted at composition start`
+    );
+    synthesizeComposition({ type: "compositioncommitasis" });
+    is(
+      preformattedDiv.innerHTML,
+      "abcX\n",
+      `${desc}: The following preformatted linefeed shouldn't be deleted at committing composition`
+    );
+    is(
+      selection.focusOffset,
+      "abcX".length,
+      `${desc}: Selection should be collapsed before the invisible preformatted linefeed`
+    );
+  }
+  {
+    contenteditable.innerHTML = "<div style=white-space:pre>\n</div>";
+    const preformattedDiv = contenteditable.querySelector("div[style]");
+    selection.collapse(preformattedDiv.firstChild, 0);
+    synthesizeCompositionChange({
+      composition: {
+        string: "X",
+        clauses: [
+          { length: 1, attr: COMPOSITION_ATTR_RAW_CLAUSE },
+        ],
+      },
+      caret: { start: 1, length: 0 },
+    });
+    is(
+      preformattedDiv.innerHTML,
+      "X",
+      `${desc}: The padding preformatted linefeed for the empty block should be deleted at composition start`
+    );
+    synthesizeComposition({ type: "compositioncommitasis" });
+    is(
+      preformattedDiv.innerHTML,
+      "X",
+      `${desc}: The padding preformatted linefeed for the empty block should be deleted at committing composition`
+    );
+    is(
+      selection.focusOffset,
+      "X".length,
+      `${desc}: Selection should be collapsed at end of the composition`
+    );
+  }
+}
+
 async function runTest()
 {
   await SpecialPowers.pushPrefEnv({
@@ -11365,6 +11432,7 @@ async function runTest()
   runCommitCompositionWithSpaceKey();
   runCancelCompositionAfterCollapseWhileSpace();
   runCompositionOnlyWhiteSpace();
+  runCompositionTestFollowedByPreformattedLinefeed();
   runCompositionWithSelectionChange();
   runCompositionWithClick();
   runForceCommitTest();

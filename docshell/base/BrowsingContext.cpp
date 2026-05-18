@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -39,6 +37,7 @@
 #include "mozilla/dom/LocationBinding.h"
 #include "mozilla/dom/MediaDevices.h"
 #include "mozilla/dom/Navigation.h"
+#include "mozilla/dom/NavigationUtils.h"
 #include "mozilla/dom/Navigator.h"
 #include "mozilla/dom/PopupBlocker.h"
 #include "mozilla/dom/ReferrerInfo.h"
@@ -124,6 +123,11 @@ template <>
 struct ParamTraits<mozilla::dom::ForcedColorsOverride>
     : public mozilla::dom::WebIDLEnumSerializer<
           mozilla::dom::ForcedColorsOverride> {};
+
+template <>
+struct ParamTraits<mozilla::dom::PrefersReducedMotionOverride>
+    : public mozilla::dom::WebIDLEnumSerializer<
+          mozilla::dom::PrefersReducedMotionOverride> {};
 
 template <>
 struct ParamTraits<mozilla::dom::ExplicitActiveStatus>
@@ -509,6 +513,10 @@ already_AddRefed<BrowsingContext> BrowsingContext::CreateDetached(
   fields.Get<IDX_TopLevelCreatedByWebContent>() =
       aOptions.topLevelCreatedByWebContent;
 
+  if (aOptions.isForPrinting && !parentBC) {
+    fields.Get<IDX_IsPrinting>() = true;
+  }
+
   if (!parentBC) {
     fields.Get<IDX_ShouldDelayMediaFromStart>() =
         StaticPrefs::media_block_autoplay_until_in_foreground();
@@ -610,10 +618,8 @@ mozilla::ipc::IPCResult BrowsingContext::CreateFromIPC(
   context->mChildOffset = aInit.mChildOffset;
   if (context->GetHasSessionHistory()) {
     context->CreateChildSHistory();
-    if (mozilla::SessionHistoryInParent()) {
-      context->GetChildSessionHistory()->SetIndexAndLength(
-          aInit.mSessionHistoryIndex, aInit.mSessionHistoryCount, nsID());
-    }
+    context->GetChildSessionHistory()->SetIndexAndLength(
+        aInit.mSessionHistoryIndex, aInit.mSessionHistoryCount, nsID());
   }
 
   // NOTE: Call through the `Set` methods for these values to ensure that any
@@ -675,9 +681,6 @@ void BrowsingContext::SetDocShell(nsIDocShell* aDocShell) {
   mDocShell = aDocShell;
   mDanglingRemoteOuterProxies = !mIsInProcess;
   mIsInProcess = true;
-  if (mChildSessionHistory) {
-    mChildSessionHistory->SetIsInProcess(true);
-  }
 
   RecomputeCanExecuteScripts();
   ClearCachedValuesOfLocations();
@@ -803,7 +806,7 @@ void BrowsingContext::SetEmbedderElement(Element* aEmbedder) {
     txn.SetEmbeddedInContentDocument(
         aEmbedder->OwnerDoc()->IsContentDocument());
     if (nsCOMPtr<nsPIDOMWindowInner> inner =
-            do_QueryInterface(aEmbedder->GetOwnerGlobal())) {
+            do_QueryInterface(aEmbedder->GetDocumentGlobal())) {
       txn.SetEmbedderInnerWindowId(inner->WindowID());
     }
     txn.SetFullscreenAllowedByOwner(OwnerAllowsFullscreen(*aEmbedder));
@@ -1192,11 +1195,6 @@ void BrowsingContext::PrepareForProcessChange() {
   // different process now. This may need to change in the future with
   // Cross-Process BFCache.
   mDocShell = nullptr;
-  if (mChildSessionHistory) {
-    // This can be removed once session history is stored exclusively in the
-    // parent process.
-    mChildSessionHistory->SetIsInProcess(false);
-  }
 
   if (!mWindowProxy) {
     return;
@@ -1257,12 +1255,120 @@ bool BrowsingContext::AncestorsAreCurrent() const {
   }
 }
 
-bool BrowsingContext::IsInBFCache() const {
-  if (mozilla::SessionHistoryInParent()) {
-    return mIsInBFCache;
+bool BrowsingContext::IsInBFCache() const { return mIsInBFCache; }
+
+void BrowsingContext::SetIsInBFCache(bool aIsInBFCache) {
+  mIsInBFCache = aIsInBFCache;
+}
+
+void BrowsingContext::SetIsEnteringBFCache(bool aIsEnteringBFCache) {
+  mIsEnteringBFCache = aIsEnteringBFCache;
+}
+
+void BrowsingContext::DeactivateDocuments() {
+  MOZ_RELEASE_ASSERT(mozilla::BFCacheInParent());
+  MOZ_DIAGNOSTIC_ASSERT(IsTop());
+
+  if (XRE_IsContentProcess() && mDocShell) {
+    nsDocShell::Cast(mDocShell)->MaybeDisconnectChildListenersOnPageHide();
   }
-  return mParentWindow &&
-         mParentWindow->TopWindowContext()->GetWindowStateSaved();
+
+  PreOrderWalk([&](BrowsingContext* aContext) {
+    nsCOMPtr<nsIDocShell> shell = aContext->GetDocShell();
+    aContext->SetIsEnteringBFCache(/* aIsEnteringBFCache */ true);
+
+    if (shell) {
+      nsDocShell::Cast(shell)->FirePageHideShowNonRecursive(false);
+    }
+  });
+
+  PreOrderWalk([&](BrowsingContext* aContext) {
+    nsCOMPtr<nsIDocShell> shell = aContext->GetDocShell();
+    if (shell) {
+      nsDocShell::Cast(shell)->ThawFreezeNonRecursive(false);
+      if (nsPresContext* pc = shell->GetPresContext()) {
+        pc->EventStateManager()->ResetHoverState();
+      }
+    }
+    aContext->SetIsInBFCache(true);
+    Document* doc = aContext->GetDocument();
+    if (doc) {
+      // Notifying needs to happen after mIsInBFCache is set to true.
+      doc->NotifyActivityChanged();
+    }
+  });
+}
+
+static void GetSubframeReactivationData(
+    BrowsingContext* aBrowsingContext,
+    Maybe<SessionHistoryInfo>& aReactivatedEntry,
+    nsTArray<SessionHistoryInfo>& aNewSHEs,
+    const Maybe<PreviousSessionHistoryInfo>& aPreviousEntryForActivation) {
+  // See bug 1991680
+  MOZ_LOG_FMT(gNavigationAPILog, LogLevel::Debug,
+              "We currently don't know how to reactivate subframes");
+}
+
+void BrowsingContext::ReactivateDocuments(
+    const Maybe<SessionHistoryInfo>& aReactivatedEntry,
+    const nsTArray<SessionHistoryInfo>& aNewSHEs,
+    const Maybe<PreviousSessionHistoryInfo>& aPreviousEntryForActivation) {
+  UpdateCurrentTopByBrowserId(this);
+  PreOrderWalk(
+      [&](BrowsingContext* aContext) MOZ_CAN_RUN_SCRIPT_BOUNDARY_LAMBDA {
+        aContext->SetIsInBFCache(false);
+        aContext->SetIsEnteringBFCache(/* aIsEnteringBFCache */ false);
+        nsCOMPtr<nsIDocShell> shell = aContext->GetDocShell();
+        // Before doing anything to reactivate, we need to thaw our suspended
+        // docshells. If we don't, updating the navigation entries can't
+        // succeed, since we don't have an active document.
+        if (shell) {
+          nsDocShell::Cast(shell)->ThawFreezeNonRecursive(true);
+        }
+
+        // We need to restore our navigation object state before calling
+        // pageshow. This is ok, since we will fire any
+        // NavigationHistoryEntry.dispose events async.
+        if (aContext->IsTop()) {
+          aContext->UpdateForReactivation(aReactivatedEntry, aNewSHEs,
+                                          aPreviousEntryForActivation);
+        } else {
+          Maybe<SessionHistoryInfo> reactivatedEntry;
+          nsTArray<SessionHistoryInfo> newSHEs;
+          GetSubframeReactivationData(aContext, reactivatedEntry, newSHEs,
+                                      aPreviousEntryForActivation);
+          aContext->UpdateForReactivation(reactivatedEntry, newSHEs,
+                                          aPreviousEntryForActivation);
+        }
+      });
+
+  PostOrderWalk([&](BrowsingContext* aContext) {
+    nsCOMPtr<nsIDocShell> shell = aContext->GetDocShell();
+    if (shell) {
+      nsDocShell::Cast(shell)->FirePageHideShowNonRecursive(true);
+    }
+  });
+}
+
+// https://html.spec.whatwg.org/#update-document-for-history-step-application
+void BrowsingContext::UpdateForReactivation(
+    const Maybe<SessionHistoryInfo>& aReactivatedEntry,
+    const nsTArray<SessionHistoryInfo>& aNewSHEs,
+    const Maybe<PreviousSessionHistoryInfo>& aPreviousEntryForActivation) {
+  if (RefPtr docShell = nsDocShell::Cast(GetDocShell());
+      docShell && aReactivatedEntry) {
+    if (RefPtr window = docShell->GetActiveWindow()) {
+      if (RefPtr navigation = window->Navigation()) {
+        // The spec actually performs these to steps in reverse order, but we
+        // can't. We need to reactivate to be able to have the navigation
+        // history entries available to set the correct navigation activation.
+        navigation->UpdateForReactivation(aNewSHEs, aReactivatedEntry.ptr());
+
+        navigation->CreateNavigationActivationFrom(
+            aPreviousEntryForActivation, Some(NavigationType::Traverse));
+      }
+    }
+  }
 }
 
 Span<RefPtr<BrowsingContext>> BrowsingContext::Children() const {
@@ -1937,6 +2043,7 @@ NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(BrowsingContext)
   NS_WRAPPERCACHE_INTERFACE_MAP_ENTRY
   NS_INTERFACE_MAP_ENTRY(nsILoadContext)
   NS_INTERFACE_MAP_ENTRY(nsISupports)
+  NS_INTERFACE_MAP_ENTRY_CONCRETE(BrowsingContext)
 NS_INTERFACE_MAP_END
 
 NS_IMPL_CYCLE_COLLECTION_CLASS(BrowsingContext)
@@ -1997,6 +2104,19 @@ NS_IMPL_CYCLE_COLLECTION_CAN_SKIP_THIS_BEGIN(BrowsingContext)
   return IsCertainlyAliveForCC(tmp);
 NS_IMPL_CYCLE_COLLECTION_CAN_SKIP_THIS_END
 
+/* static */
+void BrowsingContext::SweepWindowProxies(JSTracer* aTrc) {
+  if (!sBrowsingContexts) {
+    return;
+  }
+
+  for (BrowsingContext* bc : sBrowsingContexts->Values()) {
+    if (bc->mWindowProxy) {
+      JS_UpdateWeakPointerAfterGC(aTrc, &bc->mWindowProxy);
+    }
+  }
+}
+
 class RemoteLocationProxy
     : public RemoteObjectProxy<BrowsingContext::LocationProxy,
                                Location_Binding::sCrossOriginProperties> {
@@ -2017,12 +2137,9 @@ class RemoteLocationProxy
 
 static const RemoteLocationProxy sSingleton;
 
-// Give RemoteLocationProxy 2 reserved slots, like the other wrappers,
-// so JSObject::swap can swap it with CrossCompartmentWrappers without requiring
-// malloc.
 template <>
-const JSClass RemoteLocationProxy::Base::sClass =
-    PROXY_CLASS_DEF("Proxy", JSCLASS_HAS_RESERVED_SLOTS(2));
+const JSClass RemoteLocationProxy::Base::sClass = PROXY_CLASS_DEF(
+    "Proxy", JSCLASS_HAS_RESERVED_SLOTS(js::SwappableProxyReservedSlots));
 
 void BrowsingContext::Location(JSContext* aCx,
                                JS::MutableHandle<JSObject*> aLocation,
@@ -2068,10 +2185,6 @@ nsresult BrowsingContext::CheckFramebusting(nsDocShellLoadState* aLoadState) {
     return NS_OK;
   }
 
-  if (XRE_IsParentProcess()) {
-    return NS_OK;
-  }
-
   // Only applies to top-level navigations.
   if (!IsTop()) {
     return NS_OK;
@@ -2081,14 +2194,32 @@ nsresult BrowsingContext::CheckFramebusting(nsDocShellLoadState* aLoadState) {
     return NS_OK;
   }
 
+  if (aLoadState->LoadIsFromSessionHistory()) {
+    return NS_OK;
+  }
+
   const auto& sourceBC = aLoadState->SourceBrowsingContext();
   if (sourceBC.IsNull()) {
     return NS_OK;
   }
 
   if (BrowsingContext* bc = sourceBC.GetMaybeDiscarded()) {
-    if (bc->IsFramebustingAllowed(this)) {
+    // If the source lives in a different top-level browser, it is a
+    // cross-tab navigation (e.g. via window.opener) and allowed.
+    if (bc->BrowserId() != BrowserId()) {
       return NS_OK;
+    }
+
+    if (bc->GetCurrentWindowContext() &&
+        bc->GetCurrentWindowContext()->GetIsFramebustingAllowed()) {
+      return NS_OK;
+    }
+
+    for (auto* context = bc->GetCurrentWindowContext(); context;
+         context = context->GetParentWindowContext()) {
+      if (context->CanFramebust()) {
+        return NS_OK;
+      }
     }
 
     if (bc->GetDOMWindow()) {
@@ -2113,36 +2244,25 @@ nsresult BrowsingContext::CheckFramebusting(nsDocShellLoadState* aLoadState) {
   return NS_ERROR_DOM_SECURITY_ERR;
 }
 
-bool BrowsingContext::IsFramebustingAllowed(BrowsingContext* aTarget) {
-  MOZ_ASSERT(aTarget->IsTop());
+bool BrowsingContext::ComputeIsFramebustingAllowed() {
+  MOZ_ASSERT(IsInProcess());
 
-  if (aTarget->BrowserId() == BrowserId()) {
-    return IsFramebustingAllowedInner() || IsPopupAllowed();
-  }
-
-  // We should be able to safely assume that the SOP has our back here
-  // already. How else would this BrowsingContext have a reference?
-  return true;
-}
-
-bool BrowsingContext::IsFramebustingAllowedInner() {
-  if (IsInProcess() && SameOriginWithTop()) {
+  if (IsTop()) {
     return true;
   }
 
-  // We get the sandbox flags from the load info since the CSP header
-  // hasn't yet been processed at that time. The CSP sandbox directive makes
-  // it possible for a document to grant itself "allow-top-navigation"
-  // permissions by sending the appropiate header and we don't like that.
-  Document* doc;
-  nsIChannel* channel;
-  if ((doc = GetExtantDocument()) && (channel = doc->GetChannel())) {
-    nsCOMPtr<nsILoadInfo> loadInfo = channel->LoadInfo();
-    uint32_t sandboxFlags = loadInfo->GetSandboxFlags();
-    if (sandboxFlags && !(sandboxFlags & SANDBOXED_TOPLEVEL_NAVIGATION)) {
-      BrowsingContext* parent = GetParent();
-      return !parent || parent->IsFramebustingAllowedInner();
-    }
+  if (SameOriginWithTop()) {
+    return true;
+  }
+
+  // The browsing context's sandbox flags are the iframe "sandbox" attribute
+  // OR'ed with the parent's flags (CSP "sandbox" only applies to the
+  // document). Check the parent too, otherwise a page could grant itself
+  // "allow-top-navigation".
+  uint32_t sandboxFlags = GetSandboxFlags();
+  if (sandboxFlags && !(sandboxFlags & SANDBOXED_TOPLEVEL_NAVIGATION)) {
+    return GetParentWindowContext() &&
+           GetParentWindowContext()->GetIsFramebustingAllowed();
   }
 
   return false;
@@ -2228,19 +2348,11 @@ nsresult BrowsingContext::LoadURI(nsDocShellLoadState* aLoadState,
         aLoadState->SetChannelInitialized(true);
       }
 
-      cp->TransmitBlobDataIfBlobURL(aLoadState->URI());
+      cp->TransmitBlobDataIfBlobURL(aLoadState->URI(), mOriginAttributes);
 
 #ifdef ANDROID
-      // Generate a unique android load identifier for this url load
-      // Used to map back to the app link launch type in
-      // ContentParent::RecordAndroidAppLinkTelemetry() so we can avoid
-      // sending the app link launch type to the content process
-      uint64_t androidLoadIdentifier = nsContentUtils::GenerateTabId();
-      MOZ_ALWAYS_SUCCEEDS(
-          SetAndroidAppLinkLoadIdentifier(Some(androidLoadIdentifier)));
-
       uint32_t appLinkLaunchType = aLoadState->GetAppLinkLaunchType();
-      cp->SetAndroidAppLinkLaunchType(androidLoadIdentifier, appLinkLaunchType);
+      Canonical()->SetAndroidAppLinkLaunchType(appLinkLaunchType);
 
       // Record timing for cold app link launches
       constexpr uint32_t APPLINK_COLD = 1;
@@ -2485,10 +2597,8 @@ void BrowsingContext::Navigate(
     return;
   }
 
-  if (mozilla::SessionHistoryInParent()) {
-    loadState->SetNeedsCompletelyLoadedDocument(aNeedsCompletelyLoadedDocument);
-    loadState->SetHistoryBehavior(aHistoryHandling);
-  }
+  loadState->SetNeedsCompletelyLoadedDocument(aNeedsCompletelyLoadedDocument);
+  loadState->SetHistoryBehavior(aHistoryHandling);
 
   if (aHistoryHandling == NavigationHistoryBehavior::Replace) {
     loadState->SetLoadType(LOAD_STOP_CONTENT_AND_REPLACE);
@@ -2695,7 +2805,7 @@ PopupBlocker::PopupControlState BrowsingContext::RevisePopupAbuseLevel(
         !IsPopupAllowed() &&
         !ConsumeTransientUserActivationForMultiplePopupBlocking()) {
       nsContentUtils::ReportToConsole(nsIScriptError::warningFlag, "DOM"_ns,
-                                      doc, nsContentUtils::eDOM_PROPERTIES,
+                                      doc, PropertiesFile::DOM_PROPERTIES,
                                       "MultiplePopupsBlockedNoUserActivation");
       abuse = PopupBlocker::openBlocked;
     }
@@ -2892,7 +3002,7 @@ void BrowsingContext::PostMessageMoz(JSContext* aCx,
       callerInnerWindow &&
       nsScriptErrorBase::ComputeIsFromPrivateWindow(callerInnerWindow);
   data.innerWindowId() = callerInnerWindow ? callerInnerWindow->WindowID() : 0;
-  data.scriptLocation() = scriptLocation;
+  data.scriptLocation() = std::move(scriptLocation);
   JS::Rooted<JS::Value> transferArray(aCx);
   aError = nsContentUtils::CreateJSValueFromSequenceOfObject(aCx, aTransfer,
                                                              &transferArray);
@@ -2929,7 +3039,7 @@ void BrowsingContext::PostMessageMoz(JSContext* aCx,
     nsContentUtils::ReportToConsole(
         nsIScriptError::warningFlag, "DOM Window"_ns,
         callerInnerWindow ? callerInnerWindow->GetDocument() : nullptr,
-        nsContentUtils::eDOM_PROPERTIES,
+        PropertiesFile::DOM_PROPERTIES,
         "PostMessageSharedMemoryObjectToCrossOriginWarning");
   }
 
@@ -2974,7 +3084,7 @@ BrowsingContext::IPCInitializer BrowsingContext::GetIPCInitializer() {
   init.mCreatedDynamically = mCreatedDynamically;
   init.mChildOffset = mChildOffset;
   init.mOriginAttributes = mOriginAttributes;
-  if (mChildSessionHistory && mozilla::SessionHistoryInParent()) {
+  if (mChildSessionHistory) {
     init.mSessionHistoryIndex = mChildSessionHistory->Index();
     init.mSessionHistoryCount = mChildSessionHistory->Count();
   }
@@ -3209,6 +3319,11 @@ void BrowsingContext::DidSet(FieldIndex<IDX_ExplicitActive>,
   ActivenessChanged(isActive);
 }
 
+bool BrowsingContext::CanSet(FieldIndex<IDX_InRDMPane>, const bool&,
+                             ContentParent* aSource) {
+  return XRE_IsParentProcess() && IsTop() && !aSource;
+}
+
 void BrowsingContext::DidSet(FieldIndex<IDX_InRDMPane>, bool aOldValue) {
   MOZ_ASSERT(IsTop(),
              "Should only set InRDMPane in the top-level browsing context");
@@ -3291,14 +3406,8 @@ void BrowsingContext::DidSet(FieldIndex<IDX_PageAwakeRequestCount>,
 
 auto BrowsingContext::CanSet(FieldIndex<IDX_AllowJavascript>, bool aValue,
                              ContentParent* aSource) -> CanSetResult {
-  if (mozilla::SessionHistoryInParent()) {
-    return XRE_IsParentProcess() && !aSource ? CanSetResult::Allow
-                                             : CanSetResult::Deny;
-  }
-
-  // Without Session History in Parent, session restore code still needs to set
-  // this from content processes.
-  return LegacyRevertIfNotOwningOrParentProcess(aSource);
+  return XRE_IsParentProcess() && !aSource ? CanSetResult::Allow
+                                           : CanSetResult::Deny;
 }
 
 void BrowsingContext::DidSet(FieldIndex<IDX_AllowJavascript>, bool aOldValue) {
@@ -3380,6 +3489,22 @@ void BrowsingContext::DidSet(FieldIndex<IDX_ForcedColorsOverride>,
     return;
   }
   PresContextAffectingFieldChanged();
+}
+
+void BrowsingContext::DidSet(FieldIndex<IDX_PrefersReducedMotionOverride>,
+                             dom::PrefersReducedMotionOverride aOldValue) {
+  MOZ_ASSERT(IsTop());
+  if (PrefersReducedMotionOverride() == aOldValue) {
+    return;
+  }
+
+  WalkPresContexts([&](nsPresContext* aPc) {
+    aPc->MediaFeatureValuesChanged(
+        {MediaFeatureChangeReason::PreferenceChange},
+        // We're already iterating through sub documents, so we don't need to
+        // propagate the change again.
+        MediaFeatureChangePropagation::JustThisDocument);
+  });
 }
 
 void BrowsingContext::DidSet(FieldIndex<IDX_AnimationsPlayBackRateMultiplier>,
@@ -3540,73 +3665,6 @@ void BrowsingContext::DidSet(FieldIndex<IDX_UserAgentOverride>) {
       }
     }
   });
-}
-
-bool BrowsingContext::CanSet(FieldIndex<IDX_IsInBFCache>, bool,
-                             ContentParent* aSource) {
-  return IsTop() && !aSource && mozilla::BFCacheInParent();
-}
-
-void BrowsingContext::DidSet(FieldIndex<IDX_IsInBFCache>) {
-  MOZ_RELEASE_ASSERT(mozilla::BFCacheInParent());
-  MOZ_DIAGNOSTIC_ASSERT(IsTop());
-
-  const bool isInBFCache = GetIsInBFCache();
-  if (!isInBFCache) {
-    UpdateCurrentTopByBrowserId(this);
-    PreOrderWalk([&](BrowsingContext* aContext) {
-      aContext->mIsInBFCache = false;
-      nsCOMPtr<nsIDocShell> shell = aContext->GetDocShell();
-      if (shell) {
-        nsDocShell::Cast(shell)->ThawFreezeNonRecursive(true);
-      }
-    });
-  }
-
-  if (isInBFCache && XRE_IsContentProcess() && mDocShell) {
-    nsDocShell::Cast(mDocShell)->MaybeDisconnectChildListenersOnPageHide();
-  }
-
-  if (isInBFCache) {
-    PreOrderWalk([&](BrowsingContext* aContext) {
-      nsCOMPtr<nsIDocShell> shell = aContext->GetDocShell();
-      if (shell) {
-        nsDocShell::Cast(shell)->FirePageHideShowNonRecursive(false);
-      }
-    });
-  } else {
-    PostOrderWalk([&](BrowsingContext* aContext) {
-      nsCOMPtr<nsIDocShell> shell = aContext->GetDocShell();
-      if (shell) {
-        nsDocShell::Cast(shell)->FirePageHideShowNonRecursive(true);
-      }
-    });
-  }
-
-  if (isInBFCache) {
-    PreOrderWalk([&](BrowsingContext* aContext) {
-      nsCOMPtr<nsIDocShell> shell = aContext->GetDocShell();
-      if (shell) {
-        nsDocShell::Cast(shell)->ThawFreezeNonRecursive(false);
-        if (nsPresContext* pc = shell->GetPresContext()) {
-          pc->EventStateManager()->ResetHoverState();
-        }
-      }
-      aContext->mIsInBFCache = true;
-      Document* doc = aContext->GetDocument();
-      if (doc) {
-        // Notifying needs to happen after mIsInBFCache is set to true.
-        doc->NotifyActivityChanged();
-      }
-    });
-
-    if (XRE_IsParentProcess()) {
-      if (mCurrentWindowContext &&
-          mCurrentWindowContext->Canonical()->Fullscreen()) {
-        mCurrentWindowContext->Canonical()->ExitTopChromeDocumentFullscreen();
-      }
-    }
-  }
 }
 
 void BrowsingContext::DidSet(FieldIndex<IDX_IsSyntheticDocumentContainer>) {
@@ -4161,17 +4219,6 @@ void BrowsingContext::InitSessionHistory() {
 }
 
 ChildSHistory* BrowsingContext::GetChildSessionHistory() {
-  if (!mozilla::SessionHistoryInParent()) {
-    // For now we're checking that the session history object for the child
-    // process is available before returning the ChildSHistory object, because
-    // it is the actual implementation that ChildSHistory forwards to. This can
-    // be removed once session history is stored exclusively in the parent
-    // process.
-    return mChildSessionHistory && mChildSessionHistory->IsInProcess()
-               ? mChildSessionHistory.get()
-               : nullptr;
-  }
-
   return mChildSessionHistory;
 }
 
@@ -4185,12 +4232,6 @@ void BrowsingContext::CreateChildSHistory() {
   // history. That is why we create the ChildSHistory object in every process
   // where we have access to this browsing context (which is the top one).
   mChildSessionHistory = new ChildSHistory(this);
-
-  // If the top browsing context (this one) is loaded in this process then we
-  // also create the session history implementation for the child process.
-  // This can be removed once session history is stored exclusively in the
-  // parent process.
-  mChildSessionHistory->SetIsInProcess(IsInProcess());
 }
 
 void BrowsingContext::DidSet(FieldIndex<IDX_HasSessionHistory>,
@@ -4414,10 +4455,6 @@ void BrowsingContext::SetActiveSessionHistoryEntry(
     const Maybe<nsPoint>& aPreviousScrollPos, SessionHistoryInfo* aInfo,
     SessionHistoryInfo* aPreviousActiveEntry, uint32_t aLoadType,
     uint32_t aUpdatedCacheKey, bool aUpdateLength) {
-  if (IsTop() &&
-      !nsDocShell::ShouldAddToSessionHistory(aInfo->GetURI(), nullptr)) {
-    aInfo->SetTransient();
-  }
   if (XRE_IsContentProcess()) {
     // XXX Why we update cache key only in content process case?
     if (aUpdatedCacheKey != 0) {
@@ -4559,7 +4596,7 @@ nsresult BrowsingContext::CheckNavigationRateLimit(CallerType aCallerType) {
     Document* doc = GetDocument();
     if (doc) {
       nsContentUtils::ReportToConsole(nsIScriptError::errorFlag, "DOM"_ns, doc,
-                                      nsContentUtils::eDOM_PROPERTIES,
+                                      PropertiesFile::DOM_PROPERTIES,
                                       "LocChangeFloodingPrevented");
     }
 

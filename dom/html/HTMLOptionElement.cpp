@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -146,8 +144,8 @@ void HTMLOptionElement::BeforeSetAttr(int32_t aNamespaceID, nsAtom* aName,
   // We just changed out selected state (since we look at the "selected"
   // attribute when mSelectedChanged is false).  Let's tell our select about
   // it.
-  HTMLSelectElement* selectInt = GetSelect();
-  if (!selectInt) {
+  HTMLSelectElement* select = GetSelect();
+  if (!select) {
     // If option is a child of select, SetOptionsSelectedByIndex will set the
     // selected state if needed.
     SetStates(ElementState::CHECKED, !!aValue, aNotify);
@@ -155,9 +153,6 @@ void HTMLOptionElement::BeforeSetAttr(int32_t aNamespaceID, nsAtom* aName,
   }
 
   NS_ASSERTION(!mSelectedChanged, "Shouldn't be here");
-
-  bool inSetDefaultSelected = mIsInSetDefaultSelected;
-  mIsInSetDefaultSelected = true;
 
   int32_t index = Index();
   HTMLSelectElement::OptionFlags mask =
@@ -174,11 +169,8 @@ void HTMLOptionElement::BeforeSetAttr(int32_t aNamespaceID, nsAtom* aName,
   // change, which we will allow to take effect so that parts of
   // SetOptionsSelectedByIndex that might depend on it working don't get
   // confused.
-  selectInt->SetOptionsSelectedByIndex(index, index, mask);
+  select->SetOptionsSelectedByIndex(index, index, mask);
 
-  // Now reset our members; when we finish the attr set we'll end up with the
-  // rigt selected state.
-  mIsInSetDefaultSelected = inSetDefaultSelected;
   // the selected state might have been changed by SetOptionsSelectedByIndex,
   // possibly more than once; make sure our mSelectedChanged state is set back
   // correctly.
@@ -230,7 +222,7 @@ void HTMLOptionElement::GetText(nsAString& aText) {
 
   // XXX No CompressWhitespace for nsAString.  Sad.
   text.CompressWhitespace(true, true);
-  aText = text;
+  aText = std::move(text);
 }
 
 void HTMLOptionElement::SetText(const nsAString& aText, ErrorResult& aRv) {

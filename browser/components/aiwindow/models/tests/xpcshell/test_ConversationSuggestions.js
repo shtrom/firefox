@@ -16,6 +16,10 @@ const {
   "moz-src:///browser/components/aiwindow/models/ConversationSuggestions.sys.mjs"
 );
 
+const { sanitizeUntrustedContent } = ChromeUtils.importESModule(
+  "moz-src:///browser/components/aiwindow/models/ChatUtils.sys.mjs"
+);
+
 const { openAIEngine } = ChromeUtils.importESModule(
   "moz-src:///browser/components/aiwindow/models/Utils.sys.mjs"
 );
@@ -23,7 +27,7 @@ const { MemoriesManager } = ChromeUtils.importESModule(
   "moz-src:///browser/components/aiwindow/models/memories/MemoriesManager.sys.mjs"
 );
 const { MESSAGE_ROLE } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/aiwindow/ui/modules/ChatConstants.sys.mjs"
+  "moz-src:///browser/components/aiwindow/ui/modules/AIWindowConstants.sys.mjs"
 );
 const { sinon } = ChromeUtils.importESModule(
   "resource://testing-common/Sinon.sys.mjs"
@@ -41,18 +45,6 @@ const PREF_PRIVATE_BROWSING = "browser.privatebrowsing.autostart";
 const API_KEY = "test-api-key";
 const ENDPOINT = "https://api.test-endpoint.com/v1";
 const MODEL = "test-model";
-
-async function loadRemoteSettingsSnapshot() {
-  const file = do_get_file("ai-window-prompts-remote-settings-snapshot.json");
-  const data = await IOUtils.readUTF8(file.path);
-  return JSON.parse(data);
-}
-
-let REAL_REMOTE_SETTINGS_SNAPSHOT;
-
-add_setup(async function () {
-  REAL_REMOTE_SETTINGS_SNAPSHOT = await loadRemoteSettingsSnapshot();
-});
 
 /**
  * Cleans up preferences after testing
@@ -506,15 +498,22 @@ add_task(async function test_generateConversationStartersSidebar_happy_path() {
       2,
       "run should be called with 2 messages"
     );
+
     Assert.ok(
       callArgs.args[1].content.includes(
-        '{"title":"Current Tab","url":"https://current.example.com"}'
+        JSON.stringify({
+          title: sanitizeUntrustedContent("Current Tab"),
+          url: "https://current.example.com",
+        })
       ),
       "Prompt should include current tab info"
     );
     Assert.ok(
       callArgs.args[1].content.includes(
-        '{"title":"Tab 2","url":"https://tab2.example.com"}'
+        JSON.stringify({
+          title: sanitizeUntrustedContent("Tab 2"),
+          url: "https://tab2.example.com",
+        })
       ),
       "Prompt should include other tab info"
     );
@@ -589,13 +588,19 @@ add_task(
       );
       Assert.ok(
         callArgs.args[1].content.includes(
-          '{"title":"Current Tab","url":"https://current.example.com"}'
+          JSON.stringify({
+            title: sanitizeUntrustedContent("Current Tab"),
+            url: "https://current.example.com",
+          })
         ),
         "Prompt should include current tab info"
       );
       Assert.ok(
         callArgs.args[1].content.includes(
-          '{"title":"Tab 2","url":"https://tab2.example.com"}'
+          JSON.stringify({
+            title: sanitizeUntrustedContent("Tab 2"),
+            url: "https://tab2.example.com",
+          })
         ),
         "Prompt should include other tab info"
       );
@@ -671,13 +676,19 @@ add_task(
       );
       Assert.ok(
         callArgs.args[1].content.includes(
-          '{"title":"Current Tab","url":"https://current.example.com"}'
+          JSON.stringify({
+            title: sanitizeUntrustedContent("Current Tab"),
+            url: "https://current.example.com",
+          })
         ),
         "Prompt should include current tab info"
       );
       Assert.ok(
         callArgs.args[1].content.includes(
-          '{"title":"Tab 2","url":"https://tab2.example.com"}'
+          JSON.stringify({
+            title: sanitizeUntrustedContent("Tab 2"),
+            url: "https://tab2.example.com",
+          })
         ),
         "Prompt should include other tab info"
       );
@@ -822,7 +833,10 @@ add_task(async function test_generateConversationStartersSidebar_one_tab() {
     );
     Assert.ok(
       callArgs.args[1].content.includes(
-        '\n{"title":"Only Tab","url":"https://only.example.com"}'
+        JSON.stringify({
+          title: sanitizeUntrustedContent("Only Tab"),
+          url: "https://only.example.com",
+        })
       ),
       "Prompt should include current tab info"
     );
@@ -909,10 +923,6 @@ add_task(
       };
       sb.stub(openAIEngine, "_createEngine").resolves(fakeEngine);
 
-      sb.stub(openAIEngine, "getRemoteClient").returns({
-        get: sb.stub().resolves(REAL_REMOTE_SETTINGS_SNAPSHOT),
-      });
-
       sb.stub(
         MemoriesGetterForSuggestionPrompts,
         "getMemorySummariesForPrompt"
@@ -929,21 +939,23 @@ add_task(
 
       const callArgs = fakeEngine.run.firstCall.args[0];
       console.log("Prompt content:", callArgs.args);
+      // System prompt was loaded (non-empty string from remote settings)
       Assert.ok(
-        callArgs.args[0].content.includes(
-          "Generate the requested number of starters."
-        ),
-        "Prompt should include system prompt from remote settings"
+        typeof callArgs.args[0].content === "string" &&
+          callArgs.args[0].content.length,
+        "System prompt should be loaded from remote settings"
       );
+      // Additional components (limitations + memories) were concatenated in
       Assert.ok(
-        callArgs.args[1].content.includes(
-          "You can do this and cannot do that."
-        ),
-        "Prompt should include assistant limitations from remote settings"
+        typeof callArgs.args[1].content === "string" &&
+          callArgs.args[1].content.length,
+        "Additional components should be included in the prompt"
       );
+      // The test-provided memories (from the stub) were injected into the prompt
       Assert.ok(
-        callArgs.args[1].content.includes("Use the following memories"),
-        "Prompt should include memories prompt from remote settings"
+        callArgs.args[1].content.includes("memory 1") &&
+          callArgs.args[1].content.includes("memory 2"),
+        "Memories from the stub should be injected into the prompt"
       );
     } finally {
       sb.restore();
@@ -1005,7 +1017,10 @@ add_task(async function test_generateFollowupPrompts_happy_path() {
     );
     Assert.ok(
       callArgs.messages[1].content.includes(
-        '{"title":"Current Tab","url":"https://current.example.com"}'
+        JSON.stringify({
+          title: sanitizeUntrustedContent("Current Tab"),
+          url: "https://current.example.com",
+        })
       ),
       "Prompt should include current tab info"
     );
@@ -1088,7 +1103,10 @@ add_task(async function test_generateFollowupPrompts_no_memories() {
     );
     Assert.ok(
       callArgs.messages[1].content.includes(
-        '{"title":"Current Tab","url":"https://current.example.com"}'
+        JSON.stringify({
+          title: sanitizeUntrustedContent("Current Tab"),
+          url: "https://current.example.com",
+        })
       ),
       "Prompt should include current tab info"
     );
@@ -1172,7 +1190,10 @@ add_task(async function test_generateFollowupPrompts_no_memories_returned() {
     );
     Assert.ok(
       callArgs.messages[1].content.includes(
-        '{"title":"Current Tab","url":"https://current.example.com"}'
+        JSON.stringify({
+          title: sanitizeUntrustedContent("Current Tab"),
+          url: "https://current.example.com",
+        })
       ),
       "Prompt should include current tab info"
     );
@@ -1335,10 +1356,6 @@ add_task(
       };
       sb.stub(openAIEngine, "_createEngine").resolves(fakeEngine);
 
-      sb.stub(openAIEngine, "getRemoteClient").returns({
-        get: sb.stub().resolves(REAL_REMOTE_SETTINGS_SNAPSHOT),
-      });
-
       sb.stub(
         MemoriesGetterForSuggestionPrompts,
         "getMemorySummariesForPrompt"
@@ -1357,9 +1374,7 @@ add_task(
 
       const callArgs = fakeEngine.run.firstCall.args[0];
       Assert.ok(
-        callArgs.messages[1].content.includes(
-          "You can do this and cannot do that."
-        ),
+        callArgs.messages[1].content.includes("limitations"),
         "Prompt should include assistant limitations from remote settings"
       );
     } finally {

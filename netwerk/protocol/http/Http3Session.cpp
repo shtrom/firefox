@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim:set ts=4 sw=2 et cindent: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -126,12 +124,12 @@ nsresult Http3Session::Init(const nsHttpConnectionInfo* aConnInfo,
   }
 
   // Create security control and info object for quic.
-  mSocketControl =
-      new QuicSocketControl(isOuterConnection ? aConnInfo->ProxyInfo()->Host()
-                                              : aConnInfo->GetOrigin(),
-                            isOuterConnection ? aConnInfo->ProxyInfo()->Port()
-                                              : aConnInfo->OriginPort(),
-                            aProviderFlags, this);
+  mSocketControl = new QuicSocketControl(
+      isOuterConnection ? aConnInfo->ProxyInfo()->Host()
+                        : aConnInfo->GetOrigin(),
+      isOuterConnection ? aConnInfo->ProxyInfo()->Port()
+                        : aConnInfo->OriginPort(),
+      aProviderFlags, aConnInfo->GetOriginAttributes(), this);
   const nsCString& alpn = isOuterConnection ? aConnInfo->GetProxyNPNToken()
                                             : aConnInfo->GetNPNToken();
 
@@ -165,6 +163,11 @@ nsresult Http3Session::Init(const nsHttpConnectionInfo* aConnInfo,
           ? StaticPrefs::network_trr_idle_timeout_for_http3_conn()
           : StaticPrefs::network_http_http3_idle_timeout();
 
+  // 0 means "use neqo's spec-compliant default PTO scaling".
+  uint32_t fastPto = mConnInfo->GetIsTrrServiceChannel()
+                         ? StaticPrefs::network_trr_fast_pto_for_http3_conn()
+                         : 0;
+
   nsresult rv;
   if (mUseNSPRForIO) {
     rv = NeqoHttp3Conn::InitUseNSPRForIO(
@@ -174,8 +177,8 @@ nsresult Http3Session::Init(const nsHttpConnectionInfo* aConnInfo,
         StaticPrefs::network_http_http3_max_data(),
         StaticPrefs::network_http_http3_max_stream_data(),
         StaticPrefs::network_http_http3_version_negotiation_enabled(),
-        mConnInfo->GetWebTransport(), gHttpHandler->Http3QlogDir(),
-        aProviderFlags, idleTimeout, getter_AddRefs(mHttp3Connection));
+        mConnInfo->GetWebTransport(), gHttpHandler->Http3QlogDir(), idleTimeout,
+        fastPto, getter_AddRefs(mHttp3Connection));
   } else {
     rv = NeqoHttp3Conn::Init(
         mSocketControl->GetHostName(), alpn, selfAddr, peerAddr,
@@ -184,9 +187,9 @@ nsresult Http3Session::Init(const nsHttpConnectionInfo* aConnInfo,
         StaticPrefs::network_http_http3_max_data(),
         StaticPrefs::network_http_http3_max_stream_data(),
         StaticPrefs::network_http_http3_version_negotiation_enabled(),
-        mConnInfo->GetWebTransport(), gHttpHandler->Http3QlogDir(),
-        aProviderFlags, idleTimeout, socket->GetFileDescriptor(),
-        isOuterConnection, getter_AddRefs(mHttp3Connection));
+        mConnInfo->GetWebTransport(), gHttpHandler->Http3QlogDir(), idleTimeout,
+        fastPto, socket->GetFileDescriptor(), isOuterConnection,
+        getter_AddRefs(mHttp3Connection));
   }
   if (NS_FAILED(rv)) {
     return rv;
@@ -328,6 +331,12 @@ void Http3Session::Shutdown() {
                                                                      mError);
   LOG(("Http3Session::Shutdown %p allowToRetryWithDifferentIPFamily=%d", this,
        allowToRetryWithDifferentIPFamily));
+  // Don't exclude H3 if the failure was in the 0-RTT phase: the PSK ticket
+  // is single-use, so the retry will do a full TLS handshake and the H3
+  // server itself should still be reachable.
+  if (mBeforeConnectedError && mHad0RttStream) {
+    mDontExclude = true;
+  }
   if ((mBeforeConnectedError ||
        (mError == NS_ERROR_NET_HTTP3_PROTOCOL_ERROR)) &&
       !isNSSError && !isEchRetry && !mConnInfo->GetWebTransport() &&
@@ -573,6 +582,30 @@ nsresult Http3Session::ProcessEvents() {
 
         stream->SetResponseHeaders(data, event.header_ready.fin,
                                    event.header_ready.interim);
+
+        RefPtr<Http3Stream> http3Stream = stream->GetHttp3Stream();
+        MOZ_RELEASE_ASSERT(http3Stream, "This must be a Http3Stream");
+        RefPtr<nsAHttpTransaction> trans = http3Stream->Transaction();
+        nsHttpTransaction* httpTrans =
+            trans ? trans->QueryHttpTransaction() : nullptr;
+        if (httpTrans) {
+          if (event.header_ready.interim) {
+            if (httpTrans->GetFirstInterimResponseStart().IsNull()) {
+              auto now = TimeStamp::Now();
+              httpTrans->SetFirstInterimResponseStart(now, true);
+              httpTrans->SetResponseStart(now, false);
+            }
+          } else {
+            auto now = TimeStamp::Now();
+            httpTrans->SetFinalResponseHeadersStart(now, true);
+            TimeStamp firstInterim = httpTrans->GetFirstInterimResponseStart();
+            if (!firstInterim.IsNull()) {
+              httpTrans->SetResponseStart(firstInterim, false);
+            } else {
+              httpTrans->SetResponseStart(now, false);
+            }
+          }
+        }
 
         rv = ProcessTransactionRead(stream);
 
@@ -1084,7 +1117,7 @@ nsresult Http3Session::ProcessEvents() {
         break;
     }
     // Delete previous content of data
-    data.TruncateLength(0);
+    data.ClearAndRetainStorage();
     rv = mHttp3Connection->GetEvent(&event, data);
     if (NS_FAILED(rv)) {
       LOG(("Http3Session::ProcessEvents [this=%p] rv=%" PRIx32, this,
@@ -1142,11 +1175,20 @@ nsresult Http3Session::ProcessOutput(nsIUDPSocket* socket) {
           LOG(("Http3Session::ProcessOutput sending packet rv=%d osError=%d",
                static_cast<int32_t>(rv), NS_FAILED(rv) ? PR_GetOSError() : 0));
           if (NS_FAILED(rv) && (rv != NS_BASE_STREAM_WOULD_BLOCK)) {
-            self->mSocketError = rv;
-            // If there was an error that is not NS_BASE_STREAM_WOULD_BLOCK
-            // return from here. We do not need to set a timer, because we
-            // will close the connection.
-            return rv;
+            if (rv == NS_ERROR_OUT_OF_MEMORY) {
+              // NSPR maps ENOBUFS to PR_INSUFFICIENT_RESOURCES_ERROR, which
+              // becomes NS_ERROR_OUT_OF_MEMORY. On macOS/BSD, ENOBUFS means
+              // the NIC transmit queue is momentarily full.
+              LOG(
+                  ("Http3Session::ProcessOutput ENOBUFS (transient), dropping "
+                   "datagram [this=%p]",
+                   self));
+            } else {
+              self->mSocketError = rv;
+              // If there was another error, return from here. We do not need to
+              // set a timer, because we will close the connection.
+              return rv;
+            }
           }
           self->mTotalBytesWritten += aLength;
           self->mLastWriteTime = PR_IntervalNow();
@@ -1407,6 +1449,28 @@ bool Http3Session::AddStream(nsAHttpTransaction* aHttpTransaction,
   return true;
 }
 
+void Http3Session::SwapTransaction(nsAHttpTransaction* aOld,
+                                   nsAHttpTransaction* aNew) {
+  MOZ_ASSERT(OnSocketThread(), "not on socket thread");
+  MOZ_ASSERT(aOld && aNew);
+  RefPtr<Http3StreamBase> stream = mStreamTransactionHash.Get(aOld);
+  if (!stream) {
+    LOG3(("Http3Session::SwapTransaction %p aOld=%p not in hash", this, aOld));
+    return;
+  }
+  LOG3(("Http3Session::SwapTransaction %p aOld=%p -> aNew=%p stream=%p", this,
+        aOld, aNew, stream.get()));
+  stream->SetTransaction(aNew);
+  mStreamTransactionHash.Remove(aOld);
+  mStreamTransactionHash.InsertOrUpdate(aNew, std::move(stream));
+  // mFirstHttpTransaction is tracked by nsHttpTransaction pointer; if it
+  // was the shim, replace it with the real txn too.
+  if (mFirstHttpTransaction &&
+      mFirstHttpTransaction.get() == aOld->QueryHttpTransaction()) {
+    mFirstHttpTransaction = aNew->QueryHttpTransaction();
+  }
+}
+
 bool Http3Session::DeferIfNegotiating(ExtendedConnectKind aKind,
                                       Http3StreamBase* aStream) {
   auto& st = ExtState(aKind);
@@ -1524,6 +1588,7 @@ nsresult Http3Session::TryActivating(
       }
       return NS_BASE_STREAM_WOULD_BLOCK;
     }
+    mHad0RttStream = true;
   }
 
   nsresult rv = NS_OK;
@@ -1771,12 +1836,16 @@ void Http3Session::ResetOrStopSendingRecvd(uint64_t aStreamId, uint64_t aError,
     // DoNotRemoveAltSvc the alt-svc route will be removed.
     httpStream->Transaction()->DoNotRemoveAltSvc();
     CloseStream(stream, NS_ERROR_NET_RESET);
+  } else if (aError == HTTP3_APP_ERROR_REQUEST_CANCELLED) {
+    // The server cancelled this request; it may have had side effects, so
+    // do not retry.
+    CloseStream(stream, httpStream->RecvdData() ? NS_ERROR_NET_PARTIAL_TRANSFER
+                                                : NS_ERROR_NET_INTERRUPT);
   } else {
-    if (httpStream->RecvdData()) {
-      CloseStream(stream, NS_ERROR_NET_PARTIAL_TRANSFER);
-    } else {
-      CloseStream(stream, NS_ERROR_NET_INTERRUPT);
-    }
+    // Unrecognized application error code. Use NS_ERROR_NET_RESET so the
+    // transaction restart path retries via H2/H1.
+    CloseStream(stream, httpStream->RecvdData() ? NS_ERROR_NET_PARTIAL_TRANSFER
+                                                : NS_ERROR_NET_RESET);
   }
 }
 

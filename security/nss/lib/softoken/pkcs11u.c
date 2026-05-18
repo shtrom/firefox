@@ -17,6 +17,24 @@
 #include "softkver.h"
 
 #if !defined(NSS_FIPS_DISABLED) && defined(NSS_ENABLE_FIPS_INDICATORS)
+/* handle special cases. Classes require existing code to already be
+ * in place for that class */
+typedef enum {
+    SFTKFIPSNone = 0,
+    SFTKFIPSDH,   /* allow only specific primes */
+    SFTKFIPSECC,  /* not just keys but specific curves */
+    SFTKFIPSAEAD, /* single shot AEAD functions not allowed in FIPS mode */
+    SFTKFIPSRSAPSS,
+    SFTKFIPSTlsKeyCheck
+} SFTKFIPSSpecialClass;
+
+typedef struct SFTKFIPSAlgorithmListStr SFTKFIPSAlgorithmList;
+struct SFTKFIPSAlgorithmListStr {
+    CK_MECHANISM_TYPE type;
+    CK_MECHANISM_INFO info;
+    CK_ULONG step;
+    SFTKFIPSSpecialClass special;
+};
 /* this file should be supplied by the vendor and include all the
  * algorithms which have Algorithm certs and have been reviewed by
  * the lab. A blank file is included for the base so that FIPS mode
@@ -128,9 +146,9 @@ sftk_NewAttribute(SFTKObject *object,
      * is done for attributes by 'allocating' them from a pool already
      * allocated by the parent object.
      */
-    PZ_Lock(so->attributeLock);
+    PR_Lock(so->attributeLock);
     index = so->nextAttr++;
-    PZ_Unlock(so->attributeLock);
+    PR_Unlock(so->attributeLock);
     PORT_Assert(index < MAX_OBJS_ATTRS);
     if (index >= MAX_OBJS_ATTRS)
         return NULL;
@@ -202,6 +220,9 @@ sftk_FindTokenAttribute(SFTKTokenObject *object, CK_ATTRIBUTE_TYPE type)
     SFTKDBHandle *dbHandle = NULL;
     CK_RV crv = CKR_HOST_MEMORY;
 
+    if (object == NULL) {
+        return NULL;
+    }
     myattribute = (SFTKAttribute *)PORT_Alloc(sizeof(SFTKAttribute));
     if (myattribute == NULL) {
         goto loser;
@@ -271,9 +292,9 @@ sftk_FindAttribute(SFTKObject *object, CK_ATTRIBUTE_TYPE type)
         return sftk_FindTokenAttribute(sftk_narrowToTokenObject(object), type);
     }
 
-    PZ_Lock(sessObject->attributeLock);
+    PR_Lock(sessObject->attributeLock);
     sftkqueue_find(attribute, type, sessObject->head, sessObject->hashSize);
-    PZ_Unlock(sessObject->attributeLock);
+    PR_Unlock(sessObject->attributeLock);
 
     return (attribute);
 }
@@ -352,6 +373,9 @@ sftk_hasAttributeToken(SFTKTokenObject *object, CK_ATTRIBUTE_TYPE type)
     CK_RV crv;
     SFTKDBHandle *dbHandle;
 
+    if (object == NULL) {
+        return PR_FALSE;
+    }
     dbHandle = sftk_getDBForTokenObject(object->obj.slot, object->obj.handle);
     template.type = type;
     template.pValue = NULL;
@@ -377,9 +401,9 @@ sftk_hasAttribute(SFTKObject *object, CK_ATTRIBUTE_TYPE type)
         return sftk_hasAttributeToken(sftk_narrowToTokenObject(object), type);
     }
 
-    PZ_Lock(sessObject->attributeLock);
+    PR_Lock(sessObject->attributeLock);
     sftkqueue_find(attribute, type, sessObject->head, sessObject->hashSize);
-    PZ_Unlock(sessObject->attributeLock);
+    PR_Unlock(sessObject->attributeLock);
 
     return (PRBool)(attribute != NULL);
 }
@@ -394,10 +418,10 @@ sftk_AddAttribute(SFTKObject *object, SFTKAttribute *attribute)
 
     if (sessObject == NULL)
         return;
-    PZ_Lock(sessObject->attributeLock);
+    PR_Lock(sessObject->attributeLock);
     sftkqueue_add(attribute, attribute->handle,
                   sessObject->head, sessObject->hashSize);
-    PZ_Unlock(sessObject->attributeLock);
+    PR_Unlock(sessObject->attributeLock);
 }
 
 /*
@@ -537,13 +561,13 @@ sftk_DeleteAttribute(SFTKObject *object, SFTKAttribute *attribute)
     if (sessObject == NULL) {
         return;
     }
-    PZ_Lock(sessObject->attributeLock);
+    PR_Lock(sessObject->attributeLock);
     if (sftkqueue_is_queued(attribute, attribute->handle,
                             sessObject->head, sessObject->hashSize)) {
         sftkqueue_delete(attribute, attribute->handle,
                          sessObject->head, sessObject->hashSize);
     }
-    PZ_Unlock(sessObject->attributeLock);
+    PR_Unlock(sessObject->attributeLock);
 }
 
 /*
@@ -963,13 +987,13 @@ sftk_lookupTokenKeyByHandle(SFTKSlot *slot, CK_OBJECT_HANDLE handle)
 static void
 sftk_tokenKeyLock(SFTKSlot *slot)
 {
-    SKIP_AFTER_FORK(PZ_Lock(slot->objectLock));
+    SKIP_AFTER_FORK(PR_Lock(slot->objectLock));
 }
 
 static void
 sftk_tokenKeyUnlock(SFTKSlot *slot)
 {
-    SKIP_AFTER_FORK(PZ_Unlock(slot->objectLock));
+    SKIP_AFTER_FORK(PR_Unlock(slot->objectLock));
 }
 
 static PRIntn
@@ -1003,13 +1027,13 @@ sftk_GetObjectFromList(PRBool *hasLocks, PRBool optimizeSpace,
     int size = 0;
 
     if (!optimizeSpace) {
-        PZ_Lock(list->lock);
+        PR_Lock(list->lock);
         object = list->head;
         if (object) {
             list->head = object->next;
             list->count--;
         }
-        PZ_Unlock(list->lock);
+        PR_Unlock(list->lock);
         if (object) {
             // As a safeguard against misuse of the library, ensure we don't
             // hand out live objects that somehow land in the free list.
@@ -1043,23 +1067,23 @@ sftk_PutObjectToList(SFTKObject *object, SFTKObjectFreeList *list,
     PRBool optimizeSpace = isSessionObject &&
                            ((SFTKSessionObject *)object)->optimizeSpace;
     if (object->refLock && !optimizeSpace) {
-        PZ_Lock(list->lock);
+        PR_Lock(list->lock);
         if (list->count < MAX_OBJECT_LIST_SIZE) {
             object->next = list->head;
             list->head = object;
             list->count++;
-            PZ_Unlock(list->lock);
+            PR_Unlock(list->lock);
             return;
         }
-        PZ_Unlock(list->lock);
+        PR_Unlock(list->lock);
     }
     if (isSessionObject) {
         SFTKSessionObject *so = (SFTKSessionObject *)object;
-        PZ_DestroyLock(so->attributeLock);
+        PR_DestroyLock(so->attributeLock);
         so->attributeLock = NULL;
     }
     if (object->refLock) {
-        PZ_DestroyLock(object->refLock);
+        PR_DestroyLock(object->refLock);
         object->refLock = NULL;
     }
     PORT_Free(object);
@@ -1078,7 +1102,7 @@ static void
 sftk_InitFreeList(SFTKObjectFreeList *list)
 {
     if (!list->lock) {
-        list->lock = PZ_NewLock(nssILockObject);
+        list->lock = PR_NewLock();
     }
 }
 
@@ -1097,18 +1121,18 @@ sftk_CleanupFreeList(SFTKObjectFreeList *list, PRBool isSessionList)
     if (!list->lock) {
         return;
     }
-    SKIP_AFTER_FORK(PZ_Lock(list->lock));
+    SKIP_AFTER_FORK(PR_Lock(list->lock));
     for (object = list->head; object != NULL;
          object = sftk_freeObjectData(object)) {
-        PZ_DestroyLock(object->refLock);
+        PR_DestroyLock(object->refLock);
         if (isSessionList) {
-            PZ_DestroyLock(((SFTKSessionObject *)object)->attributeLock);
+            PR_DestroyLock(((SFTKSessionObject *)object)->attributeLock);
         }
     }
     list->count = 0;
     list->head = NULL;
-    SKIP_AFTER_FORK(PZ_Unlock(list->lock));
-    SKIP_AFTER_FORK(PZ_DestroyLock(list->lock));
+    SKIP_AFTER_FORK(PR_Unlock(list->lock));
+    SKIP_AFTER_FORK(PR_DestroyLock(list->lock));
     list->lock = NULL;
 }
 
@@ -1162,23 +1186,25 @@ sftk_NewObject(SFTKSlot *slot)
     object->validation_attribute.attrib.ulValueLen = sizeof(object->validation_value);
     /* initialize the FIPS flag properly */
     sftk_setFIPS(object, sftk_isFIPS(slot->slotID));
+    object->source = SFTK_SOURCE_DEFAULT;
 
     object->refCount = 1;
+    object->type = SFTK_SESSION_OBJECT_TYPE;
     sessObject->sessionList.next = NULL;
     sessObject->sessionList.prev = NULL;
     sessObject->sessionList.parent = object;
     sessObject->session = NULL;
     sessObject->wasDerived = PR_FALSE;
     if (!hasLocks)
-        object->refLock = PZ_NewLock(nssILockRefLock);
+        object->refLock = PR_NewLock();
     if (object->refLock == NULL) {
         PORT_Free(object);
         return NULL;
     }
     if (!hasLocks)
-        sessObject->attributeLock = PZ_NewLock(nssILockAttribute);
+        sessObject->attributeLock = PR_NewLock();
     if (sessObject->attributeLock == NULL) {
-        PZ_DestroyLock(object->refLock);
+        PR_DestroyLock(object->refLock);
         PORT_Free(object);
         return NULL;
     }
@@ -1206,7 +1232,7 @@ sftk_DestroySessionObjectData(SFTKSessionObject *so)
             so->attrList[i].freeData = PR_FALSE;
         }
     }
-    /*  PZ_DestroyLock(so->attributeLock);*/
+    /*  PR_DestroyLock(so->attributeLock);*/
     return CKR_OK;
 }
 
@@ -1249,10 +1275,10 @@ sftk_DestroyObject(SFTKObject *object)
 void
 sftk_ReferenceObject(SFTKObject *object)
 {
-    PZ_Lock(object->refLock);
+    PR_Lock(object->refLock);
     PORT_Assert(object->refCount > 0);
     object->refCount++;
-    PZ_Unlock(object->refLock);
+    PR_Unlock(object->refLock);
 }
 
 static SFTKObject *
@@ -1265,12 +1291,12 @@ sftk_ObjectFromHandleOnSlot(CK_OBJECT_HANDLE handle, SFTKSlot *slot)
         return sftk_NewTokenObject(slot, NULL, handle);
     }
 
-    PZ_Lock(slot->objectLock);
+    PR_Lock(slot->objectLock);
     sftkqueue_find2(object, handle, index, slot->sessObjHashTable);
     if (object) {
         sftk_ReferenceObject(object);
     }
-    PZ_Unlock(slot->objectLock);
+    PR_Unlock(slot->objectLock);
 
     return (object);
 }
@@ -1296,11 +1322,11 @@ sftk_FreeObject(SFTKObject *object)
     PRBool destroy = PR_FALSE;
     CK_RV crv;
 
-    PZ_Lock(object->refLock);
+    PR_Lock(object->refLock);
     if (object->refCount == 1)
         destroy = PR_TRUE;
     object->refCount--;
-    PZ_Unlock(object->refLock);
+    PR_Unlock(object->refLock);
 
     if (destroy) {
         crv = sftk_DestroyObject(object);
@@ -1326,7 +1352,7 @@ sftk_getNextHandle(SFTKSlot *slot)
         PRUint32 wrappedAround;
 
         duplicateObject = NULL;
-        PZ_Lock(slot->objectLock);
+        PR_Lock(slot->objectLock);
         wrappedAround = slot->sessionObjectHandleCount & SFTK_TOKEN_MASK;
         handle = slot->sessionObjectHandleCount & ~SFTK_TOKEN_MASK;
         if (!handle) /* don't allow zero handle */
@@ -1337,7 +1363,7 @@ sftk_getNextHandle(SFTKSlot *slot)
             sftkqueue_find(duplicateObject, handle, slot->sessObjHashTable,
                            slot->sessObjHashSize);
         }
-        PZ_Unlock(slot->objectLock);
+        PR_Unlock(slot->objectLock);
     } while (duplicateObject != NULL);
     return handle;
 }
@@ -1351,9 +1377,9 @@ sftk_AddSlotObject(SFTKSlot *slot, SFTKObject *object)
 {
     PRUint32 index = sftk_hash(object->handle, slot->sessObjHashSize);
     sftkqueue_init_element(object);
-    PZ_Lock(slot->objectLock);
+    PR_Lock(slot->objectLock);
     sftkqueue_add2(object, object->handle, index, slot->sessObjHashTable);
-    PZ_Unlock(slot->objectLock);
+    PR_Unlock(slot->objectLock);
 }
 
 void
@@ -1363,10 +1389,10 @@ sftk_AddObject(SFTKSession *session, SFTKObject *object)
     SFTKSessionObject *so = sftk_narrowToSessionObject(object);
 
     if (so) {
-        PZ_Lock(session->objectLock);
+        PR_Lock(session->objectLock);
         sftkqueue_add(&so->sessionList, 0, session->objects, 0);
         so->session = session;
-        PZ_Unlock(session->objectLock);
+        PR_Unlock(session->objectLock);
     }
     sftk_AddSlotObject(slot, object);
     sftk_ReferenceObject(object);
@@ -1386,12 +1412,12 @@ sftk_DeleteObject(SFTKSession *session, SFTKObject *object)
     /* Handle Token case */
     if (so && so->session) {
         session = so->session;
-        PZ_Lock(session->objectLock);
+        PR_Lock(session->objectLock);
         sftkqueue_delete(&so->sessionList, 0, session->objects, 0);
-        PZ_Unlock(session->objectLock);
-        PZ_Lock(slot->objectLock);
+        PR_Unlock(session->objectLock);
+        PR_Lock(slot->objectLock);
         sftkqueue_delete2(object, object->handle, index, slot->sessObjHashTable);
-        PZ_Unlock(slot->objectLock);
+        PR_Unlock(slot->objectLock);
         sftkqueue_clear_deleted_element(object);
         sftk_FreeObject(object); /* free the reference owned by the queue */
     } else {
@@ -1779,11 +1805,12 @@ sftk_CopyObject(SFTKObject *destObject, SFTKObject *srcObject)
     unsigned int i;
 
     destObject->validation_value = srcObject->validation_value;
+    destObject->source = srcObject->source;
     if (src_so == NULL) {
         return sftk_CopyTokenObject(destObject, srcObject);
     }
 
-    PZ_Lock(src_so->attributeLock);
+    PR_Lock(src_so->attributeLock);
     for (i = 0; i < src_so->hashSize; i++) {
         attribute = src_so->head[i];
         do {
@@ -1794,7 +1821,7 @@ sftk_CopyObject(SFTKObject *destObject, SFTKObject *srcObject)
                     SFTKAttribute *newAttribute = sftk_NewAttribute(
                         destObject, sftk_attr_expand(&attribute->attrib));
                     if (newAttribute == NULL) {
-                        PZ_Unlock(src_so->attributeLock);
+                        PR_Unlock(src_so->attributeLock);
                         return CKR_HOST_MEMORY;
                     }
                     sftk_AddAttribute(destObject, newAttribute);
@@ -1803,7 +1830,7 @@ sftk_CopyObject(SFTKObject *destObject, SFTKObject *srcObject)
             }
         } while (attribute != NULL);
     }
-    PZ_Unlock(src_so->attributeLock);
+    PR_Unlock(src_so->attributeLock);
 
     return CKR_OK;
 }
@@ -1859,14 +1886,14 @@ sftk_objectMatch(SFTKObject *object, CK_ATTRIBUTE_PTR theTemplate, int count)
  */
 CK_RV
 sftk_searchObjectList(SFTKSearchResults *search, SFTKObject **head,
-                      unsigned int size, PZLock *lock, CK_ATTRIBUTE_PTR theTemplate,
+                      unsigned int size, PRLock *lock, CK_ATTRIBUTE_PTR theTemplate,
                       int count, PRBool isLoggedIn)
 {
     unsigned int i;
     SFTKObject *object;
     CK_RV crv = CKR_OK;
 
-    PZ_Lock(lock);
+    PR_Lock(lock);
     for (i = 0; i < size; i++) {
         for (object = head[i]; object != NULL; object = object->next) {
             if (sftk_objectMatch(object, theTemplate, count)) {
@@ -1877,7 +1904,7 @@ sftk_searchObjectList(SFTKSearchResults *search, SFTKObject **head,
             }
         }
     }
-    PZ_Unlock(lock);
+    PR_Unlock(lock);
     return crv;
 }
 
@@ -1925,6 +1952,7 @@ sftk_FreeSearch(SFTKSearchResults *search)
 void
 sftk_update_state(SFTKSlot *slot, SFTKSession *session)
 {
+    PR_Lock(slot->slotLock);
     if (slot->isLoggedIn) {
         if (slot->ssoLoggedIn) {
             session->info.state = CKS_RW_SO_FUNCTIONS;
@@ -1940,6 +1968,7 @@ sftk_update_state(SFTKSlot *slot, SFTKSession *session)
             session->info.state = CKS_RO_PUBLIC_SESSION;
         }
     }
+    PR_Unlock(slot->slotLock);
 }
 
 /* update the state of all the sessions on a slot */
@@ -1950,12 +1979,12 @@ sftk_update_all_states(SFTKSlot *slot)
     SFTKSession *session;
 
     for (i = 0; i < slot->sessHashSize; i++) {
-        PZLock *lock = SFTK_SESSION_LOCK(slot, i);
-        PZ_Lock(lock);
+        PRLock *lock = SFTK_SESSION_LOCK(slot, i);
+        PR_Lock(lock);
         for (session = slot->head[i]; session; session = session->next) {
             sftk_update_state(slot, session);
         }
-        PZ_Unlock(lock);
+        PR_Unlock(lock);
     }
 }
 
@@ -1996,7 +2025,7 @@ sftk_InitSession(SFTKSession *session, SFTKSlot *slot, CK_SLOT_ID slotID,
     session->sign_context = NULL;
     session->search = NULL;
     session->objectIDCount = 1;
-    session->objectLock = PZ_NewLock(nssILockObject);
+    session->objectLock = PR_NewLock();
     if (session->objectLock == NULL) {
         return CKR_HOST_MEMORY;
     }
@@ -2055,7 +2084,7 @@ sftk_ClearSession(SFTKSession *session)
         op->next = op->prev = NULL;
         sftk_DeleteObject(session, op->parent);
     }
-    PZ_DestroyLock(session->objectLock);
+    PR_DestroyLock(session->objectLock);
     if (session->enc_context) {
         sftk_FreeContext(session->enc_context);
     }
@@ -2087,15 +2116,15 @@ sftk_SessionFromHandle(CK_SESSION_HANDLE handle)
 {
     SFTKSlot *slot = sftk_SlotFromSessionHandle(handle);
     SFTKSession *session;
-    PZLock *lock;
+    PRLock *lock;
 
     if (!slot)
         return NULL;
     lock = SFTK_SESSION_LOCK(slot, handle);
 
-    PZ_Lock(lock);
+    PR_Lock(lock);
     sftkqueue_find(session, handle, slot->head, slot->sessHashSize);
-    PZ_Unlock(lock);
+    PR_Unlock(lock);
 
     return (session);
 }
@@ -2179,15 +2208,17 @@ sftk_NewTokenObject(SFTKSlot *slot, SECItem *dbKey, CK_OBJECT_HANDLE handle)
     object->validation_attribute.attrib.ulValueLen = sizeof(object->validation_value);
     /* initialize the FIPS flag properly */
     sftk_setFIPS(object, sftk_isFIPS(slot->slotID));
+    object->source = SFTK_SOURCE_DEFAULT;
     object->objectInfo = NULL;
     object->infoFree = NULL;
     if (!hasLocks) {
-        object->refLock = PZ_NewLock(nssILockRefLock);
+        object->refLock = PR_NewLock();
     }
     if (object->refLock == NULL) {
         goto loser;
     }
     object->refCount = 1;
+    object->type = SFTK_TOKEN_OBJECT_TYPE;
 
     return object;
 loser:
@@ -2195,44 +2226,50 @@ loser:
     return NULL;
 }
 
-SFTKTokenObject *
+CK_RV
 sftk_convertSessionToToken(SFTKObject *obj)
 {
-    SECItem *key;
+    SECItem *dbKey;
     SFTKSessionObject *so = (SFTKSessionObject *)obj;
     SFTKTokenObject *to = sftk_narrowToTokenObject(obj);
-    SECStatus rv;
+    CK_RV crv;
 
     sftk_DestroySessionObjectData(so);
-    PZ_DestroyLock(so->attributeLock);
-    if (to == NULL) {
-        return NULL;
-    }
-    sftk_tokenKeyLock(so->obj.slot);
-    key = sftk_lookupTokenKeyByHandle(so->obj.slot, so->obj.handle);
-    if (key == NULL) {
-        sftk_tokenKeyUnlock(so->obj.slot);
-        return NULL;
-    }
-    rv = SECITEM_CopyItem(NULL, &to->dbKey, key);
-    sftk_tokenKeyUnlock(so->obj.slot);
-    if (rv == SECFailure) {
-        return NULL;
-    }
+    PR_DestroyLock(so->attributeLock);
 
-    return to;
+    sftk_tokenKeyLock(so->obj.slot);
+    dbKey = sftk_lookupTokenKeyByHandle(so->obj.slot, so->obj.handle);
+    if (dbKey && SECFailure == SECITEM_CopyItem(NULL, &to->dbKey, dbKey)) {
+        crv = CKR_HOST_MEMORY;
+    } else {
+        crv = CKR_OK;
+    }
+    sftk_tokenKeyUnlock(so->obj.slot);
+    return crv;
 }
 
 SFTKSessionObject *
 sftk_narrowToSessionObject(SFTKObject *obj)
 {
-    return !sftk_isToken(obj->handle) ? (SFTKSessionObject *)obj : NULL;
+    PRBool handleSaysSession = !sftk_isToken(obj->handle);
+    PRBool typeSaysSession = obj->type == SFTK_SESSION_OBJECT_TYPE;
+    if (handleSaysSession != typeSaysSession) {
+        PORT_Assert(0);
+        return NULL;
+    }
+    return handleSaysSession ? (SFTKSessionObject *)obj : NULL;
 }
 
 SFTKTokenObject *
 sftk_narrowToTokenObject(SFTKObject *obj)
 {
-    return sftk_isToken(obj->handle) ? (SFTKTokenObject *)obj : NULL;
+    PRBool handleSaysToken = sftk_isToken(obj->handle);
+    PRBool typeSaysToken = obj->type == SFTK_TOKEN_OBJECT_TYPE;
+    if (handleSaysToken != typeSaysToken) {
+        PORT_Assert(0);
+        return NULL;
+    }
+    return handleSaysToken ? (SFTKTokenObject *)obj : NULL;
 }
 
 /* Constant time helper functions */
@@ -2253,6 +2290,12 @@ sftk_CheckCBCPadding(CK_BYTE_PTR pBuf, unsigned int bufLen,
                      unsigned int blockSize, unsigned int *outPadSize)
 {
     PORT_Assert(outPadSize);
+
+    /* CBC-padded plaintext is always at least one full block */
+    if (bufLen < blockSize || blockSize == 0) {
+        *outPadSize = 0;
+        return CKR_ENCRYPTED_DATA_INVALID;
+    }
 
     unsigned int padSize = (unsigned int)pBuf[bufLen - 1];
 
@@ -2345,6 +2388,15 @@ sftk_AttributeToFlags(CK_ATTRIBUTE_TYPE op)
         case CKA_DIGEST:
             flags = CKF_DIGEST;
             break;
+        /* fake attribute to select key gen */
+        case CKA_NSS_GENERATE:
+            flags = CKF_GENERATE;
+            break;
+        /* fake attribute to select key pair gen */
+        case CKA_NSS_GENERATE_KEY_PAIR:
+            flags = CKF_GENERATE_KEY_PAIR;
+            break;
+        /* fake attributes to to handle MESSAGE* flags */
         case CKA_NSS_MESSAGE | CKA_ENCRYPT:
             flags = CKF_MESSAGE_ENCRYPT;
             break;
@@ -2430,10 +2482,10 @@ sftk_quickGetECCCurveOid(SFTKObject *source)
  * the sftk_handleSpecial. Since it's currently only used
  * in FIPS indicators, it's currently only compiled with
  * the FIPS indicator code */
-static int
+static CK_ULONG
 sftk_getKeyLength(SFTKObject *source)
 {
-    CK_KEY_TYPE keyType = CK_INVALID_HANDLE;
+    CK_KEY_TYPE keyType = CKK_INVALID_KEY_TYPE;
     CK_ATTRIBUTE_TYPE keyAttribute;
     CK_ULONG keyLength = 0;
     SFTKAttribute *attribute;
@@ -2453,7 +2505,8 @@ sftk_getKeyLength(SFTKObject *source)
          * key length is CKA_VALUE, which is the default */
         keyType = CKK_INVALID_KEY_TYPE;
     }
-    if (keyType == CKK_EC) {
+    if ((keyType == CKK_EC) || (keyType == CKK_EC_EDWARDS) ||
+        (keyType == CKK_EC_MONTGOMERY)) {
         SECOidTag curve = sftk_quickGetECCCurveOid(source);
         switch (curve) {
             case SEC_OID_CURVE25519:
@@ -2495,13 +2548,33 @@ sftk_getKeyLength(SFTKObject *source)
     return keyLength;
 }
 
+static PRBool
+sftk_checkKeyLength(CK_ULONG keyLength, CK_ULONG min,
+                    CK_ULONG max, CK_ULONG step)
+{
+    if (keyLength > max) {
+        return PR_FALSE;
+    }
+    if (keyLength < min) {
+        return PR_FALSE;
+    }
+    if (step == 0) {
+        return PR_TRUE;
+    }
+    if (((keyLength - min) % step) != 0) {
+        return PR_FALSE;
+    }
+    return PR_TRUE;
+}
+
 /*
  * handle specialized FIPS semantics that are too complicated to
  * handle with just a table. NOTE: this means any additional semantics
  * would have to be coded here before they can be added to the table */
 static PRBool
 sftk_handleSpecial(SFTKSlot *slot, CK_MECHANISM *mech,
-                   SFTKFIPSAlgorithmList *mechInfo, SFTKObject *source)
+                   SFTKFIPSAlgorithmList *mechInfo, SFTKObject *source,
+                   CK_ULONG keyLength, CK_ULONG targetKeyLength)
 {
     switch (mechInfo->special) {
         case SFTKFIPSDH: {
@@ -2562,11 +2635,18 @@ sftk_handleSpecial(SFTKSlot *slot, CK_MECHANISM *mech,
             if (hashObj == NULL) {
                 return PR_FALSE;
             }
+            /* cap the salt for legacy keys */
+            if ((keyLength <= 1024) && (pss->sLen > 63)) {
+                return PR_FALSE;
+            }
+            /* cap the salt based on the hash */
             if (pss->sLen > hashObj->length) {
                 return PR_FALSE;
             }
             return PR_TRUE;
         }
+        case SFTKFIPSTlsKeyCheck:
+            return sftk_checkKeyLength(targetKeyLength, 112, 512, 1);
         default:
             break;
     }
@@ -2577,7 +2657,7 @@ sftk_handleSpecial(SFTKSlot *slot, CK_MECHANISM *mech,
 
 PRBool
 sftk_operationIsFIPS(SFTKSlot *slot, CK_MECHANISM *mech, CK_ATTRIBUTE_TYPE op,
-                     SFTKObject *source)
+                     SFTKObject *source, CK_ULONG targetKeyLength)
 {
 #ifndef NSS_HAS_FIPS_INDICATORS
     return PR_FALSE;
@@ -2609,13 +2689,13 @@ sftk_operationIsFIPS(SFTKSlot *slot, CK_MECHANISM *mech, CK_ATTRIBUTE_TYPE op,
         SFTKFIPSAlgorithmList *mechs = &sftk_fips_mechs[i];
         /* if we match the number of records exactly, then we are an
          * approved algorithm in the approved mode with an approved key */
-        if (((mech->mechanism == mechs->type) &&
-             (opFlags == (mechs->info.flags & opFlags)) &&
-             (keyLength <= mechs->info.ulMaxKeySize) &&
-             (keyLength >= mechs->info.ulMinKeySize) &&
-             ((keyLength - mechs->info.ulMinKeySize) % mechs->step) == 0) &&
+        if ((mech->mechanism == mechs->type) &&
+            (opFlags == (mechs->info.flags & opFlags)) &&
+            sftk_checkKeyLength(keyLength, mechs->info.ulMinKeySize,
+                                mechs->info.ulMaxKeySize, mechs->step) &&
+            ((targetKeyLength == 0) || (mechs->special == SFTKFIPSTlsKeyCheck) || sftk_checkKeyLength(targetKeyLength, mechs->info.ulMinKeySize, mechs->info.ulMaxKeySize, mechs->step)) &&
             ((mechs->special == SFTKFIPSNone) ||
-             sftk_handleSpecial(slot, mech, mechs, source))) {
+             sftk_handleSpecial(slot, mech, mechs, source, keyLength, targetKeyLength))) {
             return PR_TRUE;
         }
     }

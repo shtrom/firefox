@@ -42,7 +42,7 @@ INSTALLER_SUFFIXES = (
     ".zip",  # Windows
 )
 
-# https://searchfox.org/mozilla-central/source/testing/config/tooltool-manifests
+# https://searchfox.org/firefox-main/source/testing/config/tooltool-manifests
 TOOLTOOL_PLATFORM_DIR = {
     "linux": "linux32",
     "linux64": "linux64",
@@ -135,6 +135,15 @@ testing_config_options = (
                 "default": False,
                 "dest": "restartAfterFailure",
                 "help": "Instruct the test harness to terminate on failure and restart where it left off",
+            },
+        ],
+        [
+            ["--restart-between-tests"],
+            {
+                "action": "store_true",
+                "default": False,
+                "dest": "restartBetweenTests",
+                "help": "Restart the browser between each test to identify tests with undocumented dependencies",
             },
         ],
     ]

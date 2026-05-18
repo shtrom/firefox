@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -316,11 +314,7 @@ StorageAccess StorageAllowedForWindow(nsPIDOMWindowInner* aWindow,
 
 StorageAccess StorageAllowedForDocument(const Document* aDoc) {
   StorageAccess cookieAllowed = CookieAllowedForDocument(aDoc);
-  // If this isn't a top-level window, check if we should apply the policy to
-  // always partition non-cookie storage.
   if (!aDoc->IsTopLevelContentDocument() &&
-      StaticPrefs::
-          privacy_partition_always_partition_third_party_non_cookie_storage() &&
       cookieAllowed > StorageAccess::eDeny) {
     return StorageAccess::ePartitionForeignOrDeny;
   }
@@ -825,7 +819,7 @@ bool ShouldAllowAccessFor(nsIChannel* aChannel, nsIURI* aURI,
   // get the target browsing context from the worker associated browsing
   // context instead.
   if (!targetBC) {
-    rv = loadInfo->GetWorkerAssociatedBrowsingContext(getter_AddRefs(targetBC));
+    rv = loadInfo->GetAssociatedBrowsingContext(getter_AddRefs(targetBC));
   }
 
   // We could have no target BC for the channel if it's for loading the script

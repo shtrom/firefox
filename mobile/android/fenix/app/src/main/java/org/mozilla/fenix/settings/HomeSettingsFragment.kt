@@ -13,11 +13,12 @@ import androidx.navigation.fragment.navArgs
 import androidx.preference.CheckBoxPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
-import androidx.preference.SwitchPreference
+import androidx.preference.SwitchPreferenceCompat
 import org.mozilla.fenix.GleanMetrics.CustomizeHome
 import org.mozilla.fenix.R
 import org.mozilla.fenix.components.Components
 import org.mozilla.fenix.components.appstate.AppAction
+import org.mozilla.fenix.e2e.SystemInsetsPaddedFragment
 import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.ext.navigateWithBreadcrumb
 import org.mozilla.fenix.ext.settings
@@ -32,7 +33,7 @@ import org.mozilla.fenix.utils.view.addToRadioGroup
  * User interactions with these preferences are persisted in [Settings] and may trigger
  * telemetry events via [CustomizeHome] metrics.
  */
-class HomeSettingsFragment : PreferenceFragmentCompat() {
+class HomeSettingsFragment : PreferenceFragmentCompat(), SystemInsetsPaddedFragment {
 
     private val args by navArgs<HomeSettingsFragmentArgs>()
 
@@ -67,12 +68,12 @@ class HomeSettingsFragment : PreferenceFragmentCompat() {
         super.onResume()
         showToolbar(getString(R.string.preferences_home_2))
         args.preferenceToScrollTo?.let {
-            scrollToPreference(it)
+            scrollToPreferenceWithHighlight(it)
         }
     }
 
     private fun setupPreferences() {
-        requirePreference<SwitchPreference>(R.string.pref_key_show_top_sites).apply {
+        requirePreference<SwitchPreferenceCompat>(R.string.pref_key_show_top_sites).apply {
             isChecked = fenixSettings.showTopSitesFeature
             onPreferenceChangeListener = createMetricPreferenceChangeListener("most_visited_sites")
         }
@@ -82,19 +83,24 @@ class HomeSettingsFragment : PreferenceFragmentCompat() {
             onPreferenceChangeListener = createMetricPreferenceChangeListener("contile")
         }
 
-        requirePreference<SwitchPreference>(R.string.pref_key_recent_tabs).apply {
+        requirePreference<SwitchPreferenceCompat>(R.string.pref_key_privacy_report).apply {
+            isChecked = fenixSettings.showPrivacyReportFeature
+            onPreferenceChangeListener = createMetricPreferenceChangeListener("privacy_report")
+        }
+
+        requirePreference<SwitchPreferenceCompat>(R.string.pref_key_recent_tabs).apply {
             isVisible = fenixSettings.showHomepageRecentTabsSectionToggle
             isChecked = fenixSettings.showRecentTabsFeature
             onPreferenceChangeListener = createMetricPreferenceChangeListener("jump_back_in")
         }
 
-        requirePreference<SwitchPreference>(R.string.pref_key_customization_bookmarks).apply {
+        requirePreference<SwitchPreferenceCompat>(R.string.pref_key_customization_bookmarks).apply {
             isVisible = fenixSettings.showHomepageBookmarksSectionToggle
             isChecked = fenixSettings.showBookmarksHomeFeature
             onPreferenceChangeListener = createMetricPreferenceChangeListener("bookmarks")
         }
 
-        requirePreference<SwitchPreference>(R.string.pref_key_pocket_homescreen_recommendations).apply {
+        requirePreference<SwitchPreferenceCompat>(R.string.pref_key_pocket_homescreen_recommendations).apply {
             isVisible = contentRecommendationsHelper.isContentRecommendationsFeatureEnabled(requireContext())
             isChecked = fenixSettings.showPocketRecommendationsFeature
             onPreferenceChangeListener = createMetricPreferenceChangeListener("pocket")
@@ -126,7 +132,7 @@ class HomeSettingsFragment : PreferenceFragmentCompat() {
             }
         }
 
-        requirePreference<SwitchPreference>(R.string.pref_key_history_metadata_feature).apply {
+        requirePreference<SwitchPreferenceCompat>(R.string.pref_key_history_metadata_feature).apply {
             isVisible = fenixSettings.showHomepageRecentlyVisitedSectionToggle
             isChecked = fenixSettings.historyMetadataUIFeature
             onPreferenceChangeListener = createMetricPreferenceChangeListener("recently_visited")
@@ -145,6 +151,7 @@ class HomeSettingsFragment : PreferenceFragmentCompat() {
         }
 
         setupOpeningScreenPreferences()
+        setupSportsWidgetPreferences()
     }
 
     private fun createMetricPreferenceChangeListener(metricKey: String): Preference.OnPreferenceChangeListener {
@@ -183,5 +190,29 @@ class HomeSettingsFragment : PreferenceFragmentCompat() {
             openingScreenLastTab,
             openingScreenAfterFourHours,
         )
+    }
+
+    private fun setupSportsWidgetPreferences() {
+        requirePreference<SwitchPreferenceCompat>(R.string.pref_key_show_homepage_sports_widget).apply {
+            isVisible = fenixSettings.enableHomepageSportsWidget
+            isChecked = fenixSettings.showHomepageSportsWidget
+            onPreferenceChangeListener = Preference.OnPreferenceChangeListener { preference, newValue ->
+                val newBooleanValue = newValue as? Boolean ?: return@OnPreferenceChangeListener false
+
+                customizeHomeMetrics.preferenceToggled.record(
+                    CustomizeHome.PreferenceToggledExtra(
+                        enabled = newBooleanValue,
+                        preferenceKey = "world_cup",
+                    ),
+                )
+
+                fenixComponents.appStore.dispatch(
+                    AppAction.SportsWidgetAction.VisibilityChanged(isVisible = newBooleanValue),
+                )
+
+                fenixSettings.preferences.edit { putBoolean(preference.key, newBooleanValue) }
+                true
+            }
+        }
     }
 }

@@ -6,7 +6,7 @@
 
 /**
  * @import { HiddenFrame } from "resource://gre/modules/HiddenFrame.sys.mjs"
- * @import { GetTextOptions, ExtractionResult } from './PageExtractor.d.ts'
+ * @import { GetTextOptions, ExtractionResult, PageMetadata } from './PageExtractor.d.ts'
  * @import { PageExtractorChild } from './PageExtractorChild.sys.mjs'
  */
 
@@ -19,26 +19,14 @@ const lazy = XPCOMUtils.declareLazy({
       prefix: "PageExtractorChild",
       maxLogLevelPref: "browser.ml.logLevel",
     }),
+  collapseWhitespace:
+    "moz-src:///toolkit/components/pageextractor/DOMExtractor.sys.mjs",
 });
 
 /**
  * Extract a variety of content from pages for use in a smart window.
  */
 export class PageExtractorParent extends JSWindowActorParent {
-  /**
-   * Returns ReaderMode content when the page passes the `isProbablyReaderable` check.
-   * The check can be bypassed to force page content to be retrieved by setting `force`
-   * to true.
-   *
-   * @see PageExtractorChild#getReaderModeContent
-   *
-   * @param {boolean} force - Bypass the `isProbablyReaderable` check.
-   * @returns {Promise<ExtractionResult>}
-   */
-  getReaderModeContent(force = false) {
-    return this.sendQuery("PageExtractorParent:GetReaderModeContent", force);
-  }
-
   /**
    * Waits for DOMContentLoaded.
    *
@@ -50,22 +38,66 @@ export class PageExtractorParent extends JSWindowActorParent {
   }
 
   /**
+   * Get metadata related to the page.
+   *
+   * @see PageExtractorChild#getPageMetadata
+   *
+   * @returns {Promise<PageMetadata>}
+   */
+  getPageMetadata() {
+    return this.sendQuery("PageExtractorParent:GetPageMetadata");
+  }
+
+  /**
    * Gets the visible text from the page. This function is a bit smarter than just
    * document.body.innerText. See GetTextOptions
    *
    * @see PageExtractorChild#getText
    *
    * @param {Partial<GetTextOptions>} options
-   * @returns {Promise<ExtractionResult>}
+   * @returns {Promise<ExtractionResult | null>}
    */
   async getText(options = {}) {
-    if (this.#isPDF()) {
-      const text = await this.browsingContext.currentWindowGlobal
-        .getActor("Pdfjs")
-        .getTextContent();
-      return { text, links: [], canvasSnapshots: [] };
+    if (options._forceRemoveBoilerplate && !Cu.isInAutomation) {
+      throw new Error(
+        "The _forceRemoveBoilerplate option from GetTextOptions can only be used in tests."
+      );
     }
+
+    if (this.#isPDF()) {
+      return this.#getTextFromPDF(options);
+    }
+
     return this.sendQuery("PageExtractorParent:GetText", options);
+  }
+
+  /**
+   * Call out to pdf.js to get the text content and apply the GetTextOptions.
+   *
+   * @param {GetTextOptions} options
+   */
+  async #getTextFromPDF(options) {
+    let text = await this.browsingContext.currentWindowGlobal
+      .getActor("Pdfjs")
+      .getTextContent();
+
+    if (options.sufficientLength && text.length > options.sufficientLength) {
+      // Try to cut at a sentence boundary within the last 100 characters of the
+      // end.
+      //
+      // TODO(Bug 2023932) Make this internationalized, splitting on a "." only works
+      // in certain scripts like Latin.
+      const truncatePoint = text.lastIndexOf(".", options.sufficientLength);
+      if (truncatePoint > options.sufficientLength - 100) {
+        text = text.substring(0, truncatePoint + 1);
+      } else {
+        text = text.substring(0, options.sufficientLength) + "…";
+      }
+    }
+
+    text = lazy.collapseWhitespace(text).trim();
+
+    return { text, links: [], canvasSnapshots: [] };
   }
 
   #isPDF() {
@@ -96,87 +128,90 @@ export class PageExtractorParent extends JSWindowActorParent {
       throw new Error("Only http: and https: URLs are supported.");
     }
     // The hidden browser manager controls the lifetime of the hidden browser.
-    return lazy.HiddenBrowserManager.withHiddenBrowser(async browser => {
-      const { host } = url;
-      // Create a custom message manager group for this browser so that the PageExtractor
-      // actor can communicate with it. The actor is registered to use this custom
-      // message manager group.
-      browser.setAttribute("messagemanagergroup", "headless-browsers");
+    return lazy.HiddenBrowserManager.withHiddenBrowser(
+      async browser => {
+        const { host } = url;
 
-      /** @type {PromiseWithResolvers<PageExtractorParent>} */
-      let actorResolver = Promise.withResolvers();
+        /** @type {PromiseWithResolvers<PageExtractorParent>} */
+        let actorResolver = Promise.withResolvers();
 
-      const locationChangeFlags = Ci.nsIWebProgress.NOTIFY_LOCATION;
-      const onLocationChange = {
-        QueryInterface: ChromeUtils.generateQI([
-          "nsIWebProgressListener",
-          "nsISupportsWeakReference",
-        ]),
-        /**
-         * @param {nsIWebProgress} webProgress
-         * @param {nsIRequest} _request
-         * @param {nsIURI} location
-         * @param {number} _flags
-         */
-        onLocationChange(webProgress, _request, location, _flags) {
-          if (!webProgress.isTopLevel) {
-            lazy.console.log(
-              "Headless browser had a non-top level location change."
-            );
-            return;
-          }
-          if (location.spec == "about:blank") {
-            // about:blank is loaded first before loading the actual page.
-            return;
-          }
-          if (URL.fromURI(location).host != host) {
-            lazy.console.log(
-              "A location change happened that wasn't the host.",
-              location.host,
-              host
-            );
-            // This is probably overkill, but make sure this is not a spurious
-            // redirect.
-            return;
-          }
-          browser.removeProgressListener(onLocationChange, locationChangeFlags);
-
-          /** @type {any} - This is reported as an `Element`, but it's a <browser> */
-          const topBrowser = webProgress.browsingContext.topFrameElement;
-
-          try {
-            const actor =
-              topBrowser.browsingContext.currentWindowGlobal.getActor(
-                "PageExtractor"
+        const locationChangeFlags = Ci.nsIWebProgress.NOTIFY_LOCATION;
+        const onLocationChange = {
+          QueryInterface: ChromeUtils.generateQI([
+            "nsIWebProgressListener",
+            "nsISupportsWeakReference",
+          ]),
+          /**
+           * @param {nsIWebProgress} webProgress
+           * @param {nsIRequest} _request
+           * @param {nsIURI} location
+           * @param {number} _flags
+           */
+          onLocationChange(webProgress, _request, location, _flags) {
+            if (!webProgress.isTopLevel) {
+              lazy.console.log(
+                "Headless browser had a non-top level location change."
               );
-
-            actor.waitForPageReady().then(() => {
-              lazy.console.log("Headless PageExtractor is ready", url);
-              actorResolver.resolve(actor);
-            });
-          } catch (error) {
-            // TODO (Bug 2001385) - It would be nice to catch if this is the
-            // `about:neterror` page or other similar errors. This will also fail if you
-            // try to access something like `about:reader` with the same error.
-            actorResolver.reject(
-              new Error(
-                "PageExtractor could not run on that page or the page could not be found."
-              )
+              return;
+            }
+            if (URL.fromURI(location).host != host) {
+              lazy.console.log(
+                "A location change happened that wasn't the host.",
+                location.host,
+                host
+              );
+              // This is probably overkill, but make sure this is not a spurious
+              // redirect.
+              return;
+            }
+            browser.removeProgressListener(
+              onLocationChange,
+              locationChangeFlags
             );
-          }
-        },
-      };
 
-      browser.addProgressListener(onLocationChange, locationChangeFlags);
+            /** @type {any} - This is reported as an `Element`, but it's a <browser> */
+            const topBrowser = webProgress.browsingContext.topFrameElement;
 
-      lazy.console.log("Loading a headless PageExtractor", url);
+            try {
+              const actor =
+                topBrowser.browsingContext.currentWindowGlobal.getActor(
+                  "PageExtractor"
+                );
 
-      browser.loadURI(url.URI, {
-        triggeringPrincipal:
-          Services.scriptSecurityManager.getSystemPrincipal(),
-      });
+              actor.waitForPageReady().then(() => {
+                lazy.console.log("Headless PageExtractor is ready", url);
+                actorResolver.resolve(actor);
+              });
+            } catch (error) {
+              // TODO (Bug 2001385) - It would be nice to catch if this is the
+              // `about:neterror` page or other similar errors. This will also fail if you
+              // try to access something like `about:reader` with the same error.
+              actorResolver.reject(
+                new Error(
+                  "PageExtractor could not run on that page or the page could not be found."
+                )
+              );
+            }
+          },
+        };
 
-      return callback(await actorResolver.promise);
-    });
+        browser.addProgressListener(onLocationChange, locationChangeFlags);
+
+        lazy.console.log("Loading a headless PageExtractor", url);
+
+        browser.loadURI(url.URI, {
+          triggeringPrincipal:
+            Services.scriptSecurityManager.getSystemPrincipal(),
+        });
+
+        return callback(await actorResolver.promise);
+      },
+      {
+        // Create a custom message manager group for this browser so that the PageExtractor
+        // actor can communicate with it. The actor is registered to use this custom
+        // message manager group.
+        messageManagerGroup: "headless-browsers",
+      }
+    );
   }
 }

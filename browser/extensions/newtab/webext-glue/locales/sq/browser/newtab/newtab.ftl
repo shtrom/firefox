@@ -8,9 +8,13 @@
 newtab-page-title = Skedë e Re
 newtab-settings-button =
     .title = Personalizoni faqen tuaj Skedë e Re
+#  (developer note): @nova-cleanup(remove-string): Remove newtab-customize-panel-icon-button once Nova lands, will be using newtab-customize-panel-label instead
 newtab-customize-panel-icon-button =
     .title = Përshtateni këtë faqe
+#  (developer note): @nova-cleanup(remove-string): Remove newtab-customize-panel-icon-button-label once Nova lands, will be using newtab-customize-panel-label instead
 newtab-customize-panel-icon-button-label = Përshtateni
+newtab-customize-panel-label =
+    .label = Përshtateni
 newtab-personalize-settings-icon-label =
     .title = Personalizoni Skedën e Re
     .aria-label = Rregullime
@@ -307,9 +311,21 @@ newtab-error-fallback-refresh-link = Rifreskoni faqen që të riprovohet.
 
 newtab-custom-shortcuts-title = Shkurtore
 newtab-custom-shortcuts-subtitle = Sajte që ruani ose vizitoni
+#  (developer note): @nova-cleanup(remove-string): Remove old string once Nova lands. The newtab-custom-shortcuts-nova string will take over
 newtab-custom-shortcuts-toggle =
     .label = Shkurtore
     .description = Sajte që ruani ose vizitoni
+newtab-custom-shortcuts-nova =
+    .label = Shkurtore
+# Variables
+#   $num (number) - Number of rows to display
+#  (developer note): @nova-cleanup(remove-string): Remove string once Nova lands. We won't be using "row"/"rows" anymore for the dropdown
+newtab-custom-row-selector2 =
+    .label =
+        { $num ->
+            [one] { $num } rresht
+           *[other] { $num } rreshta
+        }
 # Variables
 #   $num (number) - Number of rows to display
 newtab-custom-row-selector =
@@ -320,9 +336,12 @@ newtab-custom-row-selector =
 newtab-custom-sponsored-sites = Shkurtore të sponsorizuara
 newtab-custom-pocket-title = Rekomanduar nga { -pocket-brand-name }
 newtab-custom-pocket-subtitle = Lëndë e jashtëzakonshme, në kujdesin e { -pocket-brand-name }, pjesë e familjes { -brand-product-name }
+#  (developer note): @nova-cleanup(remove-string): Remove string once Nova lands. We won't be having a description under "Recommended stories" anymore
 newtab-custom-stories-toggle =
     .label = Histori të rekomanduara
     .description = Lëndë e veçantë, nën kujdesin e familjes { -brand-product-name }
+newtab-recommended-stories-toggle =
+    .label = Histori të rekomanduara
 newtab-custom-stories-personalized-toggle =
     .label = Histori
 newtab-custom-stories-personalized-checkbox-label = Histori të personalizuara, bazuar në veprimtarinë tuaj
@@ -356,8 +375,11 @@ newtab-custom-settings = Administroni më tepër rregullime
 
 newtab-wallpaper-title = Sfonde
 newtab-wallpaper-reset = Riktheje te parazgjedhjet
+#  (developer note): @nova-cleanup(remove-string): Remove old "Upload an image" string once Nova lands. The new "Add an image"  string will take over
 newtab-wallpaper-upload-image = Ngarkoni një figurë
 newtab-wallpaper-custom-color = Zgjidhni një ngjyrë
+newtab-wallpaper-toggle-title =
+    .label = Sfonde
 # Variables
 #   $file_size (number) - The number of the maximum image file size (in MB) that may be uploaded
 newtab-wallpaper-error-max-file-size = Figura tejkalonte kufirin { $file_size }MB e madhësive të kartelave. Ju lutemi, provoni të ngarkoni një kartelë më të vogël.
@@ -380,6 +402,7 @@ newtab-wallpaper-light-fox-anniversary = Një dhelpër në një lëndinë, në n
 
 ## Solid Colors
 
+#  (developer note): @nova-cleanup(remove-string): Remove old "Solid colors" string once Nova lands. The simplified "Colors" string will take over
 newtab-wallpaper-category-title-colors = Ngjyra të plota
 newtab-wallpaper-blue = Blu
 newtab-wallpaper-light-blue = Blu e çelët
@@ -486,7 +509,6 @@ newtab-weather-menu-temperature-option-fahrenheit = Farenajt
 newtab-weather-menu-temperature-option-celsius = Celsius
 newtab-weather-menu-change-temperature-units-fahrenheit = Kalo në Farenajt
 newtab-weather-menu-change-temperature-units-celsius = Kalo në Celsius
-newtab-weather-menu-hide-weather-v2 = Fshihe motin
 newtab-weather-menu-hide-weather = Fshihe motin në Skedë të Re
 newtab-weather-menu-learn-more = Mësoni më tepër
 newtab-weather-menu-detect-my-location = Pikas vendndodhjen time
@@ -632,6 +654,8 @@ newtab-report-cancel = Anuloje
 newtab-report-submit = Parashtroje
 newtab-toast-thanks-for-reporting =
     .message = Faleminderit për njoftimin rreth kësaj.
+newtab-toast-widgets-hidden =
+    .message = Përzgjidhni ikonën laps për të rishtuar kurdo widget-e.
 
 ## Strings for task / to-do list productivity widget
 
@@ -648,11 +672,16 @@ newtab-widget-lists-label-beta =
 newtab-widget-lists-completed-list = Të plotësuara ({ $number })
 newtab-widget-task-list-menu-copy = Kopjoje
 newtab-widget-lists-menu-edit = Përpunoni emër liste
+newtab-widget-lists-menu-edit2 =
+    .aria-label = Përpunoni emër liste
 newtab-widget-lists-menu-create = Krijoni një listë të re
 newtab-widget-lists-menu-delete = Fshije këtë listë
 newtab-widget-lists-menu-copy = Kopjoje listën në të papastër
-newtab-widget-lists-menu-hide = Fshihi krejt listat
 newtab-widget-lists-menu-learn-more = Mësoni më tepër
+newtab-widget-lists-button-add-item = Shtoni një objekt
+newtab-widget-lists-input-add-an-item2 =
+    .placeholder = Shtoni një objekt
+    .aria-label = Shtoni një objekt
 newtab-widget-lists-input-add-an-item =
     .placeholder = Shtoni një objekt
 newtab-widget-lists-input-error = Ju lutemi, që të shtohet një objekt, përfshini tekst.
@@ -669,9 +698,14 @@ newtab-widget-lists-name-label-default =
 newtab-widget-lists-name-placeholder-default =
     .placeholder = Listë punësh
 # The placeholder value of the name field for a newly created list
+newtab-widget-lists-name-placeholder-new2 =
+    .placeholder = Listë e re
+    .aria-label = Përpunoni emër liste
+# The placeholder value of the name field for a newly created list
 newtab-widget-lists-name-placeholder-new =
     .placeholder = Listë e re
 newtab-widget-section-title = Widget-e
+newtab-widget-menu-hide = Fshihe widget-in
 # Tooltip for hide all widgets button
 newtab-widget-section-hide-all-button =
     .title = Fshihni widget-et
@@ -682,9 +716,10 @@ newtab-widget-section-maximize =
 newtab-widget-section-minimize =
     .title = Minimizoji widget-et
     .aria-label = Tkurri krejt widget-et sa madhësia kompakte
+newtab-widget-section-menu-manage = Administroni widget-e
+newtab-widget-section-feedback = Tregonani si ju duket
 
-## Strings for timer productivity widget
-## When the timer ends, a system notification may be shown. Depending on which mode the timer is in, that message would be shown
+## Strings introduced by the Nova redesign of the Timer widget
 
 newtab-widget-timer-notification-title = Kohëmatës
 newtab-widget-timer-notification-focus = Koha për i përqendruar mbaroi. Punë e paqme. Ju duhet një pushim?
@@ -702,8 +737,9 @@ newtab-widget-timer-reset =
     .title = Riktheje te parazgjedhjet
 newtab-widget-timer-menu-notifications = Çaktivizoni njoftimet
 newtab-widget-timer-menu-notifications-on = Aktivizoni njoftimet
-newtab-widget-timer-menu-hide = Fshihe kohëmatësin
 newtab-widget-timer-menu-learn-more = Mësoni më tepër
+# The title displays above a set of top news headlines.
+newtab-daily-briefing-card-title = Tituj Kryesues
 newtab-daily-briefing-card-menu-dismiss = Hidhe tej
 # Variables:
 #   $minutes (number) - Time since the feed has been refreshed
@@ -726,3 +762,16 @@ newtab-promo-card-dismiss-button =
 newtab-activation-window-message-dismiss-button =
     .title = Hidhe tej
     .aria-label = Hidhe tej
+# "This space" refers to about:newtab. The call to action here ("make it your own")
+# is to customize newtab with a background image or colour, or by tweaking the
+# existing widgetry that appears on it.
+newtab-activation-window-message-customization-focus-header = Bëjeni tuajën këtë hapësirë
+newtab-activation-window-message-customization-focus-message = Zgjidhni një sfond të ri, shtoni shkurtore për te sajtet tuaj të parapëlqyer, dhe qëndroni i përditësuar me histori që ju interesojnë.
+newtab-activation-window-message-customization-focus-primary-button =
+    .label = Filloni ta përshtatni
+# "This space" refers to about:newtab. The sentiment of "plays by your rules" is
+# meant to evoke the idea that newtab is malleable and customizable. The call to
+# action is to customize newtab with a background image or colour, or by tweaking
+# the existing widgetry that appears on it.
+newtab-activation-window-message-values-focus-header = Kjo hapësirë u bindet rregullave tuaja
+newtab-activation-window-message-values-focus-message = { -brand-product-name }-i ju lejon të shfletoni si doni, me një mënyrë më personale për t’ia filluar ditës suaj në internet. Bëjeni { -brand-product-name }-in tuajin.

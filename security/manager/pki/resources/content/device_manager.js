@@ -73,8 +73,7 @@ async function doConfirm(l10n_id) {
 
 async function RefreshDeviceList() {
   for (let module of await secmoddb.listModules()) {
-    let slots = module.listSlots();
-    AddModule(module, slots);
+    AddModule(module, module.slots);
   }
 
   // Set the text on the FIPS button.
@@ -408,7 +407,7 @@ function changePassword() {
   objects.appendElement(selected_slot.getToken());
   params.objects = objects;
   window.browsingContext.topChromeWindow.openDialog(
-    "changepassword.xhtml",
+    "chrome://pippki/content/changepassword.xhtml",
     "",
     "chrome,centerscreen,modal",
     params
@@ -450,10 +449,9 @@ async function toggleFIPS() {
     // In FIPS mode the password must be non-empty.
     // This is different from what we allow in NON-Fips mode.
 
-    var tokendb = Cc["@mozilla.org/security/pk11tokendb;1"].getService(
-      Ci.nsIPK11TokenDB
-    );
-    var internal_token = tokendb.getInternalKeyToken(); // nsIPK11Token
+    var internal_token = Cc[
+      "@mozilla.org/security/internalkeytoken;1"
+    ].createInstance(Ci.nsIPKCS11Token);
     if (!internal_token.hasPassword) {
       // Token has either no or an empty password.
       doPrompt("fips-nonempty-primary-password-required");

@@ -5,7 +5,10 @@
 package org.mozilla.fenix.search.awesomebar
 
 import android.content.Context
+import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import mozilla.components.browser.state.search.DefaultSearchEngineProvider
+import org.mozilla.fenix.browser.browsingmode.BrowsingModeManager
 import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.search.SearchFragmentState
 
@@ -16,6 +19,7 @@ import org.mozilla.fenix.search.SearchFragmentState
  * @property interactor [AwesomeBarInteractor] used for handling user interactions with the search suggestions.
  * @property view [AwesomeBarWrapper] used for displaying the search suggestions.
  * @property includeSelectedTab Whether or not to include the current tab in search suggestions.
+ * @property browsingModeManager [BrowsingModeManager] for querying the current browsing mode.
  */
 @Suppress("OutdatedDocumentation")
 class AwesomeBarView(
@@ -23,10 +27,12 @@ class AwesomeBarView(
     private val interactor: AwesomeBarInteractor,
     val view: AwesomeBarWrapper,
     includeSelectedTab: Boolean,
+    browsingModeManager: BrowsingModeManager,
 ) {
     private val suggestionsProvidersBuilder by lazy(LazyThreadSafetyMode.NONE) {
         SearchSuggestionsProvidersBuilder(
             components = context.components,
+            scope = ProcessLifecycleOwner.get().lifecycleScope,
             includeSelectedTab = includeSelectedTab,
             loadUrlUseCase = AwesomeBarLoadUrlUseCase(interactor),
             searchUseCase = AwesomeBarSearchUseCase(interactor),
@@ -36,9 +42,8 @@ class AwesomeBarView(
                 DefaultSearchEngineProvider(context.components.core.store),
             ),
             suggestionIconProvider = DefaultSuggestionIconProvider(context),
-            onSearchEngineShortcutSelected = interactor::onSearchShortcutEngineSelected,
             onSearchEngineSuggestionSelected = interactor::onSearchEngineSuggestionSelected,
-            onSearchEngineSettingsClicked = interactor::onClickSearchEngineSettings,
+            browsingModeManager = browsingModeManager,
         )
     }
 
@@ -50,8 +55,8 @@ class AwesomeBarView(
      * new search suggestions will be provided.
      */
     fun update(state: SearchFragmentState) {
-        // Do not make suggestions based on user's current URL unless it's a search shortcut
-        if (state.query.isNotEmpty() && state.query == state.url && !state.showSearchShortcuts) {
+        // Do not make suggestions based on user's current URL
+        if (state.query.isNotEmpty() && state.query == state.url) {
             return
         }
 
@@ -68,11 +73,6 @@ class AwesomeBarView(
         state: SearchFragmentState,
     ) {
         view.removeAllProviders()
-
-        if (state.showSearchShortcuts) {
-            view.addProviders(suggestionsProvidersBuilder.shortcutsEnginePickerProvider)
-            return
-        }
 
         for (provider in suggestionsProvidersBuilder.getProvidersToAdd(state.toSearchProviderState())) {
             view.addProviders(provider)

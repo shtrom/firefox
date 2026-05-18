@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -173,10 +171,6 @@ JSObject* XrayAwareCalleeGlobal(JSObject* fun) {
 
 JSObject* XrayTraits::getExpandoChain(HandleObject obj) {
   return ObjectScope(obj)->GetExpandoChain(obj);
-}
-
-JSObject* XrayTraits::detachExpandoChain(HandleObject obj) {
-  return ObjectScope(obj)->DetachExpandoChain(obj);
 }
 
 bool XrayTraits::setExpandoChain(JSContext* cx, HandleObject obj,
@@ -1243,16 +1237,7 @@ void ExpandoObjectFinalize(JS::GCContext* gcx, JSObject* obj) {
 }
 
 const JSClassOps XrayExpandoObjectClassOps = {
-    nullptr,                // addProperty
-    nullptr,                // delProperty
-    nullptr,                // enumerate
-    nullptr,                // newEnumerate
-    nullptr,                // resolve
-    nullptr,                // mayResolve
-    ExpandoObjectFinalize,  // finalize
-    nullptr,                // call
-    nullptr,                // construct
-    nullptr,                // trace
+    .finalize = ExpandoObjectFinalize,
 };
 
 bool XrayTraits::expandoObjectMatchesConsumer(JSContext* cx,
@@ -1464,72 +1449,6 @@ JSObject* XrayTraits::ensureExpandoObject(JSContext* cx, HandleObject wrapper,
                             wrapperGlobal, WrapperPrincipal(wrapper));
   }
   return expandoObject;
-}
-
-bool XrayTraits::cloneExpandoChain(JSContext* cx, HandleObject dst,
-                                   HandleObject srcChain) {
-  MOZ_ASSERT(js::IsObjectInContextCompartment(dst, cx));
-  MOZ_ASSERT(getExpandoChain(dst) == nullptr);
-
-  RootedObject oldHead(cx, srcChain);
-  while (oldHead) {
-    // If movingIntoXrayCompartment is true, then our new reflector is in a
-    // compartment that used to have an Xray-with-expandos to the old reflector
-    // and we should copy the expandos to the new reflector directly.
-    bool movingIntoXrayCompartment;
-
-    // exclusiveWrapper is only used if movingIntoXrayCompartment ends up true.
-    RootedObject exclusiveWrapper(cx);
-    RootedObject exclusiveWrapperGlobal(cx);
-    RootedObject wrapperHolder(
-        cx,
-        JS::GetReservedSlot(oldHead, JSSLOT_EXPANDO_EXCLUSIVE_WRAPPER_HOLDER)
-            .toObjectOrNull());
-    if (wrapperHolder) {
-      RootedObject unwrappedHolder(cx, UncheckedUnwrap(wrapperHolder));
-      // unwrappedHolder is the compartment of the relevant Xray, so check
-      // whether that matches the compartment of cx (which matches the
-      // compartment of dst).
-      movingIntoXrayCompartment =
-          js::IsObjectInContextCompartment(unwrappedHolder, cx);
-
-      if (!movingIntoXrayCompartment) {
-        // The global containing this wrapper holder has an xray for |src|
-        // with expandos. Create an xray in the global for |dst| which
-        // will be associated with a clone of |src|'s expando object.
-        JSAutoRealm ar(cx, unwrappedHolder);
-        exclusiveWrapper = dst;
-        if (!JS_WrapObject(cx, &exclusiveWrapper)) {
-          return false;
-        }
-        exclusiveWrapperGlobal = JS::CurrentGlobalOrNull(cx);
-      }
-    } else {
-      JSAutoRealm ar(cx, oldHead);
-      movingIntoXrayCompartment =
-          expandoObjectMatchesConsumer(cx, oldHead, GetObjectPrincipal(dst));
-    }
-
-    if (movingIntoXrayCompartment) {
-      // Just copy properties directly onto dst.
-      if (!JS_CopyOwnPropertiesAndPrivateFields(cx, dst, oldHead)) {
-        return false;
-      }
-    } else {
-      // Create a new expando object in the compartment of dst to replace
-      // oldHead.
-      RootedObject newHead(
-          cx,
-          attachExpandoObject(cx, dst, exclusiveWrapper, exclusiveWrapperGlobal,
-                              GetExpandoObjectPrincipal(oldHead)));
-      if (!JS_CopyOwnPropertiesAndPrivateFields(cx, newHead, oldHead)) {
-        return false;
-      }
-    }
-    oldHead =
-        JS::GetReservedSlot(oldHead, JSSLOT_EXPANDO_NEXT).toObjectOrNull();
-  }
-  return true;
 }
 
 JSObject* EnsureXrayExpandoObject(JSContext* cx, JS::HandleObject wrapper) {

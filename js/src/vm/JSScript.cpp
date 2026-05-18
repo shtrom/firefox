@@ -1,6 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * vim: set ts=8 sts=2 et sw=2 tw=80:
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -690,7 +688,9 @@ void JSScript::resetScriptCounts() {
 void ScriptSourceObject::finalize(JS::GCContext* gcx, JSObject* obj) {
   MOZ_ASSERT(gcx->onMainThread());
   ScriptSourceObject* sso = &obj->as<ScriptSourceObject>();
-  sso->source()->Release();
+  if (sso->hasSource()) {
+    sso->source()->Release();
+  }
 
   // Clear the private value, calling the release hook if necessary.
   sso->setPrivate(gcx->runtime(), UndefinedValue());
@@ -699,16 +699,7 @@ void ScriptSourceObject::finalize(JS::GCContext* gcx, JSObject* obj) {
 }
 
 static const JSClassOps ScriptSourceObjectClassOps = {
-    nullptr,                       // addProperty
-    nullptr,                       // delProperty
-    nullptr,                       // enumerate
-    nullptr,                       // newEnumerate
-    nullptr,                       // resolve
-    nullptr,                       // mayResolve
-    ScriptSourceObject::finalize,  // finalize
-    nullptr,                       // call
-    nullptr,                       // construct
-    nullptr,                       // trace
+    .finalize = ScriptSourceObject::finalize,
 };
 
 const JSClass ScriptSourceObject::class_ = {
@@ -736,6 +727,18 @@ ScriptSourceObject* ScriptSourceObject::create(JSContext* cx,
 
   obj->initReservedSlot(STENCILS_SLOT, UndefinedValue());
 
+  return obj;
+}
+
+/* static */
+ScriptSourceObject* ScriptSourceObject::createForWasmModule(JSContext* cx) {
+  ScriptSourceObject* obj =
+      NewObjectWithGivenProto<ScriptSourceObject>(cx, nullptr);
+  if (!obj) {
+    return nullptr;
+  }
+
+  // Wasm modules have no ScriptSource, so we leave SOURCE_SLOT undefined.
   return obj;
 }
 
@@ -775,6 +778,7 @@ bool ScriptSourceObject::initFromOptions(
       source->getReservedSlot(ELEMENT_PROPERTY_SLOT).isMagic(JS_GENERIC_MAGIC));
   MOZ_ASSERT(source->getReservedSlot(INTRODUCTION_SCRIPT_SLOT)
                  .isMagic(JS_GENERIC_MAGIC));
+  MOZ_ASSERT(source->hasSource());
 
   if (!MaybeValidateFilename(cx, source, options)) {
     return false;
@@ -1036,9 +1040,9 @@ void UncompressedSourceCache::purge() {
     return;
   }
 
-  for (Map::Range r = map_->all(); !r.empty(); r.popFront()) {
-    if (holder_ && r.front().key() == holder_->sourceChunk()) {
-      holder_->deferDelete(std::move(r.front().value()));
+  for (auto iter = map_->modIter(); !iter.done(); iter.next()) {
+    if (holder_ && iter.get().key() == holder_->sourceChunk()) {
+      holder_->deferDelete(std::move(iter.get().value()));
       holder_ = nullptr;
     }
   }
@@ -1051,8 +1055,8 @@ size_t UncompressedSourceCache::sizeOfExcludingThis(
   size_t n = 0;
   if (map_ && !map_->empty()) {
     n += map_->shallowSizeOfIncludingThis(mallocSizeOf);
-    for (Map::Range r = map_->all(); !r.empty(); r.popFront()) {
-      n += mallocSizeOf(r.front().value().get());
+    for (auto iter = map_->iter(); !iter.done(); iter.next()) {
+      n += mallocSizeOf(iter.get().value().get());
     }
   }
   return n;
@@ -1146,6 +1150,30 @@ void ScriptSource::performDelayedConvertToCompressedSource(
                                   pending.uncompressedLength);
 
   g->pendingCompressed.destroy();
+}
+
+ScriptSource::GenericReader::GenericReader(ScriptSource* source)
+    : PinnedUnitsBase(source) {
+  addReader();
+}
+
+ScriptSource::GenericReader::~GenericReader() {
+  if (!source_->hasSourceText()) {
+    // For script sources without text, the reader is added just to access the
+    // other fields.  There shouldn't be any pending compression, and we can
+    // just remove the reader.
+    auto guard = source_->readers_.lock();
+    MOZ_ASSERT(guard->pendingCompressed.empty());
+    MOZ_ASSERT(guard->count > 0);
+    guard->count--;
+    return;
+  }
+
+  if (source_->hasSourceType<Utf8Unit>()) {
+    removeReader<Utf8Unit>();
+  } else {
+    removeReader<char16_t>();
+  }
 }
 
 void ScriptSource::PinnedUnitsBase::addReader() {
@@ -2424,12 +2452,11 @@ static void SweepScriptDataTable(SharedImmutableScriptDataTable& table) {
   // Entries are removed from the table when their reference count is one,
   // i.e. when the only reference to them is from the table entry.
 
-  for (SharedImmutableScriptDataTable::Enum e(table); !e.empty();
-       e.popFront()) {
-    SharedImmutableScriptData* sharedData = e.front();
+  for (auto iter = table.modIter(); !iter.done(); iter.next()) {
+    SharedImmutableScriptData* sharedData = iter.get();
     if (sharedData->refCount() == 1) {
       sharedData->Release();
-      e.removeFront();
+      iter.remove();
     }
   }
 }
@@ -3358,6 +3385,7 @@ BaseScript::BaseScript(uint8_t* stubEntry, JSFunction* function,
   MOZ_ASSERT(extent_.toStringStart <= extent_.sourceStart);
   MOZ_ASSERT(extent_.sourceStart <= extent_.sourceEnd);
   MOZ_ASSERT(extent_.sourceEnd <= extent_.toStringEnd);
+  MOZ_ASSERT(sourceObject->hasSource());
 }
 
 /* static */

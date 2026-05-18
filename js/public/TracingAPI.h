@@ -1,6 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * vim: set ts=8 sts=2 et sw=2 tw=80:
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -244,7 +242,10 @@ class JS_PUBLIC_API CallbackTracer
  private:
   template <typename T>
   void onEdge(T** thingp, const char* name) {
-    onChild(JS::GCCellPtr(*thingp), name);
+    T* thing = *thingp;
+    if (thing) {
+      onChild(JS::GCCellPtr(thing), name);
+    }
   }
   friend class js::GenericTracerImpl<CallbackTracer>;
 };
@@ -399,9 +400,6 @@ inline bool IsTracerKind(JSTracer* trc, JS::TracerKind kind) {
 
 // Trace an edge that is not a GC root and is not wrapped in a barriered
 // wrapper for some reason.
-//
-// This method does not check if |*edgep| is non-null before tracing through
-// it, so callers must check any nullable pointer before calling this method.
 extern JS_PUBLIC_API void UnsafeTraceManuallyBarrieredEdge(JSTracer* trc,
                                                            JSObject** thingp,
                                                            const char* name);

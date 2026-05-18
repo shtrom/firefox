@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -16,6 +14,7 @@
 #include "mozilla/ComputedStyle.h"
 #include "mozilla/Logging.h"
 #include "mozilla/PresShell.h"
+#include "mozilla/ReflowInput.h"
 #include "mozilla/StaticPrefs_layout.h"
 #include "mozilla/WritingModes.h"
 #include "nsBlockFrame.h"
@@ -2997,8 +2996,8 @@ void nsFlexContainerFrame::BuildDisplayList(nsDisplayListBuilder* aBuilder,
     BuildDisplayListForChild(aBuilder, childFrame, childLists, flags);
   }
 
-  if (GetPrevInFlow()) {
-    DisplayPushedAbsoluteFrames(aBuilder, tempLists);
+  if (GetPrevInFlow() || GetNextInFlow()) {
+    DisplayAbsoluteFramesNotBuiltByPlaceholder(aBuilder, tempLists);
   }
 
   tempLists.MoveTo(aLists);
@@ -4972,7 +4971,9 @@ void nsFlexContainerFrame::UnionInFlowChildOverflow(
     if (useMozBoxCollapseBehavior && f->StyleVisibility()->IsCollapse()) {
       continue;
     }
-    ConsiderChildOverflow(aOverflowAreas, f, aAsIfScrolled);
+    ConsiderChildOverflow(aOverflowAreas, f,
+                          aAsIfScrolled ? OverflowAreaUnionFlags::AsIfScrolled
+                                        : OverflowAreaUnionFlags::None);
     if (!isScrolledContent) {
       continue;
     }

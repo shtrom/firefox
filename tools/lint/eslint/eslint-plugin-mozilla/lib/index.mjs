@@ -99,6 +99,9 @@ let plugin = {
       .default,
     "reject-addtask-only": (await import("./rules/reject-addtask-only.mjs"))
       .default,
+    "reject-contenttask-spawn": (
+      await import("./rules/reject-contenttask-spawn.mjs")
+    ).default,
     "reject-eager-module-in-lazy-getter": (
       await import("./rules/reject-eager-module-in-lazy-getter.mjs")
     ).default,
@@ -146,7 +149,8 @@ let plugin = {
     "use-default-preference-values": (
       await import("./rules/use-default-preference-values.mjs")
     ).default,
-    "use-ownerGlobal": (await import("./rules/use-ownerGlobal.mjs")).default,
+    "use-documentGlobal": (await import("./rules/use-documentGlobal.mjs"))
+      .default,
     "use-includes-instead-of-indexOf": (
       await import("./rules/use-includes-instead-of-indexOf.mjs")
     ).default,

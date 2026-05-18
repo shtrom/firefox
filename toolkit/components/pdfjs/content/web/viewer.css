@@ -693,6 +693,7 @@
     &.selected{
       background-color:var(--highlight-selected-bg-color);
       backdrop-filter:var(--highlight-selected-backdrop-filter);
+      scroll-margin-top:50px;
     }
   }
 
@@ -711,6 +712,17 @@
 
   &.selecting .endOfContent{
     top:0;
+  }
+}
+
+.textLayerImages{
+  position:absolute;
+  inset:0;
+  user-select:none;
+
+  canvas{
+    position:absolute;
+    transform-origin:0% 0%;
   }
 }
 
@@ -4215,6 +4227,7 @@
 
   &::-moz-color-swatch{
     border-radius:100%;
+    margin:0;
   }
 
 }
@@ -4561,6 +4574,7 @@ button.hasPopupMenu{
     transparent 79%
   );
   --menuitem-text-active-fg:var(--menu-text-color);
+  --menuitem-active-border-color:var(--menuitem-border-color);
   --menuitem-focus-bg:color-mix(
     in srgb,
     var(--menu-text-color),
@@ -4576,6 +4590,7 @@ button.hasPopupMenu{
   --menuitem-border-radius:8px;
   --menu-backdrop-filter:none;
   --menu-text-color:light-dark(#15141a, #fbfbfe);
+  --menu-text-disabled-color:var(--menu-text-color);
   --menuitem-text-hover-fg:var(--menu-text-color);
   --menuitem-hover-bg:color-mix(
     in srgb,
@@ -4583,6 +4598,7 @@ button.hasPopupMenu{
     transparent 86%
   );
   --menuitem-hover-background-blend-mode:normal;
+  --disabled-opacity:0.62;
 
   @media screen and (forced-colors: active){
     --menu-bg:Canvas;
@@ -4590,14 +4606,18 @@ button.hasPopupMenu{
     --menu-box-shadow:none;
     --menu-backdrop-filter:none;
     --menu-text-color:ButtonText;
+    --menu-text-disabled-color:GrayText;
     --menu-border-color:CanvasText;
     --menuitem-border-color:none;
     --menuitem-hover-bg:SelectedItemText;
     --menuitem-text-hover-fg:SelectedItem;
     --menuitem-active-bg:SelectedItemText;
+    --menuitem-active-border-color:ButtonText;
     --menuitem-text-active-fg:SelectedItem;
+    --menuitem-focus-bg:ButtonFace;
     --menuitem-focus-outline-color:CanvasText;
     --menuitem-focus-border-color:none;
+    --disabled-opacity:1;
   }
 
   display:flex;
@@ -4622,12 +4642,12 @@ button.hasPopupMenu{
     --menu-mark-icon-size:16px;
   }
 
-  > li{
+  > button{
     display:flex;
     align-items:center;
-    list-style:none;
+    position:relative;
     width:100%;
-    height:24px;
+    height:26px;
     padding-inline:calc(var(--menu-mark-icon-size) + var(--menuitem-gap)) var(--menuitem-gap);
     gap:var(--menuitem-gap);
     box-sizing:border-box;
@@ -4635,7 +4655,7 @@ button.hasPopupMenu{
     border:1px solid var(--menuitem-border-color);
     background:transparent;
 
-    &:has(button.selected)::before{
+    &.selected::after{
       content:"";
       display:inline-block;
       width:11px;
@@ -4645,84 +4665,88 @@ button.hasPopupMenu{
       mask-image:var(--menuitem-checkmark-icon);
       background-color:var(--menu-text-color);
       position:absolute;
-      margin-inline-start:-16px;
+      inset-inline-start:var(--menuitem-gap);
+      top:50%;
+      transform:translateY(-50%);
     }
 
-    &:has(button:disabled){
-      opacity:0.62;
-      pointer-events:none;
-    }
+    &:disabled{
+      opacity:var(--disabled-opacity);
 
-    &:hover{
-      background:var(--menuitem-hover-bg);
-      background-blend-mode:var(--menuitem-hover-background-blend-mode);
-      > button{
-        &:not(.noIcon)::before{
-          background-color:var(--menuitem-text-hover-fg);
-        }
-        > span{
-          color:var(--menuitem-text-hover-fg);
-        }
+      &.selected::after{
+        background-color:var(--menu-text-disabled-color);
       }
-      &:has(button.selected)::before{
-        background-color:var(--menuitem-text-hover-fg);
-      }
-    }
-
-    &:active{
-      background-color:var(--menuitem-active-bg);
-      > button > span{
-        color:var(--menuitem-text-active-fg);
-      }
-    }
-
-    &:has(> button:focus-visible){
-      border-color:var(--menuitem-focus-border-color);
-      background-color:var(--menuitem-focus-bg);
-      outline:2px solid var(--menuitem-focus-outline-color);
-      outline-offset:2px;
-    }
-
-    > button{
-      display:flex;
-      flex-direction:row;
-      align-items:center;
-      width:100%;
-      height:auto;
-      padding:var(--menuitem-gap);
-      gap:var(--menuitem-gap);
-      background:transparent;
-      border:none;
 
       &:not(.noIcon)::before{
-        display:inline-block;
-        width:var(--menu-icon-size);
-        height:var(--menu-icon-size);
-        content:"";
-        mask-size:cover;
-        mask-position:center;
-        background-color:var(--menu-text-color);
-      }
-
-      &:focus-visible{
-        outline:none;
+        background-color:var(--menu-text-disabled-color);
       }
 
       > span{
-        display:inline-block;
-        width:max-content;
-        height:auto;
-        text-align:start;
-        color:var(--menu-text-color);
-        user-select:none;
-        padding-inline-start:6px;
-
-        font:menu;
-        font-size:13px;
-        font-style:normal;
-        font-weight:510;
-        line-height:normal;
+        color:var(--menu-text-disabled-color);
       }
+    }
+
+    &:not(:disabled){
+      &:hover{
+        background:var(--menuitem-hover-bg);
+        background-blend-mode:var(--menuitem-hover-background-blend-mode);
+
+        &:not(.noIcon)::before{
+          background-color:var(--menuitem-text-hover-fg);
+        }
+
+        > span{
+          color:var(--menuitem-text-hover-fg);
+        }
+
+        &.selected::after{
+          background-color:var(--menuitem-text-hover-fg);
+        }
+      }
+
+      &:active{
+        background-color:var(--menuitem-active-bg);
+        border-color:var(--menuitem-active-border-color);
+
+        > span{
+          color:var(--menuitem-text-active-fg);
+        }
+      }
+
+      &:focus-visible{
+        border-color:var(--menuitem-focus-border-color);
+        background-color:var(--menuitem-focus-bg);
+        outline:2px solid var(--menuitem-focus-outline-color);
+        outline-offset:2px;
+      }
+    }
+
+    &:not(.noIcon)::before{
+      display:inline-block;
+      width:var(--menu-icon-size);
+      height:var(--menu-icon-size);
+      content:"";
+      mask-size:cover;
+      mask-position:center;
+      background-color:var(--menu-text-color);
+    }
+
+    > span{
+      display:flex;
+      align-items:center;
+      align-self:stretch;
+      width:100%;
+      min-width:max-content;
+      text-align:start;
+      color:var(--menu-text-color);
+      user-select:none;
+      padding-inline-start:6px;
+
+      font:menu;
+      font-size:13px;
+      font-style:normal;
+      font-weight:510;
+      line-height:normal;
     }
   }
 }
@@ -4930,6 +4954,7 @@ button.hasPopupMenu{
     rgb(0 98 250 / 0.08),
     rgb(0 202 219 / 0.08)
   );
+  --image-dragging-placeholder-border:var(--image-outline);
   --multiple-dragging-bg:white;
   --image-multiple-dragging-shadow:0 0 0 var(--image-border-width) var(--image-current-border-color), var(--image-border-width) var(--image-border-width) 0 calc(var(--image-border-width) / 2) var(--multiple-dragging-bg), var(--image-border-width) var(--image-border-width) 0 calc(3 * var(--image-border-width) / 2) var(--image-current-border-color);
   --image-dragging-shadow:0 0 0 var(--image-border-width) var(--image-current-border-color);
@@ -4975,6 +5000,8 @@ button.hasPopupMenu{
     --multiple-dragging-bg:Canvas;
     --multiple-dragging-indicator-bg:ButtonBorder;
     --multiple-dragging-text-color:Canvas;
+    --image-dragging-placeholder-bg:Canvas;
+    --image-dragging-placeholder-border:1px GrayText solid;
   }
 
   display:flex;
@@ -5030,10 +5057,11 @@ button.hasPopupMenu{
     }
 
     &.viewsCloseButton{
-      width:32px;
-      height:32px;
+      width:26px;
+      height:26px;
       padding:4px;
       border-radius:8px;
+      background:none;
 
       &::before{
         mask-image:var(--close-button-icon);
@@ -5052,7 +5080,7 @@ button.hasPopupMenu{
     background-color:var(--header-bg);
 
     .viewsManagerLabel{
-      flex:0;
+      flex:1 1 auto;
       color:var(--text-color);
       text-align:center;
       height:fit-content;
@@ -5074,6 +5102,15 @@ button.hasPopupMenu{
       justify-content:space-between;
       width:auto;
       padding:12px 16px 12px 8px;
+
+      &:not(:has(#viewsManagerHeaderLabel ~ button:not([hidden])))::after{
+
+        content:"";
+        flex:0 0 auto;
+        width:32px;
+        height:32px;
+        pointer-events:none;
+      }
 
       #viewsManagerSelector{
         width:48px;
@@ -5126,7 +5163,7 @@ button.hasPopupMenu{
           min-width:182px;
           z-index:1;
 
-          > li > button{
+          > button{
             &#thumbnailsViewMenu::before{
               mask-image:var(--menuitem-thumbnailsView-icon);
             }
@@ -5144,8 +5181,6 @@ button.hasPopupMenu{
       }
 
       #viewsManagerAddFileButton{
-        visibility:hidden;
-
         background:var(--button-no-bg);
         width:32px;
         height:32px;
@@ -5157,6 +5192,11 @@ button.hasPopupMenu{
         &::before{
           mask-repeat:no-repeat;
           mask-image:var(--views-manager-add-file-button-icon);
+          background-color:var(--button-fg);
+        }
+
+        > input{
+          display:none;
         }
       }
 
@@ -5172,22 +5212,27 @@ button.hasPopupMenu{
         &::before{
           mask-repeat:no-repeat;
           mask-image:var(--current-outline-button-icon);
+          background-color:var(--button-fg);
         }
       }
     }
 
     #viewsManagerStatus{
-      display:flex;
-      align-items:center;
-      align-self:stretch;
-      justify-content:space-between;
-      width:auto;
+      display:grid;
+      width:100%;
       border:1px solid var(--status-border-color);
 
       > div{
         min-height:64px;
         width:100%;
         padding-inline:16px;
+        grid-area:1 / 1;
+        box-sizing:border-box;
+
+        &.hidden{
+          visibility:hidden;
+          display:unset !important;
+        }
       }
 
       .viewsManagerStatusLabel{
@@ -5206,15 +5251,53 @@ button.hasPopupMenu{
         align-self:stretch;
         background-color:var(--status-actions-bg);
 
-        > span.selected::before{
-          content:"";
-          display:inline-block;
+        #viewsManagerStatusActionLabelContainer > button{
+          position:relative;
           width:var(--icon-size);
           height:var(--icon-size);
-          mask-repeat:no-repeat;
-          mask-position:center;
-          background-color:var(--indicator-color);
-          mask-image:var(--pages-selected-icon);
+          border:none;
+          padding:0;
+          flex:0 0 auto;
+
+          &::before{
+            content:"";
+            position:absolute;
+            inset:0;
+            mask-repeat:no-repeat;
+            mask-position:center;
+            background-color:var(--indicator-color);
+            mask-image:var(--pages-selected-icon);
+          }
+
+          @media screen and (forced-colors: active){
+            border-radius:2px;
+            background-color:var(--button-bg);
+
+            &::before{
+              background-color:var(--button-fg);
+            }
+            &:hover{
+              background-color:var(--button-hover-bg);
+
+              &::before{
+                background-color:var(--button-hover-fg);
+              }
+            }
+            &:active{
+              background-color:var(--button-active-bg);
+
+              &::before{
+                background-color:var(--button-active-fg);
+              }
+            }
+          }
+
+          &#viewsManagerStatusActionDeselectButton:focus-visible{
+            outline:2px solid var(--button-focus-outline-color);
+            border:1px solid var(--button-focus-border-color);
+            border-radius:2px;
+            outline-offset:1px;
+          }
         }
 
         #actionSelector{
@@ -5347,6 +5430,7 @@ button.hasPopupMenu{
 
     #thumbnailsView{
       --thumbnail-width:126px;
+      --gap-between-input-and-thumbnail:16px;
 
       display:flex;
       flex-flow:row wrap;
@@ -5385,6 +5469,8 @@ button.hasPopupMenu{
       }
 
       &.pasteMode{
+        gap:var(--gap-between-input-and-thumbnail);
+
         > .thumbnail{
           flex-direction:column;
 
@@ -5415,14 +5501,21 @@ button.hasPopupMenu{
 
       > .thumbnail{
         --input-dim:16px;
-        --gap-between-input-and-thumbnail:16px;
+
+        &:not(&:has(input)){
+          --input-dim:0px;
+          --gap-between-input-and-thumbnail:0px;
+        }
 
         display:inline-flex;
         justify-content:flex-end;
         align-items:center;
         flex-direction:row-reverse;
         gap:var(--gap-between-input-and-thumbnail);
-        width:190px;
+        width:calc(
+          var(--thumbnail-width) + 2 *
+            (var(--input-dim) + var(--gap-between-input-and-thumbnail))
+        );
         height:auto;
         position:relative;
         scroll-margin-top:20px;
@@ -5576,6 +5669,7 @@ button.hasPopupMenu{
           &.placeholder{
             background-color:var(--image-dragging-placeholder-bg);
             box-shadow:none !important;
+            outline:var(--image-dragging-placeholder-border);
           }
 
           &.draggingThumbnail{
@@ -5762,6 +5856,9 @@ button.hasPopupMenu{
   --loading-icon-delay:400ms;
   --focus-ring-color:light-dark(#0060df, #0df);
   --focus-ring-outline:2px solid var(--focus-ring-color);
+  --new-badge-bg:light-dark(#070, #37b847);
+  --new-badge-color:light-dark(#fff, #15141a);
+  --new-badge-border-color:light-dark(#fbfbfe / 40%, #15141a / 40%);
 
   @media screen and (forced-colors: active){
     --pdfViewer-padding-bottom:9px;
@@ -5769,7 +5866,26 @@ button.hasPopupMenu{
     --page-border:1px solid CanvasText;
     --spreadHorizontalWrapped-margin-LR:3.5px;
     --focus-ring-color:CanvasText;
+    --new-badge-bg:AccentColor;
+    --new-badge-color:ButtonFace;
+    --new-badge-border-color:CanvasText;
   }
+}
+
+.newBadge{
+  background-color:var(--new-badge-bg);
+  color:var(--new-badge-color);
+  border-radius:4px;
+  border:1px solid var(--new-badge-border-color);
+  padding-inline:4px;
+  margin-inline:4px;
+  font:menu;
+  font-size:12px;
+  font-style:normal;
+  font-weight:400;
+  line-height:normal;
+  flex:0 0 fit-content;
+  user-select:none;
 }
 
 [data-main-rotation="90"]{
@@ -5780,16 +5896,6 @@ button.hasPopupMenu{
 }
 [data-main-rotation="270"]{
   transform:rotate(270deg) translateX(-100%);
-}
-
-#hiddenCopyElement,
-.hiddenCanvasElement{
-  position:absolute;
-  top:0;
-  left:0;
-  width:0;
-  height:0;
-  display:none;
 }
 
 .pdfViewer{

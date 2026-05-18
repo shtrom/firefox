@@ -107,7 +107,7 @@ function Notification(
   this.wasDismissed = false;
   this.recordedTelemetryStats = new Set();
   this.isPrivate = PrivateBrowsingUtils.isWindowPrivate(
-    this.browser.ownerGlobal
+    this.browser.documentGlobal
   );
   this.timeCreated = ChromeUtils.now();
 }
@@ -265,7 +265,7 @@ export function PopupNotifications(tabbrowser, panel, iconBox, options = {}) {
 
   this._getVisibleAnchorElement = options.getVisibleAnchorElement;
 
-  this.window = tabbrowser.ownerGlobal;
+  this.window = tabbrowser.documentGlobal;
   this.panel = panel;
   this.tabbrowser = tabbrowser;
   this.iconBox = iconBox;
@@ -360,7 +360,8 @@ export function PopupNotifications(tabbrowser, panel, iconBox, options = {}) {
         this._fireCallback(
           notification,
           NOTIFICATION_EVENT_REMOVED,
-          this.nextRemovalReason
+          this.nextRemovalReason,
+          /* withoutUserResponse = */ true
         );
         notification._recordTelemetryStat(this.nextRemovalReason);
       }
@@ -591,9 +592,6 @@ PopupNotifications.prototype = {
    *        popupOptions:
    *                     An optional object containing popup options passed to
    *                     `openPopup()` when defined.
-   *        queue:
-   *                     A boolean. Set it to true if this dialog can be queued
-   *                     in case there is another popup already visible.
    *        recordTelemetryInPrivateBrowsing:
    *                     An optional boolean indicating whether popup telemetry
    *                     should be recorded in private browsing windows. By default,
@@ -661,7 +659,7 @@ PopupNotifications.prototype = {
 
     let existingNotification = this.getNotification(id, browser);
     if (existingNotification) {
-      this._remove(existingNotification);
+      this._remove(existingNotification, /* withoutUserResponse = */ true);
     }
 
     let notifications = this.getNotificationsForBrowser(browser);
@@ -677,12 +675,6 @@ PopupNotifications.prototype = {
           this.panel.removeAttribute("noautofocus");
         } else {
           this.panel.setAttribute("noautofocus", "true");
-        }
-
-        if (options && options.queue) {
-          this.panel.setAttribute("queue", "true");
-        } else {
-          this.panel.removeAttribute("queue");
         }
 
         // show panel now
@@ -781,7 +773,8 @@ PopupNotifications.prototype = {
       this._fireCallback(
         notification,
         NOTIFICATION_EVENT_REMOVED,
-        this.nextRemovalReason
+        this.nextRemovalReason,
+        /* withoutUserResponse = */ true
       );
       return false;
     }, this);
@@ -830,18 +823,22 @@ PopupNotifications.prototype = {
    * Removes one or many Notifications.
    *
    * @param {Notification|Notification[]} notification - The Notification object/s to remove.
-   * @param {boolean} [isCancel] - Whether to signal,  in the notification event, that removal
-   *  should be treated as cancel. This is currently used to cancel permission requests
-   *  when their Notifications are removed.
+   * @param {boolean} [withoutUserResponse] - Whether the removal happens without the user
+   *  responding to the notification via an action button or menu item. Consumers that
+   *  represent pending user requests (e.g. permission prompts) should treat a true value
+   *  as a signal to abandon the request.
    */
-  remove: function PopupNotifications_remove(notification, isCancel = false) {
+  remove: function PopupNotifications_remove(
+    notification,
+    withoutUserResponse = false
+  ) {
     let notificationArray = Array.isArray(notification)
       ? notification
       : [notification];
     let activeBrowser;
 
     notificationArray.forEach(n => {
-      this._remove(n, isCancel);
+      this._remove(n, withoutUserResponse);
       if (!activeBrowser && this._isActiveBrowser(n.browser)) {
         activeBrowser = n.browser;
       }
@@ -890,6 +887,20 @@ PopupNotifications.prototype = {
 
   _ignoreDismissal: null,
   _currentAnchorElement: null,
+  _popupshownListener: null,
+  _popupshownListenerTarget: null,
+
+  _clearPopupshownListener() {
+    if (this._popupshownListener) {
+      this._popupshownListenerTarget.removeEventListener(
+        "popupshown",
+        this._popupshownListener,
+        true
+      );
+      this._popupshownListener = null;
+      this._popupshownListenerTarget = null;
+    }
+  },
 
   /**
    * Gets notifications for the currently selected browser.
@@ -902,7 +913,7 @@ PopupNotifications.prototype = {
 
   _remove: function PopupNotifications_removeHelper(
     notification,
-    isCancel = false
+    withoutUserResponse = false
   ) {
     // This notification may already be removed, in which case let's just fail
     // silently.
@@ -926,7 +937,7 @@ PopupNotifications.prototype = {
       notification,
       NOTIFICATION_EVENT_REMOVED,
       this.nextRemovalReason,
-      isCancel
+      withoutUserResponse
     );
   },
 
@@ -1317,12 +1328,6 @@ PopupNotifications.prototype = {
         this.panel.removeAttribute("noautohide");
       }
 
-      if (notificationsToShow.some(n => n.options.queue)) {
-        this.panel.setAttribute("queue", "true");
-      } else {
-        this.panel.removeAttribute("queue");
-      }
-
       // Let tests know that the panel was updated and what notifications it was
       // updated with so that tests can wait for the correct notifications to be
       // added.
@@ -1361,31 +1366,17 @@ PopupNotifications.prototype = {
         this._extendSecurityDelay(notificationsToShow);
       }
 
-      let target = this.panel;
-      if (target.parentNode) {
-        // NOTIFICATION_EVENT_SHOWN should be fired for the panel before
-        // anyone listening for popupshown on the panel gets run. Otherwise,
-        // the panel will not be initialized when the popupshown event
-        // listeners run.
-        // By targeting the panel's parent and using a capturing listener, we
-        // can have our listener called before others waiting for the panel to
-        // be shown (which probably expect the panel to be fully initialized)
-        target = target.parentNode;
-      }
-      if (this._popupshownListener) {
-        target.removeEventListener(
-          "popupshown",
-          this._popupshownListener,
-          true
-        );
-      }
+      this._clearPopupshownListener();
+      // NOTIFICATION_EVENT_SHOWN should be fired for the panel before
+      // anyone listening for popupshown on the panel gets run. Otherwise,
+      // the panel will not be initialized when the popupshown event
+      // listeners run.
+      // By targeting the panel's parent and using a capturing listener, we
+      // can have our listener called before others waiting for the panel to
+      // be shown (which probably expect the panel to be fully initialized)
+      let target = this.panel.parentNode || this.panel;
       this._popupshownListener = function () {
-        target.removeEventListener(
-          "popupshown",
-          this._popupshownListener,
-          true
-        );
-        this._popupshownListener = null;
+        this._clearPopupshownListener();
 
         notificationsToShow.forEach(function (n) {
           // The panel has been opened, remember the time the notification was
@@ -1402,6 +1393,7 @@ PopupNotifications.prototype = {
         this.panel.dispatchEvent(event);
       };
       this._popupshownListener = this._popupshownListener.bind(this);
+      this._popupshownListenerTarget = target;
       target.addEventListener("popupshown", this._popupshownListener, true);
 
       let popupOptions = notificationsToShow.findLast(
@@ -1715,7 +1707,7 @@ PopupNotifications.prototype = {
       // to update our notification map.
 
       let ourNotifications = this.getNotificationsForBrowser(ourBrowser);
-      let other = otherBrowser.ownerGlobal.PopupNotifications;
+      let other = otherBrowser.documentGlobal.PopupNotifications;
       if (!other) {
         if (ourNotifications.length) {
           console.error(
@@ -1739,7 +1731,8 @@ PopupNotifications.prototype = {
         other._fireCallback(
           n,
           NOTIFICATION_EVENT_REMOVED,
-          this.nextRemovalReason
+          this.nextRemovalReason,
+          /* withoutUserResponse = */ true
         );
         return false;
       });
@@ -1753,7 +1746,8 @@ PopupNotifications.prototype = {
         this._fireCallback(
           n,
           NOTIFICATION_EVENT_REMOVED,
-          this.nextRemovalReason
+          this.nextRemovalReason,
+          /* withoutUserResponse = */ true
         );
         return false;
       });
@@ -1784,6 +1778,11 @@ PopupNotifications.prototype = {
     if (event.target != this.panel) {
       return;
     }
+
+    // If the panel was hidden before popupshown fired, clean up the listener
+    // so it doesn't leak references to notifications and their associated
+    // windows.
+    this._clearPopupshownListener();
 
     // It's possible that a popupnotification set `aria-describedby` on the
     // panel element in its eventCallback function. If so, we'll clear that out
@@ -1841,7 +1840,7 @@ PopupNotifications.prototype = {
       // if the notification is removed.
       if (notificationObj.options.removeOnDismissal) {
         notificationObj._recordTelemetryStat(this.nextRemovalReason);
-        this._remove(notificationObj);
+        this._remove(notificationObj, /* withoutUserResponse = */ true);
       } else {
         notificationObj.dismissed = true;
         this._fireCallback(notificationObj, NOTIFICATION_EVENT_DISMISSED);

@@ -197,6 +197,9 @@ run-if = [
 ]
 
 ["browser_toolbox_meatball.js"]
+skip-if = [
+  "os == 'mac' && os_version == '15.30' && arch == 'aarch64'", # Bug 2034604
+]
 
 ["browser_toolbox_options.js"]
 
@@ -248,6 +251,9 @@ disabled = "Bug 962258"
 ["browser_toolbox_show_toolbox_tool_ready.js"]
 
 ["browser_toolbox_split_console.js"]
+skip-if = [
+  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && debug", # Bug 2021290
+]
 
 ["browser_toolbox_tabsswitch_shortcuts.js"]
 

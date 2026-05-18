@@ -555,7 +555,7 @@ var focusEditableField = async function (
       xOffset,
       yOffset,
       options,
-      editable.ownerGlobal
+      editable.documentGlobal
     );
     options.type = "mouseup";
     EventUtils.synthesizeMouse(
@@ -563,7 +563,7 @@ var focusEditableField = async function (
       xOffset,
       yOffset,
       options,
-      editable.ownerGlobal
+      editable.documentGlobal
     );
   } else {
     EventUtils.synthesizeMouse(
@@ -571,7 +571,7 @@ var focusEditableField = async function (
       xOffset,
       yOffset,
       options,
-      editable.ownerGlobal
+      editable.documentGlobal
     );
   }
   await onFocus;
@@ -851,9 +851,9 @@ function openContextMenuAndGetAllItems(inspector, options) {
  */
 async function waitUntilVisitedState(tab, selectors) {
   await asyncWaitUntil(async () => {
-    const hasVisitedState = await ContentTask.spawn(
+    const hasVisitedState = await SpecialPowers.spawn(
       tab.linkedBrowser,
-      selectors,
+      [selectors],
       args => {
         // ElementState::VISITED
         const ELEMENT_STATE_VISITED = 1 << 18;

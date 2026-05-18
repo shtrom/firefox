@@ -1,5 +1,4 @@
-/* -*- Mode: C++; tab-width: 20; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -61,7 +60,7 @@ NativeLayerRootRemoteMacParent::RecvCommitNativeLayerCommands(
         HandleLayerInfo(layerInfo.ID(), layerInfo.Position(),
                         layerInfo.DisplayRect(), layerInfo.ClipRect(),
                         layerInfo.RoundedClipRect(), layerInfo.Transform(),
-                        layerInfo.SamplingFilter(),
+                        layerInfo.samplingFilter(),
                         layerInfo.SurfaceIsFlipped());
         break;
       }
@@ -174,7 +173,8 @@ void NativeLayerRootRemoteMacParent::HandleSetLayers(
 void NativeLayerRootRemoteMacParent::HandleLayerInfo(
     uint64_t aID, IntPoint aPosition, IntRect aDisplayRect,
     Maybe<IntRect> aClipRect, Maybe<RoundedRect> aRoundedClipRect,
-    Matrix4x4 aTransform, int8_t aSamplingFilter, bool aSurfaceIsFlipped) {
+    Matrix4x4 aTransform, SamplingFilter aSamplingFilter,
+    bool aSurfaceIsFlipped) {
   auto entry = mKnownLayers.MaybeGet(aID);
   if (!entry) {
     gfxWarning() << "Got a LayerInfo for an unknown layer.";
@@ -190,7 +190,7 @@ void NativeLayerRootRemoteMacParent::HandleLayerInfo(
   layer->SetClipRect(aClipRect);
   layer->SetRoundedClipRect(aRoundedClipRect);
   layer->SetTransform(aTransform);
-  layer->SetSamplingFilter(static_cast<gfx::SamplingFilter>(aSamplingFilter));
+  layer->SetSamplingFilter(aSamplingFilter);
   layer->SetSurfaceIsFlipped(aSurfaceIsFlipped);
 }
 

@@ -48,6 +48,10 @@ class HgRepository(Repository):
 
     @property
     def head_ref(self):
+        return self.branch or self.head_rev
+
+    @property
+    def head_rev(self):
         return self._run("log", "-r", ".", "-T", "{node}")
 
     def is_cinnabar_repo(self) -> bool:
@@ -146,6 +150,14 @@ class HgRepository(Repository):
             # "ui.username" doesn't follow the "Full Name <email@domain>" convention
             return None
         return match.group(1)
+
+    def get_remote_url(self, remote=None, push=False):
+        remote = remote or "default"
+        if push:
+            remote = f"{remote}-push"
+
+        url = self._run("paths", remote, return_codes=[0, 1], stderr=subprocess.DEVNULL)
+        return url.strip() if url else None
 
     def _format_diff_filter(self, diff_filter, for_status=False):
         df = diff_filter.lower()
@@ -275,6 +287,25 @@ class HgRepository(Repository):
             self._run("showconfig", f"extensions.{extension}")
         except subprocess.CalledProcessError:
             raise MissingVCSExtension(extension)
+
+    def push(
+        self,
+        remote: Optional[str] = None,
+        ref: Optional[str] = None,
+        dest_branch: Optional[str] = None,
+        force: bool = False,
+    ):
+        if ref and not remote:
+            raise ValueError("Cannot specify ref without specifying remote")
+
+        args = ["push"]
+        if force:
+            args.append("--force")
+        if remote:
+            args.append(remote)
+        if ref:
+            args.extend(["-r", ref])
+        self._run(*args)
 
     def push_to_try(
         self,

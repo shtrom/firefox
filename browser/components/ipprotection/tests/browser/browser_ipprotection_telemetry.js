@@ -8,15 +8,15 @@ const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
   IPPExceptionsManager:
-    "moz-src:///browser/components/ipprotection/IPPExceptionsManager.sys.mjs",
+    "moz-src:///toolkit/components/ipprotection/IPPExceptionsManager.sys.mjs",
   IPPProxyManager:
-    "moz-src:///browser/components/ipprotection/IPPProxyManager.sys.mjs",
+    "moz-src:///toolkit/components/ipprotection/IPPProxyManager.sys.mjs",
   IPProtectionService:
-    "moz-src:///browser/components/ipprotection/IPProtectionService.sys.mjs",
+    "moz-src:///toolkit/components/ipprotection/IPProtectionService.sys.mjs",
 });
 
 const { ERRORS } = ChromeUtils.importESModule(
-  "chrome://browser/content/ipprotection/ipprotection-constants.mjs"
+  "moz-src:///toolkit/components/ipprotection/IPPProxyManager.sys.mjs"
 );
 
 async function resetStateToObj(content, originalState) {
@@ -56,8 +56,7 @@ add_task(async function user_start_and_stop() {
   Assert.ok(content, "Panel content should be present");
 
   setupService({
-    isSignedIn: true,
-    isEnrolledAndEntitled: true,
+    isReady: true,
   });
   IPProtectionService.updateState();
   await content.updateComplete;
@@ -123,8 +122,7 @@ add_task(async function start_in_private_browsing() {
   await putServerInRemoteSettings();
 
   setupService({
-    isSignedIn: true,
-    isEnrolledAndEntitled: true,
+    isReady: true,
   });
   IPProtectionService.updateState();
 
@@ -192,7 +190,6 @@ add_task(async function click_upgrade_button() {
 
   Assert.ok(content, "Panel content should be present");
 
-  content.state.isSignedOut = false;
   content.state.paused = true;
   content.requestUpdate();
   await content.updateComplete;
@@ -272,8 +269,7 @@ add_task(async function stop_on_shutdown() {
   Assert.ok(content, "Panel content should be present");
 
   setupService({
-    isSignedIn: true,
-    isEnrolledAndEntitled: true,
+    isReady: true,
   });
   IPProtectionService.updateState();
   await content.updateComplete;
@@ -463,4 +459,70 @@ add_task(async function test_exclusion_added() {
   Services.fog.testResetFOG();
   lazy.IPPExceptionsManager.uninit();
   Services.perms.removeByType(PERM_NAME);
+});
+
+/**
+ * Tests that the get_started event is recorded when the "Get Started" button is clicked
+ */
+add_task(async function test_get_started() {
+  setupService({
+    isReady: false,
+  });
+  IPProtectionService.updateState();
+  await openPanel();
+
+  Services.fog.testResetFOG();
+  await Services.fog.testFlushAllChildren();
+
+  let panelShownPromise = waitForPanelEvent(document, "popupshown");
+  document.dispatchEvent(
+    new CustomEvent("IPProtection:OptIn", { bubbles: true })
+  );
+
+  let getStartedEvents = Glean.ipprotection.getStarted.testGetValue();
+  Assert.equal(
+    getStartedEvents.length,
+    1,
+    "should have recorded a get_started event"
+  );
+  Assert.equal(getStartedEvents[0].category, "ipprotection");
+  Assert.equal(getStartedEvents[0].name, "get_started");
+
+  await panelShownPromise;
+  await closePanel();
+  Services.fog.testResetFOG();
+  cleanupService();
+});
+
+/**
+ * Tests that the enrollment event is recorded after completing the enroll flow
+ */
+add_task(async function test_enrollment() {
+  setupService({
+    isReady: false,
+  });
+  IPProtectionService.updateState();
+
+  Services.fog.testResetFOG();
+  await Services.fog.testFlushAllChildren();
+
+  await IPProtection.getPanel(window).enroll();
+
+  let enrollmentEvents = Glean.ipprotection.enrollment.testGetValue();
+  Assert.equal(
+    enrollmentEvents.length,
+    1,
+    "should have recorded an enrollment event"
+  );
+  Assert.equal(enrollmentEvents[0].category, "ipprotection");
+  Assert.equal(enrollmentEvents[0].name, "enrollment");
+  Assert.equal(
+    enrollmentEvents[0].extra.enrolled,
+    "true",
+    "enrolled should be true when sign-in succeeds"
+  );
+
+  await closePanel();
+  Services.fog.testResetFOG();
+  cleanupService();
 });

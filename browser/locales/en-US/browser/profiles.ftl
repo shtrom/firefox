@@ -78,7 +78,7 @@ new-profile-page-done-button =
 
 # Variables
 #   $profilename (String) - The name of the copied profile.
-copied-profile-page-header = Your copy of { $profilename } is ready to customize
+copied-profile-page-header-2 = Your copy of “{ $profilename }” is ready to customize
 copied-profile-page-header-description = We copied your data and settings into a new profile. Now give it a name, pick a look, and make it your own.
 
 restored-profile-page-header = Customize your restored profile
@@ -89,7 +89,7 @@ restored-profile-page-learn-more = Learn more
 
 # Variables
 #   $profilename (String) - The name of the profile.
-delete-profile-page-title = Delete { $profilename } profile
+delete-profile-page-title-2 = Delete “{ $profilename }” profile
 
 # Variables
 #   $profilename (String) - The name of the profile.

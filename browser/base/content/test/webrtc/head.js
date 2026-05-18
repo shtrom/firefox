@@ -232,7 +232,7 @@ async function assertWebRTCIndicatorStatus(expected) {
 }
 
 function promiseNotificationShown(notification) {
-  let win = notification.browser.ownerGlobal;
+  let win = notification.browser.documentGlobal;
   if (win.PopupNotifications.panel.state == "open") {
     return Promise.resolve();
   }
@@ -345,6 +345,8 @@ function promiseMessage(
   browser = gBrowser.selectedBrowser
 ) {
   let startTime = ChromeUtils.now();
+  // TODO: Switch to SpecialPowers.spawn
+  // eslint-disable-next-line mozilla/reject-contenttask-spawn
   let promise = ContentTask.spawn(
     browser,
     [aMessage, aCount],
@@ -859,7 +861,7 @@ async function reloadFromContent() {
   await disableObserverVerification();
 
   let loadedPromise = BrowserTestUtils.browserLoaded(gBrowser.selectedBrowser);
-  await ContentTask.spawn(gBrowser.selectedBrowser, null, () =>
+  await SpecialPowers.spawn(gBrowser.selectedBrowser, [], () =>
     content.location.reload()
   );
 

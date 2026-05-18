@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -37,6 +35,7 @@
 #include "mozilla/AccessibleCaretEventHub.h"
 #include "mozilla/Baseline.h"
 #include "mozilla/BasicEvents.h"
+#include "mozilla/CheckedInt.h"
 #include "mozilla/ClearOnShutdown.h"
 #include "mozilla/DisplayPortUtils.h"
 #include "mozilla/EffectCompositor.h"
@@ -54,6 +53,7 @@
 #include "mozilla/PresShell.h"
 #include "mozilla/ProfilerLabels.h"
 #include "mozilla/ProfilerMarkers.h"
+#include "mozilla/ReflowInput.h"
 #include "mozilla/RestyleManager.h"
 #include "mozilla/SVGImageContext.h"
 #include "mozilla/SVGIntegrationUtils.h"
@@ -815,12 +815,7 @@ FrameChildListID nsLayoutUtils::GetChildListNameFor(nsIFrame* aChildFrame) {
       id = FrameChildListID::OverflowContainers;
     }
   } else {
-    LayoutFrameType childType = aChildFrame->Type();
-    if (LayoutFrameType::TableColGroup == childType) {
-      id = FrameChildListID::ColGroup;
-    } else {
-      id = FrameChildListID::Principal;
-    }
+    id = FrameChildListID::Principal;
   }
 
 #ifdef DEBUG
@@ -889,6 +884,25 @@ Element* nsLayoutUtils::GetBackdropPseudo(const nsIContent* aContent) {
 nsIFrame* nsLayoutUtils::GetBackdropFrame(const nsIContent* aContent) {
   Element* pseudo = GetBackdropPseudo(aContent);
   return pseudo ? pseudo->GetPrimaryFrame() : nullptr;
+}
+
+/*static*/
+void nsLayoutUtils::AppendGeneratedContentPseudos(
+    const Element* aElement, nsTArray<nsIContent*>& aPseudos) {
+  if (aElement->HasProperties()) {
+    if (auto* backdrop = nsLayoutUtils::GetBackdropPseudo(aElement)) {
+      aPseudos.AppendElement(backdrop);
+    }
+    if (auto* marker = nsLayoutUtils::GetMarkerPseudo(aElement)) {
+      aPseudos.AppendElement(marker);
+    }
+    if (auto* before = nsLayoutUtils::GetBeforePseudo(aElement)) {
+      aPseudos.AppendElement(before);
+    }
+    if (auto* after = nsLayoutUtils::GetAfterPseudo(aElement)) {
+      aPseudos.AppendElement(after);
+    }
+  }
 }
 
 #ifdef ACCESSIBILITY
@@ -2760,7 +2774,7 @@ static void DumpBeforePaintDisplayList(UniquePtr<std::stringstream>& aStream,
       string.AppendInt(paintCount);
     }
     string.AppendLiteral(".html");
-    gfxUtils::sDumpPaintFile = fopen(string.BeginReading(), "w");
+    gfxUtils::sDumpPaintFile = fopen(string.get(), "w");
   } else {
     gfxUtils::sDumpPaintFile = stderr;
   }
@@ -3180,7 +3194,6 @@ void nsLayoutUtils::PaintFrame(gfxContext* aRenderingContext, nsIFrame* aFrame,
       list->DeleteAll(builder);
 
       builder->ClearRetainedWindowRegions();
-      builder->ClearWillChangeBudgets();
 
       builder->EnterPresShell(aFrame);
       builder->SetDirtyRect(visibleRect);
@@ -3873,15 +3886,16 @@ already_AddRefed<nsFontMetrics> nsLayoutUtils::GetFontMetricsForFrame(
 
 already_AddRefed<nsFontMetrics> nsLayoutUtils::GetFontMetricsForComputedStyle(
     const ComputedStyle* aComputedStyle, nsPresContext* aPresContext,
-    float aInflation, uint8_t aVariantWidth) {
+    float aInflation, uint8_t aVariantWidth, bool aForceHorizontalMetrics) {
   WritingMode wm(aComputedStyle);
   const nsStyleFont* styleFont = aComputedStyle->StyleFont();
   nsFontMetrics::Params params;
   params.language = styleFont->mLanguage;
   params.explicitLanguage = styleFont->mExplicitLanguage;
-  params.orientation = wm.IsVertical() && !wm.IsSideways()
-                           ? nsFontMetrics::eVertical
-                           : nsFontMetrics::eHorizontal;
+  params.orientation =
+      !aForceHorizontalMetrics && wm.IsVertical() && !wm.IsSideways()
+          ? nsFontMetrics::eVertical
+          : nsFontMetrics::eHorizontal;
   // pass the user font set object into the device context to
   // pass along to CreateFontGroup
   params.userFontSet = aPresContext->GetUserFontSet();
@@ -7108,6 +7122,33 @@ SurfaceFromElementResult nsLayoutUtils::SurfaceFromImageBitmap(
   return aImageBitmap->SurfaceFrom(aSurfaceFlags);
 }
 
+/* static */
+Maybe<IntSize> nsLayoutUtils::ComputeResizedSize(
+    const IntSize& aSrcSize, const Maybe<int32_t>& aResizeWidth,
+    const Maybe<int32_t>& aResizeHeight) {
+  int32_t dstWidth = aResizeWidth.valueOr(0);
+  int32_t dstHeight = aResizeHeight.valueOr(0);
+  if (!dstWidth && !dstHeight) {
+    return Some(aSrcSize);
+  }
+  if (!dstWidth) {
+    CheckedInt<int32_t> checked =
+        CheckedInt<int32_t>(aSrcSize.width) * dstHeight;
+    if (!checked.isValid()) {
+      return Nothing();
+    }
+    dstWidth = NSToIntCeil(checked.value() / double(aSrcSize.height));
+  } else if (!dstHeight) {
+    CheckedInt<int32_t> checked =
+        CheckedInt<int32_t>(aSrcSize.height) * dstWidth;
+    if (!checked.isValid()) {
+      return Nothing();
+    }
+    dstHeight = NSToIntCeil(checked.value() / double(aSrcSize.width));
+  }
+  return Some(IntSize(dstWidth, dstHeight));
+}
+
 SurfaceFromElementResult nsLayoutUtils::SurfaceFromElement(
     nsIImageLoadingContent* aElement, const Maybe<int32_t>& aResizeWidth,
     const Maybe<int32_t>& aResizeHeight, uint32_t aSurfaceFlags,
@@ -7220,7 +7261,19 @@ SurfaceFromElementResult nsLayoutUtils::SurfaceFromElement(
       imgHeight = kFallbackIntrinsicHeightInPixels;
     }
   }
-  result.mSize = result.mIntrinsicSize = IntSize(imgWidth, imgHeight);
+  result.mIntrinsicSize = IntSize(imgWidth, imgHeight);
+
+  // For vector images, rasterize at the resize dimensions so that
+  // createImageBitmap with resizeWidth/resizeHeight produces a sharp result
+  // instead of upscaling a small raster.
+  if (imgContainer->GetType() == imgIContainer::TYPE_VECTOR &&
+      (aResizeWidth.isSome() || aResizeHeight.isSome())) {
+    result.mSize =
+        ComputeResizedSize(result.mIntrinsicSize, aResizeWidth, aResizeHeight)
+            .valueOr(result.mIntrinsicSize);
+  } else {
+    result.mSize = result.mIntrinsicSize;
+  }
 
   if (!noRasterize || imgContainer->GetType() == imgIContainer::TYPE_RASTER) {
     result.mSourceSurface =
@@ -7259,7 +7312,7 @@ SurfaceFromElementResult nsLayoutUtils::SurfaceFromElement(
       result.mAlphaType = gfxAlphaType::Premult;
     }
   } else {
-    result.mDrawInfo.mImgContainer = imgContainer;
+    result.mDrawInfo.mImgContainer = std::move(imgContainer);
     result.mDrawInfo.mWhichFrame = whichFrame;
     result.mDrawInfo.mDrawingFlags = frameFlags;
   }
@@ -7935,8 +7988,19 @@ float nsLayoutUtils::FontSizeInflationInner(const nsIFrame* aFrame,
           f->StylePosition()->ISize(wm, anchorResolutionParams);
       const auto stylePosBSize =
           f->StylePosition()->BSize(wm, anchorResolutionParams);
-      if (!stylePosISize->IsAuto() ||
-          !stylePosBSize->BehavesLikeInitialValueOnBlockAxis()) {
+      const bool isTextControlPseudo = [&] {
+        switch (f->Style()->GetPseudoType()) {
+          case PseudoStyleType::MozTextControlEditingRoot:
+          case PseudoStyleType::MozTextControlPreview:
+          case PseudoStyleType::Placeholder:
+            return true;
+          default:
+            return false;
+        }
+      }();
+      if (!isTextControlPseudo &&
+          (!stylePosISize->IsAuto() ||
+           !stylePosBSize->BehavesLikeInitialValueOnBlockAxis())) {
         return 1.0;
       }
     }
@@ -8228,12 +8292,12 @@ nsMargin nsLayoutUtils::ScrollbarAreaToExcludeFromCompositionBoundsFor(
   if (!isRootContentDocRootScrollFrame) {
     return nsMargin();
   }
-  if (presContext->UseOverlayScrollbars()) {
-    return nsMargin();
-  }
   ScrollContainerFrame* scrollContainerFrame =
       aScrollFrame->GetScrollTargetFrame();
   if (!scrollContainerFrame) {
+    return nsMargin();
+  }
+  if (scrollContainerFrame->UseOverlayScrollbars()) {
     return nsMargin();
   }
   return scrollContainerFrame->GetActualScrollbarSizes(
@@ -8561,6 +8625,17 @@ void nsLayoutUtils::SetBSizeFromFontMetrics(const nsIFrame* aFrame,
       nsLayoutUtils::GetInflatedFontMetricsForFrame(aFrame);
 
   if (fm) {
+    // In vertical mixed mode, sideways glyphs (e.g. Latin) use horizontal font
+    // metrics and may need more block-size than vertical metrics provide.
+    if (aLineWM.IsVertical() && !aLineWM.IsSideways() &&
+        !aFrameWM.IsUpright()) {
+      RefPtr<nsFontMetrics> hfm = nsLayoutUtils::GetFontMetricsForComputedStyle(
+          aFrame->Style(), aFrame->PresContext(), FontSizeInflationFor(aFrame),
+          NS_FONT_VARIANT_WIDTH_NORMAL, true);
+      if (hfm && hfm->MaxHeight() > fm->MaxHeight()) {
+        fm = std::move(hfm);
+      }
+    }
     // Compute final height of the frame.
     //
     // Do things the standard css2 way -- though it's hard to find it
@@ -8795,6 +8870,7 @@ ScrollMetadata nsLayoutUtils::ComputeScrollMetadata(
     auto scrollStyles = scrollContainerFrame->GetScrollStyles();
     metadata.SetOverflow({scrollStyles.mHorizontal, scrollStyles.mVertical});
     metadata.SetScrollUpdates(scrollContainerFrame->GetScrollUpdates());
+    metadata.SetWritingMode(scrollContainerFrame->GetWritingMode());
   }
 
   // If we have the scrollparent being the same as the scroll id, the
@@ -9336,9 +9412,7 @@ static bool LineHasNonEmptyContentWorker(nsIFrame* aFrame) {
 }
 
 static bool LineHasNonEmptyContent(nsLineBox* aLine) {
-  int32_t count = aLine->GetChildCount();
-  for (nsIFrame* frame = aLine->mFirstChild; count > 0;
-       --count, frame = frame->GetNextSibling()) {
+  for (nsIFrame* frame : aLine->ChildFrames()) {
     if (LineHasNonEmptyContentWorker(frame)) {
       return true;
     }
@@ -9439,11 +9513,12 @@ nsRect nsLayoutUtils::ComputeSVGReferenceRect(
       // XXX Bug 1299876
       // The size of stroke-box is not correct if this graphic element has
       // specific stroke-linejoin or stroke-linecap.
-      const uint32_t flags = SVGUtils::eBBoxIncludeFillGeometry |
-                             SVGUtils::eBBoxIncludeStroke |
-                             (bool(aMayHaveCyclicDependency)
-                                  ? SVGUtils::eAvoidCycleIfNonScalingStroke
-                                  : 0);
+      SVGBBoxFlags flags = {SVGBBoxFlag::IncludeFillGeometry,
+                            SVGBBoxFlag::IncludeStroke};
+      if (bool(aMayHaveCyclicDependency)) {
+        flags += SVGBBoxFlag::AvoidCycleIfNonScalingStroke;
+      }
+
       gfxRect bbox = SVGUtils::GetBBox(aFrame, flags);
       r = nsLayoutUtils::RoundGfxRectToAppRect(bbox, AppUnitsPerCSSPixel());
       break;
@@ -9460,7 +9535,7 @@ nsRect nsLayoutUtils::ComputeSVGReferenceRect(
     }
     case StyleGeometryBox::FillBox: {
       gfxRect bbox =
-          SVGUtils::GetBBox(aFrame, SVGUtils::eBBoxIncludeFillGeometry);
+          SVGUtils::GetBBox(aFrame, SVGBBoxFlag::IncludeFillGeometry);
       r = nsLayoutUtils::RoundGfxRectToAppRect(bbox, AppUnitsPerCSSPixel());
       break;
     }
@@ -9687,6 +9762,7 @@ static void GetSpoofedSystemFontForRFP(LookAndFeel::FontID aFontID,
 #else
 #  error "Unknown platform"
 #endif
+  aStyle.systemFont = true;
 }
 
 /* static */
@@ -9760,8 +9836,7 @@ bool nsLayoutUtils::ShouldHandleMetaViewport(const Document* aDocument) {
   return StaticPrefs::dom_meta_viewport_enabled() || (bc && bc->InRDMPane());
 }
 
-/* static */
-ComputedStyle* nsLayoutUtils::StyleForScrollbar(
+static nsIContent* GetOriginatingElementForScrollbarPart(
     const nsIFrame* aScrollbarPart) {
   // Get the closest content node which is not an anonymous scrollbar
   // part. It should be the originating element of the scrollbar part.
@@ -9779,6 +9854,14 @@ ComputedStyle* nsLayoutUtils::StyleForScrollbar(
     content = content->GetParent();
   }
   MOZ_ASSERT(content, "Native anonymous element with no originating node?");
+  return content;
+}
+
+/* static */
+ComputedStyle* nsLayoutUtils::StyleForScrollbar(
+    const nsIFrame* aScrollbarPart) {
+  nsIContent* content = GetOriginatingElementForScrollbarPart(aScrollbarPart);
+
   // Use the style from the primary frame of the content.
   // Note: it is important to use the primary frame rather than an
   // ancestor frame of the scrollbar part for the correct handling of
@@ -9802,6 +9885,40 @@ ComputedStyle* nsLayoutUtils::StyleForScrollbar(
   // Dropping the strong reference is fine because the style should be
   // held strongly by the element.
   return style.get();
+}
+
+/* static */
+bool nsLayoutUtils::UseOverlayScrollbars(const nsIFrame* aScrollbarPart) {
+  nsIContent* content = GetOriginatingElementForScrollbarPart(aScrollbarPart);
+  if (nsIFrame* primaryFrame = content->GetPrimaryFrame()) {
+    ScrollContainerFrame* scrollContainerFrame = do_QueryFrame(primaryFrame);
+    if (!scrollContainerFrame) {
+      scrollContainerFrame =
+          primaryFrame->PresShell()->GetRootScrollContainerFrame();
+    }
+    if (scrollContainerFrame) {
+      return scrollContainerFrame->UseOverlayScrollbars();
+    }
+  }
+  return aScrollbarPart->PresContext()->UseOverlayScrollbars();
+}
+
+/* static */
+StyleScrollbarWidth nsLayoutUtils::ScrollbarWidthFor(
+    const nsIFrame* aScrollbarPart) {
+  const auto* style = StyleForScrollbar(aScrollbarPart);
+  nsIContent* content = GetOriginatingElementForScrollbarPart(aScrollbarPart);
+  if (nsIFrame* primaryFrame = content->GetPrimaryFrame()) {
+    ScrollContainerFrame* scrollContainerFrame = do_QueryFrame(primaryFrame);
+    if (!scrollContainerFrame) {
+      scrollContainerFrame =
+          primaryFrame->PresShell()->GetRootScrollContainerFrame();
+    }
+    if (scrollContainerFrame) {
+      return scrollContainerFrame->ScrollbarWidth(style);
+    }
+  }
+  return style->StyleUIReset()->ComputedScrollbarWidth();
 }
 
 enum class FramePosition : uint8_t {

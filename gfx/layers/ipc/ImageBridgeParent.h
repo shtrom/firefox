@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -43,12 +41,7 @@ class ImageBridgeParent final : public PImageBridgeParent,
                     dom::ContentParentId aContentId);
 
  public:
-  NS_IMETHOD_(MozExternalRefCountType) AddRef() override {
-    return ISurfaceAllocator::AddRef();
-  }
-  NS_IMETHOD_(MozExternalRefCountType) Release() override {
-    return ISurfaceAllocator::Release();
-  }
+  NS_INLINE_DECL_THREADSAFE_REFCOUNTING(ImageBridgeParent, final);
 
   /**
    * Creates the globals of ImageBridgeParent.
@@ -66,8 +59,7 @@ class ImageBridgeParent final : public PImageBridgeParent,
   void ActorDestroy(ActorDestroyReason aWhy) override;
 
   // CompositableParentManager
-  void SendAsyncMessage(
-      const nsTArray<AsyncParentMessageData>& aMessage) override;
+  void SendAsyncMessage(Span<const AsyncParentMessageData>) override;
 
   void NotifyNotUsed(PTextureParent* aTexture,
                      uint64_t aTransactionId) override;
@@ -80,12 +72,11 @@ class ImageBridgeParent final : public PImageBridgeParent,
                                      OpDestroyArray&& aToDestroy,
                                      const uint64_t& aFwdTransactionId);
 
-  PTextureParent* AllocPTextureParent(
+  already_AddRefed<PTextureParent> AllocPTextureParent(
       const SurfaceDescriptor& aSharedData, ReadLockDescriptor& aReadLock,
       const LayersBackend& aLayersBackend, const TextureFlags& aFlags,
       const uint64_t& aSerial,
       const wr::MaybeExternalImageId& aExternalImageId);
-  bool DeallocPTextureParent(PTextureParent* actor);
 
   mozilla::ipc::IPCResult RecvNewCompositable(const CompositableHandle& aHandle,
                                               const TextureInfo& aInfo);

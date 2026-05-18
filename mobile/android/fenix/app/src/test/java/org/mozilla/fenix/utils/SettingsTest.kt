@@ -28,6 +28,8 @@ import org.mozilla.fenix.browser.browsingmode.BrowsingMode
 import org.mozilla.fenix.components.toolbar.ToolbarPosition
 import org.mozilla.fenix.nimbus.DefaultBrowserPrompt
 import org.mozilla.fenix.nimbus.FakeNimbusEventStore
+import org.mozilla.fenix.nimbus.FxNimbus
+import org.mozilla.fenix.nimbus.HomescreenEdgeToEdgeBackground
 import org.mozilla.fenix.settings.PhoneFeature
 import org.mozilla.fenix.settings.ShortcutType
 import org.mozilla.fenix.settings.deletebrowsingdata.DeleteBrowsingDataOnQuitType
@@ -146,10 +148,25 @@ class SettingsTest {
     }
 
     @Test
-    fun defaultWallpaperIsEdgeToEdge() {
-        // When just created
+    fun defaultWallpaperIsEdgeToEdgeWhenEdgeToEdgeFeatureEnabled() {
+        FxNimbus.features.homescreenEdgeToEdgeBackground.withCachedValue(
+            HomescreenEdgeToEdgeBackground(enabled = true),
+        )
+        val settings = Settings(testContext)
+
         // Then
         assertEquals(Wallpaper.EdgeToEdge.name, settings.currentWallpaperName)
+    }
+
+    @Test
+    fun defaultWallpaperIsDefaultWhenEdgeToEdgeDisabled() {
+        FxNimbus.features.homescreenEdgeToEdgeBackground.withCachedValue(
+            HomescreenEdgeToEdgeBackground(enabled = false),
+        )
+        val settings = Settings(testContext)
+
+        // Then
+        assertEquals(Wallpaper.Default.name, settings.currentWallpaperName)
     }
 
     @Test
@@ -331,13 +348,6 @@ class SettingsTest {
         // When just created
         // Then
         assertTrue(settings.shouldShowClipboardSuggestions)
-    }
-
-    @Test
-    fun shouldShowSearchShortcuts() {
-        // When just created
-        // Then
-        assertFalse(settings.shouldShowSearchShortcuts)
     }
 
     @Test
@@ -793,46 +803,6 @@ class SettingsTest {
     }
 
     @Test
-    fun `GIVEN re-engagement notification shown and number of app launch THEN should set re-engagement notification returns correct value`() {
-        val localSetting = spyk(settings)
-
-        localSetting.reEngagementNotificationShown = false
-        localSetting.numberOfAppLaunches = 0
-        assert(localSetting.shouldSetReEngagementNotification())
-
-        localSetting.numberOfAppLaunches = 1
-        assert(localSetting.shouldSetReEngagementNotification())
-
-        localSetting.numberOfAppLaunches = 2
-        assertFalse(localSetting.shouldSetReEngagementNotification())
-
-        localSetting.reEngagementNotificationShown = true
-        localSetting.numberOfAppLaunches = 0
-        assertFalse(localSetting.shouldSetReEngagementNotification())
-    }
-
-    @Test
-    fun `GIVEN re-engagement notification shown and is default browser THEN should show re-engagement notification returns correct value`() {
-        val localSetting = spyk(settings)
-
-        every { localSetting.isDefaultBrowserBlocking() } returns false
-
-        localSetting.reEngagementNotificationShown = false
-        assert(localSetting.shouldShowReEngagementNotification())
-
-        localSetting.reEngagementNotificationShown = true
-        assertFalse(localSetting.shouldShowReEngagementNotification())
-
-        every { localSetting.isDefaultBrowserBlocking() } returns true
-
-        localSetting.reEngagementNotificationShown = false
-        assertFalse(localSetting.shouldShowReEngagementNotification())
-
-        localSetting.reEngagementNotificationShown = true
-        assertFalse(localSetting.shouldShowReEngagementNotification())
-    }
-
-    @Test
     fun inactiveTabsAreEnabled() {
         // When just created
         // Then
@@ -1071,7 +1041,6 @@ class SettingsTest {
     @Test
     fun `GIVEN top composable toolbar is enabled WHEN querying the toolbar height THEN get the height of the composable toolbar`() {
         val settings = spyk(settings)
-        every { settings.shouldUseComposableToolbar } returns true
         every { settings.toolbarPosition } returns ToolbarPosition.TOP
 
         assertEquals(64, settings.browserToolbarHeight)
@@ -1080,7 +1049,6 @@ class SettingsTest {
     @Test
     fun `GIVEN bottom composable toolbar is enabled and navigation bar is disabled WHEN querying the toolbar height THEN get the height of the composable toolbar`() {
         val settings = spyk(settings)
-        every { settings.shouldUseComposableToolbar } returns true
         every { settings.toolbarPosition } returns ToolbarPosition.BOTTOM
         every { settings.shouldUseExpandedToolbar } returns false
 
@@ -1093,7 +1061,6 @@ class SettingsTest {
             screenWidthDp = 599
         }
         val settings = spyk(settings)
-        every { settings.shouldUseComposableToolbar } returns true
         every { settings.toolbarPosition } returns ToolbarPosition.BOTTOM
         every { settings.shouldUseExpandedToolbar } returns true
 
@@ -1108,7 +1075,6 @@ class SettingsTest {
         }
         val settings = spyk(settings)
 
-        every { settings.shouldUseComposableToolbar } returns true
         every { settings.toolbarPosition } returns ToolbarPosition.BOTTOM
         every { settings.shouldUseExpandedToolbar } returns true
 
@@ -1123,19 +1089,10 @@ class SettingsTest {
         }
         val settings = spyk(settings)
 
-        every { settings.shouldUseComposableToolbar } returns true
         every { settings.toolbarPosition } returns ToolbarPosition.BOTTOM
         every { settings.shouldUseExpandedToolbar } returns true
 
         assertEquals(64, settings.browserToolbarHeight)
-    }
-
-    @Test
-    fun `GIVEN composable toolbar is not enabled WHEN querying the toolbar heigh THEN get the height of the toolbar view`() {
-        val settings = spyk(settings)
-        every { settings.shouldUseComposableToolbar } returns false
-
-        assertEquals(56, settings.browserToolbarHeight)
     }
 
     @Test
@@ -1342,41 +1299,5 @@ class SettingsTest {
 
         val result = settings.termsOfUseAcceptedVersion
         assertEquals(0, result)
-    }
-
-    @Test
-    fun `GIVEN toolbar customization is disabled WHEN reading toolbarSimpleShortcut THEN NEW_TAB is returned regardless of stored key`() {
-        settings.shouldShowToolbarCustomization = false
-        settings.toolbarSimpleShortcutKey = ShortcutType.SHARE.value
-
-        val result = settings.toolbarSimpleShortcut
-        assertEquals(ShortcutType.NEW_TAB.value, result)
-    }
-
-    @Test
-    fun `GIVEN toolbar customization is enabled WHEN reading toolbarSimpleShortcut THEN stored key is returned`() {
-        settings.shouldShowToolbarCustomization = true
-        settings.toolbarSimpleShortcutKey = ShortcutType.SHARE.value
-
-        val result = settings.toolbarSimpleShortcut
-        assertEquals(ShortcutType.SHARE.value, result)
-    }
-
-    @Test
-    fun `GIVEN toolbar customization is disabled WHEN reading toolbarExpandedShortcut THEN BOOKMARK is returned regardless of stored key`() {
-        settings.shouldShowToolbarCustomization = false
-        settings.toolbarExpandedShortcutKey = ShortcutType.NEW_TAB.value
-
-        val result = settings.toolbarExpandedShortcut
-        assertEquals(ShortcutType.BOOKMARK.value, result)
-    }
-
-    @Test
-    fun `GIVEN toolbar customization is enabled WHEN reading toolbarExpandedShortcut THEN stored key is returned`() {
-        settings.shouldShowToolbarCustomization = true
-        settings.toolbarExpandedShortcutKey = ShortcutType.TRANSLATE.value
-
-        val result = settings.toolbarExpandedShortcut
-        assertEquals(ShortcutType.TRANSLATE.value, result)
     }
 }

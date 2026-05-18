@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -370,8 +368,28 @@ void ChromeUtils::AddProfilerMarker(
                             data.GetAsUTF8String());
       } else {
         JSContext* cx = aGlobal.Context();
-        JS::Rooted<JS::Value> objValue(cx,
-                                       JS::ObjectValue(*data.GetAsObject()));
+        JS::Rooted<JSObject*> obj(cx, data.GetAsObject());
+
+        // If the caller passed something other than a plain object (e.g. an
+        // Error), fall back to a text marker using the object's string form.
+        js::ESClass cls = js::ESClass::Other;
+        NS_ENSURE_TRUE_VOID(JS::GetBuiltinClass(cx, obj, &cls));
+        if (cls != js::ESClass::Object) {
+          JS::Rooted<JS::Value> objValue(cx, JS::ObjectValue(*obj));
+          JS::Rooted<JSString*> str(cx, JS::ToString(cx, objValue));
+          nsAutoCString text;
+          if (!str) {
+            JS_ClearPendingException(cx);
+            text.AssignLiteral("<error converting to string>");
+          } else {
+            nsAutoJSString jsText;
+            NS_ENSURE_TRUE_VOID(jsText.init(cx, str));
+            CopyUTF16toUTF8(jsText, text);
+          }
+          profiler_add_marker(aName, category, std::move(options),
+                              ::geckoprofiler::markers::TextMarker{}, text);
+          return;
+        }
 
         nsString jsonString;
         auto callback = [](const char16_t* buf, uint32_t len, void* d) {
@@ -379,7 +397,6 @@ void ChromeUtils::AddProfilerMarker(
           return true;
         };
 
-        JS::Rooted<JSObject*> obj(cx, &objValue.toObject());
         if (!JS::ToJSONMaybeSafely(cx, obj, callback, &jsonString)) {
           return;
         }
@@ -2240,8 +2257,9 @@ already_AddRefed<Promise> ChromeUtils::CollectPerfStats(GlobalObject& aGlobal,
 
   extPromise->Then(
       GetCurrentSerialEventTarget(), __func__,
-      [promise](const nsCString& aResult) {
-        promise->MaybeResolve(NS_ConvertUTF8toUTF16(aResult));
+      [promise](const std::string& aResult) {
+        promise->MaybeResolve(
+            NS_ConvertUTF8toUTF16(aResult.c_str(), aResult.length()));
       },
       [promise](bool aValue) { promise->MaybeReject(NS_ERROR_FAILURE); });
 

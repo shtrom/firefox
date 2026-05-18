@@ -1,4 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -1020,6 +1019,12 @@ nsresult nsMultiMixedConv::ProcessHeader() {
         mByteRangeStart = mByteRangeEnd = 0;
       } else if (!p.ReadInteger(&mByteRangeStart) || !p.CheckChar('-') ||
                  !p.ReadInteger(&mByteRangeEnd)) {
+        return NS_ERROR_CORRUPTED_CONTENT;
+      }
+      // RFC 7233 Section 4.2: "A Content-Range field value is invalid if
+      // it contains a byte-range-resp that has a last-byte-pos value less
+      // than its first-byte-pos value."
+      if (mByteRangeStart > mByteRangeEnd) {
         return NS_ERROR_CORRUPTED_CONTENT;
       }
       mIsByteRangeRequest = true;

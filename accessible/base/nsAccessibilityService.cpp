@@ -1,4 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -181,13 +180,11 @@ static bool MustBeGenericAccessible(nsIContent* aContent,
   }
   nsIFrame* frame = aContent->GetPrimaryFrame();
   MOZ_ASSERT(frame);
-  nsAutoCString overflow;
-  frame->Style()->GetComputedPropertyValue(eCSSProperty_overflow, overflow);
   // If the frame has been transformed, and the content has any children, we
   // should create an Accessible so that we can account for the transform when
   // calculating the Accessible's bounds using the parent process cache.
   // Ditto for content which is position: fixed or sticky or has overflow
-  // styling (auto, scroll, hidden).
+  // styling (auto, scroll, hidden, or any multi-axis combination).
   // However, don't do this for XUL widgets, as this breaks XUL a11y code
   // expectations in some cases. XUL widgets are only used in the parent
   // process and can't be cached anyway.
@@ -196,8 +193,7 @@ static bool MustBeGenericAccessible(nsIContent* aContent,
           frame->IsStickyPositioned() ||
           (frame->StyleDisplay()->mPosition == StylePositionProperty::Fixed &&
            nsLayoutUtils::IsReallyFixedPos(frame)) ||
-          overflow.Equals("auto"_ns) || overflow.Equals("scroll"_ns) ||
-          overflow.Equals("hidden"_ns));
+          frame->StyleDisplay()->IsScrollableOverflow());
 }
 
 /**
@@ -262,13 +258,13 @@ bool nsAccessibilityService::ShouldCreateImgAccessible(
   }
 
   // If the element is not an img, not an embedded image via embed or object,
-  // and not a pseudo-element with CSS content alt text, then we should not
-  // create an accessible.
+  // and not a pseudo-element with non-empty CSS content alt text, then we
+  // should not create an accessible.
   if (!aElement->IsHTMLElement(nsGkAtoms::img) &&
       ((!aElement->IsHTMLElement(nsGkAtoms::embed) &&
         !aElement->IsHTMLElement(nsGkAtoms::object)) ||
        frame->AccessibleType() != AccType::eImageType) &&
-      !CssAltContent(aElement)) {
+      CssAltContent(aElement).IsEmpty()) {
     return false;
   }
 
@@ -319,7 +315,11 @@ static RefPtr<LocalAccessible> MaybeCreateSVGAccessible(
     // Shape elements: rect, circle, ellipse, line, path, polygon, and polyline.
     // 'use' and 'text' graphic elements require special support.
     if (MustSVGElementBeAccessible(aContent, aDocument)) {
-      return new EnumRoleAccessible<roles::GRAPHIC>(aContent, aDocument);
+      // Any accessible that could have TextLeafAccessible children must be a
+      // HyperTextAccessible to satisfy the invariant in
+      // GetTextAttributesLocalAcc.
+      return new EnumRoleHyperTextAccessible<roles::GRAPHIC>(aContent,
+                                                             aDocument);
     }
   } else if (aContent->IsSVGElement(nsGkAtoms::text)) {
     return new HyperTextAccessible(aContent->AsElement(), aDocument);
@@ -656,7 +656,7 @@ void nsAccessibilityService::NotifyOfResolutionChange(
   DocAccessible* document = aPresShell->GetDocAccessible();
   if (document && document->IPCDoc()) {
     AutoTArray<mozilla::a11y::CacheData, 1> data;
-    RefPtr<AccAttributes> fields = new AccAttributes();
+    auto fields = MakeRefPtr<AccAttributes>();
     fields->SetAttribute(CacheKey::Resolution, aResolution);
     data.AppendElement(mozilla::a11y::CacheData(0, fields));
     document->IPCDoc()->SendCache(CacheUpdateType::Update, data);
@@ -668,7 +668,7 @@ void nsAccessibilityService::NotifyOfDevPixelRatioChange(
   DocAccessible* document = aPresShell->GetDocAccessible();
   if (document && document->IPCDoc()) {
     AutoTArray<mozilla::a11y::CacheData, 1> data;
-    RefPtr<AccAttributes> fields = new AccAttributes();
+    auto fields = MakeRefPtr<AccAttributes>();
     fields->SetAttribute(CacheKey::AppUnitsPerDevPixel, aAppUnitsPerDevPixel);
     data.AppendElement(mozilla::a11y::CacheData(0, fields));
     document->IPCDoc()->SendCache(CacheUpdateType::Update, data);
@@ -806,8 +806,8 @@ void nsAccessibilityService::NotifyOfTabPanelVisibilityChange(
   }
 
   if (LocalAccessible* acc = document->GetAccessible(aPanel)) {
-    RefPtr<AccEvent> event =
-        new AccStateChangeEvent(acc, states::OFFSCREEN, aNowVisible);
+    auto event =
+        MakeRefPtr<AccStateChangeEvent>(acc, states::OFFSCREEN, aNowVisible);
     document->FireDelayedEvent(event);
   }
 }
@@ -891,8 +891,8 @@ void nsAccessibilityService::ComboboxValueChanged(nsIContent* aSelect) {
   if (!document) {
     return;
   }
-  if (LocalAccessible* accessible = document->GetAccessible(aSelect)) {
-    MOZ_ASSERT(accessible->IsCombobox());
+  if (LocalAccessible* accessible = document->GetAccessible(aSelect);
+      accessible && accessible->IsCombobox()) {
     document->FireDelayedEvent(nsIAccessibleEvent::EVENT_TEXT_VALUE_CHANGE,
                                accessible);
   }
@@ -1046,7 +1046,7 @@ void nsAccessibilityService::GetStringStates(uint32_t aState,
 
 already_AddRefed<DOMStringList> nsAccessibilityService::GetStringStates(
     uint64_t aStates) const {
-  RefPtr<DOMStringList> stringStates = new DOMStringList();
+  auto stringStates = MakeRefPtr<DOMStringList>();
 
   if (aStates & states::UNAVAILABLE) {
     stringStates->Add(u"unavailable"_ns);
@@ -1415,7 +1415,12 @@ LocalAccessible* nsAccessibilityService::CreateAccessible(
 
       return nullptr;
     }
-
+    if (cssAlt && cssAlt.IsEmpty()) {
+      if (aIsSubtreeHidden) {
+        *aIsSubtreeHidden = true;
+      }
+      return nullptr;
+    }
     newAcc = CreateAccessibleByFrameType(frame, content, aContext);
     MOZ_ASSERT(newAcc, "Accessible not created for text node!");
     document->BindToDocument(newAcc, nullptr);
@@ -1582,13 +1587,14 @@ LocalAccessible* nsAccessibilityService::CreateAccessible(
       if (aIsSubtreeHidden) {
         *aIsSubtreeHidden = true;
       }
-    } else if (auto cssAlt = CssAltContent(content)) {
-      // This is a pseudo-element without children that has CSS alt text. This
-      // only happens when there is alt text with an empty content string; e.g.
-      // content: "" / "alt"
-      // In this case, we need to expose the alt text on the pseudo-element
-      // itself, since we don't have a child to use. We create a
-      // TextLeafAccessible with the pseudo-element as the backing DOM node.
+    } else if (auto cssAlt = CssAltContent(content);
+               cssAlt && !cssAlt.IsEmpty()) {
+      // This is a pseudo-element without children that has CSS alt text which
+      // isn't empty. This only happens when there is alt text with an empty
+      // content string; e.g. content: "" / "alt" In this case, we need to
+      // expose the alt text on the pseudo-element itself, since we don't have a
+      // child to use. We create a TextLeafAccessible with the pseudo-element as
+      // the backing DOM node.
       newAcc = new TextLeafAccessible(content, document);
       nsAutoString text;
       cssAlt.AppendToString(text);
@@ -1608,15 +1614,10 @@ LocalAccessible* nsAccessibilityService::CreateAccessible(
     // accessibility property. If it's interesting we need it in the
     // accessibility hierarchy so that events or other accessibles can point to
     // it, or so that it can hold a state, etc.
-    if (content->IsHTMLElement() || content->IsMathMLElement() ||
-        content->IsSVGElement(nsGkAtoms::foreignObject)) {
-      // Interesting container which may have selectable text and/or embedded
-      // objects.
-      newAcc = new HyperTextAccessible(content, document);
-    } else {  // XUL, other SVG, etc.
-      // Interesting generic non-HTML container
-      newAcc = new AccessibleWrap(content, document);
-    }
+    // Interesting container which may have selectable text and/or embedded
+    // objects. Must be a HyperTextAccessible because children might include
+    // TextLeafAccessibles.
+    newAcc = new HyperTextAccessible(content, document);
   } else if (!newAcc && MustBeGenericAccessible(content, document)) {
     newAcc = new EnumRoleHyperTextAccessible<roles::TEXT_CONTAINER>(content,
                                                                     document);
@@ -1632,7 +1633,7 @@ LocalAccessible* nsAccessibilityService::CreateAccessible(
 #  include "mozilla/Monitor.h"
 #  include "mozilla/Maybe.h"
 
-static Maybe<Monitor> sAndroidMonitor;
+constinit static Maybe<Monitor> sAndroidMonitor;
 
 mozilla::Monitor& nsAccessibilityService::GetAndroidMonitor() {
   if (!sAndroidMonitor.isSome()) {
@@ -1678,17 +1679,15 @@ bool nsAccessibilityService::Init(uint64_t aCacheDomains) {
 
   eventListenerService->AddListenerChangeListener(this);
 
-  for (uint32_t i = 0; i < std::size(sHTMLMarkupMapList); i++) {
-    mHTMLMarkupMap.InsertOrUpdate(sHTMLMarkupMapList[i].tag,
-                                  &sHTMLMarkupMapList[i]);
+  for (const auto& info : sHTMLMarkupMapList) {
+    mHTMLMarkupMap.InsertOrUpdate(info.tag, &info);
   }
   for (const auto& info : sMathMLMarkupMapList) {
     mMathMLMarkupMap.InsertOrUpdate(info.tag, &info);
   }
 
-  for (uint32_t i = 0; i < std::size(sXULMarkupMapList); i++) {
-    mXULMarkupMap.InsertOrUpdate(sXULMarkupMapList[i].tag,
-                                 &sXULMarkupMapList[i]);
+  for (const auto& info : sXULMarkupMapList) {
+    mXULMarkupMap.InsertOrUpdate(info.tag, &info);
   }
 
 #ifdef A11Y_LOG
@@ -1718,11 +1717,11 @@ bool nsAccessibilityService::Init(uint64_t aCacheDomains) {
   if (XRE_IsParentProcess() &&
       StaticPrefs::accessibility_enable_all_cache_domains_AtStartup()) {
     gCacheDomains = CacheDomain::All;
+  } else {
+    // Set the active accessibility cache domains. We might want to modify the
+    // domains that we activate based on information about the instantiator.
+    gCacheDomains = ::GetCacheDomainsForKnownClients(aCacheDomains);
   }
-
-  // Set the active accessibility cache domains. We might want to modify the
-  // domains that we activate based on information about the instantiator.
-  gCacheDomains = ::GetCacheDomainsForKnownClients(aCacheDomains);
 
   static const char16_t kInitIndicator[] = {'1', 0};
   observerService->NotifyObservers(nullptr, "a11y-init-or-shutdown",

@@ -11,7 +11,6 @@ import mozilla.telemetry.glean.private.CounterMetricType
 import mozilla.telemetry.glean.private.EventMetricType
 import mozilla.telemetry.glean.private.NoExtras
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
@@ -28,6 +27,7 @@ import org.mozilla.fenix.components.menu.store.MenuState
 import org.mozilla.fenix.components.menu.store.MenuStore
 import org.mozilla.fenix.helpers.FenixGleanTestRule
 import org.robolectric.RobolectricTestRunner
+import kotlin.test.assertNotNull
 
 @RunWith(RobolectricTestRunner::class)
 class MenuTelemetryMiddlewareTest {
@@ -495,6 +495,16 @@ class MenuTelemetryMiddlewareTest {
         store.dispatch(MenuAction.OnCFRDismiss)
 
         assertTelemetryRecorded(Menu.dismissCfr)
+    }
+
+    @Test
+    fun `WHEN moving to a non-private tab THEN record the move to non-private tab browser menu telemetry`() {
+        val store = createStore()
+        assertNull(Events.browserMenuAction.testGetValue())
+
+        store.dispatch(MenuAction.MoveToNonPrivateTab)
+
+        assertTelemetryRecorded(Events.browserMenuAction, item = "move_to_non_private_tab")
     }
 
     @Test

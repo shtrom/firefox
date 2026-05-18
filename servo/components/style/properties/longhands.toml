@@ -331,6 +331,7 @@ affects = "paint"
 
 [aspect-ratio]
 type = "AspectRatio"
+boxed = true
 initial = "computed::AspectRatio::auto()"
 struct = "position"
 spec = "https://drafts.csswg.org/css-sizing-4/#aspect-ratio"
@@ -442,7 +443,6 @@ affects = "layout"
 type = "BorderSpacing"
 initial = "computed::BorderSpacing::zero()"
 struct = "inherited_table"
-boxed = true
 spec = "https://drafts.csswg.org/css-tables/#propdef-border-spacing"
 servo_restyle_damage = "rebuild_box"
 affects = "layout"
@@ -1707,7 +1707,7 @@ affects = "layout"
 
 [position-anchor]
 type = "PositionAnchor"
-initial = "computed::PositionAnchor::none()"
+initial = "computed::PositionAnchor::normal()"
 struct = "position"
 engine = "gecko"
 animation_type = "discrete"
@@ -1935,7 +1935,6 @@ initial = "computed::PageSize::auto()"
 struct = "page"
 engine = "gecko"
 spec = "https://drafts.csswg.org/css-page-3/#page-size-prop"
-boxed = true
 animation_type = "none"
 rule_types_allowed = ["page"]
 affects = "layout"
@@ -2182,7 +2181,7 @@ affects = "overflow"
 type = "UserSelect"
 initial = "computed::UserSelect::Auto"
 struct = "ui"
-engine = "gecko"
+servo_pref = "layout.unimplemented"
 extra_prefixes = ["moz", "webkit"]
 animation_type = "discrete"
 spec = "https://drafts.csswg.org/css-ui-4/#propdef-user-select"
@@ -2570,9 +2569,8 @@ affects = "layout"
 type = "NonNegativeLengthOrNumber"
 initial = "generics::length::LengthOrNumber::Number(From::from(8.0))"
 struct = "inherited_text"
-engine = "gecko"
 spec = "https://drafts.csswg.org/css-text-3/#tab-size-property"
-aliases = ["-moz-tab-size"]
+extra_gecko_aliases = ["-moz-tab-size"]
 affects = "layout"
 
 [text-autospace]
@@ -2769,7 +2767,6 @@ type = "TextDecorationInset"
 initial = "computed::text::TextDecorationInset::get_initial_value()"
 struct = "text"
 engine = "gecko"
-boxed = true
 gecko_pref = "layout.css.text-decoration-inset.enabled"
 spec = "https://drafts.csswg.org/css-text-decor-4/#text-decoration-skip-inset-property"
 affects = "overflow"
@@ -3535,11 +3532,11 @@ keyword = { values = ["padding-box", "border-box", "content-box"], gecko_enum_pr
 
 [background-blend-mode]
 struct = "background"
-engine = "gecko"
 vector = {}
 animation_type = "discrete"
 spec = "https://drafts.fxtf.org/compositing/#background-blend-mode"
 affects = "paint"
+servo_restyle_damage = "repaint"
 
 [background-blend-mode.keyword]
 values = [
@@ -3585,15 +3582,6 @@ animation_type = "none"
 enabled_in = "ua"
 affects = "layout"
 keyword = { values = ["none", "top"] }
-
-[-servo-overflow-clip-box]
-struct = "box"
-engine = "servo"
-spec = "Internal, not web-exposed,"
-animation_type = "none"
-enabled_in = "ua"
-affects = "layout"
-keyword = { values = ["padding-box", "content-box"] }
 
 [scroll-behavior]
 struct = "box"
@@ -3660,7 +3648,6 @@ gecko_constant_prefix = "NS_FONT_VARIANT_CAPS"
 
 [font-kerning]
 struct = "font"
-engine = "gecko"
 spec = "https://drafts.csswg.org/css-fonts/#propdef-font-kerning"
 animation_type = "discrete"
 affects = "layout"
@@ -3711,10 +3698,7 @@ struct = "font"
 engine = "gecko"
 spec = "https://w3c.github.io/mathml-core/#the-math-shift"
 animation_type = "discrete"
-enabled_in = "ua"
 affects = "layout"
-gecko_pref = "mathml.math_shift.enabled"
-has_effect_on_gecko_scrollbars = false
 keyword = { values = ["normal", "compact"] }
 
 [-moz-osx-font-smoothing]
@@ -4139,7 +4123,7 @@ keyword = { values = ["collapse", "preserve", "preserve-breaks", "break-spaces"]
 [timeline-scope]
 type = "ScopedName"
 initial = "computed::ScopedName::none()"
-struct = "box"
+struct = "ui"
 engine = "gecko"
 animation_type = "none"
 gecko_pref = "layout.css.scroll-driven-animations.enabled"

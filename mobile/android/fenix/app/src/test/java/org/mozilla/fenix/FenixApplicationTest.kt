@@ -14,18 +14,21 @@ import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.runBlocking
+import mozilla.components.browser.state.state.BrowserState
+import mozilla.components.browser.state.state.SearchState
 import mozilla.components.browser.state.store.BrowserStore
+import mozilla.components.concept.ai.controls.AIFeatureBlock
+import mozilla.components.concept.ai.controls.AIFeatureRegistry
 import mozilla.components.concept.engine.Engine.HttpsOnlyMode
 import mozilla.components.concept.engine.webextension.DisabledFlags
 import mozilla.components.concept.engine.webextension.Metadata
 import mozilla.components.concept.engine.webextension.WebExtension
 import mozilla.components.feature.addons.migration.DefaultSupportedAddonsChecker
+import mozilla.components.support.test.robolectric.DefaultBrowserUtils
 import mozilla.components.support.test.robolectric.testContext
 import mozilla.components.support.utils.BrowsersCache
-import mozilla.components.support.utils.DefaultBrowserUtils
 import mozilla.components.support.utils.ext.packageManagerWrapper
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -54,6 +57,7 @@ import org.mozilla.fenix.utils.Settings
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import kotlin.test.assertNotNull
 
 @RunWith(RobolectricTestRunner::class)
 class FenixApplicationTest {
@@ -84,6 +88,8 @@ class FenixApplicationTest {
 
         every { testContext.components.core } returns mockk(relaxed = true)
         every { testContext.components.nimbus } returns mockk(relaxed = true)
+        every { testContext.components.aiControlsFeatureBlock } returns AIFeatureBlock.inMemory()
+        every { testContext.components.aiFeatureRegistry } returns AIFeatureRegistry.inMemory()
         every { testContext.components.distributionIdManager } returns DistributionIdManager(
             packageManager = testContext.packageManagerWrapper,
             browserStoreProvider = DefaultDistributionBrowserStoreProvider(browserStore),
@@ -154,9 +160,8 @@ class FenixApplicationTest {
         every { settings.mobileBookmarksSize } returns 5
         every { settings.toolbarPosition } returns ToolbarPosition.BOTTOM
         every { settings.shouldUseExpandedToolbar } returns true
-        every { settings.shouldShowToolbarCustomization } returns true
-        every { settings.toolbarSimpleShortcut } returns ShortcutType.SHARE.value
-        every { settings.toolbarExpandedShortcut } returns ShortcutType.HOMEPAGE.value
+        every { settings.toolbarSimpleShortcutKey } returns ShortcutType.SHARE.value
+        every { settings.toolbarExpandedShortcutKey } returns ShortcutType.HOMEPAGE.value
         every { settings.getTabViewPingString() } returns "test"
         every { settings.getTabTimeoutPingString() } returns "test"
         every { settings.shouldShowSearchSuggestions } returns true
@@ -167,7 +172,6 @@ class FenixApplicationTest {
         every { settings.shouldShowHistorySuggestions } returns true
         every { settings.shouldShowBookmarkSuggestions } returns true
         every { settings.shouldShowClipboardSuggestions } returns true
-        every { settings.shouldShowSearchShortcuts } returns true
         every { settings.openLinksInAPrivateTab } returns true
         every { settings.shouldShowSearchSuggestionsInPrivate } returns true
         every { settings.shouldShowVoiceSearch } returns true
@@ -233,7 +237,6 @@ class FenixApplicationTest {
         assertEquals(true, Preferences.browsingHistorySuggestion.testGetValue())
         assertEquals(true, Preferences.bookmarksSuggestion.testGetValue())
         assertEquals(true, Preferences.clipboardSuggestionsEnabled.testGetValue())
-        assertEquals(true, Preferences.searchShortcutsEnabled.testGetValue())
         assertEquals(true, Preferences.voiceSearchEnabled.testGetValue())
         assertEquals("never", Preferences.openLinksInAppEnabled.testGetValue())
         assertEquals(true, Preferences.signedInSync.testGetValue())
@@ -255,10 +258,10 @@ class FenixApplicationTest {
         assertEquals(true, Preferences.globalPrivacyControlEnabled.testGetValue())
         assertEquals(true, TabStrip.enabled.testGetValue())
 
-        val contextId = TopSites.contextId.testGetValue()!!.toString()
+        val contextId = TopSites.contextId.testGetValue()
 
-        assertNotNull(TopSites.contextId.testGetValue())
-        assertEquals(contextId, settings.contileContextId)
+        assertNotNull(contextId)
+        assertEquals(contextId.toString(), settings.contileContextId)
 
         // Verify that search engine defaults are NOT set. This test does
         // not mock most of the objects telemetry is collected from.
@@ -272,8 +275,8 @@ class FenixApplicationTest {
             mozillaProductDetector = mozillaProductDetector,
         )
 
-        assertEquals(contextId, TopSites.contextId.testGetValue()!!.toString())
-        assertEquals(contextId, settings.contileContextId)
+        assertEquals(contextId, TopSites.contextId.testGetValue())
+        assertEquals(contextId.toString(), settings.contileContextId)
     }
 
     @Test
@@ -316,4 +319,49 @@ class FenixApplicationTest {
 
             assertEquals("Test", Preferences.etpCustomCookiesSelection.testGetValue())
         }
+
+    @Test
+    fun `WHEN the search configuration is updated in remote settings THEN set a new search configuration being available`() {
+        val browserStore = BrowserStore(
+            BrowserState(
+                search = SearchState(
+                    isNewSearchConfigurationAvailable = false,
+                ),
+            ),
+        )
+
+        application.setupRefreshingSearchEngines(listOf("search-config-v2"), browserStore)
+
+        assertTrue(browserStore.state.search.isNewSearchConfigurationAvailable)
+    }
+
+    @Test
+    fun `WHEN the search configuration overrides are updated in remote settings THEN set a new search configuration being available`() {
+        val browserStore = BrowserStore(
+            BrowserState(
+                search = SearchState(
+                    isNewSearchConfigurationAvailable = false,
+                ),
+            ),
+        )
+
+        application.setupRefreshingSearchEngines(listOf("search-config-overrides-v2"), browserStore)
+
+        assertTrue(browserStore.state.search.isNewSearchConfigurationAvailable)
+    }
+
+    @Test
+    fun `WHEN the search engine icons are updated in remote settings THEN set a new search configuration being available`() {
+        val browserStore = BrowserStore(
+            BrowserState(
+                search = SearchState(
+                    isNewSearchConfigurationAvailable = false,
+                ),
+            ),
+        )
+
+        application.setupRefreshingSearchEngines(listOf("search-config-icons"), browserStore)
+
+        assertTrue(browserStore.state.search.isNewSearchConfigurationAvailable)
+    }
 }

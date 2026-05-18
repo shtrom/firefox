@@ -140,14 +140,15 @@ const UNITS_GROUPS = [
     inch: M_TO_IN,
     inches: "inch",
     in: "inch",
-    "nautical-mile": 1 / 1852,
-    nmi: "nautical-mile",
-    NM: "nautical-mile",
+    "nautical mile": 1 / 1852,
+    nmi: "nautical mile",
+    NM: "nautical mile",
     "light-year": 1 / 9460730472580800,
+    "light year": "light-year",
     lyr: "light-year",
     ly: "light-year",
-    "astronomical-unit": 1 / 149597870700,
-    au: "astronomical-unit",
+    "astronomical unit": 1 / 149597870700,
+    au: "astronomical unit",
   },
   {
     // Mass
@@ -159,12 +160,14 @@ const UNITS_GROUPS = [
     mg: "milligram",
     ton: 0.001,
     t: "ton",
-    longton: 1 / LB_TO_KG / 2240,
-    "l.t.": "longton",
-    "l/t": "longton",
-    shortton: 1 / LB_TO_KG / 2000,
-    "s.t.": "shortton",
-    "s/t": "shortton",
+    "long ton": 1 / LB_TO_KG / 2240,
+    longton: "long ton",
+    "l.t.": "long ton",
+    "l/t": "long ton",
+    "short ton": 1 / LB_TO_KG / 2000,
+    shortton: "short ton",
+    "s.t.": "short ton",
+    "s/t": "short ton",
     pound: 1 / LB_TO_KG,
     lbs: "pound",
     lb: "pound",
@@ -172,6 +175,21 @@ const UNITS_GROUPS = [
     oz: "ounce",
     carat: 5000,
     ffd: 5000,
+  },
+  {
+    // Speed
+    "m/s": 1,
+    "km/h": 3600 / 1000,
+    "km/hr": "km/h",
+    kph: "km/h",
+    "ft/s": M_TO_IN / 12,
+    fps: "ft/s",
+    mph: (3600 * M_TO_IN) / 63360,
+    "mi/hr": "mph",
+    "mi/h": "mph",
+    knot: 3600 / 1852,
+    kn: "knot",
+    kt: "knot",
   },
 ];
 
@@ -181,7 +199,7 @@ const UNITS_GROUPS = [
 const CASE_SENSITIVE_UNITS = ["PN", "Pn", "MN", "Mn", "NM"];
 
 const NUMBER_REGEX = "-?\\d+(?:\\.\\d+)?\\s*";
-const UNIT_REGEX = "[A-Za-zµ°_./-]+";
+const UNIT_REGEX = "[A-Za-zµ°_./-]+ ?[A-Za-z]*";
 
 // NOTE: This regex need to be localized upon supporting multi locales
 //       since it supports en-US input format only.
@@ -207,7 +225,7 @@ export class UnitConverterSimple {
       return null;
     }
 
-    const target = findUnitGroup(regexResult[2], regexResult[3]);
+    const target = findUnitGroup(regexResult[2].trim(), regexResult[3].trim());
 
     if (!target) {
       return null;

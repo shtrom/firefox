@@ -1,10 +1,9 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set sw=2 ts=8 et tw=80 : */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "CookieCommons.h"
+#include "CookieDummyStorage.h"
 #include "CookieLogging.h"
 #include "CookieParser.h"
 #include "CookieService.h"
@@ -38,6 +37,7 @@
 #include "nsIWebProgressListener.h"
 #include "nsNetUtil.h"
 #include "ThirdPartyUtil.h"
+#include "xpcpublic.h"
 
 using namespace mozilla::dom;
 
@@ -260,6 +260,10 @@ nsresult CookieService::Init() {
   os->AddObserver(this, "last-pb-context-exited", true);
   os->AddObserver(this, "browser-delayed-startup-finished", true);
 
+  RunOnShutdown(
+      [self = RefPtr{this}] { self->RetirePersistentStorageForShutdown(); },
+      ShutdownPhase::AppShutdown);
+
   return NS_OK;
 }
 
@@ -267,16 +271,23 @@ void CookieService::InitCookieStorages() {
   NS_ASSERTION(!mPersistentStorage, "already have a default CookieStorage");
   NS_ASSERTION(!mPrivateStorage, "already have a private CookieStorage");
 
-  // Create two new CookieStorages. If we are in or beyond our observed
-  // shutdown phase, just be non-persistent.
-  if (MOZ_UNLIKELY(StaticPrefs::network_cookie_noPersistentStorage() ||
-                   AppShutdown::IsInOrBeyond(ShutdownPhase::AppShutdown))) {
+  if (MOZ_UNLIKELY(AppShutdown::IsInOrBeyond(ShutdownPhase::AppShutdown))) {
+    mPersistentStorage = new CookieDummyStorage();
+  } else if (MOZ_UNLIKELY(StaticPrefs::network_cookie_noPersistentStorage())) {
     mPersistentStorage = CookiePrivateStorage::Create();
   } else {
     mPersistentStorage = CookiePersistentStorage::Create();
   }
 
   mPrivateStorage = CookiePrivateStorage::Create();
+}
+
+void CookieService::RetirePersistentStorageForShutdown() {
+  MOZ_ASSERT(NS_IsMainThread());
+  if (mPersistentStorage) {
+    mRetiredStorage = std::move(mPersistentStorage);
+    mPersistentStorage = new CookieDummyStorage();
+  }
 }
 
 void CookieService::CloseCookieStorages() {
@@ -292,8 +303,14 @@ void CookieService::CloseCookieStorages() {
   RefPtr<CookieStorage> persistentStorage;
   persistentStorage.swap(mPersistentStorage);
 
+  RefPtr<CookieStorage> retiredStorage;
+  retiredStorage.swap(mRetiredStorage);
+
   privateStorage->Close();
   persistentStorage->Close();
+  if (retiredStorage) {
+    retiredStorage->Close();
+  }
 }
 
 CookieService::~CookieService() {
@@ -326,6 +343,10 @@ CookieService::Observe(nsISupports* /*aSubject*/, const char* aTopic,
 
 NS_IMETHODIMP
 CookieService::TestCloseCookieDB() {
+  if (!xpc::IsInAutomation()) {
+    return NS_ERROR_NOT_AVAILABLE;
+  }
+
   CloseCookieStorages();
   return NS_OK;
 }
@@ -574,14 +595,16 @@ CookieService::SetCookieStringFromHttp(nsIURI* aHostURI,
   nsAutoCString dateHeader;
   CookieCommons::GetServerDateHeader(aChannel, dateHeader);
 
+  int64_t currentTimeInUsec =
+      CookieCommons::GetCurrentTimeInUSecFromChannel(aChannel);
+
   // process each cookie in the header
   CookieParser cookieParser(crc, aHostURI);
 
   cookieParser.Parse(baseDomain, requireHostMatch, cookieStatus, cookieHeader,
                      dateHeader, true, isForeignAndNotAddon, mustBePartitioned,
                      storagePrincipalOriginAttributes.IsPrivateBrowsing(),
-                     loadInfo->GetIsOn3PCBExceptionList(),
-                     CookieCommons::GetCurrentTimeInUSecFromChannel(aChannel));
+                     loadInfo->GetIsOn3PCBExceptionList(), currentTimeInUsec);
 
   if (!cookieParser.ContainsCookie()) {
     return NS_OK;
@@ -618,7 +641,6 @@ CookieService::SetCookieStringFromHttp(nsIURI* aHostURI,
       Cookie::Create(cookieParser.CookieData(), cookieOriginAttributes);
   MOZ_ASSERT(cookie);
 
-  int64_t currentTimeInUsec = PR_Now();
   cookie->SetLastAccessedInUSec(currentTimeInUsec);
   cookie->SetCreationTimeInUSec(
       Cookie::GenerateUniqueCreationTimeInUSec(currentTimeInUsec));
@@ -1687,7 +1709,7 @@ CookieStorage* CookieService::PickStorage(
 
 nsICookieValidation::ValidationError CookieService::SetCookiesFromIPC(
     const nsACString& aBaseDomain, const OriginAttributes& aAttrs,
-    nsIURI* aHostURI, bool aFromHttp, bool aIsThirdParty,
+    nsIURI* aHostURI, bool aIsThirdParty,
     const nsTArray<CookieStruct>& aCookies, BrowsingContext* aBrowsingContext) {
   if (!IsInitialized()) {
     // If we are probably shutting down, we can ignore this cookie.
@@ -1699,7 +1721,7 @@ nsICookieValidation::ValidationError CookieService::SetCookiesFromIPC(
 
   for (const CookieStruct& cookieData : aCookies) {
     RefPtr<CookieValidation> validation = CookieValidation::ValidateForHost(
-        cookieData, aHostURI, aBaseDomain, false, aFromHttp);
+        cookieData, aHostURI, aBaseDomain, false, false);
     MOZ_ASSERT(validation);
 
     if (validation->Result() != nsICookieValidation::eOK) {
@@ -1718,8 +1740,7 @@ nsICookieValidation::ValidationError CookieService::SetCookiesFromIPC(
     cookie->SetUpdateTimeInUSec(cookie->CreationTimeInUSec());
 
     storage->AddCookie(nullptr, aBaseDomain, aAttrs, cookie, currentTimeInUsec,
-                       aHostURI, ""_ns, aFromHttp, aIsThirdParty,
-                       aBrowsingContext);
+                       aHostURI, ""_ns, false, aIsThirdParty, aBrowsingContext);
   }
 
   return nsICookieValidation::eOK;

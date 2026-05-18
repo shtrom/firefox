@@ -1,4 +1,3 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -93,6 +92,11 @@ class nsHttpConnection final : public HttpConnectionBase,
            (mKeepAliveMask && mKeepAlive);
   }
 
+  // Cheap reuse check without the IsAlive() socket probe. Used by
+  // AvailableForDispatchNow() to avoid a redundant probe before
+  // GetIdleConnection() performs the definitive check.
+  bool CanReuseLikely();
+
   // Returns time in seconds for how long connection can be reused.
   uint32_t TimeToLive();
 
@@ -115,6 +119,8 @@ class nsHttpConnection final : public HttpConnectionBase,
 
   int64_t MaxBytesRead() { return mMaxBytesRead; }
   HttpVersion GetLastHttpResponseVersion() { return mLastHttpResponseVersion; }
+
+  nsresult HandshakeError() const { return mHandshakeError; }
 
   friend class HttpConnectionForceIO;
   friend class TlsHandshaker;
@@ -196,6 +202,13 @@ class nsHttpConnection final : public HttpConnectionBase,
   nsresult CreateTunnelStream(nsAHttpTransaction* httpTransaction,
                               HttpConnectionBase** aHttpConnection,
                               bool aIsExtendedCONNECT = false) override;
+
+  // Replace the transaction this H1 connection is currently driving.
+  // Analog of Http2Session::SwapTransaction / Http3Session::SwapTransaction:
+  // used by the HE / 0-RTT adopt path when a HappyEyeballsTransaction shim
+  // is replaced by the real nsHttpTransaction on an already-activated H1
+  // connection. No-op if `aOld` isn't the current mTransaction.
+  void SwapTransaction(nsAHttpTransaction* aOld, nsAHttpTransaction* aNew);
 
  private:
   void SetTunnelSetupDone() override;
@@ -327,6 +340,12 @@ class nsHttpConnection final : public HttpConnectionBase,
 
   // mLastHttpResponseVersion stores the last response's http version seen.
   HttpVersion mLastHttpResponseVersion{HttpVersion::v1_1};
+
+  // Set by PostProcessNPNSetup on TLS handshake failure (translated from
+  // the security info's PRErrorCode via psm::GetXPCOMFromNSSError). Read
+  // by HappyEyeballsTransaction::ReadSegments to surface the cert/TLS
+  // error instead of NS_BASE_STREAM_CLOSED.
+  nsresult mHandshakeError{NS_OK};
 
   // If a large keepalive has been requested for any trans,
   // scale the default by this factor

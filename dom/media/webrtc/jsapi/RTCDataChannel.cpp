@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -602,8 +600,7 @@ dom::RTCDataChannelStats RTCDataChannel::GetStats(
 void RTCDataChannel::UnsetWorkerNeedsUs() {
   MOZ_ASSERT(mEventTarget->IsOnCurrentThread());
   mWorkerNeedsUs = false;
-  DC_INFO(("%p: Unsetting mWorkerNeedsUs, clearing worker weak ref", this));
-  mWorkerRef = nullptr;
+  DC_INFO(("%p: Unsetting mWorkerNeedsUs", this));
   UpdateMustKeepAlive();
 }
 
@@ -719,7 +716,7 @@ nsresult RTCDataChannel::DoOnMessageAvailable(const nsACString& aData,
   if (aBinary) {
     if (mBinaryType == RTCDataChannelType::Blob) {
       RefPtr<Blob> blob =
-          Blob::CreateStringBlob(GetOwnerGlobal(), aData, u""_ns);
+          Blob::CreateStringBlob(GetRelevantGlobal(), aData, u""_ns);
       if (NS_WARN_IF(!blob)) {
         DC_ERROR(("%p: RTCDataChannel::%s: CreateStringBlob failed", this,
                   __func__));

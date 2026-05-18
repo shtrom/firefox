@@ -1,6 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * vim: set ts=8 sts=2 et sw=2 tw=80:
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -34,7 +32,9 @@
 //   a. Set `set_spidermonkey_pref: startup`
 //   b. Set value to 'true' for default features, @IS_NIGHTLY_BUILD@ for
 //      tentative features, and 'false' for experimental features.
-// 5. [fuzzing] Add the feature to gluesmith/src/lib.rs, if wasm-smith has
+// 5. Update the jit-test/tests/wasm/directiveless/features.js test to include
+//    this feature.
+// 6. [fuzzing] Add the feature to gluesmith/src/lib.rs, if wasm-smith has
 //    support for it.
 
 #ifdef ENABLE_WASM_RELAXED_SIMD
@@ -77,7 +77,7 @@
 #define JS_FOR_WASM_FEATURES(FEATURE)                                   \
   FEATURE(                                                              \
     /* capitalized name   */ RelaxedSimd,                               \
-    /* lower case name    */ v128Relaxed,                               \
+    /* lower case name    */ relaxedSimd,                               \
     /* compile predicate  */ WASM_RELAXED_SIMD_ENABLED,                 \
     /* compiler predicate */ AnyCompilerAvailable(cx),                  \
     /* flag predicate     */ js::jit::JitSupportsWasmSimd(),            \
@@ -102,6 +102,15 @@
     /* flag force enable  */ false,                                     \
     /* flag fuzz enable   */ true,                                      \
     /* preference name    */ js_promise_integration)                    \
+  FEATURE(                                                              \
+    /* capitalized name   */ StackSwitching,                            \
+    /* lower case name    */ stackSwitching,                            \
+    /* compile predicate  */ WASM_JSPI_ENABLED,                         \
+    /* compiler predicate */ IonPlatformSupport(),                      \
+    /* flag predicate     */ true,                                      \
+    /* flag force enable  */ false,                                     \
+    /* flag fuzz enable   */ true,                                      \
+    /* preference name    */ stack_switching)                           \
   FEATURE(                                                              \
     /* capitalized name   */ MozIntGemm,                                \
     /* lower case name    */ mozIntGemm,                                \
@@ -146,7 +155,16 @@
     /* flag predicate     */ true,                                      \
     /* flag force enable  */ false,                                     \
     /* flag fuzz enable   */ true,                                      \
-    /* preference name    */ compact_imports)
+    /* preference name    */ compact_imports)                           \
+  FEATURE(                                                              \
+    /* capitalized name   */ WideArithmetic,                            \
+    /* lower case name    */ wideArithmetic,                            \
+    /* compile predicate  */ 1,                                         \
+    /* compiler predicate */ AnyCompilerAvailable(cx),                  \
+    /* flag predicate     */ true,                                      \
+    /* flag force enable  */ false,                                     \
+    /* flag fuzz enable   */ true,                                      \
+    /* preference name    */ wide_arithmetic)
 
 // clang-format on
 

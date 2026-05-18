@@ -1,4 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -42,6 +41,7 @@
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/DocumentInlines.h"
 #include "mozilla/dom/DragEvent.h"
+#include "mozilla/dom/NodeList.h"
 #include "mozilla/dom/Selection.h"
 #include "mozilla/gfx/2D.h"
 #include "nsFrameLoader.h"
@@ -342,7 +342,7 @@ nsresult nsBaseDragSession::InvokeDragSession(
         do_GetService("@mozilla.org/widget/dragservice;1");
     MOZ_ASSERT(dragService);
     MOZ_ASSERT(
-        !xpc::IsInAutomation() || dragService->IsMockService(),
+        !xpc::IsInAutomation() || dragService->GetIsMockService(),
         "About to start drag-drop native loop on which will prevent later "
         "tests from running properly.");
   }
@@ -1035,7 +1035,7 @@ nsresult nsBaseDragSession::DrawDrag(nsINode* aDOMNode,
       if (dragNode->NodeName().LowerCaseEqualsLiteral("img")) {
         renderFlags = renderFlags | RenderImageFlags::IsImage;
       } else {
-        nsINodeList* childList = dragNode->ChildNodes();
+        dom::NodeList* childList = dragNode->ChildNodes();
         uint32_t length = childList->Length();
         // check every childnode for being an img element
         // XXXbz why don't we need to check descendants recursively?

@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -290,45 +288,45 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
   mozilla::ipc::IPCResult RecvDeactivate(uint64_t aActionId);
 
   mozilla::ipc::IPCResult RecvRealMouseMoveEvent(
-      const mozilla::WidgetMouseEvent& aEvent, const ScrollableLayerGuid& aGuid,
-      const uint64_t& aInputBlockId);
+      const mozilla::WidgetMouseEvent& aMouseEvent,
+      const ScrollableLayerGuid& aGuid, const uint64_t& aInputBlockId);
   mozilla::ipc::IPCResult RecvNormalPriorityRealMouseMoveEvent(
-      const mozilla::WidgetMouseEvent& aEvent, const ScrollableLayerGuid& aGuid,
-      const uint64_t& aInputBlockId);
-  mozilla::ipc::IPCResult RecvRealMouseMoveEventForTests(
-      const mozilla::WidgetMouseEvent& aEvent, const ScrollableLayerGuid& aGuid,
-      const uint64_t& aInputBlockId);
-  mozilla::ipc::IPCResult RecvNormalPriorityRealMouseMoveEventForTests(
-      const mozilla::WidgetMouseEvent& aEvent, const ScrollableLayerGuid& aGuid,
-      const uint64_t& aInputBlockId);
+      const mozilla::WidgetMouseEvent& aMouseEvent,
+      const ScrollableLayerGuid& aGuid, const uint64_t& aInputBlockId);
+  mozilla::ipc::IPCResult RecvRealMouseMoveEventNoCompress(
+      const mozilla::WidgetMouseEvent& aMouseEvent,
+      const ScrollableLayerGuid& aGuid, const uint64_t& aInputBlockId);
+  mozilla::ipc::IPCResult RecvNormalPriorityRealMouseMoveEventNoCompress(
+      const mozilla::WidgetMouseEvent& aMouseEvent,
+      const ScrollableLayerGuid& aGuid, const uint64_t& aInputBlockId);
 
   mozilla::ipc::IPCResult RecvSynthMouseMoveEvent(
-      const mozilla::WidgetMouseEvent& aEvent, const ScrollableLayerGuid& aGuid,
-      const uint64_t& aInputBlockId);
+      const mozilla::WidgetMouseEvent& aMouseEvent,
+      const ScrollableLayerGuid& aGuid, const uint64_t& aInputBlockId);
   mozilla::ipc::IPCResult RecvNormalPrioritySynthMouseMoveEvent(
-      const mozilla::WidgetMouseEvent& aEvent, const ScrollableLayerGuid& aGuid,
-      const uint64_t& aInputBlockId);
+      const mozilla::WidgetMouseEvent& aMouseEvent,
+      const ScrollableLayerGuid& aGuid, const uint64_t& aInputBlockId);
 
   mozilla::ipc::IPCResult RecvRealMouseButtonEvent(
-      const mozilla::WidgetMouseEvent& aEvent, const ScrollableLayerGuid& aGuid,
-      const uint64_t& aInputBlockId);
+      const mozilla::WidgetMouseEvent& aMouseOrPointerEvent,
+      const ScrollableLayerGuid& aGuid, const uint64_t& aInputBlockId);
   mozilla::ipc::IPCResult RecvNormalPriorityRealMouseButtonEvent(
-      const mozilla::WidgetMouseEvent& aEvent, const ScrollableLayerGuid& aGuid,
-      const uint64_t& aInputBlockId);
+      const mozilla::WidgetMouseEvent& aMouseOrPointerEvent,
+      const ScrollableLayerGuid& aGuid, const uint64_t& aInputBlockId);
 
   mozilla::ipc::IPCResult RecvRealPointerButtonEvent(
-      const mozilla::WidgetPointerEvent& aEvent,
+      const mozilla::WidgetPointerEvent& aPointerEvent,
       const ScrollableLayerGuid& aGuid, const uint64_t& aInputBlockId);
   mozilla::ipc::IPCResult RecvNormalPriorityRealPointerButtonEvent(
-      const mozilla::WidgetPointerEvent& aEvent,
+      const mozilla::WidgetPointerEvent& aPointerEvent,
       const ScrollableLayerGuid& aGuid, const uint64_t& aInputBlockId);
 
   mozilla::ipc::IPCResult RecvRealMouseEnterExitWidgetEvent(
-      const mozilla::WidgetMouseEvent& aEvent, const ScrollableLayerGuid& aGuid,
-      const uint64_t& aInputBlockId);
+      const mozilla::WidgetMouseEvent& aMouseEvent,
+      const ScrollableLayerGuid& aGuid, const uint64_t& aInputBlockId);
   mozilla::ipc::IPCResult RecvNormalPriorityRealMouseEnterExitWidgetEvent(
-      const mozilla::WidgetMouseEvent& aEvent, const ScrollableLayerGuid& aGuid,
-      const uint64_t& aInputBlockId);
+      const mozilla::WidgetMouseEvent& aMouseEvent,
+      const ScrollableLayerGuid& aGuid, const uint64_t& aInputBlockId);
 
   MOZ_CAN_RUN_SCRIPT_BOUNDARY
   mozilla::ipc::IPCResult RecvRealDragEvent(
@@ -435,6 +433,9 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
   mozilla::ipc::IPCResult RecvSafeAreaInsetsChanged(
       const mozilla::LayoutDeviceIntMargin& aSafeAreaInsets);
 
+  mozilla::ipc::IPCResult RecvInitSupportsUnadjustedMovement(
+      const bool& aSupportsUnadjustedMovement);
+
 #ifdef ACCESSIBILITY
   PDocAccessibleChild* AllocPDocAccessibleChild(
       PDocAccessibleChild*, const uint64_t&,
@@ -520,9 +521,9 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
     return GetFrom(docShell);
   }
 
-  mozilla::ipc::IPCResult RecvUIResolutionChanged(const float& aDpi,
-                                                  const int32_t& aRounding,
-                                                  const double& aScale);
+  mozilla::ipc::IPCResult RecvUIResolutionChanged(
+      const float& aDpi, const int32_t& aRounding, const double& aScale,
+      const double& aDesktopToDeviceScale);
 
   mozilla::ipc::IPCResult RecvTransparencyChanged(const bool& aIsTransparent);
 
@@ -656,7 +657,7 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
                                  const ScrollableLayerGuid& aGuid,
                                  const uint64_t& aInputBlockId);
 
-  void HandleRealMouseButtonEvent(const WidgetMouseEvent& aEvent,
+  void HandleRealMouseButtonEvent(const WidgetMouseEvent& aMouseOrPointerEvent,
                                   const ScrollableLayerGuid& aGuid,
                                   const uint64_t& aInputBlockId);
 
@@ -765,6 +766,10 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
 
   mozilla::ipc::IPCResult RecvReleasePointerLock();
 
+#if defined(ACCESSIBILITY) && defined(MOZ_ENABLE_SKIA_PDF)
+  mozilla::ipc::IPCResult RecvRequestDocAccessibleForPrint();
+#endif
+
  private:
   void HandleDoubleTap(const CSSPoint& aPoint, const Modifiers& aModifiers,
                        const ScrollableLayerGuid& aGuid,
@@ -814,8 +819,7 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
       const MaybeDiscardedBrowsingContext& aBc, const PrintData& aPrintData,
       RefPtr<BrowsingContext>* aCachedBrowsingContext);
 
-  bool CreateRemoteLayerManager(
-      mozilla::layers::PCompositorBridgeChild* aCompositorChild);
+  bool CreateRemoteLayerManager();
 
   nsresult PrepareRequestData(nsIRequest* aRequest, RequestData& aRequestData);
   nsresult PrepareProgressListenerData(nsIWebProgress* aWebProgress,
@@ -847,7 +851,14 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
   RefPtr<BrowsingContext> mBrowsingContext;
   RefPtr<nsIDragSession> mDragSession;
 
+  // Tracks the keydown event currently being dispatched.
+  // This allows us to detect whether the event loop is being spun during
+  // keydown dispatch, which can cause key event IPC messages to be handled
+  // out of order.
+  Maybe<CodeNameIndex> mCurrentBeingDispatchedKeyDownCode;
+  // Tracks the most recent keydown event that was consumed.
   Maybe<CodeNameIndex> mPreviousConsumedKeyDownCode;
+
   uint32_t mChromeFlags;
   uint32_t mMaxTouchPoints;
   // The number of windows which may have ePointerRawUpdate event listener.

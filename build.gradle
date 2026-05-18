@@ -31,6 +31,7 @@ plugins {
     id 'ApkSizePlugin'
     id "mozac.ConfigPlugin"
     id 'org.mozilla.conventions.mach-tasks'
+    alias(libs.plugins.android.library) apply false
     alias(libs.plugins.dependency.analysis)
     alias(libs.plugins.detekt)
     alias(libs.plugins.kotlin.android) apply false
@@ -254,7 +255,6 @@ afterEvaluate {
             def projectName = project.getName()
             if (projectName.startsWith('geckoview')
                 || projectName == 'annotations'
-                || projectName == 'exoplayer2'
                 || projectName == 'messaging_example'
                 || projectName == 'port_messaging_example'
                 || projectName == 'test_runner'
@@ -300,7 +300,6 @@ subprojects { project ->
     def projectName = project.getName()
     if (projectName.startsWith('geckoview')
             || projectName == 'annotations'
-            || projectName == 'exoplayer2'
             || projectName == 'messaging_example'
             || projectName == 'port_messaging_example'
             || projectName == 'test_runner'
@@ -337,9 +336,7 @@ subprojects { project ->
     }
 
     afterEvaluate {
-        // Our vendored copy of exoplayer2 hits build failures when targeting Java 17.
-        // Given our intent to remove it in the near future, just leave it alone here.
-        if (it.hasProperty('android') && projectName != 'exoplayer2') {
+        if (it.hasProperty('android')) {
             kotlin {
                 jvmToolchain(config.jvmTargetCompatibility)
             }
@@ -383,12 +380,12 @@ tasks.register("lint") {
     description = "Runs lint on all mobile projects."
     mobileProjects.each { dependsOn "${it}:lint" }
 }
-tasks.register("ktlint") {
+tasks.named("ktlint").configure {
     group = "verification"
     description = "Runs ktlint on all mobile projects."
     mobileProjects.each { dependsOn "${it}:ktlint" }
 }
-tasks.register("ktlintFormat") {
+tasks.named("ktlintFormat").configure {
     group = "formatting"
     description = "Runs ktlintFormat on all mobile projects."
     mobileProjects.each { dependsOn "${it}:ktlintFormat" }

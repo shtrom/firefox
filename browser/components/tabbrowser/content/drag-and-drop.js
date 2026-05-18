@@ -211,7 +211,7 @@
       } else {
         let newIndex = this._getDropIndex(event);
         if (
-          isSplitViewWrapper(draggedTab) &&
+          (isSplitViewWrapper(draggedTab) || isTabGroupLabel(draggedTab)) &&
           newIndex < gBrowser.pinnedTabCount
         ) {
           newIndex = gBrowser.pinnedTabCount;
@@ -373,8 +373,10 @@
         if (fromTabList) {
           dropIndex = this._getDropIndex(event);
           if (dropIndex && dropIndex > movingTabs[0].elementIndex) {
-            dropIndex--;
             directionForward = true;
+            if (!isSplitViewWrapper(movingTabs[0])) {
+              dropIndex--;
+            }
           }
         } else if (
           draggedTab.currentIndex > tabs[tabs.length - 1].currentIndex
@@ -420,13 +422,19 @@
         let moveTabs = () => {
           if (dropIndex !== undefined) {
             for (let tab of movingTabs) {
-              gBrowser.moveTabTo(
-                tab,
-                { elementIndex: dropIndex },
-                dropMetricsContext
-              );
-              if (!directionForward) {
-                dropIndex++;
+              if (fromTabList && isSplitViewWrapper(tab)) {
+                const dropTarget =
+                  this._tabbrowserTabs.dragAndDropElements[dropIndex];
+                gBrowser.moveTabBefore(tab, dropTarget, dropMetricsContext);
+              } else {
+                gBrowser.moveTabTo(
+                  tab,
+                  { elementIndex: dropIndex },
+                  dropMetricsContext
+                );
+                if (!directionForward) {
+                  dropIndex++;
+                }
               }
             }
           } else if (dropElement && dropBefore) {
@@ -524,8 +532,12 @@
           }
         }
       } else if (isTabGroupLabel(draggedTab)) {
+        const dropIndex = this._getDropIndex(event);
+        const droppedIntoPinnedArea = dropIndex < gBrowser.pinnedTabCount;
         gBrowser.adoptTabGroup(draggedTab.group, {
-          elementIndex: this._getDropIndex(event),
+          elementIndex: droppedIntoPinnedArea
+            ? gBrowser.pinnedTabCount
+            : dropIndex,
         });
       } else if (draggedTab) {
         // Move the tabs into this window. To avoid multiple tab-switches in
@@ -640,10 +652,11 @@
             Services.prefs.getIntPref("browser.tabs.maxOpenBeforeWarn")
           ) {
             // Sync dialog cannot be used inside drop event handler.
-            let answer = await OpenInTabsUtils.promiseConfirmOpenInTabs(
-              urls.length,
-              window
-            );
+            let answer =
+              await gBrowser.OpenInTabsUtils.promiseConfirmOpenInTabs(
+                urls.length,
+                window
+              );
             if (!answer) {
               return;
             }
@@ -957,11 +970,17 @@
      */
     #getHorizontalScrollboxDragTarget(event, ignoreSides) {
       function isWithinBounds(el) {
-        let { width } = window.windowUtils.getBoundsWithoutFlushing(el);
+        let { width, height } = window.windowUtils.getBoundsWithoutFlushing(el);
+        const startY = el.screenY;
+        const endY = el.screenY + height;
         const offset = ignoreSides ? width * 0.25 : 0;
         const startX = el.screenX + offset;
         const endX = el.screenX + width - offset;
-        return startX <= event.screenX && event.screenX <= endX;
+        const xBoundsPass = startX <= event.screenX && event.screenX <= endX;
+        const yBoundsPass = startY <= event.screenY && event.screenY <= endY;
+        return event.type === "dragstart"
+          ? xBoundsPass && yBoundsPass
+          : xBoundsPass;
       }
       return this._tabbrowserTabs.dragAndDropElements.find(isWithinBounds);
     }
@@ -1025,14 +1044,22 @@
         );
         return;
       }
+      const isNovaEnabled = Services.prefs.getBoolPref(
+        "browser.nova.enabled",
+        false
+      );
 
       this._tabbrowserTabs.style.setProperty(
         "--dragover-tab-group-color",
-        `var(--tab-group-color-${groupColorCode})`
+        isNovaEnabled
+          ? `var(--tab-group-${groupColorCode})`
+          : `var(--tab-group-color-${groupColorCode})`
       );
       this._tabbrowserTabs.style.setProperty(
         "--dragover-tab-group-color-invert",
-        `var(--tab-group-color-${groupColorCode}-invert)`
+        isNovaEnabled
+          ? `var(--tab-group-${groupColorCode}-invert`
+          : `var(--tab-group-color-${groupColorCode}-invert)`
       );
       this._tabbrowserTabs.style.setProperty(
         "--dragover-tab-group-color-pale",
@@ -1482,7 +1509,7 @@
       if (this._tabbrowserTabs.expandOnHover) {
         // Query the expanded width from sidebar launcher to ensure tabs aren't
         // cut off (Bug 1974037).
-        const { SidebarController } = tab.ownerGlobal;
+        const { SidebarController } = tab.documentGlobal;
         SidebarController.expandOnHoverComplete.then(async () => {
           const width = await window.promiseDocumentFlushed(
             () => SidebarController.sidebarMain.clientWidth
@@ -2343,6 +2370,9 @@
         // When dragging tab(s) over an ungrouped tab, signal to the user
         // that dropping the tab(s) will create a new tab group.
         let shouldCreateGroupOnDrop =
+          Services.prefs.getBoolPref(
+            "browser.tabs.dragDrop.createGroup.enabled"
+          ) &&
           !movingTabsSet.has(dropElement) &&
           (isTab(dropElement) || isSplitViewWrapper(dropElement)) &&
           !dropElement?.group &&
@@ -2554,7 +2584,7 @@
         "pinned-drop-indicator"
       );
       let draggedTabContainer =
-        draggedTabDocument.ownerGlobal.gBrowser.tabContainer;
+        draggedTabDocument.documentGlobal.gBrowser.tabContainer;
       pinnedDropIndicator.removeAttribute("visible");
       pinnedDropIndicator.removeAttribute("interactive");
       draggedTabContainer.style.maxWidth = "";
@@ -2653,7 +2683,7 @@
           (isTab(sourceNode) ||
             isTabGroupLabel(sourceNode) ||
             isSplitViewWrapper(sourceNode)) &&
-          sourceNode.ownerGlobal.isChromeWindow &&
+          sourceNode.documentGlobal.isChromeWindow &&
           sourceNode.ownerDocument.documentElement.getAttribute("windowtype") ==
             "navigator:browser"
         ) {
@@ -2661,20 +2691,20 @@
           // and vice versa.
           if (
             PrivateBrowsingUtils.isWindowPrivate(window) !=
-            PrivateBrowsingUtils.isWindowPrivate(sourceNode.ownerGlobal)
+            PrivateBrowsingUtils.isWindowPrivate(sourceNode.documentGlobal)
           ) {
             return "none";
           }
 
           if (
             window.gMultiProcessBrowser !=
-            sourceNode.ownerGlobal.gMultiProcessBrowser
+            sourceNode.documentGlobal.gMultiProcessBrowser
           ) {
             return "none";
           }
 
           if (
-            window.gFissionBrowser != sourceNode.ownerGlobal.gFissionBrowser
+            window.gFissionBrowser != sourceNode.documentGlobal.gFissionBrowser
           ) {
             return "none";
           }

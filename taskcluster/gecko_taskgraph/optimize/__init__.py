@@ -120,6 +120,19 @@ class project:
     }
     """Strategy overrides that apply to autoland."""
 
+    beta = {
+        # Don't run tests on-push on beta.  The run-missing-tests action and
+        # cron job take care of running them regularly.
+        "test": Alias("always"),
+    }
+    """Strategy overrides that apply to beta."""
+
+    pull_request = {
+        "upload-symbols": Alias("always"),
+        "reprocess-symbols": Alias("always"),
+    }
+    """Strategy overrides that apply to pull requests."""
+
 
 class experimental:
     """Experimental strategies either under development or used as benchmarks.

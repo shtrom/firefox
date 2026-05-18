@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -12,12 +10,12 @@
 #include "mozilla/AbsoluteContainingBlock.h"
 
 #include "AnchorPositioningUtils.h"
-#include "fmt/format.h"
 #include "mozilla/CSSAlignUtils.h"
 #include "mozilla/DebugOnly.h"
 #include "mozilla/PresShell.h"
 #include "mozilla/ReflowInput.h"
 #include "mozilla/ScrollContainerFrame.h"
+#include "mozilla/ServoStyleSet.h"
 #include "mozilla/ViewportFrame.h"
 #include "mozilla/dom/ViewTransition.h"
 #include "nsCSSFrameConstructor.h"
@@ -29,6 +27,7 @@
 #include "nsPresContextInlines.h"
 
 #ifdef DEBUG
+#  include "fmt/format.h"
 #  include "nsBlockFrame.h"
 #endif
 
@@ -203,7 +202,8 @@ bool AbsoluteContainingBlock::PrepareAbsoluteFrames(
 
       // After stealing children from the previous absCB, traverse our children
       // and see if any child has a prev-in-flow that is also in our child list.
-      // If so, we move the child to our pushed child list.
+      // If so, we insert them at the front of our pushed child list.
+      nsFrameList newPushedAbsoluteFrames;
       for (auto iter = mAbsoluteFrames.begin();
            iter != mAbsoluteFrames.end();) {
         // Advance the iterator first, so it's safe to move |child|.
@@ -212,8 +212,13 @@ bool AbsoluteContainingBlock::PrepareAbsoluteFrames(
         if (childPrevInFlow &&
             childPrevInFlow->GetParent() == aDelegatingFrame) {
           mAbsoluteFrames.RemoveFrame(child);
-          mPushedAbsoluteFrames.AppendFrame(nullptr, child);
+          newPushedAbsoluteFrames.AppendFrame(nullptr, child);
         }
+      }
+      if (newPushedAbsoluteFrames.NotEmpty()) {
+        // Prepend the new pushed frames to the front of mPushedAbsoluteFrames.
+        mPushedAbsoluteFrames.InsertFrames(nullptr, nullptr,
+                                           std::move(newPushedAbsoluteFrames));
       }
     }
   }
@@ -236,6 +241,7 @@ bool AbsoluteContainingBlock::PrepareAbsoluteFrames(
 
     for (auto iter = nextAbsCB->GetChildList().begin();
          iter != nextAbsCB->GetChildList().end();) {
+      // Advance the iterator first, so it's safe to move |child|.
       nsIFrame* const child = *iter++;
       if (!child->GetPrevInFlow()) {
         nextAbsCB->StealFrame(child);
@@ -266,13 +272,39 @@ void AbsoluteContainingBlock::SanityCheckChildListsBeforeReflow(
   // TODO(TYLin): This is potentially O(N^2), where N is the number of
   // continuations that an abspos frame gets. Consider putting this behind an
   // about:config pref if it turns out to slow down debug builds too much.
-  for (const nsFrameList* list : {&mAbsoluteFrames, &mPushedAbsoluteFrames}) {
-    for (const nsIFrame* child : *list) {
-      for (nsIFrame* prev = child->GetPrevInFlow(); prev;
-           prev = prev->GetPrevInFlow()) {
-        MOZ_ASSERT(!list->ContainsFrame(prev),
-                   "It is wrong that both a child and its prev-in-flow are in "
-                   "the same child list!");
+  for (const nsIFrame* child : mAbsoluteFrames) {
+    for (nsIFrame* prev = child->GetPrevInFlow(); prev;
+         prev = prev->GetPrevInFlow()) {
+      MOZ_ASSERT(!GetChildList().ContainsFrame(prev),
+                 "It is wrong that both a child and its prev-in-flow are in "
+                 "our child list!");
+    }
+  }
+
+  {
+    // Verify that continuations are ordered across both lists concatenated.
+    // If a frame and its continuation are both present, the continuation must
+    // appear later.
+    nsTHashSet<const nsIFrame*> allFrames;
+    for (const nsFrameList* list : {&mAbsoluteFrames, &mPushedAbsoluteFrames}) {
+      for (const nsIFrame* child : *list) {
+        allFrames.Insert(child);
+      }
+    }
+
+    nsTHashSet<const nsIFrame*> seen;
+    auto CheckOrder = [&](const nsIFrame* child) {
+      seen.Insert(child);
+      const nsIFrame* prev = child->GetPrevInFlow();
+      if (prev && allFrames.Contains(prev)) {
+        MOZ_ASSERT(seen.Contains(prev),
+                   "A frame's continuation appears before the frame in "
+                   "mAbsoluteFrames + mPushedAbsoluteFrames!");
+      }
+    };
+    for (const nsFrameList* list : {&mAbsoluteFrames, &mPushedAbsoluteFrames}) {
+      for (const nsIFrame* child : *list) {
+        CheckOrder(child);
       }
     }
   }
@@ -415,22 +447,15 @@ static AnchorPosResolutionCache PopulateAnchorResolutionCache(
 static nsRect ComputeScrollableContainingBlock(
     const nsContainerFrame* aDelegatingFrame, const nsRect& aContainingBlock,
     const OverflowAreas* aOverflowAreas) {
-  switch (aDelegatingFrame->Style()->GetPseudoType()) {
-    case PseudoStyleType::MozScrolledContent:
-    case PseudoStyleType::MozScrolledCanvas: {
-      if (!aOverflowAreas) {
-        break;
-      }
-      // FIXME(bug 2004432): This is close enough to what we want. In practice
-      // we don't want to account for relative positioning and so on, but this
-      // seems good enough for now.
-      ScrollContainerFrame* sf = do_QueryFrame(aDelegatingFrame->GetParent());
-      // Clamp to the scrollable range.
-      return sf->GetUnsnappedScrolledRectInternal(
-          aOverflowAreas->ScrollableOverflow(), aContainingBlock.Size());
-    }
-    default:
-      break;
+  if (aOverflowAreas && aDelegatingFrame->Style()->GetPseudoType() ==
+                            PseudoStyleType::MozScrolledContent) {
+    // FIXME(bug 2004432): This is close enough to what we want. In practice
+    // we don't want to account for relative positioning and so on, but this
+    // seems good enough for now.
+    ScrollContainerFrame* sf = do_QueryFrame(aDelegatingFrame->GetParent());
+    // Clamp to the scrollable range.
+    return sf->GetUnsnappedScrolledRectInternal(
+        aOverflowAreas->ScrollableOverflow(), aContainingBlock.Size());
   }
   return aContainingBlock;
 }
@@ -556,10 +581,11 @@ static ModifiedContainingBlock ComputeContainingBlock(
   if (aIsGrid) {
     const auto border = aDelegatingFrame->GetUsedBorder();
     const nsPoint borderShift{border.left, border.top};
+    const nsRect preGridCB = containingBlock;
     // Shift in by border of the overall grid container.
     containingBlock = nsGridContainerFrame::GridItemCB(aKidFrame) + borderShift;
     if (!defaultAnchorInfo) {
-      return ModifiedContainingBlock{containingBlock};
+      return ModifiedContainingBlock{preGridCB, containingBlock};
     }
   }
   // ... Then the position-area based adjustment.
@@ -664,6 +690,7 @@ void AbsoluteContainingBlock::Reflow(nsContainerFrame* aDelegatingFrame,
   nsOverflowContinuationTracker tracker(aDelegatingFrame, true);
   const nscoord availBSize = aReflowInput.AvailableBSize();
   const WritingMode containerWM = aReflowInput.GetWritingMode();
+  nsFrameList newPushedAbsoluteFrames;
   for (auto iter = mAbsoluteFrames.begin(); iter != mAbsoluteFrames.end();) {
     // Advance the iterator first, so it's safe to move |kidFrame|.
     nsIFrame* const kidFrame = *iter++;
@@ -802,18 +829,20 @@ void AbsoluteContainingBlock::Reflow(nsContainerFrame* aDelegatingFrame,
         if (kidFrameNeedsPush) {
           StealFrame(kidFrame);
           kidFrame->AddStateBits(NS_FRAME_IS_PUSHED_OUT_OF_FLOW);
-          mPushedAbsoluteFrames.AppendFrame(nullptr, kidFrame);
+          newPushedAbsoluteFrames.AppendFrame(nullptr, kidFrame);
         } else if (!kidStatus.IsFullyComplete()) {
           if (!nextFrame) {
             nextFrame = aPresContext->PresShell()
                             ->FrameConstructor()
                             ->CreateContinuingFrame(kidFrame, aDelegatingFrame);
             nextFrame->AddStateBits(NS_FRAME_IS_PUSHED_OUT_OF_FLOW);
-            mPushedAbsoluteFrames.AppendFrame(nullptr, nextFrame);
+            newPushedAbsoluteFrames.AppendFrame(nullptr, nextFrame);
           } else if (nextFrame->GetParent() !=
                      aDelegatingFrame->GetNextInFlow()) {
             nextFrame->GetParent()->GetAbsoluteContainingBlock()->StealFrame(
                 nextFrame);
+            // nextFrame is in a later absCB continuation. To keep the
+            // continuations in order, append it to mPushedAbsoluteFrames.
             mPushedAbsoluteFrames.AppendFrame(aDelegatingFrame, nextFrame);
           }
           reflowStatus.MergeCompletionStatusFrom(kidStatus);
@@ -877,6 +906,12 @@ void AbsoluteContainingBlock::Reflow(nsContainerFrame* aDelegatingFrame,
         kidFrame->AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
       }
     }
+  }
+
+  if (newPushedAbsoluteFrames.NotEmpty()) {
+    // Prepend the new pushed frames to the front of mPushedAbsoluteFrames.
+    mPushedAbsoluteFrames.InsertFrames(nullptr, nullptr,
+                                       std::move(newPushedAbsoluteFrames));
   }
 
   if (availBSize != NS_UNCONSTRAINEDSIZE) {
@@ -1613,8 +1648,9 @@ void AbsoluteContainingBlock::ReflowAbsoluteFrame(
   const WritingMode wm = aKidFrame->GetWritingMode();
 
   const bool isGrid = aFlags.contains(AbsPosReflowFlag::IsGridContainerCB);
-  auto fallbacks =
-      aKidFrame->StylePosition()->mPositionTryFallbacks._0.AsSpan();
+  const auto* kidStylePosition = aKidFrame->StylePosition();
+  auto fallbacks = kidStylePosition->mPositionTryFallbacks.value._0.AsSpan();
+  const auto fallbackScope = kidStylePosition->mPositionTryFallbacks.scope;
   Maybe<uint32_t> currentFallbackIndex;
   const StylePositionTryFallbacksItem* currentFallback = nullptr;
   RefPtr<ComputedStyle> currentFallbackStyle;
@@ -1630,7 +1666,7 @@ void AbsoluteContainingBlock::ReflowAbsoluteFrame(
   // exit the loop.
   bool finalizing = false;
 
-  auto tryOrder = aKidFrame->StylePosition()->mPositionTryOrder;
+  auto tryOrder = kidStylePosition->mPositionTryOrder;
   // If position-try-order is a logical value, resolve to physical using
   // the containing block's writing mode.
   switch (tryOrder) {
@@ -1666,7 +1702,8 @@ void AbsoluteContainingBlock::ReflowAbsoluteFrame(
     while (true) {
       nextFallback = &fallbacks[index];
       nextFallbackStyle = aPresContext->StyleSet()->ResolvePositionTry(
-          *aKidFrame->GetContent()->AsElement(), *baseStyle, *nextFallback);
+          fallbackScope, *aKidFrame->GetContent()->AsElement(), *baseStyle,
+          *nextFallback);
       if (nextFallbackStyle) {
         break;
       }
@@ -1705,15 +1742,13 @@ void AbsoluteContainingBlock::ReflowAbsoluteFrame(
 
   Maybe<nsRect> firstTryRect;
   if (auto* lastSuccessfulPosition =
-          aKidFrame->GetProperty(nsIFrame::LastSuccessfulPositionFallback())) {
-    if (SeekFallbackTo(Some(lastSuccessfulPosition->mIndex))) {
-      // Remember which fallback we're trying first; also record its style,
-      // in case we need to restore it later.
-      firstTryIndex = Some(lastSuccessfulPosition->mIndex);
-      firstTryStyle = currentFallbackStyle;
-    } else {
-      aKidFrame->RemoveProperty(nsIFrame::LastSuccessfulPositionFallback());
-    }
+          aKidFrame->GetProperty(nsIFrame::LastSuccessfulPositionFallback());
+      lastSuccessfulPosition && lastSuccessfulPosition->mRecordedIndex &&
+      SeekFallbackTo(lastSuccessfulPosition->mRecordedIndex)) {
+    // Remember which fallback we're trying first; also record its style,
+    // in case we need to restore it later.
+    firstTryIndex = lastSuccessfulPosition->mRecordedIndex;
+    firstTryStyle = currentFallbackStyle;
   }
 
   // Assume we *are* overflowing the CB and if we find a fallback that doesn't
@@ -2109,8 +2144,16 @@ void AbsoluteContainingBlock::ReflowAbsoluteFrame(
       // didn't have any to try in the first place.
       isOverflowingCB = !fits;
       fallback.CommitCurrentFallback();
-      if (currentFallbackIndex == Nothing()) {
-        aKidFrame->RemoveProperty(nsIFrame::LastSuccessfulPositionFallback());
+      if (currentFallbackIndex.isNothing()) {
+        if (auto* prop = aKidFrame->GetProperty(
+                nsIFrame::LastSuccessfulPositionFallback())) {
+          // When the fallback list changes, we clear the recorded fallback data
+          // as per spec, so we shouldn't get there in this case.
+          MOZ_ASSERT(!fallbacks.IsEmpty(), "how?");
+          prop->mLastIndex.reset();
+          prop->mLastStyle = nullptr;
+          prop->mTriedAllFallbacks = isOverflowingCB;
+        }
       }
       break;
     }
@@ -2199,10 +2242,13 @@ void AbsoluteContainingBlock::ReflowAbsoluteFrame(
   }();
 
   if (currentFallbackIndex) {
-    aKidFrame->SetOrUpdateDeletableProperty(
-        nsIFrame::LastSuccessfulPositionFallback(),
-        LastSuccessfulPositionData{currentFallbackStyle, *currentFallbackIndex,
-                                   isOverflowingCB});
+    auto* lastSuccessfulPosition = aKidFrame->GetOrCreateDeletableProperty(
+        nsIFrame::LastSuccessfulPositionFallback());
+    // NOTE: We don't touch the last recorded index, that's done at resize
+    // observer time.
+    lastSuccessfulPosition->mLastIndex = currentFallbackIndex;
+    lastSuccessfulPosition->mLastStyle = std::move(currentFallbackStyle);
+    lastSuccessfulPosition->mTriedAllFallbacks = isOverflowingCB;
   }
 
 #ifdef DEBUG
@@ -2224,6 +2270,7 @@ void AbsoluteContainingBlock::ReflowAbsoluteFrame(
   }
 
   if (aOverflowAreas) {
-    aOverflowAreas->UnionWith(aKidFrame->GetOverflowAreasRelativeToParent());
+    aDelegatingFrame->ConsiderChildOverflow(
+        *aOverflowAreas, aKidFrame, OverflowAreaUnionFlags::ChildIsAbsPos);
   }
 }

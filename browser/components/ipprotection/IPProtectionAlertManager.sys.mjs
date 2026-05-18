@@ -12,12 +12,12 @@ ChromeUtils.defineLazyGetter(lazy, "ipProtectionLocalization", () => {
 
 ChromeUtils.defineESModuleGetters(lazy, {
   EveryWindow: "resource:///modules/EveryWindow.sys.mjs",
-  IPPEnrollAndEntitleManager:
-    "moz-src:///browser/components/ipprotection/IPPEnrollAndEntitleManager.sys.mjs",
   IPPProxyManager:
-    "moz-src:///browser/components/ipprotection/IPPProxyManager.sys.mjs",
+    "moz-src:///toolkit/components/ipprotection/IPPProxyManager.sys.mjs",
   IPPProxyStates:
-    "moz-src:///browser/components/ipprotection/IPPProxyManager.sys.mjs",
+    "moz-src:///toolkit/components/ipprotection/IPPProxyManager.sys.mjs",
+  IPProtectionService:
+    "moz-src:///toolkit/components/ipprotection/IPProtectionService.sys.mjs",
 });
 
 /**
@@ -100,10 +100,10 @@ class IPProtectionAlertManagerClass {
   #getMaxBandwidthUsage() {
     if (lazy.IPPProxyManager.usageInfo?.max != null) {
       return Number(lazy.IPPProxyManager.usageInfo.max) / BANDWIDTH.BYTES_IN_GB;
-    } else if (lazy.IPPEnrollAndEntitleManager.entitlement?.maxBytes != null) {
+    } else if (lazy.IPProtectionService.authProvider.maxBytes != null) {
       // Usage info doesn't exist yet. Check the entitlement
       return (
-        Number(lazy.IPPEnrollAndEntitleManager.entitlement?.maxBytes) /
+        Number(lazy.IPProtectionService.authProvider.maxBytes) /
         BANDWIDTH.BYTES_IN_GB
       );
     }
@@ -219,7 +219,7 @@ class IPProtectionAlertManagerClass {
     let result = await Promise.any(promises);
     let buttonClicked = result.getProperty("buttonNumClicked");
 
-    this.#handlePromptAction(buttonClicked);
+    this.#handlePromptAction(buttonClicked, "paused");
   }
 
   /**
@@ -252,7 +252,7 @@ class IPProtectionAlertManagerClass {
     let result = await Promise.any(promises);
     let buttonClicked = result.getProperty("buttonNumClicked");
 
-    this.#handlePromptAction(buttonClicked);
+    this.#handlePromptAction(buttonClicked, "error");
   }
 
   /**
@@ -261,8 +261,9 @@ class IPProtectionAlertManagerClass {
    * @param {number} buttonClicked Either 0 or 1.
    *  0 means continue without vpn
    *  1 means close all tabs
+   * @param {"paused"|"error"} reason Reason why the alert was triggered.
    */
-  #handlePromptAction(buttonClicked) {
+  #handlePromptAction(buttonClicked, reason) {
     this.#closeAllPrompts();
 
     if (buttonClicked === 0) {
@@ -270,6 +271,11 @@ class IPProtectionAlertManagerClass {
     } else if (buttonClicked === 1) {
       this.#closeAllTabs();
     }
+
+    Glean.ipprotection.alertButtonClicked.record({
+      buttonType: buttonClicked,
+      reason,
+    });
   }
 
   async #closeAllTabs() {

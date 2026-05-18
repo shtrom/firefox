@@ -3,6 +3,8 @@
 
 "use strict";
 
+requestLongerTimeout(1);
+
 const { PlacesTestUtils } = ChromeUtils.importESModule(
   "resource://testing-common/PlacesTestUtils.sys.mjs"
 );
@@ -19,6 +21,12 @@ ChromeUtils.defineESModuleGetters(lazy, {
 let URLs, dates, today;
 
 add_setup(async () => {
+  // test_history_context_menu opens the legacy bookmarks sidebar panel and
+  // inspects its tree view, so opt out of the updated bookmarks panel here.
+  // TODO(Bug 2039395): adapt this test to the new bookmarks sidebar panel and remove this sidebar.updateBookmarks.enabled pushPrefEnv)
+  await SpecialPowers.pushPrefEnv({
+    set: [["sidebar.updatedBookmarks.enabled", false]],
+  });
   const historyInfo = await populateHistory();
   URLs = historyInfo.URLs;
   dates = historyInfo.dates;
@@ -27,6 +35,7 @@ add_setup(async () => {
 
 registerCleanupFunction(async () => {
   await PlacesUtils.history.clear();
+  Services.prefs.clearUserPref("sidebar.history.sortOption");
 });
 
 // TO DO - move below helper into universal helper with Places Bug 1954843
@@ -238,9 +247,7 @@ add_task(async function test_history_search() {
   }, "There are no matching search results.");
 
   info("Clear the search query.");
-  let clearButton = SpecialPowers.wrap(
-    searchTextbox.inputEl
-  ).openOrClosedShadowRoot.querySelector("button");
+  let clearButton = SpecialPowers.getInputButton(searchTextbox.inputEl);
   EventUtils.synthesizeMouseAtCenter(clearButton, {}, contentWindow);
   await TestUtils.waitForCondition(
     () => !component.lists[0].emptyState,
@@ -345,6 +352,41 @@ add_task(async function test_history_sort() {
   );
 
   SidebarController.hide();
+  Services.prefs.clearUserPref("sidebar.history.sortOption");
+});
+
+add_task(async function test_history_sort_persists() {
+  let { component, contentWindow } = await showHistorySidebar();
+  let {
+    _menu: sortMenu,
+    menuButton: sortMenuButton,
+    _menuSortByDateSite: sortByDateSiteOption,
+  } = component;
+
+  info("Sort history by date and site.");
+  const promiseMenuShown = BrowserTestUtils.waitForEvent(
+    sortMenu,
+    "popupshown"
+  );
+  EventUtils.synthesizeMouseAtCenter(sortMenuButton, {}, contentWindow);
+  await promiseMenuShown;
+  sortMenu.activateItem(sortByDateSiteOption);
+  await TestUtils.waitForTick();
+
+  info("Close the sidebar.");
+  SidebarController.hide();
+
+  info("Reopen the sidebar and verify that sort order has not changed.");
+  component = (await showHistorySidebar()).component;
+  sortByDateSiteOption = component._menuSortByDateSite;
+  await BrowserTestUtils.waitForMutationCondition(
+    sortByDateSiteOption,
+    { attributes: true, attributeFilter: ["checked"] },
+    () => sortByDateSiteOption.hasAttribute("checked")
+  );
+
+  SidebarController.hide();
+  Services.prefs.clearUserPref("sidebar.history.sortOption");
 });
 
 add_task(async function test_history_auxclick() {
@@ -523,7 +565,7 @@ add_task(async function test_history_context_menu() {
   );
   await promiseRemoved;
   await TestUtils.waitForCondition(
-    () => () => rows[0].mainEl.href !== site,
+    () => rows[0].mainEl.href !== site,
     "The removed entry should no longer be visible."
   );
 
@@ -560,20 +602,21 @@ add_task(async function test_history_context_menu() {
   );
 
   info("Open link in new tab.");
-  const promiseTabOpen = BrowserTestUtils.waitForEvent(
-    window.gBrowser.tabContainer,
-    "TabOpen"
+  const newTabPromise = BrowserTestUtils.waitForNewTab(
+    window.gBrowser,
+    url,
+    true
   );
   await openAndWaitForContextMenu(contextMenu, rows[0].mainEl, () =>
     contextMenu.activateItem(getItem("open-in-tab"))
   );
-  await promiseTabOpen;
-  await BrowserTestUtils.browserLoaded(
-    window.gBrowser,
-    false,
-    rows[0].mainEl.href
+  const newTab = await newTabPromise;
+  is(
+    window.gBrowser.tabs[window.gBrowser.tabs.length - 1],
+    newTab,
+    "New tab opened in background"
   );
-  is(window.gBrowser.currentURI.spec, rows[0].mainEl.href, "New tab opened");
+  BrowserTestUtils.removeTab(newTab);
 
   info("Clear all data from website");
   let dialogOpened = BrowserTestUtils.promiseAlertDialogOpen(
@@ -629,7 +672,7 @@ add_task(async function test_history_context_menu() {
   EventUtils.synthesizeMouseAtCenter(
     rows[0].mainEl,
     eventDetails,
-    // eslint-disable-next-line mozilla/use-ownerGlobal
+    // eslint-disable-next-line mozilla/use-documentGlobal
     rows[0].mainEl.ownerDocument.defaultView
   );
   await shown;
@@ -664,7 +707,7 @@ add_task(async function test_history_context_menu() {
       EventUtils.synthesizeKey("VK_RETURN", {}, dialogWin);
     }
   );
-  await toggleSidebarPanel(window, "viewBookmarksSidebar");
+  await SidebarTestUtils.showPanel(window, "viewBookmarksSidebar");
   let tree =
     SidebarController.browser.contentDocument.getElementById("bookmarks-view");
   let toolbarKey = tree._view._nodeDetails
@@ -719,12 +762,25 @@ add_task(async function test_select_and_remove() {
   }
 
   info("Press Enter key.");
-  EventUtils.synthesizeKey("KEY_Enter", {}, contentWindow);
-  Assert.equal(
-    gBrowser.tabs.length,
-    1,
-    "Enter key does not open pages during multi-selection."
+  const anchorUrl = rows[1].url;
+  const loaded = BrowserTestUtils.browserLoaded(
+    gBrowser.selectedBrowser,
+    false,
+    anchorUrl
   );
+  EventUtils.synthesizeKey("KEY_Enter", {}, contentWindow);
+  await loaded;
+  Assert.equal(
+    gBrowser.selectedBrowser.currentURI.spec,
+    anchorUrl,
+    "Enter key opens the anchor row URL during multi-selection."
+  );
+
+  info("Re-select all pages.");
+  component.lists[0].selectAll();
+  for (let i = 0; i < rows.length; i++) {
+    await promiseRowSelected(i);
+  }
 
   info("Delete from history.");
   const contextMenu = SidebarController.currentContextMenu;
@@ -741,6 +797,7 @@ add_task(async function test_select_and_remove() {
     "The selected pages were removed."
   );
 
+  cleanUpExtraTabs();
   SidebarController.hide();
 });
 

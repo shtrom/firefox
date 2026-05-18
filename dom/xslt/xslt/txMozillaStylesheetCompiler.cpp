@@ -1,4 +1,3 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -14,7 +13,6 @@
 #include "nsComponentManagerUtils.h"
 #include "nsContentPolicyUtils.h"
 #include "nsError.h"
-#include "nsGkAtoms.h"
 #include "nsIAuthPrompt.h"
 #include "nsIExpatSink.h"
 #include "nsIHttpChannel.h"
@@ -109,7 +107,7 @@ txStylesheetSink::HandleStartElement(const char16_t* aName,
                                      const char16_t** aAtts,
                                      uint32_t aAttsCount, uint32_t aLineNumber,
                                      uint32_t aColumnNumber) {
-  MOZ_ASSERT(aAttsCount % 2 == 0, "incorrect aAttsCount");
+  MOZ_RELEASE_ASSERT(aAttsCount % 2 == 0, "incorrect aAttsCount");
 
   nsresult rv = mCompiler->startElement(aName, aAtts, aAttsCount / 2);
   if (NS_FAILED(rv)) {
@@ -260,7 +258,7 @@ txStylesheetSink::OnStartRequest(nsIRequest* aRequest) {
                                   NS_ISUPPORTS_CAST(nsIParser*, mParser),
                                   getter_AddRefs(converter));
       if (NS_SUCCEEDED(rv)) {
-        mListener = converter;
+        mListener = std::move(converter);
       }
     }
   }
@@ -338,12 +336,12 @@ class txCompileObserver final : public txACompileObserver {
                      nsIPrincipal* aSourcePrincipal,
                      ReferrerPolicy aReferrerPolicy);
 
+  // This exists solely to suppress a warning from nsDerivedSafe
+  txCompileObserver() = delete;
+
  private:
   RefPtr<txMozillaXSLTProcessor> mProcessor;
   nsCOMPtr<Document> mLoaderDocument;
-
-  // This exists solely to suppress a warning from nsDerivedSafe
-  txCompileObserver();
 
   // Private destructor, to discourage deletion outside of Release():
   ~txCompileObserver() = default;

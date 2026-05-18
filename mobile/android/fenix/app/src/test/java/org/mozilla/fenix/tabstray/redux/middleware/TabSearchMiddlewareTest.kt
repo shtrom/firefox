@@ -14,6 +14,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mozilla.fenix.tabstray.data.TabGroupTheme
 import org.mozilla.fenix.tabstray.data.TabsTrayItem
 import org.mozilla.fenix.tabstray.redux.action.TabSearchAction
 import org.mozilla.fenix.tabstray.redux.state.Page
@@ -25,14 +26,19 @@ import org.mozilla.fenix.tabstray.redux.store.TabsTrayStore
 class TabSearchMiddlewareTest {
 
     @Test
-    fun `WHEN SearchQueryChanged on NormalTabs THEN search results include matching normal and inactive tabs`() = runTest {
-        val expectedNormalTabs = listOf(
-            TabsTrayItem.Tab(tab = createTab(url = "mozilla.org")),
-            TabsTrayItem.Tab(tab = createTab(url = "mozilla.com")),
+    fun `WHEN SearchQueryChanged on NormalTabs THEN search results include matching tabs inside tab groups`() = runTest {
+        val matchingTabInGroup = TabsTrayItem.Tab(tab = createTab(url = "mozilla.org", title = "Inside Group"))
+        val nonMatchingTabInGroup = TabsTrayItem.Tab(tab = createTab(url = "example.com", title = "Other"))
+
+        val tabGroup = TabsTrayItem.TabGroup(
+            id = "group-id",
+            title = "Group Title",
+            theme = TabGroupTheme.Yellow,
+            tabs = mutableListOf(matchingTabInGroup, nonMatchingTabInGroup),
+            closed = false,
         )
-        val otherNormalTabs = listOf(TabsTrayItem.Tab(tab = createTab(url = "example.com")))
-        val expectedInactiveTabs = listOf(TabsTrayItem.Tab(tab = createTab(url = "support.mozilla.org")))
-        val otherInactiveTabs = listOf(TabsTrayItem.Tab(tab = createTab(url = "example2.com")))
+
+        val otherNormalTab = TabsTrayItem.Tab(tab = createTab(url = "mozilla.com", title = "Standalone"))
 
         val store = TabsTrayStore(
             middlewares = listOf(
@@ -43,10 +49,48 @@ class TabSearchMiddlewareTest {
             ),
             initialState = TabsTrayState(
                 selectedPage = Page.NormalTabs,
-                normalTabs = expectedNormalTabs + otherNormalTabs,
-                inactiveTabs = expectedInactiveTabs + otherInactiveTabs,
+                normalTabsState = TabsTrayState.NormalTabsState(
+                    items = listOf(tabGroup, otherNormalTab),
+                ),
             ),
         )
+
+        store.dispatch(TabSearchAction.SearchQueryChanged("mozilla"))
+        advanceUntilIdle()
+
+        val expectedSearchResults = listOf(matchingTabInGroup, otherNormalTab)
+        assertEquals(expectedSearchResults.size, store.state.tabSearchState.searchResults.size)
+        assertTrue(store.state.tabSearchState.searchResults.contains(matchingTabInGroup))
+        assertTrue(store.state.tabSearchState.searchResults.contains(otherNormalTab))
+    }
+
+    @Test
+    fun `WHEN SearchQueryChanged on NormalTabs THEN search results include matching normal and inactive tabs`() = runTest {
+        val expectedNormalTabs = listOf(
+            TabsTrayItem.Tab(tab = createTab(url = "mozilla.org")),
+            TabsTrayItem.Tab(tab = createTab(url = "mozilla.com")),
+        )
+        val otherNormalTabs = listOf(TabsTrayItem.Tab(tab = createTab(url = "example.com")))
+        val expectedInactiveTabs = listOf(TabsTrayItem.Tab(tab = createTab(url = "support.mozilla.org")))
+        val otherInactiveTabs = listOf(TabsTrayItem.Tab(tab = createTab(url = "example2.com")))
+
+            val store = TabsTrayStore(
+                middlewares = listOf(
+                    TabSearchMiddleware(
+                        scope = this,
+                        mainScope = this,
+                    ),
+                ),
+                initialState = TabsTrayState(
+                    selectedPage = Page.NormalTabs,
+                    normalTabsState = TabsTrayState.NormalTabsState(
+                        items = expectedNormalTabs + otherNormalTabs,
+                    ),
+                    inactiveTabs = TabsTrayState.InactiveTabsState(
+                        tabs = expectedInactiveTabs + otherInactiveTabs,
+                    ),
+                ),
+            )
 
         store.dispatch(TabSearchAction.SearchQueryChanged("mozilla"))
         advanceUntilIdle()
@@ -63,18 +107,20 @@ class TabSearchMiddlewareTest {
         )
         val otherPrivateTabs = listOf(TabsTrayItem.Tab(tab = createTab(url = "example.com", private = true)))
 
-        val store = TabsTrayStore(
-            middlewares = listOf(
-                TabSearchMiddleware(
-                    scope = this,
-                    mainScope = this,
+            val store = TabsTrayStore(
+                middlewares = listOf(
+                    TabSearchMiddleware(
+                        scope = this,
+                        mainScope = this,
+                    ),
                 ),
-            ),
-            initialState = TabsTrayState(
-                selectedPage = Page.PrivateTabs,
-                privateTabs = expectedPrivateTabs + otherPrivateTabs,
-            ),
-        )
+                initialState = TabsTrayState(
+                    selectedPage = Page.PrivateTabs,
+                    privateBrowsing = TabsTrayState.PrivateBrowsingState(
+                        tabs = expectedPrivateTabs + otherPrivateTabs,
+                    ),
+                ),
+            )
 
         store.dispatch(TabSearchAction.SearchQueryChanged("mozilla"))
         advanceUntilIdle()
@@ -97,19 +143,23 @@ class TabSearchMiddlewareTest {
             TabsTrayItem.Tab(tab = createTab(url = "inactive.com", title = "example 3 title")),
         )
 
-        val store = TabsTrayStore(
-            middlewares = listOf(
-                TabSearchMiddleware(
-                    scope = this,
-                    mainScope = this,
+            val store = TabsTrayStore(
+                middlewares = listOf(
+                    TabSearchMiddleware(
+                        scope = this,
+                        mainScope = this,
+                    ),
                 ),
-            ),
-            initialState = TabsTrayState(
-                selectedPage = Page.NormalTabs,
-                normalTabs = expectedNormalTabs + otherNormalTabs,
-                inactiveTabs = expectedInactiveTabs + otherInactiveTabs,
-            ),
-        )
+                initialState = TabsTrayState(
+                    selectedPage = Page.NormalTabs,
+                    normalTabsState = TabsTrayState.NormalTabsState(
+                        items = expectedNormalTabs + otherNormalTabs,
+                    ),
+                    inactiveTabs = TabsTrayState.InactiveTabsState(
+                        tabs = expectedInactiveTabs + otherInactiveTabs,
+                    ),
+                ),
+            )
 
         store.dispatch(TabSearchAction.SearchQueryChanged("mozilla homepage"))
         advanceUntilIdle()
@@ -129,18 +179,20 @@ class TabSearchMiddlewareTest {
             TabsTrayItem.Tab(tab = createTab(url = "example.com", title = "example title", private = true)),
         )
 
-        val store = TabsTrayStore(
-            middlewares = listOf(
-                TabSearchMiddleware(
-                    scope = this,
-                    mainScope = this,
+            val store = TabsTrayStore(
+                middlewares = listOf(
+                    TabSearchMiddleware(
+                        scope = this,
+                        mainScope = this,
+                    ),
                 ),
-            ),
-            initialState = TabsTrayState(
-                selectedPage = Page.PrivateTabs,
-                privateTabs = expectedPrivateTabs + otherPrivateTabs,
-            ),
-        )
+                initialState = TabsTrayState(
+                    selectedPage = Page.PrivateTabs,
+                    privateBrowsing = TabsTrayState.PrivateBrowsingState(
+                        tabs = expectedPrivateTabs + otherPrivateTabs,
+                    ),
+                ),
+            )
 
         store.dispatch(TabSearchAction.SearchQueryChanged("mozilla homepage"))
         advanceUntilIdle()
@@ -155,19 +207,21 @@ class TabSearchMiddlewareTest {
         val expectedInactiveTabs = listOf(TabsTrayItem.Tab(tab = createTab(url = "inactive-example.com", title = "Mozilla Inactive Tab")))
         val otherInactiveTabs = listOf(TabsTrayItem.Tab(tab = createTab(url = "inactive-example2.com", title = "Another title")))
 
-        val store = TabsTrayStore(
-            middlewares = listOf(
-                TabSearchMiddleware(
-                    scope = this,
-                    mainScope = this,
+            val store = TabsTrayStore(
+                middlewares = listOf(
+                    TabSearchMiddleware(
+                        scope = this,
+                        mainScope = this,
+                    ),
                 ),
-            ),
-            initialState = TabsTrayState(
-                selectedPage = Page.NormalTabs,
-                normalTabs = expectedNormalTabs + otherNormalTabs,
-                inactiveTabs = expectedInactiveTabs + otherInactiveTabs,
-            ),
-        )
+                initialState = TabsTrayState(
+                    selectedPage = Page.NormalTabs,
+                    normalTabsState = TabsTrayState.NormalTabsState(
+                        items = expectedNormalTabs + otherNormalTabs,
+                    ),
+                    inactiveTabs = TabsTrayState.InactiveTabsState(tabs = expectedInactiveTabs + otherInactiveTabs),
+                ),
+            )
 
         store.dispatch(TabSearchAction.SearchQueryChanged("mozilla"))
         advanceUntilIdle()
@@ -185,18 +239,20 @@ class TabSearchMiddlewareTest {
             TabsTrayItem.Tab(tab = createTab(url = "example.com", title = "example title", private = true)),
         )
 
-        val store = TabsTrayStore(
-            middlewares = listOf(
-                TabSearchMiddleware(
-                    scope = this,
-                    mainScope = this,
+            val store = TabsTrayStore(
+                middlewares = listOf(
+                    TabSearchMiddleware(
+                        scope = this,
+                        mainScope = this,
+                    ),
                 ),
-            ),
-            initialState = TabsTrayState(
-                selectedPage = Page.PrivateTabs,
-                privateTabs = expectedPrivateTabs + otherPrivateTabs,
-            ),
-        )
+                initialState = TabsTrayState(
+                    selectedPage = Page.PrivateTabs,
+                    privateBrowsing = TabsTrayState.PrivateBrowsingState(
+                        tabs = expectedPrivateTabs + otherPrivateTabs,
+                    ),
+                ),
+            )
 
         store.dispatch(TabSearchAction.SearchQueryChanged("mozilla"))
         advanceUntilIdle()
@@ -212,19 +268,23 @@ class TabSearchMiddlewareTest {
         )
         val inactiveTabs = listOf(TabsTrayItem.Tab(tab = createTab(url = "mozilla.com")))
 
-        val store = TabsTrayStore(
-            middlewares = listOf(
-                TabSearchMiddleware(
-                    scope = this,
-                    mainScope = this,
+            val store = TabsTrayStore(
+                middlewares = listOf(
+                    TabSearchMiddleware(
+                        scope = this,
+                        mainScope = this,
+                    ),
                 ),
-            ),
-            initialState = TabsTrayState(
-                selectedPage = Page.NormalTabs,
-                normalTabs = normalTabs,
-                inactiveTabs = inactiveTabs,
-            ),
-        )
+                initialState = TabsTrayState(
+                    selectedPage = Page.NormalTabs,
+                    normalTabsState = TabsTrayState.NormalTabsState(
+                        items = normalTabs,
+                    ),
+                    inactiveTabs = TabsTrayState.InactiveTabsState(
+                        tabs = inactiveTabs,
+                    ),
+                ),
+            )
 
         store.dispatch(TabSearchAction.SearchQueryChanged(""))
         advanceUntilIdle()
@@ -240,18 +300,20 @@ class TabSearchMiddlewareTest {
             TabsTrayItem.Tab(tab = createTab(url = "example.com", private = true)),
         )
 
-        val store = TabsTrayStore(
-            middlewares = listOf(
-                TabSearchMiddleware(
-                    scope = this,
-                    mainScope = this,
+            val store = TabsTrayStore(
+                middlewares = listOf(
+                    TabSearchMiddleware(
+                        scope = this,
+                        mainScope = this,
+                    ),
                 ),
-            ),
-            initialState = TabsTrayState(
-                selectedPage = Page.PrivateTabs,
-                privateTabs = privateTabs,
-            ),
-        )
+                initialState = TabsTrayState(
+                    selectedPage = Page.PrivateTabs,
+                    privateBrowsing = TabsTrayState.PrivateBrowsingState(
+                        tabs = privateTabs,
+                    ),
+                ),
+            )
 
         store.dispatch(TabSearchAction.SearchQueryChanged(""))
         advanceUntilIdle()
@@ -267,18 +329,20 @@ class TabSearchMiddlewareTest {
             TabsTrayItem.Tab(tab = createTab(url = "example.com", private = true)),
         )
 
-        val store = TabsTrayStore(
-            middlewares = listOf(
-                TabSearchMiddleware(
-                    scope = this,
-                    mainScope = this,
+            val store = TabsTrayStore(
+                middlewares = listOf(
+                    TabSearchMiddleware(
+                        scope = this,
+                        mainScope = this,
+                    ),
                 ),
-            ),
-            initialState = TabsTrayState(
-                selectedPage = Page.PrivateTabs,
-                privateTabs = privateTabs,
-            ),
-        )
+                initialState = TabsTrayState(
+                    selectedPage = Page.PrivateTabs,
+                    privateBrowsing = TabsTrayState.PrivateBrowsingState(
+                        tabs = privateTabs,
+                    ),
+                ),
+            )
 
         store.dispatch(TabSearchAction.SearchQueryChanged(" "))
         advanceUntilIdle()
@@ -300,19 +364,27 @@ class TabSearchMiddlewareTest {
             TabsTrayItem.Tab(tab = createTab(url = "example.com")),
         )
 
-        val store = TabsTrayStore(
-            middlewares = listOf(
-                TabSearchMiddleware(
-                    scope = this,
-                    mainScope = this,
+            val store = TabsTrayStore(
+                middlewares = listOf(
+                    TabSearchMiddleware(
+                        scope = this,
+                        mainScope = this,
+                    ),
                 ),
-            ),
-            initialState = TabsTrayState(
-                selectedPage = Page.NormalTabs,
-                normalTabs = listOf(aboutHomeOld, aboutHomeNew, aboutHomeNewest) + matchingNonHomepage + nonMatching,
-                inactiveTabs = emptyList(),
-            ),
-        )
+                initialState = TabsTrayState(
+                    selectedPage = Page.NormalTabs,
+                    normalTabsState = TabsTrayState.NormalTabsState(
+                        items = listOf(
+                            aboutHomeOld,
+                            aboutHomeNew,
+                            aboutHomeNewest,
+                        ) + matchingNonHomepage + nonMatching,
+                    ),
+                    inactiveTabs = TabsTrayState.InactiveTabsState(
+                        tabs = emptyList(),
+                    ),
+                ),
+            )
 
         store.dispatch(TabSearchAction.SearchQueryChanged("home"))
         advanceUntilIdle()
@@ -328,19 +400,23 @@ class TabSearchMiddlewareTest {
 
         val matchingNonHomepage = listOf(TabsTrayItem.Tab(tab = createTab(url = "mozilla.org")))
 
-        val store = TabsTrayStore(
-            middlewares = listOf(
-                TabSearchMiddleware(
-                    scope = this,
-                    mainScope = this,
+            val store = TabsTrayStore(
+                middlewares = listOf(
+                    TabSearchMiddleware(
+                        scope = this,
+                        mainScope = this,
+                    ),
                 ),
-            ),
-            initialState = TabsTrayState(
-                selectedPage = Page.NormalTabs,
-                normalTabs = listOf(aboutHomeOld, aboutHomeNew) + matchingNonHomepage,
-                inactiveTabs = emptyList(),
-            ),
-        )
+                initialState = TabsTrayState(
+                    selectedPage = Page.NormalTabs,
+                    normalTabsState = TabsTrayState.NormalTabsState(
+                        items = listOf(aboutHomeOld, aboutHomeNew) + matchingNonHomepage,
+                    ),
+                    inactiveTabs = TabsTrayState.InactiveTabsState(
+                        tabs = emptyList(),
+                    ),
+                ),
+            )
 
         store.dispatch(TabSearchAction.SearchQueryChanged("mozilla"))
         advanceUntilIdle()
@@ -355,19 +431,23 @@ class TabSearchMiddlewareTest {
             TabsTrayItem.Tab(tab = createTab(url = "mozilla.org/home")),
         )
 
-        val store = TabsTrayStore(
-            middlewares = listOf(
-                TabSearchMiddleware(
-                    scope = this,
-                    mainScope = this,
+            val store = TabsTrayStore(
+                middlewares = listOf(
+                    TabSearchMiddleware(
+                        scope = this,
+                        mainScope = this,
+                    ),
                 ),
-            ),
-            initialState = TabsTrayState(
-                selectedPage = Page.NormalTabs,
-                normalTabs = listOf(aboutHome) + matchingNonHomepage,
-                inactiveTabs = emptyList(),
-            ),
-        )
+                initialState = TabsTrayState(
+                    selectedPage = Page.NormalTabs,
+                    normalTabsState = TabsTrayState.NormalTabsState(
+                        items = listOf(aboutHome) + matchingNonHomepage,
+                    ),
+                    inactiveTabs = TabsTrayState.InactiveTabsState(
+                        tabs = emptyList(),
+                    ),
+                ),
+            )
 
         store.dispatch(TabSearchAction.SearchQueryChanged("home"))
         advanceUntilIdle()

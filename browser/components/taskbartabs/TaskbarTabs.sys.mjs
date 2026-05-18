@@ -1,5 +1,4 @@
-/* vim: se cin sw=2 ts=2 et filetype=javascript :
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -21,7 +20,9 @@ import { TaskbarTabsUtils } from "resource:///modules/taskbartabs/TaskbarTabsUti
 let lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
+  ManifestIcons: "resource://gre/modules/ManifestIcons.sys.mjs",
   ManifestObtainer: "resource://gre/modules/ManifestObtainer.sys.mjs",
+  ShellService: "moz-src:///browser/components/shell/ShellService.sys.mjs",
 });
 
 ChromeUtils.defineLazyGetter(lazy, "logConsole", () => {
@@ -107,10 +108,7 @@ export const TaskbarTabs = new (class {
     if (result.created) {
       this.#updateMetrics();
 
-      let icon = await fetchIconForTaskbarTab(
-        result.taskbarTab,
-        aDetails.creatingForUrl
-      );
+      let icon = await fetchIconForTaskbarTab(result.taskbarTab, aDetails);
       result.icon = icon;
 
       // Don't wait for the pinning to complete.
@@ -125,6 +123,11 @@ export const TaskbarTabs = new (class {
   async findTaskbarTab(...args) {
     await this.#ready;
     return this.#registry.findTaskbarTab(...args);
+  }
+
+  async countTaskbarTabs() {
+    await this.#ready;
+    return this.#registry.countTaskbarTabs();
   }
 
   /**
@@ -157,6 +160,7 @@ export const TaskbarTabs = new (class {
         // 'manifest' can be null if the site doesn't have a manifest.
         ...(manifest ? { manifest } : {}),
         creatingForUrl: url,
+        browser,
       }
     );
 
@@ -255,11 +259,22 @@ function initWindowManager() {
   return wm;
 }
 
-async function fetchIconForTaskbarTab(aTaskbarTab, aCreatedForUrl) {
+async function fetchIconForTaskbarTab(aTaskbarTab, aDetails) {
   let startUri = Services.io.newURI(aTaskbarTab.startUrl);
   const choices = [
+    async () => {
+      if (aDetails.browser && aDetails.manifest) {
+        let uri = await lazy.ManifestIcons.browserFetchIcon(
+          aDetails.browser,
+          aDetails.manifest,
+          256
+        );
+        return Services.io.newURI(uri);
+      }
+      return null;
+    },
     async () => await TaskbarTabsUtils.getFaviconUri(startUri),
-    async () => await TaskbarTabsUtils.getFaviconUri(aCreatedForUrl),
+    async () => await TaskbarTabsUtils.getFaviconUri(aDetails.createdForUrl),
   ];
 
   for (const choice of choices) {
@@ -290,7 +305,9 @@ async function fetchIconForTaskbarTab(aTaskbarTab, aCreatedForUrl) {
 async function loadSavedTaskbarTabIcon(aTaskbarTabId) {
   let iconPath = TaskbarTabsUtils.getTaskbarTabsFolder();
   iconPath.append("icons");
-  iconPath.append(aTaskbarTabId + ".ico");
+  iconPath.append(
+    aTaskbarTabId + "." + lazy.ShellService.shortcutIconType.extension
+  );
   try {
     return await TaskbarTabsUtils._imageFromLocalURI(
       Services.io.newFileURI(iconPath)

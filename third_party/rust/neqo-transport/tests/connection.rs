@@ -7,14 +7,13 @@
 mod common;
 use common::assert_dscp;
 use neqo_common::{Datagram, Decoder, Encoder, Role};
-use neqo_crypto::AeadTrait as _;
 use neqo_transport::{
-    CloseReason, ConnectionParameters, Error, State, StreamType, Version, MIN_INITIAL_PACKET_SIZE,
+    CloseReason, ConnectionParameters, Error, MIN_INITIAL_PACKET_SIZE, State, StreamType, Version,
 };
 use test_fixture::{
-    default_client, default_server,
+    CountingConnectionIdGenerator, DEFAULT_ALPN, default_client, default_server,
     header_protection::{self, decode_initial_header, initial_aead_and_hp},
-    new_client, new_server, now, split_datagram, CountingConnectionIdGenerator, DEFAULT_ALPN,
+    new_client, new_server, now, split_datagram,
 };
 
 #[test]
@@ -314,7 +313,7 @@ fn handshake_mlkem768x25519() {
     let mut server = default_server();
 
     client
-        .set_groups(&[neqo_crypto::TLS_GRP_KEM_MLKEM768X25519])
+        .set_groups(&[nss::TLS_GRP_KEM_MLKEM768X25519])
         .unwrap();
     client.send_additional_key_shares(0).unwrap();
 
@@ -323,11 +322,11 @@ fn handshake_mlkem768x25519() {
     assert_eq!(*server.state(), State::Confirmed);
     assert_eq!(
         client.tls_info().unwrap().key_exchange(),
-        neqo_crypto::TLS_GRP_KEM_MLKEM768X25519
+        nss::TLS_GRP_KEM_MLKEM768X25519
     );
     assert_eq!(
         server.tls_info().unwrap().key_exchange(),
-        neqo_crypto::TLS_GRP_KEM_MLKEM768X25519
+        nss::TLS_GRP_KEM_MLKEM768X25519
     );
 }
 

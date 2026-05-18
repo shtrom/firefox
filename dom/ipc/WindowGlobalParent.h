@@ -1,5 +1,3 @@
-/* -*- Mode: C++; c-basic-offset: 2; indent-tabs-mode: nil; tab-width: 8 -*- */
-/* vim: set sw=2 ts=8 et tw=80 ft=cpp : */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -47,6 +45,7 @@ struct PageUseCounters;
 class WindowSessionStoreState;
 struct WindowSessionStoreUpdate;
 class SSCacheQueryResult;
+enum class FullscreenKeyboardLock : uint8_t;
 
 /**
  * A handle in the parent process to a specific nsGlobalWindowInner object.
@@ -200,6 +199,21 @@ class WindowGlobalParent final : public WindowContext,
 
   ContentBlockingLog* GetContentBlockingLog() { return &mContentBlockingLog; }
 
+  // Apply the existing content-blocking gates (out-of-process, non-private,
+  // top-level content) and, if they pass, flush the in-memory
+  // ContentBlockingLog to the tracking database. Safe to call repeatedly;
+  // ContentBlockingLog::ReportLog() emits only the delta since the last
+  // flush, so no double-counting occurs.
+  void MaybeReportContentBlockingLog();
+
+  // Flush every live top-level WindowGlobalParent's content-blocking log to
+  // the tracking database. Exposed to chrome JS via WebIDL so
+  // TrackingDBService can force ingestion before a read query.
+  static void FlushAllContentBlockingLogs(const GlobalObject& aGlobal) {
+    FlushAllContentBlockingLogs();
+  }
+  static void FlushAllContentBlockingLogs();
+
   nsIDOMProcessParent* GetDomProcess();
 
   nsICookieJarSettings* CookieJarSettings() { return mCookieJarSettings; }
@@ -228,6 +242,7 @@ class WindowGlobalParent final : public WindowContext,
   nsITransportSecurityInfo* GetSecurityInfo() { return mSecurityInfo; }
 
   const nsACString& GetRemoteType() const override;
+  void GetRemoteType(nsACString& aRemoteType) const;
 
   void NotifySessionStoreUpdatesComplete(Element* aEmbedder);
 
@@ -301,7 +316,8 @@ class WindowGlobalParent final : public WindowContext,
 
   void DrawSnapshotInternal(gfx::CrossProcessPaint* aPaint,
                             const Maybe<IntRect>& aRect, float aScale,
-                            nscolor aBackgroundColor, uint32_t aFlags);
+                            nscolor aBackgroundColor,
+                            gfx::CrossProcessPaintFlags aFlags);
 
   // WebShare API - try to share
   mozilla::ipc::IPCResult RecvShare(IPCWebShareData&& aData,
@@ -332,6 +348,9 @@ class WindowGlobalParent final : public WindowContext,
 
   mozilla::ipc::IPCResult RecvSetDocumentDomain(NotNull<nsIURI*> aDomain);
 
+  mozilla::ipc::IPCResult RecvSetSiteIntegrityProtected(
+      NotNull<nsIURI*> aSourceURI, uint64_t aMaxAge);
+
   mozilla::ipc::IPCResult RecvReloadWithHttpsOnlyException();
 
   mozilla::ipc::IPCResult RecvGetStorageAccessPermission(
@@ -340,12 +359,17 @@ class WindowGlobalParent final : public WindowContext,
 
   mozilla::ipc::IPCResult RecvSetCookies(
       const nsCString& aBaseDomain, const OriginAttributes& aOriginAttributes,
-      nsIURI* aHost, bool aFromHttp, bool aIsThirdParty,
+      nsIURI* aHost, bool aIsThirdParty,
       const nsTArray<CookieStruct>& aCookies);
 
-  mozilla::ipc::IPCResult RecvOnInitialStorageAccess();
-
   mozilla::ipc::IPCResult RecvRecordUserActivationForBTP();
+
+  mozilla::ipc::IPCResult RecvRecordUserInteractionForPermissions();
+
+  already_AddRefed<dom::PSerialManagerParent> AllocPSerialManagerParent();
+
+  mozilla::ipc::IPCResult RecvPSerialManagerConstructor(
+      PSerialManagerParent* aActor) override;
 
   already_AddRefed<dom::PWebAuthnTransactionParent>
   AllocPWebAuthnTransactionParent();
@@ -354,6 +378,8 @@ class WindowGlobalParent final : public WindowContext,
 
   already_AddRefed<dom::PDigitalCredentialParent>
   AllocPDigitalCredentialParent();
+
+  void UpdateFullscreenKeyboardLockStatus(FullscreenKeyboardLock aStatus);
 
  private:
   WindowGlobalParent(CanonicalBrowsingContext* aBrowsingContext,
@@ -466,6 +492,8 @@ class WindowGlobalParent final : public WindowContext,
 
   bool mShouldReportHasBlockedOpaqueResponse = false;
 };
+
+nsCString BFCacheStatusToString(uint32_t aFlags);
 
 }  // namespace dom
 }  // namespace mozilla

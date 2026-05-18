@@ -12,6 +12,7 @@ import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -46,6 +47,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
@@ -58,6 +60,8 @@ import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.concept.engine.translate.TranslationSupport
 import mozilla.components.concept.engine.translate.findLanguage
 import mozilla.components.feature.addons.Addon
+import mozilla.components.feature.ipprotection.store.IPProtectionAction
+import mozilla.components.feature.ipprotection.store.state.isEligible
 import mozilla.components.service.fxa.manager.AccountState.NotAuthenticated
 import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
 import mozilla.components.support.ktx.android.util.dpToPx
@@ -88,6 +92,7 @@ import org.mozilla.fenix.components.menu.store.MenuStore
 import org.mozilla.fenix.components.menu.store.SummarizationMenuState
 import org.mozilla.fenix.components.menu.store.TranslationInfo
 import org.mozilla.fenix.components.menu.store.WebExtensionMenuItem
+import org.mozilla.fenix.ext.canGoBackInHistoryOrToStories
 import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.ext.openSetDefaultBrowserOption
 import org.mozilla.fenix.ext.openToBrowser
@@ -102,10 +107,8 @@ import org.mozilla.fenix.settings.deletebrowsingdata.DefaultDeleteBrowsingDataCo
 import org.mozilla.fenix.settings.deletebrowsingdata.DefaultDeleteBrowsingDataController.DeleteDataUseCases
 import org.mozilla.fenix.settings.deletebrowsingdata.DefaultDeleteBrowsingDataController.Stores
 import org.mozilla.fenix.settings.deletebrowsingdata.DeleteBrowsingDataController
-import org.mozilla.fenix.theme.DefaultThemeProvider
 import org.mozilla.fenix.theme.FirefoxTheme
-import org.mozilla.fenix.theme.Theme
-import org.mozilla.fenix.theme.getThemeProvider
+import org.mozilla.fenix.translations.TranslationsEnabledSettings
 import org.mozilla.fenix.utils.DELAY_MS_MAIN_MENU
 import org.mozilla.fenix.utils.DELAY_MS_SUB_MENU
 import org.mozilla.fenix.utils.DURATION_MS_MAIN_MENU
@@ -121,12 +124,6 @@ import org.mozilla.fenix.webcompat.middleware.DefaultWebCompatReporterRetrievalS
 import org.mozilla.fenix.webcompat.middleware.WebCompatInfoDeserializer
 import com.google.android.material.R as materialR
 
-// EXPANDED_MIN_RATIO is used for BottomSheetBehavior.halfExpandedRatio().
-// That value needs to be less than the PEEK_HEIGHT.
-// If EXPANDED_MIN_RATIO is greater than the PEEK_HEIGHT, then there will be
-// three states instead of the expected two states required by design.
-private const val PEEK_HEIGHT = 460
-private const val EXPANDED_MIN_RATIO = 0.0001f
 private const val EXPANDED_OFFSET = 56
 private const val HIDING_FRICTION = 0.9f
 private const val PRIVATE_HOME_MENU_BACKGROUND_ALPHA = 100
@@ -144,6 +141,7 @@ class MenuDialogFragment : BottomSheetDialogFragment() {
 
     private val args by navArgs<MenuDialogFragmentArgs>()
     private val webExtensionsMenuBinding = ViewBoundFeatureWrapper<WebExtensionsMenuBinding>()
+    private val ipProtectionMenuBinding = ViewBoundFeatureWrapper<IPProtectionMenuBinding>()
     private var bottomSheetBehavior: BottomSheetBehavior<View>? = null
     private var isPrivate: Boolean = false
 
@@ -172,10 +170,22 @@ class MenuDialogFragment : BottomSheetDialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         Events.toolbarMenuVisible.record(NoExtras())
 
-        return super.onCreateDialog(savedInstanceState).apply {
+        return object : BottomSheetDialog(requireContext(), theme) {
+            override fun onKeyDown(
+                keyCode: Int,
+                event: KeyEvent,
+            ): Boolean {
+                if (event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_MENU) {
+                    dismiss()
+                    return true
+                }
+                return super.onKeyDown(keyCode, event)
+            }
+        }.apply {
             setOnShowListener {
                 val safeActivity = activity ?: return@setOnShowListener
                 val appStore = safeActivity.components.appStore
+
                 isPrivate = appStore.state.mode.isPrivate
 
                 if (isPrivate && args.accesspoint == MenuAccessPoint.Home) {
@@ -215,9 +225,7 @@ class MenuDialogFragment : BottomSheetDialogFragment() {
                 bottomSheetBehavior = bottomSheet?.let {
                     BottomSheetBehavior.from(it).apply {
                         maxWidth = calculateMenuSheetWidth()
-                        isFitToContents = true
-                        peekHeight = PEEK_HEIGHT.dpToPx(resources.displayMetrics)
-                        halfExpandedRatio = EXPANDED_MIN_RATIO
+                        peekHeight = resources.displayMetrics.heightPixels
                         maxHeight = calculateMenuSheetHeight()
                         skipCollapsed = true
                         state = BottomSheetBehavior.STATE_EXPANDED
@@ -245,16 +253,7 @@ class MenuDialogFragment : BottomSheetDialogFragment() {
         setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
 
         setContent {
-            val theme = if (args.accesspoint == MenuAccessPoint.External) {
-                if (components.settings.openLinksInAPrivateTab) {
-                    Theme.Private
-                } else {
-                    DefaultThemeProvider.provideTheme()
-                }
-            } else {
-                getThemeProvider().provideTheme()
-            }
-            FirefoxTheme(theme = theme) {
+            FirefoxTheme {
                 val context = LocalContext.current
 
                 val components = components
@@ -317,7 +316,8 @@ class MenuDialogFragment : BottomSheetDialogFragment() {
                                 appStore = appStore,
                                 addonManager = components.addonManager,
                                 settings = settings,
-                                summarizeMenuSettings = components.core.summarizeFeatureDiscoverySettings,
+                                summarizeMenuSettings = components.core.summarizeFeatureSettings,
+                                summarizationEligibilityChecker = components.core.summarizationEligibilityChecker,
                                 bookmarksStorage = components.core.bookmarksStorage,
                                 pinnedSiteStorage = components.core.pinnedSiteStorage,
                                 appLinksUseCases = appLinksUseCases,
@@ -325,6 +325,7 @@ class MenuDialogFragment : BottomSheetDialogFragment() {
                                 addPinnedSiteUseCase = components.useCases.topSitesUseCase.addPinnedSites,
                                 removePinnedSitesUseCase = components.useCases.topSitesUseCase.removeTopSites,
                                 requestDesktopSiteUseCase = components.useCases.sessionUseCases.requestDesktopSite,
+                                migratePrivateTabUseCase = components.useCases.tabsUseCases.migratePrivateTabUseCase,
                                 materialAlertDialogBuilder = MaterialAlertDialogBuilder(context),
                                 topSitesMaxLimit = components.settings.topSitesMaxLimit,
                                 onDeleteAndQuit = {
@@ -351,6 +352,7 @@ class MenuDialogFragment : BottomSheetDialogFragment() {
                                 openToBrowser = ::openToBrowser,
                                 sessionUseCases = components.useCases.sessionUseCases,
                                 webAppUseCases = webAppUseCases,
+                                shareUseCases = components.useCases.shareUseCases,
                                 settings = settings,
                                 onDismiss = {
                                     withContext(Dispatchers.Main) {
@@ -383,6 +385,9 @@ class MenuDialogFragment : BottomSheetDialogFragment() {
                     store.stateFlow.map { state -> state.isMoreMenuExpanded }
                 }.collectAsState(initial = false)
 
+                val isTranslationsEnabled = TranslationsEnabledSettings.dataStore(requireContext())
+                    .isEnabled.collectAsState(true)
+
                 MenuDialogBottomSheet(
                     modifier = Modifier
                         .padding(top = 16.dp, bottom = 16.dp)
@@ -394,9 +399,9 @@ class MenuDialogFragment : BottomSheetDialogFragment() {
                             (isExtensionsExpanded || isMoreMenuExpanded) &&
                             args.accesspoint == MenuAccessPoint.Browser,
                     cornerShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-                    menuCfrState = if (settings.shouldShowMenuCFR) {
+                    menuCfrState = if (settings.shouldShowMenuCFR && settings.cfrPopupsEnabled) {
                         MenuCFRState(
-                            showCFR = settings.shouldShowMenuCFR,
+                            showCFR = settings.shouldShowMenuCFR && settings.cfrPopupsEnabled,
                             titleRes = R.string.menu_cfr_title,
                             messageRes = R.string.menu_cfr_body,
                             orientation = appStore.state.orientation,
@@ -419,7 +424,8 @@ class MenuDialogFragment : BottomSheetDialogFragment() {
                         browserStore.state.translationEngine.isEngineSupported ?: false
                     val isTranslationSupported =
                         isTranslationEngineSupported &&
-                            FxNimbus.features.translations.value().mainFlowBrowserMenuEnabled
+                            FxNimbus.features.translations.value().mainFlowBrowserMenuEnabled &&
+                            isTranslationsEnabled.value
                     val isPdf = selectedTab?.content?.isPdf ?: false
                     val isWebCompatEnabled by remember {
                         store.stateFlow.map { it.isWebCompatEnabled }
@@ -441,6 +447,17 @@ class MenuDialogFragment : BottomSheetDialogFragment() {
                             menuStore = store,
                             iconSize = 24.dpToPx(requireContext().resources.displayMetrics),
                             onDismiss = { this@MenuDialogFragment.dismiss() },
+                        ),
+                        owner = this@MenuDialogFragment,
+                        view = this,
+                    )
+
+                    ipProtectionMenuBinding.set(
+                        feature = IPProtectionMenuBinding(
+                            ipProtectionStore = components.ipProtection.store,
+                            onIPProtectionStatusUpdate = {
+                                store.dispatch(MenuAction.UpdateIPProtectionMenuState(it))
+                            },
                         ),
                         owner = this@MenuDialogFragment,
                         view = this,
@@ -534,6 +551,10 @@ class MenuDialogFragment : BottomSheetDialogFragment() {
                     val summarizationMenuState by remember {
                         store.stateFlow.map { state -> state.summarizationMenuState }
                     }.collectAsState(initial = SummarizationMenuState.Default)
+
+                    val ipProtectionMenuState by remember {
+                        store.stateFlow.map { state -> state.ipProtectionMenuState }
+                    }.collectAsState(initial = store.state.ipProtectionMenuState)
 
                     val contentState: Route by remember { mutableStateOf(initRoute) }
 
@@ -651,7 +672,7 @@ class MenuDialogFragment : BottomSheetDialogFragment() {
                                     isReaderViewActive = isReaderViewActive,
                                     isMoreMenuHighlighted = isOpenInAppMenuHighlighted ||
                                             summarizationMenuState.overflowMenuHighlighted,
-                                    canGoBack = selectedTab?.content?.canGoBack ?: true,
+                                    canGoBack = browserStore.state.canGoBackInHistoryOrToStories(),
                                     canGoForward = selectedTab?.content?.canGoForward ?: true,
                                     extensionsMenuItemDescription = extensionsMenuItemDescription,
                                     scrollState = scrollState,
@@ -659,6 +680,8 @@ class MenuDialogFragment : BottomSheetDialogFragment() {
                                     isDownloadHighlighted = isDownloadHighlighted,
                                     webExtensionMenuCount = webExtensionsCount,
                                     isAllWebExtensionsDisabled = isAllWebExtensionsDisabled,
+                                    showIPProtection = components.ipProtection.store.state.isEligible,
+                                    ipProtectionMenuState = ipProtectionMenuState,
                                     onMozillaAccountButtonClick = {
                                         store.dispatch(
                                             MenuAction.Navigate.MozillaAccount(
@@ -743,11 +766,18 @@ class MenuDialogFragment : BottomSheetDialogFragment() {
                                             store.dispatch(MenuAction.Navigate.Share)
                                         }
                                     },
+                                    onIPProtectionClick = {
+                                        components.ipProtection.store.dispatch(IPProtectionAction.Toggle)
+                                    },
+                                    onIPProtectionNavigate = {
+                                        store.dispatch(MenuAction.Navigate.IPProtectionSettings)
+                                    },
                                     moreSettingsSubmenu = {
                                         MoreSettingsSubmenu(
                                             isReaderViewActive = isReaderViewActive,
                                             isWebCompatEnabled = isWebCompatEnabled,
                                             isPinned = isPinned,
+                                            isPrivate = isPrivate,
                                             isInstallable = webAppUseCases.isInstallable(),
                                             isAddToHomeScreenSupported = selectedTab != null &&
                                                     webAppUseCases.isPinningSupported(),
@@ -798,6 +828,9 @@ class MenuDialogFragment : BottomSheetDialogFragment() {
                                             },
                                             onOpenInAppMenuClick = {
                                                 store.dispatch(MenuAction.OpenInApp)
+                                            },
+                                            onMoveToNonPrivateTabMenuClick = {
+                                                store.dispatch(MenuAction.MoveToNonPrivateTab)
                                             },
                                         )
                                     },

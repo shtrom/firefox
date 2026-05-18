@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -79,7 +77,8 @@ class VRManagerChild : public PVRManagerChild {
   static bool IsPresenting();
   static TimeStamp GetIdleDeadlineHint(TimeStamp aDefault);
 
-  PVRLayerChild* CreateVRLayer(uint32_t aDisplayID, uint32_t aGroup);
+  already_AddRefed<VRLayerChild> CreateVRLayer(uint32_t aDisplayID,
+                                               uint32_t aGroup);
 
   static void IdentifyTextureHost(
       const layers::TextureFactoryIdentifier& aIdentifier);
@@ -112,10 +111,6 @@ class VRManagerChild : public PVRManagerChild {
   explicit VRManagerChild();
   ~VRManagerChild();
 
-  PVRLayerChild* AllocPVRLayerChild(const uint32_t& aDisplayID,
-                                    const uint32_t& aGroup);
-  bool DeallocPVRLayerChild(PVRLayerChild* actor);
-
   // MOZ_CAN_RUN_SCRIPT_BOUNDARY until we can mark ipdl-generated things as
   // MOZ_CAN_RUN_SCRIPT.
   MOZ_CAN_RUN_SCRIPT_BOUNDARY
@@ -147,7 +142,7 @@ class VRManagerChild : public PVRManagerChild {
 
   nsTArray<RefPtr<VRDisplayClient>> mDisplays;
   VRDisplayCapabilityFlags mRuntimeCapabilities;
-  bool mDisplaysInitialized;
+  bool mDisplaysInitialized = false;
   nsTArray<uint64_t> mNavigatorCallbacks;
 
   struct XRFrameRequest {

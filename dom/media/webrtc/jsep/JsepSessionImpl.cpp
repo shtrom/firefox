@@ -174,6 +174,21 @@ void JsepSessionImpl::InitTransceiver(JsepTransceiver& aTransceiver) {
   // We do not set mLevel yet, we do that either on createOffer, or setRemote
 }
 
+nsresult JsepSessionImpl::SetRtcpMuxPolicy(JsepRtcpMuxPolicy policy) {
+  mLastError.clear();
+  if (mRtcpMuxPolicy == policy) {
+    return NS_OK;
+  }
+  if (mCurrentLocalDescription) {
+    JSEP_SET_ERROR(
+        "Changing the rtcpMux policy is only supported before the "
+        "first SetLocalDescription.");
+    return NS_ERROR_UNEXPECTED;
+  }
+  mRtcpMuxPolicy = policy;
+  return NS_OK;
+}
+
 nsresult JsepSessionImpl::SetBundlePolicy(JsepBundlePolicy policy) {
   mLastError.clear();
 
@@ -452,7 +467,7 @@ void JsepSessionImpl::AddExtmap(SdpMediaSection* msection) {
 
   if (!extensions.empty()) {
     SdpExtmapAttributeList* extmap = new SdpExtmapAttributeList;
-    extmap->mExtmaps = extensions;
+    extmap->mExtmaps = std::move(extensions);
     msection->GetAttributeList().SetAttribute(extmap);
   }
 }
@@ -808,8 +823,13 @@ JsepSession::Result JsepSessionImpl::SetLocalDescription(
 
   UniquePtr<Sdp> parsed;
   nsresult rv = ParseSdp(sdp, &parsed);
-  // Needs to be RTCError with sdp-syntax-error
-  NS_ENSURE_SUCCESS(rv, dom::PCError::OperationError);
+  if (NS_FAILED(rv)) {
+    Maybe<size_t> lineNumber;
+    if (!mLastSdpParsingErrors.empty()) {
+      lineNumber = Some(mLastSdpParsingErrors[0].first);
+    }
+    return Result(dom::PCError::OperationError, "sdp-syntax-error", lineNumber);
+  }
 
   // Check that content hasn't done anything unsupported with the SDP
   rv = ValidateLocalDescription(*parsed, type);
@@ -1011,8 +1031,13 @@ JsepSession::Result JsepSessionImpl::SetRemoteDescription(
   // Parse.
   UniquePtr<Sdp> parsed;
   nsresult rv = ParseSdp(sdp, &parsed);
-  // Needs to be RTCError with sdp-syntax-error
-  NS_ENSURE_SUCCESS(rv, dom::PCError::OperationError);
+  if (NS_FAILED(rv)) {
+    Maybe<size_t> lineNumber;
+    if (!mLastSdpParsingErrors.empty()) {
+      lineNumber = Some(mLastSdpParsingErrors[0].first);
+    }
+    return Result(dom::PCError::OperationError, "sdp-syntax-error", lineNumber);
+  }
 
   rv = ValidateRemoteDescription(*parsed);
   NS_ENSURE_SUCCESS(rv, dom::PCError::InvalidAccessError);
@@ -1109,7 +1134,12 @@ nsresult JsepSessionImpl::HandleNegotiatedSession(
   bool remoteIceLite =
       remote->GetAttributeList().HasAttribute(SdpAttribute::kIceLiteAttribute);
 
-  mIceControlling = remoteIceLite || *mIsPendingOfferer;
+  // RFC 8445 Section 9: roles persist for the session lifetime. Only set on
+  // first negotiation, or force controlling if remote switched to ICE-lite.
+  mIceControlling |= remoteIceLite;
+  if (!mNegotiations) {
+    mIceControlling |= *mIsPendingOfferer;
+  }
 
   const Sdp& answer = *mIsPendingOfferer ? *remote : *local;
 
@@ -1256,7 +1286,7 @@ nsresult JsepSessionImpl::MakeNegotiatedTransceiver(
   }
 
   if (answer.GetAttributeList().HasAttribute(SdpAttribute::kExtmapAttribute)) {
-    const auto extmaps = answer.GetAttributeList().GetExtmap().mExtmaps;
+    const auto& extmaps = answer.GetAttributeList().GetExtmap().mExtmaps;
     for (const auto& negotiatedExtension : extmaps) {
       if (negotiatedExtension.entry == 0) {
         MOZ_ASSERT(false, "This should have been caught sooner");
@@ -1926,14 +1956,31 @@ nsresult JsepSessionImpl::ValidateRemoteDescription(const Sdp& description) {
     const SdpMediaSection& oldMsection =
         mCurrentRemoteDescription->GetMediaSection(i);
 
+    if (mSdpHelper.MsectionIsDisabled(oldMsection)) {
+      bool oldIsApp =
+          oldMsection.GetMediaType() == SdpMediaSection::kApplication;
+      bool newIsApp =
+          newMsection.GetMediaType() == SdpMediaSection::kApplication;
+      if (oldIsApp != newIsApp) {
+        JSEP_SET_ERROR("Remote description changes the media type of m-line "
+                       << i
+                       << " to or from application, which is not"
+                          " permitted");
+        return NS_ERROR_INVALID_ARG;
+      }
+      continue;
+    }
+
     if (oldMsection.GetMediaType() != newMsection.GetMediaType()) {
       JSEP_SET_ERROR("Remote description changes the media type of m-line "
-                     << i);
+                     << i
+                     << "; media type changes are only permitted when the "
+                        "m-section was previously disabled");
       return NS_ERROR_INVALID_ARG;
     }
 
-    if (mSdpHelper.MsectionIsDisabled(newMsection) ||
-        mSdpHelper.MsectionIsDisabled(oldMsection)) {
+    if (mSdpHelper.MsectionIsDisabled(newMsection)) {
+      // Nothing else to do media is being disabled to possibly be reused.
       continue;
     }
 
@@ -1965,7 +2012,32 @@ nsresult JsepSessionImpl::ValidateRemoteDescription(const Sdp& description) {
   return NS_OK;
 }
 
+nsresult JsepSessionImpl::CheckRtcpMux(const Sdp& description) {
+  if (mRtcpMuxPolicy != kRtcpMuxRequire) {
+    return NS_OK;
+  }
+  for (size_t i = 0; i < description.GetMediaSectionCount(); ++i) {
+    const SdpMediaSection& msection = description.GetMediaSection(i);
+    if (mSdpHelper.MsectionIsDisabled(msection)) {
+      continue;
+    }
+    if (!mSdpHelper.HasRtcp(msection.GetProtocol())) {
+      continue;
+    }
+    if (!msection.GetAttributeList().HasAttribute(
+            SdpAttribute::kRtcpMuxAttribute)) {
+      JSEP_SET_ERROR(
+          "m-section at level "
+          << i << " is missing a=rtcp-mux, which is required by rtcpMuxPolicy");
+      return NS_ERROR_INVALID_ARG;
+    }
+  }
+  return NS_OK;
+}
+
 nsresult JsepSessionImpl::ValidateOffer(const Sdp& offer) {
+  nsresult rv = CheckRtcpMux(offer);
+  NS_ENSURE_SUCCESS(rv, rv);
   return mSdpHelper.ValidateTransportAttributes(offer, sdp::kOffer);
 }
 
@@ -1977,7 +2049,10 @@ nsresult JsepSessionImpl::ValidateAnswer(const Sdp& offer, const Sdp& answer) {
     return NS_ERROR_INVALID_ARG;
   }
 
-  nsresult rv = mSdpHelper.ValidateTransportAttributes(answer, sdp::kAnswer);
+  nsresult rv = CheckRtcpMux(answer);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = mSdpHelper.ValidateTransportAttributes(answer, sdp::kAnswer);
   NS_ENSURE_SUCCESS(rv, rv);
 
   for (size_t i = 0; i < offer.GetMediaSectionCount(); ++i) {
@@ -2319,7 +2394,7 @@ nsresult JsepSessionImpl::UpdateDefaultCandidate(
 
       auto& msection = sdp->GetMediaSection(level);
 
-      // Do not add default candidate to a bundle-only m-section, sinice that
+      // Do not add default candidate to a bundle-only m-section, since that
       // might confuse endpoints that do not support bundle-only.
       if (!msection.GetAttributeList().HasAttribute(
               SdpAttribute::kBundleOnlyAttribute)) {

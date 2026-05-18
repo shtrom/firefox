@@ -276,7 +276,7 @@ impl TimestampNormalizer {
             // at once to normalize the timestamps, we can't use it. We force the buffer to fail
             // to allocate. The lowest max binding size is 128MB, and query sets must be small
             // (no more than 4096), so this should never be hit in practice by sane programs.
-            if buffer_size.get() > device.adapter.limits().max_storage_buffer_binding_size as u64 {
+            if buffer_size.get() > device.adapter.limits().max_storage_buffer_binding_size {
                 return Err(DeviceError::OutOfMemory);
             }
 
@@ -353,7 +353,7 @@ impl TimestampNormalizer {
                 0,
                 &[buffer_offset_timestamps, total_timestamps],
             );
-            encoder.dispatch([needed_workgroups, 1, 1]);
+            encoder.dispatch_workgroups([needed_workgroups, 1, 1]);
             encoder.end_compute_pass();
         }
     }

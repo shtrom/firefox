@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -140,7 +138,7 @@ SandboxBroker::Policy::~Policy() = default;
 SandboxBroker::Policy::Policy(const Policy& aOther)
     : mMap(aOther.mMap.Clone()) {}
 
-// Chromium
+// See also Chromium BrokerFilePermission::ValidatePath in
 // sandbox/linux/syscall_broker/broker_file_permission.cc
 // Async signal safe
 bool SandboxBroker::Policy::ValidatePath(const char* path) const {
@@ -159,13 +157,11 @@ bool SandboxBroker::Policy::ValidatePath(const char* path) const {
   if (len >= 3 && path[len - 3] == '/' && path[len - 2] == '.' &&
       path[len - 1] == '.')
     return false;
-  // No /../ anywhere
-  for (size_t i = 0; i < len; i++) {
-    if (path[i] == '/' && (len - i) > 3) {
-      if (path[i + 1] == '.' && path[i + 2] == '.' && path[i + 3] == '/') {
-        return false;
-      }
-    }
+  // No special path components anywhere.
+  // Assume libc's strstr is good enough that we don't need to optimize.
+  // strstr is officially async signal safe as of POSIX.1-2017
+  if (strstr(path, "//") || strstr(path, "/./") || strstr(path, "/../")) {
+    return false;
   }
   return true;
 }
@@ -765,6 +761,11 @@ void SandboxBroker::ThreadMain(void) {
       shutdown(mFileDesc, SHUT_RD);
       break;
     }
+    if (!OperationIsValid(req.mOp)) {
+      SANDBOX_LOG("invalid op %d", static_cast<unsigned>(req.mOp));
+      shutdown(mFileDesc, SHUT_RD);
+      break;
+    }
 
     // Initialize the response with the default failure.
     memset(&resp, 0, sizeof(resp));
@@ -1042,6 +1043,8 @@ void SandboxBroker::ThreadMain(void) {
             AuditDenial(req.mOp, req.mFlags, req.mId, perms, pathBuf);
           }
           break;
+        default:
+          MOZ_CRASH("unreachable");
       }
     } else {
       MOZ_ASSERT(perms == 0);
@@ -1083,7 +1086,7 @@ void SandboxBroker::ThreadMain(void) {
   }
 }
 
-void SandboxBroker::AuditPermissive(int aOp, int aFlags, uint64_t aId,
+void SandboxBroker::AuditPermissive(Operation aOp, int aFlags, uint64_t aId,
                                     int aPerms, const char* aPath) {
   MOZ_RELEASE_ASSERT(SandboxInfo::Get().Test(SandboxInfo::kPermissive));
 
@@ -1097,21 +1100,21 @@ void SandboxBroker::AuditPermissive(int aOp, int aFlags, uint64_t aId,
   SANDBOX_LOG_ERRNO(
       "SandboxBroker: would have denied op=%s rflags=%o perms=%d path=%s for "
       "pid=%d permissive=1; real status",
-      OperationDescription[aOp], aFlags, aPerms, aPath, mChildPid);
+      OperationDescription(aOp), aFlags, aPerms, aPath, mChildPid);
   SandboxProfiler::ReportAudit("SandboxBroker::AuditPermissive",
-                               OperationDescription[aOp], aFlags, aId, aPerms,
+                               OperationDescription(aOp), aFlags, aId, aPerms,
                                aPath, mChildPid);
 }
 
-void SandboxBroker::AuditDenial(int aOp, int aFlags, uint64_t aId, int aPerms,
-                                const char* aPath) {
+void SandboxBroker::AuditDenial(Operation aOp, int aFlags, uint64_t aId,
+                                int aPerms, const char* aPath) {
   if (SandboxInfo::Get().Test(SandboxInfo::kVerbose)) {
     SANDBOX_LOG(
         "SandboxBroker: denied op=%s rflags=%o perms=%d path=%s for pid=%d",
-        OperationDescription[aOp], aFlags, aPerms, aPath, mChildPid);
+        OperationDescription(aOp), aFlags, aPerms, aPath, mChildPid);
   }
   SandboxProfiler::ReportAudit("SandboxBroker::AuditDenial",
-                               OperationDescription[aOp], aFlags, aId, aPerms,
+                               OperationDescription(aOp), aFlags, aId, aPerms,
                                aPath, mChildPid);
 }
 

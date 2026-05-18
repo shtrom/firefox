@@ -1175,7 +1175,7 @@ async function selectIndexAndWaitForSourceEditor(monitor, index) {
  */
 async function performRequests(monitor, tab, count) {
   const wait = waitForNetworkEvents(monitor, count);
-  await ContentTask.spawn(tab.linkedBrowser, count, requestCount => {
+  await SpecialPowers.spawn(tab.linkedBrowser, [count], requestCount => {
     content.wrappedJSObject.performRequests(requestCount);
   });
   await wait;
@@ -1415,23 +1415,6 @@ async function hideContextMenu(popup) {
  */
 async function selectContextMenuItem(monitor, id) {
   return selectNetmonitorContextMenuItem(monitor, id);
-}
-
-/**
- * Wait for DOM being in specific state. But, do not wait
- * for change if it's in the expected state already.
- */
-async function waitForDOMIfNeeded(target, selector, expectedLength = 1) {
-  return new Promise(resolve => {
-    const elements = target.querySelectorAll(selector);
-    if (elements.length == expectedLength) {
-      resolve(elements);
-    } else {
-      waitForDOM(target, selector, expectedLength).then(elems => {
-        resolve(elems);
-      });
-    }
-  });
 }
 
 /**

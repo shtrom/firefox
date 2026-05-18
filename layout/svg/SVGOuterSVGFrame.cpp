@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -10,6 +8,7 @@
 // Keep others in (case-insensitive) order:
 #include "gfxContext.h"
 #include "mozilla/PresShell.h"
+#include "mozilla/ReflowInput.h"
 #include "mozilla/SVGUtils.h"
 #include "mozilla/dom/BrowserChild.h"
 #include "mozilla/dom/Document.h"
@@ -131,7 +130,7 @@ void SVGOuterSVGFrame::Init(nsIContent* aContent, nsContainerFrame* aParent,
   // We need to do this async in order to get the right ordering with
   // respect to `Destroy()` when reframed.
   nsContentUtils::AddScriptRunner(
-      new AsyncSendIntrinsicSizeAndRatioToEmbedder(this));
+      MakeAndAddRef<AsyncSendIntrinsicSizeAndRatioToEmbedder>(this));
 }
 
 //----------------------------------------------------------------------
@@ -223,7 +222,6 @@ IntrinsicSize SVGOuterSVGFrame::GetIntrinsicSize() {
   return FinishIntrinsicSize(containAxes, intrinsicSize);
 }
 
-/* virtual */
 AspectRatio SVGOuterSVGFrame::GetIntrinsicRatio() const {
   if (ContainSizeAxesIfApplicable(this).IsAny()) {
     return AspectRatio();
@@ -253,8 +251,7 @@ AspectRatio SVGOuterSVGFrame::GetIntrinsicRatio() const {
     }
   }
 
-  const auto& viewBox = content->GetViewBoxInternal();
-  if (viewBox.HasRect()) {
+  if (const auto& viewBox = content->GetViewBoxInternal(); viewBox.HasRect()) {
     float zoom = Style()->EffectiveZoom().ToFloat();
     const auto& anim = viewBox.GetAnimValue() * zoom;
     return AspectRatio::FromSize(anim.width, anim.height);
@@ -280,11 +277,10 @@ nsIFrame::SizeComputationResult SVGOuterSVGFrame::ComputeSize(
 
   LogicalSize cbSize = aCBSize;
   IntrinsicSize intrinsicSize = GetIntrinsicSize();
-
+  AspectRatio ratio = GetAspectRatio();
   if (mIsRootContent) {
     // We're the root of the outermost browsing context, so we need to scale
     // cbSize by the full-zoom so that SVGs with percentage width/height zoom:
-
     NS_ASSERTION(aCBSize.ISize(aWritingMode) != NS_UNCONSTRAINEDSIZE &&
                      aCBSize.BSize(aWritingMode) != NS_UNCONSTRAINEDSIZE,
                  "root should not have auto-width/height containing block");
@@ -296,45 +292,11 @@ nsIFrame::SizeComputationResult SVGOuterSVGFrame::ComputeSize(
       cbSize.ISize(aWritingMode) *= zoom;
       cbSize.BSize(aWritingMode) *= zoom;
     }
-
-    // We also need to honour the width and height attributes' default values
-    // of 100% when we're the root of a browsing context.  (GetIntrinsicSize()
-    // doesn't report these since there's no such thing as a percentage
-    // intrinsic size.  Also note that explicit percentage values are mapped
-    // into style, so the following isn't for them.)
-
-    auto* content = static_cast<SVGSVGElement*>(GetContent());
-
-    const SVGAnimatedLength& width =
-        content->mLengthAttributes[SVGSVGElement::ATTR_WIDTH];
-    if (width.IsPercentage()) {
-      MOZ_ASSERT(!intrinsicSize.width,
-                 "GetIntrinsicSize should have reported no intrinsic width");
-      float val = width.GetAnimValInSpecifiedUnits() / 100.0f;
-      intrinsicSize.width.emplace(std::max(val, 0.0f) *
-                                  cbSize.Width(aWritingMode));
-    }
-
-    const SVGAnimatedLength& height =
-        content->mLengthAttributes[SVGSVGElement::ATTR_HEIGHT];
-    NS_ASSERTION(aCBSize.BSize(aWritingMode) != NS_UNCONSTRAINEDSIZE,
-                 "root should not have auto-height containing block");
-    if (height.IsPercentage()) {
-      MOZ_ASSERT(!intrinsicSize.height,
-                 "GetIntrinsicSize should have reported no intrinsic height");
-      float val = height.GetAnimValInSpecifiedUnits() / 100.0f;
-      intrinsicSize.height.emplace(std::max(val, 0.0f) *
-                                   cbSize.Height(aWritingMode));
-    }
-    MOZ_ASSERT(intrinsicSize.height && intrinsicSize.width,
-               "We should have just handled the only situation where"
-               "we lack an intrinsic height or width.");
   }
 
   return {ComputeSizeWithIntrinsicDimensions(
               aSizingInput.mRenderingContext, aWritingMode, intrinsicSize,
-              GetAspectRatio(), cbSize, aMargin, aBorderPadding, aSizeOverrides,
-              aFlags),
+              ratio, cbSize, aMargin, aBorderPadding, aSizeOverrides, aFlags),
           AspectRatioUsage::None};
 }
 
@@ -644,7 +606,7 @@ void SVGOuterSVGFrame::PaintSVG(gfxContext& aContext,
 }
 
 SVGBBox SVGOuterSVGFrame::GetBBoxContribution(
-    const gfx::Matrix& aToBBoxUserspace, uint32_t aFlags) {
+    const gfx::Matrix& aToBBoxUserspace, SVGBBoxFlags aFlags) {
   NS_ASSERTION(
       PrincipalChildList().FirstChild()->IsSVGOuterSVGAnonChildFrame() &&
           !PrincipalChildList().FirstChild()->GetNextSibling(),
@@ -704,7 +666,7 @@ void SVGOuterSVGFrame::AppendDirectlyOwnedAnonBoxes(
 
 void SVGOuterSVGFrame::MaybeSendIntrinsicSizeAndRatioToEmbedder() {
   MaybeSendIntrinsicSizeAndRatioToEmbedder(Some(GetIntrinsicSize()),
-                                           Some(GetAspectRatio()));
+                                           Some(GetIntrinsicRatio()));
 }
 
 void SVGOuterSVGFrame::MaybeSendIntrinsicSizeAndRatioToEmbedder(

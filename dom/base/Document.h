@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -39,7 +37,6 @@
 #include "mozilla/RenderingPhase.h"
 #include "mozilla/Result.h"
 #include "mozilla/SegmentedVector.h"
-#include "mozilla/ServoStyleSet.h"
 #include "mozilla/StorageAccessAPIHelper.h"
 #include "mozilla/TimeStamp.h"
 #include "mozilla/UniquePtr.h"
@@ -50,6 +47,7 @@
 #include "mozilla/dom/AnimationTimelinesController.h"
 #include "mozilla/dom/DocumentOrShadowRoot.h"
 #include "mozilla/dom/Element.h"
+#include "mozilla/dom/ElementBinding.h"
 #include "mozilla/dom/EventTarget.h"
 #include "mozilla/dom/LargestContentfulPaint.h"
 #include "mozilla/dom/Nullable.h"
@@ -133,9 +131,7 @@ class JSTracer;
 class PolicyContainer;
 class gfxUserFontSet;
 class mozIDOMWindowProxy;
-class nsCachableElementsByNameNodeList;
 class nsCommandManager;
-class nsContentList;
 class nsCycleCollectionTraversalCallback;
 class nsDOMCaretPosition;
 class nsDOMNavigationTiming;
@@ -161,7 +157,6 @@ class nsIDocumentObserver;
 class nsIEventTarget;
 class nsIFrame;
 class nsIGlobalObject;
-class nsIHTMLCollection;
 class nsIInputStream;
 class nsILayoutHistoryState;
 class nsIObjectLoadingContent;
@@ -178,7 +173,6 @@ class nsNodeInfoManager;
 class nsPIWindowRoot;
 class nsPresContext;
 class nsRange;
-class nsSimpleContentList;
 class nsTextNode;
 class nsViewManager;
 class nsViewportInfo;
@@ -243,6 +237,7 @@ class DocumentType;
 class DOMImplementation;
 class DOMIntersectionObserver;
 class DOMStringList;
+class EditContext;
 class Event;
 class EventListener;
 struct FailedCertSecurityInfo;
@@ -253,6 +248,7 @@ class FrameRequestCallback;
 class HighlightRegistry;
 class HTMLAllCollection;
 class HTMLBodyElement;
+class HTMLCollection;
 class HTMLInputElement;
 class HTMLMetaElement;
 class HTMLDialogElement;
@@ -273,10 +269,12 @@ enum class OrientationType : uint8_t;
 enum class PopoverAttributeState : uint8_t;
 class ProcessingInstruction;
 class Promise;
+struct PropertyDefinition;
 class ScriptLoader;
 class Selection;
 class ServiceWorkerDescriptor;
 class ShadowRoot;
+class SimpleContentList;
 class SVGDocument;
 class SVGElement;
 class SVGSVGElement;
@@ -289,6 +287,7 @@ class TrustedHTMLOrString;
 class OwningTrustedHTMLOrString;
 enum class ViewportFitType : uint8_t;
 class ViewTransition;
+struct ViewTransitionParams;
 class ViewTransitionUpdateCallbackOrStartViewTransitionOptions;
 class WakeLockSentinel;
 class WindowContext;
@@ -564,13 +563,11 @@ class Document : public nsINode,
   friend class DocumentOrShadowRoot;
   friend class LinkedList<Document>;
   friend class LinkedListElement<Document>;
+  friend class AutoRestoreCloningForSVGUse;
 
  protected:
   Document(const char* aContentType, LoadedAsData aLoadedAsData);
   virtual ~Document();
-
-  Document(const Document&) = delete;
-  Document& operator=(const Document&) = delete;
 
  public:
   using ExternalResourceLoad = dom::ExternalResourceMap::ExternalResourceLoad;
@@ -581,6 +578,8 @@ class Document : public nsINode,
   // nsINode overrides the new operator for DOM Arena allocation.
   // to use the default one, we need to bring it back again
   void* operator new(size_t aSize) { return ::operator new(aSize); }
+  Document(const Document&) = delete;
+  Document& operator=(const Document&) = delete;
 
   /**
    * Called when XPCOM shutdown.
@@ -1094,6 +1093,17 @@ class Document : public nsINode,
     mInitialAboutBlankLoadCompleting = false;
   }
 
+  // Returns true if the load event should be forced right now, despite
+  // possible blockers due to the initial sync load of about:blank.
+  bool ShouldForceInitialSyncLoad() {
+    // Force load if
+    // - we are currently in the synchronous load path of the docshell, i.e. we
+    //   are completing the initial about:blank load
+    // - and Document::EndLoad was already called, so the method is almost done
+    //   (we're likely called from there right now).
+    return InitialAboutBlankLoadCompleting() && !IsExpectingEndLoad();
+  }
+
   void SetLoadedAsData(bool aLoadedAsData, bool aConsiderForMemoryReporting);
 
   TimeStamp GetLoadingOrRestoredFromBFCacheTimeStamp() const {
@@ -1462,7 +1472,7 @@ class Document : public nsINode,
   // This array contains nodes that have been blocked to prevent
   // user tracking. They most likely have had their nsIChannel
   // canceled by the URL classifier (Safebrowsing).
-  already_AddRefed<nsSimpleContentList> BlockedNodesByClassifier() const;
+  already_AddRefed<SimpleContentList> BlockedNodesByClassifier() const;
 
   // Helper method that returns true if the document has storage-access sandbox
   // flag.
@@ -1564,6 +1574,10 @@ class Document : public nsINode,
    */
   void TearingDownEditor();
 
+  EditContext* GetActiveEditContext() const { return mActiveEditContext; }
+  // https://w3c.github.io/edit-context/#dfn-update-the-text-edit-context
+  MOZ_CAN_RUN_SCRIPT void UpdateTextEditContext();
+
   void SetKeyPressEventModel(uint16_t aKeyPressEventModel);
 
   // Gets the next form number.
@@ -1601,6 +1615,7 @@ class Document : public nsINode,
   nsresult InitPolicyContainer(nsIChannel* aChannel);
   nsresult InitCSP(nsIChannel* aChannel);
   nsresult InitIntegrityPolicy(nsIChannel* aChannel);
+  nsresult InitIntegrityPolicyWAICT(nsIChannel* aChannel);
   nsresult InitCOEP(nsIChannel* aChannel);
   nsresult InitDocPolicy(nsIChannel* aChannel);
   nsresult InitTLSCertificateBinding(nsIChannel* aChannel);
@@ -1938,10 +1953,27 @@ class Document : public nsINode,
 
   bool TopLayerContains(Element&) const;
 
+  // https://fullscreen.spec.whatwg.org/#fullscreen-element-ready-check
+  enum class ElementReadyCheckResult {
+    // error is false, in the Fullscreen API requestFullscreen algorithm
+    eOk,
+    // Shall not abort early during synchronous phase of requestFullscreen, but
+    // will during ApplyFullscreen.
+    // Not yet spec'ed.
+    eKeyboardLockOnly,
+    // Request was for an element that already is the fullscreenElement and the
+    // keyboard lock status is also the same
+    eSame,
+    // Element Ready check failed
+    eErrorPromiseRejected
+  };
+
   // Do the "fullscreen element ready check" from the fullscreen spec.
-  // It returns true if the given element is allowed to go into fullscreen.
-  // It is responsive to dispatch "fullscreenerror" event when necessary.
-  bool FullscreenElementReadyCheck(FullscreenRequest&);
+  // see https://fullscreen.spec.whatwg.org/#fullscreen-element-ready-check
+  // It returns ElementReadyCheckResult::eOk if the given element is allowed to
+  // go into fullscreen. It is responsive to dispatch "fullscreenerror" event
+  // when necessary.
+  ElementReadyCheckResult FullscreenElementReadyCheck(FullscreenRequest&);
 
   /**
    * When this is called on content process, this asynchronously requests that
@@ -1962,8 +1994,7 @@ class Document : public nsINode,
  private:
   void RequestFullscreenInContentProcess(UniquePtr<FullscreenRequest> aRequest,
                                          bool aApplyFullscreenDirectly);
-  void RequestFullscreenInParentProcess(UniquePtr<FullscreenRequest> aRequest,
-                                        bool aApplyFullscreenDirectly);
+  void RequestFullscreenInParentProcess(UniquePtr<FullscreenRequest> aRequest);
 
   // Pushes aElement onto the top layer
   void TopLayerPush(Element&);
@@ -1982,7 +2013,7 @@ class Document : public nsINode,
   void SetAncestorOriginsList(nsTArray<nsString>&& aAncestorOriginsList);
   Span<const nsString> GetAncestorOriginsList() const;
   // https://html.spec.whatwg.org/#concept-location-ancestor-origins-list
-  already_AddRefed<DOMStringList> AncestorOrigins() const;
+  already_AddRefed<DOMStringList> AncestorOrigins();
 
   // Removes all the elements with fullscreen flag set from the top layer, and
   // clears their fullscreen flag.
@@ -2042,7 +2073,8 @@ class Document : public nsINode,
    * aFrameElement is the frame element which contains the child-process
    * fullscreen document.
    */
-  void RemoteFrameFullscreenChanged(Element* aFrameElement);
+  void RemoteFrameFullscreenChanged(Element* aFrameElement,
+                                    bool aFullscreenKeyboardLockEnabled);
 
   /**
    * Called when a frame in a remote child document has rolled back fullscreen
@@ -2067,6 +2099,13 @@ class Document : public nsINode,
    * is in fullscreen mode and has no fullscreen children.
    */
   bool IsFullscreenLeaf();
+
+  /**
+   * Get the fullscreen leaf document starting from aDoc or the current
+   * in-process root document if aDoc is not fullscreen.
+   */
+  static Document* GetFullscreenLeaf(Document* aDoc);
+  static Document* GetFullscreenLeaf(Document& aDoc);
 
   /**
    * Returns the document which is at the root of this document's branch
@@ -2119,6 +2158,10 @@ class Document : public nsINode,
    * Clear pending fullscreen in aDocument.
    */
   static void ClearPendingFullscreenRequests(Document* aDocument);
+
+  void SetFullscreenKeyboardLockStatus(FullscreenKeyboardLock aStatus);
+  FullscreenKeyboardLock GetFullscreenKeyboardLockStatus() const;
+  bool HasFullscreenKeyboardLockEnabled();
 
   // ScreenOrientation related APIs
 
@@ -2355,6 +2398,10 @@ class Document : public nsINode,
   already_AddRefed<Element> CreateElem(const nsAString& aName, nsAtom* aPrefix,
                                        int32_t aNamespaceID,
                                        const nsAString* aIs = nullptr);
+
+  // https://dom.spec.whatwg.org/#effective-global-custom-element-registry
+  mozilla::dom::CustomElementRegistry*
+  GetEffectiveGlobalCustomElementRegistry();
 
   /**
    * Get the security info (i.e. SSL state etc) that the document got
@@ -3339,6 +3386,15 @@ class Document : public nsINode,
   // features values changing.
   void NotifyMediaFeatureValuesChanged();
 
+  // Returns cached value of dom.image.sizes_auto.enabled, so that
+  // changing the pref while the document is loaded doesn't cause issues.
+  bool AutoSizesEnabled() const { return mAutoSizesEnabled; }
+  // Observe loading=lazy sizes=auto image for size changes.
+  void ObserveAutoSizesImage(HTMLImageElement& aElement);
+  void UnobserveAutoSizesImage(HTMLImageElement& aElement);
+  // Returns whether we are observing |aElement| for sizes=auto size changes.
+  bool ObservesAutoSizesImage(HTMLImageElement& aElement) const;
+
   nsresult GetStateObject(JS::MutableHandle<JS::Value> aState);
 
   nsDOMNavigationTiming* GetNavigationTiming() const { return mTiming; }
@@ -3350,7 +3406,7 @@ class Document : public nsINode,
     mPageloadEventData.SetDocumentFeature(aFeature);
   }
 
-  nsContentList* ImageMapList();
+  ContentList* ImageMapList();
 
   // Add aLink to the set of links that need their status resolved.
   void RegisterPendingLinkUpdate(Link* aLink);
@@ -3511,16 +3567,17 @@ class Document : public nsINode,
   void SetTitle(const nsAString& aTitle, ErrorResult& rv);
   void GetDir(nsAString& aDirection) const;
   void SetDir(const nsAString& aDirection);
-  nsIHTMLCollection* Images();
-  nsIHTMLCollection* Embeds();
-  nsIHTMLCollection* Plugins() { return Embeds(); }
-  nsIHTMLCollection* Links();
-  nsIHTMLCollection* Forms();
-  nsIHTMLCollection* Scripts();
-  already_AddRefed<nsContentList> GetElementsByName(const nsAString& aName) {
-    return GetFuncStringContentList<nsCachableElementsByNameNodeList>(
+  HTMLCollection* Images();
+  HTMLCollection* Embeds();
+  HTMLCollection* Plugins() { return Embeds(); }
+  HTMLCollection* Links();
+  HTMLCollection* Forms();
+  HTMLCollection* Scripts();
+  already_AddRefed<ContentList> GetElementsByName(const nsAString& aName) {
+    return GetFuncStringContentList<CachableElementsByNameNodeList>(
         this, MatchNameAttribute, nullptr, UseExistingNameString, aName);
   }
+  MOZ_CAN_RUN_SCRIPT
   Document* Open(const mozilla::dom::Optional<nsAString>& /* unused */,
                  const mozilla::dom::Optional<nsAString>& /* unused */,
                  mozilla::ErrorResult& aError);
@@ -3575,10 +3632,18 @@ class Document : public nsINode,
   MOZ_CAN_RUN_SCRIPT void QueryCommandValue(const nsAString& aHTMLCommandName,
                                             nsAString& aValue,
                                             mozilla::ErrorResult& aRv);
-  nsIHTMLCollection* Applets();
-  nsIHTMLCollection* Anchors();
+  HTMLCollection* Applets();
+  HTMLCollection* Anchors();
   TimeStamp LastFocusTime() const;
   void SetLastFocusTime(const TimeStamp& aFocusTime);
+
+  void SetFocusNavigationStartingPoint(nsIContent* aContent,
+                                       bool aWillBeRemoved = false);
+  nsIContent* GetFocusNavigationStartingPoint() const {
+    return mFocusNavigationStartingPoint;
+  }
+  bool WasFocusedElementRemoved() const { return mWasFocusedElementRemoved; }
+
   // Event handlers are all on nsINode already
   bool MozSyntheticDocument() const { return IsSyntheticDocument(); }
   Element* GetCurrentScript();
@@ -3794,7 +3859,7 @@ class Document : public nsINode,
   void UnlockAllWakeLocks(WakeLockType aType);
 
   // ParentNode
-  nsIHTMLCollection* Children();
+  HTMLCollection* Children();
   uint32_t ChildElementCount();
 
   /**
@@ -4111,6 +4176,16 @@ class Document : public nsINode,
   void ScheduleViewTransitionUpdateCallback(ViewTransition* aVt);
   MOZ_CAN_RUN_SCRIPT void FlushViewTransitionUpdateCallbackQueue();
 
+  // Returns some ViewTransition::TypeList or Nothing if skip transition.
+  // https://drafts.csswg.org/css-view-transitions-2/#resolve-view-transition-rule
+  Maybe<nsTArray<RefPtr<nsAtom>>> ResolveViewTransitionRule();
+
+  void SetInboundViewTransitionParams(UniquePtr<ViewTransitionParams> aParams);
+
+  // Returns some ViewTransition or Nothing if skip transition.
+  // https://drafts.csswg.org/css-view-transitions-2/#resolve-inbound-cross-document-view-transition
+  Maybe<RefPtr<ViewTransition>> ResolveInboundCrossDocumentViewTransition();
+
   // Getter for PermissionDelegateHandler. Performs lazy initialization.
   PermissionDelegateHandler* GetPermissionDelegateHandler();
 
@@ -4269,17 +4344,15 @@ class Document : public nsINode,
   }
 
  private:
-  void DoCacheAllKnownLangPrefs();
   void RecomputeLanguageFromCharset();
   bool GetSHEntryHasUserInteraction();
 
   void AppendAutoFocusCandidateToTopDocument(Element* aAutoFocusCandidate);
 
+  // https://w3c.github.io/edit-context/#dfn-determine-the-active-editcontext
+  EditContext* DetermineActiveEditContext() const;
+
  public:
-  void SetMayNeedFontPrefsUpdate() { mMayNeedFontPrefsUpdate = true; }
-
-  bool MayNeedFontPrefsUpdate() { return mMayNeedFontPrefsUpdate; }
-
   void SetSHEntryHasUserInteraction(bool aHasInteraction);
 
   nsAtom* GetContentLanguageAsAtomForStyle() const;
@@ -4289,22 +4362,7 @@ class Document : public nsINode,
    * Fetch the user's font preferences for the given aLanguage's
    * language group.
    */
-  const LangGroupFontPrefs* GetFontPrefsForLang(
-      nsAtom* aLanguage, bool* aNeedsToCache = nullptr) const;
-
-  void ForceCacheLang(nsAtom* aLanguage) {
-    if (!mLanguagesUsed.EnsureInserted(aLanguage)) {
-      return;
-    }
-    GetFontPrefsForLang(aLanguage);
-  }
-
-  void CacheAllKnownLangPrefs() {
-    if (!mMayNeedFontPrefsUpdate) {
-      return;
-    }
-    DoCacheAllKnownLangPrefs();
-  }
+  const LangGroupFontPrefs* GetFontPrefsForLang(nsAtom* aLanguage) const;
 
   nsINode* GetServoRestyleRoot() const { return mServoRestyleRoot; }
 
@@ -4895,19 +4953,25 @@ class Document : public nsINode,
   nsPropertyTable mPropertyTable;
 
   // Our cached .children collection
-  nsCOMPtr<nsIHTMLCollection> mChildrenCollection;
+  RefPtr<HTMLCollection> mChildrenCollection;
 
   // Various DOM lists
-  RefPtr<nsContentList> mImages;
-  RefPtr<nsContentList> mEmbeds;
-  RefPtr<nsContentList> mLinks;
-  RefPtr<nsContentList> mForms;
-  RefPtr<nsContentList> mScripts;
-  nsCOMPtr<nsIHTMLCollection> mApplets;
-  RefPtr<nsContentList> mAnchors;
+  RefPtr<ContentList> mImages;
+  RefPtr<ContentList> mEmbeds;
+  RefPtr<ContentList> mLinks;
+  RefPtr<ContentList> mForms;
+  RefPtr<ContentList> mScripts;
+  RefPtr<HTMLCollection> mApplets;
+  RefPtr<ContentList> mAnchors;
 
   // container for per-context fonts (downloadable, SVG, etc.)
   RefPtr<FontFaceSet> mFontFaceSet;
+
+  // Points to the focus navigation starting point if the focused element is
+  // removed or becomes non-focusable, so that focus navigation isn't reset when
+  // that happens.
+  // https://html.spec.whatwg.org/#sequential-focus-navigation-starting-point
+  RefPtr<nsIContent> mFocusNavigationStartingPoint;
 
   // Last time this document or a one of its sub-documents was focused.  If
   // focus has never occurred then mLastFocusTime.IsNull() will be true.
@@ -4949,8 +5013,6 @@ class Document : public nsINode,
 
   // True if BIDI is enabled.
   bool mBidiEnabled : 1;
-  // True if we may need to recompute the language prefs for this document.
-  bool mMayNeedFontPrefsUpdate : 1;
 
   // True if we are trying to fire the load event for the initial about:blank.
   // Since the initial about:blank is already in READYSTATE_COMPLETE when
@@ -5250,6 +5312,14 @@ class Document : public nsINode,
   // https://html.spec.whatwg.org/#has-been-revealed
   bool mHasBeenRevealed : 1;
 
+  // Cached value of dom.image.sizes_auto.enabled
+  const bool mAutoSizesEnabled : 1;
+
+  // If false, mFocusNavigationStartingPoint is the previously-focused element.
+  // If true, mFocusNavigationStartingPoint is the previously-focused element's
+  // previous sibling in the flat tree.
+  bool mWasFocusedElementRemoved : 1;
+
   // The fingerprinting protections overrides for this document. The value will
   // override the default enabled fingerprinting protections for this document.
   // This will only get populated if these is one that comes from the local
@@ -5341,6 +5411,7 @@ class Document : public nsINode,
   nsCString mContentType;
 
   nsTArray<nsString> mAncestorOriginsList;
+  RefPtr<DOMStringList> mCachedAncestorOrigins;
 
  protected:
   // The document's security info
@@ -5580,7 +5651,11 @@ class Document : public nsINode,
 
   RefPtr<DOMImplementation> mDOMImplementation;
 
-  RefPtr<nsContentList> mImageMaps;
+  // This document's active edit context
+  // https://w3c.github.io/edit-context/#dfn-active-editcontext
+  RefPtr<EditContext> mActiveEditContext;
+
+  RefPtr<ContentList> mImageMaps;
 
   // A set of responsive images keyed by address pointer.
   nsTHashSet<HTMLImageElement*> mResponsiveContent;
@@ -5664,8 +5739,6 @@ class Document : public nsINode,
   // attributes. This set contains all elements which need lazy resolution.
   nsTHashSet<Element*> mLazyPresElements;
 
-  nsTHashSet<RefPtr<nsAtom>> mLanguagesUsed;
-
   // TODO(emilio): Is this hot enough to warrant to be cached?
   // EncodingToLang.cpp keeps the atom alive until shutdown, so
   // no need for a RefPtr.
@@ -5698,6 +5771,9 @@ class Document : public nsINode,
   RefPtr<ChromeObserver> mChromeObserver;
 
   RefPtr<HTMLAllCollection> mAll;
+
+  // https://drafts.csswg.org/css-view-transitions-2/#document-inbound-view-transition-params
+  UniquePtr<ViewTransitionParams> mInboundViewTransitionParams;
 
   // The active view transition.
   // https://drafts.csswg.org/css-view-transitions-1/#document-active-view-transition
@@ -5785,6 +5861,9 @@ class Document : public nsINode,
   nsTArray<CanvasUsage> mCanvasUsageData;
   // Timestamp (PR_Now microseconds) of the last update to mCanvasUsageData.
   uint64_t mCanvasUsageLastTimestamp = 0;
+
+  // ResizeObserver for loading=lazy sizes=auto images.
+  RefPtr<ResizeObserver> mAutoSizeImageObserver;
 
   RefPtr<class FragmentDirective> mFragmentDirective;
   UniquePtr<RadioGroupContainer> mRadioGroupContainer;
@@ -5880,7 +5959,7 @@ class MOZ_RAII IgnoreOpensDuringUnload final {
   }
 
  private:
-  Document* mDoc;
+  RefPtr<Document> mDoc;
 };
 
 /**

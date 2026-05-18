@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -58,6 +56,7 @@
 #include "mozilla/dom/DocumentInlines.h"
 #include "mozilla/dom/Event.h"
 #include "mozilla/dom/Exceptions.h"
+#include "mozilla/dom/FeaturePolicyUtils.h"
 #include "mozilla/dom/FunctionBinding.h"
 #include "mozilla/dom/IndexedDatabaseManager.h"
 #include "mozilla/dom/JSExecutionManager.h"
@@ -599,8 +598,7 @@ class ReportErrorToConsoleRunnable final : public WorkerParentThreadRunnable {
  public:
   // aWorkerPrivate is the worker thread we're on (or the main thread, if null)
   static void Report(WorkerPrivate* aWorkerPrivate, uint32_t aErrorFlags,
-                     const nsCString& aCategory,
-                     nsContentUtils::PropertiesFile aFile,
+                     const nsCString& aCategory, PropertiesFile aFile,
                      const nsCString& aMessageName,
                      const nsTArray<nsString>& aParams,
                      const mozilla::SourceLocation& aLocation) {
@@ -628,7 +626,7 @@ class ReportErrorToConsoleRunnable final : public WorkerParentThreadRunnable {
  private:
   ReportErrorToConsoleRunnable(WorkerPrivate* aWorkerPrivate,
                                uint32_t aErrorFlags, const nsCString& aCategory,
-                               nsContentUtils::PropertiesFile aFile,
+                               PropertiesFile aFile,
                                const nsCString& aMessageName,
                                const nsTArray<nsString>& aParams,
                                const mozilla::SourceLocation& aLocation)
@@ -659,7 +657,7 @@ class ReportErrorToConsoleRunnable final : public WorkerParentThreadRunnable {
 
   const uint32_t mErrorFlags;
   const nsCString mCategory;
-  const nsContentUtils::PropertiesFile mFile;
+  const PropertiesFile mFile;
   const nsCString mMessageName;
   const nsTArray<nsString> mParams;
   const mozilla::SourceLocation mLocation;
@@ -1409,7 +1407,7 @@ nsresult WorkerPrivate::SetCsp(nsIContentSecurityPolicy* aCSP) {
   aCSP->EnsureEventTarget(mMainThreadEventTarget);
 
   mLoadInfo.mCSP = aCSP;
-  auto ctx = WorkerCSPContext::CreateFromCSP(aCSP);
+  auto ctx = OffThreadCSPContext::CreateFromCSP(aCSP);
   if (NS_WARN_IF(ctx.isErr())) {
     return ctx.unwrapErr();
   }
@@ -1477,7 +1475,7 @@ nsresult WorkerPrivate::SetCSPFromHeaderValues(
 
   mLoadInfo.mCSP = csp;
 
-  auto ctx = WorkerCSPContext::CreateFromCSP(csp);
+  auto ctx = OffThreadCSPContext::CreateFromCSP(csp);
   if (NS_WARN_IF(ctx.isErr())) {
     return ctx.unwrapErr();
   }
@@ -2289,32 +2287,6 @@ void WorkerPrivate::PropagateStorageAccessPermissionGranted() {
   RefPtr<PropagateStorageAccessPermissionGrantedRunnable> runnable =
       new PropagateStorageAccessPermissionGrantedRunnable(this);
   (void)NS_WARN_IF(!runnable->Dispatch(this));
-}
-
-void WorkerPrivate::NotifyStorageKeyUsed() {
-  AssertIsOnWorkerThread();
-
-  // Only notify once per global.
-  if (hasNotifiedStorageKeyUsed) {
-    return;
-  }
-  hasNotifiedStorageKeyUsed = true;
-
-  // Notify about storage access on the main thread.
-  RefPtr<StrongWorkerRef> strongRef =
-      StrongWorkerRef::Create(this, "WorkerPrivate::NotifyStorageKeyUsed");
-  if (!strongRef) {
-    return;
-  }
-  RefPtr<ThreadSafeWorkerRef> ref = new ThreadSafeWorkerRef(strongRef);
-  DispatchToMainThread(NS_NewRunnableFunction(
-      "WorkerPrivate::NotifyStorageKeyUsed", [ref = std::move(ref)] {
-        nsGlobalWindowInner* window =
-            nsGlobalWindowInner::Cast(ref->Private()->GetAncestorWindow());
-        if (window) {
-          window->MaybeNotifyStorageKeyUsed();
-        }
-      }));
 }
 
 bool WorkerPrivate::Close() {
@@ -3349,6 +3321,7 @@ nsresult WorkerPrivate::GetLoadInfo(
     loadInfo.mStorageAccess = aParent->StorageAccess();
     loadInfo.mUseRegularPrincipal = aParent->UseRegularPrincipal();
     loadInfo.mUsingStorageAccess = aParent->UsingStorageAccess();
+    loadInfo.mSerialAllowed = aParent->SerialAllowed();
     loadInfo.mCookieJarSettings = aParent->CookieJarSettings();
     if (loadInfo.mCookieJarSettings) {
       loadInfo.mCookieJarSettingsArgs = aParent->CookieJarSettingsArgs();
@@ -3506,6 +3479,8 @@ nsresult WorkerPrivate::GetLoadInfo(
       loadInfo.mStorageAccess = StorageAllowedForWindow(globalWindow);
       loadInfo.mUseRegularPrincipal = document->UseRegularPrincipal();
       loadInfo.mUsingStorageAccess = document->UsingStorageAccess();
+      loadInfo.mSerialAllowed =
+          FeaturePolicyUtils::IsFeatureAllowed(document, u"serial"_ns);
       loadInfo.mShouldResistFingerprinting =
           document->ShouldResistFingerprinting(
               RFPTarget::IsAlwaysEnabledForPrecompute);
@@ -5959,9 +5934,8 @@ void WorkerPrivate::ReportError(JSContext* aCx,
 
 // static
 void WorkerPrivate::ReportErrorToConsole(
-    uint32_t aErrorFlags, const nsCString& aCategory,
-    nsContentUtils::PropertiesFile aFile, const nsCString& aMessageName,
-    const nsTArray<nsString>& aParams,
+    uint32_t aErrorFlags, const nsCString& aCategory, PropertiesFile aFile,
+    const nsCString& aMessageName, const nsTArray<nsString>& aParams,
     const mozilla::SourceLocation& aLocation) {
   WorkerPrivate* wp = nullptr;
   if (!NS_IsMainThread()) {
@@ -6645,8 +6619,6 @@ void WorkerPrivate::EnsureOwnerEmbedderPolicy() {
 }
 
 nsIPrincipal* WorkerPrivate::GetEffectiveStoragePrincipal() const {
-  AssertIsOnWorkerThread();
-
   if (mLoadInfo.mUseRegularPrincipal) {
     return mLoadInfo.mPrincipal;
   }
@@ -6817,9 +6789,9 @@ FontVisibility WorkerPrivate::GetFontVisibility() const {
 
 void WorkerPrivate::ReportBlockedFontFamily(const nsCString& aMsg) const {
   MOZ_LOG(gFingerprinterDetection, mozilla::LogLevel::Info, ("%s", aMsg.get()));
-  nsContentUtils::ReportToConsoleNonLocalized(NS_ConvertUTF8toUTF16(aMsg),
-                                              nsIScriptError::warningFlag,
-                                              "Security"_ns, GetDocument());
+  nsContentUtils::ReportToConsoleByWindowID(NS_ConvertUTF8toUTF16(aMsg),
+                                            nsIScriptError::warningFlag,
+                                            "Security"_ns, WindowID());
 }
 
 bool WorkerPrivate::IsChrome() const { return IsChromeWorker(); }

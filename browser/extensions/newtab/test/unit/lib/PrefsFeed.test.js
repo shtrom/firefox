@@ -228,6 +228,33 @@ describe("PrefsFeed", () => {
     feed.onPocketExperimentUpdated({}, "feature-rollout-loaded");
     assert.notCalled(feed.store.dispatch);
   });
+  it("should set initialWallpaper when currentWallpaper is set and initialWallpaper is unset", () => {
+    sandbox
+      .stub(global.NimbusFeatures.pocketNewtab, "getAllVariables")
+      .returns({
+        currentWallpaper: "celestial",
+      });
+    feed.onPocketExperimentUpdated();
+    assert.calledWith(
+      feed._prefs.set,
+      "newtabWallpapers.initialWallpaper",
+      "celestial"
+    );
+  });
+  it("should not overwrite initialWallpaper if it is already set", () => {
+    FAKE_PREFS.set("newtabWallpapers.initialWallpaper", "celestial");
+    sandbox
+      .stub(global.NimbusFeatures.pocketNewtab, "getAllVariables")
+      .returns({
+        currentWallpaper: "celestial",
+      });
+    feed.onPocketExperimentUpdated();
+    assert.neverCalledWith(
+      feed._prefs.set,
+      "newtabWallpapers.initialWallpaper",
+      sinon.match.any
+    );
+  });
   it("should send a PREF_CHANGED actions when onExperimentUpdated is called", () => {
     sandbox.stub(global.NimbusFeatures.newtab, "getAllVariables").returns({
       prefsButtonIcon: "icon-new",
@@ -422,6 +449,77 @@ describe("PrefsFeed", () => {
         })
       );
     });
+    it("should write trainhop widgets.weatherSize to the default branch", () => {
+      const setStringPref = sinon.spy();
+      ServicesStub.prefs.getDefaultBranch = sinon
+        .stub()
+        .returns({ setStringPref });
+      const enrollment = {
+        meta: { isRollout: false },
+        value: {
+          type: "widgets",
+          payload: { weatherSize: "large" },
+        },
+      };
+      sandbox
+        .stub(global.NimbusFeatures.newtabTrainhop, "getAllEnrollments")
+        .returns([enrollment]);
+
+      feed.onTrainhopExperimentUpdated();
+
+      assert.calledWith(setStringPref, "widgets.weather.size", "large");
+    });
+
+    it("should not write widgets.weather.size when weatherSize is missing", () => {
+      const setStringPref = sinon.spy();
+      ServicesStub.prefs.getDefaultBranch = sinon
+        .stub()
+        .returns({ setStringPref });
+      const enrollment = {
+        meta: { isRollout: false },
+        value: {
+          type: "widgets",
+          payload: { enabled: true },
+        },
+      };
+      sandbox
+        .stub(global.NimbusFeatures.newtabTrainhop, "getAllEnrollments")
+        .returns([enrollment]);
+
+      feed.onTrainhopExperimentUpdated();
+
+      assert.neverCalledWith(
+        setStringPref,
+        "widgets.weather.size",
+        sinon.match.any
+      );
+    });
+
+    it("should not write widgets.weather.size when weatherSize is empty string", () => {
+      const setStringPref = sinon.spy();
+      ServicesStub.prefs.getDefaultBranch = sinon
+        .stub()
+        .returns({ setStringPref });
+      const enrollment = {
+        meta: { isRollout: false },
+        value: {
+          type: "widgets",
+          payload: { weatherSize: "" },
+        },
+      };
+      sandbox
+        .stub(global.NimbusFeatures.newtabTrainhop, "getAllEnrollments")
+        .returns([enrollment]);
+
+      feed.onTrainhopExperimentUpdated();
+
+      assert.neverCalledWith(
+        setStringPref,
+        "widgets.weather.size",
+        sinon.match.any
+      );
+    });
+
     it("should dedupe multi-payload format with experiment taking precedence over rollout", () => {
       const rollout = {
         meta: {

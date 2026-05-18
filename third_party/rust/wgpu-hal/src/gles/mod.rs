@@ -115,6 +115,7 @@ pub use self::wgl::{Instance, Surface};
 
 use alloc::{boxed::Box, string::String, string::ToString as _, sync::Arc, vec::Vec};
 use core::{
+    cell::Cell,
     fmt,
     ops::Range,
     sync::atomic::{AtomicU32, AtomicU8},
@@ -232,6 +233,8 @@ bitflags::bitflags! {
         ///
         /// When this is true, instance offset emulation via vertex buffer rebinding and a shader uniform will be disabled.
         const FULLY_FEATURED_INSTANCING = 1 << 16;
+        /// Supports direct multisampled rendering to a texture without needing a resolve texture.
+        const MULTISAMPLED_RENDER_TO_TEXTURE = 1 << 17;
     }
 }
 
@@ -342,6 +345,9 @@ pub struct Buffer {
     size: wgt::BufferAddress,
     /// Flags to use within calls to [`Device::map_buffer`](crate::Device::map_buffer).
     map_flags: u32,
+    /// True if the GL buffer is actually mapped, i.e. not "fake-mapped" with
+    /// an empty slice
+    mapped: Cell<bool>,
     data: Option<Arc<MaybeMutex<Vec<u8>>>>,
     offset_of_current_mapping: Arc<MaybeMutex<wgt::BufferAddress>>,
 }
@@ -605,8 +611,14 @@ impl crate::DynBindGroup for BindGroup {}
 type ShaderId = u32;
 
 #[derive(Debug)]
+pub enum ShaderModuleSource {
+    Naga(crate::NagaShader),
+    Passthrough { source: String },
+}
+
+#[derive(Debug)]
 pub struct ShaderModule {
-    source: crate::NagaShader,
+    source: ShaderModuleSource,
     label: Option<String>,
     id: ShaderId,
 }
@@ -721,7 +733,7 @@ type ProgramCache = FastHashMap<ProgramCacheKey, Result<Arc<PipelineInner>, crat
 pub struct RenderPipeline {
     inner: Arc<PipelineInner>,
     primitive: wgt::PrimitiveState,
-    vertex_buffers: Box<[VertexBufferDesc]>,
+    vertex_buffers: Box<[Option<VertexBufferDesc>]>,
     vertex_attributes: Box<[AttributeDesc]>,
     color_targets: Box<[ColorTargetDesc]>,
     depth: Option<DepthState>,
@@ -922,6 +934,7 @@ enum Command {
         attachment: u32,
         view: TextureView,
         depth_slice: Option<u32>,
+        sample_count: u32,
     },
     ResolveAttachment {
         attachment: u32,

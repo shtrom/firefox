@@ -1,5 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- *
+/*
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -144,6 +143,13 @@ CommonSocketControl::GetEarlyDataAccepted(bool* aEarlyDataAccepted) {
 }
 
 NS_IMETHODIMP
+CommonSocketControl::GetResumptionTokenPresent(bool* aPresent) {
+  COMMON_SOCKET_CONTROL_ASSERT_ON_OWNING_THREAD();
+  *aPresent = mSessionCacheInfo.isSome();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 CommonSocketControl::DriveHandshake(void) { return NS_ERROR_NOT_IMPLEMENTED; }
 
 NS_IMETHODIMP
@@ -277,7 +283,7 @@ CommonSocketControl::IsAcceptableForHost(const nsACString& hostname,
   }
   bool chainHasValidPins;
   nsresult nsrv = mozilla::psm::PublicKeyPinningService::ChainHasValidPins(
-      derCertSpanList, PromiseFlatCString(hostname).BeginReading(), pkix::Now(),
+      derCertSpanList, PromiseFlatCString(hostname).get(), pkix::Now(),
       mIsBuiltCertChainRootBuiltInRoot, chainHasValidPins, nullptr);
   if (NS_FAILED(nsrv)) {
     return NS_OK;

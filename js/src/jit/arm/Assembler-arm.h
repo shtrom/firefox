@@ -1,6 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * vim: set ts=8 sts=2 et sw=2 tw=80:
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -1088,8 +1086,20 @@ class InstructionIterator {
 };
 
 class Assembler;
-using ARMBuffer =
-    js::jit::AssemblerBufferWithConstantPools<4, Instruction, Assembler>;
+
+using ARMBuffer = js::jit::AssemblerBufferWithConstantPools<
+    Instruction, Assembler,
+    js::jit::AssemblerBufferSettings{
+        .instSize = 4,
+        .guardSize = 1,
+        .headerSize = 1,
+        .pcBias = 8,
+        // For the alignment fill use NOP: 0x0320f000 or (Always |
+        // InstNOP::NopInst).
+        .alignFillInst = 0xe320f000,
+        // For the nopFill use a branch to the next instruction: 0xeaffffff.
+        .nopFillInst = 0xeaffffff,
+    }>;
 
 class Assembler : public AssemblerShared {
  public:
@@ -1249,11 +1259,8 @@ class Assembler : public AssemblerShared {
 #endif
 
  public:
-  // For the alignment fill use NOP: 0x0320f000 or (Always | InstNOP::NopInst).
-  // For the nopFill use a branch to the next instruction: 0xeaffffff.
   Assembler()
-      : m_buffer(1, 1, 8, GetPoolMaxOffset(), 8, 0xe320f000, 0xeaffffff,
-                 GetNopFill()),
+      : m_buffer(GetPoolMaxOffset(), GetNopFill()),
         isFinished(false),
         dtmActive(false),
         dtmCond(Always) {

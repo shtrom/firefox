@@ -1,14 +1,13 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * vim: set ts=8 sts=2 et sw=2 tw=80:
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #ifndef vm_ObjectFuse_h
 #define vm_ObjectFuse_h
 
-#include "mozilla/MathAlgorithms.h"
 #include "mozilla/MemoryReporting.h"
+
+#include <bit>
 
 #include "gc/Barrier.h"
 #include "jit/InvalidationScriptSet.h"
@@ -209,9 +208,9 @@ class ObjectFuse {
   // from the index and mask pair stored in an IC stub.
   static uint32_t propertySlotFromIndexAndMask(uint32_t propIndex,
                                                uint32_t propMask) {
-    MOZ_ASSERT(mozilla::CountPopulation32(propMask) == 1);
+    MOZ_ASSERT(std::has_single_bit(propMask));
     uint32_t slot = propIndex * NumPropsPerWord;
-    slot += mozilla::CountTrailingZeroes(propMask) / NumBitsPerProp;
+    slot += std::countr_zero(propMask) / NumBitsPerProp;
     return slot;
   }
 
@@ -226,7 +225,6 @@ class ObjectFuse {
   void handleTeleportingShadowedProperty(JSContext* cx, PropertyInfo prop);
   void handleTeleportingProtoMutation(JSContext* cx);
   void handleShadowedGlobalProperty(JSContext* cx, PropertyInfo prop);
-  void handleObjectSwap(JSContext* cx);
 
   bool addDependency(uint32_t propSlot, const jit::IonScriptKey& ionScript);
 
@@ -272,9 +270,16 @@ class ObjectFuseMap {
       GCHashMap<WeakHeapPtr<JSObject*>, UniquePtr<ObjectFuse>,
                 StableCellHasher<WeakHeapPtr<JSObject*>>, SystemAllocPolicy>;
   JS::WeakCache<Map> objectFuses_;
+#ifdef DEBUG
+  JS::Zone* zone_;
+#endif
 
  public:
-  explicit ObjectFuseMap(JSRuntime* rt) : objectFuses_(rt) {}
+  explicit ObjectFuseMap(JS::Zone* zone) : objectFuses_(zone) {
+#ifdef DEBUG
+    zone_ = zone;
+#endif
+  }
 
   ObjectFuse* getOrCreate(JSContext* cx, NativeObject* obj);
   ObjectFuse* get(NativeObject* obj);

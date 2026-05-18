@@ -285,18 +285,20 @@ struct opGetShadowRootFromHost {
   nsIContent** mTemplateNode;
   nsString mShadowRootReferenceTarget;
   mozilla::dom::ShadowRootMode mShadowRootMode;
+  mozilla::dom::SlotAssignmentMode mShadowRootSlotAssignment;
   bool mShadowRootIsClonable;
   bool mShadowRootIsSerializable;
   bool mShadowRootDelegatesFocus;
+  bool mShadowRootCustomElementRegistry;
 
-  explicit opGetShadowRootFromHost(nsIContentHandle* aHost,
-                                   nsIContentHandle* aFragHandle,
-                                   nsIContentHandle* aTemplateNode,
-                                   mozilla::dom::ShadowRootMode aShadowRootMode,
-                                   bool aShadowRootIsClonable,
-                                   bool aShadowRootIsSerializable,
-                                   bool aShadowRootDelegatesFocus,
-                                   nsAString& aShadowRootReferenceTarget) {
+  explicit opGetShadowRootFromHost(
+      nsIContentHandle* aHost, nsIContentHandle* aFragHandle,
+      nsIContentHandle* aTemplateNode,
+      mozilla::dom::ShadowRootMode aShadowRootMode, bool aShadowRootIsClonable,
+      bool aShadowRootIsSerializable, bool aShadowRootDelegatesFocus,
+      bool aShadowRootCustomElementRegistry,
+      mozilla::dom::SlotAssignmentMode aShadowRootSlotAssignment,
+      nsAString& aShadowRootReferenceTarget) {
     mHost = static_cast<nsIContent**>(aHost);
     mFragHandle = static_cast<nsIContent**>(aFragHandle);
     mTemplateNode = static_cast<nsIContent**>(aTemplateNode);
@@ -304,6 +306,8 @@ struct opGetShadowRootFromHost {
     mShadowRootIsClonable = aShadowRootIsClonable;
     mShadowRootIsSerializable = aShadowRootIsSerializable;
     mShadowRootDelegatesFocus = aShadowRootDelegatesFocus;
+    mShadowRootCustomElementRegistry = aShadowRootCustomElementRegistry;
+    mShadowRootSlotAssignment = aShadowRootSlotAssignment;
     mShadowRootReferenceTarget = aShadowRootReferenceTarget;
   }
 };
@@ -672,6 +676,9 @@ class nsHtml5TreeOperation final {
 
   ~nsHtml5TreeOperation();
 
+  nsHtml5TreeOperation(const nsHtml5TreeOperation&) = delete;
+  nsHtml5TreeOperation& operator=(const nsHtml5TreeOperation&) = delete;
+
   inline void Init(const treeOperation& aOperation) {
     NS_ASSERTION(mOperation.is<uninitialized>(),
                  "Op code must be uninitialized when initializing.");
@@ -700,9 +707,6 @@ class nsHtml5TreeOperation final {
                    bool* aInterrupted, bool* aStreamEnded);
 
  private:
-  nsHtml5TreeOperation(const nsHtml5TreeOperation&) = delete;
-  nsHtml5TreeOperation& operator=(const nsHtml5TreeOperation&) = delete;
-
   treeOperation mOperation;
 };
 

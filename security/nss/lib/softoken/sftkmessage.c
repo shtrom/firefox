@@ -7,6 +7,7 @@
  * Implement the PKCS #11 v3.0 Message interfaces
  */
 #include "seccomon.h"
+#include "secerr.h"
 #include "pkcs11.h"
 #include "pkcs11i.h"
 #include "blapi.h"
@@ -24,6 +25,11 @@ sftk_ChaCha20_Poly1305_Message_Encrypt(void *vctx,
 {
     ChaCha20Poly1305Context *ctx = vctx;
     CK_SALSA20_CHACHA20_POLY1305_MSG_PARAMS *params = vparams;
+    if (params == NULL ||
+        paramsLen != sizeof(CK_SALSA20_CHACHA20_POLY1305_MSG_PARAMS)) {
+        PORT_SetError(SEC_ERROR_INVALID_ARGS);
+        return SECFailure;
+    }
     return ChaCha20Poly1305_Encrypt(ctx, cipherText, cipherTextLen, maxOutLen,
                                     plainText, plainTextLen, params->pNonce, params->ulNonceLen,
                                     aad, aadLen, params->pTag);
@@ -40,6 +46,11 @@ sftk_ChaCha20_Poly1305_Message_Decrypt(void *vctx,
 {
     ChaCha20Poly1305Context *ctx = vctx;
     CK_SALSA20_CHACHA20_POLY1305_MSG_PARAMS *params = vparams;
+    if (params == NULL ||
+        paramsLen != sizeof(CK_SALSA20_CHACHA20_POLY1305_MSG_PARAMS)) {
+        PORT_SetError(SEC_ERROR_INVALID_ARGS);
+        return SECFailure;
+    }
     return ChaCha20Poly1305_Decrypt(ctx, plainText, plainTextLen, maxOutLen,
                                     cipherText, cipherTextLen, params->pNonce, params->ulNonceLen,
                                     aad, aadLen, params->pTag);
@@ -182,6 +193,38 @@ sftk_CryptMessage(CK_SESSION_HANDLE hSession, CK_VOID_PTR pParameter,
     crv = sftk_GetContext(hSession, &context, contextType, PR_TRUE, NULL);
     if (crv != CKR_OK)
         return crv;
+
+    if (context->isFIPS && (contextType == SFTK_MESSAGE_ENCRYPT)) {
+        if ((pParameter == NULL) || (ulParameterLen != sizeof(CK_GCM_MESSAGE_PARAMS))) {
+            context->isFIPS = PR_FALSE;
+        } else {
+            CK_GCM_MESSAGE_PARAMS *p = (CK_GCM_MESSAGE_PARAMS *)pParameter;
+            switch (p->ivGenerator) {
+                default:
+                case CKG_NO_GENERATE:
+                    context->isFIPS = PR_FALSE;
+                    break;
+                case CKG_GENERATE_RANDOM:
+                    if ((p->ulIvLen < 96 / PR_BITS_PER_BYTE) ||
+                        (p->ulIvFixedBits != 0)) {
+                        context->isFIPS = PR_FALSE;
+                    }
+                    break;
+                case CKG_GENERATE_COUNTER_XOR:
+                    if ((p->ulIvLen != 96 / PR_BITS_PER_BYTE) ||
+                        (p->ulIvFixedBits != 32)) {
+                        context->isFIPS = PR_FALSE;
+                    }
+                    break;
+                case CKG_GENERATE_COUNTER:
+                    if ((p->ulIvFixedBits < 32) ||
+                        ((p->ulIvLen * PR_BITS_PER_BYTE - p->ulIvFixedBits) < 32)) {
+                        context->isFIPS = PR_FALSE;
+                    }
+                    break;
+            }
+        }
+    }
 
     if (!pOuttext) {
         *pulOuttextLen = ulIntextLen;

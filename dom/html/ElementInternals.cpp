@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim:set ts=2 sw=2 sts=2 et cindent: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -312,7 +310,7 @@ bool ElementInternals::ReportValidity(ErrorResult& aRv) {
   invalidElements.AppendElement(mTarget);
 
   AutoJSAPI jsapi;
-  if (!jsapi.Init(mTarget->GetOwnerGlobal())) {
+  if (!jsapi.Init(mTarget->GetRelevantGlobal())) {
     return false;
   }
   JS::Rooted<JS::Value> detail(jsapi.cx());
@@ -333,8 +331,7 @@ bool ElementInternals::ReportValidity(ErrorResult& aRv) {
 }
 
 // https://html.spec.whatwg.org/#dom-elementinternals-labels
-already_AddRefed<nsINodeList> ElementInternals::GetLabels(
-    ErrorResult& aRv) const {
+already_AddRefed<NodeList> ElementInternals::GetLabels(ErrorResult& aRv) const {
   MOZ_ASSERT(mTarget);
 
   if (!mTarget->IsFormAssociatedElement()) {

@@ -45,7 +45,6 @@ rtc_library("common_audio") {
   deps = [
     ":common_audio_c",
     ":sinc_resampler",
-    "../api:array_view",
     "../api/audio:audio_frame_api",
     "../api/units:timestamp",
     "../rtc_base:checks",
@@ -382,7 +381,6 @@ if (rtc_include_tests && !build_with_chromium) {
       "../rtc_base/system:arch",
       "../test:fileutils",
       "../test:rtc_expect_death",
-      "../test:test_main",
       "../test:test_support",
       "//testing/gtest",
       "//third_party/abseil-cpp/absl/base:core_headers",

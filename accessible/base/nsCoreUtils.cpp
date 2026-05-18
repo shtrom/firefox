@@ -1,4 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -160,8 +159,8 @@ void nsCoreUtils::DispatchTouchEvent(EventMessage aMessage, int32_t aX,
   WidgetTouchEvent event(true, aMessage, aRootWidget);
 
   // XXX: Touch has an identifier of -1 to hint that it is synthesized.
-  RefPtr<dom::Touch> t = new dom::Touch(-1, LayoutDeviceIntPoint(aX, aY),
-                                        LayoutDeviceIntPoint(1, 1), 0.0f, 1.0f);
+  auto t = MakeRefPtr<dom::Touch>(-1, LayoutDeviceIntPoint(aX, aY),
+                                  LayoutDeviceIntPoint(1, 1), 0.0f, 1.0f);
   t->SetTouchTarget(aContent);
   event.mTouches.AppendElement(t);
   nsEventStatus status = nsEventStatus_eIgnore;
@@ -233,15 +232,15 @@ bool nsCoreUtils::IsAncestorOf(nsINode* aPossibleAncestorNode,
 
 nsresult nsCoreUtils::ScrollSubstringTo(nsIFrame* aFrame, nsRange* aRange,
                                         uint32_t aScrollType) {
-  ScrollAxis vertical, horizontal;
+  AxisScrollParams vertical, horizontal;
   ConvertScrollTypeToPercents(aScrollType, &vertical, &horizontal);
 
   return ScrollSubstringTo(aFrame, aRange, vertical, horizontal);
 }
 
 nsresult nsCoreUtils::ScrollSubstringTo(nsIFrame* aFrame, nsRange* aRange,
-                                        ScrollAxis aVertical,
-                                        ScrollAxis aHorizontal) {
+                                        AxisScrollParams aVertical,
+                                        AxisScrollParams aHorizontal) {
   if (!aFrame || !aRange) {
     return NS_ERROR_FAILURE;
   }
@@ -289,8 +288,8 @@ void nsCoreUtils::ScrollFrameToPoint(nsIFrame* aScrollContainerFrame,
 }
 
 void nsCoreUtils::ConvertScrollTypeToPercents(uint32_t aScrollType,
-                                              ScrollAxis* aVertical,
-                                              ScrollAxis* aHorizontal) {
+                                              AxisScrollParams* aVertical,
+                                              AxisScrollParams* aHorizontal) {
   WhereToScroll whereY, whereX;
   WhenToScroll whenY, whenX;
   switch (aScrollType) {
@@ -336,8 +335,8 @@ void nsCoreUtils::ConvertScrollTypeToPercents(uint32_t aScrollType,
       whereX = WhereToScroll::Center;
       whenX = WhenToScroll::IfNotFullyVisible;
   }
-  *aVertical = ScrollAxis(whereY, whenY);
-  *aHorizontal = ScrollAxis(whereX, whenX);
+  *aVertical = AxisScrollParams(whereY, whenY);
+  *aHorizontal = AxisScrollParams(whereX, whenX);
 }
 
 already_AddRefed<nsIDocShell> nsCoreUtils::GetDocShellFor(nsINode* aNode) {
@@ -541,7 +540,7 @@ bool nsCoreUtils::IsColumnHidden(nsTreeColumn* aColumn) {
 
 void nsCoreUtils::ScrollTo(PresShell* aPresShell, nsIContent* aContent,
                            uint32_t aScrollType) {
-  ScrollAxis vertical, horizontal;
+  AxisScrollParams vertical, horizontal;
   ConvertScrollTypeToPercents(aScrollType, &vertical, &horizontal);
   aPresShell->ScrollContentIntoView(aContent, vertical, horizontal,
                                     ScrollFlags::ScrollOverflowHidden);

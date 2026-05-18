@@ -1,4 +1,3 @@
-/* -*- Mode: C++; tab-width: 20; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -105,7 +104,7 @@ class WaylandOffscreenGLSurface {
   struct wl_egl_window* mEGLWindow = nullptr;
 };
 
-MOZ_RUNINIT static nsTHashMap<nsPtrHashKey<void>, WaylandOffscreenGLSurface*>
+constinit static nsTHashMap<nsPtrHashKey<void>, WaylandOffscreenGLSurface*>
     sWaylandOffscreenGLSurfaces;
 
 void DeleteWaylandOffscreenGLSurface(EGLSurface surface) {
@@ -548,21 +547,17 @@ void GLContextEGL::SetDamage(const nsIntRegion& aDamageRegion) {
 
 void GLContextEGL::GetWSIInfo(nsCString* const out) const {
   out->AppendLiteral("EGL_VENDOR: ");
-  out->Append(
-      (const char*)mEgl->mLib->fQueryString(mEgl->mDisplay, LOCAL_EGL_VENDOR));
+  out->Append(mEgl->mLib->fQueryString(mEgl->mDisplay, LOCAL_EGL_VENDOR));
 
   out->AppendLiteral("\nEGL_VERSION: ");
-  out->Append(
-      (const char*)mEgl->mLib->fQueryString(mEgl->mDisplay, LOCAL_EGL_VERSION));
+  out->Append(mEgl->mLib->fQueryString(mEgl->mDisplay, LOCAL_EGL_VERSION));
 
   out->AppendLiteral("\nEGL_EXTENSIONS: ");
-  out->Append((const char*)mEgl->mLib->fQueryString(mEgl->mDisplay,
-                                                    LOCAL_EGL_EXTENSIONS));
+  out->Append(mEgl->mLib->fQueryString(mEgl->mDisplay, LOCAL_EGL_EXTENSIONS));
 
 #ifndef ANDROID  // This query will crash some old android.
   out->AppendLiteral("\nEGL_EXTENSIONS(nullptr): ");
-  out->Append(
-      (const char*)mEgl->mLib->fQueryString(nullptr, LOCAL_EGL_EXTENSIONS));
+  out->Append(mEgl->mLib->fQueryString(nullptr, LOCAL_EGL_EXTENSIONS));
 #endif
 }
 

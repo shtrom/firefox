@@ -346,8 +346,8 @@ tasks:
                                                         href: "https://treeherder.mozilla.org/#/jobs?repo=${repository.project}&revision=${push.revision}"
                                                   - $if: 'repository.project == "try"'
                                                     then:
-                                                        subject: "Thank you for your try submission of ${push.revision}. It's the best!"
-                                                        content: "Your try push has been submitted. It's the best! Use the link to view the status of your jobs."
+                                                        subject: "Thank you for your try submission of ${push.revision}."
+                                                        content: "Your try push has been submitted. Use the link to view the status of your jobs."
                                         - $if: 'repository.project == "mozilla-central"'
                                           then:
                                               matrixBody: "${repository.project} push notification: https://treeherder.mozilla.org/#/jobs?repo=${repository.project}&revision=${push.revision}"
@@ -357,6 +357,7 @@ tasks:
                   $merge:
                       - trustDomain: gecko
                         isPullRequest: false
+                        prNumber: null
                         eventType: '${tasks_for}'
                         eventAction: null
                       - $switch:
@@ -397,6 +398,7 @@ tasks:
                                 ref: 'refs/heads/${event.pull_request.head.ref}'
                                 baseRev: '${event.pull_request.base.sha}'
                                 headRev: '${event.pull_request.head.sha}'
+                                prNumber: '${event.pull_request.number}'
                                 isPullRequest: true
                             'tasks_for == "pr-action"':
                                 baseRepoUrl: '${repository.base_url}'
@@ -537,13 +539,14 @@ tasks:
                                             # This causes cached_task digest generation to be random for
                                             # some tasks. Disable bytecode generation to work around that.
                                             PYTHONDONTWRITEBYTECODE: '1'
-                                            MACH_BUILD_PYTHON_NATIVE_PACKAGE_SOURCE: 'system'
-                                          - $if: 'eventType == "action"'
-                                            then:
-                                                ACTION_TASK_GROUP_ID: '${action.taskGroupId}'
-                                                ACTION_TASK_ID: {$json: {$eval: 'taskId'}}
-                                                ACTION_INPUT: {$json: {$eval: 'input'}}
-                                                ACTION_CALLBACK: '${action.cb_name}'
+                                          - $switch:
+                                                'isPullRequest':
+                                                    GECKO_PULL_REQUEST_NUMBER: "${prNumber}"
+                                                'eventType == "action"':
+                                                    ACTION_TASK_GROUP_ID: '${action.taskGroupId}'
+                                                    ACTION_TASK_ID: {$json: {$eval: 'taskId'}}
+                                                    ACTION_INPUT: {$json: {$eval: 'input'}}
+                                                    ACTION_CALLBACK: '${action.cb_name}'
                                   cache:
                                       "${trustDomain}-level-${level}-${project}-checkouts-git-shallow-v1": /builds/worker/checkouts
 

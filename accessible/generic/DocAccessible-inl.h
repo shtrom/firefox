@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -53,12 +51,8 @@ inline void DocAccessible::FireDelayedEvent(AccEvent* aEvent) {
 
 inline void DocAccessible::FireDelayedEvent(uint32_t aEventType,
                                             LocalAccessible* aTarget) {
-  RefPtr<AccEvent> event = new AccEvent(aEventType, aTarget);
+  auto event = MakeRefPtr<AccEvent>(aEventType, aTarget);
   FireDelayedEvent(event);
-}
-
-inline void DocAccessible::BindChildDocument(DocAccessible* aDocument) {
-  mNotificationController->ScheduleChildDocBinding(aDocument);
 }
 
 template <class Class, class... Args>
@@ -88,8 +82,8 @@ inline void DocAccessible::NotifyOfLoad(uint32_t aLoadEventType) {
   // If the document is loaded completely then network activity was presumingly
   // caused by file loading. Fire busy state change event.
   if (HasLoadState(eCompletelyLoaded) && IsLoadEventTarget()) {
-    RefPtr<AccEvent> stateEvent =
-        new AccStateChangeEvent(this, states::BUSY, false);
+    auto stateEvent =
+        MakeRefPtr<AccStateChangeEvent>(this, states::BUSY, false);
     FireDelayedEvent(stateEvent);
   }
 }

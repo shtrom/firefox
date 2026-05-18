@@ -1,6 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * vim: set ts=8 sts=2 et sw=2 tw=80:
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -20,6 +18,7 @@
 #include "jit/BaselineFrame.h"
 #include "jit/BaselineJIT.h"
 #include "jit/BranchHinting.h"
+#include "jit/BranchPruning.h"
 #include "jit/CodeGenerator.h"
 #include "jit/CompileInfo.h"
 #include "jit/DominatorTree.h"
@@ -27,6 +26,7 @@
 #include "jit/EffectiveAddressAnalysis.h"
 #include "jit/ExecutableAllocator.h"
 #include "jit/FoldLinearArithConstants.h"
+#include "jit/FoldTests.h"
 #include "jit/InlineScriptTree.h"
 #include "jit/InstructionReordering.h"
 #include "jit/Invalidation.h"
@@ -51,11 +51,13 @@
 #include "jit/ScriptFromCalleeToken.h"
 #include "jit/SimpleAllocator.h"
 #include "jit/Sink.h"
+#include "jit/TypeAnalysis.h"
 #include "jit/UnrollLoops.h"
 #include "jit/ValueNumbering.h"
 #include "jit/WarpBuilder.h"
 #include "jit/WarpOracle.h"
 #include "jit/WasmBCE.h"
+#include "jit/WasmRefTypeAnalysis.h"
 #include "js/Printf.h"
 #include "js/UniquePtr.h"
 #include "util/Memory.h"
@@ -413,18 +415,6 @@ void JitRuntime::TraceAtomZoneRoots(JSTracer* trc) {
 }
 
 /* static */
-bool JitRuntime::MarkJitcodeGlobalTableIteratively(GCMarker* marker) {
-  if (marker->runtime()->hasJitRuntime() &&
-      marker->runtime()->jitRuntime()->hasJitcodeGlobalTable()) {
-    return marker->runtime()
-        ->jitRuntime()
-        ->getJitcodeGlobalTable()
-        ->markIteratively(marker);
-  }
-  return false;
-}
-
-/* static */
 void JitRuntime::TraceWeakJitcodeGlobalTable(JSRuntime* rt, JSTracer* trc) {
   if (rt->hasJitRuntime() && rt->jitRuntime()->hasJitcodeGlobalTable()) {
     rt->jitRuntime()->getJitcodeGlobalTable()->traceWeak(rt, trc);
@@ -624,12 +614,15 @@ void JitCode::traceChildren(JSTracer* trc) {
 }
 
 void JitCode::finalize(JS::GCContext* gcx) {
-  // If this jitcode had a bytecode map, it must have already been removed.
+  // If this jitcode had a bytecode map, either the entry has been removed
+  // from the table, or it has been detached (jitcode_ set to null) because
+  // the profiler buffer still references it.
 #ifdef DEBUG
   JSRuntime* rt = gcx->runtime();
   if (hasBytecodeMap_) {
     MOZ_ASSERT(rt->jitRuntime()->hasJitcodeGlobalTable());
-    MOZ_ASSERT(!rt->jitRuntime()->getJitcodeGlobalTable()->lookup(raw()));
+    auto* entry = rt->jitRuntime()->getJitcodeGlobalTable()->lookup(raw());
+    MOZ_ASSERT(!entry || !entry->hasJitcode());
   }
 #endif
 
@@ -2178,7 +2171,7 @@ static MethodStatus BaselineCanEnterAtBranch(JSContext* cx, HandleScript script,
     }
 
     JitSpew(JitSpew_IonScripts, "Forcing OSR Mismatch Compilation");
-    Invalidate(cx, script);
+    Invalidate(cx, script, /* resetUses = */ false);
   }
 
   // Attempt compilation.

@@ -18,7 +18,7 @@ function handleEvent(aEvent) {
     return;
   }
   // Ignore <browser> element in about:preferences and any other special pages
-  if ("gBrowser" in aEvent.target.ownerGlobal) {
+  if ("gBrowser" in aEvent.target.documentGlobal) {
     xulFrameLoaderCreatedListenerInfo.numCalledSoFar++;
   }
 }
@@ -104,11 +104,7 @@ async function openURIInPrivateTab(uri) {
     `XULFrameLoaderCreated was fired ${xulFrameLoaderCreatedListenerInfo.numCalledSoFar} time(s) for ${uri} in private tab`
   );
 
-  if (
-    SpecialPowers.Services.appinfo.sessionHistoryInParent &&
-    currRemoteType == prevRemoteType &&
-    uri == "about:blank"
-  ) {
+  if (currRemoteType == prevRemoteType && uri == "about:blank") {
     // about:blank page gets flagged for being eligible to go into bfcache
     // and thus we create a new XULFrameLoader for these pages
     is(

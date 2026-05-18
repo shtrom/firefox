@@ -1,5 +1,4 @@
-/* -*- Mode: Java; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil; -*-
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -219,7 +218,7 @@ public class GeckoAppShell {
 
   /*
    * Keep in sync with constants found here:
-   * http://searchfox.org/mozilla-central/source/uriloader/base/nsIWebProgressListener.idl
+   * http://searchfox.org/firefox-main/source/uriloader/base/nsIWebProgressListener.idl
    */
   public static final int WPL_STATE_START = 0x00000001;
   public static final int WPL_STATE_STOP = 0x00000010;
@@ -227,7 +226,7 @@ public class GeckoAppShell {
   public static final int WPL_STATE_IS_NETWORK = 0x00040000;
 
   /* Keep in sync with constants found here:
-    http://searchfox.org/mozilla-central/source/netwerk/base/nsINetworkLinkService.idl
+    http://searchfox.org/firefox-main/source/netwerk/base/nsINetworkLinkService.idl
   */
   public static final int LINK_TYPE_UNKNOWN = 0;
   public static final int LINK_TYPE_ETHERNET = 1;
@@ -1655,7 +1654,16 @@ public class GeckoAppShell {
    * @param displayId The display id.
    */
   public static void setDisplayId(final int displayId) {
+    final boolean isDisplayIdChanged = sDisplayId != displayId;
     sDisplayId = displayId;
+
+    if (isDisplayIdChanged) {
+      if (GeckoScreenOrientation.getInstance().update()) {
+        // refreshScreenInfo is already called.
+        return;
+      }
+      ScreenManagerHelper.refreshScreenInfo();
+    }
   }
 
   @WrapForJNI(calledFrom = "any")

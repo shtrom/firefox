@@ -21,7 +21,7 @@ class MlpaTokenProviderTest {
     @Test
     fun `GIVEN a static provider WHEN I fetch the token THEN return the provided token`() =
         runTest {
-            val expected = AuthorizationToken("my-test-token")
+            val expected = AuthorizationToken.Integrity("my-test-token")
             val provider = MlpaTokenProvider.static(expected)
             val result = provider.fetchToken()
 
@@ -43,6 +43,7 @@ class MlpaTokenProviderTest {
                 successAuthenticationService.verify(request)
             },
             userIdProvider = userIdProvider,
+            storage = MlpaTokenStorage.static(),
             packageName = PackageName("my.package.name"),
         )
 
@@ -59,6 +60,7 @@ class MlpaTokenProviderTest {
                 integrityClient = failureIntegrityClient,
                 authenticationService = successAuthenticationService,
                 userIdProvider = userIdProvider,
+                storage = MlpaTokenStorage.static(),
                 packageName = PackageName("my.package.name"),
             )
 
@@ -78,6 +80,7 @@ class MlpaTokenProviderTest {
                 integrityClient = successIntegrityClient,
                 authenticationService = failureAuthenticationService,
                 userIdProvider = userIdProvider,
+                storage = MlpaTokenStorage.static(),
                 packageName = PackageName("my.package.name"),
             )
 

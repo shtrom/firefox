@@ -1,4 +1,3 @@
-/* vim:set ts=2 sw=2 et cindent: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -111,17 +110,17 @@ class SetSocketOptionRunnable : public Runnable {
 //-----------------------------------------------------------------------------
 NS_IMPL_ISUPPORTS(nsUDPOutputStream, nsIOutputStream)
 
-nsUDPOutputStream::nsUDPOutputStream(nsUDPSocket* aSocket, PRFileDesc* aFD,
+nsUDPOutputStream::nsUDPOutputStream(nsUDPSocket* aSocket,
                                      PRNetAddr& aPrClientAddr)
-    : mSocket(aSocket),
-      mFD(aFD),
-      mPrClientAddr(aPrClientAddr),
-      mIsClosed(false) {}
+    : mSocket(aSocket), mPrClientAddr(aPrClientAddr), mIsClosed(false) {}
 
 NS_IMETHODIMP nsUDPOutputStream::Close() {
   if (mIsClosed) return NS_BASE_STREAM_CLOSED;
 
   mIsClosed = true;
+  if (mSocket->IsSocketClosed()) {
+    return NS_BASE_STREAM_CLOSED;
+  }
   return NS_OK;
 }
 
@@ -135,9 +134,18 @@ NS_IMETHODIMP nsUDPOutputStream::Write(const char* aBuf, uint32_t aCount,
                                        uint32_t* _retval) {
   if (mIsClosed) return NS_BASE_STREAM_CLOSED;
 
+  if (mSocket->IsSocketClosed()) {
+    mIsClosed = true;
+    return NS_BASE_STREAM_CLOSED;
+  }
+
   *_retval = 0;
+  PRFileDesc* fd = mSocket->GetFD();
+  if (!fd) {
+    return NS_BASE_STREAM_CLOSED;
+  }
   int32_t count =
-      PR_SendTo(mFD, aBuf, aCount, 0, &mPrClientAddr, PR_INTERVAL_NO_WAIT);
+      PR_SendTo(fd, aBuf, aCount, 0, &mPrClientAddr, PR_INTERVAL_NO_WAIT);
   if (count < 0) {
     PRErrorCode code = PR_GetError();
     return ErrorAccordingToNSPR(code);
@@ -455,7 +463,7 @@ void nsUDPSocket::OnSocketReady(PRFileDesc* fd, int16_t outFlags) {
   NS_NewPipe2(getter_AddRefs(pipeIn), getter_AddRefs(pipeOut), true, true,
               segsize, segcount);
 
-  RefPtr<nsUDPOutputStream> os = new nsUDPOutputStream(this, mFD, prClientAddr);
+  RefPtr<nsUDPOutputStream> os = new nsUDPOutputStream(this, prClientAddr);
   nsresult rv = NS_AsyncCopy(pipeIn, os, mSts, NS_ASYNCCOPY_VIA_READSEGMENTS,
                              UDP_PACKET_CHUNK_SIZE);
 
@@ -466,7 +474,10 @@ void nsUDPSocket::OnSocketReady(PRFileDesc* fd, int16_t outFlags) {
   NetAddr netAddr(&prClientAddr);
   nsCOMPtr<nsIUDPMessage> message =
       new UDPMessageProxy(&netAddr, pipeOut, std::move(data));
-  mListener->OnPacketReceived(this, message);
+  nsCOMPtr<nsIUDPSocketListener> listener = GetListener();
+  if (listener) {
+    listener->OnPacketReceived(this, message);
+  }
 }
 
 void nsUDPSocket::OnSocketDetached(PRFileDesc* fd) {
@@ -482,17 +493,18 @@ void nsUDPSocket::OnSocketDetached(PRFileDesc* fd) {
   if (mSyncListener) {
     mSyncListener->OnStopListening(this, mCondition);
     mSyncListener = nullptr;
-  } else if (mListener) {
-    // need to atomically clear mListener.  see our Close() method.
-    RefPtr<nsIUDPSocketListener> listener = nullptr;
+  } else {
+    RefPtr<nsIUDPSocketListener> listener;
+    nsCOMPtr<nsIEventTarget> listenerTarget;
     {
       MutexAutoLock lock(mLock);
       listener = ToRefPtr(std::move(mListener));
+      listenerTarget = mListenerTarget;
     }
 
     if (listener) {
       listener->OnStopListening(this, mCondition);
-      NS_ProxyRelease("nsUDPSocket::mListener", mListenerTarget,
+      NS_ProxyRelease("nsUDPSocket::mListener", listenerTarget,
                       listener.forget());
     }
   }
@@ -1132,10 +1144,10 @@ NS_IMETHODIMP
 nsUDPSocket::AsyncListen(nsIUDPSocketListener* aListener) {
   // ensuring mFD implies ensuring mLock
   NS_ENSURE_TRUE(mFD, NS_ERROR_NOT_INITIALIZED);
-  NS_ENSURE_TRUE(mListener == nullptr, NS_ERROR_IN_PROGRESS);
   NS_ENSURE_TRUE(mSyncListener == nullptr, NS_ERROR_IN_PROGRESS);
   {
     MutexAutoLock lock(mLock);
+    NS_ENSURE_TRUE(mListener == nullptr, NS_ERROR_IN_PROGRESS);
     mListenerTarget = GetCurrentSerialEventTarget();
     if (NS_IsMainThread()) {
       // PNecko usage
@@ -1152,8 +1164,11 @@ NS_IMETHODIMP
 nsUDPSocket::SyncListen(nsIUDPSocketSyncListener* aListener) {
   // ensuring mFD implies ensuring mLock
   NS_ENSURE_TRUE(mFD, NS_ERROR_NOT_INITIALIZED);
-  NS_ENSURE_TRUE(mListener == nullptr, NS_ERROR_IN_PROGRESS);
   NS_ENSURE_TRUE(mSyncListener == nullptr, NS_ERROR_IN_PROGRESS);
+  {
+    MutexAutoLock lock(mLock);
+    NS_ENSURE_TRUE(mListener == nullptr, NS_ERROR_IN_PROGRESS);
+  }
 
   mSyncListener = aListener;
 
@@ -1255,8 +1270,6 @@ void nsUDPSocket::EnableWritePoll() {
   mPollFlags = (PR_POLL_WRITE | PR_POLL_READ | PR_POLL_EXCEPT);
 }
 
-bool nsUDPSocket::IsSocketClosed() { return mFD == nullptr; }
-
 NS_IMETHODIMP
 nsUDPSocket::SendBinaryStream(const nsACString& aHost, uint16_t aPort,
                               nsIInputStream* aStream) {
@@ -1278,7 +1291,10 @@ nsUDPSocket::SendBinaryStreamWithAddress(const NetAddr* aAddr,
   PR_InitializeNetAddr(PR_IpAddrAny, 0, &prAddr);
   NetAddrToPRNetAddr(aAddr, &prAddr);
 
-  RefPtr<nsUDPOutputStream> os = new nsUDPOutputStream(this, mFD, prAddr);
+  if (!mFD) {
+    return NS_BASE_STREAM_CLOSED;
+  }
+  RefPtr<nsUDPOutputStream> os = new nsUDPOutputStream(this, prAddr);
   return NS_AsyncCopy(aStream, os, mSts, NS_ASYNCCOPY_VIA_READSEGMENTS,
                       UDP_PACKET_CHUNK_SIZE);
 }
@@ -1312,13 +1328,18 @@ nsresult nsUDPSocket::SetSocketOption(const PRSocketOptionData& aOpt) {
   mSts->IsOnCurrentThread(&onSTSThread);
 
   if (!onSTSThread) {
-    // Dispatch to STS thread and re-enter this method there
-    nsCOMPtr<nsIRunnable> runnable = new SetSocketOptionRunnable(this, aOpt);
-    nsresult rv = mSts->Dispatch(runnable, NS_DISPATCH_NORMAL);
-    if (NS_WARN_IF(NS_FAILED(rv))) {
-      return rv;
+    if (mAttached) {
+      // Socket is attached to STS; dispatch to avoid racing with STS polling.
+      nsCOMPtr<nsIRunnable> runnable = new SetSocketOptionRunnable(this, aOpt);
+      nsresult rv = mSts->Dispatch(runnable, NS_DISPATCH_NORMAL);
+      if (NS_WARN_IF(NS_FAILED(rv))) {
+        return rv;
+      }
+      return NS_OK;
     }
-    return NS_OK;
+    // Socket not yet attached to STS; safe to call PR_SetSocketOption directly
+    // since no other thread is accessing the FD. Errors are propagated to the
+    // caller rather than silently discarded.
   }
 
   if (NS_WARN_IF(!mFD)) {
@@ -1346,7 +1367,8 @@ nsUDPSocket::JoinMulticast(const nsACString& aAddr, const nsACString& aIface) {
   }
 
   PRNetAddr prAddr;
-  if (PR_StringToNetAddr(aAddr.BeginReading(), &prAddr) != PR_SUCCESS) {
+  if (PR_StringToNetAddr(PromiseFlatCString(aAddr).get(), &prAddr) !=
+      PR_SUCCESS) {
     return NS_ERROR_FAILURE;
   }
 
@@ -1354,7 +1376,8 @@ nsUDPSocket::JoinMulticast(const nsACString& aAddr, const nsACString& aIface) {
   if (aIface.IsEmpty()) {
     PR_InitializeNetAddr(PR_IpAddrAny, 0, &prIface);
   } else {
-    if (PR_StringToNetAddr(aIface.BeginReading(), &prIface) != PR_SUCCESS) {
+    if (PR_StringToNetAddr(PromiseFlatCString(aIface).get(), &prIface) !=
+        PR_SUCCESS) {
       return NS_ERROR_FAILURE;
     }
   }
@@ -1407,7 +1430,8 @@ nsUDPSocket::LeaveMulticast(const nsACString& aAddr, const nsACString& aIface) {
   }
 
   PRNetAddr prAddr;
-  if (PR_StringToNetAddr(aAddr.BeginReading(), &prAddr) != PR_SUCCESS) {
+  if (PR_StringToNetAddr(PromiseFlatCString(aAddr).get(), &prAddr) !=
+      PR_SUCCESS) {
     return NS_ERROR_FAILURE;
   }
 
@@ -1415,7 +1439,8 @@ nsUDPSocket::LeaveMulticast(const nsACString& aAddr, const nsACString& aIface) {
   if (aIface.IsEmpty()) {
     PR_InitializeNetAddr(PR_IpAddrAny, 0, &prIface);
   } else {
-    if (PR_StringToNetAddr(aIface.BeginReading(), &prIface) != PR_SUCCESS) {
+    if (PR_StringToNetAddr(PromiseFlatCString(aIface).get(), &prIface) !=
+        PR_SUCCESS) {
       return NS_ERROR_FAILURE;
     }
   }
@@ -1575,7 +1600,8 @@ nsUDPSocket::SetMulticastInterface(const nsACString& aIface) {
   if (aIface.IsEmpty()) {
     PR_InitializeNetAddr(PR_IpAddrAny, 0, &prIface);
   } else {
-    if (PR_StringToNetAddr(aIface.BeginReading(), &prIface) != PR_SUCCESS) {
+    if (PR_StringToNetAddr(PromiseFlatCString(aIface).get(), &prIface) !=
+        PR_SUCCESS) {
       return NS_ERROR_FAILURE;
     }
   }

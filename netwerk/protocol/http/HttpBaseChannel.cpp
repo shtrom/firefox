@@ -1,6 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set sw=2 ts=8 et tw=80 : */
-
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -109,7 +106,7 @@
 #include "nsThreadUtils.h"
 #include "nsURLHelper.h"
 #include "mozilla/RemoteLazyInputStreamChild.h"
-#include "mozilla/net/SFVService.h"
+#include "mozilla/net/SFV.h"
 #include "mozilla/dom/ContentChild.h"
 #include "nsQueryObject.h"
 
@@ -1508,6 +1505,19 @@ nsresult HttpBaseChannel::DoApplyContentConversionsInternal(
     }
   }
 #endif
+  // dcb/dcz must be decompressed in the parent process. If we reach here
+  // in the content process with dcb/dcz, the parent failed to handle it.
+  if (XRE_IsContentProcess()) {
+    nsAutoCString contentEncoding;
+    nsresult rv =
+        mResponseHead->GetHeader(nsHttp::Content_Encoding, contentEncoding);
+    if (NS_SUCCEEDED(rv) && (contentEncoding.LowerCaseEqualsLiteral("dcb") ||
+                             contentEncoding.LowerCaseEqualsLiteral("dcz"))) {
+      MOZ_DIAGNOSTIC_ASSERT(
+          false, "dcb/dcz Content-Encoding reached the content process");
+      return NS_ERROR_INVALID_CONTENT_ENCODING;
+    }
+  }
 
   if (!LoadApplyConversion()) {
     LOG(("not applying conversion per ApplyConversion\n"));
@@ -1874,7 +1884,6 @@ HttpBaseChannel::GetThirdPartyClassificationFlags(uint32_t* aFlags) {
 
 NS_IMETHODIMP
 HttpBaseChannel::GetTransferSize(uint64_t* aTransferSize) {
-  MutexAutoLock lock(mOnDataFinishedMutex);
   *aTransferSize = mTransferSize;
   return NS_OK;
 }
@@ -1887,14 +1896,12 @@ HttpBaseChannel::GetRequestSize(uint64_t* aRequestSize) {
 
 NS_IMETHODIMP
 HttpBaseChannel::GetDecodedBodySize(uint64_t* aDecodedBodySize) {
-  MutexAutoLock lock(mOnDataFinishedMutex);
   *aDecodedBodySize = mDecodedBodySize;
   return NS_OK;
 }
 
 NS_IMETHODIMP
 HttpBaseChannel::GetEncodedBodySize(uint64_t* aEncodedBodySize) {
-  MutexAutoLock lock(mOnDataFinishedMutex);
   *aEncodedBodySize = mEncodedBodySize;
   return NS_OK;
 }
@@ -2947,7 +2954,7 @@ nsresult ProcessXCTO(HttpBaseChannel* aChannel, nsIURI* aURI,
     RefPtr<dom::Document> doc;
     aLoadInfo->GetLoadingDocument(getter_AddRefs(doc));
     nsContentUtils::ReportToConsole(nsIScriptError::warningFlag, "XCTO"_ns, doc,
-                                    nsContentUtils::eSECURITY_PROPERTIES,
+                                    PropertiesFile::SECURITY_PROPERTIES,
                                     "XCTOHeaderValueMissing", params);
     return NS_OK;
   }
@@ -3220,10 +3227,22 @@ nsresult EnsureMIMEOfScript(HttpBaseChannel* aChannel, nsIURI* aURI,
   nsContentPolicyType internalType = aLoadInfo->InternalContentPolicyType();
 
   // We restrict importScripts() in worker code to JavaScript MIME types.
-  if (internalType == nsIContentPolicy::TYPE_INTERNAL_WORKER_IMPORT_SCRIPTS ||
-      internalType == nsIContentPolicy::TYPE_INTERNAL_WORKER_STATIC_MODULE) {
+  if (internalType == nsIContentPolicy::TYPE_INTERNAL_WORKER_IMPORT_SCRIPTS) {
     ReportMimeTypeMismatch(aChannel, "BlockImportScriptsWithWrongMimeType",
                            aURI, contentType, Report::Error);
+    return NS_ERROR_CORRUPTED_CONTENT;
+  }
+
+  if (internalType == nsIContentPolicy::TYPE_INTERNAL_WORKER_STATIC_MODULE) {
+#ifdef NIGHTLY_BUILD
+    if (StaticPrefs::javascript_options_experimental_wasm_esm_integration()) {
+      if (nsContentUtils::HasWasmMimeTypeEssence(typeString)) {
+        return NS_OK;
+      }
+    }
+#endif
+    ReportMimeTypeMismatch(aChannel, "BlockModuleWithWrongMimeType", aURI,
+                           contentType, Report::Error);
     return NS_ERROR_CORRUPTED_CONTENT;
   }
 
@@ -3820,9 +3839,7 @@ NS_IMETHODIMP
 HttpBaseChannel::GetLocalAddress(nsACString& addr) {
   if (mSelfAddr.raw.family == PR_AF_UNSPEC) return NS_ERROR_NOT_AVAILABLE;
 
-  addr.SetLength(kIPv6CStrBufSize);
-  mSelfAddr.ToStringBuffer(addr.BeginWriting(), kIPv6CStrBufSize);
-  addr.SetLength(strlen(addr.BeginReading()));
+  mSelfAddr.ToString(addr);
 
   return NS_OK;
 }
@@ -3883,7 +3900,7 @@ nsresult HttpBaseChannel::AddSecurityMessage(
 
   nsAutoString errorText;
   rv = nsContentUtils::GetLocalizedString(
-      nsContentUtils::eSECURITY_PROPERTIES,
+      PropertiesFile::SECURITY_PROPERTIES,
       NS_ConvertUTF16toUTF8(aMessageTag).get(), errorText);
   NS_ENSURE_SUCCESS(rv, rv);
 
@@ -3916,9 +3933,7 @@ NS_IMETHODIMP
 HttpBaseChannel::GetRemoteAddress(nsACString& addr) {
   if (mPeerAddr.raw.family == PR_AF_UNSPEC) return NS_ERROR_NOT_AVAILABLE;
 
-  addr.SetLength(kIPv6CStrBufSize);
-  mPeerAddr.ToStringBuffer(addr.BeginWriting(), kIPv6CStrBufSize);
-  addr.SetLength(strlen(addr.BeginReading()));
+  mPeerAddr.ToString(addr);
 
   return NS_OK;
 }
@@ -4237,15 +4252,15 @@ HttpBaseChannel::GetFetchCacheMode(uint32_t* aFetchCacheMode) {
 
 namespace {
 
-void SetCacheFlags(uint32_t& aLoadFlags, uint32_t aFlags) {
-  // First, clear any possible cache related flags.
+void SetCacheFlags(Atomic<uint32_t, Relaxed>& aLoadFlags, uint32_t aFlags) {
+  // First, clear any possible cache related flags
   uint32_t allPossibleFlags =
       nsIRequest::INHIBIT_CACHING | nsIRequest::LOAD_BYPASS_CACHE |
       nsIRequest::VALIDATE_ALWAYS | nsIRequest::LOAD_FROM_CACHE |
       nsICachingChannel::LOAD_ONLY_FROM_CACHE;
   aLoadFlags &= ~allPossibleFlags;
 
-  // Then set the new flags.
+  // Then set the new flags
   aLoadFlags |= aFlags;
 }
 
@@ -4368,10 +4383,9 @@ HttpBaseChannel::GetEntityID(nsACString& aEntityID) {
 
 void HttpBaseChannel::AddConsoleReport(
     uint32_t aErrorFlags, const nsACString& aCategory,
-    nsContentUtils::PropertiesFile aPropertiesFile,
-    const nsACString& aSourceFileURI, uint32_t aLineNumber,
-    uint32_t aColumnNumber, const nsACString& aMessageName,
-    const nsTArray<nsString>& aStringParams) {
+    PropertiesFile aPropertiesFile, const nsACString& aSourceFileURI,
+    uint32_t aLineNumber, uint32_t aColumnNumber,
+    const nsACString& aMessageName, const nsTArray<nsString>& aStringParams) {
   mReportCollector->AddConsoleReport(aErrorFlags, aCategory, aPropertiesFile,
                                      aSourceFileURI, aLineNumber, aColumnNumber,
                                      aMessageName, aStringParams);
@@ -4568,7 +4582,7 @@ already_AddRefed<nsILoadInfo> HttpBaseChannel::CloneLoadInfoForRedirect(
                "docshell and necko should have the same "
                "geckoViewSessionContextId attribute");
 
-    attrs = docShellAttrs;
+    attrs = std::move(docShellAttrs);
     attrs.SetFirstPartyDomain(true, aNewURI);
     newLoadInfo->SetOriginAttributes(attrs);
 
@@ -5435,14 +5449,39 @@ bool HttpBaseChannel::ShouldTaintReplacementChannelOrigin(
     return false;
   }
 
-  // If new channel is not of same origin we need to taint unless
-  // mURI <-> mOriginalURI/LoadingPrincipal are same origin.
+  // Fetch spec "compute redirect-taint":
+  // Taint if url's origin is not same-origin with lastURL's origin AND
+  // request's origin is not same-origin with lastURL's origin.
+  // Condition 1: same-origin redirect never taints.
   if (IsNewChannelSameOrigin(aNewChannel)) {
     return false;
   }
 
-  nsresult rv;
+  // Condition 2: cross-origin redirect — taint if the origin that initiated
+  // the request is not same-origin with the current URL (mURI).
+  //
+  // Bug 1965430: For top-level navigational loads (e.g., form POST),
+  // LoadingPrincipal is null. TriggeringPrincipal correctly represents the
+  // origin that initiated the request in all cases. The old code using
+  // LoadingPrincipal fell through to comparing mOriginalURI with mURI, which
+  // are equal for the first redirect, incorrectly skipping the taint.
+  if (StaticPrefs::network_http_origin_useTriggeringPrincipal()) {
+    nsIPrincipal* triggeringPrincipal = mLoadInfo->TriggeringPrincipal();
+    if (!triggeringPrincipal) {
+      return true;
+    }
+    bool sameOrigin = false;
+    nsresult rv = triggeringPrincipal->IsSameOrigin(mURI, &sameOrigin);
+    if (NS_FAILED(rv)) {
+      return true;
+    }
+    return !sameOrigin;
+  }
 
+  // Old code path (Bug 1965430): retained behind pref for safety.
+  // Uses LoadingPrincipal which is null for top-level navigations,
+  // falling back to mOriginalURI vs mURI comparison.
+  nsresult rv;
   if (mLoadInfo->GetLoadingPrincipal()) {
     bool sameOrigin = false;
     rv = mLoadInfo->GetLoadingPrincipal()->IsSameOrigin(mURI, &sameOrigin);
@@ -5930,6 +5969,18 @@ HttpBaseChannel::GetResponseStart(TimeStamp* _retval) {
 }
 
 NS_IMETHODIMP
+HttpBaseChannel::GetFirstInterimResponseStart(TimeStamp* _retval) {
+  *_retval = mTransactionTimings.firstInterimResponseStart;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+HttpBaseChannel::GetFinalResponseHeadersStart(TimeStamp* _retval) {
+  *_retval = mTransactionTimings.finalResponseHeadersStart;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 HttpBaseChannel::GetResponseEnd(TimeStamp* _retval) {
   *_retval = mTransactionTimings.responseEnd;
   return NS_OK;
@@ -5996,6 +6047,8 @@ IMPL_TIMING_ATTR(SecureConnectionStart)
 IMPL_TIMING_ATTR(ConnectEnd)
 IMPL_TIMING_ATTR(RequestStart)
 IMPL_TIMING_ATTR(ResponseStart)
+IMPL_TIMING_ATTR(FirstInterimResponseStart)
+IMPL_TIMING_ATTR(FinalResponseHeadersStart)
 IMPL_TIMING_ATTR(ResponseEnd)
 IMPL_TIMING_ATTR(CacheReadStart)
 IMPL_TIMING_ATTR(CacheReadEnd)
@@ -6477,26 +6530,7 @@ NS_IMETHODIMP HttpBaseChannel::ComputeCrossOriginOpenerPolicy(
   //                              %s"same-origin-allow-popups" /
   //                              %s"unsafe-none"; case-sensitive
 
-  nsCOMPtr<nsISFVService> sfv = GetSFVService();
-
-  nsCOMPtr<nsISFVItem> item;
-  nsresult rv = sfv->ParseItem(openerPolicy, getter_AddRefs(item));
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-
-  nsCOMPtr<nsISFVBareItem> value;
-  rv = item->GetValue(getter_AddRefs(value));
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-
-  nsCOMPtr<nsISFVToken> token = do_QueryInterface(value);
-  if (!token) {
-    return NS_ERROR_UNEXPECTED;
-  }
-
-  rv = token->GetValue(openerPolicy);
+  nsresult rv = SFV::ParseItem<SFV::Token>(openerPolicy, openerPolicy);
   if (NS_FAILED(rv)) {
     return rv;
   }
@@ -6586,22 +6620,7 @@ HttpBaseChannel::GetOriginAgentClusterHeader(bool* aValue) {
   }
 
   // Origin-Agent-Cluster = <boolean>
-  nsCOMPtr<nsISFVService> sfv = GetSFVService();
-  nsCOMPtr<nsISFVItem> item;
-  rv = sfv->ParseItem(content, getter_AddRefs(item));
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-  nsCOMPtr<nsISFVBareItem> value;
-  rv = item->GetValue(getter_AddRefs(value));
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-  nsCOMPtr<nsISFVBool> flag = do_QueryInterface(value);
-  if (!flag) {
-    return NS_ERROR_NOT_AVAILABLE;
-  }
-  return flag->GetValue(aValue);
+  return SFV::ParseItem<SFV::SFVBool>(content, *aValue);
 }
 
 void HttpBaseChannel::MaybeFlushConsoleReports() {
@@ -6833,6 +6852,11 @@ static void CollectORBBlockTelemetry(
           .EnumGet(glean::orb::BlockInitiatorLabel::eOther)
           .Add();
       break;
+    case ExtContentPolicy::TYPE_TEXT:
+      glean::orb::block_initiator
+          .EnumGet(glean::orb::BlockInitiatorLabel::eText)
+          .Add();
+      break;
     case ExtContentPolicy::TYPE_DOCUMENT:
     case ExtContentPolicy::TYPE_SUBDOCUMENT:
     case ExtContentPolicy::TYPE_OBJECT:
@@ -6883,7 +6907,7 @@ void HttpBaseChannel::LogORBError(
   params.AppendElement(NS_ConvertUTF8toUTF16(uri));
   params.AppendElement(aReason);
   nsContentUtils::ReportToConsole(nsIScriptError::warningFlag, "ORB"_ns, doc,
-                                  nsContentUtils::eNECKO_PROPERTIES,
+                                  PropertiesFile::NECKO_PROPERTIES,
                                   "ResourceBlockedORB", params);
 }
 

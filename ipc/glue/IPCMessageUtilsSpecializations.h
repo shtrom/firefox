@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -32,6 +30,7 @@
 #include "mozilla/dom/UserActivation.h"
 #include "gfxPlatform.h"
 #include "NonCustomCSSPropertyId.h"
+#include "nsContentPolicyType.h"
 #include "nsContentPermissionHelper.h"
 #include "nsDebug.h"
 #include "nsIContentPolicy.h"
@@ -402,11 +401,28 @@ struct ParamTraits<nsID> {
   }
 };
 
+struct nsContentPolicyTypeValidator {
+  using IntegralType = std::underlying_type_t<nsContentPolicyType>;
+
+  static bool IsLegalValue(const IntegralType e) {
+    switch (e) {
+#define CONTENT_POLICY_TYPE(name) case nsContentPolicyType::name:
+      FOR_EACH_CONTENT_POLICY_TYPE(CONTENT_POLICY_TYPE)
+#undef CONTENT_POLICY_TYPE
+      return true;
+
+      case nsContentPolicyType::TYPE_INVALID:
+        // NOTE: It is intentionally valid to send TYPE_INVALID over IPC.
+        return true;
+    }
+
+    return false;
+  }
+};
+
 template <>
 struct ParamTraits<nsContentPolicyType>
-    : public ContiguousEnumSerializer<nsContentPolicyType,
-                                      nsIContentPolicy::TYPE_INVALID,
-                                      nsIContentPolicy::TYPE_END> {};
+    : EnumSerializer<nsContentPolicyType, nsContentPolicyTypeValidator> {};
 
 template <>
 struct ParamTraits<mozilla::TimeDuration> {

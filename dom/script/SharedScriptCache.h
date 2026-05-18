@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -14,11 +12,13 @@
 #include "js/loader/ScriptKind.h"            // JS::loader::ScriptKind
 #include "js/loader/ScriptLoadRequest.h"     // JS::loader::ScriptLoadRequest
 #include "mozilla/CORSMode.h"                // mozilla::CORSMode
+#include "mozilla/HashTable.h"               // mozilla::HashMap
 #include "mozilla/MemoryReporting.h"         // MallocSizeOf
 #include "mozilla/Mutex.h"                   // Mutex, GUARDED_BY, MutexAutoLock
 #include "mozilla/RefPtr.h"                  // RefPtr
 #include "mozilla/SharedSubResourceCache.h"  // SharedSubResourceCache, SharedSubResourceCacheLoadingValueBase, SubResourceNetworkMetadataHolder
 #include "mozilla/ThreadSafety.h"            // MOZ_GUARDED_BY
+#include "mozilla/UniquePtr.h"               // mozilla::UniquePtr
 #include "mozilla/WeakPtr.h"                 // SupportsWeakPtr
 #include "mozilla/dom/CacheExpirationTime.h"  // CacheExpirationTime
 #include "nsIMemoryReporter.h"  // nsIMemoryReporter, NS_DECL_NSIMEMORYREPORTER
@@ -64,9 +64,6 @@ class ScriptHashKey : public PLDHashEntryHdr {
     MOZ_COUNT_CTOR(ScriptHashKey);
   }
 
-  ScriptHashKey(ScriptLoader* aLoader,
-                const JS::loader::ScriptLoadRequest* aRequest,
-                const JS::loader::LoadedScript* aLoadedScript);
   ScriptHashKey(ScriptLoader* aLoader,
                 const JS::loader::ScriptLoadRequest* aRequest,
                 mozilla::dom::ReferrerPolicy aReferrerPolicy,
@@ -157,10 +154,11 @@ class ScriptLoadData final
       public nsISupports,
       public SharedSubResourceCacheLoadingValueBase<ScriptLoadData> {
  protected:
-  ~ScriptLoadData() {}
+  ~ScriptLoadData() = default;
 
  public:
   ScriptLoadData(ScriptLoader* aLoader, JS::loader::ScriptLoadRequest* aRequest,
+                 CacheExpirationTime aExpirationTime,
                  JS::loader::LoadedScript* aLoadedScript);
 
   NS_DECL_ISUPPORTS
@@ -228,6 +226,14 @@ class SharedScriptCache final
 
   NS_IMETHOD Observe(nsISupports* aSubject, const char* aTopic,
                      const char16_t* aData) override {
+    if (strcmp(aTopic, "ipc:content-shutdown") == 0) {
+      OnContentShutdown(aSubject);
+      return NS_OK;
+    }
+    if (strcmp(aTopic, "profile-before-change") == 0) {
+      OnProfileBeforeChange();
+      return NS_OK;
+    }
     return Base::DoObserve(aSubject, aTopic, aData);
   }
 
@@ -238,6 +244,13 @@ class SharedScriptCache final
   void SaveToDiskCache();
 
   void InvalidateInProcess();
+
+  void OnEntryInserted();
+  void OnEntryEverHit();
+
+  void UpdateEverHitTelemetry();
+  static void RecvUpdateEverHitTelemetry(const uint64_t& aChildId,
+                                         const uint32_t& aRate);
 
   // This has to be static because it's also called for loaders that don't have
   // a sheet cache (loaders that are not owned by a document).
@@ -263,7 +276,18 @@ class SharedScriptCache final
 
   bool ShouldIgnoreMemoryPressure() override;
 
+  void ClearInProcessForMemoryPressure() override;
+
  private:
+  bool EnsureEverHitMap();
+  void OnContentShutdown(nsISupports* aSubject);
+  void OnProfileBeforeChange();
+  void AccumulateEverHitTelemetry(uint32_t aRate);
+
+  void SetDiskCacheTimer();
+  void ClearDiskCacheTimer();
+  void OnDiskCacheTimer();
+
   class EncodeItem {
    public:
     EncodeItem(JS::Stencil* aStencil, JS::TranscodeBuffer&& aSRI,
@@ -282,8 +306,53 @@ class SharedScriptCache final
     RefPtr<JS::loader::LoadedScript> mLoadedScript;
   };
 
+  // Set to true if the telemetry data is sent from the content process and
+  // the preparation for the telemetry accumulation/submission is done.
+  // This is set to true even if the preparation fails (mEverHitMap == nullptr),
+  // to avoid retrying the preparation again and again.
+  //
+  // This field is used only on the parent process.
+  bool mPreparedEverHitMap = false;
+
+  // True if the disk cache timer should be rescheduled.
+  // This is set to true if another activity happens during the timer
+  // is set.
+  bool mRetryDiskCacheTimer = false;
+
+  // The initial value for mLastEverHitRatio, which is outside of the
+  // valid range.
+  static constexpr uint32_t NOT_YET_REPORTED = 101;
+
+  // The cache-hit ratio value that's sent to the parent process.
+  // Used to avoid performing unnecessary IPC when UpdateEverHitTelemetry is
+  // successively called without the cache-hit ratio changed.
+  uint32_t mLastEverHitRatio = NOT_YET_REPORTED;
+
+  // The number of times each cache entry is ever hit.
+  // Used with mEntryInserted to calculate the cache-hit ratio, for the
+  // dom.script_memory_cache_ever_hit telemetry.
+  size_t mEntryEverHit = 0;
+
+  // The number of times a new cache entry is inserted.
+  size_t mEntryInserted = 0;
+
+  // A map from content process ID to the cache-hit ratio, in [0,100] range.
+  // The parent process uses CONTENT_PROCESS_ID_MAIN as the ID.
+  //
+  // This is the telemetry data which is eventually be reflected to the
+  // dom.script_memory_cache_ever_hit telemetry probe.
+  //
+  // This field is used only on the parent process.
+  //
+  // Content processes periodically send the data to the parent process,
+  // and the parent process keeps the latest value, until the process shutdown.
+  using EverHitMapType = HashMap<uint64_t, uint32_t>;
+  UniquePtr<EverHitMapType> mEverHitMap;
+
   Mutex mEncodeMutex{"SharedScriptCache::mEncodeMutex"};
   Vector<EncodeItem> mEncodeItems MOZ_GUARDED_BY(mEncodeMutex);
+
+  nsCOMPtr<nsITimer> mDiskCacheTimer;
 };
 
 }  // namespace dom

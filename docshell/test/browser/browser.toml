@@ -96,6 +96,8 @@ skip-if = [
 
 ["browser_bfcache_after_auxiliary.js"]
 
+["browser_bug2011921.js"]
+
 ["browser_bfcache_copycommand.js"]
 skip-if = [
   "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && opt", # Bug 1730593
@@ -113,6 +115,9 @@ https_first_disabled = true
 ["browser_browsingContext-getAllBrowsingContextsInSubtree.js"]
 
 ["browser_browsingContext-getWindowByName.js"]
+skip-if = [
+  "os == 'win' && os_version == '11.26200' && asan", # Bug 2019745
+]
 
 ["browser_browsingContext-webProgress.js"]
 skip-if = [
@@ -392,9 +397,6 @@ skip-if = [
 ["browser_targetTopLevelLinkClicksToBlank.js"]
 
 ["browser_title_in_session_history.js"]
-run-if = [
-  "sessionHistoryInParent",
-]
 
 ["browser_ua_emulation.js"]
 

@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -77,6 +75,14 @@ enum class NativeKeyBindingsType : uint8_t;
 enum class WindowButtonType : uint8_t;
 struct FontRange;
 struct SwipeEventQueue;
+
+enum class HapticFeedbackType : uint8_t {
+  ShortPress = 0,
+  LongPress = 1,
+  TextHandleMove = 2,
+
+  End,  // Not a feedback type, only to mark the upper boundary
+};
 
 enum class WindowShadow : uint8_t {
   None,
@@ -212,7 +218,6 @@ enum TouchPointerState : uint8_t {
 #endif
 
 #define MOZ_WIDGET_MAX_SIZE 16384
-#define MOZ_WIDGET_INVALID_SCALE 0.0
 
 // Must be kept in sync with xpcom/rust/xpcom/src/interfaces/nonidl.rs
 #define NS_IWIDGET_IID \
@@ -266,9 +271,6 @@ enum nsCursor {  ///(normal cursor,       usually rendered as an arrow)
   // This one is used for array sizing, and so better be the last
   // one in this list...
   eCursorCount,
-
-  // ...except for this one.
-  eCursorInvalid = eCursorCount + 1
 };
 
 /**
@@ -304,17 +306,17 @@ namespace mozilla::widget {
 
 /**
  * Size constraints for setting the minimum and maximum size of a widget.
- * Values are in device pixels.
+ * Values are in desktop pixels, so they do not depend on the widget's
+ * current backing scale factor. Each widget implementation converts to
+ * its native coordinate system using its own scale factor when applying
+ * the constraints.
  */
 struct SizeConstraints {
-  SizeConstraints()
-      : mMaxSize(MOZ_WIDGET_MAX_SIZE, MOZ_WIDGET_MAX_SIZE),
-        mScale(MOZ_WIDGET_INVALID_SCALE) {}
+  SizeConstraints() : mMaxSize(MOZ_WIDGET_MAX_SIZE, MOZ_WIDGET_MAX_SIZE) {}
 
-  SizeConstraints(mozilla::LayoutDeviceIntSize aMinSize,
-                  mozilla::LayoutDeviceIntSize aMaxSize,
-                  mozilla::DesktopToLayoutDeviceScale aScale)
-      : mMinSize(aMinSize), mMaxSize(aMaxSize), mScale(aScale) {
+  SizeConstraints(mozilla::DesktopIntSize aMinSize,
+                  mozilla::DesktopIntSize aMaxSize)
+      : mMinSize(aMinSize), mMaxSize(aMaxSize) {
     if (mMaxSize.width > MOZ_WIDGET_MAX_SIZE) {
       mMaxSize.width = MOZ_WIDGET_MAX_SIZE;
     }
@@ -323,18 +325,8 @@ struct SizeConstraints {
     }
   }
 
-  mozilla::LayoutDeviceIntSize mMinSize;
-  mozilla::LayoutDeviceIntSize mMaxSize;
-
-  /*
-   * The scale used to convert from desktop to device dimensions.
-   * MOZ_WIDGET_INVALID_SCALE if the value is not known.
-   *
-   * Bug 1701109 is filed to revisit adding of 'mScale' and deal
-   * with multi-monitor scaling issues in more complete way across
-   * all widget implementations.
-   */
-  mozilla::DesktopToLayoutDeviceScale mScale;
+  mozilla::DesktopIntSize mMinSize;
+  mozilla::DesktopIntSize mMaxSize;
 };
 
 class MOZ_RAII AutoSynthesizedEventCallbackNotifier final {
@@ -417,6 +409,7 @@ class nsIWidget : public nsSupportsWeakReference {
   typedef mozilla::widget::IMEEnabled IMEEnabled;
   typedef mozilla::widget::IMEMessage IMEMessage;
   typedef mozilla::widget::IMENotification IMENotification;
+  typedef mozilla::widget::IMENotificationRequest IMENotificationRequest;
   typedef mozilla::widget::IMENotificationRequests IMENotificationRequests;
   typedef mozilla::widget::IMEState IMEState;
   typedef mozilla::widget::InputContext InputContext;
@@ -626,7 +619,7 @@ class nsIWidget : public nsSupportsWeakReference {
    * dependent "desktop pixels" used to manage window positions on a
    * potentially multi-screen, mixed-resolution desktop.
    */
-  virtual mozilla::DesktopToLayoutDeviceScale GetDesktopToDeviceScale() {
+  virtual mozilla::DesktopToLayoutDeviceScale GetDesktopToDeviceScale() const {
     return mozilla::DesktopToLayoutDeviceScale(1.0);
   }
 
@@ -1889,14 +1882,14 @@ class nsIWidget : public nsSupportsWeakReference {
   virtual void CreateCompositor(int aWidth, int aHeight);
   virtual void SetCompositorWidgetDelegate(CompositorWidgetDelegate*) {}
 
-  WindowRenderer* CreateFallbackRenderer();
+  already_AddRefed<WindowRenderer> CreateFallbackRenderer();
 
   /**
    * Returns a FallbackRenderer which is intended to be temporary while
    * backgrounded without a GPU process. It listens to GPUProcessManager events
    * in order to destroy itself when the GPU process becomes available.
    */
-  WindowRenderer* CreateBackgroundedFallbackRenderer();
+  already_AddRefed<WindowRenderer> CreateBackgroundedFallbackRenderer();
 
   /**
    * Setter/Getter of the system font setting for testing.
@@ -1916,15 +1909,27 @@ class nsIWidget : public nsSupportsWeakReference {
     return LayoutDeviceIntSize();
   }
 
-  /**
-   * If this widget uses native pointer lock instead of warp-to-center
-   * (currently only GTK on Wayland), these methods provide access to that
-   * functionality.
-   */
-  virtual void SetNativePointerLockCenter(
-      const LayoutDeviceIntPoint& aLockCenter) {}
-  virtual void LockNativePointer() {}
+  enum class NativePointerLockMode : uint8_t {
+    Regular,
+    Unadjusted,
+  };
+
+  virtual void LockNativePointer(NativePointerLockMode aNativePointerLockMode) {
+  }
   virtual void UnlockNativePointer() {}
+
+  /**
+   * Inform the widget to change the native pointer lock mode. This is a no-op
+   * if the native pointer isn't locked or if the platform doesn't support
+   * unadjusted movement.
+   */
+  virtual void SetNativePointerLockMode(
+      NativePointerLockMode aNativePointerLockMode) {}
+
+  /**
+   * Whether unadjusted movement is supported for native pointer lock.
+   */
+  virtual bool SupportsUnadjustedMovement() { return false; }
 
   /*
    * Get safe area insets except to cutout.
@@ -2162,7 +2167,7 @@ class nsIWidget : public nsSupportsWeakReference {
    * does not necessarily change the size of a window to conform to this size,
    * thus Resize should be called afterwards.
    *
-   * @param aConstraints: the size constraints in device pixels
+   * @param aConstraints: the size constraints in desktop pixels
    */
   virtual void SetSizeConstraints(const SizeConstraints& aConstraints);
 
@@ -2174,20 +2179,29 @@ class nsIWidget : public nsSupportsWeakReference {
   /**
    * Return the size constraints currently observed by the widget.
    *
-   * @return the constraints in device pixels
+   * @return the constraints in desktop pixels
    */
   virtual const SizeConstraints GetSizeConstraints();
 
   /**
-   * Apply the current size constraints to the given size.
+   * Apply the current size constraints to the given size. The size and
+   * constraints are converted through the widget's current scale factor
+   * so that callers can continue to work in device pixels.
    *
-   * @param aWidth width to constrain
-   * @param aHeight height to constrain
+   * @param aWidth width in device pixels to constrain
+   * @param aHeight height in device pixels to constrain
    */
   virtual void ConstrainSize(int32_t* aWidth, int32_t* aHeight) {
     SizeConstraints c = GetSizeConstraints();
-    *aWidth = std::clamp(*aWidth, c.mMinSize.width, c.mMaxSize.width);
-    *aHeight = std::clamp(*aHeight, c.mMinSize.height, c.mMaxSize.height);
+    const double scale = GetDesktopToDeviceScale().scale;
+    auto ToDevice = [scale](int32_t aDesktop) {
+      return aDesktop == NS_MAXSIZE ? NS_MAXSIZE
+                                    : NSToIntRound(aDesktop * scale);
+    };
+    *aWidth = std::clamp(*aWidth, ToDevice(c.mMinSize.width),
+                         ToDevice(c.mMaxSize.width));
+    *aHeight = std::clamp(*aHeight, ToDevice(c.mMinSize.height),
+                          ToDevice(c.mMaxSize.height));
   }
 
   /**
@@ -2334,6 +2348,8 @@ class nsIWidget : public nsSupportsWeakReference {
     Puppet,
   };
   bool IsPuppetWidget() const { return mWidgetType == WidgetType::Puppet; }
+  bool IsHeadlessWidget() const { return mWidgetType == WidgetType::Headless; }
+  bool IsNativeWidget() const { return mWidgetType == WidgetType::Native; }
 
   using WindowButtonType = mozilla::WindowButtonType;
 
@@ -2345,6 +2361,11 @@ class nsIWidget : public nsSupportsWeakReference {
    */
   virtual void SetWindowButtonRect(WindowButtonType aButtonType,
                                    const LayoutDeviceIntRect& aClientRect) {}
+
+  /**
+   * Provide haptic feedback for this widget.
+   */
+  virtual void PerformHapticFeedback(mozilla::HapticFeedbackType aType) {}
 
 #ifdef DEBUG
   virtual nsresult SetHiDPIMode(bool aHiDPI) {

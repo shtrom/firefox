@@ -495,7 +495,7 @@ add_task(async function test_aboutOpenTabsReplacedWhenLeftViewActive() {
   EventUtils.synthesizeMouseAtCenter(
     tabRowForTab2,
     {},
-    tabRowForTab2.ownerGlobal
+    tabRowForTab2.documentGlobal
   );
 
   await TestUtils.waitForCondition(
@@ -808,7 +808,7 @@ add_task(async function test_open_link_in_split_view_from_container() {
     false,
     testPageUrl
   );
-
+  let containerIndex = containerTab.elementIndex;
   let splitViewCreated = BrowserTestUtils.waitForEvent(
     gBrowser.tabContainer,
     "SplitViewCreated"
@@ -856,10 +856,193 @@ add_task(async function test_open_link_in_split_view_from_container() {
     containerTab.splitview,
     "Both tabs should be in the same split view"
   );
+  is(
+    containerIndex,
+    linkTab.splitview.elementIndex,
+    "Splitview is created in place"
+  );
 
   is(gBrowser.selectedTab, linkTab, "Link tab should be selected");
 
   linkTab.splitview.close();
+  while (gBrowser.tabs.length > 1) {
+    BrowserTestUtils.removeTab(gBrowser.tabs.at(-1));
+  }
+});
+
+add_task(async function test_open_link_in_split_view_hidden_on_hidden_tab() {
+  FirefoxViewHandler.openTab();
+  let fxviewTab = FirefoxViewHandler.tab;
+  await BrowserTestUtils.browserLoaded(
+    fxviewTab.linkedBrowser,
+    false,
+    "about:firefoxview"
+  );
+
+  ok(fxviewTab.hidden, "Firefox View tab is a hidden tab");
+
+  let browser = fxviewTab.linkedBrowser;
+  let doc = browser.contentWindow.document;
+
+  let openTabs = doc.querySelector("view-opentabs[slot='opentabs']");
+  await TestUtils.waitForCondition(
+    () => openTabs.viewCards?.[0]?.tabList?.rowEls?.length,
+    "Open tab rows rendered"
+  );
+
+  let firstTabLink = openTabs.viewCards[0].tabList.rowEls[0].mainEl;
+
+  const contextMenu = document.getElementById("contentAreaContextMenu");
+  let popupShown = BrowserTestUtils.waitForEvent(contextMenu, "popupshown");
+  EventUtils.synthesizeMouseAtCenter(
+    firstTabLink,
+    { type: "contextmenu", button: 2 },
+    browser.contentWindow
+  );
+  await popupShown;
+
+  let openLinkInSplitViewItem = contextMenu.querySelector(
+    "#context-openlinkinsplitview"
+  );
+  ok(openLinkInSplitViewItem, "Open Link in Split View menu item exists");
+  ok(
+    !BrowserTestUtils.isVisible(openLinkInSplitViewItem),
+    "Open Link in Split View menu item is hidden on a hidden tab"
+  );
+
+  let popupHidden = BrowserTestUtils.waitForPopupEvent(contextMenu, "hidden");
+  contextMenu.hidePopup();
+  await popupHidden;
+
+  BrowserTestUtils.removeTab(fxviewTab);
+  FirefoxViewHandler.tab = null;
+});
+
+add_task(
+  async function test_open_link_in_split_view_hidden_when_in_split_view() {
+    const testPageUrl = httpURL("file_anchor_elements.html");
+
+    let tab1 = BrowserTestUtils.addTab(gBrowser, testPageUrl, {
+      skipAnimation: true,
+    });
+    await BrowserTestUtils.browserLoaded(
+      tab1.linkedBrowser,
+      false,
+      testPageUrl
+    );
+
+    let tab2 = BrowserTestUtils.addTab(gBrowser, testPageUrl, {
+      skipAnimation: true,
+    });
+    await BrowserTestUtils.browserLoaded(
+      tab2.linkedBrowser,
+      false,
+      testPageUrl
+    );
+
+    gBrowser.addTabSplitView([tab1, tab2]);
+    gBrowser.selectedTab = tab1;
+
+    const contextMenu = document.getElementById("contentAreaContextMenu");
+    let popupShown = BrowserTestUtils.waitForEvent(contextMenu, "popupshown");
+
+    await BrowserTestUtils.synthesizeMouseAtCenter(
+      "#a_with_href",
+      { type: "contextmenu", button: 2 },
+      tab1.linkedBrowser
+    );
+    await popupShown;
+
+    let openLinkInSplitViewItem = contextMenu.querySelector(
+      "#context-openlinkinsplitview"
+    );
+    ok(openLinkInSplitViewItem, "Open Link in Split View menu item exists");
+    ok(
+      !BrowserTestUtils.isVisible(openLinkInSplitViewItem),
+      "Open Link in Split View menu item is hidden when current tab is in a split view"
+    );
+
+    let popupHidden = BrowserTestUtils.waitForPopupEvent(contextMenu, "hidden");
+    contextMenu.hidePopup();
+    await popupHidden;
+
+    tab1.splitview.close();
+    while (gBrowser.tabs.length > 1) {
+      BrowserTestUtils.removeTab(gBrowser.tabs.at(-1));
+    }
+  }
+);
+
+add_task(async function test_about_opentabs_cannot_be_pinned() {
+  const tab1 = await addTab();
+  const tab2 = await addTab();
+
+  EventUtils.synthesizeMouseAtCenter(tab1, {});
+
+  let openTabsPromise = BrowserTestUtils.waitForNewTab(
+    gBrowser,
+    "about:opentabs"
+  );
+  let splitViewCreated = BrowserTestUtils.waitForEvent(
+    gBrowser.tabContainer,
+    "SplitViewCreated"
+  );
+  await withTabMenu(tab1, async moveTabToNewSplitViewItem => {
+    await BrowserTestUtils.waitForMutationCondition(
+      moveTabToNewSplitViewItem,
+      { attributes: true },
+      () =>
+        !moveTabToNewSplitViewItem.hidden &&
+        !moveTabToNewSplitViewItem.disabled,
+      "moveTabToNewSplitViewItem is visible and not disabled"
+    );
+
+    info("Click menu option to add new split view");
+    moveTabToNewSplitViewItem.click();
+    await splitViewCreated;
+    await openTabsPromise;
+  });
+
+  let aboutOpenTabsTab = gBrowser.selectedTab;
+  Assert.equal(
+    aboutOpenTabsTab.linkedBrowser.currentURI.spec,
+    "about:opentabs",
+    "about:opentabs is the selected tab"
+  );
+
+  let menuItemPinTab = document.getElementById("context_pinTab");
+  let menuItemPinSelectedTabs = document.getElementById(
+    "context_pinSelectedTabs"
+  );
+
+  // Right-click the about:opentabs tab on its own.
+  updateTabContextMenu(aboutOpenTabsTab);
+  Assert.ok(
+    menuItemPinTab.hidden,
+    "Pin Tab is hidden when right-clicking the about:opentabs tab"
+  );
+
+  // Multi-select the about:opentabs tab alongside another tab and confirm
+  // Pin Selected Tabs is hidden.
+  await triggerClickOn(tab2, { ctrlKey: true });
+  Assert.ok(aboutOpenTabsTab.multiselected, "about:opentabs is multiselected");
+  Assert.ok(tab2.multiselected, "tab2 is multiselected");
+
+  updateTabContextMenu(aboutOpenTabsTab);
+  Assert.ok(
+    menuItemPinSelectedTabs.hidden,
+    "Pin Selected Tabs is hidden when about:opentabs is in the selection"
+  );
+
+  // Right-clicking a different multiselected tab should still hide the item
+  // because the selection contains about:opentabs.
+  updateTabContextMenu(tab2);
+  Assert.ok(
+    menuItemPinSelectedTabs.hidden,
+    "Pin Selected Tabs is hidden when right-clicking a sibling of about:opentabs"
+  );
+
+  tab1.splitview.unsplitTabs();
   while (gBrowser.tabs.length > 1) {
     BrowserTestUtils.removeTab(gBrowser.tabs.at(-1));
   }

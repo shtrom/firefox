@@ -105,6 +105,8 @@ subsuite = "mozbuild"
 
 ["test_manifest.py"]
 
+["test_testing.py"]
+
 ["test_mozconfig.py"]
 
 ["test_mozinfo.py"]
@@ -122,6 +124,8 @@ subsuite = "mozbuild"
 ["test_telemetry_settings.py"]
 
 ["test_util.py"]
+
+["test_toolchains.py"]
 
 ["test_util_fileavoidwrite.py"]
 

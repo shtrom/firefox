@@ -1,4 +1,3 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -142,9 +141,25 @@ class HttpConnectionBase : public nsSupportsWeakReference {
   virtual void SetLastTransactionExpectedNoContent(bool) = 0;
   virtual int64_t BytesWritten() = 0;  // includes TLS
   void SetSecurityCallbacks(nsIInterfaceRequestor* aCallbacks);
+  already_AddRefed<nsIInterfaceRequestor> GetCallbacks() {
+    MutexAutoLock lock(mCallbacksLock);
+    return do_AddRef(mCallbacks.get());
+  }
+  // Call only from Init(), before the object is shared with other threads.
+  void InitCallbacks(nsIInterfaceRequestor* aCallbacks,
+                     const char* aName) MOZ_NO_THREAD_SAFETY_ANALYSIS {
+    mCallbacks = new nsMainThreadPtrHolder<nsIInterfaceRequestor>(
+        aName, aCallbacks, false);
+  }
   void SetTrafficCategory(HttpTrafficCategory);
 
   void BootstrapTimings(TimingStruct times);
+  void SetDnsBootstrapTimings(TimeStamp domainLookupStart,
+                              TimeStamp domainLookupEnd);
+  void SetConnectBootstrapTimings(TimeStamp connectStart,
+                                  TimeStamp tcpConnectEnd,
+                                  TimeStamp secureConnectionStart = TimeStamp(),
+                                  TimeStamp connectEnd = TimeStamp());
 
   virtual bool IsPersistent() = 0;
   virtual bool IsReused() = 0;
@@ -184,6 +199,10 @@ class HttpConnectionBase : public nsSupportsWeakReference {
   void SetOwner(ConnectionEntry* aEntry);
   ConnectionEntry* OwnerEntry() const;
 
+  void SetIsRacing(bool aValue) { mIsRacing = aValue; }
+  bool IsRacing() const { return mIsRacing; }
+  virtual void SetDontExclude() {}
+
  protected:
   // The capabailities associated with the most recent transaction
   uint32_t mTransactionCaps{0};
@@ -200,8 +219,9 @@ class HttpConnectionBase : public nsSupportsWeakReference {
   bool mBootstrappedTimingsSet{false};
   TimingStruct mBootstrappedTimings;
 
-  Mutex mCallbacksLock MOZ_UNANNOTATED{"nsHttpConnection::mCallbacksLock"};
-  nsMainThreadPtrHandle<nsIInterfaceRequestor> mCallbacks;
+  Mutex mCallbacksLock{"nsHttpConnection::mCallbacksLock"};
+  nsMainThreadPtrHandle<nsIInterfaceRequestor> mCallbacks
+      MOZ_GUARDED_BY(mCallbacksLock);
 
   nsTArray<HttpTrafficCategory> mTrafficCategory;
   PRIntervalTime mRtt{0};
@@ -216,6 +236,8 @@ class HttpConnectionBase : public nsSupportsWeakReference {
   ConnectionCloseReason mCloseReason = ConnectionCloseReason::UNSET;
 
   bool mAddressTypeReported{false};
+
+  bool mIsRacing{false};
 
   // Tunnel retated functions:
   enum HttpConnectionState {

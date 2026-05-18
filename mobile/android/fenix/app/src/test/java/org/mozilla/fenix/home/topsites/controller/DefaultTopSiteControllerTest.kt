@@ -27,7 +27,6 @@ import mozilla.components.feature.top.sites.TopSitesUseCases
 import mozilla.components.service.mars.MozAdsUseCases
 import mozilla.components.support.test.robolectric.testContext
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -41,8 +40,6 @@ import org.mozilla.fenix.GleanMetrics.ShortcutsLibrary
 import org.mozilla.fenix.GleanMetrics.TopSites
 import org.mozilla.fenix.R
 import org.mozilla.fenix.components.Analytics
-import org.mozilla.fenix.components.AppStore
-import org.mozilla.fenix.components.appstate.AppState
 import org.mozilla.fenix.components.usecases.FenixBrowserUseCases
 import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.helpers.FenixGleanTestRule
@@ -51,6 +48,7 @@ import org.mozilla.fenix.home.topsites.ShortcutsFragmentDirections
 import org.mozilla.fenix.settings.SupportUtils
 import org.mozilla.fenix.utils.Settings
 import java.lang.ref.WeakReference
+import kotlin.test.assertNotNull
 
 @RunWith(AndroidJUnit4::class)
 class DefaultTopSiteControllerTest {
@@ -58,7 +56,6 @@ class DefaultTopSiteControllerTest {
     @get:Rule
     val gleanTestRule = FenixGleanTestRule(testContext)
 
-    private val appStore: AppStore = AppStore(AppState())
     private val activity: Activity = mockk(relaxed = true)
     private val navController: NavController = mockk(relaxed = true)
     private val tabsUseCases: TabsUseCases = mockk(relaxed = true)
@@ -740,7 +737,7 @@ class DefaultTopSiteControllerTest {
 
         controller.handleSelectTopSite(topSite, position)
 
-        verify { marsUseCases.recordInteraction(topSite.clickUrl) }
+        coVerify { marsUseCases.recordInteraction(topSite.clickUrl) }
 
         val event = TopSites.contileClick.testGetValue()!!
 
@@ -830,7 +827,7 @@ class DefaultTopSiteControllerTest {
 
         controller.handleTopSiteImpression(topSite, position)
 
-        verify { marsUseCases.recordInteraction(topSite.impressionUrl) }
+        coVerify { marsUseCases.recordInteraction(topSite.impressionUrl) }
 
         val event = TopSites.contileImpression.testGetValue()!!
 
@@ -928,7 +925,7 @@ class DefaultTopSiteControllerTest {
 
         controller.updateTopSite(topSite = topSite, title = title, url = url)
 
-        verify {
+        coVerify {
             topSitesUseCases.addPinnedSites(title = title, url = url)
         }
     }
@@ -948,7 +945,7 @@ class DefaultTopSiteControllerTest {
 
         controller.updateTopSite(topSite = topSite, title = title, url = url)
 
-        verify {
+        coVerify {
             topSitesUseCases.updateTopSites(topSite = topSite, title = title, url = url)
         }
     }
@@ -1153,7 +1150,6 @@ class DefaultTopSiteControllerTest {
 
     private fun createController(scope: CoroutineScope): DefaultTopSiteController =
         DefaultTopSiteController(
-            appStore = appStore,
             activityRef = WeakReference(activity),
             navControllerRef = WeakReference(navController),
             store = store,

@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim:set ts=2 sw=2 sts=2 et cindent: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -386,6 +384,13 @@ class MediaDecoder : public DecoderDoctorLifeLogger<MediaDecoder> {
 
   bool IsVideoDecodingSuspended() const;
 
+#  ifdef MOZ_WMF_CDM
+  // [TEST-ONLY] Returns true if WMFClearKey CDM is active. The media engine
+  // renders frames internally via OnVideoStreamTick() in this mode, so no
+  // decoded frames appear in the image container.
+  bool IsUsingWMFClearKey() const;
+#  endif
+
   // The MediaDecoderOwner of this decoder wants to resist fingerprinting.
   bool ShouldResistFingerprinting() const {
     return mShouldResistFingerprinting;
@@ -697,6 +702,10 @@ class MediaDecoder : public DecoderDoctorLifeLogger<MediaDecoder> {
 
   // True if we have suspended video decoding.
   bool mIsVideoDecodingSuspended = false;
+
+#  ifdef MOZ_WMF_CDM
+  bool mIsFrameServerMode = false;
+#  endif
 
  protected:
   // PlaybackRate and pitch preservation status we should start at.

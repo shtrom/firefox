@@ -59,12 +59,14 @@
 #include "pc/test/fake_rtc_certificate_generator.h"
 #include "pc/test/integration_test_helpers.h"
 #include "pc/test/mock_peer_connection_observers.h"
+#include "rtc_base/event.h"
 #include "rtc_base/strings/string_format.h"
 #include "rtc_base/thread.h"
 #include "system_wrappers/include/metrics.h"
 #include "test/create_test_field_trials.h"
 #include "test/gmock.h"
 #include "test/gtest.h"
+#include "test/run_loop.h"
 #include "test/wait_until.h"
 
 // This file contains unit tests that relate to the behavior of the
@@ -148,7 +150,7 @@ class SdpMungingTest : public ::testing::Test {
   scoped_refptr<PeerConnectionFactoryInterface> pc_factory_;
 
  private:
-  AutoThread main_thread_;
+  test::RunLoop main_thread_;
 };
 
 TEST_F(SdpMungingTest, DISABLED_ReportUMAMetricsWithNoMunging) {
@@ -545,14 +547,19 @@ TEST_F(SdpMungingTest, IceUfragRestrictedAddresses) {
     std::optional<RTCError> result;
     const std::string candidate = StringFormat(
         tmpl, absl::StrReplaceAll(address_test.first, {{":", " "}}).c_str());
+
+    Event event;
     caller->pc()->AddIceCandidate(
         std::unique_ptr<IceCandidate>(
             CreateIceCandidate("", 0, candidate, nullptr)),
-        [&result](RTCError error) { result = error; });
+        [&](RTCError error) {
+          result = error;
+          event.Set();
+        });
 
-    ASSERT_THAT(
-        WaitUntil([&] { return result.has_value(); }, ::testing::IsTrue()),
-        IsRtcOk());
+    ASSERT_TRUE(event.Wait(kDefaultTimeout));
+    EXPECT_TRUE(result.has_value());
+
     if (address_test.second == true) {
       EXPECT_TRUE(result.value().ok());
     } else {
@@ -691,7 +698,7 @@ TEST_F(SdpMungingTest, RemoveContentRejected) {
   std::unique_ptr<SessionDescriptionInterface> offer = pc->CreateOffer();
   auto& contents = offer->description()->contents();
   ASSERT_THAT(contents, SizeIs(1));
-  auto name = contents[0].mid();
+  std::string name = contents[0].mid();
   EXPECT_TRUE(offer->description()->RemoveContentByName(contents[0].mid()));
   std::string sdp;
   offer->ToString(&sdp);

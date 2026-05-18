@@ -1,4 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -25,18 +24,18 @@ using namespace mozilla;
 using namespace mozilla::a11y;
 
 Accessible::Accessible()
-    : mType(static_cast<uint32_t>(0)),
+    : mType(eNoType),
       mGenericTypes(static_cast<uint32_t>(0)),
       mRoleMapEntryIndex(aria::NO_ROLE_MAP_ENTRY_INDEX) {}
 
 Accessible::Accessible(AccType aType, AccGenericType aGenericTypes,
                        uint8_t aRoleMapEntryIndex)
-    : mType(static_cast<uint32_t>(aType)),
+    : mType(aType),
       mGenericTypes(static_cast<uint32_t>(aGenericTypes)),
       mRoleMapEntryIndex(aRoleMapEntryIndex) {}
 
 void Accessible::StaticAsserts() const {
-  static_assert(eLastAccType <= (1 << kTypeBits) - 1,
+  static_assert(kHighestAccType <= (1 << kTypeBits) - 1,
                 "Accessible::mType was oversized by eLastAccType!");
   static_assert(
       eLastAccGenericType <= (1 << kGenericTypesBits) - 1,

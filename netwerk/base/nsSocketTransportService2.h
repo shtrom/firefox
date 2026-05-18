@@ -1,4 +1,3 @@
-/* vim:set ts=4 sw=2 sts=2 ci et: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -293,7 +292,7 @@ class nsSocketTransportService final : public nsPISocketTransportService,
   // Number of keepalive probes to send.
   int32_t mKeepaliveProbeCount{kDefaultTCPKeepCount};
   // True if TCP keepalive is enabled globally.
-  bool mKeepaliveEnabledPref{false};
+  Atomic<bool, Relaxed> mKeepaliveEnabledPref{false};
   // Timeout of pollable event signalling.
   TimeDuration mPollableEventTimeout MOZ_GUARDED_BY(mLock);
 

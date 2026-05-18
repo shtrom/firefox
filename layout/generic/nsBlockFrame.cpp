@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -18,7 +16,9 @@
 #include "BlockReflowState.h"
 #include "CounterStyleManager.h"
 #include "TextOverflow.h"
-#include "fmt/format.h"
+#ifdef DEBUG
+#  include "fmt/base.h"
+#endif
 #include "gfxContext.h"
 #include "mozilla/AbsoluteContainingBlock.h"
 #include "mozilla/AppUnits.h"
@@ -155,13 +155,10 @@ static bool FrameHasVisibleInlineText(nsIFrame* aFrame) {
 
 // Determines whether any of the frames from the given line have visible text.
 static bool LineHasVisibleInlineText(nsLineBox* aLine) {
-  nsIFrame* kid = aLine->mFirstChild;
-  int32_t n = aLine->GetChildCount();
-  while (n-- > 0) {
+  for (nsIFrame* kid : aLine->ChildFrames()) {
     if (FrameHasVisibleInlineText(kid)) {
       return true;
     }
-    kid = kid->GetNextSibling();
   }
   return false;
 }
@@ -204,12 +201,9 @@ static nsRect GetFrameTextArea(nsIFrame* aFrame,
 static nsRect GetLineTextArea(nsLineBox* aLine,
                               nsDisplayListBuilder* aBuilder) {
   nsRect textArea;
-  nsIFrame* kid = aLine->mFirstChild;
-  int32_t n = aLine->GetChildCount();
-  while (n-- > 0) {
+  for (nsIFrame* kid : aLine->ChildFrames()) {
     nsRect kidTextArea = GetFrameTextArea(kid, aBuilder);
     textArea.OrWith(kidTextArea);
-    kid = kid->GetNextSibling();
   }
 
   return textArea;
@@ -571,7 +565,7 @@ void nsBlockFrame::InvalidateFrameWithRect(const nsRect& aRect,
 
 nscoord nsBlockFrame::SynthesizeFallbackBaseline(
     WritingMode aWM, BaselineSharingGroup aBaselineGroup) const {
-  if (IsButtonLike() && StyleDisplay()->IsInlineOutsideStyle()) {
+  if (IsButtonOrTextInput() && StyleDisplay()->IsInlineOutsideStyle()) {
     return Baseline::SynthesizeBOffsetFromContentBox(this, aWM, aBaselineGroup);
   }
   return Baseline::SynthesizeBOffsetFromMarginBox(this, aWM, aBaselineGroup);
@@ -646,7 +640,7 @@ Maybe<nscoord> nsBlockFrame::GetNaturalBaselineBOffset(
                                aExportContext)
           : GetBaselineBOffset(LinesRBegin(), LinesREnd(), aWM, aBaselineGroup,
                                aExportContext);
-  if (!offset && IsButtonLike()) {
+  if (!offset && IsButtonOrTextInput()) {
     for (const auto& line : Reversed(Lines())) {
       if (line.IsEmpty()) {
         continue;
@@ -875,9 +869,7 @@ nscoord nsBlockFrame::MinISize(const IntrinsicSizeInput& aInput) {
         }
         data.mLine = &line;
         data.SetLineContainer(curFrame);
-        nsIFrame* kid = line->mFirstChild;
-        for (int32_t i = 0, i_end = line->GetChildCount(); i != i_end;
-             ++i, kid = kid->GetNextSibling()) {
+        for (nsIFrame* kid : line->ChildFrames()) {
           const IntrinsicSizeInput kidInput(aInput, kid->GetWritingMode(),
                                             GetWritingMode());
           kid->AddInlineMinISize(kidInput, &data);
@@ -963,9 +955,7 @@ nscoord nsBlockFrame::PrefISize(const IntrinsicSizeInput& aInput) {
         }
         data.mLine = &line;
         data.SetLineContainer(curFrame);
-        nsIFrame* kid = line->mFirstChild;
-        for (int32_t i = 0, i_end = line->GetChildCount(); i != i_end;
-             ++i, kid = kid->GetNextSibling()) {
+        for (nsIFrame* kid : line->ChildFrames()) {
           const IntrinsicSizeInput kidInput(aInput, kid->GetWritingMode(),
                                             GetWritingMode());
           kid->AddInlinePrefISize(kidInput, &data);
@@ -1024,7 +1014,6 @@ nsresult nsBlockFrame::GetPrefWidthTightBounds(gfxContext* aRenderingContext,
         }
         data.mLine = &line;
         data.SetLineContainer(curFrame);
-        nsIFrame* kid = line->mFirstChild;
         // Per comment in nsIFrame::GetPrefWidthTightBounds(), the function is
         // only implemented for nsBlockFrame and nsTextFrame and is used to
         // determine the intrinsic inline sizes of MathML token elements. These
@@ -1032,8 +1021,7 @@ nsresult nsBlockFrame::GetPrefWidthTightBounds(gfxContext* aRenderingContext,
         // percentage basis for resolution.
         const IntrinsicSizeInput kidInput(aRenderingContext, Nothing(),
                                           Nothing());
-        for (int32_t i = 0, i_end = line->GetChildCount(); i != i_end;
-             ++i, kid = kid->GetNextSibling()) {
+        for (nsIFrame* kid : line->ChildFrames()) {
           rv = kid->GetPrefWidthTightBounds(aRenderingContext, &childX,
                                             &childXMost);
           NS_ENSURE_SUCCESS(rv, rv);
@@ -2305,8 +2293,8 @@ nscoord nsBlockFrame::ComputeFinalSize(const ReflowInput& aReflowInput,
 void nsBlockFrame::AlignContent(BlockReflowState& aState,
                                 ReflowOutput& aMetrics,
                                 nscoord aBEndEdgeOfChildren) {
-  StyleAlignFlags alignment = EffectiveAlignContent();
-  alignment &= ~StyleAlignFlags::FLAG_BITS;
+  const StyleAlignFlags originalAlignment = EffectiveAlignContent();
+  const auto alignment = originalAlignment & ~StyleAlignFlags::FLAG_BITS;
 
   // Short circuit
   const bool isCentered = alignment == StyleAlignFlags::CENTER ||
@@ -2336,7 +2324,7 @@ void nsBlockFrame::AlignContent(BlockReflowState& aState,
     shift = std::min(availB, endB) - aBEndEdgeOfChildren;
 
     // note: these measures all include start BP, so it subtracts out
-    if (!(StylePosition()->mAlignContent.primary & StyleAlignFlags::UNSAFE)) {
+    if (!(originalAlignment & StyleAlignFlags::UNSAFE)) {
       shift = std::max(0, shift);
     }
     if (isCentered) {
@@ -2435,6 +2423,13 @@ void nsBlockFrame::ComputeOverflowAreas(OverflowAreas& aOverflowAreas,
     const auto paddingInflatedOverflow =
         ComputePaddingInflatedScrollableOverflow(inFlowChildBounds);
     aOverflowAreas.UnionAllWith(paddingInflatedOverflow);
+
+    // For backwards compatibility reasons, we don't allow scrollable overflow
+    // on the block axis on inline inputs.
+    if (IsSingleLineTextInput()) {
+      overflowClipAxes +=
+          wm.IsVertical() ? PhysicalAxis::Horizontal : PhysicalAxis::Vertical;
+    }
   }
   // Note: we're using UnionAllWith so as to maintain the invariant of
   // ink overflow being a superset of scrollable overflow.
@@ -2461,9 +2456,7 @@ void nsBlockFrame::ComputeOverflowAreas(OverflowAreas& aOverflowAreas,
 #endif
 }
 
-// Depending on our ancestor, determine if we need to restrict padding inflation
-// in inline direction. This assumes that the passed-in frame is a scrolled
-// frame. HACK(dshin): Reaching out and querying the type like this isn't ideal.
+// Text control padding handling is kinda disgusting.
 static bool RestrictPaddingInflationInInline(const nsIFrame* aFrame) {
   MOZ_ASSERT(aFrame);
   if (aFrame->Style()->GetPseudoType() != PseudoStyleType::MozScrolledContent) {
@@ -2473,13 +2466,7 @@ static bool RestrictPaddingInflationInInline(const nsIFrame* aFrame) {
   }
   // If we're `input` or `textarea`, our grandparent element must be the text
   // control element that we can query.
-  const auto* parent = aFrame->GetParent();
-  if (!parent) {
-    return false;
-  }
-  MOZ_ASSERT(parent->IsScrollContainerOrSubclass(), "Not a scrolled frame?");
-
-  nsTextControlFrame* textControl = do_QueryFrame(parent->GetParent());
+  nsTextControlFrame* textControl = do_QueryFrame(aFrame->GetParent());
   if (MOZ_LIKELY(!textControl)) {
     return false;
   }
@@ -2594,11 +2581,12 @@ void nsBlockFrame::UnionChildOverflow(OverflowAreas& aOverflowAreas,
     nsRect bounds = line.GetPhysicalBounds();
     OverflowAreas lineAreas(bounds, bounds);
 
-    int32_t n = line.GetChildCount();
-    for (nsIFrame* lineFrame = line.mFirstChild; n > 0;
-         lineFrame = lineFrame->GetNextSibling(), --n) {
+    const OverflowAreaUnionFlags flags =
+        aAsIfScrolled ? OverflowAreaUnionFlags::AsIfScrolled
+                      : OverflowAreaUnionFlags::None;
+    for (nsIFrame* lineFrame : line.ChildFrames()) {
       // Ensure this is called for each frame in the line
-      ConsiderChildOverflow(lineAreas, lineFrame, aAsIfScrolled);
+      ConsiderChildOverflow(lineAreas, lineFrame, flags);
 
       if (inkOverflowOnly || !isScrolled) {
         continue;
@@ -2613,7 +2601,7 @@ void nsBlockFrame::UnionChildOverflow(OverflowAreas& aOverflowAreas,
     // Consider the overflow areas of the floats attached to the line as well
     if (line.HasFloats()) {
       for (nsIFrame* f : line.Floats()) {
-        ConsiderChildOverflow(lineAreas, f, aAsIfScrolled);
+        ConsiderChildOverflow(lineAreas, f, flags);
         if (inkOverflowOnly || !isScrolled) {
           continue;
         }
@@ -2659,9 +2647,7 @@ void nsBlockFrame::LazyMarkLinesDirty() {
   if (HasAnyStateBits(NS_BLOCK_LOOK_FOR_DIRTY_FRAMES)) {
     for (LineIterator line = LinesBegin(), line_end = LinesEnd();
          line != line_end; ++line) {
-      int32_t n = line->GetChildCount();
-      for (nsIFrame* lineFrame = line->mFirstChild; n > 0;
-           lineFrame = lineFrame->GetNextSibling(), --n) {
+      for (nsIFrame* lineFrame : line->ChildFrames()) {
         if (lineFrame->IsSubtreeDirty()) {
           // NOTE:  MarkLineDirty does more than just marking the line dirty.
           MarkLineDirty(line, &mLines);
@@ -3684,9 +3670,7 @@ void nsBlockFrame::MarkLineDirtyForInterrupt(nsLineBox* aLine) {
   if (HasAnyStateBits(NS_FRAME_IS_DIRTY)) {
     // Mark all our child frames dirty so we make sure to reflow them
     // later.
-    int32_t n = aLine->GetChildCount();
-    for (nsIFrame* f = aLine->mFirstChild; n > 0;
-         f = f->GetNextSibling(), --n) {
+    for (nsIFrame* f : aLine->ChildFrames()) {
       f->MarkSubtreeDirty();
     }
     // And mark all the floats whose reflows we might be skipping dirty too.
@@ -3934,10 +3918,8 @@ void nsBlockFrame::MoveChildFramesOfLine(nsLineBox* aLine,
     // one of our parent frames may have moved and so the view's position
     // relative to its parent may have changed.
     if (aDeltaBCoord) {
-      int32_t n = aLine->GetChildCount();
-      while (--n >= 0) {
-        kid->MovePositionBy(wm, translation);
-        kid = kid->GetNextSibling();
+      for (nsIFrame* f : aLine->ChildFrames()) {
+        f->MovePositionBy(wm, translation);
       }
     }
   }
@@ -5572,9 +5554,7 @@ bool nsBlockFrame::PlaceLine(BlockReflowState& aState,
   aLineLayout.RelativePositionFrames(overflowAreas);
   if (Style()->GetPseudoType() == PseudoStyleType::MozScrolledContent) {
     Maybe<nsRect> inFlowBounds;
-    int32_t n = aLine->GetChildCount();
-    for (nsIFrame* lineFrame = aLine->mFirstChild; n > 0;
-         lineFrame = lineFrame->GetNextSibling(), --n) {
+    for (nsIFrame* lineFrame : aLine->ChildFrames()) {
       auto lineFrameBounds = GetLineFrameInFlowBounds(*aLine, *lineFrame);
       if (!lineFrameBounds) {
         continue;
@@ -7636,11 +7616,10 @@ bool nsBlockFrame::HasPushedFloatsFromPrevContinuation() const {
 static void ComputeInkOverflowArea(nsLineList& aLines, nscoord aWidth,
                                    nscoord aHeight, nsRect& aResult) {
   nscoord xa = 0, ya = 0, xb = aWidth, yb = aHeight;
-  for (nsLineList::iterator line = aLines.begin(), line_end = aLines.end();
-       line != line_end; ++line) {
+  for (const auto& line : aLines) {
     // Compute min and max x/y values for the reflowed frame's
     // combined areas
-    nsRect inkOverflow(line->InkOverflowRect());
+    nsRect inkOverflow(line.InkOverflowRect());
     nscoord x = inkOverflow.x;
     nscoord y = inkOverflow.y;
     nscoord xmost = x + inkOverflow.width;
@@ -7710,11 +7689,8 @@ static void DisplayLine(nsDisplayListBuilder* aBuilder,
           ? nsIFrame::DisplayChildFlags(nsIFrame::DisplayChildFlag::Inline)
           : nsIFrame::DisplayChildFlags();
 
-  nsIFrame* kid = aLine->mFirstChild;
-  int32_t n = aLine->GetChildCount();
-  while (--n >= 0) {
+  for (nsIFrame* kid : aLine->ChildFrames()) {
     aFrame->BuildDisplayListForChild(aBuilder, kid, childLists, flags);
-    kid = kid->GetNextSibling();
   }
 
   if (aFrame->HasLineClampEllipsisDescendant() && !aLineInLine) {
@@ -7786,7 +7762,7 @@ void nsBlockFrame::BuildDisplayList(nsDisplayListBuilder* aBuilder,
   }
 
   // Prepare for text-overflow processing.
-  Maybe<TextOverflow> textOverflow =
+  UniquePtr<TextOverflow> textOverflow =
       TextOverflow::WillProcessLines(aBuilder, this);
 
   const bool hasDescendantPlaceHolders =
@@ -7832,7 +7808,7 @@ void nsBlockFrame::BuildDisplayList(nsDisplayListBuilder* aBuilder,
       // frame in our child list, it's also true for |this|.
       return false;
     }
-    if (textOverflow.isSome()) {
+    if (textOverflow) {
       // Also skip the cursor if we're creating text overflow markers, since we
       // need to know what line number we're up to in order to generate unique
       // display item keys.
@@ -7860,7 +7836,7 @@ void nsBlockFrame::BuildDisplayList(nsDisplayListBuilder* aBuilder,
                           : nullptr;
   LineIterator line_end = LinesEnd();
 
-  TextOverflow* textOverflowPtr = textOverflow.ptrOr(nullptr);
+  TextOverflow* textOverflowPtr = textOverflow.get();
   bool foundClamp = false;
 
   if (cursor) {
@@ -7872,7 +7848,7 @@ void nsBlockFrame::BuildDisplayList(nsDisplayListBuilder* aBuilder,
         if (lineArea.y >= aBuilder->GetDirtyRect().YMost()) {
           break;
         }
-        MOZ_ASSERT(textOverflow.isNothing());
+        MOZ_ASSERT(!textOverflow);
 
         if (ShouldDescendIntoLine(lineArea)) {
           DisplayLine(aBuilder, line, line->IsInline(), aLists, this, nullptr,
@@ -7948,8 +7924,8 @@ void nsBlockFrame::BuildDisplayList(nsDisplayListBuilder* aBuilder,
       lineCount++;
     }
 
-    if (GetPrevInFlow()) {
-      DisplayPushedAbsoluteFrames(aBuilder, aLists);
+    if (GetPrevInFlow() || GetNextInFlow()) {
+      DisplayAbsoluteFramesNotBuiltByPlaceholder(aBuilder, aLists);
     }
 
     if (nonDecreasingYs && lineCount >= MIN_LINES_NEEDING_CURSOR) {
@@ -7961,7 +7937,7 @@ void nsBlockFrame::BuildDisplayList(nsDisplayListBuilder* aBuilder,
     }
   }
 
-  if (textOverflow.isSome()) {
+  if (textOverflow) {
     // Put any text-overflow:ellipsis markers on top of the non-positioned
     // content of the block's lines. (If we ever start sorting the Content()
     // list this will end up in the wrong place.)
@@ -8200,8 +8176,7 @@ void nsBlockFrame::SetInitialChildList(ChildListID aListID,
           !GetParent()->Style()->IsPseudoOrAnonBox()) ||
          pseudo == PseudoStyleType::MozFieldsetContent ||
          pseudo == PseudoStyleType::MozColumnContent ||
-         (pseudo == PseudoStyleType::MozScrolledContent &&
-          !GetParent()->IsListControlFrame()) ||
+         pseudo == PseudoStyleType::MozScrolledContent ||
          pseudo == PseudoStyleType::MozSvgText) &&
         !IsMathMLFrame() && !IsColumnSetWrapperFrame() &&
         !IsComboboxControlFrame() &&
@@ -8877,8 +8852,8 @@ void nsBlockFrame::VerifyOverflowSituation() {
   // |this|. Later next-in-flows must have the same or later parents.
   ChildListID childLists[] = {FrameChildListID::Float,
                               FrameChildListID::PushedFloats};
-  for (size_t i = 0; i < std::size(childLists); ++i) {
-    const nsFrameList& children = GetChildList(childLists[i]);
+  for (const auto childList : childLists) {
+    const nsFrameList& children = GetChildList(childList);
     for (nsIFrame* f : children) {
       nsIFrame* parent = this;
       nsIFrame* nif = f->GetNextInFlow();

@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -34,6 +32,7 @@ namespace dom {
 class AddonManager;
 class BodyExtractorBase;
 class Geolocation;
+class Serial;
 class systemMessageCallback;
 class MediaDevices;
 struct MediaStreamConstraints;
@@ -42,6 +41,7 @@ class ServiceWorkerContainer;
 class CredentialsContainer;
 class Clipboard;
 class LockManager;
+class ModelContext;
 class NavigatorLogin;
 class PrivateAttribution;
 class HTMLMediaElement;
@@ -130,6 +130,8 @@ class Navigator final : public nsISupports, public nsWrapperCache {
   void GetDoNotTrack(nsAString& aResult);
   bool GlobalPrivacyControl();
   Geolocation* GetGeolocation(ErrorResult& aRv);
+  dom::Serial* GetSerial(ErrorResult& aRv);
+  dom::Serial* GetExistingSerial() { return mSerial; }
   Promise* GetBattery(ErrorResult& aRv);
   dom::WakeLockJS* WakeLock();
 
@@ -217,6 +219,7 @@ class Navigator final : public nsISupports, public nsWrapperCache {
   webgpu::Instance* Gpu();
   dom::LockManager* Locks();
   NavigatorLogin* Login();
+  dom::ModelContext* ModelContext();
   dom::PrivateAttribution* PrivateAttribution();
 
   static bool Webdriver();
@@ -295,6 +298,7 @@ class Navigator final : public nsISupports, public nsWrapperCache {
   RefPtr<nsPluginArray> mPlugins;
   RefPtr<Permissions> mPermissions;
   RefPtr<Geolocation> mGeolocation;
+  RefPtr<dom::Serial> mSerial;
   RefPtr<battery::BatteryManager> mBatteryManager;
   RefPtr<Promise> mBatteryPromise;
   RefPtr<network::Connection> mConnection;
@@ -316,6 +320,7 @@ class Navigator final : public nsISupports, public nsWrapperCache {
   RefPtr<Promise> mSharePromise;  // Web Share API related
   RefPtr<LockManager> mLocks;
   RefPtr<NavigatorLogin> mLogin;
+  RefPtr<dom::ModelContext> mModelContext;
   RefPtr<dom::PrivateAttribution> mPrivateAttribution;
   RefPtr<dom::UserActivation> mUserActivation;
   RefPtr<dom::WakeLockJS> mWakeLock;

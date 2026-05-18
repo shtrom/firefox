@@ -1,6 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * vim: set ts=8 sts=2 et sw=2 tw=80:
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -23,18 +21,18 @@ void js::ClearInterpreterEntryMap(JSRuntime* runtime) {
 }
 
 void EntryTrampolineMap::traceTrampolineCode(JSTracer* trc) {
-  for (jit::EntryTrampolineMap::Enum e(*this); !e.empty(); e.popFront()) {
-    EntryTrampoline& trampoline = e.front().value();
+  for (auto iter = modIter(); !iter.done(); iter.next()) {
+    EntryTrampoline& trampoline = iter.get().value();
     trampoline.trace(trc);
   }
 }
 
 void EntryTrampolineMap::updateScriptsAfterMovingGC(void) {
-  for (jit::EntryTrampolineMap::Enum e(*this); !e.empty(); e.popFront()) {
-    BaseScript* script = e.front().key();
+  for (auto iter = modIter(); !iter.done(); iter.next()) {
+    BaseScript* script = iter.get().key();
     if (IsForwarded(script)) {
       script = Forwarded(script);
-      e.rekeyFront(script);
+      iter.rekey(script);
     }
   }
 }
@@ -167,8 +165,8 @@ void JitRuntime::generateInterpreterEntryTrampoline(MacroAssembler& masm) {
   masm.push(lr, FramePointer);
   masm.moveStackPtrTo(FramePointer);
 
-  // Save the PSP register (r28), and a scratch (r19).
-  masm.push(r19, r28);
+  // Save the PSP register (r20), and a scratch (r19).
+  masm.push(r19, r20);
 
   // Setup the PSP so we can use callWithABI below.
   masm.SetStackPointer64(PseudoStackPointer64);
@@ -217,8 +215,8 @@ void JitRuntime::generateInterpreterEntryTrampoline(MacroAssembler& masm) {
   masm.syncStackPtr();
   masm.SetStackPointer64(sp);
 
-  // Restore r28 and r19.
-  masm.pop(r28, r19);
+  // Restore r20 and r19.
+  masm.pop(r20, r19);
 
   // Restore old fp and pop lr for return.
   masm.pop(FramePointer, lr);

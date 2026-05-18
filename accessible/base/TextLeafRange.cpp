@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -337,6 +335,7 @@ class PrevWordBreakClassWalker {
       if (!PrevChar()) {
         return Nothing();
       }
+      MOZ_ASSERT(mOffset >= 0);
       WordBreakClass curClass = GetWordBreakClass(mText.CharAt(mOffset));
       if (curClass != mClass) {
         mClass = curClass;
@@ -352,6 +351,7 @@ class PrevWordBreakClassWalker {
       // There are no characters before us.
       return true;
     }
+    MOZ_ASSERT(mOffset >= 0);
     WordBreakClass curClass = GetWordBreakClass(mText.CharAt(mOffset));
     // We wanted to peek at the previous character, not really move to it.
     ++mOffset;
@@ -368,14 +368,19 @@ class PrevWordBreakClassWalker {
       // PrevChar was called already and failed.
       return false;
     }
-    mAcc = PrevLeaf(mAcc);
-    if (!mAcc) {
-      return false;
+    // Walk backward through leaves, skipping any that are empty.
+    for (;;) {
+      mAcc = PrevLeaf(mAcc);
+      if (!mAcc) {
+        return false;
+      }
+      mText.Truncate();
+      mAcc->AppendTextTo(mText);
+      if (!mText.IsEmpty()) {
+        mOffset = static_cast<int32_t>(mText.Length()) - 1;
+        return true;
+      }
     }
-    mText.Truncate();
-    mAcc->AppendTextTo(mText);
-    mOffset = static_cast<int32_t>(mText.Length()) - 1;
-    return true;
   }
 
   Accessible* mAcc;
@@ -537,7 +542,7 @@ static dom::Selection* GetDOMSelection(const nsIContent* aStartContent,
   return startFrameSel ? &startFrameSel->NormalSelection() : nullptr;
 }
 
-std::pair<nsIContent*, uint32_t> TextLeafPoint::ToDOMPoint(
+std::pair<RefPtr<nsIContent>, uint32_t> TextLeafPoint::ToDOMPoint(
     bool aIncludeGenerated) const {
   if (!(*this) || !mAcc->IsLocal()) {
     MOZ_ASSERT_UNREACHABLE("Invalid point");
@@ -2043,7 +2048,7 @@ already_AddRefed<AccAttributes> TextLeafPoint::GetTextAttributesLocalAcc(
   }
   HyperTextAccessible* hyperAcc = parent->AsHyperText();
   MOZ_ASSERT(hyperAcc);
-  RefPtr<AccAttributes> attributes = new AccAttributes();
+  auto attributes = MakeRefPtr<AccAttributes>();
   if (hyperAcc) {
     TextAttrsMgr mgr(hyperAcc, aIncludeDefaults, acc);
     mgr.GetAttributes(attributes);
@@ -2492,7 +2497,7 @@ bool TextLeafRange::SetSelection(int32_t aSelectionNum, bool aSetFocus) const {
 
   // Make sure the selection is visible. See bug 1170242.
   domSel->ScrollIntoView(nsISelectionController::SELECTION_FOCUS_REGION,
-                         ScrollAxis(), ScrollAxis(),
+                         AxisScrollParams(), AxisScrollParams(),
                          ScrollFlags::ScrollOverflowHidden);
 
   if (aSetFocus && mStart == mEnd && !isFocusable) {

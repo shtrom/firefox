@@ -60,6 +60,15 @@ const WebCompatExtension = new (class WebCompatExtension {
     }).catch(_ => {});
   }
 
+  async allOriginalInterventions() {
+    return this.#run(async function () {
+      const available =
+        content.wrappedJSObject.interventions.getAllOriginalInterventions();
+      // structured cloning won't work, so get the interesting bits for tests.
+      return JSON.parse(JSON.stringify(available));
+    });
+  }
+
   async availableInterventions() {
     return this.#run(async function () {
       const available =
@@ -190,7 +199,7 @@ async function testShimRuns(
   });
 
   const TrackingProtection =
-    tab.ownerGlobal.gProtectionsHandler.blockers.TrackingProtection;
+    tab.documentGlobal.gProtectionsHandler.blockers.TrackingProtection;
   ok(TrackingProtection, "TP is attached to the tab");
   ok(TrackingProtection.enabled, "TP is enabled");
 
@@ -474,6 +483,17 @@ async function generateTestShims() {
       matches: [
         "*://example.com/browser/browser/extensions/webcompat/tests/browser/shims_test_3.js",
       ],
+    },
+    {
+      id: "MochitestShimXHR",
+      platform: "all",
+      name: "Test shim for fetch blocking",
+      bug: "mochitest",
+      file: "empty-shim.txt",
+      matches: [
+        "*://itisatracker.org/browser/browser/extensions/webcompat/tests/browser/shims_test_fetch.txt",
+      ],
+      onlyIfBlockedByETP: true,
     },
     {
       id: "EmbedTestShim",

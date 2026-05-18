@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -72,6 +70,23 @@ bool SVGGeometryElement::AttributeDefinesGeometry(const nsAtom* aName) {
 }
 
 bool SVGGeometryElement::GeometryDependsOnCoordCtx() {
+  nsAtom* name = NodeInfo()->NameAtom();
+  Maybe<bool> hasCtxDependentLength;
+  if (name == nsGkAtoms::rect) {
+    hasCtxDependentLength =
+        static_cast<SVGRectElement*>(this)->HasCtxDependentLength();
+  }
+  if (name == nsGkAtoms::circle) {
+    hasCtxDependentLength =
+        static_cast<SVGCircleElement*>(this)->HasCtxDependentLength();
+  }
+  if (name == nsGkAtoms::ellipse) {
+    hasCtxDependentLength =
+        static_cast<SVGEllipseElement*>(this)->HasCtxDependentLength();
+  }
+  if (hasCtxDependentLength) {
+    return hasCtxDependentLength.value();
+  }
   // Check the SVGAnimatedLength attribute
   LengthAttributesInfo info =
       const_cast<SVGGeometryElement*>(this)->GetLengthInfo();
@@ -234,8 +249,8 @@ already_AddRefed<DOMSVGPoint> SVGGeometryElement::GetPointAtLength(
     return nullptr;
   }
 
-  return do_AddRef(new DOMSVGPoint(path->ComputePointAtLength(
-      std::clamp(distance, 0.f, path->ComputeLength()))));
+  return MakeAndAddRef<DOMSVGPoint>(path->ComputePointAtLength(
+      std::clamp(distance, 0.f, path->ComputeLength())));
 }
 
 gfx::Matrix SVGGeometryElement::LocalTransform() const {

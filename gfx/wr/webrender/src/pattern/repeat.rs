@@ -12,7 +12,7 @@ use crate::pattern::PatternBuilderContext;
 use crate::pattern::PatternBuilderState;
 use crate::pattern::{Pattern, PatternKind, PatternShaderInput, PatternTextureInput};
 use crate::render_task_graph::RenderTaskId;
-use crate::renderer::GpuBufferBuilder;
+use crate::renderer::{BlendMode, GpuBufferBuilder};
 
 pub struct RepeatedPattern {
     pub stretch_size: LayoutSize,
@@ -42,7 +42,10 @@ pub fn repeated_pattern(
         ),
         texture_input: PatternTextureInput::new(repeat.src_task_id),
         base_color: ColorF::WHITE,
-        is_opaque: repeat.src_is_opaque && repeat.spacing.is_empty(),
+        is_opaque: repeat.src_is_opaque
+            && repeat.spacing.width <= 0.0
+            && repeat.spacing.height <= 0.0,
+        blend_mode: BlendMode::PremultipliedAlpha,
     }
 }
 

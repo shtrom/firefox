@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -8,11 +6,12 @@
 #include "mozilla/AbsoluteContainingBlock.h"
 #include "mozilla/PresShell.h"
 #include "mozilla/PresShellInlines.h"
+#include "mozilla/ReflowInput.h"
+#include "mozilla/ServoStyleSet.h"
 #include "mozilla/StaticPrefs_layout.h"
 #include "mozilla/dom/Document.h"
 #include "nsCSSFrameConstructor.h"
 #include "nsContentUtils.h"
-#include "nsGkAtoms.h"
 #include "nsLayoutUtils.h"
 #include "nsPageFrame.h"
 #include "nsPageSequenceFrame.h"

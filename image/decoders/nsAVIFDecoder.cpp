@@ -1,5 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- *
+/*
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -284,13 +283,13 @@ nsAVIFDecoder::DecodeResult AVIFParser::GetImage(AVIFImage& aImage) {
     return AsVariant(nsAVIFDecoder::NonDecoderResult::NoSamples);
   }
 
-  RefPtr<MediaRawData> colorImage =
-      new MediaRawData(image.primary_image.data, image.primary_image.length);
+  auto colorImage = MakeRefPtr<MediaRawData>(image.primary_image.data,
+                                             image.primary_image.length);
   RefPtr<MediaRawData> alphaImage = nullptr;
 
   if (image.alpha_image.length) {
-    alphaImage =
-        new MediaRawData(image.alpha_image.data, image.alpha_image.length);
+    alphaImage = MakeRefPtr<MediaRawData>(image.alpha_image.data,
+                                          image.alpha_image.length);
   }
 
   aImage.mFrameNum = 0;
@@ -319,8 +318,8 @@ static Mp4parseStatus CreateSampleIterator(
   }
 
   UniquePtr<IndiceWrapper> wrapper = MakeUnique<IndiceWrapper>(data);
-  RefPtr<MP4SampleIndex> index = new MP4SampleIndex(
-      *wrapper, aBuffer, trackID, false, AssertedCast<int32_t>(timescale));
+  auto index = MakeRefPtr<MP4SampleIndex>(*wrapper, aBuffer, trackID, false,
+                                          AssertedCast<uint32_t>(timescale));
   aIteratorOut = MakeUnique<SampleIterator>(index);
   return MP4PARSE_STATUS_OK;
 }
@@ -689,16 +688,19 @@ bool OwnedAOMImage::CloneFrom(aom_image_t* aImage, bool aIsAlpha) {
   uint8_t* srcY = aImage->planes[AOM_PLANE_Y];
   int yStride = aImage->stride[AOM_PLANE_Y];
   int yHeight = aom_img_plane_height(aImage, AOM_PLANE_Y);
-  size_t yBufSize = yStride * yHeight;
+  auto yBufSize = CheckedInt<size_t>(yStride) * yHeight;
+  if (!yBufSize.isValid()) {
+    return false;
+  }
 
   // If aImage is alpha plane. The data is located in Y channel.
   if (aIsAlpha) {
-    mBuffer = MakeUniqueFallible<uint8_t[]>(yBufSize);
+    mBuffer = MakeUniqueFallible<uint8_t[]>(yBufSize.value());
     if (!mBuffer) {
       return false;
     }
     uint8_t* destY = mBuffer.get();
-    memcpy(destY, srcY, yBufSize);
+    memcpy(destY, srcY, yBufSize.value());
     mImage.emplace(*aImage);
     mImage->planes[AOM_PLANE_Y] = destY;
 
@@ -708,25 +710,32 @@ bool OwnedAOMImage::CloneFrom(aom_image_t* aImage, bool aIsAlpha) {
   uint8_t* srcCb = aImage->planes[AOM_PLANE_U];
   int cbStride = aImage->stride[AOM_PLANE_U];
   int cbHeight = aom_img_plane_height(aImage, AOM_PLANE_U);
-  size_t cbBufSize = cbStride * cbHeight;
+  auto cbBufSize = CheckedInt<size_t>(cbStride) * cbHeight;
+  if (!cbBufSize.isValid()) {
+    return false;
+  }
 
   uint8_t* srcCr = aImage->planes[AOM_PLANE_V];
   int crStride = aImage->stride[AOM_PLANE_V];
   int crHeight = aom_img_plane_height(aImage, AOM_PLANE_V);
-  size_t crBufSize = crStride * crHeight;
+  auto crBufSize = CheckedInt<size_t>(crStride) * crHeight;
+  if (!crBufSize.isValid()) {
+    return false;
+  }
 
-  mBuffer = MakeUniqueFallible<uint8_t[]>(yBufSize + cbBufSize + crBufSize);
+  mBuffer = MakeUniqueFallible<uint8_t[]>(yBufSize.value() + cbBufSize.value() +
+                                          crBufSize.value());
   if (!mBuffer) {
     return false;
   }
 
   uint8_t* destY = mBuffer.get();
-  uint8_t* destCb = destY + yBufSize;
-  uint8_t* destCr = destCb + cbBufSize;
+  uint8_t* destCb = destY + yBufSize.value();
+  uint8_t* destCr = destCb + cbBufSize.value();
 
-  memcpy(destY, srcY, yBufSize);
-  memcpy(destCb, srcCb, cbBufSize);
-  memcpy(destCr, srcCr, crBufSize);
+  memcpy(destY, srcY, yBufSize.value());
+  memcpy(destCb, srcCb, cbBufSize.value());
+  memcpy(destCr, srcCr, crBufSize.value());
 
   mImage.emplace(*aImage);
   mImage->planes[AOM_PLANE_Y] = destY;

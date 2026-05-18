@@ -1,4 +1,3 @@
-/* -*- Mode: IDL; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -49,6 +48,8 @@ interface HTMLElement : Element {
            attribute DOMString contentEditable;
   [Pure]
   readonly attribute boolean isContentEditable;
+  [Pure, SetterThrows, Pref="dom.editcontext.enabled"]
+  attribute EditContext? editContext;
   [CEReactions, SetterThrows, Pure]
            attribute DOMString? popover;
   [CEReactions, SetterThrows, Pure]
@@ -121,7 +122,7 @@ interface mixin TouchEventHandlers {
 
 HTMLElement includes ElementOffsetAttributes;
 HTMLElement includes GlobalEventHandlers;
-HTMLElement includes HTMLOrForeignElement;
+HTMLElement includes HTMLOrSVGOrMathMLElement;
 HTMLElement includes ElementCSSInlineStyle;
 HTMLElement includes TouchEventHandlers;
 HTMLElement includes OnErrorEventHandlerForNodes;
