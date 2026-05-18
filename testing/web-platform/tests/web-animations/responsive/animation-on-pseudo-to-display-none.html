@@ -7,6 +7,7 @@
   <link rel="help" href="https://www.w3.org/TR/css-animations-2/#owning-element-section">
   <script src="/resources/testharness.js"></script>
   <script src="/resources/testharnessreport.js"></script>
+  <script src="/web-animations/testcommon.js"></script>
   <style>
     #target {
       background-color: lightgoldenrodyellow;
@@ -40,7 +41,6 @@
     #target.hide::before {
       display: none;
     }
-
   </style>
 </head>
 <body>
@@ -55,11 +55,15 @@
     const display = () => {
       return getComputedStyle(target, '::before').display;
     };
+    const content = () => {
+      return getComputedStyle(target, '::before').content.replace(/\"/g,"");
+    };
 
     target.classList.add('vanish');
-    let anim = document.getAnimations()[0];
+    let anim = target.getAnimations({subtree: true})[0];
     assert_true(!!anim, 'animation created');
     assert_equals(anim.animationName, 'vanish');
+    assert_equals(content(), 'hello', 'initial content');
 
     anim.finish();
     assert_equals(opacity(), '0', 'opacity when animation is finished');
@@ -70,10 +74,14 @@
     assert_equals(document.getAnimations().length, 1,
                   'animation still alive after style update');
     assert_equals(opacity(), '0', 'opacity after style update');
+    assert_equals(content(), 'world', 'content after style update');
 
     target.classList.add('hide');
     assert_equals(document.getAnimations().length, 0,
                   'display: none on the base style cancels the animation');
+
+    target.classList.remove('label');
+    assert_equals(content(), 'hello', 'content after post hide style update');
 
     target.classList.remove('hide');
     assert_equals(document.getAnimations().length, 1,

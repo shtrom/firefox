@@ -92,7 +92,7 @@ async function taskbarTabsPageAction(win, destWin) {
   let tab = (await tabOpenPromise).target;
 
   is(
-    tab.ownerGlobal,
+    tab.documentGlobal,
     destWin,
     "Shoud've reverted back to secondWin, as it is most recently focused"
   );
@@ -231,7 +231,7 @@ add_task(async function revertToMostRecent() {
   ]);
 
   await BrowserTestUtils.closeWindow(firstWin);
-  secondWin.focus();
+  await SimpleTest.promiseFocus(secondWin);
 
   // Revert back to regular window
   await taskbarTabsPageAction(taskbarTabWindow, secondWin);

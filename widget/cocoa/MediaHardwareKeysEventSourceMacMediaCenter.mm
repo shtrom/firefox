@@ -79,9 +79,9 @@ MediaCenterEventHandler MediaHardwareKeysEventSourceMacMediaCenter::
   return Block_copy(^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent* event) {
     MPChangePlaybackPositionCommandEvent* changePosEvent =
         (MPChangePlaybackPositionCommandEvent*)event;
-    HandleEvent(
-        MediaControlAction(MediaControlKey::Seekto,
-                           SeekDetails(changePosEvent.positionTime, false)));
+    HandleEvent(MediaControlAction(
+        MediaControlKey::Seekto,
+        MediaControlActionParams(changePosEvent.positionTime, false)));
     return MPRemoteCommandHandlerStatusSuccess;
   });
 }
@@ -215,7 +215,7 @@ void MediaHardwareKeysEventSourceMacMediaCenter::SetMediaMetadata(
       break;
     }
 
-    RefPtr<gfxDrawable> drawable = new gfxSurfaceDrawable(
+    auto drawable = MakeRefPtr<gfxSurfaceDrawable>(
         imageData.mDataSurface, imageData.mDataSurface->GetSize());
     nsCOMPtr<imgIContainer> imageContainer =
         image::ImageOps::CreateFromDrawable(drawable);

@@ -35,6 +35,7 @@ import kotlinx.coroutines.launch
 import mozilla.components.browser.state.state.TabSessionState
 import mozilla.components.browser.state.state.createTab
 import mozilla.components.compose.base.theme.information
+import mozilla.components.compose.base.utils.LocalUnderTest
 import mozilla.components.compose.base.utils.inComposePreview
 import mozilla.components.concept.base.images.ImageLoadRequest
 import mozilla.components.concept.engine.utils.ABOUT_HOME_URL
@@ -101,15 +102,24 @@ fun ThumbnailImage(
     alignment: Alignment = Alignment.Center,
     fallbackContent: @Composable () -> Unit,
 ) {
-    if (inComposePreview) {
-        Box(modifier = modifier)
+    if (inComposePreview || LocalUnderTest.current) {
+        Box(modifier = modifier, contentAlignment = Alignment.Center) {
+            Image(
+                painter = painterResource(id = R.drawable.ic_japan_onboarding_favicon),
+                contentDescription = null,
+                modifier = modifier
+                    .size(FallbackIconSize),
+                contentScale = contentScale,
+                alignment = alignment,
+            )
+        }
     } else {
         trace(TabsTrayTraceTag.TRACE_THUMBNAIL_IMAGE_CREATION) {
-            var state by remember { mutableStateOf(ThumbnailImageState(null, false)) }
+            var state by remember(request) { mutableStateOf(ThumbnailImageState(null, false)) }
             val scope = rememberCoroutineScope()
             val storage = components.core.thumbnailStorage
 
-            DisposableEffect(Unit) {
+            DisposableEffect(request) {
                 if (!state.hasLoaded) {
                     scope.launch {
                         val thumbnailBitmap = storage.loadThumbnail(request).await()

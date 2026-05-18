@@ -1,6 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * vim: set ts=8 sts=2 et sw=2 tw=80:
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -155,6 +153,7 @@ class ChunkBase {
 // Information about tenured heap chunks containing arenas.
 struct ArenaChunkInfo {
  private:
+  friend class ArenaChunk;
   friend class ChunkPool;
   ArenaChunk* next = nullptr;
   ArenaChunk* prev = nullptr;
@@ -168,6 +167,9 @@ struct ArenaChunkInfo {
 
   /* Whether this chunk is the chunk currently being allocated from. */
   bool isCurrentChunk = false;
+
+  // The zone this chunk is associated with, or nullptr for empty chunks.
+  JS::Zone* zone = nullptr;
 };
 
 /*
@@ -407,8 +409,7 @@ const size_t ChunkStoreBufferOffset = offsetof(ChunkBase, storeBuffer);
 const size_t ChunkMarkBitmapOffset = offsetof(ArenaChunkBase, markBits);
 
 // Hardcoded offsets into Arena class.
-const size_t ArenaZoneOffset = 2 * sizeof(uint32_t);
-const size_t ArenaHeaderSize = ArenaZoneOffset + 2 * sizeof(uintptr_t) +
+const size_t ArenaHeaderSize = 2 * sizeof(uint32_t) + 1 * sizeof(uintptr_t) +
                                sizeof(size_t) + sizeof(uintptr_t);
 
 // The first word of a GC thing has certain requirements from the GC and is used
@@ -664,9 +665,9 @@ static MOZ_ALWAYS_INLINE ArenaChunkBase* GetCellChunkBase(
 static MOZ_ALWAYS_INLINE JS::Zone* GetTenuredGCThingZone(const void* ptr) {
   // This takes a void* because the compiler can't see type relationships in
   // this header. |ptr| must be a pointer to a tenured GC thing.
-  MOZ_ASSERT(ptr);
-  const uintptr_t zone_addr = (uintptr_t(ptr) & ~ArenaMask) | ArenaZoneOffset;
-  return *reinterpret_cast<JS::Zone**>(zone_addr);
+  ChunkBase* chunk = GetGCAddressChunkBase(ptr);
+  MOZ_ASSERT(chunk->kind == ChunkKind::TenuredArenas);
+  return static_cast<ArenaChunkBase*>(chunk)->info.zone;
 }
 
 static MOZ_ALWAYS_INLINE bool TenuredCellIsMarkedBlack(
@@ -868,8 +869,9 @@ namespace gc {
 extern JS_PUBLIC_API void PerformIncrementalReadBarrier(JS::GCCellPtr thing);
 
 static MOZ_ALWAYS_INLINE void ExposeGCThingToActiveJS(JS::GCCellPtr thing) {
-  // js::jit::ReadBarrier is a specialized version of this function designed to
-  // be called from jitcode. If this code is changed, it should be kept in sync.
+  // js::jit::WeakMapValueReadBarrier inlines a specialized version of this
+  // function designed to be called from jitcode. If this code is changed, it
+  // should be kept in sync.
 
   // TODO: I'd like to assert !RuntimeHeapIsBusy() here but this gets
   // called while we are tracing the heap, e.g. during memory reporting

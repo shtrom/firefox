@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -38,8 +36,6 @@ namespace mozilla::dom {
 template <typename T>
 static void SetDataInMatrix(DOMMatrixReadOnly* aMatrix, const T* aData,
                             int aLength, ErrorResult& aRv);
-
-static const double radPerDegree = 2.0 * M_PI / 360.0;
 
 NS_IMPL_CYCLE_COLLECTION_WRAPPERCACHE(DOMMatrixReadOnly, mParent)
 
@@ -574,7 +570,7 @@ void DOMMatrixReadOnly::Stringify(nsAString& aResult, ErrorResult& aRv) {
     matrixStr.AppendLiteral(")");
   }
 
-  aResult = matrixStr;
+  aResult = std::move(matrixStr);
 }
 
 // https://drafts.fxtf.org/geometry/#structured-serialization
@@ -905,7 +901,7 @@ DOMMatrix* DOMMatrix::RotateFromVectorSelf(double aX, double aY) {
   }
 
   if (mMatrix3D) {
-    RotateAxisAngleSelf(0, 0, 1, angle / radPerDegree);
+    RotateAxisAngleSelf(0, 0, 1, angle / kRadPerDegree);
   } else {
     *mMatrix2D = mMatrix2D->PreRotate(angle);
   }
@@ -932,16 +928,16 @@ DOMMatrix* DOMMatrix::RotateSelf(double aRotX, const Optional<double>& aRotY,
 
   if (mMatrix3D) {
     if (fmod(rotZ, 360) != 0) {
-      mMatrix3D->RotateZ(rotZ * radPerDegree);
+      mMatrix3D->RotateZ(rotZ * kRadPerDegree);
     }
     if (fmod(rotY, 360) != 0) {
-      mMatrix3D->RotateY(rotY * radPerDegree);
+      mMatrix3D->RotateY(rotY * kRadPerDegree);
     }
     if (fmod(aRotX, 360) != 0) {
-      mMatrix3D->RotateX(aRotX * radPerDegree);
+      mMatrix3D->RotateX(aRotX * kRadPerDegree);
     }
   } else if (fmod(rotZ, 360) != 0) {
-    *mMatrix2D = mMatrix2D->PreRotate(rotZ * radPerDegree);
+    *mMatrix2D = mMatrix2D->PreRotate(rotZ * kRadPerDegree);
   }
 
   return this;
@@ -955,7 +951,7 @@ DOMMatrix* DOMMatrix::RotateAxisAngleSelf(double aX, double aY, double aZ,
     return this;
   }
 
-  aAngle *= radPerDegree;
+  aAngle *= kRadPerDegree;
 
   // Step 1: Post-multiply a rotation transformation on the current matrix
   // around the specified vector x, y, z by the specified rotation angle in
@@ -994,11 +990,11 @@ DOMMatrix* DOMMatrix::SkewXSelf(double aSx) {
 
   if (mMatrix3D) {
     gfx::Matrix4x4Double m;
-    m._21 = tan(aSx * radPerDegree);
+    m._21 = tan(aSx * kRadPerDegree);
     *mMatrix3D = m * *mMatrix3D;
   } else {
     gfx::MatrixDouble m;
-    m._21 = tan(aSx * radPerDegree);
+    m._21 = tan(aSx * kRadPerDegree);
     *mMatrix2D = m * *mMatrix2D;
   }
 
@@ -1012,11 +1008,11 @@ DOMMatrix* DOMMatrix::SkewYSelf(double aSy) {
 
   if (mMatrix3D) {
     gfx::Matrix4x4Double m;
-    m._12 = tan(aSy * radPerDegree);
+    m._12 = tan(aSy * kRadPerDegree);
     *mMatrix3D = m * *mMatrix3D;
   } else {
     gfx::MatrixDouble m;
-    m._12 = tan(aSy * radPerDegree);
+    m._12 = tan(aSy * kRadPerDegree);
     *mMatrix2D = m * *mMatrix2D;
   }
 

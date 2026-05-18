@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -156,18 +154,6 @@ struct CustomElementDefinition {
   // A construction stack. Use nullptr to represent an "already constructed
   // marker".
   nsTArray<RefPtr<Element>> mConstructionStack;
-
-  // See step 6.1.10 of https://dom.spec.whatwg.org/#concept-create-element
-  // which set up the prefix after a custom element is created. However, In
-  // Gecko, the prefix isn't allowed to be changed in NodeInfo, so we store the
-  // prefix information here and propagate to where NodeInfo is assigned to a
-  // custom element instead.
-  nsTArray<RefPtr<nsAtom>> mPrefixStack;
-
-  // This basically is used for distinguishing the custom element constructor
-  // is invoked from document.createElement or directly from JS, i.e.
-  // `new CustomElementConstructor()`.
-  uint32_t mConstructionDepth = 0;
 
   bool IsCustomBuiltIn() { return mType != mLocalName; }
 
@@ -470,6 +456,10 @@ class CustomElementRegistry final : public nsISupports, public nsWrapperCache {
   }
 
   bool IsScoped() const { return mIsScoped; }
+
+  static already_AddRefed<CustomElementRegistry> GetScopedRegistry(nsINode&);
+  static void SetScopedRegistry(nsINode&, CustomElementRegistry&);
+  static void RemoveScopedRegistry(nsINode&);
 
   void TraceDefinitions(JSTracer* aTrc);
 

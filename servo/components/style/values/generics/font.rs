@@ -13,8 +13,9 @@ use cssparser::Parser;
 use std::fmt::{self, Write};
 use std::io::Cursor;
 use style_traits::{
-    CssString, CssWriter, ParseError, StyleParseErrorKind, ToCss, ToTyped, TypedValue,
+    CssString, CssWriter, KeywordValue, ParseError, StyleParseErrorKind, ToCss, ToTyped, TypedValue,
 };
+use thin_vec::ThinVec;
 
 /// A trait for values that are labelled with a FontTag (for feature and
 /// variation settings).
@@ -117,6 +118,7 @@ impl<T> TaggedFontValue for VariationValue<T> {
 )]
 #[cfg_attr(feature = "servo", derive(Deserialize, Serialize))]
 #[css(comma)]
+#[typed(todo_derive_fields)]
 pub struct FontSettings<T>(#[css(if_empty = "normal", iterable)] pub Box<[T]>);
 
 impl<T> FontSettings<T> {
@@ -295,11 +297,14 @@ impl<Factor: ToCss> ToCss for GenericFontSizeAdjust<Factor> {
 }
 
 impl<Factor: ToTyped> ToTyped for GenericFontSizeAdjust<Factor> {
-    fn to_typed(&self) -> Option<TypedValue> {
+    fn to_typed(&self, dest: &mut ThinVec<TypedValue>) -> Result<(), ()> {
         match self {
-            Self::None => Some(TypedValue::Keyword(CssString::from("none"))),
-            Self::ExHeight(v) => v.to_typed(),
-            _ => None,
+            Self::None => {
+                dest.push(TypedValue::Keyword(KeywordValue(CssString::from("none"))));
+                Ok(())
+            },
+            Self::ExHeight(v) => v.to_typed(dest),
+            _ => Err(()),
         }
     }
 }

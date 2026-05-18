@@ -1,4 +1,3 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -122,22 +121,27 @@ class TextInputHandler;
 @interface NSWindow (Undocumented)
 - (NSDictionary*)shadowParameters;
 
-// Present in the same form on OS X since at least OS X 10.5.
+// Present in the same form on macOS since at least macOS 10.5.
 - (NSRect)contentRectForFrameRect:(NSRect)windowFrame
                         styleMask:(NSUInteger)windowStyle;
 - (NSRect)frameRectForContentRect:(NSRect)windowContentRect
                         styleMask:(NSUInteger)windowStyle;
 
-// Present since at least OS X 10.5.  The OS calls this method on NSWindow
+// Present since at least macOS 10.5.  The OS calls this method on NSWindow
 // (and its subclasses) to find out which NSFrameView subclass to instantiate
 // to create its "frame view".
 + (Class)frameViewClassForStyleMask:(NSUInteger)styleMask;
 
 @end
 
-@interface PopupWindow : BaseWindow {
+@interface PopupWindow : BaseWindow <NSPopoverDelegate> {
  @private
   BOOL mIsContextMenu;
+
+  // NSPopover support for native appearance
+  NSPopover* mPopover;
+  NSViewController* mPopoverViewController;
+  BOOL mUsePopover;
 }
 
 - (id)initWithContentRect:(NSRect)contentRect
@@ -147,6 +151,16 @@ class TextInputHandler;
 - (BOOL)isContextMenu;
 - (void)setIsContextMenu:(BOOL)flag;
 - (BOOL)canBecomeMainWindow;
+
+// NSPopover support
+- (void)setAllowPopover;
+- (BOOL)usePopover;
+- (void)showPopoverRelativeToRect:(NSRect)positioningRect
+                           ofView:(NSView*)positioningView
+                    preferredEdge:(NSRectEdge)preferredEdge
+                     hiddenAnchor:(BOOL)hiddenAnchor;
+- (void)closePopover;
+- (void)updatePopoverContent;
 
 @end
 
@@ -203,6 +217,10 @@ class nsCocoaWindow final : public nsIWidget {
  public:
   nsCocoaWindow();
 
+  // Check if this window should use NSPopover for popup/menu display
+  bool ShouldUseNSPopover() const;
+  bool ShouldShowAsNSPopover() const;
+
   [[nodiscard]] nsresult Create(nsIWidget* aParent, const DesktopIntRect& aRect,
                                 const InitData&) override;
 
@@ -254,11 +272,7 @@ class nsCocoaWindow final : public nsIWidget {
 
   nsresult SynthesizeNativeMouseMove(
       LayoutDeviceIntPoint aPoint,
-      nsISynthesizedEventCallback* aCallback) override {
-    return SynthesizeNativeMouseEvent(
-        aPoint, NativeMouseMessage::Move, mozilla::MouseButton::eNotPressed,
-        nsIWidget::Modifiers::NO_MODIFIERS, aCallback);
-  }
+      nsISynthesizedEventCallback* aCallback) override;
   nsresult SynthesizeNativeMouseScrollEvent(
       LayoutDeviceIntPoint aPoint, uint32_t aNativeMessage, double aDeltaX,
       double aDeltaY, double aDeltaZ, uint32_t aModifierFlags,
@@ -360,6 +374,7 @@ class nsCocoaWindow final : public nsIWidget {
   LayoutDeviceIntRect GetClientBounds() override;
   LayoutDeviceIntRect GetScreenBounds() override;
   LayoutDeviceIntRect GetBounds() override { return mBounds; }
+  [[nodiscard]] nsresult GetRestoredBounds(LayoutDeviceIntRect& aRect) override;
   void ReportMoveEvent();
   void ReportSizeEvent();
   bool WidgetTypeSupportsAcceleration() override { return true; }
@@ -384,7 +399,7 @@ class nsCocoaWindow final : public nsIWidget {
   void HandleMainThreadCATransaction();
 
 #ifdef ACCESSIBILITY
-  already_AddRefed<mozilla::a11y::LocalAccessible> GetDocumentAccessible();
+  already_AddRefed<mozilla::a11y::LocalAccessible> GetWindowAccessible();
 #endif
 
   bool WidgetPaintsBackground() override { return true; }
@@ -415,7 +430,7 @@ class nsCocoaWindow final : public nsIWidget {
                         const bool aIsVertical,
                         const LayoutDeviceIntPoint& aPoint) override;
 
-  mozilla::DesktopToLayoutDeviceScale GetDesktopToDeviceScale() final {
+  mozilla::DesktopToLayoutDeviceScale GetDesktopToDeviceScale() const final {
     return mozilla::DesktopToLayoutDeviceScale(BackingScaleFactor());
   }
 
@@ -505,6 +520,16 @@ class nsCocoaWindow final : public nsIWidget {
   // since fullscreen to-and-from zoomed windows won't necessarily trigger
   // a resize.
   bool HandleUpdateFullscreenOnResize();
+
+  void LockNativePointer(NativePointerLockMode aNativePointerLockMode) override;
+  void UnlockNativePointer() override;
+  void SetNativePointerLockMode(
+      NativePointerLockMode aNativePointerLockMode) override;
+  bool SupportsUnadjustedMovement() override;
+
+  static const mozilla::Maybe<NativePointerLockMode>&
+  GetNativePointerLockedMode();
+  static LayoutDeviceIntPoint GetNativeLockedPoint();
 
  protected:
   virtual ~nsCocoaWindow();
@@ -657,6 +682,13 @@ class nsCocoaWindow final : public nsIWidget {
 
   LayoutDeviceIntRect mBounds;
 
+  // The window bounds saved just before the window last left nsSizeMode_Normal
+  // (for fullscreen, maximized, or minimized). Used by GetRestoredBounds() so
+  // that we can persist the pre-transition position/size while the window is
+  // not in normal mode. Nothing() until the first transition out of normal
+  // mode occurs.
+  mozilla::Maybe<LayoutDeviceIntRect> mRestoredBounds;
+
   mozilla::widget::PlatformCompositorWidgetDelegate* mCompositorWidgetDelegate =
       nullptr;
 
@@ -670,6 +702,10 @@ class nsCocoaWindow final : public nsIWidget {
   // to EndOurNativeTransition() when the native transition is complete.
   bool CanStartNativeTransition();
   void EndOurNativeTransition();
+
+  // This is class state for tracking native pointer lock state.
+  static mozilla::Maybe<NativePointerLockMode> sNativePointerLockMode;
+  static LayoutDeviceIntPoint sNativeLockedPoint;
 };
 
 #endif  // nsCocoaWindow_h_

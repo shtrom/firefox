@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -64,6 +62,10 @@ class DOMMatrixReadOnly : public nsWrapperCache {
       : mParent(aParent) {
     mMatrix2D = MakeUnique<gfx::MatrixDouble>(aMatrix);
   }
+
+  DOMMatrixReadOnly() = delete;
+  DOMMatrixReadOnly(const DOMMatrixReadOnly&) = delete;
+  DOMMatrixReadOnly& operator=(const DOMMatrixReadOnly&) = delete;
 
   NS_INLINE_DECL_CYCLE_COLLECTING_NATIVE_REFCOUNTING(DOMMatrixReadOnly)
   NS_DECL_CYCLE_COLLECTION_NATIVE_WRAPPERCACHE_CLASS(DOMMatrixReadOnly)
@@ -270,11 +272,6 @@ class DOMMatrixReadOnly : public nsWrapperCache {
 
   static bool ReadStructuredCloneElements(JSStructuredCloneReader* aReader,
                                           DOMMatrixReadOnly* matrix);
-
- private:
-  DOMMatrixReadOnly() = delete;
-  DOMMatrixReadOnly(const DOMMatrixReadOnly&) = delete;
-  DOMMatrixReadOnly& operator=(const DOMMatrixReadOnly&) = delete;
 };
 
 class DOMMatrix : public DOMMatrixReadOnly {

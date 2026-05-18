@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -82,10 +80,14 @@ void CachedTableAccessible::Invalidate(Accessible* aAcc) {
     return;
   }
 
-  if (Accessible* table = nsAccUtils::TableFor(aAcc)) {
+  Accessible* table = nsAccUtils::TableFor(aAcc);
+  while (table && table->IsTable()) {
     // Destroy the instance (if any). We'll create a new one the next time it
-    // is requested.
+    // is requested. Climb up the heirarcy to invalidate parent tables as well.
     sCachedTables->Remove(table);
+    // The table may be a direct child of another table, invalidate that one as
+    // well.
+    table = table->Parent();
   }
 }
 

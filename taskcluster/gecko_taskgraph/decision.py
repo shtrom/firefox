@@ -78,6 +78,7 @@ PER_PROJECT_PARAMETERS = {
         "release_type": "nightly",
     },
     "mozilla-beta": {
+        "optimize_strategies": "gecko_taskgraph.optimize:project.beta",
         "target_tasks_method": "mozilla_beta_tasks",
         "release_type": "beta",
     },
@@ -113,6 +114,11 @@ PER_PROJECT_PARAMETERS = {
         "target_tasks_method": "mozilla_central_tasks",
     },
     # git projects
+    "firefox": {
+        # TODO We'll eventually need to split this out based on tasks_for and
+        # branch, but for now just use the pull request target_tasks_method.
+        "target_tasks_method": "firefox_pull_request_tasks",
+    },
     "staging-firefox": {
         "target_tasks_method": "default",
     },
@@ -162,21 +168,18 @@ def try_syntax_from_message(message):
     return message[try_idx:].split("\n", 1)[0]
 
 
-def taskgraph_decision(options, parameters=None):
+def taskgraph_decision(options, parameters):
     """
     Run the decision task.  This function implements `mach taskgraph decision`,
     and is responsible for
 
-     * processing decision task command-line options into parameters
      * running task-graph generation exactly the same way the other `mach
        taskgraph` commands do
      * generating a set of artifacts to memorialize the graph
      * calling TaskCluster APIs to create the graph
-    """
 
-    parameters = parameters or (
-        lambda graph_config: get_decision_parameters(graph_config, options)
-    )
+    The ``parameters`` argument must be a pre-resolved ``Parameters`` object.
+    """
 
     decision_task_id = os.environ["TASK_ID"]
 
@@ -352,8 +355,6 @@ def get_decision_parameters(graph_config, options):
     parameters["release_partner_build_number"] = 1
     parameters["release_enable_emefree"] = False
     parameters["release_product"] = None
-    parameters["required_signoffs"] = []
-    parameters["signoff_urls"] = {}
     parameters["test_manifest_loader"] = "default"
     parameters["try_mode"] = None
     parameters["try_task_config"] = {}
@@ -381,15 +382,14 @@ def get_decision_parameters(graph_config, options):
         )
         parameters.update(PER_PROJECT_PARAMETERS["default"])
 
+    if parameters.get("tasks_for", "").startswith("github-pull-request"):
+        parameters["optimize_strategies"] = (
+            "gecko_taskgraph.optimize:project.pull_request"
+        )
+
     # `target_tasks_method` has higher precedence than `project` parameters
     if options.get("target_tasks_method"):
         parameters["target_tasks_method"] = options["target_tasks_method"]
-
-    # ..but can be overridden by the commit message: if it contains the special
-    # string "DONTBUILD" and this is an on-push decision task, then use the
-    # special 'nothing' target task method.
-    if "DONTBUILD" in commit_message and options["tasks_for"] == "hg-push":
-        parameters["target_tasks_method"] = "nothing"
 
     if options.get("include_push_tasks"):
         get_existing_tasks(options.get("rebuild_kinds", []), parameters, graph_config)
@@ -408,11 +408,18 @@ def get_decision_parameters(graph_config, options):
         task_config_file = os.path.join(os.getcwd(), "try_task_config.json")
 
     # load try settings
-    if "try" in project and options["tasks_for"] == "hg-push":
+    if "try" in project and options["tasks_for"] in ("hg-push", "github-push"):
         set_try_config(parameters, task_config_file)
 
     if options.get("optimize_target_tasks") is not None:
         parameters["optimize_target_tasks"] = options["optimize_target_tasks"]
+
+    # If the commit message contains "DONTBUILD" and this is an on-push
+    # decision task, mark it so the morph phase can drop all tasks and so
+    # that is_backstop knows not to count this push as a backstop.
+    parameters["dontbuild"] = (
+        "DONTBUILD" in commit_message and options["tasks_for"] == "hg-push"
+    )
 
     # Determine if this should be a backstop push.
     parameters["backstop"] = is_backstop(parameters)

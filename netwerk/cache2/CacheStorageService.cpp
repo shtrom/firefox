@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -111,7 +109,7 @@ CacheStorageService::CacheStorageService() {
   sSelf = this;
   sGlobalEntryTables = new GlobalEntryTables();
 
-  RegisterStrongMemoryReporter(this);
+  RegisterStrongMemoryReporter(do_AddRef(this));
 }
 
 CacheStorageService::~CacheStorageService() {
@@ -134,6 +132,15 @@ void CacheStorageService::Shutdown() {
   Dispatch(event);
 
 #ifdef NS_FREE_PERMANENT_DATA
+  // Clear pending callbacks on all entries before dropping them.
+  // Each pending Callback holds a RefPtr<CacheEntry> back to its owning
+  // entry, forming a prevent-release cycle that the destructor alone
+  // cannot break.
+  for (const auto& table : sGlobalEntryTables->Values()) {
+    for (const auto& entry : table->Values()) {
+      entry->ClearCallbacks();
+    }
+  }
   sGlobalEntryTables->Clear();
   delete sGlobalEntryTables;
 #endif
@@ -1216,7 +1223,8 @@ void CacheStorageService::RemoveEntryForceValid(nsACString const& aContextKey,
   mozilla::MutexAutoLock lock(mForcedValidEntriesLock);
 
   LOG(("CacheStorageService::RemoveEntryForceValid context='%s' entryKey=%s",
-       aContextKey.BeginReading(), aEntryKey.BeginReading()));
+       PromiseFlatCString(aContextKey).get(),
+       PromiseFlatCString(aEntryKey).get()));
   mForcedValidEntries.Remove(aContextKey + aEntryKey);
 }
 
@@ -1597,7 +1605,7 @@ nsresult CacheStorageService::AddStorageEntry(
   NS_ENSURE_SUCCESS(rv, rv);
 
   LOG(("CacheStorageService::AddStorageEntry [entryKey=%s, contextKey=%s]",
-       entryKey.get(), aContextKey.BeginReading()));
+       entryKey.get(), PromiseFlatCString(aContextKey).get()));
 
   RefPtr<CacheEntry> entry;
   RefPtr<CacheEntryHandle> handle;
@@ -1614,7 +1622,7 @@ nsresult CacheStorageService::AddStorageEntry(
                 aContextKey,
                 [&aContextKey] {
                   LOG(("  new storage entries table for context '%s'",
-                       aContextKey.BeginReading()));
+                       PromiseFlatCString(aContextKey).get()));
                   return MakeUnique<CacheEntryTable>(
                       CacheEntryTable::ALL_ENTRIES);
                 })
@@ -1705,7 +1713,8 @@ nsresult CacheStorageService::CheckStorageEntry(CacheStorage const* aStorage,
   }
 
   LOG(("CacheStorageService::CheckStorageEntry [uri=%s, eid=%s, contextKey=%s]",
-       aURI.BeginReading(), aIdExtension.BeginReading(), contextKey.get()));
+       PromiseFlatCString(aURI).get(), PromiseFlatCString(aIdExtension).get(),
+       contextKey.get()));
 
   {
     StaticMutexAutoLock lock(sLock);
@@ -1757,7 +1766,8 @@ nsresult CacheStorageService::GetCacheIndexEntryAttrs(
   LOG(
       ("CacheStorageService::GetCacheIndexEntryAttrs [uri=%s, eid=%s, "
        "contextKey=%s]",
-       aURI.BeginReading(), aIdExtension.BeginReading(), contextKey.get()));
+       PromiseFlatCString(aURI).get(), PromiseFlatCString(aIdExtension).get(),
+       contextKey.get()));
 
   nsAutoCString fileKey;
   rv = CacheEntry::HashingKey(contextKey, aIdExtension, aURI, fileKey);
@@ -1968,7 +1978,7 @@ nsresult CacheStorageService::DoomStorageEntries(
     const nsACString& aContextKey, nsILoadContextInfo* aContext,
     bool aDiskStorage, bool aPinned, nsICacheEntryDoomCallback* aCallback) {
   LOG(("CacheStorageService::DoomStorageEntries [context=%s]",
-       aContextKey.BeginReading()));
+       PromiseFlatCString(aContextKey).get()));
 
   sLock.AssertCurrentThreadOwns();
 
@@ -1978,7 +1988,8 @@ nsresult CacheStorageService::DoomStorageEntries(
   AppendMemoryStorageTag(memoryStorageID);
 
   if (aDiskStorage) {
-    LOG(("  dooming disk+memory storage of %s", aContextKey.BeginReading()));
+    LOG(("  dooming disk+memory storage of %s",
+         PromiseFlatCString(aContextKey).get()));
 
     // Walk one by one and remove entries according their pin status
     CacheEntryTable *diskEntries, *memoryEntries;
@@ -2003,7 +2014,8 @@ nsresult CacheStorageService::DoomStorageEntries(
       CacheFileIOManager::EvictByContext(aContext, aPinned, u""_ns);
     }
   } else {
-    LOG(("  dooming memory-only storage of %s", aContextKey.BeginReading()));
+    LOG(("  dooming memory-only storage of %s",
+         PromiseFlatCString(aContextKey).get()));
 
     // Remove the memory entries table from the global tables.
     // Since we store memory entries also in the disk entries table
@@ -2372,7 +2384,7 @@ CacheStorageService::CollectReports(nsIHandleReportCallback* aHandleReport,
               "explicit/network/cache2/%s-storage(%s)",
               table->Type() == CacheEntryTable::MEMORY_ONLY ? "memory" : "disk",
               aAnonymize ? "<anonymized>"
-                         : globalEntry.GetKey().BeginReading()),
+                         : PromiseFlatCString(globalEntry.GetKey()).get()),
           nsIMemoryReporter::KIND_HEAP, nsIMemoryReporter::UNITS_BYTES, size,
           "Memory used by the cache storage."_ns, aData);
     }

@@ -1,5 +1,4 @@
-/* -*- indent-tabs-mode: nil; js-indent-level: 2 -*-
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -29,6 +28,8 @@ ChromeUtils.defineESModuleGetters(this, {
   Color: "resource://gre/modules/Color.sys.mjs",
   ContentAnalysis:
     "moz-src:///browser/components/contentanalysis/content/ContentAnalysis.sys.mjs",
+  ContentSharingUtils:
+    "resource:///modules/contentsharing/ContentSharingUtils.sys.mjs",
   ContextualIdentityService:
     "resource://gre/modules/ContextualIdentityService.sys.mjs",
   CustomizableUI:
@@ -52,8 +53,6 @@ ChromeUtils.defineESModuleGetters(this, {
   NewTabUtils: "resource://gre/modules/NewTabUtils.sys.mjs",
   NimbusFeatures: "resource://nimbus/ExperimentAPI.sys.mjs",
   nsContextMenu: "chrome://browser/content/nsContextMenu.sys.mjs",
-  OpenInTabsUtils:
-    "moz-src:///browser/components/tabbrowser/OpenInTabsUtils.sys.mjs",
   OpenSearchManager:
     "moz-src:///browser/components/search/OpenSearchManager.sys.mjs",
   PageActions: "resource:///modules/PageActions.sys.mjs",
@@ -69,6 +68,8 @@ ChromeUtils.defineESModuleGetters(this, {
   PopupAndRedirectBlockerObserver:
     "resource:///modules/PopupAndRedirectBlockerObserver.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
+  ReducedProtectionNotification:
+    "resource:///modules/ReducedProtectionNotification.sys.mjs",
   PrivateBrowsingUI: "moz-src:///browser/modules/PrivateBrowsingUI.sys.mjs",
   ProcessHangMonitor: "resource:///modules/ProcessHangMonitor.sys.mjs",
   ProfilesDatastoreService:
@@ -79,7 +80,8 @@ ChromeUtils.defineESModuleGetters(this, {
     "moz-src:///browser/components/privatebrowsing/ResetPBMPanel.sys.mjs",
   SafeBrowsing: "resource://gre/modules/SafeBrowsing.sys.mjs",
   Sanitizer: "resource:///modules/Sanitizer.sys.mjs",
-  ScreenshotsUtils: "resource:///modules/ScreenshotsUtils.sys.mjs",
+  ScreenshotsUtils:
+    "moz-src:///browser/components/screenshots/ScreenshotsUtils.sys.mjs",
   SearchUIUtils: "moz-src:///browser/components/search/SearchUIUtils.sys.mjs",
   SelectableProfileService:
     "resource:///modules/profiles/SelectableProfileService.sys.mjs",
@@ -1231,7 +1233,7 @@ var gKeywordURIFixup = {
     fixupInfo.QueryInterface(Ci.nsIURIFixupInfo);
 
     let browser = fixupInfo.consumer?.top?.embedderElement;
-    if (!browser || browser.ownerGlobal != window) {
+    if (!browser || browser.documentGlobal != window) {
       return;
     }
 
@@ -1295,7 +1297,13 @@ function HandleAppCommandEvent(evt) {
   evt.preventDefault();
 }
 
-function loadOneOrMoreURIs(aURIString, aTriggeringPrincipal, aPolicyContainer) {
+function loadOneOrMoreURIs(
+  aURIString,
+  {
+    triggeringPrincipal = Services.scriptSecurityManager.getSystemPrincipal(),
+    newWindowLoad = false,
+  } = {}
+) {
   // we're not a browser window, pass the URI string to a new browser window
   if (window.location.href != AppConstants.BROWSER_CHROME_URL) {
     window.openDialog(
@@ -1313,8 +1321,8 @@ function loadOneOrMoreURIs(aURIString, aTriggeringPrincipal, aPolicyContainer) {
     gBrowser.loadTabs(aURIString.split("|"), {
       inBackground: false,
       replace: true,
-      triggeringPrincipal: aTriggeringPrincipal,
-      policyContainer: aPolicyContainer,
+      triggeringPrincipal,
+      newWindowLoad,
     });
   } catch (e) {}
 }
@@ -1385,7 +1393,7 @@ var gLastOpenDirectory = {
 };
 
 function readFromClipboard() {
-  var url;
+  var url = "";
 
   try {
     // Create transferable that will transfer the text.
@@ -1849,12 +1857,11 @@ let gFileMenu = {
     this.updateImportCommandEnabledState();
     if (typeof gBrowser != "undefined") {
       this.updateTabCloseCountState();
-      if (AppConstants.platform == "macosx") {
-        SharingUtils.updateShareURLMenuItem(
-          gBrowser.selectedBrowser,
-          document.getElementById("menu_savePage")
-        );
-      }
+      SharingUtils.ensureShareMenu(
+        gBrowser.selectedBrowser,
+        null,
+        document.getElementById("menu_savePage")
+      );
     }
     PrintUtils.updatePrintSetupMenuHiddenState();
 
@@ -1941,6 +1948,12 @@ var XULBrowserWindow = {
     delete this._menuItemForTranslations;
     return (this._menuItemForTranslations =
       document.getElementById("cmd_translate"));
+  },
+  get _moreToolsTranslateMenuItem() {
+    delete this._moreToolsTranslateMenuItem;
+    return (this._moreToolsTranslateMenuItem = document.getElementById(
+      "cmd_openAboutTranslations"
+    ));
   },
 
   setDefaultStatus(status) {
@@ -2198,7 +2211,10 @@ var XULBrowserWindow = {
     if (
       (location == "about:blank" &&
         BrowserUIUtils.checkEmptyPageOrigin(gBrowser.selectedBrowser)) ||
-      location == ""
+      location == "" ||
+      (location == "about:newtab" && !this.newTabPageEnabled) ||
+      location == "chrome://browser/content/blanktab.html" ||
+      window.browsingContext.isDocumentPiP
     ) {
       // Second condition is for new tabs, otherwise
       // reload function is enabled until tab is refreshed.
@@ -2374,14 +2390,13 @@ var XULBrowserWindow = {
     } else {
       this._menuItemForTranslations.removeAttribute("disabled");
     }
-    if (
+
+    const shouldShowTranslationsMenuItems =
       TranslationsParent.AIFeature.isEnabled &&
-      TranslationsParent.getIsTranslationsEngineSupported()
-    ) {
-      this._menuItemForTranslations.removeAttribute("hidden");
-    } else {
-      this._menuItemForTranslations.setAttribute("hidden", "true");
-    }
+      TranslationsParent.getIsTranslationsEngineSupported();
+
+    this._menuItemForTranslations.hidden = !shouldShowTranslationsMenuItems;
+    this._moreToolsTranslateMenuItem.hidden = !shouldShowTranslationsMenuItems;
   },
 
   /**
@@ -2600,6 +2615,13 @@ XPCOMUtils.defineLazyPreferenceGetter(
   XULBrowserWindow,
   "spinCursorWhileBusy",
   "browser.spin_cursor_while_busy"
+);
+
+XPCOMUtils.defineLazyPreferenceGetter(
+  XULBrowserWindow,
+  "newTabPageEnabled",
+  "browser.newtabpage.enabled",
+  true
 );
 
 var LinkTargetDisplay = {
@@ -3345,61 +3367,6 @@ const DynamicShortcutTooltip = {
  */
 
 /**
- * Extracts linkNode and href for the current click target.
- *
- * Note: linkNode will be null if the click wasn't on an anchor
- * element (or XLink).
- *
- * @param event
- *        The click event.
- * @return [href, linkNode].
- */
-function hrefAndLinkNodeForClickEvent(event) {
-  function isHTMLLink(aNode) {
-    // Be consistent with what nsContextMenu.js does.
-    return (
-      (HTMLAnchorElement.isInstance(aNode) && aNode.href) ||
-      (HTMLAreaElement.isInstance(aNode) && aNode.href) ||
-      HTMLLinkElement.isInstance(aNode)
-    );
-  }
-
-  let node = event.composedTarget;
-  while (node && !isHTMLLink(node)) {
-    node = node.flattenedTreeParentNode;
-  }
-
-  if (node) {
-    return [node.href, node];
-  }
-
-  // If there is no linkNode, try simple XLink.
-  let href, baseURI;
-  node = event.composedTarget;
-  while (node && !href) {
-    if (
-      node.nodeType == Node.ELEMENT_NODE &&
-      (node.localName == "a" ||
-        node.namespaceURI == "http://www.w3.org/1998/Math/MathML")
-    ) {
-      href =
-        node.getAttribute("href") ||
-        node.getAttributeNS("http://www.w3.org/1999/xlink", "href");
-
-      if (href) {
-        baseURI = node.baseURI;
-        break;
-      }
-    }
-    node = node.flattenedTreeParentNode;
-  }
-
-  // In case of XLink, we don't return the node we got href from since
-  // callers expect <a>-like elements.
-  return [href ? makeURLAbsolute(baseURI, href) : null, null];
-}
-
-/**
  * Called whenever the user clicks in the content area.
  *
  * Note: the default event is prevented if the click is handled.
@@ -3414,7 +3381,7 @@ function contentAreaClick(event, isPanelClick) {
     return;
   }
 
-  let [href, linkNode] = hrefAndLinkNodeForClickEvent(event);
+  let [href, linkNode] = BrowserUtils.hrefAndLinkNodeForClickEvent(event);
   if (!href) {
     // Not a link, handle middle mouse navigation.
     if (
@@ -3608,80 +3575,6 @@ function middleMousePaste(event) {
   }
 }
 
-// handleDroppedLink has the following 2 overloads:
-//   handleDroppedLink(event, url, name, triggeringPrincipal)
-//   handleDroppedLink(event, links, triggeringPrincipal)
-function handleDroppedLink(
-  event,
-  urlOrLinks,
-  nameOrTriggeringPrincipal,
-  triggeringPrincipal
-) {
-  let links;
-  if (Array.isArray(urlOrLinks)) {
-    links = urlOrLinks;
-    triggeringPrincipal = nameOrTriggeringPrincipal;
-  } else {
-    links = [{ url: urlOrLinks, nameOrTriggeringPrincipal, type: "" }];
-  }
-
-  let lastLocationChange = gBrowser.selectedBrowser.lastLocationChange;
-
-  let userContextId = gBrowser.selectedBrowser.getAttribute("usercontextid");
-
-  // event is null if links are dropped in content process.
-  // inBackground should be false, as it's loading into current browser.
-  let inBackground = false;
-  if (event) {
-    inBackground = Services.prefs.getBoolPref("browser.tabs.loadInBackground");
-    if (event.shiftKey) {
-      inBackground = !inBackground;
-    }
-  }
-
-  (async function () {
-    if (
-      links.length >=
-      Services.prefs.getIntPref("browser.tabs.maxOpenBeforeWarn")
-    ) {
-      // Sync dialog cannot be used inside drop event handler.
-      let answer = await OpenInTabsUtils.promiseConfirmOpenInTabs(
-        links.length,
-        window
-      );
-      if (!answer) {
-        return;
-      }
-    }
-
-    let urls = [];
-    let postDatas = [];
-    for (let link of links) {
-      let data = await UrlbarUtils.getShortcutOrURIAndPostData(link.url);
-      urls.push(data.url);
-      postDatas.push(data.postData);
-    }
-    if (lastLocationChange == gBrowser.selectedBrowser.lastLocationChange) {
-      gBrowser.loadTabs(urls, {
-        inBackground,
-        replace: true,
-        allowThirdPartyFixup: false,
-        postDatas,
-        userContextId,
-        triggeringPrincipal,
-      });
-    }
-  })();
-
-  // If links are dropped in content process, event.preventDefault() should be
-  // called in content process.
-  if (event) {
-    // Keep the event from being handled by the dragDrop listeners
-    // built-in to gecko if they happen to be above us.
-    event.preventDefault();
-  }
-}
-
 // Note that this is also called from non-browser windows on OSX, which do
 // share menu items but not much else. See nonbrowser-mac.js.
 var BrowserOffline = {
@@ -3790,6 +3683,12 @@ function WindowIsClosing(event) {
   if (!closeWindow(false, warnAboutClosingWindow, source)) {
     return false;
   }
+
+  // Dismiss Spotlight before permitUnload triggers beforeunload dialogs.
+  const { Spotlight } = ChromeUtils.importESModule(
+    "resource:///modules/asrouter/Spotlight.sys.mjs"
+  );
+  Spotlight.close(window);
 
   // In theory we should exit here and the Window's internal Close
   // method should trigger canClose on BrowserDOMWindow. However, by
@@ -4165,8 +4064,16 @@ var MousePosTracker = {
       return;
     }
 
-    this._x = event.screenX - window.mozInnerScreenX;
-    this._y = event.screenY - window.mozInnerScreenY;
+    // event.screenX is in CSS pixels of the event target's document, which may
+    // be zoomed independently of the chrome window (e.g. devtools). Rescale to
+    // chrome CSS pixels so the comparison with chrome-side rects is valid.
+    const sourceWin = event.target.documentGlobal;
+    const scale =
+      sourceWin !== window
+        ? sourceWin.devicePixelRatio / window.devicePixelRatio
+        : 1;
+    this._x = event.screenX * scale - window.mozInnerScreenX;
+    this._y = event.screenY * scale - window.mozInnerScreenY;
 
     this._listeners.forEach(listener => {
       try {
@@ -4707,7 +4614,7 @@ var gDialogBox = {
       template,
       parentElement,
       id: "window-modal-dialog-subdialog",
-      options: {
+      dialogOptions: {
         consumeOutsideClicks: false,
       },
     });
@@ -4809,8 +4716,20 @@ var ConfirmationHint = {
    *         - descriptionId (string): message ID of the description text
    *         - position (string): position of the panel relative to the anchor.
    *         - l10nArgs (object): l10n arguments for the messageId.
+   *         - hideCheckmark: Whether to hide the animated checkmark
    */
-  show(anchor, messageId, options = {}) {
+  show(
+    anchor,
+    messageId,
+    {
+      hideCheckmark = false,
+      descriptionId,
+      l10nArgs,
+      showDescription,
+      position,
+      event,
+    } = {}
+  ) {
     this._reset();
 
     MozXULElement.insertFTLIfNeeded("toolkit/branding/brandings.ftl");
@@ -4824,9 +4743,9 @@ var ConfirmationHint = {
       MozXULElement.insertFTLIfNeeded("browser/ipProtection.ftl");
     }
 
-    document.l10n.setAttributes(this._message, messageId, options.l10nArgs);
-    if (options.descriptionId) {
-      document.l10n.setAttributes(this._description, options.descriptionId);
+    document.l10n.setAttributes(this._message, messageId, l10nArgs);
+    if (descriptionId) {
+      document.l10n.setAttributes(this._description, descriptionId);
       this._description.hidden = false;
       this._panel.classList.add("with-description");
     } else {
@@ -4836,10 +4755,14 @@ var ConfirmationHint = {
 
     this._panel.setAttribute("data-message-id", messageId);
 
+    if (!hideCheckmark) {
+      this._panel.classList.add("with-checkmark");
+    }
+
     // The timeout value used here allows the panel to stay open for
     // 3s after the text transition (duration=120ms) has finished.
     // If there is a description, we show for 6s after the text transition.
-    const DURATION = options.showDescription ? 6000 : 3000;
+    const DURATION = showDescription ? 6000 : 3000;
     this._panel.addEventListener(
       "popupshown",
       () => {
@@ -4861,8 +4784,8 @@ var ConfirmationHint = {
     );
 
     this._panel.openPopup(anchor, {
-      position: options.position ?? "bottomleft topleft",
-      triggerEvent: options.event,
+      position: position ?? "bottomleft topleft",
+      triggerEvent: event,
     });
   },
 
@@ -4874,6 +4797,7 @@ var ConfirmationHint = {
     if (this.__panel) {
       this._animationBox.removeAttribute("animate");
       this._panel.removeAttribute("data-message-id");
+      this._panel.classList.remove("with-checkmark");
     }
   },
 
@@ -5038,16 +4962,27 @@ var FirefoxViewHandler = {
   },
   _recordViewIfTabSelected() {
     if (this.tab?.selected) {
-      const PREF_NAME = "browser.firefox-view.view-count";
-      const MAX_VIEW_COUNT = 10;
-      let viewCount = Services.prefs.getIntPref(PREF_NAME, 0);
-
+      const PREF_NAME = "browser.firefox-view.button-clicks";
+      const MAX_DAYS_COUNT = 30 * 24 * 60 * 60 * 1000;
+      let buttonClicksData = JSON.parse(
+        Services.prefs.getStringPref(
+          PREF_NAME,
+          '{"count":0,"lastCountTime":""}'
+        )
+      );
+      let { count, lastCountTime } = buttonClicksData;
       // Record telemetry
       Glean.firefoxviewNext.tabSelectedToolbarbutton.record();
 
-      if (viewCount < MAX_VIEW_COUNT) {
-        Services.prefs.setIntPref(PREF_NAME, viewCount + 1);
+      if (Math.round(Date.now()) - lastCountTime >= MAX_DAYS_COUNT) {
+        // reset count every 30 days
+        count = 0;
+      } else {
+        count++;
       }
+      buttonClicksData.lastCountTime = Math.round(Date.now());
+      buttonClicksData.count = count;
+      Services.prefs.setStringPref(PREF_NAME, JSON.stringify(buttonClicksData));
     }
   },
 };

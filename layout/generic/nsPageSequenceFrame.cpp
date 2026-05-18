@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -12,6 +10,7 @@
 #include "mozilla/Logging.h"
 #include "mozilla/PresShell.h"
 #include "mozilla/PrintedSheetFrame.h"
+#include "mozilla/ReflowInput.h"
 #include "mozilla/StaticPresData.h"
 #include "mozilla/dom/HTMLCanvasElement.h"
 #include "mozilla/gfx/Point.h"
@@ -21,7 +20,6 @@
 #include "nsContentUtils.h"
 #include "nsDeviceContext.h"
 #include "nsDisplayList.h"
-#include "nsGkAtoms.h"
 #include "nsHTMLCanvasFrame.h"
 #include "nsICanvasRenderingContextInternal.h"
 #include "nsIFrame.h"
@@ -80,12 +78,6 @@ inline void SanityCheckPagesPerSheetInfo() {
     prevInfoPPS = info.mNumPages;
   }
 #endif
-}
-
-static void MarkPrincipalChildrenDirty(nsIFrame* aFrame) {
-  for (nsIFrame* childFrame : aFrame->PrincipalChildList()) {
-    childFrame->MarkSubtreeDirty();
-  }
 }
 
 const nsPagesPerSheetInfo& nsPagesPerSheetInfo::LookupInfo(int32_t aPPS) {
@@ -325,7 +317,7 @@ void nsPageSequenceFrame::Reflow(nsPresContext* aPresContext,
   if (shouldDoMeasuringReflow) {
     if (!HasAnyStateBits(NS_FRAME_FIRST_REFLOW)) {
       // Mark sheets dirty for an incremental measuring reflow.
-      MarkPrincipalChildrenDirty(this);
+      MarkPrincipalChildrenDirty();
     }
 
     for (nsIFrame* kidFrame : mFrames) {
@@ -352,7 +344,7 @@ void nsPageSequenceFrame::Reflow(nsPresContext* aPresContext,
       // Given the kid is reflowed under an unconstrained available block-size,
       // BreakType::Page doesn't really have any effect, but we keep it for
       // consistency with the normal reflow below.
-      kidReflowInput.mBreakType = ReflowInput::BreakType::Page;
+      kidReflowInput.mBreakType = BreakType::Page;
       kidReflowInput.mFlags.mIsInFragmentainerMeasuringReflow = true;
 
       ReflowOutput kidReflowOutput(kidReflowInput);
@@ -369,7 +361,7 @@ void nsPageSequenceFrame::Reflow(nsPresContext* aPresContext,
     }
 
     // Mark sheets dirty for normal reflow below.
-    MarkPrincipalChildrenDirty(this);
+    MarkPrincipalChildrenDirty();
   }
 
   nsIntMargin unwriteableTwips =
@@ -416,7 +408,7 @@ void nsPageSequenceFrame::Reflow(nsPresContext* aPresContext,
     ReflowInput kidReflowInput(
         aPresContext, aReflowInput, kidFrame,
         LogicalSize(kidFrame->GetWritingMode(), sheetSize));
-    kidReflowInput.mBreakType = ReflowInput::BreakType::Page;
+    kidReflowInput.mBreakType = BreakType::Page;
 
     ReflowOutput kidReflowOutput(kidReflowInput);
     nsReflowStatus status;
@@ -522,7 +514,7 @@ void nsPageSequenceFrame::SetPageNumberFormat(const char* aPropName,
   nsAutoString pageNumberFormat;
   // Now go get the Localized Page Formating String
   nsresult rv = nsContentUtils::GetLocalizedString(
-      nsContentUtils::ePRINTING_PROPERTIES, aPropName, pageNumberFormat);
+      PropertiesFile::PRINTING_PROPERTIES, aPropName, pageNumberFormat);
   if (NS_FAILED(rv)) {  // back stop formatting
     pageNumberFormat.AssignASCII(aDefPropVal);
   }

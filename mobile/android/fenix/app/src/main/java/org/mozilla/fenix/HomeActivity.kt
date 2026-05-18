@@ -24,6 +24,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
+import android.view.WindowManager.LayoutParams.FLAG_SECURE
 import androidx.activity.BackEventCompat
 import androidx.annotation.CallSuper
 import androidx.annotation.IdRes
@@ -61,9 +62,12 @@ import mozilla.components.concept.engine.EngineView
 import mozilla.components.concept.storage.HistoryMetadataKey
 import mozilla.components.feature.contextmenu.DefaultSelectionActionDelegate
 import mozilla.components.feature.customtabs.isCustomTabIntent
+import mozilla.components.feature.ipprotection.IPProtectionFxaAuthFlow
+import mozilla.components.feature.ipprotection.IPProtectionFxaAuthFlow.Companion.EntrypointConfig
 import mozilla.components.feature.media.ext.findActiveMediaTab
 import mozilla.components.feature.privatemode.notification.PrivateNotificationFeature
 import mozilla.components.feature.search.BrowserStoreSearchAdapter
+import mozilla.components.lib.crash.store.CrashAction
 import mozilla.components.service.fxa.sync.SyncReason
 import mozilla.components.support.base.feature.ActivityResultHandler
 import mozilla.components.support.base.feature.UserInteractionHandler
@@ -72,7 +76,6 @@ import mozilla.components.support.ktx.android.arch.lifecycle.addObservers
 import mozilla.components.support.ktx.android.content.call
 import mozilla.components.support.ktx.android.content.email
 import mozilla.components.support.ktx.android.content.share
-import mozilla.components.support.ktx.android.view.setupPersistentInsets
 import mozilla.components.support.locale.LocaleAwareAppCompatActivity
 import mozilla.components.support.utils.BootUtils
 import mozilla.components.support.utils.Browsers
@@ -90,20 +93,29 @@ import org.mozilla.fenix.GleanMetrics.SplashScreen
 import org.mozilla.fenix.GleanMetrics.StartOnHome
 import org.mozilla.fenix.addons.ExtensionsProcessDisabledBackgroundController
 import org.mozilla.fenix.addons.ExtensionsProcessDisabledForegroundController
-import org.mozilla.fenix.bindings.BrowsingModeBinding
 import org.mozilla.fenix.bindings.ExternalAppLinkStatusBinding
 import org.mozilla.fenix.bindings.SummarizeToolbarHighlightBinding
 import org.mozilla.fenix.bookmarks.DesktopFolders
+import org.mozilla.fenix.browser.BrowserFragment
 import org.mozilla.fenix.browser.browsingmode.BrowsingMode
 import org.mozilla.fenix.browser.browsingmode.BrowsingModeManager
 import org.mozilla.fenix.browser.browsingmode.DefaultBrowsingModeManager
+import org.mozilla.fenix.components.accounts.FenixFxAEntryPoint
 import org.mozilla.fenix.components.appstate.AppAction
 import org.mozilla.fenix.components.appstate.AppAction.ShareAction
 import org.mozilla.fenix.components.appstate.OrientationMode
+import org.mozilla.fenix.components.ipprotection.ErrorMessages
+import org.mozilla.fenix.components.ipprotection.IPProtectionInfoPrompter
+import org.mozilla.fenix.components.menu.MenuAccessPoint
+import org.mozilla.fenix.components.menu.share.QRCodeDialogFragment
 import org.mozilla.fenix.components.metrics.BreadcrumbsRecorder
 import org.mozilla.fenix.components.metrics.GrowthDataWorker
-import org.mozilla.fenix.components.metrics.MarketingAttributionService
+import org.mozilla.fenix.components.metrics.InstallReferrerHandlingService
 import org.mozilla.fenix.components.metrics.fonts.FontEnumerationWorker
+import org.mozilla.fenix.components.share.QR_CODE_URI_KEY
+import org.mozilla.fenix.components.share.SEND_TO_DEVICES_ACTION
+import org.mozilla.fenix.components.share.SendToDevicesDialogFragment
+import org.mozilla.fenix.crashes.CrashActionDispatcher
 import org.mozilla.fenix.crashes.CrashReporterBinding
 import org.mozilla.fenix.crashes.UnsubmittedCrashDialog
 import org.mozilla.fenix.customtabs.ExternalAppBrowserActivity
@@ -111,6 +123,7 @@ import org.mozilla.fenix.databinding.ActivityHomeBinding
 import org.mozilla.fenix.debugsettings.data.DefaultDebugSettingsRepository
 import org.mozilla.fenix.debugsettings.ui.FenixOverlay
 import org.mozilla.fenix.downloads.DownloadSnackbar
+import org.mozilla.fenix.e2e.EdgeToEdgeFragmentLifecycleCallbacks
 import org.mozilla.fenix.experiments.ResearchSurfaceDialogFragment
 import org.mozilla.fenix.ext.alreadyOnDestination
 import org.mozilla.fenix.ext.breadcrumb
@@ -135,14 +148,12 @@ import org.mozilla.fenix.home.intent.OpenBrowserIntentProcessor
 import org.mozilla.fenix.home.intent.OpenPasswordManagerIntentProcessor
 import org.mozilla.fenix.home.intent.OpenRecentlyClosedIntentProcessor
 import org.mozilla.fenix.home.intent.OpenSpecificTabIntentProcessor
-import org.mozilla.fenix.home.intent.ReEngagementIntentProcessor
 import org.mozilla.fenix.home.intent.SpeechProcessingIntentProcessor
 import org.mozilla.fenix.home.intent.StartSearchIntentProcessor
 import org.mozilla.fenix.home.topsites.DefaultTopSitesBinding
 import org.mozilla.fenix.messaging.FenixMessageSurfaceId
 import org.mozilla.fenix.messaging.MessageNotificationWorker
 import org.mozilla.fenix.nimbus.FxNimbus
-import org.mozilla.fenix.onboarding.ReEngagementNotificationWorker
 import org.mozilla.fenix.pbmlock.DefaultPrivateBrowsingLockStorage
 import org.mozilla.fenix.pbmlock.PrivateBrowsingLockFeature
 import org.mozilla.fenix.perf.DefaultStartupPathProvider
@@ -162,10 +173,13 @@ import org.mozilla.fenix.splashscreen.DefaultExperimentsOperationStorage
 import org.mozilla.fenix.splashscreen.DefaultSplashScreenStorage
 import org.mozilla.fenix.splashscreen.FetchExperimentsOperation
 import org.mozilla.fenix.splashscreen.SplashScreenManager
+import org.mozilla.fenix.splashscreen.SplashScreenOperation
 import org.mozilla.fenix.tabhistory.TabHistoryDialogFragment
 import org.mozilla.fenix.theme.DefaultThemeManager
 import org.mozilla.fenix.theme.StatusBarColorManager
 import org.mozilla.fenix.theme.ThemeManager
+import org.mozilla.fenix.translations.TranslationsAIControllableFeatureRegistrar
+import org.mozilla.fenix.translations.TranslationsEnabledSettings
 import org.mozilla.fenix.utils.AccessibilityUtils.announcePrivateModeForAccessibility
 import org.mozilla.fenix.utils.Settings
 import org.mozilla.fenix.utils.changeAppLauncherIcon
@@ -179,7 +193,7 @@ import mozilla.components.ui.icons.R as iconsR
  * - browser screen
  */
 @SuppressWarnings("TooManyFunctions", "LargeClass", "LongMethod")
-open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
+open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, CrashActionDispatcher {
     @VisibleForTesting
     internal lateinit var binding: ActivityHomeBinding
     lateinit var themeManager: ThemeManager
@@ -224,6 +238,31 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
         )
     }
 
+    private val ipProtectionPrompter by lazy {
+        IPProtectionInfoPrompter(
+            store = components.ipProtection.store,
+            appStore = components.appStore,
+            errorMessages = ErrorMessages(
+                connectionError = this.getString(R.string.ip_protection_connection_error_snackbar),
+                dataLimitReached = this.getString(
+                    R.string.ip_protection_data_limit_reached_snackbar,
+                    FxNimbus.features.ipProtection.value().dataLimitGigabyte,
+                ),
+            ),
+        )
+    }
+
+    private val translationsAIControllableFeatureRegistrar by lazy {
+        with(components) {
+            TranslationsAIControllableFeatureRegistrar(
+                aiRegistry = aiFeatureRegistry,
+                browserStore = core.store,
+                translationsEnabledSettings = TranslationsEnabledSettings.dataStore(this@HomeActivity),
+                scope = lifecycleScope,
+            )
+        }
+    }
+
     private val defaultTopSitesBinding by lazy {
         DefaultTopSitesBinding(
             browserStore = components.core.store,
@@ -250,19 +289,8 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
 
     private val crashReporterBinding by lazy {
         CrashReporterBinding(
-            context = this,
             store = components.appStore,
             onReporting = ::showCrashReporter,
-        )
-    }
-
-    private val browsingModeBinding by lazy {
-        BrowsingModeBinding(
-            window = window,
-            settings = settings(),
-            store = components.appStore,
-            themeManagerProvider = { if (::themeManager.isInitialized) themeManager else null },
-            browsingModeManager = browsingModeManager,
         )
     }
 
@@ -278,7 +306,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
     private val summarizeToolbarHighlightBinding by lazy {
         SummarizeToolbarHighlightBinding(
             appStore = components.appStore,
-            featureDiscoverySettings = components.core.summarizeFeatureDiscoverySettings,
+            featureDiscoverySettings = components.core.summarizeFeatureSettings,
             browserStore = components.core.store,
             mainDispatcher = Main,
         )
@@ -310,6 +338,22 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
         )
     }
 
+    private val ipProtectionFxaAccountAuthFlow by lazy {
+        IPProtectionFxaAuthFlow(
+            accountManager = components.backgroundServices.accountManager,
+            store = components.ipProtection.store,
+            entrypointConfig = EntrypointConfig(
+                authorization = FenixFxAEntryPoint.IPProtectionMainMenu,
+                authentication = FenixFxAEntryPoint.IPProtectionOnboarding,
+            ),
+            onAuthRequested = { url, onCompleteAction ->
+                val intent = SupportUtils.createAuthCustomTabIntent(this, url)
+                intent.putExtra("OnCompleteAction", onCompleteAction)
+                startActivity(intent)
+            },
+        )
+    }
+
     private var inflater: LayoutInflater? = null
 
     private val navHost by lazy {
@@ -318,15 +362,14 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
 
     private val externalSourceIntentProcessors by lazy {
         listOf(
-            HomeDeepLinkIntentProcessor(components.appStore, this),
+            HomeDeepLinkIntentProcessor(this),
             SpeechProcessingIntentProcessor(this, components.core.store),
             AssistIntentProcessor(),
-            StartSearchIntentProcessor(),
+            StartSearchIntentProcessor { components.fenixOnboarding.userHasBeenOnboarded() },
             OpenBrowserIntentProcessor(this, ::getIntentSessionId),
             OpenSpecificTabIntentProcessor(this),
             OpenPasswordManagerIntentProcessor(),
             OpenRecentlyClosedIntentProcessor(),
-            ReEngagementIntentProcessor(components.appStore, this),
         )
     }
 
@@ -425,30 +468,16 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
             isLauncherIntent = isLauncherIntent,
         )
 
-        // This is a temporary solution to determine if we should show the marketing onboarding card.
-        if (shouldShowOnboarding) {
-            lifecycleScope.launch(IO) {
-                MarketingAttributionService(applicationContext).start()
-            }
-        }
-
         SplashScreenManager(
-            splashScreenOperation = if (FxNimbus.features.splashScreen.value().offTrainOnboarding) {
-                ApplyExperimentsOperation(
-                    storage = DefaultExperimentsOperationStorage(components.settings),
-                    nimbus = components.nimbus.sdk,
-                )
-            } else {
-                FetchExperimentsOperation(
-                    storage = DefaultExperimentsOperationStorage(components.settings),
-                    nimbus = components.nimbus.sdk,
-                )
-            },
+            splashScreenOperation = createSplashScreenOperation(shouldShowOnboarding),
             scope = lifecycleScope,
             splashScreenTimeout = FxNimbus.features.splashScreen.value().maximumDurationMs.toLong(),
             storage = DefaultSplashScreenStorage(components.settings),
             showSplashScreen = { installSplashScreen().setKeepOnScreenCondition(it) },
             onSplashScreenFinished = { result ->
+                // Before the slashscreen ends the application has a different theme not supporting edge to edge.
+                EdgeToEdgeFragmentLifecycleCallbacks.register(supportFragmentManager, window)
+
                 if (result.sendTelemetry) {
                     SplashScreen.firstLaunchExtended.record(
                         SplashScreen.FirstLaunchExtendedExtra(dataFetched = result.wasDataFetched),
@@ -479,6 +508,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
                                     browserStore = components.core.store,
                                     inactiveTabsEnabled = settings().inactiveTabsAreEnabled,
                                     loginsStorage = components.core.passwordsStorage,
+                                    tabGroupRepository = components.core.tabGroupRepository,
                                 )
                             }
                         } else {
@@ -559,7 +589,6 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
             serviceWorkerSupport,
             aboutHomeBinding,
             crashReporterBinding,
-            browsingModeBinding,
             defaultTopSitesBinding,
             TopSitesRefresher(
                 settings = settings(),
@@ -575,6 +604,11 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
             privateBrowsingLockFeature,
             externalAppLinkStatusBinding,
             summarizeToolbarHighlightBinding,
+            components.core.summarizationSettings,
+            translationsAIControllableFeatureRegistrar,
+            ipProtectionFxaAccountAuthFlow, // FIXME(IPP) move this to each UI fragment with separate entry points.
+            ipProtectionPrompter,
+            components.ipProtection.storageSynchronizer,
         )
 
         if (!isCustomTabIntent(intent)) {
@@ -715,7 +749,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
         )
 
         binding.root.doOnLayout {
-            if (components.appStore.state.mode.isPrivate) {
+            if (browsingModeManager.mode.isPrivate) {
                 it.announcePrivateModeForAccessibility()
             }
         }
@@ -734,7 +768,6 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
             FontEnumerationWorker.sendActivatedSignalIfNeeded(applicationContext)
 
             if (NotificationManagerCompat.from(applicationContext).areNotificationsEnabled()) {
-                ReEngagementNotificationWorker.setReEngagementNotificationIfNeeded(applicationContext)
                 MessageNotificationWorker.setMessageNotificationWorker(applicationContext)
             }
 
@@ -760,8 +793,6 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
     final override fun onStart() {
         // DO NOT MOVE ANYTHING ABOVE THIS getProfilerTime CALL.
         val startProfilerTime = components.core.engine.profiler?.getProfilerTime()
-
-        window.setupPersistentInsets()
 
         components.termsOfUseManager.onStart()
 
@@ -879,7 +910,6 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
         components.core.pocketStoriesService.stopPeriodicSponsoredContentsRefresh()
         privateNotificationObserver?.stop()
         components.notificationsDelegate.unBindActivity(this)
-        MarketingAttributionService(applicationContext).stop()
 
         // clear hierarchy change listener set by AndroidX SplashScreen
         // https://bugzilla.mozilla.org/show_bug.cgi?id=1950295
@@ -938,26 +968,50 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
             return
         }
 
-        // Diagnostic breadcrumb for "Display already aquired" crash:
-        // https://github.com/mozilla-mobile/android-components/issues/7960
-        breadcrumb(
-            message = "onNewIntent()",
-            data = mapOf(
-                "intent" to intent.action.toString(),
-            ),
-        )
-
-        val tab = components.core.store.state.findActiveMediaTab()
-        if (tab != null) {
-            components.useCases.sessionUseCases.exitFullscreen(tab.id)
+        if (intent.action == SEND_TO_DEVICES_ACTION) {
+            val url = intent.getStringExtra(SendToDevicesDialogFragment.EXTRA_URL) ?: return
+            val title = intent.getStringExtra(SendToDevicesDialogFragment.EXTRA_TITLE)
+            val isPrivate = intent.getStringExtra(SendToDevicesDialogFragment.EXTRA_PRIVACY) ==
+                SendToDevicesDialogFragment.PRIVACY_PRIVATE
+            if (supportFragmentManager.findFragmentByTag(SendToDevicesDialogFragment.TAG) == null) {
+                SendToDevicesDialogFragment.newInstance(url, title, isPrivate).showNow(
+                    supportFragmentManager,
+                    SendToDevicesDialogFragment.TAG,
+                )
+            }
+            return
         }
 
-        val intentProcessors =
-            listOf(
-                CrashReporterIntentProcessor(components.appStore),
-            ) + externalSourceIntentProcessors
-        intentProcessors.forEach { it.process(intent, navHost.navController, this.intent, settings()) }
-        browsingModeManager.updateMode(intent)
+        val qrCodeUri = intent.getStringExtra(QR_CODE_URI_KEY)
+        if (qrCodeUri != null) {
+            if (supportFragmentManager.findFragmentByTag(QRCodeDialogFragment.TAG) == null) {
+                QRCodeDialogFragment.newInstance(qrCodeUri).showNow(
+                    supportFragmentManager,
+                    QRCodeDialogFragment.TAG,
+                )
+            }
+        } else {
+            // Diagnostic breadcrumb for "Display already aquired" crash:
+            // https://github.com/mozilla-mobile/android-components/issues/7960
+            breadcrumb(
+                message = "onNewIntent()",
+                data = mapOf(
+                    "intent" to intent.action.toString(),
+                ),
+            )
+
+            val tab = components.core.store.state.findActiveMediaTab()
+            if (tab != null) {
+                components.useCases.sessionUseCases.exitFullscreen(tab.id)
+            }
+
+            val intentProcessors =
+                listOf(
+                    CrashReporterIntentProcessor(components.appStore),
+                ) + externalSourceIntentProcessors
+            intentProcessors.forEach { it.process(intent, navHost.navController, this.intent, settings()) }
+            browsingModeManager.updateMode(intent)
+        }
     }
 
     /**
@@ -1075,6 +1129,35 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
         return super.dispatchTouchEvent(ev)
     }
 
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // The KEYCODE_MENU event is handled here instead of onKeyDown or onKeyUp because
+        // after navigating to another fragment like Settings or Bookmarks, and then back this
+        // key event is somehow getting consumed before it reaches onKeyDown or onKeyUp.
+        if (event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_MENU) {
+            val navHostFragment =
+                supportFragmentManager.findFragmentById(R.id.container) as? NavHostFragment
+            val currentFragment = navHostFragment?.childFragmentManager?.primaryNavigationFragment
+            when (currentFragment) {
+                is HomeFragment -> {
+                    val action = NavGraphDirections.actionGlobalMenuDialogFragment(
+                        MenuAccessPoint.Home,
+                    )
+                    navHost.navController.navigate(action)
+                    return true
+                }
+
+                is BrowserFragment -> {
+                    val action = NavGraphDirections.actionGlobalMenuDialogFragment(
+                        MenuAccessPoint.Browser,
+                    )
+                    navHost.navController.navigate(action)
+                    return true
+                }
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     final override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         // Inspired by https://searchfox.org/mozilla-esr68/source/mobile/android/base/java/org/mozilla/gecko/BrowserApp.java#584-613
         // Android N and Huawei devices have broken onKeyLongPress events for the back button, so we
@@ -1175,10 +1258,30 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
         return false
     }
 
+    private fun createSplashScreenOperation(shouldShowOnboarding: Boolean): SplashScreenOperation {
+        val nimbusOperation = if (FxNimbus.features.splashScreen.value().offTrainOnboarding) {
+            ApplyExperimentsOperation(
+                storage = DefaultExperimentsOperationStorage(components.settings),
+                nimbus = components.nimbus.sdk,
+            )
+        } else {
+            FetchExperimentsOperation(
+                storage = DefaultExperimentsOperationStorage(components.settings),
+                nimbus = components.nimbus.sdk,
+            )
+        }
+
+        if (shouldShowOnboarding) {
+            InstallReferrerHandlingService(applicationContext).start()
+        }
+
+        return nimbusOperation
+    }
+
     private fun setupTheme() {
         themeManager = createThemeManager()
         // ExternalAppBrowserActivity exclusively handles it's own theming unless in private mode.
-        if (this !is ExternalAppBrowserActivity || settings().openLinksInAPrivateTab) {
+        if (this !is ExternalAppBrowserActivity || browsingModeManager.mode.isPrivate) {
             themeManager.setActivityTheme(this)
             themeManager.applyStatusBarTheme(this)
         }
@@ -1270,7 +1373,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
             searchTermOrURL = searchTermOrURL,
             newTab = newTab,
             forceSearch = forceSearch,
-            private = components.appStore.state.mode.isPrivate,
+            private = browsingModeManager.mode.isPrivate,
             searchEngine = engine,
             flags = flags,
             historyMetadata = historyMetadata,
@@ -1295,7 +1398,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
 
         // Normal tabs + cold start -> Should go back to browser if we had any tabs open when we left last
         // except for PBM + Cold Start there won't be any tabs since they're evicted so we never will navigate
-        if (settings().shouldReturnToBrowser && !components.appStore.state.mode.isPrivate) {
+        if (settings().shouldReturnToBrowser && !browsingModeManager.mode.isPrivate) {
             // Navigate to home first (without rendering it) to add it to the back stack.
             openToBrowser(BrowserDirection.FromGlobal, null)
         }
@@ -1335,18 +1438,27 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
             intent = intent,
             settings = components.settings,
             onModeChange = { newMode ->
+                updateSecureWindowFlags(newMode)
+
+                if (::themeManager.isInitialized) {
+                    themeManager.currentTheme = newMode
+                }
+
                 components.appStore.dispatch(AppAction.BrowsingModeManagerModeChanged(mode = newMode))
             },
         )
     }
 
-    private fun createThemeManager(): ThemeManager {
-        val mode = if (this is ExternalAppBrowserActivity && !settings().openLinksInAPrivateTab) {
-            BrowsingMode.Normal
+    private fun updateSecureWindowFlags(mode: BrowsingMode = browsingModeManager.mode) {
+        if (mode == BrowsingMode.Private && !settings().shouldSecureModeBeOverridden) {
+            window.addFlags(FLAG_SECURE)
         } else {
-            components.appStore.state.mode
+            window.clearFlags(FLAG_SECURE)
         }
-        return DefaultThemeManager(mode, this)
+    }
+
+    private fun createThemeManager(): ThemeManager {
+        return DefaultThemeManager(browsingModeManager.mode, this)
     }
 
     private fun openPopup(webExtensionState: WebExtensionState) {
@@ -1458,19 +1570,20 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity {
         messaging.onMessageDisplayed(nextMessage, currentBootUniqueIdentifier)
     }
 
-    @VisibleForTesting
-    internal fun showCrashReporter(crashIDs: List<String>?, ctxt: Context) {
+    /**
+     * Dispatches the received [CrashAction] from [UnsubmittedCrashDialog]
+     */
+    override fun dispatchCrashAction(action: CrashAction) {
+        components.appStore.dispatch(AppAction.CrashActionWrapper(action))
+    }
+
+    private fun showCrashReporter(crashIDs: List<String>?) {
         if (!settings().useNewCrashReporterFlow) {
             return
         }
 
-        UnsubmittedCrashDialog(
-            dispatcher = { action ->
-                components.appStore.dispatch(AppAction.CrashActionWrapper(action))
-            },
-            crashIDs = crashIDs,
-            localContext = ctxt,
-        ).show(supportFragmentManager, UnsubmittedCrashDialog.TAG)
+        UnsubmittedCrashDialog.create(crashIDs = crashIDs)
+            .show(supportFragmentManager, UnsubmittedCrashDialog.TAG)
     }
 
     companion object {

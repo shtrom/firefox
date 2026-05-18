@@ -13,6 +13,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
   FXA_PWDMGR_REALM: "resource://gre/modules/FxAccountsCommon.sys.mjs",
   LoginBreaches: "resource:///modules/LoginBreaches.sys.mjs",
   LoginHelper: "resource://gre/modules/LoginHelper.sys.mjs",
+  PrivacyMetricsService:
+    "moz-src:///browser/components/protections/PrivacyMetricsService.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
   Region: "resource://gre/modules/Region.sys.mjs",
 });
@@ -350,7 +352,7 @@ export class AboutProtectionsParent extends JSWindowActorParent {
   }
 
   async receiveMessage(aMessage) {
-    let win = this.browsingContext.top.embedderElement.ownerGlobal;
+    let win = this.browsingContext.top.embedderElement.documentGlobal;
     switch (aMessage.name) {
       case "OpenAboutLogins":
         lazy.LoginHelper.openPasswordManager(win, {
@@ -438,6 +440,12 @@ export class AboutProtectionsParent extends JSWindowActorParent {
 
       case "FetchShowVPNCard":
         return lazy.BrowserUtils.shouldShowVPNPromo();
+
+      case "FetchPrivacyMetrics":
+        if (lazy.PrivateBrowsingUtils.isWindowPrivate(win)) {
+          return { isPrivate: true };
+        }
+        return lazy.PrivacyMetricsService.getWeeklyStats();
     }
 
     return undefined;

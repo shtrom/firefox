@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -115,7 +113,7 @@ static bool IsEventTargetChrome(EventTarget* aEventTarget,
       retVal.swap(*aDocument);
     }
   } else if (nsCOMPtr<nsIScriptObjectPrincipal> sop =
-                 do_QueryInterface(aEventTarget->GetOwnerGlobal())) {
+                 do_QueryInterface(aEventTarget->GetRelevantGlobal())) {
     isChrome = sop->GetPrincipal()->IsSystemPrincipal();
   }
   return isChrome;
@@ -776,7 +774,8 @@ static void DescribeEventTargetForProfilerMarker(const EventTarget* aTarget,
   if (node) {
     if (node->IsElement()) {
       nsAutoString nodeDescription;
-      node->AsElement()->Describe(nodeDescription, true);
+      node->AsElement()->Describe(nodeDescription,
+                                  Element::DescriptionKind::IdAndClass);
       aDescription = NS_ConvertUTF16toUTF8(nodeDescription);
     } else if (node->IsDocument()) {
       aDescription.AssignLiteral("document");
@@ -909,6 +908,25 @@ nsresult EventDispatcher::Dispatch(EventTarget* aTarget,
     }
   }
 
+  // Track the current event timing entry so that modal dialog code can call
+  // RecordModalFallbackTime() to stamp the fallback time on the right entry.
+  // The previous entry is saved and restored via ScopeExit to handle nested
+  // event dispatch and early returns.
+  RefPtr<PerformanceMainThread> perfMainThread;
+  RefPtr<PerformanceEventTiming> prevEventTimingEntry;
+  if (eventTimingEntry) {
+    perfMainThread = aPresContext->GetPerformanceMainThread();
+    if (perfMainThread) {
+      prevEventTimingEntry = perfMainThread->GetCurrentEventTimingEntry();
+      perfMainThread->SetCurrentEventTimingEntry(eventTimingEntry);
+    }
+  }
+  auto restoreEventTimingEntry = MakeScopeExit([&]() {
+    if (perfMainThread) {
+      perfMainThread->SetCurrentEventTimingEntry(prevEventTimingEntry);
+    }
+  });
+
   bool retargeted = false;
 
   if (aEvent->mFlags.mRetargetToNonNativeAnonymous) {
@@ -968,7 +986,7 @@ nsresult EventDispatcher::Dispatch(EventTarget* aTarget,
       if (global || hasHadScriptHandlingObject) {
         warn(nsContentUtils::IsChromeDoc(doc));
       }
-    } else if (nsCOMPtr<nsIGlobalObject> global = target->GetOwnerGlobal()) {
+    } else if (nsCOMPtr<nsIGlobalObject> global = target->GetRelevantGlobal()) {
       warn(global->PrincipalOrNull()->IsSystemPrincipal());
     }
   }
@@ -1042,7 +1060,7 @@ nsresult EventDispatcher::Dispatch(EventTarget* aTarget,
 
   bool clearTargets = false;
 
-  nsCOMPtr<nsIContent> content =
+  nsIContent* content =
       nsIContent::FromEventTargetOrNull(aEvent->mOriginalTarget);
 
   const bool isInAnon = content && content->ChromeOnlyAccessForEvents();
@@ -1071,6 +1089,10 @@ nsresult EventDispatcher::Dispatch(EventTarget* aTarget,
     targetEtci = MayRetargetToChromeIfCanNotHandleEvent(
         chain, preVisitor, targetEtci, nullptr, content);
   }
+
+  // Ensure no one will use the pointer after this point.
+  content = nullptr;
+
   if (!preVisitor.mCanHandle) {
     // The original target and chrome target (mAutomaticChromeDispatch=true)
     // can not handle the event but we still have to call their PreHandleEvent.
@@ -1241,7 +1263,7 @@ nsresult EventDispatcher::Dispatch(EventTarget* aTarget,
               "EventDispatcher::Dispatch", OTHER, typeStr);
 
           MarkerInnerWindowId innerWindowId;
-          if (nsIGlobalObject* global = aEvent->mTarget->GetOwnerGlobal()) {
+          if (nsIGlobalObject* global = aEvent->mTarget->GetRelevantGlobal()) {
             if (nsPIDOMWindowInner* inner = global->GetAsInnerWindow()) {
               innerWindowId = MarkerInnerWindowId{inner->WindowID()};
             }

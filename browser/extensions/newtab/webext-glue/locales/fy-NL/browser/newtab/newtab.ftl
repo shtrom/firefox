@@ -8,9 +8,13 @@
 newtab-page-title = Nij ljepblêd
 newtab-settings-button =
     .title = Jo side foar nije ljepblêden oanpasse
+#  (developer note): @nova-cleanup(remove-string): Remove newtab-customize-panel-icon-button once Nova lands, will be using newtab-customize-panel-label instead
 newtab-customize-panel-icon-button =
     .title = Dizze side oanpasse
+#  (developer note): @nova-cleanup(remove-string): Remove newtab-customize-panel-icon-button-label once Nova lands, will be using newtab-customize-panel-label instead
 newtab-customize-panel-icon-button-label = Oanpasse
+newtab-customize-panel-label =
+    .label = Oanpasse
 newtab-personalize-settings-icon-label =
     .title = Nij ljepblêd personalisearje
     .aria-label = Ynstellingen
@@ -144,6 +148,9 @@ newtab-menu-report = Rapportearje
 # Context menu option to personalize New Tab recommended stories by blocking a section of stories,
 # e.g. "Sports". "Block" is a verb here.
 newtab-menu-section-block = Blokkearje
+# "Follow", "unfollow", and "following" are social media terms that refer to subscribing to or unsubscribing from a section of stories.
+# e.g. Following the travel section of stories.
+newtab-menu-section-unfollow-topic = Untfolgje
 # "Follow", "unfollow", and "following" are social media terms that refer to subscribing to or unsubscribing from a section of stories.
 # e.g. Following the travel section of stories.
 newtab-menu-section-unfollow = Underwerp net mear folgje
@@ -311,9 +318,23 @@ newtab-error-fallback-refresh-link = Fernij de side om it opnij te probearjen.
 
 newtab-custom-shortcuts-title = Fluchkeppelingen
 newtab-custom-shortcuts-subtitle = Bewarre of besochte websites
+#  (developer note): @nova-cleanup(remove-string): Remove old string once Nova lands. The newtab-custom-shortcuts-nova string will take over
 newtab-custom-shortcuts-toggle =
     .label = Fluchkeppelingen
     .description = Bewarre of besochte websites
+newtab-custom-shortcuts-nova =
+    .label = Fluchkeppelingen
+newtab-custom-row-description =
+    .description = Oantal rigen
+# Variables
+#   $num (number) - Number of rows to display
+#  (developer note): @nova-cleanup(remove-string): Remove string once Nova lands. We won't be using "row"/"rows" anymore for the dropdown
+newtab-custom-row-selector2 =
+    .label =
+        { $num ->
+            [one] { $num } rige
+           *[other] { $num } rigen
+        }
 # Variables
 #   $num (number) - Number of rows to display
 newtab-custom-row-selector =
@@ -324,9 +345,12 @@ newtab-custom-row-selector =
 newtab-custom-sponsored-sites = Sponsore fluchkeppelingen
 newtab-custom-pocket-title = Oanrekommandearre troch { -pocket-brand-name }
 newtab-custom-pocket-subtitle = Utsûnderlike ynhâld, gearstald troch { -pocket-brand-name }, ûnderdiel fan de { -brand-product-name }-famylje
+#  (developer note): @nova-cleanup(remove-string): Remove string once Nova lands. We won't be having a description under "Recommended stories" anymore
 newtab-custom-stories-toggle =
     .label = Oanrekommandearre ferhalen
     .description = Utsûnderlike ynhâld, sammele troch de { -brand-product-name }-famylje
+newtab-recommended-stories-toggle =
+    .label = Oanrekommandearre ferhalen
 newtab-custom-stories-personalized-toggle =
     .label = Ferhalen
 newtab-custom-stories-personalized-checkbox-label = Personalisearre ferhalen op basis fan jo aktiviteit
@@ -343,6 +367,10 @@ newtab-custom-widget-lists-toggle =
     .label = Listen
 newtab-custom-widget-timer-toggle =
     .label = Timer
+newtab-custom-widget-sports-toggle =
+    .label = Wrâldkampioenskip
+newtab-custom-widget-clock-toggle =
+    .label = Klok
 newtab-custom-widget-section-title = Widgets
 newtab-custom-widget-section-toggle =
     .label = Widgets
@@ -360,8 +388,12 @@ newtab-custom-settings = Mear ynstellingen beheare
 
 newtab-wallpaper-title = Eftergrûnen
 newtab-wallpaper-reset = Standertwearden
+#  (developer note): @nova-cleanup(remove-string): Remove old "Upload an image" string once Nova lands. The new "Add an image"  string will take over
 newtab-wallpaper-upload-image = In ôfbylding oplade
+newtab-wallpaper-add-an-image = Ofbylding tafoegje
 newtab-wallpaper-custom-color = Kies in kleur
+newtab-wallpaper-toggle-title =
+    .label = Eftergrûnen
 # Variables
 #   $file_size (number) - The number of the maximum image file size (in MB) that may be uploaded
 newtab-wallpaper-error-max-file-size = De ôfbylding giet oer de limyt fan { $file_size } MB. Probearje in lytser bestân op te laden.
@@ -384,7 +416,9 @@ newtab-wallpaper-light-fox-anniversary = In foks yn in gersfjild mei in mistich 
 
 ## Solid Colors
 
+#  (developer note): @nova-cleanup(remove-string): Remove old "Solid colors" string once Nova lands. The simplified "Colors" string will take over
 newtab-wallpaper-category-title-colors = Effen kleuren
+newtab-wallpaper-colors = Kleuren
 newtab-wallpaper-blue = Blau
 newtab-wallpaper-light-blue = Ljochtblau
 newtab-wallpaper-light-purple = Ljochtpears
@@ -475,6 +509,9 @@ newtab-weather-menu-change-location = Lokaasje wizigje
 newtab-weather-change-location-search-input-placeholder =
     .placeholder = Lokaasje sykje
     .aria-label = Lokaasje sykje
+# "Current" refers to the user's physical/geographic location detected via geolocation.
+newtab-weather-change-location-search-use-current =
+    .label = Aktuele lokaasje brûke
 newtab-weather-menu-weather-display = Waarwerjefte
 newtab-weather-todays-forecast = Waarfoarsizzing foar hjoed
 newtab-weather-see-full-forecast = Folsleine waarfoarsizzing besjen
@@ -490,7 +527,6 @@ newtab-weather-menu-temperature-option-fahrenheit = Fahrenheit
 newtab-weather-menu-temperature-option-celsius = Celsius
 newtab-weather-menu-change-temperature-units-fahrenheit = Wikselje nei Fahrenheit
 newtab-weather-menu-change-temperature-units-celsius = Wikselje nei Celsius
-newtab-weather-menu-hide-weather-v2 = Waar ferstopje
 newtab-weather-menu-hide-weather = It waar op nij ljepblêd ferstopje
 newtab-weather-menu-learn-more = Mear ynfo
 newtab-weather-menu-detect-my-location = Myn lokaasje detektearje
@@ -501,8 +537,18 @@ newtab-weather-opt-in-not-now =
     .label = No net
 newtab-weather-opt-in-yes =
     .label = Ja
+newtab-weather-opt-in-headline = Jo lokale waarsfoarútsjoch opfreegje
+newtab-weather-opt-in-use-location =
+    .label = Lokaasje brûke
+newtab-weather-opt-in-choose-location = Lokaasje kieze
 # We'll be showing static (fake) weather data if the user has not opted in to using their location
 newtab-weather-static-city = New York
+# "Highest" here refers to the highest temperature of the day
+newtab-weather-high =
+    .aria-label = Heech
+# "Lowest" here refers to the lowest temperature of the day
+newtab-weather-low =
+    .aria-label = Leech
 # Variables:
 #   $provider (string) - Service provider for weather data
 newtab-weather-see-forecast-description =
@@ -554,8 +600,16 @@ newtab-topic-selection-button-pick-interests = Kies jo ynteressen
 ## e.g. Following the travel section of stories.
 
 newtab-section-follow-button = Folgje
+# Variables:
+#   $topic (string) - Topic that the user can follow
+newtab-section-follow-button-label =
+    .aria-label = { $topic } folgje
 newtab-section-following-button = Folgjend
 newtab-section-unfollow-button = Untfolgje
+# Variables:
+#   $topic (string) - Topic that the user is following and can unfollow
+newtab-section-unfollow-button-label =
+    .aria-label = Folgjend: { $topic } net mear folgje
 # A modal may appear next to the Follow button, directing users to try out the feature
 newtab-section-follow-highlight-title = Jo feed ferfynje
 newtab-section-follow-highlight-subtitle = Folgje jo ynteressen om mear te sjen fan dêr’t jo wol oer meie.
@@ -567,6 +621,22 @@ newtab-section-follow-highlight-subtitle = Folgje jo ynteressen om mear te sjen 
 newtab-section-block-button = Blokkearje
 newtab-section-blocked-button = Blokkearre
 newtab-section-unblock-button = Blokkearring opheffe
+# Variables:
+#   $topic (string) - Name of topic that user is following
+newtab-section-follow-topic =
+    .aria-label = { $topic } folgje
+# Variables:
+#   $topic (string) - Name of topic that user is unfollowing
+newtab-section-unfollow-topic =
+    .aria-label = { $topic } net mear folgje
+# Variables:
+#   $topic (string) - Name of topic that user is blocking
+newtab-section-block-topic =
+    .aria-label = { $topic } blokkearje
+# Variables:
+#   $topic (string) - Name of topic that user is unblocking
+newtab-section-unblock-topic =
+    .aria-label = Blokkearring { $topic } opheffe
 
 ## Confirmation modal for blocking a section
 
@@ -576,6 +646,7 @@ newtab-section-confirm-block-topic-p2 = Blokkearre ûnderwerpen ferskine net mea
 # Variables:
 #   $topic (string) - Name of topic that user is blocking
 newtab-section-block-topic-button = { $topic } blokkearje
+newtab-section-block-cancel-button = Annulearje
 
 ## Strings for custom wallpaper highlight
 
@@ -596,6 +667,12 @@ newtab-custom-wallpaper-cta = Probearje
 newtab-new-user-custom-wallpaper-title = Kies in eftergrûn om { -brand-product-name } fan jo te meitsjen
 newtab-new-user-custom-wallpaper-subtitle = Lit elk nij ljepblêd as thús fiele mei oanpaste eftergrûnen en kleuren.
 newtab-new-user-custom-wallpaper-cta = No probearje
+
+## Strings for Nova wallpaper feature highlight
+
+newtab-wallpaper-feature-highlight-title = Der binne frisse nije eftergrûnen binnen
+newtab-wallpaper-feature-highlight-subtitle = Kies jo favoryt en lit elk nij ljepblêd as thús fiele.
+newtab-wallpaper-feature-highlight-cta = Eftergrûn kieze
 
 ## Strings for download mobile highlight
 
@@ -637,6 +714,20 @@ newtab-report-cancel = Annulearje
 newtab-report-submit = Yntsjinje
 newtab-toast-thanks-for-reporting =
     .message = Tank foar it melden.
+newtab-toast-widgets-hidden =
+    .message = Selektearje it potleadpiktogram om op elk momint widgets wer ta te foegjen.
+# Variables:
+#   $topic (string) - Topic that the user has followed
+newtab-section-toast-follow =
+    .message = Jo folgje no { $topic }.
+# Variables:
+#   $topic (string) - Topic that the user has unfollowed
+newtab-section-toast-unfollow =
+    .message = Jo folgje { $topic } net mear.
+# Variables:
+#   $topic (string) - Topic that the user has blocked
+newtab-section-toast-block =
+    .message = Jo sjogge gjin ferhalen oer { $topic } mear.
 
 ## Strings for task / to-do list productivity widget
 
@@ -651,13 +742,20 @@ newtab-widget-lists-label-beta =
 # Variables:
 #   $number (number) - Amount of list items marked complete
 newtab-widget-lists-completed-list = Foltôge ({ $number })
+newtab-widget-lists-celebration-headline = Goed wurk
+newtab-widget-lists-celebration-subhead = Alles dien
 newtab-widget-task-list-menu-copy = Kopiearje
 newtab-widget-lists-menu-edit = Listnamme bewurkje
+newtab-widget-lists-menu-edit2 =
+    .aria-label = Listnamme bewurkje
 newtab-widget-lists-menu-create = Nije list oanmeitsje
 newtab-widget-lists-menu-delete = Dizze list fuortsmite?
 newtab-widget-lists-menu-copy = List nei klamboerd kopiearje
-newtab-widget-lists-menu-hide = Alle listen ferstopje
 newtab-widget-lists-menu-learn-more = Mear ynfo
+newtab-widget-lists-button-add-item = In item tafoegje
+newtab-widget-lists-input-add-an-item2 =
+    .placeholder = In item tafoegje
+    .aria-label = In item tafoegje
 newtab-widget-lists-input-add-an-item =
     .placeholder = In item tafoegje
 newtab-widget-lists-input-error = Foegje tekst ta om in item ta te foegjen.
@@ -666,17 +764,44 @@ newtab-widget-lists-input-menu-move-up = Omheech ferpleatse
 newtab-widget-lists-input-menu-move-down = Omleech ferpleatse
 newtab-widget-lists-input-menu-delete = Fuortsmite
 newtab-widget-lists-input-menu-edit = Bewurkje
+newtab-widget-lists-input-menu-edit2 =
+    .aria-label = Item bewurkje
 # the + symbol emphasises the functionality of adding a new list
 newtab-widget-lists-dropdown-create =
     .label = + In nije list oanmeitsje
 newtab-widget-lists-name-label-default =
     .label = Takelist
+newtab-widget-lists-name-label-checklist =
+    .label = Kontrôlelist
 newtab-widget-lists-name-placeholder-default =
     .placeholder = Takelist
+newtab-widget-lists-name-placeholder-checklist2 =
+    .placeholder = Kontrôlelist
+    .aria-label = Listnamme bewurkje
+# The placeholder value of the name field for a newly created list
+newtab-widget-lists-name-placeholder-new2 =
+    .placeholder = Nije list
+    .aria-label = Listnamme bewurkje
+newtab-widget-lists-name-placeholder-checklist =
+    .placeholder = Kontrôlelist
 # The placeholder value of the name field for a newly created list
 newtab-widget-lists-name-placeholder-new =
     .placeholder = Nije list
 newtab-widget-section-title = Widgets
+newtab-widget-menu-hide = Widget ferstopje
+newtab-widget-menu-change-size = Grutte wizigje
+# Parent label for a submenu in the widget menu that reorders the widget
+# among its siblings. "Left" and "Right" appear as items inside this submenu.
+newtab-widget-menu-move = Ferpleatse
+# Submenu item under "Move"; moves the widget one position to the left.
+# RTL locales should translate this as "Right".
+newtab-widget-menu-move-left = Links
+# Submenu item under "Move"; moves the widget one position to the right.
+# RTL locales should translate this as "Left".
+newtab-widget-menu-move-right = Rjochts
+newtab-widget-size-small = Lyts
+newtab-widget-size-medium = Normaal
+newtab-widget-size-large = Grut
 # Tooltip for hide all widgets button
 newtab-widget-section-hide-all-button =
     .title = Widgets ferstopje
@@ -687,9 +812,19 @@ newtab-widget-section-maximize =
 newtab-widget-section-minimize =
     .title = Widgets minimalisearje
     .aria-label = Alle widgets ynklappe oant kompakte ôfmjitting
+newtab-widget-section-menu-button =
+    .title = Menu Widgets
+    .aria-label = Menu Widgets iepenje
+newtab-widget-add-widgets-button =
+    .aria-label = Widget tafoegje
+    .title = Widget tafoegje
+newtab-widget-section-menu-manage = Widgets beheare
+newtab-widget-section-menu-hide-all = Widgets ferstopje
+newtab-widget-section-menu-learn-more = Mear ynfo
+newtab-widget-section-feedback = Fertel ús wat jo tinke
+newtab-widget-lists-name-default = Kontrôlelist
 
-## Strings for timer productivity widget
-## When the timer ends, a system notification may be shown. Depending on which mode the timer is in, that message would be shown
+## Strings introduced by the Nova redesign of the Timer widget
 
 newtab-widget-timer-notification-title = Timer
 newtab-widget-timer-notification-focus = De fokustiid is foarby. Goed dien. Skoft?
@@ -707,7 +842,6 @@ newtab-widget-timer-reset =
     .title = Opnij inisjalisearje
 newtab-widget-timer-menu-notifications = Notifikaasjes útskeakelje
 newtab-widget-timer-menu-notifications-on = Notifikaasjes ynskeakelje
-newtab-widget-timer-menu-hide = Timer ferstopje
 newtab-widget-timer-menu-learn-more = Mear ynfo
 # The title displays above a set of top news headlines.
 newtab-daily-briefing-card-title = Topberjochten
@@ -718,12 +852,135 @@ newtab-daily-briefing-card-timestamp = { $minutes } min. lyn bywurke
 newtab-widget-message-title = Bliuw fokust mei listen en in ynboude timer
 # to-dos stands for "things to do".
 newtab-widget-message-copy = Fan rappe yn ’t sin bringers oant deistige taken, fokussesjes oant stretchskoft – bliuw by de taak en op tiid.
+# "Make Firefox yours" refers to about:newtab. The call to action here ("Try it now")
+# is to customize the new tab page with a background image or color from
+# the built-in wallpaper collection or uploading your own image.
+newtab-promo-card-title-addons = Meitsje { -brand-product-name } fan josels
+newtab-promo-card-body-addons = Kies in eftergrûn út ús kolleksje, of meitsje jo eigen.
+newtab-promo-card-cta-addons = No probearje
 newtab-promo-card-title = { -brand-product-name } stypje
 newtab-promo-card-body = Us sponsors stypje ús misje om in better web te bouwen
 newtab-promo-card-cta = Mear ynfo
 newtab-promo-card-dismiss-button =
     .title = Slute
     .aria-label = Slute
+
+## Strings introduced by the Nova redesign of the Timer widget
+
+# Variables:
+#   $minutes (number) - The currently selected timer duration in minutes
+newtab-widget-timer-start-aria =
+    .aria-label =
+        { $minutes ->
+            [one] { $minutes }-minút-timer starte
+           *[other] { $minutes }-minuten-timer starte
+        }
+newtab-widget-timer-pause-aria =
+    .aria-label = Timer pauzearje
+# Variables:
+#   $minutes (number) - The currently selected timer duration in minutes
+newtab-widget-timer-spinbutton-name =
+    .aria-label =
+        { $minutes ->
+            [one] { $minutes } minút
+           *[other] { $minutes } minuten
+        }
+newtab-widget-timer-decrease-min =
+    .title = Mei 1 minút ferminderje
+newtab-widget-timer-increase-min =
+    .title = Mei 1 minút ferlingje
+newtab-widget-timer-mode-group =
+    .aria-label = Timermodus
+# Small label shown beneath the live time while the focus timer is running or paused.
+newtab-widget-timer-running-focus = Fokus
+# Small label shown beneath the live time while the break timer is running or paused.
+newtab-widget-timer-running-break = Skoft
+# Context-menu item to hide the Timer widget. Replaces the shared "Hide widget"
+# copy with a widget-specific string per the Nova design.
+newtab-widget-timer-menu-hide = Timer ferstopje
+# Heading shown inside the Timer widget after a focus session ends.
+newtab-widget-timer-celebration-heading-focus = Moai wurk
+# Heading shown inside the Timer widget after a break session ends.
+newtab-widget-timer-celebration-heading-break = Jo skoft is foarby
+# Message shown inside the Timer widget after a focus session ends.
+newtab-widget-timer-celebration-message-focus = Skoft nedich?
+# Message shown inside the Timer widget after a break session ends.
+newtab-widget-timer-celebration-message-break = Klear om te fokusjen?
+
+## Sports widget
+
+newtab-sports-widget-menu-follow-teams = Teams folgje
+newtab-sports-widget-menu-view-schedule = Tiidskema besjen
+newtab-sports-widget-menu-view-upcoming = Folgjende toane
+newtab-sports-widget-menu-view-results = Resultaten besjen
+# Milestone dates (e.g. group stage, semifinals, etc.). Refers to calendar dates.
+newtab-sports-widget-menu-key-dates = Wichtige datums
+newtab-sports-widget-menu-learn-more = Mear ynfo
+# “Keep tabs on” is an informal expression meaning to stay updated on, stay informed on, or regularly follow something (in this case, World Cup matches and updates).
+newtab-sports-widget-keep-tabs = Hâld it WK yn ’e gaten
+newtab-sports-widget-get-updates = Untfang live wedstriidupdates en mear.
+newtab-sports-widget-view-schedule =
+    .label = Tiidskema besjen
+newtab-sports-widget-follow-teams =
+    .label = Teams folgje
+newtab-sports-widget-view-matches =
+    .label = Wedstriden besjen
+# Variables:
+#   $number (number) - Maximum number of teams a user can choose to follow in the team selection state
+newtab-sports-widget-follow-teams-title =
+    { $number ->
+        [one] Folgje maksimaal { $number } team
+       *[other] Folgje maksimaal { $number } teams
+    }
+newtab-sports-widget-choose-wallpaper =
+    .label = Kies in eftergrûn
+newtab-sports-widget-skip = Oerslaan
+newtab-sports-widget-search-country =
+    .placeholder = Lân sykje
+    .aria-label = Lân sykje
+newtab-sports-widget-cancel = Annulearje
+newtab-sports-widget-back-button =
+    .aria-label = Tebek
+newtab-sports-widget-done-button =
+    .label = Dien
+newtab-sports-widget-group-stage = Groepsfase
+newtab-sports-widget-round-32 = Ronde fan 32
+newtab-sports-widget-round-16 = Ronde fan 16
+newtab-sports-widget-quarter-finals = Kwartfinalen
+# The "LIVE" string is meant to be uppercase in English, but other languages and locales may vary in how they handle this.
+newtab-sports-widget-live = LIVE
+newtab-custom-widget-live-refresh =
+    .title = Skoares ferfarskje
+    .aria-label = Skoares ferfarskje
+# Milestone dates (e.g. group stage, semifinals, etc.). Refers to calendar dates.
+newtab-sports-widget-key-dates = Wichtige datums
+newtab-sports-widget-upcoming = Ynkoarten
+# Used for a match currently ongoing
+newtab-sports-widget-now = No
+newtab-sports-widget-results = Resultaten
+newtab-sports-widget-semi-finals = Heale finalen
+newtab-sports-widget-bronze-finals = Treastfinale
+# Final is the final match for 1st place.
+newtab-sports-widget-final = Finale
+# Variables:
+#   $start (Date) - Start date of a tournament stage
+#   $end (Date) - End date of a tournament stage
+newtab-sports-widget-key-date-range = { DATETIME($start, day: "numeric", month: "short") } – { DATETIME($end, day: "numeric", month: "short") }
+# Variables:
+#   $date (Date) - Date of a single tournament event
+newtab-sports-widget-key-date = { DATETIME($date, day: "numeric", month: "short") }
+newtab-sports-widget-delayed = Fertrage
+newtab-sports-widget-postponed = Utsteld
+newtab-sports-widget-suspended = Underbrutsen
+newtab-sports-widget-cancelled = Annulearre
+newtab-sports-widget-information = Ynformaasje oer de wedstriid
+newtab-sports-widget-no-live-data = Livewedstriidgegevens wurde op dit stuit net bywurke
+newtab-sports-widget-view-results-link = Resultaten besjen
+newtab-sports-widget-third-place = Tredde plak
+# Runner-up is the team in 2nd place.
+newtab-sports-widget-runner-up = Twadde plak
+newtab-sports-widget-champions = Kampioen
+newtab-sports-widget-world-cup-champions = Wrâldkampioen 2026
 
 ## Strings for activation window message variants. In certain experiment configurations,
 ## the strings from these variants may be displayed in a message below the search input
@@ -746,3 +1003,59 @@ newtab-activation-window-message-customization-focus-primary-button =
 # the existing widgetry that appears on it.
 newtab-activation-window-message-values-focus-header = Dizze romte spilet neffens jo regels
 newtab-activation-window-message-values-focus-message = Mei { -brand-product-name } kinne jo sneupe lykas jo dat wolle, mei in mear persoanlike manier om jo dei online te begjinnen. Meitsje { -brand-product-name } jo eigen.
+
+## Strings for the Clock widget
+
+# Context menu item: toggle the clock card off.
+newtab-clock-widget-menu-hide = Klok ferstopje
+newtab-clock-widget-menu-learn-more = Mear ynfo
+newtab-clock-widget-menu-edit = Klokken bewurkje
+newtab-clock-widget-menu-switch-to-12h = Omskeakelje nei 12-oersformaat
+newtab-clock-widget-menu-switch-to-24h = Omskeakelje nei 24-oersformaat
+newtab-clock-widget-label-your-clocks = Jo klokken
+newtab-clock-widget-search-location-input =
+    .label = Lokaasje
+    .placeholder = Stêd sykje
+    .aria-label = Stêd sykje
+# "Nickname (optional)" refers to a custom, user-defined label for a saved location
+# (e.g., "Home", "Office", or "School") to make it easier to recognize.
+# Not to be translated as a legal name, username, or alias used for identity verification.
+newtab-clock-widget-input-nickname =
+    .label = Bynamme (opsjoneel)
+    .placeholder = Foegje in bynamme ta
+    .aria-label = Bynamme (opsjoneel)
+# "Add new clock" is an icon-only button in the widget toolbar — the
+# attributes are consumed as tooltip/screen-reader label only. The button
+# never renders visible text.
+newtab-clock-widget-button-add =
+    .title = Nije klok tafoegje
+    .aria-label = Nije klok tafoegje
+newtab-clock-widget-button-add-clock = Tafoegje
+newtab-clock-widget-button-cancel = Annulearje
+newtab-clock-widget-button-back =
+    .title = Tebek
+    .aria-label = Tebek
+newtab-clock-widget-button-edit-clock =
+    .title = Klok bewurkje
+    .aria-label = Klok bewurkje
+newtab-clock-widget-button-save = Bewarje
+newtab-clock-widget-button-remove-clock =
+    .title = Klok fuortsmite
+    .aria-label = Klok fuortsmite
+newtab-clock-widget-add-clock-form =
+    .aria-label = Klok tafoegje
+newtab-clock-widget-edit-clock-form =
+    .aria-label = Klok bewurkje
+# "Search results" is the accessible label for the listbox dropdown that appears
+# below the location search field, listing matching cities as the user types.
+# It means "results of the search", not "search within the results".
+newtab-clock-widget-search-results =
+    .aria-label = Sykresultaten
+# "Open menu for clock" is an icon-only button in the widget toolbar — the
+# attributes are consumed as tooltip/screen-reader label only. The button
+# never renders visible text.
+newtab-clock-widget-menu-button =
+    .title = Menu foar klok iepenje
+    .aria-label = Menu foar klok iepenje
+# $nickname (String) - The user-defined nickname for a saved clock location (e.g., "Home", "Office").
+newtab-clock-widget-label-nickname-with-value = Bynamme: { $nickname }

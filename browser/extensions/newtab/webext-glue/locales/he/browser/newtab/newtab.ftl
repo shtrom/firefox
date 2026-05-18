@@ -8,9 +8,13 @@
 newtab-page-title = לשונית חדשה
 newtab-settings-button =
     .title = התאמה אישית של דף הלשונית החדשה שלך
+#  (developer note): @nova-cleanup(remove-string): Remove newtab-customize-panel-icon-button once Nova lands, will be using newtab-customize-panel-label instead
 newtab-customize-panel-icon-button =
     .title = התאמה אישית של דף זה
+#  (developer note): @nova-cleanup(remove-string): Remove newtab-customize-panel-icon-button-label once Nova lands, will be using newtab-customize-panel-label instead
 newtab-customize-panel-icon-button-label = התאמה אישית
+newtab-customize-panel-label =
+    .label = התאמה אישית
 newtab-personalize-settings-icon-label =
     .title = התאמה אישית של דף הלשונית החדשה
     .aria-label = הגדרות
@@ -143,6 +147,9 @@ newtab-menu-report = דיווח
 # Context menu option to personalize New Tab recommended stories by blocking a section of stories,
 # e.g. "Sports". "Block" is a verb here.
 newtab-menu-section-block = חסימה
+# "Follow", "unfollow", and "following" are social media terms that refer to subscribing to or unsubscribing from a section of stories.
+# e.g. Following the travel section of stories.
+newtab-menu-section-unfollow-topic = ביטול המעקב
 # "Follow", "unfollow", and "following" are social media terms that refer to subscribing to or unsubscribing from a section of stories.
 # e.g. Following the travel section of stories.
 newtab-menu-section-unfollow = ביטול המעקב אחרי הנושא
@@ -305,9 +312,23 @@ newtab-error-fallback-refresh-link = נא לרענן את הדף כדי לנסו
 
 newtab-custom-shortcuts-title = קיצורי דרך
 newtab-custom-shortcuts-subtitle = אתרים ששמרת או ביקרת בהם
+#  (developer note): @nova-cleanup(remove-string): Remove old string once Nova lands. The newtab-custom-shortcuts-nova string will take over
 newtab-custom-shortcuts-toggle =
     .label = קיצורי דרך
     .description = אתרים ששמרת או ביקרת בהם
+newtab-custom-shortcuts-nova =
+    .label = קיצורי דרך
+newtab-custom-row-description =
+    .description = מספר שורות
+# Variables
+#   $num (number) - Number of rows to display
+#  (developer note): @nova-cleanup(remove-string): Remove string once Nova lands. We won't be using "row"/"rows" anymore for the dropdown
+newtab-custom-row-selector2 =
+    .label =
+        { $num ->
+            [one] שורה אחת
+           *[other] { $num } שורות
+        }
 # Variables
 #   $num (number) - Number of rows to display
 newtab-custom-row-selector =
@@ -318,9 +339,12 @@ newtab-custom-row-selector =
 newtab-custom-sponsored-sites = קיצורי דרך ממומנים
 newtab-custom-pocket-title = מומלץ על־ידי { -pocket-brand-name }
 newtab-custom-pocket-subtitle = תוכן יוצא דופן שנבחר בקפידה על־ידי { -pocket-brand-name }, חלק ממשפחת { -brand-product-name }
+#  (developer note): @nova-cleanup(remove-string): Remove string once Nova lands. We won't be having a description under "Recommended stories" anymore
 newtab-custom-stories-toggle =
     .label = סיפורים מומלצים
     .description = תוכן יוצא דופן שנבחר בקפידה על־ידי משפחת { -brand-product-name }
+newtab-recommended-stories-toggle =
+    .label = סיפורים מומלצים
 newtab-custom-stories-personalized-toggle =
     .label = סיפורים
 newtab-custom-stories-personalized-checkbox-label = סיפורים מותאמים אישית המבוססים על הפעילות שלך
@@ -337,6 +361,10 @@ newtab-custom-widget-lists-toggle =
     .label = רשימות
 newtab-custom-widget-timer-toggle =
     .label = שעון עצר
+newtab-custom-widget-sports-toggle =
+    .label = מונדיאל
+newtab-custom-widget-clock-toggle =
+    .label = שעון
 newtab-custom-widget-section-title = ווידג’טים
 newtab-custom-widget-section-toggle =
     .label = ווידג’טים
@@ -354,8 +382,12 @@ newtab-custom-settings = ניהול הגדרות נוספות
 
 newtab-wallpaper-title = תמונות רקע
 newtab-wallpaper-reset = איפוס לברירת מחדל
+#  (developer note): @nova-cleanup(remove-string): Remove old "Upload an image" string once Nova lands. The new "Add an image"  string will take over
 newtab-wallpaper-upload-image = העלאת תמונה
+newtab-wallpaper-add-an-image = הוספת תמונה
 newtab-wallpaper-custom-color = בחירת צבע
+newtab-wallpaper-toggle-title =
+    .label = תמונות רקע
 # Variables
 #   $file_size (number) - The number of the maximum image file size (in MB) that may be uploaded
 newtab-wallpaper-error-max-file-size = התמונה חרגה ממגבלת גודל הקובץ של { $file_size } מ״ב. נא לנסות להעלות קובץ קטן יותר.
@@ -378,7 +410,9 @@ newtab-wallpaper-light-fox-anniversary = שועל בשדה עשב עם נוף ה
 
 ## Solid Colors
 
+#  (developer note): @nova-cleanup(remove-string): Remove old "Solid colors" string once Nova lands. The simplified "Colors" string will take over
 newtab-wallpaper-category-title-colors = צבעים אחידים
+newtab-wallpaper-colors = צבעים
 newtab-wallpaper-blue = כחול
 newtab-wallpaper-light-blue = כחול בהיר
 newtab-wallpaper-light-purple = סגול בהיר
@@ -469,6 +503,9 @@ newtab-weather-menu-change-location = שינוי מקום
 newtab-weather-change-location-search-input-placeholder =
     .placeholder = חיפוש מקום
     .aria-label = חיפוש מקום
+# "Current" refers to the user's physical/geographic location detected via geolocation.
+newtab-weather-change-location-search-use-current =
+    .label = שימוש במיקום הנוכחי
 newtab-weather-menu-weather-display = תצוגת מזג אוויר
 newtab-weather-todays-forecast = תחזית היום
 newtab-weather-see-full-forecast = הצגת תחזית מלאה
@@ -484,7 +521,6 @@ newtab-weather-menu-temperature-option-fahrenheit = פרנהייט
 newtab-weather-menu-temperature-option-celsius = צלזיוס
 newtab-weather-menu-change-temperature-units-fahrenheit = מעבר לפרנהייט
 newtab-weather-menu-change-temperature-units-celsius = מעבר לצלזיוס
-newtab-weather-menu-hide-weather-v2 = הסתרת מזג האוויר
 newtab-weather-menu-hide-weather = הסתרת מזג האוויר בלשונית החדשה
 newtab-weather-menu-learn-more = מידע נוסף
 newtab-weather-menu-detect-my-location = זיהוי המיקום שלי
@@ -495,8 +531,18 @@ newtab-weather-opt-in-not-now =
     .label = לא כעת
 newtab-weather-opt-in-yes =
     .label = כן
+newtab-weather-opt-in-headline = קבלת תחזית מזג האוויר המקומית שלך
+newtab-weather-opt-in-use-location =
+    .label = שימוש במיקום
+newtab-weather-opt-in-choose-location = בחירת מיקום
 # We'll be showing static (fake) weather data if the user has not opted in to using their location
 newtab-weather-static-city = New York City
+# "Highest" here refers to the highest temperature of the day
+newtab-weather-high =
+    .aria-label = גבוה
+# "Lowest" here refers to the lowest temperature of the day
+newtab-weather-low =
+    .aria-label = נמוך
 # Variables:
 #   $provider (string) - Service provider for weather data
 newtab-weather-see-forecast-description =
@@ -548,8 +594,16 @@ newtab-topic-selection-button-pick-interests = בחירת תחומי העניי�
 ## e.g. Following the travel section of stories.
 
 newtab-section-follow-button = לעקוב
+# Variables:
+#   $topic (string) - Topic that the user can follow
+newtab-section-follow-button-label =
+    .aria-label = מעקב אחרי { $topic }
 newtab-section-following-button = במעקב
 newtab-section-unfollow-button = ביטול המעקב
+# Variables:
+#   $topic (string) - Topic that the user is following and can unfollow
+newtab-section-unfollow-button-label =
+    .aria-label = במעקב: ביטול מעקב אחרי { $topic }
 # A modal may appear next to the Follow button, directing users to try out the feature
 newtab-section-follow-highlight-title = כיוונון הפיד שלך
 newtab-section-follow-highlight-subtitle = ניתן לעקוב אחר תחומי העניין שלך כדי לראות עוד ממה שאהוב עליך.
@@ -561,6 +615,22 @@ newtab-section-follow-highlight-subtitle = ניתן לעקוב אחר תחומי
 newtab-section-block-button = חסימה
 newtab-section-blocked-button = חסום
 newtab-section-unblock-button = הסרת חסימה
+# Variables:
+#   $topic (string) - Name of topic that user is following
+newtab-section-follow-topic =
+    .aria-label = מעקב אחרי { $topic }
+# Variables:
+#   $topic (string) - Name of topic that user is unfollowing
+newtab-section-unfollow-topic =
+    .aria-label = ביטול מעקב אחרי { $topic }
+# Variables:
+#   $topic (string) - Name of topic that user is blocking
+newtab-section-block-topic =
+    .aria-label = חסימת { $topic }
+# Variables:
+#   $topic (string) - Name of topic that user is unblocking
+newtab-section-unblock-topic =
+    .aria-label = ביטול חסימת { $topic }
 
 ## Confirmation modal for blocking a section
 
@@ -570,6 +640,7 @@ newtab-section-confirm-block-topic-p2 = נושאים חסומים לא יופי�
 # Variables:
 #   $topic (string) - Name of topic that user is blocking
 newtab-section-block-topic-button = חסימת { $topic }
+newtab-section-block-cancel-button = ביטול
 
 ## Strings for custom wallpaper highlight
 
@@ -590,6 +661,12 @@ newtab-custom-wallpaper-cta = בואו ננסה
 newtab-new-user-custom-wallpaper-title = ניתן לבחור בטפט כדי להפוך את { -brand-product-name } לשלך
 newtab-new-user-custom-wallpaper-subtitle = כל לשונית חדשה יכולה לקבל תחושה של בית עם טפטים וצבעים מותאמים אישית.
 newtab-new-user-custom-wallpaper-cta = לנסות עכשיו
+
+## Strings for Nova wallpaper feature highlight
+
+newtab-wallpaper-feature-highlight-title = תמונות רקע חדשות ורעננות זה עתה הגיעו
+newtab-wallpaper-feature-highlight-subtitle = ניתן לבחור במועדף עליך ולגרום לכל לשונית חדשה להרגיש כמו בית.
+newtab-wallpaper-feature-highlight-cta = בחירת תמונת רקע
 
 ## Strings for download mobile highlight
 
@@ -631,6 +708,20 @@ newtab-report-cancel = ביטול
 newtab-report-submit = שליחה
 newtab-toast-thanks-for-reporting =
     .message = תודה שדיווחת על זה.
+newtab-toast-widgets-hidden =
+    .message = ניתן ללחוץ על סמל העיפרון כדי להוסיף ווידג’טים בחזרה בכל עת.
+# Variables:
+#   $topic (string) - Topic that the user has followed
+newtab-section-toast-follow =
+    .message = התחלת לעקוב אחרי { $topic }.
+# Variables:
+#   $topic (string) - Topic that the user has unfollowed
+newtab-section-toast-unfollow =
+    .message = הפסקת לעקוב אחרי { $topic }.
+# Variables:
+#   $topic (string) - Topic that the user has blocked
+newtab-section-toast-block =
+    .message = לא יוצגו יותר סיפורים בנושא { $topic }.
 
 ## Strings for task / to-do list productivity widget
 
@@ -645,13 +736,20 @@ newtab-widget-lists-label-beta =
 # Variables:
 #   $number (number) - Amount of list items marked complete
 newtab-widget-lists-completed-list = הושלמו ({ $number })
+newtab-widget-lists-celebration-headline = עבודה יפה
+newtab-widget-lists-celebration-subhead = אין משימות פתוחות
 newtab-widget-task-list-menu-copy = העתקה
 newtab-widget-lists-menu-edit = עריכת שם הרשימה
+newtab-widget-lists-menu-edit2 =
+    .aria-label = עריכת שם הרשימה
 newtab-widget-lists-menu-create = יצירת רשימה חדשה
 newtab-widget-lists-menu-delete = מחיקת רשימה זו
 newtab-widget-lists-menu-copy = העתקת הרשימה ללוח העריכה
-newtab-widget-lists-menu-hide = הסתרת כל הרשימות
 newtab-widget-lists-menu-learn-more = מידע נוסף
+newtab-widget-lists-button-add-item = הוספת פריט
+newtab-widget-lists-input-add-an-item2 =
+    .placeholder = הוספת פריט
+    .aria-label = הוספת פריט
 newtab-widget-lists-input-add-an-item =
     .placeholder = הוספת פריט
 newtab-widget-lists-input-error = נא לכלול טקסט כדי להוסיף פריט.
@@ -660,17 +758,44 @@ newtab-widget-lists-input-menu-move-up = להזיז מעלה
 newtab-widget-lists-input-menu-move-down = להזיז מטה
 newtab-widget-lists-input-menu-delete = מחיקה
 newtab-widget-lists-input-menu-edit = עריכה
+newtab-widget-lists-input-menu-edit2 =
+    .aria-label = עריכת פריט
 # the + symbol emphasises the functionality of adding a new list
 newtab-widget-lists-dropdown-create =
     .label = + יצירת רשימה חדשה
 newtab-widget-lists-name-label-default =
     .label = רשימת משימות
+newtab-widget-lists-name-label-checklist =
+    .label = רשימת תיוג
 newtab-widget-lists-name-placeholder-default =
     .placeholder = רשימת משימות
+newtab-widget-lists-name-placeholder-checklist2 =
+    .placeholder = רשימת תיוג
+    .aria-label = עריכת שם הרשימה
+# The placeholder value of the name field for a newly created list
+newtab-widget-lists-name-placeholder-new2 =
+    .placeholder = רשימה חדשה
+    .aria-label = עריכת שם הרשימה
+newtab-widget-lists-name-placeholder-checklist =
+    .placeholder = רשימת תיוג
 # The placeholder value of the name field for a newly created list
 newtab-widget-lists-name-placeholder-new =
     .placeholder = רשימה חדשה
 newtab-widget-section-title = ווידג’טים
+newtab-widget-menu-hide = הסתרת הווידג׳ט
+newtab-widget-menu-change-size = שינוי גודל
+# Parent label for a submenu in the widget menu that reorders the widget
+# among its siblings. "Left" and "Right" appear as items inside this submenu.
+newtab-widget-menu-move = העברה
+# Submenu item under "Move"; moves the widget one position to the left.
+# RTL locales should translate this as "Right".
+newtab-widget-menu-move-left = שמאלה
+# Submenu item under "Move"; moves the widget one position to the right.
+# RTL locales should translate this as "Left".
+newtab-widget-menu-move-right = ימינה
+newtab-widget-size-small = קטן
+newtab-widget-size-medium = בינוני
+newtab-widget-size-large = גדול
 # Tooltip for hide all widgets button
 newtab-widget-section-hide-all-button =
     .title = הסתרת ווידג׳טים
@@ -681,9 +806,19 @@ newtab-widget-section-maximize =
 newtab-widget-section-minimize =
     .title = מזעור ווידג׳טים
     .aria-label = צמצום כל הווידג׳טים לגודל קומפקטי
+newtab-widget-section-menu-button =
+    .title = תפריט ווידג’טים
+    .aria-label = פתיחת תפריט ווידג’טים
+newtab-widget-add-widgets-button =
+    .aria-label = הוספת ווידג׳ט
+    .title = הוספת ווידג׳ט
+newtab-widget-section-menu-manage = ניהול ווידג’טים
+newtab-widget-section-menu-hide-all = הסתרת ווידג׳טים
+newtab-widget-section-menu-learn-more = מידע נוסף
+newtab-widget-section-feedback = ספרו לנו מה דעתכם
+newtab-widget-lists-name-default = רשימת תיוג
 
-## Strings for timer productivity widget
-## When the timer ends, a system notification may be shown. Depending on which mode the timer is in, that message would be shown
+## Strings introduced by the Nova redesign of the Timer widget
 
 newtab-widget-timer-notification-title = שעון עצר
 newtab-widget-timer-notification-focus = זמן הריכוז נגמר. עבודה יפה. יש לך צורך בהפסקה?
@@ -701,7 +836,6 @@ newtab-widget-timer-reset =
     .title = איפוס
 newtab-widget-timer-menu-notifications = כיבוי התרעות
 newtab-widget-timer-menu-notifications-on = הפעלת התרעות
-newtab-widget-timer-menu-hide = הסתרת שעון עצר
 newtab-widget-timer-menu-learn-more = מידע נוסף
 # The title displays above a set of top news headlines.
 newtab-daily-briefing-card-title = כותרות מובילות
@@ -716,12 +850,135 @@ newtab-daily-briefing-card-timestamp =
 newtab-widget-message-title = להישאר מרוכז בעזרת רשימות ושעון עצר מובנה
 # to-dos stands for "things to do".
 newtab-widget-message-copy = מתזכורות מהירות ועד למשימות יומיות, מזמני התמקדות ועד להפסקות להתמתחות - כך ניתן להספיק את המשימות בזמן.
+# "Make Firefox yours" refers to about:newtab. The call to action here ("Try it now")
+# is to customize the new tab page with a background image or color from
+# the built-in wallpaper collection or uploading your own image.
+newtab-promo-card-title-addons = להפוך את { -brand-product-name } לשלך
+newtab-promo-card-body-addons = ניתן לבחור תמונת רקע מהאוסף שלנו, או ליצור אחד משלך.
+newtab-promo-card-cta-addons = לנסות עכשיו
 newtab-promo-card-title = תמיכה ב־{ -brand-product-name }
 newtab-promo-card-body = נותני החסות שלנו תומכים במשימה שלנו לבנות אינטרנט טוב יותר
 newtab-promo-card-cta = מידע נוסף
 newtab-promo-card-dismiss-button =
     .title = סגירה
     .aria-label = סגירה
+
+## Strings introduced by the Nova redesign of the Timer widget
+
+# Variables:
+#   $minutes (number) - The currently selected timer duration in minutes
+newtab-widget-timer-start-aria =
+    .aria-label =
+        { $minutes ->
+            [one] הפעלת שעון עצר של דקה אחת
+           *[other] הפעלת שעון עצר של { $minutes } דקות
+        }
+newtab-widget-timer-pause-aria =
+    .aria-label = השהיית שעון עצר
+# Variables:
+#   $minutes (number) - The currently selected timer duration in minutes
+newtab-widget-timer-spinbutton-name =
+    .aria-label =
+        { $minutes ->
+            [one] דקה אחת
+           *[other] { $minutes } דקות
+        }
+newtab-widget-timer-decrease-min =
+    .title = הפחתה של דקה אחת
+newtab-widget-timer-increase-min =
+    .title = הוספה של דקה אחת
+newtab-widget-timer-mode-group =
+    .aria-label = מצב שעון עצר
+# Small label shown beneath the live time while the focus timer is running or paused.
+newtab-widget-timer-running-focus = ריכוז
+# Small label shown beneath the live time while the break timer is running or paused.
+newtab-widget-timer-running-break = הפסקה
+# Context-menu item to hide the Timer widget. Replaces the shared "Hide widget"
+# copy with a widget-specific string per the Nova design.
+newtab-widget-timer-menu-hide = הסתרת שעון עצר
+# Heading shown inside the Timer widget after a focus session ends.
+newtab-widget-timer-celebration-heading-focus = עבודה טובה
+# Heading shown inside the Timer widget after a break session ends.
+newtab-widget-timer-celebration-heading-break = ההפסקה שלך הסתיימה
+# Message shown inside the Timer widget after a focus session ends.
+newtab-widget-timer-celebration-message-focus = יש לך צורך בהפסקה?
+# Message shown inside the Timer widget after a break session ends.
+newtab-widget-timer-celebration-message-break = נחזור להתרכז?
+
+## Sports widget
+
+newtab-sports-widget-menu-follow-teams = מעקב אחרי נבחרות
+newtab-sports-widget-menu-view-schedule = הצגת לוח זמנים
+newtab-sports-widget-menu-view-upcoming = הצגת המשחקים הבאים
+newtab-sports-widget-menu-view-results = הצגת תוצאות
+# Milestone dates (e.g. group stage, semifinals, etc.). Refers to calendar dates.
+newtab-sports-widget-menu-key-dates = תאריכי מפתח
+newtab-sports-widget-menu-learn-more = מידע נוסף
+# “Keep tabs on” is an informal expression meaning to stay updated on, stay informed on, or regularly follow something (in this case, World Cup matches and updates).
+newtab-sports-widget-keep-tabs = מעקב אחרי המונדיאל
+newtab-sports-widget-get-updates = קבלת עדכונים חיים על משחקים ועוד.
+newtab-sports-widget-view-schedule =
+    .label = הצגת לוח זמנים
+newtab-sports-widget-follow-teams =
+    .label = מעקב אחרי נבחרות
+newtab-sports-widget-view-matches =
+    .label = הצגת משחקים
+# Variables:
+#   $number (number) - Maximum number of teams a user can choose to follow in the team selection state
+newtab-sports-widget-follow-teams-title =
+    { $number ->
+        [one] מעקב אחר נבחרת אחת
+       *[other] מעקב אחר עד { $number } נבחרות
+    }
+newtab-sports-widget-choose-wallpaper =
+    .label = בחירת תמונת רקע
+newtab-sports-widget-skip = דילוג
+newtab-sports-widget-search-country =
+    .placeholder = חיפוש מדינה
+    .aria-label = חיפוש מדינה
+newtab-sports-widget-cancel = ביטול
+newtab-sports-widget-back-button =
+    .aria-label = חזרה
+newtab-sports-widget-done-button =
+    .label = סיום
+newtab-sports-widget-group-stage = שלב הבתים
+newtab-sports-widget-round-32 = סיבוב 32 האחרונות
+newtab-sports-widget-round-16 = שמינית הגמר
+newtab-sports-widget-quarter-finals = רבע גמר
+# The "LIVE" string is meant to be uppercase in English, but other languages and locales may vary in how they handle this.
+newtab-sports-widget-live = חי
+newtab-custom-widget-live-refresh =
+    .title = ריענון תוצאות
+    .aria-label = ריענון תוצאות
+# Milestone dates (e.g. group stage, semifinals, etc.). Refers to calendar dates.
+newtab-sports-widget-key-dates = תאריכי מפתח
+newtab-sports-widget-upcoming = המשחקים הבאים
+# Used for a match currently ongoing
+newtab-sports-widget-now = עכשיו
+newtab-sports-widget-results = תוצאות
+newtab-sports-widget-semi-finals = חצי גמר
+newtab-sports-widget-bronze-finals = משחק על מדליית הארד
+# Final is the final match for 1st place.
+newtab-sports-widget-final = גמר
+# Variables:
+#   $start (Date) - Start date of a tournament stage
+#   $end (Date) - End date of a tournament stage
+newtab-sports-widget-key-date-range = { DATETIME($start, month: "short", day: "numeric") } – { DATETIME($end, month: "short", day: "numeric") }
+# Variables:
+#   $date (Date) - Date of a single tournament event
+newtab-sports-widget-key-date = { DATETIME($date, month: "short", day: "numeric") }
+newtab-sports-widget-delayed = מתעכב
+newtab-sports-widget-postponed = נדחה
+newtab-sports-widget-suspended = מושהה
+newtab-sports-widget-cancelled = בוטל
+newtab-sports-widget-information = מידע על המשחק
+newtab-sports-widget-no-live-data = נתוני המשחק החי אינם מתעדכנים כרגע
+newtab-sports-widget-view-results-link = הצגת תוצאות
+newtab-sports-widget-third-place = מקום שלישי
+# Runner-up is the team in 2nd place.
+newtab-sports-widget-runner-up = סגנית האלופה
+newtab-sports-widget-champions = אלופים
+newtab-sports-widget-world-cup-champions = אלופי המונדיאל 2026
 
 ## Strings for activation window message variants. In certain experiment configurations,
 ## the strings from these variants may be displayed in a message below the search input
@@ -744,3 +1001,59 @@ newtab-activation-window-message-customization-focus-primary-button =
 # the existing widgetry that appears on it.
 newtab-activation-window-message-values-focus-header = המרחב הזה פועל לפי הכללים שלך
 newtab-activation-window-message-values-focus-message = ‏{ -brand-product-name } מאפשר לך לגלוש בדרך שלך, עם דרך אישית יותר להתחיל את היום שלך באינטרנט. ניתן להפוך את { -brand-product-name } לשלך.
+
+## Strings for the Clock widget
+
+# Context menu item: toggle the clock card off.
+newtab-clock-widget-menu-hide = הסתרת השעון
+newtab-clock-widget-menu-learn-more = מידע נוסף
+newtab-clock-widget-menu-edit = עריכת שעונים
+newtab-clock-widget-menu-switch-to-12h = מעבר לתבנית של 12 שעות
+newtab-clock-widget-menu-switch-to-24h = מעבר לתבנית של 24 שעות
+newtab-clock-widget-label-your-clocks = השעונים שלך
+newtab-clock-widget-search-location-input =
+    .label = מיקום
+    .placeholder = חיפוש אחר עיר
+    .aria-label = חיפוש אחר עיר
+# "Nickname (optional)" refers to a custom, user-defined label for a saved location
+# (e.g., "Home", "Office", or "School") to make it easier to recognize.
+# Not to be translated as a legal name, username, or alias used for identity verification.
+newtab-clock-widget-input-nickname =
+    .label = כינוי (אופציונלי)
+    .placeholder = הוספת כינוי
+    .aria-label = כינוי (אופציונלי)
+# "Add new clock" is an icon-only button in the widget toolbar — the
+# attributes are consumed as tooltip/screen-reader label only. The button
+# never renders visible text.
+newtab-clock-widget-button-add =
+    .title = הוספת שעון חדש
+    .aria-label = הוספת שעון חדש
+newtab-clock-widget-button-add-clock = הוספה
+newtab-clock-widget-button-cancel = ביטול
+newtab-clock-widget-button-back =
+    .title = חזרה
+    .aria-label = חזרה
+newtab-clock-widget-button-edit-clock =
+    .title = עריכת שעון
+    .aria-label = עריכת שעון
+newtab-clock-widget-button-save = שמירה
+newtab-clock-widget-button-remove-clock =
+    .title = הסרת שעון
+    .aria-label = הסרת שעון
+newtab-clock-widget-add-clock-form =
+    .aria-label = הוספת שעון
+newtab-clock-widget-edit-clock-form =
+    .aria-label = עריכת שעון
+# "Search results" is the accessible label for the listbox dropdown that appears
+# below the location search field, listing matching cities as the user types.
+# It means "results of the search", not "search within the results".
+newtab-clock-widget-search-results =
+    .aria-label = תוצאות חיפוש
+# "Open menu for clock" is an icon-only button in the widget toolbar — the
+# attributes are consumed as tooltip/screen-reader label only. The button
+# never renders visible text.
+newtab-clock-widget-menu-button =
+    .title = פתיחת תפריט עבור השעון
+    .aria-label = פתיחת תפריט עבור השעון
+# $nickname (String) - The user-defined nickname for a saved clock location (e.g., "Home", "Office").
+newtab-clock-widget-label-nickname-with-value = כינוי: { $nickname }

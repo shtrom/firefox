@@ -75,6 +75,14 @@
   list-style-image: url("chrome://browser/skin/synced-tabs.svg");
 }
 
+#send-tab-button {
+  list-style-image: url("chrome://browser/skin/send-tab-20.svg");
+
+  &:-moz-locale-dir(rtl) {
+    transform: scaleX(-1);
+  }
+}
+
 #characterencoding-button {
   list-style-image: url("chrome://browser/skin/characterEncoding.svg");
 }
@@ -196,11 +204,11 @@
 #sidebar-button {
   /* stylelint-disable-next-line media-query-no-invalid */
   @media not -moz-pref("sidebar.revamp") {
-    list-style-image: url("chrome://browser/skin/sidebars.svg");
+    list-style-image: url("chrome://browser/skin/sidebar-collapsed.svg");
 
     &:-moz-locale-dir(ltr)[sidebar-positionend],
     &:-moz-locale-dir(rtl):not([sidebar-positionend]) {
-      list-style-image: url("chrome://browser/skin/sidebars-right.svg");
+      list-style-image: url("chrome://browser/skin/sidebar-collapsed-right.svg");
     }
   }
 
@@ -323,11 +331,6 @@
 
   &:is([overflowedItem="true"], [cui-areatype="panel"]) {
     list-style-image: url("chrome://browser/content/ipprotection/assets/states/ipprotection-off.svg");
-
-    > .toolbarbutton-icon {
-      width: var(--icon-size-small);
-      height: var(--icon-size-small);
-    }
   }
 
   &.ipprotection-on {
@@ -337,6 +340,16 @@
     &:is([overflowedItem="true"], [cui-areatype="panel"]) {
       list-style-image: url("chrome://browser/content/ipprotection/assets/states/ipprotection-on.svg");
       fill: var(--icon-color-success);
+    }
+  }
+
+  &.ipprotection-network-error {
+    list-style-image: url("chrome://browser/content/logos/ipprotection-info.svg");
+    stroke: var(--icon-color-information);
+
+    &:is([overflowedItem="true"], [cui-areatype="panel"]) {
+      list-style-image: url("chrome://global/skin/icons/info-filled.svg");
+      fill: var(--icon-color-information);
     }
   }
 
@@ -360,6 +373,19 @@
       stroke: var(--icon-color-success);
     }
   }
+
+  &.ipprotection-paused {
+    list-style-image: url("chrome://browser/content/logos/ipprotection-paused.svg");
+    fill: var(--icon-color);
+
+    &:is([overflowedItem="true"], [cui-areatype="panel"]) {
+      list-style-image: url("chrome://browser/content/ipprotection/assets/states/ipprotection-paused.svg");
+    }
+  }
+}
+
+#tab-groups-button {
+  list-style-image: url("chrome://browser/skin/tabbrowser/tab-groups.svg");
 }
 
 #taskbar-tabs-favicon {
@@ -386,10 +412,10 @@
   }
 }
 
-#smartwindow-ask-button {
+#smartwindow-ask-button-inner {
   list-style-image: url("chrome://browser/content/aiwindow/assets/ask-icon.svg");
 
-  &.sidebar-is-open {
+  &[aria-expanded="true"] {
     list-style-image: url("chrome://global/skin/icons/close.svg");
   }
 }

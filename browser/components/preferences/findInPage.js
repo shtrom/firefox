@@ -78,7 +78,6 @@ var gSearchResultsPane = {
         window.requestIdleCallback(() => this.initializeCategories());
       });
     }
-    ensureScrollPadding();
   },
 
   /** @param {InputEvent} event */
@@ -86,17 +85,6 @@ var gSearchResultsPane = {
     // Ensure categories are initialized if idle callback didn't run sooo enough.
     await this.initializeCategories();
     this.searchFunction(event);
-  },
-
-  /**
-   * This stops the search input from moving, when typing in it
-   * changes which items in the prefs are visible.
-   */
-  fixInputPosition() {
-    let innerContainer = document.querySelector(".sticky-inner-container");
-    let width =
-      window.windowUtils.getBoundsWithoutFlushing(innerContainer).width;
-    innerContainer.style.maxWidth = width + "px";
   },
 
   /**
@@ -233,7 +221,7 @@ var gSearchResultsPane = {
       let range = document.createRange();
       range.setStart(startNode, startValue);
       range.setEnd(endNode, endValue);
-      this.getFindSelection(startNode.ownerGlobal).addRange(range);
+      this.getFindSelection(startNode.documentGlobal).addRange(range);
 
       this.searchResultsHighlighted = true;
     }
@@ -276,8 +264,6 @@ var gSearchResultsPane = {
       return;
     }
 
-    let firstQuery = !this.query && query;
-    let endQuery = !query && this.query;
     let subQuery = this.query && query.includes(this.query);
     this.query = query;
 
@@ -289,11 +275,6 @@ var gSearchResultsPane = {
     let srHeader = document.getElementById("header-searchResults");
     let noResultsEl = document.getElementById("no-results-message");
     if (this.query) {
-      // If this is the first query, fix the search input in place.
-      if (firstQuery) {
-        this.fixInputPosition();
-      }
-      // Showing the Search Results Tag
       await gotoPref("paneSearchResults");
       srHeader.hidden = false;
 
@@ -320,6 +301,14 @@ var gSearchResultsPane = {
           child.classList.add("visually-hidden");
           child.hidden = false;
         }
+        // For setting-panes, also prepare their setting-group children.
+        if (child.localName === "setting-pane") {
+          for (let group of child.querySelectorAll("setting-group")) {
+            if (group.hidden || group.hasAttribute("data-hidden-from-search")) {
+              group.classList.add("visually-hidden");
+            }
+          }
+        }
       }
 
       let ts = performance.now();
@@ -338,6 +327,49 @@ var gSearchResultsPane = {
           if (query !== this.query) {
             return;
           }
+        }
+
+        // For setting-pane elements, search each setting-group individually
+        // so that only matching groups are shown. If no group matches, fall
+        // back to a whole-pane search so panes still surface when the match
+        // is in the pane title (moz-page-header) or in content rendered
+        // outside any setting-group (e.g. paneExperimental's description).
+        if (child.localName === "setting-pane") {
+          let groupSelector =
+            "setting-group:not([data-hidden-from-search]):not([hidden]):not([data-hidden-by-setting-group])";
+          if (subQuery) {
+            groupSelector += ":not(.visually-hidden)";
+          }
+          let groups = child.querySelectorAll(groupSelector);
+          let anyGroupMatched = false;
+          for (let group of groups) {
+            let matched = await this.searchWithinNode(group, this.query);
+            if (matched) {
+              group.classList.remove("visually-hidden");
+              anyGroupMatched = true;
+            } else {
+              group.classList.add("visually-hidden");
+            }
+          }
+          let paneMatched = anyGroupMatched;
+          if (!paneMatched) {
+            paneMatched = await this.searchWithinNode(child, this.query);
+            if (paneMatched) {
+              // Pane title or pane-level content matched but no specific
+              // group did — show all groups so the pane isn't empty.
+              for (let group of groups) {
+                group.classList.remove("visually-hidden");
+              }
+            }
+          }
+          if (paneMatched) {
+            child.classList.remove("visually-hidden");
+            child.onSearchPane = true;
+            resultsFound = true;
+          } else {
+            child.classList.add("visually-hidden");
+          }
+          continue;
         }
 
         if (
@@ -386,15 +418,14 @@ var gSearchResultsPane = {
         }
       }
     } else {
-      if (endQuery) {
-        document
-          .querySelector(".sticky-inner-container")
-          .style.removeProperty("max-width");
-      }
       noResultsEl.hidden = true;
       document.getElementById("sorry-message-query").textContent = "";
-      // Going back to General when cleared
-      await gotoPref("paneGeneral");
+      // Going back to Account and sync or General when cleared
+      let redesignEnabled = Services.prefs.getBoolPref(
+        "browser.settings-redesign.enabled"
+      );
+      let defaultPane = redesignEnabled ? "paneSync" : "paneGeneral";
+      await gotoPref(defaultPane);
       srHeader.hidden = true;
 
       // Hide some special second level headers in normal view
@@ -520,7 +551,7 @@ var gSearchResultsPane = {
       // Creating tooltips for buttons
       if (
         keywordsResult &&
-        (nodeObject instanceof HTMLElement ||
+        (HTMLElement.isInstance(nodeObject) ||
           nodeObject.localName === "button" ||
           nodeObject.localName == "menulist")
       ) {

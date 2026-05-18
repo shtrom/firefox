@@ -1,6 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * vim: set ts=8 sts=2 et sw=2 tw=80:
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -309,16 +307,7 @@ void js::UnmapBufferMemory(wasm::AddressType t, void* base, size_t mappedSize,
  */
 
 static const JSClassOps ArrayBufferObjectClassOps = {
-    nullptr,                      // addProperty
-    nullptr,                      // delProperty
-    nullptr,                      // enumerate
-    nullptr,                      // newEnumerate
-    nullptr,                      // resolve
-    nullptr,                      // mayResolve
-    ArrayBufferObject::finalize,  // finalize
-    nullptr,                      // call
-    nullptr,                      // construct
-    nullptr,                      // trace
+    .finalize = ArrayBufferObject::finalize,
 };
 
 static const JSFunctionSpec arraybuffer_functions[] = {
@@ -820,11 +809,14 @@ bool ArrayBufferObject::resizeImpl(JSContext* cx, const CallArgs& args) {
     Pages newPages =
         Pages::fromByteLengthExact(newByteLength, obj->wasmPageSize());
     MOZ_RELEASE_ASSERT(WasmArrayBufferSourceMaxPages(obj).isSome());
-    Rooted<ArrayBufferObject*> res(
-        cx,
-        obj->wasmGrowToPagesInPlace(obj->wasmAddressType(), newPages, obj, cx));
-    MOZ_ASSERT_IF(res, res == obj);
-    return !!res;
+    ArrayBufferObject* res =
+        obj->wasmGrowToPagesInPlace(obj->wasmAddressType(), newPages, obj, cx);
+    if (!res) {
+      return false;
+    }
+    MOZ_ASSERT(res == obj);
+    args.rval().setUndefined();
+    return true;
   }
 
   // Steps 7-15.
@@ -1340,6 +1332,22 @@ void ArrayBufferObject::detach(JSContext* cx,
   }
 }
 
+void ResizableArrayBufferObject::notifyViewsAfterResize() {
+  // Update all views of the buffer to account for the buffer having been
+  // resized.
+  auto& innerViews = ObjectRealm::get(this).innerViews.get();
+  if (InnerViewTable::ViewVector* views =
+          innerViews.maybeViewsUnbarriered(this)) {
+    AutoTouchingGrayThings tgt;
+    for (auto& view : *views) {
+      view->notifyBufferResized();
+    }
+  }
+  if (auto* view = firstView()) {
+    view->as<ArrayBufferViewObject>().notifyBufferResized();
+  }
+}
+
 void ResizableArrayBufferObject::resize(size_t newByteLength) {
   MOZ_ASSERT(!isPreparedForAsmJS());
   MOZ_ASSERT(!isWasm());
@@ -1360,21 +1368,7 @@ void ResizableArrayBufferObject::resize(size_t newByteLength) {
   }
 
   setByteLength(newByteLength);
-
-  // Update all views of the buffer to account for the buffer having been
-  // resized.
-
-  auto& innerViews = ObjectRealm::get(this).innerViews.get();
-  if (InnerViewTable::ViewVector* views =
-          innerViews.maybeViewsUnbarriered(this)) {
-    AutoTouchingGrayThings tgt;
-    for (auto& view : *views) {
-      view->notifyBufferResized();
-    }
-  }
-  if (auto* view = firstView()) {
-    view->as<ArrayBufferViewObject>().notifyBufferResized();
-  }
+  notifyViewsAfterResize();
 }
 
 /*
@@ -2140,6 +2134,7 @@ ArrayBufferObject* ArrayBufferObject::wasmGrowToPagesInPlace(
       return nullptr;
     }
     oldBuf->setByteLength(newPages.byteLength());
+    oldBuf->as<ResizableArrayBufferObject>().notifyViewsAfterResize();
     AddCellMemory(oldBuf, newPages.byteLength(),
                   MemoryUse::ArrayBufferContents);
     return oldBuf;
@@ -2846,8 +2841,9 @@ ResizableArrayBufferObject::copyAndDetachSteal(
   MOZ_ASSERT(newByteLength <= ArrayBufferObject::ByteLengthLimit,
              "caller must validate the byte count it passes");
   MOZ_ASSERT(!source->isDetached());
-  MOZ_ASSERT(source->byteLength() >= sourceByteOffset);
-  MOZ_ASSERT(source->byteLength() >= sourceByteOffset + newByteLength);
+  MOZ_ASSERT_IF(newByteLength > 0, source->byteLength() >= sourceByteOffset);
+  MOZ_ASSERT_IF(newByteLength > 0,
+                source->byteLength() >= sourceByteOffset + newByteLength);
 
   AutoSetNewObjectMetadata metadata(cx);
   auto [newBuffer, toFill] = createBufferAndData<ImmutableArrayBufferObject,
@@ -2857,8 +2853,10 @@ ResizableArrayBufferObject::copyAndDetachSteal(
     return nullptr;
   }
 
-  std::uninitialized_copy_n(source->dataPointer() + sourceByteOffset,
-                            newByteLength, toFill);
+  if (newByteLength > 0) {
+    std::uninitialized_copy_n(source->dataPointer() + sourceByteOffset,
+                              newByteLength, toFill);
+  }
 
   return newBuffer;
 }
@@ -3591,10 +3589,10 @@ void InnerViewTable::sweepAfterMinorGC(JSTracer* trc) {
   }
 
   // Otherwise look at every map entry.
-  for (ArrayBufferViewMap::Enum e(map); !e.empty(); e.popFront()) {
-    MOZ_ASSERT(!gc::IsInsideNursery(e.front().key()));
-    if (!sweepViewsAfterMinorGC(trc, e.front().key(), e.front().value())) {
-      e.removeFront();
+  for (auto iter = map.modIter(); !iter.done(); iter.next()) {
+    MOZ_ASSERT(!gc::IsInsideNursery(iter.get().key()));
+    if (!sweepViewsAfterMinorGC(trc, iter.get().key(), iter.get().value())) {
+      iter.remove();
     }
   }
 }
@@ -3615,8 +3613,8 @@ bool InnerViewTable::sweepViewsAfterMinorGC(JSTracer* trc,
 
 size_t InnerViewTable::sizeOfExcludingThis(mozilla::MallocSizeOf mallocSizeOf) {
   size_t vectorSize = 0;
-  for (auto r = map.all(); !r.empty(); r.popFront()) {
-    vectorSize += r.front().value().views.sizeOfExcludingThis(mallocSizeOf);
+  for (auto iter = map.iter(); !iter.done(); iter.next()) {
+    vectorSize += iter.get().value().views.sizeOfExcludingThis(mallocSizeOf);
   }
 
   return vectorSize + map.shallowSizeOfExcludingThis(mallocSizeOf) +

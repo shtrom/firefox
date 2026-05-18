@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=2 sw=2 et tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -668,9 +666,11 @@ class TextInputHandlerBase : public TextEventDispatcherListener {
           return keyNameIndex == KEY_NAME_INDEX_ArrowRight &&
                  modifiers == (MODIFIER_ALT | MODIFIER_SHIFT);
         case Command::EndLine:
+        case Command::MoveRight3:
           return keyNameIndex == KEY_NAME_INDEX_ArrowRight &&
                  modifiers == MODIFIER_META;
         case Command::SelectEndLine:
+        case Command::SelectRight3:
           return keyNameIndex == KEY_NAME_INDEX_ArrowRight &&
                  modifiers == (MODIFIER_META | MODIFIER_SHIFT);
         case Command::CharPrevious:
@@ -686,9 +686,11 @@ class TextInputHandlerBase : public TextEventDispatcherListener {
           return keyNameIndex == KEY_NAME_INDEX_ArrowLeft &&
                  modifiers == (MODIFIER_ALT | MODIFIER_SHIFT);
         case Command::BeginLine:
+        case Command::MoveLeft3:
           return keyNameIndex == KEY_NAME_INDEX_ArrowLeft &&
                  modifiers == MODIFIER_META;
         case Command::SelectBeginLine:
+        case Command::SelectLeft3:
           return keyNameIndex == KEY_NAME_INDEX_ArrowLeft &&
                  modifiers == (MODIFIER_META | MODIFIER_SHIFT);
         case Command::LinePrevious:
@@ -1045,7 +1047,7 @@ class IMEInputHandler : public TextInputHandlerBase {
   void SetASCIICapableOnly(bool aASCIICapableOnly);
 
   /**
-   * True if OSX believes that our view has keyboard focus.
+   * True if macOS believes that our view has keyboard focus.
    */
   bool IsFocused();
 

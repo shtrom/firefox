@@ -1,5 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- *
+/*
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -477,7 +476,7 @@ static nsresult GetIconHandleFromURLBlocking(nsIMozIconURI* aUrl,
 }
 
 static RefPtr<HIconPromise> GetIconHandleFromURLAsync(nsIMozIconURI* aUrl) {
-  RefPtr<HIconPromise::Private> promise = new HIconPromise::Private(__func__);
+  auto promise = MakeRefPtr<HIconPromise::Private>(__func__);
 
   nsAutoCString stockIcon;
   aUrl->GetStockIcon(stockIcon);
@@ -522,8 +521,7 @@ static RefPtr<HIconPromise> GetIconHandleFromURLAsync(nsIMozIconURI* aUrl) {
 
 static RefPtr<nsIconChannel::ByteBufPromise> GetIconBufferFromURLAsync(
     nsIMozIconURI* aUrl) {
-  RefPtr<nsIconChannel::ByteBufPromise::Private> promise =
-      new nsIconChannel::ByteBufPromise::Private(__func__);
+  auto promise = MakeRefPtr<nsIconChannel::ByteBufPromise::Private>(__func__);
 
   GetIconHandleFromURLAsync(aUrl)->Then(
       GetCurrentSerialEventTarget(), __func__,

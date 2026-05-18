@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=2 sw=2 et tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -1418,12 +1416,13 @@ void TISInputSourceWrapper::WillDispatchKeyboardEvent(
     AlternativeCharCode altCharCodes(cmdedChar, cmdedShiftChar);
     aKeyEvent.mAlternativeCharCodes.AppendElement(altCharCodes);
   }
-  MOZ_LOG(gKeyLog, LogLevel::Info,
-          ("%p   TISInputSourceWrapper::WillDispatchKeyboardEvent, "
-           "hasCmdShiftOnlyChar=%s, isCmdSwitchLayout=%s, isDvorakQWERTY=%s, "
-           "cmdedChar=U+%X, cmdedShiftChar=U+%X",
-           this, TrueOrFalse(hasCmdShiftOnlyChar), TrueOrFalse(isDvorakQWERTY),
-           TrueOrFalse(isDvorakQWERTY), cmdedChar, cmdedShiftChar));
+  MOZ_LOG(
+      gKeyLog, LogLevel::Info,
+      ("%p   TISInputSourceWrapper::WillDispatchKeyboardEvent, "
+       "hasCmdShiftOnlyChar=%s, isCmdSwitchLayout=%s, isDvorakQWERTY=%s, "
+       "cmdedChar=U+%X, cmdedShiftChar=U+%X",
+       this, TrueOrFalse(hasCmdShiftOnlyChar), TrueOrFalse(isCmdSwitchLayout),
+       TrueOrFalse(isDvorakQWERTY), cmdedChar, cmdedShiftChar));
   // Special case for 'SS' key of German layout. See the comment of
   // hasCmdShiftOnlyChar definition for the detail.
   if (hasCmdShiftOnlyChar && originalCmdedShiftChar) {
@@ -1896,7 +1895,7 @@ bool TextInputHandler::HandleKeyDownEvent(NSEvent* aNativeEvent,
     //       For example, Japanese IME of Apple shows candidate window for
     //       typing window.  They, you can switch the sort order with Tab key.
     //       However, when you choose "Symbol" of the sort order, there may
-    //       be no candiate words.  In this case, IME handles the Tab key
+    //       be no candidate words.  In this case, IME handles the Tab key
     //       actually, but we cannot know it because composition string is
     //       not updated.  So, let's mark eKeyDown event as "processed by IME"
     //       when there is composition string.  This is same as Chrome.
@@ -1955,7 +1954,6 @@ bool TextInputHandler::HandleKeyDownEvent(NSEvent* aNativeEvent,
                                                    currentKeyEvent);
       currentKeyEvent->mKeyPressHandled =
           (status == nsEventStatus_eConsumeNoDefault);
-      currentKeyEvent->mKeyPressDispatched = true;
       MOZ_LOG_KEY_OR_IME(
           LogLevel::Info,
           ("%p TextInputHandler::HandleKeyDownEvent, eKeyPress event has been "
@@ -2716,12 +2714,16 @@ bool TextInputHandler::HandleCommand(Command aCommand) {
       case Command::SelectWordNext:
       case Command::EndLine:
       case Command::SelectEndLine:
+      case Command::MoveRight3:
+      case Command::SelectRight3:
       case Command::CharPrevious:
       case Command::SelectCharPrevious:
       case Command::WordPrevious:
       case Command::SelectWordPrevious:
       case Command::BeginLine:
       case Command::SelectBeginLine:
+      case Command::MoveLeft3:
+      case Command::SelectLeft3:
       case Command::LinePrevious:
       case Command::SelectLinePrevious:
       case Command::MoveTop:
@@ -2854,7 +2856,9 @@ bool TextInputHandler::HandleCommand(Command aCommand) {
       case Command::WordNext:
       case Command::SelectWordNext:
       case Command::EndLine:
-      case Command::SelectEndLine: {
+      case Command::SelectEndLine:
+      case Command::MoveRight3:
+      case Command::SelectRight3: {
         nsCocoaUtils::InitInputEvent(keypressEvent, keyEvent);
         keypressEvent.mKeyCode = NS_VK_RIGHT;
         keypressEvent.mKeyNameIndex = KEY_NAME_INDEX_ArrowRight;
@@ -2862,7 +2866,8 @@ bool TextInputHandler::HandleCommand(Command aCommand) {
             ~(MODIFIER_CONTROL | MODIFIER_ALT | MODIFIER_META);
         if (aCommand == Command::SelectCharNext ||
             aCommand == Command::SelectWordNext ||
-            aCommand == Command::SelectEndLine) {
+            aCommand == Command::SelectEndLine ||
+            aCommand == Command::SelectRight3) {
           keypressEvent.mModifiers |= MODIFIER_SHIFT;
         }
         if (aCommand == Command::WordNext ||
@@ -2870,7 +2875,9 @@ bool TextInputHandler::HandleCommand(Command aCommand) {
           keypressEvent.mModifiers |= MODIFIER_ALT;
         }
         if (aCommand == Command::EndLine ||
-            aCommand == Command::SelectEndLine) {
+            aCommand == Command::SelectEndLine ||
+            aCommand == Command::MoveRight3 ||
+            aCommand == Command::SelectRight3) {
           keypressEvent.mModifiers |= MODIFIER_META;
         }
         break;
@@ -2880,7 +2887,9 @@ bool TextInputHandler::HandleCommand(Command aCommand) {
       case Command::WordPrevious:
       case Command::SelectWordPrevious:
       case Command::BeginLine:
-      case Command::SelectBeginLine: {
+      case Command::SelectBeginLine:
+      case Command::MoveLeft3:
+      case Command::SelectLeft3: {
         nsCocoaUtils::InitInputEvent(keypressEvent, keyEvent);
         keypressEvent.mKeyCode = NS_VK_LEFT;
         keypressEvent.mKeyNameIndex = KEY_NAME_INDEX_ArrowLeft;
@@ -2888,7 +2897,8 @@ bool TextInputHandler::HandleCommand(Command aCommand) {
             ~(MODIFIER_CONTROL | MODIFIER_ALT | MODIFIER_META);
         if (aCommand == Command::SelectCharPrevious ||
             aCommand == Command::SelectWordPrevious ||
-            aCommand == Command::SelectBeginLine) {
+            aCommand == Command::SelectBeginLine ||
+            aCommand == Command::SelectLeft3) {
           keypressEvent.mModifiers |= MODIFIER_SHIFT;
         }
         if (aCommand == Command::WordPrevious ||
@@ -2896,7 +2906,9 @@ bool TextInputHandler::HandleCommand(Command aCommand) {
           keypressEvent.mModifiers |= MODIFIER_ALT;
         }
         if (aCommand == Command::BeginLine ||
-            aCommand == Command::SelectBeginLine) {
+            aCommand == Command::SelectBeginLine ||
+            aCommand == Command::MoveLeft3 ||
+            aCommand == Command::SelectLeft3) {
           keypressEvent.mModifiers |= MODIFIER_META;
         }
         break;
@@ -3359,7 +3371,7 @@ void IMEInputHandler::DebugPrintAllIMEModes() {
 
 // static
 TSMDocumentID IMEInputHandler::GetCurrentTSMDocumentID() {
-  // At least on Mac OS X 10.6.x and 10.7.x, ::TSMGetActiveDocument() has a bug.
+  // At least on macOS 10.6.x and 10.7.x, ::TSMGetActiveDocument() has a bug.
   // The result of ::TSMGetActiveDocument() isn't modified for new active text
   // input context until [NSTextInputContext currentInputContext] is called.
   // Therefore, we need to call it here.
@@ -3442,7 +3454,7 @@ IMEInputHandler::GetIMENotificationRequests() {
   // XXX Shouldn't we move floating window which shows composition string
   //     when plugin has focus and its parent is scrolled or the window is
   //     moved?
-  return IMENotificationRequests(IMENotificationRequests::NOTIFY_TEXT_CHANGE);
+  return {IMENotificationRequest::TextChange};
 }
 
 NS_IMETHODIMP_(void)
@@ -5491,7 +5503,7 @@ NSInteger TextInputHandlerBase::GetWindowLevel() {
   NS_OBJC_BEGIN_TRY_BLOCK_RETURN;
 
   MOZ_LOG_KEY_OR_IME(LogLevel::Info,
-                     ("%p TextInputHandlerBase::GetWindowLevel, Destryoed()=%s",
+                     ("%p TextInputHandlerBase::GetWindowLevel, Destroyed()=%s",
                       this, TrueOrFalse(Destroyed())));
 
   if (Destroyed()) {
@@ -5521,7 +5533,7 @@ TextInputHandlerBase::AttachNativeKeyEvent(WidgetKeyboardEvent& aKeyEvent) {
   NS_OBJC_BEGIN_TRY_BLOCK_RETURN;
 
   // Don't try to replace a native event if one already exists.
-  // OS X doesn't have an OS modifier, can't make a native event.
+  // macOS doesn't have an OS modifier, can't make a native event.
   if (aKeyEvent.mNativeKeyEvent) {
     return NS_OK;
   }

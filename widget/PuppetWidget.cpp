@@ -1,6 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * vim: sw=2 ts=8 et :
- */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -10,6 +7,7 @@
 #include "mozilla/dom/BrowserChild.h"
 #include "mozilla/EventForwards.h"
 #include "mozilla/IMEStateManager.h"
+#include "mozilla/layers/CompositorBridgeChild.h"
 #include "mozilla/layers/WebRenderLayerManager.h"
 #include "mozilla/NativeKeyBindingsType.h"
 #include "mozilla/PresShell.h"
@@ -84,7 +82,6 @@ void PuppetWidget::InfallibleCreate(nsIWidget* aParent,
                                     const LayoutDeviceIntRect& aRect,
                                     const widget::InitData& aInitData) {
   BaseCreate(aParent, aInitData);
-  MOZ_ASSERT(GetDesktopToDeviceScale().scale == 1.0);
 
   mBounds = aRect;
   mEnabled = true;
@@ -154,7 +151,6 @@ void PuppetWidget::Show(bool aState) {
 }
 
 void PuppetWidget::Resize(const DesktopSize& aSize, bool aRepaint) {
-  MOZ_ASSERT(GetDesktopToDeviceScale().scale == 1.0);
   LayoutDeviceIntRect oldBounds = mBounds;
   mBounds.SizeTo(LayoutDeviceIntSize::Round(aSize * GetDesktopToDeviceScale()));
 
@@ -454,11 +450,12 @@ nsresult PuppetWidget::SynthesizeNativeTouchpadPan(
   return NS_OK;
 }
 
-void PuppetWidget::LockNativePointer() {
+void PuppetWidget::LockNativePointer(
+    NativePointerLockMode aNativePointerLockMode) {
   if (!mBrowserChild) {
     return;
   }
-  mBrowserChild->SendLockNativePointer();
+  mBrowserChild->SendLockNativePointer(aNativePointerLockMode);
 }
 
 void PuppetWidget::UnlockNativePointer() {
@@ -466,6 +463,14 @@ void PuppetWidget::UnlockNativePointer() {
     return;
   }
   mBrowserChild->SendUnlockNativePointer();
+}
+
+void PuppetWidget::SetNativePointerLockMode(
+    NativePointerLockMode aNativePointerLockMode) {
+  if (!mBrowserChild) {
+    return;
+  }
+  mBrowserChild->SendSetNativePointerLockMode(aNativePointerLockMode);
 }
 
 void PuppetWidget::SetConfirmedTargetAPZC(
@@ -526,10 +531,16 @@ WindowRenderer* PuppetWidget::GetWindowRenderer() {
 
 bool PuppetWidget::CreateRemoteLayerManager(
     const std::function<bool(WebRenderLayerManager*)>& aInitializeFunc) {
-  RefPtr<WebRenderLayerManager> lm = new WebRenderLayerManager(this);
   MOZ_ASSERT(mBrowserChild);
+  auto* const cbc = CompositorBridgeChild::Get();
+  if (!cbc) {
+    return false;
+  }
 
-  if (!aInitializeFunc(lm)) {
+  nsCString error;
+  RefPtr<WebRenderLayerManager> lm = WebRenderLayerManager::Create(
+      this, cbc, wr::AsPipelineId(mBrowserChild->GetLayersId()), error);
+  if (!lm || !aInitializeFunc(lm)) {
     return false;
   }
 
@@ -592,7 +603,7 @@ nsresult PuppetWidget::RequestIMEToCommitComposition(bool aCancel) {
   // Dispatch eCompositionCommit event.
   WidgetCompositionEvent compositionCommitEvent(true, eCompositionCommit, this);
   InitEvent(compositionCommitEvent, nullptr);
-  compositionCommitEvent.mData = committedString;
+  compositionCommitEvent.mData = std::move(committedString);
   DispatchEvent(&compositionCommitEvent);
 
 #ifdef DEBUG
@@ -692,7 +703,7 @@ nsresult PuppetWidget::NotifyIMEOfFocusChange(
   }
 
   mIMENotificationRequestsOfParent =
-      IMENotificationRequests(IMENotificationRequests::NOTIFY_ALL);
+      IMENotificationRequests(AllIMENotificationRequests);
   RefPtr<PuppetWidget> self = this;
   mBrowserChild->SendNotifyIMEFocus(mContentCache, aIMENotification)
       ->Then(
@@ -747,8 +758,9 @@ nsresult PuppetWidget::NotifyIMEOfTextChange(
   }
 
   // BrowserParent doesn't this this to cache.  we don't send the notification
-  // if parent process doesn't request NOTIFY_TEXT_CHANGE.
-  if (mIMENotificationRequestsOfParent.WantTextChange()) {
+  // if parent process doesn't request text changes.
+  if (mIMENotificationRequestsOfParent.contains(
+          IMENotificationRequest::TextChange)) {
     mBrowserChild->SendNotifyIMETextChange(mContentCache, aIMENotification);
   } else {
     mBrowserChild->SendUpdateContentCache(mContentCache);
@@ -810,7 +822,8 @@ nsresult PuppetWidget::NotifyIMEOfPositionChange(
           !mContentCache.CacheCaretAndTextRects(this, &aIMENotification))) {
     return NS_ERROR_FAILURE;
   }
-  if (mIMENotificationRequestsOfParent.WantPositionChanged()) {
+  if (mIMENotificationRequestsOfParent.contains(
+          IMENotificationRequest::PositionChange)) {
     mBrowserChild->SendNotifyIMEPositionChange(mContentCache, aIMENotification);
   } else {
     mBrowserChild->SendUpdateContentCache(mContentCache);
@@ -903,6 +916,12 @@ void PuppetWidget::OnMemoryPressure(layers::MemoryPressureReason aWhy) {
       mWindowRenderer && mWindowRenderer->AsWebRender() &&
       XRE_IsContentProcess()) {
     mWindowRenderer->AsWebRender()->ClearCachedResources();
+  }
+}
+
+void PuppetWidget::PerformHapticFeedback(mozilla::HapticFeedbackType aType) {
+  if (mBrowserChild) {
+    mBrowserChild->SendPerformHapticFeedback(aType);
   }
 }
 
@@ -1041,10 +1060,9 @@ PuppetWidget::NotifyIME(TextEventDispatcher* aTextEventDispatcher,
 
 NS_IMETHODIMP_(IMENotificationRequests)
 PuppetWidget::GetIMENotificationRequests() {
-  return IMENotificationRequests(
-      mIMENotificationRequestsOfParent.mWantUpdates |
-      IMENotificationRequests::NOTIFY_TEXT_CHANGE |
-      IMENotificationRequests::NOTIFY_POSITION_CHANGE);
+  return mIMENotificationRequestsOfParent +
+         IMENotificationRequests{IMENotificationRequest::TextChange,
+                                 IMENotificationRequest::PositionChange};
 }
 
 NS_IMETHODIMP_(void)

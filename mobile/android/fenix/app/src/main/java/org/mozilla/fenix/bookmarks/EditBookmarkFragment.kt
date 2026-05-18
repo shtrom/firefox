@@ -10,12 +10,12 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.core.content.getSystemService
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavHostController
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import kotlinx.coroutines.flow.emptyFlow
 import mozilla.components.compose.browser.toolbar.store.BrowserToolbarState
 import mozilla.components.compose.browser.toolbar.store.BrowserToolbarStore
 import mozilla.components.compose.browser.toolbar.store.Mode
@@ -23,6 +23,7 @@ import mozilla.components.lib.state.helpers.StoreProvider.Companion.fragmentStor
 import org.mozilla.fenix.R
 import org.mozilla.fenix.components.accounts.FenixFxAEntryPoint
 import org.mozilla.fenix.components.appstate.AppAction
+import org.mozilla.fenix.e2e.SystemInsetsPaddedFragment
 import org.mozilla.fenix.ext.bookmarkStorage
 import org.mozilla.fenix.ext.nav
 import org.mozilla.fenix.ext.requireComponents
@@ -35,7 +36,7 @@ import org.mozilla.fenix.utils.lastSavedFolderCache
 /**
  * Menu to edit the name, URL, and location of a bookmark item.
  */
-class EditBookmarkFragment : Fragment(R.layout.fragment_edit_bookmark) {
+class EditBookmarkFragment : Fragment(), SystemInsetsPaddedFragment {
 
     private val args by navArgs<EditBookmarkFragmentArgs>()
 
@@ -63,10 +64,8 @@ class EditBookmarkFragment : Fragment(R.layout.fragment_edit_bookmark) {
                             middleware = listOf(
                                 BookmarksMiddleware(
                                     bookmarksStorage = requireContext().bookmarkStorage,
-                                    clipboardManager = requireContext().getSystemService(),
                                     addNewTabUseCase = requireComponents.useCases.tabsUseCases.addTab,
                                     fenixBrowserUseCases = requireComponents.useCases.fenixBrowserUseCases,
-                                    useNewSearchUX = settings().shouldUseComposableToolbar,
                                     openBookmarksInNewTab = if (settings().enableHomepageAsNewTab) {
                                         false
                                     } else {
@@ -77,7 +76,6 @@ class EditBookmarkFragment : Fragment(R.layout.fragment_edit_bookmark) {
                                     navigateToBrowser = {
                                         navController.navigate(R.id.browserFragment)
                                     },
-                                    navigateToSearch = { },
                                     navigateToSignIntoSync = {
                                         navController
                                             .navigate(
@@ -86,12 +84,18 @@ class EditBookmarkFragment : Fragment(R.layout.fragment_edit_bookmark) {
                                                 ),
                                             )
                                     },
+                                    navigateToImportDialog = {},
                                     shareBookmarks = { bookmarks ->
-                                        navController.nav(
-                                            R.id.bookmarkFragment,
-                                            BookmarkFragmentDirections.actionGlobalShareFragment(
-                                                data = bookmarks.asShareDataArray(),
-                                            ),
+                                        requireComponents.useCases.shareUseCases.shareItems(
+                                            items = bookmarks.asShareDataArray().toList(),
+                                            navigateToShareFragment = {
+                                                navController.nav(
+                                                    R.id.bookmarkFragment,
+                                                    BookmarkFragmentDirections.actionGlobalShareFragment(
+                                                        data = bookmarks.asShareDataArray(),
+                                                    ),
+                                                )
+                                            },
                                         )
                                     },
                                     showTabsTray = { },
@@ -112,6 +116,7 @@ class EditBookmarkFragment : Fragment(R.layout.fragment_edit_bookmark) {
                                             AppAction.BookmarkAction.BookmarkOperationResultReported(it),
                                         )
                                     },
+                                    importResults = { emptyFlow() },
                                     lifecycleScope = lifecycleScope,
                                 ),
                             ),

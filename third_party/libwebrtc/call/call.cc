@@ -18,6 +18,7 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -25,11 +26,9 @@
 #include "absl/functional/bind_front.h"
 #include "absl/strings/string_view.h"
 #include "api/adaptation/resource.h"
-#include "api/array_view.h"
 #include "api/environment/environment.h"
 #include "api/fec_controller.h"
 #include "api/media_types.h"
-#include "api/rtc_error.h"
 #include "api/rtc_event_log/rtc_event_log.h"
 #include "api/rtp_headers.h"
 #include "api/rtp_parameters.h"
@@ -44,6 +43,7 @@
 #include "api/units/data_size.h"
 #include "api/units/time_delta.h"
 #include "api/units/timestamp.h"
+#include "api/video/video_stream_encoder_settings.h"
 #include "audio/audio_receive_stream.h"
 #include "audio/audio_send_stream.h"
 #include "audio/audio_state.h"
@@ -53,8 +53,6 @@
 #include "call/flexfec_receive_stream.h"
 #include "call/flexfec_receive_stream_impl.h"
 #include "call/packet_receiver.h"
-#include "call/payload_type.h"
-#include "call/payload_type_picker.h"
 #include "call/receive_stream.h"
 #include "call/receive_time_calculator.h"
 #include "call/rtp_config.h"
@@ -69,7 +67,6 @@
 #include "logging/rtc_event_log/events/rtc_event_video_receive_stream_config.h"
 #include "logging/rtc_event_log/events/rtc_event_video_send_stream_config.h"
 #include "logging/rtc_event_log/rtc_stream_config.h"
-#include "media/base/codec.h"
 #include "modules/congestion_controller/include/receive_side_congestion_controller.h"
 #include "modules/rtp_rtcp/include/flexfec_receiver.h"
 #include "modules/rtp_rtcp/include/rtp_rtcp_defines.h"
@@ -104,26 +101,6 @@ namespace webrtc {
 
 namespace {
 
-// In normal operation, the PTS comes from the PeerConnection.
-// However, it is too much of a bother to insert it in all tests,
-// so defaulting here.
-class PayloadTypeSuggesterForTests : public PayloadTypeSuggester {
- public:
-  PayloadTypeSuggesterForTests() = default;
-  RTCErrorOr<PayloadType> SuggestPayloadType(absl::string_view /*mid*/,
-                                             const Codec& codec) override {
-    return payload_type_picker_.SuggestMapping(codec, nullptr);
-  }
-  RTCError AddLocalMapping(absl::string_view mid,
-                           PayloadType /* payload_type */,
-                           const Codec& /* codec */) override {
-    return RTCError::OK();
-  }
-
- private:
-  PayloadTypePicker payload_type_picker_;
-};
-
 const int* FindKeyByValue(const std::map<int, int>& m, int v) {
   for (const auto& kv : m) {
     if (kv.second == v)
@@ -136,7 +113,6 @@ std::unique_ptr<rtclog::StreamConfig> CreateRtcLogStreamConfig(
     const VideoReceiveStreamInterface::Config& config) {
   auto rtclog_config = std::make_unique<rtclog::StreamConfig>();
   rtclog_config->remote_ssrc = config.rtp.remote_ssrc;
-  rtclog_config->local_ssrc = config.rtp.local_ssrc;
   rtclog_config->rtx_ssrc = config.rtp.rtx_ssrc;
   rtclog_config->rtcp_mode = config.rtp.rtcp_mode;
 
@@ -153,7 +129,6 @@ std::unique_ptr<rtclog::StreamConfig> CreateRtcLogStreamConfig(
     const VideoSendStream::Config& config,
     size_t ssrc_index) {
   auto rtclog_config = std::make_unique<rtclog::StreamConfig>();
-  rtclog_config->local_ssrc = config.rtp.ssrcs[ssrc_index];
   if (ssrc_index < config.rtp.rtx.ssrcs.size()) {
     rtclog_config->rtx_ssrc = config.rtp.rtx.ssrcs[ssrc_index];
   }
@@ -170,7 +145,6 @@ std::unique_ptr<rtclog::StreamConfig> CreateRtcLogStreamConfig(
     const AudioReceiveStreamInterface::Config& config) {
   auto rtclog_config = std::make_unique<rtclog::StreamConfig>();
   rtclog_config->remote_ssrc = config.rtp.remote_ssrc;
-  rtclog_config->local_ssrc = config.rtp.local_ssrc;
   return rtclog_config;
 }
 
@@ -252,10 +226,13 @@ class Call final : public webrtc::Call,
 
   webrtc::VideoSendStream* CreateVideoSendStream(
       webrtc::VideoSendStream::Config config,
-      VideoEncoderConfig encoder_config) override;
+      VideoEncoderConfig encoder_config,
+      EncoderSwitchRequestCallback encoder_switch_request_callback =
+          nullptr) override;
   webrtc::VideoSendStream* CreateVideoSendStream(
       webrtc::VideoSendStream::Config config,
       VideoEncoderConfig encoder_config,
+      EncoderSwitchRequestCallback encoder_switch_request_callback,
       std::unique_ptr<FecController> fec_controller) override;
   void DestroyVideoSendStream(webrtc::VideoSendStream* send_stream) override;
 
@@ -272,9 +249,6 @@ class Call final : public webrtc::Call,
   void AddAdaptationResource(scoped_refptr<Resource> resource) override;
 
   RtpTransportControllerSendInterface* GetTransportControllerSend() override;
-
-  PayloadTypeSuggester* GetPayloadTypeSuggester() override;
-  void SetPayloadTypeSuggester(PayloadTypeSuggester* suggester) override;
 
   Stats GetStats() const override;
 
@@ -297,13 +271,6 @@ class Call final : public webrtc::Call,
 
   void OnAudioTransportOverheadChanged(
       int transport_overhead_per_packet) override;
-
-  void OnLocalSsrcUpdated(webrtc::AudioReceiveStreamInterface& stream,
-                          uint32_t local_ssrc) override;
-  void OnLocalSsrcUpdated(VideoReceiveStreamInterface& stream,
-                          uint32_t local_ssrc) override;
-  void OnLocalSsrcUpdated(FlexfecReceiveStream& stream,
-                          uint32_t local_ssrc) override;
 
   void OnUpdateSyncGroup(webrtc::AudioReceiveStreamInterface& stream,
                          absl::string_view sync_group) override;
@@ -379,6 +346,11 @@ class Call final : public webrtc::Call,
 
   void DeliverRtcp(MediaType media_type, CopyOnWriteBuffer packet)
       RTC_RUN_ON(network_thread_);
+
+  void DeliverRtpPacket_w(MediaType media_type,
+                          RtpPacketReceived packet,
+                          OnUndemuxablePacketHandler undemuxable_packet_handler)
+      RTC_RUN_ON(worker_thread_);
 
   AudioReceiveStreamImpl* FindAudioStreamForSyncGroup(
       absl::string_view sync_group) RTC_RUN_ON(worker_thread_);
@@ -476,7 +448,8 @@ class Call final : public webrtc::Call,
   RepeatingTaskHandle receive_side_cc_periodic_task_;
   RepeatingTaskHandle elastic_bandwidth_allocation_task_;
 
-  const std::unique_ptr<ReceiveTimeCalculator> receive_time_calculator_;
+  const std::unique_ptr<ReceiveTimeCalculator> receive_time_calculator_
+      RTC_GUARDED_BY(network_thread_);
 
   const std::unique_ptr<SendDelayStats> video_send_delay_stats_;
   const Timestamp start_of_call_;
@@ -497,10 +470,6 @@ class Call final : public webrtc::Call,
       RTC_GUARDED_BY(send_transport_sequence_checker_);
 
   bool is_started_ RTC_GUARDED_BY(worker_thread_) = false;
-
-  // Mechanism for proposing payload types in RTP mappings.
-  PayloadTypeSuggester* pt_suggester_ = nullptr;
-  std::unique_ptr<PayloadTypeSuggesterForTests> owned_pt_suggester_;
 
   // Sequence checker for outgoing network traffic. Could be the network thread.
   // Could also be a pacer owned thread or TQ such as the TaskQueueSender.
@@ -527,6 +496,7 @@ std::unique_ptr<Call> Call::Create(CallConfig config) {
 VideoSendStream* Call::CreateVideoSendStream(
     VideoSendStream::Config /* config */,
     VideoEncoderConfig /* encoder_config */,
+    EncoderSwitchRequestCallback /* encoder_switch_request_callback */,
     std::unique_ptr<FecController> /* fec_controller */) {
   return nullptr;
 }
@@ -907,6 +877,7 @@ void Call::DestroyAudioReceiveStream(
 webrtc::VideoSendStream* Call::CreateVideoSendStream(
     webrtc::VideoSendStream::Config config,
     VideoEncoderConfig encoder_config,
+    EncoderSwitchRequestCallback encoder_switch_request_callback,
     std::unique_ptr<FecController> fec_controller) {
   TRACE_EVENT0("webrtc", "Call::CreateVideoSendStream");
   RTC_DCHECK_RUN_ON(worker_thread_);
@@ -930,7 +901,8 @@ webrtc::VideoSendStream* Call::CreateVideoSendStream(
       transport_send_.get(), config_.encode_metronome, bitrate_allocator_.get(),
       video_send_delay_stats_.get(), std::move(config),
       std::move(encoder_config), suspended_video_send_ssrcs_,
-      suspended_video_payload_states_, std::move(fec_controller));
+      suspended_video_payload_states_, std::move(fec_controller),
+      std::move(encoder_switch_request_callback));
 
   for (uint32_t ssrc : ssrcs) {
     RTC_DCHECK(video_send_ssrcs_.find(ssrc) == video_send_ssrcs_.end());
@@ -951,7 +923,8 @@ webrtc::VideoSendStream* Call::CreateVideoSendStream(
 
 webrtc::VideoSendStream* Call::CreateVideoSendStream(
     webrtc::VideoSendStream::Config config,
-    VideoEncoderConfig encoder_config) {
+    VideoEncoderConfig encoder_config,
+    EncoderSwitchRequestCallback encoder_switch_request_callback) {
   RTC_DCHECK_RUN_ON(worker_thread_);
   if (config_.fec_controller_factory) {
     RTC_LOG(LS_INFO) << "External FEC Controller will be used.";
@@ -961,6 +934,7 @@ webrtc::VideoSendStream* Call::CreateVideoSendStream(
           ? config_.fec_controller_factory->CreateFecController(env_)
           : std::make_unique<FecControllerDefault>(env_);
   return CreateVideoSendStream(std::move(config), std::move(encoder_config),
+                               std::move(encoder_switch_request_callback),
                                std::move(fec_controller));
 }
 
@@ -1071,7 +1045,7 @@ FlexfecReceiveStream* Call::CreateFlexfecReceiveStream(
   // in a valid state, since OnRtpPacket runs on the same thread.
   FlexfecReceiveStreamImpl* receive_stream = new FlexfecReceiveStreamImpl(
       env_, std::move(config), &video_receiver_controller_,
-      call_stats_->AsRtcpRttStats());
+      transport_send_->packet_router(), call_stats_->AsRtcpRttStats());
 
   // TODO(bugs.webrtc.org/11993): Set this up asynchronously on the network
   // thread.
@@ -1110,24 +1084,6 @@ void Call::AddAdaptationResource(scoped_refptr<Resource> resource) {
 
 RtpTransportControllerSendInterface* Call::GetTransportControllerSend() {
   return transport_send_.get();
-}
-
-PayloadTypeSuggester* Call::GetPayloadTypeSuggester() {
-  // TODO: https://issues.webrtc.org/360058654 - make mandatory at
-  // initialization. Currently, only some channels use it.
-  RTC_DCHECK_RUN_ON(worker_thread_);
-  if (!pt_suggester_) {
-    // Make something that will work most of the time for testing.
-    owned_pt_suggester_ = std::make_unique<PayloadTypeSuggesterForTests>();
-    SetPayloadTypeSuggester(owned_pt_suggester_.get());
-  }
-  return pt_suggester_;
-}
-
-void Call::SetPayloadTypeSuggester(PayloadTypeSuggester* suggester) {
-  RTC_CHECK(!pt_suggester_)
-      << "SetPayloadTypeSuggester can be called only once";
-  pt_suggester_ = suggester;
 }
 
 Call::Stats Call::GetStats() const {
@@ -1256,24 +1212,6 @@ void Call::UpdateAggregateNetworkState() {
   transport_send_->OnNetworkAvailability(aggregate_network_up);
 }
 
-void Call::OnLocalSsrcUpdated(webrtc::AudioReceiveStreamInterface& stream,
-                              uint32_t local_ssrc) {
-  RTC_DCHECK_RUN_ON(worker_thread_);
-  static_cast<webrtc::AudioReceiveStreamImpl&>(stream).SetLocalSsrc(local_ssrc);
-}
-
-void Call::OnLocalSsrcUpdated(VideoReceiveStreamInterface& stream,
-                              uint32_t local_ssrc) {
-  RTC_DCHECK_RUN_ON(worker_thread_);
-  static_cast<VideoReceiveStream2&>(stream).SetLocalSsrc(local_ssrc);
-}
-
-void Call::OnLocalSsrcUpdated(FlexfecReceiveStream& stream,
-                              uint32_t local_ssrc) {
-  RTC_DCHECK_RUN_ON(worker_thread_);
-  static_cast<FlexfecReceiveStreamImpl&>(stream).SetLocalSsrc(local_ssrc);
-}
-
 void Call::OnUpdateSyncGroup(webrtc::AudioReceiveStreamInterface& stream,
                              absl::string_view sync_group) {
   RTC_DCHECK_RUN_ON(worker_thread_);
@@ -1392,7 +1330,7 @@ void Call::DeliverRtcpPacket(CopyOnWriteBuffer packet) {
 
   receive_stats_.AddReceivedRtcpBytes(static_cast<int>(packet.size()));
   bool rtcp_delivered = false;
-  ArrayView<const uint8_t> packet_view(packet.cdata(), packet.size());
+  std::span<const uint8_t> packet_view(packet.cdata(), packet.size());
   for (VideoReceiveStream2* stream : video_receive_streams_) {
     if (stream->DeliverRtcp(packet_view))
       rtcp_delivered = true;
@@ -1422,8 +1360,7 @@ void Call::DeliverRtpPacket(
     MediaType media_type,
     RtpPacketReceived packet,
     OnUndemuxablePacketHandler undemuxable_packet_handler) {
-  RTC_DCHECK_RUN_ON(worker_thread_);
-  RTC_DCHECK(packet.arrival_time().IsFinite());
+  RTC_DCHECK_RUN_ON(network_thread_);
 
   if (receive_time_calculator_) {
     int64_t packet_time_us = packet.arrival_time().us();
@@ -1434,10 +1371,34 @@ void Call::DeliverRtpPacket(
     packet.set_arrival_time(Timestamp::Micros(packet_time_us));
   }
 
+  if (worker_thread_->IsCurrent()) {
+    RTC_DCHECK_RUN_ON(worker_thread_);
+    DeliverRtpPacket_w(media_type, std::move(packet),
+                       std::move(undemuxable_packet_handler));
+  } else {
+    worker_thread_->PostTask(SafeTask(
+        task_safety_.flag(),
+        [this, media_type, packet = std::move(packet),
+         handler = std::move(undemuxable_packet_handler)]() mutable {
+          RTC_DCHECK_RUN_ON(worker_thread_);
+          DeliverRtpPacket_w(media_type, std::move(packet), std::move(handler));
+        }));
+  }
+}
+
+void Call::DeliverRtpPacket_w(
+    MediaType media_type,
+    RtpPacketReceived packet,
+    OnUndemuxablePacketHandler undemuxable_packet_handler) {
+  RTC_DCHECK_RUN_ON(worker_thread_);
+  RTC_DCHECK(packet.arrival_time().IsFinite());
+
   NotifyBweOfReceivedPacket(packet, media_type);
 
-  env_.event_log().Log(std::make_unique<RtcEventRtpPacketIncoming>(packet));
+  // Packets that are successfully demuxed are logged by their respective
+  // streams. Packets that fail to demux are logged here.
   if (media_type != MediaType::AUDIO && media_type != MediaType::VIDEO) {
+    env_.event_log().Log(std::make_unique<RtcEventRtpPacketIncoming>(packet));
     return;
   }
 
@@ -1456,9 +1417,11 @@ void Call::DeliverRtpPacket(
     // Note that we dont want to call NotifyBweOfReceivedPacket twice per
     // packet.
     if (!undemuxable_packet_handler(packet)) {
+      env_.event_log().Log(std::make_unique<RtcEventRtpPacketIncoming>(packet));
       return;
     }
     if (!receiver_controller.OnRtpPacket(packet)) {
+      env_.event_log().Log(std::make_unique<RtcEventRtpPacketIncoming>(packet));
       RTC_LOG(LS_INFO) << "Failed to demux packet " << packet.Ssrc();
       return;
     }

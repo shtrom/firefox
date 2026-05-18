@@ -5,7 +5,9 @@
 //! Typed OM Numeric Values.
 
 use crate::derives::*;
-use crate::values::specified::{NoCalcLength, Number, Percentage};
+use crate::values::specified::{
+    NoCalcAngle, NoCalcLength, NoCalcNumber, NoCalcPercentage, NoCalcTime,
+};
 use crate::values::CSSFloat;
 use cssparser::match_ignore_ascii_case;
 use style_traits::ParsingMode;
@@ -13,22 +15,31 @@ use style_traits::ParsingMode;
 /// A numeric value without a `calc` expression.
 #[derive(Clone, ToTyped)]
 #[repr(u8)]
-#[typed_value(derive_fields)]
 pub enum NoCalcNumeric {
     /// A `<length>` value.
     ///
     /// <https://drafts.csswg.org/css-values/#lengths>
     Length(NoCalcLength),
 
+    /// An `<angle>` value.
+    ///
+    /// https://drafts.csswg.org/css-values/#angles
+    Angle(NoCalcAngle),
+
+    /// A `<time>` value.
+    ///
+    /// <https://drafts.csswg.org/css-values/#time>
+    Time(NoCalcTime),
+
     /// A `<number>` value.
     ///
     /// <https://drafts.csswg.org/css-values/#number-value>
-    Number(Number),
+    Number(NoCalcNumber),
 
     /// A `<percentage>` value.
     ///
     /// <https://drafts.csswg.org/css-values/#percentages>
-    Percentage(Percentage),
+    Percentage(NoCalcPercentage),
     // TODO: Add other values.
 }
 
@@ -37,6 +48,8 @@ impl NoCalcNumeric {
     pub fn unitless_value(&self) -> CSSFloat {
         match *self {
             Self::Length(v) => v.unitless_value(),
+            Self::Angle(v) => v.unitless_value(),
+            Self::Time(v) => v.unitless_value(),
             Self::Number(v) => v.get(),
             Self::Percentage(v) => v.get(),
         }
@@ -50,6 +63,8 @@ impl NoCalcNumeric {
     pub fn unit(&self) -> &'static str {
         match *self {
             Self::Length(v) => v.unit(),
+            Self::Angle(v) => v.unit(),
+            Self::Time(v) => v.unit(),
             Self::Number(v) => v.unit(),
             Self::Percentage(v) => v.unit(),
         }
@@ -62,6 +77,8 @@ impl NoCalcNumeric {
     pub fn canonical_unit(&self) -> Option<&'static str> {
         match *self {
             Self::Length(v) => v.canonical_unit(),
+            Self::Angle(v) => v.canonical_unit(),
+            Self::Time(v) => v.canonical_unit(),
             Self::Number(v) => v.canonical_unit(),
             Self::Percentage(v) => v.canonical_unit(),
         }
@@ -74,6 +91,8 @@ impl NoCalcNumeric {
     pub fn to(&self, unit: &str) -> Result<Self, ()> {
         match self {
             Self::Length(v) => Ok(Self::Length(v.to(unit)?)),
+            Self::Angle(v) => Ok(Self::Angle(v.to(unit)?)),
+            Self::Time(v) => Ok(Self::Time(v.to(unit)?)),
             Self::Number(v) => Ok(Self::Number(v.to(unit)?)),
             Self::Percentage(v) => Ok(Self::Percentage(v.to(unit)?)),
         }
@@ -90,9 +109,17 @@ impl NoCalcNumeric {
             return Ok(NoCalcNumeric::Length(length));
         }
 
+        if let Ok(angle) = NoCalcAngle::parse_dimension(value, unit) {
+            return Ok(NoCalcNumeric::Angle(angle));
+        }
+
+        if let Ok(time) = NoCalcTime::parse_dimension(value, unit) {
+            return Ok(NoCalcNumeric::Time(time));
+        }
+
         match_ignore_ascii_case! { unit,
-            "number" => Ok(NoCalcNumeric::Number(Number::new(value))),
-            "percent" => Ok(NoCalcNumeric::Percentage(Percentage::new(value))),
+            "number" => Ok(NoCalcNumeric::Number(NoCalcNumber::new(value))),
+            "percent" => Ok(NoCalcNumeric::Percentage(NoCalcPercentage::new(value))),
             _ => Err(()),
         }
 

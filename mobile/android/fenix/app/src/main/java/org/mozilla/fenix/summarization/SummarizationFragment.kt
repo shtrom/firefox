@@ -5,43 +5,172 @@
 package org.mozilla.fenix.summarization
 
 import android.app.Dialog
+import android.content.Context
+import android.content.DialogInterface
+import android.graphics.Color
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.core.view.ViewCompat
 import androidx.fragment.app.viewModels
 import androidx.fragment.compose.content
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.fragment.navArgs
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import mozilla.components.concept.llm.Llm
-import mozilla.components.feature.summarize.SummarizationSettings
+import kotlinx.coroutines.suspendCancellableCoroutine
+import mozilla.components.browser.state.selector.selectedTab
+import mozilla.components.browser.state.state.TabSessionState
+import mozilla.components.concept.engine.EngineSession
+import mozilla.components.concept.engine.pageextraction.ContentParams
+import mozilla.components.feature.summarize.SummarizationState
 import mozilla.components.feature.summarize.SummarizationUi
-import mozilla.components.feature.summarize.fakes.FakeCloudProvider
-import mozilla.components.feature.summarize.fakes.FakeLlm
+import mozilla.components.feature.summarize.ViewDismissed
+import mozilla.components.feature.summarize.content.PageContentExtractor
+import mozilla.components.feature.summarize.content.PageMetadata
+import mozilla.components.feature.summarize.content.PageMetadataExtractor
+import mozilla.components.feature.summarize.settings.SummarizationSettings
+import mozilla.components.feature.summarize.settings.SummarizeSettingsMiddleware
+import mozilla.components.feature.summarize.settings.SummarizeSettingsState
+import mozilla.components.feature.summarize.settings.SummarizeSettingsStore
+import mozilla.components.feature.summarize.settings.summarizeSettingsReducer
+import mozilla.components.support.base.log.logger.Logger
+import mozilla.components.support.ktx.android.view.setNavigationBarColorCompat
+import mozilla.components.support.utils.ext.top
 import org.mozilla.fenix.R
+import org.mozilla.fenix.ext.requireComponents
+import org.mozilla.fenix.settings.SupportUtils
+import org.mozilla.fenix.tabstray.ext.toDisplayTitle
 import org.mozilla.fenix.theme.FirefoxTheme
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import com.google.android.material.R as materialR
+
+private const val HIDING_FRICTION = 0.9f
+
+/**
+ * Gets the content for a given engine session.
+ */
+private fun EngineSession?.asPageContentExtractor(): PageContentExtractor = { options ->
+    runCatching {
+        val options = ContentParams(removeBoilerplate = options.shouldUseReaderModeContent)
+        suspendCancellableCoroutine { continuation ->
+            this!!.getPageContent(
+                options = options,
+                onResult = { content ->
+                    continuation.resume(content)
+                },
+                onException = { error ->
+                    continuation.resumeWithException(PageContentExtractor.Exception(error))
+                },
+            )
+        }
+    }
+}
+
+private fun EngineSession?.asPageMetadataExtractor(): PageMetadataExtractor = {
+    runCatching {
+        suspendCancellableCoroutine { continuation ->
+            this!!.getPageMetadata(
+                onResult = { metadata ->
+                    continuation.resume(
+                        PageMetadata(
+                            structuredDataTypes = metadata.structuredDataTypes,
+                            wordCount = metadata.wordCount,
+                            language = metadata.language,
+                            isReaderable = metadata.isReaderable,
+                        ),
+                    )
+                },
+                onException = { error ->
+                    continuation.resumeWithException(PageMetadataExtractor.Exception(error))
+                },
+            )
+        }
+    }
+}
+
+private fun Context.getConnectionType(): ConnectionType {
+    val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val capabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
+    return when {
+        capabilities == null -> ConnectionType.NONE
+        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> ConnectionType.WIFI
+        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> ConnectionType.CELLULAR
+        else -> ConnectionType.OTHER
+    }
+}
 
 /**
  * Summarization UI entry fragment.
  */
 class SummarizationFragment : BottomSheetDialogFragment() {
     private val args by navArgs<SummarizationFragmentArgs>()
+    private val currentTab: TabSessionState? get() = requireComponents.core.store.state.selectedTab
+    private val isEngineAvailable: Boolean get() = currentTab?.engineState?.engineSession != null
     private val storeViewModel: SummarizationStoreViewModel by viewModels {
+        val engineSession = currentTab?.engineState?.engineSession
+        val provider = requireComponents.llm.mlpaProvider
+        val title = currentTab?.toDisplayTitle() ?: ""
         SummarizationStoreViewModel.factory(
             initializedFromShake = args.fromShake,
-            llmProvider = FakeCloudProvider(
-                llm = FakeLlm.testRecipe,
-            ),
-            settings = SummarizationSettings.inMemory(),
+            pageTitle = title,
+            connectionType = requireContext().getConnectionType(),
+            llmProvider = provider,
+            settings = SummarizationSettings.dataStore(requireContext()),
+            pageContentExtractor = engineSession.asPageContentExtractor(),
+            pageMetadataExtractor = engineSession.asPageMetadataExtractor(),
+            errorReporter = { tag, exception ->
+                requireComponents.analytics.crashReporter.submitCaughtException(exception)
+                Logger(tag).error(exception.message ?: "", exception)
+            },
         )
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // if we're recreating the backstack while resuming, we need to check that the tab hasn't been killed in the
+        // background
+        if (savedInstanceState != null && !isEngineAvailable) {
+            dismiss()
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val bottomSheet = dialog?.findViewById<View>(materialR.id.design_bottom_sheet)
+        bottomSheet?.let { sheet ->
+            with(BottomSheetBehavior.from(sheet)) {
+                skipCollapsed = true
+                state = BottomSheetBehavior.STATE_EXPANDED
+                hideFriction = HIDING_FRICTION
+            }
+        }
+    }
+
+    override fun onDismiss(dialog: DialogInterface) {
+        super.onDismiss(dialog)
+        storeViewModel.store.dispatch(ViewDismissed(isEngineAvailable))
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog =
         super.onCreateDialog(savedInstanceState).apply {
             setOnShowListener {
-                val bottomSheet = findViewById<View?>(materialR.id.design_bottom_sheet)
-                bottomSheet?.setBackgroundResource(android.R.color.transparent)
+                val bottomSheet = findViewById<View>(materialR.id.design_bottom_sheet) ?: return@setOnShowListener
+                ViewCompat.setOnApplyWindowInsetsListener(bottomSheet) { view, insets ->
+                    // edge-to-edge workaround
+                    // exclude the bottom insets so that we can handle the insets in compose
+                    view.setPadding(0, insets.top(), 0, 0)
+                    insets
+                }
+                bottomSheet.setBackgroundResource(android.R.color.transparent)
+                dialog?.window?.setNavigationBarColorCompat(Color.TRANSPARENT)
             }
         }
 
@@ -50,59 +179,44 @@ class SummarizationFragment : BottomSheetDialogFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?,
     ): View = content {
+        val summarizeSettings = SummarizationSettings.dataStore(requireContext())
+
+        val state by storeViewModel.store.stateFlow.collectAsStateWithLifecycle()
+        LaunchedEffect(state) {
+            when (state) {
+                SummarizationState.LearnMoreAboutShakeConsent -> {
+                    openLearnMoreLink()
+                }
+                is SummarizationState.Finished -> {
+                    dismiss()
+                }
+                else -> {}
+            }
+        }
+
+        val settingsStore = SummarizeSettingsStore(
+            initialState = SummarizeSettingsState(),
+            reducer = ::summarizeSettingsReducer,
+            middleware = listOf(
+                SummarizeSettingsMiddleware(
+                    settings = summarizeSettings,
+                    onLearnMoreClicked = { openLearnMoreLink() },
+                    storeViewModel.viewModelScope,
+                ),
+            ),
+        )
+
         FirefoxTheme {
             SummarizationUi(
                 productName = getString(R.string.app_name),
                 store = storeViewModel.store,
+                settingsStore = settingsStore,
             )
         }
     }
+
+    private fun openLearnMoreLink() {
+        val url = SupportUtils.getGenericSumoURLForTopic(SupportUtils.SumoTopic.PAGE_SUMMARIZATION)
+        SupportUtils.launchSandboxCustomTab(requireContext(), url)
+    }
 }
-
-private val FakeLlm.Companion.testRecipe get() = FakeLlm(
-    listOf(
-        Llm.Response.Success.ReplyPart(
-            """
-            **Servings:** 4
-
-            **Total Time:** 30 mins
-
-            **Prep Time:** 5 mins
-
-            **Cook Time:** 25 mins
-
-            ## 🥕 Ingredients
-            - 1 tablespoon olive oil
-            - 2 cloves garlic, minced
-            - 3 cups tomato puree
-            - 3 cups water
-            - 1 teaspoon salt, or to taste
-            - ¼ cup olive oil
-            - 2 teaspoons red chili flakes, or to taste
-            - 6 ounces dry spaghetti
-            - salt to taste
-            - 1 tablespoon finely chopped parsley, for garnish
-
-            ## 📋 Instructions
-            1. Heat 1 tablespoon olive oil in a pot over medium heat. Add garlic and sizzle until golden and fragrant, about 1 minute. Stir in tomato puree, water, and salt. Bring to a simmer, then reduce to low heat and keep warm.
-            2. Pour ¼ cup olive oil into a large non-stick skillet over medium-high heat, season with chili flakes and heat until sizzling, about 1 minute. Add raw spaghetti and toss until well coated with chili oil.
-            3. Pour in about 3 cups of tomato broth and, using tongs, move pasta from side to side to evenly distribute. Cook, occasionally moving pasta, until most broth is absorbed or evaporated and spaghetti starts frying in the pan.
-            4. Turn spaghetti over with tongs, and evenly arrange in the pan. Keep cooking until pasta starts to brown and lightly chars.
-            5. Add about 2 more cups of tomato broth, and repeat the process. Continue cooking until spaghetti is charred to your liking and cooked to desired doneness.
-            6. Serve with a drizzle of olive oil and more chili flakes if desired.
-
-            ## ⭐️ Tips
-            - For a saucier version, add more broth at the end.
-            - Don’t be afraid to char the spaghetti—crispy bits are the best part!
-            - Can be served with Parmesan cheese or enjoyed as is.
-
-            ## 🥗 Nutrition
-            - Calories: 384
-            - Protein: 9g
-            - Carbs: 50g
-            - Fat: 18g
-            """.trimIndent(),
-        ),
-        Llm.Response.Success.ReplyFinished,
-    ),
-)

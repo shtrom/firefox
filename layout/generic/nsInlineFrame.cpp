@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -927,7 +925,15 @@ void nsInlineFrame::UpdateStyleOfOwnedAnonBoxesForIBSplit(
     }
 
     nsIFrame* nextInline = blockFrame->GetProperty(nsIFrame::IBSplitSibling());
-    MOZ_ASSERT(nextInline, "There is always a trailing inline in an IB split");
+    if (MOZ_UNLIKELY(!nextInline)) {
+      MOZ_ASSERT_UNREACHABLE(
+          "There should always a be trailing inline "
+          "in an IB split");
+      // Gracefully bail so that nextInline usage below doesn't
+      // null-deref.  (We can stop worrying about this when we remove
+      // IB split siblings in bug 2031448.)
+      return;
+    }
 
     for (nsIFrame* cont = nextInline; cont;
          cont = cont->GetNextContinuation()) {
@@ -1061,7 +1067,11 @@ void nsFirstLineFrame::Reflow(nsPresContext* aPresContext,
   ReflowFrames(aPresContext, aReflowInput, irs, aReflowOutput, aStatus);
   aReflowInput.mLineLayout->SetInFirstLine(false);
 
-  ReflowAbsoluteFrames(aPresContext, aReflowOutput, aReflowInput, aStatus);
+  // If we could be an abspos containing block, then this is where we would call
+  // ReflowAbsoluteFrames. But we can't be, per bug 2036239 comment 1.
+  MOZ_ASSERT(!IsAbsoluteContainer(),
+             "None of the properties that apply to ::first-line could make it "
+             "an abspos containing block!");
 
   // Note: the line layout code will properly compute our overflow state for us
 }

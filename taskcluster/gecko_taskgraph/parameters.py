@@ -18,6 +18,7 @@ gecko_parameters_schema = {
     Required("android_perftest_backstop"): bool,
     Required("app_version"): str,
     Required("backstop"): bool,
+    Required("dontbuild"): bool,
     Required("build_number"): int,
     Required("enable_always_target"): Any(bool, [str]),
     Required("files_changed"): [str],
@@ -36,8 +37,6 @@ gecko_parameters_schema = {
     Required("release_partner_build_number"): int,
     Required("release_type"): str,
     Required("release_product"): Any(None, str),
-    Required("required_signoffs"): [str],
-    Required("signoff_urls"): dict,
     Required("test_manifest_loader"): str,
     Required("try_mode"): Any(None, str),
     Required("try_task_config"): {
@@ -50,6 +49,11 @@ gecko_parameters_schema = {
         Optional("gecko-profile-entries"): int,
         Optional("gecko-profile-features"): str,
         Optional("gecko-profile-threads"): str,
+        Optional(
+            "native-profiling",
+            description="Use OS-native profilers (Simpleperf for Android and xperf for Windows)"
+            "when running tests. Only available in raptor-browsertime tests at the moment.",
+        ): bool,
         Optional(
             "github",
             description="Github pull request triggering a code-review analysis",
@@ -104,6 +108,7 @@ gecko_parameters_schema = {
     },
     Required("version"): str,
     Optional("head_git_rev"): str,
+    Optional("pull_request_number"): int,
 }
 
 
@@ -128,6 +133,7 @@ def get_defaults(repo_root=None):
         "android_perftest_backstop": False,
         "app_version": get_app_version(),
         "backstop": False,
+        "dontbuild": False,
         "base_repository": "https://hg.mozilla.org/mozilla-unified",
         "build_number": 1,
         "enable_always_target": ["docker-image"],
@@ -152,8 +158,6 @@ def get_defaults(repo_root=None):
         # This refers to the upstream repo rather than the local checkout, so
         # should be hardcoded to 'hg' even with git-cinnabar.
         "repository_type": "hg",
-        "required_signoffs": [],
-        "signoff_urls": {},
         "test_manifest_loader": "default",
         "try_mode": None,
         "try_task_config": {},
@@ -163,3 +167,8 @@ def get_defaults(repo_root=None):
 
 def register_parameters():
     extend_parameters_schema(gecko_parameters_schema, defaults_fn=get_defaults)
+
+
+def get_decision_parameters(graph_config, parameters):
+    if pr_number := os.environ.get("GECKO_PULL_REQUEST_NUMBER", None):
+        parameters["pull_request_number"] = int(pr_number)

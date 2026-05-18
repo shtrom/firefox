@@ -17,12 +17,12 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "absl/strings/string_view.h"
-#include "api/array_view.h"
 #include "api/data_channel_interface.h"
 #include "api/dtls_transport_interface.h"
 #include "api/environment/environment.h"
@@ -132,6 +132,14 @@ bool IsEmptyPPID(dcsctp::PPID ppid) {
   return webrtc_ppid == WebrtcPPID::kStringEmpty ||
          webrtc_ppid == WebrtcPPID::kBinaryEmpty;
 }
+
+std::string GetDebugName() {
+  static std::atomic<int> instance_count = 0;
+  StringBuilder sb;
+  sb << "DcSctpTransport" << instance_count++;
+  return sb.Release();
+}
+
 }  // namespace
 
 DcSctpTransport::DcSctpTransport(const Environment& env,
@@ -157,12 +165,9 @@ DcSctpTransport::DcSctpTransport(
           [this]() { return TimeMillis(); },
           [this](dcsctp::TimeoutID timeout_id) {
             socket_->HandleTimeout(timeout_id);
-          }) {
+          }),
+      debug_name_(GetDebugName()) {
   RTC_DCHECK_RUN_ON(network_thread_);
-  static std::atomic<int> instance_count = 0;
-  StringBuilder sb;
-  sb << debug_name_ << instance_count++;
-  debug_name_ = sb.Release();
   ConnectTransportSignals();
 }
 
@@ -185,12 +190,8 @@ void DcSctpTransport::SetDataChannelSink(DataChannelSink* sink) {
   }
 }
 
-void DcSctpTransport::SetDtlsTransport(DtlsTransportInternal* transport) {
-  RTC_DCHECK_RUN_ON(network_thread_);
-  DisconnectTransportSignals();
-  transport_ = transport;
-  ConnectTransportSignals();
-  MaybeConnectSocket();
+DtlsTransportInternal* DcSctpTransport::dtls_transport() const {
+  return transport_;
 }
 
 bool DcSctpTransport::Start(const SctpOptions& options) {
@@ -407,15 +408,17 @@ int DcSctpTransport::max_message_size() const {
 }
 
 std::optional<int> DcSctpTransport::max_outbound_streams() const {
-  if (!socket_)
+  if (!socket_ || !socket_->GetMetrics().has_value()) {
     return std::nullopt;
-  return socket_->options().announced_maximum_outgoing_streams;
+  }
+  return socket_->GetMetrics()->negotiated_maximum_outgoing_streams;
 }
 
 std::optional<int> DcSctpTransport::max_inbound_streams() const {
-  if (!socket_)
+  if (!socket_ || !socket_->GetMetrics().has_value()) {
     return std::nullopt;
-  return socket_->options().announced_maximum_incoming_streams;
+  }
+  return socket_->GetMetrics()->negotiated_maximum_incoming_streams;
 }
 
 size_t DcSctpTransport::buffered_amount(int sid) const {
@@ -436,12 +439,8 @@ void DcSctpTransport::SetBufferedAmountLowThreshold(int sid, size_t bytes) {
   socket_->SetBufferedAmountLowThreshold(dcsctp::StreamID(sid), bytes);
 }
 
-void DcSctpTransport::set_debug_name_for_testing(const char* debug_name) {
-  debug_name_ = debug_name;
-}
-
 SendPacketStatus DcSctpTransport::SendPacketWithStatus(
-    ArrayView<const uint8_t> data) {
+    std::span<const uint8_t> data) {
   RTC_DCHECK_RUN_ON(network_thread_);
   RTC_DCHECK(socket_);
 
@@ -572,11 +571,12 @@ void DcSctpTransport::OnConnected() {
   RTC_DCHECK_RUN_ON(network_thread_);
   RTC_DLOG(LS_INFO) << debug_name_ << "->OnConnected().";
   ready_to_send_data_ = true;
-  if (data_channel_sink_) {
-    data_channel_sink_->OnReadyToSend();
-  }
   if (on_connected_callback_) {
     on_connected_callback_();
+  }
+  if (data_channel_sink_) {
+    data_channel_sink_->OnTransportConnected();
+    data_channel_sink_->OnReadyToSend();
   }
 }
 
@@ -591,7 +591,7 @@ void DcSctpTransport::OnConnectionRestarted() {
 }
 
 void DcSctpTransport::OnStreamsResetFailed(
-    ArrayView<const dcsctp::StreamID> outgoing_streams,
+    std::span<const dcsctp::StreamID> outgoing_streams,
     absl::string_view reason) {
   // TODO(orphis): Need a test to check for correct behavior
   for (auto& stream_id : outgoing_streams) {
@@ -603,7 +603,7 @@ void DcSctpTransport::OnStreamsResetFailed(
 }
 
 void DcSctpTransport::OnStreamsResetPerformed(
-    ArrayView<const dcsctp::StreamID> outgoing_streams) {
+    std::span<const dcsctp::StreamID> outgoing_streams) {
   RTC_DCHECK_RUN_ON(network_thread_);
   for (auto& stream_id : outgoing_streams) {
     RTC_LOG(LS_INFO) << debug_name_
@@ -631,7 +631,7 @@ void DcSctpTransport::OnStreamsResetPerformed(
 }
 
 void DcSctpTransport::OnIncomingStreamsReset(
-    ArrayView<const dcsctp::StreamID> incoming_streams) {
+    std::span<const dcsctp::StreamID> incoming_streams) {
   RTC_DCHECK_RUN_ON(network_thread_);
   for (auto& stream_id : incoming_streams) {
     RTC_LOG(LS_INFO) << debug_name_
@@ -780,6 +780,7 @@ dcsctp::DcSctpOptions DcSctpTransport::CreateDcSctpOptions(
   dcsctp_options.max_init_retransmits = std::nullopt;
   dcsctp_options.per_stream_send_queue_limit =
       DataChannelInterface::MaxSendQueueSize();
+  dcsctp_options.announced_maximum_outgoing_streams = options.max_sctp_streams;
   // This is just set to avoid denial-of-service. Practically unlimited.
   dcsctp_options.max_send_buffer_size = std::numeric_limits<size_t>::max();
   dcsctp_options.enable_message_interleaving =

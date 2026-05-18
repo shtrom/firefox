@@ -28,7 +28,12 @@ fn grid_enabled() -> bool {
 
 #[cfg(feature = "servo")]
 fn grid_enabled() -> bool {
-    style_config::get_bool("layout.grid.enabled")
+    static_prefs::pref!("layout.grid.enabled")
+}
+
+#[inline]
+fn appearance_base_enabled(_context: &ParserContext) -> bool {
+    static_prefs::pref!("layout.css.appearance-base.enabled")
 }
 
 #[inline]
@@ -158,6 +163,7 @@ impl DisplayInside {
     ToTyped,
 )]
 #[repr(C)]
+#[typed(todo_derive_fields)]
 pub struct Display(u16);
 
 /// Gecko-only impl block for Display (shared stuff later in this file):
@@ -663,7 +669,7 @@ pub enum DominantBaseline {
     /// writing modes when 'text-orientation' is 'mixed' or 'upright'.
     Auto,
     /// Use the text-under baseline.
-    #[parse(aliases = "text-before-edge")]
+    #[parse(aliases = "text-after-edge")]
     TextBottom,
     /// Use the alphabetic baseline.
     Alphabetic,
@@ -680,7 +686,7 @@ pub enum DominantBaseline {
     /// Use the hanging baseline.
     Hanging,
     /// Use the text-over baseline.
-    #[parse(aliases = "text-after-edge")]
+    #[parse(aliases = "text-before-edge")]
     TextTop,
 }
 
@@ -846,6 +852,7 @@ pub enum ScrollSnapStrictness {
     ToTyped,
 )]
 #[repr(C)]
+#[typed(todo_derive_fields)]
 pub struct ScrollSnapType {
     axis: ScrollSnapAxis,
     strictness: ScrollSnapStrictness,
@@ -942,6 +949,7 @@ pub enum ScrollSnapAlignKeyword {
     ToTyped,
 )]
 #[repr(C)]
+#[typed(todo_derive_fields)]
 pub struct ScrollSnapAlign {
     block: ScrollSnapAlignKeyword,
     inline: ScrollSnapAlignKeyword,
@@ -1071,6 +1079,7 @@ pub enum OverflowAnchor {
 )]
 #[css(comma)]
 #[repr(C)]
+#[typed(no_multiple_values)]
 /// Provides a rendering hint to the user agent, stating what kinds of changes
 /// the author expects to perform on the element.
 ///
@@ -1686,8 +1695,11 @@ pub enum Appearance {
     Textfield,
     /// The dropdown button(s) that open up a dropdown list.
     MenulistButton,
-    /// Only relevant to the <select> element and ::picker(select) pseudo-element,
-    /// allowing them to be styled.
+    /// https://drafts.csswg.org/css-forms/#appearance
+    #[parse(condition = "appearance_base_enabled")]
+    Base,
+    /// Only relevant to the <select> element and ::picker(select) pseudo-element, allowing them to
+    /// be styled.
     #[parse(condition = "appearance_base_select_enabled")]
     BaseSelect,
     /// Menu Popup background.
@@ -2031,9 +2043,10 @@ impl ScrollbarGutter {
 
 /// A specified value for the zoom property.
 #[derive(
-    Clone, Copy, Debug, MallocSizeOf, PartialEq, Parse, SpecifiedValueInfo, ToCss, ToShmem, ToTyped,
+    Clone, Debug, MallocSizeOf, PartialEq, Parse, SpecifiedValueInfo, ToCss, ToShmem, ToTyped,
 )]
 #[allow(missing_docs)]
+#[typed(todo_derive_fields)]
 pub enum Zoom {
     Normal,
     /// An internal value that resets the effective zoom to 1. Used for scrollbar parts, which

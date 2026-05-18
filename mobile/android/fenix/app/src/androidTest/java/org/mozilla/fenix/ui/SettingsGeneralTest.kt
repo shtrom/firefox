@@ -4,9 +4,9 @@
 
 package org.mozilla.fenix.ui
 
-import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.core.net.toUri
 import androidx.core.os.LocaleListCompat
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.mozilla.fenix.FenixApplication
@@ -15,12 +15,12 @@ import org.mozilla.fenix.customannotations.SmokeTest
 import org.mozilla.fenix.helpers.AppAndSystemHelper.registerAndCleanupIdlingResources
 import org.mozilla.fenix.helpers.AppAndSystemHelper.runWithSystemLocaleChanged
 import org.mozilla.fenix.helpers.DataGenerationHelper.getStringResource
+import org.mozilla.fenix.helpers.FenixTestRule
 import org.mozilla.fenix.helpers.HomeActivityIntentTestRule
 import org.mozilla.fenix.helpers.RecyclerViewIdlingResource
 import org.mozilla.fenix.helpers.TestAssetHelper.loremIpsumAsset
 import org.mozilla.fenix.helpers.TestHelper.mDevice
 import org.mozilla.fenix.helpers.TestHelper.waitForAppWindowToBeUpdated
-import org.mozilla.fenix.helpers.TestSetup
 import org.mozilla.fenix.helpers.perf.DetectMemoryLeaksRule
 import org.mozilla.fenix.ui.robots.checkTextSizeOnWebsite
 import org.mozilla.fenix.ui.robots.homeScreen
@@ -29,20 +29,26 @@ import org.mozilla.fenix.ui.util.FRENCH_LANGUAGE_HEADER
 import org.mozilla.fenix.ui.util.FRENCH_SYSTEM_LOCALE_OPTION
 import org.mozilla.fenix.ui.util.FR_SETTINGS
 import org.mozilla.fenix.ui.util.ROMANIAN_LANGUAGE_HEADER
+import androidx.compose.ui.test.junit4.v2.AndroidComposeTestRule as AndroidComposeTestRuleV2
 
 /**
  *  Tests for verifying the General section of the Settings menu
  *
  */
-class SettingsGeneralTest : TestSetup() {
-    @get:Rule
+class SettingsGeneralTest {
+    @get:Rule(order = 0)
+    val fenixTestRule: FenixTestRule = FenixTestRule()
+
+    private val mockWebServer get() = fenixTestRule.mockWebServer
+
+    @get:Rule(order = 1)
     val composeTestRule =
-        AndroidComposeTestRule(
+        AndroidComposeTestRuleV2(
             HomeActivityIntentTestRule.withDefaultSettingsOverrides(),
         ) { it.activity }
 
-    @get:Rule
-    val memoryLeaksRule = DetectMemoryLeaksRule()
+    @get:Rule(order = 2)
+    val memoryLeaksRule = DetectMemoryLeaksRule(composeTestRule = { composeTestRule })
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2092697
     @Test
@@ -68,7 +74,7 @@ class SettingsGeneralTest : TestSetup() {
         }
     }
 
-    // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3135005
+    // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/344213
     @SmokeTest
     @Test
     fun verifyFontSizingChangeTest() {
@@ -161,6 +167,7 @@ class SettingsGeneralTest : TestSetup() {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/516078
+    @Ignore("Failing: https://bugzilla.mozilla.org/show_bug.cgi?id=2021700")
     @Test
     fun verifyFollowDeviceLanguageTest() {
         val frenchLocale = LocaleListCompat.forLanguageTags("fr")

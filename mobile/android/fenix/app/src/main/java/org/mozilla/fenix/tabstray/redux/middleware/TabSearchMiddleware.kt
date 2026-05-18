@@ -36,9 +36,14 @@ class TabSearchMiddleware(
         when (action) {
             is TabSearchAction.SearchQueryChanged -> {
                 scope.launch {
-                    val tabs = when (store.state.selectedPage) {
-                        Page.NormalTabs -> store.state.normalTabs + store.state.inactiveTabs
-                        Page.PrivateTabs -> store.state.privateTabs
+                    val state = store.state
+                    val items = when (state.selectedPage) {
+                        Page.NormalTabs -> {
+                            state.normalTabsState.items + state.inactiveTabs.tabs
+                        }
+                        Page.PrivateTabs -> {
+                            state.privateBrowsing.tabs
+                        }
                         else -> emptyList()
                     }
 
@@ -47,9 +52,15 @@ class TabSearchMiddleware(
                     val filteredTabs = if (query.isBlank()) {
                         emptyList()
                     } else {
+                        val allTabs = items.flatMap { item ->
+                            when (item) {
+                                is TabsTrayItem.Tab -> listOf(item)
+                                is TabsTrayItem.TabGroup -> item.tabs
+                            }
+                        }
+
                         val (matchingHomepage, matchingNonHomepage) =
-                            tabs
-                                .filterIsInstance<TabsTrayItem.Tab>()
+                            allTabs
                                 .filter { it.contains(text = query) }
                                 .sortedByDescending { it.lastAccess }
                                 .partition { it.isHomepageItem }

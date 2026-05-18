@@ -243,7 +243,7 @@ ContentAreaDropListener.prototype = {
     let dataTransfer = aEvent.dataTransfer;
     let types = dataTransfer.types;
     if (
-      !types.includes("application/x-moz-file") &&
+      !dataTransfer.files.length &&
       !types.includes("text/x-moz-url") &&
       !types.includes("text/uri-list") &&
       !types.includes("text/x-moz-text-internal") &&
@@ -264,7 +264,7 @@ ContentAreaDropListener.prototype = {
 
     // If drag source and drop target are in the same top window, don't allow.
     let eventWC =
-      aEvent.originalTarget.ownerGlobal.browsingContext.currentWindowContext;
+      aEvent.originalTarget.documentGlobal.browsingContext.currentWindowContext;
     if (eventWC && sourceTopWC == eventWC.topWindowContext) {
       return false;
     }

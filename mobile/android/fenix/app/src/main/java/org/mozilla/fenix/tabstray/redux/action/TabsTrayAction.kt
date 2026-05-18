@@ -44,14 +44,14 @@ sealed interface TabsTrayAction : Action {
     object ExitSelectMode : TabsTrayAction
 
     /**
-     * Added a new [TabsTrayItem] to the selection set.
+     * Added a new [TabsTrayItem.Tab] to the selection set.
      */
-    data class AddSelectTab(val tab: TabsTrayItem) : TabsTrayAction
+    data class AddSelectTab(val tab: TabsTrayItem.Tab) : TabsTrayAction
 
     /**
-     * Removed a [TabsTrayItem] from the selection set.
+     * Removed a [TabsTrayItem.Tab] from the selection set.
      */
-    data class RemoveSelectTab(val tab: TabsTrayItem) : TabsTrayAction
+    data class RemoveSelectTab(val tab: TabsTrayItem.Tab) : TabsTrayAction
 
     /**
      * The active page in the tray that is now in focus.
@@ -75,21 +75,6 @@ sealed interface TabsTrayAction : Action {
      * @property expanded The updated boolean to [org.mozilla.fenix.tabstray.redux.state.TabsTrayState.inactiveTabsExpanded]
      */
     data class UpdateInactiveExpanded(val expanded: Boolean) : TabsTrayAction
-
-    /**
-     * Updates the list of tabs in [org.mozilla.fenix.tabstray.redux.state.TabsTrayState.inactiveTabs].
-     */
-    data class UpdateInactiveTabs(val tabs: List<TabsTrayItem.Tab>) : TabsTrayAction
-
-    /**
-     * Updates the list of tabs in [org.mozilla.fenix.tabstray.redux.state.TabsTrayState.normalTabs].
-     */
-    data class UpdateNormalTabs(val tabs: List<TabsTrayItem>) : TabsTrayAction
-
-    /**
-     * Updates the list of tabs in [org.mozilla.fenix.tabstray.redux.state.TabsTrayState.privateTabs].
-     */
-    data class UpdatePrivateTabs(val tabs: List<TabsTrayItem>) : TabsTrayAction
 
     /**
      * Updates the list of synced tabs in [org.mozilla.fenix.tabstray.redux.state.TabsTrayState.syncedTabs].
@@ -154,4 +139,46 @@ sealed interface TabsTrayAction : Action {
      * [TabsTrayAction] fired when the user clicks on the back button or swipes to navigate back.
      */
     object NavigateBackInvoked : TabsTrayAction
+
+    /**
+     * Updates the private browsing lock status.
+     *
+     * @property isLocked Whether the private browsing mode is currently locked by biometrics/passcode.
+     */
+    data class UpdatePbmLockStatus(val isLocked: Boolean) : TabsTrayAction
+
+    /**
+     * [TabsTrayAction] fired when the user dismisses the Inactive Tabs CFR.
+     */
+    object DismissInactiveTabsCFR : TabsTrayAction
+
+    /**
+     * [TabsTrayAction] fired when the user dismisses the inactive tabs auto-close dialog.
+     */
+    object DismissInactiveTabsAutoCloseDialog : TabsTrayAction
+
+    /**
+     * [TabsTrayAction] Fired when a reorder is requested from a TabsTray gesture.
+     *
+     * @property sourceId The id of the item being reordered
+     * @property destinationId The id of the reorder target
+     * @property placeAfter Whether to place the item before or after the target
+     */
+    data class ReorderTabsTrayItem(
+        val sourceId: String,
+        val destinationId: String?,
+        val placeAfter: Boolean,
+    ) : TabsTrayAction, TabsStorageAction
+
+    /**
+     * [TabsTrayAction] fired when a tab drag is started from the tabs tray.
+     *
+     * @property preserveSelectMode Whether select mode should be preserved on a drag.
+     */
+    data class TabDragStart(val preserveSelectMode: Boolean) : TabsTrayAction
+
+    /**
+     * [TabsTrayAction] fired when a tab drag is cancelled from the tabs tray.
+     */
+    object TabDragCancel : TabsTrayAction
 }

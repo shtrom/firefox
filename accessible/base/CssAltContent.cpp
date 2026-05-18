@@ -1,4 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -72,13 +71,14 @@ CssAltContent::CssAltContent(nsIContent* aContent) {
     }
   }
   mItems = frame->StyleContent()->AltContentItems();
-}
+  if (mItems.IsEmpty()) {
+    return;
+  }
 
-void CssAltContent::AppendToString(nsAString& aOut) {
   // There can be multiple alt text items.
   for (const auto& item : mItems) {
     if (item.IsString()) {
-      aOut.Append(NS_ConvertUTF8toUTF16(item.AsString().AsString()));
+      mText.Append(NS_ConvertUTF8toUTF16(item.AsString().AsString()));
     } else if (item.IsAttr()) {
       // This item gets its value from an attribute on the element or from
       // fallback text.
@@ -104,10 +104,12 @@ void CssAltContent::AppendToString(nsAString& aOut) {
           fallback->ToString(val);
         }
       }
-      aOut.Append(val);
+      mText.Append(val);
     }
   }
 }
+
+void CssAltContent::AppendToString(nsAString& aOut) { aOut.Append(mText); }
 
 /* static */
 bool CssAltContent::HandleAttributeChange(nsIContent* aContent,

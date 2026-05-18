@@ -1,6 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * vim: set ts=8 sts=2 et sw=2 tw=80:
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -9,6 +7,8 @@
  */
 
 #include "gc/Tenuring.h"
+
+#include <bit>
 
 #include "gc/Cell.h"
 #include "gc/GCInternals.h"
@@ -102,6 +102,10 @@ size_t TenuringTracer::getPromotedCells() const { return promotedCells; }
 
 void TenuringTracer::onObjectEdge(JSObject** objp, const char* name) {
   JSObject* obj = *objp;
+  if (!obj) {
+    return;
+  }
+
   if (!nursery_.inCollectedRegion(obj)) {
     MOZ_ASSERT(!obj->isForwarded());
     return;
@@ -147,7 +151,11 @@ JSObject* TenuringTracer::promoteObject(JSObject* obj) {
 
 void TenuringTracer::onStringEdge(JSString** strp, const char* name) {
   JSString* str = *strp;
-  if (!nursery_.inCollectedRegion(str)) {
+  if (!str) {
+    return;
+  }
+
+  if (!str || !nursery_.inCollectedRegion(str)) {
     return;
   }
 
@@ -171,7 +179,7 @@ JSString* TenuringTracer::promoteOrForward(JSString* str) {
 
 void TenuringTracer::onBigIntEdge(JS::BigInt** bip, const char* name) {
   JS::BigInt* bi = *bip;
-  if (!nursery_.inCollectedRegion(bi)) {
+  if (!bi || !nursery_.inCollectedRegion(bi)) {
     return;
   }
 
@@ -195,7 +203,7 @@ JS::BigInt* TenuringTracer::promoteOrForward(JS::BigInt* bi) {
 
 void TenuringTracer::onGetterSetterEdge(GetterSetter** gsp, const char* name) {
   GetterSetter* gs = *gsp;
-  if (!nursery_.inCollectedRegion(gs)) {
+  if (!gs || !nursery_.inCollectedRegion(gs)) {
     return;
   }
 
@@ -337,8 +345,8 @@ void js::gc::StoreBuffer::MonoTypeBuffer<T>::trace(TenuringTracer& mover,
     last_.trace(mover);
   }
 
-  for (typename StoreSet::Range r = stores_.all(); !r.empty(); r.popFront()) {
-    r.front().trace(mover);
+  for (auto iter = stores_.iter(); !iter.done(); iter.next()) {
+    iter.get().trace(mover);
   }
 }
 
@@ -358,11 +366,7 @@ template struct StoreBuffer::MonoTypeBuffer<StoreBuffer::ObjectPtrEdge>;
 void js::gc::StoreBuffer::SlotsEdge::trace(TenuringTracer& mover) const {
   NativeObject* obj = object();
   MOZ_ASSERT(IsCellPointerValid(obj));
-
-  // Beware JSObject::swap exchanging a native object for a non-native one.
-  if (!obj->is<NativeObject>()) {
-    return;
-  }
+  MOZ_ASSERT(obj->is<NativeObject>());
 
   MOZ_ASSERT(!IsInsideNursery(obj), "obj shouldn't live in nursery.");
 
@@ -441,11 +445,14 @@ static inline void TraceWholeCell(TenuringTracer& mover,
 }
 
 template <typename T>
-bool TenuringTracer::traceBufferedCells(Arena* arena, ArenaCellSet* cells) {
+void TenuringTracer::traceBufferedCells(Arena* arena, ArenaCellSet* cells) {
   for (size_t i = 0; i < MaxArenaCellIndex; i += cells->BitsPerWord) {
     ArenaCellSet::WordT bitset = cells->getWord(i / cells->BitsPerWord);
+    static_assert(std::is_same_v<ArenaCellSet::WordT, uint32_t>,
+                  "unexpected word type");
+
     while (bitset) {
-      size_t bit = i + js::detail::CountTrailingZeroes(bitset);
+      size_t bit = i + std::countr_zero(bitset);
       bitset &= bitset - 1;  // Clear the low bit.
 
       auto cell =
@@ -460,11 +467,9 @@ bool TenuringTracer::traceBufferedCells(Arena* arena, ArenaCellSet* cells) {
       }
     }
   }
-
-  return false;
 }
 
-bool ArenaCellSet::trace(TenuringTracer& mover) {
+void ArenaCellSet::trace(TenuringTracer& mover) {
   check();
 
   arena->bufferedCells() = &ArenaCellSet::Empty;
@@ -472,13 +477,13 @@ bool ArenaCellSet::trace(TenuringTracer& mover) {
   JS::TraceKind kind = MapAllocToTraceKind(arena->getAllocKind());
   switch (kind) {
     case JS::TraceKind::Object:
-      return mover.traceBufferedCells<JSObject>(arena, this);
+      mover.traceBufferedCells<JSObject>(arena, this);
       break;
     case JS::TraceKind::String:
-      return mover.traceBufferedCells<JSString>(arena, this);
+      mover.traceBufferedCells<JSString>(arena, this);
       break;
     case JS::TraceKind::JitCode:
-      return mover.traceBufferedCells<jit::JitCode>(arena, this);
+      mover.traceBufferedCells<jit::JitCode>(arena, this);
       break;
     default:
       MOZ_CRASH("Unexpected trace kind");
@@ -489,16 +494,9 @@ void js::gc::StoreBuffer::WholeCellBuffer::trace(TenuringTracer& mover,
                                                  StoreBuffer* owner) {
   MOZ_ASSERT(owner->isEnabled());
 
-  ArenaCellSet** sweepListTail = &sweepHead_;
-
   for (LifoAlloc::Enum e(*storage_); !e.empty();) {
     ArenaCellSet* cellSet = e.read<ArenaCellSet>();
-    bool needsSweep = cellSet->trace(mover);
-    if (needsSweep) {
-      MOZ_ASSERT(!*sweepListTail);
-      *sweepListTail = cellSet;
-      sweepListTail = &cellSet->next;
-    }
+    cellSet->trace(mover);
   }
 }
 
@@ -669,9 +667,13 @@ void JSLinearString::maybeCloneCharsOnPromotionTyped(JSLinearString* str) {
   //
   // "Nothing else is yet known to keep the base alive" == "the base is not
   // currently forwarded".
+  //
+  // If something else depends on this string, then avoid this cloning to make
+  // sure we have a reference to the base string (without adding additional
+  // complexity to maintain one.)
   bool baseKnownLiveYet = IsForwarded(root);
   bool cloneToSaveSpace =
-      !baseKnownLiveYet &&
+      !baseKnownLiveYet && !str->isDependedOn() &&
       JSDependentString::smallComparedToBase(str->length(), root->length());
 
   if (!cloneToSaveSpace) {
@@ -707,11 +709,13 @@ void JSLinearString::maybeCloneCharsOnPromotionTyped(JSLinearString* str) {
   // The dependent string will be overwritten with a new non-dependent linear
   // string with a fresh set of flags appropriate for its new type. Preserve
   // flags that still apply to the new string.
-  uint32_t saved_flags = str->flags() & PRESERVE_LINEAR_NONATOM_BITS_ON_REPLACE;
+  uint32_t saved_flags =
+      str->flags() & StringFlags::PRESERVE_LINEAR_NONATOM_BITS_ON_REPLACE;
 
   // Overwrite the dest string with a new linear string.
   new (str) JSLinearString(data, len, false /* hasBuffer */);
-  MOZ_ASSERT((str->flags() & PRESERVE_LINEAR_NONATOM_BITS_ON_REPLACE) == 0);
+  MOZ_ASSERT((str->flags() &
+              StringFlags::PRESERVE_LINEAR_NONATOM_BITS_ON_REPLACE) == 0);
   str->setHeaderLengthAndFlags(len, str->flags() | saved_flags);
   if (str->isTenured()) {
     str->zone()->addCellMemory(str, nbytes, js::MemoryUse::StringContents);
@@ -749,7 +753,7 @@ void JSDependentString::updateToPromotedBaseImpl(JSLinearString* base) {
   const CharT* oldChars = JSString::nonInlineCharsRaw<CharT>();
   size_t offset = oldChars - oldBaseChars;
   JSLinearString* promotedBase = Forwarded(base);
-  MOZ_ASSERT(offset < promotedBase->length());
+  MOZ_ASSERT(offset + this->length() <= promotedBase->length());
 
   const CharT* newBaseChars =
       promotedBase->JSString::nonInlineCharsRaw<CharT>();
@@ -1620,13 +1624,13 @@ void PromotionStats::printObjectCounts(JSContext* cx,
                                        const JS::AutoRequireNoGC& nogc) {
   CountsVector counts;
 
-  for (auto r = objectCountByBaseShape.all(); !r.empty(); r.popFront()) {
-    size_t count = r.front().value();
+  for (auto iter = objectCountByBaseShape.iter(); !iter.done(); iter.next()) {
+    size_t count = iter.get().value();
     if (count < AttentionThreshold) {
       continue;
     }
 
-    BaseShape* baseShape = r.front().key();
+    BaseShape* baseShape = iter.get().key();
 
     const char* className = baseShape->clasp()->name;
 
@@ -1729,6 +1733,10 @@ MinorSweepingTracer::MinorSweepingTracer(JSRuntime* rt)
 template <typename T>
 inline void MinorSweepingTracer::onEdge(T** thingp, const char* name) {
   T* thing = *thingp;
+  if (!thing) {
+    return;
+  }
+
   if (thing->isTenured()) {
     MOZ_ASSERT(!IsForwarded(thing));
     return;

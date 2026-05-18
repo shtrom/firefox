@@ -481,11 +481,11 @@ export class FeatureCallout {
       case "popupshowing":
         // If another panel is showing, close the tour.
         if (
-          event.target.ownerGlobal === this.win &&
+          event.target.documentGlobal === this.win &&
           event.target !== this._container &&
           event.target.localName === "panel" &&
           event.target.id !== "ctrlTab-panel" &&
-          event.target.getAttribute("noautohide") !== "true"
+          !event.target.hasAttribute("noautohide")
         ) {
           this.endTour();
         }
@@ -793,6 +793,7 @@ export class FeatureCallout {
    * - %triggerTab%: The <tab> element associated with the current browser.
    * - %triggeredTabBookmark%: Bookmark item in the toolbar matching the current tab's URL or label.
    * - ::%shadow%: Traverses nested shadow DOM boundaries.
+   * - ::%document%: Traverses into a content document.
    *
    * @param {string} selector
    * @returns {{scope: Element, selector: string} | null}
@@ -803,7 +804,7 @@ export class FeatureCallout {
 
     // %triggerTab%
     if (this.browser && normalizedSelector.includes("%triggerTab%")) {
-      const triggerTab = this.browser.ownerGlobal.gBrowser?.getTabForBrowser(
+      const triggerTab = this.browser.documentGlobal.gBrowser?.getTabForBrowser(
         this.browser
       );
       if (!triggerTab) {
@@ -818,7 +819,7 @@ export class FeatureCallout {
 
     // %triggeredTabBookmark%
     if (normalizedSelector.includes("%triggeredTabBookmark%")) {
-      const gBrowser = this.browser?.ownerGlobal?.gBrowser;
+      const gBrowser = this.browser?.documentGlobal?.gBrowser;
       const tab = gBrowser?.getTabForBrowser(this.browser);
       const url = this.browser?.currentURI?.spec;
       const label = tab?.label;
@@ -873,20 +874,27 @@ export class FeatureCallout {
       normalizedSelector = `:scope${postTokenSelector}`;
     }
 
-    // ::%shadow%
-    if (normalizedSelector.includes("::%shadow%")) {
-      let parts = normalizedSelector.split("::%shadow%");
-      for (let i = 0; i < parts.length; i++) {
+    // ::%shadow% and ::%document%
+    if (
+      normalizedSelector.includes("::%shadow%") ||
+      normalizedSelector.includes("::%document%")
+    ) {
+      let parts = normalizedSelector.split(/(::%shadow%|::%document%)/);
+      for (let i = 0; i < parts.length; i += 2) {
         normalizedSelector = parts[i].trim();
-        if (i === parts.length - 1) {
+        if (i + 1 >= parts.length) {
           break;
         }
         let el = scope.querySelector(normalizedSelector);
         if (!el) {
           break;
         }
-        if (el.shadowRoot) {
+        if (parts[i + 1] === "::%shadow%" && el.shadowRoot) {
           scope = el.shadowRoot;
+        } else if (parts[i + 1] === "::%document%" && el.contentDocument) {
+          scope = el.contentDocument;
+        } else {
+          break;
         }
       }
     }
@@ -982,7 +990,7 @@ export class FeatureCallout {
         case "end": {
           // Inline arrow, i.e. arrow is on one of the left/right edges.
           let isRTL =
-            this.ownerGlobal.getComputedStyle(this).direction === "rtl";
+            this.documentGlobal.getComputedStyle(this).direction === "rtl";
           let isRight = isRTL ^ (positionParts[1] === "start");
           let side = isRight ? "end" : "start";
           arrowPosition = `inline-${side}`;
@@ -1048,6 +1056,7 @@ export class FeatureCallout {
             type="arrow"
             consumeoutsideclicks="never"
             norolluponanchor="true"
+            nonnative=""
             position="${panel_position.panel_position_string}"
             ${hide_arrow ? "" : 'show-arrow=""'}
             ${autohide ? "" : 'noautohide="true"'}
@@ -1590,8 +1599,7 @@ export class FeatureCallout {
     const handleActorMessage =
       lazy.AboutWelcomeParent.prototype.onContentMessage.bind({});
     const getActionHandler = name => data =>
-      handleActorMessage(`AWPage:${name}`, data, this.doc);
-
+      handleActorMessage(`AWPage:${name}`, data, this.browser);
     const telemetryMessageHandler = getActionHandler("TELEMETRY_EVENT");
     const AWSendEventTelemetry = data => {
       if (this.config?.metrics !== "block") {
@@ -1603,6 +1611,7 @@ export class FeatureCallout {
       AWGetFeatureConfig: () => this.config,
       AWGetSelectedTheme: getActionHandler("GET_SELECTED_THEME"),
       AWGetInstalledAddons: getActionHandler("GET_INSTALLED_ADDONS"),
+      AWEnsureAddonInstalled: getActionHandler("ENSURE_ADDON_INSTALLED"),
       // Do not send telemetry if message config sets metrics as 'block'.
       AWSendEventTelemetry,
       AWSendToDeviceEmailsSupported: getActionHandler(
@@ -2027,7 +2036,7 @@ export class FeatureCallout {
       if (doc !== this.doc) {
         let windowIndex = [
           ...Services.wm.getEnumerator("navigator:browser"),
-        ].indexOf(target.ownerGlobal);
+        ].indexOf(target.documentGlobal);
         source = `window${windowIndex + 1}: ${source}`;
       }
     }
@@ -2515,13 +2524,13 @@ export class FeatureCallout {
     chrome: {
       all: {
         // Use a gradient because it's possible (due to custom themes) that the
-        // arrowpanel-background will be semi-transparent, causing the arrow to
+        // panel-background will be semi-transparent, causing the arrow to
         // show through the callout background. Put the Menu color behind the
-        // arrowpanel-background.
+        // panel-background.
         background:
-          "Menu linear-gradient(var(--arrowpanel-background), var(--arrowpanel-background))",
-        color: "var(--arrowpanel-color)",
-        border: "var(--arrowpanel-border-color)",
+          "Menu linear-gradient(var(--panel-background-color), var(--panel-background-color))",
+        color: "var(--panel-text-color)",
+        border: "var(--panel-border-color)",
         "accent-color": "var(--focus-outline-color)",
         // Button Background
         "button-background": "var(--button-background-color)",
@@ -2564,18 +2573,18 @@ export class FeatureCallout {
         "link-color-hover": "LinkText",
         "link-color-active": "ActiveText",
         "link-color-visited": "VisitedText",
-        "icon-success-color": "var(--attention-dot-color)",
+        "icon-success-color": "var(--color-accent-attention)",
         // Dismiss Button
         "dismiss-button-background":
-          "Menu linear-gradient(var(--arrowpanel-background), var(--arrowpanel-background))",
+          "Menu linear-gradient(var(--panel-background-color), var(--panel-background-color))",
         "dismiss-button-background-hover":
-          "Menu linear-gradient(color-mix(in srgb, currentColor 14%, var(--arrowpanel-background)))",
+          "Menu linear-gradient(color-mix(in srgb, currentColor 14%, var(--panel-background-color)))",
         "dismiss-button-background-active":
-          "Menu linear-gradient(color-mix(in srgb, currentColor 21%, var(--arrowpanel-background)))",
+          "Menu linear-gradient(color-mix(in srgb, currentColor 21%, var(--panel-background-color)))",
       },
       hcm: {
-        background: "var(--arrowpanel-background)",
-        "dismiss-button-background": "var(--arrowpanel-background)",
+        background: "var(--panel-background-color)",
+        "dismiss-button-background": "var(--panel-background-color)",
         "dismiss-button-background-hover":
           "color-mix(in srgb, currentColor 14%, SelectedItem)",
         "dismiss-button-background-active":

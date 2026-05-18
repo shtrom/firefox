@@ -25,7 +25,7 @@ function handleEventLocal(aEvent) {
     return;
   }
   // Ignore <browser> element in about:preferences and any other special pages
-  if ("gBrowser" in aEvent.target.ownerGlobal) {
+  if ("gBrowser" in aEvent.target.documentGlobal) {
     xulFrameLoaderCreatedCounter.numCalledSoFar++;
   }
 }
@@ -135,7 +135,7 @@ async function loadURIAndCheckRemoteType(
 ) {
   let expectedCurr = remoteTypes.shift();
   initXulFrameLoaderCreatedCounter(xulFrameLoaderCreatedCounter);
-  aBrowser.ownerGlobal.gBrowser.addEventListener(
+  aBrowser.documentGlobal.gBrowser.addEventListener(
     "XULFrameLoaderCreated",
     handleEventLocal
   );
@@ -155,23 +155,20 @@ async function loadURIAndCheckRemoteType(
   info(
     `XULFrameLoaderCreated was fired ${xulFrameLoaderCreatedCounter.numCalledSoFar} time(s) for ${aURI} ${aText}`
   );
-  var numExpected =
-    expectedCurr == aPrevRemoteType &&
-    // With BFCache in the parent we'll get a XULFrameLoaderCreated even if
-    // expectedCurr == aPrevRemoteType, because we store the old frameloader
-    // in the BFCache. We have to make an exception for loads in the parent
-    // process (which have a null aPrevRemoteType/expectedCurr) because
-    // BFCache in the parent disables caching for those loads.
-    (!SpecialPowers.Services.appinfo.sessionHistoryInParent || !expectedCurr)
-      ? 0
-      : 1;
+
+  // With BFCache in the parent we'll get a XULFrameLoaderCreated even if
+  // expectedCurr == aPrevRemoteType, because we store the old frameloader in
+  // the BFCache. We have to make an exception for loads in the parent process
+  // (which have a null aPrevRemoteType/expectedCurr) because BFCache in the
+  // parent disables caching for those loads.
+  var numExpected = expectedCurr == aPrevRemoteType && !expectedCurr ? 0 : 1;
   is(
     xulFrameLoaderCreatedCounter.numCalledSoFar,
     numExpected,
     `XULFrameLoaderCreated fired correct number of times for ${aURI} ${aText} 
     prev=${aPrevRemoteType} curr =${aBrowser.remoteType}`
   );
-  aBrowser.ownerGlobal.gBrowser.removeEventListener(
+  aBrowser.documentGlobal.gBrowser.removeEventListener(
     "XULFrameLoaderCreated",
     handleEventLocal
   );

@@ -1,6 +1,4 @@
-/* -*- Mode: c++; c-basic-offset: 2; tab-width: 4; indent-tabs-mode: nil; -*-
- * vim: set sw=2 ts=4 expandtab:
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -37,6 +35,7 @@
 #include "ScreenHelperAndroid.h"
 #include "TouchResampler.h"
 #include "WidgetUtils.h"
+#include "WindowEvent.h"
 #include "WindowRenderer.h"
 
 #include "mozilla/EventForwards.h"
@@ -44,7 +43,6 @@
 #include "nsContentUtils.h"
 #include "nsDragService.h"
 #include "nsFocusManager.h"
-#include "nsGkAtoms.h"
 #include "nsGfxCIID.h"
 #include "nsIDocShellTreeOwner.h"
 #include "nsLayoutUtils.h"
@@ -1170,6 +1168,11 @@ class LayerViewSupport final
 
   using Base::AttachNative;
   using Base::DisposeNative;
+
+  template <typename Functor>
+  static void OnNativeCall(Functor&& aCall) {
+    NS_DispatchToMainThread(new WindowEvent<Functor>(std::move(aCall)));
+  }
 
   void OnWeakNonIntrusiveDetach(already_AddRefed<Runnable> aDisposer) {
     RefPtr<Runnable> disposer = aDisposer;
@@ -2576,6 +2579,19 @@ void nsWindow::DoResize(double aX, double aY, double aWidth, double aHeight,
   if (aRepaint && FindTopLevel() == nsWindow::TopWindow()) RedrawAll();
 }
 
+void nsWindow::PerformHapticFeedback(HapticFeedbackType aType) {
+  if (Destroyed()) {
+    return;
+  }
+
+  auto acc(mGeckoViewSupport.Access());
+  if (!acc) {
+    return;
+  }
+
+  acc->PerformHapticFeedback(static_cast<int32_t>(aType));
+}
+
 void nsWindow::SetSizeMode(nsSizeMode aMode) {
   if (aMode == mSizeMode) {
     return;
@@ -2920,19 +2936,6 @@ void nsWindow::InitEvent(WidgetGUIEvent& event, LayoutDeviceIntPoint* aPoint) {
   } else {
     event.mRefPoint = LayoutDeviceIntPoint(0, 0);
   }
-}
-
-void nsWindow::PerformHapticFeedback(int32_t aEffect) {
-  if (Destroyed()) {
-    return;
-  }
-
-  auto acc(mGeckoViewSupport.Access());
-  if (!acc) {
-    return;
-  }
-
-  acc->PerformHapticFeedback(aEffect);
 }
 
 void nsWindow::UpdateOverscrollVelocity(const float aX, const float aY) {

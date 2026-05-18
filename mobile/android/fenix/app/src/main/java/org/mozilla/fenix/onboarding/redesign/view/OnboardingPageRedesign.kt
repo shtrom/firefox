@@ -50,16 +50,14 @@ val CONTENT_IMAGE_HEIGHT = 176.dp
  * A composable for displaying onboarding page content.
  *
  * @param pageState [OnboardingPageState] The page content that's displayed.
- * @param isSmallDevice Whether to apply layout optimizations for constrained screen heights.
  */
 @Composable
 fun OnboardingPageRedesign(
     pageState: OnboardingPageState,
-    isSmallDevice: Boolean = false,
 ) {
-    CardView(pageState, isSmallDevice)
+    CardView(pageState, pageState.isSmallDevice)
 
-    LaunchedEffect(pageState) {
+    LaunchedEffect(Unit) {
         pageState.onRecordImpressionEvent()
     }
 }
@@ -96,9 +94,17 @@ private fun CardView(
                 ),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Spacer(Modifier.weight(TITLE_TOP_SPACER_WEIGHT)).takeIf { !isSmallDevice }
+                if (pageState.isSmallDevice) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                } else {
+                    Spacer(modifier = Modifier.weight(TITLE_TOP_SPACER_WEIGHT))
+                }
 
                 Content(pageState, isSmallDevice)
+
+                pageState.secondaryButton?.let {
+                    SecondaryButton(title = pageState.title, secondaryButton = it)
+                }
 
                 FilledButton(
                     modifier = Modifier
@@ -109,10 +115,6 @@ private fun CardView(
                     text = pageState.primaryButton.text,
                     onClick = pageState.primaryButton.onClick,
                 )
-
-                pageState.secondaryButton?.let {
-                    SecondaryButton(title = pageState.title, secondaryButton = it)
-                }
             }
         }
     }
@@ -192,7 +194,6 @@ private fun OnboardingPageSetToDefaultPreview() {
                 ),
                 onRecordImpressionEvent = {},
             ),
-            isSmallDevice = false,
         )
     }
 }
@@ -216,7 +217,6 @@ private fun OnboardingPageSyncPreview() {
                 ),
                 onRecordImpressionEvent = {},
             ),
-            isSmallDevice = false,
         )
     }
 }
@@ -240,7 +240,6 @@ private fun OnboardingPageNotificationPreview() {
                 ),
                 onRecordImpressionEvent = {},
             ),
-            isSmallDevice = false,
         )
     }
 }
@@ -264,7 +263,6 @@ private fun OnboardingPageSearchWidgetPreview() {
                 ),
                 onRecordImpressionEvent = {},
             ),
-            isSmallDevice = false,
         )
     }
 }

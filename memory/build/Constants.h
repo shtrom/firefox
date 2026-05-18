@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -8,7 +6,8 @@
 #define CONSTANTS_H
 
 #include "mozilla/Literals.h"
-#include "mozilla/MathAlgorithms.h"
+
+#include <bit>
 
 #include "Utils.h"
 
@@ -85,9 +84,8 @@ static constexpr size_t kMaxQuantumClass = kMinQuantumWideClass - kQuantum;
 static constexpr size_t kMaxQuantumWideClass = kMinLargeClass - kQuantumWide;
 
 // We can optimise some divisions to shifts if these are powers of two.
-static_assert(mozilla::IsPowerOfTwo(kQuantum),
-              "kQuantum is not a power of two");
-static_assert(mozilla::IsPowerOfTwo(kQuantumWide),
+static_assert(std::has_single_bit(kQuantum), "kQuantum is not a power of two");
+static_assert(std::has_single_bit(kQuantumWide),
               "kQuantumWide is not a power of two");
 
 static_assert(kMaxQuantumClass % kQuantum == 0,
@@ -119,6 +117,7 @@ constexpr size_t kCacheLineSize =
     64
 #endif
     ;
+constexpr size_t kCacheLineMask = kCacheLineSize - 1;
 
 // Recycle at most 128 MiB of chunks. This means we retain at most
 // 6.25% of the process address space on a 32-bit OS for later use.

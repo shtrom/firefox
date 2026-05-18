@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -46,7 +44,6 @@
 #include "mozilla/dom/workerinternals/Queue.h"
 #include "mozilla/ipc/Endpoint.h"
 #include "mozilla/net/NeckoChannelParams.h"
-#include "nsContentUtils.h"
 #include "nsIChannel.h"
 #include "nsIContentPolicy.h"
 #include "nsID.h"
@@ -448,8 +445,8 @@ class WorkerPrivate final
                    JSErrorReport* aReport);
 
   static void ReportErrorToConsole(
-      uint32_t aErrorFlags, const nsCString& aCategory,
-      nsContentUtils::PropertiesFile aFile, const nsCString& aMessageName,
+      uint32_t aErrorFlags, const nsCString& aCategory, PropertiesFile aFile,
+      const nsCString& aMessageName,
       const nsTArray<nsString>& aParams = nsTArray<nsString>(),
       const mozilla::SourceLocation& aLocation =
           mozilla::JSCallingLocation::Get());
@@ -736,6 +733,7 @@ class WorkerPrivate final
   void CopyJSSettings(workerinternals::JSSettings& aSettings) {
     mozilla::MutexAutoLock lock(mMutex);
     aSettings = mJSSettings;
+    aSettings.CopyOverrideStrings();
   }
 
   void CopyJSRealmOptions(JS::RealmOptions& aOptions) {
@@ -961,7 +959,7 @@ class WorkerPrivate final
     return mLoadInfo.mCSPContext->CSPInfo();
   }
 
-  WorkerCSPContext* GetCSPContext() const {
+  OffThreadCSPContext* GetCSPContext() const {
     return mLoadInfo.mCSPContext.get();
   }
 
@@ -1001,6 +999,11 @@ class WorkerPrivate final
   bool UsingStorageAccess() const {
     AssertIsOnWorkerThread();
     return mLoadInfo.mUsingStorageAccess;
+  }
+
+  bool SerialAllowed() const {
+    AssertIsOnWorkerThread();
+    return mLoadInfo.mSerialAllowed;
   }
 
   nsICookieJarSettings* CookieJarSettings() const {
@@ -1049,8 +1052,6 @@ class WorkerPrivate final
   bool Thaw(const nsPIDOMWindowInner* aWindow);
 
   void PropagateStorageAccessPermissionGranted();
-
-  void NotifyStorageKeyUsed();
 
   void EnableDebugger();
 
@@ -1735,10 +1736,6 @@ class WorkerPrivate final
 
   // The flag indicates if the worke is idle for events in the main event loop.
   bool mWorkerLoopIsIdle MOZ_GUARDED_BY(mMutex){false};
-
-  // This flag is used to ensure we only call NotifyStorageKeyUsed once per
-  // global.
-  bool hasNotifiedStorageKeyUsed{false};
 
   RefPtr<WorkerParentRef> mParentRef;
 

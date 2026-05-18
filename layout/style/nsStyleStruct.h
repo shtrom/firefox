@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -23,6 +21,7 @@
 #include "mozilla/Attributes.h"
 #include "mozilla/Likely.h"
 #include "mozilla/Maybe.h"
+#include "mozilla/StaticPrefs_layout.h"
 #include "mozilla/WindowButtonType.h"
 #include "nsChangeHint.h"
 #include "nsColor.h"
@@ -1014,6 +1013,11 @@ struct MOZ_NEEDS_MEMMOVABLE_MEMBERS nsStylePosition {
   inline mozilla::StyleContentDistribution UsedContentAlignment(
       LogicalAxis aAxis) const;
 
+  bool CanHaveDefaultAnchor() const {
+    return mPositionAnchor.value.IsIdent() || mPositionAnchor.value.IsAuto() ||
+           (mPositionAnchor.value.IsNormal() && !mPositionArea.IsNone());
+  }
+
   Position mObjectPosition;
   StyleRect<mozilla::StyleInset> mOffset;
   StyleSize mWidth;
@@ -1557,10 +1561,9 @@ struct StyleAnimation {
   StyleAnimationIterationCount mIterationCount{1.0f};
   StyleAnimationComposition mComposition = StyleAnimationComposition::Replace;
   StyleAnimationTimeline mTimeline = StyleAnimationTimeline::Auto();
-  StyleAnimationRangeStart mRangeStart{StyleTimelineRangeName::Normal,
-                                       LengthPercentage::FromPercentage(0.0f)};
-  StyleAnimationRangeEnd mRangeEnd{StyleTimelineRangeName::Normal,
-                                   LengthPercentage::FromPercentage(1.0f)};
+  StyleAnimationRangeStart mRangeStart =
+      StyleAnimationRangeStart::DefaultStart();
+  StyleAnimationRangeEnd mRangeEnd = StyleAnimationRangeEnd::DefaultEnd();
 };
 
 struct StyleScrollTimeline {
@@ -1708,8 +1711,6 @@ struct MOZ_NEEDS_MEMMOVABLE_MEMBERS nsStyleDisplay {
   // may identify anchor positioning anchor elements.
   mozilla::StyleScopedName mAnchorScope;
 
-  mozilla::StyleScopedName mTimelineScope;
-
   mozilla::Maybe<mozilla::WindowButtonType> GetWindowButtonType() const {
     if (MOZ_LIKELY(mDefaultAppearance == mozilla::StyleAppearance::None)) {
       return mozilla::Nothing();
@@ -1727,8 +1728,11 @@ struct MOZ_NEEDS_MEMMOVABLE_MEMBERS nsStyleDisplay {
     }
   }
 
-  bool HasAppearance() const {
-    return EffectiveAppearance() != mozilla::StyleAppearance::None;
+  bool HasNativeAppearance() const {
+    auto appearance = EffectiveAppearance();
+    return appearance != mozilla::StyleAppearance::None &&
+           appearance != mozilla::StyleAppearance::Base &&
+           appearance != mozilla::StyleAppearance::BaseSelect;
   }
 
   mozilla::StyleAppearance EffectiveAppearance() const {
@@ -2033,7 +2037,11 @@ struct MOZ_NEEDS_MEMMOVABLE_MEMBERS nsStyleUIReset {
  public:
   mozilla::StyleUserSelect ComputedUserSelect() const { return mUserSelect; }
 
-  mozilla::StyleScrollbarWidth ScrollbarWidth() const;
+  // DO NOT USE THIS FUNCTION DIRECTLY.
+  // nsLayoutUtils::ScrollbarWidthFor() should be used instead.
+  mozilla::StyleScrollbarWidth ComputedScrollbarWidth() const {
+    return mScrollbarWidth;
+  }
 
   const mozilla::StyleTransitionProperty& GetTransitionProperty(
       uint32_t aIndex) const {
@@ -2097,11 +2105,12 @@ struct MOZ_NEEDS_MEMMOVABLE_MEMBERS nsStyleUIReset {
   const mozilla::StyleAnimationTimeline& GetTimeline(uint32_t aIndex) const {
     return mAnimations[aIndex % mAnimationTimelineCount].GetTimeline();
   }
-  const mozilla::StyleAnimationRangeStart& GetRangeStart(
+  const mozilla::StyleAnimationRangeStart& GetAnimationRangeStart(
       uint32_t aIndex) const {
     return mAnimations[aIndex % mAnimationRangeStartCount].GetRangeStart();
   }
-  const mozilla::StyleAnimationRangeEnd& GetRangeEnd(uint32_t aIndex) const {
+  const mozilla::StyleAnimationRangeEnd& GetAnimationRangeEnd(
+      uint32_t aIndex) const {
     return mAnimations[aIndex % mAnimationRangeEndCount].GetRangeEnd();
   }
 
@@ -2110,7 +2119,8 @@ struct MOZ_NEEDS_MEMMOVABLE_MEMBERS nsStyleUIReset {
   mozilla::StyleImeMode mIMEMode;
   mozilla::StyleWindowDragging mWindowDragging;
   mozilla::StyleWindowShadow mWindowShadow;
-  float mWindowOpacity;
+  mozilla::StyleFieldSizing mFieldSizing;
+
   // The margin of the window region that should be transparent to events.
   mozilla::StyleLength mMozWindowInputRegionMargin;
   mozilla::StyleTransform mMozWindowTransform;
@@ -2123,6 +2133,7 @@ struct MOZ_NEEDS_MEMMOVABLE_MEMBERS nsStyleUIReset {
   uint32_t mTransitionDelayCount;
   uint32_t mTransitionPropertyCount;
   uint32_t mTransitionBehaviorCount;
+  float mWindowOpacity;
   nsStyleAutoArray<mozilla::StyleAnimation> mAnimations;
   // The number of elements in mAnimations that are not from repeating
   // a list due to another property being longer.
@@ -2148,12 +2159,14 @@ struct MOZ_NEEDS_MEMMOVABLE_MEMBERS nsStyleUIReset {
   uint32_t mViewTimelineAxisCount;
   uint32_t mViewTimelineInsetCount;
 
-  mozilla::StyleFieldSizing mFieldSizing;
-
-  bool HasViewTransitionName() const { return !mViewTransitionName.IsNone(); }
+  bool HasViewTransitionName() const {
+    return mViewTransitionName.value.AsAtom() != nsGkAtoms::none;
+  }
 
   mozilla::StyleViewTransitionName mViewTransitionName;
   mozilla::StyleViewTransitionClass mViewTransitionClass;
+
+  mozilla::StyleScopedName mTimelineScope;
 };
 
 struct MOZ_NEEDS_MEMMOVABLE_MEMBERS nsStyleUI {

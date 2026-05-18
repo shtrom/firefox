@@ -2760,6 +2760,25 @@ public class GeckoSessionTestRule implements TestRule {
     webExtensionApiCall("RemoveAllCertOverrides", null);
   }
 
+  /**
+   * Seeds the tracking protection database with the given content blocking log.
+   *
+   * @param logJson JSON-serialized ContentBlockingLog (origin keys mapped to arrays of [state,
+   *     blocked, count] tuples).
+   */
+  public void saveTrackingDBEvents(final @NonNull String logJson) {
+    webExtensionApiCall(
+        "SaveTrackingDBEvents",
+        args -> {
+          args.put("log", logJson);
+        });
+  }
+
+  /** Removes all entries from the tracking protection database. */
+  public void clearTrackingDB() {
+    webExtensionApiCall("ClearTrackingDB", null);
+  }
+
   private interface SetArgs {
     void setArgs(JSONObject object) throws JSONException;
   }
@@ -2819,11 +2838,6 @@ public class GeckoSessionTestRule implements TestRule {
     webExtensionApiCall("ClearHSTSState", null);
   }
 
-  /** Checks if SHIP is running. */
-  public boolean isSessionHistoryInParentRunning() {
-    return (Boolean) webExtensionApiCall("IsSessionHistoryInParentRunning", null);
-  }
-
   /** Checks if fission is running. */
   public boolean isFissionRunning() {
     return (Boolean) webExtensionApiCall("IsFissionRunning", null);
@@ -2832,6 +2846,20 @@ public class GeckoSessionTestRule implements TestRule {
   /** Simulate user gesture activation */
   public void notifyUserGestureActivation(final GeckoSession session) {
     webExtensionApiCall(session, "NotifyUserGestureActivation", null);
+  }
+
+  /** Adds a virtual WebAuthn authenticator. Returns the authenticator ID. */
+  public String addVirtualAuthenticator() {
+    return (String) webExtensionApiCall("AddVirtualAuthenticator", null);
+  }
+
+  /** Removes a virtual WebAuthn authenticator. */
+  public void removeVirtualAuthenticator(final String authenticatorId) {
+    webExtensionApiCall(
+        "RemoveVirtualAuthenticator",
+        args -> {
+          args.put("authenticatorId", authenticatorId);
+        });
   }
 
   /**

@@ -4,7 +4,6 @@
 
 package org.mozilla.fenix.tabstray.ui.tabitems
 
-import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.core.DecayAnimationSpec
 import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.BorderStroke
@@ -16,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,6 +35,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import mozilla.components.compose.base.RadioCheckmark
+import mozilla.components.compose.base.button.IconButton
 import mozilla.components.support.base.utils.MAX_URI_LENGTH
 import org.mozilla.fenix.R
 import org.mozilla.fenix.compose.DismissibleItemBackground
@@ -47,7 +46,6 @@ import org.mozilla.fenix.ext.toShortUrl
 import org.mozilla.fenix.tabstray.TabsTrayTestTag
 import org.mozilla.fenix.tabstray.data.TabsTrayItem
 import org.mozilla.fenix.tabstray.data.createTab
-import org.mozilla.fenix.tabstray.ui.sharedTabTransition
 import org.mozilla.fenix.theme.FirefoxTheme
 import mozilla.components.browser.tabstray.R as tabstrayR
 import mozilla.components.ui.icons.R as iconsR
@@ -61,11 +59,7 @@ private val ThumbnailHeight = 68.dp
  *
  * @param tab The given tab to render as list item.
  * @param modifier [Modifier] to be applied to the tab list item content.
- * @param isSelected Indicates if the item should be rendered as selected.
- * @param multiSelectionEnabled Indicates if the item should be rendered with multi selection options,
- * enabled.
- * @param multiSelectionSelected Indicates if the item should be rendered as multi selection selected
- * option.
+ * @param selectionState: The tab item's [TabsTrayItemSelectionState]
  * @param shouldClickListen Whether the item should stop listening to click events.
  * @param swipingEnabled Whether the item is swipeable.
  * @param onCloseClick Invoked when the close button is clicked.
@@ -76,9 +70,7 @@ private val ThumbnailHeight = 68.dp
 fun TabListTabItem(
     tab: TabsTrayItem.Tab,
     modifier: Modifier = Modifier,
-    isSelected: Boolean = false,
-    multiSelectionEnabled: Boolean = false,
-    multiSelectionSelected: Boolean = false,
+    selectionState: TabsTrayItemSelectionState = TabsTrayItemSelectionState(),
     shouldClickListen: Boolean = true,
     swipingEnabled: Boolean = true,
     onCloseClick: (TabsTrayItem.Tab) -> Unit,
@@ -89,10 +81,10 @@ fun TabListTabItem(
     val density = LocalDensity.current
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
-    val swipeState = remember(multiSelectionEnabled, swipingEnabled) {
+    val swipeState = remember(selectionState.multiSelectEnabled, swipingEnabled) {
         SwipeToDismissState2(
             density = density,
-            enabled = !multiSelectionEnabled && swipingEnabled,
+            enabled = !selectionState.multiSelectEnabled && swipingEnabled,
             decayAnimationSpec = decayAnimationSpec,
             isRtl = isRtl,
         )
@@ -112,9 +104,7 @@ fun TabListTabItem(
     ) {
         TabContent(
             tab = tab,
-            isSelected = isSelected,
-            multiSelectionEnabled = multiSelectionEnabled,
-            multiSelectionSelected = multiSelectionSelected,
+            selectionState = selectionState,
             shouldClickListen = shouldClickListen,
             modifier = modifier,
             onCloseClick = onCloseClick,
@@ -128,37 +118,34 @@ fun TabListTabItem(
 @Composable
 private fun TabContent(
     tab: TabsTrayItem.Tab,
-    isSelected: Boolean,
-    multiSelectionEnabled: Boolean,
-    multiSelectionSelected: Boolean,
+    selectionState: TabsTrayItemSelectionState,
     shouldClickListen: Boolean,
     modifier: Modifier = Modifier,
     onCloseClick: (TabsTrayItem.Tab) -> Unit,
     onClick: (TabsTrayItem) -> Unit,
     onLongClick: ((TabsTrayItem) -> Unit)? = null,
 ) {
-    val contentBackgroundColor = if (isSelected) {
+    val contentBackgroundColor = if (selectionState.isSelected) {
         MaterialTheme.colorScheme.primaryContainer
-    } else if (multiSelectionSelected) {
-        MaterialTheme.colorScheme.surfaceContainerHigh
     } else {
         MaterialTheme.colorScheme.surfaceContainerLowest
     }
-
     Row(
         modifier = modifier
             .fillMaxWidth()
             .background(contentBackgroundColor)
             .tabItemClickable(
-                tab = tab,
-                enabled = shouldClickListen,
-                onClick = onClick,
-                onLongClick = onLongClick,
+                clickHandler = TabsTrayItemClickHandler(
+                    enabled = shouldClickListen,
+                    onClick = onClick,
+                    onLongClick = onLongClick,
+                ),
+                clickedItem = tab,
             )
             .padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
             .testTag(TabsTrayTestTag.TAB_ITEM_ROOT)
             .semantics {
-                selected = isSelected
+                selected = selectionState.isFocused
             },
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -186,32 +173,45 @@ private fun TabContent(
             )
         }
 
-        if (!multiSelectionEnabled) {
-            IconButton(
-                onClick = { onCloseClick(tab) },
-                modifier = Modifier
-                    .size(size = 48.dp)
-                    .testTag(TabsTrayTestTag.TAB_ITEM_CLOSE),
-            ) {
-                Icon(
-                    painter = painterResource(id = iconsR.drawable.mozac_ic_cross_24),
-                    contentDescription = stringResource(
-                        id = R.string.close_tab_title,
-                        tab.title,
-                    ),
-                    tint = MaterialTheme.colorScheme.secondary,
-                )
-            }
-        } else {
-            RadioCheckmark(
-                isSelected = multiSelectionSelected,
-                modifier = Modifier.padding(end = 16.dp),
-            )
-        }
+        TabListIcon(
+            selectionState = selectionState,
+            onCloseClick = onCloseClick,
+            tab = tab,
+        )
     }
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+private fun TabListIcon(
+    selectionState: TabsTrayItemSelectionState,
+    onCloseClick: (TabsTrayItem.Tab) -> Unit,
+    tab: TabsTrayItem.Tab,
+) {
+    if (!selectionState.multiSelectEnabled) {
+        IconButton(
+            onClick = { onCloseClick(tab) },
+            contentDescription = stringResource(
+                id = R.string.close_tab_title,
+                tab.title,
+            ),
+            modifier = Modifier
+                .size(size = 48.dp)
+                .testTag(TabsTrayTestTag.TAB_ITEM_CLOSE),
+        ) {
+            Icon(
+                painter = painterResource(id = iconsR.drawable.mozac_ic_cross_24),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary,
+            )
+        }
+    } else {
+        RadioCheckmark(
+            isSelected = selectionState.isSelected,
+            modifier = Modifier.padding(end = FirefoxTheme.layout.space.dynamic200),
+        )
+    }
+}
+
 @Composable
 private fun Thumbnail(
     tab: TabsTrayItem.Tab,
@@ -222,7 +222,6 @@ private fun Thumbnail(
         tabThumbnailImageData = tab.toThumbnailImageData(),
         thumbnailSizePx = thumbnailSize,
         modifier = Modifier
-            .sharedTabTransition(tabId = tab.id)
             .size(
                 width = ThumbnailWidth,
                 height = ThumbnailHeight,
@@ -235,54 +234,93 @@ private fun Thumbnail(
 }
 
 private data class TabListItemPreviewState(
-    val isSelected: Boolean,
-    val multiSelectionEnabled: Boolean,
-    val multiSelectionSelected: Boolean,
+    val tabItemSelectionState: TabsTrayItemSelectionState,
     val url: String = "www.mozilla.org",
     val title: String = "Mozilla Domain",
 )
 
 private class TabListItemParameterProvider : PreviewParameterProvider<TabListItemPreviewState> {
-    override val values: Sequence<TabListItemPreviewState>
-        get() = sequenceOf(
+    val data: List<Pair<String, TabListItemPreviewState>> = listOf(
+        Pair(
+            "Not focused or selected",
             TabListItemPreviewState(
-                isSelected = false,
-                multiSelectionEnabled = false,
-                multiSelectionSelected = false,
+                TabsTrayItemSelectionState(
+                    isFocused = false,
+                    multiSelectEnabled = false,
+                    isSelected = false,
+                ),
             ),
+        ),
+        Pair(
+            "Focused, not selected",
             TabListItemPreviewState(
-                isSelected = true,
-                multiSelectionEnabled = false,
-                multiSelectionSelected = false,
+                TabsTrayItemSelectionState(
+                    isFocused = true,
+                    multiSelectEnabled = false,
+                    isSelected = false,
+                ),
             ),
+        ),
+        Pair(
+            "Multiselection enabled, not focused or selected",
             TabListItemPreviewState(
-                isSelected = false,
-                multiSelectionEnabled = true,
-                multiSelectionSelected = false,
+                TabsTrayItemSelectionState(
+                    isFocused = false,
+                    multiSelectEnabled = true,
+                    isSelected = false,
+                ),
             ),
+        ),
+        Pair(
+            "Multiselection enabled, focused, not selected",
             TabListItemPreviewState(
-                isSelected = true,
-                multiSelectionEnabled = true,
-                multiSelectionSelected = false,
+                TabsTrayItemSelectionState(
+                    isFocused = true,
+                    multiSelectEnabled = true,
+                    isSelected = false,
+                ),
             ),
+        ),
+        Pair(
+            "Multiselection enabled, not focused, selected",
             TabListItemPreviewState(
-                isSelected = false,
-                multiSelectionEnabled = true,
-                multiSelectionSelected = true,
+                TabsTrayItemSelectionState(
+                    isFocused = false,
+                    multiSelectEnabled = true,
+                    isSelected = true,
+                ),
             ),
+        ),
+        Pair(
+            "Multiselection enabled, focused and selected",
             TabListItemPreviewState(
-                isSelected = true,
-                multiSelectionEnabled = true,
-                multiSelectionSelected = true,
+                TabsTrayItemSelectionState(
+                    isFocused = true,
+                    multiSelectEnabled = true,
+                    isSelected = true,
+                ),
             ),
+        ),
+        Pair(
+            "Not focused or selected, long title",
             TabListItemPreviewState(
-                isSelected = false,
-                multiSelectionEnabled = false,
-                multiSelectionSelected = false,
+                TabsTrayItemSelectionState(
+                    isFocused = false,
+                    multiSelectEnabled = false,
+                    isSelected = false,
+                ),
                 url = "www.google.com/superlongurl",
-                title = "Super super super super super super super super long title",
+                title = LOREM_IPSUM,
             ),
-        )
+        ),
+    )
+
+    override fun getDisplayName(index: Int): String? {
+        return data[index].first
+    }
+
+    override val values: Sequence<TabListItemPreviewState>
+        get() = data.map { it.second }.asSequence()
 }
 
 @Composable
@@ -296,11 +334,9 @@ private fun TabListTabItemPreview(
                 url = tabListItemState.url,
                 title = tabListItemState.title,
             ),
-            isSelected = tabListItemState.isSelected,
             onCloseClick = {},
             onClick = {},
-            multiSelectionEnabled = tabListItemState.multiSelectionEnabled,
-            multiSelectionSelected = tabListItemState.multiSelectionSelected,
+            selectionState = tabListItemState.tabItemSelectionState,
         )
     }
 }

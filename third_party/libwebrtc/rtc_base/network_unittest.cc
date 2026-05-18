@@ -14,14 +14,15 @@
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "absl/algorithm/container.h"
 #include "absl/strings/match.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
-#include "api/array_view.h"
 #include "api/environment/environment.h"
 #include "api/environment/environment_factory.h"
 #include "api/field_trials.h"
@@ -37,10 +38,10 @@
 #include "rtc_base/network_monitor_factory.h"
 #include "rtc_base/physical_socket_server.h"
 #include "rtc_base/socket_address.h"
-#include "rtc_base/thread.h"
 #include "test/create_test_field_trials.h"
 #include "test/gmock.h"
 #include "test/gtest.h"
+#include "test/run_loop.h"
 #include "test/wait_until.h"
 
 // IWYU pragma: begin_keep
@@ -331,7 +332,7 @@ class NetworkTest : public ::testing::Test {
  protected:
   const FieldTrials field_trials_ = CreateTestFieldTrials();
   const Environment env_ = CreateEnvironment(&field_trials_);
-  AutoThread main_thread_;
+  test::RunLoop main_thread_;
   bool callback_called_ = false;
 };
 
@@ -425,18 +426,18 @@ TEST_F(NetworkTest, DISABLED_TestCreateNetworks) {
 TEST_F(NetworkTest, TestUpdateNetworks) {
   PhysicalSocketServer socket_server;
   BasicNetworkManager manager(env_, &socket_server);
-  manager.SubscribeNetworksChanged([this] { OnNetworksChanged(); });
+  manager.SubscribeNetworksChanged(this, [this] { OnNetworksChanged(); });
   EXPECT_EQ(NetworkManager::ENUMERATION_ALLOWED,
             manager.enumeration_permission());
   manager.StartUpdating();
-  Thread::Current()->ProcessMessages(0);
+  main_thread_.Flush();
   EXPECT_TRUE(callback_called_);
   callback_called_ = false;
   // Callback should be triggered immediately when StartUpdating
   // is called, after network update signal is already sent.
   manager.StartUpdating();
   EXPECT_TRUE(manager.started());
-  Thread::Current()->ProcessMessages(0);
+  main_thread_.Flush();
   EXPECT_TRUE(callback_called_);
   manager.StopUpdating();
   EXPECT_TRUE(manager.started());
@@ -450,7 +451,7 @@ TEST_F(NetworkTest, TestUpdateNetworks) {
   // Callback should be triggered immediately after StartUpdating is called
   // when start_count_ is reset to 0.
   manager.StartUpdating();
-  Thread::Current()->ProcessMessages(0);
+  main_thread_.Flush();
   EXPECT_TRUE(callback_called_);
 }
 
@@ -571,7 +572,7 @@ void SetupNetworks(std::vector<std::unique_ptr<Network>>* list) {
 TEST_F(NetworkTest, TestIPv6MergeNetworkList) {
   PhysicalSocketServer socket_server;
   BasicNetworkManager manager(env_, &socket_server);
-  manager.SubscribeNetworksChanged([this]() { OnNetworksChanged(); });
+  manager.SubscribeNetworksChanged(this, [this]() { OnNetworksChanged(); });
   std::vector<std::unique_ptr<Network>> networks;
   SetupNetworks(&networks);
   std::vector<const Network*> original_list = CopyNetworkPointers(networks);
@@ -592,7 +593,7 @@ TEST_F(NetworkTest, TestIPv6MergeNetworkList) {
 TEST_F(NetworkTest, TestNoChangeMerge) {
   PhysicalSocketServer socket_server;
   BasicNetworkManager manager(env_, &socket_server);
-  manager.SubscribeNetworksChanged([this]() { OnNetworksChanged(); });
+  manager.SubscribeNetworksChanged(this, [this]() { OnNetworksChanged(); });
   std::vector<std::unique_ptr<Network>> networks;
   SetupNetworks(&networks);
   std::vector<const Network*> original_list = CopyNetworkPointers(networks);
@@ -622,7 +623,7 @@ TEST_F(NetworkTest, TestNoChangeMerge) {
 TEST_F(NetworkTest, MergeWithChangedIP) {
   PhysicalSocketServer socket_server;
   BasicNetworkManager manager(env_, &socket_server);
-  manager.SubscribeNetworksChanged([this]() { OnNetworksChanged(); });
+  manager.SubscribeNetworksChanged(this, [this]() { OnNetworksChanged(); });
   std::vector<std::unique_ptr<Network>> original_list;
   SetupNetworks(&original_list);
   // Make a network that we're going to change.
@@ -657,7 +658,7 @@ TEST_F(NetworkTest, MergeWithChangedIP) {
 TEST_F(NetworkTest, TestMultipleIPMergeNetworkList) {
   PhysicalSocketServer socket_server;
   BasicNetworkManager manager(env_, &socket_server);
-  manager.SubscribeNetworksChanged([this]() { OnNetworksChanged(); });
+  manager.SubscribeNetworksChanged(this, [this]() { OnNetworksChanged(); });
   std::vector<std::unique_ptr<Network>> original_list;
   SetupNetworks(&original_list);
   const Network* const network_ptr = original_list[2].get();
@@ -709,7 +710,7 @@ TEST_F(NetworkTest, TestMultipleIPMergeNetworkList) {
 TEST_F(NetworkTest, TestMultiplePublicNetworksOnOneInterfaceMerge) {
   PhysicalSocketServer socket_server;
   BasicNetworkManager manager(env_, &socket_server);
-  manager.SubscribeNetworksChanged([this]() { OnNetworksChanged(); });
+  manager.SubscribeNetworksChanged(this, [this]() { OnNetworksChanged(); });
   std::vector<std::unique_ptr<Network>> original_list;
   SetupNetworks(&original_list);
   bool changed = false;
@@ -1243,7 +1244,7 @@ TEST_F(NetworkTest, TestNetworkMonitoring) {
   FakeNetworkMonitorFactory factory;
   PhysicalSocketServer socket_server;
   BasicNetworkManager manager(env_, &socket_server, &factory);
-  manager.SubscribeNetworksChanged([this]() { OnNetworksChanged(); });
+  manager.SubscribeNetworksChanged(this, [this]() { OnNetworksChanged(); });
   manager.StartUpdating();
   FakeNetworkMonitor* network_monitor = GetNetworkMonitor(manager);
   EXPECT_TRUE(network_monitor && network_monitor->started());
@@ -1274,7 +1275,7 @@ TEST_F(NetworkTest, MAYBE_DefaultLocalAddress) {
   FakeNetworkMonitorFactory factory;
   PhysicalSocketServer socket_server;
   TestBasicNetworkManager manager(env_, &socket_server, &factory);
-  manager.SubscribeNetworksChanged([this]() { OnNetworksChanged(); });
+  manager.SubscribeNetworksChanged(this, [this]() { OnNetworksChanged(); });
   manager.StartUpdating();
   EXPECT_THAT(WaitUntil([&] { return callback_called_; }, IsTrue()), IsRtcOk());
 
@@ -1510,7 +1511,113 @@ TEST_F(NetworkTest, NetworkCostVpn_VpnMoreExpensive) {
   delete net2;
 }
 
-TEST_F(NetworkTest, GuessAdapterFromNetworkCost) {
+class NetworkTestWithDifferentiatedCellular
+    : public NetworkTest,
+      public testing::WithParamInterface<std::string> {
+ protected:
+  FieldTrials CreateFieldTrials(absl::string_view s = "") {
+    return CreateTestFieldTrials(absl::StrCat(
+        "WebRTC-UseDifferentiatedCellularCosts/", GetParam(), "/", s));
+  }
+};
+
+INSTANTIATE_TEST_SUITE_P(NetworkTestWithDifferentiatedCellular,
+                         NetworkTestWithDifferentiatedCellular,
+                         testing::Values("Disabled", "Enabled"));
+
+TEST_P(NetworkTestWithDifferentiatedCellular, NetworkCostSlice_Default) {
+  FieldTrials field_trials = CreateFieldTrials();
+
+  IPAddress ip1;
+  EXPECT_TRUE(IPFromString("2400:4030:1:2c00:be30:0:0:1", &ip1));
+
+  Network net1("rmnet1", "rmnet1", TruncateIP(ip1, 64), 64,
+               ADAPTER_TYPE_CELLULAR_5G);
+  net1.set_network_slice(NetworkSlice::UNIFIED_COMMUNICATIONS);
+
+  Network net2("rmnet1", "rmnet1", TruncateIP(ip1, 64), 64,
+               ADAPTER_TYPE_CELLULAR_5G);
+
+  EXPECT_EQ(net1.GetCost(field_trials), net2.GetCost(field_trials));
+}
+
+TEST_P(NetworkTestWithDifferentiatedCellular, NetworkCostSlice_Disabled) {
+  FieldTrials field_trials =
+      CreateFieldTrials("WebRTC-UnifiedCommunications/Disabled/");
+
+  IPAddress ip1;
+  EXPECT_TRUE(IPFromString("2400:4030:1:2c00:be30:0:0:1", &ip1));
+
+  Network net1("rmnet1", "rmnet1", TruncateIP(ip1, 64), 64,
+               ADAPTER_TYPE_CELLULAR_5G);
+  net1.set_network_slice(NetworkSlice::UNIFIED_COMMUNICATIONS);
+
+  Network net2("rmnet1", "rmnet1", TruncateIP(ip1, 64), 64,
+               ADAPTER_TYPE_CELLULAR_5G);
+
+  EXPECT_EQ(net1.GetCost(field_trials), net2.GetCost(field_trials));
+}
+
+TEST_P(NetworkTestWithDifferentiatedCellular,
+       NetworkCostSlice_SliceLessExpensive) {
+  FieldTrials field_trials =
+      CreateFieldTrials("WebRTC-UnifiedCommunications/Enabled/");
+
+  IPAddress ip1;
+  EXPECT_TRUE(IPFromString("2400:4030:1:2c00:be30:0:0:1", &ip1));
+
+  Network net1("rmnet1", "rmnet1", TruncateIP(ip1, 64), 64,
+               ADAPTER_TYPE_CELLULAR_5G);
+  net1.set_network_slice(NetworkSlice::UNIFIED_COMMUNICATIONS);
+
+  Network net2("rmnet1", "rmnet1", TruncateIP(ip1, 64), 64,
+               ADAPTER_TYPE_CELLULAR_5G);
+
+  EXPECT_LT(net1.GetCost(field_trials), net2.GetCost(field_trials));
+}
+
+TEST_F(NetworkTest, NetworkCostSlice_IgnoredWhenInapplicable) {
+  FieldTrials field_trials =
+      CreateTestFieldTrials("WebRTC-UnifiedCommunications/Enabled/");
+
+  IPAddress ip1;
+  EXPECT_TRUE(IPFromString("2400:4030:1:2c00:be30:0:0:1", &ip1));
+
+  Network net1("wlan", "wlan", TruncateIP(ip1, 64), 64, ADAPTER_TYPE_WIFI);
+  net1.set_network_slice(NetworkSlice::UNIFIED_COMMUNICATIONS);
+
+  Network net2("wlan", "wlan", TruncateIP(ip1, 64), 64, ADAPTER_TYPE_WIFI);
+
+  EXPECT_EQ(net1.GetCost(field_trials), net2.GetCost(field_trials));
+}
+
+TEST_F(NetworkTest, GuessAdapterFromNetworkCost_Default) {
+  FieldTrials field_trials =
+      CreateTestFieldTrials("WebRTC-UseDifferentiatedCellularCosts/Enabled/");
+
+  IPAddress ip1;
+  EXPECT_TRUE(IPFromString("2400:4030:1:2c00:be30:0:0:1", &ip1));
+
+  for (auto type : kAllAdapterTypes) {
+    if (type == ADAPTER_TYPE_VPN)
+      continue;
+    Network net1("em1", "em1", TruncateIP(ip1, 64), 64);
+    net1.set_type(type);
+
+    auto [guess, vpn, network_slice] =
+        Network::GuessAdapterFromNetworkCost(net1.GetCost(field_trials));
+
+    EXPECT_FALSE(vpn);
+    if (type == ADAPTER_TYPE_LOOPBACK) {
+      EXPECT_EQ(guess, ADAPTER_TYPE_ETHERNET);
+    } else {
+      EXPECT_EQ(type, guess);
+    }
+    EXPECT_EQ(NetworkSlice::NO_SLICE, network_slice);
+  }
+}
+
+TEST_F(NetworkTest, GuessAdapterFromNetworkCost_Vpn) {
   FieldTrials field_trials = CreateTestFieldTrials(
       "WebRTC-AddNetworkCostToVpn/Enabled/"
       "WebRTC-UseDifferentiatedCellularCosts/Enabled/");
@@ -1522,31 +1629,65 @@ TEST_F(NetworkTest, GuessAdapterFromNetworkCost) {
     if (type == ADAPTER_TYPE_VPN)
       continue;
     Network net1("em1", "em1", TruncateIP(ip1, 64), 64);
-    net1.set_type(type);
-    auto [guess, vpn] =
-        Network::GuessAdapterFromNetworkCost(net1.GetCost(field_trials));
-    EXPECT_FALSE(vpn);
-    if (type == ADAPTER_TYPE_LOOPBACK) {
-      EXPECT_EQ(guess, ADAPTER_TYPE_ETHERNET);
-    } else {
-      EXPECT_EQ(type, guess);
-    }
-  }
-
-  // VPN
-  for (auto type : kAllAdapterTypes) {
-    if (type == ADAPTER_TYPE_VPN)
-      continue;
-    Network net1("em1", "em1", TruncateIP(ip1, 64), 64);
     net1.set_type(ADAPTER_TYPE_VPN);
     net1.set_underlying_type_for_vpn(type);
-    auto [guess, vpn] =
+
+    auto [guess, vpn, network_slice] =
         Network::GuessAdapterFromNetworkCost(net1.GetCost(field_trials));
+
     EXPECT_TRUE(vpn);
     if (type == ADAPTER_TYPE_LOOPBACK) {
       EXPECT_EQ(guess, ADAPTER_TYPE_ETHERNET);
     } else {
       EXPECT_EQ(type, guess);
+    }
+    EXPECT_EQ(NetworkSlice::NO_SLICE, network_slice);
+  }
+}
+
+TEST_P(NetworkTestWithDifferentiatedCellular,
+       GuessAdapterFromNetworkCost_Slice) {
+  FieldTrials field_trials = CreateFieldTrials(
+      "WebRTC-AddNetworkCostToVpn/Enabled/"
+      "WebRTC-UnifiedCommunications/Enabled/");
+
+  bool differentiated_cellular_enabled = GetParam() == "Enabled";
+
+  IPAddress ip1;
+  EXPECT_TRUE(IPFromString("2400:4030:1:2c00:be30:0:0:1", &ip1));
+
+  constexpr AdapterType sliceable_cellular_types[] = {ADAPTER_TYPE_CELLULAR_5G,
+                                                      ADAPTER_TYPE_CELLULAR};
+
+  for (AdapterType actual_type : sliceable_cellular_types) {
+    AdapterType expected_guess =
+        differentiated_cellular_enabled ? actual_type : ADAPTER_TYPE_CELLULAR;
+
+    {
+      Network net1("rmnet1", "rmnet1", TruncateIP(ip1, 64), 64);
+      net1.set_type(actual_type);
+      net1.set_network_slice(NetworkSlice::UNIFIED_COMMUNICATIONS);
+
+      auto [guess, vpn, network_slice] =
+          Network::GuessAdapterFromNetworkCost(net1.GetCost(field_trials));
+
+      EXPECT_EQ(expected_guess, guess);
+      EXPECT_FALSE(vpn);
+      EXPECT_EQ(NetworkSlice::UNIFIED_COMMUNICATIONS, network_slice);
+    }
+
+    {
+      Network net2("rmnet1", "rmnet1", TruncateIP(ip1, 64), 64);
+      net2.set_type(ADAPTER_TYPE_VPN);
+      net2.set_underlying_type_for_vpn(actual_type);
+      net2.set_network_slice(NetworkSlice::UNIFIED_COMMUNICATIONS);
+
+      auto [guess, vpn, network_slice] =
+          Network::GuessAdapterFromNetworkCost(net2.GetCost(field_trials));
+
+      EXPECT_EQ(expected_guess, guess);
+      EXPECT_TRUE(vpn);
+      EXPECT_EQ(NetworkSlice::UNIFIED_COMMUNICATIONS, network_slice);
     }
   }
 }
@@ -1604,10 +1745,10 @@ TEST_F(NetworkTest, HardcodedVpn) {
   EXPECT_TRUE(NetworkManagerBase::IsVpnMacAddress(global));
 
   EXPECT_FALSE(
-      NetworkManagerBase::IsVpnMacAddress(ArrayView<const uint8_t>(cisco, 5)));
+      NetworkManagerBase::IsVpnMacAddress(std::span<const uint8_t>(cisco, 5)));
   EXPECT_FALSE(NetworkManagerBase::IsVpnMacAddress(five_bytes));
   EXPECT_FALSE(NetworkManagerBase::IsVpnMacAddress(unknown));
-  EXPECT_FALSE(NetworkManagerBase::IsVpnMacAddress(nullptr));
+  EXPECT_FALSE(NetworkManagerBase::IsVpnMacAddress({}));
 }
 
 TEST(CompareNetworks, IrreflexivityTest) {

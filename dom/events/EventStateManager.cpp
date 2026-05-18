@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -67,6 +65,7 @@
 #include "mozilla/dom/HTMLInputElement.h"
 #include "mozilla/dom/HTMLLabelElement.h"
 #include "mozilla/dom/MouseEventBinding.h"
+#include "mozilla/dom/PerformanceMainThread.h"
 #include "mozilla/dom/PointerEventHandler.h"
 #include "mozilla/dom/PopoverData.h"
 #include "mozilla/dom/Record.h"
@@ -158,7 +157,7 @@ static TimeStamp gLastCursorUpdateTime;
 static TimeStamp gTypingStartTime;
 static TimeStamp gTypingEndTime;
 static int32_t gTypingInteractionKeyPresses = 0;
-MOZ_RUNINIT static dom::InteractionData gTypingInteraction = {};
+constinit static dom::InteractionData gTypingInteraction = {};
 
 static inline int32_t RoundDown(double aDouble) {
   return (aDouble > 0) ? static_cast<int32_t>(floor(aDouble))
@@ -181,7 +180,7 @@ static bool IsSelectingLink(nsIFrame* aTargetFrame) {
 }
 
 static UniquePtr<WidgetMouseEvent> CreateMouseOrPointerWidgetEvent(
-    WidgetMouseEvent* aMouseEvent, EventMessage aMessage,
+    const WidgetMouseEvent* aMouseEvent, EventMessage aMessage,
     EventTarget* aRelatedTarget);
 
 /**
@@ -2564,6 +2563,12 @@ void EventStateManager::BeginTrackingDragGesture(nsPresContext* aPresContext,
   SetGestureDownPoint(inDownEvent);
 
   if (inDownFrame) {
+    // We need to store the explicit target of the drag gesture start content,
+    // i.e., it may be a `Text` even though the event target should be its
+    // flattened tree parent element because we want to maintain `Selection`
+    // with the `Text`. E.g., we want to allow to extending selection in a
+    // draggable editing host, check whether the `Text` is selectable or not
+    // like in a `Text` of a <button>.
     mGestureDownContent = inDownFrame->GetContentForEvent(inDownEvent);
     mGestureDownFrameOwner = inDownFrame->GetContent();
     if (!mGestureDownFrameOwner) {
@@ -2900,7 +2905,7 @@ void EventStateManager::GenerateDragGesture(nsPresContext* aPresContext,
   }
 
   // Reset mCurretTargetContent to what it was
-  mCurrentTargetContent = targetBeforeEvent;
+  mCurrentTargetContent = std::move(targetBeforeEvent);
 
   // Now flush all pending notifications, for better responsiveness
   // while dragging.
@@ -3632,17 +3637,15 @@ void EventStateManager::DoScrollText(
     actualDevPixelScrollAmount.y = 0;
   }
 
-  ScrollSnapFlags snapFlags = ScrollSnapFlags::Disabled;
+  ScrollSnapFlags snapFlags = ScrollSnapFlags::IntendedDirection;
   mozilla::ScrollOrigin origin = mozilla::ScrollOrigin::NotSpecified;
   switch (aEvent->mDeltaMode) {
     case WheelEvent_Binding::DOM_DELTA_LINE:
       origin = mozilla::ScrollOrigin::MouseWheel;
-      snapFlags = ScrollSnapFlags::IntendedDirection;
       break;
     case WheelEvent_Binding::DOM_DELTA_PAGE:
       origin = mozilla::ScrollOrigin::Pages;
-      snapFlags = ScrollSnapFlags::IntendedDirection |
-                  ScrollSnapFlags::IntendedEndPosition;
+      snapFlags |= ScrollSnapFlags::IntendedEndPosition;
       break;
     case WheelEvent_Binding::DOM_DELTA_PIXEL:
       origin = mozilla::ScrollOrigin::Pixels;
@@ -4272,6 +4275,19 @@ nsresult EventStateManager::PostHandleEvent(nsPresContext* aPresContext,
         frameSelection->SetDragState(false);
       }
     } break;
+    case eContextMenu: {
+      // If the context menu event was not prevented, a context menu is about
+      // to be shown. Record a fallback time now so that pending event timing
+      // entries (pointerdown, mousedown, etc.) are not inflated by the time
+      // the user spends interacting with the menu.
+      // https://github.com/w3c/event-timing/issues/154
+      if (!aEvent->DefaultPrevented() && aEvent->IsTrusted()) {
+        if (auto* perf = aPresContext->GetPerformanceMainThread()) {
+          perf->RecordModalFallbackTime();
+        }
+      }
+      break;
+    }
     case eWheelOperationEnd: {
       MOZ_ASSERT(aEvent->IsTrusted());
       ScrollbarsForWheel::MayInactivate();
@@ -4389,8 +4405,7 @@ nsresult EventStateManager::PostHandleEvent(nsPresContext* aPresContext,
         case WheelPrefs::ACTION_NONE:
         default:
           bool allDeltaOverflown = false;
-          if (StaticPrefs::dom_event_wheel_event_groups_enabled() &&
-              (wheelEvent->mDeltaX != 0.0 || wheelEvent->mDeltaY != 0.0)) {
+          if (wheelEvent->mDeltaX != 0.0 || wheelEvent->mDeltaY != 0.0) {
             if (scrollTarget) {
               WheelTransaction::WillHandleDefaultAction(
                   wheelEvent, scrollTarget, mCurrentTarget);
@@ -4733,8 +4748,21 @@ void EventStateManager::SetPresContext(nsPresContext* aPresContext) {
 }
 
 void EventStateManager::ClearFrameRefs(nsIFrame* aFrame) {
-  if (aFrame && aFrame == mCurrentTarget) {
+  if (!aFrame) {
+    return;
+  }
+
+  if (aFrame == mCurrentTarget) {
     mCurrentTargetContent = aFrame->GetContent();
+  }
+
+  // If the element currently shown in the status bar has lost its
+  // frame, clear the status bar.
+  if (aFrame == mLinkOverFrame.GetFrame()) {
+    nsIContent* content = aFrame->GetContent();
+    if (content && content->IsElement()) {
+      content->AsElement()->LeaveLink(mPresContext);
+    }
   }
 }
 
@@ -5159,7 +5187,7 @@ class MOZ_STACK_CLASS ESMEventCB : public EventDispatchingCallback {
 };
 
 static UniquePtr<WidgetMouseEvent> CreateMouseOrPointerWidgetEvent(
-    WidgetMouseEvent* aMouseEvent, EventMessage aMessage,
+    const WidgetMouseEvent* aMouseEvent, EventMessage aMessage,
     EventTarget* aRelatedTarget) {
   // This method does not support creating a mouse/pointer button change event
   // because of no data about the changing state.
@@ -5175,19 +5203,21 @@ static UniquePtr<WidgetMouseEvent> CreateMouseOrPointerWidgetEvent(
              aMessage == eMouseEnterIntoWidget ||
              aMessage == eMouseExitFromWidget);
 
-  WidgetPointerEvent* sourcePointer = aMouseEvent->AsPointerEvent();
   UniquePtr<WidgetMouseEvent> newEvent;
-  if (sourcePointer) {
+  if (IsPointerEventMessage(aMessage)) {
     AUTO_PROFILER_LABEL("CreateMouseOrPointerWidgetEvent", OTHER);
 
-    WidgetPointerEvent* newPointerEvent = new WidgetPointerEvent(
-        aMouseEvent->IsTrusted(), aMessage, aMouseEvent->mWidget);
-    newPointerEvent->mIsPrimary = sourcePointer->mIsPrimary;
-    newPointerEvent->mWidth = sourcePointer->mWidth;
-    newPointerEvent->mHeight = sourcePointer->mHeight;
-    newPointerEvent->mInputSource = sourcePointer->mInputSource;
-
-    newEvent = WrapUnique(newPointerEvent);
+    newEvent = MakeUnique<WidgetPointerEvent>(aMouseEvent->IsTrusted(),
+                                              aMessage, aMouseEvent->mWidget);
+    if (const WidgetPointerEvent* const sourcePointerEvent =
+            aMouseEvent->AsPointerEvent()) {
+      WidgetPointerEvent* const newPointerEvent =
+          static_cast<WidgetPointerEvent*>(newEvent.get());
+      newPointerEvent->mIsPrimary = sourcePointerEvent->mIsPrimary;
+      newPointerEvent->mWidth = sourcePointerEvent->mWidth;
+      newPointerEvent->mHeight = sourcePointerEvent->mHeight;
+      // Not assigning mFromTouchEvent
+    }
   } else {
     newEvent = MakeUnique<WidgetMouseEvent>(aMouseEvent->IsTrusted(), aMessage,
                                             aMouseEvent->mWidget,
@@ -5203,6 +5233,8 @@ static UniquePtr<WidgetMouseEvent> CreateMouseOrPointerWidgetEvent(
   newEvent->mRelatedTarget = aRelatedTarget;
   newEvent->mRefPoint = aMouseEvent->mRefPoint;
   newEvent->mModifiers = aMouseEvent->mModifiers;
+  newEvent->mInputSource = aMouseEvent->mInputSource;
+  newEvent->pointerId = aMouseEvent->pointerId;
   // NOTE: If you need to change this if-expression, you need to update
   // WidgetMouseEventBase::ComputeMouseButtonPressure() too.
   if (!aMouseEvent->mFlags.mDispatchedAtLeastOnce &&
@@ -5214,8 +5246,9 @@ static UniquePtr<WidgetMouseEvent> CreateMouseOrPointerWidgetEvent(
     // Note that we don't need to do this if the input source does not support
     // hover state because a WPT check the behavior (see below) and the other
     // browsers pass the test even though this is inconsistent behavior.
-    newEvent->mButton =
-        sourcePointer ? MouseButton::eNotPressed : MouseButton::ePrimary;
+    newEvent->mButton = newEvent->mClass == ePointerEventClass
+                            ? MouseButton::eNotPressed
+                            : MouseButton::ePrimary;
     if (aMouseEvent->IsPressingButton()) {
       // If the source event has not been dispatched into the DOM yet, we
       // need to remove the flag which is being pressed.
@@ -5254,10 +5287,6 @@ static UniquePtr<WidgetMouseEvent> CreateMouseOrPointerWidgetEvent(
     newEvent->mButtons = aMouseEvent->mButtons;
     newEvent->mPressure = aMouseEvent->mPressure;
   }
-
-  newEvent->mInputSource = aMouseEvent->mInputSource;
-  newEvent->pointerId = aMouseEvent->pointerId;
-
   return newEvent;
 }
 
@@ -5633,7 +5662,8 @@ static LayoutDeviceIntPoint GetWindowClientRectCenter(nsIWidget* aWidget) {
 
 void EventStateManager::GeneratePointerEnterExit(EventMessage aMessage,
                                                  WidgetMouseEvent* aEvent) {
-  WidgetPointerEvent pointerEvent(*aEvent);
+  WidgetPointerEvent pointerEvent =
+      WidgetPointerEvent::MakeCopyFromMouseEvent(*aEvent);
   pointerEvent.mMessage = aMessage;
   GenerateMouseEnterExit(&pointerEvent);
 }
@@ -5844,7 +5874,7 @@ void EventStateManager::GenerateMouseEnterExit(WidgetMouseEvent* aMouseEvent) {
   }
 
   // reset mCurretTargetContent to what it was
-  mCurrentTargetContent = targetBeforeEvent;
+  mCurrentTargetContent = std::move(targetBeforeEvent);
 }
 
 OverOutElementsWrapper* EventStateManager::GetWrapperByEventID(
@@ -5864,7 +5894,8 @@ OverOutElementsWrapper* EventStateManager::GetWrapperByEventID(
 
 /* static */
 void EventStateManager::SetPointerLock(nsIWidget* aWidget,
-                                       nsPresContext* aPresContext) {
+                                       nsPresContext* aPresContext,
+                                       bool aUnadjustedMovement) {
   // Reset mouse wheel transaction
   WheelTransaction::EndTransaction();
 
@@ -5893,16 +5924,20 @@ void EventStateManager::SetPointerLock(nsIWidget* aWidget,
     //     work only in the automation mode.
     sLastRefPoint = sLastRefPointOfRawUpdate =
         GetWindowClientRectCenter(aWidget);
-    aWidget->SynthesizeNativeMouseMove(
-        sLastRefPoint + aWidget->WidgetToScreenOffset(), nullptr);
 
     // Suppress DnD
     if (dragService) {
       dragService->Suppress();
     }
 
-    // Activate native pointer lock on platforms where it is required (Wayland)
-    aWidget->LockNativePointer();
+    // Activate native pointer lock on platforms where it is required.
+    aWidget->LockNativePointer(
+        aUnadjustedMovement ? nsIWidget::NativePointerLockMode::Unadjusted
+                            : nsIWidget::NativePointerLockMode::Regular);
+
+    // Initialize the pointer position after pointer is locked.
+    aWidget->SynthesizeNativeMouseMove(
+        sLastRefPoint + aWidget->WidgetToScreenOffset(), nullptr);
   } else {
     if (aWidget) {
       // Deactivate native pointer lock on platforms where it is required
@@ -6019,7 +6054,7 @@ void EventStateManager::GenerateDragDropEnterExit(nsPresContext* aPresContext,
   }
 
   // reset mCurretTargetContent to what it was
-  mCurrentTargetContent = targetBeforeEvent;
+  mCurrentTargetContent = std::move(targetBeforeEvent);
 
   // Now flush all pending notifications, for better responsiveness.
   FlushLayout(aPresContext);
@@ -6365,23 +6400,23 @@ nsresult EventStateManager::DispatchClickEvents(
 }
 
 nsresult EventStateManager::HandleMiddleClickPaste(
-    PresShell* aPresShell, WidgetMouseEvent* aMouseEvent,
+    PresShell* aPresShell, WidgetMouseEvent* aMouseOrPointerEvent,
     nsEventStatus* aStatus, EditorBase* aEditorBase) {
   MOZ_ASSERT(aPresShell);
-  MOZ_ASSERT(aMouseEvent);
-  MOZ_ASSERT((aMouseEvent->mMessage == ePointerAuxClick &&
-              aMouseEvent->mButton == MouseButton::eMiddle) ||
-             EventCausesClickEvents(*aMouseEvent));
+  MOZ_ASSERT(aMouseOrPointerEvent);
+  MOZ_ASSERT((aMouseOrPointerEvent->mMessage == ePointerAuxClick &&
+              aMouseOrPointerEvent->mButton == MouseButton::eMiddle) ||
+             EventCausesClickEvents(*aMouseOrPointerEvent));
   MOZ_ASSERT(aStatus);
   MOZ_ASSERT(*aStatus != nsEventStatus_eConsumeNoDefault);
 
   // Even if we're called twice or more for a mouse operation, we should
   // handle only once.  Although mMultipleActionsPrevented may be set to
   // true by different event handler in the future, we can use it for now.
-  if (aMouseEvent->mFlags.mMultipleActionsPrevented) {
+  if (aMouseOrPointerEvent->mFlags.mMultipleActionsPrevented) {
     return NS_OK;
   }
-  aMouseEvent->mFlags.mMultipleActionsPrevented = true;
+  aMouseOrPointerEvent->mFlags.mMultipleActionsPrevented = true;
 
   RefPtr<Selection> selection;
   if (aEditorBase) {
@@ -6467,16 +6502,30 @@ nsresult EventStateManager::HandleMiddleClickPaste(
   if (!range) {
     return NS_OK;
   }
-  WidgetMouseEvent mouseEvent(*aMouseEvent);
-  mouseEvent.mOriginalTarget = range->GetStartContainer();
-  if (NS_WARN_IF(!mouseEvent.mOriginalTarget) ||
-      !aEditorBase->IsAcceptableInputEvent(&mouseEvent)) {
-    return NS_OK;
+  {
+    Maybe<WidgetPointerEvent> pointerEvent;
+    Maybe<WidgetMouseEvent> mouseEvent;
+    if (aMouseOrPointerEvent->mClass == ePointerEventClass) {
+      MOZ_ASSERT(aMouseOrPointerEvent->AsPointerEvent());
+      pointerEvent.emplace(
+          WidgetPointerEvent::MakeCopyFromMouseEvent(*aMouseOrPointerEvent));
+    } else {
+      MOZ_ASSERT(!aMouseOrPointerEvent->AsPointerEvent());
+      MOZ_ASSERT(!aMouseOrPointerEvent->AsDragEvent());
+      mouseEvent.emplace(*aMouseOrPointerEvent);
+    }
+    WidgetMouseEvent& eventCopyRef =
+        pointerEvent.isSome() ? pointerEvent.ref() : mouseEvent.ref();
+    eventCopyRef.mOriginalTarget = range->GetStartContainer();
+    if (NS_WARN_IF(!eventCopyRef.mOriginalTarget) ||
+        !aEditorBase->IsAcceptableInputEvent(&eventCopyRef)) {
+      return NS_OK;
+    }
   }
 
   // If Control key is pressed, we should paste clipboard content as
   // quotation.  Otherwise, paste it as is.
-  if (aMouseEvent->IsControl()) {
+  if (aMouseOrPointerEvent->IsControl()) {
     DebugOnly<nsresult> rv = aEditorBase->PasteAsQuotationAsAction(
         clipboardType, EditorBase::DispatchPasteEvent::No, dataTransfer);
     NS_WARNING_ASSERTION(NS_SUCCEEDED(rv), "Failed to paste as quotation");

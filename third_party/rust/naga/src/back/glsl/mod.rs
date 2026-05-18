@@ -226,7 +226,8 @@ impl Version {
     }
 
     fn supports_std430_layout(&self) -> bool {
-        *self >= Version::Desktop(430) || *self >= Version::new_gles(310)
+        // std430 is available from 400 via GL_ARB_shader_storage_buffer_object.
+        *self >= Version::Desktop(400) || *self >= Version::new_gles(310)
     }
 
     fn supports_fma_function(&self) -> bool {
@@ -625,7 +626,7 @@ pub fn supported_capabilities() -> valid::Capabilities {
     Caps::IMMEDIATES
         | Caps::FLOAT64
         | Caps::PRIMITIVE_INDEX
-        | Caps::CLIP_DISTANCE
+        | Caps::CLIP_DISTANCES
         | Caps::MULTIVIEW
         | Caps::EARLY_DEPTH_TEST
         | Caps::MULTISAMPLED_SHADING
@@ -638,7 +639,10 @@ pub fn supported_capabilities() -> valid::Capabilities {
         | Caps::SUBGROUP
         | Caps::SUBGROUP_BARRIER
         | Caps::SHADER_FLOAT16
+        | Caps::SHADER_INT16
         | Caps::SHADER_FLOAT16_IN_FLOAT32
         | Caps::SHADER_BARYCENTRICS
         | Caps::DRAW_INDEX
+        | Caps::MEMORY_DECORATION_COHERENT
+        | Caps::MEMORY_DECORATION_VOLATILE
 }

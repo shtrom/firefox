@@ -75,6 +75,10 @@ class DistributionIdManagerTest {
             val distributionId = subject.getDistributionId()
 
             assertEquals("vivo-001", distributionId)
+
+            val distribution = subject.getDistribution()
+
+            assertEquals(DistributionIdManager.Distribution.VIVO_001, distribution)
         }
 
     @Test
@@ -92,6 +96,10 @@ class DistributionIdManagerTest {
             val distributionId = subject.getDistributionId()
 
             assertEquals("Mozilla", distributionId)
+
+            val distribution = subject.getDistribution()
+
+            assertEquals(DistributionIdManager.Distribution.DEFAULT, distribution)
         }
 
     @Test
@@ -112,6 +120,10 @@ class DistributionIdManagerTest {
             val distributionId = subject.getDistributionId()
 
             assertEquals("Mozilla", distributionId)
+
+            val distribution = subject.getDistribution()
+
+            assertEquals(DistributionIdManager.Distribution.DEFAULT, distribution)
         }
 
     @Test
@@ -128,6 +140,10 @@ class DistributionIdManagerTest {
             val distributionId = subject.getDistributionId()
 
             assertEquals("Mozilla", distributionId)
+
+            val distribution = subject.getDistribution()
+
+            assertEquals(DistributionIdManager.Distribution.DEFAULT, distribution)
         }
 
     @Test
@@ -146,6 +162,10 @@ class DistributionIdManagerTest {
             val distributionId = subject.getDistributionId()
 
             assertEquals("dt-001", distributionId)
+
+            val distribution = subject.getDistribution()
+
+            assertEquals(DistributionIdManager.Distribution.DT_001, distribution)
         }
 
     @Test
@@ -164,6 +184,10 @@ class DistributionIdManagerTest {
             val distributionId = subject.getDistributionId()
 
             assertEquals("Mozilla", distributionId)
+
+            val distribution = subject.getDistribution()
+
+            assertEquals(DistributionIdManager.Distribution.DEFAULT, distribution)
         }
 
     @Test
@@ -182,6 +206,10 @@ class DistributionIdManagerTest {
             val distributionId = subject.getDistributionId()
 
             assertEquals("Mozilla", distributionId)
+
+            val distribution = subject.getDistribution()
+
+            assertEquals(DistributionIdManager.Distribution.DEFAULT, distribution)
         }
 
     @Test
@@ -200,6 +228,10 @@ class DistributionIdManagerTest {
             val distributionId = subject.getDistributionId()
 
             assertEquals("Mozilla", distributionId)
+
+            val distribution = subject.getDistribution()
+
+            assertEquals(DistributionIdManager.Distribution.DEFAULT, distribution)
         }
 
     @Test
@@ -218,6 +250,10 @@ class DistributionIdManagerTest {
             val distributionId = subject.getDistributionId()
 
             assertEquals("Mozilla", distributionId)
+
+            val distribution = subject.getDistribution()
+
+            assertEquals(DistributionIdManager.Distribution.DEFAULT, distribution)
         }
 
     @Test
@@ -280,10 +316,64 @@ class DistributionIdManagerTest {
             assertEquals(true, subject.shouldSkipMarketingConsentScreen())
 
             subject.setDistribution(DistributionIdManager.Distribution.AURA_001)
-            assertEquals(false, subject.shouldSkipMarketingConsentScreen())
+            assertEquals(true, subject.shouldSkipMarketingConsentScreen())
 
             subject.setDistribution(DistributionIdManager.Distribution.XIAOMI_001)
             assertEquals(true, subject.shouldSkipMarketingConsentScreen())
+        }
+
+    @Test
+    fun `WHEN checking the distribution startup strategy THEN the correct strategy is returned`() =
+        runBlocking {
+            val subject = DistributionIdManager(
+                packageManager = testContext.packageManagerWrapper,
+                testBrowserStoreProvider,
+                distributionProviderChecker = testDistributionProviderChecker,
+                distributionSettings = testDistributionSettings,
+                metricController = FakeMetricController(),
+            )
+
+            subject.setDistribution(DistributionIdManager.Distribution.DEFAULT)
+            assertEquals(
+                DistributionAdjustStartupStrategy.NONE,
+                subject.getDistributionAdjustStartupStrategy(),
+            )
+
+            subject.setDistribution(DistributionIdManager.Distribution.VIVO_001)
+            assertEquals(
+                DistributionAdjustStartupStrategy.IMMEDIATE_WITH_COPPA,
+                subject.getDistributionAdjustStartupStrategy(),
+            )
+
+            subject.setDistribution(DistributionIdManager.Distribution.DT_001)
+            assertEquals(
+                DistributionAdjustStartupStrategy.IMMEDIATE_WITH_COPPA,
+                subject.getDistributionAdjustStartupStrategy(),
+            )
+
+            subject.setDistribution(DistributionIdManager.Distribution.DT_002)
+            assertEquals(
+                DistributionAdjustStartupStrategy.IMMEDIATE_WITH_COPPA,
+                subject.getDistributionAdjustStartupStrategy(),
+            )
+
+            subject.setDistribution(DistributionIdManager.Distribution.DT_003)
+            assertEquals(
+                DistributionAdjustStartupStrategy.IMMEDIATE_WITH_COPPA,
+                subject.getDistributionAdjustStartupStrategy(),
+            )
+
+            subject.setDistribution(DistributionIdManager.Distribution.AURA_001)
+            assertEquals(
+                DistributionAdjustStartupStrategy.IMMEDIATE_WITH_PLAY_STORE_KIDS,
+                subject.getDistributionAdjustStartupStrategy(),
+            )
+
+            subject.setDistribution(DistributionIdManager.Distribution.XIAOMI_001)
+            assertEquals(
+                DistributionAdjustStartupStrategy.IMMEDIATE_WITH_COPPA,
+                subject.getDistributionAdjustStartupStrategy(),
+            )
         }
 
     @Test
@@ -301,6 +391,10 @@ class DistributionIdManagerTest {
             val distributionId = subject.getDistributionId()
 
             assertEquals("aura-001", distributionId)
+
+            val distribution = subject.getDistribution()
+
+            assertEquals(DistributionIdManager.Distribution.AURA_001, distribution)
         }
 
     @Test
@@ -319,6 +413,10 @@ class DistributionIdManagerTest {
             val distributionId = subject.getDistributionId()
 
             assertEquals("dt-002", distributionId)
+
+            val distribution = subject.getDistribution()
+
+            assertEquals(DistributionIdManager.Distribution.DT_002, distribution)
         }
 
     @Test
@@ -337,6 +435,10 @@ class DistributionIdManagerTest {
             val distributionId = subject.getDistributionId()
 
             assertEquals("Mozilla", distributionId)
+
+            val distribution = subject.getDistribution()
+
+            assertEquals(DistributionIdManager.Distribution.DEFAULT, distribution)
         }
 
     @Test
@@ -354,6 +456,10 @@ class DistributionIdManagerTest {
             val distributionId = subject.getDistributionId()
 
             assertEquals("dt-003", distributionId)
+
+            val distribution = subject.getDistribution()
+
+            assertEquals(DistributionIdManager.Distribution.DT_003, distribution)
         }
 
     @Test
@@ -380,6 +486,10 @@ class DistributionIdManagerTest {
             val distributionId = subject.getDistributionId()
 
             assertEquals("vivo-001", distributionId)
+
+            val distribution = subject.getDistribution()
+
+            assertEquals(DistributionIdManager.Distribution.VIVO_001, distribution)
         }
 
     @Test
@@ -406,6 +516,10 @@ class DistributionIdManagerTest {
             val distributionId = subject.getDistributionId()
 
             assertEquals("xiaomi-001", distributionId)
+
+            val distribution = subject.getDistribution()
+
+            assertEquals(DistributionIdManager.Distribution.XIAOMI_001, distribution)
         }
 
     @Test
@@ -432,6 +546,10 @@ class DistributionIdManagerTest {
             val distributionId = subject.getDistributionId()
 
             assertEquals("Mozilla", distributionId)
+
+            val distribution = subject.getDistribution()
+
+            assertEquals(DistributionIdManager.Distribution.DEFAULT, distribution)
         }
 
     @Test
@@ -450,6 +568,10 @@ class DistributionIdManagerTest {
             val distributionId = subject.getDistributionId()
 
             assertEquals("vivo-001", distributionId)
+
+            val distribution = subject.getDistribution()
+
+            assertEquals(DistributionIdManager.Distribution.VIVO_001, distribution)
         }
 
     @Test
@@ -466,6 +588,10 @@ class DistributionIdManagerTest {
             val distributionId = subject.getDistributionId()
 
             assertEquals("Mozilla", distributionId)
+
+            val distribution = subject.getDistribution()
+
+            assertEquals(DistributionIdManager.Distribution.DEFAULT, distribution)
         }
 
     @Test

@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -81,8 +79,12 @@ extern size_t gPageSize;
 #endif
 
 // Return the smallest pagesize multiple that is >= s.
-#define PAGE_CEILING(s) (((s) + gPageSizeMask) & ~gPageSizeMask)
+#define PAGE_CEILING(s) \
+  (((s) + mozilla::gPageSizeMask) & ~mozilla::gPageSizeMask)
 #define REAL_PAGE_CEILING(s) (((s) + gRealPageSizeMask) & ~gRealPageSizeMask)
+
+// Return the largest pagesize multiple that is <= s.
+#define REAL_PAGE_FLOOR(s) ((s) & ~gRealPageSizeMask)
 
 #define PAGES_PER_REAL_PAGE_CEILING(s) \
   (((s) + gPagesPerRealPage - 1) & ~(gPagesPerRealPage - 1))
@@ -122,8 +124,7 @@ void DefineGlobals();
 #define CHUNK_CEILING(s) (((s) + kChunkSizeMask) & ~kChunkSizeMask)
 
 // Return the smallest cacheline multiple that is >= s.
-#define CACHELINE_CEILING(s) \
-  (((s) + (kCacheLineSize - 1)) & ~(kCacheLineSize - 1))
+#define CACHELINE_CEILING(s) (((s) + kCacheLineMask) & ~kCacheLineMask)
 
 // Return the smallest quantum multiple that is >= a.
 #define QUANTUM_CEILING(a) (((a) + (kQuantumMask)) & ~(kQuantumMask))

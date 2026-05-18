@@ -15,7 +15,20 @@ import kotlinx.coroutines.flow.StateFlow
  * Implementations may provide models from different environments
  * (e.g., cloud-hosted or locally installed).
  */
-sealed interface LlmProvider
+sealed interface LlmProvider {
+    /**
+     * Metadata about an [LlmProvider].
+     *
+     * @property nameRes A string resource ID representing the display name of the provider.
+     * @property iconRes A drawable resource ID representing the icon of the provider if present.
+     */
+    data class Info(val nameRes: Int, val iconRes: Int? = null)
+
+    /**
+     * Metadata about this provider, including its display name.
+     */
+    val info: Info
+}
 
 /**
  * A provider that exposes an LLM hosted in the cloud.
@@ -37,8 +50,10 @@ interface CloudLlmProvider : LlmProvider {
 
         /**
          * Indicates that the cloud provider is unavailable.
+         *
+         * @property exception The exception that caused the provider to become unavailable, if known.
          */
-        object Unavailable : State
+        data class Unavailable(val exception: Llm.Exception) : State
 
         /**
          * Indicates that the cloud LLM is fully initialized and ready for use.

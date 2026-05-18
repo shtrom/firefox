@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -60,6 +58,7 @@
 
 #include "js/Debug.h"
 #include "js/RealmOptions.h"
+#include "js/friend/CycleCollector.h"
 #include "js/friend/DumpFunctions.h"  // js::DumpHeap
 #include "js/GCAPI.h"
 #include "js/HeapAPI.h"
@@ -302,7 +301,7 @@ struct FixWeakMappingGrayBitsTracer : public js::WeakMapTracer {
     }
   }
 
-  MOZ_INIT_OUTSIDE_CTOR bool mAnyMarked;
+  bool mAnyMarked = false;
 };
 
 #ifdef DEBUG
@@ -687,7 +686,7 @@ JSHolderList::Iter::Iter(JSHolderList& aList, WhichJSHolders aWhich)
 
 void JSHolderList::Iter::UpdateForRemovals() { mIter.Settle(); }
 
-JSHolderList::JSHolderList() {}
+JSHolderList::JSHolderList() = default;
 
 bool JSHolderList::RemoveEntry(EntryVector& aJSHolders, Entry* aEntry) {
   MOZ_ASSERT(aEntry);
@@ -1784,8 +1783,15 @@ void CycleCollectedJSRuntime::JSObjectsTenured(JS::GCContext* aGCContext) {
 
   for (auto iter = objects.Iter(); !iter.Done(); iter.Next()) {
     nsWrapperCache* cache = iter.Get();
+    if (MOZ_UNLIKELY(!cache)) {
+      continue;
+    }
     JSObject* wrapper = cache->GetWrapperMaybeDead();
-    MOZ_DIAGNOSTIC_ASSERT(wrapper);
+    if (MOZ_UNLIKELY(!wrapper)) {
+      // Wrapper might have been cleared temporarily while updating reflector
+      // global.
+      continue;
+    }
 
     if (js::gc::InCollectedNurseryRegion(wrapper)) {
       MOZ_ASSERT(!cache->PreservingWrapper());
@@ -1809,6 +1815,17 @@ void CycleCollectedJSRuntime::NurseryWrapperAdded(nsWrapperCache* aCache) {
   MOZ_ASSERT(aCache->GetWrapperMaybeDead());
   MOZ_ASSERT(!JS::ObjectIsTenured(aCache->GetWrapperMaybeDead()));
   mNurseryObjects.InfallibleAppend(aCache);
+}
+
+void CycleCollectedJSRuntime::NurseryWrapperRemovedSlow(
+    nsWrapperCache* aCache) {
+  MOZ_ASSERT(aCache);
+  for (auto iter = mNurseryObjects.IterFromLast(); !iter.Done(); iter.Prev()) {
+    if (iter.Get() == aCache) {
+      iter.Get() = nullptr;
+      return;
+    }
+  }
 }
 
 void CycleCollectedJSRuntime::DeferredFinalize(
@@ -1928,7 +1945,8 @@ IncrementalFinalizeRunnable::Run() {
   }
 
   MOZ_ASSERT(mRuntime->mFinalizeRunnable == this);
-  auto timerId = glean::cycle_collector::deferred_finalize_async.Start();
+  auto timerId =
+      glean::cycle_collector::deferred_finalize_async.ProcessGet().Start();
   ReleaseNow(true);
 
   if (mDeferredFinalizeFunctions.Length()) {
@@ -1940,8 +1958,8 @@ IncrementalFinalizeRunnable::Run() {
     MOZ_ASSERT(!mRuntime);
   }
 
-  glean::cycle_collector::deferred_finalize_async.StopAndAccumulate(
-      std::move(timerId));
+  glean::cycle_collector::deferred_finalize_async.ProcessGet()
+      .StopAndAccumulate(std::move(timerId));
 
   return NS_OK;
 }

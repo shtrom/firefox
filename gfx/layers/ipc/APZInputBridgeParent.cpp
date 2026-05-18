@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -16,16 +14,15 @@ namespace mozilla {
 namespace layers {
 
 /* static */
-APZInputBridgeParent* APZInputBridgeParent::Create(
-    const LayersId& aLayersId, Endpoint<PAPZInputBridgeParent>&& aEndpoint) {
-  APZInputBridgeParent* parent = new APZInputBridgeParent(aLayersId);
+void APZInputBridgeParent::Create(const LayersId& aLayersId,
+                                  Endpoint<PAPZInputBridgeParent>&& aEndpoint) {
+  auto parent = MakeRefPtr<APZInputBridgeParent>(aLayersId);
   if (!aEndpoint.Bind(parent)) {
     // We can't recover from this.
     MOZ_CRASH("Failed to bind APZInputBridgeParent to endpoint");
   }
 
-  CompositorBridgeParent::SetAPZInputBridgeParent(aLayersId, parent);
-  return parent;
+  CompositorBridgeParent::SetAPZInputBridgeParent(aLayersId, std::move(parent));
 }
 
 APZInputBridgeParent::APZInputBridgeParent(const LayersId& aLayersId) {

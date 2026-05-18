@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -73,7 +71,7 @@ nsresult NetworkLoadHandler::DataReceivedFromNetwork(nsIStreamLoader* aLoader,
   if (aStringLen > GetWorkerScriptMaxSizeInBytes()) {
     Document* parentDoc = mWorkerRef->Private()->GetDocument();
     nsContentUtils::ReportToConsole(nsIScriptError::errorFlag, "DOM"_ns,
-                                    parentDoc, nsContentUtils::eDOM_PROPERTIES,
+                                    parentDoc, PropertiesFile::DOM_PROPERTIES,
                                     "WorkerScriptTooLargeError");
     return NS_ERROR_DOM_ABORT_ERR;
   }
@@ -207,9 +205,9 @@ nsresult NetworkLoadHandler::DataReceivedFromNetwork(nsIStreamLoader* aLoader,
     NS_ENSURE_SUCCESS(rv, rv);
 
     if (!loadContext->mRequest->ScriptTextLength()) {
-      nsContentUtils::ReportToConsole(
-          nsIScriptError::warningFlag, "DOM"_ns, parentDoc,
-          nsContentUtils::eDOM_PROPERTIES, "EmptyWorkerSourceWarning");
+      nsContentUtils::ReportToConsole(nsIScriptError::warningFlag, "DOM"_ns,
+                                      parentDoc, PropertiesFile::DOM_PROPERTIES,
+                                      "EmptyWorkerSourceWarning");
     }
   }
 
@@ -363,6 +361,12 @@ nsresult NetworkLoadHandler::PrepareForRequest(nsIRequest* aRequest) {
             || (StaticPrefs::
                     javascript_options_experimental_wasm_esm_integration() &&
                 nsContentUtils::HasWasmMimeTypeEssence(mimeTypeUTF16))
+            // Allow non-toplevel text modules
+            || (JS::Prefs::experimental_import_text() &&
+                !loadContext->IsTopLevel() &&
+                loadContext->mRequest->IsModuleRequest() &&
+                loadContext->mRequest->AsModuleRequest()->mModuleType ==
+                    JS::ModuleType::Text)
 #endif
                 )) {
         const nsCString& scope = mWorkerRef->Private()
@@ -415,7 +419,7 @@ nsresult NetworkLoadHandler::PrepareForRequest(nsIRequest* aRequest) {
   mozilla::dom::RequestOrUTF8String request;
 
   MOZ_ASSERT(!loadContext->mFullURL.IsEmpty());
-  request.SetAsUTF8String().ShareOrDependUpon(loadContext->mFullURL);
+  request.SetAsUTF8String() = loadContext->mFullURL;
 
   // This JSContext will not end up executing JS code because here there are
   // no ReadableStreams involved.

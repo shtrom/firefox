@@ -1,6 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * vim: set ts=8 sts=2 et sw=2 tw=80:
- *
+/*
  * Copyright 2016 Mozilla Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -1752,6 +1750,8 @@ struct BaseCompiler final {
   [[nodiscard]] bool emitTableGrow();
   [[nodiscard]] bool emitTableSet();
   [[nodiscard]] bool emitTableSize();
+  [[nodiscard]] bool emitI64AddSub128(bool isAdd);
+  [[nodiscard]] bool emitI64MulWide(bool isSigned);
 
   void emitTableBoundsCheck(uint32_t tableIndex, RegI32 address,
                             RegPtr instance);

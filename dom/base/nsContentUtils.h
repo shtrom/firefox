@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -73,7 +71,6 @@ class imgRequestProxy;
 class nsAtom;
 class nsAttrValue;
 class nsAutoScriptBlockerSuppressNodeRemoved;
-class nsContentList;
 class nsCycleCollectionTraversalCallback;
 class nsDocShell;
 class nsGlobalWindowInner;
@@ -168,6 +165,7 @@ class BrowserParent;
 class BrowsingContext;
 class BrowsingContextGroup;
 class ContentChild;
+class ContentList;
 class ContentFrameMessageManager;
 class ContentParent;
 struct CustomElementDefinition;
@@ -196,6 +194,7 @@ struct SetHTMLOptions;
 struct SetHTMLUnsafeOptions;
 enum class ShadowRootMode : uint8_t;
 class ShadowRoot;
+enum class SlotAssignmentMode : uint8_t;
 struct StructuredSerializeOptions;
 struct SynthesizeMouseEventData;
 struct SynthesizeMouseEventOptions;
@@ -203,6 +202,7 @@ struct SynthesizeTouchEventData;
 struct SynthesizeTouchEventOptions;
 class TrustedHTMLOrString;
 class VoidFunction;
+class WindowContext;
 class WorkerPrivate;
 enum class ElementCallbackType;
 enum class ReferrerPolicy : uint8_t;
@@ -263,6 +263,26 @@ struct EventNameMapping {
   int32_t mType;
   mozilla::EventMessage mMessage;
   mozilla::EventClassID mEventClassID;
+};
+
+enum class PropertiesFile : uint8_t {
+  CSS_PROPERTIES,
+  XUL_PROPERTIES,
+  LAYOUT_PROPERTIES,
+  FORMS_PROPERTIES,
+  PRINTING_PROPERTIES,
+  DOM_PROPERTIES,
+  HTMLPARSER_PROPERTIES,
+  SVG_PROPERTIES,
+  BRAND_PROPERTIES,
+  COMMON_DIALOG_PROPERTIES,
+  MATHML_PROPERTIES,
+  SECURITY_PROPERTIES,
+  NECKO_PROPERTIES,
+  FORMS_PROPERTIES_en_US,
+  DOM_PROPERTIES_en_US,
+  NECKO_PROPERTIES_en_US,
+  COUNT
 };
 
 namespace mozilla::dom {
@@ -961,6 +981,13 @@ class nsContentUtils {
       nsIContent* aContent, const nsAString& aAttrValue,
       nsIPrincipal* aSubjectPrincipal);
 
+  /* Returns true if browser allowed to navigate aTarget BrowsingContext using
+   * aSource BrowsingContext and aDocumentPrincipal */
+  static bool CanNavigate(mozilla::dom::BrowsingContext* aSource,
+                          mozilla::dom::BrowsingContext* aTarget,
+                          nsIPrincipal* aDocumentPrincipal,
+                          bool aConsiderOpener);
+
   /**
    * Returns true if the given string is guaranteed to be treated as an absolute
    * URL, rather than a relative URL. In practice, this means any complete URL
@@ -1030,6 +1057,13 @@ class nsContentUtils {
    */
   static bool IsCustomElementName(nsAtom* aName, uint32_t aNameSpaceID);
 
+  /**
+   * Returns true if |aName| is a valid shadow host name, per
+   * https://dom.spec.whatwg.org/#valid-shadow-host-name
+   */
+  static bool IsValidShadowHostName(nsAtom* aName,
+                                    uint32_t aNameSpaceID = kNameSpaceID_XHTML);
+
   static nsresult CheckQName(const nsAString& aQualifiedName,
                              bool aNamespaceAware = true,
                              const char16_t** aColon = nullptr);
@@ -1068,8 +1102,8 @@ class nsContentUtils {
    * If aColon is non-null, it's set to the position of the first colon
    * (or null if no colon).
    * If aLocalNameEnd is non-null, it's set to the end of the local name
-   * (the second colon if present, otherwise the end of the string).
-   * Per "strictly split", "f:o:o" gives prefix="f", localName="o".
+   * (always the end of the string).
+   * Splits on the first colon only: "f:o:o" gives prefix="f", localName="o:o".
    * aNodeType indicates whether this is for an element or attribute (to
    * determine the correct local-name validation).
    */
@@ -1351,25 +1385,6 @@ class nsContentUtils {
               localized message.
    *   @param aLocation message location. Pass the empty location to omit it.
    */
-  enum PropertiesFile {
-    eCSS_PROPERTIES,
-    eXUL_PROPERTIES,
-    eLAYOUT_PROPERTIES,
-    eFORMS_PROPERTIES,
-    ePRINTING_PROPERTIES,
-    eDOM_PROPERTIES,
-    eHTMLPARSER_PROPERTIES,
-    eSVG_PROPERTIES,
-    eBRAND_PROPERTIES,
-    eCOMMON_DIALOG_PROPERTIES,
-    eMATHML_PROPERTIES,
-    eSECURITY_PROPERTIES,
-    eNECKO_PROPERTIES,
-    eFORMS_PROPERTIES_en_US,
-    eDOM_PROPERTIES_en_US,
-    eNECKO_PROPERTIES_en_US,
-    PropertiesFile_COUNT
-  };
   static nsresult ReportToConsole(
       uint32_t aErrorFlags, const nsACString& aCategory,
       const Document* aDocument, PropertiesFile aFile, const char* aMessageName,
@@ -2135,7 +2150,7 @@ class nsContentUtils {
       TextContentDiscoverMode aDiscoverMode = eDontRecurseIntoChildren);
 
   /**
-   * Delete strings allocated for nsContentList matches
+   * Delete strings allocated for ContentList matches
    */
   static void DestroyMatchString(void* aData);
 
@@ -2520,7 +2535,7 @@ class nsContentUtils {
    * Utility method for getElementsByClassName.  aRootNode is the node (either
    * document or element), which getElementsByClassName was called on.
    */
-  static already_AddRefed<nsContentList> GetElementsByClassName(
+  static already_AddRefed<mozilla::dom::ContentList> GetElementsByClassName(
       nsINode* aRootNode, const nsAString& aClasses);
 
   /**
@@ -2664,12 +2679,7 @@ class nsContentUtils {
    */
   static bool IsSecureContextOrWebExtension(JSContext*, JSObject*);
 
-  enum DocumentViewerType {
-    TYPE_UNSUPPORTED,
-    TYPE_CONTENT,
-    TYPE_FALLBACK,
-    TYPE_UNKNOWN
-  };
+  enum DocumentViewerType { TYPE_UNSUPPORTED, TYPE_CONTENT, TYPE_UNKNOWN };
 
   static already_AddRefed<nsIDocumentLoaderFactory> FindInternalDocumentViewer(
       const nsACString& aType, DocumentViewerType* aLoaderType = nullptr);
@@ -3462,6 +3472,14 @@ class nsContentUtils {
   static already_AddRefed<mozilla::dom::ContentFrameMessageManager>
   TryGetBrowserChildGlobal(nsISupports* aFrom);
 
+  /**
+   * Attempts to retrieve the extant document from a window global.
+   *
+   * @param aFrom The object expected to represent a window global.
+   * @return The associated document, or nullptr if not available.
+   */
+  static Document* TryGetDocumentFromWindowGlobal(nsISupports* aFrom);
+
   // Get a serial number for a newly created inner or outer window.
   static uint32_t InnerOrOuterWindowCreated();
   // Record that an inner or outer window has been destroyed.
@@ -3628,7 +3646,9 @@ class nsContentUtils {
   MOZ_CAN_RUN_SCRIPT_BOUNDARY
   static nsIContent* AttachDeclarativeShadowRoot(
       nsIContent* aHost, mozilla::dom::ShadowRootMode aMode, bool aIsClonable,
-      bool aIsSerializable, bool aDelegatesFocus, const nsAString&);
+      bool aIsSerializable, bool aDelegatesFocus, bool aCustomElementRegistry,
+      mozilla::dom::SlotAssignmentMode aSlotAssignment,
+      const nsAString& aReferenceTarget);
 
   static bool NavigationMustBeAReplace(nsIURI& aURI, const Document& aDocument);
 
@@ -3857,6 +3877,9 @@ nsContentUtils::InternalContentPolicyTypeToExternal(nsContentPolicyType aType) {
     case nsIContentPolicy::TYPE_INTERNAL_JSON_PRELOAD:
       return ExtContentPolicy::TYPE_JSON;
 
+    case nsIContentPolicy::TYPE_INTERNAL_TEXT_PRELOAD:
+      return ExtContentPolicy::TYPE_TEXT;
+
     case nsIContentPolicy::TYPE_INVALID:
     case nsIContentPolicy::TYPE_OTHER:
     case nsIContentPolicy::TYPE_SCRIPT:
@@ -3884,11 +3907,10 @@ nsContentUtils::InternalContentPolicyTypeToExternal(nsContentPolicyType aType) {
     case nsIContentPolicy::TYPE_WEB_IDENTITY:
     case nsIContentPolicy::TYPE_WEB_TRANSPORT:
     case nsIContentPolicy::TYPE_JSON:
+    case nsIContentPolicy::TYPE_TEXT:
       // NOTE: When adding something here make sure the enumerator is defined!
       return static_cast<ExtContentPolicyType>(aType);
 
-    case nsIContentPolicy::TYPE_END:
-      break;
       // Do not add default: so that compilers can catch the missing case.
   }
 

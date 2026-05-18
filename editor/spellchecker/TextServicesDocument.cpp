@@ -1,4 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -171,7 +170,7 @@ nsresult TextServicesDocument::InitWithEditor(nsIEditor* aEditor) {
   }
 
   if (!mSelCon) {
-    mSelCon = selCon;
+    mSelCon = std::move(selCon);
   }
 
   // Check to see if we already have an mDocument. If we do, it
@@ -858,7 +857,7 @@ nsresult TextServicesDocument::ScrollSelectionIntoView() {
   const nsCOMPtr selCon = mSelCon;
   return selCon->ScrollSelectionIntoView(
       SelectionType::eNormal, nsISelectionController::SELECTION_FOCUS_REGION,
-      ScrollAxis(), ScrollAxis(), ScrollFlags::None,
+      AxisScrollParams(), AxisScrollParams(), ScrollFlags::None,
       SelectionScrollMode::SyncFlush);
 }
 

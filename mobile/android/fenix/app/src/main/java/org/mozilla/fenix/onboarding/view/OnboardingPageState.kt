@@ -5,7 +5,8 @@
 package org.mozilla.fenix.onboarding.view
 
 import androidx.annotation.DrawableRes
-import org.mozilla.fenix.compose.LinkTextState
+import mozilla.components.compose.base.LinkTextState
+import org.mozilla.fenix.nimbus.MarketingCardVariant
 
 /**
  * Model containing data for [OnboardingPage].
@@ -22,6 +23,7 @@ import org.mozilla.fenix.compose.LinkTextState
  * @property marketingData Optional marketing page data.
  * @property onRecordImpressionEvent Callback for recording impression event.
  * @property shouldShowElevation Whether to show elevation/shadow for the page card.
+ * @property isSmallDevice Whether to apply layout optimizations for constrained screen heights.
  */
 data class OnboardingPageState(
     @param:DrawableRes val imageRes: Int,
@@ -36,6 +38,7 @@ data class OnboardingPageState(
     val marketingData: OnboardingMarketingData? = null,
     val onRecordImpressionEvent: () -> Unit = {},
     val shouldShowElevation: Boolean = true,
+    val isSmallDevice: Boolean = false,
 )
 
 /**
@@ -130,6 +133,7 @@ data class OnboardingTermsOfService(
  * Model containing data for the marketing data page during onboarding.
  */
 data class OnboardingMarketingData(
+    val marketingCardVariant: MarketingCardVariant,
     val bodyOneText: String,
     val bodyOneLinkText: String,
     val bodyTwoText: String,

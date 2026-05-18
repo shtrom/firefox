@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -32,6 +30,7 @@
 #include "js/StructuredClone.h"
 #include "mozilla/EndianUtils.h"
 #include "mozilla/ErrorResult.h"
+#include "mozilla/ScopeExit.h"
 #include "mozilla/dom/BindingUtils.h"
 #include "mozilla/dom/BlobBinding.h"
 #include "mozilla/dom/Document.h"
@@ -453,9 +452,15 @@ JSObject* CopyingStructuredCloneReadCallback(
         RefPtr<Blob> blob = fileChild.BlobPtr();
         MOZ_ASSERT(blob->IsFile());
 
-        RefPtr<File> file = blob->ToFile();
+        RefPtr<File> file;
+        if (blob->HasExpandos()) {
+          const RefPtr<Blob> clonedBlob = blob->Clone();
+          file = clonedBlob->ToFile();
+        } else {
+          file = blob->ToFile();
+        }
         if (!file) {
-          MOZ_ASSERT(false, "Could not convert blob to file!");
+          MOZ_ASSERT(false, "Could not create file!");
 
           return nullptr;
         }
@@ -488,11 +493,29 @@ JSObject* CopyingStructuredCloneReadCallback(
     StructuredCloneFileChild& file = cloneInfo->mFiles[aData];
 
     switch (static_cast<StructuredCloneTags>(aTag)) {
-      case SCTAG_DOM_BLOB:
+      case SCTAG_DOM_BLOB: {
         MOZ_ASSERT(file.Type() == StructuredCloneFileBase::eBlob);
         MOZ_ASSERT(!file.Blob().IsFile());
 
-        return WrapAsJSObject(aCx, file.MutableBlob());
+        JS::Rooted<JSObject*> result(aCx);
+        if (file.Blob().HasExpandos()) {
+          const RefPtr<Blob> newBlob = file.Blob().Clone();
+          MOZ_ASSERT(newBlob);
+
+          if (!WrapAsJSObject(aCx, newBlob, &result)) {
+            return nullptr;
+          }
+        } else {
+          // If the blob has no expandos, we can return the existing wrapper
+          // directly. This is an optimization over step 10 of
+          // https://w3c.github.io/IndexedDB/#add-or-put since the result is
+          // observably equivalent when there are no user-added properties.
+          if (!WrapAsJSObject(aCx, file.MutableBlob(), &result)) {
+            return nullptr;
+          }
+        }
+        return result;
+      }
 
       case SCTAG_DOM_FILE: {
         MOZ_ASSERT(file.Type() == StructuredCloneFileBase::eBlob);
@@ -501,15 +524,30 @@ JSObject* CopyingStructuredCloneReadCallback(
 
         {
           // Create a scope so ~RefPtr fires before returning an unwrapped
-          // JS::Value.
+          // JSObject*. Otherwise ~JS::Rooted will unroot the object, then
+          // ~RefPtr will trigger GC before the value is returned and rooted
+          // again by the caller.
+          // See bug 1480640 for details.
           const RefPtr<Blob> blob = file.BlobPtr();
           MOZ_ASSERT(blob->IsFile());
 
-          const RefPtr<File> file = blob->ToFile();
-          MOZ_ASSERT(file);
+          // Same logic as blob above: clone only if necessary
+          if (blob->HasExpandos()) {
+            const RefPtr<Blob> clonedBlob = blob->Clone();
+            MOZ_ASSERT(clonedBlob);
+            const RefPtr<File> file = clonedBlob->ToFile();
+            MOZ_ASSERT(file);
 
-          if (!WrapAsJSObject(aCx, file, &result)) {
-            return nullptr;
+            if (!WrapAsJSObject(aCx, file, &result)) {
+              return nullptr;
+            }
+          } else {
+            const RefPtr<File> file = blob->ToFile();
+            MOZ_ASSERT(file);
+
+            if (!WrapAsJSObject(aCx, file, &result)) {
+              return nullptr;
+            }
           }
         }
 
@@ -756,14 +794,15 @@ void IDBObjectStore::GetAddInfo(JSContext* aCx, ValueWrapper& aValueWrapper,
 
   if (!HasValidKeyPath()) {
     // Out-of-line keys must be passed in.
-    auto result = aKey.SetFromJSVal(aCx, aKeyVal);
+    auto result =
+        aKey.SetFromJSVal(aCx, aKeyVal, mTransaction.unsafeGetRawPtr());
     if (result.isErr()) {
       aRv = result.unwrapErr().ExtractErrorResult(
           InvalidMapsTo<NS_ERROR_DOM_INDEXEDDB_DATA_ERR>);
       return;
     }
   } else if (!isAutoIncrement) {
-    if (!aValueWrapper.Clone(aCx)) {
+    if (!aValueWrapper.Clone(aCx, mTransaction.unsafeGetRawPtr())) {
       aRv.Throw(NS_ERROR_DOM_DATA_CLONE_ERR);
       return;
     }
@@ -783,7 +822,8 @@ void IDBObjectStore::GetAddInfo(JSContext* aCx, ValueWrapper& aValueWrapper,
 
   // Figure out indexes and the index values to update here.
 
-  if (mSpec->indexes().Length() && !aValueWrapper.Clone(aCx)) {
+  if (mSpec->indexes().Length() &&
+      !aValueWrapper.Clone(aCx, mTransaction.unsafeGetRawPtr())) {
     aRv.Throw(NS_ERROR_DOM_DATA_CLONE_ERR);
     return;
   }
@@ -822,22 +862,46 @@ void IDBObjectStore::GetAddInfo(JSContext* aCx, ValueWrapper& aValueWrapper,
     }
   }
 
-  if (isAutoIncrement && HasValidKeyPath()) {
-    if (!aValueWrapper.Clone(aCx)) {
-      aRv.Throw(NS_ERROR_DOM_DATA_CLONE_ERR);
-      return;
+  // The transaction must be temporarily inactive during the structured
+  // serialization of the value per the spec:
+  // https://w3c.github.io/IndexedDB/#clone-value
+  {
+    const bool shouldInactivate = mTransaction && mTransaction->IsActive();
+    if (shouldInactivate) {
+      mTransaction->TransitionToInactiveWithDeferral();
     }
+    auto guard = MakeScopeExit([&]() {
+      if (shouldInactivate) {
+        if (!mTransaction->IsAborted()) {
+          mTransaction->TransitionToActive();
+        } else {
+          mTransaction->DeactivateDeferral();
+          mTransaction->DrainDeferredResponses();
+        }
+      }
+    });
 
-    GetAddInfoClosure data(aCloneWriteInfo, aValueWrapper.Value());
+    if (isAutoIncrement && HasValidKeyPath()) {
+      if (!aValueWrapper.Clone(aCx, mTransaction.unsafeGetRawPtr())) {
+        aRv.Throw(NS_ERROR_DOM_DATA_CLONE_ERR);
+        return;
+      }
 
-    MOZ_ASSERT(aKey.IsUnset());
+      GetAddInfoClosure data(aCloneWriteInfo, aValueWrapper.Value());
 
-    aRv = GetKeyPath().ExtractOrCreateKey(aCx, aValueWrapper.Value(), aKey,
-                                          &GetAddInfoCallback, &data);
-  } else {
-    GetAddInfoClosure data(aCloneWriteInfo, aValueWrapper.Value());
+      MOZ_ASSERT(aKey.IsUnset());
 
-    aRv = GetAddInfoCallback(aCx, &data);
+      aRv = GetKeyPath().ExtractOrCreateKey(aCx, aValueWrapper.Value(), aKey,
+                                            &GetAddInfoCallback, &data);
+    } else {
+      GetAddInfoClosure data(aCloneWriteInfo, aValueWrapper.Value());
+
+      aRv = GetAddInfoCallback(aCx, &data);
+    }
+  }
+
+  if (mTransaction && mTransaction->IsAborted() && !aRv.Failed()) {
+    aRv.Throw(NS_ERROR_DOM_INDEXEDDB_ABORT_ERR);
   }
 }
 
@@ -870,28 +934,7 @@ RefPtr<IDBRequest> IDBObjectStore::AddOrPut(JSContext* aCx,
   StructuredCloneWriteInfo cloneWriteInfo(mTransaction->Database());
   nsTArray<IndexUpdateInfo> updateInfos;
 
-  // According to spec https://w3c.github.io/IndexedDB/#clone-value,
-  // the transaction must be in inactive state during clone
-  mTransaction->TransitionToInactive();
-
-#ifdef DEBUG
-  const uint32_t previousPendingRequestCount{
-      mTransaction->GetPendingRequestCount()};
-#endif
   GetAddInfo(aCx, aValueWrapper, aKey, cloneWriteInfo, key, updateInfos, aRv);
-  // Check that new requests were rejected in the Inactive state
-  // and possibly in the Finished state, if the transaction has been aborted,
-  // during the structured cloning.
-  MOZ_ASSERT(mTransaction->GetPendingRequestCount() ==
-             previousPendingRequestCount);
-
-  if (!mTransaction->IsAborted()) {
-    mTransaction->TransitionToActive();
-  } else if (!aRv.Failed()) {
-    aRv.Throw(NS_ERROR_DOM_INDEXEDDB_ABORT_ERR);
-    return nullptr;  // It is mandatory to return right after throw
-  }
-
   if (aRv.Failed()) {
     return nullptr;
   }
@@ -1060,7 +1103,8 @@ RefPtr<IDBRequest> IDBObjectStore::GetAllInternal(
   }
 
   RefPtr<IDBKeyRange> keyRange;
-  IDBKeyRange::FromJSVal(aCx, aKey, &keyRange, aRv);
+  IDBKeyRange::FromJSVal(aCx, aKey, &keyRange, aRv,
+                         mTransaction.unsafeGetRawPtr());
   if (NS_WARN_IF(aRv.Failed())) {
     return nullptr;
   }
@@ -1379,7 +1423,8 @@ RefPtr<IDBRequest> IDBObjectStore::GetInternal(bool aKeyOnly, JSContext* aCx,
   }
 
   RefPtr<IDBKeyRange> keyRange;
-  IDBKeyRange::FromJSVal(aCx, aKey, &keyRange, aRv);
+  IDBKeyRange::FromJSVal(aCx, aKey, &keyRange, aRv,
+                         mTransaction.unsafeGetRawPtr());
   if (aRv.Failed()) {
     return nullptr;
   }
@@ -1441,7 +1486,8 @@ RefPtr<IDBRequest> IDBObjectStore::DeleteInternal(JSContext* aCx,
   }
 
   RefPtr<IDBKeyRange> keyRange;
-  IDBKeyRange::FromJSVal(aCx, aKey, &keyRange, aRv);
+  IDBKeyRange::FromJSVal(aCx, aKey, &keyRange, aRv,
+                         mTransaction.unsafeGetRawPtr());
   if (NS_WARN_IF((aRv.Failed()))) {
     return nullptr;
   }
@@ -1689,7 +1735,8 @@ RefPtr<IDBRequest> IDBObjectStore::Count(JSContext* aCx,
   }
 
   RefPtr<IDBKeyRange> keyRange;
-  IDBKeyRange::FromJSVal(aCx, aKey, &keyRange, aRv);
+  IDBKeyRange::FromJSVal(aCx, aKey, &keyRange, aRv,
+                         mTransaction.unsafeGetRawPtr());
   if (aRv.Failed()) {
     return nullptr;
   }
@@ -1740,7 +1787,8 @@ RefPtr<IDBRequest> IDBObjectStore::OpenCursorInternal(
   }
 
   RefPtr<IDBKeyRange> keyRange;
-  IDBKeyRange::FromJSVal(aCx, aRange, &keyRange, aRv);
+  IDBKeyRange::FromJSVal(aCx, aRange, &keyRange, aRv,
+                         mTransaction.unsafeGetRawPtr());
   if (NS_WARN_IF(aRv.Failed())) {
     return nullptr;
   }
@@ -1938,10 +1986,21 @@ bool IDBObjectStore::HasValidKeyPath() const {
   return GetKeyPath().IsValid();
 }
 
-bool IDBObjectStore::ValueWrapper::Clone(JSContext* aCx) {
+bool IDBObjectStore::ValueWrapper::Clone(JSContext* aCx,
+                                         IDBTransaction* aTransaction) {
   if (mCloned) {
     return true;
   }
+
+  const bool shouldInactivate = aTransaction && aTransaction->IsActive();
+  if (shouldInactivate) {
+    aTransaction->TransitionToInactive();
+  }
+  auto guard = MakeScopeExit([&]() {
+    if (shouldInactivate && !aTransaction->IsAborted()) {
+      aTransaction->TransitionToActive();
+    }
+  });
 
   static const JSStructuredCloneCallbacks callbacks = {
       CopyingStructuredCloneReadCallback /* read */,
@@ -1958,6 +2017,10 @@ bool IDBObjectStore::ValueWrapper::Clone(JSContext* aCx) {
 
   JS::Rooted<JS::Value> clonedValue(aCx);
   if (!JS_StructuredClone(aCx, mValue, &clonedValue, &callbacks, &cloneInfo)) {
+    return false;
+  }
+
+  if (aTransaction && aTransaction->IsAborted()) {
     return false;
   }
 

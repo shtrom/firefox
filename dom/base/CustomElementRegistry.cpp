@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -11,6 +9,7 @@
 #include "jsapi.h"
 #include "mozilla/AsyncEventDispatcher.h"
 #include "mozilla/AutoRestore.h"
+#include "mozilla/ClearOnShutdown.h"
 #include "mozilla/CycleCollectedJSContext.h"
 #include "mozilla/CycleCollectedUniquePtr.h"
 #include "mozilla/HoldDropJSObjects.h"
@@ -19,6 +18,7 @@
 #include "mozilla/dom/CustomElementRegistryBinding.h"
 #include "mozilla/dom/CustomEvent.h"
 #include "mozilla/dom/DocGroup.h"
+#include "mozilla/dom/Element.h"
 #include "mozilla/dom/ElementBinding.h"
 #include "mozilla/dom/HTMLElement.h"
 #include "mozilla/dom/HTMLElementBinding.h"
@@ -302,8 +302,7 @@ void CustomElementCallback::Call(ElementCallbackType aType,
       } else if (owningValue.IsFile()) {
         value.SetValue().SetAsFile() = owningValue.GetAsFile();
       } else {
-        value.SetValue().SetAsUSVString().ShareOrDependUpon(
-            owningValue.GetAsUSVString());
+        value.SetValue().SetAsUSVString() = owningValue.GetAsUSVString();
       }
       static_cast<LifecycleFormStateRestoreCallback*>(aCallback.get())
           ->Call(mThisObject, value, mArgs.mReason);
@@ -714,14 +713,14 @@ void CustomElementRegistry::EnqueueLifecycleCallback(
   }
 
   // 5. If callbackName is "attributeChangedCallback":
-  if (aType == ElementCallbackType::eAttributeChanged) {
-    // 5.1. Let attributeName be the first element of args.
-    // 5.2. If definition's observed attributes does not contain attributeName,
-    //      then return.
-    if (!definition->mObservedAttributes.Contains(aArgs.mName)) {
-      return;
-    }
-  }
+  //    5.1. Let attributeName be the first element of args.
+  //    5.2. If definition's observed attributes does not contain attributeName,
+  //         then return.
+  // Callers must perform this check themselves before calling.
+  MOZ_ASSERT(aType != ElementCallbackType::eAttributeChanged ||
+                 definition->IsInObservedAttributeList(aArgs.mName),
+             "Caller must check IsInObservedAttributeList for "
+             "eAttributeChanged");
 
   // 6. Add a new callback reaction to element's custom element reaction queue,
   //    with callback function callback and arguments args.
@@ -730,6 +729,42 @@ void CustomElementRegistry::EnqueueLifecycleCallback(
 
   // 7. Enqueue an element on the appropriate element queue given element.
   reactionsStack->EnqueueCallbackReaction(aCustomElement, std::move(callback));
+}
+
+using ScopedRegistryMap =
+    nsRefPtrHashtable<nsPtrHashKey<nsINode>, CustomElementRegistry>;
+
+static StaticAutoPtr<ScopedRegistryMap> gScopedRegistryMap;
+
+/* static */
+already_AddRefed<CustomElementRegistry>
+CustomElementRegistry::GetScopedRegistry(nsINode& aNode) {
+  if (!gScopedRegistryMap) {
+    return nullptr;
+  }
+  RefPtr<CustomElementRegistry> registry = gScopedRegistryMap->Get(&aNode);
+  if (registry) {
+    return registry.forget();
+  }
+  return nullptr;
+}
+
+/* static */
+void CustomElementRegistry::SetScopedRegistry(
+    nsINode& aNode, CustomElementRegistry& aRegistry) {
+  MOZ_ASSERT(aRegistry.IsScoped());
+  if (!gScopedRegistryMap) {
+    gScopedRegistryMap = new ScopedRegistryMap();
+    ClearOnShutdown(&gScopedRegistryMap);
+  }
+  gScopedRegistryMap->InsertOrUpdate(&aNode, &aRegistry);
+}
+
+/* static */
+void CustomElementRegistry::RemoveScopedRegistry(nsINode& aNode) {
+  if (gScopedRegistryMap) {
+    gScopedRegistryMap->Remove(&aNode);
+  }
 }
 
 namespace {
@@ -1485,9 +1520,9 @@ void CustomElementRegistry::Upgrade(Element* aElement,
         LifecycleCallbackArgs args;
         args.mName = attrName;
         args.mOldValue = VoidString();
-        args.mNewValue = attrValue;
+        args.mNewValue = std::move(attrValue);
         args.mNamespaceURI =
-            (namespaceURI.IsEmpty() ? VoidString() : namespaceURI);
+            (namespaceURI.IsEmpty() ? VoidString() : std::move(namespaceURI));
 
         nsContentUtils::EnqueueLifecycleCallback(
             ElementCallbackType::eAttributeChanged, aElement, args,
@@ -1528,6 +1563,10 @@ void CustomElementRegistry::Upgrade(Element* aElement,
     return;
   }
 
+  // 11. Set element's custom element state to "custom".
+  data->mState = CustomElementData::State::eCustom;
+  aElement->SetDefined(true);
+
   // 10. If element is a form-associated custom element, then:
   if (data->IsFormAssociated()) {
     // 10.1. Reset the form owner of element.
@@ -1539,10 +1578,6 @@ void CustomElementRegistry::Upgrade(Element* aElement,
 
     internals->UpdateFormOwner();
   }
-
-  // 11. Set element's custom element state to "custom".
-  data->mState = CustomElementData::State::eCustom;
-  aElement->SetDefined(true);
 }
 
 already_AddRefed<nsISupports> CustomElementRegistry::CallGetCustomInterface(
@@ -1728,7 +1763,7 @@ void CustomElementReactionsStack::InvokeReactions(ElementQueue* aElementQueue,
     MOZ_ASSERT(element);
 
     CustomElementData* elementData = element->GetCustomElementData();
-    if (!elementData || !element->GetOwnerGlobal()) {
+    if (!elementData || !element->GetRelevantGlobal()) {
       // This happens when the document is destroyed and the element is already
       // unlinked, no need to fire the callbacks in this case.
       continue;
@@ -1741,7 +1776,7 @@ void CustomElementReactionsStack::InvokeReactions(ElementQueue* aElementQueue,
       auto reaction(std::move(reactions.ElementAt(j)));
       if (reaction) {
         if (!aGlobal && reaction->IsUpgradeReaction()) {
-          nsIGlobalObject* global = element->GetOwnerGlobal();
+          nsIGlobalObject* global = element->GetRelevantGlobal();
           MOZ_ASSERT(!aes);
           aes.emplace(global, "custom elements reaction invocation");
         }

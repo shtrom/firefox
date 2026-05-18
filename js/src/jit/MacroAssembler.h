@@ -1,6 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * vim: set ts=8 sts=2 et sw=2 tw=80:
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -44,6 +42,7 @@
 #include "vm/Opcodes.h"
 #include "vm/RealmFuses.h"
 #include "vm/RuntimeFuses.h"
+#include "vm/StringFlags.h"
 #include "wasm/WasmAnyRef.h"
 
 // [SMDOC] MacroAssembler multi-platform overview
@@ -261,8 +260,6 @@ enum class CheckUnsafeCallWithABI {
 // as an ABI function signature.
 template <typename Sig>
 static inline DynFn DynamicFunction(Sig fun);
-
-enum class CharEncoding { Latin1, TwoByte };
 
 constexpr uint32_t WasmCallerInstanceOffsetBeforeCall =
     wasm::FrameWithInstances::callerInstanceOffsetWithoutFrame();
@@ -1176,6 +1173,8 @@ class MacroAssembler : public MacroAssemblerSpecific {
   inline void mulPtr(Register rhs, Register srcDest) PER_ARCH;
   inline void mulPtr(ImmWord rhs, Register srcDest) PER_ARCH;
 
+  inline void mul64(const Register64& rhs, const Register64& srcDest)
+      DEFINED_ON(x64, arm64, mips64, loong64, riscv64);
   inline void mul64(const Operand& src, const Register64& dest) DEFINED_ON(x64);
   inline void mul64(const Operand& src, const Register64& dest,
                     const Register temp) DEFINED_ON(x64);
@@ -2029,6 +2028,8 @@ class MacroAssembler : public MacroAssemblerSpecific {
 
   inline void branchTestMagic(Condition cond, const Address& valaddr,
                               JSWhyMagic why, Label* label) PER_ARCH;
+  inline void branchTestMagic(Condition cond, const BaseIndex& valaddr,
+                              JSWhyMagic why, Label* label) PER_ARCH;
 
   inline void branchTestMagicValue(Condition cond, const ValueOperand& val,
                                    JSWhyMagic why, Label* label);
@@ -2235,6 +2236,27 @@ class MacroAssembler : public MacroAssemblerSpecific {
   inline void spectreBoundsCheckPtr(Register index, const Address& length,
                                     Register maybeScratch,
                                     Label* failure) PER_ARCH;
+
+  // ========================================================================
+  // Support for 128-bit arithmetic.
+
+  // Produces the top 64 bits of the 128-bit value `lhsHi:lhsLo +/-
+  // rhsHi:rhsLo`.  Only used on 64-bit targets.  `output` must be different
+  // from all the other registers, on all supported targets.
+  inline void wasmAddSubI128HI64(Register lhsLo, Register lhsHi, Register rhsLo,
+                                 Register rhsHi, Register output, bool isAdd)
+      DEFINED_ON(x64, arm64, riscv64, loong64, mips64);
+
+  // Produces the top 64 bits of the 128-bit value `RAX *widen rhs`.  The result
+  // will be in RAX.  RDX is trashed.  `rhs` may not be RAX or RDX.  Callers
+  // must preserve live values in RAX and RDX themselves.
+  inline void wasmMulI64WideHI64(Register rhs, bool isSigned) DEFINED_ON(x64);
+
+  // The same, but for all other 64-bit targets.  There are no restrictions on
+  // what the registers may be.
+  inline void wasmMulI64WideHI64(Register lhs, Register rhs, Register output,
+                                 bool isSigned)
+      DEFINED_ON(arm64, riscv64, loong64, mips64);
 
   // ========================================================================
   // Canonicalization primitives.
@@ -5881,6 +5903,10 @@ class MacroAssembler : public MacroAssemblerSpecific {
                                       ValueOperand output, Register scratch1,
                                       Register scratch2);
 
+  void timeClip(FloatRegister time, FloatRegister output);
+  void timeClip(FloatRegister time, FloatRegister output, Register scratch,
+                const LiveRegisterSet& liveRegs);
+
   void computeImplicitThis(Register env, ValueOperand output, Label* slowPath);
 
  private:
@@ -6027,6 +6053,22 @@ class MacroAssembler : public MacroAssemblerSpecific {
 
   void finish();
   void link(JitCode* code);
+
+  void assertUnreachable(const char* output);
+
+  void assert32Compare(Condition condition, Register lhs, Imm32 rhs,
+                       const char* output = nullptr);
+  void assert32Compare(Condition condition, Address lhs, Imm32 rhs,
+                       const char* output = nullptr);
+  void assertPtrCompare(Condition condition, Register lhs, ImmWord rhs,
+                        const char* output = nullptr);
+  void assertPtrCompare(Condition condition, Address lhs, ImmWord rhs,
+                        const char* output = nullptr);
+
+  void assertPtrZero(Address src, const char* output = nullptr);
+  void assertPtrZero(Register src, const char* output = nullptr);
+  void assertPtrNonZero(Address src, const char* output = nullptr);
+  void assertPtrNonZero(Register src, const char* output = nullptr);
 
   void assumeUnreachable(const char* output);
 

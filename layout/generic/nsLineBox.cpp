@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -256,13 +254,10 @@ void nsLineBox::List(FILE* out, const char* aPrefix,
   }
   fprintf_stderr(out, "%s<\n", str.get());
 
-  nsIFrame* frame = mFirstChild;
-  int32_t n = GetChildCount();
   nsCString pfx(aPrefix);
   pfx += "  ";
-  while (--n >= 0) {
+  for (nsIFrame* frame : ChildFrames()) {
     frame->List(out, pfx.get(), aFlags);
-    frame = frame->GetNextSibling();
   }
 
   if (HasFloats()) {
@@ -329,8 +324,7 @@ bool nsLineBox::IsEmpty() const {
     return mFirstChild->IsEmpty();
   }
 
-  nsIFrame* kid = mFirstChild;
-  for (int32_t n = GetChildCount(); n > 0; --n, kid = kid->GetNextSibling()) {
+  for (nsIFrame* kid : ChildFrames()) {
     if (!kid->IsEmpty()) {
       return false;
     }
@@ -354,9 +348,8 @@ bool nsLineBox::CachedIsEmpty() {
   if (IsBlock()) {
     result = mFirstChild->CachedIsEmpty();
   } else {
-    nsIFrame* kid = mFirstChild;
     result = true;
-    for (int32_t n = GetChildCount(); n > 0; --n, kid = kid->GetNextSibling()) {
+    for (nsIFrame* kid : ChildFrames()) {
       if (!kid->CachedIsEmpty()) {
         result = false;
         break;
@@ -666,14 +659,11 @@ nsLineIterator::FindFrameAt(int32_t aLineNumber, nsPoint aPos,
 
   LineFrameFinder finder(aPos, line->mContainerSize, line->mWritingMode,
                          mRightToLeft);
-  int32_t n = line->GetChildCount();
-  nsIFrame* frame = line->mFirstChild;
-  while (n--) {
+  for (nsIFrame* frame : line->ChildFrames()) {
     finder.Scan(frame);
     if (finder.IsDone()) {
       break;
     }
-    frame = frame->GetNextSibling();
   }
   finder.Finish(aFrameFound, aPosIsBeforeFirstFrame, aPosIsAfterLastFrame);
   return NS_OK;

@@ -165,7 +165,7 @@ async function getReusableMasksAsync(browser, _origin) {
  * @param {object} messageArgs
  */
 async function showErrorAsync(browser, messageId, messageArgs) {
-  const { PopupNotifications } = browser.ownerGlobal.wrappedJSObject;
+  const { PopupNotifications } = browser.documentGlobal.wrappedJSObject;
   const [message] = await lazy.strings.formatValues([
     { id: messageId, args: messageArgs },
   ]);
@@ -257,20 +257,47 @@ async function showReusableMasksAsync(browser, origin, error) {
     return null;
   }
 
+  // Parse the mask count from the error message
+  let maskCount = 50;
+  if (error?.detail) {
+    const match = error.detail.match(/(\d+)\s+(?:free\s+)?email\s+masks?/i);
+    if (match) {
+      maskCount = parseInt(match[1], 10);
+    }
+  }
+
   let fillUsername;
   const fillUsernamePromise = new Promise(resolve => (fillUsername = resolve));
-  const [getUnlimitedMasksStrings] = await formatMessages(
-    "firefox-relay-get-unlimited-masks"
+  const [
+    seeAllMasksStrings,
+    dismissStrings,
+    headerMessage,
+    bodyMessage,
+    selectLabelMessage,
+  ] = await formatMessages(
+    "firefox-relay-see-all-masks",
+    "firefox-relay-dismiss",
+    { id: "firefox-relay-reuse-masks-header", args: { count: maskCount } },
+    "firefox-relay-reuse-masks-description-v2",
+    "firefox-relay-reuse-masks-select-label"
   );
-  const getUnlimitedMasks = {
-    label: getUnlimitedMasksStrings.label,
-    accessKey: getUnlimitedMasksStrings.accesskey,
+  const seeAllMasks = {
+    label: seeAllMasksStrings.label,
+    accessKey: seeAllMasksStrings.accesskey,
     dismiss: true,
     async callback() {
       Glean.relayIntegration.getUnlimitedMasksReusePanel.record({
         value: gFlowId,
       });
-      browser.ownerGlobal.openWebLinkIn(gConfig.manageURL, "tab");
+      browser.documentGlobal.openWebLinkIn(gConfig.manageURL, "tab");
+    },
+  };
+  const dismiss = {
+    label: dismissStrings.label,
+    accessKey: dismissStrings.accesskey,
+    dismiss: true,
+    callback() {
+      // Just dismiss the notification
     },
   };
 
@@ -287,11 +314,58 @@ async function showReusableMasksAsync(browser, origin, error) {
       return;
     }
 
-    customizeNotificationHeader(notification);
+    // Set custom header with dynamic mask count
+    const doc = notification.owner.panel.ownerDocument;
+    const description = doc.querySelector(
+      `description[popupid=${notification.id}]`
+    );
 
-    notification.owner.panel.getElementsByClassName(
-      "error-message"
-    )[0].textContent = error.detail || "";
+    const headerDiv = doc.createElement("div");
+    headerDiv.className = "relay-integration-header-variation";
+    headerDiv.style.marginBottom = "0";
+    const headerP = doc.createElement("p");
+    headerP.textContent = headerMessage;
+    headerP.style.marginBottom = "0";
+    headerDiv.appendChild(headerP);
+    description.replaceChildren(headerDiv);
+
+    // Set body message with learn more link
+    const errorMessageEl =
+      notification.owner.panel.getElementsByClassName("error-message")[0];
+    errorMessageEl.textContent = "";
+    errorMessageEl.style.marginTop = "8px";
+    const bodyP = doc.createElement("p");
+    bodyP.style.marginTop = "0";
+    bodyP.style.marginBottom = "0";
+
+    // Parse the message and create link for the labeled part
+    const parts = bodyMessage.split(/<label[^>]*>|<\/label>/);
+    parts.forEach((part, index) => {
+      if (index % 2 === 0) {
+        bodyP.appendChild(doc.createTextNode(part));
+      } else {
+        const link = doc.createElement("a");
+        link.href = gConfig.manageURL;
+        link.className = "text-link";
+        link.textContent = part;
+        link.addEventListener("click", event => {
+          event.preventDefault();
+          browser.documentGlobal.openWebLinkIn(gConfig.manageURL, "tab");
+        });
+        bodyP.appendChild(link);
+      }
+    });
+
+    errorMessageEl.appendChild(bodyP);
+
+    // Add section label
+    const selectLabel = doc.createElement("p");
+    selectLabel.textContent = selectLabelMessage;
+    selectLabel.style.fontWeight = "600";
+    selectLabel.style.fontSize = "1.1em";
+    selectLabel.style.marginTop = "24px";
+    selectLabel.style.marginBottom = "8px";
+    errorMessageEl.appendChild(selectLabel);
 
     // rebuild "reuse mask" buttons list
     const list = getReusableMasksList();
@@ -301,17 +375,18 @@ async function showReusableMasksAsync(browser, origin, error) {
     const fragment = document.createDocumentFragment();
     reusableMasks
       .filter(mask => mask.enabled)
+      .slice(0, 5)
       .forEach(mask => {
         const button = document.createElement("button");
+
+        const maskDescription = document.createElement("span");
+        const raw = mask.description || mask.generated_for || mask.used_on;
+        maskDescription.textContent = URL.parse(raw)?.hostname ?? raw ?? "";
+        button.appendChild(maskDescription);
 
         const maskFullAddress = document.createElement("span");
         maskFullAddress.textContent = mask.full_address;
         button.appendChild(maskFullAddress);
-
-        const maskDescription = document.createElement("span");
-        maskDescription.textContent =
-          mask.description || mask.generated_for || mask.used_on;
-        button.appendChild(maskDescription);
 
         button.addEventListener(
           "click",
@@ -332,6 +407,35 @@ async function showReusableMasksAsync(browser, origin, error) {
         fragment.appendChild(button);
       });
     list.appendChild(fragment);
+
+    // Style buttons to be the same size and aligned right
+    const panel = notification.owner.panel;
+    const buttonContainer = panel.querySelector(
+      ".popup-notification-footer-container"
+    );
+    const mainAction = panel.querySelector(
+      ".popup-notification-primary-button"
+    );
+    const secondaryActions = panel.querySelectorAll(
+      ".popup-notification-secondary-button"
+    );
+
+    if (buttonContainer) {
+      buttonContainer.style.justifyContent = "flex-end";
+      buttonContainer.style.gap = "8px";
+    }
+
+    if (mainAction) {
+      mainAction.style.flex = "0 0 auto";
+      mainAction.style.minWidth = "120px";
+    }
+
+    if (secondaryActions.length) {
+      secondaryActions.forEach(button => {
+        button.style.flex = "0 0 auto";
+        button.style.minWidth = "120px";
+      });
+    }
   }
 
   function notificationRemoved() {
@@ -354,18 +458,19 @@ async function showReusableMasksAsync(browser, origin, error) {
     }
   }
 
-  const { PopupNotifications } = browser.ownerGlobal.wrappedJSObject;
+  const { PopupNotifications } = browser.documentGlobal.wrappedJSObject;
   notification = PopupNotifications.show(
     browser,
     "relay-integration-reuse-masks",
     "", // content is provided after popup shown
     "password-notification-icon",
-    getUnlimitedMasks,
-    [],
+    seeAllMasks,
+    [dismiss],
     {
       autofocus: true,
       removeOnDismissal: true,
       hideClose: true,
+      persistent: true,
       eventCallback: onNotificationEvent,
     }
   );
@@ -661,7 +766,7 @@ class RelayOffered {
   }
 
   async offerRelayIntegrationToSignedOutUser(feature, browser, origin) {
-    const { PopupNotifications } = browser.ownerGlobal.wrappedJSObject;
+    const { PopupNotifications } = browser.documentGlobal.wrappedJSObject;
     let fillUsername;
     const fillUsernamePromise = new Promise(
       resolve => (fillUsername = resolve)
@@ -687,7 +792,8 @@ class RelayOffered {
 
         // Capture the selected tab panel ID so we can come back to it after the
         // user finishes FXA sign-in
-        const tabPanelId = browser.ownerGlobal.gBrowser.selectedTab.linkedPanel;
+        const tabPanelId =
+          browser.documentGlobal.gBrowser.selectedTab.linkedPanel;
 
         // TODO: add some visual treatment to the tab and/or the form field to
         // indicate to the user that they need to complete sign-in to receive a
@@ -719,9 +825,9 @@ class RelayOffered {
           }
 
           // Go back to the tab with the form that started the FXA sign-in flow
-          const tabToFocus = Array.from(browser.ownerGlobal.gBrowser.tabs).find(
-            tab => tab.linkedPanel === tabPanelId
-          );
+          const tabToFocus = Array.from(
+            browser.documentGlobal.gBrowser.tabs
+          ).find(tab => tab.linkedPanel === tabPanelId);
           if (!tabToFocus) {
             // If the tab has been closed, return
             // TODO: figure out the real UX here?
@@ -731,7 +837,7 @@ class RelayOffered {
           // TODO: Update the visual treatment to the form field to indicate to
           // the user that we are hiding their email address.
 
-          browser.ownerGlobal.gBrowser.selectedTab = tabToFocus;
+          browser.documentGlobal.gBrowser.selectedTab = tabToFocus;
 
           // Create the relay user, mark feature enabled, fill in the username
           // field with a mask
@@ -760,7 +866,7 @@ class RelayOffered {
               utm_medium: "firefox-desktop",
             }
           );
-        browser.ownerGlobal.openWebLinkIn(fxaUrl, "tab");
+        browser.documentGlobal.openWebLinkIn(fxaUrl, "tab");
       },
     };
     const postpone = getPostpone(postponeStrings, feature);
@@ -815,7 +921,7 @@ class RelayOffered {
   }
 
   async offerRelayIntegrationToFxAUser(feature, browser, origin, fxaUser) {
-    const { PopupNotifications } = browser.ownerGlobal.wrappedJSObject;
+    const { PopupNotifications } = browser.documentGlobal.wrappedJSObject;
     let fillUsername;
     const fillUsernamePromise = new Promise(
       resolve => (fillUsername = resolve)
@@ -1007,6 +1113,64 @@ class RelayFeature extends OptInFeature {
 
   async offerRelayIntegration(browser, origin) {
     return this.implementation.offerRelayIntegration?.(this, browser, origin);
+  }
+
+  async getRelayProfileInfo() {
+    if (!lazy.fxAccounts.constructor.config.isProductionConfig()) {
+      return null;
+    }
+
+    const hasSession = await lazy.fxAccounts.hasLocalSession();
+    if (!hasSession) {
+      return null;
+    }
+
+    try {
+      const token = await getRelayTokenAsync();
+      if (!token) {
+        return null;
+      }
+
+      const profileResponse = await fetch(gConfig.profilesUrl, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
+
+      if (!profileResponse.ok) {
+        return null;
+      }
+
+      const profiles = await profileResponse.json();
+      const profile =
+        Array.isArray(profiles) && profiles.length ? profiles[0] : profiles;
+
+      const masksResponse = await fetch(gConfig.addressesUrl, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
+
+      let masksCount = 0;
+      if (masksResponse.ok) {
+        const masks = await masksResponse.json();
+        masksCount = Array.isArray(masks) ? masks.length : 0;
+      }
+
+      return {
+        has_premium: profile?.has_premium || false,
+        has_phone: profile?.has_phone || false,
+        has_vpn: profile?.has_vpn || false,
+        masksCount,
+      };
+    } catch (e) {
+      console.error("Error fetching Relay profile:", e);
+      return null;
+    }
   }
 }
 

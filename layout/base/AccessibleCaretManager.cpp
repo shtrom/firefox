@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -220,7 +218,7 @@ void AccessibleCaretManager::UpdateCarets(const UpdateCaretsHintSet& aHint) {
 
 bool AccessibleCaretManager::IsCaretDisplayableInCursorMode(
     nsIFrame** aOutFrame, int32_t* aOutOffset) const {
-  RefPtr<nsCaret> caret = mPresShell->GetCaret();
+  RefPtr<nsCaret> caret = mPresShell->GetOriginalCaret();
   if (!caret || !caret->IsVisible()) {
     return false;
   }
@@ -298,8 +296,7 @@ void AccessibleCaretManager::UpdateCaretsForCursorMode(
 
   // Perform haptic feedback when the user drags the caret
   if (mIsCaretPositionChanged && mActiveCaret) {
-    ProvideHapticFeedback(
-        nsIHapticFeedback::HapticFeedbackType::TextHandleMove);
+    ProvideHapticFeedback(mozilla::HapticFeedbackType::TextHandleMove);
   }
 
   if (!aHints.contains(UpdateCaretsHint::DispatchNoEvent) && !mActiveCaret) {
@@ -380,11 +377,20 @@ void AccessibleCaretManager::UpdateCaretsForSelectionMode(
   if (mIsCaretPositionChanged) {
     // Perform haptic feedback when the user drags the caret
     if (mActiveCaret) {
-      ProvideHapticFeedback(
-          nsIHapticFeedback::HapticFeedbackType::TextHandleMove);
+      ProvideHapticFeedback(mozilla::HapticFeedbackType::TextHandleMove);
     }
+
+    AutoWeakFrame weakStartFrame = startFrameAndOffset.mFrame;
+    AutoWeakFrame weakEndFrame = endFrameAndOffset.mFrame;
+
     // Flush layout to make the carets intersection correct.
     if (MaybeFlushLayout() == Terminated::Yes) {
+      return;
+    }
+
+    if ((startFrameAndOffset.mFrame && !weakStartFrame.IsAlive()) ||
+        (endFrameAndOffset.mFrame && !weakEndFrame.IsAlive())) {
+      HideCaretsAndDispatchCaretStateChangedEvent();
       return;
     }
   }
@@ -496,11 +502,10 @@ void AccessibleCaretManager::UpdateCaretsForAlwaysTilt(
 }
 
 void AccessibleCaretManager::ProvideHapticFeedback(
-    nsIHapticFeedback::HapticFeedbackType aEffect) {
+    mozilla::HapticFeedbackType aType) {
   if (StaticPrefs::layout_accessiblecaret_hapticfeedback()) {
-    if (nsCOMPtr<nsIHapticFeedback> haptic =
-            do_GetService("@mozilla.org/widget/hapticfeedback;1")) {
-      haptic->PerformSimpleAction(aEffect);
+    if (nsIWidget* widget = mPresShell->GetRootWidget()) {
+      widget->PerformHapticFeedback(aType);
     }
   }
 }
@@ -594,7 +599,7 @@ nsresult AccessibleCaretManager::SelectWordOrShortcut(const nsPoint& aPoint) {
       GetSelection()->ContainsPoint(aPoint)) {
     AC_LOG("%s: UpdateCarets() for current selection", __FUNCTION__);
     UpdateCarets();
-    ProvideHapticFeedback(nsIHapticFeedback::HapticFeedbackType::LongPress);
+    ProvideHapticFeedback(mozilla::HapticFeedbackType::LongPress);
     return NS_OK;
   }
 
@@ -645,7 +650,7 @@ nsresult AccessibleCaretManager::SelectWordOrShortcut(const nsPoint& aPoint) {
     // We need to update carets to get correct information before dispatching
     // CaretStateChangedEvent.
     UpdateCarets();
-    ProvideHapticFeedback(nsIHapticFeedback::HapticFeedbackType::LongPress);
+    ProvideHapticFeedback(mozilla::HapticFeedbackType::LongPress);
     DispatchCaretStateChangedEvent(CaretChangedReason::Longpressonemptycontent);
     return NS_OK;
   }
@@ -706,7 +711,7 @@ nsresult AccessibleCaretManager::SelectWordOrShortcut(const nsPoint& aPoint) {
         }
 
         UpdateCarets();
-        ProvideHapticFeedback(nsIHapticFeedback::HapticFeedbackType::LongPress);
+        ProvideHapticFeedback(mozilla::HapticFeedbackType::LongPress);
         DispatchCaretStateChangedEvent(
             CaretChangedReason::Longpressonemptycontent);
 
@@ -718,7 +723,7 @@ nsresult AccessibleCaretManager::SelectWordOrShortcut(const nsPoint& aPoint) {
   // Then try select a word under point.
   nsresult rv = SelectWord(ptFrame, ptInFrame);
   UpdateCarets();
-  ProvideHapticFeedback(nsIHapticFeedback::HapticFeedbackType::LongPress);
+  ProvideHapticFeedback(mozilla::HapticFeedbackType::LongPress);
 
   return rv;
 }

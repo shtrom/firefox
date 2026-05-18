@@ -401,6 +401,17 @@ sealed class LastAccessAction : BrowserAction() {
     ) : LastAccessAction()
 
     /**
+     * Updates the [TabSessionState.lastVisibleAt] timestamp of the tab with the given [tabId].
+     *
+     * @property tabId the ID of the tab to update.
+     * @property lastVisibleAt the timestamp when the tab was last visible to the user.
+     */
+    data class UpdateLastVisibleAtAction(
+        val tabId: String,
+        val lastVisibleAt: Long,
+    ) : LastAccessAction()
+
+    /**
      * Updates [TabSessionState.lastMediaAccessState] for when media started playing in the tab identified by [tabId].
      *
      * @property tabId the ID of the tab to update.
@@ -1040,6 +1051,15 @@ sealed class TranslationsAction : BrowserAction() {
     data class OperationRequestedAction(
         val tabId: String?,
         val operation: TranslationOperation,
+    ) : TranslationsAction()
+
+    /**
+     * Sets whether the translations feature is enabled and should be shown to the user.
+     *
+     * @property isTranslationsEnabled Whether the translations feature is enabled.
+     */
+    data class SetTranslationsEnabledAction(
+        val isTranslationsEnabled: Boolean,
     ) : TranslationsAction()
 
     /**
@@ -1708,8 +1728,11 @@ sealed class DownloadAction : BrowserAction() {
 
     /**
      * Updates the [BrowserState] to remove the download with the provided [downloadId].
+     * @param downloadId The ID of the download to remove.
+     * @param removeFromDisk If true, forcibly deletes the file from storage. If false, only removes
+     * from history. If null, falls back to the global user preference.
      */
-    data class RemoveDownloadAction(val downloadId: String) : DownloadAction()
+    data class RemoveDownloadAction(val downloadId: String, val removeFromDisk: Boolean? = null) : DownloadAction()
 
     /**
      * Updates the [BrowserState] to remove all downloads.
@@ -1863,8 +1886,18 @@ sealed class SearchAction : BrowserAction() {
         val additionalAvailableSearchEngines: List<SearchEngine>,
         val userSelectedSearchEngineId: String?,
         val userSelectedSearchEngineName: String?,
+        val userSelectedPrivateSearchEngineId: String?,
+        val userSelectedPrivateSearchEngineName: String?,
         val regionDefaultSearchEngineId: String,
         val regionSearchEnginesOrder: List<String>,
+        val searchEnginesConfigurationId: Int?,
+    ) : SearchAction()
+
+    /**
+     * Indicates that a new search engines configuration is available for the application to use.
+     */
+    data class SearchConfigurationAvailabilityChanged(
+        val isNewSearchConfigurationAvailable: Boolean,
     ) : SearchAction()
 
     /**
@@ -1885,6 +1918,21 @@ sealed class SearchAction : BrowserAction() {
         val searchEngineId: String,
         val searchEngineName: String?,
     ) : SearchAction()
+
+    /**
+     * Updates [BrowserState.search] to update [SearchState.userSelectedPrivateSearchEngineId] and
+     * [SearchState.userSelectedPrivateSearchEngineName].
+     */
+    data class SelectPrivateSearchEngineAction(
+        val searchEngineId: String,
+        val searchEngineName: String?,
+    ) : SearchAction()
+
+    /**
+     * Clears the private browsing search engine override, causing it to fall back to the
+     * normal default search engine.
+     */
+    object ClearPrivateSearchEngineAction : SearchAction()
 
     /**
      * Shows a previously hidden, bundled search engine in [SearchState.regionSearchEngines] again

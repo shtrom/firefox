@@ -5,7 +5,7 @@
 <%namespace name="helpers" file="/helpers.mako.rs" />
 
 <%
-    from data import to_idl_name, SYSTEM_FONT_LONGHANDS, to_camel_case
+    from data import SYSTEM_FONT_LONGHANDS, to_camel_case
     from itertools import groupby
 %>
 
@@ -327,6 +327,7 @@ impl AnimationValue {
                         let style_struct = match declaration.keyword {
                             % if not prop.style_struct.inherited:
                             CSSWideKeyword::Revert |
+                            CSSWideKeyword::RevertRule |
                             CSSWideKeyword::RevertLayer |
                             CSSWideKeyword::Unset |
                             % endif
@@ -335,6 +336,7 @@ impl AnimationValue {
                             },
                             % if prop.style_struct.inherited:
                             CSSWideKeyword::Revert |
+                            CSSWideKeyword::RevertRule |
                             CSSWideKeyword::RevertLayer |
                             CSSWideKeyword::Unset |
                             % endif
@@ -369,7 +371,7 @@ impl AnimationValue {
             PropertyDeclaration::WithVariables(ref declaration) => {
                 let mut cache = Default::default();
                 let substituted = {
-                    let custom_properties = &context.style().custom_properties();
+                    let substitution_functions = &context.style().substitution_functions();
 
                     debug_assert!(
                         context.builder.stylist.is_some(),
@@ -377,7 +379,7 @@ impl AnimationValue {
                     );
                     declaration.value.substitute_variables(
                         declaration.id,
-                        custom_properties,
+                        substitution_functions,
                         context.builder.stylist.unwrap(),
                         context,
                         &mut cache,

@@ -138,8 +138,6 @@ fail-if = [
 
 ["browser_rules_imported_stylesheet_edit.js"]
 
-["browser_rules_inactive_css_display-justify.js"]
-
 ["browser_rules_inactive_css_flexbox.js"]
 
 ["browser_rules_inactive_css_grid.js"]
@@ -147,6 +145,8 @@ fail-if = [
 ["browser_rules_inactive_css_inline.js"]
 
 ["browser_rules_inactive_css_split-condition.js"]
+
+["browser_rules_inactive_css_update.js"]
 
 ["browser_rules_inactive_css_visited.js"]
 
@@ -255,6 +255,8 @@ fail-if = [
 
 ["browser_rules_position-try.js"]
 
+["browser_rules_popup_override.js"]
+
 ["browser_rules_preview-tooltips-sizes.js"]
 
 ["browser_rules_print_media_simulation.js"]
@@ -270,6 +272,8 @@ fail-if = [
 ["browser_rules_pseudo-visited_with_style-attribute.js"]
 
 ["browser_rules_pseudo_lock_options.js"]
+
+["browser_rules_element_specific_pseudo_classes.js"]
 
 ["browser_rules_refresh-no-flicker.js"]
 

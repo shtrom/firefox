@@ -1,6 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * vim: set ts=8 sts=2 et sw=2 tw=80:
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -127,9 +125,18 @@ static const Scale ScalePointer = TimesEight;
 
 class Assembler;
 
-typedef js::jit::AssemblerBufferWithConstantPools<4, Instruction, Assembler,
-                                                  NumShortBranchRangeTypes>
-    Buffer;
+using Buffer =
+    js::jit::AssemblerBufferWithConstantPools<Instruction, Assembler,
+                                              js::jit::AssemblerBufferSettings{
+                                                  .instSize = 4,
+                                                  .guardSize = 2,
+                                                  .headerSize = 2,
+                                                  .pcBias = 8,
+                                                  .alignFillInst = kNopByte,
+                                                  .nopFillInst = kNopByte,
+                                                  .numShortBranchRanges =
+                                                      NumShortBranchRangeTypes,
+                                              }>;
 
 class Assembler : public AssemblerShared,
                   public AssemblerRISCVI,
@@ -200,9 +207,7 @@ class Assembler : public AssemblerShared,
 #ifdef JS_JITSPEW
         printer(nullptr),
 #endif
-        m_buffer(/*guardSize*/ 2, /*headerSize*/ 2, /*instBufferAlign*/ 8,
-                 /*poolMaxOffset*/ GetPoolMaxOffset(), /*pcBias*/ 8,
-                 /*alignFillInst*/ kNopByte, /*nopFillInst*/ kNopByte),
+        m_buffer(/*poolMaxOffset*/ GetPoolMaxOffset(), /*nopFill*/ 0),
         isFinished(false) {
   }
   static uint32_t NopFill;
@@ -298,8 +303,8 @@ class Assembler : public AssemblerShared,
   BufferOffset nextOffset() { return m_buffer.nextOffset(); }
   // Get the buffer offset of the next inserted instruction. This may flush
   // constant pools.
-  BufferOffset nextInstrOffset(int numInstr = 1) {
-    return m_buffer.nextInstrOffset(numInstr);
+  BufferOffset nextInstrOffset(unsigned numInsts, unsigned numNewDeadlines) {
+    return m_buffer.nextInstrOffset(numInsts, numNewDeadlines);
   }
   void comment(const char* msg) { spew("; %s", msg); }
 
@@ -312,7 +317,6 @@ class Assembler : public AssemblerShared,
       va_end(va);
     }
   }
-
 #else
   MOZ_ALWAYS_INLINE void spew(const char* fmt, ...) MOZ_FORMAT_PRINTF(2, 3) {}
 #endif
@@ -376,7 +380,9 @@ class Assembler : public AssemblerShared,
 
   Register getStackPointer() const { return StackPointer; }
   void flushBuffer() {}
+#ifdef JS_DISASM_RISCV64
   static int disassembleInstr(Instr instr, bool enable_spew = false);
+#endif /* JS_DISASM_RISCV64 */
   int jumpChainTargetAt(BufferOffset pos, bool is_internal);
   static int jumpChainTargetAt(Instruction* instruction, BufferOffset pos,
                                bool is_internal,
@@ -393,8 +399,8 @@ class Assembler : public AssemblerShared,
 
   // Determines if Label is bound and near enough so that branch instruction
   // can be used to reach it, instead of jump instruction.
-  bool is_near(Label* L);
-  bool is_near(Label* L, OffsetSize bits);
+  bool isNear(Label* L);
+  bool isNear(Label* L, OffsetSize bits);
   bool is_near_branch(Label* L);
 
   void nopAlign(int m) {
@@ -406,7 +412,7 @@ class Assembler : public AssemblerShared,
   virtual BufferOffset emit(Instr x) {
     MOZ_ASSERT(hasCreator());
     BufferOffset offset = m_buffer.putInt(x);
-#if defined(DEBUG) || defined(JS_JITSPEW)
+#if (defined(DEBUG) || defined(JS_JITSPEW)) && defined(JS_DISASM_RISCV64)
     if (!oom()) {
       DEBUG_PRINTF(
           "0x%" PRIx64 "(%" PRIxPTR "):",
@@ -427,14 +433,23 @@ class Assembler : public AssemblerShared,
     return m_buffer.putInt(x);
   }
 
-  void instr_at_put(BufferOffset offset, Instr instr) {
-    DEBUG_PRINTF("\t[instr_at_put\n");
+  void putInstrAt(BufferOffset offset, Instr instr) {
+#ifdef JS_DISASM_RISCV64
+    DEBUG_PRINTF("\t[putInstrAt\n");
     DEBUG_PRINTF("\t%p %d \n\t", editSrc(offset), offset.getOffset());
     disassembleInstr(editSrc(offset)->InstructionBits());
     DEBUG_PRINTF("\t");
     *reinterpret_cast<Instr*>(editSrc(offset)) = instr;
     disassembleInstr(editSrc(offset)->InstructionBits());
     DEBUG_PRINTF("\t]\n");
+#else
+    DEBUG_PRINTF(
+        "\t[putInstrAt\n"
+        "\t%p %d \n\t"
+        "\t]\n",
+        editSrc(offset), offset.getOffset());
+    *reinterpret_cast<Instr*>(editSrc(offset)) = instr;
+#endif /* JS_DISASM_RISCV64 */
   }
 
   static Condition InvertCondition(Condition);
@@ -539,7 +554,7 @@ class Assembler : public AssemblerShared,
   void assertNoGCThings() const {
 #ifdef DEBUG
     MOZ_ASSERT(dataRelocations_.length() == 0);
-    for (auto& j : jumps_) {
+    for (const auto& j : jumps_) {
       MOZ_ASSERT(j.kind == RelocationKind::HARDCODED);
     }
 #endif

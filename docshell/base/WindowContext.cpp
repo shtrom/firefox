@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -72,12 +70,7 @@ bool WindowContext::IsCurrent() const {
   return mBrowsingContext->mCurrentWindowContext == this;
 }
 
-bool WindowContext::IsInBFCache() {
-  if (mozilla::SessionHistoryInParent()) {
-    return mBrowsingContext->IsInBFCache();
-  }
-  return TopWindowContext()->GetWindowStateSaved();
-}
+bool WindowContext::IsInBFCache() { return mBrowsingContext->IsInBFCache(); }
 
 already_AddRefed<nsIRFPTargetSetIDL>
 WindowContext::GetOverriddenFingerprintingSettingsWebIDL() const {
@@ -364,6 +357,11 @@ bool WindowContext::CanSet(FieldIndex<IDX_HasActivePeerConnections>, bool,
   return XRE_IsParentProcess() && IsTop();
 }
 
+bool WindowContext::CanSet(FieldIndex<IDX_IsFramebustingAllowed>,
+                           const bool& aValue, ContentParent* aSource) {
+  return CheckOnlyOwningProcessCanSet(aSource);
+}
+
 void WindowContext::ProcessCloseRequest() {
   MOZ_ASSERT(XRE_IsParentProcess(), "Window must be Global Parent");
   BrowsingContext* top = mBrowsingContext->Top();
@@ -476,12 +474,6 @@ void WindowContext::DidSet(FieldIndex<IDX_HasReportedShadowDOMUsage>,
       }
     }
   }
-}
-
-bool WindowContext::CanSet(FieldIndex<IDX_WindowStateSaved>, bool aValue,
-                           ContentParent* aSource) {
-  return !mozilla::SessionHistoryInParent() && IsTop() &&
-         CheckOnlyOwningProcessCanSet(aSource);
 }
 
 void WindowContext::CreateFromIPC(IPCInitializer&& aInit) {
@@ -741,6 +733,18 @@ bool WindowContext::CanShowPopup() {
   }
 
   return !StaticPrefs::dom_disable_open_during_load();
+}
+
+bool WindowContext::CanFramebust() {
+  uint32_t permit = GetPopupPermission();
+  if (permit == nsIPermissionManager::ALLOW_ACTION) {
+    return true;
+  }
+  if (permit == nsIPermissionManager::DENY_ACTION) {
+    return false;
+  }
+
+  return !StaticPrefs::dom_security_framebusting_intervention_enabled();
 }
 
 void WindowContext::TransientSetHasActivePeerConnections() {

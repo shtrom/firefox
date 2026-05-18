@@ -16,7 +16,6 @@ import mozilla.components.support.test.robolectric.testContext
 import mozilla.components.support.utils.toSafeIntent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -25,6 +24,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mozilla.fenix.GleanMetrics.Metrics
 import org.mozilla.fenix.browser.browsingmode.BrowsingMode
+import org.mozilla.fenix.browser.browsingmode.BrowsingModeManager
 import org.mozilla.fenix.components.AppStore
 import org.mozilla.fenix.components.appstate.AppAction
 import org.mozilla.fenix.ext.components
@@ -34,6 +34,7 @@ import org.mozilla.fenix.helpers.FenixGleanTestRule
 import org.mozilla.fenix.helpers.perf.TestStrictModeManager
 import org.mozilla.fenix.utils.Settings
 import org.robolectric.RobolectricTestRunner
+import kotlin.test.assertNotNull
 
 @RunWith(RobolectricTestRunner::class)
 class HomeActivityTest {
@@ -95,14 +96,14 @@ class HomeActivityTest {
 
     @Test
     fun `navigateToBrowserOnColdStart in normal mode navigates to browser`() {
-        every { settings.shouldReturnToBrowser } returns true
-        every { activity.components.settings } returns settings
-        every { activity.components.appStore } returns appStore
-        every { appStore.state } returns mockk {
-            every { mode } returns BrowsingMode.Normal
-        }
-        every { activity.openToBrowser(any(), any()) } returns Unit
+        val browsingModeManager: BrowsingModeManager = mockk()
+        every { browsingModeManager.mode } returns BrowsingMode.Normal
 
+        every { settings.shouldReturnToBrowser } returns true
+        every { activity.components.settings.shouldReturnToBrowser } returns true
+        every { activity.openToBrowser(any(), any()) } just Runs
+
+        activity.browsingModeManager = browsingModeManager
         activity.navigateToBrowserOnColdStart()
 
         verify(exactly = 1) { activity.openToBrowser(BrowserDirection.FromGlobal, null) }
@@ -110,14 +111,14 @@ class HomeActivityTest {
 
     @Test
     fun `navigateToBrowserOnColdStart in private mode does not navigate to browser`() {
-        every { settings.shouldReturnToBrowser } returns true
-        every { activity.components.settings } returns settings
-        every { activity.components.appStore } returns appStore
-        every { appStore.state } returns mockk {
-            every { mode } returns BrowsingMode.Private
-        }
-        every { activity.openToBrowser(any(), any()) } returns Unit
+        val browsingModeManager: BrowsingModeManager = mockk()
+        every { browsingModeManager.mode } returns BrowsingMode.Private
 
+        every { settings.shouldReturnToBrowser } returns true
+        every { activity.components.settings.shouldReturnToBrowser } returns true
+        every { activity.openToBrowser(any(), any()) } just Runs
+
+        activity.browsingModeManager = browsingModeManager
         activity.navigateToBrowserOnColdStart()
 
         verify(exactly = 0) { activity.openToBrowser(BrowserDirection.FromGlobal, null) }

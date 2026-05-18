@@ -1,22 +1,13 @@
-import { Logo } from "content-src/components/Logo/Logo";
+import { shallow } from "enzyme";
 import React from "react";
-import { mount } from "enzyme";
+import { Logo } from "content-src/components/Logo/Logo";
 
 describe("<Logo>", () => {
-  let wrapper;
-  //   let fakeWindow;
-
-  beforeEach(() => {
-    wrapper = mount(<Logo />);
-  });
-
-  it("should render", () => {
-    assert.ok(wrapper.exists());
-    assert.ok(wrapper.find(".logo-and-wordmark").exists());
-  });
-
-  it("should render a logo and wordmark element", () => {
-    assert.ok(wrapper.find(".logo-and-wordmark .logo").exists());
-    assert.ok(wrapper.find(".logo-and-wordmark .wordmark").exists());
+  it("should render the logo wrapper", () => {
+    const wrapper = shallow(<Logo />);
+    assert.ok(wrapper.find("h1.logo-and-wordmark-wrapper").exists());
+    assert.ok(wrapper.find("div.logo-and-wordmark").exists());
+    assert.ok(wrapper.find("div.logo").exists());
+    assert.ok(wrapper.find("div.wordmark").exists());
   });
 });

@@ -1,6 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * vim: set ts=8 sts=2 et sw=2 tw=80:
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -984,6 +982,15 @@ void MacroAssembler::branchTestMagic(Condition cond, const Address& valaddr,
   loadPtr(valaddr, scratch);
   ma_b(scratch, ImmWord(magic), label, cond);
 }
+
+void MacroAssembler::branchTestMagic(Condition cond, const BaseIndex& valaddr,
+                                     JSWhyMagic why, Label* label) {
+  uint64_t magic = MagicValue(why).asRawBits();
+  UseScratchRegisterScope temps(this);
+  Register scratch = temps.Acquire();
+  loadPtr(valaddr, scratch);
+  ma_b(scratch, ImmWord(magic), label, cond);
+}
 void MacroAssembler::branchTestNull(Condition cond, Register tag,
                                     Label* label) {
   MOZ_ASSERT(cond == Equal || cond == NotEqual);
@@ -1694,12 +1701,10 @@ void MacroAssembler::minFloat32(FloatRegister other, FloatRegister srcDest,
   Float32Min(srcDest, srcDest, other);
 }
 void MacroAssembler::move16SignExtend(Register src, Register dest) {
-  slli(dest, src, xlen - 16);
-  srai(dest, dest, xlen - 16);
+  SignExtendShort(dest, src);
 }
 void MacroAssembler::move16To64SignExtend(Register src, Register64 dest) {
-  move32To64SignExtend(src, dest);
-  move16SignExtend(dest.reg, dest.reg);
+  SignExtendShort(dest.reg, src);
 }
 void MacroAssembler::move8SignExtendToPtr(Register src, Register dest) {
   move8To64SignExtend(src, Register64(dest));
@@ -1714,12 +1719,10 @@ void MacroAssembler::move32To64SignExtend(Register src, Register64 dest) {
   SignExtendWord(dest.reg, src);
 }
 void MacroAssembler::move32To64ZeroExtend(Register src, Register64 dest) {
-  slli(dest.reg, src, 32);
-  srli(dest.reg, dest.reg, 32);
+  ZeroExtendWord(dest.reg, src);
 }
 void MacroAssembler::move32ZeroExtendToPtr(Register src, Register dest) {
-  slli(dest, src, 32);
-  srli(dest, dest, 32);
+  ZeroExtendWord(dest, src);
 }
 void MacroAssembler::move64(Register64 src, Register64 dest) {
   movePtr(src.reg, dest.reg);
@@ -1738,12 +1741,10 @@ void MacroAssembler::move8ZeroExtend(Register src, Register dest) {
 }
 
 void MacroAssembler::move8SignExtend(Register src, Register dest) {
-  slli(dest, src, xlen - 8);
-  srai(dest, dest, xlen - 8);
+  SignExtendByte(dest, src);
 }
 void MacroAssembler::move8To64SignExtend(Register src, Register64 dest) {
-  move32To64SignExtend(src, dest);
-  move8SignExtend(dest.reg, dest.reg);
+  SignExtendByte(dest.reg, src);
 }
 void MacroAssembler::moveDoubleToGPR64(FloatRegister src, Register64 dest) {
   fmv_x_d(dest.reg, src);
@@ -1830,6 +1831,9 @@ void MacroAssembler::mulDoublePtr(ImmPtr imm, Register temp,
 void MacroAssembler::mulFloat32(FloatRegister src, FloatRegister dest) {
   fmul_s(dest, dest, src);
 }
+void MacroAssembler::mul64(const Register64& rhs, const Register64& srcDest) {
+  mul(srcDest.reg, srcDest.reg, rhs.reg);
+}
 void MacroAssembler::mulPtr(Register rhs, Register srcDest) {
   mul(srcDest, srcDest, rhs);
 }
@@ -1915,8 +1919,10 @@ void MacroAssembler::patchSub32FromStackPtr(CodeOffset offset, Imm32 imm) {
   (*p1) = (*p1) & 0xfffff;
   (*p1) = (*p1) | ((int32_t)low_12 << 20);
 
+#ifdef JS_DISASM_RISCV64
   disassembleInstr(inst0->InstructionBits());
   disassembleInstr(inst1->InstructionBits());
+#endif /* JS_DISASM_RISCV64 */
   MOZ_ASSERT((int32_t)(inst0->Imm20UValue() << kImm20Shift) +
                  (int32_t)(inst1->Imm12Value()) ==
              imm.value);
@@ -2272,6 +2278,38 @@ void MacroAssembler::xorPtr(Imm32 imm, Register dest) {
 void MacroAssembler::xorPtr(Imm32 imm, Register src, Register dest) {
   ma_xor(dest, src, imm);
 }
+
+// ===============================================================
+// 128-bit arithmetic
+
+void MacroAssembler::wasmAddSubI128HI64(Register lhsLo, Register lhsHi,
+                                        Register rhsLo, Register rhsHi,
+                                        Register output, bool isAdd) {
+  // Require: the output is not the same as any of the inputs.
+  MOZ_RELEASE_ASSERT(output != lhsLo && output != lhsHi && output != rhsLo &&
+                     output != rhsHi);
+  // We use `output` as a temp to hold the carry or borrow.
+  if (isAdd) {
+    add(output, lhsLo, rhsLo);    // output = lhsLo + rhsLo
+    sltu(output, output, lhsLo);  // output = carry from `lhsLo + rhsLo`
+    add(output, output, lhsHi);   // output = carry + lhsHi
+    add(output, output, rhsHi);   // output = carry + lhsHi + rhsHi
+  } else {
+    sltu(output, lhsLo, rhsLo);  // output = borrow from `lhsLo - rhsLo`
+    sub(output, lhsHi, output);  // output = lhsHi - borrow
+    sub(output, output, rhsHi);  // output = lhsHi - borrow - rhsHi
+  }
+}
+
+void MacroAssembler::wasmMulI64WideHI64(Register lhs, Register rhs,
+                                        Register output, bool isSigned) {
+  if (isSigned) {
+    mulh(output, lhs, rhs);
+  } else {
+    mulhu(output, lhs, rhs);
+  }
+}
+
 //}}} check_macroassembler_style
 
 void MacroAssemblerRiscv64Compat::incrementInt32Value(const Address& addr) {

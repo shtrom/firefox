@@ -34,7 +34,7 @@ from mozgeckoprofiler import (
     symbolicate_profile_json,
     view_gecko_profile,
 )
-from mozserve import Http3Server
+from mozserve import Http3Server, MozHttp2Server
 
 try:
     import psutil
@@ -893,6 +893,8 @@ class XPCShellTestThread(Thread):
             self.keep_going = True
             return
 
+        self.log.test_start(name, group=group)
+
         # Check for known-fail tests
         expect_pass = self.test_object["expected"] == "pass"
 
@@ -989,7 +991,6 @@ class XPCShellTestThread(Thread):
         process_output = None
 
         try:
-            self.log.test_start(name, group=group)
             if self.verbose:
                 self.logCommand(name, self.command, test_dir)
 
@@ -1202,6 +1203,7 @@ class XPCShellTests:
         self.harness_timeout = HARNESS_TIMEOUT
         self.nodeProc = {}
         self.http3Server = None
+        self.mozHttp2Server = None
         self.conditioned_profile_dir = None
 
     def getTestManifest(self, manifest):
@@ -1563,8 +1565,6 @@ class XPCShellTests:
                 )
             return
 
-        # We try to find the node executable in the path given to us by the user in
-        # the MOZ_NODE_PATH environment variable
         nodeBin = os.getenv("MOZ_NODE_PATH", None)
         if not nodeBin and build:
             nodeBin = build.substs.get("NODEJS")
@@ -1583,81 +1583,27 @@ class XPCShellTests:
         self.log.info("Found node at %s" % (nodeBin,))
 
         node_env = self.buildNodeEnvironment()
-
-        def read_streams(name, proc, pipe):
-            output = "stdout" if pipe == proc.stdout else "stderr"
-            for line in iter(pipe.readline, ""):
-                self.log.info("node %s [%s] %s" % (name, output, line))
-
-        def startServer(name, serverJs):
-            if not os.path.exists(serverJs):
-                error = "%s not found at %s" % (name, serverJs)
-                self.log.error(error)
-                raise OSError(error)
-
-            # OK, we found our server, let's try to get it running
-            self.log.info("Found %s at %s" % (name, serverJs))
-            try:
-                # We pipe stdin to node because the server will exit when its
-                # stdin reaches EOF
-                with popenCleanupHack():
-                    process = Popen(
-                        [nodeBin, serverJs],
-                        stdin=PIPE,
-                        stdout=PIPE,
-                        stderr=PIPE,
-                        env=node_env,
-                        cwd=os.getcwd(),
-                        universal_newlines=True,
-                        start_new_session=True,
-                    )
-                self.nodeProc[name] = process
-
-                # Check to make sure the server starts properly by waiting for it to
-                # tell us it's started
-                msg = process.stdout.readline()
-                if "server listening" in msg:
-                    searchObj = re.search(
-                        r"HTTP2 server listening on ports ([0-9]+),([0-9]+)", msg, 0
-                    )
-                    if searchObj:
-                        self.env["MOZHTTP2_PORT"] = searchObj.group(1)
-                        self.env["MOZNODE_EXEC_PORT"] = searchObj.group(2)
-                t1 = Thread(
-                    target=read_streams,
-                    args=(name, process, process.stdout),
-                    daemon=True,
-                )
-                t1.start()
-                t2 = Thread(
-                    target=read_streams,
-                    args=(name, process, process.stderr),
-                    daemon=True,
-                )
-                t2.start()
-            except OSError as e:
-                # This occurs if the subprocess couldn't be started
-                self.log.error("Could not run %s server: %s" % (name, str(e)))
-                raise
-
         myDir = os.path.split(os.path.abspath(__file__))[0]
-        startServer("moz-http2", os.path.join(myDir, "moz-http2", "moz-http2.js"))
+        serverPath = os.path.join(myDir, "moz-http2", "moz-http2.js")
+
+        serverOptions = {}
+        serverOptions["nodeBin"] = nodeBin
+        serverOptions["serverPath"] = serverPath
+        serverOptions["isWin"] = sys.platform == "win32"
+
+        self.mozHttp2Server = MozHttp2Server(serverOptions, node_env, self.log)
+        self.mozHttp2Server.start()
+
+        for key, value in self.mozHttp2Server.ports().items():
+            self.env[key] = value
 
     def shutdownNode(self):
         """
         Shut down our node process, if it exists
         """
-        for name, proc in self.nodeProc.items():
-            self.log.info("Node %s server shutting down ..." % name)
-            if proc.poll() is not None:
-                self.log.info("Node server %s already dead %s" % (name, proc.poll()))
-            elif sys.platform != "win32":
-                # Kill process and all its spawned children.
-                os.killpg(proc.pid, signal.SIGTERM)
-            else:
-                proc.terminate()
-
-        self.nodeProc = {}
+        if self.mozHttp2Server is not None:
+            self.mozHttp2Server.stop()
+            self.mozHttp2Server = None
 
     def startHttp3Server(self):
         """
@@ -1754,9 +1700,7 @@ class XPCShellTests:
         self.mozInfo = fixedInfo
 
         self.mozInfo["fission"] = prefs.get("fission.autostart", True)
-        self.mozInfo["sessionHistoryInParent"] = self.mozInfo[
-            "fission"
-        ] or not prefs.get("fission.disableSessionHistoryInParent", False)
+        self.mozInfo["sessionHistoryInParent"] = True
 
         self.mozInfo["verify"] = options.get("verify", False)
 
@@ -1778,7 +1722,7 @@ class XPCShellTests:
             (release, versioninfo, machine) = platform.mac_ver()
             versionNums = release.split(".")[:2]
             os_version = "%s.%s" % (versionNums[0], versionNums[1].ljust(2, "0"))
-            if os_version.split(".")[0] in ["14", "15"]:
+            if os_version.split(".", 1)[0] in ["14", "15"]:
                 self.mozInfo["crashreporter"] = False
 
         # we default to false for e10s on xpcshell

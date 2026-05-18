@@ -23,6 +23,7 @@
 #include "absl/strings/string_view.h"
 #include "api/field_trials_view.h"
 #include "api/media_types.h"
+#include "api/payload_type.h"
 #include "api/rtc_error.h"
 #include "api/rtp_parameters.h"
 #include "api/rtp_transceiver_direction.h"
@@ -170,7 +171,7 @@ const RTCErrorOr<std::vector<const Codec*>> GetAssociatedCodecsForRed(
 // already exist in `offered_codecs` and ensure the payload types don't
 // collide.
 RTCError MergeCodecs(const CodecList& reference_codecs,
-                     const std::string& mid,
+                     absl::string_view mid,
                      CodecList& offered_codecs,
                      PayloadTypeSuggester& pt_suggester) {
   // TODO: bugs.webrtc.org/360058654 - This method makes blocking calls to
@@ -238,8 +239,12 @@ RTCError MergeCodecs(const CodecList& reference_codecs,
       }
       if (associated_codecs.value().empty()) {
         // No parameter. Just blindly add the codec.
-        RTC_LOG(LS_WARNING)
-            << "RED codec with no associated codecs found: " << red_codec;
+        // This is known to be used with video, but not with audio.
+        if (red_codec.type == Codec::Type::kAudio) {
+          RTC_LOG(LS_WARNING)
+              << "RED audio codec with no associated codecs found: "
+              << red_codec;
+        }
         RTCErrorOr<PayloadType> suggestion =
             pt_suggester.SuggestPayloadType(mid, red_codec);
         if (!suggestion.ok()) {
@@ -558,7 +563,7 @@ RTCError AssignCodecIdsAndLinkRed(PayloadTypeSuggester* pt_suggester,
   RTC_DCHECK_DISALLOW_THREAD_BLOCKING_CALLS();
   int codec_payload_type = Codec::kIdNotSet;
   for (Codec& codec : codecs) {
-    if (codec.id == Codec::kIdNotSet) {
+    if (codec.id == PayloadType::NotSet()) {
       // Add payload types to codecs, if needed
       // This should only happen if WebRTC-PayloadTypesInTransport field trial
       // is enabled.
@@ -572,7 +577,7 @@ RTCError AssignCodecIdsAndLinkRed(PayloadTypeSuggester* pt_suggester,
     // record first Opus codec id
     if (absl::EqualsIgnoreCase(codec.name, kOpusCodecName) &&
         codec_payload_type == Codec::kIdNotSet) {
-      codec_payload_type = codec.id;
+      codec_payload_type = codec.id.value();
     }
   }
   if (codec_payload_type != Codec::kIdNotSet) {
@@ -595,7 +600,7 @@ RTCError AssignCodecIdsAndLinkRed(PayloadTypeSuggester* pt_suggester,
 
 // Exposed for testing
 RTCError MergeCodecsForTesting(const CodecList& reference_codecs,
-                               const std::string& mid,
+                               absl::string_view mid,
                                CodecList& offered_codecs,
                                PayloadTypeSuggester& pt_suggester) {
   return MergeCodecs(reference_codecs, mid, offered_codecs, pt_suggester);
@@ -616,7 +621,8 @@ RTCErrorOr<std::vector<Codec>> CodecVendor::GetNegotiatedCodecsForOffer(
   CodecList codecs;
   std::string mid = media_description_options.mid;
   // If current content exists and is not being recycled, use its codecs.
-  if (current_content && current_content->mid() == mid) {
+  if (current_content && current_content->mid() == mid &&
+      IsMediaContentOfType(current_content, media_description_options.type)) {
     RTCErrorOr<CodecList> checked_codec_list =
         CodecList::Create(current_content->media_description()->codecs());
     if (!checked_codec_list.ok()) {
@@ -654,10 +660,10 @@ RTCErrorOr<std::vector<Codec>> CodecVendor::GetNegotiatedCodecsForOffer(
         if (!IsMediaContentOfType(current_content,
                                   media_description_options.type)) {
           // Can happen if the remote side re-uses a MID while recycling.
-          LOG_AND_RETURN_ERROR(RTCErrorType::INTERNAL_ERROR,
-                               "Media type for content with mid='" +
-                                   current_content->mid() +
-                                   "' does not match previous type.");
+          return LOG_ERROR(RTCError(RTCErrorType::INTERNAL_ERROR)
+                           << "Media type for content with mid='"
+                           << current_content->mid()
+                           << "' does not match previous type.");
         }
         const MediaContentDescription* mcd =
             current_content->media_description();
@@ -754,7 +760,8 @@ RTCErrorOr<Codecs> CodecVendor::GetNegotiatedCodecsForAnswer(
   RTC_LOG_THREAD_BLOCK_COUNT();
   CodecList codecs;
   std::string mid = media_description_options.mid;
-  if (current_content && current_content->mid() == mid) {
+  if (current_content && current_content->mid() == mid &&
+      IsMediaContentOfType(current_content, media_description_options.type)) {
     RTCErrorOr<CodecList> checked_codec_list =
         CodecList::Create(current_content->media_description()->codecs());
     if (!checked_codec_list.ok()) {
@@ -789,10 +796,10 @@ RTCErrorOr<Codecs> CodecVendor::GetNegotiatedCodecsForAnswer(
         if (!IsMediaContentOfType(current_content,
                                   media_description_options.type)) {
           // Can happen if the remote side re-uses a MID while recycling.
-          LOG_AND_RETURN_ERROR(RTCErrorType::INTERNAL_ERROR,
-                               "Media type for content with mid='" +
-                                   current_content->mid() +
-                                   "' does not match previous type.");
+          return LOG_ERROR(RTCError(RTCErrorType::INTERNAL_ERROR)
+                           << "Media type for content with mid='"
+                           << current_content->mid()
+                           << "' does not match previous type.");
         }
         const MediaContentDescription* mcd =
             current_content->media_description();

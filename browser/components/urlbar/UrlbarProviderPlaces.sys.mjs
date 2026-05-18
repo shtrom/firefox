@@ -1,6 +1,4 @@
-/* -*- indent-tabs-mode: nil; js-indent-level: 2 -*-
- * vim: sw=2 ts=2 sts=2 expandtab
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 /* eslint complexity: ["error", 53] */
@@ -407,14 +405,6 @@ function makeUrlbarResult(queryContext, info) {
         lowerCaseTag.includes(token.lowerCaseValue)
       );
     });
-  }
-
-  if (!title && info.url) {
-    try {
-      // If there's no title, show the domain as the title. Not all valid URLs
-      // have a domain.
-      title = new URL(info.url).URI.displayHostPort;
-    } catch (e) {}
   }
 
   return new lazy.UrlbarResult({

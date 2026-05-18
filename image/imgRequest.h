@@ -1,5 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- *
+/*
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -250,7 +249,7 @@ class imgRequest final : public nsIThreadRetargetableStreamListener,
   nsCOMPtr<nsITimedChannel> mTimedChannel;
 
   nsCString mContentType;
-  int64_t mContentLength;
+  int64_t mContentLength = 0;
 
   /* we hold on to this to this so long as we have observers */
   RefPtr<imgCacheEntry> mCacheEntry;

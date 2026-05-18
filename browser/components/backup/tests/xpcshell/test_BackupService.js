@@ -730,7 +730,10 @@ async function openUniqueFileInFolder(folderpath) {
   await worker.post("open", [testFile]);
 
   await Assert.rejects(
-    IOUtils.remove(folderpath),
+    IOUtils.remove(folderpath, {
+      recursive: true,
+      retryReadonly: true,
+    }),
     /NS_ERROR_FILE_DIR_NOT_EMPTY/,
     "attempt to remove folder threw an exception"
   );
@@ -771,7 +774,7 @@ async function checkBackup(backupService, profilePath, shouldSucceed) {
 
   await Assert.rejects(
     backupService.createBackup({ profilePath }),
-    /Failed to remove/,
+    /Failed to remove \d+? items/,
     "createBackup threw correct exception"
   );
 }
@@ -849,6 +852,11 @@ async function checkBackupWithUnremovableItems(unremovableItemsLimit) {
  * reached.
  */
 add_task(
+  {
+    // Windows will prevent folder deletion if the folder has an open file.
+    // Other platforms do not do this.
+    skip_if: () => AppConstants.platform !== "win",
+  },
   async function test_createBackup_robustToNonReadonlyFileSystemErrorsAllowOneNonReadonly() {
     await checkBackupWithUnremovableItems(1);
   }
@@ -859,10 +867,71 @@ add_task(
  * 0.
  */
 add_task(
+  {
+    // Windows will prevent folder deletion if the folder has an open file.
+    // Other platforms do not do this.
+    skip_if: () => AppConstants.platform !== "win",
+  },
   async function test_createBackup_robustToNonReadonlyFileSystemErrors() {
     await checkBackupWithUnremovableItems(0);
   }
 );
+
+/**
+ * Tests that removable items in the staging folder are removed when a backup
+ * is attempted.
+ */
+add_task(async function test_createBackup_deletesStaleStagingItems() {
+  // Block backup if there is one stale item.
+  Services.prefs.setIntPref(
+    "browser.backup.max-num-unremovable-staging-items",
+    1
+  );
+  registerCleanupFunction(() =>
+    Services.prefs.clearUserPref(
+      "browser.backup.max-num-unremovable-staging-items"
+    )
+  );
+
+  let sandbox = sinon.createSandbox();
+
+  const TEST_UID = "ThisIsMyTestUID";
+  const TEST_EMAIL = "foxy@mozilla.org";
+
+  sandbox.stub(UIState, "get").returns({
+    status: UIState.STATUS_SIGNED_IN,
+    uid: TEST_UID,
+    email: TEST_EMAIL,
+  });
+  const backupService = new BackupService({});
+
+  let profilePath = await IOUtils.createUniqueDirectory(
+    PathUtils.tempDir,
+    "profileDir"
+  );
+  let snapshotsFolder = PathUtils.join(
+    profilePath,
+    BackupService.PROFILE_FOLDER_NAME,
+    BackupService.SNAPSHOTS_FOLDER_NAME
+  );
+
+  // Add one stale item, which would prevent backup if it could not be removed.
+  let tempFilename = await IOUtils.createUniqueFile(
+    snapshotsFolder,
+    "deleteme"
+  );
+  try {
+    info(`Performing backup`);
+    await checkBackup(backupService, profilePath, true /* shouldSucceed */);
+  } finally {
+    Assert.ok(
+      !(await IOUtils.exists(tempFilename)),
+      "stale staging item was deleted during backup"
+    );
+    await IOUtils.remove(profilePath, { recursive: true });
+    sandbox.restore();
+  }
+});
 
 /**
  * Tests that failure to delete the prior backup doesn't prevent the backup
@@ -972,6 +1041,70 @@ add_task(async function test_checkForPostRecovery() {
   await IOUtils.remove(testProfilePath, { recursive: true });
   sandbox.restore();
 });
+
+/**
+ * Tests that if one resource's postRecovery rejects, the remaining resources
+ * still get their postRecovery called and the post-recovery.json file is
+ * cleaned up.
+ */
+add_task(
+  async function test_checkForPostRecovery_resilient_to_resource_failure() {
+    let sandbox = sinon.createSandbox();
+
+    let testProfilePath = await IOUtils.createUniqueDirectory(
+      PathUtils.tempDir,
+      "checkForPostRecoveryResilienceTest"
+    );
+    let fakePostRecoveryObject = {
+      [FakeBackupResource1.key]: "test 1",
+      [FakeBackupResource3.key]: "test 3",
+    };
+    await IOUtils.writeJSON(
+      PathUtils.join(testProfilePath, BackupService.POST_RECOVERY_FILE_NAME),
+      fakePostRecoveryObject
+    );
+
+    sandbox
+      .stub(FakeBackupResource1.prototype, "postRecovery")
+      .rejects(new Error("Simulated postRecovery failure"));
+    sandbox.stub(FakeBackupResource2.prototype, "postRecovery").resolves();
+    sandbox.stub(FakeBackupResource3.prototype, "postRecovery").resolves();
+
+    let bs = new BackupService({
+      FakeBackupResource1,
+      FakeBackupResource2,
+      FakeBackupResource3,
+    });
+
+    await bs.checkForPostRecovery(testProfilePath);
+    await bs.postRecoveryComplete;
+
+    Assert.ok(
+      FakeBackupResource1.prototype.postRecovery.calledOnce,
+      "FakeBackupResource1.postRecovery was called once (and rejected)"
+    );
+    Assert.ok(
+      FakeBackupResource2.prototype.postRecovery.notCalled,
+      "FakeBackupResource2.postRecovery was not called (no entry in post-recovery)"
+    );
+    Assert.ok(
+      FakeBackupResource3.prototype.postRecovery.calledOnce,
+      "FakeBackupResource3.postRecovery was still called despite FakeBackupResource1 failure"
+    );
+
+    let postRecoveryFilePath = PathUtils.join(
+      testProfilePath,
+      BackupService.POST_RECOVERY_FILE_NAME
+    );
+    Assert.ok(
+      !(await IOUtils.exists(postRecoveryFilePath)),
+      "post-recovery.json should be cleaned up even after a resource failure"
+    );
+
+    await IOUtils.remove(testProfilePath, { recursive: true });
+    sandbox.restore();
+  }
+);
 
 /**
  * Tests that getBackupFileInfo updates backupFileInfo in the state with a subset
@@ -1156,8 +1289,8 @@ add_task(async function test_getBackupFileInfo_error_handling() {
     );
     Assert.strictEqual(
       bs.state.backupFileToRestore,
-      null,
-      `backupFileToRestore should be cleared for error ${testError}`
+      "test-backup.html",
+      `backupFileToRestore should be kept the same`
     );
 
     sandbox.restore();

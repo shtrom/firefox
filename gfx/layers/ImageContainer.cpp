@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -58,8 +56,8 @@ Atomic<int32_t> Image::sSerialCounter(0);
 Atomic<uint32_t> ImageContainer::sGenerationCounter(0);
 
 static void CopyPlane(uint8_t* aDst, const uint8_t* aSrc,
-                      const gfx::IntSize& aSize, int32_t aStride,
-                      int32_t aSkip);
+                      const gfx::IntSize& aSize, int32_t aStride, int32_t aSkip,
+                      int32_t aBytesPerElement = 1);
 
 RefPtr<PlanarYCbCrImage> ImageFactory::CreatePlanarYCbCrImage(
     const gfx::IntSize& aScaleHint, BufferRecycleBin* aRecycleBin) {
@@ -211,15 +209,19 @@ ImageContainer::~ImageContainer() {
     const gfx::IntSize& aSize, gfx::SurfaceFormat aFormat, uint8_t*& aOutBuffer,
     SurfaceDescriptorBuffer& aSdBuffer, int32_t& aStride,
     const std::function<layers::MemoryOrShmem(uint32_t)>& aAllocate) {
-  aStride = ImageDataSerializer::ComputeRGBStride(aFormat, aSize.width);
-  size_t length = ImageDataSerializer::ComputeRGBBufferSize(aSize, aFormat);
+  auto stride = ImageDataSerializer::ComputeRGBStride(aFormat, aSize.width);
+  Maybe<uint32_t> length =
+      ImageDataSerializer::ComputeRGBBufferSize(aSize, aFormat);
 
-  if (aStride <= 0 || length == 0) {
+  if (stride.isNothing() || length.isNothing()) {
     return NS_ERROR_INVALID_ARG;
   }
 
-  aSdBuffer.desc() = RGBDescriptor(aSize, aFormat);
-  aSdBuffer.data() = aAllocate(length);
+  aStride = stride.value();
+
+  aSdBuffer.desc() = RGBDescriptor(aSize, aFormat, gfx::ColorSpace2::SRGB,
+                                   gfx::TransferFunction::SRGB);
+  aSdBuffer.data() = aAllocate(length.value());
 
   const layers::MemoryOrShmem& memOrShmem = aSdBuffer.data();
   switch (memOrShmem.type()) {
@@ -643,7 +645,7 @@ ImageContainer::GetMacIOSurfaceRecycleAllocator() {
 #endif
 
 // -
-// https://searchfox.org/mozilla-central/source/dom/media/ipc/RemoteImageHolder.cpp#46
+// https://searchfox.org/firefox-main/source/dom/media/ipc/RemoteImageHolder.cpp#46
 
 Maybe<PlanarYCbCrData> PlanarYCbCrData::From(
     const SurfaceDescriptorBuffer& sdb) {
@@ -708,8 +710,8 @@ Maybe<PlanarYCbCrData> PlanarYCbCrData::From(
       yuvDesc.cbCrSize().width < 0 || yuvDesc.cbCrSize().height < 0 ||
       yuvData.mYStride < 0 || yuvData.mCbCrStride < 0 || !yuvData.mYChannel ||
       !yuvData.mCbChannel || !yuvData.mCrChannel ||
-      yuvDesc.ySize() < yuvData.YDataSize() ||
-      yuvDesc.cbCrSize() < yuvData.CbCrDataSize()) {
+      !(yuvData.YDataSize() <= yuvDesc.ySize()) ||
+      !(yuvData.CbCrDataSize() <= yuvDesc.cbCrSize())) {
     gfxCriticalError() << "Unusual PlanarYCbCrData: " << yuvData.mYSkip << ","
                        << yuvData.mCbSkip << "," << yuvData.mCrSkip << ", "
                        << yuvDesc.ySize().width << "," << yuvDesc.ySize().height
@@ -814,11 +816,15 @@ nsresult PlanarYCbCrImage::BuildSurfaceDescriptorBuffer(
                                            pdata->mCbCrStride, cbcrSize.height,
                                            yOffset, cbOffset, crOffset);
 
-  uint32_t bufferSize = ImageDataSerializer::ComputeYCbCrBufferSize(
-      ySize, pdata->mYStride, cbcrSize, pdata->mCbCrStride, yOffset, cbOffset,
-      crOffset, pdata->mColorDepth);
+  Maybe<uint32_t> bufferSize = ImageDataSerializer::ComputeYCbCrBufferSize(
+      pdata->mPictureRect, ySize, pdata->mYStride, cbcrSize, pdata->mCbCrStride,
+      yOffset, cbOffset, crOffset, pdata->mColorDepth,
+      pdata->mChromaSubsampling);
+  if (bufferSize.isNothing()) {
+    return NS_ERROR_FAILURE;
+  }
 
-  aSdBuffer.data() = aAllocate(bufferSize);
+  aSdBuffer.data() = aAllocate(bufferSize.value());
 
   uint8_t* buffer = nullptr;
   const MemoryOrShmem& memOrShmem = aSdBuffer.data();
@@ -840,7 +846,8 @@ nsresult PlanarYCbCrImage::BuildSurfaceDescriptorBuffer(
   aSdBuffer.desc() = YCbCrDescriptor(
       pdata->mPictureRect, ySize, pdata->mYStride, cbcrSize, pdata->mCbCrStride,
       yOffset, cbOffset, crOffset, pdata->mStereoMode, pdata->mColorDepth,
-      pdata->mYUVColorSpace, pdata->mColorRange, pdata->mChromaSubsampling);
+      pdata->mYUVColorSpace, pdata->mColorRange, pdata->mTransferFunction,
+      pdata->mChromaSubsampling, pdata->mHDRMetadata);
 
   CopyPlane(buffer + yOffset, pdata->mYChannel, ySize, pdata->mYStride,
             pdata->mYSkip);
@@ -880,12 +887,13 @@ UniquePtr<uint8_t[]> RecyclingPlanarYCbCrImage::AllocateBuffer(uint32_t aSize) {
 }
 
 static void CopyPlane(uint8_t* aDst, const uint8_t* aSrc,
-                      const gfx::IntSize& aSize, int32_t aStride,
-                      int32_t aSkip) {
+                      const gfx::IntSize& aSize, int32_t aStride, int32_t aSkip,
+                      int32_t aBytesPerElement) {
   int32_t height = aSize.height;
   int32_t width = aSize.width;
+  const int32_t rowBytes = width * aBytesPerElement;
 
-  MOZ_RELEASE_ASSERT(width <= aStride);
+  MOZ_RELEASE_ASSERT(rowBytes <= aStride);
 
   if (!aSkip) {
     // Fast path: planar input.
@@ -896,9 +904,14 @@ static void CopyPlane(uint8_t* aDst, const uint8_t* aSrc,
       uint8_t* dst = aDst;
       // Slow path
       for (int x = 0; x < width; ++x) {
-        *dst++ = *src++;
-        src += aSkip;
+        for (int b = 0; b < aBytesPerElement; ++b) {
+          *dst++ = *src++;
+        }
+        src += aSkip * aBytesPerElement;
       }
+      // Trailing stride bytes are not pixel data; zero them so
+      // VideoFrame.copyTo() does not expose stale buffer contents to JS.
+      memset(dst, 0, aStride - rowBytes);
       aSrc += aStride;
       aDst += aStride;
     }
@@ -932,12 +945,15 @@ nsresult RecyclingPlanarYCbCrImage::CopyData(const Data& aData) {
   mData.mCrChannel = mData.mCbChannel + mData.mCbCrStride * cbcrSize.height;
   mData.mYSkip = mData.mCbSkip = mData.mCrSkip = 0;
 
+  const int32_t bytesPerSample =
+      aData.mColorDepth == gfx::ColorDepth::COLOR_8 ? 1 : 2;
+
   CopyPlane(mData.mYChannel, aData.mYChannel, ySize, aData.mYStride,
             aData.mYSkip);
   CopyPlane(mData.mCbChannel, aData.mCbChannel, cbcrSize, aData.mCbCrStride,
-            aData.mCbSkip);
+            aData.mCbSkip, bytesPerSample);
   CopyPlane(mData.mCrChannel, aData.mCrChannel, cbcrSize, aData.mCbCrStride,
-            aData.mCrSkip);
+            aData.mCrSkip, bytesPerSample);
   if (aData.mAlpha) {
     MOZ_ASSERT(mData.mAlpha);
     mData.mAlpha->mChannel =

@@ -19,6 +19,7 @@ import mozilla.components.compose.browser.toolbar.store.BrowserToolbarStore
 import mozilla.components.compose.browser.toolbar.store.DisplayState
 import mozilla.components.lib.state.helpers.StoreProvider.Companion.fragmentStore
 import org.mozilla.fenix.R
+import org.mozilla.fenix.browser.browsingmode.BrowsingModeManager
 import org.mozilla.fenix.browser.readermode.ReaderModeController
 import org.mozilla.fenix.browser.store.BrowserScreenStore
 import org.mozilla.fenix.components.AppStore
@@ -48,11 +49,12 @@ object BrowserToolbarStoreBuilder {
      * @param browserScreenStore [BrowserScreenStore] used for integration with other browser screen functionalities.
      * @param browserStore [BrowserStore] used for observing the browsing details.
      * @param components [Components] allowing interactions with other application features.
-     * @param browserAnimator Helper for animating the browser content when navigating to other screens.
+     * @param browsingModeManager [BrowsingModeManager] for querying the current browsing mode.
      * @param thumbnailsFeature [BrowserThumbnails] for requesting screenshots of the current tab.
      * @param readerModeController [ReaderModeController] for managing the reader mode.
      * @param settings [Settings] object to get the toolbar position and other settings.
      * @param customTabSession [CustomTabSessionState] if the toolbar is shown in a custom tab.
+     * @param isSandboxCustomTab Whether the custom tab is sandboxed.
      */
     @Suppress("LongParameterList", "LongMethod")
     fun build(
@@ -63,11 +65,12 @@ object BrowserToolbarStoreBuilder {
         browserScreenStore: BrowserScreenStore,
         browserStore: BrowserStore,
         components: Components,
-        browserAnimator: BrowserAnimator,
+        browsingModeManager: BrowsingModeManager,
         thumbnailsFeature: () -> BrowserThumbnails?,
         readerModeController: ReaderModeController,
         settings: Settings,
         customTabSession: CustomTabSessionState? = null,
+        isSandboxCustomTab: Boolean = false,
     ) = fragment.fragmentStore(
         BrowserToolbarState(
             displayState = DisplayState(
@@ -91,6 +94,7 @@ object BrowserToolbarStoreBuilder {
                         appStore = appStore,
                         browserScreenStore = browserScreenStore,
                         browserStore = browserStore,
+                        ipProtectionStore = components.ipProtection.store,
                         permissionsStorage = components.core.geckoSitePermissionsStorage,
                         cookieBannersStorage = components.core.cookieBannersStorage,
                         bookmarksStorage = activity.components.core.bookmarksStorage,
@@ -100,9 +104,10 @@ object BrowserToolbarStoreBuilder {
                         clipboard = activity.components.clipboardHandler,
                         publicSuffixList = components.publicSuffixList,
                         settings = settings,
+                        shareUseCases = components.useCases.shareUseCases,
                         navController = navController,
+                        browsingModeManager = browsingModeManager,
                         readerModeController = readerModeController,
-                        browserAnimator = browserAnimator,
                         thumbnailsFeature = thumbnailsFeature,
                         isWideScreen = { fragment.isWideWindow() },
                         isTallScreen = { fragment.isTallWindow() },
@@ -110,6 +115,7 @@ object BrowserToolbarStoreBuilder {
                     ),
                     BrowserToolbarSearchStatusSyncMiddleware(
                         appStore = appStore,
+                        browsingModeManager = browsingModeManager,
                         scope = lifecycleScope,
                     ),
                     BrowserToolbarSearchMiddleware(
@@ -118,6 +124,7 @@ object BrowserToolbarStoreBuilder {
                         browserStore = browserStore,
                         components = components,
                         navController = navController,
+                        browsingModeManager = browsingModeManager,
                         settings = settings,
                         scope = lifecycleScope,
                     ),
@@ -130,6 +137,7 @@ object BrowserToolbarStoreBuilder {
                         requireNotNull(customTabSession).id,
                         browserStore = browserStore,
                         appStore = appStore,
+                        ipProtectionStore = components.ipProtection.store,
                         permissionsStorage = components.core.geckoSitePermissionsStorage,
                         cookieBannersStorage = components.core.cookieBannersStorage,
                         useCases = components.useCases.customTabsUseCases,
@@ -140,6 +148,7 @@ object BrowserToolbarStoreBuilder {
                         closeTabDelegate = { activity.finishAndRemoveTask() },
                         settings = settings,
                         scope = lifecycleScope,
+                        isSandboxCustomTab = isSandboxCustomTab,
                     ),
                 )
             },

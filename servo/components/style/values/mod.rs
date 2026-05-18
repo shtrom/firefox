@@ -11,6 +11,7 @@
 use crate::derives::*;
 use crate::parser::{Parse, ParserContext};
 use crate::values::distance::{ComputeSquaredDistance, SquaredDistance};
+use crate::values::generics::position::IsTreeScoped;
 use crate::Atom;
 pub use cssparser::{serialize_identifier, serialize_name, CowRcStr, Parser};
 pub use cssparser::{SourceLocation, Token};
@@ -18,14 +19,13 @@ use precomputed_hash::PrecomputedHash;
 use selectors::parser::SelectorParseErrorKind;
 use std::fmt::{self, Debug, Write};
 use style_traits::{
-    CssString, CssWriter, NumericValue, ParseError, StyleParseErrorKind, ToCss, UnitValue,
+    CssString, CssWriter, KeywordValue, MathSum, NumericValue, ParseError, StyleParseErrorKind,
+    ToCss, ToTyped, TypedValue, UnitValue,
 };
+use thin_vec::ThinVec;
 use to_shmem::impl_trivial_to_shmem;
 
-#[cfg(feature = "gecko")]
-pub use crate::gecko::url::CssUrl;
-#[cfg(feature = "servo")]
-pub use crate::servo::url::CssUrl;
+pub use crate::url::CssUrl;
 
 pub mod animated;
 pub mod computed;
@@ -33,6 +33,7 @@ pub mod distance;
 pub mod generics;
 pub mod resolved;
 pub mod specified;
+pub mod tagged_numeric;
 
 /// A CSS float value.
 pub type CSSFloat = f32;
@@ -96,19 +97,11 @@ where
 }
 
 /// Serialize a number with calc, and NaN/infinity handling (if enabled)
-pub fn serialize_number<W>(v: f32, was_calc: bool, dest: &mut CssWriter<W>) -> fmt::Result
+pub fn serialize_number<W>(v: f32, dest: &mut CssWriter<W>) -> fmt::Result
 where
     W: Write,
 {
-    serialize_specified_dimension(v, "", was_calc, dest)
-}
-
-/// Reify a value into number numeric value.
-pub fn reify_number(v: f32) -> NumericValue {
-    NumericValue::Unit(UnitValue {
-        value: v,
-        unit: CssString::from("number"),
-    })
+    serialize_specified_dimension(v, "", /* was_calc = */ false, dest)
 }
 
 /// Serialize a specified dimension with unit, calc, and NaN/infinity handling (if enabled)
@@ -459,12 +452,27 @@ where
     dest.write_char('%')
 }
 
-/// Reify a value into percentage numeric value.
-pub fn reify_percentage(value: CSSFloat) -> NumericValue {
-    NumericValue::Unit(UnitValue {
+/// Reify a percentage with calc.
+pub fn reify_percentage(
+    value: CSSFloat,
+    was_calc: bool,
+    dest: &mut ThinVec<TypedValue>,
+) -> Result<(), ()> {
+    let numeric_value = NumericValue::Unit(UnitValue {
         value: value * 100.,
         unit: CssString::from("percent"),
-    })
+    });
+
+    // https://drafts.css-houdini.org/css-typed-om-1/#reify-a-math-expression
+    if was_calc {
+        dest.push(TypedValue::Numeric(NumericValue::Sum(MathSum {
+            values: ThinVec::from([numeric_value]),
+        })));
+    } else {
+        dest.push(TypedValue::Numeric(numeric_value));
+    }
+
+    Ok(())
 }
 
 /// Convenience void type to disable some properties and values through types.
@@ -611,6 +619,15 @@ impl ToCss for CustomIdent {
     }
 }
 
+impl ToTyped for CustomIdent {
+    fn to_typed(&self, dest: &mut ThinVec<TypedValue>) -> Result<(), ()> {
+        // This shouldn't escape identifiers. See bug 2023533.
+        let s = ToCss::to_css_cssstring(self);
+        dest.push(TypedValue::Keyword(KeywordValue(s)));
+        Ok(())
+    }
+}
+
 /// <https://www.w3.org/TR/css-values-4/#dashed-idents>
 /// This is simply an Atom, but will only parse if the identifier starts with "--".
 #[repr(transparent)]
@@ -653,6 +670,26 @@ impl DashedIdent {
     /// Check for special internal value.
     pub fn is_empty(&self) -> bool {
         self.0 == atom!("")
+    }
+
+    /// Returns an atom with the same value, but without the starting "--".
+    ///
+    /// # Panics
+    ///
+    /// Panics when used on the special `DashedIdent::empty()`.
+    pub(crate) fn undashed(&self) -> Atom {
+        assert!(!self.is_empty(), "Can't undash the empty DashedIdent");
+        #[cfg(feature = "gecko")]
+        let name = &self.0.as_slice()[2..];
+        #[cfg(feature = "servo")]
+        let name = &self.0[2..];
+        Atom::from(name)
+    }
+}
+
+impl IsTreeScoped for DashedIdent {
+    fn is_tree_scoped(&self) -> bool {
+        !self.is_empty()
     }
 }
 
@@ -733,9 +770,7 @@ impl Parse for KeyframesName {
         Ok(match *input.next()? {
             Token::Ident(ref s) => Self(CustomIdent::from_ident(location, s, &["none"])?.0),
             // Note that empty <string> should be rejected.
-            Token::QuotedString(ref s) if !s.as_ref().is_empty() => {
-                Self(Atom::from(s.as_ref()))
-            },
+            Token::QuotedString(ref s) if !s.as_ref().is_empty() => Self(Atom::from(s.as_ref())),
             ref t => return Err(location.new_unexpected_token_error(t.clone())),
         })
     }
@@ -763,5 +798,13 @@ impl ToCss for KeyframesName {
 
         #[cfg(feature = "servo")]
         return serialize(self.0.as_ref(), dest);
+    }
+}
+
+impl ToTyped for KeyframesName {
+    fn to_typed(&self, dest: &mut ThinVec<TypedValue>) -> Result<(), ()> {
+        let s = ToCss::to_css_cssstring(self);
+        dest.push(TypedValue::Keyword(KeywordValue(s)));
+        Ok(())
     }
 }

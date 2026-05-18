@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -34,6 +32,7 @@
 #include "mozilla/dom/Animation.h"
 #include "mozilla/dom/BindingDeclarations.h"
 #include "mozilla/dom/BlobBinding.h"
+#include "mozilla/dom/ContentList.h"
 #include "mozilla/dom/DOMCollectedFramesBinding.h"
 #include "mozilla/dom/DOMRect.h"
 #include "mozilla/dom/DocumentInlines.h"
@@ -54,7 +53,6 @@
 #include "nsCaret.h"
 #include "nsCharsetSource.h"
 #include "nsComputedDOMStyle.h"
-#include "nsContentList.h"
 #include "nsContentUtils.h"
 #include "nsDeviceContext.h"
 #include "nsError.h"
@@ -1367,12 +1365,11 @@ nsDOMWindowUtils::NodesFromRect(float aX, float aY, float aTopSize,
                                 float aRightSize, float aBottomSize,
                                 float aLeftSize, bool aIgnoreRootScrollFrame,
                                 bool aFlushLayout, bool aOnlyVisible,
-                                float aVisibleThreshold,
-                                nsINodeList** aReturn) {
+                                float aVisibleThreshold, NodeList** aReturn) {
   RefPtr<Document> doc = GetDocument();
   NS_ENSURE_STATE(doc);
 
-  auto list = MakeRefPtr<nsSimpleContentList>(doc);
+  auto list = MakeRefPtr<SimpleContentList>(doc);
 
   // The visible threshold was omitted or given a zero value (which makes no
   // sense), so give a reasonable default.
@@ -1710,26 +1707,38 @@ Result<mozilla::LayoutDeviceRect, nsresult> nsDOMWindowUtils::ConvertTo(
     return Err(NS_ERROR_NOT_AVAILABLE);
   }
 
-  // Note that if the document is NOT in OOP iframes, i.e. it's in the top level
-  // content subtree in the same process,
-  // nsIWidget::WidgetToTopLevelWidgetTransform() doesn't include the desktop
-  // zoom value, so for documents in the top level content document subtree,
-  // this ViewportUtils::DocumentRelativeLayoutToVisual call applies the desktop
-  // zoom value via PresShell::GetResolution() in the function.
   CSSRect rect(aX, aY, aWidth, aHeight);
-  rect = ViewportUtils::DocumentRelativeLayoutToVisual(rect, presShell);
 
+  nsRect appUnitsRect = CSSPixel::ToAppUnits(rect);
   nsPresContext* presContext = presShell->GetPresContext();
   MOZ_ASSERT(presContext);
+  nsPresContext* rootPresContext = presContext->GetRootPresContext();
+  MOZ_ASSERT(rootPresContext);
 
-  // For OOP iframe documents, we don't have desktop zoom value specifically in
-  // each iframe documents (i.e. the in-process root presshell's resolution is
-  // 1.0), instead nsIWidget::WidgetToTopLevelWidgetTransform() includes the
+  // Use TransformRect to map coordinates from the subdocument frame to the
+  // top-level root frame, applying intermediate CSS transforms. For OOP iframe
+  // documents, rootFrame and topRootFrame are the same frame, so this is a
+  // no-op.
+  if (presContext != rootPresContext) {
+    nsIFrame* rootFrame = presShell->GetRootFrame();
+    nsIFrame* topRootFrame = rootPresContext->PresShell()->GetRootFrame();
+    if (rootFrame && topRootFrame) {
+      nsLayoutUtils::TransformRect(rootFrame, topRootFrame, appUnitsRect);
+    }
+  }
+
+  LayoutDeviceRect devPixelsRect = LayoutDeviceRect::FromAppUnits(
+      appUnitsRect, rootPresContext->AppUnitsPerDevPixel());
+
+  // Apply the desktop zoom value via PresShell::GetResolution()
+  devPixelsRect =
+      ViewportUtils::DocumentRelativeLayoutToVisual(devPixelsRect, presShell);
+
+  // For OOP iframe documents, we don't have the desktop zoom value specifically
+  // in each iframe document (i.e. the in-process root presshell's resolution is
+  // 1.0). Instead, nsIWidget::WidgetToTopLevelWidgetTransform() includes the
   // desktop zoom scale value along with translations by ancestor scroll
   // containers, ancestor CSS transforms, etc.
-  nsRect appUnitsRect = CSSPixel::ToAppUnits(rect);
-  LayoutDeviceRect devPixelsRect = LayoutDeviceRect::FromAppUnits(
-      appUnitsRect, presContext->AppUnitsPerDevPixel());
   devPixelsRect =
       widget->WidgetToTopLevelWidgetTransform().TransformBounds(devPixelsRect);
 
@@ -2912,7 +2921,7 @@ static CaretInfo GetCaretContentAndBounds(
   // focused element will have multi-line content.
   nsIFrame* frame = aElement->GetPrimaryFrame();
   if (frame) {
-    RefPtr<nsCaret> caret = frame->PresShell()->GetCaret();
+    RefPtr<nsCaret> caret = frame->PresShell()->GetActiveCaret();
     if (caret && caret->IsVisible()) {
       nsRect rect;
       if (nsIFrame* textFrame = caret->GetGeometry(&rect)) {
@@ -2983,8 +2992,8 @@ nsDOMWindowUtils::ZoomToFocusedInput() {
   if (caretInfo.frame) {
     presShell->ScrollFrameIntoView(
         caretInfo.frame, caretInfo.caretRectRelativeToTextFrame,
-        ScrollAxis(WhereToScroll::Center, WhenToScroll::IfNotVisible),
-        ScrollAxis(WhereToScroll::Center, WhenToScroll::IfNotVisible),
+        AxisScrollParams(WhereToScroll::Center, WhenToScroll::IfNotVisible),
+        AxisScrollParams(WhereToScroll::Center, WhenToScroll::IfNotVisible),
         ScrollFlags::ForZoomToFocusedInput);
   }
 
@@ -3126,7 +3135,13 @@ nsDOMWindowUtils::GetUnanimatedComputedStyle(Element* aElement,
     return NS_ERROR_FAILURE;
   }
 
-  Maybe<PseudoStyleRequest> pseudo = PseudoStyleRequest::Parse(aPseudoElement);
+  RefPtr<Document> doc = GetDocument();
+  if (!doc) {
+    return NS_ERROR_FAILURE;
+  }
+
+  Maybe<PseudoStyleRequest> pseudo =
+      PseudoStyleRequest::Parse(aPseudoElement, doc->DefaultStyleAttrURLData());
   if (!pseudo) {
     return NS_ERROR_FAILURE;
   }
@@ -3328,7 +3343,7 @@ nsDOMWindowUtils::GetFilePath(JS::Handle<JS::Value> aFile, JSContext* aCx,
       return rv.StealNSResult();
     }
 
-    _retval = filePath;
+    _retval = std::move(filePath);
     return NS_OK;
   }
 
@@ -3454,11 +3469,12 @@ nsDOMWindowUtils::SetVisualViewportSize(float aWidth, float aHeight) {
 }
 
 nsresult nsDOMWindowUtils::RemoteFrameFullscreenChanged(
-    Element* aFrameElement) {
+    Element* aFrameElement, bool aFullscreenKeyboardLockEnabled) {
   nsCOMPtr<Document> doc = GetDocument();
   NS_ENSURE_STATE(doc);
 
-  doc->RemoteFrameFullscreenChanged(aFrameElement);
+  doc->RemoteFrameFullscreenChanged(aFrameElement,
+                                    aFullscreenKeyboardLockEnabled);
   return NS_OK;
 }
 
@@ -4281,10 +4297,9 @@ nsDOMWindowUtils::WrCapture() {
 }
 
 NS_IMETHODIMP
-nsDOMWindowUtils::WrStartCaptureSequence(const nsACString& aPath,
-                                         uint32_t aFlags) {
+nsDOMWindowUtils::WrStartCaptureSequence(uint32_t aFlags) {
   if (WebRenderBridgeChild* wrbc = GetWebRenderBridge()) {
-    wrbc->StartCaptureSequence(nsCString(aPath), aFlags);
+    wrbc->StartCaptureSequence(aFlags);
   }
   return NS_OK;
 }

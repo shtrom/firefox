@@ -20,11 +20,11 @@ use crate::logical_geometry::WritingMode;
 use malloc_size_of::{MallocSizeOf, MallocSizeOfOps};
 use crate::computed_value_flags::*;
 use cssparser::Parser;
-use crate::media_queries::Device;
+use crate::device::Device;
 use crate::parser::ParserContext;
 use crate::selector_parser::PseudoElement;
 use crate::stylist::Stylist;
-use style_traits::{CssStringWriter, CssWriter, KeywordsCollectFn, ParseError, SpecifiedValueInfo, StyleParseErrorKind, ToCss, TypedValue, ToTyped};
+use style_traits::{CssStringWriter, CssWriter, KeywordsCollectFn, ParseError, SpecifiedValueInfo, StyleParseErrorKind, ToCss, TypedValueList, ToTyped};
 use crate::derives::*;
 use crate::stylesheets::{CssRuleType, CssRuleTypes, Origin};
 use crate::logical_geometry::{LogicalAxis, LogicalCorner, LogicalSide};
@@ -273,13 +273,13 @@ impl PropertyDeclaration {
     }
 
     /// Like the method on ToTyped.
-    pub fn to_typed(&self) -> Option<TypedValue> {
+    pub fn to_typed_value_list(&self) -> Option<TypedValueList> {
         use self::PropertyDeclaration::*;
 
         match *self {
             % for ty, vs in groupby(data.declaration_variants, key=lambda x: x["type"]):
             ${" | ".join("{}(ref value)".format(v["name"]) for v in vs)} => {
-                value.to_typed()
+                value.to_typed_value_list()
             }
             % endfor
         }
@@ -391,7 +391,10 @@ impl NonCustomPropertyId {
                             pref = getattr(property, "servo_pref")
                         %>
                         % if pref:
-                            Some("${pref}"),
+                            {
+                                const_assert!(!static_prefs::default_value!("${pref}"));
+                                Some("${pref}")
+                            },
                         % else:
                             None,
                         % endif
@@ -402,7 +405,8 @@ impl NonCustomPropertyId {
                     Some(pref) => pref,
                 };
 
-                style_config::get_bool(pref)
+                // The assertions above guarantee that the pref defaults to false.
+                static_prefs::Preference::get(pref, false)
             % endif
         };
 
@@ -1380,6 +1384,7 @@ pub mod style_structs {
                         self.${longhand.ident}.clone()
                     }
 
+                    /// Whether `self` and `other` have the same computed value for ${longhand.name}.
                     #[allow(non_snake_case)]
                     #[inline]
                     pub fn ${longhand.ident}_equals(&self, other: &Self) -> bool {
@@ -1522,6 +1527,12 @@ pub mod style_structs {
                 self.scroll_timeline_name_iter().any(|name| !name.value.is_none())
             }
 
+            /// Returns whether there is any timeline scope specified.
+            #[cfg(feature = "gecko")]
+            pub fn specifies_timeline_scope(&self) -> bool {
+                !self.mTimelineScope.is_none()
+            }
+
             /// Returns whether there is any named progress timeline specified with
             /// view-timeline-name other than `none`.
             #[cfg(feature = "gecko")]
@@ -1638,8 +1649,8 @@ pub struct ComputedValues {
 impl ComputedValues {
     /// Returns the pseudo-element that this style represents.
     #[cfg(feature = "servo")]
-    pub fn pseudo(&self) -> Option<&PseudoElement> {
-        self.pseudo.as_ref()
+    pub fn pseudo(&self) -> Option<PseudoElement> {
+        self.pseudo
     }
 
     /// Returns true if this is the style for a pseudo-element.
@@ -1666,11 +1677,6 @@ impl ComputedValues {
     /// Gets a reference to the custom properties map (if one exists).
     pub fn custom_properties(&self) -> &crate::custom_properties::ComputedCustomProperties {
         &self.custom_properties
-    }
-
-    /// Returns whether we have the same custom properties as another style.
-    pub fn custom_properties_equal(&self, other: &Self) -> bool {
-      self.custom_properties() == other.custom_properties()
     }
 
 % for prop in data.longhands:
@@ -1729,12 +1735,12 @@ impl ComputedValues {
         }
     }
 
-    /// Returns the computed value of the given longhand as a strongly-typed
-    /// `TypedValue`, if supported.
-    pub fn computed_typed_value(
+    /// Returns the computed value of the given longhand as a
+    /// [`TypedValueList`], if supported.
+    pub fn property_value_to_typed_value_list(
         &self,
         property_id: LonghandId,
-    ) -> Option<TypedValue> {
+    ) -> Option<TypedValueList> {
         let property_id = property_id.to_physical(self.writing_mode);
         match property_id {
             % for specified_type, props in groupby(data.longhands, key=lambda x: x.specified_type()):
@@ -1748,7 +1754,7 @@ impl ComputedValues {
                     % endfor
                     _ => unsafe { debug_unreachable!() },
                 };
-                value.to_typed()
+                value.to_typed_value_list()
             }
             % endfor
         }
@@ -1924,7 +1930,7 @@ impl ComputedValues {
             PropertyDeclarationId::Longhand(id) => {
                 let mut context = resolved::Context {
                     style: self,
-                    for_property: id.into(),
+                    for_property: PropertyId::NonCustom(id.into()),
                     current_longhand: Some(id),
                 };
                 let mut s = String::new();
@@ -1948,6 +1954,14 @@ impl ComputedValues {
             }
         }
     }
+
+    /// Calls the given function for each cached lazy pseudo-element style.
+    pub fn each_cached_lazy_pseudo<F>(&self, mut _f: F)
+    where
+        F: FnMut(&Self),
+    {
+        // Servo doesn't currently cache lazy pseudo-element styles.
+    }
 }
 
 #[cfg(feature = "servo")]
@@ -1967,6 +1981,25 @@ impl ops::DerefMut for ComputedValues {
 
 #[cfg(feature = "servo")]
 impl ComputedValuesInner {
+    /// Share ComputedValues but with different flags.
+    pub fn clone_with_flags(&self, flags: ComputedValueFlags, pseudo: Option<&PseudoElement>) -> Arc<ComputedValues> {
+        Arc::new(ComputedValues {
+            inner: Self {
+                custom_properties: self.custom_properties.clone(),
+                attribute_references: self.attribute_references.clone(),
+                writing_mode: self.writing_mode.clone(),
+                rules: self.rules.clone(),
+                visited_style: self.visited_style.clone(),
+                flags,
+                effective_zoom: self.effective_zoom.clone(),
+                % for style_struct in data.active_style_structs():
+                ${style_struct.ident}: self.${style_struct.ident}.clone(),
+                % endfor
+            },
+            pseudo: pseudo.cloned(),
+        })
+    }
+
     /// Returns the visited style, if any.
     pub fn visited_style(&self) -> Option<&ComputedValues> {
         self.visited_style.as_deref()
@@ -2007,12 +2040,6 @@ impl ComputedValuesInner {
             Content::Normal | Content::None => true,
             Content::Items(ref items) => items.items.is_empty()
         }
-    }
-
-    /// Whether the current style or any of its ancestors is multicolumn.
-    #[inline]
-    pub fn can_be_fragmented(&self) -> bool {
-        self.flags.contains(ComputedValueFlags::CAN_BE_FRAGMENTED)
     }
 
     /// Whether the current style is multicolumn.
@@ -2259,8 +2286,8 @@ pub struct StyleBuilder<'a> {
     /// node.
     pub rules: Option<StrongRuleNode>,
 
-    /// The computed custom properties.
-    pub custom_properties: crate::custom_properties::ComputedCustomProperties,
+    /// The computed custom properties and attributes.
+    pub substitution_functions: crate::custom_properties::ComputedSubstitutionFunctions,
 
     /// The set of attributes used as values in `attr()`
     pub attribute_references: crate::dom::AttributeReferences,
@@ -2331,7 +2358,7 @@ impl<'a> StyleBuilder<'a> {
             rules,
             modified_reset: false,
             is_root_element,
-            custom_properties: crate::custom_properties::ComputedCustomProperties::default(),
+            substitution_functions: crate::custom_properties::ComputedSubstitutionFunctions::default(),
             attribute_references: crate::dom::AttributeReferences::default(),
             invalid_non_custom_properties: LonghandIdSet::default(),
             writing_mode: inherited_style.writing_mode,
@@ -2364,6 +2391,10 @@ impl<'a> StyleBuilder<'a> {
     ) -> Self {
         let reset_style = device.default_computed_values();
         let inherited_style = parent_style.unwrap_or(reset_style);
+        let map = crate::custom_properties::ComputedSubstitutionFunctions::new(
+            Some(style_to_derive_from.custom_properties().clone()),
+            None,
+        );
         Self {
             device,
             stylist,
@@ -2374,7 +2405,7 @@ impl<'a> StyleBuilder<'a> {
             is_root_element: false,
             rules: None,
             attribute_references: crate::dom::AttributeReferences::default(),
-            custom_properties: style_to_derive_from.custom_properties().clone(),
+            substitution_functions: map,
             invalid_non_custom_properties: LonghandIdSet::default(),
             writing_mode: style_to_derive_from.writing_mode,
             effective_zoom: style_to_derive_from.effective_zoom,
@@ -2412,12 +2443,8 @@ impl<'a> StyleBuilder<'a> {
         self.modified_reset = true;
         self.add_flags(ComputedValueFlags::INHERITS_RESET_STYLE);
 
-        % if property.ident == "content":
-        self.add_flags(ComputedValueFlags::CONTENT_DEPENDS_ON_INHERITED_STYLE);
-        % endif
-
-        % if property.ident == "display":
-        self.add_flags(ComputedValueFlags::DISPLAY_DEPENDS_ON_INHERITED_STYLE);
+        % if property.ident == "content" or property.ident == "display":
+        self.add_flags(ComputedValueFlags::DISPLAY_OR_CONTENT_DEPEND_ON_INHERITED_STYLE);
         % endif
 
         if self.${property.style_struct.ident}.ptr_eq(inherited_struct) {
@@ -2499,7 +2526,7 @@ impl<'a> StyleBuilder<'a> {
             /* rules = */ None,
             /* is_root_element = */ false,
         );
-        ret.custom_properties = custom_properties;
+        ret.substitution_functions.custom_properties = custom_properties;
         ret.visited_style = visited_style;
         ret
     }
@@ -2621,7 +2648,7 @@ impl<'a> StyleBuilder<'a> {
     pub fn build(self) -> Arc<ComputedValues> {
         ComputedValues::new(
             self.pseudo,
-            self.custom_properties,
+            self.substitution_functions.custom_properties,
             self.attribute_references,
             self.writing_mode,
             self.effective_zoom,
@@ -2634,11 +2661,15 @@ impl<'a> StyleBuilder<'a> {
         )
     }
 
-    /// Get the custom properties map if necessary.
-    pub fn custom_properties(&self) -> &crate::custom_properties::ComputedCustomProperties {
-        &self.custom_properties
+    /// Get the substitution function maps if necessary.
+    pub fn substitution_functions(&self) -> &crate::custom_properties::ComputedSubstitutionFunctions {
+        &self.substitution_functions
     }
 
+    /// Get the custom properties map if necessary.
+    pub fn custom_properties(&self) -> &crate::custom_properties::ComputedCustomProperties {
+        &self.substitution_functions.custom_properties
+    }
 
     /// Get the inherited custom properties map.
     pub fn inherited_custom_properties(&self) -> &crate::custom_properties::ComputedCustomProperties {
@@ -2832,7 +2863,7 @@ macro_rules! longhand_properties_idents {
 
 // Large pages generate tens of thousands of ComputedValues.
 #[cfg(feature = "gecko")]
-size_of_test!(ComputedValues, 256);
+size_of_test!(ComputedValues, 248);
 #[cfg(feature = "servo")]
 size_of_test!(ComputedValues, 224);
 
@@ -2886,3 +2917,211 @@ pub(crate) fn restyle_damage_${effect_name} (old: &ComputedValues, new: &Compute
 }
 % endfor
 % endif
+
+/// Descriptor types for @-rules like @font-face and @counter-style.
+<%def name="generate_descriptors(descriptors)">
+use super::*;
+#[allow(unused_imports)]
+use crate::values::specified;
+
+/// Descriptor identifier.
+#[derive(Clone, Copy, Debug, Eq, Hash, FromPrimitive, Parse, PartialEq)]
+#[repr(u8)]
+pub enum DescriptorId {
+    % for descriptor in descriptors:
+    /// The "${descriptor.name}" descriptor.
+    ${descriptor.camel_case},
+    % endfor
+}
+
+impl DescriptorId {
+    /// The total number of descriptors.
+    pub const COUNT: usize = ${len(descriptors)};
+
+    /// The CSS name of this descriptor.
+    pub fn name(&self) -> &'static str {
+        const NAMES: [&'static str; DescriptorId::COUNT] = [
+        % for descriptor in descriptors:
+            "${descriptor.name}",
+        % endfor
+        ];
+        NAMES[*self as usize]
+    }
+}
+
+/// All descriptor values.
+#[derive(Clone, Debug, Default, ToShmem, PartialEq, MallocSizeOf)]
+pub struct Descriptors {
+    % for descriptor in descriptors:
+    /// The "${descriptor.name}" descriptor value.
+    % if descriptor.ignore_malloc_size_of:
+    #[ignore_malloc_size_of = "${descriptor.ignore_malloc_size_of}"]
+    % endif
+    pub ${descriptor.ident}: Option<${descriptor.type}>,
+    % endfor
+}
+
+impl Descriptors {
+    /// Gets a descriptor in CSS syntax.
+    pub fn get(&self, id: DescriptorId, dest: &mut CssStringWriter) -> fmt::Result {
+        let mut dest = CssWriter::new(dest);
+        match id {
+        % for descriptor in descriptors:
+            DescriptorId::${descriptor.camel_case} => self.${descriptor.ident}.to_css(&mut dest),
+        % endfor
+        }
+    }
+
+    /// Parses a given descriptor. Returns whether the descriptor changed.
+    pub fn set<'i, 't>(&mut self, id: DescriptorId, context: &ParserContext, input: &mut Parser<'i, 't>) -> Result<bool, ParseError<'i>> {
+        use crate::parser::Parse;
+        // DeclarationParser also calls parse_entirely so we’d normally not need to, but in this
+        // case we do because we set the value as a side effect rather than returning it.
+        match id {
+        % for descriptor in descriptors:
+            DescriptorId::${descriptor.camel_case} => {
+                let value = Some(input.parse_entirely(|i|
+                    % if descriptor.parser:
+                        ${descriptor.type}::${descriptor.parser}(context, i)
+                    % else:
+                        Parse::parse(context, i)
+                    % endif
+                )?);
+                let change = self.${descriptor.ident} != value;
+                self.${descriptor.ident} = value;
+                Ok(change)
+            },
+        % endfor
+        }
+    }
+
+    /// Removes a descriptor. Returns true if it used to be set.
+    pub fn remove(&mut self, id: DescriptorId) -> bool {
+        match id {
+        % for descriptor in descriptors:
+            DescriptorId::${descriptor.camel_case} => self.${descriptor.ident}.take().is_some(),
+        % endfor
+        }
+    }
+
+    /// Returns the count of set descriptors.
+    pub fn len(&self) -> usize {
+        let mut count = 0;
+        % for descriptor in descriptors:
+        if self.${descriptor.ident}.is_some() {
+            count += 1;
+        }
+        % endfor
+        count
+    }
+
+    /// Returns the descriptor at position `i`.
+    pub fn at(&self, i: usize) -> Option<DescriptorId> {
+        let mut cur = 0;
+        % for descriptor in descriptors:
+        if self.${descriptor.ident}.is_some() {
+            if cur == i {
+                return Some(DescriptorId::${descriptor.camel_case});
+            }
+            cur += 1;
+        }
+        % endfor
+        let _ = cur; // Silences warning on the last descriptor
+        None
+    }
+}
+
+impl ToCss for Descriptors {
+    fn to_css<W>(&self, dest: &mut CssWriter<W>) -> fmt::Result
+    where
+        W: fmt::Write,
+    {
+        use std::fmt::Write;
+        % for descriptor in descriptors:
+        if let Some(ref value) = self.${descriptor.ident} {
+            dest.write_str("${descriptor.name}: ")?;
+            value.to_css(dest)?;
+            dest.write_str("; ")?;
+        }
+        % endfor
+        Ok(())
+    }
+}
+
+/// Parser for descriptor declarations in at-rules.
+pub struct DescriptorParser<'a, 'b: 'a> {
+    /// The parser context.
+    pub context: &'a ParserContext<'b>,
+    /// The descriptors to parse into.
+    pub descriptors: &'a mut Descriptors,
+}
+
+impl<'a, 'b, 'i> cssparser::AtRuleParser<'i> for DescriptorParser<'a, 'b> {
+    type Prelude = ();
+    type AtRule = ();
+    type Error = StyleParseErrorKind<'i>;
+}
+
+impl<'a, 'b, 'i> cssparser::QualifiedRuleParser<'i> for DescriptorParser<'a, 'b> {
+    type Prelude = ();
+    type QualifiedRule = ();
+    type Error = StyleParseErrorKind<'i>;
+}
+
+impl<'a, 'b, 'i> cssparser::RuleBodyItemParser<'i, (), StyleParseErrorKind<'i>>
+    for DescriptorParser<'a, 'b>
+{
+    fn parse_qualified(&self) -> bool {
+        false
+    }
+    fn parse_declarations(&self) -> bool {
+        true
+    }
+}
+
+impl<'a, 'b, 'i> cssparser::DeclarationParser<'i> for DescriptorParser<'a, 'b> {
+    type Declaration = ();
+    type Error = StyleParseErrorKind<'i>;
+
+    fn parse_value<'t>(
+        &mut self,
+        name: cssparser::CowRcStr<'i>,
+        input: &mut Parser<'i, 't>,
+        _declaration_start: &cssparser::ParserState,
+    ) -> Result<(), ParseError<'i>> {
+        let Ok(id) = DescriptorId::from_ident(name.as_ref()) else {
+            return Err(
+                input.new_custom_error(
+                    selectors::parser::SelectorParseErrorKind::UnexpectedIdent(name.clone())
+                )
+            );
+        };
+        self.descriptors.set(id, self.context, input)?;
+        Ok(())
+    }
+}
+</%def>
+
+/// Generated code for @font-face descriptors.
+pub mod font_face {
+    use crate::font_face::*;
+${generate_descriptors(data.font_face_descriptors)}
+}
+
+/// Generated code for @counter-style descriptors.
+pub mod counter_style {
+    use crate::counter_style::*;
+${generate_descriptors(data.counter_style_descriptors)}
+}
+
+/// Generated code for @property descriptors.
+pub mod property {
+    use crate::properties_and_values::rule::*;
+${generate_descriptors(data.property_descriptors)}
+}
+
+/// Generated code for @view-transition descriptors.
+pub mod view_transition {
+    use crate::stylesheets::view_transition_rule::*;
+${generate_descriptors(data.view_transition_descriptors)}
+}

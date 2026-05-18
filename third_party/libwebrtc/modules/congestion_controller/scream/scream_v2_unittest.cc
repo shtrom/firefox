@@ -33,14 +33,13 @@ using ::testing::TestWithParam;
 constexpr DataSize kPacketSize = DataSize::Bytes(1000);
 
 TransportPacketsFeedback CreateFeedback(Timestamp feedback_time,
-                                        TimeDelta smoothed_rtt,
+                                        TimeDelta rtt,
                                         int number_of_ect1_packets,
                                         int number_of_packets_in_flight) {
   int sequence_number = 0;
   TransportPacketsFeedback feedback;
   feedback.feedback_time = feedback_time;
-  feedback.smoothed_rtt = smoothed_rtt;
-  Timestamp send_time = feedback_time - smoothed_rtt;
+  Timestamp send_time = feedback_time - rtt;
 
   feedback.data_in_flight = kPacketSize * number_of_packets_in_flight;
 
@@ -49,7 +48,7 @@ TransportPacketsFeedback CreateFeedback(Timestamp feedback_time,
     result.sent_packet.send_time = send_time;
     result.sent_packet.size = kPacketSize;
     result.ecn = EcnMarking::kEct1;
-    result.receive_time = send_time;
+    result.receive_time = send_time + rtt / 2;
     result.sent_packet.sequence_number = sequence_number++;
     feedback.packet_feedbacks.push_back(result);
   }
@@ -62,7 +61,8 @@ TEST(ScreamV2Test, TargetRateIncreaseToMaxOnUnConstrainedNetwork) {
   Environment env = CreateTestEnvironment({.time = &clock});
   ScreamV2 scream(env);
   const DataRate kMaxDataRate = DataRate::KilobitsPerSec(2000);
-  scream.SetTargetBitrateConstraints(DataRate::Zero(), kMaxDataRate);
+  scream.SetTargetBitrateConstraints(DataRate::Zero(), kMaxDataRate,
+                                     DataRate::KilobitsPerSec(300));
   DataRate send_rate = DataRate::KilobitsPerSec(100);
   // Configure a feedback generator simulating a network with infinite
   // capacity but 25ms one way delay.
@@ -71,7 +71,10 @@ TEST(ScreamV2Test, TargetRateIncreaseToMaxOnUnConstrainedNetwork) {
 
   for (int i = 0; i < 100; ++i) {
     TransportPacketsFeedback feedback =
-        feedback_generator.ProcessUntilNextFeedback(send_rate, clock);
+        feedback_generator.ProcessUntilNextFeedback(
+            send_rate, clock, [&](const SentPacket& packet) {
+              scream.OnPacketSent(packet.data_in_flight);
+            });
     scream.OnTransportPacketsFeedback(feedback);
     send_rate = scream.target_rate();
   }
@@ -84,7 +87,8 @@ TEST(ScreamV2Test,
   Environment env = CreateTestEnvironment({.time = &clock});
   ScreamV2 scream(env);
   const DataRate kMaxDataRate = DataRate::KilobitsPerSec(2000);
-  scream.SetTargetBitrateConstraints(DataRate::Zero(), kMaxDataRate);
+  scream.SetTargetBitrateConstraints(DataRate::Zero(), kMaxDataRate,
+                                     DataRate::KilobitsPerSec(300));
   DataRate send_rate = DataRate::KilobitsPerSec(100);
   // Configure a feedback generator simulating a network with infinite
   // capacity but 25ms one way delay.
@@ -93,7 +97,10 @@ TEST(ScreamV2Test,
 
   for (int i = 0; i < 70; ++i) {
     TransportPacketsFeedback feedback =
-        feedback_generator.ProcessUntilNextFeedback(send_rate, clock);
+        feedback_generator.ProcessUntilNextFeedback(
+            send_rate, clock, [&](const SentPacket& packet) {
+              scream.OnPacketSent(packet.data_in_flight);
+            });
     scream.OnTransportPacketsFeedback(feedback);
     send_rate = scream.target_rate();
   }
@@ -103,7 +110,10 @@ TEST(ScreamV2Test,
   send_rate = send_rate / 2;
   for (int i = 0; i < 20; ++i) {
     TransportPacketsFeedback feedback =
-        feedback_generator.ProcessUntilNextFeedback(send_rate, clock);
+        feedback_generator.ProcessUntilNextFeedback(
+            send_rate, clock, [&](const SentPacket& packet) {
+              scream.OnPacketSent(packet.data_in_flight);
+            });
     scream.OnTransportPacketsFeedback(feedback);
   }
   // Still the same ref_window.
@@ -116,16 +126,14 @@ TEST(ScreamV2Test, ReferenceWindowIncreaseLessPerStepOnLowRtt) {
   ScreamV2 scream_1(env);
   ScreamV2 scream_2(env);
 
-  TransportPacketsFeedback feedback =
-      CreateFeedback(clock.CurrentTime(), /*smoothed_rtt=*/
-                     TimeDelta::Millis(10),
+  TransportPacketsFeedback high_rtt_feedback =
+      CreateFeedback(clock.CurrentTime(), /*rtt=*/TimeDelta::Millis(100),
                      /*number_of_ect1_packets=*/20,
                      /*number_of_packets_in_flight=*/20);
-
-  TransportPacketsFeedback high_rtt_feedback = feedback;
-  high_rtt_feedback.smoothed_rtt = TimeDelta::Millis(100);
-  TransportPacketsFeedback low_rtt_feedback = feedback;
-  low_rtt_feedback.smoothed_rtt = TimeDelta::Millis(1);
+  TransportPacketsFeedback low_rtt_feedback =
+      CreateFeedback(clock.CurrentTime(), /*rtt=*/TimeDelta::Millis(1),
+                     /*number_of_ect1_packets=*/20,
+                     /*number_of_packets_in_flight=*/20);
 
   scream_1.OnTransportPacketsFeedback(high_rtt_feedback);
   scream_2.OnTransportPacketsFeedback(low_rtt_feedback);
@@ -140,8 +148,7 @@ TEST(ScreamV2Test, ReferenceWindowIncreaseLessPerStepIfCeDetected) {
   ScreamV2 scream_2(env);
 
   TransportPacketsFeedback feedback =
-      CreateFeedback(clock.CurrentTime(), /*smoothed_rtt=*/
-                     TimeDelta::Millis(10),
+      CreateFeedback(clock.CurrentTime(), /*rtt=*/TimeDelta::Millis(10),
                      /*number_of_ect1_packets=*/20,
                      /*number_of_packets_in_flight=*/20);
 
@@ -154,6 +161,43 @@ TEST(ScreamV2Test, ReferenceWindowIncreaseLessPerStepIfCeDetected) {
   EXPECT_GT(scream_1.ref_window(), scream_2.ref_window());
 }
 
+TEST(ScreamV2Test, ReferenceWindowDecreaseIfPacketsAreLostForTheFirstTime) {
+  SimulatedClock clock(Timestamp::Seconds(1'234));
+  Environment env = CreateTestEnvironment({.time = &clock});
+  ScreamV2 scream(env);
+
+  TransportPacketsFeedback feedback =
+      CreateFeedback(clock.CurrentTime(), /*rtt=*/TimeDelta::Millis(10),
+                     /*number_of_ect1_packets=*/20,
+                     /*number_of_packets_in_flight=*/20);
+
+  scream.OnTransportPacketsFeedback(feedback);
+  DataSize ref_window = scream.ref_window();
+  clock.AdvanceTime(TimeDelta::Millis(25));
+
+  TransportPacketsFeedback loss_feedback =
+      CreateFeedback(clock.CurrentTime(), /*rtt=*/TimeDelta::Millis(10),
+                     /*number_of_ect1_packets=*/5,
+                     /*number_of_packets_in_flight=*/5);
+  loss_feedback.packet_feedbacks[3].receive_time = Timestamp::PlusInfinity();
+  loss_feedback.packet_feedbacks[3].reported_lost_for_the_first_time = true;
+
+  scream.OnTransportPacketsFeedback(loss_feedback);
+  EXPECT_LT(scream.ref_window(), ref_window);
+  ref_window = scream.ref_window();
+
+  clock.AdvanceTime(TimeDelta::Millis(25));
+  TransportPacketsFeedback loss_feedback2 =
+      CreateFeedback(clock.CurrentTime(), /*rtt=*/TimeDelta::Millis(10),
+                     /*number_of_ect1_packets=*/5,
+                     /*number_of_packets_in_flight=*/5);
+  loss_feedback2.packet_feedbacks[0].receive_time = Timestamp::PlusInfinity();
+  loss_feedback2.packet_feedbacks[0].reported_lost_for_the_first_time = false;
+
+  scream.OnTransportPacketsFeedback(loss_feedback2);
+  EXPECT_GE(scream.ref_window(), ref_window);
+}
+
 TEST(ScreamV2Test, ReferenceWindowIncreaseToDataInflight) {
   SimulatedClock clock(Timestamp::Seconds(1'234));
   Environment env = CreateTestEnvironment({.time = &clock});
@@ -163,8 +207,7 @@ TEST(ScreamV2Test, ReferenceWindowIncreaseToDataInflight) {
   TimeDelta feedback_interval = TimeDelta::Millis(25);
 
   TransportPacketsFeedback feedback =
-      CreateFeedback(clock.CurrentTime(), /*smoothed_rtt=*/
-                     TimeDelta::Millis(10),
+      CreateFeedback(clock.CurrentTime(), /*rtt=*/TimeDelta::Millis(10),
                      /*number_of_ect1_packets=*/20,
                      /*number_of_packets_in_flight=*/10);
 
@@ -174,9 +217,9 @@ TEST(ScreamV2Test, ReferenceWindowIncreaseToDataInflight) {
     clock.AdvanceTime(feedback_interval);
   }
   // Target rate can increase up to 1.1 * data_in_flight + Max Segment Size(
-  // default 1000 bytes) when no max target rate has been set.
+  // default 1280 bytes) when no max target rate has been set.
   EXPECT_EQ(scream.ref_window(),
-            1.1 * feedback.data_in_flight + DataSize::Bytes(1000));
+            1.1 * feedback.data_in_flight + DataSize::Bytes(1280));
 }
 
 TEST(ScreamV2Test, CalculatesL4sAlpha) {
@@ -189,8 +232,7 @@ TEST(ScreamV2Test, CalculatesL4sAlpha) {
   TimeDelta feedback_interval = TimeDelta::Millis(25);
 
   TransportPacketsFeedback feedback =
-      CreateFeedback(clock.CurrentTime(), /*smoothed_rtt=*/
-                     TimeDelta::Millis(10),
+      CreateFeedback(clock.CurrentTime(), /*rtt=*/TimeDelta::Millis(10),
                      /*number_of_ect1_packets=*/20,
                      /*number_of_packets_in_flight=*/20);
   // CE mark 20% of packets.
@@ -238,7 +280,10 @@ AdaptsToLinkCapacityResult RunAdaptToLinkCapacityTest(
   DataRate send_rate = DataRate::KilobitsPerSec(100);
   while (clock.CurrentTime() < kStartTime + params.adaption_time) {
     TransportPacketsFeedback feedback =
-        feedback_generator.ProcessUntilNextFeedback(send_rate, clock);
+        feedback_generator.ProcessUntilNextFeedback(
+            send_rate, clock, [&](const SentPacket& packet) {
+              scream.OnPacketSent(packet.data_in_flight);
+            });
     scream.OnTransportPacketsFeedback(feedback);
     send_rate = scream.target_rate();
   }
@@ -250,15 +295,18 @@ AdaptsToLinkCapacityResult RunAdaptToLinkCapacityTest(
   while (clock.CurrentTime() <
          time_after_adaption + params.time_to_run_after_adaption_time) {
     TransportPacketsFeedback feedback =
-        feedback_generator.ProcessUntilNextFeedback(send_rate, clock);
+        feedback_generator.ProcessUntilNextFeedback(
+            send_rate, clock, [&](const SentPacket& packet) {
+              scream.OnPacketSent(packet.data_in_flight);
+            });
     scream.OnTransportPacketsFeedback(feedback);
     send_rate = scream.target_rate();
     result.min_rate_after_adaption =
         std::min(result.min_rate_after_adaption, send_rate);
     result.max_rate_after_adaption =
         std::max(result.max_rate_after_adaption, send_rate);
-    result.max_smoothed_rtt_after_adaptation = std::max(
-        result.max_smoothed_rtt_after_adaptation, feedback.smoothed_rtt);
+    result.max_smoothed_rtt_after_adaptation =
+        std::max(result.max_smoothed_rtt_after_adaptation, scream.rtt());
   }
   RTC_LOG(LS_INFO) << " rate_after_adaption " << result.data_rate
                    << " max_rate_after_adaption: "
@@ -273,7 +321,7 @@ TEST(ScreamV2Test, AdaptsToEcnLinkCapacity1Mbps) {
       .network_config = {.queue_delay_ms = 25,
                          .link_capacity = DataRate::KilobitsPerSec(1000)},
       .send_as_ect1 = true,
-      .adaption_time = TimeDelta::Seconds(3)};
+      .adaption_time = TimeDelta::Seconds(4)};
   AdaptsToLinkCapacityResult result = RunAdaptToLinkCapacityTest(params);
 
   EXPECT_LT(result.data_rate, DataRate::KilobitsPerSec(1100));
@@ -309,14 +357,14 @@ TEST(ScreamV2Test, AdaptsToDelayLinkCapacity2Mbps) {
       .network_config = {.queue_delay_ms = 10,
                          .link_capacity = DataRate::KilobitsPerSec(2000)},
       .send_as_ect1 = false,  // Adapt only due to delay increase.
-      .adaption_time = TimeDelta::Seconds(3)};
+      .adaption_time = TimeDelta::Seconds(10)};
 
   AdaptsToLinkCapacityResult result = RunAdaptToLinkCapacityTest(params);
 
-  EXPECT_LT(result.data_rate, DataRate::KilobitsPerSec(2300));
-  EXPECT_GT(result.data_rate, DataRate::KilobitsPerSec(1700));
-  EXPECT_LT(result.max_rate_after_adaption, DataRate::KilobitsPerSec(2300));
-  EXPECT_GT(result.min_rate_after_adaption, DataRate::KilobitsPerSec(1700));
+  EXPECT_LT(result.data_rate, DataRate::KilobitsPerSec(2500));
+  EXPECT_GT(result.data_rate, DataRate::KilobitsPerSec(1500));
+  EXPECT_LT(result.max_rate_after_adaption, DataRate::KilobitsPerSec(2500));
+  EXPECT_GT(result.min_rate_after_adaption, DataRate::KilobitsPerSec(1500));
 
   EXPECT_LT(result.max_smoothed_rtt_after_adaptation,
             TimeDelta::Millis(10 * 2 + 50 + 10));
@@ -327,17 +375,12 @@ TEST(ScreamV2Test, AdaptsToDelayLinkCapacity2MbpsLongRunning) {
       .network_config = {.queue_delay_ms = 10,
                          .link_capacity = DataRate::KilobitsPerSec(2000)},
       .send_as_ect1 = false,  // Adapt only due to delay increase.
-      .adaption_time = TimeDelta::Seconds(3),
+      .adaption_time = TimeDelta::Seconds(5),
       .time_to_run_after_adaption_time = TimeDelta::Minutes(15)};
 
   AdaptsToLinkCapacityResult result = RunAdaptToLinkCapacityTest(params);
-
-  // TODO: bugs.webrtc.org/447037083 - ensure target rate does not increase too
-  // much if RTT decrease. Currently, if rate is decreased, RTT decrease, which
-  // leads to a high target rate once the delay is decreased and a high RTT
-  // variation.
   EXPECT_LT(result.max_smoothed_rtt_after_adaptation,
-            TimeDelta::Millis(10 * 2 + 100));
+            TimeDelta::Millis(10 * 2 + 60));
 }
 
 }  // namespace

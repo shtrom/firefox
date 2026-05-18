@@ -1,5 +1,4 @@
-/* -*- Mode: Java; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil; -*-
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -2034,7 +2033,8 @@ import org.mozilla.geckoview.SessionTextInput.EditableListener.IMEState;
         outAttrs.inputType = InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL;
       } else {
         // TYPE_TEXT_FLAG_IME_MULTI_LINE flag makes the fullscreen IME line wrap
-        outAttrs.inputType |= InputType.TYPE_TEXT_FLAG_IME_MULTI_LINE;
+        outAttrs.inputType |=
+            InputType.TYPE_TEXT_FLAG_IME_MULTI_LINE | InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT;
       }
     }
 

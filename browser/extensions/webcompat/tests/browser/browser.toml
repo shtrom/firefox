@@ -4,7 +4,11 @@ support-files = [
   "shims_test.js",
   "shims_test_2.js",
   "shims_test_3.js",
+  "shims_test_fetch.txt",
+  "shims_test_fetch.txt^headers^",
   "iframe_test.html",
+  "intervention_test.html",
+  "intervention_test_frame.html",
   "shims_test.html",
   "shims_test_2.html",
   "shims_test_3.html",
@@ -17,6 +21,8 @@ prefs = ["extensions.webcompat.disabled_interventions.test6=true","extensions.we
 skip-if = [
   "debug", # disabled until bug 1961939 is fixed.
 ]
+
+["browser_bug2024904.js"]
 
 ["browser_custom_functions.js"]
 support-files = ["download_server.sjs", "echo_headers.sjs"]
@@ -73,5 +79,7 @@ skip-if = [
   "os == 'win' && os_version == '11.26100' && arch == 'x86'", # Bug 2003484
   "os == 'win' && os_version == '11.26200' && arch == 'x86'", # Bug 2003484
 ]
+
+["browser_special_content_scripts.js"]
 
 ["browser_ua_helpers.js"]

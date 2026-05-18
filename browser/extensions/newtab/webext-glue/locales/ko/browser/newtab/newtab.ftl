@@ -8,9 +8,13 @@
 newtab-page-title = 새 탭
 newtab-settings-button =
     .title = 새 탭 페이지 사용자 지정
+#  (developer note): @nova-cleanup(remove-string): Remove newtab-customize-panel-icon-button once Nova lands, will be using newtab-customize-panel-label instead
 newtab-customize-panel-icon-button =
     .title = 이 페이지 사용자 지정
+#  (developer note): @nova-cleanup(remove-string): Remove newtab-customize-panel-icon-button-label once Nova lands, will be using newtab-customize-panel-label instead
 newtab-customize-panel-icon-button-label = 사용자 지정
+newtab-customize-panel-label =
+    .label = 사용자 지정
 newtab-personalize-settings-icon-label =
     .title = 새 탭 개인화
     .aria-label = 설정
@@ -144,6 +148,9 @@ newtab-menu-report = 신고
 # Context menu option to personalize New Tab recommended stories by blocking a section of stories,
 # e.g. "Sports". "Block" is a verb here.
 newtab-menu-section-block = 차단
+# "Follow", "unfollow", and "following" are social media terms that refer to subscribing to or unsubscribing from a section of stories.
+# e.g. Following the travel section of stories.
+newtab-menu-section-unfollow-topic = 팔로우 취소
 # "Follow", "unfollow", and "following" are social media terms that refer to subscribing to or unsubscribing from a section of stories.
 # e.g. Following the travel section of stories.
 newtab-menu-section-unfollow = 주제 팔로우 취소
@@ -311,9 +318,22 @@ newtab-error-fallback-refresh-link = 페이지를 새로 고침해서 다시 시
 
 newtab-custom-shortcuts-title = 바로 가기
 newtab-custom-shortcuts-subtitle = 저장하거나 방문한 사이트
+#  (developer note): @nova-cleanup(remove-string): Remove old string once Nova lands. The newtab-custom-shortcuts-nova string will take over
 newtab-custom-shortcuts-toggle =
     .label = 바로 가기
     .description = 저장하거나 방문한 사이트
+newtab-custom-shortcuts-nova =
+    .label = 바로 가기
+newtab-custom-row-description =
+    .description = 행 수
+# Variables
+#   $num (number) - Number of rows to display
+#  (developer note): @nova-cleanup(remove-string): Remove string once Nova lands. We won't be using "row"/"rows" anymore for the dropdown
+newtab-custom-row-selector2 =
+    .label =
+        { $num ->
+           *[other] { $num } 행
+        }
 # Variables
 #   $num (number) - Number of rows to display
 newtab-custom-row-selector =
@@ -323,9 +343,12 @@ newtab-custom-row-selector =
 newtab-custom-sponsored-sites = 스폰서 바로 가기
 newtab-custom-pocket-title = { -pocket-brand-name } 추천
 newtab-custom-pocket-subtitle = { -brand-product-name } 제품군의 일부인 { -pocket-brand-name }에서 선별한 뛰어난 콘텐츠
+#  (developer note): @nova-cleanup(remove-string): Remove string once Nova lands. We won't be having a description under "Recommended stories" anymore
 newtab-custom-stories-toggle =
     .label = 추천 이야기
     .description = { -brand-product-name } 제품군이 선별한 뛰어난 콘텐츠
+newtab-recommended-stories-toggle =
+    .label = 추천 이야기
 newtab-custom-stories-personalized-toggle =
     .label = 이야기
 newtab-custom-stories-personalized-checkbox-label = 활동에 기반한 개인화된 이야기
@@ -342,6 +365,10 @@ newtab-custom-widget-lists-toggle =
     .label = 목록
 newtab-custom-widget-timer-toggle =
     .label = 타이머
+newtab-custom-widget-sports-toggle =
+    .label = 월드컵
+newtab-custom-widget-clock-toggle =
+    .label = 시계
 newtab-custom-widget-section-title = 위젯
 newtab-custom-widget-section-toggle =
     .label = 위젯
@@ -359,8 +386,12 @@ newtab-custom-settings = 추가 설정
 
 newtab-wallpaper-title = 배경 화면
 newtab-wallpaper-reset = 기본값으로 재설정
+#  (developer note): @nova-cleanup(remove-string): Remove old "Upload an image" string once Nova lands. The new "Add an image"  string will take over
 newtab-wallpaper-upload-image = 이미지 업로드
+newtab-wallpaper-add-an-image = 이미지 추가
 newtab-wallpaper-custom-color = 색상 선택
+newtab-wallpaper-toggle-title =
+    .label = 배경 화면
 # Variables
 #   $file_size (number) - The number of the maximum image file size (in MB) that may be uploaded
 newtab-wallpaper-error-max-file-size = 이미지가 파일 크기 제한인 { $file_size }MB를 초과했습니다. 더 작은 파일을 업로드 해 주세요.
@@ -383,7 +414,9 @@ newtab-wallpaper-light-fox-anniversary = 안개가 자욱한 산 풍경이 있�
 
 ## Solid Colors
 
+#  (developer note): @nova-cleanup(remove-string): Remove old "Solid colors" string once Nova lands. The simplified "Colors" string will take over
 newtab-wallpaper-category-title-colors = 단색
+newtab-wallpaper-colors = 색상
 newtab-wallpaper-blue = 파란색
 newtab-wallpaper-light-blue = 하늘색
 newtab-wallpaper-light-purple = 연보라색
@@ -474,6 +507,9 @@ newtab-weather-menu-change-location = 위치 변경
 newtab-weather-change-location-search-input-placeholder =
     .placeholder = 위치 검색
     .aria-label = 위치 검색
+# "Current" refers to the user's physical/geographic location detected via geolocation.
+newtab-weather-change-location-search-use-current =
+    .label = 현재 위치 사용
 newtab-weather-menu-weather-display = 날씨 표시
 newtab-weather-todays-forecast = 오늘의 일기예보
 newtab-weather-see-full-forecast = 전체 일기예보 보기
@@ -489,7 +525,6 @@ newtab-weather-menu-temperature-option-fahrenheit = 화씨
 newtab-weather-menu-temperature-option-celsius = 섭씨
 newtab-weather-menu-change-temperature-units-fahrenheit = 화씨로 전환
 newtab-weather-menu-change-temperature-units-celsius = 섭씨로 전환
-newtab-weather-menu-hide-weather-v2 = 날씨 숨기기
 newtab-weather-menu-hide-weather = 새 탭에서 날씨 숨기기
 newtab-weather-menu-learn-more = 더 알아보기
 newtab-weather-menu-detect-my-location = 내 위치 감지
@@ -500,8 +535,18 @@ newtab-weather-opt-in-not-now =
     .label = 나중에
 newtab-weather-opt-in-yes =
     .label = 예
+newtab-weather-opt-in-headline = 지역 일기예보 받기
+newtab-weather-opt-in-use-location =
+    .label = 위치 사용
+newtab-weather-opt-in-choose-location = 위치 선택
 # We'll be showing static (fake) weather data if the user has not opted in to using their location
 newtab-weather-static-city = 뉴욕
+# "Highest" here refers to the highest temperature of the day
+newtab-weather-high =
+    .aria-label = 높음
+# "Lowest" here refers to the lowest temperature of the day
+newtab-weather-low =
+    .aria-label = 낮음
 # Variables:
 #   $provider (string) - Service provider for weather data
 newtab-weather-see-forecast-description =
@@ -553,8 +598,16 @@ newtab-topic-selection-button-pick-interests = 관심 분야를 선택하세요
 ## e.g. Following the travel section of stories.
 
 newtab-section-follow-button = 팔로우
+# Variables:
+#   $topic (string) - Topic that the user can follow
+newtab-section-follow-button-label =
+    .aria-label = { $topic } 팔로우
 newtab-section-following-button = 팔로잉
 newtab-section-unfollow-button = 팔로우 취소
+# Variables:
+#   $topic (string) - Topic that the user is following and can unfollow
+newtab-section-unfollow-button-label =
+    .aria-label = 팔로잉: { $topic } 팔로우 취소
 # A modal may appear next to the Follow button, directing users to try out the feature
 newtab-section-follow-highlight-title = 피드를 미세 조정하세요
 newtab-section-follow-highlight-subtitle = 관심 분야를 팔로우하면 좋아하는 것을 더 많이 볼 수 있습니다.
@@ -566,6 +619,22 @@ newtab-section-follow-highlight-subtitle = 관심 분야를 팔로우하면 좋�
 newtab-section-block-button = 차단
 newtab-section-blocked-button = 차단됨
 newtab-section-unblock-button = 차단 해제
+# Variables:
+#   $topic (string) - Name of topic that user is following
+newtab-section-follow-topic =
+    .aria-label = { $topic } 팔로우
+# Variables:
+#   $topic (string) - Name of topic that user is unfollowing
+newtab-section-unfollow-topic =
+    .aria-label = { $topic } 팔로우 취소
+# Variables:
+#   $topic (string) - Name of topic that user is blocking
+newtab-section-block-topic =
+    .aria-label = { $topic } 차단
+# Variables:
+#   $topic (string) - Name of topic that user is unblocking
+newtab-section-unblock-topic =
+    .aria-label = { $topic } 차단 해제
 
 ## Confirmation modal for blocking a section
 
@@ -575,6 +644,7 @@ newtab-section-confirm-block-topic-p2 = 차단된 주제는 더 이상 피드에
 # Variables:
 #   $topic (string) - Name of topic that user is blocking
 newtab-section-block-topic-button = { $topic } 차단
+newtab-section-block-cancel-button = 취소
 
 ## Strings for custom wallpaper highlight
 
@@ -595,6 +665,12 @@ newtab-custom-wallpaper-cta = 사용해 보기
 newtab-new-user-custom-wallpaper-title = 나만의 { -brand-product-name }를 만들 배경 화면을 선택하세요
 newtab-new-user-custom-wallpaper-subtitle = 사용자 지정 배경화면과 색상으로 모든 새 탭을 내 집처럼 꾸며보세요.
 newtab-new-user-custom-wallpaper-cta = 지금 사용해보기
+
+## Strings for Nova wallpaper feature highlight
+
+newtab-wallpaper-feature-highlight-title = 새로운 배경 화면이 방금 공개되었습니다
+newtab-wallpaper-feature-highlight-subtitle = 취향에 맞는 걸 골라 모든 새 탭을 나만의 공간으로 꾸며보세요.
+newtab-wallpaper-feature-highlight-cta = 배경 화면 선택
 
 ## Strings for download mobile highlight
 
@@ -636,6 +712,20 @@ newtab-report-cancel = 취소
 newtab-report-submit = 보내기
 newtab-toast-thanks-for-reporting =
     .message = 신고해 주셔서 감사합니다.
+newtab-toast-widgets-hidden =
+    .message = 언제든지 위젯을 다시 추가하려면 연필 아이콘을 선택하세요.
+# Variables:
+#   $topic (string) - Topic that the user has followed
+newtab-section-toast-follow =
+    .message = { $topic } 주제를 팔로우했습니다.
+# Variables:
+#   $topic (string) - Topic that the user has unfollowed
+newtab-section-toast-unfollow =
+    .message = { $topic } 주제를 더 이상 팔로우하지 않습니다.
+# Variables:
+#   $topic (string) - Topic that the user has blocked
+newtab-section-toast-block =
+    .message = { $topic }에 대한 이야기가 더 이상 표시되지 않습니다.
 
 ## Strings for task / to-do list productivity widget
 
@@ -650,13 +740,20 @@ newtab-widget-lists-label-beta =
 # Variables:
 #   $number (number) - Amount of list items marked complete
 newtab-widget-lists-completed-list = 완료 ({ $number }개)
+newtab-widget-lists-celebration-headline = 잘하셨습니다
+newtab-widget-lists-celebration-subhead = 모두 확인됨
 newtab-widget-task-list-menu-copy = 복사
 newtab-widget-lists-menu-edit = 목록 이름 편집
+newtab-widget-lists-menu-edit2 =
+    .aria-label = 목록 이름 편집
 newtab-widget-lists-menu-create = 새 목록 만들기
 newtab-widget-lists-menu-delete = 이 목록 삭제
 newtab-widget-lists-menu-copy = 클립보드에 목록 복사
-newtab-widget-lists-menu-hide = 모든 목록 숨기기
 newtab-widget-lists-menu-learn-more = 더 알아보기
+newtab-widget-lists-button-add-item = 항목 추가
+newtab-widget-lists-input-add-an-item2 =
+    .placeholder = 항목 추가
+    .aria-label = 항목 추가
 newtab-widget-lists-input-add-an-item =
     .placeholder = 항목 추가
 newtab-widget-lists-input-error = 항목을 추가하려면 텍스트를 포함하세요.
@@ -665,17 +762,44 @@ newtab-widget-lists-input-menu-move-up = 위로 이동
 newtab-widget-lists-input-menu-move-down = 아래로 이동
 newtab-widget-lists-input-menu-delete = 삭제
 newtab-widget-lists-input-menu-edit = 편집
+newtab-widget-lists-input-menu-edit2 =
+    .aria-label = 항목 편집
 # the + symbol emphasises the functionality of adding a new list
 newtab-widget-lists-dropdown-create =
     .label = + 새 목록 만들기
 newtab-widget-lists-name-label-default =
     .label = 작업 목록
+newtab-widget-lists-name-label-checklist =
+    .label = 체크리스트
 newtab-widget-lists-name-placeholder-default =
     .placeholder = 작업 목록
+newtab-widget-lists-name-placeholder-checklist2 =
+    .placeholder = 체크리스트
+    .aria-label = 목록 이름 편집
+# The placeholder value of the name field for a newly created list
+newtab-widget-lists-name-placeholder-new2 =
+    .placeholder = 새 목록
+    .aria-label = 목록 이름 편집
+newtab-widget-lists-name-placeholder-checklist =
+    .placeholder = 체크리스트
 # The placeholder value of the name field for a newly created list
 newtab-widget-lists-name-placeholder-new =
     .placeholder = 새 목록
 newtab-widget-section-title = 위젯
+newtab-widget-menu-hide = 위젯 숨기기
+newtab-widget-menu-change-size = 크기 변경
+# Parent label for a submenu in the widget menu that reorders the widget
+# among its siblings. "Left" and "Right" appear as items inside this submenu.
+newtab-widget-menu-move = 이동
+# Submenu item under "Move"; moves the widget one position to the left.
+# RTL locales should translate this as "Right".
+newtab-widget-menu-move-left = 왼쪽
+# Submenu item under "Move"; moves the widget one position to the right.
+# RTL locales should translate this as "Left".
+newtab-widget-menu-move-right = 오른쪽
+newtab-widget-size-small = 작게
+newtab-widget-size-medium = 중간
+newtab-widget-size-large = 크게
 # Tooltip for hide all widgets button
 newtab-widget-section-hide-all-button =
     .title = 위젯 숨기기
@@ -686,9 +810,19 @@ newtab-widget-section-maximize =
 newtab-widget-section-minimize =
     .title = 위젯 최소화
     .aria-label = 모든 위젯을 작은 크기로 접기
+newtab-widget-section-menu-button =
+    .title = 위젯 메뉴
+    .aria-label = 위젯 메뉴 열기
+newtab-widget-add-widgets-button =
+    .aria-label = 위젯 추가
+    .title = 위젯 추가
+newtab-widget-section-menu-manage = 위젯 관리
+newtab-widget-section-menu-hide-all = 위젯 숨기기
+newtab-widget-section-menu-learn-more = 더 알아보기
+newtab-widget-section-feedback = 의견을 알려주세요
+newtab-widget-lists-name-default = 체크리스트
 
-## Strings for timer productivity widget
-## When the timer ends, a system notification may be shown. Depending on which mode the timer is in, that message would be shown
+## Strings introduced by the Nova redesign of the Timer widget
 
 newtab-widget-timer-notification-title = 타이머
 newtab-widget-timer-notification-focus = 집중 시간이 다 되었습니다. 잘 하셨습니다. 휴식이 필요하신가요?
@@ -706,7 +840,6 @@ newtab-widget-timer-reset =
     .title = 초기화
 newtab-widget-timer-menu-notifications = 알림 끄기
 newtab-widget-timer-menu-notifications-on = 알림 켜기
-newtab-widget-timer-menu-hide = 타이머 숨기기
 newtab-widget-timer-menu-learn-more = 더 알아보기
 # The title displays above a set of top news headlines.
 newtab-daily-briefing-card-title = 주요 헤드라인
@@ -717,12 +850,123 @@ newtab-daily-briefing-card-timestamp = { $minutes }분 전 업데이트됨
 newtab-widget-message-title = 목록과 내장 타이머로 집중하기
 # to-dos stands for "things to do".
 newtab-widget-message-copy = 빠른 알림부터 매일 할 일 목록, 집중 세션부터 스트레칭 휴식까지 — 업무에 집중하고 시간을 준수하세요.
+# "Make Firefox yours" refers to about:newtab. The call to action here ("Try it now")
+# is to customize the new tab page with a background image or color from
+# the built-in wallpaper collection or uploading your own image.
+newtab-promo-card-title-addons = 나만의 { -brand-product-name } 만들기
+newtab-promo-card-body-addons = 모음집에서 배경 화면을 선택하거나 나만의 배경 화면을 만드세요.
+newtab-promo-card-cta-addons = 지금 사용해보기
 newtab-promo-card-title = { -brand-product-name } 지원
 newtab-promo-card-body = 스폰서는 더 나은 웹을 만들려는 저희를 지원합니다
 newtab-promo-card-cta = 더 알아보기
 newtab-promo-card-dismiss-button =
     .title = 닫기
     .aria-label = 닫기
+
+## Strings introduced by the Nova redesign of the Timer widget
+
+# Variables:
+#   $minutes (number) - The currently selected timer duration in minutes
+newtab-widget-timer-start-aria =
+    .aria-label = { $minutes }분 타이머 시작
+newtab-widget-timer-pause-aria =
+    .aria-label = 타이머 일시 중지
+# Variables:
+#   $minutes (number) - The currently selected timer duration in minutes
+newtab-widget-timer-spinbutton-name =
+    .aria-label = { $minutes }분
+newtab-widget-timer-decrease-min =
+    .title = 1분 감소
+newtab-widget-timer-increase-min =
+    .title = 1분 증가
+newtab-widget-timer-mode-group =
+    .aria-label = 타이머 모드
+# Small label shown beneath the live time while the focus timer is running or paused.
+newtab-widget-timer-running-focus = 집중
+# Small label shown beneath the live time while the break timer is running or paused.
+newtab-widget-timer-running-break = 휴식
+# Context-menu item to hide the Timer widget. Replaces the shared "Hide widget"
+# copy with a widget-specific string per the Nova design.
+newtab-widget-timer-menu-hide = 타이머 숨기기
+# Heading shown inside the Timer widget after a focus session ends.
+newtab-widget-timer-celebration-heading-focus = 잘하셨어요
+# Heading shown inside the Timer widget after a break session ends.
+newtab-widget-timer-celebration-heading-break = 휴식 시간이 종료됨
+# Message shown inside the Timer widget after a focus session ends.
+newtab-widget-timer-celebration-message-focus = 휴식이 필요하신가요?
+# Message shown inside the Timer widget after a break session ends.
+newtab-widget-timer-celebration-message-break = 집중할 준비가 되었나요?
+
+## Sports widget
+
+newtab-sports-widget-menu-follow-teams = 팀 팔로우
+newtab-sports-widget-menu-view-schedule = 일정 보기
+newtab-sports-widget-menu-view-upcoming = 예정된 경기 보기
+newtab-sports-widget-menu-view-results = 결과 보기
+# Milestone dates (e.g. group stage, semifinals, etc.). Refers to calendar dates.
+newtab-sports-widget-menu-key-dates = 주요 날짜
+newtab-sports-widget-menu-learn-more = 더 알아보기
+# “Keep tabs on” is an informal expression meaning to stay updated on, stay informed on, or regularly follow something (in this case, World Cup matches and updates).
+newtab-sports-widget-keep-tabs = 월드컵 소식을 놓치지 마세요
+newtab-sports-widget-get-updates = 라이브 경기 업데이트 등을 받으세요.
+newtab-sports-widget-view-schedule =
+    .label = 일정 보기
+newtab-sports-widget-follow-teams =
+    .label = 팀 팔로우
+newtab-sports-widget-view-matches =
+    .label = 경기 보기
+# Variables:
+#   $number (number) - Maximum number of teams a user can choose to follow in the team selection state
+newtab-sports-widget-follow-teams-title = 최대 { $number }개 팀 팔로우
+newtab-sports-widget-choose-wallpaper =
+    .label = 배경 화면 선택
+newtab-sports-widget-skip = 건너뛰기
+newtab-sports-widget-search-country =
+    .placeholder = 국가 검색
+    .aria-label = 국가 검색
+newtab-sports-widget-cancel = 취소
+newtab-sports-widget-back-button =
+    .aria-label = 뒤로
+newtab-sports-widget-done-button =
+    .label = 완료
+newtab-sports-widget-group-stage = 조별 예선
+newtab-sports-widget-round-32 = 32강
+newtab-sports-widget-round-16 = 16강
+newtab-sports-widget-quarter-finals = 8강
+# The "LIVE" string is meant to be uppercase in English, but other languages and locales may vary in how they handle this.
+newtab-sports-widget-live = 라이브
+newtab-custom-widget-live-refresh =
+    .title = 점수 새로 고침
+    .aria-label = 점수 새로 고침
+# Milestone dates (e.g. group stage, semifinals, etc.). Refers to calendar dates.
+newtab-sports-widget-key-dates = 주요 날짜
+newtab-sports-widget-upcoming = 예정된 경기
+# Used for a match currently ongoing
+newtab-sports-widget-now = 지금
+newtab-sports-widget-results = 결과
+newtab-sports-widget-semi-finals = 준결승
+newtab-sports-widget-bronze-finals = 동메달 결정전
+# Final is the final match for 1st place.
+newtab-sports-widget-final = 결승
+# Variables:
+#   $start (Date) - Start date of a tournament stage
+#   $end (Date) - End date of a tournament stage
+newtab-sports-widget-key-date-range = { DATETIME($start, month: "short", day: "numeric") } – { DATETIME($end, month: "short", day: "numeric") }
+# Variables:
+#   $date (Date) - Date of a single tournament event
+newtab-sports-widget-key-date = { DATETIME($date, month: "short", day: "numeric") }
+newtab-sports-widget-delayed = 지연됨
+newtab-sports-widget-postponed = 연기됨
+newtab-sports-widget-suspended = 중단됨
+newtab-sports-widget-cancelled = 취소됨
+newtab-sports-widget-information = 경기 정보
+newtab-sports-widget-no-live-data = 현재 라이브 경기 데이터가 업데이트되지 않고 있습니다
+newtab-sports-widget-view-results-link = 결과 보기
+newtab-sports-widget-third-place = 3위
+# Runner-up is the team in 2nd place.
+newtab-sports-widget-runner-up = 준우승
+newtab-sports-widget-champions = 우승팀
+newtab-sports-widget-world-cup-champions = 2026년 월드컵 우승팀
 
 ## Strings for activation window message variants. In certain experiment configurations,
 ## the strings from these variants may be displayed in a message below the search input
@@ -745,3 +989,59 @@ newtab-activation-window-message-customization-focus-primary-button =
 # the existing widgetry that appears on it.
 newtab-activation-window-message-values-focus-header = 이 공간은 유연하고 사용자 정의가 가능합니다
 newtab-activation-window-message-values-focus-message = { -brand-product-name }는 사용자가 원하는 방식으로 탐색할 수 있게 해주며, 온라인에서 하루를 시작하는 더 개인화된 방법을 제공합니다. 나만의 { -brand-product-name }를 만드세요.
+
+## Strings for the Clock widget
+
+# Context menu item: toggle the clock card off.
+newtab-clock-widget-menu-hide = 시계 숨기기
+newtab-clock-widget-menu-learn-more = 더 알아보기
+newtab-clock-widget-menu-edit = 시계 편집
+newtab-clock-widget-menu-switch-to-12h = 12시간제로 전환
+newtab-clock-widget-menu-switch-to-24h = 24시간제로 전환
+newtab-clock-widget-label-your-clocks = 나만의 시계
+newtab-clock-widget-search-location-input =
+    .label = 위치
+    .placeholder = 도시 검색
+    .aria-label = 도시 검색
+# "Nickname (optional)" refers to a custom, user-defined label for a saved location
+# (e.g., "Home", "Office", or "School") to make it easier to recognize.
+# Not to be translated as a legal name, username, or alias used for identity verification.
+newtab-clock-widget-input-nickname =
+    .label = 별명 (선택 사항)
+    .placeholder = 별명 추가
+    .aria-label = 별명 (선택 사항)
+# "Add new clock" is an icon-only button in the widget toolbar — the
+# attributes are consumed as tooltip/screen-reader label only. The button
+# never renders visible text.
+newtab-clock-widget-button-add =
+    .title = 새 시계 추가
+    .aria-label = 새 시계 추가
+newtab-clock-widget-button-add-clock = 추가
+newtab-clock-widget-button-cancel = 취소
+newtab-clock-widget-button-back =
+    .title = 뒤로
+    .aria-label = 뒤로
+newtab-clock-widget-button-edit-clock =
+    .title = 시계 편집
+    .aria-label = 시계 편집
+newtab-clock-widget-button-save = 저장
+newtab-clock-widget-button-remove-clock =
+    .title = 시계 제거
+    .aria-label = 시계 제거
+newtab-clock-widget-add-clock-form =
+    .aria-label = 시계 추가
+newtab-clock-widget-edit-clock-form =
+    .aria-label = 시계 편집
+# "Search results" is the accessible label for the listbox dropdown that appears
+# below the location search field, listing matching cities as the user types.
+# It means "results of the search", not "search within the results".
+newtab-clock-widget-search-results =
+    .aria-label = 검색 결과
+# "Open menu for clock" is an icon-only button in the widget toolbar — the
+# attributes are consumed as tooltip/screen-reader label only. The button
+# never renders visible text.
+newtab-clock-widget-menu-button =
+    .title = 시계 메뉴 열기
+    .aria-label = 시계 메뉴 열기
+# $nickname (String) - The user-defined nickname for a saved clock location (e.g., "Home", "Office").
+newtab-clock-widget-label-nickname-with-value = Nickname: { $nickname }

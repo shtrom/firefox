@@ -31,10 +31,6 @@ use std::hash::{Hash, Hasher};
 /// events.
 pub type ItemTag = (u64, u16);
 
-/// An identifier used to refer to previously sent display items. Currently it
-/// refers to individual display items, but this may change later.
-pub type ItemKey = u16;
-
 #[repr(C)]
 #[derive(Copy, PartialEq, Eq, Clone, PartialOrd, Ord, Hash, Deserialize, MallocSizeOf, Serialize, PeekPoke)]
 pub struct PrimitiveFlags(u8);
@@ -200,9 +196,6 @@ pub enum DisplayItem {
     PopReferenceFrame,
     PopStackingContext,
     PopAllShadows,
-
-    ReuseItems(ItemKey),
-    RetainedItems(ItemKey),
 
     // For debugging purposes.
     DebugMarker(u32),
@@ -425,7 +418,6 @@ pub struct TextDisplayItem {
     pub font_key: font::FontInstanceKey,
     pub color: ColorF,
     pub glyph_options: Option<font::GlyphOptions>,
-    pub ref_frame_offset: LayoutVector2D,
 } // IMPLICIT: glyphs: Vec<font::GlyphInstance>
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, MallocSizeOf, PartialEq, Serialize, PeekPoke)]
@@ -901,11 +893,9 @@ pub struct SnapshotInfo {
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize, PeekPoke)]
 pub struct PushStackingContextDisplayItem {
-    pub origin: LayoutPoint,
     pub spatial_id: SpatialId,
     pub snapshot: Option<SnapshotInfo>,
     pub prim_flags: PrimitiveFlags,
-    pub ref_frame_offset: LayoutVector2D,
     pub stacking_context: StackingContext,
 }
 
@@ -2283,8 +2273,6 @@ impl DisplayItem {
             DisplayItem::RadialGradient(..) => "radial_gradient",
             DisplayItem::Rectangle(..) => "rectangle",
             DisplayItem::SetGradientStops => "set_gradient_stops",
-            DisplayItem::ReuseItems(..) => "reuse_item",
-            DisplayItem::RetainedItems(..) => "retained_items",
             DisplayItem::Text(..) => "text",
             DisplayItem::YuvImage(..) => "yuv_image",
             DisplayItem::BackdropFilter(..) => "backdrop_filter",

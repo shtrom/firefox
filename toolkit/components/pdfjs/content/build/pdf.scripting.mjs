@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 5.5.211
- * pdfjsBuild = afa8a07a2
+ * pdfjsVersion = 6.0.109
+ * pdfjsBuild = d27b9ab5f
  */
 
 ;// ./src/scripting_api/constants.js
@@ -159,13 +159,7 @@ const FieldType = {
   time: 4
 };
 function createActionsMap(actions) {
-  const actionsMap = new Map();
-  if (actions) {
-    for (const [eventType, actionsForEvent] of Object.entries(actions)) {
-      actionsMap.set(eventType, actionsForEvent);
-    }
-  }
-  return actionsMap;
+  return new Map(actions ? Object.entries(actions) : null);
 }
 function getFieldType(actions) {
   let format = actions.get("Format");
@@ -189,12 +183,18 @@ function getFieldType(actions) {
   return FieldType.none;
 }
 
+;// ./src/shared/math_clamp.js
+function MathClamp(v, min, max) {
+  return Math.min(Math.max(v, min), max);
+}
+
 ;// ./src/shared/scripting_utils.js
+
 function makeColorComp(n) {
-  return Math.floor(Math.max(0, Math.min(1, n)) * 255).toString(16).padStart(2, "0");
+  return Math.floor(MathClamp(n, 0, 1) * 255).toString(16).padStart(2, "0");
 }
 function scaleAndClamp(x) {
-  return Math.max(0, Math.min(255, 255 * x));
+  return MathClamp(x, 0, 1) * 255;
 }
 class ColorConverters {
   static CMYK_G([c, y, m, k]) {
@@ -361,6 +361,8 @@ function serializeError(error) {
     value
   };
 }
+const makeArr = () => [];
+const makeMap = () => new Map();
 
 ;// ./src/scripting_api/field.js
 
@@ -424,7 +426,7 @@ class Field extends PDFObject {
     this._fillColor = data.fillColor || ["T"];
     this._isChoice = Array.isArray(data.items);
     this._items = data.items || [];
-    this._hasValue = data.hasOwnProperty("value");
+    this._hasValue = Object.hasOwn(data, "value");
     this._page = data.page || 0;
     this._strokeColor = data.strokeColor || ["G", 0];
     this._textColor = data.textColor || ["G", 0];
@@ -962,6 +964,7 @@ class CheckboxField extends RadioButtonField {
 ;// ./src/scripting_api/aform.js
 
 
+
 class AForm {
   constructor(document, app, util, color) {
     this._document = document;
@@ -1050,7 +1053,7 @@ class AForm {
     if (bCurrencyPrepend) {
       buf.push(strCurrency);
     }
-    sepStyle = Math.min(Math.max(0, Math.floor(sepStyle)), 4);
+    sepStyle = MathClamp(Math.floor(sepStyle), 0, 4);
     buf.push("%,", sepStyle, ".", nDec.toString(), "f");
     if (!bCurrencyPrepend) {
       buf.push(strCurrency);
@@ -1107,7 +1110,7 @@ class AForm {
       return;
     }
     nDec = Math.floor(nDec);
-    sepStyle = Math.min(Math.max(0, Math.floor(sepStyle)), 4);
+    sepStyle = MathClamp(Math.floor(sepStyle), 0, 4);
     let value = this.AFMakeNumber(event.value);
     if (value === null) {
       event.value = "%";
@@ -1221,8 +1224,8 @@ class AForm {
   }
   AFSimple_Calculate(cFunction, cFields) {
     const actions = {
-      AVG: args => args.reduce((acc, value) => acc + value, 0) / args.length,
-      SUM: args => args.reduce((acc, value) => acc + value, 0),
+      AVG: args => Math.sumPrecise(args) / args.length,
+      SUM: args => Math.sumPrecise(args),
       PRD: args => args.reduce((acc, value) => acc * value, 1),
       MIN: args => Math.min(...args),
       MAX: args => Math.max(...args)
@@ -2395,6 +2398,8 @@ class InfoProxyHandler {
   }
 }
 class Doc extends PDFObject {
+  #pageActions = null;
+  #otherPageActions = null;
   constructor(data) {
     super(data);
     this._expandos = globalThis;
@@ -2446,11 +2451,9 @@ class Doc extends PDFObject {
     this._zoom = data.zoom || 100;
     this._actions = createActionsMap(data.actions);
     this._globalEval = data.globalEval;
-    this._pageActions = null;
     this._userActivation = false;
     this._disablePrinting = false;
     this._disableSaving = false;
-    this._otherPageActions = null;
   }
   _initActions() {
     for (const {
@@ -2506,13 +2509,13 @@ class Doc extends PDFObject {
   }
   _dispatchPageEvent(name, actions, pageNumber) {
     if (name === "PageOpen") {
-      this._pageActions ||= new Map();
-      if (!this._pageActions.has(pageNumber)) {
-        this._pageActions.set(pageNumber, createActionsMap(actions));
+      this.#pageActions ??= new Map();
+      if (!this.#pageActions.has(pageNumber)) {
+        this.#pageActions.set(pageNumber, createActionsMap(actions));
       }
       this._pageNum = pageNumber - 1;
     }
-    for (const acts of [this._pageActions, this._otherPageActions]) {
+    for (const acts of [this.#pageActions, this.#otherPageActions]) {
       actions = acts?.get(pageNumber)?.get(name);
       if (actions) {
         for (const action of actions) {
@@ -2543,27 +2546,13 @@ class Doc extends PDFObject {
     const po = field.obj._actions.get("PageOpen");
     const pc = field.obj._actions.get("PageClose");
     if (po || pc) {
-      this._otherPageActions ||= new Map();
-      let actions = this._otherPageActions.get(field.obj._page + 1);
-      if (!actions) {
-        actions = new Map();
-        this._otherPageActions.set(field.obj._page + 1, actions);
-      }
+      this.#otherPageActions ??= new Map();
+      const actions = this.#otherPageActions.getOrInsertComputed(field.obj._page + 1, makeMap);
       if (po) {
-        let poActions = actions.get("PageOpen");
-        if (!poActions) {
-          poActions = [];
-          actions.set("PageOpen", poActions);
-        }
-        poActions.push(...po);
+        actions.getOrInsertComputed("PageOpen", makeArr).push(...po);
       }
       if (pc) {
-        let pcActions = actions.get("PageClose");
-        if (!pcActions) {
-          pcActions = [];
-          actions.set("PageClose", pcActions);
-        }
-        pcActions.push(...pc);
+        actions.getOrInsertComputed("PageClose", makeArr).push(...pc);
       }
     }
   }

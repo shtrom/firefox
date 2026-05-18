@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -666,14 +664,6 @@ class HTMLMediaElement : public nsGenericHTMLElement,
     SetHTMLBoolAttr(nsGkAtoms::muted, aMuted, aRv);
   }
 
-  bool MozAllowCasting() const { return mAllowCasting; }
-
-  void SetMozAllowCasting(bool aShow) { mAllowCasting = aShow; }
-
-  bool MozIsCasting() const { return mIsCasting; }
-
-  void SetMozIsCasting(bool aShow) { mIsCasting = aShow; }
-
   // Returns whether a call to Play() would be rejected with NotAllowedError.
   // This assumes "worst case" for unknowns. So if prompting for permission is
   // enabled and no permission is stored, this behaves as if the user would
@@ -807,6 +797,18 @@ class HTMLMediaElement : public nsGenericHTMLElement,
   }
 
   void NotifyCueDisplayStatesChanged();
+
+  void SetCuesDirty() {
+    if (mTextTrackManager) {
+      mTextTrackManager->SetCuesDirty();
+    }
+  }
+
+  void UpdateCueDisplay() {
+    if (mTextTrackManager) {
+      mTextTrackManager->UpdateCueDisplay();
+    }
+  }
 
   bool IsBlessed() const { return mIsBlessed; }
 

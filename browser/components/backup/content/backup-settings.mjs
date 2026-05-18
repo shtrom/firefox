@@ -38,7 +38,7 @@ export default class BackupSettings extends MozLitElement {
     return {
       scheduledBackupsButtonEl: "#backup-toggle-scheduled-button",
       archiveSectionEl: "#scheduled-backups",
-      restoreSectionEl: "#restore-from-backup",
+      restoreSectionEl: "#backup-toggle-restore-button",
       triggerBackupButtonEl: "#backup-trigger-button",
       changePasswordButtonEl: "#backup-change-password-button",
       disableBackupEncryptionEl: "disable-backup-encryption",
@@ -139,6 +139,7 @@ export default class BackupSettings extends MozLitElement {
             detail: {
               backupFile: event.detail.backupFile,
               backupPassword: event.detail.backupPassword,
+              source: "preferences",
             },
           })
         );
@@ -214,6 +215,7 @@ export default class BackupSettings extends MozLitElement {
       @close=${this.handleTurnOnScheduledBackupsDialogClose}
     >
       <turn-on-scheduled-backups
+        source="preferences"
         defaultlabel=${fileName}
         defaultpath=${path}
         defaulticonurl=${iconURL}
@@ -224,7 +226,9 @@ export default class BackupSettings extends MozLitElement {
 
   turnOffScheduledBackupsDialogTemplate() {
     return html`<dialog id="turn-off-scheduled-backups-dialog">
-      <turn-off-scheduled-backups></turn-off-scheduled-backups>
+      <turn-off-scheduled-backups
+        source="preferences"
+      ></turn-off-scheduled-backups>
     </dialog>`;
   }
 
@@ -235,30 +239,27 @@ export default class BackupSettings extends MozLitElement {
   }
 
   restoreFromBackupTemplate() {
-    let restoreItemL10nID = this.backupServiceState.scheduledBackupsEnabled
+    let restoreL10nID = this.backupServiceState.scheduledBackupsEnabled
       ? "settings-data-backup-restore-scheduled-on"
       : "settings-data-backup-restore-scheduled-off";
 
-    let restoreButtonL10nID = this.backupServiceState.scheduledBackupsEnabled
-      ? "settings-data-backup-scheduled-backups-on-restore-choose"
-      : "settings-data-backup-scheduled-backups-off-restore-choose";
-
-    return html`<moz-box-item
-        id="restore-from-backup"
-        data-l10n-id=${restoreItemL10nID}
-      >
-        <moz-button
-          id="backup-toggle-restore-button"
-          @click=${this.handleShowRestoreDialog}
-          data-l10n-id=${restoreButtonL10nID}
-          slot="actions"
-        ></moz-button>
-      </moz-box-item>
+    return html`<moz-box-button
+        id="backup-toggle-restore-button"
+        @click=${this.handleShowRestoreDialog}
+        data-l10n-id=${restoreL10nID}
+      ></moz-box-button>
       ${this.restoreFromBackupDialogTemplate()}`;
   }
 
   handleShowRestoreDialog() {
     if (this.restoreFromBackupDialogEl) {
+      this.dispatchEvent(
+        new CustomEvent("BackupUI:FindBackupsInWellKnownLocations", {
+          bubbles: true,
+          composed: true,
+          detail: { source: "preferences" },
+        })
+      );
       this.restoreFromBackupDialogEl.showModal();
       this.restoreFromBackupEl.resizeTextarea();
     }

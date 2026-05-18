@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -250,39 +248,6 @@ nsTArray<nsCString>& TErrorResult<CleanupPolicy>::CreateErrorMessageHelper(
 }
 
 template <typename CleanupPolicy>
-void TErrorResult<CleanupPolicy>::SerializeMessage(
-    IPC::MessageWriter* aWriter) const {
-  using namespace IPC;
-  AssertInOwningThread();
-  MOZ_ASSERT(mUnionState == HasMessage);
-  MOZ_ASSERT(mExtra.mMessage);
-  WriteParam(aWriter, mExtra.mMessage->mArgs);
-  WriteParam(aWriter, mExtra.mMessage->mErrorNumber);
-}
-
-template <typename CleanupPolicy>
-bool TErrorResult<CleanupPolicy>::DeserializeMessage(
-    IPC::MessageReader* aReader) {
-  using namespace IPC;
-  AssertInOwningThread();
-  auto readMessage = MakeUnique<Message>();
-  if (!ReadParam(aReader, &readMessage->mArgs) ||
-      !ReadParam(aReader, &readMessage->mErrorNumber)) {
-    return false;
-  }
-  if (!readMessage->HasCorrectNumberOfArguments()) {
-    return false;
-  }
-
-  MOZ_ASSERT(mUnionState == HasNothing);
-  InitMessage(readMessage.release());
-#ifdef DEBUG
-  mUnionState = HasMessage;
-#endif  // DEBUG
-  return true;
-}
-
-template <typename CleanupPolicy>
 void TErrorResult<CleanupPolicy>::SetPendingExceptionWithMessage(
     JSContext* aCx, const char* context) {
   AssertInOwningThread();
@@ -391,34 +356,106 @@ struct TErrorResult<CleanupPolicy>::DOMExceptionInfo {
 };
 
 template <typename CleanupPolicy>
-void TErrorResult<CleanupPolicy>::SerializeDOMExceptionInfo(
+void TErrorResult<CleanupPolicy>::SerializeErrorResult(
     IPC::MessageWriter* aWriter) const {
   using namespace IPC;
   AssertInOwningThread();
-  MOZ_ASSERT(mUnionState == HasDOMExceptionInfo);
-  MOZ_ASSERT(mExtra.mDOMExceptionInfo);
-  WriteParam(aWriter, mExtra.mDOMExceptionInfo->mMessage);
-  WriteParam(aWriter, mExtra.mDOMExceptionInfo->mRv);
+
+  // It should be the case that mMightHaveUnreportedJSException can only be
+  // true when we're expecting a JS exception.  We cannot send such messages
+  // over the IPC channel since there is no sane way of transferring the JS
+  // value over to the other side.  Callers should never do that.
+  MOZ_ASSERT(!mMightHaveUnreportedJSException);
+  if (IsJSException() || IsJSContextException()) {
+    MOZ_CRASH(
+        "Cannot serialize an ErrorResult representing a Javascript exception");
+  }
+
+  WriteParam(aWriter, mResult);
+  if (IsErrorWithMessage()) {
+    MOZ_ASSERT(mResult == NS_ERROR_INTERNAL_ERRORRESULT_TYPEERROR ||
+               mResult == NS_ERROR_INTERNAL_ERRORRESULT_RANGEERROR);
+    MOZ_ASSERT(mUnionState == HasMessage);
+    MOZ_ASSERT(mExtra.mMessage);
+
+    WriteParam(aWriter, mExtra.mMessage->mArgs);
+    WriteParam(aWriter, mExtra.mMessage->mErrorNumber);
+  } else if (IsDOMException()) {
+    MOZ_ASSERT(mResult == NS_ERROR_INTERNAL_ERRORRESULT_DOMEXCEPTION);
+    MOZ_ASSERT(mUnionState == HasDOMExceptionInfo);
+    MOZ_ASSERT(mExtra.mDOMExceptionInfo);
+
+    WriteParam(aWriter, mExtra.mDOMExceptionInfo->mMessage);
+    WriteParam(aWriter, mExtra.mDOMExceptionInfo->mRv);
+  } else {
+    MOZ_ASSERT(mUnionState == HasNothing);
+  }
 }
 
 template <typename CleanupPolicy>
-bool TErrorResult<CleanupPolicy>::DeserializeDOMExceptionInfo(
+bool TErrorResult<CleanupPolicy>::DeserializeErrorResult(
     IPC::MessageReader* aReader) {
   using namespace IPC;
   AssertInOwningThread();
-  nsCString message;
-  nsresult rv;
-  if (!ReadParam(aReader, &message) || !ReadParam(aReader, &rv)) {
+
+  nsresult result;
+  if (!ReadParam(aReader, &result)) {
     return false;
   }
 
-  MOZ_ASSERT(mUnionState == HasNothing);
-  MOZ_ASSERT(IsDOMException());
-  InitDOMExceptionInfo(new DOMExceptionInfo(rv, message));
+  switch (result) {
+    case NS_ERROR_INTERNAL_ERRORRESULT_JS_EXCEPTION:
+    case NS_ERROR_INTERNAL_ERRORRESULT_EXCEPTION_ON_JSCONTEXT:
+      // JS exceptions can not be serialized.
+      return false;
+
+    case NS_ERROR_INTERNAL_ERRORRESULT_TYPEERROR:
+    case NS_ERROR_INTERNAL_ERRORRESULT_RANGEERROR: {
+      nsTArray<nsCString> args;
+      dom::ErrNum errorNumber;
+      if (!ReadParam(aReader, &args) || !ReadParam(aReader, &errorNumber)) {
+        return false;
+      }
+
+      if (GetErrorArgCount(errorNumber) != args.Length()) {
+        return false;
+      }
+
+      for (nsCString& arg : args) {
+        if (Utf8ValidUpTo(arg) != arg.Length()) {
+          return false;
+        }
+      }
+
+      ClearUnionData();
+
+      nsTArray<nsCString>& messageArgsArray =
+          CreateErrorMessageHelper(errorNumber, result);
+      messageArgsArray = std::move(args);
+      MOZ_ASSERT(mExtra.mMessage->HasCorrectNumberOfArguments(),
+                 "validated earlier");
 #ifdef DEBUG
-  mUnionState = HasDOMExceptionInfo;
-#endif  // DEBUG
-  return true;
+      mUnionState = HasMessage;
+#endif
+      return true;
+    }
+
+    case NS_ERROR_INTERNAL_ERRORRESULT_DOMEXCEPTION: {
+      nsCString message;
+      nsresult rv;
+      if (!ReadParam(aReader, &message) || !ReadParam(aReader, &rv)) {
+        return false;
+      }
+
+      ThrowDOMException(rv, message);
+      return true;
+    }
+
+    default:
+      ClearUnionData();
+      AssignErrorCode(result);
+      return true;
+  }
 }
 
 template <typename CleanupPolicy>
@@ -1601,11 +1638,13 @@ struct IdToIndexComparator {
 static const PropertyInfo* XrayFindOwnPropertyInfo(
     JSContext* cx, DOMObjectType type, JS::Handle<jsid> id,
     const NativeProperties* nativeProperties) {
-  if ((type == eInterfacePrototype || type == eGlobalInstance) &&
-      MOZ_UNLIKELY(nativeProperties->iteratorAliasMethodIndex >= 0) &&
-      id.isWellKnownSymbol(JS::SymbolCode::iterator)) {
-    return nativeProperties->MethodPropertyInfos() +
-           nativeProperties->iteratorAliasMethodIndex;
+  if (type == eInterfacePrototype || type == eGlobalInstance) {
+    if (nativeProperties->iteratorAliasMethodIndex >= 0) [[unlikely]] {
+      if (id.isWellKnownSymbol(JS::SymbolCode::iterator)) {
+        return nativeProperties->MethodPropertyInfos() +
+               nativeProperties->iteratorAliasMethodIndex;
+      }
+    }
   }
 
   size_t idx;
@@ -2329,144 +2368,42 @@ bool DictionaryBase::ParseJSON(JSContext* aCx, const nsAString& aJSON,
   return JS_ParseJSON(aCx, aJSON.BeginReading(), aJSON.Length(), aVal);
 }
 
-bool DictionaryBase::StringifyToJSON(JSContext* aCx, JS::Handle<JSObject*> aObj,
-                                     nsAString& aJSON) const {
-  return JS::ToJSONMaybeSafely(aCx, aObj, AppendJSONToString, &aJSON);
+bool DictionaryBase::ParseJSON(JSContext* aCx, const nsACString& aJSON,
+                               JS::MutableHandle<JS::Value> aVal) {
+  if (aJSON.IsEmpty()) {
+    return true;
+  }
+  if (IsAscii(aJSON)) {
+    return JS_ParseJSON(
+        aCx, reinterpret_cast<const JS::Latin1Char*>(aJSON.BeginReading()),
+        aJSON.Length(), aVal);
+  }
+  nsAutoString utf16;
+  if (!CopyUTF8toUTF16(aJSON, utf16, fallible)) {
+    return false;
+  }
+  return JS_ParseJSON(aCx, utf16.BeginReading(), utf16.Length(), aVal);
 }
 
-/* static */
-bool DictionaryBase::AppendJSONToString(const char16_t* aJSONData,
-                                        uint32_t aDataLength, void* aString) {
+static bool AppendJSONToString(const char16_t* aJSONData, uint32_t aDataLength,
+                               void* aString) {
   nsAString* string = static_cast<nsAString*>(aString);
   string->Append(aJSONData, aDataLength);
   return true;
 }
 
-void UpdateReflectorGlobal(JSContext* aCx, JS::Handle<JSObject*> aObjArg,
-                           ErrorResult& aError) {
-  js::AssertSameCompartment(aCx, aObjArg);
+bool DictionaryBase::StringifyToJSON(JSContext* aCx, JS::Handle<JSObject*> aObj,
+                                     nsAString& aJSON) const {
+  return JS::ToJSONMaybeSafely(aCx, aObj, AppendJSONToString, &aJSON);
+}
 
-  aError.MightThrowJSException();
-
-  // Check if we're anywhere near the stack limit before we reach the
-  // transplanting code, since it has no good way to handle errors. This uses
-  // the untrusted script limit, which is not strictly necessary since no
-  // actual script should run.
-  js::AutoCheckRecursionLimit recursion(aCx);
-  if (!recursion.checkConservative(aCx)) {
-    aError.StealExceptionFromJSContext(aCx);
-    return;
+bool DictionaryBase::StringifyToJSON(JSContext* aCx, JS::Handle<JSObject*> aObj,
+                                     nsACString& aJSON) const {
+  nsAutoString json;
+  if (!StringifyToJSON(aCx, aObj, json)) {
+    return false;
   }
-
-  JS::Rooted<JSObject*> aObj(aCx, aObjArg);
-  MOZ_ASSERT(IsDOMObject(aObj));
-
-  const DOMJSClass* domClass = GetDOMClass(aObj);
-
-  JS::Rooted<JSObject*> oldGlobal(aCx, JS::GetNonCCWObjectGlobal(aObj));
-  MOZ_ASSERT(JS_IsGlobalObject(oldGlobal));
-
-  JS::Rooted<JSObject*> newGlobal(aCx,
-                                  domClass->mGetAssociatedGlobal(aCx, aObj));
-  MOZ_ASSERT(JS_IsGlobalObject(newGlobal));
-
-  JSAutoRealm oldAr(aCx, oldGlobal);
-
-  if (oldGlobal == newGlobal) {
-    return;
-  }
-
-  nsISupports* native = UnwrapDOMObjectToISupports(aObj);
-  if (!native) {
-    return;
-  }
-
-  bool isProxy = js::IsProxy(aObj);
-  JS::Rooted<JSObject*> expandoObject(aCx);
-  if (isProxy) {
-    expandoObject = DOMProxyHandler::GetAndClearExpandoObject(aObj);
-  }
-
-  JSAutoRealm newAr(aCx, newGlobal);
-
-  // First we clone the reflector. We get a copy of its properties and clone its
-  // expando chain.
-
-  JS::Handle<JSObject*> proto = (domClass->mGetProto)(aCx);
-  if (!proto) {
-    aError.StealExceptionFromJSContext(aCx);
-    return;
-  }
-
-  JS::Rooted<JSObject*> newobj(aCx, JS_CloneObject(aCx, aObj, proto));
-  if (!newobj) {
-    aError.StealExceptionFromJSContext(aCx);
-    return;
-  }
-
-  // Assert it's possible to create wrappers when |aObj| and |newobj| are in
-  // different compartments.
-  MOZ_ASSERT_IF(JS::GetCompartment(aObj) != JS::GetCompartment(newobj),
-                js::AllowNewWrapper(JS::GetCompartment(aObj), newobj));
-
-  JS::Rooted<JSObject*> propertyHolder(aCx);
-  JS::Rooted<JSObject*> copyFrom(aCx, isProxy ? expandoObject : aObj);
-  if (copyFrom) {
-    propertyHolder = JS_NewObjectWithGivenProto(aCx, nullptr, nullptr);
-    if (!propertyHolder) {
-      aError.StealExceptionFromJSContext(aCx);
-      return;
-    }
-
-    if (!JS_CopyOwnPropertiesAndPrivateFields(aCx, propertyHolder, copyFrom)) {
-      aError.StealExceptionFromJSContext(aCx);
-      return;
-    }
-  } else {
-    propertyHolder = nullptr;
-  }
-
-  // We've set up |newobj|, so we make it own the native by setting its reserved
-  // slot and nulling out the reserved slot of |obj|. Update the wrapper cache
-  // to keep everything consistent in case GC moves newobj.
-  //
-  // NB: It's important to do this _after_ copying the properties to
-  // propertyHolder. Otherwise, an object with |foo.x === foo| will
-  // crash when JS_CopyOwnPropertiesAndPrivateFields tries to call wrap() on
-  // foo.x.
-  static_assert(DOM_OBJECT_SLOT == JS_OBJECT_WRAPPER_SLOT);
-  JS::SetReservedSlot(newobj, DOM_OBJECT_SLOT,
-                      JS::GetReservedSlot(aObj, DOM_OBJECT_SLOT));
-  JS::SetReservedSlot(aObj, DOM_OBJECT_SLOT, JS::PrivateValue(nullptr));
-  nsWrapperCache* cache = nullptr;
-  CallQueryInterface(native, &cache);
-  cache->UpdateWrapperForNewGlobal(native, newobj);
-
-  aObj = xpc::TransplantObjectRetainingXrayExpandos(aCx, aObj, newobj);
-  if (!aObj) {
-    MOZ_CRASH();
-  }
-
-  // Update the wrapper cache again if transplanting didn't use newobj but
-  // returned some other object.
-  if (aObj != newobj) {
-    MOZ_ASSERT(UnwrapDOMObjectToISupports(aObj) == native);
-    cache->UpdateWrapperForNewGlobal(native, aObj);
-  }
-
-  if (propertyHolder) {
-    JS::Rooted<JSObject*> copyTo(aCx);
-    if (isProxy) {
-      copyTo = DOMProxyHandler::EnsureExpandoObject(aCx, aObj);
-    } else {
-      copyTo = aObj;
-    }
-
-    if (!copyTo ||
-        !JS_CopyOwnPropertiesAndPrivateFields(aCx, copyTo, propertyHolder)) {
-      MOZ_CRASH();
-    }
-  }
+  return CopyUTF16toUTF8(json, aJSON, fallible);
 }
 
 GlobalObject::GlobalObject(JSContext* aCx, JSObject* aObject)
@@ -2477,12 +2414,10 @@ GlobalObject::GlobalObject(JSContext* aCx, JSObject* aObject)
     // aCx correctly represents the current global here.
     obj = js::CheckedUnwrapDynamic(obj, aCx, /* stopAtWindowProxy = */ false);
     if (!obj) {
-      // We should never end up here on a worker thread, since there shouldn't
-      // be any security wrappers to worry about.
-      if (!MOZ_LIKELY(NS_IsMainThread())) {
-        MOZ_CRASH();
-      }
-
+      MOZ_RELEASE_ASSERT(
+          NS_IsMainThread(),
+          "We should never end up here on a worker thread, since there "
+          "shouldn't be any security wrappers to worry about.");
       Throw(aCx, NS_ERROR_XPC_SECURITY_MANAGER_VETO);
       return;
     }
@@ -2677,28 +2612,6 @@ void ConstructJSImplementation(const char* aContractId,
 
 bool NormalizeUSVString(nsAString& aString) {
   return EnsureUTF16Validity(aString);
-}
-
-bool NormalizeUSVString(binding_detail::FakeString<char16_t>& aString) {
-  uint32_t upTo = Utf16ValidUpTo(aString);
-  uint32_t len = aString.Length();
-  if (upTo == len) {
-    return true;
-  }
-  // This is the part that's different from EnsureUTF16Validity with an
-  // nsAString& argument, because we don't want to ensure mutability in our
-  // BeginWriting() in the common case and nsAString's EnsureMutable is not
-  // public.  This is a little annoying; I wish we could just share the more or
-  // less identical code!
-  if (!aString.EnsureMutable()) {
-    return false;
-  }
-
-  char16_t* ptr = aString.BeginWriting();
-  auto span = Span(ptr, len);
-  span[upTo] = 0xFFFD;
-  EnsureUtf16ValiditySpan(span.From(upTo + 1));
-  return true;
 }
 
 bool ConvertJSValueToByteString(BindingCallContext& cx, JS::Handle<JS::Value> v,
@@ -2981,8 +2894,8 @@ struct LenientThisPolicyMixin {
 
 // There are some LenientThis things on globals, so we inherit from
 // MaybeGlobalThisPolicy.
-struct LenientThisPolicy : public MaybeGlobalThisPolicy,
-                           public LenientThisPolicyMixin {
+struct MOZ_EMPTY_BASES LenientThisPolicy : public MaybeGlobalThisPolicy,
+                                           public LenientThisPolicyMixin {
   // We want the HasValidThisValue of MaybeGlobalThisPolicy.
 
   // We want the ExtractThisObject of MaybeGlobalThisPolicy.
@@ -3098,7 +3011,7 @@ struct MaybeCrossOriginObjectThisPolicy : public MaybeGlobalThisPolicy {
 
 // And in some cases we are dealing with a maybe-cross-origin object _and_ need
 // [LenientThis] behavior.
-struct MaybeCrossOriginObjectLenientThisPolicy
+struct MOZ_EMPTY_BASES MaybeCrossOriginObjectLenientThisPolicy
     : public MaybeCrossOriginObjectThisPolicy,
       public LenientThisPolicyMixin {
   // We want to get all of our behavior from
@@ -3518,6 +3431,7 @@ static bool GetBackingObject(JSContext* aCx, JS::Handle<JSObject*> aObj,
                   ? aObj
                   : js::UncheckedUnwrap(aObj,
                                         /* stopAtWindowProxy = */ false);
+  MOZ_ASSERT(aSlotIndex < JSCLASS_RESERVED_SLOTS(JS::GetClass(reflector)));
 
   // Retrieve the backing object from the reserved slot on the maplike/setlike
   // object. If it doesn't exist yet, create it.
@@ -3572,8 +3486,10 @@ static inline JSObject* NewObservableArrayProxyObject(
   }
 
   JS::Rooted<JS::Value> targetValue(aCx, JS::ObjectValue(*target));
+  js::ProxyOptions options;
+  options.setLazyProto(true);
   JS::Rooted<JSObject*> proxy(
-      aCx, js::NewProxyObject(aCx, aHandler, targetValue, nullptr));
+      aCx, js::NewProxyObject(aCx, aHandler, targetValue, nullptr, options));
   if (!proxy) {
     return nullptr;
   }
@@ -3711,47 +3627,6 @@ bool GetDesiredProto(JSContext* aCx, const JS::CallArgs& aCallArgs,
 
   return MaybeWrapObject(aCx, aDesiredProto);
 }
-
-namespace {
-
-class MOZ_RAII AutoConstructionDepth final {
- public:
-  MOZ_IMPLICIT AutoConstructionDepth(CustomElementDefinition* aDefinition)
-      : mDefinition(aDefinition) {
-    MOZ_ASSERT(mDefinition->mConstructionStack.IsEmpty());
-
-    mDefinition->mConstructionDepth++;
-    // If the mConstructionDepth isn't matched with the length of mPrefixStack,
-    // this means the constructor is called directly from JS, i.e.
-    // 'new CustomElementConstructor()', we have to push a dummy prefix into
-    // stack.
-    if (mDefinition->mConstructionDepth > mDefinition->mPrefixStack.Length()) {
-      mDidPush = true;
-      mDefinition->mPrefixStack.AppendElement(nullptr);
-    }
-
-    MOZ_ASSERT(mDefinition->mConstructionDepth ==
-               mDefinition->mPrefixStack.Length());
-  }
-
-  ~AutoConstructionDepth() {
-    MOZ_ASSERT(mDefinition->mConstructionDepth > 0);
-    MOZ_ASSERT(mDefinition->mConstructionDepth ==
-               mDefinition->mPrefixStack.Length());
-
-    if (mDidPush) {
-      MOZ_ASSERT(mDefinition->mPrefixStack.LastElement() == nullptr);
-      mDefinition->mPrefixStack.RemoveLastElement();
-    }
-    mDefinition->mConstructionDepth--;
-  }
-
- private:
-  CustomElementDefinition* mDefinition;
-  bool mDidPush = false;
-};
-
-}  // anonymous namespace
 
 /* https://html.spec.whatwg.org/#html-element-constructors */
 namespace binding_detail {
@@ -3963,19 +3838,8 @@ bool HTMLConstructor(JSContext* aCx, unsigned aArgc, JS::Value* aVp,
   //     object..."
   JS::Rooted<JSObject*> desiredProto(aCx);
 
-  // Check which construction path we're taking before running any JS.
-  // This determines whether we need AutoConstructionDepth protection.
   nsTArray<RefPtr<Element>>& constructionStack = definition->mConstructionStack;
   const bool isDirectConstruction = constructionStack.IsEmpty();
-
-  // For direct construction (not upgrade), create AutoConstructionDepth before
-  // GetDesiredProto. This ensures mConstructionDepth is incremented before any
-  // re-entrant JS can run via Proxy traps, preventing desynchronization with
-  // mPrefixStack which may be pushed by nsContentUtils::NewXULOrHTMLElement.
-  mozilla::Maybe<AutoConstructionDepth> autoDepth;
-  if (isDirectConstruction) {
-    autoDepth.emplace(definition);
-  }
 
   if (!GetDesiredProto(aCx, args, aProtoId, aCreator, &desiredProto)) {
     return false;
@@ -3990,9 +3854,11 @@ bool HTMLConstructor(JSContext* aCx, unsigned aArgc, JS::Value* aVp,
     //       implementing the interface..."
     JSAutoRealm ar(aCx, global.Get());
 
+    // The namespace prefix will be set after construction by
+    // nsContentUtils::NewXULOrHTMLElement per spec step 6.1.10 of
+    // https://dom.spec.whatwg.org/#concept-create-element.
     RefPtr<NodeInfo> nodeInfo = doc->NodeInfoManager()->GetNodeInfo(
-        definition->mLocalName, definition->mPrefixStack.LastElement(), ns,
-        nsINode::ELEMENT_NODE);
+        definition->mLocalName, nullptr, ns, nsINode::ELEMENT_NODE);
     MOZ_ASSERT(nodeInfo);
 
     if (ns == kNameSpaceID_XUL) {
@@ -4135,7 +4001,7 @@ void ReportDeprecation(nsIGlobalObject* aGlobal, Document* aDoc, nsIURI* aURI,
   key.AppendASCII("Warning");
 
   nsAutoString msg;
-  rv = nsContentUtils::GetMaybeLocalizedString(nsContentUtils::eDOM_PROPERTIES,
+  rv = nsContentUtils::GetMaybeLocalizedString(PropertiesFile::DOM_PROPERTIES,
                                                key.get(), aDoc, msg);
   if (NS_WARN_IF(NS_FAILED(rv))) {
     return;

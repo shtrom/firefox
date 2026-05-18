@@ -1,5 +1,3 @@
-# -*- Mode: python; indent-tabs-mode: nil; tab-width: 40 -*-
-# vim: set filetype=python:
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -85,6 +83,7 @@ gecko_metrics = [
     "toolkit/components/formautofill/metrics.yaml",
     "toolkit/components/gecko-trace/generated-metrics.yaml",
     "toolkit/components/glean/metrics.yaml",
+    "toolkit/components/ipprotection/metrics.yaml",
     "toolkit/components/mediasniffer/metrics.yaml",
     "toolkit/components/messaging-system/metrics.yaml",
     "toolkit/components/ml/metrics.yaml",
@@ -122,6 +121,7 @@ firefox_desktop_metrics = [
     "browser/components/attribution/metrics.yaml",
     "browser/components/backup/metrics.yaml",
     "browser/components/contextualidentity/metrics.yaml",
+    "browser/components/controlcenter/metrics.yaml",
     "browser/components/customkeys/metrics.yaml",
     "browser/components/downloads/metrics.yaml",
     "browser/components/extensions/metrics.yaml",
@@ -238,6 +238,7 @@ firefox_desktop_pings = [
     "toolkit/components/telemetry/pings.yaml",
     "toolkit/modules/pings.yaml",
     "toolkit/mozapps/update/shared_pings.yaml",
+    "toolkit/profile/pings.yaml",
 ]
 
 # Pings that are sent by the Firefox Desktop Background Update Task

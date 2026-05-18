@@ -205,15 +205,16 @@ export class AutoCompleteParent extends JSWindowActorParent {
       return;
     }
 
+    if (!this.browsingContext.canOpenModalPicker) {
+      return;
+    }
+
     let browser = this.browsingContext.top.embedderElement;
-    let window = browser.ownerGlobal;
-    // Also check window top in case this is a sidebar.
-    if (
-      Services.focus.activeWindow !== window.top &&
-      Services.focus.focusedWindow.top !== window.top
-    ) {
-      // We were sent a message from a window or tab that went into the
-      // background, so we'll ignore it for now.
+
+    let tabbrowser = browser.getTabBrowser();
+    if (tabbrowser && tabbrowser.selectedBrowser != browser) {
+      // Overly cautious check, because AsyncTabSwitcher might delay
+      // deactivating our browser.
       return;
     }
 
@@ -499,7 +500,7 @@ export class AutoCompleteParent extends JSWindowActorParent {
   }
 
   notifyListeners() {
-    let window = this.browsingContext.top.embedderElement.ownerGlobal;
+    let window = this.browsingContext.top.embedderElement.documentGlobal;
     for (let listener of autoCompleteListeners) {
       try {
         listener(window);
@@ -528,8 +529,10 @@ export class AutoCompleteParent extends JSWindowActorParent {
   }
 
   // This defines the supported autocomplete providers and the prioity to show the autocomplete
-  // entry.
-  #AUTOCOMPLETE_PROVIDERS = ["FormAutofill", "LoginManager", "FormHistory"];
+  // entry. LoginManager is prioritized to handle potential username fields first,
+  // allowing FormAutofill to safely support single email fields without
+  // manual exclusions.
+  #AUTOCOMPLETE_PROVIDERS = ["LoginManager", "FormAutofill", "FormHistory"];
 
   /**
    * Search across multiple module to gather autocomplete entries for a given search string.

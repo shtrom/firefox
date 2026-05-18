@@ -2,7 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-import { CATEGORIES_LIST, INTENTS_LIST } from "./MemoriesConstants.sys.mjs";
+import {
+  CATEGORIES_LIST,
+  INTENTS_LIST,
+  MAX_MEMORY_SUMMARY_LENGTH,
+} from "./MemoriesConstants.sys.mjs";
 
 /**
  * JSON Schema for initial memories generation
@@ -31,7 +35,10 @@ export const INITIAL_MEMORIES_SCHEMA = {
         type: ["string", "null"],
         enum: [...INTENTS_LIST, null],
       },
-      memory_summary: { type: ["string", "null"] },
+      memory_summary: {
+        type: ["string", "null"],
+        maxLength: MAX_MEMORY_SUMMARY_LENGTH,
+      },
       score: { type: "integer" },
 
       reasoning: { type: "string", minLength: 12, maxLength: 200 },
@@ -113,6 +120,26 @@ export const MEMORIES_NON_SENSITIVE_SCHEMA = {
     required: ["non_sensitive_memories"],
     properties: {
       non_sensitive_memories: {
+        type: "array",
+        minItems: 1,
+        items: { type: "string" },
+      },
+    },
+  },
+};
+
+/**
+ * JSON schema for filtering low-quality memories
+ */
+export const MEMORIES_QUALITY_FILTER_SCHEMA = {
+  type: "array",
+  minItems: 1,
+  items: {
+    type: "object",
+    additionalProperties: false,
+    required: ["good_memories"],
+    properties: {
+      good_memories: {
         type: "array",
         minItems: 1,
         items: { type: "string" },

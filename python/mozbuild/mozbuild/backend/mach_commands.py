@@ -252,7 +252,9 @@ def rust_analyzer_config(command_context):
         if sys.platform == "win32":
             cargo_check_command = [sys.executable, "../../mach"]
         else:
-            cargo_check_command = ["../../mach"]
+            # This needs to be an absolute path so the searchfox indexing can
+            # find the mach binary.
+            cargo_check_command = [os.path.join(command_context.topsrcdir, "mach")]
     elif sys.platform == "win32":
         cargo_check_command = [sys.executable, "mach"]
     else:
@@ -534,7 +536,12 @@ def setup_clangd_rust_in_vscode(command_context):
     clangd_cfg = {
         "CompileFlags": {
             "CompilationDatabase": clangd_cc_path,
-        }
+        },
+        "Completion": {
+            # NOTE(emilio): This got ported from previous code, but it's unclear if it's
+            # what we want...
+            "HeaderInsertion": "Never",
+        },
     }
 
     with open(".clangd", "w") as file:
@@ -549,14 +556,6 @@ def setup_clangd_rust_in_vscode(command_context):
             "0",
             "--completion-style",
             "detailed",
-            "--background-index",
-            "--all-scopes-completion",
-            "--log",
-            "info",
-            "--pch-storage",
-            "disk",
-            "--clang-tidy",
-            "--header-insertion=never",
         ],
     }
 

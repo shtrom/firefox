@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -255,8 +253,8 @@ struct IntrinsicIncDec : public IntrinsicAddSub<T, Order> {
 };
 
 template <typename T, MemoryOrdering Order>
-struct AtomicIntrinsics : public IntrinsicMemoryOps<T, Order>,
-                          public IntrinsicIncDec<T, Order> {
+struct MOZ_EMPTY_BASES AtomicIntrinsics : public IntrinsicMemoryOps<T, Order>,
+                                          public IntrinsicIncDec<T, Order> {
   typedef IntrinsicBase<T, Order> Base;
 
   static T or_(typename Base::ValueType& aPtr, T aVal) {
@@ -273,8 +271,9 @@ struct AtomicIntrinsics : public IntrinsicMemoryOps<T, Order>,
 };
 
 template <typename T, MemoryOrdering Order>
-struct AtomicIntrinsics<T*, Order> : public IntrinsicMemoryOps<T*, Order>,
-                                     public IntrinsicIncDec<T*, Order> {};
+struct MOZ_EMPTY_BASES
+    AtomicIntrinsics<T*, Order> : public IntrinsicMemoryOps<T*, Order>,
+                                  public IntrinsicIncDec<T*, Order> {};
 
 template <typename T>
 struct ToStorageTypeArgument {

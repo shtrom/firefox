@@ -98,6 +98,10 @@ tasks:
         suite: web-platform-tests
         treeherder-symbol: W(wpt)
         virtualization: virtual
+        worker-type:
+            by-test-platform:
+                .*windows.*: win11-64-25h2
+                default: default
         tier:
             by-variant:
                 no-fission:
@@ -132,18 +136,12 @@ tasks:
                 default: 7200
         variants:
             - no-fission
-            - geckoview-no-fission-no-ship
             - async-event-dispatching
             - privatebrowsing
             - inc-origin-init
             - privatebrowsing-inc-origin-init
         run-on-projects:
             by-variant:
-                geckoview-no-fission-no-ship:
-                    by-test-platform:
-                        android-em.*/debug-isolated-process: []
-                        android-em.*: built-projects
-                        default: []
                 no-fission:
                     by-test-platform:
                         android-em.*/debug-isolated-process: []
@@ -188,6 +186,10 @@ tasks:
     web-platform-tests-backlog:
         description: "Web platform test (backlog) run"
         treeherder-symbol: W-b(wpt)
+        worker-type:
+            by-test-platform:
+                .*windows.*: win11-64-25h2
+                default: default
         variants:
             - no-fission
         chunks:
@@ -229,6 +231,10 @@ tasks:
         suite: web-platform-tests
         treeherder-symbol: W(codecs)
         virtualization: virtual
+        worker-type:
+            by-test-platform:
+                .*windows.*: win11-64-25h2
+                default: default
         tier: default
         chunks: dynamic
         default-chunks: 1
@@ -282,6 +288,10 @@ tasks:
             by-test-platform:
                 windows.*64.*/.*: virtual-with-gpu
                 default: virtual
+        worker-type:
+            by-test-platform:
+                .*windows.*: win11-64-25h2-gpu
+                default: default
         chunks: dynamic
         default-chunks:
             by-test-platform:
@@ -370,8 +380,7 @@ tasks:
         # (though we're working on reducing this!)
         # Devs would love ~10-15m runs, but we don't want to be more than
         # 50% overhead, so let's aim for 15m (20m debug)
-        chunks: dynamic
-        default-chunks:
+        chunks:
             by-test-platform:
                 linux2204.*/debug.*: 25
                 linux2204.*: 20
@@ -399,7 +408,7 @@ tasks:
                 - --timeout-multiplier=5.0
         worker-type:
             by-test-platform:
-                .*windows.*: win11-64-24h2-webgpu
+                .*windows.*: win11-64-25h2-webgpu
                 default: default
 
     web-platform-tests-webgpu-long:
@@ -408,8 +417,7 @@ tasks:
         treeherder-symbol: W(webgpu-long)
         virtualization: virtual-with-gpu
         tier: 2
-        chunks: dynamic
-        default-chunks: 2
+        chunks: 2
         max-run-time: 5400  # 90m
         variants: []  # We don't need sw or nofis testing.
         run-on-projects:
@@ -425,6 +433,10 @@ tasks:
                 - --skip-implementation-status=backlog
                 - --skip-implementation-status=not-implementing
                 - --timeout-multiplier=5.0
+        worker-type:
+            by-test-platform:
+                .*windows.*: win11-64-25h2-webgpu
+                default: default
 
     web-platform-tests-webgpu-backlog:
         description: "Web platform WebGPU test run (backlog)"
@@ -437,8 +449,7 @@ tasks:
         # (though we're working on reducing this!)
         # Devs would love ~10-15m runs, but we don't want to be more than
         # 50% overhead, so let's aim for 15m (20m debug)
-        chunks: dynamic
-        default-chunks:
+        chunks:
             by-test-platform:
                 linux2204.*-64.*: 20
                 macosx.*: 25
@@ -466,7 +477,7 @@ tasks:
                 - --timeout-multiplier=5.0
         worker-type:
             by-test-platform:
-                .*windows.*: win11-64-24h2-webgpu
+                .*windows.*: win11-64-25h2-webgpu
                 default: default
 
     web-platform-tests-webgpu-backlog-long:
@@ -475,8 +486,7 @@ tasks:
         treeherder-symbol: W(webgpu-backlog-long)
         virtualization: virtual-with-gpu
         tier: 3
-        chunks: dynamic
-        default-chunks:
+        chunks:
             by-test-platform:
                 macosx.*: 5
                 windows.*-64.*: 6
@@ -494,12 +504,20 @@ tasks:
                 - --skip-implementation-status=not-implementing
                 - --backlog
                 - --timeout-multiplier=5.0
+        worker-type:
+            by-test-platform:
+                .*windows.*: win11-64-25h2-webgpu
+                default: default
 
     web-platform-tests-canvas:
         description: "Web platform Canvas test run"
         suite: web-platform-tests
         treeherder-symbol: W(canvas)
         virtualization: virtual-with-gpu
+        worker-type:
+            by-test-platform:
+                .*windows.*: win11-64-25h2-gpu
+                default: default
         tier:
             by-variant:
                 no-fission:
@@ -563,6 +581,10 @@ tasks:
         schedules-component: web-platform-tests-reftest
         treeherder-symbol: W-b(Wr)
         virtualization: virtual
+        worker-type:
+            by-test-platform:
+                .*windows.*: win11-64-25h2
+                default: default
         chunks: 1
         variants:
             - no-fission
@@ -594,6 +616,10 @@ tasks:
         description: "Web platform webdriver-spec run"
         schedules-component: web-platform-tests-wdspec
         treeherder-symbol: W(Wd)
+        worker-type:
+            by-test-platform:
+                .*windows.*: win11-64-25h2
+                default: default
         chunks: dynamic
         default-chunks:
             by-test-platform:
@@ -611,7 +637,6 @@ tasks:
                         - --test-type=wdspec
         variants:
             - no-fission
-            - geckoview-no-fission-no-ship
             - headless
             - async-event-dispatching
         run-on-projects:
@@ -626,11 +651,6 @@ tasks:
                         linux2404-64-shippable/opt: ['mozilla-central']
                         linux2404-64-asan/opt: ['mozilla-central']
                         android.*: built-projects
-                        default: []
-                geckoview-no-fission-no-ship:
-                    by-test-platform:
-                        android-em.*/debug-isolated-process: []
-                        android-em.*: built-projects
                         default: []
                 async-event-dispatching:
                     by-test-platform:
@@ -664,7 +684,7 @@ tasks:
                         - macosx64-minidump-stackwalk
                         - macosx64-fix-stacks
                     macosx.*-aarch64.*:
-                        - macosx64-aarch64-geckodriver
+                        - macosx64-geckodriver
                         - macosx64-aarch64-minidump-stackwalk
                         - macosx64-aarch64-fix-stacks
                     win.*-32.*:
@@ -684,6 +704,10 @@ tasks:
         description: "Web platform crashtests run"
         schedules-component: web-platform-tests-crashtest
         treeherder-symbol: W(Wc)
+        worker-type:
+            by-test-platform:
+                .*windows.*: win11-64-25h2
+                default: default
         chunks: dynamic
         default-chunks:
             by-test-platform:
@@ -743,6 +767,10 @@ tasks:
         description: "Web platform print-reftest run"
         schedules-component: web-platform-tests-print-reftest
         treeherder-symbol: W(Wp)
+        worker-type:
+            by-test-platform:
+                .*windows.*: win11-64-25h2
+                default: default
         chunks: 1
         test-manifest-loader: null  # don't load tests in the taskgraph
         tier:
@@ -799,6 +827,10 @@ tasks:
             category: test-verify
             name: test-verify-wpt
         treeherder-symbol: TVw
+        worker-type:
+            by-test-platform:
+                .*windows.*: win11-64-25h2
+                default: default
         max-run-time: 10800
         run-on-projects:
             by-test-platform:
@@ -829,7 +861,7 @@ tasks:
                         - macosx64-minidump-stackwalk
                         - macosx64-fix-stacks
                     macosx.*-aarch64.*:
-                        - macosx64-aarch64-geckodriver
+                        - macosx64-geckodriver
                         - macosx64-aarch64-minidump-stackwalk
                         - macosx64-aarch64-fix-stacks
                     win.*-32.*:
@@ -852,6 +884,10 @@ tasks:
             name: test-coverage-wpt
         schedules-component: test-coverage-wpt
         treeherder-symbol: TCw
+        worker-type:
+            by-test-platform:
+                .*windows.*: win11-64-25h2
+                default: default
         max-run-time: 10800
         variants:
             - no-fission

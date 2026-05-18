@@ -170,15 +170,12 @@ const NimbusLogging = {
   },
 };
 
-let _testSuite = null;
-
 export const NimbusTestUtils = {
   init(testCase) {
-    _testSuite = testCase;
-
+    const assert = testCase.Assert;
     Object.defineProperty(NimbusTestUtils, "Assert", {
       configurable: true,
-      get: () => _testSuite.Assert,
+      get: () => assert,
     });
   },
 
@@ -439,7 +436,14 @@ export const NimbusTestUtils = {
      * @param {object?} props
      *        Additional properties to splat into to the
      */
-    recipe(slug, props = {}) {
+    recipe(
+      slug,
+      { isFirefoxLabsOptIn = false, isRollout = false, ...props } = {}
+    ) {
+      if (isFirefoxLabsOptIn && !isRollout) {
+        throw new Error("isFirefoxLabsOptIn requires isRollout");
+      }
+
       return {
         id: slug,
         schemaVersion: "1.7.0",
@@ -454,7 +458,7 @@ export const NimbusTestUtils = {
         proposedEnrollment: 7,
         referenceBranch: "control",
         application: "firefox-desktop",
-        branches: props?.isRollout
+        branches: isRollout
           ? [NimbusTestUtils.factories.recipe.branches[0]]
           : NimbusTestUtils.factories.recipe.branches,
         bucketConfig: NimbusTestUtils.factories.recipe.bucketConfig,
@@ -464,12 +468,14 @@ export const NimbusTestUtils = {
           "testFeature",
         ],
         targeting: "true",
-        isRollout: false,
-        isFirefoxLabsOptIn: false,
-        firefoxLabsTitle: null,
-        firefoxLabsDescription: null,
+        isRollout,
+        isFirefoxLabsOptIn,
+        firefoxLabsTitle: isFirefoxLabsOptIn ? "placeholder-title" : null,
+        firefoxLabsDescription: isFirefoxLabsOptIn
+          ? "placeholder-description"
+          : null,
         firefoxLabsDescriptionLinks: null,
-        firefoxLabsGroup: null,
+        firefoxLabsGroup: isFirefoxLabsOptIn ? "placeholder-group" : null,
         requiresRestart: false,
         localizations: null,
         ...props,
@@ -1331,6 +1337,8 @@ export const NimbusTestUtils = {
 
         // Remove all migration state.
         Services.prefs.deleteBranch("nimbus.migrations.");
+
+        Services.prefs.clearUserPref("nimbus.firstUpdateComplete");
 
         NimbusLogging.maybeResetLogLevel();
       },

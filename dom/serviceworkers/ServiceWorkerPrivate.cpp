@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -311,9 +309,6 @@ Result<IPCInternalRequest, nsresult> GetIPCInternalRequest(
   nsCOMPtr<nsICacheInfoChannel> cacheInfoChannel =
       do_QueryInterface(underlyingChannel);
 
-  nsAutoCString spec;
-  MOZ_TRY(uriNoFragment->GetSpec(spec));
-
   nsAutoCString fragment;
   MOZ_TRY(uri->GetRef(fragment));
 
@@ -427,9 +422,9 @@ Result<IPCInternalRequest, nsresult> GetIPCInternalRequest(
   // Note: all the arguments are copied rather than moved, which would be more
   // efficient, because there's no move-friendly constructor generated.
   return IPCInternalRequest(
-      method, {spec}, ipcHeadersGuard, ipcHeaders, Nothing(), -1,
-      alternativeDataType, contentPolicyType, internalPriority, referrer,
-      referrerPolicy, environmentReferrerPolicy, requestMode,
+      method, {WrapNotNull(uriNoFragment.get())}, ipcHeadersGuard, ipcHeaders,
+      Nothing(), -1, alternativeDataType, contentPolicyType, internalPriority,
+      referrer, referrerPolicy, environmentReferrerPolicy, requestMode,
       requestCredentials, cacheMode, requestRedirect, requestPriority,
       integrity, false, fragment, principalInfo, interceptionPrincipalInfo,
       contentPolicyType, redirectChain, isThirdPartyChannel, embedderPolicy);
@@ -770,7 +765,7 @@ nsresult ServiceWorkerPrivate::Initialize() {
       OriginTrials(), std::move(serviceWorkerData), regInfo->AgentClusterId(),
       remoteType.unwrap());
 
-  mRemoteWorkerData.referrerInfo() = MakeAndAddRef<ReferrerInfo>();
+  mRemoteWorkerData.referrerInfo() = MakeAndAddRef<ReferrerInfo>(nullptr);
 
   // This fills in the rest of mRemoteWorkerData.serviceWorkerData().
   RefreshRemoteWorkerData(regInfo);

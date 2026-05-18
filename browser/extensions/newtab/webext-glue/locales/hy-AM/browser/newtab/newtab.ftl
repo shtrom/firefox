@@ -8,9 +8,13 @@
 newtab-page-title = Նոր ներդիր
 newtab-settings-button =
     .title = Հարմարեցրեք ձեր Նոր Ներդիր էջը
+#  (developer note): @nova-cleanup(remove-string): Remove newtab-customize-panel-icon-button once Nova lands, will be using newtab-customize-panel-label instead
 newtab-customize-panel-icon-button =
     .title = Հարմարեցնել այս էջը
+#  (developer note): @nova-cleanup(remove-string): Remove newtab-customize-panel-icon-button-label once Nova lands, will be using newtab-customize-panel-label instead
 newtab-customize-panel-icon-button-label = Հարմարեցնել
+newtab-customize-panel-label =
+    .label = Հարմարեցնել
 newtab-personalize-settings-icon-label =
     .title = Անհատականացնել նոր ներդիրը
     .aria-label = Կարգավորումներ
@@ -72,6 +76,11 @@ newtab-topsites-url-validation = Անհրաժեշտ է վավեր URL
 newtab-topsites-image-url-label = Հարմարեցված պատկերի URL
 newtab-topsites-use-image-link = Օգտագործել հարմարեցված պատկեր...
 newtab-topsites-image-validation = Նկարը չհաջողվեց բեռնել: Փորձեք այլ URL.
+
+## Clear text button for the URL and image URL input fields in the Top Sites form.
+
+newtab-topsites-clear-input =
+    .aria-label = Մաքրել տեքստը
 
 ## Top Sites - General form dialog buttons. These are verbs/actions.
 
@@ -141,6 +150,9 @@ newtab-menu-report = Զեկուցել
 newtab-menu-section-block = Արգելափակել
 # "Follow", "unfollow", and "following" are social media terms that refer to subscribing to or unsubscribing from a section of stories.
 # e.g. Following the travel section of stories.
+newtab-menu-section-unfollow-topic = Չհետևել
+# "Follow", "unfollow", and "following" are social media terms that refer to subscribing to or unsubscribing from a section of stories.
+# e.g. Following the travel section of stories.
 newtab-menu-section-unfollow = Չհետևել թեմային
 
 ## Context menu options for sponsored stories and new ad formats on New Tab.
@@ -151,7 +163,7 @@ newtab-menu-report-this-ad = Հաղորդել այս գովազդի մասին
 
 ## Message displayed in a modal window to explain privacy and provide context for sponsored content.
 
-newtab-privacy-modal-button-done = Ավարտ
+newtab-privacy-modal-button-done = Պատրաստ է։
 newtab-privacy-modal-button-manage = Կառավարել հովանավորված բովանդակության կարգավորումները
 newtab-privacy-modal-header = Ձեր գաղտնիությունը կարևոր է։
 newtab-privacy-modal-paragraph-2 =
@@ -299,9 +311,21 @@ newtab-error-fallback-refresh-link = Թարմացրեք էջը՝ կրկին փո
 
 newtab-custom-shortcuts-title = Դյուրանցումներ
 newtab-custom-shortcuts-subtitle = Կայքեր, որոնք պահել կամ այցելել եք
+#  (developer note): @nova-cleanup(remove-string): Remove old string once Nova lands. The newtab-custom-shortcuts-nova string will take over
 newtab-custom-shortcuts-toggle =
     .label = Դյուրանցումներ
     .description = Կայքեր, որոնք պահել կամ այցելել եք
+newtab-custom-shortcuts-nova =
+    .label = Դյուրանցումներ
+# Variables
+#   $num (number) - Number of rows to display
+#  (developer note): @nova-cleanup(remove-string): Remove string once Nova lands. We won't be using "row"/"rows" anymore for the dropdown
+newtab-custom-row-selector2 =
+    .label =
+        { $num ->
+            [one] { $num } տող
+           *[other] { $num } տող
+        }
 # Variables
 #   $num (number) - Number of rows to display
 newtab-custom-row-selector =
@@ -326,6 +350,10 @@ newtab-custom-widget-lists-toggle =
     .label = Ցանկեր
 newtab-custom-widget-timer-toggle =
     .label = ժամաչափ
+newtab-custom-widget-sports-toggle =
+    .label = Աշխարհի գավաթ
+newtab-custom-widget-clock-toggle =
+    .label = Ժամացույց
 newtab-custom-widget-section-title = Վիջեթներ
 newtab-custom-widget-section-toggle =
     .label = Վիջեթներ
@@ -343,8 +371,12 @@ newtab-custom-settings = Կառավարել լրացուցիչ կարգավոր�
 
 newtab-wallpaper-title = Պաստառներ
 newtab-wallpaper-reset = Վերակայել սկզբնադիրը
+#  (developer note): @nova-cleanup(remove-string): Remove old "Upload an image" string once Nova lands. The new "Add an image"  string will take over
 newtab-wallpaper-upload-image = Վերբեռնել պատկեր
+newtab-wallpaper-add-an-image = Հավելել պատկեր
 newtab-wallpaper-custom-color = Ընտրել գույն
+newtab-wallpaper-toggle-title =
+    .label = Պաստառներ
 newtab-wallpaper-error-upload-file-type = Մենք չկարողացանք վերբեռնել ձեր ֆայլը։ Խնդրում ենք կրկին փորձել պատկերի ֆայլով։
 newtab-wallpaper-light-red-panda = Կարմիր պանդա
 newtab-wallpaper-light-mountain = Սպիտակ լեռ
@@ -363,7 +395,9 @@ newtab-wallpaper-light-fox-anniversary = Աղվեսը խոտածածկ դաշտ�
 
 ## Solid Colors
 
+#  (developer note): @nova-cleanup(remove-string): Remove old "Solid colors" string once Nova lands. The simplified "Colors" string will take over
 newtab-wallpaper-category-title-colors = Կոշտ գույներ
+newtab-wallpaper-colors = Գույներ
 newtab-wallpaper-blue = Կապույտ
 newtab-wallpaper-light-blue = Բաց կապույտ
 newtab-wallpaper-light-purple = Բաց մանուշակագույն
@@ -391,6 +425,8 @@ newtab-wallpaper-gradient-orange = Գրադիենտ նարնջագույն և վ
 newtab-wallpaper-abstract-blue-purple = Կապույտ և մանուշակագույն ձևեր
 newtab-wallpaper-abstract-white-curves = Սպիտակ՝ ստվերագծված կորերով
 newtab-wallpaper-abstract-purple-green = Մանուշակագույն և կանաչ լույսի գրադիենտ
+newtab-wallpaper-abstract-blue-purple-waves = Կապույտ և մանուշակագույն ալիքավոր ձևեր
+newtab-wallpaper-abstract-black-waves = Սև ալիքավոր ձևեր
 
 ## Firefox
 
@@ -401,6 +437,7 @@ newtab-wallpaper-storm-sky = Փոթորիկ երկինք
 newtab-wallpaper-sky-with-pink-clouds = Երկինք վարդագույն ամպերով
 newtab-wallpaper-red-panda-yawns-in-a-tree = Կարմիր պանդան հորանջում է ծառի վրա
 newtab-wallpaper-white-mountains = Սպիտակ լեռներ
+newtab-wallpaper-sand-dunes = Սպիտակ ավազաբլուրներ
 # Variables
 #   $author_string (String) - The name of the creator of the photo.
 #   $webpage_string (String) - The name of the webpage where the photo is located.
@@ -447,6 +484,8 @@ newtab-weather-change-location-search-input-placeholder =
     .placeholder = Որոնել գտնվելու վայրը
     .aria-label = Որոնել գտնվելու վայրը
 newtab-weather-menu-weather-display = Եղանակի ցուցադրում
+newtab-weather-todays-forecast = Այսօրվա կանխատեսումը
+newtab-weather-see-full-forecast = Դիտել ամբողջական կանխատեսումը
 # Display options are:
 # - Simple: Displays a current weather condition icon and the current temperature
 # - Detailed: Include simple information plus a short text summary: e.g. "Mostly cloudy"
@@ -469,8 +508,16 @@ newtab-weather-opt-in-not-now =
     .label = Ոչ հիմա
 newtab-weather-opt-in-yes =
     .label = Այո
+newtab-weather-opt-in-use-location =
+    .label = Օգտագործել տեղադրությունը
 # We'll be showing static (fake) weather data if the user has not opted in to using their location
 newtab-weather-static-city = Նյու Յորք քաղաք
+# "Highest" here refers to the highest temperature of the day
+newtab-weather-high =
+    .aria-label = Բարձր
+# "Lowest" here refers to the lowest temperature of the day
+newtab-weather-low =
+    .aria-label = Ցածր
 # Variables:
 #   $provider (string) - Service provider for weather data
 newtab-weather-see-forecast-description =
@@ -531,6 +578,22 @@ newtab-section-follow-highlight-title = Կարգավորեք ձեր լրահոս
 newtab-section-block-button = Արգելափակել
 newtab-section-blocked-button = Արգելափակված
 newtab-section-unblock-button = Ապաարգելափակել
+# Variables:
+#   $topic (string) - Name of topic that user is following
+newtab-section-follow-topic =
+    .aria-label = Հետևել { $topic }-ին
+# Variables:
+#   $topic (string) - Name of topic that user is unfollowing
+newtab-section-unfollow-topic =
+    .aria-label = Չհետևել { $topic }-ին
+# Variables:
+#   $topic (string) - Name of topic that user is blocking
+newtab-section-block-topic =
+    .aria-label = Արգելափակել { $topic }-ը
+# Variables:
+#   $topic (string) - Name of topic that user is unblocking
+newtab-section-unblock-topic =
+    .aria-label = Ապաարգելափակել { $topic }-ը
 
 ## Confirmation modal for blocking a section
 
@@ -538,6 +601,7 @@ newtab-section-cancel-button = Ոչ հիմա
 # Variables:
 #   $topic (string) - Name of topic that user is blocking
 newtab-section-block-topic-button = Արգելափակել { $topic }-ը
+newtab-section-block-cancel-button = Չեղարկել
 
 ## Strings for custom wallpaper highlight
 
@@ -556,6 +620,10 @@ newtab-custom-wallpaper-cta = Փորձել
 ## Strings for new user activation custom wallpaper highlight
 
 newtab-new-user-custom-wallpaper-cta = Փորձել հիմա
+
+## Strings for Nova wallpaper feature highlight
+
+newtab-wallpaper-feature-highlight-cta = Ընտրեք պաստառ
 
 ## Strings for download mobile highlight
 
@@ -586,11 +654,21 @@ newtab-report-content-inappropriate-offensive =
     .label = Անպատշաճ կամ վիրավորական
 newtab-report-content-spam-misleading =
     .label = Սպամ կամ մոլորեցնող
+newtab-report-content-requires-payment-subscription =
+    .label = Պահանջվում է վճարում կամ բաժանորդագրություն
 newtab-report-content-requires-payment-subscription-learn-more = Իմանալ ավելին
 newtab-report-cancel = Չեղարկել
 newtab-report-submit = Ուղարկել
 newtab-toast-thanks-for-reporting =
     .message = Շնորհակալություն հայտնելու համար:
+# Variables:
+#   $topic (string) - Topic that the user has followed
+newtab-section-toast-follow =
+    .message = Դուք այժմ հետևում եք { $topic }-ին։
+# Variables:
+#   $topic (string) - Topic that the user has unfollowed
+newtab-section-toast-unfollow =
+    .message = Դուք այլևս չեք հետևում { $topic }-ին։
 
 ## Strings for task / to-do list productivity widget
 
@@ -605,13 +683,20 @@ newtab-widget-lists-label-beta =
 # Variables:
 #   $number (number) - Amount of list items marked complete
 newtab-widget-lists-completed-list = Ավարտված է ({ $number })
+newtab-widget-lists-celebration-headline = Լավ աշխատանք
+newtab-widget-lists-celebration-subhead = Ամեն ինչ պարզ է
 newtab-widget-task-list-menu-copy = Պատճենել
 newtab-widget-lists-menu-edit = Խմբագրել ցանկի անունը
+newtab-widget-lists-menu-edit2 =
+    .aria-label = Խմբագրել ցանկի անունը
 newtab-widget-lists-menu-create = Ստեղծել նոր ցանկ
 newtab-widget-lists-menu-delete = Ջնջել այս ցանկը
 newtab-widget-lists-menu-copy = Պատճենել ցանկը սեղմատախտակին
-newtab-widget-lists-menu-hide = Թաքցնել բոլոր ցանկերը
 newtab-widget-lists-menu-learn-more = Իմանալ ավելին
+newtab-widget-lists-button-add-item = Ավելացնել միույթ
+newtab-widget-lists-input-add-an-item2 =
+    .placeholder = Ավելացնել միույթ
+    .aria-label = Ավելացնել միույթ
 newtab-widget-lists-input-add-an-item =
     .placeholder = Ավելացնել միույթ
 newtab-widget-lists-input-error = Խնդրում ենք ներառել տեքստ՝ տարր ավելացնելու համար։
@@ -627,10 +712,18 @@ newtab-widget-lists-name-label-default =
     .label = Առաջադրանքների ցանկ
 newtab-widget-lists-name-placeholder-default =
     .placeholder = Առաջադրանքների ցանկ
+newtab-widget-lists-name-placeholder-checklist2 =
+    .placeholder = Ստուգաթերթիկ
+    .aria-label = Խմբագրել ցանկի անունը
+# The placeholder value of the name field for a newly created list
+newtab-widget-lists-name-placeholder-new2 =
+    .placeholder = Նոր ցանկ
+    .aria-label = Խմբագրել ցանկի անունը
 # The placeholder value of the name field for a newly created list
 newtab-widget-lists-name-placeholder-new =
     .placeholder = Նոր ցանկ
 newtab-widget-section-title = Վիջեթներ
+newtab-widget-menu-hide = Թաքցնել վիջեթը
 # Tooltip for hide all widgets button
 newtab-widget-section-hide-all-button =
     .title = Թաքցնել վիջեթները
@@ -641,9 +734,19 @@ newtab-widget-section-maximize =
 newtab-widget-section-minimize =
     .title = Փոքրացնել վիջեթները
     .aria-label = Կոծկել բոլոր վիջեթները սեղմ չափի
+newtab-widget-section-menu-button =
+    .title = Վիջեթների ցանկ
+    .aria-label = Բացել վիջեթների ցանկը
+newtab-widget-add-widgets-button =
+    .aria-label = Ավելացնել վիջեթ
+    .title = Ավելացնել վիջեթ
+newtab-widget-section-menu-manage = Կառավարել վիջեթները
+newtab-widget-section-menu-hide-all = Թաքցնել վիջեթները
+newtab-widget-section-menu-learn-more = Իմանալ ավելին
+newtab-widget-section-feedback = Ասեք մեզ, թե ինչ եք կարծում
+newtab-widget-lists-name-default = Ստուգաթերթիկ
 
-## Strings for timer productivity widget
-## When the timer ends, a system notification may be shown. Depending on which mode the timer is in, that message would be shown
+## Strings introduced by the Nova redesign of the Timer widget
 
 newtab-widget-timer-notification-title = ժամաչափ
 newtab-widget-timer-notification-focus = Կենտրոնանալու ժամանակը սպառվեց։ Լավ աշխատանք։ Հանգստի կարիք ունե՞ք։
@@ -661,15 +764,53 @@ newtab-widget-timer-reset =
     .title = Վերակայել
 newtab-widget-timer-menu-notifications = Անջատել ծանուցումները
 newtab-widget-timer-menu-notifications-on = Միացնել ծանուցումները
-newtab-widget-timer-menu-hide = Թաքցնել ժամաչափը
 newtab-widget-timer-menu-learn-more = Իմանալ ավելին
+# The title displays above a set of top news headlines.
+newtab-daily-briefing-card-title = Առաջատար վերնագրեր
 newtab-widget-message-title = Մնացեք կենտրոնացած ցուցակների և ներկառուցված ժամանակաչափի միջոցով
+newtab-promo-card-body-addons = Ընտրեք պաստառ մեր հավաքածուից կամ ստեղծեք ձեր սեփականը։
+newtab-promo-card-cta-addons = Փորձել հիմա
 newtab-promo-card-title = Աջակցել { -brand-product-name }-ին
 newtab-promo-card-body = Մեր հովանավորները աջակցում են ավելի լավ համացանց կերտելու մեր առաքելությանը
 newtab-promo-card-cta = Իմանալ ավելին
 newtab-promo-card-dismiss-button =
     .title = Բաց թողնել
     .aria-label = Բաց թողնել
+
+## Strings introduced by the Nova redesign of the Timer widget
+
+# Message shown inside the Timer widget after a focus session ends.
+newtab-widget-timer-celebration-message-focus = Հանգստի կարիք ունե՞ք։
+# Message shown inside the Timer widget after a break session ends.
+newtab-widget-timer-celebration-message-break = Պատրա՞ստ եք կենտրոնանալու։
+
+## Sports widget
+
+# Milestone dates (e.g. group stage, semifinals, etc.). Refers to calendar dates.
+newtab-sports-widget-menu-key-dates = Հիմնական ամսաթվերը
+newtab-sports-widget-menu-learn-more = Իմանալ ավելին
+# “Keep tabs on” is an informal expression meaning to stay updated on, stay informed on, or regularly follow something (in this case, World Cup matches and updates).
+newtab-sports-widget-keep-tabs = Հետևեք Աշխարհի գավաթին
+newtab-sports-widget-cancel = Չեղարկել
+newtab-sports-widget-done-button =
+    .label = Պատրաստ է
+newtab-sports-widget-group-stage = Խմբային փուլ
+newtab-sports-widget-round-32 = 32-ի փուլ
+newtab-custom-widget-live-refresh =
+    .title = Թարմացնել միավորները
+    .aria-label = Թարմացնել միավորները
+newtab-sports-widget-upcoming = Առաջիկա
+newtab-sports-widget-results = Արդյունքներ
+newtab-sports-widget-semi-finals = Կիսաեզրափակիչներ
+newtab-sports-widget-bronze-finals = Բրոնզե եզրափակիչ
+# Final is the final match for 1st place.
+newtab-sports-widget-final = Եզրափակիչ
+newtab-sports-widget-delayed = Հետաձգված
+newtab-sports-widget-cancelled = Չեղարկված
+newtab-sports-widget-view-results-link = Դիտել արդյունքները
+newtab-sports-widget-third-place = Երրորդ տեղը
+newtab-sports-widget-champions = Չեմպիոններ
+newtab-sports-widget-world-cup-champions = 2026 թվականի աշխարհի առաջնության չեմպիոններ
 
 ## Strings for activation window message variants. In certain experiment configurations,
 ## the strings from these variants may be displayed in a message below the search input
@@ -683,3 +824,10 @@ newtab-activation-window-message-customization-focus-primary-button =
 # action is to customize newtab with a background image or colour, or by tweaking
 # the existing widgetry that appears on it.
 newtab-activation-window-message-values-focus-header = Այս տարածքը խաղում է ձեր կանոններով
+
+## Strings for the Clock widget
+
+newtab-clock-widget-button-add-clock = Ավելացնել
+newtab-clock-widget-button-save = Պահել
+# $nickname (String) - The user-defined nickname for a saved clock location (e.g., "Home", "Office").
+newtab-clock-widget-label-nickname-with-value = Մականուն՝ { $nickname }

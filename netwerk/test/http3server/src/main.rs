@@ -8,7 +8,7 @@ use base64::prelude::*;
 use neqo_bin::server::{HttpServer, Runner};
 use neqo_common::Bytes;
 use neqo_common::{event::Provider, qdebug, qerror, qinfo, qtrace, Datagram, Header};
-use neqo_crypto::{generate_ech_keys, init_db, AllowZeroRtt, AntiReplay};
+use nss_rs::{generate_ech_keys, init_db, AllowZeroRtt, AntiReplay};
 use neqo_http3::{
     ConnectUdpRequest, ConnectUdpServerEvent, Error, Http3OrWebTransportStream, Http3Parameters,
     Http3Server, Http3ServerEvent, SessionAcceptAction, StreamId, WebTransportRequest,
@@ -326,6 +326,10 @@ impl HttpServer for Http3TestServer {
                                 stream
                                     .stream_reset_send(Error::HttpRequestRejected.code())
                                     .unwrap();
+                            } else if path == b"/UnknownReset" {
+                                // Reset with an unrecognized application error code.
+                                stream.stream_stop_sending(0xfe).unwrap();
+                                stream.stream_reset_send(0xfe).unwrap();
                             } else if path == b"/closeafter1000ms" {
                                 let response_body = b"0123456789".to_vec();
                                 stream
@@ -1239,14 +1243,21 @@ impl HttpServer for Http3ConnectProxyServer {
                     );
                     let tcp_stream = self.tcp_streams.get_mut(&stream.stream_id()).unwrap();
                     while !tcp_stream.recv_buffer.is_empty() {
-                        let sent = stream
-                            .send_data(&tcp_stream.recv_buffer.make_contiguous(), now)
-                            .unwrap();
-                        qtrace!("tcp_stream send to client sent={}", sent);
-                        if sent == 0 {
-                            break;
+                        match stream.send_data(&tcp_stream.recv_buffer.make_contiguous(), now) {
+                            Ok(sent) => {
+                                qtrace!("tcp_stream send to client sent={}", sent);
+                                if sent == 0 {
+                                    // no progress possible right now — stop trying to send in this loop
+                                    // (could also mark for later retry)
+                                    break;
+                                }
+                                tcp_stream.recv_buffer.drain(0..sent);
+                            }
+                            Err(e) => {
+                                eprintln!("send_data failed: {:?}", e);
+                                break;
+                            }
                         }
-                        tcp_stream.recv_buffer.drain(0..sent);
                     }
                 }
                 Http3ServerEvent::ConnectUdp(ConnectUdpServerEvent::NewSession {
@@ -1427,7 +1438,10 @@ impl HttpServer for Http3ConnectProxyServer {
                         buf.resize(len, 0);
                         // TODO: Might overflow our current datagram buffer of 10
                         // https://github.com/mozilla/neqo/issues/2852
-                        socket.session.send_datagram(buf.as_slice(), None).unwrap();
+                        socket
+                            .session
+                            .send_datagram(buf.as_slice(), None, Instant::now())
+                            .unwrap();
                         progressed = true;
                     }
                     Poll::Ready(Err(e)) => {

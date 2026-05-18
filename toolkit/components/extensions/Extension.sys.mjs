@@ -1,5 +1,3 @@
-/* -*- Mode: indent-tabs-mode: nil; js-indent-level: 2 -*- */
-/* vim: set sts=2 sw=2 et tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -1617,22 +1615,6 @@ export class ExtensionData {
 
   get backgroundState() {
     return this._backgroundState;
-  }
-
-  /**
-   * Returns true if the addon is configured to be installed
-   * by enterprise policy.
-   * Should be kept in sync with XPIDatabase.sys.mjs
-   */
-  get isInstalledByEnterprisePolicy() {
-    const policySettings = Services.policies?.getExtensionSettings(this.id);
-    const legacyLockedSettings =
-      Services.policies?.getActivePolicies()?.Extensions?.Locked ?? [];
-    return (
-      ["force_installed", "normal_installed"].includes(
-        policySettings?.installation_mode
-      ) || legacyLockedSettings.includes(this.id)
-    );
   }
 
   async getExtensionVersionWithoutValidation() {
@@ -4317,11 +4299,19 @@ export class Extension extends ExtensionData {
       lazy.ExtensionPermissions.add(this.id, { permissions: [], origins });
       updateCache = true;
 
+      // ExtensionPermissions.add asynchronously updates this.allowedOrigins
+      // and this.permissions as needed, but that is too late for us, so we
+      // fix up the permissions here based on what we know.
+
       let allowed = this.allowedOrigins.patterns.map(p => p.pattern);
       this.allowedOrigins = new MatchPatternSet(origins.concat(allowed), {
         restrictSchemes: this.restrictSchemes,
         ignorePath: true,
       });
+
+      if (origins.includes("<all_urls>")) {
+        this.permissions.add("<all_urls>");
+      }
     }
 
     if (updateCache) {

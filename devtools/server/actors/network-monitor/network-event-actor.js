@@ -440,7 +440,7 @@ class NetworkEventActor extends Actor {
    * @return object
    *         The response packet - network response content.
    */
-  getResponseContent() {
+  async getResponseContent() {
     if (!this._response.content.text && this._memoryCacheData) {
       const data = this._memoryCacheData;
       this._memoryCacheData = null;
@@ -461,6 +461,20 @@ class NetworkEventActor extends Actor {
           this._discardResponseBody = true;
         }
       }
+    }
+
+    if (!this._response.content.text && this._response.content.encodedData) {
+      this._response.content.text =
+        await lazy.NetworkUtils.decodeResponseChunks(
+          this._response.content.encodedData,
+          {
+            charset: this._response.content.contentCharset,
+            compressionEncodings: this._response.content.compressionEncodings,
+            encodedBodySize: this._response.content.encodedBodySize,
+            encoding: this._response.content.encoding,
+          }
+        );
+      delete this._response.content.encodedData;
     }
 
     const content = { ...this._response.content };
@@ -673,7 +687,7 @@ class NetworkEventActor extends Actor {
    * @param object info
    *        The object containing security information.
    */
-  addSecurityInfo(info, isRacing) {
+  addSecurityInfo(info) {
     // Ignore calls when this actor is already destroyed
     if (this.isDestroyed()) {
       return;
@@ -683,7 +697,6 @@ class NetworkEventActor extends Actor {
 
     this._onEventUpdate(lazy.NetworkUtils.NETWORK_EVENT_TYPES.SECURITY_INFO, {
       state: info.state,
-      isRacing,
     });
   }
 

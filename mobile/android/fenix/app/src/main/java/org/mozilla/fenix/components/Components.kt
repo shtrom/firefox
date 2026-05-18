@@ -11,22 +11,29 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.NotificationManagerCompat
 import com.google.android.play.core.review.ReviewManagerFactory
+import mozilla.components.concept.ai.controls.AIFeatureBlock
+import mozilla.components.concept.ai.controls.AIFeatureRegistry
 import mozilla.components.feature.addons.AddonManager
 import mozilla.components.feature.addons.amo.AMOAddonsProvider
 import mozilla.components.feature.addons.migration.DefaultSupportedAddonsChecker
 import mozilla.components.feature.addons.update.DefaultAddonUpdater
 import mozilla.components.feature.autofill.AutofillConfiguration
+import mozilla.components.feature.summarize.PageSummaryFeature
+import mozilla.components.feature.summarize.settings.SummarizationSettings
+import mozilla.components.lib.ai.controls.default
 import mozilla.components.lib.crash.store.CrashAction
 import mozilla.components.lib.crash.store.CrashMiddleware
 import mozilla.components.lib.integrity.googleplay.GooglePlayIntegrityClient
 import mozilla.components.lib.integrity.googleplay.GoogleProjectNumber
 import mozilla.components.lib.integrity.googleplay.IntegrityManagerProvider
 import mozilla.components.lib.integrity.googleplay.TokenProviderFactory
+import mozilla.components.lib.llm.mlpa.MlpaTokenStorage
 import mozilla.components.lib.publicsuffixlist.PublicSuffixList
 import mozilla.components.service.fxrelay.eligibility.RelayEligibilityStore
 import mozilla.components.service.fxrelay.eligibility.middlewares.ClearLastUsedMiddleware
 import mozilla.components.support.base.android.DefaultProcessInfoProvider
 import mozilla.components.support.base.android.NotificationsDelegate
+import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.base.worker.Frequency
 import mozilla.components.support.remotesettings.DefaultRemoteSettingsSyncScheduler
 import mozilla.components.support.remotesettings.RemoteSettingsServer
@@ -34,6 +41,7 @@ import mozilla.components.support.remotesettings.RemoteSettingsService
 import mozilla.components.support.remotesettings.into
 import mozilla.components.support.utils.BuildManufacturerChecker
 import mozilla.components.support.utils.ClipboardHandler
+import mozilla.components.support.utils.ext.packageManagerCompatHelper
 import mozilla.components.support.utils.ext.packageManagerWrapper
 import org.mozilla.fenix.BuildConfig
 import org.mozilla.fenix.Config
@@ -42,13 +50,16 @@ import org.mozilla.fenix.R
 import org.mozilla.fenix.autofill.AutofillConfirmActivity
 import org.mozilla.fenix.autofill.AutofillSearchActivity
 import org.mozilla.fenix.autofill.AutofillUnlockActivity
-import org.mozilla.fenix.browser.browsingmode.BrowsingModeMiddleware
 import org.mozilla.fenix.browser.relay.ErrorMessages
 import org.mozilla.fenix.browser.relay.RelayFeatureIntegration
 import org.mozilla.fenix.components.appstate.AppAction
 import org.mozilla.fenix.components.appstate.AppState
 import org.mozilla.fenix.components.appstate.setup.checklist.SetupChecklistState
 import org.mozilla.fenix.components.appstate.setup.checklist.getSetupChecklistCollection
+import org.mozilla.fenix.components.appstate.sports.SportsWidgetState
+import org.mozilla.fenix.components.ipprotection.IPProtection
+import org.mozilla.fenix.components.llm.Llm
+import org.mozilla.fenix.components.llm.ext.accessTokenProvider
 import org.mozilla.fenix.components.metrics.MetricsMiddleware
 import org.mozilla.fenix.crashes.CrashReportingAppMiddleware
 import org.mozilla.fenix.crashes.SettingsCrashReportCache
@@ -70,6 +81,10 @@ import org.mozilla.fenix.home.middleware.HomeTelemetryMiddleware
 import org.mozilla.fenix.home.setup.store.DefaultSetupChecklistRepository
 import org.mozilla.fenix.home.setup.store.SetupChecklistPreferencesMiddleware
 import org.mozilla.fenix.home.setup.store.SetupChecklistTelemetryMiddleware
+import org.mozilla.fenix.home.sports.SportsWidgetMiddleware
+import org.mozilla.fenix.home.sports.WorldCupMatchesRepository
+import org.mozilla.fenix.ipprotection.IPProtectionManager
+import org.mozilla.fenix.ipprotection.store.DefaultIPProtectionPromptRepository
 import org.mozilla.fenix.messaging.state.MessagingMiddleware
 import org.mozilla.fenix.nimbus.FxNimbus
 import org.mozilla.fenix.onboarding.FenixOnboarding
@@ -80,10 +95,16 @@ import org.mozilla.fenix.perf.StartupStateProvider
 import org.mozilla.fenix.perf.StrictModeManager
 import org.mozilla.fenix.perf.lazyMonitored
 import org.mozilla.fenix.reviewprompt.ReviewPromptMiddleware
+import org.mozilla.fenix.search.VoiceSearchAIControlFeature
+import org.mozilla.fenix.settings.ai.AIControlsSearchProvider
+import org.mozilla.fenix.settings.datachoices.DataChoicesSearchProvider
+import org.mozilla.fenix.settings.labs.FirefoxLabsSettingsSearchProvider
+import org.mozilla.fenix.settings.pagesummaries.PageSummariesSettingsSearchProvider
 import org.mozilla.fenix.settings.settingssearch.DefaultFenixSettingsIndexer
 import org.mozilla.fenix.termsofuse.TermsOfUseManager
 import org.mozilla.fenix.termsofuse.store.DefaultTermsOfUsePromptRepository
 import org.mozilla.fenix.utils.Settings
+import org.mozilla.fenix.utils.getApplicationInstalledTime
 import org.mozilla.fenix.utils.isLargeScreenSize
 import org.mozilla.fenix.wifi.WifiConnectionMonitor
 import java.util.concurrent.TimeUnit
@@ -200,7 +221,7 @@ class Components(private val context: Context) {
     val remoteSettingsSyncScheduler by lazyMonitored {
         DefaultRemoteSettingsSyncScheduler(
             context,
-            Frequency(24, TimeUnit.HOURS),
+            Frequency(2, TimeUnit.HOURS),
         )
     }
 
@@ -217,6 +238,9 @@ class Components(private val context: Context) {
                 context.getString(R.string.remote_settings_server_prod) -> RemoteSettingsServer.Prod.into()
                 context.getString(R.string.remote_settings_server_dev) -> RemoteSettingsServer.Dev.into()
                 context.getString(R.string.remote_settings_server_stage) -> RemoteSettingsServer.Stage.into()
+                context.getString(R.string.remote_settings_server_prod_v2) -> RemoteSettingsServer.ProdV2.into()
+                context.getString(R.string.remote_settings_server_dev_v2) -> RemoteSettingsServer.DevV2.into()
+                context.getString(R.string.remote_settings_server_stage_v2) -> RemoteSettingsServer.StageV2.into()
                 else -> RemoteSettingsServer.Prod.into()
             },
             channel = BuildConfig.BUILD_TYPE,
@@ -224,9 +248,10 @@ class Components(private val context: Context) {
             isLargeScreenSize = context.isLargeScreenSize(),
         )
     }
-    val nimbus by lazyMonitored {
+    val nimbus: NimbusComponents by lazyMonitored {
         NimbusComponents(
             context = context,
+            engine = lazyMonitored { core.engine },
             remoteSettingsService = remoteSettingsService.value.remoteSettingsService,
         )
     }
@@ -295,9 +320,9 @@ class Components(private val context: Context) {
                 },
                 recentHistory = emptyList(),
                 setupChecklistState = setupChecklistState(),
+                sportsWidgetState = setupSportsWidgetState(),
             ).run { filterState(blocklistHandler) },
             middlewares = listOf(
-                BrowsingModeMiddleware(settings),
                 ProfileMarkerMiddleware(markerName = "AppStore", profiler = core.engine.profiler),
                 LogMiddleware(tag = "AppStore", shouldIncludeDetailedData = { Config.channel.isDebug }),
                 BlocklistMiddleware(blocklistHandler),
@@ -326,14 +351,20 @@ class Components(private val context: Context) {
                 SetupChecklistPreferencesMiddleware(DefaultSetupChecklistRepository(context)),
                 SetupChecklistTelemetryMiddleware(),
                 ReviewPromptMiddleware(
+                    continuousOnboardingInProgress = {
+                        val continuousOnboardingCompleted = settings.seventhDayOnboardingCompletedTimestamp != -1L
+                        settings.continuousOnboardingFeatureEnabled && !continuousOnboardingCompleted
+                    },
                     shouldUseNewTriggerCriteria = { settings.newReviewPromptTriggerCriteriaEnabled },
                     shouldShowCustomPrompt = { settings.customReviewPromptUiEnabled && settings.isTelemetryEnabled },
+                    disableCustomPrompt = { settings.customReviewPromptUiEnabled = false },
                     createJexlHelper = nimbus::createJexlHelper,
                     nimbusEventStore = nimbus.events,
                 ).also {
                     settings.migrateLastReviewPromptTimePrefIfNeeded(nimbus.events)
                 },
                 AppVisualCompletenessMiddleware(performance.visualCompletenessQueue),
+                SportsWidgetMiddleware(sportsRepository = WorldCupMatchesRepository()),
             ),
         ).also {
             it.dispatch(AppAction.SetupChecklistAction.Init)
@@ -354,7 +385,16 @@ class Components(private val context: Context) {
         null
     }
 
-    val fxSuggest by lazyMonitored { FxSuggest(context, remoteSettingsService.value) }
+    private fun setupSportsWidgetState() = SportsWidgetState(
+        countriesSelected = settings.sportsSelectedCountries,
+        hasSkippedFollowTeam = settings.hasSkippedSportsFollowTeam,
+        isVisible = settings.showHomepageSportsWidget,
+        isFeatureEnabled = settings.enableHomepageSportsWidget,
+        isCountdownWidgetVisible = settings.showHomepageCountdownWidget,
+        forceOneWeekToWorldCup = settings.forceOneWeekToWorldCup,
+    )
+
+    val fxSuggest by lazyMonitored { FxSuggest(context, remoteSettingsService.value, analytics.crashReporter) }
 
     val distributionIdManager by lazyMonitored {
         DistributionIdManager(
@@ -385,7 +425,36 @@ class Components(private val context: Context) {
     }
 
     val settingsIndexer by lazyMonitored {
-        DefaultFenixSettingsIndexer(context)
+        DefaultFenixSettingsIndexer(
+            context = context,
+            additionalProviders = listOf(
+                DataChoicesSearchProvider,
+                AIControlsSearchProvider,
+                PageSummariesSettingsSearchProvider(
+                    summarizationFeatureConfiguration = core.summarizeFeatureSettings,
+                ),
+                FirefoxLabsSettingsSearchProvider(
+                    isLabsEnabled = { context.settings().enableFirefoxLabs },
+                ),
+            ),
+        )
+    }
+
+    val ipProtectionPromptRepository by lazyMonitored {
+        DefaultIPProtectionPromptRepository(
+            settings = settings,
+            installedTimeMillis = {
+                getApplicationInstalledTime(
+                    packageManagerCompatHelper = context.packageManagerCompatHelper,
+                    packageName = context.packageName,
+                    logger = Logger("DefaultIPProtectionPromptRepository"),
+                )
+            },
+        )
+    }
+
+    val ipProtectionManager by lazyMonitored {
+        IPProtectionManager(ipProtectionPromptRepository)
     }
 
     val ads by lazyMonitored {
@@ -409,11 +478,50 @@ class Components(private val context: Context) {
         )
     }
 
-    val llm: Llm by lazyMonitored {
-        Llm(core.client, integrityClient, clientUUID)
+    val aiFeatureRegistry by lazyMonitored {
+        AIFeatureRegistry.default().also {
+            if (settings.shakeToSummarizeFeatureFlagEnabled) {
+                it.register(PageSummaryFeature(SummarizationSettings.dataStore(context)))
+            }
+            it.register(
+                VoiceSearchAIControlFeature(
+                    settings = context.settings(),
+                    onUpdateWidget = { VoiceSearchAIControlFeature.updateWidget(context) },
+                ),
+            )
+        }
     }
 
-    private val clientUUID by lazyMonitored { ClientUUID.build(context) }
+    @Suppress("unused")
+    val aiControlsFeatureBlock by lazyMonitored {
+        AIFeatureBlock.default(
+            context,
+            registry = aiFeatureRegistry,
+        )
+    }
+
+    val llm: Llm by lazyMonitored {
+        Llm(
+            client = core.client,
+            storage = MlpaTokenStorage.sharedPrefs(context),
+            fxaTokenProvider = backgroundServices.accountManager.accessTokenProvider,
+            integrityClient = integrityClient,
+            userIdProvider = clientUUID,
+        )
+    }
+
+    val clientUUID by lazyMonitored { ClientUUID.build(context) }
+
+    val ipProtection by lazyMonitored {
+        IPProtection(
+            engine = core.engine,
+            browserStore = core.store,
+            syncStore = backgroundServices.syncStore,
+            lazyFxaAccountManager = lazy { backgroundServices.accountManager },
+            settings = settings,
+            context = context,
+        )
+    }
 }
 
 /**

@@ -8,9 +8,13 @@
 newtab-page-title = Fitxa berria
 newtab-settings-button =
     .title = Pertsonalizatu fitxa berriaren orria
+#  (developer note): @nova-cleanup(remove-string): Remove newtab-customize-panel-icon-button once Nova lands, will be using newtab-customize-panel-label instead
 newtab-customize-panel-icon-button =
     .title = Pertsonalizatu orri hau
+#  (developer note): @nova-cleanup(remove-string): Remove newtab-customize-panel-icon-button-label once Nova lands, will be using newtab-customize-panel-label instead
 newtab-customize-panel-icon-button-label = Pertsonalizatu
+newtab-customize-panel-label =
+    .label = Pertsonalizatu
 newtab-personalize-settings-icon-label =
     .title = Pertsonalizatu fitxa berria
     .aria-label = Ezarpenak
@@ -144,6 +148,9 @@ newtab-menu-report = Jakinarazi
 # Context menu option to personalize New Tab recommended stories by blocking a section of stories,
 # e.g. "Sports". "Block" is a verb here.
 newtab-menu-section-block = Blokeatu
+# "Follow", "unfollow", and "following" are social media terms that refer to subscribing to or unsubscribing from a section of stories.
+# e.g. Following the travel section of stories.
+newtab-menu-section-unfollow-topic = Utzi jarraitzeari
 # "Follow", "unfollow", and "following" are social media terms that refer to subscribing to or unsubscribing from a section of stories.
 # e.g. Following the travel section of stories.
 newtab-menu-section-unfollow = Ez jarraitu gaia
@@ -310,9 +317,23 @@ newtab-error-fallback-refresh-link = Berritu orria berriro saiatzeko.
 
 newtab-custom-shortcuts-title = Lasterbideak
 newtab-custom-shortcuts-subtitle = Gordetzen edo bisitatzen dituzun guneak
+#  (developer note): @nova-cleanup(remove-string): Remove old string once Nova lands. The newtab-custom-shortcuts-nova string will take over
 newtab-custom-shortcuts-toggle =
     .label = Lasterbideak
     .description = Gordetzen edo bisitatzen dituzun guneak
+newtab-custom-shortcuts-nova =
+    .label = Lasterbideak
+newtab-custom-row-description =
+    .description = Lerro kopurua
+# Variables
+#   $num (number) - Number of rows to display
+#  (developer note): @nova-cleanup(remove-string): Remove string once Nova lands. We won't be using "row"/"rows" anymore for the dropdown
+newtab-custom-row-selector2 =
+    .label =
+        { $num ->
+            [one] Errenkada bat
+           *[other] { $num } errenkada
+        }
 # Variables
 #   $num (number) - Number of rows to display
 newtab-custom-row-selector =
@@ -323,9 +344,12 @@ newtab-custom-row-selector =
 newtab-custom-sponsored-sites = Babesleen lasterbideak
 newtab-custom-pocket-title = { -pocket-brand-name }-ek gomendatua
 newtab-custom-pocket-subtitle = { -brand-product-name } familiakide den { -pocket-brand-name }-eko taldeak hautatutako aparteko edukia.
+#  (developer note): @nova-cleanup(remove-string): Remove string once Nova lands. We won't be having a description under "Recommended stories" anymore
 newtab-custom-stories-toggle =
     .label = Gomendatutako istorioak
     .description = { -brand-product-name } familiak aukeratutako eduki aparta
+newtab-recommended-stories-toggle =
+    .label = Gomendatutako istorioak
 newtab-custom-stories-personalized-toggle =
     .label = Istorioak
 newtab-custom-stories-personalized-checkbox-label = Zure jardueran oinarritutako istorio pertsonalizatuak
@@ -342,6 +366,10 @@ newtab-custom-widget-lists-toggle =
     .label = Zerrendak
 newtab-custom-widget-timer-toggle =
     .label = Tenporizadorea
+newtab-custom-widget-sports-toggle =
+    .label = Munduko Kopa
+newtab-custom-widget-clock-toggle =
+    .label = Erlojua
 newtab-custom-widget-section-title = Widgetak
 newtab-custom-widget-section-toggle =
     .label = Widgetak
@@ -359,8 +387,12 @@ newtab-custom-settings = Kudeatu ezarpen gehiago
 
 newtab-wallpaper-title = Horma-paperak
 newtab-wallpaper-reset = Berrezarri lehenespenera
+#  (developer note): @nova-cleanup(remove-string): Remove old "Upload an image" string once Nova lands. The new "Add an image"  string will take over
 newtab-wallpaper-upload-image = Igo irudia
+newtab-wallpaper-add-an-image = Gehitu irudia
 newtab-wallpaper-custom-color = Aukeratu kolorea
+newtab-wallpaper-toggle-title =
+    .label = Horma-paperak
 # Variables
 #   $file_size (number) - The number of the maximum image file size (in MB) that may be uploaded
 newtab-wallpaper-error-max-file-size = Irudiak fitxategi-tamainaren { $file_size } MBko muga gainditzen du. Saiatu fitxategi txikiago bat igotzen.
@@ -383,7 +415,9 @@ newtab-wallpaper-light-fox-anniversary = Azeria belardi batean mendiko paisaia l
 
 ## Solid Colors
 
+#  (developer note): @nova-cleanup(remove-string): Remove old "Solid colors" string once Nova lands. The simplified "Colors" string will take over
 newtab-wallpaper-category-title-colors = Kolore solidoak
+newtab-wallpaper-colors = Koloreak
 newtab-wallpaper-blue = Urdina
 newtab-wallpaper-light-blue = Urdin argia
 newtab-wallpaper-light-purple = More argia
@@ -474,6 +508,9 @@ newtab-weather-menu-change-location = Aldatu kokapena
 newtab-weather-change-location-search-input-placeholder =
     .placeholder = Bilatu kokapena
     .aria-label = Bilatu kokapena
+# "Current" refers to the user's physical/geographic location detected via geolocation.
+newtab-weather-change-location-search-use-current =
+    .label = Erabili uneko kokapena
 newtab-weather-menu-weather-display = Eguraldia bistaratzea
 newtab-weather-todays-forecast = Gaurko iragarpena
 newtab-weather-see-full-forecast = Ikusi iragarpen osoa
@@ -489,7 +526,6 @@ newtab-weather-menu-temperature-option-fahrenheit = Fahrenheit
 newtab-weather-menu-temperature-option-celsius = Celsius
 newtab-weather-menu-change-temperature-units-fahrenheit = Aldatu Fahrenheit-era
 newtab-weather-menu-change-temperature-units-celsius = Aldatu Celsius-era
-newtab-weather-menu-hide-weather-v2 = Ezkutatu eguraldia
 newtab-weather-menu-hide-weather = Ezkutatu eguraldia fitxa berrian
 newtab-weather-menu-learn-more = Argibide gehiago
 newtab-weather-menu-detect-my-location = Hauteman nire kokalekua
@@ -500,8 +536,18 @@ newtab-weather-opt-in-not-now =
     .label = Une honetan ez
 newtab-weather-opt-in-yes =
     .label = Bai
+newtab-weather-opt-in-headline = Lortu tokiko eguraldiaren iragarpena
+newtab-weather-opt-in-use-location =
+    .label = Erabili kokapena
+newtab-weather-opt-in-choose-location = Aukeratu kokapena
 # We'll be showing static (fake) weather data if the user has not opted in to using their location
 newtab-weather-static-city = New York
+# "Highest" here refers to the highest temperature of the day
+newtab-weather-high =
+    .aria-label = Altua
+# "Lowest" here refers to the lowest temperature of the day
+newtab-weather-low =
+    .aria-label = Baxua
 # Variables:
 #   $provider (string) - Service provider for weather data
 newtab-weather-see-forecast-description =
@@ -553,8 +599,16 @@ newtab-topic-selection-button-pick-interests = Hautatu zure interesak
 ## e.g. Following the travel section of stories.
 
 newtab-section-follow-button = Jarraitu
+# Variables:
+#   $topic (string) - Topic that the user can follow
+newtab-section-follow-button-label =
+    .aria-label = Jarraitu { $topic }
 newtab-section-following-button = Jarraitzen
 newtab-section-unfollow-button = Utzi jarraitzeari
+# Variables:
+#   $topic (string) - Topic that the user is following and can unfollow
+newtab-section-unfollow-button-label =
+    .aria-label = Jarraitzen: utzi { $topic } jarraitzeari
 # A modal may appear next to the Follow button, directing users to try out the feature
 newtab-section-follow-highlight-title = Doitu zure jarioa
 newtab-section-follow-highlight-subtitle = Jarraitu zure interesak gustatzen zaizunetik gehiago ikusteko.
@@ -566,6 +620,22 @@ newtab-section-follow-highlight-subtitle = Jarraitu zure interesak gustatzen zai
 newtab-section-block-button = Blokeatu
 newtab-section-blocked-button = Blokeatuta
 newtab-section-unblock-button = Desblokeatu
+# Variables:
+#   $topic (string) - Name of topic that user is following
+newtab-section-follow-topic =
+    .aria-label = Jarraitu { $topic }
+# Variables:
+#   $topic (string) - Name of topic that user is unfollowing
+newtab-section-unfollow-topic =
+    .aria-label = Utzi { $topic } jarraitzeari
+# Variables:
+#   $topic (string) - Name of topic that user is blocking
+newtab-section-block-topic =
+    .aria-label = Blokeatu { $topic }
+# Variables:
+#   $topic (string) - Name of topic that user is unblocking
+newtab-section-unblock-topic =
+    .aria-label = Desblokeatu { $topic }
 
 ## Confirmation modal for blocking a section
 
@@ -575,6 +645,7 @@ newtab-section-confirm-block-topic-p2 = Blokeatutako gaiak ez dira gehiago azald
 # Variables:
 #   $topic (string) - Name of topic that user is blocking
 newtab-section-block-topic-button = Blokeatu { $topic }
+newtab-section-block-cancel-button = Utzi
 
 ## Strings for custom wallpaper highlight
 
@@ -595,6 +666,12 @@ newtab-custom-wallpaper-cta = Probatu
 newtab-new-user-custom-wallpaper-title = Aukeratu horma-paper bat { -brand-product-name } zure egiteko
 newtab-new-user-custom-wallpaper-subtitle = Molda ezazu fitxa berri bakoitza zure modura horma-paper eta kolore pertsonalizatuekin.
 newtab-new-user-custom-wallpaper-cta = Probatu orain
+
+## Strings for Nova wallpaper feature highlight
+
+newtab-wallpaper-feature-highlight-title = Horma-paper berriak heldu berri dira
+newtab-wallpaper-feature-highlight-subtitle = Aukeratu zure gogokoena eta sentitu etxean bezala fitxa berri bakoitzean.
+newtab-wallpaper-feature-highlight-cta = Aukeratu horma-papera
 
 ## Strings for download mobile highlight
 
@@ -636,6 +713,20 @@ newtab-report-cancel = Utzi
 newtab-report-submit = Bidali
 newtab-toast-thanks-for-reporting =
     .message = Eskerrik asko hau jakinarazteagatik.
+newtab-toast-widgets-hidden =
+    .message = Hautatu arkatzaren ikonoa edonoiz widgetak berriz gehitzeko.
+# Variables:
+#   $topic (string) - Topic that the user has followed
+newtab-section-toast-follow =
+    .message = { $topic } jarraitzen ari zara orain.
+# Variables:
+#   $topic (string) - Topic that the user has unfollowed
+newtab-section-toast-unfollow =
+    .message = Ez zara { $topic } jarraitzen ari gehiago.
+# Variables:
+#   $topic (string) - Topic that the user has blocked
+newtab-section-toast-block =
+    .message = Ez duzu { $topic } gaiaren inguruko istorio gehiagorik ikusiko.
 
 ## Strings for task / to-do list productivity widget
 
@@ -650,13 +741,20 @@ newtab-widget-lists-label-beta =
 # Variables:
 #   $number (number) - Amount of list items marked complete
 newtab-widget-lists-completed-list = Osatuta ({ $number })
+newtab-widget-lists-celebration-headline = Lan ona
+newtab-widget-lists-celebration-subhead = Dena burututa
 newtab-widget-task-list-menu-copy = Kopiatu
 newtab-widget-lists-menu-edit = Editatu zerrendaren izena
+newtab-widget-lists-menu-edit2 =
+    .aria-label = Editatu zerrendaren izena
 newtab-widget-lists-menu-create = Sortu zerrenda berria
 newtab-widget-lists-menu-delete = Ezabatu zerrenda hau
 newtab-widget-lists-menu-copy = Kopiatu zerrenda arbelean
-newtab-widget-lists-menu-hide = Ezkutatu zerrenda guztiak
 newtab-widget-lists-menu-learn-more = Argibide gehiago
+newtab-widget-lists-button-add-item = Gehitu elementua
+newtab-widget-lists-input-add-an-item2 =
+    .placeholder = Gehitu elementua
+    .aria-label = Gehitu elementua
 newtab-widget-lists-input-add-an-item =
     .placeholder = Gehitu elementua
 newtab-widget-lists-input-error = Idatzi testua elementua gehitu ahal izateko.
@@ -665,17 +763,44 @@ newtab-widget-lists-input-menu-move-up = Eraman gora
 newtab-widget-lists-input-menu-move-down = Eraman behera
 newtab-widget-lists-input-menu-delete = Ezabatu
 newtab-widget-lists-input-menu-edit = Editatu
+newtab-widget-lists-input-menu-edit2 =
+    .aria-label = Editatu elementua
 # the + symbol emphasises the functionality of adding a new list
 newtab-widget-lists-dropdown-create =
     .label = + Sortu zerrenda berria
 newtab-widget-lists-name-label-default =
     .label = Zereginen zerrenda
+newtab-widget-lists-name-label-checklist =
+    .label = Zerrenda
 newtab-widget-lists-name-placeholder-default =
     .placeholder = Zereginen zerrenda
+newtab-widget-lists-name-placeholder-checklist2 =
+    .placeholder = Zerrenda
+    .aria-label = Editatu zerrendaren izena
+# The placeholder value of the name field for a newly created list
+newtab-widget-lists-name-placeholder-new2 =
+    .placeholder = Zerrenda berria
+    .aria-label = Editatu zerrendaren izena
+newtab-widget-lists-name-placeholder-checklist =
+    .placeholder = Zerrenda
 # The placeholder value of the name field for a newly created list
 newtab-widget-lists-name-placeholder-new =
     .placeholder = Zerrenda berria
 newtab-widget-section-title = Widgetak
+newtab-widget-menu-hide = Ezkutatu widgeta
+newtab-widget-menu-change-size = Aldatu tamaina
+# Parent label for a submenu in the widget menu that reorders the widget
+# among its siblings. "Left" and "Right" appear as items inside this submenu.
+newtab-widget-menu-move = Aldatu lekuz
+# Submenu item under "Move"; moves the widget one position to the left.
+# RTL locales should translate this as "Right".
+newtab-widget-menu-move-left = Ezkerrera
+# Submenu item under "Move"; moves the widget one position to the right.
+# RTL locales should translate this as "Left".
+newtab-widget-menu-move-right = Eskuinera
+newtab-widget-size-small = Txikia
+newtab-widget-size-medium = Ertaina
+newtab-widget-size-large = Handia
 # Tooltip for hide all widgets button
 newtab-widget-section-hide-all-button =
     .title = Ezkutatu widgetak
@@ -686,9 +811,19 @@ newtab-widget-section-maximize =
 newtab-widget-section-minimize =
     .title = Minimizatu widgetak
     .aria-label = Tolestu widget guztiak tamaina trinkora
+newtab-widget-section-menu-button =
+    .title = Widgeten menua
+    .aria-label = Ireki widgeten menua
+newtab-widget-add-widgets-button =
+    .aria-label = Gehitu widgeta
+    .title = Gehitu widgeta
+newtab-widget-section-menu-manage = Kudeatu widgetak
+newtab-widget-section-menu-hide-all = Ezkutatu widgetak
+newtab-widget-section-menu-learn-more = Argibide gehiago
+newtab-widget-section-feedback = Emaguzu zure iritzia
+newtab-widget-lists-name-default = Zerrenda
 
-## Strings for timer productivity widget
-## When the timer ends, a system notification may be shown. Depending on which mode the timer is in, that message would be shown
+## Strings introduced by the Nova redesign of the Timer widget
 
 newtab-widget-timer-notification-title = Tenporizadorea
 newtab-widget-timer-notification-focus = Kontzentratzeko denbora amaitu da. Ondo egina. Atsedena behar duzu?
@@ -706,7 +841,6 @@ newtab-widget-timer-reset =
     .title = Berrezarri
 newtab-widget-timer-menu-notifications = Desaktibatu jakinarazpenak
 newtab-widget-timer-menu-notifications-on = Aktibatu jakinarazpenak
-newtab-widget-timer-menu-hide = Ezkutatu tenporizadorea
 newtab-widget-timer-menu-learn-more = Argibide gehiago
 # The title displays above a set of top news headlines.
 newtab-daily-briefing-card-title = Lerroburu garrantzitsuenak
@@ -717,12 +851,135 @@ newtab-daily-briefing-card-timestamp = Duela { $minutes }m eguneratuta
 newtab-widget-message-title = Mantendu kontzentratuta zerrendekin eta tenporizadorearekin
 # to-dos stands for "things to do".
 newtab-widget-message-copy = Abisu azkarretatik egunaren egitekoetara, saio zentratuetatik luzatzeko hutsuneetara — izan zereginen gainean eta garaiz.
+# "Make Firefox yours" refers to about:newtab. The call to action here ("Try it now")
+# is to customize the new tab page with a background image or color from
+# the built-in wallpaper collection or uploading your own image.
+newtab-promo-card-title-addons = Moldatu { -brand-product-name } zure gustura
+newtab-promo-card-body-addons = Hautatu horma-papera gure bildumatik edo sortu zurea.
+newtab-promo-card-cta-addons = Probatu orain
 newtab-promo-card-title = Lagundu { -brand-product-name }
 newtab-promo-card-body = Gure babesleek web hobeagoa eraikitzeko misioan laguntzen gaituzte
 newtab-promo-card-cta = Argibide gehiago
 newtab-promo-card-dismiss-button =
     .title = Baztertu
     .aria-label = Baztertu
+
+## Strings introduced by the Nova redesign of the Timer widget
+
+# Variables:
+#   $minutes (number) - The currently selected timer duration in minutes
+newtab-widget-timer-start-aria =
+    .aria-label =
+        { $minutes ->
+            [one] Hasi minutu { $minutes }eko tenporizadorea
+           *[other] Hasi { $minutes } minutuko tenporizadorea
+        }
+newtab-widget-timer-pause-aria =
+    .aria-label = Pausatu tenporizadorea
+# Variables:
+#   $minutes (number) - The currently selected timer duration in minutes
+newtab-widget-timer-spinbutton-name =
+    .aria-label =
+        { $minutes ->
+            [one] Minutu { $minutes }
+           *[other] { $minutes } minutu
+        }
+newtab-widget-timer-decrease-min =
+    .title = Kendu minutu bat
+newtab-widget-timer-increase-min =
+    .title = Gehitu minutu bat
+newtab-widget-timer-mode-group =
+    .aria-label = Tenporizadorearen modua
+# Small label shown beneath the live time while the focus timer is running or paused.
+newtab-widget-timer-running-focus = Kontzentrazioa
+# Small label shown beneath the live time while the break timer is running or paused.
+newtab-widget-timer-running-break = Atsedena
+# Context-menu item to hide the Timer widget. Replaces the shared "Hide widget"
+# copy with a widget-specific string per the Nova design.
+newtab-widget-timer-menu-hide = Ezkutatu tenporizadorea
+# Heading shown inside the Timer widget after a focus session ends.
+newtab-widget-timer-celebration-heading-focus = Lan bikaina
+# Heading shown inside the Timer widget after a break session ends.
+newtab-widget-timer-celebration-heading-break = Atsedeneko denbora amaitu da
+# Message shown inside the Timer widget after a focus session ends.
+newtab-widget-timer-celebration-message-focus = Atsedenaldia behar duzu?
+# Message shown inside the Timer widget after a break session ends.
+newtab-widget-timer-celebration-message-break = Kontzentratzeko prest?
+
+## Sports widget
+
+newtab-sports-widget-menu-follow-teams = Jarraitu taldeak
+newtab-sports-widget-menu-view-schedule = Ikusi ordutegia
+newtab-sports-widget-menu-view-upcoming = Ikusi hurrengoak
+newtab-sports-widget-menu-view-results = Ikusi emaitzak
+# Milestone dates (e.g. group stage, semifinals, etc.). Refers to calendar dates.
+newtab-sports-widget-menu-key-dates = Data garrantzitsuak
+newtab-sports-widget-menu-learn-more = Argibide gehiago
+# “Keep tabs on” is an informal expression meaning to stay updated on, stay informed on, or regularly follow something (in this case, World Cup matches and updates).
+newtab-sports-widget-keep-tabs = Adi-adi jarraitu Munduko Kopa
+newtab-sports-widget-get-updates = Jaso partiden zuzeneko eguneraketak eta gehiago.
+newtab-sports-widget-view-schedule =
+    .label = Ikusi ordutegia
+newtab-sports-widget-follow-teams =
+    .label = Jarraitu taldeak
+newtab-sports-widget-view-matches =
+    .label = Ikusi partidak
+# Variables:
+#   $number (number) - Maximum number of teams a user can choose to follow in the team selection state
+newtab-sports-widget-follow-teams-title =
+    { $number ->
+        [one] Jarraitu talde { $number } arte
+       *[other] Jarraitu { $number } talde arte
+    }
+newtab-sports-widget-choose-wallpaper =
+    .label = Aukeratu horma-papera
+newtab-sports-widget-skip = Saltatu
+newtab-sports-widget-search-country =
+    .placeholder = Bilatu herrialdea
+    .aria-label = Bilatu herrialdea
+newtab-sports-widget-cancel = Utzi
+newtab-sports-widget-back-button =
+    .aria-label = Atzera
+newtab-sports-widget-done-button =
+    .label = Eginda
+newtab-sports-widget-group-stage = Multzokako fasea
+newtab-sports-widget-round-32 = Final hogeita hamabirenak
+newtab-sports-widget-round-16 = Final hamaseirenak
+newtab-sports-widget-quarter-finals = Final laurdenak
+# The "LIVE" string is meant to be uppercase in English, but other languages and locales may vary in how they handle this.
+newtab-sports-widget-live = ZUZENEAN
+newtab-custom-widget-live-refresh =
+    .title = Berritu emaitzak
+    .aria-label = Berritu emaitzak
+# Milestone dates (e.g. group stage, semifinals, etc.). Refers to calendar dates.
+newtab-sports-widget-key-dates = Data garrantzitsuak
+newtab-sports-widget-upcoming = Hurrengoak
+# Used for a match currently ongoing
+newtab-sports-widget-now = Orain
+newtab-sports-widget-results = Emaitzak
+newtab-sports-widget-semi-finals = Finalerdiak
+newtab-sports-widget-bronze-finals = Brontzerako finala
+# Final is the final match for 1st place.
+newtab-sports-widget-final = Finala
+# Variables:
+#   $start (Date) - Start date of a tournament stage
+#   $end (Date) - End date of a tournament stage
+newtab-sports-widget-key-date-range = { DATETIME($start, month: "short", day: "numeric") } – { DATETIME($end, month: "short", day: "numeric") }
+# Variables:
+#   $date (Date) - Date of a single tournament event
+newtab-sports-widget-key-date = { DATETIME($date, month: "short", day: "numeric") }
+newtab-sports-widget-delayed = Atzeratuta
+newtab-sports-widget-postponed = Atzeratuta
+newtab-sports-widget-suspended = Bertan behera utzita
+newtab-sports-widget-cancelled = Bertan behera utzita
+newtab-sports-widget-information = Partidari buruzko informazioa
+newtab-sports-widget-no-live-data = Partiden zuzeneko informazioa ez da eguneratzen ari une honetan
+newtab-sports-widget-view-results-link = Ikusi emaitzak
+newtab-sports-widget-third-place = Hirugarren postua
+# Runner-up is the team in 2nd place.
+newtab-sports-widget-runner-up = Txapeldunordea
+newtab-sports-widget-champions = Txapeldunak
+newtab-sports-widget-world-cup-champions = 2026ko Munduko Koparen Txapeldunak
 
 ## Strings for activation window message variants. In certain experiment configurations,
 ## the strings from these variants may be displayed in a message below the search input
@@ -745,3 +1002,59 @@ newtab-activation-window-message-customization-focus-primary-button =
 # the existing widgetry that appears on it.
 newtab-activation-window-message-values-focus-header = Zuk agintzen duzu txoko honetan
 newtab-activation-window-message-values-focus-message = Nahi duzun erara nabigatzen uzten dizu { -brand-product-name }(e)k, zure online eguna hasteko modu pertsonalago batekin. Moldatu { -brand-product-name } zure erara.
+
+## Strings for the Clock widget
+
+# Context menu item: toggle the clock card off.
+newtab-clock-widget-menu-hide = Ezkutatu erlojua
+newtab-clock-widget-menu-learn-more = Argibide gehiago
+newtab-clock-widget-menu-edit = Editatu erlojuak
+newtab-clock-widget-menu-switch-to-12h = Aldatu 12 orduko formatura
+newtab-clock-widget-menu-switch-to-24h = Aldatu 24 orduko formatura
+newtab-clock-widget-label-your-clocks = Zure erlojuak
+newtab-clock-widget-search-location-input =
+    .label = Kokapena
+    .placeholder = Bilatu hiria
+    .aria-label = Bilatu hiria
+# "Nickname (optional)" refers to a custom, user-defined label for a saved location
+# (e.g., "Home", "Office", or "School") to make it easier to recognize.
+# Not to be translated as a legal name, username, or alias used for identity verification.
+newtab-clock-widget-input-nickname =
+    .label = Ezizena (aukerakoa)
+    .placeholder = Gehitu ezizena
+    .aria-label = Ezizena (aukerakoa)
+# "Add new clock" is an icon-only button in the widget toolbar — the
+# attributes are consumed as tooltip/screen-reader label only. The button
+# never renders visible text.
+newtab-clock-widget-button-add =
+    .title = Gehitu erloju berria
+    .aria-label = Gehitu erloju berria
+newtab-clock-widget-button-add-clock = Gehitu
+newtab-clock-widget-button-cancel = Utzi
+newtab-clock-widget-button-back =
+    .title = Atzera
+    .aria-label = Atzera
+newtab-clock-widget-button-edit-clock =
+    .title = Editatu erlojua
+    .aria-label = Editatu erlojua
+newtab-clock-widget-button-save = Gorde
+newtab-clock-widget-button-remove-clock =
+    .title = Kendu erlojua
+    .aria-label = Kendu erlojua
+newtab-clock-widget-add-clock-form =
+    .aria-label = Gehitu erlojua
+newtab-clock-widget-edit-clock-form =
+    .aria-label = Editatu erlojua
+# "Search results" is the accessible label for the listbox dropdown that appears
+# below the location search field, listing matching cities as the user types.
+# It means "results of the search", not "search within the results".
+newtab-clock-widget-search-results =
+    .aria-label = Bilaketaren emaitzak
+# "Open menu for clock" is an icon-only button in the widget toolbar — the
+# attributes are consumed as tooltip/screen-reader label only. The button
+# never renders visible text.
+newtab-clock-widget-menu-button =
+    .title = Ireki erlojuaren menua
+    .aria-label = Ireki erlojuaren menua
+# $nickname (String) - The user-defined nickname for a saved clock location (e.g., "Home", "Office").
+newtab-clock-widget-label-nickname-with-value = Ezizena: { $nickname }

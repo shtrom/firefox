@@ -52,18 +52,16 @@ var gExceptionPaths = [
 
   // toolkit/components/pdfjs/content/build/pdf.js
   "resource://pdf.js/web/images/",
-  // This file is only loaded in using a dynamic import in pdf.js in case wasm
-  // is not available.
+  // These files are only loaded in using a dynamic import in pdf.js in case
+  // wasm is not available.
   "resource://pdf.js/web/wasm/openjpeg_nowasm_fallback.js",
+  "resource://pdf.js/web/wasm/jbig2_nowasm_fallback.js",
 
   // Exclude the form autofill path that has been moved out of the extensions to
   // toolkit, see bug 1691821.
   "resource://gre-resources/autofill/",
   // Localization file added programatically in FormAutofillUtils.sys.mjs
   "resource://gre/localization/en-US/toolkit/formautofill",
-
-  // Exclude all search-extensions because they aren't referenced by filename
-  "resource://search-extensions/",
 
   // Exclude all services-automation because they are used through webdriver
   "resource://gre/modules/services-automation/",
@@ -241,6 +239,12 @@ var allowlist = [
   // File from the ipp-activator add-on
   { file: "resource://builtin-addons/ipp-activator/breakages/tab.json" },
 
+  // Referenced by devtools/client/themes/toolbox.css and
+  // devtools/client/debugger/src/components/PrimaryPanes/Tracer.css. The test
+  // splits devtools and non-devtools passes, so the non-devtools pass can't
+  // see those cross-domain references.
+  { file: "chrome://global/skin/icons/experiments.svg" },
+
   // Starting from here, files in the allowlist are bugs that need fixing.
   // Bug 1339424 (wontfix?)
   {
@@ -331,13 +335,21 @@ var allowlist = [
     file: "resource://app/modules/backup/CookiesBackupResource.sys.mjs",
   },
 
-  // Bug 1996315: QR code generation modules
+  // Bug 2035340: TabManagementService will be used by AI Window for tab management
   {
-    file: "moz-src:///browser/components/qrcode/QRCodeGenerator.sys.mjs",
+    file: "moz-src:///browser/components/aiwindow/ui/modules/TabManagementService.sys.mjs",
   },
+
+  // Bug 2023223: Replace loginOrigin, addresses, payments, and form history
+  // richlist items with autocomplete-row-item
   {
-    file: "moz-src:///browser/components/qrcode/QRCodeWorker.sys.mjs",
+    file: "chrome://global/content/autocomplete-row-item/autocomplete-row-item.mjs",
   },
+
+  // Referenced dynamically in newtab components via template literals:
+  // `chrome://global/skin/icons/shaft-arrow-${isRTL ? "right" : "left"}.svg`
+  { file: "chrome://global/skin/icons/shaft-arrow-left.svg" },
+  { file: "chrome://global/skin/icons/shaft-arrow-right.svg" },
 ];
 
 if (AppConstants.NIGHTLY_BUILD) {
@@ -345,6 +357,15 @@ if (AppConstants.NIGHTLY_BUILD) {
     // A debug tool that is only available in Nightly builds, and is accessed
     // directly by developers via the chrome URI (bug 1888491)
     { file: "chrome://browser/content/backup/debug.html" }
+  );
+}
+
+if (!AppConstants.RELEASE_OR_BETA) {
+  allowlist.push(
+    // browser/extensions/newtab/actors/AboutNewTabChild.sys.mjs constructs the
+    // URL dynamically: `chrome://global/content/vendor/react${debugString}.js`
+    { file: "chrome://global/content/vendor/react-dev.js" },
+    { file: "chrome://global/content/vendor/react-dom-dev.js" }
   );
 }
 

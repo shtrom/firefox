@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -78,7 +76,9 @@ static const MediaControlKey sDefaultSupportedKeys[] = {
     MediaControlKey::Focus,       MediaControlKey::Play,
     MediaControlKey::Pause,       MediaControlKey::Playpause,
     MediaControlKey::Stop,        MediaControlKey::Seekto,
-    MediaControlKey::Seekforward, MediaControlKey::Seekbackward};
+    MediaControlKey::Seekforward, MediaControlKey::Seekbackward,
+    MediaControlKey::Mute,        MediaControlKey::Unmute,
+    MediaControlKey::Setvolume};
 
 static void GetDefaultSupportedKeys(nsTArray<MediaControlKey>& aKeys) {
   for (const auto& key : sDefaultSupportedKeys) {
@@ -146,13 +146,13 @@ void MediaController::NextTrack() {
 void MediaController::SeekBackward(double aSeekOffset) {
   LOG("Seek Backward");
   UpdateMediaControlActionToContentMediaIfNeeded(MediaControlAction(
-      MediaControlKey::Seekbackward, SeekDetails(aSeekOffset)));
+      MediaControlKey::Seekbackward, MediaControlActionParams(aSeekOffset)));
 }
 
 void MediaController::SeekForward(double aSeekOffset) {
   LOG("Seek Forward");
   UpdateMediaControlActionToContentMediaIfNeeded(MediaControlAction(
-      MediaControlKey::Seekforward, SeekDetails(aSeekOffset)));
+      MediaControlKey::Seekforward, MediaControlActionParams(aSeekOffset)));
 }
 
 void MediaController::SkipAd() {
@@ -164,7 +164,7 @@ void MediaController::SkipAd() {
 void MediaController::SeekTo(double aSeekTime, bool aFastSeek) {
   LOG("Seek To");
   UpdateMediaControlActionToContentMediaIfNeeded(MediaControlAction(
-      MediaControlKey::Seekto, SeekDetails(aSeekTime, aFastSeek)));
+      MediaControlKey::Seekto, MediaControlActionParams(aSeekTime, aFastSeek)));
 }
 
 void MediaController::Stop() {
@@ -174,9 +174,31 @@ void MediaController::Stop() {
   MediaStatusManager::ClearActiveMediaSessionContextIdIfNeeded();
 }
 
+void MediaController::SetVolume(double aVolume) {
+  double volume = std::clamp(aVolume, 0.0, 1.0);
+  LOG("SetVolume: %f, ClampedVolume: %f", aVolume, volume);
+  UpdateMediaControlActionToContentMediaIfNeeded(
+      MediaControlAction(MediaControlKey::Setvolume,
+                         MediaControlActionParams::FromVolume(volume)));
+}
+
+void MediaController::Mute() {
+  LOG("Mute");
+  UpdateMediaControlActionToContentMediaIfNeeded(
+      MediaControlAction(MediaControlKey::Mute));
+}
+
+void MediaController::Unmute() {
+  LOG("Unmute");
+  UpdateMediaControlActionToContentMediaIfNeeded(
+      MediaControlAction(MediaControlKey::Unmute));
+}
+
 uint64_t MediaController::Id() const { return mTopLevelBrowsingContextId; }
 
-bool MediaController::IsAudible() const { return IsMediaAudible(); }
+bool MediaController::IsAudible() const {
+  return IsMediaAudible() || !mUncontrollableAudibleMap.IsEmpty();
+}
 
 bool MediaController::IsPlaying() const { return IsMediaPlaying(); }
 
@@ -195,6 +217,9 @@ bool MediaController::ShouldPropagateActionToAllContexts(
       case MediaControlKey::Seekto:
       case MediaControlKey::Seekforward:
       case MediaControlKey::Seekbackward:
+      case MediaControlKey::Mute:
+      case MediaControlKey::Unmute:
+      case MediaControlKey::Setvolume:
         return true;
       default:
         return false;
@@ -205,9 +230,14 @@ bool MediaController::ShouldPropagateActionToAllContexts(
 
 void MediaController::UpdateMediaControlActionToContentMediaIfNeeded(
     const MediaControlAction& aAction) {
-  // If the controller isn't active or it has been shutdown, we don't need to
-  // update media action to the content process.
-  if (!mIsActive || mShutdown) {
+  if (mShutdown) {
+    return;
+  }
+  // Stop must be allowed through on inactive controllers because uncontrollable
+  // receivers need to silence on audio focus loss even though they never
+  // activate the controller. For all other actions an inactive controller has
+  // nothing to dispatch.
+  if (!mIsActive && aAction.mKey != Some(MediaControlKey::Stop)) {
     return;
   }
 
@@ -325,17 +355,32 @@ NS_IMETHODIMP MediaController::GetName(nsACString& aName) {
 }
 
 void MediaController::NotifyMediaAudibleChanged(uint64_t aBrowsingContextId,
-                                                MediaAudibleState aState) {
+                                                MediaAudibleState aState,
+                                                ControlType aType) {
   if (mShutdown) {
     return;
   }
 
   bool oldAudible = IsAudible();
-  MediaStatusManager::NotifyMediaAudibleChanged(aBrowsingContextId, aState);
+  if (aType == ControlType::eControllable) {
+    MediaStatusManager::NotifyMediaAudibleChanged(aBrowsingContextId, aState);
+  } else {
+    // Uncontrollable source: track audible-source counts per browsing context
+    // directly here so that activation logic stays untouched.
+    if (aState == MediaAudibleState::eAudible) {
+      ++mUncontrollableAudibleMap.LookupOrInsert(aBrowsingContextId, 0u);
+    } else if (auto entry =
+                   mUncontrollableAudibleMap.Lookup(aBrowsingContextId)) {
+      if (--entry.Data() == 0) {
+        entry.Remove();
+      }
+    }
+  }
   if (IsAudible() == oldAudible) {
     return;
   }
   UpdateActivatedStateIfNeeded();
+  DispatchAsyncEvent(u"audiblechange"_ns);
 
   // Request the audio focus amongs different controllers that could cause
   // pausing other audible controllers if we enable the audio focus management.
@@ -544,7 +589,11 @@ void MediaController::DispatchAsyncEvent(already_AddRefed<Event> aEvent) {
   MOZ_ASSERT(event);
   nsAutoString eventType;
   event->GetType(eventType);
-  if (!mIsActive && !eventType.EqualsLiteral("deactivated")) {
+  // 'audiblechange' must fire even on inactive controllers because
+  // uncontrollable sources never activate the controller, but their
+  // audibility still matters to listeners.
+  if (!mIsActive && !eventType.EqualsLiteral("deactivated") &&
+      !eventType.EqualsLiteral("audiblechange")) {
     LOG("Only 'deactivated' can be dispatched on a deactivated controller, not "
         "'%s'",
         NS_ConvertUTF16toUTF8(eventType).get());

@@ -8,9 +8,13 @@
 newtab-page-title = Нова вкладка
 newtab-settings-button =
     .title = Налаштуйте свою сторінку нової вкладки
+#  (developer note): @nova-cleanup(remove-string): Remove newtab-customize-panel-icon-button once Nova lands, will be using newtab-customize-panel-label instead
 newtab-customize-panel-icon-button =
     .title = Налаштувати цю сторінку
+#  (developer note): @nova-cleanup(remove-string): Remove newtab-customize-panel-icon-button-label once Nova lands, will be using newtab-customize-panel-label instead
 newtab-customize-panel-icon-button-label = Налаштувати
+newtab-customize-panel-label =
+    .label = Налаштувати
 newtab-personalize-settings-icon-label =
     .title = Персоналізувати нову вкладку
     .aria-label = Налаштування
@@ -311,9 +315,22 @@ newtab-error-fallback-refresh-link = Оновіть сторінку, щоб с�
 
 newtab-custom-shortcuts-title = Ярлики
 newtab-custom-shortcuts-subtitle = Сайти, які ви зберігаєте чи відвідуєте
+#  (developer note): @nova-cleanup(remove-string): Remove old string once Nova lands. The newtab-custom-shortcuts-nova string will take over
 newtab-custom-shortcuts-toggle =
     .label = Ярлики
     .description = Сайти, які ви зберігаєте чи відвідуєте
+newtab-custom-shortcuts-nova =
+    .label = Ярлики
+# Variables
+#   $num (number) - Number of rows to display
+#  (developer note): @nova-cleanup(remove-string): Remove string once Nova lands. We won't be using "row"/"rows" anymore for the dropdown
+newtab-custom-row-selector2 =
+    .label =
+        { $num ->
+            [one] { $num } рядок
+            [few] { $num } рядки
+           *[many] { $num } рядків
+        }
 # Variables
 #   $num (number) - Number of rows to display
 newtab-custom-row-selector =
@@ -325,9 +342,12 @@ newtab-custom-row-selector =
 newtab-custom-sponsored-sites = Спонсоровані ярлики
 newtab-custom-pocket-title = Рекомендації від { -pocket-brand-name }
 newtab-custom-pocket-subtitle = Добірні матеріали від { -pocket-brand-name }, що входить до родини { -brand-product-name }
+#  (developer note): @nova-cleanup(remove-string): Remove string once Nova lands. We won't be having a description under "Recommended stories" anymore
 newtab-custom-stories-toggle =
     .label = Рекомендовані матеріали
     .description = Виняткові матеріали, відібрані командою { -brand-product-name }
+newtab-recommended-stories-toggle =
+    .label = Рекомендовані матеріали
 newtab-custom-stories-personalized-toggle =
     .label = Історії
 newtab-custom-stories-personalized-checkbox-label = Персоналізовані історії на основі вашої активності
@@ -361,8 +381,11 @@ newtab-custom-settings = Керувати іншими налаштування�
 
 newtab-wallpaper-title = Шпалери
 newtab-wallpaper-reset = Відновити типові
+#  (developer note): @nova-cleanup(remove-string): Remove old "Upload an image" string once Nova lands. The new "Add an image"  string will take over
 newtab-wallpaper-upload-image = Вивантажте зображення
 newtab-wallpaper-custom-color = Виберіть колір
+newtab-wallpaper-toggle-title =
+    .label = Шпалери
 # Variables
 #   $file_size (number) - The number of the maximum image file size (in MB) that may be uploaded
 newtab-wallpaper-error-max-file-size = Зображення перевищує обмеження розміру файлу в { $file_size } МБ. Спробуйте вивантажити менший файл.
@@ -385,6 +408,7 @@ newtab-wallpaper-light-fox-anniversary = Лисиця в трав'янистом
 
 ## Solid Colors
 
+#  (developer note): @nova-cleanup(remove-string): Remove old "Solid colors" string once Nova lands. The simplified "Colors" string will take over
 newtab-wallpaper-category-title-colors = Суцільні кольори
 newtab-wallpaper-blue = Синій
 newtab-wallpaper-light-blue = Блакитний
@@ -491,7 +515,6 @@ newtab-weather-menu-temperature-option-fahrenheit = Градуси Фаренг�
 newtab-weather-menu-temperature-option-celsius = Градуси Цельсія
 newtab-weather-menu-change-temperature-units-fahrenheit = Перемкнути на градуси Фаренгейта
 newtab-weather-menu-change-temperature-units-celsius = Перемкнути на градуси Цельсія
-newtab-weather-menu-hide-weather-v2 = Приховати погоду
 newtab-weather-menu-hide-weather = Сховати погоду на новій вкладці
 newtab-weather-menu-learn-more = Докладніше
 newtab-weather-menu-detect-my-location = Визначити моє розташування
@@ -654,11 +677,16 @@ newtab-widget-lists-label-beta =
 newtab-widget-lists-completed-list = Завершено ({ $number })
 newtab-widget-task-list-menu-copy = Копіювати
 newtab-widget-lists-menu-edit = Редагувати назву списку
+newtab-widget-lists-menu-edit2 =
+    .aria-label = Редагувати назву списку
 newtab-widget-lists-menu-create = Створити новий список
 newtab-widget-lists-menu-delete = Видалити цей список
 newtab-widget-lists-menu-copy = Копіювати список до буфера обміну
-newtab-widget-lists-menu-hide = Приховати всі списки
 newtab-widget-lists-menu-learn-more = Докладніше
+newtab-widget-lists-button-add-item = Додати запис
+newtab-widget-lists-input-add-an-item2 =
+    .placeholder = Додати запис
+    .aria-label = Додати запис
 newtab-widget-lists-input-add-an-item =
     .placeholder = Додати запис
 newtab-widget-lists-input-error = Введіть текст, щоб додати запис
@@ -675,6 +703,10 @@ newtab-widget-lists-name-label-default =
 newtab-widget-lists-name-placeholder-default =
     .placeholder = Список завдань
 # The placeholder value of the name field for a newly created list
+newtab-widget-lists-name-placeholder-new2 =
+    .placeholder = Новий список
+    .aria-label = Редагувати назву списку
+# The placeholder value of the name field for a newly created list
 newtab-widget-lists-name-placeholder-new =
     .placeholder = Новий список
 newtab-widget-section-title = Віджети
@@ -688,9 +720,9 @@ newtab-widget-section-maximize =
 newtab-widget-section-minimize =
     .title = Згорнути віджети
     .aria-label = Згорнути всі віджети до компактного розміру
+newtab-widget-section-menu-manage = Керувати віджетами
 
-## Strings for timer productivity widget
-## When the timer ends, a system notification may be shown. Depending on which mode the timer is in, that message would be shown
+## Strings introduced by the Nova redesign of the Timer widget
 
 newtab-widget-timer-notification-title = Таймер
 newtab-widget-timer-notification-focus = Час зосередження вичерпано. Гарна робота. Потрібна перерва?
@@ -708,7 +740,6 @@ newtab-widget-timer-reset =
     .title = Скинути
 newtab-widget-timer-menu-notifications = Вимкнути сповіщення
 newtab-widget-timer-menu-notifications-on = Увімкнути сповіщення
-newtab-widget-timer-menu-hide = Приховати таймер
 newtab-widget-timer-menu-learn-more = Докладніше
 # The title displays above a set of top news headlines.
 newtab-daily-briefing-card-title = Найпопулярніші заголовки

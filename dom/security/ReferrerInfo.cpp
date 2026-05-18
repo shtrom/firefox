@@ -1,11 +1,10 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "ReferrerInfo.h"
 
+#include "ipc/IPCMessageUtilsSpecializations.h"
 #include "mozilla/BasePrincipal.h"
 #include "mozilla/ContentBlockingAllowList.h"
 #include "mozilla/RefPtr.h"
@@ -14,9 +13,11 @@
 #include "mozilla/StyleSheet.h"
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/Element.h"
+#include "mozilla/dom/FetchIPCTypes.h"
 #include "mozilla/dom/ReferrerPolicyBinding.h"
 #include "mozilla/dom/RequestBinding.h"
 #include "mozilla/glean/DomSecurityMetrics.h"
+#include "mozilla/ipc/URIUtils.h"
 #include "mozilla/net/CookieJarSettings.h"
 #include "mozilla/net/HttpBaseChannel.h"
 #include "nsCharSeparatedTokenizer.h"
@@ -843,7 +844,7 @@ void ReferrerInfo::LogMessageToConsole(
 
   nsAutoString localizedMsg;
   rv = nsContentUtils::FormatLocalizedString(
-      nsContentUtils::eSECURITY_PROPERTIES, aMsg, aParams, localizedMsg);
+      PropertiesFile::SECURITY_PROPERTIES, aMsg, aParams, localizedMsg);
   if (NS_WARN_IF(NS_FAILED(rv))) {
     return;
   }
@@ -977,6 +978,62 @@ ReferrerInfo::ReferrerInfo(const ReferrerInfo& rhs)
       mInitialized(rhs.mInitialized),
       mOverridePolicyByDefault(rhs.mOverridePolicyByDefault),
       mComputedReferrer(rhs.mComputedReferrer) {}
+
+void ReferrerInfo::Serialize(IPC::MessageWriter* aWriter) const {
+  MOZ_ASSERT(mInitialized);
+  nsCOMPtr<nsIURI> originalReferrer = mOriginalReferrer;
+  WriteParam(aWriter, originalReferrer.get());
+  WriteParam(aWriter, mPolicy);
+  WriteParam(aWriter, mOriginalPolicy);
+  WriteParam(aWriter, mSendReferrer);
+  WriteParam(aWriter, mOverridePolicyByDefault);
+  WriteParam(aWriter, mComputedReferrer);
+}
+
+// static
+bool ReferrerInfo::Deserialize(IPC::MessageReader* aReader,
+                               RefPtr<nsIReferrerInfo>* aResult) {
+  RefPtr<nsIURI> originalReferrer;
+  if (!ReadParam(aReader, &originalReferrer)) {
+    return false;
+  }
+
+  ReferrerPolicyEnum policy;
+  if (!ReadParam(aReader, &policy)) {
+    return false;
+  }
+
+  ReferrerPolicyEnum originalPolicy;
+  if (!ReadParam(aReader, &originalPolicy)) {
+    return false;
+  }
+
+  bool sendReferrer;
+  if (!ReadParam(aReader, &sendReferrer)) {
+    return false;
+  }
+
+  bool overridePolicyByDefault;
+  if (!ReadParam(aReader, &overridePolicyByDefault)) {
+    return false;
+  }
+
+  Maybe<nsCString> computedReferrer;
+  if (!ReadParam(aReader, &computedReferrer)) {
+    return false;
+  }
+
+  RefPtr<ReferrerInfo> info = new ReferrerInfo();
+  info->mOriginalReferrer = originalReferrer;
+  info->mPolicy = policy;
+  info->mOriginalPolicy = originalPolicy;
+  info->mSendReferrer = sendReferrer;
+  info->mInitialized = true;
+  info->mOverridePolicyByDefault = overridePolicyByDefault;
+  info->mComputedReferrer = std::move(computedReferrer);
+  *aResult = info.forget();
+  return true;
+}
 
 already_AddRefed<ReferrerInfo> ReferrerInfo::Clone() const {
   RefPtr<ReferrerInfo> copy(new ReferrerInfo(*this));
@@ -1400,13 +1457,13 @@ nsresult ReferrerInfo::ComputeReferrer(nsIHttpChannel* aChannel) {
     if (NS_WARN_IF(NS_FAILED(rv))) {
       return rv;
     }
-    referrer = userSpoofReferrer;
+    referrer = std::move(userSpoofReferrer);
   }
 
   // strip away any userpass; we don't want to be giving out passwords ;-)
   // This is required by Referrer Policy stripping algorithm.
   nsCOMPtr<nsIURI> exposableURI = nsIOService::CreateExposableURI(referrer);
-  referrer = exposableURI;
+  referrer = std::move(exposableURI);
 
   // Don't send referrer when the request is cross-origin and policy is
   // "same-origin".

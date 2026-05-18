@@ -1,4 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -56,7 +55,7 @@ void SVGDocumentWrapper::DestroyViewer() {
   MOZ_ASSERT(NS_IsMainThread());
   if (mViewer) {
     mViewer->GetDocument()->OnPageHide(false, nullptr);
-    mViewer->Close(nullptr);
+    mViewer->Close();
     mViewer->Destroy();
     mViewer = nullptr;
   }
@@ -209,7 +208,7 @@ SVGDocumentWrapper::OnStartRequest(nsIRequest* aRequest) {
 
     rv = mViewer->Init(nullptr, LayoutDeviceIntRect(), nullptr);
     if (NS_SUCCEEDED(rv)) {
-      rv = mViewer->Open(nullptr, nullptr);
+      rv = mViewer->Open();
     }
   }
   return rv;
@@ -307,7 +306,7 @@ nsresult SVGDocumentWrapper::SetupViewer(nsIRequest* aRequest,
   // For a root document, DocShell would do these sort of things
   // automatically. Since there is no DocShell for this wrapped SVG document,
   // we must set it up manually.
-  RefPtr<nsDOMNavigationTiming> timing = new nsDOMNavigationTiming(nullptr);
+  auto timing = MakeRefPtr<nsDOMNavigationTiming>(nullptr);
   timing->NotifyNavigationStart(
       nsDOMNavigationTiming::DocShellState::eInactive);
   viewer->SetNavigationTiming(timing);

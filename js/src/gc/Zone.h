@@ -1,6 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * vim: set ts=8 sts=2 et sw=2 tw=80:
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -16,13 +14,16 @@
 #include "mozilla/TimeStamp.h"
 
 #include <array>
+#include <bit>
 
 #include "jstypes.h"
 
 #include "ds/Bitmap.h"
+#include "ds/SlimLinkedList.h"
 #include "gc/ArenaList.h"
 #include "gc/Barrier.h"
 #include "gc/BufferAllocator.h"
+#include "gc/ChunkPool.h"
 #include "gc/FinalizationObservers.h"
 #include "gc/FindSCCs.h"
 #include "gc/GCMarker.h"
@@ -43,6 +44,7 @@
 
 namespace js {
 
+class AutoLockGC;
 class DebugScriptMap;
 class RegExpZone;
 class WeakRefObject;
@@ -344,7 +346,7 @@ class AtomCacheHashTable {
   // This value was picked empirically based on performance testing using SP2
   // and SP3. 2k was better than 1k but 4k was not much better than 2k.
   static constexpr uint32_t sSize = 2 * 1024;
-  static_assert(mozilla::IsPowerOfTwo(sSize));
+  static_assert(std::has_single_bit(sSize));
   std::array<EntrySet, sSize> mEntrySets;
 };
 
@@ -400,6 +402,41 @@ namespace JS {
 class Zone : public js::ZoneAllocator, public js::gc::GraphNodeBase<JS::Zone> {
  public:
   js::gc::ArenaLists arenas;
+
+  // Chunks which have had some, but not all, of their arenas allocated live
+  // in the available chunk lists. When all available arenas in a chunk have
+  // been allocated, the chunk is removed from the available list and moved
+  // to the fullChunks pool.
+  js::GCLockData<js::gc::ChunkPool> availableChunks_;
+
+  // When all arenas in a chunk are used, it is moved to the fullChunks pool
+  // so as to reduce the cost of operations on the available lists.
+  js::GCLockData<js::gc::ChunkPool> fullChunks_;
+
+  // The chunk currently being allocated from. If non-null this has
+  // isCurrentChunk set to true. Can be accessed without taking the GC lock.
+  js::MainThreadOrGCTaskData<js::gc::ArenaChunk*> currentChunk_;
+
+  // Bitmap for arenas in the current chunk that have been freed by background
+  // sweeping but not yet merged into the chunk's freeCommittedArenas.
+  js::GCLockData<js::gc::ChunkArenaBitmap> pendingFreeCommittedArenas;
+
+  js::gc::ChunkPool& fullChunks(const js::AutoLockGC& lock) {
+    return fullChunks_.ref();
+  }
+  js::gc::ChunkPool& availableChunks(const js::AutoLockGC& lock) {
+    return availableChunks_.ref();
+  }
+  const js::gc::ChunkPool& fullChunks(const js::AutoLockGC& lock) const {
+    return fullChunks_.ref();
+  }
+  const js::gc::ChunkPool& availableChunks(const js::AutoLockGC& lock) const {
+    return availableChunks_.ref();
+  }
+
+  template <typename F>
+  inline void forEachNonEmptyChunk(js::gc::GCRuntime* gc,
+                                   const js::AutoLockGC& lock, F&& func);
 
   js::gc::BufferAllocator bufferAllocator;
 
@@ -462,10 +499,13 @@ class Zone : public js::ZoneAllocator, public js::gc::GraphNodeBase<JS::Zone> {
 
   // Live weakmaps in this zone, used internally by the JS engine and used to
   // implement JS WeakMap objects respectively.
-  js::MainThreadOrGCTaskData<mozilla::LinkedList<js::WeakMapBase>>
+  js::MainThreadOrGCTaskData<js::SlimLinkedList<js::WeakMapBase>>
       gcSystemWeakMaps_;
-  js::MainThreadOrGCTaskData<mozilla::LinkedList<js::WeakMapBase>>
+  js::MainThreadOrGCTaskData<js::SlimLinkedList<js::WeakMapBase>>
       gcUserWeakMaps_;
+  // During marking this holds user weak maps that have been marked.
+  js::MainThreadOrGCTaskData<js::SlimLinkedList<js::WeakMapBase>>
+      gcMarkedUserWeakMaps_;
 
   // The set of compartments in this zone.
   using CompartmentVector =
@@ -533,6 +573,10 @@ class Zone : public js::ZoneAllocator, public js::gc::GraphNodeBase<JS::Zone> {
   js::MainThreadOrGCTaskData<bool> gcUserWeakMapsMayHaveKeyDelegates_;
   js::MainThreadOrGCTaskData<bool> gcWeakMapsMayHaveSymbolKeys_;
 
+  // Cached information about finalization registries in the zone.
+  js::MainThreadOrGCTaskData<bool>
+      gcFinalizationRegistriesMayHaveSymbolRegistrations_;
+
   js::MainThreadOrIonCompileData<JSObject**> preservedWrappers_;
   js::MainThreadOrIonCompileData<size_t> preservedWrappersCount_;
   js::MainThreadOrIonCompileData<size_t> preservedWrappersCapacity_;
@@ -585,18 +629,21 @@ class Zone : public js::ZoneAllocator, public js::gc::GraphNodeBase<JS::Zone> {
   [[nodiscard]] bool findSweepGroupEdges(Zone* atomsZone);
 
   struct JitDiscardOptions {
-    JitDiscardOptions() {}
+    JitDiscardOptions() = default;
     bool discardJitScripts = false;
     bool resetNurseryAllocSites = false;
     bool resetPretenuredAllocSites = false;
   };
+
+  // Circumvent https://github.com/llvm/llvm-project/issues/36032
+  static constexpr JitDiscardOptions DefaultJitDiscardOptions() { return {}; }
 
   void maybeDiscardJitCode(JS::GCContext* gcx);
 
   // Discard JIT code regardless of isPreservingCode().
   void forceDiscardJitCode(
       JS::GCContext* gcx,
-      const JitDiscardOptions& options = JitDiscardOptions());
+      const JitDiscardOptions& options = DefaultJitDiscardOptions());
 
   void resetAllocSitesAndInvalidate(bool resetNurserySites,
                                     bool resetPretenuredSites);
@@ -717,6 +764,10 @@ class Zone : public js::ZoneAllocator, public js::gc::GraphNodeBase<JS::Zone> {
     return true;
   }
 
+  bool hasPendingWrapperPreservations() const {
+    return preservedWrappersCount_ != 0;
+  }
+
   void purgePendingWrapperPreservationBuffer() {
     MOZ_RELEASE_ASSERT(preservedWrappersCount_ == 0);
     js_free(preservedWrappers_);
@@ -781,11 +832,14 @@ class Zone : public js::ZoneAllocator, public js::gc::GraphNodeBase<JS::Zone> {
     return res;
   }
 
-  mozilla::LinkedList<js::WeakMapBase>& gcSystemWeakMaps() {
+  js::SlimLinkedList<js::WeakMapBase>& gcSystemWeakMaps() {
     return gcSystemWeakMaps_.ref();
   }
-  mozilla::LinkedList<js::WeakMapBase>& gcUserWeakMaps() {
+  js::SlimLinkedList<js::WeakMapBase>& gcUserWeakMaps() {
     return gcUserWeakMaps_.ref();
+  }
+  js::SlimLinkedList<js::WeakMapBase>& gcMarkedUserWeakMaps() {
+    return gcMarkedUserWeakMaps_.ref();
   }
 
   bool gcUserWeakMapsMayHaveKeyDelegates() const {
@@ -801,6 +855,13 @@ class Zone : public js::ZoneAllocator, public js::gc::GraphNodeBase<JS::Zone> {
   void clearGCCachedWeakMapKeyData() {
     gcUserWeakMapsMayHaveKeyDelegates_ = false;
     gcWeakMapsMayHaveSymbolKeys_ = false;
+  }
+
+  void setGCFinalizationRegistriesMayHaveSymbolRegistrations() {
+    gcFinalizationRegistriesMayHaveSymbolRegistrations_ = true;
+  }
+  void clearGCFinalizationRegistriesMayHaveSymbolRegistrations() {
+    gcFinalizationRegistriesMayHaveSymbolRegistrations_ = false;
   }
 
   CompartmentVector& compartments() { return compartments_.ref(); }
@@ -896,6 +957,7 @@ class Zone : public js::ZoneAllocator, public js::gc::GraphNodeBase<JS::Zone> {
     return gcGraphEdges.has(otherZone);
   }
   [[nodiscard]] bool addSweepGroupEdgeTo(Zone* otherZone) {
+    MOZ_ASSERT(isGCMarking());
     MOZ_ASSERT(otherZone->isGCMarking());
     return gcSweepGroupEdges().put(otherZone);
   }

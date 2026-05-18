@@ -54,6 +54,7 @@ UNCOMMON_TRY_TASK_LABELS = [
     r"windows10-aarch64-qr",
     # Test tasks
     r"web-platform-tests.*backlog",  # hide wpt jobs that are not implemented yet - bug 1572820
+    r"-artifact[/-]",  # Artifact build test jobs - Bug 1945658
     r"-ccov",
     r"-profiling-",  # talos/raptor profiling jobs are run too often
     r"-32-.*-webgpu",  # webgpu gets little benefit from these tests.
@@ -65,6 +66,8 @@ UNCOMMON_TRY_TASK_LABELS = [
     r"nightly-simulation",
     # Can't actually run on try
     r"notarization",
+    # not usually needed
+    "upload-symbols",
 ]
 
 
@@ -228,15 +231,6 @@ def filter_release_tasks(task, parameters):
     return True
 
 
-def filter_out_missing_signoffs(task, parameters):
-    for signoff in parameters["required_signoffs"]:
-        if signoff not in parameters["signoff_urls"] and signoff in task.attributes.get(
-            "required_signoffs", []
-        ):
-            return False
-    return True
-
-
 def filter_tests_without_manifests(task, parameters):
     """Remove test tasks that have an empty 'test_manifests' attribute.
 
@@ -273,8 +267,6 @@ def accept_raptor_android_build(platform):
     if "android" not in platform:
         return False
     if "shippable" not in platform:
-        return False
-    if "p5" in platform and "aarch64" in platform:
         return False
     if "p6" in platform and "aarch64" in platform:
         return True
@@ -539,9 +531,6 @@ def target_tasks_promote_desktop(full_task_graph, parameters, graph_config):
         if task.attributes.get("shipping_product") != parameters["release_product"]:
             return False
 
-        if not filter_out_missing_signoffs(task, parameters):
-            return False
-
         if task.attributes.get("shipping_phase") == "promote":
             return True
 
@@ -559,8 +548,6 @@ def target_tasks_push_desktop(full_task_graph, parameters, graph_config):
     )
 
     def filter(task):
-        if not filter_out_missing_signoffs(task, parameters):
-            return False
         # Include promotion tasks; these will be optimized out
         if task.label in filtered_for_candidates:
             return True
@@ -585,8 +572,6 @@ def target_tasks_ship_desktop(full_task_graph, parameters, graph_config):
     )
 
     def filter(task):
-        if not filter_out_missing_signoffs(task, parameters):
-            return False
         # Include promotion tasks; these will be optimized out
         if task.label in filtered_for_candidates:
             return True
@@ -682,12 +667,24 @@ def target_tasks_custom_car_perf_testing(full_task_graph, parameters, graph_conf
         if "network-bench" in try_name and "linux" not in platform:
             return False
 
+        # Bug 2014270 - Disable speedometer2 on production branches
+        if "speedometer2" in try_name:
+            return False
+
         # Desktop and Android selection for CaR
         if accept_raptor_desktop_build(platform):
             if "browsertime" in try_name and "custom-car" in try_name:
                 # Bug 1898514: avoid tp6m or non-essential tp6 jobs in cron
                 if "tp6" in try_name and "essential" not in try_name:
                     return False
+                # Bug 2038340: temporarily limit CaR benchmarks on Windows
+                # to sp3/js3/motionmark during PSU replacement
+                if "windows" in platform and "benchmark" in try_name:
+                    if not any(
+                        x in try_name
+                        for x in ["speedometer3", "jetstream3", "motionmark"]
+                    ):
+                        return False
                 # Bug 1928416
                 # For ARM coverage, this will only run on M2 machines at the moment.
                 if "jetstream2" in try_name:
@@ -745,6 +742,10 @@ def target_tasks_general_perf_testing(full_task_graph, parameters, graph_config)
         if "tp7" in try_name:
             return False
 
+        # Bug 2014270 - Disable speedometer2 on production branches
+        if "speedometer2" in try_name:
+            return False
+
         # Bug 1867669 - Temporarily disable all live site tests
         if "live" in try_name and "sheriffed" not in try_name:
             return False
@@ -769,6 +770,14 @@ def target_tasks_general_perf_testing(full_task_graph, parameters, graph_config)
                 if "chrome" in try_name:
                     if "tp6" in try_name and "essential" not in try_name:
                         return False
+                    # Bug 2038340: temporarily limit Chrome benchmarks on Windows
+                    # to sp3/js3/motionmark during PSU replacement
+                    if "windows" in platform and "benchmark" in try_name:
+                        if not any(
+                            x in try_name
+                            for x in ["speedometer3", "jetstream3", "motionmark"]
+                        ):
+                            return False
                     return True
                 # chromium-as-release has its own cron
                 if "custom-car" in try_name:
@@ -778,8 +787,16 @@ def target_tasks_general_perf_testing(full_task_graph, parameters, graph_config)
                 if "-fis" in try_name:
                     return False
                 if "linux" in platform:
-                    if "speedometer" in try_name:
+                    if "speedometer3" in try_name:
                         return True
+                # Bug 2038340: temporarily limit Firefox benchmarks on Windows
+                # to sp3/js3/motionmark during PSU replacement
+                if "windows" in platform and "benchmark" in try_name:
+                    if not any(
+                        x in try_name
+                        for x in ["speedometer3", "jetstream3", "motionmark"]
+                    ):
+                        return False
                 if "safari" and "benchmark" in try_name:
                     if "jetstream2" in try_name and "safari" in try_name:
                         return False
@@ -839,7 +856,7 @@ def target_tasks_general_perf_testing(full_task_graph, parameters, graph_config)
                     return True
                 if "fenix" in try_name:
                     return False
-                if "speedometer" in try_name:
+                if "speedometer3" in try_name:
                     return True
                 if "motionmark" in try_name and "1-3" in try_name:
                     if "chrome-m" in try_name:
@@ -863,8 +880,11 @@ def target_tasks_geckoview_perftest(full_task_graph, parameters, graph_config):
 
         if accept_raptor_android_build(platform):
             try_name = attributes.get("raptor_try_name")
+            # Bug 2014270 - Disable speedometer2 on production branches
+            if "speedometer2" in try_name:
+                return False
             if "geckoview" in try_name and "browsertime" in try_name:
-                if "hw-s24" in platform and "speedometer" not in try_name:
+                if "hw-s24" in platform and "speedometer3" not in try_name:
                     return False
                 if "live" in try_name and "cnn-amp" not in try_name:
                     return False
@@ -903,7 +923,7 @@ def target_tasks_speedometer_tests(full_task_graph, parameters, graph_config):
         if accept_raptor_desktop_build(platform):
             if (
                 "browsertime" in try_name
-                and "speedometer" in try_name
+                and "speedometer3" in try_name
                 and "chrome" in try_name
             ):
                 return True
@@ -912,7 +932,7 @@ def target_tasks_speedometer_tests(full_task_graph, parameters, graph_config):
                 return False
             if (
                 "browsertime" in try_name
-                and "speedometer" in try_name
+                and "speedometer3" in try_name
                 and "chrome-m" in try_name
             ):
                 if "-nofis" not in try_name:
@@ -1297,6 +1317,10 @@ def target_tasks_daily_beta_perf(full_task_graph, parameters, graph_config):
         if not platform:
             return False
 
+        # Bug 2014270 - Disable speedometer2 on production branches
+        if "speedometer2" in try_name:
+            return False
+
         # Select beta tasks for awsy
         if "awsy" in try_name:
             if accept_awsy_task(try_name, platform):
@@ -1370,6 +1394,10 @@ def target_tasks_weekly_release_perf(full_task_graph, parameters, graph_config):
         if attributes.get("unittest_suite") not in ("raptor", "awsy"):
             return False
         if not platform:
+            return False
+
+        # Bug 2014270 - Disable speedometer2 on production branches
+        if "speedometer2" in try_name:
             return False
 
         # Select release tasks for awsy
@@ -1674,13 +1702,29 @@ def target_tasks_android_l10n_sync(full_task_graph, parameters, graph_config):
     return [l for l, t in full_task_graph.tasks.items() if l == "android-l10n-sync"]
 
 
+@register_target_task("android-l10n-sync-beta-to-release")
+def target_tasks_android_l10n_sync_beta_to_release(
+    full_task_graph, parameters, graph_config
+):
+    return [
+        l
+        for l, t in full_task_graph.tasks.items()
+        if l == "android-l10n-sync-beta-to-release"
+    ]
+
+
 @register_target_task("os-integration")
 def target_tasks_os_integration(full_task_graph, parameters, graph_config):
     candidate_attrs = load_yaml(os.path.join(TEST_CONFIGS, "os-integration.yml"))
 
     labels = []
     for label, task in full_task_graph.tasks.items():
-        if task.kind not in TEST_KINDS + ("source-test", "perftest", "startup-test"):
+        if task.kind not in TEST_KINDS + (
+            "source-test",
+            "perftest",
+            "startup-test",
+            "snap-upstream-test",
+        ):
             continue
 
         # Match tasks against attribute sets defined in os-integration.yml.
@@ -1695,6 +1739,12 @@ def target_tasks_os_integration(full_task_graph, parameters, graph_config):
                 task.attributes.get("build_platform") == "macosx64"
                 or "android-hw" in label
             ):
+                continue
+
+            # The `-local` snap variants depend on local gecko checkouts and
+            # aren't meaningful on m-c; match the exclusion used by
+            # `snap_upstream_tasks`.
+            if task.kind == "snap-upstream-test" and "-local" in label:
                 continue
 
             # Perform additional filtering for non-try repos. We don't want to
@@ -1722,4 +1772,33 @@ def target_tasks_test_info_timings_periodic(full_task_graph, parameters, graph_c
         "source-test-file-metadata-test-info-xpcshell-timings-periodic",
         "source-test-file-metadata-test-info-mochitest-timings-periodic",
         "source-test-file-metadata-test-info-manifest-timings-periodic",
+        "source-test-file-metadata-test-info-worker-data-periodic",
     ]
+
+
+@register_target_task("android-macrobenchmark_daily")
+def target_tasks_android_macrobenchmark_daily(
+    full_task_graph, parameters, graph_config
+):
+    return [
+        label
+        for label, task in full_task_graph.tasks.items()
+        if task.kind == "run-macrobenchmark-firebase"
+    ]
+
+
+@register_target_task("firefox_pull_request_tasks")
+def target_firefox_pull_requests(full_task_graph, parameters, graph_config):
+    if parameters["tasks_for"] != "github-pull-request":
+        return []
+
+    labels = []
+    for label, task in full_task_graph.tasks.items():
+        # Always add the code review analysis & ending tasks
+        if task.attributes.get("code-review") or task.kind == "code-review":
+            labels.append(label)
+
+        elif not standard_filter(task, parameters):
+            continue
+
+    return labels

@@ -11,7 +11,6 @@
  */
 
 import { createEngine } from "chrome://global/content/ml/EngineProcess.sys.mjs";
-import { getFxAccountsSingleton } from "resource://gre/modules/FxAccounts.sys.mjs";
 import {
   OAUTH_CLIENT_ID,
   SCOPE_PROFILE_UID,
@@ -21,25 +20,19 @@ import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 
 const lazy = XPCOMUtils.declareLazy({
   RemoteSettings: "resource://services-settings/remote-settings.sys.mjs",
+  getFxAccountsSingleton: "resource://gre/modules/FxAccounts.sys.mjs",
 });
 
 const APIKEY_PREF = "browser.smartwindow.apiKey";
 const MODEL_PREF = "browser.smartwindow.model";
 const ENDPOINT_PREF = "browser.smartwindow.endpoint";
 const MODEL_CHOICE_PREF = "browser.smartwindow.firstrun.modelChoice";
+const GENERIC_MODEL_NAME = "generic";
 
 /**
  * Default engine ID used for all AI Window features
  */
 export const DEFAULT_ENGINE_ID = "smart-openai";
-
-/**
- * Service types for different AI Window features
- */
-export const SERVICE_TYPES = Object.freeze({
-  AI: "ai",
-  MEMORIES: "memories",
-});
 
 /**
  * Observer for model preference changes.
@@ -79,6 +72,8 @@ export const MODEL_FEATURES = Object.freeze({
   MEMORIES_DEDUPLICATION_USER: "memories-deduplication-user",
   MEMORIES_SENSITIVITY_FILTER_SYSTEM: "memories-sensitivity-filter-system",
   MEMORIES_SENSITIVITY_FILTER_USER: "memories-sensitivity-filter-user",
+  MEMORIES_QUALITY_FILTER_SYSTEM: "memories-quality-filter-system",
+  MEMORIES_QUALITY_FILTER_USER: "memories-quality-filter-user",
   // memories usage features
   MEMORIES_MESSAGE_CLASSIFICATION_SYSTEM:
     "memories-message-classification-system",
@@ -88,38 +83,45 @@ export const MODEL_FEATURES = Object.freeze({
   REAL_TIME_CONTEXT_TAB: "real-time-context-tab",
   REAL_TIME_CONTEXT_MENTIONS: "real-time-context-mentions",
   MEMORIES_RELEVANT_CONTEXT: "memories-relevant-context",
+  DISABLE_TABLE_INSTRUCTIONS: "disable-table-instructions",
+  ENABLE_TABLE_INSTRUCTIONS: "enable-table-instructions",
 });
 
 /**
- * Default model IDs for each feature.
- * These are Mozilla's recommended models, used when user hasn't configured
- * custom settings or when remote setting retrieval fails.
+ * Service types for different AI Window features
  */
-export const DEFAULT_MODEL = Object.freeze({
-  [MODEL_FEATURES.CHAT]: "qwen3-235b-a22b-instruct-2507-maas",
-  [MODEL_FEATURES.TITLE_GENERATION]: "qwen3-235b-a22b-instruct-2507-maas",
+export const SERVICE_TYPES = Object.freeze({
+  AI: "ai",
+  MEMORIES: "memories",
+});
+
+/**
+ * Purposes for different AI Window features, used to track usage and performance in telemetry
+ */
+export const PURPOSES = Object.freeze({
+  CHAT: "chat",
+  TITLE_GENERATION: "title-generation",
+  CONVERSATION_STARTERS_SIDEBAR: "convo-starters-sidebar",
+  MEMORY_GENERATION: "memory-generation",
+});
+
+/**
+ * Default purposes for different AI Window features, used to track usage and performance in telemetry
+ * (purposes are now defined in remote-settings)
+ */
+export const DEFAULT_PURPOSE = "default";
+export const FEATURE_PURPOSES = Object.freeze({
+  DEFAULT_PURPOSE: PURPOSES.CHAT,
+  [MODEL_FEATURES.CHAT]: PURPOSES.CHAT,
   [MODEL_FEATURES.CONVERSATION_SUGGESTIONS_SIDEBAR_STARTER]:
-    "qwen3-235b-a22b-instruct-2507-maas",
+    PURPOSES.CONVERSATION_STARTERS_SIDEBAR,
   [MODEL_FEATURES.CONVERSATION_SUGGESTIONS_FOLLOWUP]:
-    "qwen3-235b-a22b-instruct-2507-maas",
-  [MODEL_FEATURES.CONVERSATION_SUGGESTIONS_ASSISTANT_LIMITATIONS]:
-    "qwen3-235b-a22b-instruct-2507-maas",
-  [MODEL_FEATURES.CONVERSATION_SUGGESTIONS_INSIGHTS]:
-    "qwen3-235b-a22b-instruct-2507-maas",
-  // memories generation flow
-  [MODEL_FEATURES.MEMORIES_INITIAL_GENERATION_SYSTEM]: "gemini-2.5-flash-lite",
-  [MODEL_FEATURES.MEMORIES_INITIAL_GENERATION_USER]: "gemini-2.5-flash-lite",
-  [MODEL_FEATURES.MEMORIES_DEDUPLICATION_SYSTEM]: "gemini-2.5-flash-lite",
-  [MODEL_FEATURES.MEMORIES_DEDUPLICATION_USER]: "gemini-2.5-flash-lite",
-  [MODEL_FEATURES.MEMORIES_SENSITIVITY_FILTER_SYSTEM]: "gemini-2.5-flash-lite",
-  [MODEL_FEATURES.MEMORIES_SENSITIVITY_FILTER_USER]: "gemini-2.5-flash-lite",
-  // memories usage flow
+    PURPOSES.CONVERSATION_STARTERS_SIDEBAR,
+  [MODEL_FEATURES.TITLE_GENERATION]: PURPOSES.TITLE_GENERATION,
+  [MODEL_FEATURES.MEMORIES_INITIAL_GENERATION_SYSTEM]:
+    PURPOSES.MEMORY_GENERATION,
   [MODEL_FEATURES.MEMORIES_MESSAGE_CLASSIFICATION_SYSTEM]:
-    "qwen3-235b-a22b-instruct-2507-maas",
-  [MODEL_FEATURES.MEMORIES_MESSAGE_CLASSIFICATION_USER]:
-    "qwen3-235b-a22b-instruct-2507-maas",
-  [MODEL_FEATURES.MEMORIES_RELEVANT_CONTEXT]:
-    "qwen3-235b-a22b-instruct-2507-maas",
+    PURPOSES.MEMORY_GENERATION,
 });
 
 /**
@@ -130,20 +132,21 @@ export const DEFAULT_MODEL = Object.freeze({
  * - Old clients will continue using old major version
  */
 export const FEATURE_MAJOR_VERSIONS = Object.freeze({
-  [MODEL_FEATURES.CHAT]: 2,
+  [MODEL_FEATURES.CHAT]: 4,
   [MODEL_FEATURES.TITLE_GENERATION]: 1,
   [MODEL_FEATURES.CONVERSATION_STARTERS_SIDEBAR_SYSTEM]: 1,
   [MODEL_FEATURES.CONVERSATION_SUGGESTIONS_SIDEBAR_STARTER]: 2,
   [MODEL_FEATURES.CONVERSATION_SUGGESTIONS_FOLLOWUP]: 1,
   [MODEL_FEATURES.CONVERSATION_SUGGESTIONS_ASSISTANT_LIMITATIONS]: 1,
-  [MODEL_FEATURES.CONVERSATION_SUGGESTIONS_INSIGHTS]: 1,
   // memories generation feature versions
-  [MODEL_FEATURES.MEMORIES_INITIAL_GENERATION_SYSTEM]: 1,
-  [MODEL_FEATURES.MEMORIES_INITIAL_GENERATION_USER]: 1,
+  [MODEL_FEATURES.MEMORIES_INITIAL_GENERATION_SYSTEM]: 2,
+  [MODEL_FEATURES.MEMORIES_INITIAL_GENERATION_USER]: 2,
   [MODEL_FEATURES.MEMORIES_DEDUPLICATION_SYSTEM]: 1,
   [MODEL_FEATURES.MEMORIES_DEDUPLICATION_USER]: 1,
   [MODEL_FEATURES.MEMORIES_SENSITIVITY_FILTER_SYSTEM]: 1,
   [MODEL_FEATURES.MEMORIES_SENSITIVITY_FILTER_USER]: 1,
+  [MODEL_FEATURES.MEMORIES_QUALITY_FILTER_SYSTEM]: 1,
+  [MODEL_FEATURES.MEMORIES_QUALITY_FILTER_USER]: 1,
   // memories usage feature versions
   [MODEL_FEATURES.MEMORIES_MESSAGE_CLASSIFICATION_SYSTEM]: 1,
   [MODEL_FEATURES.MEMORIES_MESSAGE_CLASSIFICATION_USER]: 1,
@@ -161,6 +164,11 @@ export const FEATURE_MAJOR_VERSIONS = Object.freeze({
  * @property {boolean} [is_default] - Whether this is the default config for the feature
  * @property {object} [parameters] - Optional inference parameters (e.g., temperature)
  * @property {string[]} [additional_components] - Optional list of dependent feature configs
+ */
+
+/**
+ * @typedef {object} RemoteSettingsClient
+ * @property {() => Promise<object[]>} get - Function to get records from remote settings
  */
 
 /**
@@ -317,6 +325,27 @@ export class openAIEngine {
   #serviceType = null;
 
   /**
+   * Purpose used for creating the engine instance
+   *
+   * @type {string | null}
+   */
+  #purpose = null;
+
+  /**
+   * Feature name passed to PipelineOptions as featureId for telemetry.
+   *
+   * @type {string | null}
+   */
+  #feature = null;
+
+  /**
+   * Flow ID for correlating frontend and backend telemetry.
+   *
+   * @type {string | null}
+   */
+  #flowId = null;
+
+  /**
    * Gets the Remote Settings client for AI window configurations.
    *
    * @returns {RemoteSettingsClient}
@@ -351,15 +380,21 @@ export class openAIEngine {
   }
 
   /**
-   * Applies default configuration fallback when Remote Settings selection fails
+   * Overrides the model config with generic config
    *
-   * @param {string} feature - The feature identifier
+   * @param {Array} featureConfigs - All configs for the feature from Remote Settings
+   * @param {number} majorVersion - Required major version for the feature
+   *
    * @private
    */
-  _applyDefaultConfig(feature) {
-    this.feature = feature;
-    this.model = DEFAULT_MODEL[feature];
-    this.#configs = {};
+  _loadGenericChatPrompt(featureConfigs, majorVersion) {
+    console.warn(`Custom endpoint detected. Using generic chat prompt`);
+    this.#configs[MODEL_FEATURES.CHAT] = selectMainConfig(featureConfigs, {
+      majorVersion,
+      userModel: GENERIC_MODEL_NAME,
+      modelChoiceId: "",
+      feature: MODEL_FEATURES.CHAT,
+    });
   }
 
   /**
@@ -378,11 +413,9 @@ export class openAIEngine {
     majorVersion
   ) {
     if (!featureConfigs.length) {
-      console.warn(
-        `No Remote Settings records found for feature: ${feature}, using default`
-      );
-      this._applyDefaultConfig(feature);
-      return;
+      const msg = `No Remote Settings records found for feature: ${feature}`;
+      console.error(msg);
+      throw new Error(msg);
     }
 
     const userModel = Services.prefs.getStringPref(MODEL_PREF, "");
@@ -397,11 +430,9 @@ export class openAIEngine {
     });
 
     if (!mainConfig) {
-      console.warn(
-        `No matching model config found for feature: ${feature} with major version ${majorVersion}, using default`
-      );
-      this._applyDefaultConfig(feature);
-      return;
+      const msg = `No matching model config found for feature: ${feature} with major version ${majorVersion};`;
+      console.error(msg);
+      throw new Error(msg);
     }
 
     this.feature = feature;
@@ -500,10 +531,21 @@ export class openAIEngine {
       majorVersion
     );
 
-    const hasCustomEndpoint = Services.prefs.prefHasUserValue(ENDPOINT_PREF);
-    if (hasCustomEndpoint) {
+    if (openAIEngine.hasCustomEndpoint()) {
+      if (feature === MODEL_FEATURES.CHAT) {
+        this._loadGenericChatPrompt(featureConfigs, majorVersion);
+      }
       this._applyCustomEndpointModel();
     }
+  }
+
+  /**
+   * Checks whether a custom endpoint is configured via pref.
+   *
+   * @returns {boolean} True if the endpoint pref has a user-set value.
+   */
+  static hasCustomEndpoint() {
+    return Services.prefs.prefHasUserValue(ENDPOINT_PREF);
   }
 
   /**
@@ -514,7 +556,31 @@ export class openAIEngine {
    */
   getConfig(feature) {
     const targetFeature = feature || this.feature;
-    return this.#configs?.[targetFeature] || null;
+    // load custom prompt pref if exists
+    // custom prompts should be entered as { feature_name: prompt }
+    const prefPromptRaw = Services.prefs.getStringPref(
+      "browser.smartwindow.customPrompts",
+      ""
+    );
+    let prefPrompt = null;
+    if (prefPromptRaw) {
+      try {
+        prefPrompt = JSON.parse(prefPromptRaw);
+      } catch (e) {
+        console.warn(
+          "browser.smartwindow.customPrompts contains invalid JSON. Expecting: { feature: prompt }",
+          e
+        );
+      }
+    }
+    const prefPromptMapping = prefPrompt?.[targetFeature]
+      ? { prompts: prefPrompt[targetFeature] }
+      : null;
+
+    return {
+      ...this.#configs?.[targetFeature],
+      ...prefPromptMapping,
+    };
   }
 
   /**
@@ -525,137 +591,13 @@ export class openAIEngine {
    * @returns {Promise<string>} The prompt content
    */
   async loadPrompt(feature) {
-    // Try loading from Remote Settings first
     const config = this.getConfig(feature);
     if (config?.prompts) {
       return config.prompts;
     }
 
-    console.warn(
-      `No Remote Settings prompt for ${feature}, falling back to local`
-    );
-
-    // Fall back to local prompts
-    try {
-      return await this.#loadLocalPrompt(feature);
-    } catch (error) {
-      throw new Error(`Failed to load prompt for ${feature}: ${error.message}`);
-    }
-  }
-
-  /**
-   * Loads a prompt from local prompt files.
-   *
-   * @param {string} feature - The feature identifier
-   * @returns {Promise<string>} The prompt content from local files
-   */
-  async #loadLocalPrompt(feature) {
-    switch (feature) {
-      case MODEL_FEATURES.CHAT: {
-        const { assistantPrompt } =
-          await import("moz-src:///browser/components/aiwindow/models/prompts/AssistantPrompts.sys.mjs");
-        return assistantPrompt;
-      }
-      case MODEL_FEATURES.TITLE_GENERATION: {
-        const { titleGenerationPrompt } =
-          await import("moz-src:///browser/components/aiwindow/models/prompts/TitleGenerationPrompts.sys.mjs");
-        return titleGenerationPrompt;
-      }
-      case MODEL_FEATURES.CONVERSATION_STARTERS_SIDEBAR_SYSTEM: {
-        const { conversationStarterSystemPrompt } =
-          await import("moz-src:///browser/components/aiwindow/models/prompts/ConversationSuggestionsPrompts.sys.mjs");
-        return conversationStarterSystemPrompt;
-      }
-      case MODEL_FEATURES.CONVERSATION_SUGGESTIONS_SIDEBAR_STARTER: {
-        const { conversationStarterPrompt } =
-          await import("moz-src:///browser/components/aiwindow/models/prompts/ConversationSuggestionsPrompts.sys.mjs");
-        return conversationStarterPrompt;
-      }
-      case MODEL_FEATURES.CONVERSATION_SUGGESTIONS_FOLLOWUP: {
-        const { conversationFollowupPrompt } =
-          await import("moz-src:///browser/components/aiwindow/models/prompts/ConversationSuggestionsPrompts.sys.mjs");
-        return conversationFollowupPrompt;
-      }
-      case MODEL_FEATURES.CONVERSATION_SUGGESTIONS_ASSISTANT_LIMITATIONS: {
-        const { assistantLimitations } =
-          await import("moz-src:///browser/components/aiwindow/models/prompts/ConversationSuggestionsPrompts.sys.mjs");
-        return assistantLimitations;
-      }
-      case MODEL_FEATURES.CONVERSATION_SUGGESTIONS_MEMORIES: {
-        const { conversationMemoriesPrompt } =
-          await import("moz-src:///browser/components/aiwindow/models/prompts/ConversationSuggestionsPrompts.sys.mjs");
-        return conversationMemoriesPrompt;
-      }
-
-      // Memories generation flow
-      case MODEL_FEATURES.MEMORIES_INITIAL_GENERATION_SYSTEM: {
-        const { initialMemoriesGenerationSystemPrompt } =
-          await import("moz-src:///browser/components/aiwindow/models/prompts/MemoriesPrompts.sys.mjs");
-        return initialMemoriesGenerationSystemPrompt;
-      }
-      case MODEL_FEATURES.MEMORIES_INITIAL_GENERATION_USER: {
-        const { initialMemoriesGenerationPrompt } =
-          await import("moz-src:///browser/components/aiwindow/models/prompts/MemoriesPrompts.sys.mjs");
-        return initialMemoriesGenerationPrompt;
-      }
-      case MODEL_FEATURES.MEMORIES_DEDUPLICATION_SYSTEM: {
-        const { memoriesDeduplicationSystemPrompt } =
-          await import("moz-src:///browser/components/aiwindow/models/prompts/MemoriesPrompts.sys.mjs");
-        return memoriesDeduplicationSystemPrompt;
-      }
-      case MODEL_FEATURES.MEMORIES_DEDUPLICATION_USER: {
-        const { memoriesDeduplicationPrompt } =
-          await import("moz-src:///browser/components/aiwindow/models/prompts/MemoriesPrompts.sys.mjs");
-        return memoriesDeduplicationPrompt;
-      }
-      case MODEL_FEATURES.MEMORIES_SENSITIVITY_FILTER_SYSTEM: {
-        const { memoriesSensitivityFilterSystemPrompt } =
-          await import("moz-src:///browser/components/aiwindow/models/prompts/MemoriesPrompts.sys.mjs");
-        return memoriesSensitivityFilterSystemPrompt;
-      }
-      case MODEL_FEATURES.MEMORIES_SENSITIVITY_FILTER_USER: {
-        const { memoriesSensitivityFilterPrompt } =
-          await import("moz-src:///browser/components/aiwindow/models/prompts/MemoriesPrompts.sys.mjs");
-        return memoriesSensitivityFilterPrompt;
-      }
-
-      // memories usage flow
-      case MODEL_FEATURES.MEMORIES_MESSAGE_CLASSIFICATION_SYSTEM: {
-        const { messageMemoryClassificationSystemPrompt } =
-          await import("moz-src:///browser/components/aiwindow/models/prompts/MemoriesPrompts.sys.mjs");
-        return messageMemoryClassificationSystemPrompt;
-      }
-      case MODEL_FEATURES.MEMORIES_MESSAGE_CLASSIFICATION_USER: {
-        const { messageMemoryClassificationPrompt } =
-          await import("moz-src:///browser/components/aiwindow/models/prompts/MemoriesPrompts.sys.mjs");
-        return messageMemoryClassificationPrompt;
-      }
-      case MODEL_FEATURES.MEMORIES_RELEVANT_CONTEXT: {
-        const { relevantMemoriesContextPrompt } =
-          await import("moz-src:///browser/components/aiwindow/models/prompts/MemoriesPrompts.sys.mjs");
-        return relevantMemoriesContextPrompt;
-      }
-
-      // real time context
-      case MODEL_FEATURES.REAL_TIME_CONTEXT_DATE: {
-        const { realTimeContextDatePrompt } =
-          await import("moz-src:///browser/components/aiwindow/models/prompts/ContextPrompts.sys.mjs");
-        return realTimeContextDatePrompt;
-      }
-      case MODEL_FEATURES.REAL_TIME_CONTEXT_TAB: {
-        const { realTimeContextTabPrompt } =
-          await import("moz-src:///browser/components/aiwindow/models/prompts/ContextPrompts.sys.mjs");
-        return realTimeContextTabPrompt;
-      }
-      case MODEL_FEATURES.REAL_TIME_CONTEXT_MENTIONS: {
-        const { realTimeContextMentionsPrompt } =
-          await import("moz-src:///browser/components/aiwindow/models/prompts/ContextPrompts.sys.mjs");
-        return realTimeContextMentionsPrompt;
-      }
-
-      default:
-        throw new Error(`No local prompt found for feature: ${feature}`);
-    }
+    console.error(`Failed to load prompt for ${feature}`);
+    throw new Error(`Failed to load prompt for ${feature}`);
   }
 
   /**
@@ -663,30 +605,35 @@ export class openAIEngine {
    *
    * @param {string} feature
    *   The feature name to use to retrieve remote settings for prompts.
-   * @param {string} engineId
-   *   The engine ID for MLEngine creation. Defaults to DEFAULT_ENGINE_ID.
-   * @param {string} serviceType
-   *   The type of message to be sent ("ai", "memories", "s2s").
-   *   Defaults to SERVICE_TYPES.AI.
+   * @param {string | null} [flowId]
+   *   Flow ID for correlating frontend and backend telemetry.
    * @returns {Promise<object>}
    *   Promise that will resolve to the configured engine instance.
    */
-  static async build(
-    feature,
-    engineId = DEFAULT_ENGINE_ID,
-    serviceType = SERVICE_TYPES.AI
-  ) {
+  static async build(feature, flowId = null) {
     const engine = new openAIEngine();
 
     await engine.loadConfig(feature);
 
+    const config = engine.getConfig(feature);
+    const engineId = `${DEFAULT_ENGINE_ID}-${feature}`;
     engine.#engineId = engineId;
-    engine.#serviceType = serviceType;
+    engine.#serviceType =
+      config?.service_type ?? getDefaultServiceType(feature);
+    engine.#purpose =
+      config?.purpose ??
+      FEATURE_PURPOSES[feature] ??
+      FEATURE_PURPOSES[DEFAULT_PURPOSE];
+    engine.#feature = feature;
+    engine.#flowId = flowId;
 
     engine.engineInstance = await openAIEngine.#createOpenAIEngine(
       engineId,
-      serviceType,
-      engine.model
+      engine.#serviceType,
+      engine.#purpose,
+      engine.model,
+      flowId,
+      feature
     );
 
     return engine;
@@ -699,7 +646,7 @@ export class openAIEngine {
    */
   static async getFxAccountToken() {
     try {
-      const fxAccounts = getFxAccountsSingleton();
+      const fxAccounts = lazy.getFxAccountsSingleton();
       return await fxAccounts.getOAuthToken({
         scope: [SCOPE_SMART_WINDOW, SCOPE_PROFILE_UID],
         client_id: OAUTH_CLIENT_ID,
@@ -715,10 +662,20 @@ export class openAIEngine {
    *
    * @param {string} engineId     The identifier for the engine instance
    * @param {string} serviceType  The type of message to be sent ("ai", "memories", "s2s")
+   * @param {string} purpose      The purpose of the request, used for telemetry tracking
    * @param {string | null} modelId  The resolved model ID (already contains fallback logic)
+   * @param {string | null} flowId   Flow ID for correlating frontend and backend telemetry
+   * @param {string | null} featureId  Feature name passed to PipelineOptions
    * @returns {Promise<object>}   The configured engine instance
    */
-  static async #createOpenAIEngine(engineId, serviceType, modelId = null) {
+  static async #createOpenAIEngine(
+    engineId,
+    serviceType,
+    purpose,
+    modelId = null,
+    flowId = null,
+    featureId = null
+  ) {
     const extraHeadersPref = Services.prefs.getStringPref(
       "browser.smartwindow.extraHeaders",
       "{}"
@@ -733,14 +690,17 @@ export class openAIEngine {
 
     try {
       const engineInstance = await openAIEngine._createEngine({
-        apiKey: Services.prefs.getStringPref(APIKEY_PREF, ""),
+        apiKey: this.hasCustomEndpoint() ? this.apiKey : "",
         backend: "openai",
-        baseURL: Services.prefs.getStringPref(ENDPOINT_PREF, ""),
+        baseURL: this.endpoint,
         engineId,
+        featureId,
+        flowId,
         modelId,
         modelRevision: "main",
         taskName: "text-generation",
         serviceType,
+        purpose,
         extraHeaders,
       });
       return engineInstance;
@@ -771,7 +731,9 @@ export class openAIEngine {
     try {
       return await this.engineInstance.run(content);
     } catch (ex) {
-      if (!this._is401Error(ex)) {
+      // Skip the token retry flow when using a custom endpoint,
+      // as the retry logic only applies to FxAccounts tokens.
+      if (!this._is401Error(ex) || openAIEngine.hasCustomEndpoint()) {
         throw ex;
       }
 
@@ -779,7 +741,7 @@ export class openAIEngine {
         "LLM request returned a 401 - revoking our token and retrying"
       );
 
-      const fxAccounts = getFxAccountsSingleton();
+      const fxAccounts = lazy.getFxAccountsSingleton();
       const oldToken = content.fxAccountToken;
       if (oldToken) {
         await fxAccounts.removeCachedOAuthToken({ token: oldToken });
@@ -825,7 +787,10 @@ export class openAIEngine {
     this.engineInstance = await openAIEngine.#createOpenAIEngine(
       this.#engineId,
       this.#serviceType,
-      this.model
+      this.#purpose,
+      this.model,
+      this.#flowId,
+      this.#feature
     );
   }
 
@@ -851,13 +816,21 @@ export class openAIEngine {
    * @yields {object}                   LLM streaming response chunks
    */
   async *_runWithGeneratorAuth(options) {
+    // Extract signal before passing options to engineInstance — AbortSignal
+    // cannot be cloned via postMessage (structured clone algorithm).
+    const { signal, ...engineOptions } = options;
     try {
-      const generator = this.engineInstance.runWithGenerator(options);
+      const generator = this.engineInstance.runWithGenerator(engineOptions);
       for await (const chunk of generator) {
+        if (signal?.aborted) {
+          return;
+        }
         yield chunk;
       }
     } catch (ex) {
-      if (!this._is401Error(ex)) {
+      // Skip the token retry flow when using a custom endpoint,
+      // as the retry logic only applies to FxAccounts tokens.
+      if (!this._is401Error(ex) || openAIEngine.hasCustomEndpoint()) {
         throw ex;
       }
 
@@ -865,7 +838,7 @@ export class openAIEngine {
         "LLM streaming request returned a 401 - revoking our token and retrying"
       );
 
-      const fxAccounts = getFxAccountsSingleton();
+      const fxAccounts = lazy.getFxAccountsSingleton();
       const oldToken = options.fxAccountToken;
       if (oldToken) {
         await fxAccounts.removeCachedOAuthToken({ token: oldToken });
@@ -874,11 +847,14 @@ export class openAIEngine {
       await this._recreateEngine();
 
       const newToken = await openAIEngine.getFxAccountToken();
-      const updatedOptions = { ...options, fxAccountToken: newToken };
+      const updatedOptions = { ...engineOptions, fxAccountToken: newToken };
 
       try {
         const generator = this.engineInstance.runWithGenerator(updatedOptions);
         for await (const chunk of generator) {
+          if (signal?.aborted) {
+            return;
+          }
           yield chunk;
         }
       } catch (retryEx) {
@@ -911,6 +887,64 @@ export class openAIEngine {
   }
 }
 
+XPCOMUtils.defineLazyPreferenceGetter(
+  openAIEngine,
+  "endpoint",
+  ENDPOINT_PREF,
+  ""
+);
+
+XPCOMUtils.defineLazyPreferenceGetter(openAIEngine, "apiKey", APIKEY_PREF, "");
+
+/**
+ * Resolves chat model metadata for a given choice ID from Remote Settings.
+ *
+ * @param {string} choiceId - Model choice ID (e.g., "1", "2", "3")
+ * @param {number} [maxMajorVersion] - Maximum major version to include
+ * @returns {Promise<{model: string, ownerName: string}|null>}
+ *   Returns null if choice ID not found in Remote Settings
+ */
+export async function resolveChatModelChoice(
+  choiceId,
+  maxMajorVersion = FEATURE_MAJOR_VERSIONS[MODEL_FEATURES.CHAT]
+) {
+  if (choiceId === "0") {
+    // Custom model - no RS lookup needed
+    return {
+      model: "custom-model",
+      ownerName: "",
+    };
+  }
+
+  try {
+    const client = openAIEngine.getRemoteClient();
+    const allRecords = await client.get();
+
+    const record = selectMainConfig(
+      allRecords.filter(r => r.feature === MODEL_FEATURES.CHAT),
+      {
+        majorVersion: maxMajorVersion,
+        feature: MODEL_FEATURES.CHAT,
+        modelChoiceId: choiceId,
+      }
+    );
+    if (!record) {
+      return null;
+    }
+
+    return {
+      model: record.model,
+      ownerName: record.owner_name ?? "",
+    };
+  } catch (error) {
+    console.warn(
+      "Failed to resolve chat model choice from Remote Settings:",
+      error
+    );
+    return null;
+  }
+}
+
 /**
  * Renders a prompt from a string, replacing placeholders with provided strings.
  *
@@ -927,4 +961,11 @@ export function renderPrompt(rawPromptContent, stringsToReplace = {}) {
   }
 
   return finalPromptContent;
+}
+
+function getDefaultServiceType(feature) {
+  if (feature.startsWith("memories")) {
+    return SERVICE_TYPES.MEMORIES;
+  }
+  return SERVICE_TYPES.AI;
 }

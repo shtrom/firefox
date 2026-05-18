@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -163,7 +161,7 @@ void HTMLElement::RestoreFormAssociatedCustomElementState() {
   }
 
   auto& ce = content.get_CustomElementTuple();
-  nsCOMPtr<nsIGlobalObject> global = GetOwnerDocument()->GetOwnerGlobal();
+  nsCOMPtr<nsIGlobalObject> global = GetRelevantGlobal();
   internals->RestoreFormValue(
       nsContentUtils::ExtractFormAssociatedCustomElementValue(global,
                                                               ce.value()),
@@ -293,6 +291,8 @@ void HTMLElement::AfterClearForm(bool aUnbindOrDelete) {
 
 void HTMLElement::UpdateFormOwner() {
   MOZ_ASSERT(IsFormAssociatedElement());
+  DebugOnly<CustomElementData*> data = GetCustomElementData();
+  MOZ_ASSERT(data && data->mState == CustomElementData::State::eCustom);
 
   // If @form is set, the element *has* to be in a composed document,
   // otherwise it wouldn't be possible to find an element with the
@@ -394,6 +394,13 @@ void HTMLElement::UpdateDisabledState(bool aNotify) {
 }
 
 void HTMLElement::UpdateFormOwner(bool aBindToTree, Element* aFormIdElement) {
+  MOZ_ASSERT(IsFormAssociatedElement());
+
+  CustomElementData* data = GetCustomElementData();
+  if (data->mState != CustomElementData::State::eCustom) {
+    return;
+  }
+
   HTMLFormElement* oldForm = GetFormInternal();
   nsGenericHTMLFormElement::UpdateFormOwner(aBindToTree, aFormIdElement);
   HTMLFormElement* newForm = GetFormInternal();

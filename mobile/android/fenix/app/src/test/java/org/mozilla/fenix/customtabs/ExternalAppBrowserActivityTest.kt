@@ -8,7 +8,9 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.navigation.NavController
 import io.mockk.Called
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
@@ -20,18 +22,20 @@ import mozilla.components.feature.intent.ext.putSessionId
 import mozilla.components.support.utils.toSafeIntent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mozilla.fenix.BrowserDirection
 import org.mozilla.fenix.NavGraphDirections
+import org.mozilla.fenix.browser.browsingmode.BrowsingMode
+import org.mozilla.fenix.browser.browsingmode.BrowsingModeManager
 import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.ext.getIntentSource
 import org.mozilla.fenix.ext.getNavDirections
 import org.mozilla.fenix.utils.Settings
 import org.robolectric.RobolectricTestRunner
+import kotlin.test.assertNotNull
 
 @RunWith(RobolectricTestRunner::class)
 class ExternalAppBrowserActivityTest {
@@ -55,10 +59,15 @@ class ExternalAppBrowserActivityTest {
     @Test
     fun `navigateToBrowserOnColdStart does nothing for external app browser activity`() {
         val activity = spyk(ExternalAppBrowserActivity())
+        val browsingModeManager: BrowsingModeManager = mockk()
+        every { browsingModeManager.mode } returns BrowsingMode.Normal
 
+        val settings: Settings = mockk()
+        every { settings.shouldReturnToBrowser } returns true
         every { activity.components.settings.shouldReturnToBrowser } returns true
-        every { activity.openToBrowser(any(), any()) } returns Unit
+        every { activity.openToBrowser(any(), any()) } just Runs
 
+        activity.browsingModeManager = browsingModeManager
         activity.navigateToBrowserOnColdStart()
 
         verify(exactly = 0) { activity.openToBrowser(BrowserDirection.FromGlobal, null) }

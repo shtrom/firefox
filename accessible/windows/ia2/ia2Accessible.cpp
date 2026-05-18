@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -105,8 +103,7 @@ ia2Accessible::get_relation(long aRelationIndex,
 
     RelationType relationType = sRelationTypePairs[idx].first;
     Relation rel = acc->RelationByType(relationType);
-    RefPtr<ia2AccessibleRelation> ia2Relation =
-        new ia2AccessibleRelation(relationType, &rel);
+    auto ia2Relation = MakeRefPtr<ia2AccessibleRelation>(relationType, &rel);
     if (ia2Relation->HasTargets()) {
       if (relIdx == aRelationIndex) {
         ia2Relation.forget(aRelation);
@@ -139,8 +136,7 @@ ia2Accessible::get_relations(long aMaxRelations,
 
     RelationType relationType = sRelationTypePairs[idx].first;
     Relation rel = acc->RelationByType(relationType);
-    RefPtr<ia2AccessibleRelation> ia2Rel =
-        new ia2AccessibleRelation(relationType, &rel);
+    auto ia2Rel = MakeRefPtr<ia2AccessibleRelation>(relationType, &rel);
     if (ia2Rel->HasTargets()) {
       ia2Rel.forget(aRelation + (*aNRelations));
       (*aNRelations)++;

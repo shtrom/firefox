@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -12,6 +10,8 @@
 #include "mozilla/PresShell.h"
 #include "mozilla/StyleSheet.h"
 #include "mozilla/dom/AnimatableBinding.h"
+#include "mozilla/dom/ContentList.h"
+#include "mozilla/dom/CustomElementRegistry.h"
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/HTMLInputElement.h"
 #include "mozilla/dom/ShadowRoot.h"
@@ -62,9 +62,7 @@ void DocumentOrShadowRoot::AddSizeOfExcludingThis(nsWindowSizes& aSizes) const {
 }
 
 DocumentOrShadowRoot::~DocumentOrShadowRoot() {
-  for (StyleSheet* sheet : mStyleSheets) {
-    sheet->ClearAssociatedDocumentOrShadowRoot();
-  }
+  MOZ_ASSERT(mStyleSheets.IsEmpty());
 }
 
 StyleSheetList* DocumentOrShadowRoot::StyleSheets() {
@@ -265,10 +263,10 @@ Element* DocumentOrShadowRoot::GetElementById(nsAtom* aElementId) const {
   return nullptr;
 }
 
-already_AddRefed<nsContentList> DocumentOrShadowRoot::GetElementsByTagNameNS(
+already_AddRefed<ContentList> DocumentOrShadowRoot::GetElementsByTagNameNS(
     const nsAString& aNamespaceURI, const nsAString& aLocalName) {
   ErrorResult rv;
-  RefPtr<nsContentList> list =
+  RefPtr<ContentList> list =
       GetElementsByTagNameNS(aNamespaceURI, aLocalName, rv);
   if (rv.Failed()) {
     return nullptr;
@@ -276,7 +274,7 @@ already_AddRefed<nsContentList> DocumentOrShadowRoot::GetElementsByTagNameNS(
   return list.forget();
 }
 
-already_AddRefed<nsContentList> DocumentOrShadowRoot::GetElementsByTagNameNS(
+already_AddRefed<ContentList> DocumentOrShadowRoot::GetElementsByTagNameNS(
     const nsAString& aNamespaceURI, const nsAString& aLocalName,
     ErrorResult& aResult) {
   int32_t nameSpaceId = kNameSpaceID_Wildcard;
@@ -293,7 +291,7 @@ already_AddRefed<nsContentList> DocumentOrShadowRoot::GetElementsByTagNameNS(
   return NS_GetContentList(&AsNode(), nameSpaceId, aLocalName);
 }
 
-already_AddRefed<nsContentList> DocumentOrShadowRoot::GetElementsByClassName(
+already_AddRefed<ContentList> DocumentOrShadowRoot::GetElementsByClassName(
     const nsAString& aClasses) {
   return nsContentUtils::GetElementsByClassName(&AsNode(), aClasses);
 }
@@ -624,7 +622,11 @@ void DocumentOrShadowRoot::GetAnimations(
        child = child->GetNextSibling()) {
     if (RefPtr<Element> element = Element::FromNode(child)) {
       nsTArray<RefPtr<Animation>> result;
-      element->GetAnimationsWithoutFlush(options, result);
+      IgnoredErrorResult error;
+      element->GetAnimationsWithoutFlush(options, result, error);
+      MOZ_ASSERT(
+          !error.Failed(),
+          "We only expect exceptions with invalid pseudoElement arguments");
       aAnimations.AppendElements(std::move(result));
     }
   }
@@ -754,6 +756,48 @@ void DocumentOrShadowRoot::Unlink(DocumentOrShadowRoot* tmp) {
   });
   NS_IMPL_CYCLE_COLLECTION_UNLINK(mAdoptedStyleSheets);
   tmp->mIdentifierMap.Clear();
+}
+
+void DocumentOrShadowRoot::SetCustomElementRegistry(
+    CustomElementRegistry& aRegistry) {
+  MOZ_ASSERT(StaticPrefs::dom_scoped_custom_element_registries_enabled());
+  MOZ_ASSERT(mKind == Kind::ShadowRoot,
+             "SetCustomElementRegistry should only be called on ShadowRoots");
+  ShadowRoot& root = static_cast<ShadowRoot&>(AsNode());
+  root.SetCustomElementRegistry(&aRegistry);
+}
+
+/* https://dom.spec.whatwg.org/#dom-documentorshadowroot-customelementregistry
+ */
+CustomElementRegistry* DocumentOrShadowRoot::GetCustomElementRegistry() {
+  // Step 1. If this is a document, then return this's custom element registry.
+  // TODO(2021247): Per document registries
+  if (mKind == Kind::Document) {
+    Document* doc = AsNode().AsDocument();
+    nsPIDOMWindowInner* window = doc->GetInnerWindow();
+    if (!window) {
+      return nullptr;
+    }
+    return window->CustomElements();
+  }
+
+  // Step 2. Assert: this is a ShadowRoot node.
+  MOZ_ASSERT(AsNode().IsShadowRoot());
+
+  // Step 3. Return this's custom element registry.
+  ShadowRoot* root = ShadowRoot::FromNode(AsNode());
+  MOZ_ASSERT(root);
+  if (StaticPrefs::dom_scoped_custom_element_registries_enabled()) {
+    return root->GetCustomElementRegistry();
+  }
+
+  // XXX Fallback when scoped registries are disabled: return the window's
+  // global registry.
+  nsPIDOMWindowInner* window = root->OwnerDoc()->GetInnerWindow();
+  if (!window) {
+    return nullptr;
+  }
+  return window->CustomElements();
 }
 
 }  // namespace mozilla::dom

@@ -36,12 +36,16 @@ module.exports = {
     `${projectRoot}/toolkit/components/reader/**/*.stories.mjs`,
     // megalist components stories
     `${projectRoot}/toolkit/components/satchel/megalist/content/**/*.stories.mjs`,
+    // autocomplete-row-item stories
+    `${projectRoot}/toolkit/components/satchel/autocomplete-row-item/**/*.stories.@(mjs|md)`,
     // WebRTC components stories
     `${projectRoot}/browser/components/webrtc/content/**/*.stories.mjs`,
     // AI Window components stories
     `${projectRoot}/browser/components/aiwindow/ui/**/*.stories.mjs`,
     // Multiline editor components stories
     `${projectRoot}/browser/components/multilineeditor/**/*.stories.@(mjs|md)`,
+    // Trust Panel components stories
+    `${projectRoot}/browser/components/controlcenter/content/components/**/*.stories.mjs`,
     // Everything else
     "../stories/**/*.stories.@(js|jsx|mjs|ts|tsx|md)",
     // Design system files

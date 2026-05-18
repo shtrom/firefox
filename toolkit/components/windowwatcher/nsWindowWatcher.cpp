@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -504,9 +502,9 @@ nsWindowWatcher::OpenWindowWithRemoteTab(
   RefPtr<BrowsingContext> parentBC = aOpenWindowInfo->GetParent();
   if (parentBC) {
     RefPtr<Element> browserElement = parentBC->Top()->GetEmbedderElement();
-    if (browserElement && browserElement->GetOwnerGlobal() &&
-        browserElement->GetOwnerGlobal()->GetAsInnerWindow()) {
-      parentWindowOuter = browserElement->GetOwnerGlobal()
+    if (browserElement && browserElement->GetRelevantGlobal() &&
+        browserElement->GetRelevantGlobal()->GetAsInnerWindow()) {
+      parentWindowOuter = browserElement->GetRelevantGlobal()
                               ->GetAsInnerWindow()
                               ->GetOuterWindow();
     }
@@ -1320,9 +1318,15 @@ nsresult nsWindowWatcher::OpenWindowInternal(
           targetDocShell->GetBrowsingContext()->GetSessionStorageManager();
 
       if (parentStorageManager && newStorageManager) {
+        nsCOMPtr<nsIPrincipal> storagePrincipal;
+        if (parentDoc) {
+          storagePrincipal = parentDoc->EffectiveStoragePrincipal();
+        } else {
+          storagePrincipal = subjectPrincipal;
+        }
         RefPtr<Storage> storage;
         parentStorageManager->GetStorage(
-            parentInnerWin, subjectPrincipal, subjectPrincipal,
+            parentInnerWin, subjectPrincipal, storagePrincipal,
             targetBC->UsePrivateBrowsing(), getter_AddRefs(storage));
         if (storage) {
           newStorageManager->CloneStorage(storage);
@@ -2133,7 +2137,7 @@ already_AddRefed<nsDocShellLoadState> nsWindowWatcher::CreateLoadState(
 
   // If we're called from JS, i.e window.open, we need to set history handling
   // behavior here to be able to do push to replace conversion if needed.
-  if (aIsWindowOpen && mozilla::SessionHistoryInParent()) {
+  if (aIsWindowOpen) {
     loadState->SetHistoryBehavior(NavigationHistoryBehavior::Auto);
   }
 

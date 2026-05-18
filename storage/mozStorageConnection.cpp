@@ -1,6 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * vim: sw=2 ts=2 et lcs=trail\:.,tab\:>~ :
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -39,7 +37,7 @@
 #include "ObfuscatingVFS.h"
 #include "QuotaVFS.h"
 #include "StorageBaseStatementInternal.h"
-#include "SQLCollations.h"
+#include "mozilla/intl/AppCollator.h"
 #include "FileSystemModule.h"
 #include "mozStorageHelper.h"
 
@@ -393,8 +391,8 @@ class AsyncInitializeClone final : public Runnable {
 
  private:
   nsresult Dispatch(nsresult aResult, nsISupports* aValue) {
-    RefPtr<CallbackComplete> event =
-        new CallbackComplete(aResult, aValue, mCallback.forget());
+    auto event =
+        MakeRefPtr<CallbackComplete>(aResult, aValue, mCallback.forget());
     return mClone->eventTargetOpenedOn->Dispatch(event, NS_DISPATCH_NORMAL);
   }
 
@@ -741,8 +739,8 @@ class AsyncBackupDatabaseFile final : public Runnable, public nsITimerCallback {
   }
 
   nsresult Dispatch(nsresult aResult, nsISupports* aValue) {
-    RefPtr<CallbackComplete> event =
-        new CallbackComplete(aResult, aValue, mCallback.forget());
+    auto event =
+        MakeRefPtr<CallbackComplete>(aResult, aValue, mCallback.forget());
     return mConnection->eventTargetOpenedOn->Dispatch(event,
                                                       NS_DISPATCH_NORMAL);
   }
@@ -1248,7 +1246,7 @@ nsresult Connection::initializeInternal() {
   }
 
   // Register our built-in SQL collating sequences.
-  srv = registerCollations(mDBConn, mStorageService);
+  srv = mozilla::intl::AppCollator::InstallCallbacks(mDBConn);
   if (srv != SQLITE_OK) {
     return convertResultCode(srv);
   }
@@ -1504,8 +1502,8 @@ nsresult Connection::internalClose(sqlite3* aNativeConnection) {
       // are done here.
       SQLiteMutexAutoLock lockedScope(sharedDBMutex);
       // We still have non-finalized statements. Finalize them.
-      sqlite3_stmt* stmt = nullptr;
-      while ((stmt = ::sqlite3_next_stmt(aNativeConnection, stmt))) {
+      while (sqlite3_stmt* stmt =
+                 ::sqlite3_next_stmt(aNativeConnection, nullptr)) {
         MOZ_LOG(gStorageLog, LogLevel::Debug,
                 ("Auto-finalizing SQL statement '%s' (%p)", ::sqlite3_sql(stmt),
                  stmt));
@@ -1518,21 +1516,7 @@ nsresult Connection::internalClose(sqlite3* aNativeConnection) {
         NS_WARNING(msg.get());
 #endif  // DEBUG
 
-        srv = ::sqlite3_finalize(stmt);
-
-#ifdef DEBUG
-        if (srv != SQLITE_OK) {
-          SmprintfPointer msg = ::mozilla::Smprintf(
-              "Could not finalize SQL statement (%p)", stmt);
-          NS_WARNING(msg.get());
-        }
-#endif  // DEBUG
-
-        // Ensure that the loop continues properly, whether closing has
-        // succeeded or not.
-        if (srv == SQLITE_OK) {
-          stmt = nullptr;
-        }
+        (void)::sqlite3_finalize(stmt);
       }
       // Scope exiting will unlock the mutex before we invoke sqlite3_close()
       // again, since Sqlite will try to acquire it.
@@ -1775,7 +1759,7 @@ Connection::SpinningSynchronousClose() {
     return NS_ERROR_UNEXPECTED;
   }
 
-  RefPtr<CloseListener> listener = new CloseListener();
+  auto listener = MakeRefPtr<CloseListener>();
   rv = AsyncClose(listener);
   NS_ENSURE_SUCCESS(rv, rv);
   MOZ_ALWAYS_TRUE(
@@ -1925,12 +1909,12 @@ Connection::AsyncClone(bool aReadOnly,
 
   // The cloned connection will still implement the synchronous API, but throw
   // if any synchronous methods are called on the main thread.
-  RefPtr<Connection> clone =
-      new Connection(mStorageService, flags, ASYNCHRONOUS, mTelemetryFilename,
-                     mInterruptible, mIgnoreLockingMode, mOpenNotExclusive);
+  auto clone = MakeRefPtr<Connection>(mStorageService, flags, ASYNCHRONOUS,
+                                      mTelemetryFilename, mInterruptible,
+                                      mIgnoreLockingMode, mOpenNotExclusive);
 
-  RefPtr<AsyncInitializeClone> initEvent =
-      new AsyncInitializeClone(this, clone, aReadOnly, aCallback);
+  auto initEvent =
+      MakeRefPtr<AsyncInitializeClone>(this, clone, aReadOnly, aCallback);
   // Dispatch to our async thread, since the originating connection must remain
   // valid and open for the whole cloning process.  This also ensures we are
   // properly serialized with a `close` operation, rather than race with it.
@@ -2102,9 +2086,9 @@ Connection::Clone(bool aReadOnly, mozIStorageConnection** _connection) {
     flags = (~SQLITE_OPEN_CREATE & flags);
   }
 
-  RefPtr<Connection> clone =
-      new Connection(mStorageService, flags, mSupportedOperations,
-                     mTelemetryFilename, mInterruptible);
+  auto clone =
+      MakeRefPtr<Connection>(mStorageService, flags, mSupportedOperations,
+                             mTelemetryFilename, mInterruptible);
 
   rv = initializeClone(clone, aReadOnly);
   if (NS_FAILED(rv)) {
@@ -2499,7 +2483,7 @@ Connection::BeginTransaction() {
 nsresult Connection::beginTransactionInternal(
     const SQLiteMutexAutoLock& aProofOfLock, sqlite3* aNativeConnection,
     int32_t aTransactionType) {
-  if (transactionInProgress(aProofOfLock)) {
+  if (transactionInProgress(aProofOfLock, aNativeConnection)) {
     return NS_ERROR_FAILURE;
   }
   nsresult rv;
@@ -2535,7 +2519,7 @@ Connection::CommitTransaction() {
 
 nsresult Connection::commitTransactionInternal(
     const SQLiteMutexAutoLock& aProofOfLock, sqlite3* aNativeConnection) {
-  if (!transactionInProgress(aProofOfLock)) {
+  if (!transactionInProgress(aProofOfLock, aNativeConnection)) {
     return NS_ERROR_UNEXPECTED;
   }
   nsresult rv =
@@ -2559,7 +2543,7 @@ Connection::RollbackTransaction() {
 
 nsresult Connection::rollbackTransactionInternal(
     const SQLiteMutexAutoLock& aProofOfLock, sqlite3* aNativeConnection) {
-  if (!transactionInProgress(aProofOfLock)) {
+  if (!transactionInProgress(aProofOfLock, aNativeConnection)) {
     return NS_ERROR_UNEXPECTED;
   }
 
@@ -2626,14 +2610,18 @@ Connection::RemoveFunction(const nsACString& aFunctionName) {
   }
 
   SQLiteMutexAutoLock lockedScope(sharedDBMutex);
-  NS_ENSURE_TRUE(mFunctions.Get(aFunctionName, nullptr), NS_ERROR_FAILURE);
+  auto entry = mFunctions.Lookup(aFunctionName);
+  NS_ENSURE_TRUE(entry, NS_ERROR_FAILURE);
 
+  // SQLite allows to register the same function name with different number
+  // of arguments, thus to properly remove our function we must use the same
+  // nArg used at registration time.
   int srv = ::sqlite3_create_function(
-      mDBConn, nsPromiseFlatCString(aFunctionName).get(), 0, SQLITE_ANY,
-      nullptr, nullptr, nullptr, nullptr);
+      mDBConn, nsPromiseFlatCString(aFunctionName).get(), entry->numArgs,
+      SQLITE_ANY, nullptr, nullptr, nullptr, nullptr);
   if (srv != SQLITE_OK) return convertResultCode(srv);
 
-  mFunctions.Remove(aFunctionName);
+  entry.Remove();
 
   return NS_OK;
 }

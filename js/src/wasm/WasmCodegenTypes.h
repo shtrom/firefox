@@ -1,6 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * vim: set ts=8 sts=2 et sw=2 tw=80:
- *
+/*
  * Copyright 2021 Mozilla Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +19,7 @@
 
 #include "mozilla/CheckedInt.h"
 #include "mozilla/EnumeratedArray.h"
+#include "mozilla/Maybe.h"
 #include "mozilla/Span.h"
 
 #include <stdint.h>
@@ -746,6 +745,15 @@ struct TrapData {
   // a signature mismatch may leave us with only one frame. This frame is
   // validly constructed, but has no debug frame yet.
   bool failedUnwindSignatureMismatch;
+
+  struct FaultInfo {
+    uint32_t memoryIndex;
+    uint64_t byteOffset;
+  };
+
+  // For Trap::OutOfBounds triggered by a memory fault, the memory index and
+  // byte offset of the faulting address within the memory's mapped region.
+  mozilla::Maybe<FaultInfo> faultInfo;
 };
 
 // The (,Callable,Func)Offsets classes are used to record the offsets of
@@ -832,6 +840,9 @@ class CodeRange {
     DebugStub,                 // calls C++ to handle debug event
     RequestTierUpStub,         // calls C++ to request tier-2 compilation
     UpdateCallRefMetricsStub,  // updates a CallRefMetrics
+#ifdef ENABLE_WASM_JSPI
+    ContBaseFrame,  // base frame for a cont stack
+#endif
     FarJumpIsland,  // inserted to connect otherwise out-of-range insns
     Throw           // special stack-unwinding stub jumped to by other stubs
   };
@@ -923,6 +934,9 @@ class CodeRange {
   bool isJitEntry() const { return kind() == JitEntry; }
   bool isInterpEntry() const { return kind() == InterpEntry; }
   bool isEntry() const { return isInterpEntry() || isJitEntry(); }
+#ifdef ENABLE_WASM_JSPI
+  bool isContBaseFrame() const { return kind() == ContBaseFrame; }
+#endif
   bool hasFuncIndex() const {
     return isFunction() || isImportExit() || isEntry();
   }

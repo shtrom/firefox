@@ -21,6 +21,7 @@ use style_traits::{CssWriter, ToCss};
 /// https://drafts.csswg.org/css-images/#image-values
 #[derive(Clone, MallocSizeOf, PartialEq, SpecifiedValueInfo, ToResolvedValue, ToShmem, ToTyped)]
 #[repr(C, u8)]
+#[typed(todo_derive_fields)]
 pub enum GenericImage<G, ImageUrl, Color, Percentage, Resolution> {
     /// `none` variant.
     None,
@@ -59,9 +60,11 @@ pub enum GenericImage<G, ImageUrl, Color, Percentage, Resolution> {
     ImageSet(Box<GenericImageSet<Self, Resolution>>),
 
     /// A `light-dark()` function.
-    /// NOTE(emilio): #[css(skip)] only affects SpecifiedValueInfo. Remove or make conditional
-    /// if/when shipping light-dark() for content.
-    LightDark(#[css(skip)] Box<GenericLightDark<Self>>),
+    LightDark(Box<GenericLightDark<Self>>),
+
+    /// An `image(<color>)` function.
+    #[css(function)]
+    Image(#[value_info(skip)] Box<Color>),
 }
 
 pub use self::GenericImage as Image;
@@ -437,6 +440,11 @@ where
             Image::MozSymbolicIcon(ref id) => {
                 dest.write_str("-moz-symbolic-icon(")?;
                 serialize_atom_identifier(id, dest)?;
+                dest.write_char(')')
+            },
+            Image::Image(ref color) => {
+                dest.write_str("image(")?;
+                color.to_css(dest)?;
                 dest.write_char(')')
             },
             Image::ImageSet(ref is) => is.to_css(dest),

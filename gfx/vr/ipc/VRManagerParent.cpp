@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -45,22 +43,16 @@ VRManagerParent::~VRManagerParent() {
   MOZ_COUNT_DTOR(VRManagerParent);
 }
 
-PVRLayerParent* VRManagerParent::AllocPVRLayerParent(const uint32_t& aDisplayID,
-                                                     const uint32_t& aGroup) {
+already_AddRefed<PVRLayerParent> VRManagerParent::AllocPVRLayerParent(
+    const uint32_t& aDisplayID, const uint32_t& aGroup) {
   if (!StaticPrefs::dom_vr_enabled() && !StaticPrefs::dom_vr_webxr_enabled()) {
     return nullptr;
   }
 
-  RefPtr<VRLayerParent> layer;
-  layer = new VRLayerParent(aDisplayID, aGroup);
+  auto layer = MakeRefPtr<VRLayerParent>(aDisplayID, aGroup);
   VRManager* vm = VRManager::Get();
   vm->AddLayer(layer);
-  return layer.forget().take();
-}
-
-bool VRManagerParent::DeallocPVRLayerParent(PVRLayerParent* actor) {
-  delete actor;
-  return true;
+  return layer.forget();
 }
 
 bool VRManagerParent::IsSameProcess() const {

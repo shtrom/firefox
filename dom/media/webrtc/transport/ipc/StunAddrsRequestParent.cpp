@@ -6,16 +6,13 @@
 
 #include "../mdns_service/mdns_service.h"
 #include "../runnable_utils.h"
+#include "local_addr.h"
 #include "mozilla/StaticPtr.h"
 #include "nsIThread.h"
 #include "nsNetUtil.h"
 #include "transport/nricectx.h"
 #include "transport/nricemediastream.h"  // needed only for including nricectx.h
 #include "transport/nricestunaddr.h"
-
-extern "C" {
-#include "local_addr.h"
-}
 
 using namespace mozilla::ipc;
 
@@ -40,9 +37,7 @@ StunAddrsRequestParent::StunAddrsRequestParent() : mIPCClosed(false) {
   MOZ_ASSERT(mSTSThread);
 }
 
-StunAddrsRequestParent::~StunAddrsRequestParent() {
-  ASSERT_ON_THREAD(mMainThread);
-}
+StunAddrsRequestParent::~StunAddrsRequestParent() = default;
 
 mozilla::ipc::IPCResult StunAddrsRequestParent::RecvGetStunAddrs() {
   ASSERT_ON_THREAD(mMainThread);
@@ -68,8 +63,8 @@ mozilla::ipc::IPCResult StunAddrsRequestParent::RecvRegisterMDNSHostname(
   }
 
   if (mSharedMDNSService) {
-    mSharedMDNSService->RegisterHostname(aHostname.BeginReading(),
-                                         aAddress.BeginReading());
+    mSharedMDNSService->RegisterHostname(PromiseFlatCString(aHostname).get(),
+                                         PromiseFlatCString(aAddress).get());
   }
 
   return IPC_OK();
@@ -84,7 +79,8 @@ mozilla::ipc::IPCResult StunAddrsRequestParent::RecvQueryMDNSHostname(
   }
 
   if (mSharedMDNSService) {
-    mSharedMDNSService->QueryHostname(this, aHostname.BeginReading());
+    mSharedMDNSService->QueryHostname(this,
+                                      PromiseFlatCString(aHostname).get());
   }
 
   return IPC_OK();
@@ -99,7 +95,7 @@ mozilla::ipc::IPCResult StunAddrsRequestParent::RecvUnregisterMDNSHostname(
   }
 
   if (mSharedMDNSService) {
-    mSharedMDNSService->UnregisterHostname(aHostname.BeginReading());
+    mSharedMDNSService->UnregisterHostname(PromiseFlatCString(aHostname).get());
   }
 
   return IPC_OK();
@@ -177,9 +173,11 @@ void StunAddrsRequestParent::SendStunAddrs_m(const NrIceStunAddrArray& addrs) {
     std::ostringstream o;
     char buffer[16];
     for (auto& addr : addrs) {
-      if (addr.localAddr().addr.ip_version == NR_IPV4 &&
-          !nr_transport_addr_is_loopback(&addr.localAddr().addr)) {
-        nr_transport_addr_get_addrstring(&addr.localAddr().addr, buffer, 16);
+      nr_local_addr localAddr;
+      addr.toNrLocalAddr(localAddr);
+      if (localAddr.addr.ip_version == NR_IPV4 &&
+          !nr_transport_addr_is_loopback(&localAddr.addr)) {
+        nr_transport_addr_get_addrstring(&localAddr.addr, buffer, 16);
         o << buffer << ";";
       }
     }
@@ -208,9 +206,6 @@ void StunAddrsRequestParent::OnQueryComplete_m(
 
 StaticRefPtr<StunAddrsRequestParent::MDNSServiceWrapper>
     StunAddrsRequestParent::mSharedMDNSService;
-
-NS_IMPL_ADDREF(StunAddrsRequestParent)
-NS_IMPL_RELEASE(StunAddrsRequestParent)
 
 StunAddrsRequestParent::MDNSServiceWrapper::MDNSServiceWrapper(
     const std::string& ifaddr)

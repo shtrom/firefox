@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -72,6 +70,7 @@
 #include "mozilla/dom/AudioTrackList.h"
 #include "mozilla/dom/BlobURLProtocolHandler.h"
 #include "mozilla/dom/ContentMediaController.h"
+#include "mozilla/dom/DocGroup.h"
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/ElementInlines.h"
 #include "mozilla/dom/FeaturePolicyUtils.h"
@@ -478,7 +477,7 @@ class HTMLMediaElement::MediaControlKeyListener final
   }
 
   void HandleMediaKey(MediaControlKey aKey,
-                      Maybe<SeekDetails> aDetails) override {
+                      const MediaControlActionParams& aParams) override {
     MOZ_ASSERT(NS_IsMainThread());
     MOZ_ASSERT(IsStarted());
     MEDIACONTROL_LOG("HandleEvent '%s'", GetEnumString(aKey).get());
@@ -494,22 +493,32 @@ class HTMLMediaElement::MediaControlKeyListener final
         StopIfNeeded();
         break;
       case MediaControlKey::Seekto:
-        MOZ_ASSERT(aDetails->mAbsolute);
-        if (aDetails->mAbsolute->mFastSeek) {
-          Owner()->FastSeek(aDetails->mAbsolute->mSeekTime, IgnoreErrors());
+        MOZ_ASSERT(aParams.mAbsolute);
+        if (aParams.mAbsolute->mFastSeek) {
+          Owner()->FastSeek(aParams.mAbsolute->mSeekTime, IgnoreErrors());
         } else {
-          Owner()->SetCurrentTime(aDetails->mAbsolute->mSeekTime);
+          Owner()->SetCurrentTime(aParams.mAbsolute->mSeekTime);
         }
         break;
       case MediaControlKey::Seekforward:
-        MOZ_ASSERT(aDetails->mRelativeSeekOffset);
+        MOZ_ASSERT(aParams.mRelativeSeekOffset);
         Owner()->SetCurrentTime(Owner()->CurrentTime() +
-                                aDetails->mRelativeSeekOffset.value());
+                                aParams.mRelativeSeekOffset.value());
         break;
       case MediaControlKey::Seekbackward:
-        MOZ_ASSERT(aDetails->mRelativeSeekOffset);
+        MOZ_ASSERT(aParams.mRelativeSeekOffset);
         Owner()->SetCurrentTime(Owner()->CurrentTime() -
-                                aDetails->mRelativeSeekOffset.value());
+                                aParams.mRelativeSeekOffset.value());
+        break;
+      case MediaControlKey::Setvolume:
+        MOZ_ASSERT(aParams.mVolume);
+        Owner()->SetVolume(aParams.mVolume.value(), IgnoreErrors());
+        break;
+      case MediaControlKey::Mute:
+        Owner()->SetMuted(true);
+        break;
+      case MediaControlKey::Unmute:
+        Owner()->SetMuted(false);
         break;
       default:
         MOZ_ASSERT_UNREACHABLE(
@@ -611,7 +620,7 @@ class HTMLMediaElement::MediaControlKeyListener final
   RefPtr<ContentMediaAgent> mControlAgent;
   bool mIsPictureInPictureEnabled = false;
   bool mIsOwnerAudible = false;
-  MOZ_INIT_OUTSIDE_CTOR uint64_t mOwnerBrowsingContextId;
+  MOZ_INIT_OUTSIDE_CTOR uint64_t mOwnerBrowsingContextId = 0;
   const nsID mElementId;
 };
 
@@ -772,7 +781,13 @@ class HTMLMediaElement::MediaStreamRenderer {
     if (mFirstFrameVideoOutput) {
       mWatchManager.Watch(mFirstFrameVideoOutput->mFirstFrameRendered,
                           &MediaStreamRenderer::SetFirstFrameRendered);
+      mWatchManager.Watch(mFirstFrameVideoOutput->mAttachment,
+                          &MediaStreamRenderer::UpdateVideoTrackListeners);
     }
+    mWatchManager.Watch(mVideoTrack,
+                        &MediaStreamRenderer::UpdateVideoTrackListeners);
+    mWatchManager.Watch(mRendering,
+                        &MediaStreamRenderer::UpdateVideoTrackListeners);
   }
 
   void Shutdown() {
@@ -781,11 +796,12 @@ class HTMLMediaElement::MediaStreamRenderer {
         RemoveTrack(t->AsAudioStreamTrack());
       }
     }
-    if (mVideoTrack) {
-      RemoveTrack(mVideoTrack->AsVideoStreamTrack());
+    if (mVideoTrack.Ref()) {
+      RemoveTrack(mVideoTrack.Ref()->AsVideoStreamTrack());
     }
     mWatchManager.Shutdown();
     mFirstFrameVideoOutput = nullptr;
+    mVideoOutput = nullptr;
   }
 
   void UpdateGraphTime() {
@@ -797,12 +813,14 @@ class HTMLMediaElement::MediaStreamRenderer {
     if (!mFirstFrameVideoOutput) {
       return;
     }
-    if (mVideoTrack) {
-      mVideoTrack->AsVideoStreamTrack()->RemoveVideoOutput(
+    if (mVideoTrack.Ref()) {
+      mVideoTrack.Ref()->AsVideoStreamTrack()->RemoveVideoOutput(
           mFirstFrameVideoOutput);
     }
     mWatchManager.Unwatch(mFirstFrameVideoOutput->mFirstFrameRendered,
                           &MediaStreamRenderer::SetFirstFrameRendered);
+    mWatchManager.Unwatch(mFirstFrameVideoOutput->mAttachment,
+                          &MediaStreamRenderer::UpdateVideoTrackListeners);
     mFirstFrameVideoOutput = nullptr;
   }
 
@@ -844,10 +862,8 @@ class HTMLMediaElement::MediaStreamRenderer {
                                                       mAudioOutputVolume);
       }
     }
-
-    if (mVideoTrack) {
-      mVideoTrack->AsVideoStreamTrack()->AddVideoOutput(mVideoContainer);
-    }
+    // Video attachment is handled by UpdateVideoTrackListeners via mRendering
+    // Watchable.
   }
 
   void Stop() {
@@ -871,8 +887,11 @@ class HTMLMediaElement::MediaStreamRenderer {
     // device may not start.  Ensure the promise is resolved.
     ResolveAudioDevicePromiseIfExists(__func__);
 
-    if (mVideoTrack) {
-      mVideoTrack->AsVideoStreamTrack()->RemoveVideoOutput(mVideoContainer);
+    if (mVideoTrack.Ref() && mVideoOutput) {
+      // This is fine even if mVideoOutput is not attached to mVideoTrack (might
+      // be pending removal from an earlier mVideoTrack), as RemoveVideoOutput
+      // is idempotent.
+      mVideoTrack.Ref()->AsVideoStreamTrack()->RemoveVideoOutput(mVideoOutput);
     }
   }
 
@@ -961,21 +980,16 @@ class HTMLMediaElement::MediaStreamRenderer {
     }
   }
   void AddTrack(VideoStreamTrack* aTrack) {
-    MOZ_DIAGNOSTIC_ASSERT(!mVideoTrack);
+    MOZ_DIAGNOSTIC_ASSERT(!mVideoTrack.Ref());
     if (!mVideoContainer) {
       return;
     }
     mVideoTrack = aTrack;
     EnsureGraphTimeDummy();
-    if (mFirstFrameVideoOutput) {
-      // Add the first frame output even if we are rendering. It will only
-      // accept one frame. If we are rendering, then the main output will
-      // overwrite that with the same frame (and possibly more frames).
-      aTrack->AddVideoOutput(mFirstFrameVideoOutput);
-    }
-    if (mRendering) {
-      aTrack->AddVideoOutput(mVideoContainer);
-    }
+    // Video output attachment is handled by UpdateVideoTrackListeners via the
+    // mVideoTrack Watchable, when mVideoContainer is known to not be in use
+    // from a VideoOutput for a previous track on a potentially different
+    // MediaTrackGraph.
   }
 
   void RemoveTrack(AudioStreamTrack* aTrack) {
@@ -992,15 +1006,18 @@ class HTMLMediaElement::MediaStreamRenderer {
     }
   }
   void RemoveTrack(VideoStreamTrack* aTrack) {
-    MOZ_DIAGNOSTIC_ASSERT(mVideoTrack == aTrack);
+    MOZ_DIAGNOSTIC_ASSERT(mVideoTrack.Ref() == aTrack);
     if (!mVideoContainer) {
       return;
     }
     if (mFirstFrameVideoOutput) {
       aTrack->RemoveVideoOutput(mFirstFrameVideoOutput);
     }
-    if (mRendering) {
-      aTrack->RemoveVideoOutput(mVideoContainer);
+    if (mRendering && mVideoOutput) {
+      // This is fine even if mVideoOutput is not attached to mVideoTrack (might
+      // be pending removal from an earlier mVideoTrack), as RemoveVideoOutput
+      // is idempotent.
+      aTrack->RemoveVideoOutput(mVideoOutput);
     }
     mVideoTrack = nullptr;
   }
@@ -1037,8 +1054,8 @@ class HTMLMediaElement::MediaStreamRenderer {
       }
     }
 
-    if (!graph && mVideoTrack && !mVideoTrack->Ended()) {
-      graph = mVideoTrack->Graph();
+    if (!graph && mVideoTrack.Ref() && !mVideoTrack.Ref()->Ended()) {
+      graph = mVideoTrack.Ref()->Graph();
     }
 
     if (!graph) {
@@ -1048,6 +1065,43 @@ class HTMLMediaElement::MediaStreamRenderer {
     // This dummy keeps `graph` alive and ensures access to it.
     mGraphTimeDummy = MakeRefPtr<SharedDummyTrack>(
         graph->CreateSourceTrack(MediaSegment::AUDIO));
+  }
+
+  void UpdateVideoTrackListeners() {
+    if (mFirstFrameVideoOutput &&
+        mFirstFrameVideoOutput->mAttachment == VideoOutput::State::Detached &&
+        mVideoTrack.Ref()) {
+      // The first-frame VideoOutput is detached but should attach to
+      // mVideoTrack. Attach now.
+      // If we are rendering, then a subsequently registered mVideoOutput will
+      // overwrite the frame from mFirstFrameVideoOutput with the same frame
+      // (and possibly more frames).
+      MOZ_ASSERT_IF(mVideoOutput,
+                    mVideoOutput->mAttachment != VideoOutput::State::Attached);
+      mVideoTrack.Ref()->AsVideoStreamTrack()->AddVideoOutput(
+          mFirstFrameVideoOutput);
+    }
+    if (mVideoOutput &&
+        mVideoOutput->mAttachment == VideoOutput::State::Detached) {
+      // mVideoOutput became detached. Clear it.
+      mWatchManager.Unwatch(mVideoOutput->mAttachment,
+                            &MediaStreamRenderer::UpdateVideoTrackListeners);
+      mVideoOutput = nullptr;
+    }
+    if (mRendering && mVideoTrack.Ref() && !mVideoOutput) {
+      // There is no attached VideoOutput but there should be one because we are
+      // rendering a track. Create one and attach now.
+      MOZ_ASSERT_IF(
+          mFirstFrameVideoOutput,
+          mFirstFrameVideoOutput->mAttachment == VideoOutput::State::Attached);
+      RefPtr o = new VideoOutput(mVideoContainer, AbstractThread::MainThread());
+      mVideoTrack.Ref()->AsVideoStreamTrack()->AddVideoOutput(o);
+      if (o->mAttachment == VideoOutput::State::Attached) {
+        mVideoOutput = std::move(o);
+        mWatchManager.Watch(mVideoOutput->mAttachment,
+                            &MediaStreamRenderer::UpdateVideoTrackListeners);
+      }
+    }
   }
 
   void ResolveAudioDevicePromiseIfExists(StaticString aMethodName) {
@@ -1062,7 +1116,7 @@ class HTMLMediaElement::MediaStreamRenderer {
 
   // True when all tracks are being rendered, i.e., when the media element is
   // playing.
-  bool mRendering = false;
+  Watchable<bool> mRendering = {false, "MediaStreamRenderer::mRendering"};
 
   // True while we're progressing mGraphTime. False otherwise.
   bool mProgressingCurrentTime = false;
@@ -1080,7 +1134,6 @@ class HTMLMediaElement::MediaStreamRenderer {
   MozPromiseRequestHolder<GenericPromise::AllSettledPromiseType>
       mDeviceStartedRequest;
 
-  // WatchManager for mGraphTime.
   WatchManager<MediaStreamRenderer> mWatchManager;
 
   // A dummy MediaTrack to guarantee a MediaTrackGraph is kept alive while
@@ -1100,13 +1153,22 @@ class HTMLMediaElement::MediaStreamRenderer {
   // Currently enabled (and rendered) audio tracks.
   nsTArray<WeakPtr<MediaStreamTrack>> mAudioTracks;
 
-  // Currently selected (and rendered) video track.
-  WeakPtr<MediaStreamTrack> mVideoTrack;
+  // Currently selected video track. Attachment of VideoOutputs to the track is
+  // deferred to UpdateVideoTrackListeners.
+  Watchable<WeakPtr<MediaStreamTrack>> mVideoTrack = {
+      nullptr, "MediaStreamRenderer::mVideoTrack"};
 
   // Holds a reference to the first-frame-getting video output attached to
   // mVideoTrack. Set by the constructor, unset when the media element tells us
   // it has rendered the first frame.
   RefPtr<FirstFrameVideoOutput> mFirstFrameVideoOutput;
+
+  // Reference to the video output currently attached to a video track. A new
+  // mVideoTrack gets a new VideoOutput such that it sends frames with a new
+  // ProducerID. Detaching from mVideoTrack is async, so even if mVideoTrack
+  // changes, this remains until it has detached asynchronously from the
+  // underlying track.
+  RefPtr<VideoOutput> mVideoOutput;
 };
 
 static uint32_t sDecoderCaptureSourceId = 0;
@@ -1462,7 +1524,7 @@ HTMLMediaElement::MediaLoadListener::OnStartRequest(nsIRequest* aRequest) {
     code.AppendInt(responseStatus);
     nsAutoString src;
     element->GetCurrentSrc(src);
-    AutoTArray<nsString, 2> params = {code, src};
+    AutoTArray<nsString, 2> params = {std::move(code), std::move(src)};
     element->ReportLoadError("MediaLoadHttpError", params);
     return NS_BINDING_ABORTED;
   }
@@ -1568,7 +1630,7 @@ void HTMLMediaElement::ReportToConsole(
     uint32_t aErrorFlags, const char* aMsg,
     const nsTArray<nsString>& aParams) const {
   nsContentUtils::ReportToConsole(aErrorFlags, "Media"_ns, OwnerDoc(),
-                                  nsContentUtils::eDOM_PROPERTIES, aMsg,
+                                  PropertiesFile::DOM_PROPERTIES, aMsg,
                                   aParams);
 }
 
@@ -1948,7 +2010,7 @@ class HTMLMediaElement::ChannelLoader final {
     // Else the channel must be open and starting to download. If it encounters
     // a non-catastrophic failure, it will set a new task to continue loading
     // another candidate.  It's safe to set it as mChannel now.
-    mChannel = channel;
+    mChannel = std::move(channel);
 
     // loadListener will be unregistered either on shutdown or when
     // OnStartRequest for the channel we just opened fires.
@@ -2079,30 +2141,21 @@ class HTMLMediaElement::ErrorSink {
   void ReportErrorProbe(uint16_t aErrorCode,
                         const Maybe<MediaResult>& aResult) {
     MOZ_ASSERT(IsValidErrorCode(aErrorCode));
-    auto getErrorType = [&]() {
+    auto getErrorTypeLabel = [&]() {
       if (aErrorCode == MEDIA_ERR_ABORTED) {
-        return "AbortError"_ns;
+        return "abort_error"_ns;
       }
       if (aErrorCode == MEDIA_ERR_NETWORK) {
-        return "NetworkError"_ns;
+        return "network_error"_ns;
       }
       if (aErrorCode == MEDIA_ERR_DECODE) {
-        return "DecodeErr"_ns;
+        return "decode_error"_ns;
       }
-      return "SrcNotSupportedErr"_ns;
+      return "not_supported_error"_ns;
     };
-
-    glean::media::ErrorExtra extraData;
-    extraData.errorType = Some(getErrorType());
-    if (aResult) {
-      extraData.errorName = Some(aResult->ErrorName());
-    }
-    nsAutoString keySystem;
-    if (mOwner->mMediaKeys) {
-      mOwner->mMediaKeys->GetKeySystem(keySystem);
-      extraData.keySystem = Some(NS_ConvertUTF16toUTF8(keySystem));
-    }
-    glean::media::error.Record(Some(extraData));
+    nsCString encryptedLabel =
+        mOwner->mMediaKeys ? "encrypted"_ns : "non_encrypted"_ns;
+    glean::media::error.Get(getErrorTypeLabel(), encryptedLabel).Add();
   }
 
   // Media elememt's life cycle would be longer than error sink, so we use the
@@ -2842,7 +2895,7 @@ void HTMLMediaElement::SelectResource(
         return;
       }
     } else {
-      AutoTArray<nsString, 1> params = {src};
+      AutoTArray<nsString, 1> params = {std::move(src)};
       ReportLoadError("MediaLoadInvalidURI", params);
       rv = MediaResult(rv.Code(), "MediaLoadInvalidURI");
     }
@@ -3047,7 +3100,7 @@ void HTMLMediaElement::LoadFromSourceChildren(
         // Check that at least one other source child exists and report that
         // we will try to load that one next.
         nsIContent* nextChild = mSourcePointer->GetNextSibling();
-        AutoTArray<nsString, 2> params = {type, src};
+        AutoTArray<nsString, 2> params = {std::move(type), std::move(src)};
 
         while (nextChild) {
           if (nextChild && nextChild->IsHTMLElement(nsGkAtoms::source)) {
@@ -3096,7 +3149,7 @@ void HTMLMediaElement::LoadFromSourceChildren(
     nsCOMPtr<nsIURI> uri;
     NewURIFromString(src, getter_AddRefs(uri));
     if (!uri) {
-      AutoTArray<nsString, 1> params = {src};
+      AutoTArray<nsString, 1> params = {std::move(src)};
       ReportLoadError("MediaLoadInvalidURI", params);
       DealWithFailedElement(child);
       return;
@@ -5352,14 +5405,9 @@ void HTMLMediaElement::AfterSetAttr(int32_t aNameSpaceID, nsAtom* aName,
       if (aValue) {
         nsCOMPtr<nsIURI> uri;
         NewURIFromString(srcVal.String(), getter_AddRefs(uri));
-        if (uri && IsMediaSourceURI(uri)) {
-          nsresult rv = NS_GetSourceForMediaSourceURI(
-              uri, getter_AddRefs(mSrcMediaSource));
-          if (NS_FAILED(rv)) {
-            nsAutoString spec;
-            GetCurrentSrc(spec);
-            AutoTArray<nsString, 1> params = {spec};
-            ReportLoadError("MediaLoadInvalidURI", params);
+        if (uri && uri->SchemeIs(BLOBURI_SCHEME)) {
+          if (DocGroup* docGroup = OwnerDoc()->GetDocGroup()) {
+            mSrcMediaSource = docGroup->LookupMediaSourceURL(uri);
           }
         }
       }
@@ -5384,6 +5432,7 @@ void HTMLMediaElement::AfterSetAttr(int32_t aNameSpaceID, nsAtom* aName,
       }
     } else if (aName == nsGkAtoms::controls && IsInComposedDoc()) {
       NotifyUAWidgetSetupOrChange();
+      SetCuesDirty();
     }
   }
 
@@ -5560,7 +5609,7 @@ template <typename DecoderType, typename... LoadArgs>
 nsresult HTMLMediaElement::SetupDecoder(DecoderType* aDecoder,
                                         LoadArgs&&... aArgs) {
   LOG(LogLevel::Debug, ("%p Created decoder %p for type %s", this, aDecoder,
-                        aDecoder->ContainerType().OriginalString().Data()));
+                        aDecoder->ContainerType().OriginalString().get()));
 
   nsresult rv = aDecoder->Load(std::forward<LoadArgs>(aArgs)...);
   if (NS_FAILED(rv)) {
@@ -5864,25 +5913,25 @@ void HTMLMediaElement::EndSrcMediaStreamPlayback() {
 }
 
 static already_AddRefed<AudioTrack> CreateAudioTrack(
-    AudioStreamTrack* aStreamTrack, nsIGlobalObject* aOwnerGlobal) {
+    AudioStreamTrack* aStreamTrack, nsIGlobalObject* aRelevantGlobal) {
   nsAutoString id;
   nsAutoString label;
   aStreamTrack->GetId(id);
   aStreamTrack->GetLabel(label, CallerType::System);
 
-  return MediaTrackList::CreateAudioTrack(aOwnerGlobal, id, u"main"_ns, label,
-                                          u""_ns, true, aStreamTrack);
+  return MediaTrackList::CreateAudioTrack(aRelevantGlobal, id, u"main"_ns,
+                                          label, u""_ns, true, aStreamTrack);
 }
 
 static already_AddRefed<VideoTrack> CreateVideoTrack(
-    VideoStreamTrack* aStreamTrack, nsIGlobalObject* aOwnerGlobal) {
+    VideoStreamTrack* aStreamTrack, nsIGlobalObject* aRelevantGlobal) {
   nsAutoString id;
   nsAutoString label;
   aStreamTrack->GetId(id);
   aStreamTrack->GetLabel(label, CallerType::System);
 
-  return MediaTrackList::CreateVideoTrack(aOwnerGlobal, id, u"main"_ns, label,
-                                          u""_ns, aStreamTrack);
+  return MediaTrackList::CreateVideoTrack(aRelevantGlobal, id, u"main"_ns,
+                                          label, u""_ns, aStreamTrack);
 }
 
 void HTMLMediaElement::NotifyMediaStreamTrackAdded(
@@ -5905,7 +5954,7 @@ void HTMLMediaElement::NotifyMediaStreamTrackAdded(
   if (AudioStreamTrack* t = aTrack->AsAudioStreamTrack()) {
     MOZ_DIAGNOSTIC_ASSERT(AudioTracks(), "Element can't have been unlinked");
     RefPtr<AudioTrack> audioTrack =
-        CreateAudioTrack(t, AudioTracks()->GetOwnerGlobal());
+        CreateAudioTrack(t, AudioTracks()->GetRelevantGlobal());
     AudioTracks()->AddTrack(audioTrack);
   } else if (VideoStreamTrack* t = aTrack->AsVideoStreamTrack()) {
     // TODO: Fix this per the spec on bug 1273443.
@@ -5914,7 +5963,7 @@ void HTMLMediaElement::NotifyMediaStreamTrackAdded(
     }
     MOZ_DIAGNOSTIC_ASSERT(VideoTracks(), "Element can't have been unlinked");
     RefPtr<VideoTrack> videoTrack =
-        CreateVideoTrack(t, VideoTracks()->GetOwnerGlobal());
+        CreateVideoTrack(t, VideoTracks()->GetRelevantGlobal());
     VideoTracks()->AddTrack(videoTrack);
     // New MediaStreamTrack added, set the new added video track as selected
     // video track when there is no selected track.
@@ -6222,6 +6271,7 @@ void HTMLMediaElement::SeekCompleted() {
         }));
   }
   MOZ_ASSERT(!mSeekDOMPromise);
+  SetCuesDirty();
 }
 
 void HTMLMediaElement::SeekAborted() {
@@ -6487,7 +6537,13 @@ void HTMLMediaElement::UpdateReadyStateInternal() {
 
   if (IsVideo() && VideoTracks() && !VideoTracks()->IsEmpty() &&
       !IsPlaybackEnded() && GetImageContainer() &&
-      !GetImageContainer()->HasCurrentImage()) {
+      !GetImageContainer()->HasCurrentImage()
+#ifdef MOZ_WMF_CDM
+      // WMFClearKey frame-server mode renders video internally without exposing
+      // frames through the image container.
+      && !(mDecoder && mDecoder->IsUsingWMFClearKey())
+#endif
+  ) {
     // Don't advance if we are playing video, but don't have a video frame.
     // Also, if video became available after advancing to HAVE_CURRENT_DATA
     // while we are still playing, we need to revert to HAVE_METADATA until
@@ -7884,7 +7940,6 @@ void HTMLMediaElement::PopulatePendingTextTrackList() {
 TextTrackManager* HTMLMediaElement::GetOrCreateTextTrackManager() {
   if (!mTextTrackManager) {
     mTextTrackManager = new TextTrackManager(this);
-    mTextTrackManager->AddListeners();
   }
   return mTextTrackManager;
 }
@@ -8077,6 +8132,7 @@ void HTMLMediaElement::NotifyAboutPlaying() {
   // Stick to the QueueEvent() call path for now because we want to
   // trigger some telemetry-related codes in the QueueEvent() method.
   QueueEvent(u"playing"_ns);
+  StartMediaControlKeyListenerIfNeeded();
 }
 
 already_AddRefed<PlayPromise> HTMLMediaElement::CreatePlayPromise(
@@ -8191,7 +8247,7 @@ void HTMLMediaElement::ConstructMediaTracks(const MediaInfo* aInfo) {
     LOG(LogLevel::Debug, ("%p ConstructMediaTracks, add an audio track", this));
     const TrackInfo& info = aInfo->mAudio;
     RefPtr<AudioTrack> track = MediaTrackList::CreateAudioTrack(
-        audioList->GetOwnerGlobal(), info.mId, info.mKind, info.mLabel,
+        audioList->GetRelevantGlobal(), info.mId, info.mKind, info.mLabel,
         info.mLanguage, info.mEnabled);
 
     audioList->AddTrack(track);
@@ -8202,7 +8258,7 @@ void HTMLMediaElement::ConstructMediaTracks(const MediaInfo* aInfo) {
     LOG(LogLevel::Debug, ("%p ConstructMediaTracks, add a video track", this));
     const TrackInfo& info = aInfo->mVideo;
     RefPtr<VideoTrack> track = MediaTrackList::CreateVideoTrack(
-        videoList->GetOwnerGlobal(), info.mId, info.mKind, info.mLabel,
+        videoList->GetRelevantGlobal(), info.mId, info.mKind, info.mLabel,
         info.mLanguage);
 
     videoList->AddTrack(track);

@@ -222,6 +222,7 @@ var h11required_conn = null;
 var h11required_header = "yes";
 var didRst = false;
 var rstConnection = null;
+var didUnknownRst = false;
 var illegalheader_conn = null;
 
 // eslint-disable-next-line complexity
@@ -432,6 +433,20 @@ function handleRequest(req, res) {
     if (req.httpVersionMajor != 2) {
       res.setHeader("Connection", "close");
     }
+    res.writeHead(200);
+    res.end("It's all good.");
+    return;
+  } else if (u.pathname === "/unknown_rst_once") {
+    // First H2 request gets RST_STREAM with an unrecognized error code; the
+    // retry succeeds.
+    if (!didUnknownRst && req.httpVersionMajor === 2) {
+      didUnknownRst = true;
+      req.stream.reset(0xfe);
+      return;
+    }
+    // Clear so the test can be re-run with --verify
+    didUnknownRst = false;
+    res.setHeader("Content-Type", "text/html");
     res.writeHead(200);
     res.end("It's all good.");
     return;
@@ -857,13 +872,21 @@ let httpServer = http.createServer((req, res) => {
 
 function forkH3Server(serverPath, dbPath) {
   const args = [dbPath];
-  let process = spawn(serverPath, args);
-  let id = forkProcessInternal(process);
+  const env = Object.assign({}, process.env, {
+    RUST_BACKTRACE: "full",
+  });
+  let child = spawn(serverPath, args, { env });
+  let id = forkProcessInternal(child);
   // Return a promise that resolves when we receive data from stdout
   return new Promise((resolve, _) => {
-    process.stdout.on("data", data => {
+    child.stdout.on("data", data => {
       console.log(data.toString());
       resolve({ id, output: data.toString().trim() });
+    });
+
+    child.stderr.on("data", chunk => {
+      const s = chunk.toString();
+      console.log(`[child stderr] ${s}`);
     });
   });
 }

@@ -1,4 +1,3 @@
-/* -*- Mode: C++; tab-width: 20; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -324,93 +323,6 @@ BOOL nsCocoaUtils::ShouldRestoreStateDueToLaunchAtLogin() {
   return NO;
 }
 
-static bool sIsActivelyShowingAppModalDialog = false;
-
-bool nsCocoaUtils::PrepareForNativeAppModalDialog() {
-  NS_OBJC_BEGIN_TRY_BLOCK_RETURN;
-
-  MOZ_ASSERT(NS_IsMainThread());
-
-  if (sIsActivelyShowingAppModalDialog) {
-    return false;
-  }
-  sIsActivelyShowingAppModalDialog = true;
-
-  if (!NSApp.active) {
-    // Early exit if the app isn't active. This is because we can't safely
-    // set the NSApp.mainMenu property in such a case. We early exit so we
-    // also don't invoke any side effects.
-    return true;
-  }
-
-  // Don't do anything if this is embedding. We'll assume that if there is no
-  // hidden window we shouldn't do anything, and that should cover the embedding
-  // case.
-  nsMenuBarX* hiddenWindowMenuBar = nsMenuUtilsX::GetHiddenWindowMenuBar();
-  if (!hiddenWindowMenuBar) {
-    return true;
-  }
-
-  // First put up the hidden window menu bar so that app menu event handling is
-  // correct.
-  hiddenWindowMenuBar->Paint();
-
-  NSMenu* mainMenu = [NSApp mainMenu];
-  NS_ASSERTION(
-      [mainMenu numberOfItems] > 0,
-      "Main menu does not have any items, something is terribly wrong!");
-
-  // Create new menu bar for use with modal dialog
-  NSMenu* newMenuBar = [[GeckoNSMenu alloc] initWithTitle:@""];
-
-  // Swap in our app menu. Note that the event target is whatever window is up
-  // when the app modal dialog goes up.
-  NSMenuItem* firstMenuItem = [[mainMenu itemAtIndex:0] retain];
-  [mainMenu removeItemAtIndex:0];
-  [newMenuBar insertItem:firstMenuItem atIndex:0];
-  [firstMenuItem release];
-
-  // Add standard edit menu
-  [newMenuBar addItem:nsMenuUtilsX::GetStandardEditMenuItem()];
-
-  // Show the new menu bar
-  [NSApp setMainMenu:newMenuBar];
-  [newMenuBar release];
-
-  return true;
-
-  NS_OBJC_END_TRY_BLOCK_RETURN(sIsActivelyShowingAppModalDialog = false);
-}
-
-void nsCocoaUtils::CleanUpAfterNativeAppModalDialog() {
-  NS_OBJC_BEGIN_TRY_IGNORE_BLOCK;
-
-  MOZ_ASSERT(NS_IsMainThread());
-
-  if (!sIsActivelyShowingAppModalDialog) {
-    return;
-  }
-
-  // Don't do anything if this is embedding. We'll assume that if there is no
-  // hidden window we shouldn't do anything, and that should cover the embedding
-  // case.
-  nsMenuBarX* hiddenWindowMenuBar = nsMenuUtilsX::GetHiddenWindowMenuBar();
-  if (!hiddenWindowMenuBar) return;
-
-  NSWindow* mainWindow = [NSApp mainWindow];
-  if (!mainWindow) {
-    // We do an async paint in order to prevent crashes when macOS is actively
-    // enumerating the menu items in `NSApp.mainMenu`.
-    hiddenWindowMenuBar->PaintAsyncIfNeeded();
-  } else {
-    [WindowDelegate paintMenubarForWindow:mainWindow];
-  }
-
-  sIsActivelyShowingAppModalDialog = false;
-
-  NS_OBJC_END_TRY_IGNORE_BLOCK;
-}
-
 static void data_ss_release_callback(void* aDataSourceSurface, const void* data,
                                      size_t size) {
   if (aDataSourceSurface) {
@@ -473,8 +385,7 @@ nsresult nsCocoaUtils::CreateCGImageFromSurface(SourceSurface* aSurface,
   CGDataProviderRef dataProvider = ::CGDataProviderCreateWithData(
       dataSurface.forget().take(), map.mData, map.mStride * height,
       data_ss_release_callback);
-  CGColorSpaceRef colorSpace =
-      ::CGColorSpaceCreateWithName(kCGColorSpaceGenericRGB);
+  CGColorSpaceRef colorSpace = ::CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
   *aResult = ::CGImageCreate(
       width, height, 8, 32, map.mStride, colorSpace,
       kCGBitmapByteOrder32Host | kCGImageAlphaPremultipliedFirst, dataProvider,
@@ -1824,6 +1735,22 @@ already_AddRefed<nsISupports> nsCocoaUtils::GetDataFromPasteboardItem(
         title = pString;
       }
       pString = [NSString stringWithFormat:@"%@\n%@", pString, title];
+    } else {
+      // Try to convert file to file:// URL
+      nsCOMPtr<nsISupports> fileData =
+          GetDataFromPasteboardItem(nsDependentCString(kFileMime), aItem);
+      nsCOMPtr<nsIFile> file = do_QueryInterface(fileData);
+      if (file) {
+        nsAutoCString urlSpec;
+        if (NS_SUCCEEDED(NS_GetURLSpecFromFile(file, urlSpec))) {
+          nsAutoString leafName;
+          file->GetLeafName(leafName);
+
+          NSString* url = nsCocoaUtils::ToNSString(urlSpec);
+          NSString* title = nsCocoaUtils::ToNSString(leafName);
+          pString = [NSString stringWithFormat:@"%@\n%@", url, title];
+        }
+      }
     }
   } else if (aFlavor.EqualsLiteral(kURLDataMime)) {
     pString = nsCocoaUtils::GetStringForTypeFromPasteboardItem(
@@ -1872,7 +1799,7 @@ already_AddRefed<nsISupports> nsCocoaUtils::GetDataFromPasteboardItem(
     return genericDataWrapper.forget();
   }
 
-  // We have never supported this on Mac OS X, we should someday. Normally
+  // We have never supported this on macOS, we should someday. Normally
   // dragging images in is accomplished with a file path drag instead of the
   // image data itself.
   /*

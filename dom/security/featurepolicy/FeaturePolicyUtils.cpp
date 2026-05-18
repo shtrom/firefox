@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -44,9 +42,12 @@ static FeatureMap sSupportedFeatures[] = {
      FeaturePolicyUtils::FeaturePolicyValue::eSelf},
     {"publickey-credentials-get",
      FeaturePolicyUtils::FeaturePolicyValue::eSelf},
+    {"serial", FeaturePolicyUtils::FeaturePolicyValue::eSelf},
     {"speaker-selection", FeaturePolicyUtils::FeaturePolicyValue::eSelf},
     {"storage-access", FeaturePolicyUtils::FeaturePolicyValue::eAll},
     {"screen-wake-lock", FeaturePolicyUtils::FeaturePolicyValue::eSelf},
+    {"loopback-network", FeaturePolicyUtils::FeaturePolicyValue::eSelf},
+    {"local-network", FeaturePolicyUtils::FeaturePolicyValue::eSelf},
     {"aria-notify", FeaturePolicyUtils::FeaturePolicyValue::eAll},
 };
 

@@ -5,8 +5,8 @@
 package org.mozilla.fenix.home
 
 import android.content.Context
-import android.view.View
 import androidx.annotation.VisibleForTesting
+import androidx.compose.material3.SnackbarHostState
 import androidx.navigation.NavController
 import kotlinx.coroutines.CoroutineScope
 import mozilla.components.browser.state.selector.findTab
@@ -16,7 +16,7 @@ import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.feature.tabs.TabsUseCases
 import mozilla.components.support.base.feature.LifecycleAwareFeature
 import org.mozilla.fenix.R
-import org.mozilla.fenix.components.AppStore
+import org.mozilla.fenix.browser.browsingmode.BrowsingModeManager
 import org.mozilla.fenix.components.usecases.FenixBrowserUseCases
 import org.mozilla.fenix.ext.tabClosedUndoMessage
 import org.mozilla.fenix.ext.tabsClosedUndoMessage
@@ -24,32 +24,33 @@ import org.mozilla.fenix.home.HomeScreenViewModel.Companion.ALL_NORMAL_TABS
 import org.mozilla.fenix.home.HomeScreenViewModel.Companion.ALL_PRIVATE_TABS
 import org.mozilla.fenix.utils.Settings
 import org.mozilla.fenix.utils.allowUndo
+import org.mozilla.fenix.utils.getUndoDelay
 
 /**
  * Delegate to handle tab removal and undo actions in the homepage.
  *
- * @param appStore [AppStore] used for querying and updating application state.
  * @param context An Android [Context].
  * @param viewModel [HomeScreenViewModel] containing the data on the sessions to delete.
  * @param browserStore The [BrowserStore] that holds the currently open tabs.
+ * @param browsingModeManager [BrowsingModeManager] used for fetching the current browsing mode.
  * @param navController [NavController] used for navigation.
  * @param tabsUseCases The [TabsUseCases] instance to perform tab actions.
  * @param fenixBrowserUseCases [FenixBrowserUseCases] used for adding new homepage tabs.
  * @param settings [Settings] used to check the application shared preferences.
- * @param snackBarParentView The [View] to find a parent from for displaying the snackbar.
+ * @param snackbarHostState The [SnackbarHostState] used to display snackbars.
  * @param viewLifecycleScope The [CoroutineScope] to use for launching coroutines.
  */
 @Suppress("LongParameterList")
 class TabsCleanupFeature(
-    private val appStore: AppStore,
     private val context: Context,
     private val viewModel: HomeScreenViewModel,
     private val browserStore: BrowserStore,
+    private val browsingModeManager: BrowsingModeManager,
     private val navController: NavController,
     private val tabsUseCases: TabsUseCases,
     private val fenixBrowserUseCases: FenixBrowserUseCases,
     private val settings: Settings,
-    private val snackBarParentView: View,
+    private val snackbarHostState: SnackbarHostState,
     private val viewLifecycleScope: CoroutineScope,
 ) : LifecycleAwareFeature {
 
@@ -79,16 +80,25 @@ class TabsCleanupFeature(
     @VisibleForTesting
     internal fun showUndoSnackbar(message: String, onCancel: () -> Unit) {
         viewLifecycleScope.allowUndo(
-            view = snackBarParentView,
+            snackbarHostState = snackbarHostState,
             message = message,
             undoActionTitle = context.getString(R.string.snackbar_deleted_undo),
             onCancel = onCancel,
             operation = {},
+            undoDelay = context.getUndoDelay(),
         )
     }
 
     private fun removeAllTabsAndShowSnackbar(sessionCode: String) {
-        if (sessionCode == ALL_PRIVATE_TABS) {
+        val isPrivate = sessionCode == ALL_PRIVATE_TABS
+
+        val tabsCount = if (isPrivate) {
+            browserStore.state.privateTabs.size
+        } else {
+            browserStore.state.normalTabs.size
+        }
+
+        if (isPrivate) {
             tabsUseCases.removePrivateTabs()
         } else {
             tabsUseCases.removeNormalTabs()
@@ -100,12 +110,14 @@ class TabsCleanupFeature(
             // Hold onto the new tab ID so that the new tab can be removed if the tabs are restored
             // by the undo action.
             tabId = fenixBrowserUseCases.addNewHomepageTab(
-                private = appStore.state.mode.isPrivate,
+                private = browsingModeManager.mode.isPrivate,
             )
         }
 
         showUndoSnackbar(
-            message = context.tabsClosedUndoMessage(private = sessionCode == ALL_PRIVATE_TABS),
+            message = context.tabsClosedUndoMessage(
+                count = tabsCount,
+            ),
             onCancel = {
                 onUndoAllTabsRemoved(tabId)
             },
@@ -129,7 +141,7 @@ class TabsCleanupFeature(
 
     private fun removeTabAndShowSnackbar(sessionId: String) {
         val tab = browserStore.state.findTab(sessionId) ?: return
-        val isPrivate = appStore.state.mode.isPrivate
+        val isPrivate = browsingModeManager.mode.isPrivate
 
         // Check if this is the last tab being removed.
         val hasTabsRemaining = if (isPrivate) {

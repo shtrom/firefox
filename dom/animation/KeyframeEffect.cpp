@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -255,7 +253,8 @@ void KeyframeEffect::SetKeyframes(nsTArray<Keyframe>&& aKeyframes,
   }
 
   mKeyframes = std::move(aKeyframes);
-  KeyframeUtils::DistributeKeyframes(mKeyframes);
+  mKeyframesOffsetInfo =
+      KeyframeUtils::ComputeMissingKeyframeOffsets(mKeyframes, aTimeline);
 
   if (mAnimation && mAnimation->IsRelevant()) {
     MutationObservers::NotifyAnimationChanged(mAnimation);
@@ -431,7 +430,9 @@ void KeyframeEffect::UpdateProperties(const ComputedStyle* aStyle,
                                       const AnimationTimeline* aTimeline) {
   MOZ_ASSERT(aStyle);
 
-  nsTArray<AnimationProperty> properties = BuildProperties(aStyle);
+  nsTArray<AnimationProperty> properties = BuildProperties(
+      aStyle, aTimeline ? aTimeline
+                        : (mAnimation ? mAnimation->GetTimeline() : nullptr));
 
   bool propertiesChanged = mProperties != properties;
 
@@ -477,7 +478,9 @@ void KeyframeEffect::UpdateProperties(const ComputedStyle* aStyle,
 }
 
 void KeyframeEffect::UpdateBaseStyle(const ComputedStyle* aStyle) {
-  EnsureBaseStyles(aStyle, BuildProperties(aStyle), nullptr, nullptr);
+  const AnimationTimeline* timeline =
+      mAnimation ? mAnimation->GetTimeline() : nullptr;
+  EnsureBaseStyles(aStyle, BuildProperties(aStyle, timeline), nullptr, nullptr);
 }
 
 void KeyframeEffect::EnsureBaseStyles(
@@ -626,8 +629,8 @@ void KeyframeEffect::ComposeStyle(
        ++propIdx) {
     const AnimationProperty& prop = mProperties[propIdx];
 
-    MOZ_ASSERT(prop.mSegments[0].mFromKey == 0.0, "incorrect first from key");
-    MOZ_ASSERT(prop.mSegments[prop.mSegments.Length() - 1].mToKey == 1.0,
+    MOZ_ASSERT(prop.mSegments[0].mFromKey <= 0.0, "incorrect first from key");
+    MOZ_ASSERT(prop.mSegments[prop.mSegments.Length() - 1].mToKey >= 1.0,
                "incorrect last to key");
 
     if (aPropertiesToSkip.HasProperty(prop.mProperty)) {
@@ -777,7 +780,7 @@ static const KeyframeEffectOptions& KeyframeEffectOptionsFromUnion(
 
 template <class OptionsType>
 static KeyframeEffectParams KeyframeEffectParamsFromUnion(
-    const OptionsType& aOptions, CallerType aCallerType, ErrorResult& aRv) {
+    const OptionsType& aOptions, Document* aDocument, ErrorResult& aRv) {
   KeyframeEffectParams result;
   if (aOptions.IsUnrestrictedDouble()) {
     return result;
@@ -794,8 +797,8 @@ static KeyframeEffectParams KeyframeEffectParamsFromUnion(
     return result;
   }
 
-  Maybe<PseudoStyleRequest> pseudoRequest =
-      PseudoStyleRequest::Parse(options.mPseudoElement);
+  Maybe<PseudoStyleRequest> pseudoRequest = PseudoStyleRequest::Parse(
+      options.mPseudoElement, aDocument->DefaultStyleAttrURLData());
   if (!pseudoRequest) {
     // Per the spec, we throw SyntaxError for syntactically invalid pseudos.
     aRv.ThrowSyntaxError(
@@ -837,7 +840,7 @@ already_AddRefed<KeyframeEffect> KeyframeEffect::ConstructKeyframeEffect(
   }
 
   KeyframeEffectParams effectOptions =
-      KeyframeEffectParamsFromUnion(aOptions, aGlobal.CallerType(), aRv);
+      KeyframeEffectParamsFromUnion(aOptions, doc, aRv);
   // An invalid Pseudo-element aborts all further steps.
   if (aRv.Failed()) {
     return nullptr;
@@ -861,7 +864,7 @@ already_AddRefed<KeyframeEffect> KeyframeEffect::ConstructKeyframeEffect(
 }
 
 nsTArray<AnimationProperty> KeyframeEffect::BuildProperties(
-    const ComputedStyle* aStyle) {
+    const ComputedStyle* aStyle, const AnimationTimeline* aTimeline) {
   MOZ_ASSERT(aStyle);
 
   nsTArray<AnimationProperty> result;
@@ -881,7 +884,7 @@ nsTArray<AnimationProperty> KeyframeEffect::BuildProperties(
 
   result = KeyframeUtils::GetAnimationPropertiesFromKeyframes(
       keyframesCopy, mTarget.mElement, mTarget.mPseudoRequest, aStyle,
-      mEffectOptions.mComposite);
+      mEffectOptions.mComposite, aTimeline, mKeyframesOffsetInfo);
 
 #ifdef DEBUG
   MOZ_ASSERT(SpecifiedKeyframeArraysAreEqual(mKeyframes, keyframesCopy),
@@ -927,7 +930,7 @@ void KeyframeEffect::UpdateTarget(Element* aElement,
     }
   }
 
-  mTarget = newTarget;
+  mTarget = std::move(newTarget);
 
   if (mTarget) {
     UpdateTargetRegistration();
@@ -1102,8 +1105,8 @@ void KeyframeEffect::SetPseudoElement(const nsAString& aPseudoElement,
 
   // Note: ParsePseudoELement() returns Some(NotPseudo) for the null string,
   // so we handle null case before this.
-  Maybe<PseudoStyleRequest> pseudoRequest =
-      PseudoStyleRequest::Parse(aPseudoElement);
+  Maybe<PseudoStyleRequest> pseudoRequest = PseudoStyleRequest::Parse(
+      aPseudoElement, mDocument->DefaultStyleAttrURLData());
   if (!pseudoRequest || pseudoRequest->IsNotPseudo()) {
     // Per the spec, we throw SyntaxError for syntactically invalid pseudos.
     aRv.ThrowSyntaxError(
@@ -1257,15 +1260,44 @@ void KeyframeEffect::GetKeyframes(JSContext* aCx, nsTArray<JSObject*>& aResult,
   const StylePerDocumentStyleData* rawData =
       mDocument->EnsureStyleSet().RawData();
 
+  // If we don't have a timeline or the timeline is not a ViewTimeline, we
+  // shouldn't generate the missing keyframes if all keyframes are using
+  // TimelineRangeOffsets. Otherwise, we should generate the missing keyframes
+  // only if needed.
+  const auto& generatedKeyframesStatus =
+      KeyframeUtils::CheckSkippableGeneratedKeyframes(
+          mKeyframes, mAnimation ? mAnimation->GetTimeline() : nullptr,
+          mKeyframesOffsetInfo);
+
   for (const Keyframe& keyframe : mKeyframes) {
+    if (generatedKeyframesStatus.ShouldSkip(keyframe)) {
+      // FIXME: Bug 2037642. This is not correct actually for getKeyframes(). We
+      // still have to generate the missing keyframes if there are properties
+      // which are not specified in the keyframes with computed offst <= 0.0 or
+      // >= 1.0.
+      // https://drafts.csswg.org/scroll-animations-1/#named-range-keyframes
+      continue;
+    }
+
     // Set up a dictionary object for the explicit members
     BaseComputedKeyframe keyframeDict;
     if (keyframe.mOffset) {
-      keyframeDict.mOffset.SetValue(keyframe.mOffset.value());
+      // FIXME: Bug 2016574. Add range name to BaseKeyframe.
+      if (!keyframe.mOffset->IsTimelineRangeOffset()) {
+        keyframeDict.mOffset.SetValue(keyframe.mOffset->mPercentage);
+      }
     }
-    MOZ_ASSERT(keyframe.mComputedOffset != Keyframe::kComputedOffsetNotSet,
-               "Invalid computed offset");
-    keyframeDict.mComputedOffset.Construct(keyframe.mComputedOffset);
+    if (std::isnan(keyframe.mComputedOffset)) {
+      MOZ_ASSERT(keyframe.IsRangedKeyframe(), "Invalid computed offset");
+      // FIXME: Bug 2039388. This may happen if the associated timeline doesn't
+      // support this timeline range name, or the layout is not ready so we
+      // cannot resolve the timeline range name. This is not specced so we use
+      // "NaN" to match the behavior of other browsers.
+      keyframeDict.mComputedOffset.Construct(
+          std::numeric_limits<double>::quiet_NaN());
+    } else {
+      keyframeDict.mComputedOffset.Construct(keyframe.mComputedOffset);
+    }
     if (keyframe.mTimingFunction) {
       keyframeDict.mEasing.Truncate();
       keyframe.mTimingFunction.ref().AppendToString(keyframeDict.mEasing);
@@ -1983,15 +2015,15 @@ KeyframeEffect::MatchForCompositor KeyframeEffect::IsMatchForCompositor(
   if (mAnimation->UsingScrollTimeline()) {
     const ScrollTimeline* scrollTimeline =
         mAnimation->GetTimeline()->AsScrollTimeline();
+    const auto state = scrollTimeline->GetState();
     // We don't send this animation to the compositor if
     // 1. the APZ is disabled entirely or for the source, or
     // 2. the associated scroll-timeline is inactive, or
     // 3. the scrolling direction is not available (i.e. no scroll range).
     // 4. the scroll style of the scroller is overflow:hidden.
-    if (!scrollTimeline->APZIsActiveForSource() ||
-        !scrollTimeline->IsActive() ||
-        !scrollTimeline->ScrollingDirectionIsAvailable() ||
-        scrollTimeline->SourceScrollStyle() == StyleOverflow::Hidden) {
+    if (!state.APZIsActiveForSource() || !state.IsActive() ||
+        !state.ScrollingDirectionIsAvailable() ||
+        state.SourceScrollStyle() == StyleOverflow::Hidden) {
       return KeyframeEffect::MatchForCompositor::No;
     }
 
@@ -2051,6 +2083,38 @@ double KeyframeEffect::AnimationsPlayBackRateMultiplier() const {
     return presContext->AnimationsPlayBackRateMultiplier();
   }
   return 1.0;
+}
+
+void KeyframeEffect::MaybeUpdateKeyframeComputedOffsets(
+    const AnimationTimeline* aTimeline) {
+  if (!mKeyframesOffsetInfo.mRangeOffset) {
+    return;
+  }
+
+  bool needsRebuildProperties = false;
+  for (auto& keyframe : mKeyframes) {
+    if (!keyframe.IsRangedKeyframe()) {
+      continue;
+    }
+
+    const auto& offset = *keyframe.mOffset;
+    const double oldComputedOffset = keyframe.mComputedOffset;
+    keyframe.mComputedOffset =
+        KeyframeUtils::GetComputedOffset(offset, aTimeline);
+
+    if (Keyframe::ComputedOffsetsAreDifferent(oldComputedOffset,
+                                              keyframe.mComputedOffset)) {
+      needsRebuildProperties = true;
+    }
+  }
+
+  if (needsRebuildProperties && mTarget) {
+    RefPtr<const ComputedStyle> computedStyle =
+        GetTargetComputedStyle(Flush::None);
+    if (computedStyle) {
+      UpdateProperties(computedStyle, aTimeline);
+    }
+  }
 }
 
 }  // namespace dom

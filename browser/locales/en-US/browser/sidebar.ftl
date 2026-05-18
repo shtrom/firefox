@@ -57,14 +57,14 @@ sidebar-search-results-header =
 
 ## Labels for sidebar customize panel
 
-sidebar-customize-extensions-header = Sidebar extensions
-sidebar-customize-firefox-tools-header =
-  .label = { -brand-product-name } tools
+sidebar-customize-extensions-header2 = Extensions
+sidebar-customize-firefox-tools-header2 =
+  .label = Tools
 sidebar-customize-firefox-settings = Manage { -brand-short-name } settings
 sidebar-vertical-tabs =
   .label = Vertical tabs
-sidebar-settings =
-  .label = Sidebar settings
+sidebar-settings2 =
+  .label = Settings
 sidebar-hide-tabs-and-sidebar =
   .label = Hide tabs and sidebar
 sidebar-show-on-the-right =
@@ -75,7 +75,7 @@ sidebar-show-on-the-left =
 # hovers over it.
 expand-sidebar-on-hover =
   .label = Expand sidebar on hover
-sidebar-manage-extensions = Manage Extensions
+sidebar-manage-extensions2 = Manage all extensions
 
 ## Labels for sidebar context menu items
 
@@ -120,6 +120,15 @@ sidebar-history-context-menu-bookmark-page =
   .label = Bookmark Page…
 sidebar-history-context-menu-delete-pages =
   .label = Delete Pages from History
+
+## Labels for sidebar bookmarks context menu items
+
+sidebar-bookmarks-context-menu-edit-bookmark =
+  .label = Edit Bookmark…
+sidebar-bookmarks-context-menu-delete-bookmark =
+  .label = Delete Bookmark
+sidebar-bookmarks-context-menu-delete-separator =
+  .label = Delete
 
 ## Labels for sidebar menu items.
 
@@ -183,6 +192,15 @@ sidebar-menu-syncedtabs-header =
   .heading = Tabs from other devices
 sidebar-menu-cpm-header =
   .heading = Passwords
+sidebar-menu-bookmarks-header =
+  .heading = Bookmarks
+
+## Labels for sidebar bookmarks panel folder names.
+
+sidebar-bookmarks-folder-menu = Bookmarks Menu
+sidebar-bookmarks-folder-toolbar = Bookmarks Toolbar
+sidebar-bookmarks-folder-other = Other Bookmarks
+sidebar-bookmarks-folder-mobile = Mobile Bookmarks
 
 ## Titles for sidebar menu panels.
 

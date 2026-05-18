@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -152,15 +150,6 @@ void VRManagerChild::ActorDestroy(ActorDestroyReason aReason) {
   if (sVRManagerChildSingleton == this) {
     sVRManagerChildSingleton = nullptr;
   }
-}
-
-PVRLayerChild* VRManagerChild::AllocPVRLayerChild(const uint32_t& aDisplayID,
-                                                  const uint32_t& aGroup) {
-  return VRLayerChild::CreateIPDLActor();
-}
-
-bool VRManagerChild::DeallocPVRLayerChild(PVRLayerChild* actor) {
-  return VRLayerChild::DestroyIPDLActor(actor);
 }
 
 void VRManagerChild::UpdateDisplayInfo(const VRDisplayInfo& aDisplayInfo) {
@@ -365,10 +354,13 @@ bool VRManagerChild::EnumerateVRDisplays() {
 
 void VRManagerChild::DetectRuntimes() { (void)SendDetectRuntimes(); }
 
-PVRLayerChild* VRManagerChild::CreateVRLayer(uint32_t aDisplayID,
-                                             uint32_t aGroup) {
-  PVRLayerChild* vrLayerChild = AllocPVRLayerChild(aDisplayID, aGroup);
-  return SendPVRLayerConstructor(vrLayerChild, aDisplayID, aGroup);
+already_AddRefed<VRLayerChild> VRManagerChild::CreateVRLayer(
+    uint32_t aDisplayID, uint32_t aGroup) {
+  RefPtr<VRLayerChild> vrLayerChild = VRLayerChild::CreateIPDLActor();
+  if (!SendPVRLayerConstructor(vrLayerChild, aDisplayID, aGroup)) {
+    return nullptr;
+  }
+  return vrLayerChild.forget();
 }
 
 void VRManagerChild::XRFrameRequest::Call(

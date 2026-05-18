@@ -16,6 +16,7 @@ from gecko_taskgraph.util.chunking import (
     get_runtimes,
     get_test_tags,
     guess_mozinfo_from_task,
+    resolve_manifest_runtimes,
 )
 from gecko_taskgraph.util.perfile import perfile_number_of_chunks
 
@@ -189,12 +190,12 @@ def resolve_dynamic_chunks(config, tasks):
             yield task
             continue
 
-        all_runtimes = get_runtimes(task["test-platform"], task["test-name"])
-        runtimes = {
-            m: r
-            for m, r in all_runtimes.items()
-            if m in task["test-manifests"]["active"]
-        }
+        suite_name = task["test-name"] + task.get("variant-suffix", "")
+        all_runtimes = get_runtimes(task["test-platform"], suite_name)
+
+        runtimes = resolve_manifest_runtimes(
+            all_runtimes, task["test-manifests"]["active"]
+        )
 
         if not all_runtimes:
             task["chunks"] = task.get("default-chunks", 1)
@@ -242,8 +243,9 @@ def split_chunks(config, tasks):
                 task["max-run-time"] = int(task["max-run-time"] * 2)
 
             manifests = task["test-manifests"]
+            suite_name = task["test-name"] + task.get("variant-suffix", "")
             chunked_manifests = chunk_manifests(
-                task["test-name"],
+                suite_name,
                 task["test-platform"],
                 task["chunks"],
                 manifests["active"],

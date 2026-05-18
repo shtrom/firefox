@@ -6,11 +6,10 @@ package org.mozilla.fenix.home
 
 import androidx.navigation.NavController
 import androidx.navigation.NavDirections
-import io.mockk.Runs
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.test.TestScope
 import mozilla.components.browser.state.action.TabListAction
 import mozilla.components.browser.state.search.SearchEngine
 import mozilla.components.browser.state.state.BrowserState
@@ -26,10 +25,8 @@ import mozilla.components.feature.tab.collections.TabCollection
 import mozilla.components.feature.tabs.TabsUseCases
 import mozilla.components.service.nimbus.messaging.Message
 import mozilla.components.support.test.robolectric.testContext
-import mozilla.components.support.test.rule.MainCoroutineRule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -50,6 +47,7 @@ import org.mozilla.fenix.components.appstate.AppAction
 import org.mozilla.fenix.components.appstate.AppState
 import org.mozilla.fenix.components.appstate.setup.checklist.ChecklistItem
 import org.mozilla.fenix.components.usecases.FenixBrowserUseCases
+import org.mozilla.fenix.components.usecases.ShareUseCases
 import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.ext.settings
 import org.mozilla.fenix.helpers.FenixGleanTestRule
@@ -63,8 +61,10 @@ import org.mozilla.fenix.utils.Settings
 import org.mozilla.fenix.wallpapers.Wallpaper
 import org.mozilla.fenix.wallpapers.WallpaperState
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.io.File
 import java.lang.ref.WeakReference
+import kotlin.test.assertNotNull
 import mozilla.components.feature.tab.collections.Tab as ComponentTab
 
 @RunWith(RobolectricTestRunner::class) // For gleanTestRule
@@ -72,9 +72,6 @@ class DefaultSessionControlControllerTest {
 
     @get:Rule
     val temporaryFolder = TemporaryFolder()
-
-    @get:Rule
-    val coroutinesTestRule = MainCoroutineRule()
 
     @get:Rule
     val gleanTestRule = FenixGleanTestRule(testContext)
@@ -92,7 +89,7 @@ class DefaultSessionControlControllerTest {
     private val selectTabUseCase: TabsUseCases = mockk(relaxed = true)
     private val fenixBrowserUseCases: FenixBrowserUseCases = mockk(relaxed = true)
     private val settings: Settings = mockk(relaxed = true)
-    private val scope = coroutinesTestRule.scope
+    private val shareUseCases: ShareUseCases = mockk(relaxed = true)
     private val searchEngine = SearchEngine(
         id = "test",
         name = "Test Engine",
@@ -332,11 +329,13 @@ class DefaultSessionControlControllerTest {
     }
 
     @Test
-    fun handleCollectionShareTabsClicked() {
+    fun `WHEN handleCollectionShareTabsClicked is called THEN share use case is invoked with the collection items and title as subject`() {
+        val collectionTitle = "Reading list"
         val collection = mockk<TabCollection> {
             every { tabs } returns emptyList()
-            every { title } returns ""
+            every { title } returns collectionTitle
         }
+
         createController().handleCollectionShareTabsClicked(collection)
 
         assertNotNull(Collections.shared.testGetValue())
@@ -345,9 +344,10 @@ class DefaultSessionControlControllerTest {
         assertEquals(null, recordedEvents.single().extra)
 
         verify {
-            navController.navigate(
-                match<NavDirections> { it.actionId == R.id.action_global_shareFragment },
-                null,
+            shareUseCases.shareItems(
+                items = emptyList(),
+                subject = collectionTitle,
+                navigateToShareFragment = any(),
             )
         }
     }
@@ -709,7 +709,8 @@ class DefaultSessionControlControllerTest {
             fenixBrowserUseCases = fenixBrowserUseCases,
             appStore = appStore,
             navControllerRef = WeakReference(navController),
-            viewLifecycleScope = scope,
+            viewLifecycleScope = TestScope(),
+            shareUseCases = shareUseCases,
             showAddSearchWidgetPrompt = { showAddSearchWidgetPromptCalled = true },
             requestSetDefaultBrowserPrompt = { requestSetDefaultBrowserPromptCalled = true },
         ).apply {

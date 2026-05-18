@@ -7,10 +7,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-dependencies {
-    implementation(libs.kaml)
-}
-
 group = "org.mozilla"
 
 val mozconfig = gradle.extra["mozconfig"] as Map<*, *>
@@ -31,9 +27,21 @@ gradlePlugin {
         id = "org.mozilla.conventions.mach-tasks"
         implementationClass = "org.mozilla.conventions.MachTasksPlugin"
     }
+    plugins.register("org.mozilla.conventions.zip-test-reports") {
+        id = "org.mozilla.conventions.zip-test-reports"
+        implementationClass = "org.mozilla.conventions.ZipTestReportsPlugin"
+    }
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions {
+        allWarningsAsErrors.set(true)
+    }
 }
 
 dependencies {
+    implementation(libs.kaml)
+    compileOnly(libs.android.gradle.plugin)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)

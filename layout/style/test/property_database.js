@@ -1,6 +1,4 @@
-/* -*- indent-tabs-mode: nil; js-indent-level: 2 -*- */
 /* eslint-disable dot-notation */
-/* vim: set ts=2 sw=2 sts=2 et: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -502,6 +500,11 @@ var validNonUrlImageValues = [
   "-webkit-repeating-radial-gradient(circle, red, blue 10%, red 20%)",
   "-webkit-repeating-radial-gradient(circle farthest-corner, gray 10px, yellow 20px)",
   "-webkit-repeating-radial-gradient(top left, circle, red, blue 4%, red 8%)",
+
+  // image() function
+  "image(red)",
+  "image(transparent)",
+  "image(color-mix(in srgb, red, blue))",
 ];
 var invalidNonUrlImageValues = [
   "-moz-element(#a:1)",
@@ -829,6 +832,8 @@ var invalidNonUrlImageValues = [
         "cross-fade(#F0F8FF, rgb(0, 0, 0), rgba(0, 255, 0, 1), 25%)",
       ]
     : []),
+
+  "image(none)",
 ];
 var unbalancedGradientAndElementValues = ["-moz-element(#a()"];
 
@@ -13445,10 +13450,9 @@ if (IsCSSPropertyPrefEnabled("layout.css.anchor-positioning.enabled")) {
     domProp: "positionAnchor",
     inherited: false,
     type: CSS_TYPE_LONGHAND,
-    initial_values: ["none"],
-    other_values: ["auto", "--foo"],
+    initial_values: ["normal"],
+    other_values: ["none", "auto", "--foo"],
     invalid_values: [
-      "normal",
       "none, auto",
       "--foo none",
       "--foo, auto",
@@ -13979,16 +13983,14 @@ gCSSProperties["math-style"] = {
   invalid_values: [],
 };
 
-if (IsCSSPropertyPrefEnabled("mathml.math_shift.enabled")) {
-  gCSSProperties["math-shift"] = {
-    domProp: "mathShift",
-    inherited: true,
-    type: CSS_TYPE_LONGHAND,
-    initial_values: ["normal"],
-    other_values: ["compact"],
-    invalid_values: [],
-  };
-}
+gCSSProperties["math-shift"] = {
+  domProp: "mathShift",
+  inherited: true,
+  type: CSS_TYPE_LONGHAND,
+  initial_values: ["normal"],
+  other_values: ["compact"],
+  invalid_values: [],
+};
 
 gCSSProperties["forced-color-adjust"] = {
   domProp: "forcedColorAdjust",

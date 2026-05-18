@@ -24,24 +24,34 @@ export class SidebarPage extends MozLitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.ownerGlobal.addEventListener("beforeunload", this.clearDocument);
-    this.ownerGlobal.addEventListener("unload", this.clearDocument);
+    this.documentGlobal.addEventListener("beforeunload", this.clearDocument);
+    this.documentGlobal.addEventListener("unload", this.clearDocument);
 
     this._contextMenu = this.topWindow.SidebarController.currentContextMenu;
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    this.ownerGlobal.removeEventListener("beforeunload", this.clearDocument);
-    this.ownerGlobal.removeEventListener("unload", this.clearDocument);
+    this.documentGlobal.removeEventListener("beforeunload", this.clearDocument);
+    this.documentGlobal.removeEventListener("unload", this.clearDocument);
   }
 
   get topWindow() {
-    return this.ownerGlobal.top;
+    return this.documentGlobal.top;
   }
 
   get sidebarController() {
     return this.topWindow.SidebarController;
+  }
+
+  getRowsInOrder() {
+    const rows = [];
+    for (const list of this.lists) {
+      for (const item of list.tabItems) {
+        rows.push({ list, item });
+      }
+    }
+    return rows;
   }
 
   addContextMenuListeners() {
@@ -132,8 +142,16 @@ export class SidebarPage extends MozLitElement {
    *   The event to handle.
    */
   handleCommandEvent(e) {
+    let promise;
     switch (e.target.id) {
       case "sidebar-history-context-open-in-tab":
+        this.topWindow.openTrustedLinkIn(this.triggerNode.url, "tab", {
+          inBackground: Services.prefs.getBoolPref(
+            "browser.tabs.loadInBackground"
+          ),
+        });
+        break;
+      case "sidebar-synced-tabs-context-open-in-tab":
         this.topWindow.openTrustedLinkIn(this.triggerNode.url, "tab");
         break;
       case "sidebar-history-context-forget-site":
@@ -160,14 +178,21 @@ export class SidebarPage extends MozLitElement {
         break;
       case "sidebar-synced-tabs-context-bookmark-tab":
       case "sidebar-history-context-bookmark-page":
-        this.topWindow.PlacesCommandHook.bookmarkLink(
+        promise = this.topWindow.PlacesCommandHook.bookmarkLink(
           this.triggerNode.url,
           this.triggerNode.title
         );
         break;
     }
+    return promise;
   }
 
+  /**
+   * Show the "Clear data for site" dialog.
+   *
+   * @returns {"accept" | "cancel"}
+   *   The dialog's closing button.
+   */
   async forgetAboutThisSite() {
     let host;
     if (PlacesUtils.nodeIsHost(this.triggerNode)) {
@@ -181,10 +206,17 @@ export class SidebarPage extends MozLitElement {
     } catch (e) {
       // If there is no baseDomain we fall back to host
     }
+    let deferred = Promise.withResolvers();
     await this.topWindow.gDialogBox.open(
       "chrome://browser/content/places/clearDataForSite.xhtml",
-      { host, hostOrBaseDomain: baseDomain ?? host }
+      {
+        host,
+        hostOrBaseDomain: baseDomain ?? host,
+        onAccept: () => deferred.resolve("accept"),
+        onCancel: () => deferred.resolve("cancel"),
+      }
     );
+    return deferred.promise;
   }
 
   /**
@@ -192,7 +224,7 @@ export class SidebarPage extends MozLitElement {
    * and all of the custom elements can cleanup.
    */
   clearDocument() {
-    this.ownerGlobal.document.body.textContent = "";
+    this.documentGlobal.document.body.textContent = "";
   }
 
   /**

@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim:set ts=4 sw=2 sts=2 et cin: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -31,6 +29,7 @@
 #include "mozilla/Base64.h"
 #include "mozilla/ClearOnShutdown.h"
 #include "mozilla/Components.h"
+#include "mozilla/EndianUtils.h"
 #include "mozilla/Printf.h"
 #include "mozilla/RandomNum.h"
 #include "mozilla/SHA1.h"
@@ -48,6 +47,7 @@
 #include "nsIXULAppInfo.h"
 #include "nsICookieService.h"
 #include "nsIObserverService.h"
+#include "nsISiteIntegrityService.h"
 #include "nsISiteSecurityService.h"
 #include "nsIStreamConverterService.h"
 #include "nsCRT.h"
@@ -131,6 +131,7 @@
 
 #define ACCEPT_HEADER_STYLE "text/css,*/*;q=0.1"
 #define ACCEPT_HEADER_JSON "application/json,*/*;q=0.5"
+#define ACCEPT_HEADER_TEXT "text/plain,*/*;q=0.5"
 #define ACCEPT_HEADER_ALL "*/*"
 
 #define UA_PREF(_pref) UA_PREF_PREFIX _pref
@@ -218,9 +219,7 @@ already_AddRefed<nsHttpHandler> nsHttpHandler::GetInstance() {
 static nsCString ImageAcceptHeader() {
   nsCString mimeTypes;
 
-#ifdef MOZ_AV1
   mimeTypes.Append("image/avif,");
-#endif
 
 #ifdef MOZ_JXL
   if (mozilla::StaticPrefs::image_jxl_enabled()) {
@@ -245,9 +244,7 @@ static nsCString DocumentAcceptHeader() {
 
   // we also insert all of the image formats before */* when the pref is set
   if (mozilla::StaticPrefs::network_http_accept_include_images()) {
-#ifdef MOZ_AV1
     mimeTypes.Append("image/avif,");
-#endif
 
 #ifdef MOZ_JXL
     if (mozilla::StaticPrefs::image_jxl_enabled()) {
@@ -279,7 +276,6 @@ nsHttpHandler::nsHttpHandler()
       mPrivateBrowsingIdempotencyKeySeed(mozilla::RandomUint64OrDie()),
       mDebugObservations(false),
       mEnableAltSvc(false),
-      mEnableAltSvcOE(false),
       mSpdyPingThreshold(PR_SecondsToInterval(
           StaticPrefs::network_http_http2_ping_threshold())),
       mSpdyPingTimeout(PR_SecondsToInterval(
@@ -695,14 +691,6 @@ nsresult nsHttpHandler::AddAcceptAndDictionaryHeaders(
 
             nsAutoCStringN<64> encodedHash = ":"_ns + aDict->GetHash() + ":"_ns;
 
-            // Need to retain access to the dictionary until the request
-            // completes. Note that this includes if the dictionary we offered
-            // gets replaced by another request while we're waiting for a
-            // response; in that case we need to read in a copy of the
-            // dictionary into memory before overwriting it and store in dict
-            // temporarily.
-            aRequest->SetDictionary(aDict);
-
             // We want to make sure that the cache entry doesn't disappear out
             // from under us if we set the header, so do the callback to
             // Prefetch() the entry before adding the headers (so we don't
@@ -714,6 +702,14 @@ nsresult nsHttpHandler::AddAcceptAndDictionaryHeaders(
             if ((aCallback)(aNeedsResume, aDict)) {
               LOG_DICTIONARIES(
                   ("Setting Available-Dictionary: %s", encodedHash.get()));
+              // Need to retain access to the dictionary until the request
+              // completes. Note that this includes if the dictionary we offered
+              // gets replaced by another request while we're waiting for a
+              // response; in that case we need to read in a copy of the
+              // dictionary into memory before overwriting it and store in dict
+              // temporarily.
+              aRequest->SetDictionary(aDict);
+
               nsresult rv = aRequest->SetHeader(
                   nsHttp::Available_Dictionary, encodedHash, false,
                   nsHttpHeaderArray::eVarietyRequestOverride);
@@ -733,7 +729,7 @@ nsresult nsHttpHandler::AddAcceptAndDictionaryHeaders(
               return aRequest->SetHeader(
                   nsHttp::Accept_Encoding, self->mDictionaryAcceptEncodings,
                   false, nsHttpHeaderArray::eVarietyRequestOverride);
-            }
+            }  // else probably Prefetch failed
             return NS_OK;
           });
     }
@@ -769,6 +765,8 @@ nsresult nsHttpHandler::AddStandardRequestHeaders(
     accept.Assign(ACCEPT_HEADER_STYLE);
   } else if (aContentPolicyType == ExtContentPolicy::TYPE_JSON) {
     accept.Assign(ACCEPT_HEADER_JSON);
+  } else if (aContentPolicyType == ExtContentPolicy::TYPE_TEXT) {
+    accept.Assign(ACCEPT_HEADER_TEXT);
   } else {
     accept.Assign(ACCEPT_HEADER_ALL);
   }
@@ -860,6 +858,16 @@ bool nsHttpHandler::IsAcceptableEncoding(const char* enc, bool isSecure) {
   LOG(("nsHttpHandler::IsAceptableEncoding %s https=%d %d\n", enc, isSecure,
        rv));
   return rv;
+}
+
+nsISiteIntegrityService* nsHttpHandler::GetSiteIntegrityService() {
+  if (!mSiteIntegrityService) {
+    nsCOMPtr<nsISiteIntegrityService> service;
+    service = mozilla::components::SiteIntegrity::Service();
+    mSiteIntegrityService = new nsMainThreadPtrHolder<nsISiteIntegrityService>(
+        "nsHttpHandler::mSiteIntegrityService", service);
+  }
+  return mSiteIntegrityService;
 }
 
 nsISiteSecurityService* nsHttpHandler::GetSSService() {
@@ -1535,9 +1543,9 @@ void nsHttpHandler::PrefsChanged(const char* pref) {
       // and accept-encoding.dictionary, update both if either changes (which is
       // quite rare, so there's no real perf hit)
       nsAutoCString acceptDictionaryEncodings;
-      rv = Preferences::GetCString(HTTP_PREF("accept-encoding.dictionary"),
-                                   acceptDictionaryEncodings);
-      if (NS_SUCCEEDED(rv) && !acceptDictionaryEncodings.IsEmpty()) {
+      nsresult rvDic = Preferences::GetCString(
+          HTTP_PREF("accept-encoding.dictionary"), acceptDictionaryEncodings);
+      if (NS_SUCCEEDED(rvDic) && !acceptDictionaryEncodings.IsEmpty()) {
         acceptEncodings.Append(", "_ns);
         acceptEncodings.Append(acceptDictionaryEncodings);
         rv = SetAcceptEncodings(acceptEncodings.get(), true, true);
@@ -1616,11 +1624,6 @@ void nsHttpHandler::PrefsChanged(const char* pref) {
   if (PREF_CHANGED(HTTP_PREF("altsvc.enabled"))) {
     rv = Preferences::GetBool(HTTP_PREF("altsvc.enabled"), &cVar);
     if (NS_SUCCEEDED(rv)) mEnableAltSvc = cVar;
-  }
-
-  if (PREF_CHANGED(HTTP_PREF("altsvc.oe"))) {
-    rv = Preferences::GetBool(HTTP_PREF("altsvc.oe"), &cVar);
-    if (NS_SUCCEEDED(rv)) mEnableAltSvcOE = cVar;
   }
 
   if (PREF_CHANGED(HTTP_PREF("http2.push-allowance"))) {
@@ -2568,10 +2571,33 @@ nsresult nsHttpHandler::SpeculativeConnectInternal(
     }
   }
 
+  bool fetchHTTPSRR = EchConfigEnabled();
+  if (StaticPrefs::network_http_happy_eyeballs_enabled()) {
+    ci->SetHappyEyeballsEnabled(true);
+    // When HE is enabled, HTTPS RR lookups are handled by
+    // HappyEyeballsConnectionAttempt.
+    fetchHTTPSRR = false;
+  }
+
   LOG(("MaybeSpeculativeConnectWithHTTPSRR for ci=%s", ci->HashKey().get()));
   // When ech is enabled, always do speculative connect with HTTPS RR.
-  return MaybeSpeculativeConnectWithHTTPSRR(ci, aCallbacks, 0,
-                                            EchConfigEnabled());
+  return MaybeSpeculativeConnectWithHTTPSRR(ci, aCallbacks, 0, fetchHTTPSRR);
+}
+
+nsresult nsHttpHandler::SpeculativeConnect(nsHttpConnectionInfo* ci,
+                                           nsIInterfaceRequestor* callbacks,
+                                           uint32_t caps,
+                                           SpeculativeTransaction* aTrans) {
+  if (mDebugObservations) {
+    nsCOMPtr<nsIObserverService> obsService = services::GetObserverService();
+    if (obsService) {
+      nsPrintfCString debugHashKey("%s", ci->HashKey().get());
+      obsService->NotifyObservers(nullptr, "speculative-connect-request",
+                                  NS_ConvertUTF8toUTF16(debugHashKey).get());
+    }
+  }
+  RefPtr<nsHttpConnectionInfo> clone = ci->Clone();
+  return mConnMgr->SpeculativeConnect(clone, callbacks, caps, aTrans);
 }
 
 NS_IMETHODIMP
@@ -2764,26 +2790,24 @@ void nsHttpHandler::NotifyActiveTabLoadOptimization() {
 }
 
 TimeStamp nsHttpHandler::GetLastActiveTabLoadOptimizationHit() {
-  MutexAutoLock lock(mLastActiveTabLoadOptimizationLock);
-
-  return mLastActiveTabLoadOptimizationHit;
+  auto lastTimestamp = mLastActiveTabLoadOptimizationHit.Lock();
+  return *lastTimestamp;
 }
 
 void nsHttpHandler::SetLastActiveTabLoadOptimizationHit(TimeStamp const& when) {
-  MutexAutoLock lock(mLastActiveTabLoadOptimizationLock);
-
-  if (mLastActiveTabLoadOptimizationHit.IsNull() ||
-      (!when.IsNull() && mLastActiveTabLoadOptimizationHit < when)) {
-    mLastActiveTabLoadOptimizationHit = when;
+  if (when.IsNull()) {
+    return;
+  }
+  auto lastTimestamp = mLastActiveTabLoadOptimizationHit.Lock();
+  if (lastTimestamp->IsNull() || *lastTimestamp < when) {
+    *lastTimestamp = when;
   }
 }
 
 bool nsHttpHandler::IsBeforeLastActiveTabLoadOptimization(
     TimeStamp const& when) {
-  MutexAutoLock lock(mLastActiveTabLoadOptimizationLock);
-
-  return !mLastActiveTabLoadOptimizationHit.IsNull() &&
-         when <= mLastActiveTabLoadOptimizationHit;
+  auto lastTimestamp = mLastActiveTabLoadOptimizationHit.Lock();
+  return !lastTimestamp->IsNull() && when <= *lastTimestamp;
 }
 
 void nsHttpHandler::ExcludeHttp2OrHttp3Internal(
@@ -2812,13 +2836,13 @@ void nsHttpHandler::ExcludeHttp2OrHttp3Internal(
   MOZ_ASSERT_IF(!nsIOService::UseSocketProcess(), OnSocketThread());
 
   if (ci->IsHttp3()) {
-    if (!mExcludedHttp3Origins.Contains(ci->GetRoutedHost())) {
+    {
       MutexAutoLock lock(mHttpExclusionLock);
       mExcludedHttp3Origins.Insert(ci->GetRoutedHost());
     }
     mConnMgr->ExcludeHttp3(ci);
   } else {
-    if (!mExcludedHttp2Origins.Contains(ci->GetOrigin())) {
+    {
       MutexAutoLock lock(mHttpExclusionLock);
       mExcludedHttp2Origins.Insert(ci->GetOrigin());
     }

@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -17,6 +15,7 @@
 #include "mozilla/dom/BodyExtractor.h"
 #include "mozilla/dom/FetchBinding.h"
 #include "mozilla/dom/File.h"
+#include "mozilla/dom/Serial.h"
 #include "nsCharSeparatedTokenizer.h"
 #include "nsContentPolicyUtils.h"
 #include "nsContentUtils.h"
@@ -54,6 +53,7 @@
 #include "mozilla/dom/MIDIOptionsBinding.h"
 #include "mozilla/dom/MediaCapabilities.h"
 #include "mozilla/dom/MediaSession.h"
+#include "mozilla/dom/ModelContext.h"
 #include "mozilla/dom/NavigatorLogin.h"
 #include "mozilla/dom/Permissions.h"
 #include "mozilla/dom/PrivateAttribution.h"
@@ -143,6 +143,7 @@ NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN(Navigator)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mPlugins)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mPermissions)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mGeolocation)
+  NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mSerial)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mBatteryManager)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mBatteryPromise)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mConnection)
@@ -156,6 +157,7 @@ NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN(Navigator)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mWebGpu)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mLocks)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mLogin)
+  NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mModelContext)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mPrivateAttribution)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mUserActivation)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mWakeLock)
@@ -187,6 +189,11 @@ void Navigator::Invalidate() {
   if (mGeolocation) {
     mGeolocation->Shutdown();
     mGeolocation = nullptr;
+  }
+
+  if (mSerial) {
+    mSerial->Shutdown();
+    mSerial = nullptr;
   }
 
   if (mBatteryManager) {
@@ -248,6 +255,8 @@ void Navigator::Invalidate() {
 
   mLogin = nullptr;
 
+  mModelContext = nullptr;
+
   mPrivateAttribution = nullptr;
 
   mUserActivation = nullptr;
@@ -271,7 +280,7 @@ void Navigator::GetUserAgent(nsAString& aUserAgent, CallerType aCallerType,
       docshell->GetBrowsingContext()->GetCustomUserAgent(customUserAgent);
 
       if (!customUserAgent.IsEmpty()) {
-        aUserAgent = customUserAgent;
+        aUserAgent = std::move(customUserAgent);
         return;
       }
     }
@@ -430,7 +439,7 @@ void Navigator::GetPlatform(nsAString& aPlatform, CallerType aCallerType,
       bc->GetCustomPlatform(customPlatform);
 
       if (!customPlatform.IsEmpty()) {
-        aPlatform = customPlatform;
+        aPlatform = std::move(customPlatform);
         return;
       }
     }
@@ -460,7 +469,7 @@ void Navigator::GetOscpu(nsAString& aOSCPU, CallerType aCallerType,
     nsAutoString override;
     nsresult rv = Preferences::GetString("general.oscpu.override", override);
     if (NS_SUCCEEDED(rv)) {
-      aOSCPU = override;
+      aOSCPU = std::move(override);
       return;
     }
   }
@@ -623,7 +632,7 @@ void Navigator::GetBuildID(nsAString& aBuildID, CallerType aCallerType,
     nsAutoString override;
     nsresult rv = Preferences::GetString("general.buildID.override", override);
     if (NS_SUCCEEDED(rv)) {
-      aBuildID = override;
+      aBuildID = std::move(override);
       return;
     }
 
@@ -1085,7 +1094,7 @@ void Navigator::RegisterProtocolHandler(const nsAString& aScheme,
     // console so that web developers have some way to tell what's going wrong.
     nsContentUtils::ReportToConsole(
         nsIScriptError::warningFlag, "DOM"_ns, mWindow->GetDoc(),
-        nsContentUtils::eDOM_PROPERTIES,
+        PropertiesFile::DOM_PROPERTIES,
         "RegisterProtocolHandlerPrivateBrowsingWarning");
     return;
   }
@@ -1141,6 +1150,20 @@ Geolocation* Navigator::GetGeolocation(ErrorResult& aRv) {
   }
 
   return mGeolocation;
+}
+
+dom::Serial* Navigator::GetSerial(ErrorResult& aRv) {
+  if (mSerial) {
+    return mSerial;
+  }
+
+  if (!mWindow) {
+    aRv.ThrowInvalidStateError("Navigator no longer has an associated window");
+    return nullptr;
+  }
+
+  mSerial = MakeRefPtr<dom::Serial>(mWindow);
+  return mSerial;
 }
 
 class BeaconStreamListener final : public nsIStreamListener {
@@ -2019,7 +2042,7 @@ nsresult Navigator::GetPlatform(nsAString& aPlatform, Document* aCallerDoc,
         mozilla::Preferences::GetString("general.platform.override", override);
 
     if (NS_SUCCEEDED(rv)) {
-      aPlatform = override;
+      aPlatform = std::move(override);
       return NS_OK;
     }
   }
@@ -2056,7 +2079,7 @@ nsresult Navigator::GetAppVersion(nsAString& aAppVersion, Document* aCallerDoc,
                                                   override);
 
     if (NS_SUCCEEDED(rv)) {
-      aAppVersion = override;
+      aAppVersion = std::move(override);
       return NS_OK;
     }
   }
@@ -2121,7 +2144,7 @@ nsresult Navigator::GetUserAgent(nsPIDOMWindowInner* aWindow,
         mozilla::Preferences::GetString("general.useragent.override", override);
 
     if (NS_SUCCEEDED(rv)) {
-      aUserAgent = override;
+      aUserAgent = std::move(override);
       return NS_OK;
     }
   }
@@ -2209,7 +2232,7 @@ already_AddRefed<Promise> Navigator::RequestMediaKeySystemAccess(
       (void)doc->GetDocumentURI(*uri);
     }
     nsContentUtils::ReportToConsole(nsIScriptError::warningFlag, "Media"_ns,
-                                    doc, nsContentUtils::eDOM_PROPERTIES,
+                                    doc, PropertiesFile::DOM_PROPERTIES,
                                     "MediaEMEInsecureContextDeprecatedWarning",
                                     params);
   }
@@ -2309,6 +2332,13 @@ NavigatorLogin* Navigator::Login() {
     mLogin = new NavigatorLogin(GetWindow());
   }
   return mLogin;
+}
+
+dom::ModelContext* Navigator::ModelContext() {
+  if (!mModelContext) {
+    mModelContext = new dom::ModelContext(GetWindow());
+  }
+  return mModelContext;
 }
 
 dom::PrivateAttribution* Navigator::PrivateAttribution() {

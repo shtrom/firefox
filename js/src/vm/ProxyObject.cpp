@@ -1,6 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * vim: set ts=8 sts=2 et sw=2 tw=80:
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -20,8 +18,7 @@ using namespace js;
 
 static gc::AllocKind GetProxyGCObjectKind(const JSClass* clasp,
                                           const BaseProxyHandler* handler,
-                                          const Value& priv,
-                                          bool withInlineValues) {
+                                          const Value& priv) {
   MOZ_ASSERT(clasp->isProxyObject());
 
   uint32_t nreserved = JSCLASS_RESERVED_SLOTS(clasp);
@@ -31,10 +28,7 @@ static gc::AllocKind GetProxyGCObjectKind(const JSClass* clasp,
   // JSCLASS_HAS_RESERVED_SLOTS since bug 1360523.
   MOZ_ASSERT(nreserved > 0);
 
-  uint32_t nslots = 0;
-  if (withInlineValues) {
-    nslots = detail::ProxyValueArray::allocCount(nreserved);
-  }
+  uint32_t nslots = detail::ProxyValueArray::allocCount(nreserved);
 
   MOZ_ASSERT(nslots <= NativeObject::MAX_FIXED_SLOTS);
   gc::AllocKind kind = gc::GetGCObjectKind(nslots);
@@ -52,12 +46,7 @@ static gc::AllocKind GetProxyGCObjectKind(const JSClass* clasp,
 
 void ProxyObject::init(const BaseProxyHandler* handler, HandleValue priv,
                        JSContext* cx) {
-  setInlineValueArray();
-
-  detail::ProxyValueArray* values = detail::GetProxyDataLayout(this)->values();
-  values->init(numReservedSlots());
-
-  data.handler = handler;
+  data.init(handler, numReservedSlots());
 
   if (IsCrossCompartmentWrapper(this)) {
     MOZ_ASSERT(cx->global() == &cx->compartment()->globalForNewCCW());
@@ -65,10 +54,6 @@ void ProxyObject::init(const BaseProxyHandler* handler, HandleValue priv,
   } else {
     setSameCompartmentPrivate(priv);
   }
-
-  // The expando slot is nullptr until required by the installation of
-  // a private field.
-  setExpando(nullptr);
 }
 
 /* static */
@@ -91,8 +76,7 @@ ProxyObject* ProxyObject::New(JSContext* cx, const BaseProxyHandler* handler,
   }
 #endif
 
-  gc::AllocKind allocKind = GetProxyGCObjectKind(clasp, handler, priv,
-                                                 /* withInlineValues = */ true);
+  gc::AllocKind allocKind = GetProxyGCObjectKind(clasp, handler, priv);
 
   Realm* realm = cx->realm();
 
@@ -142,8 +126,7 @@ ProxyObject* ProxyObject::New(JSContext* cx, const BaseProxyHandler* handler,
 
 gc::AllocKind ProxyObject::allocKindForTenure() const {
   Value priv = private_();
-  return GetProxyGCObjectKind(getClass(), data.handler, priv,
-                              usingInlineValueArray());
+  return GetProxyGCObjectKind(getClass(), data.handler, priv);
 }
 
 void ProxyObject::setCrossCompartmentPrivate(const Value& priv) {
@@ -172,7 +155,7 @@ void ProxyObject::setExpando(JSObject* expando) {
   MOZ_ASSERT_IF(!zone()->isGCPreparing() && isMarkedBlack() && expando,
                 !JS::GCThingIsMarkedGray(JS::GCCellPtr(expando)));
 
-  *slotOfExpando() = ObjectOrNullValue(expando);
+  *expandoPtr() = expando;
 }
 
 void ProxyObject::nuke() {

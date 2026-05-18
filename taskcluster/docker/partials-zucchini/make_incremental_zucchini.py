@@ -262,7 +262,7 @@ def create_patch(from_file, to_file, destination_patch):
             log(f"Zucchini failed to create patch:\n{e.stderr}", "create_patch")
             raise Exception(f"Zucchini exited with code: {e.returncode}")
 
-        xz_cmd(("--compress", "-9", "-e", "-c"), patch_fd.name, destination_patch)
+        xz_cmd(("--compress", "-7", "-e", "-c"), patch_fd.name, destination_patch)
 
 
 def make_partial(
@@ -532,7 +532,7 @@ def main():
         "--cert-path",
         help="Certificate path",
         type=argparse.FileType("rb"),
-        required=True,
+        required=False,
     )
     parser.add_argument(
         "--allow-staging-urls",
@@ -563,8 +563,11 @@ def main():
 
     base_workdir = os.path.abspath(args.workdir)
 
-    signing_cert = args.cert_path.read()
-    assert get_keysize(signing_cert) == 4096
+    if args.cert_path:
+        signing_cert = args.cert_path.read()
+        assert get_keysize(signing_cert) == 4096
+    else:
+        signing_cert = None
 
     # Multithread one partial per CPU
     cpus = os.cpu_count()  # This isn't optimal, but will do for now

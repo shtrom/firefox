@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=4 sw=2 et tw=78: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -962,7 +960,7 @@ void EditorEventListener::InitializeDragDropCaret() {
   // See nsCaret::IsVisible().
   mCaret->SetVisibilityDuringSelection(true);
 
-  presShell->SetCaret(mCaret);
+  presShell->SetActiveCaret(mCaret);
 }
 
 void EditorEventListener::CleanupDragDropCaret() {
@@ -974,7 +972,7 @@ void EditorEventListener::CleanupDragDropCaret() {
 
   RefPtr<PresShell> presShell = GetPresShell();
   if (presShell) {
-    presShell->RestoreCaret();
+    presShell->RestoreOriginalCaret();
   }
 
   mCaret->Terminate();
@@ -1178,7 +1176,9 @@ nsresult EditorEventListener::Blur(const InternalFocusEvent& aBlurEvent) {
     return NS_OK;
   }
 
-  DebugOnly<nsresult> rvIgnored = mEditorBase->OnBlur(aBlurEvent.mTarget);
+  const OwningNonNull<EditorBase> editorBase(*mEditorBase);
+  nsCOMPtr target = aBlurEvent.mTarget;
+  DebugOnly<nsresult> rvIgnored = editorBase->OnBlur(target);
   NS_WARNING_ASSERTION(NS_SUCCEEDED(rvIgnored), "EditorBase::OnBlur() failed");
   return NS_OK;  // Don't return error code to the event listener manager.
 }

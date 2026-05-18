@@ -1,5 +1,3 @@
-/* -*- js-indent-level: 2; tab-width: 2; indent-tabs-mode: nil -*- */
-
 /* import-globals-from chrome-harness.js */
 /* import-globals-from mochitest-e10s-utils.js */
 
@@ -316,8 +314,6 @@ function Tester(aTests, structuredLogger, aCallback) {
     this.SimpleTestOriginal[m] = this.SimpleTest[m];
   });
 
-  this._coverageCollector = null;
-
   const { XPCOMUtils } = ChromeUtils.importESModule(
     "resource://gre/modules/XPCOMUtils.sys.mjs"
   );
@@ -400,14 +396,6 @@ Tester.prototype = {
 
     if (gConfig.repeat) {
       this.repeat = gConfig.repeat;
-    }
-
-    if (gConfig.jscovDirPrefix) {
-      let coveragePath = gConfig.jscovDirPrefix;
-      let { CoverageCollector } = ChromeUtils.importESModule(
-        "resource://testing-common/CoverageUtils.sys.mjs"
-      );
-      this._coverageCollector = new CoverageCollector(coveragePath);
     }
 
     if (gConfig.debugger || gConfig.debuggerInteractive || gConfig.jsdebugger) {
@@ -728,12 +716,6 @@ Tester.prototype = {
   },
 
   async ensureVsyncDisabled() {
-    // The WebExtension process keeps vsync enabled forever in headless mode.
-    // See bug 1782541.
-    if (Services.env.get("MOZ_HEADLESS")) {
-      return;
-    }
-
     try {
       await this.TestUtils.waitForCondition(
         () => !ChromeUtils.vsyncEnabled(),
@@ -862,9 +844,13 @@ Tester.prototype = {
     }
     let changedPrefs = [];
     for (let p of failures) {
-      this.structuredLogger.error(
-        // We only report unexpected failures when --compare-preferences is set.
-        `TEST-${gConfig.comparePrefs ? "UN" : ""}EXPECTED-FAIL | ${testPath} | changed preference: ${p}`
+      this.currentTest.addResult(
+        new testResult({
+          name: `changed preference: ${p}`,
+          pass: !gConfig.comparePrefs,
+          todo: !gConfig.comparePrefs,
+          allowFailure: this.currentTest.allowFailure,
+        })
       );
       changedPrefs.push(p);
     }
@@ -970,10 +956,6 @@ Tester.prototype = {
     if (!this.currentTest) {
       this.checkWindowsState();
     } else {
-      if (this._coverageCollector) {
-        this._coverageCollector.recordTestCoverage(this.currentTest.path);
-      }
-
       this.PerTestCoverageUtils.afterTestSync();
 
       // Run cleanup functions for the current test before moving on to the
@@ -1272,9 +1254,7 @@ Tester.prototype = {
     // Make sure the window is raised before starting the next test.
     this.SimpleTest.waitForFocus(() => {
       if (this.done) {
-        if (this._coverageCollector) {
-          this._coverageCollector.finalize();
-        } else if (
+        if (
           !AppConstants.RELEASE_OR_BETA &&
           !AppConstants.DEBUG &&
           !AppConstants.MOZ_CODE_COVERAGE &&
@@ -1337,14 +1317,6 @@ Tester.prototype = {
         );
 
         barrier.wait().then(() => {
-          // Simulate memory pressure so that we're forced to free more resources
-          // and thus get rid of more false leaks like already terminated workers.
-          Services.obs.notifyObservers(
-            null,
-            "memory-pressure",
-            "heap-minimize"
-          );
-
           Services.ppmm.broadcastAsyncMessage("browser-test:collect-request");
 
           this._shutdownCleanup(() => {
@@ -1539,6 +1511,7 @@ Tester.prototype = {
             ? {
                 name: err.message,
                 stack: err.stack,
+                time: err.time,
                 allowFailure: currentTest.allowFailure,
               }
             : {
@@ -1728,9 +1701,11 @@ Tester.prototype = {
               self.nextTest();
             } else {
               await self.notifyProfilerOfTestEnd();
+              // failCount > 1 (not > 0) because the "Test timed out"
+              // result above already incremented failCount by one.
               self.structuredLogger.testEnd(
                 self.currentTest.path,
-                "TIMEOUT",
+                self.currentTest.failCount > 1 ? "FAIL" : "TIMEOUT",
                 "PASS",
                 "Test timed out"
               );
@@ -1789,10 +1764,13 @@ function isErrorOrException(err) {
  *     false    false    todoCount    TEST-KNOWN-FAIL         FAIL     FAIL
  *     false    true     todoCount    TEST-KNOWN-FAIL         FAIL     FAIL
  */
-function testResult({ name, pass, todo, ex, stack, allowFailure }) {
+function testResult({ name, pass, todo, ex, stack, allowFailure, time }) {
   this.info = false;
   this.name = name;
   this.msg = "";
+  if (time) {
+    this.time = time;
+  }
 
   if (allowFailure && !pass) {
     this.allowedFailure = true;

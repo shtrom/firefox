@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -2120,8 +2118,10 @@ uint64_t QuotaManager::CollectOriginsForEviction(
                         });
 
         if (!match) {
-          MOZ_ASSERT(!originInfo->mCanonicalQuotaObjects.Count(),
-                     "Inactive origin shouldn't have open files!");
+          // Inactive origins shouldn't have open files
+          if (NS_WARN_IF(originInfo->mCanonicalQuotaObjects.Count())) {
+            continue;
+          }
           aInactiveOriginInfos.InsertElementSorted(
               originInfo, OriginInfoAccessTimeComparator());
         }
@@ -3752,7 +3752,7 @@ Result<FullOriginMetadata, nsresult> QuotaManager::LoadFullOriginMetadata(
     ClientUsageArray clientUsages;
     QM_TRY(MOZ_TO_RESULT(clientUsages.Deserialize(clientUsagesText)));
 
-    fullOriginMetadata.mClientUsages = clientUsages;
+    fullOriginMetadata.mClientUsages = std::move(clientUsages);
   } else {
     fullOriginMetadata.mQuotaVersion = kNoQuotaVersion;
     fullOriginMetadata.mOriginUsage = 0;
@@ -9401,9 +9401,9 @@ nsresult StorageOperationBase::OriginProps::Init(
   }();
 
   mLeafName = leafName;
-  mSpec = spec;
-  mAttrs = attrs;
-  mOriginalSuffix = originalSuffix;
+  mSpec = std::move(spec);
+  mAttrs = std::move(attrs);
+  mOriginalSuffix = std::move(originalSuffix);
   mPersistenceType.init(persistenceType);
   if (result == OriginParser::ObsoleteOrigin) {
     mType = eObsolete;

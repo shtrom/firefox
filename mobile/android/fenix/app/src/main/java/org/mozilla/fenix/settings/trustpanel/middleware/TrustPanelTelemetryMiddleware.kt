@@ -49,11 +49,13 @@ class TrustPanelTelemetryMiddleware : Middleware<TrustPanelState, TrustPanelActi
             is TrustPanelAction.TogglePermission,
             is TrustPanelAction.UpdateAutoplayValue,
             is TrustPanelAction.UpdateSitePermissions,
+            is TrustPanelAction.UpdateIPProtectionMenuState,
             is TrustPanelAction.WebsitePermissionAction,
             is TrustPanelAction.RequestQWAC,
             is TrustPanelAction.UpdateQWAC,
             TrustPanelAction.Navigate.PrivacySecuritySettings,
             is TrustPanelAction.Navigate.ManagePhoneFeature,
+            is TrustPanelAction.Navigate.IPProtectionSettings,
             -> Unit
         }
     }

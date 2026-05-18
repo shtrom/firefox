@@ -1,6 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * vim: set ts=8 sts=2 et sw=2 tw=80:
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -292,6 +290,9 @@ MethodStatus BaselineCompiler::compileOffThread() {
 }
 
 bool BaselineCompiler::compileImpl() {
+  MOZ_RELEASE_ASSERT(handler.script()->length() <= BaselineMaxScriptLength);
+  MOZ_RELEASE_ASSERT(handler.script()->nslots() <= BaselineMaxScriptSlots);
+
   AutoCreatedBy acb(masm, "BaselineCompiler::compile");
 
   perfSpewer_.startRecording();
@@ -424,6 +425,8 @@ bool BaselineCompiler::finishCompile(JSContext* cx) {
     // Mark the jitcode as having a bytecode map.
     code->setHasBytecodeMap();
   }
+
+  script->jitScript()->setIonThreshold(handler.baseWarmUpThreshold());
 
   script->jitScript()->setBaselineScript(script, baselineScript.release());
 
@@ -679,7 +682,8 @@ void BaselineCodeGen<Handler>::emitOutOfLinePostBarrierSlot() {
 // stubs created when running in the interpreter. This happens on transition to
 // baseline.
 static bool CreateAllocSitesForCacheIRStub(JSScript* script, uint32_t pcOffset,
-                                           ICCacheIRStub* stub) {
+                                           ICCacheIRStub* stub,
+                                           const gc::AutoMarkingLock& lock) {
   const CacheIRStubInfo* stubInfo = stub->stubInfo();
   uint8_t* stubData = stub->stubDataStart();
 
@@ -698,7 +702,7 @@ static bool CreateAllocSitesForCacheIRStub(JSScript* script, uint32_t pcOffset,
           stubInfo->getPtrStubField<ICCacheIRStub, gc::AllocSite>(stub, offset);
       if (site->kind() == gc::AllocSite::Kind::Unknown) {
         gc::AllocSite* newSite =
-            icScript->getOrCreateAllocSite(script, pcOffset);
+            icScript->getOrCreateAllocSite(script, pcOffset, lock);
         if (!newSite) {
           return false;
         }
@@ -715,14 +719,15 @@ static bool CreateAllocSitesForCacheIRStub(JSScript* script, uint32_t pcOffset,
   return true;
 }
 
-static void CreateAllocSitesForICChain(JSScript* script, uint32_t entryIndex) {
+static void CreateAllocSitesForICChain(JSScript* script, uint32_t entryIndex,
+                                       const gc::AutoMarkingLock& lock) {
   JitScript* jitScript = script->jitScript();
   ICStub* stub = jitScript->icEntry(entryIndex).firstStub();
   uint32_t pcOffset = jitScript->fallbackStub(entryIndex)->pcOffset();
 
   while (!stub->isFallback()) {
-    if (!CreateAllocSitesForCacheIRStub(script, pcOffset,
-                                        stub->toCacheIRStub())) {
+    if (!CreateAllocSitesForCacheIRStub(script, pcOffset, stub->toCacheIRStub(),
+                                        lock)) {
       // This is an optimization and safe to skip if we hit OOM or per-zone
       // limit.
       return;
@@ -732,12 +737,15 @@ static void CreateAllocSitesForICChain(JSScript* script, uint32_t entryIndex) {
 }
 
 void BaselineCompilerHandler::createAllocSites() {
+  ICScript* icScript = script()->jitScript()->icScript();
+  gc::AutoMarkingLock lock(script()->zone(), icScript->markingLock());
+
   for (uint32_t allocSiteIndex : allocSiteIndices_) {
-    CreateAllocSitesForICChain(script(), allocSiteIndex);
+    CreateAllocSitesForICChain(script(), allocSiteIndex, lock);
   }
 
   if (needsEnvAllocSite_) {
-    script()->jitScript()->icScript()->ensureEnvAllocSite(script());
+    icScript->ensureEnvAllocSite(script(), lock);
   }
 }
 
@@ -1589,39 +1597,6 @@ bool BaselineCodeGen<Handler>::emitInterruptCheck() {
   return true;
 }
 
-template <typename Handler>
-bool BaselineCodeGen<Handler>::emitTrialInliningCheck(Register count,
-                                                      Register icScript,
-                                                      Register scratch) {
-  if (JitOptions.disableInlining) {
-    return true;
-  }
-
-  // Consider trial inlining.
-  // Note: unlike other warmup thresholds, where we try to enter a
-  // higher tier whenever we are higher than a given warmup count,
-  // trial inlining triggers once when reaching the threshold.
-  Label noTrialInlining;
-  masm.branch32(Assembler::NotEqual, count,
-                Imm32(JitOptions.trialInliningWarmUpThreshold),
-                &noTrialInlining);
-  prepareVMCall();
-
-  masm.PushBaselineFramePtr(FramePointer, scratch);
-
-  using Fn = bool (*)(JSContext*, BaselineFrame*);
-  if (!callVMNonOp<Fn, DoTrialInlining>()) {
-    return false;
-  }
-  // Reload registers potentially clobbered by the call.
-  Address warmUpCounterAddr(icScript, ICScript::offsetOfWarmUpCount());
-  masm.loadPtr(frame.addressOfICScript(), icScript);
-  masm.load32(warmUpCounterAddr, count);
-  masm.bind(&noTrialInlining);
-
-  return true;
-}
-
 template <>
 bool BaselineCompilerCodeGen::emitWarmUpCounterIncrement() {
   frame.assertSyncedStack();
@@ -1658,8 +1633,27 @@ bool BaselineCompilerCodeGen::emitWarmUpCounterIncrement() {
   masm.add32(Imm32(1), countReg);
   masm.store32(countReg, warmUpCounterAddr);
 
-  if (!emitTrialInliningCheck(countReg, scriptReg, R1.scratchReg())) {
-    return false;
+  if (!JitOptions.disableInlining) {
+    // Consider trial inlining.
+    // Note: unlike other warmup thresholds, where we try to enter a
+    // higher tier whenever we are higher than a given warmup count,
+    // trial inlining triggers once when reaching the threshold.
+    Label noTrialInlining;
+    masm.branch32(Assembler::NotEqual, countReg,
+                  Imm32(JitOptions.trialInliningWarmUpThreshold),
+                  &noTrialInlining);
+    prepareVMCall();
+
+    masm.PushBaselineFramePtr(FramePointer, R1.scratchReg());
+
+    using Fn = bool (*)(JSContext*, BaselineFrame*);
+    if (!callVMNonOp<Fn, DoTrialInlining>()) {
+      return false;
+    }
+    // Reload registers potentially clobbered by the call.
+    masm.loadPtr(frame.addressOfICScript(), scriptReg);
+    masm.load32(warmUpCounterAddr, countReg);
+    masm.bind(&noTrialInlining);
   }
 
   if (JSOp(*pc) == JSOp::LoopHead) {
@@ -1675,7 +1669,13 @@ bool BaselineCompilerCodeGen::emitWarmUpCounterIncrement() {
 
   uint32_t warmUpThreshold = OptimizationInfo::warmUpThresholdForPC(
       script, pc, handler.baseWarmUpThreshold());
-  masm.branch32(Assembler::LessThan, countReg, Imm32(warmUpThreshold), &done);
+  int32_t delta = warmUpThreshold - handler.baseWarmUpThreshold();
+  masm.load32(Address(scriptReg, ICScript::offsetOfIonThreshold()),
+              R1.scratchReg());
+  if (delta != 0) {
+    masm.add32(Imm32(delta), R1.scratchReg());
+  }
+  masm.branch32(Assembler::LessThan, countReg, R1.scratchReg(), &done);
 
   // Don't trigger Warp compilations from trial-inlined scripts.
   Address depthAddr(scriptReg, ICScript::offsetOfDepth());
@@ -1805,8 +1805,28 @@ bool BaselineInterpreterCodeGen::emitWarmUpCounterIncrement() {
   masm.add32(Imm32(1), countReg);
   masm.store32(countReg, warmUpCounterAddr);
 
-  if (!emitTrialInliningCheck(countReg, scriptReg, R1.scratchReg())) {
-    return false;
+  if (!JitOptions.disableInlining) {
+    // Consider trial inlining.
+    // Note: unlike other warmup thresholds, where we try to enter a
+    // higher tier whenever we are higher than a given warmup count,
+    // trial inlining triggers once when reaching the threshold.
+    Label noTrialInlining;
+    masm.branch32(Assembler::NotEqual, countReg,
+                  Imm32(JitOptions.trialInliningWarmUpThreshold),
+                  &noTrialInlining);
+    prepareVMCall();
+
+    masm.PushBaselineFramePtr(FramePointer, R1.scratchReg());
+
+    using Fn = bool (*)(JSContext*, BaselineFrame*);
+    if (!callVMNonOp<Fn, DoTrialInlining>()) {
+      return false;
+    }
+    // Reload registers potentially clobbered by the call.
+    loadScript(scriptReg);
+    masm.loadJitScript(scriptReg, scriptReg);
+    masm.load32(warmUpCounterAddr, countReg);
+    masm.bind(&noTrialInlining);
   }
 
   if (JitOptions.baselineBatching) {
@@ -1882,6 +1902,11 @@ bool BaselineInterpreterCodeGen::emitWarmUpCounterIncrement() {
     // a prebarrier here because we will always be overwriting a nullptr,
     // and we don't need a postbarrier because the script is always tenured.
 #ifdef DEBUG
+    Label queueIsNotFull;
+    masm.branch32(Assembler::Below, countReg,
+                  Imm32(JitOptions.baselineQueueCapacity), &queueIsNotFull);
+    masm.assumeUnreachable("Compile queue should be drained when full");
+    masm.bind(&queueIsNotFull);
     Label queueSlotIsEmpty;
     masm.branchPtr(Assembler::Equal, queueSlot, ImmWord(0), &queueSlotIsEmpty);
     masm.assumeUnreachable(
@@ -2563,9 +2588,11 @@ template <typename Handler>
 bool BaselineCodeGen<Handler>::emitCheckThis(ValueOperand val, bool reinit) {
   Label thisOK;
   if (reinit) {
-    masm.branchTestMagic(Assembler::Equal, val, &thisOK);
+    masm.branchTestMagicValue(Assembler::Equal, val, JS_UNINITIALIZED_LEXICAL,
+                              &thisOK);
   } else {
-    masm.branchTestMagic(Assembler::NotEqual, val, &thisOK);
+    masm.branchTestMagicValue(Assembler::NotEqual, val,
+                              JS_UNINITIALIZED_LEXICAL, &thisOK);
   }
 
   prepareVMCall();
@@ -2603,7 +2630,8 @@ bool BaselineCodeGen<Handler>::emit_CheckReturn() {
   }
   masm.bind(&checkThis);
   masm.branchTestUndefined(Assembler::NotEqual, R1, &returnBad);
-  masm.branchTestMagic(Assembler::NotEqual, R0, &done);
+  masm.branchTestMagicValue(Assembler::NotEqual, R0, JS_UNINITIALIZED_LEXICAL,
+                            &done);
   masm.bind(&returnBad);
 
   prepareVMCall();
@@ -3244,7 +3272,8 @@ static void MarkElementsNonPackedIfHoleValue(MacroAssembler& masm,
                                              Register elements,
                                              ValueOperand val) {
   Label notHole;
-  masm.branchTestMagic(Assembler::NotEqual, val, &notHole);
+  masm.branchTestMagicValue(Assembler::NotEqual, val, JS_ELEMENTS_HOLE,
+                            &notHole);
   {
     Address elementsFlags(elements, ObjectElements::offsetOfFlags());
     masm.or32(Imm32(ObjectElements::NON_PACKED), elementsFlags);
@@ -5827,11 +5856,11 @@ bool BaselineCodeGen<Handler>::emit_MoreIter() {
 }
 
 template <typename Handler>
-bool BaselineCodeGen<Handler>::emitIsMagicValue() {
+bool BaselineCodeGen<Handler>::emitIsMagicValue(JSWhyMagic why) {
   frame.syncStack(0);
 
   Label isMagic, done;
-  masm.branchTestMagic(Assembler::Equal, frame.addressOfStackValue(-1),
+  masm.branchTestMagic(Assembler::Equal, frame.addressOfStackValue(-1), why,
                        &isMagic);
   masm.moveValue(BooleanValue(false), R0);
   masm.jump(&done);
@@ -5846,7 +5875,7 @@ bool BaselineCodeGen<Handler>::emitIsMagicValue() {
 
 template <typename Handler>
 bool BaselineCodeGen<Handler>::emit_IsNoIter() {
-  return emitIsMagicValue();
+  return emitIsMagicValue(JS_NO_ITER_VALUE);
 }
 
 template <typename Handler>
@@ -5898,7 +5927,7 @@ bool BaselineCodeGen<Handler>::emit_OptimizeGetIterator() {
 
 template <typename Handler>
 bool BaselineCodeGen<Handler>::emit_IsGenClosing() {
-  return emitIsMagicValue();
+  return emitIsMagicValue(JS_GENERATOR_CLOSING);
 }
 
 template <typename Handler>
@@ -7236,8 +7265,7 @@ bool BaselineInterpreterGenerator::emitInterpreterLoop() {
 
   tableOffset_ = masm.currentOffset();
 
-  for (size_t i = 0; i < JSOP_LIMIT; i++) {
-    const Label& opLabel = opLabels[i];
+  for (auto opLabel : opLabels) {
     MOZ_ASSERT(opLabel.bound());
     CodeLabel cl;
     masm.writeCodePointer(&cl);

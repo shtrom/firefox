@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -154,14 +152,6 @@ Atomic<RuntimeService*> gRuntimeService(nullptr);
 
 // Only true during the call to Init.
 bool gRuntimeServiceDuringInit = false;
-
-class LiteralRebindingCString : public nsDependentCString {
- public:
-  template <int N>
-  void RebindLiteral(const char (&aStr)[N]) {
-    Rebind(aStr, N - 1);
-  }
-};
 
 template <typename T>
 struct PrefTraits;
@@ -555,12 +545,12 @@ MOZ_CAN_RUN_SCRIPT_FOR_DEFINITION bool ContentSecurityPolicyAllows(
       return true;
     }
 
-    if (WorkerCSPContext* ctx = worker->GetCSPContext()) {
+    if (OffThreadCSPContext* ctx = worker->GetCSPContext()) {
       evalOK = ctx->IsEvalAllowed(reportViolation);
     }
     violationType = nsIContentSecurityPolicy::VIOLATION_TYPE_EVAL;
   } else {
-    if (WorkerCSPContext* ctx = worker->GetCSPContext()) {
+    if (OffThreadCSPContext* ctx = worker->GetCSPContext()) {
       evalOK = ctx->IsWasmEvalAllowed(reportViolation);
     }
 
@@ -1212,22 +1202,6 @@ bool RuntimeService::RegisterWorker(WorkerPrivate& aWorkerPrivate) {
     AssertIsOnMainThread();
   }
 
-  nsCString sharedWorkerScriptSpec;
-  if (isSharedWorker) {
-    AssertIsOnMainThread();
-
-    nsCOMPtr<nsIURI> scriptURI = aWorkerPrivate.GetResolvedScriptURI();
-    NS_ASSERTION(scriptURI, "Null script URI!");
-
-    nsresult rv = scriptURI->GetSpec(sharedWorkerScriptSpec);
-    if (NS_FAILED(rv)) {
-      NS_WARNING("GetSpec failed?!");
-      return false;
-    }
-
-    NS_ASSERTION(!sharedWorkerScriptSpec.IsEmpty(), "Empty spec!");
-  }
-
   bool exemptFromPerDomainMax = false;
   if (isServiceWorker) {
     AssertIsOnMainThread();
@@ -1265,7 +1239,7 @@ bool RuntimeService::RegisterWorker(WorkerPrivate& aWorkerPrivate) {
       // Worker spawn gets queued due to hitting max workers per domain
       // limit so let's log a warning.
       WorkerPrivate::ReportErrorToConsole(nsIScriptError::warningFlag, "DOM"_ns,
-                                          nsContentUtils::eDOM_PROPERTIES,
+                                          PropertiesFile::DOM_PROPERTIES,
                                           "HittingMaxWorkersPerDomain2"_ns);
 
       if (isServiceWorker) {
@@ -1294,6 +1268,8 @@ bool RuntimeService::RegisterWorker(WorkerPrivate& aWorkerPrivate) {
     }
   } else {
     if (!mNavigatorPropertiesLoaded) {
+      MutexAutoLock lock(mMutex);
+
       if (NS_FAILED(Navigator::GetAppVersion(
               mNavigatorProperties.mAppVersion, aWorkerPrivate.GetDocument(),
               false /* aUsePrefOverriddenValue */)) ||
@@ -1720,13 +1696,18 @@ void RuntimeService::CrashIfHanging() {
   msg.Append(activeStats.mMessage);
 
   // This string will be leaked.
-  MOZ_CRASH_UNSAFE(strdup(msg.BeginReading()));
+  MOZ_CRASH_UNSAFE(strdup(msg.get()));
 }
 
 // This spins the event loop until all workers are finished and their threads
 // have been joined.
 void RuntimeService::Cleanup() {
   AssertIsOnMainThread();
+
+  if (mCleanedUp) {
+    return;
+  }
+  mCleanedUp = true;
 
   if (!mShuttingDown) {
     Shutdown();
@@ -1822,9 +1803,9 @@ void RuntimeService::Cleanup() {
       obs->RemoveObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID);
       mObserved = false;
     }
-  }
 
-  nsLayoutStatics::Release();
+    nsLayoutStatics::Release();
+  }
 }
 
 void RuntimeService::AddAllTopLevelWorkersToArray(
@@ -1959,11 +1940,13 @@ void RuntimeService::UpdateAllWorkerContextOptions() {
 void RuntimeService::UpdateAppVersionOverridePreference(
     const nsAString& aValue) {
   AssertIsOnMainThread();
+  MutexAutoLock lock(mMutex);
   mNavigatorProperties.mAppVersionOverridden = aValue;
 }
 
 void RuntimeService::UpdatePlatformOverridePreference(const nsAString& aValue) {
   AssertIsOnMainThread();
+  MutexAutoLock lock(mMutex);
   mNavigatorProperties.mPlatformOverridden = aValue;
 }
 
@@ -1971,7 +1954,10 @@ void RuntimeService::UpdateAllWorkerLanguages(
     const nsTArray<nsString>& aLanguages) {
   MOZ_ASSERT(NS_IsMainThread());
 
-  mNavigatorProperties.mLanguages = aLanguages.Clone();
+  {
+    MutexAutoLock lock(mMutex);
+    mNavigatorProperties.mLanguages = aLanguages.Clone();
+  }
   BroadcastAllWorkers(
       [&aLanguages](auto& worker) { worker.UpdateLanguages(aLanguages); });
 }

@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -30,6 +28,7 @@
 #include "mozilla/dom/MIDIPlatformService.h"
 #include "mozilla/dom/MIDIPortParent.h"
 #include "mozilla/dom/MLSTransactionParent.h"
+#include "mozilla/dom/ProcessIsolation.h"
 #include "mozilla/dom/MessagePortParent.h"
 #include "mozilla/dom/PGamepadEventChannelParent.h"
 #include "mozilla/dom/PGamepadTestChannelParent.h"
@@ -513,6 +512,9 @@ BackgroundParentImpl::AllocPIdleSchedulerParent() {
 already_AddRefed<dom::PRemoteWorkerControllerParent>
 BackgroundParentImpl::AllocPRemoteWorkerControllerParent(
     const dom::RemoteWorkerData& aRemoteWorkerData) {
+  if (BackgroundParent::IsOtherProcessActor(this)) {
+    return nullptr;
+  }
   RefPtr<dom::RemoteWorkerControllerParent> actor =
       new dom::RemoteWorkerControllerParent(aRemoteWorkerData);
   return actor.forget();
@@ -522,7 +524,6 @@ IPCResult BackgroundParentImpl::RecvPRemoteWorkerControllerConstructor(
     dom::PRemoteWorkerControllerParent* aActor,
     const dom::RemoteWorkerData& aRemoteWorkerData) {
   MOZ_ASSERT(aActor);
-
   return IPC_OK();
 }
 
@@ -539,6 +540,11 @@ IPCResult BackgroundParentImpl::RecvPSharedWorkerConstructor(
     PSharedWorkerParent* aActor, const mozilla::dom::RemoteWorkerData& aData,
     const uint64_t& aWindowID,
     const mozilla::dom::MessagePortIdentifier& aPortIdentifier) {
+  if (MOZ_UNLIKELY(aData.serviceWorkerData().type() !=
+                   OptionalServiceWorkerData::Tvoid_t)) {
+    return IPC_FAIL(this, "Invalid worker type for PSharedWorkerParent");
+  }
+
   mozilla::dom::SharedWorkerParent* actor =
       static_cast<mozilla::dom::SharedWorkerParent*>(aActor);
   actor->Initialize(aData, aWindowID, aPortIdentifier);
@@ -667,10 +673,8 @@ bool BackgroundParentImpl::DeallocPCamerasParent(
 
 auto BackgroundParentImpl::AllocPUDPSocketParent(
     const Maybe<PrincipalInfo>& /* unused */, const nsACString& /* unused */)
-    -> PUDPSocketParent* {
-  RefPtr<UDPSocketParent> p = new UDPSocketParent(this);
-
-  return p.forget().take();
+    -> already_AddRefed<PUDPSocketParent> {
+  return do_AddRef(new UDPSocketParent(this));
 }
 
 mozilla::ipc::IPCResult BackgroundParentImpl::RecvPUDPSocketConstructor(
@@ -678,6 +682,10 @@ mozilla::ipc::IPCResult BackgroundParentImpl::RecvPUDPSocketConstructor(
     const nsACString& aFilter) {
   AssertIsInMainProcess();
   AssertIsOnBackgroundThread();
+
+  if (!StaticPrefs::dom_udpsocket_enabled() && aFilter.IsEmpty()) {
+    return IPC_FAIL(this, "udp socket not enabled");
+  }
 
   if (aOptionalPrincipal.isSome()) {
     // Support for checking principals (for non-mtransport use) will be handled
@@ -701,12 +709,6 @@ mozilla::ipc::IPCResult BackgroundParentImpl::RecvPUDPSocketConstructor(
   }
 
   return IPC_OK();
-}
-
-bool BackgroundParentImpl::DeallocPUDPSocketParent(PUDPSocketParent* actor) {
-  UDPSocketParent* p = static_cast<UDPSocketParent*>(actor);
-  p->Release();
-  return true;
 }
 
 mozilla::dom::PBroadcastChannelParent*
@@ -1202,6 +1204,15 @@ mozilla::ipc::IPCResult BackgroundParentImpl::RecvCreateMLSTransaction(
     return IPC_FAIL(this, "invalid endpoint for MLSTransaction");
   }
 
+  RefPtr<ThreadsafeContentParentHandle> parent =
+      BackgroundParent::GetContentParentHandle(this);
+  if (parent && !dom::ValidatePrincipalCouldPotentiallyBeLoadedBy(
+                    aPrincipal, parent->GetRemoteType(), {})) {
+    dom::ContentParent::LogAndAssertFailedPrincipalValidationInfo(aPrincipal,
+                                                                  __func__);
+    return IPC_FAIL(this, "Principal validation failed");
+  }
+
   if (!sMLSTaskQueue) {
     nsCOMPtr<nsISerialEventTarget> taskQueue;
     MOZ_ALWAYS_SUCCEEDS(NS_CreateBackgroundTaskQueue(
@@ -1373,7 +1384,8 @@ BackgroundParentImpl::RecvEnsureUtilityProcessAndCreateBridge(
   }
   NS_DispatchToMainThread(NS_NewRunnableFunction(
       "BackgroundParentImpl::RecvEnsureUtilityProcessAndCreateBridge()",
-      [aResolver, managerThread, otherProcInfo, childId, aLocation]() {
+      [aResolver = std::move(aResolver), managerThread, otherProcInfo, childId,
+       aLocation]() {
         RefPtr<UtilityProcessManager> upm =
             UtilityProcessManager::GetSingleton();
         using Type = std::tuple<const nsresult&,

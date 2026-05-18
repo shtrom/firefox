@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -11,7 +9,6 @@
 #include "StickyScrollContainer.h"
 #include "mozilla/AnimationUtils.h"
 #include "mozilla/Assertions.h"
-#include "mozilla/CachedInheritingStyles.h"
 #include "mozilla/ComputedStyle.h"
 #include "mozilla/ComputedStyleInlines.h"
 #include "mozilla/DocumentStyleRootIterator.h"
@@ -22,6 +19,7 @@
 #include "mozilla/PresShell.h"
 #include "mozilla/PresShellInlines.h"
 #include "mozilla/ProfilerLabels.h"
+#include "mozilla/ReflowInput.h"
 #include "mozilla/SVGIntegrationUtils.h"
 #include "mozilla/SVGObserverUtils.h"
 #include "mozilla/SVGTextFrame.h"
@@ -2756,28 +2754,21 @@ static nsChangeHint DiffCachedHighlightPseudos(Element& aElement,
                                                const ComputedStyle& aOldStyle,
                                                ComputedStyle& aNewStyle) {
   nsChangeHint hint = nsChangeHint(0);
-
-  AutoTArray<CachedStyleEntry, 4> oldEntries;
-  aOldStyle.GetCachedLazyPseudoEntries(oldEntries);
-  for (const auto& entry : oldEntries) {
-    if (!PseudoStyle::IsPseudoElement(entry.mPseudoType) ||
-        PseudoStyle::IsEagerlyCascadedInServo(entry.mPseudoType)) {
-      continue;
-    }
-    RefPtr<ComputedStyle> newPseudo = aStyleSet.ProbePseudoElementStyle(
-        aElement, entry.mPseudoType, entry.mFunctionalPseudoParameter,
-        &aNewStyle);
-    if (!entry.mStyle && !newPseudo) {
-      continue;
-    }
-    if (!entry.mStyle || !newPseudo) {
-      hint |= nsChangeHint_RepaintFrame | nsChangeHint_UpdateSubtreeOverflow;
-      continue;
-    }
-    uint32_t equalStructs = 0;
-    hint |= entry.mStyle->CalcStyleDifference(*newPseudo, &equalStructs);
-  }
-
+  aOldStyle.ForEachCachedLazyPseudoEntry(
+      [&](ComputedStyle* aStyle, nsAtom* aParam, PseudoStyleType aType) {
+        RefPtr<ComputedStyle> newPseudo = aStyleSet.ProbePseudoElementStyle(
+            aElement, aType, aParam, &aNewStyle);
+        if (!aStyle && !newPseudo) {
+          return;
+        }
+        if (!aStyle || !newPseudo) {
+          hint |=
+              nsChangeHint_RepaintFrame | nsChangeHint_UpdateSubtreeOverflow;
+          return;
+        }
+        uint32_t equalStructs = 0;
+        hint |= aStyle->CalcStyleDifference(*newPseudo, &equalStructs);
+      });
   return hint;
 }
 
@@ -2960,16 +2951,6 @@ bool RestyleManager::ProcessPostTraversal(Element* aElement,
     // initial continuations; ::first-line fixes that up after the fact.
     for (nsIFrame* f = styleFrame; f; f = f->GetNextContinuation()) {
       f->SetComputedStyle(upToDateStyle);
-    }
-
-    if (!aElement->GetParent()) {
-      // This is the root.  Update styles on the viewport as needed.
-      ViewportFrame* viewport =
-          do_QueryFrame(mPresContext->PresShell()->GetRootFrame());
-      if (viewport) {
-        // NB: The root restyle state, not the one for our children!
-        viewport->UpdateStyle(aRestyleState);
-      }
     }
 
     // Some changes to animations don't affect the computed style and yet still
@@ -3535,13 +3516,45 @@ static inline bool NeedToRecordAttrChange(
   return aStyleSet.MightHaveAttributeDependency(aElement, aAttribute);
 }
 
+void RestyleManager::MaybeRecascadeForAttrFunction(Element* aElement,
+                                                   nsAtom* aAttribute) {
+  // TODO(Bug 2037724): this method covers a limited number of
+  // pseudos (i.e. ::selection is not handled).
+  if (Servo_Element_ReferencesAttribute(aElement, aAttribute)) {
+    PostRestyleEvent(aElement, RestyleHint::RECASCADE_SELF, nsChangeHint(0));
+  }
+
+  AutoTArray<nsIContent*, 4> pseudos;
+  nsLayoutUtils::AppendGeneratedContentPseudos(aElement, pseudos);
+  for (nsIContent* pseudo : pseudos) {
+    Element* pseudoElement = Element::FromNode(pseudo);
+    if (Servo_Element_ReferencesAttribute(pseudoElement, aAttribute)) {
+      PostRestyleEvent(pseudoElement, RestyleHint::RECASCADE_SELF,
+                       nsChangeHint(0));
+    }
+  }
+
+  auto* shadow = aElement->GetShadowRoot();
+  if (shadow && shadow->IsUAWidget()) {
+    for (nsIContent* node = shadow->GetFirstChild(); node;
+         node = node->GetNextNode(shadow)) {
+      if (!node->IsElement() || node->AsElement()->GetPseudoElementType() ==
+                                    PseudoStyleType::NotPseudo) {
+        continue;
+      }
+      if (Servo_Element_ReferencesAttribute(node->AsElement(), aAttribute)) {
+        PostRestyleEvent(node->AsElement(), RestyleHint::RECASCADE_SELF,
+                         nsChangeHint(0));
+      }
+    }
+  }
+}
+
 void RestyleManager::AttributeWillChange(Element* aElement,
                                          int32_t aNameSpaceID,
                                          nsAtom* aAttribute,
                                          AttrModType aModType) {
-  if (Servo_Element_ReferencesAttribute(aElement, aAttribute)) {
-    PostRestyleEvent(aElement, RestyleHint::RECASCADE_SELF, nsChangeHint(0));
-  }
+  MaybeRecascadeForAttrFunction(aElement, aAttribute);
   TakeSnapshotForAttributeChange(*aElement, aNameSpaceID, aAttribute);
 }
 

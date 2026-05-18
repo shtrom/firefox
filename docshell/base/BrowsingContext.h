@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -73,6 +71,7 @@ struct LoadingSessionHistoryInfo;
 class Location;
 template <typename>
 struct Nullable;
+class PreviousSessionHistoryInfo;
 template <typename T>
 class Sequence;
 class SessionHistoryInfo;
@@ -251,6 +250,8 @@ struct EmbedderColorSchemes {
   FIELD(PrefersColorSchemeOverride, dom::PrefersColorSchemeOverride)          \
   FIELD(LanguageOverride, nsCString)                                          \
   FIELD(TimezoneOverride, nsString)                                           \
+  /* DevTools override for prefers-reduced-motion */                          \
+  FIELD(PrefersReducedMotionOverride, dom::PrefersReducedMotionOverride)      \
   /* DevTools override for forced-colors */                                   \
   FIELD(ForcedColorsOverride, dom::ForcedColorsOverride)                      \
   /* DevTools multiplier for animations playback rate */                      \
@@ -262,8 +263,6 @@ struct EmbedderColorSchemes {
   /* The number of entries added to the session history because of this       \
    * browsing context. */                                                     \
   FIELD(HistoryEntryCount, uint32_t)                                          \
-  /* Don't use the getter of the field, but IsInBFCache() method */           \
-  FIELD(IsInBFCache, bool)                                                    \
   FIELD(HasRestoreData, bool)                                                 \
   FIELD(SessionStoreEpoch, uint32_t)                                          \
   /* Whether we can execute scripts in this BrowsingContext. Has no effect    \
@@ -303,6 +302,9 @@ struct EmbedderColorSchemes {
      Document Picture-in-Picture window */                                    \
   FIELD(ControlsDocumentPiP, bool)
 
+#define NS_DOM_BROWSINGCONTEXT_IID \
+  {0x5059a6aa, 0xf09, 0x415c, {0x89, 0xbd, 0x63, 0xfd, 0xe5, 0xab, 0x1a, 0x66}};
+
 // BrowsingContext, in this context, is the cross process replicated
 // environment in which information about documents is stored. In
 // particular the tree structure of nested browsing contexts is
@@ -321,6 +323,7 @@ struct EmbedderColorSchemes {
 // BrowsingContext::Create* methods.
 class BrowsingContext : public nsILoadContext, public nsWrapperCache {
   MOZ_DECL_SYNCED_CONTEXT(BrowsingContext, MOZ_EACH_BC_FIELD)
+  NS_INLINE_DECL_STATIC_IID(NS_DOM_BROWSINGCONTEXT_IID)
 
  public:
   enum class Type { Chrome, Content };
@@ -499,18 +502,9 @@ class BrowsingContext : public nsILoadContext, public nsWrapperCache {
   // the source BrowsingContext is allowed to perform the navigation.
   nsresult CheckFramebusting(nsDocShellLoadState* aLoadState);
 
-  // Determines if the current BrowsingContext is allowed to navigate the
-  // target BrowsingContext (which should be top-level).
-  bool IsFramebustingAllowed(BrowsingContext* aTarget);
-
-  // A BrowsingContext is allowed to perform a top-level navigation if one
-  // of the following conditions is met:
-  // 1. It is top-level (implied by same-origin).
-  // 2. It is same-origin with the top-level.
-  // 3. Its associated document has been interacted with by the user.
-  // 4. Its associated document has explicit `allow-top-navigation`
-  //    sandbox flags.
-  bool IsFramebustingAllowedInner();
+  // Compute whether this browsing context is allowed to navigate the
+  // top-level without user interaction. Must be called in-process.
+  bool ComputeIsFramebustingAllowed();
 
   void DisplayLoadError(const nsAString& aURI);
 
@@ -858,6 +852,9 @@ class BrowsingContext : public nsILoadContext, public nsWrapperCache {
     mWindowProxy = aWindowProxy;
   }
 
+  // Since mWindowProxy is a weak pointer it has to be updated during sweeping.
+  static void SweepWindowProxies(JSTracer* aTrc);
+
   Nullable<WindowProxyHolder> GetWindow();
 
   NS_DECL_CYCLE_COLLECTING_ISUPPORTS
@@ -1113,11 +1110,29 @@ class BrowsingContext : public nsILoadContext, public nsWrapperCache {
     return GetForcedColorsOverride();
   }
 
+  dom::PrefersReducedMotionOverride PrefersReducedMotionOverride() const {
+    return GetPrefersReducedMotionOverride();
+  }
+
   double AnimationsPlayBackRateMultiplier() const {
     return Top()->GetAnimationsPlayBackRateMultiplier();
   }
 
   bool IsInBFCache() const;
+  bool IsEnteringBFCache() const { return mIsEnteringBFCache; }
+  void DeactivateDocuments();
+
+  MOZ_CAN_RUN_SCRIPT
+  void ReactivateDocuments(
+      const Maybe<SessionHistoryInfo>& aReactivatedEntry,
+      const nsTArray<SessionHistoryInfo>& aNewSHEs,
+      const Maybe<PreviousSessionHistoryInfo>& aPreviousEntryForActivation);
+
+  MOZ_CAN_RUN_SCRIPT
+  void UpdateForReactivation(
+      const Maybe<SessionHistoryInfo>& aReactivatedEntry,
+      const nsTArray<SessionHistoryInfo>& aNewSHEs,
+      const Maybe<PreviousSessionHistoryInfo>& aPreviousEntryForActivation);
 
   bool AllowJavascript() const { return GetAllowJavascript(); }
   bool CanExecuteScripts() const { return mCanExecuteScripts; }
@@ -1162,6 +1177,10 @@ class BrowsingContext : public nsILoadContext, public nsWrapperCache {
                                        const SessionHistoryInfo& aInfo);
   static bool ShouldAddEntryForRefresh(nsIURI* aCurrentURI, nsIURI* aNewURI,
                                        bool aHasPostData);
+
+  void SetIsInBFCache(bool aIsInBFCache);
+
+  void SetIsEnteringBFCache(bool aIsEnteringBFCache);
 
  private:
   // Check whether it's OK to load the given url with the given subject
@@ -1306,11 +1325,17 @@ class BrowsingContext : public nsILoadContext, public nsWrapperCache {
     return IsTop();
   }
 
+  bool CanSet(FieldIndex<IDX_PrefersReducedMotionOverride>,
+              dom::PrefersReducedMotionOverride, ContentParent*) {
+    return IsTop();
+  }
+
   bool CanSet(FieldIndex<IDX_AnimationsPlayBackRateMultiplier>, double&,
               ContentParent*) {
     return IsTop();
   }
 
+  bool CanSet(FieldIndex<IDX_InRDMPane>, const bool&, ContentParent* aSource);
   void DidSet(FieldIndex<IDX_InRDMPane>, bool aOldValue);
   void DidSet(FieldIndex<IDX_HasOrientationOverride>, bool aOldValue);
   MOZ_CAN_RUN_SCRIPT_BOUNDARY void DidSet(FieldIndex<IDX_ForceDesktopViewport>,
@@ -1324,6 +1349,9 @@ class BrowsingContext : public nsILoadContext, public nsWrapperCache {
 
   void DidSet(FieldIndex<IDX_ForcedColorsOverride>,
               dom::ForcedColorsOverride aOldValue);
+
+  void DidSet(FieldIndex<IDX_PrefersReducedMotionOverride>,
+              dom::PrefersReducedMotionOverride aOldValue);
 
   void DidSet(FieldIndex<IDX_AnimationsPlayBackRateMultiplier>,
               double aOldValue);
@@ -1536,9 +1564,6 @@ class BrowsingContext : public nsILoadContext, public nsWrapperCache {
   void DidSet(FieldIndex<IDX_TextZoom>, float aOldValue);
   void DidSet(FieldIndex<IDX_AuthorStyleDisabledDefault>);
 
-  bool CanSet(FieldIndex<IDX_IsInBFCache>, bool, ContentParent* aSource);
-  void DidSet(FieldIndex<IDX_IsInBFCache>);
-
   void DidSet(FieldIndex<IDX_IsSyntheticDocumentContainer>);
 
   void DidSet(FieldIndex<IDX_IsUnderHiddenEmbedderElement>, bool aOldValue);
@@ -1589,10 +1614,8 @@ class BrowsingContext : public nsILoadContext, public nsWrapperCache {
 
   JS::UniqueChars mDefaultLocale;
 
-  // This is not a strong reference, but using a JS::Heap for that should be
-  // fine. The JSObject stored in here should be a proxy with a
-  // nsOuterWindowProxy handler, which will update the pointer from its
-  // objectMoved hook and clear it from its finalize hook.
+  // This is a weak reference. It will be updated automatically during sweeping
+  // by SweepWindowProxies.
   JS::Heap<JSObject*> mWindowProxy;
   LocationProxy mLocation;
 
@@ -1649,6 +1672,10 @@ class BrowsingContext : public nsILoadContext, public nsWrapperCache {
   // dispatched. When coming out from the bfcache, the value is set to false
   // before dispatching pageshow.
   bool mIsInBFCache : 1;
+
+  // Set to true if the browsing context is in the bfcache and pagehide has not
+  // been dispatched.
+  bool mIsEnteringBFCache : 1 = false;
 
   // Determines if we can execute scripts in this BrowsingContext. True if
   // AllowJavascript() is true and script execution is allowed in the parent

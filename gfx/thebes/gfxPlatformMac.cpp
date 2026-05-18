@@ -1,5 +1,4 @@
-/* -*- Mode: C++; tab-width: 20; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -82,7 +81,8 @@ PRThread* gfxPlatformMac::sFontRegistrationThread = nullptr;
    thread, and hope that it'll be finished by the time we're ready to build
    our font list. */
 /* static */
-void gfxPlatformMac::RegisterSupplementalFonts() {
+gfxPlatformMac::SupplementalFontThread
+gfxPlatformMac::RegisterSupplementalFonts() {
   if (XRE_GetProcessType() == GeckoProcessType_Default) {
     // We activate the fonts on a separate thread, to minimize the startup-
     // time cost.
@@ -90,6 +90,7 @@ void gfxPlatformMac::RegisterSupplementalFonts() {
         PR_USER_THREAD, FontRegistrationCallback, nullptr, PR_PRIORITY_NORMAL,
         PR_GLOBAL_THREAD, PR_JOINABLE_THREAD, 0);
   }
+  return SupplementalFontThread();
 }
 
 /* static */

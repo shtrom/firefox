@@ -21,6 +21,7 @@ import org.mozilla.fenix.components.menu.MenuAccessPoint
  * an external access point, and null otherwise.
  * @property extensionMenuState The [ExtensionMenuState] to display.
  * @property summarizationMenuState The [SummarizationMenuState] that handles summarization menu item
+ * @property ipProtectionMenuState The [IPProtectionMenuState] for the IP protection menu item.
  * @property isMoreMenuExpanded Whether or not the "more menu" is expanded.
  * @property isDesktopMode Whether or not the desktop mode is enabled for the currently visited
  * page.
@@ -30,6 +31,7 @@ data class MenuState(
     val customTabSessionId: String? = null,
     val extensionMenuState: ExtensionMenuState = ExtensionMenuState(),
     val summarizationMenuState: SummarizationMenuState = SummarizationMenuState.Default,
+    val ipProtectionMenuState: IPProtectionMenuState = IPProtectionMenuState(),
     val isMoreMenuExpanded: Boolean = false,
     val isDesktopMode: Boolean = false,
 ) : State {
@@ -189,4 +191,51 @@ data class TranslationInfo(
     val isTranslated: Boolean,
     val translatedLanguage: String,
     val onTranslatePageMenuClick: () -> Unit,
+)
+
+/**
+ * Represents the display states of the IP protection menu item.
+ */
+enum class IPProtectionMenuStatus {
+    /**
+     * IP protection is inactive.
+     */
+    Disabled,
+
+    /**
+     * IP protection is in the process of activating.
+     */
+    Activating,
+
+    /**
+     * IP protection is active.
+     */
+    Enabled,
+
+    /**
+     * IP protection is paused until the data limit resets.
+     */
+    DataLimitReached,
+
+    /**
+     * IP protection has errored.
+     */
+    ConnectionError,
+
+    /**
+     * User needs to authenticate or to authorize ip protection service before IP protection can be used.
+     */
+    AuthRequired,
+}
+
+/**
+ * Represents the state of the IP protection menu item.
+ *
+ * @property status The current [IPProtectionMenuStatus] shown in the badge.
+ * @property dataLimitGb The total monthly data allowance in GB.
+ */
+@Immutable
+data class IPProtectionMenuState(
+    val status: IPProtectionMenuStatus = IPProtectionMenuStatus.Disabled,
+    val dataLimitGb: Int = -1,
 )

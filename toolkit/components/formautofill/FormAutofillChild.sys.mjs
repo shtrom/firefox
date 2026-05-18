@@ -34,7 +34,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
 class FormFillFocusListener {
   handleFocus(element) {
     let actor =
-      element.ownerGlobal?.windowGlobalChild?.getActor("FormAutofill");
+      element.documentGlobal.windowGlobalChild?.getActor("FormAutofill");
     return actor?.handleFocus(element);
   }
 
@@ -367,6 +367,20 @@ export class FormAutofillChild extends JSWindowActorChild {
       return;
     }
 
+    const method = Services.focus.getLastFocusMethod(this.contentWindow);
+    const isProgrammatic = !!(method & Ci.nsIFocusManager.FLAG_BYJS);
+    const skipCheck = Services.prefs.getBoolPref(
+      "extensions.formautofill.skipProgrammaticCheckForTests",
+      false
+    );
+
+    if (isProgrammatic && !skipCheck) {
+      this.debug(
+        "showPopupIfEmpty: Suppressing automated popup due to programmatic focus."
+      );
+      return;
+    }
+
     if (fieldName.startsWith("cc-") || AppConstants.platform === "android") {
       lazy.FormAutofillContent.showPopup();
     }
@@ -478,7 +492,6 @@ export class FormAutofillChild extends JSWindowActorChild {
 
         if (!gFormFillFocusListener) {
           gFormFillFocusListener = new FormFillFocusListener();
-
           const formFillController = Cc[
             "@mozilla.org/satchel/form-fill-controller;1"
           ].getService(Ci.nsIFormFillController);
@@ -839,7 +852,7 @@ export class FormAutofillChild extends JSWindowActorChild {
     }
 
     // The `domWin` truthiness test is used by unit tests to bypass this check.
-    const domWin = formElement.ownerGlobal;
+    const domWin = formElement.documentGlobal;
     if (!domWin) {
       return;
     }

@@ -3,6 +3,7 @@ tags = "devtools"
 subsuite = "devtools"
 support-files = [
   "doc_alert.svg",
+  "doc_anchor_names.html",
   "doc_at_scope.css",
   "doc_blob_stylesheet.html",
   "doc_copystyles.css",
@@ -70,6 +71,10 @@ support-files = [
 
 ["browser_rules_add-rule.js"]
 
+["browser_rules_anchor-names-autocomplete.js"]
+
+["browser_rules_at_appearance-base.js"]
+
 ["browser_rules_at_scope.js"]
 
 ["browser_rules_at_starting-style.js"]
@@ -105,6 +110,8 @@ skip-if = [
 ["browser_rules_class_panel_state_preserved.js"]
 
 ["browser_rules_class_panel_toggle.js"]
+
+["browser_rules_color-preview.js"]
 
 ["browser_rules_colorUnit.js"]
 
@@ -337,6 +344,9 @@ skip-if = [
 ["browser_rules_variables-in-pseudo-element_02.js"]
 
 ["browser_rules_variables-jump-to-definition.js"]
+skip-if = [
+  "os == 'mac' && os_version == '15.30' && arch == 'aarch64'", # Bug 2034604
+]
 
 ["browser_rules_variables_01.js"]
 

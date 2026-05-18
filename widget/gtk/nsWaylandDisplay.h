@@ -1,6 +1,3 @@
-/* -*- Mode: C; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim:expandtab:shiftwidth=2:tabstop=2:
- */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -8,6 +5,7 @@
 #ifndef MOZ_WAYLAND_DISPLAY_H_
 #define MOZ_WAYLAND_DISPLAY_H_
 
+#include <time.h>
 #include "DMABufDevice.h"
 
 #include "mozilla/widget/mozwayland.h"
@@ -25,6 +23,7 @@
 #include "mozilla/widget/color-representation-v1-client-protocol.h"
 #include "mozilla/widget/xdg-shell-client-protocol.h"
 #include "mozilla/widget/xx-pip-v1-client-protocol.h"
+#include "mozilla/widget/xx-session-management-v1-client-protocol.h"
 
 #include <gbm.h>
 
@@ -46,7 +45,11 @@ class nsWaylandDisplay {
  public:
   // Create nsWaylandDisplay object on top of native Wayland wl_display
   // connection.
+  // Split nsWaylandDisplay setup to constructor & Init() call
+  // to allow calls WaylandDisplayGet() from Init() where we query
+  // wayland display setup.
   explicit nsWaylandDisplay(wl_display* aDisplay);
+  void Init();
 
   static uint32_t GetLastEventSerial();
   wl_display* GetDisplay() { return mDisplay; };
@@ -130,10 +133,25 @@ class nsWaylandDisplay {
   bool HasDMABufFeedback() const { return mDmabufIsFeedback; }
   void EnsureDMABufFormats();
 
+  void SetFixes(wl_fixes* aFixes);
+  wl_fixes* GetFixes() const { return mFixes; }
+
+  static void SessionCreate(void* aData, xx_session_v1* aSession,
+                            const char* aSessionId);
+  static void SessionRestore(void* aData, xx_session_v1* aSession);
+  static void SessionReplace(void* aData, xx_session_v1* aSession);
+
+  xx_session_manager_v1* GetSessionManager() { return mSessionManager; }
+  void SetSessionManager(xx_session_manager_v1* aSessionManager);
+  void CreateSession(const char* aSessionId = nullptr);
+  xx_session_v1* GetSession() { return mWaylandSession; }
+
   static void AsyncRoundtripCallback(void* aData, wl_callback* aCallback,
                                      uint32_t aTime);
   void RequestAsyncRoundtrip();
   void WaitForAsyncRoundtrips();
+
+  void RefreshScreens();
 
   struct MonitorConfig {
     int id = 0;
@@ -141,6 +159,7 @@ class nsWaylandDisplay {
     int y = 0;
     int pixelWidth = 0;
     int pixelHeight = 0;
+    bool pendingChanges = true;
     explicit MonitorConfig(int aId) : id(aId) {}
   };
 
@@ -154,6 +173,7 @@ class nsWaylandDisplay {
  private:
   PRThread* mThreadId = nullptr;
   wl_registry* mRegistry = nullptr;
+  wl_fixes* mFixes = nullptr;
   wl_display* mDisplay = nullptr;
   wl_compositor* mCompositor = nullptr;
   wl_subcompositor* mSubcompositor = nullptr;
@@ -178,6 +198,9 @@ class nsWaylandDisplay {
   wp_color_representation_manager_v1* mColorRepresentationManager = nullptr;
   xx_pip_shell_v1* mPipShell = nullptr;
   xdg_wm_base* mWmBase = nullptr;
+  xx_session_manager_v1* mSessionManager = nullptr;
+  xx_session_v1* mWaylandSession = nullptr;
+  nsCString mWaylandSessionId;
   RefPtr<DMABufFormats> mFormats;
   GList* mAsyncRoundtrips = nullptr;
 
@@ -209,7 +232,8 @@ class nsWaylandDisplay {
 wl_display* WaylandDisplayGetWLDisplay();
 nsWaylandDisplay* WaylandDisplayGet();
 void WaylandDisplayRelease();
-void WlCompositorCrashHandler();
+void WlCompositorUnavailableHandler();
+void WlCompositorSilentDisconnectHandler(clock_t aFailureTime);
 
 }  // namespace mozilla::widget
 

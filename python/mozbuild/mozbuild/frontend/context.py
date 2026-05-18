@@ -24,7 +24,11 @@ from types import FunctionType
 import mozpack.path as mozpath
 
 from mozbuild.util import (
+    CCompilerFlag,
+    CxxCompilerFlag,
     HierarchicalStringList,
+    HostCCompilerFlag,
+    HostCxxCompilerFlag,
     ImmutableStrictOrderingOnAppendList,
     KeyedDefaultDict,
     List,
@@ -662,12 +666,12 @@ class CompileFlags(TargetCompileFlags):
             ),
             (
                 "WARNINGS_CFLAGS",
-                context.config.substs.get("WARNINGS_CFLAGS"),
+                context.config.substs.get("WARNINGS_CFLAGS", []),
                 ("CFLAGS",),
             ),
             (
                 "WARNINGS_CXXFLAGS",
-                context.config.substs.get("WARNINGS_CXXFLAGS"),
+                context.config.substs.get("WARNINGS_CXXFLAGS", []),
                 ("CXXFLAGS",),
             ),
             ("MOZBUILD_CFLAGS", None, ("CFLAGS",)),
@@ -1873,6 +1877,22 @@ VARIABLES = {
         the library will not be built as part of the default build.
         """,
     ),
+    "RUST_PROGRAM_OUTPUT_CATEGORY": (
+        str,
+        str,
+        """The output category for this context's Rust program(s). If set this will
+        correspond to the build command that will build these Rust programs, and
+        the programs will not be built as part of the default build.
+        """,
+    ),
+    "HOST_RUST_PROGRAM_OUTPUT_CATEGORY": (
+        str,
+        str,
+        """The output category for this context's host Rust program(s). If set this will
+        correspond to the build command that will build these host Rust programs, and
+        the programs will not be built as part of the default build.
+        """,
+    ),
     "IS_FRAMEWORK": (
         bool,
         bool,
@@ -2468,7 +2488,7 @@ VARIABLES = {
         """,
     ),
     "CFLAGS": (
-        List,
+        TypedList(CCompilerFlag),
         list,
         """Flags passed to the C compiler for all of the C source files
            declared in this directory.
@@ -2479,7 +2499,7 @@ VARIABLES = {
         """,
     ),
     "CXXFLAGS": (
-        List,
+        TypedList(CxxCompilerFlag),
         list,
         """Flags passed to the C++ compiler for all of the C++ source files
            declared in this directory.
@@ -2581,7 +2601,7 @@ VARIABLES = {
         """,
     ),
     "HOST_CFLAGS": (
-        List,
+        TypedList(HostCCompilerFlag),
         list,
         """Flags passed to the host C compiler for all of the C source files
            declared in this directory.
@@ -2592,7 +2612,7 @@ VARIABLES = {
         """,
     ),
     "HOST_CXXFLAGS": (
-        List,
+        TypedList(HostCxxCompilerFlag),
         list,
         """Flags passed to the host C++ compiler for all of the C++ source files
            declared in this directory.
@@ -2920,9 +2940,7 @@ SPECIAL_VARIABLES = {
         """,
     ),
     "CONFIG": (
-        lambda context: ReadOnlyKeyedDefaultDict(
-            lambda key: context.config.substs.get(key)
-        ),
+        lambda context: ReadOnlyKeyedDefaultDict(context.config.substs.get),
         dict,
         """Dictionary containing the current configuration variables.
 

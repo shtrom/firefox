@@ -949,6 +949,15 @@ class MochitestArguments(ArgumentContainer):
             },
         ],
         [
+            ["--restart-between-tests"],
+            {
+                "action": "store_true",
+                "dest": "restartBetweenTests",
+                "default": False,
+                "help": "Restart the browser between each test to identify tests with undocumented dependencies.",
+            },
+        ],
+        [
             ["--variant"],
             {
                 "dest": "variant",
@@ -1102,14 +1111,6 @@ class MochitestArguments(ArgumentContainer):
                 parser.error(
                     "directory for %s does not exist as a destination to copy a "
                     "chrome manifest." % options.store_chrome_manifest
-                )
-
-        if options.jscov_dir_prefix:
-            options.jscov_dir_prefix = os.path.abspath(options.jscov_dir_prefix)
-            if not os.path.isdir(options.jscov_dir_prefix):
-                parser.error(
-                    "directory %s does not exist as a destination for coverage "
-                    "data." % options.jscov_dir_prefix
                 )
 
         if options.testingModulesDir is None:

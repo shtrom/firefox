@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -91,6 +89,18 @@ nsLineLayout::nsLineLayout(nsPresContext* aPresContext,
   }
 }
 
+static bool ShouldApplyTextIndent(nsIFrame* aLineContainer) {
+  if (aLineContainer->IsRubyTextContainerFrame()) {
+    return false;
+  }
+  if (nsBlockFrame* block = do_QueryFrame(aLineContainer);
+      block && block->IsTextInput()) {
+    // text-indent applies to the inner text input frames individually.
+    return false;
+  }
+  return true;
+}
+
 void nsLineLayout::BeginLineReflow(nscoord aICoord, nscoord aBCoord,
                                    nscoord aISize, nscoord aBSize,
                                    bool aImpactedByFloats, bool aIsTopOfPage,
@@ -162,7 +172,8 @@ void nsLineLayout::BeginLineReflow(nscoord aICoord, nscoord aBCoord,
   // Determine if this is the first line of the block (or first after a hard
   // line-break, if `each-line` is in effect).
   nsIFrame* containerFrame = LineContainerFrame();
-  if (!containerFrame->IsRubyTextContainerFrame()) {
+  if (!mStyleText->mTextIndent.length.IsDefinitelyZero() &&
+      ShouldApplyTextIndent(containerFrame)) {
     bool isFirstLineOrAfterHardBreak = [&] {
       if (mLineNumber > 0) {
         return mStyleText->mTextIndent.each_line && GetLine() &&

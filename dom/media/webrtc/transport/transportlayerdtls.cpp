@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -10,7 +8,6 @@
 
 #include <algorithm>
 #include <iomanip>
-#include <queue>
 #include <sstream>
 
 #include "dtlsidentity.h"
@@ -1046,7 +1043,7 @@ bool TransportLayerDtls::CheckAlpn() {
                                    << "'; permitted:" << ss.str());
     return false;
   }
-  alpn_ = chosen;
+  alpn_ = std::move(chosen);
   return true;
 }
 
@@ -1496,7 +1493,7 @@ SECStatus TransportLayerDtls::AuthCertificateHook(PRFileDesc* fd,
 
       // Checking functions call PR_SetError()
       SECStatus rv = SECFailure;
-      for (auto digest : digests_) {
+      for (const auto& digest : digests_) {
         rv = CheckDigest(digest, peer_cert);
 
         // Matches a digest, we are good to go

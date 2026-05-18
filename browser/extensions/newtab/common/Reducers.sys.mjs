@@ -126,6 +126,7 @@ export const INITIAL_STATE = {
     showNotifications: false,
     toastCounter: 0,
     toastId: "",
+    toastData: {},
     // This queue is reset each time SHOW_TOAST_MESSAGE is ran.
     // For can be a queue in the future, but for now is one item
     toastQueue: [],
@@ -136,6 +137,8 @@ export const INITIAL_STATE = {
     inferredInterests: {},
     coarseInferredInterests: {},
     coarsePrivateInferredInterests: {},
+    debugFeatures: null,
+    inferredTelemetrySettingsOverrides: {},
   },
   Search: {
     // When search hand-off is enabled, we render a big button that is styled to
@@ -207,6 +210,13 @@ export const INITIAL_STATE = {
   },
   ExternalComponents: {
     components: [],
+  },
+  SportsWidget: {
+    data: null,
+    initialized: false,
+    widgetState: "sports-intro",
+    selectedTeams: [],
+    matchesTab: "upcoming",
   },
 };
 
@@ -638,7 +648,14 @@ function InferredPersonalization(
         coarseInferredInterests: action.data.coarseInferredInterests,
         coarsePrivateInferredInterests:
           action.data.coarsePrivateInferredInterests,
+        inferredTelemetrySettingsOverrides:
+          action.data.inferredTelemetrySettingsOverrides,
         lastUpdated: action.data.lastUpdated,
+      };
+    case at.INFERRED_PERSONALIZATION_DEBUG_FEATURES_UPDATE:
+      return {
+        ...prevState,
+        debugFeatures: action.data,
       };
     case at.INFERRED_PERSONALIZATION_RESET:
       return { ...INITIAL_STATE.InferredPersonalization };
@@ -740,7 +757,11 @@ function DiscoveryStream(prevState = INITIAL_STATE.DiscoveryStream, action) {
         ...prevState,
       };
     case at.DISCOVERY_STREAM_LAYOUT_RESET:
-      return { ...INITIAL_STATE.DiscoveryStream, config: prevState.config };
+      return {
+        ...INITIAL_STATE.DiscoveryStream,
+        config: prevState.config,
+        sectionPersonalization: prevState.sectionPersonalization,
+      };
     case at.DISCOVERY_STREAM_FEEDS_UPDATE:
       return {
         ...prevState,
@@ -1015,6 +1036,7 @@ function Notifications(prevState = INITIAL_STATE.Notifications, action) {
         showNotifications: action.data.showNotifications,
         toastCounter: prevState.toastCounter + 1,
         toastId: action.data.toastId,
+        toastData: action.data.toastData ?? {},
         toastQueue: [action.data.toastId],
       };
     case at.HIDE_TOAST_MESSAGE: {
@@ -1183,6 +1205,21 @@ function ExternalComponents(
   }
 }
 
+function SportsWidget(prevState = INITIAL_STATE.SportsWidget, action) {
+  switch (action.type) {
+    case at.WIDGETS_SPORTS_WIDGET_SET:
+      return { ...prevState, data: action.data, initialized: true };
+    case at.WIDGETS_SPORTS_SET_WIDGET_STATE:
+      return { ...prevState, widgetState: action.data };
+    case at.WIDGETS_SPORTS_SET_SELECTED_TEAMS:
+      return { ...prevState, selectedTeams: action.data };
+    case at.WIDGETS_SPORTS_SET_MATCHES_TAB:
+      return { ...prevState, matchesTab: action.data };
+    default:
+      return prevState;
+  }
+}
+
 export const reducers = {
   TopSites,
   App,
@@ -1202,4 +1239,5 @@ export const reducers = {
   SectionsLayout,
   Weather,
   ExternalComponents,
+  SportsWidget,
 };

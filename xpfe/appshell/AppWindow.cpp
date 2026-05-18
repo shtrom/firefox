@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim:set ts=2 sw=2 sts=2 ci et: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -49,7 +47,7 @@
 #include "nsXULTooltipListener.h"
 #include "nsXULPopupManager.h"
 #include "nsFocusManager.h"
-#include "nsContentList.h"
+#include "mozilla/dom/ContentList.h"
 #include "nsIDOMWindowUtils.h"
 #include "nsServiceManagerUtils.h"
 
@@ -1788,7 +1786,7 @@ nsresult AppWindow::MaybeSaveEarlyWindowPersistentValues(
   settings.menubarShown = attributeValue.EqualsLiteral("false");
 
   ErrorResult err;
-  nsCOMPtr<nsIHTMLCollection> toolbarSprings = navbar->GetElementsByTagNameNS(
+  RefPtr<dom::HTMLCollection> toolbarSprings = navbar->GetElementsByTagNameNS(
       u"http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"_ns,
       u"toolbarspring"_ns, err);
   if (err.Failed()) {
@@ -2179,6 +2177,14 @@ NS_IMETHODIMP AppWindow::CreateNewWindow(int32_t aChromeFlags,
                                          nsIOpenWindowInfo* aOpenWindowInfo,
                                          nsIAppWindow** _retval) {
   NS_ENSURE_ARG_POINTER(_retval);
+
+  // If a position change is pending (e.g. this window was just dragged to a
+  // different display), flush it now so the new window reads our current
+  // position from the XULStore rather than the stale one still queued behind
+  // the SIZE_PERSISTENCE_TIMEOUT timer.
+  if (mPersistentAttributesDirty.contains(PersistentAttribute::Position)) {
+    PersistentAttributesDirty(PersistentAttribute::Position, Sync);
+  }
 
   if (aChromeFlags & nsIWebBrowserChrome::CHROME_OPENAS_CHROME) {
     MOZ_RELEASE_ASSERT(
@@ -2961,7 +2967,7 @@ class AppWindowTimerCallback final : public nsITimerCallback, public nsINamed {
   }
 
  private:
-  ~AppWindowTimerCallback() {}
+  ~AppWindowTimerCallback() = default;
 
   RefPtr<AppWindow> mWindow;
 };

@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -127,7 +125,7 @@ class AlignedBuffer {
   }
   // Set length of buffer, allocating memory as required.
   // If memory is allocated, additional buffer area is filled with 0.
-  bool SetLength(size_t aLength) {
+  [[nodiscard]] bool SetLength(size_t aLength) {
     if (aLength > mLength && !EnsureCapacity(aLength)) {
       return false;
     }
@@ -343,13 +341,13 @@ class MediaData {
 
   template <typename ReturnType>
   const ReturnType* As() const {
-    MOZ_ASSERT(this->mType == ReturnType::sType);
+    MOZ_RELEASE_ASSERT(this->mType == ReturnType::sType);
     return static_cast<const ReturnType*>(this);
   }
 
   template <typename ReturnType>
   ReturnType* As() {
-    MOZ_ASSERT(this->mType == ReturnType::sType);
+    MOZ_RELEASE_ASSERT(this->mType == ReturnType::sType);
     return static_cast<ReturnType*>(this);
   }
 
@@ -494,11 +492,11 @@ class VideoData : public MediaData {
     ~QuantizableBuffer();
 
    private:
-    void AllocateRecyclableData(size_t aLength);
+    void AllocateRecyclableData(uint32_t aLength);
 
     RefPtr<layers::BufferRecycleBin> mRecycleBin;
     UniquePtr<uint8_t[]> m8bpcPlanes;
-    size_t mAllocatedLength;
+    uint32_t mAllocatedLength;
   };
 
   // Constructs a VideoData object. If aImage is nullptr, creates a new Image
@@ -522,7 +520,7 @@ class VideoData : public MediaData {
       const media::TimeUnit& aTimecode, const IntRect& aPicture,
       layers::KnowsCompositor* aAllocator);
 
-  static already_AddRefed<VideoData> CreateAndCopyData(
+  static Result<already_AddRefed<VideoData>, MediaResult> CreateAndCopyData(
       const VideoInfo& aInfo, ImageContainer* aContainer, int64_t aOffset,
       const media::TimeUnit& aTime, const media::TimeUnit& aDuration,
       const YCbCrBuffer& aBuffer, const YCbCrBuffer::Plane& aAlphaPlane,
@@ -691,6 +689,8 @@ class MediaRawData final : public MediaData {
   explicit MediaRawData(AlignedByteBuffer&& aData);
   MediaRawData(AlignedByteBuffer&& aData, AlignedByteBuffer&& aAlphaData);
 
+  MediaRawData(const MediaRawData&) = delete;
+
   // Pointer to data or null if not-yet allocated
   const uint8_t* Data() const { return mBuffer.Data(); }
   // Pointer to alpha data or null if not-yet allocated
@@ -751,7 +751,6 @@ class MediaRawData final : public MediaData {
   AlignedByteBuffer mBuffer;
   AlignedByteBuffer mAlphaBuffer;
   CryptoSample mCryptoInternal;
-  MediaRawData(const MediaRawData&);  // Not implemented
 };
 
 // MediaByteBuffer is a ref counted infallible TArray.

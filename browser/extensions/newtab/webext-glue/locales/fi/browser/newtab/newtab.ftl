@@ -8,9 +8,13 @@
 newtab-page-title = Uusi välilehti
 newtab-settings-button =
     .title = Muokkaa Uusi välilehti -sivua
+#  (developer note): @nova-cleanup(remove-string): Remove newtab-customize-panel-icon-button once Nova lands, will be using newtab-customize-panel-label instead
 newtab-customize-panel-icon-button =
     .title = Mukauta tätä sivua
+#  (developer note): @nova-cleanup(remove-string): Remove newtab-customize-panel-icon-button-label once Nova lands, will be using newtab-customize-panel-label instead
 newtab-customize-panel-icon-button-label = Mukauta
+newtab-customize-panel-label =
+    .label = Mukauta
 newtab-personalize-settings-icon-label =
     .title = Mukauta uutta välilehteä
     .aria-label = Asetukset
@@ -76,6 +80,11 @@ newtab-topsites-url-validation = Kelvollinen osoite vaaditaan
 newtab-topsites-image-url-label = Oman kuvan osoite
 newtab-topsites-use-image-link = Käytä omaa kuvaa…
 newtab-topsites-image-validation = Kuvan lataaminen epäonnistui. Kokeile toista osoitetta.
+
+## Clear text button for the URL and image URL input fields in the Top Sites form.
+
+newtab-topsites-clear-input =
+    .aria-label = Tyhjennä teksti
 
 ## Top Sites - General form dialog buttons. These are verbs/actions.
 
@@ -143,6 +152,9 @@ newtab-menu-report = Ilmoita
 # Context menu option to personalize New Tab recommended stories by blocking a section of stories,
 # e.g. "Sports". "Block" is a verb here.
 newtab-menu-section-block = Estä
+# "Follow", "unfollow", and "following" are social media terms that refer to subscribing to or unsubscribing from a section of stories.
+# e.g. Following the travel section of stories.
+newtab-menu-section-unfollow-topic = Lopeta seuraaminen
 # "Follow", "unfollow", and "following" are social media terms that refer to subscribing to or unsubscribing from a section of stories.
 # e.g. Following the travel section of stories.
 newtab-menu-section-unfollow = Lopeta aiheen seuraaminen
@@ -310,9 +322,23 @@ newtab-error-fallback-refresh-link = Yritä uudestaan päivittämällä sivu.
 
 newtab-custom-shortcuts-title = Oikotiet
 newtab-custom-shortcuts-subtitle = Tallentamasi tai vierailemasi sivustot
+#  (developer note): @nova-cleanup(remove-string): Remove old string once Nova lands. The newtab-custom-shortcuts-nova string will take over
 newtab-custom-shortcuts-toggle =
     .label = Oikotiet
     .description = Tallentamasi tai vierailemasi sivustot
+newtab-custom-shortcuts-nova =
+    .label = Oikotiet
+newtab-custom-row-description =
+    .description = Rivien lukumäärä
+# Variables
+#   $num (number) - Number of rows to display
+#  (developer note): @nova-cleanup(remove-string): Remove string once Nova lands. We won't be using "row"/"rows" anymore for the dropdown
+newtab-custom-row-selector2 =
+    .label =
+        { $num ->
+            [one] { $num } rivi
+           *[other] { $num } riviä
+        }
 # Variables
 #   $num (number) - Number of rows to display
 newtab-custom-row-selector =
@@ -323,9 +349,12 @@ newtab-custom-row-selector =
 newtab-custom-sponsored-sites = Sponsoroidut oikotiet
 newtab-custom-pocket-title = { -pocket-brand-name } suosittelee
 newtab-custom-pocket-subtitle = Poikkeuksellista, valikoitua sisältöä { -pocket-brand-name }-palvelulta, osana { -brand-product-name }-perhettä
+#  (developer note): @nova-cleanup(remove-string): Remove string once Nova lands. We won't be having a description under "Recommended stories" anymore
 newtab-custom-stories-toggle =
     .label = Suositellut tarinat
     .description = Poikkeuksellista { -brand-product-name }-perheen kuratoimaa sisältöä
+newtab-recommended-stories-toggle =
+    .label = Suositellut tarinat
 newtab-custom-stories-personalized-toggle =
     .label = Tarinat
 newtab-custom-stories-personalized-checkbox-label = Personoituja tarinoita aktiivisuuteesi pohjautuen
@@ -342,6 +371,10 @@ newtab-custom-widget-lists-toggle =
     .label = Listat
 newtab-custom-widget-timer-toggle =
     .label = Ajastin
+newtab-custom-widget-sports-toggle =
+    .label = Jalkapallon maailmanmestaruuskilpailut
+newtab-custom-widget-clock-toggle =
+    .label = Kello
 newtab-custom-widget-section-title = Pienoisohjelmat
 newtab-custom-widget-section-toggle =
     .label = Pienoisohjelmat
@@ -359,8 +392,12 @@ newtab-custom-settings = Muokkaa lisää asetuksia
 
 newtab-wallpaper-title = Taustakuvat
 newtab-wallpaper-reset = Palauta oletusarvo
+#  (developer note): @nova-cleanup(remove-string): Remove old "Upload an image" string once Nova lands. The new "Add an image"  string will take over
 newtab-wallpaper-upload-image = Lähetä kuva
+newtab-wallpaper-add-an-image = Lisää kuva
 newtab-wallpaper-custom-color = Valitse väri
+newtab-wallpaper-toggle-title =
+    .label = Taustakuvat
 # Variables
 #   $file_size (number) - The number of the maximum image file size (in MB) that may be uploaded
 newtab-wallpaper-error-max-file-size = Kuvan koko ylitti tiedostokokorajan { $file_size } Mt. Yritä ladata pienempi tiedosto.
@@ -383,7 +420,9 @@ newtab-wallpaper-light-fox-anniversary = Kettu ruohopellolla ja sumuinen vuorist
 
 ## Solid Colors
 
+#  (developer note): @nova-cleanup(remove-string): Remove old "Solid colors" string once Nova lands. The simplified "Colors" string will take over
 newtab-wallpaper-category-title-colors = Yhtenäiset värit
+newtab-wallpaper-colors = Värit
 newtab-wallpaper-blue = Sininen
 newtab-wallpaper-light-blue = Vaaleansininen
 newtab-wallpaper-light-purple = Vaaleanvioletti
@@ -474,6 +513,9 @@ newtab-weather-menu-change-location = Vaihda sijaintia
 newtab-weather-change-location-search-input-placeholder =
     .placeholder = Hae sijaintia
     .aria-label = Hae sijaintia
+# "Current" refers to the user's physical/geographic location detected via geolocation.
+newtab-weather-change-location-search-use-current =
+    .label = Käytä nykyistä sijaintia
 newtab-weather-menu-weather-display = Sään näkymä
 newtab-weather-todays-forecast = Tämän päivän ennuste
 newtab-weather-see-full-forecast = Katso koko ennuste
@@ -489,7 +531,6 @@ newtab-weather-menu-temperature-option-fahrenheit = Fahrenheit
 newtab-weather-menu-temperature-option-celsius = Celsius
 newtab-weather-menu-change-temperature-units-fahrenheit = Vaihda Fahrenheitiin
 newtab-weather-menu-change-temperature-units-celsius = Vaihda Celsiukseen
-newtab-weather-menu-hide-weather-v2 = Piilota sää
 newtab-weather-menu-hide-weather = Piilota sää uudessa välilehdessä
 newtab-weather-menu-learn-more = Lue lisää
 newtab-weather-menu-detect-my-location = Havaitse sijaintini
@@ -500,8 +541,18 @@ newtab-weather-opt-in-not-now =
     .label = Ei nyt
 newtab-weather-opt-in-yes =
     .label = Kyllä
+newtab-weather-opt-in-headline = Hanki paikallinen sääennuste
+newtab-weather-opt-in-use-location =
+    .label = Käytä sijaintia
+newtab-weather-opt-in-choose-location = Valitse sijainti
 # We'll be showing static (fake) weather data if the user has not opted in to using their location
 newtab-weather-static-city = Helsinki
+# "Highest" here refers to the highest temperature of the day
+newtab-weather-high =
+    .aria-label = Korkein
+# "Lowest" here refers to the lowest temperature of the day
+newtab-weather-low =
+    .aria-label = Matalin
 # Variables:
 #   $provider (string) - Service provider for weather data
 newtab-weather-see-forecast-description =
@@ -553,8 +604,16 @@ newtab-topic-selection-button-pick-interests = Valitse kiinnostuksen kohteesi
 ## e.g. Following the travel section of stories.
 
 newtab-section-follow-button = Seuraa
+# Variables:
+#   $topic (string) - Topic that the user can follow
+newtab-section-follow-button-label =
+    .aria-label = Seuraa aihetta { $topic }
 newtab-section-following-button = Seurataan
 newtab-section-unfollow-button = Lopeta seuraaminen
+# Variables:
+#   $topic (string) - Topic that the user is following and can unfollow
+newtab-section-unfollow-button-label =
+    .aria-label = Seurataan: Lopeta aiheen { $topic } seuraaminen
 # A modal may appear next to the Follow button, directing users to try out the feature
 newtab-section-follow-highlight-title = Hienosäädä syötettä
 newtab-section-follow-highlight-subtitle = Seuraa kiinnostuksen kohteitasi nähdäksesi enemmän sinua kiinnostavia asioita.
@@ -566,6 +625,22 @@ newtab-section-follow-highlight-subtitle = Seuraa kiinnostuksen kohteitasi nähd
 newtab-section-block-button = Estä
 newtab-section-blocked-button = Estetty
 newtab-section-unblock-button = Poista esto
+# Variables:
+#   $topic (string) - Name of topic that user is following
+newtab-section-follow-topic =
+    .aria-label = Seuraa aihetta { $topic }
+# Variables:
+#   $topic (string) - Name of topic that user is unfollowing
+newtab-section-unfollow-topic =
+    .aria-label = Lopeta aiheen { $topic } seuraaminen
+# Variables:
+#   $topic (string) - Name of topic that user is blocking
+newtab-section-block-topic =
+    .aria-label = Estä { $topic }
+# Variables:
+#   $topic (string) - Name of topic that user is unblocking
+newtab-section-unblock-topic =
+    .aria-label = Poista aiheen { $topic } esto
 
 ## Confirmation modal for blocking a section
 
@@ -575,6 +650,7 @@ newtab-section-confirm-block-topic-p2 = Estetyt aiheet eivät enää näy syött
 # Variables:
 #   $topic (string) - Name of topic that user is blocking
 newtab-section-block-topic-button = Estä { $topic }
+newtab-section-block-cancel-button = Peruuta
 
 ## Strings for custom wallpaper highlight
 
@@ -595,6 +671,12 @@ newtab-custom-wallpaper-cta = Kokeile
 newtab-new-user-custom-wallpaper-title = Valitse taustakuva ja tee { -brand-product-name }ista omasi
 newtab-new-user-custom-wallpaper-subtitle = Tee jokaisesta uudesta välilehdestä tutunomainen mukautetuilla taustakuvilla ja väreillä.
 newtab-new-user-custom-wallpaper-cta = Kokeile nyt
+
+## Strings for Nova wallpaper feature highlight
+
+newtab-wallpaper-feature-highlight-title = Uudet taustakuvat saapuivat juuri
+newtab-wallpaper-feature-highlight-subtitle = Valitse suosikkisi ja tee jokaisesta uudesta välilehdestä kotoisa.
+newtab-wallpaper-feature-highlight-cta = Valitse taustakuva
 
 ## Strings for download mobile highlight
 
@@ -636,6 +718,20 @@ newtab-report-cancel = Peruuta
 newtab-report-submit = Lähetä
 newtab-toast-thanks-for-reporting =
     .message = Kiitos, että ilmoitit tästä.
+newtab-toast-widgets-hidden =
+    .message = Voit lisätä pienoisohjelmia takaisin milloin tahansa valitsemalla kynäkuvakkeen.
+# Variables:
+#   $topic (string) - Topic that the user has followed
+newtab-section-toast-follow =
+    .message = Seuraat nyt aihetta { $topic }.
+# Variables:
+#   $topic (string) - Topic that the user has unfollowed
+newtab-section-toast-unfollow =
+    .message = Et enää seuraa aihetta { $topic }.
+# Variables:
+#   $topic (string) - Topic that the user has blocked
+newtab-section-toast-block =
+    .message = Et enää näe aihetta { $topic } käsitteleviä tarinoita.
 
 ## Strings for task / to-do list productivity widget
 
@@ -650,13 +746,20 @@ newtab-widget-lists-label-beta =
 # Variables:
 #   $number (number) - Amount of list items marked complete
 newtab-widget-lists-completed-list = Valmis ({ $number })
+newtab-widget-lists-celebration-headline = Hyvää työtä
+newtab-widget-lists-celebration-subhead = Kaikki hoidettu
 newtab-widget-task-list-menu-copy = Kopioi
 newtab-widget-lists-menu-edit = Muokkaa listan nimeä
+newtab-widget-lists-menu-edit2 =
+    .aria-label = Muokkaa listan nimeä
 newtab-widget-lists-menu-create = Luo uusi lista
 newtab-widget-lists-menu-delete = Poista tämä lista
 newtab-widget-lists-menu-copy = Kopioi lista leikepöydälle
-newtab-widget-lists-menu-hide = Piilota kaikki listat
 newtab-widget-lists-menu-learn-more = Lue lisää
+newtab-widget-lists-button-add-item = Lisää kohde
+newtab-widget-lists-input-add-an-item2 =
+    .placeholder = Lisää kohde
+    .aria-label = Lisää kohde
 newtab-widget-lists-input-add-an-item =
     .placeholder = Lisää kohde
 newtab-widget-lists-input-error = Sisällytä tekstiä lisätäksesi kohteen.
@@ -665,17 +768,35 @@ newtab-widget-lists-input-menu-move-up = Siirrä ylös
 newtab-widget-lists-input-menu-move-down = Siirrä alas
 newtab-widget-lists-input-menu-delete = Poista
 newtab-widget-lists-input-menu-edit = Muokkaa
+newtab-widget-lists-input-menu-edit2 =
+    .aria-label = Muokkaa merkintää
 # the + symbol emphasises the functionality of adding a new list
 newtab-widget-lists-dropdown-create =
     .label = + Luo uusi lista
 newtab-widget-lists-name-label-default =
     .label = Tehtävälista
+newtab-widget-lists-name-label-checklist =
+    .label = Tarkistuslista
 newtab-widget-lists-name-placeholder-default =
     .placeholder = Tehtävälista
+newtab-widget-lists-name-placeholder-checklist2 =
+    .placeholder = Tarkistuslista
+    .aria-label = Muokkaa listan nimeä
+# The placeholder value of the name field for a newly created list
+newtab-widget-lists-name-placeholder-new2 =
+    .placeholder = Uusi lista
+    .aria-label = Muokkaa listan nimeä
+newtab-widget-lists-name-placeholder-checklist =
+    .placeholder = Tarkistuslista
 # The placeholder value of the name field for a newly created list
 newtab-widget-lists-name-placeholder-new =
     .placeholder = Uusi lista
 newtab-widget-section-title = Pienoisohjelmat
+newtab-widget-menu-hide = Piilota pienoisohjelma
+newtab-widget-menu-change-size = Muuta kokoa
+newtab-widget-size-small = Pieni
+newtab-widget-size-medium = Keskikokoinen
+newtab-widget-size-large = Suuri
 # Tooltip for hide all widgets button
 newtab-widget-section-hide-all-button =
     .title = Piilota pienoisohjelmat
@@ -686,9 +807,16 @@ newtab-widget-section-maximize =
 newtab-widget-section-minimize =
     .title = Pienennä pienoisohjelmat
     .aria-label = Supista pienoisohjelmat kompaktiin kokoon
+newtab-widget-section-menu-button =
+    .title = Pienoisohjelmien valikko
+    .aria-label = Avaa pienoisohjelmien valikko
+newtab-widget-section-menu-manage = Hallitse pienoisohjelmia
+newtab-widget-section-menu-hide-all = Piilota pienoisohjelmat
+newtab-widget-section-menu-learn-more = Lue lisää
+newtab-widget-section-feedback = Kerro meille mielipiteesi
+newtab-widget-lists-name-default = Tarkistuslista
 
-## Strings for timer productivity widget
-## When the timer ends, a system notification may be shown. Depending on which mode the timer is in, that message would be shown
+## Strings introduced by the Nova redesign of the Timer widget
 
 newtab-widget-timer-notification-title = Ajastin
 newtab-widget-timer-notification-focus = Keskittymisaika on ohi. Hyvää työtä. Tarvitsetko tauon?
@@ -706,7 +834,6 @@ newtab-widget-timer-reset =
     .title = Nollaa
 newtab-widget-timer-menu-notifications = Poista ilmoitukset käytöstä
 newtab-widget-timer-menu-notifications-on = Ota ilmoitukset käyttöön
-newtab-widget-timer-menu-hide = Piilota ajastin
 newtab-widget-timer-menu-learn-more = Lue lisää
 # The title displays above a set of top news headlines.
 newtab-daily-briefing-card-title = Pääotsikot
@@ -717,12 +844,130 @@ newtab-daily-briefing-card-timestamp = Päivitetty { $minutes } min sitten
 newtab-widget-message-title = Pysy keskittyneenä listojen ja sisäänrakennetun ajastimen avulla
 # to-dos stands for "things to do".
 newtab-widget-message-copy = Nopeista muistutuksista päivittäisiin tehtäviin, keskittymisharjoituksista venyttelytaukoihin – pysy tehtävässäsi ja aikataulussa.
+# "Make Firefox yours" refers to about:newtab. The call to action here ("Try it now")
+# is to customize the new tab page with a background image or color from
+# the built-in wallpaper collection or uploading your own image.
+newtab-promo-card-title-addons = Tee { -brand-product-name }ista omasi
+newtab-promo-card-body-addons = Valitse taustakuva kokoelmastamme tai luo omasi.
+newtab-promo-card-cta-addons = Kokeile nyt
 newtab-promo-card-title = Tue { -brand-product-name }ia
 newtab-promo-card-body = Sponsorimme tukevat tehtäväämme rakentaa parempaa Internetiä
 newtab-promo-card-cta = Lue lisää
 newtab-promo-card-dismiss-button =
     .title = Hylkää
     .aria-label = Hylkää
+
+## Strings introduced by the Nova redesign of the Timer widget
+
+# Variables:
+#   $minutes (number) - The currently selected timer duration in minutes
+newtab-widget-timer-start-aria =
+    .aria-label =
+        { $minutes ->
+            [one] Käynnistä { $minutes } minuutin ajastin
+           *[other] Käynnistä { $minutes } minuutin ajastin
+        }
+newtab-widget-timer-pause-aria =
+    .aria-label = Keskeytä ajastin
+# Variables:
+#   $minutes (number) - The currently selected timer duration in minutes
+newtab-widget-timer-spinbutton-name =
+    .aria-label =
+        { $minutes ->
+            [one] { $minutes } minuutti
+           *[other] { $minutes } minuuttia
+        }
+newtab-widget-timer-decrease-min =
+    .title = Vähennä 1 minuutti
+newtab-widget-timer-increase-min =
+    .title = Lisää 1 minuutti
+newtab-widget-timer-mode-group =
+    .aria-label = Ajastintila
+# Small label shown beneath the live time while the focus timer is running or paused.
+newtab-widget-timer-running-focus = Keskity
+# Small label shown beneath the live time while the break timer is running or paused.
+newtab-widget-timer-running-break = Tauko
+# Context-menu item to hide the Timer widget. Replaces the shared "Hide widget"
+# copy with a widget-specific string per the Nova design.
+newtab-widget-timer-menu-hide = Piilota ajastin
+# Heading shown inside the Timer widget after a focus session ends.
+newtab-widget-timer-celebration-heading-focus = Hyvää työtä
+# Heading shown inside the Timer widget after a break session ends.
+newtab-widget-timer-celebration-heading-break = Tauko on ohi
+# Message shown inside the Timer widget after a focus session ends.
+newtab-widget-timer-celebration-message-focus = Tarvitsetko tauon?
+# Message shown inside the Timer widget after a break session ends.
+newtab-widget-timer-celebration-message-break = Valmis keskittymään?
+
+## Sports widget
+
+newtab-sports-widget-menu-follow-teams = Seuraa joukkueita
+newtab-sports-widget-menu-view-upcoming = Näytä tulevat
+newtab-sports-widget-menu-view-results = Näytä tulokset
+# Milestone dates (e.g. group stage, semifinals, etc.). Refers to calendar dates.
+newtab-sports-widget-menu-key-dates = Tärkeimmät päivät
+newtab-sports-widget-menu-learn-more = Lue lisää
+# “Keep tabs on” is an informal expression meaning to stay updated on, stay informed on, or regularly follow something (in this case, World Cup matches and updates).
+newtab-sports-widget-keep-tabs = Pidä silmällä MM-kisoja
+newtab-sports-widget-get-updates = Saat päivityksiä otteluiden suorista tapahtumista ja paljon muuta.
+newtab-sports-widget-view-schedule =
+    .label = Näytä aikataulu
+newtab-sports-widget-follow-teams =
+    .label = Seuraa joukkueita
+newtab-sports-widget-view-matches =
+    .label = Näytä ottelut
+# Variables:
+#   $number (number) - Maximum number of teams a user can choose to follow in the team selection state
+newtab-sports-widget-follow-teams-title =
+    { $number ->
+        [one] Seuraa { $number } joukkuetta
+       *[other] Seuraa { $number } joukkuetta
+    }
+newtab-sports-widget-choose-wallpaper =
+    .label = Valitse taustakuva
+newtab-sports-widget-skip = Ohita
+newtab-sports-widget-search-country =
+    .placeholder = Hae maata
+    .aria-label = Hae maata
+newtab-sports-widget-cancel = Peruuta
+newtab-sports-widget-done-button =
+    .label = Valmis
+newtab-sports-widget-group-stage = Lohkovaihe
+newtab-sports-widget-round-32 = 32 parasta
+newtab-sports-widget-round-16 = 16 parasta
+newtab-sports-widget-quarter-finals = Puolivälierät
+# The "LIVE" string is meant to be uppercase in English, but other languages and locales may vary in how they handle this.
+newtab-sports-widget-live = SUORA
+newtab-custom-widget-live-refresh =
+    .title = Päivitä tulokset
+    .aria-label = Päivitä tulokset
+# Milestone dates (e.g. group stage, semifinals, etc.). Refers to calendar dates.
+newtab-sports-widget-key-dates = Tärkeimmät päivät
+newtab-sports-widget-upcoming = Tulossa
+newtab-sports-widget-results = Tulokset
+newtab-sports-widget-semi-finals = Välierät
+newtab-sports-widget-bronze-finals = Pronssiottelu
+# Final is the final match for 1st place.
+newtab-sports-widget-final = Loppuottelu
+# Variables:
+#   $start (Date) - Start date of a tournament stage
+#   $end (Date) - End date of a tournament stage
+newtab-sports-widget-key-date-range = { DATETIME($start, month: "short", day: "numeric") } – { DATETIME($end, month: "short", day: "numeric") }
+# Variables:
+#   $date (Date) - Date of a single tournament event
+newtab-sports-widget-key-date = { DATETIME($date, month: "short", day: "numeric") }
+newtab-sports-widget-delayed = Viivästynyt
+newtab-sports-widget-postponed = Lykätty
+newtab-sports-widget-suspended = Keskeytetty
+newtab-sports-widget-cancelled = Peruttu
+newtab-sports-widget-information = Tietoja ottelusta
+newtab-sports-widget-no-live-data = Suoran ottelun tiedot eivät päivity juuri nyt
+newtab-sports-widget-view-results-link = Näytä tulokset
+newtab-sports-widget-third-place = Kolmas sija
+# Runner-up is the team in 2nd place.
+newtab-sports-widget-runner-up = Toinen sija
+newtab-sports-widget-champions = Mestarit
+newtab-sports-widget-world-cup-champions = Vuoden 2026 MM-kilpailujen mestarit
 
 ## Strings for activation window message variants. In certain experiment configurations,
 ## the strings from these variants may be displayed in a message below the search input
@@ -745,3 +990,59 @@ newtab-activation-window-message-customization-focus-primary-button =
 # the existing widgetry that appears on it.
 newtab-activation-window-message-values-focus-header = Tämä tila toimii sinun säännöilläsi
 newtab-activation-window-message-values-focus-message = { -brand-product-name } antaa sinun selata verkkoa haluamallasi tavalla, tarjoten henkilökohtaisemman tavan aloittaa päiväsi verkossa. Tee { -brand-product-name }ista omasi.
+
+## Strings for the Clock widget
+
+# Context menu item: toggle the clock card off.
+newtab-clock-widget-menu-hide = Piilota kello
+newtab-clock-widget-menu-learn-more = Lue lisää
+newtab-clock-widget-menu-edit = Muokkaa kelloja
+newtab-clock-widget-menu-switch-to-12h = Vaihda 12 tunnin muotoon
+newtab-clock-widget-menu-switch-to-24h = Vaihda 24 tunnin muotoon
+newtab-clock-widget-label-your-clocks = Kellosi
+newtab-clock-widget-search-location-input =
+    .label = Sijainti
+    .placeholder = Hae kaupunkia
+    .aria-label = Hae kaupunkia
+# "Nickname (optional)" refers to a custom, user-defined label for a saved location
+# (e.g., "Home", "Office", or "School") to make it easier to recognize.
+# Not to be translated as a legal name, username, or alias used for identity verification.
+newtab-clock-widget-input-nickname =
+    .label = Kutsumanimi (valinnainen)
+    .placeholder = Lisää kutsumanimi
+    .aria-label = Kutsumanimi (valinnainen)
+# "Add new clock" is an icon-only button in the widget toolbar — the
+# attributes are consumed as tooltip/screen-reader label only. The button
+# never renders visible text.
+newtab-clock-widget-button-add =
+    .title = Lisää uusi kello
+    .aria-label = Lisää uusi kello
+newtab-clock-widget-button-add-clock = Lisää
+newtab-clock-widget-button-cancel = Peruuta
+newtab-clock-widget-button-back =
+    .title = Takaisin
+    .aria-label = Takaisin
+newtab-clock-widget-button-edit-clock =
+    .title = Muokkaa kelloa
+    .aria-label = Muokkaa kelloa
+newtab-clock-widget-button-save = Tallenna
+newtab-clock-widget-button-remove-clock =
+    .title = Poista kello
+    .aria-label = Poista kello
+newtab-clock-widget-add-clock-form =
+    .aria-label = Lisää kello
+newtab-clock-widget-edit-clock-form =
+    .aria-label = Muokkaa kelloa
+# "Search results" is the accessible label for the listbox dropdown that appears
+# below the location search field, listing matching cities as the user types.
+# It means "results of the search", not "search within the results".
+newtab-clock-widget-search-results =
+    .aria-label = Hakutulokset
+# "Open menu for clock" is an icon-only button in the widget toolbar — the
+# attributes are consumed as tooltip/screen-reader label only. The button
+# never renders visible text.
+newtab-clock-widget-menu-button =
+    .title = Avaa kellon valikko
+    .aria-label = Avaa kellon valikko
+# $nickname (String) - The user-defined nickname for a saved clock location (e.g., "Home", "Office").
+newtab-clock-widget-label-nickname-with-value = Kutsumanimi: { $nickname }

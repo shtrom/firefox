@@ -1,4 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -89,7 +88,7 @@ class nsChromeRegistry : public nsIToolkitChromeRegistry,
                               mozilla::FileLocation& aFile)
         : mType(aType), mFile(aFile) {}
 
-    ~ManifestProcessingContext() {}
+    ~ManifestProcessingContext() = default;
 
     nsIURI* GetManifestURI();
     already_AddRefed<nsIURI> ResolveURI(const char* uri);

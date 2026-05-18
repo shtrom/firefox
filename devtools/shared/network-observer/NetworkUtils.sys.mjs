@@ -169,8 +169,8 @@ function getChannelBrowsingContextID(channel) {
     return channel.loadInfo.browsingContextID;
   }
 
-  if (channel.loadInfo.workerAssociatedBrowsingContextID) {
-    return channel.loadInfo.workerAssociatedBrowsingContextID;
+  if (channel.loadInfo.associatedBrowsingContextID) {
+    return channel.loadInfo.associatedBrowsingContextID;
   }
 
   // At least WebSocket channel aren't having a browsingContextID set on their loadInfo
@@ -219,7 +219,8 @@ function isPreloadRequest(channel) {
     type == Ci.nsIContentPolicy.TYPE_INTERNAL_IMAGE_PRELOAD ||
     type == Ci.nsIContentPolicy.TYPE_INTERNAL_STYLESHEET_PRELOAD ||
     type == Ci.nsIContentPolicy.TYPE_INTERNAL_FONT_PRELOAD ||
-    type == Ci.nsIContentPolicy.TYPE_INTERNAL_JSON_PRELOAD
+    type == Ci.nsIContentPolicy.TYPE_INTERNAL_JSON_PRELOAD ||
+    type == Ci.nsIContentPolicy.TYPE_INTERNAL_TEXT_PRELOAD
   );
 }
 
@@ -570,20 +571,19 @@ function matchRequest(channel, filters) {
     }
 
     if (type == "browser-element") {
-      if (!channel.loadInfo.browsingContext) {
+      let browsingContext =
+        channel.loadInfo.browsingContext ||
+        channel.loadInfo.associatedBrowsingContext;
+
+      if (!browsingContext) {
         const topFrame = lazy.NetworkHelper.getTopFrameForRequest(channel);
-        // `topFrame` is typically null for some chrome requests like favicons
-        // And its `browsingContext` attribute might be null if the request happened
+        // `topFrame` is typically null for some chrome requests like favicons,
+        // and its `browsingContext` attribute might be null if the request happened
         // while the tab is being closed.
-        return (
-          topFrame?.browsingContext?.browserId ==
-          filters.sessionContext.browserId
-        );
+        browsingContext = topFrame?.browsingContext;
       }
-      return (
-        channel.loadInfo.browsingContext.browserId ==
-        filters.sessionContext.browserId
-      );
+
+      return browsingContext?.browserId == filters.sessionContext.browserId;
     }
     if (type == "webextension") {
       return (

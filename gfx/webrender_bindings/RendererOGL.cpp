@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -124,7 +122,6 @@ RendererOGL::RendererOGL(RefPtr<RenderThread>&& aThread,
       mRenderer(aRenderer),
       mBridge(aBridge),
       mWindowId(aWindowId),
-      mDisableNativeCompositor(false),
       mLastPipelineInfo(new WebRenderPipelineInfo) {
   MOZ_ASSERT(mThread);
   MOZ_ASSERT(mCompositor);
@@ -165,11 +162,6 @@ void RendererOGL::Update() {
     wr_renderer_update(mRenderer);
     FlushPipelineInfo();
   }
-}
-
-static void DoWebRenderDisableNativeCompositor(
-    layers::CompositorBridgeParent* aBridge) {
-  aBridge->NotifyWebRenderDisableNativeCompositor();
 }
 
 RenderedFrameId RendererOGL::UpdateAndRender(
@@ -334,14 +326,7 @@ bool RendererOGL::EnsureAsyncScreenshot() {
   if (mCompositor->SupportAsyncScreenshot()) {
     return true;
   }
-  if (!mDisableNativeCompositor) {
-    layers::CompositorThread()->Dispatch(
-        NewRunnableFunction("DoWebRenderDisableNativeCompositorRunnable",
-                            &DoWebRenderDisableNativeCompositor, mBridge));
-
-    mDisableNativeCompositor = true;
-    gfxCriticalNote << "Disable native compositor for async screenshot";
-  }
+  MOZ_ASSERT_UNREACHABLE("unexpected to be called");
   return false;
 }
 

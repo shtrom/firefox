@@ -32,6 +32,7 @@
   --weekend-font-color: -moz-activehyperlinktext;
 
   --disabled-background-color: ButtonShadow;
+  --disabled-opacity: 0.5;
 
   /* TODO: these need to be in sync (ish) with DateTimePickerPanel.sys.mjs */
   font-size: 10px;
@@ -120,6 +121,7 @@ button:focus-visible {
 }
 
 #date-picker {
+  flex-grow: 1;
   /* Add some padding so outlines would not overflow our viewport. */
   padding: 0.4rem;
 }
@@ -367,7 +369,7 @@ button.month-year.active {
 }
 
 .spinner-container > .spinner > div.disabled {
-  visibility: hidden;
+  opacity: var(--disabled-opacity);
 }
 
 /* Used only in <input type="time"> */
@@ -388,6 +390,7 @@ button.month-year.active {
 #datetime-picker {
   display: flex;
   gap: 1em;
+  justify-content: center;
 }
 
 #date-picker,

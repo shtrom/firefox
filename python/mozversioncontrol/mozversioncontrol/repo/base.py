@@ -135,7 +135,12 @@ class Repository(abc.ABC):
     @property
     @abc.abstractmethod
     def head_ref(self):
-        """Hash of HEAD revision."""
+        """Head reference."""
+
+    @property
+    @abc.abstractmethod
+    def head_rev(self):
+        """Head revision."""
 
     @property
     @abc.abstractmethod
@@ -183,6 +188,10 @@ class Repository(abc.ABC):
 
         If no email is configured, then None is returned.
         """
+
+    @abc.abstractmethod
+    def get_remote_url(self, remote=None, push=False):
+        """Return the URL for the specified remote."""
 
     @abc.abstractmethod
     def get_changed_files(self, diff_filter, mode="unstaged", rev=None):
@@ -264,6 +273,36 @@ class Repository(abc.ABC):
         """Undo all changes (including removing new untracked files) in the
         given `path`.
         """
+
+    @abc.abstractmethod
+    def push(
+        self,
+        remote: Optional[str] = None,
+        ref: Optional[str] = None,
+        dest_branch: Optional[str] = None,
+        force: bool = False,
+    ):
+        """Push to a remote repository.
+
+        `remote` specifies the remote to push to. If None, the default remote is used.
+        `ref` specifies the branch or ref to push. If None, the current branch/ref is used.
+        `dest_branch` specifies the destination branch name. If None, pushes ref to ref.
+        `force` whether to use a force push (default False).
+        """
+
+    def add_note(
+        self,
+        note: str,
+        content: str,
+        commit: Optional[str] = None,
+    ):
+        """Attach a git note with `content` to `commit`.
+
+        `note` is the notes namespace under refs/notes/.
+        `content` is the data to store in the note.
+        `commit` is the commit to associage the note with (defaults to HEAD).
+        """
+        raise NotImplementedError
 
     @abc.abstractmethod
     def push_to_try(

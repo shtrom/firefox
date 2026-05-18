@@ -27,6 +27,10 @@ class SrcRepository(Repository):
     def head_ref(self):
         pass
 
+    @property
+    def head_rev(self):
+        pass
+
     def is_cinnabar_repo(self) -> bool:
         return False
 
@@ -59,6 +63,9 @@ class SrcRepository(Repository):
 
     def get_upstream(self):
         pass
+
+    def get_remote_url(self, remote=None, push=False):
+        return None
 
     def get_changed_files(self, diff_filter="ADM", mode="unstaged", rev=None):
         return []
@@ -138,6 +145,15 @@ class SrcRepository(Repository):
         pass
 
     def update(self, ref):
+        pass
+
+    def push(
+        self,
+        remote: Optional[str] = None,
+        ref: Optional[str] = None,
+        dest_branch: Optional[str] = None,
+        force: bool = False,
+    ):
         pass
 
     def push_to_try(

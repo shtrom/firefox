@@ -45,7 +45,7 @@ class BrowsingContextModule extends WindowGlobalBiDiModule {
 
     // Set of event names which have active subscriptions.
     this.#subscribedEvents = new Set();
-    this.contextCreatedHandled = false;
+    this.#contextCreatedHandled = false;
   }
 
   destroy() {
@@ -574,7 +574,7 @@ class BrowsingContextModule extends WindowGlobalBiDiModule {
 
     const contextNodes = [];
     if (startNodes === null) {
-      contextNodes.push(this.messageHandler.window.document.documentElement);
+      contextNodes.push(this.messageHandler.window.document);
     } else {
       for (const serializedStartNode of startNodes) {
         const startNode = this.deserialize(serializedStartNode, realm);

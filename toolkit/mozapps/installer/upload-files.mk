@@ -18,10 +18,6 @@ ifndef MOZ_PKG_FORMAT
     endif
 endif # MOZ_PKG_FORMAT
 
-ifeq ($(OS_ARCH),WINNT)
-INSTALLER_DIR   = windows
-endif
-
 ifeq (cocoa,$(MOZ_WIDGET_TOOLKIT))
 ifndef _APPNAME
 _APPNAME = $(MOZ_MACBUNDLE_NAME)
@@ -134,7 +130,6 @@ endif
 ifeq ($(MOZ_PKG_FORMAT),DMG)
   PKG_SUFFIX	= .dmg
 
-  _ABS_MOZSRCDIR = $(shell cd $(MOZILLA_DIR) && pwd)
   PKG_DMG_SOURCE = $(MOZ_PKG_DIR)
   MOZ_PKG_MAC_DSSTORE=$(topsrcdir)/$(MOZ_BRANDING_DIRECTORY)/dsstore
   MOZ_PKG_MAC_BACKGROUND=$(topsrcdir)/$(MOZ_BRANDING_DIRECTORY)/background.png
@@ -313,33 +308,7 @@ ifeq ($(OS_ARCH),Darwin)
 UPLOAD_FILES += $(call QUOTED_WILDCARD,$(DIST)/$(PKG_PATH)$(UPDATE_FRAMEWORK_ARTIFACTS_ARCHIVE_BASENAME).zip)
 endif # Darwin
 
-ifndef MOZ_PKG_SRCDIR
-  MOZ_PKG_SRCDIR = $(topsrcdir)
-endif
-
-SRC_TAR_PREFIX = $(MOZ_APP_NAME)-$(MOZ_PKG_VERSION)
-SRC_TAR_EXCLUDE_PATHS += \
-  --exclude='.hg*' \
-  --exclude='.git' \
-  --exclude='.gitattributes' \
-  --exclude='.gitkeep' \
-  --exclude='.gitmodules' \
-  --exclude='CVS' \
-  --exclude='.cvs*' \
-  --exclude='.mozconfig*' \
-  --exclude='*.pyc' \
-  --exclude='$(MOZILLA_DIR)/Makefile' \
-  --exclude='$(MOZILLA_DIR)/dist'
-ifdef MOZ_OBJDIR
-  SRC_TAR_EXCLUDE_PATHS += --exclude='$(MOZ_OBJDIR)'
-endif
-CREATE_SOURCE_TAR = $(TAR) -c --owner=0 --group=0 --numeric-owner \
-  --mode=go-w $(SRC_TAR_EXCLUDE_PATHS) --transform='s,^\./,$(SRC_TAR_PREFIX)/,' -f
-
-SOURCE_TAR = $(DIST)/$(PKG_SRCPACK_PATH)$(PKG_SRCPACK_BASENAME).tar.xz
 HG_BUNDLE_FILE = $(DIST)/$(PKG_SRCPACK_PATH)$(PKG_BUNDLE_BASENAME).bundle
-SOURCE_CHECKSUM_FILE = $(DIST)/$(PKG_SRCPACK_PATH)$(PKG_SRCPACK_BASENAME).checksums
-SOURCE_UPLOAD_FILES = $(SOURCE_TAR)
 
 HG ?= hg
 CREATE_HG_BUNDLE_CMD  = $(HG) -v -R $(topsrcdir) bundle --base null

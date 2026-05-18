@@ -338,8 +338,11 @@ export class MLEngineParent extends JSProcessActorParent {
         notificationsCallback,
       });
 
-      // engine will observe ipc:content-shutdown to get notified if the inference process crashes
-      Services.obs.addObserver(engine, "ipc:content-shutdown");
+      // Observe ipc:content-shutdown to detect inference process crashes.
+      // Use a weak reference so this observer doesn't root the engine
+      // and its pending request promises, which may prevent windows
+      // that triggered inference from being cycle-collected.
+      Services.obs.addObserver(engine, "ipc:content-shutdown", true);
 
       const creationTime = ChromeUtils.now() - start;
 
@@ -463,8 +466,8 @@ export class MLEngineParent extends JSProcessActorParent {
     await Promise.all(
       [...this.#modelFilesInUse].map(async ([key, entry]) => {
         await modelHub.deleteNonMatchingModelRevisions(
-          entry.modelWithHostname,
           entry.taskName,
+          entry.modelWithHostname,
           entry.revision
         );
         this.#modelFilesInUse.delete(key);
@@ -1136,6 +1139,10 @@ export class MLEngine {
       featureId: pipelineOptions.featureId,
       flowId: pipelineOptions.flowId,
     });
+    this.QueryInterface = ChromeUtils.generateQI([
+      "nsIObserver",
+      "nsISupportsWeakReference",
+    ]);
   }
 
   /**
@@ -1145,7 +1152,6 @@ export class MLEngine {
    * @returns {object|null} The validated request, or null if blocked
    */
   #validateRequest(request) {
-    lazy.console.debug("[MLSecurity] Validating request:", request);
     return request;
   }
 
@@ -1700,6 +1706,7 @@ export class MLEngine {
           tokens: chunk.metadata.tokens,
           isPrompt: chunk.metadata.isPrompt,
           toolCalls: chunk.metadata.toolCalls,
+          usage: chunk.metadata.usage,
         };
 
         // Be a bit defensive here in getting the metadata, as different engines may

@@ -525,6 +525,7 @@ def load_wpt_tests(xul_tester, requested_paths, excluded_paths, update_manifest=
         "testing/mozbase/mozrunner",
         "testing/mozbase/mozversion",
         "testing/web-platform/",
+        "testing/web-platform/tests",
         "testing/web-platform/tests/tools",
         "testing/web-platform/tests/tools/third_party/html5lib",
         "testing/web-platform/tests/tools/third_party/webencodings",
@@ -580,7 +581,7 @@ def load_wpt_tests(xul_tester, requested_paths, excluded_paths, update_manifest=
             if tests:
                 yield item_type, path, tests
 
-    run_info_extras = products.Product(kwargs["config"], "firefox").run_info_extras(
+    run_info_extras = products.Product.from_product_name("firefox").run_info_extras(
         logger, **kwargs
     )
     run_info = wpttest.get_run_info(

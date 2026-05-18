@@ -1,6 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- * vim: set ts=8 sts=2 et sw=2 tw=80:
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -763,38 +761,6 @@ bool Watchtower::watchFreezeOrSealSlow(JSContext* cx, Handle<NativeObject*> obj,
       return false;
     }
   }
-
-  return true;
-}
-
-// static
-bool Watchtower::watchObjectSwapSlow(JSContext* cx, HandleObject a,
-                                     HandleObject b) {
-  MOZ_ASSERT(watchesObjectSwap(a, b));
-
-  // If we're swapping an object that's used as prototype, we're mutating the
-  // proto chains of other objects. Treat this as a proto change to ensure we
-  // invalidate shape teleporting and megamorphic caches.
-  if (!WatchProtoChangeImpl(cx, a)) {
-    return false;
-  }
-  if (!WatchProtoChangeImpl(cx, b)) {
-    return false;
-  }
-
-  if (a->hasObjectFuse()) {
-    if (auto* objFuse = cx->zone()->objectFuses.get(a.as<NativeObject>())) {
-      objFuse->handleObjectSwap(cx);
-    }
-  }
-  if (b->hasObjectFuse()) {
-    if (auto* objFuse = cx->zone()->objectFuses.get(b.as<NativeObject>())) {
-      objFuse->handleObjectSwap(cx);
-    }
-  }
-
-  // Note: we don't invoke the testing callback for swap because the objects may
-  // not be safe to expose to JS at this point. See bug 1754699.
 
   return true;
 }

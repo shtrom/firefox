@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import mozilla.components.compose.base.PagerIndicator
 import mozilla.components.compose.base.annotation.FlexibleWindowLightDarkPreview
 import mozilla.components.lib.state.ext.observeAsComposableState
 import mozilla.components.support.base.log.logger.Logger
@@ -55,7 +56,6 @@ import org.mozilla.fenix.R
 import org.mozilla.fenix.components.appstate.AppAction
 import org.mozilla.fenix.components.appstate.setup.checklist.ChecklistItem
 import org.mozilla.fenix.components.components
-import org.mozilla.fenix.compose.PagerIndicator
 import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.onboarding.WidgetPinnedReceiver.WidgetPinnedState
 import org.mozilla.fenix.onboarding.store.OnboardingAction.OnboardingToolbarAction
@@ -96,6 +96,8 @@ private val logger: Logger = Logger("OnboardingScreenRedesign")
  * @param onMarketingOptInToggle callback for when the user toggles the opt-in checkbox
  * @param onMarketingDataContinueClick callback for when the user clicks the continue button on the
  * marketing data opt out screen.
+ * @param onMarketingDataSkipClick callback for when the user clicks the skip button on the
+ * marketing data opt out screen.
  * @param onFinish Invoked when the onboarding is completed.
  * @param onImpression Invoked when a page in the pager is displayed.
  * @param currentIndex callback for when the current horizontal pager page changes
@@ -119,6 +121,7 @@ fun OnboardingScreenRedesign(
     onMarketingDataLearnMoreClick: () -> Unit,
     onMarketingOptInToggle: (optIn: Boolean) -> Unit,
     onMarketingDataContinueClick: (allowMarketingDataCollection: Boolean) -> Unit,
+    onMarketingDataSkipClick: () -> Unit,
     onFinish: (pageType: OnboardingPageUiData) -> Unit,
     onImpression: (pageType: OnboardingPageUiData) -> Unit,
     currentIndex: (index: Int) -> Unit,
@@ -240,6 +243,10 @@ fun OnboardingScreenRedesign(
             onMarketingDataContinueClick(allowMarketingDataCollection)
             scrollToNextPageOrDismiss()
         },
+        onMarketingDataSkipClick = {
+            onMarketingDataSkipClick()
+            scrollToNextPageOrDismiss()
+        },
         onboardingStore = onboardingStore,
     )
 }
@@ -342,6 +349,7 @@ private fun OnboardingContent(
     onMarketingOptInToggle: (optIn: Boolean) -> Unit,
     onMarketingDataLearnMoreClick: () -> Unit,
     onMarketingDataContinueClick: (allowMarketingDataCollection: Boolean) -> Unit,
+    onMarketingDataSkipClick: () -> Unit,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val layout = getOnboardingLayout(this)
@@ -354,8 +362,8 @@ private fun OnboardingContent(
         )
 
         Column(
-            modifier = Modifier.systemBarsPadding(),
             verticalArrangement = Arrangement.Center,
+            modifier = Modifier.systemBarsPadding(),
         ) {
             Spacer(Modifier.weight(1f)).takeIf { !layout.isSmall }
 
@@ -390,6 +398,7 @@ private fun OnboardingContent(
                     onCustomizeToolbarButtonClick = onCustomizeToolbarButtonClick,
                     onTermsOfServiceButtonClick = onAgreeAndConfirmTermsOfService,
                     shouldShowElevation = !layout.isSmall,
+                    isSmallDevice = layout.isSmall,
                 )
 
                 OnboardingPageForType(
@@ -400,7 +409,7 @@ private fun OnboardingContent(
                     onMarketingDataLearnMoreClick = onMarketingDataLearnMoreClick,
                     onMarketingOptInToggle = onMarketingOptInToggle,
                     onMarketingDataContinueClick = onMarketingDataContinueClick,
-                    isSmallDevice = layout.isSmall,
+                    onMarketingDataSkipClick = onMarketingDataSkipClick,
                 )
             }
 
@@ -413,8 +422,8 @@ private fun OnboardingContent(
                         .align(Alignment.CenterHorizontally)
                         .padding(bottom = 16.dp),
                     activeColor = MaterialTheme.colorScheme.onPrimary,
-                    inactiveColor = MaterialTheme.colorScheme.surfaceVariant,
-                    leaveTrail = true,
+                    inactiveColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    leaveTrail = false,
                 )
             }
         }
@@ -450,14 +459,14 @@ private fun OnboardingPageForType(
     onMarketingDataLearnMoreClick: () -> Unit,
     onMarketingOptInToggle: (optIn: Boolean) -> Unit,
     onMarketingDataContinueClick: (allowMarketingDataCollection: Boolean) -> Unit,
-    isSmallDevice: Boolean,
+    onMarketingDataSkipClick: () -> Unit,
 ) {
     when (type) {
         OnboardingPageUiData.Type.DEFAULT_BROWSER,
         OnboardingPageUiData.Type.SYNC_SIGN_IN,
         OnboardingPageUiData.Type.ADD_SEARCH_WIDGET,
         OnboardingPageUiData.Type.NOTIFICATION_PERMISSION,
-            -> OnboardingPageRedesign(state, isSmallDevice)
+            -> OnboardingPageRedesign(state)
 
         OnboardingPageUiData.Type.TOOLBAR_PLACEMENT -> {
             val context = LocalContext.current
@@ -483,12 +492,12 @@ private fun OnboardingPageForType(
             onMarketingDataLearnMoreClick = onMarketingDataLearnMoreClick,
             onMarketingOptInToggle = onMarketingOptInToggle,
             onMarketingDataContinueClick = onMarketingDataContinueClick,
+            onMarketingDataSkipClick = onMarketingDataSkipClick,
         )
 
         OnboardingPageUiData.Type.TERMS_OF_SERVICE -> TermsOfServiceOnboardingPageRedesign(
             state,
             termsOfServiceEventHandler,
-            isSmallDevice = isSmallDevice,
         )
 
         // no-ops
@@ -661,6 +670,7 @@ private fun OnboardingScreenPreview() {
             onMarketingDataLearnMoreClick = {},
             onMarketingOptInToggle = {},
             onMarketingDataContinueClick = {},
+            onMarketingDataSkipClick = {},
             onNotificationPermissionButtonClick = {},
             onNotificationPermissionSkipClick = {},
         )

@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=8 sts=2 et sw=2 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -80,13 +78,13 @@ class nsMimeType final : public nsWrapperCache {
 
   // MimeType WebIDL methods
   void GetDescription(mozilla::dom::DOMString& retval) const {
-    retval.SetKnownLiveString(kMimeDescription);
+    retval.AssignLiteral(u"Portable Document Format");
   }
 
   already_AddRefed<nsPluginElement> EnabledPlugin() const;
 
   void GetSuffixes(mozilla::dom::DOMString& retval) const {
-    retval.SetKnownLiveString(kMimeSuffix);
+    retval.AssignLiteral(u"pdf");
   }
 
   void GetType(nsString& retval) const { retval = mName; }
@@ -94,10 +92,6 @@ class nsMimeType final : public nsWrapperCache {
 
  protected:
   virtual ~nsMimeType();
-
-  static constexpr nsLiteralString kMimeDescription =
-      u"Portable Document Format"_ns;
-  static constexpr nsLiteralString kMimeSuffix = u"pdf"_ns;
 
   // Note that this creates an explicit reference cycle:
   //
