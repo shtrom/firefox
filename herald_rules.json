@@ -1,0 +1,76 @@
+{
+  "rules": [
+    {
+      "id": "S1",
+      "name": "tests",
+      "author": "shtrom",
+      "status": "active",
+      "type": "differential-revision",
+      "conditions": [
+        {
+          "type": "repository",
+          "operator": "is-any-of",
+          "value": [
+            "infra-testing-autoland",
+            "infra-testing-main"
+          ]
+        },
+        {
+          "type": "differential-affected-files",
+          "operator": "matches-regexp",
+          "value": "/.*"
+        }
+      ],
+      "actions": [
+        {
+          "type": "add-reviewers",
+          "reviewers": [
+            {
+              "target": "infra-testing-reviewers",
+              "blocking": false,
+              "is_group": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "groups": {
+    "lando-reviewers": {
+      "id": "infra-testing-reviewers",
+      "display_name": "infra-testing-reviewers",
+      "members": [
+        "sheehan",
+        "shtrom",
+        "zeid"
+      ]
+    }
+  },
+  "github_users": {
+    "sheehan": {
+      "username": "cgsheeh",
+      "user_id": 12172761
+    },
+    "shtrom": {
+      "username": "shtrom",
+      "user_id": 160280
+    },
+    "zeid": {
+      "username": "zzzeid",
+      "user_id": 2043828
+    }
+  },
+  "metadata": {
+    "extracted_at": "2026-01-29T07:04:24.886522Z",
+    "total_rules": 87,
+    "total_groups": 73,
+    "total_users_resolved": 180,
+    "total_users_unresolved": 134,
+    "phabricator_instance": "phabricator.services.mozilla.com",
+    "scrape_status": {
+      "rules_complete": false,
+      "groups_complete": true,
+      "github_complete": true
+    }
+  }
+}
