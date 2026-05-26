@@ -29,6 +29,11 @@
               "target": "infra-testing-reviewers",
               "blocking": false,
               "is_group": true
+            },
+            {
+              "target": "/ent:infra-testing-reviewers",
+              "blocking": false,
+              "is_group": true
             }
           ]
         }
@@ -36,13 +41,20 @@
     }
   ],
   "groups": {
-    "lando-reviewers": {
+    "infra-testing-reviewers": {
       "id": "infra-testing-reviewers",
       "display_name": "infra-testing-reviewers",
       "members": [
         "sheehan",
         "shtrom",
         "zeid"
+      ]
+    },
+    "/ent:infra-testing-reviewers": {
+      "id": "/ent:infra-testing-reviewers",
+      "display_name": "/ent:infra-testing-reviewers",
+      "members": [
+        "shtrom"
       ]
     }
   },
