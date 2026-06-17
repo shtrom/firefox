@@ -36,7 +36,7 @@
               "is_group": true
             },
             {
-              "target": "Aryx",
+              "target": "dkl",
               "blocking": false,
               "is_group": false
             }
@@ -67,6 +67,10 @@
     "Aryx": {
       "username": "Archaeopteryx",
       "user_id": 216576
+    },
+    "dkl": {
+      "username": "dklawren",
+      "user_id": 826315
     },
     "sheehan": {
       "username": "cgsheeh",
