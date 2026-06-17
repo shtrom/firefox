@@ -29,6 +29,16 @@
               "target": "infra-testing-reviewers",
               "blocking": false,
               "is_group": true
+            },
+            {
+              "target": "/ent:infra-testing-reviewers",
+              "blocking": false,
+              "is_group": true
+            },
+            {
+              "target": "Aryx",
+              "blocking": false,
+              "is_group": false
             }
           ]
         }
@@ -36,7 +46,7 @@
     }
   ],
   "groups": {
-    "lando-reviewers": {
+    "infra-testing-reviewers": {
       "id": "infra-testing-reviewers",
       "display_name": "infra-testing-reviewers",
       "members": [
@@ -44,9 +54,20 @@
         "shtrom",
         "zeid"
       ]
+    },
+    "/ent:infra-testing-reviewers": {
+      "id": "/ent:infra-testing-reviewers",
+      "display_name": "/ent:infra-testing-reviewers",
+      "members": [
+        "shtrom"
+      ]
     }
   },
   "github_users": {
+    "Aryx": {
+      "username": "Archaeopteryx",
+      "user_id": 216576
+    },
     "sheehan": {
       "username": "cgsheeh",
       "user_id": 12172761
