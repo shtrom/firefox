@@ -413,7 +413,7 @@ index df4673b02a..fcf3d0e72f 100644
  
  bool RtpExtension::IsSupportedForVideo(absl::string_view uri) {
 diff --git a/call/BUILD.gn b/call/BUILD.gn
-index 69eff3f733..99530d85a3 100644
+index 930be8ef02..1fe22bc1cc 100644
 --- a/call/BUILD.gn
 +++ b/call/BUILD.gn
 @@ -20,6 +20,7 @@ rtc_library("call_interfaces") {
@@ -686,7 +686,7 @@ index 03f846a905..12405e1646 100644
  // Subclasses must defined kId and kUri static constexpr members.
  class BaseRtpStringExtension {
 diff --git a/modules/rtp_rtcp/source/rtp_packet.cc b/modules/rtp_rtcp/source/rtp_packet.cc
-index 0c5d25a06e..234b8e9c59 100644
+index a003a9df74..3fc8044d55 100644
 --- a/modules/rtp_rtcp/source/rtp_packet.cc
 +++ b/modules/rtp_rtcp/source/rtp_packet.cc
 @@ -213,6 +213,10 @@ void RtpPacket::ZeroMutableExtensions() {

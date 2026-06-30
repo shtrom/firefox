@@ -84,7 +84,7 @@ index 12405e1646..b5148dff8c 100644
  // Base extension class for RTP header extensions which are strings.
  // Subclasses must defined kId and kUri static constexpr members.
 diff --git a/modules/rtp_rtcp/source/rtp_packet.cc b/modules/rtp_rtcp/source/rtp_packet.cc
-index 234b8e9c59..f76fc11b20 100644
+index 3fc8044d55..ef78a45945 100644
 --- a/modules/rtp_rtcp/source/rtp_packet.cc
 +++ b/modules/rtp_rtcp/source/rtp_packet.cc
 @@ -194,7 +194,9 @@ void RtpPacket::ZeroMutableExtensions() {
