@@ -399,7 +399,7 @@ index 6ba3292fca..5d3a731864 100644
    RTPHeader();
    RTPHeader(const RTPHeader& other);
 diff --git a/api/rtp_parameters.cc b/api/rtp_parameters.cc
-index df4673b02a..fcf3d0e72f 100644
+index 35f15dbf60..c36452e786 100644
 --- a/api/rtp_parameters.cc
 +++ b/api/rtp_parameters.cc
 @@ -232,7 +232,8 @@ bool RtpExtension::IsSupportedForAudio(absl::string_view uri) {
@@ -701,7 +701,7 @@ index a003a9df74..3fc8044d55 100644
    }
  }
 diff --git a/modules/rtp_rtcp/source/rtp_packet_unittest.cc b/modules/rtp_rtcp/source/rtp_packet_unittest.cc
-index 981f816397..b49985ed34 100644
+index 0e713dcd52..f625dbe0c5 100644
 --- a/modules/rtp_rtcp/source/rtp_packet_unittest.cc
 +++ b/modules/rtp_rtcp/source/rtp_packet_unittest.cc
 @@ -143,6 +143,18 @@ constexpr uint8_t kPacketWithMid[] = {
@@ -723,7 +723,7 @@ index 981f816397..b49985ed34 100644
  constexpr uint32_t kCsrcs[] = {0x34567890, 0x32435465};
  constexpr uint8_t kPayload[] = {'p', 'a', 'y', 'l', 'o', 'a', 'd'};
  constexpr uint8_t kPacketPaddingSize = 8;
-@@ -422,6 +434,24 @@ TEST(RtpPacketTest, FailsToSetUnregisteredExtension) {
+@@ -423,6 +435,24 @@ TEST(RtpPacketTest, FailsToSetUnregisteredExtension) {
    EXPECT_EQ(packet.GetExtension<TransportSequenceNumber>(), std::nullopt);
  }
  
