@@ -5419,7 +5419,8 @@ enum class ComponentTypeKindRaw : uint8_t {
         if (c->coreFuncs().length() <= dtorIndexRaw) {
           return d.failf("invalid core func index %d", dtorIndexRaw);
         }
-        const FuncType& dtorType = c->getCoreFuncTypeForCoreFunc(dtorIndexRaw);
+        const FuncType& dtorType =
+            c->getTypeForCoreFunc(dtorIndexRaw).funcType();
 
         if (!dtorType.isValidComponentDestructor()) {
           return d.fail("destructor has invalid signature");
@@ -5922,7 +5923,7 @@ enum class CanonDefKindRaw : uint8_t {
       // Because flattened func types use only primitive types, there will never
       // be any type references and a strict comparison will suffice.
       if (!FuncType::strictlyEquals(
-              flattened, c->getCoreFuncTypeForCoreFunc(coreFuncIndex))) {
+              flattened, c->getTypeForCoreFunc(coreFuncIndex).funcType())) {
         return d.fail(
             "could not lift core func (component func type did not match)");
       }
