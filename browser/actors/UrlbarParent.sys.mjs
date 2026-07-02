@@ -31,9 +31,9 @@ ChromeUtils.defineESModuleGetters(lazy, {
  *   `browser.urlbar.ipc.chromeMessagePassing`): the child holds a
  *   `UrlbarParentControllerProxy` and trades actor messages with us. We build
  *   the controller from the `Init` payload and retain it in a `Map` keyed by
- *   the child-assigned `instanceId`, routing subsequent messages to it.
- *   These controllers are retained until torn down explicitly (a later patch
- *   adds the `Destroy` message and the child-side `FinalizationRegistry`).
+ *   the child-assigned `instanceId`, routing subsequent messages to it. The
+ *   controller is dropped on the `Destroy` message the child sends when its
+ *   input is collected (via a `FinalizationRegistry`).
  */
 export class UrlbarParent extends JSWindowActorParent {
   /** @type {WeakMap<object, UrlbarParentController>} */
@@ -78,6 +78,11 @@ export class UrlbarParent extends JSWindowActorParent {
         instanceId,
         new lazy.UrlbarParentController({ sapName, isPrivate })
       );
+      return;
+    }
+
+    if (message.name == "Destroy") {
+      this.#messageControllers.delete(instanceId);
       return;
     }
 

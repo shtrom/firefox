@@ -29,9 +29,27 @@ ChromeUtils.defineESModuleGetters(lazy, {
  *   `browser.urlbar.ipc.chromeMessagePassing` is set (so the wire path runs in
  *   CI). We hand back a `UrlbarParentControllerProxy` that trades messages with
  *   the parent-side controller, identified by an `instanceId`.
+ *
+ * On the message path the parent retains its controller strongly (keyed by
+ * `instanceId`), so we tie that controller's lifetime to the input: the input
+ * is registered in a `FinalizationRegistry` that sends `Destroy(instanceId)`
+ * when the input is collected, letting the parent drop its entry. (The direct
+ * path needs none of this: its controllers are cached in a `WeakMap` keyed by
+ * the input.)
  */
 export class UrlbarChild extends JSWindowActorChild {
   #nextInstanceId = 0;
+
+  // Sends `Destroy(instanceId)` to the parent once a message-path input is
+  // collected, so the parent can drop the controller it holds for it.
+  #destroyRegistry = new FinalizationRegistry(instanceId => {
+    try {
+      this.sendAsyncMessage("Destroy", { instanceId });
+    } catch (ex) {
+      // The actor is already gone (e.g. the window global was torn down), so
+      // the parent's controllers went with it; nothing left to clean up.
+    }
+  });
 
   /**
    * Returns the object that backs a given `<moz-urlbar>` input's child
@@ -49,11 +67,13 @@ export class UrlbarChild extends JSWindowActorChild {
     if (parentActor && !lazy.UrlbarPrefs.get("ipc.chromeMessagePassing")) {
       return parentActor.getOrCreateController(input);
     }
-    // Message-passing path: cross-process, or chrome with the pref on. The
-    // proxy duck-types as a UrlbarParentController for the child controller.
+    // Message-passing path: cross-process, or chrome with the pref on.
+    let instanceId = ++this.#nextInstanceId;
+    this.#destroyRegistry.register(input, instanceId);
+    // The proxy duck-types as a UrlbarParentController for the child controller.
     return /** @type {UrlbarParentController} */ (
       /** @type {unknown} */ (
-        new lazy.UrlbarParentControllerProxy(this, ++this.#nextInstanceId, {
+        new lazy.UrlbarParentControllerProxy(this, instanceId, {
           sapName: input.sapName,
           isPrivate: input.isPrivate,
         })
