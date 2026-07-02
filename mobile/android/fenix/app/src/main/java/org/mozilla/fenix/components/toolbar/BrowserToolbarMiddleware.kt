@@ -108,6 +108,10 @@ import org.mozilla.fenix.components.appstate.snackbar.SnackbarState
 import org.mozilla.fenix.components.menu.MenuAccessPoint
 import org.mozilla.fenix.components.metrics.MetricsUtils
 import org.mozilla.fenix.components.share.ShareSource
+import org.mozilla.fenix.components.toolbar.BrowserToolbarTestTags.SITE_INFO_LOCAL_FILE
+import org.mozilla.fenix.components.toolbar.BrowserToolbarTestTags.SITE_INFO_SECURE
+import org.mozilla.fenix.components.toolbar.BrowserToolbarTestTags.SITE_INFO_UNKNOWN
+import org.mozilla.fenix.components.toolbar.BrowserToolbarTestTags.SITE_INFO_UNSECURE
 import org.mozilla.fenix.components.toolbar.DisplayActions.AddBookmarkClicked
 import org.mozilla.fenix.components.toolbar.DisplayActions.EditBookmarkClicked
 import org.mozilla.fenix.components.toolbar.DisplayActions.HomepageClicked
@@ -189,6 +193,13 @@ internal sealed class PageEndActionsInteractions(override val source: Source) : 
     data class ReaderModeClicked(
         val isActive: Boolean,
     ) : PageEndActionsInteractions(Source.AddressBar.PageEnd)
+}
+
+internal object BrowserToolbarTestTags {
+    const val SITE_INFO_LOCAL_FILE = "browser.toolbar.site.info.local.file"
+    const val SITE_INFO_UNKNOWN = "browser.toolbar.site.info.unknown"
+    const val SITE_INFO_SECURE = "browser.toolbar.site.info.secure"
+    const val SITE_INFO_UNSECURE = "browser.toolbar.site.info.unsecure"
 }
 
 /**
@@ -1284,6 +1295,7 @@ class BrowserToolbarMiddleware(
                     contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
                     highlighted = highlight,
                     onClick = StartPageActions.SiteInfoClicked,
+                    testTag = SITE_INFO_LOCAL_FILE,
                 )
             } else if (selectedTab?.content?.securityInfo == null ||
                 selectedTab.content.securityInfo == SecurityInfo.Unknown
@@ -1293,6 +1305,7 @@ class BrowserToolbarMiddleware(
                     contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
                     highlighted = highlight,
                     onClick = object : BrowserToolbarEvent {},
+                    testTag = SITE_INFO_UNKNOWN,
                 )
             } else if (
                 selectedTab.content.securityInfo.isSecure &&
@@ -1304,6 +1317,7 @@ class BrowserToolbarMiddleware(
                     contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
                     highlighted = highlight,
                     onClick = StartPageActions.SiteInfoClicked,
+                    testTag = SITE_INFO_SECURE,
                 )
             } else {
                 buildSiteInfoAction(
@@ -1311,6 +1325,7 @@ class BrowserToolbarMiddleware(
                     contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
                     highlighted = highlight,
                     onClick = StartPageActions.SiteInfoClicked,
+                    testTag = SITE_INFO_UNSECURE,
                 )
             }
         }
@@ -1360,6 +1375,7 @@ class BrowserToolbarMiddleware(
         contentDescription: Int,
         highlighted: Boolean = false,
         onClick: BrowserToolbarInteraction,
+        testTag: String? = null,
     ): Action {
         return if (ipProtectionStore.state.proxyStatus == Authorized.Active) {
             Action.AnimatedPillActionRes(
@@ -1370,6 +1386,7 @@ class BrowserToolbarMiddleware(
                 animated = !ipProtectionStore.state.proxyActiveShown,
                 highlighted = highlighted,
                 onClick = onClick,
+                testTag = testTag,
             ).also {
                 ipProtectionStore.dispatch(IPProtectionAction.ProxyActiveShown)
             }
@@ -1379,6 +1396,7 @@ class BrowserToolbarMiddleware(
                 contentDescription = contentDescription,
                 highlighted = highlighted,
                 onClick = onClick,
+                testTag = testTag,
             )
         }
     }

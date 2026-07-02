@@ -142,6 +142,10 @@ import org.mozilla.fenix.components.search.TABS_SEARCH_ENGINE_ID
 import org.mozilla.fenix.components.share.ShareSheetLauncher
 import org.mozilla.fenix.components.share.ShareSource
 import org.mozilla.fenix.components.toolbar.BrowserToolbarMiddleware.ToolbarAction
+import org.mozilla.fenix.components.toolbar.BrowserToolbarTestTags.SITE_INFO_LOCAL_FILE
+import org.mozilla.fenix.components.toolbar.BrowserToolbarTestTags.SITE_INFO_SECURE
+import org.mozilla.fenix.components.toolbar.BrowserToolbarTestTags.SITE_INFO_UNKNOWN
+import org.mozilla.fenix.components.toolbar.BrowserToolbarTestTags.SITE_INFO_UNSECURE
 import org.mozilla.fenix.components.toolbar.DisplayActions.AddBookmarkClicked
 import org.mozilla.fenix.components.toolbar.DisplayActions.EditBookmarkClicked
 import org.mozilla.fenix.components.toolbar.DisplayActions.HomepageClicked
@@ -1994,6 +1998,7 @@ class BrowserToolbarMiddlewareTest {
             drawableResId = iconsR.drawable.mozac_ic_page_portrait_24,
             contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
             onClick = StartPageActions.SiteInfoClicked,
+            testTag = SITE_INFO_LOCAL_FILE,
         )
 
         val toolbarStore = buildStore(middleware)
@@ -2023,6 +2028,7 @@ class BrowserToolbarMiddlewareTest {
             drawableResId = iconsR.drawable.mozac_ic_shield_checkmark_24,
             contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
             onClick = StartPageActions.SiteInfoClicked,
+            testTag = SITE_INFO_SECURE,
         )
 
         val toolbarStore = buildStore(middleware)
@@ -2061,6 +2067,7 @@ class BrowserToolbarMiddlewareTest {
         assertEquals(expectedSecurityIndicator.highlighted, securityIndicator.highlighted)
         assertFalse(securityIndicator.onClick is StartPageActions.SiteInfoClicked)
         assertNull(securityIndicator.onLongClick)
+        assertEquals(SITE_INFO_UNKNOWN, securityIndicator.testTag)
     }
 
     @Test
@@ -2089,11 +2096,13 @@ class BrowserToolbarMiddlewareTest {
                 drawableResId = iconsR.drawable.mozac_ic_shield_checkmark_24,
                 contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
                 onClick = StartPageActions.SiteInfoClicked,
+                testTag = SITE_INFO_SECURE,
             )
             val expectedInsecureIndicator = ActionButtonRes(
                 drawableResId = iconsR.drawable.mozac_ic_shield_slash_24,
                 contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
                 onClick = StartPageActions.SiteInfoClicked,
+                testTag = SITE_INFO_UNSECURE,
             )
             val toolbarStore = buildStore(middleware).also {
                 it.dispatch(BrowserToolbarAction.Init())
@@ -2138,6 +2147,7 @@ class BrowserToolbarMiddlewareTest {
                 drawableResId = iconsR.drawable.mozac_ic_shield_slash_24,
                 contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
                 onClick = StartPageActions.SiteInfoClicked,
+                testTag = SITE_INFO_UNSECURE,
             )
             val toolbarStore = buildStore(middleware).also {
                 it.dispatch(BrowserToolbarAction.Init())
@@ -2174,11 +2184,13 @@ class BrowserToolbarMiddlewareTest {
                 drawableResId = iconsR.drawable.mozac_ic_shield_checkmark_24,
                 contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
                 onClick = StartPageActions.SiteInfoClicked,
+                testTag = SITE_INFO_SECURE,
             )
             val expectedInsecureIndicator = ActionButtonRes(
                 drawableResId = iconsR.drawable.mozac_ic_shield_slash_24,
                 contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
                 onClick = StartPageActions.SiteInfoClicked,
+                testTag = SITE_INFO_UNSECURE,
             )
             val toolbarStore = buildStore(middleware).also {
                 it.dispatch(BrowserToolbarAction.Init())
@@ -2222,11 +2234,13 @@ class BrowserToolbarMiddlewareTest {
                 drawableResId = iconsR.drawable.mozac_ic_shield_checkmark_24,
                 contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
                 onClick = StartPageActions.SiteInfoClicked,
+                testTag = SITE_INFO_SECURE,
             )
             val expectedInsecureIndicator = ActionButtonRes(
                 drawableResId = iconsR.drawable.mozac_ic_shield_slash_24,
                 contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
                 onClick = StartPageActions.SiteInfoClicked,
+                testTag = SITE_INFO_UNSECURE,
             )
             val toolbarStore = buildStore(middleware).also {
                 it.dispatch(BrowserToolbarAction.Init())
@@ -2275,6 +2289,7 @@ class BrowserToolbarMiddlewareTest {
         assertEquals(iconsR.drawable.mozac_ic_shield_checkmark_24, siteInfo.iconResId)
         assertEquals(iconsR.drawable.mozac_ic_globe_24, siteInfo.overlayResId)
         assertEquals(R.string.ip_protection_toolbar_pill_label, siteInfo.textResId)
+        assertEquals(SITE_INFO_SECURE, siteInfo.testTag)
     }
 
     @Test
@@ -2301,6 +2316,7 @@ class BrowserToolbarMiddlewareTest {
         assertEquals(1, toolbarPageActions.size)
         val siteInfo = toolbarPageActions[0] as AnimatedPillActionRes
         assertEquals(iconsR.drawable.mozac_ic_globe_24, siteInfo.iconResId)
+        assertEquals(SITE_INFO_UNKNOWN, siteInfo.testTag)
     }
 
     @Test
@@ -2327,6 +2343,7 @@ class BrowserToolbarMiddlewareTest {
         assertEquals(1, toolbarPageActions.size)
         val siteInfo = toolbarPageActions[0] as AnimatedPillActionRes
         assertEquals(iconsR.drawable.mozac_ic_shield_slash_24, siteInfo.iconResId)
+        assertEquals(SITE_INFO_UNSECURE, siteInfo.testTag)
     }
 
     @Test
@@ -2351,7 +2368,8 @@ class BrowserToolbarMiddlewareTest {
 
         val toolbarPageActions = toolbarStore.state.displayState.pageActionsStart
         assertEquals(1, toolbarPageActions.size)
-        assertIs<ActionButtonRes>(toolbarPageActions[0])
+        val siteInfo = assertIs<ActionButtonRes>(toolbarPageActions[0])
+        assertEquals(SITE_INFO_LOCAL_FILE, siteInfo.testTag)
     }
 
     @Test
@@ -2524,6 +2542,7 @@ class BrowserToolbarMiddlewareTest {
                 drawableResId = iconsR.drawable.mozac_ic_shield_slash_24,
                 contentDescription = toolbarR.string.mozac_browser_toolbar_content_description_site_info,
                 onClick = StartPageActions.SiteInfoClicked,
+                testTag = SITE_INFO_UNSECURE,
             )
 
             var toolbarPageActions = toolbarStore.state.displayState.pageActionsStart
