@@ -203,13 +203,18 @@ EnterprisePoliciesManager.prototype = {
         continue;
       }
 
-      let { valid: parametersAreValid, parsedValue: parsedParameters } =
-        lazy.PolicySchemaValidator.validate(policyParameters, policySchema, {
-          allowAdditionalProperties: true,
-        });
+      let {
+        valid: parametersAreValid,
+        parsedValue: parsedParameters,
+        error: validationError,
+      } = lazy.PolicySchemaValidator.validate(policyParameters, policySchema, {
+        allowAdditionalProperties: true,
+      });
 
       if (!parametersAreValid) {
-        lazy.log.error(`Invalid parameters specified for ${policyName}.`);
+        lazy.log.error(
+          `Invalid parameters specified for ${policyName}: ${validationError.message}`
+        );
         continue;
       }
 
