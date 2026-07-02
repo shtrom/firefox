@@ -93,7 +93,9 @@ fun ProtectionsDashboardContent(
 
             BottomSheetHandle(
                 onRequestDismiss = onDismiss,
-                contentDescription = "",
+                contentDescription = stringResource(
+                    R.string.tracker_protections_dashboard_close_handlebar_content_description,
+                ),
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .minimumInteractiveComponentSize()
