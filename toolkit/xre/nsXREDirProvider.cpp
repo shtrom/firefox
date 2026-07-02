@@ -1337,7 +1337,12 @@ nsresult nsXREDirProvider::AppendFromAppData(nsIFile* aFile, bool aIsDotted) {
   // future?
   if (gAppData->profile) {
     nsAutoCString profile;
-    profile = gAppData->profile;
+#  if defined(MOZ_THUNDERBIRD)
+    if (gAppData->profile[0] != '.') {
+      profile.Assign('.');
+    }
+#  endif
+    profile.Append(gAppData->profile);
     MOZ_TRY(aFile->AppendRelativeNativePath(profile));
   } else {
     nsAutoCString vendor;
@@ -1358,7 +1363,8 @@ nsresult nsXREDirProvider::AppendFromAppData(nsIFile* aFile, bool aIsDotted) {
 /*
  * Check if legacy directory exists, which can be:
  *  (1) $HOME/.<gAppData->vendor>/<gAppData->appName>
- *  (2) $HOME/<gAppData->profile>
+ *  (2) $HOME/<gAppData->profile> on Firefox or
+ *      $HOME/.<gAppData->profile> on Thunderbird
  *  (3) $HOME/<MOZ_USER_DIR>
  *
  * The MOZ_USER_DIR will also be defined in case (1), so first check the deeper
@@ -1516,7 +1522,20 @@ nsresult nsXREDirProvider::GetLegacyOrXDGHomePath(const char* aHomeDir,
 
     // If the build was made against a specific profile name, MOZ_APP_PROFILE=
     // then make sure we respect this and dont move to XDG directory
-    if (gAppData->profile) {
+    //
+    // Only do this on Firefox.
+    //
+    // For Thunderbird, it always defines MOZ_APP_PROFILE=thunderbird. Hence,
+    // check if the gAppData->profile value is set to something else, indicating
+    // of a specific build where legacy needs to be forced, similar to the
+    // Firefox handling. Both casing are verified to account for systems where
+    // that matters.
+    if (gAppData->profile
+#  if defined(MOZ_THUNDERBIRD)
+        && strcmp(gAppData->profile, "thunderbird") != 0 &&
+        strcmp(gAppData->profile, "Thunderbird") != 0
+#  endif
+    ) {
       MOZ_TRY(NS_NewNativeLocalFile(nsDependentCString(aHomeDir),
                                     getter_AddRefs(localDir)));
     } else {
