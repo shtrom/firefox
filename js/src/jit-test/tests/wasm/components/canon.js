@@ -605,6 +605,11 @@ wasmFailValidateText(`
 )
 `, /invalid function index/);
 
+// A wrong declared import signature must be rejected.
+wasmFailValidateText(componentWithLower(
+  [`(type (func (param "a" u32) (result u32)))`], 0, ["i32", "i32"], ["i32"]),
+  /incompatible function type for import/);
+
 // ----------------------------------------------------------------------------
 // Spill-to-memory when flattening
 //
