@@ -2516,7 +2516,7 @@ void gfxFont::Draw(const gfxTextRun* aTextRun, uint32_t aStart, uint32_t aEnd,
     // If no pattern is specified for fill, use the current pattern
     NS_ASSERTION((int(aRunParams.drawMode) & int(DrawMode::GLYPH_STROKE)) == 0,
                  "no pattern supplied for stroking text");
-    contextPaint = MakeRefPtr<SVGContextPaintImpl>(aRunParams.context);
+    contextPaint = MakeRefPtr<SVGContextPaint>(aRunParams.context);
     fontParams.contextPaint = contextPaint;
   }
 

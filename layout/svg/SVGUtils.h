@@ -42,7 +42,6 @@ namespace mozilla {
 class SVGAnimatedEnumeration;
 class SVGAnimatedLength;
 class SVGContextPaint;
-struct SVGContextPaintImpl;
 class SVGDisplayContainerFrame;
 class SVGGeometryFrame;
 class SVGOuterSVGFrame;

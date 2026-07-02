@@ -101,7 +101,7 @@ static void SetupInheritablePaint(const DrawTarget* aDrawTarget,
                                   const gfxMatrix& aContextMatrix,
                                   nsIFrame* aFrame, float& aOpacity,
                                   SVGContextPaint* aOuterContextPaint,
-                                  SVGContextPaintImpl::Paint& aTargetPaint,
+                                  SVGContextPaint::Paint& aTargetPaint,
                                   StyleSVGPaint nsStyleSVG::* aFillOrStroke,
                                   nscolor aDefaultFallbackColor,
                                   imgDrawingParams& aImgParams) {
@@ -124,15 +124,15 @@ static void SetupInheritablePaint(const DrawTarget* aDrawTarget,
 
   if (aOuterContextPaint) {
     RefPtr<gfxPattern> pattern;
-    auto tag = SVGContextPaintImpl::Paint::Tag::None;
+    auto tag = SVGContextPaint::Paint::Tag::None;
     switch ((style->*aFillOrStroke).kind.tag) {
       case StyleSVGPaintKind::Tag::ContextFill:
-        tag = SVGContextPaintImpl::Paint::Tag::ContextFill;
+        tag = SVGContextPaint::Paint::Tag::ContextFill;
         pattern = aOuterContextPaint->GetPattern(
             Tag::Fill, aDrawTarget, aOpacity, aContextMatrix, aImgParams);
         break;
       case StyleSVGPaintKind::Tag::ContextStroke:
-        tag = SVGContextPaintImpl::Paint::Tag::ContextStroke;
+        tag = SVGContextPaint::Paint::Tag::ContextStroke;
         pattern = aOuterContextPaint->GetPattern(
             Tag::Stroke, aDrawTarget, aOpacity, aContextMatrix, aImgParams);
         break;
@@ -149,11 +149,11 @@ static void SetupInheritablePaint(const DrawTarget* aDrawTarget,
   aTargetPaint.SetColor(color);
 }
 
-SVGContextPaintImpl::SVGContextPaintImpl(const DrawTarget* aDrawTarget,
-                                         const gfxMatrix& aContextMatrix,
-                                         nsIFrame* aFrame,
-                                         SVGContextPaint* aOuterContextPaint,
-                                         imgDrawingParams& aImgParams) {
+SVGContextPaint::SVGContextPaint(const DrawTarget* aDrawTarget,
+                                 const gfxMatrix& aContextMatrix,
+                                 nsIFrame* aFrame,
+                                 SVGContextPaint* aOuterContextPaint,
+                                 imgDrawingParams& aImgParams) {
   const nsStyleSVG* style = aFrame->StyleSVG();
 
   // fill:
@@ -190,7 +190,7 @@ SVGContextPaintImpl::SVGContextPaintImpl(const DrawTarget* aDrawTarget,
   }
 }
 
-SVGContextPaintImpl::SVGContextPaintImpl(gfxContext* aContext) {
+SVGContextPaint::SVGContextPaint(gfxContext* aContext) {
   std::fill(mOpacity.begin(), mOpacity.end(), 1.0f);
   if (RefPtr<gfxPattern> fillPattern = aContext->GetPattern()) {
     mPaint[Tag::Fill].SetPattern(fillPattern, aContext->CurrentMatrixDouble());
@@ -228,11 +228,11 @@ SVGContextPaint* SVGContextPaint::GetContextPaint(nsIContent* aContent) {
   return const_cast<SVGContextPaint*>(contextPaint);
 }
 
-bool SVGContextPaintImpl::IsSolidColor(Tag aTag) const {
+bool SVGContextPaint::IsSolidColor(Tag aTag) const {
   return mPaint[aTag].IsSolidColor();
 }
 
-DeviceColor SVGContextPaintImpl::AsSolidColor(Tag aTag) const {
+DeviceColor SVGContextPaint::AsSolidColor(Tag aTag) const {
   MOZ_ASSERT(IsSolidColor(aTag), "Must be solid color");
 
   imgDrawingParams dummy;
@@ -244,7 +244,7 @@ DeviceColor SVGContextPaintImpl::AsSolidColor(Tag aTag) const {
   return color;
 }
 
-already_AddRefed<gfxPattern> SVGContextPaintImpl::GetPattern(
+already_AddRefed<gfxPattern> SVGContextPaint::GetPattern(
     Tag aTag, const DrawTarget* aDrawTarget, float aOpacity,
     const gfxMatrix& aCTM, imgDrawingParams& aImgParams) const {
   return mPaint[aTag].GetPattern(
@@ -253,7 +253,7 @@ already_AddRefed<gfxPattern> SVGContextPaintImpl::GetPattern(
       aImgParams);
 }
 
-already_AddRefed<gfxPattern> SVGContextPaintImpl::Paint::GetPattern(
+already_AddRefed<gfxPattern> SVGContextPaint::Paint::GetPattern(
     const DrawTarget* aDrawTarget, float aOpacity,
     StyleSVGPaint nsStyleSVG::* aFillOrStroke, const gfxMatrix& aCTM,
     imgDrawingParams& aImgParams) const {
@@ -322,47 +322,11 @@ already_AddRefed<gfxPattern> SVGContextPaintImpl::Paint::GetPattern(
   return pattern.forget();
 }
 
-AutoSetRestoreSVGContextPaint::AutoSetRestoreSVGContextPaint(
-    const SVGContextPaint* aContextPaint, dom::Document* aDocument)
-    : mDocument(aDocument),
-      mOuterContextPaint(aDocument->GetCurrentContextPaint()) {
-  mDocument->SetCurrentContextPaint(aContextPaint);
-}
-
-AutoSetRestoreSVGContextPaint::~AutoSetRestoreSVGContextPaint() {
-  mDocument->SetCurrentContextPaint(mOuterContextPaint);
-}
-
-// SVGEmbeddingContextPaint
-
-bool SVGEmbeddingContextPaint::IsSolidColor(Tag aTag) const {
-  return mColor[aTag].isSome();
-}
-
-DeviceColor SVGEmbeddingContextPaint::AsSolidColor(Tag aTag) const {
-  MOZ_ASSERT(IsSolidColor(aTag), "Must be solid color");
-  return mColor[aTag].value();
-}
-
-already_AddRefed<gfxPattern> SVGEmbeddingContextPaint::GetPattern(
-    Tag aTag, const DrawTarget* aDrawTarget, float aFillOpacity,
-    const gfxMatrix& aCTM, imgDrawingParams& aImgParams) const {
-  if (!mColor[aTag]) {
-    return nullptr;
-  }
-  // The gfxPattern that we create below depends on aFillOpacity, and since
-  // different elements in the SVG image may pass in different values for
-  // fill opacities we don't try to cache the gfxPattern that we create.
-  DeviceColor color = *mColor[aTag];
-  color.a *= aFillOpacity;
-  return MakeAndAddRef<gfxPattern>(color);
-}
-
-uint32_t SVGEmbeddingContextPaint::Hash() const {
+uint32_t SVGContextPaint::Hash() const {
   uint32_t hash = 0;
 
-  if (mColor[Tag::Fill]) {
-    hash = HashGeneric(hash, mColor[Tag::Fill]->ToABGR());
+  if (IsSolidColor(Tag::Fill)) {
+    hash = HashGeneric(hash, AsSolidColor(Tag::Fill).ToABGR());
   } else {
     // Arbitrary number, just to avoid trivial hash collisions between pairs of
     // instances where one embedding context has fill set to the same value as
@@ -370,8 +334,8 @@ uint32_t SVGEmbeddingContextPaint::Hash() const {
     hash = 1;
   }
 
-  if (mColor[Tag::Stroke]) {
-    hash = HashGeneric(hash, mColor[Tag::Stroke]->ToABGR());
+  if (IsSolidColor(Tag::Stroke)) {
+    hash = HashGeneric(hash, AsSolidColor(Tag::Stroke).ToABGR());
   }
 
   if (mOpacity[Tag::Fill] != 1.0f) {
@@ -383,6 +347,17 @@ uint32_t SVGEmbeddingContextPaint::Hash() const {
   }
 
   return hash;
+}
+
+AutoSetRestoreSVGContextPaint::AutoSetRestoreSVGContextPaint(
+    const SVGContextPaint* aContextPaint, dom::Document* aDocument)
+    : mDocument(aDocument),
+      mOuterContextPaint(aDocument->GetCurrentContextPaint()) {
+  mDocument->SetCurrentContextPaint(aContextPaint);
+}
+
+AutoSetRestoreSVGContextPaint::~AutoSetRestoreSVGContextPaint() {
+  mDocument->SetCurrentContextPaint(mOuterContextPaint);
 }
 
 }  // namespace mozilla

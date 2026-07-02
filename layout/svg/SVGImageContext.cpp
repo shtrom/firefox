@@ -79,8 +79,8 @@ void SVGImageContext::MaybeStoreContextPaint(SVGImageContext& aContext,
     strokeOpacity = Some(style->mStrokeOpacity.AsOpacity());
   }
   if (fill || stroke || fillOpacity || strokeOpacity) {
-    aContext.mContextPaint = MakeRefPtr<SVGEmbeddingContextPaint>(
-        fill, fillOpacity, stroke, strokeOpacity);
+    aContext.mContextPaint =
+        MakeRefPtr<SVGContextPaint>(fill, fillOpacity, stroke, strokeOpacity);
   }
 }
 
@@ -118,8 +118,8 @@ void SVGImageContext::MaybeStoreContextPaint(SVGImageContext& aContext,
     fillOpacity = Some(opacity);
   }
   if (stroke || fill || strokeOpacity || fillOpacity) {
-    aContext.mContextPaint = MakeRefPtr<SVGEmbeddingContextPaint>(
-        fill, fillOpacity, stroke, strokeOpacity);
+    aContext.mContextPaint =
+        MakeRefPtr<SVGContextPaint>(fill, fillOpacity, stroke, strokeOpacity);
   }
 }
 
