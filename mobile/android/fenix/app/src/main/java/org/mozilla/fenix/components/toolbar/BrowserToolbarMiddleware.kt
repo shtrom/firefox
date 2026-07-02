@@ -104,6 +104,7 @@ import org.mozilla.fenix.components.appstate.AppAction.SearchAction.SearchEnded
 import org.mozilla.fenix.components.appstate.AppAction.SearchAction.SearchStarted
 import org.mozilla.fenix.components.appstate.AppAction.SnackbarAction.SnackbarDismissed
 import org.mozilla.fenix.components.appstate.AppAction.URLCopiedToClipboard
+import org.mozilla.fenix.components.appstate.SupportedMenuNotifications.NotDefaultBrowser
 import org.mozilla.fenix.components.appstate.snackbar.SnackbarState
 import org.mozilla.fenix.components.menu.MenuAccessPoint
 import org.mozilla.fenix.components.metrics.MetricsUtils
@@ -1224,7 +1225,8 @@ class BrowserToolbarMiddleware(
         ToolbarAction.Menu -> ActionButtonRes(
             drawableResId = iconsR.drawable.mozac_ic_ellipsis_vertical_24,
             contentDescription = R.string.content_description_menu,
-            highlighted = appStore.state.supportedMenuNotifications.isNotEmpty(),
+            highlighted = appStore.state.supportedMenuNotifications
+                .filterNot { it == NotDefaultBrowser }.isNotEmpty(),
             onClick = MenuClicked(source),
         )
 
