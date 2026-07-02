@@ -250,6 +250,8 @@ class FuncType {
   WASM_DECLARE_FRIEND_SERIALIZE(FuncType);
 };
 
+extern UniqueChars ToString(const FuncType& type, const TypeContext* types);
+
 //=========================================================================
 // Structure types
 

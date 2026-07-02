@@ -77,11 +77,11 @@ struct ImportValues;
                         HandleObject importObj,
                         MutableHandle<WasmInstanceObject*> instanceObj);
 
+struct ImportValues;
+
 // Extracts the various imports from the given import object into the given
 // ImportValues structure while checking the imports against the given module.
 // The resulting structure can be passed to WasmModule::instantiate.
-
-struct ImportValues;
 [[nodiscard]] bool GetImports(JSContext* cx, const Module& module,
                               HandleObject importObj, ImportValues* imports);
 
