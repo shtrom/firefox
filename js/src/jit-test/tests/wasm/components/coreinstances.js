@@ -113,9 +113,11 @@ if (false) {
   `, /does not satisfy/);
 }
 
-// Inline exports.
-// TODO(wasm-cm): Inline exports not yet implemented.
-wasmFailValidateText(`
+// ----------------------------------------------------------------------------
+// Inline exports
+
+// Basic behavior.
+wasmValidateText(`
 (component
   (core module
     (func (export "f"))
@@ -124,4 +126,19 @@ wasmFailValidateText(`
   (alias core export 0 "f" (core func))
   (core instance (export "f" (func 0)))
 )
-`, /inline exports are not yet supported/);
+`);
+
+// Duplicate names are rejected.
+wasmFailValidateText(`
+(component
+  (core module
+    (func (export "f"))
+  )
+    (core instance (instantiate 0))
+    (alias core export 0 "f" (core func))
+    (core instance
+      (export "f" (func 0))
+      (export "f" (func 0))
+    )
+)
+`, /duplicate name of inline export/);

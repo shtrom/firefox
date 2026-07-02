@@ -574,13 +574,10 @@ struct ComponentItemHasher {
   static bool match(const ComponentItem& k, const Lookup& l) { return k == l; }
 };
 
-struct CoreInstanceInstantiateArg {
-  CacheableName name;
-  uint32_t instanceIndex;
-};
-
-using CoreInstanceInstantiateArgVector =
-    mozilla::Vector<CoreInstanceInstantiateArg, 0, SystemAllocPolicy>;
+using CoreInstanceInstantiateArgs =
+    mozilla::HashMap<CacheableName,  // import module name
+                     uint32_t,       // instance index
+                     CacheableNameHasher, SystemAllocPolicy>;
 
 // Instructions for instantiating a core instance from a core module,
 // corresponding to this text production:
@@ -593,29 +590,82 @@ struct CoreInstanceDescFromModule {
 
   // The instance's "with" declarations. In the binary format there is no inline
   // export form, only a form that uses the exports of another core instance.
-  CoreInstanceInstantiateArgVector args;
+  CoreInstanceInstantiateArgs args;
 };
 
-// Instructions for instantiating a core instance by re-exporting core items
-// already present in the component's index spaces. Corresponds to this text:
-//
-//     (core instance (export ...)*)
-//
-// This form of core instantiation semantically creates a new anonymous module
-// which imports the given definitions and re-exports them. Alternatively, you
-// can consider it a mere renaming of the items exported by other modules, but
-// creating an anonymous module simplifies our implementation. Note that the
-// module does not live in the component's core module index space.
-//
-// TODO(wasm-cm): Fill this out and figure out how to satisfy the module's
-// imports.
-struct CoreInstanceDescFromInlineExports {
-  SharedModule mod;
+class ComponentInlineExports {
+  using ExportMap = mozilla::HashMap<CacheableName, ComponentItem,
+                                     CacheableNameHasher, SystemAllocPolicy>;
+  using OriginalIndexMap =
+      mozilla::HashMap<ComponentItem, uint32_t, ComponentItemHasher,
+                       SystemAllocPolicy>;
+
+  // Maps from export names to ComponentItems whose indices refer to this
+  // instance.
+  ExportMap exports_;
+
+  // Maps from ComponentItems in this instance (produced by exports_) to the
+  // original indices of the items being re-exported.
+  OriginalIndexMap originalIndices_;
+
+ public:
+  struct Builder {
+    uint32_t numFuncs = 0;
+    uint32_t numTypes = 0;
+    uint32_t numComponents = 0;
+    uint32_t numInstances = 0;
+    uint32_t numCoreFunctions = 0;
+    uint32_t numCoreTables = 0;
+    uint32_t numCoreMemories = 0;
+    uint32_t numCoreGlobals = 0;
+    uint32_t numCoreTags = 0;
+    uint32_t numCoreTypes = 0;
+    uint32_t numCoreModules = 0;
+    uint32_t numCoreInstances = 0;
+
+    uint32_t trackItemOfSort(ComponentSort sort);
+  };
+
+  bool addExport(Builder* builder, CacheableName&& name, ComponentSort sort,
+                 uint32_t index);
+  mozilla::Maybe<ComponentItem> getExport(const CacheableName& name) const;
+
+  // Given an export that originated from this instance, resolves the original
+  // item being re-exported.
+  ComponentItem resolveOriginalItem(ComponentItem exp) const;
 };
 
 // Instructions for instantiating a core instance.
-using CoreInstanceDesc = mozilla::Variant<CoreInstanceDescFromModule,
-                                          CoreInstanceDescFromInlineExports>;
+class CoreInstanceDesc {
+  using CoreInstanceVariant =
+      mozilla::Variant<CoreInstanceDescFromModule, ComponentInlineExports>;
+
+  CoreInstanceVariant desc_;
+
+  // The owning component for this instance.
+  const Component* component_;
+
+ public:
+  explicit CoreInstanceDesc(const Component* c,
+                            CoreInstanceDescFromModule&& fromModule)
+      : desc_(std::move(fromModule)), component_(c) {}
+  explicit CoreInstanceDesc(const Component* c,
+                            ComponentInlineExports&& inlineExports)
+      : desc_(std::move(inlineExports)), component_(c) {}
+
+  const CoreInstanceVariant& desc() const { return desc_; }
+
+  // Gets an export from a core instance by name. The returned ComponentItem is
+  // always of kind ItemKind::Raw, simply identifying the DefinitionKind ("core
+  // sort") and index within the module.
+  mozilla::Maybe<ComponentItem> getExport(const CacheableName& name) const;
+
+  const TypeDef& getCoreFuncType(uint32_t coreFuncIndex) const;
+  const TableDesc& getTable(uint32_t tableIndex) const;
+  const MemoryDesc& getMemory(uint32_t memoryIndex) const;
+  const GlobalDesc& getGlobal(uint32_t globalIndex) const;
+  const TagDesc& getTag(uint32_t tagIndex) const;
+};
 
 // Describes an import or export from a wasm component.
 class ComponentExternDesc {
@@ -776,29 +826,35 @@ class Component : public JS::WasmComponent {
   // TODO(wasm-cm): Functions for component instances
 
   const ItemVector& coreFuncs() const { return coreFuncs_; }
-  [[nodiscard]] bool addCoreFunc(ComponentItem&& funcItem) {
-    return coreFuncs_.append(std::move(funcItem));
+  [[nodiscard]] bool addAliasOfExportedCoreFunc(ComponentItem funcItem) {
+    MOZ_RELEASE_ASSERT(funcItem.kind() == ComponentItem::ItemKind::Alias);
+    MOZ_RELEASE_ASSERT(funcItem.sort() == ComponentSort::CoreFunction);
+    return coreFuncs_.append(funcItem);
   }
 
   const ItemVector& coreTables() const { return coreTables_; }
+  const TableDesc& getCoreTable(uint32_t tableIndex) const;
   [[nodiscard]] bool addCoreTable(ComponentItem tableItem) {
     MOZ_RELEASE_ASSERT(tableItem.sort() == ComponentSort::CoreTable);
     return coreTables_.append(tableItem);
   }
 
   const ItemVector& coreMemories() const { return coreMemories_; }
+  const MemoryDesc& getCoreMemory(uint32_t memoryIndex) const;
   [[nodiscard]] bool addCoreMemory(ComponentItem memoryItem) {
     MOZ_RELEASE_ASSERT(memoryItem.sort() == ComponentSort::CoreMemory);
     return coreMemories_.append(memoryItem);
   }
 
   const ItemVector& coreGlobals() const { return coreGlobals_; }
+  const GlobalDesc& getCoreGlobal(uint32_t globalIndex) const;
   [[nodiscard]] bool addCoreGlobal(ComponentItem globalItem) {
     MOZ_RELEASE_ASSERT(globalItem.sort() == ComponentSort::CoreGlobal);
     return coreGlobals_.append(globalItem);
   }
 
   const ItemVector& coreTags() const { return coreTags_; }
+  const TagDesc& getCoreTag(uint32_t tagIndex) const;
   bool addCoreTag(ComponentItem tagItem) {
     MOZ_RELEASE_ASSERT(tagItem.sort() == ComponentSort::CoreTag);
     return coreTags_.append(tagItem);
@@ -812,7 +868,7 @@ class Component : public JS::WasmComponent {
   }
 
   const ItemVector& coreInstances() const { return coreInstances_; }
-  SharedModule getCoreModuleForCoreInstance(uint32_t instanceIndex) const;
+  const CoreInstanceDesc& getCoreInstance(uint32_t instanceIndex) const;
   [[nodiscard]] bool addCoreInstance(CoreInstanceDesc&& instance) {
     return addDefinedItem(ComponentSort::CoreInstance, std::move(instance),
                           definedCoreInstances_, coreInstances_);

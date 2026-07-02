@@ -5468,6 +5468,45 @@ enum class ComponentCoreSortRaw : uint8_t {
   Instance = 0x12,
 };
 
+[[nodiscard]] static bool DecodeComponentCoreSort(Decoder& d,
+                                                  ComponentSort* sort) {
+  uint8_t coreSort;
+  if (!d.readFixedU8(&coreSort)) {
+    return d.fail("expected core sort");
+  }
+
+  switch (coreSort) {
+    case uint8_t(ComponentCoreSortRaw::Function): {
+      *sort = ComponentSort::CoreFunction;
+    } break;
+    case uint8_t(ComponentCoreSortRaw::Table): {
+      *sort = ComponentSort::CoreTable;
+    } break;
+    case uint8_t(ComponentCoreSortRaw::Memory): {
+      *sort = ComponentSort::CoreMemory;
+    } break;
+    case uint8_t(ComponentCoreSortRaw::Global): {
+      *sort = ComponentSort::CoreGlobal;
+    } break;
+    case uint8_t(ComponentCoreSortRaw::Tag): {
+      *sort = ComponentSort::CoreTag;
+    } break;
+    case uint8_t(ComponentCoreSortRaw::Type): {
+      *sort = ComponentSort::CoreType;
+    } break;
+    case uint8_t(ComponentCoreSortRaw::Module): {
+      *sort = ComponentSort::CoreModule;
+    } break;
+    case uint8_t(ComponentCoreSortRaw::Instance): {
+      *sort = ComponentSort::CoreInstance;
+    } break;
+    default:
+      return d.failf("unexpected core externtype %d", coreSort);
+  }
+
+  return true;
+}
+
 [[nodiscard]] static bool DecodeComponentSort(Decoder& d, ComponentSort* sort,
                                               bool forExterndesc) {
   uint8_t kind;
@@ -5477,38 +5516,8 @@ enum class ComponentCoreSortRaw : uint8_t {
 
   switch (kind) {
     case uint8_t(ComponentSortRaw::CoreSort): {
-      uint8_t coreSort;
-      if (!d.readFixedU8(&coreSort)) {
-        return d.fail("expected core sort");
-      }
-
-      switch (coreSort) {
-        case uint8_t(ComponentCoreSortRaw::Function): {
-          *sort = ComponentSort::CoreFunction;
-        } break;
-        case uint8_t(ComponentCoreSortRaw::Table): {
-          *sort = ComponentSort::CoreTable;
-        } break;
-        case uint8_t(ComponentCoreSortRaw::Memory): {
-          *sort = ComponentSort::CoreMemory;
-        } break;
-        case uint8_t(ComponentCoreSortRaw::Global): {
-          *sort = ComponentSort::CoreGlobal;
-        } break;
-        case uint8_t(ComponentCoreSortRaw::Tag): {
-          *sort = ComponentSort::CoreTag;
-        } break;
-        case uint8_t(ComponentCoreSortRaw::Type): {
-          *sort = ComponentSort::CoreType;
-        } break;
-        case uint8_t(ComponentCoreSortRaw::Module): {
-          *sort = ComponentSort::CoreModule;
-        } break;
-        case uint8_t(ComponentCoreSortRaw::Instance): {
-          *sort = ComponentSort::CoreInstance;
-        } break;
-        default:
-          return d.failf("unexpected core externtype %d", coreSort);
+      if (!DecodeComponentCoreSort(d, sort)) {
+        return false;
       }
     } break;
     case uint8_t(ComponentSortRaw::Function): {
@@ -5616,6 +5625,77 @@ enum class ComponentTypeBoundKindRaw : uint8_t {
   return true;
 }
 
+// Validates that a `(core:)?sortidx` from the component spec corresponds to a
+// valid item in the component's index space.
+[[nodiscard]] static bool ValidateComponentSortIdx(Decoder& d,
+                                                   const Component& c,
+                                                   ComponentSort sort,
+                                                   uint32_t index) {
+  switch (sort) {
+    case ComponentSort::Func: {
+      if (c.funcs().length() <= index) {
+        return d.failf("invalid function index %d", index);
+      }
+    } break;
+    case ComponentSort::Type: {
+      if (c.types().length() <= index) {
+        return d.failf("invalid type index %d", index);
+      }
+    } break;
+    case ComponentSort::Component:
+      // TODO(wasm-cm): Support nested components
+      return d.fail("nested components are not supported yet");
+    case ComponentSort::Instance:
+      // TODO(wasm-cm): Support nested components
+      return d.fail("nested components are not supported yet");
+
+    case ComponentSort::CoreFunction: {
+      if (c.coreFuncs().length() <= index) {
+        return d.failf("invalid core function index %d", index);
+      }
+    } break;
+    case ComponentSort::CoreTable: {
+      if (c.coreTables().length() <= index) {
+        return d.failf("invalid table index %d", index);
+      }
+    } break;
+    case ComponentSort::CoreMemory: {
+      if (c.coreMemories().length() <= index) {
+        return d.failf("invalid memory index %d", index);
+      }
+    } break;
+    case ComponentSort::CoreGlobal: {
+      if (c.coreGlobals().length() <= index) {
+        return d.failf("invalid global index %d", index);
+      }
+    } break;
+    case ComponentSort::CoreTag: {
+      if (c.coreTags().length() <= index) {
+        return d.failf("invalid tag index %d", index);
+      }
+    } break;
+
+    case ComponentSort::CoreType:
+      // TODO(wasm-cm): Support core type aliases as part of outer aliases.
+      return d.fail("core type aliases are not supported yet");
+    case ComponentSort::CoreModule: {
+      if (c.coreModules().length() <= index) {
+        return d.failf("invalid core module index %d", index);
+      }
+    } break;
+    case ComponentSort::CoreInstance: {
+      if (c.coreInstances().length() <= index) {
+        return d.failf("invalid core instance index %d", index);
+      }
+    } break;
+
+    default:
+      MOZ_CRASH();
+  }
+
+  return true;
+}
+
 enum class CoreInstanceExprKind : uint8_t {
   InstantiateModule = 0x00,
   InlineExports = 0x01,
@@ -5646,18 +5726,17 @@ enum class CoreInstanceExprKind : uint8_t {
                        MaxComponentCoreInstantiateArgs);
       }
 
-      CoreInstanceInstantiateArgVector args;
-      if (!args.reserve(numArgs)) {
-        return false;
-      }
-
+      CoreInstanceInstantiateArgs args;
       for (uint32_t i = 0; i < numArgs; i++) {
         CacheableName importName;
         if (!DecodeName(d, &importName)) {
           return d.fail("expected import name");
         }
-        // TODO(wasm-cm): Validate that the name corresponds to an import on the
-        // module
+
+        auto p = args.lookupForAdd(importName.utf8Bytes());
+        if (p) {
+          return d.fail("duplicate core instantiate arg name");
+        }
 
         uint8_t instanceIndicator;
         if (!d.readFixedU8(&instanceIndicator) ||
@@ -5673,32 +5752,75 @@ enum class CoreInstanceExprKind : uint8_t {
           return d.failf("invalid core instance index %d", instanceIndex);
         }
 
-        // TODO(wasm-cm): Validate that the instance's exports satisfy the
-        // module's imports
-
-        args.infallibleAppend(CoreInstanceInstantiateArg{
-            .name = std::move(importName),
-            .instanceIndex = instanceIndex,
-        });
+        if (!args.add(p, std::move(importName), instanceIndex)) {
+          return false;
+        }
       }
 
-      CoreInstanceDesc desc(CoreInstanceDescFromModule{
-          .moduleIndex = moduleIndex,
-          .args = std::move(args),
-      });
+      CoreInstanceDesc desc(c, CoreInstanceDescFromModule{
+                                   .moduleIndex = moduleIndex,
+                                   .args = std::move(args),
+                               });
       if (!c->addCoreInstance(std::move(desc))) {
         return false;
       }
     } break;
     case uint8_t(CoreInstanceExprKind::InlineExports): {
-      // TODO(wasm-cm): Core instances generated from inline exports are
-      // basically just a way of renaming exports to satisfy another component's
-      // imports. But even so, a reasonable first way to implement this would be
-      // to literally construct a new module with imports and exports, then
-      // instantiate that. (Note that this new module wouldn't take up space in
-      // the core module index space; we would have to track ownership a
-      // different way.)
-      return d.fail("core instances from inline exports are not yet supported");
+      uint32_t numExports;
+      if (!d.readVarU32(&numExports)) {
+        return d.fail("expected number of inline exports");
+      }
+      if (numExports > MaxComponentInlineExports) {
+        return d.failf("too many inline exports (max %d)",
+                       MaxComponentInlineExports);
+      }
+
+      ComponentInlineExports inlineExports;
+      ComponentInlineExports::Builder builder;
+      NameSet exportNames;
+      for (uint32_t i = 0; i < numExports; i++) {
+        CacheableName name;
+        ComponentSort sort;
+        uint32_t index;
+        if (!DecodeName(d, &name)) {
+          return d.fail("expected inline export name");
+        }
+        if (!DecodeComponentCoreSort(d, &sort)) {
+          return false;
+        }
+        if (!d.readVarU32(&index)) {
+          return d.fail("expected inline export item index");
+        }
+
+        // Check for duplicate names
+        auto p = exportNames.lookupForAdd(name.utf8Bytes());
+        if (p) {
+          return d.fail("duplicate name of inline export");
+        }
+        if (!exportNames.add(p, name.utf8Bytes())) {
+          return false;
+        }
+
+        // Component-level sorts like Func and CoreModule are not allowed for
+        // core instances.
+        if (!ComponentSortIsCoreSort(sort)) {
+          return d.failf("invalid sort %d for core inline export",
+                         uint8_t(sort));
+        }
+
+        // Check that index refers to a valid item
+        if (!ValidateComponentSortIdx(d, *c, sort, index)) {
+          return false;
+        }
+
+        if (!inlineExports.addExport(&builder, std::move(name), sort, index)) {
+          return false;
+        }
+      }
+
+      if (!c->addCoreInstance(CoreInstanceDesc(c, std::move(inlineExports)))) {
+        return false;
+      }
     } break;
     default:
       return d.failf("expected type of instance expression but got %d",
@@ -5745,13 +5867,30 @@ enum class AliasKindRaw : uint8_t {
       if (c->coreInstances().length() <= instanceIndex) {
         return d.failf("invalid core instance index %d", instanceIndex);
       }
-      SharedModule mod = c->getCoreModuleForCoreInstance(instanceIndex);
-      mozilla::Maybe<const Export&> exp =
-          mod->moduleMeta().getExport(exportName);
-      if (exp.isNothing()) {
+      const CoreInstanceDesc& instance = c->getCoreInstance(instanceIndex);
+      mozilla::Maybe<ComponentItem> maybeExp = instance.getExport(exportName);
+      if (maybeExp.isNothing()) {
         return d.failf("core instance %d has no export \"%.*s\"", instanceIndex,
                        ComponentName_Printf(exportName));
       }
+      ComponentItem exp = *maybeExp;
+
+      ComponentItem newAlias = instance.desc().match(
+          [&](const CoreInstanceDescFromModule&) {
+            return ComponentItem::alias(ComponentAliasKind::CoreExport, sort,
+                                        instanceIndex, exp.itemIndex());
+          },
+          [&](const ComponentInlineExports& inlineExports) {
+            // If you alias an export of an inline-export instance, then you can
+            // just turn the alias into an outer alias of the original thing and
+            // call it a day. This saves some unnecessary indirection, prevents
+            // terrible chains of aliases, and also ensures that we never have
+            // to build index spaces for inline-export instances.
+            ComponentItem originalItem = inlineExports.resolveOriginalItem(exp);
+            return ComponentItem::alias(ComponentAliasKind::Outer,
+                                        originalItem.sort(), 0,
+                                        originalItem.itemIndex());
+          });
 
       switch (sort) {
         case ComponentSort::CoreFunction: {
@@ -5759,14 +5898,12 @@ enum class AliasKindRaw : uint8_t {
             return d.failf("too many core funcs (max %d)",
                            MaxComponentCoreFuncs);
           }
-          if (exp->kind() != DefinitionKind::Function) {
+          if (exp.sort() != ComponentSort::CoreFunction) {
             return d.failf(
                 "export \"%.*s\" of core instance %d is not a function",
                 ComponentName_Printf(exportName), instanceIndex);
           }
-          if (!c->addCoreFunc(
-                  ComponentItem::alias(ComponentAliasKind::CoreExport, sort,
-                                       instanceIndex, exp->funcIndex()))) {
+          if (!c->addAliasOfExportedCoreFunc(newAlias)) {
             return false;
           }
         } break;
@@ -5775,13 +5912,11 @@ enum class AliasKindRaw : uint8_t {
             return d.failf("too many core tables (max %d)",
                            MaxComponentCoreTables);
           }
-          if (exp->kind() != DefinitionKind::Table) {
+          if (exp.sort() != ComponentSort::CoreTable) {
             return d.failf("export \"%.*s\" of core instance %d is not a table",
                            ComponentName_Printf(exportName), instanceIndex);
           }
-          if (!c->addCoreTable(
-                  ComponentItem::alias(ComponentAliasKind::CoreExport, sort,
-                                       instanceIndex, exp->tableIndex()))) {
+          if (!c->addCoreTable(newAlias)) {
             return false;
           }
         } break;
@@ -5790,14 +5925,12 @@ enum class AliasKindRaw : uint8_t {
             return d.failf("too many core memories (max %d)",
                            MaxComponentCoreMemories);
           }
-          if (exp->kind() != DefinitionKind::Memory) {
+          if (exp.sort() != ComponentSort::CoreMemory) {
             return d.failf(
                 "export \"%.*s\" of core instance %d is not a memory",
                 ComponentName_Printf(exportName), instanceIndex);
           }
-          if (!c->addCoreMemory(
-                  ComponentItem::alias(ComponentAliasKind::CoreExport, sort,
-                                       instanceIndex, exp->memoryIndex()))) {
+          if (!c->addCoreMemory(newAlias)) {
             return false;
           }
         } break;
@@ -5806,14 +5939,12 @@ enum class AliasKindRaw : uint8_t {
             return d.failf("too many core globals (max %d)",
                            MaxComponentCoreGlobals);
           }
-          if (exp->kind() != DefinitionKind::Global) {
+          if (exp.sort() != ComponentSort::CoreGlobal) {
             return d.failf(
                 "export \"%.*s\" of core instance %d is not a global",
                 ComponentName_Printf(exportName), instanceIndex);
           }
-          if (!c->addCoreGlobal(
-                  ComponentItem::alias(ComponentAliasKind::CoreExport, sort,
-                                       instanceIndex, exp->globalIndex()))) {
+          if (!c->addCoreGlobal(newAlias)) {
             return false;
           }
         } break;
@@ -5821,13 +5952,11 @@ enum class AliasKindRaw : uint8_t {
           if (c->coreTags().length() >= MaxComponentCoreTags) {
             return d.failf("too many core tags (max %d)", MaxComponentCoreTags);
           }
-          if (exp->kind() != DefinitionKind::Tag) {
+          if (exp.sort() != ComponentSort::CoreTag) {
             return d.failf("export \"%.*s\" of core instance %d is not a tag",
                            ComponentName_Printf(exportName), instanceIndex);
           }
-          if (!c->addCoreTag(
-                  ComponentItem::alias(ComponentAliasKind::CoreExport, sort,
-                                       instanceIndex, exp->tagIndex()))) {
+          if (!c->addCoreTag(newAlias)) {
             return false;
           }
         } break;
@@ -5836,7 +5965,9 @@ enum class AliasKindRaw : uint8_t {
       }
     } break;
     case uint8_t(AliasKindRaw::Outer): {
-      // TODO(wasm-cm)
+      // TODO(wasm-cm): Support 0-depth outer aliases
+      // TODO(wasm-cm): Support all depths of outer aliases once nested
+      // components are supported
       return d.fail("outer aliases are not yet supported");
     } break;
     default:
@@ -6039,20 +6170,16 @@ enum class ComponentExportFlagsRaw : uint8_t {
   if (!d.readVarU32(&exportIndex)) {
     return d.fail("expected export index");
   }
+  if (!ValidateComponentSortIdx(d, *c, exportSort, exportIndex)) {
+    return false;
+  }
 
-  // Validate that the index is in range
   ComponentExternDesc externDesc;
   switch (exportSort) {
     case ComponentSort::Func: {
-      if (c->funcs().length() <= exportIndex) {
-        return d.failf("invalid function index %d for export", exportIndex);
-      }
       externDesc = ComponentExternDesc::func(c->getTypeForFunc(exportIndex));
     } break;
     case ComponentSort::Type: {
-      if (c->types().length() <= exportIndex) {
-        return d.failf("invalid type index %d for export", exportIndex);
-      }
       externDesc = ComponentExternDesc::type(c->getType(exportIndex));
     } break;
     case ComponentSort::Component: {
@@ -6064,9 +6191,6 @@ enum class ComponentExportFlagsRaw : uint8_t {
       return d.fail("exported component instances are not supported yet");
     } break;
     case ComponentSort::CoreModule: {
-      if (c->coreModules().length() <= exportIndex) {
-        return d.failf("invalid core module index %d for export", exportIndex);
-      }
       externDesc = ComponentExternDesc::coreModule(exportIndex);
     } break;
     default:

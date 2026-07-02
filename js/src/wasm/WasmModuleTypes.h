@@ -120,6 +120,20 @@ struct NameHasher {
   }
 };
 
+// A variant of the same hash policy for tables/sets that own their keys.
+struct CacheableNameHasher {
+  using Key = CacheableName;
+  using Lookup = mozilla::Span<const char>;
+
+  static HashNumber hash(const Lookup& aLookup) {
+    return mozilla::HashString(aLookup.data(), aLookup.Length());
+  }
+
+  static bool match(const Key& aKey, const Lookup& aLookup) {
+    return aKey.utf8Bytes() == aLookup;
+  }
+};
+
 // Import describes a single wasm import. An ImportVector describes all
 // of a single module's imports.
 //

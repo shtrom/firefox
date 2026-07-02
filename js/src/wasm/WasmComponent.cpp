@@ -135,6 +135,179 @@ bool StronglyUniqueNameSet::add(mozilla::Span<const char> name,
   return data_.add(p, std::move(owned));
 }
 
+uint32_t ComponentInlineExports::Builder::trackItemOfSort(ComponentSort sort) {
+  switch (sort) {
+    case ComponentSort::Func:
+      return numFuncs++;
+    case ComponentSort::Type:
+      return numTypes++;
+    case ComponentSort::Component:
+      return numComponents++;
+    case ComponentSort::Instance:
+      return numInstances++;
+    case ComponentSort::CoreFunction:
+      return numCoreFunctions++;
+    case ComponentSort::CoreTable:
+      return numCoreTables++;
+    case ComponentSort::CoreMemory:
+      return numCoreMemories++;
+    case ComponentSort::CoreGlobal:
+      return numCoreGlobals++;
+    case ComponentSort::CoreTag:
+      return numCoreTags++;
+    case ComponentSort::CoreType:
+      return numCoreTypes++;
+    case ComponentSort::CoreModule:
+      return numCoreModules++;
+    case ComponentSort::CoreInstance:
+      return numCoreInstances++;
+    default:
+      MOZ_CRASH();
+  }
+}
+
+bool ComponentInlineExports::addExport(Builder* builder, CacheableName&& name,
+                                       ComponentSort sort, uint32_t index) {
+  uint32_t indexInThisInstance = builder->trackItemOfSort(sort);
+  ComponentItem exportItem = ComponentItem::raw(sort, indexInThisInstance);
+
+  // Add export name -> item-in-this-instance mapping
+  auto p1 = exports_.lookupForAdd(name.utf8Bytes());
+  MOZ_RELEASE_ASSERT(!p1, "duplicates should have been caught in validation");
+  if (!exports_.add(p1, std::move(name), exportItem)) {
+    return false;
+  }
+
+  // Add item-in-this-instance -> original index mapping
+  auto p2 = originalIndices_.lookupForAdd(
+      ComponentItem::raw(sort, indexInThisInstance));
+  MOZ_RELEASE_ASSERT(!p2);
+  if (!originalIndices_.add(p2, exportItem, index)) {
+    return false;
+  }
+
+  return true;
+}
+
+mozilla::Maybe<ComponentItem> ComponentInlineExports::getExport(
+    const CacheableName& name) const {
+  auto p = exports_.lookup(name.utf8Bytes());
+  if (!p) {
+    return mozilla::Nothing();
+  }
+  return mozilla::Some(p->value());
+}
+
+ComponentItem ComponentInlineExports::resolveOriginalItem(
+    ComponentItem exp) const {
+  auto p = originalIndices_.lookup(exp);
+  MOZ_RELEASE_ASSERT(p.found());
+  ComponentItem orig = ComponentItem::raw(exp.sort(), p->value());
+  MOZ_ASSERT(orig.sort() == exp.sort());
+  return orig;
+}
+
+mozilla::Maybe<ComponentItem> CoreInstanceDesc::getExport(
+    const CacheableName& name) const {
+  return desc_.match(
+      [&](const CoreInstanceDescFromModule& fromModule)
+          -> mozilla::Maybe<ComponentItem> {
+        SharedModule mod = component_->getCoreModule(fromModule.moduleIndex);
+        mozilla::Maybe<const Export&> exp = mod->moduleMeta().getExport(name);
+        if (exp.isNothing()) {
+          return mozilla::Nothing();
+        }
+        switch (exp->kind()) {
+          case DefinitionKind::Function:
+            return mozilla::Some(ComponentItem::raw(ComponentSort::CoreFunction,
+                                                    exp->funcIndex()));
+          case DefinitionKind::Table:
+            return mozilla::Some(ComponentItem::raw(ComponentSort::CoreTable,
+                                                    exp->tableIndex()));
+          case DefinitionKind::Memory:
+            return mozilla::Some(ComponentItem::raw(ComponentSort::CoreMemory,
+                                                    exp->memoryIndex()));
+          case DefinitionKind::Global:
+            return mozilla::Some(ComponentItem::raw(ComponentSort::CoreGlobal,
+                                                    exp->globalIndex()));
+          case DefinitionKind::Tag:
+            return mozilla::Some(
+                ComponentItem::raw(ComponentSort::CoreTag, exp->tagIndex()));
+          default:
+            MOZ_CRASH();
+        }
+      },
+      [&](const ComponentInlineExports& inlineExports)
+          -> mozilla::Maybe<ComponentItem> {
+        return inlineExports.getExport(name);
+      });
+}
+
+const TypeDef& CoreInstanceDesc::getCoreFuncType(uint32_t coreFuncIndex) const {
+  return desc_.match(
+      [&](const CoreInstanceDescFromModule& fromModule) -> const TypeDef& {
+        SharedModule mod = component_->getCoreModule(fromModule.moduleIndex);
+        return mod->codeMeta().getFuncTypeDef(coreFuncIndex);
+      },
+      [&](const ComponentInlineExports& inlineExports) -> const TypeDef& {
+        ComponentItem originalFunc = inlineExports.resolveOriginalItem(
+            ComponentItem::raw(ComponentSort::CoreFunction, coreFuncIndex));
+        return component_->getTypeForCoreFunc(originalFunc.itemIndex());
+      });
+}
+
+const TableDesc& CoreInstanceDesc::getTable(uint32_t tableIndex) const {
+  return desc_.match(
+      [&](const CoreInstanceDescFromModule& fromModule) -> const TableDesc& {
+        SharedModule mod = component_->getCoreModule(fromModule.moduleIndex);
+        return mod->codeMeta().tables[tableIndex];
+      },
+      [&](const ComponentInlineExports& inlineExports) -> const TableDesc& {
+        ComponentItem originalTable = inlineExports.resolveOriginalItem(
+            ComponentItem::raw(ComponentSort::CoreTable, tableIndex));
+        return component_->getCoreTable(originalTable.itemIndex());
+      });
+}
+
+const MemoryDesc& CoreInstanceDesc::getMemory(uint32_t memoryIndex) const {
+  return desc_.match(
+      [&](const CoreInstanceDescFromModule& fromModule) -> const MemoryDesc& {
+        SharedModule mod = component_->getCoreModule(fromModule.moduleIndex);
+        return mod->codeMeta().memories[memoryIndex];
+      },
+      [&](const ComponentInlineExports& inlineExports) -> const MemoryDesc& {
+        ComponentItem originalMemory = inlineExports.resolveOriginalItem(
+            ComponentItem::raw(ComponentSort::CoreMemory, memoryIndex));
+        return component_->getCoreMemory(originalMemory.itemIndex());
+      });
+}
+
+const GlobalDesc& CoreInstanceDesc::getGlobal(uint32_t globalIndex) const {
+  return desc_.match(
+      [&](const CoreInstanceDescFromModule& fromModule) -> const GlobalDesc& {
+        SharedModule mod = component_->getCoreModule(fromModule.moduleIndex);
+        return mod->codeMeta().globals[globalIndex];
+      },
+      [&](const ComponentInlineExports& inlineExports) -> const GlobalDesc& {
+        ComponentItem originalGlobal = inlineExports.resolveOriginalItem(
+            ComponentItem::raw(ComponentSort::CoreGlobal, globalIndex));
+        return component_->getCoreGlobal(originalGlobal.itemIndex());
+      });
+}
+
+const TagDesc& CoreInstanceDesc::getTag(uint32_t tagIndex) const {
+  return desc_.match(
+      [&](const CoreInstanceDescFromModule& fromModule) -> const TagDesc& {
+        SharedModule mod = component_->getCoreModule(fromModule.moduleIndex);
+        return mod->codeMeta().tags[tagIndex];
+      },
+      [&](const ComponentInlineExports& inlineExports) -> const TagDesc& {
+        ComponentItem originalTag = inlineExports.resolveOriginalItem(
+            ComponentItem::raw(ComponentSort::CoreTag, tagIndex));
+        return component_->getCoreTag(originalTag.itemIndex());
+      });
+}
+
 bool ComponentExternDesc::matches(const ComponentExternDesc& sub,
                                   const ComponentExternDesc& super) {
   MOZ_ASSERT(ComponentSortValidForExternDesc(sub.sort()));
@@ -1011,13 +1184,131 @@ const TypeDef& Component::getTypeForCoreFunc(uint32_t coreFuncIndex) const {
     } break;
     case ComponentItem::ItemKind::Import:
     case ComponentItem::ItemKind::Export:
-      // Core funcs cannot be imported or exported
+      // Core funcs cannot be imported or exported.
       MOZ_CRASH();
     case ComponentItem::ItemKind::Alias: {
-      MOZ_ASSERT(item.aliasKind() == ComponentAliasKind::CoreExport);
-      SharedModule mod =
-          getCoreModuleForCoreInstance(item.aliasInstanceIndex());
-      return mod->codeMeta().getFuncTypeDef(item.itemIndex());
+      if (item.aliasKind() == ComponentAliasKind::Outer) {
+        // TODO(wasm-cm): Right now we should only produce outer aliases with
+        // an index of 0. In the future this will need to be expanded to
+        // handle all outer aliases.
+        //
+        // TODO(wasm-cm): Well, but is it ever valid to outer-alias a core
+        // thing (other than a module) with a depth other than 0? Probably
+        // not.
+        MOZ_RELEASE_ASSERT(item.aliasInstanceIndex() == 0);
+        return getTypeForCoreFunc(item.itemIndex());
+      }
+      MOZ_RELEASE_ASSERT(item.aliasKind() == ComponentAliasKind::CoreExport);
+      return getCoreInstance(item.aliasInstanceIndex())
+          .getCoreFuncType(item.itemIndex());
+    } break;
+    default:
+      MOZ_CRASH();
+  }
+}
+
+const TableDesc& Component::getCoreTable(uint32_t tableIndex) const {
+  ComponentItem item = coreTables_[tableIndex];
+  MOZ_ASSERT(item.sort() == ComponentSort::CoreTable);
+  switch (item.kind()) {
+    case ComponentItem::ItemKind::Defined:
+    case ComponentItem::ItemKind::Import:
+    case ComponentItem::ItemKind::Export:
+      // Tables cannot be defined, imported, or exported.
+      MOZ_CRASH();
+    case ComponentItem::ItemKind::Alias: {
+      if (item.aliasKind() == ComponentAliasKind::Outer) {
+        // TODO(wasm-cm): Right now we should only produce outer aliases with
+        // an index of 0. In the future this will need to be expanded to
+        // handle all outer aliases.
+        MOZ_RELEASE_ASSERT(item.aliasInstanceIndex() == 0);
+        return getCoreTable(item.itemIndex());
+      }
+      MOZ_RELEASE_ASSERT(item.aliasKind() == ComponentAliasKind::CoreExport);
+
+      return getCoreInstance(item.aliasInstanceIndex())
+          .getTable(item.itemIndex());
+    } break;
+    default:
+      MOZ_CRASH();
+  }
+}
+
+const MemoryDesc& Component::getCoreMemory(uint32_t memoryIndex) const {
+  ComponentItem item = coreMemories_[memoryIndex];
+  MOZ_ASSERT(item.sort() == ComponentSort::CoreMemory);
+  switch (item.kind()) {
+    case ComponentItem::ItemKind::Defined:
+    case ComponentItem::ItemKind::Import:
+    case ComponentItem::ItemKind::Export:
+      // Memories cannot be defined, imported, or exported.
+      MOZ_CRASH();
+    case ComponentItem::ItemKind::Alias: {
+      if (item.aliasKind() == ComponentAliasKind::Outer) {
+        // TODO(wasm-cm): Right now we should only produce outer aliases with
+        // an index of 0. In the future this will need to be expanded to
+        // handle all outer aliases.
+        MOZ_RELEASE_ASSERT(item.aliasInstanceIndex() == 0);
+        return getCoreMemory(item.itemIndex());
+      }
+      MOZ_RELEASE_ASSERT(item.aliasKind() == ComponentAliasKind::CoreExport);
+
+      return getCoreInstance(item.aliasInstanceIndex())
+          .getMemory(item.itemIndex());
+    } break;
+    default:
+      MOZ_CRASH();
+  }
+}
+
+const GlobalDesc& Component::getCoreGlobal(uint32_t globalIndex) const {
+  ComponentItem item = coreGlobals_[globalIndex];
+  MOZ_ASSERT(item.sort() == ComponentSort::CoreGlobal);
+  switch (item.kind()) {
+    case ComponentItem::ItemKind::Defined:
+    case ComponentItem::ItemKind::Import:
+    case ComponentItem::ItemKind::Export:
+      // Globals cannot be defined, imported, or exported.
+      MOZ_CRASH();
+    case ComponentItem::ItemKind::Alias: {
+      if (item.aliasKind() == ComponentAliasKind::Outer) {
+        // TODO(wasm-cm): Right now we should only produce outer aliases with
+        // an index of 0. In the future this will need to be expanded to
+        // handle all outer aliases.
+        MOZ_RELEASE_ASSERT(item.aliasInstanceIndex() == 0);
+        return getCoreGlobal(item.itemIndex());
+      }
+      MOZ_RELEASE_ASSERT(item.aliasKind() == ComponentAliasKind::CoreExport);
+
+      return getCoreInstance(item.aliasInstanceIndex())
+          .getGlobal(item.itemIndex());
+    } break;
+    default:
+      MOZ_CRASH();
+  }
+}
+
+const TagDesc& Component::getCoreTag(uint32_t tagIndex) const {
+  ComponentItem item = coreTags_[tagIndex];
+  MOZ_ASSERT(item.sort() == ComponentSort::CoreTag);
+  switch (item.kind()) {
+    case ComponentItem::ItemKind::Defined:
+    case ComponentItem::ItemKind::Import:
+    case ComponentItem::ItemKind::Export:
+      // Tags cannot be defined, imported, or exported.
+      MOZ_CRASH();
+    case ComponentItem::ItemKind::Alias: {
+      if (item.aliasKind() == ComponentAliasKind::Outer) {
+        // TODO(wasm-cm): Right now we should only produce outer aliases with
+        // an index of 0. In the future this will need to be expanded to
+        // handle all outer aliases.
+        MOZ_RELEASE_ASSERT(item.aliasInstanceIndex() == 0);
+        return getCoreTag(item.itemIndex());
+      }
+      MOZ_RELEASE_ASSERT(item.aliasKind() == ComponentAliasKind::CoreExport);
+
+      return getCoreInstance(item.aliasInstanceIndex())
+          .getTag(item.itemIndex());
     } break;
     default:
       MOZ_CRASH();
@@ -1046,27 +1337,19 @@ SharedModule Component::getCoreModule(uint32_t modIndex) const {
   }
 }
 
-SharedModule Component::getCoreModuleForCoreInstance(
+const CoreInstanceDesc& Component::getCoreInstance(
     uint32_t instanceIndex) const {
   ComponentItem item = coreInstances_[instanceIndex];
   MOZ_ASSERT(item.sort() == ComponentSort::CoreInstance);
   switch (item.kind()) {
-    case ComponentItem::ItemKind::Defined: {
-      const CoreInstanceDesc& instance =
-          definedCoreInstances_[item.itemIndex()];
-      if (instance.is<CoreInstanceDescFromModule>()) {
-        return getCoreModule(
-            instance.as<CoreInstanceDescFromModule>().moduleIndex);
-      }
-      return instance.as<CoreInstanceDescFromInlineExports>().mod;
-    } break;
+    case ComponentItem::ItemKind::Defined:
+      return definedCoreInstances_[item.itemIndex()];
     case ComponentItem::ItemKind::Import:
     case ComponentItem::ItemKind::Export:
-      // Core instances cannot be imported or exported
-      MOZ_CRASH();
     case ComponentItem::ItemKind::Alias:
-      // TODO(wasm-cm): Fix once nested components are supported
-      MOZ_CRASH("should be impossible for now");
+      // Core instances cannot be imported or exported, and because of this,
+      // they cannot be aliased either.
+      MOZ_CRASH();
     default:
       MOZ_CRASH();
   }
