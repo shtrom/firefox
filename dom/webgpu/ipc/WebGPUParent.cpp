@@ -1282,6 +1282,17 @@ ipc::IPCResult WebGPUParent::GetFrontBufferSnapshot(
   RawId bufferId = 0;
   const auto bufferSize = data->mBufferSize;
 
+  // The swap chain owns exactly MAX_SWAPCHAIN_BUFFER_COUNT staging-buffer IDs.
+  // Each ID must always be in exactly one of mUnassignedBufferIds,
+  // mAvailableBufferIds, mQueuedBufferIds, or a pending
+  // ReadbackSnapshotCallback. In error cases, be sure to release the buffer ID
+  // back to the available pool.
+  const auto bufferIdGuard = mozilla::MakeScopeExit([&] {
+    if (bufferId) {
+      data->mAvailableBufferIds.push_back(bufferId);
+    }
+  });
+
   // step 1: find an available staging buffer, or create one
   {
     if (!data->mAvailableBufferIds.empty()) {
@@ -1299,6 +1310,9 @@ ipc::IPCResult WebGPUParent::GetFrontBufferSnapshot(
                                             bufferId, nullptr, bufferSize,
                                             usage, false, error.ToFFI());
       if (ForwardError(error)) {
+        ffi::wgpu_server_buffer_drop(mContext.get(), bufferId);
+        data->mUnassignedBufferIds.push_back(bufferId);
+        bufferId = 0;
         return IPC_OK();
       }
     } else {
@@ -1381,6 +1395,8 @@ ipc::IPCResult WebGPUParent::GetFrontBufferSnapshot(
       ffi::WGPUHostMap_Read);
   ReadbackSnapshotCallback(
       reinterpret_cast<uint8_t*>(snapshotRequest.release()), status);
+  // bufferId was transferred to ReadbackSnapshotCallback.
+  bufferId = 0;
 
   // Check if ReadbackSnapshotCallback is called.
   MOZ_RELEASE_ASSERT(data->mReadbackSnapshotCallbackCalled == true);
@@ -1487,6 +1503,8 @@ void WebGPUParent::SwapChainPresent(
                                             bufferId, nullptr, bufferSize,
                                             usage, false, error.ToFFI());
       if (ForwardError(error)) {
+        ffi::wgpu_server_buffer_drop(mContext.get(), bufferId);
+        data->mUnassignedBufferIds.push_back(bufferId);
         return;
       }
     } else {
