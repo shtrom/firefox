@@ -13,6 +13,8 @@ import mozilla.components.feature.summarize.ErrorAction
 import mozilla.components.feature.summarize.LlmProviderAction
 import mozilla.components.feature.summarize.OffDeviceSummarizationShakeConsentAction
 import mozilla.components.feature.summarize.OnDeviceSummarizationShakeConsentAction
+import mozilla.components.feature.summarize.PageLoadCompleted
+import mozilla.components.feature.summarize.PageLoadStarted
 import mozilla.components.feature.summarize.ReceivedParsedDocument
 import mozilla.components.feature.summarize.SettingsBackClicked
 import mozilla.components.feature.summarize.SettingsClicked
@@ -166,6 +168,8 @@ class SummarizationTelemetryMiddleware(
             LlmProviderAction.ProviderAvailable,
             OffDeviceSummarizationShakeConsentAction.LearnMoreClicked,
             OnDeviceSummarizationShakeConsentAction.LearnMoreClicked,
+            PageLoadStarted,
+            PageLoadCompleted,
             SettingsBackClicked,
             SettingsClicked,
             ShakeConsentRequested,

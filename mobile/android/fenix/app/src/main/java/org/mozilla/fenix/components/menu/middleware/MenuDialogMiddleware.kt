@@ -154,18 +154,17 @@ class MenuDialogMiddleware(
     }
 
     private suspend fun setupPageSummarizationState(store: Store<MenuState, MenuAction>) {
-        val isNormalTab = store.state.browserMenuState?.selectedTab?.isNormalTab() ?: false
-        val isLoading = store.state.browserMenuState?.isLoading ?: false
+        val selectedTab = store.state.browserMenuState?.selectedTab
+        val isNormalTab = selectedTab?.isNormalTab() ?: false
+        val isSummarizationEligible = selectedTab.checkSummarizationEligibility()
+        val showMenuItem = summarizeMenuSettings.showMenuItem
 
         val summarizationState = SummarizationMenuState.Default.copy(
-            visible = summarizeMenuSettings.showMenuItem,
+            visible = showMenuItem,
             highlighted = summarizeMenuSettings.shouldHighlightMenuItem && isNormalTab,
             overflowMenuHighlighted = summarizeMenuSettings.shouldHighlightOverflowMenuItem && isNormalTab,
             showNewFeatureBadge = true,
-            enabled = summarizeMenuSettings.showMenuItem &&
-                    isNormalTab &&
-                    !isLoading &&
-                    store.state.browserMenuState?.selectedTab.checkSummarizationEligibility(),
+            enabled = showMenuItem && isNormalTab && isSummarizationEligible,
         )
         store.dispatch(
             MenuAction.InitializeSummarizationMenuState(summarizationState),
