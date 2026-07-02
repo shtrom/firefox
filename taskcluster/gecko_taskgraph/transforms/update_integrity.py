@@ -151,6 +151,7 @@ def add_additional_fetches_and_command(config, jobs):
         # ideally, this attribute would be set on en-US jobs as well...but it's not, so we have to assume
         locale = job["attributes"].get("locale", "en-US")
         build_target = job["attributes"]["build_target"]
+        product = job.pop("product")
 
         cmd = [
             # add dmg tool location to the $PATH. this is not strictly necessary
@@ -174,7 +175,7 @@ def add_additional_fetches_and_command(config, jobs):
             # channel
             job["attributes"]["update-channel"],
             # product name
-            job["attributes"]["shipping_product"],
+            product,
             # artifact dir
             "/builds/worker/artifacts",
         ]
