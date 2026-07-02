@@ -703,6 +703,7 @@ ${
   #onContextMenuRebuilt() {
     if (this.#isSmartbarMode) {
       this.#initSmartbarContextMenuPaste();
+      this._initPasteAndGo();
       return;
     }
     this._initStripOnShare();
@@ -5252,6 +5253,38 @@ ${
     });
   }
 
+  /**
+   * Whether Paste and Go should be enabled.
+   *
+   * @returns {boolean}
+   */
+  #pasteAndGoEnabled() {
+    if (this.#isSmartbarMode) {
+      return Services.clipboard.hasDataMatchingFlavors(
+        ["text/plain"],
+        Ci.nsIClipboard.kGlobalClipboard
+      );
+    }
+    return this.document.commandDispatcher
+      .getControllerForCommand("cmd_paste")
+      .isCommandEnabled("cmd_paste");
+  }
+
+  /**
+   * Pastes the clipboard into the input for Paste and Go.
+   */
+  #pasteForPasteAndGo() {
+    if (!this.#isSmartbarMode) {
+      this.window.goDoCommand("cmd_paste");
+      return;
+    }
+    const clipboardText = this.#readClipboardData()?.getData("text/plain");
+    if (!clipboardText) {
+      return;
+    }
+    this.value = clipboardText;
+  }
+
   _initPasteAndGo() {
     let inputBox = this.querySelector("moz-input-box");
     let contextMenu = inputBox.menupopup;
@@ -5260,7 +5293,7 @@ ${
       return;
     }
 
-    let pasteAndGo = this.document.createXULElement("menuitem");
+    let pasteAndGo = contextMenu.ownerDocument.createXULElement("menuitem");
     pasteAndGo.id = "paste-and-go";
     let label = Services.strings
       .createBundle("chrome://browser/locale/browser.properties")
@@ -5271,7 +5304,7 @@ ${
       this.suppressStartQuery();
 
       this.select();
-      this.window.goDoCommand("cmd_paste");
+      this.#pasteForPasteAndGo();
       this.setResultForCurrentValue(null);
       this.handleCommand();
       this.controller.clearLastQueryContextCache();
@@ -5286,10 +5319,7 @@ ${
       // because paste and go doesn't want a result selection.
       this.view.close();
 
-      let controller =
-        this.document.commandDispatcher.getControllerForCommand("cmd_paste");
-      let enabled = controller.isCommandEnabled("cmd_paste");
-      if (enabled) {
+      if (this.#pasteAndGoEnabled()) {
         pasteAndGo.removeAttribute("disabled");
       } else {
         pasteAndGo.setAttribute("disabled", "true");
