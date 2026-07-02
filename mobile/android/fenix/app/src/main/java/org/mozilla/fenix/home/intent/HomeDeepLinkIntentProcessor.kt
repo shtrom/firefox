@@ -81,6 +81,7 @@ class HomeDeepLinkIntentProcessor(
             "settings_private_browsing" -> GlobalDirections.SettingsPrivateBrowsing
             "settings_app_icon" -> GlobalDirections.SettingsAppIcon
             "settings_ai_controls" -> GlobalDirections.SettingsAIControls
+            "protections_dashboard" -> GlobalDirections.ProtectionsDashboard
 
             else -> return
         }

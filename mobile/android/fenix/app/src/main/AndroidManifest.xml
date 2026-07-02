@@ -543,6 +543,7 @@
                 <data android:host="urls_bookmarks"/>
                 <data android:host="urls_history"/>
                 <data android:host="settings_private_browsing"/>
+                <data android:host="protections_dashboard"/>
             </intent-filter>
         </activity>
 

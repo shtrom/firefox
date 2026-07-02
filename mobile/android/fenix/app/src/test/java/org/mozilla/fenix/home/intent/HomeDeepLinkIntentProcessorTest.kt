@@ -34,6 +34,7 @@ import org.mozilla.fenix.components.accounts.FenixFxAEntryPoint
 import org.mozilla.fenix.components.share.ShareSource
 import org.mozilla.fenix.components.usecases.ShareUseCases
 import org.mozilla.fenix.onboarding.MARKETING_CHANNEL_ID
+import org.mozilla.fenix.trackingprotection.ProtectionsDashboardFragment
 import org.mozilla.fenix.utils.Settings
 import org.robolectric.RobolectricTestRunner
 import android.provider.Settings as AndroidSettings
@@ -377,6 +378,22 @@ class HomeDeepLinkIntentProcessorTest {
 
         verify { activity wasNot Called }
         verify { navController.navigate(NavGraphDirections.actionGlobalAiControlsFragment()) }
+        verify { out wasNot Called }
+    }
+
+    @Test
+    fun `process protections_dashboard deep link`() {
+        assertTrue(processorHome.process(testIntent("protections_dashboard"), navController, out, settings))
+
+        verify { activity wasNot Called }
+        verify {
+            navController.navigate(
+                NavGraphDirections.actionGlobalProtectionsDashboard(
+                    customTabSessionId = null,
+                    source = ProtectionsDashboardFragment.SOURCE_DEEPLINK,
+                ),
+            )
+        }
         verify { out wasNot Called }
     }
 
