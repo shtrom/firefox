@@ -4,10 +4,6 @@
 
 "use strict";
 
-const { alertPromptService } = ChromeUtils.importESModule(
-  "resource://gre/modules/psm/pippki.sys.mjs"
-);
-
 document.addEventListener("dialogaccept", onDialogAccept);
 
 /**
@@ -57,13 +53,10 @@ async function onDialogAccept(event) {
     await pkcs11ModuleDB.addModule(nameBox.value, pathBox.value, 0, 0);
     window.close();
   } catch (e) {
-    addModuleFailure("add-module-failure");
+    let addModuleFailure =
+      await document.l10n.formatValue("add-module-failure");
+    Services.prompt.alert(window, null, addModuleFailure);
   }
-}
-
-async function addModuleFailure(l10nID) {
-  let [AddModuleFailure] = await document.l10n.formatValues([{ id: l10nID }]);
-  alertPromptService(window, null, AddModuleFailure);
 }
 
 function validateModuleName() {
