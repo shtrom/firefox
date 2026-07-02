@@ -255,5 +255,6 @@ ipprotection-message-bar.vpn-top-content {
 
   > [slot="description"] {
     padding-inline-start: var(--space-xxlarge);
+    display: inline-block;
   }
 }
