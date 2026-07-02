@@ -162,6 +162,10 @@ class TrustPanel {
 
   #lastEvent = null;
 
+  // Monotonic tag for #updateBlockerView runs so a stale (slower) run can't
+  // overwrite a fresher one's result. See the method for details.
+  #blockerViewUpdateId = 0;
+
   #popupToggleDelayTimer = null;
   #openingReason = null;
 
@@ -553,12 +557,6 @@ class TrustPanel {
     );
 
     this.#updateAttribute(
-      document.getElementById("trustpanel-blocker-section"),
-      "hidden",
-      !this.anyDetected
-    );
-
-    this.#updateAttribute(
       document.getElementById("trustpanel-toggle-section"),
       "disabled",
       !ContentBlockingAllowList.canHandle(window.gBrowser.selectedBrowser)
@@ -595,17 +593,32 @@ class TrustPanel {
   }
 
   async #updateBlockerView() {
+    // Snapshot the event so this run stays internally consistent across the
+    // awaits below, and tag the run so that if a newer run starts while we're
+    // awaiting, this (now stale) one bails out instead of writing its result.
+    // Without this guard, concurrent runs — a burst of content-blocking events
+    // on a tracker-heavy site (e.g. Meta) plus opening the subview — race on
+    // the final write, and a stale run can finish last and clobber a fresher
+    // count with 0, producing the intermittent "0 trackers blocked".
+    const event = this.#lastEvent;
+    const updateId = ++this.#blockerViewUpdateId;
+
     let count = this.#fetchSmartBlocked().length;
     let blocked = [];
     let detected = [];
 
     for (let blocker of Object.values(this.#blockers)) {
-      if (blocker.isBlocking(this.#lastEvent)) {
+      if (blocker.isBlocking(event)) {
         blocked.push(blocker);
         count += await blocker.getBlockerCount();
-      } else if (blocker.isDetected(this.#lastEvent)) {
+      } else if (blocker.isDetected(event)) {
         detected.push(blocker);
       }
+    }
+
+    // A newer run started while we were awaiting; let it own the DOM update.
+    if (updateId !== this.#blockerViewUpdateId) {
+      return;
     }
 
     this.#addButtons("trustpanel-blocked", blocked, true);
@@ -614,6 +627,15 @@ class TrustPanel {
     document
       .getElementById("trustpanel-smartblock-section")
       .toggleAttribute("hidden", !this.#addSmartblockEmbedToggles());
+
+    this.#updateAttribute(
+      document.getElementById("trustpanel-blocker-section"),
+      "hidden",
+      // avoids a misleading "0 trackers blocked" for trackers that are detected
+      // but not blocked, which happens transiently during page load, since
+      // detection events can arrive before the blocking ones.
+      count === 0
+    );
 
     // This element is in the main view but updated in case
     // any content blocking events were missed.
