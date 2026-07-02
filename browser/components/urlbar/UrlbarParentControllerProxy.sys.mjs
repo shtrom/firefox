@@ -17,9 +17,10 @@
  * notifications come back as `Notify` messages that the child actor dispatches
  * to the paired `UrlbarChildController`.
  *
- * The synchronous view methods (whose data has to be pre-fetched to cross the
- * boundary) and telemetry are wired up in later patches; until then this path
- * is incomplete and off by default.
+ * The view's synchronous per-result data (`getViewTemplate`/`getResultCommands`)
+ * can't be fetched across the boundary on demand, so it's pre-fetched with each
+ * `QueryResults` and read back here from the result. Telemetry is wired up in a
+ * later patch; until then this path is incomplete and off by default.
  */
 export class UrlbarParentControllerProxy {
   /** @type {UrlbarChild} */
@@ -72,6 +73,9 @@ export class UrlbarParentControllerProxy {
     });
   }
 
+  /**
+   * @param {UrlbarResult} result The result to remove.
+   */
   removeResult(result) {
     this.#actor.sendAsyncMessage("RemoveResult", {
       instanceId: this.#instanceId,
@@ -79,6 +83,9 @@ export class UrlbarParentControllerProxy {
     });
   }
 
+  /**
+   * @param {UrlbarQueryContext} queryContext The context to cache.
+   */
   setLastQueryContextCache(queryContext) {
     this.#actor.sendAsyncMessage("SetLastQueryContextCache", {
       instanceId: this.#instanceId,
@@ -89,6 +96,49 @@ export class UrlbarParentControllerProxy {
   clearLastQueryContextCache() {
     this.#actor.sendAsyncMessage("ClearLastQueryContextCache", {
       instanceId: this.#instanceId,
+    });
+  }
+
+  /**
+   * Returns a dynamic result's view template, pre-fetched and attached to the
+   * result when its `QueryResults` was delivered (see `UrlbarChild`).
+   *
+   * @param {UrlbarResult} result The dynamic result.
+   * @returns {object} The view template.
+   */
+  getViewTemplate(result) {
+    // @ts-expect-error FIXME(bug 2051959): viewData is a message-path expando
+    // (see `UrlbarChild`), not declared on UrlbarResult.
+    return result.viewData?.viewTemplate;
+  }
+
+  /**
+   * Returns a result's menu commands, pre-fetched and attached to the result
+   * when its `QueryResults` was delivered (see `UrlbarChild`).
+   *
+   * @param {UrlbarResult} result The result.
+   * @returns {?object[]} The commands, or null/undefined.
+   */
+  getResultCommands(result) {
+    // @ts-expect-error FIXME(bug 2051959): viewData is a message-path expando
+    // (see `UrlbarChild`), not declared on UrlbarResult.
+    return result.viewData?.resultCommands;
+  }
+
+  /**
+   * Returns a dynamic result's view update. This one is already async on the
+   * caller's side, so it round-trips through the parent rather than being
+   * pre-fetched.
+   *
+   * @param {UrlbarResult} result The dynamic result.
+   * @param {object} idsByName A map from node names to element ids.
+   * @returns {Promise<object>} The view update.
+   */
+  getViewUpdate(result, idsByName) {
+    return this.#actor.sendQuery("GetViewUpdate", {
+      instanceId: this.#instanceId,
+      result: result.toWire(),
+      idsByName,
     });
   }
 }

@@ -10,6 +10,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   UrlbarQueryContext:
     "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
   UrlbarResult: "chrome://browser/content/urlbar/UrlbarResult.mjs",
+  UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
 });
 
 /**
@@ -80,22 +81,29 @@ export class UrlbarParent extends JSWindowActorParent {
       // The real child controller lives across the boundary, so hand the
       // parent controller a proxy that forwards its notifications over the
       // actor.
-      controller.setChild(new UrlbarChildControllerProxy(this, instanceId));
+      controller.setChild(
+        new UrlbarChildControllerProxy(this, instanceId, controller)
+      );
       this.#messageControllers.set(instanceId, controller);
-      return;
+      return undefined;
     }
 
     if (message.name == "Destroy") {
       this.#messageControllers.delete(instanceId);
-      return;
+      return undefined;
     }
 
     let controller = this.#messageControllers.get(instanceId);
     if (!controller) {
-      return;
+      return undefined;
     }
 
     switch (message.name) {
+      case "GetViewUpdate":
+        return controller.getViewUpdate(
+          lazy.UrlbarResult.fromWire(message.data.result),
+          message.data.idsByName
+        );
       case "StartQuery":
         controller.startQuery(
           lazy.UrlbarQueryContext.fromWire(message.data.queryContext)
@@ -118,6 +126,7 @@ export class UrlbarParent extends JSWindowActorParent {
         controller.clearLastQueryContextCache();
         break;
     }
+    return undefined;
   }
 }
 
@@ -135,13 +144,17 @@ class UrlbarChildControllerProxy {
   /** @type {number} */
   #instanceId;
 
-  constructor(actor, instanceId) {
+  /** @type {UrlbarParentController} */
+  #controller;
+
+  constructor(actor, instanceId, controller) {
     this.#actor = actor;
     this.#instanceId = instanceId;
+    this.#controller = controller;
   }
 
   notify(name, ...params) {
-    this.#actor.sendAsyncMessage("Notify", {
+    let data = {
       instanceId: this.#instanceId,
       name,
       params: params.map(param =>
@@ -149,6 +162,23 @@ class UrlbarChildControllerProxy {
           ? { serializedQueryContext: param.toWire() }
           : param
       ),
-    });
+    };
+    // The view fetches a result's template and menu commands synchronously,
+    // which can't cross the boundary on demand, so pre-fetch them here for the
+    // results we're about to deliver and ship them alongside.
+    if (name == this.#controller.NOTIFICATIONS.QUERY_RESULTS) {
+      let queryContext = params[0];
+      data.resultViewData = queryContext.results.map(result => ({
+        viewTemplate:
+          result.type == lazy.UrlbarShared.RESULT_TYPE.DYNAMIC
+            ? this.#controller.getViewTemplate(result)
+            : undefined,
+        resultCommands: this.#controller.getResultCommands(
+          result,
+          queryContext.isPrivate
+        ),
+      }));
+    }
+    this.#actor.sendAsyncMessage("Notify", data);
   }
 }

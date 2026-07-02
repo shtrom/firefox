@@ -108,20 +108,25 @@ export class UrlbarChild extends JSWindowActorChild {
     if (message.name != "Notify") {
       return;
     }
-    let { instanceId, name, params } = message.data;
+    let { instanceId, name, params, resultViewData } = message.data;
     let child = this.#childControllers.get(instanceId)?.deref();
     if (!child) {
       this.#childControllers.delete(instanceId);
       return;
     }
-    child.notify(
-      name,
-      ...params.map(param =>
-        param?.serializedQueryContext
-          ? lazy.UrlbarQueryContext.fromWire(param.serializedQueryContext)
-          : param
-      )
+    let deserialized = params.map(param =>
+      param?.serializedQueryContext
+        ? lazy.UrlbarQueryContext.fromWire(param.serializedQueryContext)
+        : param
     );
+    if (resultViewData) {
+      // params[0] is the query context; reattach the per-result view data the
+      // parent pre-fetched so the view can read it synchronously.
+      deserialized[0].results.forEach((result, i) => {
+        result.viewData = resultViewData[i];
+      });
+    }
+    child.notify(name, ...deserialized);
   }
 
   /**
