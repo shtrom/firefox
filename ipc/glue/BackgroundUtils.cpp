@@ -7,7 +7,6 @@
 #include "MainThreadUtils.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/BasePrincipal.h"
-#include "mozilla/EnumSet.h"
 #include "mozilla/ContentPrincipal.h"
 #include "mozilla/NullPrincipal.h"
 #include "mozilla/SystemPrincipal.h"
@@ -31,7 +30,6 @@
 #include "mozilla/dom/BrowsingContext.h"
 #include "mozilla/dom/CanonicalBrowsingContext.h"
 #include "mozilla/dom/Document.h"
-#include "mozilla/dom/ProcessIsolation.h"
 #include "mozilla/dom/PolicyContainer.h"
 #include "mozilla/dom/WindowGlobalParent.h"
 #include "mozilla/LoadInfo.h"
@@ -710,28 +708,6 @@ nsresult LoadInfoArgsToLoadInfo(const LoadInfoArgs& loadInfoArgs,
       return topLevelPrincipalOrErr.unwrapErr();
     }
     topLevelPrincipal = topLevelPrincipalOrErr.unwrap();
-  }
-
-  // Validate principals received via IPC
-  if (aOriginRemoteType != NOT_REMOTE_TYPE) {
-    EnumSet<dom::ValidatePrincipalOptions> validationOptions;
-    // The inference process runs ChromeWorkers with a system principal.
-    if (aOriginRemoteType == INFERENCE_REMOTE_TYPE) {
-      validationOptions += dom::ValidatePrincipalOptions::AllowSystem;
-    }
-
-    auto principalCouldBeLoaded = [&](nsIPrincipal* aPrincipal) {
-      return !aPrincipal ||
-             dom::ValidatePrincipalCouldPotentiallyBeLoadedBy(
-                 aPrincipal, aOriginRemoteType, validationOptions);
-    };
-
-    if (NS_WARN_IF(!principalCouldBeLoaded(loadingPrincipal)) ||
-        NS_WARN_IF(!principalCouldBeLoaded(triggeringPrincipal)) ||
-        NS_WARN_IF(!principalCouldBeLoaded(principalToInherit)) ||
-        NS_WARN_IF(!principalCouldBeLoaded(topLevelPrincipal))) {
-      return NS_ERROR_ILLEGAL_VALUE;
-    }
   }
 
   nsCOMPtr<nsIURI> resultPrincipalURI;
