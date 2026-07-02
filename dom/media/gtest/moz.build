@@ -30,6 +30,7 @@ UNIFIED_SOURCES += [
     "TestAudioBuffers.cpp",
     "TestAudioCallbackDriver.cpp",
     "TestAudioCompactor.cpp",
+    "TestAudioConfig.cpp",
     "TestAudioData.cpp",
     "TestAudioDecoderInputTrack.cpp",
     "TestAudioInputSource.cpp",
