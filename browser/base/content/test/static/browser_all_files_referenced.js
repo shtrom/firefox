@@ -257,7 +257,7 @@ var allowlist = [
   // Bug 1348559
   { file: "chrome://pippki/content/resetpassword.xhtml" },
   // Bug 1337345
-  { file: "resource://gre/modules/Manifest.sys.mjs" },
+  { file: "moz-src:///dom/manifest/Manifest.sys.mjs" },
   // Bug 1494170
   // (The references to these files are dynamically generated, so the test can't
   // find the references)

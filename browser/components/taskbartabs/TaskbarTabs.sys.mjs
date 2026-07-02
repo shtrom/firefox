@@ -20,9 +20,9 @@ import { TaskbarTabsUtils } from "resource:///modules/taskbartabs/TaskbarTabsUti
 let lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
-  ManifestIcons: "resource://gre/modules/ManifestIcons.sys.mjs",
-  ManifestObtainer: "resource://gre/modules/ManifestObtainer.sys.mjs",
-  ManifestProcessor: "resource://gre/modules/ManifestProcessor.sys.mjs",
+  ManifestIcons: "moz-src:///dom/manifest/ManifestIcons.sys.mjs",
+  ManifestObtainer: "moz-src:///dom/manifest/ManifestObtainer.sys.mjs",
+  ManifestProcessor: "moz-src:///dom/manifest/ManifestProcessor.sys.mjs",
   ShellService: "moz-src:///browser/components/shell/ShellService.sys.mjs",
 });
 

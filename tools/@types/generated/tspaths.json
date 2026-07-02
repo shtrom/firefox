@@ -34,6 +34,9 @@
       "chrome://browser/content/aiwindow/components/ai-chat-table.mjs": [
         "../../../browser/components/aiwindow/ui/components/ai-chat-table/ai-chat-table.mjs"
       ],
+      "chrome://browser/content/aiwindow/components/ai-grouped-chip-container.mjs": [
+        "../../../browser/components/aiwindow/ui/components/ai-grouped-chip-container/ai-grouped-chip-container.mjs"
+      ],
       "chrome://browser/content/aiwindow/components/ai-website-chip.mjs": [
         "../../../browser/components/aiwindow/ui/components/ai-website-chip/ai-website-chip.mjs"
       ],
@@ -6202,9 +6205,6 @@
       "resource://gre/modules/IgnoreLists.sys.mjs": [
         "../../../toolkit/modules/IgnoreLists.sys.mjs"
       ],
-      "resource://gre/modules/ImageObjectProcessor.sys.mjs": [
-        "../../../dom/manifest/ImageObjectProcessor.sys.mjs"
-      ],
       "resource://gre/modules/IndexedDB.sys.mjs": [
         "../../../toolkit/modules/IndexedDB.sys.mjs"
       ],
@@ -6294,21 +6294,6 @@
       ],
       "resource://gre/modules/LoginStore.sys.mjs": [
         "../../../toolkit/components/passwordmgr/LoginStore.sys.mjs"
-      ],
-      "resource://gre/modules/Manifest.sys.mjs": [
-        "../../../dom/manifest/Manifest.sys.mjs"
-      ],
-      "resource://gre/modules/ManifestFinder.sys.mjs": [
-        "../../../dom/manifest/ManifestFinder.sys.mjs"
-      ],
-      "resource://gre/modules/ManifestIcons.sys.mjs": [
-        "../../../dom/manifest/ManifestIcons.sys.mjs"
-      ],
-      "resource://gre/modules/ManifestObtainer.sys.mjs": [
-        "../../../dom/manifest/ManifestObtainer.sys.mjs"
-      ],
-      "resource://gre/modules/ManifestProcessor.sys.mjs": [
-        "../../../dom/manifest/ManifestProcessor.sys.mjs"
       ],
       "resource://gre/modules/MatchURLFilters.sys.mjs": [
         "../../../toolkit/components/extensions/MatchURLFilters.sys.mjs"
@@ -6612,9 +6597,6 @@
       ],
       "resource://gre/modules/UserCharacteristicsPageService.sys.mjs": [
         "../../../toolkit/components/resistfingerprinting/UserCharacteristicsPageService.sys.mjs"
-      ],
-      "resource://gre/modules/ValueExtractor.sys.mjs": [
-        "../../../dom/manifest/ValueExtractor.sys.mjs"
       ],
       "resource://gre/modules/WPTEventsParent.sys.mjs": [
         "../../../toolkit/components/extensions/WPTEventsParent.sys.mjs"
@@ -7086,6 +7068,9 @@
       ],
       "resource://newtab/lib/Widgets/ListsFeed.sys.mjs": [
         "../../../browser/extensions/newtab/lib/Widgets/ListsFeed.sys.mjs"
+      ],
+      "resource://newtab/lib/Widgets/PrivacyFeed.sys.mjs": [
+        "../../../browser/extensions/newtab/lib/Widgets/PrivacyFeed.sys.mjs"
       ],
       "resource://newtab/lib/Widgets/SportsFeed.sys.mjs": [
         "../../../browser/extensions/newtab/lib/Widgets/SportsFeed.sys.mjs"
