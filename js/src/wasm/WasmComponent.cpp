@@ -808,29 +808,92 @@ void wasm::PurgeComponentCanonicalTypes() {
 }
 
 mozilla::Maybe<FuncType> wasm::FlattenFuncType(
-    const Component& c, const ComponentFuncType& funcType) {
+    const ComponentFuncType& funcType, CanonMode mode, bool* memoryRequired,
+    bool* reallocRequired, bool* tooDeep) {
+  const uint32_t MaxFlatParams = 16;
+  const uint32_t MaxFlatResults = 1;
+
   ValTypeVector params;
   ValTypeVector results;
 
-  // TODO(wasm-cm): Handle (and test) the case where params or results exceed
-  // the maximums set by the component model, at which point the ABI falls back
-  // to passing values in memory. (Or maybe this will all change with lazy
-  // lowering, who knows.)
-
-  if (!FlattenTypes(c, funcType.paramTypes, &params)) {
+  bool paramsHaveStringsOrLists = false;
+  bool resultsHaveStringsOrLists = false;
+  if (!FlattenTypes(funcType.paramTypes, &params, &paramsHaveStringsOrLists,
+                    tooDeep, /*depth=*/0)) {
     return mozilla::Nothing();
   }
   if (funcType.resultType.isSome()) {
-    if (!FlattenType(c, funcType.resultType.ref(), &results)) {
+    if (!FlattenType(funcType.resultType.ref(), &results,
+                     &resultsHaveStringsOrLists, tooDeep, /*depth=*/0)) {
       return mozilla::Nothing();
     }
+  }
+
+  // String or list params require realloc on lift and memory on lower.
+  // String or list results require memory on lift and realloc on lower.
+  if ((mode == CanonMode::Lift && resultsHaveStringsOrLists) ||
+      (mode == CanonMode::Lower && paramsHaveStringsOrLists)) {
+    *memoryRequired = true;
+  }
+  if ((mode == CanonMode::Lift && paramsHaveStringsOrLists) ||
+      (mode == CanonMode::Lower && resultsHaveStringsOrLists)) {
+    *reallocRequired = true;
+  }
+
+  // Regardless of lifting or lowering, if there are too many flattened params,
+  // values must be passed in memory. Replace the params with a single pointer
+  // to memory.
+  if (params.length() > MaxFlatParams) {
+    params.clear();
+    if (!params.append(ValType::i32())) {
+      return mozilla::Nothing();
+    }
+
+    // Spilled params must be alloced by the host on lifted functions, whereas
+    // on lowered functions they are allocated by the module and read by the
+    // host.
+    if (mode == CanonMode::Lift) {
+      *reallocRequired = true;
+    } else {
+      *memoryRequired = true;
+    }
+  }
+
+  // If there are too many flattened results (e.g. returning a record), the
+  // results must also be passed in memory. When lifting a core func, the core
+  // module does the obvious thing and allocates space for the results,
+  // returning a pointer. When lowering a component func, however, returning a
+  // pointer would imply that the component callee has to call `realloc` to get
+  // such a pointer, which is dumb when the core caller could just allocate
+  // stack space for it, so instead the canonical ABI chooses to make the
+  // results an out param.
+  if (results.length() > MaxFlatResults) {
+    if (mode == CanonMode::Lift) {
+      results.clear();
+      if (!results.append(ValType::i32())) {
+        return mozilla::Nothing();
+      }
+    } else {
+      if (!params.append(ValType::i32())) {
+        return mozilla::Nothing();
+      }
+      results.clear();
+    }
+
+    *memoryRequired = true;
+  }
+
+  // If realloc is required, memory is always also required.
+  if (*reallocRequired) {
+    *memoryRequired = true;
   }
 
   return mozilla::Some(FuncType(std::move(params), std::move(results)));
 }
 
-bool wasm::FlattenTypes(const Component& c, const ComponentTypeVector& types,
-                        ValTypeVector* result) {
+bool wasm::FlattenTypes(const ComponentTypeVector& types, ValTypeVector* result,
+                        bool* hasStringsOrLists, bool* tooDeep,
+                        uint32_t depth) {
   // Pre-reserve at least enough space for a bunch of primitives. We still may
   // exceed the capacity reserved here but at least we can avoid a little bit of
   // allocation. (Appends after this point are not to be considered infallible.)
@@ -839,7 +902,7 @@ bool wasm::FlattenTypes(const Component& c, const ComponentTypeVector& types,
   }
 
   for (const ComponentType& t : types) {
-    if (!FlattenType(c, t, result)) {
+    if (!FlattenType(t, result, hasStringsOrLists, tooDeep, depth)) {
       return false;
     }
   }
@@ -859,8 +922,14 @@ static ValType JoinVariantValType(ValType a, ValType b) {
   }
 }
 
-bool wasm::FlattenType(const Component& c, const ComponentType& type,
-                       ValTypeVector* result) {
+bool wasm::FlattenType(const ComponentType& type, ValTypeVector* result,
+                       bool* hasStringsOrLists, bool* tooDeep, uint32_t depth) {
+  if (depth > MaxComponentFlatteningDepth) {
+    *tooDeep = true;
+    return false;
+  }
+  depth += 1;
+
   switch (type.kind()) {
     // Simple primitives
     case ComponentTypeKind::Bool:
@@ -898,6 +967,7 @@ bool wasm::FlattenType(const Component& c, const ComponentType& type,
 
     // Strings are always two i32's
     case ComponentTypeKind::String: {
+      *hasStringsOrLists = true;
       if (!result->append(ValType::i32())) {
         return false;
       }
@@ -910,6 +980,7 @@ bool wasm::FlattenType(const Component& c, const ComponentType& type,
     // types disagrees with the categories in the canonical ABI explainer, e.g.
     // we represent tuples as a vector of value types, not a record.
     case ComponentTypeKind::List: {
+      *hasStringsOrLists = true;
       // This will have to change when support is added for fixed-length lists.
       if (!result->append(ValType::i32())) {
         return false;
@@ -919,12 +990,14 @@ bool wasm::FlattenType(const Component& c, const ComponentType& type,
       }
     } break;
     case ComponentTypeKind::Record: {
-      if (!FlattenRecord(c, type.asRecord(), result)) {
+      if (!FlattenRecord(type.asRecord(), result, hasStringsOrLists, tooDeep,
+                         depth)) {
         return false;
       }
     } break;
     case ComponentTypeKind::Tuple: {
-      if (!FlattenTypes(c, type.asTuple(), result)) {
+      if (!FlattenTypes(type.asTuple(), result, hasStringsOrLists, tooDeep,
+                        depth)) {
         return false;
       }
     } break;
@@ -943,7 +1016,8 @@ bool wasm::FlattenType(const Component& c, const ComponentType& type,
         }
 
         ValTypeVector caseFlattened;
-        if (!FlattenType(c, *case_.type, &caseFlattened)) {
+        if (!FlattenType(*case_.type, &caseFlattened, hasStringsOrLists,
+                         tooDeep, depth)) {
           return false;
         }
         for (size_t i = 0; i < caseFlattened.length(); i++) {
@@ -966,7 +1040,7 @@ bool wasm::FlattenType(const Component& c, const ComponentType& type,
       if (!result->append(ValType::i32())) {
         return false;
       }
-      if (!FlattenType(c, inner, result)) {
+      if (!FlattenType(inner, result, hasStringsOrLists, tooDeep, depth)) {
         return false;
       }
     } break;
@@ -983,13 +1057,15 @@ bool wasm::FlattenType(const Component& c, const ComponentType& type,
       // Payload(s)
       size_t startIndex = result->length();
       if (inner.type.isSome()) {
-        if (!FlattenType(c, *inner.type, result)) {
+        if (!FlattenType(*inner.type, result, hasStringsOrLists, tooDeep,
+                         depth)) {
           return false;
         }
       }
       if (inner.errorType.isSome()) {
         ValTypeVector errorFlattened;
-        if (!FlattenType(c, *inner.errorType, &errorFlattened)) {
+        if (!FlattenType(*inner.errorType, &errorFlattened, hasStringsOrLists,
+                         tooDeep, depth)) {
           return false;
         }
         for (size_t i = 0; i < errorFlattened.length(); i++) {
@@ -1013,11 +1089,11 @@ bool wasm::FlattenType(const Component& c, const ComponentType& type,
   return true;
 }
 
-bool wasm::FlattenRecord(const Component& c,
-                         const ComponentRecordFieldVector& fields,
-                         ValTypeVector* result) {
+bool wasm::FlattenRecord(const ComponentRecordFieldVector& fields,
+                         ValTypeVector* result, bool* hasStringsOrLists,
+                         bool* tooDeep, uint32_t depth) {
   for (const ComponentRecordField& field : fields) {
-    if (!FlattenType(c, field.type, result)) {
+    if (!FlattenType(field.type, result, hasStringsOrLists, tooDeep, depth)) {
       return false;
     }
   }
@@ -1178,10 +1254,8 @@ const TypeDef& Component::getTypeForCoreFunc(uint32_t coreFuncIndex) const {
   ComponentItem item = coreFuncs_[coreFuncIndex];
   MOZ_ASSERT(item.sort() == ComponentSort::CoreFunction);
   switch (item.kind()) {
-    case ComponentItem::ItemKind::Defined: {
-      // TODO(wasm-cm): Fix this when (canon lower) is supported.
-      MOZ_CRASH("should be impossible for now");
-    } break;
+    case ComponentItem::ItemKind::Defined:
+      return *loweredFuncs_[item.itemIndex()].flattenedType();
     case ComponentItem::ItemKind::Import:
     case ComponentItem::ItemKind::Export:
       // Core funcs cannot be imported or exported.

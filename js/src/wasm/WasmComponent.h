@@ -358,16 +358,23 @@ class ComponentTypeDef : public AtomicRefCounted<ComponentTypeDef> {
 
 class Component;
 
-[[nodiscard]] bool FlattenTypes(const Component& c,
-                                const ComponentTypeVector& types,
-                                ValTypeVector* result);
-[[nodiscard]] bool FlattenType(const Component& c, const ComponentType& type,
-                               ValTypeVector* result);
-[[nodiscard]] bool FlattenRecord(const Component& c,
-                                 const ComponentRecordFieldVector& fields,
-                                 ValTypeVector* result);
-mozilla::Maybe<FuncType> FlattenFuncType(const Component& c,
-                                         const ComponentFuncType& funcType);
+enum class CanonMode : uint8_t {
+  Lift,
+  Lower,
+};
+
+[[nodiscard]] bool FlattenTypes(const ComponentTypeVector& types,
+                                ValTypeVector* result, bool* hasStringsOrLists,
+                                bool* tooDeep, uint32_t depth);
+[[nodiscard]] bool FlattenType(const ComponentType& type, ValTypeVector* result,
+                               bool* hasStringsOrLists, bool* tooDeep,
+                               uint32_t depth);
+[[nodiscard]] bool FlattenRecord(const ComponentRecordFieldVector& fields,
+                                 ValTypeVector* result, bool* hasStringsOrLists,
+                                 bool* tooDeep, uint32_t depth);
+mozilla::Maybe<FuncType> FlattenFuncType(const ComponentFuncType& funcType,
+                                         CanonMode mode, bool* memoryRequired,
+                                         bool* reallocRequired, bool* tooDeep);
 
 // A hash policy for StronglyUniqueNameSet that hashes items based on their
 // trimmed, lowercased versions, but matches based on the full strongly-unique
@@ -399,25 +406,44 @@ class StronglyUniqueNameSet {
   [[nodiscard]] bool add(mozilla::Span<const char> name, bool* duplicate);
 };
 
-struct ComponentCanonOpt {
-  // TODO(wasm-cm)
+// These values must match the binary encoding exactly.
+enum class ComponentStringEncoding : uint8_t {
+  UTF8 = 0x00,
+  UTF16 = 0x01,
+  Latin1PlusUTF16 = 0x02,
 };
 
-using ComponentCanonOptVector =
-    mozilla::Vector<ComponentCanonOpt, 0, SystemAllocPolicy>;
+struct ComponentCanonOpts {
+  ComponentStringEncoding stringEncoding;
+  mozilla::Maybe<uint32_t> memoryIndex;
+  mozilla::Maybe<uint32_t> reallocIndex;
+  mozilla::Maybe<uint32_t> postReturnIndex;
+};
 
-class ComponentFuncDesc {
+class ComponentLiftedFuncDesc {
   uint32_t typeIndex_;
-  ComponentCanonOptVector canonOpts_;
+  ComponentCanonOpts canonOpts_;
 
  public:
-  ComponentFuncDesc(uint32_t typeIndex, ComponentCanonOptVector&& canonOpts)
-      : typeIndex_(typeIndex), canonOpts_(std::move(canonOpts)) {}
+  ComponentLiftedFuncDesc(uint32_t typeIndex, ComponentCanonOpts canonOpts)
+      : typeIndex_(typeIndex), canonOpts_(canonOpts) {}
 
   // This returns the raw type index. To get the ComponentFuncType, call
   // Component::typeForFunc instead.
   uint32_t typeIndex() const { return typeIndex_; }
-  const ComponentCanonOptVector& canonOpts() const { return canonOpts_; }
+  const ComponentCanonOpts& canonOpts() const { return canonOpts_; }
+};
+
+class ComponentLoweredFuncDesc {
+  uint32_t funcIndex_;
+  SharedTypeDef flattenedType_;
+
+ public:
+  ComponentLoweredFuncDesc(uint32_t funcIndex, SharedTypeDef&& flattenedType)
+      : funcIndex_(funcIndex), flattenedType_(std::move(flattenedType)) {}
+
+  uint32_t funcIndex() const { return funcIndex_; }
+  const SharedTypeDef& flattenedType() const { return flattenedType_; }
 };
 
 enum class ComponentAliasKind : uint8_t {
@@ -758,7 +784,10 @@ class Component : public JS::WasmComponent {
   using CoreInstanceVector =
       mozilla::Vector<CoreInstanceDesc, 0, SystemAllocPolicy>;
   using TypeVector = mozilla::Vector<ComponentType, 0, SystemAllocPolicy>;
-  using FuncVector = mozilla::Vector<ComponentFuncDesc, 0, SystemAllocPolicy>;
+  using FuncVector =
+      mozilla::Vector<ComponentLiftedFuncDesc, 0, SystemAllocPolicy>;
+  using LoweredFuncVector =
+      mozilla::Vector<ComponentLoweredFuncDesc, 0, SystemAllocPolicy>;
   using ImportVector = mozilla::Vector<ComponentImport, 0, SystemAllocPolicy>;
   using ExportVector = mozilla::Vector<ComponentExport, 0, SystemAllocPolicy>;
   using ItemVector = mozilla::Vector<ComponentItem, 0, SystemAllocPolicy>;
@@ -768,6 +797,7 @@ class Component : public JS::WasmComponent {
   CoreInstanceVector definedCoreInstances_;
   TypeVector definedTypes_;
   FuncVector definedFuncs_;
+  LoweredFuncVector loweredFuncs_;
   ImportVector imports_;
   ExportVector exports_;
 
@@ -809,7 +839,7 @@ class Component : public JS::WasmComponent {
   [[nodiscard]] bool addExport(ComponentExport&& exp);
 
   const ItemVector& funcs() const { return funcs_; }
-  [[nodiscard]] bool addFunc(ComponentFuncDesc&& func) {
+  [[nodiscard]] bool addFunc(ComponentLiftedFuncDesc&& func) {
     return addDefinedItem(ComponentSort::Func, std::move(func), definedFuncs_,
                           funcs_);
   }
@@ -830,6 +860,14 @@ class Component : public JS::WasmComponent {
     MOZ_RELEASE_ASSERT(funcItem.kind() == ComponentItem::ItemKind::Alias);
     MOZ_RELEASE_ASSERT(funcItem.sort() == ComponentSort::CoreFunction);
     return coreFuncs_.append(funcItem);
+  }
+  [[nodiscard]] bool addLoweredFunc(ComponentLoweredFuncDesc&& loweredFunc) {
+    uint32_t funcIndex = loweredFuncs_.length();
+    if (!loweredFuncs_.append(std::move(loweredFunc))) {
+      return false;
+    }
+    return coreFuncs_.append(
+        ComponentItem::defined(ComponentSort::CoreFunction, funcIndex));
   }
 
   const ItemVector& coreTables() const { return coreTables_; }

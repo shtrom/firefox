@@ -5977,19 +5977,115 @@ enum class AliasKindRaw : uint8_t {
   return true;
 }
 
-[[nodiscard]] static bool DecodeCanonOpts(Decoder& d,
-                                          ComponentCanonOptVector* opts) {
+enum class CanonOptKindRaw : uint8_t {
+  StringEncodingUTF8 = uint8_t(ComponentStringEncoding::UTF8),
+  StringEncodingUTF16 = uint8_t(ComponentStringEncoding::UTF16),
+  StringEncodingLatin1PlusUTF16 =
+      uint8_t(ComponentStringEncoding::Latin1PlusUTF16),
+  Memory = 0x03,
+  Realloc = 0x04,
+  PostReturn = 0x05,
+};
+
+// Decodes a list of canonopts in the binary format.
+[[nodiscard]] static bool DecodeCanonOpts(Decoder& d, const Component& c,
+                                          ComponentCanonOpts* opts,
+                                          CanonMode mode) {
+  *opts = {};
+
   uint32_t count;
   if (!d.readVarU32(&count)) {
     return d.fail("expected number of canonopts");
   }
+
+  // TODO(wasm-cm): Do you need max canonopts when each kind of canonopt can
+  // only be set once?
   if (count > MaxComponentCanonOpts) {
     return d.failf("too many canonopts (max %d)", MaxComponentCanonOpts);
   }
 
-  if (count > 0) {
-    // TODO(wasm-cm): Actually parse canonopts
-    return d.fail("canonopts are not yet supported");
+  bool hasStringEncoding = false;
+  bool hasMemory = false;
+  bool hasRealloc = false;
+  bool hasPostReturn = false;
+  for (uint32_t i = 0; i < count; i++) {
+    uint8_t kind;
+    if (!d.readFixedU8(&kind)) {
+      return d.fail("expected canonopt");
+    }
+    switch (kind) {
+      case uint8_t(CanonOptKindRaw::StringEncodingUTF8):
+      case uint8_t(CanonOptKindRaw::StringEncodingUTF16):
+      case uint8_t(CanonOptKindRaw::StringEncodingLatin1PlusUTF16): {
+        if (hasStringEncoding) {
+          return d.fail("string encoding already specified");
+        }
+        hasStringEncoding = true;
+        opts->stringEncoding = ComponentStringEncoding(kind);
+      } break;
+      case uint8_t(CanonOptKindRaw::Memory): {
+        if (hasMemory) {
+          return d.fail("memory already specified");
+        }
+        hasMemory = true;
+        uint32_t memoryIndex;
+        if (!d.readVarU32(&memoryIndex)) {
+          return d.fail("expected memory index");
+        }
+        if (c.coreMemories().length() <= memoryIndex) {
+          return d.failf("invalid memory index %d", memoryIndex);
+        }
+        if (c.getCoreMemory(memoryIndex).addressType() != AddressType::I32) {
+          return d.fail("memory for canonical ABI must be 32-bit");
+        }
+        opts->memoryIndex.emplace(memoryIndex);
+      } break;
+      case uint8_t(CanonOptKindRaw::Realloc): {
+        if (hasRealloc) {
+          return d.fail("realloc already specified");
+        }
+        hasRealloc = true;
+        uint32_t reallocIndex;
+        if (!d.readVarU32(&reallocIndex)) {
+          return d.fail("expected realloc index");
+        }
+        if (c.coreFuncs().length() <= reallocIndex) {
+          return d.failf("invalid index %d for realloc function", reallocIndex);
+        }
+        const FuncType& reallocType =
+            c.getTypeForCoreFunc(reallocIndex).funcType();
+        if (reallocType.args().length() != 4 ||
+            reallocType.args()[0] != ValType::i32() ||
+            reallocType.args()[1] != ValType::i32() ||
+            reallocType.args()[2] != ValType::i32() ||
+            reallocType.args()[3] != ValType::i32() ||
+            reallocType.results().length() != 1 ||
+            reallocType.results()[0] != ValType::i32()) {
+          return d.fail("invalid signature for realloc function");
+        }
+        opts->reallocIndex.emplace(reallocIndex);
+      } break;
+      case uint8_t(CanonOptKindRaw::PostReturn): {
+        if (mode != CanonMode::Lift) {
+          return d.fail("post-return only valid for canon lift");
+        }
+        if (hasPostReturn) {
+          return d.fail("post-return already specified");
+        }
+        hasPostReturn = true;
+        uint32_t postReturnIndex;
+        if (!d.readVarU32(&postReturnIndex)) {
+          return d.fail("expected post-return index");
+        }
+        if (c.coreFuncs().length() <= postReturnIndex) {
+          return d.failf("invalid index %d for post-return function",
+                         postReturnIndex);
+        }
+        opts->postReturnIndex.emplace(postReturnIndex);
+      } break;
+      default:
+        return d.failf("unexpected canonopt 0x%02x", kind);
+    }
   }
 
   return true;
@@ -6026,8 +6122,8 @@ enum class CanonDefKindRaw : uint8_t {
         return d.failf("invalid core function index %d", coreFuncIndex);
       }
 
-      ComponentCanonOptVector opts;
-      if (!DecodeCanonOpts(d, &opts)) {
+      ComponentCanonOpts opts;
+      if (!DecodeCanonOpts(d, *c, &opts, CanonMode::Lift)) {
         return false;
       }
 
@@ -6045,27 +6141,109 @@ enum class CanonDefKindRaw : uint8_t {
       }
 
       const ComponentFuncType& ft = t.asFunc();
-      mozilla::Maybe<FuncType> maybeFlattened = FlattenFuncType(*c, ft);
-      if (maybeFlattened.isNothing()) {
+      bool memoryRequired = false;
+      bool reallocRequired = false;
+      bool tooDeep = false;
+      mozilla::Maybe<FuncType> flattened = FlattenFuncType(
+          ft, CanonMode::Lift, &memoryRequired, &reallocRequired, &tooDeep);
+      if (flattened.isNothing()) {
+        if (tooDeep) {
+          return d.fail("flattening exceeded maximum depth");
+        }
         return false;
       }
-      const FuncType& flattened = maybeFlattened.ref();
 
       // Because flattened func types use only primitive types, there will never
       // be any type references and a strict comparison will suffice.
       if (!FuncType::strictlyEquals(
-              flattened, c->getTypeForCoreFunc(coreFuncIndex).funcType())) {
+              flattened.ref(),
+              c->getTypeForCoreFunc(coreFuncIndex).funcType())) {
         return d.fail(
             "could not lift core func (component func type did not match)");
       }
 
-      if (!c->addFunc(ComponentFuncDesc(typeIndex, std::move(opts)))) {
+      // Verify presence of (memory) and (realloc) if required.
+      if (memoryRequired && opts.memoryIndex.isNothing()) {
+        return d.fail("memory required for canon lift");
+      }
+      if (reallocRequired && opts.reallocIndex.isNothing()) {
+        return d.fail("realloc required for canon lift");
+      }
+
+      // Verify post-return signature, if present. The post-return function is
+      // required to have params matching the actual function's results (after
+      // flattening).
+      if (opts.postReturnIndex.isSome()) {
+        const FuncType& postReturnType =
+            c->getTypeForCoreFunc(*opts.postReturnIndex).funcType();
+        if (postReturnType.args().length() != flattened->results().length() ||
+            postReturnType.results().length() != 0) {
+          return d.fail("invalid signature for post-return function");
+        }
+        for (size_t i = 0; i < postReturnType.args().length(); i++) {
+          if (postReturnType.args()[i] != flattened->results()[i]) {
+            return d.fail("invalid signature for post-return function");
+          }
+        }
+      }
+
+      if (!c->addFunc(ComponentLiftedFuncDesc(typeIndex, std::move(opts)))) {
         return false;
       }
     } break;
     case uint8_t(CanonDefKindRaw::Lower): {
-      // TODO(wasm-cm)
-      return d.fail("canon lower is not supported yet");
+      if (c->coreFuncs().length() >= MaxComponentCoreFuncs) {
+        return d.failf("too many core funcs (max %d)", MaxComponentCoreFuncs);
+      }
+
+      uint8_t dummy;
+      if (!d.readFixedU8(&dummy) || dummy != 0) {
+        return d.fail("expected canonical definition");
+      }
+
+      uint32_t funcIndex;
+      if (!d.readVarU32(&funcIndex)) {
+        return d.fail("expected function index");
+      }
+      if (c->funcs().length() <= funcIndex) {
+        return d.failf("invalid function index %d", funcIndex);
+      }
+
+      ComponentCanonOpts opts;
+      if (!DecodeCanonOpts(d, *c, &opts, CanonMode::Lower)) {
+        return false;
+      }
+
+      const ComponentFuncType& ft = c->getTypeForFunc(funcIndex).asFunc();
+      bool memoryRequired = false;
+      bool reallocRequired = false;
+      bool tooDeep = false;
+      mozilla::Maybe<FuncType> flattened = FlattenFuncType(
+          ft, CanonMode::Lower, &memoryRequired, &reallocRequired, &tooDeep);
+      if (flattened.isNothing()) {
+        if (tooDeep) {
+          return d.fail("flattening exceeded maximum depth");
+        }
+        return false;
+      }
+      SharedTypeDef flattenedCanonical =
+          TypeContext::canonicalizeSingleType(flattened.extract());
+      if (!flattenedCanonical) {
+        return false;
+      }
+
+      // Verify presence of (memory) and (realloc) if required.
+      if (memoryRequired && opts.memoryIndex.isNothing()) {
+        return d.fail("memory required for canon lower");
+      }
+      if (reallocRequired && opts.reallocIndex.isNothing()) {
+        return d.fail("realloc required for canon lower");
+      }
+
+      if (!c->addLoweredFunc(ComponentLoweredFuncDesc(
+              funcIndex, std::move(flattenedCanonical)))) {
+        return false;
+      }
     } break;
     default:
       return d.failf("unexpected canonical definition kind 0x%02x", kind);
