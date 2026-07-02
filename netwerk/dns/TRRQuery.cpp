@@ -271,9 +271,8 @@ AHostResolver::LookupStatus TRRQuery::CompleteLookup(
       status = aaaaResult;
     }
 
-    if (NS_FAILED(status) &&
-        (aaaaResult == NS_ERROR_DEFINITIVE_UNKNOWN_HOST ||
-         aResult == NS_ERROR_DEFINITIVE_UNKNOWN_HOST)) {
+    if (NS_FAILED(status) && (aaaaResult == NS_ERROR_DEFINITIVE_UNKNOWN_HOST ||
+                              aResult == NS_ERROR_DEFINITIVE_UNKNOWN_HOST)) {
       status = NS_ERROR_DEFINITIVE_UNKNOWN_HOST;
     }
   } else {
@@ -311,8 +310,7 @@ AHostResolver::LookupStatus TRRQuery::CompleteLookup(
       newRRSet = addrInfoA;
       status = aResult;
       if (NS_FAILED(status) &&
-          (otherSucceeded ||
-           aaaaResult == NS_ERROR_DEFINITIVE_UNKNOWN_HOST)) {
+          (otherSucceeded || aaaaResult == NS_ERROR_DEFINITIVE_UNKNOWN_HOST)) {
         LOG(("status set to NS_ERROR_DEFINITIVE_UNKNOWN_HOST"));
         status = NS_ERROR_DEFINITIVE_UNKNOWN_HOST;
       }
