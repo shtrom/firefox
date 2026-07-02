@@ -1484,6 +1484,13 @@ class BrowserRobot(private val composeTestRule: ComposeTestRule) {
         Log.i(TAG, "clickTheDismissButtonOnSummarizeCFR: Clicked the \"X\" button on the summarize CFR")
     }
 
+    fun clickStayInAppPromptButton() {
+        val stayInAppButton = itemContainingText(getStringResource(R.string.applinks_prompt_negative_button, argument = appName))
+        if (stayInAppButton.exists()) {
+            stayInAppButton.click()
+        }
+    }
+
     class Transition(private val composeTestRule: ComposeTestRule) {
         fun openThreeDotMenu(interact: ThreeDotMenuMainRobot.() -> Unit): ThreeDotMenuMainRobot.Transition {
             openMainMenuAndAwaitBottomSheet(composeTestRule)
