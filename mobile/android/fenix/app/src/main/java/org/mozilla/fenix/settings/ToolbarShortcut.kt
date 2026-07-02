@@ -37,6 +37,7 @@ enum class ShortcutType(val value: String) {
 internal enum class ShortcutAvailability {
     SIMPLE,
     EXPANDED,
+    TAB_STRIP,
 }
 
 internal data class ShortcutOption(
@@ -57,43 +58,43 @@ internal val allShortcutOptions: List<ShortcutOption> = listOf(
         ShortcutType.SHARE,
         iconsR.drawable.mozac_ic_share_android_24,
         R.string.toolbar_customize_shortcut_share,
-        setOf(ShortcutAvailability.SIMPLE),
+        setOf(ShortcutAvailability.SIMPLE, ShortcutAvailability.TAB_STRIP),
     ),
     ShortcutOption(
         ShortcutType.BOOKMARK,
         iconsR.drawable.mozac_ic_bookmark_24,
         R.string.toolbar_customize_shortcut_add_bookmark,
-        setOf(ShortcutAvailability.SIMPLE, ShortcutAvailability.EXPANDED),
+        setOf(ShortcutAvailability.SIMPLE, ShortcutAvailability.EXPANDED, ShortcutAvailability.TAB_STRIP),
     ),
     ShortcutOption(
         ShortcutType.TRANSLATE,
         iconsR.drawable.mozac_ic_translate_24,
         R.string.toolbar_customize_shortcut_translate,
-        setOf(ShortcutAvailability.SIMPLE, ShortcutAvailability.EXPANDED),
+        setOf(ShortcutAvailability.SIMPLE, ShortcutAvailability.EXPANDED, ShortcutAvailability.TAB_STRIP),
     ),
     ShortcutOption(
         ShortcutType.HOMEPAGE,
         iconsR.drawable.mozac_ic_home_24,
         R.string.toolbar_customize_shortcut_homepage,
-        setOf(ShortcutAvailability.SIMPLE, ShortcutAvailability.EXPANDED),
+        setOf(ShortcutAvailability.SIMPLE, ShortcutAvailability.EXPANDED, ShortcutAvailability.TAB_STRIP),
     ),
     ShortcutOption(
         ShortcutType.BACK,
         iconsR.drawable.mozac_ic_back_24,
         R.string.toolbar_customize_shortcut_back,
-        setOf(ShortcutAvailability.SIMPLE, ShortcutAvailability.EXPANDED),
+        setOf(ShortcutAvailability.SIMPLE, ShortcutAvailability.EXPANDED, ShortcutAvailability.TAB_STRIP),
     ),
     ShortcutOption(
         ShortcutType.SUMMARIZE,
         iconsR.drawable.mozac_ic_lightning_24,
         summariesR.string.mozac_summarize_settings_summarize_pages,
-        setOf(ShortcutAvailability.SIMPLE),
+        setOf(ShortcutAvailability.SIMPLE, ShortcutAvailability.TAB_STRIP),
     ),
     ShortcutOption(
         ShortcutType.NONE,
         null,
         R.string.toolbar_customize_shortcut_none,
-        setOf(ShortcutAvailability.SIMPLE),
+        setOf(ShortcutAvailability.SIMPLE, ShortcutAvailability.TAB_STRIP),
     ),
 )
 
@@ -102,3 +103,6 @@ internal val expandedShortcutOptions: List<ShortcutOption> =
 
 internal val simpleShortcutOptions: List<ShortcutOption> =
     allShortcutOptions.filter { ShortcutAvailability.SIMPLE in it.availability }
+
+internal val tabStripShortcutOptions: List<ShortcutOption> =
+    allShortcutOptions.filter { ShortcutAvailability.TAB_STRIP in it.availability }

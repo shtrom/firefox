@@ -504,7 +504,7 @@ class TabPreview @JvmOverloads constructor(
         val isTallWindow = context.isTallWindow()
         val shouldUseExpandedToolbar = settings.shouldUseExpandedToolbar
 
-        val primarySlotAction = ShortcutType.fromValue(settings.toolbarSimpleShortcutKey)?.toToolbarAction(tab)
+        val primarySlotAction = ShortcutType.fromValue(settings.activeSimpleToolbarShortcutKey)?.toToolbarAction(tab)
 
         return listOfNotNull(
             primarySlotAction?.let {
@@ -584,8 +584,10 @@ class TabPreview @JvmOverloads constructor(
         ShortcutType.TRANSLATE -> ToolbarAction.Translate
         ShortcutType.HOMEPAGE -> ToolbarAction.Homepage
         ShortcutType.BACK -> ToolbarAction.Back
-        ShortcutType.SUMMARIZE -> when (summarizationFeatureSettings.canShowFeature) {
-            true -> ToolbarAction.Summarize
+        ShortcutType.SUMMARIZE -> when {
+            summarizationFeatureSettings.canShowFeature -> ToolbarAction.Summarize
+            // The tab strip already provides a new tab button, so fall back to the default tab strip shortcut.
+            context.components.settings.isTabStripEnabled -> ToolbarAction.Share
             else -> ToolbarAction.NewTab
         }
         ShortcutType.NONE -> null

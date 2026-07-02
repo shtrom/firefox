@@ -1111,6 +1111,7 @@ open class FenixApplication : Application(), Provider, ThemeProvider {
 
             toolbarSimpleShortcut.set(settings.toolbarSimpleShortcutKey)
             toolbarExpandedShortcut.set(settings.toolbarExpandedShortcutKey)
+            toolbarTabStripShortcut.set(settings.toolbarTabStripShortcutKey)
 
             enhancedTrackingProtection.set(
                 when {

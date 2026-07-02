@@ -1481,9 +1481,10 @@ class BrowserToolbarMiddlewareTest {
     }
 
     @Test
-    fun `GIVEN on a small width with tabstrip is enabled and not using the extended layout THEN don't show a share button as browser end action`() {
+    fun `GIVEN on a small width with tabstrip is enabled and not using the extended layout THEN show the tab strip shortcut, tab counter and menu as browser end actions`() {
         settings.shouldUseExpandedToolbar = false
         settings.isTabStripEnabled = true
+        settings.toolbarTabStripShortcutKey = ShortcutType.SHARE.value
         val browserScreenStore = buildBrowserScreenStore()
         val middleware = buildMiddleware(
             browserScreenStore = browserScreenStore,
@@ -1493,18 +1494,20 @@ class BrowserToolbarMiddlewareTest {
         val toolbarStore = buildStore(middleware)
 
         assertEquals(3, toolbarStore.state.displayState.browserActionsEnd.size)
-        val newTabButton = toolbarStore.state.displayState.browserActionsEnd[0] as ActionButtonRes
+        val shortcutButton = toolbarStore.state.displayState.browserActionsEnd[0] as ActionButtonRes
         val tabCounterButton = toolbarStore.state.displayState.browserActionsEnd[1] as TabCounterAction
         val menuButton = toolbarStore.state.displayState.browserActionsEnd[2] as ActionButtonRes
-        assertEquals(expectedNewTabButton(), newTabButton)
+        assertEquals(expectedShareButton(), shortcutButton)
+        assertNotEquals(expectedNewTabButton(), shortcutButton)
         assertEqualsTabCounterButton(expectedTabCounterButton(), tabCounterButton)
         assertEquals(expectedMenuButton(), menuButton)
     }
 
     @Test
-    fun `GIVEN expanded toolbar with tabstrip and tall window WHEN changing to short window THEN show new tab, tab counter and menu`() = runTest(testDispatcher) {
+    fun `GIVEN expanded toolbar with tabstrip and tall window WHEN changing to short window THEN show the tab strip shortcut, tab counter and menu`() = runTest(testDispatcher) {
         settings.isTabStripEnabled = true
         settings.shouldUseExpandedToolbar = true
+        settings.toolbarTabStripShortcutKey = ShortcutType.SHARE.value
         val browserScreenStore = buildBrowserScreenStore()
         var isWideScreen = false
         var isTallScreen = true
@@ -1528,10 +1531,11 @@ class BrowserToolbarMiddlewareTest {
         assertEquals(0, navigationActions.size)
         toolbarBrowserActions = toolbarStore.state.displayState.browserActionsEnd
         assertEquals(3, toolbarBrowserActions.size)
-        val newTabButton = toolbarBrowserActions[0] as ActionButtonRes
+        val shortcutButton = toolbarBrowserActions[0] as ActionButtonRes
         val tabCounterButton = toolbarBrowserActions[1] as TabCounterAction
         val menuButton = toolbarBrowserActions[2] as ActionButtonRes
-        assertEquals(expectedNewTabButton(), newTabButton)
+        assertEquals(expectedShareButton(), shortcutButton)
+        assertNotEquals(expectedNewTabButton(), shortcutButton)
         assertEqualsTabCounterButton(expectedTabCounterButton(), tabCounterButton)
         assertEquals(expectedMenuButton(), menuButton)
     }
@@ -3462,7 +3466,7 @@ class BrowserToolbarMiddlewareTest {
     @Test
     fun `GIVEN simple toolbar use share shortcut AND wide window with tabstrip enabled WHEN initializing toolbar THEN only show one Share in end browser actions`() {
         settings.isTabStripEnabled = true
-        settings.toolbarSimpleShortcutKey = ShortcutType.SHARE.value
+        settings.toolbarTabStripShortcutKey = ShortcutType.SHARE.value
 
         val middleware = buildMiddleware(
             appStore = appStore,
@@ -3478,6 +3482,30 @@ class BrowserToolbarMiddlewareTest {
         assertEquals(expectedShareButton(), shareButton)
         assertEqualsTabCounterButton(expectedTabCounterButton(), tabCounterButton)
         assertNotEquals(expectedShareButton(), menuButton)
+    }
+
+    @Test
+    fun `GIVEN tab strip enabled WHEN building end browser actions THEN use tab strip shortcut instead of simple shortcut`() = runTest(testDispatcher) {
+        settings.isTabStripEnabled = true
+        settings.toolbarSimpleShortcutKey = ShortcutType.NEW_TAB.value
+        settings.toolbarTabStripShortcutKey = ShortcutType.BOOKMARK.value
+
+        val toolbarStore = buildStore()
+
+        val primaryButton = toolbarStore.state.displayState.browserActionsEnd[0] as ActionButtonRes
+        assertEquals(expectedBookmarkButton(), primaryButton)
+        assertNotEquals(expectedNewTabButton(), primaryButton)
+    }
+
+    @Test
+    fun `GIVEN tab strip disabled WHEN building end browser actions THEN use simple shortcut`() = runTest(testDispatcher) {
+        settings.isTabStripEnabled = false
+        settings.toolbarSimpleShortcutKey = ShortcutType.NEW_TAB.value
+
+        val toolbarStore = buildStore()
+
+        val primaryButton = toolbarStore.state.displayState.browserActionsEnd[0] as ActionButtonRes
+        assertEquals(expectedNewTabButton(), primaryButton)
     }
 
     @Test

@@ -60,6 +60,15 @@ internal abstract class ToolbarShortcutPreference @JvmOverloads constructor(
     protected abstract fun getToolbarType(): String
     protected abstract fun getSelectedIconImageView(holder: PreferenceViewHolder): ImageView?
 
+    /**
+     * The toolbar type reported in telemetry. Separate from [getToolbarType] so a preference can reuse
+     * another type's preview layout but still be reported on its own.
+     */
+    protected open fun getTelemetryToolbarType(): String = when (getToolbarType()) {
+        EXPANDED_TOOLBAR_TYPE -> EXPANDED_TOOLBAR_TYPE
+        else -> SIMPLE_TOOLBAR_TYPE
+    }
+
     override fun onBindViewHolder(holder: PreferenceViewHolder) {
         super.onBindViewHolder(holder)
 
@@ -133,10 +142,7 @@ internal abstract class ToolbarShortcutPreference @JvmOverloads constructor(
         onClickListener {
             CustomizationSettings.toolbarShortcutSelection.record(
                 CustomizationSettings.ToolbarShortcutSelectionExtra(
-                    toolbarType = when (getToolbarType()) {
-                        EXPANDED_TOOLBAR_TYPE -> EXPANDED_TOOLBAR_TYPE
-                        else -> SIMPLE_TOOLBAR_TYPE
-                    },
+                    toolbarType = getTelemetryToolbarType(),
                     item = newOption.key.value,
                 ),
             )
