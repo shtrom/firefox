@@ -346,14 +346,22 @@ appmenu-other-protection-header2 = Try other protection tools from Mozilla:
 
 ## Profiles panel
 
+appmenu-profiles-header = Profiles
+appmenu-all-profiles =
+    .label = All Profiles
+appmenu-secure-sync-header = Secure sync
+
 appmenu-profiles-2 =
     .label = Profiles
 appmenu-other-profiles = Other profiles
 appmenu-manage-profiles =
-    .label = Manage profiles
+    .label = Manage Profiles
 appmenu-copy-profile =
-    .label = Copy this profile
-appmenu-create-profile =
-    .label = New profile
+    .label = Copy This Profile
+appmenu-create-profile2 =
+    .label = Create a New Profile
 appmenu-edit-profile =
     .aria-label = Edit profile
+appmenu-edit-this-profile =
+    .label = Edit This Profile
+appmenu-profile-current-in-use = Current profile in use

@@ -118,10 +118,30 @@ add_task(async function test_appmenu_layout_two_profiles() {
     subviewBody,
   } = getElements();
 
+  const subview = PanelMultiView.getViewNode(document, "PanelUI-profiles");
+
+  await BrowserTestUtils.waitForCondition(
+    () => !!subview.querySelectorAll(".profiles-subview-item").length,
+    "Profile list items should appear in the subview"
+  );
+
+  const profileListItems = [
+    ...subview.querySelectorAll(".profiles-subview-item"),
+  ];
+  const profilesListStartSeparator = PanelMultiView.getViewNode(
+    document,
+    "profiles-subview-list-start-separator"
+  );
+
   Assert.ok(BrowserTestUtils.isVisible(editButton));
   Assert.ok(BrowserTestUtils.isVisible(newProfileButton));
   Assert.ok(BrowserTestUtils.isVisible(copyProfileButton));
   Assert.ok(BrowserTestUtils.isVisible(manageProfilesButton));
+  Assert.strictEqual(
+    subviewBody.compareDocumentPosition(editButton),
+    4,
+    "The edit button should follow the subview body"
+  );
   Assert.strictEqual(
     subviewBody.compareDocumentPosition(newProfileButton),
     4,
@@ -136,6 +156,33 @@ add_task(async function test_appmenu_layout_two_profiles() {
     subviewBody.compareDocumentPosition(manageProfilesButton),
     4,
     "The manage profiles button should follow the subview body"
+  );
+
+  Assert.ok(
+    profilesListStartSeparator,
+    "A separator before the profile list should exist"
+  );
+  Assert.strictEqual(
+    copyProfileButton.compareDocumentPosition(profilesListStartSeparator),
+    4,
+    "The start separator should follow the copy profile button"
+  );
+  Assert.strictEqual(
+    profilesListStartSeparator.compareDocumentPosition(profileListItems[0]),
+    4,
+    "Profile list items should follow the start separator"
+  );
+  Assert.strictEqual(
+    profileListItems[profileListItems.length - 1].compareDocumentPosition(
+      manageProfilesButton
+    ),
+    4,
+    "The manage profiles button should follow the last profile list item"
+  );
+  Assert.strictEqual(
+    manageProfilesButton.compareDocumentPosition(newProfileButton),
+    4,
+    "The new profile button should follow the manage profiles button"
   );
 
   await PanelUI.hide();
