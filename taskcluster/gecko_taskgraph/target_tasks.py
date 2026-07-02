@@ -780,6 +780,9 @@ def target_tasks_custom_car_perf_testing(full_task_graph, parameters, graph_conf
                 # Bug 1898514: avoid tp6m or non-essential tp6 jobs in cron
                 if "tp6" in try_name and "essential" not in try_name:
                     return False
+                # Bug 2008058 Linux CaR tp6 tests are broken
+                if "tp6" in try_name and "linux" in platform:
+                    return False
                 # Bug 2038340: temporarily limit CaR benchmarks on Windows
                 # to sp3/js3/motionmark during PSU replacement
                 if "windows" in platform and "benchmark" in try_name:
@@ -871,7 +874,11 @@ def target_tasks_general_perf_testing(full_task_graph, parameters, graph_config)
                 return False
             if "browsertime" in try_name:
                 if "chrome" in try_name or "custom-car" in try_name:
-                    if "linux2404" in platform:
+                    # Bug 2049065: linux2404 chrome/custom-car tp6 and
+                    # chrome-unity-webgl are still broken
+                    if "linux2404" in platform and (
+                        "tp6" in try_name or "chrome-unity-webgl" in try_name
+                    ):
                         return False
                 if "chrome" in try_name:
                     if "tp6" in try_name and "essential" not in try_name:
