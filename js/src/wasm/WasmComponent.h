@@ -439,84 +439,110 @@ enum class ComponentAliasKind : uint8_t {
 // This first field, whatAndWhere_, stores all the information necessary to find
 // the index space for the item. It is a packed field laid out like so:
 //
-//     00 00 00000000 00000000000000000000
-//     │  │  │        └ instance index (ItemKind::Alias only)
-//     │  │  └ alias sort (type ComponentSort, ItemKind::Alias only)
-//     │  └ alias kind (type ComponentAliasKind, ItemKind::Alias only)
+//     000 00000000 00 0000000000000000000
+//     │   │        │  └ instance index (ItemKind::Alias only)
+//     │   │        └ alias kind (type ComponentAliasKind, ItemKind::Alias only)
+//     │   └ sort (type ComponentSort)
 //     └ kind (type ItemKind)
 //
-// For all ItemKinds except ItemKind::Alias, this is basically a big 32-bit enum
-// where only the top two bits are used. But for ItemKind::Alias we additionally
+// For all ItemKinds, we store the "sort" of the item (e.g. func, table, type,
+// or core func). This is not strictly necessary for all kinds, but facilitates
+// debugging and can catch bugs. It _is_ strictly necessary for ItemKind::Alias
+// and ItemKind::SortAndIndex, both of which use the `(core:)?sortidx`
+// production from the component spec. Additionally, for ItemKind::Alias we
 // store the ComponentAliasKind (core export alias, component export alias, or
-// outer alias) and the ComponentSort (e.g. Func or Type). Finally there is the
-// instance index, which is the index of the core instance, component instance,
-// or outer component to fetch an item from.
+// outer alias) and the instance index, which is the index of the core instance,
+// component instance, or outer component to fetch an item from.
 //
 // The second field, itemIndex_, is simply a uint32_t item index like you'd find
-// anywhere else. Together, this means the common case for defined items,
-// imports, and exports is just:
-//
-//     if (whatAndWhere_ == (ItemKind::Defined << ItemKindShift)) {
-//         return items[itemIndex_];
-//     }
-//
+// anywhere else.
 class ComponentItem {
   uint32_t whatAndWhere_;
   uint32_t itemIndex_;
 
+  friend struct ComponentItemHasher;
+
  public:
-  static constexpr uint32_t ItemKindShift = 30;
-  static constexpr uint32_t ItemKindMask = 0b11 << ItemKindShift;
-  static constexpr uint32_t AliasKindShift = 28;
+  static constexpr uint32_t ItemKindShift = 29;
+  static constexpr uint32_t ItemKindMask = 0b111 << ItemKindShift;
+  static constexpr uint32_t SortShift = 21;
+  static constexpr uint32_t SortMask = 0b11111111 << SortShift;
+  static constexpr uint32_t AliasKindShift = 19;
   static constexpr uint32_t AliasKindMask = 0b11 << AliasKindShift;
-  static constexpr uint32_t AliasSortShift = 20;
-  static constexpr uint32_t AliasSortMask = 0b11111111 << AliasSortShift;
-  static constexpr uint32_t AliasInstanceMask = (1 << AliasSortShift) - 1;
+  static constexpr uint32_t AliasInstanceMask = (1 << AliasKindShift) - 1;
 
   enum class ItemKind : uint8_t {
+    // For Defined, Import, and Export, the sort of the item is always clear
+    // from context. For example, when looking up a function by index, you would
+    // get an item from the component's `funcs_` vector; therefore, the only
+    // things you need to know are whether it is defined, imported, or exported,
+    // and what index it would be in each of those three relevant vectors.
+    // However, we still redundantly store a sort on these items because we have
+    // the space in `whatAndWhere_` and can use it to catch bugs.
     Defined,
     Import,
     Export,
+
+    // Alias refers to the component concept of "alias"; that is, projecting an
+    // item out of another component/core instance into the current instance's
+    // index space. For this we require all fields of `whatAndWhere_`.
     Alias,
+
+    // Sometimes there are simply cases where we want to track a sort and index
+    // temporarily without it contributing to an index space. This type is fine
+    // for this purpose but we carve off a dedicated kind for it to avoid bugs.
+    // This corresponds to `(core:)?sortidx` in the component spec.
+    Raw,
   };
 
-  explicit ComponentItem(ItemKind kind, uint32_t itemIndex)
-      : whatAndWhere_(uint32_t(kind) << ItemKindShift), itemIndex_(itemIndex) {
+  explicit ComponentItem(ItemKind kind, ComponentSort sort, uint32_t itemIndex)
+      : whatAndWhere_(0), itemIndex_(itemIndex) {
     MOZ_ASSERT(kind != ItemKind::Alias);
+
+    whatAndWhere_ |= uint32_t(kind) << ItemKindShift;
+    whatAndWhere_ |= uint32_t(sort) << SortShift;
+
     MOZ_ASSERT(this->kind() == kind);
+    MOZ_ASSERT(this->sort() == sort);
   }
   explicit ComponentItem(ComponentAliasKind aliasKind, ComponentSort sort,
                          uint32_t instanceIndex, uint32_t itemIndex)
       : whatAndWhere_(0), itemIndex_(itemIndex) {
     MOZ_ASSERT((instanceIndex & ~AliasInstanceMask) == 0);
     whatAndWhere_ |= uint32_t(ItemKind::Alias) << ItemKindShift;
+    whatAndWhere_ |= uint32_t(sort) << SortShift;
     whatAndWhere_ |= uint32_t(aliasKind) << AliasKindShift;
-    whatAndWhere_ |= uint32_t(sort) << AliasSortShift;
     whatAndWhere_ |= instanceIndex;
 
-    MOZ_ASSERT(kind() == ItemKind::Alias);
+    MOZ_ASSERT(this->kind() == ItemKind::Alias);
+    MOZ_ASSERT(this->sort() == sort);
     MOZ_ASSERT(this->aliasKind() == aliasKind);
-    MOZ_ASSERT(aliasSort() == sort);
-    MOZ_ASSERT(aliasInstanceIndex() == instanceIndex);
+    MOZ_ASSERT(this->aliasInstanceIndex() == instanceIndex);
   }
 
  public:
-  static ComponentItem defined(uint32_t itemIndex) {
-    return ComponentItem(ItemKind::Defined, itemIndex);
+  static ComponentItem defined(ComponentSort sort, uint32_t itemIndex) {
+    return ComponentItem(ItemKind::Defined, sort, itemIndex);
   }
-  static ComponentItem import(uint32_t itemIndex) {
-    return ComponentItem(ItemKind::Import, itemIndex);
+  static ComponentItem import(ComponentSort sort, uint32_t itemIndex) {
+    return ComponentItem(ItemKind::Import, sort, itemIndex);
   }
-  static ComponentItem export_(uint32_t itemIndex) {
-    return ComponentItem(ItemKind::Export, itemIndex);
+  static ComponentItem export_(ComponentSort sort, uint32_t itemIndex) {
+    return ComponentItem(ItemKind::Export, sort, itemIndex);
   }
   static ComponentItem alias(ComponentAliasKind aliasKind, ComponentSort sort,
                              uint32_t instanceIndex, uint32_t itemIndex) {
     return ComponentItem(aliasKind, sort, instanceIndex, itemIndex);
   }
+  static ComponentItem raw(ComponentSort sort, uint32_t itemIndex) {
+    return ComponentItem(ItemKind::Raw, sort, itemIndex);
+  }
 
   ItemKind kind() const {
     return ItemKind((whatAndWhere_ & ItemKindMask) >> ItemKindShift);
+  }
+  ComponentSort sort() const {
+    return ComponentSort((whatAndWhere_ & SortMask) >> SortShift);
   }
   uint32_t itemIndex() const { return itemIndex_; }
 
@@ -525,19 +551,28 @@ class ComponentItem {
     return ComponentAliasKind((whatAndWhere_ & AliasKindMask) >>
                               AliasKindShift);
   }
-  ComponentSort aliasSort() const {
-    MOZ_RELEASE_ASSERT(kind() == ItemKind::Alias);
-    return ComponentSort((whatAndWhere_ & AliasSortMask) >> AliasSortShift);
-  }
   uint32_t aliasInstanceIndex() const {
     MOZ_RELEASE_ASSERT(kind() == ItemKind::Alias);
     return whatAndWhere_ & AliasInstanceMask;
+  }
+
+  bool operator==(const ComponentItem& other) const {
+    return whatAndWhere_ == other.whatAndWhere_ &&
+           itemIndex_ == other.itemIndex_;
   }
 };
 
 // TODO(wasm-cm): Add static asserts for MaxComponents and
 // MaxComponentNestingDepth or whatever, eventually
 static_assert(MaxComponentCoreInstances <= ComponentItem::AliasInstanceMask);
+
+struct ComponentItemHasher {
+  using Lookup = ComponentItem;
+  static HashNumber hash(const Lookup& l) {
+    return mozilla::HashGeneric(l.whatAndWhere_, l.itemIndex_);
+  }
+  static bool match(const ComponentItem& k, const Lookup& l) { return k == l; }
+};
 
 struct CoreInstanceInstantiateArg {
   CacheableName name;
@@ -701,13 +736,14 @@ class Component : public JS::WasmComponent {
 
   template <typename T>
   bool addDefinedItem(
-      T&& item, mozilla::Vector<T, 0, SystemAllocPolicy>& definedItemsVector,
+      ComponentSort sort, T&& item,
+      mozilla::Vector<T, 0, SystemAllocPolicy>& definedItemsVector,
       ItemVector& indexSpaceVector) {
     uint32_t index = definedItemsVector.length();
     if (!definedItemsVector.append(std::forward<T>(item))) {
       return false;
     }
-    return indexSpaceVector.append(ComponentItem::defined(index));
+    return indexSpaceVector.append(ComponentItem::defined(sort, index));
   }
 
  public:
@@ -724,14 +760,16 @@ class Component : public JS::WasmComponent {
 
   const ItemVector& funcs() const { return funcs_; }
   [[nodiscard]] bool addFunc(ComponentFuncDesc&& func) {
-    return addDefinedItem(std::move(func), definedFuncs_, funcs_);
+    return addDefinedItem(ComponentSort::Func, std::move(func), definedFuncs_,
+                          funcs_);
   }
 
   const ItemVector& types() const { return types_; }
   ComponentType getType(uint32_t typeIndex) const;
   [[nodiscard]] bool addType(ComponentType&& type) {
     MOZ_RELEASE_ASSERT(type.isValid());
-    return addDefinedItem(std::move(type), definedTypes_, types_);
+    return addDefinedItem(ComponentSort::Type, std::move(type), definedTypes_,
+                          types_);
   }
 
   // TODO(wasm-cm): Functions for components
@@ -743,36 +781,41 @@ class Component : public JS::WasmComponent {
   }
 
   const ItemVector& coreTables() const { return coreTables_; }
-  [[nodiscard]] bool addCoreTable(ComponentItem&& tableItem) {
-    return coreTables_.append(std::move(tableItem));
+  [[nodiscard]] bool addCoreTable(ComponentItem tableItem) {
+    MOZ_RELEASE_ASSERT(tableItem.sort() == ComponentSort::CoreTable);
+    return coreTables_.append(tableItem);
   }
 
   const ItemVector& coreMemories() const { return coreMemories_; }
-  [[nodiscard]] bool addCoreMemory(ComponentItem&& memoryItem) {
-    return coreMemories_.append(std::move(memoryItem));
+  [[nodiscard]] bool addCoreMemory(ComponentItem memoryItem) {
+    MOZ_RELEASE_ASSERT(memoryItem.sort() == ComponentSort::CoreMemory);
+    return coreMemories_.append(memoryItem);
   }
 
   const ItemVector& coreGlobals() const { return coreGlobals_; }
-  [[nodiscard]] bool addCoreGlobal(ComponentItem&& globalItem) {
-    return coreGlobals_.append(std::move(globalItem));
+  [[nodiscard]] bool addCoreGlobal(ComponentItem globalItem) {
+    MOZ_RELEASE_ASSERT(globalItem.sort() == ComponentSort::CoreGlobal);
+    return coreGlobals_.append(globalItem);
   }
 
   const ItemVector& coreTags() const { return coreTags_; }
-  bool addCoreTag(ComponentItem&& tagItem) {
-    return coreTags_.append(std::move(tagItem));
+  bool addCoreTag(ComponentItem tagItem) {
+    MOZ_RELEASE_ASSERT(tagItem.sort() == ComponentSort::CoreTag);
+    return coreTags_.append(tagItem);
   }
 
   const ItemVector& coreModules() const { return coreModules_; }
   SharedModule getCoreModule(uint32_t modIndex) const;
   [[nodiscard]] bool addCoreModule(SharedModule module) {
-    return addDefinedItem(std::move(module), definedCoreModules_, coreModules_);
+    return addDefinedItem(ComponentSort::CoreModule, std::move(module),
+                          definedCoreModules_, coreModules_);
   }
 
   const ItemVector& coreInstances() const { return coreInstances_; }
   SharedModule getCoreModuleForCoreInstance(uint32_t instanceIndex) const;
   [[nodiscard]] bool addCoreInstance(CoreInstanceDesc&& instance) {
-    return addDefinedItem(std::move(instance), definedCoreInstances_,
-                          coreInstances_);
+    return addDefinedItem(ComponentSort::CoreInstance, std::move(instance),
+                          definedCoreInstances_, coreInstances_);
   }
 
   // --------------------------------------------------------------------------

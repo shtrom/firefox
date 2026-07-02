@@ -888,7 +888,7 @@ bool Component::addImport(ComponentImport&& import) {
   }
 
   // Add import to appropriate index space
-  ComponentItem item = ComponentItem::import(importIndex);
+  ComponentItem item = ComponentItem::import(sort, importIndex);
   switch (sort) {
     case ComponentSort::Func: {
       if (!funcs_.append(item)) {
@@ -933,7 +933,7 @@ bool Component::addExport(ComponentExport&& exp) {
   }
 
   // Add export to appropriate index space
-  ComponentItem item = ComponentItem::export_(exportIndex);
+  ComponentItem item = ComponentItem::export_(sort, exportIndex);
   switch (sort) {
     case ComponentSort::Func: {
       if (!funcs_.append(item)) {
@@ -969,6 +969,7 @@ bool Component::addExport(ComponentExport&& exp) {
 
 ComponentType Component::getType(uint32_t typeIndex) const {
   ComponentItem item = types_[typeIndex];
+  MOZ_ASSERT(item.sort() == ComponentSort::Type);
   switch (item.kind()) {
     case ComponentItem::ItemKind::Defined:
       return definedTypes_[item.itemIndex()];
@@ -985,6 +986,7 @@ ComponentType Component::getType(uint32_t typeIndex) const {
 
 ComponentType Component::getTypeForFunc(uint32_t funcIndex) const {
   ComponentItem item = funcs_[funcIndex];
+  MOZ_ASSERT(item.sort() == ComponentSort::Func);
   switch (item.kind()) {
     case ComponentItem::ItemKind::Defined:
       return getType(definedFuncs_[item.itemIndex()].typeIndex());
@@ -1001,6 +1003,7 @@ ComponentType Component::getTypeForFunc(uint32_t funcIndex) const {
 
 const TypeDef& Component::getTypeForCoreFunc(uint32_t coreFuncIndex) const {
   ComponentItem item = coreFuncs_[coreFuncIndex];
+  MOZ_ASSERT(item.sort() == ComponentSort::CoreFunction);
   switch (item.kind()) {
     case ComponentItem::ItemKind::Defined: {
       // TODO(wasm-cm): Fix this when (canon lower) is supported.
@@ -1023,6 +1026,7 @@ const TypeDef& Component::getTypeForCoreFunc(uint32_t coreFuncIndex) const {
 
 SharedModule Component::getCoreModule(uint32_t modIndex) const {
   ComponentItem item = coreModules_[modIndex];
+  MOZ_ASSERT(item.sort() == ComponentSort::CoreModule);
   switch (item.kind()) {
     case ComponentItem::ItemKind::Defined:
       return definedCoreModules_[item.itemIndex()];
@@ -1045,6 +1049,7 @@ SharedModule Component::getCoreModule(uint32_t modIndex) const {
 SharedModule Component::getCoreModuleForCoreInstance(
     uint32_t instanceIndex) const {
   ComponentItem item = coreInstances_[instanceIndex];
+  MOZ_ASSERT(item.sort() == ComponentSort::CoreInstance);
   switch (item.kind()) {
     case ComponentItem::ItemKind::Defined: {
       const CoreInstanceDesc& instance =
