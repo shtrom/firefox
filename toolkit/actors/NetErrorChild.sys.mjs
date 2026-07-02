@@ -34,7 +34,6 @@ export class NetErrorChild extends RemotePageChild {
       "RPMSetTRRDisabledLoadFlags",
       "RPMGetCurrentTRRMode",
       "RPMShowOSXLocalNetworkPermissionWarning",
-      "RPMIsSSLKeyLoggingEnabled",
     ];
     this.exportFunctions(exportableFunctions);
   }
@@ -240,10 +239,6 @@ export class NetErrorChild extends RemotePageChild {
   RPMSetTRRDisabledLoadFlags() {
     this.contentWindow.docShell.browsingContext.defaultLoadFlags |=
       Ci.nsIRequest.LOAD_TRR_DISABLED_MODE;
-  }
-
-  RPMIsSSLKeyLoggingEnabled() {
-    return Services.env.exists("SSLKEYLOGFILE");
   }
 
   RPMShowOSXLocalNetworkPermissionWarning() {

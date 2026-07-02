@@ -38,6 +38,5 @@ export default {
     RPMIsSiteSpecificTRRError: "readonly",
     RPMSetTRRDisabledLoadFlags: "readonly",
     RPMShowOSXLocalNetworkPermissionWarning: "readonly",
-    RPMIsSSLKeyLoggingEnabled: "readonly",
   },
 };
