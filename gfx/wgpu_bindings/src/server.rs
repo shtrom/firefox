@@ -20,13 +20,14 @@ use wgh::Instance;
 use wgt::error::{ErrorType, WebGpuError};
 
 use std::borrow::Cow;
+use std::collections::HashMap;
 #[allow(unused_imports)]
 use std::mem;
 #[cfg(target_os = "linux")]
 use std::os::fd::{FromRawFd, IntoRawFd, OwnedFd, RawFd};
 use std::os::raw::c_char;
 use std::ptr;
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
 #[allow(unused_imports)]
@@ -87,8 +88,7 @@ fn get_linux_dmabuf_modifiers() -> Option<Vec<u64>> {
     }
 
     // The pointer is owned by gfxVars storage and copied immediately.
-    let modifiers =
-        unsafe { std::slice::from_raw_parts(modifiers_ptr, modifier_count as usize) };
+    let modifiers = unsafe { std::slice::from_raw_parts(modifiers_ptr, modifier_count as usize) };
     Some(modifiers.to_vec())
 }
 
@@ -133,6 +133,31 @@ pub struct WebGPUParentPtr(*mut core::ffi::c_void);
 pub struct Global {
     owner: WebGPUParentPtr,
     global: wgc::global::Global,
+    swap_chain_configs: Mutex<HashMap<SwapChainId, SwapChainConfig>>,
+}
+
+/// Values for the descriptor when creating textures for an active swap chain.
+#[derive(Clone)]
+struct SwapChainConfig {
+    size: wgt::Extent3d,
+    format: wgt::TextureFormat,
+    usage: wgt::TextureUsages,
+    view_formats: Vec<wgt::TextureFormat>,
+}
+
+impl SwapChainConfig {
+    fn to_texture_descriptor(&self) -> wgc::resource::TextureDescriptor<'static> {
+        wgt::TextureDescriptor {
+            label: Some(Cow::Borrowed("swap chain texture")),
+            size: self.size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgt::TextureDimension::D2,
+            format: self.format,
+            usage: self.usage,
+            view_formats: self.view_formats.clone(),
+        }
+    }
 }
 
 impl std::ops::Deref for Global {
@@ -200,7 +225,11 @@ pub extern "C" fn wgpu_server_new(owner: WebGPUParentPtr) -> *mut Global {
         },
         Some(build_telemetry_struct()),
     );
-    let global = Global { owner, global };
+    let global = Global {
+        owner,
+        global,
+        swap_chain_configs: Mutex::new(HashMap::new()),
+    };
     Box::into_raw(Box::new(global))
 }
 
@@ -2185,6 +2214,18 @@ impl Global {
             }
             #[allow(unused_variables)]
             DeviceAction::CreateTexture(id, desc, swap_chain_id) => {
+                let desc = if let Some(swap_chain_id) = swap_chain_id {
+                    self.swap_chain_configs
+                        .lock()
+                        .unwrap()
+                        .get(&swap_chain_id)
+                        .cloned()
+                        .expect("CreateTexture for unknown swap chain {swap_chain_id:?}")
+                        .to_texture_descriptor()
+                } else {
+                    desc
+                };
+
                 unsafe {
                     assert!(wgpu_texture_format_is_valid_for_webidl(&nsCString::from(
                         serde_json::to_value(&desc.format)
@@ -3097,10 +3138,26 @@ unsafe fn process_message(
             width,
             height,
             format,
+            texture_format,
+            usage,
+            view_formats,
             buffer_ids,
             remote_texture_owner_id,
             use_shared_texture_in_swap_chain,
         } => {
+            global.swap_chain_configs.lock().unwrap().insert(
+                SwapChainId(remote_texture_owner_id.0),
+                SwapChainConfig {
+                    size: wgt::Extent3d {
+                        width: width as u32,
+                        height: height as u32,
+                        depth_or_array_layers: 1,
+                    },
+                    format: texture_format,
+                    usage,
+                    view_formats,
+                },
+            );
             wgpu_parent_create_swap_chain(
                 global.owner,
                 device_id,
@@ -3135,6 +3192,11 @@ unsafe fn process_message(
             txn_type,
             txn_id,
         } => {
+            global
+                .swap_chain_configs
+                .lock()
+                .unwrap()
+                .remove(&SwapChainId(remote_texture_owner_id.0));
             wgpu_parent_swap_chain_drop(global.owner, remote_texture_owner_id, txn_type, txn_id);
         }
 
