@@ -95,6 +95,7 @@ exclude = [
   "LockedNestedDeclarationsRule",
 ]
 include = [
+  "ContainerAttributeDependencyKind",
   "AlignmentBaseline",
   "AnchorName",
   "ScopedName",

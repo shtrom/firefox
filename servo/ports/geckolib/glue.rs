@@ -105,7 +105,7 @@ use style::shared_lock::{
 };
 use style::string_cache::{Atom, WeakAtom};
 use style::style_adjuster::StyleAdjuster;
-use style::stylesheets::container_rule::ContainerSizeQuery;
+use style::stylesheets::container_rule::{ContainerAttributeDependencyKind, ContainerSizeQuery};
 use style::stylesheets::import_rule::{ImportLayer, ImportSheet};
 use style::stylesheets::keyframes_rule::{Keyframe, KeyframeSelectors, KeyframesStepValue};
 use style::stylesheets::scope_rule::{ImplicitScopeRoot, ScopeRootCandidate, ScopeSubjectMap};
@@ -8192,6 +8192,22 @@ pub extern "C" fn Servo_StyleSet_MightHaveAttributeDependency(
             })
         })
     }
+}
+
+#[no_mangle]
+pub extern "C" fn Servo_StyleSet_MightHaveAttributeDependencyInContainer(
+    raw_data: &PerDocumentStyleData,
+    element: &RawGeckoElement,
+    local_name: *mut nsAtom,
+) -> ContainerAttributeDependencyKind {
+    let data = raw_data.borrow();
+    let element = GeckoElement(element);
+
+    ContainerAttributeDependencyKind::element_container_dependency_kind(
+        element,
+        local_name,
+        &data.stylist,
+    )
 }
 
 #[no_mangle]
