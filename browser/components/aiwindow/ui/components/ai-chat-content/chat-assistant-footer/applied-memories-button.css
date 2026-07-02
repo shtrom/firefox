@@ -343,7 +343,7 @@ moz-button.memories-remove-button::part(button) {
   width: var(--aiwindow-action-row-button-width);
   gap: var(--space-xsmall);
 
-  --button-alignment: var(--aiwindow-action-row-button-alignment);
+  --button-content-alignment: var(--aiwindow-action-row-button-alignment);
   --button-padding: var(--aiwindow-action-row-button-padding);
   --button-font-weight: var(--button-font-weight);
 }

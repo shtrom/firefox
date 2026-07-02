@@ -26,6 +26,7 @@ export default {
         "default",
         "primary",
         "destructive",
+        "muted",
         "toolbar",
         "menuitem",
         "icon",
@@ -49,6 +50,7 @@ moz-button-labelled =
   .label = Button
 moz-button-primary = Primary
 moz-button-destructive = Destructive
+moz-button-muted = Muted
 moz-button-menuitem = Menu Item
 moz-button-titled =
   .title = View logins
@@ -144,6 +146,12 @@ MenuItem.args = {
   type: "menuitem",
   l10nId: "moz-button-menuitem",
   size: "small",
+};
+export const Muted = Template.bind({});
+Muted.args = {
+  ...Default.args,
+  type: "muted",
+  l10nId: "moz-button-muted",
 };
 export const Icon = Template.bind({});
 Icon.args = {

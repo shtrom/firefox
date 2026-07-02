@@ -281,6 +281,26 @@ export const tokensTable = {
       name: "--button-background-color-ghost-selected",
     },
     {
+      value: "var(--button-background-color)",
+      name: "--button-background-color-muted",
+    },
+    {
+      value: "var(--button-background-color-active)",
+      name: "--button-background-color-muted-active",
+    },
+    {
+      value: "var(--button-background-color-hover)",
+      name: "--button-background-color-muted-hover",
+    },
+    {
+      value: "var(--button-background-color-disabled)",
+      name: "--button-background-color-muted-disabled",
+    },
+    {
+      value: "var(--button-background-color-muted-active)",
+      name: "--button-background-color-muted-selected",
+    },
+    {
       value: "var(--button-background-color-ghost)",
       name: "--button-background-color-menu",
     },
@@ -338,6 +358,10 @@ export const tokensTable = {
     {
       value: "var(--button-background-color-ghost-active)",
       name: "--button-background-color-toolbar-selected",
+    },
+    {
+      value: "var(--color-accent-attention)",
+      name: "--button-badge-background-color",
     },
     { value: "var(--background-color-box)", name: "--card-background-color" },
     {
@@ -990,6 +1014,26 @@ export const tokensTable = {
     {
       value: "var(--button-border-color-menu-active)",
       name: "--button-border-color-menu-selected",
+    },
+    {
+      value: "var(--button-border-color)",
+      name: "--button-border-color-muted",
+    },
+    {
+      value: "var(--button-border-color-active)",
+      name: "--button-border-color-muted-active",
+    },
+    {
+      value: "var(--button-border-color-hover)",
+      name: "--button-border-color-muted-hover",
+    },
+    {
+      value: "var(--button-border-color-disabled)",
+      name: "--button-border-color-muted-disabled",
+    },
+    {
+      value: "var(--button-border-color-muted-active)",
+      name: "--button-border-color-muted-selected",
     },
     {
       value: {
@@ -1825,6 +1869,7 @@ export const tokensTable = {
     { value: "var(--dimension-500)", name: "--size-layout-xlarge" },
     { value: "280px", name: "--size-sidebar" },
     { value: "118px", name: "--size-sidebar-narrow" },
+    { value: "6px", name: "--button-badge-size" },
     { value: "var(--size-item-large)", name: "--button-min-height" },
     { value: "var(--size-item-medium)", name: "--button-min-height-small" },
     { value: "40px", name: "--button-min-height-large" },
@@ -2194,6 +2239,23 @@ export const tokensTable = {
     {
       value: "var(--button-text-color-ghost-active)",
       name: "--button-text-color-ghost-selected",
+    },
+    { value: "var(--button-text-color)", name: "--button-text-color-muted" },
+    {
+      value: "var(--button-text-color-active)",
+      name: "--button-text-color-muted-active",
+    },
+    {
+      value: "var(--button-text-color-hover)",
+      name: "--button-text-color-muted-hover",
+    },
+    {
+      value: "var(--button-text-color-disabled)",
+      name: "--button-text-color-muted-disabled",
+    },
+    {
+      value: "var(--button-text-color-muted-active)",
+      name: "--button-text-color-muted-selected",
     },
     {
       value: {
@@ -2654,173 +2716,8 @@ export const tokensTable = {
       name: "--box-border",
     },
   ],
-  "icon-color": [
-    { value: "currentColor", name: "--button-icon-fill" },
-    { value: "var(--button-icon-fill)", name: "--button-icon-stroke" },
-    {
-      value: {
-        light: "var(--color-gray-70)",
-        dark: "var(--color-gray-0)",
-        prefersContrast: "var(--text-color)",
-        default: "light-dark(var(--color-gray-70), var(--color-gray-0))",
-      },
-      name: "--icon-color",
-    },
-    {
-      value: {
-        light: "var(--color-blue-60)",
-        dark: "var(--color-blue-20)",
-        prefersContrast: "var(--icon-color)",
-        default: "light-dark(var(--color-blue-60), var(--color-blue-20))",
-      },
-      name: "--icon-color-information",
-    },
-    {
-      value: {
-        light: "var(--color-green-60)",
-        dark: "var(--color-green-20)",
-        prefersContrast: "var(--icon-color)",
-        default: "light-dark(var(--color-green-60), var(--color-green-20))",
-      },
-      name: "--icon-color-success",
-    },
-    {
-      value: {
-        light: "var(--color-yellow-60)",
-        dark: "var(--color-yellow-20)",
-        prefersContrast: "var(--icon-color)",
-        default: "light-dark(var(--color-yellow-60), var(--color-yellow-20))",
-      },
-      name: "--icon-color-warning",
-    },
-    {
-      value: {
-        light: "var(--color-red-60)",
-        dark: "var(--color-red-20)",
-        prefersContrast: "var(--icon-color)",
-        default: "light-dark(var(--color-red-60), var(--color-red-20))",
-      },
-      name: "--icon-color-critical",
-    },
-    {
-      value: {
-        light: "var(--color-gray-70)",
-        dark: "var(--color-gray-0)",
-        nativeTheme: "currentColor",
-        platform: {
-          default: "currentColor",
-          browserTheme: {
-            light: "var(--color-gray-70)",
-            dark: "var(--color-gray-0)",
-            default: "light-dark(var(--color-gray-70), var(--color-gray-0))",
-          },
-        },
-        default: "light-dark(var(--color-gray-70), var(--color-gray-0))",
-      },
-      name: "--toolbarbutton-icon-fill",
-    },
-    {
-      value: {
-        light: "var(--color-blue-60)",
-        dark: "var(--color-cyan-30)",
-        nativeTheme: "AccentColor",
-        platform: {
-          default: "AccentColor",
-          browserTheme: {
-            light: "var(--color-blue-60)",
-            dark: "var(--color-cyan-30)",
-            default: "light-dark(var(--color-blue-60), var(--color-cyan-30))",
-          },
-        },
-        default: "light-dark(var(--color-blue-60), var(--color-cyan-30))",
-      },
-      name: "--toolbarbutton-icon-fill-attention",
-    },
-    {
-      value: {
-        light: "var(--color-gray-20)",
-        dark: "var(--color-gray-90)",
-        nativeTheme: "AccentColorText",
-        platform: {
-          default: "AccentColorText",
-          browserTheme: {
-            light: "var(--color-gray-20)",
-            dark: "var(--color-gray-90)",
-            default: "light-dark(var(--color-gray-20), var(--color-gray-90))",
-          },
-        },
-        default: "light-dark(var(--color-gray-20), var(--color-gray-90))",
-      },
-      name: "--toolbarbutton-icon-fill-attention-text",
-    },
-    {
-      value: "var(--icon-color-information)",
-      name: "--message-bar-icon-color",
-    },
-    { value: "var(--button-icon-fill)", name: "--select-icon-fill" },
-    { value: "var(--icon-color)", name: "--box-icon-fill" },
-    { value: "var(--box-icon-fill)", name: "--box-icon-stroke" },
-    { value: "var(--color-blue-50)", name: "--tab-loading-fill" },
-    {
-      value: {
-        default: "0.9",
-        nativeTheme: "0.9",
-        prefersContrast: "1",
-        browserTheme: { default: "0.72" },
-      },
-      name: "--urlbar-icon-fill-opacity",
-    },
-  ],
-  opacity: [
-    {
-      value: { default: "0.5", forcedColors: "1" },
-      name: "--button-opacity-disabled",
-    },
-    {
-      value: "var(--button-opacity-disabled)",
-      name: "--checkbox-opacity-disabled",
-    },
-    {
-      value: "var(--button-opacity-disabled)",
-      name: "--input-text-opacity-disabled",
-    },
-    {
-      value: { default: "0.6", prefersContrast: "1" },
-      name: "--opacity-deemphasized-strong",
-    },
-    {
-      value: { default: "0.8", prefersContrast: "1" },
-      name: "--opacity-deemphasized",
-    },
-    {
-      value: {
-        default: "var(--button-opacity-disabled)",
-        prefersContrast: 0.3,
-      },
-      name: "--toolbarbutton-opacity-disabled",
-    },
-    {
-      value: "var(--button-opacity-disabled)",
-      name: "--select-opacity-disabled",
-    },
-    {
-      value: "var(--button-opacity-disabled)",
-      name: "--toggle-opacity-disabled",
-    },
-  ],
-  "icon-size": [
-    { value: "var(--icon-size-small)", name: "--icon-size" },
-    { value: "var(--dimension-12)", name: "--icon-size-xsmall" },
-    { value: "var(--dimension-16)", name: "--icon-size-small" },
-    { value: "var(--dimension-20)", name: "--icon-size-medium" },
-    { value: "var(--dimension-24)", name: "--icon-size-large" },
-    { value: "var(--dimension-32)", name: "--icon-size-xlarge" },
-    { value: "var(--icon-size-xsmall)", name: "--input-text-icon-size" },
-    { value: "var(--icon-size-xsmall)", name: "--breadcrumb-icon-size" },
-    { value: "var(--icon-size)", name: "--message-bar-icon-size" },
-    { value: "var(--icon-size)", name: "--box-icon-size" },
-  ],
   uncategorized: [
+    { value: "center", name: "--button-content-alignment" },
     {
       value: {
         nativeTheme: "var(--toolbar-text-color)",
@@ -3201,6 +3098,172 @@ export const tokensTable = {
       },
       name: "--tabs-navbar-separator-style",
     },
+  ],
+  "icon-color": [
+    { value: "currentColor", name: "--button-icon-fill" },
+    { value: "var(--button-icon-fill)", name: "--button-icon-stroke" },
+    {
+      value: {
+        light: "var(--color-gray-70)",
+        dark: "var(--color-gray-0)",
+        prefersContrast: "var(--text-color)",
+        default: "light-dark(var(--color-gray-70), var(--color-gray-0))",
+      },
+      name: "--icon-color",
+    },
+    {
+      value: {
+        light: "var(--color-blue-60)",
+        dark: "var(--color-blue-20)",
+        prefersContrast: "var(--icon-color)",
+        default: "light-dark(var(--color-blue-60), var(--color-blue-20))",
+      },
+      name: "--icon-color-information",
+    },
+    {
+      value: {
+        light: "var(--color-green-60)",
+        dark: "var(--color-green-20)",
+        prefersContrast: "var(--icon-color)",
+        default: "light-dark(var(--color-green-60), var(--color-green-20))",
+      },
+      name: "--icon-color-success",
+    },
+    {
+      value: {
+        light: "var(--color-yellow-60)",
+        dark: "var(--color-yellow-20)",
+        prefersContrast: "var(--icon-color)",
+        default: "light-dark(var(--color-yellow-60), var(--color-yellow-20))",
+      },
+      name: "--icon-color-warning",
+    },
+    {
+      value: {
+        light: "var(--color-red-60)",
+        dark: "var(--color-red-20)",
+        prefersContrast: "var(--icon-color)",
+        default: "light-dark(var(--color-red-60), var(--color-red-20))",
+      },
+      name: "--icon-color-critical",
+    },
+    {
+      value: {
+        light: "var(--color-gray-70)",
+        dark: "var(--color-gray-0)",
+        nativeTheme: "currentColor",
+        platform: {
+          default: "currentColor",
+          browserTheme: {
+            light: "var(--color-gray-70)",
+            dark: "var(--color-gray-0)",
+            default: "light-dark(var(--color-gray-70), var(--color-gray-0))",
+          },
+        },
+        default: "light-dark(var(--color-gray-70), var(--color-gray-0))",
+      },
+      name: "--toolbarbutton-icon-fill",
+    },
+    {
+      value: {
+        light: "var(--color-blue-60)",
+        dark: "var(--color-cyan-30)",
+        nativeTheme: "AccentColor",
+        platform: {
+          default: "AccentColor",
+          browserTheme: {
+            light: "var(--color-blue-60)",
+            dark: "var(--color-cyan-30)",
+            default: "light-dark(var(--color-blue-60), var(--color-cyan-30))",
+          },
+        },
+        default: "light-dark(var(--color-blue-60), var(--color-cyan-30))",
+      },
+      name: "--toolbarbutton-icon-fill-attention",
+    },
+    {
+      value: {
+        light: "var(--color-gray-20)",
+        dark: "var(--color-gray-90)",
+        nativeTheme: "AccentColorText",
+        platform: {
+          default: "AccentColorText",
+          browserTheme: {
+            light: "var(--color-gray-20)",
+            dark: "var(--color-gray-90)",
+            default: "light-dark(var(--color-gray-20), var(--color-gray-90))",
+          },
+        },
+        default: "light-dark(var(--color-gray-20), var(--color-gray-90))",
+      },
+      name: "--toolbarbutton-icon-fill-attention-text",
+    },
+    {
+      value: "var(--icon-color-information)",
+      name: "--message-bar-icon-color",
+    },
+    { value: "var(--button-icon-fill)", name: "--select-icon-fill" },
+    { value: "var(--icon-color)", name: "--box-icon-fill" },
+    { value: "var(--box-icon-fill)", name: "--box-icon-stroke" },
+    { value: "var(--color-blue-50)", name: "--tab-loading-fill" },
+    {
+      value: {
+        default: "0.9",
+        nativeTheme: "0.9",
+        prefersContrast: "1",
+        browserTheme: { default: "0.72" },
+      },
+      name: "--urlbar-icon-fill-opacity",
+    },
+  ],
+  opacity: [
+    {
+      value: { default: "0.5", forcedColors: "1" },
+      name: "--button-opacity-disabled",
+    },
+    {
+      value: "var(--button-opacity-disabled)",
+      name: "--checkbox-opacity-disabled",
+    },
+    {
+      value: "var(--button-opacity-disabled)",
+      name: "--input-text-opacity-disabled",
+    },
+    {
+      value: { default: "0.6", prefersContrast: "1" },
+      name: "--opacity-deemphasized-strong",
+    },
+    {
+      value: { default: "0.8", prefersContrast: "1" },
+      name: "--opacity-deemphasized",
+    },
+    {
+      value: {
+        default: "var(--button-opacity-disabled)",
+        prefersContrast: 0.3,
+      },
+      name: "--toolbarbutton-opacity-disabled",
+    },
+    {
+      value: "var(--button-opacity-disabled)",
+      name: "--select-opacity-disabled",
+    },
+    {
+      value: "var(--button-opacity-disabled)",
+      name: "--toggle-opacity-disabled",
+    },
+  ],
+  "icon-size": [
+    { value: "var(--icon-size-small)", name: "--icon-size" },
+    { value: "var(--dimension-12)", name: "--icon-size-xsmall" },
+    { value: "var(--dimension-16)", name: "--icon-size-small" },
+    { value: "var(--dimension-20)", name: "--icon-size-medium" },
+    { value: "var(--dimension-24)", name: "--icon-size-large" },
+    { value: "var(--dimension-32)", name: "--icon-size-xlarge" },
+    { value: "var(--icon-size-xsmall)", name: "--input-text-icon-size" },
+    { value: "var(--icon-size-xsmall)", name: "--breadcrumb-icon-size" },
+    { value: "var(--icon-size)", name: "--message-bar-icon-size" },
+    { value: "var(--icon-size)", name: "--box-icon-size" },
   ],
 };
 
@@ -3813,6 +3876,14 @@ export const variableLookupTable = {
   "button-background-color-ghost-hover": "var(--button-background-color-hover)",
   "button-background-color-ghost-selected":
     "var(--button-background-color-ghost-active)",
+  "button-background-color-muted": "var(--button-background-color)",
+  "button-background-color-muted-active":
+    "var(--button-background-color-active)",
+  "button-background-color-muted-hover": "var(--button-background-color-hover)",
+  "button-background-color-muted-disabled":
+    "var(--button-background-color-disabled)",
+  "button-background-color-muted-selected":
+    "var(--button-background-color-muted-active)",
   "button-background-color-menu": "var(--button-background-color-ghost)",
   "button-background-color-menu-active": {
     default: "var(--button-background-color-ghost-active)",
@@ -3843,6 +3914,8 @@ export const variableLookupTable = {
     "var(--toolbarbutton-background-color-hover)",
   "button-background-color-toolbar-selected":
     "var(--button-background-color-ghost-active)",
+  "button-badge-background-color": "var(--color-accent-attention)",
+  "button-badge-size": "6px",
   "button-border": "var(--border-width) solid var(--button-border-color)",
   "button-border-color": {
     default: "transparent",
@@ -3898,6 +3971,12 @@ export const variableLookupTable = {
     default: "var(--button-border-color-ghost-hover)",
   },
   "button-border-color-menu-selected": "var(--button-border-color-menu-active)",
+  "button-border-color-muted": "var(--button-border-color)",
+  "button-border-color-muted-active": "var(--button-border-color-active)",
+  "button-border-color-muted-hover": "var(--button-border-color-hover)",
+  "button-border-color-muted-disabled": "var(--button-border-color-disabled)",
+  "button-border-color-muted-selected":
+    "var(--button-border-color-muted-active)",
   "button-border-color-hover": {
     default: "var(--button-border-color)",
     forcedColors: "var(--border-color-interactive-hover)",
@@ -3931,6 +4010,7 @@ export const variableLookupTable = {
   "button-border-color-toolbar-selected":
     "var(--button-border-color-ghost-active)",
   "button-border-radius": "var(--border-radius-medium)",
+  "button-content-alignment": "center",
   "button-font-size": "var(--font-size-root)",
   "button-font-size-small": "var(--font-size-small)",
   "button-font-weight": "var(--font-weight-semibold)",
@@ -4021,6 +4101,11 @@ export const variableLookupTable = {
     forcedColors: "var(--button-text-color-hover)",
   },
   "button-text-color-ghost-selected": "var(--button-text-color-ghost-active)",
+  "button-text-color-muted": "var(--button-text-color)",
+  "button-text-color-muted-active": "var(--button-text-color-active)",
+  "button-text-color-muted-hover": "var(--button-text-color-hover)",
+  "button-text-color-muted-disabled": "var(--button-text-color-disabled)",
+  "button-text-color-muted-selected": "var(--button-text-color-muted-active)",
   "button-text-color-hover": {
     default: "var(--button-text-color)",
     forcedColors: "SelectedItem",
