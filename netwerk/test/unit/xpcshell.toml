@@ -942,6 +942,10 @@ head = "head_channels.js head_cache.js head_cookies.js head_trr.js head_http3.js
 ["test_http3.js"]
 head = "head_cookies.js head_channels.js head_cache.js head_http3.js http3_common.js"
 run-sequentially = ["true"] # http3server
+# Some platform consumers may default speculative-parallel-limit to 0, which
+# starves the alt-svc/h3 connection these requests route over. Enforce the
+# value the test requires to pass.
+prefs = ["network.http.speculative-parallel-limit=20"]
 skip-if = [
   "os == 'android' && os_version == '14' && arch == 'x86_64'", # Bug 1982955
   "os == 'win' && os_version == '10.2009' && arch == 'x86_64'", # Bug 1807931
@@ -984,6 +988,10 @@ skip-if = [
 
 ["test_http3_alt_svc.js"]
 run-sequentially = ["true"] # http3server
+# Some platform consumers may default speculative-parallel-limit to 0, which
+# disables the speculative connect this test exercises. Enforce the value the
+# test requires to pass.
+prefs = ["network.http.speculative-parallel-limit=20"]
 skip-if = [
   "os == 'android' && os_version == '14' && arch == 'x86_64'",
   "os == 'win' && os_version == '11.26100' && arch == 'x86_64' && msix", # Bug 1807931
