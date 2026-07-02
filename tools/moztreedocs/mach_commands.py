@@ -15,6 +15,7 @@ import uuid
 from functools import partial
 from pprint import pprint
 
+import attr
 import mozpack.path as mozpath
 import sentry_sdk
 import yaml
@@ -22,6 +23,7 @@ from mach.decorators import Command, CommandArgument, SubCommand
 from mach.registrar import Registrar
 from mozbuild.util import cpu_count
 from mozfile import load_source
+from mozlint.result import Issue, IssueEncoder, ResultSummary
 
 here = os.path.abspath(os.path.dirname(__file__))
 topsrcdir = os.path.abspath(os.path.dirname(os.path.dirname(here)))
@@ -205,7 +207,7 @@ def build_docs(
 
         [fatal_errors, known_errors] = _check_sphinx_warnings(warnings, docs_config)
 
-        log_results(fatal_errors, known_errors, errors_file)
+        log_results(fatal_errors, known_errors, command_context.topsrcdir, errors_file)
         if len(fatal_errors):
             return 1
 
@@ -603,7 +605,36 @@ def print_result_to_stderr(known_or_unexpected, result_details):
     )
 
 
-def log_results(fatal_errors, known_errors, error_file=None):
+@attr.s(slots=True, kw_only=True)
+class AnalysisFormatIssue(Issue):
+    """
+    Adapter for the Issue class to produce results in a code review bot
+    compatible manner. Namely, use of line rather than lineno, and `path` as
+    the relative path rather than absolute.
+    """
+
+    line = attr.ib(default=None)
+
+    def __attrs_post_init__(self):
+        root = ResultSummary.root
+        assert root is not None, "Missing ResultSummary.root"
+        if os.path.isabs(self.path):
+            self.path = mozpath.relpath(self.path, root)
+        else:
+            self.path = mozpath.normpath(self.path)
+        self.line = self.lineno
+
+
+def create_issue(result):
+    """Creates an AnalysisFormatIssue from the given result"""
+    args = {}
+    for arg in attr.fields(AnalysisFormatIssue):
+        if arg.init:
+            args[arg.name] = result.get(arg.name)
+    return AnalysisFormatIssue(**args)
+
+
+def log_results(fatal_errors, known_errors, root, error_file=None):
     """
     This will always output to stdout, but optionally also dump messages
     to error_file in the JSON format needed for the review bot.
@@ -611,7 +642,7 @@ def log_results(fatal_errors, known_errors, error_file=None):
     Ideally we should reuse mozlint's logger here.
     """
 
-    results = []
+    result = ResultSummary(root)
 
     for m in known_errors:
         # We log known errors as warnings for mozlint, so that they'll still
@@ -620,7 +651,9 @@ def log_results(fatal_errors, known_errors, error_file=None):
         result_details = transform_error(m, "warning")
         print_result_to_stderr("KNOWN", result_details)
         if "relpath" in result_details:
-            results.append(result_details)
+            result.issues[result_details["relpath"]].append(
+                create_issue(result_details)
+            )
 
     print(f"Known Failures: {len(known_errors)}")
 
@@ -628,10 +661,12 @@ def log_results(fatal_errors, known_errors, error_file=None):
         result_details = transform_error(m, "error")
         print_result_to_stderr("UNEXPECTED", result_details)
         if "relpath" in result_details:
-            results.append(result_details)
+            result.issues[result_details["relpath"]].append(
+                create_issue(result_details)
+            )
 
     print(f"Failures: {len(fatal_errors)}")
 
     if error_file:
         with open(error_file, "w") as fh:
-            json.dump(results, fh)
+            json.dump(result.issues, fh, cls=IssueEncoder)
