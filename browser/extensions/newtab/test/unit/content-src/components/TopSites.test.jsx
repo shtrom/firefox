@@ -1616,9 +1616,11 @@ describe("<TopSiteList>", () => {
 describe("TopSiteAddButton", () => {
   it("should dispatch a TOP_SITES_EDIT action when the addbutton is clicked", () => {
     const dispatch = sinon.spy();
-    const wrapper = shallow(<TopSiteAddButton dispatch={dispatch} index={7} />);
+    const wrapper = shallow(
+      <TopSiteAddButton dispatch={dispatch} index={7} isAddButton={true} />
+    );
 
-    wrapper.find("moz-button").first().simulate("click");
+    wrapper.find(".add-button").first().simulate("click");
 
     assert.calledOnce(dispatch);
     assert.calledWithExactly(dispatch, {

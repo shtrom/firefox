@@ -4,5 +4,3 @@
 
 export const TOP_SITES_DEFAULT_ROWS = 1;
 export const TOP_SITES_MAX_SITES_PER_ROW = 8;
-// Maximum number of shortcut rows the grid can grow to.
-export const TOP_SITES_MAX_ROWS = 4;
