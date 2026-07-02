@@ -1273,44 +1273,19 @@ panelview .toolbarbutton-1,
   }
 }
 
-#appMenu-profiles-button {
+#appMenu-profiles-button,
+#PanelUI-fxa-menu-profiles-button {
   justify-content: space-between;
-}
-
-#PanelUI-fxa-menu-all-profiles-list {
-  overflow: hidden auto;
-}
-
-#PanelUI-fxa-menu-all-profiles-list .profile-item-labels {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-
-  > label {
-    margin: 0;
-  }
-}
-
-#PanelUI-fxa-menu-all-profiles-list .profile-item-current-label {
-  color: var(--text-color-deemphasized);
-}
-
-#PanelUI-fxa-menu-all-profiles-list .profile-item-check-icon {
-  -moz-context-properties: fill;
-  fill: currentColor;
-  width: 16px;
-  height: 16px;
 }
 
 /* Set the --appmenu-profiles-theme-bg and --appmenu-profiles-theme-fg
  * variables inline on the toolbarbutton */
+#appMenu-profiles-button.subviewbutton-iconic > .toolbarbutton-icon,
+#PanelUI-fxa-menu-profiles-button.subviewbutton-iconic > .toolbarbutton-icon,
 .subviewbutton-iconic.profile-item > .toolbarbutton-icon {
   -moz-context-properties: fill, stroke;
   fill: var(--appmenu-profiles-theme-bg);
   stroke: var(--appmenu-profiles-theme-fg);
-  width: var(--icon-size-large);
-  height: var(--icon-size-large);
 }
 
 /* Adjust the Zoom toolbaritem padding to have its height the same as other toolbarbuttons,
@@ -2499,6 +2474,24 @@ radiogroup:focus-visible > .subviewradio[focused="true"] {
   text-overflow: ellipsis;
 }
 
+#profiles-edit-this-profile-button {
+  list-style-image: url("chrome://global/skin/icons/edit-outline.svg");
+  padding: var(--panel-header-back-icon-padding);
+  margin: 0;
+}
+
+#profiles-edit-this-profile-button > .toolbarbutton-text {
+  display: none;
+}
+
+#profiles-copy-profile-button {
+  list-style-image: url("chrome://global/skin/icons/edit-copy.svg");
+}
+
+#profiles-create-profile-button {
+  list-style-image: url("chrome://global/skin/icons/plus.svg");
+}
+
 #profile-icon-image {
   width: 90px;
   height: 90px;
@@ -2527,21 +2520,6 @@ radiogroup:focus-visible > .subviewradio[focused="true"] {
 
 #PanelUI-profiles > .panel-subview-body {
   padding-block-start: 0;
-  flex: none;
-}
-
-#profiles-subview-list {
-  max-height: 50dvh;
-  overflow: hidden auto;
-}
-
-#PanelUI-profiles {
-  height: fit-content;
-  min-height: 0 !important;
-}
-
-.panel-viewcontainer:has(#PanelUI-profiles[visible]) {
-  min-height: 0 !important;
 }
 
 /* ----- Profiles FxA panel ----- */
@@ -2549,9 +2527,7 @@ radiogroup:focus-visible > .subviewradio[focused="true"] {
 /* Special case: hide the profiles menuitem if the FxA/Sync panel is shown as
  * a submenu of the app menu, rather than anchored to the FxA/Sync toolbar
  * button. */
-#appMenu-popup
-  panelmultiview[mainViewId="appMenu-mainView"]
-  :is(#PanelUI-fxa-menu-profiles-header-separator, #PanelUI-fxa-menu-profiles-header-label, #PanelUI-fxa-menu-profile-buttons) {
+#appMenu-popup panelmultiview[mainViewId="appMenu-mainView"] #PanelUI-fxa-menu-profiles-button {
   display: none;
 }
 
