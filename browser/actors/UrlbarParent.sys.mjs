@@ -7,6 +7,9 @@ const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   UrlbarParentController:
     "moz-src:///browser/components/urlbar/UrlbarParentController.sys.mjs",
+  UrlbarQueryContext:
+    "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
+  UrlbarResult: "chrome://browser/content/urlbar/UrlbarResult.mjs",
 });
 
 /**
@@ -16,33 +19,35 @@ ChromeUtils.defineESModuleGetters(lazy, {
 /**
  * Parent-process counterpart of `UrlbarChild`. Owns the
  * `UrlbarParentController` instances created for the `<moz-urlbar>`
- * elements served by this window global.
+ * elements served by this window global, across both transports:
  *
- * The controllers are cached in a `WeakMap` keyed by the input element, so
- * a controller's lifetime tracks its element rather than the actor's: when
- * an element goes away (e.g. an about:newtab-style document hosting a
- * smartbar is torn down while the top chrome window lives on) its
- * controller becomes collectable, rather than being pinned until the
- * window closes. Reconnecting the same element (e.g. toggling customize
- * mode) reuses the same controller.
+ * - Direct path (chrome `<moz-urlbar>`, default): `getOrCreateController`
+ *   hands the real `UrlbarParentController` back to the in-process child,
+ *   cached in a `WeakMap` keyed by the input element so a controller's
+ *   lifetime tracks its element rather than the actor's. Reconnecting the
+ *   same element (e.g. toggling customize mode) reuses the same controller.
  *
- * In the chrome same-process configuration, `UrlbarChild.getOrCreateController`
- * reaches us via `windowGlobalChild.parentActor.getActor("Urlbar")` and we
- * hand the real `UrlbarParentController` back directly. A future
- * content-process consumer (e.g. about:newtab) will instead trade
- * `sendQuery` messages with us, at which point the parent will need to
- * retain controllers explicitly and route by an instance id.
+ * - Message path (content-process `<moz-urlbar>`, or chrome with
+ *   `browser.urlbar.ipc.chromeMessagePassing`): the child holds a
+ *   `UrlbarParentControllerProxy` and trades actor messages with us. We build
+ *   the controller from the `Init` payload and retain it in a `Map` keyed by
+ *   the child-assigned `instanceId`, routing subsequent messages to it.
+ *   These controllers are retained until torn down explicitly (a later patch
+ *   adds the `Destroy` message and the child-side `FinalizationRegistry`).
  */
 export class UrlbarParent extends JSWindowActorParent {
   /** @type {WeakMap<object, UrlbarParentController>} */
   #controllers = new WeakMap();
 
+  /** @type {Map<number, UrlbarParentController>} */
+  #messageControllers = new Map();
+
   /**
+   * Direct path only: returns the in-process controller for an input,
+   * creating it on demand.
+   *
    * @param {object} input
    *   The `UrlbarInput`/`SmartbarInput` owning the controller.
-   *   In-process only; for now the parent controller depends on a live
-   *   input reference, which is why content-process `<moz-urlbar>`
-   *   isn't supported yet.
    * @returns {UrlbarParentController}
    */
   getOrCreateController(input) {
@@ -56,4 +61,70 @@ export class UrlbarParent extends JSWindowActorParent {
     }
     return controller;
   }
+
+  /**
+   * Message path: routes child->parent messages to the controller identified
+   * by `instanceId`, deserializing their payloads.
+   *
+   * @param {object} message
+   *   The actor message, with `name` and `data`.
+   */
+  receiveMessage(message) {
+    let { instanceId } = message.data;
+
+    if (message.name == "Init") {
+      let { sapName, isPrivate } = message.data;
+      this.#messageControllers.set(
+        instanceId,
+        new lazy.UrlbarParentController({ sapName, isPrivate })
+      );
+      return;
+    }
+
+    let controller = this.#messageControllers.get(instanceId);
+    if (!controller) {
+      return;
+    }
+
+    switch (message.name) {
+      case "StartQuery":
+        controller.startQuery(contextFromWire(message.data.queryContext));
+        break;
+      case "CancelQuery":
+        controller.cancelQuery();
+        break;
+      case "RemoveResult":
+        controller.removeResult(
+          lazy.UrlbarResult.fromWire(message.data.result)
+        );
+        break;
+      case "SetLastQueryContextCache":
+        controller.setLastQueryContextCache(
+          contextFromWire(message.data.queryContext)
+        );
+        break;
+      case "ClearLastQueryContextCache":
+        controller.clearLastQueryContextCache();
+        break;
+    }
+  }
+}
+
+/**
+ * Reconstructs a UrlbarQueryContext received as an actor message: structured-
+ * clone preserved its data but dropped its class identity and its nested
+ * results' private-field data, so restore the prototype and rebuild the
+ * results from their wire forms.
+ *
+ * @param {object} wire
+ *   The wire representation produced by the proxy's contextToWire().
+ * @returns {object} The restored UrlbarQueryContext.
+ */
+function contextFromWire(wire) {
+  Object.setPrototypeOf(wire, lazy.UrlbarQueryContext.prototype);
+  wire.results = wire.results?.map(lazy.UrlbarResult.fromWire) ?? [];
+  if (wire.heuristicResult) {
+    wire.heuristicResult = lazy.UrlbarResult.fromWire(wire.heuristicResult);
+  }
+  return wire;
 }

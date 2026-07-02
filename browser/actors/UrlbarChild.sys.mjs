@@ -2,6 +2,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+const lazy = {};
+
+ChromeUtils.defineESModuleGetters(lazy, {
+  UrlbarParentControllerProxy:
+    "moz-src:///browser/components/urlbar/UrlbarParentControllerProxy.sys.mjs",
+  UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
+});
+
 /**
  * @import {UrlbarParent} from "./UrlbarParent.sys.mjs"
  * @import {UrlbarParentController} from "moz-src:///browser/components/urlbar/UrlbarParentController.sys.mjs"
@@ -9,35 +17,48 @@
 
 /**
  * Child-process counterpart of `UrlbarParent`. Each `UrlbarChildController`
- * created by a `<moz-urlbar>` instance asks this actor for the
- * `UrlbarParentController` that runs the query lifecycle and parent-only
- * telemetry on its behalf.
+ * created by a `<moz-urlbar>` instance asks this actor for the object that
+ * runs the query lifecycle and parent-only telemetry on its behalf.
  *
- * For chrome `<moz-urlbar>` instances both actors live in the parent
- * process, so we hand the real `UrlbarParentController` reference back to
- * the child controller and methods are invoked synchronously in-process.
- * A future content-process consumer (e.g. about:newtab) will replace this
- * direct hand-off with message passing via `sendQuery` / `sendAsyncMessage`.
+ * Two transports back that object:
+ * - Direct (default for chrome `<moz-urlbar>`): both actors live in the parent
+ *   process, so we hand the real `UrlbarParentController` reference back and
+ *   methods are invoked synchronously in-process.
+ * - Message-passing: used for a content-process `<moz-urlbar>` (e.g.
+ *   about:newtab), and for chrome when
+ *   `browser.urlbar.ipc.chromeMessagePassing` is set (so the wire path runs in
+ *   CI). We hand back a `UrlbarParentControllerProxy` that trades messages with
+ *   the parent-side controller, identified by an `instanceId`.
  */
 export class UrlbarChild extends JSWindowActorChild {
+  #nextInstanceId = 0;
+
   /**
-   * Returns the `UrlbarParentController` that backs a given `<moz-urlbar>`
-   * input, creating it on demand. Reconnecting the same element returns the
-   * existing controller.
+   * Returns the object that backs a given `<moz-urlbar>` input's child
+   * controller, creating it on demand. On the direct path, reconnecting the
+   * same element returns the existing controller.
    *
    * @param {object} input
    *   The `UrlbarInput`/`SmartbarInput` that owns the child controller.
-   *   In-process only.
-   * @returns {UrlbarParentController}
+   * @returns {UrlbarParentController} The real controller (direct path) or, on
+   *   the message path, a `UrlbarParentControllerProxy` that stands in for one.
    */
   getOrCreateController(input) {
     let parentActor = this.#parentActor;
-    if (!parentActor) {
-      throw new Error(
-        "UrlbarChild: cross-process moz-urlbar is not yet supported"
-      );
+    // In-process and not forcing the wire path: hand back the real controller.
+    if (parentActor && !lazy.UrlbarPrefs.get("ipc.chromeMessagePassing")) {
+      return parentActor.getOrCreateController(input);
     }
-    return parentActor.getOrCreateController(input);
+    // Message-passing path: cross-process, or chrome with the pref on. The
+    // proxy duck-types as a UrlbarParentController for the child controller.
+    return /** @type {UrlbarParentController} */ (
+      /** @type {unknown} */ (
+        new lazy.UrlbarParentControllerProxy(this, ++this.#nextInstanceId, {
+          sapName: input.sapName,
+          isPrivate: input.isPrivate,
+        })
+      )
+    );
   }
 
   /**

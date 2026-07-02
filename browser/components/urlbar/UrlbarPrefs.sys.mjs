@@ -196,6 +196,13 @@ const PREF_URLBAR_DEFAULTS = /** @type {PreferenceDefinition[]} */ ([
   // Set default intent threshold value of 0.5
   ["intentThreshold", [0.5, "float"]],
 
+  // When true, in-process (chrome) `<moz-urlbar>` instances route through the
+  // Urlbar actor's message-passing path instead of holding a direct
+  // UrlbarParentController reference, exercising the same wire path a
+  // content-process `<moz-urlbar>` uses. Off by default; intended for the
+  // pref-on CI variant and local testing of the actor path.
+  ["ipc.chromeMessagePassing", false],
+
   // Whether the results panel should be kept open during IME composition.
   ["keepPanelOpenDuringImeComposition", false],
 

@@ -437,6 +437,13 @@ pref("browser.urlbar.filter.javascript", true);
 // remaining typed history.
 pref("browser.urlbar.focusContentDocumentOnEsc", true);
 
+// When true, in-process (chrome) <moz-urlbar> instances route through the
+// Urlbar actor's message-passing path instead of holding a direct
+// UrlbarParentController reference, exercising the same wire path a
+// content-process <moz-urlbar> uses. Off by default; intended for the
+// pref-on CI variant and local testing of the actor path.
+pref("browser.urlbar.ipc.chromeMessagePassing", false);
+
 // Enable a certain level of urlbar logging to the Browser Console. See
 // ConsoleInstance.webidl.
 pref("browser.urlbar.loglevel", "Error");
