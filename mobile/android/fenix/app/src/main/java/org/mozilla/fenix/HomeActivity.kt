@@ -159,6 +159,7 @@ import org.mozilla.fenix.messaging.FenixMessageSurfaceId
 import org.mozilla.fenix.messaging.MessageNotificationWorker
 import org.mozilla.fenix.nimbus.FxNimbus
 import org.mozilla.fenix.onboarding.ensureMarketingChannelExists
+import org.mozilla.fenix.onboarding.seedOnboardingCompletedTimestampForDebugIfNeeded
 import org.mozilla.fenix.pbmlock.DefaultPrivateBrowsingLockStorage
 import org.mozilla.fenix.pbmlock.PrivateBrowsingLockFeature
 import org.mozilla.fenix.perf.DefaultStartupPathProvider
@@ -462,6 +463,8 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
         binding = ActivityHomeBinding.inflate(layoutInflater)
 
         Performance.processIntentIfPerformanceTest(intent, this)
+
+        components.settings.seedOnboardingCompletedTimestampForDebugIfNeeded()
 
         val shouldShowOnboarding = !intent.isAllowedDuringOnboardingIntent(packageName) &&
             with(components) {
