@@ -299,6 +299,10 @@ let propNameAllowlist = [
   // This variable is read from JS to determine the column count when handling
   // keyboard navigation in the New Tab sections grid.
   { propName: "--sections-col-count", isFromDevTools: false },
+
+  // This property was used in the onboarding set up feature callout checklist.
+  // It's currently not referenced in CSS but may be needed for future use.
+  { propName: "--fc-icon-success-color", isFromDevTools: false },
 ];
 
 // Add suffix to stylesheets' URI so that we always load them here and
