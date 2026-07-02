@@ -14,18 +14,10 @@ import androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS
 private const val AUTHENTICATORS = BIOMETRIC_WEAK or DEVICE_CREDENTIAL
 
 /**
- * Checks for hardware sensors (fingerprint, facial recognition etc.) specific to biometrics.
+ * Checks if the hardware requirements are met for using the [BiometricManager].
  */
-fun BiometricManager.isBiometricHardwareAvailable(): Boolean {
+fun BiometricManager.isHardwareAvailable(): Boolean {
     val status = canAuthenticate(BIOMETRIC_WEAK)
-    return status != BIOMETRIC_ERROR_NO_HARDWARE && status != BIOMETRIC_ERROR_HW_UNAVAILABLE
-}
-
-/**
- * Checks if the device supports biometric or credential authentication (PIN, pattern, password etc).
- */
-fun BiometricManager.isDeviceLockCapable(): Boolean {
-    val status = canAuthenticate(AUTHENTICATORS)
     return status != BIOMETRIC_ERROR_NO_HARDWARE && status != BIOMETRIC_ERROR_HW_UNAVAILABLE
 }
 
