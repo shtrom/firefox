@@ -999,7 +999,7 @@ toolbarbutton[constrain-size="true"][cui-areatype="panel"] > .toolbarbutton-badg
 .ctaMenuLogo {
   width: var(--icon-size);
   height: var(--icon-size);
-  margin-inline-end: var(--space-xsmall);
+  margin-inline-end: var(--space-medium);
 }
 
 #PanelUI-fxa-menu-monitor-button {
@@ -1008,7 +1008,7 @@ toolbarbutton[constrain-size="true"][cui-areatype="panel"] > .toolbarbutton-badg
 
 #PanelUI-fxa-menu-relay-button,
 #PanelUI-services-menu-relay-button {
-  list-style-image: url(chrome://browser/content/logos/relay.svg);
+  list-style-image: url(chrome://browser/content/logos/relay-monochrome.svg);
 }
 
 #PanelUI-fxa-menu-vpn-button {
