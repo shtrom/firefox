@@ -90,6 +90,7 @@ async function buildTable() {
       const inputNewKey = document.createElement("moz-input-text");
       inputNewKey.className = "newKey";
       inputNewKey.setAttribute("data-l10n-id", "customkeys-key-new");
+      inputNewKey.setAttribute("inputlayout", "inline-end");
       keyActions.append(inputNewKey);
 
       // Clear button:

@@ -279,6 +279,13 @@ addAboutKbTask(async function testChange(tab) {
       _consts.downloadsDisplay,
       "Key is the default key"
     );
+    is(
+      content.getComputedStyle(
+        content.downloadsRow.querySelector(".currentShortcut")
+      ).display,
+      "block",
+      "Current shortcut field is visible"
+    );
     info("Clicking Change for key_openDownloads");
     content.input =
       content.downloadsRow.querySelector(".newKey").wrappedJSObject;
@@ -287,6 +294,13 @@ addAboutKbTask(async function testChange(tab) {
     content.change.click();
     await focused;
     ok(true, "New key input got focus");
+    is(
+      content.getComputedStyle(
+        content.downloadsRow.querySelector(".currentShortcut")
+      ).display,
+      "none",
+      "Current shortcut field is hidden in editing mode"
+    );
     content.selected = ContentTaskUtils.waitForEvent(
       content.input.inputEl,
       "select"
@@ -367,6 +381,13 @@ addAboutKbTask(async function testChange(tab) {
         .value,
       _consts.unusedDisplay,
       "Key is the customized key"
+    );
+    is(
+      content.getComputedStyle(
+        content.downloadsRow.querySelector(".currentShortcut")
+      ).display,
+      "block",
+      "Current shortcut field is visible after editing mode is completed"
     );
   });
   // We deliberately let the result of this test leak into the next one.
