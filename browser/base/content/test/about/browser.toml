@@ -108,6 +108,11 @@ support-files = [
   "server_error.sjs",
 ]
 
+["browser_aboutNetError_sslKeyLogging.js"]
+support-files = [
+  "sslKeyLogging_processScript.js",
+]
+
 ["browser_aboutNetError_telemetry.js"]
 
 ["browser_aboutNetError_timeout.js"]
