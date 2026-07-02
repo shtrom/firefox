@@ -17508,8 +17508,6 @@ function SportsMatchRow({
     status: matchStatus,
     home_score,
     away_score,
-    home_extra,
-    away_extra,
     home_penalty,
     away_penalty,
     query
@@ -17519,9 +17517,8 @@ function SportsMatchRow({
   const homeTeamName = home_team ? localizedNames?.[home_team.key] ?? home_team.name : tbdTeamName;
   const awayTeamName = away_team ? localizedNames?.[away_team.key] ?? away_team.name : tbdTeamName;
   const dateTimestamp = new Date(date).getTime();
-  // (developer note): Assumes home_score/away_score exclude extra time goals
-  const displayHomeScore = home_score + (home_extra || 0);
-  const displayAwayScore = away_score + (away_extra || 0);
+  const displayHomeScore = home_score || 0;
+  const displayAwayScore = away_score || 0;
   // A match went to a shootout only when both penalty scores are present.
   // Checking both guards against asymmetric/corrupt data where one side is
   // null — which would otherwise pass a `null` into the aria-label args.
@@ -18254,14 +18251,14 @@ function groupMatchesBySection(matches) {
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 // Resolves the winning team's `key` for a finished match, or null for a draw.
-// Mirrors the score resolution used in SportsMatchRow: regular + extra time,
-// then a penalty shootout when the aggregate is level.
+// home_score/away_score already include extra-time goals; a penalty shootout
+// decides it when the score is level.
 const getMatchWinnerKey = match => {
   if (!match) {
     return null;
   }
-  const homeScore = (match.home_score || 0) + (match.home_extra || 0);
-  const awayScore = (match.away_score || 0) + (match.away_extra || 0);
+  const homeScore = match.home_score || 0;
+  const awayScore = match.away_score || 0;
   if (homeScore > awayScore) {
     return match.home_team.key;
   }

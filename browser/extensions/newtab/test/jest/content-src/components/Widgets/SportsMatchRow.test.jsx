@@ -117,12 +117,12 @@ describe("<SportsMatchRow> upcoming variant", () => {
 });
 
 describe("<SportsMatchRow> now variant", () => {
-  it("renders home and away scores including extra time", () => {
+  it("renders home and away scores without double-counting extra time", () => {
     const { container } = renderWithDispatch(
       <SportsMatchRow
         match={{
           ...baseMatch,
-          home_score: 1,
+          home_score: 2,
           away_score: 0,
           home_extra: 1,
           away_extra: 0,
@@ -400,12 +400,12 @@ describe("<SportsMatchRow> now variant", () => {
 });
 
 describe("<SportsMatchRow> results variant", () => {
-  it("renders home and away scores including extra time", () => {
+  it("renders home and away scores without double-counting extra time", () => {
     const { container } = renderWithDispatch(
       <SportsMatchRow
         match={{
           ...baseMatch,
-          home_score: 1,
+          home_score: 2,
           away_score: 0,
           home_extra: 1,
           away_extra: 0,
@@ -607,7 +607,7 @@ describe("<SportsMatchRow> aria-label l10n", () => {
       expect(args.awayPenalty).toBe(4);
     });
 
-    it("adds extra-time goals into the announced scores", () => {
+    it("does not double-count extra-time goals in the announced scores", () => {
       const { container } = renderWithDispatch(
         <SportsMatchRow
           match={{
@@ -621,7 +621,7 @@ describe("<SportsMatchRow> aria-label l10n", () => {
         />
       );
       const { args } = getAnchorL10n(container);
-      expect(args.homeScore).toBe(3);
+      expect(args.homeScore).toBe(2);
       expect(args.awayScore).toBe(1);
     });
 

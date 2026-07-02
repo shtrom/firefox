@@ -35,12 +35,13 @@ describe("getMatchWinnerKey", () => {
     );
   });
 
-  it("counts extra-time goals toward the aggregate", () => {
-    // 1+1 vs 1+0 -> home wins on extra time.
+  it("ignores home_extra/away_extra (already included in the score)", () => {
+    // home_score/away_score already include extra-time goals, so the *_extra
+    // fields must not be added again.
     expect(
       getMatchWinnerKey(
         match({
-          home_score: 1,
+          home_score: 2,
           away_score: 1,
           home_extra: 1,
           away_extra: 0,
