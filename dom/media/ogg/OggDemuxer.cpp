@@ -388,6 +388,11 @@ void OggDemuxer::SetupMediaTracksInfo(const nsTArray<uint32_t>& aSerials) {
   for (size_t i = 0; i < aSerials.Length(); i++) {
     uint32_t serial = aSerials[i];
     OggCodecState* codecState = mCodecStore.Get(serial);
+    if (!codecState) {
+      // A bitstream whose OggCodecState::Create() failed is stored as null.
+      OGG_DEBUG("Skipping null codec state for serial {}", serial);
+      continue;
+    }
 
     MessageField* msgInfo = nullptr;
     if (mSkeletonState) {
