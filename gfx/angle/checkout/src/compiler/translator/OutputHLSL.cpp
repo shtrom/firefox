@@ -3458,15 +3458,11 @@ bool OutputHLSL::writeConstantInitialization(TInfoSinkBase &out,
 {
     if (initializer->hasConstantValue())
     {
-        const TConstantUnion *constValue = initializer->getConstantValue();
-        if (!constValue)
-        {
-            return false;
-        }
         symbolNode->traverse(this);
         out << ArrayString(symbolNode->getType());
         out << " = {";
-        writeConstantUnionArray(out, constValue, initializer->getType().getObjectSize());
+        writeConstantUnionArray(out, initializer->getConstantValue(),
+                                initializer->getType().getObjectSize());
         out << "}";
         return true;
     }
