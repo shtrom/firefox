@@ -27,6 +27,9 @@ import org.mozilla.gecko.annotation.WrapForJNI;
   private static final int SENSOR_ROTATION_VECTOR = 6;
   private static final int SENSOR_GAME_ROTATION_VECTOR = 7;
 
+  private static final int ORIENTATION_SENSOR_DELAY = 16666; // 60Hz
+  private static final int MOTION_SENSOR_DELAY = 16666; // 60Hz
+
   private static SensorListeners sListeners;
 
   private static Sensor gAccelerometerSensor;
@@ -133,8 +136,7 @@ import org.mozilla.gecko.annotation.WrapForJNI;
             gGyroscopeSensor = sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
           }
           if (gGyroscopeSensor != null) {
-            sm.registerListener(
-                sListeners, gGameRotationVectorSensor, SensorManager.SENSOR_DELAY_FASTEST);
+            sm.registerListener(sListeners, gGameRotationVectorSensor, ORIENTATION_SENSOR_DELAY);
             break;
           }
           // This device has a broken game rotation vector sensor. Use rotation vector sensor if
@@ -148,8 +150,7 @@ import org.mozilla.gecko.annotation.WrapForJNI;
           gRotationVectorSensor = sm.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
         }
         if (gRotationVectorSensor != null) {
-          sm.registerListener(
-              sListeners, gRotationVectorSensor, SensorManager.SENSOR_DELAY_FASTEST);
+          sm.registerListener(sListeners, gRotationVectorSensor, ORIENTATION_SENSOR_DELAY);
           break;
         }
       // Fallthrough
@@ -159,7 +160,7 @@ import org.mozilla.gecko.annotation.WrapForJNI;
           gOrientationSensor = sm.getDefaultSensor(Sensor.TYPE_ORIENTATION);
         }
         if (gOrientationSensor != null) {
-          sm.registerListener(sListeners, gOrientationSensor, SensorManager.SENSOR_DELAY_FASTEST);
+          sm.registerListener(sListeners, gOrientationSensor, ORIENTATION_SENSOR_DELAY);
         }
         break;
 
@@ -168,7 +169,7 @@ import org.mozilla.gecko.annotation.WrapForJNI;
           gAccelerometerSensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         }
         if (gAccelerometerSensor != null) {
-          sm.registerListener(sListeners, gAccelerometerSensor, SensorManager.SENSOR_DELAY_FASTEST);
+          sm.registerListener(sListeners, gAccelerometerSensor, MOTION_SENSOR_DELAY);
         }
         break;
 
@@ -186,8 +187,7 @@ import org.mozilla.gecko.annotation.WrapForJNI;
           gLinearAccelerometerSensor = sm.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
         }
         if (gLinearAccelerometerSensor != null) {
-          sm.registerListener(
-              sListeners, gLinearAccelerometerSensor, SensorManager.SENSOR_DELAY_FASTEST);
+          sm.registerListener(sListeners, gLinearAccelerometerSensor, MOTION_SENSOR_DELAY);
         }
         break;
 
@@ -196,7 +196,7 @@ import org.mozilla.gecko.annotation.WrapForJNI;
           gGyroscopeSensor = sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
         }
         if (gGyroscopeSensor != null) {
-          sm.registerListener(sListeners, gGyroscopeSensor, SensorManager.SENSOR_DELAY_FASTEST);
+          sm.registerListener(sListeners, gGyroscopeSensor, MOTION_SENSOR_DELAY);
         }
         break;
 
