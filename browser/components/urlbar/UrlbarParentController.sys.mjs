@@ -323,8 +323,13 @@ export class UrlbarParentController {
       queryContext.sixthTimerId = 0;
     }
 
-    if (queryContext.firstResultChanged) {
-      // Notify the input so it can make adjustments based on the first result.
+    // When the input is in-process (direct path), let it react to the first
+    // result and bail before notifying if it took over (e.g. entered search
+    // mode and restarted the query). On the message path the input lives across
+    // the boundary, so it runs `onFirstResult` content-side when it receives the
+    // results instead, and `speculativeConnect` is skipped (it needs the
+    // window).
+    if (queryContext.firstResultChanged && this.input) {
       if (this.input.onFirstResult(queryContext.results[0])) {
         // The input canceled the query and started a new one.
         return;

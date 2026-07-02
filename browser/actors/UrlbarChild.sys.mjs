@@ -119,6 +119,18 @@ export class UrlbarChild extends JSWindowActorChild {
         ? lazy.UrlbarQueryContext.fromWire(param.serializedQueryContext)
         : param
     );
+    // The parent ran the query but the input lives here, so let it react to the
+    // first result (search mode, autofill) before the results are shown. If it
+    // takes over (returns true), the results are stale; don't dispatch them.
+    if (name == "onQueryResults") {
+      let queryContext = deserialized[0];
+      if (
+        queryContext.firstResultChanged &&
+        child.input.onFirstResult(queryContext.results[0])
+      ) {
+        return;
+      }
+    }
     if (resultViewData) {
       // params[0] is the query context; reattach the per-result view data the
       // parent pre-fetched so the view can read it synchronously.
