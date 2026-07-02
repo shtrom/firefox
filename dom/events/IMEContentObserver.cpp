@@ -1056,6 +1056,27 @@ void IMEContentObserver::CharacterDataChanged(
   MaybeNotifyIMEOfTextChange(data);
 }
 
+void IMEContentObserver::EditContextTextChanged(uint32_t aRangeStart,
+                                                uint32_t aRangeEnd,
+                                                const nsAString& aText) {
+  TextChangeData data(aRangeStart, aRangeEnd, aRangeStart + aText.Length(),
+                      IsEditorHandlingEventForComposition(),
+                      IsEditorComposing());
+  MaybeNotifyIMEOfTextChange(data);
+}
+
+void IMEContentObserver::EditContextSelectionChanged() {
+  bool causedByComposition = IsEditorHandlingEventForComposition();
+  bool causedBySelectionEvent = TextComposition::IsHandlingSelectionEvent();
+  bool duringComposition = IsEditorComposing();
+  MaybeNotifyIMEOfSelectionChange(causedByComposition, causedBySelectionEvent,
+                                  duringComposition);
+}
+
+void IMEContentObserver::EditContextPositionChanged() {
+  MaybeNotifyIMEOfPositionChange(Immediately::No);
+}
+
 void IMEContentObserver::ContentAdded(nsINode* aContainer,
                                       nsIContent* aFirstContent,
                                       nsIContent* aLastContent) {

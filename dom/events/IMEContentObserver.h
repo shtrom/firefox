@@ -70,6 +70,11 @@ class IMEContentObserver final : public nsStubMutationObserver,
    */
   void OnSelectionChange(dom::Selection& aSelection);
 
+  void EditContextTextChanged(uint32_t aRangeStart, uint32_t aRangeEnd,
+                              const nsAString& aText);
+  void EditContextSelectionChanged();
+  void EditContextPositionChanged();
+
   MOZ_CAN_RUN_SCRIPT bool OnMouseButtonEvent(nsPresContext& aPresContext,
                                              WidgetMouseEvent& aMouseEvent);
 
