@@ -4,7 +4,6 @@
 
 /**
  * @import {UrlbarChild} from "../../actors/UrlbarChild.sys.mjs"
- * @import {UrlbarQueryContext} from "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs"
  */
 
 /**
@@ -14,12 +13,13 @@
  * `browser.urlbar.ipc.chromeMessagePassing`) holds one of these instead of a
  * direct controller reference: it forwards the child->parent query-lifecycle
  * calls to the parent process as actor messages, where `UrlbarParent` routes
- * them to the real controller keyed by `instanceId`.
+ * them to the real controller keyed by `instanceId`. Parent->child
+ * notifications come back as `Notify` messages that the child actor dispatches
+ * to the paired `UrlbarChildController`.
  *
- * Only the child->parent calls are forwarded here. Parent->child
- * notifications, the synchronous view methods (whose data has to be pre-fetched
- * to cross the boundary), and telemetry are wired up in later patches; until
- * then this path is incomplete and off by default.
+ * The synchronous view methods (whose data has to be pre-fetched to cross the
+ * boundary) and telemetry are wired up in later patches; until then this path
+ * is incomplete and off by default.
  */
 export class UrlbarParentControllerProxy {
   /** @type {UrlbarChild} */
@@ -47,17 +47,22 @@ export class UrlbarParentControllerProxy {
   }
 
   /**
-   * No-op on the message path: the parent controller holds no reference back
-   * to the child (cross-process it can't, and a strong ref would pin the input
-   * and defeat cleanup). Parent->child notifications are delivered as actor
-   * messages instead.
+   * Registers the paired child controller with the actor so parent->child
+   * `Notify` messages for this instance can be dispatched to it. The parent
+   * controller itself never holds the child on this path (cross-process it
+   * can't, and a strong ref would pin the input and defeat cleanup).
+   *
+   * @param {object} child
+   *   The paired `UrlbarChildController`.
    */
-  setChild() {}
+  setChild(child) {
+    this.#actor.registerChildController(this.#instanceId, child);
+  }
 
   startQuery(queryContext) {
     this.#actor.sendAsyncMessage("StartQuery", {
       instanceId: this.#instanceId,
-      queryContext: contextToWire(queryContext),
+      queryContext: queryContext.toWire(),
     });
   }
 
@@ -77,7 +82,7 @@ export class UrlbarParentControllerProxy {
   setLastQueryContextCache(queryContext) {
     this.#actor.sendAsyncMessage("SetLastQueryContextCache", {
       instanceId: this.#instanceId,
-      queryContext: contextToWire(queryContext),
+      queryContext: queryContext.toWire(),
     });
   }
 
@@ -86,21 +91,4 @@ export class UrlbarParentControllerProxy {
       instanceId: this.#instanceId,
     });
   }
-}
-
-/**
- * Serializes a UrlbarQueryContext for an actor message. The context's own
- * fields survive structured-clone, but its nested UrlbarResults keep their
- * data in private fields, so replace them with their wire forms.
- *
- * @param {UrlbarQueryContext} queryContext
- *   The context to serialize.
- * @returns {object} The structured-cloneable wire representation.
- */
-function contextToWire(queryContext) {
-  return {
-    ...queryContext,
-    results: queryContext.results?.map(result => result.toWire()),
-    heuristicResult: queryContext.heuristicResult?.toWire(),
-  };
 }

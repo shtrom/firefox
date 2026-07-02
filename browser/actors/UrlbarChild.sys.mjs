@@ -8,11 +8,14 @@ ChromeUtils.defineESModuleGetters(lazy, {
   UrlbarParentControllerProxy:
     "moz-src:///browser/components/urlbar/UrlbarParentControllerProxy.sys.mjs",
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
+  UrlbarQueryContext:
+    "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
 });
 
 /**
  * @import {UrlbarParent} from "./UrlbarParent.sys.mjs"
  * @import {UrlbarParentController} from "moz-src:///browser/components/urlbar/UrlbarParentController.sys.mjs"
+ * @import {UrlbarChildController} from "chrome://browser/content/urlbar/UrlbarChildController.mjs"
  */
 
 /**
@@ -28,7 +31,9 @@ ChromeUtils.defineESModuleGetters(lazy, {
  *   about:newtab), and for chrome when
  *   `browser.urlbar.ipc.chromeMessagePassing` is set (so the wire path runs in
  *   CI). We hand back a `UrlbarParentControllerProxy` that trades messages with
- *   the parent-side controller, identified by an `instanceId`.
+ *   the parent-side controller, identified by an `instanceId`. The parent's
+ *   `Notify` messages are dispatched back to the paired child controller, which
+ *   we hold weakly (keyed by `instanceId`) so as not to pin its input.
  *
  * On the message path the parent retains its controller strongly (keyed by
  * `instanceId`), so we tie that controller's lifetime to the input: the input
@@ -40,9 +45,13 @@ ChromeUtils.defineESModuleGetters(lazy, {
 export class UrlbarChild extends JSWindowActorChild {
   #nextInstanceId = 0;
 
+  /** @type {Map<number, WeakRef<UrlbarChildController>>} */
+  #childControllers = new Map();
+
   // Sends `Destroy(instanceId)` to the parent once a message-path input is
   // collected, so the parent can drop the controller it holds for it.
   #destroyRegistry = new FinalizationRegistry(instanceId => {
+    this.#childControllers.delete(instanceId);
     try {
       this.sendAsyncMessage("Destroy", { instanceId });
     } catch (ex) {
@@ -77,6 +86,40 @@ export class UrlbarChild extends JSWindowActorChild {
           sapName: input.sapName,
           isPrivate: input.isPrivate,
         })
+      )
+    );
+  }
+
+  /**
+   * Records the message-path child controller for an instance so the parent's
+   * `Notify` messages can be dispatched to it. Held weakly so it (and its
+   * input) stay collectable.
+   *
+   * @param {number} instanceId
+   *   The instance the controller was created for.
+   * @param {UrlbarChildController} child
+   *   The paired child controller.
+   */
+  registerChildController(instanceId, child) {
+    this.#childControllers.set(instanceId, new WeakRef(child));
+  }
+
+  receiveMessage(message) {
+    if (message.name != "Notify") {
+      return;
+    }
+    let { instanceId, name, params } = message.data;
+    let child = this.#childControllers.get(instanceId)?.deref();
+    if (!child) {
+      this.#childControllers.delete(instanceId);
+      return;
+    }
+    child.notify(
+      name,
+      ...params.map(param =>
+        param?.serializedQueryContext
+          ? lazy.UrlbarQueryContext.fromWire(param.serializedQueryContext)
+          : param
       )
     );
   }

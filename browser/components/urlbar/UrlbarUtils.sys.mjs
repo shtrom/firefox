@@ -42,6 +42,7 @@ const lazy = XPCOMUtils.declareLazy({
     "moz-src:///browser/components/urlbar/UrlbarProviderOpenTabs.sys.mjs",
   UrlbarProviderSearchTips:
     "moz-src:///browser/components/urlbar/UrlbarProviderSearchTips.sys.mjs",
+  UrlbarResult: "chrome://browser/content/urlbar/UrlbarResult.mjs",
   UrlbarSearchUtils:
     "moz-src:///browser/components/urlbar/UrlbarSearchUtils.sys.mjs",
   UrlUtils: "resource://gre/modules/UrlUtils.sys.mjs",
@@ -3273,6 +3274,41 @@ export class UrlbarQueryContext {
 
     // Allow remote results.
     return true;
+  }
+
+  /**
+   * Serializes this context to a plain, structured-cloneable object for sending
+   * across the Urlbar actor boundary. The context's own fields survive
+   * structured-clone on their own, but its nested UrlbarResults keep their data
+   * in private fields, so they're replaced with their wire forms.
+   *
+   * @returns {object} The wire representation; reconstruct with fromWire().
+   */
+  toWire() {
+    return {
+      ...this,
+      results: this.results?.map(result => result.toWire()),
+      heuristicResult: this.heuristicResult?.toWire(),
+    };
+  }
+
+  /**
+   * Reconstructs a UrlbarQueryContext from the plain object produced by
+   * toWire(), e.g. after it has crossed the Urlbar actor boundary: structured-
+   * clone preserved the context's own fields but dropped its class identity and
+   * its results' private-field data, so restore the prototype and rebuild the
+   * results.
+   *
+   * @param {object} wire The wire representation from toWire().
+   * @returns {UrlbarQueryContext} The reconstructed context.
+   */
+  static fromWire(wire) {
+    Object.setPrototypeOf(wire, UrlbarQueryContext.prototype);
+    wire.results = wire.results?.map(lazy.UrlbarResult.fromWire) ?? [];
+    if (wire.heuristicResult) {
+      wire.heuristicResult = lazy.UrlbarResult.fromWire(wire.heuristicResult);
+    }
+    return wire;
   }
 }
 

@@ -32,7 +32,9 @@ ChromeUtils.defineESModuleGetters(lazy, {
  *   `UrlbarParentControllerProxy` and trades actor messages with us. We build
  *   the controller from the `Init` payload and retain it in a `Map` keyed by
  *   the child-assigned `instanceId`, routing subsequent messages to it. The
- *   controller is dropped on the `Destroy` message the child sends when its
+ *   controller's notifications go back to the child as `Notify` messages
+ *   (dispatched through a parent-side `UrlbarChildControllerProxy` stand-in).
+ *   The controller is dropped on the `Destroy` message the child sends when its
  *   input is collected (via a `FinalizationRegistry`).
  */
 export class UrlbarParent extends JSWindowActorParent {
@@ -74,10 +76,12 @@ export class UrlbarParent extends JSWindowActorParent {
 
     if (message.name == "Init") {
       let { sapName, isPrivate } = message.data;
-      this.#messageControllers.set(
-        instanceId,
-        new lazy.UrlbarParentController({ sapName, isPrivate })
-      );
+      let controller = new lazy.UrlbarParentController({ sapName, isPrivate });
+      // The real child controller lives across the boundary, so hand the
+      // parent controller a proxy that forwards its notifications over the
+      // actor.
+      controller.setChild(new UrlbarChildControllerProxy(this, instanceId));
+      this.#messageControllers.set(instanceId, controller);
       return;
     }
 
@@ -93,7 +97,9 @@ export class UrlbarParent extends JSWindowActorParent {
 
     switch (message.name) {
       case "StartQuery":
-        controller.startQuery(contextFromWire(message.data.queryContext));
+        controller.startQuery(
+          lazy.UrlbarQueryContext.fromWire(message.data.queryContext)
+        );
         break;
       case "CancelQuery":
         controller.cancelQuery();
@@ -105,7 +111,7 @@ export class UrlbarParent extends JSWindowActorParent {
         break;
       case "SetLastQueryContextCache":
         controller.setLastQueryContextCache(
-          contextFromWire(message.data.queryContext)
+          lazy.UrlbarQueryContext.fromWire(message.data.queryContext)
         );
         break;
       case "ClearLastQueryContextCache":
@@ -116,20 +122,33 @@ export class UrlbarParent extends JSWindowActorParent {
 }
 
 /**
- * Reconstructs a UrlbarQueryContext received as an actor message: structured-
- * clone preserved its data but dropped its class identity and its nested
- * results' private-field data, so restore the prototype and rebuild the
- * results from their wire forms.
- *
- * @param {object} wire
- *   The wire representation produced by the proxy's contextToWire().
- * @returns {object} The restored UrlbarQueryContext.
+ * Parent-side stand-in for the `UrlbarChildController`, mirroring
+ * `UrlbarParentControllerProxy` on the content side. The parent controller
+ * calls `notify()` here, and we forward each notification to the real child
+ * controller across the boundary as a `Notify` message, serializing any
+ * `UrlbarQueryContext` argument.
  */
-function contextFromWire(wire) {
-  Object.setPrototypeOf(wire, lazy.UrlbarQueryContext.prototype);
-  wire.results = wire.results?.map(lazy.UrlbarResult.fromWire) ?? [];
-  if (wire.heuristicResult) {
-    wire.heuristicResult = lazy.UrlbarResult.fromWire(wire.heuristicResult);
+class UrlbarChildControllerProxy {
+  /** @type {UrlbarParent} */
+  #actor;
+
+  /** @type {number} */
+  #instanceId;
+
+  constructor(actor, instanceId) {
+    this.#actor = actor;
+    this.#instanceId = instanceId;
   }
-  return wire;
+
+  notify(name, ...params) {
+    this.#actor.sendAsyncMessage("Notify", {
+      instanceId: this.#instanceId,
+      name,
+      params: params.map(param =>
+        param instanceof lazy.UrlbarQueryContext
+          ? { serializedQueryContext: param.toWire() }
+          : param
+      ),
+    });
+  }
 }
