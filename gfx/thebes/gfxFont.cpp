@@ -60,6 +60,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <numeric>
 #include <cmath>
 
 using namespace mozilla;
@@ -2330,9 +2331,9 @@ void gfxFont::DrawEmphasisMarks(const gfxTextRun* aShapedText, gfx::Point* aPt,
     inlineCoord += aParams.direction * aShapedText->GetAdvanceForGlyph(idx);
     if (shouldDrawEmphasisMark &&
         (i + 1 == aCount || aShapedText->IsClusterStart(idx + 1))) {
-      float clusterAdvance = inlineCoord - clusterStart;
+      gfxFloat clusterAdvance = inlineCoord - clusterStart;
       // Move the coord backward to get the needed start point.
-      float delta = (clusterAdvance + aParams.advance) / 2;
+      float delta = std::midpoint(clusterAdvance, aParams.advance);
       inlineCoord -= delta;
       aParams.mark->Draw(markRange, *aPt, params, aImgParams);
       inlineCoord += delta;
