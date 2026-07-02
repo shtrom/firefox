@@ -173,7 +173,7 @@ def add_additional_fetches_and_command(config, jobs):
             locale,
             # channel
             job["attributes"]["update-channel"],
-            # app name
+            # product name
             job["attributes"]["shipping_product"],
             # artifact dir
             "/builds/worker/artifacts",
