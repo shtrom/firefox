@@ -77,6 +77,9 @@ class nsHttpRequestHead {
 
   [[nodiscard]] nsresult SetHeader(const nsACString& h, const nsACString& v,
                                    bool m = false);
+  [[nodiscard]] nsresult SetHeader(const nsACString& h, const nsACString& v,
+                                   bool m,
+                                   nsHttpHeaderArray::HeaderVariety variety);
   [[nodiscard]] nsresult SetHeader(const nsHttpAtom& h, const nsACString& v,
                                    bool m = false);
   [[nodiscard]] nsresult SetHeader(const nsHttpAtom& h, const nsACString& v,

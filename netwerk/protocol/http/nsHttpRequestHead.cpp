@@ -161,6 +161,18 @@ nsresult nsHttpRequestHead::SetHeader(const nsACString& h, const nsACString& v,
                             nsHttpHeaderArray::eVarietyRequestOverride);
 }
 
+nsresult nsHttpRequestHead::SetHeader(
+    const nsACString& h, const nsACString& v, bool m,
+    nsHttpHeaderArray::HeaderVariety variety) {
+  RecursiveMutexAutoLock mon(mRecursiveMutex);
+
+  if (mInVisitHeaders) {
+    return NS_ERROR_FAILURE;
+  }
+
+  return mHeaders.SetHeader(h, v, m, variety);
+}
+
 nsresult nsHttpRequestHead::SetHeader(const nsHttpAtom& h, const nsACString& v,
                                       bool m /*= false*/) {
   RecursiveMutexAutoLock mon(mRecursiveMutex);

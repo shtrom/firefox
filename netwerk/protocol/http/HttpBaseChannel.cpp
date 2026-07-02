@@ -2071,7 +2071,7 @@ nsresult HttpBaseChannel::SetRequestHeaderInternal(
     StoreIsUserAgentHeaderModified(true);
   }
 
-  return mRequestHead.SetHeader(aHeader, flatValue, aMerge);
+  return mRequestHead.SetHeader(aHeader, flatValue, aMerge, aVariety);
 }
 
 NS_IMETHODIMP
