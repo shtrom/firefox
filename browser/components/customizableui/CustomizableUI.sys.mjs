@@ -67,7 +67,7 @@ const kSubviewEvents = ["ViewShowing", "ViewHiding"];
  * The current version. We can use this to auto-add new default widgets as necessary.
  * (would be const but isn't because of testing purposes)
  */
-var kVersion = 25;
+var kVersion = 24;
 
 /**
  * Buttons removed from built-ins by version they were removed. kVersion must be
@@ -378,7 +378,10 @@ var CustomizableUIInternal = {
         type: CustomizableUI.TYPE_TOOLBAR,
         overflowable: true,
         defaultPlacements: navbarPlacements,
-        verticalTabsDefaultPlacements: ["alltabs-button"],
+        verticalTabsDefaultPlacements: [
+          "firefox-view-button",
+          "alltabs-button",
+        ],
         defaultCollapsed: false,
       },
       true
@@ -401,6 +404,7 @@ var CustomizableUIInternal = {
       {
         type: CustomizableUI.TYPE_TOOLBAR,
         defaultPlacements: [
+          "firefox-view-button",
           "tabbrowser-tabs",
           "new-tab-button",
           "alltabs-button",
@@ -847,31 +851,6 @@ var CustomizableUIInternal = {
         !navbarPlacements.includes("reset-pbm-toolbar-button")
       ) {
         navbarPlacements.push("reset-pbm-toolbar-button");
-      }
-    }
-
-    // Remove firefox view button for new profiles and users who have barely
-    // interacted with it (<=2 recorded clicks).
-    if (currentVersion < 25) {
-      let firefoxViewArea = CustomizableUI.verticalTabsEnabled
-        ? gSavedState.placements[CustomizableUI.AREA_NAVBAR]
-        : gSavedState.placements[CustomizableUI.AREA_TABSTRIP];
-      let defaultIndex = CustomizableUI.verticalTabsEnabled
-        ? -2 // vertical tabs default: second last (before alltabs-button)
-        : 0; // horizontal tabs default: first (before tabbrowser-tabs)
-      if (firefoxViewArea?.at(defaultIndex) === "firefox-view-button") {
-        let shouldKeepFirefoxView = false;
-        try {
-          let { count } = JSON.parse(
-            Services.prefs.getStringPref("browser.firefox-view.button-clicks")
-          );
-          shouldKeepFirefoxView = count > 2;
-        } catch (e) {
-          console.error(e);
-        }
-        if (!shouldKeepFirefoxView) {
-          firefoxViewArea.splice(defaultIndex, 1);
-        }
       }
     }
   },
@@ -7161,11 +7140,7 @@ function WidgetGroupWrapper(aWidget) {
   });
 
   this.__defineGetter__("areaType", function () {
-    let { currentArea } = aWidget;
-    if (!currentArea) {
-      return null;
-    }
-    let areaProps = gAreas.get(currentArea);
+    let areaProps = gAreas.get(aWidget.currentArea);
     return areaProps && areaProps.get("type");
   });
 

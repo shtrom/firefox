@@ -55,8 +55,6 @@ function triggerClickOn(target, options) {
   return promise;
 }
 
-enableFirefoxViewButton(window);
-
 add_task(async function aria_attributes() {
   let win = await BrowserTestUtils.openNewBrowserWindow();
   is(

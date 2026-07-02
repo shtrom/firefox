@@ -6172,7 +6172,7 @@
           // is visible, so as to not do this in private browsing mode or if the user
           // has removed the button from their toolbar (bug 1946432, bug 1989429)
           let firefoxViewAvailable =
-            FirefoxViewHandler.tab ||
+            FirefoxViewHandler.tab &&
             FirefoxViewHandler.button?.checkVisibility({
               checkVisibilityCSS: true,
               visibilityProperty: true,

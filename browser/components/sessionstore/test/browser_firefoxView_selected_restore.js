@@ -7,9 +7,6 @@ const { _LastSession } = ChromeUtils.importESModule(
 const { sinon } = ChromeUtils.importESModule(
   "resource://testing-common/Sinon.sys.mjs"
 );
-const FirefoxViewTestUtils = ChromeUtils.importESModule(
-  "resource://testing-common/FirefoxViewTestUtils.sys.mjs"
-);
 
 const state = {
   windows: [
@@ -28,9 +25,6 @@ const state = {
     },
   ],
 };
-
-FirefoxViewTestUtils.init(this);
-FirefoxViewTestUtils.enableFirefoxViewButton(window);
 
 add_task(async function test_firefox_view_selected_tab() {
   let fxViewBtn = document.getElementById("firefox-view-button");

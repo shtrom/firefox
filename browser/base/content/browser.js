@@ -5074,6 +5074,13 @@ var FirefoxViewHandler = {
     }
   },
   openTab(section) {
+    if (!CustomizableUI.getPlacementOfWidget(this.BUTTON_ID)) {
+      CustomizableUI.addWidgetToArea(
+        this.BUTTON_ID,
+        CustomizableUI.AREA_TABSTRIP,
+        CustomizableUI.getPlacementOfWidget("tabbrowser-tabs").position
+      );
+    }
     let viewURL = "about:firefoxview";
     if (section) {
       viewURL = `${viewURL}#${section}`;
@@ -5092,7 +5099,7 @@ var FirefoxViewHandler = {
       gBrowser.tabContainer.addEventListener("TabSelect", this);
       window.addEventListener("activate", this);
       gBrowser.hideTab(this.tab);
-      this.button?.setAttribute("aria-controls", this.tab.linkedPanel);
+      this.button.setAttribute("aria-controls", this.tab.linkedPanel);
     }
     // we put this here to avoid a race condition that would occur
     // if this was called in response to "TabSelect"
