@@ -45,6 +45,34 @@ function waitForEvent(target, eventName, callback = () => true) {
   });
 }
 
+/**
+ * Initializes IPProtectionService and resolves once it reaches READY.
+ */
+async function initServiceToReady() {
+  const readyEvent = waitForEvent(
+    IPProtectionService,
+    "IPProtectionService:StateChanged",
+    () => IPProtectionService.state === IPProtectionStates.READY
+  );
+  IPProtectionService.init();
+  await readyEvent;
+}
+/* exported initServiceToReady */
+
+/**
+ * Resolves once IPPProxyManager reaches the given state.
+ *
+ * @param {string} state - One of IPPProxyStates.
+ */
+function waitForProxyState(state) {
+  return waitForEvent(
+    IPPProxyManager,
+    "IPPProxyManager:StateChanged",
+    () => IPPProxyManager.state === state
+  );
+}
+/* exported waitForProxyState */
+
 async function putServerInRemoteSettings(
   server = {
     hostname: "test1.example.com",
@@ -110,6 +138,8 @@ function setupStubs(aOptions = {}) {
   });
   IPPDummyAuthProvider.setProxyUsage(options.proxyUsage);
   IPPDummyAuthProvider.setProxyPassError(null);
+  IPPDummyAuthProvider.setProxyPassHang(false);
+  IPPDummyAuthProvider.setProxyPassResolveOnAbort(null);
 }
 
 /**
