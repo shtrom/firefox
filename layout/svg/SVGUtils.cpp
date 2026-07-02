@@ -1253,12 +1253,14 @@ void SVGUtils::MakeFillPatternFor(nsIFrame* aFrame, gfxContext* aContext,
     RefPtr<gfxPattern> pattern;
     switch (style->mFill.kind.tag) {
       case StyleSVGPaintKind::Tag::ContextFill:
-        pattern = aContextPaint->GetFillPattern(
-            dt, fillOpacity, aContext->CurrentMatrixDouble(), aImgParams);
+        pattern = aContextPaint->GetPattern(
+            SVGContextPaint::Tag::Fill, dt, fillOpacity,
+            aContext->CurrentMatrixDouble(), aImgParams);
         break;
       case StyleSVGPaintKind::Tag::ContextStroke:
-        pattern = aContextPaint->GetStrokePattern(
-            dt, fillOpacity, aContext->CurrentMatrixDouble(), aImgParams);
+        pattern = aContextPaint->GetPattern(
+            SVGContextPaint::Tag::Stroke, dt, fillOpacity,
+            aContext->CurrentMatrixDouble(), aImgParams);
         break;
       default:;
     }
@@ -1320,12 +1322,14 @@ void SVGUtils::MakeStrokePatternFor(nsIFrame* aFrame, gfxContext* aContext,
     RefPtr<gfxPattern> pattern;
     switch (style->mStroke.kind.tag) {
       case StyleSVGPaintKind::Tag::ContextFill:
-        pattern = aContextPaint->GetFillPattern(
-            dt, strokeOpacity, aContext->CurrentMatrixDouble(), aImgParams);
+        pattern = aContextPaint->GetPattern(
+            SVGContextPaint::Tag::Fill, dt, strokeOpacity,
+            aContext->CurrentMatrixDouble(), aImgParams);
         break;
       case StyleSVGPaintKind::Tag::ContextStroke:
-        pattern = aContextPaint->GetStrokePattern(
-            dt, strokeOpacity, aContext->CurrentMatrixDouble(), aImgParams);
+        pattern = aContextPaint->GetPattern(
+            SVGContextPaint::Tag::Stroke, dt, strokeOpacity,
+            aContext->CurrentMatrixDouble(), aImgParams);
         break;
       default:;
     }
@@ -1357,12 +1361,12 @@ float SVGUtils::GetOpacity(const StyleSVGOpacity& aOpacity,
       return aOpacity.AsOpacity();
     case StyleSVGOpacity::Tag::ContextFillOpacity:
       if (aContextPaint) {
-        opacity = aContextPaint->GetFillOpacity();
+        opacity = aContextPaint->GetOpacity(SVGContextPaint::Tag::Fill);
       }
       break;
     case StyleSVGOpacity::Tag::ContextStrokeOpacity:
       if (aContextPaint) {
-        opacity = aContextPaint->GetStrokeOpacity();
+        opacity = aContextPaint->GetOpacity(SVGContextPaint::Tag::Stroke);
       }
       break;
   }

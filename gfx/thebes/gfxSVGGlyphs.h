@@ -194,47 +194,45 @@ class SimpleTextContextPaint : public mozilla::SVGContextPaint {
 
  public:
   SimpleTextContextPaint(gfxPattern* aFillPattern, gfxPattern* aStrokePattern,
-                         const gfxMatrix& aCTM)
-      : mFillPattern(aFillPattern ? aFillPattern : new gfxPattern(sZero)),
-        mStrokePattern(aStrokePattern ? aStrokePattern
-                                      : new gfxPattern(sZero)) {
-    mFillMatrix = SetupDeviceToPatternMatrix(aFillPattern, aCTM);
-    mStrokeMatrix = SetupDeviceToPatternMatrix(aStrokePattern, aCTM);
+                         const gfxMatrix& aCTM) {
+    mPattern[Tag::Fill] = aFillPattern ? aFillPattern : new gfxPattern(sZero);
+    mMatrix[Tag::Fill] = SetupDeviceToPatternMatrix(aFillPattern, aCTM);
+    mPattern[Tag::Stroke] =
+        aStrokePattern ? aStrokePattern : new gfxPattern(sZero);
+    mMatrix[Tag::Stroke] = SetupDeviceToPatternMatrix(aStrokePattern, aCTM);
   }
 
-  already_AddRefed<gfxPattern> GetFillPattern(
-      const DrawTarget* aDrawTarget, float aOpacity, const gfxMatrix& aCTM,
-      imgDrawingParams& aImgParams) override {
-    if (mFillPattern) {
-      mFillPattern->SetMatrix(aCTM * mFillMatrix);
+  bool IsSolidColor(Tag aTag) const override {
+    DeviceColor color;
+    return mPattern[aTag]->GetSolidColor(color);
+  }
+
+  DeviceColor AsSolidColor(Tag aTag) const override {
+    MOZ_ASSERT(IsSolidColor(aTag), "Must be solid color");
+    DeviceColor color;
+    mPattern[aTag]->GetSolidColor(color);
+    return color;
+  }
+
+  already_AddRefed<gfxPattern> GetPattern(
+      Tag aTag, const DrawTarget* aDrawTarget, float aOpacity,
+      const gfxMatrix& aCTM, imgDrawingParams& aImgParams) override {
+    if (mPattern[aTag]) {
+      mPattern[aTag]->SetMatrix(aCTM * mMatrix[aTag]);
     }
-    RefPtr<gfxPattern> fillPattern = mFillPattern;
-    return fillPattern.forget();
+    RefPtr<gfxPattern> pattern = mPattern[aTag];
+    return pattern.forget();
   }
 
-  already_AddRefed<gfxPattern> GetStrokePattern(
-      const DrawTarget* aDrawTarget, float aOpacity, const gfxMatrix& aCTM,
-      imgDrawingParams& aImgParams) override {
-    if (mStrokePattern) {
-      mStrokePattern->SetMatrix(aCTM * mStrokeMatrix);
-    }
-    RefPtr<gfxPattern> strokePattern = mStrokePattern;
-    return strokePattern.forget();
-  }
-
-  float GetFillOpacity() const override { return mFillPattern ? 1.0f : 0.0f; }
-
-  float GetStrokeOpacity() const override {
-    return mStrokePattern ? 1.0f : 0.0f;
+  float GetOpacity(Tag aTag) const override {
+    return mPattern[aTag] ? 1.0f : 0.0f;
   }
 
  private:
-  RefPtr<gfxPattern> mFillPattern;
-  RefPtr<gfxPattern> mStrokePattern;
+  EnumeratedArray<Tag, RefPtr<gfxPattern>> mPattern;
 
   // Device space to pattern space transforms
-  gfxMatrix mFillMatrix;
-  gfxMatrix mStrokeMatrix;
+  EnumeratedArray<Tag, gfxMatrix> mMatrix;
 };
 
 #endif

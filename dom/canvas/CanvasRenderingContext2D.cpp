@@ -6262,19 +6262,18 @@ void CanvasRenderingContext2D::DrawDirectlyToCanvas(
 
   if (mContextProperties != CanvasContextProperties::None &&
       aImage.mImgContainer->GetType() == imgIContainer::TYPE_VECTOR) {
-    SVGEmbeddingContextPaint* contextPaint =
-        svgContext.GetOrCreateContextPaint();
+    Maybe<nscolor> fill, stroke;
     const ContextState& state = CurrentState();
 
     if (mContextProperties != CanvasContextProperties::Fill &&
         state.StyleIsColor(Style::STROKE)) {
-      contextPaint->SetStroke(state.colorStyles[Style::STROKE]);
+      stroke = Some(state.colorStyles[Style::STROKE]);
     }
-
     if (mContextProperties != CanvasContextProperties::Stroke &&
         state.StyleIsColor(Style::FILL)) {
-      contextPaint->SetFill(state.colorStyles[Style::FILL]);
+      fill = Some(state.colorStyles[Style::FILL]);
     }
+    svgContext.SetContextPaint(fill, stroke);
   }
 
   auto result = aImage.mImgContainer->Draw(

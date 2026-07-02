@@ -95,12 +95,8 @@ class SVGImageContext {
     return mContextPaint.get();
   }
 
-  SVGEmbeddingContextPaint* GetOrCreateContextPaint() {
-    if (!mContextPaint) {
-      mContextPaint = MakeRefPtr<SVGEmbeddingContextPaint>();
-    }
-
-    return mContextPaint.get();
+  void SetContextPaint(Maybe<nscolor> aFill, Maybe<nscolor> aStroke) {
+    mContextPaint = MakeRefPtr<SVGEmbeddingContextPaint>(aFill, aStroke);
   }
 
   void ClearContextPaint() { mContextPaint = nullptr; }
