@@ -5317,25 +5317,11 @@ static UniquePtr<WidgetMouseEvent> CreateMouseOrPointerWidgetEvent(
     newEvent->mButton = newEvent->mClass == ePointerEventClass
                             ? MouseButton::eNotPressed
                             : MouseButton::ePrimary;
-    if (aMouseEvent->IsPressingButton()) {
-      // If the source event has not been dispatched into the DOM yet, we
-      // need to remove the flag which is being pressed.
-      newEvent->mButtons = static_cast<decltype(WidgetMouseEvent::mButtons)>(
-          aMouseEvent->mButtons &
-          ~MouseButtonsFlagToChange(
-              static_cast<MouseButton>(aMouseEvent->mButton)));
-    } else if (aMouseEvent->IsReleasingButton()) {
-      // If the source event has not been dispatched into the DOM yet, we
-      // need to add the flag which is being released.
-      newEvent->mButtons = static_cast<decltype(WidgetMouseEvent::mButtons)>(
-          aMouseEvent->mButtons |
-          MouseButtonsFlagToChange(
-              static_cast<MouseButton>(aMouseEvent->mButton)));
-    } else {
-      // The source event does not change the buttons state so that we can
-      // set mButtons value as-is.
-      newEvent->mButtons = aMouseEvent->mButtons;
-    }
+    // If the source event has not been dispatched into the DOM yet, we
+    // need to remove the flag which is being pressed. Similarly, if the source
+    // event has not been dispatched into the DOM yet, we need to add the flag
+    // which is being released.
+    newEvent->mButtons = aMouseEvent->ComputeButtonsBeforeDispatch();
     // Adjust pressure if it does not matches with mButtons.
     // FIXME: We may use wrong pressure value if the source event has not been
     // dispatched into the DOM yet.  However, fixing this requires to store the
@@ -7098,13 +7084,24 @@ void EventStateManager::ContentRemoved(Document* aDocument,
     const bool hadMouseOutTarget =
         mMouseEnterLeaveHelper->GetOutEventTarget() != nullptr;
     mMouseEnterLeaveHelper->ContentRemoved(*aContent);
-    // If we lose the mouseout target, we need to dispatch mouseover on an
-    // ancestor.  For ensuring the chance to do it before next user input, we
-    // need a synthetic mouse move.
     if (hadMouseOutTarget && !mMouseEnterLeaveHelper->GetOutEventTarget()) {
-      if (PresShell* presShell =
+      if (PresShell* const presShell =
               mPresContext ? mPresContext->GetPresShell() : nullptr) {
-        presShell->SynthesizeMouseMove(false);
+        // If we lose the mouseout target, we need to dispatch mouseover on an
+        // ancestor.  For ensuring the chance to do it before next user input,
+        // we need a synthetic mouse move.
+        const bool requiresToSynthesizeMouseMove = [&]() {
+          // If the last mouse event is caused by a pointing device which does
+          // not support hover state and it's inactive, we don't need to
+          // synthesize mouse move.
+          const PointerInfo* const lastMouseInfo =
+              PointerEventHandler::GetLastMouseInfo();
+          return lastMouseInfo && (lastMouseInfo->InputSourceSupportsHover() ||
+                                   lastMouseInfo->mIsActive);
+        }();
+        if (requiresToSynthesizeMouseMove) {
+          presShell->SynthesizeMouseMove(false);
+        }
       }
     }
   }

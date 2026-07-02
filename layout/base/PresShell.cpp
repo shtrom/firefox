@@ -5944,7 +5944,12 @@ void PresShell::ProcessSynthMouseMoveEvent(bool aFromScroll) {
   if (mLastMousePointerId.isSome()) {
     if (const PointerInfo* const lastMouseInfo =
             PointerEventHandler::GetLastMouseInfo(this)) {
-      if (lastMouseInfo->HasLastState()) {
+      // We shouldn't dispatch mouse boundary events when a layout change
+      // if the mouse event was caused by a pointing device which does not
+      // support hover state.
+      if (lastMouseInfo->HasLastState() &&
+          (lastMouseInfo->InputSourceSupportsHover() ||
+           lastMouseInfo->mIsActive)) {
         ProcessSynthMouseOrPointerMoveEvent(eMouseMove, *mLastMousePointerId,
                                             *lastMouseInfo);
       }
@@ -9798,6 +9803,11 @@ nsresult PresShell::EventHandler::DispatchEventToDOM(
           MOZ_CRASH("MouseEvent target must be an element");
         }
 #endif  // #ifdef DEBUG
+      }
+      if (aEvent->mClass == eMouseEventClass) {
+        MOZ_ASSERT(aEvent->AsMouseEvent());
+        PointerEventHandler::WillDispatchMouseEventToDOM(
+            *aEvent->AsMouseEvent());
       }
       RefPtr<nsPresContext> presContext = GetPresContext();
       EventDispatcher::Dispatch(eventTarget, presContext, aEvent, nullptr,
