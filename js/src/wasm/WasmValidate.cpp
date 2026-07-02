@@ -4847,6 +4847,9 @@ bool wasm::DecodeModuleTail(Decoder& d, CodeMetadata* codeMeta,
   if (len == 0) {
     return d.failf("%s name cannot be empty", thing);
   }
+  if (len > d.bytesRemain()) {
+    return d.fail("over-long name");
+  }
 
   Decoder nameDecoder(d.currentPosition(), d.currentPosition() + len,
                       d.currentOffset(), d.error(), d.warnings());
