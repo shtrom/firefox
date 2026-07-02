@@ -3165,7 +3165,15 @@ static bool MoveToPending(nsIFile* dumpFile, nsIFile* extraFile,
   return true;
 }
 
-nsresult OOPInit(nsIFile* aXREDirectory) {
+nsresult OOPInit(nsIFile* aXREDirectory, bool force /*=false*/) {
+  // Android is exempt from early return because the helper has already been
+  // started and is unconditionally expecting a rendezvous.
+#if !defined(MOZ_WIDGET_ANDROID)
+  if (!CrashReporterIsEnabled(force)) {
+    return NS_OK;
+  }
+#endif
+
   CrashHelperClient* crashHelperClient;
 
   PathString tempPath;
