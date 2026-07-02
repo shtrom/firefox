@@ -2516,10 +2516,8 @@ void gfxFont::Draw(const gfxTextRun* aTextRun, uint32_t aStart, uint32_t aEnd,
     // If no pattern is specified for fill, use the current pattern
     NS_ASSERTION((int(aRunParams.drawMode) & int(DrawMode::GLYPH_STROKE)) == 0,
                  "no pattern supplied for stroking text");
-    RefPtr<gfxPattern> fillPattern = aRunParams.context->GetPattern();
-    contextPaint = new SimpleTextContextPaint(
-        fillPattern, nullptr, aRunParams.context->CurrentMatrixDouble());
-    fontParams.contextPaint = contextPaint.get();
+    contextPaint = MakeRefPtr<SVGContextPaintImpl>(aRunParams.context);
+    fontParams.contextPaint = contextPaint;
   }
 
   // Synthetic-bold strikes are each offset one device pixel in run direction

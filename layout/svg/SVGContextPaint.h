@@ -58,8 +58,6 @@ struct MaxContiguousEnumValue<SVGContextPaintTypeTag> {
  * be able to share their context-paint data cheaply.)  However, in most cases,
  * SVGContextPaint instances are stored in a local RefPtr and only last for the
  * duration of a function call.
- * XXX Note: SVGImageContext doesn't actually have a SVGContextPaint member yet,
- * but it will in a later patch in the patch series that added this comment.
  */
 class SVGContextPaint : public RefCounted<SVGContextPaint> {
  protected:
@@ -80,13 +78,13 @@ class SVGContextPaint : public RefCounted<SVGContextPaint> {
   virtual gfx::DeviceColor AsSolidColor(Tag aTag) const = 0;
   virtual already_AddRefed<gfxPattern> GetPattern(
       Tag aTag, const DrawTarget* aDrawTarget, float aOpacity,
-      const gfxMatrix& aCTM, imgDrawingParams& aImgParams) = 0;
+      const gfxMatrix& aCTM, imgDrawingParams& aImgParams) const = 0;
   virtual float GetOpacity(Tag aTag) const = 0;
 
   already_AddRefed<gfxPattern> GetPattern(Tag aTag,
                                           const DrawTarget* aDrawTarget,
                                           const gfxMatrix& aCTM,
-                                          imgDrawingParams& aImgParams) {
+                                          imgDrawingParams& aImgParams) const {
     return GetPattern(aTag, aDrawTarget, GetOpacity(aTag), aCTM, aImgParams);
   }
 
@@ -156,12 +154,13 @@ struct SVGContextPaintImpl : public SVGContextPaint {
                       const gfxMatrix& aContextMatrix, nsIFrame* aFrame,
                       SVGContextPaint* aOuterContextPaint,
                       imgDrawingParams& aImgParams);
+  explicit SVGContextPaintImpl(gfxContext* aContext);
 
   bool IsSolidColor(Tag aTag) const override;
   gfx::DeviceColor AsSolidColor(Tag aTag) const override;
   already_AddRefed<gfxPattern> GetPattern(
       Tag aTag, const DrawTarget* aDrawTarget, float aOpacity,
-      const gfxMatrix& aCTM, imgDrawingParams& aImgParams) override;
+      const gfxMatrix& aCTM, imgDrawingParams& aImgParams) const override;
 
   float GetOpacity(Tag aTag) const override { return mOpacity[aTag]; }
 
@@ -169,12 +168,18 @@ struct SVGContextPaintImpl : public SVGContextPaint {
     enum class Tag : uint8_t {
       None,
       Color,
+      Pattern,
       PaintServer,
       ContextFill,
       ContextStroke,
     };
 
     Paint() : mPaintDefinition{}, mPaintType(Tag::None) {}
+    ~Paint() {
+      if (mPaintType == Tag::Pattern) {
+        mPaintDefinition.mPattern->Release();
+      }
+    }
 
     void SetPaintServer(nsIFrame* aFrame, const gfxMatrix& aContextMatrix,
                         SVGPaintServerFrame* aPaintServerFrame) {
@@ -191,16 +196,39 @@ struct SVGContextPaintImpl : public SVGContextPaint {
 
     bool IsSolidColor() const { return mPaintType == Tag::Color; }
 
+    void SetPattern(gfxPattern* aPattern, const gfxMatrix& aCTM) {
+      mPaintType = Tag::Pattern;
+      mPaintDefinition.mPattern = aPattern;
+      mPaintDefinition.mPattern->AddRef();
+      mContextMatrix = SetupDeviceToPatternMatrix(aPattern, aCTM);
+    }
+
     void SetContextPaint(SVGContextPaint* aContextPaint, Tag aTag) {
       MOZ_ASSERT(aTag == Tag::ContextFill || aTag == Tag::ContextStroke);
       mPaintType = aTag;
       mPaintDefinition.mContextPaint = aContextPaint;
     }
 
+    already_AddRefed<gfxPattern> GetPattern(
+        const DrawTarget* aDrawTarget, float aOpacity,
+        StyleSVGPaint nsStyleSVG::* aFillOrStroke, const gfxMatrix& aCTM,
+        imgDrawingParams& aImgParams) const;
+
+   private:
+    static gfxMatrix SetupDeviceToPatternMatrix(const gfxPattern* aPattern,
+                                                const gfxMatrix& aCTM) {
+      gfxMatrix deviceToUser = aCTM;
+      if (!deviceToUser.Invert()) {
+        return gfxMatrix(0, 0, 0, 0, 0, 0);  // singular
+      }
+      return deviceToUser * aPattern->GetMatrix();
+    }
+
     union {
       SVGPaintServerFrame* mPaintServerFrame;
       SVGContextPaint* mContextPaint;
       nscolor mColor;
+      gfxPattern* mPattern;
     } mPaintDefinition;
 
     // Initialized (if needed) in SetPaintServer():
@@ -212,11 +240,6 @@ struct SVGContextPaintImpl : public SVGContextPaint {
     // Device-space-to-pattern-space
     mutable gfxMatrix mPatternMatrix;
     mutable nsRefPtrHashtable<nsFloatHashKey, gfxPattern> mPatternCache;
-
-    already_AddRefed<gfxPattern> GetPattern(
-        const DrawTarget* aDrawTarget, float aOpacity,
-        StyleSVGPaint nsStyleSVG::* aFillOrStroke, const gfxMatrix& aCTM,
-        imgDrawingParams& aImgParams) const;
   };
 
   DrawMode GetDrawMode() const { return mDrawMode; }
@@ -273,7 +296,7 @@ class SVGEmbeddingContextPaint : public SVGContextPaint {
   gfx::DeviceColor AsSolidColor(Tag aTag) const override;
   already_AddRefed<gfxPattern> GetPattern(
       Tag aTag, const DrawTarget* aDrawTarget, float aOpacity,
-      const gfxMatrix& aCTM, imgDrawingParams& aImgParams) override;
+      const gfxMatrix& aCTM, imgDrawingParams& aImgParams) const override;
 
   float GetOpacity(Tag aTag) const override { return mOpacity[aTag]; };
 

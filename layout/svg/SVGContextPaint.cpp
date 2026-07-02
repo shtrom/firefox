@@ -190,6 +190,14 @@ SVGContextPaintImpl::SVGContextPaintImpl(const DrawTarget* aDrawTarget,
   }
 }
 
+SVGContextPaintImpl::SVGContextPaintImpl(gfxContext* aContext) {
+  std::fill(mOpacity.begin(), mOpacity.end(), 1.0f);
+  if (RefPtr<gfxPattern> fillPattern = aContext->GetPattern()) {
+    mPaint[Tag::Fill].SetPattern(fillPattern, aContext->CurrentMatrixDouble());
+    mDrawMode |= DrawMode::GLYPH_FILL;
+  }
+}
+
 void SVGContextPaint::InitStrokeGeometry(gfxContext* aContext,
                                          float devUnitsPerSVGUnit) {
   mStrokeWidth = aContext->CurrentLineWidth() / devUnitsPerSVGUnit;
@@ -238,7 +246,7 @@ DeviceColor SVGContextPaintImpl::AsSolidColor(Tag aTag) const {
 
 already_AddRefed<gfxPattern> SVGContextPaintImpl::GetPattern(
     Tag aTag, const DrawTarget* aDrawTarget, float aOpacity,
-    const gfxMatrix& aCTM, imgDrawingParams& aImgParams) {
+    const gfxMatrix& aCTM, imgDrawingParams& aImgParams) const {
   return mPaint[aTag].GetPattern(
       aDrawTarget, aOpacity,
       aTag == Tag::Fill ? &nsStyleSVG::mFill : &nsStyleSVG::mStroke, aCTM,
@@ -260,9 +268,7 @@ already_AddRefed<gfxPattern> SVGContextPaintImpl::Paint::GetPattern(
 
   switch (mPaintType) {
     case Tag::None:
-      pattern = new gfxPattern(DeviceColor());
-      mPatternMatrix = gfxMatrix();
-      break;
+      return nullptr;
     case Tag::Color: {
       DeviceColor color = ToDeviceColor(mPaintDefinition.mColor);
       color.a *= aOpacity;
@@ -270,6 +276,10 @@ already_AddRefed<gfxPattern> SVGContextPaintImpl::Paint::GetPattern(
       mPatternMatrix = gfxMatrix();
       break;
     }
+    case Tag::Pattern:
+      pattern = mPaintDefinition.mPattern;
+      pattern->SetMatrix(aCTM * mPatternMatrix);
+      break;
     case Tag::PaintServer:
       pattern = mPaintDefinition.mPaintServerFrame->GetPaintServerPattern(
           mFrame, aDrawTarget, mContextMatrix, aFillOrStroke, aOpacity,
@@ -336,7 +346,7 @@ DeviceColor SVGEmbeddingContextPaint::AsSolidColor(Tag aTag) const {
 
 already_AddRefed<gfxPattern> SVGEmbeddingContextPaint::GetPattern(
     Tag aTag, const DrawTarget* aDrawTarget, float aFillOpacity,
-    const gfxMatrix& aCTM, imgDrawingParams& aImgParams) {
+    const gfxMatrix& aCTM, imgDrawingParams& aImgParams) const {
   if (!mColor[aTag]) {
     return nullptr;
   }
