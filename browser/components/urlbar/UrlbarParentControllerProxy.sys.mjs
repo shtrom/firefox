@@ -100,6 +100,26 @@ export class UrlbarParentControllerProxy {
   }
 
   /**
+   * @param {UrlbarResult} result The result about to be selected.
+   */
+  onBeforeSelection(result) {
+    this.#actor.sendAsyncMessage("OnBeforeSelection", {
+      instanceId: this.#instanceId,
+      result: result.toWire(),
+    });
+  }
+
+  /**
+   * @param {UrlbarResult} result The selected result.
+   */
+  onSelection(result) {
+    this.#actor.sendAsyncMessage("OnSelection", {
+      instanceId: this.#instanceId,
+      result: result.toWire(),
+    });
+  }
+
+  /**
    * Returns a dynamic result's view template, pre-fetched and attached to the
    * result when its `QueryResults` was delivered (see `UrlbarChild`).
    *

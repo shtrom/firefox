@@ -3159,7 +3159,9 @@ export class UrlbarView {
     }
 
     let result = row?.result;
-    this.controller.onBeforeSelection(result, element);
+    if (result) {
+      this.controller.onBeforeSelection(result, element);
+    }
 
     this.#setAccessibleFocus(setAccessibleFocus && element);
     this.#rawSelectedElement = element;
@@ -3175,7 +3177,9 @@ export class UrlbarView {
       this.input.setResultForCurrentValue(result);
     }
 
-    this.controller.onSelection(result, element);
+    if (result) {
+      this.controller.onSelection(result, element);
+    }
   }
 
   /**
