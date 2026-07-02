@@ -72,6 +72,14 @@ export function getPEMString(cert) {
   );
 }
 
+export function alertPromptService(window, title, message) {
+  // XXX Bug 1425832 - Using Services.prompt here causes tests to report memory
+  // leaks.
+  // eslint-disable-next-line mozilla/use-services
+  var ps = Cc["@mozilla.org/prompter;1"].getService(Ci.nsIPromptService);
+  ps.alert(window, title, message);
+}
+
 const DEFAULT_CERT_EXTENSION = "crt";
 
 /**
@@ -179,7 +187,7 @@ export async function exportToFile(parent, document, cert) {
     await IOUtils.write(fp.file.path, content);
   } catch (ex) {
     let title = await document.l10n.formatValue("write-file-failure");
-    Services.prompt.alert(parent, title, ex.toString());
+    alertPromptService(parent, title, ex.toString());
   }
   if (Cu.isInAutomation) {
     Services.obs.notifyObservers(null, "cert-export-finished");

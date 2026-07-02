@@ -4,13 +4,104 @@
 
 // Tests the dialog used for loading PKCS #11 modules.
 
-const { PromptTestUtils } = ChromeUtils.importESModule(
-  "resource://testing-common/PromptTestUtils.sys.mjs"
+const { MockRegistrar } = ChromeUtils.importESModule(
+  "resource://testing-common/MockRegistrar.sys.mjs"
 );
 
-const { ctypes } = ChromeUtils.importESModule(
-  "resource://gre/modules/ctypes.sys.mjs"
+const gMockPKCS11ModuleDB = {
+  addModuleCallCount: 0,
+  expectedLibPath: "",
+  expectedModuleName: "",
+  throwOnAddModule: false,
+
+  async addModule(
+    moduleName,
+    libraryFullPath,
+    cryptoMechanismFlags,
+    cipherFlags
+  ) {
+    this.addModuleCallCount++;
+    Assert.equal(
+      moduleName,
+      this.expectedModuleName,
+      "addModule: Name given should be what's in the name textbox"
+    );
+    Assert.equal(
+      libraryFullPath,
+      this.expectedLibPath,
+      "addModule: Path given should be what's in the path textbox"
+    );
+    Assert.equal(
+      cryptoMechanismFlags,
+      0,
+      "addModule: No crypto mechanism flags should be passed"
+    );
+    Assert.equal(cipherFlags, 0, "addModule: No cipher flags should be passed");
+
+    if (this.throwOnAddModule) {
+      throw new Error(`addModule: Throwing exception`);
+    }
+  },
+
+  async deleteModule() {
+    throw new Error("not expecting deleteModule() to be called");
+  },
+
+  async listModules() {
+    throw new Error("not expecting listModules() to be called");
+  },
+
+  QueryInterface: ChromeUtils.generateQI(["nsIPKCS11ModuleDB"]),
+};
+
+const gMockPromptService = {
+  alertCallCount: 0,
+  expectedText: "",
+  expectedWindow: null,
+
+  alert(parent, dialogTitle, text) {
+    this.alertCallCount++;
+    Assert.equal(
+      parent,
+      this.expectedWindow,
+      "alert: Parent should be expected window"
+    );
+    Assert.equal(dialogTitle, null, "alert: Title should be null");
+    Assert.equal(
+      text,
+      this.expectedText,
+      "alert: Actual and expected text should match"
+    );
+  },
+
+  QueryInterface: ChromeUtils.generateQI(["nsIPromptService"]),
+};
+
+var gMockPKCS11CID = MockRegistrar.register(
+  "@mozilla.org/security/pkcs11moduledb;1",
+  gMockPKCS11ModuleDB
 );
+var gMockPromptServiceCID = MockRegistrar.register(
+  "@mozilla.org/prompter;1",
+  gMockPromptService
+);
+
+var gMockFilePicker = SpecialPowers.MockFilePicker;
+gMockFilePicker.init();
+
+var gTempFile = Services.dirsvc.get("TmpD", Ci.nsIFile);
+gTempFile.append("browser_loadPKCS11Module_ui-fakeModule");
+
+registerCleanupFunction(() => {
+  gMockFilePicker.cleanup();
+  MockRegistrar.unregister(gMockPKCS11CID);
+  MockRegistrar.unregister(gMockPromptServiceCID);
+});
+
+function resetCallCounts() {
+  gMockPKCS11ModuleDB.addModuleCallCount = 0;
+  gMockPromptService.alertCallCount = 0;
+}
 
 /**
  * Opens the dialog shown to load a PKCS #11 module.
@@ -42,17 +133,13 @@ function openLoadModuleDialog() {
  *
  * @param {window} win
  *        The dialog window.
- * @param {MockFilePicker} mockFilePicker
- *        Mock FilePicker implementation.
- * @param {nsIFile} tempFile
- *        A file to be selected (or not) by the file picker.
  * @param {boolean} cancel
- *        If true, the file picker is canceled. If false, tempFile is chosen in
+ *        If true, the file picker is canceled. If false, gTempFile is chosen in
  *        the file picker and the file picker is accepted.
  */
-async function browseToTempFile(win, mockFilePicker, tempFile, cancel) {
-  mockFilePicker.showCallback = () => {
-    mockFilePicker.setFiles([tempFile]);
+async function browseToTempFile(win, cancel) {
+  gMockFilePicker.showCallback = () => {
+    gMockFilePicker.setFiles([gTempFile]);
 
     if (cancel) {
       info("MockFilePicker returning cancel");
@@ -74,18 +161,8 @@ add_task(async function testBrowseButton() {
   let originalPathBoxValue = "expected path if picker is canceled";
   pathBox.value = originalPathBoxValue;
 
-  let mockFilePicker = SpecialPowers.MockFilePicker;
-  mockFilePicker.init();
-
-  registerCleanupFunction(() => {
-    mockFilePicker.cleanup();
-  });
-
-  let tempFile = Services.dirsvc.get("TmpD", Ci.nsIFile);
-  tempFile.append("browser_loadPKCS11Module_ui-fakeModule");
-
   // Test what happens if the file picker is canceled.
-  await browseToTempFile(win, mockFilePicker, tempFile, true);
+  await browseToTempFile(win, true);
   Assert.equal(
     pathBox.value,
     originalPathBoxValue,
@@ -93,121 +170,101 @@ add_task(async function testBrowseButton() {
   );
 
   // Test what happens if the file picker is not canceled.
-  await browseToTempFile(win, mockFilePicker, tempFile, false);
+  await browseToTempFile(win, false);
   Assert.equal(
     pathBox.value,
-    tempFile.path,
+    gTempFile.path,
     "Path shown should be same as the one chosen in the file picker"
   );
 
   await BrowserTestUtils.closeWindow(win);
 });
 
-function testAddModuleHelper(win, modulePath, moduleName) {
-  win.document.getElementById("device_path").value = modulePath;
-  win.document.getElementById("device_name").value = moduleName;
+function testAddModuleHelper(win, throwOnAddModule) {
+  resetCallCounts();
+  gMockPKCS11ModuleDB.expectedLibPath = gTempFile.path;
+  gMockPKCS11ModuleDB.expectedModuleName = "test module";
+  gMockPKCS11ModuleDB.throwOnAddModule = throwOnAddModule;
 
-  info(`Accepting dialog for "${moduleName}": ${modulePath}`);
+  win.document.getElementById("device_name").value =
+    gMockPKCS11ModuleDB.expectedModuleName;
+  win.document.getElementById("device_path").value =
+    gMockPKCS11ModuleDB.expectedLibPath;
+
+  info("Accepting dialog");
   win.document.getElementById("loaddevice").acceptDialog();
-}
-
-async function countLoadedModules() {
-  let pkcs11ModuleDB = Cc["@mozilla.org/security/pkcs11moduledb;1"].getService(
-    Ci.nsIPKCS11ModuleDB
-  );
-  let modules = await pkcs11ModuleDB.listModules();
-  return modules.length;
-}
-
-async function getTestModulePath() {
-  // When running locally, this is where the test module should be.
-  let testModulePath = PathUtils.join(
-    PathUtils.parent(Services.dirsvc.get("CurWorkD", Ci.nsIFile).path, 2),
-    "xpcshell",
-    "security",
-    "manager",
-    "ssl",
-    "tests",
-    "unit",
-    "pkcs11testmodule",
-    ctypes.libraryName("pkcs11testmodule")
-  );
-  if (await IOUtils.exists(testModulePath)) {
-    return testModulePath;
-  }
-  // When running in taskcluster, this is where the test module should be.
-  testModulePath = PathUtils.join(
-    PathUtils.parent(Services.dirsvc.get("CurWorkD", Ci.nsIFile).path, 1),
-    "xpcshell",
-    "tests",
-    "security",
-    "manager",
-    "ssl",
-    "tests",
-    "unit",
-    "pkcs11testmodule",
-    ctypes.libraryName("pkcs11testmodule")
-  );
-  Assert.ok(await IOUtils.exists(testModulePath), "found test module");
-  return testModulePath;
 }
 
 add_task(async function testAddModuleSuccess() {
   let win = await openLoadModuleDialog();
-  let testModulePath = await getTestModulePath();
-  let windowClosedPromise = BrowserTestUtils.windowClosed(win);
-  let moduleCountBefore = await countLoadedModules();
-  testAddModuleHelper(win, testModulePath, "test module");
-  let moduleCountAfter = await countLoadedModules();
+
+  testAddModuleHelper(win, false);
+  await BrowserTestUtils.windowClosed(win);
+
   Assert.equal(
-    moduleCountAfter,
-    moduleCountBefore + 1,
-    "should have 1 more module loaded than before"
+    gMockPKCS11ModuleDB.addModuleCallCount,
+    1,
+    "addModule() should have been called once"
   );
-
-  registerCleanupFunction(async () => {
-    let pkcs11ModuleDB = Cc[
-      "@mozilla.org/security/pkcs11moduledb;1"
-    ].getService(Ci.nsIPKCS11ModuleDB);
-    await pkcs11ModuleDB.deleteModule("test module");
-  });
-
-  await windowClosedPromise;
+  Assert.equal(
+    gMockPromptService.alertCallCount,
+    0,
+    "alert() should never have been called"
+  );
 });
 
 add_task(async function testAddModuleFailure() {
   let win = await openLoadModuleDialog();
+  gMockPromptService.expectedText = "Unable to add module";
+  gMockPromptService.expectedWindow = win;
 
-  let moduleCountBefore = await countLoadedModules();
-  testAddModuleHelper(win, "somenonexistentpath", "nonexistent test module");
-  await PromptTestUtils.handleNextPrompt(
-    win,
-    { modalType: Services.prompt.MODAL_TYPE_WINDOW, promptType: "alert" },
-    { buttonNumClick: 1 }
-  );
-  let moduleCountAfter = await countLoadedModules();
-  Assert.equal(
-    moduleCountAfter,
-    moduleCountBefore,
-    "should have the same number of loaded modules as before"
-  );
+  // The exception we throw in addModule is first reported as an uncaught
+  // exception by XPConnect before an exception is propagated to the actual
+  // caller.
+  expectUncaughtException(true);
 
+  testAddModuleHelper(win, true);
+  expectUncaughtException(false);
   // If adding a module fails, the dialog will not close. As such, we have to
   // close the window ourselves.
   await BrowserTestUtils.closeWindow(win);
+
+  Assert.equal(
+    gMockPKCS11ModuleDB.addModuleCallCount,
+    1,
+    "addModule() should have been called once"
+  );
+  Assert.equal(
+    gMockPromptService.alertCallCount,
+    1,
+    "alert() should have been called once"
+  );
 });
 
 add_task(async function testCancel() {
   let win = await openLoadModuleDialog();
+  resetCallCounts();
 
   info("Canceling dialog");
   win.document.getElementById("loaddevice").cancelDialog();
+
+  Assert.equal(
+    gMockPKCS11ModuleDB.addModuleCallCount,
+    0,
+    "addModule() should never have been called"
+  );
+  Assert.equal(
+    gMockPromptService.alertCallCount,
+    0,
+    "alert() should never have been called"
+  );
 
   await BrowserTestUtils.windowClosed(win);
 });
 
 async function testModuleNameHelper(moduleName, acceptButtonShouldBeDisabled) {
   let win = await openLoadModuleDialog();
+  resetCallCounts();
 
   info(`Setting Module Name to '${moduleName}'`);
   let moduleNameBox = win.document.getElementById("device_name");
