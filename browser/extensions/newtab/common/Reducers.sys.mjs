@@ -4,11 +4,17 @@
 
 import { actionTypes as at } from "resource://newtab/common/Actions.mjs";
 import { Dedupe } from "resource:///modules/Dedupe.sys.mjs";
+import { TOP_SITES_MAX_ROWS as PLATFORM_TOP_SITES_MAX_ROWS } from "resource:///modules/topsites/constants.mjs";
 
 export {
   TOP_SITES_DEFAULT_ROWS,
   TOP_SITES_MAX_SITES_PER_ROW,
 } from "resource:///modules/topsites/constants.mjs";
+
+// @backward-compat { version 154 }
+// When 154 reaches Release, delete this shim and add TOP_SITES_MAX_ROWS to the
+// constants.mjs re-export above.
+export const TOP_SITES_MAX_ROWS = PLATFORM_TOP_SITES_MAX_ROWS ?? 4;
 
 const dedupe = new Dedupe(site => site && site.url);
 
