@@ -394,6 +394,9 @@
       "chrome://browser/content/urlbar/UrlbarView.mjs": [
         "../../../browser/components/urlbar/content/UrlbarView.mjs"
       ],
+      "chrome://browser/content/usercontext/ContainerEditor.mjs": [
+        "../../../browser/components/contextualidentity/content/ContainerEditor.mjs"
+      ],
       "chrome://browser/content/webrtc/webrtc-preview.mjs": [
         "../../../browser/components/webrtc/content/webrtc-preview/webrtc-preview.mjs"
       ],
@@ -6292,6 +6295,9 @@
       "resource://gre/modules/LoginRelatedRealms.sys.mjs": [
         "../../../toolkit/components/passwordmgr/LoginRelatedRealms.sys.mjs"
       ],
+      "resource://gre/modules/LoginStorageMigrator.sys.mjs": [
+        "../../../toolkit/components/passwordmgr/LoginStorageMigrator.sys.mjs"
+      ],
       "resource://gre/modules/LoginStore.sys.mjs": [
         "../../../toolkit/components/passwordmgr/LoginStore.sys.mjs"
       ],
@@ -6393,9 +6399,6 @@
       ],
       "resource://gre/modules/PrincipalsCollector.sys.mjs": [
         "../../../toolkit/components/cleardata/PrincipalsCollector.sys.mjs"
-      ],
-      "resource://gre/modules/PrivateAttributionService.sys.mjs": [
-        "../../../dom/privateattribution/PrivateAttributionService.sys.mjs"
       ],
       "resource://gre/modules/PrivateBrowsingUtils.sys.mjs": [
         "../../../toolkit/modules/PrivateBrowsingUtils.sys.mjs"
