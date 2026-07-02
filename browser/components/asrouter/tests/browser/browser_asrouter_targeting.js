@@ -44,6 +44,11 @@ const { DefaultBrowserCheck } = ChromeUtils.importESModule(
   "moz-src:///browser/components/DefaultBrowserCheck.sys.mjs"
 );
 
+const FirefoxViewTestUtils = ChromeUtils.importESModule(
+  "resource://testing-common/FirefoxViewTestUtils.sys.mjs"
+);
+FirefoxViewTestUtils.init(this);
+
 const testFeatureCallout = {
   id: "TEST_MESSAGE",
   template: "feature_callout",
@@ -152,6 +157,10 @@ add_task(async function setup_pref_env() {
       ["browser.shell.mostRecentDefaultPromptSeen", 0],
     ],
   });
+});
+
+add_setup(function add_firefox_view_button() {
+  FirefoxViewTestUtils.enableFirefoxViewButton(window);
 });
 
 // ASRouterTargeting.findMatchingMessage
