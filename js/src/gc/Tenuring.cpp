@@ -125,7 +125,7 @@ bool TenuringTracer::onObjectEdge(JSObject** objp, const char* name) {
 JSObject* TenuringTracer::promoteOrForward(JSObject* obj) {
   MOZ_ASSERT(nursery_.inCollectedRegion(obj));
 
-  if (obj->isForwarded()) {
+  if (obj->isForwardedNonAtomic()) {
     const gc::RelocationOverlay* overlay = gc::RelocationOverlay::fromCell(obj);
     obj = static_cast<JSObject*>(overlay->forwardingAddress());
     if (IsInsideNursery(obj)) {
@@ -173,7 +173,7 @@ bool TenuringTracer::onStringEdge(JSString** strp, const char* name) {
 JSString* TenuringTracer::promoteOrForward(JSString* str) {
   MOZ_ASSERT(nursery_.inCollectedRegion(str));
 
-  if (str->isForwarded()) {
+  if (str->isForwardedNonAtomic()) {
     const gc::RelocationOverlay* overlay = gc::RelocationOverlay::fromCell(str);
     str = static_cast<JSString*>(overlay->forwardingAddress());
     if (IsInsideNursery(str)) {
@@ -198,7 +198,7 @@ bool TenuringTracer::onBigIntEdge(JS::BigInt** bip, const char* name) {
 JS::BigInt* TenuringTracer::promoteOrForward(JS::BigInt* bi) {
   MOZ_ASSERT(nursery_.inCollectedRegion(bi));
 
-  if (bi->isForwarded()) {
+  if (bi->isForwardedNonAtomic()) {
     const gc::RelocationOverlay* overlay = gc::RelocationOverlay::fromCell(bi);
     bi = static_cast<JS::BigInt*>(overlay->forwardingAddress());
     if (IsInsideNursery(bi)) {
@@ -223,7 +223,7 @@ bool TenuringTracer::onGetterSetterEdge(GetterSetter** gsp, const char* name) {
 GetterSetter* TenuringTracer::promoteOrForward(GetterSetter* gs) {
   MOZ_ASSERT(nursery_.inCollectedRegion(gs));
 
-  if (gs->isForwarded()) {
+  if (gs->isForwardedNonAtomic()) {
     const gc::RelocationOverlay* overlay = gc::RelocationOverlay::fromCell(gs);
     gs = static_cast<GetterSetter*>(overlay->forwardingAddress());
     if (IsInsideNursery(gs)) {
@@ -277,7 +277,7 @@ void TenuringTracer::traverse(JS::Value* thingp) {
     return;
   }
 
-  if (cell->isForwarded()) {
+  if (cell->isForwardedNonAtomic()) {
     const gc::RelocationOverlay* overlay =
         gc::RelocationOverlay::fromCell(cell);
     Cell* target = overlay->forwardingAddress();
@@ -672,7 +672,7 @@ StringRelocationOverlay* StringRelocationOverlay::forwardDependentString(
 JSLinearString* JSDependentString::rootBaseDuringMinorGC() {
   JSLinearString* root = this;
   while (MaybeForwarded(root)->hasBase()) {
-    if (root->isForwarded()) {
+    if (root->isForwardedNonAtomic()) {
       root = js::gc::StringRelocationOverlay::fromCell(root)
                  ->savedNurseryBaseOrRelocOverlay();
     } else {

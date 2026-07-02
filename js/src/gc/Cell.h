@@ -122,6 +122,9 @@ class HeaderWord {
   // Accessors for GC data.
   uintptr_t flags() const { return getAtomic() & RESERVED_MASK; }
   bool isForwarded() const { return flags() & FORWARD_BIT; }
+  // Non-atomic variant. Only safe when no other thread can be mutating the
+  // header concurrently.
+  bool isForwardedNonAtomic() const { return value_ & FORWARD_BIT; }
   void setForwardingAddress(uintptr_t ptr) {
     MOZ_ASSERT((ptr & RESERVED_MASK) == 0);
     setAtomic(ptr | FORWARD_BIT);
@@ -159,6 +162,7 @@ class Cell {
   void operator=(const Cell&) = delete;
 
   bool isForwarded() const { return header_.isForwarded(); }
+  bool isForwardedNonAtomic() const { return header_.isForwardedNonAtomic(); }
   uintptr_t flags() const { return header_.flags(); }
 
   MOZ_ALWAYS_INLINE bool isTenured() const { return !IsInsideNursery(this); }
