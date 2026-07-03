@@ -195,6 +195,8 @@ static bool RequireClearLead(const nsString& aKeySystem) {
          aKeySystem.EqualsLiteral(kPlayReadyHardwareClearLeadKeySystemName);
 }
 
+bool MFCDMParent::IsClearLead() const { return RequireClearLead(mKeySystem); }
+
 static void BuildCapabilitiesArray(
     const nsTArray<MFCDMMediaCapability>& aCapabilities,
     AutoPropVar& capabilitiesPropOut) {

@@ -262,12 +262,20 @@ void MFMediaEngineParent::HandleMediaEngineEvent(
     }
     case MF_MEDIA_ENGINE_EVENT_FIRSTFRAMEREADY: {
 #ifdef MOZ_WMF_CDM
-      // A produced frame means protected activation succeeded; restore the
-      // recovery budget so a later transient failure on this playback is not
-      // constrained by earlier ones.
+      // A produced frame means protected activation succeeded; refresh the
+      // readiness conditions and restore the recovery budget so a later
+      // transient failure on this playback is not constrained by earlier ones.
       if (mProxyId) {
         if (RefPtr<MFCDMParent> cdmParent =
                 MFCDMParent::GetCDMById(*mProxyId)) {
+          // A produced frame proves the protected pipeline is working, so
+          // refresh the conditions (e.g. an HDCP pre-warm that could not
+          // confirm support and marked it failed) to ready. Skip this for
+          // clearlead: its first frame is clear and does not exercise HDCP or
+          // the decryptor, so it does not prove them ready.
+          if (cdmParent->IsHardwareDRM() && !cdmParent->IsClearLead()) {
+            cdmParent->ReadinessMonitor().MarkAllReady();
+          }
           cdmParent->ReadinessMonitor().ResetRecoveryBudget();
         }
       }
