@@ -1857,13 +1857,16 @@ void AbsoluteContainingBlock::ReflowAbsoluteFrame(
         kidPos.B(outerWM) -= mCumulativeContainingBlockBSize;
       } else {
         // aKidFrame is a next-in-flow. Place it at the block-edge start of its
-        // containing block, with the same inline-position as its prev-in-flow.
-        kidPos = LogicalPoint(
-            outerWM, kidPrevInFlow->IStart(outerWM, cbBorderBoxSize), 0);
+        // containing block, with the same inline-position as in its
+        // unfragmented position.
+        kidPos =
+            *GetUnfragmentedPosition(aReflowInput, aKidFrame->FirstInFlow());
+        kidPos.B(outerWM) = 0;
       }
       const LogicalSize kidSize = kidDesiredSize.Size(outerWM);
-      const LogicalRect kidRect(outerWM, kidPos, kidSize);
-      aKidFrame->SetRect(outerWM, kidRect, cbBorderBoxSize);
+      nsRect kidRect = LogicalRect(outerWM, kidPos, kidSize)
+                           .GetPhysicalRect(outerWM, cbBorderBoxSize);
+      aKidFrame->SetRect(kidRect);
     } else {
       // Position the child relative to our padding edge.
       const LogicalSize kidSize = kidDesiredSize.Size(outerWM);
