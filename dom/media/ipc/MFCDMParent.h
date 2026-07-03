@@ -63,6 +63,10 @@ class MFCDMParent final : public PMFCDMParent {
 
   bool IsHardwareDRM() const { return mIsHardwareDRM; }
 
+  // Whether this session is clearlead: its stream begins with clear samples
+  // before switching to encrypted, so its first produced frame is clear.
+  bool IsClearLead() const;
+
   void ActorDestroy(ActorDestroyReason aWhy) override;
 
   mozilla::ipc::IPCResult RecvGetCapabilities(
