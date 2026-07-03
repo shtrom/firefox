@@ -1067,7 +1067,7 @@ bool HTMLEditor::EntireDocumentIsEditable() const {
           (document->GetBody() && document->GetBody()->IsEditable()));
 }
 
-dom::EditContext* HTMLEditor::ComputeEditContext() const {
+dom::EditContext* HTMLEditor::GetEditContext() const {
   if (!StaticPrefs::dom_editcontext_enabled() ||
       !EditContext::IsAnyAttached()) {
     return nullptr;
@@ -1077,11 +1077,6 @@ dom::EditContext* HTMLEditor::ComputeEditContext() const {
     return element->GetEditContext();
   }
   return nullptr;
-}
-
-bool HTMLEditor::IsFiringTextUpdate() const {
-  EditContext* editContext = GetEditActionEditContext();
-  return editContext && editContext->IsFiringTextUpdate();
 }
 
 void HTMLEditor::CreateEventListeners() {

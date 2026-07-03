@@ -50,10 +50,8 @@ class mozInlineSpellStatus {
   static mozilla::UniquePtr<mozInlineSpellStatus> CreateForSelection(
       mozInlineSpellChecker& aSpellChecker);
 
-  enum class SetAnchorToCaret : bool { No, Yes };
   static mozilla::UniquePtr<mozInlineSpellStatus> CreateForRange(
-      mozInlineSpellChecker& aSpellChecker, nsRange* aRange,
-      SetAnchorToCaret aSetAnchorToCaret = SetAnchorToCaret::No);
+      mozInlineSpellChecker& aSpellChecker, nsRange* aRange);
 
   nsresult FinishInitOnEvent(mozInlineSpellWordUtil& aWordUtil);
 
@@ -93,12 +91,12 @@ class mozInlineSpellStatus {
   // @param aAnchorRange see mAnchorRange.
   // @param aForceNavigationWordCheck see mForceNavigationWordCheck.
   // @param aNewNavigationPositionOffset see mNewNavigationPositionOffset.
-  explicit mozInlineSpellStatus(
-      mozInlineSpellChecker* aSpellChecker, Operation aOp,
-      RefPtr<nsRange>&& aRange, RefPtr<nsRange>&& aCreatedRange,
-      RefPtr<nsRange>&& aAnchorRange, bool aForceNavigationWordCheck,
-      int32_t aNewNavigationPositionOffset,
-      SetAnchorToCaret aSetAnchorToCaret = SetAnchorToCaret::No);
+  explicit mozInlineSpellStatus(mozInlineSpellChecker* aSpellChecker,
+                                Operation aOp, RefPtr<nsRange>&& aRange,
+                                RefPtr<nsRange>&& aCreatedRange,
+                                RefPtr<nsRange>&& aAnchorRange,
+                                bool aForceNavigationWordCheck,
+                                int32_t aNewNavigationPositionOffset);
 
   // For resuming a previously started check.
   const Operation mOp;
@@ -117,7 +115,7 @@ class mozInlineSpellStatus {
   // position (such as for the intial check of everything).
   //
   // For mOp == eOpNavigation, this is the NEW position of the cursor
-  RefPtr<const nsRange> mAnchorRange;
+  const RefPtr<const nsRange> mAnchorRange;
 
   // -----
   // The following members are only for navigation events and are only
@@ -131,10 +129,6 @@ class mozInlineSpellStatus {
   // mozInlineSpellChecker::HandleNavigationEvent for a description of why we
   // have this.
   const bool mForceNavigationWordCheck;
-
-  // Set mAnchorRange to document selection if it is collapsed
-  // when spell check occurs.
-  const SetAnchorToCaret mSetAnchorToCaret;
 
   // Contains the offset passed in to HandleNavigationEvent
   const int32_t mNewNavigationPositionOffset;
@@ -260,8 +254,6 @@ class mozInlineSpellChecker final : public nsIInlineSpellChecker,
                                      nsRange** aRange);
 
   nsresult CleanupRangesInSelection(mozilla::dom::Selection* aSelection);
-
-  nsresult SpellCheckRangeIgnoringWordAtCaret(nsRange* aRange);
 
   /**
    * @param aRange needs to be kept alive by the caller.

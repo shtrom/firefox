@@ -109,8 +109,6 @@ class EditContext final : public DOMEventTargetHelper {
     return mTextNextToCaretChangedByTextUpdateHandler;
   }
 
-  bool IsFiringTextUpdate() const { return mIsFiringTextUpdate; }
-
  private:
   EditContext(nsIGlobalObject* aGlobalObject, const EditContextInit& aInit,
               ErrorResult& aRv);
@@ -133,7 +131,6 @@ class EditContext final : public DOMEventTargetHelper {
   bool mIsComposing = false;
   bool mTextNextToCaretChangedByTextUpdateHandler = false;
   bool mExpectingCharacterBounds = false;
-  bool mIsFiringTextUpdate = false;
 };
 
 }  // namespace mozilla::dom

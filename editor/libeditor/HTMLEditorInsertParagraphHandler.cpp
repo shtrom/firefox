@@ -68,7 +68,7 @@ HTMLEditor::InsertParagraphSeparatorAsSubAction(const Element& aEditingHost) {
     }
   }
 
-  if (GetEditActionEditContext()) {
+  if (GetEditContext()) {
     // Don't insert paragraph if there is an EditContext
     return EditActionResult::HandledResult();
   }
