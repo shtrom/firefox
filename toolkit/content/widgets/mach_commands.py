@@ -286,15 +286,7 @@ def addstory(command_context, name, project_name, path):
     help="Fetch the current Nova design tokens from Figma before building. "
     "Requires a valid FIGMA_ACCESS_TOKEN in your environment.",
 )
-@CommandArgument(
-    "--output-dir",
-    help="Directory to write the built design token files to. Defaults to "
-    "their checked-in locations. When set, the newtab install/bundle steps "
-    "are skipped so the real tree isn't modified.",
-)
-def buildtokens(command_context, fetch_figma, output_dir=None):
-    if output_dir:
-        os.environ["STYLE_DICTIONARY_OUTPUT_DIR"] = output_dir
+def buildtokens(command_context, fetch_figma):
     if run_mach(
         command_context,
         "npm",
@@ -333,6 +325,5 @@ def buildtokens(command_context, fetch_figma, output_dir=None):
         "npm",
         args=["run", "build", "--prefix=toolkit/themes/shared/design-system"],
     )
-    if not output_dir:
-        run_mach(command_context, "newtab", subcommand="install")
-        run_mach(command_context, "newtab", subcommand="bundle")
+    run_mach(command_context, "newtab", subcommand="install")
+    run_mach(command_context, "newtab", subcommand="bundle")
