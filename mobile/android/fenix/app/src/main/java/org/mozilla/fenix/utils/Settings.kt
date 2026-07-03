@@ -2439,14 +2439,6 @@ class Settings(
     )
 
     /**
-     * Indicates if the Mozilla Ads Client is enabled.
-     */
-    var enableMozillaAdsClient by booleanPreference(
-        key = appContext.getPreferenceKey(R.string.pref_key_enable_mozilla_ads_client),
-        default = { FxNimbus.features.mozillaAdsClient.value().enabled },
-    )
-
-    /**
      * Indicates if Firefox Labs is enabled.
      */
     var enableFirefoxLabs by booleanPreference(

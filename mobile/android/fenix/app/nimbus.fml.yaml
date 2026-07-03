@@ -1192,14 +1192,6 @@ features:
         type: Boolean
         default: false
 
-  mozilla-ads-client:
-    description: Feature to enable the Mozilla Ads Client support for Top Sites for users on Firefox on Android.
-    variables:
-      enabled:
-        description: If true, Mozilla Ads Client support for Top Sites is enabled.
-        type: Boolean
-        default: true
-
   private-mode-and-stories-entry-point:
     description: Feature to enable the Private Mode and Stories Entry Point Experiment.
     variables:
