@@ -3139,6 +3139,23 @@ export class UrlbarQueryContext {
   searchMode;
 
   /**
+   * Utility function to determine whether we should use the existence of
+   * searchMode to restrict the type of results to only search suggestions
+   * or the new behaviour behind `historyInSearchMode` pref that shows all
+   * types of results in searchMode, treating engine searchMode as
+   * "temporarily changed default search engine".
+   *
+   * @returns {boolean}
+   */
+  restrictInSearchMode() {
+    if (lazy.UrlbarPrefs.get("unifiedSearchButton.historyInSearchMode")) {
+      // We still want to restrict local searchModes even if the pref is on.
+      return !!this.searchMode && !this.searchMode.engineName;
+    }
+    return !!this.searchMode;
+  }
+
+  /**
    * @type {string}
    *   The string the user entered in autocomplete.
    */
