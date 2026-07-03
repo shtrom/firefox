@@ -1,4 +1,4 @@
-(external_helper_app_service)=
+(external-helper-app-service)=
 
 # External Helper App Service
 
@@ -27,7 +27,7 @@ want to do.
 
 ## During a Load
 
-When content is already being loaded the {ref}`URI Loader Service <uri_loader_service>`
+When content is already being loaded the {ref}`URI Loader Service <uri-loader-service>`
 determines whether the browser can handle the content or not. If not it calls
 into the external helper app server through `nsExternalHelperAppService::DoContent`.
 
