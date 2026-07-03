@@ -58,7 +58,6 @@ namespace mozilla {
 namespace dom {
 class PerformanceStorage;
 class ContentParent;
-enum class NoCorsMediaRequestState : uint8_t;
 }  // namespace dom
 
 class LogCollector;
@@ -704,9 +703,6 @@ class HttpBaseChannel : public nsHashPropertyBag,
 
   OpaqueResponse PerformOpaqueResponseSafelistCheckAfterSniff(
       const nsACString& aContentType, bool aNoSniff);
-
-  dom::NoCorsMediaRequestState NoCorsMediaRequestState();
-  void RecordSubsequentNoCorsRequestState();
 
   bool NeedOpaqueResponseAllowedCheckAfterSniff() const;
   void BlockOpaqueResponseAfterSniff(

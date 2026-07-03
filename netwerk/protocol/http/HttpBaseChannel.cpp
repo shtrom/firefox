@@ -3497,37 +3497,6 @@ OpaqueResponse HttpBaseChannel::BlockOrFilterOpaqueResponse(
   return OpaqueResponse::Block;
 }
 
-dom::NoCorsMediaRequestState HttpBaseChannel::NoCorsMediaRequestState() {
-  MOZ_ASSERT(XRE_IsParentProcess());
-
-  if (!mLoadInfo->GetIsMediaRequest()) {
-    return dom::NoCorsMediaRequestState::NotAvailable;
-  }
-
-  RefPtr<dom::WindowGlobalParent> wgp =
-      dom::WindowGlobalParent::GetByInnerWindowId(
-          mLoadInfo->GetInnerWindowID());
-  if (!wgp || wgp->IsDiscarded()) {
-    return dom::NoCorsMediaRequestState::NotAvailable;
-  }
-
-  return wgp->NoCorsMediaRequestState(mURI);
-}
-
-void HttpBaseChannel::RecordSubsequentNoCorsRequestState() {
-  MOZ_ASSERT(XRE_IsParentProcess());
-  MOZ_ASSERT(mLoadInfo->GetIsMediaRequest());
-
-  RefPtr<dom::WindowGlobalParent> wgp =
-      dom::WindowGlobalParent::GetByInnerWindowId(
-          mLoadInfo->GetInnerWindowID());
-  if (!wgp || wgp->IsDiscarded()) {
-    return;
-  }
-
-  wgp->RecordSubsequentNoCorsRequestState(mURI);
-}
-
 // The specification for ORB is currently being written:
 // https://whatpr.org/fetch/1442.html#orb-algorithm
 // The `opaque-response-safelist check` is implemented in:
@@ -3626,8 +3595,14 @@ HttpBaseChannel::PerformOpaqueResponseSafelistCheckBeforeSniff() {
   // Step 4
   // If it's a media subsequent request, we assume that it will only be made
   // after a successful initial request.
-  if (NoCorsMediaRequestState() == dom::NoCorsMediaRequestState::Subsequent) {
-    return OpaqueResponse::Allow;
+  bool isMediaRequest;
+  mLoadInfo->GetIsMediaRequest(&isMediaRequest);
+  if (isMediaRequest) {
+    bool isMediaInitialRequest;
+    mLoadInfo->GetIsMediaInitialRequest(&isMediaInitialRequest);
+    if (!isMediaInitialRequest) {
+      return OpaqueResponse::Allow;
+    }
   }
 
   // Step 5
@@ -3688,7 +3663,9 @@ OpaqueResponse HttpBaseChannel::PerformOpaqueResponseSafelistCheckAfterSniff(
   MOZ_ASSERT(mCachedOpaqueResponseBlockingPref);
 
   // Step 9
-  if (NoCorsMediaRequestState() != dom::NoCorsMediaRequestState::NotAvailable) {
+  bool isMediaRequest;
+  mLoadInfo->GetIsMediaRequest(&isMediaRequest);
+  if (isMediaRequest) {
     return BlockOrFilterOpaqueResponse(
         mORB, u"after sniff: media request"_ns,
         OpaqueResponseBlockedTelemetryReason::eAfterSniffMedia,

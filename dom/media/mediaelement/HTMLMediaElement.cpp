@@ -2009,6 +2009,7 @@ class HTMLMediaElement::ChannelLoader final {
           triggeringPrincipal->OriginAttributesRef());
     }
     loadInfo->SetIsMediaRequest(true);
+    loadInfo->SetIsMediaInitialRequest(true);
 
     if (nsCOMPtr<nsITimedChannel> timedChannel = do_QueryInterface(channel)) {
       nsString initiatorType =
