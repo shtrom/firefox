@@ -13,6 +13,7 @@
 #  include "MFCDMParent.h"
 #  include "MFContentProtectionManager.h"
 #  include "mozilla/EMEUtils.h"
+#  include "mozilla/glean/DomMediaPlatformsWmfMetrics.h"
 #endif
 
 #include "MFMediaEngineExtension.h"
@@ -29,6 +30,7 @@
 #include "mozilla/StaticPrefs_media.h"
 #include "mozilla/StaticPtr.h"
 #include "mozilla/gfx/DeviceManagerDx.h"
+#include "mozilla/gfx/gfxVars.h"
 #include "mozilla/ipc/UtilityMediaServiceParent.h"
 #include "mozilla/ipc/UtilityProcessChild.h"
 
@@ -268,6 +270,13 @@ void MFMediaEngineParent::HandleMediaEngineEvent(
       if (mProxyId) {
         if (RefPtr<MFCDMParent> cdmParent =
                 MFCDMParent::GetCDMById(*mProxyId)) {
+          if (cdmParent->IsHardwareDRM()) {
+            // Record before restoring the budget so the success event reports
+            // how many recoveries it took to reach the first frame.
+            RecordProtectedReadiness(cdmParent,
+                                     ProtectedActivationPhase::Succeeded, S_OK,
+                                     Nothing());
+          }
           // A produced frame proves the protected pipeline is working, so
           // refresh the conditions (e.g. an HDCP pre-warm that could not
           // confirm support and marked it failed) to ready. Skip this for
@@ -323,6 +332,48 @@ void MFMediaEngineParent::HandleMediaEngineEvent(
 }
 
 #ifdef MOZ_WMF_CDM
+void MFMediaEngineParent::RecordProtectedReadiness(
+    MFCDMParent* aCdmParent, ProtectedActivationPhase aPhase,
+    HRESULT aPlatformError,
+    const Maybe<MFProtectedPathReadinessMonitor::Reaction>& aReaction) {
+  AssertOnManagerThread();
+  auto& monitor = aCdmParent->ReadinessMonitor();
+  const uint32_t recoveryCount = monitor.RecoveriesUsed();
+  nsCString readiness = monitor.DescribeReadiness();
+  // A reaction only exists for a failed activation handled by the gate; it is
+  // Nothing on the other phases (and when the gate is disabled).
+  const char* reactionStr = "none";
+  if (aReaction) {
+    reactionStr =
+        MFProtectedPathReadinessMonitor::EnumValueToString(*aReaction);
+  }
+  glean::mfcdm::ProtectedReadinessExtra extra;
+  extra.readiness = Some(readiness);
+  extra.platformError =
+      Some(static_cast<int64_t>(static_cast<uint32_t>(aPlatformError)));
+  extra.phase = Some(nsCString(EnumValueToString(aPhase)));
+  if (aReaction) {
+    extra.reaction = Some(nsCString(reactionStr));
+  }
+  extra.gateWaitMs =
+      Some(static_cast<int64_t>(mProtectedGateWait.ToMilliseconds()));
+  extra.recoveryCount = Some(static_cast<int64_t>(recoveryCount));
+  extra.keySystem = Some(NS_ConvertUTF16toUTF8(aCdmParent->GetKeySystem()));
+  const nsCString adapterVendorID = gfx::gfxVars::AdapterVendorID();
+  if (!adapterVendorID.IsEmpty()) {
+    extra.adapterVendorId = Some(adapterVendorID);
+    extra.adapterDeviceId = Some(gfx::gfxVars::AdapterDeviceID());
+    extra.adapterDriverVersion = Some(gfx::gfxVars::AdapterDriverVersion());
+  }
+  LOG("protected_readiness probe: phase={}, reaction={}, error={:#x}, "
+      "recoveryCount={}, gateWaitMs={}, readiness=[{}]",
+      EnumValueToString(aPhase), reactionStr,
+      static_cast<uint32_t>(aPlatformError), recoveryCount,
+      static_cast<int64_t>(mProtectedGateWait.ToMilliseconds()),
+      readiness.get());
+  glean::mfcdm::protected_readiness.Record(Some(std::move(extra)));
+}
+
 void MFMediaEngineParent::RecoverProtectedPlayback(HRESULT aResult) {
   AssertOnManagerThread();
   LOG("Recovering protected playback, hr={:x}", aResult);
@@ -358,16 +409,27 @@ void MFMediaEngineParent::NotifyError(MF_MEDIA_ENGINE_ERR aError,
   // Foundation gives no advance signal for. When the gate is enabled, re-drive
   // the protected pipeline within budget; once the budget is spent the error
   // falls through to the terminal handling below. SL3000 is never demoted.
-  if (mProxyId &&
-      StaticPrefs::
-          media_wmf_media_engine_protected_readiness_gate_enabled_AtStartup()) {
+  if (mProxyId) {
     if (RefPtr<MFCDMParent> cdmParent = MFCDMParent::GetCDMById(*mProxyId);
         cdmParent && cdmParent->IsHardwareDRM()) {
-      if (cdmParent->ReadinessMonitor().OnActivationError(
-              aResult,
-              StaticPrefs::
-                  media_wmf_media_engine_protected_readiness_gate_max_recoveries()) ==
-          MFProtectedPathReadinessMonitor::Reaction::Recover) {
+      // The bounded-recovery decision only runs when the gate is enabled;
+      // otherwise the reaction stays Nothing and the error falls through to the
+      // terminal handling below.
+      Maybe<MFProtectedPathReadinessMonitor::Reaction> reaction;
+      if (StaticPrefs::
+              media_wmf_media_engine_protected_readiness_gate_enabled_AtStartup()) {
+        reaction = Some(cdmParent->ReadinessMonitor().OnActivationError(
+            aResult,
+            StaticPrefs::
+                media_wmf_media_engine_protected_readiness_gate_max_recoveries()));
+      }
+
+      // Record the readiness snapshot at the failure.
+      RecordProtectedReadiness(cdmParent, ProtectedActivationPhase::Failed,
+                               aResult, reaction);
+
+      if (reaction ==
+          Some(MFProtectedPathReadinessMonitor::Reaction::Recover)) {
         LOG("Re-driving protected playback after activation error, hr={:x}",
             aResult);
         ENGINE_MARKER("MFMediaEngineParent,RetryProtectedActivation");
@@ -586,9 +648,16 @@ void MFMediaEngineParent::SetMediaSourceOnEngine() {
   if (holdForReadiness) {
     LOG("Holding protected topology build until readiness conditions settle");
     ENGINE_MARKER("MFMediaEngineParent, HoldForReadiness");
+    // Record that the gate engaged. A "gate_held" event with no later
+    // succeeded/failed event for this session indicates the gate never
+    // released, which this otherwise-silent hold would not surface.
+    RecordProtectedReadiness(cdmParent, ProtectedActivationPhase::GateHeld,
+                             S_OK, Nothing());
+    mProtectedGateHoldStart = TimeStamp::Now();
     cdmParent->ReadinessMonitor().RunWhenActivationSettled(
         [self = RefPtr{this}, this] {
           if (mMediaEngine) {
+            mProtectedGateWait = TimeStamp::Now() - mProtectedGateHoldStart;
             LOG("Readiness settled; setting protected media source on engine");
             SetMediaSourceOnEngine();
           }

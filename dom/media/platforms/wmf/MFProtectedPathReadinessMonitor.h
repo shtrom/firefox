@@ -128,8 +128,7 @@ class MFProtectedPathReadinessMonitor final {
                                 nsISerialEventTarget* aTarget);
 
   // Recover: re-drive the protected pipeline through the engine-recreate
-  // recovery path. Terminal: stop reacting and surface the error to EME (never
-  // demote SL3000 to SL2000).
+  // recovery path. Terminal: stop reacting and surface the error to EME.
   MOZ_DEFINE_ENUM_CLASS_WITH_BASE_AND_TOSTRING_AT_CLASS_SCOPE(Reaction, uint8_t,
                                                               (Recover,
                                                                Terminal));
