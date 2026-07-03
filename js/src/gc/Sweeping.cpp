@@ -1975,14 +1975,16 @@ IncrementalProgress GCRuntime::markDuringSweeping(JS::GCContext* gcx,
 
   auto [mainThreadBudget, helperThreadBudget] = budgetConcurrentMarking(budget);
 
-  markSynchronously(mainThreadBudget, useParallelMarking);
+  IncrementalProgress result =
+      markSynchronously(mainThreadBudget, useParallelMarking);
 
-  if (hasMarkingWork()) {
+  if (!marker().isMarkStackEmpty()) {
+    MOZ_ASSERT(result == NotFinished);
     maybeStartConcurrentMarking(helperThreadBudget);
     return NotFinished;
   }
 
-  return Finished;
+  return result;
 }
 
 void GCRuntime::beginSweepPhase(AutoGCSession& session) {
@@ -2739,8 +2741,8 @@ IncrementalProgress GCRuntime::sweepPhase(SliceBudget& budget) {
   // be empty already.
   MOZ_ASSERT(initialState <= State::Sweep);
 
-  bool isFirstSweepSlice = initialState < State::Sweep;
 #ifdef DEBUG
+  bool isFirstSweepSlice = initialState < State::Sweep;
   if (isFirstSweepSlice) {
     assertNoMarkingWork();
   }
@@ -2751,8 +2753,8 @@ IncrementalProgress GCRuntime::sweepPhase(SliceBudget& budget) {
 
   markSliceCount++;
 
-  finishAnyConcurrentMarking(budget);
-  if (!isFirstSweepSlice && budget.isOverBudget()) {
+  bool finishedMainThreadOnlyMarking = finishAnyConcurrentMarking(budget);
+  if (!finishedMainThreadOnlyMarking) {
     auto [_, helperThreadBudget] = budgetConcurrentMarking(budget);
     maybeStartConcurrentMarking(helperThreadBudget);
     return NotFinished;
