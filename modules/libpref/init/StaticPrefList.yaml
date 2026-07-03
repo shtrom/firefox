@@ -5580,6 +5580,11 @@
   value: false
   mirror: always
 
+- name: dom.udpsocket.max_per_background
+  type: RelaxedAtomicInt32
+  value: 640
+  mirror: always
+
 # Whether to dump worker use counters
 - name: dom.use_counters.dump.worker
   type: RelaxedAtomicBool
