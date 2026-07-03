@@ -129,16 +129,6 @@ TRRLoadInfo::GetSecurityMode(uint32_t* aFlags) {
 }
 
 NS_IMETHODIMP
-TRRLoadInfo::GetIsInDevToolsContext(bool* aIsInDevToolsContext) {
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-TRRLoadInfo::SetIsInDevToolsContext(bool aIsInDevToolsContext) {
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
 TRRLoadInfo::GetIsInThirdPartyContext(bool* aIsInThirdPartyContext) {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
