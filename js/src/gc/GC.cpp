@@ -5318,12 +5318,15 @@ void GCRuntime::collect(bool nonincrementalByAPI, const SliceBudget& budget,
   UnscheduleZones(this);
 }
 
-SliceBudget GCRuntime::defaultBudget(JS::GCReason reason, int64_t millis) {
-  // millis == 0 means use internal GC scheduling logic to come up with
-  // a duration for the slice budget. This may end up still being zero
-  // based on preferences.
-  if (millis == 0) {
-    millis = defaultSliceBudgetMS();
+SliceBudget GCRuntime::defaultBudget(JS::GCReason reason) {
+  // Get configurable default slice budget. This may be zero to indicate
+  // unlimited.
+  int64_t millis = defaultSliceBudgetMS();
+
+  // These slices are triggered when a background task finishes and may run at
+  // inconvenient times, so limit their duration.
+  if (reason == JS::GCReason::BG_TASK_FINISHED && millis != 0) {
+    millis = std::max(millis, int64_t(1));
   }
 
   // If the embedding has registered a callback for creating SliceBudgets,
@@ -5575,7 +5578,7 @@ bool GCRuntime::gcIfRequestedImpl(bool eagerOk) {
     return false;
   }
 
-  SliceBudget budget = defaultBudget(reason, 0);
+  SliceBudget budget = defaultBudget(reason);
   if (!isIncrementalGCInProgress()) {
     startGC(JS::GCOptions::Normal, reason, budget);
   } else {

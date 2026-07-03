@@ -828,7 +828,7 @@ class GCRuntime {
   void startBackgroundAllocTaskIfIdle();
 
   void requestMajorGC(JS::GCReason reason);
-  JS::SliceBudget defaultBudget(JS::GCReason reason, int64_t millis);
+  JS::SliceBudget defaultBudget(JS::GCReason reason);
   bool maybeIncreaseSliceBudget(JS::SliceBudget& budget,
                                 mozilla::TimeStamp sliceStartTime,
                                 mozilla::TimeStamp gcStartTime);
