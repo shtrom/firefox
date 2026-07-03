@@ -10,6 +10,7 @@
 #include "MFCDMExtra.h"
 #include "MFCDMSession.h"
 #include "MFPMPHostWrapper.h"
+#include "MFProtectedPathReadinessMonitor.h"
 #include "RemoteMediaManagerParent.h"
 #include "mozilla/EventTargetAndLockCapability.h"
 #include "mozilla/MozPromise.h"
@@ -51,6 +52,13 @@ class MFCDMParent final : public PMFCDMParent {
   static already_AddRefed<MFCDMParent> GetCDMById(uint64_t aId);
   uint64_t Id() const { return mId; }
   const nsString& GetKeySystem() const { return mKeySystem; }
+
+  // Per-session protected-playback readiness monitor. The engine actor reads
+  // and updates it via GetCDMById because this CDM actor outlives an engine
+  // recreate.
+  MFProtectedPathReadinessMonitor& ReadinessMonitor() {
+    return mReadinessMonitor;
+  }
 
   void ActorDestroy(ActorDestroyReason aWhy) override;
 
@@ -154,6 +162,8 @@ class MFCDMParent final : public PMFCDMParent {
 
   // Guards sRegisteredCDMs and the strong reference handed out by GetCDMById.
   static inline StaticMutex sRegistryMutex;
+
+  MFProtectedPathReadinessMonitor mReadinessMonitor;
 
   constinit static inline nsTHashMap<nsUint64HashKey, MFCDMParent*>
       sRegisteredCDMs MOZ_GUARDED_BY(sRegistryMutex);
