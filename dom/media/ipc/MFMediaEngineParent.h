@@ -134,12 +134,6 @@ class MFMediaEngineParent final : public PMFMediaEngineParent {
   float mPlaybackRate = 1.0;
 
 #ifdef MOZ_WMF_CDM
-  // Set while recovering from a GPU/DRM hardware context reset. During
-  // recovery the whole MFMediaEngineParent actor is torn down and a new one
-  // is created; this flag suppresses spurious errors that arrive in the
-  // interim and would otherwise interrupt the reinit sequence. Only
-  // access/modify on the manager thread.
-  bool mHardwareResetInProgress = false;
   // Pending HDCP readiness check started at hardware reset time. Shared
   // across engine instances so the new engine created after recovery can
   // chain SetMediaSourceOnEngine() on the already-running check.

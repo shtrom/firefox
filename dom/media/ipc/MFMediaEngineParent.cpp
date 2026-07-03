@@ -315,7 +315,6 @@ void MFMediaEngineParent::NotifyError(MF_MEDIA_ENGINE_ERR aError,
     LOG("Notifying hardware reset error, hr={:x}", aResult);
     ENGINE_MARKER("MFMediaEngineParent,HardwareContextReset");
     sPendingHDCPCheck = nullptr;
-    mHardwareResetInProgress = true;
     RefPtr<MFCDMParent> cdmParent =
         mProxyId ? MFCDMParent::GetCDMById(*mProxyId) : nullptr;
     if (cdmParent) {
