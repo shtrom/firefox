@@ -461,6 +461,10 @@ MFCDMParent::MFCDMParent(const nsAString& aKeySystem,
 void MFCDMParent::OnHardwareContextReset() {
   ASSERT_CDM_ACCESS_ON_MANAGER_THREAD();
   MFCDM_PARENT_LOG("OnHardwareContextReset");
+  // The engine actor is torn down and recreated by the recovery, so clear the
+  // engine-side readiness; the new engine re-establishes it. The CDM-side
+  // conditions persist with this surviving actor.
+  mReadinessMonitor.ResetEngineConditions();
   // All CDM sessions are in an invalid state after a hardware context reset.
   // Close them so the content process can re-request keys.
   for (auto& iter : mSessions) {

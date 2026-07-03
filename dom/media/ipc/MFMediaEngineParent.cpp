@@ -660,6 +660,23 @@ mozilla::ipc::IPCResult MFMediaEngineParent::RecvSetCDMProxyId(
   rv = mContentProtectionManager->SetCDMProxy(proxy);
   CDM_SETUP_IPC_RETURN_IF_FAILED(rv, "Failed to set CDM proxy");
 
+  // Record the engine-side readiness here, at engine<->CDM attach, rather than
+  // when the DXGI device manager is first created: this is the earliest point
+  // where the CDM (and so its readiness monitor) is known. The adapter was
+  // bound when the engine was created; on an adapter change the engine is
+  // recreated and re-attaches, re-marking these conditions after the monitor's
+  // engine-side conditions are reset.
+  auto& readiness = cdmParent->ReadinessMonitor();
+  readiness.MarkReady(
+      MFProtectedPathReadinessMonitor::Condition::ContentProtectionManager);
+  if (mDXGIDeviceManager) {
+    readiness.MarkReady(
+        MFProtectedPathReadinessMonitor::Condition::HwDrmAdapter);
+  } else {
+    readiness.MarkFailed(
+        MFProtectedPathReadinessMonitor::Condition::HwDrmAdapter, E_FAIL);
+  }
+
   mContentProtectionManager->SetNotifyWaitingForKeyCallback(
       [self = RefPtr{this}]() {
         if (self->CanSend() && self->mMediaEngine) {
