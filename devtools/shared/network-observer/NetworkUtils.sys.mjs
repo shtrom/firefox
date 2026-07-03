@@ -94,24 +94,17 @@ const REDIRECT_CODES = [
   308, // HTTP Moved Permanently
 ];
 
-function getChannelCauseType(channel) {
-  if (channel.loadInfo.isInDevToolsContext) {
-    return "devtools";
-  }
-
-  const { externalContentPolicyType, internalContentPolicyType } =
-    channel.loadInfo;
-
+function causeTypeToString(causeType, loadFlags, internalContentPolicyType) {
   let prefix = "";
   if (
-    (externalContentPolicyType == Ci.nsIContentPolicy.TYPE_IMAGESET ||
+    (causeType == Ci.nsIContentPolicy.TYPE_IMAGESET ||
       internalContentPolicyType == Ci.nsIContentPolicy.TYPE_INTERNAL_IMAGE) &&
-    channel.loadFlags & Ci.nsIRequest.LOAD_BACKGROUND
+    loadFlags & Ci.nsIRequest.LOAD_BACKGROUND
   ) {
     prefix = "lazy-";
   }
 
-  return prefix + LOAD_CAUSE_STRINGS[externalContentPolicyType] || "unknown";
+  return prefix + LOAD_CAUSE_STRINGS[causeType] || "unknown";
 }
 
 function stringToCauseType(value) {
@@ -151,7 +144,11 @@ function isChromeFileChannel(channel) {
 }
 
 function isPrivilegedChannel(channel) {
-  return isChannelFromSystemPrincipal(channel) || isChromeFileChannel(channel);
+  return (
+    isChannelFromSystemPrincipal(channel) ||
+    isChromeFileChannel(channel) ||
+    channel.loadInfo.isInDevToolsContext
+  );
 }
 
 /**
@@ -237,11 +234,25 @@ function isPreloadRequest(channel) {
  *          - type {string} cause type as string
  */
 function getCauseDetails(channel) {
+  // Determine the cause and if this is an XHR request.
+  let causeType = Ci.nsIContentPolicy.TYPE_OTHER;
+  let causeUri = null;
+
+  if (channel.loadInfo) {
+    causeType = channel.loadInfo.externalContentPolicyType;
+    const { loadingPrincipal } = channel.loadInfo;
+    if (loadingPrincipal) {
+      causeUri = loadingPrincipal.spec;
+    }
+  }
+
   return {
-    loadingDocumentUri: channel.loadInfo.loadingPrincipal
-      ? channel.loadInfo.loadingPrincipal.spec
-      : null,
-    type: getChannelCauseType(channel),
+    loadingDocumentUri: causeUri,
+    type: causeTypeToString(
+      causeType,
+      channel.loadFlags,
+      channel.loadInfo.internalContentPolicyType
+    ),
   };
 }
 
@@ -927,6 +938,7 @@ function removeChromeFrames(stacktrace) {
 
 export const NetworkUtils = {
   ACCEPTED_COMPRESSION_ENCODINGS,
+  causeTypeToString,
   decodeResponseChunks,
   fetchRequestHeadersAndCookies,
   fetchResponseHeadersAndCookies,
