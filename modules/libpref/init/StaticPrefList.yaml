@@ -5033,7 +5033,7 @@
 
 - name: dom.security.unexpected_system_load_telemetry_enabled
   type: bool
-  value: @IS_EARLY_BETA_OR_EARLIER@
+  value: @IS_NIGHTLY_OR_DEV_EDITION@
   mirror: always
 
 # pref controls `Sanitizer` API being exposed
