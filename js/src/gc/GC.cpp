@@ -4293,9 +4293,11 @@ bool GCRuntime::finishAnyConcurrentMarking(JS::SliceBudget& budget) {
   }
 
   // Perform as much main-thread-only marking as we can within the budget.
+  MOZ_ASSERT(concurrentMarker().isRegularMarking());
   bool result = concurrentMarker().processMainThreadBuffers(budget);
 
   GCMarker::moveAllWork(&marker(), &concurrentMarker());
+  MOZ_ASSERT(concurrentMarker().isMarkStackEmpty());
 
   if (!canMarkConcurrently()) {
     // Abort concurrent marking. Ensure main thread buffers are traced first.
@@ -4319,8 +4321,9 @@ std::tuple<JS::SliceBudget, JS::SliceBudget> GCRuntime::budgetConcurrentMarking(
   auto* mainThreadInterrupt = requestedBudget.interruptRequestFlag();
   auto* helperThreadInterrupt = &markTask.interruptRequest;
 
-  // No concurrent marking.
-  if (!useConcurrentMarking) {
+  // Not concurrent marking, or no suitable work.
+  bool hasHelperThreadWork = !marker().isMarkStackEmpty();
+  if (!useConcurrentMarking || !hasHelperThreadWork) {
     return {requestedBudget, SliceBudget(WorkBudget(0))};
   }
 
