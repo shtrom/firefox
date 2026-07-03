@@ -363,11 +363,9 @@ Preferences.addSetting({
   pref: "browser.shell.checkDefaultBrowser",
   setup: emitChange => {
     if (!DefaultBrowserHelper.canCheck) {
-      return;
+      return undefined;
     }
-    DefaultBrowserHelper.pollForDefaultChanges(emitChange);
-    // eslint-disable-next-line consistent-return
-    return () => DefaultBrowserHelper.clearPollingForDefaultChanges();
+    return DefaultBrowserHelper.pollForDefaultChanges(emitChange);
   },
   /**
    * Show button for setting browser as default browser or information that

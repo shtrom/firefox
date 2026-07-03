@@ -12,7 +12,9 @@ const { XPCOMUtils } = ChromeUtils.importESModule(
 // This module touches the preferences window directly (window timers,
 // location.hash, document.visibilityState), so it must be imported with
 // { global: "current" } from main.js so those globals resolve to the
-// preferences window.
+// preferences window. ES module setting configs (e.g. browser-icon.mjs) are
+// already loaded in that global and import it statically, sharing this single
+// instance and its polling timer.
 
 const lazy = {};
 
@@ -52,6 +54,13 @@ export const DefaultBrowserHelper = {
   _lastPolledIsDefault: undefined,
 
   /**
+   * Callbacks notified when the default-browser state changes while polling.
+   *
+   * @type {Set<Function>}
+   */
+  _changeListeners: new Set(),
+
+  /**
    * @type {typeof import('../shell/ShellService.sys.mjs').ShellService | undefined}
    */
   get shellSvc() {
@@ -66,57 +75,70 @@ export const DefaultBrowserHelper = {
   },
 
   /**
-   * Sets up polling of whether the browser is set to default,
-   * and calls provided hasChanged function when the state changes.
+   * Subscribes to default-browser state changes. The polling timer starts on
+   * the first subscriber and every registered callback is invoked when the
+   * state flips; polling stops once the last subscriber unsubscribes.
    *
-   * @param {Function} hasChanged
+   * @param {Function} hasChanged Called when the default-browser state changes.
+   * @returns {() => void} Unsubscribe function.
    */
   pollForDefaultChanges(hasChanged) {
-    if (this._pollingTimer) {
-      return;
-    }
-    this._lastPolledIsDefault = this.isBrowserDefault;
+    this._changeListeners.add(hasChanged);
 
-    // Exponential backoff mechanism will delay the polling times if user doesn't
-    // trigger SetDefaultBrowser for a long time.
-    const backoffTimes = [
-      1000, 1000, 1000, 1000, 2000, 2000, 2000, 5000, 5000, 10000,
-    ];
+    if (!this._pollingTimer) {
+      this._lastPolledIsDefault = this.isBrowserDefault;
 
-    const pollForDefaultBrowser = () => {
-      if (
-        (location.hash == "" ||
-          location.hash == "#general" ||
-          location.hash == "#sync") &&
-        document.visibilityState == "visible"
-      ) {
-        const { isBrowserDefault } = this;
-        if (isBrowserDefault !== this._lastPolledIsDefault) {
-          this._lastPolledIsDefault = isBrowserDefault;
-          hasChanged();
+      // Exponential backoff mechanism will delay the polling times if user doesn't
+      // trigger SetDefaultBrowser for a long time.
+      const backoffTimes = [
+        1000, 1000, 1000, 1000, 2000, 2000, 2000, 5000, 5000, 10000,
+      ];
+
+      const pollForDefaultBrowser = () => {
+        if (
+          (location.hash == "" ||
+            location.hash == "#general" ||
+            location.hash == "#sync" ||
+            location.hash == "#browserIcon") &&
+          document.visibilityState == "visible"
+        ) {
+          const { isBrowserDefault } = this;
+          if (isBrowserDefault !== this._lastPolledIsDefault) {
+            this._lastPolledIsDefault = isBrowserDefault;
+            for (let listener of this._changeListeners) {
+              listener();
+            }
+          }
         }
-      }
 
-      if (!this._pollingTimer) {
-        return;
-      }
+        if (!this._pollingTimer) {
+          return;
+        }
 
-      // approximately a "requestIdleInterval"
-      this._pollingTimer = window.setTimeout(
-        () => {
-          window.requestIdleCallback(pollForDefaultBrowser);
-        },
-        backoffTimes[
-          this._backoffIndex + 1 < backoffTimes.length
-            ? this._backoffIndex++
-            : backoffTimes.length - 1
-        ]
-      );
+        // approximately a "requestIdleInterval"
+        this._pollingTimer = window.setTimeout(
+          () => {
+            window.requestIdleCallback(pollForDefaultBrowser);
+          },
+          backoffTimes[
+            this._backoffIndex + 1 < backoffTimes.length
+              ? this._backoffIndex++
+              : backoffTimes.length - 1
+          ]
+        );
+      };
+
+      this._pollingTimer = window.setTimeout(() => {
+        window.requestIdleCallback(pollForDefaultBrowser);
+      }, backoffTimes[this._backoffIndex]);
+    }
+
+    return () => {
+      this._changeListeners.delete(hasChanged);
+      if (!this._changeListeners.size) {
+        this.clearPollingForDefaultChanges();
+      }
     };
-
-    this._pollingTimer = window.setTimeout(() => {
-      window.requestIdleCallback(pollForDefaultBrowser);
-    }, backoffTimes[this._backoffIndex]);
   },
 
   /**
