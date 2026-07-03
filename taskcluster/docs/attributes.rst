@@ -545,10 +545,6 @@ release-type
 ============
 For android builds, the type of release: typically debug, nightly, beta, release.
 
-shipping-product
-================
-For android tasks, the shipping product: Fenix, Focus, or an android-component name.
-
 artifacts
 =========
 For android-components tasks, a dictionary mapping extensions to artifact names.

@@ -29,9 +29,6 @@ def resolve_keys(config, tasks):
                 item_name=task["name"],
                 **{
                     "level": config.params["level"],
-                    "shipping-product": task.get("attributes", {}).get(
-                        "shipping-product"
-                    ),
                 },
             )
         yield task

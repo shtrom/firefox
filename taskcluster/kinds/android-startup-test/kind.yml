@@ -99,7 +99,6 @@ tasks:
     fenix-arm64-v8a-nightly-robo-opt:
         attributes:
             build-type: fenix-nightly
-            shipping-product: fenix
         description: Fenix Nightly Opt Robo Test (arm64-v8a)
         dependencies:
             signing: signing-apk-fenix-nightly
@@ -125,7 +124,6 @@ tasks:
     fenix-arm64-v8a-nightly:
         attributes:
             build-type: fenix-nightly-firebase
-            shipping-product: fenix
         dependencies:
             signing: signing-apk-fenix-nightly-firebase
             signing-android-test: signing-apk-fenix-android-test-nightly
@@ -154,7 +152,6 @@ tasks:
     fenix-armeabi-v7a-nightly:
         attributes:
             build-type: fenix-nightly-firebase
-            shipping-product: fenix
         dependencies:
             signing: signing-apk-fenix-nightly-firebase
             signing-android-test: signing-apk-fenix-android-test-nightly
@@ -183,7 +180,6 @@ tasks:
     focus-arm64-v8a-nightly:
         attributes:
             build-type: focus-nightly-firebase
-            shipping-product: focus
         dependencies:
             signed-apk-debug-apk: signing-apk-focus-nightly-firebase
             signed-apk-android-test: signing-apk-focus-android-test-nightly
@@ -212,7 +208,6 @@ tasks:
     focus-armeabi-v7a-nightly:
         attributes:
             build-type: focus-nightly-firebase
-            shipping-product: focus
         dependencies:
             signed-apk-debug-apk: signing-apk-focus-nightly-firebase
             signed-apk-android-test: signing-apk-focus-android-test-nightly
@@ -241,7 +236,6 @@ tasks:
     focus-arm64-v8a-nightly-robo-opt:
         attributes:
             build-type: focus-nightly
-            shipping-product: focus
         description: Focus Nightly Opt Robo Test (ARM)
         dependencies:
             signing: signing-apk-focus-nightly

@@ -52,7 +52,6 @@ tasks:
     fenix:
         attributes:
             build-type: fenix-debug-firebase
-            shipping-product: fenix
         description: Baseline profile generation for Fenix
         dependencies:
             instrumented-apk: instrumented-build-apk-fenix

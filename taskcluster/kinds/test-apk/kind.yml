@@ -45,7 +45,6 @@ tasks:
         description: Focus unit tests
         attributes:
             build-type: focus-debug
-            shipping-product: focus
         run:
             pre-gradlew:
                 - ["cd", "mobile/android/focus-android"]
@@ -67,7 +66,6 @@ tasks:
         description: Fenix unit tests
         attributes:
             build-type: fenix-debug
-            shipping-product: fenix
         run:
             pre-gradlew:
                 - ["cd", "mobile/android/fenix"]

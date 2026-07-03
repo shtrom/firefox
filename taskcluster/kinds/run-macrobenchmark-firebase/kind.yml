@@ -50,7 +50,6 @@ tasks:
     fenix:
         attributes:
             build-type: fenix-debug-firebase
-            shipping-product: fenix
         description: Run macrobenchmark for Fenix
         dependencies:
             instrumented-apk: instrumented-build-macrobenchmark-apk-fenix
