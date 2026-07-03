@@ -52,11 +52,6 @@ moz-button.input-cta {
   min-width: var(--size-item-xlarge);
 }
 
-:host([submit-disabled]) moz-button.input-cta::part(button) {
-  cursor: not-allowed;
-  opacity: var(--opacity-deemphasized-strong);
-}
-
 :host([action="stop"]) moz-button.input-cta {
   --button-padding: 0;
 

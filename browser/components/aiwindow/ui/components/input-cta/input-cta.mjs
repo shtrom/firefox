@@ -29,8 +29,6 @@ import "chrome://global/content/elements/moz-button.mjs";
  * @property {SmartbarAction} action - Current action or empty string for initial state.
  * @property {SearchEngineInfo} searchEngineInfo - The current search engine display info.
  * @property {SearchEngineInfo[]} searchEngines - The list of visible search engines.
- * @property {boolean} submitDisabled - When true, the primary button is inert
- *   (used for the "Go" guardrail) while the action dropdown stays usable.
  */
 export class InputCta extends MozLitElement {
   static shadowRootOptions = {
@@ -42,11 +40,6 @@ export class InputCta extends MozLitElement {
     action: { type: String, reflect: true },
     searchEngineInfo: { type: Object },
     searchEngines: { type: Array },
-    submitDisabled: {
-      type: Boolean,
-      reflect: true,
-      attribute: "submit-disabled",
-    },
   };
 
   static ACTIONS = ["chat", "navigate", "search", "stop"];
@@ -54,7 +47,6 @@ export class InputCta extends MozLitElement {
   constructor() {
     super();
     this.action = "";
-    this.submitDisabled = false;
     this.searchEngineInfo = { name: "", icon: "" };
     this._menuId = `actions-menu-${crypto.randomUUID()}`;
     this._searchSubpanelId = `search-submenu-${crypto.randomUUID()}`;
@@ -109,9 +101,6 @@ export class InputCta extends MozLitElement {
   }
 
   #onAction() {
-    if (this.submitDisabled && this.action != "stop") {
-      return;
-    }
     const eventType = `aiwindow-input-cta:${this.action == "stop" ? "on-stop" : "on-action"}`;
     this.dispatchEvent(
       new CustomEvent(eventType, {
@@ -166,25 +155,6 @@ export class InputCta extends MozLitElement {
       } else {
         this.style.removeProperty("--search-icon");
       }
-    }
-  }
-
-  async updated(changedProps) {
-    if (!changedProps.has("submitDisabled") && !changedProps.has("action")) {
-      return;
-    }
-    // moz-button has no per-part disabled state, so expose the "Go" guardrail to
-    // assistive technology by toggling aria-disabled on its inner main button
-    // while leaving the chevron/dropdown live.
-    await this.#mozButton?.updateComplete;
-    const mainButton = this.#mozButton?.buttonEl;
-    if (!mainButton) {
-      return;
-    }
-    if (this.submitDisabled && this.action != "stop") {
-      mainButton.setAttribute("aria-disabled", "true");
-    } else {
-      mainButton.removeAttribute("aria-disabled");
     }
   }
 

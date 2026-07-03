@@ -102,10 +102,6 @@ const lazy = XPCOMUtils.declareLazy({
 const UNLIMITED_MAX_RESULTS = 99;
 const MAX_INPUT_LENGTH = 32000;
 
-// Default Smartbar action before the user types or picks one. The live guess
-// changes with intent detection.
-const DEFAULT_SMARTBAR_ACTION = "chat";
-
 let getBoundsWithoutFlushing = element =>
   element.documentGlobal.windowUtils.getBoundsWithoutFlushing(element);
 let px = number => number.toFixed(2) + "px";
@@ -283,8 +279,6 @@ ${
   #scrollAnimationId = null;
   #smartbarAction = "";
   #smartbarActionPending = false;
-  #smartbarActionLocked = false;
-  #smartbarSearchEngineName = "";
   #detectedIntent = "";
   #smartbarAssistantIsGenerating = false;
   #smartbarEditor = null;
@@ -420,7 +414,7 @@ ${
     if (this.#isSmartbarMode) {
       this.#ensureSmartbarEditor();
       this._inputCta = this.querySelector("input-cta");
-      this.smartbarAction = DEFAULT_SMARTBAR_ACTION;
+      this._inputCta.setAttribute("action", this.smartbarAction);
       this.#updateCtaSearchEngineInfo();
       this._inputCta.addEventListener(
         "aiwindow-input-cta:on-action-change",
@@ -1588,11 +1582,6 @@ ${
    * @param {Event} event - The triggering event.
    */
   #handleSuppressedNavigation(event) {
-    // A manual pick always wins over intent detection.
-    if (this.#smartbarActionLocked) {
-      this.#submitLockedAction(event);
-      return;
-    }
     if (this._resultForCurrentValue?.type == UrlbarShared.RESULT_TYPE.URL) {
       // pickResult() reads _lastSearchString for engagement telemetry. The
       // suppressed branch of startQuery() intentionally leaves it untouched
@@ -1635,195 +1624,62 @@ ${
       return;
     }
 
+    const action = event.detail.action;
+    this.smartbarAction = action;
     const isExplicitAction =
       event.type === "aiwindow-input-cta:on-action-change" ||
       event.type === "aiwindow-input-cta:on-search-engine-select";
 
-    // Picking an action or engine only locks the button; it doesn't submit.
-    // Submit happens via the primary button or Enter, so return focus to input.
-    if (isExplicitAction) {
-      if (event.type === "aiwindow-input-cta:on-search-engine-select") {
-        this.#smartbarSearchEngineName = event.detail.engineName ?? "";
-        this.smartbarAction = "search";
-      } else {
-        this.#smartbarSearchEngineName = "";
-        this.smartbarAction = event.detail.action;
-      }
-      this.#smartbarActionLocked = true;
-      this.#updateGoGuardrail();
-      this.#updateCtaSearchEngineInfo();
-      this.focus();
+    // For non-explicit actions, forward to handleNavigation.
+    if (!isExplicitAction) {
+      this.handleNavigation({ event });
       return;
     }
 
-    this.smartbarAction = event.detail.action;
-    this.handleNavigation({ event });
-  }
-
-  /**
-   * Whether a result is safe to pick on submit. It isn't when the user has been
-   * editing the value after selecting it, unless the result is the heuristic, a
-   * tip, an AI chat result, or its value still matches the input.
-   *
-   * @param {UrlbarResult} [result] - The result for the selected element.
-   * @returns {boolean}
-   */
-  #isSafeToPickResult(result) {
-    return (
-      !!result &&
-      (result.heuristic ||
-        !this.valueIsTyped ||
-        result.type == UrlbarShared.RESULT_TYPE.TIP ||
-        result.type == UrlbarShared.RESULT_TYPE.AI_CHAT ||
-        this.value == this.#getValueFromResult(result))
-    );
-  }
-
-  /**
-   * Whether a submission should be routed through the manually locked action
-   * rather than the generic navigation path. A deliberately keyboard-selected
-   * suggestion row (not an auto-selected heuristic) and one-off searches take
-   * precedence over a manual pick.
-   *
-   * @param {object} options
-   * @param {Element} [options.element] - The selected view element, if any.
-   * @param {UrlbarResult} [options.result] - The result for the selected element.
-   * @param {boolean} options.safeToPickResult - Whether the result is safe to pick.
-   * @param {boolean} options.isComposing - Whether IME composition is active.
-   * @param {HandleNavigationOneOffParams} [options.oneOffParams] - One-off params.
-   * @returns {boolean}
-   */
-  #shouldSubmitLockedAction({
-    element,
-    result,
-    safeToPickResult,
-    isComposing,
-    oneOffParams,
-  }) {
-    if (!this.#isSmartbarMode || !this.#smartbarActionLocked || isComposing) {
-      return false;
-    }
-    const hasSelectedSuggestionRow =
-      element && result && !result.heuristic && safeToPickResult;
-    return !hasSelectedSuggestionRow && !oneOffParams?.engine;
-  }
-
-  /**
-   * Submits the Smartbar honoring a manually locked action, so the user's
-   * explicit choice wins over the live intent guess. Does nothing on an empty
-   * value, and the "Go" guardrail blocks navigation for non-URL text.
-   *
-   * @param {Event} event - The event that triggered the submission.
-   */
-  #submitLockedAction(event) {
-    const value = this.untrimmedValue;
-    if (!value.trim()) {
-      return;
-    }
-
-    switch (this.smartbarAction) {
-      case "chat":
-        this.submitChat(event, value);
-        break;
-      case "search":
-        this.#submitSearch(event, value);
-        break;
-      case "navigate":
-        if (this.#goBlocked) {
-          return;
-        }
-        this.#submitNavigate(event, value);
-        break;
-    }
-  }
-
-  /**
-   * Runs a search for the given value using the remembered engine (from
-   * "Search with…") or the default engine.
-   *
-   * @param {Event} event - The triggering event.
-   * @param {string} value - The value to search for.
-   */
-  #submitSearch(event, value) {
-    const engine =
-      (this.#smartbarSearchEngineName &&
-        lazy.UrlbarSearchUtils.getEngineByName(
-          this.#smartbarSearchEngineName
-        )) ||
-      lazy.UrlbarSearchUtils.getDefaultEngine(this.isPrivate);
-    if (!engine) {
-      return;
-    }
-    const [url, postData] = lazy.UrlbarUtils.getSearchQueryUrl(engine, value);
+    // Handle explicit actions from smartbar CTA.
+    const committedValue = this.untrimmedValue;
     this.controller.engagementEvent.record(event, {
       location: this.sapLocation,
-      searchString: value,
+      searchString: committedValue,
       searchSource: this.getSearchSource(event),
-      selType: "search_button",
+      selType: `${action}_button`,
       result: null,
       windowMode: this.windowMode,
     });
-    this.#dispatchSmartbarCommitEvent(event, value);
-    this._loadURL(url, event, this._whereToOpen(event), {
-      postData,
-      allowInheritPrincipal: false,
-    });
-    this._recordSearch(engine, event);
-  }
+    this.#dispatchSmartbarCommitEvent(event, committedValue);
 
-  /**
-   * Navigates to the given value as a URL.
-   *
-   * @param {Event} event - The triggering event.
-   * @param {string} value - The value to navigate to.
-   */
-  #submitNavigate(event, value) {
-    let flags = Ci.nsIURIFixup.FIXUP_FLAG_FIX_SCHEME_TYPOS;
-    if (this.isPrivate) {
-      flags |= Ci.nsIURIFixup.FIXUP_FLAG_PRIVATE_CONTEXT;
-    }
-    const fixupInfo = Services.uriFixup.getFixupURIInfo(value, flags);
-    this.controller.engagementEvent.record(event, {
-      location: this.sapLocation,
-      searchString: value,
-      searchSource: this.getSearchSource(event),
-      selType: "navigate_button",
-      result: null,
-      windowMode: this.windowMode,
-    });
-    this.#dispatchSmartbarCommitEvent(event, value);
-    this._loadURL(
-      fixupInfo.preferredURI.spec,
-      event,
-      this._whereToOpen(event),
-      {
+    // Run search
+    if (action === "search") {
+      const engineName = event?.detail?.engineName;
+      const engine = engineName
+        ? lazy.UrlbarSearchUtils.getEngineByName(engineName)
+        : lazy.UrlbarSearchUtils.getDefaultEngine();
+      const [url, postData] = lazy.UrlbarUtils.getSearchQueryUrl(
+        engine,
+        committedValue
+      );
+      this._loadURL(url, event, this._whereToOpen(event), {
+        postData,
         allowInheritPrincipal: false,
+      });
+      this._recordSearch(engine, event);
+    }
+
+    // Attempt to navigate to URL
+    if (action === "navigate") {
+      let flags = Ci.nsIURIFixup.FIXUP_FLAG_FIX_SCHEME_TYPOS;
+      if (this.isPrivate) {
+        flags |= Ci.nsIURIFixup.FIXUP_FLAG_PRIVATE_CONTEXT;
       }
-    );
-  }
 
-  /**
-   * Whether the "Go" guardrail currently blocks submission: the user locked the
-   * "Go" action but the typed text doesn't look like a web address. The live
-   * intent guess (#detectedIntent) recognizes URL-shaped input as "navigate".
-   *
-   * @returns {boolean}
-   */
-  get #goBlocked() {
-    return (
-      this.#smartbarActionLocked &&
-      this.smartbarAction === "navigate" &&
-      !!this.untrimmedValue.trim() &&
-      this.#detectedIntent !== "navigate"
-    );
-  }
-
-  /**
-   * Reflects the "Go" guardrail state onto the CTA button, making the primary
-   * button inert (but leaving the dropdown usable) while it's blocked.
-   */
-  #updateGoGuardrail() {
-    this._inputCta?.toggleAttribute("submit-disabled", this.#goBlocked);
+      let fixupInfo = Services.uriFixup.getFixupURIInfo(committedValue, flags);
+      this._loadURL(
+        fixupInfo.preferredURI.spec,
+        event,
+        this._whereToOpen(event),
+        { allowInheritPrincipal: false }
+      );
+    }
   }
 
   /**
@@ -1868,23 +1724,16 @@ ${
       result.payload.inPrivateWindow;
     let selectedPrivateEngineResult =
       selectedPrivateResult && result.payload.isPrivateEngine;
-    let safeToPickResult = this.#isSafeToPickResult(result);
-    // A keyboard-selected suggestion row wins over a manual action pick, but an
-    // auto-selected heuristic does not: a locked action otherwise determines the
-    // submission, honoring the user's explicit choice over the live guess.
-    if (
-      this.#shouldSubmitLockedAction({
-        element,
-        result,
-        safeToPickResult,
-        isComposing,
-        oneOffParams,
-      })
-    ) {
-      this.#submitLockedAction(event);
-      return;
-    }
-
+    // Whether the user has been editing the value in the URL bar after selecting
+    // the result. However, if the result type is tip, pick as it is. The result
+    // heuristic is also kept the behavior as is for safety.
+    let safeToPickResult =
+      result &&
+      (result.heuristic ||
+        !this.valueIsTyped ||
+        result.type == UrlbarShared.RESULT_TYPE.TIP ||
+        result.type == UrlbarShared.RESULT_TYPE.AI_CHAT ||
+        this.value == this.#getValueFromResult(result));
     if (
       !isComposing &&
       element &&
@@ -2677,13 +2526,8 @@ ${
     this._lastSearchString = "";
     this._autofillPlaceholder = null;
     this._resultForCurrentValue = null;
-    // Reset to the default action and resume guessing on the next input.
-    this.#smartbarActionLocked = false;
-    this.#smartbarSearchEngineName = "";
-    this.smartbarAction = DEFAULT_SMARTBAR_ACTION;
+    this.smartbarAction = "";
     this.#detectedIntent = "";
-    this.#updateGoGuardrail();
-    this.#updateCtaSearchEngineInfo();
     this.#contextWebsites = [];
     this.#updateContextChips();
     this.setSelectionRange(0, 0);
@@ -5571,14 +5415,8 @@ ${
       return;
     }
 
-    // Reflect the engine picked from "Search with…", falling back to the
-    // default engine when none was chosen.
-    const engine =
-      (this.#smartbarSearchEngineName &&
-        lazy.UrlbarSearchUtils.getEngineByName(
-          this.#smartbarSearchEngineName
-        )) ||
-      lazy.UrlbarSearchUtils.getDefaultEngine(this.isPrivate);
+    // Get default engine from current search mode
+    const engine = lazy.UrlbarSearchUtils.getDefaultEngine(this.isPrivate);
 
     this._inputCta.searchEngineInfo = {
       name: engine.name,
@@ -7105,7 +6943,7 @@ ${
     /** @type {SmartbarAction} */
     let detectedAction;
     if (!firstResult || !firstResult.heuristic) {
-      detectedAction = this.value ? "chat" : DEFAULT_SMARTBAR_ACTION;
+      detectedAction = this.value ? "chat" : "";
     } else {
       switch (firstResult.type) {
         case UrlbarShared.RESULT_TYPE.URL:
@@ -7119,16 +6957,11 @@ ${
           detectedAction = "search";
           break;
         default:
-          detectedAction = DEFAULT_SMARTBAR_ACTION;
+          detectedAction = "";
       }
     }
-    // Always track the live guess, but only let it drive the button while the
-    // user hasn't manually locked an action.
+    this.smartbarAction = detectedAction;
     this.#detectedIntent = detectedAction;
-    if (!this.#smartbarActionLocked) {
-      this.smartbarAction = detectedAction;
-    }
-    this.#updateGoGuardrail();
   }
 
   /**
