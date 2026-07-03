@@ -12862,21 +12862,6 @@
     value: 2
     mirror: always
 
-# Gate protected (hardware DRM) playback activation on readiness: hold the
-# topology build until output protection has settled, instead of attempting
-# blind and reacting on failure. Read once at startup.
--   name: media.wmf.media-engine.protected-readiness-gate.enabled
-    type: bool
-    value: true
-    mirror: once
-
-# Maximum bounded last-resort recoveries, per playback session, for the two
-# protected-activation errors Media Foundation gives no advance signal for.
--   name: media.wmf.media-engine.protected-readiness-gate.max-recoveries
-    type: RelaxedAtomicUint32
-    value: 1
-    mirror: always
-
 # Bypass the gfx block list check for the media engine playback.
 -   name: media.wmf.media-engine.bypass-gfx-blocklist
     type: RelaxedAtomicBool
