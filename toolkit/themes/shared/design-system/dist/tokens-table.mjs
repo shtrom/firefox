@@ -960,7 +960,10 @@ export const tokensTable = {
       name: "--button-border-color-disabled",
     },
     {
-      value: { default: "var(--button-border-color)" },
+      value: {
+        default: "var(--button-border-color)",
+        prefersContrast: "var(--button-border-color)",
+      },
       name: "--button-border-color-ghost",
     },
     {
@@ -3950,7 +3953,10 @@ export const variableLookupTable = {
     default: "var(--button-border-color)",
     forcedColors: "var(--border-color-interactive-disabled)",
   },
-  "button-border-color-ghost": { default: "var(--button-border-color)" },
+  "button-border-color-ghost": {
+    default: "var(--button-border-color)",
+    prefersContrast: "var(--button-border-color)",
+  },
   "button-border-color-ghost-active": {
     default: "var(--button-border-color-active)",
   },

@@ -610,6 +610,7 @@
 
       /** button **/
       --button-border-color: var(--button-text-color);
+      --button-border-color-ghost: var(--button-border-color);
       --button-text-color-ghost-hover: var(--button-text-color-hover);
       --button-text-color-ghost-active: var(--button-text-color-active);
       --button-text-color-toolbar-hover: var(--button-text-color-hover);
