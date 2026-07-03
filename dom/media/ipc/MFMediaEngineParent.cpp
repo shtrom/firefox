@@ -261,6 +261,17 @@ void MFMediaEngineParent::HandleMediaEngineEvent(
       break;
     }
     case MF_MEDIA_ENGINE_EVENT_FIRSTFRAMEREADY: {
+#ifdef MOZ_WMF_CDM
+      // A produced frame means protected activation succeeded; restore the
+      // recovery budget so a later transient failure on this playback is not
+      // constrained by earlier ones.
+      if (mProxyId) {
+        if (RefPtr<MFCDMParent> cdmParent =
+                MFCDMParent::GetCDMById(*mProxyId)) {
+          cdmParent->ReadinessMonitor().ResetRecoveryBudget();
+        }
+      }
+#endif
       if (mMediaEngine->HasVideo() && !mIsFrameServerMode) {
         EnsureDcompSurfaceHandle();
       }
@@ -303,6 +314,23 @@ void MFMediaEngineParent::HandleMediaEngineEvent(
   }
 }
 
+#ifdef MOZ_WMF_CDM
+void MFMediaEngineParent::RecoverProtectedPlayback(HRESULT aResult) {
+  AssertOnManagerThread();
+  LOG("Recovering protected playback, hr={:x}", aResult);
+  // SendNotifyHardwareReset drives the content side to tear this engine down
+  // and build a fresh one (new IMFMediaEngine + SetSource), which re-drives
+  // Media Foundation instead of leaving it wedged in the error state.
+  sPendingHDCPCheck = nullptr;
+  if (RefPtr<MFCDMParent> cdmParent =
+          mProxyId ? MFCDMParent::GetCDMById(*mProxyId) : nullptr) {
+    cdmParent->OnHardwareContextReset();
+    sPendingHDCPCheck = cdmParent->WaitForHDCPSettleAfterReset();
+  }
+  (void)SendNotifyHardwareReset(static_cast<uint32_t>(aResult));
+}
+#endif
+
 void MFMediaEngineParent::NotifyError(MF_MEDIA_ENGINE_ERR aError,
                                       HRESULT aResult) {
   AssertOnManagerThread();
@@ -314,15 +342,31 @@ void MFMediaEngineParent::NotifyError(MF_MEDIA_ENGINE_ERR aError,
   if (IsHardwareResetHRESULT(aResult)) {
     LOG("Notifying hardware reset error, hr={:x}", aResult);
     ENGINE_MARKER("MFMediaEngineParent,HardwareContextReset");
-    sPendingHDCPCheck = nullptr;
-    RefPtr<MFCDMParent> cdmParent =
-        mProxyId ? MFCDMParent::GetCDMById(*mProxyId) : nullptr;
-    if (cdmParent) {
-      cdmParent->OnHardwareContextReset();
-      sPendingHDCPCheck = cdmParent->WaitForHDCPSettleAfterReset();
-    }
-    (void)SendNotifyHardwareReset(static_cast<uint32_t>(aResult));
+    RecoverProtectedPlayback(aResult);
     return;
+  }
+
+  // Bounded last-resort reaction for the two protected-activation errors Media
+  // Foundation gives no advance signal for. When the gate is enabled, re-drive
+  // the protected pipeline within budget; once the budget is spent the error
+  // falls through to the terminal handling below. SL3000 is never demoted.
+  if (mProxyId &&
+      StaticPrefs::
+          media_wmf_media_engine_protected_readiness_gate_enabled_AtStartup()) {
+    if (RefPtr<MFCDMParent> cdmParent = MFCDMParent::GetCDMById(*mProxyId);
+        cdmParent && cdmParent->IsHardwareDRM()) {
+      if (cdmParent->ReadinessMonitor().OnActivationError(
+              aResult,
+              StaticPrefs::
+                  media_wmf_media_engine_protected_readiness_gate_max_recoveries()) ==
+          MFProtectedPathReadinessMonitor::Reaction::Recover) {
+        LOG("Re-driving protected playback after activation error, hr={:x}",
+            aResult);
+        ENGINE_MARKER("MFMediaEngineParent,RetryProtectedActivation");
+        RecoverProtectedPlayback(aResult);
+        return;
+      }
+    }
   }
 #endif
   LOG("Notify error '{}', hr={:x}", MFMediaEngineErrorToStr(aError), aResult);
