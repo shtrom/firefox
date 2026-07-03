@@ -7,7 +7,6 @@ const lazy = {
 };
 
 ChromeUtils.defineESModuleGetters(lazy, {
-  AdsClient: "resource://newtab/lib/AdsClient.sys.mjs",
   ContextId: "moz-src:///browser/modules/ContextId.sys.mjs",
   ObliviousHTTP: "resource://gre/modules/ObliviousHTTP.sys.mjs",
   PersistentCache: "resource://newtab/lib/PersistentCache.sys.mjs",
@@ -57,7 +56,6 @@ export class AdsFeed {
     this.tiles = [];
     this.spocs = [];
     this.spocPlacements = [];
-    this.adsClient = null;
     this.cache = this.PersistentCache(CACHE_KEY, true);
   }
 
@@ -432,10 +430,6 @@ export class AdsFeed {
    * @returns {void}
    */
   async init(isStartup = false) {
-    if (lazy.AdsClient.isEnabled(this.store.getState().Prefs.values)) {
-      this.adsClient = lazy.AdsClient.getClient();
-    }
-
     if (this.isEnabled()) {
       await this.getAdsData(isStartup);
     }

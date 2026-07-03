@@ -4,7 +4,6 @@
 
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
-  AdsClient: "resource://newtab/lib/AdsClient.sys.mjs",
   ContextId: "moz-src:///browser/modules/ContextId.sys.mjs",
   SectionsLayoutManager: "resource://newtab/lib/SectionsLayoutFeed.sys.mjs",
   NimbusFeatures: "resource://nimbus/ExperimentAPI.sys.mjs",
@@ -142,7 +141,6 @@ export class DiscoveryStreamFeed {
     this._impressionId = this.getOrCreateImpressionId();
     // Internal in-memory cache for parsing json prefs.
     this._prefCache = {};
-    this.adsClient = null;
 
     this.onPocketExperimentUpdated = this.onPocketExperimentUpdated.bind(this);
   }
@@ -2564,9 +2562,6 @@ export class DiscoveryStreamFeed {
         // 2. If config.enabled is true, start loading data.
         if (this.config.enabled) {
           await this.enable({ updateOpenTabs: true, isStartup: true });
-        }
-        if (lazy.AdsClient.isEnabled(this.store.getState().Prefs.values)) {
-          this.adsClient = lazy.AdsClient.getClient();
         }
         // This function is async but just for devtools,
         // so we don't need to wait for it.

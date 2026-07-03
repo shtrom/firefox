@@ -429,13 +429,6 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
-    "unifiedAds.adsClient.enabled",
-    {
-      title: "Local toggle for the AdsClient code paths",
-      value: false,
-    },
-  ],
-  [
     "unifiedAds.tiles.enabled",
     {
       title:
