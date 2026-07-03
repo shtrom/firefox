@@ -1355,6 +1355,7 @@ mozilla::ipc::IPCResult MFCDMParent::RecvInit(
   }
 
   mIsInited = true;
+  mIsHardwareDRM = isHWSecure;
   mInitParams = Some(aParams);
   PrewarmHDCP(isHWSecure);
   aResolver(MFCDMInitIPDL{mId});

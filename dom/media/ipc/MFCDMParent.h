@@ -61,6 +61,8 @@ class MFCDMParent final : public PMFCDMParent {
     return mReadinessMonitor;
   }
 
+  bool IsHardwareDRM() const { return mIsHardwareDRM; }
+
   void ActorDestroy(ActorDestroyReason aWhy) override;
 
   mozilla::ipc::IPCResult RecvGetCapabilities(
@@ -205,6 +207,7 @@ class MFCDMParent final : public PMFCDMParent {
   static inline uint64_t sNextId = 1;
   const uint64_t mId;
   bool mIsInited = false;
+  bool mIsHardwareDRM = false;
 
   static inline BSTR sWidevineL1Path;
 
