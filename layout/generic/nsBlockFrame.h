@@ -779,6 +779,7 @@ class nsBlockFrame : public nsContainerFrame {
   WalkInlineDescendantsToReflowAbsoluteFrames(nsIFrame* aFrame,
                                               nsPresContext* aPresContext,
                                               const ReflowInput& aReflowInput,
+                                              const ReflowOutput& aReflowOutput,
                                               nsReflowStatus& aStatus);
 
   /**
@@ -788,13 +789,17 @@ class nsBlockFrame : public nsContainerFrame {
    *
    * @param aInlineFrame inline-level frame that forms the absolute containing
    *        block.
+   * @param aReflowOutput this block frame's reflow output, used to get the
+   *        container size for logical coordinate conversions (the block frame's
+   *        own size is not yet set at this point in its reflow).
    * @return overflow areas from aInlineFrame's abspos kids, in
    *         aInlineFrame's coordinate space. Or if no abspos descendants were
    *         visited, return Nothing().
    */
   mozilla::Maybe<mozilla::OverflowAreas> ReflowAbsoluteFramesInInlineFrame(
       nsInlineFrame* aInlineFrame, nsPresContext* aPresContext,
-      const ReflowInput& aReflowInput, nsReflowStatus& aStatus);
+      const ReflowInput& aReflowInput, const ReflowOutput& aReflowOutput,
+      nsReflowStatus& aStatus);
 
   /**
    * Find any trailing BR clear from the last line of this block (or from its
