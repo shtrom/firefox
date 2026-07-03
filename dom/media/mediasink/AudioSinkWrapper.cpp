@@ -301,7 +301,7 @@ double AudioSinkWrapper::PlaybackRate() const {
 }
 
 nsresult AudioSinkWrapper::Start(const TimeUnit& aStartTime,
-                                 const MediaInfo& aInfo) {
+                                 const MediaInfo& aInfo, StartType aStartType) {
   LOG("{} AudioSinkWrapper::Start", fmt::ptr(this));
   AssertOwnerThread();
   MOZ_ASSERT(!mIsStarted, "playback already started.");
@@ -323,6 +323,19 @@ nsresult AudioSinkWrapper::Start(const TimeUnit& aStartTime,
 
   mEndedPromise = mEndedPromiseHolder.Ensure(__func__);
   if (!NeedAudioSink()) {
+    return NS_OK;
+  }
+  // On a seek resume, initialize the audio stream asynchronously: cubeb stream
+  // init can take tens of milliseconds (CoreAudio/AudioUnit on macOS) and doing
+  // it synchronously here stalls the state machine thread, delaying the
+  // playback clock and the resume. Instead, return immediately; playback
+  // resumes on the system clock and switches to the audio clock once the sink
+  // is ready (the same path used when unmuting). Initial playback start stays
+  // synchronous.
+  if (aStartType == StartType::SeekResume) {
+    LOG("{}: AudioSinkWrapper::Start, async audio sink init for seek resume",
+        fmt::ptr(this));
+    MaybeAsyncCreateAudioSink(mAudioDevice);
     return NS_OK;
   }
   return SyncCreateAudioSink(aStartTime);

@@ -429,6 +429,11 @@ class MediaDecoderStateMachine
   // The media sink resource.  Used on the state machine thread.
   RefPtr<MediaSink> mMediaSink;
 
+  // Set when a seek completes so the next StartMediaSink() starts the audio sink
+  // asynchronously (resume on the system clock while the audio stream initializes
+  // off-thread), then reset. Avoids stalling resume on cubeb init after a seek.
+  bool mStartSinkAfterSeek = false;
+
   // The end time of the last audio frame that's been pushed onto the media sink
   // in microseconds. This will approximately be the end time
   // of the audio stream, unless another frame is pushed to the hardware.

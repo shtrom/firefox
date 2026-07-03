@@ -3206,6 +3206,10 @@ void MediaDecoderStateMachine::LoopingDecodingState::HandleError(
 }
 
 void MediaDecoderStateMachine::SeekingState::SeekCompleted() {
+  MOZ_ASSERT(mMaster->OnTaskQueue());
+  // Resuming playback after a seek re-creates the audio sink; start it
+  // asynchronously so cubeb init does not stall the resume (see StartMediaSink).
+  mMaster->mStartSinkAfterSeek = true;
   const auto newCurrentTime = CalculateNewCurrentTime();
 
   if ((newCurrentTime == mMaster->Duration() ||
@@ -4091,8 +4095,13 @@ nsresult MediaDecoderStateMachine::StartMediaSink() {
 
   mAudioCompleted = false;
   const auto startTime = GetMediaTime();
-  LOG("StartMediaSink, mediaTime={}", startTime.ToMicroseconds());
-  nsresult rv = mMediaSink->Start(startTime, Info());
+  const MediaSink::StartType startType = mStartSinkAfterSeek
+                                             ? MediaSink::StartType::SeekResume
+                                             : MediaSink::StartType::Initial;
+  mStartSinkAfterSeek = false;
+  LOG("StartMediaSink, mediaTime={}, startType={}", startTime.ToMicroseconds(),
+      MediaSink::EnumValueToString(startType));
+  nsresult rv = mMediaSink->Start(startTime, Info(), startType);
   StreamNameChanged();
 
   auto videoPromise = mMediaSink->OnEnded(TrackInfo::kVideoTrack);
