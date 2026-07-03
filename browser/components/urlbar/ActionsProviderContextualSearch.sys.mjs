@@ -95,6 +95,7 @@ class ProviderContextualSearch extends ActionsProvider {
   async #createActionResult({ type, engine, key = "contextual-search" }) {
     let icon = engine?.icon || (await engine?.getIconURL?.()) || DEFAULT_ICON;
     let result = {
+      providerName: this.name,
       key,
       l10nId: "urlbar-result-search-with",
       l10nArgs: { engine: engine.name || engine.title },
