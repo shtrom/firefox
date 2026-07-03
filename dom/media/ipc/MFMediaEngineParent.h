@@ -94,6 +94,12 @@ class MFMediaEngineParent final : public PMFMediaEngineParent {
 #ifdef MOZ_WMF_CDM
   // We will disable HWDRM when receiving error MSPR_E_NO_DECRYPTOR_AVAILABLE.
   void NotifyDisableHWDRM();
+
+  // Resets the CDM and recreates the engine through the hardware-context-reset
+  // recovery path, forwarding aResult as the platform error. Used both for
+  // genuine hardware-context resets and for the bounded last-resort retry of
+  // protected activation errors.
+  void RecoverProtectedPlayback(HRESULT aResult);
 #endif
 
   // This generates unique id for each MFMediaEngineParent instance, and it
