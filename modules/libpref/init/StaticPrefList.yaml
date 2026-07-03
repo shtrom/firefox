@@ -10531,7 +10531,7 @@
   rust: true
 
 # Whether to enable the CSS alpha() color function.
-# https://drafts.csswg.org/css-values-5/#attr-notation
+# https://drafts.csswg.org/css-color-5/#relative-alpha
 - name: layout.css.alpha-color-function.enabled
   type: RelaxedAtomicBool
   value: @IS_NIGHTLY_BUILD@
@@ -11051,7 +11051,7 @@
   mirror: always
 
 # Is support for the progress() function enabled?
-# https://drafts.csswg.org/css-values-5/#tree-counting
+# https://drafts.csswg.org/css-values-5/#progress
 - name: layout.css.progress-function.enabled
   type: RelaxedAtomicBool
   value: @IS_NIGHTLY_BUILD@
