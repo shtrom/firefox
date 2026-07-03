@@ -18218,11 +18218,6 @@
   value: 40
   mirror: always
 
-- name: security.csp.truncate_blocked_uri_for_frame_navigations
-  type: bool
-  value: false
-  mirror: always
-
 # Limit the number of CSP reports that are send in a specific timespan.
 - name: security.csp.reporting.limit.count
   type: uint32_t
