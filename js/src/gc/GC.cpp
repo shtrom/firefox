@@ -3565,7 +3565,7 @@ bool GCRuntime::initMultiThreadedMarkers() {
   return true;
 }
 
-static inline IncrementalProgress ToIncrementalProgress(bool finished) {
+inline IncrementalProgress ToIncrementalProgress(bool finished) {
   return finished ? Finished : NotFinished;
 }
 
@@ -3574,31 +3574,14 @@ IncrementalProgress GCRuntime::markPhase(SliceBudget& budget) {
 
   markSliceCount++;
 
-  bool finishedMainThreadOnlyMarking = finishAnyConcurrentMarking(budget);
+  finishAnyConcurrentMarking(budget);
 
   auto [mainThreadBudget, helperThreadBudget] = budgetConcurrentMarking(budget);
 
-  IncrementalProgress result =
-      markSynchronously(mainThreadBudget, useParallelMarking);
+  markSynchronously(mainThreadBudget, useParallelMarking);
 
-  if (!marker().isMarkStackEmpty()) {
-    MOZ_ASSERT(result == NotFinished);
+  if (hasMarkingWork()) {
     maybeStartConcurrentMarking(helperThreadBudget);
-    return NotFinished;
-  }
-
-  if (!finishedMainThreadOnlyMarking) {
-    return NotFinished;
-  }
-
-  if (result == NotFinished) {
-    return NotFinished;
-  }
-
-  // Yield eagerly after marking has finished for internally triggered slices
-  // not running in idle time.
-  if (isIncremental && sliceReason == JS::GCReason::BG_TASK_FINISHED &&
-      !budget.idle) {
     return NotFinished;
   }
 
@@ -3632,7 +3615,11 @@ IncrementalProgress GCRuntime::markSynchronously(
     MOZ_ASSERT(reportTime);
     MOZ_ASSERT(!isBackgroundMarking());
 
-    return ToIncrementalProgress(ParallelMarker::mark(this, sliceBudget));
+    if (!ParallelMarker::mark(this, sliceBudget)) {
+      return NotFinished;
+    }
+
+    return Finished;
   }
 
   return ToIncrementalProgress(
@@ -3646,7 +3633,11 @@ bool GCRuntime::hasMarkingWork() const {
     }
   }
 
-  return hasDelayedMarking();
+  if (hasDelayedMarking()) {
+    return true;
+  }
+
+  return false;
 }
 
 void GCRuntime::drainMarkStack() {
@@ -4288,11 +4279,11 @@ void GCRuntime::maybeStartConcurrentMarking(SliceBudget& budget) {
 #endif
 }
 
-bool GCRuntime::finishAnyConcurrentMarking(JS::SliceBudget& budget) {
+void GCRuntime::finishAnyConcurrentMarking(JS::SliceBudget& budget) {
 #ifdef JS_GC_CONCURRENT_MARKING
   if (!useConcurrentMarking) {
     MOZ_ASSERT(!isBackgroundMarking());
-    return true;
+    return;
   }
 
   pauseBackgroundMarking();
@@ -4304,22 +4295,13 @@ bool GCRuntime::finishAnyConcurrentMarking(JS::SliceBudget& budget) {
   }
 
   // Perform as much main-thread-only marking as we can within the budget.
-  MOZ_ASSERT(concurrentMarker().isRegularMarking());
-  bool result = concurrentMarker().processMainThreadBuffers(budget);
+  concurrentMarker().processMainThreadBuffers(budget);
 
   GCMarker::moveAllWork(&marker(), &concurrentMarker());
-  MOZ_ASSERT(concurrentMarker().isMarkStackEmpty());
 
   if (!canMarkConcurrently()) {
-    // Abort concurrent marking. Ensure main thread buffers are traced first.
-    SliceBudget unlimitedBudget = SliceBudget::unlimited();
-    concurrentMarker().processMainThreadBuffers(unlimitedBudget);
     useConcurrentMarking = NoConcurrentMarking;
   }
-
-  return result;
-#else
-  return true;
 #endif
 }
 
@@ -4332,9 +4314,8 @@ std::tuple<JS::SliceBudget, JS::SliceBudget> GCRuntime::budgetConcurrentMarking(
   auto* mainThreadInterrupt = requestedBudget.interruptRequestFlag();
   auto* helperThreadInterrupt = &markTask.interruptRequest;
 
-  // Not concurrent marking, or no suitable work.
-  bool hasHelperThreadWork = !marker().isMarkStackEmpty();
-  if (!useConcurrentMarking || !hasHelperThreadWork) {
+  // No concurrent marking.
+  if (!useConcurrentMarking) {
     return {requestedBudget, SliceBudget(WorkBudget(0))};
   }
 
@@ -5329,15 +5310,12 @@ void GCRuntime::collect(bool nonincrementalByAPI, const SliceBudget& budget,
   UnscheduleZones(this);
 }
 
-SliceBudget GCRuntime::defaultBudget(JS::GCReason reason) {
-  // Get configurable default slice budget. This may be zero to indicate
-  // unlimited.
-  int64_t millis = defaultSliceBudgetMS();
-
-  // These slices are triggered when a background task finishes and may run at
-  // inconvenient times, so limit their duration.
-  if (reason == JS::GCReason::BG_TASK_FINISHED && millis != 0) {
-    millis = std::max(millis, int64_t(1));
+SliceBudget GCRuntime::defaultBudget(JS::GCReason reason, int64_t millis) {
+  // millis == 0 means use internal GC scheduling logic to come up with
+  // a duration for the slice budget. This may end up still being zero
+  // based on preferences.
+  if (millis == 0) {
+    millis = defaultSliceBudgetMS();
   }
 
   // If the embedding has registered a callback for creating SliceBudgets,
@@ -5589,7 +5567,7 @@ bool GCRuntime::gcIfRequestedImpl(bool eagerOk) {
     return false;
   }
 
-  SliceBudget budget = defaultBudget(reason);
+  SliceBudget budget = defaultBudget(reason, 0);
   if (!isIncrementalGCInProgress()) {
     startGC(JS::GCOptions::Normal, reason, budget);
   } else {

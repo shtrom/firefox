@@ -332,12 +332,6 @@ bool CCGCScheduler::GCRunnerFired(TimeStamp aDeadline) {
 
 bool CCGCScheduler::GCRunnerFiredDoGC(TimeStamp aDeadline,
                                       const GCRunnerStep& aStep) {
-  // Check whether there's anything to do right now.
-  JSContext* cx = dom::danger::GetJSContext();
-  if (InIncrementalGC() && !JS::IncrementalGCHasForegroundWork(cx)) {
-    return false;
-  }
-
   // Run a GC slice, possibly the first one of a major GC.
   nsJSContext::IsShrinking is_shrinking = nsJSContext::NonShrinkingGC;
   if (!InIncrementalGC() && aStep.mReason == JS::GCReason::USER_INACTIVE) {
@@ -379,6 +373,7 @@ bool CCGCScheduler::GCRunnerFiredDoGC(TimeStamp aDeadline,
   // If the GC doesn't have any more work to do on the foreground thread (and
   // e.g. is waiting for background sweeping to finish) then return false to
   // make IdleTaskRunner postpone the next call a bit.
+  JSContext* cx = dom::danger::GetJSContext();
   return JS::IncrementalGCHasForegroundWork(cx);
 }
 

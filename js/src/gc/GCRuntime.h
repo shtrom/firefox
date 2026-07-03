@@ -828,7 +828,7 @@ class GCRuntime {
   void startBackgroundAllocTaskIfIdle();
 
   void requestMajorGC(JS::GCReason reason);
-  JS::SliceBudget defaultBudget(JS::GCReason reason);
+  JS::SliceBudget defaultBudget(JS::GCReason reason, int64_t millis);
   bool maybeIncreaseSliceBudget(JS::SliceBudget& budget,
                                 mozilla::TimeStamp sliceStartTime,
                                 mozilla::TimeStamp gcStartTime);
@@ -914,7 +914,7 @@ class GCRuntime {
   std::tuple<JS::SliceBudget, JS::SliceBudget> budgetConcurrentMarking(
       const JS::SliceBudget& requestedBudget);
   void maybeStartConcurrentMarking(JS::SliceBudget& budget);
-  bool finishAnyConcurrentMarking(JS::SliceBudget& budget);
+  void finishAnyConcurrentMarking(JS::SliceBudget& budget);
   friend class BackgroundMarkTask;
   enum ParallelMarking : bool {
     NoParallelMarking = false,
