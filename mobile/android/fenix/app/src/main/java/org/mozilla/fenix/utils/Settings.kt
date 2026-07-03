@@ -369,14 +369,6 @@ class Settings(
     }
 
     /**
-     * Indicates if review prompt feature should use the new trigger criteria.
-     */
-    var newReviewPromptTriggerCriteriaEnabled by booleanPreference(
-        appContext.getPreferenceKey(R.string.pref_key_custom_review_prompt_enabled),
-        default = { FxNimbus.features.customReviewPrompt.value().enabled },
-    )
-
-    /**
      * Indicates if the custom review prompt UI should be enabled.
      */
     var customReviewPromptUiEnabled by booleanPreference(
