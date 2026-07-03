@@ -3997,7 +3997,7 @@ pref("security.storage.encryption.sqlite.enabled", false, locked);
 // is not being used in form autofill, but need to exist for migration purposes.
 pref("extensions.formautofill.available", "detect");
 
-#if defined(NIGHTLY_BUILD) && !defined(ANDROID)
+#if !defined(ANDROID)
 pref("extensions.formautofill.addresses.supported", "on");
 // Use ML for address form field detection.
 pref("extensions.formautofill.useml", true);
