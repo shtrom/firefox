@@ -4161,14 +4161,14 @@ nsresult EditorBase::OnCompositionChange(
     }
   }
 
-  if (RefPtr<EditContext> editContext = GetEditContext()) {
+  if (RefPtr editContext = editActionData.GetEditContext()) {
     RefPtr<TextRangeArray> ranges = mComposition->GetRanges();
     editContext->FireTextFormatUpdate(
         ranges, mComposition->ClampedStartOffsetInTextNode());
     if (NS_WARN_IF(Destroyed())) {
       return Err(NS_ERROR_EDITOR_DESTROYED);
     }
-    if (editContext != GetEditContext()) {
+    if (editActionData.EditContextHasBeenChanged()) {
       // textformatupdate handler deactivated this EditContext
       return Err(NS_ERROR_EDITOR_UNEXPECTED_DOM_TREE);
     }
@@ -5765,6 +5765,13 @@ nsresult EditorBase::ReplaceTextAsAction(
     restorer.Abort();
   }
 
+  if (editActionData.GetEditContext()) {
+    // For EditContext, we only dispatch beforeinput - we don't
+    // try to do the replacement.
+    // https://w3c.github.io/edit-context/#example-how-beforeinput-can-be-used-to-catch-insertreplacementtext-to-apply-spelling-changes
+    return NS_OK;
+  }
+
   AutoPlaceholderBatch treatAsOneTransaction(
       *this, ScrollSelectionIntoView::Yes, __FUNCTION__);
 
@@ -6466,7 +6473,7 @@ template <typename PT, typename CT>
 EditorBase::AutoCaretBidiLevelManager::AutoCaretBidiLevelManager(
     const EditorBase& aEditorBase, nsIEditor::EDirection aDirectionAndAmount,
     const EditorDOMPointBase<PT, CT>& aPointAtCaret) {
-  if (EditContext* editContext = aEditorBase.GetEditContext()) {
+  if (EditContext* editContext = aEditorBase.GetEditActionEditContext()) {
     InitForEditContext(aEditorBase, aDirectionAndAmount, *editContext);
   } else {
     Init(aEditorBase, aDirectionAndAmount, aPointAtCaret);
@@ -6476,7 +6483,7 @@ EditorBase::AutoCaretBidiLevelManager::AutoCaretBidiLevelManager(
 void EditorBase::AutoCaretBidiLevelManager::InitForEditContext(
     const EditorBase& aEditorBase, nsIEditor::EDirection aDirectionAndAmount,
     const EditContext&) {
-  MOZ_ASSERT(aEditorBase.GetEditContext());
+  MOZ_ASSERT(aEditorBase.GetEditActionEditContext());
   // Get bidi level from selection for EditContext. Since we only
   // do deletion as a top-level subaction for EditContext,
   // this should be okay.
@@ -6782,6 +6789,13 @@ EditorBase::AutoEditActionDataSetter::AutoEditActionDataSetter(
       mTopLevelEditSubActionData.mCachedPendingStyles.emplace();
     }
   }
+
+  if (aEditAction != EditAction::eNone &&
+      aEditAction != EditAction::eNotEditing &&
+      aEditAction != EditAction::eInitializing) {
+    mEditContext = aEditorBase.ComputeEditContext();
+  }
+
   mEditorBase.mEditActionData = this;
 
   if (aEditorBase.IsHTMLEditor() &&

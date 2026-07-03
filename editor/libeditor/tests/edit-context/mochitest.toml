@@ -14,3 +14,5 @@ prefs = [
 
 ["test_editcontext_resist_fingerprinting.html"]
 support-files = ["file_editcontext_resist_fingerprinting.html"]
+
+["test_editcontext_spellcheck.html"]
