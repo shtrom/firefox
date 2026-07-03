@@ -172,9 +172,6 @@ nsresult LoadInfoArgsToLoadInfo(const mozilla::net::LoadInfoArgs& aLoadInfoArgs,
          false)                                                                \
   SETTER(bool, AllowDeprecatedSystemRequests)                                  \
                                                                                \
-  GETTER(bool, IsInDevToolsContext, isInDevToolsContext, false)                \
-  SETTER(bool, IsInDevToolsContext)                                            \
-                                                                               \
   GETTER(bool, ParserCreatedScript, parserCreatedScript, false)                \
   SETTER(bool, ParserCreatedScript)                                            \
                                                                                \
@@ -423,7 +420,7 @@ class LoadInfo final : public nsILoadInfo {
 #undef DEFINE_PARAMETER
 
                bool aInitialSecurityCheckDone,
-           bool aIsThirdPartyContext,
+           bool aIsInDevToolsContext, bool aIsThirdPartyContext,
            const Maybe<bool>& aIsThirdPartyContextToTopWindow,
            const OriginAttributes& aOriginAttributes,
            RedirectHistoryArray&& aRedirectChainIncludingInternalRedirects,
@@ -518,6 +515,7 @@ class LoadInfo final : public nsILoadInfo {
 
   bool mInitialSecurityCheckDone = false;
   // NB: TYPE_DOCUMENT implies !third-party.
+  bool mIsInDevToolsContext = false;
   bool mIsThirdPartyContext = false;
   Maybe<bool> mIsThirdPartyContextToTopWindow;
   OriginAttributes mOriginAttributes;

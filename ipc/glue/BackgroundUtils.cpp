@@ -885,6 +885,7 @@ nsresult LoadInfoArgsToLoadInfo(const LoadInfoArgs& loadInfoArgs,
 #undef DEFINE_ARGUMENT
 
           loadInfoArgs.initialSecurityCheckDone(),
+      XRE_IsParentProcess() ? false : loadInfoArgs.isInDevToolsContext(),
       loadInfoArgs.isInThirdPartyContext(), isThirdPartyContextToTopWindow,
       loadInfoArgs.originAttributes(),
       std::move(redirectChainIncludingInternalRedirects),

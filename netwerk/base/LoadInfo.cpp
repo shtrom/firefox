@@ -774,7 +774,7 @@ LoadInfo::LoadInfo(
 #undef DEFINE_PARAMETER
 
         bool aInitialSecurityCheckDone,
-    bool aIsThirdPartyContext,
+    bool aIsInDevToolsContext, bool aIsThirdPartyContext,
     const Maybe<bool>& aIsThirdPartyContextToTopWindow,
     const OriginAttributes& aOriginAttributes,
     RedirectHistoryArray&& aRedirectChainIncludingInternalRedirects,
@@ -1063,6 +1063,20 @@ NS_IMETHODIMP
 LoadInfo::GetSecurityMode(uint32_t* aFlags) {
   *aFlags = nsContentSecurityManager::ComputeSecurityMode(mSecurityFlags);
 
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+LoadInfo::GetIsInDevToolsContext(bool* aIsInDevToolsContext) {
+  *aIsInDevToolsContext = mIsInDevToolsContext;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+LoadInfo::SetIsInDevToolsContext(bool aIsInDevToolsContext) {
+  if (XRE_IsParentProcess()) {
+    mIsInDevToolsContext = aIsInDevToolsContext;
+  }
   return NS_OK;
 }
 
