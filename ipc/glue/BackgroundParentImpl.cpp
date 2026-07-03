@@ -724,11 +724,6 @@ mozilla::ipc::IPCResult BackgroundParentImpl::RecvPUDPSocketConstructor(
   AssertIsInMainProcess();
   AssertIsOnBackgroundThread();
 
-  if (ManagedPUDPSocketParent().Count() >=
-      static_cast<uint32_t>(StaticPrefs::dom_udpsocket_max_per_background())) {
-    return IPC_FAIL(this, "too many UDP sockets");
-  }
-
   if (!StaticPrefs::dom_udpsocket_enabled() && aFilter.IsEmpty()) {
     return IPC_FAIL(this, "udp socket not enabled");
   }
