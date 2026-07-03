@@ -3591,7 +3591,18 @@ IncrementalProgress GCRuntime::markPhase(SliceBudget& budget) {
     return NotFinished;
   }
 
-  return result;
+  if (result == NotFinished) {
+    return NotFinished;
+  }
+
+  // Yield eagerly after marking has finished for internally triggered slices
+  // not running in idle time.
+  if (isIncremental && sliceReason == JS::GCReason::BG_TASK_FINISHED &&
+      !budget.idle) {
+    return NotFinished;
+  }
+
+  return Finished;
 }
 
 IncrementalProgress GCRuntime::markSynchronously(

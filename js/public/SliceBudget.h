@@ -80,8 +80,8 @@ class JS_PUBLIC_API SliceBudget {
   bool interrupted = false;
 
  public:
-  // Whether this slice is running in (predicted to be) idle time.
-  // Only used for recording in the profile.
+  // Whether this slice is running in (predicted to be) idle time. This can be
+  // used by the GC to end slices early when not running in idle time.
   bool idle = false;
 
   // Whether this slice was given an extended budget, larger than
