@@ -2439,6 +2439,14 @@ class Settings(
     )
 
     /**
+     * Indicates if the Mozilla Ads Client for Sponsored Stories is enabled.
+     */
+    var enableAdsClientForStories by booleanPreference(
+        key = appContext.getPreferenceKey(R.string.pref_key_enable_ads_client_for_stories),
+        default = { FxNimbus.features.adsClientForStories.value().enabled },
+    )
+
+    /**
      * Indicates if Firefox Labs is enabled.
      */
     var enableFirefoxLabs by booleanPreference(

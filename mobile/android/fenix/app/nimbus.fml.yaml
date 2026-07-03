@@ -1192,6 +1192,14 @@ features:
         type: Boolean
         default: false
 
+  ads-client-for-stories:
+    description: Feature to enable the Mozilla Ads Client support for Sponsored Stories for users on Firefox on Android.
+    variables:
+      enabled:
+        description: If true, Mozilla Ads Client support for Sponsored Stories is enabled.
+        type: Boolean
+        default: false
+
   private-mode-and-stories-entry-point:
     description: Feature to enable the Private Mode and Stories Entry Point Experiment.
     variables:
