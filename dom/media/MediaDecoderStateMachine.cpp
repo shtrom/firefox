@@ -1555,7 +1555,8 @@ class MediaDecoderStateMachine::LoopingDecodingState
 
     // If we can get the last sample, use its frame. Otherwise, use common 1024.
     int64_t typicalPacketFrameCount = 1024;
-    if (RefPtr<AudioData> audio = AudioQueue().PeekBack()) {
+    if (RefPtr<AudioData> audio = AudioQueue().PeekBack();
+        audio && audio->Frames()) {
       typicalPacketFrameCount = audio->Frames();
     }
 
