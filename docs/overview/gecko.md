@@ -222,7 +222,7 @@ different packages are stored.
 The resource protocol is another internal protocol that can reference files that ship as part of the
 application. Strictly speaking it is simply a mapped, all urls of the form `resource://<package>/…`
 are mapped to `<new-uri>/…`. The mappings are generally defined using the resource instruction in
-{ref}`chrome manifest files <chrome_manifest_resource>` however can also be defined at runtime and
+{ref}`chrome manifest files <chrome-manifest-resource>` however can also be defined at runtime and
 some hardcoded mappings. Common examples include:
 
 - `resource://gre/…` which references files in the gecko omni.ja file.
@@ -258,7 +258,7 @@ these are set up automatically, as {ref}`per the documentation <Visual Studio Co
 
 For front-end work, ESLint and Prettier are the linters you'll use the most, see the
 {ref}`section on ESLint <eslint>` for details of both of those, which also has
-{ref}`an FAQ <eslint_common_issues>`.
+{ref}`an FAQ <eslint-common-issues>`.
 
 Details about {ref}`automated tests may be found here <Automated Testing>`. The most commonly used
 tests are {ref}`XPCShell <XPCShell tests>` for testing backend components,

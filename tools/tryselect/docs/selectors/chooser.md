@@ -5,7 +5,7 @@ many to remember, making it easy to forget a set of tasks which should otherwise
 
 This selector allows you to select tasks from a web interface that lists all the possible build and
 test tasks and allows you to select them from a list. The values are dynamically generated using the
-{ref}`taskgraph<TaskCluster Task-Graph Generation>` as an input, which ensures that it will never be
+{ref}`taskgraph<taskcluster-task-graph-generation>` as an input, which ensures that it will never be
 out of date.
 
 To use:
@@ -24,5 +24,5 @@ You can run:
 mach try chooser --full
 ```
 
-To generate the interface using the full {ref}`taskgraph<TaskCluster Task-Graph Generation>` instead. This will include tasks that don't run
+To generate the interface using the full {ref}`taskgraph<taskcluster-task-graph-generation>` instead. This will include tasks that don't run
 on mozilla-central.
