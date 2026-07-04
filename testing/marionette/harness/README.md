@@ -1,5 +1,4 @@
-marionette-harness
-==================
+# marionette-harness
 
 Marionette is an automation driver for Mozilla's Gecko engine. It can remotely
 control either the UI or the internal JavaScript of a Gecko platform, such as
@@ -19,8 +18,7 @@ For more information and the repository please checkout:
 - home and docs: https://developer.mozilla.org/en-US/docs/Mozilla/QA/Marionette
 
 
-Example
--------
+## Example
 
 The following command will run the tests as specified via a manifest file, or
 test path, or test folder in Firefox:
