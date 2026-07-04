@@ -1,26 +1,32 @@
 /* Any copyright is dedicated to the Public Domain.
  * http://creativecommons.org/publicdomain/zero/1.0/ */
 
-// This tests the following aspects of the `quick-suggest` ping:
-//
-// * `requestId` should be non-null in the ping when the ping is related to a
-//   suggestion served from Merino
-// * `undefined` and empty-string values should be recorded in the ping as
-//   `null`
+// In the `quick-suggest` ping, `undefined` and empty-string values should be
+// recorded as `null`.
 
 "use strict";
 
-const MERINO_RESULT = {
+// A mock Merino suggestion. It's easier to test with Merino (online)
+// suggestions because remote settings (offline) suggestions originate in the
+// Suggest Rust component, and none of the suggestion fields reported in the
+// ping are `Option`s, so they don't end up being `undefined` in JS.
+const SUGGESTION = {
   // undefined
   impression_url: undefined,
+  custom_details: {
+    amp: {
+      suggestion_id: undefined,
+    },
+  },
+
   // empty string
   advertiser: "",
+  click_url: "",
 
   block_id: 1,
   url: "https://example.com/sponsored",
   title: "Sponsored suggestion",
   keywords: ["sponsored"],
-  click_url: "https://example.com/click",
   iab_category: "22 - Shopping",
   provider: "adm",
   is_sponsored: true,
@@ -38,7 +44,7 @@ add_setup(async function () {
     set: [["browser.urlbar.suggest.quickactions", false]],
   });
   await initQuickSuggestPingTest({
-    merinoSuggestions: [MERINO_RESULT],
+    merinoSuggestions: [SUGGESTION],
   });
 });
 
@@ -48,12 +54,15 @@ add_task(async function () {
 
   await doQuickSuggestPingTest({
     index,
-    suggestion: MERINO_RESULT,
+    suggestion: SUGGESTION,
     impressionOnly: {
+      reportingUrl: null, // impression_url
+      suggestionId: null,
+      advertiser: null,
+
       pingType: CONTEXTUAL_SERVICES_PING_TYPES.QS_IMPRESSION,
       matchType,
-      advertiser: MERINO_RESULT.advertiser,
-      blockId: MERINO_RESULT.block_id.toString(),
+      blockId: SUGGESTION.block_id.toString(),
       improveSuggestExperience: true,
       position,
       suggestedIndex: "-1",
@@ -62,14 +71,16 @@ add_task(async function () {
       source,
       contextId: "",
       isClicked: false,
-      reportingUrl: MERINO_RESULT.impression_url,
     },
     click: [
       {
+        reportingUrl: null, // impression_url
+        suggestionId: null,
+        advertiser: null,
+
         pingType: CONTEXTUAL_SERVICES_PING_TYPES.QS_IMPRESSION,
         matchType,
-        advertiser: MERINO_RESULT.advertiser,
-        blockId: MERINO_RESULT.block_id.toString(),
+        blockId: SUGGESTION.block_id.toString(),
         improveSuggestExperience: true,
         position,
         suggestedIndex: "-1",
@@ -78,13 +89,15 @@ add_task(async function () {
         source,
         contextId: "",
         isClicked: true,
-        reportingUrl: MERINO_RESULT.impression_url,
       },
       {
+        reportingUrl: null, // click_url
+        suggestionId: null,
+        advertiser: null,
+
         pingType: CONTEXTUAL_SERVICES_PING_TYPES.QS_SELECTION,
         matchType,
-        advertiser: MERINO_RESULT.advertiser,
-        blockId: MERINO_RESULT.block_id.toString(),
+        blockId: SUGGESTION.block_id.toString(),
         improveSuggestExperience: true,
         position,
         suggestedIndex: "-1",
@@ -92,7 +105,6 @@ add_task(async function () {
         requestId: MerinoTestUtils.server.response.body.request_id,
         source,
         contextId: "",
-        reportingUrl: MERINO_RESULT.click_url,
       },
     ],
     commands: [
@@ -100,10 +112,13 @@ add_task(async function () {
         command: "dismiss",
         pings: [
           {
+            reportingUrl: null, // impression_url
+            suggestionId: null,
+            advertiser: null,
+
             pingType: CONTEXTUAL_SERVICES_PING_TYPES.QS_IMPRESSION,
             matchType,
-            advertiser: MERINO_RESULT.advertiser,
-            blockId: MERINO_RESULT.block_id.toString(),
+            blockId: SUGGESTION.block_id.toString(),
             improveSuggestExperience: true,
             position,
             suggestedIndex: "-1",
@@ -112,13 +127,15 @@ add_task(async function () {
             source,
             contextId: "",
             isClicked: false,
-            reportingUrl: MERINO_RESULT.impression_url,
           },
           {
+            reportingUrl: null, // not set
+            suggestionId: null,
+            advertiser: null,
+
             pingType: CONTEXTUAL_SERVICES_PING_TYPES.QS_BLOCK,
             matchType,
-            advertiser: MERINO_RESULT.advertiser,
-            blockId: MERINO_RESULT.block_id.toString(),
+            blockId: SUGGESTION.block_id.toString(),
             improveSuggestExperience: true,
             position,
             suggestedIndex: "-1",
@@ -126,7 +143,7 @@ add_task(async function () {
             requestId: MerinoTestUtils.server.response.body.request_id,
             source,
             contextId: "",
-            iabCategory: MERINO_RESULT.iab_category,
+            iabCategory: SUGGESTION.iab_category,
           },
         ],
       },
@@ -134,10 +151,13 @@ add_task(async function () {
         command: "manage",
         pings: [
           {
+            reportingUrl: null, // impression_url
+            suggestionId: null,
+            advertiser: null,
+
             pingType: CONTEXTUAL_SERVICES_PING_TYPES.QS_IMPRESSION,
             matchType,
-            advertiser: MERINO_RESULT.advertiser,
-            blockId: MERINO_RESULT.block_id.toString(),
+            blockId: SUGGESTION.block_id.toString(),
             improveSuggestExperience: true,
             position,
             suggestedIndex: "-1",
@@ -146,7 +166,6 @@ add_task(async function () {
             source,
             contextId: "",
             isClicked: false,
-            reportingUrl: MERINO_RESULT.impression_url,
           },
         ],
       },

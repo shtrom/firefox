@@ -2684,6 +2684,9 @@ UrlbarUtils.RESULT_PAYLOAD_SCHEMA = {
       subtype: {
         type: "string",
       },
+      suggestionId: {
+        type: "string",
+      },
       suggestionObject: {
         type: "object",
       },
