@@ -763,7 +763,7 @@ class TelemetryEvent {
       this.#recordExposures(queryContext);
     }
 
-    const visibleResults = this._controller.view?.visibleResults ?? [];
+    const visibleResults = this.#engagementData.visibleResults;
 
     // Start tracking for a disable event if there was a Suggest result
     // during an engagement or abandonment event.
@@ -803,7 +803,6 @@ class TelemetryEvent {
    *   already started closing. In that case, no telemetry should be recorded.
    */
   #searchSourceToSap(searchSource) {
-    let browserWindow = this._controller.browserWindow;
     if (searchSource === "urlbar_handoff") {
       return "handoff";
     }
@@ -814,6 +813,7 @@ class TelemetryEvent {
     if (searchSource === "smartbar") {
       return "smartbar";
     }
+    let browserWindow = this._controller.browserWindow;
     if (browserWindow.closed) {
       // If the browser window has already started closing, then we bail-out.
       // We would rather return no telemetry than have telemetry with an
@@ -829,6 +829,19 @@ class TelemetryEvent {
       return "urlbar_addonpage";
     }
     return "urlbar";
+  }
+
+  /**
+   * The content-side state the engagement-telemetry recording needs.
+   *
+   * @type {object}
+   */
+  get #engagementData() {
+    return {
+      searchMode: this._controller.input.searchMode,
+      visibleResults: this._controller.view?.visibleResults ?? [],
+      viewIsOpen: this._controller.view?.isOpen ?? false,
+    };
   }
 
   /**
@@ -904,6 +917,7 @@ class TelemetryEvent {
     if (!sap) {
       return;
     }
+    let engagementData = this.#engagementData;
     // The extra_key `location` is optional, but required for the smartbar.
     // TODO (bug 2024631): Support location for all SAPs.
     if (this._controller.sapName === "smartbar" && !location) {
@@ -911,7 +925,7 @@ class TelemetryEvent {
         "Telemetry extra_key `location` is required for smartbar"
       );
     }
-    searchMode = searchMode ?? this._controller.input.searchMode;
+    searchMode = searchMode ?? engagementData.searchMode;
 
     // Distinguish user typed search strings from persisted search terms.
     const interaction = this.#getInteractionType(
@@ -922,7 +936,7 @@ class TelemetryEvent {
       searchMode
     );
     const search_mode = this.#getSearchMode(searchMode);
-    const currentResults = this._controller.view?.visibleResults ?? [];
+    const currentResults = engagementData.visibleResults;
     let numResults = currentResults.length;
     let groups = currentResults
       .map(r => lazy.UrlbarUtils.searchEngagementTelemetryGroup(r))
@@ -953,10 +967,7 @@ class TelemetryEvent {
           selected_result = `action_${actionKey}`;
         }
 
-        if (
-          selected_result === "input_field" &&
-          !this._controller.view?.isOpen
-        ) {
+        if (selected_result === "input_field" && !engagementData.viewIsOpen) {
           numResults = 0;
           groups = "";
           results = "";
