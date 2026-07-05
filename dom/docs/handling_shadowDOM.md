@@ -62,14 +62,16 @@ they are not a descendant of a `ShadowRoot`.
 
 Gecko attaches internally created `ShadowRoot` to some specific elements.
 For example, `<details>`, `<video>` and SVG `<use>`. You can check it with
-`ShadowRoot::IsUAShadowRootSlow()` (returning `true` means it's a UA shadow's
-`ShadowRoot`). Often the children of the UA shadow host element will be assigned
-to one or more `<slot>`s in the shadow. Therefore, they can be selected by the
-user. Additionally, [Selection API](https://w3c.github.io/selection-api/) can
-specify any points in the host element as a range boundary. However, from the
-shadow including DOM point of view, children should be treated as replaced by
-the children of the UA `ShadowRoot`. Therefore, when we handle selection
-including DOM ranges, we need to ignore the UA shadow.
+`ShadowRoot::IsUAWidget()` except for the SVG `<use>` case (This exception is
+not problem because we treat the UA shadow for SVG `<use>` as a part of the
+flat tree for selection). Often the children of the UA shadow host element will
+be assigned to one or more `<slot>`s in the shadow. Therefore, they can be
+selected by the user. Additionally,
+[Selection API](https://w3c.github.io/selection-api/) can specify any points in
+the host element as a range boundary. However, from the shadow including DOM
+point of view, children should be treated as replaced by the children of the UA
+`ShadowRoot`. Therefore, when we handle selection including DOM ranges, we need
+to ignore the UA shadow for a UA widget.
 
 ## Unassigned node
 
@@ -189,9 +191,10 @@ is not a part of the [flattened tree](#flattened-tree).
 ### TreeKind::FlatForSelection
 
 Handle [the flattened tree](#flattened-tree) except the
-[UA shadow tree](#ua-shadow-tree)s. The assigned nodes of `<slot>` elements are
-treated as children of the `<slot>` element (if a `<slot>` does not have
-assigned node, it's treated as a normal element which may have some children).
+[UA shadow tree](#ua-shadow-tree)s except for the SVG `<use>` element.
+The assigned nodes of `<slot>` elements are treated as children of the `<slot>`
+element (if a `<slot>` does not have assigned node, it's treated as a normal
+element which may have some children).
 
 The normal flattened tree does not contain
 [non-flattened nodes](#non-flattened-node). From Selection API point of view,

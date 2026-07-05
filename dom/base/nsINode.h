@@ -359,13 +359,13 @@ enum class TreeKind : uint8_t {
   // Handle the flattened tree for Selection. Selection API accepts any nodes in
   // the DOM as a container of a range boundary. I.e., even if a node is not
   // part of the flattened tree. On the other hand, shadow for UA shadow DOM for
-  // elements such as <details>, <video>, <audio> and SVG <use> should not be
-  // treated as a shadow. Therefore, their content in the DOM are treated as-is
-  // and the nodes only in the UA shadow DOM are treated as disconnected
-  // shadow's content from the parent point of view. I.e., DOM APIs should not
-  // cross the shadow DOM boundary from the parent. On the other hand, they may
-  // be treated as connected from the child point of view. E.g., users can
-  // select the default <summary> text of a <details>.
+  // elements such as <details>, <video> and <audio> should not be treated as a
+  // shadow. Therefore, their content in the DOM are treated as-is and the nodes
+  // only in the UA shadow DOM are treated as disconnected shadow's content from
+  // the parent point of view. I.e., DOM APIs should not cross the shadow DOM
+  // boundary from the parent. On the other hand, they may be treated as
+  // connected from the child point of view. E.g., users can select the default
+  // <summary> text of a <details>.
   // FYI: This is a good TreeKind for DOM Selection that may cross the shadow
   // DOM boundaries.
   FlatForSelection,

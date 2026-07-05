@@ -1969,27 +1969,38 @@ nsresult nsHTMLCopyEncoder::PromoteRange(nsRange* inRange) {
     return NS_ERROR_UNEXPECTED;
   }
   const RawRangeBoundary startRef = [&]() -> RawRangeBoundary {
-    const auto& ref = inRange->MayCrossShadowBoundaryStartRef();
-    // XXX If GetTreeKind() returns TreeKind::DOM but ref.GetTreeKind() returns
-    // TreeKind::FlatForSelection, what should we do?  The result may cross the
-    // shadow DOM boundaries even though the our user do not want that.
-    if (GetTreeKind() == TreeKind::FlatForSelection &&
-        ref.GetTreeKind() == TreeKind::DOM) {
-      return ref.AsRaw().AsRangeBoundaryInFlatTreeOrNonFlattenedNode(
-          inRange->Collapsed() ? RangeBoundaryFor::Collapsed
-                               : RangeBoundaryFor::Start);
+    if (GetTreeKind() == TreeKind::DOM) {
+      // XXX If GetTreeKind() returns TreeKind::DOM but
+      // inRange->MayCrossShadowBoundaryStartRef().GetTreeKind() returns
+      // TreeKind::FlatForSelection, what should we do?  The result may cross
+      // the shadow DOM boundaries even though the our user do not want that.
+      return inRange->MayCrossShadowBoundaryStartRef().AsRaw();
     }
-    return ref.AsRaw();
+    MOZ_ASSERT(GetTreeKind() == TreeKind::FlatForSelection);
+    const RangeBoundaryFor startBoundaryIsFor =
+        inRange->Collapsed() ? RangeBoundaryFor::Collapsed
+                             : RangeBoundaryFor::Start;
+    // Ensure the range boundary is in a flattened node.
+    return inRange->MayCrossShadowBoundaryStartRef()
+        .AsRaw()
+        .GetRangeBoundaryInFlatTree(startBoundaryIsFor);
   }();
   const RawRangeBoundary endRef = [&]() -> RawRangeBoundary {
-    const auto& ref = inRange->MayCrossShadowBoundaryEndRef();
-    if (GetTreeKind() == TreeKind::FlatForSelection &&
-        ref.GetTreeKind() == TreeKind::DOM) {
-      return ref.AsRaw().AsRangeBoundaryInFlatTreeOrNonFlattenedNode(
-          inRange->Collapsed() ? RangeBoundaryFor::Collapsed
-                               : RangeBoundaryFor::End);
+    if (GetTreeKind() == TreeKind::DOM) {
+      // XXX If GetTreeKind() returns TreeKind::DOM but
+      // inRange->MayCrossShadowBoundaryEndRef().GetTreeKind() returns
+      // TreeKind::FlatForSelection, what should we do?  The result may cross
+      // the shadow DOM boundaries even though the our user do not want that.
+      return inRange->MayCrossShadowBoundaryEndRef().AsRaw();
     }
-    return ref.AsRaw();
+    MOZ_ASSERT(GetTreeKind() == TreeKind::FlatForSelection);
+    const RangeBoundaryFor endBoundaryIsFor = inRange->Collapsed()
+                                                  ? RangeBoundaryFor::Collapsed
+                                                  : RangeBoundaryFor::End;
+    // Ensure the range boundary is in a flattened node.
+    return inRange->MayCrossShadowBoundaryEndRef()
+        .AsRaw()
+        .GetRangeBoundaryInFlatTree(endBoundaryIsFor);
   }();
   MOZ_ASSERT(startRef.GetTreeKind() == endRef.GetTreeKind());
   const nsINode* const commonAncestor =

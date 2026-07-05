@@ -459,20 +459,33 @@ bool AbstractRange::IsInSelection(const Selection& aSelection) const {
   return mSelections.Contains(&aSelection);
 }
 
-void AbstractRange::RegisterSelection(Selection& aSelection) {
+nsresult AbstractRange::RegisterSelection(Selection& aSelection) {
   if (IsInSelection(aSelection)) {
-    return;
+    return NS_OK;
   }
-  bool isFirstSelection = mSelections.IsEmpty();
+  const Maybe<nsINode*> commonAncestor = [&]() -> Maybe<nsINode*> {
+    const bool isFirstSelection = mSelections.IsEmpty();
+    const bool isValidRange = !IsStaticRange() || AsStaticRange()->IsValid();
+    if (isFirstSelection && !mRegisteredClosestCommonInclusiveAncestor &&
+        isValidRange) {
+      return Some(GetClosestCommonInclusiveAncestor(
+          AllowRangeCrossShadowBoundary::Yes));
+    }
+    return Nothing{};
+  }();
+  if (commonAncestor.isSome() && NS_WARN_IF(!commonAncestor.value()))
+      [[unlikely]] {
+    NS_WARNING(
+        fmt::format("start:{}", MayCrossShadowBoundaryStartRef()).c_str());
+    NS_WARNING(fmt::format("end:  {}", MayCrossShadowBoundaryEndRef()).c_str());
+    MOZ_ASSERT_UNREACHABLE("The boundaries must be connected");
+    return NS_ERROR_FAILURE;
+  }
   mSelections.AppendElement(&aSelection);
-  const bool isValidRange = !IsStaticRange() || AsStaticRange()->IsValid();
-  if (isFirstSelection && !mRegisteredClosestCommonInclusiveAncestor &&
-      isValidRange) {
-    nsINode* commonAncestor =
-        GetClosestCommonInclusiveAncestor(AllowRangeCrossShadowBoundary::Yes);
-    MOZ_ASSERT(commonAncestor, "unexpected disconnected nodes");
-    RegisterClosestCommonInclusiveAncestor(commonAncestor);
+  if (commonAncestor.isSome()) {
+    RegisterClosestCommonInclusiveAncestor(commonAncestor.value());
   }
+  return NS_OK;
 }
 
 const nsTArray<WeakPtr<Selection>>& AbstractRange::GetSelections() const {

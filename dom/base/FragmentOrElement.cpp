@@ -162,7 +162,7 @@ HTMLSlotElement* nsIContent::GetAssignedSlotForSelection() const {
     return nullptr;
   }
   ShadowRoot* const containingShadowRoot = assignedSlot->GetContainingShadow();
-  return containingShadowRoot && !containingShadowRoot->IsUAShadowRootSlow()
+  return containingShadowRoot && !containingShadowRoot->IsUAWidget()
              ? assignedSlot
              : nullptr;
 }

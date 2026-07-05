@@ -94,9 +94,9 @@ inline void nsIContent::SetPrimaryFrame(nsIFrame* aFrame) {
  * host but is not assigned to any <slot>, or it is a child node of a <slot>
  * which has some assigned nodes. The reason is, Selection API accepts any node
  * in the DOM as the container. On the other hand, UA shadow tree such as a
- * shadow for <details>, <video>, <audio> or SVG <use> should not be treated as
- * a shadow. Therefore, if the parent node is a shadow root of a UA shadow DOM,
- * return the shadow root instead of the host.
+ * shadow for <details>, <video> or <audio> should not be treated as a shadow.
+ * Therefore, if the parent node is a shadow root of a UA shadow DOM, return the
+ * shadow root instead of the host.
  */
 template <nsINode::FlattenedParentType aType>
 static inline nsINode* GetFlattenedTreeParentNode(const nsINode* aNode) {
@@ -152,12 +152,12 @@ static inline nsINode* GetFlattenedTreeParentNode(const nsINode* aNode) {
     if (auto* slot = mozilla::dom::HTMLSlotElement::FromNode(parentAsContent)) {
       if constexpr (aType == nsINode::eForSelection) {
         // Even if the parent node is a <slot> in any shadow (for either content
-        // or UA such as <details>, <video>, <audio> or SVG <use>), we can
-        // return the <slot> as parent for nsINode::eForSelection because any
-        // node in the DOM can be a container of a range boundary. E.g., even if
-        // the <slot> has some assigned nodes, the fallback content can be
-        // selected by the Selection API. So, we should not treat the unused
-        // fallback content as disconnected from the flattened tree.
+        // or UA such as <details>, <video>, <audio>, we can return the <slot>
+        // as parent for nsINode::eForSelection because any node in the DOM can
+        // be a container of a range boundary. E.g., even if the <slot> has some
+        // assigned nodes, the fallback content can be selected by the Selection
+        // API. So, we should not treat the unused fallback content as
+        // disconnected from the flattened tree.
         return slot;
       } else {
         // If the parent is a <slot> and its assigned nodes list is empty, aNode
@@ -169,8 +169,22 @@ static inline nsINode* GetFlattenedTreeParentNode(const nsINode* aNode) {
 
     if (auto* const shadowRoot =
             mozilla::dom::ShadowRoot::FromNode(parentAsContent)) {
-      if (aType != nsINode::eForSelection ||
-          !shadowRoot->IsUAShadowRootSlow()) {
+      if constexpr (aType != nsINode::eForSelection) {
+        return shadowRoot->GetHost();
+      } else {
+        // If the parent is a shadow root for UA widget, we shouldn't cross the
+        // boundary with a selection range. Therefore, we should treat the UA
+        // shadow root as the root.
+        if (shadowRoot->IsUAWidget()) {
+          return shadowRoot;
+        }
+        // Even if the shadow root is not for a UA widget, the shadow root may
+        // be a UA shadow root. Currently, the only case is SVG <use>. It
+        // creates a closed shadow to clone the referring elements. We want to
+        // treat the shadow is flattened in the flat tree for selection.
+        MOZ_ASSERT_IF(shadowRoot->GetHost() &&
+                          !shadowRoot->GetHost()->CanAttachShadowDOM(),
+                      shadowRoot->GetHost()->IsSVGElement(nsGkAtoms::use));
         return shadowRoot->GetHost();
       }
     }
@@ -270,7 +284,7 @@ inline mozilla::dom::ShadowRoot* nsINode::GetContainingShadowForSelection()
   }
   mozilla::dom::ShadowRoot* const shadowRoot =
       AsContent()->GetContainingShadow();
-  return shadowRoot && !shadowRoot->IsUAShadowRootSlow() ? shadowRoot : nullptr;
+  return shadowRoot && !shadowRoot->IsUAWidget() ? shadowRoot : nullptr;
 }
 
 inline mozilla::dom::ShadowRoot* nsINode::GetClosestShadowRootInFlattenedTree()
@@ -296,7 +310,7 @@ nsINode::GetClosestShadowRootInFlattenedTreeForSelection() const {
        node = node->GetParentNode()) {
     // If this node is an inclusive descendant of a shadow root, return it.
     if (auto* const shadowRoot = mozilla::dom::ShadowRoot::FromNode(node)) {
-      if (!shadowRoot->IsUAShadowRootSlow()) {
+      if (!shadowRoot->IsUAWidget()) {
         return shadowRoot;
       }
     }

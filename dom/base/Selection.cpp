@@ -1402,8 +1402,11 @@ nsresult Selection::StyledRanges::AddRangeAndIgnoreOverlaps(
 
   // a common case is that we have no ranges yet
   if (mRanges.Length() == 0) {
+    if (NS_WARN_IF(
+            NS_FAILED(aRange->RegisterSelection(MOZ_KnownLive(mSelection))))) {
+      return NS_ERROR_FAILURE;
+    }
     mRanges.AppendElement(StyledRange(aRange));
-    aRange->RegisterSelection(MOZ_KnownLive(mSelection));
 #ifdef ACCESSIBILITY
     a11y::SelectionManager::SelectionRangeChanged(mSelection.GetType(),
                                                   *aRange);
@@ -1431,8 +1434,11 @@ nsresult Selection::StyledRanges::AddRangeAndIgnoreOverlaps(
     startIndex = *maybeStartIndex;
   }
 
+  if (NS_WARN_IF(
+          NS_FAILED(aRange->RegisterSelection(MOZ_KnownLive(mSelection))))) {
+    return NS_ERROR_FAILURE;
+  }
   mRanges.InsertElementAt(startIndex, StyledRange(aRange));
-  aRange->RegisterSelection(MOZ_KnownLive(mSelection));
 #ifdef ACCESSIBILITY
   a11y::SelectionManager::SelectionRangeChanged(mSelection.GetType(), *aRange);
 #endif
@@ -1448,10 +1454,13 @@ nsresult Selection::StyledRanges::MaybeAddRangeAndTruncateOverlaps(
 
   // a common case is that we have no ranges yet
   if (mRanges.Length() == 0) {
+    if (NS_WARN_IF(
+            NS_FAILED(aRange->RegisterSelection(MOZ_KnownLive(mSelection))))) {
+      return NS_ERROR_FAILURE;
+    }
     // XXX(Bug 1631371) Check if this should use a fallible operation as it
     // pretended earlier.
     mRanges.AppendElement(StyledRange(aRange));
-    aRange->RegisterSelection(MOZ_KnownLive(mSelection));
 #ifdef ACCESSIBILITY
     a11y::SelectionManager::SelectionRangeChanged(mSelection.GetType(),
                                                   *aRange);
@@ -1499,11 +1508,14 @@ nsresult Selection::StyledRanges::MaybeAddRangeAndTruncateOverlaps(
 #endif
 
   if (startIndex == endIndex) {
+    if (NS_WARN_IF(
+            NS_FAILED(aRange->RegisterSelection(MOZ_KnownLive(mSelection))))) {
+      return NS_ERROR_FAILURE;
+    }
     // The new range doesn't overlap any existing ranges
     // XXX(Bug 1631371) Check if this should use a fallible operation as it
     // pretended earlier.
     mRanges.InsertElementAt(startIndex, StyledRange(aRange));
-    aRange->RegisterSelection(MOZ_KnownLive(mSelection));
     aOutIndex->emplace(startIndex);
     return NS_OK;
   }
@@ -1542,17 +1554,20 @@ nsresult Selection::StyledRanges::MaybeAddRangeAndTruncateOverlaps(
 
   temp.InsertElementAt(insertionPoint, StyledRange(aRange));
 
-  // Merge the leftovers back in to mRanges
-  mRanges.InsertElementsAt(startIndex, temp);
-
   for (uint32_t i = 0; i < temp.Length(); ++i) {
     if (temp[i].mRange->IsDynamicRange()) {
-      MOZ_KnownLive(temp[i].mRange->AsDynamicRange())
-          ->RegisterSelection(MOZ_KnownLive(mSelection));
+      if (NS_WARN_IF(
+              NS_FAILED(MOZ_KnownLive(temp[i].mRange->AsDynamicRange())
+                            ->RegisterSelection(MOZ_KnownLive(mSelection))))) {
+        return NS_ERROR_FAILURE;
+      }
       // `MOZ_KnownLive` is required because of
       // https://bugzilla.mozilla.org/show_bug.cgi?id=1622253.
     }
   }
+
+  // Merge the leftovers back in to mRanges
+  mRanges.InsertElementsAt(startIndex, temp);
 
   aOutIndex->emplace(startIndex + insertionPoint);
   return NS_OK;
@@ -1706,14 +1721,16 @@ nsresult Selection::GetDynamicRangesForIntervalArray(
   return NS_OK;
 }
 
-void Selection::StyledRanges::ReorderRangesIfNecessary() {
+nsresult Selection::StyledRanges::ReorderRangesIfNecessary() {
   const Document* doc = mSelection.GetDocument();
   if (!doc) {
-    return;
+    // XXX Should we return error? But it'd cause new exception in JS in the
+    // edge case.
+    return NS_OK;
   }
   if (mRanges.Length() < 2 && mInvalidStaticRanges.IsEmpty()) {
     // There is nothing to be reordered.
-    return;
+    return NS_OK;
   }
   const int32_t currentDocumentGeneration = doc->GetGeneration();
   const bool domMutationHasHappened =
@@ -1736,7 +1753,10 @@ void Selection::StyledRanges::ReorderRangesIfNecessary() {
       if (iter->mRange->AsStaticRange()->IsValid()) {
         mRanges.AppendElement(*iter);
         if (!iter->mRange->IsInSelection(mSelection)) {
-          iter->mRange->RegisterSelection(mSelection);
+          if (NS_WARN_IF(
+                  NS_FAILED(iter->mRange->RegisterSelection(mSelection)))) {
+            return NS_ERROR_FAILURE;
+          }
         }
         iter = mInvalidStaticRanges.RemoveElementAt(iter);
       } else {
@@ -1791,6 +1811,7 @@ void Selection::StyledRanges::ReorderRangesIfNecessary() {
     mDocumentGeneration = currentDocumentGeneration;
     mRangesMightHaveChanged = false;
   }
+  return NS_OK;
 }
 
 nsresult Selection::StyledRanges::GetIndicesForInterval(
@@ -1808,7 +1829,9 @@ nsresult Selection::StyledRanges::GetIndicesForInterval(
     return NS_ERROR_INVALID_POINTER;
   }
 
-  ReorderRangesIfNecessary();
+  if (NS_WARN_IF(NS_FAILED(ReorderRangesIfNecessary()))) {
+    return NS_ERROR_FAILURE;
+  }
 
   if (mRanges.Length() == 0) {
     return NS_OK;

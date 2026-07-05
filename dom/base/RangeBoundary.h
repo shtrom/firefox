@@ -829,12 +829,12 @@ class RangeBoundaryBase {
     // aChild cannot be a range boundary in the flat tree because all children
     // of the parent node is replaced with the shadow root in the flat tree
     // unless assigned to a slot.
-    if (!shadowRoot->IsUAShadowRootSlow()) {
+    if (!shadowRoot->IsUAWidget()) {
       return nullptr;
     }
-    // If aChild is a child of a ShadowRoot which is for <use> or a UA widget,
-    // we want to put it into the host because the ShadowRoot is a native one,
-    // not visible from the web.
+    // If aChild is a child of a ShadowRoot which is for a UA widget, we want to
+    // put it into the host because the ShadowRoot is a native one, not visible
+    // from the web.
     return shadowRoot->GetHost();
   }
 

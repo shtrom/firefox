@@ -1135,7 +1135,7 @@ class Selection final : public nsSupportsWeakReference,
     // order. This method will also move invalid `StaticRange`s into
     // `mInvalidStaticRanges` (and previously-invalid-now-valid-again
     // `StaticRange`s back into `mRanges`).
-    void ReorderRangesIfNecessary();
+    [[nodiscard]] nsresult ReorderRangesIfNecessary();
 
     // These are the ranges inside this selection. They are kept sorted in order
     // of DOM start position.
