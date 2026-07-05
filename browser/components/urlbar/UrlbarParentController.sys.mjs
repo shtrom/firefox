@@ -834,13 +834,31 @@ class TelemetryEvent {
   /**
    * The content-side state the engagement-telemetry recording needs.
    *
-   * @type {object}
+   * @type {{searchMode: object, visibleResults: UrlbarResult[], viewIsOpen: boolean, searchSource: string}}
    */
   get #engagementData() {
     return {
       searchMode: this._controller.input.searchMode,
       visibleResults: this._controller.view?.visibleResults ?? [],
       viewIsOpen: this._controller.view?.isOpen ?? false,
+      searchSource: this._controller.input.getSearchSource(),
+    };
+  }
+
+  /**
+   * The smartbar-only telemetry fields, read fresh from the input.
+   *
+   * @type {{chatId: string, intent: string, model: string}}
+   */
+  get #smartbarData() {
+    // Only read when the SAP is `smartbar`, so the input is a SmartbarInput.
+    const input = /** @type {SmartbarInput} */ (
+      /** @type {unknown} */ (this._controller.input)
+    );
+    return {
+      chatId: input.conversationTelemetryInfo?.chat_id ?? "",
+      intent: input.smartbarAction ?? "",
+      model: input.modelName ?? "",
     };
   }
 
@@ -1111,15 +1129,7 @@ class TelemetryEvent {
     if (!isSmartbar) {
       return null;
     }
-    // If SAP is `smartbar` we can safely cast to type `SmartbarInput`.
-    const input = /** @type {SmartbarInput} */ (
-      /** @type {unknown} */ (this._controller.input)
-    );
-    return {
-      chatId: input.conversationTelemetryInfo?.chat_id ?? "",
-      intent: input.smartbarAction ?? "",
-      model: input.modelName ?? "",
-    };
+    return this.#smartbarData;
   }
 
   /**
@@ -1162,7 +1172,8 @@ class TelemetryEvent {
     if (!exposures.length) {
       return;
     }
-    let sap = this.#searchSourceToSap(this._controller.input.getSearchSource());
+    let { searchSource, visibleResults } = this.#engagementData;
+    let sap = this.#searchSourceToSap(searchSource);
     if (!sap) {
       // Window started closing.
       return;
@@ -1178,7 +1189,7 @@ class TelemetryEvent {
 
         let endResults = result.isHiddenExposure
           ? queryContext.results
-          : this._controller.view?.visibleResults;
+          : visibleResults;
         terminal = endResults?.includes(result);
       }
 
