@@ -960,9 +960,11 @@
   --urlbarView-icon-border-radius: var(--urlbarView-top-pick-icon-border-radius);
 }
 
-.urlbarView-row[type$="_adm_sponsored"][is-top-pick] {
-  --urlbarView-icon-size: var(--urlbarView-rich-search-suggestion-icon-size);
-  --urlbarView-icon-border-radius: var(--urlbarView-rich-search-suggestion-icon-border-radius);
+@media not -moz-pref("browser.urlbar.quicksuggest.ampTopPickUseNovaIconSize") {
+  .urlbarView-row[type$="_adm_sponsored"][is-top-pick] {
+    --urlbarView-icon-size: var(--urlbarView-rich-search-suggestion-icon-size);
+    --urlbarView-icon-border-radius: var(--urlbarView-rich-search-suggestion-icon-border-radius);
+  }
 }
 
 .urlbarView-row[type$="_amo"] {
