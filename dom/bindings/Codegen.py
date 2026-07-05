@@ -19905,13 +19905,13 @@ class CGNativeMember(ClassMethod):
                 # No need for a third element in the isMember case
                 return "nsString", None, None
             # Outparam
-            return "void", "", "aRetVal = ${declName};\n"
+            return "void", "", "aRetVal = std::move(${declName});\n"
         if type.isByteString() or type.isUTF8String():
             if isMember:
                 # No need for a third element in the isMember case
                 return "nsCString", None, None
             # Outparam
-            return "void", "", "aRetVal = ${declName};\n"
+            return "void", "", "aRetVal = std::move(${declName});\n"
         if type.isEnum():
             enumName = type.unroll().inner.identifier.name
             if type.nullable():
