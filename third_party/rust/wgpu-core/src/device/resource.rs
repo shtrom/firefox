@@ -27,8 +27,7 @@ use crate::{
     api_log,
     binding_model::{
         self, BindGroup, BindGroupLateBufferBindingInfo, BindGroupLayout,
-        BindGroupLayoutEntryError, BindGroupLayoutState, CreateBindGroupError,
-        CreateBindGroupLayoutError,
+        BindGroupLayoutEntryError, CreateBindGroupError, CreateBindGroupLayoutError,
     },
     command, conv,
     device::{
@@ -48,8 +47,8 @@ use crate::{
     present,
     resource::{
         self, Buffer, ExternalTexture, Fallible, Labeled, ParentDevice, QuerySet,
-        RawResourceAccess, ResourceState, Sampler, StagingBuffer, Texture, TextureView,
-        TextureViewNotRenderableReason, TextureViewState, Tlas, TrackingData,
+        RawResourceAccess, Sampler, StagingBuffer, Texture, TextureView,
+        TextureViewNotRenderableReason, Tlas, TrackingData,
     },
     resource_log,
     snatch::{SnatchGuard, SnatchLock, Snatchable},
@@ -61,8 +60,8 @@ use crate::{
 };
 
 use super::{
-    queue::Queue, surface_config::validate_surface_configuration, DeviceDescriptor, DeviceError,
-    DeviceLostClosure, UserClosures, ENTRYPOINT_FAILURE_ERROR, ZERO_BUFFER_SIZE,
+    queue::Queue, DeviceDescriptor, DeviceError, DeviceLostClosure, UserClosures,
+    ENTRYPOINT_FAILURE_ERROR, ZERO_BUFFER_SIZE,
 };
 
 #[cfg(supports_64bit_atomics)]
@@ -733,11 +732,7 @@ impl Device {
                         let Some(view) = view.upgrade() else {
                             continue;
                         };
-                        let Ok(view_state) = view.state() else {
-                            continue;
-                        };
-                        let Some(raw_view) =
-                            view_state.raw.snatch(&mut self.snatchable_lock.write())
+                        let Some(raw_view) = view.raw.snatch(&mut self.snatchable_lock.write())
                         else {
                             continue;
                         };
@@ -1378,7 +1373,7 @@ impl Device {
         }
     }
 
-    fn create_texture_inner(
+    pub fn create_texture(
         self: &Arc<Self>,
         desc: &resource::TextureDescriptor,
     ) -> Result<Arc<Texture>, resource::CreateTextureError> {
@@ -1403,16 +1398,6 @@ impl Device {
                 return Err(CreateTextureError::InvalidDepthDimension(
                     desc.dimension,
                     desc.format,
-                ));
-            }
-            // Transient textures can only be 2D
-            if desc
-                .usage
-                .contains(wgt::TextureUsages::TRANSIENT_ATTACHMENT)
-            {
-                return Err(CreateTextureError::InvalidDimensionUsages(
-                    wgt::TextureUsages::TRANSIENT_ATTACHMENT,
-                    desc.dimension,
                 ));
             }
         }
@@ -1518,31 +1503,19 @@ impl Device {
             }
         }
 
-        if desc
-            .usage
-            .contains(wgt::TextureUsages::TRANSIENT_ATTACHMENT)
-        {
-            if desc.usage
-                != (wgt::TextureUsages::TRANSIENT_ATTACHMENT
-                    | wgt::TextureUsages::RENDER_ATTACHMENT)
-            {
-                return Err(CreateTextureError::InvalidTransientTextureUsage(desc.usage));
-            }
-
-            if desc.mip_level_count != 1 {
-                return Err(CreateTextureError::InvalidTransientTextureMipLevelCount(
-                    desc.mip_level_count,
+        if desc.usage.contains(wgt::TextureUsages::TRANSIENT) {
+            if !desc.usage.contains(wgt::TextureUsages::RENDER_ATTACHMENT) {
+                return Err(CreateTextureError::InvalidUsage(
+                    wgt::TextureUsages::TRANSIENT,
                 ));
             }
-
-            if desc.size.depth_or_array_layers != 1 {
-                return Err(CreateTextureError::InvalidTransientTextureLayerCount(
-                    desc.size.depth_or_array_layers,
+            let extra_usage =
+                desc.usage - wgt::TextureUsages::TRANSIENT - wgt::TextureUsages::RENDER_ATTACHMENT;
+            if !extra_usage.is_empty() {
+                return Err(CreateTextureError::IncompatibleUsage(
+                    wgt::TextureUsages::TRANSIENT,
+                    extra_usage,
                 ));
-            }
-
-            if !desc.view_formats.is_empty() {
-                return Err(CreateTextureError::InvalidTransientTextureViewFormats);
             }
         }
 
@@ -1753,53 +1726,7 @@ impl Device {
         Ok(texture)
     }
 
-    pub fn create_texture(
-        self: &Arc<Self>,
-        desc: &resource::TextureDescriptor,
-    ) -> (Arc<Texture>, Option<resource::CreateTextureError>) {
-        let (texture, error) = match self.create_texture_inner(desc) {
-            Ok(texture) => (texture, None),
-            Err(e) => {
-                let texture = Texture::invalid(self, desc);
-                (Arc::new(texture), Some(e))
-            }
-        };
-        api_log!(
-            "Device::create_texture({desc:?}) -> {:?}",
-            Arc::as_ptr(&texture)
-        );
-
-        #[cfg(feature = "trace")]
-        if let Some(ref mut trace) = *self.trace.lock() {
-            use crate::device::trace::IntoTrace as _;
-
-            trace.add(trace::Action::CreateTexture(
-                texture.to_trace(),
-                desc.clone(),
-            ));
-        }
-        (texture, error)
-    }
-
-    /// Creates a texture that is guaranteed to be invalid
-    pub fn create_texture_error(
-        self: &Arc<Self>,
-        desc: &resource::TextureDescriptor,
-    ) -> Arc<Texture> {
-        let texture = Arc::new(Texture::invalid(self, desc));
-        #[cfg(feature = "trace")]
-        if let Some(ref mut trace) = *self.trace.lock() {
-            use crate::device::trace::IntoTrace as _;
-
-            trace.add(trace::Action::CreateTextureError(
-                texture.to_trace(),
-                desc.clone(),
-            ));
-        }
-        texture
-    }
-
-    fn create_texture_view_inner(
+    pub fn create_texture_view(
         self: &Arc<Self>,
         texture: &Arc<Texture>,
         desc: &resource::TextureViewDescriptor,
@@ -1808,7 +1735,7 @@ impl Device {
 
         let snatch_guard = texture.device.snatchable_lock.read();
 
-        let texture_raw = texture.try_inner(&snatch_guard)?.raw();
+        let texture_raw = texture.try_raw(&snatch_guard)?;
 
         // resolve TextureViewDescriptor defaults
         // https://gpuweb.github.io/gpuweb/#abstract-opdef-resolving-gputextureviewdescriptor-defaults
@@ -1860,21 +1787,6 @@ impl Device {
             if usage.is_empty() {
                 texture.desc.usage
             } else if texture.desc.usage.contains(usage) {
-                // Transient texture usage subsetting is disallowed
-                if texture
-                    .desc
-                    .usage
-                    .contains(wgt::TextureUsages::TRANSIENT_ATTACHMENT)
-                    && texture.desc.usage != usage
-                {
-                    return Err(
-                        resource::CreateTextureViewError::InvalidTransientTextureViewUsage {
-                            texture: texture.desc.usage,
-                            view: usage,
-                        },
-                    );
-                }
-
                 usage
             } else {
                 return Err(resource::CreateTextureViewError::InvalidTextureViewUsage {
@@ -2131,10 +2043,7 @@ impl Device {
         };
 
         let view = TextureView {
-            state: ResourceState::Valid(TextureViewState {
-                raw: Snatchable::new(raw),
-                render_extent,
-            }),
+            raw: Snatchable::new(raw),
             parent: texture.clone(),
             device: self.clone(),
             desc: resource::HalTextureViewDescriptor {
@@ -2145,6 +2054,7 @@ impl Device {
                 range: resolved_range,
             },
             format_features: texture.format_features,
+            render_extent,
             samples: texture.desc.sample_count,
             selector,
             label: desc.label.to_string(),
@@ -2158,36 +2068,6 @@ impl Device {
         }
 
         Ok(view)
-    }
-
-    pub fn create_texture_view(
-        self: &Arc<Self>,
-        texture: &Arc<Texture>,
-        desc: &resource::TextureViewDescriptor,
-    ) -> (Arc<TextureView>, Option<resource::CreateTextureViewError>) {
-        let (view, error) = match self.create_texture_view_inner(texture, desc) {
-            Ok(view) => (view, None),
-            Err(e) => (TextureView::invalid(self, texture, desc), Some(e)),
-        };
-
-        api_log!(
-            "Texture::create_view({:?}) -> {:?}",
-            Arc::as_ptr(texture),
-            Arc::as_ptr(&view)
-        );
-
-        #[cfg(feature = "trace")]
-        if let Some(ref mut trace) = *self.trace.lock() {
-            use crate::device::trace;
-            use trace::IntoTrace as _;
-            trace.add(trace::Action::CreateTextureView {
-                id: view.to_trace(),
-                parent: texture.to_trace(),
-                desc: desc.clone(),
-            });
-        }
-
-        (view, error)
     }
 
     pub fn create_external_texture(
@@ -2698,29 +2578,6 @@ impl Device {
     pub fn create_bind_group_layout(
         self: &Arc<Self>,
         desc: &binding_model::BindGroupLayoutDescriptor,
-    ) -> (Arc<BindGroupLayout>, Option<CreateBindGroupLayoutError>) {
-        let (bgl, error) = match self.create_bind_group_layout_inner(desc) {
-            Ok(layout) => (layout, None),
-            Err(e) => (
-                BindGroupLayout::invalid(self, desc.label.to_string()),
-                Some(e),
-            ),
-        };
-        #[cfg(feature = "trace")]
-        if let Some(ref mut trace) = *self.trace.lock() {
-            use crate::device::trace::IntoTrace;
-
-            trace.add(trace::Action::CreateBindGroupLayout(
-                bgl.to_trace(),
-                desc.clone(),
-            ));
-        }
-        (bgl, error)
-    }
-
-    fn create_bind_group_layout_inner(
-        self: &Arc<Device>,
-        desc: &binding_model::BindGroupLayoutDescriptor,
     ) -> Result<Arc<BindGroupLayout>, CreateBindGroupLayoutError> {
         self.check_is_valid()?;
 
@@ -2728,7 +2585,7 @@ impl Device {
 
         let bgl_result = self.bgl_pool.get_or_init(entry_map, |entry_map| {
             let bgl =
-                self.create_bind_group_layout_impl(&desc.label, entry_map, bgl::Origin::Pool)?;
+                self.create_bind_group_layout_internal(&desc.label, entry_map, bgl::Origin::Pool)?;
             bgl.exclusive_pipeline
                 .set(binding_model::ExclusivePipeline::None)
                 .unwrap();
@@ -2741,7 +2598,7 @@ impl Device {
         }
     }
 
-    fn create_bind_group_layout_impl(
+    fn create_bind_group_layout_internal(
         self: &Arc<Self>,
         label: &crate::Label,
         entry_map: bgl::EntryMap,
@@ -2988,7 +2845,7 @@ impl Device {
         // If a single bind group layout violates limits, the pipeline layout is
         // definitely going to violate limits too, lets catch it now.
         count_validator
-            .validate(&self.limits, self.instance_flags)
+            .validate(&self.limits)
             .map_err(CreateBindGroupLayoutError::TooManyBindings)?;
 
         // Validate that binding arrays don't conflict with dynamic offsets.
@@ -2998,14 +2855,12 @@ impl Device {
             .map_err(|e| self.handle_hal_error(e))?;
 
         let bgl = BindGroupLayout {
-            state: ResourceState::Valid(BindGroupLayoutState {
-                raw: binding_model::RawBindGroupLayout::Owning(ManuallyDrop::new(raw)),
-                origin,
-                binding_count_validator: count_validator,
-            }),
+            raw: binding_model::RawBindGroupLayout::Owning(ManuallyDrop::new(raw)),
             device: self.clone(),
             entries: entry_map,
+            origin,
             exclusive_pipeline: OnceCellOrLock::new(),
+            binding_count_validator: count_validator,
             label: label.to_string(),
         };
 
@@ -3221,7 +3076,6 @@ impl Device {
         texture_init_actions: &mut Vec<TextureInitTrackerAction>,
         snatch_guard: &'a SnatchGuard<'a>,
     ) -> Result<hal::TextureBinding<'a, dyn hal::DynTextureView>, CreateBindGroupError> {
-        view.check_valid()?;
         view.same_device(self)?;
 
         let internal_use = self.texture_use_parameters(
@@ -3412,7 +3266,6 @@ impl Device {
 
         self.check_is_valid()?;
         layout.same_device(self)?;
-        layout.check_is_valid()?;
 
         {
             // Check that the number of entries in the descriptor matches
@@ -3616,7 +3469,7 @@ impl Device {
 
         let hal_desc = hal::BindGroupDescriptor {
             label: desc.label.to_hal(self.instance_flags),
-            layout: layout.try_raw()?,
+            layout: layout.raw(),
             entries: &hal_entries,
             buffers: &hal_buffers,
             samplers: &hal_samplers,
@@ -3854,30 +3707,8 @@ impl Device {
     pub fn create_pipeline_layout(
         self: &Arc<Self>,
         desc: &binding_model::ResolvedPipelineLayoutDescriptor,
-    ) -> (
-        Arc<binding_model::PipelineLayout>,
-        Option<binding_model::CreatePipelineLayoutError>,
-    ) {
-        let (layout, error) = match self.create_pipeline_layout_impl(desc, false) {
-            Ok(layout) => (layout, None),
-            Err(e) => (
-                binding_model::PipelineLayout::invalid(Arc::clone(self), desc.label.to_string()),
-                Some(e),
-            ),
-        };
-        #[cfg(feature = "trace")]
-        if let Some(ref mut trace) = *self.trace.lock() {
-            use crate::device::trace::IntoTrace;
-            trace.add(trace::Action::CreatePipelineLayout(
-                layout.to_trace(),
-                desc.to_trace(),
-            ));
-        }
-        api_log!(
-            "Device::create_pipeline_layout -> {:?}",
-            Arc::as_ptr(&layout)
-        );
-        (layout, error)
+    ) -> Result<Arc<binding_model::PipelineLayout>, binding_model::CreatePipelineLayoutError> {
+        self.create_pipeline_layout_impl(desc, false)
     }
 
     fn create_pipeline_layout_impl(
@@ -3935,15 +3766,12 @@ impl Device {
                 }
             }
 
-            count_validator.merge(&bgl.state()?.binding_count_validator);
+            count_validator.merge(&bgl.binding_count_validator);
         }
 
         count_validator
-            .validate(&self.limits, self.instance_flags)
+            .validate(&self.limits)
             .map_err(Error::TooManyBindings)?;
-
-        let buffers_and_acceleration_structures_in_vertex_stage =
-            count_validator.buffers_and_acceleration_structures_in_vertex_stage();
 
         let get_bgl_iter = || {
             desc.bind_group_layouts
@@ -3956,8 +3784,8 @@ impl Device {
             .collect::<ArrayVec<_, { hal::MAX_BIND_GROUPS }>>();
 
         let raw_bind_group_layouts = get_bgl_iter()
-            .map(|bgl| bgl.map(|bgl| bgl.try_raw()).transpose())
-            .collect::<Result<ArrayVec<_, { hal::MAX_BIND_GROUPS }>, _>>()?;
+            .map(|bgl| bgl.map(|bgl| bgl.raw()))
+            .collect::<ArrayVec<_, { hal::MAX_BIND_GROUPS }>>();
 
         let additional_flags = if self.indirect_validation.is_some() {
             hal::PipelineLayoutFlags::INDIRECT_BUILTIN_UPDATE
@@ -3980,12 +3808,11 @@ impl Device {
         drop(raw_bind_group_layouts);
 
         let layout = binding_model::PipelineLayout {
-            raw: ResourceState::Valid(raw),
+            raw: ManuallyDrop::new(raw),
             device: self.clone(),
             label: desc.label.to_string(),
             bind_group_layouts,
             immediate_size: desc.immediate_size,
-            buffers_and_acceleration_structures_in_vertex_stage,
         };
 
         let layout = Arc::new(layout);
@@ -4018,7 +3845,7 @@ impl Device {
                 match unique_bind_group_layouts.entry(bgl_entry_map) {
                     hashbrown::hash_map::Entry::Occupied(v) => Ok(Some(Arc::clone(v.get()))),
                     hashbrown::hash_map::Entry::Vacant(e) => {
-                        match self.create_bind_group_layout_impl(
+                        match self.create_bind_group_layout_internal(
                             &None,
                             e.key().clone(),
                             bgl::Origin::Derived,
@@ -4047,32 +3874,6 @@ impl Device {
     pub fn create_compute_pipeline(
         self: &Arc<Self>,
         desc: pipeline::ResolvedComputePipelineDescriptor,
-    ) -> (
-        Arc<pipeline::ComputePipeline>,
-        Option<pipeline::CreateComputePipelineError>,
-    ) {
-        let (compute_pipeline, error) = match self.create_compute_pipeline_inner(desc.clone()) {
-            Ok(compute_pipeline) => (compute_pipeline, None),
-            Err(error) => (
-                pipeline::ComputePipeline::invalid(self.clone(), desc.label.to_string()),
-                Some(error),
-            ),
-        };
-        #[cfg(feature = "trace")]
-        if let Some(ref mut trace) = *self.trace.lock() {
-            use crate::device::trace;
-            use crate::device::trace::IntoTrace;
-            trace.add(trace::Action::CreateComputePipeline {
-                id: compute_pipeline.to_trace(),
-                desc: desc.to_trace(),
-            });
-        }
-        (compute_pipeline, error)
-    }
-
-    pub fn create_compute_pipeline_inner(
-        self: &Arc<Self>,
-        desc: pipeline::ResolvedComputePipelineDescriptor,
     ) -> Result<Arc<pipeline::ComputePipeline>, pipeline::CreateComputePipelineError> {
         self.check_is_valid()?;
 
@@ -4088,7 +3889,6 @@ impl Device {
         let pipeline_layout = match desc.layout {
             Some(pipeline_layout) => {
                 pipeline_layout.same_device(self)?;
-                pipeline_layout.check_valid()?;
                 Some(pipeline_layout)
             }
             None => None,
@@ -4147,7 +3947,7 @@ impl Device {
 
         let pipeline_desc = hal::ComputePipelineDescriptor {
             label: desc.label.to_hal(self.instance_flags),
-            layout: pipeline_layout.raw()?,
+            layout: pipeline_layout.raw(),
             stage: hal::ProgrammableStage {
                 module: shader_module.raw(),
                 entry_point: final_entry_point_name.as_ref(),
@@ -4189,12 +3989,10 @@ impl Device {
                 });
 
         let pipeline = pipeline::ComputePipeline {
-            state: ResourceState::Valid(pipeline::ComputePipelineState {
-                raw: ManuallyDrop::new(raw),
-                layout: pipeline_layout.clone(),
-                _shader_module: shader_module,
-            }),
+            raw: ManuallyDrop::new(raw),
+            layout: pipeline_layout,
             device: self.clone(),
+            _shader_module: shader_module,
             late_sized_buffer_groups,
             immediate_slots_required,
             label: desc.label.to_string(),
@@ -4204,7 +4002,7 @@ impl Device {
         let pipeline = Arc::new(pipeline);
 
         if is_auto_layout {
-            for bgl in pipeline_layout.bind_group_layouts.iter() {
+            for bgl in pipeline.layout.bind_group_layouts.iter() {
                 let Some(bgl) = bgl else {
                     continue;
                 };
@@ -4219,31 +4017,6 @@ impl Device {
     }
 
     pub fn create_render_pipeline(
-        self: &Arc<Self>,
-        desc: pipeline::ResolvedGeneralRenderPipelineDescriptor,
-    ) -> (
-        Arc<pipeline::RenderPipeline>,
-        Option<pipeline::CreateRenderPipelineError>,
-    ) {
-        let (render_pipeline, error) = match self.create_render_pipeline_inner(desc.clone()) {
-            Ok(pipeline) => (pipeline, None),
-            Err(e) => (
-                pipeline::RenderPipeline::invalid(self.clone(), desc.label.to_string()),
-                Some(e),
-            ),
-        };
-        #[cfg(feature = "trace")]
-        if let Some(ref mut trace) = *self.trace.lock() {
-            use crate::device::trace::IntoTrace;
-            trace.add(trace::Action::CreateGeneralRenderPipeline {
-                id: render_pipeline.to_trace(),
-                desc: desc.to_trace(),
-            });
-        }
-        (render_pipeline, error)
-    }
-
-    pub fn create_render_pipeline_inner(
         self: &Arc<Self>,
         desc: pipeline::ResolvedGeneralRenderPipelineDescriptor,
     ) -> Result<Arc<pipeline::RenderPipeline>, pipeline::CreateRenderPipelineError> {
@@ -4644,7 +4417,6 @@ impl Device {
         let pipeline_layout = match desc.layout {
             Some(pipeline_layout) => {
                 pipeline_layout.same_device(self)?;
-                pipeline_layout.check_valid()?;
                 Some(pipeline_layout)
             }
             None => None,
@@ -4941,26 +4713,6 @@ impl Device {
                     },
                 );
             }
-
-            let given = pipeline_layout
-                .buffers_and_acceleration_structures_in_vertex_stage
-                .saturating_add(vertex.buffers.len() as u32);
-            if !self
-                .instance_flags
-                .contains(wgt::InstanceFlags::STRICT_WEBGPU_COMPLIANCE)
-            {
-                let limit = self
-                    .limits
-                    .max_buffers_and_acceleration_structures_per_shader_stage;
-                if given > limit {
-                    return Err(
-                    pipeline::CreateRenderPipelineError::TooManyBuffersAndAccelerationStructuresInVertexStage {
-                        given,
-                        limit,
-                    },
-                );
-                }
-            }
         }
 
         // Multiview is only supported if the feature is enabled
@@ -5003,7 +4755,7 @@ impl Device {
         let raw = {
             let pipeline_desc = hal::RenderPipelineDescriptor {
                 label: desc.label.to_hal(self.instance_flags),
-                layout: pipeline_layout.raw()?,
+                layout: pipeline_layout.raw(),
                 vertex_processor: match vertex_stage {
                     Some(vertex_stage) => hal::VertexProcessor::Standard {
                         vertex_buffers: &hal_vertex_buffer_layouts,
@@ -5093,10 +4845,8 @@ impl Device {
         };
 
         let pipeline = pipeline::RenderPipeline {
-            state: ResourceState::Valid(pipeline::RenderPipelineState {
-                raw: ManuallyDrop::new(raw),
-                layout: pipeline_layout.clone(),
-            }),
+            raw: ManuallyDrop::new(raw),
+            layout: pipeline_layout,
             device: self.clone(),
             pass_context,
             _shader_modules: shader_modules,
@@ -5115,7 +4865,7 @@ impl Device {
         let pipeline = Arc::new(pipeline);
 
         if is_auto_layout {
-            for bgl in pipeline_layout.bind_group_layouts.iter() {
+            for bgl in pipeline.layout.bind_group_layouts.iter() {
                 let Some(bgl) = bgl else {
                     continue;
                 };
@@ -5299,6 +5049,118 @@ impl Device {
         use present::ConfigureSurfaceError as E;
         profiling::scope!("surface_configure");
 
+        fn validate_surface_configuration(
+            config: &mut hal::SurfaceConfiguration,
+            caps: &hal::SurfaceCapabilities,
+            max_texture_dimension_2d: u32,
+        ) -> Result<(), E> {
+            let width = config.extent.width;
+            let height = config.extent.height;
+
+            if width > max_texture_dimension_2d || height > max_texture_dimension_2d {
+                return Err(E::TooLarge {
+                    width,
+                    height,
+                    max_texture_dimension_2d,
+                });
+            }
+
+            if !caps.present_modes.contains(&config.present_mode) {
+                // Automatic present mode checks.
+                //
+                // The "Automatic" modes are never supported by the backends.
+                let fallbacks = match config.present_mode {
+                    wgt::PresentMode::AutoVsync => {
+                        &[wgt::PresentMode::FifoRelaxed, wgt::PresentMode::Fifo][..]
+                    }
+                    // Always end in FIFO to make sure it's always supported
+                    wgt::PresentMode::AutoNoVsync => &[
+                        wgt::PresentMode::Immediate,
+                        wgt::PresentMode::Mailbox,
+                        wgt::PresentMode::Fifo,
+                    ][..],
+                    _ => {
+                        return Err(E::UnsupportedPresentMode {
+                            requested: config.present_mode,
+                            available: caps.present_modes.clone(),
+                        });
+                    }
+                };
+
+                let new_mode = fallbacks
+                    .iter()
+                    .copied()
+                    .find(|fallback| caps.present_modes.contains(fallback))
+                    .unwrap_or_else(|| {
+                        unreachable!(
+                            "Fallback system failed to choose present mode. \
+                            This is a bug. Mode: {:?}, Options: {:?}",
+                            config.present_mode, &caps.present_modes
+                        );
+                    });
+
+                api_log!(
+                    "Automatically choosing presentation mode by rule {:?}. Chose {new_mode:?}",
+                    config.present_mode
+                );
+                config.present_mode = new_mode;
+            }
+            if !caps.formats.contains(&config.format) {
+                return Err(E::UnsupportedFormat {
+                    requested: config.format,
+                    available: caps.formats.clone(),
+                });
+            }
+            if !caps
+                .composite_alpha_modes
+                .contains(&config.composite_alpha_mode)
+            {
+                let new_alpha_mode = 'alpha: {
+                    // Automatic alpha mode checks.
+                    let fallbacks = match config.composite_alpha_mode {
+                        wgt::CompositeAlphaMode::Auto => &[
+                            wgt::CompositeAlphaMode::Opaque,
+                            wgt::CompositeAlphaMode::Inherit,
+                        ][..],
+                        _ => {
+                            return Err(E::UnsupportedAlphaMode {
+                                requested: config.composite_alpha_mode,
+                                available: caps.composite_alpha_modes.clone(),
+                            });
+                        }
+                    };
+
+                    for &fallback in fallbacks {
+                        if caps.composite_alpha_modes.contains(&fallback) {
+                            break 'alpha fallback;
+                        }
+                    }
+
+                    unreachable!(
+                        "Fallback system failed to choose alpha mode. This is a bug. \
+                                  AlphaMode: {:?}, Options: {:?}",
+                        config.composite_alpha_mode, &caps.composite_alpha_modes
+                    );
+                };
+
+                api_log!(
+                    "Automatically choosing alpha mode by rule {:?}. Chose {new_alpha_mode:?}",
+                    config.composite_alpha_mode
+                );
+                config.composite_alpha_mode = new_alpha_mode;
+            }
+            if !caps.usage.contains(config.usage) {
+                return Err(E::UnsupportedUsage {
+                    requested: config.usage,
+                    available: caps.usage,
+                });
+            }
+            if width == 0 || height == 0 {
+                return Err(E::ZeroArea);
+            }
+            Ok(())
+        }
+
         log::debug!("configuring surface with {config:?}");
 
         let error = 'error: {
@@ -5319,10 +5181,10 @@ impl Device {
                     if *format == config.format {
                         continue;
                     }
-                    if !caps.formats.iter().any(|fc| fc.format == config.format) {
+                    if !caps.formats.contains(&config.format) {
                         break 'error E::UnsupportedFormat {
                             requested: config.format,
-                            available: caps.texture_formats().collect(),
+                            available: caps.formats,
                         };
                     }
                     if config.format.remove_srgb_suffix() != format.remove_srgb_suffix() {
@@ -5348,7 +5210,6 @@ impl Device {
                     present_mode: config.present_mode,
                     composite_alpha_mode: config.alpha_mode,
                     format: config.format,
-                    color_space: config.color_space,
                     extent: wgt::Extent3d {
                         width: config.width,
                         height: config.height,

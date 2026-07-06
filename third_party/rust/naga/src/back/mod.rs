@@ -93,7 +93,7 @@ bitflags::bitflags! {
 pub type PipelineConstants = hashbrown::HashMap<String, f64>;
 
 /// Indentation level.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub struct Level(pub usize);
 
 impl Level {
@@ -174,7 +174,6 @@ impl FunctionType {
 }
 
 /// Helper structure that stores data needed when writing the function
-#[derive(Debug)]
 pub struct FunctionCtx<'a> {
     /// The current function being written
     pub ty: FunctionType,
@@ -390,7 +389,6 @@ bitflags::bitflags! {
 }
 
 /// The intersection test to use for ray queries.
-#[derive(Debug)]
 #[repr(u32)]
 pub enum RayIntersectionType {
     Triangle = 1,

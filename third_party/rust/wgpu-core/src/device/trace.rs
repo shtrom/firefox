@@ -128,7 +128,6 @@ pub enum Action<'a, R: ReferenceType> {
     DestroyBuffer(R::Buffer),
     DropBuffer(R::Buffer),
     CreateTexture(R::Texture, crate::resource::TextureDescriptor<'a>),
-    CreateTextureError(R::Texture, crate::resource::TextureDescriptor<'a>),
     DestroyTexture(R::Texture),
     DropTexture(R::Texture),
     CreateTextureView {
@@ -155,7 +154,6 @@ pub enum Action<'a, R: ReferenceType> {
     },
     Present(R::Surface),
     DiscardSurfaceTexture(R::Surface),
-    ReleaseSurfaceTexture(R::Surface),
     CreateBindGroupLayout(
         PointerId<markers::BindGroupLayout>,
         crate::binding_model::BindGroupLayoutDescriptor<'a>,
@@ -195,12 +193,12 @@ pub enum Action<'a, R: ReferenceType> {
     },
     DropShaderModule(PointerId<markers::ShaderModule>),
     CreateComputePipeline {
-        id: PointerId<markers::ComputePipeline>,
+        id: Option<PointerId<markers::ComputePipeline>>,
         desc: TraceComputePipelineDescriptor<'a>,
     },
     DropComputePipeline(PointerId<markers::ComputePipeline>),
     CreateGeneralRenderPipeline {
-        id: PointerId<markers::RenderPipeline>,
+        id: Option<PointerId<markers::RenderPipeline>>,
         desc: TraceGeneralRenderPipelineDescriptor<'a>,
     },
     DropRenderPipeline(PointerId<markers::RenderPipeline>),

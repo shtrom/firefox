@@ -9,9 +9,7 @@ use parking_lot::{Mutex, MutexGuard};
 use crate::vulkan::{
     conv, map_host_device_oom_and_lost_err,
     semaphore_list::SemaphoreType,
-    swapchain::{
-        Surface, SurfaceTextureMetadata, Swapchain, SwapchainSubmissionSemaphoreGuard, WindowHandle,
-    },
+    swapchain::{Surface, SurfaceTextureMetadata, Swapchain, SwapchainSubmissionSemaphoreGuard},
     DeviceShared, InstanceShared,
 };
 
@@ -19,27 +17,15 @@ pub(crate) struct NativeSurface {
     raw: vk::SurfaceKHR,
     functor: khr::surface::Instance,
     instance: Arc<InstanceShared>,
-    /// Built from the window's `HWND` (Windows only) to answer the display-HDR
-    /// query; `None` for non-Win32 surfaces.
-    #[cfg(windows)]
-    hdr_source: Option<crate::auxil::dxgi::hdr::DxgiHdrSource>,
 }
 
 impl NativeSurface {
-    pub fn from_vk_surface_khr(
-        instance: &crate::vulkan::Instance,
-        raw: vk::SurfaceKHR,
-        hwnd: Option<WindowHandle>,
-    ) -> Self {
-        #[cfg(not(windows))]
-        let _ = hwnd;
+    pub fn from_vk_surface_khr(instance: &crate::vulkan::Instance, raw: vk::SurfaceKHR) -> Self {
         let functor = khr::surface::Instance::new(&instance.shared.entry, &instance.shared.raw);
         Self {
             raw,
             functor,
             instance: Arc::clone(&instance.shared),
-            #[cfg(windows)]
-            hdr_source: hwnd.map(|wh| crate::auxil::dxgi::hdr::DxgiHdrSource::new(wh.0)),
         }
     }
 
@@ -146,22 +132,10 @@ impl Surface for NativeSurface {
             }
         };
 
-        // Group the driver's (format, color space) pairs into one entry per
-        // format, preserving the driver's format order.
-        let mut formats: Vec<wgt::SurfaceFormatCapabilities> = Vec::new();
-        for (format, color_space) in raw_surface_formats
+        let formats = raw_surface_formats
             .into_iter()
             .filter_map(conv::map_vk_surface_formats)
-        {
-            let color_spaces = color_space.to_color_spaces().unwrap();
-            match formats.iter_mut().find(|fc| fc.format == format) {
-                Some(fc) => fc.color_spaces |= color_spaces,
-                None => formats.push(wgt::SurfaceFormatCapabilities {
-                    format,
-                    color_spaces,
-                }),
-            }
-        }
+            .collect();
         Some(crate::SurfaceCapabilities {
             formats,
             // TODO: Right now we're always truncating the swap chain
@@ -193,7 +167,13 @@ impl Surface for NativeSurface {
             .map(|osc| osc.as_any().downcast_ref::<NativeSwapchain>().unwrap().raw)
             .unwrap_or(vk::SwapchainKHR::null());
 
-        let color_space = conv::map_surface_color_space(config.color_space);
+        let color_space = if config.format == wgt::TextureFormat::Rgba16Float {
+            // Enable wide color gamut mode
+            // Vulkan swapchain for Android only supports DISPLAY_P3_NONLINEAR_EXT and EXTENDED_SRGB_LINEAR_EXT
+            vk::ColorSpaceKHR::EXTENDED_SRGB_LINEAR_EXT
+        } else {
+            vk::ColorSpaceKHR::SRGB_NONLINEAR
+        };
 
         let original_format = device.shared.private_caps.map_texture_format(config.format);
         let mut raw_flags = vk::SwapchainCreateFlagsKHR::empty();
@@ -291,11 +271,6 @@ impl Surface for NativeSurface {
             present_semaphores,
             next_present_time: None,
         }))
-    }
-
-    #[cfg(windows)]
-    fn display_hdr_info(&self) -> Option<wgt::DisplayHdrInfo> {
-        self.hdr_source.as_ref()?.display_hdr_info()
     }
 
     fn as_any(&self) -> &dyn Any {

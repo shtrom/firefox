@@ -439,6 +439,142 @@ fn create_next_numbered_dir(dir: &std::path::Path) -> std::io::Result<std::path:
     }
 }
 
+fn sanitize_limits(limits: &mut wgt::Limits) {
+    // Copy the value of a WebGPU-defined limit without modifying it.
+    macro_rules! transfer_limit {
+        ($limit:tt) => {
+            let $limit = limits.$limit;
+        };
+    }
+    // Ignore or `debug_assert` the requested value of a limit related to `wgpu` extensions,
+    // then use the default value. (In most cases the default value of `wgpu`-defined limits
+    // is zero, but `max_non_sampler_bindings` is a special case.)
+    macro_rules! sanitize_limit {
+        ($limit:tt) => {
+            debug_assert_eq!(limits.$limit, wgt::Limits::default().$limit);
+            let $limit = wgt::Limits::default().$limit;
+        };
+    }
+
+    transfer_limit!(max_texture_dimension_1d);
+    transfer_limit!(max_texture_dimension_2d);
+    transfer_limit!(max_texture_dimension_3d);
+    transfer_limit!(max_texture_array_layers);
+    transfer_limit!(max_bind_groups);
+    transfer_limit!(max_bind_groups_plus_vertex_buffers);
+    transfer_limit!(max_bindings_per_bind_group);
+    transfer_limit!(max_dynamic_uniform_buffers_per_pipeline_layout);
+    transfer_limit!(max_dynamic_storage_buffers_per_pipeline_layout);
+    transfer_limit!(max_sampled_textures_per_shader_stage);
+    transfer_limit!(max_samplers_per_shader_stage);
+    transfer_limit!(max_storage_buffers_per_shader_stage);
+    transfer_limit!(max_storage_textures_per_shader_stage);
+    transfer_limit!(max_uniform_buffers_per_shader_stage);
+    transfer_limit!(max_uniform_buffer_binding_size);
+    transfer_limit!(max_storage_buffer_binding_size);
+    transfer_limit!(max_vertex_buffers);
+    transfer_limit!(max_buffer_size);
+    transfer_limit!(max_vertex_attributes);
+    transfer_limit!(max_vertex_buffer_array_stride);
+    transfer_limit!(max_inter_stage_shader_variables);
+    transfer_limit!(min_uniform_buffer_offset_alignment);
+    transfer_limit!(min_storage_buffer_offset_alignment);
+    transfer_limit!(max_color_attachments);
+    transfer_limit!(max_color_attachment_bytes_per_sample);
+    transfer_limit!(max_compute_workgroup_storage_size);
+    transfer_limit!(max_compute_invocations_per_workgroup);
+    transfer_limit!(max_compute_workgroup_size_x);
+    transfer_limit!(max_compute_workgroup_size_y);
+    transfer_limit!(max_compute_workgroup_size_z);
+    transfer_limit!(max_compute_workgroups_per_dimension);
+    transfer_limit!(max_immediate_size);
+
+    sanitize_limit!(max_binding_array_acceleration_structure_elements_per_shader_stage);
+    sanitize_limit!(max_binding_array_sampler_elements_per_shader_stage);
+    sanitize_limit!(max_binding_array_elements_per_shader_stage);
+    sanitize_limit!(max_non_sampler_bindings);
+    sanitize_limit!(max_task_workgroup_total_count);
+    sanitize_limit!(max_task_workgroups_per_dimension);
+    sanitize_limit!(max_mesh_workgroup_total_count);
+    sanitize_limit!(max_mesh_workgroups_per_dimension);
+    sanitize_limit!(max_task_invocations_per_workgroup);
+    sanitize_limit!(max_task_invocations_per_dimension);
+    sanitize_limit!(max_mesh_invocations_per_workgroup);
+    sanitize_limit!(max_mesh_invocations_per_dimension);
+    sanitize_limit!(max_task_payload_size);
+    sanitize_limit!(max_mesh_output_vertices);
+    sanitize_limit!(max_mesh_output_primitives);
+    sanitize_limit!(max_mesh_output_layers);
+    sanitize_limit!(max_mesh_multiview_view_count);
+    sanitize_limit!(max_blas_primitive_count);
+    sanitize_limit!(max_blas_geometry_count);
+    sanitize_limit!(max_tlas_instance_count);
+    sanitize_limit!(max_acceleration_structures_per_shader_stage);
+    sanitize_limit!(max_multiview_view_count);
+
+    // This exhaustive struct literal ensures new limits are considered in this function. Set them
+    // above with `transfer_limit!` if they're standard WebGPU limits, or with `sanitize_limit!` if
+    // they're `wgpu` extensions.
+    let sanitized_limits = wgt::Limits {
+        max_texture_dimension_1d,
+        max_texture_dimension_2d,
+        max_texture_dimension_3d,
+        max_texture_array_layers,
+        max_bind_groups,
+        max_bind_groups_plus_vertex_buffers,
+        max_bindings_per_bind_group,
+        max_dynamic_uniform_buffers_per_pipeline_layout,
+        max_dynamic_storage_buffers_per_pipeline_layout,
+        max_sampled_textures_per_shader_stage,
+        max_samplers_per_shader_stage,
+        max_storage_buffers_per_shader_stage,
+        max_storage_textures_per_shader_stage,
+        max_uniform_buffers_per_shader_stage,
+        max_binding_array_acceleration_structure_elements_per_shader_stage,
+        max_binding_array_sampler_elements_per_shader_stage,
+        max_binding_array_elements_per_shader_stage,
+        max_uniform_buffer_binding_size,
+        max_storage_buffer_binding_size,
+        max_vertex_buffers,
+        max_buffer_size,
+        max_vertex_attributes,
+        max_vertex_buffer_array_stride,
+        max_inter_stage_shader_variables,
+        min_uniform_buffer_offset_alignment,
+        min_storage_buffer_offset_alignment,
+        max_color_attachments,
+        max_color_attachment_bytes_per_sample,
+        max_compute_workgroup_storage_size,
+        max_compute_invocations_per_workgroup,
+        max_compute_workgroup_size_x,
+        max_compute_workgroup_size_y,
+        max_compute_workgroup_size_z,
+        max_compute_workgroups_per_dimension,
+        max_immediate_size,
+        max_non_sampler_bindings,
+        max_task_workgroup_total_count,
+        max_task_workgroups_per_dimension,
+        max_mesh_workgroup_total_count,
+        max_mesh_workgroups_per_dimension,
+        max_task_invocations_per_workgroup,
+        max_task_invocations_per_dimension,
+        max_mesh_invocations_per_workgroup,
+        max_mesh_invocations_per_dimension,
+        max_task_payload_size,
+        max_mesh_output_vertices,
+        max_mesh_output_primitives,
+        max_mesh_output_layers,
+        max_mesh_multiview_view_count,
+        max_blas_primitive_count,
+        max_blas_geometry_count,
+        max_tlas_instance_count,
+        max_acceleration_structures_per_shader_stage,
+        max_multiview_view_count,
+    };
+
+    *limits = sanitized_limits;
+}
+
 unsafe fn adapter_request_device(
     global: &Global,
     self_id: id::AdapterId,
@@ -449,8 +585,8 @@ unsafe fn adapter_request_device(
     let mut sanitized_desc = {
         let wgc::device::DeviceDescriptor {
             label,
-            required_features,
-            required_limits,
+            mut required_features,
+            mut required_limits,
             experimental_features,
             memory_hints,
             trace,
@@ -463,9 +599,10 @@ unsafe fn adapter_request_device(
         assert!(matches!(memory_hints, wgt::MemoryHints::Performance));
         assert!(matches!(trace, wgt::Trace::Off));
 
-        // Note that wgpu-core will generally ignore all required features and limits that
-        // are not part of the spec. See docs of `InstanceFlags::STRICT_WEBGPU_COMPLIANCE`
-        // for exceptions and actual behavior.
+        // Note that there is logic below that adds back some native features that
+        // are used internally to implement external textures.
+        required_features.features_wgpu = wgt::FeaturesWGPU::empty();
+        sanitize_limits(&mut required_limits);
 
         wgc::device::DeviceDescriptor {
             label,
@@ -2103,7 +2240,7 @@ impl Global {
                     || desc.size.height > max
                     || desc.size.depth_or_array_layers > max
                 {
-                    self.create_texture_error(device_id, Some(id), &desc);
+                    self.create_texture_error(Some(id), &desc);
                     error_buf.init(ErrMsg::oom(), device_id);
                     return;
                 }
@@ -2115,7 +2252,7 @@ impl Global {
                 ]
                 .contains(&0)
                 {
-                    self.create_texture_error(device_id, Some(id), &desc);
+                    self.create_texture_error(Some(id), &desc);
                     error_buf.init(
                         ErrMsg {
                             message: "size is zero".into(),
@@ -2137,7 +2274,7 @@ impl Global {
                     if desc.size.width > limits.max_texture_dimension_2d
                         || desc.size.height > limits.max_texture_dimension_2d
                     {
-                        self.create_texture_error(device_id, Some(id), &desc);
+                        self.create_texture_error(Some(id), &desc);
                         error_buf.init(
                             ErrMsg {
                                 message: "size exceeds limits.max_texture_dimension_2d".into(),
@@ -2153,7 +2290,7 @@ impl Global {
                         && desc.usage.contains(wgt::TextureUsages::STORAGE_BINDING)
                         && !features.contains(wgt::Features::BGRA8UNORM_STORAGE)
                     {
-                        self.create_texture_error(device_id, Some(id), &desc);
+                        self.create_texture_error(Some(id), &desc);
                         error_buf.init(
                             ErrMsg {
                                 message: concat!(
@@ -2308,7 +2445,7 @@ impl Global {
                 }
             }
             DeviceAction::CreateBindGroupLayoutError(id, label) => {
-                self.create_bind_group_layout_error(device_id, Some(id), label);
+                self.create_bind_group_layout_error(Some(id), label);
             }
             DeviceAction::RenderPipelineGetBindGroupLayout(pipeline_id, index, bgl_id) => {
                 let (_, error) =
@@ -2426,8 +2563,9 @@ impl Global {
                     }
                 }
             }
-            DeviceAction::CreateRenderBundle(id, mut encoder, desc) => {
-                let (_, error) = self.render_bundle_encoder_finish(&mut encoder, &desc, Some(id));
+            DeviceAction::CreateRenderBundle(id, encoder, desc) => {
+                let (_, error) =
+                    self.render_bundle_encoder_finish(Box::new(encoder), &desc, Some(id));
                 if let Some(err) = error {
                     error_buf.init(err, device_id);
                 }
@@ -2834,7 +2972,7 @@ unsafe fn process_message(
                     driver,
                     driver_info,
                     backend,
-                    transient_saves_memory: _,
+                    transient_saves_memory,
                     device_pci_bus_id: _,
                     subgroup_min_size,
                     subgroup_max_size,
@@ -2876,6 +3014,7 @@ unsafe fn process_message(
                     driver_info: Cow::Owned(driver_info),
                     backend,
                     support_use_shared_texture_in_swap_chain,
+                    transient_saves_memory,
                     subgroup_min_size,
                     subgroup_max_size,
                 };
@@ -3357,7 +3496,7 @@ pub unsafe extern "C" fn wgpu_server_device_import_texture_from_shared_handle(
 
     let Some(hal_device) = global.device_as_hal::<wgc::api::Dx12>(device_id) else {
         emit_critical_invalid_note("dx12 device");
-        global.create_texture_error(device_id, Some(id_in), &desc);
+        global.create_texture_error(Some(id_in), &desc);
         return;
     };
     let dx12_device = hal_device.raw_device();
@@ -3372,7 +3511,7 @@ pub unsafe extern "C" fn wgpu_server_device_import_texture_from_shared_handle(
             },
             device_id,
         );
-        global.create_texture_error(device_id, Some(id_in), &desc);
+        global.create_texture_error(Some(id_in), &desc);
         return;
     }
 
@@ -3472,13 +3611,13 @@ mod macos {
 
         let Some(surface) = IOSurfaceRef::lookup(io_surface_id) else {
             emit_critical_invalid_note("IOSurface");
-            global.create_texture_error(device_id, Some(id_in), &desc);
+            global.create_texture_error(Some(id_in), &desc);
             return;
         };
 
         let Some(hal_device) = global.device_as_hal::<wgc::api::Metal>(device_id) else {
             emit_critical_invalid_note("metal device");
-            global.create_texture_error(device_id, Some(id_in), &desc);
+            global.create_texture_error(Some(id_in), &desc);
             return;
         };
         let metal_device = hal_device.raw_device();
@@ -3523,7 +3662,7 @@ mod macos {
             metal_device.newTextureWithDescriptor_iosurface_plane(&metal_desc, &surface, plane)
         else {
             emit_critical_invalid_note("IOSurface");
-            global.create_texture_error(device_id, Some(id_in), &desc);
+            global.create_texture_error(Some(id_in), &desc);
             return;
         };
 

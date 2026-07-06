@@ -1,6 +1,6 @@
 //! [`Backend`], [`Backends`], and backend-specific options.
 
-use alloc::string::{String, ToString};
+use alloc::string::String;
 use core::{hash::Hash, str::FromStr};
 
 #[cfg(any(feature = "serde", test))]
@@ -852,9 +852,7 @@ impl FromStr for Dx12Compiler {
             "staticdxc" => Self::StaticDxc,
             "fxc" => Self::Fxc,
             "auto" => Self::Auto,
-            path => Self::DynamicDxc {
-                dxc_path: path.to_string(),
-            },
+            _ => return Err("Expected `dynamicdxc` (alias `dxc`), `staticdxc`, `fxc`, or `auto`."),
         })
     }
 }

@@ -127,6 +127,7 @@ pub struct AdapterInformation<S> {
     driver_info: S,
     backend: wgt::Backend,
     support_use_shared_texture_in_swap_chain: bool,
+    transient_saves_memory: bool,
     subgroup_min_size: u32,
     subgroup_max_size: u32,
 }
@@ -148,9 +149,7 @@ pub struct TextureViewDescriptor<'a> {
 // them to be managed by IdentityHub just like built-in wgpu resource types.
 #[derive(Debug)]
 pub enum ExternalTextureSource {}
-impl id::Marker for ExternalTextureSource {
-    const TYPE: &'static str = "ExternalTextureSource";
-}
+impl id::Marker for ExternalTextureSource {}
 pub type ExternalTextureSourceId = id::Id<ExternalTextureSource>;
 
 #[repr(C)]
