@@ -1175,9 +1175,9 @@ static bool CreateURLFilenameFromTextA(nsAutoString& aText, char* aFilename) {
   // an extra check to verify for the local code page that the converted text
   // doesn't go over MAX_PATH and just return false if it does.
   char defaultChar = '_';
-  int currLen = WideCharToMultiByte(CP_ACP, WC_COMPOSITECHECK | WC_DEFAULTCHAR,
-                                    aText.get(), -1, aFilename, MAX_PATH,
-                                    &defaultChar, nullptr);
+  int currLen = WideCharToMultiByte(
+      CP_ACP, WC_COMPOSITECHECK | WC_DEFAULTCHAR | WC_NO_BEST_FIT_CHARS,
+      aText.get(), -1, aFilename, MAX_PATH, &defaultChar, nullptr);
   return currLen != 0;
 }
 
