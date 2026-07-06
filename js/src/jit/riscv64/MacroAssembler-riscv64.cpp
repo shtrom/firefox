@@ -1561,12 +1561,15 @@ void MacroAssemblerRiscv64::computeScaledAddress(const BaseIndex& address,
   Register base = address.base;
   Register index = address.index;
   int32_t shift = Imm32::ShiftOf(address.scale).value;
-  UseScratchRegisterScope temps(this);
-  if (shift && base == zero) {
-    MOZ_ASSERT(shift <= 4);
+  MOZ_ASSERT(shift <= 4);
+
+  if (index == zero) {
+    if (dest != base) {
+      mv(dest, base);
+    }
+  } else if (shift && base == zero) {
     slli(dest, index, shift);
   } else if (shift) {
-    MOZ_ASSERT(shift <= 4);
     if (HasZbaExtension()) {
       switch (shift) {
         case 1:
@@ -1582,6 +1585,8 @@ void MacroAssemblerRiscv64::computeScaledAddress(const BaseIndex& address,
           break;
       }
     }
+
+    UseScratchRegisterScope temps(this);
     Register tmp = dest == base ? temps.Acquire() : dest;
     slli(tmp, index, shift);
     add(dest, base, tmp);
@@ -1595,12 +1600,14 @@ void MacroAssemblerRiscv64::computeScaledAddress32(const BaseIndex& address,
   Register base = address.base;
   Register index = address.index;
   int32_t shift = Imm32::ShiftOf(address.scale).value;
-  UseScratchRegisterScope temps(this);
-  if (shift && base == zero) {
-    MOZ_ASSERT(shift <= 4);
+  MOZ_ASSERT(shift <= 4);
+
+  if (index == zero) {
+    SignExtendWord(dest, base);
+  } else if (shift && base == zero) {
     slliw(dest, index, shift);
   } else if (shift) {
-    MOZ_ASSERT(shift <= 4);
+    UseScratchRegisterScope temps(this);
     Register tmp = dest == base ? temps.Acquire() : dest;
     slliw(tmp, index, shift);
     addw(dest, base, tmp);
