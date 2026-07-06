@@ -252,7 +252,6 @@ export function newOriginalSources(originalSourcesInfo) {
         actors.push(sourceActor);
         actorsSources[sourceActor.actor] = [];
       }
-
       actorsSources[sourceActor.actor].push(
         createSourceMapOriginalSource(id, url, sourceActor.sourceObject)
       );
@@ -408,6 +407,7 @@ export function newStyleSheetSources(styleSheetResources) {
     }
     dispatch({ type: "ADD_SOURCES", sources: styleSheets });
     dispatch(insertSourceActors(styleSheetActors));
+    await dispatch(loadSourceMapsForSourceActors(styleSheetActors));
   };
 }
 
