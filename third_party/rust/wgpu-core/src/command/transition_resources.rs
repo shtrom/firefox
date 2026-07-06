@@ -38,8 +38,10 @@ impl Global {
                     .collect::<Result<_, TransitionResourcesError>>()?,
                 texture_transitions: texture_transitions
                     .map(|t| {
+                        let texture = self.resolve_texture_id(t.texture);
+                        texture.check_valid()?;
                         Ok(wgt::TextureTransition {
-                            texture: self.resolve_texture_id(t.texture)?,
+                            texture,
                             selector: t.selector,
                             state: t.state,
                         })

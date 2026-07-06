@@ -96,9 +96,9 @@ use crate::snatch::SnatchGuard;
 use crate::init_tracker::BufferInitTrackerAction;
 use crate::ray_tracing::{AsAction, BuildAccelerationStructureError};
 use crate::resource::{
-    DestroyedResourceError, Fallible, InvalidResourceError, Labeled, ParentDevice as _, QuerySet,
+    DestroyedResourceError, Fallible, InvalidOrDestroyedResourceError, InvalidResourceError,
+    Labeled, ParentDevice as _, QuerySet,
 };
-use crate::storage::Storage;
 use crate::track::{DeviceTracker, ResourceUsageCompatibilityError, Tracker, UsageScope};
 use crate::{api_log, global::Global, id, resource_log, Label};
 use crate::{hal_label, LabelHelpers};
@@ -520,7 +520,7 @@ impl<'a> ops::DerefMut for RecordingGuard<'a> {
     }
 }
 
-pub(crate) struct CommandEncoder {
+pub struct CommandEncoder {
     pub(crate) device: Arc<Device>,
 
     pub(crate) label: String,
@@ -964,6 +964,56 @@ impl CommandEncoder {
         }
     }
 
+    pub(crate) fn validate_pass_timestamp_writes<E>(
+        device: &Device,
+        timestamp_writes: &PassTimestampWrites<Fallible<QuerySet>>,
+    ) -> Result<ArcPassTimestampWrites, E>
+    where
+        E: From<TimestampWritesError>
+            + From<QueryUseError>
+            + From<DeviceError>
+            + From<MissingFeatures>
+            + From<InvalidResourceError>,
+    {
+        let &PassTimestampWrites {
+            ref query_set,
+            beginning_of_pass_write_index,
+            end_of_pass_write_index,
+        } = timestamp_writes;
+
+        device.require_features(wgt::Features::TIMESTAMP_QUERY)?;
+
+        let query_set = query_set.clone().get()?;
+
+        query_set.same_device(device)?;
+
+        for idx in [beginning_of_pass_write_index, end_of_pass_write_index]
+            .into_iter()
+            .flatten()
+        {
+            query_set.validate_query(SimplifiedQueryType::Timestamp, idx, None)?;
+        }
+
+        if let Some((begin, end)) = beginning_of_pass_write_index.zip(end_of_pass_write_index) {
+            if begin == end {
+                return Err(TimestampWritesError::IndicesEqual { idx: begin }.into());
+            }
+        }
+
+        if beginning_of_pass_write_index
+            .or(end_of_pass_write_index)
+            .is_none()
+        {
+            return Err(TimestampWritesError::IndicesMissing.into());
+        }
+
+        Ok(ArcPassTimestampWrites {
+            query_set,
+            beginning_of_pass_write_index,
+            end_of_pass_write_index,
+        })
+    }
+
     pub(crate) fn insert_barriers_from_tracker(
         raw: &mut dyn hal::DynCommandEncoder,
         base: &mut Tracker,
@@ -1271,9 +1321,9 @@ impl CommandEncoder {
         self: &Arc<Self>,
         desc: &wgt::CommandBufferDescriptor<Label>,
     ) -> (Arc<CommandBuffer>, Option<CommandEncoderError>) {
-        let mut cmd_enc_status = self.data.lock();
+        let status = self.data.lock().finish();
 
-        let res = match cmd_enc_status.finish() {
+        let res = match status {
             CommandEncoderStatus::Finished(mut cmd_buf_data) => {
                 match Self::encode_commands(&self.device, &mut cmd_buf_data) {
                     Ok(()) => Ok(cmd_buf_data),
@@ -1617,6 +1667,15 @@ pub enum CommandEncoderError {
     RenderPass(#[from] RenderPassError),
 }
 
+impl From<InvalidOrDestroyedResourceError> for CommandEncoderError {
+    fn from(err: InvalidOrDestroyedResourceError) -> Self {
+        match err {
+            InvalidOrDestroyedResourceError::InvalidResource(e) => Self::InvalidResource(e),
+            InvalidOrDestroyedResourceError::DestroyedResource(e) => Self::DestroyedResource(e),
+        }
+    }
+}
+
 impl CommandEncoderError {
     fn is_destroyed_error(&self) -> bool {
         matches!(
@@ -1713,13 +1772,6 @@ impl Global {
         self.hub.buffers.get(buffer_id).get()
     }
 
-    fn resolve_texture_id(
-        &self,
-        texture_id: Id<id::markers::Texture>,
-    ) -> Result<Arc<crate::resource::Texture>, InvalidResourceError> {
-        self.hub.textures.get(texture_id).get()
-    }
-
     fn resolve_query_set(
         &self,
         query_set_id: Id<id::markers::QuerySet>,
@@ -1804,57 +1856,6 @@ impl Global {
 
         cmd_buf_data
             .push_with(|| -> Result<_, CommandEncoderError> { Ok(ArcCommand::PopDebugGroup) })
-    }
-
-    fn validate_pass_timestamp_writes<E>(
-        device: &Device,
-        query_sets: &Storage<Fallible<QuerySet>>,
-        timestamp_writes: &PassTimestampWrites,
-    ) -> Result<ArcPassTimestampWrites, E>
-    where
-        E: From<TimestampWritesError>
-            + From<QueryUseError>
-            + From<DeviceError>
-            + From<MissingFeatures>
-            + From<InvalidResourceError>,
-    {
-        let &PassTimestampWrites {
-            query_set,
-            beginning_of_pass_write_index,
-            end_of_pass_write_index,
-        } = timestamp_writes;
-
-        device.require_features(wgt::Features::TIMESTAMP_QUERY)?;
-
-        let query_set = query_sets.get(query_set).get()?;
-
-        query_set.same_device(device)?;
-
-        for idx in [beginning_of_pass_write_index, end_of_pass_write_index]
-            .into_iter()
-            .flatten()
-        {
-            query_set.validate_query(SimplifiedQueryType::Timestamp, idx, None)?;
-        }
-
-        if let Some((begin, end)) = beginning_of_pass_write_index.zip(end_of_pass_write_index) {
-            if begin == end {
-                return Err(TimestampWritesError::IndicesEqual { idx: begin }.into());
-            }
-        }
-
-        if beginning_of_pass_write_index
-            .or(end_of_pass_write_index)
-            .is_none()
-        {
-            return Err(TimestampWritesError::IndicesMissing.into());
-        }
-
-        Ok(ArcPassTimestampWrites {
-            query_set,
-            beginning_of_pass_write_index,
-            end_of_pass_write_index,
-        })
     }
 }
 
