@@ -2043,13 +2043,13 @@ package org.mozilla.geckoview {
   }
 
   public class GeckoSession.ScrollPositionUpdate {
-    ctor public ScrollPositionUpdate();
+    ctor public ScrollPositionUpdate(float, float, float, int);
     field public static final int SOURCE_OTHER = 1;
     field public static final int SOURCE_USER_INTERACTION = 0;
-    field public float scrollX;
-    field public float scrollY;
-    field public int source;
-    field public float zoom;
+    field public final float scrollX;
+    field public final float scrollY;
+    field public final int source;
+    field public final float zoom;
   }
 
   @Retention(value=RetentionPolicy.SOURCE) public static interface GeckoSession.ScrollPositionUpdate.SourceType {

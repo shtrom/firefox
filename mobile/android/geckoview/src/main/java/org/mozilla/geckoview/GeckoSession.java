@@ -6900,22 +6900,39 @@ public class GeckoSession {
     public @interface SourceType {}
 
     /** The new horizontal scroll position in CSS pixels. */
-    public float scrollX;
+    public final float scrollX;
 
     /** The new vertical scroll position in CSS pixels. */
-    public float scrollY;
+    public final float scrollY;
 
     /**
      * The new zoom level. This is used to relate scrollX and scrollY, which are in CSS pixels, to
      * quantities in screen pixels. Multiply scrollX/scrollY by zoom to get screen pixels.
      */
-    public float zoom;
+    public final float zoom;
 
     /**
      * The source of the scroll position change. One of {@link #SOURCE_USER_INTERACTION} or {@link
      * #SOURCE_OTHER}.
      */
-    public @SourceType int source;
+    public final @SourceType int source;
+
+    /**
+     * Construct a new, immutable ScrollPositionUpdate.
+     *
+     * @param scrollX The new horizontal scroll position in CSS pixels.
+     * @param scrollY The new vertical scroll position in CSS pixels.
+     * @param zoom The new zoom level.
+     * @param source The source of the scroll position change, one of {@link
+     *     #SOURCE_USER_INTERACTION} or {@link #SOURCE_OTHER}.
+     */
+    public ScrollPositionUpdate(
+        final float scrollX, final float scrollY, final float zoom, final @SourceType int source) {
+      this.scrollX = scrollX;
+      this.scrollY = scrollY;
+      this.zoom = zoom;
+      this.source = source;
+    }
   }
 
   /**
@@ -8038,11 +8055,7 @@ public class GeckoSession {
     mViewportTop = scrollY * zoom;
     mViewportZoom = zoom;
 
-    final ScrollPositionUpdate update = new ScrollPositionUpdate();
-    update.scrollX = scrollX;
-    update.scrollY = scrollY;
-    update.zoom = zoom;
-    update.source = source;
+    final ScrollPositionUpdate update = new ScrollPositionUpdate(scrollX, scrollY, zoom, source);
     mLastScrollPositionUpdate = update;
     if (mCompositorScrollDelegate != null) {
       mCompositorScrollDelegate.onScrollChanged(this, update);
