@@ -222,6 +222,9 @@ class RecordingConnMgrDelegate final : public HappyEyeballsConnMgrDelegate {
   void RecordIPFamilyPreference(ConnectionEntry*, uint16_t) override {
     mCalls.AppendElement("RecordIPFamilyPreference"_ns);
   }
+  void ResetIPFamilyPreference(ConnectionEntry*) override {
+    mCalls.AppendElement("ResetIPFamilyPreference"_ns);
+  }
   bool MaybeProcessCoalescingKeys(ConnectionEntry*, nsIDNSAddrRecord*,
                                   bool) override {
     mCalls.AppendElement("MaybeProcessCoalescingKeys"_ns);

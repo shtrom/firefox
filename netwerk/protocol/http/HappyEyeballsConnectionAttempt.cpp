@@ -111,6 +111,9 @@ class DefaultHappyEyeballsConnMgrDelegate final
                                 uint16_t aFamily) override {
     aEntry->RecordIPFamilyPreference(aFamily);
   }
+  void ResetIPFamilyPreference(ConnectionEntry* aEntry) override {
+    aEntry->ResetIPFamilyPreference();
+  }
   bool MaybeProcessCoalescingKeys(ConnectionEntry* aEntry,
                                   nsIDNSAddrRecord* aRecord,
                                   bool aIsHttp3) override {
@@ -1417,6 +1420,16 @@ void HappyEyeballsConnectionAttempt::EnterSucceeded() {
   RefPtr<ConnectionEntry> entry(mEntry);
   MOZ_ASSERT(entry);
 
+  // RecordIPFamilyPreference is sticky (set-once) and can't flip an existing
+  // preference. If the winning family contradicts the entry's learned
+  // preference (e.g. the preferred family has since gone dead and the other
+  // family won), reset first so the winner becomes the new preference instead
+  // of being ignored -- otherwise the stale preference persists and every
+  // subsequent connection keeps giving the dead family a head start.
+  if ((mAddrFamily == AF_INET && entry->mPreferIPv6) ||
+      (mAddrFamily == AF_INET6 && entry->mPreferIPv4)) {
+    mConnMgrDelegate->ResetIPFamilyPreference(entry);
+  }
   mConnMgrDelegate->RecordIPFamilyPreference(entry, mAddrFamily);
 
   TimeStamp dnsLookupStart, dnsLookupEnd;

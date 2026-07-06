@@ -51,6 +51,7 @@ class HappyEyeballsConnMgrDelegate {
                                        bool aAbandon) = 0;
   virtual void RecordIPFamilyPreference(ConnectionEntry* aEntry,
                                         uint16_t aFamily) = 0;
+  virtual void ResetIPFamilyPreference(ConnectionEntry* aEntry) = 0;
   virtual bool MaybeProcessCoalescingKeys(ConnectionEntry* aEntry,
                                           nsIDNSAddrRecord* aRecord,
                                           bool aIsHttp3) = 0;
