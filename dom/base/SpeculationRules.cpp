@@ -6,6 +6,7 @@
 
 #include "mozilla/CycleCollectedJSContext.h"
 #include "mozilla/dom/Document.h"
+#include "mozilla/dom/PrefetchCandidates.h"
 #include "mozilla/dom/ReferrerPolicyBinding.h"
 #include "mozilla/dom/SpeculationRuleSet.h"
 #include "mozilla/dom/speculationrules_ffi_generated.h"
@@ -109,7 +110,36 @@ void SpeculationRules::ConsiderLoads() {
 void SpeculationRules::InnerConsiderLoads() {
   mConsiderSpeculativeLoadsMicrotaskQueued = false;
 
-  // TODO(avandolder): Steps 1-7.
+  // Step 1.
+  if (!mDocument || !mDocument->IsFullyActive()) {
+    return;
+  }
+
+  // Step 2.
+  UniquePtr<PrefetchCandidates> prefetchCandidates =
+      PrefetchCandidates::Create();
+  // Step 3.
+  for (auto& entry : mRuleSetsFromScript) {
+    entry.GetData()->ConsiderLoads(prefetchCandidates.get());
+  }
+
+  // Step 4.
+  // TODO(avandolder): Cancel and discard existing speculation rules prefetch
+  // records that are not still being speculated given prefetchCandidates.
+
+  // Step 5-6.
+  // Here, we group the candidates in-place, unlike the spec.
+  prefetchCandidates->Group();
+
+  // Step 7 runs in various cases when we decide to actually fire a prefetch
+  // based on the eagerness value of the candidates.
+  // Currently, we only support immediate eagerness, and we fire these
+  // prefetches now.
+  for ([[maybe_unused]] PrefetchCandidate& candidate :
+       prefetchCandidates->AsArray()) {
+    // TODO(avandolder): Create a prefetch record and start a referrer-initiated
+    // navigational prefetch given candidate.
+  }
 }
 
 }  // namespace mozilla::dom

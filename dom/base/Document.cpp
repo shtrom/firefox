@@ -229,6 +229,7 @@
 #include "mozilla/dom/ProcessingInstruction.h"
 #include "mozilla/dom/Promise.h"
 #include "mozilla/dom/PromiseNativeHandler.h"
+#include "mozilla/dom/ReferrerPolicyBinding.h"
 #include "mozilla/dom/RemoteBrowser.h"
 #include "mozilla/dom/ReportDeliver.h"
 #include "mozilla/dom/ResizeObserver.h"
