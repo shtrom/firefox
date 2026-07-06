@@ -15,6 +15,7 @@
   --sidebar-box-color: currentColor;
   background-color: transparent;
   color: var(--sidebar-text-color);
+  font: menu;
   height: 100%;
 
   &[lwt-sidebar="light"] {
