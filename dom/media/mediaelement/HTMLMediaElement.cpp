@@ -5590,6 +5590,9 @@ void HTMLMediaElement::AfterSetAttr(int32_t aNameSpaceID, nsAtom* aName,
       if (mMutedState == MutedState::Default) {
         SetMutedInternal(aValue ? (mMuted | MUTED_BY_CONTENT)
                                 : (mMuted & ~MUTED_BY_CONTENT));
+        if (IsInComposedDoc()) {
+          NotifyUAWidgetSetupOrChange();
+        }
       }
     }
   }
