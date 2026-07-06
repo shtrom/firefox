@@ -99,6 +99,10 @@ def run_mach(command_context, cmd, **kwargs):
     )
 
 
+def mach_argv(command_context):
+    return [sys.executable, os.path.join(command_context.topsrcdir, "mach")]
+
+
 @SubCommand(
     "newtab",
     "watch",
@@ -109,13 +113,13 @@ def watch(command_context):
 
     try:
         p1 = subprocess.Popen([
-            "./mach",
+            *mach_argv(command_context),
             "npm",
             "run",
             "watchmc",
             "--prefix=browser/extensions/newtab",
         ])
-        p2 = subprocess.Popen(["./mach", "watch"])
+        p2 = subprocess.Popen([*mach_argv(command_context), "watch"])
         processes.extend([p1, p2])
         print("Watching subprocesses started. Press Ctrl-C to terminate them.")
 
@@ -999,7 +1003,7 @@ def bundle(command_context):
 
     try:
         proc = subprocess.Popen([
-            "./mach",
+            *mach_argv(command_context),
             "npm",
             "run",
             "bundle",
@@ -1043,7 +1047,7 @@ def install(command_context):
 
     try:
         proc = subprocess.Popen([
-            "./mach",
+            *mach_argv(command_context),
             "npm",
             "install",
             "--prefix=browser/extensions/newtab",
