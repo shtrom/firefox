@@ -376,17 +376,7 @@ void MacroAssemblerRiscv64::ma_cmp_mv(Register dst, Register lhs, Register rhs,
   Register scratch = temps.Acquire();
 
   ma_cmp_set(scratch, lhs, rhs, c);
-
-  // Inlined moveIfNotZero to avoid allocating a new scratch register if
-  // "Zicond" is available.
-  if (HasZicondExtension()) {
-    ma_cselnz(dst, src, dst, scratch, scratch);
-  } else {
-    Label done;
-    ma_b(scratch, scratch, &done, Zero, ShortJump);
-    mv(dst, src);
-    bind(&done);
-  }
+  ma_cselnz(dst, src, dst, scratch, scratch);
 }
 
 void MacroAssemblerRiscv64::ma_cmp_mv(Register dst, Register lhs, Imm32 rhs,
@@ -395,22 +385,11 @@ void MacroAssemblerRiscv64::ma_cmp_mv(Register dst, Register lhs, Imm32 rhs,
   Register scratch = temps.Acquire();
 
   ma_cmp_set(scratch, lhs, rhs, c);
-
-  // Inlined moveIfNotZero to avoid allocating a new scratch register if
-  // "Zicond" is available.
-  if (HasZicondExtension()) {
-    ma_cselnz(dst, src, dst, scratch, scratch);
-  } else {
-    Label done;
-    ma_b(scratch, scratch, &done, Zero, ShortJump);
-    mv(dst, src);
-    bind(&done);
-  }
+  ma_cselnz(dst, src, dst, scratch, scratch);
 }
 
 void MacroAssemblerRiscv64::ma_cselz(Register rd, Register rs1, Register rs2,
                                      Register rc, Register rtmp) {
-  MOZ_ASSERT(HasZicondExtension());
   MOZ_ASSERT(rd != rtmp);
 
   // From
@@ -430,29 +409,63 @@ void MacroAssemblerRiscv64::ma_cselz(Register rd, Register rs1, Register rs2,
     return;
   }
 
-  if (rd == rc) {
-    if (rs1 != rtmp) {
-      czero_eqz(rtmp, rs2, rc);
-      czero_nez(rd, rs1, rc);
+  if (HasZicondExtension()) {
+    if (rd == rc) {
+      if (rs1 != rtmp) {
+        czero_eqz(rtmp, rs2, rc);
+        czero_nez(rd, rs1, rc);
+      } else {
+        czero_nez(rtmp, rs1, rc);
+        czero_eqz(rd, rs2, rc);
+      }
     } else {
-      czero_nez(rtmp, rs1, rc);
-      czero_eqz(rd, rs2, rc);
+      if (rd == rs2) {
+        czero_eqz(rd, rs2, rc);
+        czero_nez(rtmp, rs1, rc);
+      } else {
+        czero_nez(rd, rs1, rc);
+        czero_eqz(rtmp, rs2, rc);
+      }
     }
+    add(rd, rd, rtmp);
   } else {
-    if (rd == rs2) {
-      czero_eqz(rd, rs2, rc);
-      czero_nez(rtmp, rs1, rc);
+    if (rd == rs1) {
+      Label done;
+      ma_b(rc, rc, &done, Zero, ShortJump);
+      mv(rd, rs2);
+      bind(&done);
+    } else if (rd == rs2) {
+      Label done;
+      ma_b(rc, rc, &done, NonZero, ShortJump);
+      mv(rd, rs1);
+      bind(&done);
+    } else if (rd == rc) {
+      Label done;
+      if (rtmp == rs1) {
+        ma_b(rc, rc, &done, Zero, ShortJump);
+        mv(rtmp, rs2);
+      } else if (rtmp == rs2) {
+        ma_b(rc, rc, &done, NonZero, ShortJump);
+        mv(rtmp, rs1);
+      } else {
+        mv(rtmp, rs1);
+        ma_b(rc, rc, &done, Zero, ShortJump);
+        mv(rtmp, rs2);
+      }
+      bind(&done);
+      mv(rd, rtmp);
     } else {
-      czero_nez(rd, rs1, rc);
-      czero_eqz(rtmp, rs2, rc);
+      mv(rd, rs1);
+      Label done;
+      ma_b(rc, rc, &done, Zero, ShortJump);
+      mv(rd, rs2);
+      bind(&done);
     }
   }
-  add(rd, rd, rtmp);
 }
 
 void MacroAssemblerRiscv64::ma_cselnz(Register rd, Register rs1, Register rs2,
                                       Register rc, Register rtmp) {
-  MOZ_ASSERT(HasZicondExtension());
   MOZ_ASSERT(rd != rtmp);
 
   // From
@@ -472,24 +485,59 @@ void MacroAssemblerRiscv64::ma_cselnz(Register rd, Register rs1, Register rs2,
     return;
   }
 
-  if (rd == rc) {
-    if (rs1 != rtmp) {
-      czero_nez(rtmp, rs2, rc);
-      czero_eqz(rd, rs1, rc);
+  if (HasZicondExtension()) {
+    if (rd == rc) {
+      if (rs1 != rtmp) {
+        czero_nez(rtmp, rs2, rc);
+        czero_eqz(rd, rs1, rc);
+      } else {
+        czero_eqz(rtmp, rs1, rc);
+        czero_nez(rd, rs2, rc);
+      }
     } else {
-      czero_eqz(rtmp, rs1, rc);
-      czero_nez(rd, rs2, rc);
+      if (rd == rs2) {
+        czero_nez(rd, rs2, rc);
+        czero_eqz(rtmp, rs1, rc);
+      } else {
+        czero_eqz(rd, rs1, rc);
+        czero_nez(rtmp, rs2, rc);
+      }
     }
+    add(rd, rd, rtmp);
   } else {
-    if (rd == rs2) {
-      czero_nez(rd, rs2, rc);
-      czero_eqz(rtmp, rs1, rc);
+    if (rd == rs1) {
+      Label done;
+      ma_b(rc, rc, &done, NonZero, ShortJump);
+      mv(rd, rs2);
+      bind(&done);
+    } else if (rd == rs2) {
+      Label done;
+      ma_b(rc, rc, &done, Zero, ShortJump);
+      mv(rd, rs1);
+      bind(&done);
+    } else if (rd == rc) {
+      Label done;
+      if (rtmp == rs1) {
+        ma_b(rc, rc, &done, NonZero, ShortJump);
+        mv(rtmp, rs2);
+      } else if (rtmp == rs2) {
+        ma_b(rc, rc, &done, Zero, ShortJump);
+        mv(rtmp, rs1);
+      } else {
+        mv(rtmp, rs1);
+        ma_b(rc, rc, &done, NonZero, ShortJump);
+        mv(rtmp, rs2);
+      }
+      bind(&done);
+      mv(rd, rtmp);
     } else {
-      czero_eqz(rd, rs1, rc);
-      czero_nez(rtmp, rs2, rc);
+      mv(rd, rs1);
+      Label done;
+      ma_b(rc, rc, &done, NonZero, ShortJump);
+      mv(rd, rs2);
+      bind(&done);
     }
   }
-  add(rd, rd, rtmp);
 }
 
 void MacroAssemblerRiscv64::ma_compareF32(Register rd, DoubleCondition cc,
