@@ -6843,11 +6843,16 @@ void MacroAssemblerRiscv64::Dror(Register rd, Register rs, Register rt) {
 void MacroAssemblerRiscv64::wasmLoadImpl(const wasm::MemoryAccessDesc& access,
                                          Register memoryBase, Register ptr,
                                          AnyRegister output) {
+  BaseIndex address(memoryBase, ptr, TimesOne, access.offset32());
+  wasmLoadImpl(access, address, output);
+}
+
+void MacroAssemblerRiscv64::wasmLoadImpl(const wasm::MemoryAccessDesc& access,
+                                         const BaseIndex& address,
+                                         AnyRegister output) {
   access.assertOffsetInGuardPages();
 
   asMasm().memoryBarrierBefore(access.sync());
-
-  BaseIndex address(memoryBase, ptr, TimesOne, access.offset32());
 
   FaultingCodeOffset fco;
   switch (access.type()) {
@@ -6889,11 +6894,16 @@ void MacroAssemblerRiscv64::wasmLoadImpl(const wasm::MemoryAccessDesc& access,
 void MacroAssemblerRiscv64::wasmStoreImpl(const wasm::MemoryAccessDesc& access,
                                           AnyRegister value,
                                           Register memoryBase, Register ptr) {
+  BaseIndex address(memoryBase, ptr, TimesOne, access.offset32());
+  wasmStoreImpl(access, value, address);
+}
+
+void MacroAssemblerRiscv64::wasmStoreImpl(const wasm::MemoryAccessDesc& access,
+                                          AnyRegister value,
+                                          const BaseIndex& address) {
   access.assertOffsetInGuardPages();
 
   asMasm().memoryBarrierBefore(access.sync());
-
-  BaseIndex address(memoryBase, ptr, TimesOne, access.offset32());
 
   FaultingCodeOffset fco;
   switch (access.type()) {
@@ -6931,6 +6941,38 @@ void MacroAssemblerRiscv64::wasmStoreImpl(const wasm::MemoryAccessDesc& access,
   // Only the last emitted instruction is a memory access.
   append(access, js::wasm::TrapMachineInsnForStore(access.byteSize()), fco);
   asMasm().memoryBarrierAfter(access.sync());
+}
+
+BaseIndex MacroAssemblerRiscv64::toBaseIndex(Register base, uint64_t address,
+                                             UseScratchRegisterScope& temps) {
+  Register index;
+  int32_t offset;
+  if (is_int32(address)) {
+    index = zero;
+    offset = int32_t(address);
+  } else {
+    Register scratch = temps.Acquire();
+    ma_li(scratch, Imm64(address));
+    index = scratch;
+    offset = 0;
+  }
+  return BaseIndex{base, index, TimesOne, offset};
+}
+
+void MacroAssemblerRiscv64::wasmLoadAbsoluteImpl(
+    const wasm::MemoryAccessDesc& access, Register memoryBase, uint64_t offset,
+    AnyRegister output) {
+  UseScratchRegisterScope temps(this);
+  BaseIndex address = toBaseIndex(memoryBase, offset, temps);
+  wasmLoadImpl(access, address, output);
+}
+
+void MacroAssemblerRiscv64::wasmStoreAbsoluteImpl(
+    const wasm::MemoryAccessDesc& access, AnyRegister value,
+    Register memoryBase, uint64_t offset) {
+  UseScratchRegisterScope temps(this);
+  BaseIndex address = toBaseIndex(memoryBase, offset, temps);
+  wasmStoreImpl(access, value, address);
 }
 
 void MacroAssemblerRiscv64::ma_fmv_d(FloatRegister src, ValueOperand dest) {

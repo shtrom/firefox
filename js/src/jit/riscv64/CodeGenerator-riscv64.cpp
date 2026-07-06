@@ -5,6 +5,7 @@
 #include "jit/riscv64/CodeGenerator-riscv64.h"
 
 #include "mozilla/MathAlgorithms.h"
+#include "mozilla/Maybe.h"
 
 #include <bit>
 
@@ -671,30 +672,62 @@ void CodeGenerator::visitUModConstantI64(LUModConstantI64* ins) {
   masm.sub(output, lhs, output);
 }
 
+// If we have a constant base ptr, try to add the offset to it, to generate
+// better code when the full address is known.  The addition may overflow past
+// 32 bits because the front end does nothing special if the base is a large
+// constant and base+offset overflows; sidestep this by performing the addition
+// anyway, overflowing to 64-bit.
+static mozilla::Maybe<uint64_t> ToAbsoluteAddress(
+    const LAllocation* ptr, const wasm::MemoryAccessDesc& access) {
+  if (ptr->isConstantValue()) {
+    const MConstant* c = ptr->toConstant();
+    uint64_t baseAddress = c->type() == MIRType::Int32
+                               ? uint64_t(uint32_t(c->toInt32()))
+                               : uint64_t(c->toInt64());
+    uint64_t offset = access.offset32();
+    return mozilla::Some(baseAddress + offset);
+  }
+  return mozilla::Nothing();
+}
+
 void CodeGenerator::visitWasmLoadI64(LWasmLoadI64* ins) {
   const MWasmLoad* mir = ins->mir();
+  const auto& access = mir->access();
 
   Register memoryBase = ToRegister(ins->memoryBase());
-  Register ptr = ToRegister(ins->ptr());
+  Register64 output = ToOutRegister64(ins);
 
-  // See comment in visitWasmLoad re the type of 'base'.
-  if (mir->base()->type() == MIRType::Int32) {
-    masm.move32ZeroExtendToPtr(ptr, ptr);
+  if (auto address = ToAbsoluteAddress(ins->ptr(), access)) {
+    masm.wasmLoadAbsoluteI64(access, memoryBase, address.value(), output);
+  } else {
+    Register ptr = ToRegister(ins->ptr());
+
+    // See comment in visitWasmLoad re the type of 'base'.
+    if (mir->base()->type() == MIRType::Int32) {
+      masm.move32ZeroExtendToPtr(ptr, ptr);
+    }
+    masm.wasmLoadI64(access, memoryBase, ptr, output);
   }
-  masm.wasmLoadI64(mir->access(), memoryBase, ptr, ToOutRegister64(ins));
 }
 
 void CodeGenerator::visitWasmStoreI64(LWasmStoreI64* ins) {
   const MWasmStore* mir = ins->mir();
+  const auto& access = mir->access();
 
+  Register64 value = ToRegister64(ins->value());
   Register memoryBase = ToRegister(ins->memoryBase());
-  Register ptr = ToRegister(ins->ptr());
 
-  // See comment in visitWasmLoad re the type of 'base'.
-  if (mir->base()->type() == MIRType::Int32) {
-    masm.move32ZeroExtendToPtr(ptr, ptr);
+  if (auto address = ToAbsoluteAddress(ins->ptr(), access)) {
+    masm.wasmStoreAbsoluteI64(access, value, memoryBase, address.value());
+  } else {
+    Register ptr = ToRegister(ins->ptr());
+
+    // See comment in visitWasmLoad re the type of 'base'.
+    if (mir->base()->type() == MIRType::Int32) {
+      masm.move32ZeroExtendToPtr(ptr, ptr);
+    }
+    masm.wasmStoreI64(access, value, memoryBase, ptr);
   }
-  masm.wasmStoreI64(mir->access(), ToRegister64(ins->value()), memoryBase, ptr);
 }
 
 void CodeGenerator::visitWasmSelectI64(LWasmSelectI64* ins) {
@@ -2001,36 +2034,54 @@ void CodeGenerator::visitNotF(LNotF* ins) {
 
 void CodeGenerator::visitWasmLoad(LWasmLoad* ins) {
   const MWasmLoad* mir = ins->mir();
-  UseScratchRegisterScope temps(&masm);
-  Register scratch2 = temps.Acquire();
+  const auto& access = mir->access();
 
   Register memoryBase = ToRegister(ins->memoryBase());
-  Register ptr = ToRegister(ins->ptr());
+  AnyRegister output = ToAnyRegister(ins->output());
 
-  // ptr is a GPR and is either a 32-bit value zero-extended to 64-bit, or a
-  // true 64-bit value.
-  if (mir->base()->type() == MIRType::Int32) {
-    masm.move32ZeroExtendToPtr(ptr, scratch2);
-    ptr = scratch2;
+  if (auto address = ToAbsoluteAddress(ins->ptr(), access)) {
+    masm.wasmLoadAbsolute(access, memoryBase, address.value(), output);
+  } else {
+    UseScratchRegisterScope temps(&masm);
+    Register ptr = ToRegister(ins->ptr());
+
+    // ptr is a GPR and is either a 32-bit value zero-extended to 64-bit, or a
+    // true 64-bit value.
+    if (mir->base()->type() == MIRType::Int32) {
+      Register scratch = temps.Acquire();
+
+      masm.move32ZeroExtendToPtr(ptr, scratch);
+      ptr = scratch;
+    }
+
+    masm.wasmLoad(access, memoryBase, ptr, output);
   }
-  masm.wasmLoad(mir->access(), memoryBase, ptr, ToAnyRegister(ins->output()));
 }
 
 void CodeGenerator::visitWasmStore(LWasmStore* ins) {
   const MWasmStore* mir = ins->mir();
-  UseScratchRegisterScope temps(&masm);
-  Register scratch2 = temps.Acquire();
+  const auto& access = mir->access();
 
+  AnyRegister value = ToAnyRegister(ins->value());
   Register memoryBase = ToRegister(ins->memoryBase());
-  Register ptr = ToRegister(ins->ptr());
 
-  // ptr is a GPR and is either a 32-bit value zero-extended to 64-bit, or a
-  // true 64-bit value.
-  if (mir->base()->type() == MIRType::Int32) {
-    masm.move32ZeroExtendToPtr(ptr, scratch2);
-    ptr = scratch2;
+  if (auto address = ToAbsoluteAddress(ins->ptr(), access)) {
+    masm.wasmStoreAbsolute(access, value, memoryBase, address.value());
+  } else {
+    UseScratchRegisterScope temps(&masm);
+    Register ptr = ToRegister(ins->ptr());
+
+    // ptr is a GPR and is either a 32-bit value zero-extended to 64-bit, or a
+    // true 64-bit value.
+    if (mir->base()->type() == MIRType::Int32) {
+      Register scratch = temps.Acquire();
+
+      masm.move32ZeroExtendToPtr(ptr, scratch);
+      ptr = scratch;
+    }
+
+    masm.wasmStore(access, value, memoryBase, ptr);
   }
-  masm.wasmStore(mir->access(), ToAnyRegister(ins->value()), memoryBase, ptr);
 }
 
 void CodeGenerator::visitWasmCompareExchangeHeap(
