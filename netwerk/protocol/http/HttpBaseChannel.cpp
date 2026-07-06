@@ -6894,11 +6894,9 @@ void HttpBaseChannel::LogORBError(
   mLoadInfo->GetLoadingDocument(getter_AddRefs(doc));
 
   nsAutoCString uri;
-  if (mURI->SchemeIs("data")) {
-    uri.AssignLiteral("data:...");
-  } else {
-    nsCOMPtr<nsIURI> exposableURI = net::nsIOService::CreateExposableURI(mURI);
-    exposableURI->GetSpec(uri);
+  nsresult rv = nsContentUtils::AnonymizeURI(mURI, uri);
+  if (NS_WARN_IF(NS_FAILED(rv))) {
+    return;
   }
 
   uint64_t contentWindowId;
