@@ -86,6 +86,9 @@ struct WebRenderCapabilities {
   bool mUseLayerCompositor = false;
   bool mUseTripleBuffering = false;
   bool mSupportsExternalBufferTextures = false;
+#ifdef XP_DARWIN
+  wr::ImageBufferKind mIOSurfaceImageKind = wr::ImageBufferKind::Texture2D;
+#endif
 };
 
 /// A handler that can be bundled into a transaction and notified at specific

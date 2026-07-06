@@ -343,6 +343,14 @@ RefPtr<WebRenderAPI::CreatePromise> WebRenderAPI::Create(
         // which block on the WebRenderAPI work can proceed immediately.
         renderThread->BeginShaderWarmupIfNeeded();
 
+#ifdef XP_DARWIN
+        wr::ImageBufferKind ioSurfaceImageKind = wr::ImageBufferKind::Texture2D;
+        if (gl && gl->GetPreferredMacIOSurfaceTextureTarget() ==
+                      LOCAL_GL_TEXTURE_RECTANGLE) {
+          ioSurfaceImageKind = wr::ImageBufferKind::TextureRect;
+        }
+#endif
+
         const WebRenderCapabilities capabilities{
             .mBackendType = backend,
             .mCompositorType = compositorType,
@@ -351,7 +359,11 @@ RefPtr<WebRenderAPI::CreatePromise> WebRenderAPI::Create(
             .mUseDComp = useDComp,
             .mUseLayerCompositor = useLayerCompositor,
             .mUseTripleBuffering = useTripleBuffering,
-            .mSupportsExternalBufferTextures = supportsExternalBufferTextures};
+            .mSupportsExternalBufferTextures = supportsExternalBufferTextures,
+#ifdef XP_DARWIN
+            .mIOSurfaceImageKind = ioSurfaceImageKind,
+#endif
+        };
         RefPtr<WebRenderAPI> api =
             new WebRenderAPI(docHandle, aWindowId, capabilities, syncHandle);
         return CreatePromise::CreateAndResolve(std::move(api), __func__);
