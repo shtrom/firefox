@@ -3434,6 +3434,31 @@ export const SearchService = new (class SearchService {
   #onSeparateDefaultPrefChanged(prefName, previousValue, currentValue) {
     // Clear out the sorted engines settings, so that we re-sort it if necessary.
     this._cachedSortedEngines = null;
+
+    if (
+      prefName === "browser.search.separatePrivateDefault" &&
+      !previousValue &&
+      currentValue
+    ) {
+      if (this.#appDefaultEngine(true) != this.#appDefaultEngine(false)) {
+        // The app has a distinct private default, which allows it to specify a
+        // different engine (e.g., for active experiments, user choice, or partner
+        // routing). Prioritize that app default when enabling this option.
+        this._settings.setMetaDataAttribute(
+          "privateDefaultEngineId",
+          this.#appDefaultEngine(true).id
+        );
+      } else {
+        // If the app defaults don't differ but the user has customized their
+        // normal engine, we shouldn't force them back to a generic default.
+        // Start them off with the engine they are already comfortable using.
+        this._settings.setMetaDataAttribute(
+          "privateDefaultEngineId",
+          this.defaultEngine.id
+        );
+      }
+    }
+
     // We should notify if the normal default, and the currently saved private
     // default are different. Otherwise, save the energy.
     if (this.defaultEngine != this._getEngineDefault(true)) {
