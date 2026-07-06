@@ -353,12 +353,8 @@ nsresult NetworkLoadHandler::PrepareForRequest(nsIRequest* aRequest) {
 
     auto mimeTypeUTF16 = NS_ConvertUTF8toUTF16(mimeType);
     if (!nsContentUtils::IsJavascriptMIMEType(mimeTypeUTF16)) {
-      // JSON is only allowed for non-toplevel JSON module imports, not for
-      // classic importScripts() or the top-level worker script.
+      // JSON is allowed as a non-toplevel.
       if (!((!loadContext->IsTopLevel() &&
-             loadContext->mRequest->IsModuleRequest() &&
-             loadContext->mRequest->AsModuleRequest()->mModuleType ==
-                 JS::ModuleType::JSON &&
              nsContentUtils::IsJsonMimeType(mimeTypeUTF16))
 #ifdef NIGHTLY_BUILD
             // Allow wasm modules.
