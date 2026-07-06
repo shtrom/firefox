@@ -111,7 +111,9 @@ export class LoginStorageMigrator {
 
   // Runs the migration if necessary and returns the active storage backend.
   async run() {
-    switch (this.#state) {
+    const state = this.#state;
+    this.#logger.log(`run: ${state}`);
+    switch (state) {
       case "RustPrimary":
         return this.#rustStorage;
 
@@ -132,13 +134,25 @@ export class LoginStorageMigrator {
     }
   }
 
-  // Atm only supported either unlocked or without Primary Password.
+  // If a PrP is set, prompt for it. Then start the migration.
   async #startMigration() {
     if (
       lazy.LoginHelper.isPrimaryPasswordSet() &&
       !this.#jsonStorage.isLoggedIn
     ) {
-      return this.#jsonStorage;
+      const token = Cc[
+        "@mozilla.org/security/internalkeytoken;1"
+      ].createInstance(Ci.nsIPKCS11Token);
+      try {
+        // Logs in, which prompts for the primary password.
+        await token.login();
+      } catch (e) {
+        // An exception is thrown if the user cancels the prompt.
+      }
+      if (!token.isLoggedIn) {
+        this.#logger.log("Migration deferred: primary password locked");
+        return this.#jsonStorage;
+      }
     }
     return this.#executeMigration();
   }
@@ -268,10 +282,14 @@ export class LoginStorageMigrator {
 
   async #retryMigration() {
     this.#retryCount++;
+    this.#logger.log(
+      `Retrying migration (${this.#retryCount}/${MAX_RUNTIME_RETRIES})`
+    );
     return this.#executeMigration();
   }
 
   #abortMigration() {
+    this.#logger.log("Migration aborted; will retry on next startup");
     Services.prefs.setIntPref(
       PREFS.MIGRATION_ATTEMPTS,
       Services.prefs.getIntPref(PREFS.MIGRATION_ATTEMPTS, 0) + 1
@@ -281,6 +299,7 @@ export class LoginStorageMigrator {
   }
 
   #exceedMigrationBudget() {
+    this.#logger.log("Migration budget exceeded; disabling Rust backend");
     Services.prefs.setBoolPref(PREFS.RUST_ENABLED, false);
     Services.prefs.setIntPref(PREFS.MIGRATION_ATTEMPTS, 0);
     return this.#jsonStorage;
@@ -290,6 +309,7 @@ export class LoginStorageMigrator {
   // changes made while Rust was active are lost. Reset the attempt budget so a
   // later re-enable starts fresh.
   #deactivateRust() {
+    this.#logger.log("Deactivating Rust backend");
     Services.prefs.setBoolPref(PREFS.RUST_ACTIVE, false);
     Services.prefs.setIntPref(PREFS.MIGRATION_ATTEMPTS, 0);
     return this.#jsonStorage;

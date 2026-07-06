@@ -19,6 +19,9 @@ const { LoginStorageMigrator } = ChromeUtils.importESModule(
 const { sinon } = ChromeUtils.importESModule(
   "resource://testing-common/Sinon.sys.mjs"
 );
+const { MockRegistrar } = ChromeUtils.importESModule(
+  "resource://testing-common/MockRegistrar.sys.mjs"
+);
 
 const PREF_ENABLED = "signon.storage.rust.enabled";
 const PREF_ACTIVE = "signon.storage.rust.active";
@@ -97,6 +100,28 @@ function makeRustStorage({
       this.vulnerable.push(...passwords);
     },
   };
+}
+
+// Stands in for the primary password dialog. `accept` decides whether the user
+// submits the correct password or cancels. Returns the CID to unregister.
+function mockPrimaryPasswordPrompt(accept) {
+  const prompt = {
+    promptPassword(_dialogTitle, _text, password) {
+      if (accept) {
+        password.value = LoginTestUtils.primaryPassword.primaryPassword;
+      }
+      return accept;
+    },
+    QueryInterface: ChromeUtils.generateQI(["nsIPrompt"]),
+  };
+  const windowWatcher = {
+    getNewPrompter: () => prompt,
+    QueryInterface: ChromeUtils.generateQI(["nsIWindowWatcher"]),
+  };
+  return MockRegistrar.register(
+    "@mozilla.org/embedcomp/window-watcher;1",
+    windowWatcher
+  );
 }
 
 add_setup(function () {
@@ -368,12 +393,44 @@ add_task(async function test_migration_retries_then_completes() {
 // Primary Password
 // ---------------------------------------------------------------------------
 
-add_task(async function test_primaryPassword_locked_defers_without_penalty() {
+add_task(async function test_primaryPassword_prompt_accepted_migrates() {
+  resetState();
+  Services.prefs.setBoolPref(PREF_ENABLED, true);
+  await LoginTestUtils.primaryPassword.enable();
+  const cid = mockPrimaryPasswordPrompt(true);
+  try {
+    const json = makeJsonStorage({
+      logins: [TestData.formLogin({})],
+      isLoggedIn: false,
+    });
+    const rust = makeRustStorage();
+
+    const result = await new LoginStorageMigrator(json, rust).run();
+
+    Assert.equal(
+      result,
+      rust,
+      "accepting the Primary Password prompt proceeds with migration"
+    );
+    Assert.equal(
+      Services.prefs.getBoolPref(PREF_ACTIVE),
+      true,
+      "rust activated"
+    );
+    const { extra } = Glean.pwmgr.rustMigrationStatus.testGetValue()[0];
+    Assert.equal(extra.primary_password_set, "true");
+  } finally {
+    MockRegistrar.unregister(cid);
+    await LoginTestUtils.primaryPassword.disable();
+  }
+});
+
+add_task(async function test_primaryPassword_prompt_canceled_defers() {
   resetState();
   Services.prefs.setBoolPref(PREF_ENABLED, true);
   Services.prefs.setIntPref(PREF_ATTEMPTS, 3);
-  const sandbox = sinon.createSandbox();
-  sandbox.stub(LoginHelper, "isPrimaryPasswordSet").returns(true);
+  await LoginTestUtils.primaryPassword.enable();
+  const cid = mockPrimaryPasswordPrompt(false);
   try {
     const json = makeJsonStorage({
       logins: [TestData.formLogin({})],
@@ -386,7 +443,7 @@ add_task(async function test_primaryPassword_locked_defers_without_penalty() {
     Assert.equal(
       result,
       json,
-      "locked Primary Password defers to the JSON store"
+      "canceling the Primary Password prompt defers to the JSON store"
     );
     Assert.equal(rust.calls.length, 0, "no migration performed");
     Assert.equal(
@@ -397,7 +454,7 @@ add_task(async function test_primaryPassword_locked_defers_without_penalty() {
     Assert.equal(
       Services.prefs.getIntPref(PREF_ATTEMPTS),
       3,
-      "deferral does not consume the attempt budget"
+      "canceling does not consume the attempt budget"
     );
     Assert.equal(
       Glean.pwmgr.rustMigrationStatus.testGetValue(),
@@ -405,7 +462,8 @@ add_task(async function test_primaryPassword_locked_defers_without_penalty() {
       "no status event for a deferred run"
     );
   } finally {
-    sandbox.restore();
+    MockRegistrar.unregister(cid);
+    await LoginTestUtils.primaryPassword.disable();
   }
 });
 
