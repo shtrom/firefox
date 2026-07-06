@@ -107,6 +107,10 @@ if CONFIG["OS_TARGET"] == "WINNT":
     DEFINES["_WINSOCK_DEPRECATED_NO_WARNINGS"] = True
     DEFINES["__STD_C"] = True
 
+    UNIFIED_SOURCES += [
+        "/third_party/abseil-cpp/absl/time/internal/cctz/src/time_zone_name_win.cc"
+    ]
+
 if CONFIG["TARGET_CPU"] == "aarch64":
 
     DEFINES["__ARM_NEON__"] = "1"

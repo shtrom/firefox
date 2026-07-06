@@ -23,7 +23,7 @@ LOCAL_INCLUDES += [
 ]
 
 UNIFIED_SOURCES += [
-    "/third_party/abseil-cpp/absl/base/internal/throw_delegate.cc"
+    "/third_party/abseil-cpp/absl/base/throw_delegate.cc"
 ]
 
 if not CONFIG["MOZ_DEBUG"]:

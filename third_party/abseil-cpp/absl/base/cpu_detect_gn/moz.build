@@ -23,7 +23,7 @@ LOCAL_INCLUDES += [
 ]
 
 UNIFIED_SOURCES += [
-    "/third_party/abseil-cpp/absl/log/log_entry.cc"
+    "/third_party/abseil-cpp/absl/base/internal/cpu_detect.cc"
 ]
 
 if not CONFIG["MOZ_DEBUG"]:
@@ -43,12 +43,6 @@ if CONFIG["OS_TARGET"] == "Android":
     DEFINES["HAVE_SYS_UIO_H"] = True
     DEFINES["_GNU_SOURCE"] = True
     DEFINES["__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__"] = True
-
-if CONFIG["OS_TARGET"] == "Darwin":
-
-    OS_LIBS += [
-        "-framework Foundation"
-    ]
 
 if CONFIG["OS_TARGET"] == "Linux":
 
@@ -162,4 +156,4 @@ if CONFIG["OS_TARGET"] == "Linux" and CONFIG["TARGET_CPU"] == "x86_64":
 
     DEFINES["_GNU_SOURCE"] = True
 
-Library("log_entry_gn")
+Library("cpu_detect_gn")

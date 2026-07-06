@@ -23,7 +23,7 @@ LOCAL_INCLUDES += [
 ]
 
 UNIFIED_SOURCES += [
-    "/third_party/abseil-cpp/absl/crc/internal/cpu_detect.cc"
+    "/third_party/abseil-cpp/absl/base/internal/hardening.cc"
 ]
 
 if not CONFIG["MOZ_DEBUG"]:
@@ -156,4 +156,4 @@ if CONFIG["OS_TARGET"] == "Linux" and CONFIG["TARGET_CPU"] == "x86_64":
 
     DEFINES["_GNU_SOURCE"] = True
 
-Library("cpu_detect_gn")
+Library("hardening_gn")
