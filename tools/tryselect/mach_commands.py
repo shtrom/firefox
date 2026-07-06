@@ -111,9 +111,7 @@ def handle_presets(
 
     if preset:
         if preset not in presets(command_context):
-            command_context._mach_context.parser.error(
-                f"preset '{preset}' does not exist"
-            )
+            parser.error(f"preset '{preset}' does not exist")
 
         name = preset
         preset = presets(command_context)[name]
