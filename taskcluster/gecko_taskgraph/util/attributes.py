@@ -91,25 +91,6 @@ RUN_ON_PROJECT_ALIASES = {
     "mozilla-central-only": lambda params: params["project"] == "mozilla-central",
 }
 
-_COPYABLE_ATTRIBUTES = (
-    "accepted-mar-channel-ids",
-    "artifact_map",
-    "artifact_prefix",
-    "build_platform",
-    "build_type",
-    "l10n_chunk",
-    "locale",
-    "mar-channel-id",
-    "maven_packages",
-    "nightly",
-    "shippable",
-    "shipping_phase",
-    "shipping_product",
-    "signed",
-    "stub-installer",
-    "update-channel",
-)
-
 
 def match_run_on_projects(params, run_on_projects):
     """Determine whether the given project is included in the `run-on-projects`
@@ -138,14 +119,6 @@ def match_run_on_hg_branches(hg_branch, run_on_hg_branches):
 
 
 match_run_on_repo_type = _match_run_on
-
-
-def copy_attributes_from_dependent_job(dep_job, denylist=()):
-    return {
-        attr: dep_job.attributes[attr]
-        for attr in _COPYABLE_ATTRIBUTES
-        if attr in dep_job.attributes and attr not in denylist
-    }
 
 
 def sorted_unique_list(*args):
