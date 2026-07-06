@@ -10050,7 +10050,7 @@ void nsGridContainerFrame::UpdateSubgridFrameState() {
 }
 
 nsFrameState nsGridContainerFrame::ComputeSelfSubgridMasonryBits() const {
-  nsFrameState bits = nsFrameState(0);
+  nsFrameState bits = NS_FRAME_STATE_NONE;
   const auto* pos = StylePosition();
 
   // We can only have masonry layout in one axis.
@@ -10133,7 +10133,7 @@ void nsGridContainerFrame::Init(nsIContent* aContent, nsContainerFrame* aParent,
     AddStateBits(NS_FRAME_FONT_INFLATION_FLOW_ROOT);
   }
 
-  nsFrameState bits = nsFrameState(0);
+  nsFrameState bits = NS_FRAME_STATE_NONE;
   if (MOZ_LIKELY(!aPrevInFlow)) {
     bits = ComputeSelfSubgridMasonryBits();
   } else {
