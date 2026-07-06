@@ -3835,6 +3835,19 @@ Preferences.addSetting({
   pref: "privacy.trackingprotection.emailtracking.pbmode.enabled",
 });
 
+// Social tracking protection isn't exposed directly either; it follows the
+// all-windows tracking protection control, but only when the user is blocking
+// social tracking cookies (socialBlockCookies). This mirrors the old UI.
+Preferences.addSetting({
+  id: "trackingProtectionSocialEnabled",
+  pref: "privacy.trackingprotection.socialtracking.enabled",
+});
+
+Preferences.addSetting({
+  id: "socialBlockCookies",
+  pref: "privacy.socialtracking.block_cookies.enabled",
+});
+
 Preferences.addSetting({
   id: "etpCustomTrackingProtectionEnabledContext",
   deps: [
@@ -3842,6 +3855,8 @@ Preferences.addSetting({
     "trackingProtectionEnabledPBM",
     "trackingProtectionEmailEnabled",
     "trackingProtectionEmailEnabledPBM",
+    "trackingProtectionSocialEnabled",
+    "socialBlockCookies",
   ],
   get(_, { trackingProtectionEnabled, trackingProtectionEnabledPBM }) {
     if (trackingProtectionEnabled.value && trackingProtectionEnabledPBM.value) {
@@ -3858,6 +3873,8 @@ Preferences.addSetting({
       trackingProtectionEnabledPBM,
       trackingProtectionEmailEnabled,
       trackingProtectionEmailEnabledPBM,
+      trackingProtectionSocialEnabled,
+      socialBlockCookies,
     }
   ) {
     if (value == "all") {
@@ -3865,11 +3882,17 @@ Preferences.addSetting({
       trackingProtectionEnabledPBM.value = true;
       trackingProtectionEmailEnabled.value = true;
       trackingProtectionEmailEnabledPBM.value = true;
+      if (socialBlockCookies.value) {
+        trackingProtectionSocialEnabled.value = true;
+      }
     } else if (value == "pbmOnly") {
       trackingProtectionEnabled.value = false;
       trackingProtectionEnabledPBM.value = true;
       trackingProtectionEmailEnabled.value = false;
       trackingProtectionEmailEnabledPBM.value = true;
+      if (socialBlockCookies.value) {
+        trackingProtectionSocialEnabled.value = false;
+      }
     }
   },
 });
@@ -3881,6 +3904,8 @@ Preferences.addSetting({
     "trackingProtectionEnabledPBM",
     "trackingProtectionEmailEnabled",
     "trackingProtectionEmailEnabledPBM",
+    "trackingProtectionSocialEnabled",
+    "socialBlockCookies",
   ],
   disabled: ({ trackingProtectionEnabled, trackingProtectionEnabledPBM }) => {
     return (
@@ -3899,6 +3924,8 @@ Preferences.addSetting({
       trackingProtectionEnabledPBM,
       trackingProtectionEmailEnabled,
       trackingProtectionEmailEnabledPBM,
+      trackingProtectionSocialEnabled,
+      socialBlockCookies,
     }
   ) {
     if (value) {
@@ -3911,6 +3938,11 @@ Preferences.addSetting({
       trackingProtectionEnabledPBM.value = false;
       trackingProtectionEmailEnabled.value = false;
       trackingProtectionEmailEnabledPBM.value = false;
+    }
+    // Neither toggle branch enables all-windows tracking protection, so social
+    // trackers are never blocked here; clear the pref to match the old UI.
+    if (socialBlockCookies.value) {
+      trackingProtectionSocialEnabled.value = false;
     }
   },
 });
