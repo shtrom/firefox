@@ -15,6 +15,7 @@
 #ifdef ACCESSIBILITY
 #  include "mozilla/a11y/Compatibility.h"
 #endif
+#include "mozilla/CheckedInt.h"
 #include "mozilla/Logging.h"
 #include "mozilla/ScopeExit.h"
 #include "mozilla/StaticPrefs_clipboard.h"
@@ -159,6 +160,25 @@ mozilla::Maybe<UINT> nsClipboard::GetSecondaryFormat(const char* aMimeStr) {
   }
   return mozilla::Nothing();
 }
+
+template <typename GroupDesc>
+/* static */
+bool nsClipboard::FileGroupDescriptorHasItems(HGLOBAL aHGlobal,
+                                              uint64_t aItemCount) {
+  if (!aHGlobal) {
+    return false;
+  }
+  using FileDesc = std::remove_extent_t<decltype(GroupDesc::fgd)>;
+  mozilla::CheckedInt<size_t> requiredSize(offsetof(GroupDesc, fgd));
+  requiredSize += mozilla::CheckedInt<size_t>(aItemCount) * sizeof(FileDesc);
+  return requiredSize.isValid() &&
+         ::GlobalSize(aHGlobal) >= requiredSize.value();
+}
+
+template bool nsClipboard::FileGroupDescriptorHasItems<FILEGROUPDESCRIPTORW>(
+    HGLOBAL, uint64_t);
+template bool nsClipboard::FileGroupDescriptorHasItems<FILEGROUPDESCRIPTORA>(
+    HGLOBAL, uint64_t);
 
 //-------------------------------------------------------------------------
 // static
@@ -896,12 +916,40 @@ nsresult nsClipboard::GetNativeDataOffClipboard(IDataObject* aDataObject,
       fe.cfFormat == fileDescriptorFlavorW) {
     nsAutoString tempPath;
 
-    // BUG(?): this should probably use FILEGROUPDESCRIPTOR[A,W] depending on
-    // the above
-    ScopedOLELock<LPFILEGROUPDESCRIPTOR> fgdesc(stm.hGlobal);
-    if (fgdesc) {
-      MOZ_TRY(GetTempFilePath(
-          nsDependentString((fgdesc->fgd)[aIndex].cFileName), tempPath));
+    if (fe.cfFormat == fileDescriptorFlavorW) {
+      ScopedOLELock<LPFILEGROUPDESCRIPTORW> fgdesc(stm.hGlobal);
+      if (fgdesc) {
+        if (aIndex >= fgdesc->cItems ||
+            !FileGroupDescriptorHasItems<FILEGROUPDESCRIPTORW>(
+                stm.hGlobal, static_cast<uint64_t>(aIndex) + 1)) {
+          return NS_ERROR_INVALID_ARG;
+        }
+        const WCHAR* fileName = fgdesc->fgd[aIndex].cFileName;
+        size_t nameLen = ::wcsnlen(fileName, MAX_PATH);
+        if (nameLen == MAX_PATH) {
+          return NS_ERROR_INVALID_ARG;
+        }
+        MOZ_TRY(
+            GetTempFilePath(nsDependentString(fileName, nameLen), tempPath));
+      }
+    } else {
+      ScopedOLELock<LPFILEGROUPDESCRIPTORA> fgdesc(stm.hGlobal);
+      if (fgdesc) {
+        if (aIndex >= fgdesc->cItems ||
+            !FileGroupDescriptorHasItems<FILEGROUPDESCRIPTORA>(
+                stm.hGlobal, static_cast<uint64_t>(aIndex) + 1)) {
+          return NS_ERROR_INVALID_ARG;
+        }
+        const CHAR* fileName = fgdesc->fgd[aIndex].cFileName;
+        size_t nameLen = ::strnlen(fileName, MAX_PATH);
+        if (nameLen == MAX_PATH) {
+          return NS_ERROR_INVALID_ARG;
+        }
+        nsAutoString wideName;
+        MOZ_TRY(NS_CopyNativeToUnicode(nsDependentCSubstring(fileName, nameLen),
+                                       wideName));
+        MOZ_TRY(GetTempFilePath(wideName, tempPath));
+      }
     }
 
     MOZ_TRY(SaveStorageOrStream(aDataObject, aIndex, tempPath));

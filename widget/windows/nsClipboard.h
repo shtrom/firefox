@@ -58,6 +58,13 @@ class nsClipboard final : public nsBaseClipboard, public nsIObserver {
                                             uint64_t aThreshold = 0);
   static nsresult GetGlobalData(HGLOBAL aHGBL, void** aData, uint32_t* aLen);
 
+  // True if aHGlobal is backed by an allocation large enough to hold a
+  // GroupDesc (FILEGROUPDESCRIPTORA or FILEGROUPDESCRIPTORW) header followed by
+  // at least aItemCount of its descriptor entries.
+  template <typename GroupDesc>
+  static bool FileGroupDescriptorHasItems(HGLOBAL aHGlobal,
+                                          uint64_t aItemCount);
+
   // This function returns the internal Windows clipboard format identifier
   // for a given Mime string. The default is to map kHTMLMime ("text/html")
   // to the clipboard format CF_HTML ("HTLM Format"), but it can also be

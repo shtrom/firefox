@@ -429,9 +429,12 @@ nsDragSession::GetNumDropItems(uint32_t* aNumItems) {
   STGMEDIUM stm;
 
   if (SUCCEEDED(mDataObject->GetData(&fe2, &stm))) {
+    *aNumItems = 0;
     LPFILEGROUPDESCRIPTOR pDesc =
         static_cast<LPFILEGROUPDESCRIPTOR>(GlobalLock(stm.hGlobal));
-    if (pDesc) {
+    // Validate that pDesc actualy has the contents it claims.
+    if (pDesc && nsClipboard::FileGroupDescriptorHasItems<FILEGROUPDESCRIPTORW>(
+                     stm.hGlobal, pDesc->cItems)) {
       *aNumItems = pDesc->cItems;
     }
     GlobalUnlock(stm.hGlobal);
