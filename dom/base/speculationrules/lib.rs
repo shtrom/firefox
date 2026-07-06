@@ -32,19 +32,21 @@ pub enum Eagerness {
     Conservative = 0,
 }
 
-#[derive(Debug, serde::Deserialize)]
+// NOTE: Keep this in sync with the definition in dom/webidl/ReferrerPolicy.webidl.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
 #[serde(rename_all = "kebab-case")]
+#[repr(u8)]
 pub enum ReferrerPolicy {
     #[serde(rename = "")]
     Empty,
     NoReferrer,
     NoReferrerWhenDowngrade,
-    SameOrigin,
     Origin,
-    StrictOrigin,
     OriginWhenCrossOrigin,
-    StrictOriginWhenCrossOrigin,
     UnsafeUrl,
+    SameOrigin,
+    StrictOrigin,
+    StrictOriginWhenCrossOrigin,
 }
 
 #[derive(Debug, serde::Deserialize)]

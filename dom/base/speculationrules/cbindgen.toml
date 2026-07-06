@@ -18,9 +18,11 @@ class SpeculationRuleSet;
 """
 
 [export]
+include = ["ReferrerPolicy"]
 item_types = ["functions", "enums"]
 
 [export.rename]
+"ReferrerPolicy" = "SpeculationRulesReferrerPolicy"
 "ThinVec" = "nsTArray"
 "SpeculationRuleSet" = "mozilla::dom::SpeculationRuleSet"
 

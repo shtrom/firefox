@@ -6,12 +6,34 @@
 
 #include "mozilla/CycleCollectedJSContext.h"
 #include "mozilla/dom/Document.h"
+#include "mozilla/dom/ReferrerPolicyBinding.h"
 #include "mozilla/dom/SpeculationRuleSet.h"
+#include "mozilla/dom/speculationrules_ffi_generated.h"
 #include "nsCycleCollectionParticipant.h"
 #include "nsIScriptElement.h"
 #include "nsIURI.h"
 
 namespace mozilla::dom {
+
+#define STATIC_ASSERT_REFERRER_POLICY_EQ(cpp_, rust_) \
+  static_assert(                                      \
+      ReferrerPolicy::cpp_ ==                         \
+      static_cast<ReferrerPolicy>(SpeculationRulesReferrerPolicy::rust_))
+
+STATIC_ASSERT_REFERRER_POLICY_EQ(_empty, Empty);
+STATIC_ASSERT_REFERRER_POLICY_EQ(No_referrer, NoReferrer);
+STATIC_ASSERT_REFERRER_POLICY_EQ(No_referrer_when_downgrade,
+                                 NoReferrerWhenDowngrade);
+STATIC_ASSERT_REFERRER_POLICY_EQ(Origin, Origin);
+STATIC_ASSERT_REFERRER_POLICY_EQ(Origin_when_cross_origin,
+                                 OriginWhenCrossOrigin);
+STATIC_ASSERT_REFERRER_POLICY_EQ(Unsafe_url, UnsafeUrl);
+STATIC_ASSERT_REFERRER_POLICY_EQ(Same_origin, SameOrigin);
+STATIC_ASSERT_REFERRER_POLICY_EQ(Strict_origin, StrictOrigin);
+STATIC_ASSERT_REFERRER_POLICY_EQ(Strict_origin_when_cross_origin,
+                                 StrictOriginWhenCrossOrigin);
+
+#undef STATIC_ASSERT_REFERRER_POLICY_EQ
 
 NS_IMPL_CYCLE_COLLECTION_CLASS(SpeculationRules)
 
