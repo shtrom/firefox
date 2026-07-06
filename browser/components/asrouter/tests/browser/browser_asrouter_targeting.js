@@ -44,6 +44,11 @@ const { DefaultBrowserCheck } = ChromeUtils.importESModule(
   "moz-src:///browser/components/DefaultBrowserCheck.sys.mjs"
 );
 
+const FirefoxViewTestUtils = ChromeUtils.importESModule(
+  "resource://testing-common/FirefoxViewTestUtils.sys.mjs"
+);
+FirefoxViewTestUtils.init(this);
+
 const testFeatureCallout = {
   id: "TEST_MESSAGE",
   template: "feature_callout",
@@ -1764,6 +1769,8 @@ add_task(async function test_distributionId() {
 });
 
 add_task(async function test_fxViewButtonAreaType_default() {
+  FirefoxViewTestUtils.enableFirefoxViewButton(window);
+
   is(
     typeof (await ASRouterTargeting.Environment.fxViewButtonAreaType),
     "string",
