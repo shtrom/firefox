@@ -64,9 +64,7 @@ class EditContext final : public DOMEventTargetHelper {
   nsGenericHTMLElement* GetAssociatedElement() const {
     return mAssociatedElement;
   }
-  void SetAssociatedElement(nsGenericHTMLElement* aElement) {
-    mAssociatedElement = aElement;
-  }
+  void SetAssociatedElement(nsGenericHTMLElement* aElement);
 
   // Anonymous <div> element that holds the text being edited.
   nsGenericHTMLElement& TextContainer() { return *mTextContainer; }

@@ -378,6 +378,7 @@ void nsGenericHTMLElement::SetEditContext(mozilla::dom::EditContext* aContext,
   nsAtom* name = NodeInfo()->NameAtom();
   if (name == nsGkAtoms::canvas &&
       !StaticPrefs::dom_editcontext_allow_canvas()) {
+    OwnerDoc()->SetUseCounter(eUseCounter_custom_EditContextCanvas);
     aRv.ThrowNotSupportedError(
         "<canvas>-based EditContext is currently disabled in Firefox due to "
         "accessibility concerns.");

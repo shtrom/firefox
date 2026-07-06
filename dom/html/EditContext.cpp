@@ -147,6 +147,13 @@ EditContext::EditContext(nsIGlobalObject* aGlobalObject,
   UpdateText(0, 0, aInit.mText, aRv);
 }
 
+void EditContext::SetAssociatedElement(nsGenericHTMLElement* aElement) {
+  mAssociatedElement = aElement;
+  if (aElement && aElement->IsHTMLElement(nsGkAtoms::canvas)) {
+    aElement->OwnerDoc()->SetUseCounter(eUseCounter_custom_EditContextCanvas);
+  }
+}
+
 void EditContext::GetText(nsAString& aText) const { mText->GetData(aText); }
 
 void EditContext::GetTextSubstring(uint32_t aStart, uint32_t aEnd,
