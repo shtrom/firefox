@@ -347,7 +347,6 @@ export class Outline extends Component {
       {
         ref: "outlineList",
         className: "outline-list devtools-monospace",
-        dir: "ltr",
       },
       namedFunctions.map(func => this.renderFunction(func)),
       classes.map(klass => this.renderClassFunctions(klass, classFunctions))
@@ -450,7 +449,6 @@ export class Outline extends Component {
       {
         ref: "outlineList",
         className: "outline-list devtools-monospace",
-        dir: "ltr",
       },
       filteredAtRules.map(rule => this.renderAtRule(rule))
     );
