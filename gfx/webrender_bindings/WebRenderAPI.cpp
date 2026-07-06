@@ -70,7 +70,7 @@ TransactionBuilder::TransactionBuilder(
     : mRemoteTextureTxnScheduler(aRemoteTextureTxnScheduler),
       mRemoteTextureTxnId(aRemoteTextureTxnId),
       mUseSceneBuilderThread(aUseSceneBuilderThread),
-      mApiBackend(aApi->GetBackendType()),
+      mCapabilities(aApi->GetCapabilities()),
       mOwnsData(true) {
   mTxn = wr_transaction_new(mUseSceneBuilderThread);
 }
@@ -84,7 +84,7 @@ TransactionBuilder::TransactionBuilder(
       mRemoteTextureTxnId(aRemoteTextureTxnId),
       mTxn(aTxn),
       mUseSceneBuilderThread(aUseSceneBuilderThread),
-      mApiBackend(aApi->GetBackendType()),
+      mCapabilities(aApi->GetCapabilities()),
       mOwnsData(aOwnsData) {}
 
 TransactionBuilder::~TransactionBuilder() {
@@ -343,10 +343,17 @@ RefPtr<WebRenderAPI::CreatePromise> WebRenderAPI::Create(
         // which block on the WebRenderAPI work can proceed immediately.
         renderThread->BeginShaderWarmupIfNeeded();
 
-        RefPtr<WebRenderAPI> api = new WebRenderAPI(
-            docHandle, aWindowId, backend, compositorType, maxTextureSize,
-            useANGLE, useDComp, useLayerCompositor, useTripleBuffering,
-            supportsExternalBufferTextures, syncHandle);
+        const WebRenderCapabilities capabilities{
+            .mBackendType = backend,
+            .mCompositorType = compositorType,
+            .mMaxTextureSize = maxTextureSize,
+            .mUseANGLE = useANGLE,
+            .mUseDComp = useDComp,
+            .mUseLayerCompositor = useLayerCompositor,
+            .mUseTripleBuffering = useTripleBuffering,
+            .mSupportsExternalBufferTextures = supportsExternalBufferTextures};
+        RefPtr<WebRenderAPI> api =
+            new WebRenderAPI(docHandle, aWindowId, capabilities, syncHandle);
         return CreatePromise::CreateAndResolve(std::move(api), __func__);
       });
 }
@@ -355,10 +362,8 @@ already_AddRefed<WebRenderAPI> WebRenderAPI::Clone() {
   wr::DocumentHandle* docHandle = nullptr;
   wr_api_clone(mDocHandle, &docHandle);
 
-  RefPtr<WebRenderAPI> renderApi = new WebRenderAPI(
-      docHandle, mId, mBackend, mCompositor, mMaxTextureSize, mUseANGLE,
-      mUseDComp, mUseLayerCompositor, mUseTripleBuffering,
-      mSupportsExternalBufferTextures, mSyncHandle, this, this);
+  RefPtr<WebRenderAPI> renderApi =
+      new WebRenderAPI(docHandle, mId, mCapabilities, mSyncHandle, this, this);
 
   return renderApi.forget();
 }
@@ -367,22 +372,14 @@ wr::WrIdNamespace WebRenderAPI::GetNamespace() {
   return wr_api_get_namespace(mDocHandle);
 }
 
-WebRenderAPI::WebRenderAPI(
-    wr::DocumentHandle* aHandle, wr::WindowId aId, WebRenderBackend aBackend,
-    WebRenderCompositor aCompositor, uint32_t aMaxTextureSize, bool aUseANGLE,
-    bool aUseDComp, bool aUseLayerCompositor, bool aUseTripleBuffering,
-    bool aSupportsExternalBufferTextures, layers::SyncHandle aSyncHandle,
-    wr::WebRenderAPI* aRootApi, wr::WebRenderAPI* aRootDocumentApi)
+WebRenderAPI::WebRenderAPI(wr::DocumentHandle* aHandle, wr::WindowId aId,
+                           WebRenderCapabilities aCapabilities,
+                           layers::SyncHandle aSyncHandle,
+                           wr::WebRenderAPI* aRootApi,
+                           wr::WebRenderAPI* aRootDocumentApi)
     : mDocHandle(aHandle),
       mId(aId),
-      mBackend(aBackend),
-      mCompositor(aCompositor),
-      mMaxTextureSize(aMaxTextureSize),
-      mUseANGLE(aUseANGLE),
-      mUseDComp(aUseDComp),
-      mUseLayerCompositor(aUseLayerCompositor),
-      mUseTripleBuffering(aUseTripleBuffering),
-      mSupportsExternalBufferTextures(aSupportsExternalBufferTextures),
+      mCapabilities(std::move(aCapabilities)),
       mCaptureSequence(false),
       mSyncHandle(aSyncHandle),
       mRendererDestroyed(false),

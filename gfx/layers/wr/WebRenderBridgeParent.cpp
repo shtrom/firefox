@@ -856,10 +856,10 @@ bool WebRenderBridgeParent::UpdateResources(
   if (scheduleRelease) {
     // When software WR is enabled, shared surfaces are read during rendering
     // rather than copied to the texture cache.
-    wr::Checkpoint when =
-        mLateInit->mApi->GetBackendType() == WebRenderBackend::SOFTWARE
-            ? wr::Checkpoint::FrameRendered
-            : wr::Checkpoint::FrameTexturesUpdated;
+    wr::Checkpoint when = mLateInit->mApi->GetCapabilities().mBackendType ==
+                                  WebRenderBackend::SOFTWARE
+                              ? wr::Checkpoint::FrameRendered
+                              : wr::Checkpoint::FrameTexturesUpdated;
     aUpdates.Notify(when, std::move(scheduleRelease));
   }
 
@@ -901,8 +901,8 @@ bool WebRenderBridgeParent::AddSharedExternalImage(
   // Prefer raw buffers, unless our backend requires native textures.
   IntSize surfaceSize = dSurf->GetSize();
   TextureHost::NativeTexturePolicy policy =
-      TextureHost::BackendNativeTexturePolicy(mLateInit->mApi->GetBackendType(),
-                                              surfaceSize);
+      TextureHost::BackendNativeTexturePolicy(
+          mLateInit->mApi->GetCapabilities().mBackendType, surfaceSize);
   auto imageType =
       policy == TextureHost::NativeTexturePolicy::REQUIRE
           ? wr::ExternalImageType::TextureHandle(wr::ImageBufferKind::Texture2D)
@@ -1043,8 +1043,8 @@ bool WebRenderBridgeParent::UpdateSharedExternalImage(
   // Prefer raw buffers, unless our backend requires native textures.
   IntSize surfaceSize = dSurf->GetSize();
   TextureHost::NativeTexturePolicy policy =
-      TextureHost::BackendNativeTexturePolicy(mLateInit->mApi->GetBackendType(),
-                                              surfaceSize);
+      TextureHost::BackendNativeTexturePolicy(
+          mLateInit->mApi->GetCapabilities().mBackendType, surfaceSize);
   auto imageType =
       policy == TextureHost::NativeTexturePolicy::REQUIRE
           ? wr::ExternalImageType::TextureHandle(wr::ImageBufferKind::Texture2D)
@@ -3128,11 +3128,12 @@ TextureFactoryIdentifier WebRenderBridgeParent::GetTextureFactoryIdentifier() {
   const bool supportsD3D11NV12 = false;
 #endif
 
+  const auto& capabilities = mLateInit->mApi->GetCapabilities();
   TextureFactoryIdentifier ident(
-      mLateInit->mApi->GetBackendType(), mLateInit->mApi->GetCompositorType(),
-      XRE_GetProcessType(), mLateInit->mApi->GetMaxTextureSize(),
-      mLateInit->mApi->GetUseANGLE(), mLateInit->mApi->GetUseDComp(),
-      mLateInit->mApi->GetUseLayerCompositor(),
+      capabilities.mBackendType, capabilities.mCompositorType,
+      XRE_GetProcessType(), capabilities.mMaxTextureSize,
+      capabilities.mUseANGLE, capabilities.mUseDComp,
+      capabilities.mUseLayerCompositor,
       mLateInit->mAsyncImageManager->UseCompositorWnd(), false, false, false,
       supportsD3D11NV12, mLateInit->mApi->GetSyncHandle());
   return ident;
