@@ -49,7 +49,6 @@ newtab-search-box-input =
 newtab-topsites-add-search-engine-header = Add Search Engine
 newtab-topsites-add-shortcut-header = New Shortcut
 newtab-topsites-edit-shortcut-header = Edit Shortcut
-newtab-topsites-add-shortcut-label = Add Shortcut
 newtab-topsites-add-shortcut-title =
     .title = Add Shortcut
     .aria-label = Add Shortcut

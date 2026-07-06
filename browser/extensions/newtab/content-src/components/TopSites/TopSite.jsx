@@ -23,9 +23,6 @@ import { TOP_SITES_MAX_SITES_PER_ROW } from "common/Reducers.sys.mjs";
 import { ContextMenuButton } from "content-src/components/ContextMenu/ContextMenuButton";
 import { TopSiteImpressionWrapper } from "./TopSiteImpressionWrapper";
 import { connect } from "react-redux";
-import { MessageWrapper } from "../MessageWrapper/MessageWrapper";
-import { ShortcutFeatureHighlight } from "../DiscoveryStreamComponents/FeatureHighlight/ShortcutFeatureHighlight";
-import { shouldShowOMCHighlight } from "../../lib/asrouter-message-utils.mjs";
 
 const NEWTAB_SOURCE = "newtab";
 
@@ -89,9 +86,7 @@ export class TopSiteLink extends React.PureComponent {
     if (this.props.groupedPinsEnabled) {
       return !!this.props.link.isPinned;
     }
-    return (
-      this.dragged || (!isSponsored(this.props.link) && !this.props.isAddButton)
-    );
+    return this.dragged || !isSponsored(this.props.link);
   }
 
   onDragEvent(event) {
@@ -172,10 +167,7 @@ export class TopSiteLink extends React.PureComponent {
     // If we have tabbed to a search shortcut top site, and we click 'enter',
     // we should execute the onClick function. This needs to be added because
     // search top sites are anchor tags without an href. See bug 1483135
-    if (
-      event.key === "Enter" &&
-      (this.props.link.searchTopSite || this.props.isAddButton)
-    ) {
+    if (event.key === "Enter" && this.props.link.searchTopSite) {
       this.props.onClick(event);
     }
   }
@@ -273,7 +265,6 @@ export class TopSiteLink extends React.PureComponent {
       link,
       onClick,
       title,
-      isAddButton,
       visibleTopSites,
     } = this.props;
 
@@ -291,12 +282,6 @@ export class TopSiteLink extends React.PureComponent {
       selectedColor,
     } = this.calculateStyle();
 
-    const addButtonLabell10n = {
-      "data-l10n-id": "newtab-topsites-add-shortcut-label",
-    };
-    const addButtonTitlel10n = {
-      "data-l10n-id": "newtab-topsites-add-shortcut-title",
-    };
     const addPinnedTitlel10n = {
       "data-l10n-id": "topsite-label-pinned",
       "data-l10n-args": JSON.stringify({ title }),
@@ -404,8 +389,7 @@ export class TopSiteLink extends React.PureComponent {
             data-is-sponsored-link={!!link.sponsored_tile_id}
             onFocus={this.props.onFocus}
             aria-label={link.isPinned ? undefined : title}
-            {...(isAddButton && { ...addButtonTitlel10n })}
-            {...(!isAddButton && { title })}
+            title={title}
             {...(link.isPinned && { ...addPinnedTitlel10n })}
             data-l10n-args={JSON.stringify({ title })}
           >
@@ -437,11 +421,7 @@ export class TopSiteLink extends React.PureComponent {
                   : ""
               }`}
             >
-              <span
-                className="title-label"
-                dir="auto"
-                {...(isAddButton && { ...addButtonLabell10n })}
-              >
+              <span className="title-label" dir="auto">
                 {link.searchTopSite && (
                   <div className="top-site-icon search-topsite" />
                 )}
@@ -453,26 +433,10 @@ export class TopSiteLink extends React.PureComponent {
               />
             </div>
           </a>
-          {isAddButton &&
-            shouldShowOMCHighlight(
-              this.props.Messages,
-              "ShortcutHighlight"
-            ) && (
-              <MessageWrapper
-                dispatch={this.props.dispatch}
-                onClick={e => e.stopPropagation()}
-              >
-                <ShortcutFeatureHighlight
-                  dispatch={this.props.dispatch}
-                  feature="FEATURE_SHORTCUT_HIGHLIGHT"
-                  position="inset-block-end inset-inline-start"
-                  messageData={this.props.Messages?.messageData}
-                />
-              </MessageWrapper>
-            )}
           {children}
           {impressionStats}
         </div>
+        {this.props.addButton}
       </li>
     );
   }
@@ -731,17 +695,34 @@ export class TopSiteAddButton extends React.PureComponent {
   }
 
   render() {
-    return (
-      <TopSiteLink
-        {...this.props}
-        isAddButton={true}
-        className={`add-button ${this.props.className || ""}`}
+    // In-grid buttons are large to match the tile icons; the full-row hover
+    // overlay uses the default size.
+    const button = (
+      <moz-button
+        type="primary"
+        className="add-button"
+        {...(this.props.inGrid && { size: "large" })}
+        iconsrc="chrome://global/skin/icons/plus.svg"
+        data-l10n-id="newtab-topsites-add-shortcut-title"
         onClick={this.onEditButtonClick}
-        setPref={this.props.setPref}
-        isDraggable={false}
-        tabIndex={this.props.tabIndex}
       />
     );
+
+    if (this.props.inGrid) {
+      return (
+        <li
+          className={`top-site-outer add-button-tile ${
+            this.props.className ? `${this.props.className}` : ""
+          }`}
+        >
+          {button}
+        </li>
+      );
+    }
+
+    // For a full row, overlay the button on the last tile; reveal on hover or
+    // when the shortcuts row has focus.
+    return <div className="add-button-hidden">{button}</div>;
   }
 }
 
@@ -839,6 +820,12 @@ export class _TopSiteList extends React.PureComponent {
   render() {
     const { props } = this;
     const topSites = this.props.sites;
+    const maxSitesPerRow =
+      props.topSitesMaxSitesPerRow ?? TOP_SITES_MAX_SITES_PER_ROW;
+    // The array can be sparse (e.g. dismissed tiles leave holes), so count the
+    // tiles that actually render rather than relying on slot indices.
+    const tileCount = topSites.filter(site => site && !site.isAddButton).length;
+    const rowFull = tileCount > 0 && tileCount % maxSitesPerRow === 0;
     const topSitesUI = [];
     const commonProps = {
       onDragEvent: this.props.onDragEvent,
@@ -924,27 +911,29 @@ export class _TopSiteList extends React.PureComponent {
           );
         }
       } else if (topSites[i]?.isAddButton) {
-        topSiteLink = (
-          <TopSiteAddButton
-            key={slotKey}
-            {...restSlotProps}
-            {...commonProps}
-            setRef={
-              i === this.state.focusedIndex
-                ? el => {
-                    this.focusedRef = el;
-                  }
-                : () => {}
-            }
-            tabIndex={i === this.state.focusedIndex ? 0 : -1}
-            onFocus={() => {
-              this.onTopsiteFocus(i);
-            }}
-            Messages={this.props.Messages}
-            visibleTopSites={this.props.visibleTopSites}
-          />
-        );
+        // Render the add button in-grid when the row isn't full. It carries the
+        // slot's responsive hide class so it drops at the same breakpoints as a
+        // tile in that column would.
+        if (!rowFull) {
+          topSiteLink = (
+            <TopSiteAddButton
+              inGrid={true}
+              className={slotProps.className}
+              key={slotKey}
+              index={i}
+              dispatch={props.dispatch}
+            />
+          );
+        }
       } else {
+        // When this is the last tile of a full row, the add button has no free
+        // cell of its own, so render it as a hover overlay anchored to this tile.
+        let addButton = null;
+        if (topSites[i + 1]?.isAddButton && rowFull) {
+          addButton = (
+            <TopSiteAddButton index={i + 1} dispatch={props.dispatch} />
+          );
+        }
         topSiteLink = (
           <TopSite
             key={slotKey}
@@ -966,6 +955,7 @@ export class _TopSiteList extends React.PureComponent {
               this.onTopsiteFocus(i);
             }}
             visibleTopSites={this.props.visibleTopSites}
+            addButton={addButton}
           />
         );
       }
@@ -1010,6 +1000,5 @@ export class _TopSiteList extends React.PureComponent {
 
 export const TopSiteList = connect(state => ({
   App: state.App,
-  Messages: state.Messages,
   Prefs: state.Prefs,
 }))(_TopSiteList);
