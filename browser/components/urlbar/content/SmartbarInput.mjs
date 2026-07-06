@@ -316,6 +316,7 @@ ${
   // Properties accessed in tests.
   lastQueryContextPromise = Promise.resolve();
   _autofillPlaceholder = null;
+  _applyingAutofill = false;
   _resultForCurrentValue = null;
   _untrimmedValue = "";
   _enableAutofillPlaceholder = true;
@@ -849,6 +850,19 @@ ${
       this.#smartbarInputController.setValue(val);
     } else {
       this.inputField.value = val;
+    }
+  }
+
+  #setInputRangeText(replacement, start, end, selectionMode) {
+    if (this.#smartbarInputController) {
+      this.#smartbarInputController.setRangeText(
+        replacement,
+        start,
+        end,
+        selectionMode
+      );
+    } else {
+      this.inputField.setRangeText(replacement, start, end, selectionMode);
     }
   }
 
@@ -4688,37 +4702,38 @@ ${
     adaptiveHistoryInput,
     untrimmedValue,
   }) {
-    const valueMatches = this.value === value;
-    const selectionMatches =
-      this.selectionStart === selectionStart &&
-      this.selectionEnd === selectionEnd;
-    if (valueMatches && selectionMatches) {
-      return;
-    }
-    // The autofilled value may be a URL that includes a scheme at the
-    // beginning.  Do not allow it to be trimmed.
-    if (!valueMatches) {
-      this._setValue(value, { untrimmedValue });
-    }
-    this.setSelectionRange(selectionStart, selectionEnd);
-    // Ensure selection state is cached for contenteditable and events fire.
-    if (!selectionMatches) {
-      if (this.#smartbarInputController) {
-        this.#smartbarInputController.dispatchSelectionChange();
-      } else {
-        this.inputField.dispatchEvent(
-          new Event("selectionchange", { bubbles: true, cancelable: false })
+    // The smartbar editor dispatches `selectionchange` synchronously: Prevent
+    // `_on_selectionchange` from applying the autofill as user text before
+    // `_autofillPlaceholder` is set.
+    this._applyingAutofill = true;
+    try {
+      // When the value only appends an autocompleted suffix, replace just the
+      // suffix instead of the whole value.
+      if (this.value === value.substring(0, selectionStart)) {
+        this._untrimmedValue = untrimmedValue ?? value;
+        this._resultForCurrentValue = null;
+        this.#setInputRangeText(
+          value.substring(selectionStart),
+          selectionStart,
+          this.value.length,
+          "select"
         );
+        this.formatValue();
+      } else {
+        this._setValue(value, { untrimmedValue });
+        this.setSelectionRange(selectionStart, selectionEnd);
       }
+      this._autofillPlaceholder = {
+        value,
+        type,
+        adaptiveHistoryInput,
+        selectionStart,
+        selectionEnd,
+        untrimmedValue,
+      };
+    } finally {
+      this._applyingAutofill = false;
     }
-    this._autofillPlaceholder = {
-      value,
-      type,
-      adaptiveHistoryInput,
-      selectionStart,
-      selectionEnd,
-      untrimmedValue,
-    };
   }
 
   /**
@@ -6255,6 +6270,7 @@ ${
     // happens when the user wants to modify the autofilled text by either
     // clicking on it, or pressing HOME, END, RIGHT, …
     if (
+      !this._applyingAutofill &&
       this._autofillPlaceholder &&
       this._autofillPlaceholder.value == this.value &&
       (this._autofillPlaceholder.selectionStart != this.selectionStart ||
