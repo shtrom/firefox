@@ -472,7 +472,7 @@ var SidebarController = {
     this._switcherPanel = document.getElementById("sidebarMenu-popup");
     this._switcherTarget = document.getElementById("sidebar-switcher-target");
     this._switcherArrow = document.getElementById("sidebar-switcher-arrow");
-    this._hoverBlockerCount = 0;
+    this._openPopups = new Set();
     this._escapedWhileHovered = false;
     this._mouseLeftSinceEscape = false;
     if (
@@ -1244,8 +1244,6 @@ var SidebarController = {
     );
     if (expandOnHoverEnabled) {
       animatingElements = [this.sidebarContainer];
-
-      this._addHoverStateBlocker();
     } else {
       animatingElements = [
         this.sidebarContainer,
@@ -1451,7 +1449,7 @@ var SidebarController = {
     }
 
     if (expandOnHoverEnabled) {
-      await this._removeHoverStateBlocker();
+      this._reconcileHoverState();
     }
   },
 
@@ -1599,29 +1597,29 @@ var SidebarController = {
     }
   },
 
-  _addHoverStateBlocker() {
-    this._hoverBlockerCount++;
-    MousePosTracker.removeListener(this);
+  _isMenuPopupOpen() {
+    for (const popup of this._openPopups) {
+      if (popup.state !== "open" && popup.state !== "showing") {
+        this._openPopups.delete(popup);
+      }
+    }
+    return this._openPopups.size > 0;
   },
 
-  async _removeHoverStateBlocker() {
-    if (this._hoverBlockerCount == 1) {
-      let isHovered = this._checkIsHoveredOverLauncher();
-
-      // Collapse sidebar if needed
-      if (this._state.launcherExpanded && !isHovered) {
-        if (this._animationEnabled && !window.gReduceMotion) {
-          this._animateSidebarContainer();
-        }
-        this._state.launcherExpanded = false;
-        await this.waitUntilStable();
-      }
-
-      // Re-add MousePosTracker listener
-      MousePosTracker.addListener(this);
+  /**
+   * Re-evaluate hover state and expand or collapse the launcher to match. Used
+   * to recover transitions that were ignored while suppressed (during an
+   * animation or while a popup was open).
+   */
+  _reconcileHoverState() {
+    if (this._ongoingAnimations.length || this._isMenuPopupOpen()) {
+      return;
     }
-    if (this._hoverBlockerCount > 0) {
-      this._hoverBlockerCount--;
+    let isHovered = this._checkIsHoveredOverLauncher();
+    if (isHovered && !this._state.launcherExpanded) {
+      this.onMouseEnter();
+    } else if (!isHovered && this._state.launcherExpanded) {
+      this._collapseLauncher();
     }
   },
 
@@ -2480,6 +2478,11 @@ var SidebarController = {
   },
 
   onMouseLeave() {
+    // Ignore hover changes while animating or while a popup is open; the state
+    // is reconciled once the animation settles or the popup closes.
+    if (this._ongoingAnimations.length || this._isMenuPopupOpen()) {
+      return;
+    }
     if (this._escapedWhileHovered) {
       this._mouseLeftSinceEscape = true;
       return;
@@ -2492,6 +2495,9 @@ var SidebarController = {
 
   onMouseEnter() {
     if (this._state.launcherExpanded) {
+      return;
+    }
+    if (this._ongoingAnimations.length || this._isMenuPopupOpen()) {
       return;
     }
     if (this._escapedWhileHovered) {
@@ -2555,17 +2561,17 @@ var SidebarController = {
     };
   },
 
-  async handleEvent(e) {
+  handleEvent(e) {
     switch (e.type) {
       case "popupshown":
-        /* Temporarily remove MousePosTracker listener when a context menu is open */
         if (e.composedTarget.tagName !== "tooltip") {
-          this._addHoverStateBlocker();
+          this._openPopups.add(e.composedTarget);
         }
         break;
       case "popuphidden":
         if (e.composedTarget.tagName !== "tooltip") {
-          await this._removeHoverStateBlocker();
+          this._openPopups.delete(e.composedTarget);
+          this._reconcileHoverState();
         }
         break;
       default:
@@ -2595,7 +2601,7 @@ var SidebarController = {
         ? ""
         : "0";
     } else {
-      this._removeHoverStateBlocker();
+      this._openPopups.clear();
       MousePosTracker.removeListener(this);
       if (!this.mouseOverTask?.isFinalized) {
         this.mouseOverTask?.finalize();
