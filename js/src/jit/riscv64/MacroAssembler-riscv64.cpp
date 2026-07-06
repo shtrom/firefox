@@ -1332,15 +1332,31 @@ std::pair<Register, int16_t> MacroAssemblerRiscv64::computeAddress(
   Register base;
   int16_t encodedOffset;
 
-  if (!is_int12(address.offset)) {
+  int32_t offset = address.offset;
+  if (is_int12(offset)) {
+    base = address.base;
+    encodedOffset = offset;
+  } else if (is_two_int12(offset)) {
+    auto [first, second] = ToTwoInt12(offset);
+
     Register scratch = temps.Acquire();
-    ma_li(scratch, Imm32(address.offset));
+    addi(scratch, address.base, first);
+    base = scratch;
+    encodedOffset = second;
+  } else if (is_int32(int64_t(offset) + 0x800)) {
+    auto [high20, low12] = ToHigh20Low12(offset);
+
+    Register scratch = temps.Acquire();
+    lui(scratch, high20);
+    add(scratch, address.base, scratch);
+    base = scratch;
+    encodedOffset = low12;
+  } else {
+    Register scratch = temps.Acquire();
+    ma_li(scratch, Imm32(offset));
     add(scratch, address.base, scratch);
     base = scratch;
     encodedOffset = 0;
-  } else {
-    base = address.base;
-    encodedOffset = address.offset;
   }
 
   return {base, encodedOffset};
@@ -1568,7 +1584,21 @@ Address MacroAssemblerRiscv64::computeScaledAddress(
   computeScaledAddress(address, scratch);
 
   int32_t offset = address.offset;
-  if (!is_int12(offset)) {
+  if (is_int12(offset)) {
+    // Nothing to do, offset fits into i12 immediate of load/store instructions.
+  } else if (is_two_int12(offset)) {
+    auto [first, second] = ToTwoInt12(offset);
+
+    addi(scratch, scratch, first);
+    offset = second;
+  } else if (is_int32(int64_t(offset) + 0x800)) {
+    auto [high20, low12] = ToHigh20Low12(offset);
+
+    Register scratch2 = temps.Acquire();
+    lui(scratch2, high20);
+    add(scratch, scratch, scratch2);
+    offset = low12;
+  } else {
     Register scratch2 = temps.Acquire();
     ma_li(scratch2, Imm32(offset));
     add(scratch, scratch, scratch2);
