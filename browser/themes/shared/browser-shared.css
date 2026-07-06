@@ -1509,7 +1509,7 @@ popupnotificationcontent {
 
 /* AI Window Toggle Button */
 #ai-window-toggle {
-  list-style-image: url("chrome://branding/content/icon32.png");
+  list-style-image: url("chrome://branding/content/about-logo.svg");
   border-radius: var(--border-radius-medium);
   padding-inline-end: var(--space-small);
 
@@ -1636,7 +1636,7 @@ popupnotificationcontent {
 }
 
 #ai-window-switch-classic {
-  list-style-image: url("chrome://branding/content/icon32.png");
+  list-style-image: url("chrome://branding/content/about-logo.svg");
 
   :root[ai-window] &::after {
     display: none;
