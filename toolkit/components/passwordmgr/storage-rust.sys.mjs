@@ -193,14 +193,6 @@ class RustLoginsStoreAdapter {
     return await this.#store.count();
   }
 
-  async countByOrigin(origin) {
-    return await this.#store.countByOrigin(origin);
-  }
-
-  async countByFormActionOrigin(formActionOrigin) {
-    return await this.#store.countByFormActionOrigin(formActionOrigin);
-  }
-
   async touch(id) {
     return await this.#store.touch(id);
   }
@@ -810,18 +802,14 @@ export class LoginManagerRustStorage {
   }
 
   async countLoginsAsync(origin, formActionOrigin, httpRealm) {
-    if (!origin && !formActionOrigin && !httpRealm) {
+    // The optimized adapter path only applies when all fields are the empty
+    // string wildcard. Origin and formActionOrigin must go through the generic
+    // search below so that count and search share the same strict matching
+    // semantics; the native countByOrigin/countByFormActionOrigin paths
+    // normalize the origin (e.g. stripping a trailing slash) and would count
+    // logins that searchLoginsAsync does not return.
+    if (origin === "" && formActionOrigin === "" && httpRealm === "") {
       return await this.#storageAdapter.count();
-    }
-
-    if (origin && !formActionOrigin && !httpRealm) {
-      return await this.#storageAdapter.countByOrigin(origin);
-    }
-
-    if (!origin && formActionOrigin && !httpRealm) {
-      return await this.#storageAdapter.countByFormActionOrigin(
-        formActionOrigin
-      );
     }
 
     const loginData = {
