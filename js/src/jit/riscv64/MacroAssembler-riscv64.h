@@ -799,36 +799,6 @@ class MacroAssemblerRiscv64Compat : public MacroAssemblerRiscv64 {
     splitSignExtTag(value, tag);
   }
 
-  void moveIfZero(Register dst, Register src, Register cond) {
-    if (HasZicondExtension()) {
-      UseScratchRegisterScope temps(this);
-      Register scratch = temps.Acquire();
-
-      ma_cselz(dst, src, dst, cond, scratch);
-      return;
-    }
-
-    Label done;
-    ma_b(cond, cond, &done, NonZero, ShortJump);
-    mv(dst, src);
-    bind(&done);
-  }
-
-  void moveIfNotZero(Register dst, Register src, Register cond) {
-    if (HasZicondExtension()) {
-      UseScratchRegisterScope temps(this);
-      Register scratch = temps.Acquire();
-
-      ma_cselnz(dst, src, dst, cond, scratch);
-      return;
-    }
-
-    Label done;
-    ma_b(cond, cond, &done, Zero, ShortJump);
-    mv(dst, src);
-    bind(&done);
-  }
-
   // unboxing code
   void unboxNonDouble(const ValueOperand& operand, Register dest,
                       JSValueType type) {
