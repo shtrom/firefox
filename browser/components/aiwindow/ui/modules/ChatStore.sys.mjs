@@ -840,6 +840,7 @@ class ChatStore {
    * This method is meant to only be used for testing cleanup
    */
   async destroyDatabase() {
+    await this.#promiseConn?.catch(() => {});
     await this.#removeDatabaseFiles();
     this.#promiseConn = null;
     this.#recordDatabaseSizeValue(0);
