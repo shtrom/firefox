@@ -6613,11 +6613,10 @@ CodeOffset MacroAssembler::wasmReturnCall(
   return offset;
 }
 
-void MacroAssembler::wasmCallBuiltinInstanceMethod(
+CodeOffset MacroAssembler::wasmCallBuiltinInstanceMethod(
     const wasm::CallSiteDesc& desc, const ABIArg& instanceArg,
     wasm::SymbolicAddress builtin, wasm::FailureMode failureMode,
-    wasm::Trap failureTrap, CodeOffset* callStackMapKey,
-    CodeOffset* trapStackMapKey) {
+    wasm::Trap failureTrap) {
   MOZ_ASSERT(instanceArg != ABIArg());
   MOZ_ASSERT_IF(!wasm::NeedsBuiltinThunk(builtin),
                 failureMode == wasm::FailureMode::Infallible ||
@@ -6644,7 +6643,7 @@ void MacroAssembler::wasmCallBuiltinInstanceMethod(
   }
 #endif
 
-  *callStackMapKey = call(desc, builtin);
+  CodeOffset ret = call(desc, builtin);
 
 #ifdef JS_CHECK_UNSAFE_CALL_WITH_ABI
   if (checkUnsafeCallWithABI) {
@@ -6652,18 +6651,19 @@ void MacroAssembler::wasmCallBuiltinInstanceMethod(
   }
 #endif
 
-  *trapStackMapKey = wasmTrapOnFailedInstanceCall(
-      ReturnReg, failureMode, failureTrap, desc.toTrapSiteDesc());
+  wasmTrapOnFailedInstanceCall(ReturnReg, failureMode, failureTrap,
+                               desc.toTrapSiteDesc());
+  return ret;
 }
 
-CodeOffset MacroAssembler::wasmTrapOnFailedInstanceCall(
+void MacroAssembler::wasmTrapOnFailedInstanceCall(
     Register resultRegister, wasm::FailureMode failureMode,
     wasm::Trap failureTrap, const wasm::TrapSiteDesc& trapSiteDesc) {
   Label noTrap;
   switch (failureMode) {
     case wasm::FailureMode::Infallible:
       MOZ_ASSERT(failureTrap == wasm::Trap::Limit);
-      return CodeOffset();
+      return;
     case wasm::FailureMode::FailOnNegI32:
       branchTest32(Assembler::NotSigned, resultRegister, resultRegister,
                    &noTrap);
@@ -6684,14 +6684,6 @@ CodeOffset MacroAssembler::wasmTrapOnFailedInstanceCall(
   }
   wasmTrap(failureTrap, trapSiteDesc);
   bind(&noTrap);
-
-  if (failureTrap != wasm::Trap::ThrowReported) {
-    return CodeOffset();
-  }
-
-  // For Trap::ThrowReported, the caller(s) may want to create a stackmap, so
-  // tell them what its key must be.
-  return CodeOffset(masm.currentOffset());
 }
 
 // In principle, call_indirect requires an expensive context switch to the
