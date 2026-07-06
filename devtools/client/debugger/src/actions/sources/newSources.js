@@ -8,6 +8,7 @@
  * @module actions/sources
  */
 import { insertSourceActors } from "../../actions/source-actors";
+import { setStyleSheetAtRules } from "./stylesheets";
 import {
   makeScriptSourceId,
   createGeneratedSource,
@@ -400,6 +401,12 @@ export function newStyleSheetSources(styleSheetResources) {
       styleSheets.push(stylesheet);
       styleSheetActors.push(
         createStyleSheetActor(styleSheetResource, stylesheet)
+      );
+      dispatch(
+        setStyleSheetAtRules(
+          styleSheetResource.resourceId,
+          styleSheetResource.atRules
+        )
       );
     }
     if (!styleSheets.length) {
