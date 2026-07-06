@@ -187,19 +187,16 @@ class Editor extends PureComponent {
   }
 
   onEditorUpdated = viewUpdate => {
-    const { editor } = this.state;
     if (viewUpdate.docChanged || viewUpdate.geometryChanged) {
       updateEditorSizeCssVariables(viewUpdate.view.dom);
       const { selectedLocation } = this.props;
-      // The updates made to the  stylesheet contents are
-      // only sent when these conditions are satisfied.
+      // To make sure we only update when we actually interact with the content in the stylesheet,
+      // we also check that the view has focus and the content changes.
       if (
-        // When a source is selected
         selectedLocation &&
-        // When it is actually a stylesheet
         selectedLocation.source.isStyleSheet &&
-        // When a user changes the doc content
-        editor.isViewUpdateFromUserInput(viewUpdate)
+        viewUpdate.view.hasFocus &&
+        viewUpdate.docChanged
       ) {
         this.updateStyleSheetText(
           selectedLocation.sourceActor,
@@ -722,10 +719,7 @@ class Editor extends PureComponent {
     await editor.setText(selectedSourceTextContent.value.value, {
       documentId: selectedSource.id,
     });
-    const isReadOnly =
-      !selectedSource.isStyleSheet ||
-      (selectedSource.isOriginal && !selectedSource.isPrettyPrinted);
-    await editor.setReadOnly(isReadOnly);
+    await editor.setReadOnly(!selectedSource.isStyleSheet);
   }
 
   showErrorMessage(msg) {

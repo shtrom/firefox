@@ -23,12 +23,10 @@ import {
   getOpenedSources,
   getBlackBoxRanges,
   getProjectDirectoryRoot,
-  getStyleSheetAtRules,
 } from "../selectors/index";
 import { memoizeLast } from "../utils/memoizeLast";
 import { searchKeys } from "../constants";
 import {
-  formatAtRule,
   formatSymbol,
   parseLineColumn,
   formatShortcutResults,
@@ -170,26 +168,19 @@ export class QuickOpenModal extends Component {
   };
 
   searchSymbols = async query => {
-    const { getFunctionSymbols, selectedLocation, atRules } = this.props;
+    const { getFunctionSymbols, selectedLocation } = this.props;
     if (!selectedLocation) {
       return this.setResults([]);
     }
-    let results;
-    if (selectedLocation.source.isStyleSheet) {
-      results = atRules;
-      if (query === "@") {
-        return this.setResults(results.map(formatAtRule));
-      }
+    let results = await getFunctionSymbols(selectedLocation, maxResults);
 
-      results = filter(results.map(formatAtRule), query);
+    if (query === "@" || query === "#") {
+      results = results.map(formatSymbol);
       return this.setResults(results);
     }
-    results = await getFunctionSymbols(selectedLocation, maxResults);
-    if (query === "@" || query === "#") {
-      return this.setResults(results.map(formatSymbol));
-    }
     results = filter(results, query.slice(1), "name");
-    return this.setResults(results.map(formatSymbol));
+    results = results.map(formatSymbol);
+    return this.setResults(results);
   };
 
   searchShortcuts = query => {
@@ -513,10 +504,6 @@ function mapStateToProps(state) {
   const openedSources = getOpenedSources(state);
 
   return {
-    atRules:
-      selectedLocation && selectedLocation.source.isStyleSheet
-        ? getStyleSheetAtRules(state, selectedLocation.sourceActor.id)
-        : [],
     displayedSources,
     blackBoxRanges: getBlackBoxRanges(state),
     projectDirectoryRoot: getProjectDirectoryRoot(state),

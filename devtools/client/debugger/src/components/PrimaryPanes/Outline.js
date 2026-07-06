@@ -3,19 +3,24 @@
  * file, You can obtain one at <http://mozilla.org/MPL/2.0/>. */
 
 import React, { Component } from "devtools/client/shared/vendor/react";
-import dom from "devtools/client/shared/vendor/react-dom-factories";
+import {
+  div,
+  ul,
+  li,
+  span,
+  h2,
+  button,
+} from "devtools/client/shared/vendor/react-dom-factories";
 import PropTypes from "devtools/client/shared/vendor/react-prop-types";
 import { connect } from "devtools/client/shared/vendor/react-redux";
 
 import { containsPosition, positionAfter } from "../../utils/ast";
-import { formatAtRuleContent } from "../../utils/quick-open";
 import { createLocation } from "../../utils/location";
 
 import actions from "../../actions/index";
 import {
   getSelectedLocation,
   getSelectedSourceTextContent,
-  getStyleSheetAtRules,
 } from "../../selectors/index";
 
 import OutlineFilter from "./OutlineFilter";
@@ -68,7 +73,6 @@ export class Outline extends Component {
 
   static get propTypes() {
     return {
-      atRules: PropTypes.array.isRequired,
       alphabetizeOutline: PropTypes.bool.isRequired,
       onAlphabetizeClick: PropTypes.func.isRequired,
       selectLocation: PropTypes.func.isRequired,
@@ -77,20 +81,14 @@ export class Outline extends Component {
       getClassSymbols: PropTypes.func.isRequired,
       selectedSourceTextContent: PropTypes.object,
       canFetchSymbols: PropTypes.bool,
-      launchResponsiveMode: PropTypes.func.isRequired,
-      isLocalTab: PropTypes.func.isRequired,
     };
   }
 
   componentDidMount() {
-    const { canFetchSymbols, selectedLocation } = this.props;
-    if (!canFetchSymbols) {
+    if (!this.props.canFetchSymbols) {
       return;
     }
-
-    if (!selectedLocation.source.isStyleSheet) {
-      this.getClassAndFunctionSymbols();
-    }
+    this.getClassAndFunctionSymbols();
   }
 
   componentDidUpdate(prevProps) {
@@ -110,8 +108,7 @@ export class Outline extends Component {
     // Lets make sure the source text has been loaded and it is different
     if (
       canFetchSymbols &&
-      prevProps.selectedSourceTextContent !== selectedSourceTextContent &&
-      !selectedLocation.source.isStyleSheet
+      prevProps.selectedSourceTextContent !== selectedSourceTextContent
     ) {
       this.getClassAndFunctionSymbols();
     }
@@ -160,17 +157,12 @@ export class Outline extends Component {
     if (!selectedLocation || !selectedItem) {
       return;
     }
-    const { source } = selectedLocation;
+
     selectLocation(
       createLocation({
-        source,
-        line: source.isStyleSheet
-          ? selectedItem.line
-          : selectedItem.location.start.line,
-        column: source.isStyleSheet
-          ? // Stylesheet at-rules location are 0 based, codemirror is 1 based
-            selectedItem.column - 1
-          : selectedItem.location.start.column,
+        source: selectedLocation.source,
+        line: selectedItem.location.start.line,
+        column: selectedItem.location.start.column,
       })
     );
 
@@ -185,39 +177,15 @@ export class Outline extends Component {
     this.props.showOutlineContextMenu(event, func, symbols);
   }
 
-  /**
-   * Called when a media condition is clicked
-   * If a responsive mode link is clicked, it will launch it.
-   *
-   * @param {object} e
-   *        Event object
-   */
-  onMediaConditionClick(e) {
-    const conditionText = e.target.textContent;
-    const isWidthCond = conditionText.toLowerCase().indexOf("width") > -1;
-    const mediaVal = parseInt(/\d+/.exec(conditionText), 10);
-
-    const options = isWidthCond ? { width: mediaVal } : { height: mediaVal };
-    this.props.launchResponsiveMode(options);
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
   updateFilter = filter => {
-    this.setState({ filter });
+    this.setState({ filter: filter.trim() });
   };
 
   renderPlaceholder() {
-    const { selectedLocation } = this.props;
-    let placeholderMessage;
-    if (selectedLocation) {
-      placeholderMessage = selectedLocation.source.isStyleSheet
-        ? L10N.getStr("outline.noAtRules")
-        : L10N.getStr("outline.noFunctions");
-    } else {
-      placeholderMessage = L10N.getStr("outline.noFileSelected");
-    }
-    return dom.div(
+    const placeholderMessage = this.props.selectedLocation
+      ? L10N.getStr("outline.noFunctions")
+      : L10N.getStr("outline.noFileSelected");
+    return div(
       {
         className: "outline-pane-info",
       },
@@ -226,7 +194,7 @@ export class Outline extends Component {
   }
 
   renderLoading() {
-    return dom.div(
+    return div(
       {
         className: "outline-pane-info",
       },
@@ -238,7 +206,7 @@ export class Outline extends Component {
     const { focusedItem } = this.state;
     const { name, location, parameterNames } = func;
     const isFocused = focusedItem === func;
-    return dom.li(
+    return li(
       {
         key: `${name}:${location.start.line}:${location.start.column}`,
         className: classnames("outline-list__element", {
@@ -252,7 +220,7 @@ export class Outline extends Component {
         onClick: () => this.selectItem(func),
         onContextMenu: e => this.onContextMenu(e, func),
       },
-      dom.span(
+      span(
         {
           className: "outline-list__element-icon",
         },
@@ -268,9 +236,9 @@ export class Outline extends Component {
   }
 
   renderClassHeader(klass) {
-    return dom.div(
+    return div(
       null,
-      dom.span(
+      span(
         {
           className: "keyword",
         },
@@ -296,7 +264,7 @@ export class Outline extends Component {
     const item = classFunc || classInfo;
     const isFocused = focusedItem === item;
 
-    return dom.li(
+    return li(
       {
         className: "outline-list__class",
         ref: el => {
@@ -306,7 +274,7 @@ export class Outline extends Component {
         },
         key: klass,
       },
-      dom.h2(
+      h2(
         {
           className: classnames({
             focused: isFocused,
@@ -317,7 +285,7 @@ export class Outline extends Component {
           ? this.renderFunction(classFunc)
           : this.renderClassHeader(klass)
       ),
-      dom.ul(
+      ul(
         {
           className: "outline-list__class-list",
         },
@@ -343,123 +311,23 @@ export class Outline extends Component {
       classes = classes.sort();
       classFunctions.sort(sortByName);
     }
-    return dom.ul(
+    return ul(
       {
         ref: "outlineList",
         className: "outline-list devtools-monospace",
+        dir: "ltr",
       },
       namedFunctions.map(func => this.renderFunction(func)),
       classes.map(klass => this.renderClassFunctions(klass, classFunctions))
     );
   }
 
-  renderConditionContent(atRule) {
-    if (!atRule.conditionText) {
-      return null;
-    }
-
-    // For non-media rules, we don't do anything more than displaying the conditionText
-    // as there are no other condition text that would justify opening RDM at a specific
-    // size (e.g. `@container` condition is relative to a container size, which varies
-    // depending the node the rule applies to).
-    if (atRule.type !== "media" || !this.props.isLocalTab()) {
-      return dom.span({ className: "at-rule-details" }, atRule.conditionText);
-    }
-
-    const conditionContent = [];
-    const minMaxPattern = /(min\-|max\-)(width|height):\s\d+(px)/gi;
-    let match = minMaxPattern.exec(atRule.conditionText);
-    let lastParsed = 0;
-    while (match && match.index != minMaxPattern.lastIndex) {
-      const matchEnd = match.index + match[0].length;
-      conditionContent.push(
-        dom.span(
-          { className: "at-rule-details" },
-          atRule.conditionText.substring(lastParsed, match.index)
-        ),
-        dom.a(
-          {
-            className: "at-rule-media-link",
-            href: "#",
-            onClick: e => this.onMediaConditionClick(e),
-          },
-          atRule.conditionText.substring(match.index, matchEnd)
-        )
-      );
-      match = minMaxPattern.exec(atRule.conditionText);
-      lastParsed = matchEnd;
-    }
-    conditionContent.push(
-      dom.span(
-        {
-          className: "at-rule-details",
-        },
-        atRule.conditionText.substring(lastParsed, atRule.conditionText.length)
-      )
-    );
-    return dom.span(
-      {
-        className: classnames("at-rule-details", {
-          "media-condition-unmatched":
-            atRule.type == "media" && !atRule.matches,
-        }),
-      },
-      conditionContent
-    );
-  }
-
-  renderAtRule(atRule) {
-    return dom.li(
-      {
-        key: `${atRule.line}:${atRule.column}`,
-        className: classnames("outline-list__element", "outline-list-at-rules"),
-        onClick: () => this.selectItem(atRule),
-      },
-      dom.span(
-        {
-          className: "at-rule-label",
-          href: "#",
-        },
-        `@${atRule.type}`,
-        atRule.conditionText
-          ? this.renderConditionContent(atRule)
-          : dom.span(
-              {
-                className: "at-rule-details",
-              },
-              // @property
-              atRule.propertyName ||
-                // @position-try
-                atRule.positionTryName ||
-                // @layer
-                atRule.layerName
-            )
-      )
-    );
-  }
-
-  renderAtRules() {
-    const { atRules } = this.props;
-    const { filter } = this.state;
-    const filteredAtRules = atRules.filter(atRule => {
-      const ruleContent = formatAtRuleContent(atRule);
-      return filterOutlineItem(ruleContent, filter);
-    });
-    return dom.ul(
-      {
-        ref: "outlineList",
-        className: "outline-list devtools-monospace",
-      },
-      filteredAtRules.map(rule => this.renderAtRule(rule))
-    );
-  }
-
   renderFooter() {
-    return dom.div(
+    return div(
       {
         className: "outline-footer",
       },
-      dom.button(
+      button(
         {
           onClick: this.props.onAlphabetizeClick,
           className: this.props.alphabetizeOutline ? "active" : "",
@@ -470,48 +338,32 @@ export class Outline extends Component {
   }
 
   render() {
-    const { selectedLocation, atRules } = this.props;
+    const { selectedLocation } = this.props;
     const { filter, symbols } = this.state;
 
     if (!selectedLocation) {
       return this.renderPlaceholder();
     }
 
-    if (selectedLocation.source.isStyleSheet) {
-      if (!atRules.length) {
-        return this.renderPlaceholder();
-      }
-
-      return dom.div(
-        { className: "outline" },
-        dom.div(
-          null,
-          React.createElement(OutlineFilter, {
-            filter,
-            updateFilter: this.updateFilter,
-            selectedSource: selectedLocation.source,
-          }),
-          this.renderAtRules()
-        )
-      );
-    }
     if (!symbols) {
       return this.renderLoading();
     }
 
     const { functions } = symbols;
+
     if (functions.length === 0) {
       return this.renderPlaceholder();
     }
 
-    return dom.div(
-      { className: "outline" },
-      dom.div(
+    return div(
+      {
+        className: "outline",
+      },
+      div(
         null,
         React.createElement(OutlineFilter, {
           filter,
           updateFilter: this.updateFilter,
-          selectedSource: selectedLocation.source,
         }),
         this.renderFunctions(functions),
         this.renderFooter()
@@ -522,16 +374,11 @@ export class Outline extends Component {
 
 const mapStateToProps = state => {
   const selectedSourceTextContent = getSelectedSourceTextContent(state);
-  const selectedLocation = getSelectedLocation(state);
-  const atRules = selectedLocation
-    ? getStyleSheetAtRules(state, selectedLocation.sourceActor.id)
-    : [];
   return {
     selectedSourceTextContent,
-    selectedLocation,
+    selectedLocation: getSelectedLocation(state),
     canFetchSymbols:
       selectedSourceTextContent && isFulfilled(selectedSourceTextContent),
-    atRules,
   };
 };
 
@@ -540,6 +387,4 @@ export default connect(mapStateToProps, {
   showOutlineContextMenu: actions.showOutlineContextMenu,
   getFunctionSymbols: actions.getFunctionSymbols,
   getClassSymbols: actions.getClassSymbols,
-  launchResponsiveMode: actions.launchResponsiveMode,
-  isLocalTab: actions.isLocalTab,
 })(Outline);

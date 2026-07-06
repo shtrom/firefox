@@ -19,7 +19,7 @@ export function getFunctionSymbols(location, maxResults) {
     // Make sure the source for the symbols exist.
     await dispatch(loadSourceText(location.source, location.sourceActor));
     const editor = getEditor();
-    return editor?.getFunctionSymbols(location.source.id, maxResults);
+    return editor?.getFunctionSymbols(maxResults);
   };
 }
 
@@ -29,6 +29,6 @@ export function getClassSymbols(location) {
     await dispatch(loadSourceText(location.source, location.sourceActor));
 
     const editor = getEditor();
-    return editor?.getClassSymbols(location.source.id);
+    return editor?.getClassSymbols();
   };
 }

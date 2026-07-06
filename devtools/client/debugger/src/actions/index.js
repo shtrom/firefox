@@ -20,7 +20,6 @@ import * as tabs from "./tabs";
 import * as threads from "./threads";
 import * as toolbox from "./toolbox";
 import * as preview from "./preview";
-import * as responsiveMode from "./responsive-mode";
 import * as tracing from "./tracing";
 import * as contextMenu from "./context-menus/index";
 
@@ -48,5 +47,4 @@ export default {
   ...preview,
   ...tracing,
   ...contextMenu,
-  ...responsiveMode,
 };

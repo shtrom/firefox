@@ -23,7 +23,6 @@ CompiledModules(
     "sources-tree.js",
     "sources-content.js",
     "sources.js",
-    "stylesheets.js",
     "tabs.js",
     "threads.js",
     "tracer.js",

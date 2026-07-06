@@ -471,8 +471,7 @@ function getMetaBindings(doc, node) {
  * @param {object}   view - Codemirror view (https://codemirror.net/docs/ref/#view)
  * @param {object}   language - Codemirror Language (https://codemirror.net/docs/ref/#language)
  * @param {object}   options
- *        {Tree}     options.tree - https://lezer.codemirror.net/docs/ref/#common.Tree
- *        {Boolean}  options.forceParseTo - Force parsing the document up to a certain point.
+ *        {Boolean}  options.forceParseTo - Force parsing the document up to a certain point
  *        {Function} options.enterVisitor - A function that is called when a node is entered
  *        {Set}      options.filterSet - A set of node types which should be visited, all others should be ignored
  *        {Number}   options.walkFrom - Determine the location in the AST where the iteration of the syntax tree should start
@@ -480,14 +479,13 @@ function getMetaBindings(doc, node) {
  */
 async function walkTree(view, language, options) {
   const { forceParsing, syntaxTree } = language;
-  if (options.forceParseTo && !options.tree) {
+  if (options.forceParseTo) {
     // Force parsing the source, up to the end of the current viewport,
     // Also increasing the timeout threshold so we make sure
     // all required content is parsed (this is mostly needed for larger sources).
     await forceParsing(view, options.forceParseTo, 10000);
   }
-  const tree = options.tree || syntaxTree(view.state);
-  await tree.iterate({
+  await syntaxTree(view.state).iterate({
     enter: node => {
       if (options.filterSet?.has(node.name)) {
         options.enterVisitor(node);

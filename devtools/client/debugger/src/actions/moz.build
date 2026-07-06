@@ -21,7 +21,6 @@ CompiledModules(
     "preview.js",
     "project-text-search.js",
     "quick-open.js",
-    "responsive-mode.js",
     "source-actors.js",
     "sources-tree.js",
     "tabs.js",
