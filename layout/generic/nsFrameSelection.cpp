@@ -1822,33 +1822,31 @@ nsIFrame* nsFrameSelection::GetFrameToPageSelect() const {
     return nullptr;
   }
 
-  nsIFrame* rootFrameToSelect = [&]() -> nsIFrame* {
-    if (mLimiters.mIndependentSelectionRootElement) {
-      return mLimiters.mIndependentSelectionRootElement->GetPrimaryFrame();
+  nsIFrame* rootFrameToSelect;
+  if (mLimiters.mIndependentSelectionRootElement) {
+    rootFrameToSelect =
+        mLimiters.mIndependentSelectionRootElement->GetPrimaryFrame();
+    if (NS_WARN_IF(!rootFrameToSelect)) {
+      return nullptr;
     }
-    if (mLimiters.mAncestorLimiter) {
-      return mLimiters.mAncestorLimiter->GetPrimaryFrame();
+  } else if (mLimiters.mAncestorLimiter) {
+    rootFrameToSelect = mLimiters.mAncestorLimiter->GetPrimaryFrame();
+    if (NS_WARN_IF(!rootFrameToSelect)) {
+      return nullptr;
     }
-    return mPresShell->GetRootScrollContainerFrame();
-  }();
-
-  if (NS_WARN_IF(!rootFrameToSelect)) {
-    return nullptr;
+  } else {
+    rootFrameToSelect = mPresShell->GetRootScrollContainerFrame();
+    if (NS_WARN_IF(!rootFrameToSelect)) {
+      return nullptr;
+    }
   }
 
-  // If there is selected content, and it's under our root, look for nearest
-  // and vertical scrollable parent under the root frame.
-  nsIFrame* innerScrollableFrame = [&]() -> nsIFrame* {
-    RefPtr contentToSelect = mPresShell->GetContentForScrolling();
-    if (!contentToSelect) {
-      return nullptr;
-    }
-    nsIFrame* frame = contentToSelect->GetPrimaryFrame();
-    if (!frame ||
-        !nsLayoutUtils::IsProperAncestorFrame(rootFrameToSelect, frame)) {
-      return nullptr;
-    }
-    for (; frame != rootFrameToSelect; frame = frame->GetParent()) {
+  nsCOMPtr<nsIContent> contentToSelect = mPresShell->GetContentForScrolling();
+  if (contentToSelect) {
+    // If there is selected content, look for nearest and vertical scrollable
+    // parent under the root frame.
+    for (nsIFrame* frame = contentToSelect->GetPrimaryFrame();
+         frame && frame != rootFrameToSelect; frame = frame->GetParent()) {
       ScrollContainerFrame* scrollContainerFrame = do_QueryFrame(frame);
       if (!scrollContainerFrame) {
         continue;
@@ -1864,13 +1862,12 @@ nsIFrame* nsFrameSelection::GetFrameToPageSelect() const {
         return frame;
       }
     }
-    // Otherwise, i.e., there is no scrollable frame or only the root frame is
-    // scrollable, let's return the root frame because Shift + PageUp/PageDown
-    // should expand the selection in the root content even if it's not
-    // scrollable.
-    return nullptr;
-  }();
-  return innerScrollableFrame ? innerScrollableFrame : rootFrameToSelect;
+  }
+  // Otherwise, i.e., there is no scrollable frame or only the root frame is
+  // scrollable, let's return the root frame because Shift + PageUp/PageDown
+  // should expand the selection in the root content even if it's not
+  // scrollable.
+  return rootFrameToSelect;
 }
 
 nsresult nsFrameSelection::PageMove(bool aForward, bool aExtend,
