@@ -21342,7 +21342,7 @@ bool Document::HasFullscreenKeyboardLockEnabled() {
 
 class SpeculationRules& Document::SpeculationRules() {
   if (!mSpeculationRules) {
-    mSpeculationRules = MakeRefPtr<class SpeculationRules>();
+    mSpeculationRules = MakeRefPtr<class SpeculationRules>(this);
   }
   return *mSpeculationRules;
 }

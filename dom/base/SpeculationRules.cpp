@@ -4,6 +4,8 @@
 
 #include "mozilla/dom/SpeculationRules.h"
 
+#include "mozilla/CycleCollectedJSContext.h"
+#include "mozilla/dom/Document.h"
 #include "mozilla/dom/SpeculationRuleSet.h"
 #include "nsCycleCollectionParticipant.h"
 #include "nsIScriptElement.h"
@@ -14,6 +16,7 @@ namespace mozilla::dom {
 NS_IMPL_CYCLE_COLLECTION_CLASS(SpeculationRules)
 
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN(SpeculationRules)
+  NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mDocument)
   for (const auto& entry : tmp->mRuleSetsFromScript) {
     NS_CYCLE_COLLECTION_NOTE_EDGE_NAME(cb, "mRuleSetsFromScript key");
     cb.NoteXPCOMChild(entry.GetKey());
@@ -21,18 +24,70 @@ NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN(SpeculationRules)
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
 
 NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN(SpeculationRules)
+  NS_IMPL_CYCLE_COLLECTION_UNLINK(mDocument)
   NS_IMPL_CYCLE_COLLECTION_UNLINK(mRuleSetsFromScript)
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
+
+SpeculationRules::SpeculationRules(Document* aDocument)
+    : mDocument(aDocument) {}
 
 // https://html.spec.whatwg.org/#register-speculation-rules
 void SpeculationRules::RegisterFromScript(
     nsIScriptElement* aScriptElement, UniquePtr<SpeculationRuleSet> aRuleSet) {
+  // Step 2.
   mRuleSetsFromScript.InsertOrUpdate(aScriptElement, std::move(aRuleSet));
+  // Step 3.
+  ConsiderLoads();
 }
 
 // html.spec.whatwg.org/#unregister-speculation-rules
 void SpeculationRules::Unregister(nsIScriptElement* aScriptElement) {
+  // Step 2.
   mRuleSetsFromScript.Remove(aScriptElement);
+  // Step 3.
+  ConsiderLoads();
+}
+
+namespace {
+
+class ConsiderSpeculativeLoadsMicrotask final
+    : public mozilla::MicroTaskRunnable {
+ public:
+  explicit ConsiderSpeculativeLoadsMicrotask(
+      SpeculationRules* aSpeculationRules)
+      : mSpeculationRules(aSpeculationRules) {}
+
+  void Run(AutoSlowOperation& /* unused */) override {
+    mSpeculationRules->InnerConsiderLoads();
+  }
+
+ private:
+  RefPtr<SpeculationRules> mSpeculationRules;
+};
+
+}  // namespace
+
+// https://html.spec.whatwg.org/#consider-speculative-loads
+void SpeculationRules::ConsiderLoads() {
+  // Steps 1-2.
+  if (!mDocument->IsTopLevelContentDocument() ||
+      mConsiderSpeculativeLoadsMicrotaskQueued) {
+    return;
+  }
+  if (CycleCollectedJSContext* context = CycleCollectedJSContext::Get()) {
+    // Step 3.
+    mConsiderSpeculativeLoadsMicrotaskQueued = true;
+    // Step 4.
+    RefPtr mt = MakeRefPtr<ConsiderSpeculativeLoadsMicrotask>(this);
+    context->DispatchToMicroTask(mt.forget());
+  }
+}
+
+// https://html.spec.whatwg.org/#inner-consider-speculative-loads-steps
+void SpeculationRules::InnerConsiderLoads() {
+  mConsiderSpeculativeLoadsMicrotaskQueued = false;
+
+  // TODO(avandolder): Steps 1-7.
 }
 
 }  // namespace mozilla::dom
