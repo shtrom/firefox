@@ -40,6 +40,16 @@ template("absl_source_set") {
 
       if (moz_webrtc_build) {
         configs -= [ "//chromium/build/config/compiler:prevent_unsafe_narrowing" ]
+
+        # Silence -Wcomma / -Wtautological-type-limit-compare spam from
+        # third-party abseil sources. See bug 1965053.
+        if (!defined(cflags_cc)) {
+          cflags_cc = []
+        }
+        cflags_cc += [
+          "-Wno-comma",
+          "-Wno-tautological-type-limit-compare",
+        ]
       }
 
       if (!defined(defines)) {
