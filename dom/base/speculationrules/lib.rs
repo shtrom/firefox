@@ -171,7 +171,6 @@ pub unsafe extern "C" fn prefetch_candidates_group(candidates: &mut PrefetchCand
 #[repr(C)]
 pub struct FfiPrefetchCandidate {
     url: nsCString,
-    // TODO(avandolder): Use a nullable tag type instead of filtering out nulls.
     tags: ThinVec<nsCString>,
     eagerness: Eagerness,
     referrer_policy: ReferrerPolicy,
@@ -184,7 +183,14 @@ impl From<&PrefetchCandidate> for FfiPrefetchCandidate {
             tags: value
                 .tags
                 .iter()
-                .filter_map(|tag| tag.as_ref().map(nsCString::from))
+                .map(|tag| match tag {
+                    Some(t) => t.into(),
+                    None => {
+                        let mut s = nsCString::new();
+                        s.set_is_void(true);
+                        s
+                    }
+                })
                 .collect(),
             eagerness: value.eagerness,
             referrer_policy: value.referrer_policy,
