@@ -340,6 +340,9 @@ class MacroAssemblerRiscv64 : public Assembler {
   void computeScaledAddress(const BaseIndex& address, Register dest);
   void computeScaledAddress32(const BaseIndex& address, Register dest);
 
+  Address computeScaledAddress(const BaseIndex& address,
+                               UseScratchRegisterScope& temps);
+
  private:
   bool UseShortBranch(Label* L, JumpKind jumpKind, OffsetSize bits,
                       mozilla::Maybe<AutoForbidNops>& maybeAfn);
@@ -536,11 +539,8 @@ class MacroAssemblerRiscv64Compat : public MacroAssemblerRiscv64 {
   };
   void convertInt32ToDouble(const BaseIndex& src, FloatRegister dest) {
     UseScratchRegisterScope temps(this);
-    Register scratch = temps.Acquire();
-    MOZ_ASSERT(scratch != src.base);
-    MOZ_ASSERT(scratch != src.index);
-    computeScaledAddress(src, scratch);
-    convertInt32ToDouble(Address(scratch, src.offset), dest);
+    Address address = computeScaledAddress(src, temps);
+    convertInt32ToDouble(address, dest);
   };
   void convertUInt32ToDouble(Register src, FloatRegister dest);
   void convertUInt32ToFloat32(Register src, FloatRegister dest);
@@ -939,7 +939,7 @@ class MacroAssemblerRiscv64Compat : public MacroAssemblerRiscv64 {
   }
 
   void loadInt32OrDouble(const Address& src, FloatRegister dest);
-  void loadInt32OrDouble(const BaseIndex& addr, FloatRegister dest);
+  void loadInt32OrDouble(const BaseIndex& src, FloatRegister dest);
   void loadConstantDouble(double dp, FloatRegister dest);
   void loadConstantFloat32(float f, FloatRegister dest);
 
