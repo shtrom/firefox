@@ -2436,8 +2436,9 @@ void nsDocShell::MaybeCreateInitialClientSource(nsIPrincipal* aPrincipal) {
   MaybeInheritController(mInitialClientSource.get(), principal);
 }
 
-void VerifyCientPrincipalInfosMatch(const mozilla::ipc::PrincipalInfo& aLeft,
-                                    const mozilla::ipc::PrincipalInfo& aRight) {
+void VerifyClientPrincipalInfosMatch(
+    const mozilla::ipc::PrincipalInfo& aLeft,
+    const mozilla::ipc::PrincipalInfo& aRight) {
   // Inheriting a controller when the principals don't match would cause a
   // crash. Let's do the checks earlier to crash here already instead of
   // ClientSource::SetController. And assert each condition separately. See bug
@@ -2487,8 +2488,8 @@ void nsDocShell::MaybeInheritController(
     return;
   }
 
-  VerifyCientPrincipalInfosMatch(aClientSource->Info().PrincipalInfo(),
-                                 controller->PrincipalInfo());
+  VerifyClientPrincipalInfosMatch(aClientSource->Info().PrincipalInfo(),
+                                  controller->PrincipalInfo());
   aClientSource->InheritController(controller.ref());
 }
 
