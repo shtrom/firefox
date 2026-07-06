@@ -231,6 +231,11 @@ class RecordingConnMgrDelegate final : public HappyEyeballsConnMgrDelegate {
     mCalls.AppendElement("RemoveTransFromPendingQ"_ns);
     return false;
   }
+  nsresult StartRetryWithoutTRR(ConnectionEntry*, nsHttpTransaction*, uint32_t,
+                                bool, bool, bool) override {
+    mCalls.AppendElement("StartRetryWithoutTRR"_ns);
+    return mStartRetryWithoutTRRRv;
+  }
 
   int32_t Count(const char* aName) const {
     int32_t n = 0;
@@ -253,6 +258,7 @@ class RecordingConnMgrDelegate final : public HappyEyeballsConnMgrDelegate {
   nsTArray<nsCString> mCalls;
   RefPtr<PendingTransactionInfo> mFindResult;
   nsresult mDispatchRv = NS_OK;
+  nsresult mStartRetryWithoutTRRRv = NS_OK;
   bool mSimulateDispatchBindsConnection = false;
   nsTArray<RefPtr<ConnectionHandle>> mDispatchHandles;
 };

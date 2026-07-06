@@ -116,7 +116,8 @@ class ConnectionEntry : public SupportsWeakPtr {
   nsresult CreateDnsAndConnectSocket(nsAHttpTransaction* trans, uint32_t caps,
                                      bool speculative, bool urgentStart,
                                      bool allow1918,
-                                     PendingTransactionInfo* pendingTransInfo);
+                                     PendingTransactionInfo* pendingTransInfo,
+                                     bool retryWithoutTRR = false);
 
   // Spdy sometimes resolves the address in the socket manager in order
   // to re-coalesce sharded HTTP hosts. The dotted decimal address is

@@ -65,9 +65,13 @@ class HappyEyeballsConnectionAttempt final : public ConnectionAttempt,
   NS_DECL_NSITIMERCALLBACK
   NS_DECL_NSINAMED
 
+  // aRetryWithoutTRR is set for the fallback attempt started after a first
+  // attempt's TRR-resolved addresses all failed to connect; it forces DNS
+  // resolution to bypass TRR (and the DNS cache).
   HappyEyeballsConnectionAttempt(nsHttpConnectionInfo* ci,
                                  nsAHttpTransaction* trans, uint32_t caps,
-                                 bool speculative, bool urgentStart);
+                                 bool speculative, bool urgentStart,
+                                 bool retryWithoutTRR = false);
 
   nsresult Init(ConnectionEntry* ent) override;
   void Abandon() override;
@@ -217,6 +221,16 @@ class HappyEyeballsConnectionAttempt final : public ConnectionAttempt,
   nsresult OnAAAARecord(nsIDNSRecord* aRecord, nsresult status, uint64_t aId);
   nsresult OnHTTPSRecord(nsIDNSRecord* aRecord, nsresult status, uint64_t aId);
 
+  // True when this attempt's (TRR-resolved) addresses all failed to connect and
+  // we should hand the transaction to a fresh attempt that re-resolves with TRR
+  // disabled (the connection-time equivalent of nsSocketTransport's legacy
+  // native-DNS fallback). Only applies to a real transaction, outside TRR_ONLY
+  // mode, and not to an attempt that is already a TRR-disabled retry.
+  bool ShouldRetryWithoutTRR(happy_eyeballs::FailureReason aReason) const;
+  // Hand the transaction to a new HappyEyeballsConnectionAttempt that resolves
+  // with TRR disabled, and abandon this one without closing the transaction.
+  void RetryWithoutTRR();
+
   // Connection Attempt
   // Build a per-establisher HappyEyeballsTransaction wired up to forward
   // its OnTransportStatus events back through MaybeSendTransportStatus
@@ -289,6 +303,19 @@ class HappyEyeballsConnectionAttempt final : public ConnectionAttempt,
   // Single-address DNS record of the winning establisher, used to build
   // connection-coalescing keys for the winner only.
   nsCOMPtr<nsIDNSAddrRecord> mWinnerAddrRecord;
+
+  // IDs of the still-outstanding A/AAAA lookups issued for mHost (the origin /
+  // routed host). HTTPS RR target-name lookups are not tracked here, so their
+  // addresses never enter the coalescing keys.
+  nsTHashSet<uint64_t> mOriginDnsLookupIds;
+  // Combined A+AAAA addresses resolved for mHost, used to build the entry's
+  // coalescing keys once both lookups complete.
+  nsTArray<NetAddr> mOriginAddresses;
+
+  // When set, DNS resolution bypasses TRR and the cache. Set on the fallback
+  // attempt started after TRR-resolved addresses failed to connect; also
+  // prevents that fallback attempt from triggering a second retry.
+  bool mRetryWithoutTRR = false;
 
   nsCOMPtr<nsITimer> mTimer;
   WeakPtr<ConnectionEntry> mEntry;

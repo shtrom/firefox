@@ -786,6 +786,12 @@ skip-if = [
   "os == 'win' && msix",
 ]
 
+["test_happy_eyeballs_trr_connect_fallback.js"]
+skip-if = [
+  "os == 'android'",
+  "os == 'win' && msix",
+]
+
 ["test_happy_eyeballs_dns_prefetch_reuse.js"]
 run-sequentially = ["true"] # node server exceptions dont replay well
 

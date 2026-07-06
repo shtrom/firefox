@@ -120,16 +120,28 @@ class DefaultHappyEyeballsConnMgrDelegate final
                                nsHttpTransaction* aTrans) override {
     return aEntry->RemoveTransFromPendingQ(aTrans);
   }
+  nsresult StartRetryWithoutTRR(ConnectionEntry* aEntry,
+                                nsHttpTransaction* aTrans, uint32_t aCaps,
+                                bool aSpeculative, bool aUrgentStart,
+                                bool aAllow1918) override {
+    RefPtr<PendingTransactionInfo> pendingTransInfo =
+        new PendingTransactionInfo(aTrans);
+    return aEntry->CreateDnsAndConnectSocket(
+        aTrans, aCaps, aSpeculative, aUrgentStart, aAllow1918, pendingTransInfo,
+        /* retryWithoutTRR = */ true);
+  }
 };
 
 HappyEyeballsConnectionAttempt::HappyEyeballsConnectionAttempt(
     nsHttpConnectionInfo* ci, nsAHttpTransaction* trans, uint32_t caps,
-    bool speculative, bool urgentStart)
+    bool speculative, bool urgentStart, bool retryWithoutTRR)
     : ConnectionAttempt(ci, trans, caps, speculative, urgentStart),
       mEstablisherFactory(new DefaultConnectionEstablisherFactory()),
       mConnMgrDelegate(new DefaultHappyEyeballsConnMgrDelegate()),
+      mRetryWithoutTRR(retryWithoutTRR),
       mZeroRttHandle(new ZeroRttHandle(this)) {
-  LOG(("HappyEyeballsConnectionAttempt ctor %p", this));
+  LOG(("HappyEyeballsConnectionAttempt ctor %p retryWithoutTRR=%d", this,
+       retryWithoutTRR));
   if (mConnInfo->GetRoutedHost().IsEmpty()) {
     mHost = mConnInfo->GetOrigin();
   } else {
@@ -592,6 +604,10 @@ nsresult HappyEyeballsConnectionAttempt::ProcessHappyEyeballsOutput() {
       case happy_eyeballs::Output::Tag::Failed: {
         LOG(("happy_eyeballs::Output::Tag::Failed reason=%d",
              static_cast<uint32_t>(event.failed.reason)));
+        if (ShouldRetryWithoutTRR(event.failed.reason)) {
+          RetryWithoutTRR();
+          return NS_OK;
+        }
         TransitionPayload payload;
         payload.mFailureReason = Some(event.failed.reason);
         Transition(State::Failed, std::move(payload));
@@ -620,9 +636,19 @@ HappyEyeballsConnectionAttempt::SetupDnsFlags(
     dnsFlags = nsIDNSService::RESOLVE_BYPASS_CACHE;
   }
 
+  // Fallback attempt after TRR-resolved addresses failed to connect: bypass TRR
+  // and the (TRR-populated) cache to re-resolve natively.
+  if (mRetryWithoutTRR) {
+    dnsFlags |= nsIDNSService::RESOLVE_DISABLE_TRR |
+                nsIDNSService::RESOLVE_BYPASS_CACHE |
+                nsIDNSService::RESOLVE_REFRESH_CACHE;
+  }
+
   switch (aType) {
     case happy_eyeballs::DnsRecordType::Https:
-      dnsFlags |= nsIDNSService::GetFlagsFromTRRMode(mConnInfo->GetTRRMode());
+      if (!mRetryWithoutTRR) {
+        dnsFlags |= nsIDNSService::GetFlagsFromTRRMode(mConnInfo->GetTRRMode());
+      }
       return dnsFlags;
     case happy_eyeballs::DnsRecordType::Aaaa:
       if (mCaps & NS_HTTP_DISABLE_IPV6) {
@@ -638,8 +664,10 @@ HappyEyeballsConnectionAttempt::SetupDnsFlags(
       break;
   }
 
-  dnsFlags |=
-      nsIDNSService::GetFlagsFromTRRMode(NS_HTTP_TRR_MODE_FROM_FLAGS(mCaps));
+  if (!mRetryWithoutTRR) {
+    dnsFlags |=
+        nsIDNSService::GetFlagsFromTRRMode(NS_HTTP_TRR_MODE_FROM_FLAGS(mCaps));
+  }
 
   // When we get here, we are not resolving using any configured proxy likely
   // because of individual proxy setting on the request or because the host is
@@ -730,6 +758,17 @@ void HappyEyeballsConnectionAttempt::DNSLookup(
     happy_eyeballs::DnsRecordType aType,
     Result<nsIDNSService::DNSFlags, nsresult> aFlags, uint64_t aId,
     const nsACString& aHostname) {
+  // Track A/AAAA lookups for the origin host (mHost) so the coalescing keys are
+  // built from their combined addresses once both finish. Lookups for an HTTPS
+  // RR target name could use a different hostname and are intentionally
+  // excluded. The id is removed in OnARecord/OnAAAARecord, which run on both
+  // the success and failure paths.
+  if ((aType == happy_eyeballs::DnsRecordType::A ||
+       aType == happy_eyeballs::DnsRecordType::Aaaa) &&
+      aHostname.Equals(mHost)) {
+    mOriginDnsLookupIds.Insert(aId);
+  }
+
   nsCOMPtr<nsIDNSService> dns = aFlags.isOk() ? GetOrInitDNSService() : nullptr;
 
   if (dns) {
@@ -1118,6 +1157,71 @@ void HappyEyeballsConnectionAttempt::CloseHttpTransaction(
   // Defensive: Failed implies no winner, so should never be adopted.
   // Route through ReleaseRealTransaction to keep the invariant uniform.
   ReleaseRealTransaction(reason, aEntry);
+}
+
+bool HappyEyeballsConnectionAttempt::ShouldRetryWithoutTRR(
+    happy_eyeballs::FailureReason aReason) const {
+  if (!StaticPrefs::network_http_happy_eyeballs_retry_without_trr()) {
+    return false;
+  }
+
+  // Only when TRR-resolved addresses all failed to *connect* (not a pure DNS
+  // failure), for a real transaction, outside TRR_ONLY mode, and only once (a
+  // TRR-disabled retry attempt must not retry again).
+  if (aReason != happy_eyeballs::FailureReason::Connection ||
+      mRetryWithoutTRR || !mDnsMetadata.mIsTRR ||
+      mDnsMetadata.mEffectiveTRRMode == nsIRequest::TRR_ONLY_MODE ||
+      !RealHttpTransaction()) {
+    return false;
+  }
+
+  // Don't fall back when TRR intentionally returned 0.0.0.0 / :: (a blocked
+  // answer), unless the pref opts in. Matches
+  // nsSocketTransport::RecoverFromError.
+  if (!StaticPrefs::network_trr_fallback_on_zero_response() &&
+      !mOriginAddresses.IsEmpty()) {
+    bool allZero = true;
+    for (const auto& addr : mOriginAddresses) {
+      bool isZero = (addr.raw.family == AF_INET && addr.inet.ip == 0) ||
+                    (addr.raw.family == AF_INET6 && addr.inet6.ip.u64[0] == 0 &&
+                     addr.inet6.ip.u64[1] == 0);
+      if (!isZero) {
+        allZero = false;
+        break;
+      }
+    }
+    if (allZero) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+void HappyEyeballsConnectionAttempt::RetryWithoutTRR() {
+  RefPtr<HappyEyeballsConnectionAttempt> self(this);
+  RefPtr<ConnectionEntry> entry(mEntry);
+  RefPtr<nsHttpTransaction> realTrans = RealHttpTransaction();
+  LOG(("HappyEyeballsConnectionAttempt::RetryWithoutTRR %p trans=%p", this,
+       realTrans.get()));
+  MOZ_ASSERT(entry && realTrans);
+
+  // Start a fresh attempt that re-resolves this transaction with TRR disabled.
+  nsresult rv = mConnMgrDelegate->StartRetryWithoutTRR(
+      entry, realTrans, mCaps, mSpeculative, mUrgentStart, mAllow1918);
+  if (NS_FAILED(rv)) {
+    LOG(("  StartRetryWithoutTRR failed rv=%" PRIx32 "; failing normally",
+         static_cast<uint32_t>(rv)));
+    TransitionPayload payload;
+    payload.mFailureReason = Some(happy_eyeballs::FailureReason::Connection);
+    Transition(State::Failed, std::move(payload));
+    return;
+  }
+
+  // The new attempt owns the transaction now. Detach so this attempt's teardown
+  // can't close or re-queue it, then remove ourselves and abandon.
+  ForgetRealTransaction();
+  mConnMgrDelegate->RemoveConnectionAttempt(entry, this, /* abandon = */ true);
 }
 
 void HappyEyeballsConnectionAttempt::Abandon() {
@@ -1792,6 +1896,9 @@ nsresult HappyEyeballsConnectionAttempt::OnARecord(nsIDNSRecord* aRecord,
 
   nsresult rv;
   if (NS_FAILED(status) || !addrRecord) {
+    if (mOriginDnsLookupIds.Contains(aId)) {
+      mOriginDnsLookupIds.Remove(aId);
+    }
     nsTArray<NetAddr> emptyArray;
     rv =
         happy_eyeballs_process_dns_response_a(mHappyEyeballs, aId, &emptyArray);
@@ -1811,6 +1918,11 @@ nsresult HappyEyeballsConnectionAttempt::OnARecord(nsIDNSRecord* aRecord,
       LOG(("Addr=[%s]", addr.ToString().get()));
       ipv4Addresses.AppendElement(addr);
     }
+  }
+
+  if (mOriginDnsLookupIds.Contains(aId)) {
+    mOriginDnsLookupIds.Remove(aId);
+    mOriginAddresses.AppendElements(ipv4Addresses);
   }
 
   rv = happy_eyeballs_process_dns_response_a(mHappyEyeballs, aId,
@@ -1839,6 +1951,9 @@ nsresult HappyEyeballsConnectionAttempt::OnAAAARecord(nsIDNSRecord* aRecord,
 
   nsresult rv;
   if (NS_FAILED(status) || !addrRecord) {
+    if (mOriginDnsLookupIds.Contains(aId)) {
+      mOriginDnsLookupIds.Remove(aId);
+    }
     nsTArray<NetAddr> emptyArray;
     rv = happy_eyeballs_process_dns_response_aaaa(mHappyEyeballs, aId,
                                                   &emptyArray);
@@ -1858,6 +1973,11 @@ nsresult HappyEyeballsConnectionAttempt::OnAAAARecord(nsIDNSRecord* aRecord,
       LOG(("Addr=[%s]", addr.ToString().get()));
       ipv6Addresses.AppendElement(addr);
     }
+  }
+
+  if (mOriginDnsLookupIds.Contains(aId)) {
+    mOriginDnsLookupIds.Remove(aId);
+    mOriginAddresses.AppendElements(ipv6Addresses);
   }
 
   rv = happy_eyeballs_process_dns_response_aaaa(mHappyEyeballs, aId,

@@ -1046,10 +1046,11 @@ bool ConnectionEntry::MaybeProcessCoalescingKeys(nsIDNSAddrRecord* dnsRecord,
 
 nsresult ConnectionEntry::CreateDnsAndConnectSocket(
     nsAHttpTransaction* trans, uint32_t caps, bool speculative,
-    bool urgentStart, bool allow1918,
-    PendingTransactionInfo* pendingTransInfo) {
+    bool urgentStart, bool allow1918, PendingTransactionInfo* pendingTransInfo,
+    bool retryWithoutTRR) {
   return mConnectionAttemptPool->StartConnectionEstablishment(
-      this, trans, caps, speculative, urgentStart, allow1918, pendingTransInfo);
+      this, trans, caps, speculative, urgentStart, allow1918, pendingTransInfo,
+      retryWithoutTRR);
 }
 
 bool ConnectionEntry::AllowToRetryDifferentIPFamilyForHttp3(nsresult aError) {
