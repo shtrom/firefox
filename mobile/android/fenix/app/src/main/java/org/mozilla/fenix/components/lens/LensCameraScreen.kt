@@ -327,7 +327,7 @@ private fun BottomControls(
                 .background(Color.White, CircleShape),
         ) {
             Icon(
-                painter = painterResource(iconsR.drawable.mozac_ic_camera_24),
+                painter = painterResource(iconsR.drawable.mozac_ic_search_24),
                 contentDescription = null,
                 tint = Color.Black,
             )
