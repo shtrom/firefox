@@ -1180,7 +1180,8 @@ bool nsCocoaWindow::PreRender(WidgetRenderingContext* aContext)
   // composition is done, thus keeping the GL context locked forever.
   mCompositingLock.Lock();
 
-  if (aContext->mGL && StaticPrefs::gfx_compositor_gpu_migration()) {
+  if (aContext->mGL && aContext->mGL->GetContextType() == GLContextType::CGL &&
+      StaticPrefs::gfx_compositor_gpu_migration()) {
     GLContextCGL::Cast(aContext->mGL)->MigrateToActiveGPU();
   }
 
