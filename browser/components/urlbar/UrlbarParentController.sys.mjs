@@ -32,16 +32,6 @@ ChromeUtils.defineLazyGetter(lazy, "logger", () =>
   lazy.UrlbarShared.getLogger({ prefix: "Controller" })
 );
 
-const NOTIFICATIONS = {
-  QUERY_STARTED: "onQueryStarted",
-  QUERY_RESULTS: "onQueryResults",
-  QUERY_RESULT_REMOVED: "onQueryResultRemoved",
-  QUERY_CANCELLED: "onQueryCancelled",
-  QUERY_FINISHED: "onQueryFinished",
-  VIEW_OPEN: "onViewOpen",
-  VIEW_CLOSE: "onViewClose",
-};
-
 /**
  * The address bar controller handles queries from the address bar, obtains
  * results and returns them to the UI for display.
@@ -106,10 +96,6 @@ export class UrlbarParentController {
       manager || lazy.ProvidersManager.getInstanceForSap(this.sapName);
 
     this.engagementEvent = new TelemetryEvent(this);
-  }
-
-  get NOTIFICATIONS() {
-    return NOTIFICATIONS;
   }
 
   /**
@@ -262,7 +248,7 @@ export class UrlbarParentController {
     // For proper functionality we must ensure this notification is fired
     // synchronously, as soon as startQuery is invoked, but after any
     // notifications related to the previous query.
-    this.notify(NOTIFICATIONS.QUERY_STARTED, queryContext);
+    this.notify(lazy.UrlbarShared.NOTIFICATIONS.QUERY_STARTED, queryContext);
     await this.manager.startQuery(queryContext, this);
 
     // If the query has been cancelled, onQueryFinished was notified already.
@@ -274,7 +260,7 @@ export class UrlbarParentController {
       contextWrapper.done = true;
       // TODO (Bug 1549936) this is necessary to avoid leaks in PB tests.
       this.manager.cancelQuery(queryContext);
-      this.notify(NOTIFICATIONS.QUERY_FINISHED, queryContext);
+      this.notify(lazy.UrlbarShared.NOTIFICATIONS.QUERY_FINISHED, queryContext);
     }
 
     return queryContext;
@@ -300,8 +286,8 @@ export class UrlbarParentController {
     queryContext.sixthTimerId = 0;
 
     this.manager.cancelQuery(queryContext);
-    this.notify(NOTIFICATIONS.QUERY_CANCELLED, queryContext);
-    this.notify(NOTIFICATIONS.QUERY_FINISHED, queryContext);
+    this.notify(lazy.UrlbarShared.NOTIFICATIONS.QUERY_CANCELLED, queryContext);
+    this.notify(lazy.UrlbarShared.NOTIFICATIONS.QUERY_FINISHED, queryContext);
   }
 
   /**
@@ -344,7 +330,7 @@ export class UrlbarParentController {
       );
     }
 
-    this.notify(NOTIFICATIONS.QUERY_RESULTS, queryContext);
+    this.notify(lazy.UrlbarShared.NOTIFICATIONS.QUERY_RESULTS, queryContext);
     // Update lastResultCount after notifying, so the view can use it.
     queryContext.lastResultCount = queryContext.results.length;
   }
@@ -458,7 +444,7 @@ export class UrlbarParentController {
     }
 
     queryContext.results.splice(index, 1);
-    this.notify(NOTIFICATIONS.QUERY_RESULT_REMOVED, index);
+    this.notify(lazy.UrlbarShared.NOTIFICATIONS.QUERY_RESULT_REMOVED, index);
   }
 
   /**

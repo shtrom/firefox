@@ -98,11 +98,8 @@ export class UrlbarChildController {
   get engagementEvent() {
     return this.#parent.engagementEvent;
   }
-  get NOTIFICATIONS() {
-    return this.#parent.NOTIFICATIONS;
-  }
   get platform() {
-    return this.#parent.platform;
+    return AppConstants.platform;
   }
   /**
    * The selection behavior that the user has used to select a result. The
