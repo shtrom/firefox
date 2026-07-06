@@ -466,6 +466,11 @@ class MainMenuTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3080111
+    @Converted(
+        replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.MainMenuTest#verifyTheTranslatePageSubMenuOptionTest"],
+        bug = 2049332,
+        since = "2026-07",
+    )
     @SmokeTest
     @Test
     fun verifyTheTranslatePageSubMenuOptionTest() {

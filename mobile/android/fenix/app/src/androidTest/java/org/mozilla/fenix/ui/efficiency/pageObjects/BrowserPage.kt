@@ -153,6 +153,12 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
         return this
     }
 
+    fun openMainMenu(): BrowserPage {
+        mozClick(BrowserPageSelectors.MAIN_MENU_BUTTON)
+
+        return this
+    }
+
     private companion object {
         const val HTTPS_ERROR_GO_BACK = "Go Back (Recommended)"
     }

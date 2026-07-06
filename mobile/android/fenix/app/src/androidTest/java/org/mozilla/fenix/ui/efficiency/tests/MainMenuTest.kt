@@ -8,6 +8,7 @@ import org.junit.Ignore
 import org.junit.Test
 import org.mozilla.fenix.customannotations.SmokeTest
 import org.mozilla.fenix.helpers.MockBrowserDataHelper
+import org.mozilla.fenix.helpers.TestAssetHelper.firstForeignWebPageAsset
 import org.mozilla.fenix.helpers.TestAssetHelper.getGenericAsset
 import org.mozilla.fenix.helpers.TestAssetHelper.pdfFormAsset
 import org.mozilla.fenix.ui.efficiency.helpers.BaseTest
@@ -26,7 +27,9 @@ import org.mozilla.fenix.ui.efficiency.selectors.MainMenuSelectors.DESKTOP_SITE_
 import org.mozilla.fenix.ui.efficiency.selectors.MainMenuSelectors.EDIT_BOOKMARK_BUTTON
 import org.mozilla.fenix.ui.efficiency.selectors.MainMenuSelectors.FORWARD_BUTTON
 
-class MainMenuTest : BaseTest() {
+class MainMenuTest : BaseTest(
+    isPageLoadTranslationsPromptEnabled = false,
+) {
 
     private val mockWebServer get() = fenixTestRule.mockWebServer
 
@@ -253,5 +256,30 @@ class MainMenuTest : BaseTest() {
             .mozClick(CollectionsSelectors.COLLECTION_WITH_TITLE(collectionTitle))
             .mozVerify(CollectionsSelectors.COLLECTION_TAB_WITH_TITLE(firstTestPage.title))
             .mozVerify(CollectionsSelectors.COLLECTION_TAB_WITH_TITLE(secondTestPage.title))
+    }
+
+    // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3080111
+    @SmokeTest
+    @Test
+    fun verifyTheTranslatePageSubMenuOptionTest() {
+        val testPage = mockWebServer.firstForeignWebPageAsset
+
+        on.browserPage.navigateToPage(testPage.url.toString())
+            .openMainMenu()
+            .mozClick(MainMenuSelectors.MORE_BUTTON)
+            .mozClick(MainMenuSelectors.TRANSLATE_BUTTON)
+            .mozClickIfPresent(BrowserPageSelectors.TRANSLATION_SHEET_TRANSLATE_BUTTON)
+            .mozWaitUntilAbsent(BrowserPageSelectors.TRANSLATION_SHEET_TRANSLATE_BUTTON)
+        on.browserPage
+            .openMainMenu()
+            .mozClick(MainMenuSelectors.MORE_BUTTON)
+            .mozClick(MainMenuSelectors.TRANSLATED_BUTTON)
+            .mozClickIfPresent(BrowserPageSelectors.TRANSLATION_SHEET_SHOW_ORIGINAL_BUTTON)
+            .mozWaitUntilAbsent(BrowserPageSelectors.TRANSLATION_SHEET_SHOW_ORIGINAL_BUTTON)
+        on.browserPage
+            .verifyPageContent(testPage.content)
+            .openMainMenu()
+            .mozClick(MainMenuSelectors.MORE_BUTTON)
+            .mozVerify(MainMenuSelectors.TRANSLATE_BUTTON)
     }
 }
