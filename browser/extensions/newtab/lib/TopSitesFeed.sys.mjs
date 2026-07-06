@@ -29,6 +29,7 @@ import {
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
+  AdsClient: "resource://newtab/lib/AdsClient.sys.mjs",
   ContextId: "moz-src:///browser/modules/ContextId.sys.mjs",
   FilterAdult: "resource:///modules/FilterAdult.sys.mjs",
   LinksCache: "resource:///modules/LinksCache.sys.mjs",
@@ -926,6 +927,7 @@ export class TopSitesFeed {
       getShortHostnameForCurrentSearch
     );
     this.ranker = new RankShortcutsProvider();
+    this.adsClient = null;
 
     this.dedupe = new Dedupe(this._dedupeKey);
     this.frecentCache = new lazy.LinksCache(
@@ -2574,6 +2576,9 @@ export class TopSitesFeed {
       case at.INIT:
         this.init();
         this.updateCustomSearchShortcuts(true /* isStartup */);
+        if (lazy.AdsClient.isEnabled(this.store.getState().Prefs.values)) {
+          this.adsClient = lazy.AdsClient.getClient();
+        }
         break;
       case at.DISCOVERY_STREAM_DEV_SYSTEM_TICK:
       case at.DISCOVERY_STREAM_DEV_EXPIRE_CACHE:
