@@ -13116,21 +13116,6 @@ void nsContentUtils::InnerOrOuterWindowDestroyed() {
   --sInnerOrOuterWindowCount;
 }
 
-/* static */
-nsresult nsContentUtils::AnonymizeURI(nsIURI* aURI, nsCString& aAnonymizedURI) {
-  MOZ_ASSERT(aURI);
-
-  if (aURI->SchemeIs("data")) {
-    aAnonymizedURI.Assign("data:..."_ns);
-    return NS_OK;
-  }
-  // Anonymize the URL.
-  // Strip the URL of any possible username/password and make it ready to be
-  // presented in the UI.
-  nsCOMPtr<nsIURI> exposableURI = net::nsIOService::CreateExposableURI(aURI);
-  return exposableURI->GetSpec(aAnonymizedURI);
-}
-
 static bool JSONCreator(const char16_t* aBuf, uint32_t aLen, void* aData) {
   nsAString* result = static_cast<nsAString*>(aData);
   return result->Append(aBuf, aLen, fallible);
