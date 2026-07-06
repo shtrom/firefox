@@ -96,8 +96,9 @@ Expression ranks:
 ## Notes
 
 Certain build types have special significance:
-\* `opt` implies => `!asan && !ccov && !debug && !tsan`
-\* Instead of `!debug` use separate conditions for `asan`, `ccov` (rarely used), `opt`, and `tsan`
+
+- `opt` implies => `!asan && !ccov && !debug && !tsan`
+- Instead of `!debug` use separate conditions for `asan`, `ccov` (rarely used), `opt`, and `tsan`
 
 ## Errors Detected
 
