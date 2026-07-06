@@ -191,6 +191,10 @@ export class SearchModeSwitcher {
       }
       return;
     }
+    if (event.type == "searchmodechanged") {
+      this.onSearchModeChanged();
+      return;
+    }
     if (event.type == "focus") {
       this.#input.setUnifiedSearchButtonAvailability(true);
       return;
@@ -335,10 +339,6 @@ export class SearchModeSwitcher {
         ) {
           this.updateSearchIcon();
         }
-        break;
-      }
-      case "urlbar-searchmodechanged": {
-        this.onSearchModeChanged();
         break;
       }
     }
@@ -802,7 +802,6 @@ export class SearchModeSwitcher {
 
   #enableObservers() {
     Services.obs.addObserver(this, "browser-search-engine-modified", true);
-    Services.obs.addObserver(this, "urlbar-searchmodechanged", true);
 
     this.#button.addEventListener("focus", this);
     this.#button.addEventListener("keydown", this);
@@ -812,11 +811,12 @@ export class SearchModeSwitcher {
 
     this.#closebutton.addEventListener("click", this);
     this.#closebutton.addEventListener("mousedown", this);
+
+    this.#input.addEventListener("searchmodechanged", this);
   }
 
   #disableObservers() {
     Services.obs.removeObserver(this, "browser-search-engine-modified");
-    Services.obs.removeObserver(this, "urlbar-searchmodechanged");
 
     this.#button.removeEventListener("focus", this);
     this.#button.removeEventListener("keydown", this);
@@ -826,6 +826,8 @@ export class SearchModeSwitcher {
 
     this.#closebutton.removeEventListener("click", this);
     this.#closebutton.removeEventListener("mousedown", this);
+
+    this.#input.removeEventListener("searchmodechanged", this);
   }
 
   /**

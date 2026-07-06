@@ -3292,7 +3292,8 @@ ${
         }
       }
     }
-    Services.obs.notifyObservers(null, "urlbar-searchmodechanged");
+    lazy.UrlbarSearchTermsPersistence.onSearchModeChanged(this.window);
+    this.dispatchEvent(new Event("searchmodechanged"));
   }
 
   /**
@@ -5507,7 +5508,8 @@ ${
       this.setPageProxyState("invalid", true);
     }
 
-    Services.obs.notifyObservers(null, "urlbar-searchmodechanged");
+    lazy.UrlbarSearchTermsPersistence.onSearchModeChanged(this.window);
+    this.dispatchEvent(new Event("searchmodechanged"));
   }
 
   /**

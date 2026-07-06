@@ -1022,7 +1022,10 @@ add_task(async function search_engines_with_accel_updown() {
 
   let searchModeEngineName = win.gURLBar.searchMode?.engineName;
   while (searchModeEngineName != "MozSearch") {
-    let searchmodeChanged = TestUtils.topicObserved("urlbar-searchmodechanged");
+    let searchmodeChanged = BrowserTestUtils.waitForEvent(
+      win.gURLBar,
+      "searchmodechanged"
+    );
     EventUtils.synthesizeKey("KEY_ArrowDown", { accelKey: true }, win);
     await searchmodeChanged;
     await TestUtils.waitForCondition(async () => {
