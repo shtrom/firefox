@@ -696,11 +696,14 @@ export class TopSiteAddButton extends React.PureComponent {
 
   render() {
     // In-grid buttons are large to match the tile icons; the full-row hover
-    // overlay uses the default size.
+    // overlay uses the default size. Both variants participate in the shortcuts'
+    // arrow-key navigation.
     const button = (
       <moz-button
         type="primary"
         className="add-button"
+        tabIndex={this.props.tabIndex}
+        onFocus={this.props.onFocus}
         {...(this.props.inGrid && { size: "large" })}
         iconsrc="chrome://global/skin/icons/plus.svg"
         data-l10n-id="newtab-topsites-add-shortcut-title"
@@ -775,6 +778,14 @@ export class _TopSiteList extends React.PureComponent {
       // eslint-disable-next-line react/no-did-update-set-state
       this.setState(ended ? _TopSiteList.DEFAULT_STATE : { activeIndex: null });
     }
+
+    // Keyboard focus: the shortcuts share one roving tab stop (focusedIndex). If
+    // the row count shrinks, the focused tile may no longer be rendered, leaving
+    // the row with no tab stop — reset to the first tile to keep the row focusable.
+    if (prevProps.TopSitesRows !== this.props.TopSitesRows) {
+      // eslint-disable-next-line react/no-did-update-set-state
+      this.setState({ focusedIndex: 0 });
+    }
   }
 
   onActivate(index) {
@@ -786,22 +797,31 @@ export class _TopSiteList extends React.PureComponent {
       return;
     }
 
-    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-      // Arrow direction should match visual navigation direction in RTL
-      const isRTL = document.dir === "rtl";
-      const navigateToPrevious = isRTL
-        ? e.key === "ArrowRight"
-        : e.key === "ArrowLeft";
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") {
+      return;
+    }
+    // Arrow direction should match visual navigation direction in RTL
+    const isRTL = document.dir === "rtl";
+    const navigateToPrevious = isRTL
+      ? e.key === "ArrowRight"
+      : e.key === "ArrowLeft";
 
-      const targetTopSite = navigateToPrevious
-        ? this.focusedRef?.previousSibling
-        : this.focusedRef?.nextSibling;
-
-      const targetAnchor = targetTopSite?.querySelector("a");
-      if (targetAnchor) {
-        targetAnchor.tabIndex = 0;
-        targetAnchor.focus();
-      }
+    // Walk a flat, DOM-ordered list of focus targets: each tile's link plus
+    // the add-button.
+    const focusTargets = [...this.focusRef.querySelectorAll("a, .add-button")];
+    const currentIndex = focusTargets.indexOf(e.target);
+    if (currentIndex === -1) {
+      return;
+    }
+    // Wrap around the row: stepping forward past the last target returns to the
+    // first, and vice versa. The extra `+ count` keeps the modulo positive when
+    // wrapping backward from index 0.
+    const count = focusTargets.length;
+    const delta = navigateToPrevious ? -1 : 1;
+    const target = focusTargets[(currentIndex + delta + count) % count];
+    if (target) {
+      target.tabIndex = 0;
+      target.focus();
     }
   }
 
@@ -922,6 +942,10 @@ export class _TopSiteList extends React.PureComponent {
               key={slotKey}
               index={i}
               dispatch={props.dispatch}
+              tabIndex={i === this.state.focusedIndex ? 0 : -1}
+              onFocus={() => {
+                this.onTopsiteFocus(i);
+              }}
             />
           );
         }
@@ -931,7 +955,14 @@ export class _TopSiteList extends React.PureComponent {
         let addButton = null;
         if (topSites[i + 1]?.isAddButton && rowFull) {
           addButton = (
-            <TopSiteAddButton index={i + 1} dispatch={props.dispatch} />
+            <TopSiteAddButton
+              index={i + 1}
+              dispatch={props.dispatch}
+              tabIndex={i + 1 === this.state.focusedIndex ? 0 : -1}
+              onFocus={() => {
+                this.onTopsiteFocus(i + 1);
+              }}
+            />
           );
         }
         topSiteLink = (
@@ -943,13 +974,6 @@ export class _TopSiteList extends React.PureComponent {
             {...restSlotProps}
             {...commonProps}
             colors={props.colors}
-            setRef={
-              i === this.state.focusedIndex
-                ? el => {
-                    this.focusedRef = el;
-                  }
-                : () => {}
-            }
             tabIndex={i === this.state.focusedIndex ? 0 : -1}
             onFocus={() => {
               this.onTopsiteFocus(i);
