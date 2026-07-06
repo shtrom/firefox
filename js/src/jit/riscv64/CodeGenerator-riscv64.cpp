@@ -749,21 +749,15 @@ void CodeGenerator::visitWasmStoreI64(LWasmStoreI64* ins) {
 void CodeGenerator::visitWasmSelectI64(LWasmSelectI64* ins) {
   MOZ_ASSERT(ins->mir()->type() == MIRType::Int64);
 
-  Register cond = ToRegister(ins->condExpr());
-  LInt64Allocation falseExpr = ins->falseExpr();
+  Register condExpr = ToRegister(ins->condExpr());
+  Register64 trueExpr = ToRegister64(ins->trueExpr());
+  Register64 falseExpr = ToRegister64(ins->falseExpr());
+  Register64 output = ToOutRegister64(ins);
 
-  Register64 out = ToOutRegister64(ins);
-  MOZ_ASSERT(ToRegister64(ins->trueExpr()) == out,
-             "true expr is reused for input");
+  UseScratchRegisterScope temps(&masm);
+  Register scratch = temps.Acquire();
 
-  if (falseExpr.value().isGeneralReg()) {
-    masm.moveIfZero(out.reg, ToRegister(falseExpr.value()), cond);
-  } else {
-    Label done;
-    masm.ma_b(cond, cond, &done, Assembler::NonZero, ShortJump);
-    masm.loadPtr(ToAddress(falseExpr.value()), out.reg);
-    masm.bind(&done);
-  }
+  masm.ma_cselnz(output.reg, trueExpr.reg, falseExpr.reg, condExpr, scratch);
 }
 
 void CodeGenerator::visitExtendInt32ToInt64(LExtendInt32ToInt64* ins) {
@@ -2205,20 +2199,20 @@ void CodeGenerator::visitWasmSelect(LWasmSelect* ins) {
   MIRType mirType = ins->mir()->type();
 
   Register cond = ToRegister(ins->condExpr());
-  const LAllocation* falseExpr = ins->falseExpr();
 
   if (mirType == MIRType::Int32 || mirType == MIRType::WasmAnyRef) {
+    Register trueExpr = ToRegister(ins->trueExpr());
+    Register falseExpr = ToRegister(ins->falseExpr());
     Register out = ToRegister(ins->output());
-    MOZ_ASSERT(ToRegister(ins->trueExpr()) == out,
-               "true expr input is reused for output");
-    if (falseExpr->isGeneralReg()) {
-      masm.moveIfZero(out, ToRegister(falseExpr), cond);
-    } else {
-      masm.cmp32Load32(Assembler::Zero, cond, cond, ToAddress(falseExpr), out);
-    }
+
+    UseScratchRegisterScope temps(&masm);
+    Register scratch = temps.Acquire();
+
+    masm.ma_cselnz(out, trueExpr, falseExpr, cond, scratch);
     return;
   }
 
+  const LAllocation* falseExpr = ins->falseExpr();
   FloatRegister out = ToFloatRegister(ins->output());
   MOZ_ASSERT(ToFloatRegister(ins->trueExpr()) == out,
              "true expr input is reused for output");

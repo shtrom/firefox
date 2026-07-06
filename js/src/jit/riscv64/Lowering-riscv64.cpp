@@ -463,17 +463,30 @@ void LIRGeneratorRiscv64::lowerBuiltinInt64ToFloatingPoint(
 }
 
 void LIRGeneratorRiscv64::lowerWasmSelectI(MWasmSelect* select) {
-  auto* lir = new (alloc())
-      LWasmSelect(useRegisterAtStart(select->trueExpr()),
-                  useAny(select->falseExpr()), useRegister(select->condExpr()));
-  defineReuseInput(lir, select, LWasmSelect::TrueExprIndex);
+  MIRType type = select->type();
+
+  if (type == MIRType::Int32 || type == MIRType::WasmAnyRef) {
+    auto* lir =
+        new (alloc()) LWasmSelect(useRegisterAtStart(select->trueExpr()),
+                                  useRegisterAtStart(select->falseExpr()),
+                                  useRegisterAtStart(select->condExpr()));
+    define(lir, select);
+  } else {
+    MOZ_ASSERT(type == MIRType::Float32 || type == MIRType::Double);
+
+    auto* lir = new (alloc()) LWasmSelect(
+        useRegisterAtStart(select->trueExpr()), useAny(select->falseExpr()),
+        useRegister(select->condExpr()));
+    defineReuseInput(lir, select, LWasmSelect::TrueExprIndex);
+  }
 }
 
 void LIRGeneratorRiscv64::lowerWasmSelectI64(MWasmSelect* select) {
-  auto* lir = new (alloc()) LWasmSelectI64(
-      useInt64RegisterAtStart(select->trueExpr()),
-      useInt64(select->falseExpr()), useRegister(select->condExpr()));
-  defineInt64ReuseInput(lir, select, LWasmSelectI64::TrueExprIndex);
+  auto* lir =
+      new (alloc()) LWasmSelectI64(useInt64RegisterAtStart(select->trueExpr()),
+                                   useInt64RegisterAtStart(select->falseExpr()),
+                                   useRegisterAtStart(select->condExpr()));
+  defineInt64(lir, select);
 }
 
 // On riscv64 we specialize the cases: compare is {{U,}Int32, {U,}Int64},
