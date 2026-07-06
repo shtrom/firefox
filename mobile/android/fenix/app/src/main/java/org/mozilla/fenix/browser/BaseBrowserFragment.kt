@@ -2242,10 +2242,7 @@ abstract class BaseBrowserFragment :
             (activity as? HomeActivity)?.let { homeActivity ->
                 // ExternalAppBrowserActivity exclusively handles it's own theming unless in private mode.
                 if (homeActivity !is ExternalAppBrowserActivity || homeActivity.browsingModeManager.mode.isPrivate) {
-                    homeActivity.themeManager.applyStatusBarTheme(
-                        homeActivity,
-                        requireComponents.settings.isTabStripEnabled,
-                    )
+                    homeActivity.themeManager.applyStatusBarTheme(homeActivity)
                 }
             }
             collapseBrowserView()
