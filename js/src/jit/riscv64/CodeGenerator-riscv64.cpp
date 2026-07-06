@@ -719,8 +719,14 @@ void CodeGenerator::visitWasmStoreI64(LWasmStoreI64* ins) {
   const MWasmStore* mir = ins->mir();
   const auto& access = mir->access();
 
-  Register64 value = ToRegister64(ins->value());
   Register memoryBase = ToRegister(ins->memoryBase());
+
+  Register64 value = Register64::Invalid();
+  if (ins->value().value().isBogus()) {
+    value = Register64(zero);
+  } else {
+    value = ToRegister64(ins->value());
+  }
 
   if (auto address = ToAbsoluteAddress(ins->ptr(), access)) {
     masm.wasmStoreAbsoluteI64(access, value, memoryBase, address.value());
@@ -2072,8 +2078,14 @@ void CodeGenerator::visitWasmStore(LWasmStore* ins) {
   const MWasmStore* mir = ins->mir();
   const auto& access = mir->access();
 
-  AnyRegister value = ToAnyRegister(ins->value());
   Register memoryBase = ToRegister(ins->memoryBase());
+
+  AnyRegister value;
+  if (ins->value()->isBogus()) {
+    value = AnyRegister(zero);
+  } else {
+    value = ToAnyRegister(ins->value());
+  }
 
   if (auto address = ToAbsoluteAddress(ins->ptr(), access)) {
     masm.wasmStoreAbsolute(access, value, memoryBase, address.value());
