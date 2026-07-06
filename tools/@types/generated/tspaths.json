@@ -226,6 +226,9 @@
       "chrome://browser/content/passwordmgr/login-doorhanger-username-field.mjs": [
         "../../../browser/components/passwordmgr/content/login-doorhanger-username-field.mjs"
       ],
+      "chrome://browser/content/preferences/DefaultBrowserHelper.mjs": [
+        "../../../browser/components/preferences/DefaultBrowserHelper.mjs"
+      ],
       "chrome://browser/content/preferences/FocusHistory.mjs": [
         "../../../browser/components/preferences/FocusHistory.mjs"
       ],
@@ -339,6 +342,9 @@
       ],
       "chrome://browser/content/sidebar/sidebar-panel-header.mjs": [
         "../../../browser/components/sidebar/sidebar-panel-header.mjs"
+      ],
+      "chrome://browser/content/sidebar/sidebar-panel-switcher.mjs": [
+        "../../../browser/components/sidebar/sidebar-panel-switcher.mjs"
       ],
       "chrome://browser/content/sidebar/sidebar-permissions-ui.mjs": [
         "../../../browser/components/sidebar/sidebar-permissions-ui.mjs"
@@ -807,6 +813,9 @@
       ],
       "chrome://mozapps/content/extensions/components/addon-updates-message.mjs": [
         "../../../toolkit/mozapps/extensions/content/components/addon-updates-message.mjs"
+      ],
+      "chrome://mozapps/content/extensions/components/addons-promo.mjs": [
+        "../../../toolkit/mozapps/extensions/content/components/addons-promo.mjs"
       ],
       "chrome://mozapps/content/extensions/components/categories-box.mjs": [
         "../../../toolkit/mozapps/extensions/content/components/categories-box.mjs"
@@ -1893,6 +1902,9 @@
       ],
       "resource://autofill/FormAutofillSync.sys.mjs": [
         "../../../toolkit/components/formautofill/FormAutofillSync.sys.mjs"
+      ],
+      "resource://autofill/PassportStorage.sys.mjs": [
+        "../../../toolkit/components/formautofill/default/PassportStorage.sys.mjs"
       ],
       "resource://autofill/ProfileAutoCompleteResult.sys.mjs": [
         "../../../toolkit/components/formautofill/ProfileAutoCompleteResult.sys.mjs"
@@ -5878,6 +5890,9 @@
       "resource://gre/modules/DAPVisitCounter.sys.mjs": [
         "../../../toolkit/components/dap/DAPVisitCounter.sys.mjs"
       ],
+      "resource://gre/modules/DateNormalizationUtils.sys.mjs": [
+        "../../../toolkit/modules/DateNormalizationUtils.sys.mjs"
+      ],
       "resource://gre/modules/DeferredTask.sys.mjs": [
         "../../../toolkit/modules/DeferredTask.sys.mjs"
       ],
@@ -6238,9 +6253,6 @@
       "resource://gre/modules/KeywordUtils.sys.mjs": [
         "../../../toolkit/modules/KeywordUtils.sys.mjs"
       ],
-      "resource://gre/modules/LangPackMatcher.sys.mjs": [
-        "../../../intl/locale/LangPackMatcher.sys.mjs"
-      ],
       "resource://gre/modules/LightweightThemeConsumer.sys.mjs": [
         "../../../toolkit/modules/LightweightThemeConsumer.sys.mjs"
       ],
@@ -6462,6 +6474,9 @@
       ],
       "resource://gre/modules/ResetProfile.sys.mjs": [
         "../../../toolkit/modules/ResetProfile.sys.mjs"
+      ],
+      "resource://gre/modules/RosettaUtils.sys.mjs": [
+        "../../../toolkit/modules/RosettaUtils.sys.mjs"
       ],
       "resource://gre/modules/RustSharedRemoteSettingsService.sys.mjs": [
         "../../../toolkit/modules/RustSharedRemoteSettingsService.sys.mjs"
@@ -6858,6 +6873,9 @@
       ],
       "resource://gre/modules/shared/NewPasswordModel.sys.mjs": [
         "../../../toolkit/components/passwordmgr/shared/NewPasswordModel.sys.mjs"
+      ],
+      "resource://gre/modules/shared/PassportRecord.sys.mjs": [
+        "../../../toolkit/components/formautofill/shared/PassportRecord.sys.mjs"
       ],
       "resource://gre/modules/shared/PasswordGenerator.sys.mjs": [
         "../../../toolkit/components/passwordmgr/shared/PasswordGenerator.sys.mjs"

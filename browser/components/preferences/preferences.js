@@ -107,7 +107,7 @@ ChromeUtils.defineESModuleGetters(this, {
   FileUtils: "resource://gre/modules/FileUtils.sys.mjs",
   FirefoxRelay: "resource://gre/modules/FirefoxRelay.sys.mjs",
   HomePage: "resource:///modules/HomePage.sys.mjs",
-  LangPackMatcher: "resource://gre/modules/LangPackMatcher.sys.mjs",
+  LangPackMatcher: "moz-src:///intl/locale/LangPackMatcher.sys.mjs",
   LoginHelper: "resource://gre/modules/LoginHelper.sys.mjs",
   NimbusFeatures: "resource://nimbus/ExperimentAPI.sys.mjs",
   OSKeyStore: "resource://gre/modules/OSKeyStore.sys.mjs",
