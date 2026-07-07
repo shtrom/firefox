@@ -577,6 +577,9 @@ class TelemetryEvent {
    * @property {UrlbarResult} [result]
    *   The engaged result. This should be set to the result related to the
    *   picked element.
+   * @property {UrlbarResult[]} [visibleResults]
+   *   The visible results captured when a deferred (disable/bounce) recording
+   *   is tracked, so `selIndex` indexes into the same set the recording reports.
    * @property {boolean} [isSessionOngoing]
    *   Set to true if the search session is still ongoing.
    * @property {object} [searchMode]
@@ -667,10 +670,31 @@ class TelemetryEvent {
    * @param {ActionDetails} details
    */
   #internalRecord(event, details) {
+    let snapshot = this.#collectEngagement(event, details);
+    if (snapshot) {
+      this.#recordEngagement(snapshot);
+    }
+  }
+
+  /**
+   * Gathers everything a recording needs from the picked result and the DOM
+   * event into a single snapshot, synchronously at engagement time. Values that
+   * can only be derived content-side (the `action`, resolved from the `event`
+   * and `element`, and the picked action key) are resolved here, so the
+   * recording itself needs neither.
+   *
+   * @param {?Event} event
+   *   The DOM event behind the engagement, or null for paste&go / drop&go.
+   * @param {ActionDetails} details
+   *   The interaction details.
+   * @returns {?object} The snapshot to record from, or null when there is no
+   *   session in progress to record.
+   */
+  #collectEngagement(event, details) {
     const startEventInfo = this._startEventInfo;
 
     if (!startEventInfo) {
-      return;
+      return null;
     }
     if (
       !event &&
@@ -727,7 +751,42 @@ class TelemetryEvent {
       pickedActionKey: details.element?.dataset.action ?? null,
     };
 
+    return {
+      method,
+      action,
+      startEventInfo,
+      numChars,
+      numWords,
+      searchWords,
+      internalDetails,
+    };
+  }
+
+  /**
+   * Records the engagement (or abandonment) telemetry from a snapshot gathered
+   * by `#collectEngagement()`. Runs parent-side: it reads the parent's query
+   * context, records Glean telemetry and exposures, and notifies the providers.
+   *
+   * @param {object} snapshot
+   *   The snapshot returned by `#collectEngagement()`.
+   */
+  #recordEngagement(snapshot) {
+    let {
+      method,
+      action,
+      startEventInfo,
+      numChars,
+      numWords,
+      searchWords,
+      internalDetails,
+    } = snapshot;
+
     let { queryContext } = this._controller._lastQueryContextWrapper || {};
+
+    // The engagement is recorded immediately, so the live results still match
+    // the picked selIndex; the deferred disable/bounce paths instead capture
+    // this at tracking time (see startTrackingDisableSuggest/BounceEvent).
+    const visibleResults = this.#engagementData.visibleResults;
 
     this.#recordSearchEngagementTelemetry(method, startEventInfo, {
       action,
@@ -738,6 +797,7 @@ class TelemetryEvent {
       searchSource: internalDetails.searchSource,
       searchMode: internalDetails.searchMode,
       selIndex: internalDetails.selIndex,
+      visibleResults,
       selType: internalDetails.selType,
       pickedActionKey: internalDetails.pickedActionKey,
       location: internalDetails.location,
@@ -749,15 +809,13 @@ class TelemetryEvent {
       this.#recordExposures(queryContext);
     }
 
-    const visibleResults = this.#engagementData.visibleResults;
-
     // Start tracking for a disable event if there was a Suggest result
     // during an engagement or abandonment event.
     if (
       (method == "engagement" || method == "abandonment") &&
       visibleResults.some(r => r.providerName == "UrlbarProviderQuickSuggest")
     ) {
-      this.startTrackingDisableSuggest(event, internalDetails);
+      this.startTrackingDisableSuggest(internalDetails.event, internalDetails);
     }
 
     try {
@@ -871,6 +929,10 @@ class TelemetryEvent {
    *   The searchMode object to record.
    * @param {number} details.selIndex
    *   The index of the selected result.
+   * @param {UrlbarResult[]} details.visibleResults
+   *   The results shown when the engagement was captured. Passed in (rather than
+   *   read fresh here) so a deferred recording indexes `selIndex` into the same
+   *   results it was captured against.
    * @param {string} details.selType
    *   The Type of the selected element, undefined for "blur".
    *   One of "unknown", "autofill", "visiturl", "bookmark", "help", "history",
@@ -907,6 +969,7 @@ class TelemetryEvent {
       searchSource,
       searchMode,
       selIndex,
+      visibleResults,
       selType,
       pickedActionKey = null,
       viewTime = 0,
@@ -940,15 +1003,14 @@ class TelemetryEvent {
       searchMode
     );
     const search_mode = this.#getSearchMode(searchMode);
-    const currentResults = engagementData.visibleResults;
-    let numResults = currentResults.length;
-    let groups = currentResults
+    let numResults = visibleResults.length;
+    let groups = visibleResults
       .map(r => lazy.UrlbarUtils.searchEngagementTelemetryGroup(r))
       .join(",");
-    let results = currentResults
+    let results = visibleResults
       .map(r => lazy.UrlbarUtils.searchEngagementTelemetryType(r))
       .join(",");
-    let actions = currentResults
+    let actions = visibleResults
       .map(r => lazy.UrlbarUtils.searchEngagementTelemetryAction(r))
       .filter(v => v)
       .join(",");
@@ -959,13 +1021,13 @@ class TelemetryEvent {
     switch (method) {
       case "engagement": {
         let selected_result = lazy.UrlbarUtils.searchEngagementTelemetryType(
-          currentResults[selIndex],
+          visibleResults[selIndex],
           selType
         );
 
         if (selType == "action") {
           let actionKey = lazy.UrlbarUtils.searchEngagementTelemetryAction(
-            currentResults[selIndex],
+            visibleResults[selIndex],
             pickedActionKey
           );
           selected_result = `action_${actionKey}`;
@@ -1040,7 +1102,7 @@ class TelemetryEvent {
         let selected_result = "none";
         if (previousEvent == "engagement") {
           selected_result = lazy.UrlbarUtils.searchEngagementTelemetryType(
-            currentResults[selIndex],
+            visibleResults[selIndex],
             selType
           );
         }
@@ -1066,7 +1128,7 @@ class TelemetryEvent {
       }
       case "bounce": {
         let selected_result = lazy.UrlbarUtils.searchEngagementTelemetryType(
-          currentResults[selIndex],
+          visibleResults[selIndex],
           selType
         );
         let eventInfo = {
@@ -1574,6 +1636,9 @@ class TelemetryEvent {
    *   An object describing interaction details.
    */
   startTrackingDisableSuggest(event, details) {
+    // Capture the visible results now so the deferred recording indexes the
+    // same set as the tracked selIndex, not the live view's at trigger time.
+    details.visibleResults = this.#engagementData.visibleResults;
     this._lastSearchDetailsForDisableSuggestTracking = {
       // The time when a user interacts a suggest result, either through
       // an engagement or an abandonment.
@@ -1628,9 +1693,6 @@ class TelemetryEvent {
       details.searchString
     );
 
-    details.provider = details.result?.providerName;
-    details.selIndex = details.result?.rowIndex ?? -1;
-
     this.#recordSearchEngagementTelemetry("disable", startEventInfo, {
       action,
       numChars,
@@ -1640,6 +1702,7 @@ class TelemetryEvent {
       searchSource: details.searchSource,
       searchMode: details.searchMode,
       selIndex: details.selIndex,
+      visibleResults: details.visibleResults,
       selType: details.selType,
       location: details.location,
       windowMode: details.windowMode,
@@ -1673,6 +1736,10 @@ class TelemetryEvent {
     if (state.bounceEventTracking) {
       await this.handleBounceEventTrigger(browser);
     }
+
+    // Capture the visible results now so the deferred recording indexes the
+    // same set as the tracked selIndex, not the live view's at trigger time.
+    details.visibleResults = this.#engagementData.visibleResults;
 
     state.bounceEventTracking = {
       startTime: Date.now(),
@@ -1782,6 +1849,7 @@ class TelemetryEvent {
       searchSource: details.searchSource,
       searchMode: details.searchMode,
       selIndex: details.selIndex,
+      visibleResults: details.visibleResults,
       selType: details.selType,
       viewTime: viewTime / 1000,
       location: details.location,
