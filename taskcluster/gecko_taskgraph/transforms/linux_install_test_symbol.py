@@ -15,6 +15,7 @@ _METHOD_GROUP = {
     "apt": "inst-apt",
     "rpm": "inst-rpm",
     "flatpak": "inst-flatpak",
+    "tarball": "inst-tarball",
 }
 
 transforms = TransformSequence()

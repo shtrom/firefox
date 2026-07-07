@@ -228,6 +228,7 @@ treeherder:
         'inst-apt': 'Linux installer tests: apt'
         'inst-rpm': 'Linux installer tests: rpm'
         'inst-flatpak': 'Linux installer tests: flatpak'
+        'inst-tarball': 'Linux installer tests: tarball'
         'Attr-L10n': 'Build Attribution'
         'android-l10n': 'Import strings from android-l10n repo'
         'updt-tst': 'Test updates to release from older firefox versions'
