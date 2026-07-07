@@ -190,6 +190,7 @@ RTCRtpReceiver::RTCRtpReceiver(
                       &RTCRtpReceiver::UpdateReceiveTrackMute);
 
   mParameters.mCodecs.Construct();
+  mParameters.mHeaderExtensions.Construct();
 }
 
 #undef INIT_MIRROR
@@ -945,6 +946,10 @@ void RTCRtpReceiver::SyncFromJsep(const JsepTransceiver& aJsepTransceiver) {
   if (GetJsepTransceiver().mRecvTrack.GetNegotiatedDetails()) {
     const auto& details(
         *GetJsepTransceiver().mRecvTrack.GetNegotiatedDetails());
+    mParameters.mHeaderExtensions.Reset();
+    mParameters.mHeaderExtensions.Construct();
+    RTCRtpTransceiver::ToDomHeaderExtensions(
+        details, mParameters.mHeaderExtensions.Value());
     mParameters.mCodecs.Reset();
     mParameters.mCodecs.Construct();
     if (details.GetEncodingCount()) {

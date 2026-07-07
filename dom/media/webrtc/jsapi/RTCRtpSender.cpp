@@ -160,6 +160,7 @@ RTCRtpSender::RTCRtpSender(nsPIDOMWindowInner* aWindow, PeerConnectionImpl* aPc,
 
   mParameters.mCodecs.Construct();
   UpdateParametersRtcp();
+  mParameters.mHeaderExtensions.Construct();
 
   if (mDtmf) {
     mWatchManager.Watch(mTransmitting, &RTCRtpSender::UpdateDtmfSender);
@@ -856,16 +857,19 @@ already_AddRefed<Promise> RTCRtpSender::SetParameters(
 
   if (mLastReturnedParameters.isSome() &&
       paramsCopy.mTransactionId.WasPassed()) {
-    // We check mPastReturnedParameters and presence of transaction id because
+    // We check mLastReturnedParameters and presence of transaction id because
     // if these aren't right and we're letting it slide, we do not expect these
     // read-only members to be present.
-
-    // TODO: Verify remaining read-only parameters
-    // headerExtensions (bug 1765851)
 
     if (oldParams->mRtcp != paramsCopy.mRtcp) {
       p->MaybeRejectWithInvalidModificationError(
           "RTCRtpParameters.rtcp is a read-only parameter");
+      return p.forget();
+    }
+
+    if (oldParams->mHeaderExtensions != paramsCopy.mHeaderExtensions) {
+      p->MaybeRejectWithInvalidModificationError(
+          "RTCRtpParameters.headerExtensions is a read-only parameter");
       return p.forget();
     }
   }
@@ -1373,17 +1377,13 @@ void RTCRtpSender::GetParameters(RTCRtpSendParameters& aParameters) {
   // encodings is set to the value of the [[SendEncodings]] internal slot.
   aParameters.mEncodings = mParameters.mEncodings;
 
-  // The headerExtensions sequence is populated based on the header extensions
-  // that have been negotiated for sending
-  // TODO(bug 1765851): We do not support this yet
-  // aParameters.mHeaderExtensions.Construct();
-
+  aParameters.mHeaderExtensions.Construct(
+      mParameters.mHeaderExtensions.Value());
   aParameters.mRtcp.Construct(mParameters.mRtcp.Value());
   if (mParameters.mDegradationPreference.WasPassed()) {
     aParameters.mDegradationPreference.Construct(
         mParameters.mDegradationPreference.Value());
   }
-  aParameters.mHeaderExtensions.Construct();
   if (mParameters.mCodecs.WasPassed()) {
     aParameters.mCodecs.Construct(mParameters.mCodecs.Value());
   }
@@ -1413,6 +1413,13 @@ bool operator==(const RTCRtpEncodingParameters& a1,
 bool operator==(const RTCRtcpParameters& a1, const RTCRtcpParameters& a2) {
   // webidl does not generate types that are equality comparable
   return a1.mCname == a2.mCname && a1.mReducedSize == a2.mReducedSize;
+}
+
+bool operator==(const RTCRtpHeaderExtensionParameters& a1,
+                const RTCRtpHeaderExtensionParameters& a2) {
+  // webidl does not generate types that are equality comparable
+  return a1.mUri == a2.mUri && a1.mId == a2.mId &&
+         a1.mEncrypted == a2.mEncrypted;
 }
 
 // static
@@ -1871,6 +1878,16 @@ void RTCRtpSender::UpdateParametersRtcp() {
   mParameters.mRtcp.Value().mReducedSize.Construct(false);
 }
 
+void RTCRtpSender::UpdateParametersHeaderExtensions() {
+  if (const JsepTrackNegotiatedDetails* details =
+          GetJsepTransceiver().mSendTrack.GetNegotiatedDetails()) {
+    mParameters.mHeaderExtensions.Reset();
+    mParameters.mHeaderExtensions.Construct();
+    RTCRtpTransceiver::ToDomHeaderExtensions(
+        *details, mParameters.mHeaderExtensions.Value());
+  }
+}
+
 void RTCRtpSender::SyncFromJsep(const JsepTransceiver& aJsepTransceiver) {
   if (!mSimulcastEnvelopeSet) {
     // JSEP is establishing the simulcast envelope for the first time, right now
@@ -1898,6 +1915,7 @@ void RTCRtpSender::SyncFromJsep(const JsepTransceiver& aJsepTransceiver) {
   }
   UpdateParametersCodecs();
   UpdateParametersRtcp();
+  UpdateParametersHeaderExtensions();
 
   MaybeUpdateConduit();
 }
