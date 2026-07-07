@@ -14,6 +14,7 @@ _CHANNEL_ABBREV = {
 _METHOD_GROUP = {
     "apt": "inst-apt",
     "rpm": "inst-rpm",
+    "flatpak": "inst-flatpak",
 }
 
 transforms = TransformSequence()

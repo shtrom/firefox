@@ -25,8 +25,8 @@ setUp() {
 
 tearDown() {
     rm -f "${SHUNIT_TMPDIR}/calls.tmp" "${SHUNIT_TMPDIR}/os-release" 2>/dev/null || true
-    unset -f curl wget check_cmd dpkg apt_cache_show_stub uname rpm_pkg_exists_stub run_sudo retry \
-        sleep id sudo _flaky install_apt install_rpm \
+    unset -f curl wget check_cmd dpkg apt_cache_show_stub uname rpm_pkg_exists_stub flatpak run_sudo retry \
+        sleep id sudo _flaky install_apt install_rpm install_flatpak \
         download_to_stdout check_url need_cmd find_l10n_package zypper dnf gpg mktemp \
         _apt_l10n_check _rpm_l10n_check _rpm_l10n_stub apt_verify_gpg_fingerprint 2>/dev/null || true
     rm -f "${SHUNIT_TMPDIR}/flag.tmp" 2>/dev/null || true
@@ -705,6 +705,98 @@ testInstallRpmOrchestration() {
     install_rpm
     assertTrue "rpm_add_repository called" "grep -q rpm_add_repository '$_calls'"
     assertTrue "rpm_install_packages called" "grep -q rpm_install_packages '$_calls'"
+}
+
+testParseArgsInstallMethodFlatpak() {
+    parse_args --install-method flatpak
+    assertEquals "method=flatpak" "flatpak" "$INSTALL_METHOD"
+}
+
+testDetectBestMethodFlatpak() {
+    check_cmd() { [ "$1" = "flatpak" ]; }
+    detect_best_method
+    assertEquals "flatpak -> flatpak" "flatpak" "$INSTALL_METHOD"
+}
+
+testChannelToFlatpakBranchRelease() {
+    CHANNEL=release
+    local _result
+    _result="$(channel_to_flatpak_branch)"
+    assertEquals "flatpak branch release" "" "$_result"
+}
+
+testChannelToFlatpakBranchBeta() {
+    CHANNEL=beta
+    assertEquals "flatpak branch beta" "beta" "$(channel_to_flatpak_branch)"
+}
+
+testChannelToFlatpakBranchDeveditionErrors() {
+    assertFalse "flatpak devedition errors" 'sh "$INSTALL_FIREFOX_SCRIPT" --channel devedition --install-method flatpak >/dev/null 2>&1'
+}
+
+testChannelToFlatpakBranchNightlyErrors() {
+    assertFalse "flatpak nightly errors" 'sh "$INSTALL_FIREFOX_SCRIPT" --channel nightly --install-method flatpak >/dev/null 2>&1'
+}
+
+testFlatpakAddRemotesRelease() {
+    local _calls="${SHUNIT_TMPDIR}/calls.tmp"
+    run_sudo() { echo "run_sudo $*" >> "$_calls"; }; export -f run_sudo
+    retry() { "$@"; }; export -f retry
+    flatpak_add_remotes ""
+    assertTrue "release: flathub added" \
+        "grep -q 'run_sudo flatpak remote-add --if-not-exists --system flathub ' '$_calls'"
+    assertFalse "release: flathub-beta not added" \
+        "grep -q 'flathub-beta' '$_calls'"
+}
+
+testFlatpakAddRemotesBeta() {
+    local _calls="${SHUNIT_TMPDIR}/calls.tmp"
+    run_sudo() { echo "run_sudo $*" >> "$_calls"; }; export -f run_sudo
+    retry() { "$@"; }; export -f retry
+    flatpak_add_remotes "beta"
+    assertTrue "beta: flathub-beta added" \
+        "grep -q 'run_sudo flatpak remote-add --if-not-exists --system flathub-beta ' '$_calls'"
+}
+
+testFlatpakInstallOrUpdateFresh() {
+    local _calls="${SHUNIT_TMPDIR}/calls.tmp"
+    flatpak() { echo "flatpak $*" >> "$_calls"; [ "$1" = "info" ] && return 1; return 0; }
+    run_sudo() { echo "run_sudo $*" >> "$_calls"; }
+    retry() { "$@"; }
+    export -f flatpak run_sudo retry
+    flatpak_install_or_update ""
+    assertTrue "fresh install: flatpak install called" \
+        "grep -q 'run_sudo flatpak install --system -y flathub org.mozilla.firefox' '$_calls'"
+}
+
+testFlatpakInstallOrUpdateExisting() {
+    local _calls="${SHUNIT_TMPDIR}/calls.tmp"
+    flatpak() { echo "flatpak $*" >> "$_calls"; return 0; }
+    run_sudo() { echo "run_sudo $*" >> "$_calls"; }
+    retry() { "$@"; }
+    export -f flatpak run_sudo retry
+    flatpak_install_or_update "beta"
+    assertTrue "already installed: flatpak update called" \
+        "grep -q 'run_sudo flatpak update --system -y org.mozilla.firefox//beta' '$_calls'"
+}
+
+testInstallFlatpakOrchestration() {
+    local _calls="${SHUNIT_TMPDIR}/calls.tmp"
+    flatpak_add_remotes() { echo "flatpak_add_remotes $*" >> "$_calls"; }
+    flatpak_install_or_update() { echo "flatpak_install_or_update $*" >> "$_calls"; }
+    need_cmd() { return 0; }
+    export -f flatpak_add_remotes flatpak_install_or_update need_cmd
+    CHANNEL=release install_flatpak
+    assertTrue "add_remotes called" "grep -q flatpak_add_remotes '$_calls'"
+    assertTrue "install_or_update called" "grep -q flatpak_install_or_update '$_calls'"
+}
+
+testInstallFirefoxDispatchFlatpak() {
+    local _calls="${SHUNIT_TMPDIR}/calls.tmp"
+    install_flatpak() { echo "install_flatpak" >> "$_calls"; }; export -f install_flatpak
+    INSTALL_METHOD=flatpak
+    install_firefox
+    assertTrue "install_firefox dispatches to flatpak" "grep -q install_flatpak '$_calls'"
 }
 
 . shunit2

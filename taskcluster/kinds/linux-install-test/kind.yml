@@ -79,6 +79,17 @@ distros:
             a64: {in-tree: opensuse-leap-arm64-base}  # both arches tested intentionally
         methods: [rpm, tarball]
 
+    debian-12-flatpak:
+        symbol: deb12-fpk
+        pre-install: *apt-pre-install
+        docker-image:
+            x64: {in-tree: debian12-flatpak}
+            a64: {in-tree: debian12-arm64-flatpak}
+        methods: [flatpak]
+        channels: [release, beta]
+        locales: [en-US]  # flatpak ignores locale; en-US avoids redundant tasks
+        max-run-time: 1800
+
 tasks:
     debian-12-x64-apt-release-env:
         description: "Test install-firefox.sh: apt release on debian-12 (auto-detect locale from env)"

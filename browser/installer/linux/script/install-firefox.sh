@@ -7,7 +7,7 @@
 #
 # Options:
 #   --channel <release|beta|devedition|nightly>   Choose Firefox channel (default: release)
-#   --install-method <method>          Force install method: apt, rpm
+#   --install-method <method>          Force install method: apt, rpm, flatpak
 #   --lang <locale>                    Force locale (e.g. fr, de, ja)
 #   -v, --verbose                      Enable verbose output
 #   -h, --help                         Show this help
@@ -145,7 +145,7 @@ Usage: curl --proto '=https' --tlsv1.2 -sSf <url>/install-firefox.sh -o install-
 
 Options:
   --channel <release|beta|devedition|nightly>   Choose Firefox channel (default: release)
-  --install-method <method>          Force install method: apt, rpm
+  --install-method <method>          Force install method: apt, rpm, flatpak
   --lang <locale>                    Force locale (e.g. fr, de, ja)
   -v, --verbose                      Enable verbose output (shell trace + sudo command logging)
   -h, --help                         Show this help
@@ -168,8 +168,8 @@ parse_args() {
                 shift
                 INSTALL_METHOD="${1:?Missing install method value}"
                 case "$INSTALL_METHOD" in
-                    apt|rpm) ;;
-                    *) error "Invalid install method '$INSTALL_METHOD'. Must be: apt, rpm" ;;
+                    apt|rpm|flatpak) ;;
+                    *) error "Invalid install method '$INSTALL_METHOD'. Must be: apt, rpm, flatpak" ;;
                 esac
                 ;;
             --lang)
@@ -515,6 +515,51 @@ install_rpm() {
     ok "Firefox ($CHANNEL, $ARCH, $DETECTED_LOCALE) installed via $_pkg_manager"
 }
 
+channel_to_flatpak_branch() {
+    case "$CHANNEL" in
+        release)    echo "" ;;
+        beta)       echo "beta" ;;
+        devedition) error "Firefox Developer Edition is not available as a flatpak" ;;
+        nightly)    error "Firefox Nightly is not available as a flatpak" ;;
+        *)          error "Unsupported channel: $CHANNEL" ;;
+    esac
+}
+
+# flathub is always added: runtimes (e.g. org.freedesktop.Platform) live only
+# on flathub, not flathub-beta.
+flatpak_add_remotes() {
+    local _branch="$1"
+    retry run_sudo flatpak remote-add --if-not-exists --system flathub \
+        "https://flathub.org/repo/flathub.flatpakrepo"
+    if [ -n "$_branch" ]; then
+        retry run_sudo flatpak remote-add --if-not-exists --system flathub-beta \
+            "https://flathub.org/beta-repo/flathub-beta.flatpakrepo"
+    fi
+}
+
+flatpak_install_or_update() {
+    local _branch="$1"
+    local _remote _ref
+    _remote="${_branch:+flathub-beta}"
+    _remote="${_remote:-flathub}"
+    _ref="org.mozilla.firefox${_branch:+//$_branch}"
+    if flatpak info --system "$_ref" >/dev/null 2>&1; then
+        retry run_sudo flatpak update --system -y "$_ref"
+    else
+        retry run_sudo flatpak install --system -y "$_remote" "$_ref"
+    fi
+}
+
+install_flatpak() {
+    info "Installing Firefox ($CHANNEL) via flatpak..."
+    need_cmd flatpak
+    local _branch
+    _branch="$(channel_to_flatpak_branch)"
+    flatpak_add_remotes "$_branch"
+    flatpak_install_or_update "$_branch"
+    ok "Firefox ($CHANNEL, $ARCH, $DETECTED_LOCALE) installed via flatpak"
+}
+
 detect_best_method() {
     if [ -n "$INSTALL_METHOD" ]; then
         info "Using forced install method: $INSTALL_METHOD"
@@ -525,6 +570,8 @@ detect_best_method() {
         INSTALL_METHOD="apt"
     elif check_cmd dnf || check_cmd zypper; then
         INSTALL_METHOD="rpm"
+    elif check_cmd flatpak; then
+        INSTALL_METHOD="flatpak"
     else
         error "No supported package manager found. Use --install-method to force one."
     fi
@@ -535,15 +582,27 @@ detect_best_method() {
 install_firefox() {
     if [ "$VERBOSE" = true ]; then set -x; fi
     case "$INSTALL_METHOD" in
-        apt) install_apt ;;
-        rpm) install_rpm ;;
-        *)   error "Unknown install method: $INSTALL_METHOD" ;;
+        apt)     install_apt ;;
+        rpm)     install_rpm ;;
+        flatpak) install_flatpak ;;
+        *)       error "Unknown install method: $INSTALL_METHOD" ;;
     esac
     if [ "$VERBOSE" = true ]; then set +x; fi
 }
 
 verify_install() {
     info "Verifying installation..."
+    if [ "$INSTALL_METHOD" = "flatpak" ]; then
+        local _branch _ref
+        _branch="$(channel_to_flatpak_branch)"
+        _ref="org.mozilla.firefox${_branch:+//$_branch}"
+        if flatpak info --system "$_ref" >/dev/null 2>&1; then
+            ok "Verified: Firefox flatpak ($CHANNEL) is installed"
+        else
+            warn "Could not verify Firefox flatpak installation"
+        fi
+        return
+    fi
     local _pkg_bin _bin _seen _candidate
     _pkg_bin="$(channel_to_package)"
     _seen=""
