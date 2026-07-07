@@ -134,9 +134,7 @@ def run_nightly_builds_action(
 
     limit_product = input.get("limit_product")
     if limit_product or limit_product == "desktop":
-        parameters["release_history"] = populate_release_history(
-            "Firefox", "mozilla-central"
-        )
+        parameters["release_history"] = populate_release_history("Firefox", "try")
     # choose the right target tasks method
     if limit_product:
         if limit_product == "desktop":
