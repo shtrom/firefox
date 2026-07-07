@@ -1177,6 +1177,8 @@ interface nsIAddonContentPolicy extends nsISupports {
   readonly CSP_ALLOW_WASM?: 8;
 
   validateAddonCSP(aPolicyString: string, aPermittedPolicy: u32): string;
+
+  validateAddonSandboxCSP(aPolicyString: string): string;
 }
 
 // https://searchfox.org/firefox-main/source/caps/nsIDomainPolicy.idl
