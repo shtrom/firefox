@@ -1071,9 +1071,6 @@ newtab-widget-timer-mode-group =
 newtab-widget-timer-running-focus = Focus
 # Small label shown beneath the live time while the break timer is running or paused.
 newtab-widget-timer-running-break = Break
-# Context-menu item to hide the Timer widget. Replaces the shared "Hide widget"
-# copy with a widget-specific string per the Nova design.
-newtab-widget-timer-menu-hide = Hide timer
 # Heading shown inside the Timer widget after a focus session ends.
 newtab-widget-timer-celebration-heading-focus = Nice work
 # Heading shown inside the Timer widget after a break session ends.
@@ -1142,8 +1139,6 @@ newtab-activation-window-message-values-focus-message = { -brand-product-name } 
 
 ## Strings for the Clock widget
 
-# Context menu item: toggle the clock card off.
-newtab-clock-widget-menu-hide = Hide clock
 newtab-clock-widget-menu-learn-more = Learn more
 newtab-clock-widget-menu-edit = Edit clocks
 newtab-clock-widget-menu-switch-to-12h = Switch to 12-hour format

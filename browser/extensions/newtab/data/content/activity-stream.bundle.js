@@ -13556,6 +13556,39 @@ const useWidgetCelebration = widgetRef => {
     triggerCelebration
   };
 };
+;// CONCATENATED MODULE: ./content-src/components/Widgets/SizeSubmenu.jsx
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+
+
+// Shared "Change size" submenu (sibling to MoveSubmenu). Each widget passes the
+// sizes it supports and its current size; gating stays at the call site.
+const SizeSubmenu = ({
+  submenuId,
+  sizes,
+  checkedSize,
+  onChangeSize
+}) => {
+  const sizeSubmenuRef = useSizeSubmenu(onChangeSize);
+  return /*#__PURE__*/external_React_default().createElement("panel-item", {
+    submenu: submenuId
+  }, /*#__PURE__*/external_React_default().createElement("span", {
+    "data-l10n-id": "newtab-widget-menu-change-size"
+  }), /*#__PURE__*/external_React_default().createElement("panel-list", {
+    ref: sizeSubmenuRef,
+    slot: "submenu",
+    id: submenuId
+  }, sizes.map(size => /*#__PURE__*/external_React_default().createElement("panel-item", {
+    key: size,
+    type: "checkbox",
+    checked: checkedSize === size || undefined,
+    "data-size": size,
+    "data-l10n-id": `newtab-widget-size-${size}`
+  }))));
+};
 ;// CONCATENATED MODULE: ./content-src/components/Widgets/MoveSubmenu.jsx
 function MoveSubmenu_extends() { return MoveSubmenu_extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, MoveSubmenu_extends.apply(null, arguments); }
 /* This Source Code Form is subject to the terms of the Mozilla Public
@@ -13659,6 +13692,80 @@ function MoveSubmenu({
     disabled: true
   }))));
 }
+;// CONCATENATED MODULE: ./content-src/components/Widgets/WidgetMenuFooter.jsx
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+
+
+
+const LEARN_MORE_URL = "https://support.mozilla.org/kb/firefox-new-tab-widgets";
+
+// Shared trailing block for the widget menus that use it, in a fixed order:
+// divider, Change size, Move, Hide widget, Learn more. Size submenu is passed in.
+const WidgetMenuFooter = ({
+  dispatch,
+  // widgetId is the registry id used by Move (e.g. "focusTimer"); widgetName is
+  // the telemetry name (e.g. "focus_timer").
+  widgetId,
+  widgetEnabledMap,
+  widgetName,
+  enabledPref,
+  widgetSize,
+  learnMoreL10nId,
+  sizeSubmenu,
+  onAfterHide,
+  onLearnMore,
+  // Suppress the divider when the widget has no items above the footer, so it
+  // doesn't render as a stray leading separator.
+  showDivider = true
+}) => {
+  const handleHide = () => {
+    (0,external_ReactRedux_namespaceObject.batch)(() => {
+      dispatch(actionCreators.OnlyToMain({
+        type: actionTypes.SET_PREF,
+        data: {
+          name: enabledPref,
+          value: false
+        }
+      }));
+      dispatch(actionCreators.OnlyToMain({
+        type: actionTypes.WIDGETS_ENABLED,
+        data: {
+          widget_name: widgetName,
+          widget_source: "context_menu",
+          enabled: false,
+          widget_size: widgetSize
+        }
+      }));
+      onAfterHide?.();
+    });
+  };
+  const handleLearnMore = () => {
+    (0,external_ReactRedux_namespaceObject.batch)(() => {
+      dispatch(actionCreators.OnlyToMain({
+        type: actionTypes.OPEN_LINK,
+        data: {
+          url: LEARN_MORE_URL,
+          where: "tab"
+        }
+      }));
+      onLearnMore?.();
+    });
+  };
+  return /*#__PURE__*/external_React_default().createElement((external_React_default()).Fragment, null, showDivider && /*#__PURE__*/external_React_default().createElement("hr", null), sizeSubmenu, /*#__PURE__*/external_React_default().createElement(MoveSubmenu, {
+    widgetId: widgetId,
+    widgetEnabledMap: widgetEnabledMap
+  }), /*#__PURE__*/external_React_default().createElement("panel-item", {
+    "data-l10n-id": "newtab-widget-menu-hide",
+    onClick: handleHide
+  }), /*#__PURE__*/external_React_default().createElement("panel-item", {
+    "data-l10n-id": learnMoreL10nId,
+    onClick: handleLearnMore
+  }));
+};
 ;// CONCATENATED MODULE: ./content-src/components/Widgets/useWidgetTelemetry.jsx
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -14048,8 +14155,7 @@ function Lists({
   const telemetrySize = widgetsMayBeMaximized ? widgetSize : "medium";
   const {
     impressionRef,
-    recordUserAction,
-    recordEnabled
+    recordUserAction
   } = useWidgetTelemetry({
     dispatch,
     widget: listsWidget,
@@ -14389,20 +14495,6 @@ function Lists({
     }
     handleListInteraction();
   }
-  function handleHideLists() {
-    (0,external_ReactRedux_namespaceObject.batch)(() => {
-      dispatch(actionCreators.OnlyToMain({
-        type: actionTypes.SET_PREF,
-        data: {
-          name: "widgets.lists.enabled",
-          value: false
-        }
-      }));
-      recordEnabled(false, {
-        source: "context_menu"
-      });
-    });
-  }
   function handleCopyListToClipboard() {
     const currentList = lists[selected];
     if (!currentList) {
@@ -14429,16 +14521,6 @@ function Lists({
     });
     handleListInteraction();
   }
-  function handleLearnMore() {
-    dispatch(actionCreators.OnlyToMain({
-      type: actionTypes.OPEN_LINK,
-      data: {
-        url: "https://support.mozilla.org/kb/firefox-new-tab-widgets",
-        where: "tab"
-      }
-    }));
-    handleListInteraction();
-  }
   const handleChangeSize = (0,external_React_namespaceObject.useCallback)(size => {
     (0,external_ReactRedux_namespaceObject.batch)(() => {
       dispatch(actionCreators.OnlyToMain({
@@ -14455,7 +14537,6 @@ function Lists({
       });
     });
   }, [dispatch, recordUserAction]);
-  const sizeSubmenuRef = useSizeSubmenu(handleChangeSize);
   (0,external_React_namespaceObject.useEffect)(() => {
     setIsAddingTask(false);
   }, [selected]);
@@ -14599,33 +14680,24 @@ function Lists({
   })), /*#__PURE__*/external_React_default().createElement("panel-item", {
     "data-l10n-id": "newtab-widget-lists-menu-delete",
     onClick: () => handleDeleteList()
-  }), /*#__PURE__*/external_React_default().createElement("hr", null), /*#__PURE__*/external_React_default().createElement("panel-item", {
+  }), /*#__PURE__*/external_React_default().createElement("panel-item", {
     "data-l10n-id": "newtab-widget-lists-menu-copy",
     onClick: () => handleCopyListToClipboard()
-  }), novaEnabled && widgetsMayBeMaximized && /*#__PURE__*/external_React_default().createElement("panel-item", {
-    submenu: "lists-size-submenu"
-  }, /*#__PURE__*/external_React_default().createElement("span", {
-    "data-l10n-id": "newtab-widget-menu-change-size"
-  }), /*#__PURE__*/external_React_default().createElement("panel-list", {
-    ref: sizeSubmenuRef,
-    slot: "submenu",
-    id: "lists-size-submenu"
-  }, ["medium", "large"].map(size => /*#__PURE__*/external_React_default().createElement("panel-item", {
-    key: size,
-    type: "checkbox",
-    checked: widgetSize === size || undefined,
-    "data-size": size,
-    "data-l10n-id": `newtab-widget-size-${size}`
-  })))), /*#__PURE__*/external_React_default().createElement(MoveSubmenu, {
+  }), /*#__PURE__*/external_React_default().createElement(WidgetMenuFooter, {
+    dispatch: dispatch,
     widgetId: "lists",
-    widgetEnabledMap: widgetEnabledMap
-  }), /*#__PURE__*/external_React_default().createElement("panel-item", {
-    "data-l10n-id": "newtab-widget-menu-hide",
-    onClick: () => handleHideLists()
-  }), /*#__PURE__*/external_React_default().createElement("panel-item", {
-    className: "learn-more",
-    "data-l10n-id": "newtab-widget-lists-menu-learn-more",
-    onClick: handleLearnMore
+    widgetEnabledMap: widgetEnabledMap,
+    widgetName: "lists",
+    enabledPref: "widgets.lists.enabled",
+    widgetSize: widgetsMayBeMaximized ? widgetSize : "medium",
+    learnMoreL10nId: "newtab-widget-lists-menu-learn-more",
+    onLearnMore: handleListInteraction,
+    sizeSubmenu: novaEnabled && widgetsMayBeMaximized && /*#__PURE__*/external_React_default().createElement(SizeSubmenu, {
+      submenuId: "lists-size-submenu",
+      sizes: ["medium", "large"],
+      checkedSize: widgetSize,
+      onChangeSize: handleChangeSize
+    })
   }))), (showInlineAddButton || isAddingTask) && /*#__PURE__*/external_React_default().createElement("div", {
     className: "lists-add-action"
   }, showInlineAddButton && renderAddTaskButton(), /*#__PURE__*/external_React_default().createElement("div", {
@@ -14931,6 +15003,7 @@ function FocusTimer_extends() { return FocusTimer_extends = Object.assign ? Obje
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+
 
 
 
@@ -15573,15 +15646,6 @@ const FocusTimer = ({
       sel.addRange(range);
     }
   };
-  function handleLearnMore() {
-    dispatch(actionCreators.OnlyToMain({
-      type: actionTypes.OPEN_LINK,
-      data: {
-        url: "https://support.mozilla.org/kb/firefox-new-tab-widgets"
-      }
-    }));
-    handleTimerInteraction();
-  }
   function handlePrefUpdate(prefName, prefValue) {
     dispatch(actionCreators.OnlyToMain({
       type: actionTypes.SET_PREF,
@@ -15755,7 +15819,6 @@ const FocusTimer = ({
     e.preventDefault();
     toggleType(timerType === "focus" ? "break" : "focus");
   };
-  const sizeSubmenuRef = useSizeSubmenu(handleChangeSize);
 
   // Keep the running-state body layout through the celebration so the ring
   // doesn't shift to a third position during the animation.
@@ -15797,57 +15860,23 @@ const FocusTimer = ({
     onClick: () => {
       handlePrefUpdate("widgets.focusTimer.showSystemNotifications", !showSystemNotifications);
     }
-  }), /*#__PURE__*/external_React_default().createElement("panel-item", {
-    // @nova-cleanup(remove-conditional): Drop the ternary and keep
-    // newtab-widget-timer-menu-hide once Nova ships.
-    "data-l10n-id": novaEnabled ? "newtab-widget-timer-menu-hide" : "newtab-widget-menu-hide",
-    onClick: () => {
-      (0,external_ReactRedux_namespaceObject.batch)(() => {
-        dispatch(actionCreators.OnlyToMain({
-          type: actionTypes.SET_PREF,
-          data: {
-            name: "widgets.focusTimer.enabled",
-            value: false
-          }
-        }));
-        const telemetryData = {
-          widget_name: "focus_timer",
-          widget_source: "context_menu",
-          enabled: false,
-          widget_size: widgetSize
-        };
-        dispatch(actionCreators.OnlyToMain({
-          type: actionTypes.WIDGETS_ENABLED,
-          data: telemetryData
-        }));
-      });
-    }
-  }),
-  // @nova-cleanup(remove-conditional): Remove the `novaEnabled &&` check; keep widgetsMayBeMaximized
-  novaEnabled && widgetsMayBeMaximized && /*#__PURE__*/external_React_default().createElement("panel-item", {
-    submenu: "focus-timer-size-submenu"
-  }, /*#__PURE__*/external_React_default().createElement("span", {
-    "data-l10n-id": "newtab-widget-menu-change-size"
-  }), /*#__PURE__*/external_React_default().createElement("panel-list", {
-    ref: sizeSubmenuRef,
-    slot: "submenu",
-    id: "focus-timer-size-submenu"
-  }, ["small", "medium", "large"].map(size => /*#__PURE__*/external_React_default().createElement("panel-item", FocusTimer_extends({
-    key: size,
-    type: "checkbox",
-    checked: widgetSize === size || undefined,
-    "data-size": size,
-    "data-l10n-id": `newtab-widget-size-${size}`
-  }, size === "small" ? {
-    disabled: true
-  } : {}))))), /*#__PURE__*/external_React_default().createElement(MoveSubmenu, {
+  }), /*#__PURE__*/external_React_default().createElement(WidgetMenuFooter, {
+    dispatch: dispatch,
     widgetId: "focusTimer",
-    widgetEnabledMap: widgetEnabledMap
-  }),
-  // @nova-cleanup(remove-conditional): Remove the `novaEnabled &&` check; always render the divider.
-  novaEnabled && /*#__PURE__*/external_React_default().createElement("hr", null), /*#__PURE__*/external_React_default().createElement("panel-item", {
-    "data-l10n-id": "newtab-widget-timer-menu-learn-more",
-    onClick: handleLearnMore
+    widgetEnabledMap: widgetEnabledMap,
+    widgetName: "focus_timer",
+    enabledPref: "widgets.focusTimer.enabled",
+    widgetSize: widgetSize,
+    learnMoreL10nId: "newtab-widget-timer-menu-learn-more",
+    onLearnMore: handleTimerInteraction,
+    sizeSubmenu:
+    // @nova-cleanup(remove-conditional): Remove the `novaEnabled &&` check; keep widgetsMayBeMaximized
+    novaEnabled && widgetsMayBeMaximized && /*#__PURE__*/external_React_default().createElement(SizeSubmenu, {
+      submenuId: "focus-timer-size-submenu",
+      sizes: ["medium", "large"],
+      checkedSize: widgetSize,
+      onChangeSize: handleChangeSize
+    })
   })))),
   // @nova-cleanup(remove-conditional): Remove this branch and the legacy block below; keep only the Nova body
   novaEnabled ? /*#__PURE__*/external_React_default().createElement((external_React_default()).Fragment, null, /*#__PURE__*/external_React_default().createElement("div", {
@@ -16611,6 +16640,7 @@ function WeatherForecast({
 
 
 
+
 const Weather_USER_ACTION_TYPES = {
   CHANGE_LOCATION: "change_location",
   DETECT_LOCATION: "detect_location",
@@ -16656,7 +16686,6 @@ function Weather_Weather({
       }));
     });
   }, [dispatch]);
-  const sizeSubmenuRef = useSizeSubmenu(handleChangeSize);
   const handleIntersection = (0,external_React_namespaceObject.useCallback)(() => {
     if (impressionFired.current) {
       return;
@@ -16772,44 +16801,16 @@ function Weather_Weather({
       }));
     });
   }
-  function handleHideWeather() {
-    (0,external_ReactRedux_namespaceObject.batch)(() => {
-      dispatch(actionCreators.OnlyToMain({
-        type: actionTypes.SET_PREF,
-        data: {
-          name: "widgets.weather.enabled",
-          value: false
-        }
-      }));
-      dispatch(actionCreators.OnlyToMain({
-        type: actionTypes.WIDGETS_ENABLED,
-        data: {
-          widget_name: "weather",
-          widget_source: "context_menu",
-          enabled: false,
-          widget_size: size
-        }
-      }));
-    });
-  }
   function handleLearnMore() {
-    (0,external_ReactRedux_namespaceObject.batch)(() => {
-      dispatch(actionCreators.OnlyToMain({
-        type: actionTypes.OPEN_LINK,
-        data: {
-          url: "https://support.mozilla.org/kb/firefox-new-tab-widgets"
-        }
-      }));
-      dispatch(actionCreators.OnlyToMain({
-        type: actionTypes.WIDGETS_USER_EVENT,
-        data: {
-          widget_name: "weather",
-          widget_source: "context_menu",
-          user_action: Weather_USER_ACTION_TYPES.LEARN_MORE,
-          widget_size: size
-        }
-      }));
-    });
+    dispatch(actionCreators.OnlyToMain({
+      type: actionTypes.WIDGETS_USER_EVENT,
+      data: {
+        widget_name: "weather",
+        widget_source: "context_menu",
+        user_action: Weather_USER_ACTION_TYPES.LEARN_MORE,
+        widget_size: size
+      }
+    }));
   }
   function handleProviderLinkClick() {
     dispatch(actionCreators.OnlyToMain({
@@ -16889,29 +16890,27 @@ function Weather_Weather({
     }), !showOptInState && isOptInEnabled && /*#__PURE__*/external_React_default().createElement("panel-item", {
       "data-l10n-id": "newtab-weather-menu-detect-my-location",
       onClick: handleDetectLocation
-    }), widgetsSystemEnabled && widgetsEnabled && widgetsMayBeMaximized && /*#__PURE__*/external_React_default().createElement("panel-item", {
-      submenu: "weather-size-submenu"
-    }, /*#__PURE__*/external_React_default().createElement("span", {
-      "data-l10n-id": "newtab-widget-menu-change-size"
-    }), /*#__PURE__*/external_React_default().createElement("panel-list", {
-      ref: sizeSubmenuRef,
-      slot: "submenu",
-      id: "weather-size-submenu"
-    }, ["small", "medium", "large"].map(s => /*#__PURE__*/external_React_default().createElement("panel-item", {
-      key: s,
-      type: "checkbox",
-      checked: currentWeatherSize === s || undefined,
-      "data-size": s,
-      "data-l10n-id": `newtab-widget-size-${s}`
-    })))), /*#__PURE__*/external_React_default().createElement(MoveSubmenu, {
+    }), /*#__PURE__*/external_React_default().createElement(WidgetMenuFooter, {
+      dispatch: dispatch,
       widgetId: "weather",
-      widgetEnabledMap: widgetEnabledMap
-    }), /*#__PURE__*/external_React_default().createElement("panel-item", {
-      "data-l10n-id": "newtab-widget-menu-hide",
-      onClick: handleHideWeather
-    }), /*#__PURE__*/external_React_default().createElement("panel-item", {
-      "data-l10n-id": "newtab-weather-menu-learn-more",
-      onClick: handleLearnMore
+      widgetEnabledMap: widgetEnabledMap,
+      widgetName: "weather",
+      enabledPref: "widgets.weather.enabled",
+      widgetSize: size,
+      learnMoreL10nId: "newtab-weather-menu-learn-more",
+      onLearnMore: handleLearnMore,
+      showDivider: !showOptInState,
+      sizeSubmenu:
+      /* Only show size options when both system and user prefs are enabled;
+         medium/large sizes require the widgets row, which only renders when both are true.
+         trainhopConfig.widgets.enabled overrides either system or user pref so
+         an experiment payload can drive the submenu without flipping local prefs. */
+      widgetsSystemEnabled && widgetsEnabled && widgetsMayBeMaximized && /*#__PURE__*/external_React_default().createElement(SizeSubmenu, {
+        submenuId: "weather-size-submenu",
+        sizes: ["small", "medium", "large"],
+        checkedSize: currentWeatherSize,
+        onChangeSize: handleChangeSize
+      })
     })));
   }
   function getArticleClassNames() {
@@ -18652,6 +18651,7 @@ function SportsWidget_extends() { return SportsWidget_extends = Object.assign ? 
 
 
 
+
 const WIDGET_STATES = {
   INTRO: "sports-intro",
   FOLLOW_TEAMS: "sports-follow-state",
@@ -19348,26 +19348,6 @@ function SportsWidget_SportsWidget({
     });
     handleInteraction();
   }
-  function handleSportsWidgetHide() {
-    (0,external_ReactRedux_namespaceObject.batch)(() => {
-      dispatch(actionCreators.OnlyToMain({
-        type: actionTypes.SET_PREF,
-        data: {
-          name: "widgets.sportsWidget.enabled",
-          value: false
-        }
-      }));
-      dispatch(actionCreators.OnlyToMain({
-        type: actionTypes.WIDGETS_ENABLED,
-        data: {
-          widget_name: "sports",
-          widget_source: "context_menu",
-          enabled: false,
-          widget_size: widgetSize
-        }
-      }));
-    });
-  }
   const handleChangeSize = (0,external_React_namespaceObject.useCallback)(size => {
     (0,external_ReactRedux_namespaceObject.batch)(() => {
       dispatch(actionCreators.OnlyToMain({
@@ -19389,7 +19369,6 @@ function SportsWidget_SportsWidget({
       }));
     });
   }, [dispatch]);
-  const sizeSubmenuRef = useSizeSubmenu(handleChangeSize);
   function handleViewMatches(widgetSource) {
     (0,external_ReactRedux_namespaceObject.batch)(() => {
       dispatch(actionCreators.OnlyToMain({
@@ -19409,24 +19388,15 @@ function SportsWidget_SportsWidget({
     handleInteraction();
   }
   function handleLearnMore() {
-    (0,external_ReactRedux_namespaceObject.batch)(() => {
-      dispatch(actionCreators.OnlyToMain({
-        type: actionTypes.OPEN_LINK,
-        data: {
-          url: "https://support.mozilla.org/kb/firefox-new-tab-widgets"
-        }
-      }));
-      const telemetryData = {
+    dispatch(actionCreators.OnlyToMain({
+      type: actionTypes.WIDGETS_USER_EVENT,
+      data: {
         widget_name: "sports",
         widget_source: "context_menu",
         user_action: SportsWidget_USER_ACTION_TYPES.LEARN_MORE,
         widget_size: widgetSize
-      };
-      dispatch(actionCreators.OnlyToMain({
-        type: actionTypes.WIDGETS_USER_EVENT,
-        data: telemetryData
-      }));
-    });
+      }
+    }));
     handleInteraction();
   }
 
@@ -19680,29 +19650,21 @@ function SportsWidget_SportsWidget({
     "data-l10n-id": "newtab-sports-widget-menu-view-results",
     onClick: handleViewResults,
     disabled: !hasPreviousResults
-  }), widgetsMayBeMaximized && /*#__PURE__*/external_React_default().createElement("panel-item", {
-    submenu: "sports-size-submenu"
-  }, /*#__PURE__*/external_React_default().createElement("span", {
-    "data-l10n-id": "newtab-widget-menu-change-size"
-  }), /*#__PURE__*/external_React_default().createElement("panel-list", {
-    ref: sizeSubmenuRef,
-    slot: "submenu",
-    id: "sports-size-submenu"
-  }, ["medium", "large"].map(size => /*#__PURE__*/external_React_default().createElement("panel-item", {
-    key: size,
-    type: "checkbox",
-    checked: widgetSize === size || undefined,
-    "data-size": size,
-    "data-l10n-id": `newtab-widget-size-${size}`
-  })))), /*#__PURE__*/external_React_default().createElement(MoveSubmenu, {
+  }), /*#__PURE__*/external_React_default().createElement(WidgetMenuFooter, {
+    dispatch: dispatch,
     widgetId: "sportsWidget",
-    widgetEnabledMap: widgetEnabledMap
-  }), /*#__PURE__*/external_React_default().createElement("panel-item", {
-    "data-l10n-id": "newtab-widget-menu-hide",
-    onClick: handleSportsWidgetHide
-  }), /*#__PURE__*/external_React_default().createElement("panel-item", {
-    "data-l10n-id": "newtab-sports-widget-menu-learn-more",
-    onClick: handleLearnMore
+    widgetEnabledMap: widgetEnabledMap,
+    widgetName: "sports",
+    enabledPref: "widgets.sportsWidget.enabled",
+    widgetSize: widgetSize,
+    learnMoreL10nId: "newtab-sports-widget-menu-learn-more",
+    onLearnMore: handleLearnMore,
+    sizeSubmenu: widgetsMayBeMaximized ? /*#__PURE__*/external_React_default().createElement(SizeSubmenu, {
+      submenuId: "sports-size-submenu",
+      sizes: ["medium", "large"],
+      checkedSize: widgetSize,
+      onChangeSize: handleChangeSize
+    }) : null
   })))), /*#__PURE__*/external_React_default().createElement("div", {
     className: "sports-body"
   }, widgetState === WIDGET_STATES.FOLLOW_TEAMS && /*#__PURE__*/external_React_default().createElement(SportsWidgetFollowTeams, {
@@ -21279,8 +21241,7 @@ function Clocks({
   });
   const {
     impressionRef,
-    recordUserAction,
-    recordEnabled
+    recordUserAction
   } = useWidgetTelemetry({
     dispatch,
     widget: CLOCKS_WIDGET,
@@ -21316,7 +21277,6 @@ function Clocks({
     });
     closeContextMenu();
   }, [dispatch, recordUserAction, closeContextMenu]);
-  const sizeSubmenuRef = useSizeSubmenu(handleChangeSize);
   const handleToggleHourFormat = (0,external_React_namespaceObject.useCallback)(() => {
     const nextFormat = use12HourFormat ? "24" : "12";
     (0,external_ReactRedux_namespaceObject.batch)(() => {
@@ -21334,35 +21294,12 @@ function Clocks({
     });
     closeContextMenu();
   }, [use12HourFormat, dispatch, recordUserAction, closeContextMenu]);
-  const handleHide = (0,external_React_namespaceObject.useCallback)(() => {
-    (0,external_ReactRedux_namespaceObject.batch)(() => {
-      dispatch(actionCreators.OnlyToMain({
-        type: actionTypes.SET_PREF,
-        data: {
-          name: PREF_WIDGETS_CLOCKS_ENABLED,
-          value: false
-        }
-      }));
-      recordEnabled(false, {
-        source: CLOCK_WIDGET_SOURCE.CONTEXT_MENU
-      });
-    });
-    closeContextMenu();
-  }, [dispatch, recordEnabled, closeContextMenu]);
   const handleLearnMore = (0,external_React_namespaceObject.useCallback)(() => {
-    (0,external_ReactRedux_namespaceObject.batch)(() => {
-      dispatch(actionCreators.OnlyToMain({
-        type: actionTypes.OPEN_LINK,
-        data: {
-          url: "https://support.mozilla.org/kb/firefox-new-tab-widgets"
-        }
-      }));
-      recordUserAction(Clocks_USER_ACTION_TYPES.LEARN_MORE, {
-        source: CLOCK_WIDGET_SOURCE.CONTEXT_MENU
-      });
+    recordUserAction(Clocks_USER_ACTION_TYPES.LEARN_MORE, {
+      source: CLOCK_WIDGET_SOURCE.CONTEXT_MENU
     });
     closeContextMenu();
-  }, [dispatch, recordUserAction, closeContextMenu]);
+  }, [recordUserAction, closeContextMenu]);
   const clockZones = (0,external_React_namespaceObject.useMemo)(() => parseClockZonesPref(clocksZonesPref) || buildDefaultZones(), [clocksZonesPref]);
   (0,external_React_namespaceObject.useEffect)(() => {
     if (!clockZones.some(clock => clock.label && !clock.labelColor)) {
@@ -21495,23 +21432,6 @@ function Clocks({
     ref: contextMenuRef,
     id: "clocks-widget-context-menu"
   }, /*#__PURE__*/external_React_default().createElement("panel-item", {
-    submenu: "clocks-size-submenu"
-  }, /*#__PURE__*/external_React_default().createElement("span", {
-    "data-l10n-id": "newtab-widget-menu-change-size"
-  }), /*#__PURE__*/external_React_default().createElement("panel-list", {
-    ref: sizeSubmenuRef,
-    slot: "submenu",
-    id: "clocks-size-submenu"
-  }, ["small", "medium", "large"].map(s => /*#__PURE__*/external_React_default().createElement("panel-item", {
-    key: s,
-    type: "checkbox",
-    checked: currentSize === s,
-    "data-size": s,
-    "data-l10n-id": `newtab-widget-size-${s}`
-  })))), /*#__PURE__*/external_React_default().createElement(MoveSubmenu, {
-    widgetId: "clocks",
-    widgetEnabledMap: widgetEnabledMap
-  }), /*#__PURE__*/external_React_default().createElement("panel-item", {
     "data-l10n-id": "newtab-clock-widget-menu-edit",
     onClick: () => {
       handleShowEditClocks(CLOCK_WIDGET_SOURCE.CONTEXT_MENU);
@@ -21520,12 +21440,22 @@ function Clocks({
   }), /*#__PURE__*/external_React_default().createElement("panel-item", {
     "data-l10n-id": use12HourFormat ? "newtab-clock-widget-menu-switch-to-24h" : "newtab-clock-widget-menu-switch-to-12h",
     onClick: handleToggleHourFormat
-  }), /*#__PURE__*/external_React_default().createElement("panel-item", {
-    "data-l10n-id": "newtab-clock-widget-menu-hide",
-    onClick: handleHide
-  }), /*#__PURE__*/external_React_default().createElement("panel-item", {
-    "data-l10n-id": "newtab-clock-widget-menu-learn-more",
-    onClick: handleLearnMore
+  }), /*#__PURE__*/external_React_default().createElement(WidgetMenuFooter, {
+    dispatch: dispatch,
+    widgetId: "clocks",
+    widgetEnabledMap: widgetEnabledMap,
+    widgetName: "clocks",
+    enabledPref: PREF_WIDGETS_CLOCKS_ENABLED,
+    widgetSize: currentSize,
+    learnMoreL10nId: "newtab-clock-widget-menu-learn-more",
+    onAfterHide: closeContextMenu,
+    onLearnMore: handleLearnMore,
+    sizeSubmenu: /*#__PURE__*/external_React_default().createElement(SizeSubmenu, {
+      submenuId: "clocks-size-submenu",
+      sizes: ["small", "medium", "large"],
+      checkedSize: currentSize,
+      onChangeSize: handleChangeSize
+    })
   }))), isClockFormOpen && /*#__PURE__*/external_React_default().createElement(AddClockForm, {
     key: editingClockIndex ?? "add",
     isEditing: editingClockIndex !== null,
