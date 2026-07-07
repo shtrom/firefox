@@ -21,6 +21,7 @@ import org.mozilla.fenix.home.logo.LogoController
 import org.mozilla.fenix.home.logo.TrackingProtectionController
 import org.mozilla.fenix.home.pocket.PocketRecommendedStoriesCategory
 import org.mozilla.fenix.home.pocket.controller.PocketStoriesController
+import org.mozilla.fenix.home.pocket.controller.StoriesImpressionSource
 import org.mozilla.fenix.home.privatebrowsing.controller.PrivateBrowsingController
 import org.mozilla.fenix.home.recentsyncedtabs.RecentSyncedTab
 import org.mozilla.fenix.home.recentsyncedtabs.controller.RecentSyncedTabController
@@ -245,9 +246,11 @@ class SessionControlInteractorTest {
     fun `GIVEN a PocketStoriesInteractor WHEN stories are shown THEN handle it in a PocketStoriesController`() {
         val shownStories: List<PocketStory> = emptyList()
 
-        interactor.onStoriesShown(shownStories)
+        interactor.onStoriesShown(shownStories, StoriesImpressionSource.HOMEPAGE)
 
-        verify { pocketStoriesController.handleStoriesShown(shownStories) }
+        verify {
+            pocketStoriesController.handleStoriesShown(shownStories, StoriesImpressionSource.HOMEPAGE)
+        }
     }
 
     @Test
@@ -264,9 +267,15 @@ class SessionControlInteractorTest {
         val clickedStory: PocketStory = mockk()
         val storyPosition = Triple(1, 2, 3)
 
-        interactor.onStoryClicked(clickedStory, storyPosition)
+        interactor.onStoryClicked(clickedStory, storyPosition, StoriesImpressionSource.HOMEPAGE)
 
-        verify { pocketStoriesController.handleStoryClicked(clickedStory, storyPosition) }
+        verify {
+            pocketStoriesController.handleStoryClicked(
+                clickedStory,
+                storyPosition,
+                StoriesImpressionSource.HOMEPAGE,
+            )
+        }
     }
 
     @Test

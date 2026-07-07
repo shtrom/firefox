@@ -9756,6 +9756,12 @@ pocket:
     type: event
     description: |
       The Pocket recommended stories are shown on the home screen.
+    extra_keys:
+      source:
+        type: string
+        description: |
+          Where the stories impression was recorded.
+          One of "homepage" or "stories_screen".
     bugs:
       - https://github.com/mozilla-mobile/fenix/issues/21593
     data_reviews:
@@ -9784,6 +9790,11 @@ pocket:
         description: |
           Position of the clicked story in the list shown.
           Uses the [row x column] matrix notation.
+      source:
+        type: string
+        description: |
+          Where the clicked story was shown.
+          One of "homepage" or "stories_screen".
     bugs:
       - https://github.com/mozilla-mobile/fenix/issues/21593
     data_reviews:
@@ -15379,6 +15390,11 @@ home.content.article:
       topic: &topic
         description: The topic of the recommendation. Like "entertainment".
         type: string
+      source: &source_pocket
+        description: >
+          The surface where the article was shown.
+          One of "homepage" or "stories_screen".
+        type: string
     send_in_pings:
       - home
 
@@ -15404,6 +15420,7 @@ home.content.article:
       received_rank: *received_rank
       recommended_at: *recommended_at
       topic: *topic
+      source: *source_pocket
     send_in_pings:
       - home
 
