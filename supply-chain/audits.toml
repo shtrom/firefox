@@ -5415,6 +5415,11 @@ who = "Lars Eggert <lars@eggert.org>"
 criteria = "safe-to-run"
 delta = "1.7.0 -> 1.7.2"
 
+[[audits.plist]]
+who = "Henrik Skupin <mail@hskupin.info>"
+criteria = "safe-to-run"
+delta = "1.7.2 -> 1.10.0"
+
 [[audits.pollster]]
 who = "Ben Dean-Kawamura <bdk@mozilla.com>"
 criteria = "safe-to-deploy"
@@ -5626,6 +5631,11 @@ delta = "0.15.2 -> 0.16.0"
 who = "Lars Eggert <lars@eggert.org>"
 criteria = "safe-to-run"
 delta = "0.30.0 -> 0.37.5"
+
+[[audits.quick-xml]]
+who = "Henrik Skupin <mail@hskupin.info>"
+criteria = "safe-to-run"
+delta = "0.37.5 -> 0.41.0"
 
 [[audits.quinn-udp]]
 who = "Kershaw Chang <kershaw@mozilla.com>"
