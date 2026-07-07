@@ -1979,6 +1979,13 @@ export const tokensTable = {
     { value: "4px", name: "--panel-box-shadow-margin" },
     { value: "16px", name: "--panel-padding" },
     { value: "4px", name: "--panel-padding-block" },
+    {
+      value:
+        "var(--panel-separator-padding-block) var(--panel-separator-padding-inline)",
+      name: "--panel-separator-padding",
+    },
+    { value: "4px", name: "--panel-separator-padding-block" },
+    { value: "8px", name: "--panel-separator-padding-inline" },
     { value: "8px", name: "--toolbar-padding-inline" },
     { value: "2px", name: "--toolbarbutton-badge-padding-inline" },
     { value: "1px", name: "--toolbarbutton-badge-padding-block-end" },
@@ -4408,6 +4415,15 @@ export const variableLookupTable = {
   "panel-box-shadow-margin": "4px",
   "panel-padding": "16px",
   "panel-padding-block": "4px",
+  "panel-separator-color": {
+    default: "color-mix(in srgb, currentColor 25%, transparent)",
+    prefersContrast: "currentColor",
+    forcedColors: "var(--border-color)",
+  },
+  "panel-separator-padding":
+    "var(--panel-separator-padding-block) var(--panel-separator-padding-inline)",
+  "panel-separator-padding-block": "4px",
+  "panel-separator-padding-inline": "8px",
   "panel-text-color": {
     light: "var(--color-black)",
     dark: "rgb(251, 251, 254)",
@@ -4424,11 +4440,6 @@ export const variableLookupTable = {
     default: "light-dark(var(--color-black), rgb(251, 251, 254))",
   },
   "panel-width": "initial",
-  "panel-separator-color": {
-    default: "color-mix(in srgb, currentColor 25%, transparent)",
-    prefersContrast: "currentColor",
-    forcedColors: "var(--border-color)",
-  },
   "popup-box-shadow": "var(--box-shadow-level-3)",
   "sidebar-background-color": {
     light: "white",

@@ -939,15 +939,15 @@
     "dark": "rgb(82, 82, 94)",
     "forcedColors": "transparent"
   },
-  "panel/text/color": {
-    "light": "{Colors$color/black}",
-    "dark": "rgb(251, 251, 254)",
-    "forcedColors": "MenuText"
-  },
   "panel/separator/color": {
     "light": "color-mix(in srgb, currentColor 25%, transparent)",
     "dark": "color-mix(in srgb, currentColor 25%, transparent)",
     "forcedColors": "{Theme$border/color}"
+  },
+  "panel/text/color": {
+    "light": "{Colors$color/black}",
+    "dark": "rgb(251, 251, 254)",
+    "forcedColors": "MenuText"
   },
   "sidebar/background/color": {
     "light": "white",

@@ -177,7 +177,6 @@ module.exports = [
       "browser/themes/shared/contextmenu.css",
       "browser/themes/shared/controlcenter/panel.css",
       "browser/themes/shared/customizableui/customizeMode.css",
-      "browser/themes/shared/customizableui/panelUI-shared.css",
       "browser/themes/shared/downloads/allDownloadsView.inc.css",
       "browser/themes/shared/downloads/contentAreaDownloadsView.css",
       "browser/themes/shared/downloads/download-blockedStates.css",

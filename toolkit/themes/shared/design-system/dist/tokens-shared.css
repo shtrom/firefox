@@ -479,6 +479,9 @@
     --panel-padding: 16px;
     --panel-padding-block: 4px;
     --panel-separator-color: color-mix(in srgb, currentColor 25%, transparent);
+    --panel-separator-padding: var(--panel-separator-padding-block) var(--panel-separator-padding-inline);
+    --panel-separator-padding-block: 4px;
+    --panel-separator-padding-inline: 8px;
     --panel-text-color: light-dark(var(--color-black), rgb(251, 251, 254));
     --panel-width: initial;
 
