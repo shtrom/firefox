@@ -225,6 +225,7 @@ treeherder:
         'wc': 'webcompat'
         'Boot': 'Bootstrap'
         'inst': 'Linux installer tests'
+        'inst-apt': 'Linux installer tests: apt'
         'Attr-L10n': 'Build Attribution'
         'android-l10n': 'Import strings from android-l10n repo'
         'updt-tst': 'Test updates to release from older firefox versions'
