@@ -349,7 +349,7 @@ bool DocAccessibleParent::AttachChild(RemoteAccessible* aParent,
   aParent->AddChildAt(aIndex, aChild);
   aChild->SetParent(aParent);
   // ProxyCreated might have already been called if aChild is being moved.
-  if (!aChild->GetWrapper() && !IsPrintDoc()) {
+  if (!aChild->GetWrapper()) {
     ProxyCreated(aChild);
   }
   if (aChild->IsTableRow() || aChild->IsTableCell()) {
@@ -1050,7 +1050,7 @@ ipc::IPCResult DocAccessibleParent::AddChildDoc(DocAccessibleParent* aChildDoc,
   outerDoc->SetChildDoc(aChildDoc);
   mChildDocs.AppendElement(aChildDoc->mActorID);
 
-  if (aCreating && !aChildDoc->IsPrintDoc()) {
+  if (aCreating) {
     ProxyCreated(aChildDoc);
   }
 
