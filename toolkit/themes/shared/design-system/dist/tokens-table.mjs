@@ -365,6 +365,21 @@ export const tokensTable = {
     },
     { value: "var(--background-color-box)", name: "--card-background-color" },
     {
+      value: {
+        default: "initial",
+        forcedColors: "var(--button-background-color)",
+      },
+      name: "--card-header-background-color",
+    },
+    {
+      value: "var(--button-background-color-hover)",
+      name: "--card-header-background-color-hover",
+    },
+    {
+      value: "var(--button-background-color-active)",
+      name: "--card-header-background-color-active",
+    },
+    {
       value: "var(--button-background-color)",
       name: "--checkbox-background-color",
     },
@@ -1091,6 +1106,28 @@ export const tokensTable = {
       name: "--card-border-color",
     },
     {
+      value: {
+        default: "transparent",
+        forcedColors: "var(--button-border-color)",
+        prefersContrast: "var(--button-border-color)",
+      },
+      name: "--card-header-border-color",
+    },
+    {
+      value: {
+        default: "transparent",
+        forcedColors: "var(--button-border-color-hover)",
+      },
+      name: "--card-header-border-color-hover",
+    },
+    {
+      value: {
+        default: "transparent",
+        forcedColors: "var(--button-border-color-active)",
+      },
+      name: "--card-header-border-color-active",
+    },
+    {
       value: "var(--border-color-interactive)",
       name: "--checkbox-border-color",
     },
@@ -1276,6 +1313,10 @@ export const tokensTable = {
     { value: "16px", name: "--border-radius-large" },
     { value: "var(--border-radius-medium)", name: "--button-border-radius" },
     { value: "var(--border-radius-large)", name: "--card-border-radius" },
+    {
+      value: "var(--border-radius-medium)",
+      name: "--card-border-radius-compact",
+    },
     { value: "var(--border-radius-small)", name: "--checkbox-border-radius" },
     {
       value: "var(--border-radius-medium)",
@@ -1813,6 +1854,8 @@ export const tokensTable = {
     { value: "var(--font-size-large)", name: "--font-size-heading-medium" },
     { value: "var(--font-size-root)", name: "--button-font-size" },
     { value: "var(--font-size-small)", name: "--button-font-size-small" },
+    { value: "var(--font-size-root)", name: "--card-font-size" },
+    { value: "var(--font-size-small)", name: "--card-font-size-compact" },
     { value: "10px", name: "--toolbarbutton-badge-font-size" },
     { value: "var(--button-font-size)", name: "--select-font-size" },
     { value: "var(--select-font-size)", name: "--select-font-size-small" },
@@ -1927,7 +1970,9 @@ export const tokensTable = {
     },
     { value: 0, name: "--button-padding-icon" },
     { value: "var(--space-large)", name: "--card-padding" },
+    { value: "var(--space-small)", name: "--card-padding-compact" },
     { value: "var(--card-padding)", name: "--card-gap" },
+    { value: "var(--space-small)", name: "--card-gap-compact" },
     { value: "var(--space-small)", name: "--card-gap-article" },
     { value: "var(--space-small)", name: "--checkbox-margin-inline" },
     { value: "4px", name: "--info-bar-margin-block-start" },
@@ -2363,6 +2408,15 @@ export const tokensTable = {
     {
       value: "var(--button-text-color-ghost-active)",
       name: "--button-text-color-toolbar-selected",
+    },
+    { value: "var(--button-text-color)", name: "--card-header-text-color" },
+    {
+      value: "var(--button-text-color-hover)",
+      name: "--card-header-text-color-hover",
+    },
+    {
+      value: "var(--button-text-color-active)",
+      name: "--card-header-text-color-active",
     },
     {
       value: {
@@ -4208,12 +4262,40 @@ export const variableLookupTable = {
       "light-dark(color-mix(in srgb, currentColor 10%, transparent), color-mix(in srgb, currentColor 6%, transparent))",
   },
   "card-border-radius": "var(--border-radius-large)",
+  "card-border-radius-compact": "var(--border-radius-medium)",
   "card-box-shadow": "var(--box-shadow-level-2)",
   "card-box-shadow-hover": "var(--box-shadow-level-4)",
   "card-focus-outline": "var(--focus-outline)",
+  "card-font-size": "var(--font-size-root)",
+  "card-font-size-compact": "var(--font-size-small)",
   "card-padding": "var(--space-large)",
+  "card-padding-compact": "var(--space-small)",
   "card-gap": "var(--card-padding)",
+  "card-gap-compact": "var(--space-small)",
   "card-gap-article": "var(--space-small)",
+  "card-header-background-color": {
+    default: "initial",
+    forcedColors: "var(--button-background-color)",
+  },
+  "card-header-background-color-hover": "var(--button-background-color-hover)",
+  "card-header-background-color-active":
+    "var(--button-background-color-active)",
+  "card-header-border-color": {
+    default: "transparent",
+    forcedColors: "var(--button-border-color)",
+    prefersContrast: "var(--button-border-color)",
+  },
+  "card-header-border-color-hover": {
+    default: "transparent",
+    forcedColors: "var(--button-border-color-hover)",
+  },
+  "card-header-border-color-active": {
+    default: "transparent",
+    forcedColors: "var(--button-border-color-active)",
+  },
+  "card-header-text-color": "var(--button-text-color)",
+  "card-header-text-color-hover": "var(--button-text-color-hover)",
+  "card-header-text-color-active": "var(--button-text-color-active)",
   "checkbox-background-color": "var(--button-background-color)",
   "checkbox-background-color-hover": "var(--button-background-color-hover)",
   "checkbox-background-color-active": "var(--button-background-color-active)",
