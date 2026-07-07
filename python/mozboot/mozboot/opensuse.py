@@ -2,8 +2,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from mozfile import which
-
 from mozboot.base import MERCURIAL_INSTALL_PROMPT, BaseBootstrapper
 from mozboot.linux_common import LinuxBootstrapper
 
@@ -18,9 +16,6 @@ class OpenSUSEBootstrapper(LinuxBootstrapper, BaseBootstrapper):
     def install_packages(self, packages):
         # watchman is not available
         packages = [p for p in packages if p != "watchman"]
-        # awk may already be pulled in transitively; only request it when missing.
-        if not which("awk"):
-            packages += ["awk"]
         self.zypper_install(*packages)
 
     def _update_package_manager(self):
