@@ -16,6 +16,7 @@ _METHOD_GROUP = {
     "rpm": "inst-rpm",
     "flatpak": "inst-flatpak",
     "tarball": "inst-tarball",
+    "snap": "inst-snap",
 }
 
 transforms = TransformSequence()

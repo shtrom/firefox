@@ -106,6 +106,7 @@ distros:
         locales: [en-US]  # flatpak ignores locale; en-US avoids redundant tasks
         max-run-time: 1800
 
+# TODO: add snap distro once a suitable CI worker image with snapd is available
 tasks:
     debian-12-x64-apt-release-env:
         description: "Test install-firefox.sh: apt release on debian-12 (auto-detect locale from env)"

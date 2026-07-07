@@ -27,7 +27,7 @@ tearDown() {
     rm -f "${SHUNIT_TMPDIR}/calls.tmp" "${SHUNIT_TMPDIR}/os-release" 2>/dev/null || true
     unset -f curl wget check_cmd dpkg apt_cache_show_stub uname rpm_pkg_exists_stub flatpak run_sudo retry \
         sleep id sudo _flaky install_apt install_rpm install_flatpak install_tarball \
-        download_to_stdout check_url need_cmd find_l10n_package zypper dnf tar gpg mktemp \
+        download_to_stdout check_url need_cmd find_l10n_package zypper dnf tar gpg snap mktemp \
         _apt_l10n_check _rpm_l10n_check _rpm_l10n_stub apt_verify_gpg_fingerprint 2>/dev/null || true
     rm -f "${SHUNIT_TMPDIR}/flag.tmp" 2>/dev/null || true
     unset _OS_RELEASE 2>/dev/null || true
@@ -988,6 +988,77 @@ testInstallTarballOrchestration() {
     assertTrue "download_and_extract called" \
         "grep -q tarball_download_and_extract '$_calls'"
     assertTrue "install_to called" "grep -q tarball_install_to '$_calls'"
+}
+
+testParseArgsInstallMethodSnap() {
+    parse_args --install-method snap
+    assertEquals "method=snap" "snap" "$INSTALL_METHOD"
+}
+
+testChannelToSnapChannelRelease() {
+    CHANNEL=release
+    assertEquals "snap release -> stable" "stable" "$(channel_to_snap_channel)"
+}
+
+testChannelToSnapChannelBeta() {
+    CHANNEL=beta
+    assertEquals "snap beta -> beta" "beta" "$(channel_to_snap_channel)"
+}
+
+testChannelToSnapChannelNightly() {
+    CHANNEL=nightly
+    assertEquals "snap nightly -> edge" "edge" "$(channel_to_snap_channel)"
+}
+
+testChannelToSnapChannelDeveditionErrors() {
+    assertFalse "snap devedition errors" \
+        '( CHANNEL=devedition channel_to_snap_channel >/dev/null 2>&1 )'
+}
+
+testDetectBestMethodSnap() {
+    check_cmd() { [ "$1" = "snap" ]; }; export -f check_cmd
+    detect_best_method
+    assertEquals "snap -> snap" "snap" "$INSTALL_METHOD"
+}
+
+testDetectBestMethodSnapOverFlatpak() {
+    check_cmd() { [ "$1" = "snap" ] || [ "$1" = "flatpak" ]; }; export -f check_cmd
+    detect_best_method
+    assertEquals "snap beats flatpak when both present" "snap" "$INSTALL_METHOD"
+}
+
+testInstallSnapFreshInstall() {
+    CHANNEL=release
+    local _calls="${SHUNIT_TMPDIR}/calls.tmp"
+    snap() { echo "snap $*" >> "$_calls"; [ "$1" = "list" ] && return 1; return 0; }
+    run_sudo() { echo "run_sudo $*" >> "$_calls"; }
+    retry() { "$@"; }
+    need_cmd() { return 0; }
+    export -f snap run_sudo retry need_cmd
+    install_snap
+    assertTrue "fresh install: snap install called" \
+        "grep -q 'run_sudo snap install firefox --channel=stable' '$_calls'"
+}
+
+testInstallSnapAlreadyInstalled() {
+    CHANNEL=beta
+    local _calls="${SHUNIT_TMPDIR}/calls.tmp"
+    snap() { echo "snap $*" >> "$_calls"; return 0; }
+    run_sudo() { echo "run_sudo $*" >> "$_calls"; }
+    retry() { "$@"; }
+    need_cmd() { return 0; }
+    export -f snap run_sudo retry need_cmd
+    install_snap
+    assertTrue "already installed: snap refresh called" \
+        "grep -q 'run_sudo snap refresh firefox --channel=beta' '$_calls'"
+}
+
+testInstallFirefoxDispatchSnap() {
+    local _calls="${SHUNIT_TMPDIR}/calls.tmp"
+    install_snap() { echo "install_snap" >> "$_calls"; }; export -f install_snap
+    INSTALL_METHOD=snap
+    install_firefox
+    assertTrue "install_firefox dispatches to snap" "grep -q install_snap '$_calls'"
 }
 
 . shunit2

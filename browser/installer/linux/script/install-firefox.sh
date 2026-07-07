@@ -7,7 +7,7 @@
 #
 # Options:
 #   --channel <release|beta|devedition|nightly>   Choose Firefox channel (default: release)
-#   --install-method <method>          Force install method: apt, rpm, flatpak, tarball
+#   --install-method <method>          Force install method: apt, rpm, flatpak, tarball, snap
 #   --lang <locale>                    Force locale (e.g. fr, de, ja)
 #   -v, --verbose                      Enable verbose output
 #   -h, --help                         Show this help
@@ -145,7 +145,7 @@ Usage: curl --proto '=https' --tlsv1.2 -sSf <url>/install-firefox.sh -o install-
 
 Options:
   --channel <release|beta|devedition|nightly>   Choose Firefox channel (default: release)
-  --install-method <method>          Force install method: apt, rpm, flatpak, tarball
+  --install-method <method>          Force install method: apt, rpm, flatpak, tarball, snap
   --lang <locale>                    Force locale (e.g. fr, de, ja)
   -v, --verbose                      Enable verbose output (shell trace + sudo command logging)
   -h, --help                         Show this help
@@ -168,8 +168,8 @@ parse_args() {
                 shift
                 INSTALL_METHOD="${1:?Missing install method value}"
                 case "$INSTALL_METHOD" in
-                    apt|rpm|flatpak|tarball) ;;
-                    *) error "Invalid install method '$INSTALL_METHOD'. Must be: apt, rpm, flatpak, tarball" ;;
+                    apt|rpm|flatpak|snap|tarball) ;;
+                    *) error "Invalid install method '$INSTALL_METHOD'. Must be: apt, rpm, flatpak, snap, tarball" ;;
                 esac
                 ;;
             --lang)
@@ -525,6 +525,16 @@ channel_to_flatpak_branch() {
     esac
 }
 
+channel_to_snap_channel() {
+    case "$CHANNEL" in
+        release)    echo "stable" ;;
+        beta)       echo "beta" ;;
+        nightly)    echo "edge" ;;
+        devedition) error "Firefox Developer Edition is not available as a snap" ;;
+        *)          error "Unsupported channel: $CHANNEL" ;;
+    esac
+}
+
 # flathub is always added: runtimes (e.g. org.freedesktop.Platform) live only
 # on flathub, not flathub-beta.
 flatpak_add_remotes() {
@@ -558,6 +568,19 @@ install_flatpak() {
     flatpak_add_remotes "$_branch"
     flatpak_install_or_update "$_branch"
     ok "Firefox ($CHANNEL, $ARCH, $DETECTED_LOCALE) installed via flatpak"
+}
+
+install_snap() {
+    info "Installing Firefox ($CHANNEL) via snap..."
+    need_cmd snap
+    local _channel
+    _channel="$(channel_to_snap_channel)"
+    if snap list firefox >/dev/null 2>&1; then
+        retry run_sudo snap refresh firefox --channel="$_channel"
+    else
+        retry run_sudo snap install firefox --channel="$_channel"
+    fi
+    ok "Firefox ($CHANNEL, $ARCH, $DETECTED_LOCALE) installed via snap"
 }
 
 tarball_product_name() {
@@ -695,6 +718,9 @@ detect_best_method() {
         INSTALL_METHOD="apt"
     elif check_cmd dnf || check_cmd zypper; then
         INSTALL_METHOD="rpm"
+    elif check_cmd snap; then
+        # snap preferred over flatpak: better system integration on Ubuntu/Debian.
+        INSTALL_METHOD="snap"
     elif check_cmd flatpak; then
         INSTALL_METHOD="flatpak"
     else
@@ -710,6 +736,7 @@ install_firefox() {
         apt)     install_apt ;;
         rpm)     install_rpm ;;
         flatpak) install_flatpak ;;
+        snap)    install_snap ;;
         tarball) install_tarball ;;
         *)       error "Unknown install method: $INSTALL_METHOD" ;;
     esac
