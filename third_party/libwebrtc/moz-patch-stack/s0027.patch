@@ -208,7 +208,7 @@ index 0bef5aea19..9fd93022f6 100644
      }
  
 diff --git a/api/BUILD.gn b/api/BUILD.gn
-index 389546904e..56a65412ea 100644
+index 46f773bc6e..1d42ce85bb 100644
 --- a/api/BUILD.gn
 +++ b/api/BUILD.gn
 @@ -34,6 +34,9 @@ rtc_library("enable_media") {
@@ -337,7 +337,7 @@ index 389546904e..56a65412ea 100644
  
  rtc_source_set("data_channel_event_observer_interface") {
    visibility = [ "*" ]
-@@ -1221,6 +1254,7 @@ rtc_source_set("refcountedbase") {
+@@ -1226,6 +1259,7 @@ rtc_source_set("refcountedbase") {
  }
  
  rtc_library("ice_transport_factory") {
@@ -345,7 +345,7 @@ index 389546904e..56a65412ea 100644
    visibility = [ "*" ]
    sources = [
      "ice_transport_factory.cc",
-@@ -1238,6 +1272,7 @@ rtc_library("ice_transport_factory") {
+@@ -1243,6 +1277,7 @@ rtc_library("ice_transport_factory") {
      "../rtc_base/system:rtc_export",
    ]
  }
