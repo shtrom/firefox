@@ -749,11 +749,7 @@ export class LoginManagerRustStorage {
    *
    */
   async removeAllLoginsAsync() {
-    const removed = await this.#removeLogins(false, true);
-    if (this.#isActive) {
-      lazy.LoginHelper.notifyStorageChanged("removeAllLogins", removed ?? []);
-    }
-    return removed;
+    return await this.#removeLogins(false, true);
   }
 
   /**
@@ -799,6 +795,12 @@ export class LoginManagerRustStorage {
     if (idsToDelete.length) {
       await this.#storageAdapter.deleteMany(idsToDelete);
     }
+
+    if (this.#isActive) {
+      lazy.LoginHelper.notifyStorageChanged("removeAllLogins", removedLogins);
+    }
+
+    return removedLogins;
   }
 
   async countLoginsAsync(origin, formActionOrigin, httpRealm) {
