@@ -311,8 +311,7 @@ def lto(
     # on the performance benefit.
     # Defaulting to full LTO is costly in terms of compilation time, so we only
     # default to it if MOZ_AUTOMATION and PGO are on, and for some platforms.
-    # Based on speedometer3 scores, full lto + pgo is beneficial for Linux and
-    # Windows for x86_64 targets.
+    # Based on speedometer3 scores, full lto + pgo is beneficial for Windows for x86_64 targets.
     if values == () or values == ("cross",):
         if c_compiler.type == "gcc":
             values += ("full",)
@@ -416,7 +415,7 @@ def lto(
     # settings otherwise, both for documentation and to prevent regression when
     # compiling firefox with older compilers.
 
-    if c_compiler.version < "20.0.0" or target.os in ("Android", "WINNT"):
+    if c_compiler.version < "20.0.0" or target.os != "GNU":
         # Tell LTO not to inline functions above a certain size, to mitigate
         # binary size growth while still getting good performance.
         # (For hot functions, PGO will put a multiplier on this limit.)
