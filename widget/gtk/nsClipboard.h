@@ -132,10 +132,9 @@ class nsClipboard final : public nsBaseClipboard, public nsIObserver {
   // map instead of re-fetching the JSON. The cross-platform
   // HasMatchingFlavorsCallback is unchanged; this richer variant is used
   // only internally on Linux.
-  using HasMatchingFlavorsCallbackWithMap =
-      mozilla::MoveOnlyFunction<void(
-          mozilla::Result<nsTArray<nsCString>, nsresult>,
-          mozilla::Maybe<mozilla::widget::WebCustomFormatMap>)>;
+  using HasMatchingFlavorsCallbackWithMap = mozilla::MoveOnlyFunction<void(
+      mozilla::Result<nsTArray<nsCString>, nsresult>,
+      mozilla::Maybe<mozilla::widget::WebCustomFormatMap>)>;
   void AsyncHasNativeClipboardDataMatchingFlavorsWithMap(
       const nsTArray<nsCString>& aFlavorList, ClipboardType aWhichClipboard,
       HasMatchingFlavorsCallbackWithMap&& aCallback);
