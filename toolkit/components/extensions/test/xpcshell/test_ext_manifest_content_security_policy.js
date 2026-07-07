@@ -46,12 +46,12 @@ add_task(async function test_manifest_csp() {
   });
   ExtensionTestUtils.failOnSchemaWarnings(true);
 
+  Assert.deepEqual(normalized.errors, [], "Should have no warnings");
+
   Assert.deepEqual(
-    normalized.errors,
-    [
-      `Error processing content_security_policy: Expected string instead of {"extension_pages":"script-src 'self'; object-src 'none'"}`,
-    ],
-    "Should have the expected warning"
+    normalized.error,
+    `Error processing content_security_policy: Expected string instead of {"extension_pages":"script-src 'self'; object-src 'none'"}`,
+    "Should have the expected error"
   );
 });
 
@@ -63,12 +63,12 @@ add_task(async function test_manifest_csp_v3() {
   });
   ExtensionTestUtils.failOnSchemaWarnings(true);
 
+  Assert.deepEqual(normalized.errors, [], "Should have no warnings");
+
   Assert.deepEqual(
-    normalized.errors,
-    [
-      `Error processing content_security_policy: Expected object instead of "script-src 'self'; object-src 'none'"`,
-    ],
-    "Should have the expected warning"
+    normalized.error,
+    `Error processing content_security_policy: Expected object instead of "script-src 'self'; object-src 'none'"`,
+    "Should have the expected error"
   );
 
   normalized = await ExtensionTestUtils.normalizeManifest({
