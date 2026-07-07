@@ -857,7 +857,7 @@ export class UrlbarView {
     this.controller.engagementEvent.discard();
     queryOptions.searchString = this.input.value;
     queryOptions.autofillIgnoresSelection = true;
-    queryOptions.event.interactionType = "returned";
+    queryOptions.interactionType = "returned";
 
     // Opening the panel now will show the rows from the previous query, so to
     // avoid flicker, open it only if the search string hasn't changed. Also

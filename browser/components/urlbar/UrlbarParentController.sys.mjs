@@ -508,19 +508,20 @@ class TelemetryEvent {
    * @param {string} [searchString] Pass a search string related to the event if
    *        you have one.  The event by itself sometimes isn't enough to
    *        determine the telemetry details we should record.
+   * @param {string} [interactionType] An explicit interaction type for the
+   *        session, used in preference to one derived from the event. The view
+   *        passes this when reopening a prior search ("returned").
    * @throws This should never throw, or it may break the urlbar.
    * @see {@link https://firefox-source-docs.mozilla.org/browser/urlbar/telemetry.html}
    */
-  start(event, queryContext, searchString = null) {
+  start(event, queryContext, searchString = null, interactionType = null) {
     if (this._startEventInfo) {
       if (this._startEventInfo.interactionType == "topsites") {
         // If the most recent event came from opening the results pane with an
         // empty string replace the interactionType (that would be "topsites")
         // with one for the current event to better measure the user flow.
-        this._startEventInfo.interactionType = this._getStartInteractionType(
-          event,
-          searchString
-        );
+        this._startEventInfo.interactionType =
+          interactionType || this._getStartInteractionType(event, searchString);
         this._startEventInfo.searchString = searchString;
       } else if (
         this._startEventInfo.interactionType == "returned" &&
@@ -564,7 +565,8 @@ class TelemetryEvent {
 
     this._startEventInfo = {
       timeStamp: event.timeStamp || ChromeUtils.now(),
-      interactionType: this._getStartInteractionType(event, searchString),
+      interactionType:
+        interactionType || this._getStartInteractionType(event, searchString),
       searchString,
     };
   }
@@ -1503,9 +1505,7 @@ class TelemetryEvent {
   }
 
   _getStartInteractionType(event, searchString) {
-    if (event.interactionType) {
-      return event.interactionType;
-    } else if (event.type == "input") {
+    if (event.type == "input") {
       return lazy.UrlbarUtils.isPasteEvent(event) ? "pasted" : "typed";
     } else if (event.type == "drop") {
       return "dropped";

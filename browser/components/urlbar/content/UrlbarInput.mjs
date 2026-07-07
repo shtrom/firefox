@@ -2322,6 +2322,9 @@ ${
    * @param {event} [options.event]
    *   The user-generated event that triggered the query, if any.  If given, we
    *   will record engagement event telemetry for the query.
+   * @param {string} [options.interactionType]
+   *   An explicit engagement interaction type for the query, used in preference
+   *   to one derived from the event (e.g. "returned" when reopening a search).
    */
   startQuery({
     allowAutofill,
@@ -2329,6 +2332,7 @@ ${
     searchString,
     resetSearchState = true,
     event,
+    interactionType,
   } = {}) {
     if (!searchString) {
       searchString =
@@ -2344,7 +2348,12 @@ ${
     });
 
     if (event) {
-      this.controller.engagementEvent.start(event, queryContext, searchString);
+      this.controller.engagementEvent.start(
+        event,
+        queryContext,
+        searchString,
+        interactionType
+      );
     }
 
     if (this._suppressStartQuery) {
