@@ -32,7 +32,6 @@ import {
   HISTORY as SOURCE_HISTORY,
   CONVERSATION as SOURCE_CONVERSATION,
   CONVERSATION_USER_REQUEST as SOURCE_USER_REQUEST,
-  SESSION as SOURCE_SESSION,
   PREF_GENERATE_MEMORIES_FROM_HISTORY,
   PREF_GENERATE_MEMORIES_FROM_CONVERSATION,
   MAX_MEMORY_SUMMARY_LENGTH,
@@ -259,10 +258,7 @@ export class MemoriesManager {
       return [];
     }
 
-    const { persistedMemories } = await this.saveMemories(
-      result.memories,
-      SOURCE_SESSION
-    );
+    const { persistedMemories } = await this.saveMemories(result.memories);
 
     if (result.processedThroughMs > 0) {
       await this.setLastSessionMemoryTimestamp(
@@ -280,12 +276,8 @@ export class MemoriesManager {
    * @param {object} [opts={}]
    * @param {boolean} [opts.includeSoftDeleted=false]
    *        Whether to include soft-deleted memories.
-   * @returns {Promise<Array<Map<{
-   *  memory_summary: string,
-   *  category: string,
-   *  intent: string,
-   *  score: number,
-   * }>>>}                                    List of memories
+   * @returns {Promise<Array<object>>}
+   *        List of memories
    */
   static async getAllMemories(opts = { includeSoftDeleted: false }) {
     return await MemoryStore.getMemories(opts);
@@ -296,12 +288,7 @@ export class MemoriesManager {
    * This is a quick-access wrapper around MemoryStore.getMemories() specifically requiring the memoryIds option.
    *
    * @param {Set<string>} memoryIds   Set of memory IDs
-   * @returns {Promise<Array<Map<{
-   *  memory_summary: string,
-   *  category: string,
-   *  intent: string,
-   *  score: number,
-   * }>>>}
+   * @returns {Promise<Array<Map>>}
    */
   static async getMemoriesByID(memoryIds) {
     return await MemoryStore.getMemories({ memoryIds });
@@ -348,20 +335,14 @@ export class MemoriesManager {
    *
    * @param {Array<object>|null|undefined} generatedMemories
    *        Array of MemoryPartial-like objects to persist.
-   * @param {string} source
-   *        Fallback source tag, used only for memories that don't carry their
-   *        own evidence-derived `source`.
    * @returns {Promise<{ persistedMemories: Array<object> }>}
    */
-  static async saveMemories(generatedMemories, source) {
+  static async saveMemories(generatedMemories) {
     const persistedMemories = [];
 
     if (Array.isArray(generatedMemories)) {
       for (const memoryPartial of generatedMemories) {
-        const stored = await MemoryStore.addMemory({
-          ...memoryPartial,
-          source: memoryPartial.source ?? source,
-        });
+        const stored = await MemoryStore.addMemory(memoryPartial);
         persistedMemories.push(stored);
       }
     }
@@ -408,10 +389,9 @@ export class MemoriesManager {
 
     let candidateMemory = {
       memory_summary: summary,
-      score: 5.0,
       reasoning: "User requested.",
       evidence: [{ type: "user", value: message }],
-      source: SOURCE_USER_REQUEST,
+      sources: [SOURCE_USER_REQUEST],
     };
 
     const addedMemory = await MemoryStore.addMemory(candidateMemory);
@@ -428,10 +408,15 @@ export class MemoriesManager {
   static async enrichExistingMemory(memoryId, memorySummary) {
     const { categories, intents } =
       await this.memoryClassifyMessage(memorySummary);
-    await MemoryStore.updateMemory(memoryId, {
-      category: categories[0] ?? "",
-      intent: intents[0] ?? "",
-    });
+
+    const tags = [];
+    if (categories[0]) {
+      tags.push(`category:${categories[0]}`);
+    }
+    if (intents[0]) {
+      tags.push(`intent:${intents[0]}`);
+    }
+    await MemoryStore.updateMemory(memoryId, { tags });
   }
 
   /**
@@ -545,13 +530,7 @@ export class MemoriesManager {
    * @param {string} message                  User message to find relevant memories for
    * @param {number} topK                     Number of top relevant memories to return (default: 5)
    * @param {number} similarityThreshold      Minimum similarity score (0-1) to include (default: 0.22)
-   * @returns {Promise<Array<{
-   *  memory_summary: string,
-   *  category: string,
-   *  intent: string,
-   *  score: number,
-   *  similarity: number,
-   * }>>}                                     List of relevant memories sorted by similarity
+   * @returns {Promise<Array<object>>}           List of relevant memories sorted by similarity
    */
   static async getRelevantMemories(
     message,
