@@ -687,12 +687,14 @@ void DocManager::RemoteDocAdded(DocAccessibleParent* aDoc) {
   MOZ_ASSERT(!sRemoteDocuments->Contains(aDoc),
              "How did we already have the doc!");
   sRemoteDocuments->AppendElement(aDoc);
-  ProxyCreated(aDoc);
-  // Fire a reorder event on the OuterDocAccessible.
-  if (LocalAccessible* outerDoc = aDoc->OuterDocOfRemoteBrowser()) {
-    MOZ_ASSERT(outerDoc->Document());
-    auto reorder = MakeRefPtr<AccReorderEvent>(outerDoc);
-    outerDoc->Document()->FireDelayedEvent(reorder);
+  if (!aDoc->IsPrintDoc()) {
+    ProxyCreated(aDoc);
+    // Fire a reorder event on the OuterDocAccessible.
+    if (LocalAccessible* outerDoc = aDoc->OuterDocOfRemoteBrowser()) {
+      MOZ_ASSERT(outerDoc->Document());
+      auto reorder = MakeRefPtr<AccReorderEvent>(outerDoc);
+      outerDoc->Document()->FireDelayedEvent(reorder);
+    }
   }
 }
 

@@ -1299,7 +1299,9 @@ mozilla::ipc::IPCResult BrowserParent::RecvPDocAccessibleConstructor(
     // In this case, we don't get aParentDoc and aParentID.
     MOZ_ASSERT(!aParentDoc && !aParentID);
     doc->SetTopLevelInContentProcess();
-    a11y::ProxyCreated(doc);
+    if (!doc->IsPrintDoc()) {
+      a11y::ProxyCreated(doc);
+    }
     // It's possible the embedder accessible hasn't been set yet; e.g.
     // a hidden iframe. In that case, embedderDoc will be null and this will
     // be handled when the embedder is set.
@@ -1323,7 +1325,9 @@ mozilla::ipc::IPCResult BrowserParent::RecvPDocAccessibleConstructor(
     doc->SetTopLevel();
     a11y::DocManager::RemoteDocAdded(doc);
 #  ifdef XP_WIN
-    doc->MaybeInitWindowEmulation();
+    if (!aIsPrintDoc) {
+      doc->MaybeInitWindowEmulation();
+    }
 #  endif
   }
   return IPC_OK();
