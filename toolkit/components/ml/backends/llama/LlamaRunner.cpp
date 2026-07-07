@@ -39,6 +39,7 @@
 #include "nsThreadManager.h"
 #include "mozilla/ThreadEventQueue.h"
 #include "mozilla/dom/Promise-inl.h"
+#include "mozilla/Encoding.h"
 #include "nsQueryObject.h"
 #include "private/pprio.h"
 
@@ -94,10 +95,46 @@ LlamaGenerateTask::~LlamaGenerateTask() {
   LOGD_RUNNER("Entered {}", __PRETTY_FUNCTION__);
 }
 
+namespace {
+
+// Decode `aBytes` through the streaming UTF-8 `aDecoder`, appending the valid
+// UTF-8 output to `aOut`. An incomplete trailing sequence is retained inside
+// the decoder until a later call completes it; bytes that can never be valid
+// are replaced with U+FFFD. This is the same buffer-sizing dance dom/script's
+// ScriptDecoding uses to drive a streaming Decoder. Returns false on allocation
+// failure.
+[[nodiscard]] bool AppendDecodedUtf8(Decoder& aDecoder,
+                                     const nsACString& aBytes,
+                                     nsACString& aOut) {
+  Span<const uint8_t> src(
+      reinterpret_cast<const uint8_t*>(aBytes.BeginReading()), aBytes.Length());
+  CheckedInt<size_t> capacity = aDecoder.MaxUTF8BufferLength(src.Length());
+  size_t base = aOut.Length();
+  if (!capacity.isValid() ||
+      !aOut.SetLength(base + capacity.value(), fallible)) {
+    return false;
+  }
+  Span<uint8_t> dst(reinterpret_cast<uint8_t*>(aOut.BeginWriting()) + base,
+                    capacity.value());
+  aOut.SetLength(base + std::get<2>(aDecoder.DecodeToUTF8(src, dst, false)));
+  return true;
+}
+
+}  // namespace
+
 nsresult LlamaGenerateTask::Run() {
   LOGD_RUNNER("Entered {}", __PRETTY_FUNCTION__);
   mState = TaskState::Running;
   mozilla::dom::LlamaChatResponse response;
+
+  // llama.cpp byte-fallback tokens are single bytes, so a multi-byte codepoint
+  // is emitted across several tokens. Flushing on a token-count boundary can
+  // therefore end a chunk's `mPiece` mid-codepoint, and converting that
+  // `UTF8String` to a JS string would reject with "malformed UTF-8 character
+  // sequence". Feeding the pieces through one streaming UTF-8 decoder holds an
+  // incomplete trailing sequence back until a later token completes it (a
+  // sequence that never completes stays buffered and is dropped).
+  UniquePtr<Decoder> decoder = UTF_8_ENCODING->NewDecoderWithoutBOMHandling();
 
   // Used by the backend to check cancellation status during generation.
   auto cancelCallback = [&state = mState]() -> bool {
@@ -106,8 +143,9 @@ nsresult LlamaGenerateTask::Run() {
 
   // Called by the backend each time new tokens are generated.
   auto tokenCallback =
-      [&response, bufSize = mChatOptions.mMinOutputBufferSize, self = this](
-          const mozilla::dom::LlamaChatResponse& chunk) -> ResultStatus {
+      [&response, &decoder, bufSize = mChatOptions.mMinOutputBufferSize,
+       self =
+           this](const mozilla::dom::LlamaChatResponse& chunk) -> ResultStatus {
     LOGV_RUNNER("Entered {}", __PRETTY_FUNCTION__);
     // Flush if phase has changed
     if ((response.mPhase != chunk.mPhase) && !response.mTokens.IsEmpty()) {
@@ -125,7 +163,12 @@ nsresult LlamaGenerateTask::Run() {
       }
     }
 
-    response.mPiece.Append(chunk.mPiece);
+    if (!AppendDecodedUtf8(*decoder, chunk.mPiece, response.mPiece)) {
+      auto msg = nsFmtCString("{}: Unable to append message to the response",
+                              __PRETTY_FUNCTION__);
+      LOGE_RUNNER("{}", msg);
+      return mozilla::Err(Error{std::move(msg)});
+    }
     auto out =
         response.mTokens.AppendElements(chunk.mTokens, mozilla::fallible);
     if (!out) {
