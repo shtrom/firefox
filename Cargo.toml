@@ -272,8 +272,9 @@ itertools = { path = "build/rust/itertools" }
 # else we do use requires backtrace, so dummy it out for now.
 backtrace = { path = "build/rust/backtrace" }
 
-# Locally patch bindgen to a yet-unreleased version.
-bindgen_0_72 = { package = "bindgen", git = "https://github.com/rust-lang/rust-bindgen", rev = "9366e0af8da529c958b4cd4fcbe492d951c86f5c" }
+# Locally patch bindgen to a yet-unreleased version + a patch that was recently
+# merged upstream.
+bindgen_0_72 = { package = "bindgen", git = "https://github.com/glandium/rust-bindgen", rev = "5274da5a06411accb266c10819b989ac25a81b7d" }
 
 # Patch bindgen 0.69 to 0.72
 bindgen = { path = "build/rust/bindgen" }

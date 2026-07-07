@@ -1107,9 +1107,12 @@ delta = "0.69.4 -> 0.72.0"
 notes = "I'm the primary maintainer of this crate."
 
 [[audits.bindgen]]
-who = "Emilio Cobos Álvarez <emilio@crisal.io>"
+who = [
+    "Emilio Cobos Álvarez <emilio@crisal.io>",
+    "Mike Hommey <mh+mozilla@glandium.org>",
+]
 criteria = "safe-to-deploy"
-delta = "0.72.0 -> 0.72.0@git:9366e0af8da529c958b4cd4fcbe492d951c86f5c"
+delta = "0.72.0 -> 0.72.0@git:5274da5a06411accb266c10819b989ac25a81b7d"
 importable = false
 notes = "Authored or reviewed all relevant changes upstream."
 
