@@ -1591,7 +1591,7 @@ var gContainerCreation = {
       this.isPillPinned = true;
     }
 
-    panel.openPopup(anchor, "bottomleft topleft");
+    panel.openPopup(anchor, "bottomright topright");
   },
 
   _unpinAnchor() {
