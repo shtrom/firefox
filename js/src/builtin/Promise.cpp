@@ -8001,6 +8001,8 @@ void PromiseObject::onSettled(JSContext* cx, Handle<PromiseObject*> promise,
       promise->isUnhandled()) {
     cx->runtime()->addUnhandledRejectedPromise(cx, promise);
   }
+
+  DebugAPI::onPromiseSettled(cx, promise);
 }
 
 void PromiseObject::setRequiresUserInteractionHandling(bool state) {
