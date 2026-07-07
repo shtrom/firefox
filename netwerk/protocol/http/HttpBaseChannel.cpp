@@ -80,6 +80,7 @@
 #include "nsIMultiplexInputStream.h"
 #include "nsIMutableArray.h"
 #include "nsINetworkInterceptController.h"
+#include "nsIOService.h"
 #include "nsIObserverService.h"
 #include "nsIPrincipal.h"
 #include "nsIProtocolProxyService.h"
@@ -6894,9 +6895,11 @@ void HttpBaseChannel::LogORBError(
   mLoadInfo->GetLoadingDocument(getter_AddRefs(doc));
 
   nsAutoCString uri;
-  nsresult rv = nsContentUtils::AnonymizeURI(mURI, uri);
-  if (NS_WARN_IF(NS_FAILED(rv))) {
-    return;
+  if (mURI->SchemeIs("data")) {
+    uri.AssignLiteral("data:...");
+  } else {
+    nsCOMPtr<nsIURI> exposableURI = net::nsIOService::CreateExposableURI(mURI);
+    exposableURI->GetSpec(uri);
   }
 
   uint64_t contentWindowId;
