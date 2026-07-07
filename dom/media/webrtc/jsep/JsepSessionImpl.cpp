@@ -1786,8 +1786,8 @@ nsresult JsepSessionImpl::UpdateTransceiversFromRemoteDescription(
     // This will process a=msid if present, or clear the stream ids if the
     // msection is not sending. If the msection is sending, and there are no
     // a=msid, the previously set default will stay.
-    transceiver->mRecvTrack.RecvTrackSetRemote(remote, msection,
-                                               transceiver->mSendTrack.GetSsrcs());
+    transceiver->mRecvTrack.RecvTrackSetRemote(
+        remote, msection, transceiver->mSendTrack.GetSsrcs());
     SetTransceiver(*transceiver);
   }
 
