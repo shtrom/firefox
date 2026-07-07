@@ -3017,7 +3017,7 @@
 # `.key` of the second `keypress` is set to the empty string.
 - name: dom.event.keypress.key.allow_lone_surrogate
   type: bool
-  value: @IS_NOT_EARLY_BETA_OR_EARLIER@
+  value: false
   mirror: always
 
 # Make EventStateManager restore the last "mouseover" target when it's
