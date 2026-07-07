@@ -1,80 +1,177 @@
-From: Alexander Cooper <alcooper@chromium.org>
-Date: Mon, 8 Jun 2026 10:13:41 -0700
-Subject: (cherry-pick-branch-heads/7871) [M150] Fix OOB write in
- RotateDesktopFrame and DXGI size mismatch
+From: Michael Froman <mjfroman@mac.com>
+Date: Tue, 7 Jul 2026 09:42:02 -0500
+Subject: (tmp-cherry-pick) Revert "Remove the deprecated
+ libjingle_peerconnection target" (3e52f63b06)
+
+This reverts commit 77889f4867c822547908093eaa240b34eb086303.
+
+Reason for revert: Downstream projects need to be updated first.
 
 Original change's description:
-> Fix OOB write in RotateDesktopFrame and DXGI size mismatch
+> Remove the deprecated libjingle_peerconnection target
 >
-> Upgrade RTC_DCHECK to RTC_CHECK in RotateDesktopFrame to enforce
-> bounds checks in release builds. Validate captured frame size against
-> expected unrotated size in DxgiOutputDuplicator::Duplicate to fail
-> gracefully on resolution changes.
->
-> Fixed: chromium:520199394
-> Change-Id: Iad22c89cf3ef900b0ac58a72ec3a9f8d2e96123b
-> Reviewed-on: https://webrtc-review.googlesource.com/c/src/+/479000
-> Auto-Submit: Alexander Cooper <alcooper@chromium.org>
-> Commit-Queue: Alexander Cooper <alcooper@chromium.org>
-> Reviewed-by: Mark Foltz <mfoltz@chromium.org>
-> Cr-Commit-Position: refs/heads/main@{#47937}
+> Change-Id: I0dc50fb3aa239b3f4c509e86e25a55bf6b595a8d
+> Bug: webrtc:463418937
+> Reviewed-on: https://webrtc-review.googlesource.com/c/src/+/479160
+> Commit-Queue: Jeremy Leconte <jleconte@google.com>
+> Reviewed-by: Mirko Bonadei <mbonadei@webrtc.org>
+> Cr-Commit-Position: refs/heads/main@{#47928}
 
-(cherry picked from commit 15644107234aa9bc7a4bf7e9f9a2157a8a9415b4)
-
-Bug: chromium:522134569,chromium:520199394
-Change-Id: Iad22c89cf3ef900b0ac58a72ec3a9f8d2e96123b
-Reviewed-on: https://webrtc-review.googlesource.com/c/src/+/480580
-Commit-Queue: rubber-stamper@appspot.gserviceaccount.com <rubber-stamper@appspot.gserviceaccount.com>
-Auto-Submit: Chrome Cherry Picker <chrome-cherry-picker@chops-service-accounts.iam.gserviceaccount.com>
+Bug: webrtc:463418937
+No-Presubmit: true
+No-Tree-Checks: true
+No-Try: true
+Change-Id: I5b6cf3907432ad69d6c4fca5de2b7d762954f4e5
+Reviewed-on: https://webrtc-review.googlesource.com/c/src/+/479940
 Bot-Commit: rubber-stamper@appspot.gserviceaccount.com <rubber-stamper@appspot.gserviceaccount.com>
-Cr-Commit-Position: refs/branch-heads/7871@{#2}
-Cr-Branched-From: b1dde843dc4388c62a66f8ca903e795463b04075-refs/heads/main@{#47863}
+Commit-Queue: Tomas Gunnarsson <tommi@webrtc.org>
+Cr-Commit-Position: refs/heads/main@{#47936}
 ---
- modules/desktop_capture/desktop_frame_rotation.cc   |  4 ++--
- .../desktop_capture/win/dxgi_output_duplicator.cc   | 13 +++++++++++++
- 2 files changed, 15 insertions(+), 2 deletions(-)
+ BUILD.gn                                  |  4 +---
+ examples/BUILD.gn                         |  1 +
+ examples/androidnativeapi/BUILD.gn        |  1 +
+ pc/BUILD.gn                               | 17 +++++++++++++++++
+ rtc_tools/data_channel_benchmark/BUILD.gn |  1 +
+ sdk/android/BUILD.gn                      |  3 +++
+ test/fuzzers/BUILD.gn                     |  6 +++++-
+ 7 files changed, 29 insertions(+), 4 deletions(-)
 
-diff --git a/modules/desktop_capture/desktop_frame_rotation.cc b/modules/desktop_capture/desktop_frame_rotation.cc
-index a6b4d1619d..a7ea388a92 100644
---- a/modules/desktop_capture/desktop_frame_rotation.cc
-+++ b/modules/desktop_capture/desktop_frame_rotation.cc
-@@ -99,13 +99,13 @@ void RotateDesktopFrame(const DesktopFrame& source,
-                         const DesktopVector& target_offset,
-                         DesktopFrame* target) {
-   RTC_DCHECK(target);
--  RTC_DCHECK(DesktopRect::MakeSize(source.size()).ContainsRect(source_rect));
-+  RTC_CHECK(DesktopRect::MakeSize(source.size()).ContainsRect(source_rect));
-   // TODO(bugs.webrtc.org/436974448): Support other pixel formats.
-   RTC_CHECK_EQ(FOURCC_ARGB, source.pixel_format());
-   // The rectangle in `target`.
-   const DesktopRect target_rect =
-       RotateAndOffsetRect(source_rect, source.size(), rotation, target_offset);
--  RTC_DCHECK(DesktopRect::MakeSize(target->size()).ContainsRect(target_rect));
-+  RTC_CHECK(DesktopRect::MakeSize(target->size()).ContainsRect(target_rect));
+diff --git a/BUILD.gn b/BUILD.gn
+index 7ca7684fa6..eae85b0a81 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -562,10 +562,8 @@ if (!build_with_chromium) {
+       "media",
+       "modules",
+       "modules/video_capture:video_capture_internal_impl",
+-      "pc:peer_connection_factory",
++      "pc:libjingle_peerconnection",
+       "pc:rtc_pc",
+-      "pc:webrtc_sdp",
+-      "stats",
+       "video",
+     ]
  
-   if (target_rect.is_empty()) {
-     return;
-diff --git a/modules/desktop_capture/win/dxgi_output_duplicator.cc b/modules/desktop_capture/win/dxgi_output_duplicator.cc
-index f07a55af46..946401aaf1 100644
---- a/modules/desktop_capture/win/dxgi_output_duplicator.cc
-+++ b/modules/desktop_capture/win/dxgi_output_duplicator.cc
-@@ -229,6 +229,19 @@ bool DxgiOutputDuplicator::Duplicate(Context* context,
-     // triggers screen flickering?
+diff --git a/examples/BUILD.gn b/examples/BUILD.gn
+index da8116da67..507b575764 100644
+--- a/examples/BUILD.gn
++++ b/examples/BUILD.gn
+@@ -777,6 +777,7 @@ if (is_linux || is_chromeos || is_win) {
+       "../modules/audio_device",
+       "../modules/audio_processing",
+       "../modules/video_capture:video_capture_module",
++      "../pc:libjingle_peerconnection",
+       "../rtc_base:rtc_json",
+       "../test:video_test_common",
+       "//third_party/abseil-cpp/absl/flags:flag",
+diff --git a/examples/androidnativeapi/BUILD.gn b/examples/androidnativeapi/BUILD.gn
+index ff334cc746..5ee801b9a3 100644
+--- a/examples/androidnativeapi/BUILD.gn
++++ b/examples/androidnativeapi/BUILD.gn
+@@ -73,6 +73,7 @@ if (is_android) {
+       "//media:rtc_audio_video",
+       "//media:rtc_internal_video_codecs",
+       "//modules/utility",
++      "//pc:libjingle_peerconnection",
+       "//pc:webrtc_sdp",
+       "//sdk/android:native_api_base",
+       "//sdk/android:native_api_jni",
+diff --git a/pc/BUILD.gn b/pc/BUILD.gn
+index 46ddb0adc1..ae23689304 100644
+--- a/pc/BUILD.gn
++++ b/pc/BUILD.gn
+@@ -19,6 +19,7 @@
+ # - sdp_utils
+ # - media_stream_observer
+ # - video_track_source
++# - libjingle_peerconnection
+ #
+ # Some targets are depended on by external users for historical reasons,
+ # and are therefore marked with visibility "*". This is in the process
+@@ -2171,6 +2172,22 @@ rtc_source_set("legacy_stats_collector_interface") {
+   ]
+ }
  
-     const DesktopFrame& source = texture_->AsDesktopFrame();
-+    // During a resolution transition, DXGI might deliver a frame with the new
-+    // size before the controller detects the change and reinitializes.
-+    // `unrotated_size_` is cached at initialization and only updated when
-+    // this object is recreated. We abort capture on mismatch to force
-+    // reinitialization by the |DxgiDuplicatorController|.
-+    if (!source.size().equals(unrotated_size_)) {
-+      RTC_LOG(LS_WARNING) << "Captured frame size " << source.size().width()
-+                        << "x" << source.size().height()
-+                        << " does not match expected size "
-+                        << unrotated_size_.width() << "x"
-+                        << unrotated_size_.height();
-+      return false;
-+    }
-     if (rotation_ != Rotation::CLOCK_WISE_0) {
-       for (DesktopRegion::Iterator it(updated_region); !it.IsAtEnd();
-            it.Advance()) {
++# This target contains the libraries that are required in order to get an
++# usable peerconnection-using binary.
++rtc_source_set("libjingle_peerconnection") {
++  # TODO(bugs.webrtc.org/13661): Reduce visibility if possible
++  visibility = [ "*" ]  # Used by Chrome and others
++  allow_poison = [ "environment_construction" ]
++
++  deps = [
++    ":jsep_session_description",
++    ":peer_connection_factory",
++    ":rtc_stats_collector",
++    ":webrtc_sdp",
++    "../stats",
++  ]
++}
++
+ rtc_library("datagram_connection_internal") {
+   sources = [
+     "datagram_connection_internal.cc",
+diff --git a/rtc_tools/data_channel_benchmark/BUILD.gn b/rtc_tools/data_channel_benchmark/BUILD.gn
+index 96da67791e..f1aee05687 100644
+--- a/rtc_tools/data_channel_benchmark/BUILD.gn
++++ b/rtc_tools/data_channel_benchmark/BUILD.gn
+@@ -68,6 +68,7 @@ rtc_executable("data_channel_benchmark") {
+     "../../api/video_codecs:video_encoder_factory_template_libvpx_vp8_adapter",
+     "../../api/video_codecs:video_encoder_factory_template_libvpx_vp9_adapter",
+     "../../api/video_codecs:video_encoder_factory_template_open_h264_adapter",
++    "../../pc:libjingle_peerconnection",
+     "../../rtc_base:checks",
+     "../../rtc_base:copy_on_write_buffer",
+     "../../rtc_base:logging",
+diff --git a/sdk/android/BUILD.gn b/sdk/android/BUILD.gn
+index 23013ab15c..38136c450f 100644
+--- a/sdk/android/BUILD.gn
++++ b/sdk/android/BUILD.gn
+@@ -142,6 +142,7 @@ if (is_android) {
+       ":libjingle_peerconnection_metrics_default_jni",
+       ":native_api_jni",
+       ":video_egl_jni",
++      "../../pc:libjingle_peerconnection",
+       "../../rtc_base:checks",
+       "../../rtc_base:logging",
+       "../../rtc_base:ssl_adapter",
+@@ -1714,6 +1715,7 @@ if (is_android) {
+       ":libjingle_peerconnection_jni",
+       ":libjingle_peerconnection_metrics_default_jni",
+       ":native_api_jni",
++      "../../pc:libjingle_peerconnection",
+       "../../rtc_base:checks",
+       "../../rtc_base:logging",
+       "../../rtc_base:ssl_adapter",
+@@ -1814,6 +1816,7 @@ if (is_android) {
+       "../../modules/audio_device:mock_audio_device",
+       "../../modules/utility",
+       "../../modules/video_coding:video_codec_interface",
++      "../../pc:libjingle_peerconnection",
+       "../../rtc_base:checks",
+       "../../rtc_base:ip_address",
+       "../../rtc_base:logging",
+diff --git a/test/fuzzers/BUILD.gn b/test/fuzzers/BUILD.gn
+index e9783f651a..4cda97d978 100644
+--- a/test/fuzzers/BUILD.gn
++++ b/test/fuzzers/BUILD.gn
+@@ -475,7 +475,10 @@ webrtc_fuzzer_test("residual_echo_detector_fuzzer") {
+ 
+ webrtc_fuzzer_test("sdp_parser_fuzzer") {
+   sources = [ "sdp_parser_fuzzer.cc" ]
+-  deps = [ "../../api:jsep" ]
++  deps = [
++    "../../api:jsep",
++    "../../pc:libjingle_peerconnection",
++  ]
+   seed_corpus = "corpora/sdp-corpus"
+ }
+ 
+@@ -493,6 +496,7 @@ if (!build_with_chromium) {
+       "../../api:peer_connection_interface",
+       "../../api:rtc_error_matchers",
+       "../../pc:integration_test_helpers",
++      "../../pc:libjingle_peerconnection",
+       "../../pc:pc_test_utils",
+       "../../rtc_base:checks",
+       "../../test:test_support",
