@@ -11,7 +11,7 @@ Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/19164e58323d59c1f
  2 files changed, 8 insertions(+), 2 deletions(-)
 
 diff --git a/call/call.h b/call/call.h
-index 0cbfe1d4db..e97a8ee4ec 100644
+index c7a25fe78b..3cfdc40f05 100644
 --- a/call/call.h
 +++ b/call/call.h
 @@ -27,6 +27,7 @@
@@ -22,7 +22,7 @@ index 0cbfe1d4db..e97a8ee4ec 100644
  #include "call/call_config.h"
  #include "call/flexfec_receive_stream.h"
  #include "call/packet_receiver.h"
-@@ -62,9 +63,9 @@ class Call {
+@@ -65,9 +66,9 @@ class Call {
      int64_t rtt_ms = -1;
      std::optional<int64_t> ccfb_messages_received = std::nullopt;
      flat_map<uint32_t, SentCongestionControllerFeedbackStats>
