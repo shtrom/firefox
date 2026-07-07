@@ -2561,6 +2561,7 @@ radiogroup:focus-visible > .subviewradio[focused="true"] {
 /* ----- IP Protection panel ----- */
 #PanelUI-ipprotection {
   padding: var(--space-small);
+  padding-top: 0;
   width: 28em;
 
   @media not -moz-pref("browser.nova.enabled") {
@@ -2586,12 +2587,24 @@ radiogroup:focus-visible > .subviewradio[focused="true"] {
   }
 }
 
+#ipprotection-header-content,
 #ipprotection-experiment-badge {
-  margin-inline-start: var(--space-xsmall);
+  font-size: var(--font-size-large);
+}
+
+#ipprotection-experiment-badge {
   display: inline-block;
   color: var(--text-color-deemphasized);
+
+  @media not -moz-pref("browser.nova.enabled") {
+    margin-inline-start: var(--space-xsmall);
+  }
 }
 
 #PanelUI-ipprotection-locations {
   max-height: 43em;
+}
+
+#PanelUI-ipprotection-locations-header h1 {
+  font-size: var(--font-size-large);
 }
