@@ -847,13 +847,11 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
 
   async #sendMoreInfoButtonHandler(event) {
     const { target } = event;
-    const state = ViewState.get(target.documentGlobal.document);
     event.preventDefault();
     const tabbrowser = target.documentGlobal.gBrowser;
     this.#recordGleanEvent("sendMoreInfo");
     event.target.documentGlobal.CustomizableUI.hidePanelForNode(target);
     await this.#openWebCompatTab(tabbrowser);
-    state.reset();
   }
 
   #previewButtonHandler(event) {
