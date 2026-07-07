@@ -62,8 +62,6 @@ fail-if = [
 ]
 support-files = ["handlers.json"]
 
-["test_launch_first_click_with_permission.js"]
-
 ["test_punycodeURIs.js"]
 skip-if = [
   "os == 'win' && msix", # https://bugzilla.mozilla.org/show_bug.cgi?id=1809485
