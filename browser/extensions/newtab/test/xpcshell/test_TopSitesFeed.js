@@ -3979,39 +3979,70 @@ add_task(async function test_pinSiteAtGrouped_growsRowWhenFullOfPins() {
   sandbox.restore();
 });
 
-add_task(async function test_pin_growsRowWhenPinningPastGrid() {
+add_task(async function test_pin_replacesLastFrecencyTileOnFullRow() {
   let sandbox = sinon.createSandbox();
   let feed = getTopSitesFeedForTest(sandbox);
-  // Classic mode (grouped pref unset). Stub out the actual pin side effects so
-  // only the grow decision in pin() is under test. The index adjustment shifts
-  // left (as a preceding sponsored tile would) to confirm grow keys on the
-  // requested slot, not the shifted pin position.
-  sandbox
-    .stub(feed, "_adjustPinIndexForSponsoredLinks")
-    .callsFake((s, i) => i - 1);
-  sandbox.stub(NewTabUtils.pinnedLinks, "pin");
+  // Classic mode (grouped pref unset). Stub side effects so only pin()'s
+  // eviction/grow decision is under test. Identity index adjustment keeps the
+  // asserted pin slot readable (no preceding sponsored tiles to shift over).
+  sandbox.stub(feed, "_adjustPinIndexForSponsoredLinks").callsFake((s, i) => i);
+  let pinStub = sandbox.stub(NewTabUtils.pinnedLinks, "pin");
   sandbox.stub(feed, "_clearLinkCustomScreenshot").resolves();
   sandbox.stub(feed, "_broadcastPinnedSitesUpdated");
 
-  let pinAt = (index, rows) => {
+  // The add button on a full row sends the slot just past the visible grid.
+  let pinPastGrid = (rows, gridRows) => {
     feed.store.dispatch.resetHistory();
+    pinStub.resetHistory();
     feed.store.state.Prefs.values = {
-      topSitesRows: rows,
+      topSitesRows: gridRows,
       topSitesMaxSitesPerRow: 8,
     };
-    return feed.pin({ data: { site: { url: "https://new.com" }, index } });
+    feed.store.state.TopSites.rows = rows;
+    return feed.pin({
+      data: { site: { url: "https://new.com" }, index: gridRows * 8 },
+    });
   };
 
-  info("grows a row when pinning past the visible grid, below max rows");
-  await pinAt(8, 1);
-  Assert.ok(dispatchedRowGrow(feed, 2), "grew for the out-of-grid pin");
+  info("replaces the last frecency tile instead of growing a row");
+  await pinPastGrid(Array(8).fill("site"), 1);
+  Assert.ok(!dispatchedRowGrow(feed), "no grow: a frecency tile was replaced");
+  Assert.equal(
+    pinStub.getCall(0).args[1],
+    7,
+    "pinned at the last frecency slot"
+  );
 
-  info("does not grow when pinning within the grid (e.g. an edit)");
-  await pinAt(3, 1);
-  Assert.ok(!dispatchedRowGrow(feed), "no grow for an in-grid pin");
+  info("replaces the last frecency tile even when a later slot is pinned");
+  let scattered = Array(8).fill("site");
+  scattered[7] = { isPinned: true };
+  await pinPastGrid(scattered, 1);
+  Assert.ok(
+    !dispatchedRowGrow(feed),
+    "no grow: an earlier frecency tile was replaced"
+  );
+  Assert.equal(
+    pinStub.getCall(0).args[1],
+    6,
+    "pinned at the last frecency slot, not the last position"
+  );
+
+  info("skips sponsored tiles when choosing the tile to replace");
+  let withSponsored = Array(8).fill("site");
+  withSponsored[7] = { sponsored_position: 1 };
+  await pinPastGrid(withSponsored, 1);
+  Assert.equal(
+    pinStub.getCall(0).args[1],
+    6,
+    "did not replace the sponsored tile"
+  );
+
+  info("grows a row when every visible slot is pinned or sponsored");
+  await pinPastGrid(Array(8).fill({ isPinned: true }), 1);
+  Assert.ok(dispatchedRowGrow(feed, 2), "grew: no frecency tile to replace");
 
   info("does not grow once already at the max rows");
-  await pinAt(32, 4);
+  await pinPastGrid(Array(32).fill({ isPinned: true }), 4);
   Assert.ok(!dispatchedRowGrow(feed), "no grow at the max rows");
 
   sandbox.restore();

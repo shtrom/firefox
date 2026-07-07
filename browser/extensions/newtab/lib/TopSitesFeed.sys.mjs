@@ -2340,16 +2340,33 @@ export class TopSitesFeed {
     index = this._adjustPinIndexForSponsoredLinks(site, index);
     // If valid index provided, pin at that position
     if (index >= 0) {
-      await this._pinSiteAt(site, index);
-      // Classic grow: pinning past the visible grid adds a row (grouped mode
-      // grows in _pinSiteAtGrouped instead).
       const prefs = this.store.getState().Prefs.values;
-      if (
-        !this._groupedPinsEnabled &&
-        requestedIndex >= getTopSitesCount(prefs) &&
-        prefs[ROWS_PREF] < TOP_SITES_MAX_ROWS
-      ) {
-        this.store.dispatch(ac.SetPref(ROWS_PREF, prefs[ROWS_PREF] + 1));
+      // Classic add button on a full row: replace the last visible frecency tile,
+      // matching how a grouped pin pushes the trailing frecency tile off the grid.
+      // Fall back to growing a row only when there's no organic tile to replace.
+      const count = getTopSitesCount(prefs);
+      const pinsPastGrid = !this._groupedPinsEnabled && requestedIndex >= count;
+      let evictIndex = -1;
+      if (pinsPastGrid) {
+        const { rows } = this.store.getState().TopSites;
+        for (let i = count - 1; i >= 0; i--) {
+          const link = rows[i];
+          if (link && !link.isPinned && !link.sponsored_position) {
+            evictIndex = i;
+            break;
+          }
+        }
+      }
+      if (evictIndex >= 0) {
+        await this._pinSiteAt(
+          site,
+          this._adjustPinIndexForSponsoredLinks(site, evictIndex)
+        );
+      } else {
+        await this._pinSiteAt(site, index);
+        if (pinsPastGrid && prefs[ROWS_PREF] < TOP_SITES_MAX_ROWS) {
+          this.store.dispatch(ac.SetPref(ROWS_PREF, prefs[ROWS_PREF] + 1));
+        }
       }
       this._broadcastPinnedSitesUpdated();
     } else {
