@@ -29,11 +29,11 @@ From there you can register as many mappings as you need.
 
 Each mapping defines:
 
-- the origin (domain)
+* the origin (domain)
 
   The custom origin to expose via https URL.
 
-- the local folder
+* the local folder
 
   The local folder where to load files from.
 
@@ -53,3 +53,21 @@ a new mapping for the loaded file URL.
 
 The second action `Try it` will register a transient mapping to load the current file or folder
 from a https URL. The mapping will disappear as soon as you close DevTools or Firefox.
+
+## Manage mappings via preferences
+
+Mappings can also be managed in about:config via preferences, so that you can easily import and transfer them
+between profiles, or via automation.
+
+Each mapping is defined by three preferences:
+
+* `devtools.local-mode.mappings.${index}.origin`: string for the mapping's origin. (e.g. "firefox.localhost")
+* `devtools.local-mode.mappings.${index}.path`: string for the absolute path to local folder (e.g. "/home/hello-world")
+* `devtools.local-mode.mappings.${index}.disabled`: optional boolean to disable this mapping
+and where `${index}` is an incremental integer counter to uniquely identify each mapping.
+
+Here is an example of mappings you can control from about:config:
+
+```{image} mappings-in-about-config.png
+:alt: List of Local Mapping preferences displayed in about:config
+```
