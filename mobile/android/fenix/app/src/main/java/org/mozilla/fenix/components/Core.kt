@@ -626,7 +626,6 @@ class Core(
     val pocketStoriesConfig by lazyMonitored {
         PocketStoriesConfig(
             client,
-            Frequency(4, TimeUnit.HOURS),
             contentRecommendationsParams = ContentRecommendationsRequestConfig(
                 locale = LocaleManager.getSelectedLocale(context).toLanguageTag(),
             ),
