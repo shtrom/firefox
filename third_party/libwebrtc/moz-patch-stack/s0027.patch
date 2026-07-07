@@ -69,10 +69,10 @@ Bug 1883116 - (fix-3d9c3687a4) Supporting change of call_factory.cc to create_ca
 Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/b86cb7278bc4e557104cec0313d83511b9c8f40d
 ---
  .gn                                           |  2 +
- BUILD.gn                                      | 48 ++++++++++++++++++-
- api/BUILD.gn                                  | 35 +++++++++++++-
+ BUILD.gn                                      | 50 ++++++++++++++++++-
+ api/BUILD.gn                                  | 35 ++++++++++++-
  api/rtp_sender_interface.h                    |  4 +-
- api/rtp_sender_setparameters_callback.cc      | 27 +++++++++++
+ api/rtp_sender_setparameters_callback.cc      | 27 ++++++++++
  api/rtp_sender_setparameters_callback.h       | 28 +++++++++++
  api/task_queue/BUILD.gn                       |  2 +
  api/transport/BUILD.gn                        |  2 +
@@ -90,15 +90,15 @@ Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/b86cb7278bc4e5571
  .../aec3/adaptive_fir_filter_avx2.cc          |  2 +-
  .../audio_processing/agc2/rnn_vad/BUILD.gn    |  2 +-
  modules/desktop_capture/BUILD.gn              | 29 +----------
- modules/portal/BUILD.gn                       | 24 ++++++++++
+ modules/portal/BUILD.gn                       | 24 +++++++++
  modules/utility/BUILD.gn                      |  4 ++
- modules/video_capture/BUILD.gn                | 11 +----
+ modules/video_capture/BUILD.gn                | 11 +---
  rtc_base/BUILD.gn                             | 26 +++++++++-
  rtc_base/system/BUILD.gn                      |  2 +-
  test/BUILD.gn                                 | 10 ++++
  video/BUILD.gn                                |  4 +-
- webrtc.gni                                    | 32 ++++++++-----
- 30 files changed, 297 insertions(+), 92 deletions(-)
+ webrtc.gni                                    | 32 ++++++++----
+ 30 files changed, 299 insertions(+), 92 deletions(-)
  create mode 100644 api/rtp_sender_setparameters_callback.cc
  create mode 100644 api/rtp_sender_setparameters_callback.h
 
@@ -116,7 +116,7 @@ index 375e71ac46..c028ef6f70 100644
    # TODO(https://bugs.webrtc.org/14437):  Remove this section if general
    # Chromium fix resolves the problem.
 diff --git a/BUILD.gn b/BUILD.gn
-index eae85b0a81..74e306fe12 100644
+index 7ca7684fa6..5283267d59 100644
 --- a/BUILD.gn
 +++ b/BUILD.gn
 @@ -39,7 +39,7 @@ if (is_android) {
@@ -151,8 +151,8 @@ index eae85b0a81..74e306fe12 100644
  
  if (!rtc_build_ssl) {
    config("external_ssl_library") {
-@@ -566,6 +572,32 @@ if (!build_with_chromium) {
-       "pc:rtc_pc",
+@@ -568,6 +574,34 @@ if (!build_with_chromium) {
+       "stats",
        "video",
      ]
 +    if (build_with_mozilla) {
@@ -177,14 +177,16 @@ index eae85b0a81..74e306fe12 100644
 +        "api/video_codecs:video_encoder_factory_template_libvpx_vp9_adapter",
 +        "api/video_codecs:video_encoder_factory_template_open_h264_adapter",
 +        "logging:rtc_event_log_api",
-+        "pc:libjingle_peerconnection",
++        "pc:peer_connection_factory",
 +        "pc:rtc_pc",
++        "pc:webrtc_sdp",
++        "stats",
 +      ]
 +    }
  
      if (rtc_include_builtin_audio_codecs) {
        deps += [
-@@ -576,8 +608,22 @@ if (!build_with_chromium) {
+@@ -578,8 +612,22 @@ if (!build_with_chromium) {
  
      if (build_with_mozilla) {
        deps += [

@@ -74,7 +74,7 @@ index 44447d3a34..a034bc9814 100644
  # The python interpreter to use by default. On Windows, this will look
  # for python3.exe and python3.bat.
 diff --git a/BUILD.gn b/BUILD.gn
-index a735611eeb..0cc0777633 100644
+index 7db39b12d7..42444a3271 100644
 --- a/BUILD.gn
 +++ b/BUILD.gn
 @@ -21,8 +21,8 @@
@@ -108,7 +108,7 @@ index a735611eeb..0cc0777633 100644
      defines = []
  
      deps = [
-@@ -853,7 +853,7 @@ rtc_static_library("dcsctp") {
+@@ -857,7 +857,7 @@ rtc_static_library("dcsctp") {
    visibility = [ "//:default" ]
    sources = []
    complete_static_lib = true
@@ -117,7 +117,7 @@ index a735611eeb..0cc0777633 100644
    defines = []
    deps = [
      "net/dcsctp/public:factory",
-@@ -891,7 +891,7 @@ group("poison_default_neural_residual_echo_estimator") {
+@@ -895,7 +895,7 @@ group("poison_default_neural_residual_echo_estimator") {
  if (!build_with_chromium) {
    # Write debug logs to gn_logs.txt.
    # This is also required for Siso builds.
@@ -327,7 +327,7 @@ index 589142b014..2ee80ded55 100644
      }
    }
 diff --git a/examples/BUILD.gn b/examples/BUILD.gn
-index 507b575764..dc182cf918 100644
+index da8116da67..3e0be725a9 100644
 --- a/examples/BUILD.gn
 +++ b/examples/BUILD.gn
 @@ -9,15 +9,15 @@
@@ -383,7 +383,7 @@ index b671239bae..e545b2cde3 100644
    android_java_prebuilt("autobanh_java") {
      jar_path = "lib/autobanh.jar"
 diff --git a/examples/androidnativeapi/BUILD.gn b/examples/androidnativeapi/BUILD.gn
-index 5ee801b9a3..15411a2903 100644
+index ff334cc746..0ca98d2767 100644
 --- a/examples/androidnativeapi/BUILD.gn
 +++ b/examples/androidnativeapi/BUILD.gn
 @@ -41,8 +41,8 @@ if (is_android) {
@@ -589,10 +589,10 @@ index 09f8f56fbc..5d2b795f6b 100644
  import("../../webrtc.gni")
  
 diff --git a/pc/BUILD.gn b/pc/BUILD.gn
-index 260dce6f30..1e0f0cd268 100644
+index b42faa8ba5..0493e5b238 100644
 --- a/pc/BUILD.gn
 +++ b/pc/BUILD.gn
-@@ -30,8 +30,8 @@
+@@ -29,8 +29,8 @@
  
  import("../webrtc.gni")
  if (is_android) {
@@ -759,7 +759,7 @@ index 688064169e..aa5229372d 100644
      deps = [ ":google_test_runner_delegate" ]
    }
 diff --git a/test/fuzzers/BUILD.gn b/test/fuzzers/BUILD.gn
-index 4cda97d978..9b917aa340 100644
+index e9783f651a..651f67920b 100644
 --- a/test/fuzzers/BUILD.gn
 +++ b/test/fuzzers/BUILD.gn
 @@ -6,7 +6,7 @@
