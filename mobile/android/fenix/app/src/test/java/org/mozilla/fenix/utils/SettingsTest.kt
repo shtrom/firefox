@@ -8,6 +8,7 @@ import android.content.pm.PackageInfo
 import androidx.core.content.edit
 import io.mockk.every
 import io.mockk.spyk
+import io.mockk.verify
 import mozilla.components.concept.engine.Engine.HttpsOnlyMode.DISABLED
 import mozilla.components.concept.engine.Engine.HttpsOnlyMode.ENABLED
 import mozilla.components.concept.engine.Engine.HttpsOnlyMode.ENABLED_PRIVATE_ONLY
@@ -1006,6 +1007,27 @@ class SettingsTest {
 
         settings.migrateSearchWidgetInstalledPrefIfNeeded()
         assertFalse(settings.searchWidgetInstalled)
+    }
+
+    @Test
+    fun `GIVEN the legacy pocket database has not been deleted WHEN deleteLegacyPocketDatabaseIfNeeded is called THEN the database is deleted`() {
+        val context = spyk(testContext)
+        val settings = Settings(context)
+
+        settings.deletePocketDatabaseIfNeeded()
+
+        verify { context.deleteDatabase("pocket_recommendations") }
+    }
+
+    @Test
+    fun `GIVEN the legacy pocket database was already deleted WHEN deleteLegacyPocketDatabaseIfNeeded is called again THEN the database is not deleted a second time`() {
+        val context = spyk(testContext)
+        val settings = Settings(context)
+
+        settings.deletePocketDatabaseIfNeeded()
+        settings.deletePocketDatabaseIfNeeded()
+
+        verify(exactly = 1) { context.deleteDatabase("pocket_recommendations") }
     }
 
     @Test
