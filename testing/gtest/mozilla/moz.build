@@ -18,7 +18,6 @@ if CONFIG["ENABLE_TESTS"]:
     EXPORTS.mozilla.gtest += [
         "MozAssertions.h",
         "MozHelpers.h",
-        "ScopedPrefSetter.h",
         "WaitFor.h",
     ]
 

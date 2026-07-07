@@ -12,7 +12,6 @@
 #include "mozilla/Attributes.h"
 #include "mozilla/Preferences.h"
 #include "mozilla/gfx/gfxVars.h"
-#include "mozilla/gtest/ScopedPrefSetter.h"
 #include "mozilla/media/webrtc/CodecInfo.h"
 
 using namespace mozilla;
@@ -68,6 +67,29 @@ constexpr const char* kNonCanonicalMimeTypes[] = {
     "video/avc",
     "video/avc1",
     "video/avc3",
+};
+
+class MOZ_RAII ScopedPrefSetter {
+ public:
+  ScopedPrefSetter(const char* aPrefName, bool aValue)
+      : mPrefName(aPrefName),
+        mOriginalValue(Preferences::GetBool(aPrefName, false)) {
+    MOZ_ASSERT(NS_IsMainThread());
+    Preferences::SetBool(mPrefName, aValue);
+  }
+  ~ScopedPrefSetter() {
+    MOZ_ASSERT(NS_IsMainThread());
+    Preferences::SetBool(mPrefName, mOriginalValue);
+  }
+
+  ScopedPrefSetter(const ScopedPrefSetter&) = delete;
+  ScopedPrefSetter& operator=(const ScopedPrefSetter&) = delete;
+  ScopedPrefSetter(ScopedPrefSetter&&) = delete;
+  ScopedPrefSetter& operator=(ScopedPrefSetter&&) = delete;
+
+ private:
+  const char* mPrefName;
+  const bool mOriginalValue;
 };
 
 class WebRTCCodecInfoTest : public testing::Test {
