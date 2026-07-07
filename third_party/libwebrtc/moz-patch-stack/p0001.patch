@@ -124,7 +124,7 @@ index 96da67791e..f1aee05687 100644
      "../../rtc_base:copy_on_write_buffer",
      "../../rtc_base:logging",
 diff --git a/sdk/android/BUILD.gn b/sdk/android/BUILD.gn
-index 23013ab15c..38136c450f 100644
+index 30517e9435..4888d0e92b 100644
 --- a/sdk/android/BUILD.gn
 +++ b/sdk/android/BUILD.gn
 @@ -142,6 +142,7 @@ if (is_android) {
@@ -143,7 +143,7 @@ index 23013ab15c..38136c450f 100644
        "../../rtc_base:checks",
        "../../rtc_base:logging",
        "../../rtc_base:ssl_adapter",
-@@ -1814,6 +1816,7 @@ if (is_android) {
+@@ -1815,6 +1817,7 @@ if (is_android) {
        "../../modules/audio_device:mock_audio_device",
        "../../modules/utility",
        "../../modules/video_coding:video_codec_interface",
