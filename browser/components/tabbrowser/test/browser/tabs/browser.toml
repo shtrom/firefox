@@ -517,6 +517,9 @@ skip-if = [
   "true", # Bug 1616418 Bug 1549985
 ]
 
+["browser_tabContextMenu_altStructure.js"]
+tags = "vertical-tabs"
+
 ["browser_tabContextMenu_keyboard.js"]
 tags = "vertical-tabs"
 
