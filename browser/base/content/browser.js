@@ -31,7 +31,7 @@ ChromeUtils.defineESModuleGetters(this, {
   ContentSharingUtils:
     "resource:///modules/contentsharing/ContentSharingUtils.sys.mjs",
   ContextualIdentityService:
-    "resource://gre/modules/ContextualIdentityService.sys.mjs",
+    "moz-src:///toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs",
   CustomizableUI:
     "moz-src:///browser/components/customizableui/CustomizableUI.sys.mjs",
   DevToolsSocketStatus:

@@ -188,7 +188,7 @@ var allowlist = [
   },
 
   // SpiderMonkey parser API, currently unused in browser/ and toolkit/
-  { file: "resource://gre/modules/reflect.sys.mjs" },
+  { file: "moz-src:///toolkit/components/reflect/reflect.sys.mjs" },
 
   // extensions/pref/autoconfig/src/nsReadConfig.cpp
   { file: "resource://gre/defaults/autoconfig/prefcalls.js" },

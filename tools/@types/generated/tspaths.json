@@ -5848,23 +5848,14 @@
       "resource://gre/modules/ContentRelevancyManager.sys.mjs": [
         "../../../toolkit/components/contentrelevancy/ContentRelevancyManager.sys.mjs"
       ],
-      "resource://gre/modules/ContextualIdentityService.sys.mjs": [
-        "../../../toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs"
-      ],
       "resource://gre/modules/CoveragePing.sys.mjs": [
         "../../../toolkit/components/telemetry/pings/CoveragePing.sys.mjs"
       ],
       "resource://gre/modules/CrashMonitor.sys.mjs": [
         "../../../toolkit/components/crashmonitor/CrashMonitor.sys.mjs"
       ],
-      "resource://gre/modules/CrashReports.sys.mjs": [
-        "../../../toolkit/crashreporter/CrashReports.sys.mjs"
-      ],
       "resource://gre/modules/CrashService.sys.mjs": [
         "../../../toolkit/components/crashes/CrashService.sys.mjs"
-      ],
-      "resource://gre/modules/CrashSubmit.sys.mjs": [
-        "../../../toolkit/crashreporter/CrashSubmit.sys.mjs"
       ],
       "resource://gre/modules/Credentials.sys.mjs": [
         "../../../services/fxaccounts/Credentials.sys.mjs"
@@ -6469,9 +6460,6 @@
       "resource://gre/modules/RemoteSettingsCrashPull.sys.mjs": [
         "../../../toolkit/components/crashes/RemoteSettingsCrashPull.sys.mjs"
       ],
-      "resource://gre/modules/RemoteWebNavigation.sys.mjs": [
-        "../../../toolkit/components/remotebrowserutils/RemoteWebNavigation.sys.mjs"
-      ],
       "resource://gre/modules/ResetProfile.sys.mjs": [
         "../../../toolkit/modules/ResetProfile.sys.mjs"
       ],
@@ -6727,9 +6715,6 @@
       "resource://gre/modules/jsdebugger.sys.mjs": [
         "../../../devtools/platform/jsdebugger.sys.mjs"
       ],
-      "resource://gre/modules/kvstore.sys.mjs": [
-        "../../../toolkit/components/kvstore/kvstore.sys.mjs"
-      ],
       "resource://gre/modules/media/IdpSandbox.sys.mjs": [
         "../../../dom/media/IdpSandbox.sys.mjs"
       ],
@@ -6783,9 +6768,6 @@
       ],
       "resource://gre/modules/psm/pippki.sys.mjs": [
         "../../../security/manager/pki/pippki.sys.mjs"
-      ],
-      "resource://gre/modules/reflect.sys.mjs": [
-        "../../../toolkit/components/reflect/reflect.sys.mjs"
       ],
       "resource://gre/modules/services-automation/ServicesAutomation.sys.mjs": [
         "../../../services/automation/ServicesAutomation.sys.mjs"
