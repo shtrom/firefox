@@ -1591,6 +1591,12 @@ RefPtr<dom::Promise> ReplaceTrackOperation::CallImpl(ErrorResult& aError) {
         // If connection.[[IsClosed]] is true, abort these steps.
         // Set sender.[[SenderTrack]] to withTrack.
         if (sender->SetSenderTrackWithClosedCheck(track)) {
+          // mSenderTrack is now updated. SeamlessTrackSwitch already called
+          // MaybeUpdateConduit() synchronously, but at that point mSenderTrack
+          // still held the old value (spec requires the update to happen in
+          // this queued task). Call it again now that mSenderTrack is final so
+          // the conduit can correctly start or stop based on the new track.
+          sender->MaybeUpdateConduit();
           // Resolve p with undefined.
           p->MaybeResolveWithUndefined();
         }
@@ -2168,7 +2174,7 @@ void RTCRtpSender::UpdateBaseConfig(BaseConfig* aConfig) {
   // JsepTrack::GetActive, because that updates before the queued task, which
   // is too early for some of the things we interact with here (eg;
   // RTCDTMFSender).
-  aConfig->mTransmitting = mTransceiver->IsSending();
+  aConfig->mTransmitting = mTransceiver->IsSending() && mSenderTrack;
 }
 
 void RTCRtpSender::ApplyVideoConfig(const VideoConfig& aConfig) {
