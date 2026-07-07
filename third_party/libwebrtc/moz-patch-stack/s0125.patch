@@ -8,10 +8,10 @@ Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/6c3f917f52d45566d
  1 file changed, 4 insertions(+), 5 deletions(-)
 
 diff --git a/call/rtp_transport_controller_send.cc b/call/rtp_transport_controller_send.cc
-index d1b9651447..08e9a0502c 100644
+index a224a4941b..f1ea5abe9e 100644
 --- a/call/rtp_transport_controller_send.cc
 +++ b/call/rtp_transport_controller_send.cc
-@@ -735,19 +735,18 @@ void RtpTransportControllerSend::ComputeStatsFromCongestionControlFeedback(
+@@ -740,19 +740,18 @@ void RtpTransportControllerSend::ComputeStatsFromCongestionControlFeedback(
  
      if (packet_info.IsReceived()) {
        switch (packet_info.ecn) {
