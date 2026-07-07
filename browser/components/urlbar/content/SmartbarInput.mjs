@@ -7291,6 +7291,12 @@ ${
   set isSidebarMode(isSidebar) {
     this.#isSidebarMode = !!isSidebar;
     this.#updateContextChips();
+    // Mirror sidebar mode onto the model picker so its shared panel-list styles
+    // (smartwindow-panel-list.css) pick up the sidebar inline margin.
+    const modelSelect = this.querySelector("input-model-select");
+    if (modelSelect) {
+      modelSelect.sidebarMode = this.#isSidebarMode;
+    }
   }
 
   /**
