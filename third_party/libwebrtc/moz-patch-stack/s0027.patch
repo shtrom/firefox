@@ -210,7 +210,7 @@ index 7ca7684fa6..5283267d59 100644
      }
  
 diff --git a/api/BUILD.gn b/api/BUILD.gn
-index 09b6816d12..e14a2776be 100644
+index 2e0bd76b33..ca9f2cc43a 100644
 --- a/api/BUILD.gn
 +++ b/api/BUILD.gn
 @@ -34,6 +34,9 @@ rtc_library("enable_media") {
@@ -1191,10 +1191,10 @@ index c0fb04ac82..af412f6890 100644
      deps += [
        "..:logging",
 diff --git a/test/BUILD.gn b/test/BUILD.gn
-index 1f39c7d82f..170927d2d6 100644
+index 9fb385003c..0e095dc31d 100644
 --- a/test/BUILD.gn
 +++ b/test/BUILD.gn
-@@ -277,6 +277,7 @@ rtc_library("audio_test_common") {
+@@ -279,6 +279,7 @@ rtc_library("audio_test_common") {
    ]
  }
  
@@ -1202,7 +1202,7 @@ index 1f39c7d82f..170927d2d6 100644
  if (!build_with_chromium) {
    if (is_mac || is_ios) {
      rtc_library("video_test_mac") {
-@@ -331,8 +332,12 @@ if (!build_with_chromium) {
+@@ -333,8 +334,12 @@ if (!build_with_chromium) {
      }
    }
  }
@@ -1215,7 +1215,7 @@ index 1f39c7d82f..170927d2d6 100644
    testonly = true
    sources = [
      "rtcp_packet_parser.cc",
-@@ -342,6 +347,7 @@ rtc_library("rtp_test_utils") {
+@@ -344,6 +349,7 @@ rtc_library("rtp_test_utils") {
      "rtp_file_writer.cc",
      "rtp_file_writer.h",
    ]
@@ -1223,7 +1223,7 @@ index 1f39c7d82f..170927d2d6 100644
  
    deps = [
      "../api:rtp_parameters",
-@@ -511,7 +517,9 @@ rtc_library("video_frame_writer") {
+@@ -513,7 +519,9 @@ rtc_library("video_frame_writer") {
    ]
  
    if (!is_ios) {
@@ -1233,7 +1233,7 @@ index 1f39c7d82f..170927d2d6 100644
      sources += [ "testsupport/jpeg_frame_writer.cc" ]
    } else {
      sources += [ "testsupport/jpeg_frame_writer_ios.cc" ]
-@@ -1781,6 +1789,7 @@ if (!build_with_chromium) {
+@@ -1786,6 +1794,7 @@ if (!build_with_chromium) {
    }
  }
  
@@ -1241,7 +1241,7 @@ index 1f39c7d82f..170927d2d6 100644
  if (!build_with_chromium && is_android) {
    rtc_android_library("native_test_java") {
      testonly = true
-@@ -1823,6 +1832,7 @@ if (!build_with_chromium && is_android) {
+@@ -1828,6 +1837,7 @@ if (!build_with_chromium && is_android) {
      sources = [ "android/org/webrtc/native_test/NativeTestWebrtc.java" ]
    }
  }
