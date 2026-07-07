@@ -18,7 +18,6 @@
 #include "nsArrayUtils.h"
 #include "nsBaseClipboard.h"
 #include "nsIContentAnalysis.h"
-#include "nsITransferable.h"
 #include "nsISupportsPrimitives.h"
 #include "nsCOMPtr.h"
 #include "nsComponentManagerUtils.h"
@@ -77,15 +76,6 @@ nsClipboardProxy::GetData(nsITransferable* aTransferable,
   }
   nsTArray<nsCString> types;
   aTransferable->FlavorsTransferableCanImport(types);
-  // The web custom format map is a synthetic flavor that aggregates the
-  // per-essence "web foo/bar" slots; it must not be exposed to content
-  // processes through the sync transferable API. Content code should
-  // discover web custom formats via nsIClipboard::getDataSnapshot{,Sync}.
-  for (const auto& type : types) {
-    if (type.EqualsLiteral(kWebCustomFormatMapType)) {
-      return NS_ERROR_FAILURE;
-    }
-  }
 
   IPCTransferableDataOrError transferableOrError;
   if (MOZ_UNLIKELY(nsIContentAnalysis::MightBeActive())) {

@@ -81,9 +81,6 @@ NSString* const kUrlsWithTitlesPboardType = @"WebURLsWithTitlesPboardType";
 NSString* const kMozWildcardPboardType = @"org.mozilla.MozillaWildcard";
 NSString* const kMozCustomTypesPboardType = @"org.mozilla.custom-clipdata";
 NSString* const kMozFileUrlsPboardType = @"org.mozilla.file-urls";
-NSString* const kWebCustomFormatPboardTypePrefix =
-    @"org.w3.web-custom-format.type-";
-NSString* const kWebCustomFormatMapPboardType = @"org.w3.web-custom-format.map";
 
 @implementation UTIHelper
 
@@ -94,8 +91,6 @@ NSString* const kWebCustomFormatMapPboardType = @"org.w3.web-custom-format.map";
       [aType isEqualToString:kPublicUrlPboardType] ||
       [aType isEqualToString:kPublicUrlNamePboardType] ||
       [aType isEqualToString:kMozFileUrlsPboardType] ||
-      [aType isEqualToString:kWebCustomFormatPboardTypePrefix] ||
-      [aType isEqualToString:kWebCustomFormatMapPboardType] ||
       [aType isEqualToString:(NSString*)kPasteboardTypeFileURLPromise] ||
       [aType isEqualToString:(NSString*)kPasteboardTypeFilePromiseContent] ||
       [aType isEqualToString:(NSString*)kUTTypeFileURL] ||

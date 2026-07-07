@@ -53,7 +53,7 @@ class nsClipboard final : public nsBaseClipboard, public nsIObserver {
                                             uint64_t aThreshold = 0);
   static nsresult GetNativeDataOffClipboard(IDataObject* aDataObject,
                                             UINT aIndex, UINT aFormat,
-                                            const char* aMIMEFlavor,
+                                            const char* aMIMEImageFormat,
                                             void** aData, uint32_t* aLen,
                                             uint64_t aThreshold = 0);
   static nsresult GetGlobalData(HGLOBAL aHGBL, void** aData, uint32_t* aLen);
@@ -79,13 +79,6 @@ class nsClipboard final : public nsBaseClipboard, public nsIObserver {
   static UINT GetClipboardFileDescriptorFormatW();
   static UINT GetHtmlClipboardFormat();
   static UINT GetCustomClipboardFormat();
-
-  // Web custom format support. The map clipboard format stores the JSON
-  // produced by mozilla::widget::WebCustomFormatMapToJSON; each individual
-  // custom format payload is written under a per-slot clipboard format
-  // registered on demand via GetFormat("Web Custom FormatN"). The names match
-  // the convention used by Chromium so other browsers can round-trip the data.
-  static UINT GetWebCustomFormatMapClipboardFormat();
   mozilla::Result<int32_t, nsresult> GetNativeClipboardSequenceNumber(
       ClipboardType aWhichClipboard) override;
 

@@ -782,8 +782,6 @@ STDMETHODIMP nsDataObj::GetData(LPFORMATETC aFormat, LPSTGMEDIUM pSTM) {
       if (format == fileFlavor) return GetFileContents(*aFormat, *pSTM);
       if (format == PreferredDropEffect)
         return GetPreferredDropEffect(*aFormat, *pSTM);
-      if (format == nsClipboard::GetWebCustomFormatMapClipboardFormat())
-        return GetText(df, *aFormat, *pSTM);
       // MOZ_LOG(gWindowsLog, LogLevel::Info,
       //       ("***** nsDataObj::GetData - Unknown format %u\n", format));
       return GetText(df, *aFormat, *pSTM);
@@ -1572,15 +1570,6 @@ HRESULT nsDataObj::GetText(const nsACString& aDataFlavor, FORMATETC& aFE,
     return S_OK;
   };
 
-  // kWebCustomFormatMapType is synthetic: the JSON is held on the data object
-  // (set by nsClipboard::SetupNativeDataObject) rather than in the
-  // transferable. Serve it without the trailing UTF-16 null pad.
-  if (aDataFlavor.EqualsLiteral(kWebCustomFormatMapType)) {
-    MOZ_ASSERT(!mWebCustomFormatMapJson.IsEmpty());
-    return assignDataToStg(const_cast<char*>(mWebCustomFormatMapJson.get()),
-                           mWebCustomFormatMapJson.Length());
-  }
-
   const nsPromiseFlatCString& flavorStr = PromiseFlatCString(aDataFlavor);
 
   nsCOMPtr<nsISupports> genericDataWrapper;
@@ -1656,12 +1645,9 @@ HRESULT nsDataObj::GetText(const nsACString& aDataFlavor, FORMATETC& aFE,
 
   // We assume that any data-format that isn't caught above can be satisfied by
   // Unicode text. (This may be an erroneous assumption, but seems to have been
-  // true so far.) Web custom formats are byte payloads (nsISupportsCString), so
-  // they must skip the trailing UTF-16 null pad just like the legacy custom
-  // clipboard format does.
+  // true so far.)
   bool const excludeNull =
-      aFE.cfFormat == nsClipboard::GetCustomClipboardFormat() ||
-      StringBeginsWith(aDataFlavor, nsLiteralCString(kWebCustomFormatPrefix));
+      aFE.cfFormat == nsClipboard::GetCustomClipboardFormat();
 
   return assignDataToStg(data, len + (excludeNull ? 0 : sizeof(char16_t)));
 }

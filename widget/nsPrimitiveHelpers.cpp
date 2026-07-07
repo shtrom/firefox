@@ -46,8 +46,7 @@ void nsPrimitiveHelpers ::CreatePrimitiveForData(const nsACString& aFlavor,
 
   if (aFlavor.EqualsLiteral(kNativeHTMLMime) ||
       aFlavor.EqualsLiteral(kRTFMime) ||
-      aFlavor.EqualsLiteral(kCustomTypesMime) ||
-      StringBeginsWith(aFlavor, nsLiteralCString(kWebCustomFormatPrefix))) {
+      aFlavor.EqualsLiteral(kCustomTypesMime)) {
     nsCOMPtr<nsISupportsCString> primitive =
         do_CreateInstance(NS_SUPPORTS_CSTRING_CONTRACTID);
     if (primitive) {
@@ -130,8 +129,7 @@ void nsPrimitiveHelpers::CreateDataFromPrimitive(const nsACString& aFlavor,
   *aDataBuff = nullptr;
   *aDataLen = 0;
 
-  if (aFlavor.EqualsLiteral(kCustomTypesMime) ||
-      StringBeginsWith(aFlavor, nsLiteralCString(kWebCustomFormatPrefix))) {
+  if (aFlavor.EqualsLiteral(kCustomTypesMime)) {
     nsCOMPtr<nsISupportsCString> plainText(do_QueryInterface(aPrimitive));
     if (plainText) {
       nsAutoCString data;
