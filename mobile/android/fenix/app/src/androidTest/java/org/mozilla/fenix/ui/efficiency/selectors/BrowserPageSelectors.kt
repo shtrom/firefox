@@ -104,6 +104,13 @@ object BrowserPageSelectors {
         groups = listOf("translatedPageTranslationSheet"),
     )
 
+    val ADDED_TO_SHORTCUTS_SNACKBAR_TEXT = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR_WITH_TEXT,
+        value = getStringResource(R.string.snackbar_added_to_shortcuts),
+        description = "Added to shortcuts snackbar text",
+        groups = listOf("addedToShortcutsSnackbar"),
+    )
+
     val all = listOf(
         ENGINE_VIEW,
         PAGE_CONTENT,
@@ -118,5 +125,6 @@ object BrowserPageSelectors {
         TRANSLATION_SHEET_TITLE,
         TRANSLATION_SHEET_TRANSLATE_BUTTON,
         TRANSLATION_SHEET_SHOW_ORIGINAL_BUTTON,
+        ADDED_TO_SHORTCUTS_SNACKBAR_TEXT,
     )
 }
