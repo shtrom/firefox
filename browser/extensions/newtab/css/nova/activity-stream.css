@@ -14524,10 +14524,18 @@ button.arrow-button:dir(rtl) {
   font-size: var(--font-size-root);
   margin: 0;
 }
+.nova-enabled .highlight-popover-body .button-wrapper {
+  align-self: flex-start;
+}
 .nova-enabled .highlight-popover-image {
   width: 100%;
   height: auto;
   border-radius: var(--border-radius-small);
+}
+.nova-enabled .widgets-survey-callout .highlight-popover-image {
+  /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
+  width: 169px;
+  align-self: center;
 }
 
 .nova-enabled .omc-highlight-slot {

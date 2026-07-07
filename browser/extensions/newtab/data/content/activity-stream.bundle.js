@@ -17275,6 +17275,41 @@ const OMC_HIGHLIGHT_REGISTRY = Object.freeze({
     },
     dismiss: DISMISS_MODES.BLOCK,
   },
+  // Survey callouts; the CTA opens content.surveyUrl set by the OMC message.
+  WorldCupSurveyCallout: {
+    slot: SLOTS.WIDGETS_ROW,
+    shell: SHELLS.POPOVER,
+    chrome: {
+      position: "inset-block-start inset-inline-center",
+      modalClassName: "widgets-callout widgets-survey-callout",
+    },
+    body: {
+      image: {
+        src: "chrome://newtab/content/data/content/assets/highlights/widget-survey.webp",
+      },
+      title: { l10nId: "newtab-sports-widget-message-survey-title" },
+      subtitle: { l10nId: "newtab-sports-widget-message-survey-body" },
+      cta: { l10nId: "newtab-sports-widget-message-survey-cta" },
+    },
+    dismiss: DISMISS_MODES.BLOCK,
+  },
+  WorldCupWidgetSurveyCallout: {
+    slot: SLOTS.WIDGETS_ROW,
+    shell: SHELLS.POPOVER,
+    chrome: {
+      position: "inset-block-start inset-inline-center",
+      modalClassName: "widgets-callout widgets-survey-callout",
+    },
+    body: {
+      image: {
+        src: "chrome://newtab/content/data/content/assets/highlights/widget-survey.webp",
+      },
+      title: { l10nId: "newtab-sports-widget-message-survey-widget-title" },
+      subtitle: { l10nId: "newtab-sports-widget-message-survey-widget-body" },
+      cta: { l10nId: "newtab-sports-widget-message-survey-cta" },
+    },
+    dismiss: DISMISS_MODES.BLOCK,
+  },
 });
 
 const getRegistryEntry = messageType => {
@@ -17321,7 +17356,8 @@ const resolveImage = ({ content, defaults }) => {
 
 const HighlightPopoverBody = ({
   body,
-  content
+  content,
+  onCtaClick
 }) => {
   const image = resolveImage({
     content,
@@ -17339,6 +17375,12 @@ const HighlightPopoverBody = ({
     l10nKey: "subtitle",
     defaultL10nId: body?.subtitle?.l10nId
   });
+  const cta = resolveText({
+    content,
+    rawKey: "cardCta",
+    l10nKey: "cta",
+    defaultL10nId: body?.cta?.l10nId
+  });
   return /*#__PURE__*/external_React_default().createElement("div", {
     className: "highlight-popover-body"
   }, /*#__PURE__*/external_React_default().createElement(HighlightImage, {
@@ -17352,7 +17394,17 @@ const HighlightPopoverBody = ({
     as: "p",
     className: "subtitle",
     value: subtitle
-  }));
+  }), cta && onCtaClick && /*#__PURE__*/external_React_default().createElement("span", {
+    className: "button-wrapper"
+  }, cta.raw ? /*#__PURE__*/external_React_default().createElement("moz-button", {
+    type: "primary",
+    label: cta.raw,
+    onClick: onCtaClick
+  }) : /*#__PURE__*/external_React_default().createElement("moz-button", {
+    type: "primary",
+    "data-l10n-id": cta.l10nId,
+    onClick: onCtaClick
+  })));
 };
 ;// CONCATENATED MODULE: ./content-src/components/DiscoveryStreamComponents/FeatureHighlight/OMCHighlightSlot.jsx
 /* This Source Code Form is subject to the terms of the Mozilla Public
@@ -17365,11 +17417,18 @@ const HighlightPopoverBody = ({
 
 
 
+
+
+// MESSAGE_CLICK telemetry source label for the callout's CTA button.
+const CTA_CLICK_SOURCE = "cta";
 const PopoverShell = ({
   entry,
   content,
   handleDismiss,
-  handleBlock
+  handleBlock,
+  handleClick,
+  handleClose,
+  dispatch
 }) => {
   const dismissCallback = (0,external_React_namespaceObject.useCallback)(() => {
     handleDismiss?.();
@@ -17377,6 +17436,27 @@ const PopoverShell = ({
       handleBlock?.();
     }
   }, [entry.dismiss, handleDismiss, handleBlock]);
+
+  // The CTA opens content.surveyUrl in a new tab and records the click. Taking
+  // the survey is a conversion, not a dismissal, so we block (to keep the
+  // callout from reappearing) and close the popover, but leave MESSAGE_DISMISS
+  // to the X button and outside clicks. Only wired up when a surveyUrl is
+  // present so we never render a "Take survey" button that just closes.
+  const surveyUrl = content?.surveyUrl;
+  const onCtaClick = (0,external_React_namespaceObject.useCallback)(() => {
+    dispatch(actionCreators.OnlyToMain({
+      type: actionTypes.OPEN_LINK,
+      data: {
+        url: surveyUrl,
+        where: "tab"
+      }
+    }));
+    handleClick?.(CTA_CLICK_SOURCE);
+    if (entry.dismiss === DISMISS_MODES.BLOCK) {
+      handleBlock?.();
+    }
+    handleClose?.();
+  }, [surveyUrl, entry.dismiss, dispatch, handleClick, handleBlock, handleClose]);
   return /*#__PURE__*/external_React_default().createElement(FeatureHighlight, {
     position: entry.chrome.position,
     arrowPosition: entry.chrome.arrowPosition,
@@ -17385,7 +17465,8 @@ const PopoverShell = ({
     showButtonIcon: false,
     message: /*#__PURE__*/external_React_default().createElement(HighlightPopoverBody, {
       body: entry.body,
-      content: content
+      content: content,
+      onCtaClick: surveyUrl ? onCtaClick : undefined
     }),
     dismissCallback: dismissCallback,
     outsideClickCallback: handleDismiss
