@@ -17,10 +17,10 @@ Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/ba88bd50d70897cc1
  9 files changed, 14 insertions(+), 11 deletions(-)
 
 diff --git a/api/environment/environment_factory.cc b/api/environment/environment_factory.cc
-index 3c6ef979ae..1b0af2219e 100644
+index 72a0fdbbd3..62bbb01741 100644
 --- a/api/environment/environment_factory.cc
 +++ b/api/environment/environment_factory.cc
-@@ -108,7 +108,7 @@ Environment EnvironmentFactory::CreateWithDefaults() && {
+@@ -109,7 +109,7 @@ Environment EnvironmentFactory::CreateWithDefaults() && {
      Set(std::make_unique<DeprecatedGlobalFieldTrials>());
    }
  #if defined(WEBRTC_MOZILLA_BUILD)
