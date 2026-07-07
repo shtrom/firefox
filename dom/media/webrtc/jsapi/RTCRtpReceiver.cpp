@@ -191,6 +191,11 @@ RTCRtpReceiver::RTCRtpReceiver(
 
   mParameters.mCodecs.Construct();
   mParameters.mHeaderExtensions.Construct();
+
+  mParameters.mRtcp.Construct();
+  // On a receiver, rtcp.cname is left unset; it is a sender-side value.
+  // TODO(bug 1765852): We do not support reduced size yet
+  mParameters.mRtcp.Value().mReducedSize.Construct(false);
 }
 
 #undef INIT_MIRROR
