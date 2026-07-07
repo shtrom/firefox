@@ -7,7 +7,7 @@
 #
 # Options:
 #   --channel <release|beta|devedition|nightly>   Choose Firefox channel (default: release)
-#   --install-method <method>          Force install method: apt
+#   --install-method <method>          Force install method: apt, rpm
 #   --lang <locale>                    Force locale (e.g. fr, de, ja)
 #   -v, --verbose                      Enable verbose output
 #   -h, --help                         Show this help
@@ -112,6 +112,16 @@ download_to_stdout() {
     fi
 }
 
+rpm_pkg_exists() {
+    local _mgr="$1"
+    local _name="$2"
+    case "$_mgr" in
+        dnf|yum)  "$_mgr" info "$_name" >/dev/null 2>&1 ;;
+        zypper)   zypper --non-interactive search --match-exact --type package "$_name" >/dev/null 2>&1 ;;
+        *)        return 1 ;;
+    esac
+}
+
 # Check that a URL is reachable before relying on it
 check_url() {
     local _url="$1"
@@ -135,7 +145,7 @@ Usage: curl --proto '=https' --tlsv1.2 -sSf <url>/install-firefox.sh -o install-
 
 Options:
   --channel <release|beta|devedition|nightly>   Choose Firefox channel (default: release)
-  --install-method <method>          Force install method: apt
+  --install-method <method>          Force install method: apt, rpm
   --lang <locale>                    Force locale (e.g. fr, de, ja)
   -v, --verbose                      Enable verbose output (shell trace + sudo command logging)
   -h, --help                         Show this help
@@ -158,8 +168,8 @@ parse_args() {
                 shift
                 INSTALL_METHOD="${1:?Missing install method value}"
                 case "$INSTALL_METHOD" in
-                    apt) ;;
-                    *) error "Invalid install method '$INSTALL_METHOD'. Must be: apt" ;;
+                    apt|rpm) ;;
+                    *) error "Invalid install method '$INSTALL_METHOD'. Must be: apt, rpm" ;;
                 esac
                 ;;
             --lang)
@@ -429,6 +439,82 @@ install_apt() {
     ok "Firefox ($CHANNEL, $ARCH, $DETECTED_LOCALE) installed via apt"
 }
 
+rpm_detect_pkg_manager() {
+    if check_cmd dnf; then
+        echo "dnf"
+    elif check_cmd yum; then
+        error "yum is not supported: verifying Mozilla's package signatures requires RPM 4.18+ (GPG subkey support), but yum-based systems ship older RPM versions that cannot verify the signing key. Use --install-method flatpak or --install-method tarball instead, or upgrade to a distribution with dnf (RHEL 8+, Fedora, etc.)."
+    elif check_cmd zypper; then
+        echo "zypper"
+    else
+        error "No supported RPM package manager found (dnf, yum, zypper)"
+    fi
+}
+
+rpm_add_repository() {
+    local _pkg_manager="$1"
+    local _repo_url="$2"
+    local _gpg_key="$3"
+    if [ "$_pkg_manager" = "zypper" ]; then
+        # --gpgcheck-allow-unsigned-repo: Mozilla's repo metadata is not GPG-signed;
+        # individual .rpm packages are verified via gpgcheck=1 at install time.
+        zypper lr mozilla-firefox >/dev/null 2>&1 || \
+            run_sudo zypper ar -f -p 10 --gpgcheck-allow-unsigned-repo \
+                "$_repo_url" mozilla-firefox
+        # Note: unlike the apt path, the downloaded key is not verified against a
+        # hardcoded fingerprint — packages are verified by gpgcheck=1 instead.
+        retry run_sudo zypper --gpg-auto-import-keys refresh mozilla-firefox
+    else
+        local _repo_file="/etc/yum.repos.d/mozilla-firefox.repo"
+        if [ ! -f "$_repo_file" ]; then
+            run_sudo tee "$_repo_file" >/dev/null <<REPOEOF
+[mozilla-firefox]
+name=Mozilla Firefox
+baseurl=${_repo_url}
+enabled=1
+gpgcheck=1
+repo_gpgcheck=0
+gpgkey=${_gpg_key}
+priority=10
+REPOEOF
+        fi
+    fi
+}
+
+rpm_install_packages() {
+    local _pkg_manager="$1"
+    local _pkg="$2"
+    local _l10n_pkg="$3"
+    if [ "$_pkg_manager" = "zypper" ]; then
+        # --replacefiles: on openSUSE the distro ships MozillaFirefox which owns
+        # /usr/bin/firefox; zypper blocks the install without this flag.
+        retry run_sudo zypper install -y --replacefiles "$_pkg"
+    else
+        retry run_sudo "$_pkg_manager" install -y "$_pkg"
+    fi
+    if [ -n "$_l10n_pkg" ]; then
+        # Soft fallback: Mozilla RPM repos have fewer l10n packages than apt.
+        # One attempt only — retry would exit 1 on failure, defeating the fallback.
+        run_sudo "$_pkg_manager" install -y "$_l10n_pkg" 2>/dev/null || \
+            warn "Could not install language pack $_l10n_pkg; Firefox is installed without it"
+    fi
+}
+
+install_rpm() {
+    local _pkg_manager _pkg _repo_url _gpg_key _l10n_pkg
+    _pkg_manager="$(rpm_detect_pkg_manager)"
+    info "Installing Firefox ($CHANNEL) via $_pkg_manager..."
+    _pkg="$(channel_to_package)"
+    _repo_url="https://packages.mozilla.org/rpm/firefox"
+    _gpg_key="https://packages.mozilla.org/rpm/firefox/signing-key.gpg"
+    check_url "$_repo_url" || error "Mozilla RPM repository is not reachable at $_repo_url"
+    rpm_add_repository "$_pkg_manager" "$_repo_url" "$_gpg_key"
+    _rpm_l10n_check() { rpm_pkg_exists "$_pkg_manager" "$1"; }
+    find_l10n_package _rpm_l10n_check "$_pkg"
+    rpm_install_packages "$_pkg_manager" "$_pkg" "$_l10n_pkg"
+    ok "Firefox ($CHANNEL, $ARCH, $DETECTED_LOCALE) installed via $_pkg_manager"
+}
+
 detect_best_method() {
     if [ -n "$INSTALL_METHOD" ]; then
         info "Using forced install method: $INSTALL_METHOD"
@@ -437,6 +523,8 @@ detect_best_method() {
 
     if check_cmd apt-get; then
         INSTALL_METHOD="apt"
+    elif check_cmd dnf || check_cmd zypper; then
+        INSTALL_METHOD="rpm"
     else
         error "No supported package manager found. Use --install-method to force one."
     fi
@@ -448,6 +536,7 @@ install_firefox() {
     if [ "$VERBOSE" = true ]; then set -x; fi
     case "$INSTALL_METHOD" in
         apt) install_apt ;;
+        rpm) install_rpm ;;
         *)   error "Unknown install method: $INSTALL_METHOD" ;;
     esac
     if [ "$VERBOSE" = true ]; then set +x; fi
