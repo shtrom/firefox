@@ -94,7 +94,7 @@ class HgRepository(Repository):
         self._client.close()
 
     def _run(self, *args, **runargs):
-        if not self._client.server or runargs.get("env"):
+        if not self._client.server:
             return super()._run(*args, **runargs)
 
         # hglib requires bytes on python 3
@@ -294,7 +294,6 @@ class HgRepository(Repository):
         ref: Optional[str] = None,
         dest_branch: Optional[str] = None,
         force: bool = False,
-        env: Optional[dict] = None,
     ):
         if ref and not remote:
             raise ValueError("Cannot specify ref without specifying remote")
@@ -306,9 +305,7 @@ class HgRepository(Repository):
             args.append(remote)
         if ref:
             args.extend(["-r", ref])
-
-        kwargs = {"env": env} if env else {}
-        self._run(*args, **kwargs)
+        self._run(*args)
 
     def _resolve_try_branch(self):
         return self.branch

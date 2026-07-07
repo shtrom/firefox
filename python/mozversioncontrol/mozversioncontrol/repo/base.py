@@ -68,7 +68,17 @@ class Repository(abc.ABC):
             )
         return relative_path.as_posix()
 
-    def _run(self, *args, encoding="utf-8", return_codes=None, **runargs):
+    def _process_run_args(self, *args, **runargs):
+        return_codes = runargs.get("return_codes", [])
+        env = self._env
+        if "env" in runargs:
+            env = env.copy()
+            env.update(runargs["env"])
+
+        cmd = (str(self._tool),) + args
+        return (cmd, return_codes, env)
+
+    def _run(self, *args, encoding="utf-8", **runargs):
         # Check if we have a tool, either hg or git. If this is a source release
         # we return "src", indicating we don't have a tool to use. This caused
         # jstests to fail before fixing, because it uses a packaged mozjs
@@ -76,33 +86,28 @@ class Repository(abc.ABC):
         if not self._tool:
             return "src"
 
-        cmd = (str(self._tool),) + args
-        return_codes = return_codes or []
-
-        env = self._env
-        if extra_env := runargs.pop("env", None):
-            env = env.copy()
-            env.update(extra_env)
-
-        runargs.setdefault("stdout", subprocess.PIPE)
-        runargs.setdefault("check", True)
+        (cmd, return_codes, env) = self._process_run_args(*args, **runargs)
+        stderr = runargs.get("stderr", None)
         try:
-            result = subprocess.run(  # noqa: PLW1510
-                cmd, cwd=self.path, encoding=encoding, env=env, **runargs
+            return subprocess.check_output(
+                cmd,
+                cwd=self.path,
+                encoding=encoding,
+                env=env,
+                stderr=stderr,
             )
-            return result.stdout
         except subprocess.CalledProcessError as e:
             if e.returncode in return_codes:
                 return ""
             raise
 
     def _pipefrom(self, *args, encoding="utf-8"):
-        cmd = (str(self._tool),) + args
+        (cmd, _return_codes, env) = self._process_run_args(*args)
         return subprocess.Popen(
             cmd,
             cwd=self.path,
             encoding=encoding,
-            env=self._env,
+            env=env,
             stdout=subprocess.PIPE,
         ).stdout
 
@@ -278,7 +283,6 @@ class Repository(abc.ABC):
         ref: Optional[str] = None,
         dest_branch: Optional[str] = None,
         force: bool = False,
-        env: Optional[dict] = None,
     ):
         """Push to a remote repository.
 
@@ -286,7 +290,6 @@ class Repository(abc.ABC):
         `ref` specifies the branch or ref to push. If None, the current branch/ref is used.
         `dest_branch` specifies the destination branch name. If None, pushes ref to ref.
         `force` whether to use a force push (default False).
-        `env` additional environment to set while pushing.
         """
 
     def add_note(
