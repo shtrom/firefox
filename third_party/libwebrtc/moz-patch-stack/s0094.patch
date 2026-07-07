@@ -52,10 +52,10 @@ index 6acf2f8a0b..6ff80536c6 100644
  
  rtc_library("encoded_frame") {
 diff --git a/webrtc.gni b/webrtc.gni
-index 428702516c..d5daa54c3f 100644
+index c0366647c8..e33f548341 100644
 --- a/webrtc.gni
 +++ b/webrtc.gni
-@@ -487,8 +487,8 @@ all_poison_types = [
+@@ -491,8 +491,8 @@ all_poison_types = [
    "default_neural_residual_echo_estimator",
  ]
  

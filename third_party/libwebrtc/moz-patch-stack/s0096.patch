@@ -383,7 +383,7 @@ index b671239bae..e545b2cde3 100644
    android_java_prebuilt("autobanh_java") {
      jar_path = "lib/autobanh.jar"
 diff --git a/examples/androidnativeapi/BUILD.gn b/examples/androidnativeapi/BUILD.gn
-index ff334cc746..0ca98d2767 100644
+index 02bb6b7db4..6cfd97ca61 100644
 --- a/examples/androidnativeapi/BUILD.gn
 +++ b/examples/androidnativeapi/BUILD.gn
 @@ -41,8 +41,8 @@ if (is_android) {
@@ -398,10 +398,10 @@ index ff334cc746..0ca98d2767 100644
      deps = [
        ":generated_jni",
 diff --git a/examples/androidvoip/BUILD.gn b/examples/androidvoip/BUILD.gn
-index c26d2b2b50..14a8e16c55 100644
+index cb7554cb5a..1259899cd2 100644
 --- a/examples/androidvoip/BUILD.gn
 +++ b/examples/androidvoip/BUILD.gn
-@@ -50,8 +50,8 @@ if (is_android) {
+@@ -51,8 +51,8 @@ if (is_android) {
        "jni/onload.cc",
      ]
  
@@ -664,7 +664,7 @@ index af412f6890..51a0e6160c 100644
  
  rtc_source_set("arch") {
 diff --git a/rtc_tools/network_tester/BUILD.gn b/rtc_tools/network_tester/BUILD.gn
-index 9da8b4ef4c..9a89320eb2 100644
+index eeac69b6cc..28254272eb 100644
 --- a/rtc_tools/network_tester/BUILD.gn
 +++ b/rtc_tools/network_tester/BUILD.gn
 @@ -189,8 +189,8 @@ if (is_android) {
@@ -677,7 +677,7 @@ index 9da8b4ef4c..9a89320eb2 100644
 +    configs += [ "//chromium/build/config/android:hide_all_but_jni" ]
  
      output_extension = "so"
-   }
+ 
 diff --git a/sdk/BUILD.gn b/sdk/BUILD.gn
 index b861a4d6df..8c1e975546 100644
 --- a/sdk/BUILD.gn
@@ -781,7 +781,7 @@ index e9783f651a..651f67920b 100644
    }
  }
 diff --git a/webrtc.gni b/webrtc.gni
-index f06d224db7..8b43c67c88 100644
+index afd90fd7cd..fcb4fe1bb6 100644
 --- a/webrtc.gni
 +++ b/webrtc.gni
 @@ -5,12 +5,12 @@
@@ -803,12 +803,16 @@ index f06d224db7..8b43c67c88 100644
  import("//build_overrides/build.gni")
  
  if (!build_with_chromium && is_component_build) {
-@@ -28,20 +28,20 @@ if (!build_with_chromium && is_component_build) {
+@@ -28,7 +28,7 @@ if (!build_with_chromium && is_component_build) {
  }
  
  if (is_ios) {
 -  import("//build/config/ios/rules.gni")
 +  import("//chromium/build/config/ios/rules.gni")
+ }
+ 
+ if (is_android) {
+@@ -36,16 +36,16 @@ if (is_android) {
  }
  
  if (is_mac) {
@@ -829,7 +833,7 @@ index f06d224db7..8b43c67c88 100644
  }
  
  if (build_with_chromium) {
-@@ -365,8 +365,8 @@ rtc_common_configs = [ webrtc_root + ":common_config" ]
+@@ -369,8 +369,8 @@ rtc_common_configs = [ webrtc_root + ":common_config" ]
  
  if (is_mac || is_ios) {
    if (filter_include(default_compiler_configs,
@@ -840,7 +844,7 @@ index f06d224db7..8b43c67c88 100644
    }
  }
  
-@@ -389,7 +389,7 @@ rtc_common_inherited_config = webrtc_root + ":common_inherited_config"
+@@ -393,7 +393,7 @@ rtc_common_inherited_config = webrtc_root + ":common_inherited_config"
  # Common configs to remove or add in all rtc targets.
  rtc_remove_configs = []
  if (!build_with_chromium && is_clang) {

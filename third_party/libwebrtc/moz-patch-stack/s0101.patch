@@ -148,10 +148,10 @@ index 08da574eb2..5d3b7c2319 100644
  rtc_library("ssl") {
  if (!build_with_mozilla) {
 diff --git a/webrtc.gni b/webrtc.gni
-index 7416d4b176..f6a4f3e66c 100644
+index c4040fee9e..08be7fbbb3 100644
 --- a/webrtc.gni
 +++ b/webrtc.gni
-@@ -112,7 +112,7 @@ declare_args() {
+@@ -116,7 +116,7 @@ declare_args() {
  
    # Used to specify an external OpenSSL include path when not compiling the
    # library that comes with WebRTC (i.e. rtc_build_ssl == 0).
@@ -160,7 +160,7 @@ index 7416d4b176..f6a4f3e66c 100644
  
    # Selects whether debug dumps for the audio processing module
    # should be generated.
-@@ -333,7 +333,7 @@ declare_args() {
+@@ -337,7 +337,7 @@ declare_args() {
  }
  
  # Enable liboam only on non-mozilla builds.

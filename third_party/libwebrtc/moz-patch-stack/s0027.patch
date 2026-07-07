@@ -1272,10 +1272,10 @@ index 33bd20d7e6..ed8d45a1e6 100644
      "../api:sequence_checker",
      "../api/adaptation:resource_adaptation_api",
 diff --git a/webrtc.gni b/webrtc.gni
-index 3f3b9314a3..76592553d8 100644
+index 33ec055dae..223c6788fd 100644
 --- a/webrtc.gni
 +++ b/webrtc.gni
-@@ -35,6 +35,11 @@ if (is_mac) {
+@@ -39,6 +39,11 @@ if (is_mac) {
    import("//build/config/mac/rules.gni")
  }
  
@@ -1287,7 +1287,7 @@ index 3f3b9314a3..76592553d8 100644
  if (is_fuchsia) {
    import("//build/config/fuchsia/config.gni")
  }
-@@ -46,6 +51,11 @@ if (build_with_chromium) {
+@@ -50,6 +55,11 @@ if (build_with_chromium) {
  # This declare_args is separated from the next one because args declared
  # in this one, can be read from the next one (args defined in the same
  # declare_args cannot be referenced in that scope).
@@ -1299,7 +1299,7 @@ index 3f3b9314a3..76592553d8 100644
  declare_args() {
    # Setting this to true will make RTC_EXPORT (see rtc_base/system/rtc_export.h)
    # expand to code that will manage symbols visibility.
-@@ -79,7 +89,7 @@ declare_args() {
+@@ -83,7 +93,7 @@ declare_args() {
    # will tell the pre-processor to remove the default definition of the
    # SystemTimeNanos() which is defined in rtc_base/system_time.cc. In
    # that case a new implementation needs to be provided.
@@ -1308,7 +1308,7 @@ index 3f3b9314a3..76592553d8 100644
  
    # Setting this to false will require the API user to pass in their own
    # SSLCertificateVerifier to verify the certificates presented from a
-@@ -102,7 +112,7 @@ declare_args() {
+@@ -106,7 +116,7 @@ declare_args() {
  
    # Used to specify an external OpenSSL include path when not compiling the
    # library that comes with WebRTC (i.e. rtc_build_ssl == 0).
@@ -1317,7 +1317,7 @@ index 3f3b9314a3..76592553d8 100644
  
    # Selects whether debug dumps for the audio processing module
    # should be generated.
-@@ -112,13 +122,13 @@ declare_args() {
+@@ -116,13 +126,13 @@ declare_args() {
    rtc_exclude_audio_processing_module = false
  
    # Set this to false to skip building examples.
@@ -1334,7 +1334,7 @@ index 3f3b9314a3..76592553d8 100644
  
    # Set this to use PipeWire on the Wayland display server.
    # By default it's only enabled on desktop Linux (excludes ChromeOS) and
-@@ -129,9 +139,6 @@ declare_args() {
+@@ -133,9 +143,6 @@ declare_args() {
    # Set this to link PipeWire and required libraries directly instead of using the dlopen.
    rtc_link_pipewire = false
  
@@ -1344,7 +1344,7 @@ index 3f3b9314a3..76592553d8 100644
    # Experimental: enable use of Android AAudio which requires Android SDK 26 or above
    # and NDK r16 or above.
    rtc_enable_android_aaudio = false
-@@ -270,7 +277,7 @@ declare_args() {
+@@ -274,7 +281,7 @@ declare_args() {
    rtc_build_json = !build_with_mozilla
    rtc_build_libsrtp = !build_with_mozilla
    rtc_build_libvpx = !build_with_mozilla
@@ -1353,7 +1353,7 @@ index 3f3b9314a3..76592553d8 100644
    rtc_build_opus = !build_with_mozilla
    rtc_build_ssl = !build_with_mozilla
  
-@@ -279,7 +286,7 @@ declare_args() {
+@@ -283,7 +290,7 @@ declare_args() {
  
    # Chromium uses its own IO handling, so the internal ADM is only built for
    # standalone WebRTC.
@@ -1362,7 +1362,7 @@ index 3f3b9314a3..76592553d8 100644
  
    # Set this to true to enable the avx2 support in webrtc.
    # TODO: Make sure that AVX2 works also for non-clang compilers.
-@@ -325,6 +332,9 @@ declare_args() {
+@@ -329,6 +336,9 @@ declare_args() {
    rtc_enable_grpc = rtc_enable_protobuf && (is_linux || is_mac)
  }
  
@@ -1372,7 +1372,7 @@ index 3f3b9314a3..76592553d8 100644
  # Make it possible to provide custom locations for some libraries (move these
  # up into declare_args should we need to actually use them for the GN build).
  rtc_libvpx_dir = "//third_party/libvpx"
-@@ -1235,7 +1245,7 @@ if (is_mac || is_ios) {
+@@ -1244,7 +1254,7 @@ if (is_mac || is_ios) {
    }
  }
  
