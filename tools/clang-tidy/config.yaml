@@ -33,6 +33,8 @@ clang_checkers:
     reliability: high
   - name: modernize-use-equals-delete
     reliability: high
+  - name: modernize-use-transparent-functors
+    reliability: high
   - name: readability-redundant-string-cstr
     reliability: high
   - name: readability-redundant-string-init

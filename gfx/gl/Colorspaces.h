@@ -994,7 +994,7 @@ inline void DequantizeMonotonic(const Span<float> vals) {
   static constexpr bool INFER_HEAD_TAIL_FROM_BODY_EDGE = false;
   // Basically ignore contents of head and tail, and infer from edges of body.
   // print("3: %s\n", to_str(vals).c_str());
-  if (!IsMonotonic(head, std::less<float>{})) {
+  if (!IsMonotonic(head, std::less<>{})) {
     if (!INFER_HEAD_TAIL_FROM_BODY_EDGE) {
       LinearFill(head,
                  {
@@ -1008,7 +1008,7 @@ inline void DequantizeMonotonic(const Span<float> vals) {
                        });
     }
   }
-  if (!IsMonotonic(tail, std::less<float>{})) {
+  if (!IsMonotonic(tail, std::less<>{})) {
     if (!INFER_HEAD_TAIL_FROM_BODY_EDGE) {
       LinearFill(tail, {
                            {-0.5, (*(tail_begin - 1) + *tail.begin()) / 2},
@@ -1022,7 +1022,7 @@ inline void DequantizeMonotonic(const Span<float> vals) {
     }
   }
   // print("3: %s\n", to_str(vals).c_str());
-  MOZ_ASSERT(IsMonotonic(vals, std::less<float>{}));
+  MOZ_ASSERT(IsMonotonic(vals, std::less<>{}));
 
   // Rescale, because we tend to lose range.
   static constexpr bool RESCALE = false;
@@ -1041,14 +1041,14 @@ static void InvertLut(const In& lut, Out* const out_invertedLut) {
   MOZ_ASSERT(IsMonotonic(lut));
   auto plut = &lut;
   auto vec = std::vector<float>{};
-  if (!IsMonotonic(lut, std::less<float>{})) {
+  if (!IsMonotonic(lut, std::less<>{})) {
     // print("Not strictly monotonic...\n");
     vec.assign(lut.begin(), lut.end());
     DequantizeMonotonic(vec);
     plut = &vec;
     // print("  Now strictly monotonic: %i: %s\n",
-    //   int(IsMonotonic(*plut, std::less<float>{})), to_str(*plut).c_str());
-    MOZ_ASSERT(IsMonotonic(*plut, std::less<float>{}));
+    //   int(IsMonotonic(*plut, std::less<>{})), to_str(*plut).c_str());
+    MOZ_ASSERT(IsMonotonic(*plut, std::less<>{}));
   }
   MOZ_ASSERT(plut->size() >= 2);
 
@@ -1060,7 +1060,7 @@ static void InvertLut(const In& lut, Out* const out_invertedLut) {
   }
 
   MOZ_ASSERT(IsMonotonic(ret));
-  MOZ_ASSERT(IsMonotonic(ret, std::less<float>{}));
+  MOZ_ASSERT(IsMonotonic(ret, std::less<>{}));
 }
 
 // -
