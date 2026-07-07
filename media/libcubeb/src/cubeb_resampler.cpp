@@ -315,10 +315,7 @@ cubeb_resampler_speex<T, InputProcessor, OutputProcessor>::fill_internal_duplex(
       input_queue.push(in_buffer, *input_frames_count * input_channels);
       long available = static_cast<long>(input_queue.length() / input_channels);
       if (available < output_frames_before_processing) {
-        /* Capture underrun: pad with silence rather than presenting fewer
-         * frames to the callback, which would shorten the output. */
-        input_queue.push_silence((output_frames_before_processing - available) *
-                                 input_channels);
+        output_frames_before_processing = available;
       }
       resampled_input = input_queue.data();
       *input_frames_count = original_count;
