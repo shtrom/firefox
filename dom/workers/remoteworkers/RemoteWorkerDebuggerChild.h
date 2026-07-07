@@ -5,8 +5,8 @@
 #ifndef mozilla_dom_RemoteWorkerDebuggerChild_h
 #define mozilla_dom_RemoteWorkerDebuggerChild_h
 
-#include "mozilla/dom/PRemoteWorkerDebuggerChild.h"
 #include "mozilla/Maybe.h"
+#include "mozilla/dom/PRemoteWorkerDebuggerChild.h"
 #include "nsTArray.h"
 
 using mozilla::ipc::IPCResult;
