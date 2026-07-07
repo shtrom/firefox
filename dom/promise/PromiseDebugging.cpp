@@ -4,7 +4,6 @@
 
 #include "mozilla/dom/PromiseDebugging.h"
 
-#include "js/Promise.h"
 #include "js/Value.h"
 #include "mozilla/CycleCollectedJSContext.h"
 #include "mozilla/RefPtr.h"
@@ -44,7 +43,7 @@ class FlushRejections : public DiscardableRunnable {
     NS_DispatchToCurrentThread(new FlushRejections());
   }
 
-  static void FlushSync(bool aDeferToEventPath = true) {
+  static void FlushSync() {
     sDispatched.set(false);
 
     // Call the callbacks if necessary.
@@ -52,7 +51,7 @@ class FlushRejections : public DiscardableRunnable {
     // uncaught or consumed. Since `sDispatched` is `false`,
     // `FlushRejections` will be called once again, on an ulterior
     // tick.
-    PromiseDebugging::FlushUncaughtRejectionsInternal(aDeferToEventPath);
+    PromiseDebugging::FlushUncaughtRejectionsInternal();
   }
 
   NS_IMETHOD Run() override {
@@ -179,9 +178,7 @@ void PromiseDebugging::Shutdown() { sIDPrefix.SetIsVoid(true); }
 /* static */
 void PromiseDebugging::FlushUncaughtRejections() {
   MOZ_ASSERT(!NS_IsMainThread());
-  // Worker shutdown — NotifyUnhandledRejections may never run,
-  // so don't defer console reporting to the event path.
-  FlushRejections::FlushSync(/* aDeferToEventPath = */ false);
+  FlushRejections::FlushSync();
 }
 
 /* static */
@@ -233,14 +230,6 @@ void PromiseDebugging::AddConsumedRejection(JS::Handle<JSObject*> aPromise) {
       return;
     }
   }
-  // If this promise is deferred to the NotifyUnhandledRejections event path,
-  // that path will see it's handled and skip it. Don't enqueue a consumed
-  // notification (would cause onConsumed without prior onLeftUncaught).
-  const uint64_t promiseID = JS::GetPromiseID(aPromise);
-  if (CycleCollectedJSContext::Get()->HasPendingUnhandledRejection(promiseID)) {
-    return;
-  }
-
   // This might OOM, but won't set a pending exception, so we'll just ignore it.
   if (CycleCollectedJSContext::Get()->mConsumedRejections.append(aPromise)) {
     FlushRejections::DispatchNeeded();
@@ -248,7 +237,7 @@ void PromiseDebugging::AddConsumedRejection(JS::Handle<JSObject*> aPromise) {
 }
 
 /* static */
-void PromiseDebugging::FlushUncaughtRejectionsInternal(bool aDeferToEventPath) {
+void PromiseDebugging::FlushUncaughtRejectionsInternal() {
   CycleCollectedJSContext* storage = CycleCollectedJSContext::Get();
 
   auto& uncaught = storage->mUncaughtRejections;
@@ -267,15 +256,6 @@ void PromiseDebugging::FlushUncaughtRejectionsInternal(bool aDeferToEventPath) {
     // PromiseDebugging::AddConsumedRejection.
     if (!promise) {
       continue;
-    }
-
-    // If this promise will go through the NotifyUnhandledRejections event
-    // path, defer both observer notification and console reporting there.
-    if (aDeferToEventPath) {
-      const uint64_t promiseID = JS::GetPromiseID(promise);
-      if (storage->HasPendingUnhandledRejection(promiseID)) {
-        continue;
-      }
     }
 
     bool suppressReporting = false;
