@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
+#include <numeric>
 #include <optional>
 #include <ostream>
 #include <vector>
@@ -985,8 +986,8 @@ inline void DequantizeMonotonic(const Span<float> vals) {
     const auto prev_part_last = part_first - 1;
     const auto part_last = next_part_first - 1;
     const auto line = TwoPoints<float>{
-        {-0.5, (*prev_part_last + *part_first) / 2},
-        {part.size() - 0.5f, (*part_last + *next_part_first) / 2},
+        {-0.5, std::midpoint(*prev_part_last, *part_first)},
+        {part.size() - 0.5f, std::midpoint(*part_last, *next_part_first)},
     };
     LinearFill(part, line);
   }
@@ -996,11 +997,11 @@ inline void DequantizeMonotonic(const Span<float> vals) {
   // print("3: %s\n", to_str(vals).c_str());
   if (!IsMonotonic(head, std::less<>{})) {
     if (!INFER_HEAD_TAIL_FROM_BODY_EDGE) {
-      LinearFill(head,
-                 {
-                     {0, *head.begin()},
-                     {head.size() - 0.5f, (*(head.end() - 1) + *head_end) / 2},
-                 });
+      LinearFill(head, {
+                           {0, *head.begin()},
+                           {head.size() - 0.5f,
+                            std::midpoint(*(head.end() - 1), *head_end)},
+                       });
     } else {
       LinearFill(head, {
                            {head.size() + 0.0f, *head_end},
@@ -1010,10 +1011,11 @@ inline void DequantizeMonotonic(const Span<float> vals) {
   }
   if (!IsMonotonic(tail, std::less<>{})) {
     if (!INFER_HEAD_TAIL_FROM_BODY_EDGE) {
-      LinearFill(tail, {
-                           {-0.5, (*(tail_begin - 1) + *tail.begin()) / 2},
-                           {tail.size() - 1.0f, *(tail.end() - 1)},
-                       });
+      LinearFill(tail,
+                 {
+                     {-0.5, std::midpoint(*(tail_begin - 1), *tail.begin())},
+                     {tail.size() - 1.0f, *(tail.end() - 1)},
+                 });
     } else {
       LinearFill(tail, {
                            {-2.0f, *(tail_begin - 2)},
