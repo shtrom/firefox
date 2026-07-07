@@ -402,10 +402,14 @@ nsTArray<RefPtr<dom::RTCStatsPromise>> RTCRtpSender::GetStatsInternal(
             if (audioStats) {
               local.mPacketsSent.Construct(audioStats->packets_sent);
               local.mBytesSent.Construct(audioStats->payload_bytes_sent);
-              local.mNackCount.Construct(audioStats->rtcp_packet_type_counts.nack_packets);
-              local.mHeaderBytesSent.Construct(audioStats->header_and_padding_bytes_sent);
-              local.mRetransmittedPacketsSent.Construct(audioStats->retransmitted_packets_sent);
-              local.mRetransmittedBytesSent.Construct(audioStats->retransmitted_bytes_sent);
+              local.mNackCount.Construct(
+                  audioStats->rtcp_packet_type_counts.nack_packets);
+              local.mHeaderBytesSent.Construct(
+                  audioStats->header_and_padding_bytes_sent);
+              local.mRetransmittedPacketsSent.Construct(
+                  audioStats->retransmitted_packets_sent);
+              local.mRetransmittedBytesSent.Construct(
+                  audioStats->retransmitted_bytes_sent);
             } else {
               local.mPacketsSent.Construct(0);
               local.mBytesSent.Construct(0);
@@ -564,8 +568,8 @@ nsTArray<RefPtr<dom::RTCStatsPromise>> RTCRtpSender::GetStatsInternal(
               // webrtc::VideoSendStream::Stats does not have width/height. We
               // might be able to get this somewhere else?
               // videoStats->frames is not documented, but looking at the
-              // implementation it appears to be the number of frames inputted to
-              // the encoder, which ought to work.
+              // implementation it appears to be the number of frames inputted
+              // to the encoder, which ought to work.
               videoSourceStats.mFrames.Construct(videoStats->frames);
               videoSourceStats.mFramesPerSecond.Construct(
                   videoStats->input_frame_rate);
