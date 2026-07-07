@@ -538,7 +538,7 @@ index 88890be798..c9aefc297b 100644
  #include "rtc_base/memory/aligned_malloc.h"
  
 diff --git a/media/BUILD.gn b/media/BUILD.gn
-index 5556284a88..5105bae673 100644
+index a5c97aa0a5..48dfd4469b 100644
 --- a/media/BUILD.gn
 +++ b/media/BUILD.gn
 @@ -76,7 +76,7 @@ rtc_library("rtc_media_base") {
@@ -573,7 +573,7 @@ index 5556284a88..5105bae673 100644
  }
  
  rtc_library("video_adapter") {
-@@ -262,9 +271,16 @@ rtc_library("media_engine") {
+@@ -263,9 +272,16 @@ rtc_library("media_engine") {
      "//third_party/abseil-cpp/absl/algorithm:container",
      "//third_party/abseil-cpp/absl/functional:any_invocable",
    ]
@@ -590,7 +590,7 @@ index 5556284a88..5105bae673 100644
    sources = [
      "base/media_channel_impl.cc",
      "base/media_channel_impl.h",
-@@ -311,6 +327,7 @@ rtc_library("media_channel_impl") {
+@@ -312,6 +328,7 @@ rtc_library("media_channel_impl") {
      "//third_party/abseil-cpp/absl/strings:string_view",
    ]
  }
@@ -598,7 +598,7 @@ index 5556284a88..5105bae673 100644
  
  rtc_source_set("media_channel") {
    sources = [ "base/media_channel.h" ]
-@@ -415,6 +432,7 @@ rtc_library("codec_list") {
+@@ -416,6 +433,7 @@ rtc_library("codec_list") {
  }
  
  rtc_library("rtp_utils") {
@@ -606,7 +606,7 @@ index 5556284a88..5105bae673 100644
    sources = [
      "base/rtp_utils.cc",
      "base/rtp_utils.h",
-@@ -430,8 +448,10 @@ rtc_library("rtp_utils") {
+@@ -431,8 +449,10 @@ rtc_library("rtp_utils") {
      "//third_party/abseil-cpp/absl/strings:string_view",
    ]
  }
@@ -617,7 +617,7 @@ index 5556284a88..5105bae673 100644
    sources = [
      "base/stream_params.cc",
      "base/stream_params.h",
-@@ -445,6 +465,7 @@ rtc_library("stream_params") {
+@@ -446,6 +466,7 @@ rtc_library("stream_params") {
      "//third_party/abseil-cpp/absl/strings:string_view",
    ]
  }
@@ -625,7 +625,7 @@ index 5556284a88..5105bae673 100644
  
  rtc_library("media_constants") {
    sources = [
-@@ -455,6 +476,7 @@ rtc_library("media_constants") {
+@@ -456,6 +477,7 @@ rtc_library("media_constants") {
  }
  
  rtc_library("turn_utils") {
@@ -633,7 +633,7 @@ index 5556284a88..5105bae673 100644
    sources = [
      "base/turn_utils.cc",
      "base/turn_utils.h",
-@@ -465,8 +487,10 @@ rtc_library("turn_utils") {
+@@ -466,8 +488,10 @@ rtc_library("turn_utils") {
      "../rtc_base/system:rtc_export",
    ]
  }
@@ -644,7 +644,7 @@ index 5556284a88..5105bae673 100644
    sources = [
      "base/rid_description.cc",
      "base/rid_description.h",
-@@ -476,6 +500,7 @@ rtc_library("rid_description") {
+@@ -477,6 +501,7 @@ rtc_library("rid_description") {
      "//third_party/abseil-cpp/absl/strings:string_view",
    ]
  }
@@ -652,7 +652,7 @@ index 5556284a88..5105bae673 100644
  
  rtc_library("rtc_simulcast_encoder_adapter") {
    visibility = [ "*" ]
-@@ -560,6 +585,11 @@ rtc_library("rtc_internal_video_codecs") {
+@@ -561,6 +586,11 @@ rtc_library("rtc_internal_video_codecs") {
      "//third_party/abseil-cpp/absl/container:inlined_vector",
      "//third_party/abseil-cpp/absl/strings",
    ]
@@ -664,7 +664,7 @@ index 5556284a88..5105bae673 100644
  
    if (enable_libaom) {
      defines += [ "RTC_USE_LIBAOM_AV1_ENCODER" ]
-@@ -579,6 +609,13 @@ rtc_library("rtc_internal_video_codecs") {
+@@ -580,6 +610,13 @@ rtc_library("rtc_internal_video_codecs") {
      "engine/internal_encoder_factory.cc",
      "engine/internal_encoder_factory.h",
    ]
