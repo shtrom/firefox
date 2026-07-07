@@ -116,7 +116,7 @@ index 4706638e3e..675807743a 100644
    # TODO(https://bugs.webrtc.org/14437):  Remove this section if general
    # Chromium fix resolves the problem.
 diff --git a/BUILD.gn b/BUILD.gn
-index 0bef5aea19..9fd93022f6 100644
+index eae85b0a81..74e306fe12 100644
 --- a/BUILD.gn
 +++ b/BUILD.gn
 @@ -39,7 +39,7 @@ if (is_android) {
@@ -128,7 +128,7 @@ index 0bef5aea19..9fd93022f6 100644
    # This target should (transitively) cause everything to be built; if you run
    # 'ninja default' and then 'ninja all', the second build should do no work.
    group("default") {
-@@ -186,6 +186,10 @@ config("common_inherited_config") {
+@@ -187,6 +187,10 @@ config("common_inherited_config") {
      defines += [ "WEBRTC_ENABLE_OBJC_SYMBOL_EXPORT" ]
    }
  
@@ -139,7 +139,7 @@ index 0bef5aea19..9fd93022f6 100644
    if (!rtc_builtin_ssl_root_certificates) {
      defines += [ "WEBRTC_EXCLUDE_BUILT_IN_SSL_ROOT_CERTS" ]
    }
-@@ -501,9 +505,11 @@ config("common_config") {
+@@ -502,9 +506,11 @@ config("common_config") {
    }
  }
  
@@ -151,7 +151,7 @@ index 0bef5aea19..9fd93022f6 100644
  
  if (!rtc_build_ssl) {
    config("external_ssl_library") {
-@@ -565,6 +571,32 @@ if (!build_with_chromium) {
+@@ -566,6 +572,32 @@ if (!build_with_chromium) {
        "pc:rtc_pc",
        "video",
      ]
@@ -184,7 +184,7 @@ index 0bef5aea19..9fd93022f6 100644
  
      if (rtc_include_builtin_audio_codecs) {
        deps += [
-@@ -575,8 +607,22 @@ if (!build_with_chromium) {
+@@ -576,8 +608,22 @@ if (!build_with_chromium) {
  
      if (build_with_mozilla) {
        deps += [
@@ -1189,10 +1189,10 @@ index c0fb04ac82..af412f6890 100644
      deps += [
        "..:logging",
 diff --git a/test/BUILD.gn b/test/BUILD.gn
-index f442d98ecf..6ac2345bc2 100644
+index 1f39c7d82f..170927d2d6 100644
 --- a/test/BUILD.gn
 +++ b/test/BUILD.gn
-@@ -278,6 +278,7 @@ rtc_library("audio_test_common") {
+@@ -277,6 +277,7 @@ rtc_library("audio_test_common") {
    ]
  }
  
@@ -1200,7 +1200,7 @@ index f442d98ecf..6ac2345bc2 100644
  if (!build_with_chromium) {
    if (is_mac || is_ios) {
      rtc_library("video_test_mac") {
-@@ -332,8 +333,12 @@ if (!build_with_chromium) {
+@@ -331,8 +332,12 @@ if (!build_with_chromium) {
      }
    }
  }
@@ -1213,7 +1213,7 @@ index f442d98ecf..6ac2345bc2 100644
    testonly = true
    sources = [
      "rtcp_packet_parser.cc",
-@@ -343,6 +348,7 @@ rtc_library("rtp_test_utils") {
+@@ -342,6 +347,7 @@ rtc_library("rtp_test_utils") {
      "rtp_file_writer.cc",
      "rtp_file_writer.h",
    ]
@@ -1221,7 +1221,7 @@ index f442d98ecf..6ac2345bc2 100644
  
    deps = [
      "../api:rtp_parameters",
-@@ -512,7 +518,9 @@ rtc_library("video_frame_writer") {
+@@ -511,7 +517,9 @@ rtc_library("video_frame_writer") {
    ]
  
    if (!is_ios) {
@@ -1231,7 +1231,7 @@ index f442d98ecf..6ac2345bc2 100644
      sources += [ "testsupport/jpeg_frame_writer.cc" ]
    } else {
      sources += [ "testsupport/jpeg_frame_writer_ios.cc" ]
-@@ -1388,6 +1396,7 @@ if (!build_with_chromium) {
+@@ -1781,6 +1789,7 @@ if (!build_with_chromium) {
    }
  }
  
@@ -1239,7 +1239,7 @@ index f442d98ecf..6ac2345bc2 100644
  if (!build_with_chromium && is_android) {
    rtc_android_library("native_test_java") {
      testonly = true
-@@ -1430,6 +1439,7 @@ if (!build_with_chromium && is_android) {
+@@ -1823,6 +1832,7 @@ if (!build_with_chromium && is_android) {
      sources = [ "android/org/webrtc/native_test/NativeTestWebrtc.java" ]
    }
  }

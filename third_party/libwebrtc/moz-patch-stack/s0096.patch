@@ -74,7 +74,7 @@ index a97e2f18b4..e03aab02cf 100644
  # The python interpreter to use by default. On Windows, this will look
  # for python3.exe and python3.bat.
 diff --git a/BUILD.gn b/BUILD.gn
-index 0bd2576bc3..7fe113499a 100644
+index a735611eeb..0cc0777633 100644
 --- a/BUILD.gn
 +++ b/BUILD.gn
 @@ -21,8 +21,8 @@
@@ -99,7 +99,7 @@ index 0bd2576bc3..7fe113499a 100644
    import("//third_party/jni_zero/jni_zero.gni")
  }
  
-@@ -538,7 +538,7 @@ if (!build_with_chromium) {
+@@ -539,7 +539,7 @@ if (!build_with_chromium) {
      sources = []
  
      complete_static_lib = true
@@ -108,7 +108,7 @@ index 0bd2576bc3..7fe113499a 100644
      defines = []
  
      deps = [
-@@ -851,7 +851,7 @@ rtc_static_library("dcsctp") {
+@@ -853,7 +853,7 @@ rtc_static_library("dcsctp") {
    visibility = [ "//:default" ]
    sources = []
    complete_static_lib = true
@@ -117,7 +117,7 @@ index 0bd2576bc3..7fe113499a 100644
    defines = []
    deps = [
      "net/dcsctp/public:factory",
-@@ -889,7 +889,7 @@ group("poison_default_neural_residual_echo_estimator") {
+@@ -891,7 +891,7 @@ group("poison_default_neural_residual_echo_estimator") {
  if (!build_with_chromium) {
    # Write debug logs to gn_logs.txt.
    # This is also required for Siso builds.
@@ -733,7 +733,7 @@ index a3e9a49204..6bb07f9740 100644
  import("../webrtc.gni")
  
 diff --git a/test/BUILD.gn b/test/BUILD.gn
-index 385cf4b031..3afabcba1a 100644
+index 688064169e..aa5229372d 100644
 --- a/test/BUILD.gn
 +++ b/test/BUILD.gn
 @@ -6,10 +6,10 @@
@@ -749,7 +749,7 @@ index 385cf4b031..3afabcba1a 100644
    import("//third_party/jni_zero/jni_zero.gni")
  }
  
-@@ -429,7 +429,7 @@ if (is_ios && !build_with_chromium) {
+@@ -428,7 +428,7 @@ if (is_ios && !build_with_chromium) {
      testonly = true
      visibility = [ "*" ]
      sources = [ "ios/google_test_runner.mm" ]
@@ -759,7 +759,7 @@ index 385cf4b031..3afabcba1a 100644
      deps = [ ":google_test_runner_delegate" ]
    }
 diff --git a/test/fuzzers/BUILD.gn b/test/fuzzers/BUILD.gn
-index f68cf156e6..7728a7e52a 100644
+index 4cda97d978..9b917aa340 100644
 --- a/test/fuzzers/BUILD.gn
 +++ b/test/fuzzers/BUILD.gn
 @@ -6,7 +6,7 @@
@@ -771,7 +771,7 @@ index f68cf156e6..7728a7e52a 100644
  import("//testing/libfuzzer/fuzzer_test.gni")
  import("../../webrtc.gni")
  
-@@ -81,7 +81,7 @@ template("webrtc_fuzzer_test") {
+@@ -83,7 +83,7 @@ template("webrtc_fuzzer_test") {
      }
  
      if (!build_with_chromium && is_clang) {
