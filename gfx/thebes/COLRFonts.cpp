@@ -13,6 +13,7 @@
 #include "TextDrawTarget.h"
 
 #include <limits>
+#include <numbers>
 
 using namespace mozilla;
 using namespace mozilla::gfx;
@@ -1617,7 +1618,7 @@ struct PaintRotate : public PaintTransformBase {
 
   Matrix GetMatrix(const PaintState& aState, uint32_t aOffset) const {
     MOZ_ASSERT(format == kFormat);
-    return Matrix::Rotation(-float(angle) * float(M_PI));
+    return Matrix::Rotation(-float(angle) * std::numbers::pi_v<float>);
   }
 };
 
@@ -1628,7 +1629,7 @@ struct PaintVarRotate : public PaintRotate {
   Matrix GetMatrix(const PaintState& aState, uint32_t aOffset) const {
     MOZ_ASSERT(format == kFormat);
     float ang = ApplyVariation(aState, angle, varIndexBase);
-    return Matrix::Rotation(-ang * float(M_PI));
+    return Matrix::Rotation(-ang * std::numbers::pi_v<float>);
   }
 };
 
@@ -1642,7 +1643,7 @@ struct PaintRotateAroundCenter : public PaintTransformBase {
     MOZ_ASSERT(format == kFormat);
     Point center(aState.F2P(int16_t(centerX)), -aState.F2P(int16_t(centerY)));
     return Matrix::Translation(center)
-        .PreRotate(-float(angle) * float(M_PI))
+        .PreRotate(-float(angle) * std::numbers::pi_v<float>)
         .PreTranslate(-center);
   }
 };
@@ -1659,14 +1660,14 @@ struct PaintVarRotateAroundCenter : public PaintRotateAroundCenter {
                  -aState.F2P(ApplyVariation(aState, int16_t(centerY),
                                             SatAdd(varIndexBase, 2))));
     return Matrix::Translation(center)
-        .PreRotate(-ang * float(M_PI))
+        .PreRotate(-ang * std::numbers::pi_v<float>)
         .PreTranslate(-center);
   }
 };
 
 static inline Matrix SkewMatrix(float aSkewX, float aSkewY) {
-  float xy = tanf(aSkewX * float(M_PI));
-  float yx = tanf(aSkewY * float(M_PI));
+  float xy = tanf(aSkewX * std::numbers::pi_v<float>);
+  float yx = tanf(aSkewY * std::numbers::pi_v<float>);
   return std::isnan(xy) || std::isnan(yx) ? Matrix()
                                           : Matrix(1.0, -yx, xy, 1.0, 0.0, 0.0);
 }

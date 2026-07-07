@@ -50,6 +50,11 @@ clang_checkers:
     reliability: high
   - name: modernize-use-bool-literals
     reliability: high
+  - name: modernize-use-std-numbers
+    reliability: high
+    config:
+      - key: DiffThreshold
+        value: 0.0000001
   - name: bugprone-forwarding-reference-overload
     reliability: high
   - name: bugprone-move-forwarding-reference
