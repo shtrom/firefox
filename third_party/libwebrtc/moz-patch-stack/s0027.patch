@@ -210,7 +210,7 @@ index c3a725bbf4..1785d59731 100644
      }
  
 diff --git a/api/BUILD.gn b/api/BUILD.gn
-index 2e0bd76b33..ca9f2cc43a 100644
+index f22ec6bc9e..a1c97b9bb1 100644
 --- a/api/BUILD.gn
 +++ b/api/BUILD.gn
 @@ -34,6 +34,9 @@ rtc_library("enable_media") {
@@ -251,7 +251,7 @@ index 2e0bd76b33..ca9f2cc43a 100644
  
  rtc_library("dtmf_sender_interface") {
    visibility = [ "*" ]
-@@ -287,6 +295,10 @@ rtc_library("sframe_decrypter_interface") {
+@@ -287,6 +295,10 @@ rtc_library("sframe_decryptor_interface") {
  }
  
  rtc_library("rtp_sender_interface") {
@@ -268,7 +268,7 @@ index 2e0bd76b33..ca9f2cc43a 100644
      ":rtp_parameters",
 +    ":rtp_sender_setparameters_callback",
      ":scoped_refptr",
-     ":sframe_encrypter_interface",
+     ":sframe_encryptor_interface",
      "../rtc_base:checks",
 @@ -310,6 +323,20 @@ rtc_library("rtp_sender_interface") {
      "//third_party/abseil-cpp/absl/functional:any_invocable",
@@ -340,7 +340,7 @@ index 2e0bd76b33..ca9f2cc43a 100644
  rtc_library("neteq_simulator_api") {
    visibility = [ "*" ]
 diff --git a/api/rtp_sender_interface.h b/api/rtp_sender_interface.h
-index 32cbfeb556..31629ddc21 100644
+index d3e54ddf2f..41066c929e 100644
 --- a/api/rtp_sender_interface.h
 +++ b/api/rtp_sender_interface.h
 @@ -36,6 +36,8 @@
