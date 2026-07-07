@@ -1018,8 +1018,7 @@ def make_desktop_nightly_filter(platforms):
             filter_on_platforms(task, platforms),
             filter_for_project(task, parameters),
             task.attributes.get("shippable", False),
-            # Nightly only builds don't have `shipping_product` set
-            task.attributes.get("shipping_product") in {None, "firefox", "thunderbird"},
+            task.attributes.get("shipping_product") in {"firefox", "thunderbird"},
             task.kind not in {"l10n"},  # no on-change l10n
             task.kind
             not in {
