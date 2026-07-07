@@ -24,8 +24,9 @@ ChromeUtils.defineESModuleGetters(lazy, {
   UrlbarProviderSemanticHistorySearch:
     "moz-src:///browser/components/urlbar/UrlbarProviderSemanticHistorySearch.sys.mjs",
   UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
+  UrlbarTelemetryUtils:
+    "chrome://browser/content/urlbar/UrlbarTelemetryUtils.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
-  UrlUtils: "resource://gre/modules/UrlUtils.sys.mjs",
 });
 
 ChromeUtils.defineLazyGetter(lazy, "logger", () =>
@@ -521,7 +522,8 @@ class TelemetryEvent {
         // empty string replace the interactionType (that would be "topsites")
         // with one for the current event to better measure the user flow.
         this._startEventInfo.interactionType =
-          interactionType || this._getStartInteractionType(event, searchString);
+          interactionType ||
+          lazy.UrlbarTelemetryUtils.startInteractionType(event, searchString);
         this._startEventInfo.searchString = searchString;
       } else if (
         this._startEventInfo.interactionType == "returned" &&
@@ -566,7 +568,8 @@ class TelemetryEvent {
     this._startEventInfo = {
       timeStamp: event.timeStamp || ChromeUtils.now(),
       interactionType:
-        interactionType || this._getStartInteractionType(event, searchString),
+        interactionType ||
+        lazy.UrlbarTelemetryUtils.startInteractionType(event, searchString),
       searchString,
     };
   }
@@ -672,105 +675,24 @@ class TelemetryEvent {
    * @param {ActionDetails} details
    */
   #internalRecord(event, details) {
-    let snapshot = this.#collectEngagement(event, details);
+    let snapshot = lazy.UrlbarTelemetryUtils.collectSnapshot(
+      event,
+      details,
+      this._startEventInfo
+    );
     if (snapshot) {
       this.#recordEngagement(snapshot);
     }
   }
 
   /**
-   * Gathers everything a recording needs from the picked result and the DOM
-   * event into a single snapshot, synchronously at engagement time. Values that
-   * can only be derived content-side (the `action`, resolved from the `event`
-   * and `element`, and the picked action key) are resolved here, so the
-   * recording itself needs neither.
-   *
-   * @param {?Event} event
-   *   The DOM event behind the engagement, or null for paste&go / drop&go.
-   * @param {ActionDetails} details
-   *   The interaction details.
-   * @returns {?object} The snapshot to record from, or null when there is no
-   *   session in progress to record.
-   */
-  #collectEngagement(event, details) {
-    const startEventInfo = this._startEventInfo;
-
-    if (!startEventInfo) {
-      return null;
-    }
-    if (
-      !event &&
-      startEventInfo.interactionType != "pasted" &&
-      startEventInfo.interactionType != "dropped"
-    ) {
-      // If no event is passed, we must be executing either paste&go or drop&go.
-      throw new Error("Event must be defined, unless input was pasted/dropped");
-    }
-    if (!details) {
-      throw new Error("Invalid event details: " + details);
-    }
-
-    let action = this.#getActionFromEvent(
-      event,
-      details,
-      startEventInfo.interactionType
-    );
-
-    /** @type {"abandonment" | "engagement"} */
-    let method =
-      action == "blur" || action == "tab_switch" ? "abandonment" : "engagement";
-
-    if (method == "engagement") {
-      // Not all engagements end the search session. The session remains ongoing
-      // when certain commands are picked (like dismissal) and results that
-      // enter search mode are picked. We should find a generalized way to
-      // determine this instead of listing all the cases like this.
-      details.isSessionOngoing = !!(
-        [
-          "dismiss",
-          "inaccurate_location",
-          "not_interested",
-          "not_now",
-          "opt_in",
-          "show_less_frequently",
-        ].includes(details.selType) ||
-        details.result?.payload.providesSearchMode
-      );
-    }
-
-    // numWords is not a perfect measurement, since it will return an incorrect
-    // value for languages that do not use spaces or URLs containing spaces in
-    // its query parameters, for example.
-    let { numChars, numWords, searchWords } = this._parseSearchString(
-      details.searchString
-    );
-
-    let internalDetails = {
-      ...details,
-      event,
-      provider: details.result?.providerName,
-      selIndex: details.result?.rowIndex ?? -1,
-      pickedActionKey: details.element?.dataset.action ?? null,
-    };
-
-    return {
-      method,
-      action,
-      startEventInfo,
-      numChars,
-      numWords,
-      searchWords,
-      internalDetails,
-    };
-  }
-
-  /**
    * Records the engagement (or abandonment) telemetry from a snapshot gathered
-   * by `#collectEngagement()`. Runs parent-side: it reads the parent's query
-   * context, records Glean telemetry and exposures, and notifies the providers.
+   * by `UrlbarTelemetryUtils.collectSnapshot()`. Runs parent-side: it reads the
+   * parent's query context, records Glean telemetry and exposures, and notifies
+   * the providers.
    *
    * @param {object} snapshot
-   *   The snapshot returned by `#collectEngagement()`.
+   *   The snapshot to record from.
    */
   #recordEngagement(snapshot) {
     let {
@@ -1422,58 +1344,6 @@ class TelemetryEvent {
     return source ?? "unknown";
   }
 
-  #getActionFromEvent(event, details, defaultInteractionType) {
-    if (!event) {
-      return defaultInteractionType === "dropped" ? "drop_go" : "paste_go";
-    }
-    if (event.type === "blur") {
-      return "blur";
-    }
-    if (event.type === "tabswitch") {
-      return "tab_switch";
-    }
-    // dismiss_autofill temporarily blocks autofill suggestions rather than
-    // removing history, but we still want to report it "dismiss" in telemetry.
-    if (details.element?.dataset.command === "dismiss_autofill") {
-      return "dismiss";
-    }
-    if (
-      details.element?.dataset.command &&
-      details.element.dataset.command !== "help"
-    ) {
-      return details.element.dataset.command;
-    }
-    if (details.selType === "dismiss") {
-      return "dismiss";
-    }
-    if (MouseEvent.isInstance(event)) {
-      // TODO (Bug 2018250): Don’t rely on `event` and use `selType` or
-      // `details.element` if possible.
-      return /** @type {HTMLElement} */ (event.target).classList.contains(
-        "urlbar-go-button"
-      )
-        ? "go_button"
-        : "click";
-    }
-    return "enter";
-  }
-
-  _parseSearchString(searchString) {
-    let numChars = searchString.length.toString();
-    let searchWords = searchString
-      .substring(0, lazy.UrlbarUtils.MAX_TEXT_LENGTH)
-      .trim()
-      .split(lazy.UrlUtils.REGEXP_SPACES)
-      .filter(t => t);
-    let numWords = searchWords.length.toString();
-
-    return {
-      numChars,
-      numWords,
-      searchWords,
-    };
-  }
-
   /**
    * Checks whether re-searched by modifying some of the keywords from the
    * previous search. Concretely, returns true if there is intersects between
@@ -1502,19 +1372,6 @@ class TelemetryEvent {
     return (
       intersect(currentSet, previousSet) || intersect(previousSet, currentSet)
     );
-  }
-
-  _getStartInteractionType(event, searchString) {
-    if (event.type == "input") {
-      return lazy.UrlbarUtils.isPasteEvent(event) ? "pasted" : "typed";
-    } else if (event.type == "drop") {
-      return "dropped";
-    } else if (event.type == "paste") {
-      return "pasted";
-    } else if (searchString) {
-      return "typed";
-    }
-    return "topsites";
   }
 
   /**
@@ -1664,7 +1521,7 @@ class TelemetryEvent {
     let details = state.details;
 
     let startEventInfo = {
-      interactionType: this._getStartInteractionType(
+      interactionType: lazy.UrlbarTelemetryUtils.startInteractionType(
         event,
         details.searchString
       ),
@@ -1683,15 +1540,14 @@ class TelemetryEvent {
       throw new Error("Invalid event details: " + details);
     }
 
-    let action = this.#getActionFromEvent(
+    let action = lazy.UrlbarTelemetryUtils.actionFromEvent(
       event,
       details,
       startEventInfo.interactionType
     );
 
-    let { numChars, numWords, searchWords } = this._parseSearchString(
-      details.searchString
-    );
+    let { numChars, numWords, searchWords } =
+      lazy.UrlbarTelemetryUtils.parseSearchString(details.searchString);
 
     this.#recordSearchEngagementTelemetry("disable", startEventInfo, {
       action,
@@ -1827,15 +1683,14 @@ class TelemetryEvent {
       throw new Error("Invalid event details: " + details);
     }
 
-    let action = this.#getActionFromEvent(
+    let action = lazy.UrlbarTelemetryUtils.actionFromEvent(
       event,
       details,
       startEventInfo.interactionType
     );
 
-    let { numChars, numWords, searchWords } = this._parseSearchString(
-      details.searchString
-    );
+    let { numChars, numWords, searchWords } =
+      lazy.UrlbarTelemetryUtils.parseSearchString(details.searchString);
 
     details.provider = details.result?.providerName;
     details.selIndex = details.result?.rowIndex ?? -1;
