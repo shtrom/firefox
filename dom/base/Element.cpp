@@ -3707,8 +3707,6 @@ nsresult Element::SetAttrInternal(int32_t aNamespaceID, nsAtom* aName,
 
   BeforeSetAttr(aNamespaceID, aName, &attrValue, aNotify);
 
-  PreIdMaybeChange(aNamespaceID, aName, &attrValue);
-
   return SetAttrAndNotify(
       aNamespaceID, aName, aPrefix, oldValueSet ? &oldValue : nullptr,
       attrValue, aSubjectPrincipal, modType, aNotify, kCallAfterSetAttr,
@@ -3749,8 +3747,6 @@ nsresult Element::SetParsedAttr(int32_t aNamespaceID, nsAtom* aName,
   }
 
   BeforeSetAttr(aNamespaceID, aName, &aParsedValue, aNotify);
-
-  PreIdMaybeChange(aNamespaceID, aName, &aParsedValue);
 
   return SetAttrAndNotify(aNamespaceID, aName, aPrefix,
                           oldValueSet ? &oldValue : nullptr, aParsedValue,
@@ -3835,11 +3831,7 @@ nsresult Element::SetNoNameSpaceAttrOnNewlyCreatedElement(
       }
     } else {
       RefPtr<nsAtom> valueAtom = aValue.ForgetAtom();
-      if (namePtr == nsGkAtoms::id) {
-        // Keep in sync with PostIdMaybeChange!
-        SetHasID();
-        // Not adding to table since not in doc or in doc fragment.
-      } else if (namePtr == nsGkAtoms::contenteditable) {
+      if (namePtr == nsGkAtoms::contenteditable) {
         // See below for the empty-value case.
         // Splitting this like this is a micro optimization to avoid the check
         // for non-parsed string attributes.
@@ -3989,8 +3981,6 @@ nsresult Element::SetAttrAndNotify(
     MOZ_TRY(SetAndSwapAttr(ni, aParsedValue, &oldValueSet, aIsKnownNew));
   }
 
-  PostIdMaybeChange(aNamespaceID, aName, &valueForAfterSetAttr);
-
   // If the old value owns its own data, we know it is OK to keep using it.
   // oldValue will be null if there was no previously set value
   const nsAttrValue* oldValue;
@@ -4118,18 +4108,19 @@ bool Element::ParseAttribute(int32_t aNamespaceID, nsAtom* aAttribute,
 
 void Element::BeforeSetAttr(int32_t aNamespaceID, nsAtom* aName,
                             const nsAttrValue* aValue, bool aNotify) {
-  if (aNamespaceID == kNameSpaceID_None) {
-    if (aName == nsGkAtoms::_class && aValue) {
-      // Note: This flag is asymmetrical. It is never unset and isn't exact.
-      // If it is ever made to be exact, we probably need to handle this
-      // similarly to how ids are handled in PreIdMaybeChange and
-      // PostIdMaybeChange.
-      // Note that SetSingleClassFromParser inlines BeforeSetAttr and
-      // calls SetMayHaveClass directly. Making a subclass take action
-      // on the class attribute in a BeforeSetAttr override would
-      // require revising SetSingleClassFromParser.
-      SetMayHaveClass();
-    }
+  if (aNamespaceID != kNameSpaceID_None) {
+    return;
+  }
+  if (aName == nsGkAtoms::_class && aValue) {
+    // Note: This flag is asymmetrical. It is never unset and isn't exact.
+    // Note that SetSingleClassFromParser inlines BeforeSetAttr and
+    // calls SetMayHaveClass directly. Making a subclass take action
+    // on the class attribute in a BeforeSetAttr override would
+    // require revising SetSingleClassFromParser.
+    SetMayHaveClass();
+  }
+  if (aName == nsGkAtoms::id) {
+    PreIdMaybeChange(aValue);
   }
 }
 
@@ -4138,55 +4129,47 @@ void Element::AfterSetAttr(int32_t aNamespaceID, nsAtom* aName,
                            const nsAttrValue* aOldValue,
                            nsIPrincipal* aMaybeScriptedPrincipal,
                            bool aNotify) {
-  if (aNamespaceID == kNameSpaceID_None) {
-    if (aName == nsGkAtoms::part) {
-      bool isPart = !!aValue;
-      if (HasPartAttribute() != isPart) {
-        SetHasPartAttribute(isPart);
-        if (ShadowRoot* shadow = GetContainingShadow()) {
-          if (isPart) {
-            shadow->PartAdded(*this);
-          } else {
-            shadow->PartRemoved(*this);
-          }
+  if (aNamespaceID != kNameSpaceID_None) {
+    return;
+  }
+  if (aName == nsGkAtoms::id) {
+    PostIdMaybeChange(aValue);
+  } else if (aName == nsGkAtoms::part) {
+    bool isPart = !!aValue;
+    if (HasPartAttribute() != isPart) {
+      SetHasPartAttribute(isPart);
+      if (ShadowRoot* shadow = GetContainingShadow()) {
+        if (isPart) {
+          shadow->PartAdded(*this);
+        } else {
+          shadow->PartRemoved(*this);
         }
       }
-      MOZ_ASSERT(HasPartAttribute() == isPart);
-    } else if (aName == nsGkAtoms::slot && GetParent()) {
-      if (ShadowRoot* shadow = GetParent()->GetShadowRoot()) {
-        shadow->MaybeReassignContent(*this);
-      }
-    } else if (aName == nsGkAtoms::aria_activedescendant) {
-      ClearExplicitlySetAttrElement(aName);
-      IDREFAttributeValueChanged(aName, aValue);
-    } else if (aName == nsGkAtoms::aria_controls ||
-               aName == nsGkAtoms::aria_describedby ||
-               aName == nsGkAtoms::aria_details ||
-               aName == nsGkAtoms::aria_errormessage ||
-               aName == nsGkAtoms::aria_flowto ||
-               aName == nsGkAtoms::aria_labelledby ||
-               aName == nsGkAtoms::aria_owns) {
-      ClearExplicitlySetAttrElements(aName);
     }
+    MOZ_ASSERT(HasPartAttribute() == isPart);
+  } else if (aName == nsGkAtoms::slot && GetParent()) {
+    if (ShadowRoot* shadow = GetParent()->GetShadowRoot()) {
+      shadow->MaybeReassignContent(*this);
+    }
+  } else if (aName == nsGkAtoms::aria_activedescendant) {
+    ClearExplicitlySetAttrElement(aName);
+    IDREFAttributeValueChanged(aName, aValue);
+  } else if (aName == nsGkAtoms::aria_controls ||
+             aName == nsGkAtoms::aria_describedby ||
+             aName == nsGkAtoms::aria_details ||
+             aName == nsGkAtoms::aria_errormessage ||
+             aName == nsGkAtoms::aria_flowto ||
+             aName == nsGkAtoms::aria_labelledby ||
+             aName == nsGkAtoms::aria_owns) {
+    ClearExplicitlySetAttrElements(aName);
   }
 }
 
-void Element::PreIdMaybeChange(int32_t aNamespaceID, nsAtom* aName,
-                               const nsAttrValue* aValue) {
-  if (aNamespaceID != kNameSpaceID_None || aName != nsGkAtoms::id) {
-    return;
-  }
+void Element::PreIdMaybeChange(const nsAttrValue* aValue) {
   RemoveFromIdTable();
 }
 
-void Element::PostIdMaybeChange(int32_t aNamespaceID, nsAtom* aName,
-                                const nsAttrValue* aValue) {
-  if (aNamespaceID != kNameSpaceID_None || aName != nsGkAtoms::id) {
-    return;
-  }
-
-  // Keep in sync with SetNoNameSpaceAttrOnNewlyCreatedElement!
-
+void Element::PostIdMaybeChange(const nsAttrValue* aValue) {
   // id="" means that the element has no id, not that it has an empty
   // string as the id.
   if (aValue && !aValue->IsEmptyString()) {
@@ -4285,8 +4268,6 @@ nsresult Element::UnsetAttr(int32_t aNameSpaceID, nsAtom* aName, bool aNotify) {
 
   BeforeSetAttr(aNameSpaceID, aName, nullptr, aNotify);
 
-  PreIdMaybeChange(aNameSpaceID, aName, nullptr);
-
   // Clear the attribute out from attribute map.
   nsDOMSlots* slots = GetExistingDOMSlots();
   if (slots && slots->mAttributeMap) {
@@ -4315,8 +4296,6 @@ nsresult Element::UnsetAttr(int32_t aNameSpaceID, nsAtom* aName, bool aNotify) {
 
   nsAttrValue oldValue;
   MOZ_TRY(mAttrs.RemoveAttrAt(index, oldValue));
-
-  PostIdMaybeChange(aNameSpaceID, aName, nullptr);
 
   const CustomElementData* data = GetCustomElementData();
   if (data && data->mState == CustomElementData::State::eCustom) {
