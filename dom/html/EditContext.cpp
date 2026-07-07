@@ -101,7 +101,6 @@ void EditContext::Deactivate() {
   }
 
   // 1. Set editContext's is composing to false.
-  mIsComposing = false;
   // 2. Fire an event named compositionend at editContext using
   //    CompositionEvent.
   // TODO
@@ -314,11 +313,13 @@ void EditContext::UpdateTextAndFireEvent(
       TextUpdateEvent::Constructor(this, u"textupdate"_ns, options);
   e->SetTrusted(true);
   mTextNextToCaretChangedByTextUpdateHandler = false;
-  // It shouldn't be possible for this to be called recursively.
-  MOZ_ASSERT(!mIsFiringTextUpdate);
+  // textupdate can be fired recursively if the editor is blurred
+  // during a composition (since that cancels the composition).
+  // XXX: Some web apps may not handle this properly
+  //      - perhaps add mPendingTextUpdateEvent/TextFormatUpdateEvent?
+  AutoRestore restore(mIsFiringTextUpdate);
   mIsFiringTextUpdate = true;
   DispatchEvent(*e);
-  mIsFiringTextUpdate = false;
 }
 
 void EditContext::StartComposition(const WidgetCompositionEvent& aEvent) {
