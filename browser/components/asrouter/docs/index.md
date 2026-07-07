@@ -95,7 +95,7 @@ menu-message
 
 ## Detailed Docs
 
-- Explore key terms in the [Messaging System Glossary](./messaging-glossary.html).
+- Explore key terms in the [Messaging System Glossary](./messaging-glossary.md).
 
 - Learn more about messaging experimentation through [Nimbus](https://experimenter.info/) in the [Messaging System: Experimenter Onboarding](https://mozilla-hub.atlassian.net/wiki/spaces/FIREFOX/pages/233406786/OMC+Experimenter+Onboarding).
 
