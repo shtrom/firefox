@@ -5,20 +5,24 @@ Subject: Bug 1912989 - (fix-2360208f7d) Removed build command causing failure.
 
 Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/fd4bc7427678a45283f0f56418ee2c70fac711e6
 ---
- .gn | 4 +++-
- 1 file changed, 3 insertions(+), 1 deletion(-)
+ .gn | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
 
 diff --git a/.gn b/.gn
-index 675807743a..82164c084e 100644
+index c028ef6f70..1d9b371ee0 100644
 --- a/.gn
 +++ b/.gn
-@@ -38,7 +38,9 @@ no_check_targets = [
+@@ -38,9 +38,11 @@ no_check_targets = [
  exec_script_allowlist = build_dotfile_settings.exec_script_allowlist +
                          [ "//build_overrides/build.gni" ]
  
+-expand_directory_allowlist = build_dotfile_settings.expand_directory_allowlist
+-
 -export_compile_commands = [ "*" ]
 +# Normally, we'd use 'if (!build_with_mozilla)', but that flag isn't
 +# available yet.
++#expand_directory_allowlist = build_dotfile_settings.expand_directory_allowlist
++#
 +#export_compile_commands = [ "*" ]
  
  default_args = {
