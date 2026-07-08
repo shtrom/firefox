@@ -53,8 +53,8 @@ class JsepTrackNegotiatedDetails {
   }
 
   const SdpExtmapAttributeList::Extmap* GetExt(
-      const std::string& ext_name) const {
-    auto it = mExtmap.find(ext_name);
+      const nsACString& ext_name) const {
+    auto it = mExtmap.find(nsCString(ext_name));
     if (it != mExtmap.end()) {
       return &it->second;
     }
@@ -76,7 +76,7 @@ class JsepTrackNegotiatedDetails {
  private:
   friend class JsepTrack;
 
-  std::map<std::string, SdpExtmapAttributeList::Extmap> mExtmap;
+  std::map<nsCString, SdpExtmapAttributeList::Extmap> mExtmap;
   std::vector<UniquePtr<JsepTrackEncoding>> mEncodings;
   uint32_t mTias;  // bits per second
   RtpRtcpConfig mRtpRtcpConf;
