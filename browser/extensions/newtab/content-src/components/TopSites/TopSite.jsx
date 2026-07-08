@@ -890,7 +890,11 @@ export class _TopSiteList extends React.PureComponent {
         });
 
       const slotProps = {
-        key: link?.url || `hole-${holeIndex++}`,
+        // Stable key so the button isn't remounted (and re-flashed) as its slot
+        // shifts on pin/unpin — it has no url to key off of.
+        key: link?.isAddButton
+          ? "add-button"
+          : link?.url || `hole-${holeIndex++}`,
         index: i,
       };
       // @nova-cleanup(remove-conditional): Remove classic path once Nova ships
