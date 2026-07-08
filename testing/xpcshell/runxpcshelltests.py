@@ -448,6 +448,21 @@ class XPCShellTestThread(Thread):
         # a while due to stack fixing.
         self.killTimeout(proc)
 
+        self.reportTimeoutResult()
+
+        self.log.info(f"xpcshell return code: {self.getReturnCode(proc)}")
+        self.postCheck(proc)
+        self.clean_temp_dirs(self.test_object["path"])
+
+        # Now that we've finished cleaning up after the timed out test we can
+        # relinquish the lock to allow run_test() to finish.
+        self.lock.release()
+
+    def reportTimeoutResult(self):
+        """Log the structured failure for a timed-out test: a FAIL test_status
+        pointing at the uploaded profile (when one was written), followed by a
+        TIMEOUT test_end. Shared by the harness timer (testTimeout) and the path
+        where a profiled test dumps its profile and exits on its own."""
         if self.test_object["expected"] == "pass":
             expected = "PASS"
         else:
@@ -457,14 +472,14 @@ class XPCShellTestThread(Thread):
         if self.timeout_factor > 1:
             extra = {"timeoutfactor": self.timeout_factor}
 
-        # If the profiler dumped a profile from its sampler thread before we
-        # killed the wedged process (scheduled by head.js via scheduleDumpToFile
-        # since the main thread can't write one once it stops returning to the
-        # event loop), report it here as a structured test_status, logged while
-        # the test is still in progress so the artifact is linked to this test.
-        # A structured message (unlike a raw log line) is downgraded to expected
-        # on a retried run, and is recorded as a FAIL marker in the
-        # resource-usage profile the dashboards read.
+        # If the profiler dumped a profile from its sampler thread (scheduled by
+        # head.js via scheduleDumpToFile since the main thread can't write one
+        # once it stops returning to the event loop), report it here as a
+        # structured test_status, logged while the test is still in progress so
+        # the artifact is linked to this test. A structured message (unlike a
+        # raw log line) is downgraded to expected on a retried run, and is
+        # recorded as a FAIL marker in the resource-usage profile the dashboards
+        # read.
         profile_name = self.timeout_profile_name
         upload_dir = self.env.get("MOZ_UPLOAD_DIR")
         if (
@@ -503,14 +518,6 @@ class XPCShellTestThread(Thread):
                 extra=extra,
             )
             self.log_full_output()
-
-        self.log.info("xpcshell return code: %s" % self.getReturnCode(proc))
-        self.postCheck(proc)
-        self.clean_temp_dirs(self.test_object["path"])
-
-        # Now that we've finished cleaning up after the timed out test we can
-        # relinquish the lock to allow run_test() to finish.
-        self.lock.release()
 
     def updateTestPrefsFile(self):
         # If the Manifest file has some additional prefs, merge the
@@ -1066,6 +1073,7 @@ class XPCShellTestThread(Thread):
             if self.verbose:
                 self.logCommand(name, self.command, test_dir)
 
+            launch_time = time.monotonic()
             proc = self.launchProcess(
                 self.command,
                 stdout=self.pStdout,
@@ -1088,6 +1096,7 @@ class XPCShellTestThread(Thread):
             # Communicate returns a tuple of (stdout, stderr), however we always
             # redirect stderr to stdout, so the second element is ignored.
             process_output, _ = self.communicate(proc)
+            elapsed = time.monotonic() - launch_time
 
             if self.interactive:
                 # Not sure what else to do here...
@@ -1104,6 +1113,25 @@ class XPCShellTestThread(Thread):
                 self.timer = None
 
             self.lock.release()
+
+            # A profiled test that overran its expected timeout dumps a profile
+            # from the sampler thread and exits the process itself (see
+            # scheduleDumpToFile in head.js), rather than waiting for the
+            # harness's safety-net kill. Recognize that here -- the process
+            # ended on its own past the expected timeout and left a profile at
+            # the agreed path -- and report it as a timeout, not a normal result.
+            if (
+                not self.timedout
+                and self.timeout_profile_name
+                and self.env.get("MOZ_UPLOAD_DIR")
+                and elapsed > testTimeoutInterval
+                and os.path.isfile(
+                    os.path.join(self.env["MOZ_UPLOAD_DIR"], self.timeout_profile_name)
+                )
+            ):
+                self.timedout = True
+                self.reportTimeoutResult()
+                return
 
             if process_output:
                 # For the remote case, stdout is not yet depleted, so we parse
