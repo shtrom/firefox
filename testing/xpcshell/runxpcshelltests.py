@@ -1018,26 +1018,23 @@ class XPCShellTestThread(Thread):
 
         self.timeout_profile_name = None
         if not self.interactive and not self.debuggerInfo and not self.jsDebuggerInfo:
-            self.timer = Timer(testTimeoutInterval, lambda: self.testTimeout(proc))
-            self.timer.start()
-            self.env["MOZ_TEST_TIMEOUT_INTERVAL"] = str(testTimeoutInterval)
-
             # When the profiler runs by default, have it dump a profile from its
-            # sampler thread shortly before this timeout fires (armed by
-            # head.js), so a test wedged in a synchronous run (where the main
-            # thread can never write one) still leaves a profile. We pick the
-            # artifact name here so the retry of a test that timed out doesn't
-            # overwrite the initial run's profile: the retry gets a "_retry"
-            # suffix, and a numeric counter is only added on an actual name
-            # collision (the same test listed in two manifests). The suffixes go
-            # before the test extension so the name still ends in e.g.
-            # ".js.json" as Treeherder expects. testTimeout reports this name.
+            # sampler thread once this timeout is reached (armed by head.js), so
+            # a test blocked in a synchronous run (where the main thread can
+            # never write one) still leaves a profile. We pick the artifact name here
+            # so the retry of a test that timed out doesn't overwrite the initial
+            # run's profile: the retry gets a "_retry" suffix, and a numeric
+            # counter is only added on an actual name collision (the same test
+            # listed in two manifests). The suffixes go before the test extension
+            # so the name still ends in e.g. ".js.json" as Treeherder expects.
+            # testTimeout reports this name.
             upload_dir = self.env.get("MOZ_UPLOAD_DIR")
-            if (
+            timeout_dump_armed = (
                 upload_dir
                 and self.env.get("MOZ_PROFILER_STARTUP")
                 and "MOZ_PROFILER_SHUTDOWN" not in self.env
-            ):
+            )
+            if timeout_dump_armed:
                 root, ext = os.path.splitext(os.path.basename(name))
                 if self.is_retry:
                     root += "_retry"
@@ -1050,6 +1047,17 @@ class XPCShellTestThread(Thread):
                 self.env["MOZ_TEST_TIMEOUT_PROFILE_PATH"] = os.path.join(
                     upload_dir, filename
                 )
+
+            # head.js dumps the profile from the sampler thread once the timeout
+            # is reached, so when that's armed this timer is only a safety net;
+            # give it 50% more time so the sampler thread can finish writing the
+            # profile before we kill the process.
+            kill_interval = testTimeoutInterval
+            if timeout_dump_armed:
+                kill_interval = testTimeoutInterval * 1.5
+            self.timer = Timer(kill_interval, lambda: self.testTimeout(proc))
+            self.timer.start()
+            self.env["MOZ_TEST_TIMEOUT_INTERVAL"] = str(testTimeoutInterval)
 
         proc = None
         process_output = None
