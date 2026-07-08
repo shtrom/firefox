@@ -231,18 +231,6 @@ class DefaultQuickSettingsController(
 
     override fun handleTrackingProtectionDetailsClicked() {
         navController.popBackStack()
-
-        val state = quickSettingsStore.state.protectionsState
-        val directions = NavGraphDirections
-            .actionGlobalTrackingProtectionPanelDialogFragment(
-                sessionId = sessionId,
-                url = state.url,
-                trackingProtectionEnabled = state.isTrackingProtectionEnabled,
-                cookieBannerUIMode = state.cookieBannerUIMode,
-                gravity = context.components.settings.toolbarPosition.androidGravity,
-                sitePermissions = sitePermissions,
-            )
-        navController.navigate(directions)
     }
 
     override fun handleConnectionDetailsClicked() {
