@@ -48,7 +48,7 @@ import { AIWindowAccountAuth } from "moz-src:///browser/components/aiwindow/ui/m
 import { EmbeddingsGenerator } from "chrome://global/content/ml/EmbeddingsGenerator.sys.mjs";
 import { cosSim } from "chrome://global/content/ml/NLPUtils.sys.mjs";
 
-const DEFAULT_HISTORY_FULL_LOOKUP_DAYS = 60;
+const DEFAULT_HISTORY_FULL_LOOKUP_DAYS = 20;
 const DEFAULT_HISTORY_FULL_MAX_RESULTS = 3000;
 const DEFAULT_HISTORY_DELTA_MAX_RESULTS = 500;
 const DEFAULT_CHAT_FULL_MAX_RESULTS = 50;
