@@ -31,16 +31,19 @@ media::DecodeSupportSet SupportsVideoDecodeForWebrtc(
 // Implementation class that samples codec preferences once at construction.
 class CodecInfoImpl final : public WebrtcCodecInfo {
  public:
-  CodecInfoImpl()
-      : mPrefs(),
+  CodecInfoImpl() : CodecInfoImpl(OverrideRtxPreference::NoOverride) {}
+  explicit CodecInfoImpl(const OverrideRtxPreference aOverrideRtxPreference)
+      : mPrefs([aOverrideRtxPreference] {
+          return DefaultCodecPreferences(aOverrideRtxPreference);
+        }()),
         mAudioCodecs([this] {
-          AutoTArray<UniquePtr<JsepCodecDescription>, 5> codecs;
-          EnumerateDefaultAudioCodecs(&codecs, mPrefs);
+          nsTArray<UniquePtr<JsepCodecDescription>> codecs;
+          EnumerateDefaultAudioCodecs(codecs, mPrefs);
           return codecs;
         }()),
         mVideoCodecs([this] {
-          AutoTArray<UniquePtr<JsepCodecDescription>, 10> codecs;
-          EnumerateDefaultVideoCodecs(&codecs, mPrefs);
+          nsTArray<UniquePtr<JsepCodecDescription>> codecs;
+          EnumerateDefaultVideoCodecs(codecs, mPrefs);
           return codecs;
         }()) {}
 

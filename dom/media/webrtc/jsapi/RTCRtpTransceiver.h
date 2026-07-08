@@ -211,7 +211,7 @@ class RTCRtpTransceiver : public nsISupports, public nsWrapperCache {
   Canonical<std::string>& CanonicalMid() { return mMid; }
   Canonical<std::string>& CanonicalSyncGroup() { return mSyncGroup; }
 
-  const nsTArray<UniquePtr<JsepCodecDescription>>& GetPreferredCodecs() {
+  const std::vector<UniquePtr<JsepCodecDescription>>& GetPreferredCodecs() {
     return mPreferredCodecs;
   }
 
@@ -278,7 +278,7 @@ class RTCRtpTransceiver : public nsISupports, public nsWrapperCache {
 
   // Preferred codecs to be negotiated set by calling
   // setCodecPreferences.
-  nsTArray<UniquePtr<JsepCodecDescription>> mPreferredCodecs;
+  std::vector<UniquePtr<JsepCodecDescription>> mPreferredCodecs;
   // Identifies if a preferred list and order of codecs is to be used.
   // This is true if setCodecPreferences was called successfully and passed
   // codecs (not empty).
