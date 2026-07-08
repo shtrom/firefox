@@ -56,7 +56,6 @@ UNIFIED_SOURCES += [
 # that grouping.
 SOURCES += [
     "TestCacheCrypto.cpp",
-    "TestCacheEntryWriterHang.cpp",
     "TestHappyEyeballsConnectionAttempt.cpp",
 ]
 
