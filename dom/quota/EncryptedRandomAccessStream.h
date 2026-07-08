@@ -220,7 +220,7 @@ class EncryptedRandomAccessStream final
   friend RefPtr<T> mozilla::MakeRefPtr(Args&&... aArgs);
 
   // This class must be initialized by |Create()|.
-  EncryptedRandomAccessStream<CipherStrategy>(
+  EncryptedRandomAccessStream(
       MovingNotNull<nsCOMPtr<nsIRandomAccessStream>> aStream,
       typename CipherStrategy::KeyType aMasterKey)
       : EncryptedRandomAccessStreamBase(std::move(aStream)),
