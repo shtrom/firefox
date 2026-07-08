@@ -5475,14 +5475,14 @@ pub extern "C" fn Servo_DeclarationBlock_Count(declarations: &LockedDeclarationB
 }
 
 #[no_mangle]
-pub extern "C" fn Servo_DeclarationBlock_GetNthProperty(
+pub extern "C" fn Servo_DeclarationBlock_GetAt(
     declarations: &LockedDeclarationBlock,
     index: u32,
-    result: &mut nsACString,
+    result: &mut structs::CSSPropertyId,
 ) -> bool {
     read_locked_arc(declarations, |decls: &PropertyDeclarationBlock| {
         if let Some(decl) = decls.declarations().get(index as usize) {
-            result.assign(&decl.id().name());
+            *result = decl.id().to_gecko_css_property_id();
             true
         } else {
             false
@@ -6306,14 +6306,16 @@ macro_rules! match_wrap_declared {
 }
 
 #[no_mangle]
-pub extern "C" fn Servo_DeclarationBlock_PropertyIsSet(
-    declarations: &LockedDeclarationBlock,
-    property: NonCustomCSSPropertyId,
+pub unsafe extern "C" fn Servo_DeclarationBlock_HasProperty(
+    decls: &LockedDeclarationBlock,
+    id: &structs::CSSPropertyId,
 ) -> bool {
-    read_locked_arc(declarations, |decls: &PropertyDeclarationBlock| {
-        decls.contains(PropertyDeclarationId::Longhand(get_longhand_from_id!(
-            property
-        )))
+    let id = get_property_id_from_csspropertyid!(id, false);
+    read_locked_arc(decls, |decls| match id.as_shorthand() {
+        Ok(s) => s
+            .longhands()
+            .all(|l| decls.contains(PropertyDeclarationId::Longhand(l))),
+        Err(longhand_or_custom) => decls.contains(longhand_or_custom),
     })
 }
 
@@ -6329,7 +6331,6 @@ pub unsafe extern "C" fn Servo_DeclarationBlock_HasLonghandProperty(
                 return decls.contains(longhand_or_custom);
             }
         }
-
         false
     })
 }
@@ -9024,14 +9025,39 @@ pub extern "C" fn Servo_ComputedValues_GetPropertyTypedValueList(
     property_id: &structs::CSSPropertyId,
     result: &mut PropertyTypedValueList,
 ) -> bool {
+    use style::properties::{CustomDeclaration, PropertyDeclaration};
     let property_id = get_property_id_from_csspropertyid!(property_id, false);
 
-    let non_custom_property_id = match property_id.non_custom_id() {
-        Some(id) => id,
-        // XXX Handle custom properties here. Tracked in bug 1990426.
-        None => {
-            *result = PropertyTypedValueList::None;
-            return true;
+    let non_custom_property_id = match property_id {
+        PropertyId::NonCustom(id) => id,
+        PropertyId::Custom(name) => match style.custom_properties.get_for_cssom(&name) {
+            None => {
+                *result = PropertyTypedValueList::None;
+                return true;
+            },
+            Some(value) => {
+                let value = value.to_declared_value();
+                *result = match value.to_typed_value_list() {
+                    Some(l) => PropertyTypedValueList::Typed(l),
+                    None => {
+                        // We have a value, but we don't know how to reify it as
+                        // a typed value yet, so fall back to exposing it as an
+                        // unparsed value.
+                        // TODO(bug 1990426): This should become effectively
+                        // unreachable once we reify all custom property values.
+                        let global_style_data = &*GLOBAL_STYLE_DATA;
+                        let mut block = PropertyDeclarationBlock::new();
+                        block.push(
+                            PropertyDeclaration::Custom(CustomDeclaration { name, value }),
+                            Importance::Normal,
+                        );
+                        PropertyTypedValueList::Unsupported(
+                            Arc::new(global_style_data.shared_lock.wrap(block)).into(),
+                        )
+                    },
+                };
+                return true;
+            },
         },
     };
 
@@ -9044,7 +9070,6 @@ pub extern "C" fn Servo_ComputedValues_GetPropertyTypedValueList(
     *result = match typed_value_list {
         None => {
             let global_style_data = &*GLOBAL_STYLE_DATA;
-
             let mut block = PropertyDeclarationBlock::new();
 
             match non_custom_property_id.longhand_or_shorthand() {
@@ -9086,8 +9111,7 @@ pub unsafe extern "C" fn Servo_GetCustomPropertyValue(
     let data = raw_data.borrow();
     let device = data.stylist.device();
     let name = Atom::from(name.as_str_unchecked());
-    let custom_registration = data.stylist.get_custom_property_registration(&name);
-    let computed_value = style.custom_properties.get(custom_registration, &name);
+    let computed_value = style.custom_properties.get_for_cssom(&name);
     let computed_value = match computed_value {
         Some(v) => v,
         None => return false,
@@ -9118,6 +9142,18 @@ pub extern "C" fn Servo_GetCustomPropertiesCount(computed_values: &ComputedValue
     // and custom_properties.non_inherited.
     let properties = computed_values.custom_properties();
     properties.inherited.len() as u32 + properties.non_inherited.len() as u32
+}
+
+#[no_mangle]
+pub extern "C" fn Servo_ComputedValues_HasCustomProperty(
+    cv: &ComputedValues,
+    prop: *mut nsAtom,
+) -> bool {
+    unsafe {
+        Atom::with(prop, |prop| {
+            cv.custom_properties.get_for_cssom(prop).is_some()
+        })
+    }
 }
 
 #[no_mangle]
