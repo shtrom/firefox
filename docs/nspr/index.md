@@ -21,6 +21,11 @@ software offerings.
 
 : How to checkout and build from source.
 
+{ref}`NSPR release procedure`
+
+: How to cut a new NSPR release: bumping the version and producing the
+  distributions.
+
 {ref}`NSPR listing`
 
 : All NSPR pages
