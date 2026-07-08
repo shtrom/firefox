@@ -10,13 +10,8 @@ var { AppConstants } = ChromeUtils.importESModule(
 const { SitePermissions } = ChromeUtils.importESModule(
   "resource:///modules/SitePermissions.sys.mjs"
 );
-
-let lazy = {};
-XPCOMUtils.defineLazyServiceGetter(
-  lazy,
-  "SiteCategory",
-  "@mozilla.org/site-category;1",
-  Ci.nsISiteCategory
+const { PermissionUI } = ChromeUtils.importESModule(
+  "resource:///modules/PermissionUI.sys.mjs"
 );
 
 const sitePermissionsL10n = {
@@ -602,7 +597,7 @@ var gSitePermissionsManager = {
     if (this._type === "desktop-notification") {
       for (let group of this._permissionsToDelete.values()) {
         Glean.webNotificationPermission.permissionRevokedPreferences.record({
-          site_category: lazy.SiteCategory.getCategory(group.principal),
+          site_category: PermissionUI.getSiteCategory(group.principal),
         });
       }
     }
