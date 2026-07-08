@@ -23,6 +23,7 @@
 #include "ExpandedPrincipal.h"
 #include "MainThreadUtils.h"
 #include "MobileViewportManager.h"
+#include "nsAnimationManager.h"
 #include "NSSErrorsService.h"
 #include "NodeUbiReporting.h"
 #include "NonCustomCSSPropertyId.h"
@@ -19391,6 +19392,9 @@ void Document::DetermineProximityToViewportAndNotifyResizeObservers() {
   //
   // Bug 2040244 - Move this into RO loop.
   // https://github.com/whatwg/html/pull/11613
+  if (auto* pc = GetPresContext()) {
+    pc->AnimationManager()->UpdateDeferredTimelineChanges();
+  }
   if (mTimelinesController.UpdateStaleTimelines()) {
     FlushPendingNotifications(ctf);
   }
