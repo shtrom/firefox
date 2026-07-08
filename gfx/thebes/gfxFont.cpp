@@ -3330,7 +3330,7 @@ static uint8_t IsBoundarySpace(uint8_t aChar, uint8_t aNextChar) {
 template <typename T, typename Func>
 bool gfxFont::ProcessShapedWordInternal(
     const T* aText, uint32_t aLength, uint32_t aHash, Script aRunScript,
-    nsAtom* aLanguage, bool aVertical, int32_t aAppUnitsPerDevUnit,
+    nsAtom* aLanguage, bool aVertical, uint16_t aAppUnitsPerDevUnit,
     gfx::ShapedTextFlags aFlags, RoundingFlags aRounding,
     gfxTextPerfMetrics* aTextPerf GFX_MAYBE_UNUSED, Func aCallback) {
   WordCacheKey key(aText, aLength, aHash, aRunScript, aLanguage,
@@ -3451,7 +3451,7 @@ bool gfxFont::WordCacheKey::HashPolicy::match(const Key& aKey,
 }
 
 bool gfxFont::ProcessSingleSpaceShapedWord(
-    bool aVertical, int32_t aAppUnitsPerDevUnit, gfx::ShapedTextFlags aFlags,
+    bool aVertical, uint16_t aAppUnitsPerDevUnit, gfx::ShapedTextFlags aFlags,
     RoundingFlags aRounding,
     const std::function<void(gfxShapedWord*)>& aCallback) {
   static const uint8_t space = ' ';
@@ -3765,7 +3765,7 @@ bool gfxFont::SplitAndInitTextRun(
   uint32_t wordStart = 0;
   uint32_t hash = 0;
   bool wordIs8Bit = true;
-  int32_t appUnitsPerDevUnit = aTextRun->GetAppUnitsPerDevUnit();
+  uint16_t appUnitsPerDevUnit = aTextRun->GetAppUnitsPerDevUnit();
 
   T nextCh = aString[0];
   for (uint32_t i = 0; i <= aRunLength; ++i) {

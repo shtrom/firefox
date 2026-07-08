@@ -1140,7 +1140,7 @@ class gfxShapedText {
            mozilla::gfx::ShapedTextFlags::TEXT_IS_8BIT;
   }
 
-  int32_t GetAppUnitsPerDevUnit() const { return mAppUnitsPerDevUnit; }
+  uint16_t GetAppUnitsPerDevUnit() const { return mAppUnitsPerDevUnit; }
 
   uint32_t GetLength() const { return mLength; }
 
@@ -1913,7 +1913,7 @@ class gfxFont {
   // Get a ShapedWord representing a single space for use in setting up a
   // gfxTextRun.
   bool ProcessSingleSpaceShapedWord(
-      bool aVertical, int32_t aAppUnitsPerDevUnit,
+      bool aVertical, uint16_t aAppUnitsPerDevUnit,
       mozilla::gfx::ShapedTextFlags aFlags, RoundingFlags aRounding,
       const std::function<void(gfxShapedWord*)>& aCallback);
 
@@ -2180,7 +2180,7 @@ class gfxFont {
   bool ProcessShapedWordInternal(const T* aText, uint32_t aLength,
                                  uint32_t aHash, Script aRunScript,
                                  nsAtom* aLanguage, bool aVertical,
-                                 int32_t aAppUnitsPerDevUnit,
+                                 uint16_t aAppUnitsPerDevUnit,
                                  mozilla::gfx::ShapedTextFlags aFlags,
                                  RoundingFlags aRounding,
                                  gfxTextPerfMetrics* aTextPerf, Func aCallback);
@@ -2213,14 +2213,14 @@ class gfxFont {
     // for keys stored in the cache, the corresponding gfxShapedWord value
     // holds a RefPtr<nsAtom> to the same atom.
     nsAtom* mLanguage;
-    int32_t mAppUnitsPerDevUnit;
+    uint16_t mAppUnitsPerDevUnit;
     PLDHashNumber mHashKey;
     bool mTextIs8Bit;
     RoundingFlags mRounding;
 
     WordCacheKey(const uint8_t* aText, uint32_t aLength, uint32_t aStringHash,
                  Script aScriptCode, nsAtom* aLanguage,
-                 int32_t aAppUnitsPerDevUnit, ShapedTextFlags aFlags,
+                 uint16_t aAppUnitsPerDevUnit, ShapedTextFlags aFlags,
                  RoundingFlags aRounding)
         : mLength(aLength),
           mFlags(aFlags),
@@ -2239,7 +2239,7 @@ class gfxFont {
 
     WordCacheKey(const char16_t* aText, uint32_t aLength, uint32_t aStringHash,
                  Script aScriptCode, nsAtom* aLanguage,
-                 int32_t aAppUnitsPerDevUnit, ShapedTextFlags aFlags,
+                 uint16_t aAppUnitsPerDevUnit, ShapedTextFlags aFlags,
                  RoundingFlags aRounding)
         : mLength(aLength),
           mFlags(aFlags),
