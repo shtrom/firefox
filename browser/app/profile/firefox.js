@@ -1498,7 +1498,7 @@ pref("browser.sessionstore.log.appender.file.logOnError", true);
 // The default log level for all Session restore logs.
 pref("browser.sessionstore.loglevel", "Warn");
 
-#ifdef EARLY_BETA_OR_EARLIER
+#ifdef NIGHTLY_BUILD
   pref("browser.sessionstore.loglevel", "Debug");
   pref("browser.sessionstore.log.appender.file.logOnSuccess", true);
 #else
