@@ -1955,6 +1955,16 @@
     "dark": "none",
     "forcedColors": "none"
   },
+  "urlbar/background/color": {
+    "light": "{Theme$toolbar/field/background/color}",
+    "dark": "{Theme$toolbar/field/background/color}",
+    "forcedColors": "{Theme$toolbar/field/background/color}"
+  },
+  "urlbar/background/color/focus": {
+    "light": "{Theme$toolbar/field/background/color/focus}",
+    "dark": "{Theme$toolbar/field/background/color/focus}",
+    "forcedColors": "{Theme$toolbar/field/background/color/focus}"
+  },
   "urlbar/box/background/color": {
     "light": "white",
     "dark": "rgb(66, 65, 77)",
@@ -1999,6 +2009,11 @@
     "light": "rgb(91, 91, 102)",
     "dark": "rgb(191, 191, 201)",
     "forcedColors": "transparent"
+  },
+  "urlbarview/text/color/secondary": {
+    "light": "color-mix(in srgb, currentColor 73%, transparent)",
+    "dark": "color-mix(in srgb, currentColor 73%, transparent)",
+    "forcedColors": "currentColor"
   },
   "urlbarview/text/color/selected": {
     "light": "rgb(21, 20, 26)",

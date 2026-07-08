@@ -5,7 +5,7 @@
 "use strict";
 
 /**
- * Asserts the features of style sheets in the debugger
+ * Asserts toggling of stylesheets in the debugger
  */
 const httpServer = createTestHTTPServer();
 const BASE_URL = `http://localhost:${httpServer.identity.primaryPort}/`;
@@ -28,49 +28,6 @@ httpServer.registerPathHandler("/style.css", (request, response) => {
   response.write("body { background-color: powderblue; }");
 });
 
-// This tests that editing style sheets updates the current page.
-add_task(async function testEditingStyleSheets() {
-  await pushPref("devtools.debugger.features.stylesheets-in-debugger", true);
-  const dbg = await initDebuggerWithAbsoluteURL(
-    BASE_URL + "index.html",
-    "style.css"
-  );
-
-  let currentBgColor = await getCurrentPageBackgroundColor();
-  is(
-    currentBgColor,
-    "rgb(176, 224, 230)",
-    "The background color is powder blue"
-  );
-
-  await selectSourceFromSourceTreeWithIndex(
-    dbg,
-    "style.css",
-    3,
-    "Select the style sheet"
-  );
-  const color = "powderblue";
-  is(getEditorContent(dbg), `body { background-color: ${color}; }`);
-
-  info("Change the value of the backgroud color property in the editor");
-  getCMEditor(dbg).focus();
-  await setEditorCursorAt(dbg, 1, 35);
-  let x = color.length;
-  while (x > 0) {
-    pressKey(dbg, "Backspace");
-    x--;
-  }
-  type(dbg, "green");
-
-  // Wait a bit for the color to change to the final green color
-  const bgColorChanged = await waitFor(async () => {
-    currentBgColor = await getCurrentPageBackgroundColor();
-    return currentBgColor == "rgb(0, 128, 0)";
-  });
-  ok(bgColorChanged, "The background color is now green");
-  is(getEditorContent(dbg), `body { background-color: green; }`);
-});
-
 // This asserts that toggling a style sheet on/of updates the current page.
 add_task(async function testToggleStyleSheetVisibility() {
   await pushPref("devtools.debugger.features.stylesheets-in-debugger", true);
@@ -79,7 +36,8 @@ add_task(async function testToggleStyleSheetVisibility() {
     "style.css"
   );
 
-  let currentBgColor = await getCurrentPageBackgroundColor();
+  let currentBgColor =
+    await getCurrentPageStylePropertyValue("backgroundColor");
   is(
     currentBgColor,
     "rgb(176, 224, 230)",
@@ -97,26 +55,28 @@ add_task(async function testToggleStyleSheetVisibility() {
   await toggleStylesheetsVisibility(dbg);
 
   info("Assert that the styling is no longer applied to the page");
-  let bgColorChanged = await waitForBackgroundColorChange(
+  let bgColorChanged = await waitForStylePropertyValueChange(
     dbg,
+    "backgroundColor",
     "rgba(0, 0, 0, 0)"
   );
   ok(bgColorChanged, "The body background color is removed");
 
-  currentBgColor = await getCurrentPageBackgroundColor();
+  currentBgColor = await getCurrentPageStylePropertyValue("backgroundColor");
   is(currentBgColor, "rgba(0, 0, 0, 0)", "The background color is removed");
 
   info("Click to enable the stylesheet");
   await toggleStylesheetsVisibility(dbg);
 
   info("Assert that the styling is applied to the page");
-  bgColorChanged = await waitForBackgroundColorChange(
+  bgColorChanged = await waitForStylePropertyValueChange(
     dbg,
+    "backgroundColor",
     "rgb(176, 224, 230)"
   );
   ok(bgColorChanged, "The body background color is removed");
 
-  currentBgColor = await getCurrentPageBackgroundColor();
+  currentBgColor = await getCurrentPageStylePropertyValue("backgroundColor");
   is(
     currentBgColor,
     "rgb(176, 224, 230)",
@@ -176,7 +136,7 @@ span {
 
   info("Check the page has the style sheet applied");
   is(
-    await getCurrentPageBackgroundColor(),
+    await getCurrentPageStylePropertyValue("backgroundColor"),
     "rgb(255, 0, 0)",
     "The background color is powder blue"
   );
@@ -199,7 +159,7 @@ span {
 
   info("Check the page does not have the style sheet applied");
   is(
-    await getCurrentPageBackgroundColor(),
+    await getCurrentPageStylePropertyValue("backgroundColor"),
     "rgba(0, 0, 0, 0)",
     "The background color is powder blue"
   );
@@ -215,45 +175,3 @@ span {
     "minified source is still correct"
   );
 });
-
-async function toggleVisibilityAndAssertTheBackgroundPageColor(
-  dbg,
-  expectedPageColor
-) {
-  const bgColorChanged = waitForBackgroundColorChange(dbg, expectedPageColor);
-
-  info("Click to toggle the stylesheet");
-  await toggleStylesheetsVisibility(dbg);
-  await bgColorChanged;
-  ok(true, "The body background color has changed");
-
-  const currentBgColor = await getCurrentPageBackgroundColor();
-  is(currentBgColor, expectedPageColor, "The background color is correct");
-}
-
-function waitForBackgroundColorChange(dbg, expectedColor) {
-  return waitFor(async () => {
-    const currentBgColor = await getCurrentPageBackgroundColor();
-    return currentBgColor == expectedColor;
-  });
-}
-
-function getCurrentPageBackgroundColor() {
-  return SpecialPowers.spawn(gBrowser.selectedBrowser, [], function () {
-    const bodyStyles = content.getComputedStyle(content.document.body);
-    return bodyStyles.backgroundColor;
-  });
-}
-
-async function toggleStylesheetsVisibility(dbg) {
-  const el = findElementWithSelector(
-    dbg,
-    ".toggleStyleSheetVisibility .dbg-img-eye-opened"
-  );
-  const buttonUpdated = waitForElementWithSelector(
-    dbg,
-    `.toggleStyleSheetVisibility .dbg-img-eye-${el ? "closed" : "opened"}`
-  );
-  clickElement(dbg, "toggleStyleSheetVisibilityButton");
-  return buttonUpdated;
-}
