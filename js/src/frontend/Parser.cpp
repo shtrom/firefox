@@ -5291,18 +5291,18 @@ GeneralParser<ParseHandler, Unit>::importDeclaration() {
   BinaryNodeType moduleRequest = MOZ_TRY(handler_.newModuleRequest(
       moduleSpec, importAttributeList, TokenPos(begin, pos().end)));
 
+  Node importClause;
+  ImportPhase phase;
   if (isSourcePhaseImport) {
-    BinaryNodeType node = MOZ_TRY(handler_.newImportSourceDeclaration(
-        importSourceBinding, moduleRequest, TokenPos(begin, pos().end)));
-    if (!processImport(node)) {
-      return errorResult();
-    }
-
-    return node;
+    importClause = importSourceBinding;
+    phase = ImportPhase::Source;
+  } else {
+    importClause = importSpecSet;
+    phase = ImportPhase::Evaluation;
   }
 
   BinaryNodeType node = MOZ_TRY(handler_.newImportDeclaration(
-      importSpecSet, moduleRequest, TokenPos(begin, pos().end)));
+      importClause, moduleRequest, phase, TokenPos(begin, pos().end)));
   if (!processImport(node)) {
     return errorResult();
   }
@@ -12482,11 +12482,9 @@ GeneralParser<ParseHandler, Unit>::importExpr(YieldHandling yieldHandling,
 
     Node spec = MOZ_TRY(handler_.newCallImportSpec(arg, optionalArg));
 
-    ParseNodeKind kind = ParseNodeKind::CallImportExpr;
-    if (isSourcePhaseImport) {
-      kind = ParseNodeKind::CallImportSourceExpr;
-    }
-    return handler_.newCallImport(importHolder, spec, kind);
+    ImportPhase phase =
+        isSourcePhaseImport ? ImportPhase::Source : ImportPhase::Evaluation;
+    return handler_.newCallImport(importHolder, spec, phase);
   }
 
   error(JSMSG_UNEXPECTED_TOKEN_NO_EXPECT, TokenKindToDesc(next));

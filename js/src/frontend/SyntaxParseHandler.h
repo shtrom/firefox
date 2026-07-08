@@ -472,13 +472,8 @@ class SyntaxParseHandler {
                                     const TokenPos& pos) {
     return NodeGeneric;
   }
-  BinaryNodeResult newImportDeclaration(Node importSpecSet, Node moduleRequest,
-                                        const TokenPos& pos) {
-    return NodeGeneric;
-  }
-  BinaryNodeResult newImportSourceDeclaration(Node importedBinding,
-                                              Node moduleRequest,
-                                              const TokenPos& pos) {
+  BinaryNodeResult newImportDeclaration(Node importClause, Node moduleRequest,
+                                        ImportPhase phase, const TokenPos& pos) {
     return NodeGeneric;
   }
   BinaryNodeResult newImportSpec(Node importNameNode, Node bindingName) {
@@ -512,7 +507,7 @@ class SyntaxParseHandler {
     return NodeGeneric;
   }
   BinaryNodeResult newCallImport(NullaryNodeType importHolder, Node singleArg,
-                                 ParseNodeKind kind) {
+                                 ImportPhase phase) {
     return NodeGeneric;
   }
   BinaryNodeResult newCallImportSpec(Node specifierArg, Node optionalArg) {

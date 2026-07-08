@@ -1456,7 +1456,6 @@ class ASTSerializer {
                            MutableHandleValue dst);
   bool variableDeclarator(ParseNode* pn, MutableHandleValue dst);
   bool importDeclaration(BinaryNode* importNode, MutableHandleValue dst);
-  bool importSourceDeclaration(BinaryNode* importNode, MutableHandleValue dst);
   bool importSpecifier(BinaryNode* importSpec, MutableHandleValue dst);
   bool importNamespaceSpecifier(UnaryNode* importSpec, MutableHandleValue dst);
   bool exportDeclaration(ParseNode* exportNode, MutableHandleValue dst);
@@ -1848,8 +1847,8 @@ bool ASTSerializer::importDeclaration(BinaryNode* importNode,
                                       MutableHandleValue dst) {
   MOZ_ASSERT(importNode->isKind(ParseNodeKind::ImportDecl));
 
-  ListNode* specList = &importNode->left()->as<ListNode>();
-  MOZ_ASSERT(specList->isKind(ParseNodeKind::ImportSpecList));
+  bool isSource =
+      importNode->as<ImportDeclarationNode>().phase() == ImportPhase::Source;
 
   auto* moduleRequest = &importNode->right()->as<BinaryNode>();
   MOZ_ASSERT(moduleRequest->isKind(ParseNodeKind::ImportModuleRequest));
@@ -1857,8 +1856,44 @@ bool ASTSerializer::importDeclaration(BinaryNode* importNode,
   ParseNode* moduleSpecNode = moduleRequest->left();
   MOZ_ASSERT(moduleSpecNode->isKind(ParseNodeKind::StringExpr));
 
-  auto* attributeList = &moduleRequest->right()->as<ListNode>();
-  MOZ_ASSERT(attributeList->isKind(ParseNodeKind::ImportAttributeList));
+  RootedValue moduleSpec(cx);
+  if (!literal(moduleSpecNode, &moduleSpec)) {
+    return false;
+  }
+
+  NodeVector attributes(cx);
+  if (isSource) {
+    // Import source declarations do not have import attributes.
+    MOZ_ASSERT(moduleRequest->right()->isKind(ParseNodeKind::PosHolder));
+  } else {
+    auto* attributeList = &moduleRequest->right()->as<ListNode>();
+    MOZ_ASSERT(attributeList->isKind(ParseNodeKind::ImportAttributeList));
+    if (!importAttributes(attributeList, attributes)) {
+      return false;
+    }
+  }
+
+  RootedValue moduleRequestValue(cx);
+  if (!builder.moduleRequest(moduleSpec, attributes, &importNode->pn_pos,
+                             &moduleRequestValue)) {
+    return false;
+  }
+
+  if (isSource) {
+    NameNode* bindingName = &importNode->left()->as<NameNode>();
+    MOZ_ASSERT(bindingName->isKind(ParseNodeKind::Name));
+
+    RootedValue bindingNameValue(cx);
+    if (!identifier(bindingName, &bindingNameValue)) {
+      return false;
+    }
+
+    return builder.importSourceDeclaration(bindingNameValue, moduleRequestValue,
+                                           &importNode->pn_pos, dst);
+  }
+
+  ListNode* specList = &importNode->left()->as<ListNode>();
+  MOZ_ASSERT(specList->isKind(ParseNodeKind::ImportSpecList));
 
   NodeVector elts(cx);
   if (!elts.reserve(specList->count())) {
@@ -1881,61 +1916,8 @@ bool ASTSerializer::importDeclaration(BinaryNode* importNode,
     elts.infallibleAppend(elt);
   }
 
-  RootedValue moduleSpec(cx);
-  if (!literal(moduleSpecNode, &moduleSpec)) {
-    return false;
-  }
-
-  NodeVector attributes(cx);
-  if (!importAttributes(attributeList, attributes)) {
-    return false;
-  }
-
-  RootedValue moduleRequestValue(cx);
-  if (!builder.moduleRequest(moduleSpec, attributes, &importNode->pn_pos,
-                             &moduleRequestValue)) {
-    return false;
-  }
-
   return builder.importDeclaration(elts, moduleRequestValue,
                                    &importNode->pn_pos, dst);
-}
-
-bool ASTSerializer::importSourceDeclaration(BinaryNode* importNode,
-                                            MutableHandleValue dst) {
-  MOZ_ASSERT(importNode->isKind(ParseNodeKind::ImportSourceDecl));
-
-  NameNode* bindingName = &importNode->left()->as<NameNode>();
-  MOZ_ASSERT(bindingName->isKind(ParseNodeKind::Name));
-
-  auto* moduleRequest = &importNode->right()->as<BinaryNode>();
-  MOZ_ASSERT(moduleRequest->isKind(ParseNodeKind::ImportModuleRequest));
-
-  ParseNode* moduleSpecNode = moduleRequest->left();
-  MOZ_ASSERT(moduleSpecNode->isKind(ParseNodeKind::StringExpr));
-
-  RootedValue bindingNameValue(cx);
-  if (!identifier(bindingName, &bindingNameValue)) {
-    return false;
-  }
-
-  RootedValue moduleSpec(cx);
-  if (!literal(moduleSpecNode, &moduleSpec)) {
-    return false;
-  }
-
-  // Import source declarations do not have import attributes.
-  MOZ_ASSERT(moduleRequest->right()->isKind(ParseNodeKind::PosHolder));
-  NodeVector attributes(cx);
-
-  RootedValue moduleRequestValue(cx);
-  if (!builder.moduleRequest(moduleSpec, attributes, &importNode->pn_pos,
-                             &moduleRequestValue)) {
-    return false;
-  }
-
-  return builder.importSourceDeclaration(bindingNameValue, moduleRequestValue,
-                                         &importNode->pn_pos, dst);
 }
 
 bool ASTSerializer::importSpecifier(BinaryNode* importSpec,
@@ -2312,9 +2294,6 @@ bool ASTSerializer::statement(ParseNode* pn, MutableHandleValue dst) {
 
     case ParseNodeKind::ImportDecl:
       return importDeclaration(&pn->as<BinaryNode>(), dst);
-
-    case ParseNodeKind::ImportSourceDecl:
-      return importSourceDeclaration(&pn->as<BinaryNode>(), dst);
 
     case ParseNodeKind::ExportStmt:
     case ParseNodeKind::ExportDefaultStmt:
@@ -3278,7 +3257,6 @@ bool ASTSerializer::expression(ParseNode* pn, MutableHandleValue dst) {
              builder.metaProperty(firstIdent, secondIdent, &node->pn_pos, dst);
     }
 
-    case ParseNodeKind::CallImportSourceExpr:
     case ParseNodeKind::CallImportExpr: {
       BinaryNode* node = &pn->as<BinaryNode>();
       ParseNode* identNode = node->left();
@@ -3303,7 +3281,10 @@ bool ASTSerializer::expression(ParseNode* pn, MutableHandleValue dst) {
         return false;
       }
 
-      if (pn->isKind(ParseNodeKind::CallImportSourceExpr)) {
+      bool isImportSource =
+          node->as<CallImportNode>().phase() == ImportPhase::Source;
+
+      if (isImportSource) {
         Rooted<JSAtom*> sourceStr(cx, cx->names().source);
         if (!identifier(sourceStr, &identNode->pn_pos, &property)) {
           return false;
@@ -3331,9 +3312,6 @@ bool ASTSerializer::expression(ParseNode* pn, MutableHandleValue dst) {
           return false;
         }
       }
-
-      bool isImportSource = false;
-      isImportSource = pn->isKind(ParseNodeKind::CallImportSourceExpr);
 
       return builder.callImportExpression(meta, property, args, &pn->pn_pos,
                                           dst, isImportSource);
