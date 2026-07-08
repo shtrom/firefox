@@ -1076,8 +1076,8 @@ void RTCRtpTransceiver::SetCodecPreferences(
   // If we passed an empty list, we should restore the default list, including
   // RTX
 
-  mPreferredCodecs.clear();
-  std::vector<UniquePtr<JsepCodecDescription>> defaultCodecs;
+  mPreferredCodecs.Clear();
+  AutoTArray<UniquePtr<JsepCodecDescription>, 16> defaultCodecs;
 
   if (kind.EqualsLiteral("video")) {
     PeerConnectionImpl::GetDefaultVideoCodecs(defaultCodecs, rtxOverride);
@@ -1122,13 +1122,13 @@ void RTCRtpTransceiver::SetCodecPreferences(
         if ((mimeType.Find(defaultCodec->mName) != kNotFound) &&
             (inputCodec.mClockRate == defaultCodec->mClock) && channelsMatch &&
             sdpFmtpLinesMatch) {
-          mPreferredCodecs.emplace_back(defaultCodec->Clone());
+          mPreferredCodecs.EmplaceBack(defaultCodec->Clone());
           break;
         }
       }
     }
   } else {
-    mPreferredCodecs.swap(defaultCodecs);
+    mPreferredCodecs = std::move(defaultCodecs);
     mPreferredCodecsInUse = false;
   }
 }
