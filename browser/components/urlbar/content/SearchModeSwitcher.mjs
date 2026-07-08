@@ -281,6 +281,9 @@ export class SearchModeSwitcher {
         ) {
           return;
         }
+        // Prevent the keystroke from generating a
+        // click event and reopening the switcher.
+        keyboardEvent.preventDefault();
         break;
       }
       case "auxclick": {
