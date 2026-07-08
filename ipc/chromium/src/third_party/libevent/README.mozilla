@@ -1,4 +1,4 @@
-This is a clean copy of libevent-2.1.12-stable with the following modifications.
+This is a clean copy of libevent-2.1.13-stable with the following modifications.
 
 1. Add the following files:
 
@@ -9,7 +9,7 @@ This is a clean copy of libevent-2.1.12-stable with the following modifications.
 - solaris/event2/event-config.h
 - evconfig-private.h
 
-These files are taken from libevent-2.1.12-stable built on the development
+These files are taken from libevent-2.1.13-stable built on the development
 environment indicated by the first path component. You have to run
 "./configure" and "make" to get all of the pre-processing done. The
 event-config.h header can then be found in include/event2/ sub-directory and
