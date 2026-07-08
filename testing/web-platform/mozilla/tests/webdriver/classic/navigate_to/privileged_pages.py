@@ -105,7 +105,7 @@ def test_resource_url_without_system_access(session):
     assert_error(response, "unsupported operation")
 
 
-@pytest.mark.parametrize("protocol", ["http", "https"], ids=["http", "https"])
+@pytest.mark.parametrize("protocol", ["http", "https"])
 def test_web_safe_url_in_parent_process_context_without_system_access(
     parent_process_session, inline, protocol
 ):

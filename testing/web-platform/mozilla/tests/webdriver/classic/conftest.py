@@ -63,7 +63,7 @@ def install_new_tab_extension(session):
 
 
 @pytest_asyncio.fixture
-async def parent_process_session(session, configuration, geckodriver):
+async def parent_process_session(configuration, geckodriver):
     """Start a new geckodriver session with about:about opened via command
     line argument and return the session. Stops the driver on teardown."""
     config = deepcopy(configuration)
