@@ -237,7 +237,6 @@ allowed_warnings:
     - "toolkit/components/telemetry/obsolete/collection/custom-pings\\.md:.*: WARNING: undefined label"
     - "toolkit/components/telemetry/data/install-ping\\.md:.*: ERROR: Document or section may not begin with a transition"
     - "toolkit/mozapps/extensions/addon-manager/AMRemoteSettings-overview\\.md:.*: WARNING: undefined label"
-    - "code-quality/.*\\.md:.*: WARNING: undefined label"
 exclude_patterns:
     - js/src/doc/Debugger
 
