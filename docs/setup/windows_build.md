@@ -108,7 +108,7 @@ building Firefox for Android, you should also see the {ref}`GeckoView Contributo
 
 ### Ensure antivirus exclusions
 
-(ensure-antivirus-exclusions-1)=
+(ensure-antivirus-exclusions)=
 
 Microsoft Defender Antivirus and some third-party antivirus products
 are known to significantly degrade build times and sometimes even cause failed
