@@ -6448,12 +6448,6 @@
   value: ""
   mirror: never
 
-# Whether to include common ancestor when serializing HTML data for clipboard copy.
-- name: dom.serializer.includeCommonAncestor.enabled
-  type: bool
-  value: false
-  mirror: always
-
 # Whether to enable XSLT.
 - name: dom.xslt.enabled
   type: bool
