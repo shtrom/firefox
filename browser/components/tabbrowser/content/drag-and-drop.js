@@ -1056,17 +1056,26 @@
         );
         return;
       }
+      const isNovaEnabled = Services.prefs.getBoolPref(
+        "browser.nova.enabled",
+        false
+      );
+
       this._tabbrowserTabs.style.setProperty(
         "--dragover-tab-group-color",
-        `var(--tab-group-${groupColorCode})`
+        isNovaEnabled
+          ? `var(--tab-group-${groupColorCode})`
+          : `var(--tab-group-color-${groupColorCode})`
       );
       this._tabbrowserTabs.style.setProperty(
         "--dragover-tab-group-color-invert",
-        `var(--tab-group-${groupColorCode}-invert)`
+        isNovaEnabled
+          ? `var(--tab-group-${groupColorCode}-invert`
+          : `var(--tab-group-color-${groupColorCode}-invert)`
       );
       this._tabbrowserTabs.style.setProperty(
         "--dragover-tab-group-color-pale",
-        `var(--tab-group-${groupColorCode}-pale)`
+        `var(--tab-group-color-${groupColorCode}-pale)`
       );
     }
 

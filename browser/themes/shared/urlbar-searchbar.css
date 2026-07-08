@@ -69,13 +69,15 @@
    optionally be replaced with inline definitions when Proton is removed. */
 .urlbar,
 #searchbar {
-  --urlbar-background-border: var(--urlbar-input-container-border-width) solid transparent;
-  --urlbar-background-border-breakout: var(--urlbar-input-container-border-width) solid transparent;
+  --urlbar-background-background-color: var(--toolbar-field-background-color);
+  --urlbar-background-background-color-focused: var(--toolbar-field-background-color-focus);
+  --urlbar-background-border: none;
+  --urlbar-background-border-breakout: none;
   --urlbar-background-border-radius: var(--urlbarview-border-radius);
   --urlbar-background-border-top-radius-breakout-compact: min(var(--urlbar-background-border-radius), calc(var(--urlbar-min-height) / 2));
   --urlbar-background-box-shadow-breakout: 0 0 14px 0 var(--chrome-box-shadow);
   --urlbar-background-box-shadow-breakout-compact: none;
-  --urlbar-background-inset-breakout: calc(var(--urlbar-min-height) / 2 - var(--urlbarview-border-radius));
+  --urlbar-background-inset-breakout: calc(var(--urlbar-min-height) / 2 - var(--border-radius-xlarge));
   --urlbar-background-inset-breakout-compact: 0;
   --urlbar-background-outline-focused: none;
   --urlbar-input-container-border: var(--urlbar-input-container-border-width) solid var(--toolbar-field-border-color);
@@ -211,13 +213,13 @@ toolbar[inactive="true"] .urlbar,
   display: block;
   position: absolute;
   inset: 0;
-  background-color: var(--urlbar-background-color);
+  background-color: var(--urlbar-background-background-color);
   background-clip: border-box;
   border-radius: var(--urlbar-background-border-radius);
   border: var(--urlbar-background-border);
 
   .urlbar:is([focused], [open]) > & {
-    background-color: var(--urlbar-background-color-focus);
+    background-color: var(--urlbar-background-background-color-focused);
   }
 
   .urlbar[focused]:not([suppress-focus-border]) > & {
@@ -283,7 +285,7 @@ toolbar[inactive="true"] .urlbar,
 }
 
 #searchbar {
-  background-color: var(--urlbar-background-color);
+  background-color: var(--urlbar-background-background-color);
   background-clip: border-box;
   border-radius: var(--urlbar-border-radius);
   outline: var(--urlbar-input-container-border);
@@ -291,7 +293,7 @@ toolbar[inactive="true"] .urlbar,
   overflow: clip;
 
   &:focus-within {
-    background-color: var(--urlbar-background-color-focus);
+    background-color: var(--urlbar-background-background-color-focused);
     outline-color: var(--focus-outline-color);
     outline-width: var(--urlbar-input-container-border-width-breakout);
     outline-offset: calc(-1 * var(--urlbar-input-container-border-width-breakout));
@@ -1327,11 +1329,6 @@ toolbar[inactive="true"] .urlbar,
   Unfortunately, it gets overridden by --button-background-color-active
   during clicks.*/
   --button-background-color-selected: var(--button-background-color);
-
-  --button-text-color: var(--urlbar-box-text-color);
-  --button-text-color-hover: var(--urlbar-box-text-color-hover);
-  --button-text-color-active: var(--urlbar-box-text-color-hover);
-  --button-text-color-selected: var(--urlbar-box-text-color);
 
   --button-background-color: var(--urlbar-box-background-color);
   @media -moz-pref("browser.urlbar.unifiedSearchButton.always") {

@@ -291,7 +291,7 @@
   "box/border/radius/inner": 7,
   "box/icon/size": "{Primitives$icon/size}",
   "box/padding": "{Primitives$space/large}",
-  "tab/margin/block": "{Primitives$dimension/4}",
+  "tab/block/margin": "{Primitives$dimension/4}",
   "tab/border/radius": "var(--toolbarbutton-border-radius)",
   "tab/close/button/padding": 6,
   "tab/background/color/hover": "color-mix(in srgb, currentColor 11%, transparent)",
@@ -315,10 +315,5 @@
   "urlbar/box/text/color/hover": "{Primitives$urlbar/box/text/color}",
   "urlbar/margin/inline": 5,
   "urlbar/padding/block": 4,
-  "urlbarview/border/radius": 10,
-  "urlbarview/action/button/background/color": "color-mix(in srgb, var(--urlbarview-background-color-hover) 50%, transparent)",
-  "urlbarview/action/button/background/color/hover": "var(--urlbarview-background-color-hover)",
-  "urlbarview/favicon/size": "{Primitives$icon/size}",
-  "urlbarview/row/min/height": "{Primitives$size/item/large}",
-  "urlbarview/row/padding/block": "{Primitives$space/small}"
+  "urlbarview/border/radius": 10
 }
