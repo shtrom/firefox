@@ -1716,18 +1716,6 @@ class BrowserRobot(private val composeTestRule: ComposeTestRule) {
             return SitePermissionsRobot.Transition(composeTestRule)
         }
 
-        fun openSiteSecuritySheet(interact: SiteSecurityRobot.() -> Unit): SiteSecurityRobot.Transition {
-            Log.i(TAG, "openSiteSecuritySheet: Trying to click the site security toolbar button and wait for $waitingTime ms for a new window")
-            composeTestRule.onNodeWithContentDescription(getStringResource(toolbarR.string.mozac_browser_toolbar_content_description_site_info)).performClick()
-            Log.i(TAG, "openSiteSecuritySheet: Clicked the site security toolbar button and waited for $waitingTime ms for a new window")
-            composeTestRule.waitForIdle()
-            mDevice.waitForIdle()
-            waitForAppWindowToBeUpdated()
-
-            SiteSecurityRobot().interact()
-            return SiteSecurityRobot.Transition()
-        }
-
         fun clickManageAddressButton(interact: SettingsSubMenuAutofillRobot.() -> Unit): SettingsSubMenuAutofillRobot.Transition {
             Log.i(TAG, "clickManageAddressButton: Trying to click the manage address button and wait for $waitingTime ms for a new window")
             itemWithResId("$packageName:id/manage_addresses")
