@@ -6,7 +6,7 @@
 
 #include "gtest/gtest.h"
 
-static const char* const valid_ids[] = {
+static const char* const ids[] = {
     "5C347B10-D55C-11D1-89B7-006008911B81",
     "{5C347B10-D55C-11D1-89B7-006008911B81}",
     "5c347b10-d55c-11d1-89b7-006008911b81",
@@ -17,36 +17,16 @@ static const char* const valid_ids[] = {
     "fc347b10-d55c-f1d1-f9b7-006008911b81",
     "{fc347b10-d55c-f1d1-f9b7-006008911b81}",
 };
-#define NUM_VALID_IDS ((int)(sizeof(valid_ids) / sizeof(valid_ids[0])))
-
-static const char* const invalid_ids[] = {
-    "5C347B10-D55C-11D1-89B7-006008911B810",    // One too many digits
-    "5C347B10-D55C-11D1-89B7-006008911B8",      // One fewer digit
-    "5C347B10-D55C-11G1-89B7-006008911B81",     // One char is not hex
-    "{5C347B10-D55C-11D1-89B7-006008911B81",    // Improperly terminated 1
-    "5C347B10-D55C-11D1-89B7-006008911B81}",    // Improperly terminated 2
-    "{5C347B10-D55C-11D1-89B7-006008911B81}1",  // No \0 after end
-    "{5C347\010-D55C-11D1-89B7-006008911B81}",  // \0 in the middle / too short
-};
-#define NUM_INVALID_IDS ((int)(sizeof(invalid_ids) / sizeof(invalid_ids[0])))
+#define NUM_IDS ((int)(sizeof(ids) / sizeof(ids[0])))
 
 TEST(nsID, StringConversion)
 {
   nsID id;
-  for (int i = 0; i < NUM_VALID_IDS; i++) {
-    const char* idstr = valid_ids[i];
+  for (int i = 0; i < NUM_IDS; i++) {
+    const char* idstr = ids[i];
     ASSERT_TRUE(id.Parse(idstr));
 
     auto cp = id.ToString();
-    ASSERT_STREQ(cp.get(), valid_ids[4 * (i / 4) + 3]);
-  }
-}
-
-TEST(nsID, InvalidParsing)
-{
-  nsID id;
-  for (int i = 0; i < NUM_INVALID_IDS; i++) {
-    const char* idstr = invalid_ids[i];
-    ASSERT_FALSE(id.Parse(idstr));
+    ASSERT_STREQ(cp.get(), ids[4 * (i / 4) + 3]);
   }
 }

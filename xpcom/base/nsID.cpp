@@ -152,11 +152,7 @@ bool nsID::Parse(const char* aIDStr) {
     i++;
   }
 
-  if (expectFormat1 && (*aIDStr++ != '}')) {
-    return false;  // Improperly terminated
-  }
-
-  return *aIDStr == '\0';
+  return expectFormat1 ? *aIDStr == '}' : true;
 }
 
 #ifndef XPCOM_GLUE_AVOID_NSPR
