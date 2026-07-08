@@ -7482,6 +7482,14 @@ void QuotaManager::ShutdownStorageInternal() {
       mTemporaryStorageInitializedInternal = false;
     }
 
+    // Drop the (original-origin <-> uuid-based storage-origin) mappings used
+    // for private-browsing origins.
+    {
+      MutexAutoLock lock(mQuotaMutex);
+      mOriginToStorageOriginMap.Clear();
+      mStorageOriginToOriginMap.Clear();
+    }
+
     ReleaseIOThreadObjects();
 
     mStorageConnection = nullptr;
