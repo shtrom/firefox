@@ -1404,9 +1404,18 @@ newtab-stocks-menu-learn-more = Learn more
 
 ## Strings for the Picture of the Day widget
 
-# Eyebrow shown at the top of the widget. Wikimedia Commons is a brand name and
-# should not be translated.
+# Title shown at the top of the widget, with the source name appended.
+# "Wikimedia Commons" is a brand name and should not be translated.
 newtab-picture-header = Picture of the day · Wikimedia Commons
+
+# Shorter title shown at the top of the widget, without the source name.
+newtab-picture-header-main = Picture of the day
+
+# Screen-reader label for the license link; the visible text is the license
+# name (for example "CC BY-SA 4.0") provided with the picture.
+# $license (string) - the name of the license.
+newtab-picture-attribution-license =
+    .aria-label = View the { $license } license
 
 # Button that sets the current picture as the New Tab background wallpaper. The
 # button collapses to an icon when not hovered/focused, so .title is its tooltip.
