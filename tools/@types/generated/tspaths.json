@@ -343,9 +343,6 @@
       "chrome://browser/content/sidebar/sidebar-panel-header.mjs": [
         "../../../browser/components/sidebar/sidebar-panel-header.mjs"
       ],
-      "chrome://browser/content/sidebar/sidebar-panel-switcher.mjs": [
-        "../../../browser/components/sidebar/sidebar-panel-switcher.mjs"
-      ],
       "chrome://browser/content/sidebar/sidebar-permissions-ui.mjs": [
         "../../../browser/components/sidebar/sidebar-permissions-ui.mjs"
       ],
@@ -396,6 +393,9 @@
       ],
       "chrome://browser/content/urlbar/UrlbarShared.mjs": [
         "../../../browser/components/urlbar/content/UrlbarShared.mjs"
+      ],
+      "chrome://browser/content/urlbar/UrlbarTelemetryUtils.mjs": [
+        "../../../browser/components/urlbar/content/UrlbarTelemetryUtils.mjs"
       ],
       "chrome://browser/content/urlbar/UrlbarView.mjs": [
         "../../../browser/components/urlbar/content/UrlbarView.mjs"
@@ -1495,6 +1495,9 @@
       "resource:///modules/MSMigrationUtils.sys.mjs": [
         "../../../browser/components/migration/MSMigrationUtils.sys.mjs"
       ],
+      "resource:///modules/MenuSectionLayout.sys.mjs": [
+        "../../../browser/modules/MenuSectionLayout.sys.mjs"
+      ],
       "resource:///modules/MigrationUtils.sys.mjs": [
         "../../../browser/components/migration/MigrationUtils.sys.mjs"
       ],
@@ -1731,9 +1734,6 @@
       ],
       "resource:///modules/backup/SiteSettingsBackupResource.sys.mjs": [
         "../../../browser/components/backup/resources/SiteSettingsBackupResource.sys.mjs"
-      ],
-      "resource:///modules/contentsharing/ContentSharingUtils.sys.mjs": [
-        "../../../browser/components/contentsharing/ContentSharingUtils.sys.mjs"
       ],
       "resource:///modules/distribution.sys.mjs": [
         "../../../browser/components/distribution.sys.mjs"
@@ -3384,9 +3384,6 @@
       ],
       "resource://devtools/client/netmonitor/src/actions/ui.js": [
         "../../../devtools/client/netmonitor/src/actions/ui.js"
-      ],
-      "resource://devtools/client/netmonitor/src/api.js": [
-        "../../../devtools/client/netmonitor/src/api.js"
       ],
       "resource://devtools/client/netmonitor/src/app.js": [
         "../../../devtools/client/netmonitor/src/app.js"
@@ -6945,6 +6942,9 @@
       ],
       "resource://newtab/lib/ActivityStreamPrefs.sys.mjs": [
         "../../../browser/extensions/newtab/lib/ActivityStreamPrefs.sys.mjs"
+      ],
+      "resource://newtab/lib/AdsClient.sys.mjs": [
+        "../../../browser/extensions/newtab/lib/AdsClient.sys.mjs"
       ],
       "resource://newtab/lib/AdsFeed.sys.mjs": [
         "../../../browser/extensions/newtab/lib/AdsFeed.sys.mjs"

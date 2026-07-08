@@ -8,7 +8,7 @@ document.addEventListener(
     const lazy = {};
     ChromeUtils.defineESModuleGetters(lazy, {
       ContentSharingUtils:
-        "resource:///modules/contentsharing/ContentSharingUtils.sys.mjs",
+        "moz-src:///browser/components/contentsharing/ContentSharingUtils.sys.mjs",
       TabMetrics: "moz-src:///browser/components/tabbrowser/TabMetrics.sys.mjs",
       TabNotes: "moz-src:///browser/components/tabnotes/TabNotes.sys.mjs",
     });
