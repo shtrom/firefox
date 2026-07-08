@@ -4293,7 +4293,7 @@ nsresult QuotaManager::InitializeOrigin(
                                 0) {
                               clientUsages[clientType] = usageInfo.TotalUsage();
                             } else {
-#if defined(EARLY_BETA_OR_EARLIER) || defined(DEBUG)
+#if defined(NIGHTLY_BUILD) || defined(DEBUG)
                               const nsCOMPtr<nsIConsoleService> console =
                                   do_GetService(NS_CONSOLESERVICE_CONTRACTID);
                               if (console) {
