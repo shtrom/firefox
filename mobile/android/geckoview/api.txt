@@ -1305,6 +1305,7 @@ package org.mozilla.geckoview {
     method @NonNull @UiThread public SessionAccessibility getAccessibility();
     method @Nullable @UiThread public Autofill.Delegate getAutofillDelegate();
     method @NonNull @UiThread public Autofill.Session getAutofillSession();
+    method @HandlerThread @NonNull public GeckoResult<JSONObject> getBrokenSiteReport();
     method @UiThread public void getClientBounds(@NonNull RectF);
     method @UiThread public void getClientToScreenMatrix(@NonNull Matrix);
     method @UiThread public void getClientToSurfaceMatrix(@NonNull Matrix);

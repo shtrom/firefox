@@ -991,7 +991,7 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
       for (const [category, values] of Object.entries(brokenSiteReportData)) {
         previewData[category] = Object.fromEntries(
           Object.entries(values)
-            .filter(([_, { do_not_preview }]) => !do_not_preview)
+            .filter(([_, { doNotPreview }]) => !doNotPreview)
             .map(([name, value]) => [name, value])
         );
       }

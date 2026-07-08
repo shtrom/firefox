@@ -3270,6 +3270,25 @@ public class GeckoSession {
   }
 
   /**
+   * Get the report info when a site is reported as broken.
+   *
+   * @return a {@link GeckoResult} containing the BrokenSiteReport as a JSONObject.
+   */
+  @HandlerThread
+  public @NonNull GeckoResult<JSONObject> getBrokenSiteReport() {
+    ThreadUtils.assertOnHandlerThread();
+    return mEventDispatcher
+        .queryString("GeckoView:GetBrokenSiteReport")
+        .map(
+            value -> {
+              if (value == null) {
+                throw new IllegalStateException("Unable to get broken site report");
+              }
+              return new JSONObject(value);
+            });
+  }
+
+  /**
    * Get the web compatibility info when a site is reported as broken.
    *
    * @return a {@link GeckoResult} containing the WebCompatInfo as a JSONObject.
