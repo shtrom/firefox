@@ -475,7 +475,7 @@ function makeBookmarkResult(
       source == UrlbarShared.RESULT_SOURCE.HISTORY ? true : undefined,
     blockL10n:
       source == UrlbarShared.RESULT_SOURCE.HISTORY
-        ? { id: "urlbar-result-menu-remove-from-history2" }
+        ? { id: "urlbar-result-menu-remove-from-history" }
         : undefined,
     helpUrl:
       source == UrlbarShared.RESULT_SOURCE.HISTORY
@@ -522,7 +522,7 @@ function makeFormHistoryResult(queryContext, { suggestion, engineName }) {
       title: suggestion,
       lowerCaseSuggestion: suggestion.toLocaleLowerCase(),
       isBlockable: true,
-      blockL10n: { id: "urlbar-result-menu-remove-from-history2" },
+      blockL10n: { id: "urlbar-result-menu-remove-from-history" },
       helpUrl:
         Services.urlFormatter.formatURLPref("app.support.baseURL") +
         "awesome-bar-result-menu",
@@ -939,7 +939,7 @@ function makeVisitResult(
     source == UrlbarShared.RESULT_SOURCE.HISTORY
   ) {
     payload.isBlockable = true;
-    payload.blockL10n = { id: "urlbar-result-menu-remove-from-history2" };
+    payload.blockL10n = { id: "urlbar-result-menu-remove-from-history" };
     payload.helpUrl =
       Services.urlFormatter.formatURLPref("app.support.baseURL") +
       "awesome-bar-result-menu";

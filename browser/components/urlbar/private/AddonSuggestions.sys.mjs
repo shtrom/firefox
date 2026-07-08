@@ -116,7 +116,7 @@ export class AddonSuggestions extends SuggestProvider {
       commands.push({
         name: RESULT_MENU_COMMAND.SHOW_LESS_FREQUENTLY,
         l10n: {
-          id: "urlbar-result-menu-show-less-frequently2",
+          id: "urlbar-result-menu-show-less-frequently",
         },
       });
     }
@@ -125,20 +125,20 @@ export class AddonSuggestions extends SuggestProvider {
       {
         name: RESULT_MENU_COMMAND.DISMISS,
         l10n: {
-          id: "urlbar-result-menu-dismiss-suggestion2",
+          id: "urlbar-result-menu-dismiss-suggestion",
         },
       },
       {
         name: RESULT_MENU_COMMAND.NOT_INTERESTED,
         l10n: {
-          id: "firefox-suggest-command-dont-show-addons2",
+          id: "firefox-suggest-command-dont-show-addons",
         },
       },
       { name: "separator" },
       {
         name: RESULT_MENU_COMMAND.MANAGE,
         l10n: {
-          id: "urlbar-result-menu-manage-firefox-suggest2",
+          id: "urlbar-result-menu-manage-firefox-suggest",
         },
       }
     );

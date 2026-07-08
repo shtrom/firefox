@@ -113,7 +113,7 @@ export class RealtimeSuggestProvider extends SuggestProvider {
 
   get notInterestedCommandL10n() {
     return {
-      id: `urlbar-result-menu-dont-show-${this.realtimeTypeForFtl}2`,
+      id: "urlbar-result-menu-dont-show-" + this.realtimeTypeForFtl,
     };
   }
 
@@ -423,7 +423,7 @@ export class RealtimeSuggestProvider extends SuggestProvider {
               {
                 name: "not_interested",
                 l10n: {
-                  id: "urlbar-result-realtime-opt-in-dismiss-all2",
+                  id: "urlbar-result-realtime-opt-in-dismiss-all",
                 },
               },
             ],
@@ -552,7 +552,7 @@ export class RealtimeSuggestProvider extends SuggestProvider {
       commands.push({
         name: "show_less_frequently",
         l10n: {
-          id: "urlbar-result-menu-show-less-frequently2",
+          id: "urlbar-result-menu-show-less-frequently",
         },
       });
     }
@@ -566,13 +566,13 @@ export class RealtimeSuggestProvider extends SuggestProvider {
       {
         name: "manage",
         l10n: {
-          id: "urlbar-result-menu-manage-firefox-suggest2",
+          id: "urlbar-result-menu-manage-firefox-suggest",
         },
       },
       {
         name: "help",
         l10n: {
-          id: "urlbar-result-menu-learn-more2",
+          id: "urlbar-result-menu-learn-more",
         },
       }
     );

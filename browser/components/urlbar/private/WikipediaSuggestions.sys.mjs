@@ -76,14 +76,14 @@ export class WikipediaSuggestions extends SuggestProvider {
       {
         name: "dismiss",
         l10n: {
-          id: "urlbar-result-menu-dismiss-suggestion2",
+          id: "urlbar-result-menu-dismiss-suggestion",
         },
       },
       { name: "separator" },
       {
         name: "manage",
         l10n: {
-          id: "urlbar-result-menu-manage-firefox-suggest2",
+          id: "urlbar-result-menu-manage-firefox-suggest",
         },
       },
     ];

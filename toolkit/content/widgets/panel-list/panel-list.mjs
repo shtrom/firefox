@@ -487,8 +487,6 @@ export class PanelList extends HTMLElement {
               [accesskey="${e.key.toUpperCase()}"]`
           );
           if (item) {
-            // Prevent the host from receiving input events for this keypress.
-            e.preventDefault();
             item.click();
           }
         }

@@ -332,7 +332,7 @@ class UrlbarInputTestUtils {
     );
     let promiseMenuOpen = lazy.BrowserTestUtils.waitForEvent(
       this.#urlbar(win).view.resultMenu,
-      "shown"
+      "popupshown"
     );
     if (byMouse) {
       this.info(
@@ -363,8 +363,9 @@ class UrlbarInputTestUtils {
       this.info(`waiting for ${activationKey} to open the menu popup`);
     }
     await promiseMenuOpen;
-    this.Assert?.ok(
-      this.#urlbar(win).view.resultMenu.hasAttribute("open"),
+    this.Assert?.equal(
+      this.#urlbar(win).view.resultMenu.state,
+      "open",
       "Checking popup state"
     );
   }
@@ -413,11 +414,19 @@ class UrlbarInputTestUtils {
 
       let promisePopup = lazy.BrowserTestUtils.waitForEvent(
         this.#urlbar(window).view.resultMenu,
-        "shown"
+        "popupshown"
       );
 
-      this.info("Clicking submenu item with selector: " + selector);
-      this.EventUtils.synthesizeMouseAtCenter(menuitem, {}, window);
+      if (AppConstants.platform == "macosx") {
+        // Synthesized clicks don't work in the native Mac menu.
+        this.info(
+          "Calling openMenu() on submenu item with selector: " + selector
+        );
+        menuitem.openMenu(true);
+      } else {
+        this.info("Clicking submenu item with selector: " + selector);
+        this.EventUtils.synthesizeMouseAtCenter(menuitem, {}, window);
+      }
 
       this.info("Waiting for submenu popupshown event");
       await promisePopup;
@@ -429,13 +438,13 @@ class UrlbarInputTestUtils {
     if (accesskey) {
       await lazy.TestUtils.waitForCondition(() => {
         menuitem = this.#urlbar(window).view.resultMenu.querySelector(
-          `panel-item[accesskey=${accesskey}]`
+          `menuitem[accesskey=${accesskey}]`
         );
         return menuitem;
       }, "Waiting for strings to load");
     } else if (command) {
       menuitem = this.#urlbar(window).view.resultMenu.querySelector(
-        `panel-item[data-command=${command}]`
+        `menuitem[data-command=${command}]`
       );
     } else {
       throw new Error("accesskey or command must be specified");
@@ -474,8 +483,24 @@ class UrlbarInputTestUtils {
       throw new Error("Menu item not found for accesskey: " + accesskey);
     }
 
-    this.info(`pressing access key (${accesskey}) to activate menu item`);
-    this.EventUtils.synthesizeKey(accesskey, {}, win);
+    let promiseCommand = lazy.BrowserTestUtils.waitForEvent(
+      this.#urlbar(win).view.resultMenu,
+      "command"
+    );
+
+    if (AppConstants.platform == "macosx") {
+      // The native Mac menu doesn't support access keys.
+      this.info("calling doCommand() to activate menu item");
+      menuitem.doCommand();
+      this.#urlbar(win).view.resultMenu.hidePopup(true);
+    } else {
+      this.info(`pressing access key (${accesskey}) to activate menu item`);
+      this.EventUtils.synthesizeKey(accesskey, {}, win);
+    }
+
+    this.info("waiting for command event");
+    await promiseCommand;
+    this.info("got the command event");
   }
 
   /**
@@ -516,19 +541,28 @@ class UrlbarInputTestUtils {
       submenuSelectors,
       window: win,
     });
-
     if (!menuitem) {
       throw new Error("Menu item not found for command: " + command);
     }
 
     let promiseCommand = lazy.BrowserTestUtils.waitForEvent(
       this.#urlbar(win).view.resultMenu,
-      "click"
+      "command"
     );
 
-    this.info("Clicking menu item with command: " + command);
-    this.EventUtils.synthesizeMouseAtCenter(menuitem, {}, win);
+    if (AppConstants.platform == "macosx") {
+      // Synthesized clicks don't work in the native Mac menu.
+      this.info("calling doCommand() to activate menu item");
+      menuitem.doCommand();
+      this.#urlbar(win).view.resultMenu.hidePopup(true);
+    } else {
+      this.info("Clicking menu item with command: " + command);
+      this.EventUtils.synthesizeMouseAtCenter(menuitem, {}, win);
+    }
+
+    this.info("Waiting for command event");
     await promiseCommand;
+    this.info("Got the command event");
   }
 
   /**

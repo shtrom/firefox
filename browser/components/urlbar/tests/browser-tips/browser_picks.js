@@ -170,7 +170,7 @@ function makeTipResult({ buttonUrl, helpUrl, heuristic }) {
       ],
       helpUrl,
       helpL10n: {
-        id: "urlbar-result-menu-tip-get-help2",
+        id: "urlbar-result-menu-tip-get-help",
       },
     },
   });

@@ -117,7 +117,7 @@ async function doShowLessFrequentlyCapReachedManySearches() {
     `menuitem[data-command=${command}]`
   );
   Assert.ok(!menuitem, "Menuitem should be absent");
-  gURLBar.view.resultMenu.removeAttribute("open");
+  gURLBar.view.resultMenu.hidePopup(true);
 }
 
 // Tests the "Don't show weather suggestions" result menu dismissal command.

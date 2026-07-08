@@ -342,14 +342,14 @@ export class UrlbarProviderSearchSuggestions extends UrlbarProvider {
       return /** @type {UrlbarResultCommand[]} */ ([
         {
           name: RESULT_MENU_COMMANDS.TRENDING_BLOCK,
-          l10n: { id: "urlbar-result-menu-trending-dont-show2" },
+          l10n: { id: "urlbar-result-menu-trending-dont-show" },
         },
         {
           name: "separator",
         },
         {
           name: RESULT_MENU_COMMANDS.TRENDING_HELP,
-          l10n: { id: "urlbar-result-menu-learn-more2" },
+          l10n: { id: "urlbar-result-menu-learn-more" },
         },
       ]);
     }
@@ -684,7 +684,7 @@ function makeFormHistoryResult(queryContext, engine, entry) {
       title: entry.value,
       lowerCaseSuggestion: entry.value.toLocaleLowerCase(),
       isBlockable: true,
-      blockL10n: { id: "urlbar-result-menu-remove-from-history2" },
+      blockL10n: { id: "urlbar-result-menu-remove-from-history" },
       helpUrl:
         Services.urlFormatter.formatURLPref("app.support.baseURL") +
         "awesome-bar-result-menu",

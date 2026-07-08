@@ -56,12 +56,12 @@ async function openResultMenuItems(index) {
   }
 
   let resultMenu = gURLBar.view.resultMenu;
-  let shown = BrowserTestUtils.waitForEvent(resultMenu, "shown");
+  let shown = BrowserTestUtils.waitForEvent(resultMenu, "popupshown");
   EventUtils.synthesizeMouseAtCenter(menuButton, {});
   await shown;
 
   return Array.from(
-    resultMenu.querySelectorAll("panel-item.urlbarView-result-menuitem"),
+    resultMenu.querySelectorAll("menuitem.urlbarView-result-menuitem"),
     el => ({ command: el.dataset.command, element: el })
   );
 }
@@ -71,9 +71,9 @@ async function openResultMenuItems(index) {
  */
 async function closeMenu() {
   let resultMenu = gURLBar.view.resultMenu;
-  if (resultMenu.hasAttribute("open")) {
-    let hidden = BrowserTestUtils.waitForEvent(resultMenu, "hidden");
-    resultMenu.hide();
+  if (resultMenu.state === "open" || resultMenu.state === "showing") {
+    let hidden = BrowserTestUtils.waitForEvent(resultMenu, "popuphidden");
+    resultMenu.hidePopup();
     await hidden;
   }
 }
@@ -102,7 +102,7 @@ add_task(async function dismiss_menu_appears_for_adaptive_autofill_url() {
 
   Assert.equal(
     dismiss.element.getAttribute("data-l10n-id"),
-    "urlbar-result-menu-dismiss-suggestion2",
+    "urlbar-result-menu-dismiss-suggestion",
     "l10n id should be the dismiss suggestion string"
   );
 
@@ -110,7 +110,7 @@ add_task(async function dismiss_menu_appears_for_adaptive_autofill_url() {
   Assert.ok(remove, "Remove URL command should be in the menu");
   Assert.equal(
     remove.element.getAttribute("data-l10n-id"),
-    "urlbar-result-menu-remove-from-history2",
+    "urlbar-result-menu-remove-from-history",
     "l10n id should be the same as regular remove from history command"
   );
 
@@ -143,7 +143,7 @@ add_task(async function dismiss_menu_appears_for_adaptive_autofill_origin() {
 
   Assert.equal(
     dismiss.element.getAttribute("data-l10n-id"),
-    "urlbar-result-menu-dismiss-suggestion2",
+    "urlbar-result-menu-dismiss-suggestion",
     "l10n id should be the dismiss suggestion string"
   );
 
@@ -497,12 +497,12 @@ add_task(async function dismiss_menu_in_private_window_adaptive_url() {
   Assert.ok(menuButton, "Result menu button should exist");
 
   let resultMenu = privateWin.gURLBar.view.resultMenu;
-  let shown = BrowserTestUtils.waitForEvent(resultMenu, "shown");
+  let shown = BrowserTestUtils.waitForEvent(resultMenu, "popupshown");
   EventUtils.synthesizeMouseAtCenter(menuButton, {}, privateWin);
   await shown;
 
   let items = Array.from(
-    resultMenu.querySelectorAll("panel-item.urlbarView-result-menuitem"),
+    resultMenu.querySelectorAll("menuitem.urlbarView-result-menuitem"),
     el => ({ command: el.dataset.command, element: el })
   );
 
@@ -514,6 +514,10 @@ add_task(async function dismiss_menu_in_private_window_adaptive_url() {
     items.find(i => i.command === "dismiss"),
     "Remove from history command should still appear in private browsing"
   );
+
+  let hidden = BrowserTestUtils.waitForEvent(resultMenu, "popuphidden");
+  resultMenu.hidePopup();
+  await hidden;
 
   await UrlbarTestUtils.promisePopupClose(privateWin);
   await BrowserTestUtils.closeWindow(privateWin);

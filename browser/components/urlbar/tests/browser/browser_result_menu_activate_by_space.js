@@ -61,7 +61,7 @@ async function doSpaceKeyTest({ input, targetRowIndex }) {
   // Open result menu by SPACE key.
   let promiseMenuOpen = BrowserTestUtils.waitForEvent(
     gURLBar.view.resultMenu,
-    "shown"
+    "popupshown"
   );
 
   await new Promise(resolve => {
@@ -84,5 +84,5 @@ async function doSpaceKeyTest({ input, targetRowIndex }) {
     previousUrlbarValue,
     "The urlbar value should be same"
   );
-  gURLBar.view.resultMenu.removeAttribute("open");
+  gURLBar.view.resultMenu.hidePopup();
 }

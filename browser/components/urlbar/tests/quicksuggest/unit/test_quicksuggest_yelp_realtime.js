@@ -461,7 +461,7 @@ function yelpOptInResult({ dismissButton = false } = {}) {
             {
               name: "not_interested",
               l10n: {
-                id: "urlbar-result-realtime-opt-in-dismiss-all2",
+                id: "urlbar-result-realtime-opt-in-dismiss-all",
               },
             },
           ],

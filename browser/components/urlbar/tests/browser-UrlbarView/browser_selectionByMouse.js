@@ -345,7 +345,7 @@ add_task(async function buttons() {
           url: mainResultUrl,
           helpUrl: mainResultHelpUrl,
           helpL10n: {
-            id: "urlbar-result-menu-learn-more2",
+            id: "urlbar-result-menu-learn-more",
           },
           isBlockable: true,
         },
@@ -364,8 +364,9 @@ add_task(async function buttons() {
   providersManager.registerProvider(provider);
 
   let assertResultMenuOpen = () => {
-    Assert.ok(
-      gURLBar.view.resultMenu.hasAttribute("open"),
+    Assert.equal(
+      gURLBar.view.resultMenu.state,
+      "showing",
       "Result menu is showing"
     );
     EventUtils.synthesizeKey("KEY_Escape");

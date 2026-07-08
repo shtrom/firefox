@@ -247,7 +247,7 @@ export class YelpSuggestions extends SuggestProvider {
       {
         name: RESULT_MENU_COMMAND.INACCURATE_LOCATION,
         l10n: {
-          id: "urlbar-result-menu-report-inaccurate-location2",
+          id: "urlbar-result-menu-report-inaccurate-location",
         },
       },
     ];
@@ -256,7 +256,7 @@ export class YelpSuggestions extends SuggestProvider {
       commands.push({
         name: RESULT_MENU_COMMAND.SHOW_LESS_FREQUENTLY,
         l10n: {
-          id: "urlbar-result-menu-show-less-frequently2",
+          id: "urlbar-result-menu-show-less-frequently",
         },
       });
     }
@@ -265,20 +265,20 @@ export class YelpSuggestions extends SuggestProvider {
       {
         name: RESULT_MENU_COMMAND.DISMISS,
         l10n: {
-          id: "urlbar-result-menu-dismiss-suggestion2",
+          id: "urlbar-result-menu-dismiss-suggestion",
         },
       },
       { name: "separator" },
       {
         name: RESULT_MENU_COMMAND.MANAGE,
         l10n: {
-          id: "urlbar-result-menu-manage-firefox-suggest2",
+          id: "urlbar-result-menu-manage-firefox-suggest",
         },
       },
       {
         name: RESULT_MENU_COMMAND.HELP,
         l10n: {
-          id: "urlbar-result-menu-learn-more2",
+          id: "urlbar-result-menu-learn-more",
         },
       }
     );
