@@ -645,8 +645,7 @@ class NodeBuilder {
   [[nodiscard]] bool callImportExpression(HandleValue meta,
                                           HandleValue property,
                                           NodeVector& args, TokenPos* pos,
-                                          MutableHandleValue dst,
-                                          bool isImportSource = false);
+                                          MutableHandleValue dst);
 
   [[nodiscard]] bool super(TokenPos* pos, MutableHandleValue dst);
 
@@ -1400,20 +1399,19 @@ bool NodeBuilder::metaProperty(HandleValue meta, HandleValue property,
 
 bool NodeBuilder::callImportExpression(HandleValue meta, HandleValue property,
                                        NodeVector& args, TokenPos* pos,
-                                       MutableHandleValue dst,
-                                       bool isImportSource /* = false */) {
+                                       MutableHandleValue dst) {
   RootedValue array(cx);
   if (!newArray(args, &array)) {
     return false;
   }
 
-  if (isImportSource) {
+  // `import.source(...)` carries the `source` phase as its property; plain
+  // `import(...)` has no property.
+  if (!property.isNull()) {
     return newNode(AST_CALL_IMPORT_SOURCE, pos, "meta", meta, "property",
                    property, "arguments", array, dst);
-  } else {
-    return newNode(AST_CALL_IMPORT, pos, "ident", meta, "arguments", array,
-                   dst);
   }
+  return newNode(AST_CALL_IMPORT, pos, "ident", meta, "arguments", array, dst);
 }
 
 bool NodeBuilder::super(TokenPos* pos, MutableHandleValue dst) {
@@ -3314,7 +3312,7 @@ bool ASTSerializer::expression(ParseNode* pn, MutableHandleValue dst) {
       }
 
       return builder.callImportExpression(meta, property, args, &pn->pn_pos,
-                                          dst, isImportSource);
+                                          dst);
     }
 
     case ParseNodeKind::SetThis: {
