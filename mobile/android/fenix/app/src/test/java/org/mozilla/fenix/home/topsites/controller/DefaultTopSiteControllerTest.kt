@@ -40,9 +40,13 @@ import org.mozilla.fenix.GleanMetrics.ShortcutsLibrary
 import org.mozilla.fenix.GleanMetrics.TopSites
 import org.mozilla.fenix.R
 import org.mozilla.fenix.components.Analytics
+import org.mozilla.fenix.components.AppStore
+import org.mozilla.fenix.components.appstate.AppAction.ShortcutAction
 import org.mozilla.fenix.components.usecases.FenixBrowserUseCases
 import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.helpers.FenixGleanTestRule
+import org.mozilla.fenix.home.topsites.AddShortcutEntryPoint
+import org.mozilla.fenix.home.topsites.AddShortcutSource
 import org.mozilla.fenix.home.topsites.ShortcutsFragmentDirections
 import org.mozilla.fenix.settings.SupportUtils
 import org.mozilla.fenix.utils.Settings
@@ -57,6 +61,7 @@ class DefaultTopSiteControllerTest {
 
     private val activity: Activity = mockk(relaxed = true)
     private val navController: NavController = mockk(relaxed = true)
+    private val appStore: AppStore = mockk(relaxed = true)
     private val tabsUseCases: TabsUseCases = mockk(relaxed = true)
     private val selectTabUseCase: TabsUseCases = mockk(relaxed = true)
     private val topSitesUseCases: TopSitesUseCases = mockk(relaxed = true)
@@ -1015,6 +1020,9 @@ class DefaultTopSiteControllerTest {
         coVerify {
             topSitesUseCases.addPinnedSites(title = title, url = url)
         }
+        verify {
+            appStore.dispatch(ShortcutAction.FrecencyTopSitePromoted)
+        }
     }
 
     @Test
@@ -1043,11 +1051,24 @@ class DefaultTopSiteControllerTest {
         val title = "Firefox"
         val url = "firefox.com"
 
-        controller.handleSaveShortcut(title = title, url = url)
+        controller.handleSaveShortcut(
+            title = title,
+            url = url,
+            source = AddShortcutSource.MANUAL,
+            entryPoint = AddShortcutEntryPoint.HOMEPAGE,
+        )
         testScheduler.advanceUntilIdle()
 
         coVerify {
             topSitesUseCases.addPinnedSites(title = title, url = url)
+        }
+        verify {
+            appStore.dispatch(
+                ShortcutAction.ShortcutAdded(
+                    source = AddShortcutSource.MANUAL,
+                    entryPoint = AddShortcutEntryPoint.HOMEPAGE,
+                ),
+            )
         }
     }
 
@@ -1273,6 +1294,7 @@ class DefaultTopSiteControllerTest {
             activityRef = WeakReference(activity),
             navControllerRef = WeakReference(navController),
             store = store,
+            appStore = appStore,
             settings = settings,
             addTabUseCase = tabsUseCases.addTab,
             selectTabUseCase = selectTabUseCase.selectTab,

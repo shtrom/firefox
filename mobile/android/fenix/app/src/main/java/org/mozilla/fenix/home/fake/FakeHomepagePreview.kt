@@ -56,6 +56,8 @@ import org.mozilla.fenix.home.sports.SportsInteractor
 import org.mozilla.fenix.home.store.NimbusMessageState
 import org.mozilla.fenix.home.termsofuse.PrivacyNoticeBannerInteractor
 import org.mozilla.fenix.home.termsofuse.PrivacyNoticeBannerInteractorNoOp
+import org.mozilla.fenix.home.topsites.AddShortcutEntryPoint
+import org.mozilla.fenix.home.topsites.AddShortcutSource
 import org.mozilla.fenix.home.topsites.interactor.TopSiteInteractor
 import org.mozilla.fenix.wallpapers.WallpaperState
 import java.io.File
@@ -189,7 +191,12 @@ internal object FakeHomepagePreview {
 
             override fun onShortcutsLibraryViewed() { /* no op */ }
 
-            override fun onSaveShortcut(title: String, url: String) { /* no op */ }
+            override fun onSaveShortcut(
+                title: String,
+                url: String,
+                source: AddShortcutSource,
+                entryPoint: AddShortcutEntryPoint,
+            ) { /* no op */ }
         }
 
     internal val recentTabInteractor

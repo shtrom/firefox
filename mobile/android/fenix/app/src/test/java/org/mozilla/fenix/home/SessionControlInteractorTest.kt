@@ -33,6 +33,8 @@ import org.mozilla.fenix.home.sessioncontrol.SessionControlInteractor
 import org.mozilla.fenix.home.sports.SportsController
 import org.mozilla.fenix.home.termsofuse.PrivacyNoticeBannerController
 import org.mozilla.fenix.home.toolbar.ToolbarController
+import org.mozilla.fenix.home.topsites.AddShortcutEntryPoint
+import org.mozilla.fenix.home.topsites.AddShortcutSource
 import org.mozilla.fenix.home.topsites.controller.TopSiteController
 
 class SessionControlInteractorTest {
@@ -228,8 +230,20 @@ class SessionControlInteractorTest {
 
     @Test
     fun `WHEN save shortcut is called THEN handle the save action in the controller`() {
-        interactor.onSaveShortcut(title = "Firefox", url = "firefox.com")
-        verify { topSiteController.handleSaveShortcut(title = "Firefox", url = "firefox.com") }
+        interactor.onSaveShortcut(
+            title = "Firefox",
+            url = "firefox.com",
+            source = AddShortcutSource.MANUAL,
+            entryPoint = AddShortcutEntryPoint.HOMEPAGE,
+        )
+        verify {
+            topSiteController.handleSaveShortcut(
+                title = "Firefox",
+                url = "firefox.com",
+                source = AddShortcutSource.MANUAL,
+                entryPoint = AddShortcutEntryPoint.HOMEPAGE,
+            )
+        }
     }
 
     @Test
