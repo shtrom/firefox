@@ -17,6 +17,7 @@
   "properties": {
     "3rdparty": {
       "type": "object",
+      "x-category": "Security",
       "properties": {
         "Extensions": {
           "type": "object",
@@ -32,6 +33,7 @@
 
     "AIControls": {
       "type": "object",
+      "x-category": "Content settings",
       "properties": {
         "Default": {
           "type": "object",
@@ -121,25 +123,33 @@
     },
 
     "AllowedDomainsForApps": {
-      "type": "string"
+      "type": "string",
+      "x-category": "Network security"
     },
 
     "AllowFileSelectionDialogs": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Browser UI"
     },
 
     "AppAutoUpdate": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Device update settings"
     },
 
     "AppUpdatePin": {
-      "type": "string"
+      "type": "string",
+      "x-category": "Device update settings"
     },
 
-    "AppUpdateURL": { "$ref": "#/definitions/url" },
+    "AppUpdateURL": {
+      "x-category": "Device update settings",
+      "$ref": "#/definitions/url"
+    },
 
     "Authentication": {
       "type": "object",
+      "x-category": "Authentication",
       "properties": {
         "SPNEGO": {
           "type": "array",
@@ -193,15 +203,18 @@
     },
 
     "AutofillAddressEnabled": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Password manager"
     },
 
     "AutofillCreditCardEnabled": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Password manager"
     },
 
     "AutoLaunchProtocolsFromOrigins": {
       "type": "array",
+      "x-category": "Network security",
       "contentMediaType": "application/json",
       "items": {
         "type": "object",
@@ -219,27 +232,33 @@
     },
 
     "BackgroundAppUpdate": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Device update settings"
     },
 
     "BlockAboutAddons": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Extensions"
     },
 
     "BlockAboutConfig": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Security"
     },
 
     "BlockAboutProfiles": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Security"
     },
 
     "BlockAboutSupport": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Security"
     },
 
     "Bookmarks": {
       "type": "array",
+      "x-category": "Bookmarks",
       "items": {
         "type": "object",
         "properties": {
@@ -266,6 +285,7 @@
 
     "BrowserDataBackup": {
       "type": ["boolean", "object"],
+      "x-category": "Security",
       "properties": {
         "AllowBackup": {
           "type": "boolean"
@@ -277,11 +297,13 @@
     },
 
     "CaptivePortal": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Network security"
     },
 
     "Certificates": {
       "type": "object",
+      "x-category": "Certificate management",
       "properties": {
         "ImportEnterpriseRoots": {
           "type": "boolean"
@@ -297,6 +319,7 @@
 
     "Containers": {
       "type": "object",
+      "x-category": "Extensions",
       "properties": {
         "Default": {
           "type": "array",
@@ -348,6 +371,7 @@
 
     "ContentAnalysis": {
       "type": "object",
+      "x-category": "Cloud reporting",
       "properties": {
         "Enabled": {
           "type": "boolean"
@@ -444,6 +468,7 @@
 
     "Cookies": {
       "type": "object",
+      "x-category": "Network security",
       "properties": {
         "Allow": {
           "type": "array",
@@ -510,7 +535,8 @@
     },
 
     "DefaultDownloadDirectory": {
-      "type": "string"
+      "type": "string",
+      "x-category": "Downloads"
     },
 
     "DefaultSerialGuardSetting": {
@@ -519,19 +545,23 @@
     },
 
     "DisableAccounts": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Miscellaneous"
     },
 
     "DisableAppUpdate": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Device update settings"
     },
 
     "DisableBuiltinPDFViewer": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Printing"
     },
 
     "DisabledCiphers": {
       "type": "object",
+      "x-category": "Network security",
       "properties": {
         "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256": {
           "type": "boolean"
@@ -597,67 +627,83 @@
     },
 
     "DisableDefaultBrowserAgent": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Miscellaneous"
     },
 
     "DisableDeveloperTools": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Security"
     },
 
     "DisableEncryptedClientHello": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Network security"
     },
 
     "DisableFeedbackCommands": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Browser UI"
     },
 
     "DisableFirefoxAccounts": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Miscellaneous"
     },
 
     "DisableFirefoxScreenshots": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Miscellaneous"
     },
 
     "DisableFirefoxStudies": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Miscellaneous"
     },
 
     "DisableForgetButton": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Miscellaneous"
     },
 
     "DisableFormHistory": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Local data storage"
     },
 
     "DisableMasterPasswordCreation": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Password manager"
     },
 
     "DisablePasswordReveal": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Password manager"
     },
 
     "DisablePocket": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Miscellaneous"
     },
 
     "DisablePrivateBrowsing": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Browsing restrictions"
     },
 
     "DisableProfileImport": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Bookmarks"
     },
 
     "DisableProfileRefresh": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Miscellaneous"
     },
 
     "DisableRemoteImprovements": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Miscellaneous"
     },
 
     "DisableRemoteSettingsAndAcceptSecurityConsequences": {
@@ -665,11 +711,13 @@
     },
 
     "DisableSafeMode": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Security"
     },
 
     "DisableSecurityBypass": {
       "type": "object",
+      "x-category": "Certificate management",
       "properties": {
         "InvalidCertificate": {
           "type": "boolean"
@@ -682,22 +730,27 @@
     },
 
     "DisableSetDesktopBackground": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Browser UI"
     },
 
     "DisableSystemAddonUpdate": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Device update settings"
     },
 
     "DisableTelemetry": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Miscellaneous"
     },
 
     "DisableThirdPartyModuleBlocking": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Security"
     },
 
     "DisplayBookmarksToolbar": {
+      "x-category": "Bookmarks",
       "anyOf": [
         { "type": "boolean" },
         { "type": "string", "enum": ["always", "never", "newtab"] }
@@ -705,6 +758,7 @@
     },
 
     "DisplayMenuBar": {
+      "x-category": "Browser UI",
       "anyOf": [
         { "type": "boolean" },
         {
@@ -716,6 +770,7 @@
 
     "DNSOverHTTPS": {
       "type": "object",
+      "x-category": "Network security",
       "properties": {
         "Enabled": {
           "type": "boolean"
@@ -737,15 +792,18 @@
     },
 
     "DontCheckDefaultBrowser": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Startup"
     },
 
     "DownloadDirectory": {
-      "type": "string"
+      "type": "string",
+      "x-category": "Downloads"
     },
 
     "EnableTrackingProtection": {
       "type": "object",
+      "x-category": "Network security",
       "properties": {
         "Value": {
           "type": "boolean"
@@ -784,6 +842,7 @@
 
     "EncryptedMediaExtensions": {
       "type": "object",
+      "x-category": "Content settings",
       "properties": {
         "Enabled": {
           "type": "boolean"
@@ -796,6 +855,7 @@
 
     "ExemptDomainFileTypePairsFromFileTypeDownloadWarnings": {
       "type": "array",
+      "x-category": "Network security",
       "items": {
         "type": "object",
         "properties": {
@@ -814,6 +874,7 @@
 
     "Extensions": {
       "type": "object",
+      "x-category": "Extensions",
       "properties": {
         "Install": {
           "type": "array",
@@ -838,6 +899,7 @@
 
     "ExtensionSettings": {
       "type": "object",
+      "x-category": "Extensions",
       "contentMediaType": "application/json",
       "properties": {
         "*": {
@@ -968,11 +1030,13 @@
     },
 
     "ExtensionUpdate": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Extensions"
     },
 
     "FirefoxHome": {
       "type": "object",
+      "x-category": "Startup",
       "properties": {
         "Search": {
           "type": "boolean"
@@ -1012,6 +1076,7 @@
 
     "FirefoxSuggest": {
       "type": "object",
+      "x-category": "Search",
       "properties": {
         "WebSuggestions": {
           "type": "boolean"
@@ -1033,6 +1098,7 @@
 
     "GenerativeAI": {
       "type": "object",
+      "x-category": "Miscellaneous",
       "properties": {
         "Chatbot": {
           "type": "boolean"
@@ -1056,11 +1122,13 @@
     },
 
     "GoToIntranetSiteForSingleWordEntryInAddressBar": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Network security"
     },
 
     "Handlers": {
       "type": "object",
+      "x-category": "Security",
       "contentMediaType": "application/json",
       "patternProperties": {
         "^(mimeTypes|extensions|schemes)$": {
@@ -1101,11 +1169,13 @@
     },
 
     "HardwareAcceleration": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Miscellaneous"
     },
 
     "Homepage": {
       "type": "object",
+      "x-category": "Startup",
       "properties": {
         "URL": { "$ref": "#/definitions/url" },
         "Locked": {
@@ -1124,16 +1194,19 @@
 
     "HttpAllowlist": {
       "type": "array",
+      "x-category": "Network security",
       "items": { "$ref": "#/definitions/origin" }
     },
 
     "HttpsOnlyMode": {
       "type": "string",
+      "x-category": "Network security",
       "enum": ["allowed", "disallowed", "enabled", "force_enabled"]
     },
 
     "InstallAddonsPermission": {
       "type": "object",
+      "x-category": "Extensions",
       "properties": {
         "Allow": {
           "type": "array",
@@ -1146,19 +1219,23 @@
     },
 
     "IPProtectionAvailable": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Network security"
     },
 
     "LegacyProfiles": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Miscellaneous"
     },
 
     "LegacySameSiteCookieBehaviorEnabled": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Network security"
     },
 
     "LegacySameSiteCookieBehaviorEnabledForDomainList": {
       "type": "array",
+      "x-category": "Network security",
       "items": {
         "type": "string"
       }
@@ -1166,6 +1243,7 @@
 
     "LocalFileLinks": {
       "type": "array",
+      "x-category": "Network security",
       "items": {
         "type": "string"
       }
@@ -1173,6 +1251,7 @@
 
     "LocalNetworkAccess": {
       "type": "object",
+      "x-category": "Network security",
       "properties": {
         "Enabled": {
           "type": "boolean"
@@ -1196,6 +1275,7 @@
     },
 
     "ManagedBookmarks": {
+      "x-category": "Bookmarks",
       "items": {
         "properties": {
           "children": {
@@ -1241,50 +1321,64 @@
     },
 
     "ManualAppUpdateOnly": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Device update settings"
     },
 
     "MicrosoftEntraSSO": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Authentication"
     },
 
     "NetworkPrediction": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Network security"
     },
 
     "NewTabPage": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Startup"
     },
 
     "NoDefaultBookmarks": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Bookmarks"
     },
 
     "OfferToSaveLogins": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Password manager"
     },
 
     "OfferToSaveLoginsDefault": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Password manager"
     },
 
     "OverrideFirstRunPage": {
-      "type": "string"
+      "type": "string",
+      "x-category": "Startup"
     },
 
-    "OverridePostUpdatePage": { "$ref": "#/definitions/urlOrEmpty" },
+    "OverridePostUpdatePage": {
+      "x-category": "Startup",
+      "$ref": "#/definitions/urlOrEmpty"
+    },
 
     "PasswordManagerEnabled": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Password manager"
     },
 
     "PasswordManagerExceptions": {
       "type": "array",
+      "x-category": "Password manager",
       "items": { "$ref": "#/definitions/origin" }
     },
 
     "PDFjs": {
       "type": "object",
+      "x-category": "Printing",
       "properties": {
         "Enabled": {
           "type": "boolean"
@@ -1297,6 +1391,7 @@
 
     "Permissions": {
       "type": "object",
+      "x-category": "Content settings",
       "properties": {
         "Camera": {
           "type": "object",
@@ -1464,6 +1559,7 @@
 
     "PictureInPicture": {
       "type": "object",
+      "x-category": "Content settings",
       "properties": {
         "Enabled": {
           "type": "boolean"
@@ -1476,6 +1572,7 @@
 
     "PopupBlocking": {
       "type": "object",
+      "x-category": "Content settings",
       "properties": {
         "Allow": {
           "type": "array",
@@ -1493,11 +1590,13 @@
     },
 
     "PostQuantumKeyAgreementEnabled": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Network security"
     },
 
     "Preferences": {
       "type": "object",
+      "x-category": "Security",
       "contentMediaType": "application/json",
       "patternProperties": {
         "^.*$": {
@@ -1520,24 +1619,29 @@
     },
 
     "PrimaryPassword": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Password manager"
     },
 
     "PrintingEnabled": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Printing"
     },
 
     "PrivateBrowsingModeAvailability": {
       "type": "number",
+      "x-category": "Browsing restrictions",
       "enum": [0, 1, 2]
     },
 
     "PromptForDownloadLocation": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Downloads"
     },
 
     "Proxy": {
       "type": "object",
+      "x-category": "Network security",
       "properties": {
         "Mode": {
           "type": "string",
@@ -1591,6 +1695,7 @@
 
     "RelaunchRequired": {
       "type": "object",
+      "x-category": "Miscellaneous",
       "properties": {
         "NotificationPeriodHours": {
           "type": "number"
@@ -1611,6 +1716,7 @@
 
     "RequestedLocales": {
       "type": ["string", "array"],
+      "x-category": "Miscellaneous",
       "items": {
         "type": "string"
       }
@@ -1618,6 +1724,7 @@
 
     "SanitizeOnShutdown": {
       "type": ["boolean", "object"],
+      "x-category": "Local data storage",
       "properties": {
         "Cache": {
           "type": "boolean"
@@ -1655,11 +1762,13 @@
 
     "SearchBar": {
       "type": "string",
+      "x-category": "Search",
       "enum": ["unified", "separate"]
     },
 
     "SearchEngines": {
       "type": "object",
+      "x-category": "Search",
       "properties": {
         "Add": {
           "type": "array",
@@ -1716,11 +1825,13 @@
     },
 
     "SearchSuggestEnabled": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Search"
     },
 
     "SecurityDevices": {
       "type": "object",
+      "x-category": "Certificate management",
       "patternProperties": {
         "^(?!Add$|Delete$).*$": { "type": "string" }
       },
@@ -1741,11 +1852,13 @@
     },
 
     "ShowHomeButton": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Startup"
     },
 
     "SitePolicies": {
       "type": "array",
+      "x-category": "Browsing restrictions",
       "items": {
         "type": "object",
         "properties": {
@@ -1777,25 +1890,30 @@
     },
 
     "SkipTermsOfUse": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Startup"
     },
 
     "SSLVersionMax": {
       "type": "string",
+      "x-category": "Network security",
       "enum": ["tls1", "tls1.1", "tls1.2", "tls1.3"]
     },
 
     "SSLVersionMin": {
       "type": "string",
+      "x-category": "Network security",
       "enum": ["tls1", "tls1.1", "tls1.2", "tls1.3"]
     },
 
     "StartDownloadsInTempDirectory": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Downloads"
     },
 
     "SupportMenu": {
       "type": "object",
+      "x-category": "Browser UI",
       "properties": {
         "Title": {
           "type": "string"
@@ -1809,11 +1927,13 @@
     },
 
     "TranslateEnabled": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Content settings"
     },
 
     "UserMessaging": {
       "type": "object",
+      "x-category": "Miscellaneous",
       "properties": {
         "WhatsNew": {
           "type": "boolean"
@@ -1843,15 +1963,18 @@
     },
 
     "UseSystemPrintDialog": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Printing"
     },
 
     "VisualSearchEnabled": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Search"
     },
 
     "WebsiteFilter": {
       "type": "object",
+      "x-category": "Browsing restrictions",
       "contentMediaType": "application/json",
       "properties": {
         "Block": {
@@ -1871,11 +1994,13 @@
     },
 
     "WindowsSSO": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Authentication"
     },
 
     "XSLTEnabled": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Content settings"
     }
   }
 }
