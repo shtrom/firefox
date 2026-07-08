@@ -2389,15 +2389,24 @@ class Editor extends EventEmitter {
    * Get the functions symbols for the current source loaded in the
    * the editor.
    *
+   * @param {number} sourceId - The id for the source, this used to cache and retrieve a cached syntax tree
    * @param {number} maxResults - The maximum no of results to display
    */
-  async getFunctionSymbols(maxResults) {
+  async getFunctionSymbols(sourceId, maxResults) {
     const cm = editors.get(this);
-    const { codemirrorLanguage } = this.#CodeMirror6;
+    const {
+      codemirrorLanguage,
+      codemirrorLangJavascript: { javascriptLanguage },
+    } = this.#CodeMirror6;
 
     const functionSymbols = [];
     let resultsCount = 0;
     await lezerUtils.walkTree(cm, codemirrorLanguage, {
+      tree: lezerUtils.getTree(
+        javascriptLanguage,
+        sourceId,
+        cm.state.doc.toString()
+      ),
       filterSet: lezerUtils.nodeTypeSets.functionsDeclAndExpr,
       enterVisitor: node => {
         if (resultsCount == maxResults) {
@@ -2426,7 +2435,6 @@ class Editor extends EventEmitter {
         });
         resultsCount++;
       },
-      forceParseTo: cm.state.doc.length,
     });
 
     return functionSymbols;
@@ -2435,14 +2443,23 @@ class Editor extends EventEmitter {
   /**
    * Get the class symbols for the current source loaded in the the editor.
    *
+   * @param {number} sourceId - The id for the source, this used to cache and retrieve a cached syntax tree
    * @returns
    */
-  async getClassSymbols() {
+  async getClassSymbols(sourceId) {
     const cm = editors.get(this);
-    const { codemirrorLanguage } = this.#CodeMirror6;
+    const {
+      codemirrorLanguage,
+      codemirrorLangJavascript: { javascriptLanguage },
+    } = this.#CodeMirror6;
 
     const classSymbols = [];
     await lezerUtils.walkTree(cm, codemirrorLanguage, {
+      tree: lezerUtils.getTree(
+        javascriptLanguage,
+        sourceId,
+        cm.state.doc.toString()
+      ),
       filterSet: lezerUtils.nodeTypeSets.classes,
       enterVisitor: node => {
         const classVarDefNode = node.node.firstChild.nextSibling;
@@ -2457,7 +2474,6 @@ class Editor extends EventEmitter {
           },
         });
       },
-      forceParseTo: cm.state.doc.length,
     });
 
     return classSymbols;
