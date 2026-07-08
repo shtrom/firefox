@@ -63,7 +63,19 @@ already_AddRefed<CSSMathClamp> CSSMathClamp::Constructor(
   RefPtr<CSSNumericValue> value = CSSNumericValue::Create(global, aValue);
   RefPtr<CSSNumericValue> upper = CSSNumericValue::Create(global, aUpper);
 
-  // XXX Step 2 is not yet implemented!
+  // Step 2.
+
+  AutoTArray<const StyleNumericType*, 3> numericTypes;
+
+  numericTypes.AppendElement(&lower->GetNumericType());
+  numericTypes.AppendElement(&value->GetNumericType());
+  numericTypes.AppendElement(&upper->GetNumericType());
+
+  StyleNumericType numericType;
+  if (!Servo_NumericType_AddTypes(&numericTypes, &numericType)) {
+    aRv.ThrowTypeError("Incompatible types");
+    return nullptr;
+  }
 
   // Step 3.
 
