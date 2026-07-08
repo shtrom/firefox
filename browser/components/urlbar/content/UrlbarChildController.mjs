@@ -198,6 +198,11 @@ export class UrlbarChildController {
    */
   // eslint-disable-next-line complexity
   handleKeyNavigation(event, executeAction = true) {
+    // If the resultMenu is open then let them handle any key events.
+    if (this.view.resultMenu.hasAttribute("open")) {
+      return;
+    }
+
     const isMac = AppConstants.platform == "macosx";
     // Handle readline/emacs-style navigation bindings on Mac.
     if (
