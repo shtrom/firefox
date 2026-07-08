@@ -4658,6 +4658,45 @@ static SamplerThread* NewSamplerThread(PSLockRef aLock, uint32_t aGeneration,
 // sampler exits the process while holding it, so such a waiter never resumes.
 static mozilla::StaticMutex sScheduledDumpMutex;
 
+// Save a profile to a file like profiler_save_profile_to_file(), but route the
+// given shared progress cell into the streaming code so its 0..1 progress can
+// be observed from another thread while the (long) dump runs.
+static void profiler_save_profile_to_file_with_progress(
+    const char* aFilename, RefPtr<ProgressLogger::SharedProgress> aProgress);
+
+// A scheduled off-main-thread dump can take a long time to build in memory
+// while the output file stays flat at ~350 KB (everything is spliced into the
+// file only at the end), so file size cannot distinguish a slow-but-progressing
+// dump from a hung one. The streaming code updates mProgress as it walks the
+// profile buffer; this helper thread polls that cell and writes the 0..1
+// fraction to a "<profile>.progress" sidecar file for a consumer that can't
+// read our memory (e.g. an out-of-process test harness). If it ever blocks
+// (say on the allocator the dump is contending for) the sidecar simply stops
+// advancing, which a consumer already treats as a stall.
+struct ScheduledDumpProgressEmitter {
+  RefPtr<ProgressLogger::SharedProgress> mProgress;
+  nsCString mSidecarPath;
+  Atomic<bool, MemoryOrdering::Relaxed> mDone{false};
+};
+
+static void ScheduledDumpProgressEmitterThread(void* aArg) {
+  NS_SetCurrentThreadName("ProfilerDumpProgress");
+  auto* emitter = static_cast<ScheduledDumpProgressEmitter*>(aArg);
+  // Poll the progress atomic on mProgress and write its current 0..1 value to
+  // the sidecar file until the dump signals completion via mDone.
+  while (!emitter->mDone) {
+    {
+      std::ofstream stream(emitter->mSidecarPath.get());
+      stream << emitter->mProgress->Progress().ToDouble() << "\n";
+    }
+    // ~1s cadence (a consumer polls far less often), split into short steps so
+    // the join on the non-exit-after-dump path returns promptly once mDone set.
+    for (int i = 0; i < 10 && !emitter->mDone; ++i) {
+      PR_Sleep(PR_MillisecondsToInterval(100));
+    }
+  }
+}
+
 // This function is the sampler thread.  This implementation is used for all
 // targets.
 void SamplerThread::Run() {
@@ -5272,12 +5311,29 @@ void SamplerThread::Run() {
       // (and, on the exit-after path, until the process is gone) rather than
       // acting while the profile is half-written.
       mozilla::StaticMutexAutoLock dumpLock(sScheduledDumpMutex);
-      profiler_save_profile_to_file(scheduledDumpPath.get());
+
+      // Emit streaming progress to a "<profile>.progress" sidecar while the
+      // dump runs, so a consumer can tell a slow-but-progressing dump from a
+      // hung one instead of watching the (flat) profile file size.
+      auto dumpProgress = MakeRefPtr<ProgressLogger::SharedProgress>();
+      ScheduledDumpProgressEmitter emitter{dumpProgress};
+      emitter.mSidecarPath = scheduledDumpPath;
+      emitter.mSidecarPath.AppendLiteral(".progress");
+      PRThread* emitterThread = PR_CreateThread(
+          PR_USER_THREAD, ScheduledDumpProgressEmitterThread, &emitter,
+          PR_PRIORITY_LOW, PR_GLOBAL_THREAD, PR_JOINABLE_THREAD, 0);
+
+      profiler_save_profile_to_file_with_progress(scheduledDumpPath.get(),
+                                                  dumpProgress);
+      emitter.mDone = true;
       if (scheduledDumpExitAfter) {
         // The profile is fully written; exit now as requested. A caller parked
         // in profiler_wait_for_scheduled_dump() stays blocked on the mutex
         // until the process exits here, so it never runs its abort.
         AppShutdown::DoImmediateExit();
+      }
+      if (emitterThread) {
+        PR_JoinThread(emitterThread);
       }
     }
 
@@ -6329,7 +6385,8 @@ void profiler_init(void* aStackTop) {
 static void locked_profiler_save_profile_to_file(
     PSLockRef aLock, const char* aFilename,
     const PreRecordedMetaInformation& aPreRecordedMetaInformation,
-    bool aIsShuttingDown);
+    bool aIsShuttingDown = false,
+    RefPtr<ProgressLogger::SharedProgress> aProgress = nullptr);
 
 static SamplerThread* locked_profiler_stop(PSLockRef aLock);
 
@@ -6613,7 +6670,7 @@ Vector<ProfileAndAdditionalInformation> profiler_move_exit_profiles() {
 static void locked_profiler_save_profile_to_file(
     PSLockRef aLock, const char* aFilename,
     const PreRecordedMetaInformation& aPreRecordedMetaInformation,
-    bool aIsShuttingDown = false) {
+    bool aIsShuttingDown, RefPtr<ProgressLogger::SharedProgress> aProgress) {
   nsAutoCString processedFilename(aFilename);
   const auto processInsertionIndex = processedFilename.Find("%p");
   if (processInsertionIndex != kNotFound) {
@@ -6638,7 +6695,7 @@ static void locked_profiler_save_profile_to_file(
     {
       (void)locked_profiler_stream_json_for_this_process(
           aLock, w, /* sinceTime */ 0, aPreRecordedMetaInformation,
-          aIsShuttingDown, nullptr, ProgressLogger{});
+          aIsShuttingDown, nullptr, ProgressLogger{std::move(aProgress)});
 
       w.StartArrayProperty("processes");
       Vector<ProfileAndAdditionalInformation> exitProfiles =
@@ -6658,7 +6715,11 @@ static void locked_profiler_save_profile_to_file(
 
 void profiler_save_profile_to_file(const char* aFilename) {
   LOG("profiler_save_profile_to_file(%s)", aFilename);
+  profiler_save_profile_to_file_with_progress(aFilename, nullptr);
+}
 
+static void profiler_save_profile_to_file_with_progress(
+    const char* aFilename, RefPtr<ProgressLogger::SharedProgress> aProgress) {
   MOZ_RELEASE_ASSERT(CorePS::Exists());
 
   const auto preRecordedMetaInformation = PreRecordMetaInformation();
@@ -6669,8 +6730,9 @@ void profiler_save_profile_to_file(const char* aFilename) {
     return;
   }
 
-  locked_profiler_save_profile_to_file(lock, aFilename,
-                                       preRecordedMetaInformation);
+  locked_profiler_save_profile_to_file(
+      lock, aFilename, preRecordedMetaInformation,
+      /* aIsShuttingDown */ false, std::move(aProgress));
 }
 
 void profiler_schedule_dump_to_file(double aDelaySeconds, const char* aFilename,
