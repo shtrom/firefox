@@ -575,10 +575,10 @@
     <ID>UndocumentedPublicClass:PermissionStorage.kt$PermissionStorage</ID>
     <ID>UndocumentedPublicClass:PhoneFeature.kt$PhoneFeature : Parcelable</ID>
     <ID>UndocumentedPublicClass:QuickSettingsFragmentReducer.kt$WebsitePermissionsStateReducer</ID>
-    <ID>UndocumentedPublicClass:QuickSettingsFragmentState.kt$AutoplayValue</ID>
-    <ID>UndocumentedPublicClass:QuickSettingsFragmentState.kt$AutoplayValue$AllowAll : AutoplayValue</ID>
-    <ID>UndocumentedPublicClass:QuickSettingsFragmentState.kt$AutoplayValue$BlockAll : AutoplayValue</ID>
-    <ID>UndocumentedPublicClass:QuickSettingsFragmentState.kt$AutoplayValue$BlockAudible : AutoplayValue</ID>
+    <ID>UndocumentedPublicClass:AutoplayValue.kt$AutoplayValue</ID>
+    <ID>UndocumentedPublicClass:AutoplayValue.kt$AutoplayValue$AllowAll : AutoplayValue</ID>
+    <ID>UndocumentedPublicClass:AutoplayValue.kt$AutoplayValue$BlockAll : AutoplayValue</ID>
+    <ID>UndocumentedPublicClass:AutoplayValue.kt$AutoplayValue$BlockAudible : AutoplayValue</ID>
     <ID>UndocumentedPublicClass:QuickSettingsFragmentState.kt$WebsitePermission$Autoplay : WebsitePermission</ID>
     <ID>UndocumentedPublicClass:QuickSettingsFragmentState.kt$WebsitePermission$Toggleable : WebsitePermission</ID>
     <ID>UndocumentedPublicClass:RadioButtonInfoPreference.kt$RadioButtonInfoPreference : RadioButtonPreference</ID>
@@ -794,11 +794,11 @@
     <ID>UndocumentedPublicFunction:ProfilerMarkers.kt$ProfilerMarkers$fun homeActivityOnStart(rootContainer: View, profiler: Profiler?)</ID>
     <ID>UndocumentedPublicFunction:PwaOnboardingObserver.kt$PwaOnboardingObserver$fun start()</ID>
     <ID>UndocumentedPublicFunction:PwaOnboardingObserver.kt$PwaOnboardingObserver$fun stop()</ID>
-    <ID>UndocumentedPublicFunction:QuickSettingsFragmentState.kt$AutoplayValue$abstract fun createSitePermissionsFromCustomRules(origin: String, settings: Settings): SitePermissions</ID>
-    <ID>UndocumentedPublicFunction:QuickSettingsFragmentState.kt$AutoplayValue$abstract fun isSelected(): Boolean</ID>
-    <ID>UndocumentedPublicFunction:QuickSettingsFragmentState.kt$AutoplayValue$abstract fun updateSitePermissions(sitePermissions: SitePermissions): SitePermissions</ID>
-    <ID>UndocumentedPublicFunction:QuickSettingsFragmentState.kt$AutoplayValue.Companion$fun getFallbackValue( context: Context, settings: Settings, sitePermission: SitePermissions?, ): AutoplayValue</ID>
-    <ID>UndocumentedPublicFunction:QuickSettingsFragmentState.kt$AutoplayValue.Companion$fun values( context: Context, settings: Settings, sitePermission: SitePermissions?, ): List&lt;AutoplayValue&gt;</ID>
+    <ID>UndocumentedPublicFunction:AutoplayValue.kt$AutoplayValue$abstract fun createSitePermissionsFromCustomRules(origin: String, settings: Settings): SitePermissions</ID>
+    <ID>UndocumentedPublicFunction:AutoplayValue.kt$AutoplayValue$abstract fun isSelected(): Boolean</ID>
+    <ID>UndocumentedPublicFunction:AutoplayValue.kt$AutoplayValue$abstract fun updateSitePermissions(sitePermissions: SitePermissions): SitePermissions</ID>
+    <ID>UndocumentedPublicFunction:AutoplayValue.kt$AutoplayValue.Companion$fun getFallbackValue( context: Context, settings: Settings, sitePermission: SitePermissions?, ): AutoplayValue</ID>
+    <ID>UndocumentedPublicFunction:AutoplayValue.kt$AutoplayValue.Companion$fun values( context: Context, settings: Settings, sitePermission: SitePermissions?, ): List&lt;AutoplayValue&gt;</ID>
     <ID>UndocumentedPublicFunction:RadioButtonInfoPreference.kt$RadioButtonInfoPreference$fun onInfoClickListener(listener: (() -&gt; Unit))</ID>
     <ID>UndocumentedPublicFunction:RadioButtonPreference.kt$RadioButtonPreference$fun onClickListener(listener: (() -&gt; Unit))</ID>
     <ID>UndocumentedPublicFunction:RadioButtonPreference.kt$RadioButtonPreference$fun setCheckedWithoutClickListener(isChecked: Boolean)</ID>
