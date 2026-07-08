@@ -19970,7 +19970,11 @@
 
 - name: webgl.disable-angle
   type: RelaxedAtomicBool
+#if defined(XP_WIN)
   value: false
+#else
+  value: true
+#endif
   mirror: always
 
 - name: webgl.disable-wgl
