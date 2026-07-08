@@ -132,10 +132,9 @@ class nsClipboard final : public nsBaseClipboard, public nsIObserver {
   // only internally on Linux. The alias is public so a file-scope helper
   // (TargetCallbackHandler) can hold instances of it; the method taking it
   // is private.
-  using HasMatchingFlavorsCallbackWithMap =
-      mozilla::MoveOnlyFunction<void(
-          mozilla::Result<nsTArray<nsCString>, nsresult>,
-          mozilla::Maybe<mozilla::widget::WebCustomFormatMap>)>;
+  using HasMatchingFlavorsCallbackWithMap = mozilla::MoveOnlyFunction<void(
+      mozilla::Result<nsTArray<nsCString>, nsresult>,
+      mozilla::Maybe<mozilla::widget::WebCustomFormatMap>)>;
 
  private:
   virtual ~nsClipboard();
