@@ -233,19 +233,14 @@
     set color(code) {
       let diff = code !== this.#colorCode;
       this.#colorCode = code;
-      this.style.setProperty(
-        "--tab-group-color",
-        `var(--tab-group-color-${code})`
-      );
+      this.style.setProperty("--tab-group-color", `var(--tab-group-${code})`);
       this.style.setProperty(
         "--tab-group-color-invert",
-        Services.prefs.getBoolPref("browser.nova.enabled")
-          ? `var(--tab-group-${code}-invert)`
-          : `var(--tab-group-color-${code}-invert)`
+        `var(--tab-group-${code}-invert)`
       );
       this.style.setProperty(
         "--tab-group-color-pale",
-        `var(--tab-group-color-${code}-pale)`
+        `var(--tab-group-${code}-pale)`
       );
       this.style.setProperty(
         "--tab-group-background-color",

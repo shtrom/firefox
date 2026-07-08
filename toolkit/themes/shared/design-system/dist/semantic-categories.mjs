@@ -789,11 +789,17 @@ export const tokensTable = {
       name: "--tab-background-color-selected",
     },
     {
+      value: "var(--toolbar-field-background-color)",
+      name: "--urlbar-background-color",
+    },
+    {
+      value: "var(--toolbar-field-background-color-focus)",
+      name: "--urlbar-background-color-focus",
+    },
+    {
       value: {
-        nativeTheme:
-          "light-dark(var(--button-background-color-hover), color-mix(in srgb, currentColor 16%, transparent))",
-        default:
-          "light-dark(var(--button-background-color-hover), color-mix(in srgb, currentColor 16%, transparent))",
+        nativeTheme: "var(--button-background-color)",
+        default: "var(--button-background-color)",
         browserTheme: {
           light: "white",
           dark: "rgb(66, 65, 77)",
@@ -848,6 +854,15 @@ export const tokensTable = {
         },
       },
       name: "--urlbarview-background-color-selected",
+    },
+    {
+      value:
+        "color-mix(in srgb, var(--urlbarview-background-color-hover) 50%, transparent)",
+      name: "--urlbarview-action-button-background-color",
+    },
+    {
+      value: "var(--urlbarview-background-color-hover)",
+      name: "--urlbarview-action-button-background-color-hover",
     },
   ],
   "border-color": [
@@ -1480,7 +1495,7 @@ export const tokensTable = {
       name: "--panel-box-shadow",
     },
     { value: "var(--box-shadow-level-3)", name: "--popup-box-shadow" },
-    { value: "var(--box-shadow-level-1)", name: "--tab-selected-box-shadow" },
+    { value: "var(--box-shadow-level-1)", name: "--tab-box-shadow-selected" },
   ],
   color: [
     { value: "#fbfbfe", name: "--color-gray-0" },
@@ -1973,6 +1988,8 @@ export const tokensTable = {
       value: "var(--dimension-40)",
       name: "--tab-pinned-expanded-background-width",
     },
+    { value: "var(--icon-size)", name: "--urlbarview-favicon-size" },
+    { value: "var(--size-item-large)", name: "--urlbarview-row-min-height" },
   ],
   space: [
     { value: "var(--dimension-relative-0125)", name: "--space-xxsmall" },
@@ -2116,7 +2133,7 @@ export const tokensTable = {
     { value: "1px", name: "--toggle-dot-margin" },
     { value: "calc(-1 * var(--dimension-2))", name: "--toggle-inset" },
     { value: "var(--space-large)", name: "--box-padding" },
-    { value: "var(--dimension-4)", name: "--tab-block-margin" },
+    { value: "var(--dimension-4)", name: "--tab-margin-block" },
     { value: "6px", name: "--tab-close-button-padding" },
     { value: "5.5px", name: "--tab-icon-end-margin" },
     { value: "var(--dimension-8)", name: "--tab-inline-padding" },
@@ -2134,6 +2151,7 @@ export const tokensTable = {
     { value: "var(--space-medium)", name: "--tab-vertical-inline-padding" },
     { value: "5px", name: "--urlbar-margin-inline" },
     { value: "4px", name: "--urlbar-padding-block" },
+    { value: "var(--space-small)", name: "--urlbarview-row-padding-block" },
   ],
   "text-color": [
     {
@@ -2738,6 +2756,17 @@ export const tokensTable = {
         },
       },
       name: "--urlbarview-text-color-action",
+    },
+    {
+      value: {
+        nativeTheme: "color-mix(in srgb, currentColor 73%, transparent)",
+        default: "color-mix(in srgb, currentColor 73%, transparent)",
+        forcedColors: "currentColor",
+        browserTheme: {
+          default: "color-mix(in srgb, currentColor 73%, transparent)",
+        },
+      },
+      name: "--urlbarview-text-color-secondary",
     },
     {
       value: {
@@ -5070,8 +5099,9 @@ export const variableLookupTable = {
   "box-icon-fill": "var(--icon-color)",
   "box-icon-stroke": "var(--box-icon-fill)",
   "box-padding": "var(--space-large)",
-  "tab-block-margin": "var(--dimension-4)",
+  "tab-margin-block": "var(--dimension-4)",
   "tab-border-radius": "var(--toolbarbutton-border-radius)",
+  "tab-box-shadow-selected": "var(--box-shadow-level-1)",
   "tab-attention-dot-color": "var(--color-accent-attention)",
   "tab-close-button-padding": "6px",
   "tab-hover-outline-color": {
@@ -5114,7 +5144,6 @@ export const variableLookupTable = {
       default: "light-dark(rgb(21, 20, 26), var(--color-white))",
     },
   },
-  "tab-selected-box-shadow": "var(--box-shadow-level-1)",
   "tab-vertical-block-margin": "var(--dimension-2)",
   "tab-vertical-inline-padding": "var(--space-medium)",
   "tab-group-blue": {
@@ -5348,12 +5377,13 @@ export const variableLookupTable = {
     nativeTheme: "solid",
     browserTheme: { default: "none" },
   },
+  "urlbar-background-color": "var(--toolbar-field-background-color)",
+  "urlbar-background-color-focus":
+    "var(--toolbar-field-background-color-focus)",
   "urlbar-border-radius": "var(--button-border-radius)",
   "urlbar-box-background-color": {
-    nativeTheme:
-      "light-dark(var(--button-background-color-hover), color-mix(in srgb, currentColor 16%, transparent))",
-    default:
-      "light-dark(var(--button-background-color-hover), color-mix(in srgb, currentColor 16%, transparent))",
+    nativeTheme: "var(--button-background-color)",
+    default: "var(--button-background-color)",
     browserTheme: {
       light: "white",
       dark: "rgb(66, 65, 77)",
@@ -5412,6 +5442,13 @@ export const variableLookupTable = {
       default: "light-dark(rgb(240, 240, 244), rgb(82, 82, 94))",
     },
   },
+  "urlbarview-action-button-background-color":
+    "color-mix(in srgb, var(--urlbarview-background-color-hover) 50%, transparent)",
+  "urlbarview-action-button-background-color-hover":
+    "var(--urlbarview-background-color-hover)",
+  "urlbarview-favicon-size": "var(--icon-size)",
+  "urlbarview-row-min-height": "var(--size-item-large)",
+  "urlbarview-row-padding-block": "var(--space-small)",
   "urlbarview-text-color-action": {
     nativeTheme: "LinkText",
     default: "LinkText",
@@ -5419,6 +5456,14 @@ export const variableLookupTable = {
       light: "rgb(91, 91, 102)",
       dark: "rgb(191, 191, 201)",
       default: "light-dark(rgb(91, 91, 102), rgb(191, 191, 201))",
+    },
+  },
+  "urlbarview-text-color-secondary": {
+    nativeTheme: "color-mix(in srgb, currentColor 73%, transparent)",
+    default: "color-mix(in srgb, currentColor 73%, transparent)",
+    forcedColors: "currentColor",
+    browserTheme: {
+      default: "color-mix(in srgb, currentColor 73%, transparent)",
     },
   },
   "urlbarview-text-color-selected": {
