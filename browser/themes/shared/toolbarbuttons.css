@@ -619,7 +619,7 @@ toolbar:not(#TabsToolbar) > #personal-bookmarks {
 
 /* Force the display of the label for bookmarks */
 .bookmark-item > .toolbarbutton-text {
-  display: flex !important;
+  display: block !important;
 }
 
 #PlacesToolbar,
