@@ -82,54 +82,6 @@ ChromeUtils.defineESModuleGetters(lazy, {
   isValidLogoUrl: "resource:///modules/PermissionPromptTargeting.sys.mjs",
 });
 
-// Lazy getter for site categories from pref
-XPCOMUtils.defineLazyPreferenceGetter(
-  lazy,
-  "siteCategories",
-  "permissions.desktop-notification.telemetry.siteCategories",
-  "{}",
-  null,
-  val => {
-    // Parse the JSON pref into a Map
-    // Format: {"domain1":"category1","domain2":"category2",...}
-    try {
-      let obj = JSON.parse(val);
-      return new Map(Object.entries(obj));
-    } catch (e) {
-      console.error("Failed to parse site categories pref:", e);
-      return new Map();
-    }
-  }
-);
-
-/**
- * Get the site category for telemetry based on the domain.
- *
- * @param {nsIPrincipal} principal - The principal of the requesting site
- * @returns {string} The category name or "other" if not in the known list
- */
-function getSiteCategory(principal) {
-  try {
-    // Check the full host first for specific subdomain matches
-    // (e.g., "mail.google.com" should match before falling back to "google.com")
-    let host = principal.URI.host;
-    if (lazy.siteCategories.has(host)) {
-      return lazy.siteCategories.get(host);
-    }
-
-    // Fall back to baseDomain (eTLD+1) for general domain matches
-    // (e.g., "example.com" from "sub.example.com")
-    let baseDomain = principal.baseDomain;
-    if (lazy.siteCategories.has(baseDomain)) {
-      return lazy.siteCategories.get(baseDomain);
-    }
-
-    return "other";
-  } catch (e) {
-    return "other";
-  }
-}
-
 XPCOMUtils.defineLazyServiceGetter(
   lazy,
   "IDNService",
@@ -141,6 +93,13 @@ XPCOMUtils.defineLazyServiceGetter(
   "ContentPrefService2",
   "@mozilla.org/content-pref/service;1",
   Ci.nsIContentPrefService2
+);
+
+XPCOMUtils.defineLazyServiceGetter(
+  lazy,
+  "SiteCategory",
+  "@mozilla.org/site-category;1",
+  Ci.nsISiteCategory
 );
 
 ChromeUtils.defineLazyGetter(lazy, "gBrandBundle", function () {
@@ -1495,7 +1454,7 @@ class DesktopNotificationPermissionPrompt extends PermissionPromptForRequest {
 
   get promptActions() {
     // Capture the site category now, while this.principal is still valid
-    let siteCategory = getSiteCategory(this.principal);
+    let siteCategory = lazy.SiteCategory.getCategory(this.principal);
 
     let allowAction = {
       label: lazy.gBrowserBundle.GetStringFromName("webNotifications.allow2"),
@@ -1565,7 +1524,7 @@ class DesktopNotificationPermissionPrompt extends PermissionPromptForRequest {
 
   get postPromptActions() {
     // Capture the site category now, while this.principal is still valid
-    let siteCategory = getSiteCategory(this.principal);
+    let siteCategory = lazy.SiteCategory.getCategory(this.principal);
 
     let allowAction = {
       label: lazy.gBrowserBundle.GetStringFromName("webNotifications.allow2"),
@@ -1691,7 +1650,7 @@ class DesktopNotificationPermissionPrompt extends PermissionPromptForRequest {
 
   prompt() {
     // Capture site category early (before this.principal becomes invalid)
-    let siteCategory = getSiteCategory(this.principal);
+    let siteCategory = lazy.SiteCategory.getCategory(this.principal);
 
     // Determine the blocking reason (check most specific to least specific)
     let blockReason = null;
@@ -1719,7 +1678,7 @@ class DesktopNotificationPermissionPrompt extends PermissionPromptForRequest {
 
   postPrompt() {
     Glean.webNotificationPermission.iconShown.record({
-      site_category: getSiteCategory(this.principal),
+      site_category: lazy.SiteCategory.getCategory(this.principal),
     });
 
     if (this.#exposureQualified) {
@@ -1744,12 +1703,12 @@ class DesktopNotificationPermissionPrompt extends PermissionPromptForRequest {
 
       // Record icon_clicked telemetry when user clicks the post-prompt icon
       Glean.webNotificationPermission.iconClicked.record({
-        site_category: getSiteCategory(this.principal),
+        site_category: lazy.SiteCategory.getCategory(this.principal),
       });
     }
 
     Glean.webNotificationPermission.promptShown.record({
-      site_category: getSiteCategory(this.principal),
+      site_category: lazy.SiteCategory.getCategory(this.principal),
       trigger,
     });
 
@@ -2450,5 +2409,4 @@ export const PermissionUI = {
   StorageAccessPermissionPrompt,
   LoopbackNetworkPermissionPrompt,
   LocalNetworkPermissionPrompt,
-  getSiteCategory,
 };
