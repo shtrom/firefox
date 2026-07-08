@@ -8,6 +8,7 @@ function assertIsImportDeclaration(src) {
   assertEq(ast.body.length, 1);
   const importDecl = ast.body[0];
   assertEq(importDecl.type, "ImportDeclaration");
+  assertEq(importDecl.phase, "evaluation");
 }
 
 function assertIsImportSourceDeclaration(src) {
@@ -15,7 +16,8 @@ function assertIsImportSourceDeclaration(src) {
   assertEq(ast.type, "Program");
   assertEq(ast.body.length, 1);
   const importDecl = ast.body[0];
-  assertEq(importDecl.type, "ImportSourceDeclaration");
+  assertEq(importDecl.type, "ImportDeclaration");
+  assertEq(importDecl.phase, "source");
 }
 
 const ast = Reflect.parse("import source mod from './module.js'", {target: "module"});
@@ -23,7 +25,8 @@ assertEq(ast.type, "Program");
 assertEq(ast.body.length, 1);
 
 const importDecl = ast.body[0];
-assertEq(importDecl.type, "ImportSourceDeclaration");
+assertEq(importDecl.type, "ImportDeclaration");
+assertEq(importDecl.phase, "source");
 
 const binding = importDecl.binding;
 assertEq(binding.type, "Identifier");

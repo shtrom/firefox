@@ -692,7 +692,8 @@ class FullParseHandler {
   }
 
   BinaryNodeResult newImportDeclaration(Node importClause, Node moduleRequest,
-                                        ImportPhase phase, const TokenPos& pos) {
+                                        ImportPhase phase,
+                                        const TokenPos& pos) {
     return newResult<ImportDeclarationNode>(pos, importClause, moduleRequest,
                                             phase);
   }

@@ -473,7 +473,8 @@ class SyntaxParseHandler {
     return NodeGeneric;
   }
   BinaryNodeResult newImportDeclaration(Node importClause, Node moduleRequest,
-                                        ImportPhase phase, const TokenPos& pos) {
+                                        ImportPhase phase,
+                                        const TokenPos& pos) {
     return NodeGeneric;
   }
   BinaryNodeResult newImportSpec(Node importNameNode, Node bindingName) {
