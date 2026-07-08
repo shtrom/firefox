@@ -15,12 +15,16 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mozilla.fenix.GleanMetrics.HomeContentArticle
 import org.mozilla.fenix.GleanMetrics.Pings
+import org.mozilla.fenix.GleanMetrics.TopSites
 import org.mozilla.fenix.TestUtils
 import org.mozilla.fenix.components.AppStore
 import org.mozilla.fenix.components.appstate.AppAction.ContentRecommendationsAction
+import org.mozilla.fenix.components.appstate.AppAction.ShortcutAction
 import org.mozilla.fenix.helpers.FenixGleanTestRule
 import org.mozilla.fenix.home.pocket.PocketImpression
 import org.mozilla.fenix.home.pocket.controller.StoriesImpressionSource
+import org.mozilla.fenix.home.topsites.AddShortcutEntryPoint
+import org.mozilla.fenix.home.topsites.AddShortcutSource
 import kotlin.test.assertNotNull
 
 @RunWith(AndroidJUnit4::class)
@@ -190,6 +194,69 @@ class HomeTelemetryMiddlewareTest {
 
         job.join()
         assertTrue(pingReceived)
+    }
+
+    @Test
+    fun `GIVEN a source and entry point WHEN ShortcutAdded action is dispatched THEN record the top site add telemetry`() {
+        val store = createStore()
+
+        assertNull(TopSites.add.testGetValue())
+
+        store.dispatch(
+            ShortcutAction.ShortcutAdded(
+                source = AddShortcutSource.POPULAR,
+                entryPoint = AddShortcutEntryPoint.SHORTCUTS_LIBRARY,
+            ),
+        )
+
+        val event = TopSites.add.testGetValue()!!
+        assertEquals(1, event.size)
+        assertEquals(AddShortcutSource.POPULAR.value, event.single().extra!!["source"])
+        assertEquals(AddShortcutEntryPoint.SHORTCUTS_LIBRARY.value, event.single().extra!!["entry_point"])
+    }
+
+    @Test
+    fun `WHEN FrecencyTopSitePromoted action is dispatched THEN record the top site add telemetry with the frecency promote source`() {
+        val store = createStore()
+
+        assertNull(TopSites.add.testGetValue())
+
+        store.dispatch(ShortcutAction.FrecencyTopSitePromoted)
+
+        val event = TopSites.add.testGetValue()!!
+        assertEquals(1, event.size)
+        assertEquals(AddShortcutSource.FRECENCY_PROMOTE.value, event.single().extra!!["source"])
+        assertNull(event.single().extra!!["entry_point"])
+    }
+
+    @Test
+    fun `WHEN AddShortcutSheetShown action is dispatched THEN record the add shortcut sheet shown telemetry`() {
+        val store = createStore()
+
+        assertNull(TopSites.addSheetShown.testGetValue())
+
+        store.dispatch(
+            ShortcutAction.AddShortcutSheetShown(
+                entryPoint = AddShortcutEntryPoint.HOMEPAGE,
+            ),
+        )
+
+        val event = TopSites.addSheetShown.testGetValue()!!
+        assertEquals(1, event.size)
+        assertEquals(AddShortcutEntryPoint.HOMEPAGE.value, event.single().extra!!["entry_point"])
+    }
+
+    @Test
+    fun `WHEN AddWebsiteDialogShown action is dispatched THEN record the add website modal shown telemetry`() {
+        val store = createStore()
+
+        assertNull(TopSites.addUrlShown.testGetValue())
+
+        store.dispatch(ShortcutAction.AddWebsiteDialogShown)
+
+        val event = TopSites.addUrlShown.testGetValue()!!
+        assertEquals(1, event.size)
+        assertNull(event.single().extra)
     }
 
     private fun createStore() = AppStore(

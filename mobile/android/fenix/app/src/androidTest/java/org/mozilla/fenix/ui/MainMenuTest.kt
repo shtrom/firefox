@@ -390,6 +390,11 @@ class MainMenuTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3080114
+    @Converted(
+        replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.MainMenuTest#verifyTheAddToHomeScreenSubMenuOptionTest"],
+        bug = 2051566,
+        since = "2026-06",
+    )
     @SmokeTest
     @Test
     fun verifyTheAddToHomeScreenSubMenuOptionTest() {

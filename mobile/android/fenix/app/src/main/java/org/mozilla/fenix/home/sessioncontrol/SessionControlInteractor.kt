@@ -36,6 +36,8 @@ import org.mozilla.fenix.home.sports.SportsCardType
 import org.mozilla.fenix.home.sports.SportsController
 import org.mozilla.fenix.home.termsofuse.PrivacyNoticeBannerController
 import org.mozilla.fenix.home.toolbar.ToolbarController
+import org.mozilla.fenix.home.topsites.AddShortcutEntryPoint
+import org.mozilla.fenix.home.topsites.AddShortcutSource
 import org.mozilla.fenix.home.topsites.controller.TopSiteController
 import org.mozilla.fenix.wallpapers.WallpaperState
 
@@ -280,8 +282,18 @@ class SessionControlInteractor(
         topSiteController.handleShortcutsLibraryViewed()
     }
 
-    override fun onSaveShortcut(title: String, url: String) {
-        topSiteController.handleSaveShortcut(title = title, url = url)
+    override fun onSaveShortcut(
+        title: String,
+        url: String,
+        source: AddShortcutSource,
+        entryPoint: AddShortcutEntryPoint,
+    ) {
+        topSiteController.handleSaveShortcut(
+            title = title,
+            url = url,
+            source = source,
+            entryPoint = entryPoint,
+        )
     }
 
     override fun showWallpapersOnboardingDialog(state: WallpaperState): Boolean {

@@ -62,6 +62,7 @@ class ShortcutsFragment : Fragment(), SystemInsetsPaddedFragment {
         controller = DefaultTopSiteController(
             activityRef = WeakReference(requireActivity()),
             store = requireComponents.core.store,
+            appStore = requireComponents.appStore,
             navControllerRef = WeakReference(findNavController()),
             settings = requireComponents.settings,
             addTabUseCase = requireComponents.useCases.tabsUseCases.addTab,

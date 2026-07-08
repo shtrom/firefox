@@ -495,7 +495,7 @@ nsresult HappyEyeballsConnectionAttempt::ProcessEchRetryConnectionResult(
 void HappyEyeballsConnectionAttempt::DnsLookupTimings(TimeStamp& aStart,
                                                       TimeStamp& aEnd) const {
   aStart = mFirstDnsLookupStart;
-  aEnd = mFirstConnectionStart;
+  aEnd = mDnsResolutionEnd.IsNull() ? mFirstConnectionStart : mDnsResolutionEnd;
 }
 
 void HappyEyeballsConnectionAttempt::FillConnectTimings(
@@ -565,6 +565,12 @@ nsresult HappyEyeballsConnectionAttempt::ProcessHappyEyeballsOutput() {
 
         if (mFirstConnectionStart.IsNull()) {
           mFirstConnectionStart = TimeStamp::Now();
+          // If no DNS response arrived before the first connection attempt,
+          // report domainLookupEnd as connectStart (matches Chrome's
+          // null-dns_resolution_end fallback).
+          if (mDnsResolutionEnd.IsNull()) {
+            mDnsResolutionEnd = mFirstConnectionStart;
+          }
         }
 
         auto res = ToNetAddr(event.attempt_connection.addr,
@@ -1856,6 +1862,14 @@ HappyEyeballsConnectionAttempt::OnLookupComplete(nsICancelable* request,
                                                  nsIDNSRecord* rec,
                                                  nsresult status) {
   LOG(("HappyEyeballsConnectionAttempt::OnLookupComplete"));
+
+  // domainLookupEnd tracks the latest DNS response received before the first
+  // connection attempt starts. Later responses are ignored; if no lookup has
+  // completed by the time the first connection starts, it is set to
+  // mFirstConnectionStart there instead.
+  if (mFirstConnectionStart.IsNull()) {
+    mDnsResolutionEnd = TimeStamp::Now();
+  }
 
   if (!request) {
     return NS_OK;

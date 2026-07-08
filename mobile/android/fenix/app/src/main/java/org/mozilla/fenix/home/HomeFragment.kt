@@ -1328,6 +1328,7 @@ class HomeFragment : Fragment() {
     private fun buildTopSitesController() = DefaultTopSiteController(
         activityRef = WeakReference(requireActivity()),
         store = store,
+        appStore = requireComponents.appStore,
         navControllerRef = WeakReference(findNavController()),
         settings = requireComponents.settings,
         addTabUseCase = requireComponents.useCases.tabsUseCases.addTab,

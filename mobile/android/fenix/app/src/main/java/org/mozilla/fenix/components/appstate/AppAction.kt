@@ -38,6 +38,8 @@ import org.mozilla.fenix.home.recenttabs.RecentTab
 import org.mozilla.fenix.home.recentvisits.RecentlyVisitedItem
 import org.mozilla.fenix.home.sports.MatchCard
 import org.mozilla.fenix.home.sports.SportCardErrorState
+import org.mozilla.fenix.home.topsites.AddShortcutEntryPoint
+import org.mozilla.fenix.home.topsites.AddShortcutSource
 import org.mozilla.fenix.library.history.PendingDeletionHistory
 import org.mozilla.fenix.messaging.MessagingState
 import org.mozilla.fenix.wallpapers.Wallpaper
@@ -444,8 +446,33 @@ sealed class AppAction : Action {
     sealed class ShortcutAction : AppAction() {
         /**
          * [ShortcutAction] dispatched when a shortcut is added.
+         *
+         * @property source The [AddShortcutSource] of how the shortcut was added.
+         * @property entryPoint The [AddShortcutEntryPoint] from where the add flow was started from.
          */
-        data object ShortcutAdded : ShortcutAction()
+        data class ShortcutAdded(
+            val source: AddShortcutSource,
+            val entryPoint: AddShortcutEntryPoint,
+        ) : ShortcutAction()
+
+        /**
+         * [ShortcutAction] dispatched when the popular-list bottom sheet for adding a shortcut is shown.
+         *
+         * @property entryPoint The [AddShortcutEntryPoint] from where the add flow was started from.
+         */
+        data class AddShortcutSheetShown(
+            val entryPoint: AddShortcutEntryPoint,
+        ) : ShortcutAction()
+
+        /**
+         * [ShortcutAction] dispatched when the manual add website dialog is shown.
+         */
+        data object AddWebsiteDialogShown : ShortcutAction()
+
+        /**
+         * [ShortcutAction] dispatched when a frecent top site is promoted to a pinned shortcut.
+         */
+        data object FrecencyTopSitePromoted : ShortcutAction()
     }
 
     /**

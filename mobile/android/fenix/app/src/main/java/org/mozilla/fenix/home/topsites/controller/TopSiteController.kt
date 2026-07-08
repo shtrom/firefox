@@ -38,12 +38,16 @@ import org.mozilla.fenix.GleanMetrics.ShortcutsLibrary
 import org.mozilla.fenix.GleanMetrics.TopSites
 import org.mozilla.fenix.R
 import org.mozilla.fenix.browser.browsingmode.BrowsingMode
+import org.mozilla.fenix.components.AppStore
 import org.mozilla.fenix.components.appstate.AppAction
+import org.mozilla.fenix.components.appstate.AppAction.ShortcutAction
 import org.mozilla.fenix.components.metrics.MetricsUtils
 import org.mozilla.fenix.components.usecases.FenixBrowserUseCases
 import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.ext.nav
 import org.mozilla.fenix.home.HomeFragmentDirections
+import org.mozilla.fenix.home.topsites.AddShortcutEntryPoint
+import org.mozilla.fenix.home.topsites.AddShortcutSource
 import org.mozilla.fenix.home.topsites.ShortcutsFragmentDirections
 import org.mozilla.fenix.home.topsites.interactor.TopSiteInteractor
 import org.mozilla.fenix.settings.SupportUtils
@@ -118,7 +122,12 @@ interface TopSiteController {
     /**
      * @see [TopSiteInteractor.onSaveShortcut]
      */
-    fun handleSaveShortcut(title: String, url: String)
+    fun handleSaveShortcut(
+        title: String,
+        url: String,
+        source: AddShortcutSource,
+        entryPoint: AddShortcutEntryPoint,
+    )
 }
 
 /**
@@ -129,6 +138,7 @@ class DefaultTopSiteController(
     private val activityRef: WeakReference<Activity>,
     private val navControllerRef: WeakReference<NavController>,
     private val store: BrowserStore,
+    private val appStore: AppStore,
     private val settings: Settings,
     private val addTabUseCase: TabsUseCases.AddNewTabUseCase,
     private val selectTabUseCase: TabsUseCases.SelectTabUseCase,
@@ -156,7 +166,7 @@ class DefaultTopSiteController(
             )
         }
 
-        activity.components.appStore.dispatch(
+        appStore.dispatch(
             AppAction.BrowsingModeManagerModeChanged(BrowsingMode.Private),
         )
 
@@ -239,6 +249,8 @@ class DefaultTopSiteController(
                 title = title,
                 url = url,
             )
+
+            appStore.dispatch(ShortcutAction.FrecencyTopSitePromoted)
         } else {
             topSitesUseCases.updateTopSites(
                 topSite = topSite,
@@ -428,7 +440,16 @@ class DefaultTopSiteController(
         ShortcutsLibrary.viewed.record(NoExtras())
     }
 
-    override fun handleSaveShortcut(title: String, url: String) {
+    override fun handleSaveShortcut(
+        title: String,
+        url: String,
+        source: AddShortcutSource,
+        entryPoint: AddShortcutEntryPoint,
+    ) {
+        appStore.dispatch(
+            ShortcutAction.ShortcutAdded(source = source, entryPoint = entryPoint),
+        )
+
         viewLifecycleScope.launch {
             topSitesUseCases.addPinnedSites(
                 title = title,
