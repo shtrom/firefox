@@ -1804,6 +1804,8 @@ class XPCShellTests:
             os.environ.get("MOZ_ENABLE_INC_ORIGIN_INIT") == "1"
         )
 
+        self.mozInfo["privateBrowsing"] = os.environ.get("MOZ_PRIVATE_BROWSING") == "1"
+
         self.mozInfo["condprof"] = options.get("conditionedProfile", False)
         self.mozInfo["msix"] = options.get("variant", "") == "msix"
 

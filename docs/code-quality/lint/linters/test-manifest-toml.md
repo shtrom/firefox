@@ -60,6 +60,7 @@ Expression ranks:
    - mda_gpu
    - msix
    - nogpu
+   - privateBrowsing
    - remote_async
    - snapshot
    - socketprocess_e10s
