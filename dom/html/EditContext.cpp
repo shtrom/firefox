@@ -499,11 +499,11 @@ nsresult EditContext::FireCharacterBoundsUpdateAndGetRects(
   };
   CollapseDirection collapse = CollapseDirection::None;
   if (aStart == aEnd) {
-    if (TextLength() == 0) {
-      // TODO: fall back to selection or control bounds in this case
-      return NS_ERROR_FAILURE;
-    }
     // In this case, ContentEventHandler still wants a rectangle for the caret
+    if (TextLength() == 0) {
+      aRects.AppendElement(FallbackBounds());
+      return NS_OK;
+    }
     if (aEnd < TextLength()) {
       // If requested range is before end of text, query the next character,
       // and collapse its rectangle in the opposite direction of the writing.
@@ -638,6 +638,33 @@ Maybe<LayoutDeviceIntRect> EditContext::GetSelectionBounds() const {
     return Nothing();
   }
   return Some(ToDeviceRect(*presContext, *mSelectionBounds));
+}
+
+LayoutDeviceIntRect EditContext::FallbackBounds() const {
+  if (Maybe<LayoutDeviceIntRect> bounds = GetSelectionBounds()) {
+    return *bounds;
+  }
+  if (Maybe<LayoutDeviceIntRect> bounds = GetControlBounds()) {
+    return *bounds;
+  }
+  if (NS_WARN_IF(!mAssociatedElement) ||
+      NS_WARN_IF(!mAssociatedElement->GetPrimaryFrame())) {
+    // Nothing good we can return here.
+    return {0, 0, 1, 1};
+  }
+  nsPresContext* presContext =
+      mAssociatedElement->GetPrimaryFrame()->PresContext();
+  nsRect appUnitsRect = mAssociatedElement->GetPrimaryFrame()->GetRect();
+  LayoutDeviceIntRect deviceRect;
+  deviceRect.x = presContext->AppUnitsToDevPixels(appUnitsRect.x);
+  deviceRect.y = presContext->AppUnitsToDevPixels(appUnitsRect.y);
+  // ContentCache, etc. is confused if the rectangles are empty,
+  // so ensure that they aren't.
+  deviceRect.width =
+      std::max(1, presContext->AppUnitsToDevPixels(appUnitsRect.width));
+  deviceRect.height =
+      std::max(1, presContext->AppUnitsToDevPixels(appUnitsRect.height));
+  return deviceRect;
 }
 
 }  // namespace mozilla::dom
