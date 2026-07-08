@@ -105,7 +105,6 @@ export const PREF_WIDGETS_STOCKS_ENABLED = "widgets.stocks.enabled";
 export const PREF_STOCKS_SIZE = "widgets.stocks.size";
 export const PREF_WIDGETS_SYSTEM_STOCKS_ENABLED =
   "widgets.system.stocks.enabled";
-export const PREF_CROSSWORD_ENDPOINT = "widgets.crossword.endpoint";
 
 /**
  * @typedef {object} WidgetRegistryEntry
@@ -409,22 +408,6 @@ export function resolveWidgetHasSidebar(widget, prefs) {
     }
   }
   return widget.hasSidebar;
-}
-
-/**
- * Returns the Merino endpoint the Crossword widget iframe should load.
- * A trainhopConfig.widgets.crosswordEndpoint override wins over the raw pref so
- * the endpoint can be swapped (e.g. staging to production) without a release.
- * The raw pref is never read directly by the component.
- *
- * @param {object} prefs - current pref values from the Redux store
- * @returns {string}
- */
-export function resolveCrosswordEndpoint(prefs) {
-  return (
-    prefs.trainhopConfig?.widgets?.crosswordEndpoint ||
-    prefs[PREF_CROSSWORD_ENDPOINT]
-  );
 }
 
 /**
