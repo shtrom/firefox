@@ -124,7 +124,7 @@ export var PoliciesPrefTracker = {
 
   start() {
     let { PoliciesUtils } = ChromeUtils.importESModule(
-      "resource:///modules/policies/Policies.sys.mjs"
+      "resource://gre/modules/PoliciesHelpers.sys.mjs"
     );
     this._originalFunc = PoliciesUtils.setDefaultPref;
     PoliciesUtils.setDefaultPref = this.hoistedSetDefaultPref.bind(this);
@@ -134,7 +134,7 @@ export var PoliciesPrefTracker = {
     this.restoreDefaultValues();
 
     let { PoliciesUtils } = ChromeUtils.importESModule(
-      "resource:///modules/policies/Policies.sys.mjs"
+      "resource://gre/modules/PoliciesHelpers.sys.mjs"
     );
     PoliciesUtils.setDefaultPref = this._originalFunc;
     this._originalFunc = null;
