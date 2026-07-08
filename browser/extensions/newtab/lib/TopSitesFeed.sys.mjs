@@ -2230,7 +2230,6 @@ export class TopSitesFeed {
     }
     pinnedLinks._links = next;
     pinnedLinks.save();
-    this.pinnedCache.expire();
   }
 
   /**
