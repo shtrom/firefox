@@ -4,7 +4,6 @@
 
 #include "DefaultCodecPreferences.h"
 
-#include "PeerConnectionImpl.h"
 #include "gmp/GMPUtils.h"
 #include "libwebrtcglue/VideoConduit.h"
 #include "mozilla/StaticPrefs_media.h"
@@ -114,13 +113,6 @@ bool DefaultCodecPreferences::RedUlpfecEnabledStatic() {
 }
 
 void EnumerateDefaultVideoCodecs(
-    nsTArray<UniquePtr<JsepCodecDescription>>& aSupportedCodecs,
-    const OverrideRtxPreference aOverrideRtxPreference) {
-  const DefaultCodecPreferences prefs(aOverrideRtxPreference);
-  EnumerateDefaultVideoCodecs(&aSupportedCodecs, prefs);
-}
-
-void EnumerateDefaultVideoCodecs(
     nsTArray<UniquePtr<JsepCodecDescription>>* aSupportedCodecs,
     const JsepCodecPreferences& aPrefs) {
   MOZ_ASSERT(aSupportedCodecs);
@@ -144,12 +136,6 @@ void EnumerateDefaultVideoCodecs(
   std::stable_sort(codecs.begin(), codecs.end(), comparator);
 
   aSupportedCodecs->AppendElements(std::move(codecs));
-}
-
-void EnumerateDefaultAudioCodecs(
-    nsTArray<UniquePtr<JsepCodecDescription>>& aSupportedCodecs) {
-  const auto prefs = PeerConnectionImpl::GetDefaultCodecPreferences();
-  EnumerateDefaultAudioCodecs(&aSupportedCodecs, prefs);
 }
 
 void EnumerateDefaultAudioCodecs(

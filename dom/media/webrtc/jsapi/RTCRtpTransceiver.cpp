@@ -1009,7 +1009,6 @@ void RTCRtpTransceiver::SetCodecPreferences(
   nsTArray<RTCRtpCodec> aCodecsFiltered;
   OverrideRtxPreference rtxOverride =
       OverrideRtxPreference::OverrideWithDisabled;
-  ;
   bool useableCodecs = false;
 
   // kind = transciever's kind.
@@ -1080,9 +1079,13 @@ void RTCRtpTransceiver::SetCodecPreferences(
   AutoTArray<UniquePtr<JsepCodecDescription>, 16> defaultCodecs;
 
   if (kind.EqualsLiteral("video")) {
-    PeerConnectionImpl::GetDefaultVideoCodecs(defaultCodecs, rtxOverride);
+    EnumerateDefaultVideoCodecs(
+        &defaultCodecs,
+        DefaultCodecPreferencesWithRtxOverride(mPc->mPrefs, rtxOverride));
   } else if (kind.EqualsLiteral("audio")) {
-    PeerConnectionImpl::GetDefaultAudioCodecs(defaultCodecs);
+    EnumerateDefaultAudioCodecs(
+        &defaultCodecs,
+        DefaultCodecPreferencesWithRtxOverride(mPc->mPrefs, rtxOverride));
   }
 
   if (!aCodecsFiltered.IsEmpty()) {
