@@ -131,6 +131,13 @@ class EditContext final : public DOMEventTargetHelper {
   // Get the selection bounds for the EditContext,
   // or Nothing if updateSelectionBounds has not been called.
   Maybe<LayoutDeviceIntRect> GetSelectionBounds() const;
+  /**
+   * Returns bounds to use as a fallback:
+   * - selection bounds if they have been set,
+   * - otherwise, control bounds if they have been set,
+   * - otherwise, associated element client bounding rect.
+   */
+  LayoutDeviceIntRect FallbackBounds() const;
 
   bool WasTextNextToCaretChangedByTextUpdateHandler() const {
     return mTextNextToCaretChangedByTextUpdateHandler;

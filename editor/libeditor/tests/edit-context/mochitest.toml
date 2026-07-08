@@ -14,6 +14,8 @@ prefs = [
 
 ["test_editcontext_empty_text_node.html"]
 
+["test_editcontext_fallback_bounds.html"]
+
 ["test_editcontext_format_commands.html"]
 
 ["test_editcontext_query_characters.html"]

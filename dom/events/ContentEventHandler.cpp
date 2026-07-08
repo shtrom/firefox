@@ -2008,11 +2008,14 @@ nsresult ContentEventHandler::OnQueryTextRectArray(
   const uint32_t kEndOffset = aEvent->mInput.EndOffset();
   bool wasLineBreaker = false;
   if (RefPtr<EditContext> editContext = GetEditContext()) {
+    MOZ_ASSERT(offset <= kEndOffset);
+    // Let's not overflow if somehow offset > kEndOffset
+    const uint32_t endOffset = std::max(kEndOffset, offset);
     // Get rectangles from EditContext character bounds
     nsTArray<LayoutDeviceIntRect>& rects = aEvent->mReply->mRectArray;
     Maybe<LayoutDeviceIntRect> selectionBounds =
         editContext->GetSelectionBounds();
-    if (selectionBounds && offset == kEndOffset &&
+    if (selectionBounds && offset == endOffset &&
         offset == editContext->SelectionStartClamped() &&
         editContext->SelectionIsCollapsed()) {
       // Use selection bounds for caret rect
@@ -2020,24 +2023,31 @@ nsresult ContentEventHandler::OnQueryTextRectArray(
       MOZ_ASSERT(aEvent->Succeeded());
       return NS_OK;
     }
-    rv = editContext->FireCharacterBoundsUpdateAndGetRects(offset, kEndOffset,
+    rv = editContext->FireCharacterBoundsUpdateAndGetRects(offset, endOffset,
                                                            rects);
     if (NS_SUCCEEDED(rv) && !rects.IsEmpty()) {
       LayoutDeviceIntRect lastRect = rects.LastElement();
       // If a range that goes past the end of the text content was requested,
       // just add more copies of the last rect to match the expected length.
-      while (rects.Length() < kEndOffset - offset) {
+      while (rects.Length() < endOffset - offset) {
         rects.AppendElement(lastRect);
       }
-      return rv;
+      MOZ_ASSERT(aEvent->Succeeded());
+      return NS_OK;
     }
-    // If failed (e.g. web app does not call updateCharacterBounds(), try
-    // to get the text from the DOM instead). But for canvas, that certainly
-    // won't work, so there's nothing we can do.
+    // If failed (e.g. web app does not call updateCharacterBounds()), try
+    // to get the text from the DOM instead. But for canvas, that certainly
+    // won't work, so just use the fallback bounds.
     if (mRootElement->IsHTMLElement(nsGkAtoms::canvas)) {
-      // XXX: maybe we can use selection bounds if query is roughly
-      //      for selection? or use control bounds as a fallback?
-      return NS_ERROR_FAILURE;
+      nsTArray<LayoutDeviceIntRect>& rects = aEvent->mReply->mRectArray;
+      LayoutDeviceIntRect fallbackBounds = editContext->FallbackBounds();
+      const uint32_t rectCount = std::max(1u, endOffset - offset);
+      rects.SetCapacity(rectCount);
+      for ([[maybe_unused]] uint32_t i : IntegerRange(rectCount)) {
+        rects.AppendElement(fallbackBounds);
+      }
+      MOZ_ASSERT(aEvent->Succeeded());
+      return NS_OK;
     }
   }
   // lastCharRect stores the last charRect value (see below for the detail of
@@ -2480,13 +2490,13 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
       MOZ_ASSERT(aEvent->Succeeded());
       return NS_OK;
     }
-    // If failed (e.g. web app does not call updateCharacterBounds(), try
-    // to get the text from the DOM instead). But for canvas, that certainly
-    // won't work, so there's nothing we can do.
+    // If failed (e.g. web app does not call updateCharacterBounds()), try
+    // to get the text from the DOM instead. But for canvas, that certainly
+    // won't work, so just use the fallback bounds.
     if (mRootElement->IsHTMLElement(nsGkAtoms::canvas)) {
-      // XXX: maybe we can use selection bounds if query is roughly
-      //      for selection? or use control bounds as a fallback?
-      return NS_ERROR_FAILURE;
+      aEvent->mReply->mRect = editContext->FallbackBounds();
+      MOZ_ASSERT(aEvent->Succeeded());
+      return NS_OK;
     }
   }
 
@@ -2987,8 +2997,8 @@ nsresult ContentEventHandler::OnQueryCharacterAtPoint(
       }
       return NS_OK;
     }
-    // If failed (e.g. web app does not call updateCharacterBounds(), try
-    // to get the text from the DOM instead). But for canvas, that certainly
+    // If failed (e.g. web app does not call updateCharacterBounds()), try
+    // to get the text from the DOM instead. But for canvas, that certainly
     // won't work, so there's nothing we can do.
     if (mRootElement->IsHTMLElement(nsGkAtoms::canvas)) {
       return NS_ERROR_FAILURE;
