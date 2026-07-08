@@ -541,6 +541,7 @@
 
     "DefaultSerialGuardSetting": {
       "type": "number",
+      "x-category": "Content settings",
       "enum": [2, 3]
     },
 
@@ -707,7 +708,8 @@
     },
 
     "DisableRemoteSettingsAndAcceptSecurityConsequences": {
-      "type": "boolean"
+      "type": "boolean",
+      "x-category": "Network security"
     },
 
     "DisableSafeMode": {
