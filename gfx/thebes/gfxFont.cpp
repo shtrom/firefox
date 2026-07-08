@@ -3329,7 +3329,7 @@ static uint8_t IsBoundarySpace(uint8_t aChar, uint8_t aNextChar) {
 
 template <typename T, typename Func>
 bool gfxFont::ProcessShapedWordInternal(
-    const T* aText, uint32_t aLength, uint32_t aHash, Script aRunScript,
+    const T* aText, uint8_t aLength, uint32_t aHash, Script aRunScript,
     nsAtom* aLanguage, bool aVertical, uint16_t aAppUnitsPerDevUnit,
     gfx::ShapedTextFlags aFlags, RoundingFlags aRounding,
     gfxTextPerfMetrics* aTextPerf GFX_MAYBE_UNUSED, Func aCallback) {
@@ -3725,8 +3725,10 @@ bool gfxFont::SplitAndInitTextRun(
   }
 #endif
 
-  uint32_t wordCacheCharLimit =
-      gfxPlatform::GetPlatform()->WordCacheCharLimit();
+  // TODO: Is there really a good reason to have this tied to a pref?
+  const uint32_t wordCacheCharLimit =
+      std::min(gfxPlatform::GetPlatform()->WordCacheCharLimit(),
+               static_cast<uint32_t>(std::numeric_limits<uint8_t>::max()));
 
   bool vertical = aOrientation == ShapedTextFlags::TEXT_ORIENT_VERTICAL_UPRIGHT;
 
@@ -3809,9 +3811,10 @@ bool gfxFont::SplitAndInitTextRun(
           wordFlags |= gfx::ShapedTextFlags::TEXT_IS_8BIT;
         }
       }
+      MOZ_ASSERT(length <= std::numeric_limits<uint8_t>::max());
       bool processed = ProcessShapedWordInternal(
-          aString + wordStart, length, hash, aRunScript, aLanguage, vertical,
-          appUnitsPerDevUnit, wordFlags, rounding, tp,
+          aString + wordStart, static_cast<uint8_t>(length), hash, aRunScript,
+          aLanguage, vertical, appUnitsPerDevUnit, wordFlags, rounding, tp,
           [&](gfxShapedWord* aShapedWord) {
             aTextRun->CopyGlyphDataFrom(aShapedWord, aRunStart + wordStart);
           });
