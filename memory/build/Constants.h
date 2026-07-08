@@ -104,7 +104,7 @@ static constexpr size_t kNumQuantumWideClasses =
 
 // Size and alignment of memory chunks that are allocated by the OS's virtual
 // memory system.
-static constexpr size_t kChunkSize = 1_MiB;
+static constexpr size_t kChunkSize = 2_MiB;
 static constexpr size_t kChunkSizeMask = kChunkSize - 1;
 
 // Maximum size of L1 cache line.  This is used to avoid cache line aliasing,
