@@ -250,6 +250,7 @@ module.exports = [
       "devtools/client/aboutdebugging/src/components/shared/IconLabel.css",
       "devtools/client/aboutdebugging/src/components/shared/Message.css",
       "devtools/client/aboutdebugging/src/components/sidebar/Sidebar.css",
+      "devtools/client/aboutdebugging/src/components/sidebar/SidebarFixedItem.css",
       "devtools/client/aboutdebugging/src/components/sidebar/SidebarItem.css",
       "devtools/client/aboutdebugging/src/components/sidebar/SidebarRuntimeItem.css",
       "gfx/layers/apz/test/mochitest/helper_subframe_style.css",

@@ -2029,6 +2029,9 @@
       "resource://devtools/client/aboutdebugging/src/components/sidebar/Sidebar.js": [
         "../../../devtools/client/aboutdebugging/src/components/sidebar/Sidebar.js"
       ],
+      "resource://devtools/client/aboutdebugging/src/components/sidebar/SidebarFixedItem.js": [
+        "../../../devtools/client/aboutdebugging/src/components/sidebar/SidebarFixedItem.js"
+      ],
       "resource://devtools/client/aboutdebugging/src/components/sidebar/SidebarItem.js": [
         "../../../devtools/client/aboutdebugging/src/components/sidebar/SidebarItem.js"
       ],

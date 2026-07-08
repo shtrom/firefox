@@ -39,7 +39,6 @@ const Template = ({
   showSearch,
   type = "",
   customHeight = "initial",
-  alwaysExpanded,
 }) => {
   let iconSrc = hasIcons
     ? "chrome://global/skin/icons/settings.svg"
@@ -61,19 +60,13 @@ const Template = ({
         margin-inline-start: 10px;
         --page-nav-margin-block-start: 10px;
 
-        &:not([alwaysexpanded]) {
-          @media (max-width: 52rem) {
-            margin-inline-start: 0;
-          }
+        @media (max-width: 52rem) {
+          margin-inline-start: 0;
         }
       }
     </style>
     <div id="page">
-      <moz-page-nav
-        data-l10n-id="moz-page-nav-heading"
-        type=${ifDefined(type)}
-        ?alwaysexpanded=${alwaysExpanded}
-      >
+      <moz-page-nav data-l10n-id="moz-page-nav-heading" type=${ifDefined(type)}>
         ${when(
           showSearch,
           () =>
@@ -130,7 +123,6 @@ Default.args = {
   hasIcons: true,
   showSearch: false,
   customHeight: "100%",
-  alwaysExpanded: false,
 };
 
 export const WithFooterLinks = Template.bind({});
@@ -151,11 +143,6 @@ WithSearchScroll.args = {
   ...Default.args,
   showSearch: true,
   customHeight: "190px",
-};
-export const WithoutCollapsing = Template.bind({});
-WithoutCollapsing.args = {
-  ...Default.args,
-  alwaysExpanded: true,
 };
 
 export const Mobile = Template.bind({});
