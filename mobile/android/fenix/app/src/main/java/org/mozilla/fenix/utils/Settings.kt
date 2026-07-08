@@ -2498,14 +2498,6 @@ class Settings(
     )
 
     /**
-     * Indicates if the Unified Trust Panel is enabled.
-     */
-    var enableUnifiedTrustPanel by booleanPreference(
-        key = appContext.getPreferenceKey(R.string.pref_key_enable_unified_trust_panel),
-        default = true,
-    )
-
-    /**
      * Indicates if Homepage Sports Widget is enabled.
      */
     var enableHomepageSportsWidget by booleanPreference(

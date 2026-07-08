@@ -677,7 +677,7 @@ class BrowserToolbarMiddleware(
 
                         val isTrackingProtectionEnabled =
                             tab.trackingProtection.enabled && !hasTrackingProtectionException
-                        val directions = if (settings.enableUnifiedTrustPanel) {
+                        val directions =
                             BrowserFragmentDirections.actionBrowserFragmentToTrustPanelFragment(
                                 sessionId = tab.id,
                                 url = tab.content.url,
@@ -690,21 +690,6 @@ class BrowserToolbarMiddleware(
                                 isTrackingProtectionEnabled = isTrackingProtectionEnabled,
                                 cookieBannerUIMode = cookieBannerUIMode,
                             )
-                        } else {
-                            BrowserFragmentDirections.actionBrowserFragmentToQuickSettingsSheetDialogFragment(
-                                sessionId = tab.id,
-                                url = tab.content.url,
-                                title = tab.content.title,
-                                isLocalPdf = tab.content.url.isContentUrl(),
-                                isSecured = tab.content.securityInfo.isSecure,
-                                sitePermissions = sitePermissions,
-                                gravity = settings.toolbarPosition.androidGravity,
-                                certificateName = tab.content.securityInfo.issuer,
-                                permissionHighlights = tab.content.permissionHighlights,
-                                isTrackingProtectionEnabled = isTrackingProtectionEnabled,
-                                cookieBannerUIMode = cookieBannerUIMode,
-                            )
-                        }
                         navController.nav(
                             R.id.browserFragment,
                             directions,

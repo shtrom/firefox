@@ -444,7 +444,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler, SystemIns
                     runIfFragmentIsAttached {
                         val isTrackingProtectionEnabled =
                             tab.trackingProtection.enabled && !hasTrackingProtectionException
-                        val directions = if (requireComponents.settings.enableUnifiedTrustPanel) {
+                        val directions =
                             BrowserFragmentDirections.actionBrowserFragmentToTrustPanelFragment(
                                 sessionId = tab.id,
                                 url = tab.content.url,
@@ -457,21 +457,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler, SystemIns
                                 isTrackingProtectionEnabled = isTrackingProtectionEnabled,
                                 cookieBannerUIMode = cookieBannerUIMode,
                             )
-                        } else {
-                            BrowserFragmentDirections.actionBrowserFragmentToQuickSettingsSheetDialogFragment(
-                                sessionId = tab.id,
-                                url = tab.content.url,
-                                title = tab.content.title,
-                                isLocalPdf = tab.content.url.isContentUrl(),
-                                isSecured = tab.content.securityInfo.isSecure,
-                                sitePermissions = sitePermissions,
-                                gravity = getAppropriateLayoutGravity(),
-                                certificateName = tab.content.securityInfo.issuer,
-                                permissionHighlights = tab.content.permissionHighlights,
-                                isTrackingProtectionEnabled = isTrackingProtectionEnabled,
-                                cookieBannerUIMode = cookieBannerUIMode,
-                            )
-                        }
                         nav(R.id.browserFragment, directions)
                     }
                 }

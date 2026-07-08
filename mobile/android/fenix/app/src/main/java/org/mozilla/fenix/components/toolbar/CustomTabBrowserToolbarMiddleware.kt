@@ -202,7 +202,7 @@ class CustomTabBrowserToolbarMiddleware(
                                     publicSuffixList = publicSuffixList,
                                 )
 
-                                val directions = if (settings.enableUnifiedTrustPanel) {
+                                val directions =
                                     ExternalAppBrowserFragmentDirections.actionGlobalTrustPanelFragment(
                                         sessionId = safeCustomTab.id,
                                         url = safeCustomTab.content.url,
@@ -216,23 +216,6 @@ class CustomTabBrowserToolbarMiddleware(
                                             safeCustomTab.trackingProtection.enabled && !isExcepted,
                                         cookieBannerUIMode = cookieBannerUIMode,
                                     )
-                                } else {
-                                    ExternalAppBrowserFragmentDirections
-                                        .actionGlobalQuickSettingsSheetDialogFragment(
-                                            sessionId = customTabId,
-                                            url = safeCustomTab.content.url,
-                                            title = safeCustomTab.content.title,
-                                            isLocalPdf = safeCustomTab.content.url.isContentUrl(),
-                                            isSecured = safeCustomTab.content.securityInfo.isSecure,
-                                            sitePermissions = sitePermissions,
-                                            gravity = settings.toolbarPosition.androidGravity,
-                                            certificateName = safeCustomTab.content.securityInfo.issuer,
-                                            permissionHighlights = safeCustomTab.content.permissionHighlights,
-                                            isTrackingProtectionEnabled =
-                                                safeCustomTab.trackingProtection.enabled && !isExcepted,
-                                            cookieBannerUIMode = cookieBannerUIMode,
-                                        )
-                                }
                                 navController.nav(
                                     R.id.externalAppBrowserFragment,
                                     directions,
