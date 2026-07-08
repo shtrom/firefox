@@ -38,12 +38,12 @@ class CodecInfoImpl final : public WebrtcCodecInfo {
         }()),
         mAudioCodecs([this] {
           nsTArray<UniquePtr<JsepCodecDescription>> codecs;
-          EnumerateDefaultAudioCodecs(codecs, mPrefs);
+          EnumerateDefaultAudioCodecs(&codecs, mPrefs);
           return codecs;
         }()),
         mVideoCodecs([this] {
           nsTArray<UniquePtr<JsepCodecDescription>> codecs;
-          EnumerateDefaultVideoCodecs(codecs, mPrefs);
+          EnumerateDefaultVideoCodecs(&codecs, mPrefs);
           return codecs;
         }()) {}
 
