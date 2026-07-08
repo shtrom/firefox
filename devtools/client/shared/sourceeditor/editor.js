@@ -538,6 +538,32 @@ class Editor extends EventEmitter {
     }
   }
 
+  /**
+   * Checks if the update to the content of the current document
+   * from a direct user interaction.
+   *
+   * @param {object} viewUpdate
+   * @returns {boolean}
+   */
+  isViewUpdateFromUserInput(viewUpdate) {
+    const {
+      codemirrorState: { Transaction },
+    } = this.#CodeMirror6;
+    // Make sure document has changed, ensuring user events like selections don't count.
+    if (viewUpdate.docChanged) {
+      // Check transactions for any that are direct user input, not changes from Y.js or another extension.
+      for (const transaction of viewUpdate.transactions) {
+        // Not using Transaction.isUserEvent because that only checks for a specific User event type ( "input", "delete", etc.).
+        // Checking the annotation directly allows for any type of user event.
+        const userEventType = transaction.annotation(Transaction.userEvent);
+        if (userEventType) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   // This update listener allows listening to the changes
   // to the codemiror editor.
   setUpdateListener(listener = null) {
@@ -4069,6 +4095,13 @@ class Editor extends EventEmitter {
     const offset = this.#positionToOffset(line);
     const el = this.#getElementAtOffset(offset);
     return el.closest(".cm-line");
+  }
+
+  // Used only in tests
+  // Only used for CM6
+  isReadOnly() {
+    const cm = editors.get(this);
+    return cm.state.readOnly;
   }
 
   // Used only in tests
