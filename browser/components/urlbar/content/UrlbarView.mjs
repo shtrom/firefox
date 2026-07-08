@@ -70,8 +70,8 @@ export class UrlbarView {
     this.#rows.addEventListener("overflow", this);
     this.#rows.addEventListener("underflow", this);
 
-    this.resultMenu.addEventListener("command", this);
-    this.resultMenu.addEventListener("popupshowing", this);
+    this.resultMenu.addEventListener("click", this);
+    this.resultMenu.addEventListener("showing", this);
 
     this.input.toggleAttribute("noresults", true);
 
@@ -664,7 +664,7 @@ export class UrlbarView {
       this.chromeWindow.gBrowser.userTypedValue = null;
     }
 
-    this.resultMenu.hidePopup();
+    this.resultMenu.hide();
     this.removeAccessibleFocus();
     this.input.inputField.setAttribute("aria-expanded", "false");
     this.#openPanelInstance = null;
@@ -1106,24 +1106,10 @@ export class UrlbarView {
 
   openResultMenu(result, anchor) {
     this.#resultMenuResult = result;
-
     let event = new CustomEvent("ResultMenuTriggered", {
       detail: { target: anchor },
     });
-
-    this.resultMenu.openPopup(anchor, {
-      position: "bottomright topright",
-      triggerEvent: event,
-    });
-
-    anchor.toggleAttribute("open", true);
-    let listener = event => {
-      if (event.target == this.resultMenu) {
-        anchor.removeAttribute("open");
-        this.resultMenu.removeEventListener("popuphidden", listener);
-      }
-    };
-    this.resultMenu.addEventListener("popuphidden", listener);
+    this.resultMenu.toggle(event, anchor);
   }
 
   /**
@@ -3872,7 +3858,7 @@ export class UrlbarView {
       commands.push({
         name: RESULT_MENU_COMMANDS.DISMISS,
         l10n: result.payload.blockL10n || {
-          id: "urlbar-result-menu-dismiss-suggestion",
+          id: "urlbar-result-menu-dismiss-suggestion2",
         },
       });
     }
@@ -3880,7 +3866,7 @@ export class UrlbarView {
       commands.push({
         name: RESULT_MENU_COMMANDS.HELP,
         l10n: result.payload.helpL10n || {
-          id: "urlbar-result-menu-learn-more",
+          id: "urlbar-result-menu-learn-more2",
         },
       });
     }
@@ -3888,7 +3874,7 @@ export class UrlbarView {
       commands.push({
         name: RESULT_MENU_COMMANDS.MANAGE,
         l10n: {
-          id: "urlbar-result-menu-manage-firefox-suggest",
+          id: "urlbar-result-menu-manage-firefox-suggest2",
         },
       });
     }
@@ -3902,33 +3888,22 @@ export class UrlbarView {
    * Popuplates the result menu with commands.
    *
    * @param {object} options
-   * @param {XULTextElement} options.menupopup
+   * @param {PanelList} options.panel
    * @param {UrlbarResultCommand[]} options.commands
    */
-  #populateResultMenu({ menupopup = this.resultMenu, commands }) {
-    menupopup.textContent = "";
+  async #populateResultMenu({ panel = this.resultMenu, commands }) {
+    panel.textContent = "";
+    await this.#l10nCache.ensureAll(commands.map(e => e.l10n).filter(e => e));
     for (let data of commands) {
-      if (data.children) {
-        let popup = this.document.createXULElement("menupopup");
-        this.#populateResultMenu({
-          menupopup: popup,
-          commands: data.children,
-        });
-        let menu = this.document.createXULElement("menu");
-        this.#l10nCache.setElementL10n(menu, data.l10n);
-        menu.appendChild(popup);
-        menupopup.appendChild(menu);
-        continue;
-      }
       if (data.name == "separator") {
-        menupopup.appendChild(this.document.createXULElement("menuseparator"));
+        panel.appendChild(this.document.createElement("separator"));
         continue;
       }
-      let menuitem = this.document.createXULElement("menuitem");
+      let menuitem = this.document.createElement("panel-item");
       menuitem.dataset.command = data.name;
       menuitem.classList.add("urlbarView-result-menuitem");
       this.#l10nCache.setElementL10n(menuitem, data.l10n);
-      menupopup.appendChild(menuitem);
+      panel.appendChild(menuitem);
     }
   }
 
@@ -4229,49 +4204,53 @@ export class UrlbarView {
     this.#enableOrDisableRowWrap();
   }
 
+  // Currently the resultMenu is the only element to consume click events, the context
+  // menu uses command events (below).
+  on_click(event) {
+    let result = this.#resultMenuResult;
+    this.#resultMenuResult = null;
+    let menuitem = event.target;
+    switch (menuitem.dataset.command) {
+      case RESULT_MENU_COMMANDS.HELP:
+        menuitem.dataset.url =
+          result.payload.helpUrl ||
+          Services.urlFormatter.formatURLPref("app.support.baseURL") +
+            "awesome-bar-result-menu";
+        break;
+    }
+    this.input.pickResult(result, event, menuitem);
+  }
+
   on_command(event) {
     let contextMenu;
-    if (event.currentTarget == this.resultMenu) {
-      let result = this.#resultMenuResult;
-      this.#resultMenuResult = null;
-      let menuitem = event.target;
-      switch (menuitem.dataset.command) {
-        case RESULT_MENU_COMMANDS.HELP:
-          menuitem.dataset.url =
-            result.payload.helpUrl ||
-            Services.urlFormatter.formatURLPref("app.support.baseURL") +
-              "awesome-bar-result-menu";
-          break;
-      }
-      this.input.pickResult(result, event, menuitem);
-    } else if (
-      (contextMenu = event.target.closest("#urlbarView-context-menu"))
-    ) {
+    if ((contextMenu = event.target.closest("#urlbarView-context-menu"))) {
       let row = contextMenu.triggerNode.closest(".urlbarView-row");
       this.input.pickResult(row.result, event, event.target);
     }
   }
 
+  on_showing(event) {
+    let commands;
+    let splitButton = event.target.triggeringEvent.detail.target.closest(
+      ".urlbarView-splitbutton"
+    );
+
+    if (splitButton) {
+      // Show the commands the are defined in its Split Button.
+      let mainButton = splitButton.firstElementChild;
+      let buttonName = mainButton.dataset.name;
+      commands = this.#resultMenuResult.payload.buttons.find(
+        b => b.name == buttonName
+      ).menu;
+    } else {
+      commands = this.#getResultMenuCommands(this.#resultMenuResult);
+    }
+
+    this.#populateResultMenu({ commands });
+  }
+
   on_popupshowing(event) {
-    if (event.target == this.resultMenu) {
-      let commands;
-
-      let splitButton = event.triggerEvent?.detail.target?.closest(
-        ".urlbarView-splitbutton"
-      );
-      if (splitButton) {
-        // Show the commands the are defined in its Split Button.
-        let mainButton = splitButton.firstElementChild;
-        let buttonName = mainButton.dataset.name;
-        commands = this.#resultMenuResult.payload.buttons.find(
-          b => b.name == buttonName
-        ).menu;
-      } else {
-        commands = this.#getResultMenuCommands(this.#resultMenuResult);
-      }
-
-      this.#populateResultMenu({ commands });
-    } else if (event.target.id == "urlbarView-context-menu") {
+    if (event.target.id == "urlbarView-context-menu") {
       if (!lazy.UrlbarPrefs.get("contextMenu.featureGate")) {
         event.preventDefault();
         return;
