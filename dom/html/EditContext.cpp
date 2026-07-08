@@ -163,13 +163,28 @@ void EditContext::GetTextSubstring(uint32_t aStart, uint32_t aEnd,
   mText->SubstringData(aStart, aEnd - aStart, aText, IgnoreErrors());
 }
 
-RefPtr<DOMRect> EditContext::ToDOMRect(const Rect& copy) const {
-  return MakeRefPtr<DOMRect>(GetRelevantGlobal(), copy.x, copy.y, copy.width,
-                             copy.height);
+RefPtr<DOMRect> EditContext::ToDOMRect(const Rect& aCopy) const {
+  return MakeRefPtr<DOMRect>(GetRelevantGlobal(), aCopy.x, aCopy.y, aCopy.width,
+                             aCopy.height);
 }
 
-auto EditContext::ToRect(const DOMRect& rect) const -> Rect {
-  return Rect(rect.X(), rect.Y(), rect.Width(), rect.Height());
+auto EditContext::ToRect(const DOMRect& aRect) const -> Rect {
+  return Rect(aRect.X(), aRect.Y(), aRect.Width(), aRect.Height());
+}
+
+LayoutDeviceIntRect EditContext::ToDeviceRect(const nsPresContext& aPresContext,
+                                              const Rect& aRect) {
+  CSSIntRect rect;
+  aRect.ToIntRect(&rect);
+  LayoutDeviceIntRect deviceRect;
+  deviceRect.x = aPresContext.CSSPixelsToDevPixels(rect.x);
+  deviceRect.y = aPresContext.CSSPixelsToDevPixels(rect.y);
+  // ContentCache, etc. is confused if the rectangles are empty,
+  // so ensure that they aren't.
+  deviceRect.width = std::max(1, aPresContext.CSSPixelsToDevPixels(rect.width));
+  deviceRect.height =
+      std::max(1, aPresContext.CSSPixelsToDevPixels(rect.height));
+  return deviceRect;
 }
 
 void EditContext::UpdateSelection(uint32_t aStart, uint32_t aEnd) {
@@ -264,11 +279,11 @@ void EditContext::UpdateText(uint32_t aRangeStart, uint32_t aRangeEnd,
 }
 
 void EditContext::UpdateControlBounds(DOMRect& aControlBounds) {
-  mControlBounds = ToRect(aControlBounds);
+  mControlBounds = Some(ToRect(aControlBounds));
 }
 
 void EditContext::UpdateSelectionBounds(DOMRect& aSelectionBounds) {
-  mSelectionBounds = ToRect(aSelectionBounds);
+  mSelectionBounds = Some(ToRect(aSelectionBounds));
 }
 
 void EditContext::UpdateTextAndFireEvent(
@@ -567,17 +582,8 @@ nsresult EditContext::FireCharacterBoundsUpdateAndGetRects(
       // XXX: Should we emit a console warning about this?
       return NS_ERROR_FAILURE;
     }
-    CSSIntRect rect;
-    mCodepointRects[indexInCodepointRects.value()].ToIntRect(&rect);
-    LayoutDeviceIntRect deviceRect;
-    deviceRect.x = presContext->CSSPixelsToDevPixels(rect.x);
-    deviceRect.y = presContext->CSSPixelsToDevPixels(rect.y);
-    // ContentCache, etc. is confused if the rectangles are empty,
-    // so ensure that they aren't.
-    deviceRect.width =
-        std::max(1, presContext->CSSPixelsToDevPixels(rect.width));
-    deviceRect.height =
-        std::max(1, presContext->CSSPixelsToDevPixels(rect.height));
+    Rect cssRect = mCodepointRects[indexInCodepointRects.value()];
+    LayoutDeviceIntRect deviceRect = ToDeviceRect(*presContext, cssRect);
     aRects.AppendElement(deviceRect);
   }
   if (collapse != CollapseDirection::None) {
@@ -614,6 +620,24 @@ nsresult EditContext::FireCharacterBoundsUpdateAndGetRects(
     }
   }
   return NS_OK;
+}
+
+Maybe<LayoutDeviceIntRect> EditContext::GetControlBounds() const {
+  nsPresContext* presContext = mText->OwnerDoc()->GetPresContext();
+  if (!presContext || !mControlBounds) {
+    // Control bounds were never set.
+    return Nothing();
+  }
+  return Some(ToDeviceRect(*presContext, *mControlBounds));
+}
+
+Maybe<LayoutDeviceIntRect> EditContext::GetSelectionBounds() const {
+  nsPresContext* presContext = mText->OwnerDoc()->GetPresContext();
+  if (!presContext || !mSelectionBounds) {
+    // Selection bounds were never set.
+    return Nothing();
+  }
+  return Some(ToDeviceRect(*presContext, *mSelectionBounds));
 }
 
 }  // namespace mozilla::dom

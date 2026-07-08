@@ -56,6 +56,20 @@ class EditContext final : public DOMEventTargetHelper {
     //      See https://github.com/w3c/edit-context/issues/88
     return std::min(SelectionEnd(), TextLength());
   }
+
+  bool SelectionIsCollapsed() const {
+    return SelectionStartClamped() == SelectionEndClamped();
+  }
+
+  // Minimum of selection start/end, clamped to <= length of text
+  uint32_t SelectionMinClamped() const {
+    return std::min(SelectionStartClamped(), SelectionEndClamped());
+  }
+  // Maximum of selection start/end, clamped to <= length of text
+  uint32_t SelectionMaxClamped() const {
+    return std::max(SelectionStartClamped(), SelectionEndClamped());
+  }
+
   uint32_t CharacterBoundsRangeStart() const {
     return mCodepointRectsStartIndex;
   }
@@ -111,6 +125,12 @@ class EditContext final : public DOMEventTargetHelper {
                                                uint32_t aCompositionOffset);
   MOZ_CAN_RUN_SCRIPT nsresult FireCharacterBoundsUpdateAndGetRects(
       uint32_t aStart, uint32_t aEnd, nsTArray<LayoutDeviceIntRect>& aRects);
+  // Get the control bounds for the EditContext,
+  // or Nothing if updateControlBounds has not been called.
+  Maybe<LayoutDeviceIntRect> GetControlBounds() const;
+  // Get the selection bounds for the EditContext,
+  // or Nothing if updateSelectionBounds has not been called.
+  Maybe<LayoutDeviceIntRect> GetSelectionBounds() const;
 
   bool WasTextNextToCaretChangedByTextUpdateHandler() const {
     return mTextNextToCaretChangedByTextUpdateHandler;
@@ -125,14 +145,16 @@ class EditContext final : public DOMEventTargetHelper {
 
   using Rect = gfx::RectTyped<CSSPixel, double>;
 
-  RefPtr<DOMRect> ToDOMRect(const Rect& copy) const;
-  Rect ToRect(const DOMRect& rect) const;
+  RefPtr<DOMRect> ToDOMRect(const Rect& aCopy) const;
+  Rect ToRect(const DOMRect& aRect) const;
+  static LayoutDeviceIntRect ToDeviceRect(const nsPresContext& aPresContext,
+                                          const Rect& aRect);
 
   RefPtr<nsGenericHTMLElement> mAssociatedElement;
   RefPtr<nsGenericHTMLElement> mTextContainer;
   nsTArray<Rect> mCodepointRects;
-  Rect mControlBounds;
-  Rect mSelectionBounds;
+  Maybe<Rect> mControlBounds;
+  Maybe<Rect> mSelectionBounds;
   RefPtr<nsTextNode> mText;
   uint32_t mSelectionStart = 0;
   uint32_t mSelectionEnd = 0;
