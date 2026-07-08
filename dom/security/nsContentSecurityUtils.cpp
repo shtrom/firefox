@@ -1936,7 +1936,7 @@ void nsContentSecurityUtils::AssertChromePageHasCSP(Document* aDocument) {
   }
 
   // We load a lot of SVG images from chrome:.
-  if (aDocument->IsBeingUsedAsImage() || aDocument->IsLoadedAsData()) {
+  if (aDocument->IsResourceDoc() || aDocument->IsLoadedAsData()) {
     return;
   }
 
