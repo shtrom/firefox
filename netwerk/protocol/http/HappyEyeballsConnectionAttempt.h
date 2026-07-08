@@ -338,10 +338,13 @@ class HappyEyeballsConnectionAttempt final : public ConnectionAttempt,
   bool mTRRInfoForwarded = false;
 
   // domainLookupStart: when the first DNS query (A/AAAA/HTTPS) was issued.
-  // domainLookupEnd is reported as mFirstConnectionStart (the start of the
-  // first connection attempt).
   TimeStamp mFirstDnsLookupStart;
   TimeStamp mFirstConnectionStart;
+  // domainLookupEnd: the latest DNS response (OnLookupComplete) that arrives
+  // before the first connection attempt starts; if none has by then, it is set
+  // to mFirstConnectionStart. domainLookupEnd is reported as
+  // min(mFirstConnectionStart, mDnsResolutionEnd) (see DnsLookupTimings).
+  TimeStamp mDnsResolutionEnd;
 
   // First-racer connect timings, mirroring the domainLookup span: the first
   // racer to reach each milestone across all racers (captured in
