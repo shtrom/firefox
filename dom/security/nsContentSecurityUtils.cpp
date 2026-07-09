@@ -1457,6 +1457,13 @@ static nsLiteralCString sConnectSrcAddonsAllowList[] = {
 // connect-src https://example.org
 //  Any https host source.
 static nsLiteralCString sConnectSrcHttpsHostAllowList[] = {"about:logging"_ns};
+// frame-src https://example.org
+//  Any https host source. Used by the New Tab crossword widget, which embeds a
+//  Merino-served bundle in a sandboxed iframe.
+static nsLiteralCString sFrameSrcHttpsHostAllowList[] = {
+    "about:home"_ns,
+    "about:newtab"_ns,
+};
 
 class DisallowingVisitor : public nsCSPSrcVisitor {
  public:
@@ -1708,6 +1715,19 @@ class ConnectSrcVisitor : public AllowBuiltinSrcVisitor {
   }
 };
 
+class FrameSrcVisitor : public AllowBuiltinSrcVisitor {
+ public:
+  FrameSrcVisitor(CSPDirective aDirective, nsACString& aURL)
+      : AllowBuiltinSrcVisitor(aDirective, aURL) {
+    MOZ_ASSERT(aDirective == CSPDirective::FRAME_SRC_DIRECTIVE);
+  }
+
+  bool visitHostSrc(const nsCSPHostSrc& src) override {
+    return VisitHostSrcWithWildcardAndHttpsHostAllowLists(
+        src, nullptr, sFrameSrcHttpsHostAllowList);
+  }
+};
+
 class AddonSrcVisitor : public AllowBuiltinSrcVisitor {
  public:
   AddonSrcVisitor(CSPDirective aDirective, nsACString& aURL)
@@ -1905,6 +1925,7 @@ void nsContentSecurityUtils::AssertAboutPageHasCSP(Document* aDocument) {
   CHECK_DIR(IMG_SRC_DIRECTIVE, ImgSrcVisitor);
   CHECK_DIR(MEDIA_SRC_DIRECTIVE, MediaSrcVisitor);
   CHECK_DIR(CONNECT_SRC_DIRECTIVE, ConnectSrcVisitor);
+  CHECK_DIR(FRAME_SRC_DIRECTIVE, FrameSrcVisitor);
 
   // Make sure we have a checker for all the directives that are being used.
   nsTArray<nsString> directiveNames;
@@ -1913,7 +1934,7 @@ void nsContentSecurityUtils::AssertAboutPageHasCSP(Document* aDocument) {
     if (dir.EqualsLiteral("default-src") || dir.EqualsLiteral("object-src") ||
         dir.EqualsLiteral("script-src") || dir.EqualsLiteral("style-src") ||
         dir.EqualsLiteral("img-src") || dir.EqualsLiteral("media-src") ||
-        dir.EqualsLiteral("connect-src")) {
+        dir.EqualsLiteral("connect-src") || dir.EqualsLiteral("frame-src")) {
       continue;
     }
 

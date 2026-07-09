@@ -7,7 +7,11 @@ import React, { useCallback, useRef } from "react";
 import { useSelector, batch } from "react-redux";
 import { actionCreators as ac, actionTypes as at } from "common/Actions.mjs";
 import { useIntersectionObserver, useSizeSubmenu } from "../../../lib/utils";
-import { WIDGET_REGISTRY, resolveWidgetSize } from "common/WidgetsRegistry.mjs";
+import {
+  WIDGET_REGISTRY,
+  resolveWidgetSize,
+  resolveCrosswordEndpoint,
+} from "common/WidgetsRegistry.mjs";
 import { MoveSubmenu } from "../MoveSubmenu";
 
 const USER_ACTION_TYPES = {
@@ -19,6 +23,7 @@ const CROSSWORD_ENTRY = WIDGET_REGISTRY.find(w => w.id === "crossword");
 function Crossword({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
   const prefs = useSelector(state => state.Prefs.values);
   const widgetSize = resolveWidgetSize(CROSSWORD_ENTRY, prefs);
+  const crosswordEndpoint = resolveCrosswordEndpoint(prefs);
   const impressionFired = useRef(false);
 
   const handleIntersection = useCallback(() => {
@@ -168,7 +173,16 @@ function Crossword({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
         </div>
       </div>
 
-      <div className="crossword-body"></div>
+      <div className="crossword-body">
+        <iframe
+          className="crossword-frame"
+          title="Crossword"
+          src={crosswordEndpoint}
+          // allow-same-origin is required for the crossword to work, but is
+          // currently under security review to see if it's safe to keep in our codebase right now.
+          sandbox="allow-scripts allow-same-origin"
+        />
+      </div>
     </article>
   );
 }

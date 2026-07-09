@@ -10156,6 +10156,14 @@ dialog:dir(rtl)::after {
   display: flex;
   flex-direction: column;
   gap: var(--space-small);
+  min-height: 0;
+}
+
+.crossword-frame {
+  flex: 1;
+  width: 100%;
+  border: none;
+  border-radius: var(--border-radius-medium);
 }
 
 /* This Source Code Form is subject to the terms of the Mozilla Public
