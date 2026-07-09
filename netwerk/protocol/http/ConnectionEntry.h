@@ -117,6 +117,8 @@ class ConnectionEntry : public SupportsWeakPtr {
 
   bool MaybeProcessCoalescingKeys(nsIDNSAddrRecord* dnsRecord,
                                   bool aIsHttp3 = false);
+  bool MaybeProcessCoalescingKeys(const nsTArray<NetAddr>& aAddresses,
+                                  bool aIsHttp3 = false);
 
   nsresult CreateDnsAndConnectSocket(nsAHttpTransaction* trans, uint32_t caps,
                                      bool speculative, bool urgentStart,

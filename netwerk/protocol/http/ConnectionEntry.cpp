@@ -1028,15 +1028,29 @@ void ConnectionEntry::MaybeUpdateEchConfig(nsHttpConnectionInfo* aConnInfo) {
 
 bool ConnectionEntry::MaybeProcessCoalescingKeys(nsIDNSAddrRecord* dnsRecord,
                                                  bool aIsHttp3) {
-  if (!mConnInfo || !mConnInfo->EndToEndSSL() || (!aIsHttp3 && !AllowHttp2()) ||
-      mConnInfo->UsingProxy() || !mCoalescingKeys.IsEmpty() || !dnsRecord) {
+  if (!dnsRecord) {
     return false;
   }
 
-  nsresult rv = dnsRecord->GetAddresses(mAddresses);
-  if (NS_FAILED(rv) || mAddresses.IsEmpty()) {
+  nsTArray<NetAddr> addresses;
+  if (NS_FAILED(dnsRecord->GetAddresses(addresses))) {
     return false;
   }
+
+  return MaybeProcessCoalescingKeys(addresses, aIsHttp3);
+}
+
+bool ConnectionEntry::MaybeProcessCoalescingKeys(
+    const nsTArray<NetAddr>& aAddresses, bool aIsHttp3) {
+  if (!mConnInfo || !mConnInfo->EndToEndSSL() || (!aIsHttp3 && !AllowHttp2()) ||
+      mConnInfo->UsingProxy() || !mCoalescingKeys.IsEmpty()) {
+    return false;
+  }
+
+  if (aAddresses.IsEmpty()) {
+    return false;
+  }
+  mAddresses = aAddresses.Clone();
 
   nsAutoCString suffix;
   mConnInfo->GetOriginAttributes().CreateSuffix(suffix);

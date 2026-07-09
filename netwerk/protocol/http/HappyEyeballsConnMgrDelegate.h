@@ -6,9 +6,9 @@
 #define HappyEyeballsConnMgrDelegate_h_
 
 #include "nsISupportsImpl.h"
+#include "nsTArray.h"
 #include "mozilla/AlreadyAddRefed.h"
-
-class nsIDNSAddrRecord;
+#include "mozilla/net/DNS.h"
 
 namespace mozilla {
 namespace net {
@@ -53,7 +53,7 @@ class HappyEyeballsConnMgrDelegate {
                                         uint16_t aFamily) = 0;
   virtual void ResetIPFamilyPreference(ConnectionEntry* aEntry) = 0;
   virtual bool MaybeProcessCoalescingKeys(ConnectionEntry* aEntry,
-                                          nsIDNSAddrRecord* aRecord,
+                                          const nsTArray<NetAddr>& aAddresses,
                                           bool aIsHttp3) = 0;
   virtual bool RemoveTransFromPendingQ(ConnectionEntry* aEntry,
                                        nsHttpTransaction* aTrans) = 0;

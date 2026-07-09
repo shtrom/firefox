@@ -230,6 +230,11 @@ class HappyEyeballsConnectionAttempt final : public ConnectionAttempt,
   // Hand the transaction to a new HappyEyeballsConnectionAttempt that resolves
   // with TRR disabled, and abandon this one without closing the transaction.
   void RetryWithoutTRR();
+  // Once the origin host's (mHost) A and AAAA lookups have both completed,
+  // build the connection entry's coalescing keys from their combined addresses
+  // and reprocess the pending queue. Addresses resolved for an HTTPS RR target
+  // name are intentionally excluded.
+  void MaybeBuildOriginCoalescingKeys();
 
   // Connection Attempt
   // Build a per-establisher HappyEyeballsTransaction wired up to forward
@@ -300,9 +305,6 @@ class HappyEyeballsConnectionAttempt final : public ConnectionAttempt,
   RefPtr<HappyEyeballsTransaction> mOutputTrans;
   uint64_t mOutputConnId{0};
   uint16_t mAddrFamily{0};
-  // Single-address DNS record of the winning establisher, used to build
-  // connection-coalescing keys for the winner only.
-  nsCOMPtr<nsIDNSAddrRecord> mWinnerAddrRecord;
 
   // IDs of the still-outstanding A/AAAA lookups issued for mHost (the origin /
   // routed host). HTTPS RR target-name lookups are not tracked here, so their

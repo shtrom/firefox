@@ -115,9 +115,9 @@ class DefaultHappyEyeballsConnMgrDelegate final
     aEntry->ResetIPFamilyPreference();
   }
   bool MaybeProcessCoalescingKeys(ConnectionEntry* aEntry,
-                                  nsIDNSAddrRecord* aRecord,
+                                  const nsTArray<NetAddr>& aAddresses,
                                   bool aIsHttp3) override {
-    return aEntry->MaybeProcessCoalescingKeys(aRecord, aIsHttp3);
+    return aEntry->MaybeProcessCoalescingKeys(aAddresses, aIsHttp3);
   }
   bool RemoveTransFromPendingQ(ConnectionEntry* aEntry,
                                nsHttpTransaction* aTrans) override {
@@ -918,7 +918,6 @@ void HappyEyeballsConnectionAttempt::HandleConnectionResult(
   mOutputTrans = establisher->Transaction();
   mOutputConnId = aId;
   mAddrFamily = addr.raw.family;
-  mWinnerAddrRecord = establisher->AddrRecord();
   // The winner is the first connection to fully succeed.
   mFirstConnectEnd = TimeStamp::Now();
   // The ownership of connection is moved to HappyEyeballsConnectionAttempt now.
@@ -1255,19 +1254,6 @@ void HappyEyeballsConnectionAttempt::ProcessTCPConn(
   LOG(("Got connTCP:%p transactionAlreadyOnConn=%d", connTCP.get(),
        aTransactionAlreadyOnConn));
 
-  // Build coalescing keys for the winning connection and reprocess the pending
-  // queue before inserting connTCP into the active list. If our pending
-  // transaction can coalesce onto an existing connection, ProcessSpdyPendingQ
-  // dispatches it there now (and ReportSpdyConnection below closes the now
-  // redundant connTCP for coalescing).
-  if (mWinnerAddrRecord && StaticPrefs::network_http_http2_enabled() &&
-      StaticPrefs::network_http_http2_coalesce_hostnames()) {
-    if (mConnMgrDelegate->MaybeProcessCoalescingKeys(entry, mWinnerAddrRecord,
-                                                     false)) {
-      mConnMgrDelegate->ProcessSpdyPendingQ(entry);
-    }
-  }
-
   mConnMgrDelegate->InsertIntoActiveConns(entry, connTCP);
 
   bool isHttp2 = connTCP->UsingSpdy();
@@ -1368,14 +1354,6 @@ void HappyEyeballsConnectionAttempt::ProcessUDPConn(
         FillConnectTimings(/* aIsQuic = */ true, timings);
         trans->BootstrapTimings(timings);
       }
-    }
-  }
-
-  if (mWinnerAddrRecord && nsHttpHandler::IsHttp3Enabled() &&
-      StaticPrefs::network_http_http2_coalesce_hostnames()) {
-    if (mConnMgrDelegate->MaybeProcessCoalescingKeys(entry, mWinnerAddrRecord,
-                                                     true)) {
-      mConnMgrDelegate->ProcessSpdyPendingQ(entry);
     }
   }
 
@@ -1925,6 +1903,7 @@ nsresult HappyEyeballsConnectionAttempt::OnARecord(nsIDNSRecord* aRecord,
   if (NS_FAILED(status) || !addrRecord) {
     if (mOriginDnsLookupIds.Contains(aId)) {
       mOriginDnsLookupIds.Remove(aId);
+      MaybeBuildOriginCoalescingKeys();
     }
     nsTArray<NetAddr> emptyArray;
     rv =
@@ -1950,6 +1929,7 @@ nsresult HappyEyeballsConnectionAttempt::OnARecord(nsIDNSRecord* aRecord,
   if (mOriginDnsLookupIds.Contains(aId)) {
     mOriginDnsLookupIds.Remove(aId);
     mOriginAddresses.AppendElements(ipv4Addresses);
+    MaybeBuildOriginCoalescingKeys();
   }
 
   rv = happy_eyeballs_process_dns_response_a(mHappyEyeballs, aId,
@@ -1980,6 +1960,7 @@ nsresult HappyEyeballsConnectionAttempt::OnAAAARecord(nsIDNSRecord* aRecord,
   if (NS_FAILED(status) || !addrRecord) {
     if (mOriginDnsLookupIds.Contains(aId)) {
       mOriginDnsLookupIds.Remove(aId);
+      MaybeBuildOriginCoalescingKeys();
     }
     nsTArray<NetAddr> emptyArray;
     rv = happy_eyeballs_process_dns_response_aaaa(mHappyEyeballs, aId,
@@ -2005,6 +1986,7 @@ nsresult HappyEyeballsConnectionAttempt::OnAAAARecord(nsIDNSRecord* aRecord,
   if (mOriginDnsLookupIds.Contains(aId)) {
     mOriginDnsLookupIds.Remove(aId);
     mOriginAddresses.AppendElements(ipv6Addresses);
+    MaybeBuildOriginCoalescingKeys();
   }
 
   rv = happy_eyeballs_process_dns_response_aaaa(mHappyEyeballs, aId,
@@ -2013,6 +1995,36 @@ nsresult HappyEyeballsConnectionAttempt::OnAAAARecord(nsIDNSRecord* aRecord,
     return rv;
   }
   return ProcessHappyEyeballsOutput();
+}
+
+void HappyEyeballsConnectionAttempt::MaybeBuildOriginCoalescingKeys() {
+  // Called on each origin A/AAAA completion; wait until both have finished.
+  // Both lookups are issued up front, so this proceeds exactly once (when the
+  // last one completes).
+  if (!mOriginDnsLookupIds.IsEmpty()) {
+    return;
+  }
+
+  if (mOriginAddresses.IsEmpty() ||
+      !StaticPrefs::network_http_http2_coalesce_hostnames() ||
+      (!StaticPrefs::network_http_http2_enabled() &&
+       !nsHttpHandler::IsHttp3Enabled())) {
+    return;
+  }
+
+  RefPtr<ConnectionEntry> entry(mEntry);
+  if (!entry) {
+    return;
+  }
+
+  // The H2/H3 outcome isn't known yet; the coalescing keys are IP-based and
+  // identical either way. MaybeProcessCoalescingKeys still applies the
+  // EndToEndSSL / AllowHttp2 / proxy gating, and the connection is only
+  // registered in the coalescing hash at success (UpdateCoalescingForNewConn).
+  if (mConnMgrDelegate->MaybeProcessCoalescingKeys(entry, mOriginAddresses,
+                                                   mConnInfo->IsHttp3())) {
+    mConnMgrDelegate->ProcessSpdyPendingQ(entry);
+  }
 }
 
 // Helper function to convert ALPN string to HttpVersion enum
