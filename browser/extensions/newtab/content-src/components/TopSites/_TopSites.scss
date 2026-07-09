@@ -501,13 +501,15 @@ $calculated-max-width-twice-widest: $break-point-widest + 2 * $card-width;
     visibility: hidden;
   }
 
-  // Zero-pin drop placeholder keeps its slot but stays hidden until the drag is
-  // over the drop zone, so only the drop zone shows by default.
+  // Zero-pin drop placeholder keeps its slot but stays invisible until the drag
+  // is over the drop zone. opacity (not visibility) so it stays hit-testable:
+  // when it's the only cell on a new row, visibility:hidden drops it from
+  // hit-testing and dragover never lands on it, so it never reveals.
   &.zero-pin-placeholder {
-    visibility: hidden;
+    opacity: 0;
 
     &.over {
-      visibility: visible;
+      opacity: 1;
     }
   }
 

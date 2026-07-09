@@ -1942,10 +1942,10 @@ main.newtab-main section {
   visibility: hidden;
 }
 .top-site-outer.zero-pin-placeholder {
-  visibility: hidden;
+  opacity: 0;
 }
 .top-site-outer.zero-pin-placeholder.over {
-  visibility: visible;
+  opacity: 1;
 }
 .top-site-outer.dragged .tile *, .top-site-outer.dragged .tile::before {
   display: none;

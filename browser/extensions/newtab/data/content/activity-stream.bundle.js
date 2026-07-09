@@ -9033,6 +9033,8 @@ class _TopSiteList extends (external_React_default()).PureComponent {
     this.onTopsiteFocus = this.onTopsiteFocus.bind(this);
     this.onWrapperBlur = this.onWrapperBlur.bind(this);
     this.onKeyDown = this.onKeyDown.bind(this);
+    this.onListDragLeave = this.onListDragLeave.bind(this);
+    this.onListDragOver = this.onListDragOver.bind(this);
   }
   componentDidUpdate(prevProps) {
     // Drag state lives in the hook now; mirror the old reset of our own view
@@ -9101,6 +9103,47 @@ class _TopSiteList extends (external_React_default()).PureComponent {
       focusedIndex: focusIndex
     }));
   }
+
+  // dragover fires continuously on whatever's under the cursor, so it's the
+  // reliable "current element" signal (dragenter/dragleave order can't be
+  // trusted between adjacent tiles). The reflow should only live while the
+  // cursor is within the pinned drop region (the purple outline), so hit-test
+  // the live overlay boxes: each box spans a whole pinned row, so crossing the
+  // gaps between pins stays inside and doesn't flicker. Classic has no pinned
+  // region, so it keeps its original behavior.
+  onListDragOver(event) {
+    // Preserve any list-level handler (zero-pin grouped drop geometry).
+    this.props.listProps?.onDragOver?.(event);
+    if (!this.props.groupedPinsEnabled) {
+      return;
+    }
+    const boxes = [...event.currentTarget.querySelectorAll(".pinned-drop-box")];
+    if (!boxes.length) {
+      return;
+    }
+    const inside = boxes.some(box => {
+      const r = box.getBoundingClientRect();
+      return event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom;
+    });
+    if (!inside) {
+      this.props.onDragEvent(event);
+    }
+  }
+
+  // Safety net for the grouped pinned-region clear: leaving the grid straight
+  // off an edge tile, where no in-region dragover lands first. Filters out
+  // tile-to-tile crossings via relatedTarget. Grouped-only, so classic keeps its
+  // original "placeholder persists until drop/dragend" behavior.
+  onListDragLeave(event) {
+    // Preserve any list-level handler (e.g. zero-pin grouped drop).
+    this.props.listProps?.onDragLeave?.(event);
+    if (!this.props.groupedPinsEnabled) {
+      return;
+    }
+    if (!event.currentTarget.contains(event.relatedTarget)) {
+      this.props.onDragEvent(event);
+    }
+  }
   render() {
     const {
       props
@@ -9116,8 +9159,10 @@ class _TopSiteList extends (external_React_default()).PureComponent {
       onDragEvent: this.props.onDragEvent,
       dispatch: props.dispatch,
       groupedPinsEnabled: this.props.groupedPinsEnabled,
-      // Zero-pin drops on the list (single target); everything else per-tile.
-      dropsOnList: !!this.props.listProps
+      // Zero-pin drops on the list (single synthetic target, no per-tile
+      // handlers). The reorder+append path keeps per-tile handlers and adds a
+      // list-level append target, so it passes listProps without this flag.
+      dropsOnList: !!this.props.dropsOnList
     };
     const {
       decorations
@@ -9244,6 +9289,8 @@ class _TopSiteList extends (external_React_default()).PureComponent {
       onFocus: this.onWrapperFocus,
       onBlur: this.onWrapperBlur
     }, this.props.listProps, {
+      onDragOver: this.onListDragOver,
+      onDragLeave: this.onListDragLeave,
       ref: el => {
         this.focusRef = el;
         this.props.listRef?.(el);
@@ -9644,6 +9691,18 @@ function useTopSitesDnD({
           setPreviewSites(makeTopSitesPreview(index));
         }
         break;
+      case "dragover":
+        // List-level signal (no index) that the cursor left the pinned drop
+        // region. Tiles pass their index, so a tile's own dragover is ignored.
+        if (index === undefined) {
+          setPreviewSites(null);
+        }
+        break;
+      case "dragleave":
+        // Safety net for leaving the grid entirely off an edge tile, where no
+        // bare-grid dragover lands first.
+        setPreviewSites(null);
+        break;
       case "drop":
         if (index !== draggedIndex || pinInPlace && isMovable(draggedSite)) {
           droppedRef.current = true;
@@ -9785,6 +9844,99 @@ function TopSiteListContainer(props) {
     onDragEvent: onDragEvent,
     draggedSite: draggedSite
   });
+}
+;// CONCATENATED MODULE: ./content-src/components/TopSites/useAppendPinDrop.jsx
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+
+// Append-to-end drop slot for the has-pins case. Dragging a frecent (a new pin,
+// not an existing one) opens one reserved, net-zero placeholder right after the
+// last pin, hidden until the cursor is over it — the same mechanic as
+// useZeroPinDrop, just at the end of an existing group. It layers on top of
+// useTopSitesDnD's insert-anywhere reflow: over a pin you get the reflow, over
+// this slot you append.
+//
+// Placeholders aren't native drop targets in grouped mode (_allowDrop gates on
+// isPinned), so the drop is caught at the list via geometry. The preview and the
+// commit reuse useTopSitesDnD's onDragEvent: a no-index dragover clears the
+// reflow while this slot owns the interaction, and the drop replays at
+// appendIndex so the existing reorder/telemetry path commits it.
+function useAppendPinDrop({
+  baseSites,
+  draggedSite,
+  isMovable,
+  onDragEvent,
+  // shared with useTopSitesDnD
+  previewActive // a reflow preview is showing (cursor is over a pin)
+}) {
+  const [over, setOver] = (0,external_React_namespaceObject.useState)(false);
+  const placeholderElRef = (0,external_React_namespaceObject.useRef)(null);
+  const setRef = (0,external_React_namespaceObject.useCallback)(el => {
+    placeholderElRef.current = el;
+  }, []);
+  const enabled = !!draggedSite && isMovable(draggedSite);
+
+  // First free slot after the contiguous pinned block.
+  const lastPinIndex = baseSites.reduce((last, site, i) => site?.isPinned ? i : last, -1);
+  const appendIndex = lastPinIndex + 1;
+  const isOver = (0,external_React_namespaceObject.useCallback)(event => {
+    const rect = placeholderElRef.current?.getBoundingClientRect();
+    return !!rect && event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
+  }, []);
+  const onDragOver = (0,external_React_namespaceObject.useCallback)(event => {
+    if (!enabled) {
+      return;
+    }
+    const nowOver = isOver(event);
+    if (nowOver) {
+      event.preventDefault();
+      // This slot owns the preview now; drop the insert-anywhere reflow.
+      onDragEvent(event);
+    }
+    if (over !== nowOver) {
+      setOver(nowOver);
+    }
+  }, [enabled, isOver, over, onDragEvent]);
+  const onDrop = (0,external_React_namespaceObject.useCallback)(event => {
+    if (!enabled || !isOver(event)) {
+      return;
+    }
+    event.preventDefault();
+    // Commit through the reorder hook's drop at the append slot.
+    onDragEvent(event, appendIndex);
+  }, [enabled, isOver, onDragEvent, appendIndex]);
+  const onDragLeave = (0,external_React_namespaceObject.useCallback)(event => {
+    if (event.currentTarget.contains(event.relatedTarget)) {
+      return;
+    }
+    if (over) {
+      setOver(false);
+    }
+  }, [over]);
+
+  // Collapse the dragged source out of flow so the reserved slot nets zero cells.
+  const sites = enabled ? baseSites.map(site => site && site.url === draggedSite.url ? {
+    ...site,
+    isCollapsed: true
+  } : site) : baseSites;
+  return {
+    sites,
+    listProps: {
+      onDragOver,
+      onDrop,
+      onDragLeave
+    },
+    decorations: {
+      // Hide the reserved slot while the reflow drives (cursor over a pin), so we
+      // don't add a cell on top of the reflow's own growth.
+      zeroPinSlot: enabled && !previewActive ? appendIndex : -1,
+      overZeroPin: over,
+      setZeroPinRef: setRef
+    }
+  };
 }
 ;// CONCATENATED MODULE: ./content-src/components/TopSites/useZeroPinDrop.jsx
 /* This Source Code Form is subject to the terms of the Mozilla Public
@@ -9935,6 +10087,7 @@ function GroupedTopSiteListContainer_extends() { return GroupedTopSiteListContai
 
 
 
+
 // Grouped reorder uses the classic DnD hook: `isShiftable = isPinned` already
 // slides the pinned block, and the constant-cell preview already grows the block
 // when a frecent joins — natively, no geometry. Grouping itself (contiguity, the
@@ -9989,13 +10142,15 @@ function useBaseSites(props) {
 
 // Picks the grouped DnD variant by whether any pin exists: zero pins is a
 // simpler "drag one tile onto one target" interaction with its own hook, while
-// with pins present it's slot reordering. Both hooks run every render (rules of
-// hooks) and we consume only the active one — that's deliberate: rendering a
-// single TopSiteList across the zero-pin<->has-pin flip keeps the subtree
-// mounted, so sponsored tiles don't remount on the first pin / last unpin and
-// re-fire their ad impressions. While a drag is in flight the hook that owns it
-// (its `draggedSite` is set) stays active regardless of `hasPins`, so a mid-drag
-// pinned-set change can't swap hooks and strand the gesture.
+// with pins present it's slot reordering, plus an append slot (useAppendPinDrop)
+// layered on the reorder hook for dropping a frecent at the group's end. The
+// hooks all run every render (rules of hooks) and we consume only the active
+// path — that's deliberate: rendering a single TopSiteList across the
+// zero-pin<->has-pin flip keeps the subtree mounted, so sponsored tiles don't
+// remount on the first pin / last unpin and re-fire their ad impressions. While
+// a drag is in flight the hook that owns it (its `draggedSite` is set) stays
+// active regardless of `hasPins`, so a mid-drag pinned-set change can't swap
+// hooks and strand the gesture.
 function GroupedTopSiteListContainer(props) {
   const baseSites = useBaseSites(props);
   const {
@@ -10011,6 +10166,17 @@ function GroupedTopSiteListContainer(props) {
     onDragStart,
     onReorder,
     pinInPlace: true
+  });
+
+  // With pins present, dragging a frecent (a new pin) opens a reserved append
+  // slot after the last pin; existing-pin drags just reflow. Layered on the
+  // reorder hook: over a pin its reflow drives, over the slot append takes over.
+  const append = useAppendPinDrop({
+    baseSites,
+    draggedSite: reorder.draggedSite,
+    isMovable: GroupedTopSiteListContainer_isMovable,
+    onDragEvent: reorder.onDragEvent,
+    previewActive: !!reorder.previewSites
   });
   const zeroPin = useZeroPinDrop({
     baseSites,
@@ -10031,12 +10197,12 @@ function GroupedTopSiteListContainer(props) {
   }
   const isZeroPin = active === zeroPin;
   return /*#__PURE__*/external_React_default().createElement(TopSiteList, GroupedTopSiteListContainer_extends({}, props, {
-    sites: isZeroPin ? zeroPin.sites : reorder.previewSites || baseSites,
+    sites: isZeroPin ? zeroPin.sites : reorder.previewSites || append.sites,
     onDragEvent: active.onDragEvent,
     draggedSite: active.draggedSite,
     groupedPinsEnabled: true,
-    listProps: isZeroPin ? zeroPin.listProps : undefined,
-    decorations: isZeroPin ? zeroPin.decorations : undefined
+    listProps: isZeroPin ? zeroPin.listProps : append.listProps,
+    decorations: isZeroPin ? zeroPin.decorations : append.decorations
   }));
 }
 ;// CONCATENATED MODULE: ./content-src/components/TopSites/TopSites.jsx

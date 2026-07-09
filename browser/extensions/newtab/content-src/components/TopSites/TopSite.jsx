@@ -767,6 +767,8 @@ export class _TopSiteList extends React.PureComponent {
     this.onTopsiteFocus = this.onTopsiteFocus.bind(this);
     this.onWrapperBlur = this.onWrapperBlur.bind(this);
     this.onKeyDown = this.onKeyDown.bind(this);
+    this.onListDragLeave = this.onListDragLeave.bind(this);
+    this.onListDragOver = this.onListDragOver.bind(this);
   }
 
   componentDidUpdate(prevProps) {
@@ -837,6 +839,52 @@ export class _TopSiteList extends React.PureComponent {
     }));
   }
 
+  // dragover fires continuously on whatever's under the cursor, so it's the
+  // reliable "current element" signal (dragenter/dragleave order can't be
+  // trusted between adjacent tiles). The reflow should only live while the
+  // cursor is within the pinned drop region (the purple outline), so hit-test
+  // the live overlay boxes: each box spans a whole pinned row, so crossing the
+  // gaps between pins stays inside and doesn't flicker. Classic has no pinned
+  // region, so it keeps its original behavior.
+  onListDragOver(event) {
+    // Preserve any list-level handler (zero-pin grouped drop geometry).
+    this.props.listProps?.onDragOver?.(event);
+    if (!this.props.groupedPinsEnabled) {
+      return;
+    }
+    const boxes = [...event.currentTarget.querySelectorAll(".pinned-drop-box")];
+    if (!boxes.length) {
+      return;
+    }
+    const inside = boxes.some(box => {
+      const r = box.getBoundingClientRect();
+      return (
+        event.clientX >= r.left &&
+        event.clientX <= r.right &&
+        event.clientY >= r.top &&
+        event.clientY <= r.bottom
+      );
+    });
+    if (!inside) {
+      this.props.onDragEvent(event);
+    }
+  }
+
+  // Safety net for the grouped pinned-region clear: leaving the grid straight
+  // off an edge tile, where no in-region dragover lands first. Filters out
+  // tile-to-tile crossings via relatedTarget. Grouped-only, so classic keeps its
+  // original "placeholder persists until drop/dragend" behavior.
+  onListDragLeave(event) {
+    // Preserve any list-level handler (e.g. zero-pin grouped drop).
+    this.props.listProps?.onDragLeave?.(event);
+    if (!this.props.groupedPinsEnabled) {
+      return;
+    }
+    if (!event.currentTarget.contains(event.relatedTarget)) {
+      this.props.onDragEvent(event);
+    }
+  }
+
   render() {
     const { props } = this;
     const topSites = this.props.sites;
@@ -851,8 +899,10 @@ export class _TopSiteList extends React.PureComponent {
       onDragEvent: this.props.onDragEvent,
       dispatch: props.dispatch,
       groupedPinsEnabled: this.props.groupedPinsEnabled,
-      // Zero-pin drops on the list (single target); everything else per-tile.
-      dropsOnList: !!this.props.listProps,
+      // Zero-pin drops on the list (single synthetic target, no per-tile
+      // handlers). The reorder+append path keeps per-tile handlers and adds a
+      // list-level append target, so it passes listProps without this flag.
+      dropsOnList: !!this.props.dropsOnList,
     };
     const { decorations } = this.props;
     // We assign a key to each placeholder slot. We need it to be independent
@@ -1001,6 +1051,8 @@ export class _TopSiteList extends React.PureComponent {
           onFocus={this.onWrapperFocus}
           onBlur={this.onWrapperBlur}
           {...this.props.listProps}
+          onDragOver={this.onListDragOver}
+          onDragLeave={this.onListDragLeave}
           ref={el => {
             this.focusRef = el;
             this.props.listRef?.(el);
