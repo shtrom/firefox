@@ -37,7 +37,6 @@ import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.ext.nav
 import org.mozilla.fenix.ext.requireComponents
 import org.mozilla.fenix.ext.runIfFragmentIsAttached
-import org.mozilla.fenix.settings.quicksettings.protections.cookiebanners.getCookieBannerUIMode
 
 /**
  * Fragment used for browsing the web within external apps.
@@ -167,12 +166,6 @@ class ExternalAppBrowserFragment : BaseBrowserFragment(), SystemInsetsPaddedFrag
     override fun navToQuickSettingsSheet(tab: SessionState, sitePermissions: SitePermissions?) {
         requireComponents.useCases.trackingProtectionUseCases.containsException(tab.id) { contains ->
             lifecycleScope.launch {
-                val cookieBannersStorage = requireComponents.core.cookieBannersStorage
-                val cookieBannerUIMode = cookieBannersStorage.getCookieBannerUIMode(
-                    tab = tab,
-                    isFeatureEnabledInPrivateMode = requireComponents.settings.shouldUseCookieBannerPrivateMode,
-                    publicSuffixList = requireComponents.publicSuffixList,
-                )
                 withContext(Dispatchers.Main) {
                     runIfFragmentIsAttached {
                         val directions =
@@ -186,7 +179,6 @@ class ExternalAppBrowserFragment : BaseBrowserFragment(), SystemInsetsPaddedFrag
                                 certificate = tab.content.securityInfo.certificate,
                                 permissionHighlights = tab.content.permissionHighlights,
                                 isTrackingProtectionEnabled = tab.trackingProtection.enabled && !contains,
-                                cookieBannerUIMode = cookieBannerUIMode,
                             )
                         nav(R.id.externalAppBrowserFragment, directions)
                     }

@@ -73,7 +73,6 @@ import org.mozilla.fenix.onboarding.OnboardingTelemetryRecorder
 import org.mozilla.fenix.onboarding.continuous.ContinuousOnboardingFeatureDefault
 import org.mozilla.fenix.onboarding.continuous.ContinuousOnboardingStageProviderDefault
 import org.mozilla.fenix.settings.downloads.DownloadLocationManager
-import org.mozilla.fenix.settings.quicksettings.protections.cookiebanners.getCookieBannerUIMode
 import org.mozilla.fenix.shortcut.PwaOnboardingObserver
 import org.mozilla.fenix.summarization.SummarizationNavigator
 import org.mozilla.fenix.termsofuse.store.Surface
@@ -434,12 +433,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler, SystemIns
         FxNimbus.features.cookieBanners.recordExposure()
         useCase.containsException(tab.id) { hasTrackingProtectionException ->
             lifecycleScope.launch {
-                val cookieBannersStorage = requireComponents.core.cookieBannersStorage
-                val cookieBannerUIMode = cookieBannersStorage.getCookieBannerUIMode(
-                    tab = tab,
-                    isFeatureEnabledInPrivateMode = requireComponents.settings.shouldUseCookieBannerPrivateMode,
-                    publicSuffixList = requireComponents.publicSuffixList,
-                )
                 withContext(Dispatchers.Main) {
                     runIfFragmentIsAttached {
                         val isTrackingProtectionEnabled =
@@ -455,7 +448,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler, SystemIns
                                 certificate = tab.content.securityInfo.certificate,
                                 permissionHighlights = tab.content.permissionHighlights,
                                 isTrackingProtectionEnabled = isTrackingProtectionEnabled,
-                                cookieBannerUIMode = cookieBannerUIMode,
                             )
                         nav(R.id.browserFragment, directions)
                     }

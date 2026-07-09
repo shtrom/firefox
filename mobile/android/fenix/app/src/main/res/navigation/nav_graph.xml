@@ -1832,9 +1832,6 @@
             android:name="isTrackingProtectionEnabled"
             app:argType="boolean" />
         <argument
-            android:name="cookieBannerUIMode"
-            app:argType="org.mozilla.fenix.trackingprotection.CookieBannerUIMode" />
-        <argument
             android:name="isLocalPdf"
             app:argType="boolean" />
         <dialog
@@ -1866,9 +1863,6 @@
             <argument
                 android:name="isTrackingProtectionEnabled"
                 app:argType="boolean" />
-            <argument
-                android:name="cookieBannerUIMode"
-                app:argType="org.mozilla.fenix.trackingprotection.CookieBannerUIMode" />
             <argument
                 android:name="isLocalPdf"
                 app:argType="boolean" />
