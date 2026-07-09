@@ -1545,15 +1545,83 @@ export class UrlbarView {
     item._content.appendChild(url);
     item._elements.set("url", url);
 
-    if (lazy.UrlbarPrefs.get("resultExplanationsFeatureGate")) {
-      let explanation = this.#createElement("span");
-      explanation.classList.add(
-        "urlbarView-explanation",
-        "urlbarView-overflowable"
-      );
-      item._content.appendChild(explanation);
-      item._elements.set("explanation", explanation);
+    this.#createExplanation(item._content, item);
+  }
+
+  #createExplanation(parentNode, item) {
+    if (!lazy.UrlbarPrefs.get("resultExplanationsFeatureGate")) {
+      return;
     }
+
+    let explanation = this.#createElement("span");
+    explanation.classList.add(
+      "urlbarView-explanation",
+      "urlbarView-overflowable"
+    );
+    parentNode.appendChild(explanation);
+    item._elements.set("explanation", explanation);
+
+    let bookmarked = this.#createElement("span");
+    bookmarked.className = "urlbarView-explanation-bookmarked";
+    explanation.appendChild(bookmarked);
+    item._elements.set("explanationBookmarked", bookmarked);
+
+    let lastVisited = this.#createElement("span");
+    lastVisited.className = "urlbarView-explanation-last-visited";
+    explanation.appendChild(lastVisited);
+    item._elements.set("explanationLastVisited", lastVisited);
+  }
+
+  /**
+   * Updates the "last visited" and "bookmarked" explanation of a row.
+   *
+   * @param {Element} item
+   *   The row.
+   * @param {UrlbarResult} result
+   *   The row's result.
+   * @param {boolean} setURL
+   *   Whether the row is showing its URL.
+   */
+  #updateExplanation(item, result, setURL) {
+    let explanation = item._elements.get("explanation");
+    if (!explanation) {
+      return;
+    }
+
+    let bookmarked = item._elements.get("explanationBookmarked");
+    let hasBookmark = setURL && !!result.payload.bookmarkDateMs;
+    if (hasBookmark) {
+      let { formattedDate } = lazy.UrlbarUtils.formatDate(
+        new Date(result.payload.bookmarkDateMs),
+        { forceAbsoluteDate: true }
+      );
+      this.document.l10n.setAttributes(
+        bookmarked,
+        "urlbar-result-explanation-bookmarked",
+        { date: formattedDate }
+      );
+    } else {
+      this.#l10nCache.removeElementL10n(bookmarked);
+    }
+
+    let lastVisited = item._elements.get("explanationLastVisited");
+    let hasLastVisit = setURL && !!result.payload.lastVisit;
+    if (hasLastVisit) {
+      let { isRelative, formattedDate } = lazy.UrlbarUtils.formatDate(
+        new Date(result.payload.lastVisit)
+      );
+      this.document.l10n.setAttributes(
+        lastVisited,
+        isRelative
+          ? "urlbar-result-explanation-last-visited-relative-2"
+          : "urlbar-result-explanation-last-visited-absolute-2",
+        { date: formattedDate }
+      );
+    } else {
+      this.#l10nCache.removeElementL10n(lastVisited);
+    }
+
+    item.toggleAttribute("has-explanation", hasLastVisit || hasBookmark);
   }
 
   /**
@@ -1790,15 +1858,7 @@ export class UrlbarView {
     bodyTop.appendChild(url);
     item._elements.set("url", url);
 
-    if (lazy.UrlbarPrefs.get("resultExplanationsFeatureGate")) {
-      let explanation = this.#createElement("span");
-      explanation.classList.add(
-        "urlbarView-explanation",
-        "urlbarView-overflowable"
-      );
-      bodyTop.appendChild(explanation);
-      item._elements.set("explanation", explanation);
-    }
+    this.#createExplanation(bodyTop, item);
 
     let description = this.#createElement("div");
     description.classList.add("urlbarView-row-body-description");
@@ -1948,7 +2008,9 @@ export class UrlbarView {
       item._buttons.get("tip").textContent = result.payload.buttonText;
     }
 
-    if (this.#getResultMenuCommands(result)) {
+    let hasResultMenu = !!this.#getResultMenuCommands(result);
+    item.toggleAttribute("has-menu-button", hasResultMenu);
+    if (hasResultMenu) {
       this.#addRowButton(item, {
         name: "result-menu",
         classList: ["urlbarView-button-menu"],
@@ -2515,33 +2577,7 @@ export class UrlbarView {
       this.#updateOverflowTooltip(url, "");
     }
 
-    let explanation = item._elements.get("explanation");
-    if (explanation && setURL && result.payload.lastVisit) {
-      item.toggleAttribute("has-explanation", true);
-      let { isRelative, formattedDate } = lazy.UrlbarUtils.formatDate(
-        new Date(result.payload.lastVisit)
-      );
-      if (isRelative) {
-        this.document.l10n.setAttributes(
-          explanation,
-          "urlbar-result-explanation-last-visited-relative-2",
-          { date: formattedDate }
-        );
-      } else {
-        this.document.l10n.setAttributes(
-          explanation,
-          "urlbar-result-explanation-last-visited-absolute-2",
-          { date: formattedDate }
-        );
-      }
-    } else {
-      if (explanation) {
-        explanation.removeAttribute("data-l10n-id");
-        explanation.removeAttribute("data-l10n-args");
-        explanation.textContent = "";
-      }
-      item.toggleAttribute("has-explanation", false);
-    }
+    this.#updateExplanation(item, result, setURL);
 
     title.toggleAttribute("is-url", isVisitAction);
     if (isVisitAction) {
@@ -3039,6 +3075,10 @@ export class UrlbarView {
       let tagsContainer = row._elements.get("tagsContainer");
       if (tagsContainer) {
         this.#setElementOverflowing(tagsContainer, false);
+      }
+      let explanation = row._elements.get("explanation");
+      if (explanation) {
+        this.#setElementOverflowing(explanation, false);
       }
     }
   }

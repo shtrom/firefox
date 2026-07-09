@@ -102,6 +102,7 @@
 
 .urlbarView-results {
   white-space: nowrap;
+  container-type: inline-size;
 
   .urlbar:not([noresults]) > .urlbarView > .urlbarView-body-outer > .urlbarView-body-inner > & {
     padding-block-start: var(--urlbarView-padding);
@@ -193,7 +194,6 @@
 .urlbarView-row-body-top-no-wrap {
   display: flex;
   align-items: baseline;
-  flex: 0 0 auto;
   min-width: 0;
   max-width: 100%;
 }
@@ -234,10 +234,15 @@
      but not too short, since wrapping in that case would cause fewer rows to be
      shown. Wrap the URL under the title and other no-wrap elements. */
   .urlbarView-results[wrap] > .urlbarView-row[has-url] > .urlbarView-row-inner > .urlbarView-row-body > .urlbarView-row-body-top {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 0;
+    grid-template-areas:
+      "title title"
+      "url   explanation";
+    row-gap: 2px;
 
     > .urlbarView-row-body-top-no-wrap {
-      flex-basis: 100%;
+      grid-area: title;
       max-width: 100%;
 
       > .urlbarView-title-separator {
@@ -245,10 +250,27 @@
       }
     }
 
-    > .urlbarView-url,
-    > .urlbarView-explanation {
-      margin-top: 2px;
+    > .urlbarView-url {
+      grid-area: url;
     }
+
+    > .urlbarView-explanation {
+      grid-area: explanation;
+    }
+  }
+}
+
+@container (width >= 450px) {
+  .urlbarView-row[has-explanation]:is([selected], :hover) > .urlbarView-row-inner > .urlbarView-row-body > .urlbarView-row-body-top > .urlbarView-explanation {
+    visibility: visible;
+  }
+
+  .urlbarView-results[wrap]
+    > .urlbarView-row[has-explanation]:is([selected], :hover)
+    > .urlbarView-row-inner
+    > .urlbarView-row-body
+    > .urlbarView-row-body-top {
+    grid-template-columns: minmax(0, 1fr) minmax(0, max-content);
   }
 }
 
@@ -631,6 +653,7 @@
   /* Explicitly set line-height to avoid excessively tall rows if the title triggers use of
      fallback fonts with extreme metrics. */
   line-height: 1.4;
+  flex: 1;
 }
 
 /* user context box */
@@ -830,7 +853,6 @@
 
 .urlbarView-url,
 .urlbarView-explanation {
-  flex: auto;
   font-size: var(--urlbarView-small-font-size);
   /* Increase line-height to avoid cutting overhanging glyphs due to masking on
      the element */
@@ -850,17 +872,25 @@
   }
 }
 
-.urlbarView-explanation {
-  visibility: collapse;
+.urlbarView-url {
+  flex: 1 1 auto;
 }
 
-.urlbarView-row[has-explanation]:is([selected], :hover) > .urlbarView-row-inner > .urlbarView-row-body > .urlbarView-row-body-top {
-  > .urlbarView-explanation {
-    visibility: visible;
+.urlbarView-explanation {
+  visibility: collapse;
+  margin-inline: calc(var(--urlbarView-row-padding-inline) + var(--urlbarView-icon-margin-start));
+  flex: 0 0 auto;
+
+  .urlbarView-row[has-menu-button] & {
+    margin-inline-end: 0;
   }
-  > .urlbarView-url {
-    visibility: collapse;
-  }
+}
+
+.urlbarView-url[overflow] ~ .urlbarView-explanation::before,
+.urlbarView-explanation-bookmarked:not(:empty) + .urlbarView-explanation-last-visited:not(:empty)::before {
+  content: var(--urlbarView-separator-char);
+  margin: 0 var(--urlbarView-separator-margin-inline);
+  opacity: var(--opacity-deemphasized-strong);
 }
 
 .urlbarView-title[is-url]:-moz-locale-dir(rtl),
