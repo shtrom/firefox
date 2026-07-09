@@ -11,6 +11,8 @@ internal object BookmarksTestTag {
     // Bookmark toolbar
     const val BOOKMARK_TOOLBAR = "bookmarks.toolbar"
 
+    const val BOOKMARK_PLACEHOLDER = "bookmarks.placeholder"
+
     // Edit bookmarked item
     const val EDIT_BOOKMARK_ITEM_TITLE_TEXT_FIELD = "edit.bookmark.item.title.text.field"
     const val EDIT_BOOKMARK_ITEM_URL_TEXT_FIELD = "edit.bookmark.item.url.text.field"
