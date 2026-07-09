@@ -73,7 +73,9 @@ class DocAccessibleParent : public RemoteAccessible,
   bool IsShutdown() const { return mShutdown; }
 
   /**
-   * Set whether this document is a static clone created for printing.
+   * Set whether this document is a static clone created for printing. We don't
+   * expose print documents or their descendant Accessibles to platform
+   * accessibility APIs; they are used purely to generate a tagged PDF.
    */
   void SetIsPrintDoc(bool aIsPrintDoc) { mIsPrintDoc = aIsPrintDoc; }
   bool IsPrintDoc() const { return mIsPrintDoc; }
