@@ -3456,9 +3456,9 @@ bool gfxFont::ProcessSingleSpaceShapedWord(
     const std::function<void(gfxShapedWord*)>& aCallback) {
   static const uint8_t space = ' ';
   return ProcessShapedWordInternal(
-      &space, 1, gfxShapedWord::HashMix(0, ' '), Script::LATIN,
-      /* aLanguage = */ nullptr, aVertical, aAppUnitsPerDevUnit, aFlags,
-      aRounding, nullptr, aCallback);
+      &space, 1, gfxShapedWord::HashMix(gfxShapedWord::sHashInitialValue, ' '),
+      Script::LATIN, /* aLanguage = */ nullptr, aVertical, aAppUnitsPerDevUnit,
+      aFlags, aRounding, nullptr, aCallback);
 }
 
 bool gfxFont::ShapeText(const uint8_t* aText, uint32_t aOffset,
@@ -3765,7 +3765,7 @@ bool gfxFont::SplitAndInitTextRun(
   }
 
   uint32_t wordStart = 0;
-  uint32_t hash = 0;
+  uint32_t hash = gfxShapedWord::sHashInitialValue;
   bool wordIs8Bit = true;
   uint16_t appUnitsPerDevUnit = aTextRun->GetAppUnitsPerDevUnit();
 
@@ -3837,8 +3837,9 @@ bool gfxFont::SplitAndInitTextRun(
         DebugOnly<char16_t> boundary16 = boundary;
         NS_ASSERTION(boundary16 < 256, "unexpected boundary!");
         bool processed = ProcessShapedWordInternal(
-            &boundary, 1, gfxShapedWord::HashMix(0, boundary), aRunScript,
-            aLanguage, vertical, appUnitsPerDevUnit,
+            &boundary, 1,
+            gfxShapedWord::HashMix(gfxShapedWord::sHashInitialValue, boundary),
+            aRunScript, aLanguage, vertical, appUnitsPerDevUnit,
             flags | gfx::ShapedTextFlags::TEXT_IS_8BIT, rounding, tp,
             [&](gfxShapedWord* aShapedWord) {
               aTextRun->CopyGlyphDataFrom(aShapedWord, aRunStart + i);
@@ -3850,7 +3851,7 @@ bool gfxFont::SplitAndInitTextRun(
           return false;
         }
       }
-      hash = 0;
+      hash = gfxShapedWord::sHashInitialValue;
       wordStart = i + 1;
       wordIs8Bit = true;
       continue;
@@ -3882,7 +3883,7 @@ bool gfxFont::SplitAndInitTextRun(
       }
     }
 
-    hash = 0;
+    hash = gfxShapedWord::sHashInitialValue;
     wordStart = i + 1;
     wordIs8Bit = true;
   }
