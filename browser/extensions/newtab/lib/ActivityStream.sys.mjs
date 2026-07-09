@@ -58,7 +58,6 @@ ChromeUtils.defineESModuleGetters(lazy, {
   TopStoriesFeed: "resource://newtab/lib/TopStoriesFeed.sys.mjs",
   WallpaperFeed: "resource://newtab/lib/Wallpapers/WallpaperFeed.sys.mjs",
   WeatherFeed: "resource://newtab/lib/WeatherFeed.sys.mjs",
-  WebNotificationsFeed: "resource://newtab/lib/WebNotificationsFeed.sys.mjs",
 });
 
 XPCOMUtils.defineLazyServiceGetter(
@@ -2134,12 +2133,6 @@ const FEEDS_DATA = [
     factory: () => new lazy.ExternalComponentsFeed(),
     title: "Handles updating the registry of external components",
     value: true,
-  },
-  {
-    name: "webnotificationsfeed",
-    factory: () => new lazy.WebNotificationsFeed(),
-    title: "Handles snapshotting the platform NotificationDB",
-    value: false,
   },
 ];
 
