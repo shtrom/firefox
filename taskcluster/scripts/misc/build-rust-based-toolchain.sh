@@ -26,8 +26,8 @@ case "$TARGET" in
     # when not cross-compiling, leading to a sysroot discrepancy.
     # Using C*FLAGS_x86_64_unknown_linux_gnu makes the flags apply to both host
     # and target when not cross-compiling.
-    export CFLAGS_${arch}_unknown_linux_gnu="--sysroot=$sysroot -fuse-ld=lld"
-    export CXXFLAGS_${arch}_unknown_linux_gnu="-D_GLIBCXX_USE_CXX11_ABI=0 --sysroot=$sysroot -fuse-ld=lld"
+    export CFLAGS_${arch}_unknown_linux_gnu="--sysroot=$sysroot -fuse-ld=lld -Wno-unused-command-line-argument"
+    export CXXFLAGS_${arch}_unknown_linux_gnu="-D_GLIBCXX_USE_CXX11_ABI=0 --sysroot=$sysroot -fuse-ld=lld -Wno-unused-command-line-argument"
     ;;
 *-apple-darwin)
     # Cross-compiling for Mac on Linux.
@@ -40,8 +40,8 @@ case "$TARGET" in
     export RUSTFLAGS="-Clinker=$MOZ_FETCHES_DIR/clang/bin/clang++ -C link-arg=-isysroot -C link-arg=$MACOS_SYSROOT -C link-arg=-fuse-ld=lld -C link-arg=--target=$TARGET $rust_lto_flags"
     export CC="$MOZ_FETCHES_DIR/clang/bin/clang"
     export CXX="$MOZ_FETCHES_DIR/clang/bin/clang++"
-    export TARGET_CFLAGS="-isysroot $MACOS_SYSROOT -fuse-ld=lld"
-    export TARGET_CXXFLAGS="-isysroot $MACOS_SYSROOT -fuse-ld=lld -stdlib=libc++"
+    export TARGET_CFLAGS="-isysroot $MACOS_SYSROOT -fuse-ld=lld -Wno-unused-command-line-argument"
+    export TARGET_CXXFLAGS="-isysroot $MACOS_SYSROOT -fuse-ld=lld -Wno-unused-command-line-argument -stdlib=libc++"
     ;;
 *-pc-windows-msvc)
     # Cross-compiling for Windows on Linux.
