@@ -17,6 +17,7 @@ import androidx.annotation.VisibleForTesting.Companion.PRIVATE
 import androidx.core.content.edit
 import androidx.lifecycle.LifecycleOwner
 import androidx.preference.PreferenceManager
+import mozilla.components.browser.engine.gecko.cookiebanners.ReportSiteDomainsRepository.Companion.REPORT_SITE_DOMAINS_REPOSITORY_NAME
 import mozilla.components.concept.engine.Engine
 import mozilla.components.concept.engine.Engine.HttpsOnlyMode
 import mozilla.components.concept.engine.EngineSession.CookieBannerHandlingMode
@@ -73,6 +74,7 @@ import org.mozilla.fenix.tabstray.DefaultTabManagementFeatureHelper
 import org.mozilla.fenix.termsofuse.TOU_VERSION
 import org.mozilla.fenix.utils.Settings.Companion.LONGFOX_PEEK_ANIMATION_MAX_SHOWS
 import org.mozilla.fenix.wallpapers.Wallpaper
+import java.io.File
 import java.security.InvalidParameterException
 import java.util.concurrent.TimeUnit.MILLISECONDS
 
@@ -1917,6 +1919,25 @@ class Settings(
         if (!hasDeletedLegacyPocketDatabase) {
             appContext.deleteDatabase("pocket_recommendations")
             hasDeletedLegacyPocketDatabase = true
+        }
+    }
+
+    /**
+     * Indicates if the [REPORT_SITE_DOMAINS_REPOSITORY_NAME] DataStore has been deleted.
+     */
+    private var hasDeletedReportSiteDomainsDataStore by booleanPreference(
+        appContext.getPreferenceKey(R.string.pref_key_deleted_report_site_domains_datastore),
+        default = false,
+    )
+
+    /**
+     * Deletes the [REPORT_SITE_DOMAINS_REPOSITORY_NAME] DataStore left behind on existing
+     * application after the legacy cookie banner feature was removed.
+     */
+    fun deleteReportSiteDomainsDataStoreIfNeeded() {
+        if (!hasDeletedReportSiteDomainsDataStore) {
+            File(appContext.filesDir, "datastore/$REPORT_SITE_DOMAINS_REPOSITORY_NAME.preferences_pb").delete()
+            hasDeletedReportSiteDomainsDataStore = true
         }
     }
 
