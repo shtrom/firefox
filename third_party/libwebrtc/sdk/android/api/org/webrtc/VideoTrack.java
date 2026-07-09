@@ -11,7 +11,6 @@
 package org.webrtc;
 
 import java.util.IdentityHashMap;
-import org.jni_zero.NativeMethods;
 
 /** Java version of VideoTrackInterface. */
 public class VideoTrack extends MediaStreamTrack {
@@ -36,9 +35,9 @@ public class VideoTrack extends MediaStreamTrack {
     // We allow calling addSink() with the same sink multiple times. This is similar to the C++
     // VideoTrack::AddOrUpdateSink().
     if (!sinks.containsKey(sink)) {
-      final long nativeSink = VideoTrackJni.get().wrapSink(sink);
+      final long nativeSink = nativeWrapSink(sink);
       sinks.put(sink, nativeSink);
-      VideoTrackJni.get().addSink(getNativeMediaStreamTrack(), nativeSink);
+      nativeAddSink(getNativeMediaStreamTrack(), nativeSink);
     }
   }
 
@@ -50,16 +49,16 @@ public class VideoTrack extends MediaStreamTrack {
   public void removeSink(VideoSink sink) {
     final Long nativeSink = sinks.remove(sink);
     if (nativeSink != null) {
-      VideoTrackJni.get().removeSink(getNativeMediaStreamTrack(), nativeSink);
-      VideoTrackJni.get().freeSink(nativeSink);
+      nativeRemoveSink(getNativeMediaStreamTrack(), nativeSink);
+      nativeFreeSink(nativeSink);
     }
   }
 
   @Override
   public void dispose() {
     for (long nativeSink : sinks.values()) {
-      VideoTrackJni.get().removeSink(getNativeMediaStreamTrack(), nativeSink);
-      VideoTrackJni.get().freeSink(nativeSink);
+      nativeRemoveSink(getNativeMediaStreamTrack(), nativeSink);
+      nativeFreeSink(nativeSink);
     }
     sinks.clear();
     super.dispose();
@@ -70,14 +69,8 @@ public class VideoTrack extends MediaStreamTrack {
     return getNativeMediaStreamTrack();
   }
 
-  @NativeMethods
-  interface Natives {
-    void addSink(long track, long nativeSink);
-
-    void removeSink(long track, long nativeSink);
-
-    long wrapSink(VideoSink sink);
-
-    void freeSink(long sink);
-  }
+  private static native void nativeAddSink(long track, long nativeSink);
+  private static native void nativeRemoveSink(long track, long nativeSink);
+  private static native long nativeWrapSink(VideoSink sink);
+  private static native void nativeFreeSink(long sink);
 }

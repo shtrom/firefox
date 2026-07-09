@@ -11,8 +11,6 @@
 package org.webrtc;
 
 import java.nio.ByteBuffer;
-import org.jni_zero.CalledByNative;
-import org.jni_zero.NativeMethods;
 
 /** Java wrapper for a C++ DataChannelInterface. */
 public class DataChannel {
@@ -116,31 +114,31 @@ public class DataChannel {
   public void registerObserver(Observer observer) {
     checkDataChannelExists();
     if (nativeObserver != 0) {
-      DataChannelJni.get().unregisterObserver(this, nativeObserver);
+      nativeUnregisterObserver(nativeObserver);
     }
-    nativeObserver = DataChannelJni.get().registerObserver(this, observer);
+    nativeObserver = nativeRegisterObserver(observer);
   }
 
   /** Unregister the (only) observer. */
   public void unregisterObserver() {
     checkDataChannelExists();
-    DataChannelJni.get().unregisterObserver(this, nativeObserver);
+    nativeUnregisterObserver(nativeObserver);
     nativeObserver = 0;
   }
 
   public String label() {
     checkDataChannelExists();
-    return DataChannelJni.get().label(this);
+    return nativeLabel();
   }
 
   public int id() {
     checkDataChannelExists();
-    return DataChannelJni.get().id(this);
+    return nativeId();
   }
 
   public State state() {
     checkDataChannelExists();
-    return DataChannelJni.get().state(this);
+    return nativeState();
   }
 
   /**
@@ -150,13 +148,13 @@ public class DataChannel {
    */
   public long bufferedAmount() {
     checkDataChannelExists();
-    return DataChannelJni.get().bufferedAmount(this);
+    return nativeBufferedAmount();
   }
 
   /** Close the channel. */
   public void close() {
     checkDataChannelExists();
-    DataChannelJni.get().close(this);
+    nativeClose();
   }
 
   /** Send `data` to the remote peer; return success. */
@@ -166,7 +164,7 @@ public class DataChannel {
     // ByteBuffer is direct and/or is backed by an array.
     byte[] data = new byte[buffer.data.remaining()];
     buffer.data.get(data);
-    return DataChannelJni.get().send(this, data, buffer.binary);
+    return nativeSend(data, buffer.binary);
   }
 
   /** Dispose of native resources attached to this channel. */
@@ -187,22 +185,12 @@ public class DataChannel {
     }
   }
 
-  @NativeMethods
-  interface Natives {
-    long registerObserver(DataChannel caller, Observer observer);
-
-    void unregisterObserver(DataChannel caller, long observer);
-
-    String label(DataChannel caller);
-
-    int id(DataChannel caller);
-
-    State state(DataChannel caller);
-
-    long bufferedAmount(DataChannel caller);
-
-    void close(DataChannel caller);
-
-    boolean send(DataChannel caller, byte[] data, boolean binary);
-  }
+  private native long nativeRegisterObserver(Observer observer);
+  private native void nativeUnregisterObserver(long observer);
+  private native String nativeLabel();
+  private native int nativeId();
+  private native State nativeState();
+  private native long nativeBufferedAmount();
+  private native void nativeClose();
+  private native boolean nativeSend(byte[] data, boolean binary);
 }

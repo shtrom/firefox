@@ -10,8 +10,6 @@
 
 package org.webrtc;
 
-import org.jni_zero.NativeMethods;
-
 /** Java wrapper for a C++ DtmfSenderInterface. */
 public class DtmfSender {
   private long nativeDtmfSender;
@@ -25,7 +23,7 @@ public class DtmfSender {
    */
   public boolean canInsertDtmf() {
     checkDtmfSenderExists();
-    return DtmfSenderJni.get().canInsertDtmf(nativeDtmfSender);
+    return nativeCanInsertDtmf(nativeDtmfSender);
   }
 
   /**
@@ -47,7 +45,7 @@ public class DtmfSender {
    */
   public boolean insertDtmf(String tones, int duration, int interToneGap) {
     checkDtmfSenderExists();
-    return DtmfSenderJni.get().insertDtmf(nativeDtmfSender, tones, duration, interToneGap);
+    return nativeInsertDtmf(nativeDtmfSender, tones, duration, interToneGap);
   }
 
   /**
@@ -55,7 +53,7 @@ public class DtmfSender {
    */
   public String tones() {
     checkDtmfSenderExists();
-    return DtmfSenderJni.get().tones(nativeDtmfSender);
+    return nativeTones(nativeDtmfSender);
   }
 
   /**
@@ -64,7 +62,7 @@ public class DtmfSender {
    */
   public int duration() {
     checkDtmfSenderExists();
-    return DtmfSenderJni.get().duration(nativeDtmfSender);
+    return nativeDuration(nativeDtmfSender);
   }
 
   /**
@@ -74,7 +72,7 @@ public class DtmfSender {
    */
   public int interToneGap() {
     checkDtmfSenderExists();
-    return DtmfSenderJni.get().interToneGap(nativeDtmfSender);
+    return nativeInterToneGap(nativeDtmfSender);
   }
 
   public void dispose() {
@@ -89,16 +87,10 @@ public class DtmfSender {
     }
   }
 
-  @NativeMethods
-  interface Natives {
-    boolean canInsertDtmf(long dtmfSender);
-
-    boolean insertDtmf(long dtmfSender, String tones, int duration, int interToneGap);
-
-    String tones(long dtmfSender);
-
-    int duration(long dtmfSender);
-
-    int interToneGap(long dtmfSender);
-  }
+  private static native boolean nativeCanInsertDtmf(long dtmfSender);
+  private static native boolean nativeInsertDtmf(
+      long dtmfSender, String tones, int duration, int interToneGap);
+  private static native String nativeTones(long dtmfSender);
+  private static native int nativeDuration(long dtmfSender);
+  private static native int nativeInterToneGap(long dtmfSender);
 }

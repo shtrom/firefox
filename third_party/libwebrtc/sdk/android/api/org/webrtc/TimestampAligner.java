@@ -10,8 +10,6 @@
 
 package org.webrtc;
 
-import org.jni_zero.NativeMethods;
-
 /**
  * The TimestampAligner class helps translating camera timestamps into the same timescale as is
  * used by webrtc. Some cameras have built in timestamping which is more accurate than
@@ -39,7 +37,7 @@ public class TimestampAligner {
   }
 
   public TimestampAligner(Environment webrtcEnv) {
-    nativeTimestampAligner = TimestampAlignerJni.get().createTimestampAligner(webrtcEnv.ref());
+    nativeTimestampAligner = nativeCreateTimestampAligner(webrtcEnv.ref());
   }
 
   /**
@@ -49,13 +47,13 @@ public class TimestampAligner {
    */
   public long translateTimestamp(long cameraTimeNs) {
     checkNativeAlignerExists();
-    return TimestampAlignerJni.get().translateTimestamp(nativeTimestampAligner, cameraTimeNs);
+    return nativeTranslateTimestamp(nativeTimestampAligner, cameraTimeNs);
   }
 
   /** Dispose native timestamp aligner. */
   public void dispose() {
     checkNativeAlignerExists();
-    TimestampAlignerJni.get().releaseTimestampAligner(nativeTimestampAligner);
+    nativeReleaseTimestampAligner(nativeTimestampAligner);
     nativeTimestampAligner = 0;
   }
 
@@ -65,13 +63,7 @@ public class TimestampAligner {
     }
   }
 
-  @NativeMethods
-  interface Natives {
-    long createTimestampAligner(long webrtcEnvRef);
-
-    void releaseTimestampAligner(long timestampAligner);
-
-    long translateTimestamp(long timestampAligner, long cameraTimeNs);
-  }
+  private static native long nativeCreateTimestampAligner(long webrtcEnvRef);
+  private static native void nativeReleaseTimestampAligner(long timestampAligner);
+  private static native long nativeTranslateTimestamp(long timestampAligner, long cameraTimeNs);
 }
-
