@@ -1070,6 +1070,7 @@ WEBIDL_FILES = [
     "TextTrackCueList.webidl",
     "TextTrackList.webidl",
     "TimeEvent.webidl",
+    "TimelineRangeOffset.webidl",
     "TimeRanges.webidl",
     "ToggleEvent.webidl",
     "Touch.webidl",

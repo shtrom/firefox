@@ -27,6 +27,7 @@
 #include "mozilla/StaticPrefs_dom.h"
 #include "mozilla/StaticPrefs_gfx.h"
 #include "mozilla/StaticPrefs_layers.h"
+#include "mozilla/dom/CSSUnitValue.h"
 #include "mozilla/dom/KeyframeEffectBinding.h"
 #include "mozilla/dom/MutationObservers.h"
 #include "mozilla/layers/AnimationInfo.h"
@@ -1293,10 +1294,26 @@ void KeyframeEffect::GetKeyframes(JSContext* aCx, nsTArray<JSObject*>& aResult,
     // Set up a dictionary object for the explicit members
     BaseComputedKeyframe keyframeDict;
     if (keyframe.mOffset) {
-      // FIXME: Bug 2016574. Add range name to BaseKeyframe.
-      if (!keyframe.mOffset->IsTimelineRangeOffset()) {
-        keyframeDict.mOffset.SetValue(keyframe.mOffset->mPercentage);
-      }
+      if (keyframe.mOffset->IsPercentageOffset()) {
+        // The percentage offset, so we use double. We don't use CSSNumericValue
+        // for backwards compatibility.
+        keyframeDict.mOffset.SetValue().RawSetAsDouble() =
+            keyframe.mOffset->mPercentage;
+      } else if (StaticPrefs::layout_css_typed_om_enabled()) {
+        // The timeline range offset.
+        MOZ_ASSERT(keyframe.mOffset->IsTimelineRangeOffset());
+
+        nsAutoCString rangeName;
+        Servo_SerializeTimelineRangeName(keyframe.mOffset->mRangeName,
+                                         &rangeName);
+        auto& offset =
+            keyframeDict.mOffset.SetValue().RawSetAsTimelineRangeOffset();
+        offset.mRangeName.Construct(std::move(rangeName));
+        offset.mOffset.Construct(MakeCSSUnitValue(
+            GetParentObject(), StyleNumericType::Percent(),
+            keyframe.mOffset->mPercentage * 100.0, "percent"_ns));
+      }  // else: if we don't enable the CSS Typed OM preference, we leave it
+         // null.
     }
     if (std::isnan(keyframe.mComputedOffset)) {
       MOZ_ASSERT(keyframe.IsRangedKeyframe(), "Invalid computed offset");
