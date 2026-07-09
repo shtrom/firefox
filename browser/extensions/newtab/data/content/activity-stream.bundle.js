@@ -24895,7 +24895,7 @@ class ContentSection extends (external_React_default()).PureComponent {
     let value;
     if (e.target.nodeName === "MOZ-SELECT") {
       value = parseInt(e.target.value, 10);
-    } else if (e.target.nodeName === "INPUT" || e.target.nodeName === "MOZ-CHECKBOX") {
+    } else if (e.target.nodeName === "INPUT") {
       value = e.target.checked;
       if (eventSource) {
         this.inputUserEvent(eventSource, value);
@@ -25221,16 +25221,23 @@ class ContentSection extends (external_React_default()).PureComponent {
     }, /*#__PURE__*/external_React_default().createElement("div", {
       className: "more-information",
       ref: this.pocketDrawerRef
-    }, mayHaveInferredPersonalization && /*#__PURE__*/external_React_default().createElement("moz-checkbox", {
+    }, mayHaveInferredPersonalization && /*#__PURE__*/external_React_default().createElement("div", {
+      className: "check-wrapper",
+      role: "presentation"
+    }, /*#__PURE__*/external_React_default().createElement("input", {
       id: "inferred-personalization",
       className: "customize-menu-checkbox",
       disabled: !pocketEnabled,
       checked: showInferredPersonalizationEnabled,
+      type: "checkbox",
       onChange: this.onPreferenceSelect,
       "data-preference": "discoverystream.sections.personalization.inferred.user.enabled",
-      "data-event-source": "INFERRED_PERSONALIZATION",
-      "data-l10n-id": "newtab-custom-stories-personalized-checkbox"
-    }), mayHaveTopicSections && /*#__PURE__*/external_React_default().createElement(SectionsMgmtPanel, {
+      "data-event-source": "INFERRED_PERSONALIZATION"
+    }), /*#__PURE__*/external_React_default().createElement("label", {
+      className: "customize-menu-checkbox-label",
+      htmlFor: "inferred-personalization",
+      "data-l10n-id": "newtab-custom-stories-personalized-checkbox-label"
+    })), mayHaveTopicSections && /*#__PURE__*/external_React_default().createElement(SectionsMgmtPanel, {
       exitEventFired: exitEventFired,
       pocketEnabled: pocketEnabled,
       onSubpanelToggle: onSubpanelToggle,
