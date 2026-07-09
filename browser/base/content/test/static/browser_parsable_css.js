@@ -449,7 +449,44 @@ function processCSSRules(container) {
       processCSSRules(rule); // @supports, @media, @layer (block), @keyframes, style rules with nested rules.
     }
     if (!rule.style) {
-      continue; // @layer (statement), @font-feature-values, @counter-style
+      // @layer (statement), @font-feature-values, @counter-style, @container, …
+
+      // Look for custom property usage in style queries
+      if (rule.conditionText) {
+        const lexer = new InspectorCSSParser(rule.conditionText);
+        let token;
+        let foundStyleFunc = false;
+        while ((token = lexer.nextToken())) {
+          // we're looking for usages of the `style()` function to collect referenced
+          // custom property names
+          if (token.tokenType === "Function" && token.value === "style") {
+            foundStyleFunc = true;
+            continue;
+          }
+
+          // If we saw a `style(` token before, we're looking for the custom property name
+          // param
+          if (
+            foundStyleFunc &&
+            token.tokenType === "Ident" &&
+            token.text.startsWith("--")
+          ) {
+            foundStyleFunc = false;
+            const prop = token.text;
+            let prevValue = customPropsToReferencesMap.get(prop) || 0;
+            customPropsToReferencesMap.set(prop, prevValue + 1);
+            continue;
+          }
+
+          // When seeing a closing parenthesis we can reset the work variable
+          if (token.tokenType === "CloseParenthesis") {
+            foundStyleFunc = false;
+            continue;
+          }
+        }
+      }
+
+      continue;
     }
 
     // We want to extract urls and variables from the css text.
