@@ -664,10 +664,10 @@ index af412f6890..51a0e6160c 100644
  
  rtc_source_set("arch") {
 diff --git a/rtc_tools/network_tester/BUILD.gn b/rtc_tools/network_tester/BUILD.gn
-index eeac69b6cc..28254272eb 100644
+index 554ff37ccc..f649ed3bb2 100644
 --- a/rtc_tools/network_tester/BUILD.gn
 +++ b/rtc_tools/network_tester/BUILD.gn
-@@ -189,8 +189,8 @@ if (is_android) {
+@@ -185,8 +185,8 @@ if (is_android) {
        "../../test:create_test_environment",
      ]
  
