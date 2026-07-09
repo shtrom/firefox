@@ -49,7 +49,14 @@ ConnectionEntry::ConnectionEntry(nsHttpConnectionInfo* ci,
 
 bool ConnectionEntry::HasActiveH3Connection() const {
   for (const auto& conn : mActiveConns) {
-    if (conn->UsingHttp3()) {
+    // An unusable h3 connection lingering in mActiveConns must not hold the
+    // single-H3-per-entry slot: GetH2orH3ActiveConn won't dispatch onto it, so
+    // counting it here would make AtActiveConnectionLimit block a replacement
+    // forever and wedge any pending transaction (bug 2050384). A
+    // still-handshaking connection is not yet connected, so it is still
+    // counted.
+    RefPtr<HttpConnectionUDP> connUDP = do_QueryObject(conn);
+    if (connUDP && !connUDP->IsConnectedAndUnusable()) {
       return true;
     }
   }

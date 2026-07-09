@@ -16439,6 +16439,16 @@
   value: false
   mirror: always
 
+#ifdef DEBUG
+  # When true, HttpConnectionUDP::CanReuse() always returns false, simulating an
+  # HTTP/3 connection that has become unusable but still lingers in the entry's
+  # active connections. Testing only.
+-   name: network.http.http3.force_cannot_reuse_for_testing
+    type: RelaxedAtomicBool
+    value: false
+    mirror: always
+#endif
+
 # Maximum time (ms) a session can remain in ZERORTT state before being
 # considered stuck. If a Http3Session doesn't transition to CONNECTED within
 # this timeout, it will be closed.
