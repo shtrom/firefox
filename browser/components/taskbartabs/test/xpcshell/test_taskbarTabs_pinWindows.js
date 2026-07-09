@@ -43,20 +43,10 @@ registerCleanupFunction(() => {
   sinon.restore();
 });
 
-const registry = createInMemoryRegistry();
-
 // Favicons are written to the profile directory, ensure it exists.
 do_get_profile();
 
-async function attemptPin(aTaskbarTab, aDestFolder, aShortcutRelativePath) {
-  Assert.equal(
-    await TaskbarTabsPin.pinTaskbarTab(
-      aTaskbarTab,
-      await TaskbarTabsUtils.getDefaultIcon()
-    ),
-    aShortcutRelativePath,
-    "pinTaskbarTab returned expected relative path."
-  );
+function shellPinCalled(aTaskbarTab, destFolder, shortcutRelativePath) {
   ok(
     ShellService.writeShortcutIcon.calledOnce,
     `Icon creation should have been called.`
@@ -67,12 +57,12 @@ async function attemptPin(aTaskbarTab, aDestFolder, aShortcutRelativePath) {
   );
   Assert.equal(
     kMockNativeShellService.createShortcut.firstCall.args[6],
-    aDestFolder,
+    destFolder,
     "The shortcut should go into the expected destination."
   );
   Assert.equal(
     kMockNativeShellService.createShortcut.firstCall.args[7],
-    aShortcutRelativePath,
+    shortcutRelativePath,
     "The shortcut path should match the expected result."
   );
   ok(
@@ -89,6 +79,12 @@ async function attemptPin(aTaskbarTab, aDestFolder, aShortcutRelativePath) {
     kMockNativeShellService.createShortcut.firstCall.args[7],
     `The created and pinned shortcuts should be the same file.`
   );
+  Assert.equal(
+    kMockNativeShellService.pinShortcutToTaskbar.firstCall.args[2],
+    aTaskbarTab.shortcutRelativePath,
+    `The pinned shortcut should be the saved shortcut.`
+  );
+  Assert.equal(patchedSpy.callCount, 1, "A single patched event was emitted");
 }
 
 function shellUnpinCalled(aShortcutRelativePath) {
@@ -112,18 +108,30 @@ function shellUnpinCalled(aShortcutRelativePath) {
   );
 }
 
+async function pinTaskbarTabDefaultIcon(aTaskbarTab, aRegistry) {
+  return TaskbarTabsPin.pinTaskbarTab(
+    aTaskbarTab,
+    aRegistry,
+    await TaskbarTabsUtils.getDefaultIcon()
+  );
+}
+
+const registry = new TaskbarTabsRegistry();
+
+const patchedSpy = sinon.stub();
+registry.on(TaskbarTabsRegistry.events.patched, patchedSpy);
+
 add_task(async function test_pin_location() {
   const parsedURI = Services.io.newURI("https://www.example.com");
   const taskbarTab = createTaskbarTab(registry, parsedURI, 0);
   sinon.resetHistory();
 
-  await attemptPin(
+  await pinTaskbarTabDefaultIcon(taskbarTab, registry);
+  shellPinCalled(
     taskbarTab,
     "Programs",
     `[formatValue_taskbar-tab-shortcut-folder]\\${taskbarTab.name}.lnk`
   );
-
-  registry.removeTaskbarTab(taskbarTab.id);
 });
 
 add_task(async function test_pin_location_dos_name() {
@@ -131,7 +139,8 @@ add_task(async function test_pin_location_dos_name() {
   const invalidTaskbarTab = createTaskbarTab(registry, parsedURI, 0);
   sinon.resetHistory();
 
-  await attemptPin(
+  await pinTaskbarTabDefaultIcon(invalidTaskbarTab, registry);
+  shellPinCalled(
     invalidTaskbarTab,
     "Programs",
     // 'Untitled' is the default selected by the MIME code, since
@@ -151,7 +160,8 @@ add_task(async function test_pin_location_bad_characters() {
   });
   sinon.resetHistory();
 
-  await attemptPin(
+  await pinTaskbarTabDefaultIcon(invalidTaskbarTab, registry);
+  shellPinCalled(
     invalidTaskbarTab,
     "Programs",
     "[formatValue_taskbar-tab-shortcut-folder]\\__ ____ __ __ Not a valid. filename__! __ __ ____ __..lnk"
@@ -169,7 +179,8 @@ add_task(async function test_pin_location_lnk_extension() {
   });
   sinon.resetHistory();
 
-  await attemptPin(
+  await pinTaskbarTabDefaultIcon(invalidTaskbarTab, registry);
+  shellPinCalled(
     invalidTaskbarTab,
     "Programs",
     "[formatValue_taskbar-tab-shortcut-folder]\\coolstartup.lnk.lnk"
@@ -186,7 +197,13 @@ add_task(async function test_unpin() {
   });
 
   sinon.resetHistory();
-  await TaskbarTabsPin.unpinTaskbarTab(tt);
+  await TaskbarTabsPin.unpinTaskbarTab(tt, registry);
 
   shellUnpinCalled("somewhere else\\shortcut name.lnk");
+  Assert.equal(
+    tt.shortcutRelativePath,
+    null,
+    "Shortcut relative path was removed from the taskbar tab"
+  );
+  Assert.equal(patchedSpy.callCount, 1, "A single patched event was emitted");
 });

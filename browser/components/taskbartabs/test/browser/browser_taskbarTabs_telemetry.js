@@ -63,7 +63,7 @@ registerCleanupFunction(() => {
 
 // Don't use the normal TaskbarTabs module, since we don't want it to pin
 // automatically.
-const gRegistry = createInMemoryRegistry();
+const gRegistry = new TaskbarTabsRegistry();
 const gWindowManager = new TaskbarTabsWindowManager();
 
 const BASE_URL = "https://example.org";
@@ -93,6 +93,7 @@ async function testPinMetricCustom(aPinResult, aPinMessage = null) {
 
   await TaskbarTabsPin.pinTaskbarTab(
     taskbarTab,
+    gRegistry,
     await TaskbarTabsUtils.getDefaultIcon()
   );
 
@@ -140,7 +141,7 @@ async function testUnpinMetricCustom(
     shortcutRelativePath: "whatever",
   });
 
-  await TaskbarTabsPin.unpinTaskbarTab(taskbarTab);
+  await TaskbarTabsPin.unpinTaskbarTab(taskbarTab, gRegistry);
   snapshot = Glean.webApp.unpin.testGetValue();
   is(snapshot.length, 1, "A single unpin event was recorded");
   Assert.strictEqual(

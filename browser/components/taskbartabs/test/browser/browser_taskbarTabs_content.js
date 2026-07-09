@@ -8,7 +8,7 @@ ChromeUtils.defineESModuleGetters(this, {
   TaskbarTabsUtils: "resource:///modules/taskbartabs/TaskbarTabsUtils.sys.mjs",
 });
 
-const registry = createInMemoryRegistry();
+const registry = new TaskbarTabsRegistry();
 
 const url1 = Services.io.newURI("https://example.com");
 const userContextId1 = 0;
