@@ -28,6 +28,10 @@ case "$TARGET" in
     # and target when not cross-compiling.
     export CFLAGS_${arch}_unknown_linux_gnu="--sysroot=$sysroot -fuse-ld=lld -Wno-unused-command-line-argument"
     export CXXFLAGS_${arch}_unknown_linux_gnu="-D_GLIBCXX_USE_CXX11_ABI=0 --sysroot=$sysroot -fuse-ld=lld -Wno-unused-command-line-argument"
+    # Point pkg-config exclusively at the sysroot
+    export PKG_CONFIG_ALLOW_CROSS=1
+    export PKG_CONFIG_SYSROOT_DIR=$sysroot
+    export PKG_CONFIG_LIBDIR="$sysroot/usr/lib/$arch-linux-gnu/pkgconfig:$sysroot/usr/lib/pkgconfig:$sysroot/usr/share/pkgconfig"
     ;;
 *-apple-darwin)
     # Cross-compiling for Mac on Linux.
