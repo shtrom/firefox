@@ -263,13 +263,13 @@ class BookmarksTest {
         }.clickBookmarksButton {
         }.clickSearchButton {
             // Search for a valid term
-            typeBookmarkSearch(firstWebPage.title)
-            verifyBookmarkSearchSuggestionsAreDisplayed(firstWebPage.url.toString())
-            verifyBookmarkSuggestionsAreNotDisplayed(secondWebPage.url.toString())
+            typeSearch(firstWebPage.title)
+            verifySearchSuggestionsAreDisplayed(firstWebPage.url.toString())
+            verifySuggestionsAreNotDisplayed(secondWebPage.url.toString())
             // Search for invalid term
-            typeBookmarkSearch("Android")
-            verifyBookmarkSuggestionsAreNotDisplayed(firstWebPage.url.toString())
-            verifyBookmarkSuggestionsAreNotDisplayed(secondWebPage.url.toString())
+            typeSearch("Android")
+            verifySuggestionsAreNotDisplayed(firstWebPage.url.toString())
+            verifySuggestionsAreNotDisplayed(secondWebPage.url.toString())
         }
     }
 
@@ -285,11 +285,13 @@ class BookmarksTest {
         }.clickBookmarksButton {
         }.clickSearchButton {
             verifySearchToolbar(true)
-            verifyBookmarkSearchBarPlaceholder()
-            pressBack()
+            verifySearchSelectorButton()
+            verifySearchEngineIcon("Bookmarks")
+            verifySearchBarPlaceholder("Search bookmarks")
+            verifySearchBarPosition()
+            tapOutsideToDismissSearchBar(defaultWebPage.url.toString())
             verifySearchToolbar(false)
         }
-
         composeBookmarksMenu(composeTestRule) {
         }.goBackToBrowserScreen {
         }.openThreeDotMenu {
@@ -305,6 +307,8 @@ class BookmarksTest {
         }.clickBookmarksButton {
         }.clickSearchButton {
             verifySearchToolbar(true)
+            verifySearchEngineIcon("Bookmarks")
+            verifySearchBarPosition()
             pressBack()
             verifySearchToolbar(false)
         }

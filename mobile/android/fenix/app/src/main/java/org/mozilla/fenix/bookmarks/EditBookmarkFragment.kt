@@ -15,6 +15,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import kotlinx.coroutines.flow.emptyFlow
+import mozilla.components.compose.browser.toolbar.store.BrowserToolbarState
+import mozilla.components.compose.browser.toolbar.store.BrowserToolbarStore
+import mozilla.components.compose.browser.toolbar.store.Mode
 import mozilla.components.lib.state.helpers.StoreProvider.Companion.fragmentStore
 import org.mozilla.fenix.R
 import org.mozilla.fenix.components.accounts.FenixFxAEntryPoint
@@ -24,6 +27,8 @@ import org.mozilla.fenix.e2e.SystemInsetsPaddedFragment
 import org.mozilla.fenix.ext.bookmarkStorage
 import org.mozilla.fenix.ext.nav
 import org.mozilla.fenix.ext.requireComponents
+import org.mozilla.fenix.search.SearchFragmentState
+import org.mozilla.fenix.search.SearchFragmentStore
 import org.mozilla.fenix.theme.FirefoxTheme
 
 /**
@@ -123,6 +128,9 @@ class EditBookmarkFragment : Fragment(), SystemInsetsPaddedFragment {
                 BookmarksScreen(
                     buildStore = buildStore,
                     startDestination = BookmarksDestinations.EDIT_BOOKMARK,
+                    toolbarStore = BrowserToolbarStore(BrowserToolbarState(mode = Mode.EDIT)),
+                    searchStore = SearchFragmentStore(SearchFragmentState.EMPTY),
+                    bookmarksSearchEngine = null,
                     bookmarkToLoad = args.guidToEdit,
                 )
             }

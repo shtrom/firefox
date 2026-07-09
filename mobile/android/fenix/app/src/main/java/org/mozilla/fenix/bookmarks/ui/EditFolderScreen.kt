@@ -209,7 +209,7 @@ private fun EditFolderScreenPreview() {
             ),
             bookmarksMultiselectMoveState = null,
             isLoading = false,
-            searchState = null,
+            isSearching = false,
         ),
     )
 

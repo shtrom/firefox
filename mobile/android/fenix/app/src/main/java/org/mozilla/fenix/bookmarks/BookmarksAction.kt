@@ -83,7 +83,8 @@ internal data class FolderClicked(val item: BookmarkItem.Folder) : BookmarksActi
 internal data class FolderLongClicked(val item: BookmarkItem.Folder) : BookmarksAction
 internal data class BookmarkClicked(val item: BookmarkItem.Bookmark) : BookmarksAction
 internal data class BookmarkLongClicked(val item: BookmarkItem.Bookmark) : BookmarksAction
-
+internal data object SearchClicked : BookmarksAction
+internal data object SearchDismissed : BookmarksAction
 internal data object AddFolderClicked : BookmarksAction
 internal data object CloseClicked : BookmarksAction
 internal data object BackClicked : BookmarksAction
@@ -138,13 +139,6 @@ internal sealed class SelectFolderAction : BookmarksAction {
         data object AtoZClicked : SortMenu()
         data object ZtoAClicked : SortMenu()
     }
-}
-
-internal sealed interface SearchAction : BookmarksAction {
-    data object SearchClicked : SearchAction
-    data object SearchDismissed : SearchAction
-    data class SearchQueryChanged(val query: String) : SearchAction
-    data class ReceivedSearchResults(val results: List<BookmarkItem>) : SearchAction
 }
 
 internal sealed class OpenTabsConfirmationDialogAction : BookmarksAction {
