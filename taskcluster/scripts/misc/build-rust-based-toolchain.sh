@@ -17,7 +17,10 @@ case "$TARGET" in
 *-unknown-linux-gnu)
     # Native or cross-compiled Linux Build
     arch=${TARGET%%-*}
-    sysroot=$MOZ_FETCHES_DIR/sysroot-$arch-linux-gnu
+    sysroot=$MOZ_FETCHES_DIR/sysroot
+    if [ ! -d "$sysroot" ]; then
+        sysroot=$MOZ_FETCHES_DIR/sysroot-$arch-linux-gnu
+    fi
     export RUSTFLAGS="-Clinker=$MOZ_FETCHES_DIR/clang/bin/clang++ -C link-arg=--sysroot=$sysroot -C link-arg=-fuse-ld=lld -C link-arg=--target=$TARGET $rust_lto_flags"
     export CC=$MOZ_FETCHES_DIR/clang/bin/clang
     export CXX=$MOZ_FETCHES_DIR/clang/bin/clang++
