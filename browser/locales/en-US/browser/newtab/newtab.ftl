@@ -1566,6 +1566,12 @@ newtab-picture-header-main = Picture of the day
 newtab-picture-attribution-license =
     .aria-label = View the { $license } license
 
+# Tooltip and screen-reader label for the icon-only button that opens the
+# widget's context menu. The button never renders visible text.
+newtab-picture-widget-menu-button =
+    .title = Picture of the day options
+    .aria-label = Picture of the day options
+
 # Button that sets the current picture as the New Tab background wallpaper. The
 # button collapses to an icon when not hovered/focused, so .title is its tooltip.
 newtab-picture-set-wallpaper =
