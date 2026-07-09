@@ -6977,6 +6977,13 @@
   value: true
   mirror: always
 
+# Scales the autoscroll speed, as a percentage
+# (100 = default, 200 = double speed, 50 = half speed).
+- name: general.autoscroll.speed_multiplier
+  type: RelaxedAtomicInt32
+  value: 100
+  mirror: always
+
 # Limits the depth of recursive conversion of data when opening
 # a content to view.  This is mostly intended to prevent infinite
 # loops with faulty converters involved.
