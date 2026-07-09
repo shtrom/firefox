@@ -3705,7 +3705,9 @@ nsresult Element::SetAttrInternal(int32_t aNamespaceID, nsAtom* aName,
   nsAttrValue attrValue;
   aParseFn(attrValue);
 
-  BeforeSetAttr(aNamespaceID, aName, &attrValue, aNotify);
+  if (aName->IsStatic()) {
+    BeforeSetAttr(aNamespaceID, aName, &attrValue, aNotify);
+  }
 
   return SetAttrAndNotify(
       aNamespaceID, aName, aPrefix, oldValueSet ? &oldValue : nullptr,
@@ -3746,7 +3748,9 @@ nsresult Element::SetParsedAttr(int32_t aNamespaceID, nsAtom* aName,
                                                  modType);
   }
 
-  BeforeSetAttr(aNamespaceID, aName, &aParsedValue, aNotify);
+  if (aName->IsStatic()) {
+    BeforeSetAttr(aNamespaceID, aName, &aParsedValue, aNotify);
+  }
 
   return SetAttrAndNotify(aNamespaceID, aName, aPrefix,
                           oldValueSet ? &oldValue : nullptr, aParsedValue,
@@ -3934,7 +3938,9 @@ nsresult Element::SetNoNameSpaceAttrOnNewlyCreatedElement(
   // we only call this from the HTML parser and not from the prototype content
   // sink.
 
-  AfterSetAttr(kNameSpaceID_None, namePtr, valuePtr, nullptr, nullptr, false);
+  if (namePtr->IsStatic()) {
+    AfterSetAttr(kNameSpaceID_None, namePtr, valuePtr, nullptr, nullptr, false);
+  }
 
   // No `dir` handling; see above.
   // No notification.
@@ -4032,7 +4038,7 @@ nsresult Element::SetAttrAndNotify(
     }
   }
 
-  if (aCallAfterSetAttr) {
+  if (aCallAfterSetAttr && aName->IsStatic()) {
     AfterSetAttr(aNamespaceID, aName, &valueForAfterSetAttr, oldValue,
                  aSubjectPrincipal, aNotify);
 
@@ -4108,6 +4114,7 @@ bool Element::ParseAttribute(int32_t aNamespaceID, nsAtom* aAttribute,
 
 void Element::BeforeSetAttr(int32_t aNamespaceID, nsAtom* aName,
                             const nsAttrValue* aValue, bool aNotify) {
+  MOZ_ASSERT(aName->IsStatic());
   if (aNamespaceID != kNameSpaceID_None) {
     return;
   }
@@ -4129,6 +4136,7 @@ void Element::AfterSetAttr(int32_t aNamespaceID, nsAtom* aName,
                            const nsAttrValue* aOldValue,
                            nsIPrincipal* aMaybeScriptedPrincipal,
                            bool aNotify) {
+  MOZ_ASSERT(aName->IsStatic());
   if (aNamespaceID != kNameSpaceID_None) {
     return;
   }
@@ -4266,7 +4274,9 @@ nsresult Element::UnsetAttr(int32_t aNameSpaceID, nsAtom* aName, bool aNotify) {
                                                  AttrModType::Removal);
   }
 
-  BeforeSetAttr(aNameSpaceID, aName, nullptr, aNotify);
+  if (aName->IsStatic()) {
+    BeforeSetAttr(aNameSpaceID, aName, nullptr, aNotify);
+  }
 
   // Clear the attribute out from attribute map.
   nsDOMSlots* slots = GetExistingDOMSlots();
@@ -4312,7 +4322,9 @@ nsresult Element::UnsetAttr(int32_t aNameSpaceID, nsAtom* aName, bool aNotify) {
     }
   }
 
-  AfterSetAttr(aNameSpaceID, aName, nullptr, &oldValue, nullptr, aNotify);
+  if (aName->IsStatic()) {
+    AfterSetAttr(aNameSpaceID, aName, nullptr, &oldValue, nullptr, aNotify);
+  }
 
   if (aNotify) {
     // We can always pass oldValue here since there is no new value which could
