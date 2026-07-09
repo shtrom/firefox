@@ -6,6 +6,7 @@
 
 #include "mozilla/AlreadyAddRefed.h"
 #include "mozilla/Assertions.h"
+#include "mozilla/NotNull.h"
 #include "mozilla/ServoStyleConsts.h"
 #include "mozilla/UniquePtr.h"
 #include "mozilla/dom/BindingDeclarations.h"
@@ -19,6 +20,14 @@ namespace mozilla::dom {
 CSSMathNegate::CSSMathNegate(nsCOMPtr<nsISupports> aParent,
                              RefPtr<CSSNumericValue> aValue)
     : CSSMathValue(std::move(aParent), MathValueType::MathNegate),
+      mValue(std::move(aValue)) {}
+
+CSSMathNegate::CSSMathNegate(
+    nsCOMPtr<nsISupports> aParent,
+    MovingNotNull<UniquePtr<StyleNumericType>> aNumericType,
+    RefPtr<CSSNumericValue> aValue)
+    : CSSMathValue(std::move(aParent), std::move(aNumericType),
+                   MathValueType::MathNegate),
       mValue(std::move(aValue)) {}
 
 // static
@@ -50,9 +59,13 @@ already_AddRefed<CSSMathNegate> CSSMathNegate::Constructor(
   // Step 1.
   RefPtr<CSSNumericValue> value = CSSNumericValue::Create(global, aArg);
 
+  auto numericType = MakeUnique<StyleNumericType>(value->GetNumericType());
+
   // Step 2.
 
-  return MakeAndAddRef<CSSMathNegate>(std::move(global), std::move(value));
+  return MakeAndAddRef<CSSMathNegate>(std::move(global),
+                                      WrapMovingNotNull(std::move(numericType)),
+                                      std::move(value));
 }
 
 CSSNumericValue* CSSMathNegate::Value() const { return mValue; }

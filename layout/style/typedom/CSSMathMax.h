@@ -7,6 +7,7 @@
 
 #include "js/TypeDecls.h"
 #include "mozilla/RefPtr.h"
+#include "mozilla/UniquePtr.h"
 #include "mozilla/dom/CSSMathValue.h"
 #include "mozilla/dom/CSSNumericArrayBindingFwd.h"
 #include "mozilla/dom/CSSNumericValueBindingFwd.h"
@@ -23,6 +24,8 @@ namespace mozilla {
 
 struct CSSPropertyId;
 class ErrorResult;
+template <typename T>
+class MovingNotNull;
 struct StyleNumericValue;
 using StyleMathMax = CopyableTArray<StyleNumericValue>;
 
@@ -36,6 +39,10 @@ class CSSMathMax final : public CSSMathValue {
  public:
   explicit CSSMathMax(nsCOMPtr<nsISupports> aParent,
                       RefPtr<CSSNumericArray> aValues);
+
+  CSSMathMax(nsCOMPtr<nsISupports> aParent,
+             MovingNotNull<UniquePtr<StyleNumericType>> aNumericType,
+             RefPtr<CSSNumericArray> aValues);
 
   static RefPtr<CSSMathMax> Create(nsCOMPtr<nsISupports> aParent,
                                    const StyleMathMax& aMathMax);

@@ -6,6 +6,7 @@
 
 #include "mozilla/AlreadyAddRefed.h"
 #include "mozilla/Assertions.h"
+#include "mozilla/NotNull.h"
 #include "mozilla/ServoStyleConsts.h"
 #include "mozilla/UniquePtr.h"
 #include "mozilla/dom/BindingDeclarations.h"
@@ -19,6 +20,14 @@ namespace mozilla::dom {
 CSSMathInvert::CSSMathInvert(nsCOMPtr<nsISupports> aParent,
                              RefPtr<CSSNumericValue> aValue)
     : CSSMathValue(std::move(aParent), MathValueType::MathInvert),
+      mValue(std::move(aValue)) {}
+
+CSSMathInvert::CSSMathInvert(
+    nsCOMPtr<nsISupports> aParent,
+    MovingNotNull<UniquePtr<StyleNumericType>> aNumericType,
+    RefPtr<CSSNumericValue> aValue)
+    : CSSMathValue(std::move(aParent), std::move(aNumericType),
+                   MathValueType::MathInvert),
       mValue(std::move(aValue)) {}
 
 // static
@@ -50,8 +59,13 @@ already_AddRefed<CSSMathInvert> CSSMathInvert::Constructor(
   // Step 1.
   RefPtr<CSSNumericValue> value = CSSNumericValue::Create(global, aArg);
 
+  auto numericType = MakeUnique<StyleNumericType>(value->GetNumericType());
+  Servo_NumericType_Invert(numericType.get());
+
   // Step 2.
-  return MakeAndAddRef<CSSMathInvert>(std::move(global), std::move(value));
+  return MakeAndAddRef<CSSMathInvert>(std::move(global),
+                                      WrapMovingNotNull(std::move(numericType)),
+                                      std::move(value));
 }
 
 CSSNumericValue* CSSMathInvert::Value() const { return mValue; }

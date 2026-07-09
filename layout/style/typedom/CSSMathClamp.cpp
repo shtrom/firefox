@@ -7,6 +7,7 @@
 #include "mozilla/AlreadyAddRefed.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/ErrorResult.h"
+#include "mozilla/NotNull.h"
 #include "mozilla/ServoStyleConsts.h"
 #include "mozilla/dom/BindingDeclarations.h"
 #include "mozilla/dom/CSSMathClampBinding.h"
@@ -21,6 +22,17 @@ CSSMathClamp::CSSMathClamp(nsCOMPtr<nsISupports> aParent,
                            RefPtr<CSSNumericValue> aValue,
                            RefPtr<CSSNumericValue> aUpper)
     : CSSMathValue(std::move(aParent), MathValueType::MathClamp),
+      mLower(std::move(aLower)),
+      mValue(std::move(aValue)),
+      mUpper(std::move(aUpper)) {}
+
+CSSMathClamp::CSSMathClamp(
+    nsCOMPtr<nsISupports> aParent,
+    MovingNotNull<UniquePtr<StyleNumericType>> aNumericType,
+    RefPtr<CSSNumericValue> aLower, RefPtr<CSSNumericValue> aValue,
+    RefPtr<CSSNumericValue> aUpper)
+    : CSSMathValue(std::move(aParent), std::move(aNumericType),
+                   MathValueType::MathClamp),
       mLower(std::move(aLower)),
       mValue(std::move(aValue)),
       mUpper(std::move(aUpper)) {}
@@ -71,16 +83,17 @@ already_AddRefed<CSSMathClamp> CSSMathClamp::Constructor(
   numericTypes.AppendElement(&value->GetNumericType());
   numericTypes.AppendElement(&upper->GetNumericType());
 
-  StyleNumericType numericType;
-  if (!Servo_NumericType_AddTypes(&numericTypes, &numericType)) {
+  auto numericType = MakeUnique<StyleNumericType>();
+  if (!Servo_NumericType_AddTypes(&numericTypes, numericType.get())) {
     aRv.ThrowTypeError("Incompatible types");
     return nullptr;
   }
 
   // Step 3.
 
-  return MakeAndAddRef<CSSMathClamp>(std::move(global), std::move(lower),
-                                     std::move(value), std::move(upper));
+  return MakeAndAddRef<CSSMathClamp>(
+      std::move(global), WrapMovingNotNull(std::move(numericType)),
+      std::move(lower), std::move(value), std::move(upper));
 }
 
 CSSNumericValue* CSSMathClamp::Lower() const { return mLower; }

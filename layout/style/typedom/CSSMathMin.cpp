@@ -7,6 +7,7 @@
 #include "mozilla/AlreadyAddRefed.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/ErrorResult.h"
+#include "mozilla/NotNull.h"
 #include "mozilla/ServoStyleConsts.h"
 #include "mozilla/dom/BindingDeclarations.h"
 #include "mozilla/dom/CSSMathMinBinding.h"
@@ -20,6 +21,13 @@ namespace mozilla::dom {
 CSSMathMin::CSSMathMin(nsCOMPtr<nsISupports> aParent,
                        RefPtr<CSSNumericArray> aValues)
     : CSSMathValue(std::move(aParent), MathValueType::MathMin),
+      mValues(std::move(aValues)) {}
+
+CSSMathMin::CSSMathMin(nsCOMPtr<nsISupports> aParent,
+                       MovingNotNull<UniquePtr<StyleNumericType>> aNumericType,
+                       RefPtr<CSSNumericArray> aValues)
+    : CSSMathValue(std::move(aParent), std::move(aNumericType),
+                   MathValueType::MathMin),
       mValues(std::move(aValues)) {}
 
 // static
@@ -80,8 +88,8 @@ already_AddRefed<CSSMathMin> CSSMathMin::Constructor(
     numericTypes.AppendElement(&value->GetNumericType());
   }
 
-  StyleNumericType numericType;
-  if (!Servo_NumericType_AddTypes(&numericTypes, &numericType)) {
+  auto numericType = MakeUnique<StyleNumericType>();
+  if (!Servo_NumericType_AddTypes(&numericTypes, numericType.get())) {
     aRv.ThrowTypeError("Incompatible types");
     return nullptr;
   }
@@ -90,7 +98,8 @@ already_AddRefed<CSSMathMin> CSSMathMin::Constructor(
 
   auto array = MakeRefPtr<CSSNumericArray>(global, std::move(values));
 
-  return MakeAndAddRef<CSSMathMin>(global, std::move(array));
+  return MakeAndAddRef<CSSMathMin>(
+      global, WrapMovingNotNull(std::move(numericType)), std::move(array));
 }
 
 CSSNumericArray* CSSMathMin::Values() const { return mValues; }

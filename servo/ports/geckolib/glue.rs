@@ -5991,6 +5991,11 @@ pub extern "C" fn Servo_NumericType_Create(unit: &nsACString, result: &mut Numer
     }
 }
 
+#[no_mangle]
+pub extern "C" fn Servo_NumericType_Invert(numeric_type: &mut NumericType) {
+    numeric_type.invert();
+}
+
 fn add_numeric_types<'a, I>(types: I, result: &mut NumericType) -> bool
 where
     I: Iterator<Item = &'a NumericType>,
