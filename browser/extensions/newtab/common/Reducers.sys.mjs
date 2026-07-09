@@ -190,10 +190,6 @@ export const INITIAL_STATE = {
     suggestedLocations: [],
   },
   // Widgets
-  Stocks: {
-    tickers: [],
-    lastUpdated: null,
-  },
   ListsWidget: {
     // value pointing to last selectled list
     selected: "taskList",
@@ -1257,19 +1253,6 @@ function TimerWidget(prevState = INITIAL_STATE.TimerWidget, action) {
   }
 }
 
-function Stocks(prevState = INITIAL_STATE.Stocks, action) {
-  switch (action.type) {
-    case at.WIDGETS_STOCKS_UPDATE:
-      return {
-        ...prevState,
-        tickers: action.data.tickers,
-        lastUpdated: action.data.lastUpdated,
-      };
-    default:
-      return prevState;
-  }
-}
-
 function ListsWidget(prevState = INITIAL_STATE.ListsWidget, action) {
   switch (action.type) {
     case at.WIDGETS_LISTS_SET:
@@ -1422,7 +1405,6 @@ export const reducers = {
   Wallpapers,
   SectionsLayout,
   Weather,
-  Stocks,
   ExternalComponents,
   SportsWidget,
   PrivacyWidget,
