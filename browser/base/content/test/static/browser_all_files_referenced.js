@@ -338,8 +338,9 @@ var allowlist = [
 
   // Referenced dynamically in newtab components via template literals:
   // `chrome://global/skin/icons/shaft-arrow-${isRTL ? "right" : "left"}.svg`
+  // (shaft-arrow-right.svg is now also referenced statically by the Stocks
+  // widget, so it no longer needs an allowlist entry here.)
   { file: "chrome://global/skin/icons/shaft-arrow-left.svg" },
-  { file: "chrome://global/skin/icons/shaft-arrow-right.svg" },
 
   // Bug 1907594 - Created an inital set of messaging system targeting constants
   // Preparation for future use in ASRouter
