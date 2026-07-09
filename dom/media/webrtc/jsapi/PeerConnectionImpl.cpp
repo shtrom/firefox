@@ -2442,6 +2442,7 @@ PeerConnectionImpl::Close() {
   }
 
   mSignalingState = RTCSignalingState::Closed;
+  mIceConnectionState = RTCIceConnectionState::Closed;
   mConnectionState = RTCPeerConnectionState::Closed;
 
   if (!mTransportHandler) {

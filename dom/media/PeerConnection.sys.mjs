@@ -379,9 +379,6 @@ export class RTCPeerConnection {
     // is set to true or false based on the presence of the "trickle" ice-option
     this._canTrickle = null;
 
-    // So we can record telemetry on state transitions
-    this._iceConnectionState = "new";
-
     this._hasStunServer = this._hasTurnServer = false;
     this._iceGatheredRelayCandidates = false;
   }
@@ -1486,7 +1483,6 @@ export class RTCPeerConnection {
       return;
     }
     this._closed = true;
-    this.changeIceConnectionState("closed");
     if (this._localIdp) {
       this._localIdp.close();
     }
@@ -1615,7 +1611,7 @@ export class RTCPeerConnection {
     return this._pc.iceGatheringState;
   }
   get iceConnectionState() {
-    return this._iceConnectionState;
+    return this._pc.iceConnectionState;
   }
   get connectionState() {
     return this._pc.connectionState;
@@ -1639,16 +1635,6 @@ export class RTCPeerConnection {
           candidate: null,
         })
       );
-    }
-  }
-
-  changeIceConnectionState(state) {
-    if (state != this._iceConnectionState) {
-      this._iceConnectionState = state;
-      _globalPCList.notifyLifecycleObservers(this, "iceconnectionstatechange");
-      if (!this._closed) {
-        this.dispatchEvent(new this._win.Event("iceconnectionstatechange"));
-      }
     }
   }
 
@@ -1879,36 +1865,8 @@ export class PeerConnectionObserver {
     );
   }
 
-  // This method is primarily responsible for updating iceConnectionState.
-  // This state is defined in the WebRTC specification as follows:
-  //
-  // iceConnectionState:
-  // -------------------
-  //   new           Any of the RTCIceTransports are in the new state and none
-  //                 of them are in the checking, failed or disconnected state.
-  //
-  //   checking      Any of the RTCIceTransports are in the checking state and
-  //                 none of them are in the failed or disconnected state.
-  //
-  //   connected     All RTCIceTransports are in the connected, completed or
-  //                 closed state and at least one of them is in the connected
-  //                 state.
-  //
-  //   completed     All RTCIceTransports are in the completed or closed state
-  //                 and at least one of them is in the completed state.
-  //
-  //   failed        Any of the RTCIceTransports are in the failed state.
-  //
-  //   disconnected  Any of the RTCIceTransports are in the disconnected state
-  //                 and none of them are in the failed state.
-  //
-  //   closed        All of the RTCIceTransports are in the closed state.
-
-  handleIceConnectionStateChange(iceConnectionState) {
+  logIceConnectionStateChange(iceConnectionState) {
     let pc = this._dompc;
-    if (pc.iceConnectionState === iceConnectionState) {
-      return;
-    }
 
     if (iceConnectionState === "failed") {
       if (!pc._hasStunServer) {
@@ -1927,8 +1885,6 @@ export class PeerConnectionObserver {
         pc.logError("ICE failed, see about:webrtc for more details");
       }
     }
-
-    pc.changeIceConnectionState(iceConnectionState);
   }
 
   onStateChange(state) {
@@ -1947,7 +1903,12 @@ export class PeerConnectionObserver {
 
     switch (state) {
       case "IceConnectionState":
-        this.handleIceConnectionStateChange(this._dompc._pc.iceConnectionState);
+        this.logIceConnectionStateChange(this._dompc.iceConnectionState);
+        _globalPCList.notifyLifecycleObservers(
+          this,
+          "iceconnectionstatechange"
+        );
+        this.dispatchEvent(new this._win.Event("iceconnectionstatechange"));
         break;
 
       case "IceGatheringState":
