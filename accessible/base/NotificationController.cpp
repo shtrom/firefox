@@ -1088,7 +1088,8 @@ void NotificationController::WillRefresh(mozilla::TimeStamp aTime) {
         static_cast<BrowserChild*>(browserChild.get())
             ->SendPDocAccessibleConstructor(
                 ipcDoc, parentIPCDoc, id,
-                childDoc->DocumentNode()->GetBrowsingContext());
+                childDoc->DocumentNode()->GetBrowsingContext(),
+                childDoc->IsPrintDoc());
       }
     }
   }
