@@ -22,5 +22,4 @@ interface RTCDtlsTransport : EventTarget {
   [Throws]
   sequence<ArrayBuffer> getRemoteCertificates();
   attribute EventHandler onstatechange;
-  attribute EventHandler onerror;
 };

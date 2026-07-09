@@ -103,17 +103,14 @@ class MediaTransportParent::Impl : public sigslot::has_slots<> {
 
   void OnStateChange(const std::string& aTransportId,
                      TransportLayer::State aState,
-                     const nsTArray<nsTArray<uint8_t>>& aRemoteCerts,
-                     Maybe<RTCErrorParams> aError) {
+                     const nsTArray<nsTArray<uint8_t>>& aRemoteCerts) {
     NS_ENSURE_TRUE_VOID(
-        mParent->SendOnStateChange(aTransportId, aState, aRemoteCerts, aError));
+        mParent->SendOnStateChange(aTransportId, aState, aRemoteCerts));
   }
 
   void OnRtcpStateChange(const std::string& aTransportId,
-                         TransportLayer::State aState,
-                         Maybe<RTCErrorParams> aError) {
-    NS_ENSURE_TRUE_VOID(
-        mParent->SendOnRtcpStateChange(aTransportId, aState, aError));
+                         TransportLayer::State aState) {
+    NS_ENSURE_TRUE_VOID(mParent->SendOnRtcpStateChange(aTransportId, aState));
   }
 
   RefPtr<MediaTransportHandler> mHandler;

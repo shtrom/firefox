@@ -450,21 +450,19 @@ mozilla::ipc::IPCResult MediaTransportChild::RecvOnEncryptedSending(
 
 mozilla::ipc::IPCResult MediaTransportChild::RecvOnStateChange(
     const string& transportId, const TransportLayer::State& state,
-    nsTArray<nsTArray<uint8_t>>&& remoteCerts,
-    Maybe<dom::RTCErrorParams> error) {
+    nsTArray<nsTArray<uint8_t>>&& remoteCerts) {
   MutexAutoLock lock(mMutex);
   if (mUser) {
-    mUser->OnStateChange(transportId, state, std::move(remoteCerts), error);
+    mUser->OnStateChange(transportId, state, std::move(remoteCerts));
   }
   return ipc::IPCResult::Ok();
 }
 
 mozilla::ipc::IPCResult MediaTransportChild::RecvOnRtcpStateChange(
-    const string& transportId, const TransportLayer::State& state,
-    Maybe<dom::RTCErrorParams> error) {
+    const string& transportId, const TransportLayer::State& state) {
   MutexAutoLock lock(mMutex);
   if (mUser) {
-    mUser->OnRtcpStateChange(transportId, state, error);
+    mUser->OnRtcpStateChange(transportId, state);
   }
   return ipc::IPCResult::Ok();
 }

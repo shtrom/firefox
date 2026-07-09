@@ -503,11 +503,9 @@ class PeerConnectionImpl final
 
   void OnDtlsStateChange(const std::string& aTransportId,
                          TransportLayer::State aState,
-                         const nsTArray<nsTArray<uint8_t>>& aRemoteCerts,
-                         Maybe<dom::RTCErrorParams> aError);
+                         const nsTArray<nsTArray<uint8_t>>& aRemoteCerts);
   void OnRtcpStateChange(const std::string& aTransportId,
-                         TransportLayer::State aState,
-                         Maybe<dom::RTCErrorParams> aError);
+                         TransportLayer::State aState);
   dom::RTCPeerConnectionState GetNewConnectionState() const;
   // Returns whether we need to fire a state change event
   bool UpdateConnectionState();

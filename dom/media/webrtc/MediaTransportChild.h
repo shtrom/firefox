@@ -33,10 +33,9 @@ class MediaTransportChild : public dom::PMediaTransportChild {
                                                  MediaPacket&& packet);
   mozilla::ipc::IPCResult RecvOnStateChange(
       const string& transportId, const TransportLayerState& state,
-      nsTArray<nsTArray<uint8_t>>&& remoteCerts, Maybe<RTCErrorParams> error);
+      nsTArray<nsTArray<uint8_t>>&& remoteCerts);
   mozilla::ipc::IPCResult RecvOnRtcpStateChange(
-      const string& transportId, const TransportLayerState& state,
-      Maybe<RTCErrorParams> error);
+      const string& transportId, const TransportLayerState& state);
 
  private:
   virtual ~MediaTransportChild();
