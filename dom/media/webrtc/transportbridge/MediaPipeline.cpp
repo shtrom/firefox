@@ -399,7 +399,8 @@ void MediaPipeline::GetContributingSourceStats(
 
 void MediaPipeline::RtpStateChange(const std::string& aTransportId,
                                    TransportLayer::State aState,
-                                   const nsTArray<nsTArray<uint8_t>>&) {
+                                   const nsTArray<nsTArray<uint8_t>>&,
+                                   Maybe<dom::RTCErrorParams>) {
   if (mTransportId != aTransportId) {
     return;
   }
@@ -408,7 +409,8 @@ void MediaPipeline::RtpStateChange(const std::string& aTransportId,
 }
 
 void MediaPipeline::RtcpStateChange(const std::string& aTransportId,
-                                    TransportLayer::State aState) {
+                                    TransportLayer::State aState,
+                                    Maybe<dom::RTCErrorParams>) {
   if (mTransportId != aTransportId) {
     return;
   }
