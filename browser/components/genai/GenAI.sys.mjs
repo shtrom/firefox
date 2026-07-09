@@ -659,10 +659,9 @@ export const GenAI = {
       !isInBrowserStack ||
       !browser ||
       this.ignoredInputs.has(data.inputType) ||
-      !lazy.chatShortcuts ||
       (isSmartWindow
         ? !lazy.chatShortcutsSmartWindow
-        : !this.canShowChatEntrypoint)
+        : !lazy.chatShortcuts || !this.canShowChatEntrypoint)
     ) {
       return;
     }
@@ -805,11 +804,11 @@ export const GenAI = {
     switch (source) {
       case "page":
         return isSmartWindow
-          ? lazy.chatShortcutsSmartWindow
+          ? true
           : this.canShowChatEntrypoint || isPageFeatureAllowed;
       case "tab":
         return isSmartWindow
-          ? lazy.chatShortcutsSmartWindow && isSingleTab
+          ? isSingleTab
           : isPageFeatureAllowed && isSingleTab;
       case "tool":
         return lazy.chatPage;
@@ -1395,18 +1394,19 @@ export const GenAI = {
         selection: context.selection?.length ?? 0,
       });
     }
+    const win =
+      context.window?.browsingContext?.topChromeWindow ?? context.window;
     Glean.genaiChatbot.promptClick.record({
       content_type: context.contentType,
       prompt: promptObj.id ?? "custom",
       provider: this.getProviderId(),
       reader_mode: context.readerMode,
       selection: context.selection?.length ?? 0,
+      smart_window: lazy.AIWindow.isAIWindowActive(win),
       source: context.entry,
     });
 
     // In Smart Window, send selected text with prompt label to the assistant
-    const win =
-      context.window?.browsingContext?.topChromeWindow ?? context.window;
     if (lazy.AIWindow.isAIWindowActive(win)) {
       if (!lazy.AIWindowUI.isSidebarOpen(win)) {
         const activeConversation = lazy.AIWindow.getActiveConversation(win);
