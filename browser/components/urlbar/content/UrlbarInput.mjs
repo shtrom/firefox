@@ -2016,15 +2016,23 @@ ${
           : lazy.UrlbarUtils.clearOriginPageAutofillBlock(url);
         clear
           .then(wasBlocked => {
+            // getBackspaceBlock reads and removes the {blockedAt} entry for
+            // telemetry. clearAutofillBackspaceEntryForUrl then removes any
+            // remaining sub-threshold {count} entry. Together they always
+            // clear the in-memory counter — visiting the url is a positive
+            // signal regardless of whether a database block existed.
+            let entry = lazy.UrlbarUtils.getBackspaceBlock(url);
+            lazy.UrlbarUtils.clearAutofillBackspaceEntryForUrl(url);
+
             if (!wasBlocked) {
               return;
             }
+
             let level = isOrigin ? "origin" : "url";
             Glean.urlbarAutofill.reintegration[level].add(1);
 
             // For backspace-induced blocks, record the unblock delay: fast
             // unblocks suggest the original block was accidental.
-            let entry = lazy.UrlbarUtils.getBackspaceBlock(url);
             if (entry?.level === level) {
               Glean.urlbarAutofill.reintegrationAfterBackspace[
                 level
