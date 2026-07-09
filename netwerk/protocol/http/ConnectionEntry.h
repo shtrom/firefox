@@ -86,6 +86,11 @@ class ConnectionEntry : public SupportsWeakPtr {
 
   uint32_t PruneDeadConnections();
   void MakeConnectionPendingAndDontReuse(HttpConnectionBase* conn);
+  // Move any active HTTP/3 connection that can no longer take new transactions
+  // (e.g. DontReuse'd) out of mActiveConns and into mPendingConns, so it stops
+  // holding the single-H3-per-entry slot and is closed once its current
+  // transaction (if any) finishes.
+  void MoveUnusableH3ConnsToPending();
   void VerifyTraffic();
   void PruneNoTraffic();
   uint32_t TimeoutTick();
