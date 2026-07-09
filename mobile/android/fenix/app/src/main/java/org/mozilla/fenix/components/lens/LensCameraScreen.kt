@@ -197,7 +197,7 @@ private fun CameraTopBar(
                 .size(ButtonSize),
         ) {
             Icon(
-                painter = painterResource(iconsR.drawable.mozac_ic_cross_24),
+                painter = painterResource(iconsR.drawable.mozac_ic_back_24),
                 contentDescription = null,
                 tint = FirefoxTheme.colors.iconOnColor,
             )
