@@ -1227,7 +1227,7 @@ void KeyframeEffect::GetProperties(
 }
 
 void KeyframeEffect::GetKeyframes(JSContext* aCx, nsTArray<JSObject*>& aResult,
-                                  ErrorResult& aRv) const {
+                                  ErrorResult& aRv) {
   MOZ_ASSERT(aResult.IsEmpty());
   MOZ_ASSERT(!aRv.Failed());
 
@@ -1260,6 +1260,12 @@ void KeyframeEffect::GetKeyframes(JSContext* aCx, nsTArray<JSObject*>& aResult,
     // acceptable however, since such a case is rare and this is only
     // short-term (and unshipped) behavior until bug 1391537 is fixed.
     computedStyle = GetTargetComputedStyle(Flush::Style);
+  }
+
+  // Update computed offsets if needed. We do this after we flush the style.
+  if (mAnimation && mAnimation->GetTimeline()) {
+    MaybeUpdateKeyframeComputedOffsets(mAnimation->GetTimeline(),
+                                       mAnimation->GetTimelineRange());
   }
 
   const StylePerDocumentStyleData* rawData =
@@ -1892,6 +1898,14 @@ void KeyframeEffect::SetAnimation(Animation* aAnimation) {
   mAnimation = aAnimation;
 
   UpdateNormalizedTiming();
+
+  // The keyframe computed offsets may need to be updated because it is
+  // associated with a different animation (so the timeline and timeline ranges
+  // may be different), or we have to reset the offsets if it doens't have the
+  // associated animation.
+  MaybeUpdateKeyframeComputedOffsets(
+      mAnimation ? mAnimation->GetTimeline() : nullptr,
+      mAnimation ? mAnimation->GetTimelineRange() : AnimationRange());
 
   // The order of these function calls is important:
   // NotifyAnimationTimingUpdated() need the updated mIsRelevant flag to check
