@@ -2456,7 +2456,7 @@ nsresult nsHttpChannel::CallOnStartRequest() {
       PerformOpaqueResponseSafelistCheckBeforeSniff();
   if (opaqueResponse == OpaqueResponse::Block) {
     SetChannelBlockedByOpaqueResponse();
-    CancelWithReason(NS_ERROR_DOM_NETWORK_ERR,
+    CancelWithReason(NS_BINDING_ABORTED,
                      "OpaqueResponseBlocker::BlockResponse"_ns);
     return NS_BINDING_ABORTED;
   }
@@ -12309,10 +12309,14 @@ void nsHttpChannel::DisableIsOpaqueResponseAllowedAfterSniffCheck(
       // Step 8
       MOZ_ASSERT(mLoadInfo);
 
-      auto noCorsMediaRequestState = NoCorsMediaRequestState();
-      if (noCorsMediaRequestState !=
-          dom::NoCorsMediaRequestState::NotAvailable) {
-        if (noCorsMediaRequestState != dom::NoCorsMediaRequestState::Initial) {
+      bool isMediaRequest;
+      mLoadInfo->GetIsMediaRequest(&isMediaRequest);
+      if (isMediaRequest) {
+        bool isInitialRequest;
+        mLoadInfo->GetIsMediaInitialRequest(&isInitialRequest);
+        MOZ_ASSERT(isInitialRequest);
+
+        if (!isInitialRequest) {
           // Step 8.1
           BlockOpaqueResponseAfterSniff(
               u"media request after sniffing, but not initial request"_ns,
@@ -12327,11 +12331,6 @@ void nsHttpChannel::DisableIsOpaqueResponseAllowedAfterSniffCheck(
               OpaqueResponseBlockedTelemetryReason::eMediaIncorrectResp);
           return;
         }
-
-        // At this point we've checked that the requested resource is media and
-        // that the sniff passes. Any following requests for this resource
-        // should be considered to be subsequent.
-        RecordSubsequentNoCorsRequestState();
       }
     }
 

@@ -208,6 +208,7 @@ struct LoadInfoArgs
   RequestMode?                requestMode;
   bool                        isFromProcessingFrameAttributes;
   bool                        isMediaRequest;
+  bool                        isMediaInitialRequest;
   bool                        isFromObjectOrEmbed;
   CookieJarSettingsArgs       cookieJarSettings;
   uint32_t                    requestBlockingReason;

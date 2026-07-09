@@ -99,8 +99,6 @@ WindowGlobalInit WindowGlobalActor::WindowInitializer(
     init.staticCloneOf() = original->GetWindowContext();
   }
   init.isUncommittedInitialDocument() = doc->IsUncommittedInitialDocument();
-  init.isVideoDocument() =
-      doc->MediaDocumentKind() == Document::MediaDocumentKind::Video;
   init.blockAllMixedContent() = doc->GetBlockAllMixedContent(false);
   init.upgradeInsecureRequests() = doc->GetUpgradeInsecureRequests(false);
   init.sandboxFlags() = doc->GetSandboxFlags();
