@@ -851,6 +851,22 @@ already_AddRefed<nsIChannel> WindowGlobalParent::GetFailedChannel() {
   return nullptr;
 }
 
+dom::NoCorsMediaRequestState WindowGlobalParent::NoCorsMediaRequestState(
+    nsIURI* aURI) const {
+  nsCString uri;
+  return (NS_SUCCEEDED(aURI->GetSpecIgnoringRef(uri)) &&
+          mNoCorsMediaRequestURIs.Contains(uri))
+             ? dom::NoCorsMediaRequestState::Subsequent
+             : dom::NoCorsMediaRequestState::Initial;
+}
+
+void WindowGlobalParent::RecordSubsequentNoCorsRequestState(nsIURI* aURI) {
+  nsCString uri;
+  if (NS_SUCCEEDED(aURI->GetSpecIgnoringRef(uri)) && !uri.IsEmpty()) {
+    mNoCorsMediaRequestURIs.PutEntry(uri);
+  }
+}
+
 mozilla::ipc::IPCResult WindowGlobalParent::RecvShare(
     IPCWebShareData&& aData, WindowGlobalParent::ShareResolver&& aResolver) {
   // Widget Layer handoff...
