@@ -8,11 +8,7 @@
  * the Taskbar Tabs systems should interact with it through this interface.
  */
 
-import {
-  TaskbarTabsRegistry,
-  TaskbarTabsRegistryStorage,
-  kTaskbarTabsRegistryEvents,
-} from "resource:///modules/taskbartabs/TaskbarTabsRegistry.sys.mjs";
+import { TaskbarTabsRegistryStorage } from "resource:///modules/taskbartabs/TaskbarTabsRegistry.sys.mjs";
 import { TaskbarTabsWindowManager } from "resource:///modules/taskbartabs/TaskbarTabsWindowManager.sys.mjs";
 import { TaskbarTabsPin } from "resource:///modules/taskbartabs/TaskbarTabsPin.sys.mjs";
 import { TaskbarTabsUtils } from "resource:///modules/taskbartabs/TaskbarTabsUtils.sys.mjs";
@@ -257,26 +253,7 @@ async function initRegistry() {
   let registryFile = TaskbarTabsUtils.getTaskbarTabsFolder();
   registryFile.append(kRegistryFilename);
 
-  let init = {};
-  if (registryFile.exists()) {
-    init.loadFile = registryFile;
-  }
-
-  let registry = await TaskbarTabsRegistry.create(init);
-
-  // Initialize persistent storage.
-  let storage = new TaskbarTabsRegistryStorage(registry, registryFile);
-  registry.on(kTaskbarTabsRegistryEvents.created, () => {
-    storage.save();
-  });
-  registry.on(kTaskbarTabsRegistryEvents.patched, () => {
-    storage.save();
-  });
-  registry.on(kTaskbarTabsRegistryEvents.removed, () => {
-    storage.save();
-  });
-
-  return registry;
+  return await new TaskbarTabsRegistryStorage(registryFile).load();
 }
 
 /**
