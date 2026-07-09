@@ -427,6 +427,18 @@ class XPCShellTestThread(Thread):
             self.log_full_output()
             self.failCount = 1
 
+    def _readTimeoutProfileProgress(self, profile_path):
+        # Read the 0..1 streaming progress the profiler writes to the
+        # "<profile>.progress" sidecar while a scheduled dump is in flight.
+        # Returns None if it isn't there yet or can't be parsed.
+        if not profile_path:
+            return None
+        try:
+            with open(profile_path + ".progress") as f:
+                return float(f.read().strip())
+        except (OSError, ValueError):
+            return None
+
     def testTimeout(self, proc):
         # Ensure that we didn't race the test finishing execution between when
         # the timeout timer fired and this code started executing.
@@ -438,6 +450,30 @@ class XPCShellTestThread(Thread):
         if self.timer is None:
             self.lock.release()
             return
+
+        # While a scheduled profile dump (see scheduleDumpToFile in head.js) is
+        # still writing, defer the kill so we don't upload truncated JSON. The
+        # profiler reports the dump's 0..1 progress in a "<profile>.progress"
+        # sidecar; keep deferring while it advances, and kill once it stalls (a
+        # genuine hang) or the budget runs out (30 deferrals of 10s, or 3 stalls).
+        profile_path = self.env.get("MOZ_TEST_TIMEOUT_PROFILE_PATH")
+        progress = self._readTimeoutProfileProgress(profile_path)
+        if progress is not None and self._timeout_defer_count < 30:
+            if progress > self._last_timeout_profile_progress + 1e-6:
+                self._last_timeout_profile_progress = progress
+                self._timeout_stall_count = 0
+            else:
+                self._timeout_stall_count += 1
+            if progress < 1.0 and self._timeout_stall_count < 3:
+                self._timeout_defer_count += 1
+                self.log.info(
+                    f"{self.test_object['id']} | timeout profile dump "
+                    f"progressing ({progress * 100:.1f}%), deferring kill"
+                )
+                self.timer = Timer(10, lambda: self.testTimeout(proc))
+                self.timer.start()
+                self.lock.release()
+                return
 
         # Set these flags first to prevent test_end from being logged again
         # while we output the full log.
@@ -1062,6 +1098,12 @@ class XPCShellTestThread(Thread):
             kill_interval = testTimeoutInterval
             if timeout_dump_armed:
                 kill_interval = testTimeoutInterval * 1.5
+            # Tracks the scheduled profile dump's streaming progress so
+            # testTimeout can defer the kill while the dump is still making
+            # progress, and kill it once progress stalls.
+            self._last_timeout_profile_progress = -1.0
+            self._timeout_stall_count = 0
+            self._timeout_defer_count = 0
             self.timer = Timer(kill_interval, lambda: self.testTimeout(proc))
             self.timer.start()
             self.env["MOZ_TEST_TIMEOUT_INTERVAL"] = str(testTimeoutInterval)
@@ -1113,6 +1155,18 @@ class XPCShellTestThread(Thread):
                 self.timer = None
 
             self.lock.release()
+
+            # Drop the scheduled-dump progress sidecar so it isn't uploaded as a
+            # stray artifact (it lives next to the profile inside MOZ_UPLOAD_DIR).
+            # This is the only cleanup site, reached on both the self-exit and
+            # kill paths; the C++ exit-after path _exit()s the process without
+            # removing it, so this is what keeps it out of the upload.
+            timeout_profile = self.env.get("MOZ_TEST_TIMEOUT_PROFILE_PATH")
+            if timeout_profile:
+                try:
+                    os.remove(timeout_profile + ".progress")
+                except OSError:
+                    pass
 
             # A profiled test that overran its expected timeout dumps a profile
             # from the sampler thread and exits the process itself (see
