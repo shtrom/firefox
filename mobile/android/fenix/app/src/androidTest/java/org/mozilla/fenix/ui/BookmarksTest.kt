@@ -263,13 +263,13 @@ class BookmarksTest {
         }.clickBookmarksButton {
         }.clickSearchButton {
             // Search for a valid term
-            typeSearch(firstWebPage.title)
-            verifySearchSuggestionsAreDisplayed(firstWebPage.url.toString())
-            verifySuggestionsAreNotDisplayed(secondWebPage.url.toString())
+            typeBookmarkSearch(firstWebPage.title)
+            verifyBookmarkSearchSuggestionsAreDisplayed(firstWebPage.url.toString())
+            verifyBookmarkSuggestionsAreNotDisplayed(secondWebPage.url.toString())
             // Search for invalid term
-            typeSearch("Android")
-            verifySuggestionsAreNotDisplayed(firstWebPage.url.toString())
-            verifySuggestionsAreNotDisplayed(secondWebPage.url.toString())
+            typeBookmarkSearch("Android")
+            verifyBookmarkSuggestionsAreNotDisplayed(firstWebPage.url.toString())
+            verifyBookmarkSuggestionsAreNotDisplayed(secondWebPage.url.toString())
         }
     }
 
@@ -285,13 +285,16 @@ class BookmarksTest {
         }.clickBookmarksButton {
         }.clickSearchButton {
             verifySearchToolbar(true)
-            verifySearchSelectorButton()
-            verifySearchEngineIcon("Bookmarks")
-            verifySearchBarPlaceholder("Search bookmarks")
-            verifySearchBarPosition()
+            verifyBookmarkSearchBarPlaceholder()
             tapOutsideToDismissSearchBar(defaultWebPage.url.toString())
             verifySearchToolbar(false)
         }
+
+        homeScreen(composeTestRule) {
+        }.openThreeDotMenu {
+        }.clickBookmarksButton {
+        }
+
         composeBookmarksMenu(composeTestRule) {
         }.goBackToBrowserScreen {
         }.openThreeDotMenu {
@@ -307,8 +310,6 @@ class BookmarksTest {
         }.clickBookmarksButton {
         }.clickSearchButton {
             verifySearchToolbar(true)
-            verifySearchEngineIcon("Bookmarks")
-            verifySearchBarPosition()
             pressBack()
             verifySearchToolbar(false)
         }
