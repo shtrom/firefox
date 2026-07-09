@@ -64,6 +64,7 @@
 #include "memory_counter.h"
 #include "memory_hooks.h"
 #include "memory_markers.h"
+#include "mozilla/AppShutdown.h"
 #include "mozilla/ArrayAlgorithm.h"
 #include "mozilla/BaseAndGeckoProfilerDetail.h"
 #include "mozilla/BaseProfiler.h"
@@ -1001,11 +1002,16 @@ class CorePS {
     MOZ_ASSERT(sInstance);
     return sInstance->mScheduledDumpPath;
   }
+  static bool ScheduledDumpExitAfter(PSLockRef) {
+    MOZ_ASSERT(sInstance);
+    return sInstance->mScheduledDumpExitAfter;
+  }
   static void ScheduleDumpToFile(PSLockRef, const TimeStamp& aDeadline,
-                                 const nsACString& aPath) {
+                                 const nsACString& aPath, bool aExitAfterDump) {
     MOZ_ASSERT(sInstance);
     sInstance->mScheduledDumpDeadline = aDeadline;
     sInstance->mScheduledDumpPath = aPath;
+    sInstance->mScheduledDumpExitAfter = aExitAfterDump;
   }
   static void CancelScheduledDump(PSLockRef) {
     MOZ_ASSERT(sInstance);
@@ -1070,6 +1076,9 @@ class CorePS {
   // file to write it to. Null deadline when none is scheduled.
   TimeStamp mScheduledDumpDeadline;
   nsAutoCString mScheduledDumpPath;
+  // Whether the sampler thread should exit the process once it has written the
+  // scheduled dump. Only meaningful while a dump is scheduled.
+  bool mScheduledDumpExitAfter = false;
 
   // This memory buffer is used by the MergeStacks mechanism. Previously it was
   // stack allocated, but this led to a stack overflow, as it was too much
@@ -4690,6 +4699,7 @@ void SamplerThread::Run() {
   // (profiler_save_profile_to_file takes the profiler lock itself).
   bool scheduledDumpDue = false;
   nsAutoCString scheduledDumpPath;
+  bool scheduledDumpExitAfter = false;
 
   const TimeDuration sampleInterval =
       TimeDuration::FromMicroseconds(mIntervalMicroseconds);
@@ -4768,6 +4778,7 @@ void SamplerThread::Run() {
           !deadline.IsNull() && sampleStart >= deadline) {
         scheduledDumpDue = true;
         scheduledDumpPath = CorePS::ScheduledDumpPath(lock);
+        scheduledDumpExitAfter = CorePS::ScheduledDumpExitAfter(lock);
         CorePS::CancelScheduledDump(lock);
       }
 
@@ -5250,6 +5261,10 @@ void SamplerThread::Run() {
     if (scheduledDumpDue) {
       scheduledDumpDue = false;
       profiler_save_profile_to_file(scheduledDumpPath.get());
+      if (scheduledDumpExitAfter) {
+        // The profile is fully written; exit now as requested.
+        AppShutdown::DoImmediateExit();
+      }
     }
 
     ProfilerChild::ProcessPendingUpdate();
@@ -6644,8 +6659,8 @@ void profiler_save_profile_to_file(const char* aFilename) {
                                        preRecordedMetaInformation);
 }
 
-void profiler_schedule_dump_to_file(double aDelaySeconds,
-                                    const char* aFilename) {
+void profiler_schedule_dump_to_file(double aDelaySeconds, const char* aFilename,
+                                    bool aExitAfterDump) {
   if (!aFilename || !CorePS::Exists()) {
     return;
   }
@@ -6656,7 +6671,8 @@ void profiler_schedule_dump_to_file(double aDelaySeconds,
       TimeStamp::Now() + TimeDuration::FromSeconds(aDelaySeconds);
 
   PSAutoLock lock;
-  CorePS::ScheduleDumpToFile(lock, deadline, nsDependentCString(aFilename));
+  CorePS::ScheduleDumpToFile(lock, deadline, nsDependentCString(aFilename),
+                             aExitAfterDump);
 }
 
 void profiler_cancel_scheduled_dump() {

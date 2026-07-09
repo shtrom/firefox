@@ -633,18 +633,23 @@ function _execute_test() {
   }
 
   // If we reach the test's timeout, the profiler writes a profile from its
-  // sampler thread, so a test that blocks its main thread (e.g. a long
-  // synchronous run that never returns to the event loop) still leaves a
-  // profile. Unlike a main-thread nsITimer this fires regardless of what the
-  // main thread is doing. The harness picks the output path (in
+  // sampler thread and then exits the process, so a test that blocks its main
+  // thread (e.g. a long synchronous run that never returns to the event loop)
+  // still leaves a profile. Unlike a main-thread nsITimer this fires regardless
+  // of what the main thread is doing. The harness picks the output path (in
   // MOZ_TEST_TIMEOUT_PROFILE_PATH); its own kill is only a safety net at 150%
-  // of the timeout, giving the sampler thread time to finish writing before it
-  // fires. The harness reports the written file when it times the test out.
+  // of the timeout, so exiting here as soon as the profile is on disk lets a
+  // timed-out test end promptly instead of idling until that kill. The harness
+  // recognizes the self-exit and reports the written file.
   let scheduledProfileDump = false;
   let timeoutProfilePath = _Services.env.get("MOZ_TEST_TIMEOUT_PROFILE_PATH");
   if (timeoutProfilePath && _Services.profiler.IsActive()) {
     let delaySeconds = parseInt(_Services.env.get("MOZ_TEST_TIMEOUT_INTERVAL"));
-    _Services.profiler.scheduleDumpToFile(delaySeconds, timeoutProfilePath);
+    _Services.profiler.scheduleDumpToFile(
+      delaySeconds,
+      timeoutProfilePath,
+      /* aExitAfterDump */ true
+    );
     scheduledProfileDump = true;
   }
 
