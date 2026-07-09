@@ -481,6 +481,11 @@ void NotificationController::ScheduleProcessing() {
   // Note: the mPresShell null-check might be unnecessary; it's just to prevent
   // a null-deref here, if we somehow get called after we've been shut down.
   if (mObservingState == eNotObservingRefresh && mPresShell) {
+    if (mDocument->IsPrintDoc()) {
+      // A print document is a static clone and thus doesn't need a refresh
+      // tick.
+      return;
+    }
     if (mPresShell->AddRefreshObserver(this, FlushType::Display,
                                        "Accessibility notifications")) {
       mObservingState = eRefreshObserving;
