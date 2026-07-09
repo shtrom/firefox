@@ -361,6 +361,12 @@ nsProfiler::ScheduleDumpToFile(double aDelaySeconds, const char* aFilename,
 }
 
 NS_IMETHODIMP
+nsProfiler::WaitForScheduledDump() {
+  profiler_wait_for_scheduled_dump();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 nsProfiler::CancelScheduledDump() {
   profiler_cancel_scheduled_dump();
   return NS_OK;

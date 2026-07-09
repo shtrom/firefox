@@ -334,6 +334,15 @@ void profiler_schedule_dump_to_file(double aDelaySeconds, const char* aFilename,
                                     bool aExitAfterDump);
 void profiler_cancel_scheduled_dump();
 
+// Block until an in-progress scheduled dump (see
+// profiler_schedule_dump_to_file) finishes; a no-op if none is in progress, and
+// always a no-op outside automation. Lets a caller on a fatal-abort path avoid
+// acting over a half-written profile; when the dump was scheduled with
+// aExitAfterDump the process exits on completion, so the caller never returns.
+// It can block for as long as the dump takes, hence the automation-only
+// restriction.
+void profiler_wait_for_scheduled_dump();
+
 //---------------------------------------------------------------------------
 // RAII classes
 //---------------------------------------------------------------------------

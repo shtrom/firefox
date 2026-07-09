@@ -114,6 +114,7 @@
 #include "nsSystemInfo.h"
 #include "nsThreadUtils.h"
 #include "nsXULAppAPI.h"
+#include "xpcpublic.h"
 #include "nsDirectoryServiceUtils.h"
 #include "Tracing.h"
 #include "prdtoa.h"
@@ -4651,6 +4652,12 @@ static SamplerThread* NewSamplerThread(PSLockRef aLock, uint32_t aGeneration,
   return new SamplerThread(aLock, aGeneration, aInterval, aFeatures);
 }
 
+// Held by the sampler thread while it writes a scheduled off-main-thread dump
+// (profiler_schedule_dump_to_file). profiler_wait_for_scheduled_dump() takes it
+// to wait for an in-progress dump to finish; on the exit-after-dump path the
+// sampler exits the process while holding it, so such a waiter never resumes.
+static mozilla::StaticMutex sScheduledDumpMutex;
+
 // This function is the sampler thread.  This implementation is used for all
 // targets.
 void SamplerThread::Run() {
@@ -5260,9 +5267,16 @@ void SamplerThread::Run() {
     // profiler_save_profile_to_file outside the lock to avoid a deadlock.
     if (scheduledDumpDue) {
       scheduledDumpDue = false;
+      // Hold sScheduledDumpMutex across the whole write so a caller in
+      // profiler_wait_for_scheduled_dump() blocks until this write finishes
+      // (and, on the exit-after path, until the process is gone) rather than
+      // acting while the profile is half-written.
+      mozilla::StaticMutexAutoLock dumpLock(sScheduledDumpMutex);
       profiler_save_profile_to_file(scheduledDumpPath.get());
       if (scheduledDumpExitAfter) {
-        // The profile is fully written; exit now as requested.
+        // The profile is fully written; exit now as requested. A caller parked
+        // in profiler_wait_for_scheduled_dump() stays blocked on the mutex
+        // until the process exits here, so it never runs its abort.
         AppShutdown::DoImmediateExit();
       }
     }
@@ -6682,6 +6696,18 @@ void profiler_cancel_scheduled_dump() {
 
   PSAutoLock lock;
   CorePS::CancelScheduledDump(lock);
+}
+
+void profiler_wait_for_scheduled_dump() {
+  // No-op outside automation. A scheduled dump is only ever armed by test
+  // harnesses, and this can block indefinitely (until the dump finishes or, on
+  // the exit-after path, until the process exits), so it must never delay a
+  // fatal-abort path in a shipped browser; in automation the harness's own
+  // timeout is the ultimate backstop.
+  if (!xpc::IsInAutomation()) {
+    return;
+  }
+  mozilla::StaticMutexAutoLock lock(sScheduledDumpMutex);
 }
 
 void profiler_request_dump_and_quit_for_test(const nsACString& aReason) {
