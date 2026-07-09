@@ -94,7 +94,6 @@ class Settings(
     private val appContext: Context,
     private val packageName: String = appContext.packageName,
     private val packageManagerCompatHelper: PackageManagerCompatHelper = appContext.packageManagerCompatHelper,
-    @Suppress("unused")
     private val isBenchmarkBuild: Boolean = BuildConfig.IS_BENCHMARK_BUILD,
 ) : PreferencesHolder {
     companion object {
@@ -563,7 +562,9 @@ class Settings(
     )
 
     val shouldSecureModeBeOverridden
-        get() = allowScreenshotsInPrivateMode || allowScreenCaptureInSecureScreens
+        get() = allowScreenshotsInPrivateMode || allowScreenCaptureInSecureScreens ||
+        // Allow FTL videos from macrobenchmark tests to capture what is happening in the CUJ
+            isBenchmarkBuild
     var allowScreenshotsInPrivateMode by booleanPreference(
         appContext.getPreferenceKey(R.string.pref_key_allow_screenshots_in_private_mode),
         default = false,
