@@ -1086,6 +1086,7 @@ toolbar[inactive="true"] .urlbar,
   #translations-button[translationsactive] > & {
     fill: var(--toolbarbutton-icon-fill-attention);
     fill-opacity: 1;
+    margin-inline: var(--space-small);
   }
 }
 
@@ -1095,7 +1096,7 @@ toolbar[inactive="true"] .urlbar,
   list-style-image: url("chrome://global/skin/icons/loading.svg");
   fill: var(--toolbarbutton-icon-fill-attention);
   fill-opacity: 1;
-  margin-inline: 1px;
+  margin-inline-end: var(--space-small);
 }
 
 #translations-button-locale {
@@ -1109,7 +1110,7 @@ toolbar[inactive="true"] .urlbar,
   padding-top: 3px;
   padding-inline: 1px;
   box-sizing: border-box;
-  margin-inline: 2px -2px;
+  margin-inline-end: var(--space-small);
   margin-block: -2px;
 }
 
