@@ -1319,14 +1319,6 @@ class Settings(
         default = appContext.getString(R.string.remote_settings_server_prod),
     )
 
-    /**
-     * Indicates if the cookie banners CRF should be shown.
-     */
-    var shouldShowCookieBannersCFR by booleanPreference(
-        appContext.getPreferenceKey(R.string.pref_key_should_show_cookie_banners_action_popup),
-        default = { shouldShowCookieBannerUI },
-    )
-
     var shouldShowTabSwipeCFR by booleanPreference(
         appContext.getPreferenceKey(R.string.pref_key_toolbar_tab_swipe_cfr),
         default = false,

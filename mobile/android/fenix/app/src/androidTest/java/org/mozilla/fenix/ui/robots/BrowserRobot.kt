@@ -985,13 +985,6 @@ class BrowserRobot(private val composeTestRule: ComposeTestRule) {
         }
     }
 
-    fun verifyCookieBannerBlockerCFRExists(exists: Boolean) =
-        assertUIObjectExists(
-            itemContainingText(getStringResource(R.string.cookie_banner_cfr_message)),
-            exists = exists,
-            waitingTime = waitingTimeLong,
-        )
-
     fun verifyOpenLinkInAnotherAppPrompt(appName: String) {
         assertUIObjectExists(
             itemContainingText(
