@@ -48,6 +48,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   SectionsFeed: "resource://newtab/lib/SectionsManager.sys.mjs",
   SectionsLayoutFeed: "resource://newtab/lib/SectionsLayoutFeed.sys.mjs",
   SportsFeed: "resource://newtab/lib/Widgets/SportsFeed.sys.mjs",
+  StocksFeed: "resource://newtab/lib/Widgets/StocksFeed.sys.mjs",
   PrivacyFeed: "resource://newtab/lib/Widgets/PrivacyFeed.sys.mjs",
   StartupCacheInit: "resource://newtab/lib/StartupCacheInit.sys.mjs",
   Store: "resource://newtab/lib/Store.sys.mjs",
@@ -2060,6 +2061,12 @@ const FEEDS_DATA = [
     name: "weatherfeed",
     factory: () => new lazy.WeatherFeed(),
     title: "Handles fetching and caching weather data",
+    value: true,
+  },
+  {
+    name: "stocksfeed",
+    factory: () => new lazy.StocksFeed(),
+    title: "Handles fetching and caching stocks data",
     value: true,
   },
   {

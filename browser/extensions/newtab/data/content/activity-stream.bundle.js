@@ -334,6 +334,7 @@ for (const type of [
   "WIDGETS_SPORTS_WATCH_LIVE_REQUEST",
   "WIDGETS_SPORTS_WATCH_LIVE_SET",
   "WIDGETS_SPORTS_WIDGET_SET",
+  "WIDGETS_STOCKS_UPDATE",
   "WIDGETS_TIMER_END",
   "WIDGETS_TIMER_PAUSE",
   "WIDGETS_TIMER_PLAY",
@@ -6824,6 +6825,10 @@ const INITIAL_STATE = {
     suggestedLocations: [],
   },
   // Widgets
+  Stocks: {
+    tickers: [],
+    lastUpdated: null,
+  },
   ListsWidget: {
     // value pointing to last selectled list
     selected: "taskList",
@@ -7887,6 +7892,19 @@ function TimerWidget(prevState = INITIAL_STATE.TimerWidget, action) {
   }
 }
 
+function Stocks(prevState = INITIAL_STATE.Stocks, action) {
+  switch (action.type) {
+    case actionTypes.WIDGETS_STOCKS_UPDATE:
+      return {
+        ...prevState,
+        tickers: action.data.tickers,
+        lastUpdated: action.data.lastUpdated,
+      };
+    default:
+      return prevState;
+  }
+}
+
 function ListsWidget(prevState = INITIAL_STATE.ListsWidget, action) {
   switch (action.type) {
     case actionTypes.WIDGETS_LISTS_SET:
@@ -8039,6 +8057,7 @@ const reducers = {
   Wallpapers,
   SectionsLayout,
   Weather,
+  Stocks,
   ExternalComponents,
   SportsWidget,
   PrivacyWidget,
@@ -21854,6 +21873,129 @@ function Crossword({
   }));
 }
 
+;// CONCATENATED MODULE: ./content-src/components/Widgets/Stocks/StockTicker.jsx
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+
+
+function getDirection(changePercent) {
+  const value = parseFloat(String(changePercent ?? "").replace(/[^0-9.-]/g, ""));
+  if (!Number.isFinite(value) || value === 0) {
+    return "flat";
+  }
+  return value > 0 ? "up" : "down";
+}
+
+// The feed hands us Merino's preformatted values: last_price like "$559.44 USD"
+// and todays_change_perc like "+0.2" (US formatting, no percent sign). Parse the
+// number back out and reformat it for the viewer's locale, so the decimal
+// separator, currency symbol, and percent sign follow local conventions.
+function parseAmount(raw) {
+  const value = parseFloat(String(raw ?? "").replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(value) ? value : null;
+}
+
+// How many decimal places the source value carries, so the formatted output
+// keeps the same precision Merino sent (e.g. "0.2" stays 1 place, "0.00" stays 2).
+function decimalPlaces(raw) {
+  const decimals = String(raw ?? "").match(/\.(\d+)/);
+  return decimals ? decimals[1].length : 0;
+}
+function formatPrice(price, locale) {
+  const value = parseAmount(price);
+  if (value === null) {
+    return String(price ?? "");
+  }
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    // For now the feed only returns US stocks and ETFs, which are all priced
+    // in USD, so the currency is fixed here.
+    currency: "USD",
+    currencyDisplay: "narrowSymbol"
+  }).format(value);
+}
+function formatChange(change, locale) {
+  const value = parseAmount(change);
+  if (value === null) {
+    return String(change ?? "");
+  }
+  const places = decimalPlaces(change);
+  // Merino sends the value already in percent units ("0.2" means 0.2%), but the
+  // percent style expects a ratio, so divide by 100.
+  return new Intl.NumberFormat(locale, {
+    style: "percent",
+    signDisplay: "exceptZero",
+    minimumFractionDigits: places,
+    maximumFractionDigits: places
+  }).format(value / 100);
+}
+const TICKER_STATUS_L10N_ID = {
+  up: "newtab-stocks-ticker-status-up",
+  down: "newtab-stocks-ticker-status-down",
+  flat: "newtab-stocks-ticker-status-flat"
+};
+
+// A single read-only ticker card. The visible rows are hidden from screen
+// readers; the spoken label comes from the localized `.stock-ticker-sr` span
+// instead (one of the newtab-stocks-ticker-status-* messages, by direction).
+function StockTicker({
+  loading,
+  size = "medium",
+  name: stockName,
+  ticker,
+  price,
+  changePercent
+}) {
+  const direction = getDirection(changePercent);
+  const locale = typeof navigator !== "undefined" ? navigator.language : undefined;
+  const displayPrice = formatPrice(price, locale);
+  const displayChange = formatChange(changePercent, locale);
+  const changeText = /*#__PURE__*/external_React_default().createElement("span", {
+    className: `stock-ticker-change stock-ticker-change--${direction}`
+  }, displayChange);
+  return /*#__PURE__*/external_React_default().createElement("li", {
+    className: `stock-ticker stock-ticker--${size}`,
+    "aria-hidden": loading ? "true" : undefined
+  }, !loading && /*#__PURE__*/external_React_default().createElement("span", {
+    className: "stock-ticker-sr",
+    "data-l10n-id": TICKER_STATUS_L10N_ID[direction],
+    "data-l10n-args": JSON.stringify({
+      name: stockName || ticker,
+      change: displayChange,
+      price: displayPrice
+    })
+  }), /*#__PURE__*/external_React_default().createElement("span", {
+    className: `stock-indicator stock-indicator--${direction}`,
+    "aria-hidden": "true"
+  }), /*#__PURE__*/external_React_default().createElement("span", {
+    className: "stock-ticker-label",
+    "aria-hidden": "true"
+  }, size === "large" ? /*#__PURE__*/external_React_default().createElement((external_React_default()).Fragment, null, /*#__PURE__*/external_React_default().createElement("span", {
+    className: "stock-ticker-line"
+  }, /*#__PURE__*/external_React_default().createElement("span", {
+    className: "stock-ticker-name"
+  }, stockName), /*#__PURE__*/external_React_default().createElement("span", {
+    className: "stock-ticker-dot"
+  }), /*#__PURE__*/external_React_default().createElement("span", {
+    className: "stock-ticker-symbol"
+  }, ticker)), /*#__PURE__*/external_React_default().createElement("span", {
+    className: "stock-ticker-line"
+  }, changeText, /*#__PURE__*/external_React_default().createElement("span", {
+    className: "stock-ticker-dot"
+  }), /*#__PURE__*/external_React_default().createElement("span", {
+    className: "stock-ticker-price"
+  }, displayPrice))) : /*#__PURE__*/external_React_default().createElement((external_React_default()).Fragment, null, /*#__PURE__*/external_React_default().createElement("span", {
+    className: "stock-ticker-line"
+  }, /*#__PURE__*/external_React_default().createElement("span", {
+    className: "stock-ticker-symbol"
+  }, ticker), /*#__PURE__*/external_React_default().createElement("span", {
+    className: "stock-ticker-dot"
+  }), /*#__PURE__*/external_React_default().createElement("span", {
+    className: "stock-ticker-price"
+  }, displayPrice)), changeText)));
+}
+
 ;// CONCATENATED MODULE: ./content-src/components/Widgets/Stocks/Stocks.jsx
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -21866,18 +22008,24 @@ function Crossword({
 
 
 
+
+
 const Stocks_USER_ACTION_TYPES = {
   CHANGE_SIZE: "change_size",
   SEARCH_TICKERS: "search_tickers",
   LEARN_MORE: "learn_more"
 };
 const STOCKS_ENTRY = WIDGET_REGISTRY.find(w => w.id === "stocks");
-function Stocks({
+const STOCKS_PLACEHOLDER_COUNT = 4;
+function Stocks_Stocks({
   dispatch,
   widgetsMayBeMaximized,
   widgetEnabledMap
 }) {
   const prefs = (0,external_ReactRedux_namespaceObject.useSelector)(state => state.Prefs.values);
+  const {
+    tickers
+  } = (0,external_ReactRedux_namespaceObject.useSelector)(state => state.Stocks);
 
   // Resolve size through the registry helper, not the pref, so trainhop and the
   // default can apply.
@@ -21897,26 +22045,6 @@ function Stocks({
     }));
   }, [dispatch, widgetSize]);
   const widgetRef = useIntersectionObserver(handleIntersection);
-  function handleStocksHide() {
-    (0,external_ReactRedux_namespaceObject.batch)(() => {
-      dispatch(actionCreators.OnlyToMain({
-        type: actionTypes.SET_PREF,
-        data: {
-          name: STOCKS_ENTRY.enabledPref,
-          value: false
-        }
-      }));
-      dispatch(actionCreators.OnlyToMain({
-        type: actionTypes.WIDGETS_ENABLED,
-        data: {
-          widget_name: "stocks",
-          widget_source: "context_menu",
-          enabled: false,
-          widget_size: widgetSize
-        }
-      }));
-    });
-  }
   const handleChangeSize = (0,external_React_namespaceObject.useCallback)(size => {
     (0,external_ReactRedux_namespaceObject.batch)(() => {
       dispatch(actionCreators.OnlyToMain({
@@ -21938,7 +22066,6 @@ function Stocks({
       }));
     });
   }, [dispatch]);
-  const sizeSubmenuRef = useSizeSubmenu(handleChangeSize);
 
   // Placeholder: a real ticker search will replace this telemetry-only stub in
   // a follow-up.
@@ -21953,24 +22080,18 @@ function Stocks({
       }
     }));
   }
+
+  // The shared footer opens the support link; here we only record the click.
   function handleLearnMore() {
-    (0,external_ReactRedux_namespaceObject.batch)(() => {
-      dispatch(actionCreators.OnlyToMain({
-        type: actionTypes.OPEN_LINK,
-        data: {
-          url: "https://support.mozilla.org/kb/firefox-new-tab-widgets"
-        }
-      }));
-      dispatch(actionCreators.OnlyToMain({
-        type: actionTypes.WIDGETS_USER_EVENT,
-        data: {
-          widget_name: "stocks",
-          widget_source: "context_menu",
-          user_action: Stocks_USER_ACTION_TYPES.LEARN_MORE,
-          widget_size: widgetSize
-        }
-      }));
-    });
+    dispatch(actionCreators.OnlyToMain({
+      type: actionTypes.WIDGETS_USER_EVENT,
+      data: {
+        widget_name: "stocks",
+        widget_source: "context_menu",
+        user_action: Stocks_USER_ACTION_TYPES.LEARN_MORE,
+        widget_size: widgetSize
+      }
+    }));
   }
   return /*#__PURE__*/external_React_default().createElement("article", {
     className: `stocks widget col-4 ${widgetSize}-widget`,
@@ -21979,44 +22100,69 @@ function Stocks({
     }
   }, /*#__PURE__*/external_React_default().createElement("div", {
     className: "stocks-title-wrapper"
-  }, /*#__PURE__*/external_React_default().createElement("div", {
+  }, /*#__PURE__*/external_React_default().createElement("span", {
+    className: "stocks-title",
+    "data-l10n-id": "newtab-stocks-widget-title"
+  }), /*#__PURE__*/external_React_default().createElement("div", {
     className: "stocks-context-menu-wrapper"
   }, /*#__PURE__*/external_React_default().createElement("moz-button", {
     className: "stocks-context-menu-button",
     iconSrc: "chrome://global/skin/icons/more.svg",
     menuId: "stocks-context-menu",
-    type: "ghost"
+    type: "icon ghost",
+    size: "small",
+    "data-l10n-id": "newtab-stocks-widget-menu-button"
   }), /*#__PURE__*/external_React_default().createElement("panel-list", {
     id: "stocks-context-menu"
   }, /*#__PURE__*/external_React_default().createElement("panel-item", {
     "data-l10n-id": "newtab-stocks-menu-search",
     onClick: handleSearchTickers
-  }), /*#__PURE__*/external_React_default().createElement("hr", null), widgetsMayBeMaximized && /*#__PURE__*/external_React_default().createElement("panel-item", {
-    submenu: "stocks-size-submenu"
-  }, /*#__PURE__*/external_React_default().createElement("span", {
-    "data-l10n-id": "newtab-widget-menu-change-size"
-  }), /*#__PURE__*/external_React_default().createElement("panel-list", {
-    ref: sizeSubmenuRef,
-    slot: "submenu",
-    id: "stocks-size-submenu"
-  }, ["small", "medium", "large"].map(size => /*#__PURE__*/external_React_default().createElement("panel-item", {
-    key: size,
-    type: "checkbox",
-    checked: widgetSize === size || undefined,
-    "data-size": size,
-    "data-l10n-id": `newtab-widget-size-${size}`
-  })))), /*#__PURE__*/external_React_default().createElement(MoveSubmenu, {
+  }), /*#__PURE__*/external_React_default().createElement(WidgetMenuFooter, {
+    dispatch: dispatch,
     widgetId: "stocks",
-    widgetEnabledMap: widgetEnabledMap
-  }), /*#__PURE__*/external_React_default().createElement("panel-item", {
-    "data-l10n-id": "newtab-stocks-menu-hide",
-    onClick: handleStocksHide
-  }), /*#__PURE__*/external_React_default().createElement("panel-item", {
-    "data-l10n-id": "newtab-stocks-menu-learn-more",
-    onClick: handleLearnMore
+    widgetEnabledMap: widgetEnabledMap,
+    widgetName: "stocks",
+    enabledPref: STOCKS_ENTRY.enabledPref,
+    widgetSize: widgetSize,
+    learnMoreL10nId: "newtab-stocks-menu-learn-more",
+    onLearnMore: handleLearnMore,
+    sizeSubmenu: widgetsMayBeMaximized ? /*#__PURE__*/external_React_default().createElement(SizeSubmenu, {
+      submenuId: "stocks-size-submenu",
+      sizes: ["medium", "large"],
+      checkedSize: widgetSize,
+      onChangeSize: handleChangeSize
+    }) : null
   })))), /*#__PURE__*/external_React_default().createElement("div", {
     className: "stocks-body"
-  }));
+  }, widgetSize === "medium" && /*#__PURE__*/external_React_default().createElement("ul", {
+    className: `stocks-grid${tickers.length ? "" : " stocks-grid--loading"}`
+  }, tickers.length ? tickers.map(t => /*#__PURE__*/external_React_default().createElement(StockTicker, {
+    key: t.ticker,
+    name: t.name,
+    ticker: t.ticker,
+    price: t.last_price,
+    changePercent: t.todays_change_perc
+  })) : Array.from({
+    length: STOCKS_PLACEHOLDER_COUNT
+  }).map((_, i) => /*#__PURE__*/external_React_default().createElement(StockTicker, {
+    key: i,
+    loading: true
+  }))), widgetSize === "large" && /*#__PURE__*/external_React_default().createElement("ul", {
+    className: `stocks-list${tickers.length ? "" : " stocks-list--loading"}`
+  }, tickers.length ? tickers.map(t => /*#__PURE__*/external_React_default().createElement(StockTicker, {
+    key: t.ticker,
+    size: "large",
+    name: t.name,
+    ticker: t.ticker,
+    price: t.last_price,
+    changePercent: t.todays_change_perc
+  })) : Array.from({
+    length: STOCKS_PLACEHOLDER_COUNT
+  }).map((_, i) => /*#__PURE__*/external_React_default().createElement(StockTicker, {
+    key: i,
+    size: "large",
+    loading: true
+  })))));
 }
 
 ;// CONCATENATED MODULE: ./content-src/components/Widgets/WidgetsComponentRegistry.jsx
@@ -22081,7 +22227,7 @@ const WIDGET_ROW_COMPONENTS = {
   clocks: ClocksRowWidget,
   privacy: Privacy,
   crossword: Crossword,
-  stocks: Stocks
+  stocks: Stocks_Stocks
 };
 const WIDGET_SIDEBAR_COMPONENTS = {
   weather: WeatherSidebarWidget
