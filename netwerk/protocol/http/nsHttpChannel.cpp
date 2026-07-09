@@ -2456,7 +2456,7 @@ nsresult nsHttpChannel::CallOnStartRequest() {
       PerformOpaqueResponseSafelistCheckBeforeSniff();
   if (opaqueResponse == OpaqueResponse::Block) {
     SetChannelBlockedByOpaqueResponse();
-    CancelWithReason(NS_BINDING_ABORTED,
+    CancelWithReason(NS_ERROR_DOM_NETWORK_ERR,
                      "OpaqueResponseBlocker::BlockResponse"_ns);
     return NS_BINDING_ABORTED;
   }

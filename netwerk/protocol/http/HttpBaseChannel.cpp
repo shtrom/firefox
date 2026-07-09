@@ -3744,7 +3744,7 @@ void HttpBaseChannel::BlockOpaqueResponseAfterSniff(
   MOZ_DIAGNOSTIC_ASSERT(mORB);
   LogORBError(aReason, aTelemetryReason);
   RefPtr<OpaqueResponseBlocker> orb(mORB);
-  orb->BlockResponse(this, NS_BINDING_ABORTED);
+  orb->BlockResponse(this, NS_ERROR_DOM_NETWORK_ERR);
 }
 
 void HttpBaseChannel::AllowOpaqueResponseAfterSniff() {
