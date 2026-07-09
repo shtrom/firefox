@@ -83,18 +83,18 @@ document.addEventListener(
           });
           break;
         case "context_pinSelectedTabs":
-          gBrowser.pinMultiSelectedTabs(
-            lazy.TabMetrics.userTriggeredContext(
+          gBrowser.pinMultiSelectedTabs({
+            metricsContext: lazy.TabMetrics.userTriggeredContext(
               lazy.TabMetrics.METRIC_SOURCE.TAB_MENU
-            )
-          );
+            ),
+          });
           break;
         case "context_unpinSelectedTabs":
-          gBrowser.unpinMultiSelectedTabs(
-            lazy.TabMetrics.userTriggeredContext(
+          gBrowser.unpinMultiSelectedTabs({
+            metricsContext: lazy.TabMetrics.userTriggeredContext(
               lazy.TabMetrics.METRIC_SOURCE.TAB_MENU
-            )
-          );
+            ),
+          });
           break;
         case "context_duplicateTab":
           duplicateTabIn(TabContextMenu.contextTab, "tab");
@@ -122,13 +122,25 @@ document.addEventListener(
           );
           break;
         case "context_moveToStart":
-          gBrowser.moveTabsToStart(TabContextMenu.contextTab);
+          gBrowser.moveTabsToStart(TabContextMenu.contextTab, {
+            metricsContext: lazy.TabMetrics.userTriggeredContext(
+              lazy.TabMetrics.METRIC_SOURCE.TAB_MENU
+            ),
+          });
           break;
         case "context_moveToEnd":
-          gBrowser.moveTabsToEnd(TabContextMenu.contextTab);
+          gBrowser.moveTabsToEnd(TabContextMenu.contextTab, {
+            metricsContext: lazy.TabMetrics.userTriggeredContext(
+              lazy.TabMetrics.METRIC_SOURCE.TAB_MENU
+            ),
+          });
           break;
         case "context_openTabInWindow":
-          gBrowser.replaceTabsWithWindow(TabContextMenu.contextTab);
+          gBrowser.replaceTabsWithWindow(TabContextMenu.contextTab, {
+            metricsContext: gBrowser.TabMetrics.userTriggeredContext(
+              gBrowser.TabMetrics.METRIC_SOURCE.TAB_MENU
+            ),
+          });
           break;
         case "context_selectAllTabs":
           gBrowser.selectAllTabs();
@@ -179,7 +191,12 @@ document.addEventListener(
           {
             let { tabGroupId } = event.target.parentElement.triggerNode.dataset;
             let tabGroup = gBrowser.getTabGroupById(tabGroupId);
-            tabGroup.documentGlobal.gBrowser.replaceGroupWithWindow(tabGroup);
+            tabGroup.documentGlobal.gBrowser.replaceGroupWithWindow(
+              tabGroup,
+              lazy.TabMetrics.userTriggeredContext(
+                lazy.TabMetrics.METRIC_SOURCE.TAB_GROUP_MENU
+              )
+            );
           }
           break;
         case "open-tab-group-context-menu_moveToThisWindow":
@@ -222,7 +239,12 @@ document.addEventListener(
             let tabGroup = SessionStore.openSavedTabGroup(tabGroupId, window, {
               source: lazy.TabMetrics.METRIC_SOURCE.TAB_OVERFLOW_MENU,
             });
-            gBrowser.replaceGroupWithWindow(tabGroup);
+            gBrowser.replaceGroupWithWindow(
+              tabGroup,
+              lazy.TabMetrics.userTriggeredContext(
+                lazy.TabMetrics.METRIC_SOURCE.TAB_OVERFLOW_MENU
+              )
+            );
           }
           break;
         case "saved-tab-group-context-menu_delete":

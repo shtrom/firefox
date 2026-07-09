@@ -194,7 +194,12 @@ class TabsListBase {
 
   _selectTab(tab) {
     if (this.gBrowser.selectedTab != tab) {
-      this.gBrowser.selectedTab = tab;
+      this.gBrowser.setSelectedTab(
+        tab,
+        this.gBrowser.TabMetrics.userTriggeredContext(
+          this.gBrowser.TabMetrics.METRIC_SOURCE.TAB_OVERFLOW_MENU
+        )
+      );
     } else {
       this.gBrowser.tabContainer._handleTabSelect();
     }

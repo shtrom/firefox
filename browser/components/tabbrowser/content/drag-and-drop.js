@@ -551,6 +551,14 @@
       } else if (draggedTab) {
         // Move the tabs into this window. To avoid multiple tab-switches in
         // the original window, the selected tab should be adopted last.
+        gBrowser.recordTabMetrics(
+          gBrowser.TabMetrics.METRIC_ACTION.ADOPT,
+          gBrowser.TabMetrics.userTriggeredContext(
+            gBrowser.TabMetrics.METRIC_SOURCE.DRAG_AND_DROP
+          ),
+          { tabCount: movingTabs.length }
+        );
+
         const dropIndex = this._getDropIndex(event);
         let newIndex = dropIndex;
         let selectedTab;
@@ -846,7 +854,14 @@
         winWidth /= screenCssToDesktopScale;
         winHeight /= screenCssToDesktopScale;
 
-        let props = { screenX: left, screenY: top, suppressanimation: 1 };
+        let props = {
+          screenX: left,
+          screenY: top,
+          suppressanimation: 1,
+          metricsContext: gBrowser.TabMetrics.userTriggeredContext(
+            gBrowser.TabMetrics.METRIC_SOURCE.DRAG_AND_DROP
+          ),
+        };
         gBrowser.replaceTabsWithWindow(draggedTab, props);
       }
       event.stopPropagation();

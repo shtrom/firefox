@@ -600,6 +600,8 @@ skip-if = [
   "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && opt", # Bug 1947600
 ]
 
+["browser_tab_interaction_telemetry.js"]
+
 ["browser_tab_groups_tab_interactions_telemetry.js"]
 skip-if = [
   "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && opt && swgl", # Bug 1968371
