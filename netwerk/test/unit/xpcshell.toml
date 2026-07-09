@@ -1489,7 +1489,12 @@ skip-if = [
 ]
 
 ["test_port_remapping.js"]
-skip-if = ["socketprocess_networking"] # Fails due to Mochia (bug 1982446)
+skip-if = [
+  "os == 'win' && os_version == '11.26100' && arch == 'x86' && socketprocess_networking",
+  "os == 'win' && os_version == '11.26100' && arch == 'x86_64' && socketprocess_networking",
+  "os == 'win' && os_version == '11.26200' && arch == 'x86' && socketprocess_networking",
+  "os == 'win' && os_version == '11.26200' && arch == 'x86_64' && socketprocess_networking",
+]
 
 ["test_post.js"]
 
