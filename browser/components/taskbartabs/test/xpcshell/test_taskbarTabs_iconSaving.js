@@ -102,7 +102,7 @@ add_task(async function test_pin_saves_raster_icon() {
   gOverrideIconFileOnce = iconFile;
 
   let img = await TaskbarTabsUtils._imageFromLocalURI(gPngFavicon);
-  await TaskbarTabsPin.pinTaskbarTab(taskbarTab, registry, img);
+  await TaskbarTabsPin.pinTaskbarTab(taskbarTab, img);
 
   equal(
     ShellService.writeShortcutIcon.firstCall.args[1],
@@ -120,7 +120,7 @@ add_task(async function test_pin_saves_vector_icon() {
   gOverrideIconFileOnce = iconFile;
 
   let img = await TaskbarTabsUtils._imageFromLocalURI(gSvgFavicon);
-  await TaskbarTabsPin.pinTaskbarTab(taskbarTab, registry, img);
+  await TaskbarTabsPin.pinTaskbarTab(taskbarTab, img);
 
   equal(
     ShellService.writeShortcutIcon.firstCall.args[1],

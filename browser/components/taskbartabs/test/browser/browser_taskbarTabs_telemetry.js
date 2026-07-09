@@ -93,7 +93,6 @@ async function testPinMetricCustom(aPinResult, aPinMessage = null) {
 
   await TaskbarTabsPin.pinTaskbarTab(
     taskbarTab,
-    gRegistry,
     await TaskbarTabsUtils.getDefaultIcon()
   );
 
@@ -141,7 +140,7 @@ async function testUnpinMetricCustom(
     shortcutRelativePath: "whatever",
   });
 
-  await TaskbarTabsPin.unpinTaskbarTab(taskbarTab, gRegistry);
+  await TaskbarTabsPin.unpinTaskbarTab(taskbarTab);
   snapshot = Glean.webApp.unpin.testGetValue();
   is(snapshot.length, 1, "A single unpin event was recorded");
   Assert.strictEqual(

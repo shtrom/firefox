@@ -15,7 +15,9 @@ ChromeUtils.defineESModuleGetters(this, {
 
 const BASE_URL = "https://example.com/";
 
-const gPinStub = sinon.stub(TaskbarTabsPin, "pinTaskbarTab");
+const gPinStub = sinon
+  .stub(TaskbarTabsPin, "pinTaskbarTab")
+  .callsFake(() => "shortcut relative path");
 const gUnpinStub = sinon.stub(TaskbarTabsPin, "unpinTaskbarTab");
 
 add_task(async function test_moveTabIntoTaskbarTabParentWindow() {
@@ -26,7 +28,7 @@ add_task(async function test_moveTabIntoTaskbarTabParentWindow() {
     const move = await TaskbarTabs.moveTabIntoTaskbarTab(tab);
     is(gPinStub.callCount, 1, "Exactly one pin was attempted");
     is(
-      gPinStub.firstCall.args[3],
+      gPinStub.firstCall.args[2],
       move.window,
       "The newly-created window was passed as part of the pinning"
     );
@@ -42,8 +44,9 @@ add_task(async function test_findOrCreateTaskbarTabParentWindow() {
   let uri = Services.io.newURI(BASE_URL);
   let result = await TaskbarTabs.findOrCreateTaskbarTab(uri, 0);
   is(gPinStub.callCount, 1, "Exactly one pin was attempted");
-  ok(
-    !gPinStub.firstCall.args[3]?.window,
+  Assert.strictEqual(
+    gPinStub.firstCall.args[2]?.window,
+    null,
     "No window was passed to pinTaskbarTab"
   );
   await TaskbarTabs.removeTaskbarTab(result.taskbarTab.id);
@@ -55,7 +58,7 @@ add_task(async function test_findOrCreateTaskbarTabParentWindow() {
   });
   is(gPinStub.callCount, 2, "Exactly one pin was attempted");
   is(
-    gPinStub.secondCall.args[3]?.window,
+    gPinStub.secondCall.args[2]?.window,
     fakeWindow,
     "Provided window was passed to pinTaskbarTab"
   );
@@ -87,4 +90,49 @@ add_task(async function test_findOrCreateTaskbarTabEnsurePin() {
   );
 
   await TaskbarTabs.removeTaskbarTab(result1.taskbarTab.id);
+});
+
+add_task(async function test_shortcutRelativePathIsUpdated() {
+  let sandbox = sinon.createSandbox();
+  let patchStub = sandbox.stub(
+    TaskbarTabsRegistry.prototype,
+    "patchTaskbarTab"
+  );
+
+  let uri = Services.io.newURI(BASE_URL);
+  let { taskbarTab } = await TaskbarTabs.findOrCreateTaskbarTab(uri, 0);
+  Assert.equal(patchStub.callCount, 1, "Exactly one pin was attempted");
+  Assert.equal(
+    patchStub.firstCall.args[0]?.id,
+    taskbarTab.id,
+    "The correct taskbar tab was patched"
+  );
+  Assert.deepEqual(
+    patchStub.firstCall.args[1],
+    { shortcutRelativePath: "shortcut relative path" },
+    "The return value from pinTaskbarTab was used as the shortcutRelativePath"
+  );
+  await TaskbarTabs.removeTaskbarTab(taskbarTab.id);
+
+  await BrowserTestUtils.withNewTab(BASE_URL, async browser => {
+    const tab = window.gBrowser.getTabForBrowser(browser);
+    patchStub.resetHistory();
+
+    const move = await TaskbarTabs.moveTabIntoTaskbarTab(tab);
+    Assert.equal(patchStub.callCount, 1, "Exactly one pin was attempted");
+    Assert.equal(
+      patchStub.firstCall.args[0]?.id,
+      move.taskbarTab.id,
+      "The correct taskbar tab was patched"
+    );
+    Assert.deepEqual(
+      patchStub.firstCall.args[1],
+      { shortcutRelativePath: "shortcut relative path" },
+      "The return value from pinTaskbarTab was used as the shortcutRelativePath"
+    );
+    await BrowserTestUtils.closeWindow(move.window);
+    await TaskbarTabs.removeTaskbarTab(move.taskbarTab.id);
+  });
+
+  sandbox.restore();
 });
