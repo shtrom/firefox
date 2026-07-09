@@ -66,7 +66,6 @@ input {
   --newtab-element-secondary-color: color-mix(in srgb, currentColor 5%, transparent);
   --newtab-element-secondary-hover-color: color-mix(in srgb, currentColor 12%, transparent);
   --newtab-element-secondary-active-color: color-mix(in srgb, currentColor 25%, transparent);
-  --newtab-primary-element-hover-color: color-mix(in srgb, var(--newtab-primary-action-background) 90%, #000);
   --newtab-primary-element-hover-pocket-color: color-mix(in srgb, var(--newtab-primary-action-background-pocket) 90%, #000);
   --newtab-primary-element-active-color: color-mix(in srgb, var(--newtab-primary-action-background) 80%, #000);
   --newtab-primary-element-text-color: var(--color-white);
@@ -92,7 +91,6 @@ input {
   --newtab-contextual-text-primary-color: light-dark(var(--text-color), var(--newtab-text-primary-color));
   --newtab-primary-action-background-pocket: var(--color-accent-primary);
   --newtab-primary-action-background-pocket-dimmed: color-mix(in srgb, var(--newtab-primary-action-background) 25%, transparent);
-  --newtab-primary-element-hover-color: color-mix(in srgb, var(--newtab-primary-action-background) 55%, var(--color-white));
   --newtab-primary-element-hover-pocket-color: color-mix(in srgb, var(--newtab-primary-action-background-pocket) 55%, var(--color-white));
   --newtab-element-hover-color: color-mix(in srgb, var(--newtab-background-color) 80%, var(--color-white));
   --newtab-element-active-color: color-mix(in srgb, var(--newtab-background-color) 60%, var(--color-white));
@@ -2601,49 +2599,6 @@ main.newtab-main section {
 .home-section [slot=nested] {
   margin-block-start: 0;
 }
-.home-section .section .customize-menu-checkbox-label {
-  font-size: inherit;
-  margin-inline-start: var(--space-xsmall);
-}
-.home-section .section .check-wrapper {
-  position: relative;
-  display: flex;
-}
-.home-section .section .customize-menu-checkbox {
-  margin-inline-start: var(--space-xxsmall);
-  width: 16px;
-  height: 16px;
-  vertical-align: middle;
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  box-sizing: border-box;
-  border-radius: var(--border-radius-xsmall);
-  appearance: none;
-  background-color: var(--newtab-element-secondary-color);
-  flex-shrink: 0;
-}
-.home-section .section .customize-menu-checkbox:hover {
-  background-color: var(--newtab-element-secondary-hover-color);
-}
-.home-section .section .customize-menu-checkbox:checked {
-  -moz-context-properties: fill;
-  fill: var(--newtab-primary-element-text-color);
-  background: url("chrome://global/skin/icons/check.svg") center no-repeat;
-  background-color: var(--newtab-primary-action-background);
-}
-.home-section .section .customize-menu-checkbox:checked:hover {
-  background-color: var(--newtab-primary-element-hover-color);
-}
-.home-section .section .customize-menu-checkbox:checked:active {
-  background-color: var(--newtab-primary-element-active-color);
-}
-@media (forced-colors: active) {
-  .home-section .section .customize-menu-checkbox:checked {
-    fill: #000;
-  }
-}
-.home-section .section .customize-menu-checkbox:active + .checkmark {
-  fill: var(--newtab-element-secondary-color);
-}
 .home-section .section #shortcuts-toggle {
   display: flex;
   flex-direction: column;
@@ -2673,14 +2628,12 @@ main.newtab-main section {
 .home-section .section .more-info-pocket-wrapper .more-information {
   padding-block: var(--space-medium);
 }
-.home-section .section .more-info-pocket-wrapper .check-wrapper {
-  margin-block-end: var(--space-small);
+.home-section .section .more-info-pocket-wrapper .customize-menu-checkbox {
+  --input-width: var(--size-item-small);
+  margin-block-end: var(--space-medium);
 }
-.home-section .section .more-info-pocket-wrapper:has(moz-box-button:focus-within) {
+.home-section .section .more-info-pocket-wrapper:has(moz-box-button:focus-within), .home-section .section .more-info-pocket-wrapper:has(.customize-menu-checkbox:focus-within) {
   overflow: visible;
-}
-.home-section .section .more-info-top-wrapper .check-wrapper {
-  margin-block-start: var(--space-large);
 }
 .home-section .sponsored-content-info {
   display: flex;
@@ -2740,22 +2693,8 @@ main.newtab-main section {
   box-shadow: 0 0 0 2px var(--newtab-primary-action-background-dimmed);
 }
 
-.home-section .section .customize-menu-checkbox {
-  outline: 0;
-  box-shadow: 0 0 0 2px light-dark(var(--newtab-background-color), var(--newtab-background-color-dark));
-}
-
 .home-section .section .selector {
   margin-block-start: var(--space-xxsmall);
-}
-
-.home-section .section .customize-menu-checkbox:is(:focus-visible) {
-  box-shadow: 0 0 0 2px var(--color-accent-primary);
-  outline: var(--focus-outline);
-}
-.home-section .section .customize-menu-checkbox:is(:active) {
-  box-shadow: 0 0 0 2px var(--color-accent-primary-active);
-  outline: 0;
 }
 
 .sections-mgmt-panel,
