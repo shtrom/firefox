@@ -82,9 +82,11 @@ class MOZ_STACK_CLASS ServoCSSAnimationBuilder final {
   bool BuildKeyframes(const Element& aElement, nsPresContext* aPresContext,
                       nsAtom* aName,
                       const StyleComputedTimingFunction& aTimingFunction,
+                      const StyleAnimationComposition aComposition,
                       nsTArray<Keyframe>& aKeyframes) {
     return aPresContext->StyleSet()->GetKeyframesForName(
-        aElement, *mComputedStyle, aName, aTimingFunction, aKeyframes);
+        aElement, *mComputedStyle, aName, aTimingFunction, aComposition,
+        aKeyframes);
   }
   void SetKeyframes(KeyframeEffect& aEffect, nsTArray<Keyframe>&& aKeyframes,
                     const dom::AnimationTimeline* aTimeline,
@@ -372,6 +374,7 @@ static already_AddRefed<CSSAnimation> BuildAnimation(
   nsTArray<Keyframe> keyframes;
   if (!aBuilder.BuildKeyframes(*aTarget.mElement, aPresContext, animationName,
                                aStyle.GetAnimationTimingFunction(animIdx),
+                               aStyle.GetAnimationComposition(animIdx),
                                keyframes)) {
     return nullptr;
   }

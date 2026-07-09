@@ -7787,6 +7787,7 @@ fn property_value_pair_for(id: &PropertyDeclarationId) -> structs::PropertyValue
 fn fill_in_missing_keyframe_values(
     all_properties: &PropertyDeclarationIdSet,
     timing_function: &ComputedTimingFunction,
+    composite: structs::CompositeOperationOrAuto,
     properties_at_offset: &PropertyDeclarationIdSet,
     offset: Offset,
     keyframes: &mut nsTArray<structs::Keyframe>,
@@ -7796,22 +7797,12 @@ fn fill_in_missing_keyframe_values(
         return;
     }
 
-    // Use auto for missing keyframes.
-    // FIXME: This may be a spec issue in css-animations-2 because the spec says the default
-    // keyframe-specific composite is replace, but web-animations-1 uses auto. Use auto now so we
-    // use the value of animation-composition of the element, for missing keyframes.
-    // https://github.com/w3c/csswg-drafts/issues/7476
-    let composition = structs::CompositeOperationOrAuto::Auto;
     let keyframe = match offset {
         Offset::Zero => unsafe {
-            &mut *bindings::Gecko_GetOrCreateInitialKeyframe(
-                keyframes,
-                timing_function,
-                composition,
-            )
+            &mut *bindings::Gecko_GetOrCreateInitialKeyframe(keyframes, timing_function, composite)
         },
         Offset::One => unsafe {
-            &mut *bindings::Gecko_GetOrCreateFinalKeyframe(keyframes, timing_function, composition)
+            &mut *bindings::Gecko_GetOrCreateFinalKeyframe(keyframes, timing_function, composite)
         },
     };
 
@@ -7834,7 +7825,13 @@ fn remove_duplicated_property_value_entry(
         let k = &mut keyframes[idx];
         let mut set = HashSet::new();
         let mut values = nsTArray::new();
-        for pair in k.mPropertyValues.drain(..).rev() {
+        // The property values are in the reverse order, so the first one overrides the later ones,
+        // e.g.
+        // cover 50% { opacity: 0.5 }
+        // cover 50% { opacity: 1 }
+        //
+        // The merged keyframe should be "cover 50% { opacity: 1 }".
+        for pair in k.mPropertyValues.drain(..) {
             let property =
                 match OwnedPropertyDeclarationId::from_gecko_css_property_id(&pair.mProperty) {
                     Some(property) => property,
@@ -7856,6 +7853,7 @@ pub unsafe extern "C" fn Servo_StyleSet_GetKeyframesForName(
     style: &ComputedValues,
     name: *mut nsAtom,
     inherited_timing_function: &ComputedTimingFunction,
+    inherited_composite: computed::AnimationComposition,
     keyframes: &mut nsTArray<structs::Keyframe>,
 ) -> bool {
     use style::gecko_bindings::structs::CompositeOperationOrAuto;
@@ -7885,9 +7883,20 @@ pub unsafe extern "C" fn Servo_StyleSet_GetKeyframesForName(
     let mut current_offset = -1.;
 
     let writing_mode = style.writing_mode;
+    let map_composite = |composite: AnimationComposition| match composite {
+        AnimationComposition::Replace => CompositeOperationOrAuto::Replace,
+        AnimationComposition::Add => CompositeOperationOrAuto::Add,
+        AnimationComposition::Accumulate => CompositeOperationOrAuto::Accumulate,
+    };
+    // These two composites are for specified 0% and 100% keyframes whose default composite is
+    // auto, and we may update them later if the keyframe-specific composite is set.
+    let mut initial_keyframe_composite = CompositeOperationOrAuto::Auto;
+    let mut final_keyframe_composite = CompositeOperationOrAuto::Auto;
 
     let get_timing_func_and_composition =
-        |step: &KeyframesStep| -> (ComputedTimingFunction, CompositeOperationOrAuto) {
+        |step: &KeyframesStep,
+         is_generated_missing_keyframe: bool|
+         -> (ComputedTimingFunction, CompositeOperationOrAuto) {
             // Override timing_function if the keyframe has an animation-timing-function.
             let timing_function = match step.get_animation_timing_function(&guard) {
                 Some(val) => val.to_computed_value_without_context(),
@@ -7895,12 +7904,17 @@ pub unsafe extern "C" fn Servo_StyleSet_GetKeyframesForName(
             };
             // Override composite operation if the keyframe has an animation-composition.
             let composition = step.get_animation_composition(&guard).map_or(
-                CompositeOperationOrAuto::Auto,
-                |val| match val {
-                    AnimationComposition::Replace => CompositeOperationOrAuto::Replace,
-                    AnimationComposition::Add => CompositeOperationOrAuto::Add,
-                    AnimationComposition::Accumulate => CompositeOperationOrAuto::Accumulate,
+                // If no specified animation-composition, use the default value for the missing
+                // keyframes. It's unfortunate we have to resolve auto now because we generate the
+                // missing keyframes too early.
+                // https://drafts.csswg.org/css-animations-2/#keyframes
+                // FIXME: We will generate the missing keyframes later in Bug 2037642.
+                if is_generated_missing_keyframe {
+                    map_composite(inherited_composite)
+                } else {
+                    CompositeOperationOrAuto::Auto
                 },
+                |val| map_composite(val),
             );
             (timing_function, composition)
         };
@@ -7931,7 +7945,10 @@ pub unsafe extern "C" fn Servo_StyleSet_GetKeyframesForName(
             properties_set_at_current_offset.clear();
             current_offset = step.start_offset.percentage.0;
         }
-        let (timing_function, composition) = get_timing_func_and_composition(step);
+        let (timing_function, composition) = get_timing_func_and_composition(
+            step,
+            matches!(step.value, KeyframesStepValue::ComputedValues),
+        );
         // Look for an existing keyframe with the same offset, timing function, and compsition, or
         // else add a new keyframe at the beginning of the keyframe array.
         let keyframe = &mut *bindings::Gecko_GetOrCreateKeyframeAtStart(
@@ -7997,6 +8014,14 @@ pub unsafe extern "C" fn Servo_StyleSet_GetKeyframesForName(
                     }
                     properties_set_at_current_offset.insert(id);
                 }
+
+                // Set the keyframe-specific composite for the specified 0% and 100% keyframes, to
+                // make sure we find the correct keyframe when filling missing properties later.
+                if current_offset == 0.0 {
+                    initial_keyframe_composite = composition;
+                } else if current_offset == 1.0 {
+                    final_keyframe_composite = composition;
+                }
             },
         }
     }
@@ -8007,11 +8032,13 @@ pub unsafe extern "C" fn Servo_StyleSet_GetKeyframesForName(
     }
 
     // Append property values that are missing in the initial or the final keyframes.
-    // FIXME: Bug 2037642. We shouldn't handle missing keyframes now.
+    // Note: we have to make sure the easing and composite are correct to find the correct
+    // keyframe. Otherwise, this may generate the redundant keyframe.
     if !has_complete_initial_keyframe {
         fill_in_missing_keyframe_values(
             &properties_changed,
             inherited_timing_function,
+            initial_keyframe_composite,
             &properties_set_at_start,
             Offset::Zero,
             keyframes,
@@ -8021,6 +8048,7 @@ pub unsafe extern "C" fn Servo_StyleSet_GetKeyframesForName(
         fill_in_missing_keyframe_values(
             &properties_changed,
             inherited_timing_function,
+            final_keyframe_composite,
             &properties_set_at_end,
             Offset::One,
             keyframes,
@@ -8049,9 +8077,9 @@ pub unsafe extern "C" fn Servo_StyleSet_GetKeyframesForName(
     // [1] cover 20% {...}
     // Only the last property value of `width` is kept.
     let mut grouped_keyframes_indexes = HashSet::new();
-    for step in animation.steps_with_range_name.iter() {
+    for step in animation.steps_with_range_name.iter().rev() {
         debug_assert!(!step.start_offset.range_name.is_none());
-        let (timing_function, composition) = get_timing_func_and_composition(step);
+        let (timing_function, composition) = get_timing_func_and_composition(step, false);
         let mut matched_idx = 0;
         let keyframe = &mut *bindings::Gecko_GetOrCreateKeyframeWithRangeName(
             &mut keyframes_with_range_names,
@@ -8092,7 +8120,8 @@ pub unsafe extern "C" fn Servo_StyleSet_GetKeyframesForName(
         &mut keyframes_with_range_names,
         grouped_keyframes_indexes,
     );
-    keyframes.append(&mut keyframes_with_range_names);
+    // Reverse the keyframes order because we reversed them in the loop above.
+    keyframes.extend(&mut keyframes_with_range_names.drain(..).rev());
     true
 }
 
