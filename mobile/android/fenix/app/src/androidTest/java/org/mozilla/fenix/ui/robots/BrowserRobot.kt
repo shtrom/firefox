@@ -1274,21 +1274,6 @@ class BrowserRobot(private val composeTestRule: ComposeTestRule) {
         this@BrowserRobot.composeTestRule.onNodeWithText(getStringResource(R.string.webcompat_reporter_label_whats_broken_3))
             .performScrollTo().assertIsDisplayed()
         Log.i(TAG, "verifyWebCompatReporterViewItems: Verified that the \"What’s not working?\" header is displayed")
-        Log.i(TAG, "verifyWebCompatReporterViewItems: Trying to verify that the \"Send\" button is displayed")
-        this@BrowserRobot.composeTestRule.onNodeWithText(getStringResource(R.string.webcompat_reporter_send))
-            .performScrollTo().assertIsDisplayed()
-        Log.i(TAG, "verifyWebCompatReporterViewItems: Verified that the \"Send \" button is displayed")
-        Log.i(TAG, "verifyWebCompatReporterViewItems: Trying to verify that the \"Cancel\" button is displayed")
-        this@BrowserRobot.composeTestRule.onNodeWithText(getStringResource(R.string.webcompat_reporter_cancel))
-            .performScrollTo().assertIsDisplayed()
-        Log.i(TAG, "verifyWebCompatReporterViewItems: Verified that the \"Cancel \" button is displayed")
-        if (appContext.components.core.engine.version.releaseChannel !== EngineReleaseChannel.RELEASE) {
-            Log.i(TAG, "Release channel is ${appContext.components.core.engine.version.releaseChannel}")
-            Log.i(TAG, "verifyWebCompatReporterViewItems: Trying to verify that the \"Add more info\" link is displayed")
-            this@BrowserRobot.composeTestRule.onNodeWithText(getStringResource(R.string.webcompat_reporter_add_more_info))
-                .performScrollTo().assertIsDisplayed()
-            Log.i(TAG, "verifyWebCompatReporterViewItems: Verified that the \"Add more info\" link is displayed")
-        }
         Log.i(TAG, "verifyWebCompatReporterViewItems: Trying to verify that the report broken site description is displayed")
         this@BrowserRobot.composeTestRule.onNodeWithContentDescription(
             getStringResource(
@@ -1316,7 +1301,7 @@ class BrowserRobot(private val composeTestRule: ComposeTestRule) {
     }
 
     fun verifyBrokenSiteProblemDescriptionField(isDisplayed: Boolean) {
-        val descriptionLabel = getStringResource(R.string.webcompat_reporter_label_description_2)
+        val descriptionLabel = getStringResource(R.string.webcompat_reporter_label_mandatory_description)
 
         if (isDisplayed) {
             Log.i(TAG, "verifyBrokenSiteProblemDescriptionField: Verifying description field is displayed")

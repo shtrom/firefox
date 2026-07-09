@@ -11,9 +11,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
-import mozilla.components.browser.state.selector.selectedTab
-import mozilla.components.browser.state.state.BrowserState
-import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.lib.state.Middleware
 import mozilla.components.lib.state.Store
 import org.mozilla.fenix.GleanMetrics.BrokenSiteReport
@@ -28,7 +25,6 @@ import org.mozilla.fenix.GleanMetrics.BrokenSiteReportTabInfoFrameworks
 import org.mozilla.fenix.GleanMetrics.Pings
 import org.mozilla.fenix.components.AppStore
 import org.mozilla.fenix.components.appstate.AppAction
-import org.mozilla.fenix.webcompat.WebCompatReporterMoreInfoSender
 import org.mozilla.fenix.webcompat.middleware.WebCompatInfoDto.Companion.addWebCompatInfo
 import org.mozilla.fenix.webcompat.store.WebCompatReporterAction
 import org.mozilla.fenix.webcompat.store.WebCompatReporterState
@@ -37,18 +33,13 @@ import org.mozilla.fenix.webcompat.store.WebCompatReporterState
  * [Middleware] that reacts to submission related [WebCompatReporterAction]s.
  *
  * @param appStore [AppStore] used to dispatch [AppAction]s.
- * @param browserStore [BrowserStore] used to access [BrowserState].
  * @param webCompatReporterRetrievalService The service that handles submission requests.
- * @param webCompatReporterMoreInfoSender [WebCompatReporterMoreInfoSender] used
- * to send WebCompat info to webcompat.com.
  * @param scope The [CoroutineScope] for launching coroutines.
  * @param nimbusExperimentsProvider A [NimbusExperimentsProvider] used to get active experiments.
  */
 class WebCompatReporterSubmissionMiddleware(
     private val appStore: AppStore,
-    private val browserStore: BrowserStore,
     private val webCompatReporterRetrievalService: WebCompatReporterRetrievalService,
-    private val webCompatReporterMoreInfoSender: WebCompatReporterMoreInfoSender,
     private val scope: CoroutineScope,
     private val nimbusExperimentsProvider: NimbusExperimentsProvider,
 ) : Middleware<WebCompatReporterState, WebCompatReporterAction> {
@@ -69,11 +60,6 @@ class WebCompatReporterSubmissionMiddleware(
             is WebCompatReporterAction.OpenPreviewClicked -> {
                 scope.launch {
                     handleOpenPreviewClicked(store)
-                }
-            }
-            is WebCompatReporterAction.AddMoreInfoClicked -> {
-                scope.launch {
-                    handleSendMoreInfoClicked(store)
                 }
             }
             else -> {}
@@ -173,20 +159,6 @@ class WebCompatReporterSubmissionMiddleware(
         }
 
         return JsonObject(values)
-    }
-
-    private suspend fun handleSendMoreInfoClicked(
-        store: Store<WebCompatReporterState, WebCompatReporterAction>,
-    ) {
-        webCompatReporterMoreInfoSender.sendMoreWebCompatInfo(
-            reason = store.state.reason,
-            problemDescription = store.state.problemDescription,
-            enteredUrl = store.state.enteredUrl,
-            tabUrl = store.state.tabUrl,
-            engineSession = browserStore.state.selectedTab?.engineState?.engineSession,
-        )
-
-        store.dispatch(WebCompatReporterAction.SendMoreInfoSubmitted)
     }
 
     private fun setTabAntiTrackingMetrics(

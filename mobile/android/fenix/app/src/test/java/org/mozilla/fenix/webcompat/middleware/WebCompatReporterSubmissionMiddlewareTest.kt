@@ -591,61 +591,6 @@ class WebCompatReporterSubmissionMiddlewareTest {
     }
 
     @Test
-    fun `WHEN send more info is clicked THEN more WebCompat info is sent`() = runTest {
-        var moreWebCompatInfoSent = false
-        val webCompatReporterMoreInfoSender = object : WebCompatReporterMoreInfoSender {
-            override suspend fun sendMoreWebCompatInfo(
-                reason: WebCompatReporterState.BrokenSiteReason?,
-                problemDescription: String?,
-                enteredUrl: String?,
-                tabUrl: String?,
-                engineSession: EngineSession?,
-            ) {
-                moreWebCompatInfoSent = true
-            }
-        }
-
-        val tab = createTab(
-            url = "https://www.mozilla.org",
-            id = "test-tab",
-            engineSession = mockk(),
-        )
-        val browserStore = BrowserStore(
-            initialState = BrowserState(
-                tabs = listOf(tab),
-                selectedTabId = tab.id,
-            ),
-        )
-
-        val captureActionsMiddleware =
-            CaptureActionsMiddleware<WebCompatReporterState, WebCompatReporterAction>()
-
-        val store = WebCompatReporterStore(
-            initialState = WebCompatReporterState(
-                tabUrl = "https://www.mozilla.org",
-                enteredUrl = "https://www.mozilla.org/en-US/firefox/new/",
-                reason = WebCompatReporterState.BrokenSiteReason.Slow,
-                problemDescription = "",
-            ),
-            middleware = listOf(
-                captureActionsMiddleware,
-                createMiddleware(
-                    browserStore = browserStore,
-                    service = FakeWebCompatReporterRetrievalService(),
-                    scope = this,
-                    webCompatReporterMoreInfoSender = webCompatReporterMoreInfoSender,
-                ),
-            ),
-        )
-
-        store.dispatch(WebCompatReporterAction.AddMoreInfoClicked)
-        testScheduler.advanceUntilIdle()
-
-        assertTrue(moreWebCompatInfoSent)
-        captureActionsMiddleware.assertFirstAction(WebCompatReporterAction.SendMoreInfoSubmitted::class)
-    }
-
-    @Test
     fun `WHEN open preview is clicked AND enteredUrl matches tab url THEN preview contains full raw JSON plus form fields`() = runTest {
         val capture = CaptureActionsMiddleware<WebCompatReporterState, WebCompatReporterAction>()
 
@@ -660,15 +605,8 @@ class WebCompatReporterSubmissionMiddlewareTest {
             middleware = listOf(
                 capture,
                 createMiddleware(
-                    browserStore = BrowserStore(
-                        BrowserState(
-                        tabs = listOf(createTab("https://www.mozilla.org", id = "t1")),
-                            selectedTabId = "t1",
-                        ),
-                    ),
                     scope = this,
                     service = FakeWebCompatReporterRetrievalService(),
-                    webCompatReporterMoreInfoSender = FakeWebCompatReporterMoreInfoSender(),
                 ),
             ),
         )
@@ -695,23 +633,9 @@ class WebCompatReporterSubmissionMiddlewareTest {
     private fun createStore(
         enteredUrl: String = "https://www.mozilla.org",
         service: WebCompatReporterRetrievalService = FakeWebCompatReporterRetrievalService(),
-        webCompatReporterMoreInfoSender: WebCompatReporterMoreInfoSender = FakeWebCompatReporterMoreInfoSender(),
         nimbusExperimentsProvider: NimbusExperimentsProvider = FakeNimbusExperimentsProvider(),
         scope: CoroutineScope,
     ): WebCompatReporterStore {
-        val engineSession: EngineSession = mockk()
-        val tab = createTab(
-            url = "",
-            id = "test-tab",
-            engineSession = engineSession,
-        )
-        val browserStore = BrowserStore(
-            initialState = BrowserState(
-                tabs = listOf(tab),
-                selectedTabId = tab.id,
-            ),
-        )
-
         return WebCompatReporterStore(
             initialState = WebCompatReporterState(
                 tabUrl = "",
@@ -721,9 +645,7 @@ class WebCompatReporterSubmissionMiddlewareTest {
             ),
             middleware = listOf(
                 createMiddleware(
-                    browserStore = browserStore,
                     service = service,
-                    webCompatReporterMoreInfoSender = webCompatReporterMoreInfoSender,
                     nimbusExperimentsProvider = nimbusExperimentsProvider,
                     scope = scope,
                 ),
@@ -732,16 +654,12 @@ class WebCompatReporterSubmissionMiddlewareTest {
     }
 
     private fun createMiddleware(
-        browserStore: BrowserStore,
         service: WebCompatReporterRetrievalService,
-        webCompatReporterMoreInfoSender: WebCompatReporterMoreInfoSender,
         scope: CoroutineScope,
         nimbusExperimentsProvider: NimbusExperimentsProvider = FakeNimbusExperimentsProvider(),
     ) = WebCompatReporterSubmissionMiddleware(
         appStore = appStore,
-        browserStore = browserStore,
         webCompatReporterRetrievalService = service,
-        webCompatReporterMoreInfoSender = webCompatReporterMoreInfoSender,
         scope = scope,
         nimbusExperimentsProvider = nimbusExperimentsProvider,
     )
