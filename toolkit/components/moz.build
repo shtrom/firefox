@@ -79,7 +79,6 @@ DIRS += [
     "search",
     "sessionstore",
     "shell",
-    "sitecategories",
     "startup",
     "statusfilter",
     "telemetry",

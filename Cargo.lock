@@ -2993,7 +2993,6 @@ dependencies = [
  "rust_minidump_writer_linux",
  "shell_windows",
  "signature_cache",
- "sitecategories",
  "ssl_tokens_cache",
  "static_prefs",
  "storage",
@@ -7476,18 +7475,6 @@ name = "siphasher"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56199f7ddabf13fe5074ce809e7d3f42b42ae711800501b5b16ea82ad029c39d"
-
-[[package]]
-name = "sitecategories"
-version = "0.1.0"
-dependencies = [
- "libc",
- "nserror",
- "nsstring",
- "serde_json",
- "static_prefs",
- "xpcom",
-]
 
 [[package]]
 name = "skv"

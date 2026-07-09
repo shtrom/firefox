@@ -57,7 +57,7 @@ add_setup(async function () {
     set: [
       ["dom.webnotifications.requireuserinteraction", false],
       [
-        "toolkit.telemetry.site_categories",
+        "permissions.desktop-notification.telemetry.siteCategories",
         JSON.stringify({ "example.com": "email" }),
       ],
     ],
