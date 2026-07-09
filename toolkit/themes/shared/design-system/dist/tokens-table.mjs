@@ -1881,6 +1881,7 @@ export const tokensTable = {
     { value: 700, name: "--font-weight-bold" },
     { value: "var(--font-weight-semibold)", name: "--font-weight-heading" },
     { value: "var(--font-weight-semibold)", name: "--button-font-weight" },
+    { value: "var(--font-weight-semibold)", name: "--badge-font-weight" },
     { value: "var(--button-font-weight)", name: "--select-font-weight" },
     { value: "var(--font-weight)", name: "--select-option-font-weight" },
   ],
@@ -4864,6 +4865,7 @@ export const variableLookupTable = {
   },
   "badge-border-radius": "var(--border-radius-small)",
   "badge-border-width": "1px",
+  "badge-font-weight": "var(--font-weight-semibold)",
   "badge-padding-block": "0",
   "badge-padding-inline": "var(--space-xsmall)",
   "badge-text-color": {
