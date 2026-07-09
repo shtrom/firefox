@@ -220,30 +220,11 @@ export class IPProtectionServerlistBase extends EventTarget {
    */
   __list = null;
 
-  constructor() {
-    super();
-    this.handleEvent = this.#handleEvent.bind(this);
-  }
-
-  init() {
-    lazy.IPProtectionService.addEventListener(
-      "IPProtectionService:StateChanged",
-      this.handleEvent
-    );
-  }
-  uninit() {
-    lazy.IPProtectionService.removeEventListener(
-      "IPProtectionService:StateChanged",
-      this.handleEvent
-    );
-  }
-  #handleEvent(_event) {
-    if (lazy.IPProtectionService.state === lazy.IPProtectionStates.READY) {
-      this.maybeFetchList(true);
-    }
-  }
+  init() {}
 
   async initOnStartupCompleted() {}
+
+  uninit() {}
 
   /**
    * Tries to refresh the list from the underlining source.
@@ -351,16 +332,35 @@ export class RemoteSettingsServerlist extends IPProtectionServerlistBase {
 
   constructor() {
     super();
+    this.handleEvent = this.#handleEvent.bind(this);
     this.__list = IPProtectionServerlistBase.dataToList(
       lazy.IPPStartupCache.locationList
     );
   }
+  init() {
+    lazy.IPProtectionService.addEventListener(
+      "IPProtectionService:StateChanged",
+      this.handleEvent
+    );
+  }
 
   async initOnStartupCompleted() {
-    super.initOnStartupCompleted();
     this.bucket.on("sync", async () => {
       await this.maybeFetchList(true);
     });
+  }
+
+  uninit() {
+    lazy.IPProtectionService.removeEventListener(
+      "IPProtectionService:StateChanged",
+      this.handleEvent
+    );
+  }
+
+  #handleEvent(_event) {
+    if (lazy.IPProtectionService.state === lazy.IPProtectionStates.READY) {
+      this.maybeFetchList();
+    }
   }
 
   maybeFetchList(forceUpdate = false) {
@@ -414,12 +414,13 @@ export class PrefServerList extends IPProtectionServerlistBase {
   }
 
   async initOnStartupCompleted() {
-    super.initOnStartupCompleted();
     Services.prefs.addObserver(PrefServerList.PREF_NAME, this.#observer);
+    // If the pref changed between startup and registering the observer we have
+    // not handled it yet. If the value hasn't actually changed, this is a no-op.
+    this.maybeFetchList();
   }
 
   uninit() {
-    super.uninit();
     Services.prefs.removeObserver(PrefServerList.PREF_NAME, this.#observer);
   }
 
