@@ -11,7 +11,6 @@ const PC_CONTRACT = "@mozilla.org/dom/peerconnection;1";
 const PC_OBS_CONTRACT = "@mozilla.org/dom/peerconnectionobserver;1";
 const PC_ICE_CONTRACT = "@mozilla.org/dom/rtcicecandidate;1";
 const PC_SESSION_CONTRACT = "@mozilla.org/dom/rtcsessiondescription;1";
-const PC_STATIC_CONTRACT = "@mozilla.org/dom/peerconnectionstatic;1";
 const PC_COREQUEST_CONTRACT = "@mozilla.org/dom/createofferrequest;1";
 
 const PC_CID = Components.ID("{bdc2e533-b308-4708-ac8e-a8bfade6d851}");
@@ -19,7 +18,6 @@ const PC_OBS_CID = Components.ID("{d1748d4c-7f6a-4dc5-add6-d55b7678537e}");
 const PC_ICE_CID = Components.ID("{02b9970c-433d-4cc2-923d-f7028ac66073}");
 const PC_SESSION_CID = Components.ID("{1775081b-b62d-4954-8ffe-a067bbf508a7}");
 const PC_MANAGER_CID = Components.ID("{7293e901-2be3-4c02-b4bd-cbef6fc24f78}");
-const PC_STATIC_CID = Components.ID("{0fb47c47-a205-4583-a9fc-cbadf8c95880}");
 const PC_COREQUEST_CID = Components.ID(
   "{74b2122d-65a8-4824-aa9e-3d664cb75dc2}"
 );
@@ -55,7 +53,6 @@ export class GlobalPCList {
   constructor() {
     this._list = {};
     this._networkdown = false; // XXX Need to query current state somehow
-    this._lifecycleobservers = {};
     this._nextId = 1;
     Services.obs.addObserver(this, "inner-window-destroyed");
     Services.obs.addObserver(this, "profile-change-net-teardown");
@@ -66,12 +63,6 @@ export class GlobalPCList {
     Services.obs.addObserver(this, "PeerConnection:response:deny");
     if (Services.cpmm) {
       Services.cpmm.addMessageListener("gmp-plugin-crash", this);
-    }
-  }
-
-  notifyLifecycleObservers(pc, type) {
-    for (var key of Object.keys(this._lifecycleobservers)) {
-      this._lifecycleobservers[key](pc, pc._winID, type);
     }
   }
 
@@ -157,10 +148,6 @@ export class GlobalPCList {
     if (topic == "inner-window-destroyed") {
       let winID = subject.QueryInterface(Ci.nsISupportsPRUint64).data;
       cleanupWinId(this._list, winID);
-
-      if (this._lifecycleobservers.hasOwnProperty(winID)) {
-        delete this._lifecycleobservers[winID];
-      }
     } else if (
       topic == "profile-change-net-teardown" ||
       topic == "network:offline-about-to-go-offline"
@@ -199,10 +186,6 @@ export class GlobalPCList {
         }
       }
     }
-  }
-
-  _registerPeerConnectionLifecycleCallback(winID, cb) {
-    this._lifecycleobservers[winID] = cb;
   }
 }
 
@@ -573,7 +556,6 @@ export class RTCPeerConnection {
 
     this._certificateReady = this._initCertificate(certificate);
     this._initIdp();
-    _globalPCList.notifyLifecycleObservers(this, "initialized");
   }
 
   getConfiguration() {
@@ -1627,7 +1609,6 @@ export class RTCPeerConnection {
   }
 
   handleIceGatheringStateChange() {
-    _globalPCList.notifyLifecycleObservers(this, "icegatheringstatechange");
     this.dispatchEvent(new this._win.Event("icegatheringstatechange"));
     if (this.iceGatheringState === "complete") {
       this.dispatchEvent(
@@ -1904,10 +1885,6 @@ export class PeerConnectionObserver {
     switch (state) {
       case "IceConnectionState":
         this.logIceConnectionStateChange(this._dompc.iceConnectionState);
-        _globalPCList.notifyLifecycleObservers(
-          this,
-          "iceconnectionstatechange"
-        );
         this.dispatchEvent(new this._win.Event("iceconnectionstatechange"));
         break;
 
@@ -1916,7 +1893,6 @@ export class PeerConnectionObserver {
         break;
 
       case "ConnectionState":
-        _globalPCList.notifyLifecycleObservers(this, "connectionstatechange");
         this.dispatchEvent(new this._win.Event("connectionstatechange"));
         break;
 
@@ -1977,22 +1953,6 @@ export class PeerConnectionObserver {
 setupPrototype(PeerConnectionObserver, {
   classID: PC_OBS_CID,
   contractID: PC_OBS_CONTRACT,
-  QueryInterface: ChromeUtils.generateQI(["nsIDOMGlobalPropertyInitializer"]),
-});
-
-export class RTCPeerConnectionStatic {
-  init(win) {
-    this._winID = win.windowGlobalChild.innerWindowId;
-  }
-
-  registerPeerConnectionLifecycleCallback(cb) {
-    _globalPCList._registerPeerConnectionLifecycleCallback(this._winID, cb);
-  }
-}
-
-setupPrototype(RTCPeerConnectionStatic, {
-  classID: PC_STATIC_CID,
-  contractID: PC_STATIC_CONTRACT,
   QueryInterface: ChromeUtils.generateQI(["nsIDOMGlobalPropertyInitializer"]),
 });
 
