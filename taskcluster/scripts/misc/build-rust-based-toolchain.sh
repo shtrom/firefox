@@ -36,7 +36,6 @@ aarch64-unknown-linux-gnu)
     ;;
 *-apple-darwin)
     # Cross-compiling for Mac on Linux.
-    export PATH="$MOZ_FETCHES_DIR/clang/bin:$PATH"
     if test "$TARGET" = "aarch64-apple-darwin"; then
         export MACOSX_DEPLOYMENT_TARGET=11.0
     else
@@ -64,7 +63,7 @@ aarch64-unknown-linux-gnu)
     ;;
 esac
 
-PATH="$MOZ_FETCHES_DIR/rustc/bin:$MOZ_FETCHES_DIR/clang/bin:$PATH"
+PATH="$MOZ_FETCHES_DIR/rustc/bin:$MOZ_FETCHES_DIR/clang/bin:${EXTRA_PATH:+$EXTRA_PATH:}$PATH"
 
 if [ -n "${CRATE_PATH}" ]; then
   CRATE_PATH="${GECKO_PATH}/${CRATE_PATH}"
