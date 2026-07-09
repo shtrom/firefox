@@ -10,7 +10,6 @@
 #include "irregexp/imported/regexp.h"
 
 #ifdef V8_INTL_SUPPORT
-#include "js/properties_glue.h"
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
 #include "unicode/usetiter.h"
@@ -971,6 +970,7 @@ Tree* ParserImpl<CharT>::ParseDisjunction() {
         // Restore previous state.
         state = state->previous_state();
         builder = state->builder();
+        flags_ = builder->flags();
 
         builder->AddAtom(body);
         // For compatibility with JSC and ES3, we allow quantifiers after
@@ -2108,9 +2108,7 @@ bool LookupSpecialPropertyValueName(const char* name,
     return LookupPropertyValueName(UCHAR_GENERAL_CATEGORY, "Unassigned",
                                    !negate, result, nullptr, flags, zone);
   } else {
-    return mozilla_properties_glue_add_property_ranges(
-        static_cast<void*>(result), static_cast<void*>(zone), name, negate,
-        IsUnicodeSets(flags) && IsIgnoreCase(flags));
+    return false;
   }
   return true;
 }

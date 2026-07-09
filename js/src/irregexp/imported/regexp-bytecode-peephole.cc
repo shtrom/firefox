@@ -1090,7 +1090,6 @@ DirectHandle<TrustedByteArray> BytecodePeepholeOptimization::OptimizeBytecode(
       isolate->factory()->NewTrustedByteArray(optimized_length);
   MemCopy(array->begin(), optimized_bytecode, optimized_length);
 
-#ifndef COMPILING_IRREGEXP_FOR_EXTERNAL_EMBEDDER
   if (did_optimize && v8_flags.trace_regexp_peephole_optimization) {
     std::unique_ptr<char[]> pattern_cstring =
         re_data->escaped_source()->ToCString();
@@ -1102,7 +1101,6 @@ DirectHandle<TrustedByteArray> BytecodePeepholeOptimization::OptimizeBytecode(
     RegExpBytecodeDisassemble(array->begin(), optimized_length,
                               pattern_cstring.get());
   }
-#endif  // !COMPILING_IRREGEXP_FOR_EXTERNAL_EMBEDDER
 
   return array;
 }
