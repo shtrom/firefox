@@ -18,7 +18,7 @@ from mozversioncontrol.errors import (
     CannotDeleteFromRootOfRepositoryException,
     MissingVCSExtension,
 )
-from mozversioncontrol.repo.base import Repository
+from mozversioncontrol.repo.base import HG_TRY_URL, Repository
 
 
 class HgRepository(Repository):
@@ -320,6 +320,7 @@ class HgRepository(Repository):
         self,
         message: str,
         changed_files: dict[str, str] = {},
+        remote: str = HG_TRY_URL,
         allow_log_capture: bool = False,
     ):
         if changed_files:
