@@ -92,14 +92,7 @@ ParseVariationDataSubtable(const ots::Font* font, const uint8_t* data, const siz
     }
   }
 
-  // The individual counts here are 16-bit values, and valueSize is either 1 or 2,
-  // so this cannot overflow.
-  size_t deltaSetSize = valueSize * (size_t(wordDeltaCount) + size_t(*regionIndexCount));
-  // Check that multiplication by itemCount will not overflow size_t.
-  if (deltaSetSize > std::numeric_limits<size_t>::max() / itemCount) {
-    return OTS_FAILURE_MSG("Delta data size overflow");
-  }
-  if (!subtable.Skip(deltaSetSize * size_t(itemCount))) {
+  if (!subtable.Skip(valueSize * size_t(itemCount) * (size_t(wordDeltaCount) + size_t(*regionIndexCount)))) {
     return OTS_FAILURE_MSG("Failed to read delta data");
   }
 
