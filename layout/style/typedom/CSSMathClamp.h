@@ -25,10 +25,7 @@ struct CSSPropertyId;
 class ErrorResult;
 template <typename T>
 class MovingNotNull;
-struct StyleNumericValue;
-template <typename T, size_t N>
-struct StyleOwnedArray;
-using StyleMathClamp = StyleOwnedArray<StyleNumericValue, 3>;
+struct StyleMathClamp;
 
 namespace dom {
 
@@ -36,9 +33,6 @@ class GlobalObject;
 
 class CSSMathClamp final : public CSSMathValue {
  public:
-  CSSMathClamp(nsCOMPtr<nsISupports> aParent, RefPtr<CSSNumericValue> aLower,
-               RefPtr<CSSNumericValue> aValue, RefPtr<CSSNumericValue> aUpper);
-
   CSSMathClamp(nsCOMPtr<nsISupports> aParent,
                MovingNotNull<UniquePtr<StyleNumericType>> aNumericType,
                RefPtr<CSSNumericValue> aLower, RefPtr<CSSNumericValue> aValue,

@@ -17,15 +17,6 @@
 
 namespace mozilla::dom {
 
-CSSMathClamp::CSSMathClamp(nsCOMPtr<nsISupports> aParent,
-                           RefPtr<CSSNumericValue> aLower,
-                           RefPtr<CSSNumericValue> aValue,
-                           RefPtr<CSSNumericValue> aUpper)
-    : CSSMathValue(std::move(aParent), MathValueType::MathClamp),
-      mLower(std::move(aLower)),
-      mValue(std::move(aValue)),
-      mUpper(std::move(aUpper)) {}
-
 CSSMathClamp::CSSMathClamp(
     nsCOMPtr<nsISupports> aParent,
     MovingNotNull<UniquePtr<StyleNumericType>> aNumericType,
@@ -40,15 +31,17 @@ CSSMathClamp::CSSMathClamp(
 // static
 RefPtr<CSSMathClamp> CSSMathClamp::Create(nsCOMPtr<nsISupports> aParent,
                                           const StyleMathClamp& aMathClamp) {
-  const auto values = aMathClamp.AsSpan();
-  static_assert(StyleMathClamp::Length() == 3);
+  const auto values = aMathClamp.values.AsSpan();
+  static_assert(decltype(StyleMathClamp::values)::Length() == 3);
 
   RefPtr<CSSNumericValue> lower = CSSNumericValue::Create(aParent, values[0]);
   RefPtr<CSSNumericValue> value = CSSNumericValue::Create(aParent, values[1]);
   RefPtr<CSSNumericValue> upper = CSSNumericValue::Create(aParent, values[2]);
 
-  return MakeAndAddRef<CSSMathClamp>(std::move(aParent), std::move(lower),
-                                     std::move(value), std::move(upper));
+  return MakeAndAddRef<CSSMathClamp>(
+      std::move(aParent),
+      WrapMovingNotNull(MakeUnique<StyleNumericType>(aMathClamp.numeric_type)),
+      std::move(lower), std::move(value), std::move(upper));
 }
 
 NS_IMPL_ISUPPORTS_CYCLE_COLLECTION_INHERITED_0(CSSMathClamp, CSSMathValue)
@@ -126,9 +119,10 @@ void CSSMathClamp::ToCssTextWithProperty(const CSSPropertyId& aPropertyId,
 }
 
 StyleMathClamp CSSMathClamp::ToStyleMathClamp() const {
-  return StyleMathClamp(mLower->ToStyleNumericValue(),
-                        mValue->ToStyleNumericValue(),
-                        mUpper->ToStyleNumericValue());
+  return StyleMathClamp{GetNumericType(), StyleOwnedArray<StyleNumericValue, 3>(
+                                              mLower->ToStyleNumericValue(),
+                                              mValue->ToStyleNumericValue(),
+                                              mUpper->ToStyleNumericValue())};
 }
 
 const CSSMathClamp& CSSMathValue::GetAsCSSMathClamp() const {

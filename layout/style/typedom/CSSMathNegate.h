@@ -24,10 +24,7 @@ namespace mozilla {
 struct CSSPropertyId;
 template <typename T>
 class MovingNotNull;
-template <typename T>
-struct StyleBox;
-struct StyleNumericValue;
-using StyleMathNegate = StyleBox<StyleNumericValue>;
+struct StyleMathNegate;
 
 namespace dom {
 
@@ -35,8 +32,6 @@ class GlobalObject;
 
 class CSSMathNegate final : public CSSMathValue {
  public:
-  CSSMathNegate(nsCOMPtr<nsISupports> aParent, RefPtr<CSSNumericValue> aValue);
-
   CSSMathNegate(nsCOMPtr<nsISupports> aParent,
                 MovingNotNull<UniquePtr<StyleNumericType>> aNumericType,
                 RefPtr<CSSNumericValue> aValue);

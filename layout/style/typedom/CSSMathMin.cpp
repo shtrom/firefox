@@ -19,11 +19,6 @@
 namespace mozilla::dom {
 
 CSSMathMin::CSSMathMin(nsCOMPtr<nsISupports> aParent,
-                       RefPtr<CSSNumericArray> aValues)
-    : CSSMathValue(std::move(aParent), MathValueType::MathMin),
-      mValues(std::move(aValues)) {}
-
-CSSMathMin::CSSMathMin(nsCOMPtr<nsISupports> aParent,
                        MovingNotNull<UniquePtr<StyleNumericType>> aNumericType,
                        RefPtr<CSSNumericArray> aValues)
     : CSSMathValue(std::move(aParent), std::move(aNumericType),
@@ -35,13 +30,16 @@ RefPtr<CSSMathMin> CSSMathMin::Create(nsCOMPtr<nsISupports> aParent,
                                       const StyleMathMin& aMathMin) {
   nsTArray<RefPtr<CSSNumericValue>> values;
 
-  for (const auto& value : aMathMin) {
+  for (const auto& value : aMathMin.values) {
     values.AppendElement(CSSNumericValue::Create(aParent, value));
   }
 
   auto array = MakeRefPtr<CSSNumericArray>(aParent, std::move(values));
 
-  return MakeRefPtr<CSSMathMin>(std::move(aParent), std::move(array));
+  return MakeRefPtr<CSSMathMin>(
+      std::move(aParent),
+      WrapMovingNotNull(MakeUnique<StyleNumericType>(aMathMin.numeric_type)),
+      std::move(array));
 }
 
 NS_IMPL_ISUPPORTS_CYCLE_COLLECTION_INHERITED_0(CSSMathMin, CSSMathValue)
@@ -132,7 +130,7 @@ StyleMathMin CSSMathMin::ToStyleMathMin() const {
     values.AppendElement(value->ToStyleNumericValue());
   }
 
-  return StyleMathMin{std::move(values)};
+  return StyleMathMin{GetNumericType(), std::move(values)};
 }
 
 const CSSMathMin& CSSMathValue::GetAsCSSMathMin() const {

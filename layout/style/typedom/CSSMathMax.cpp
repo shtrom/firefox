@@ -19,11 +19,6 @@
 namespace mozilla::dom {
 
 CSSMathMax::CSSMathMax(nsCOMPtr<nsISupports> aParent,
-                       RefPtr<CSSNumericArray> aValues)
-    : CSSMathValue(std::move(aParent), MathValueType::MathMax),
-      mValues(std::move(aValues)) {}
-
-CSSMathMax::CSSMathMax(nsCOMPtr<nsISupports> aParent,
                        MovingNotNull<UniquePtr<StyleNumericType>> aNumericType,
                        RefPtr<CSSNumericArray> aValues)
     : CSSMathValue(std::move(aParent), std::move(aNumericType),
@@ -35,13 +30,16 @@ RefPtr<CSSMathMax> CSSMathMax::Create(nsCOMPtr<nsISupports> aParent,
                                       const StyleMathMax& aMathMax) {
   nsTArray<RefPtr<CSSNumericValue>> values;
 
-  for (const auto& value : aMathMax) {
+  for (const auto& value : aMathMax.values) {
     values.AppendElement(CSSNumericValue::Create(aParent, value));
   }
 
   auto array = MakeRefPtr<CSSNumericArray>(aParent, std::move(values));
 
-  return MakeRefPtr<CSSMathMax>(std::move(aParent), std::move(array));
+  return MakeRefPtr<CSSMathMax>(
+      std::move(aParent),
+      WrapMovingNotNull(MakeUnique<StyleNumericType>(aMathMax.numeric_type)),
+      std::move(array));
 }
 
 NS_IMPL_ISUPPORTS_CYCLE_COLLECTION_INHERITED_0(CSSMathMax, CSSMathValue)
@@ -125,14 +123,14 @@ void CSSMathMax::ToCssTextWithProperty(const CSSPropertyId& aPropertyId,
   aDest.Append(")"_ns);
 }
 
-StyleMathMin CSSMathMax::ToStyleMathMax() const {
+StyleMathMax CSSMathMax::ToStyleMathMax() const {
   nsTArray<StyleNumericValue> values;
 
   for (const RefPtr<CSSNumericValue>& value : mValues->GetValues()) {
     values.AppendElement(value->ToStyleNumericValue());
   }
 
-  return StyleMathMax{std::move(values)};
+  return StyleMathMax{GetNumericType(), std::move(values)};
 }
 
 const CSSMathMax& CSSMathValue::GetAsCSSMathMax() const {

@@ -26,8 +26,7 @@ struct CSSPropertyId;
 class ErrorResult;
 template <typename T>
 class MovingNotNull;
-struct StyleNumericValue;
-using StyleMathMax = CopyableTArray<StyleNumericValue>;
+struct StyleMathMax;
 
 namespace dom {
 
@@ -37,9 +36,6 @@ class Sequence;
 
 class CSSMathMax final : public CSSMathValue {
  public:
-  explicit CSSMathMax(nsCOMPtr<nsISupports> aParent,
-                      RefPtr<CSSNumericArray> aValues);
-
   CSSMathMax(nsCOMPtr<nsISupports> aParent,
              MovingNotNull<UniquePtr<StyleNumericType>> aNumericType,
              RefPtr<CSSNumericArray> aValues);

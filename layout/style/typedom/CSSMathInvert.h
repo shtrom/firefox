@@ -24,10 +24,7 @@ namespace mozilla {
 struct CSSPropertyId;
 template <typename T>
 class MovingNotNull;
-template <typename T>
-struct StyleBox;
-struct StyleNumericValue;
-using StyleMathInvert = StyleBox<StyleNumericValue>;
+struct StyleMathInvert;
 
 namespace dom {
 
@@ -35,8 +32,6 @@ class GlobalObject;
 
 class CSSMathInvert final : public CSSMathValue {
  public:
-  CSSMathInvert(nsCOMPtr<nsISupports> aParent, RefPtr<CSSNumericValue> aValue);
-
   CSSMathInvert(nsCOMPtr<nsISupports> aParent,
                 MovingNotNull<UniquePtr<StyleNumericType>> aNumericType,
                 RefPtr<CSSNumericValue> aValue);

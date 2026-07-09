@@ -26,8 +26,7 @@ struct CSSPropertyId;
 class ErrorResult;
 template <typename T>
 class MovingNotNull;
-struct StyleNumericValue;
-using StyleMathMin = CopyableTArray<StyleNumericValue>;
+struct StyleMathMin;
 
 namespace dom {
 
@@ -37,8 +36,6 @@ class Sequence;
 
 class CSSMathMin final : public CSSMathValue {
  public:
-  CSSMathMin(nsCOMPtr<nsISupports> aParent, RefPtr<CSSNumericArray> aValues);
-
   CSSMathMin(nsCOMPtr<nsISupports> aParent,
              MovingNotNull<UniquePtr<StyleNumericType>> aNumericType,
              RefPtr<CSSNumericArray> aValues);

@@ -17,11 +17,6 @@
 
 namespace mozilla::dom {
 
-CSSMathInvert::CSSMathInvert(nsCOMPtr<nsISupports> aParent,
-                             RefPtr<CSSNumericValue> aValue)
-    : CSSMathValue(std::move(aParent), MathValueType::MathInvert),
-      mValue(std::move(aValue)) {}
-
 CSSMathInvert::CSSMathInvert(
     nsCOMPtr<nsISupports> aParent,
     MovingNotNull<UniquePtr<StyleNumericType>> aNumericType,
@@ -34,9 +29,12 @@ CSSMathInvert::CSSMathInvert(
 RefPtr<CSSMathInvert> CSSMathInvert::Create(
     nsCOMPtr<nsISupports> aParent, const StyleMathInvert& aMathInvert) {
   RefPtr<CSSNumericValue> value =
-      CSSNumericValue::Create(aParent, *aMathInvert);
+      CSSNumericValue::Create(aParent, *aMathInvert.value);
 
-  return MakeRefPtr<CSSMathInvert>(std::move(aParent), std::move(value));
+  return MakeRefPtr<CSSMathInvert>(
+      std::move(aParent),
+      WrapMovingNotNull(MakeUnique<StyleNumericType>(aMathInvert.numeric_type)),
+      std::move(value));
 }
 
 NS_IMPL_ISUPPORTS_CYCLE_COLLECTION_INHERITED_0(CSSMathInvert, CSSMathValue)
@@ -92,7 +90,8 @@ void CSSMathInvert::ToCssTextWithProperty(const CSSPropertyId& aPropertyId,
 StyleMathInvert CSSMathInvert::ToStyleMathInvert() const {
   auto value = MakeUnique<StyleNumericValue>(mValue->ToStyleNumericValue());
 
-  return StyleMathInvert{std::move(value)};
+  return StyleMathInvert{GetNumericType(),
+                         StyleBox<StyleNumericValue>(std::move(value))};
 }
 
 const CSSMathInvert& CSSMathValue::GetAsCSSMathInvert() const {
