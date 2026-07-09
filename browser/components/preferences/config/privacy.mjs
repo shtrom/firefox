@@ -1286,8 +1286,9 @@ SettingGroupManager.registerGroups({
         id: "reloadTabsHint",
         control: "moz-message-bar",
         l10nId: "preferences-etp-reload-tabs-hint",
-        options: [
+        items: [
           {
+            id: "reloadTabsHintButton",
             control: "moz-button",
             l10nId: "preferences-etp-reload-tabs-hint-button",
             slot: "actions",
@@ -1344,8 +1345,9 @@ SettingGroupManager.registerGroups({
         id: "reloadTabsHint",
         control: "moz-message-bar",
         l10nId: "preferences-etp-reload-tabs-hint",
-        options: [
+        items: [
           {
+            id: "reloadTabsHintButton",
             control: "moz-button",
             l10nId: "preferences-etp-reload-tabs-hint-button",
             slot: "actions",
@@ -3723,6 +3725,10 @@ Preferences.addSetting({
   visible(_, setting) {
     return setting.value;
   },
+});
+
+Preferences.addSetting({
+  id: "reloadTabsHintButton",
   onUserClick() {
     PrivacySettingHelpers.reloadAllOtherTabs();
   },
