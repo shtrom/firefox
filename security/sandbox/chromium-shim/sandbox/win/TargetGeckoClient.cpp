@@ -5,6 +5,7 @@
 #include "TargetGeckoClient.h"
 
 #include "base/win/win_util.h"
+#include "mozilla/Assertions.h"
 
 namespace mozilla::sandboxing {
 
@@ -19,12 +20,25 @@ SyscallBrokering::SyscallBrokering(std::string_view aFunctionName,
     : mFunctionName(aFunctionName),
       mContext(aContext ? base::win::UnicodeStringToView(*aContext)
                         : std::wstring_view{}),
-      mBrokered(false) {}
+      mBrokered(false) {
+  if (!sTargetGeckoServices.logSyscallBrokeringStart) {
+    return;
+  }
+
+  MOZ_ASSERT(sTargetGeckoServices.logSyscallBrokeringEnd,
+             "logSyscallBrokeringEnd must be set to end the started interval.");
+
+  sTargetGeckoServices.logSyscallBrokeringStart(mFunctionName);
+}
 
 SyscallBrokering::~SyscallBrokering() {
   if (!sTargetGeckoServices.logSyscallBrokeringEnd) {
     return;
   }
+
+  MOZ_ASSERT(sTargetGeckoServices.logSyscallBrokeringStart,
+             "logSyscallBrokeringStart must be set to have started the "
+             "interval.");
 
   sTargetGeckoServices.logSyscallBrokeringEnd(mFunctionName, mContext,
                                               mBrokered);

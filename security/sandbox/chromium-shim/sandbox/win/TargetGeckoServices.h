@@ -9,11 +9,13 @@
 
 namespace mozilla::sandboxing {
 
+using SyscallBrokeringStartFn = void (*)(std::string_view aName);
 using SyscallBrokeringEndFn = void (*)(std::string_view aName,
                                        std::wstring_view aContext,
                                        bool aBrokered);
 
 struct TargetGeckoServices {
+  SyscallBrokeringStartFn logSyscallBrokeringStart = nullptr;
   SyscallBrokeringEndFn logSyscallBrokeringEnd = nullptr;
 };
 
