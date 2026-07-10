@@ -41,8 +41,6 @@ support-files = ["topstories.json"]
 
 ["test_NewTabMessaging.js"]
 
-["test_PictureOfTheDayFeed.js"]
-
 ["test_PlacesFeed.js"]
 
 ["test_PrivacyFeed.js"]

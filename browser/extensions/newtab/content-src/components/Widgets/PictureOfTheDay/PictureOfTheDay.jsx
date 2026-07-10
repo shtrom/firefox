@@ -3,7 +3,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 // eslint-disable-next-line no-unused-vars
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback } from "react";
 import { useSelector, batch } from "react-redux";
 import { actionCreators as ac, actionTypes as at } from "common/Actions.mjs";
 import { useSizeSubmenu } from "../../../lib/utils";
@@ -15,27 +15,19 @@ const PICTURE_OF_THE_DAY_ENTRY = WIDGET_REGISTRY.find(
   w => w.id === "pictureOfTheDay"
 );
 
-// Renders the daily picture from the Merino feed (Bug 2050976): the full-bleed
-// image with a source eyebrow. Falls back to a sunrise-gradient empty state
-// when there's no picture, with an eye button to restore.
+// Boilerplate "hidden picture" fallback: a sunrise-gradient background with the
+// context menu, an eye button to bring the picture back, and a hover-revealed
+// empty-state message. The picture, description, and the "Manage wallpaper" /
+// "Hide today's picture" / eye actions arrive with the Merino feed (Bug
+// 2050976) and the wallpaper/dismiss follow-ups (2050973/2050972); for now
+// those controls are present but only emit telemetry.
 const PictureOfTheDay = ({
   dispatch,
   widgetsMayBeMaximized,
   widgetEnabledMap,
 }) => {
   const prefs = useSelector(state => state.Prefs.values);
-  const pictureData = useSelector(state => state.PictureOfTheDay);
   const widgetSize = resolveWidgetSize(PICTURE_OF_THE_DAY_ENTRY, prefs);
-
-  // Fall back to the empty state when the picture fails to load (e.g. a cached
-  // URL opened offline, or a broken/404 image) instead of showing a broken
-  // image. Reset when a new picture arrives so the next day's image is tried.
-  const [imageFailed, setImageFailed] = useState(false);
-  useEffect(() => {
-    setImageFailed(false);
-  }, [pictureData.imageUrl]);
-
-  const hasPicture = Boolean(pictureData.imageUrl) && !imageFailed;
 
   const { impressionRef, recordUserAction, recordEnabled } = useWidgetTelemetry(
     { dispatch, widget: PICTURE_OF_THE_DAY_ENTRY, widgetSize }
@@ -102,18 +94,10 @@ const PictureOfTheDay = ({
 
   return (
     <article
-      className={`picture-of-the-day widget col-4 ${widgetSize}-widget${
-        hasPicture ? " has-picture" : ""
-      }`}
+      className={`picture-of-the-day widget col-4 ${widgetSize}-widget`}
       ref={impressionRef}
     >
       <div className="picture-of-the-day-toolbar">
-        {hasPicture ? (
-          <p
-            className="picture-of-the-day-eyebrow"
-            data-l10n-id="newtab-picture-header"
-          ></p>
-        ) : null}
         <div className="picture-of-the-day-context-menu-wrapper">
           <moz-button
             className="picture-of-the-day-context-menu-button"
@@ -170,29 +154,18 @@ const PictureOfTheDay = ({
         </div>
       </div>
 
-      {hasPicture ? (
-        <div className="picture-of-the-day-populated">
-          <img
-            className="picture-of-the-day-image"
-            src={pictureData.imageUrl}
-            alt={pictureData.title}
-            onError={() => setImageFailed(true)}
-          />
-        </div>
-      ) : (
-        <div className="picture-of-the-day-footer">
-          <button
-            type="button"
-            className="picture-of-the-day-show-button"
-            onClick={handleShow}
-            data-l10n-id="newtab-picture-show-button"
-          ></button>
-          <p
-            className="picture-of-the-day-message"
-            data-l10n-id="newtab-picture-check-back"
-          ></p>
-        </div>
-      )}
+      <div className="picture-of-the-day-footer">
+        <button
+          type="button"
+          className="picture-of-the-day-show-button"
+          onClick={handleShow}
+          data-l10n-id="newtab-picture-show-button"
+        ></button>
+        <p
+          className="picture-of-the-day-message"
+          data-l10n-id="newtab-picture-check-back"
+        ></p>
+      </div>
     </article>
   );
 };

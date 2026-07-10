@@ -190,24 +190,6 @@ export const INITIAL_STATE = {
     suggestedLocations: [],
   },
   // Widgets
-  Stocks: {
-    tickers: [],
-    lastUpdated: null,
-  },
-  PictureOfTheDay: {
-    initialized: false,
-    lastUpdated: null,
-    imageUrl: "",
-    thumbnailUrl: "",
-    title: "",
-    description: "",
-    publishedDate: "",
-    sourceUrl: "",
-    author: "",
-    licenseLabel: "",
-    licenseUrl: "",
-    error: null,
-  },
   ListsWidget: {
     // value pointing to last selectled list
     selected: "taskList",
@@ -1155,29 +1137,6 @@ function Weather(prevState = INITIAL_STATE.Weather, action) {
   }
 }
 
-const PictureOfTheDay = (prevState = INITIAL_STATE.PictureOfTheDay, action) => {
-  switch (action.type) {
-    case at.PICTURE_OF_THE_DAY_UPDATE:
-      return {
-        ...prevState,
-        imageUrl: action.data.imageUrl ?? "",
-        thumbnailUrl: action.data.thumbnailUrl ?? "",
-        title: action.data.title ?? "",
-        description: action.data.description ?? "",
-        publishedDate: action.data.publishedDate ?? "",
-        sourceUrl: action.data.sourceUrl ?? "",
-        author: action.data.author ?? "",
-        licenseLabel: action.data.licenseLabel ?? "",
-        licenseUrl: action.data.licenseUrl ?? "",
-        lastUpdated: action.data.lastUpdated ?? null,
-        error: action.data.error ?? null,
-        initialized: true,
-      };
-    default:
-      return prevState;
-  }
-};
-
 function PrivacyWidget(prevState = INITIAL_STATE.PrivacyWidget, action) {
   switch (action.type) {
     case at.WIDGETS_PRIVACY_UPDATE:
@@ -1449,5 +1408,4 @@ export const reducers = {
   ExternalComponents,
   SportsWidget,
   PrivacyWidget,
-  PictureOfTheDay,
 };

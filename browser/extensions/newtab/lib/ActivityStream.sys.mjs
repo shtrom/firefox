@@ -49,8 +49,6 @@ ChromeUtils.defineESModuleGetters(lazy, {
   SectionsLayoutFeed: "resource://newtab/lib/SectionsLayoutFeed.sys.mjs",
   SportsFeed: "resource://newtab/lib/Widgets/SportsFeed.sys.mjs",
   PrivacyFeed: "resource://newtab/lib/Widgets/PrivacyFeed.sys.mjs",
-  PictureOfTheDayFeed:
-    "resource://newtab/lib/Widgets/PictureOfTheDayFeed.sys.mjs",
   StartupCacheInit: "resource://newtab/lib/StartupCacheInit.sys.mjs",
   Store: "resource://newtab/lib/Store.sys.mjs",
   SystemTickFeed: "resource://newtab/lib/SystemTickFeed.sys.mjs",
@@ -578,14 +576,6 @@ export const PREFS_CONFIG = new Map([
       title:
         "The Merino endpoint for fetching World Cup watch-live broadcaster data",
       value: "https://merino.services.mozilla.com/api/v1/wcs/watch-links",
-    },
-  ],
-  [
-    "widgets.pictureOfTheDay.endpoint",
-    {
-      title: "The Merino endpoint for fetching the daily Picture of the day",
-      value:
-        "https://merino.services.mozilla.com/api/v1/rss/picture-of-the-day",
     },
   ],
   [
@@ -2158,12 +2148,6 @@ const FEEDS_DATA = [
     factory: () => new lazy.PrivacyFeed(),
     title:
       "Handles fetching the daily tracker-blocked count for the Privacy widget",
-    value: true,
-  },
-  {
-    name: "pictureofthedayfeed",
-    factory: () => new lazy.PictureOfTheDayFeed(),
-    title: "Handles fetching and caching the daily Picture of the day",
     value: true,
   },
   {
