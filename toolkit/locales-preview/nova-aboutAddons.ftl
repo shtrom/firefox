@@ -17,3 +17,14 @@ list-empty-get-extensions-promo =
   .message = We’ve got recommendations to help you improve focus, privacy and more.
 
 list-empty-get-extensions-promo-button = Find your first extension
+
+# Themes Mode segmented control shown at the top of the about:addons themes list view
+# when Project Nova is enabled.
+themes-mode-light =
+  .label = Light
+
+themes-mode-dark =
+  .label = Dark
+
+themes-mode-device =
+  .label = Device
