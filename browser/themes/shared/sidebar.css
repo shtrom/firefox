@@ -473,6 +473,7 @@ sidebar-main,
     background-color: var(--sidebar-background-color);
     color: var(--sidebar-text-color);
     padding-block-end: 0;
+    border-inline-start: none;
   }
 
   #sidebar {
@@ -533,7 +534,9 @@ sidebar-main,
     }
   }
 
-  #sidebar-box[sidebar-panel-open] {
+  /* Straighten out the leading edge of the panel, if it's adjacent to the
+   * launcher + splitter. */
+  #sidebar-container:not([hidden]) ~ #sidebar-box[sidebar-panel-open] {
     &:not([sidebar-positionend]) {
       border-start-start-radius: 0;
       border-end-start-radius: 0;
@@ -542,6 +545,16 @@ sidebar-main,
     &[sidebar-positionend] {
       border-start-end-radius: 0;
       border-end-end-radius: 0;
+    }
+  }
+
+  @media not -moz-pref("sidebar.verticalTabs") {
+    #sidebar-box[sidebar-panel-open]:not([sidebar-positionend]) {
+      margin-inline-start: calc(-1 * var(--chrome-window-gap));
+    }
+
+    #sidebar-box[sidebar-panel-open][sidebar-positionend] {
+      margin-inline-end: calc(-1 * var(--chrome-window-gap));
     }
   }
 }
