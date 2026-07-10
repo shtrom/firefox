@@ -226,6 +226,12 @@ addon-card[expanded] .update-postponed-bar,
 }
 
 /* Theme preview image. */
+theme-preview {
+  /* The theme-preview component is a pure abstraction that doesn't participate
+   * to the page layout */
+  display: contents;
+}
+
 .card-heading-image {
   /* If the width, height or aspect ratio changes, don't forget to update the
    * getScreenshotUrlForAddon function in aboutaddons.js */

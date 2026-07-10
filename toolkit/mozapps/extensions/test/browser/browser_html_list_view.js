@@ -119,6 +119,7 @@ add_task(async function testExtensionList() {
     "The card is labelled by the heading"
   );
   let icon = card.querySelector(".addon-icon");
+  is_element_visible(icon, "Extension icon DOM element should not be hidden");
   ok(icon.src.endsWith("/test-icon.png"), "The icon is set");
 
   // Disable the extension.
@@ -840,6 +841,7 @@ add_task(async function testPluginIcons() {
   ok(!!icons.length, "There are some plugins listed");
 
   for (let icon of icons) {
+    is_element_visible(icon, "Plugins icon DOM element should not be hidden");
     is(icon.src, pluginIconUrl, "Plugins use the plugin icon");
   }
 
@@ -865,6 +867,7 @@ add_task(async function testExtensionGenericIcon() {
 
   let card = getCardByAddonId(doc, id);
   let icon = card.querySelector(".addon-icon");
+  is_element_visible(icon, "Extension icon DOM element should not be hidden");
   is(icon.src, extensionIconUrl, "Extensions without icon use the generic one");
 
   await extension.unload();
