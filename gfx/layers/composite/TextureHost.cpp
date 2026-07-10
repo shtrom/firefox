@@ -497,7 +497,8 @@ BufferTextureHost::BufferTextureHost(const BufferDescriptor& aDesc,
   mUseExternalTextures =
       kMaxSize >= mSize.width && mSize.width >= kMinSize &&
       kMaxSize >= mSize.height && mSize.height >= kMinSize &&
-      StaticPrefs::gfx_webrender_enable_client_storage_AtStartup();
+      StaticPrefs::gfx_webrender_enable_client_storage_AtStartup() &&
+      !gfx::gfxVars::UseWebRenderANGLE();
 #else
   mUseExternalTextures = false;
 #endif

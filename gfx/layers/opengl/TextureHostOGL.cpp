@@ -407,6 +407,9 @@ bool DirectMapTextureSource::UpdateInternal(gfx::DataSourceSurface* aSurface,
     return false;
   }
 
+  MOZ_ASSERT(gl()->IsExtensionSupported(gl::GLContext::APPLE_texture_range));
+  MOZ_ASSERT(gl()->IsExtensionSupported(gl::GLContext::APPLE_client_storage));
+
   if (aInit) {
     gl()->fGenTextures(1, &mTextureHandle);
     gl()->fBindTexture(LOCAL_GL_TEXTURE_RECTANGLE_ARB, mTextureHandle);
