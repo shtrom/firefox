@@ -114,6 +114,7 @@ preprocessed_intervention_files = [
     "bug1970810-camper-van-week-end.fr.js",
     "bug1973976-iweather.gov.vn-fix_narrow_interface.css",
     "bug1975651-comic.k-manga.jp.js",
+    "bug1977440-firesmoke.ca-fix_image_flickering.css",
     "bug1978572-store.renishaw.com-fix_range_sliders.css",
     "bug1980382-www.fidrec.com.sg-fix_radio_buttons.css",
     "bug1981995-mygeha.com-fix_location_section_layout.css",
