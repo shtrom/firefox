@@ -22080,7 +22080,8 @@ function Crossword({
   }, /*#__PURE__*/external_React_default().createElement("div", {
     className: "crossword-title-wrapper"
   }, /*#__PURE__*/external_React_default().createElement("h3", {
-    className: "newtab-crossword-title"
+    className: "newtab-crossword-title",
+    "data-l10n-id": "newtab-crossword-widget-header"
   }), /*#__PURE__*/external_React_default().createElement("div", {
     className: "crossword-context-menu-wrapper"
   }, /*#__PURE__*/external_React_default().createElement("moz-button", {
@@ -22112,8 +22113,9 @@ function Crossword({
     onClick: handleCrosswordHide
   }), /*#__PURE__*/external_React_default().createElement("panel-item", {
     className: "learn-more",
+    "data-l10n-id": "newtab-crossword-menu-learn-more",
     onClick: handleLearnMore
-  }, "Learn more")))), /*#__PURE__*/external_React_default().createElement("div", {
+  })))), /*#__PURE__*/external_React_default().createElement("div", {
     className: "crossword-body"
   }, /*#__PURE__*/external_React_default().createElement("iframe", {
     className: "crossword-frame",
@@ -25564,7 +25566,7 @@ function WidgetsManagementPanel({
     ontoggle: onToggleWidget,
     "data-preference": "widgets.crossword.enabled",
     "data-event-source": "WIDGET_CROSSWORD",
-    label: "Crossword"
+    "data-l10n-id": "newtab-crossword-widget-toggle"
   })), mayHaveStocksWidget && /*#__PURE__*/external_React_default().createElement("div", {
     id: "stocks-widget-section",
     className: "section"

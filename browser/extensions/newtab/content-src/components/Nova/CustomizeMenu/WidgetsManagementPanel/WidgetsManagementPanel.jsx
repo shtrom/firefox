@@ -226,14 +226,13 @@ function WidgetsManagementPanel({
               )}
               {mayHaveCrosswordWidget && (
                 <div id="crossword-widget-section" className="section">
-                  {/* TODO: Add in fluent string when correct preview files are set up */}
                   <moz-toggle
                     id="crossword-toggle"
                     pressed={crosswordEnabled || null}
                     ontoggle={onToggleWidget}
                     data-preference="widgets.crossword.enabled"
                     data-event-source="WIDGET_CROSSWORD"
-                    label="Crossword"
+                    data-l10n-id="newtab-crossword-widget-toggle"
                   ></moz-toggle>
                 </div>
               )}
