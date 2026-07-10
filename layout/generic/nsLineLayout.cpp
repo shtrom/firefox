@@ -10,8 +10,10 @@
 
 #include "LayoutLogging.h"
 #include "RubyUtils.h"
+#include "mozilla/AbsoluteContainingBlock.h"
 #include "mozilla/ComputedStyle.h"
 #include "mozilla/SVGTextFrame.h"
+#include "mozilla/StaticPrefs_layout.h"
 #include "nsBidiPresUtils.h"
 #include "nsBlockFrame.h"
 #include "nsContainerFrame.h"
@@ -19,6 +21,7 @@
 #include "nsFontMetrics.h"
 #include "nsGkAtoms.h"
 #include "nsIContent.h"
+#include "nsInlineFrame.h"
 #include "nsLayoutUtils.h"
 #include "nsPresContext.h"
 #include "nsRubyFrame.h"
@@ -986,6 +989,17 @@ void nsLineLayout::ReflowFrame(nsIFrame* aFrame, nsReflowStatus& aReflowStatus,
     // a next-in-flow where it ends up).
     if (aReflowStatus.IsComplete()) {
       if (nsIFrame* kidNextInFlow = aFrame->GetNextInFlow()) {
+        if (StaticPrefs::layout_abspos_fragment_aware_inline_cb_enabled()) {
+          if (nsInlineFrame* inlineFrame = do_QueryFrame(aFrame)) {
+            // Before removing aFrame's next-in-flows, pull any absolute
+            // children's first-in-flows in the next-in-flows into aFrame to
+            // prevent those children from being destroyed.
+            if (AbsoluteContainingBlock* absCB =
+                    inlineFrame->GetAbsoluteContainingBlock()) {
+              absCB->PrepareAbsoluteFrames(inlineFrame);
+            }
+          }
+        }
         // Remove all of the childs next-in-flows. Make sure that we ask
         // the right parent to do the removal (it's possible that the
         // parent is not this because we are executing pullup code)
