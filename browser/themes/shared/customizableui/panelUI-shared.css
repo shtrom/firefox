@@ -2530,6 +2530,7 @@ radiogroup:focus-visible > .subviewradio[focused="true"] {
 
 #profiles-edit-this-profile-button {
   list-style-image: url("chrome://global/skin/icons/edit-outline.svg");
+  /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
   padding: var(--panel-header-back-icon-padding);
   margin: 0;
 }
