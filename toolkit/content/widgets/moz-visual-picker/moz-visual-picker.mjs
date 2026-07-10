@@ -157,6 +157,10 @@ export class MozVisualPickerItem extends SelectControlItemMixin(MozLitElement) {
   }
 
   textTemplate() {
+    if (!this.label) {
+      return "";
+    }
+
     const labelElement =
       this.labelPosition == "outside"
         ? html`<label class="label" for="picker-item">${this.label}</label>`
