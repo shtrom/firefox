@@ -98,6 +98,12 @@ export const INTENTS_LIST = [
   "Resume / Revisit",
 ];
 
+/**
+ * Memory retrieval constants
+ */
+export const DEFAULT_RELEVANT_MEMORIES_TOP_K = 5;
+export const DEFAULT_RELEVANT_MEMORIES_SIMILARITY_THRESHOLD = 0.22;
+
 // if generate memories is enabled. This is used by
 // - MemoriesScheduler
 export const PREF_GENERATE_MEMORIES_FROM_HISTORY =

@@ -35,6 +35,8 @@ import {
   PREF_GENERATE_MEMORIES_FROM_HISTORY,
   PREF_GENERATE_MEMORIES_FROM_CONVERSATION,
   MAX_MEMORY_SUMMARY_LENGTH,
+  DEFAULT_RELEVANT_MEMORIES_TOP_K,
+  DEFAULT_RELEVANT_MEMORIES_SIMILARITY_THRESHOLD,
 } from "moz-src:///browser/components/aiwindow/models/memories/MemoriesConstants.sys.mjs";
 import {
   getFormattedMemoryAttributeList,
@@ -45,8 +47,6 @@ import { MEMORIES_MESSAGE_CLASSIFY_SCHEMA } from "moz-src:///browser/components/
 import { AIWindow } from "moz-src:///browser/components/aiwindow/ui/modules/AIWindow.sys.mjs";
 import { EveryWindow } from "resource:///modules/EveryWindow.sys.mjs";
 import { AIWindowAccountAuth } from "moz-src:///browser/components/aiwindow/ui/modules/AIWindowAccountAuth.sys.mjs";
-import { EmbeddingsGenerator } from "chrome://global/content/ml/EmbeddingsGenerator.sys.mjs";
-import { cosSim } from "chrome://global/content/ml/NLPUtils.sys.mjs";
 
 const DEFAULT_HISTORY_FULL_LOOKUP_DAYS = 20;
 const DEFAULT_HISTORY_FULL_MAX_RESULTS = 3000;
@@ -78,12 +78,6 @@ export class MemoriesManager {
   // Cached Conversation for memory usage (classification, relevance).
   // Same serial-only contract.
   static #usageConversationPromise = null;
-
-  // Embeddings cache for semantic memory search
-  static #embeddingsGenerator = null;
-  static #memoryEmbeddingsCache = null;
-  static #memoryCacheKey = null;
-
   /**
    * Returns a Conversation wired to the memory-generation feature. Used for:
    * initial generation, deduplication, sensitivity filter.
@@ -295,6 +289,19 @@ export class MemoriesManager {
   }
 
   /**
+   * Public API wrapper around MemoryStore.getMemories
+   *
+   * @param {Array<object>} [attributeFilters]     // Filtering options
+   * @param {string} [attributeFilters.field]      // Memory field (attribute) on which to filter
+   * @param {string} [attributeFilters.value]      // The value to filter against
+   * @param {string} [attributeFilters.comparator] // How the filter should be applied (equal to, greater than, less than, etc.)
+   * @returns {Array<object>}                      // Array of filtered memories
+   */
+  static async getMemoriesByAttribute(attributeFilters) {
+    return await MemoryStore.getMemories({ attributeFilters });
+  }
+
+  /**
    * Returns the unified session-memory watermark (ms since Unix epoch): the
    * point through which the combined history+chat session pipeline has been
    * processed.
@@ -490,100 +497,32 @@ export class MemoriesManager {
   }
 
   /**
-   * Clears the embeddings cache. Used for testing.
+   * Clears the embeddings cache in MemoryStore. Used for testing.
    *
    * @private
    */
   static _clearEmbeddingsCache() {
-    this.#memoryEmbeddingsCache = null;
-    this.#memoryCacheKey = null;
+    MemoryStore._clearEmbeddingsCache();
   }
 
   /**
-   * Computes a hash of memories for cache invalidation.
-   * Uses incremental FNV-1a hashing to avoid allocating large concatenated strings
-   * based on https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function#FNV-1a_hash
-   *
-   * @param {Array} memories  Array of memory objects with id and updated_at fields
-   * @returns {number}        32-bit hash representing the memories state
-   */
-  static #computeMemoriesHash(memories) {
-    // FNV-1a offset basis (32-bit)
-    let hash = 0x811c9dc5;
-
-    for (const m of memories) {
-      const str = `${m.id}-${m.updated_at}`;
-      for (let i = 0; i < str.length; i++) {
-        hash ^= str.charCodeAt(i);
-        // FNV prime, keep 32-bit
-        hash = (hash * 0x01000193) >>> 0;
-      }
-    }
-
-    return hash;
-  }
-
-  /**
-   * Fetches relevant memories for a given user message using semantic similarity.
-   * Uses embeddings and cosine similarity for fast, accurate memory retrieval.
+   * Public API wrapper around MemoryStore.getRelevantMemories
    *
    * @param {string} message                  User message to find relevant memories for
    * @param {number} topK                     Number of top relevant memories to return (default: 5)
    * @param {number} similarityThreshold      Minimum similarity score (0-1) to include (default: 0.22)
-   * @returns {Promise<Array<object>>}           List of relevant memories sorted by similarity
+   * @returns {Promise<Array<object>>}        List of relevant memories sorted by similarity
    */
   static async getRelevantMemories(
     message,
-    topK = 5,
-    similarityThreshold = 0.22
+    topK = DEFAULT_RELEVANT_MEMORIES_TOP_K,
+    similarityThreshold = DEFAULT_RELEVANT_MEMORIES_SIMILARITY_THRESHOLD
   ) {
-    const memories = await MemoriesManager.getAllMemories();
-
-    if (memories.length === 0) {
-      return [];
-    }
-
-    // Lazy initialize embeddings generator
-    if (!this.#embeddingsGenerator) {
-      this.#embeddingsGenerator = EmbeddingsGenerator.forGeneral();
-    }
-
-    // Re-embed memories only if cache is invalid
-    const currentCacheKey = this.#computeMemoriesHash(memories);
-    if (
-      !this.#memoryEmbeddingsCache ||
-      this.#memoryCacheKey !== currentCacheKey
-    ) {
-      const memoryTexts = memories.map(m => {
-        const summary = m.memory_summary?.toLowerCase() || "";
-        const reasoning = m.reasoning?.toLowerCase() || "";
-        return reasoning ? `${summary}. ${reasoning}` : summary;
-      });
-      const result = await this.#embeddingsGenerator.embedMany(memoryTexts);
-      this.#memoryEmbeddingsCache = result.output || result;
-      this.#memoryCacheKey = currentCacheKey;
-    }
-
-    const queryResult = await this.#embeddingsGenerator.embed(
-      message.toLowerCase()
+    return await MemoryStore.getRelevantMemories(
+      message,
+      topK,
+      similarityThreshold
     );
-    let queryEmbedding = queryResult.output || queryResult;
-
-    if (Array.isArray(queryEmbedding) && queryEmbedding.length === 1) {
-      queryEmbedding = queryEmbedding[0];
-    }
-
-    // Calculate cosine similarity
-    const similarities = this.#memoryEmbeddingsCache.map((memEmb, idx) => ({
-      ...memories[idx],
-      similarity: cosSim(queryEmbedding, memEmb),
-    }));
-
-    // Filter by threshold, sort by similarity, and return top K
-    return similarities
-      .filter(m => m.similarity >= similarityThreshold)
-      .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, topK);
   }
 
   /**

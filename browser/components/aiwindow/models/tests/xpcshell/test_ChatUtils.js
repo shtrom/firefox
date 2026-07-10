@@ -229,9 +229,7 @@ add_task(async function test_constructRelevantMemoriesContextMessage() {
       {
         id: "food_drink.16ec1838",
         memory_summary: "Loves drinking coffee",
-        category: "Food & Drink",
-        intent: "Plan / Organize",
-        score: 3,
+        tags: ["category:Food & Drink", "intent:Plan / Organize"],
         similarity: 0.95,
       },
     ]);
