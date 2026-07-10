@@ -5,6 +5,7 @@
   <title>Test that character bounds are reported correctly for DOM-based EditContext.</title>
   <script src="/tests/SimpleTest/SimpleTest.js"></script>
   <script src="/tests/SimpleTest/EventUtils.js"></script>
+  <script src="common.js"></script>
   <link rel="stylesheet" href="/tests/SimpleTest/test.css"/>
 </head>
 <body>
@@ -27,10 +28,6 @@ function rectUnion(r1, r2) {
     Math.max(r1.left + r1.width - left, r2.left + r2.width - left),
     Math.max(r1.top + r1.height - top, r2.top + r2.height - top),
   );
-}
-
-function stringifyRect(r) {
-  return `{left: ${r.left}, top: ${r.top}, width: ${r.width}, height: ${r.height}}`;
 }
 
 function clearRectCache() {
@@ -100,8 +97,8 @@ function checkTextRectArray(start, count) {
   const rects = getTextRectArray(start, count);
   info(start + ' ' + count);
   for (let i = start; i < start+count; i++) {
-    is(stringifyRect(rects[i-start]), stringifyRect(bounds[i]),
-       formatMessage('synthesizeQueryTextRectArray should give rectangles provided in updateCharacterBounds.'));
+    checkRect(rects[i-start], bounds[i],
+              formatMessage('synthesizeQueryTextRectArray should give rectangles provided in updateCharacterBounds.'));
   }
 }
 
@@ -114,12 +111,12 @@ function checkTextRect(start, count) {
   ok(result.succeeded,
      formatMessage('QueryTextRect should succeed on EditContext.'));
   let union = bounds.slice(start, start + count).reduce(rectUnion);
-  is(stringifyRect(result), stringifyRect(union),
-     formatMessage('QueryTextRect should give union of rectangles provided in updateCharacterBounds.'));
+  checkRect(result, union,
+            formatMessage('QueryTextRect should give union of rectangles provided in updateCharacterBounds.'));
 }
 
 function checkCharacterAtPoint(characterIndex) {
-  const rect = bounds[characterIndex];
+  const rect = convertToRootRelativeRect(bounds[characterIndex]);
   let result = synthesizeCharAtPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
   ok(firedCharacterBoundsUpdate,
      formatMessage('Should fire characterboundsupdate when querying character at point.'));
@@ -201,42 +198,42 @@ async function runTests(aHost) {
 
   let rects = getTextRectArray(0, 0);
   is(rects.length, 1, formatMessage('QueryTextRectArray should still give a caret rect if count is 0.'));
-  is(stringifyRect(rects[0]),
-     stringifyRect({left: bounds[0].left, top: bounds[0].top, width: 1, height: bounds[0].height}),
-    formatMessage('QueryTextRectArray should give first character rect collapsed to the left.'));
+  checkRect(rects[0],
+            {left: bounds[0].left, top: bounds[0].top, width: 1, height: bounds[0].height},
+            formatMessage('QueryTextRectArray should give first character rect collapsed to the left.'));
 
   rects = getTextRectArray(editContext.text.length, 0);
   is(rects.length, 1,
      formatMessage('QueryTextRectArray should still give a caret rect if count is 0.'));
   let lastBound = bounds[editContext.text.length - 1];
-  is(stringifyRect(rects[0]),
-     stringifyRect({left: lastBound.left + lastBound.width, top: lastBound.top, width: 1, height: lastBound.height}),
-     formatMessage('QueryTextRectArray should give last character rect collapsed to the right.'));
+  checkRect(rects[0],
+            {left: lastBound.left + lastBound.width, top: lastBound.top, width: 1, height: lastBound.height},
+            formatMessage('QueryTextRectArray should give last character rect collapsed to the right.'));
 
   aHost.style.writingMode = 'vertical-rl';
   rects = getTextRectArray(0, 0);
   is(rects.length, 1,
      formatMessage('QueryTextRectArray should still give a caret rect if count is 0.'));
-  is(stringifyRect(rects[0]),
-     stringifyRect({left: bounds[0].left, top: bounds[0].top, width: bounds[0].width, height: 1}),
-     formatMessage('QueryTextRectArray should give first character rect collapsed to the top for vertical writing mode.'));
+  checkRect(rects[0],
+            {left: bounds[0].left, top: bounds[0].top, width: bounds[0].width, height: 1},
+            formatMessage('QueryTextRectArray should give first character rect collapsed to the top for vertical writing mode.'));
   rects = getTextRectArray(editContext.text.length, 0);
   is(rects.length, 1,
      formatMessage('QueryTextRectArray should still give a caret rect if count is 0.'));
-  is(stringifyRect(rects[0]),
-     stringifyRect({left: lastBound.left, top: lastBound.top + lastBound.height, width: lastBound.width, height: 1}),
-    formatMessage('QueryTextRectArray should give last character rect collapsed to the bottom for vertical writing mode.'));
+  checkRect(rects[0],
+            {left: lastBound.left, top: lastBound.top + lastBound.height, width: lastBound.width, height: 1},
+            formatMessage('QueryTextRectArray should give last character rect collapsed to the bottom for vertical writing mode.'));
 
   editContext.updateText(0, editContext.text.length, 'fooạ̀́bar');
   checkTextRectArray(5, 1);
   is(characterBoundsUpdateRange, '3-7',
-    formatMessage('characterboundsupdate offsets should not be in the middle of a grapheme cluster.'));
+     formatMessage('characterboundsupdate offsets should not be in the middle of a grapheme cluster.'));
   const longText = 'test'.repeat(20);
   const graphemeCluster = '🏳️‍🌈';
   editContext.updateText(0, editContext.text.length, longText + graphemeCluster + longText);
   checkTextRectArray(longText.length + 2, 1);
   is(characterBoundsUpdateRange, `${longText.length}-${longText.length+graphemeCluster.length}`,
-    formatMessage('characterboundsupdate offsets should not be in the middle of a grapheme cluster.'));
+     formatMessage('characterboundsupdate offsets should not be in the middle of a grapheme cluster.'));
 }
 
 add_task(() => runTests(domHost));

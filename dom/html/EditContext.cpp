@@ -24,6 +24,7 @@
 #include "mozilla/intl/Segmenter.h"
 #include "nsDOMCSSDeclaration.h"
 #include "nsGenericHTMLElement.h"
+#include "nsLayoutUtils.h"
 #include "nsTextNode.h"
 
 namespace mozilla::dom {
@@ -172,18 +173,35 @@ auto EditContext::ToRect(const DOMRect& aRect) const -> Rect {
   return Rect(aRect.X(), aRect.Y(), aRect.Width(), aRect.Height());
 }
 
-LayoutDeviceIntRect EditContext::ToDeviceRect(const nsPresContext& aPresContext,
-                                              const Rect& aRect) {
-  CSSIntRect rect;
-  aRect.ToIntRect(&rect);
-  LayoutDeviceIntRect deviceRect;
-  deviceRect.x = aPresContext.CSSPixelsToDevPixels(rect.x);
-  deviceRect.y = aPresContext.CSSPixelsToDevPixels(rect.y);
+LayoutDeviceIntRect EditContext::ToRootRelativeDeviceRect(
+    const nsPresContext& aPresContext, const Rect& aRect) {
+  CSSIntRect cssRect;
+  aRect.ToIntRect(&cssRect);
+  return ToRootRelativeDeviceRect(aPresContext, Rect::ToAppUnits(cssRect));
+}
+
+LayoutDeviceIntRect EditContext::ToRootRelativeDeviceRect(
+    const nsPresContext& aPresContext, const nsRect& aRect) {
+  nsRect rect = aRect;
+  if (!aPresContext.IsRoot()) {
+    nsPresContext* rootPC = aPresContext.GetRootPresContext();
+    if (NS_WARN_IF(!rootPC)) {
+      return {0, 0, 1, 1};
+    }
+    nsIFrame* documentRootFrame = aPresContext.PresShell()->GetRootFrame();
+    nsIFrame* topLevelRootFrame = rootPC->PresShell()->GetRootFrame();
+    if (NS_WARN_IF(!documentRootFrame) || NS_WARN_IF(!topLevelRootFrame)) {
+      return {0, 0, 1, 1};
+    }
+    rect = nsLayoutUtils::TransformFrameRectToAncestor(documentRootFrame, rect,
+                                                       topLevelRootFrame);
+  }
+  LayoutDeviceIntRect deviceRect = LayoutDeviceIntRect::FromAppUnitsToOutside(
+      rect, aPresContext.AppUnitsPerDevPixel());
   // ContentCache, etc. is confused if the rectangles are empty,
   // so ensure that they aren't.
-  deviceRect.width = std::max(1, aPresContext.CSSPixelsToDevPixels(rect.width));
-  deviceRect.height =
-      std::max(1, aPresContext.CSSPixelsToDevPixels(rect.height));
+  deviceRect.width = std::max(1, deviceRect.width);
+  deviceRect.height = std::max(1, deviceRect.height);
   return deviceRect;
 }
 
@@ -583,7 +601,8 @@ nsresult EditContext::FireCharacterBoundsUpdateAndGetRects(
       return NS_ERROR_FAILURE;
     }
     Rect cssRect = mCodepointRects[indexInCodepointRects.value()];
-    LayoutDeviceIntRect deviceRect = ToDeviceRect(*presContext, cssRect);
+    LayoutDeviceIntRect deviceRect =
+        ToRootRelativeDeviceRect(*presContext, cssRect);
     aRects.AppendElement(deviceRect);
   }
   if (collapse != CollapseDirection::None) {
@@ -628,7 +647,7 @@ Maybe<LayoutDeviceIntRect> EditContext::GetControlBounds() const {
     // Control bounds were never set.
     return Nothing();
   }
-  return Some(ToDeviceRect(*presContext, *mControlBounds));
+  return Some(ToRootRelativeDeviceRect(*presContext, *mControlBounds));
 }
 
 Maybe<LayoutDeviceIntRect> EditContext::GetSelectionBounds() const {
@@ -637,7 +656,7 @@ Maybe<LayoutDeviceIntRect> EditContext::GetSelectionBounds() const {
     // Selection bounds were never set.
     return Nothing();
   }
-  return Some(ToDeviceRect(*presContext, *mSelectionBounds));
+  return Some(ToRootRelativeDeviceRect(*presContext, *mSelectionBounds));
 }
 
 LayoutDeviceIntRect EditContext::FallbackBounds() const {
@@ -655,16 +674,7 @@ LayoutDeviceIntRect EditContext::FallbackBounds() const {
   nsPresContext* presContext =
       mAssociatedElement->GetPrimaryFrame()->PresContext();
   nsRect appUnitsRect = mAssociatedElement->GetPrimaryFrame()->GetRect();
-  LayoutDeviceIntRect deviceRect;
-  deviceRect.x = presContext->AppUnitsToDevPixels(appUnitsRect.x);
-  deviceRect.y = presContext->AppUnitsToDevPixels(appUnitsRect.y);
-  // ContentCache, etc. is confused if the rectangles are empty,
-  // so ensure that they aren't.
-  deviceRect.width =
-      std::max(1, presContext->AppUnitsToDevPixels(appUnitsRect.width));
-  deviceRect.height =
-      std::max(1, presContext->AppUnitsToDevPixels(appUnitsRect.height));
-  return deviceRect;
+  return ToRootRelativeDeviceRect(*presContext, appUnitsRect);
 }
 
 }  // namespace mozilla::dom
