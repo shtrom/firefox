@@ -17,6 +17,15 @@
 
 #PopupAutoComplete > richlistbox {
   padding: var(--space-medium);
+
+  &:not([pointerselected]) > richlistitem.autocomplete-row-item[selected] > autocomplete-row-item {
+    border-color: var(--focus-outline-color);
+  }
+
+  &[pointerselected] > richlistitem.autocomplete-row-item[selected] > autocomplete-row-item {
+    background-color: var(--button-background-color-ghost-hover);
+    color: var(--button-text-color-ghost-hover);
+  }
 }
 
 #PopupAutoComplete > richlistbox > richlistitem.autocomplete-row-item {
@@ -29,15 +38,6 @@
   &[selected] {
     background-color: unset;
     color: unset;
-
-    > autocomplete-row-item:not([selected]) {
-      background-color: var(--button-background-color-ghost-hover);
-      color: var(--button-text-color-ghost-hover);
-    }
-
-    &:not(:hover) > autocomplete-row-item[selected] {
-      border-color: var(--focus-outline-color);
-    }
   }
 
   &[footer] {

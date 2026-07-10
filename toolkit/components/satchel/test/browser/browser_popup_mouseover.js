@@ -117,6 +117,10 @@ add_task(async function test_focus_indicator_follows_pointer() {
 
       const listItemElems = itemsBox.querySelectorAll(".autocomplete-row-item");
       Assert.ok(
+        !itemsBox.hasAttribute("pointerselected"),
+        "keyboard selection should not set pointerselected"
+      );
+      Assert.ok(
         listItemElems[0].querySelector("autocomplete-row-item").selected,
         "keyboard-selected row item should show the focus indicator"
       );
@@ -131,8 +135,12 @@ add_task(async function test_focus_indicator_follows_pointer() {
       });
 
       Assert.ok(
-        !itemsBox.querySelector("autocomplete-row-item[selected]"),
-        "focus indicator should be cleared once the pointer selects a row"
+        itemsBox.hasAttribute("pointerselected"),
+        "pointer selection should set pointerselected"
+      );
+      Assert.ok(
+        listItemElems[1].querySelector("autocomplete-row-item").selected,
+        "moused-over row item should become selected"
       );
       Assert.equal(
         autoCompletePopup.selectedIndex,
