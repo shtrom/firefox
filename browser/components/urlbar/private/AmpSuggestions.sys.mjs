@@ -120,6 +120,9 @@ export class AmpSuggestions extends SuggestProvider {
       if (suggestion.custom_details?.amp) {
         let { amp } = suggestion.custom_details;
         normalized.suggestionId = amp.suggestion_id;
+        if (typeof amp.header_text == "string") {
+          normalized.fullKeyword = amp.header_text;
+        }
       }
 
       // Replace URL timestamp templates inline. This isn't necessary for Rust
