@@ -42,10 +42,21 @@ const DEFAULT_THEME_ID = "default-theme@mozilla.org";
  */
 
 /**
- * Component description goes here.
+ * A component for selecting and managing Firefox themes. Displays theme color
+ * swatches and optionally appearance mode controls (light/dark/device).
  *
  * @tagname theme-picker
- * @property {string} variant - Property description goes here
+ * @property {string} appearance
+ *   Current appearance mode: "light", "dark", or "device"
+ * @property {string} activeThemeId - The addon ID of the currently active theme
+ * @property {boolean} nativeTheme - Whether native theme styling is enabled
+ * @property {ThemePickerTheme[]} themes
+ *   Array of theme objects with IDs and picker colors
+ * @property {string} layout
+ *   Display layout: "full" (with mode selector and native theme checkbox) or
+ *   "compact" (color swatches only)
+ * @fires themechange - Fired when appearance, theme, or nativeTheme changes.
+ * Detail contains {property, value}
  */
 export class ThemePicker extends MozLitElement {
   static properties = {
@@ -53,6 +64,7 @@ export class ThemePicker extends MozLitElement {
     activeThemeId: { type: String },
     nativeTheme: { type: Boolean },
     themes: { type: Array },
+    layout: { type: String },
   };
 
   constructor() {
@@ -63,6 +75,7 @@ export class ThemePicker extends MozLitElement {
     this.themes = [];
     this.nativeTheme = false;
     this.controller = ThemePicker.createController(this);
+    this.layout = "full";
   }
 
   /**
@@ -129,7 +142,10 @@ export class ThemePicker extends MozLitElement {
     });
   }
 
-  render() {
+  appearanceChooserTemplate() {
+    if (this.layout == "compact") {
+      return "";
+    }
     const icons = {
       // eslint-disable-next-line mozilla/no-browser-refs-in-toolkit
       light: "chrome://browser/skin/weather/sunny.svg",
@@ -138,31 +154,47 @@ export class ThemePicker extends MozLitElement {
       // eslint-disable-next-line mozilla/no-browser-refs-in-toolkit
       device: "chrome://browser/skin/device-desktop.svg",
     };
+    return html`<moz-segmented-control
+      .value=${this.appearance}
+      @change=${this.appearanceChange}
+    >
+      <moz-segmented-control-item
+        data-l10n-id="theme-picker-mode-light"
+        value="light"
+        .iconSrc=${icons.light}
+      ></moz-segmented-control-item>
+      <moz-segmented-control-item
+        data-l10n-id="theme-picker-mode-dark"
+        value="dark"
+        .iconSrc=${icons.dark}
+      ></moz-segmented-control-item>
+      <moz-segmented-control-item
+        data-l10n-id="theme-picker-mode-device"
+        value="device"
+        .iconSrc=${icons.device}
+      ></moz-segmented-control-item>
+    </moz-segmented-control>`;
+  }
+
+  defaultThemeTemplate() {
+    if (this.layout == "compact") {
+      return "";
+    }
+    return html`<moz-checkbox
+      data-l10n-id="theme-picker-use-linux-theme"
+      ?checked=${this.nativeTheme}
+      ?disabled=${this.activeThemeId != DEFAULT_THEME_ID}
+      @change=${this.nativeThemeChange}
+    ></moz-checkbox>`;
+  }
+
+  render() {
     return html`
       <link
         rel="stylesheet"
         href="chrome://global/content/elements/theme-picker.css"
       />
-      <moz-segmented-control
-        .value=${this.appearance}
-        @change=${this.appearanceChange}
-      >
-        <moz-segmented-control-item
-          data-l10n-id="theme-picker-mode-light"
-          value="light"
-          .iconSrc=${icons.light}
-        ></moz-segmented-control-item>
-        <moz-segmented-control-item
-          data-l10n-id="theme-picker-mode-dark"
-          value="dark"
-          .iconSrc=${icons.dark}
-        ></moz-segmented-control-item>
-        <moz-segmented-control-item
-          data-l10n-id="theme-picker-mode-device"
-          value="device"
-          .iconSrc=${icons.device}
-        ></moz-segmented-control-item>
-      </moz-segmented-control>
+      ${this.appearanceChooserTemplate()}
       <moz-visual-picker
         .value=${this.activeThemeId}
         @change=${this.themeChange}
@@ -174,12 +206,7 @@ export class ThemePicker extends MozLitElement {
             ></moz-visual-picker-item>`
         )}
       </moz-visual-picker>
-      <moz-checkbox
-        data-l10n-id="theme-picker-use-linux-theme"
-        ?checked=${this.nativeTheme}
-        ?disabled=${this.activeThemeId != DEFAULT_THEME_ID}
-        @change=${this.nativeThemeChange}
-      ></moz-checkbox>
+      ${this.defaultThemeTemplate()}
     `;
   }
 }
