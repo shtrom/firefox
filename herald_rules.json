@@ -31,7 +31,7 @@
               "is_group": true
             },
             {
-              "target": "/ent:infra-testing-reviewers",
+              "target": "ent:infra-testing-reviewers",
               "blocking": false,
               "is_group": true
             },
@@ -55,9 +55,9 @@
         "zeid"
       ]
     },
-    "/ent:infra-testing-reviewers": {
-      "id": "/ent:infra-testing-reviewers",
-      "display_name": "/ent:infra-testing-reviewers",
+    "ent:infra-testing-reviewers": {
+      "id": "ent:infra-testing-reviewers",
+      "display_name": "ent:infra-testing-reviewers",
       "members": [
         "shtrom"
       ]
