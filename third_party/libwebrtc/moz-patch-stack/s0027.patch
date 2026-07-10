@@ -116,7 +116,7 @@ index 375e71ac46..c028ef6f70 100644
    # TODO(https://bugs.webrtc.org/14437):  Remove this section if general
    # Chromium fix resolves the problem.
 diff --git a/BUILD.gn b/BUILD.gn
-index 4be196196f..9243cfb519 100644
+index 3cbf3e4e4a..439689b3b1 100644
 --- a/BUILD.gn
 +++ b/BUILD.gn
 @@ -39,7 +39,7 @@ if (is_android) {
@@ -128,7 +128,7 @@ index 4be196196f..9243cfb519 100644
    # This target should (transitively) cause everything to be built; if you run
    # 'ninja default' and then 'ninja all', the second build should do no work.
    group("default") {
-@@ -188,6 +188,10 @@ config("common_inherited_config") {
+@@ -191,6 +191,10 @@ config("common_inherited_config") {
      defines += [ "WEBRTC_ENABLE_OBJC_SYMBOL_EXPORT" ]
    }
  
@@ -139,7 +139,7 @@ index 4be196196f..9243cfb519 100644
    if (!rtc_builtin_ssl_root_certificates) {
      defines += [ "WEBRTC_EXCLUDE_BUILT_IN_SSL_ROOT_CERTS" ]
    }
-@@ -503,9 +507,11 @@ config("common_config") {
+@@ -506,9 +510,11 @@ config("common_config") {
    }
  }
  
@@ -151,7 +151,7 @@ index 4be196196f..9243cfb519 100644
  
  if (!rtc_build_ssl) {
    config("external_ssl_library") {
-@@ -569,6 +575,34 @@ if (!build_with_chromium) {
+@@ -572,6 +578,34 @@ if (!build_with_chromium) {
        "stats",
        "video",
      ]
@@ -186,7 +186,7 @@ index 4be196196f..9243cfb519 100644
  
      if (rtc_include_builtin_audio_codecs) {
        deps += [
-@@ -579,8 +613,22 @@ if (!build_with_chromium) {
+@@ -582,8 +616,22 @@ if (!build_with_chromium) {
  
      if (build_with_mozilla) {
        deps += [
@@ -850,10 +850,10 @@ index 0f581c6922..5465a0e26c 100644
      } else {
        cflags = [
 diff --git a/modules/desktop_capture/BUILD.gn b/modules/desktop_capture/BUILD.gn
-index 11d4c742e3..c63387d211 100644
+index b85984eb1c..f742b70627 100644
 --- a/modules/desktop_capture/BUILD.gn
 +++ b/modules/desktop_capture/BUILD.gn
-@@ -643,37 +643,12 @@ rtc_library("desktop_capture") {
+@@ -644,37 +644,12 @@ rtc_library("desktop_capture") {
      ]
      deps += [ ":desktop_capture_objc" ]
    }
@@ -891,7 +891,7 @@ index 11d4c742e3..c63387d211 100644
    }
  
    if (rtc_use_x11_extensions) {
-@@ -836,9 +811,7 @@ rtc_library("desktop_capture") {
+@@ -837,9 +812,7 @@ rtc_library("desktop_capture") {
      deps += [ "../../rtc_base:sanitizer" ]
    }
  
@@ -1259,7 +1259,7 @@ index 09f0ecc008..4c65e18159 100644
      "../api:sequence_checker",
      "../api/adaptation:resource_adaptation_api",
 diff --git a/webrtc.gni b/webrtc.gni
-index 5a0009a65b..2da252636b 100644
+index b827f10b6b..34b2c0e4d6 100644
 --- a/webrtc.gni
 +++ b/webrtc.gni
 @@ -39,6 +39,11 @@ if (is_mac) {
@@ -1359,7 +1359,7 @@ index 5a0009a65b..2da252636b 100644
  # Make it possible to provide custom locations for some libraries (move these
  # up into declare_args should we need to actually use them for the GN build).
  rtc_libvpx_dir = "//third_party/libvpx"
-@@ -1255,7 +1265,7 @@ if (is_mac || is_ios) {
+@@ -1259,7 +1269,7 @@ if (is_mac || is_ios) {
    }
  }
  
