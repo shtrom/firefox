@@ -138,9 +138,6 @@ static nsresult OpenPiPWindowUtility(nsPIDOMWindowOuter* aParent,
   RefPtr<nsDocShellLoadState> loadState =
       nsWindowWatcher::CreateLoadState(uri, aParent);
 
-  // Ensure we load with this's relevant global object's principal
-  loadState->SetTriggeringPrincipal(aParent->GetExtantDoc()->NodePrincipal());
-
   // pictureinpicture, disallow_return_to_oopener are non-standard window
   // features not available from JS
   nsPrintfCString features("pictureinpicture,top=%d,left=%d,width=%d,height=%d",
@@ -249,7 +246,14 @@ CSSIntRect DocumentPictureInPicture::DetermineExtent(
 }
 
 already_AddRefed<Promise> DocumentPictureInPicture::RequestWindow(
-    const DocumentPictureInPictureOptions& aOptions, ErrorResult& aRv) {
+    const DocumentPictureInPictureOptions& aOptions,
+    nsIPrincipal& aCallerPrincipal, ErrorResult& aRv) {
+  if (aCallerPrincipal.GetIsExpandedPrincipal()) {
+    aRv.ThrowNotAllowedError(
+        "Document Picture-in-Picture is not available in isolated world");
+    return nullptr;
+  }
+
   // Not part of the spec, but check the document is active
   RefPtr<nsPIDOMWindowInner> ownerWin = GetOwnerWindow();
   if (!ownerWin || !ownerWin->IsFullyActive()) {

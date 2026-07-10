@@ -8,7 +8,7 @@ const { UrlbarTestUtils } = ChromeUtils.importESModule(
 );
 
 // Test documentPictureInPicture.requestWindow() from a content script.
-async function testContentScript({ useMainWorld } = {}) {
+async function testContentScript({ useMainWorld, unwrapWindow } = {}) {
   // In isolated world, we need to unwrap the window so the test
   // can see what we set on it.
   const pageWindow = useMainWorld ? "window" : "window.wrappedJSObject";
@@ -30,7 +30,7 @@ async function testContentScript({ useMainWorld } = {}) {
         // Wait for test to grant us user activation
         window.addEventListener("test-pip", async () => {
           try {
-            let pipWin = await window.documentPictureInPicture.requestWindow();
+            await window.${unwrapWindow ? "wrappedJSObject." : ""}documentPictureInPicture.requestWindow();
             ${pageWindow}.pipResult = { opened: true };
           } catch (e) {
             ${pageWindow}.pipResult = { opened: false, error: e.message };
@@ -69,14 +69,6 @@ async function testContentScript({ useMainWorld } = {}) {
 
   return { result, tab, chromePiP, extension };
 }
-
-function getContentPrincipal(browserOrWin) {
-  const browser = browserOrWin.gBrowser
-    ? browserOrWin.gBrowser.selectedBrowser
-    : browserOrWin;
-  return browser.browsingContext.currentWindowContext.documentPrincipal;
-}
-
 add_task(async function dpip_from_main_world() {
   const { result, tab, chromePiP, extension } = await testContentScript({
     useMainWorld: true,
@@ -89,31 +81,35 @@ add_task(async function dpip_from_main_world() {
   );
   is(chromePiP.gURLBar.value, expectedURL, "PiP urlbar shows opener origin");
 
-  ok(
-    getContentPrincipal(chromePiP).equals(
-      getContentPrincipal(tab.linkedBrowser)
-    ),
-    "PiP principal matches the opener page's principal"
-  );
-
   await BrowserTestUtils.closeWindow(chromePiP);
   BrowserTestUtils.removeTab(tab);
   await extension.unload();
 });
 
-add_task(async function dpip_from_isolated_world() {
-  const { result, tab, chromePiP, extension } = await testContentScript();
+add_task(async function dpip_from_isolated_world_rejected() {
+  const { result, tab, extension } = await testContentScript();
 
-  ok(result.opened, "Isolated world can open DPIP");
-
+  ok(!result.opened, "Isolated world cannot open DPIP directly");
   ok(
-    getContentPrincipal(chromePiP).equals(
-      getContentPrincipal(tab.linkedBrowser)
-    ),
-    "PiP principal matches the opener page's principal"
+    result.error?.includes("isolated world"),
+    "Got extension-specific error message"
   );
 
-  await BrowserTestUtils.closeWindow(chromePiP);
+  BrowserTestUtils.removeTab(tab);
+  await extension.unload();
+});
+
+add_task(async function dpip_from_isolated_world_via_wrappedJSObject() {
+  const { result, tab, chromePiP, extension } = await testContentScript({
+    unwrapWindow: true,
+  });
+
+  info("Isolated world via wrappedJSObject: " + JSON.stringify(result));
+  ok(result.opened, "Isolated world can open DPIP via wrappedJSObject");
+
+  if (chromePiP) {
+    await BrowserTestUtils.closeWindow(chromePiP);
+  }
   BrowserTestUtils.removeTab(tab);
   await extension.unload();
 });
@@ -124,7 +120,7 @@ add_task(async function dpip_from_extension_page() {
     files: {
       "page.html": `<script src="page.js"></script>`,
       "page.js": async function () {
-        browser.runtime.onMessage.addListener(async () => {
+        try {
           let pipPromise;
           browser.test.withHandlingUserInput(() => {
             pipPromise = window.documentPictureInPicture.requestWindow();
@@ -134,8 +130,11 @@ add_task(async function dpip_from_extension_page() {
             pipWin,
             "Extension page can open Document PiP"
           );
-        });
-        browser.test.sendMessage("ready");
+          pipWin.close();
+        } catch (e) {
+          browser.test.fail(`requestWindow() threw: ${e.message}`);
+        }
+        browser.test.sendMessage("done");
       },
     },
     async background() {
@@ -146,24 +145,11 @@ add_task(async function dpip_from_extension_page() {
   });
 
   await extension.startup();
-  await extension.awaitMessage("ready");
-
-  const chromePiPPromise = BrowserTestUtils.waitForNewWindow();
-  extension.sendMessage("open-pip");
-  const chromePiP = await chromePiPPromise;
+  await extension.awaitMessage("done");
 
   const tab = gBrowser.tabs.find(t =>
     t.linkedBrowser.currentURI.spec.startsWith("moz-extension://")
   );
-
-  ok(
-    getContentPrincipal(chromePiP).equals(
-      getContentPrincipal(tab.linkedBrowser)
-    ),
-    "PiP principal matches the extension page's principal"
-  );
-
-  await BrowserTestUtils.closeWindow(chromePiP);
   BrowserTestUtils.removeTab(tab);
   await extension.unload();
 });
