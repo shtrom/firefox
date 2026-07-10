@@ -311,6 +311,13 @@ body {
       background-color: var(--toolbox-background-color-inactive);
       color: var(--toolbox-text-color-inactive);
     }
+
+    /* Remove the border and rounded corners against the screen edge in
+     * fullscreen. */
+    :root:is([inFullscreen], [inDOMFullscreen]) & {
+      border-radius: 0;
+      border: none;
+    }
   }
 
   #navigator-toolbox,
