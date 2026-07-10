@@ -214,7 +214,7 @@ index 16f42bd02d..2d9700bb73 100644
                                     int current_delay_ms,
                                     int target_delay_ms,
 diff --git a/video/rtp_video_stream_receiver2.cc b/video/rtp_video_stream_receiver2.cc
-index 4ee9330a51..90c4432fd3 100644
+index 01e482be12..8ed9d9db6e 100644
 --- a/video/rtp_video_stream_receiver2.cc
 +++ b/video/rtp_video_stream_receiver2.cc
 @@ -292,6 +292,7 @@ RtpVideoStreamReceiver2::RtpVideoStreamReceiver2(
@@ -233,18 +233,18 @@ index 4ee9330a51..90c4432fd3 100644
        packet_buffer_(kPacketBufferStartSize,
                       PacketBufferMaxSize(env_.field_trials())),
        reference_finder_(std::make_unique<RtpFrameReferenceFinder>()),
-@@ -1363,7 +1365,8 @@ void RtpVideoStreamReceiver2::FrameDecoded(int64_t picture_id) {
+@@ -1371,7 +1373,8 @@ void RtpVideoStreamReceiver2::FrameDecoded(int64_t picture_id) {
      int64_t unwrapped_rtp_seq_num = rtp_seq_num_unwrapper_.Unwrap(seq_num);
      packet_infos_.erase(packet_infos_.begin(),
                          packet_infos_.upper_bound(unwrapped_rtp_seq_num));
 -    packet_buffer_.ClearTo(seq_num);
 +    uint32_t num_packets_cleared = packet_buffer_.ClearTo(seq_num);
 +    vcm_receive_statistics_->OnDiscardedPackets(num_packets_cleared);
-     reference_finder_->ClearTo(seq_num);
+     reference_finder_->ClearTo(seq_num, rtp_timestamp);
    }
  }
 diff --git a/video/rtp_video_stream_receiver2.h b/video/rtp_video_stream_receiver2.h
-index 8d790dad0d..42f44aa6f8 100644
+index e3aaaebc72..950f62900f 100644
 --- a/video/rtp_video_stream_receiver2.h
 +++ b/video/rtp_video_stream_receiver2.h
 @@ -68,6 +68,7 @@
