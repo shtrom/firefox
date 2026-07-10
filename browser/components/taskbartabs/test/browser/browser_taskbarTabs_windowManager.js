@@ -15,7 +15,7 @@ XPCOMUtils.defineLazyServiceGetters(this, {
   WinTaskbar: ["@mozilla.org/windows-taskbar;1", Ci.nsIWinTaskbar],
 });
 
-const registry = new TaskbarTabsRegistry();
+const registry = createInMemoryRegistry();
 
 const url1 = Services.io.newURI("https://example.com");
 const userContextId1 = 0;

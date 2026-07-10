@@ -85,11 +85,8 @@ async function testWrittenIconFile(aIconFile) {
 const url = Services.io.newURI("https://www.test.com");
 const userContextId = 0;
 
-const registry = new TaskbarTabsRegistry();
+const registry = createInMemoryRegistry();
 const taskbarTab = createTaskbarTab(registry, url, userContextId);
-
-const patchedSpy = sinon.stub();
-registry.on(TaskbarTabsRegistry.events.patched, patchedSpy);
 
 function getTempFile() {
   let path = do_get_tempdir();

@@ -13,10 +13,13 @@ ChromeUtils.defineESModuleGetters(this, {
   XPCOMUtils: "resource://gre/modules/XPCOMUtils.sys.mjs",
 });
 
-const gRegistry = new TaskbarTabsRegistry();
-
-const patchedSpy = sinon.stub();
-gRegistry.on(TaskbarTabsRegistry.events.patched, patchedSpy);
+const gSavedStub = sinon.stub();
+const gRegistry = new TaskbarTabsRegistry(
+  {
+    save: gSavedStub,
+  },
+  []
+);
 
 sinon.stub(ShellService, "writeShortcutIcon").resolves();
 sinon.stub(ShellService, "shellService").value({
@@ -74,7 +77,7 @@ function checkCreateSecondaryTileCall(aTaskbarTab) {
     "Reasonable arguments were specified."
   );
 
-  Assert.equal(patchedSpy.callCount, 1, "A single patched event was emitted");
+  Assert.equal(gSavedStub.callCount, 1, "The database was saved once.");
   Assert.equal(
     aTaskbarTab.shortcutRelativePath,
     "taskbartab-" + aTaskbarTab.id,
@@ -132,5 +135,5 @@ add_task(async function test_unpin() {
     null,
     "Shortcut relative path was removed from the taskbar tab"
   );
-  Assert.equal(patchedSpy.callCount, 1, "A single patched event was emitted");
+  Assert.equal(gSavedStub.callCount, 1, "The database was saved once");
 });

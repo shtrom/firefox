@@ -63,7 +63,7 @@ registerCleanupFunction(() => {
 
 // Don't use the normal TaskbarTabs module, since we don't want it to pin
 // automatically.
-const gRegistry = new TaskbarTabsRegistry();
+const gRegistry = createInMemoryRegistry();
 const gWindowManager = new TaskbarTabsWindowManager();
 
 const BASE_URL = "https://example.org";

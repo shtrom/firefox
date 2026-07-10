@@ -43,6 +43,14 @@ registerCleanupFunction(() => {
   sinon.restore();
 });
 
+const savedStub = sinon.stub();
+const registry = new TaskbarTabsRegistry(
+  {
+    save: savedStub,
+  },
+  []
+);
+
 // Favicons are written to the profile directory, ensure it exists.
 do_get_profile();
 
@@ -84,7 +92,7 @@ function shellPinCalled(aTaskbarTab, destFolder, shortcutRelativePath) {
     aTaskbarTab.shortcutRelativePath,
     `The pinned shortcut should be the saved shortcut.`
   );
-  Assert.equal(patchedSpy.callCount, 1, "A single patched event was emitted");
+  Assert.equal(savedStub.callCount, 1, "The database was saved once.");
 }
 
 function shellUnpinCalled(aShortcutRelativePath) {
@@ -115,11 +123,6 @@ async function pinTaskbarTabDefaultIcon(aTaskbarTab, aRegistry) {
     await TaskbarTabsUtils.getDefaultIcon()
   );
 }
-
-const registry = new TaskbarTabsRegistry();
-
-const patchedSpy = sinon.stub();
-registry.on(TaskbarTabsRegistry.events.patched, patchedSpy);
 
 add_task(async function test_pin_location() {
   const parsedURI = Services.io.newURI("https://www.example.com");
@@ -205,5 +208,5 @@ add_task(async function test_unpin() {
     null,
     "Shortcut relative path was removed from the taskbar tab"
   );
-  Assert.equal(patchedSpy.callCount, 1, "A single patched event was emitted");
+  Assert.equal(savedStub.callCount, 1, "The database was saved once.");
 });
