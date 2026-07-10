@@ -124,7 +124,7 @@ private fun ExtensionsMenuTrailingContent(
             Icon(
                 painter = painterResource(id = iconsR.drawable.mozac_ic_settings_24),
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurface,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         return
@@ -215,7 +215,7 @@ private fun NumberedChevronBadge(
                 painterResource(id = iconsR.drawable.mozac_ic_chevron_down_20)
             },
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurface,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.semantics {
                 testTagsAsResourceId = true
                 testTag = EXTENSIONS_OPTION_CHEVRON
@@ -253,7 +253,7 @@ internal fun WebExtensionMenuItems(
                 }
                     ?: painterResource(iconsR.drawable.mozac_ic_extension_fill_24),
                 iconTint = when (extension.icon) {
-                    null -> MaterialTheme.colorScheme.onSurface
+                    null -> MaterialTheme.colorScheme.onSurfaceVariant
                     else -> Color.Unspecified
                 },
                 enabled = extension.enabled,

@@ -288,7 +288,7 @@ internal fun WebExtensionMenuItem(
                     ) {
                         Icon(
                             painter = painterResource(iconsR.drawable.mozac_ic_settings_24),
-                            tint = MaterialTheme.colorScheme.onSurface,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             contentDescription = null,
                         )
                     }
@@ -479,7 +479,7 @@ private fun getIconTint(state: MenuItemState): Color {
         MenuItemState.ACTIVE -> MaterialTheme.colorScheme.tertiary
         MenuItemState.WARNING -> MaterialTheme.colorScheme.error
         MenuItemState.CRITICAL -> Color.Unspecified
-        else -> MaterialTheme.colorScheme.onSurface
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 }
 
@@ -502,7 +502,7 @@ private fun WebExtensionMenuItemPreview() {
             WebExtensionMenuItem(
                 label = "label",
                 iconPainter = painterResource(iconsR.drawable.mozac_ic_extension_fill_24),
-                iconTint = MaterialTheme.colorScheme.onSurface,
+                iconTint = MaterialTheme.colorScheme.onSurfaceVariant,
                 enabled = true,
                 badgeText = "17",
                 onClick = {},
