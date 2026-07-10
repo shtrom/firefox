@@ -469,7 +469,7 @@ index 407a99eb29..a939fbb8ac 100644
  if (rtc_include_tests) {
    rtc_source_set("test_feedback_generator_interface") {
 diff --git a/call/BUILD.gn b/call/BUILD.gn
-index 03a97e080c..36908316ea 100644
+index 0bdeb093a2..416e5c8b45 100644
 --- a/call/BUILD.gn
 +++ b/call/BUILD.gn
 @@ -46,7 +46,7 @@ rtc_library("call_interfaces") {
@@ -540,7 +540,7 @@ index 88890be798..c9aefc297b 100644
  #include "rtc_base/memory/aligned_malloc.h"
  
 diff --git a/media/BUILD.gn b/media/BUILD.gn
-index a5c97aa0a5..48dfd4469b 100644
+index 190f162695..66837e062d 100644
 --- a/media/BUILD.gn
 +++ b/media/BUILD.gn
 @@ -76,7 +76,7 @@ rtc_library("rtc_media_base") {
@@ -715,7 +715,7 @@ index cb74a2710e..b1c02c5025 100644
      : content_hint(VideoTrackInterface::ContentHint::kNone) {}
  VideoOptions::~VideoOptions() = default;
 diff --git a/modules/audio_coding/BUILD.gn b/modules/audio_coding/BUILD.gn
-index cb779e61be..41ab20dac8 100644
+index 8b9799d1b8..a4c39101a6 100644
 --- a/modules/audio_coding/BUILD.gn
 +++ b/modules/audio_coding/BUILD.gn
 @@ -338,7 +338,7 @@ rtc_library("webrtc_opus_wrapper") {
@@ -813,7 +813,7 @@ index e62ce13dd8..ceea41532c 100644
      testonly = true
  
 diff --git a/modules/audio_processing/aec3/BUILD.gn b/modules/audio_processing/aec3/BUILD.gn
-index 22b5419168..2f2d349514 100644
+index 9ea55f11da..669c410077 100644
 --- a/modules/audio_processing/aec3/BUILD.gn
 +++ b/modules/audio_processing/aec3/BUILD.gn
 @@ -260,14 +260,11 @@ if (current_cpu == "x86" || current_cpu == "x64") {
@@ -1005,7 +1005,7 @@ index 5a6fab0b74..b8d65383e3 100644
          "/config/external/nspr",
          "/nsprpub/lib/ds",
 diff --git a/rtc_base/BUILD.gn b/rtc_base/BUILD.gn
-index 8f6dc71173..fdf6964ad7 100644
+index 36b301f6eb..454107f71c 100644
 --- a/rtc_base/BUILD.gn
 +++ b/rtc_base/BUILD.gn
 @@ -428,6 +428,7 @@ rtc_library("sample_counter") {
@@ -1168,7 +1168,7 @@ index 8f6dc71173..fdf6964ad7 100644
  
  rtc_library("ssl_adapter") {
    visibility = [ "*" ]
-@@ -2478,7 +2502,7 @@ if (rtc_include_tests) {
+@@ -2477,7 +2501,7 @@ if (rtc_include_tests) {
    }
  }
  
@@ -1250,7 +1250,7 @@ index 9fb385003c..0e095dc31d 100644
  rtc_library("call_config_utils") {
    testonly = true
 diff --git a/video/BUILD.gn b/video/BUILD.gn
-index 45979a504c..ef53936478 100644
+index 3c2123ce3f..4a79b42d28 100644
 --- a/video/BUILD.gn
 +++ b/video/BUILD.gn
 @@ -16,7 +16,7 @@ rtc_library("video_stream_encoder_interface") {
