@@ -188,7 +188,7 @@ index 7676870a78..b0cf0e47e7 100644
      }
      reference_finder_->ClearTo(seq_num, rtp_timestamp);
 diff --git a/video/video_stream_buffer_controller.cc b/video/video_stream_buffer_controller.cc
-index 418e3613f2..e5e1395536 100644
+index 3986cceaa7..bf03366136 100644
 --- a/video/video_stream_buffer_controller.cc
 +++ b/video/video_stream_buffer_controller.cc
 @@ -34,6 +34,7 @@
@@ -209,8 +209,8 @@ index 418e3613f2..e5e1395536 100644
    int complete_units = buffer_->GetTotalNumberOfContinuousTemporalUnits();
    if (buffer_->InsertFrame(std::move(frame))) {
      RTC_DCHECK(metadata.receive_time) << "Frame receive time must be set!";
-@@ -164,6 +168,9 @@ std::optional<int64_t> VideoStreamBufferController::InsertFrame(
-                                       *metadata.receive_time);
+@@ -165,6 +169,9 @@ std::optional<int64_t> VideoStreamBufferController::InsertFrame(
+            .was_retransmitted = metadata.delayed_by_retransmission});
      }
      if (complete_units < buffer_->GetTotalNumberOfContinuousTemporalUnits()) {
 +      TRACE_EVENT2("webrtc",

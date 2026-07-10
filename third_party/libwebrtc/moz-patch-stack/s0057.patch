@@ -284,10 +284,10 @@ index 64d7812e61..99d0acba8d 100644
                                   std::move(config_.frame_decryptor),
                                   std::move(config_.frame_transformer)),
 diff --git a/video/video_stream_buffer_controller.cc b/video/video_stream_buffer_controller.cc
-index c5b33593ff..418e3613f2 100644
+index ac11225f1c..3986cceaa7 100644
 --- a/video/video_stream_buffer_controller.cc
 +++ b/video/video_stream_buffer_controller.cc
-@@ -249,6 +249,7 @@ void VideoStreamBufferController::OnFrameReady(
+@@ -250,6 +250,7 @@ void VideoStreamBufferController::OnFrameReady(
  
    // Update stats.
    UpdateDroppedFrames();
@@ -295,7 +295,7 @@ index c5b33593ff..418e3613f2 100644
    UpdateFrameBufferTimings(min_receive_time, now);
  
    std::unique_ptr<EncodedFrame> frame =
-@@ -313,6 +314,17 @@ void VideoStreamBufferController::UpdateDroppedFrames()
+@@ -314,6 +315,17 @@ void VideoStreamBufferController::UpdateDroppedFrames()
        buffer_->GetTotalNumberOfDroppedFrames();
  }
  
