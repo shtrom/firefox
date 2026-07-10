@@ -14926,7 +14926,7 @@ function Lists({
     })
   })), /*#__PURE__*/external_React_default().createElement("moz-button", {
     className: "lists-panel-button",
-    "data-l10n-id": "newtab-menu-section-tooltip",
+    "data-l10n-id": "newtab-widget-lists-menu-button",
     iconSrc: "chrome://global/skin/icons/more.svg",
     menuId: "lists-panel",
     type: "ghost"

@@ -844,7 +844,7 @@ function Lists({
           )}
         <moz-button
           className="lists-panel-button"
-          data-l10n-id="newtab-menu-section-tooltip"
+          data-l10n-id="newtab-widget-lists-menu-button"
           iconSrc="chrome://global/skin/icons/more.svg"
           menuId="lists-panel"
           type="ghost"

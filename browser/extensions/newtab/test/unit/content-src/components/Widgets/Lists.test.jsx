@@ -93,7 +93,7 @@ describe("<Lists>", () => {
   it("adds explicit names to the icon-only menu buttons", () => {
     assert.equal(
       wrapper.find("moz-button.lists-panel-button").prop("data-l10n-id"),
-      "newtab-menu-section-tooltip"
+      "newtab-widget-lists-menu-button"
     );
     assert.equal(
       wrapper.find(".task-item moz-button").at(0).prop("data-l10n-id"),
