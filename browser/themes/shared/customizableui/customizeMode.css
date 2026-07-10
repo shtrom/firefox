@@ -390,6 +390,10 @@ toolbarpaletteitem {
   transform: scaleX(-1);
 }
 
+#customization-uidensity-link {
+  margin-inline: var(--space-medium);
+}
+
 #customization-panelWrapper,
 #customization-panelWrapper > .panel-arrowcontent,
 #customization-panelHolder {

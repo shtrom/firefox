@@ -307,6 +307,7 @@ SettingGroupManager.registerGroups({
     l10nId: "appearance-window-density-group",
     iconSrc: "chrome://browser/skin/window.svg",
     headingLevel: 2,
+    subcategory: "windowDensity",
     items: [
       {
         id: "uiDensity",
