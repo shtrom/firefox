@@ -12,7 +12,7 @@ import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 export { openAIEngine };
 
 export const MODEL_PREF = "browser.smartwindow.model";
-const GENERIC_MODEL_NAME = "generic";
+export const GENERIC_MODEL_NAME = "generic";
 const MODEL_CHOICE_PREF = "browser.smartwindow.firstrun.modelChoice";
 
 const RS_AI_WINDOW_COLLECTION = "ai-window-prompts";
@@ -115,6 +115,8 @@ export const MODEL_FEATURES = Object.freeze({
   REAL_TIME_CONTEXT_TAB: "real-time-context-tab",
   REAL_TIME_CONTEXT_MENTIONS: "real-time-context-mentions",
   MEMORIES_RELEVANT_CONTEXT: "memories-relevant-context",
+  // agents
+  AGENT_MONITOR: "agent-monitor",
 });
 
 /** @typedef {(typeof MODEL_FEATURES)[keyof typeof MODEL_FEATURES]} ModelFeature */
@@ -125,6 +127,7 @@ export const MODEL_FEATURES = Object.freeze({
 export const SERVICE_TYPES = Object.freeze({
   AI: "ai",
   MEMORIES: "memories",
+  AGENT: "agent",
 });
 
 /**
@@ -135,6 +138,8 @@ export const PURPOSES = Object.freeze({
   TITLE_GENERATION: "title-generation",
   CONVERSATION_STARTERS_SIDEBAR: "convo-starters-sidebar",
   MEMORY_GENERATION: "memory-generation",
+  // agents
+  MONITOR: "monitor",
 });
 
 /**
@@ -169,6 +174,8 @@ export const FEATURE_MAJOR_VERSIONS = Object.freeze({
   [MODEL_FEATURES.REAL_TIME_CONTEXT_DATE]: 1,
   [MODEL_FEATURES.REAL_TIME_CONTEXT_TAB]: 1,
   [MODEL_FEATURES.REAL_TIME_CONTEXT_MENTIONS]: 1,
+  // agents
+  [MODEL_FEATURES.AGENT_MONITOR]: 1,
 });
 
 /**

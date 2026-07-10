@@ -208,6 +208,10 @@ export const FEATURES = {
   "llm-telemetry": {
     engineId: "llm-telemetry-engine",
   },
+  //agents
+  "agent-monitor": {
+    engineId: "agent-monitor-engine",
+  },
 };
 
 /**

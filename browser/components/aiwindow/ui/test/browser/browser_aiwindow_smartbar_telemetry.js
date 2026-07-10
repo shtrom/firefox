@@ -481,6 +481,7 @@ add_task(async function test_smartbar_telemetry_abandonment_extra_keys() {
   const { win, sidebarBrowser } = await openAIWindowWithSidebar();
 
   await typeInSmartbar(sidebarBrowser, "test");
+  await waitForSmartbarAction(sidebarBrowser, "chat");
   await SpecialPowers.spawn(sidebarBrowser, [], async () => {
     const aiWindow = content.document.querySelector("ai-window");
     const smartbar = aiWindow.shadowRoot.querySelector("#ai-window-smartbar");
