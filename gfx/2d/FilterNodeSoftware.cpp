@@ -2709,8 +2709,11 @@ IntRect FilterNodeDisplacementMapSoftware::InflatedSourceOrDestRect(
 
   RectDouble destOrSourceRect(aDestOrSourceRect);
   destOrSourceRect.Inflate(ceil(fabs(mScale) / 2));
-  return RectIsInt32Safe(destOrSourceRect) ? TruncatedToInt(destOrSourceRect)
-                                           : aDestOrSourceRect;
+  if (!RectIsInt32Safe(destOrSourceRect)) {
+    return IntRect();
+  }
+
+  return TruncatedToInt(destOrSourceRect);
 }
 
 IntRect FilterNodeDisplacementMapSoftware::GetOutputRectInRect(
