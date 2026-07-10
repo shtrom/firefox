@@ -1927,7 +1927,7 @@ index beadd8cc63..b5485d4edb 100644
 +      long nativeVideoEncoderWrapper, EncodedImage frame);
  }
 diff --git a/sdk/android/src/java/org/webrtc/audio/WebRtcAudioRecord.java b/sdk/android/src/java/org/webrtc/audio/WebRtcAudioRecord.java
-index 510cc04779..e8a5bf1b9c 100644
+index 26a1bfa4a9..43542ddb2b 100644
 --- a/sdk/android/src/java/org/webrtc/audio/WebRtcAudioRecord.java
 +++ b/sdk/android/src/java/org/webrtc/audio/WebRtcAudioRecord.java
 @@ -23,6 +23,7 @@ import android.os.Build;
@@ -1946,7 +1946,7 @@ index 510cc04779..e8a5bf1b9c 100644
  import org.webrtc.CalledByNative;
  import org.webrtc.Logging;
  import org.webrtc.ThreadUtils;
-@@ -130,6 +130,7 @@ class WebRtcAudioRecord {
+@@ -131,6 +131,7 @@ class WebRtcAudioRecord {
        // Audio recording has started and the client is informed about it.
        doAudioRecordStateCallback(AUDIO_RECORD_START);
  
@@ -1954,7 +1954,7 @@ index 510cc04779..e8a5bf1b9c 100644
        AudioTimestamp audioTimestamp = null;
        if (Build.VERSION.SDK_INT >= 24) {
          audioTimestamp = new AudioTimestamp();
-@@ -152,9 +153,7 @@ class WebRtcAudioRecord {
+@@ -153,9 +154,7 @@ class WebRtcAudioRecord {
                  captureTimeNs = audioTimestamp.nanoTime;
                }
              }
@@ -1965,7 +1965,7 @@ index 510cc04779..e8a5bf1b9c 100644
            }
            if (audioSamplesReadyCallback != null) {
              // Copy the entire byte buffer array. The start of the byteBuffer is not necessarily
-@@ -298,7 +297,7 @@ class WebRtcAudioRecord {
+@@ -309,7 +308,7 @@ class WebRtcAudioRecord {
      // Rather than passing the ByteBuffer with every callback (requiring
      // the potentially expensive GetDirectBufferAddress) we simply have the
      // the native class cache the address to the memory once.
@@ -1974,7 +1974,7 @@ index 510cc04779..e8a5bf1b9c 100644
  
      // Get the minimum buffer size required for the successful creation of
      // an AudioRecord object, in byte units.
-@@ -510,14 +509,10 @@ class WebRtcAudioRecord {
+@@ -523,14 +522,10 @@ class WebRtcAudioRecord {
      return (channels == 1 ? AudioFormat.CHANNEL_IN_MONO : AudioFormat.CHANNEL_IN_STEREO);
    }
  
