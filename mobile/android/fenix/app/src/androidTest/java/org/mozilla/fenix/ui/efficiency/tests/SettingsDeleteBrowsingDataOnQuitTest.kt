@@ -83,8 +83,8 @@ class SettingsDeleteBrowsingDataOnQuitTest : BaseTest() {
             .clickPageContent("Open microphone")
         on.browserPage
             .mozVerify(SitePermissionsSelectors.MICROPHONE_PERMISSION_PROMPT)
-            .mozClick(SitePermissionsSelectors.PAGE_PERMISSION_REMEMBER_DECISION_CHECKBOX)
-            .mozClick(SitePermissionsSelectors.PAGE_PERMISSION_DIALOG_DENY_BUTTON)
+            .mozClickIfPresent(SitePermissionsSelectors.PAGE_PERMISSION_REMEMBER_DECISION_CHECKBOX)
+            .mozClickIfPresent(SitePermissionsSelectors.PAGE_PERMISSION_DIALOG_DENY_BUTTON)
         on.browserPage.verifyPageContent("Microphone not allowed")
         on.home.navigateToPage()
         on.mainMenu.navigateToPage()
