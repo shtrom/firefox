@@ -312,6 +312,7 @@ for (const type of [
   "WIDGETS_LISTS_USER_EVENT",
   "WIDGETS_LISTS_USER_IMPRESSION",
   "WIDGETS_OPT_IN",
+  "WIDGETS_PICTURE_SET_WALLPAPER",
   "WIDGETS_PRIVACY_UPDATE",
   "WIDGETS_SPORTS_CHANGE_FOLLOWED_ONLY",
   "WIDGETS_SPORTS_CHANGE_LIVE_INDEX",
@@ -22286,9 +22287,17 @@ function Stocks({
 
 const PICTURE_OF_THE_DAY_ENTRY = WIDGET_REGISTRY.find(w => w.id === "pictureOfTheDay");
 
-// Renders the daily picture from the Merino feed (Bug 2050976): the full-bleed
-// image with a source eyebrow and a localized description. Falls back to a
-// sunrise-gradient empty state when there's no picture, with an eye button to
+// How long the confirmation checkmark shows after setting the wallpaper.
+const JUST_SET_CHECKMARK_MS = 2000;
+
+// "Set wallpaper" button icons: the canvas icon by default, swapped for a
+// checkmark during the brief post-set confirmation.
+const SET_WALLPAPER_ICON = "chrome://browser/skin/canvas.svg";
+const SET_WALLPAPER_CHECK_ICON = "chrome://global/skin/icons/check.svg";
+
+// Renders the daily picture from the Merino feed (Bug 2050976): the image with
+// a source eyebrow and description, and a "Set wallpaper" action. Falls back to
+// a sunrise-gradient empty state when there's no picture, with an eye button to
 // restore.
 const PictureOfTheDay_PictureOfTheDay = ({
   dispatch,
@@ -22298,6 +22307,11 @@ const PictureOfTheDay_PictureOfTheDay = ({
   const prefs = (0,external_ReactRedux_namespaceObject.useSelector)(state => state.Prefs.values);
   const pictureData = (0,external_ReactRedux_namespaceObject.useSelector)(state => state.PictureOfTheDay);
   const widgetSize = resolveWidgetSize(PICTURE_OF_THE_DAY_ENTRY, prefs);
+  const isSetAsWallpaper = Boolean(prefs["widgets.pictureOfTheDay.setAsWallpaper"]);
+
+  // Only offer the "Set wallpaper" CTA when wallpapers are on and custom
+  // wallpapers are allowed, since this action sets a custom wallpaper.
+  const canSetWallpaper = Boolean(prefs["newtabWallpapers.enabled"] && prefs["newtabWallpapers.customWallpaper.enabled"]);
 
   // Fall back to the empty state when the picture fails to load (e.g. a cached
   // URL opened offline, or a broken/404 image) instead of showing a broken
@@ -22307,6 +22321,22 @@ const PictureOfTheDay_PictureOfTheDay = ({
     setImageFailed(false);
   }, [pictureData.imageUrl]);
   const hasPicture = Boolean(pictureData.imageUrl) && !imageFailed;
+
+  // Show a brief checkmark right after the user sets the wallpaper, then settle
+  // into the collapsed "already set" state.
+  const [justSet, setJustSet] = (0,external_React_namespaceObject.useState)(false);
+  (0,external_React_namespaceObject.useEffect)(() => {
+    if (!justSet) {
+      return undefined;
+    }
+    const timer = setTimeout(() => setJustSet(false), JUST_SET_CHECKMARK_MS);
+    return () => clearTimeout(timer);
+  }, [justSet]);
+
+  // After setting, keep the button collapsed for the current hover/focus
+  // session so it doesn't pop open to the pill the moment the checkmark clears;
+  // a fresh hover (after leaving the widget) expands it again.
+  const [suppressExpand, setSuppressExpand] = (0,external_React_namespaceObject.useState)(false);
   const {
     impressionRef,
     recordUserAction,
@@ -22372,18 +22402,39 @@ const PictureOfTheDay_PictureOfTheDay = ({
       });
     });
   };
-
-  // Placeholder handlers — telemetry only until the wallpaper (Bug 2050973)
-  // and dismiss (Bug 2050972) features are implemented.
-  const handleManageWallpaper = () => recordUserAction("manage_wallpaper", {
-    source: "context_menu"
-  });
+  const handleManageWallpaper = () => {
+    (0,external_ReactRedux_namespaceObject.batch)(() => {
+      dispatch({
+        type: actionTypes.SHOW_PERSONALIZE
+      });
+      recordUserAction("manage_wallpaper", {
+        source: "context_menu"
+      });
+    });
+  };
   const handleHidePhoto = () => recordUserAction("hide_photo", {
     source: "context_menu"
   });
   const handleShow = () => recordUserAction("show_picture", {
     source: "widget"
   });
+
+  // The Merino image host doesn't send CORS headers, so the picture bytes can
+  // only be read in the privileged main process. The feed does the fetch,
+  // derives the theme, and applies it as the custom wallpaper; show a checkmark
+  // confirmation immediately.
+  const handleSetWallpaper = () => {
+    (0,external_ReactRedux_namespaceObject.batch)(() => {
+      dispatch(actionCreators.OnlyToMain({
+        type: actionTypes.WIDGETS_PICTURE_SET_WALLPAPER
+      }));
+      recordUserAction("set_wallpaper", {
+        source: "widget"
+      });
+    });
+    setJustSet(true);
+    setSuppressExpand(true);
+  };
 
   // The image, source line, and description open the picture's source page
   // (Wikimedia Commons) in a new tab. Only wired when the feed supplies a source
@@ -22429,7 +22480,15 @@ const PictureOfTheDay_PictureOfTheDay = ({
   });
   return /*#__PURE__*/external_React_default().createElement("article", {
     className: `picture-of-the-day widget col-4 ${widgetSize}-widget${hasPicture ? " has-picture" : ""}`,
-    ref: impressionRef
+    ref: impressionRef,
+    onMouseLeave: () => setSuppressExpand(false),
+    onBlur: e => {
+      // Only reset when focus leaves the whole widget, not when it moves
+      // between the menu and button inside it.
+      if (!e.currentTarget.contains(e.relatedTarget)) {
+        setSuppressExpand(false);
+      }
+    }
   }, /*#__PURE__*/external_React_default().createElement("div", {
     className: "picture-of-the-day-toolbar"
   }, hasPicture ? renderSourceText("picture-of-the-day-eyebrow", {
@@ -22483,6 +22542,12 @@ const PictureOfTheDay_PictureOfTheDay = ({
     className: "picture-of-the-day-details"
   }, pictureData.description ? renderSourceText("picture-of-the-day-description", {
     text: pictureData.description
+  }) : null, canSetWallpaper ? /*#__PURE__*/external_React_default().createElement("moz-button", {
+    className: `picture-of-the-day-set-wallpaper${justSet || isSetAsWallpaper ? " is-collapsed" : ""}${suppressExpand ? " no-expand" : ""}`,
+    type: "primary",
+    iconSrc: justSet ? SET_WALLPAPER_CHECK_ICON : SET_WALLPAPER_ICON,
+    onClick: handleSetWallpaper,
+    "data-l10n-id": "newtab-picture-set-wallpaper"
   }) : null)) : /*#__PURE__*/external_React_default().createElement("div", {
     className: "picture-of-the-day-footer"
   }, /*#__PURE__*/external_React_default().createElement("button", {

@@ -19,6 +19,8 @@ const mockState = {
       "widgets.system.pictureOfTheDay.enabled": true,
       "widgets.pictureOfTheDay.enabled": true,
       "widgets.pictureOfTheDay.size": "medium",
+      "newtabWallpapers.enabled": true,
+      "newtabWallpapers.customWallpaper.enabled": true,
     },
   },
 };
@@ -174,6 +176,21 @@ describe("PictureOfTheDay widget", () => {
     ).toBeTruthy();
   });
 
+  it("opens the Customize panel when Manage wallpaper is clicked", () => {
+    const dispatch = jest.fn();
+    const { container } = renderWidget(dispatch);
+    fireEvent.click(
+      container.querySelector(
+        '[data-l10n-id="newtab-picture-menu-manage-wallpaper"]'
+      )
+    );
+    expect(
+      dispatch.mock.calls.find(
+        ([action]) => action.type === at.SHOW_PERSONALIZE
+      )
+    ).toBeTruthy();
+  });
+
   describe("populated state", () => {
     const populatedState = {
       ...mockState,
@@ -186,7 +203,15 @@ describe("PictureOfTheDay widget", () => {
       },
     };
 
-    it("renders the picture, eyebrow, and description", () => {
+    const withPrefs = extraPrefs => ({
+      ...populatedState,
+      Prefs: {
+        ...populatedState.Prefs,
+        values: { ...populatedState.Prefs.values, ...extraPrefs },
+      },
+    });
+
+    it("renders the picture, eyebrow, description, and Set wallpaper button", () => {
       const { container } = renderWidget(jest.fn(), {}, populatedState);
       const root = container.querySelector("article.picture-of-the-day");
       expect(root.className).toContain("has-picture");
@@ -200,6 +225,9 @@ describe("PictureOfTheDay widget", () => {
       expect(
         container.querySelector(".picture-of-the-day-description").textContent
       ).toBe("A test picture description.");
+      expect(
+        container.querySelector(".picture-of-the-day-set-wallpaper")
+      ).toBeTruthy();
       // No empty-state eye/message while a picture is shown.
       expect(
         container.querySelector(".picture-of-the-day-show-button")
@@ -222,6 +250,54 @@ describe("PictureOfTheDay widget", () => {
       expect(
         container.querySelector("article.picture-of-the-day").className
       ).not.toContain("has-picture");
+    });
+
+    it("dispatches WIDGETS_PICTURE_SET_WALLPAPER when Set wallpaper is clicked", () => {
+      const dispatch = jest.fn();
+      const { container } = renderWidget(dispatch, {}, populatedState);
+      fireEvent.click(
+        container.querySelector(".picture-of-the-day-set-wallpaper")
+      );
+      expect(
+        dispatch.mock.calls.find(
+          ([action]) => action.type === at.WIDGETS_PICTURE_SET_WALLPAPER
+        )
+      ).toBeTruthy();
+    });
+
+    it("collapses the Set wallpaper button once it is set as wallpaper", () => {
+      const { container } = renderWidget(
+        jest.fn(),
+        {},
+        withPrefs({ "widgets.pictureOfTheDay.setAsWallpaper": true })
+      );
+      expect(
+        container.querySelector(
+          ".picture-of-the-day-set-wallpaper.is-collapsed"
+        )
+      ).toBeTruthy();
+    });
+
+    it("hides the Set wallpaper button when custom wallpapers are disabled", () => {
+      const { container } = renderWidget(
+        jest.fn(),
+        {},
+        withPrefs({ "newtabWallpapers.customWallpaper.enabled": false })
+      );
+      expect(
+        container.querySelector(".picture-of-the-day-set-wallpaper")
+      ).toBeFalsy();
+    });
+
+    it("hides the Set wallpaper button when wallpapers are disabled", () => {
+      const { container } = renderWidget(
+        jest.fn(),
+        {},
+        withPrefs({ "newtabWallpapers.enabled": false })
+      );
+      expect(
+        container.querySelector(".picture-of-the-day-set-wallpaper")
+      ).toBeFalsy();
     });
   });
 
