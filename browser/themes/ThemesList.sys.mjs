@@ -225,10 +225,13 @@ class ThemesList {
   }
 
   /**
-   * @returns {Array<string>} The addon IDs of all themes managed by this instance.
+   * @returns {Array<{id: string, themePickerColors: ThemePickerColors}>}
+   *   Array of theme objects with id and themePickerColors.
    */
-  getThemeIds() {
-    return Array.from(FIREFOX_THEMES_MAP.keys());
+  getThemesInfo() {
+    return Array.from(FIREFOX_THEMES_MAP.values()).map(
+      ({ id, themePickerColors }) => ({ id, themePickerColors })
+    );
   }
 
   /**
@@ -246,18 +249,6 @@ class ThemesList {
    */
   isBuiltIn(themeId) {
     return !!FIREFOX_THEMES_MAP.get(themeId)?.isBuiltIn;
-  }
-
-  /**
-   * Returns the background color variants for the given theme. Each variant is an object with a
-   * `type` field ("gradient" or "color") and a `value` field containing the CSS string.
-   *
-   * @param {string} themeId - The addon ID of the theme.
-   * @returns {ThemePickerColors | null}
-   *   The color variants, or null if the theme is not managed by this instance.
-   */
-  getThemePickerColors(themeId) {
-    return FIREFOX_THEMES_MAP.get(themeId)?.themePickerColors ?? null;
   }
 
   /**
