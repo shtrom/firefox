@@ -3649,17 +3649,17 @@
     <!-- Title text for the uninstall survey dialog, asking the user for the reason they are removing the app -->
     <string name="microsurvey_uninstall_survey_title">Your feedback matters. Why are you uninstalling?</string>
     <!-- Uninstall survey answer option -->
-    <string name="uninstall_survey_option_1">Webpage issues</string>
+    <string name="uninstall_survey_option_1_v2">It’s slow or unreliable</string>
     <!-- Uninstall survey answer option -->
-    <string name="uninstall_survey_option_2">Video and download issues</string>
+    <string name="uninstall_survey_option_2_v2">Websites didn’t work properly</string>
     <!-- Uninstall survey answer option -->
-    <string name="uninstall_survey_option_3">Performance issues</string>
+    <string name="uninstall_survey_option_3_v2">Missing features I need</string>
     <!-- Uninstall survey answer option -->
-    <string name="uninstall_survey_option_4">Function and design issues</string>
+    <string name="uninstall_survey_option_4_v2">Videos, downloads, or media didn’t work</string>
     <!-- Uninstall survey answer option -->
-    <string name="uninstall_survey_option_5">Privacy-related issues</string>
+    <string name="uninstall_survey_option_5_v2">It’s hard to use or poorly designed</string>
     <!-- Uninstall survey answer option -->
-    <string name="uninstall_survey_option_6">Payment and subscription issues</string>
+    <string name="uninstall_survey_option_6_v2">Privacy or security concerns</string>
     <!-- Button label shown at the bottom of the uninstall survey -->
     <string name="uninstall_survey_button_label">Submit feedback and uninstall</string>
     <!-- Accessibility -->
