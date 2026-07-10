@@ -5830,6 +5830,9 @@
       "resource://gre/modules/ContentDOMReference.sys.mjs": [
         "../../../toolkit/modules/ContentDOMReference.sys.mjs"
       ],
+      "resource://gre/modules/ContentDispatchChooser.sys.mjs": [
+        "../../../toolkit/mozapps/handling/ContentDispatchChooser.sys.mjs"
+      ],
       "resource://gre/modules/ContentPrefServiceChild.sys.mjs": [
         "../../../toolkit/components/contentprefs/ContentPrefServiceChild.sys.mjs"
       ],
@@ -6387,6 +6390,9 @@
       ],
       "resource://gre/modules/PlacesUtils.sys.mjs": [
         "../../../toolkit/components/places/PlacesUtils.sys.mjs"
+      ],
+      "resource://gre/modules/PoliciesHelpers.sys.mjs": [
+        "../../../toolkit/components/enterprisepolicies/PoliciesHelpers.sys.mjs"
       ],
       "resource://gre/modules/PopupNotifications.sys.mjs": [
         "../../../toolkit/modules/PopupNotifications.sys.mjs"
