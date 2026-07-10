@@ -366,13 +366,8 @@ already_AddRefed<MediaDataEncoder> PEMFactory::CreateEncoder(
     return nullptr;
   }
 
-  if (aConfig.IsVideo()) {
-    return m->CreateVideoEncoder(aConfig, aTaskQueue);
-  }
-  if (aConfig.IsAudio()) {
-    return m->CreateAudioEncoder(aConfig, aTaskQueue);
-  }
-  return nullptr;
+  return aConfig.IsVideo() ? m->CreateVideoEncoder(aConfig, aTaskQueue)
+                           : nullptr;
 }
 
 RefPtr<PlatformEncoderModule::CreateEncoderPromise>

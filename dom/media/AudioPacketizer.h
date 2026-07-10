@@ -7,14 +7,8 @@
 
 #include <AudioSampleFormat.h>
 #include <mozilla/Assertions.h>
-#include <mozilla/Casting.h>
-#include <mozilla/CheckedInt.h>
 #include <mozilla/PodOperations.h>
 #include <mozilla/UniquePtr.h>
-#include <mozilla/UniquePtrExtensions.h>
-
-#include "nsDebug.h"
-#include "nsError.h"
 
 // Enable this to warn when `Output` has been called but not enough data was
 // buffered.
@@ -54,60 +48,46 @@ class AudioPacketizer {
                "positive");
   }
 
-  [[nodiscard]] nsresult Input(const InputType* aFrames, uint32_t aFrameCount) {
-    CheckedUint32 inputSamples = CheckedUint32(aFrameCount) * mChannels;
-    if (!inputSamples.isValid()) {
-      NS_WARNING("AudioPacketizer::Input: frame count too large to buffer");
-      return NS_ERROR_DOM_MEDIA_OVERFLOW_ERR;
-    }
+  void Input(const InputType* aFrames, uint32_t aFrameCount) {
+    uint32_t inputSamples = aFrameCount * mChannels;
     // Need to grow the storage. This should rarely happen, if at all, once the
     // array has the right size.
-    if (inputSamples.value() > EmptySlots()) {
+    if (inputSamples > EmptySlots()) {
       // Calls to Input and Output are roughtly interleaved
       // (Input,Output,Input,Output, etc.), or balanced
       // (Input,Input,Input,Output,Output,Output), so we update the buffer to
       // the exact right size in order to not waste space.
-      CheckedUint32 newLength =
-          CheckedUint32(AvailableSamples()) + inputSamples;
-      if (!newLength.isValid()) {
-        NS_WARNING("AudioPacketizer::Input: buffer size too large to grow");
-        return NS_ERROR_DOM_MEDIA_OVERFLOW_ERR;
-      }
-      UniquePtr<InputType[]> newStorage =
-          mozilla::MakeUniqueFallible<InputType[]>(newLength.value());
-      if (!newStorage) {
-        NS_WARNING("AudioPacketizer::Input: buffer allocation failed");
-        return NS_ERROR_OUT_OF_MEMORY;
-      }
+      uint32_t newLength = AvailableSamples() + inputSamples;
+      uint32_t toCopy = AvailableSamples();
+      UniquePtr<InputType[]> oldStorage = std::move(mStorage);
+      mStorage = mozilla::MakeUnique<InputType[]>(newLength);
       // Copy the old data at the beginning of the new storage.
       if (WriteIndex() >= ReadIndex()) {
-        PodCopy(newStorage.get(), mStorage.get() + ReadIndex(),
+        PodCopy(mStorage.get(), oldStorage.get() + ReadIndex(),
                 AvailableSamples());
       } else {
         uint32_t firstPartLength = mLength - ReadIndex();
         uint32_t secondPartLength = AvailableSamples() - firstPartLength;
-        PodCopy(newStorage.get(), mStorage.get() + ReadIndex(),
+        PodCopy(mStorage.get(), oldStorage.get() + ReadIndex(),
                 firstPartLength);
-        PodCopy(newStorage.get() + firstPartLength, mStorage.get(),
+        PodCopy(mStorage.get() + firstPartLength, oldStorage.get(),
                 secondPartLength);
       }
-      mStorage = std::move(newStorage);
-      mWriteIndex -= mReadIndex;
+      mWriteIndex = toCopy;
       mReadIndex = 0;
-      mLength = newLength.value();
+      mLength = newLength;
     }
 
-    if (WriteIndex() + inputSamples.value() <= mLength) {
-      PodCopy(mStorage.get() + WriteIndex(), aFrames, inputSamples.value());
+    if (WriteIndex() + inputSamples <= mLength) {
+      PodCopy(mStorage.get() + WriteIndex(), aFrames, aFrameCount * mChannels);
     } else {
       uint32_t firstPartLength = mLength - WriteIndex();
-      uint32_t secondPartLength = inputSamples.value() - firstPartLength;
+      uint32_t secondPartLength = inputSamples - firstPartLength;
       PodCopy(mStorage.get() + WriteIndex(), aFrames, firstPartLength);
       PodCopy(mStorage.get(), aFrames + firstPartLength, secondPartLength);
     }
 
-    mWriteIndex += inputSamples.value();
-    return NS_OK;
+    mWriteIndex += inputSamples;
   }
 
   OutputType* Output() {
@@ -181,13 +161,7 @@ class AudioPacketizer {
 
   uint32_t WriteIndex() const { return mWriteIndex % mLength; }
 
-  uint32_t AvailableSamples() const {
-    // Output never advances mReadIndex past mWriteIndex (it clamps to the
-    // available count on under-run), so the difference is never negative.
-    // The live count is bounded by mLength (a uint32), so the cast is in range.
-    MOZ_DIAGNOSTIC_ASSERT(mWriteIndex >= mReadIndex);
-    return AssertedCast<uint32_t>(mWriteIndex - mReadIndex);
-  }
+  uint32_t AvailableSamples() const { return mWriteIndex - mReadIndex; }
 
   uint32_t EmptySlots() const { return mLength - AvailableSamples(); }
 
