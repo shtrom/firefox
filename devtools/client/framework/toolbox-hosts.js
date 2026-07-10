@@ -299,10 +299,20 @@ class SidebarHost extends BaseInBrowserHost {
 
   #onFrameResize = () => {
     const global = this.hostTab.documentGlobal;
-    this.#splitter.setAttribute(
-      "aria-valuenow",
-      global.windowUtils.getBoundsWithoutFlushing(this.frame).width
-    );
+    const frameWidth = global.windowUtils.getBoundsWithoutFlushing(
+      this.frame
+    ).width;
+
+    // Make the side toolbox width available so the content area can reserve it
+    // for its min-width.
+    global.document
+      .getElementById("tabbrowser-tabbox")
+      .style.setProperty(
+        "--devtools-toolbox-width",
+        `${Math.round(frameWidth)}px`
+      );
+
+    this.#splitter.setAttribute("aria-valuenow", frameWidth);
     const minWidth = parseFloat(global.getComputedStyle(this.frame).minWidth);
     this.#splitter.setAttribute("aria-valuemin", minWidth);
 
@@ -335,6 +345,10 @@ class SidebarHost extends BaseInBrowserHost {
       if (!isNaN(width)) {
         Services.prefs.setIntPref(this.widthPref, width);
       }
+
+      this.hostTab.documentGlobal.document
+        .getElementById("tabbrowser-tabbox")
+        .style.removeProperty("--devtools-toolbox-width");
 
       this.#resizeObserver.disconnect();
       this.#browserPanel.removeChild(this.#splitter);

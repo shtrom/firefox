@@ -5,6 +5,7 @@
 @namespace html url("http://www.w3.org/1999/xhtml");
 
 :root {
+  --content-area-min-size: 25px;
   /* --tabpanel-background-color matches $in-content-page-background in newtab
      (browser/extensions/newtab/content-src/styles/_variables.scss) */
   --tabpanel-background-color: #f9f9fb;
@@ -188,8 +189,8 @@
 .browserStack {
   flex: 10000 10000;
   /* Prevent shrinking the page content to 0 height and width */
-  min-height: 25px;
-  min-width: 25px;
+  min-height: var(--content-area-min-size);
+  min-width: var(--content-area-min-size);
 }
 
 #tabbrowser-tabpanels {
