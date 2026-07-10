@@ -2,7 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { html, repeat } from "chrome://global/content/vendor/lit.all.mjs";
+import {
+  html,
+  nothing,
+  repeat,
+} from "chrome://global/content/vendor/lit.all.mjs";
 import { MozLitElement } from "chrome://global/content/lit-utils.mjs";
 // eslint-disable-next-line import/no-unassigned-import
 import "chrome://global/content/elements/moz-button.mjs";
@@ -10,6 +14,23 @@ import "chrome://global/content/elements/moz-button.mjs";
 import "chrome://global/content/elements/panel-list.mjs";
 // eslint-disable-next-line import/no-unassigned-import
 import "chrome://global/content/elements/moz-badge.mjs";
+
+const { XPCOMUtils } = ChromeUtils.importESModule(
+  "resource://gre/modules/XPCOMUtils.sys.mjs"
+);
+
+// TODO Bug 2053495: remove with mistral release pref
+const MISTRAL_RELEASE_PREF = "browser.smartwindow.mistralRelease";
+
+const { getModelDisplayOrder, getModelIconURL } = window.IS_STORYBOOK
+  ? {
+      getModelDisplayOrder: () => ["1", "2", "3"],
+      getModelIconURL: choiceId =>
+        `chrome://browser/content/aiwindow/assets/model-choice-${choiceId}.svg`,
+    }
+  : ChromeUtils.importESModule(
+      "moz-src:///browser/components/aiwindow/models/Utils.sys.mjs"
+    );
 
 /**
  * A model select that shows the current model choice and lets users change
@@ -40,6 +61,19 @@ export class InputModelSelect extends MozLitElement {
     this.panelOpen = false;
     this.sidebarMode = false;
     this._menuId = `models-menu-${crypto.randomUUID()}`;
+    // TODO Bug 2053495: remove with mistral release pref. Caches the pref and
+    // re-renders the whole component when it changes (e.g. Nimbus enrollment
+    // mid-session), so labels, order, and icons all update in place.
+    XPCOMUtils.defineLazyPreferenceGetter(
+      this,
+      "mistralRelease",
+      MISTRAL_RELEASE_PREF,
+      false,
+      () => this.requestUpdate()
+    );
+    // defineLazyPreferenceGetter registers its pref observer on first read, so
+    // touch the value here to arm the onUpdate callback above.
+    void this.mistralRelease;
   }
 
   get #caretIcon() {
@@ -60,12 +94,22 @@ export class InputModelSelect extends MozLitElement {
     if (!this.availableModels) {
       return [];
     }
-    return Object.entries(this.availableModels).map(
-      ([index, availableModel]) => ({
+    const order = getModelDisplayOrder();
+    const rank = index => {
+      // Custom (choice "0") always leads the list.
+      if (index === "0") {
+        return -1;
+      }
+      const position = order.indexOf(index);
+      // IDs not in the order list sort to the end.
+      return position === -1 ? order.length : position;
+    };
+    return Object.entries(this.availableModels)
+      .map(([index, availableModel]) => ({
         ...availableModel,
         index,
-      })
-    );
+      }))
+      .sort((a, b) => rank(a.index) - rank(b.index));
   }
 
   get #selectedModel() {
@@ -100,17 +144,19 @@ export class InputModelSelect extends MozLitElement {
     );
   }
 
-  #getIconUrl(index) {
-    return `chrome://browser/content/aiwindow/assets/model-choice-${index}.svg`;
-  }
-
   #getButtonLabelL10nId(labelId) {
+    if (labelId === "custom") {
+      return "aiwindow-input-model-select-button-label-custom";
+    }
     return `aiwindow-input-model-select-button-label-${labelId}`;
   }
 
   #getDescriptionL10nId(labelId) {
     if (labelId === "custom") {
       return "aiwindow-input-model-select-menu-item-description-custom";
+    }
+    if (this.mistralRelease) {
+      return `aiwindow-input-model-select-button-label-${labelId}`;
     }
     return "aiwindow-input-model-select-menu-item-description";
   }
@@ -122,42 +168,64 @@ export class InputModelSelect extends MozLitElement {
 
     const panelListTemplate = html`<panel-list
       id=${this._menuId}
+      mistral-release=${this.mistralRelease}
       @shown=${this.#onPanelShown}
       @hidden=${this.#onPanelHidden}
     >
       ${repeat(
         this.#modelsList,
-        item => item.model,
+        item => item.index,
         item => html`
           <button
             class="model-item"
             role="menuitem"
             @click=${() => this.#setModelId(item.model)}
           >
-            <img
-              class="model-item-icon"
-              src=${this.#getIconUrl(item.index)}
-              alt=""
-            />
+            <span class="model-item-avatar">
+              <img
+                class="model-item-icon${item.index === "0"
+                  ? " model-item-icon--custom"
+                  : ""}"
+                src=${getModelIconURL(item.index, item)}
+                alt=${this.mistralRelease ? item.shortName : nothing}
+            /></span>
             <span class="model-item-content">
-              <span
-                class="model-item-label"
-                data-l10n-id=${this.#getButtonLabelL10nId(item.labelId)}
-              ></span>
-              <span
-                class="model-item-details"
-                data-l10n-id=${this.#getDescriptionL10nId(item.labelId)}
-                data-l10n-args=${JSON.stringify({
-                  model: item.model,
-                  ownerName: item.ownerName,
-                })}
-              ></span>
+              <span class="model-item-header">
+                ${this.mistralRelease && item.shortName
+                  ? html`<span class="model-item-label"
+                      >${item.shortName}</span
+                    >`
+                  : html`<span
+                      class="model-item-label"
+                      data-l10n-id=${this.#getButtonLabelL10nId(item.labelId)}
+                    ></span>`}
+                ${item.index === this.defaultModelChoiceId
+                  ? html`<moz-badge
+                      type="new"
+                      data-l10n-id="aiwindow-input-model-select-default-badge"
+                    ></moz-badge>`
+                  : ""}
+              </span>
+              ${this.mistralRelease
+                ? html`<span
+                    class="model-item-details"
+                    data-l10n-id=${this.#getDescriptionL10nId(item.labelId)}
+                  ></span>`
+                : html`<span
+                    class="model-item-details"
+                    data-l10n-id=${this.#getDescriptionL10nId(item.labelId)}
+                    data-l10n-args=${JSON.stringify({
+                      model: item.model,
+                      ownerName: item.ownerName,
+                    })}
+                  ></span>`}
             </span>
-            ${item.index === this.defaultModelChoiceId
-              ? html`<moz-badge
-                  type="new"
-                  data-l10n-id="aiwindow-input-model-select-default-badge"
-                ></moz-badge>`
+            ${item.model === this.selectedModelId
+              ? html`<img
+                  class="model-item-check"
+                  src="chrome://global/skin/icons/check.svg"
+                  alt=""
+                />`
               : ""}
           </button>
         `
@@ -185,7 +253,12 @@ export class InputModelSelect extends MozLitElement {
         type="default"
         class="input-model-select-button"
         .menuId=${this._menuId}
-        data-l10n-id=${this.#getButtonLabelL10nId(this.#selectedModel.labelId)}
+        data-l10n-id=${this.mistralRelease && this.#selectedModel.brandName
+          ? nothing
+          : this.#getButtonLabelL10nId(this.#selectedModel.labelId)}
+        label=${this.mistralRelease && this.#selectedModel.brandName
+          ? this.#selectedModel.brandName
+          : nothing}
         .iconSrc=${this.#caretIcon}
         iconPosition="end"
       >
