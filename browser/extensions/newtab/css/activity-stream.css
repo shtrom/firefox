@@ -10236,8 +10236,7 @@ dialog:dir(rtl)::after {
 }
 
 .picture-of-the-day-toolbar,
-.picture-of-the-day-footer,
-.picture-of-the-day-details {
+.picture-of-the-day-footer {
   position: relative;
   z-index: 1;
 }
@@ -10296,12 +10295,10 @@ dialog:dir(rtl)::after {
 }
 
 .picture-of-the-day:hover .picture-of-the-day-message,
-.picture-of-the-day:hover .picture-of-the-day-description,
 .picture-of-the-day:hover .picture-of-the-day-toolbar,
 .picture-of-the-day:hover .picture-of-the-day-populated::before,
 .picture-of-the-day:hover .picture-of-the-day-populated::after,
 .picture-of-the-day:focus-within .picture-of-the-day-message,
-.picture-of-the-day:focus-within .picture-of-the-day-description,
 .picture-of-the-day:focus-within .picture-of-the-day-toolbar,
 .picture-of-the-day:focus-within .picture-of-the-day-populated::before,
 .picture-of-the-day:focus-within .picture-of-the-day-populated::after {
@@ -10329,19 +10326,14 @@ dialog:dir(rtl)::after {
 
 .picture-of-the-day-populated::before {
   inset-block-start: 0;
-  block-size: 100%;
-  background: color-mix(in srgb, var(--color-black) 40%, transparent);
-}
-@media (prefers-contrast) {
-  .picture-of-the-day-populated::before {
-    background: color-mix(in srgb, var(--color-black) 90%, transparent);
-  }
+  block-size: 45%;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0));
 }
 
 .picture-of-the-day-populated::after {
   inset-block-end: 0;
-  block-size: 100%;
-  background: linear-gradient(to top, color-mix(in srgb, var(--color-black) 100%, transparent) 0%, transparent 50%, color-mix(in srgb, var(--color-black) 100%, transparent) 100%);
+  block-size: 55%;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0));
 }
 
 .picture-of-the-day-image {
@@ -10353,70 +10345,16 @@ dialog:dir(rtl)::after {
   z-index: 0;
 }
 
-.picture-of-the-day-details {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-small);
-  padding: var(--space-medium);
-  color: var(--color-white);
-  z-index: 2;
-}
-
 .picture-of-the-day-eyebrow {
   margin: 0;
   margin-inline-end: auto;
   min-inline-size: 0;
   overflow: hidden;
-  color: var(--color-white);
+  color: white;
   font-size: var(--font-size-small);
   white-space: nowrap;
   text-overflow: ellipsis;
   text-shadow: 0 1px 2px color-mix(in srgb, var(--color-black) 60%, transparent);
-}
-
-.picture-of-the-day-description {
-  display: -webkit-box;
-  margin: 0;
-  overflow: hidden;
-  font-size: var(--font-size-small);
-  opacity: 0;
-  transition: opacity 150ms;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-}
-
-.picture-of-the-day-source-link {
-  padding: 0;
-  border: none;
-  background: none;
-  color: inherit;
-  font-family: inherit;
-  font-weight: inherit;
-  text-align: start;
-  cursor: pointer;
-}
-.picture-of-the-day-source-link:focus-visible {
-  outline: var(--focus-outline);
-  outline-offset: var(--focus-outline-offset);
-}
-
-.picture-of-the-day-image-link {
-  position: absolute;
-  inset: 0;
-  padding: 0;
-  border: none;
-  background: none;
-  cursor: pointer;
-  z-index: 0;
-}
-.picture-of-the-day-image-link:focus-visible {
-  outline: var(--focus-outline);
-  outline-offset: calc(-1 * var(--focus-outline-offset));
-}
-
-.medium-widget .picture-of-the-day-description {
-  display: none;
 }
 
 @media (forced-colors: active) {
@@ -10426,10 +10364,6 @@ dialog:dir(rtl)::after {
   }
   .picture-of-the-day-show-button::before {
     background-color: var(--button-text-color-ghost);
-  }
-
-  .picture-of-the-day-details {
-    color: var(--text-color);
   }
 
   .picture-of-the-day-populated::before,
