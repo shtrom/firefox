@@ -77,15 +77,13 @@ NTSTATUS WINAPI TargetNtCreateKey(NtCreateKeyFunction orig_CreateKey,
   NTSTATUS status =
       orig_CreateKey(key, desired_access, object_attributes, title_index,
                      class_name, create_options, disposition);
-  if (NT_SUCCESS(status)) {
+  if (NT_SUCCESS(status) || status == STATUS_OBJECT_NAME_NOT_FOUND) {
     return status;
   }
 
-  if (STATUS_OBJECT_NAME_NOT_FOUND != status) {
-    mozilla::sandboxing::LogBlocked("NtCreateKey",
-                                    object_attributes->ObjectName->Buffer,
-                                    object_attributes->ObjectName->Length);
-  }
+  mozilla::sandboxing::LogBlocked("NtCreateKey",
+                                  object_attributes->ObjectName->Buffer,
+                                  object_attributes->ObjectName->Length);
 
   // We don't trust that the IPC can work this early.
   if (!SandboxFactory::GetTargetServices()->GetState()->InitCalled()) {
@@ -238,15 +236,13 @@ NTSTATUS WINAPI TargetNtOpenKey(NtOpenKeyFunction orig_OpenKey, PHANDLE key,
                                 POBJECT_ATTRIBUTES object_attributes) {
   // Check if the process can open it first.
   NTSTATUS status = orig_OpenKey(key, desired_access, object_attributes);
-  if (NT_SUCCESS(status)) {
+  if (NT_SUCCESS(status) || status == STATUS_OBJECT_NAME_NOT_FOUND) {
     return status;
   }
 
-  if (STATUS_OBJECT_NAME_NOT_FOUND != status) {
-    mozilla::sandboxing::LogBlocked("NtOpenKey",
-                                    object_attributes->ObjectName->Buffer,
-                                    object_attributes->ObjectName->Length);
-  }
+  mozilla::sandboxing::LogBlocked("NtOpenKey",
+                                  object_attributes->ObjectName->Buffer,
+                                  object_attributes->ObjectName->Length);
 
   return CommonNtOpenKey(status, key, desired_access, object_attributes);
 }
@@ -262,15 +258,14 @@ NTSTATUS WINAPI TargetNtOpenKeyEx(NtOpenKeyExFunction orig_OpenKeyEx,
   // We do not support open_options at this time. The 2 current known values
   // are REG_OPTION_CREATE_LINK, to open a symbolic link, and
   // REG_OPTION_BACKUP_RESTORE to open the key with special privileges.
-  if (NT_SUCCESS(status) || open_options != 0) {
+  if (NT_SUCCESS(status) || open_options != 0 ||
+      status == STATUS_OBJECT_NAME_NOT_FOUND) {
     return status;
   }
 
-  if (STATUS_OBJECT_NAME_NOT_FOUND != status) {
-    mozilla::sandboxing::LogBlocked("NtOpenKeyEx",
-                                    object_attributes->ObjectName->Buffer,
-                                    object_attributes->ObjectName->Length);
-  }
+  mozilla::sandboxing::LogBlocked("NtOpenKeyEx",
+                                  object_attributes->ObjectName->Buffer,
+                                  object_attributes->ObjectName->Length);
 
   return CommonNtOpenKey(status, key, desired_access, object_attributes);
 }
