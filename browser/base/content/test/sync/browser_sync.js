@@ -226,11 +226,25 @@ add_task(async function test_ui_state_signedin() {
     ),
     "expected toolbar to be visible after opening"
   );
+  let sendTabButton = PanelMultiView.getViewNode(
+    document,
+    "PanelUI-fxa-menu-sendtab-button"
+  );
+  let sendTabButtonId = sendTabButton.getAttribute("data-l10n-id");
+  Assert.equal(
+    sendTabButtonId,
+    "fxa-menu-send-to-device",
+    "'Send to Device' displayed on send tab button"
+  );
+
   checkFxaToolbarButtonPanel({
     headerTitle: "Manage account",
     headerDescription: state.displayName,
     enabledItems: [
-      "PanelUI-fxa-menu-sync-status-button",
+      "PanelUI-fxa-menu-sendtab-button",
+      "PanelUI-fxa-menu-connect-device-button",
+      "PanelUI-fxa-menu-syncnow-button",
+      "PanelUI-fxa-menu-sync-prefs-button",
       "PanelUI-fxa-menu-account-signout-button",
     ],
     disabledItems: [],
@@ -454,9 +468,16 @@ add_task(async function test_ui_state_signed_in() {
   checkFxaToolbarButtonPanel({
     headerTitle: "Manage account",
     headerDescription: "Foo Bar",
-    enabledItems: ["PanelUI-fxa-menu-account-signout-button"],
+    enabledItems: [
+      "PanelUI-fxa-menu-sendtab-button",
+      "PanelUI-fxa-menu-connect-device-button",
+      "PanelUI-fxa-menu-account-signout-button",
+    ],
     disabledItems: [],
-    hiddenItems: ["PanelUI-fxa-menu-sync-status-button"],
+    hiddenItems: [
+      "PanelUI-fxa-menu-syncnow-button",
+      "PanelUI-fxa-menu-sync-prefs-button",
+    ],
     visibleItems: ["PanelUI-fxa-menu-setup-sync-container"],
   });
   checkFxAAvatar("signedin");
@@ -471,6 +492,53 @@ add_task(async function test_ui_state_signed_in() {
   });
 
   await closeTabAndMainPanel();
+});
+
+add_task(async function test_ui_state_signedin_mobile_only_send_tab() {
+  const sandbox = sinon.createSandbox();
+  sandbox.stub(gSync, "getSendTabTargets").returns([
+    {
+      id: 1,
+      name: "My Phone",
+      type: "mobile",
+      availableCommands: {
+        "https://identity.mozilla.com/cmd/open-uri": "baz",
+      },
+    },
+    {
+      id: 2,
+      name: "My Tablet",
+      type: "tablet",
+      availableCommands: {
+        "https://identity.mozilla.com/cmd/open-uri": "baz",
+      },
+    },
+  ]);
+
+  let state = {
+    status: UIState.STATUS_SIGNED_IN,
+    syncEnabled: true,
+    email: "foo@bar.com",
+    displayName: "Foo Bar",
+    avatarURL: "https://foo.bar",
+    lastSync: new Date(),
+    syncing: false,
+  };
+
+  gSync.updateAllUI(state);
+  await openFxaPanel();
+
+  Assert.equal(
+    PanelMultiView.getViewNode(
+      document,
+      "PanelUI-fxa-menu-sendtab-button"
+    ).getAttribute("data-l10n-id"),
+    "fxa-menu-send-to-mobile",
+    "'Send to Mobile' displayed on send tab button when all targets are mobile"
+  );
+
+  await closeFxaPanel();
+  sandbox.restore();
 });
 
 add_task(async function test_ui_state_signed_in_no_display_name() {
@@ -492,9 +560,16 @@ add_task(async function test_ui_state_signed_in_no_display_name() {
   checkFxaToolbarButtonPanel({
     headerTitle: "Manage account",
     headerDescription: "foo@bar.com",
-    enabledItems: ["PanelUI-fxa-menu-account-signout-button"],
+    enabledItems: [
+      "PanelUI-fxa-menu-sendtab-button",
+      "PanelUI-fxa-menu-connect-device-button",
+      "PanelUI-fxa-menu-account-signout-button",
+    ],
     disabledItems: [],
-    hiddenItems: ["PanelUI-fxa-menu-sync-status-button"],
+    hiddenItems: [
+      "PanelUI-fxa-menu-syncnow-button",
+      "PanelUI-fxa-menu-sync-prefs-button",
+    ],
     visibleItems: ["PanelUI-fxa-menu-setup-sync-container"],
   });
   checkFxAAvatar("signedin");
@@ -533,9 +608,15 @@ add_task(async function test_ui_state_unverified() {
   checkFxaToolbarButtonPanel({
     headerTitle: expectedLabel,
     headerDescription: state.email,
-    enabledItems: ["PanelUI-fxa-menu-account-signout-button"],
-    disabledItems: [],
-    hiddenItems: [],
+    enabledItems: [
+      "PanelUI-fxa-menu-sendtab-button",
+      "PanelUI-fxa-menu-account-signout-button",
+    ],
+    disabledItems: ["PanelUI-fxa-menu-connect-device-button"],
+    hiddenItems: [
+      "PanelUI-fxa-menu-syncnow-button",
+      "PanelUI-fxa-menu-sync-prefs-button",
+    ],
     visibleItems: ["PanelUI-fxa-menu-setup-sync-container"],
   });
   checkFxAAvatar("unverified");
@@ -574,9 +655,15 @@ add_task(async function test_ui_state_loginFailed() {
   checkFxaToolbarButtonPanel({
     headerTitle: expectedLabel,
     headerDescription: state.displayName,
-    enabledItems: ["PanelUI-fxa-menu-account-signout-button"],
-    disabledItems: [],
-    hiddenItems: [],
+    enabledItems: [
+      "PanelUI-fxa-menu-sendtab-button",
+      "PanelUI-fxa-menu-account-signout-button",
+    ],
+    disabledItems: ["PanelUI-fxa-menu-connect-device-button"],
+    hiddenItems: [
+      "PanelUI-fxa-menu-syncnow-button",
+      "PanelUI-fxa-menu-sync-prefs-button",
+    ],
     visibleItems: ["PanelUI-fxa-menu-setup-sync-container"],
   });
   checkFxAAvatar("login-failed");
@@ -687,7 +774,10 @@ add_task(async function test_experiment_ui_state_unconfigured() {
       "PanelUI-fxa-menu-vpn-button",
     ],
     disabledItems: [],
-    hiddenItems: [],
+    hiddenItems: [
+      "PanelUI-fxa-menu-syncnow-button",
+      "PanelUI-fxa-menu-sync-prefs-button",
+    ],
     visibleItems: [],
   });
 
@@ -746,7 +836,10 @@ add_task(async function test_experiment_ui_state_signedin() {
     headerTitle: "Manage account",
     headerDescription: state.displayName,
     enabledItems: [
-      "PanelUI-fxa-menu-sync-status-button",
+      "PanelUI-fxa-menu-sendtab-button",
+      "PanelUI-fxa-menu-connect-device-button",
+      "PanelUI-fxa-menu-syncnow-button",
+      "PanelUI-fxa-menu-sync-prefs-button",
       "PanelUI-fxa-menu-account-signout-button",
       "PanelUI-fxa-cta-menu",
       "PanelUI-fxa-menu-monitor-button",
@@ -797,9 +890,16 @@ add_task(async function test_new_sync_setup_ui() {
   checkFxaToolbarButtonPanel({
     headerTitle: "Manage account",
     headerDescription: "Foo Bar",
-    enabledItems: ["PanelUI-fxa-menu-account-signout-button"],
+    enabledItems: [
+      "PanelUI-fxa-menu-sendtab-button",
+      "PanelUI-fxa-menu-account-signout-button",
+    ],
     disabledItems: [],
-    hiddenItems: ["PanelUI-fxa-menu-sync-status-button"],
+    hiddenItems: [
+      "PanelUI-fxa-menu-syncnow-button",
+      "PanelUI-fxa-menu-sync-prefs-button",
+      "PanelUI-fxa-menu-connect-device-button",
+    ],
     visibleItems: ["PanelUI-fxa-menu-setup-sync-container"],
   });
 
@@ -861,7 +961,10 @@ add_task(async function test_ui_my_services_signedin() {
     headerTitle: "Manage account",
     headerDescription: state.displayName,
     enabledItems: [
-      "PanelUI-fxa-menu-sync-status-button",
+      "PanelUI-fxa-menu-sendtab-button",
+      "PanelUI-fxa-menu-connect-device-button",
+      "PanelUI-fxa-menu-syncnow-button",
+      "PanelUI-fxa-menu-sync-prefs-button",
       "PanelUI-fxa-menu-account-signout-button",
       "PanelUI-fxa-cta-menu",
       "PanelUI-fxa-menu-monitor-button",
@@ -1241,285 +1344,140 @@ async function closeTabAndMainPanel() {
   BrowserTestUtils.removeTab(gBrowser.selectedTab);
 }
 
-/**
- * When the user's account is unverified, the device list is hidden because
- * sync is inactive without verification. Without a device list, there is no
- * per-device "Send Current Page to This Device" button to interact with.
- */
-add_task(async function test_device_list_hidden_when_unverified() {
-  gSync.updateAllUI({
+add_task(async function test_ui_state_unverified_send_tab() {
+  const sandbox = sinon.createSandbox();
+  sandbox.stub(gSync, "getSendTabTargets").returns([]);
+  sandbox.stub(gSync, "isSignedIn").get(() => false);
+  sandbox.stub(gSync, "isUnverified").get(() => true);
+
+  let state = {
     status: UIState.STATUS_NOT_VERIFIED,
     syncEnabled: false,
     email: "foo@bar.com",
-  });
+    displayName: "Foo Bar",
+    avatarURL: "https://foo.bar",
+    lastSync: new Date(),
+    syncing: false,
+  };
+
+  gSync.updateAllUI(state);
   await openFxaPanel();
 
+  let sendTabButton = PanelMultiView.getViewNode(
+    document,
+    "PanelUI-fxa-menu-sendtab-button"
+  );
+
+  Assert.equal(
+    sendTabButton.getAttribute("data-l10n-id"),
+    "fxa-menu-send-to-mobile",
+    "'Send to Mobile' displayed on send tab button when all targets are mobile"
+  );
+
+  sendTabButton.click();
+
+  let verifyAccountView = PanelMultiView.getViewNode(
+    document,
+    "PanelUI-fxa-menu-sendtab-verify-account"
+  );
+  await BrowserTestUtils.waitForEvent(verifyAccountView, "ViewShown");
+
+  let unverifiedAccountButton = verifyAccountView.querySelector(
+    "#PanelUI-fxa-menu-sendtab-unverified-button"
+  );
   ok(
-    PanelMultiView.getViewNode(document, "PanelUI-fxa-menu-devices-list")
-      .hidden,
-    "Device list is hidden when account is unverified"
+    BrowserTestUtils.isVisible(unverifiedAccountButton),
+    "expected unverified account button to be visible after opening"
+  );
+  Assert.equal(
+    unverifiedAccountButton.getAttribute("disabled"),
+    "true",
+    "expected unverified account button to be disabled"
+  );
+
+  let verifyAccountButton = verifyAccountView.querySelector(
+    "#PanelUI-fxa-menu-sendtab-verify-account-button"
+  );
+  ok(
+    BrowserTestUtils.isVisible(verifyAccountButton),
+    "expected verify account button to be visible after opening"
   );
 
   await closeFxaPanel();
+  sandbox.restore();
 });
 
-/**
- * When signed out, the device list is hidden. There are no synced devices
- * so no per-device "Send Current Page to This Device" button is reachable.
- */
-add_task(async function test_device_list_hidden_when_signed_out() {
-  gSync.updateAllUI({ status: UIState.STATUS_NOT_CONFIGURED });
-  await openFxaPanel();
-
-  ok(
-    PanelMultiView.getViewNode(document, "PanelUI-fxa-menu-devices-list")
-      .hidden,
-    "Device list is hidden when signed out"
-  );
-
-  await closeFxaPanel();
-});
-
-/**
- * When signed in with sync disabled, the device list is hidden because
- * FxAMenuDeviceList hides it when syncEnabled is false.
- */
-add_task(async function test_device_list_hidden_when_sync_disabled() {
-  gSync.updateAllUI({
-    status: UIState.STATUS_SIGNED_IN,
+add_task(async function test_ui_state_signed_out_send_tab() {
+  let state = {
+    status: UIState.STATUS_NOT_CONFIGURED,
     syncEnabled: false,
     email: "foo@bar.com",
     displayName: "Foo Bar",
-  });
+    avatarURL: "https://foo.bar",
+    lastSync: new Date(),
+    syncing: false,
+  };
+
+  gSync.updateAllUI(state);
   await openFxaPanel();
 
-  ok(
-    PanelMultiView.getViewNode(document, "PanelUI-fxa-menu-devices-list")
-      .hidden,
-    "Device list is hidden when sync is disabled"
-  );
-
-  await closeFxaPanel();
-});
-
-/**
- * When a device does not support the sendTab command, the
- * "Send Current Page to This Device" button is hidden in the recent tabs panel.
- */
-add_task(async function test_send_page_button_hidden_for_incompatible_device() {
-  const sandbox = sinon.createSandbox();
-  sandbox.stub(UIState, "get").returns({
-    status: UIState.STATUS_SIGNED_IN,
-    syncEnabled: true,
-  });
-  sandbox.stub(BrowserUtils, "getShareableURL").returnsArg(0);
-  sandbox
-    .stub(fxAccounts.commands.sendTab, "isDeviceCompatible")
-    .returns(false);
-  sandbox
-    .stub(fxAccounts.commands.closeTab, "isDeviceCompatible")
-    .returns(false);
-
-  gSync.updateAllUI({
-    status: UIState.STATUS_SIGNED_IN,
-    syncEnabled: true,
-    email: "foo@bar.com",
-  });
-  await openFxaPanel();
-
-  let panelview = PanelMultiView.getViewNode(document, "PanelUI-fxa");
-  let devicesListContainer = PanelMultiView.getViewNode(
+  let profileButtonsContainer = PanelMultiView.getViewNode(
     document,
-    "PanelUI-fxa-menu-devices-list"
-  );
-  let mockDevice = { id: 1, name: "Device 1", availableCommands: {} };
-  let mockClient = {
-    id: "client1",
-    name: "Device 1",
-    lastModified: Date.now(),
-    tabs: [
-      {
-        title: "Tab 1",
-        url: "https://example.com/",
-        icon: "",
-        lastUsed: Date.now(),
-        inactive: false,
-      },
-    ],
-  };
-
-  let subviewShown = BrowserTestUtils.waitForEvent(
-    PanelMultiView.getViewNode(document, "PanelUI-fxa-device-recent-tabs"),
-    "ViewShown"
-  );
-  panelview.syncedTabsPanelList._showDeviceRecentTabs(
-    mockClient,
-    mockDevice,
-    devicesListContainer,
-    new MouseEvent("click")
-  );
-  await subviewShown;
-
-  ok(
-    PanelMultiView.getViewNode(document, "PanelUI-fxa-device-send-current-page")
-      .hidden,
-    "Send Current Page button is hidden when device does not support sendTab"
+    "PanelUI-fxa-menu-profile-buttons"
   );
 
-  await closeFxaPanel();
-  sandbox.restore();
-});
-
-/**
- * When the current page's URL is not shareable (e.g. an about: page),
- * the "Send Current Page to This Device" button is hidden in the recent tabs panel.
- */
-add_task(async function test_send_page_button_hidden_for_non_shareable_url() {
-  const sandbox = sinon.createSandbox();
-  sandbox.stub(UIState, "get").returns({
-    status: UIState.STATUS_SIGNED_IN,
-    syncEnabled: true,
-  });
-  sandbox.stub(BrowserUtils, "getShareableURL").returns(null);
-  sandbox.stub(fxAccounts.commands.sendTab, "isDeviceCompatible").returns(true);
-  sandbox
-    .stub(fxAccounts.commands.closeTab, "isDeviceCompatible")
-    .returns(false);
-
-  gSync.updateAllUI({
-    status: UIState.STATUS_SIGNED_IN,
-    syncEnabled: true,
-    email: "foo@bar.com",
-  });
-  await openFxaPanel();
-
-  let panelview = PanelMultiView.getViewNode(document, "PanelUI-fxa");
-  let devicesListContainer = PanelMultiView.getViewNode(
+  let sendTabButton = PanelMultiView.getViewNode(
     document,
-    "PanelUI-fxa-menu-devices-list"
-  );
-  let mockDevice = {
-    id: 1,
-    name: "Device 1",
-    availableCommands: {
-      "https://identity.mozilla.com/cmd/open-uri": "baz",
-    },
-  };
-  let mockClient = {
-    id: "client1",
-    name: "Device 1",
-    lastModified: Date.now(),
-    tabs: [
-      {
-        title: "Tab 1",
-        url: "https://example.com/",
-        icon: "",
-        lastUsed: Date.now(),
-        inactive: false,
-      },
-    ],
-  };
-
-  let subviewShown = BrowserTestUtils.waitForEvent(
-    PanelMultiView.getViewNode(document, "PanelUI-fxa-device-recent-tabs"),
-    "ViewShown"
-  );
-  panelview.syncedTabsPanelList._showDeviceRecentTabs(
-    mockClient,
-    mockDevice,
-    devicesListContainer,
-    new MouseEvent("click")
-  );
-  await subviewShown;
-
-  ok(
-    PanelMultiView.getViewNode(document, "PanelUI-fxa-device-send-current-page")
-      .hidden,
-    "Send Current Page button is hidden when URL is not shareable"
+    "PanelUI-fxa-menu-sendtab-button"
   );
 
-  await closeFxaPanel();
-  sandbox.restore();
-});
+  Assert.equal(
+    profileButtonsContainer.compareDocumentPosition(sendTabButton),
+    4, // Equates to Node.DOCUMENT_POSITION_FOLLOWING (4)
+    "Profile buttons container is above the send tab button"
+  );
 
-/**
- * When a device has no open tabs, the recent tabs panel hides the tabs list,
- * footer separator and "View all" button, and shows the "No open tabs" label.
- */
-add_task(async function test_recent_tabs_panel_no_open_tabs() {
-  const sandbox = sinon.createSandbox();
-  sandbox.stub(UIState, "get").returns({
-    status: UIState.STATUS_SIGNED_IN,
-    syncEnabled: true,
-  });
-  sandbox.stub(BrowserUtils, "getShareableURL").returnsArg(0);
-  sandbox
-    .stub(fxAccounts.commands.sendTab, "isDeviceCompatible")
-    .returns(false);
-  sandbox
-    .stub(fxAccounts.commands.closeTab, "isDeviceCompatible")
-    .returns(false);
+  Assert.equal(
+    sendTabButton.getAttribute("data-l10n-id"),
+    "fxa-menu-send-to-mobile",
+    "'Send to Mobile' displayed on send tab button when all targets are mobile"
+  );
 
-  gSync.updateAllUI({
-    status: UIState.STATUS_SIGNED_IN,
-    syncEnabled: true,
-    email: "foo@bar.com",
-  });
-  await openFxaPanel();
+  sendTabButton.click();
 
-  let panelview = PanelMultiView.getViewNode(document, "PanelUI-fxa");
-  let devicesListContainer = PanelMultiView.getViewNode(
+  let signInView = PanelMultiView.getViewNode(
     document,
-    "PanelUI-fxa-menu-devices-list"
+    "PanelUI-fxa-menu-sendtab-sign-in"
   );
-  let mockDevice = { id: 1, name: "Device 1", availableCommands: {} };
-  let mockClient = {
-    id: "client1",
-    name: "Device 1",
-    lastModified: Date.now(),
-    tabs: [],
-  };
+  await BrowserTestUtils.waitForEvent(signInView, "ViewShown");
 
-  let subviewShown = BrowserTestUtils.waitForEvent(
-    PanelMultiView.getViewNode(document, "PanelUI-fxa-device-recent-tabs"),
-    "ViewShown"
-  );
-  panelview.syncedTabsPanelList._showDeviceRecentTabs(
-    mockClient,
-    mockDevice,
-    devicesListContainer,
-    new MouseEvent("click")
-  );
-  await subviewShown;
-
-  ok(
-    PanelMultiView.getViewNode(document, "PanelUI-fxa-device-recent-tabs-list")
-      .hidden,
-    "Tabs list is hidden when the device has no open tabs"
+  let signInButton = signInView.querySelector(
+    "#PanelUI-fxa-menu-sendtab-sign-in-button"
   );
   ok(
-    PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-device-recent-tabs-footer-separator"
-    ).hidden,
-    "Footer separator is hidden when the device has no open tabs"
-  );
-  ok(
-    PanelMultiView.getViewNode(document, "PanelUI-fxa-device-view-all-tabs")
-      .hidden,
-    "View all tabs button is hidden when the device has no open tabs"
-  );
-  ok(
-    !PanelMultiView.getViewNode(document, "PanelUI-fxa-device-no-open-tabs")
-      .hidden,
-    "No open tabs label is shown when the device has no open tabs"
+    BrowserTestUtils.isVisible(signInButton),
+    "expected sign in button to be visible after opening"
   );
 
   await closeFxaPanel();
-  sandbox.restore();
 });
 
-add_task(async function test_sync_status_button_visible_when_sync_on() {
+add_task(async function test_ui_state_sync_disabled_send_tab() {
+  // Setup profiles db
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.profiles.enabled", true]],
+  });
+  await initGroupDatabase();
+  let profile = SelectableProfileService.currentProfile;
+  Assert.ok(profile, "Should have a profile now");
+
+  const relativeDateAnchor = new Date();
+
+  const sandbox = sinon.createSandbox();
+  sandbox.stub(gSync, "getSendTabTargets").returns([]);
+  sandbox.stub(gSync, "isSignedIn").get(() => true);
+  sandbox.stub(gSync, "isSignedInWithSyncDisabled").get(() => true);
+
   let state = {
     status: UIState.STATUS_SIGNED_IN,
     syncEnabled: true,
@@ -1529,103 +1487,162 @@ add_task(async function test_sync_status_button_visible_when_sync_on() {
     lastSync: new Date(),
     syncing: false,
   };
+
+  const origRelativeTimeFormat = gSync.relativeTimeFormat;
+  gSync.relativeTimeFormat = {
+    formatBestUnit(date) {
+      return origRelativeTimeFormat.formatBestUnit(date, {
+        now: relativeDateAnchor,
+      });
+    },
+  };
+
   gSync.updateAllUI(state);
+
   await openFxaPanel();
 
-  const syncStatusBtn = PanelMultiView.getViewNode(
+  let sendTabButton = PanelMultiView.getViewNode(
     document,
-    "PanelUI-fxa-menu-sync-status-button"
+    "PanelUI-fxa-menu-sendtab-button"
+  );
+
+  Assert.equal(
+    sendTabButton.getAttribute("data-l10n-id"),
+    "fxa-menu-send-to-mobile",
+    "'Send to Mobile' displayed on send tab button"
+  );
+
+  sendTabButton.click();
+
+  let enableSyncView = PanelMultiView.getViewNode(
+    document,
+    "PanelUI-fxa-menu-sendtab-enable-sync"
+  );
+  await BrowserTestUtils.waitForEvent(enableSyncView, "ViewShown");
+
+  let enableSyncButton = enableSyncView.querySelector(
+    "#PanelUI-fxa-menu-sendtab-enable-sync-button"
   );
   ok(
-    BrowserTestUtils.isVisible(syncStatusBtn),
-    "Sync status button is visible when signed in with sync on"
-  );
-  is(
-    PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-sync-status-title"
-    ).getAttribute("value"),
-    gSync.fluentStrings.formatValueSync("fxa-menu-sync-status-on"),
-    "Sync status title reads 'Sync is on'"
+    BrowserTestUtils.isVisible(enableSyncButton),
+    "expected enable sync button to be visible after opening"
   );
 
   await closeFxaPanel();
+  sandbox.restore();
 });
 
-add_task(async function test_sync_status_button_hidden_when_sync_off() {
+add_task(async function test_ui_state_single_device_send_tab() {
+  // Setup profiles db
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.profiles.enabled", true]],
+  });
+  await initGroupDatabase();
+  let profile = SelectableProfileService.currentProfile;
+  Assert.ok(profile, "Should have a profile now");
+
+  const relativeDateAnchor = new Date();
+
+  const sandbox = sinon.createSandbox();
+  sandbox.stub(gSync, "getSendTabTargets").returns([]);
+  sandbox.stub(gSync, "isSignedIn").get(() => true);
+  sandbox.stub(gSync, "hasNoSendTabTargets").get(() => true);
+
   let state = {
     status: UIState.STATUS_SIGNED_IN,
+    syncEnabled: true,
+    email: "foo@bar.com",
+    displayName: "Foo Bar",
+    avatarURL: "https://foo.bar",
+    lastSync: new Date(),
+    syncing: false,
+  };
+
+  const origRelativeTimeFormat = gSync.relativeTimeFormat;
+  gSync.relativeTimeFormat = {
+    formatBestUnit(date) {
+      return origRelativeTimeFormat.formatBestUnit(date, {
+        now: relativeDateAnchor,
+      });
+    },
+  };
+
+  gSync.updateAllUI(state);
+
+  await openFxaPanel();
+
+  let sendTabButton = PanelMultiView.getViewNode(
+    document,
+    "PanelUI-fxa-menu-sendtab-button"
+  );
+
+  Assert.equal(
+    sendTabButton.getAttribute("data-l10n-id"),
+    "fxa-menu-send-to-mobile",
+    "'Send to Mobile' displayed on send tab button"
+  );
+
+  sendTabButton.click();
+
+  let connectPhoneView = PanelMultiView.getViewNode(
+    document,
+    "PanelUI-fxa-menu-sendtab-connect-phone"
+  );
+  await BrowserTestUtils.waitForEvent(connectPhoneView, "ViewShown");
+
+  let connectPhoneButton = connectPhoneView.querySelector(
+    "#PanelUI-fxa-menu-sendtab-connect-phone-button"
+  );
+  ok(
+    BrowserTestUtils.isVisible(connectPhoneButton),
+    "expected connect phone button to be visible after opening"
+  );
+
+  let noDeviceButton = connectPhoneView.querySelector(
+    "#PanelUI-fxa-menu-sendtab-no-phone-button"
+  );
+  ok(
+    BrowserTestUtils.isVisible(noDeviceButton),
+    "expected no device button to be visible after opening"
+  );
+
+  await closeFxaPanel();
+  sandbox.restore();
+});
+
+add_task(async function test_app_menu_ui_state_unverified_send_tab() {
+  const sandbox = sinon.createSandbox();
+  sandbox.stub(gSync, "getSendTabTargets").returns([]);
+  sandbox.stub(gSync, "isSignedIn").get(() => false);
+  sandbox.stub(gSync, "isUnverified").get(() => true);
+
+  let state = {
+    status: UIState.STATUS_NOT_VERIFIED,
     syncEnabled: false,
     email: "foo@bar.com",
     displayName: "Foo Bar",
+    avatarURL: "https://foo.bar",
+    lastSync: new Date(),
+    syncing: false,
   };
+
   gSync.updateAllUI(state);
-  await openFxaPanel();
+  await openMainPanel();
 
-  const syncStatusBtn = PanelMultiView.getViewNode(
+  let sendTabButton = PanelMultiView.getViewNode(
     document,
-    "PanelUI-fxa-menu-sync-status-button"
-  );
-  ok(
-    syncStatusBtn.hidden,
-    "Sync status button is hidden when signed in but sync is off"
+    "PanelUI-fxa-menu-sendtab-button"
   );
 
-  await closeFxaPanel();
+  Assert.equal(
+    sendTabButton.getAttribute("data-l10n-id"),
+    "fxa-menu-send-to-mobile",
+    "'Send to Mobile' displayed on send tab button when all targets are mobile"
+  );
+
+  Assert.equal(sendTabButton.hidden, true, "Send tab button is hidden");
+
+  // await closeTabAndMainPanel();
+  await gCUITestUtils.hideMainMenu();
+  sandbox.restore();
 });
-
-add_task(async function test_sync_status_button_hidden_when_signed_out() {
-  let state = { status: UIState.STATUS_NOT_CONFIGURED };
-  gSync.updateAllUI(state);
-
-  const syncStatusBtn = PanelMultiView.getViewNode(
-    document,
-    "PanelUI-fxa-menu-sync-status-button"
-  );
-  ok(syncStatusBtn.hidden, "Sync status button is hidden when signed out");
-});
-
-add_task(
-  async function test_secure_sync_subpanel_opens_and_has_correct_buttons() {
-    let state = {
-      status: UIState.STATUS_SIGNED_IN,
-      syncEnabled: true,
-      email: "foo@bar.com",
-      displayName: "Foo Bar",
-      avatarURL: "https://foo.bar",
-      lastSync: new Date(),
-      syncing: false,
-    };
-    gSync.updateAllUI(state);
-    await openFxaPanel();
-
-    const syncStatusBtn = PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-sync-status-button"
-    );
-    let subviewShown = BrowserTestUtils.waitForEvent(
-      PanelMultiView.getViewNode(
-        document,
-        "PanelUI-fxa-menu-secure-sync-subpanel"
-      ),
-      "ViewShown"
-    );
-    syncStatusBtn.click();
-    await subviewShown;
-
-    for (const id of [
-      "PanelUI-fxa-menu-secure-sync-now",
-      "PanelUI-fxa-menu-secure-sync-settings",
-      "PanelUI-fxa-menu-secure-sync-add-device",
-      "PanelUI-fxa-menu-secure-sync-manage-devices",
-      "PanelUI-fxa-menu-secure-sync-device-missing",
-    ]) {
-      ok(
-        BrowserTestUtils.isVisible(PanelMultiView.getViewNode(document, id)),
-        `${id} is visible in the secure sync subpanel`
-      );
-    }
-
-    await closeFxaPanel();
-  }
-);

@@ -782,24 +782,6 @@ toolbarbutton[constrain-size="true"][cui-areatype="panel"] > .toolbarbutton-badg
   margin: 0;
 }
 
-.fxa-menu-secure-sync-now-content {
-  min-width: 0;
-
-  > label {
-    margin: 0;
-  }
-}
-
-#PanelUI-fxa-menu-secure-sync-subpanel,
-#PanelUI-fxa-device-recent-tabs {
-  height: fit-content;
-  min-height: 0 !important;
-}
-
-.panel-viewcontainer:has(#PanelUI-fxa-menu-secure-sync-subpanel[visible], #PanelUI-fxa-device-recent-tabs[visible]) {
-  min-height: 0 !important;
-}
-
 #PanelUI-fxa-cta-menu,
 #PanelUI-fxa-menu-services {
   .fxa-cta-button label {
@@ -879,34 +861,6 @@ toolbarbutton[constrain-size="true"][cui-areatype="panel"] > .toolbarbutton-badg
     /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
     background-color: var(--button-background-color-active);
   }
-}
-
-/* Secure sync status button and sync-off card */
-
-.fxa-menu-sync-status-icon {
-  list-style-image: url("chrome://browser/skin/sync.svg");
-  -moz-context-properties: fill;
-  fill: currentColor;
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-}
-
-.fxa-menu-sync-status-button {
-  align-items: center;
-
-  > vbox {
-    min-width: 0;
-  }
-}
-
-.fxa-menu-sync-status-title {
-  font-weight: var(--font-weight-semibold);
-}
-
-.fxa-menu-sync-status-description {
-  color: var(--text-color-deemphasized);
-  font-size: var(--font-size-small);
 }
 
 /* Firefox Account Toolbar Panel */
@@ -1072,12 +1026,6 @@ toolbarbutton[constrain-size="true"][cui-areatype="panel"] > .toolbarbutton-badg
   fill: currentColor;
 }
 
-#PanelUI-fxa-menu-get-firefox-mobile {
-  list-style-image: url("chrome://browser/skin/device-phone.svg");
-  -moz-context-properties: fill;
-  fill: currentColor;
-}
-
 :root:not([fxastatus="signedin"]) #PanelUI-fxa-menu-connect-device-button {
   color: var(--text-color-disabled);
 }
@@ -1124,8 +1072,7 @@ panelmultiview[mainViewId="PanelUI-fxa"] #PanelUI-remotetabs-syncnow {
   --panel-ui-sync-illustration-height: 141px;
 }
 
-.sendToDevice-device,
-.PanelUI-fxa-menu-device-entry {
+.sendToDevice-device {
   &[clientType="phone"] {
     list-style-image: url("chrome://browser/skin/device-phone.svg");
   }
@@ -1247,6 +1194,10 @@ panelmultiview[mainViewId="PanelUI-fxa"] #PanelUI-remotetabs-syncnow {
 }
 
 #PanelUI-remotetabs-main[devices-status="single"] > #PanelUI-remotetabs-buttons {
+  display: none;
+}
+
+#PanelUI-fxa-remotetabs-deck:not([syncingtabs]) {
   display: none;
 }
 
@@ -1608,7 +1559,6 @@ panelview .toolbarbutton-1 {
 }
 
 .PanelUI-tabitem-container > toolbarbutton[itemtype="tab"],
-toolbarbutton[itemtype="tab"].PanelUI-tabitem-container,
 #PanelUI-historyItems > toolbarbutton {
   list-style-image: url("chrome://global/skin/icons/defaultFavicon.svg");
   -moz-context-properties: fill;
@@ -1619,7 +1569,6 @@ toolbarbutton[itemtype="tab"].PanelUI-tabitem-container,
 #appMenu-fxa-label > .toolbarbutton-icon,
 #PanelUI-containersItems > .subviewbutton > .toolbarbutton-icon,
 .PanelUI-tabitem-container > toolbarbutton[itemtype="tab"] > .toolbarbutton-icon,
-toolbarbutton[itemtype="tab"].PanelUI-tabitem-container > .toolbarbutton-icon,
 .PanelUI-remotetabs-clientcontainer > toolbarbutton > .toolbarbutton-icon,
 #PanelUI-recentlyClosedWindows > toolbarbutton > .toolbarbutton-icon,
 #PanelUI-recentlyClosedTabs > toolbarbutton > .toolbarbutton-icon,
@@ -1633,6 +1582,7 @@ toolbarbutton[itemtype="tab"].PanelUI-tabitem-container > .toolbarbutton-icon,
   }
 }
 
+#PanelUI-fxa-remotetabs-tabspane,
 #PanelUI-remotetabs-tabspane {
   min-width: 0;
 }
@@ -1647,8 +1597,7 @@ toolbarbutton[itemtype="tab"].PanelUI-tabitem-container > .toolbarbutton-icon,
     transform: translateY(-20px);
   }
 
-  > toolbarbutton[itemtype="tab"],
-  &[itemtype="tab"] {
+  > toolbarbutton[itemtype="tab"] {
     flex: 1;
     min-width: 0;
     display: flex;

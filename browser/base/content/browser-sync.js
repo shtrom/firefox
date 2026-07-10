@@ -282,59 +282,6 @@ this.SyncedTabsPanelList = class SyncedTabsPanelList {
     }
   }
 
-  _createShowMoreSyncedTabsElement(paginationInfo) {
-    let showMoreItem = document.createXULElement("toolbarbutton");
-    showMoreItem.setAttribute("itemtype", "showmorebutton");
-    showMoreItem.setAttribute("closemenu", "none");
-    showMoreItem.classList.add("subviewbutton", "subviewbutton-nav-down");
-    document.l10n.setAttributes(showMoreItem, "appmenu-remote-tabs-showmore");
-
-    paginationInfo.maxTabs = Infinity;
-    showMoreItem.addEventListener("click", e => {
-      e.preventDefault();
-      e.stopPropagation();
-      this._showSyncedTabs(paginationInfo);
-    });
-    return showMoreItem;
-  }
-
-  _createShowInactiveTabsElement(client, device) {
-    let showItem = document.createXULElement("toolbarbutton");
-    showItem.setAttribute("itemtype", "showinactivebutton");
-    showItem.setAttribute("closemenu", "none");
-    showItem.classList.add("subviewbutton", "subviewbutton-nav");
-    document.l10n.setAttributes(
-      showItem,
-      "appmenu-remote-tabs-show-inactive-tabs"
-    );
-
-    let canClose =
-      device && fxAccounts.commands.closeTab.isDeviceCompatible(device);
-
-    showItem.addEventListener("click", e => {
-      let node = PanelMultiView.getViewNode(
-        document,
-        "PanelUI-fxa-menu-inactive-tabs"
-      );
-
-      // device name.
-      let label = node.querySelector("label[itemtype='client']");
-      label.textContent = client.name;
-
-      // Update the tab list.
-      let container = node.querySelector(".panel-subview-body");
-      container.replaceChildren(
-        ...client.tabs
-          .filter(t => t.inactive)
-          .map((tab, index) =>
-            this._createSyncedTabElement(tab, index, device, canClose)
-          )
-      );
-      PanelUI.showSubView("PanelUI-fxa-menu-inactive-tabs", showItem, e);
-    });
-    return showItem;
-  }
-
   _createSyncedTabElement(tabInfo, index, device, canCloseTabs) {
     let tabContainer = document.createXULElement("hbox");
     tabContainer.setAttribute(
@@ -391,6 +338,59 @@ this.SyncedTabsPanelList = class SyncedTabsPanelList {
       tabContainer.appendChild(undoBtn);
     }
     return tabContainer;
+  }
+
+  _createShowMoreSyncedTabsElement(paginationInfo) {
+    let showMoreItem = document.createXULElement("toolbarbutton");
+    showMoreItem.setAttribute("itemtype", "showmorebutton");
+    showMoreItem.setAttribute("closemenu", "none");
+    showMoreItem.classList.add("subviewbutton", "subviewbutton-nav-down");
+    document.l10n.setAttributes(showMoreItem, "appmenu-remote-tabs-showmore");
+
+    paginationInfo.maxTabs = Infinity;
+    showMoreItem.addEventListener("click", e => {
+      e.preventDefault();
+      e.stopPropagation();
+      this._showSyncedTabs(paginationInfo);
+    });
+    return showMoreItem;
+  }
+
+  _createShowInactiveTabsElement(client, device) {
+    let showItem = document.createXULElement("toolbarbutton");
+    showItem.setAttribute("itemtype", "showinactivebutton");
+    showItem.setAttribute("closemenu", "none");
+    showItem.classList.add("subviewbutton", "subviewbutton-nav");
+    document.l10n.setAttributes(
+      showItem,
+      "appmenu-remote-tabs-show-inactive-tabs"
+    );
+
+    let canClose =
+      device && fxAccounts.commands.closeTab.isDeviceCompatible(device);
+
+    showItem.addEventListener("click", e => {
+      let node = PanelMultiView.getViewNode(
+        document,
+        "PanelUI-fxa-menu-inactive-tabs"
+      );
+
+      // device name.
+      let label = node.querySelector("label[itemtype='client']");
+      label.textContent = client.name;
+
+      // Update the tab list.
+      let container = node.querySelector(".panel-subview-body");
+      container.replaceChildren(
+        ...client.tabs
+          .filter(t => t.inactive)
+          .map((tab, index) =>
+            this._createSyncedTabElement(tab, index, device, canClose)
+          )
+      );
+      PanelUI.showSubView("PanelUI-fxa-menu-inactive-tabs", showItem, e);
+    });
+    return showItem;
   }
 
   _createCloseTabElement(url, device) {
@@ -468,363 +468,6 @@ this.SyncedTabsPanelList = class SyncedTabsPanelList {
     this.tabsList = null;
     this.deck = null;
     this.separator = null;
-  }
-};
-
-this.FxAMenuDeviceList = class FxAMenuDeviceList {
-  static MAX_RECENT_TABS = 5;
-
-  constructor(devicesList) {
-    this.QueryInterface = ChromeUtils.generateQI([
-      "nsIObserver",
-      "nsISupportsWeakReference",
-    ]);
-
-    Services.obs.addObserver(this, SyncedTabs.TOPIC_TABS_CHANGED, true);
-    this.devicesList = devicesList;
-    this._updateDevicesPromise = Promise.resolve();
-
-    this._initDeviceList();
-  }
-
-  observe(subject, topic) {
-    if (topic == SyncedTabs.TOPIC_TABS_CHANGED) {
-      this._updateDeviceList();
-    }
-  }
-
-  _initDeviceList() {
-    if (SyncedTabs.isConfiguredToSyncTabs) {
-      SyncedTabs.syncTabs().catch(ex => {
-        console.error(ex);
-      });
-      this._updateDeviceList();
-    } else {
-      this.devicesList.hidden = true;
-    }
-  }
-
-  _updateDeviceList() {
-    this._updateDevicesPromise = this._updateDevicesPromise.then(
-      () => this._doUpdateDeviceList(),
-      e => console.error(e)
-    );
-  }
-
-  async _doUpdateDeviceList() {
-    if (!this.devicesList) {
-      return;
-    }
-
-    let clients;
-    try {
-      clients = await SyncedTabs.getTabClients();
-    } catch (err) {
-      console.error(err);
-      return;
-    }
-
-    if (!this.devicesList) {
-      return;
-    }
-
-    if (!UIState.get().syncEnabled || !clients.length) {
-      this.devicesList.hidden = true;
-      Services.obs.notifyObservers(null, "synced-tabs-menu:test:tabs-updated");
-      return;
-    }
-
-    SyncedTabs.sortTabClientsByLastUsed(clients);
-
-    while (this.devicesList.lastChild) {
-      this.devicesList.lastChild.remove();
-    }
-
-    for (let client of clients) {
-      let device =
-        fxAccounts.device.recentDeviceList &&
-        fxAccounts.device.recentDeviceList.find(
-          d =>
-            d.id === Weave.Service.clientsEngine.getClientFxaDeviceId(client.id)
-        );
-      this.devicesList.appendChild(this._createDeviceEntry(client, device));
-    }
-
-    this.devicesList.hidden = false;
-
-    Services.obs.notifyObservers(null, "synced-tabs-menu:test:tabs-updated");
-  }
-
-  _getDeviceClientType(device) {
-    if (!device) {
-      return "desktop";
-    }
-    if (device.type === DEVICE_TYPE_MOBILE) {
-      return "phone";
-    }
-    if (device.type === DEVICE_TYPE_TABLET) {
-      return "tablet";
-    }
-    return "desktop";
-  }
-
-  _createDeviceEntry(client, device) {
-    let btn = document.createXULElement("toolbarbutton");
-    btn.classList.add(
-      "subviewbutton",
-      "subviewbutton-iconic",
-      "subviewbutton-nav",
-      "PanelUI-fxa-menu-device-entry"
-    );
-    btn.setAttribute("label", client.name);
-    btn.setAttribute("clientType", this._getDeviceClientType(device));
-    btn.setAttribute("closemenu", "none");
-    btn.setAttribute(
-      "tooltiptext",
-      gSync.fluentStrings.formatValueSync("appmenu-fxa-last-sync", {
-        time: gSync.formatLastSyncDate(new Date(client.lastModified)),
-      })
-    );
-    btn.addEventListener("click", e => {
-      this._showDeviceRecentTabs(client, device, btn, e);
-    });
-    return btn;
-  }
-
-  _showDeviceRecentTabs(client, device, anchor, event) {
-    let panelNode = PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-device-recent-tabs"
-    );
-
-    let tabsList = panelNode.querySelector(
-      "#PanelUI-fxa-device-recent-tabs-list"
-    );
-    tabsList.replaceChildren();
-
-    let activeTabs = client.tabs.filter(t => !t.inactive);
-    let recentTabs = activeTabs.slice(0, FxAMenuDeviceList.MAX_RECENT_TABS);
-    let canCloseTabs =
-      device && fxAccounts.commands.closeTab.isDeviceCompatible(device);
-
-    for (let [index, tab] of recentTabs.entries()) {
-      let tabItem = this._createSyncedTabElement(tab, index, device);
-      tabsList.appendChild(tabItem);
-      // Force render() now (before adding close/undo children) so that
-      // toolbarbutton-icon and toolbarbutton-text are created even when the
-      // panelview is still in the template DocumentFragment and connectedCallback
-      // has not yet fired against the live document.
-      tabItem.render();
-      if (canCloseTabs) {
-        let closeBtn = this._createCloseTabElement(tab.url, device);
-        closeBtn.tab = tabItem;
-        let undoBtn = this._createUndoCloseTabElement(tab.url, device);
-        undoBtn.tab = tabItem;
-        tabItem.append(closeBtn, undoBtn);
-      }
-    }
-
-    let hasTabs = !!recentTabs.length;
-    let noTabsLabel = panelNode.querySelector(
-      "#PanelUI-fxa-device-no-open-tabs"
-    );
-    let footerSeparator = panelNode.querySelector(
-      "#PanelUI-fxa-device-recent-tabs-footer-separator"
-    );
-    let viewAllBtn = panelNode.querySelector(
-      "#PanelUI-fxa-device-view-all-tabs"
-    );
-
-    tabsList.hidden = !hasTabs;
-    noTabsLabel.hidden = hasTabs;
-    footerSeparator.hidden = !hasTabs;
-    viewAllBtn.hidden = !hasTabs;
-
-    document.l10n.setAttributes(
-      viewAllBtn,
-      "fxa-menu-device-view-all-synced-tabs",
-      { tabCount: client.tabs.length }
-    );
-    viewAllBtn.onclick = () => {
-      CustomizableUI.hidePanelForNode(viewAllBtn);
-      SidebarController.show("viewTabsSidebar");
-    };
-
-    let sendPageBtn = panelNode.querySelector(
-      "#PanelUI-fxa-device-send-current-page"
-    );
-    let canSendTab =
-      device &&
-      fxAccounts.commands.sendTab.isDeviceCompatible(device) &&
-      !!BrowserUtils.getShareableURL(gBrowser.selectedBrowser.currentURI);
-    sendPageBtn.hidden = !canSendTab;
-    if (canSendTab) {
-      const targets = gSync.getSendTabTargets();
-      // Opening this per-device subpanel is where the "send tab to device"
-      // option now lives, so record both that panel was opened and button
-      // exposed.
-      gSync.emitFxaToolbarTelemetry("send_tab_opened", anchor, {
-        device_count: String(targets.length),
-      });
-      gSync.emitFxaToolbarTelemetry("send_tab_exposed", anchor, {
-        device_count: String(targets.length),
-      });
-      sendPageBtn.onclick = () => {
-        gSync.emitFxaToolbarTelemetry("send_tab", anchor, {
-          device_count: String(targets.length),
-          action: "device",
-        });
-        CustomizableUI.hidePanelForNode(sendPageBtn);
-        let isPrivate = PrivateBrowsingUtils.isBrowserPrivate(gBrowser);
-        let tabsToSend = gBrowser.selectedTab.multiselected
-          ? gBrowser.selectedTabs.map(t => ({
-              url: t.linkedBrowser.currentURI.spec,
-              title: t.linkedBrowser.contentTitle,
-              private: isPrivate,
-            }))
-          : [
-              {
-                url: BrowserUtils.getShareableURL(
-                  gBrowser.selectedBrowser.currentURI
-                ).spec,
-                title: gBrowser.selectedBrowser.contentTitle,
-                private: isPrivate,
-              },
-            ];
-        gSync.sendTabsAndConfirm(tabsToSend, [device]);
-      };
-    }
-
-    PanelUI.showSubView("PanelUI-fxa-device-recent-tabs", anchor, event);
-  }
-
-  /**
-   * Creates a toolbarbutton used in the per-device recent tabs list (the tab
-   * entry itself and its close/undo controls all share the same shape).
-   *
-   * @param {string[]} classes - classes to add to the button.
-   * @param {function} onClick - the click event handler.
-   * @param {object} [options]
-   * @param {boolean} [options.closemenu] - when true, sets closemenu="none" so
-   *   clicking the button doesn't close the panel.
-   * @returns {Element} the created toolbarbutton.
-   */
-  _createTabToolbarButton(classes, onClick, { closemenu = false } = {}) {
-    let btn = document.createXULElement("toolbarbutton");
-    btn.classList.add(...classes);
-    if (closemenu) {
-      btn.setAttribute("closemenu", "none");
-    }
-    btn.addEventListener("click", onClick);
-    return btn;
-  }
-
-  _createSyncedTabElement(tabInfo, index, _device) {
-    let tooltipText = (tabInfo.title ? tabInfo.title + "\n" : "") + tabInfo.url;
-    let item = this._createTabToolbarButton(
-      [
-        "all-tabs-button",
-        "subviewbutton",
-        "subviewbutton-iconic",
-        "PanelUI-tabitem-container",
-        "all-tabs-item",
-      ],
-      e => {
-        let object = window.gSync._getEntryPointForElement(e.currentTarget);
-        SyncedTabs.recordSyncedTabsTelemetry(object, "click", {
-          tab_pos: index.toString(),
-        });
-        document.defaultView.openUILink(tabInfo.url, e, {
-          triggeringPrincipal:
-            Services.scriptSecurityManager.createNullPrincipal({}),
-        });
-        if (BrowserUtils.whereToOpenLink(e) != "current") {
-          e.preventDefault();
-          e.stopPropagation();
-        } else {
-          CustomizableUI.hidePanelForNode(item);
-        }
-      }
-    );
-    item.setAttribute("itemtype", "tab");
-    item.setAttribute("targetURI", tabInfo.url);
-    item.setAttribute(
-      "label",
-      tabInfo.title != "" ? tabInfo.title : tabInfo.url
-    );
-    if (tabInfo.icon) {
-      item.setAttribute("image", tabInfo.icon);
-    }
-    item.setAttribute("tooltiptext", tooltipText);
-    return item;
-  }
-
-  _createCloseTabElement(url, device) {
-    let closeBtn = this._createTabToolbarButton(
-      ["remote-tabs-close-button", "all-tabs-close-button", "subviewbutton"],
-      e => {
-        e.stopPropagation();
-
-        let tabBtn = closeBtn.parentNode;
-        let tabList = tabBtn.parentNode;
-
-        let undoBtn = tabBtn.querySelector(".remote-tabs-undo-button");
-
-        let prevClose = tabList.querySelector(
-          ".remote-tabs-undo-button:not([hidden])"
-        );
-        if (prevClose) {
-          let prevTabBtn = prevClose.parentNode;
-          prevTabBtn.classList.add("tabitem-removed");
-          prevTabBtn.addEventListener("transitionend", () => {
-            prevTabBtn.remove();
-          });
-        }
-        closeBtn.hidden = true;
-        undoBtn.hidden = false;
-        if (closeBtn.tab) {
-          closeBtn.tab.disabled = true;
-        }
-        SyncedTabsManagement.enqueueTabToClose(device.id, url);
-      },
-      { closemenu: true }
-    );
-    closeBtn.setAttribute(
-      "tooltiptext",
-      gSync.fluentStrings.formatValueSync("synced-tabs-context-close-tab", {
-        deviceName: device.name,
-      })
-    );
-    return closeBtn;
-  }
-
-  _createUndoCloseTabElement(url, device) {
-    let undoBtn = this._createTabToolbarButton(
-      ["remote-tabs-undo-button", "subviewbutton"],
-      e => {
-        e.stopPropagation();
-
-        undoBtn.hidden = true;
-        let closeBtn = undoBtn.parentNode.querySelector(
-          ".all-tabs-close-button"
-        );
-        closeBtn.hidden = false;
-        if (undoBtn.tab) {
-          undoBtn.tab.disabled = false;
-        }
-
-        SyncedTabsManagement.removePendingTabToClose(device.id, url);
-      },
-      { closemenu: true }
-    );
-    undoBtn.setAttribute("data-l10n-id", "text-action-undo");
-    undoBtn.hidden = true;
-    return undoBtn;
-  }
-
-  destroy() {
-    Services.obs.removeObserver(this, SyncedTabs.TOPIC_TABS_CHANGED);
-    this.devicesList = null;
   }
 };
 
@@ -1041,6 +684,10 @@ var gSync = {
     fxaPanelView.addEventListener("command", this);
     PanelMultiView.getViewNode(
       document,
+      "PanelUI-fxa-menu-syncnow-button"
+    ).addEventListener("mouseover", this);
+    PanelMultiView.getViewNode(
+      document,
       "PanelUI-fxa-menu-sendtab-sign-in-button"
     ).addEventListener("click", this);
     PanelMultiView.getViewNode(
@@ -1059,17 +706,6 @@ var gSync = {
       document,
       "PanelUI-fxa-menu-sendtab-no-phone-button"
     ).addEventListener("click", this);
-
-    PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-sync-status-button"
-    ).addEventListener("click", e =>
-      this._showSecureSyncSubpanel(e.currentTarget, e)
-    );
-    PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-secure-sync-subpanel"
-    ).addEventListener("command", this);
 
     PanelUI.mainView.addEventListener("ViewShowing", this);
 
@@ -1158,7 +794,22 @@ var gSync = {
       ASRouter.addImpression(message);
     }
 
+    let syncNowBtn = panelview.querySelector(".syncnow-label");
+    let l10nId = syncNowBtn.getAttribute(
+      this._isCurrentlySyncing
+        ? "syncing-data-l10n-id"
+        : "sync-now-data-l10n-id"
+    );
+    document.l10n.setAttributes(syncNowBtn, l10nId);
+
+    // This needs to exist because if the user is signed in
+    // but the user disabled or disconnected sync we should not show the button
+    const syncPrefsButtonEl = PanelMultiView.getViewNode(
+      document,
+      "PanelUI-fxa-menu-sync-prefs-button"
+    );
     const syncEnabled = UIState.get().syncEnabled;
+    syncPrefsButtonEl.hidden = !syncEnabled;
     if (!syncEnabled) {
       this._disableSyncOffIndicator();
     }
@@ -1171,8 +822,11 @@ var gSync = {
     );
     signOutButtonEl.hidden = !this.isSignedIn;
 
-    panelview.syncedTabsPanelList = new FxAMenuDeviceList(
-      PanelMultiView.getViewNode(document, "PanelUI-fxa-menu-devices-list")
+    panelview.syncedTabsPanelList = new SyncedTabsPanelList(
+      panelview,
+      PanelMultiView.getViewNode(document, "PanelUI-fxa-remotetabs-deck"),
+      PanelMultiView.getViewNode(document, "PanelUI-fxa-remotetabs-tabslist"),
+      PanelMultiView.getViewNode(document, "PanelUI-remote-tabs-separator")
     );
 
     // Any variant on the CTA will have been applied inside of updateFxAPanel,
@@ -1182,6 +836,18 @@ var gSync = {
     if (ctaCopyVariant) {
       NimbusFeatures.fxaAvatarMenuItem.recordExposureEvent();
     }
+
+    // Record Send Tab exposure if the option is visible
+    const sendTabButton = PanelMultiView.getViewNode(
+      document,
+      "PanelUI-fxa-menu-sendtab-button"
+    );
+    if (sendTabButton && !sendTabButton.hidden) {
+      const targets = this.getSendTabTargets();
+      this.emitFxaToolbarTelemetry("send_tab_exposed", sendTabButton, {
+        device_count: String(targets.length),
+      });
+    }
   },
 
   onFxAPanelViewHiding(panelview) {
@@ -1190,51 +856,29 @@ var gSync = {
     panelview.syncedTabsPanelList = null;
   },
 
-  _showSecureSyncSubpanel(anchor, event) {
-    const deviceName = fxAccounts.device.getLocalName();
-    const labelEl = PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-secure-sync-now-label"
-    );
-    labelEl.setAttribute(
-      "value",
-      this.fluentStrings.formatValueSync("fxa-menu-sync-device-now", {
-        deviceName,
-      })
-    );
-    PanelUI.showSubView("PanelUI-fxa-menu-secure-sync-subpanel", anchor, event);
-  },
-
   onCommand(button) {
     switch (button.id) {
+      case "PanelUI-fxa-menu-sync-prefs-button":
+        this.openPrefsFromFxaMenu("sync_settings", button);
+        break;
       case "PanelUI-fxa-menu-setup-sync-button":
         this.openSyncSetup("sync_settings", button);
-        break;
-      case "PanelUI-fxa-menu-get-firefox-mobile":
-        this.openGetFirefoxMobile();
         break;
 
       case "PanelUI-fxa-menu-sendtab-connect-device-button":
       // fall through
-      case "PanelUI-fxa-menu-secure-sync-add-device":
+      case "PanelUI-fxa-menu-connect-device-button":
         this.clickOpenConnectAnotherDevice(button);
-        break;
-      case "PanelUI-fxa-menu-secure-sync-manage-devices":
-        this.openDevicesManagementPage(this._getEntryPointForElement(button));
-        break;
-      case "PanelUI-fxa-menu-secure-sync-device-missing":
-        this.openDeviceMissingHelp();
-        break;
-
-      case "PanelUI-fxa-menu-secure-sync-now":
-        this.doSyncFromFxaMenu(button);
-        break;
-      case "PanelUI-fxa-menu-secure-sync-settings":
-        this.openPrefsFromFxaMenu("sync_settings", button);
         break;
 
       case "fxa-manage-account-button":
         this.clickFxAMenuHeaderButton(button);
+        break;
+      case "PanelUI-fxa-menu-syncnow-button":
+        this.doSyncFromFxaMenu(button);
+        break;
+      case "PanelUI-fxa-menu-sendtab-button":
+        this.showSendToDeviceViewFromFxaMenu(button);
         break;
       case "PanelUI-fxa-menu-account-signout-button":
         this.disconnect();
@@ -1365,6 +1009,116 @@ var gSync = {
     }
   },
 
+  updateSendToDeviceTitle() {
+    const tabCount = gBrowser.selectedTab.multiselected
+      ? gBrowser.selectedTabs.length
+      : 1;
+    document.l10n.setArgs(
+      PanelMultiView.getViewNode(document, "PanelUI-fxa-menu-sendtab-button"),
+      { tabCount }
+    );
+  },
+
+  showSendToDeviceView(anchor) {
+    PanelUI.showSubView("PanelUI-sendTabToDevice", anchor);
+    let panelViewNode = document.getElementById("PanelUI-sendTabToDevice");
+    this._populateSendTabToDevicesView(panelViewNode);
+  },
+
+  showSendToDeviceViewFromFxaMenu(anchor) {
+    (async () => {
+      switch (true) {
+        case this.isUnverified:
+          PanelUI.showSubView(
+            "PanelUI-fxa-menu-sendtab-verify-account",
+            anchor
+          );
+          return;
+        case this.isSignedIn === false:
+          PanelUI.showSubView("PanelUI-fxa-menu-sendtab-sign-in", anchor);
+          return;
+        case this.isSignedInWithSyncDisabled:
+          PanelUI.showSubView("PanelUI-fxa-menu-sendtab-enable-sync", anchor);
+          return;
+        case this.hasNoSendTabTargets:
+          PanelUI.showSubView("PanelUI-fxa-menu-sendtab-connect-phone", anchor);
+          return;
+        default:
+          this.showSendToDeviceView(anchor);
+          // Record that the user opened the Send Tab submenu
+          var targets = this.sendTabConfiguredAndLoading
+            ? []
+            : this.getSendTabTargets();
+          this.emitFxaToolbarTelemetry("send_tab_opened", anchor, {
+            device_count: String(targets.length),
+          });
+      }
+    })();
+  },
+
+  _populateSendTabToDevicesView(panelViewNode, reloadDevices = true) {
+    let bodyNode = panelViewNode.querySelector(".panel-subview-body");
+    let panelNode = panelViewNode.closest("panel");
+    let browser = gBrowser.selectedBrowser;
+    let uri = browser.currentURI;
+    let title = browser.contentTitle;
+    let multiselected = gBrowser.selectedTab.multiselected;
+
+    // This is on top because it also clears the device list between state
+    // changes.
+    this.populateSendTabToDevicesMenu(bodyNode, uri, title, {
+      multiselected,
+      createDeviceNodeFn: (clientId, name, clientType, lastModified) => {
+        if (!name) {
+          return document.createXULElement("toolbarseparator");
+        }
+        let item = document.createXULElement("toolbarbutton");
+        item.setAttribute("wrap", true);
+        item.setAttribute("align", "start");
+        item.classList.add("sendToDevice-device", "subviewbutton");
+        if (clientId) {
+          item.classList.add("subviewbutton-iconic");
+          if (lastModified) {
+            let lastSyncDate = gSync.formatLastSyncDate(lastModified);
+            if (lastSyncDate) {
+              item.setAttribute(
+                "tooltiptext",
+                this.fluentStrings.formatValueSync("appmenu-fxa-last-sync", {
+                  time: lastSyncDate,
+                })
+              );
+            }
+          }
+        }
+
+        item.addEventListener("command", () => {
+          if (panelNode) {
+            PanelMultiView.hidePopup(panelNode);
+          }
+        });
+        return item;
+      },
+      isFxaMenu: true,
+    });
+
+    bodyNode.removeAttribute("state");
+    // If the app just started, we won't have fetched the device list yet. Sync
+    // does this automatically ~10 sec after startup, but there's no trigger for
+    // this if we're signed in to FxA, but not Sync.
+    if (gSync.sendTabConfiguredAndLoading) {
+      bodyNode.setAttribute("state", "notready");
+    }
+    if (reloadDevices) {
+      // Force a refresh of the fxa device list in case the user connected a new
+      // device, and is waiting for it to show up.
+      this.refreshFxaDevices().then(_ => {
+        if (!window.closed) {
+          this._populateSendTabToDevicesView(panelViewNode, false);
+        }
+      });
+    }
+  },
+
   async toggleAccountPanel(anchor = null, aEvent) {
     // Don't show the panel if the window is in customization mode.
     if (document.documentElement.hasAttribute("customizing")) {
@@ -1382,6 +1136,10 @@ var gSync = {
 
     const fxaToolbarMenuBtn = document.getElementById(
       "fxa-toolbar-menu-button"
+    );
+    const sendTabButton = PanelMultiView.getViewNode(
+      document,
+      "PanelUI-fxa-menu-sendtab-button"
     );
 
     if (anchor === null) {
@@ -1415,6 +1173,8 @@ var gSync = {
         return;
       }
 
+      sendTabButton.setAttribute("data-l10n-id", "fxa-menu-send-to-mobile");
+
       // If we're signed out but have the PXI pref enabled
       // we should show the PXI panel instead of taking the user
       // straight to FxA sign-in
@@ -1426,6 +1186,7 @@ var gSync = {
         this.updateFxAPanel(UIState.get());
         PanelUI.showSubView("PanelUI-fxa", anchor, aEvent);
       }
+      this.enableSendTabIfValidTab();
       return;
     }
     // If the user is signed in and we have the PXI pref enabled then add
@@ -1436,6 +1197,25 @@ var gSync = {
 
     if (!gFxaToolbarAccessed) {
       Services.prefs.setBoolPref("identity.fxaccounts.toolbar.accessed", true);
+    }
+
+    this.enableSendTabIfValidTab();
+    let sendTabTargets = this.getSendTabTargets();
+
+    // If the user is unverified and the account menu is being opened from the app/hamburger
+    // menu, we hide the send tab menu.
+    if (fxaStatus === "unverified") {
+      const appMenuPanel = document.getElementById("appMenu-popup");
+      const anchorIsInAppMenu = appMenuPanel.contains(anchor);
+      sendTabButton.hidden = anchorIsInAppMenu;
+      sendTabButton.setAttribute("data-l10n-id", "fxa-menu-send-to-mobile");
+    } else if (
+      !sendTabTargets.length ||
+      this.hasOnlyMobileSendTabTargets(sendTabTargets)
+    ) {
+      sendTabButton.setAttribute("data-l10n-id", "fxa-menu-send-to-mobile");
+    } else {
+      sendTabButton.setAttribute("data-l10n-id", "fxa-menu-send-to-device");
     }
 
     if (anchor.getAttribute("open") == "true") {
@@ -1468,6 +1248,14 @@ var gSync = {
       document,
       "fxa-menu-header-description"
     );
+    const cadButtonEl = PanelMultiView.getViewNode(
+      document,
+      "PanelUI-fxa-menu-connect-device-button"
+    );
+    const syncNowButtonEl = PanelMultiView.getViewNode(
+      document,
+      "PanelUI-fxa-menu-syncnow-button"
+    );
     const fxaMenuAccountButtonEl = PanelMultiView.getViewNode(
       document,
       "fxa-manage-account-button"
@@ -1492,6 +1280,14 @@ var gSync = {
       document,
       "PanelUI-fxa-menu-profile-buttons"
     );
+    const sendTabButton = PanelMultiView.getViewNode(
+      document,
+      "PanelUI-fxa-menu-sendtab-button"
+    );
+    const sendTabSeparator = PanelMultiView.getViewNode(
+      document,
+      "PanelUI-fxa-menu-sendtab-separator"
+    );
     const profilesSeparator = PanelMultiView.getViewNode(
       document,
       "PanelUI-fxa-menu-profiles-separator"
@@ -1504,10 +1300,6 @@ var gSync = {
       document,
       "PanelUI-fxa-menu-setup-sync-container"
     );
-    const syncStatusBtn = PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-sync-status-button"
-    );
     const fxaToolbarMenuButton = document.getElementById(
       "fxa-toolbar-menu-button"
     );
@@ -1519,9 +1311,10 @@ var gSync = {
     let fxaAvatarLabelEl = document.getElementById("fxa-avatar-label");
 
     // Reset FxA/Sync UI elements to default, which is signed out
-    syncStatusBtn.hidden = true;
-    syncSetupEl.setAttribute("hidden", "true");
+    cadButtonEl.setAttribute("disabled", true);
+    syncNowButtonEl.hidden = true;
     signedInContainer.hidden = false;
+    cadButtonEl.hidden = true;
     fxaMenuAccountButtonEl.classList.remove("subviewbutton-nav");
     fxaMenuAccountButtonEl.removeAttribute("closemenu");
     menuHeaderDescriptionEl.hidden = false;
@@ -1588,10 +1381,14 @@ var gSync = {
         profileButtonsContainer.remove();
         profilesSeparator.remove();
         secureSyncHeader.remove();
+        sendTabButton.remove();
+        sendTabSeparator.remove();
 
         profilesSeparator.hidden = true;
         secureSyncHeader.hidden = true;
 
+        signedInContainer.after(sendTabButton);
+        signedInContainer.after(sendTabSeparator);
         signedInContainer.after(secureSyncHeader);
         signedInContainer.after(profilesSeparator);
         signedInContainer.after(profileButtonsContainer);
@@ -1606,7 +1403,6 @@ var gSync = {
         headerTitleL10nId = "account-disconnected2";
         headerDescription = state.displayName || state.email;
         mainWindowEl.style.removeProperty("--avatar-image-url");
-        syncSetupEl.removeAttribute("hidden");
         break;
 
       case UIState.STATUS_NOT_VERIFIED:
@@ -1614,7 +1410,6 @@ var gSync = {
         stateValue = "unverified";
         headerTitleL10nId = "account-finish-account-setup";
         headerDescription = state.displayName || state.email;
-        syncSetupEl.removeAttribute("hidden");
         break;
 
       case UIState.STATUS_SIGNED_IN:
@@ -1626,39 +1421,25 @@ var gSync = {
           state.avatarURL,
           state.avatarIsDefault
         );
+        cadButtonEl.hidden = false;
         signOutSeparator.hidden = false;
         signedInContainer.hidden = false;
+        cadButtonEl.removeAttribute("disabled");
 
         if (state.syncEnabled) {
+          // Always show sync now and connect another device button when sync is enabled
+          syncNowButtonEl.removeAttribute("hidden");
+          cadButtonEl.removeAttribute("hidden");
           syncSetupEl.setAttribute("hidden", "true");
-          syncSetupSeparator.setAttribute("hidden", "true");
-          const titleEl = PanelMultiView.getViewNode(
-            document,
-            "PanelUI-fxa-menu-sync-status-title"
-          );
-          const descEl = PanelMultiView.getViewNode(
-            document,
-            "PanelUI-fxa-menu-sync-status-description"
-          );
-          titleEl.setAttribute(
-            "value",
-            this.fluentStrings.formatValueSync("fxa-menu-sync-status-on")
-          );
-          let lastSyncDate = this.formatLastSyncDate(state.lastSync);
-          if (lastSyncDate) {
-            descEl.setAttribute(
-              "value",
-              this.fluentStrings.formatValueSync("appmenu-fxa-last-sync", {
-                time: lastSyncDate,
-              })
-            );
-          } else {
-            descEl.removeAttribute("value");
-          }
-          syncStatusBtn.hidden = false;
         } else {
           syncSetupEl.removeAttribute("hidden");
-          syncStatusBtn.hidden = true;
+        }
+        if (state.syncEnabled) {
+          cadButtonEl.removeAttribute("hidden");
+          syncSetupSeparator.removeAttribute("hidden");
+        } else {
+          cadButtonEl.setAttribute("hidden", "true");
+          syncSetupSeparator.setAttribute("hidden", "true");
         }
 
         // Reposition profiles elements
@@ -1716,6 +1497,21 @@ var gSync = {
       img.src = avatarURL;
     } else {
       mainWindowEl.style.removeProperty("--avatar-image-url");
+    }
+  },
+
+  enableSendTabIfValidTab() {
+    // All tabs selected must be sendable for the Send Tab button to be enabled
+    // on the FxA menu.
+    let canSendAllURIs = gBrowser.selectedTabs.every(
+      t => !!BrowserUtils.getShareableURL(t.linkedBrowser.currentURI)
+    );
+
+    for (const id of [
+      "PanelUI-fxa-menu-sendtab-button",
+      "PanelUI-fxa-menu-sendtab-separator",
+    ]) {
+      PanelMultiView.getViewNode(document, id).hidden = !canSendAllURIs;
     }
   },
 
@@ -2081,38 +1877,6 @@ var gSync = {
     return numFailed < targets.length; // Good enough.
   },
 
-  /**
-   * Sends the given tabs to the target devices and, if any send succeeds,
-   * shows the "Sent!" confirmation hint anchored to the FxA toolbar button
-   * (falling back to the app menu button when it isn't available).
-   *
-   * @param {object[]} tabsToSend - tabs (as passed to sendTabToDevice) to send.
-   * @param {object[]} targets - the devices to send the tabs to.
-   * @returns {Promise<boolean[]>} the per-tab send results.
-   */
-  async sendTabsAndConfirm(tabsToSend, targets) {
-    let results = await Promise.all(
-      // sendTabToDevice does not reject.
-      tabsToSend.map(t => this.sendTabToDevice(t, targets))
-    );
-    // Show the Sent! confirmation if any of the sends succeeded.
-    if (results.includes(true)) {
-      // FxA button could be hidden with CSS since the user is logged out,
-      // although it seems likely this would only happen in testing...
-      let fxastatus = document.documentElement.getAttribute("fxastatus");
-      let anchorNode =
-        (fxastatus &&
-          fxastatus != "not_configured" &&
-          document.getElementById("fxa-toolbar-menu-button")?.parentNode?.id !=
-            "widget-overflow-list" &&
-          document.getElementById("fxa-toolbar-menu-button")) ||
-        document.getElementById("PanelUI-menu-button");
-      ConfirmationHint.show(anchorNode, "confirmation-hint-send-to-device");
-    }
-    fxAccounts.flushLogFile();
-    return results;
-  },
-
   populateSendTabToDevicesMenu(devicesPopup, uri, title, options = {}) {
     const {
       multiselected = false,
@@ -2217,10 +1981,43 @@ var gSync = {
         })
       : [{ url, title, private: isPrivate }];
 
-    const send = to => this.sendTabsAndConfirm(tabsToSend, to);
+    const send = to => {
+      Promise.all(
+        tabsToSend.map(t =>
+          // sendTabToDevice does not reject.
+          this.sendTabToDevice(t, to)
+        )
+      ).then(results => {
+        // Show the Sent! confirmation if any of the sends succeeded.
+        if (results.includes(true)) {
+          // FxA button could be hidden with CSS since the user is logged out,
+          // although it seems likely this would only happen in testing...
+          let fxastatus = document.documentElement.getAttribute("fxastatus");
+          let anchorNode =
+            (fxastatus &&
+              fxastatus != "not_configured" &&
+              document.getElementById("fxa-toolbar-menu-button")?.parentNode
+                ?.id != "widget-overflow-list" &&
+              document.getElementById("fxa-toolbar-menu-button")) ||
+            document.getElementById("PanelUI-menu-button");
+          ConfirmationHint.show(anchorNode, "confirmation-hint-send-to-device");
+        }
+        fxAccounts.flushLogFile();
+      });
+    };
     const onSendAllCommand = () => {
       send(targets);
-      if (contextMenuType) {
+      // Record Send Tab clicked telemetry for "Send to All Devices"
+      if (isFxaMenu) {
+        const sendTabButton = PanelMultiView.getViewNode(
+          document,
+          "PanelUI-fxa-menu-sendtab-button"
+        );
+        this.emitFxaToolbarTelemetry("send_tab", sendTabButton, {
+          device_count: String(targets.length),
+          action: "all_devices",
+        });
+      } else if (contextMenuType) {
         this._recordSendTabTelemetry(
           "click_send_tab",
           targets.length,
@@ -2233,7 +2030,17 @@ var gSync = {
       const targetId = event.target.getAttribute("clientId");
       const target = targets.find(t => t.id == targetId);
       send([target]);
-      if (contextMenuType) {
+      // Record Send Tab clicked telemetry for specific device
+      if (isFxaMenu) {
+        const sendTabButton = PanelMultiView.getViewNode(
+          document,
+          "PanelUI-fxa-menu-sendtab-button"
+        );
+        this.emitFxaToolbarTelemetry("send_tab", sendTabButton, {
+          device_count: String(targets.length),
+          action: "device",
+        });
+      } else if (contextMenuType) {
         this._recordSendTabTelemetry(
           "click_send_tab",
           targets.length,
@@ -2308,7 +2115,17 @@ var gSync = {
         "command",
         () => {
           gSync.openDevicesManagementPage("sendtab");
-          if (contextMenuType) {
+          // Record Send Tab clicked telemetry for "Manage Devices"
+          if (isFxaMenu) {
+            const sendTabButton = PanelMultiView.getViewNode(
+              document,
+              "PanelUI-fxa-menu-sendtab-button"
+            );
+            this.emitFxaToolbarTelemetry("send_tab", sendTabButton, {
+              device_count: String(targets.length),
+              action: "manage_devices",
+            });
+          } else if (contextMenuType) {
             this._recordSendTabTelemetry(
               "click_send_tab",
               targets.length,
@@ -2995,20 +2812,6 @@ var gSync = {
     switchToTabHavingURI(url, true, { replaceQueryString: true });
   },
 
-  openDeviceMissingHelp() {
-    switchToTabHavingURI(
-      "https://support.mozilla.org/kb/fxa-managing-devices",
-      true,
-      { replaceQueryString: true }
-    );
-  },
-
-  openGetFirefoxMobile() {
-    switchToTabHavingURI("https://www.firefox.com/en-US/mobile/", true, {
-      replaceQueryString: true,
-    });
-  },
-
   openSyncedTabsPanel() {
     let placement = CustomizableUI.getPlacementOfWidget("sync-button");
     let area = placement?.area;
@@ -3071,12 +2874,18 @@ var gSync = {
       ? this.fluentStrings.formatValueSync(l10nId, l10nArgs)
       : null;
 
-    let el = PanelMultiView.getViewNode(document, "PanelUI-remotetabs-syncnow");
-    if (tooltiptext) {
-      el.setAttribute("tooltiptext", tooltiptext);
-    } else {
-      el.removeAttribute("tooltiptext");
-    }
+    let syncNowBtns = [
+      "PanelUI-remotetabs-syncnow",
+      "PanelUI-fxa-menu-syncnow-button",
+    ];
+    syncNowBtns.forEach(id => {
+      let el = PanelMultiView.getViewNode(document, id);
+      if (tooltiptext) {
+        el.setAttribute("tooltiptext", tooltiptext);
+      } else {
+        el.removeAttribute("tooltiptext");
+      }
+    });
   },
 
   get relativeTimeFormat() {
