@@ -1303,11 +1303,6 @@ class DesktopNotificationPermissionPrompt extends PermissionPromptForRequest {
       "postPromptEnabled",
       "permissions.desktop-notification.postPrompt.enabled"
     );
-    XPCOMUtils.defineLazyPreferenceGetter(
-      this,
-      "notNowEnabled",
-      "permissions.desktop-notification.notNow.enabled"
-    );
   }
 
   get type() {
@@ -1471,22 +1466,6 @@ class DesktopNotificationPermissionPrompt extends PermissionPromptForRequest {
       },
     };
     let actions = [allowAction];
-    if (this.notNowEnabled) {
-      actions.push({
-        label: lazy.gBrowserBundle.GetStringFromName("webNotifications.notNow"),
-        accessKey: lazy.gBrowserBundle.GetStringFromName(
-          "webNotifications.notNow.accesskey"
-        ),
-        action: lazy.SitePermissions.BLOCK,
-        callback: () => {
-          Glean.webNotificationPermission.promptInteraction.record({
-            site_category: siteCategory,
-            action: "block",
-            is_persistent: false,
-          });
-        },
-      });
-    }
 
     let isBrowserPrivate = lazy.PrivateBrowsingUtils.isBrowserPrivate(
       this.browser
