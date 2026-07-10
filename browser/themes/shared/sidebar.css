@@ -295,6 +295,10 @@ sidebar-main,
   &[uidensity="compact"] {
     --sidebar-launcher-button-padding-inline: round(var(--space-xsmall), 0.5px);
   }
+
+  @media -moz-pref("browser.nova.enabled") {
+    --sidebar-launcher-button-padding-inline: 4px;
+  }
 }
 
 /* Expand on hover */
