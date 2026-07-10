@@ -23,10 +23,8 @@ const JUST_SET_CHECKMARK_MS = 2000;
 const SET_WALLPAPER_ICON = "chrome://browser/skin/canvas.svg";
 const SET_WALLPAPER_CHECK_ICON = "chrome://global/skin/icons/check.svg";
 
-// Renders the daily picture from the Merino feed (Bug 2050976): the image with
-// a source line and description, a "Set wallpaper" action, and a day-keyed
-// hide/restore. Falls back to a sunrise-gradient empty state when there's no
-// picture (or the user hid today's), with an eye button to restore.
+// The daily Merino picture (image, attribution, description, "Set wallpaper"),
+// or a sunrise-gradient empty state with an eye button when it's hidden/absent.
 const PictureOfTheDay = ({
   dispatch,
   handleUserInteraction,
@@ -223,23 +221,94 @@ const PictureOfTheDay = ({
     });
   };
 
-  // Render the source line/description as a source-opening button when a source
-  // URL is available, else as the plain text element it replaces.
-  const renderSourceText = (className, { l10nId, text } = {}) =>
-    canOpenSource ? (
-      <button
-        type="button"
-        className={`${className} picture-of-the-day-source-link`}
-        data-l10n-id={l10nId}
-        onClick={handleOpenSource}
-      >
-        {text}
-      </button>
-    ) : (
-      <p className={className} data-l10n-id={l10nId}>
-        {text}
+  // The license name links to the license terms (Creative Commons) in a new
+  // tab, separate from the source page link above.
+  const canOpenLicense = Boolean(pictureData.licenseUrl);
+  const handleOpenLicense = () => {
+    if (!pictureData.licenseUrl) {
+      return;
+    }
+    batch(() => {
+      dispatch(
+        ac.OnlyToMain({
+          type: at.OPEN_LINK,
+          data: { url: pictureData.licenseUrl, where: "tab" },
+        })
+      );
+      recordUserAction("open_license", { source: "widget" });
+      handleInteraction();
+    });
+  };
+
+  // Attribution line under the title: "© {author} / {source} / {license}".
+  // Each part renders only when its field is present; the source and license
+  // are links (when their URLs are supplied), the author is plain text.
+  const renderAttribution = () => {
+    const parts = [];
+    if (pictureData.author) {
+      parts.push(
+        <span
+          key="author"
+          className="picture-of-the-day-attribution-author"
+          data-l10n-id="newtab-picture-attribution-author"
+          data-l10n-args={JSON.stringify({ author: pictureData.author })}
+        ></span>
+      );
+    }
+    if (canOpenSource) {
+      parts.push(
+        <button
+          key="source"
+          type="button"
+          className="picture-of-the-day-attribution-link picture-of-the-day-source-link"
+          data-l10n-id="newtab-picture-attribution-source-link"
+          onClick={handleOpenSource}
+        ></button>
+      );
+    }
+    if (pictureData.licenseLabel) {
+      parts.push(
+        canOpenLicense ? (
+          <button
+            key="license"
+            type="button"
+            className="picture-of-the-day-attribution-link picture-of-the-day-source-link"
+            data-l10n-id="newtab-picture-attribution-license"
+            data-l10n-args={JSON.stringify({
+              license: pictureData.licenseLabel,
+            })}
+            onClick={handleOpenLicense}
+          >
+            {pictureData.licenseLabel}
+          </button>
+        ) : (
+          <span key="license" className="picture-of-the-day-attribution-item">
+            {pictureData.licenseLabel}
+          </span>
+        )
+      );
+    }
+    if (!parts.length) {
+      return null;
+    }
+    return (
+      <p className="picture-of-the-day-attribution">
+        {parts.map((part, i) => (
+          <React.Fragment key={part.key}>
+            {i > 0 ? (
+              <span
+                className="picture-of-the-day-attribution-sep"
+                aria-hidden="true"
+              >
+                {" / "}
+              </span>
+            ) : null}
+            {part}
+          </React.Fragment>
+        ))}
       </p>
     );
+  };
 
   const pictureImage = (
     <img
@@ -266,11 +335,15 @@ const PictureOfTheDay = ({
       }}
     >
       <div className="picture-of-the-day-toolbar">
-        {hasPicture
-          ? renderSourceText("picture-of-the-day-source", {
-              l10nId: "newtab-picture-header",
-            })
-          : null}
+        {hasPicture ? (
+          <div className="picture-of-the-day-heading">
+            <p
+              className="picture-of-the-day-source"
+              data-l10n-id="newtab-picture-header-main"
+            ></p>
+            {renderAttribution()}
+          </div>
+        ) : null}
         <div className="picture-of-the-day-context-menu-wrapper">
           <moz-button
             className="picture-of-the-day-context-menu-button"
@@ -348,11 +421,11 @@ const PictureOfTheDay = ({
             pictureImage
           )}
           <div className="picture-of-the-day-details">
-            {pictureData.description
-              ? renderSourceText("picture-of-the-day-description", {
-                  text: pictureData.description,
-                })
-              : null}
+            {pictureData.description ? (
+              <p className="picture-of-the-day-description">
+                {pictureData.description}
+              </p>
+            ) : null}
             {canSetWallpaper ? (
               <moz-button
                 className={`picture-of-the-day-set-wallpaper${
