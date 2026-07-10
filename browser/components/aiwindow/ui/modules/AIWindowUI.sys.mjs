@@ -111,18 +111,24 @@ export const AIWindowUI = {
    * layout flips once, when the slide finishes. See the "Animating the content area"
    * performance best practice.
    *
+   * The slide is reserved for explicit user toggles (the Ask/Close button, which
+   * animate); every other path (tab switch, session restore, mode changes) passes
+   * `animate: false` so the sidebar doesn't slide on navigation.
+   *
    * @param {Window} win
    * @param {Element} box
    * @param {Element} splitter
    * @param {boolean} collapse
+   * @param {object} [options]
+   * @param {boolean} [options.animate=true] Whether to slide instead of committing instantly.
    */
-  _setSidebarCollapsed(win, box, splitter, collapse) {
+  _setSidebarCollapsed(win, box, splitter, collapse, { animate = true } = {}) {
     box._aiWindowOpen = !collapse;
 
     const reduceMotion = win.matchMedia(
       "(prefers-reduced-motion: reduce)"
     ).matches;
-    if (reduceMotion) {
+    if (!animate || reduceMotion) {
       this._cancelSidebarAnimation(box);
       this._commitSidebarCollapsed(box, splitter, collapse);
       return;
@@ -260,6 +266,10 @@ export const AIWindowUI = {
   /**
    * Open the AI Window sidebar
    *
+   * The slide is reserved for the Ask button, which opens via toggleSidebar; every
+   * other opener (tab switch, restore, menus, mode changes) routes through here and
+   * commits instantly.
+   *
    * @param {Window} win
    * @param {ChatConversation} conversation The conversation to open in the sidebar
    */
@@ -273,7 +283,7 @@ export const AIWindowUI = {
     const aiBrowser = this.ensureBrowserIsAppended(win.document, box);
 
     if (!this.isSidebarOpen(win)) {
-      this._setSidebarCollapsed(win, box, splitter, false);
+      this._setSidebarCollapsed(win, box, splitter, false, { animate: false });
       this._updateAskButtonChecked(win, true);
     }
 
@@ -359,6 +369,9 @@ export const AIWindowUI = {
   /**
    * Close the AI Window sidebar.
    *
+   * Only the Close button animates the slide; it is the sole caller that passes
+   * `source === "toggle"`. Tab switches and mode changes close instantly.
+   *
    * @param {Window} win
    * @param {string} source
    */
@@ -368,7 +381,9 @@ export const AIWindowUI = {
     }
     const { box, splitter } = this._getSidebarElements(win);
 
-    this._setSidebarCollapsed(win, box, splitter, true);
+    this._setSidebarCollapsed(win, box, splitter, true, {
+      animate: source === "toggle",
+    });
     this._updateAskButtonChecked(win, false);
 
     // Dispatch event to notify tab state manager that sidebar was toggled

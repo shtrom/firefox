@@ -273,6 +273,64 @@ add_task(async function test_ask_button_close_persists_across_navigation() {
   }
 });
 
+// Only animate sidebar open/close on button click
+add_task(async function test_slide_reserved_for_ask_close_button() {
+  await SpecialPowers.pushPrefEnv({ set: [["ui.prefersReducedMotion", 0]] });
+
+  const { restore } = await stubEngineNetworkBoundaries();
+
+  let win;
+  try {
+    win = await openAIWindow();
+    const box = win.document.getElementById(AIWindowUI.BOX_ID);
+    const browser = win.gBrowser.selectedBrowser;
+
+    await promiseNavigateAndLoad(browser, "https://example.com/");
+    Assert.ok(AIWindowUI.isSidebarOpen(win), "Sidebar should start open");
+
+    // Close button: slides
+    AIWindowUI.closeSidebar(win, "toggle");
+    Assert.greater(
+      box.getAnimations().length,
+      0,
+      "Closing via the Close button should animate"
+    );
+    await waitForSidebarClosed(win);
+
+    // Ask button (via toggleSidebar): slides
+    AIWindowUI.toggleSidebar(win);
+    Assert.greater(
+      box.getAnimations().length,
+      0,
+      "Opening via the Ask button should animate"
+    );
+    await waitForSidebarOpen(win);
+
+    // Tab-switch close (no source): instant
+    AIWindowUI.closeSidebar(win);
+    Assert.equal(
+      box.getAnimations().length,
+      0,
+      "A sourceless close should commit instantly without animating"
+    );
+    Assert.ok(!AIWindowUI.isSidebarOpen(win), "Sidebar should be closed");
+
+    // Tab-switch open: instant
+    const openPromise = AIWindowUI.openSidebar(win);
+    Assert.equal(
+      box.getAnimations().length,
+      0,
+      "openSidebar should commit instantly without animating"
+    );
+    Assert.ok(AIWindowUI.isSidebarOpen(win), "Sidebar should be open");
+    await openPromise;
+  } finally {
+    await BrowserTestUtils.closeWindow(win);
+    await restore();
+    await SpecialPowers.popPrefEnv();
+  }
+});
+
 add_task(
   async function test_tabs_after_first_should_open_sidebar_on_site_navigation() {
     let gAiWindow, newTab;
