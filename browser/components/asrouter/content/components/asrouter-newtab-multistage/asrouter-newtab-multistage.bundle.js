@@ -3478,25 +3478,8 @@ const MultiStageAboutWelcome = props => {
       let filteredScreens = screensVisited.concat((await window.AWEvaluateScreenTargeting(upcomingScreens)) ?? upcomingScreens);
 
       // Use existing screen for the filtered screen to carry over any modification
-      // e.g. if AW_LANGUAGE_MISMATCH exists, use it from existing screens.
-      // Includes tiles from the targeting pass so per item targeting is
-      // reflected before the screen renders.
-      setScreens(filteredScreens.map(filtered => {
-        const filteredScreen = screens.find(s => s.id === filtered.id);
-        if (!filteredScreen) {
-          return filtered;
-        }
-        if (filtered.content?.tiles && filtered.content) {
-          return {
-            ...filteredScreen,
-            content: {
-              ...filteredScreen.content,
-              tiles: filtered.content.tiles
-            }
-          };
-        }
-        return filteredScreen;
-      }));
+      // e.g. if AW_LANGUAGE_MISMATCH exists, use it from existing screens
+      setScreens(filteredScreens.map(filtered => filtered.id === LANGUAGE_MISMATCH_SCREEN_ID ? screens.find(s => s.id === filtered.id) ?? filtered : filtered));
       // Mark the initial filter pass complete and allow the first paint.
       if (!didFilter.current) {
         didFilter.current = true;
