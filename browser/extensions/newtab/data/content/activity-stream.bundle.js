@@ -22299,8 +22299,10 @@ const JUST_SET_CHECKMARK_MS = 2000;
 const SET_WALLPAPER_ICON = "chrome://browser/skin/canvas.svg";
 const SET_WALLPAPER_CHECK_ICON = "chrome://global/skin/icons/check.svg";
 
-// The daily Merino picture (image, attribution, description, "Set wallpaper"),
-// or a sunrise-gradient empty state with an eye button when it's hidden/absent.
+// Renders the daily picture from the Merino feed (Bug 2050976): the image with
+// a source line and description, a "Set wallpaper" action, and a day-keyed
+// hide/restore. Falls back to a sunrise-gradient empty state when there's no
+// picture (or the user hid today's), with an eye button to restore.
 const PictureOfTheDay_PictureOfTheDay = ({
   dispatch,
   handleUserInteraction,
@@ -22499,79 +22501,20 @@ const PictureOfTheDay_PictureOfTheDay = ({
     });
   };
 
-  // The license name links to the license terms (Creative Commons) in a new
-  // tab, separate from the source page link above.
-  const canOpenLicense = Boolean(pictureData.licenseUrl);
-  const handleOpenLicense = () => {
-    if (!pictureData.licenseUrl) {
-      return;
-    }
-    (0,external_ReactRedux_namespaceObject.batch)(() => {
-      dispatch(actionCreators.OnlyToMain({
-        type: actionTypes.OPEN_LINK,
-        data: {
-          url: pictureData.licenseUrl,
-          where: "tab"
-        }
-      }));
-      recordUserAction("open_license", {
-        source: "widget"
-      });
-      handleInteraction();
-    });
-  };
-
-  // Attribution line under the title: "© {author} / {source} / {license}".
-  // Each part renders only when its field is present; the source and license
-  // are links (when their URLs are supplied), the author is plain text.
-  const renderAttribution = () => {
-    const parts = [];
-    if (pictureData.author) {
-      parts.push(/*#__PURE__*/external_React_default().createElement("span", {
-        key: "author",
-        className: "picture-of-the-day-attribution-author",
-        "data-l10n-id": "newtab-picture-attribution-author",
-        "data-l10n-args": JSON.stringify({
-          author: pictureData.author
-        })
-      }));
-    }
-    if (canOpenSource) {
-      parts.push(/*#__PURE__*/external_React_default().createElement("button", {
-        key: "source",
-        type: "button",
-        className: "picture-of-the-day-attribution-link picture-of-the-day-source-link",
-        "data-l10n-id": "newtab-picture-attribution-source-link",
-        onClick: handleOpenSource
-      }));
-    }
-    if (pictureData.licenseLabel) {
-      parts.push(canOpenLicense ? /*#__PURE__*/external_React_default().createElement("button", {
-        key: "license",
-        type: "button",
-        className: "picture-of-the-day-attribution-link picture-of-the-day-source-link",
-        "data-l10n-id": "newtab-picture-attribution-license",
-        "data-l10n-args": JSON.stringify({
-          license: pictureData.licenseLabel
-        }),
-        onClick: handleOpenLicense
-      }, pictureData.licenseLabel) : /*#__PURE__*/external_React_default().createElement("span", {
-        key: "license",
-        className: "picture-of-the-day-attribution-item"
-      }, pictureData.licenseLabel));
-    }
-    if (!parts.length) {
-      return null;
-    }
-    return /*#__PURE__*/external_React_default().createElement("p", {
-      className: "picture-of-the-day-attribution"
-    }, parts.map((part, i) => /*#__PURE__*/external_React_default().createElement((external_React_default()).Fragment, {
-      key: part.key
-    }, i > 0 ? /*#__PURE__*/external_React_default().createElement("span", {
-      className: "picture-of-the-day-attribution-sep",
-      "aria-hidden": "true"
-    }, " / ") : null, part)));
-  };
+  // Render the source line/description as a source-opening button when a source
+  // URL is available, else as the plain text element it replaces.
+  const renderSourceText = (className, {
+    l10nId,
+    text
+  } = {}) => canOpenSource ? /*#__PURE__*/external_React_default().createElement("button", {
+    type: "button",
+    className: `${className} picture-of-the-day-source-link`,
+    "data-l10n-id": l10nId,
+    onClick: handleOpenSource
+  }, text) : /*#__PURE__*/external_React_default().createElement("p", {
+    className: className,
+    "data-l10n-id": l10nId
+  }, text);
   const pictureImage = /*#__PURE__*/external_React_default().createElement("img", {
     className: "picture-of-the-day-image",
     src: pictureData.imageUrl,
@@ -22591,12 +22534,9 @@ const PictureOfTheDay_PictureOfTheDay = ({
     }
   }, /*#__PURE__*/external_React_default().createElement("div", {
     className: "picture-of-the-day-toolbar"
-  }, hasPicture ? /*#__PURE__*/external_React_default().createElement("div", {
-    className: "picture-of-the-day-heading"
-  }, /*#__PURE__*/external_React_default().createElement("p", {
-    className: "picture-of-the-day-source",
-    "data-l10n-id": "newtab-picture-header-main"
-  }), renderAttribution()) : null, /*#__PURE__*/external_React_default().createElement("div", {
+  }, hasPicture ? renderSourceText("picture-of-the-day-source", {
+    l10nId: "newtab-picture-header"
+  }) : null, /*#__PURE__*/external_React_default().createElement("div", {
     className: "picture-of-the-day-context-menu-wrapper"
   }, /*#__PURE__*/external_React_default().createElement("moz-button", {
     className: "picture-of-the-day-context-menu-button",
@@ -22646,9 +22586,9 @@ const PictureOfTheDay_PictureOfTheDay = ({
     onClick: handleOpenSource
   }, pictureImage) : pictureImage, /*#__PURE__*/external_React_default().createElement("div", {
     className: "picture-of-the-day-details"
-  }, pictureData.description ? /*#__PURE__*/external_React_default().createElement("p", {
-    className: "picture-of-the-day-description"
-  }, pictureData.description) : null, canSetWallpaper ? /*#__PURE__*/external_React_default().createElement("moz-button", {
+  }, pictureData.description ? renderSourceText("picture-of-the-day-description", {
+    text: pictureData.description
+  }) : null, canSetWallpaper ? /*#__PURE__*/external_React_default().createElement("moz-button", {
     className: `picture-of-the-day-set-wallpaper${justSet || isSetAsWallpaper ? " is-collapsed" : ""}${suppressExpand ? " no-expand" : ""}`,
     type: "primary",
     iconSrc: justSet ? SET_WALLPAPER_CHECK_ICON : SET_WALLPAPER_ICON,

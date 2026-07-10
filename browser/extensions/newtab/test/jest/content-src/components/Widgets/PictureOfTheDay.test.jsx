@@ -222,7 +222,7 @@ describe("PictureOfTheDay widget", () => {
       expect(img.getAttribute("src")).toBe("https://example.com/potd.jpg");
       expect(img.getAttribute("alt")).toBe("A test picture description.");
       expect(
-        container.querySelector('[data-l10n-id="newtab-picture-header-main"]')
+        container.querySelector('[data-l10n-id="newtab-picture-header"]')
       ).toBeTruthy();
       expect(
         container.querySelector(".picture-of-the-day-description").textContent
@@ -384,129 +384,88 @@ describe("PictureOfTheDay widget", () => {
     });
   });
 
-  describe("attribution and source links", () => {
+  describe("source link", () => {
     const SOURCE_URL = "https://commons.wikimedia.org/wiki/File:Example.jpg";
-    const LICENSE_URL = "https://creativecommons.org/licenses/by-sa/4.0/";
-    const attributedState = {
+    const sourcedState = {
       ...mockState,
       PictureOfTheDay: {
         ...INITIAL_STATE.PictureOfTheDay,
         imageUrl: "https://example.com/potd.jpg",
         description: "A test picture description.",
         publishedDate: "2026-07-01",
-        author: "Jane Doe",
         sourceUrl: SOURCE_URL,
-        licenseLabel: "CC BY-SA 4.0",
-        licenseUrl: LICENSE_URL,
       },
     };
 
     const findOpenLink = dispatch =>
       dispatch.mock.calls.find(([action]) => action.type === at.OPEN_LINK);
 
-    it("renders the author credit, source link, and license link", () => {
-      const { container } = renderWidget(jest.fn(), {}, attributedState);
-      const author = container.querySelector(
-        ".picture-of-the-day-attribution-author"
-      );
-      expect(author.getAttribute("data-l10n-id")).toBe(
-        "newtab-picture-attribution-author"
-      );
-      expect(author.getAttribute("data-l10n-args")).toContain("Jane Doe");
+    it("renders the source line, description, and image as source buttons", () => {
+      const { container } = renderWidget(jest.fn(), {}, sourcedState);
       expect(
         container.querySelector(
-          '[data-l10n-id="newtab-picture-attribution-source-link"]'
+          'button.picture-of-the-day-source-link[data-l10n-id="newtab-picture-header"]'
         )
       ).toBeTruthy();
-      const license = container.querySelector(
-        '[data-l10n-id="newtab-picture-attribution-license"]'
-      );
-      expect(license).toBeTruthy();
-      expect(license.textContent).toBe("CC BY-SA 4.0");
-    });
-
-    it("keeps the title and description as plain (non-link) text", () => {
-      const { container } = renderWidget(jest.fn(), {}, attributedState);
       expect(
-        container.querySelector('p[data-l10n-id="newtab-picture-header-main"]')
+        container.querySelector(
+          "button.picture-of-the-day-description.picture-of-the-day-source-link"
+        )
       ).toBeTruthy();
       expect(
-        container.querySelector("p.picture-of-the-day-description")
+        container.querySelector(
+          "button.picture-of-the-day-image-link img.picture-of-the-day-image"
+        )
       ).toBeTruthy();
     });
 
-    it("opens the source page in a new tab from the attribution link", () => {
+    it("opens the source in a new tab when the source line is clicked", () => {
       const dispatch = jest.fn();
-      const { container } = renderWidget(dispatch, {}, attributedState);
-      const sourceLink = container.querySelector(
-        '[data-l10n-id="newtab-picture-attribution-source-link"]'
+      const { container } = renderWidget(dispatch, {}, sourcedState);
+      fireEvent.click(
+        container.querySelector('[data-l10n-id="newtab-picture-header"]')
       );
-      fireEvent.click(sourceLink);
       const openLink = findOpenLink(dispatch);
+      expect(openLink).toBeTruthy();
       expect(openLink[0].data.url).toBe(SOURCE_URL);
       expect(openLink[0].data.where).toBe("tab");
     });
 
-    it("opens the license page in a new tab from the license link", () => {
+    it("opens the source when the description is clicked", () => {
       const dispatch = jest.fn();
-      const { container } = renderWidget(dispatch, {}, attributedState);
+      const { container } = renderWidget(dispatch, {}, sourcedState);
       fireEvent.click(
-        container.querySelector(
-          '[data-l10n-id="newtab-picture-attribution-license"]'
-        )
+        container.querySelector(".picture-of-the-day-description")
       );
-      expect(findOpenLink(dispatch)[0].data.url).toBe(LICENSE_URL);
-    });
-
-    it("records an open_license user event when the license link is clicked", () => {
-      const dispatch = jest.fn();
-      const { container } = renderWidget(dispatch, {}, attributedState);
-      fireEvent.click(
-        container.querySelector(
-          '[data-l10n-id="newtab-picture-attribution-license"]'
-        )
-      );
-      const evt = dispatch.mock.calls.find(
-        ([action]) =>
-          action.type === at.WIDGETS_USER_EVENT &&
-          action.data?.user_action === "open_license"
-      );
-      expect(evt).toBeTruthy();
-      expect(evt[0].data.widget_name).toBe("picture_of_the_day");
+      expect(findOpenLink(dispatch)[0].data.url).toBe(SOURCE_URL);
     });
 
     it("opens the source when the image is clicked", () => {
       const dispatch = jest.fn();
-      const { container } = renderWidget(dispatch, {}, attributedState);
+      const { container } = renderWidget(dispatch, {}, sourcedState);
       fireEvent.click(
         container.querySelector(".picture-of-the-day-image-link")
       );
       expect(findOpenLink(dispatch)[0].data.url).toBe(SOURCE_URL);
     });
 
-    it("omits attribution parts and links whose fields are absent", () => {
+    it("renders plain, non-linked elements when no source URL is provided", () => {
       const { container } = renderWidget(
         jest.fn(),
         {},
         {
-          ...attributedState,
-          PictureOfTheDay: {
-            ...attributedState.PictureOfTheDay,
-            author: "",
-            sourceUrl: "",
-            licenseLabel: "",
-            licenseUrl: "",
-          },
+          ...sourcedState,
+          PictureOfTheDay: { ...sourcedState.PictureOfTheDay, sourceUrl: "" },
         }
       );
       expect(
-        container.querySelector(".picture-of-the-day-attribution")
+        container.querySelector(".picture-of-the-day-source-link")
       ).toBeFalsy();
       expect(
         container.querySelector(".picture-of-the-day-image-link")
       ).toBeFalsy();
       expect(
-        container.querySelector('p[data-l10n-id="newtab-picture-header-main"]')
+        container.querySelector('p[data-l10n-id="newtab-picture-header"]')
       ).toBeTruthy();
     });
   });
@@ -597,8 +556,6 @@ describe("PictureOfTheDay widget", () => {
       PictureOfTheDay: {
         ...populated.PictureOfTheDay,
         sourceUrl: "https://commons.wikimedia.org/wiki/File:Example.jpg",
-        licenseLabel: "CC BY-SA 4.0",
-        licenseUrl: "https://creativecommons.org/licenses/by-sa/4.0/",
       },
     };
 
@@ -626,11 +583,6 @@ describe("PictureOfTheDay widget", () => {
         '[data-l10n-id="newtab-picture-menu-hide-photo"]',
       ],
       ["open source", sourced, ".picture-of-the-day-source-link"],
-      [
-        "open license",
-        sourced,
-        '[data-l10n-id="newtab-picture-attribution-license"]',
-      ],
     ])(
       "flips widgets.pictureOfTheDay.interaction when %s is used",
       (_label, state, selector) => {
