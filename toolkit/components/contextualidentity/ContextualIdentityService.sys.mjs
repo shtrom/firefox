@@ -19,68 +19,67 @@ const CONTEXTUAL_IDENTITY_ENABLED_PREF = "privacy.userContext.enabled";
 //
 // Each color carries two codes: `code` is the legacy value used when
 // `browser.nova.enabled` is off, `codeNova` is the refreshed value used when it
-// is on. getContainerColorCode() picks between them based on the pref. Under
-// nova `codeNova` is the design-system `--color-<name>-40` token, matching the
-// shade usercontext.css paints as the tab stroke (--identity-stroke-color).
+// is on. getContainerColorCode() and usercontext.css pick between them based on
+// the pref.
 export const CONTAINER_COLORS = [
   {
     name: "gray",
     code: "#7c7c7d",
-    codeNova: "#949297",
+    codeNova: "#b7b6ba",
     l10nId: "user-context-color-gray",
   },
   {
     name: "yellow",
     code: "#ffcb00",
-    codeNova: "#db820e",
+    codeNova: "#f3a81e",
     l10nId: "user-context-color-yellow",
   },
   {
     name: "orange",
     code: "#ff9f00",
-    codeNova: "#f4682c",
+    codeNova: "#ff9565",
     l10nId: "user-context-color-orange",
   },
   {
     name: "red",
     code: "#ff613d",
-    codeNova: "#ed566e",
+    codeNova: "#ff8998",
     l10nId: "user-context-color-red",
   },
   {
     name: "pink",
     code: "#ff4bda",
-    codeNova: "#db54bf",
+    codeNova: "#f585d3",
     l10nId: "user-context-color-pink",
   },
   {
     name: "purple",
     code: "#af51f5",
-    codeNova: "#b864ee",
+    codeNova: "#d490ff",
     l10nId: "user-context-color-purple",
   },
   {
     name: "violet",
     code: "#764edd",
-    codeNova: "#9871ff",
+    codeNova: "#b89cff",
     l10nId: "user-context-color-violet",
   },
   {
     name: "blue",
     code: "#37adff",
-    codeNova: "#5a87fd",
+    codeNova: "#7bb2ff",
     l10nId: "user-context-color-blue",
   },
   {
     name: "cyan",
     code: "#00c79a",
-    codeNova: "#10a4ca",
+    codeNova: "#4cc4e1",
     l10nId: "user-context-color-cyan",
   },
   {
     name: "green",
     code: "#51cd00",
-    codeNova: "#11ae84",
+    codeNova: "#4acca6",
     l10nId: "user-context-color-green",
   },
 ];
