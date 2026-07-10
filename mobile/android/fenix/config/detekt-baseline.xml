@@ -4,7 +4,6 @@
   <CurrentIssues>
     <ID>ClassAcronymCasing:AppAction.kt$AppAction$URLCopiedToClipboard : AppAction</ID>
     <ID>ClassAcronymCasing:BookmarksAction.kt$EditBookmarkAction$URLChanged : EditBookmarkAction</ID>
-    <ID>ClassAcronymCasing:BrowserToolbarCFRPresenter.kt$BrowserToolbarCFRPresenter</ID>
     <ID>ClassAcronymCasing:CfrToolsStore.kt$CfrToolsAction$ResetLastCFRTimestampButtonClicked : CfrToolsAction</ID>
     <ID>ClassAcronymCasing:ClientUUID.kt$ClientUUID : UserIdProviderRequestHashProvider</ID>
     <ID>ClassAcronymCasing:ClientUUID.kt$PrefsBackedClientUUID : ClientUUID</ID>
@@ -44,7 +43,6 @@
     <ID>ForbiddenSuppress:BookmarksReducer.kt$@Suppress("CyclomaticComplexMethod")</ID>
     <ID>ForbiddenSuppress:BookmarksScreen.kt$@Suppress("LongMethod", "CognitiveComplexMethod", "CyclomaticComplexMethod")</ID>
     <ID>ForbiddenSuppress:BookmarksTelemetryMiddleware.kt$BookmarksTelemetryMiddleware$@Suppress("CyclomaticComplexMethod")</ID>
-    <ID>ForbiddenSuppress:BrowserToolbarCFRPresenter.kt$BrowserToolbarCFRPresenter$@Suppress("MagicNumber")</ID>
     <ID>ForbiddenSuppress:BrowserToolbarMiddleware.kt$BrowserToolbarMiddleware$@Suppress("LongMethod", "CognitiveComplexMethod")</ID>
     <ID>ForbiddenSuppress:BrowserToolbarMiddleware.kt$BrowserToolbarMiddleware$@Suppress("LongMethod", "CyclomaticComplexMethod", "CognitiveComplexMethod")</ID>
     <ID>ForbiddenSuppress:BrowserToolbarMiddleware.kt$BrowserToolbarMiddleware$@Suppress("LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "ReturnCount", "CognitiveComplexMethod")</ID>
