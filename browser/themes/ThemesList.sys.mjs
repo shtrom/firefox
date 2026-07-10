@@ -35,8 +35,6 @@ export const TESTING_XPI_BASE_URL =
  * @typedef {object} ThemeListEntry
  * @property {string} id - The addon ID of the theme.
  * @property {boolean} [isBuiltIn] - Whether the theme ships built-in with Firefox.
- * @property {boolean} [showInCompactLayout] - Whether the theme should be shown
- *   in the theme picker's compact layout mode.
  * @property {ThemePickerColors} themePickerColors
  *   The light and dark color or gradient variants representing the theme in the
  *   Firefox Themes Picker UI.
@@ -54,7 +52,6 @@ const FIREFOX_THEMES_LIST = [
   {
     id: "default-theme@mozilla.org",
     isBuiltIn: true,
-    showInCompactLayout: true,
     themePickerColors: {
       light: {
         type: "gradient",
@@ -68,7 +65,6 @@ const FIREFOX_THEMES_LIST = [
   },
   {
     id: "nova-sun@mozilla.org",
-    showInCompactLayout: true,
     themePickerColors: {
       light: {
         type: "gradient",
@@ -105,7 +101,6 @@ const FIREFOX_THEMES_LIST = [
   },
   {
     id: "nova-flare@mozilla.org",
-    showInCompactLayout: true,
     themePickerColors: {
       light: {
         type: "gradient",
@@ -145,7 +140,6 @@ const FIREFOX_THEMES_LIST = [
   },
   {
     id: "nova-lagoon@mozilla.org",
-    showInCompactLayout: true,
     themePickerColors: {
       light: {
         type: "gradient",
@@ -159,7 +153,6 @@ const FIREFOX_THEMES_LIST = [
   },
   {
     id: "nova-pine@mozilla.org",
-    showInCompactLayout: true,
     themePickerColors: {
       light: {
         type: "gradient",
@@ -186,7 +179,6 @@ const FIREFOX_THEMES_LIST = [
   },
   {
     id: "nova-ash@mozilla.org",
-    showInCompactLayout: true,
     themePickerColors: {
       light: {
         type: "gradient",
@@ -233,21 +225,10 @@ class ThemesList {
   }
 
   /**
-   * @param {object} [options]
-   * @param {boolean} [options.showInCompactLayout] - If true, only return themes
-   *   marked to be shown in the theme picker's compact layout mode.
-   * @returns {Array<{id: string, themePickerColors: ThemePickerColors}>}
-   *   Array of theme objects with id and themePickerColors.
+   * @returns {Array<string>} The addon IDs of all themes managed by this instance.
    */
-  getThemesInfo({ showInCompactLayout = false } = {}) {
-    let themes = Array.from(FIREFOX_THEMES_MAP.values());
-    if (showInCompactLayout) {
-      themes = themes.filter(theme => theme.showInCompactLayout);
-    }
-    return themes.map(({ id, themePickerColors }) => ({
-      id,
-      themePickerColors,
-    }));
+  getThemeIds() {
+    return Array.from(FIREFOX_THEMES_MAP.keys());
   }
 
   /**
@@ -265,6 +246,18 @@ class ThemesList {
    */
   isBuiltIn(themeId) {
     return !!FIREFOX_THEMES_MAP.get(themeId)?.isBuiltIn;
+  }
+
+  /**
+   * Returns the background color variants for the given theme. Each variant is an object with a
+   * `type` field ("gradient" or "color") and a `value` field containing the CSS string.
+   *
+   * @param {string} themeId - The addon ID of the theme.
+   * @returns {ThemePickerColors | null}
+   *   The color variants, or null if the theme is not managed by this instance.
+   */
+  getThemePickerColors(themeId) {
+    return FIREFOX_THEMES_MAP.get(themeId)?.themePickerColors ?? null;
   }
 
   /**

@@ -9,32 +9,18 @@ export default {
   title: "UI Widgets/Theme Picker",
   component: "theme-picker",
   argTypes: {
-    layout: {
-      options: ["full", "compact"],
+    variant: {
+      options: ["default", "other"],
       control: { type: "select" },
     },
   },
 };
 
-const Template = ({ layout, showLabels }) => html`
-  <theme-picker layout=${layout} .showLabels=${showLabels}></theme-picker>
+const Template = ({ variant }) => html`
+  <theme-picker .variant=${variant}></theme-picker>
 `;
 
 export const Default = Template.bind({});
 Default.args = {
-  layout: "full",
-  showLabels: true,
-};
-
-export const Compact = Template.bind({});
-Compact.args = {
-  ...Default.args,
-  showLabels: false,
-  layout: "compact",
-};
-
-export const WithoutVisibleLabels = Template.bind({});
-WithoutVisibleLabels.args = {
-  ...Default.args,
-  showLabels: false,
+  variant: "default",
 };
