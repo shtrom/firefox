@@ -10,8 +10,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat.getColor
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,6 +24,7 @@ import mozilla.components.compose.cfr.CFRPopup
 import mozilla.components.compose.cfr.CFRPopup.PopupAlignment.BODY_TO_ANCHOR_CENTER
 import mozilla.components.compose.cfr.CFRPopupProperties
 import mozilla.components.lib.state.ext.flowScoped
+import mozilla.components.ui.colors.NovaColors
 import mozilla.telemetry.glean.private.NoExtras
 import org.mozilla.fenix.GleanMetrics.Events
 import org.mozilla.fenix.R
@@ -102,11 +103,7 @@ class BrowserToolbarCFRPresenter(
             ),
             properties = CFRPopupProperties(
                 popupAlignment = BODY_TO_ANCHOR_CENTER,
-                popupBodyColors = listOf(
-                    getColor(context, R.color.fx_mobile_layer_color_gradient_end),
-                    getColor(context, R.color.fx_mobile_layer_color_gradient_start),
-                ),
-                dismissButtonColor = getColor(context, R.color.fx_mobile_icon_color_oncolor),
+                dismissButtonColor = NovaColors.White.toArgb(),
                 indicatorDirection = if (context.components.settings.toolbarPosition == ToolbarPosition.TOP) {
                     CFRPopup.IndicatorDirection.UP
                 } else {
@@ -123,7 +120,7 @@ class BrowserToolbarCFRPresenter(
                     Column {
                         Text(
                             text = context.getString(R.string.address_bar_swipe_cfr_message_2),
-                            color = FirefoxTheme.colors.textOnColorPrimary,
+                            color = NovaColors.White,
                             style = FirefoxTheme.typography.body2,
                             modifier = Modifier.padding(top = 2.dp),
                         )
