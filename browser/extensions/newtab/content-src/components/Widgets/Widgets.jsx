@@ -223,11 +223,6 @@ function Widgets() {
       prefs,
       widgetsEnabled
     ),
-    pictureOfTheDay: isWidgetEnabled(
-      WIDGET_REGISTRY.find(w => w.id === "pictureOfTheDay"),
-      prefs,
-      widgetsEnabled
-    ),
   };
 
   const widgetOrder = resolveWidgetOrder(prefs);

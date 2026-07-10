@@ -57,9 +57,6 @@ export class ContentSection extends React.PureComponent {
         case "WIDGET_STOCKS":
           widgetName = "stocks";
           break;
-        case "WIDGET_PICTURE_OF_THE_DAY":
-          widgetName = "picture_of_the_day";
-          break;
       }
 
       if (widgetName) {
@@ -190,7 +187,6 @@ export class ContentSection extends React.PureComponent {
       mayHavePrivacyWidget,
       mayHaveCrosswordWidget,
       mayHaveStocksWidget,
-      mayHavePictureOfTheDayWidget,
       mayHaveWeatherForecast,
       openPreferences,
       wallpapersUserEnabled,
@@ -223,7 +219,6 @@ export class ContentSection extends React.PureComponent {
       privacyEnabled,
       crosswordEnabled,
       stocksEnabled,
-      pictureOfTheDayEnabled,
     } = enabledWidgets;
 
     // @nova-cleanup(remove-conditional): Remove novaEnabled check and newtab-custom-stories-toggle, default to newtab-recommended-stories-toggle
@@ -368,19 +363,6 @@ export class ContentSection extends React.PureComponent {
                     />
                   </div>
                 )}
-                {/* Picture of the day */}
-                {mayHavePictureOfTheDayWidget && (
-                  <div id="picture-widget-section" className="section">
-                    <moz-toggle
-                      id="picture-toggle"
-                      pressed={pictureOfTheDayEnabled || null}
-                      ontoggle={this.onPreferenceSelect}
-                      data-preference="widgets.pictureOfTheDay.enabled"
-                      data-event-source="WIDGET_PICTURE_OF_THE_DAY"
-                      data-l10n-id="newtab-custom-widget-picture-toggle"
-                    />
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -498,9 +480,6 @@ export class ContentSection extends React.PureComponent {
                             mayHavePrivacyWidget={mayHavePrivacyWidget}
                             mayHaveCrosswordWidget={mayHaveCrosswordWidget}
                             mayHaveStocksWidget={mayHaveStocksWidget}
-                            mayHavePictureOfTheDayWidget={
-                              mayHavePictureOfTheDayWidget
-                            }
                             mayHaveWeatherForecast={mayHaveWeatherForecast}
                             weatherDisplay={weatherDisplay}
                             setPref={setPref}
