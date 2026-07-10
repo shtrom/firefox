@@ -15,9 +15,7 @@
 #include "sandbox/win/src/sandbox_nt_util.h"
 #include "sandbox/win/src/sharedmem_ipc_client.h"
 #include "sandbox/win/src/target_services.h"
-#include "mozilla/sandboxing/sandboxLogging.h"
-
-#define STATUS_OBJECT_NAME_NOT_FOUND ((NTSTATUS)0xC0000034L)
+#include "sandbox/win/TargetGeckoClient.h"
 
 namespace sandbox {
 namespace {
@@ -81,9 +79,7 @@ NTSTATUS WINAPI TargetNtCreateKey(NtCreateKeyFunction orig_CreateKey,
     return status;
   }
 
-  mozilla::sandboxing::LogBlocked("NtCreateKey",
-                                  object_attributes->ObjectName->Buffer,
-                                  object_attributes->ObjectName->Length);
+  SYSCALL_BROKERING_WITH_CONTEXT(object_attributes->ObjectName);
 
   // We don't trust that the IPC can work this early.
   if (!SandboxFactory::GetTargetServices()->GetState()->InitCalled()) {
@@ -159,9 +155,7 @@ NTSTATUS WINAPI TargetNtCreateKey(NtCreateKeyFunction orig_CreateKey,
     } __except (EXCEPTION_EXECUTE_HANDLER) {
       break;
     }
-    mozilla::sandboxing::LogAllowed("NtCreateKey",
-                                    object_attributes->ObjectName->Buffer,
-                                    object_attributes->ObjectName->Length);
+    SYSCALL_BROKERED();
   } while (false);
 
   return status;
@@ -223,9 +217,6 @@ NTSTATUS WINAPI CommonNtOpenKey(NTSTATUS status, PHANDLE key,
     } __except (EXCEPTION_EXECUTE_HANDLER) {
       break;
     }
-    mozilla::sandboxing::LogAllowed("NtOpenKey[Ex]",
-                                    object_attributes->ObjectName->Buffer,
-                                    object_attributes->ObjectName->Length);
   } while (false);
 
   return status;
@@ -240,11 +231,13 @@ NTSTATUS WINAPI TargetNtOpenKey(NtOpenKeyFunction orig_OpenKey, PHANDLE key,
     return status;
   }
 
-  mozilla::sandboxing::LogBlocked("NtOpenKey",
-                                  object_attributes->ObjectName->Buffer,
-                                  object_attributes->ObjectName->Length);
+  SYSCALL_BROKERING_WITH_CONTEXT(object_attributes->ObjectName);
 
-  return CommonNtOpenKey(status, key, desired_access, object_attributes);
+  status = CommonNtOpenKey(status, key, desired_access, object_attributes);
+  if (NT_SUCCESS(status)) {
+    SYSCALL_BROKERED();
+  }
+  return status;
 }
 
 NTSTATUS WINAPI TargetNtOpenKeyEx(NtOpenKeyExFunction orig_OpenKeyEx,
@@ -263,11 +256,13 @@ NTSTATUS WINAPI TargetNtOpenKeyEx(NtOpenKeyExFunction orig_OpenKeyEx,
     return status;
   }
 
-  mozilla::sandboxing::LogBlocked("NtOpenKeyEx",
-                                  object_attributes->ObjectName->Buffer,
-                                  object_attributes->ObjectName->Length);
+  SYSCALL_BROKERING_WITH_CONTEXT(object_attributes->ObjectName);
 
-  return CommonNtOpenKey(status, key, desired_access, object_attributes);
+  status = CommonNtOpenKey(status, key, desired_access, object_attributes);
+  if (NT_SUCCESS(status)) {
+    SYSCALL_BROKERED();
+  }
+  return status;
 }
 
 }  // namespace sandbox

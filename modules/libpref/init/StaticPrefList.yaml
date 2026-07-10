@@ -18547,15 +18547,6 @@
     value: @IS_NIGHTLY_BUILD@
     mirror: always
 
-  # This controls the depth of stack trace that is logged when Windows sandbox
-  # logging is turned on. This is only currently available for the content
-  # process because the only other sandbox (for GMP) has too strict a policy to
-  # allow stack tracing. This does not require a restart to take effect.
--   name: security.sandbox.windows.log.stackTraceDepth
-    type: RelaxedAtomicUint32
-    value: 0
-    mirror: always
-
   # Whether \Device\KsecDD is closed in content process. We are closing this
   # using a pref to give users a work-around if they have issues.
 -   name: security.sandbox.content.close-ksecdd-handle
