@@ -5,6 +5,7 @@
 import { html } from "chrome://global/content/vendor/lit.all.mjs";
 import { MozLitElement } from "chrome://global/content/lit-utils.mjs";
 import { SettingPaneManager } from "chrome://browser/content/preferences/config/SettingPaneManager.mjs";
+import { SettingGroupManager } from "chrome://browser/content/preferences/config/SettingGroupManager.mjs";
 
 /**
  * @import { MozPageHeader } from "chrome://global/content/elements/moz-page-header.mjs"
@@ -197,8 +198,12 @@ export class SettingPane extends MozLitElement {
       `${this.config.id}-pane-loaded`
     );
 
+    // Skip groups not yet registered, like the Home groups. A setting-group
+    // initializes itself only when its config is registered (bug 2051119).
     for (let groupId of this.config.groupIds) {
-      window.initSettingGroup(groupId);
+      if (SettingGroupManager.has(groupId)) {
+        window.initSettingGroup(groupId);
+      }
     }
   }
 
