@@ -19,7 +19,7 @@ Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/58f47eacaf10d12e2
  10 files changed, 24 insertions(+), 24 deletions(-)
 
 diff --git a/BUILD.gn b/BUILD.gn
-index 1785d59731..0d4e10b203 100644
+index be776124d9..f8c3dbd96a 100644
 --- a/BUILD.gn
 +++ b/BUILD.gn
 @@ -446,12 +446,12 @@ config("common_config") {
@@ -254,10 +254,10 @@ index a5d4544dd8..1db919f987 100644
  config("x11_config") {
    if (rtc_use_x11_extensions) {
 diff --git a/webrtc.gni b/webrtc.gni
-index 223c6788fd..4b8a650b75 100644
+index 9e02afe671..ed9fc0602d 100644
 --- a/webrtc.gni
 +++ b/webrtc.gni
-@@ -159,7 +159,7 @@ declare_args() {
+@@ -160,7 +160,7 @@ declare_args() {
  
    # Determines whether NEON code will be built.
    rtc_build_with_neon =

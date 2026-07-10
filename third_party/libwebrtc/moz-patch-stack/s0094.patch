@@ -39,7 +39,7 @@ index 69e4228893..8ce24b544a 100644
  
  group("media") {
 diff --git a/modules/video_coding/BUILD.gn b/modules/video_coding/BUILD.gn
-index 6acf2f8a0b..6ff80536c6 100644
+index 9f660c4393..56f569f271 100644
 --- a/modules/video_coding/BUILD.gn
 +++ b/modules/video_coding/BUILD.gn
 @@ -7,7 +7,7 @@
@@ -52,10 +52,10 @@ index 6acf2f8a0b..6ff80536c6 100644
  
  rtc_library("encoded_frame") {
 diff --git a/webrtc.gni b/webrtc.gni
-index c0366647c8..e33f548341 100644
+index 176ed3075d..698b774e09 100644
 --- a/webrtc.gni
 +++ b/webrtc.gni
-@@ -491,8 +491,8 @@ all_poison_types = [
+@@ -492,8 +492,8 @@ all_poison_types = [
    "default_neural_residual_echo_estimator",
  ]
  
@@ -64,5 +64,5 @@ index c0366647c8..e33f548341 100644
 +absl_include_config = "//libwebrtc/third_party/abseil-cpp:absl_include_config"
 +absl_define_config = "//libwebrtc/third_party/abseil-cpp:absl_define_config"
  
- # Abseil Flags are testonly, so this config will only be applied to WebRTC targets
- # that are testonly.
+ # Abseil Flags are testonly, so this config will only be applied to WebRTC
+ # targets that are testonly.

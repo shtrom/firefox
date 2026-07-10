@@ -74,7 +74,7 @@ index 44447d3a34..a034bc9814 100644
  # The python interpreter to use by default. On Windows, this will look
  # for python3.exe and python3.bat.
 diff --git a/BUILD.gn b/BUILD.gn
-index ab701129ee..4329954c34 100644
+index f42030a6e1..0d06980650 100644
 --- a/BUILD.gn
 +++ b/BUILD.gn
 @@ -21,8 +21,8 @@
@@ -108,7 +108,7 @@ index ab701129ee..4329954c34 100644
      defines = []
  
      deps = [
-@@ -858,7 +858,7 @@ rtc_static_library("dcsctp") {
+@@ -852,7 +852,7 @@ rtc_static_library("dcsctp") {
    visibility = [ "//:default" ]
    sources = []
    complete_static_lib = true
@@ -117,7 +117,7 @@ index ab701129ee..4329954c34 100644
    defines = []
    deps = [
      "net/dcsctp/public:factory",
-@@ -896,7 +896,7 @@ group("poison_default_neural_residual_echo_estimator") {
+@@ -890,7 +890,7 @@ group("poison_default_neural_residual_echo_estimator") {
  if (!build_with_chromium) {
    # Write debug logs to gn_logs.txt.
    # This is also required for Siso builds.
@@ -327,7 +327,7 @@ index 589142b014..2ee80ded55 100644
      }
    }
 diff --git a/examples/BUILD.gn b/examples/BUILD.gn
-index da8116da67..3e0be725a9 100644
+index 85edbfa44b..82aa0a0b0e 100644
 --- a/examples/BUILD.gn
 +++ b/examples/BUILD.gn
 @@ -9,15 +9,15 @@
@@ -351,7 +351,7 @@ index da8116da67..3e0be725a9 100644
  }
  
  group("examples") {
-@@ -630,7 +630,7 @@ if (is_ios || (is_mac && target_cpu != "x86")) {
+@@ -626,7 +626,7 @@ if (is_ios || (is_mac && target_cpu != "x86")) {
            "../sdk:mediaconstraints_objc",
            "../sdk:peerconnectionfactory_base_objc",
            "../sdk:videocapture_objc",
@@ -360,7 +360,7 @@ index da8116da67..3e0be725a9 100644
            "//third_party/ocmock",
          ]
        }
-@@ -736,7 +736,7 @@ if (is_linux || is_chromeos || is_win) {
+@@ -732,7 +732,7 @@ if (is_linux || is_chromeos || is_win) {
          "peerconnection/client/main_wnd.cc",
          "peerconnection/client/main_wnd.h",
        ]
@@ -383,7 +383,7 @@ index b671239bae..e545b2cde3 100644
    android_java_prebuilt("autobanh_java") {
      jar_path = "lib/autobanh.jar"
 diff --git a/examples/androidnativeapi/BUILD.gn b/examples/androidnativeapi/BUILD.gn
-index 02bb6b7db4..6cfd97ca61 100644
+index 183ee020d4..6a2349149b 100644
 --- a/examples/androidnativeapi/BUILD.gn
 +++ b/examples/androidnativeapi/BUILD.gn
 @@ -41,8 +41,8 @@ if (is_android) {
@@ -398,7 +398,7 @@ index 02bb6b7db4..6cfd97ca61 100644
      deps = [
        ":generated_jni",
 diff --git a/examples/androidvoip/BUILD.gn b/examples/androidvoip/BUILD.gn
-index cb7554cb5a..1259899cd2 100644
+index 7886fe1d7f..8fa3e9c794 100644
 --- a/examples/androidvoip/BUILD.gn
 +++ b/examples/androidvoip/BUILD.gn
 @@ -51,8 +51,8 @@ if (is_android) {
@@ -576,7 +576,7 @@ index 70466453f4..0a463c7619 100644
  import("../../webrtc.gni")
  
 diff --git a/modules/video_coding/BUILD.gn b/modules/video_coding/BUILD.gn
-index 6ff80536c6..0466a1de6e 100644
+index 56f569f271..376f150e57 100644
 --- a/modules/video_coding/BUILD.gn
 +++ b/modules/video_coding/BUILD.gn
 @@ -6,7 +6,7 @@
@@ -589,7 +589,7 @@ index 6ff80536c6..0466a1de6e 100644
  import("../../webrtc.gni")
  
 diff --git a/pc/BUILD.gn b/pc/BUILD.gn
-index 40b9c443cd..5862750c02 100644
+index 8b71f2a3d9..3f23109b7d 100644
 --- a/pc/BUILD.gn
 +++ b/pc/BUILD.gn
 @@ -29,8 +29,8 @@
@@ -664,10 +664,10 @@ index af412f6890..51a0e6160c 100644
  
  rtc_source_set("arch") {
 diff --git a/rtc_tools/network_tester/BUILD.gn b/rtc_tools/network_tester/BUILD.gn
-index 554ff37ccc..f649ed3bb2 100644
+index 24417d7abc..8d156a0d2a 100644
 --- a/rtc_tools/network_tester/BUILD.gn
 +++ b/rtc_tools/network_tester/BUILD.gn
-@@ -185,8 +185,8 @@ if (is_android) {
+@@ -181,8 +181,8 @@ if (is_android) {
        "../../test:create_test_environment",
      ]
  
@@ -781,7 +781,7 @@ index e9783f651a..651f67920b 100644
    }
  }
 diff --git a/webrtc.gni b/webrtc.gni
-index afd90fd7cd..fcb4fe1bb6 100644
+index a721332110..7698a65073 100644
 --- a/webrtc.gni
 +++ b/webrtc.gni
 @@ -5,12 +5,12 @@
@@ -833,7 +833,7 @@ index afd90fd7cd..fcb4fe1bb6 100644
  }
  
  if (build_with_chromium) {
-@@ -369,8 +369,8 @@ rtc_common_configs = [ webrtc_root + ":common_config" ]
+@@ -370,8 +370,8 @@ rtc_common_configs = [ webrtc_root + ":common_config" ]
  
  if (is_mac || is_ios) {
    if (filter_include(default_compiler_configs,
@@ -844,7 +844,7 @@ index afd90fd7cd..fcb4fe1bb6 100644
    }
  }
  
-@@ -393,7 +393,7 @@ rtc_common_inherited_config = webrtc_root + ":common_inherited_config"
+@@ -394,7 +394,7 @@ rtc_common_inherited_config = webrtc_root + ":common_inherited_config"
  # Common configs to remove or add in all rtc targets.
  rtc_remove_configs = []
  if (!build_with_chromium && is_clang) {
