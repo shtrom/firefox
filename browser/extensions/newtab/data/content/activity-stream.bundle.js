@@ -300,6 +300,9 @@ for (const type of [
   "WEATHER_USER_OPT_IN_LOCATION",
   "WEBEXT_CLICK",
   "WEBEXT_DISMISS",
+  "WEB_NOTIFICATIONS_ERROR",
+  "WEB_NOTIFICATIONS_REQUEST",
+  "WEB_NOTIFICATIONS_UPDATED",
   "WIDGETS_CONTAINER_ACTION",
   "WIDGETS_ENABLED",
   "WIDGETS_ERROR",
@@ -6783,6 +6786,17 @@ const INITIAL_STATE = {
     // For can be a queue in the future, but for now is one item
     toastQueue: [],
   },
+  // Snapshot of the platform NotificationDB (persisted web notifications).
+  // Distinct from `Notifications` above, which is in-newtab toast UI state.
+  // Normalized: `notifications` is the canonical id-keyed table; `byOrigin`
+  // is an id-only index. Fed by WebNotificationsFeed.
+  WebNotifications: {
+    initialized: false,
+    lastUpdated: null,
+    notifications: {},
+    byOrigin: {},
+    error: null,
+  },
   InferredPersonalization: {
     initialized: false,
     lastUpdated: null,
@@ -7768,6 +7782,27 @@ function Notifications(prevState = INITIAL_STATE.Notifications, action) {
   }
 }
 
+function WebNotifications(prevState = INITIAL_STATE.WebNotifications, action) {
+  switch (action.type) {
+    case actionTypes.WEB_NOTIFICATIONS_UPDATED:
+      return {
+        ...prevState,
+        initialized: true,
+        lastUpdated: action.data.lastUpdated,
+        notifications: action.data.notifications,
+        byOrigin: action.data.byOrigin,
+        error: null,
+      };
+    case actionTypes.WEB_NOTIFICATIONS_ERROR:
+      return {
+        ...prevState,
+        error: action.data,
+      };
+    default:
+      return prevState;
+  }
+}
+
 function Weather(prevState = INITIAL_STATE.Weather, action) {
   switch (action.type) {
     case actionTypes.WEATHER_UPDATE:
@@ -8087,6 +8122,7 @@ const reducers = {
   Sections,
   Messages,
   Notifications,
+  WebNotifications,
   Pocket,
   InferredPersonalization,
   DiscoveryStream,

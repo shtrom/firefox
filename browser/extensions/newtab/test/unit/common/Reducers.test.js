@@ -8,6 +8,7 @@ const {
   Pocket,
   DiscoveryStream,
   Search,
+  WebNotifications,
   ExternalComponents,
   SportsWidget,
   PictureOfTheDay,
@@ -1662,6 +1663,50 @@ describe("Reducers", () => {
     it("returns previous state for unrelated actions", () => {
       const prev = { tickers: [{ ticker: "DIA" }], lastUpdated: 1 };
       assert.equal(reducers.Stocks(prev, { type: "SOME_OTHER_ACTION" }), prev);
+    });
+  });
+
+  describe("WebNotifications", () => {
+    it("should return INITIAL_STATE by default", () => {
+      const nextState = WebNotifications(undefined, {
+        type: "some_action",
+      });
+      assert.equal(nextState, INITIAL_STATE.WebNotifications);
+    });
+    it("should set initialized and clear error on WEB_NOTIFICATIONS_UPDATED", () => {
+      const prevState = {
+        ...INITIAL_STATE.WebNotifications,
+        error: { step: "snapshot", message: "boom" },
+      };
+      const data = {
+        lastUpdated: 12345,
+        notifications: { abc: { id: "abc", origin: "https://example.com" } },
+        byOrigin: { "https://example.com": ["abc"] },
+      };
+      const nextState = WebNotifications(prevState, {
+        type: at.WEB_NOTIFICATIONS_UPDATED,
+        data,
+      });
+      assert.propertyVal(nextState, "initialized", true);
+      assert.propertyVal(nextState, "lastUpdated", 12345);
+      assert.deepEqual(nextState.notifications, data.notifications);
+      assert.deepEqual(nextState.byOrigin, data.byOrigin);
+      assert.isNull(nextState.error);
+    });
+    it("should set error and preserve other fields on WEB_NOTIFICATIONS_ERROR", () => {
+      const prevState = {
+        ...INITIAL_STATE.WebNotifications,
+        initialized: true,
+        notifications: { abc: { id: "abc" } },
+      };
+      const errorData = { step: "snapshot", message: "boom" };
+      const nextState = WebNotifications(prevState, {
+        type: at.WEB_NOTIFICATIONS_ERROR,
+        data: errorData,
+      });
+      assert.deepEqual(nextState.error, errorData);
+      assert.propertyVal(nextState, "initialized", true);
+      assert.deepEqual(nextState.notifications, prevState.notifications);
     });
   });
 });
