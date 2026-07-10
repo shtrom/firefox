@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import mozilla.components.compose.base.button.IconButton
+import mozilla.components.ui.colors.NovaColors
 import org.mozilla.fenix.R
 import org.mozilla.fenix.theme.FirefoxTheme
 import mozilla.components.feature.qr.R as qrR
@@ -135,7 +136,7 @@ fun LensCameraScreen(
         if (state.showError) {
             Text(
                 text = stringResource(qrR.string.mozac_feature_qr_scanner_no_camera),
-                color = FirefoxTheme.colors.textOnColorPrimary,
+                color = NovaColors.White,
                 modifier = Modifier.align(Alignment.Center),
             )
         }
@@ -199,7 +200,7 @@ private fun CameraTopBar(
             Icon(
                 painter = painterResource(iconsR.drawable.mozac_ic_back_24),
                 contentDescription = null,
-                tint = FirefoxTheme.colors.iconOnColor,
+                tint = NovaColors.White,
             )
         }
         Text(
@@ -207,7 +208,7 @@ private fun CameraTopBar(
                 CameraMode.LENS -> stringResource(R.string.lens_camera_title_lens)
                 CameraMode.QR -> stringResource(R.string.lens_camera_title_qr)
             },
-            color = FirefoxTheme.colors.textOnColorPrimary,
+            color = NovaColors.White,
             style = FirefoxTheme.typography.headline5,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -330,7 +331,7 @@ private fun GalleryButton(
         Icon(
             painter = painterResource(iconsR.drawable.mozac_ic_image_24),
             contentDescription = null,
-            tint = FirefoxTheme.colors.iconOnColor,
+            tint = NovaColors.White,
         )
     }
 }
