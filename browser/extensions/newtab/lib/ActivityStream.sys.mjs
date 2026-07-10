@@ -589,13 +589,6 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
-    "widgets.pictureOfTheDay.setAsWallpaper",
-    {
-      title: "Whether the current Picture of the day is set as the wallpaper",
-      value: false,
-    },
-  ],
-  [
     "widgets.sportsWidget.pollIdleMs",
     {
       title:
