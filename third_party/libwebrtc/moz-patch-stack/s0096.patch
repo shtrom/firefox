@@ -127,7 +127,7 @@ index f42030a6e1..0d06980650 100644
              "Generated during 'gn gen' by //BUILD.gn.",
              "",
 diff --git a/api/BUILD.gn b/api/BUILD.gn
-index a1c97b9bb1..7d308856f7 100644
+index aef4fa702e..25e47cc97e 100644
 --- a/api/BUILD.gn
 +++ b/api/BUILD.gn
 @@ -8,8 +8,8 @@
@@ -589,7 +589,7 @@ index 00c92c51ce..c5981568cd 100644
  import("../../webrtc.gni")
  
 diff --git a/pc/BUILD.gn b/pc/BUILD.gn
-index 8b71f2a3d9..3f23109b7d 100644
+index 824c5386be..04c3fa3125 100644
 --- a/pc/BUILD.gn
 +++ b/pc/BUILD.gn
 @@ -29,8 +29,8 @@
@@ -759,7 +759,7 @@ index a29405931b..960f156d24 100644
      deps = [ ":google_test_runner_delegate" ]
    }
 diff --git a/test/fuzzers/BUILD.gn b/test/fuzzers/BUILD.gn
-index e9783f651a..651f67920b 100644
+index a90fb214c9..9129bb0a77 100644
 --- a/test/fuzzers/BUILD.gn
 +++ b/test/fuzzers/BUILD.gn
 @@ -6,7 +6,7 @@
