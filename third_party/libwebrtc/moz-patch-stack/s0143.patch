@@ -10,7 +10,7 @@ Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/d619aaf26629db4f3
  1 file changed, 2 insertions(+)
 
 diff --git a/modules/video_coding/BUILD.gn b/modules/video_coding/BUILD.gn
-index 376f150e57..c707b56f82 100644
+index c5981568cd..a4f6fb13fb 100644
 --- a/modules/video_coding/BUILD.gn
 +++ b/modules/video_coding/BUILD.gn
 @@ -391,6 +391,7 @@ rtc_library("video_coding_utility") {
