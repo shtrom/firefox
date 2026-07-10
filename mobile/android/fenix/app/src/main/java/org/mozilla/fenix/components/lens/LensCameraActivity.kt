@@ -61,9 +61,15 @@ class LensCameraActivity : AppCompatActivity() {
 
     private val galleryLauncher = registerForActivityResult(
         ActivityResultContracts.PickVisualMedia(),
-    ) { uri ->
+    ) { uri -> handleGalleryResult(uri) }
+
+    @VisibleForTesting
+    internal fun handleGalleryResult(uri: Uri?) {
         if (uri != null) {
-            val resultIntent = Intent().apply { data = uri }
+            val resultIntent = Intent().apply {
+                data = uri
+                putExtra(EXTRA_IMAGE_SOURCE, IMAGE_SOURCE_PHOTO_PICKER)
+            }
             setResult(RESULT_OK, resultIntent)
             finish()
         }
@@ -117,7 +123,10 @@ class LensCameraActivity : AppCompatActivity() {
                 Uri::class.java,
             )
             if (imageUri != null) {
-                val resultIntent = Intent().apply { data = imageUri }
+                val resultIntent = Intent().apply {
+                    data = imageUri
+                    putExtra(EXTRA_IMAGE_SOURCE, IMAGE_SOURCE_CAMERA)
+                }
                 setResult(RESULT_OK, resultIntent)
             } else {
                 setResult(RESULT_CANCELED)
@@ -250,6 +259,16 @@ class LensCameraActivity : AppCompatActivity() {
         // IntArray pixel copy inside QrAnalyzer — enough to OOM low-RAM devices. ZXing
         // detects QR codes reliably well below this resolution.
         private const val QR_DECODE_MAX_DIMENSION = 2048
+
+        /**
+         * Result intent extra naming the upload method that produced the image, read by
+         * `LensFeature` to attribute the Google Lens search telemetry.
+         */
+        internal const val EXTRA_IMAGE_SOURCE = "lens_image_source"
+
+        @VisibleForTesting internal const val IMAGE_SOURCE_CAMERA = "camera"
+
+        @VisibleForTesting internal const val IMAGE_SOURCE_PHOTO_PICKER = "photo_picker"
 
         /**
          * Creates an intent to launch [LensCameraActivity].

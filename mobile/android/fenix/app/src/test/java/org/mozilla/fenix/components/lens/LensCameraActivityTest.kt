@@ -7,6 +7,7 @@ package org.mozilla.fenix.components.lens
 import android.Manifest
 import android.app.Activity
 import android.app.Application
+import android.net.Uri
 import android.os.Bundle
 import androidx.test.core.app.ApplicationProvider
 import mozilla.components.feature.qr.QrScanActivity
@@ -213,6 +214,46 @@ class LensCameraActivityTest {
         // sets RESULT_CANCELED and finishes.
         val shadow = Shadows.shadowOf(activity)
         assertEquals(Activity.RESULT_CANCELED, shadow.resultCode)
+        assertTrue(activity.isFinishing)
+    }
+
+    @Test
+    fun `WHEN the fragment result carries a captured image URI THEN the activity returns RESULT_OK tagged as the camera source`() {
+        val controller = Robolectric.buildActivity(LensCameraActivity::class.java).setup()
+        val activity = controller.get()
+        val imageUri = Uri.parse("content://test/lens_capture.jpg")
+
+        activity.supportFragmentManager.setFragmentResult(
+            LensCameraFragment.RESULT_REQUEST_KEY,
+            Bundle().apply { putParcelable(LensCameraFragment.RESULT_IMAGE_URI, imageUri) },
+        )
+        activity.supportFragmentManager.executePendingTransactions()
+
+        val shadow = Shadows.shadowOf(activity)
+        assertEquals(Activity.RESULT_OK, shadow.resultCode)
+        assertEquals(imageUri, shadow.resultIntent.data)
+        assertEquals(
+            LensCameraActivity.IMAGE_SOURCE_CAMERA,
+            shadow.resultIntent.getStringExtra(LensCameraActivity.EXTRA_IMAGE_SOURCE),
+        )
+        assertTrue(activity.isFinishing)
+    }
+
+    @Test
+    fun `WHEN a photo picker image is returned THEN the activity returns RESULT_OK tagged as the photo_picker source`() {
+        val controller = Robolectric.buildActivity(LensCameraActivity::class.java).setup()
+        val activity = controller.get()
+        val imageUri = Uri.parse("content://test/picked_image.jpg")
+
+        activity.handleGalleryResult(imageUri)
+
+        val shadow = Shadows.shadowOf(activity)
+        assertEquals(Activity.RESULT_OK, shadow.resultCode)
+        assertEquals(imageUri, shadow.resultIntent.data)
+        assertEquals(
+            LensCameraActivity.IMAGE_SOURCE_PHOTO_PICKER,
+            shadow.resultIntent.getStringExtra(LensCameraActivity.EXTRA_IMAGE_SOURCE),
+        )
         assertTrue(activity.isFinishing)
     }
 }

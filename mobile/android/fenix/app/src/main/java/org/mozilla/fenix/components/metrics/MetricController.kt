@@ -653,6 +653,7 @@ internal class ReleaseMetricController(
             "mozac.feature.contextmenu.copy_link" to "copy_link",
             "mozac.feature.contextmenu.copy_image_location" to "copy_image_location",
             "mozac.feature.contextmenu.share_image" to "share_image",
+            "fenix.contextmenu.open_with_google_lens" to "open_with_google_lens",
         )
     }
 }

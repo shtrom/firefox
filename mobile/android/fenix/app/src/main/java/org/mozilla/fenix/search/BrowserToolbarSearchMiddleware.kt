@@ -63,8 +63,10 @@ import mozilla.components.lib.state.ext.flow
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.base.utils.NamedThreadFactory
 import mozilla.components.support.ktx.kotlin.isUrl
+import mozilla.telemetry.glean.private.NoExtras
 import org.mozilla.fenix.GleanMetrics.Events
 import org.mozilla.fenix.GleanMetrics.Toolbar
+import org.mozilla.fenix.GleanMetrics.ToolbarGoogleLensButton
 import org.mozilla.fenix.NavGraphDirections
 import org.mozilla.fenix.R
 import org.mozilla.fenix.browser.BrowserFragmentDirections
@@ -320,6 +322,7 @@ class BrowserToolbarSearchMiddleware(
 
         is LensButtonClicked -> {
             recordButtonTapped(ACTION_LENS_CLICKED)
+            ToolbarGoogleLensButton.tapped.record(NoExtras())
             observeLensInput()
             // The Lens camera screen lets the user toggle to QR scanning; observe both
             // result streams so a QR string returned from the Lens flow still lands in

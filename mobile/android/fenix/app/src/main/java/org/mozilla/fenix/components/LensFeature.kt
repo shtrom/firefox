@@ -27,6 +27,7 @@ import mozilla.components.lib.state.ext.flowScoped
 import mozilla.components.support.base.feature.LifecycleAwareFeature
 import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
 import mozilla.components.support.base.log.logger.Logger
+import org.mozilla.fenix.GleanMetrics.GoogleLens
 import org.mozilla.fenix.R
 import org.mozilla.fenix.components.appstate.AppAction.LensAction
 import org.mozilla.fenix.components.lens.LensCameraActivity
@@ -125,7 +126,7 @@ class LensFeature(
                 // fetcher. When the client-side upload yields no result, fall back to letting Lens
                 // fetch the image by URL -- but not in private mode, where we must not hand the
                 // source image URL to Google.
-                val uploadedUrl = try {
+                val uploadResult = try {
                     uploader.uploadFromUrl(imageUrl)
                 } catch (e: IOException) {
                     logger.debug("Lens image upload failed, falling back to uploadbyurl for $imageUrl", e)
@@ -133,10 +134,16 @@ class LensFeature(
                 }
 
                 val isPrivate = appStore.state.mode.isPrivate
-                val resultUrl = uploadedUrl
+                val clientResultUrl = uploadResult?.resultUrl
+                val resultUrl = clientResultUrl
                     ?: if (isPrivate) null else uploader.buildUploadByUrl(imageUrl)
 
                 if (resultUrl != null) {
+                    recordSearchCompleted(
+                        succeeded = true,
+                        source = SOURCE_CONTEXT_MENU,
+                        httpStatusCode = if (clientResultUrl != null) uploadResult.httpStatusCode else null,
+                    )
                     context.components.useCases.tabsUseCases.addTab(
                         url = resultUrl,
                         selectTab = true,
@@ -145,6 +152,9 @@ class LensFeature(
                     )
                     appStore.dispatch(LensAction.LensResultAvailable(resultUrl))
                 }
+                // resultUrl is null only when we deliberately skip the uploadbyurl fallback in
+                // private mode -- an intentional no-op, not a completed search, so it is not
+                // recorded.
             } finally {
                 appStore.dispatch(LensAction.LensDismissed)
             }
@@ -192,20 +202,42 @@ class LensFeature(
         }
 
         currentScope.launch {
+            val source = data.getStringExtra(LensCameraActivity.EXTRA_IMAGE_SOURCE) ?: SOURCE_UNKNOWN
             try {
-                val resultUrl = uploader.upload(imageUri)
+                val uploadResult = uploader.upload(imageUri)
+                val resultUrl = uploadResult.resultUrl
+                recordSearchCompleted(
+                    succeeded = resultUrl != null,
+                    source = source,
+                    httpStatusCode = uploadResult.httpStatusCode,
+                )
                 if (resultUrl != null) {
                     appStore.dispatch(LensAction.LensResultAvailable(resultUrl))
                 } else {
                     appStore.dispatch(LensAction.LensDismissed)
                 }
             } catch (e: IOException) {
+                recordSearchCompleted(succeeded = false, source = source)
                 appStore.dispatch(LensAction.LensDismissed)
             }
         }
     }
 
+    private fun recordSearchCompleted(succeeded: Boolean, source: String, httpStatusCode: Int? = null) {
+        GoogleLens.searchCompleted.record(
+            GoogleLens.SearchCompletedExtra(
+                succeeded = succeeded,
+                httpStatusCode = httpStatusCode,
+                source = source,
+            ),
+        )
+    }
+
     companion object {
+        @VisibleForTesting internal const val SOURCE_CONTEXT_MENU = "context_menu"
+
+        @VisibleForTesting internal const val SOURCE_UNKNOWN = "unknown"
+
         /**
          * Registers [LensFeature] with a [Fragment].
          * Returns null if the Google Lens integration is disabled.
