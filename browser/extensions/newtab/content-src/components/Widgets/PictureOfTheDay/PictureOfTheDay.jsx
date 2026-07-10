@@ -16,8 +16,9 @@ const PICTURE_OF_THE_DAY_ENTRY = WIDGET_REGISTRY.find(
 );
 
 // Renders the daily picture from the Merino feed (Bug 2050976): the full-bleed
-// image with a source eyebrow. Falls back to a sunrise-gradient empty state
-// when there's no picture, with an eye button to restore.
+// image with a source eyebrow and a localized description. Falls back to a
+// sunrise-gradient empty state when there's no picture, with an eye button to
+// restore.
 const PictureOfTheDay = ({
   dispatch,
   widgetsMayBeMaximized,
@@ -40,6 +41,17 @@ const PictureOfTheDay = ({
   const { impressionRef, recordUserAction, recordEnabled } = useWidgetTelemetry(
     { dispatch, widget: PICTURE_OF_THE_DAY_ENTRY, widgetSize }
   );
+
+  // Alt text uses the (localized) description when present, else a localized
+  // generic fallback (a11y decision, Bug 2050975; the raw image title was
+  // rejected as unreliable). Resolved via the l10n value API (computed string).
+  const [fallbackAlt, setFallbackAlt] = useState("");
+  useEffect(() => {
+    document.l10n
+      ?.formatValues?.([{ id: "newtab-picture-image-alt" }])
+      ?.then(([value]) => value && setFallbackAlt(value));
+  }, []);
+  const imageAlt = pictureData.description || fallbackAlt;
 
   const handleHide = () => {
     batch(() => {
@@ -100,6 +112,52 @@ const PictureOfTheDay = ({
   const handleShow = () =>
     recordUserAction("show_picture", { source: "widget" });
 
+  // The image, source line, and description open the picture's source page
+  // (Wikimedia Commons) in a new tab. Only wired when the feed supplies a source
+  // URL; otherwise the elements render as their plain text/image equivalents.
+  const canOpenSource = Boolean(pictureData.sourceUrl);
+  const handleOpenSource = () => {
+    if (!pictureData.sourceUrl) {
+      return;
+    }
+    batch(() => {
+      dispatch(
+        ac.OnlyToMain({
+          type: at.OPEN_LINK,
+          data: { url: pictureData.sourceUrl, where: "tab" },
+        })
+      );
+      recordUserAction("open_source", { source: "widget" });
+    });
+  };
+
+  // Render the source line/description as a source-opening button when a source
+  // URL is available, else as the plain text element it replaces.
+  const renderSourceText = (className, { l10nId, text } = {}) =>
+    canOpenSource ? (
+      <button
+        type="button"
+        className={`${className} picture-of-the-day-source-link`}
+        data-l10n-id={l10nId}
+        onClick={handleOpenSource}
+      >
+        {text}
+      </button>
+    ) : (
+      <p className={className} data-l10n-id={l10nId}>
+        {text}
+      </p>
+    );
+
+  const pictureImage = (
+    <img
+      className="picture-of-the-day-image"
+      src={pictureData.imageUrl}
+      alt={imageAlt}
+      onError={() => setImageFailed(true)}
+    />
+  );
+
   return (
     <article
       className={`picture-of-the-day widget col-4 ${widgetSize}-widget${
@@ -108,12 +166,11 @@ const PictureOfTheDay = ({
       ref={impressionRef}
     >
       <div className="picture-of-the-day-toolbar">
-        {hasPicture ? (
-          <p
-            className="picture-of-the-day-eyebrow"
-            data-l10n-id="newtab-picture-header"
-          ></p>
-        ) : null}
+        {hasPicture
+          ? renderSourceText("picture-of-the-day-eyebrow", {
+              l10nId: "newtab-picture-header",
+            })
+          : null}
         <div className="picture-of-the-day-context-menu-wrapper">
           <moz-button
             className="picture-of-the-day-context-menu-button"
@@ -172,12 +229,24 @@ const PictureOfTheDay = ({
 
       {hasPicture ? (
         <div className="picture-of-the-day-populated">
-          <img
-            className="picture-of-the-day-image"
-            src={pictureData.imageUrl}
-            alt={pictureData.title}
-            onError={() => setImageFailed(true)}
-          />
+          {canOpenSource ? (
+            <button
+              type="button"
+              className="picture-of-the-day-image-link"
+              onClick={handleOpenSource}
+            >
+              {pictureImage}
+            </button>
+          ) : (
+            pictureImage
+          )}
+          <div className="picture-of-the-day-details">
+            {pictureData.description
+              ? renderSourceText("picture-of-the-day-description", {
+                  text: pictureData.description,
+                })
+              : null}
+          </div>
         </div>
       ) : (
         <div className="picture-of-the-day-footer">

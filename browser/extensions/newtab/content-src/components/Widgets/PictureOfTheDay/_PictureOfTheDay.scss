@@ -35,7 +35,8 @@
 
 // Lift the content above the ::before gradient layer and the picture.
 .picture-of-the-day-toolbar,
-.picture-of-the-day-footer {
+.picture-of-the-day-footer,
+.picture-of-the-day-details {
   position: relative;
   z-index: 1;
 }
@@ -50,7 +51,7 @@
 }
 
 // In the populated state the toolbar (eyebrow + "…" menu) reveals on
-// hover/focus. Legibility comes from the top scrim on .picture-of-the-day-populated.
+// hover/focus. Legibility comes from the dark transparent overlay at the top of .picture-of-the-day-populated.
 .picture-of-the-day.has-picture .picture-of-the-day-toolbar {
   opacity: 0;
   transition: opacity 150ms;
@@ -111,6 +112,7 @@
 .picture-of-the-day:hover,
 .picture-of-the-day:focus-within {
   .picture-of-the-day-message,
+  .picture-of-the-day-description,
   .picture-of-the-day-toolbar,
   .picture-of-the-day-populated::before,
   .picture-of-the-day-populated::after {
@@ -118,8 +120,8 @@
   }
 }
 
-// Populated state: the picture fills the card, with the source eyebrow over a
-// scrim along the top.
+// Populated state: the picture fills the card, with the source eyebrow and the
+// clamped description over a dark transparent overlay along the bottom.
 .picture-of-the-day-populated {
   position: absolute;
   inset: 0;
@@ -128,8 +130,8 @@
   justify-content: flex-end;
 }
 
-// Smooth full-bleed top + bottom scrims over the picture, revealed on
-// hover/focus so the eyebrow and menu stay legible.
+// Smooth full-bleed top + bottom dark transparent overlays over the picture, revealed on
+// hover/focus so the eyebrow, menu, and description stay legible.
 .picture-of-the-day-populated::before,
 .picture-of-the-day-populated::after {
   content: '';
@@ -143,14 +145,25 @@
 
 .picture-of-the-day-populated::before {
   inset-block-start: 0;
-  block-size: 45%;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 35%), rgba(0, 0, 0, 0%));
+  block-size: 100%;
+  // A dark transparent overlay on the photo. It stays fixed dark in both light and dark mode so the white caption reads on it.
+  // stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens
+  background: color-mix(in srgb, var(--color-black) 40%, transparent);
+
+  @media (prefers-contrast) {
+    // A deeper dark overlay for more contrast. It stays fixed dark in both modes so the white caption stays legible.
+    // stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens
+    background: color-mix(in srgb, var(--color-black) 90%, transparent);
+  }
 }
 
 .picture-of-the-day-populated::after {
   inset-block-end: 0;
-  block-size: 55%;
-  background: linear-gradient(to top, rgba(0, 0, 0, 45%), rgba(0, 0, 0, 0%));
+  block-size: 100%;
+  background: linear-gradient(to top,
+  color-mix(in srgb, var(--color-black) 100%, transparent) 0%,
+  transparent 50%,
+  color-mix(in srgb, var(--color-black) 100%, transparent) 100%);
 }
 
 .picture-of-the-day-image {
@@ -162,6 +175,19 @@
   z-index: 0;
 }
 
+.picture-of-the-day-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-small);
+  padding: var(--space-medium);
+  // The caption always sits on the dark transparent overlay on the photo. It stays white in both light and dark mode.
+  // stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens
+  color: var(--color-white);
+  // Above the dark transparent overlays.
+  z-index: 2;
+}
+
 .picture-of-the-day-eyebrow {
   // Sits at the top-left of the card; the auto end-margin keeps the "…" menu
   // pinned to the right.
@@ -169,12 +195,69 @@
   margin-inline-end: auto;
   min-inline-size: 0;
   overflow: hidden;
-  color: white;
+  // The caption always sits on the dark transparent overlay on the photo. It stays white in both light and dark mode.
+  // stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens
+  color: var(--color-white);
   font-size: var(--font-size-small);
   white-space: nowrap;
   text-overflow: ellipsis;
   // Legible over any image; a long localized string ellipsizes on one line.
   text-shadow: 0 1px 2px color-mix(in srgb, var(--color-black) 60%, transparent);
+}
+
+.picture-of-the-day-description {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--font-size-small);
+  opacity: 0;
+  transition: opacity 150ms;
+  // Clamp the description to three lines with an ellipsis (design note); the
+  // medium card is too tight, so it's hidden there — see below.
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+// The source line and description become buttons that open the source page;
+// strip the button chrome so they still read as the text they replace. Leave
+// font-size and margin to the base classes above.
+.picture-of-the-day-source-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  text-align: start;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: var(--focus-outline);
+    outline-offset: var(--focus-outline-offset);
+  }
+}
+
+// Full-bleed click target over the picture; sits below the toolbar and details
+// so those controls stay clickable.
+.picture-of-the-day-image-link {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  z-index: 0;
+
+  &:focus-visible {
+    // The card clips overflow, so inset the focus ring to keep it visible.
+    outline: var(--focus-outline);
+    outline-offset: calc(-1 * var(--focus-outline-offset));
+  }
+}
+
+// Medium is tight: on hover show only the title (eyebrow), not the description.
+.medium-widget .picture-of-the-day-description {
+  display: none;
 }
 
 // The sunrise placeholder is decorative, but the eye button must stay visible
@@ -189,6 +272,11 @@
       // stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens
       background-color: var(--button-text-color-ghost);
     }
+  }
+
+  // Solid system backgrounds behind the caption so it stays legible.
+  .picture-of-the-day-details {
+    color: var(--text-color);
   }
 
   .picture-of-the-day-populated::before,

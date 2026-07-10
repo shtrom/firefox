@@ -22291,8 +22291,9 @@ function Stocks({
 const PICTURE_OF_THE_DAY_ENTRY = WIDGET_REGISTRY.find(w => w.id === "pictureOfTheDay");
 
 // Renders the daily picture from the Merino feed (Bug 2050976): the full-bleed
-// image with a source eyebrow. Falls back to a sunrise-gradient empty state
-// when there's no picture, with an eye button to restore.
+// image with a source eyebrow and a localized description. Falls back to a
+// sunrise-gradient empty state when there's no picture, with an eye button to
+// restore.
 const PictureOfTheDay_PictureOfTheDay = ({
   dispatch,
   widgetsMayBeMaximized,
@@ -22319,6 +22320,17 @@ const PictureOfTheDay_PictureOfTheDay = ({
     widget: PICTURE_OF_THE_DAY_ENTRY,
     widgetSize
   });
+
+  // Alt text uses the (localized) description when present, else a localized
+  // generic fallback (a11y decision, Bug 2050975; the raw image title was
+  // rejected as unreliable). Resolved via the l10n value API (computed string).
+  const [fallbackAlt, setFallbackAlt] = (0,external_React_namespaceObject.useState)("");
+  (0,external_React_namespaceObject.useEffect)(() => {
+    document.l10n?.formatValues?.([{
+      id: "newtab-picture-image-alt"
+    }])?.then(([value]) => value && setFallbackAlt(value));
+  }, []);
+  const imageAlt = pictureData.description || fallbackAlt;
   const handleHide = () => {
     (0,external_ReactRedux_namespaceObject.batch)(() => {
       dispatch(actionCreators.OnlyToMain({
@@ -22376,14 +22388,56 @@ const PictureOfTheDay_PictureOfTheDay = ({
   const handleShow = () => recordUserAction("show_picture", {
     source: "widget"
   });
+
+  // The image, source line, and description open the picture's source page
+  // (Wikimedia Commons) in a new tab. Only wired when the feed supplies a source
+  // URL; otherwise the elements render as their plain text/image equivalents.
+  const canOpenSource = Boolean(pictureData.sourceUrl);
+  const handleOpenSource = () => {
+    if (!pictureData.sourceUrl) {
+      return;
+    }
+    (0,external_ReactRedux_namespaceObject.batch)(() => {
+      dispatch(actionCreators.OnlyToMain({
+        type: actionTypes.OPEN_LINK,
+        data: {
+          url: pictureData.sourceUrl,
+          where: "tab"
+        }
+      }));
+      recordUserAction("open_source", {
+        source: "widget"
+      });
+    });
+  };
+
+  // Render the source line/description as a source-opening button when a source
+  // URL is available, else as the plain text element it replaces.
+  const renderSourceText = (className, {
+    l10nId,
+    text
+  } = {}) => canOpenSource ? /*#__PURE__*/external_React_default().createElement("button", {
+    type: "button",
+    className: `${className} picture-of-the-day-source-link`,
+    "data-l10n-id": l10nId,
+    onClick: handleOpenSource
+  }, text) : /*#__PURE__*/external_React_default().createElement("p", {
+    className: className,
+    "data-l10n-id": l10nId
+  }, text);
+  const pictureImage = /*#__PURE__*/external_React_default().createElement("img", {
+    className: "picture-of-the-day-image",
+    src: pictureData.imageUrl,
+    alt: imageAlt,
+    onError: () => setImageFailed(true)
+  });
   return /*#__PURE__*/external_React_default().createElement("article", {
     className: `picture-of-the-day widget col-4 ${widgetSize}-widget${hasPicture ? " has-picture" : ""}`,
     ref: impressionRef
   }, /*#__PURE__*/external_React_default().createElement("div", {
     className: "picture-of-the-day-toolbar"
-  }, hasPicture ? /*#__PURE__*/external_React_default().createElement("p", {
-    className: "picture-of-the-day-eyebrow",
-    "data-l10n-id": "newtab-picture-header"
+  }, hasPicture ? renderSourceText("picture-of-the-day-eyebrow", {
+    l10nId: "newtab-picture-header"
   }) : null, /*#__PURE__*/external_React_default().createElement("div", {
     className: "picture-of-the-day-context-menu-wrapper"
   }, /*#__PURE__*/external_React_default().createElement("moz-button", {
@@ -22425,12 +22479,15 @@ const PictureOfTheDay_PictureOfTheDay = ({
     onClick: handleLearnMore
   })))), hasPicture ? /*#__PURE__*/external_React_default().createElement("div", {
     className: "picture-of-the-day-populated"
-  }, /*#__PURE__*/external_React_default().createElement("img", {
-    className: "picture-of-the-day-image",
-    src: pictureData.imageUrl,
-    alt: pictureData.title,
-    onError: () => setImageFailed(true)
-  })) : /*#__PURE__*/external_React_default().createElement("div", {
+  }, canOpenSource ? /*#__PURE__*/external_React_default().createElement("button", {
+    type: "button",
+    className: "picture-of-the-day-image-link",
+    onClick: handleOpenSource
+  }, pictureImage) : pictureImage, /*#__PURE__*/external_React_default().createElement("div", {
+    className: "picture-of-the-day-details"
+  }, pictureData.description ? renderSourceText("picture-of-the-day-description", {
+    text: pictureData.description
+  }) : null)) : /*#__PURE__*/external_React_default().createElement("div", {
     className: "picture-of-the-day-footer"
   }, /*#__PURE__*/external_React_default().createElement("button", {
     type: "button",
