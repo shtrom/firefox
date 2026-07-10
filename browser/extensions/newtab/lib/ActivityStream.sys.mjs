@@ -591,9 +591,17 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
-    "widgets.pictureOfTheDay.setAsWallpaper",
+    "widgets.pictureOfTheDay.wallpaperActive",
     {
-      title: "Whether the current Picture of the day is set as the wallpaper",
+      title: "Whether the current Picture of the day is the active wallpaper",
+      value: false,
+    },
+  ],
+  [
+    "widgets.pictureOfTheDay.setAsWallpaper.enabled",
+    {
+      title:
+        "Whether the Picture of the day 'Set as wallpaper' feature/CTA is enabled",
       value: false,
     },
   ],

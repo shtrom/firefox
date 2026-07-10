@@ -22539,6 +22539,14 @@ function Stocks_Stocks({
 
 const PICTURE_OF_THE_DAY_ENTRY = WIDGET_REGISTRY.find(w => w.id === "pictureOfTheDay");
 
+// Whether the "Set as wallpaper" feature is enabled. A trainhopConfig override
+// wins over the pref (checked with !== undefined so a trainhop `false` can turn
+// the feature off even when the pref default is `true`).
+function resolveSetAsWallpaperEnabled(prefs) {
+  const override = prefs.trainhopConfig?.widgets?.pictureOfTheDaySetAsWallpaperEnabled;
+  return override !== undefined ? override : Boolean(prefs["widgets.pictureOfTheDay.setAsWallpaper.enabled"]);
+}
+
 // How long the confirmation checkmark shows after setting the wallpaper.
 const JUST_SET_CHECKMARK_MS = 2000;
 
@@ -22558,11 +22566,12 @@ const PictureOfTheDay_PictureOfTheDay = ({
   const prefs = (0,external_ReactRedux_namespaceObject.useSelector)(state => state.Prefs.values);
   const pictureData = (0,external_ReactRedux_namespaceObject.useSelector)(state => state.PictureOfTheDay);
   const widgetSize = resolveWidgetSize(PICTURE_OF_THE_DAY_ENTRY, prefs);
-  const isSetAsWallpaper = Boolean(prefs["widgets.pictureOfTheDay.setAsWallpaper"]);
+  const isSetAsWallpaper = Boolean(prefs["widgets.pictureOfTheDay.wallpaperActive"]);
 
-  // Only offer the "Set wallpaper" CTA when wallpapers are on and custom
-  // wallpapers are allowed, since this action sets a custom wallpaper.
-  const canSetWallpaper = Boolean(prefs["newtabWallpapers.enabled"] && prefs["newtabWallpapers.customWallpaper.enabled"]);
+  // Only offer the "Set wallpaper" CTA when the feature is enabled and wallpapers
+  // are on and custom wallpapers are allowed, since this action sets a custom
+  // wallpaper.
+  const canSetWallpaper = Boolean(resolveSetAsWallpaperEnabled(prefs) && prefs["newtabWallpapers.enabled"] && prefs["newtabWallpapers.customWallpaper.enabled"]);
 
   // Fall back to the empty state when the picture fails to load (e.g. a cached
   // URL opened offline, or a broken/404 image) instead of showing a broken

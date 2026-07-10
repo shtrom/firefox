@@ -223,7 +223,7 @@ add_task(async function test_setWallpaper_uploads_and_selects() {
   );
   Assert.ok(
     calls.some(
-      c => c.args[0]?.data?.name === "widgets.pictureOfTheDay.setAsWallpaper"
+      c => c.args[0]?.data?.name === "widgets.pictureOfTheDay.wallpaperActive"
     ),
     "marks the picture as set as wallpaper"
   );
@@ -288,7 +288,7 @@ add_task(async function test_setAsWallpaper_cleared_on_wallpaper_change() {
   const feed = makeFeed(sandbox, {
     prefs: {
       ...ENABLED_PREFS,
-      "widgets.pictureOfTheDay.setAsWallpaper": true,
+      "widgets.pictureOfTheDay.wallpaperActive": true,
       "newtabWallpapers.wallpaper": "dark-landscape",
     },
   });
@@ -303,7 +303,7 @@ add_task(async function test_setAsWallpaper_cleared_on_wallpaper_change() {
       .getCalls()
       .some(
         c =>
-          c.args[0]?.data?.name === "widgets.pictureOfTheDay.setAsWallpaper" &&
+          c.args[0]?.data?.name === "widgets.pictureOfTheDay.wallpaperActive" &&
           c.args[0]?.data?.value === false
       ),
     "clears setAsWallpaper when a non-custom wallpaper is selected"

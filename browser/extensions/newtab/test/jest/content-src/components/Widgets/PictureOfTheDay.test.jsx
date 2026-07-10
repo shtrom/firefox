@@ -19,6 +19,7 @@ const mockState = {
       "widgets.system.pictureOfTheDay.enabled": true,
       "widgets.pictureOfTheDay.enabled": true,
       "widgets.pictureOfTheDay.size": "medium",
+      "widgets.pictureOfTheDay.setAsWallpaper.enabled": true,
       "newtabWallpapers.enabled": true,
       "newtabWallpapers.customWallpaper.enabled": true,
     },
@@ -271,7 +272,7 @@ describe("PictureOfTheDay widget", () => {
       const { container } = renderWidget(
         jest.fn(),
         {},
-        withPrefs({ "widgets.pictureOfTheDay.setAsWallpaper": true })
+        withPrefs({ "widgets.pictureOfTheDay.wallpaperActive": true })
       );
       expect(
         container.querySelector(
@@ -300,6 +301,33 @@ describe("PictureOfTheDay widget", () => {
       expect(
         container.querySelector(".picture-of-the-day-set-wallpaper")
       ).toBeFalsy();
+    });
+
+    it("hides the Set wallpaper button when the feature is disabled", () => {
+      const { container } = renderWidget(
+        jest.fn(),
+        {},
+        withPrefs({ "widgets.pictureOfTheDay.setAsWallpaper.enabled": false })
+      );
+      expect(
+        container.querySelector(".picture-of-the-day-set-wallpaper")
+      ).toBeFalsy();
+    });
+
+    it("shows the Set wallpaper button when a trainhopConfig override enables the feature despite the pref being off", () => {
+      const { container } = renderWidget(
+        jest.fn(),
+        {},
+        withPrefs({
+          "widgets.pictureOfTheDay.setAsWallpaper.enabled": false,
+          trainhopConfig: {
+            widgets: { pictureOfTheDaySetAsWallpaperEnabled: true },
+          },
+        })
+      );
+      expect(
+        container.querySelector(".picture-of-the-day-set-wallpaper")
+      ).toBeTruthy();
     });
 
     it("dismisses by setting dismissedDate to the picture's date", () => {

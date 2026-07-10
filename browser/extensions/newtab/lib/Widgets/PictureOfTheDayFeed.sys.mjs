@@ -2,6 +2,37 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/**
+ * Picture of the Day widget - data flow overview
+ *
+ * Fetch / render:
+ *   Once per day this feed fetches the picture from Merino (via
+ *   TemporaryMerinoClientShim), stores it in PersistentCache, maps the payload
+ *   onto our internal shape with normalize(), and broadcasts it into the Redux
+ *   store, where PictureOfTheDay.jsx renders it. The Merino backend refreshes the
+ *   picture on a daily cron (around midnight PST); when a fresh image is not
+ *   available it serves the previous day's picture rather than nothing, so the
+ *   client can legitimately receive the same picture across days. Whether the
+ *   widget runs at all is gated by isEnabled() (isWidgetEnabled: widgets container
+ *   on, the widget addable / trainhop-enabled, and the user's enabled pref).
+ *
+ * Set as wallpaper:
+ *   The "Set wallpaper" CTA - shown only when the feature gate pref
+ *   (widgets.pictureOfTheDay.setAsWallpaper.enabled, or its trainhopConfig
+ *   override) is on AND newtabWallpapers.enabled + customWallpaper.enabled are on
+ *   - dispatches WIDGETS_PICTURE_SET_WALLPAPER. setWallpaper() then fetches the
+ *   image, derives a theme, applies it as the custom wallpaper (newtabWallpapers.*),
+ *   and marks widgets.pictureOfTheDay.wallpaperActive = true.
+ *
+ * State reset:
+ *   onPrefChangedAction clears wallpaperActive when the user switches to a
+ *   non-custom wallpaper; that flag drives the collapsed "already set" button
+ *   state in the JSX.
+ *
+ * Two distinct prefs: setAsWallpaper.enabled is the config gate (does the CTA
+ * exist); wallpaperActive is runtime state (is this picture the active wallpaper).
+ */
+
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   PersistentCache: "resource://newtab/lib/PersistentCache.sys.mjs",
@@ -246,7 +277,7 @@ export class PictureOfTheDayFeed {
       this.store.dispatch(ac.SetPref("newtabWallpapers.wallpaper", "custom"));
       this.store.dispatch(ac.SetPref("newtabWallpapers.initialWallpaper", ""));
       this.store.dispatch(
-        ac.SetPref("widgets.pictureOfTheDay.setAsWallpaper", true)
+        ac.SetPref("widgets.pictureOfTheDay.wallpaperActive", true)
       );
     } catch (e) {
       console.error("PictureOfTheDayFeed: failed to set wallpaper", e);
@@ -277,11 +308,11 @@ export class PictureOfTheDayFeed {
         // different (non-custom) wallpaper.
         const { values } = this.store.getState().Prefs;
         if (
-          values["widgets.pictureOfTheDay.setAsWallpaper"] &&
+          values["widgets.pictureOfTheDay.wallpaperActive"] &&
           values["newtabWallpapers.wallpaper"] !== "custom"
         ) {
           this.store.dispatch(
-            ac.SetPref("widgets.pictureOfTheDay.setAsWallpaper", false)
+            ac.SetPref("widgets.pictureOfTheDay.wallpaperActive", false)
           );
         }
         break;
