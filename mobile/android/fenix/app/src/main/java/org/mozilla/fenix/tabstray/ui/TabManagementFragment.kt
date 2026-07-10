@@ -484,6 +484,7 @@ class TabManagementFragment : Fragment() {
                                             action = TabGroupAction.CloseTabGroupClicked(group = expandedGroup),
                                         )
                                     },
+                                    tabInteractionHandler = tabInteractionHandler,
                                 )
                             }
 

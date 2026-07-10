@@ -19,6 +19,7 @@ import org.junit.runner.RunWith
 import org.mozilla.fenix.tabstray.LocalTabManagementFeatureHelper
 import org.mozilla.fenix.tabstray.TabManagementFeatureHelper
 import org.mozilla.fenix.tabstray.TabsTrayTestTag
+import org.mozilla.fenix.tabstray.controller.NoOpTabInteractionHandler
 import org.mozilla.fenix.tabstray.data.TabsTrayItem
 import org.mozilla.fenix.tabstray.data.createTab
 import org.mozilla.fenix.tabstray.data.createTabGroup
@@ -53,6 +54,7 @@ class ExpandedTabGroupTest {
                             onDeleteTabGroupClick = {},
                             onEditTabGroupClick = {},
                             onCloseTabGroupClick = {},
+                            tabInteractionHandler = NoOpTabInteractionHandler,
                         )
                     }
                 }
@@ -82,6 +84,7 @@ class ExpandedTabGroupTest {
                         onDeleteTabGroupClick = {},
                         onEditTabGroupClick = {},
                         onCloseTabGroupClick = {},
+                        tabInteractionHandler = NoOpTabInteractionHandler,
                     )
                 }
             }
@@ -113,6 +116,7 @@ class ExpandedTabGroupTest {
                             onDeleteTabGroupClick = {},
                             onEditTabGroupClick = {},
                             onCloseTabGroupClick = {},
+                            tabInteractionHandler = NoOpTabInteractionHandler,
                         )
                     }
                 }
@@ -145,6 +149,7 @@ class ExpandedTabGroupTest {
                             onDeleteTabGroupClick = {},
                             onEditTabGroupClick = {},
                             onCloseTabGroupClick = {},
+                            tabInteractionHandler = NoOpTabInteractionHandler,
                         )
                     }
                 }
@@ -175,6 +180,7 @@ class ExpandedTabGroupTest {
                             },
                             onEditTabGroupClick = {},
                             onCloseTabGroupClick = {},
+                            tabInteractionHandler = NoOpTabInteractionHandler,
                         )
                     }
                 }
@@ -206,6 +212,7 @@ class ExpandedTabGroupTest {
                                 editClicked = true
                             },
                             onCloseTabGroupClick = {},
+                            tabInteractionHandler = NoOpTabInteractionHandler,
                         )
                     }
                 }
@@ -235,6 +242,7 @@ class ExpandedTabGroupTest {
                             onDeleteTabGroupClick = {},
                             onEditTabGroupClick = {},
                             onCloseTabGroupClick = { closeClicked = true },
+                            tabInteractionHandler = NoOpTabInteractionHandler,
                         )
                     }
                 }
