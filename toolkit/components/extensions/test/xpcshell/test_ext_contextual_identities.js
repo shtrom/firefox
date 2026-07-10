@@ -864,7 +864,7 @@ add_task(async function test_contextualIdentity_color_aliases_api() {
     cyan = await browser.contextualIdentities.get(cyan.cookieStoreId);
     browser.test.assertEq("cyan", cyan.color, "name stays cyan with nova on");
     browser.test.assertEq(
-      "#4cc4e1",
+      "#10a4ca",
       cyan.colorCode,
       "nova on: the same container returns the refreshed code"
     );
