@@ -241,6 +241,7 @@ class ContentScriptRegistrationsBuilder {
       isolated = false,
       match_origin_as_fallback = false,
       run_at = "document_start",
+      user_styles = false,
     } = contentScriptDescriptor;
 
     // We track whether the metadata we need to build the registrations later
@@ -252,6 +253,7 @@ class ContentScriptRegistrationsBuilder {
       isolated,
       match_origin_as_fallback,
       run_at,
+      user_styles,
     });
 
     // Note: we can update these to use Map.getOrInsert() once ESR 140 is EOL.
@@ -275,13 +277,21 @@ class ContentScriptRegistrationsBuilder {
     for (const [config, fileTypes] of this.#regs) {
       const reg = {};
 
-      const { all_frames, isolated, match_origin_as_fallback, run_at } =
-        JSON.parse(config);
+      const {
+        all_frames,
+        isolated,
+        match_origin_as_fallback,
+        run_at,
+        user_styles,
+      } = JSON.parse(config);
 
       // The registration's ID is based on this data, so we only specify
       // the non-default values to make them easier to parse at a glance.
       if (all_frames) {
         reg.allFrames = true;
+      }
+      if (user_styles) {
+        reg.cssOrigin = "user";
       }
       if (!isolated) {
         reg.world = "MAIN";
