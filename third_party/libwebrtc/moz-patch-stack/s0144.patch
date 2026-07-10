@@ -2047,7 +2047,7 @@ index 8eda4395db..3135eeb3ec 100644
    // Sets all samples to be played out to zero if `mute` is true, i.e.,
    // ensures that the speaker is muted.
 diff --git a/webrtc.gni b/webrtc.gni
-index c49a91ed8d..11d2cc7ee3 100644
+index f7319cd345..ef7b1308f9 100644
 --- a/webrtc.gni
 +++ b/webrtc.gni
 @@ -31,10 +31,6 @@ if (is_ios) {
@@ -2061,7 +2061,7 @@ index c49a91ed8d..11d2cc7ee3 100644
  if (is_mac) {
    import("//chromium/build/config/mac/rules.gni")
  }
-@@ -1085,12 +1081,7 @@ template("rtc_executable") {
+@@ -1089,12 +1085,7 @@ template("rtc_executable") {
  }
  
  template("rtc_shared_library") {
@@ -2075,7 +2075,7 @@ index c49a91ed8d..11d2cc7ee3 100644
      forward_variables_from(invoker,
                             "*",
                             [
-@@ -1373,14 +1364,6 @@ if (is_android && !build_with_mozilla) {
+@@ -1377,14 +1368,6 @@ if (is_android && !build_with_mozilla) {
                                 "suppressed_configs",
                                 "visibility",
                               ])

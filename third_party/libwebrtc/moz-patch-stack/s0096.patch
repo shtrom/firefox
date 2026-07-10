@@ -74,7 +74,7 @@ index 44447d3a34..a034bc9814 100644
  # The python interpreter to use by default. On Windows, this will look
  # for python3.exe and python3.bat.
 diff --git a/BUILD.gn b/BUILD.gn
-index f42030a6e1..0d06980650 100644
+index 3c3ca407be..902bd41d31 100644
 --- a/BUILD.gn
 +++ b/BUILD.gn
 @@ -21,8 +21,8 @@
@@ -108,7 +108,7 @@ index f42030a6e1..0d06980650 100644
      defines = []
  
      deps = [
-@@ -852,7 +852,7 @@ rtc_static_library("dcsctp") {
+@@ -850,7 +850,7 @@ rtc_static_library("dcsctp") {
    visibility = [ "//:default" ]
    sources = []
    complete_static_lib = true
@@ -117,7 +117,7 @@ index f42030a6e1..0d06980650 100644
    defines = []
    deps = [
      "net/dcsctp/public:factory",
-@@ -890,7 +890,7 @@ group("poison_default_neural_residual_echo_estimator") {
+@@ -888,7 +888,7 @@ group("poison_default_neural_residual_echo_estimator") {
  if (!build_with_chromium) {
    # Write debug logs to gn_logs.txt.
    # This is also required for Siso builds.
@@ -292,7 +292,7 @@ index 293104c72d..94cd15b208 100644
  
  rtc_library("audio") {
 diff --git a/common_audio/BUILD.gn b/common_audio/BUILD.gn
-index 4c0eadf51f..208cee76c4 100644
+index e0a9d3a7c8..d1573e35a4 100644
 --- a/common_audio/BUILD.gn
 +++ b/common_audio/BUILD.gn
 @@ -287,7 +287,7 @@ if (rtc_build_with_neon) {
@@ -428,7 +428,7 @@ index 880d6bbfd8..6db3c29f03 100644
  
  group("logging") {
 diff --git a/media/BUILD.gn b/media/BUILD.gn
-index 04e7b0938e..0bbd025927 100644
+index 37df856f58..a119300534 100644
 --- a/media/BUILD.gn
 +++ b/media/BUILD.gn
 @@ -6,7 +6,7 @@
@@ -576,7 +576,7 @@ index 70466453f4..0a463c7619 100644
  import("../../webrtc.gni")
  
 diff --git a/modules/video_coding/BUILD.gn b/modules/video_coding/BUILD.gn
-index a5139f2b05..668ac9ff78 100644
+index 1dab555764..cf6283d3e1 100644
 --- a/modules/video_coding/BUILD.gn
 +++ b/modules/video_coding/BUILD.gn
 @@ -6,7 +6,7 @@
@@ -589,7 +589,7 @@ index a5139f2b05..668ac9ff78 100644
  import("../../webrtc.gni")
  
 diff --git a/pc/BUILD.gn b/pc/BUILD.gn
-index 491631b431..da4cfbe877 100644
+index 8f0e8f3a7e..1a5bba17c2 100644
 --- a/pc/BUILD.gn
 +++ b/pc/BUILD.gn
 @@ -29,8 +29,8 @@
@@ -718,7 +718,7 @@ index b861a4d6df..8c1e975546 100644
            ]
          }
 diff --git a/system_wrappers/BUILD.gn b/system_wrappers/BUILD.gn
-index a3e9a49204..6bb07f9740 100644
+index f730c86d6a..7bd95b1630 100644
 --- a/system_wrappers/BUILD.gn
 +++ b/system_wrappers/BUILD.gn
 @@ -7,8 +7,8 @@
@@ -781,7 +781,7 @@ index a90fb214c9..9129bb0a77 100644
    }
  }
 diff --git a/webrtc.gni b/webrtc.gni
-index a721332110..7698a65073 100644
+index 7bfb27e9f7..273542d94b 100644
 --- a/webrtc.gni
 +++ b/webrtc.gni
 @@ -5,12 +5,12 @@
