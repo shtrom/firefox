@@ -384,6 +384,39 @@ describe("PictureOfTheDay widget", () => {
       ).toBeTruthy();
     });
 
+    it("shows the Set wallpaper button when the dedicated widgetPictureOfTheDay namespace enables the feature", () => {
+      const { container } = renderWidget(
+        jest.fn(),
+        {},
+        withPrefs({
+          "widgets.pictureOfTheDay.setAsWallpaper.enabled": false,
+          trainhopConfig: {
+            widgetPictureOfTheDay: { setAsWallpaperEnabled: true },
+          },
+        })
+      );
+      expect(
+        container.querySelector(".picture-of-the-day-set-wallpaper")
+      ).toBeTruthy();
+    });
+
+    it("lets the dedicated widgetPictureOfTheDay namespace win over the shared widgets key", () => {
+      const { container } = renderWidget(
+        jest.fn(),
+        {},
+        withPrefs({
+          "widgets.pictureOfTheDay.setAsWallpaper.enabled": true,
+          trainhopConfig: {
+            widgetPictureOfTheDay: { setAsWallpaperEnabled: false },
+            widgets: { pictureOfTheDaySetAsWallpaperEnabled: true },
+          },
+        })
+      );
+      expect(
+        container.querySelector(".picture-of-the-day-set-wallpaper")
+      ).toBeFalsy();
+    });
+
     it("dismisses by setting dismissedDate to the picture's date", () => {
       const dispatch = jest.fn();
       const { container } = renderWidget(dispatch, {}, populatedState);
