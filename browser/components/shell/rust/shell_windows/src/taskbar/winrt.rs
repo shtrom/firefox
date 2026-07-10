@@ -223,7 +223,7 @@ mod aumid {
         /// Attempts to acquire a lock to set the current process AUMID, then
         /// set it to the provided AUMID.
         #[must_use]
-        pub async fn set_aumid(temp_aumid: &nsAString) -> Result<Self, nsresult> {
+        pub(super) async fn set_aumid(temp_aumid: &nsAString) -> Result<Self, nsresult> {
             // Block while AUMID is temporarily modified.
             let default_aumid_lock = DEFAULT_AUMID.as_ref().map_err(|e| *e)?.lock().await;
             let original_aumid = &*default_aumid_lock;
@@ -247,7 +247,7 @@ mod aumid {
 
         /// Drops self to trigger the AUMID to revert to the default and release
         /// the lock to set the default AUMID.
-        pub fn restore_aumid(self) {}
+        pub(super) fn restore_aumid(self) {}
     }
 
     impl Drop for Holder<'_> {

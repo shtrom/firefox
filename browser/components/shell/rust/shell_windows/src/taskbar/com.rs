@@ -30,7 +30,6 @@
 //!
 //! The IPinnedList3 API can pin shortcuts from any directory.
 
-use crate::util::thread::MainThreadGuard;
 use nserror::{
     nsresult, NS_ERROR_FILE_ACCESS_DENIED, NS_ERROR_FILE_NOT_FOUND, NS_ERROR_NOT_AVAILABLE,
 };
@@ -44,6 +43,7 @@ use windows::{
 };
 
 use super::PinResult;
+use crate::util::thread::MainThreadGuard;
 
 pub(super) enum PinOp {
     Pin,
@@ -151,12 +151,12 @@ const CLSID_TASKBAND_PIN: GUID = GUID::from_u128(0x90AA3A4E_1CBA_4233_B8BB_53577
 
 // Note: This definition mirrors how the windows crate defines COM enums.
 #[repr(transparent)]
-pub struct PinnedListModifyCallerEnum(pub i32);
+struct PinnedListModifyCallerEnum(i32);
 
 impl PinnedListModifyCallerEnum {
     // This enum is likely only used for Windows telemetry, i32::MAX is chosen
     // to avoid confusion with existing uses.
-    pub const MAX: Self = Self(i32::MAX);
+    const MAX: Self = Self(i32::MAX);
 }
 
 // Enum to prevent usage of IPinnedList3 methods with incomplete parameter
