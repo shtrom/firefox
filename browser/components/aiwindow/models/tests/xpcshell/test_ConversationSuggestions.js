@@ -44,14 +44,14 @@ const { sinon } = ChromeUtils.importESModule(
 const FAKE_RECORDS = [
   {
     feature: MODEL_FEATURES.CONVERSATION_SUGGESTIONS_SIDEBAR_STARTER,
-    version: "2.0",
+    version: "3.0",
     model: "test-model",
     is_default: true,
     parameters: {},
     service_type: "ai",
     purpose: "convo-starters-sidebar",
     prompts:
-      "Suggest {n} starters.\nCurrent tab:\n{current_tab}\nOpen tabs:\n{open_tabs}\nDate: {date}\n{assistant_limitations}",
+      "Suggest {n} starters.\nCurrent tab:\n{current_tab}\nOpen tabs:\n{open_tabs}\nDate: {date}\nLocale: {locale}\n{assistant_limitations}",
   },
   {
     feature: MODEL_FEATURES.CONVERSATION_STARTERS_SIDEBAR_SYSTEM,
@@ -1030,6 +1030,12 @@ add_task(
         callArgs.args[1].content.includes("memory 1") &&
           callArgs.args[1].content.includes("memory 2"),
         "Memories from the stub should be injected into the prompt"
+      );
+      // The browser locale was injected into the prompt
+      Assert.ok(
+        callArgs.args[1].content.includes(Services.locale.appLocaleAsBCP47) &&
+          !callArgs.args[1].content.includes("{locale}"),
+        "Browser locale should be injected into the prompt and no {locale} placeholder should remain"
       );
     } finally {
       sb.restore();

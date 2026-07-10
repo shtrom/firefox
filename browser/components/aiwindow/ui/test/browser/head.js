@@ -56,7 +56,7 @@ const MOCK_RS_RECORDS = [
   ["chat", 7],
   ["title-generation", 1],
   ["conversation-starters-sidebar-system", 1],
-  ["conversation-suggestions-sidebar-starter", 2],
+  ["conversation-suggestions-sidebar-starter", 3],
   ["conversation-suggestions-followup", 1],
   ["conversation-suggestions-assistant-limitations", 1],
   ["conversation-suggestions-memories", 1],
