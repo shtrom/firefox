@@ -11,7 +11,6 @@ import {
 
 const gFadingWindows = new WeakSet();
 const gSidebarAnimations = new WeakMap();
-const gSidebarWidthHandlers = new WeakMap();
 
 /**
  * @typedef {import("../components/ai-window/ai-window.mjs").SmartbarInputState} SmartbarInputState
@@ -43,46 +42,6 @@ export const AIWindowUI = {
       return null;
     }
     return { chromeDoc, box, splitter };
-  },
-
-  /**
-   * Sets a max width for the draggable sidebar.
-   *
-   * @param {Window} win
-   */
-  updateSidebarMaxWidth(win) {
-    const nodes = this._getSidebarElements(win);
-    if (!nodes) {
-      return;
-    }
-    const maxWidthRatio = parseFloat(
-      win
-        .getComputedStyle(win.document.documentElement)
-        .getPropertyValue("--ai-window-sidebar-max-width-ratio")
-    );
-    nodes.box.style.setProperty(
-      "--ai-window-sidebar-max-width",
-      `${Math.round(win.innerWidth * maxWidthRatio)}px`
-    );
-
-    if (!gSidebarWidthHandlers.has(win)) {
-      const sidebarResizeHandler = () => this.updateSidebarMaxWidth(win);
-      gSidebarWidthHandlers.set(win, sidebarResizeHandler);
-      win.addEventListener("resize", sidebarResizeHandler);
-    }
-  },
-
-  /**
-   * Stop tracking the sidebar width for a window.
-   *
-   * @param {Window} win
-   */
-  _removeSidebarWidthHandler(win) {
-    const handler = gSidebarWidthHandlers.get(win);
-    if (handler) {
-      win.removeEventListener("resize", handler);
-      gSidebarWidthHandlers.delete(win);
-    }
   },
 
   /**
@@ -165,17 +124,6 @@ export const AIWindowUI = {
    */
   _setSidebarCollapsed(win, box, splitter, collapse, { animate = true } = {}) {
     box._aiWindowOpen = !collapse;
-
-    // Give the content area its minimum width while the sidebar is open.
-    win.document
-      .getElementById("tabbrowser-tabbox")
-      .toggleAttribute("ai-window-open", !collapse);
-
-    if (!collapse) {
-      this.updateSidebarMaxWidth(win);
-    } else {
-      this._removeSidebarWidthHandler(win);
-    }
 
     const reduceMotion = win.matchMedia(
       "(prefers-reduced-motion: reduce)"
