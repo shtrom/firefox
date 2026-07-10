@@ -300,7 +300,7 @@ moz-button.memories-trigger {
   --box-padding: var(--aiwindow-memory-item-padding);
 
   &:hover .memories-remove-button,
-  &:focus-within .memories-remove-button {
+  & .memories-remove-button:focus-visible {
     opacity: 1;
     pointer-events: auto;
   }
