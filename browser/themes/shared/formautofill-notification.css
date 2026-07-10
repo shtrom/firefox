@@ -12,11 +12,6 @@
  * "address-save-update" prefix is used for "save address doorhanger" and "update address doorhanger"
  */
 
-.popup-notification-body[popupid="address-save-update"],
-.popup-notification-body[popupid="address-edit"] {
-  width: 25.8em;
-}
-
 .address-capture-notification {
   /* Overwrite margin that we don't need */
   :is(popupnotificationcontent, .panel-footer) {
