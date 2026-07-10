@@ -265,11 +265,13 @@ export class PictureOfTheDayFeed {
       const blob = await response.blob();
       let theme = "light";
       try {
-        // calculateTheme only reads image-decoding APIs (createImageBitmap,
-        // OffscreenCanvas) off the global to sample luminance; it never
-        // mutates the global.
-        // eslint-disable-next-line mozilla/reject-globalThis-modification
-        theme = await lazy.calculateTheme(globalThis, blob);
+        // calculateTheme samples luminance via createImageBitmap/OffscreenCanvas,
+        // which the sys.mjs global doesn't provide - use the parent's hidden DOM
+        // window, which does. Falls back to "light" if decoding fails.
+        theme = await lazy.calculateTheme(
+          Services.appShell.hiddenDOMWindow,
+          blob
+        );
       } catch (e) {
         console.error("PictureOfTheDayFeed: theme calculation failed", e);
       }
