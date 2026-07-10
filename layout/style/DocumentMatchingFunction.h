@@ -19,6 +19,7 @@ enum class DocumentMatchingFunction {
   RegExp,
   MediaDocument,
   PlainTextDocument,
+  UnobservableDocument,
 };
 
 }  // namespace css
