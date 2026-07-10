@@ -155,6 +155,16 @@ export class UrlbarChildController {
     this.#listeners.delete(listener);
   }
   notify(notification, ...params) {
+    // When the first results arrive, pre-warm a connection to the heuristic
+    // result. This runs content-side on both transports (the input has already
+    // reacted to the first result before we're notified) and reaches the
+    // parent's window the same way a mousedown speculative connect does.
+    if (
+      notification === UrlbarShared.NOTIFICATIONS.QUERY_RESULTS &&
+      params[0].firstResultChanged
+    ) {
+      this.speculativeConnect(params[0].results[0], params[0], "resultsadded");
+    }
     for (let listener of this.#listeners) {
       // Can't use "in" because some tests proxify these.
       if (typeof listener[notification] != "undefined") {

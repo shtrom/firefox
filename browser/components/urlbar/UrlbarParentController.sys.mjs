@@ -314,21 +314,12 @@ export class UrlbarParentController {
     // result and bail before notifying if it took over (e.g. entered search
     // mode and restarted the query). On the message path the input lives across
     // the boundary, so it runs `onFirstResult` content-side when it receives the
-    // results instead, and `speculativeConnect` is skipped (it needs the
-    // window).
+    // results instead.
     if (queryContext.firstResultChanged && this.input) {
       if (this.input.onFirstResult(queryContext.results[0])) {
         // The input canceled the query and started a new one.
         return;
       }
-
-      // The first time we receive results try to connect to the heuristic
-      // result.
-      this.speculativeConnect(
-        queryContext.results[0],
-        queryContext,
-        "resultsadded"
-      );
     }
 
     this.notify(lazy.UrlbarShared.NOTIFICATIONS.QUERY_RESULTS, queryContext);
@@ -361,18 +352,18 @@ export class UrlbarParentController {
    * @param {string} reason Reason for the speculative connect request.
    */
   speculativeConnect(result, context, reason) {
-    // Never speculative connect in private contexts.
-    if (!this.input || context.isPrivate || !context.results.length) {
+    // browserWindow is null only during teardown. Never speculative connect in
+    // private contexts.
+    if (!this.browserWindow || context.isPrivate || !context.results.length) {
       return;
     }
 
     switch (reason) {
       case "resultsadded": {
-        // We should connect to an heuristic result, if it exists.
-        if (
-          (result == context.results[0] && result.heuristic) ||
-          result.autofill
-        ) {
+        // We should connect to an heuristic result, if it exists. The result
+        // passed for this reason is always the first one, so its own flags
+        // identify it.
+        if (result.heuristic || result.autofill) {
           if (result.type == lazy.UrlbarShared.RESULT_TYPE.SEARCH) {
             // Speculative connect only if search suggestions are enabled.
             if (

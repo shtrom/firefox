@@ -122,6 +122,13 @@ export class UrlbarParent extends JSWindowActorParent {
       case "CancelQuery":
         controller.cancelQuery();
         break;
+      case "SpeculativeConnect":
+        controller.speculativeConnect(
+          lazy.UrlbarResult.fromWire(message.data.result),
+          lazy.UrlbarQueryContext.fromWire(message.data.queryContext),
+          message.data.reason
+        );
+        break;
       case "RemoveResult":
         controller.removeResult(
           lazy.UrlbarResult.fromWire(message.data.result)
