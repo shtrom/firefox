@@ -1490,6 +1490,13 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
+    "widgets.pictureOfTheDay.enabled",
+    {
+      title: "Enables the picture of the day widget",
+      value: true,
+    },
+  ],
+  [
     "widgets.system.privacy.enabled",
     {
       title: "Enables the privacy widget experiment in Nimbus",
@@ -1511,6 +1518,13 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
+    "widgets.system.pictureOfTheDay.enabled",
+    {
+      title: "Enables the picture of the day widget experiment in Nimbus",
+      value: false,
+    },
+  ],
+  [
     "widgets.privacy.size",
     {
       title: "Size of the privacy widget (medium or large)",
@@ -1528,6 +1542,20 @@ export const PREFS_CONFIG = new Map([
     "widgets.crossword.size",
     {
       title: "Size of the crossword widget (medium or large)",
+      value: "",
+    },
+  ],
+  [
+    "widgets.stocks.size",
+    {
+      title: "Size of the stocks widget (small, medium, or large)",
+      value: "",
+    },
+  ],
+  [
+    "widgets.pictureOfTheDay.size",
+    {
+      title: "Size of the picture of the day widget (small, medium, or large)",
       value: "",
     },
   ],
