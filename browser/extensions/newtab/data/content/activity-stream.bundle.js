@@ -22300,9 +22300,9 @@ const SET_WALLPAPER_ICON = "chrome://browser/skin/canvas.svg";
 const SET_WALLPAPER_CHECK_ICON = "chrome://global/skin/icons/check.svg";
 
 // Renders the daily picture from the Merino feed (Bug 2050976): the image with
-// a source eyebrow and description, a "Set wallpaper" action, and a day-keyed
-// hide/restore. Falls back to a sunrise-gradient empty state when there's no
-// picture (or the user hid today's), with an eye button to restore.
+// a source eyebrow and description, and a "Set wallpaper" action. Falls back to
+// a sunrise-gradient empty state when there's no picture, with an eye button to
+// restore.
 const PictureOfTheDay_PictureOfTheDay = ({
   dispatch,
   widgetsMayBeMaximized,
@@ -22324,15 +22324,7 @@ const PictureOfTheDay_PictureOfTheDay = ({
   (0,external_React_namespaceObject.useEffect)(() => {
     setImageFailed(false);
   }, [pictureData.imageUrl]);
-
-  // Dismissal is keyed to the picture's date so a new day's picture shows again
-  // automatically (Bug 2050972). Edge case: Merino may omit published_date, and
-  // without a key "Hide today's picture" would silently no-op, so fall back to
-  // the local day. Tradeoff: hide then tracks the user's local clock, so an
-  // undated picture restores at local midnight even if Merino hasn't rotated it.
-  const pictureDate = pictureData.publishedDate || new Date().toDateString();
-  const dismissed = pictureDate === prefs["widgets.pictureOfTheDay.dismissedDate"];
-  const hasPicture = Boolean(pictureData.imageUrl) && !dismissed && !imageFailed;
+  const hasPicture = Boolean(pictureData.imageUrl) && !imageFailed;
 
   // Show a brief checkmark right after the user sets the wallpaper, then settle
   // into the collapsed "already set" state.
@@ -22424,29 +22416,12 @@ const PictureOfTheDay_PictureOfTheDay = ({
       });
     });
   };
-  const setDismissedDate = value => dispatch(actionCreators.OnlyToMain({
-    type: actionTypes.SET_PREF,
-    data: {
-      name: "widgets.pictureOfTheDay.dismissedDate",
-      value
-    }
-  }));
-  const handleHidePhoto = () => {
-    (0,external_ReactRedux_namespaceObject.batch)(() => {
-      setDismissedDate(pictureDate);
-      recordUserAction("hide_photo", {
-        source: "context_menu"
-      });
-    });
-  };
-  const handleShow = (source = "widget") => {
-    (0,external_ReactRedux_namespaceObject.batch)(() => {
-      setDismissedDate("");
-      recordUserAction("show_picture", {
-        source
-      });
-    });
-  };
+  const handleHidePhoto = () => recordUserAction("hide_photo", {
+    source: "context_menu"
+  });
+  const handleShow = () => recordUserAction("show_picture", {
+    source: "widget"
+  });
 
   // The Merino image host doesn't send CORS headers, so the picture bytes can
   // only be read in the privileged main process. The feed does the fetch,
@@ -22535,10 +22510,7 @@ const PictureOfTheDay_PictureOfTheDay = ({
   }, /*#__PURE__*/external_React_default().createElement("panel-item", {
     "data-l10n-id": "newtab-picture-menu-manage-wallpaper",
     onClick: handleManageWallpaper
-  }), dismissed ? /*#__PURE__*/external_React_default().createElement("panel-item", {
-    "data-l10n-id": "newtab-picture-menu-show-photo",
-    onClick: () => handleShow("context_menu")
-  }) : /*#__PURE__*/external_React_default().createElement("panel-item", {
+  }), /*#__PURE__*/external_React_default().createElement("panel-item", {
     "data-l10n-id": "newtab-picture-menu-hide-photo",
     onClick: handleHidePhoto
   }), /*#__PURE__*/external_React_default().createElement("hr", null), widgetsMayBeMaximized && /*#__PURE__*/external_React_default().createElement("panel-item", {
@@ -22585,7 +22557,7 @@ const PictureOfTheDay_PictureOfTheDay = ({
   }, /*#__PURE__*/external_React_default().createElement("button", {
     type: "button",
     className: "picture-of-the-day-show-button",
-    onClick: () => handleShow("widget"),
+    onClick: handleShow,
     "data-l10n-id": "newtab-picture-show-button"
   }), /*#__PURE__*/external_React_default().createElement("p", {
     className: "picture-of-the-day-message",

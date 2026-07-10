@@ -596,13 +596,6 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
-    "widgets.pictureOfTheDay.dismissedDate",
-    {
-      title: "Published date of the Picture of the day the user dismissed",
-      value: "",
-    },
-  ],
-  [
     "widgets.sportsWidget.pollIdleMs",
     {
       title:
