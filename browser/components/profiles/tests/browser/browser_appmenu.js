@@ -33,15 +33,7 @@ async function promiseSubViewOpened() {
   let panel = PanelMultiView.getViewNode(document, "PanelUI-profiles");
   let emptyButton = document.getElementById("appMenu-empty-profiles-button");
   let button = document.getElementById("appMenu-profiles-button");
-  // The profiles buttons are shown and configured asynchronously when the app
-  // menu opens, so wait for the relevant one to become visible before clicking.
-  await TestUtils.waitForCondition(
-    () =>
-      BrowserTestUtils.isVisible(button) ||
-      BrowserTestUtils.isVisible(emptyButton),
-    "A profiles app menu button should become visible"
-  );
-  let visibleButton = BrowserTestUtils.isVisible(button) ? button : emptyButton;
+  let visibleButton = button.hidden ? emptyButton : button;
   EventUtils.synthesizeMouseAtCenter(visibleButton, {});
   return TestUtils.waitForCondition(() => BrowserTestUtils.isVisible(panel));
 }
@@ -78,15 +70,6 @@ function getElements() {
 add_task(async function test_appmenu_layout_no_profiles() {
   await SelectableProfileService.init();
   await promiseSubViewOpened();
-
-  const subview = PanelMultiView.getViewNode(document, "PanelUI-profiles");
-
-  await TestUtils.waitForCondition(
-    () =>
-      PanelMultiView.getViewNode(document, "profiles-edit-this-profile-button"),
-    "The subview buttons should be created"
-  );
-
   let {
     editButton,
     newProfileButton,
@@ -95,34 +78,27 @@ add_task(async function test_appmenu_layout_no_profiles() {
     subviewBody,
   } = getElements();
 
-  Assert.ok(BrowserTestUtils.isVisible(editButton));
+  Assert.ok(BrowserTestUtils.isHidden(editButton));
   Assert.ok(BrowserTestUtils.isVisible(newProfileButton));
   Assert.ok(BrowserTestUtils.isVisible(copyProfileButton));
   Assert.ok(BrowserTestUtils.isVisible(manageProfilesButton));
-  Assert.strictEqual(
-    subview.querySelectorAll(".profiles-subview-item").length,
-    0,
-    "No profile list items should appear for a single profile"
-  );
-  Assert.strictEqual(
-    subviewBody.compareDocumentPosition(editButton),
-    4,
-    "The edit button should follow the subview body"
-  );
+  Assert.ok(!subviewBody.contains(newProfileButton));
+  Assert.ok(!subviewBody.contains(copyProfileButton));
+  Assert.ok(!subviewBody.contains(manageProfilesButton));
   Assert.strictEqual(
     subviewBody.compareDocumentPosition(newProfileButton),
-    4,
-    "The new profile button should follow the subview body"
+    2,
+    "The new profile button should precede the subview body"
   );
   Assert.strictEqual(
     subviewBody.compareDocumentPosition(copyProfileButton),
-    4,
-    "The copy profile button should follow the subview body"
+    2,
+    "The copy profile button should precede the subview body"
   );
   Assert.strictEqual(
     subviewBody.compareDocumentPosition(manageProfilesButton),
-    4,
-    "The manage profiles button should follow the subview body"
+    2,
+    "The manage profiles button should precede the subview body"
   );
 
   await PanelUI.hide();
@@ -134,14 +110,6 @@ add_task(async function test_appmenu_layout_two_profiles() {
   await SelectableProfileService.createNewProfile(true, null, "tests");
 
   await promiseSubViewOpened();
-
-  const subview = PanelMultiView.getViewNode(document, "PanelUI-profiles");
-
-  await TestUtils.waitForCondition(
-    () => !!subview.querySelectorAll(".profiles-subview-item").length,
-    "Profile list items should appear in the subview"
-  );
-
   let {
     editButton,
     newProfileButton,
@@ -150,23 +118,10 @@ add_task(async function test_appmenu_layout_two_profiles() {
     subviewBody,
   } = getElements();
 
-  const profileListItems = [
-    ...subview.querySelectorAll(".profiles-subview-item"),
-  ];
-  const profilesListStartSeparator = PanelMultiView.getViewNode(
-    document,
-    "profiles-subview-list-start-separator"
-  );
-
   Assert.ok(BrowserTestUtils.isVisible(editButton));
   Assert.ok(BrowserTestUtils.isVisible(newProfileButton));
   Assert.ok(BrowserTestUtils.isVisible(copyProfileButton));
   Assert.ok(BrowserTestUtils.isVisible(manageProfilesButton));
-  Assert.strictEqual(
-    subviewBody.compareDocumentPosition(editButton),
-    4,
-    "The edit button should follow the subview body"
-  );
   Assert.strictEqual(
     subviewBody.compareDocumentPosition(newProfileButton),
     4,
@@ -181,33 +136,6 @@ add_task(async function test_appmenu_layout_two_profiles() {
     subviewBody.compareDocumentPosition(manageProfilesButton),
     4,
     "The manage profiles button should follow the subview body"
-  );
-
-  Assert.ok(
-    profilesListStartSeparator,
-    "A separator before the profile list should exist"
-  );
-  Assert.strictEqual(
-    copyProfileButton.compareDocumentPosition(profilesListStartSeparator),
-    4,
-    "The start separator should follow the copy profile button"
-  );
-  Assert.strictEqual(
-    profilesListStartSeparator.compareDocumentPosition(profileListItems[0]),
-    4,
-    "Profile list items should follow the start separator"
-  );
-  Assert.strictEqual(
-    profileListItems[profileListItems.length - 1].compareDocumentPosition(
-      manageProfilesButton
-    ),
-    4,
-    "The manage profiles button should follow the last profile list item"
-  );
-  Assert.strictEqual(
-    manageProfilesButton.compareDocumentPosition(newProfileButton),
-    4,
-    "The new profile button should follow the manage profiles button"
   );
 
   await PanelUI.hide();
