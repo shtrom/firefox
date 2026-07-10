@@ -4129,6 +4129,12 @@ void CheckForBrokenChromeURL(nsILoadInfo* aLoadInfo, nsIURI* aURI) {
     return;
   }
 
+  // l10n coverage data (localization/<locale>/coverage.json) is loaded
+  // speculatively and is absent for en-US and untranslated locales.
+  if (StringEndsWith(filePath, "/coverage.json"_ns)) {
+    return;
+  }
+
   // Ignore fetches/xhrs, as they are frequently used in a way where
   // non-existence is OK (ie with fallbacks). This risks false negatives (ie
   // files that *should* be there but aren't) - which we accept for now.
