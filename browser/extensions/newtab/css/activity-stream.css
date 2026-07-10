@@ -11527,6 +11527,9 @@ hr {
   .ds-section-grid.ds-card-grid:not(.nova-enabled *) .col-1-position-16 {
     order: 16;
   }
+  .ds-section-grid.ds-card-grid:not(.nova-enabled *) .col-1-hidden {
+    display: none;
+  }
   .ds-section-grid.ds-card-grid:not(.nova-enabled *) .col-1-small {
     grid-row: span 1;
     grid-column: span 1;
@@ -11844,6 +11847,9 @@ hr {
   }
   .ds-section-grid.ds-card-grid:not(.nova-enabled *) .col-2-position-16 {
     order: 16;
+  }
+  .ds-section-grid.ds-card-grid:not(.nova-enabled *) .col-2-hidden {
+    display: none;
   }
   .ds-section-grid.ds-card-grid:not(.nova-enabled *) .col-2-small {
     grid-row: span 1;
@@ -12181,6 +12187,9 @@ hr {
   .ds-section-grid.ds-card-grid:not(.nova-enabled *) .col-3-position-16 {
     order: 16;
   }
+  .ds-section-grid.ds-card-grid:not(.nova-enabled *) .col-3-hidden {
+    display: none;
+  }
   .ds-section-grid.ds-card-grid:not(.nova-enabled *) .col-3-small {
     grid-row: span 1;
     grid-column: span 1;
@@ -12514,6 +12523,9 @@ hr {
   }
   .ds-section-grid.ds-card-grid:not(.nova-enabled *) .col-4-position-16 {
     order: 16;
+  }
+  .ds-section-grid.ds-card-grid:not(.nova-enabled *) .col-4-hidden {
+    display: none;
   }
   .ds-section-grid.ds-card-grid:not(.nova-enabled *) .col-4-small {
     grid-row: span 1;
@@ -12856,6 +12868,9 @@ hr {
   .nova-enabled .ds-section-grid.ds-card-grid .col-1-position-16 {
     order: 16;
   }
+  .nova-enabled .ds-section-grid.ds-card-grid .col-1-hidden {
+    display: none;
+  }
   .nova-enabled .ds-section-grid.ds-card-grid .col-1-small {
     grid-row: span 1;
     grid-column: span 1;
@@ -13161,6 +13176,9 @@ hr {
   }
   .nova-enabled .ds-section-grid.ds-card-grid .col-2-position-16 {
     order: 16;
+  }
+  .nova-enabled .ds-section-grid.ds-card-grid .col-2-hidden {
+    display: none;
   }
   .nova-enabled .ds-section-grid.ds-card-grid .col-2-small {
     grid-row: span 1;
@@ -13481,6 +13499,9 @@ hr {
   .nova-enabled .ds-section-grid.ds-card-grid .col-3-position-16 {
     order: 16;
   }
+  .nova-enabled .ds-section-grid.ds-card-grid .col-3-hidden {
+    display: none;
+  }
   .nova-enabled .ds-section-grid.ds-card-grid .col-3-small {
     grid-row: span 1;
     grid-column: span 1;
@@ -13799,6 +13820,9 @@ hr {
   }
   .nova-enabled .ds-section-grid.ds-card-grid .col-4-position-16 {
     order: 16;
+  }
+  .nova-enabled .ds-section-grid.ds-card-grid .col-4-hidden {
+    display: none;
   }
   .nova-enabled .ds-section-grid.ds-card-grid .col-4-small {
     grid-row: span 1;
