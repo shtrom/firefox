@@ -195,6 +195,7 @@ for (const type of [
   "OPEN_PRIVATE_WINDOW",
   "OPEN_WEBEXT_SETTINGS",
   "PARTNER_LINK_ATTRIBUTION",
+  "PICTURE_OF_THE_DAY_UPDATE",
   "PLACES_BOOKMARKS_REMOVED",
   "PLACES_BOOKMARK_ADDED",
   "PLACES_HISTORY_CLEARED",
@@ -6824,6 +6825,20 @@ const INITIAL_STATE = {
     suggestedLocations: [],
   },
   // Widgets
+  PictureOfTheDay: {
+    initialized: false,
+    lastUpdated: null,
+    imageUrl: "",
+    thumbnailUrl: "",
+    title: "",
+    description: "",
+    publishedDate: "",
+    sourceUrl: "",
+    author: "",
+    licenseLabel: "",
+    licenseUrl: "",
+    error: null,
+  },
   ListsWidget: {
     // value pointing to last selectled list
     selected: "taskList",
@@ -7771,6 +7786,29 @@ function Weather(prevState = INITIAL_STATE.Weather, action) {
   }
 }
 
+const PictureOfTheDay = (prevState = INITIAL_STATE.PictureOfTheDay, action) => {
+  switch (action.type) {
+    case actionTypes.PICTURE_OF_THE_DAY_UPDATE:
+      return {
+        ...prevState,
+        imageUrl: action.data.imageUrl ?? "",
+        thumbnailUrl: action.data.thumbnailUrl ?? "",
+        title: action.data.title ?? "",
+        description: action.data.description ?? "",
+        publishedDate: action.data.publishedDate ?? "",
+        sourceUrl: action.data.sourceUrl ?? "",
+        author: action.data.author ?? "",
+        licenseLabel: action.data.licenseLabel ?? "",
+        licenseUrl: action.data.licenseUrl ?? "",
+        lastUpdated: action.data.lastUpdated ?? null,
+        error: action.data.error ?? null,
+        initialized: true,
+      };
+    default:
+      return prevState;
+  }
+};
+
 function PrivacyWidget(prevState = INITIAL_STATE.PrivacyWidget, action) {
   switch (action.type) {
     case actionTypes.WIDGETS_PRIVACY_UPDATE:
@@ -8042,6 +8080,7 @@ const reducers = {
   ExternalComponents,
   SportsWidget,
   PrivacyWidget,
+  PictureOfTheDay,
 };
 
 ;// CONCATENATED MODULE: ./content-src/components/TopSites/TopSiteFormInput.jsx
@@ -22247,19 +22286,26 @@ function Stocks({
 
 const PICTURE_OF_THE_DAY_ENTRY = WIDGET_REGISTRY.find(w => w.id === "pictureOfTheDay");
 
-// Boilerplate "hidden picture" fallback: a sunrise-gradient background with the
-// context menu, an eye button to bring the picture back, and a hover-revealed
-// empty-state message. The picture, description, and the "Manage wallpaper" /
-// "Hide today's picture" / eye actions arrive with the Merino feed (Bug
-// 2050976) and the wallpaper/dismiss follow-ups (2050973/2050972); for now
-// those controls are present but only emit telemetry.
-const PictureOfTheDay = ({
+// Renders the daily picture from the Merino feed (Bug 2050976): the full-bleed
+// image with a source eyebrow. Falls back to a sunrise-gradient empty state
+// when there's no picture, with an eye button to restore.
+const PictureOfTheDay_PictureOfTheDay = ({
   dispatch,
   widgetsMayBeMaximized,
   widgetEnabledMap
 }) => {
   const prefs = (0,external_ReactRedux_namespaceObject.useSelector)(state => state.Prefs.values);
+  const pictureData = (0,external_ReactRedux_namespaceObject.useSelector)(state => state.PictureOfTheDay);
   const widgetSize = resolveWidgetSize(PICTURE_OF_THE_DAY_ENTRY, prefs);
+
+  // Fall back to the empty state when the picture fails to load (e.g. a cached
+  // URL opened offline, or a broken/404 image) instead of showing a broken
+  // image. Reset when a new picture arrives so the next day's image is tried.
+  const [imageFailed, setImageFailed] = (0,external_React_namespaceObject.useState)(false);
+  (0,external_React_namespaceObject.useEffect)(() => {
+    setImageFailed(false);
+  }, [pictureData.imageUrl]);
+  const hasPicture = Boolean(pictureData.imageUrl) && !imageFailed;
   const {
     impressionRef,
     recordUserAction,
@@ -22327,11 +22373,14 @@ const PictureOfTheDay = ({
     source: "widget"
   });
   return /*#__PURE__*/external_React_default().createElement("article", {
-    className: `picture-of-the-day widget col-4 ${widgetSize}-widget`,
+    className: `picture-of-the-day widget col-4 ${widgetSize}-widget${hasPicture ? " has-picture" : ""}`,
     ref: impressionRef
   }, /*#__PURE__*/external_React_default().createElement("div", {
     className: "picture-of-the-day-toolbar"
-  }, /*#__PURE__*/external_React_default().createElement("div", {
+  }, hasPicture ? /*#__PURE__*/external_React_default().createElement("p", {
+    className: "picture-of-the-day-eyebrow",
+    "data-l10n-id": "newtab-picture-header"
+  }) : null, /*#__PURE__*/external_React_default().createElement("div", {
     className: "picture-of-the-day-context-menu-wrapper"
   }, /*#__PURE__*/external_React_default().createElement("moz-button", {
     className: "picture-of-the-day-context-menu-button",
@@ -22370,7 +22419,14 @@ const PictureOfTheDay = ({
   }), /*#__PURE__*/external_React_default().createElement("panel-item", {
     "data-l10n-id": "newtab-picture-menu-learn-more",
     onClick: handleLearnMore
-  })))), /*#__PURE__*/external_React_default().createElement("div", {
+  })))), hasPicture ? /*#__PURE__*/external_React_default().createElement("div", {
+    className: "picture-of-the-day-populated"
+  }, /*#__PURE__*/external_React_default().createElement("img", {
+    className: "picture-of-the-day-image",
+    src: pictureData.imageUrl,
+    alt: pictureData.title,
+    onError: () => setImageFailed(true)
+  })) : /*#__PURE__*/external_React_default().createElement("div", {
     className: "picture-of-the-day-footer"
   }, /*#__PURE__*/external_React_default().createElement("button", {
     type: "button",
@@ -22447,7 +22503,7 @@ const WIDGET_ROW_COMPONENTS = {
   privacy: Privacy,
   crossword: Crossword,
   stocks: Stocks,
-  pictureOfTheDay: PictureOfTheDay
+  pictureOfTheDay: PictureOfTheDay_PictureOfTheDay
 };
 const WIDGET_SIDEBAR_COMPONENTS = {
   weather: WeatherSidebarWidget
