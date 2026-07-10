@@ -20673,7 +20673,7 @@
 # Use xdg-session-management-v1 for session restore on Wayland.
 - name: widget.wayland.session-management.enabled
   type: bool
-  value: true
+  value: @IS_EARLY_BETA_OR_EARLIER@
   mirror: once
 
 # Use native D&D session type on Wayland instead of Gtk.
