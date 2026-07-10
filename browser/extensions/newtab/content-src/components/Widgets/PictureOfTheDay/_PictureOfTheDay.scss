@@ -44,10 +44,20 @@
 .picture-of-the-day-toolbar {
   display: flex;
   gap: var(--space-small);
-  align-items: center;
+  align-items: flex-start;
   justify-content: flex-end;
-  // Keep the context menu and source line above the picture overlay.
+  // Keep the context menu and heading (title + attribution) above the picture.
   z-index: 2;
+}
+
+// Title + attribution stack at the top-left; the auto end-margin keeps the
+// "…" menu pinned to the right.
+.picture-of-the-day-heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxsmall);
+  margin-inline-end: auto;
+  min-inline-size: 0;
 }
 
 // In the populated state the toolbar (source line + "…" menu) reveals on
@@ -261,20 +271,35 @@
 }
 
 .picture-of-the-day-source {
-  // Sits at the top-left of the card; the auto end-margin keeps the "…" menu
-  // pinned to the right.
+  // The title; sits at the top-left of the card.
   margin: 0;
-  margin-inline-end: auto;
   min-inline-size: 0;
   overflow: hidden;
   // The caption always sits on the dark transparent overlay on the photo. It stays white in both light and dark mode.
   // stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens
   color: var(--color-white);
   font-size: var(--font-size-small);
+  font-weight: var(--font-weight-bold);
   white-space: nowrap;
   text-overflow: ellipsis;
   // Legible over any image; a long localized string ellipsizes on one line.
   text-shadow: 0 1px 2px color-mix(in srgb, var(--color-black) 60%, transparent);
+}
+
+// Attribution line under the title: "© {author} / {source} / {license}".
+.picture-of-the-day-attribution {
+  margin: 0;
+  // Sits on the dark transparent overlay on the photo, so it stays white in both light and dark mode.
+  // stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens
+  color: var(--color-white);
+  font-size: var(--font-size-small);
+  text-shadow: 0 1px 2px color-mix(in srgb, var(--color-black) 60%, transparent);
+}
+
+// The source and license parts are links; underline to distinguish them from
+// the plain author credit and the "/" separators.
+.picture-of-the-day-attribution-link {
+  text-decoration: underline;
 }
 
 .picture-of-the-day-description {
@@ -374,6 +399,15 @@
   .picture-of-the-day-source {
     color: var(--text-color);
     text-shadow: none;
+  }
+
+  .picture-of-the-day-attribution {
+    color: var(--text-color);
+    text-shadow: none;
+  }
+
+  .picture-of-the-day-attribution-link {
+    color: var(--link-color);
   }
 
   .picture-of-the-day-message {

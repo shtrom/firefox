@@ -10245,9 +10245,17 @@ dialog:dir(rtl)::after {
 .picture-of-the-day-toolbar {
   display: flex;
   gap: var(--space-small);
-  align-items: center;
+  align-items: flex-start;
   justify-content: flex-end;
   z-index: 2;
+}
+
+.picture-of-the-day-heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxsmall);
+  margin-inline-end: auto;
+  min-inline-size: 0;
 }
 
 .picture-of-the-day.has-picture .picture-of-the-day-toolbar {
@@ -10406,14 +10414,25 @@ dialog:dir(rtl)::after {
 
 .picture-of-the-day-source {
   margin: 0;
-  margin-inline-end: auto;
   min-inline-size: 0;
   overflow: hidden;
   color: var(--color-white);
   font-size: var(--font-size-small);
+  font-weight: var(--font-weight-bold);
   white-space: nowrap;
   text-overflow: ellipsis;
   text-shadow: 0 1px 2px color-mix(in srgb, var(--color-black) 60%, transparent);
+}
+
+.picture-of-the-day-attribution {
+  margin: 0;
+  color: var(--color-white);
+  font-size: var(--font-size-small);
+  text-shadow: 0 1px 2px color-mix(in srgb, var(--color-black) 60%, transparent);
+}
+
+.picture-of-the-day-attribution-link {
+  text-decoration: underline;
 }
 
 .picture-of-the-day-description {
@@ -10490,6 +10509,15 @@ dialog:dir(rtl)::after {
   .picture-of-the-day-source {
     color: var(--text-color);
     text-shadow: none;
+  }
+
+  .picture-of-the-day-attribution {
+    color: var(--text-color);
+    text-shadow: none;
+  }
+
+  .picture-of-the-day-attribution-link {
+    color: var(--link-color);
   }
 
   .picture-of-the-day-message {
