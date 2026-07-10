@@ -1598,7 +1598,7 @@ void nsLineLayout::ApplyBlockTextBoxTrim(PerSpanData* psd, WritingMode aLineWM,
   MOZ_ASSERT(mBlockRS);
   nsIFrame* blockFrame = psd->mFrame->mFrame;
   const bool shouldApplyTrimStart =
-      mBlockRS->mFlags.mShouldApplyTextBoxTrimStart;
+      mBlockRS->mFlags.mShouldApplyTextBoxTrimStart && mLineNumber == 0;
   const bool shouldApplyTrimEnd =
       (mBlockRS->mFlags.mShouldApplyTextBoxTrimAtBlockEnd &&
        aIsLastFormattedLine) ||
