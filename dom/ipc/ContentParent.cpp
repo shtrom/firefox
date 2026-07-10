@@ -7507,7 +7507,12 @@ mozilla::ipc::IPCResult ContentParent::RecvHistoryGo(
     uint64_t aHistoryEpoch, bool aRequireUserInteraction, bool aUserActivation,
     bool aCheckForCancelation, HistoryGoResolver&& aResolveRequestedIndex) {
   if (!aContext.IsNullOrDiscarded()) {
-    RefPtr<CanonicalBrowsingContext> canonical = aContext.get_canonical();
+    RefPtr<CanonicalBrowsingContext> canonical =
+        aContext.get()->Top()->Canonical();
+    if (!canonical->IsKnownSubInTree(ChildID())) {
+      return IPC_OK();
+    }
+
     aResolveRequestedIndex(canonical->HistoryGo(
         aOffset, aHistoryEpoch, aRequireUserInteraction, aUserActivation,
         aCheckForCancelation, Some(ChildID())));
@@ -7520,7 +7525,12 @@ mozilla::ipc::IPCResult ContentParent::RecvNavigationTraverse(
     uint64_t aHistoryEpoch, bool aUserActivation, bool aCheckForCancelation,
     NavigationTraverseResolver&& aResolver) {
   if (!aContext.IsNullOrDiscarded()) {
-    RefPtr<CanonicalBrowsingContext> canonical = aContext.get_canonical();
+    RefPtr<CanonicalBrowsingContext> canonical =
+        aContext.get()->Top()->Canonical();
+    if (!canonical->IsKnownSubInTree(ChildID())) {
+      return IPC_OK();
+    }
+
     canonical->NavigationTraverse(aKey, aHistoryEpoch, aUserActivation,
                                   aCheckForCancelation, Some(ChildID()),
                                   aResolver);
