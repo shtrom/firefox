@@ -215,6 +215,28 @@ class TabManagerFloatingToolbarTest {
         }
     }
 
+    @Test
+    fun `GIVEN on tab groups page WHEN clicking the FAB THEN the tab groups fab callback is invoked`() {
+        var clicked = false
+        val state = TabsTrayState(selectedPage = Page.TabGroups)
+
+        composeTestRule.setContent {
+            FloatingToolbarFAB(
+                state = state,
+                onOpenNewNormalTabClicked = {},
+                onOpenNewPrivateTabClicked = {},
+                onSyncedTabsFabClicked = {},
+                onTabGroupsFabClicked = { clicked = true },
+            )
+        }
+
+        composeTestRule.onNodeWithTag(TabsTrayTestTag.FAB)
+            .assertIsDisplayed()
+            .performClick()
+
+        assert(clicked)
+    }
+
     private fun hasTextColor(color: androidx.compose.ui.graphics.Color) =
         SemanticsMatcher("Has text color matching $color") { node ->
             val textLayoutResults = mutableListOf<TextLayoutResult>()

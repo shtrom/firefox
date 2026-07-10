@@ -334,11 +334,28 @@ class TabsTrayStateTest {
     }
 
     @Test
-    fun `GIVEN Tab Groups is enabled and selected WHEN in Normal mode THEN toolbar visibility is false`() {
+    fun `GIVEN Tab Groups selected and homepage as new tab enabled WHEN in Normal mode THEN toolbar visibility is true`() {
         val state = TabsTrayState(
             mode = Mode.Normal,
             selectedPage = Page.TabGroups,
-            config = TabsTrayState.TabsTrayConfig(tabGroupsEnabled = true),
+            config = TabsTrayState.TabsTrayConfig(
+                tabGroupsEnabled = true,
+                homepageAsNewTabEnabled = true,
+            ),
+            privateBrowsing = TabsTrayState.PrivateBrowsingState(isLocked = false),
+        )
+        assert(state.isFloatingToolbarVisible)
+    }
+
+    @Test
+    fun `GIVEN Tab Groups selected and homepage as new tab disabled WHEN in Normal mode THEN toolbar visibility is false`() {
+        val state = TabsTrayState(
+            mode = Mode.Normal,
+            selectedPage = Page.TabGroups,
+            config = TabsTrayState.TabsTrayConfig(
+                tabGroupsEnabled = true,
+                homepageAsNewTabEnabled = false,
+            ),
             privateBrowsing = TabsTrayState.PrivateBrowsingState(isLocked = false),
         )
         assert(!state.isFloatingToolbarVisible)

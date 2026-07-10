@@ -189,6 +189,8 @@ data class TabsTrayState(
      * @property tabGroupsDragAndDropEnabled:  Whether drag and drop is enabled for Tab Groups.
      * @property tabGroupsOnboardingEnabled Whether the onboarding card for Tab Groups is enabled.
      * @property tabGroupsLiveReorderEnabled Whether in-place reorder is enabled for drag and drop.
+     * @property homepageAsNewTabEnabled Whether the homepage as a new tab feature is enabled, which gates the
+     * Tab Groups create FAB.
      * @property isInDebugMode Whether the app is in a debug state or has secret menu enabled.
      * @property showTabAutoCloseBanner Whether the banner for the tab auto-closer feature is visible.
      */
@@ -198,6 +200,7 @@ data class TabsTrayState(
         val tabGroupsDragAndDropEnabled: Boolean = false,
         val tabGroupsOnboardingEnabled: Boolean = false,
         val tabGroupsLiveReorderEnabled: Boolean = false,
+        val homepageAsNewTabEnabled: Boolean = false,
         val isInDebugMode: Boolean = false,
         val showTabAutoCloseBanner: Boolean = false,
     )
@@ -289,9 +292,13 @@ data class TabsTrayState(
      */
     val isFloatingToolbarVisible: Boolean
         get() {
-            val privateTabsLocked = privateBrowsing.isLocked && selectedPage == Page.PrivateTabs
-            val tabGroupsPageSelected = config.tabGroupsEnabled && selectedPage == Page.TabGroups
+            if (mode !is Mode.Normal) return false
 
-            return mode is Mode.Normal && !privateTabsLocked && !tabGroupsPageSelected
+            return when (selectedPage) {
+                Page.NormalTabs -> true
+                Page.PrivateTabs -> !privateBrowsing.isLocked
+                Page.TabGroups -> config.homepageAsNewTabEnabled
+                Page.SyncedTabs -> true
+            }
         }
 }

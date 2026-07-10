@@ -581,7 +581,10 @@ class TabManagementFragment : Fragment() {
         return storeProvider.get { restoredState ->
             TabsTrayStore(
                 initialState = restoredState?.copy(
-                    config = restoredState.config.copy(displayTabsInGrid = settings.gridTabView),
+                    config = restoredState.config.copy(
+                        displayTabsInGrid = settings.gridTabView,
+                        homepageAsNewTabEnabled = settings.enableHomepageAsNewTab,
+                    ),
                 ) ?: createInitialState(args, settings),
                 middlewares = listOf(
                     TabsTrayTelemetryMiddleware(requireComponents.nimbus.events),
@@ -594,6 +597,7 @@ class TabManagementFragment : Fragment() {
                         tabGroupRepository = requireComponents.core.tabGroupRepository,
                         removeTabsUseCase = requireComponents.useCases.tabsUseCases.removeTabs,
                         moveTabsUseCase = requireComponents.useCases.tabsUseCases.moveTabs,
+                        fenixBrowserUseCases = requireComponents.useCases.fenixBrowserUseCases,
                         mainScope = lifecycleScope,
                     ),
                     TabManagerUiStateStorageMiddleware(
@@ -642,6 +646,7 @@ class TabManagementFragment : Fragment() {
                 tabGroupsDragAndDropEnabled = settings.tabGroupsDragAndDropEnabled,
                 tabGroupsLiveReorderEnabled = settings.tabGroupsLiveReorderEnabled,
                 tabGroupsOnboardingEnabled = settings.tabGroupsOnboardingEnabled,
+                homepageAsNewTabEnabled = settings.enableHomepageAsNewTab,
                 displayTabsInGrid = settings.gridTabView,
                 isInDebugMode = Config.channel.isDebug || requireComponents.settings.showSecretDebugMenuThisSession,
                 showTabAutoCloseBanner = settings.shouldShowAutoCloseTabsBanner &&

@@ -3971,10 +3971,13 @@ metrics:
     labels:
       - drag_and_drop
       - menu
+      - fab
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=2029221
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2047039
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=2029221
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2047039
     data_sensitivity:
       - interaction
     notification_emails:

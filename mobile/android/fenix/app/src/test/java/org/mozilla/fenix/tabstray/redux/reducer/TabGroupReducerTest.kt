@@ -168,6 +168,27 @@ class TabGroupReducerTest {
     }
 
     @Test
+    fun `WHEN OpenCreatedTabGroup is reduced THEN switch to normal tabs and show the expanded sheet`() {
+        val tabGroup = createTabGroup()
+        val initialState = TabsTrayState(
+            selectedPage = Page.TabGroups,
+            backStack = TabsTrayState().backStack,
+        )
+
+        val resultState = TabGroupActionReducer.reduce(
+            state = initialState,
+            action = TabGroupAction.OpenCreatedTabGroup(group = tabGroup),
+        )
+
+        val expectedState = initialState.copy(
+            selectedPage = Page.NormalTabs,
+            backStack = initialState.backStack + ExpandedTabGroup(group = tabGroup.copy(closed = false)),
+        )
+
+        assertEquals(expectedState, resultState)
+    }
+
+    @Test
     fun `WHEN delete is confirmed from expanded tab group THEN pop the confirmation dialog and expanded tab group`() {
         val group = createTabGroup()
         val initialState = TabsTrayState(
@@ -214,6 +235,22 @@ class TabGroupReducerTest {
         val resultState = TabGroupActionReducer.reduce(
             state = initialState,
             action = TabGroupAction.AddToNewTabGroup,
+        )
+
+        assertEquals(expectedFormState, resultState.tabGroupState.formState)
+        assertEquals(expectedBackStack, resultState.backStack)
+    }
+
+    @Test
+    fun `WHEN the new tab group FAB is clicked THEN navigate to create a starter tab group`() {
+        val initialState = TabsTrayState()
+
+        val expectedFormState = initialState.initializeTabGroupForm(isStarterTabGroup = true)
+        val expectedBackStack = initialState.backStack + EditTabGroup
+
+        val resultState = TabGroupActionReducer.reduce(
+            state = initialState,
+            action = TabGroupAction.NewTabGroupFabClicked,
         )
 
         assertEquals(expectedFormState, resultState.tabGroupState.formState)

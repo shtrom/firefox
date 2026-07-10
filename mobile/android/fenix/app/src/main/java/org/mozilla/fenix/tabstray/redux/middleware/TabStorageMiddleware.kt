@@ -25,6 +25,7 @@ import mozilla.components.lib.state.Store
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.utils.DateTimeProvider
 import mozilla.components.support.utils.DefaultDateTimeProvider
+import org.mozilla.fenix.components.usecases.FenixBrowserUseCases
 import org.mozilla.fenix.tabgroups.storage.data.TabGroup
 import org.mozilla.fenix.tabgroups.storage.data.TabGroupData
 import org.mozilla.fenix.tabgroups.storage.repository.TabGroupRepository
@@ -88,10 +89,12 @@ internal data class MutableTabGroup(
  * @param tabGroupRepository The [TabGroupRepository] used to read/write tab group data.
  * @param removeTabsUseCase The [RemoveTabsUseCase] used to delete the tabs in a tab group.
  * @param moveTabsUseCase The [MoveTabsUseCase] used to sequence tabs next to each other in the underlying tab storage.
+ * @param fenixBrowserUseCases The [FenixBrowserUseCases] used to add a homepage tab for starter tab groups.
  * @param dateTimeProvider The [DateTimeProvider] that will be used to get the current date.
  * @param scope The [CoroutineScope] for running the tab data transformation off of the main thread.
  * @param mainScope The [CoroutineScope] used for returning to the main thread.
  */
+@Suppress("LargeClass", "LongParameterList")
 class TabStorageMiddleware(
     private val inactiveTabsEnabled: Boolean,
     private val tabGroupsEnabled: Boolean,
@@ -99,6 +102,7 @@ class TabStorageMiddleware(
     private val tabGroupRepository: TabGroupRepository,
     private val removeTabsUseCase: RemoveTabsUseCase,
     private val moveTabsUseCase: MoveTabsUseCase,
+    private val fenixBrowserUseCases: FenixBrowserUseCases,
     private val dateTimeProvider: DateTimeProvider = DefaultDateTimeProvider(),
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
     private val mainScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
@@ -680,11 +684,49 @@ class TabStorageMiddleware(
         return transformedTabGroups
     }
 
+    private fun createStarterTabGroup(
+        name: String,
+        theme: TabGroupTheme,
+        store: Store<TabsTrayState, TabsTrayAction>,
+    ) = scope.launch {
+        val newTabId = fenixBrowserUseCases.addNewHomepageTab(
+            private = false,
+            startLoading = false,
+        )
+        val tabGroup = TabGroup(
+            title = name,
+            theme = theme.toStorageValue(),
+            lastModified = dateTimeProvider.currentTimeMillis(),
+        )
+        tabGroupRepository.createTabGroupWithTabs(
+            tabGroup = tabGroup,
+            tabIds = listOf(newTabId),
+        )
+        mainScope.launch {
+            store.dispatch(
+                TabGroupAction.OpenCreatedTabGroup(
+                    group = TabsTrayItem.TabGroup(
+                        id = tabGroup.id,
+                        title = name,
+                        theme = theme,
+                        tabs = emptyList(),
+                    ),
+                ),
+            )
+        }
+    }
+
     private fun handleSaveClicked(
         store: Store<TabsTrayState, TabsTrayAction>,
     ) {
         val formState = store.state.tabGroupState.formState ?: return
         val mode = store.state.mode
+
+        if (formState.isStarterTabGroup) {
+            createStarterTabGroup(name = formState.name, theme = formState.theme, store = store)
+            return
+        }
+
         // Capture the selection synchronously to prevent selection loss by the Reducer
         val selectedTabIds = mode.selectedTabs.map { it.id }
         scope.launch {
@@ -761,11 +803,10 @@ class TabStorageMiddleware(
                     tabGroup = newTabGroup,
                     tabIds = selectedTabIds,
                 )
-                return newTabGroup.id
             } else {
                 tabGroupRepository.addNewTabGroup(newTabGroup)
-                return newTabGroup.id
             }
+            return newTabGroup.id
         } else {
             tabGroupRepository.updateTabGroup(
                 tabGroup = TabGroup(

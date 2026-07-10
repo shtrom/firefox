@@ -20,6 +20,7 @@ import org.mozilla.fenix.tabstray.data.TabsTrayItem.TabGroup
  * @property theme The tab group's theme.  If creating a new tab group, a default color
  * will be selected based on the last theme used.
  * @property edited Whether the user has modified the form fields.
+ * @property isStarterTabGroup Whether this form was opened to create a starter tab group.
  */
 @Immutable
 data class TabGroupFormState(
@@ -28,6 +29,7 @@ data class TabGroupFormState(
     val nextTabGroupNumber: Int = 1,
     val theme: TabGroupTheme = TabGroupTheme.default,
     val edited: Boolean = false,
+    val isStarterTabGroup: Boolean = false,
 ) {
     /**
      * Returns true when editing an existing tab group.
@@ -49,7 +51,7 @@ data class TabGroupFormState(
  *
  * Note: Because we need a localized string for the initial name, this is constructed at render time in [EditTabGroup].
  */
-fun TabsTrayState.initializeTabGroupForm() = TabGroupFormState(
+fun TabsTrayState.initializeTabGroupForm(isStarterTabGroup: Boolean = false) = TabGroupFormState(
     tabGroupId = null,
     name = "",
     nextTabGroupNumber = tabGroupState.groups.size + 1,
@@ -59,6 +61,7 @@ fun TabsTrayState.initializeTabGroupForm() = TabGroupFormState(
         ?.next()
         ?: TabGroupTheme.default,
     edited = false,
+    isStarterTabGroup = isStarterTabGroup,
 )
 
 /**

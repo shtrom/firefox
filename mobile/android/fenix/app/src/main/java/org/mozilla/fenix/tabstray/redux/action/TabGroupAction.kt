@@ -23,6 +23,18 @@ sealed interface TabGroupAction : TabsTrayAction {
     data object AddToNewTabGroup : TabGroupAction
 
     /**
+     * Fired when the user clicks the Tab Groups page FAB to create a starter tab group.
+     */
+    data object NewTabGroupFabClicked : TabGroupAction
+
+    /**
+     * Navigates to the expanded view of a tab group that was created.
+     *
+     * @property group The newly created [TabsTrayItem.TabGroup] to open.
+     */
+    data class OpenCreatedTabGroup(val group: TabsTrayItem.TabGroup) : TabGroupAction
+
+    /**
      * Fired when the user drags a tab onto another to create a new tab group.
      */
     data class DragAndDropTwoTabs(val sourceTabId: String, val destinationTabId: String) : TabGroupAction
