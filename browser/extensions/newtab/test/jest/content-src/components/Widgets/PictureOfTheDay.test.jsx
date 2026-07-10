@@ -186,17 +186,20 @@ describe("PictureOfTheDay widget", () => {
       },
     };
 
-    it("renders the picture and eyebrow", () => {
+    it("renders the picture, eyebrow, and description", () => {
       const { container } = renderWidget(jest.fn(), {}, populatedState);
       const root = container.querySelector("article.picture-of-the-day");
       expect(root.className).toContain("has-picture");
       const img = container.querySelector("img.picture-of-the-day-image");
       expect(img).toBeTruthy();
       expect(img.getAttribute("src")).toBe("https://example.com/potd.jpg");
-      expect(img.getAttribute("alt")).toBe("Test picture");
+      expect(img.getAttribute("alt")).toBe("A test picture description.");
       expect(
         container.querySelector('[data-l10n-id="newtab-picture-header"]')
       ).toBeTruthy();
+      expect(
+        container.querySelector(".picture-of-the-day-description").textContent
+      ).toBe("A test picture description.");
       // No empty-state eye/message while a picture is shown.
       expect(
         container.querySelector(".picture-of-the-day-show-button")
@@ -219,6 +222,92 @@ describe("PictureOfTheDay widget", () => {
       expect(
         container.querySelector("article.picture-of-the-day").className
       ).not.toContain("has-picture");
+    });
+  });
+
+  describe("source link", () => {
+    const SOURCE_URL = "https://commons.wikimedia.org/wiki/File:Example.jpg";
+    const sourcedState = {
+      ...mockState,
+      PictureOfTheDay: {
+        ...INITIAL_STATE.PictureOfTheDay,
+        imageUrl: "https://example.com/potd.jpg",
+        description: "A test picture description.",
+        publishedDate: "2026-07-01",
+        sourceUrl: SOURCE_URL,
+      },
+    };
+
+    const findOpenLink = dispatch =>
+      dispatch.mock.calls.find(([action]) => action.type === at.OPEN_LINK);
+
+    it("renders the source line, description, and image as source buttons", () => {
+      const { container } = renderWidget(jest.fn(), {}, sourcedState);
+      expect(
+        container.querySelector(
+          'button.picture-of-the-day-source-link[data-l10n-id="newtab-picture-header"]'
+        )
+      ).toBeTruthy();
+      expect(
+        container.querySelector(
+          "button.picture-of-the-day-description.picture-of-the-day-source-link"
+        )
+      ).toBeTruthy();
+      expect(
+        container.querySelector(
+          "button.picture-of-the-day-image-link img.picture-of-the-day-image"
+        )
+      ).toBeTruthy();
+    });
+
+    it("opens the source in a new tab when the source line is clicked", () => {
+      const dispatch = jest.fn();
+      const { container } = renderWidget(dispatch, {}, sourcedState);
+      fireEvent.click(
+        container.querySelector('[data-l10n-id="newtab-picture-header"]')
+      );
+      const openLink = findOpenLink(dispatch);
+      expect(openLink).toBeTruthy();
+      expect(openLink[0].data.url).toBe(SOURCE_URL);
+      expect(openLink[0].data.where).toBe("tab");
+    });
+
+    it("opens the source when the description is clicked", () => {
+      const dispatch = jest.fn();
+      const { container } = renderWidget(dispatch, {}, sourcedState);
+      fireEvent.click(
+        container.querySelector(".picture-of-the-day-description")
+      );
+      expect(findOpenLink(dispatch)[0].data.url).toBe(SOURCE_URL);
+    });
+
+    it("opens the source when the image is clicked", () => {
+      const dispatch = jest.fn();
+      const { container } = renderWidget(dispatch, {}, sourcedState);
+      fireEvent.click(
+        container.querySelector(".picture-of-the-day-image-link")
+      );
+      expect(findOpenLink(dispatch)[0].data.url).toBe(SOURCE_URL);
+    });
+
+    it("renders plain, non-linked elements when no source URL is provided", () => {
+      const { container } = renderWidget(
+        jest.fn(),
+        {},
+        {
+          ...sourcedState,
+          PictureOfTheDay: { ...sourcedState.PictureOfTheDay, sourceUrl: "" },
+        }
+      );
+      expect(
+        container.querySelector(".picture-of-the-day-source-link")
+      ).toBeFalsy();
+      expect(
+        container.querySelector(".picture-of-the-day-image-link")
+      ).toBeFalsy();
+      expect(
+        container.querySelector('p[data-l10n-id="newtab-picture-header"]')
+      ).toBeTruthy();
     });
   });
 });
