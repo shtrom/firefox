@@ -226,6 +226,8 @@ export var TelemetrySession = Object.freeze({
     Impl._sessionActiveTicks = 0;
     Impl._isUserActive = true;
     Impl._isUserActiveNonSynthesized = true;
+    Impl._consecutiveActiveTicks = 0;
+    Impl._consecutiveActiveTicksNonSynthesized = 0;
     Impl._subsessionStartTimeMonotonic = 0;
     Impl._lastEnvironmentChangeDate = Policy.monotonicNow();
     this.testUninstall();
@@ -310,6 +312,12 @@ var Impl = {
   // the corrected active tick (active_ticks_non_synthesized) side-by-side with
   // the legacy active tick.
   _isUserActiveNonSynthesized: true,
+  // Length of the current uninterrupted run of active ticks. Recorded as a
+  // sample into the consecutiveActiveTicks distribution when the run ends
+  // (i.e. the user goes inactive), then reset.
+  _consecutiveActiveTicks: 0,
+  // Like _consecutiveActiveTicks, but for the non-synthesized stream.
+  _consecutiveActiveTicksNonSynthesized: 0,
   _startupIO: {},
   // The previous build ID, if this is the first run with a new build.
   // Null if this is the first run, or the previous build ID is unknown.
@@ -1147,6 +1155,7 @@ var Impl = {
    */
   _onActiveTick(aUserActive) {
     const needsUpdate = aUserActive && this._isUserActive;
+    const wasActive = this._isUserActive;
     this._isUserActive = aUserActive;
 
     // Don't count the first active tick after we get out of
@@ -1154,6 +1163,13 @@ var Impl = {
     if (needsUpdate) {
       this._sessionActiveTicks++;
       Glean.browserEngagement.activeTicks.add(1);
+      this._consecutiveActiveTicks++;
+    } else if (wasActive && !aUserActive && this._consecutiveActiveTicks > 0) {
+      // The run of active ticks just ended: record its length and reset.
+      Glean.browserEngagement.consecutiveActiveTicks.active_ticks.accumulateSingleSample(
+        this._consecutiveActiveTicks
+      );
+      this._consecutiveActiveTicks = 0;
     }
   },
 
@@ -1164,10 +1180,21 @@ var Impl = {
    */
   _onActiveTickNonSynthesized(aUserActive) {
     const needsUpdate = aUserActive && this._isUserActiveNonSynthesized;
+    const wasActive = this._isUserActiveNonSynthesized;
     this._isUserActiveNonSynthesized = aUserActive;
 
     if (needsUpdate) {
       Glean.browserEngagement.activeTicksNonSynthesized.add(1);
+      this._consecutiveActiveTicksNonSynthesized++;
+    } else if (
+      wasActive &&
+      !aUserActive &&
+      this._consecutiveActiveTicksNonSynthesized > 0
+    ) {
+      Glean.browserEngagement.consecutiveActiveTicks.active_ticks_non_synthesized.accumulateSingleSample(
+        this._consecutiveActiveTicksNonSynthesized
+      );
+      this._consecutiveActiveTicksNonSynthesized = 0;
     }
   },
 
