@@ -100,6 +100,17 @@ urlbar-result-menu-report-inaccurate-location2 = Report inaccurate location
 urlbar-result-menu-show-less-frequently2 = Show less frequently
 urlbar-result-menu-dont-show-weather-suggestions2 = Don’t show weather suggestions
 
+# Shown in the urlbar input field context menu to dismiss an adaptive autofill
+# suggestion.
+urlbar-input-dismiss-autofill =
+    .label = Dismiss this suggestion
+    .accesskey = i
+# Shown in the urlbar input field context menu to remove an adaptive autofill
+# URL from history.
+urlbar-input-remove-from-history =
+    .label = Remove from history
+    .accesskey = e
+
 # Used for Split Button.
 urlbar-splitbutton-dropmarker =
     .title = Open menu

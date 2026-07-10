@@ -242,6 +242,8 @@ skip-if = [
 
 ["browser_smartwindow_sidebar_auto_open_pref_prompt.js"]
 
+["browser_smartwindow_smartbar_contextmenu_autofill_dismiss.js"]
+
 ["browser_smartwindow_smartbar_glow.js"]
 
 ["browser_smartwindow_smartbar_mentions_filter.js"]
