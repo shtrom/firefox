@@ -24,12 +24,11 @@ const SET_WALLPAPER_ICON = "chrome://browser/skin/canvas.svg";
 const SET_WALLPAPER_CHECK_ICON = "chrome://global/skin/icons/check.svg";
 
 // Renders the daily picture from the Merino feed (Bug 2050976): the image with
-// a source line and description, a "Set wallpaper" action, and a day-keyed
+// a source eyebrow and description, a "Set wallpaper" action, and a day-keyed
 // hide/restore. Falls back to a sunrise-gradient empty state when there's no
 // picture (or the user hid today's), with an eye button to restore.
 const PictureOfTheDay = ({
   dispatch,
-  handleUserInteraction,
   widgetsMayBeMaximized,
   widgetEnabledMap,
 }) => {
@@ -87,13 +86,6 @@ const PictureOfTheDay = ({
     { dispatch, widget: PICTURE_OF_THE_DAY_ENTRY, widgetSize }
   );
 
-  // Flip widgets.pictureOfTheDay.interaction on the first user action; every
-  // handler calls it so no action is missed (the flip is idempotent).
-  const handleInteraction = useCallback(
-    () => handleUserInteraction("pictureOfTheDay"),
-    [handleUserInteraction]
-  );
-
   // Alt text uses the (localized) description when present, else a localized
   // generic fallback (a11y decision, Bug 2050975; the raw image title was
   // rejected as unreliable). Resolved via the l10n value API (computed string).
@@ -113,8 +105,6 @@ const PictureOfTheDay = ({
           data: { name: PICTURE_OF_THE_DAY_ENTRY.enabledPref, value: false },
         })
       );
-      // Disabling the widget is not an interaction, so it does not flip the
-      // interaction pref.
       recordEnabled(false, { source: "context_menu" });
     });
   };
@@ -133,10 +123,9 @@ const PictureOfTheDay = ({
           value: size,
           size,
         });
-        handleInteraction();
       });
     },
-    [dispatch, recordUserAction, handleInteraction]
+    [dispatch, recordUserAction]
   );
 
   const sizeSubmenuRef = useSizeSubmenu(handleChangeSize);
@@ -153,7 +142,6 @@ const PictureOfTheDay = ({
         })
       );
       recordUserAction("learn_more", { source: "context_menu" });
-      handleInteraction();
     });
   };
 
@@ -161,7 +149,6 @@ const PictureOfTheDay = ({
     batch(() => {
       dispatch({ type: at.SHOW_PERSONALIZE });
       recordUserAction("manage_wallpaper", { source: "context_menu" });
-      handleInteraction();
     });
   };
 
@@ -177,7 +164,6 @@ const PictureOfTheDay = ({
     batch(() => {
       setDismissedDate(pictureDate);
       recordUserAction("hide_photo", { source: "context_menu" });
-      handleInteraction();
     });
   };
 
@@ -185,7 +171,6 @@ const PictureOfTheDay = ({
     batch(() => {
       setDismissedDate("");
       recordUserAction("show_picture", { source });
-      handleInteraction();
     });
   };
 
@@ -197,7 +182,6 @@ const PictureOfTheDay = ({
     batch(() => {
       dispatch(ac.OnlyToMain({ type: at.WIDGETS_PICTURE_SET_WALLPAPER }));
       recordUserAction("set_wallpaper", { source: "widget" });
-      handleInteraction();
     });
     setJustSet(true);
     setSuppressExpand(true);
@@ -219,7 +203,6 @@ const PictureOfTheDay = ({
         })
       );
       recordUserAction("open_source", { source: "widget" });
-      handleInteraction();
     });
   };
 
@@ -267,7 +250,7 @@ const PictureOfTheDay = ({
     >
       <div className="picture-of-the-day-toolbar">
         {hasPicture
-          ? renderSourceText("picture-of-the-day-source", {
+          ? renderSourceText("picture-of-the-day-eyebrow", {
               l10nId: "newtab-picture-header",
             })
           : null}

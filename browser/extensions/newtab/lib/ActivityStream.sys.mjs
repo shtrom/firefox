@@ -603,14 +603,6 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
-    "widgets.pictureOfTheDay.interaction",
-    {
-      title:
-        "Boolean flag for determining if a user has interacted with the Picture of the day widget",
-      value: false,
-    },
-  ],
-  [
     "widgets.sportsWidget.pollIdleMs",
     {
       title:

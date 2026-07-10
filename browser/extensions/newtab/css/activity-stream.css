@@ -10404,7 +10404,7 @@ dialog:dir(rtl)::after {
   gap: var(--space-small);
 }
 
-.picture-of-the-day-source {
+.picture-of-the-day-eyebrow {
   margin: 0;
   margin-inline-end: auto;
   min-inline-size: 0;
@@ -10487,7 +10487,7 @@ dialog:dir(rtl)::after {
     background-color: var(--button-text-color-ghost-hover);
   }
 
-  .picture-of-the-day-source {
+  .picture-of-the-day-eyebrow {
     color: var(--text-color);
     text-shadow: none;
   }

@@ -46,11 +46,11 @@
   gap: var(--space-small);
   align-items: center;
   justify-content: flex-end;
-  // Keep the context menu and source line above the picture overlay.
+  // Keep the context menu and eyebrow above the picture overlay.
   z-index: 2;
 }
 
-// In the populated state the toolbar (source line + "…" menu) reveals on
+// In the populated state the toolbar (eyebrow + "…" menu) reveals on
 // hover/focus. Legibility comes from the dark transparent overlay at the top of .picture-of-the-day-populated.
 .picture-of-the-day.has-picture .picture-of-the-day-toolbar {
   opacity: 0;
@@ -125,7 +125,7 @@
   }
 }
 
-// Populated state: the picture fills the card, with the source line and the
+// Populated state: the picture fills the card, with the source eyebrow and the
 // clamped description over a dark transparent overlay along the bottom.
 .picture-of-the-day-populated {
   position: absolute;
@@ -136,7 +136,7 @@
 }
 
 // Smooth full-bleed top + bottom dark transparent overlays over the picture, revealed on
-// hover/focus so the source line, menu, and description stay legible.
+// hover/focus so the eyebrow, menu, and description stay legible.
 .picture-of-the-day-populated::before,
 .picture-of-the-day-populated::after {
   content: '';
@@ -260,7 +260,7 @@
   }
 }
 
-.picture-of-the-day-source {
+.picture-of-the-day-eyebrow {
   // Sits at the top-left of the card; the auto end-margin keeps the "…" menu
   // pinned to the right.
   margin: 0;
@@ -327,7 +327,7 @@
   }
 }
 
-// Medium is tight: on hover show only the source line, not the description.
+// Medium is tight: on hover show only the title (eyebrow), not the description.
 .medium-widget .picture-of-the-day-description {
   display: none;
 }
@@ -371,7 +371,7 @@
     }
   }
 
-  .picture-of-the-day-source {
+  .picture-of-the-day-eyebrow {
     color: var(--text-color);
     text-shadow: none;
   }
