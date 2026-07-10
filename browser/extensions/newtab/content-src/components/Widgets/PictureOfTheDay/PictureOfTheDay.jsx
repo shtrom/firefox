@@ -24,9 +24,9 @@ const SET_WALLPAPER_ICON = "chrome://browser/skin/canvas.svg";
 const SET_WALLPAPER_CHECK_ICON = "chrome://global/skin/icons/check.svg";
 
 // Renders the daily picture from the Merino feed (Bug 2050976): the image with
-// a source eyebrow and description, and a "Set wallpaper" action. Falls back to
-// a sunrise-gradient empty state when there's no picture, with an eye button to
-// restore.
+// a source eyebrow and description, a "Set wallpaper" action, and a day-keyed
+// hide/restore. Falls back to a sunrise-gradient empty state when there's no
+// picture (or the user hid today's), with an eye button to restore.
 const PictureOfTheDay = ({
   dispatch,
   widgetsMayBeMaximized,
@@ -55,7 +55,16 @@ const PictureOfTheDay = ({
     setImageFailed(false);
   }, [pictureData.imageUrl]);
 
-  const hasPicture = Boolean(pictureData.imageUrl) && !imageFailed;
+  // Dismissal is keyed to the picture's date so a new day's picture shows again
+  // automatically (Bug 2050972). Edge case: Merino may omit published_date, and
+  // without a key "Hide today's picture" would silently no-op, so fall back to
+  // the local day. Tradeoff: hide then tracks the user's local clock, so an
+  // undated picture restores at local midnight even if Merino hasn't rotated it.
+  const pictureDate = pictureData.publishedDate || new Date().toDateString();
+  const dismissed =
+    pictureDate === prefs["widgets.pictureOfTheDay.dismissedDate"];
+  const hasPicture =
+    Boolean(pictureData.imageUrl) && !dismissed && !imageFailed;
 
   // Show a brief checkmark right after the user sets the wallpaper, then settle
   // into the collapsed "already set" state.
@@ -143,11 +152,27 @@ const PictureOfTheDay = ({
     });
   };
 
-  const handleHidePhoto = () =>
-    recordUserAction("hide_photo", { source: "context_menu" });
+  const setDismissedDate = value =>
+    dispatch(
+      ac.OnlyToMain({
+        type: at.SET_PREF,
+        data: { name: "widgets.pictureOfTheDay.dismissedDate", value },
+      })
+    );
 
-  const handleShow = () =>
-    recordUserAction("show_picture", { source: "widget" });
+  const handleHidePhoto = () => {
+    batch(() => {
+      setDismissedDate(pictureDate);
+      recordUserAction("hide_photo", { source: "context_menu" });
+    });
+  };
+
+  const handleShow = (source = "widget") => {
+    batch(() => {
+      setDismissedDate("");
+      recordUserAction("show_picture", { source });
+    });
+  };
 
   // The Merino image host doesn't send CORS headers, so the picture bytes can
   // only be read in the privileged main process. The feed does the fetch,
@@ -242,10 +267,17 @@ const PictureOfTheDay = ({
               data-l10n-id="newtab-picture-menu-manage-wallpaper"
               onClick={handleManageWallpaper}
             />
-            <panel-item
-              data-l10n-id="newtab-picture-menu-hide-photo"
-              onClick={handleHidePhoto}
-            />
+            {dismissed ? (
+              <panel-item
+                data-l10n-id="newtab-picture-menu-show-photo"
+                onClick={() => handleShow("context_menu")}
+              />
+            ) : (
+              <panel-item
+                data-l10n-id="newtab-picture-menu-hide-photo"
+                onClick={handleHidePhoto}
+              />
+            )}
             <hr />
             {widgetsMayBeMaximized && (
               <panel-item submenu="picture-of-the-day-size-submenu">
@@ -324,7 +356,7 @@ const PictureOfTheDay = ({
           <button
             type="button"
             className="picture-of-the-day-show-button"
-            onClick={handleShow}
+            onClick={() => handleShow("widget")}
             data-l10n-id="newtab-picture-show-button"
           ></button>
           <p
