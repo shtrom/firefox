@@ -1927,7 +1927,7 @@ index beadd8cc63..b5485d4edb 100644
 +      long nativeVideoEncoderWrapper, EncodedImage frame);
  }
 diff --git a/sdk/android/src/java/org/webrtc/audio/WebRtcAudioRecord.java b/sdk/android/src/java/org/webrtc/audio/WebRtcAudioRecord.java
-index 6a48f01f93..ac62308aa3 100644
+index 510cc04779..e8a5bf1b9c 100644
 --- a/sdk/android/src/java/org/webrtc/audio/WebRtcAudioRecord.java
 +++ b/sdk/android/src/java/org/webrtc/audio/WebRtcAudioRecord.java
 @@ -23,6 +23,7 @@ import android.os.Build;
@@ -1965,7 +1965,7 @@ index 6a48f01f93..ac62308aa3 100644
            }
            if (audioSamplesReadyCallback != null) {
              // Copy the entire byte buffer array. The start of the byteBuffer is not necessarily
-@@ -293,7 +292,7 @@ class WebRtcAudioRecord {
+@@ -298,7 +297,7 @@ class WebRtcAudioRecord {
      // Rather than passing the ByteBuffer with every callback (requiring
      // the potentially expensive GetDirectBufferAddress) we simply have the
      // the native class cache the address to the memory once.
@@ -1974,7 +1974,7 @@ index 6a48f01f93..ac62308aa3 100644
  
      // Get the minimum buffer size required for the successful creation of
      // an AudioRecord object, in byte units.
-@@ -500,14 +499,10 @@ class WebRtcAudioRecord {
+@@ -510,14 +509,10 @@ class WebRtcAudioRecord {
      return (channels == 1 ? AudioFormat.CHANNEL_IN_MONO : AudioFormat.CHANNEL_IN_STEREO);
    }
  
@@ -1994,7 +1994,7 @@ index 6a48f01f93..ac62308aa3 100644
    // Sets all recorded samples to zero if `mute` is true, i.e., ensures that
    // the microphone is muted.
 diff --git a/sdk/android/src/java/org/webrtc/audio/WebRtcAudioTrack.java b/sdk/android/src/java/org/webrtc/audio/WebRtcAudioTrack.java
-index 8eda4395db..3135eeb3ec 100644
+index 58f2743d16..40d4dacec9 100644
 --- a/sdk/android/src/java/org/webrtc/audio/WebRtcAudioTrack.java
 +++ b/sdk/android/src/java/org/webrtc/audio/WebRtcAudioTrack.java
 @@ -20,13 +20,13 @@ import android.os.Build;
@@ -2021,7 +2021,7 @@ index 8eda4395db..3135eeb3ec 100644
          // Write data until all data has been written to the audio sink.
          // Upon return, the buffer position will have been advanced to reflect
          // the amount of data that was successfully written to the AudioTrack.
-@@ -190,7 +190,7 @@ class WebRtcAudioTrack {
+@@ -202,7 +202,7 @@ class WebRtcAudioTrack {
      // Rather than passing the ByteBuffer with every callback (requiring
      // the potentially expensive GetDirectBufferAddress) we simply have the
      // the native class cache the address to the memory once.
@@ -2030,7 +2030,7 @@ index 8eda4395db..3135eeb3ec 100644
  
      // Get the minimum buffer size required for the successful creation of an
      // AudioTrack object to be created in the MODE_STREAM mode.
-@@ -525,12 +525,9 @@ class WebRtcAudioTrack {
+@@ -542,12 +542,9 @@ class WebRtcAudioTrack {
      return (channels == 1 ? AudioFormat.CHANNEL_OUT_MONO : AudioFormat.CHANNEL_OUT_STEREO);
    }
  
