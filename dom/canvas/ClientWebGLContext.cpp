@@ -483,7 +483,13 @@ void ClientWebGLContext::EndComposition() {
 layers::TextureType ClientWebGLContext::GetTexTypeForSwapChain() const {
   const RefPtr<layers::ImageBridgeChild> imageBridge =
       layers::ImageBridgeChild::GetSingleton();
-  const bool isOutOfProcess = mNotLost && mNotLost->outOfProcess != nullptr;
+
+  RefPtr<webgl::NotLostData> notLost(mNotLost);
+  if (!notLost) {
+    return layers::TexTypeForWebgl(imageBridge, false);
+  }
+
+  const bool isOutOfProcess = notLost->outOfProcess != nullptr;
   return layers::TexTypeForWebgl(imageBridge, isOutOfProcess);
 }
 
@@ -506,8 +512,14 @@ webgl::SwapChainOptions ClientWebGLContext::PrepareAsyncSwapChainOptions(
   if (fb || webvr) {
     return options;
   }
-  if (!IsContextLost() && (options.forceAsyncPresent ||
-                           StaticPrefs::webgl_out_of_process_async_present())) {
+
+  RefPtr<webgl::NotLostData> notLost(mNotLost);
+  if (!notLost) {
+    return options;
+  }
+
+  if (options.forceAsyncPresent ||
+      StaticPrefs::webgl_out_of_process_async_present()) {
     if (!mRemoteTextureOwnerId) {
       mRemoteTextureOwnerId = Some(layers::RemoteTextureOwnerId::GetNext());
     }
@@ -553,9 +565,12 @@ void ClientWebGLContext::EndOfFrame() {
 Maybe<layers::SurfaceDescriptor> ClientWebGLContext::GetFrontBuffer(
     WebGLFramebufferJS* const fb, bool vr) {
   const FuncScope funcScope(*this, "<GetFrontBuffer>");
-  if (IsContextLost()) return {};
+  RefPtr<webgl::NotLostData> notLost(mNotLost);
+  if (!notLost) {
+    return {};
+  }
 
-  const auto& child = mNotLost->outOfProcess;
+  const auto& child = notLost->outOfProcess;
   child->FlushPendingCmds();
 
   // Always synchronously get the front buffer if not using a remote texture.
@@ -630,18 +645,23 @@ void ClientWebGLContext::ClearVRSwapChain() { Run<RPROC(ClearVRSwapChain)>(); }
 
 bool ClientWebGLContext::UpdateWebRenderCanvasData(
     nsDisplayListBuilder* aBuilder, WebRenderCanvasData* aCanvasData) {
+  RefPtr<webgl::NotLostData> notLost(mNotLost);
+  if (!notLost) {
+    return false;
+  }
+
   CanvasRenderer* renderer = aCanvasData->GetCanvasRenderer();
 
-  if (!IsContextLost() && !mResetLayer && renderer) {
+  if (!mResetLayer && renderer) {
     return true;
   }
 
   const auto& size = DrawingBufferSize();
 
-  if (!IsContextLost() && !renderer && mNotLost->mCanvasRenderer &&
-      mNotLost->mCanvasRenderer->GetSize() == gfx::IntSize(size.x, size.y) &&
-      aCanvasData->SetCanvasRenderer(mNotLost->mCanvasRenderer)) {
-    mNotLost->mCanvasRenderer->SetDirty();
+  if (!renderer && notLost->mCanvasRenderer &&
+      notLost->mCanvasRenderer->GetSize() == gfx::IntSize(size.x, size.y) &&
+      aCanvasData->SetCanvasRenderer(notLost->mCanvasRenderer)) {
+    notLost->mCanvasRenderer->SetDirty();
     mResetLayer = false;
     return true;
   }
@@ -653,7 +673,7 @@ bool ClientWebGLContext::UpdateWebRenderCanvasData(
     return false;
   }
 
-  mNotLost->mCanvasRenderer = renderer;
+  notLost->mCanvasRenderer = renderer;
 
   MOZ_ASSERT(renderer);
   mResetLayer = false;
@@ -664,7 +684,10 @@ bool ClientWebGLContext::UpdateWebRenderCanvasData(
 bool ClientWebGLContext::InitializeCanvasRenderer(
     nsDisplayListBuilder* aBuilder, CanvasRenderer* aRenderer) {
   const FuncScope funcScope(*this, "<InitializeCanvasRenderer>");
-  if (IsContextLost()) return false;
+  RefPtr<webgl::NotLostData> notLost(mNotLost);
+  if (!notLost) {
+    return false;
+  }
 
   layers::CanvasRendererData data;
   data.mContext = this;
@@ -763,11 +786,14 @@ void ClientWebGLContext::GetContextAttributes(
     dom::Nullable<dom::WebGLContextAttributes>& retval) {
   retval.SetNull();
   const FuncScope funcScope(*this, "getContextAttributes");
-  if (IsContextLost()) return;
+  RefPtr<webgl::NotLostData> notLost(mNotLost);
+  if (!notLost) {
+    return;
+  }
 
   dom::WebGLContextAttributes& result = retval.SetValue();
 
-  const auto& options = mNotLost->info.options;
+  const auto& options = notLost->info.options;
 
   result.mAlpha.Construct(options.alpha);
   result.mDepth = options.depth;
@@ -994,8 +1020,11 @@ std::unordered_map<GLenum, bool> webgl::MakeIsEnabledMap(const bool webgl2) {
 // -------
 
 uvec2 ClientWebGLContext::DrawingBufferSize() {
-  if (IsContextLost()) return {};
   RefPtr<webgl::NotLostData> notLost(mNotLost);
+  if (!notLost) {
+    return {};
+  }
+
   auto& state = State();
   auto& size = state.mDrawingBufferSize;
 
