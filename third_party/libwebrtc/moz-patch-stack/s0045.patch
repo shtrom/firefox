@@ -32,7 +32,7 @@ index 101fd5b687..96b884961f 100644
      defines += [ "WEBRTC_MAC" ]
    }
 diff --git a/modules/video_capture/BUILD.gn b/modules/video_capture/BUILD.gn
-index b8d65383e3..22cafadb45 100644
+index 5e968d3c7a..e65580adf9 100644
 --- a/modules/video_capture/BUILD.gn
 +++ b/modules/video_capture/BUILD.gn
 @@ -80,7 +80,7 @@ if (!build_with_chromium || is_linux || is_chromeos) {
