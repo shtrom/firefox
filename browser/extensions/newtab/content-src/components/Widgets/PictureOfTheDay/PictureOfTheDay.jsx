@@ -46,10 +46,6 @@ const PictureOfTheDay = ({
   const pictureData = useSelector(state => state.PictureOfTheDay);
   const widgetSize = resolveWidgetSize(PICTURE_OF_THE_DAY_ENTRY, prefs);
 
-  const isSetAsWallpaper = Boolean(
-    prefs["widgets.pictureOfTheDay.wallpaperActive"]
-  );
-
   // Only offer the "Set wallpaper" CTA when the feature is enabled and wallpapers
   // are on and custom wallpapers are allowed, since this action sets a custom
   // wallpaper.
@@ -75,6 +71,14 @@ const PictureOfTheDay = ({
   const pictureDate = pictureData.publishedDate || new Date().toDateString();
   const dismissed =
     pictureDate === prefs["widgets.pictureOfTheDay.dismissedDate"];
+  // The picture is the active wallpaper only while the stored published date
+  // matches the currently-shown picture (mirrors the dismissed check above, so a
+  // new day's picture automatically re-offers the CTA) AND wallpapers are toggled
+  // on. Toggling wallpapers off in the Content section keeps the picture selected
+  // but hidden, so the checkmark hides while off and returns when toggled back on.
+  const isSetAsWallpaper =
+    Boolean(prefs["newtabWallpapers.user.enabled"]) &&
+    pictureDate === prefs["widgets.pictureOfTheDay.wallpaperActive"];
   const hasPicture =
     Boolean(pictureData.imageUrl) && !dismissed && !imageFailed;
 
@@ -205,6 +209,11 @@ const PictureOfTheDay = ({
   // derives the theme, and applies it as the custom wallpaper; show a checkmark
   // confirmation immediately.
   const handleSetWallpaper = () => {
+    // Once the picture is the active wallpaper the button is just a status
+    // checkmark, so clicking it is a no-op.
+    if (isSetAsWallpaper) {
+      return;
+    }
     batch(() => {
       dispatch(ac.OnlyToMain({ type: at.WIDGETS_PICTURE_SET_WALLPAPER }));
       recordUserAction("set_wallpaper", { source: "widget" });
@@ -443,10 +452,12 @@ const PictureOfTheDay = ({
               <moz-button
                 className={`picture-of-the-day-set-wallpaper${
                   justSet || isSetAsWallpaper ? " is-collapsed" : ""
-                }${suppressExpand ? " no-expand" : ""}`}
+                }${suppressExpand || isSetAsWallpaper ? " no-expand" : ""}`}
                 type="primary"
                 iconSrc={
-                  justSet ? SET_WALLPAPER_CHECK_ICON : SET_WALLPAPER_ICON
+                  justSet || isSetAsWallpaper
+                    ? SET_WALLPAPER_CHECK_ICON
+                    : SET_WALLPAPER_ICON
                 }
                 onClick={handleSetWallpaper}
                 data-l10n-id="newtab-picture-set-wallpaper"

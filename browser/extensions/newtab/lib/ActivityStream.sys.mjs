@@ -593,8 +593,9 @@ export const PREFS_CONFIG = new Map([
   [
     "widgets.pictureOfTheDay.wallpaperActive",
     {
-      title: "Whether the current Picture of the day is the active wallpaper",
-      value: false,
+      title:
+        "Published date of the Picture of the day set as the active wallpaper",
+      value: "",
     },
   ],
   [

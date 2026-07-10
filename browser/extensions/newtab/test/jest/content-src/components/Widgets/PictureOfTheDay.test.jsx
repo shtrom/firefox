@@ -21,6 +21,7 @@ const mockState = {
       "widgets.pictureOfTheDay.size": "medium",
       "widgets.pictureOfTheDay.setAsWallpaper.enabled": true,
       "newtabWallpapers.enabled": true,
+      "newtabWallpapers.user.enabled": true,
       "newtabWallpapers.customWallpaper.enabled": true,
     },
   },
@@ -268,17 +269,70 @@ describe("PictureOfTheDay widget", () => {
       ).toBeTruthy();
     });
 
-    it("collapses the Set wallpaper button once it is set as wallpaper", () => {
+    it("keeps the Set wallpaper button collapsed with a checkmark while the current picture is the active wallpaper", () => {
       const { container } = renderWidget(
         jest.fn(),
         {},
-        withPrefs({ "widgets.pictureOfTheDay.wallpaperActive": true })
+        withPrefs({ "widgets.pictureOfTheDay.wallpaperActive": "2026-07-01" })
+      );
+      const button = container.querySelector(
+        ".picture-of-the-day-set-wallpaper"
+      );
+      expect(button.classList.contains("is-collapsed")).toBe(true);
+      expect(button.classList.contains("no-expand")).toBe(true);
+      expect(button.getAttribute("iconsrc")).toBe(
+        "chrome://global/skin/icons/check.svg"
+      );
+    });
+
+    it("does nothing when the checkmark (already-set) button is clicked", () => {
+      const dispatch = jest.fn();
+      const { container } = renderWidget(
+        dispatch,
+        {},
+        withPrefs({ "widgets.pictureOfTheDay.wallpaperActive": "2026-07-01" })
+      );
+      fireEvent.click(
+        container.querySelector(".picture-of-the-day-set-wallpaper")
       );
       expect(
-        container.querySelector(
-          ".picture-of-the-day-set-wallpaper.is-collapsed"
+        dispatch.mock.calls.find(
+          ([action]) => action.type === at.WIDGETS_PICTURE_SET_WALLPAPER
         )
-      ).toBeTruthy();
+      ).toBeFalsy();
+    });
+
+    it("hides the checkmark while wallpapers are toggled off, keeping the stored date", () => {
+      const { container } = renderWidget(
+        jest.fn(),
+        {},
+        withPrefs({
+          "widgets.pictureOfTheDay.wallpaperActive": "2026-07-01",
+          "newtabWallpapers.user.enabled": false,
+        })
+      );
+      const button = container.querySelector(
+        ".picture-of-the-day-set-wallpaper"
+      );
+      expect(button.classList.contains("is-collapsed")).toBe(false);
+      expect(button.getAttribute("iconsrc")).toBe(
+        "chrome://browser/skin/canvas.svg"
+      );
+    });
+
+    it("re-offers the Set wallpaper CTA when the active-wallpaper date is for a different picture", () => {
+      const { container } = renderWidget(
+        jest.fn(),
+        {},
+        withPrefs({ "widgets.pictureOfTheDay.wallpaperActive": "2026-06-30" })
+      );
+      const button = container.querySelector(
+        ".picture-of-the-day-set-wallpaper"
+      );
+      expect(button.classList.contains("is-collapsed")).toBe(false);
+      expect(button.getAttribute("iconsrc")).toBe(
+        "chrome://browser/skin/canvas.svg"
+      );
     });
 
     it("hides the Set wallpaper button when custom wallpapers are disabled", () => {

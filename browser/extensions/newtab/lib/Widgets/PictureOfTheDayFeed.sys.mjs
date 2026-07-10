@@ -22,15 +22,21 @@
  *   override) is on AND newtabWallpapers.enabled + customWallpaper.enabled are on
  *   - dispatches WIDGETS_PICTURE_SET_WALLPAPER. setWallpaper() then fetches the
  *   image, derives a theme, applies it as the custom wallpaper (newtabWallpapers.*),
- *   and marks widgets.pictureOfTheDay.wallpaperActive = true.
+ *   and records the picture's published date in
+ *   widgets.pictureOfTheDay.wallpaperActive.
  *
  * State reset:
- *   onPrefChangedAction clears wallpaperActive when the user switches to a
- *   non-custom wallpaper; that flag drives the collapsed "already set" button
- *   state in the JSX.
+ *   The JSX shows the "already set" checkmark only while wallpaperActive equals the
+ *   current picture's published date, so a new day's picture re-offers the CTA on
+ *   its own. wallpaperActive is also cleared when the user switches to a non-custom
+ *   wallpaper (onPrefChangedAction) or replaces the custom wallpaper with a
+ *   different image (onWallpaperUpload). Toggling wallpapers off in the Content
+ *   section does not clear it (the picture stays selected) - the JSX just hides the
+ *   checkmark while newtabWallpapers.user.enabled is off and shows it again on.
  *
  * Two distinct prefs: setAsWallpaper.enabled is the config gate (does the CTA
- * exist); wallpaperActive is runtime state (is this picture the active wallpaper).
+ * exist); wallpaperActive stores the published date of the picture that is the
+ * active wallpaper ("" = none).
  */
 
 const lazy = {};
@@ -77,6 +83,9 @@ export class PictureOfTheDayFeed {
     this.loaded = false;
     this.merino = null;
     this.currentImageUrl = "";
+    // Set while this feed is applying its own wallpaper so the WALLPAPER_UPLOAD
+    // it triggers isn't mistaken for the user replacing the wallpaper.
+    this.settingWallpaper = false;
     this.cache = this.PersistentCache(CACHE_KEY, true);
   }
 
@@ -264,6 +273,7 @@ export class PictureOfTheDayFeed {
       } catch (e) {
         console.error("PictureOfTheDayFeed: theme calculation failed", e);
       }
+      this.settingWallpaper = true;
       this.store.dispatch({
         type: at.WALLPAPER_UPLOAD,
         data: { file: blob, theme },
@@ -277,7 +287,10 @@ export class PictureOfTheDayFeed {
       this.store.dispatch(ac.SetPref("newtabWallpapers.wallpaper", "custom"));
       this.store.dispatch(ac.SetPref("newtabWallpapers.initialWallpaper", ""));
       this.store.dispatch(
-        ac.SetPref("widgets.pictureOfTheDay.wallpaperActive", true)
+        ac.SetPref(
+          "widgets.pictureOfTheDay.wallpaperActive",
+          this.store.getState().PictureOfTheDay?.publishedDate || ""
+        )
       );
     } catch (e) {
       console.error("PictureOfTheDayFeed: failed to set wallpaper", e);
@@ -312,7 +325,7 @@ export class PictureOfTheDayFeed {
           values["newtabWallpapers.wallpaper"] !== "custom"
         ) {
           this.store.dispatch(
-            ac.SetPref("widgets.pictureOfTheDay.wallpaperActive", false)
+            ac.SetPref("widgets.pictureOfTheDay.wallpaperActive", "")
           );
         }
         break;
@@ -338,6 +351,27 @@ export class PictureOfTheDayFeed {
       case at.WIDGETS_PICTURE_SET_WALLPAPER:
         await this.setWallpaper();
         break;
+      case at.WALLPAPER_UPLOAD:
+        this.onWallpaperUpload();
+        break;
+    }
+  }
+
+  // A WALLPAPER_UPLOAD this feed didn't initiate means the user replaced the
+  // custom wallpaper with a different image, so the current picture is no longer
+  // the active wallpaper - clear the "already set" state. Our own
+  // setWallpaper sets `settingWallpaper` and re-records the date right after, so
+  // it must not clear here.
+  onWallpaperUpload() {
+    if (this.settingWallpaper) {
+      this.settingWallpaper = false;
+      return;
+    }
+    const { values } = this.store.getState().Prefs;
+    if (values["widgets.pictureOfTheDay.wallpaperActive"]) {
+      this.store.dispatch(
+        ac.SetPref("widgets.pictureOfTheDay.wallpaperActive", "")
+      );
     }
   }
 }

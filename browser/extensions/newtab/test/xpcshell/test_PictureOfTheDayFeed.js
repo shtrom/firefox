@@ -193,6 +193,12 @@ add_task(async function test_setWallpaper_uploads_and_selects() {
   const sandbox = sinon.createSandbox();
   const feed = makeFeed(sandbox, { prefs: ENABLED_PREFS });
   feed.currentImageUrl = "https://img/hi.jpg";
+  // setWallpaper records the current picture's published date, read from the
+  // PictureOfTheDay redux state.
+  feed.store.getState = () => ({
+    Prefs: { values: ENABLED_PREFS },
+    PictureOfTheDay: { publishedDate: "2026-07-01" },
+  });
 
   const blob = new Blob(["fake"], { type: "image/jpeg" });
   sandbox.stub(feed, "fetchImage").resolves({
@@ -223,9 +229,11 @@ add_task(async function test_setWallpaper_uploads_and_selects() {
   );
   Assert.ok(
     calls.some(
-      c => c.args[0]?.data?.name === "widgets.pictureOfTheDay.wallpaperActive"
+      c =>
+        c.args[0]?.data?.name === "widgets.pictureOfTheDay.wallpaperActive" &&
+        c.args[0]?.data?.value === "2026-07-01"
     ),
-    "marks the picture as set as wallpaper"
+    "records the set picture's published date as the active wallpaper"
   );
   sandbox.restore();
 });
@@ -288,7 +296,7 @@ add_task(async function test_setAsWallpaper_cleared_on_wallpaper_change() {
   const feed = makeFeed(sandbox, {
     prefs: {
       ...ENABLED_PREFS,
-      "widgets.pictureOfTheDay.wallpaperActive": true,
+      "widgets.pictureOfTheDay.wallpaperActive": "2026-07-01",
       "newtabWallpapers.wallpaper": "dark-landscape",
     },
   });
@@ -304,9 +312,61 @@ add_task(async function test_setAsWallpaper_cleared_on_wallpaper_change() {
       .some(
         c =>
           c.args[0]?.data?.name === "widgets.pictureOfTheDay.wallpaperActive" &&
-          c.args[0]?.data?.value === false
+          c.args[0]?.data?.value === ""
       ),
-    "clears setAsWallpaper when a non-custom wallpaper is selected"
+    "clears wallpaperActive when a non-custom wallpaper is selected"
+  );
+  sandbox.restore();
+});
+
+add_task(async function test_wallpaperActive_cleared_on_foreign_upload() {
+  const sandbox = sinon.createSandbox();
+  const feed = makeFeed(sandbox, {
+    prefs: {
+      ...ENABLED_PREFS,
+      "widgets.pictureOfTheDay.wallpaperActive": "2026-07-01",
+    },
+  });
+
+  await feed.onAction({ type: actionTypes.WALLPAPER_UPLOAD, data: {} });
+
+  Assert.ok(
+    feed.store.dispatch
+      .getCalls()
+      .some(
+        c =>
+          c.args[0]?.data?.name === "widgets.pictureOfTheDay.wallpaperActive" &&
+          c.args[0]?.data?.value === ""
+      ),
+    "clears wallpaperActive when the user uploads a different custom wallpaper"
+  );
+  sandbox.restore();
+});
+
+add_task(async function test_wallpaperActive_kept_on_own_upload() {
+  const sandbox = sinon.createSandbox();
+  const feed = makeFeed(sandbox, {
+    prefs: {
+      ...ENABLED_PREFS,
+      "widgets.pictureOfTheDay.wallpaperActive": "2026-07-01",
+    },
+  });
+  feed.settingWallpaper = true;
+
+  await feed.onAction({ type: actionTypes.WALLPAPER_UPLOAD, data: {} });
+
+  Assert.ok(
+    !feed.store.dispatch
+      .getCalls()
+      .some(
+        c => c.args[0]?.data?.name === "widgets.pictureOfTheDay.wallpaperActive"
+      ),
+    "does not clear wallpaperActive for the feed's own upload"
+  );
+  Assert.equal(
+    feed.settingWallpaper,
+    false,
+    "consumes the self-upload guard flag"
   );
   sandbox.restore();
 });
