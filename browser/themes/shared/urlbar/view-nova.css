@@ -658,7 +658,7 @@
 
 /* user context box */
 .urlbarView-userContext {
-  border-top: 4px solid var(--identity-tab-color);
+  border-top: 4px solid var(--identity-stroke-color);
 }
 
 .urlbarView-userContext-icon {
@@ -1217,7 +1217,7 @@
   }
 
   &.urlbarView-userContext {
-    border-top-color: var(--identity-tab-color);
+    border-top-color: var(--identity-stroke-color);
   }
 
   .urlbarView[action-override] &[data-action="tabswitch"] {
