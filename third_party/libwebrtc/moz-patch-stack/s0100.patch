@@ -38,7 +38,7 @@ index 82c4c2f185..a3654ad56c 100644
        ]
        # Added when we removed deps in other places to avoid building
 diff --git a/media/BUILD.gn b/media/BUILD.gn
-index 57581b331f..c86facd8bf 100644
+index ec7ec96ce7..2131aab392 100644
 --- a/media/BUILD.gn
 +++ b/media/BUILD.gn
 @@ -12,12 +12,10 @@ import("../webrtc.gni")
@@ -76,7 +76,7 @@ index 57581b331f..c86facd8bf 100644
  rtc_library("rtp_utils") {
  if (!build_with_mozilla) {
    sources = [
-@@ -396,7 +398,6 @@ rtc_library("media_constants") {
+@@ -399,7 +401,6 @@ rtc_library("media_constants") {
  }
  
  rtc_library("turn_utils") {
@@ -84,7 +84,7 @@ index 57581b331f..c86facd8bf 100644
    sources = [
      "base/turn_utils.cc",
      "base/turn_utils.h",
-@@ -407,10 +408,8 @@ if (!build_with_mozilla) {
+@@ -410,10 +411,8 @@ if (!build_with_mozilla) {
      "../rtc_base/system:rtc_export",
    ]
  }
@@ -95,7 +95,7 @@ index 57581b331f..c86facd8bf 100644
    sources = [
      "base/rid_description.cc",
      "base/rid_description.h",
-@@ -420,7 +419,6 @@ if (!build_with_mozilla) {
+@@ -423,7 +422,6 @@ if (!build_with_mozilla) {
      "//third_party/abseil-cpp/absl/strings:string_view",
    ]
  }
@@ -103,7 +103,7 @@ index 57581b331f..c86facd8bf 100644
  
  rtc_library("rtc_simulcast_encoder_adapter") {
    visibility = [ "*" ]
-@@ -647,6 +645,12 @@ rtc_library("rtc_audio_video") {
+@@ -650,6 +648,12 @@ rtc_library("rtc_audio_video") {
      "engine/webrtc_voice_engine.cc",
      "engine/webrtc_voice_engine.h",
    ]

@@ -214,7 +214,7 @@ index 16f42bd02d..2d9700bb73 100644
                                     int current_delay_ms,
                                     int target_delay_ms,
 diff --git a/video/rtp_video_stream_receiver2.cc b/video/rtp_video_stream_receiver2.cc
-index 01e482be12..8ed9d9db6e 100644
+index 6d8a7ebe94..32cb7c0970 100644
 --- a/video/rtp_video_stream_receiver2.cc
 +++ b/video/rtp_video_stream_receiver2.cc
 @@ -292,6 +292,7 @@ RtpVideoStreamReceiver2::RtpVideoStreamReceiver2(

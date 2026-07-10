@@ -540,7 +540,7 @@ index 88890be798..c9aefc297b 100644
  #include "rtc_base/memory/aligned_malloc.h"
  
 diff --git a/media/BUILD.gn b/media/BUILD.gn
-index ed10a5e1d8..4ea2d5c869 100644
+index 82ed3bf5ad..83e774f680 100644
 --- a/media/BUILD.gn
 +++ b/media/BUILD.gn
 @@ -72,7 +72,7 @@ rtc_library("rtc_media_base") {
@@ -614,7 +614,7 @@ index ed10a5e1d8..4ea2d5c869 100644
  
  rtc_library("media_constants") {
    sources = [
-@@ -381,6 +396,7 @@ rtc_library("media_constants") {
+@@ -384,6 +399,7 @@ rtc_library("media_constants") {
  }
  
  rtc_library("turn_utils") {
@@ -622,7 +622,7 @@ index ed10a5e1d8..4ea2d5c869 100644
    sources = [
      "base/turn_utils.cc",
      "base/turn_utils.h",
-@@ -391,8 +407,10 @@ rtc_library("turn_utils") {
+@@ -394,8 +410,10 @@ rtc_library("turn_utils") {
      "../rtc_base/system:rtc_export",
    ]
  }
@@ -633,7 +633,7 @@ index ed10a5e1d8..4ea2d5c869 100644
    sources = [
      "base/rid_description.cc",
      "base/rid_description.h",
-@@ -402,6 +420,7 @@ rtc_library("rid_description") {
+@@ -405,6 +423,7 @@ rtc_library("rid_description") {
      "//third_party/abseil-cpp/absl/strings:string_view",
    ]
  }
@@ -641,7 +641,7 @@ index ed10a5e1d8..4ea2d5c869 100644
  
  rtc_library("rtc_simulcast_encoder_adapter") {
    visibility = [ "*" ]
-@@ -486,6 +505,11 @@ rtc_library("rtc_internal_video_codecs") {
+@@ -489,6 +508,11 @@ rtc_library("rtc_internal_video_codecs") {
      "//third_party/abseil-cpp/absl/container:inlined_vector",
      "//third_party/abseil-cpp/absl/strings",
    ]
@@ -653,7 +653,7 @@ index ed10a5e1d8..4ea2d5c869 100644
  
    if (enable_libaom) {
      defines += [ "RTC_USE_LIBAOM_AV1_ENCODER" ]
-@@ -505,6 +529,13 @@ rtc_library("rtc_internal_video_codecs") {
+@@ -508,6 +532,13 @@ rtc_library("rtc_internal_video_codecs") {
      "engine/internal_encoder_factory.cc",
      "engine/internal_encoder_factory.h",
    ]
