@@ -21,27 +21,49 @@ SyscallBrokering::SyscallBrokering(std::string_view aFunctionName,
       mContext(aContext ? base::win::UnicodeStringToView(*aContext)
                         : std::wstring_view{}),
       mBrokered(false) {
-  if (!sTargetGeckoServices.logSyscallBrokeringStart) {
+  if (!sTargetGeckoServices.markIntervalStart) {
     return;
   }
 
-  MOZ_ASSERT(sTargetGeckoServices.logSyscallBrokeringEnd,
-             "logSyscallBrokeringEnd must be set to end the started interval.");
+  MOZ_ASSERT(sTargetGeckoServices.markSyscallBrokeringIntervalEnd,
+             "markSyscallBrokeringIntervalEnd must be set to end the started "
+             "interval.");
 
-  sTargetGeckoServices.logSyscallBrokeringStart(mFunctionName);
+  sTargetGeckoServices.markIntervalStart(mFunctionName);
 }
 
 SyscallBrokering::~SyscallBrokering() {
-  if (!sTargetGeckoServices.logSyscallBrokeringEnd) {
+  if (!sTargetGeckoServices.markSyscallBrokeringIntervalEnd) {
     return;
   }
 
-  MOZ_ASSERT(sTargetGeckoServices.logSyscallBrokeringStart,
-             "logSyscallBrokeringStart must be set to have started the "
-             "interval.");
+  MOZ_ASSERT(sTargetGeckoServices.markIntervalStart,
+             "markIntervalStart must be set to have started the interval.");
 
-  sTargetGeckoServices.logSyscallBrokeringEnd(mFunctionName, mContext,
-                                              mBrokered);
+  sTargetGeckoServices.markSyscallBrokeringIntervalEnd(mFunctionName, mContext,
+                                                        mBrokered);
+}
+
+AutoProfileMarker::AutoProfileMarker(std::string_view aName) : mName(aName) {
+  if (!sTargetGeckoServices.markIntervalStart) {
+    return;
+  }
+
+  MOZ_ASSERT(sTargetGeckoServices.markIntervalEnd,
+             "markIntervalEnd must be set to end the started interval.");
+
+  sTargetGeckoServices.markIntervalStart(mName);
+}
+
+AutoProfileMarker::~AutoProfileMarker() {
+  if (!sTargetGeckoServices.markIntervalEnd) {
+    return;
+  }
+
+  MOZ_ASSERT(sTargetGeckoServices.markIntervalStart,
+             "markIntervalStart must be set to have started the interval.");
+
+  sTargetGeckoServices.markIntervalEnd(mName);
 }
 
 }  // namespace mozilla::sandboxing

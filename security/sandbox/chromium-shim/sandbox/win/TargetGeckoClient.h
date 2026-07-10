@@ -50,6 +50,24 @@ class MOZ_RAII SyscallBrokering {
   bool mBrokered;
 };
 
+class MOZ_RAII AutoProfileMarker {
+ public:
+  template <size_t N>
+  explicit AutoProfileMarker(const char (&aName)[N])
+      : AutoProfileMarker(std::string_view(aName, N - 1)) {}
+
+  AutoProfileMarker(const AutoProfileMarker&) = delete;
+  AutoProfileMarker(AutoProfileMarker&&) = delete;
+  AutoProfileMarker& operator=(const AutoProfileMarker&) = delete;
+  AutoProfileMarker& operator=(AutoProfileMarker&&) = delete;
+
+  ~AutoProfileMarker();
+
+ private:
+  explicit AutoProfileMarker(std::string_view aName);
+  std::string_view mName;
+};
+
 }  // namespace mozilla::sandboxing
 
 #define SYSCALL_BROKERING_WITH_CONTEXT(context)                \

@@ -9,14 +9,16 @@
 
 namespace mozilla::sandboxing {
 
-using SyscallBrokeringStartFn = void (*)(std::string_view aName);
-using SyscallBrokeringEndFn = void (*)(std::string_view aName,
-                                       std::wstring_view aContext,
-                                       bool aBrokered);
+using MarkIntervalStartFn = void (*)(std::string_view aName);
+using MarkIntervalEndFn = void (*)(std::string_view aName);
+using MarkSyscallBrokeringIntervalEndFn = void (*)(std::string_view aName,
+                                                   std::wstring_view aContext,
+                                                   bool aBrokered);
 
 struct TargetGeckoServices {
-  SyscallBrokeringStartFn logSyscallBrokeringStart = nullptr;
-  SyscallBrokeringEndFn logSyscallBrokeringEnd = nullptr;
+  MarkIntervalStartFn markIntervalStart = nullptr;
+  MarkIntervalEndFn markIntervalEnd = nullptr;
+  MarkSyscallBrokeringIntervalEndFn markSyscallBrokeringIntervalEnd = nullptr;
 };
 
 using SetTargetGeckoServicesCb = void (*)(const TargetGeckoServices&);

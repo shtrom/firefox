@@ -34,13 +34,20 @@ struct SandboxSyscall : public mozilla::BaseMarkerType<SandboxSyscall> {
 
 namespace mozilla::sandboxing {
 
-static void LogSyscallBrokeringStart(std::string_view aName) {
+static void MarkIntervalStart(std::string_view aName) {
   PROFILER_MARKER_UNTYPED(ProfilerString8View{aName}, SANDBOX,
                           MarkerOptions(MarkerTiming::IntervalStart()));
 }
 
-static void LogSyscallBrokeringEnd(std::string_view aName,
-                                   std::wstring_view aContext, bool aBrokered) {
+static void MarkIntervalEnd(std::string_view aName) {
+  PROFILER_MARKER_UNTYPED(
+      ProfilerString8View{aName}, SANDBOX,
+      MarkerOptions(MarkerTiming::IntervalEnd(), MarkerStack::Capture()));
+}
+
+static void MarkSyscallBrokeringIntervalEnd(std::string_view aName,
+                                            std::wstring_view aContext,
+                                            bool aBrokered) {
   const std::string_view result = aBrokered ? "Allowed" : "Blocked";
 
   const ProfilerString8View name{aName};
@@ -71,8 +78,9 @@ void InitTargetGeckoServices(SetTargetGeckoServicesCb aSetServicesCb) {
   }
 
   TargetGeckoServices services;
-  services.logSyscallBrokeringStart = LogSyscallBrokeringStart;
-  services.logSyscallBrokeringEnd = LogSyscallBrokeringEnd;
+  services.markIntervalStart = MarkIntervalStart;
+  services.markIntervalEnd = MarkIntervalEnd;
+  services.markSyscallBrokeringIntervalEnd = MarkSyscallBrokeringIntervalEnd;
   aSetServicesCb(services);
 }
 
