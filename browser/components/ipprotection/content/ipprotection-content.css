@@ -243,7 +243,12 @@ ipprotection-message-bar.vpn-top-content {
   flex: 1;
 
   > [slot="description"] {
-    padding-inline-start: var(--space-xxlarge);
+    /* Add space equivalent to the size of the icon in the row above
+     * var(--icon-size-small) is the width of the icon
+     * var(--space-small) is the gap between the icon and the label
+     */
+    padding-inline-start: var(--icon-size-small);
+    margin-inline-start: var(--space-small);
     display: inline-block;
   }
 }
