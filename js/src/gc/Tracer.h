@@ -153,6 +153,7 @@ inline void TraceEdge(JSTracer* trc, const BarrieredBase<T>* thingp,
 template <typename T>
 inline void TraceEdge(JSTracer* trc, WeakHeapPtr<T>* thingp, const char* name) {
   auto* basep = gc::ConvertToBase(thingp->unbarrieredAddress());
+  JS::AutoTracingWeakEdge weak(trc);
   MOZ_ALWAYS_TRUE(gc::TraceEdgeInternal(trc, basep, name));
 }
 
@@ -259,6 +260,7 @@ inline TraceWeakResult<T> TraceWeakEdge(JSTracer* trc,
                                         const char* name) {
   T* addr = thingp->unbarrieredAddress();
   T initial = *addr;
+  JS::AutoTracingWeakEdge weak(trc);
   bool live = !InternalBarrierMethods<T>::isMarkable(initial) ||
               gc::TraceEdgeInternal(trc, gc::ConvertToBase(addr), name);
   return TraceWeakResult<T>{live, initial, *addr};
@@ -268,6 +270,7 @@ inline TraceWeakResult<T> TraceManuallyBarrieredWeakEdge(JSTracer* trc,
                                                          T* thingp,
                                                          const char* name) {
   T initial = *thingp;
+  JS::AutoTracingWeakEdge weak(trc);
   bool live = !InternalBarrierMethods<T>::isMarkable(initial) ||
               gc::TraceEdgeInternal(trc, gc::ConvertToBase(thingp), name);
   return TraceWeakResult<T>{live, initial, *thingp};
