@@ -1285,6 +1285,45 @@ static inline bool ShouldTraceWeakEdgeInStub(JSTracer* trc) {
   }
 }
 
+class GetCacheIROpsFunctor : public JS::TracingContext::Functor {
+  const CacheIRStubInfo* stubInfo;
+
+ public:
+  explicit GetCacheIROpsFunctor(const CacheIRStubInfo* stubInfo)
+      : stubInfo(stubInfo) {}
+  virtual void operator()(JS::TracingContext* trc, const char* name, char* buf,
+                          size_t bufsize) override;
+};
+
+void GetCacheIROpsFunctor::operator()(JS::TracingContext* tcx, const char* name,
+                                      char* buf, size_t bufsize) {
+  CacheIRReader reader(stubInfo);
+
+  int nameWritten = snprintf(buf, bufsize, "%s [kind: %s, ops:",
+                             CacheKindNames[uint8_t(stubInfo->kind())], name);
+  if (nameWritten < 0 || size_t(nameWritten) >= bufsize) {
+    return;
+  }
+  size_t totalWritten = size_t(nameWritten);
+
+  while (reader.more()) {
+    CacheOp op = reader.readOp();
+    CacheIROpInfo opInfo = CacheIROpInfos[size_t(op)];
+
+    size_t totalRemaining = bufsize - totalWritten;
+    int written = snprintf(buf + totalWritten, bufsize - totalWritten, " %s",
+                           CacheIRCodeName(op));
+    if (written < 0 || size_t(written) >= totalRemaining) {
+      return;
+    }
+
+    totalWritten += written;
+
+    reader.skip(opInfo.argLength);
+  }
+  snprintf(buf + totalWritten, bufsize - totalWritten, "]");
+}
+
 template <typename T>
 void jit::TraceCacheIRStub(JSTracer* trc, T* stub,
                            const CacheIRStubInfo* stubInfo) {
@@ -1308,6 +1347,8 @@ void jit::TraceCacheIRStub(JSTracer* trc, T* stub,
         // cross-zone shapes.
         GCPtr<Shape*>& shapeField =
             stubInfo->getStubField<T, Type::Shape>(stub, offset);
+        GetCacheIROpsFunctor func(stubInfo);
+        JS::AutoTracingDetails details(trc, func);
         TraceSameZoneCrossCompartmentEdge(trc, &shapeField, "cacheir-shape");
         break;
       }
@@ -1322,6 +1363,8 @@ void jit::TraceCacheIRStub(JSTracer* trc, T* stub,
         }
         break;
       case Type::JSObject: {
+        GetCacheIROpsFunctor func(stubInfo);
+        JS::AutoTracingDetails details(trc, func);
         TraceEdge(trc, &stubInfo->getStubField<T, Type::JSObject>(stub, offset),
                   "cacheir-object");
         break;
@@ -1333,14 +1376,20 @@ void jit::TraceCacheIRStub(JSTracer* trc, T* stub,
                     "cacheir-weak-object");
         }
         break;
-      case Type::Symbol:
+      case Type::Symbol: {
+        GetCacheIROpsFunctor func(stubInfo);
+        JS::AutoTracingDetails details(trc, func);
         TraceEdge(trc, &stubInfo->getStubField<T, Type::Symbol>(stub, offset),
                   "cacheir-symbol");
         break;
-      case Type::String:
+      }
+      case Type::String: {
+        GetCacheIROpsFunctor func(stubInfo);
+        JS::AutoTracingDetails details(trc, func);
         TraceEdge(trc, &stubInfo->getStubField<T, Type::String>(stub, offset),
                   "cacheir-string");
         break;
+      }
       case Type::WeakBaseScript:
         if (ShouldTraceWeakEdgeInStub<T>(trc)) {
           TraceEdge(
@@ -1357,10 +1406,13 @@ void jit::TraceCacheIRStub(JSTracer* trc, T* stub,
         TraceEdge(trc, &stubInfo->getStubField<T, Type::Id>(stub, offset),
                   "cacheir-id");
         break;
-      case Type::Value:
+      case Type::Value: {
+        GetCacheIROpsFunctor func(stubInfo);
+        JS::AutoTracingDetails details(trc, func);
         TraceEdge(trc, &stubInfo->getStubField<T, Type::Value>(stub, offset),
                   "cacheir-value");
         break;
+      }
       case Type::WeakValue:
         if (ShouldTraceWeakEdgeInStub<T>(trc)) {
           TraceEdge(trc,
