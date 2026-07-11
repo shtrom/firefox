@@ -484,26 +484,9 @@ nsresult nsGenericHTMLElement::BindToTree(BindContext& aContext,
     RegUnRegAccessKey(true);
   }
 
-  if (IsInUncomposedDoc()) {
-    Document& doc = aContext.OwnerDoc();
-    if (HasName() && CanHaveName(NodeInfo()->NameAtom())) {
-      doc.AddToNameTable(this, GetParsedAttr(nsGkAtoms::name)->GetAtomValue());
-    }
-
-    nsAtom* id = nullptr;
-    if (ShouldExposeIdAsHTMLDocumentProperty(this)) {
-      id = DoGetID();
-      MOZ_ASSERT(id && id != nsGkAtoms::_empty);
-      doc.AddToDocumentNameTable(this, id);
-    }
-    if (ShouldExposeNameAsHTMLDocumentProperty(this)) {
-      nsAtom* name = GetParsedAttr(nsGkAtoms::name)->GetAtomValue();
-      MOZ_ASSERT(name && name != nsGkAtoms::_empty);
-      // Make sure not to double-add if id and name are the same.
-      if (id != name) {
-        doc.AddToDocumentNameTable(this, name);
-      }
-    }
+  if (HasName() && IsInUncomposedDoc() && CanHaveName(NodeInfo()->NameAtom())) {
+    aContext.OwnerDoc().AddToNameTable(
+        this, GetParsedAttr(nsGkAtoms::name)->GetAtomValue());
   }
 
   if (HasFlag(NODE_IS_EDITABLE) &&
@@ -551,23 +534,6 @@ void nsGenericHTMLElement::UnbindFromTree(UnbindContext& aContext) {
   }
 
   RemoveFromNameTable();
-
-  if (Document* doc = GetUncomposedDoc()) {
-    nsAtom* id = nullptr;
-    if (ShouldExposeIdAsHTMLDocumentProperty(this)) {
-      id = DoGetID();
-      MOZ_ASSERT(id && id != nsGkAtoms::_empty);
-      doc->RemoveFromDocumentNameTable(this, id);
-    }
-    if (ShouldExposeNameAsHTMLDocumentProperty(this)) {
-      nsAtom* name = GetParsedAttr(nsGkAtoms::name)->GetAtomValue();
-      MOZ_ASSERT(name && name != nsGkAtoms::_empty);
-      // Make sure not to double-remove if id and name are the same.
-      if (id != name) {
-        doc->RemoveFromDocumentNameTable(this, name);
-      }
-    }
-  }
 
   if (HasContentEditableAttrTrueOrPlainTextOnly() ||
       HasFlag(ELEMENT_HAS_EDIT_CONTEXT)) {
@@ -694,44 +660,6 @@ void nsGenericHTMLElement::BeforeSetAttr(int32_t aNamespaceID, nsAtom* aName,
     } else if (aName == nsGkAtoms::name) {
       // Have to do this before clearing flag. See RemoveFromNameTable
       RemoveFromNameTable();
-
-      nsAtom* exposedIdOnDocument = nullptr;
-      Document* doc = GetUncomposedDoc();
-      if (doc) {
-        nsAtom* exposedNameOnDocument =
-            ShouldExposeNameAsHTMLDocumentProperty(this)
-                ? GetParsedAttr(nsGkAtoms::name)->GetAtomValue()
-                : nullptr;
-        exposedIdOnDocument =
-            ShouldExposeIdAsHTMLDocumentProperty(this) ? DoGetID() : nullptr;
-        if (exposedNameOnDocument &&
-            exposedNameOnDocument != exposedIdOnDocument) {
-          MOZ_ASSERT(exposedNameOnDocument != nsGkAtoms::_empty);
-          doc->RemoveFromDocumentNameTable(this, exposedNameOnDocument);
-        }
-      }
-      if (!aValue || aValue->IsEmptyString()) {
-        ClearHasName();
-        // The result of ShouldExposeIdAsHTMLDocumentProperty() might change
-        // after clearing the hasName flag.
-        if (doc && exposedIdOnDocument &&
-            !ShouldExposeIdAsHTMLDocumentProperty(this)) {
-          doc->RemoveFromDocumentNameTable(this, exposedIdOnDocument);
-        }
-      }
-    } else if (aName == nsGkAtoms::id) {
-      if (Document* doc = GetUncomposedDoc()) {
-        nsAtom* exposedIdOnDocument =
-            ShouldExposeIdAsHTMLDocumentProperty(this) ? DoGetID() : nullptr;
-        nsAtom* exposedNameOnDocument =
-            ShouldExposeNameAsHTMLDocumentProperty(this)
-                ? GetParsedAttr(nsGkAtoms::name)->GetAtomValue()
-                : nullptr;
-        if (exposedIdOnDocument &&
-            exposedIdOnDocument != exposedNameOnDocument) {
-          doc->RemoveFromDocumentNameTable(this, exposedIdOnDocument);
-        }
-      }
     } else if (aName == nsGkAtoms::contenteditable) {
       if (aValue) {
         // Set this before the attribute is set so that any subclass code that
@@ -949,29 +877,8 @@ void nsGenericHTMLElement::AfterSetAttr(int32_t aNamespaceID, nsAtom* aName,
         if (CanHaveName(NodeInfo()->NameAtom())) {
           AddToNameTable(aValue->GetAtomValue());
         }
-        if (Document* doc = GetUncomposedDoc()) {
-          if (ShouldExposeNameAsHTMLDocumentProperty(this)) {
-            nsAtom* id = ShouldExposeIdAsHTMLDocumentProperty(this) ? DoGetID()
-                                                                    : nullptr;
-            nsAtom* name = aValue->GetAtomValue();
-            // Make sure not to double-add if id and name are the same
-            if (id != name) {
-              doc->AddToDocumentNameTable(this, name);
-            }
-          }
-        }
-      }
-    } else if (aName == nsGkAtoms::id) {
-      if (Document* doc = GetUncomposedDoc()) {
-        if (aValue && ShouldExposeIdAsHTMLDocumentProperty(this)) {
-          nsAtom* id = aValue->GetAtomValue();
-          nsAtom* name = ShouldExposeNameAsHTMLDocumentProperty(this)
-                             ? GetParsedAttr(nsGkAtoms::name)->GetAtomValue()
-                             : nullptr;
-          if (id != name) {
-            doc->AddToDocumentNameTable(this, id);
-          }
-        }
+      } else {
+        ClearHasName();
       }
     } else if (aName == nsGkAtoms::inputmode ||
                aName == nsGkAtoms::enterkeyhint) {
