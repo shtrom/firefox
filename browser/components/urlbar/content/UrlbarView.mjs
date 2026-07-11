@@ -2693,7 +2693,7 @@ export class UrlbarView {
 
     // Get the view update from the result's provider.
     let viewUpdate = await this.controller.getViewUpdate(result, idsByName);
-    if (item.result != result) {
+    if (item.result != result || !viewUpdate) {
       return;
     }
 

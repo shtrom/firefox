@@ -162,9 +162,14 @@ export class UrlbarParentController {
    * @returns {Promise<object>} The view update.
    */
   getViewUpdate(result, idsByName) {
+    // On the message path this round-trips asynchronously, so the provider can
+    // be unregistered by the time it runs. In practice this only happens in
+    // tests, which unregister providers mid-run while a superseded query's row
+    // is still tearing down. The update is then moot; return nothing and let
+    // the view skip it.
     return this.manager
       .getProvider(result.providerName)
-      .getViewUpdate(result, idsByName);
+      ?.getViewUpdate(result, idsByName);
   }
 
   /**
