@@ -1,38 +1,11 @@
-# Trigger Listeners
+# Triggers
 
-A set of action listeners that can be used to trigger CFR messages.
+Triggers can be used to decide when messages are shown.
 
 ## Usage
 
-[As part of the CFR definition](https://searchfox.org/mozilla-central/rev/2bfe3415fb3a2fba9b1c694bc0b376365e086927/browser/components/newtab/lib/CFRMessageProvider.jsm#194) the message can register at most one trigger used to decide when the message is shown.
-
-Most triggers (unless otherwise specified) take the same arguments of `hosts` and/or `patterns`
-used to target the message to specific websites.
-
-```javascript
-// Optional set of hosts to filter out triggers only to certain websites
-let params: string[];
-// Optional set of [match patterns](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Match_patterns) to filter out triggers only to certain websites
-let patterns: string[];
-```
-
-```javascript
-{
-  ...
-  // Show the message when opening mozilla.org
-  "trigger": { "id": "openURL", "params": ["mozilla.org", "www.mozilla.org"] }
-  ...
-}
-```
-
-```javascript
-{
-  ...
-  // Show the message when opening any HTTP, HTTPS URL.
-  trigger: { id: "openURL", patterns: ["*://*/*"] }
-  ...
-}
-```
+Messages can define a single `trigger` object used to determine when the message should be shown.
+The `trigger` object must include an `id` string identifying the trigger action and may include optional trigger-specific properties such as `params`, `patterns`, or `regexPatterns`.
 
 ## Multiple triggers
 
@@ -103,6 +76,44 @@ targeting, use separate messages instead.
 
 Happens when the user loads a Reader Mode compatible webpage.
 
+Supports filtering with `params`, [`patterns`](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Match_patterns), and `regexPatterns`.
+
+```javascript
+// Optional set of hosts to filter out triggers only to certain websites
+let params: string[];
+// Optional set of Match patterns to filter out triggers only to certain websites
+let patterns: string[];
+// Optional regular expression patterns to filter out triggers only to certain websites
+let regexPatterns: string[];
+```
+
+```javascript
+{
+  ...
+  // Show the message when opening mozilla.org
+  "trigger": { "id": "openArticleURL", "params": ["mozilla.org", "www.mozilla.org"] }
+  ...
+}
+```
+
+```javascript
+{
+  ...
+  // Show the message when opening any HTTP, HTTPS URL.
+  trigger: { id: "openArticleURL", patterns: ["*://*/*"] }
+  ...
+}
+```
+
+```javascript
+{
+  ...
+  // Show the message when opening a URL that matches the regular expression.
+  trigger: { id: "openArticleURL", regexPatterns: ["^https://.*\\.mozilla\\.org/.*"] }
+  ...
+}
+```
+
 ### `openBookmarkedURL`
 
 Happens when the user bookmarks or navigates to a bookmarked URL.
@@ -138,6 +149,44 @@ interface visit {
 let recentVisits: visit[];
 ```
 
+Supports filtering with `params`, [`patterns`](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Match_patterns), and `regexPatterns`.
+
+```javascript
+// Optional set of hosts to filter out triggers only to certain websites
+let params: string[];
+// Optional set of Match patterns to filter out triggers only to certain websites
+let patterns: string[];
+// Optional regular expression patterns to filter out triggers only to certain websites
+let regexPatterns: string[];
+```
+
+```javascript
+{
+  ...
+  // Show the message when visiting mozilla.org
+  "trigger": { "id": "frequentVisits", "params": ["mozilla.org", "www.mozilla.org"] }
+  ...
+}
+```
+
+```javascript
+{
+  ...
+  // Show the message when visiting any HTTP, HTTPS URL.
+  trigger: { id: "frequentVisits", patterns: ["*://*/*"] }
+  ...
+}
+```
+
+```javascript
+{
+  ...
+  // Show the message when visiting a URL that matches the regular expression.
+  trigger: { id: "frequentVisits", regexPatterns: ["^https://.*\\.mozilla\\.org/.*"] }
+  ...
+}
+```
+
 ### `openURL`
 
 Happens every time the user loads a new URL that matches the provided `hosts` or `patterns`.
@@ -146,6 +195,44 @@ During a browsing session it keeps track of visits to unique urls that can be us
 ```javascript
 // True on the third visit for the URL which the trigger matched on
 visitsCount >= 3
+```
+
+Supports filtering with `params`, [`patterns`](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Match_patterns), and `regexPatterns`.
+
+```javascript
+// Optional set of hosts to filter out triggers only to certain websites
+let params: string[];
+// Optional set of Match patterns to filter out triggers only to certain websites
+let patterns: string[];
+// Optional regular expression patterns to filter out triggers only to certain websites
+let regexPatterns: string[];
+```
+
+```javascript
+{
+  ...
+  // Show the message when opening mozilla.org
+  "trigger": { "id": "openURL", "params": ["mozilla.org", "www.mozilla.org"] }
+  ...
+}
+```
+
+```javascript
+{
+  ...
+  // Show the message when opening any HTTP, HTTPS URL.
+  trigger: { id: "openURL", patterns: ["*://*/*"] }
+  ...
+}
+```
+
+```javascript
+{
+  ...
+  // Show the message when opening a URL that matches the regular expression.
+  trigger: { id: "openURL", regexPatterns: ["^https://.*\\.mozilla\\.org/.*"] }
+  ...
+}
 ```
 
 ### `newSavedLogin`
