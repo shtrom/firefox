@@ -4693,6 +4693,10 @@ static void DumpModuleEntryVectorItems(
       DumpTaggedParserAtomIndex(json, entry.importName, stencil);
       json.endObject();
     }
+    if (entry.importNameValueType != js::ImportNameValueType::String) {
+      json.property("importNameValueType",
+                    static_cast<uint32_t>(entry.importNameValueType));
+    }
     if (entry.exportName) {
       json.beginObjectProperty("exportName");
       DumpTaggedParserAtomIndex(json, entry.exportName, stencil);

@@ -599,7 +599,7 @@ template <XDRMode mode>
   MOZ_TRY(xdr->codeUint32(stencil.specifier.rawDataRef()));
   MOZ_TRY(xdr->codeUint32(stencil.firstUnsupportedAttributeKey.rawDataRef()));
   MOZ_TRY(XDRVectorContent(xdr, stencil.attributes));
-  MOZ_TRY(xdr->codeUint8(reinterpret_cast<uint8_t*>(&stencil.phase)));
+  MOZ_TRY(xdr->codeEnumU8(&stencil.phase));
 
   return Ok();
 }
@@ -623,6 +623,7 @@ template <XDRMode mode>
   MOZ_TRY(xdr->codeUint32(stencil.localName.rawDataRef()));
   MOZ_TRY(xdr->codeUint32(stencil.importName.rawDataRef()));
   MOZ_TRY(xdr->codeUint32(stencil.exportName.rawDataRef()));
+  MOZ_TRY(xdr->codeEnumU8(&stencil.importNameValueType));
   MOZ_TRY(xdr->codeUint32(&stencil.lineno));
   MOZ_TRY(xdr->codeUint32(stencil.column.addressOfValueForTranscode()));
 

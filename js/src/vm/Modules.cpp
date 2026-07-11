@@ -998,15 +998,16 @@ static bool CyclicModuleResolveExport(JSContext* cx,
       }
       MOZ_ASSERT(importedModule->status() >= ModuleStatus::Unlinked);
 
-      name = e.importName();
       // Step 6.a.iii. If e.[[ImportName]] is ~namespace~, then:
-      if (e.importName() == cx->names().star_namespace_star_) {
+      if (e.importNameValueType() == ImportNameValueType::Namespace) {
         // Step 6.a.iii.1. Assert: module does not provide the direct binding
         //                 for this export.
         // Step 6.a.iii.2. Return ResolvedBinding Record { [[Module]]:
         //                 importedModule, [[BindingName]]: NAMESPACE }.
+        name = cx->names().star_namespace_star_;
         return CreateResolvedBindingObject(cx, importedModule, name, result);
       } else {
+        name = e.importName();
         // Step 6.a.iv.1. Assert: module imports a specific binding for this
         //                export.
         // Step 6.a.iv.2. Return ? importedModule.ResolveExport(e.[[ImportName]]
@@ -1466,7 +1467,7 @@ static bool ModuleInitializeEnvironment(JSContext* cx,
     importName = in.importName();
 
     // Step 7.b. If in.[[ImportName]] is ~namespace~, then:
-    if (importName == cx->names().star_namespace_star_) {
+    if (in.importNameValueType() == ImportNameValueType::Namespace) {
       // Step 7.b.i. Let namespace be ? GetModuleNamespace(importedModule).
       ModuleNamespaceObject* ns =
           GetOrCreateModuleNamespace(cx, importedModule);
@@ -1480,7 +1481,7 @@ static bool ModuleInitializeEnvironment(JSContext* cx,
       // Step 7.b.iii. Perform ! env.InitializeBinding(in.[[LocalName]],
       // namespace).
       InitNamespaceOrSourceBinding(cx, env, localName, ObjectValue(*ns));
-    } else if (importName == cx->names().star_source_star_) {
+    } else if (in.importNameValueType() == ImportNameValueType::Source) {
       // https://tc39.es/ecma262/#sec-source-text-module-record-initialize-environment
       // Step 7.c. Else if in.[[ImportName]] is ~source~, then
       // Step 7.c.i. Let moduleSourceObject be importedModule.[[ModuleSource]].
@@ -1504,8 +1505,8 @@ static bool ModuleInitializeEnvironment(JSContext* cx,
     } else {
       // Step 7.d. Else:
       // Step 7.d.i. Assert: in.[[ImportName]] is a String.
-      MOZ_ASSERT(importName && importName != cx->names().star_namespace_star_ &&
-                 importName != cx->names().star_source_star_);
+      MOZ_ASSERT(importName &&
+                 in.importNameValueType() == ImportNameValueType::String);
 
       // Step 7.d.ii. Let resolution be ?
       // importedModule.ResolveExport(in.[[ImportName]]).
