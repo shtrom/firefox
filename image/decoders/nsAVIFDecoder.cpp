@@ -3,21 +3,18 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "ImageLogging.h"  // Must appear first
-
 #include "nsAVIFDecoder.h"
 
 #include <aom/aomdx.h>
 
 #include "DAV1DDecoder.h"
-#include "gfxPlatform.h"
-#include "YCbCrUtils.h"
-#include "libyuv.h"
-
+#include "ImageLogging.h"  // Must appear first
 #include "SurfacePipeFactory.h"
-
-#include "mozilla/glean/ImageDecodersMetrics.h"
+#include "YCbCrUtils.h"
+#include "gfxPlatform.h"
+#include "libyuv.h"
 #include "mozilla/UniquePtrExtensions.h"
+#include "mozilla/glean/ImageDecodersMetrics.h"
 
 using namespace mozilla::gfx;
 

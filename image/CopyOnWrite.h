@@ -10,8 +10,8 @@
 #ifndef mozilla_image_CopyOnWrite_h
 #define mozilla_image_CopyOnWrite_h
 
-#include "mozilla/RefPtr.h"
 #include "MainThreadUtils.h"
+#include "mozilla/RefPtr.h"
 #include "nsISupportsImpl.h"
 
 namespace mozilla {

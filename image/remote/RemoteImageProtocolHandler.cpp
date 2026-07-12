@@ -4,10 +4,15 @@
 
 #include "RemoteImageProtocolHandler.h"
 
+#include "ImageRegion.h"
 #include "gfxContext.h"
 #include "gfxUtils.h"
-#include "ImageRegion.h"
 #include "imgITools.h"
+#include "mozilla/SVGImageContext.h"
+#include "mozilla/dom/ContentParent.h"
+#include "mozilla/dom/ContentProcessManager.h"
+#include "mozilla/dom/ipc/IdType.h"
+#include "mozilla/gfx/2D.h"
 #include "nsContentUtils.h"
 #include "nsIPipe.h"
 #include "nsIURI.h"
@@ -15,11 +20,6 @@
 #include "nsNetUtil.h"
 #include "nsStreamUtils.h"
 #include "nsURLHelper.h"
-#include "mozilla/dom/ContentParent.h"
-#include "mozilla/dom/ContentProcessManager.h"
-#include "mozilla/dom/ipc/IdType.h"
-#include "mozilla/gfx/2D.h"
-#include "mozilla/SVGImageContext.h"
 
 namespace mozilla::image {
 

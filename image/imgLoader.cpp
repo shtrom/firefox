@@ -8,8 +8,6 @@
 #include "nsIThreadRetargetableStreamListener.h"
 #undef LoadImage
 
-#include "imgLoader.h"
-
 #include <algorithm>
 #include <utility>
 
@@ -17,28 +15,29 @@
 #include "Image.h"
 #include "ImageLogging.h"
 #include "ReferrerInfo.h"
+#include "imgLoader.h"
 #include "imgRequestProxy.h"
 #include "mozilla/BasePrincipal.h"
 #include "mozilla/ChaosMode.h"
 #include "mozilla/ClearOnShutdown.h"
 #include "mozilla/LoadInfo.h"
+#include "mozilla/Maybe.h"
 #include "mozilla/NullPrincipal.h"
 #include "mozilla/Preferences.h"
 #include "mozilla/ProfilerLabels.h"
+#include "mozilla/SharedSubResourceCache.h"
 #include "mozilla/StaticPrefs_image.h"
 #include "mozilla/StaticPrefs_network.h"
 #include "mozilla/StoragePrincipalHelper.h"
-#include "mozilla/Maybe.h"
-#include "mozilla/SharedSubResourceCache.h"
 #include "mozilla/dom/CacheExpirationTime.h"
 #include "mozilla/dom/ContentParent.h"
 #include "mozilla/dom/FetchPriority.h"
 #include "mozilla/dom/nsMixedContentBlocker.h"
 #ifdef NIGHTLY_BUILD
-#  include "mozilla/dom/PolicyContainer.h"
-#  include "mozilla/dom/IntegrityPolicyWAICT.h"
-#  include "mozilla/dom/WAICTUtils.h"
 #  include "mozilla/StaticPrefs_security.h"
+#  include "mozilla/dom/IntegrityPolicyWAICT.h"
+#  include "mozilla/dom/PolicyContainer.h"
+#  include "mozilla/dom/WAICTUtils.h"
 #  include "nsStringStream.h"
 static bool ShouldEnableWAICT(mozilla::dom::Document* aDoc);
 #endif
@@ -79,9 +78,9 @@ static bool ShouldEnableWAICT(mozilla::dom::Document* aDoc);
 // we want to explore making the document own the load group
 // so we can associate the document URI with the load group.
 // until this point, we have an evil hack:
+#include "nsIDocShell.h"
 #include "nsIHttpChannelInternal.h"
 #include "nsILoadGroupChild.h"
-#include "nsIDocShell.h"
 
 using namespace mozilla;
 using namespace mozilla::dom;

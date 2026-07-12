@@ -3,19 +3,18 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "ImageLogging.h"
 #include "ProgressTracker.h"
 
+#include "Image.h"
+#include "ImageLogging.h"
 #include "imgINotificationObserver.h"
 #include "imgIRequest.h"
-#include "Image.h"
-#include "nsNetUtil.h"
-#include "nsIObserverService.h"
-
 #include "mozilla/AppShutdown.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/SchedulerGroup.h"
 #include "mozilla/Services.h"
+#include "nsIObserverService.h"
+#include "nsNetUtil.h"
 
 using mozilla::WeakPtr;
 
