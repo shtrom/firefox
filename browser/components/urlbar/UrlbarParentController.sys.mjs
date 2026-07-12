@@ -1460,14 +1460,73 @@ class TelemetryEvent {
       await this.handleBounceEventTrigger(browser);
     }
 
-    // Capture the visible results now so the deferred recording indexes the
-    // same set as the tracked selIndex, not the live view's at trigger time.
-    details.visibleResults = this.#engagementData.visibleResults;
-
     state.bounceEventTracking = {
       startTime: Date.now(),
-      pickEvent: event,
-      resultDetails: details,
+      snapshot: this.#collectBounceSnapshot(
+        event,
+        details,
+        startEventInfo,
+        this.#engagementData.visibleResults
+      ),
+    };
+  }
+
+  /**
+   * Resolves the data a bounce recording needs from the picked result and the
+   * DOM event at pick time, so the deferred recording (which runs after the
+   * event is gone, and parent-side on the message path) needs neither. Like
+   * `UrlbarTelemetryUtils.collectSnapshot()`, but for the bounce method, whose
+   * recording shape differs.
+   *
+   * @param {?Event} event
+   *   The DOM event behind the engagement, or null for paste&go / drop&go.
+   * @param {ActionDetails} details
+   *   The interaction details.
+   * @param {?object} startEventInfo
+   *   The session's start info, or null when no session is in progress.
+   * @param {UrlbarResult[]} visibleResults
+   *   The results shown at pick time. Captured into the snapshot next to
+   *   `selIndex` (which indexes into it) so the deferred recording pairs them
+   *   from one view read, not whatever the view shows post-navigation.
+   * @returns {?object} The bounce snapshot, or null when there's no session.
+   */
+  #collectBounceSnapshot(event, details, startEventInfo, visibleResults) {
+    if (!startEventInfo) {
+      return null;
+    }
+    if (
+      !event &&
+      startEventInfo.interactionType != "pasted" &&
+      startEventInfo.interactionType != "dropped"
+    ) {
+      // If no event is passed, we must be executing either paste&go or drop&go.
+      throw new Error("Event must be defined, unless input was pasted/dropped");
+    }
+    if (!details) {
+      throw new Error("Invalid event details: " + details);
+    }
+
+    let action = lazy.UrlbarTelemetryUtils.actionFromEvent(
+      event,
+      details,
+      startEventInfo.interactionType
+    );
+    let { numChars, numWords, searchWords } =
+      lazy.UrlbarTelemetryUtils.parseSearchString(details.searchString);
+
+    return {
+      action,
+      numChars,
+      numWords,
+      searchWords,
+      provider: details.result?.providerName,
+      selIndex: details.result?.rowIndex ?? -1,
+      visibleResults: visibleResults ?? [],
+      selType: details.selType,
+      searchSource: details.searchSource,
+      searchMode: details.searchMode,
+      location: details.location,
+      windowMode: details.windowMode,
       startEventInfo,
     };
   }
@@ -1528,55 +1587,27 @@ class TelemetryEvent {
    *  navigating away via browser chrome or closing the tab.
    */
   recordBounceEvent(browser, viewTime) {
-    let state = this._controller.input.getBrowserState(browser);
-    let event = state.bounceEventTracking.pickEvent;
-    let details = state.bounceEventTracking.resultDetails;
-
-    let startEventInfo = state.bounceEventTracking.startEventInfo;
-
-    if (!startEventInfo) {
+    let { snapshot } =
+      this._controller.input.getBrowserState(browser).bounceEventTracking;
+    if (!snapshot) {
       return;
     }
 
-    if (
-      !event &&
-      startEventInfo.interactionType != "pasted" &&
-      startEventInfo.interactionType != "dropped"
-    ) {
-      // If no event is passed, we must be executing either paste&go or drop&go.
-      throw new Error("Event must be defined, unless input was pasted/dropped");
-    }
-    if (!details) {
-      throw new Error("Invalid event details: " + details);
-    }
-
-    let action = lazy.UrlbarTelemetryUtils.actionFromEvent(
-      event,
-      details,
-      startEventInfo.interactionType
-    );
-
-    let { numChars, numWords, searchWords } =
-      lazy.UrlbarTelemetryUtils.parseSearchString(details.searchString);
-
-    details.provider = details.result?.providerName;
-    details.selIndex = details.result?.rowIndex ?? -1;
-
-    this.#recordSearchEngagementTelemetry("bounce", startEventInfo, {
-      action,
-      numChars,
-      numWords,
-      searchWords,
-      provider: details.provider,
-      searchSource: details.searchSource,
-      searchMode: details.searchMode,
-      selIndex: details.selIndex,
-      visibleResults: details.visibleResults,
-      selType: details.selType,
+    this.#recordSearchEngagementTelemetry("bounce", snapshot.startEventInfo, {
+      action: snapshot.action,
+      numChars: snapshot.numChars,
+      numWords: snapshot.numWords,
+      searchWords: snapshot.searchWords,
+      provider: snapshot.provider,
+      searchSource: snapshot.searchSource,
+      searchMode: snapshot.searchMode,
+      selIndex: snapshot.selIndex,
+      visibleResults: snapshot.visibleResults,
+      selType: snapshot.selType,
       viewTime: viewTime / 1000,
-      location: details.location,
-      windowMode: details.windowMode,
-      ...this.#getOptionalSmartbarTelemetry(details.searchSource),
+      location: snapshot.location,
+      windowMode: snapshot.windowMode,
+      ...this.#getOptionalSmartbarTelemetry(snapshot.searchSource),
     });
   }
 }
