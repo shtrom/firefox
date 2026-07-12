@@ -4,40 +4,40 @@
 
 #include "TextureHost.h"
 
+#include <limits>
+
+#include "../opengl/CompositorOGL.h"
 #include "CompositableHost.h"  // for CompositableHost
-#include "mozilla/gfx/2D.h"    // for DataSourceSurface, Factory
+#include "gfxUtils.h"
+#include "mozilla/RefPtr.h"  // for nsRefPtr
+#include "mozilla/StaticPrefs_gfx.h"
+#include "mozilla/StaticPrefs_layers.h"
+#include "mozilla/gfx/2D.h"  // for DataSourceSurface, Factory
 #include "mozilla/gfx/CanvasManagerParent.h"
 #include "mozilla/gfx/gfxVars.h"
 #include "mozilla/ipc/Shmem.h"  // for Shmem
 #include "mozilla/layers/AsyncImagePipelineManager.h"
 #include "mozilla/layers/BufferTexture.h"
 #include "mozilla/layers/CompositableTransactionParent.h"  // for CompositableParentManager
+#include "mozilla/layers/Compositor.h"                     // for Compositor
 #include "mozilla/layers/CompositorBridgeParent.h"
-#include "mozilla/layers/Compositor.h"         // for Compositor
+#include "mozilla/layers/GPUVideoTextureHost.h"
 #include "mozilla/layers/ISurfaceAllocator.h"  // for ISurfaceAllocator
 #include "mozilla/layers/ImageBridgeParent.h"  // for ImageBridgeParent
-#include "mozilla/layers/LayersSurfaces.h"     // for SurfaceDescriptor, etc
-#include "mozilla/layers/RemoteTextureMap.h"
-#include "mozilla/layers/TextureHostOGL.h"  // for TextureHostOGL
 #include "mozilla/layers/ImageDataSerializer.h"
+#include "mozilla/layers/LayersSurfaces.h"  // for SurfaceDescriptor, etc
+#include "mozilla/layers/PTextureParent.h"
+#include "mozilla/layers/RemoteTextureMap.h"
 #include "mozilla/layers/TextureClient.h"
-#include "mozilla/layers/GPUVideoTextureHost.h"
+#include "mozilla/layers/TextureHostOGL.h"  // for TextureHostOGL
 #include "mozilla/layers/VideoBridgeParent.h"
 #include "mozilla/layers/WebRenderTextureHost.h"
-#include "mozilla/StaticPrefs_layers.h"
-#include "mozilla/StaticPrefs_gfx.h"
 #include "mozilla/webrender/RenderBufferTextureHost.h"
 #include "mozilla/webrender/RenderExternalTextureHost.h"
 #include "mozilla/webrender/RenderThread.h"
 #include "mozilla/webrender/WebRenderAPI.h"
 #include "nsAString.h"
-#include "mozilla/RefPtr.h"   // for nsRefPtr
 #include "nsPrintfCString.h"  // for nsPrintfCString
-#include "mozilla/layers/PTextureParent.h"
-#include <limits>
-#include "../opengl/CompositorOGL.h"
-
-#include "gfxUtils.h"
 
 #ifdef XP_MACOSX
 #  include "../opengl/MacIOSurfaceTextureHostOGL.h"

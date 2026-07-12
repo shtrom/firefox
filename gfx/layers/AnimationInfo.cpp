@@ -3,24 +3,25 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "AnimationInfo.h"
-#include "mozilla/LayerAnimationInfo.h"
-#include "mozilla/gfx/Matrix.h"
-#include "mozilla/layers/AnimationStorageData.h"
-#include "mozilla/layers/WebRenderLayerManager.h"
-#include "mozilla/layers/AnimationHelper.h"
-#include "mozilla/layers/CompositorThread.h"
-#include "mozilla/dom/Animation.h"
-#include "mozilla/dom/CSSTransition.h"
-#include "mozilla/dom/KeyframeEffect.h"
+
+#include "PuppetWidget.h"
 #include "mozilla/EffectSet.h"
+#include "mozilla/LayerAnimationInfo.h"
 #include "mozilla/MotionPathUtils.h"
 #include "mozilla/PresShell.h"
 #include "mozilla/ScrollContainerFrame.h"
+#include "mozilla/dom/Animation.h"
+#include "mozilla/dom/CSSTransition.h"
+#include "mozilla/dom/KeyframeEffect.h"
+#include "mozilla/gfx/Matrix.h"
+#include "mozilla/layers/AnimationHelper.h"
+#include "mozilla/layers/AnimationStorageData.h"
+#include "mozilla/layers/CompositorThread.h"
+#include "mozilla/layers/WebRenderLayerManager.h"
 #include "nsIContent.h"
 #include "nsLayoutUtils.h"
 #include "nsRefreshDriver.h"
 #include "nsStyleTransformMatrix.h"
-#include "PuppetWidget.h"
 
 namespace mozilla::layers {
 

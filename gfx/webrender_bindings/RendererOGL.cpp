@@ -4,13 +4,12 @@
 
 #include "RendererOGL.h"
 
-#include "base/task.h"
 #include "GLContext.h"
-#include "mozilla/gfx/Logging.h"
+#include "base/task.h"
 #include "mozilla/Logging.h"
-
-#include "mozilla/gfx/gfxVars.h"
+#include "mozilla/gfx/Logging.h"
 #include "mozilla/gfx/Types.h"
+#include "mozilla/gfx/gfxVars.h"
 #include "mozilla/layers/CompositorBridgeParent.h"
 #include "mozilla/layers/CompositorThread.h"
 #include "mozilla/layers/Fence.h"
@@ -22,8 +21,8 @@
 
 #ifdef MOZ_WIDGET_ANDROID
 #  include "GLContextEGL.h"
-#  include "mozilla/layers/AndroidHardwareBuffer.h"
 #  include "ScopedGLHelpers.h"
+#  include "mozilla/layers/AndroidHardwareBuffer.h"
 #endif
 
 namespace mozilla {

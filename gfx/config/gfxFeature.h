@@ -4,8 +4,10 @@
 #ifndef mozilla_gfx_config_gfxFeature_h
 #define mozilla_gfx_config_gfxFeature_h
 
-#include <functional>
 #include <stdint.h>
+
+#include <functional>
+
 #include "gfxTelemetry.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/Maybe.h"

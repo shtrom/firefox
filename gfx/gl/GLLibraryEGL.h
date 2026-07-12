@@ -9,26 +9,26 @@
 #  include "mozilla/X11Util.h"
 #endif
 
+#include <bitset>
+#include <memory>
+#include <unordered_map>
+
+#include "GLContext.h"
 #include "base/platform_thread.h"  // for PlatformThreadId
 #include "gfxEnv.h"
-#include "GLContext.h"
 #include "mozilla/EnumTypeTraits.h"
-#include "mozilla/gfx/Logging.h"
 #include "mozilla/Maybe.h"
 #include "mozilla/Mutex.h"
 #include "mozilla/RefPtr.h"
 #include "mozilla/StaticMutex.h"
 #include "mozilla/StaticPtr.h"
+#include "mozilla/gfx/Logging.h"
 #include "nsISupports.h"
 #include "prlink.h"
 
-#include <bitset>
-#include <memory>
-#include <unordered_map>
-
 #ifdef MOZ_WIDGET_ANDROID
-#  include "mozilla/ProfilerLabels.h"
 #  include "AndroidBuild.h"
+#  include "mozilla/ProfilerLabels.h"
 #endif
 
 #if defined(MOZ_X11)

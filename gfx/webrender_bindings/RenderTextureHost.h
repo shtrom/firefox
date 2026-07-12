@@ -7,14 +7,14 @@
 
 #include "GLConsts.h"
 #include "GLTypes.h"
-#include "nsISupportsImpl.h"
 #include "mozilla/Atomics.h"
+#include "mozilla/RefPtr.h"
 #include "mozilla/gfx/2D.h"
 #include "mozilla/layers/LayersSurfaces.h"
 #include "mozilla/layers/OverlayInfo.h"
-#include "mozilla/RefPtr.h"
-#include "mozilla/webrender/webrender_ffi.h"
 #include "mozilla/webrender/WebRenderTypes.h"
+#include "mozilla/webrender/webrender_ffi.h"
+#include "nsISupportsImpl.h"
 
 namespace mozilla {
 

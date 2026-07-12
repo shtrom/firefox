@@ -8,11 +8,10 @@
 #include <ostream>
 #include <tuple>
 
-#include "mozilla/FloatingPoint.h"
-#include "mozilla/gfx/ScaleFactor.h"
-#include "mozilla/gfx/Point.h"
-
 #include "gfxPoint.h"
+#include "mozilla/FloatingPoint.h"
+#include "mozilla/gfx/Point.h"
+#include "mozilla/gfx/ScaleFactor.h"
 
 namespace mozilla {
 namespace gfx {

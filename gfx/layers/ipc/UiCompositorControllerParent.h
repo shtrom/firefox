@@ -4,10 +4,10 @@
 #ifndef include_gfx_ipc_UiCompositorControllerParent_h
 #define include_gfx_ipc_UiCompositorControllerParent_h
 
-#include "mozilla/layers/PUiCompositorControllerParent.h"
+#include "mozilla/RefPtr.h"
 #include "mozilla/layers/CompositorScrollUpdate.h"
 #include "mozilla/layers/LayersTypes.h"
-#include "mozilla/RefPtr.h"
+#include "mozilla/layers/PUiCompositorControllerParent.h"
 
 namespace mozilla {
 namespace layers {

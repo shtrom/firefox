@@ -5,18 +5,18 @@
 #include "gfxDWriteFonts.h"
 
 #include <algorithm>
-#include "gfxDWriteFontList.h"
+
 #include "gfxContext.h"
+#include "gfxDWriteFontList.h"
 #include "gfxHarfBuzzShaper.h"
 #include "gfxTextRun.h"
+#include "harfbuzz/hb.h"
+#include "mozilla/FontPropertyTypes.h"
+#include "mozilla/Preferences.h"
 #include "mozilla/gfx/2D.h"
 #include "mozilla/gfx/DWriteSettings.h"
 #include "mozilla/gfx/Logging.h"
 #include "mozilla/gfx/gfxVars.h"
-#include "mozilla/Preferences.h"
-
-#include "harfbuzz/hb.h"
-#include "mozilla/FontPropertyTypes.h"
 
 using namespace mozilla;
 using namespace mozilla::gfx;

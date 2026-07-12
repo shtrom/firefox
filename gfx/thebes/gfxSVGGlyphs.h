@@ -6,15 +6,15 @@
 #define GFX_SVG_GLYPHS_WRAPPER_H
 
 #include "gfxFontUtils.h"
-#include "mozilla/gfx/2D.h"
-#include "nsString.h"
-#include "nsClassHashtable.h"
-#include "nsBaseHashtable.h"
-#include "nsHashKeys.h"
 #include "gfxPattern.h"
-#include "mozilla/gfx/UserData.h"
 #include "mozilla/SVGContextPaint.h"
+#include "mozilla/gfx/2D.h"
+#include "mozilla/gfx/UserData.h"
+#include "nsBaseHashtable.h"
+#include "nsClassHashtable.h"
+#include "nsHashKeys.h"
 #include "nsRefreshObservers.h"
+#include "nsString.h"
 
 class nsIDocumentViewer;
 class gfxSVGGlyphs;

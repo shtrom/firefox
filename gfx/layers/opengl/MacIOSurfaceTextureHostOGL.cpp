@@ -3,8 +3,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "MacIOSurfaceTextureHostOGL.h"
-#include "mozilla/gfx/gfxVars.h"
+
 #include "mozilla/gfx/MacIOSurface.h"
+#include "mozilla/gfx/gfxVars.h"
 #include "mozilla/layers/GpuFence.h"
 #include "mozilla/webrender/RenderMacIOSurfaceTextureHost.h"
 #include "mozilla/webrender/RenderThread.h"
