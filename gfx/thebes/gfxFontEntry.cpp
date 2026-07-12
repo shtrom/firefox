@@ -4,28 +4,33 @@
 
 #include "gfxFontEntry.h"
 
-#include <algorithm>
+#include "mozilla/FontPropertyTypes.h"
 
-#include "COLRFonts.h"
-#include "ThebesRLBox.h"
+#include "mozilla/Logging.h"
+
+#include "gfxTextRun.h"
+#include "gfxPlatform.h"
+
+#include "gfxTypes.h"
 #include "gfxContext.h"
 #include "gfxGraphiteShaper.h"
 #include "gfxHarfBuzzShaper.h"
-#include "gfxPlatform.h"
-#include "gfxPlatformFontList.h"
-#include "gfxSVGGlyphs.h"
-#include "gfxTextRun.h"
-#include "gfxTypes.h"
 #include "gfxUserFontSet.h"
-#include "graphite2/Font.h"
-#include "harfbuzz/hb-ot.h"
-#include "harfbuzz/hb.h"
-#include "mozilla/FontPropertyTypes.h"
+#include "gfxPlatformFontList.h"
 #include "mozilla/Likely.h"
-#include "mozilla/Logging.h"
 #include "mozilla/MemoryReporting.h"
 #include "mozilla/ProfilerLabels.h"
 #include "mozilla/StaticPrefs_layout.h"
+#include "gfxSVGGlyphs.h"
+#include "COLRFonts.h"
+
+#include "harfbuzz/hb.h"
+#include "harfbuzz/hb-ot.h"
+#include "graphite2/Font.h"
+
+#include "ThebesRLBox.h"
+
+#include <algorithm>
 
 using namespace mozilla;
 using namespace mozilla::gfx;

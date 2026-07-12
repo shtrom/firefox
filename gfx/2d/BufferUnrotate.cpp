@@ -4,10 +4,9 @@
 
 #include "BufferUnrotate.h"
 
+#include <algorithm>  // min & max
 #include <stdint.h>
 #include <string.h>
-
-#include <algorithm>  // min & max
 
 namespace mozilla {
 namespace gfx {

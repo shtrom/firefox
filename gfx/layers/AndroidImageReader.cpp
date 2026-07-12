@@ -15,16 +15,16 @@
 #include "GLContextProvider.h"
 #include "GLLibraryEGL.h"
 #include "GLReadTexImageHelper.h"
-#include "OGLShaderConfig.h"
-#include "ScopedGLHelpers.h"
-#include "mozilla/RemoteMediaManagerParent.h"
-#include "mozilla/ScopeExit.h"
-#include "mozilla/TimeStamp.h"
 #include "mozilla/gfx/2D.h"
 #include "mozilla/gfx/Logging.h"
 #include "mozilla/layers/AndroidImageConsumer.h"
+#include "mozilla/RemoteMediaManagerParent.h"
+#include "mozilla/ScopeExit.h"
+#include "mozilla/TimeStamp.h"
 #include "mozilla/webrender/RenderThread.h"
 #include "nsProxyRelease.h"
+#include "OGLShaderConfig.h"
+#include "ScopedGLHelpers.h"
 
 namespace mozilla {
 namespace layers {

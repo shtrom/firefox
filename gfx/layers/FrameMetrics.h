@@ -6,30 +6,29 @@
 #define GFX_FRAMEMETRICS_H
 
 #include <stdint.h>  // for uint8_t, uint32_t, uint64_t
-
 #include <iosfwd>
 
-#include "PLDHashTable.h"           // for PLDHashNumber
-#include "UnitTransforms.h"         // for ViewAs
 #include "Units.h"                  // for CSSRect, CSSPixel, etc
+#include "UnitTransforms.h"         // for ViewAs
 #include "mozilla/DefineEnum.h"     // for MOZ_DEFINE_ENUM
 #include "mozilla/HashFunctions.h"  // for HashGeneric
 #include "mozilla/Maybe.h"
-#include "mozilla/ScrollPositionUpdate.h"  // for ScrollPositionUpdate
+#include "mozilla/dom/InteractiveWidget.h"
+#include "mozilla/gfx/BasePoint.h"               // for BasePoint
+#include "mozilla/gfx/Rect.h"                    // for RoundedIn
+#include "mozilla/gfx/ScaleFactor.h"             // for ScaleFactor
+#include "mozilla/gfx/Logging.h"                 // for Log
+#include "mozilla/layers/LayersTypes.h"          // for ScrollDirection
+#include "mozilla/layers/ScrollableLayerGuid.h"  // for ScrollableLayerGuid
+#include "mozilla/ScrollPositionUpdate.h"        // for ScrollPositionUpdate
 #include "mozilla/ScrollSnapInfo.h"
 #include "mozilla/ScrollSnapTargetId.h"
 #include "mozilla/StaticPtr.h"  // for StaticAutoPtr
 #include "mozilla/TimeStamp.h"  // for TimeStamp
 #include "mozilla/WritingModes.h"
-#include "mozilla/dom/InteractiveWidget.h"
-#include "mozilla/gfx/BasePoint.h"               // for BasePoint
-#include "mozilla/gfx/Logging.h"                 // for Log
-#include "mozilla/gfx/Rect.h"                    // for RoundedIn
-#include "mozilla/gfx/ScaleFactor.h"             // for ScaleFactor
-#include "mozilla/layers/LayersTypes.h"          // for ScrollDirection
-#include "mozilla/layers/ScrollableLayerGuid.h"  // for ScrollableLayerGuid
-#include "nsString.h"
 #include "nsTHashMap.h"  // for nsTHashMap
+#include "nsString.h"
+#include "PLDHashTable.h"  // for PLDHashNumber
 
 struct nsStyleDisplay;
 namespace mozilla {

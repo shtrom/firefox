@@ -3,6 +3,7 @@
  */
 
 #include "cairo.h"
+
 #include "gtest/gtest.h"
 
 namespace mozilla {

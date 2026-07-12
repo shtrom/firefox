@@ -4,8 +4,7 @@
 
 #include "Axis.h"
 
-#include <math.h>  // for fabsf, pow, powf
-
+#include <math.h>     // for fabsf, pow, powf
 #include <algorithm>  // for max
 
 #include "APZCTreeManager.h"                // for APZCTreeManager

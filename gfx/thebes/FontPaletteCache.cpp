@@ -3,7 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "FontPaletteCache.h"
-
 #include "COLRFonts.h"
 #include "gfxFontEntry.h"
 

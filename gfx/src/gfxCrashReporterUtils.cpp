@@ -3,15 +3,13 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "gfxCrashReporterUtils.h"
-
-#include <string.h>  // for strcmp
-
-#include "MainThreadUtils.h"         // for NS_IsMainThread
-#include "mozilla/RefPtr.h"          // for RefPtr
+#include <string.h>                  // for strcmp
 #include "mozilla/SchedulerGroup.h"  // for SchedulerGroup
 #include "mozilla/Services.h"        // for GetObserverService
 #include "mozilla/StaticMutex.h"
 #include "mozilla/mozalloc.h"    // for operator new, etc
+#include "mozilla/RefPtr.h"      // for RefPtr
+#include "MainThreadUtils.h"     // for NS_IsMainThread
 #include "nsCOMPtr.h"            // for nsCOMPtr
 #include "nsError.h"             // for NS_OK, NS_FAILED, nsresult
 #include "nsExceptionHandler.h"  // for AppendAppNotesToCrashReport
@@ -19,8 +17,8 @@
 #include "nsIObserverService.h"  // for nsIObserverService
 #include "nsIRunnable.h"         // for nsIRunnable
 #include "nsISupports.h"
-#include "nsTArray.h"       // for nsTArray
 #include "nsThreadUtils.h"  // for Runnable
+#include "nsTArray.h"       // for nsTArray
 #include "nscore.h"         // for NS_IMETHOD, NS_IMETHODIMP, etc
 
 namespace mozilla {

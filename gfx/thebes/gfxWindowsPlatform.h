@@ -5,22 +5,24 @@
 #ifndef GFX_WINDOWS_PLATFORM_H
 #define GFX_WINDOWS_PLATFORM_H
 
-#include <dxgi.h>
-#include <objbase.h>
-#include <windows.h>
-
 #include "gfxCrashReporterUtils.h"
-#include "gfxDWriteFonts.h"
-#include "gfxFont.h"
 #include "gfxFontUtils.h"
+#include "gfxWindowsSurface.h"
+#include "gfxFont.h"
+#include "gfxDWriteFonts.h"
 #include "gfxPlatform.h"
 #include "gfxTelemetry.h"
 #include "gfxTypes.h"
-#include "gfxWindowsSurface.h"
-#include "mozilla/Atomics.h"
 #include "mozilla/Attributes.h"
-#include "mozilla/Mutex.h"
+#include "mozilla/Atomics.h"
 #include "nsTArray.h"
+
+#include "mozilla/Mutex.h"
+
+#include <windows.h>
+#include <objbase.h>
+
+#include <dxgi.h>
 
 // This header is available in the June 2010 SDK and in the Win8 SDK
 #include <d3dcommon.h>

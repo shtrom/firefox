@@ -7,29 +7,29 @@
 
 #include <stdint.h>
 
-#include "DrawMode.h"
-#include "X11UndefineNone.h"
+#include "gfxTypes.h"
+#include "gfxPoint.h"
 #include "gfxFont.h"
 #include "gfxFontConstants.h"
+#include "gfxSkipChars.h"
 #include "gfxPlatform.h"
 #include "gfxPlatformFontList.h"
-#include "gfxPoint.h"
 #include "gfxScriptItemizer.h"
-#include "gfxSkipChars.h"
-#include "gfxTypes.h"
 #include "gfxUserFontSet.h"
 #include "gfxUtils.h"
-#include "harfbuzz/hb.h"
 #include "mozilla/MemoryReporting.h"
 #include "mozilla/RefPtr.h"
 #include "mozilla/intl/UnicodeScriptCodes.h"
-#include "nsColor.h"
-#include "nsFrameList.h"
 #include "nsPoint.h"
 #include "nsString.h"
 #include "nsTArray.h"
 #include "nsTHashSet.h"
 #include "nsTextFrameUtils.h"
+#include "DrawMode.h"
+#include "harfbuzz/hb.h"
+#include "nsColor.h"
+#include "nsFrameList.h"
+#include "X11UndefineNone.h"
 
 #ifdef DEBUG_FRAME_DUMP
 #  include <stdio.h>

@@ -3,7 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "gfxGlyphExtents.h"
-
 #include "gfxTextRun.h"
 
 using namespace mozilla;

@@ -7,8 +7,8 @@
 #include "GLBlitHelper.h"
 #include "GLContext.h"
 #include "MozFramebuffer.h"
-#include "ScopedGLHelpers.h"
 #include "mozilla/gfx/Swizzle.h"
+#include "ScopedGLHelpers.h"
 
 namespace mozilla::layers {
 

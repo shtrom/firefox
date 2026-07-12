@@ -5,9 +5,8 @@
 #define mozilla_gfx_config_gfxConfig_h
 
 #include <functional>
-
-#include "gfxFallback.h"
 #include "gfxFeature.h"
+#include "gfxFallback.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/EnumSet.h"
 #include "mozilla/Maybe.h"

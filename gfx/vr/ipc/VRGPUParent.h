@@ -5,8 +5,8 @@
 #ifndef GFX_VR_GPU_PARENT_H
 #define GFX_VR_GPU_PARENT_H
 
-#include "VRService.h"
 #include "mozilla/gfx/PVRGPUParent.h"
+#include "VRService.h"
 
 namespace mozilla {
 namespace gfx {

@@ -5,10 +5,8 @@
 #ifndef GFX_SCROLLABLELAYERGUID_H
 #define GFX_SCROLLABLELAYERGUID_H
 
-#include <stdint.h>  // for uint8_t, uint32_t, uint64_t
-
-#include <iosfwd>  // for ostream
-
+#include <iosfwd>                        // for ostream
+#include <stdint.h>                      // for uint8_t, uint32_t, uint64_t
 #include "mozilla/layers/LayersTypes.h"  // for LayersId
 #include "nsHashKeys.h"                  // for nsUint64HashKey
 

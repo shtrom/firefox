@@ -4,57 +4,64 @@
 
 #include "gfxFont.h"
 
-#include "COLRFonts.h"
-#include "GreekCasing.h"
-#include "TextDrawTarget.h"
-#include "ThebesRLBox.h"
-#include "cairo.h"
-#include "gfx2DGlue.h"
-#include "gfxContext.h"
-#include "gfxFontMissingGlyphs.h"
-#include "gfxGlyphExtents.h"
-#include "gfxGraphiteShaper.h"
-#include "gfxHarfBuzzShaper.h"
-#include "gfxMathTable.h"
-#include "gfxPlatform.h"
-#include "gfxSVGGlyphs.h"
-#include "gfxTextRun.h"
-#include "gfxTypes.h"
-#include "gfxUserFontSet.h"
-#include "mozilla/AppUnits.h"
 #include "mozilla/DebugOnly.h"
 #include "mozilla/FontPropertyTypes.h"
-#include "mozilla/HashTable.h"
-#include "mozilla/Likely.h"
-#include "mozilla/Logging.h"
-#include "mozilla/MemoryReporting.h"
-#include "mozilla/Preferences.h"
-#include "mozilla/SVGContextPaint.h"
-#include "mozilla/ScopeExit.h"
-#include "mozilla/Services.h"
-#include "mozilla/StaticPrefs_gfx.h"
-#include "mozilla/Utf16.h"
 #include "mozilla/gfx/2D.h"
-#include "mozilla/glean/GfxMetrics.h"
 #include "mozilla/intl/Segmenter.h"
+#include "mozilla/StaticPrefs_gfx.h"
+#include "mozilla/ScopeExit.h"
+#include "mozilla/SVGContextPaint.h"
+
+#include "mozilla/Logging.h"
+
+#include "nsITimer.h"
+
+#include "gfxGlyphExtents.h"
+#include "gfxPlatform.h"
+#include "gfxTextRun.h"
+#include "nsGkAtoms.h"
+
+#include "gfxTypes.h"
+#include "gfxContext.h"
+#include "gfxFontMissingGlyphs.h"
+#include "gfxGraphiteShaper.h"
+#include "gfxHarfBuzzShaper.h"
+#include "gfxUserFontSet.h"
 #include "nsCRT.h"
 #include "nsContentUtils.h"
-#include "nsGkAtoms.h"
-#include "nsITimer.h"
 #include "nsSpecialCasingData.h"
-#include "nsStyleConsts.h"
 #include "nsTextRunTransformations.h"
 #include "nsUGenCategory.h"
 #include "nsUnicodeProperties.h"
+#include "nsStyleConsts.h"
+#include "mozilla/AppUnits.h"
+#include "mozilla/HashTable.h"
+#include "mozilla/Likely.h"
+#include "mozilla/MemoryReporting.h"
+#include "mozilla/Preferences.h"
+#include "mozilla/Services.h"
+#include "mozilla/glean/GfxMetrics.h"
+#include "mozilla/Utf16.h"
+#include "gfxMathTable.h"
+#include "gfxSVGGlyphs.h"
+#include "gfx2DGlue.h"
+#include "TextDrawTarget.h"
+#include "COLRFonts.h"
+
+#include "ThebesRLBox.h"
+
+#include "GreekCasing.h"
+
+#include "cairo.h"
 #ifdef XP_WIN
 #  include "cairo-win32.h"
 #  include "gfxWindowsPlatform.h"
 #endif
 
 #include <algorithm>
-#include <cmath>
 #include <limits>
 #include <numeric>
+#include <cmath>
 
 using namespace mozilla;
 using namespace mozilla::gfx;

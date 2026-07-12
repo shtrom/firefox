@@ -7,8 +7,8 @@
 #include <ostream>
 
 #include "gfxUtils.h"
-#include "mozilla/gfx/Types.h"
 #include "nsStyleConsts.h"
+#include "mozilla/gfx/Types.h"
 
 namespace mozilla {
 namespace layers {

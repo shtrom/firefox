@@ -6,6 +6,7 @@
 #define MOZILLA_GFX_DATASURFACEHELPERS_H
 
 #include "2D.h"
+
 #include "mozilla/UniquePtr.h"
 
 namespace mozilla {

@@ -5,18 +5,19 @@
 #ifndef GFX_WINDOWSDWRITEFONTS_H
 #define GFX_WINDOWSDWRITEFONTS_H
 
+#include "mozilla/Atomics.h"
+#include "mozilla/MemoryReporting.h"
+#include "mozilla/UniquePtr.h"
 #include <dwrite_1.h>
 
 #include "gfxDWriteCommon.h"
 #include "gfxFont.h"
 #include "gfxUserFontSet.h"
-#include "mozilla/Atomics.h"
-#include "mozilla/MemoryReporting.h"
-#include "mozilla/UniquePtr.h"
-#include "mozilla/gfx/UnscaledFontDWrite.h"
-#include "mozilla/gfx/gfxVars.h"
-#include "nsHashKeys.h"
 #include "nsTHashMap.h"
+#include "nsHashKeys.h"
+
+#include "mozilla/gfx/gfxVars.h"
+#include "mozilla/gfx/UnscaledFontDWrite.h"
 
 /**
  * \brief Class representing a font face for a font entry.

@@ -4,15 +4,14 @@
 
 #include "gfxGradientCache.h"
 
-#include <time.h>
-
 #include "MainThreadUtils.h"
-#include "PLDHashTable.h"
-#include "mozilla/StaticMutex.h"
 #include "mozilla/gfx/2D.h"
-#include "nsClassHashtable.h"
-#include "nsExpirationTracker.h"
+#include "mozilla/StaticMutex.h"
 #include "nsTArray.h"
+#include "PLDHashTable.h"
+#include "nsExpirationTracker.h"
+#include "nsClassHashtable.h"
+#include <time.h>
 
 namespace mozilla {
 namespace gfx {

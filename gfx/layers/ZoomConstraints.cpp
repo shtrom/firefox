@@ -5,7 +5,6 @@
 #include "ZoomConstraints.h"
 
 #include <ostream>
-
 #include "nsPrintfCString.h"
 
 namespace mozilla {

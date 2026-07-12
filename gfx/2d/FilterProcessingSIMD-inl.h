@@ -6,6 +6,7 @@
 #define GFX_2D_FILTERPROCESSINGSIMD_INL_H_
 
 #include "FilterProcessing.h"
+
 #include "SIMD.h"
 #include "SVGTurbulenceRenderer-inl.h"
 

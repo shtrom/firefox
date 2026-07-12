@@ -6,11 +6,10 @@
 #define SHARED_SURFACE_ANGLE_H_
 
 #include <windows.h>
-
 #include <memory>
 
-#include "SharedSurface.h"
 #include "mozilla/layers/LayersTypes.h"
+#include "SharedSurface.h"
 
 struct IDXGIKeyedMutex;
 struct ID3D11Device;

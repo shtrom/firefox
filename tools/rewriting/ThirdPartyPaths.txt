@@ -88,7 +88,6 @@ gfx/vr/service/openvr/src/strtools_public.cpp
 gfx/vr/service/openvr/src/strtools_public.h
 gfx/vr/service/openvr/src/vrpathregistry_public.cpp
 gfx/vr/service/openvr/src/vrpathregistry_public.h
-gfx/vr/service/osvr/
 gfx/wr/
 gfx/ycbcr/
 intl/icu/

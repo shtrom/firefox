@@ -4,18 +4,17 @@
 
 #include "gfxBlur.h"
 
-#include <cmath>
-
 #include "gfx2DGlue.h"
 #include "gfxContext.h"
 #include "gfxPlatform.h"
-#include "gfxUtils.h"
-#include "mozilla/Maybe.h"
 #include "mozilla/gfx/2D.h"
 #include "mozilla/gfx/Blur.h"
 #include "mozilla/gfx/PathHelpers.h"
-#include "nsClassHashtable.h"
+#include "mozilla/Maybe.h"
 #include "nsExpirationTracker.h"
+#include "nsClassHashtable.h"
+#include "gfxUtils.h"
+#include <cmath>
 
 using namespace mozilla;
 using namespace mozilla::gfx;

@@ -4,14 +4,14 @@
 
 #include "mozilla/layers/StackingContextHelper.h"
 
-#include "ActiveLayerTracker.h"
-#include "UnitTransforms.h"
 #include "mozilla/PresShell.h"
-#include "mozilla/dom/BrowserChild.h"
-#include "mozilla/gfx/Matrix.h"
 #include "mozilla/gfx/Point.h"
+#include "mozilla/gfx/Matrix.h"
+#include "UnitTransforms.h"
 #include "nsDisplayList.h"
+#include "mozilla/dom/BrowserChild.h"
 #include "nsLayoutUtils.h"
+#include "ActiveLayerTracker.h"
 
 namespace mozilla {
 namespace layers {

@@ -5,14 +5,13 @@
 #ifndef FONT_PALETTE_CACHE_H
 #define FONT_PALETTE_CACHE_H
 
-#include <utility>
-
-#include "mozilla/HashFunctions.h"
-#include "mozilla/MruCache.h"
-#include "mozilla/RefPtr.h"
 #include "mozilla/gfx/Types.h"
+#include "mozilla/MruCache.h"
+#include "mozilla/HashFunctions.h"
+#include "mozilla/RefPtr.h"
 #include "nsAtom.h"
 #include "nsTArray.h"
+#include <utility>
 
 class gfxFontEntry;
 

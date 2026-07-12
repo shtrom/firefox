@@ -6,7 +6,6 @@
 #define MOZILLA_GFX_USERDATA_H_
 
 #include <stdlib.h>
-
 #include "Types.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/Atomics.h"

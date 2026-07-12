@@ -5,7 +5,6 @@
 #include "SharedSurfaceANGLE.h"
 
 #include <d3d11.h>
-
 #include "GLContextEGL.h"
 #include "GLLibraryEGL.h"
 #include "mozilla/gfx/DeviceManagerDx.h"

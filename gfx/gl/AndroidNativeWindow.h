@@ -5,12 +5,11 @@
 #ifndef AndroidNativeWindow_h_
 #define AndroidNativeWindow_h_
 
+#include <jni.h>
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
-#include <jni.h>
-
-#include "SurfaceTexture.h"
 #include "mozilla/java/GeckoSurfaceWrappers.h"
+#include "SurfaceTexture.h"
 
 namespace mozilla {
 namespace gl {

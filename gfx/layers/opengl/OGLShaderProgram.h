@@ -10,8 +10,8 @@
 #include <utility>
 
 #include "GLContext.h"  // for fast inlines of glUniform*
-#include "OGLShaderConfig.h"
 #include "mozilla/UniquePtr.h"
+#include "OGLShaderConfig.h"
 
 namespace mozilla {
 namespace layers {

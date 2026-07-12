@@ -3,12 +3,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "VsyncSource.h"
-
-#include "MainThreadUtils.h"
-#include "gfxPlatform.h"
-#include "mozilla/VsyncDispatcher.h"
 #include "nsThreadUtils.h"
 #include "nsXULAppAPI.h"
+#include "mozilla/VsyncDispatcher.h"
+#include "MainThreadUtils.h"
+#include "gfxPlatform.h"
 
 #ifdef MOZ_WAYLAND
 #  include "WaylandVsyncSource.h"

@@ -6,12 +6,11 @@
 #define mozilla_layers_OverscrollHandoffChain_h
 
 #include <vector>
-
-#include "APZUtils.h"                    // for CancelAnimationFlags
-#include "Units.h"                       // for ScreenPoint
-#include "mozilla/RefPtr.h"              // for RefPtr
-#include "mozilla/layers/LayersTypes.h"  // for Layer::ScrollDirection
+#include "mozilla/RefPtr.h"   // for RefPtr
 #include "nsISupportsImpl.h"  // for NS_INLINE_DECL_THREADSAFE_REFCOUNTING
+#include "APZUtils.h"         // for CancelAnimationFlags
+#include "mozilla/layers/LayersTypes.h"  // for Layer::ScrollDirection
+#include "Units.h"                       // for ScreenPoint
 
 namespace mozilla {
 

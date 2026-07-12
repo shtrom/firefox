@@ -4,42 +4,44 @@
 
 #include "gfxPlatformMac.h"
 
-#include "AppleUtils.h"
-#include "CFTypeRefPtr.h"
-#include "gfxConfig.h"
-#include "gfxCoreTextShaper.h"
-#include "gfxMacFont.h"
 #include "gfxQuartzSurface.h"
+#include "mozilla/DataMutex.h"
+#include "mozilla/gfx/2D.h"
+
+#include "gfxMacFont.h"
+#include "gfxCoreTextShaper.h"
 #include "gfxTextRun.h"
 #include "gfxUserFontSet.h"
-#include "mozilla/DataMutex.h"
+#include "gfxConfig.h"
+
+#include "AppleUtils.h"
+#include "CFTypeRefPtr.h"
+#include "nsTArray.h"
 #include "mozilla/Preferences.h"
 #include "mozilla/VsyncDispatcher.h"
-#include "mozilla/gfx/2D.h"
-#include "nsTArray.h"
 #ifdef MOZ_WIDGET_COCOA
 #  include "mozilla/MacAutoreleasePool.h"
 #  include "nsCocoaFeatures.h"
 #endif
-#include "GeckoProfiler.h"
-#include "gfx2DGlue.h"
 #include "nsComponentManagerUtils.h"
 #include "nsIFile.h"
-#include "nsThreadUtils.h"
 #include "nsUnicodeProperties.h"
 #include "qcms.h"
+#include "gfx2DGlue.h"
+#include "GeckoProfiler.h"
+#include "nsThreadUtils.h"
 
 #ifdef MOZ_BUNDLED_FONTS
-#  include "mozilla/StaticPrefs_gfx.h"
 #  include "nsDirectoryServiceDefs.h"
+#  include "mozilla/StaticPrefs_gfx.h"
 #endif
 
-#include <CoreVideo/CoreVideo.h>
 #include <dlfcn.h>
+#include <CoreVideo/CoreVideo.h>
 
-#include "VsyncSource.h"
 #include "mozilla/layers/CompositorBridgeParent.h"
 #include "mozilla/layers/SurfacePool.h"
+#include "VsyncSource.h"
 
 using namespace mozilla;
 using namespace mozilla::gfx;

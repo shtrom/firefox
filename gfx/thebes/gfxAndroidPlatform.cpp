@@ -2,37 +2,39 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "gfxAndroidPlatform.h"
-
-#include "AndroidBuild.h"
-#include "AndroidSystemFontIterator.h"
-#include "GeckoProfiler.h"
-#include "VsyncSource.h"
 #include "base/basictypes.h"
-#include "cairo.h"
-#include "ft2build.h"
-#include "gfx2DGlue.h"
-#include "gfxFT2FontList.h"
-#include "gfxImageSurface.h"
-#include "gfxTextRun.h"
-#include "mozilla/CountingAllocatorBase.h"
-#include "mozilla/Preferences.h"
-#include "mozilla/StaticPrefs_gfx.h"
-#include "mozilla/StaticPrefs_webgl.h"
-#include "mozilla/Utf16.h"
+
+#include "gfxAndroidPlatform.h"
 #include "mozilla/gfx/2D.h"
 #include "mozilla/gfx/gfxVars.h"
+#include "mozilla/CountingAllocatorBase.h"
 #include "mozilla/intl/LocaleService.h"
 #include "mozilla/intl/OSPreferences.h"
 #include "mozilla/java/GeckoAppShellWrappers.h"
 #include "mozilla/java/HardwareCodecCapabilityUtilsWrappers.h"
 #include "mozilla/jni/Utils.h"
 #include "mozilla/layers/AndroidHardwareBuffer.h"
+#include "mozilla/Preferences.h"
+#include "mozilla/StaticPrefs_gfx.h"
+#include "mozilla/StaticPrefs_webgl.h"
 #include "mozilla/widget/AndroidVsync.h"
+#include "mozilla/Utf16.h"
+
+#include "AndroidBuild.h"
+#include "AndroidSystemFontIterator.h"
+#include "GeckoProfiler.h"
+#include "gfx2DGlue.h"
+#include "gfxFT2FontList.h"
+#include "gfxImageSurface.h"
+#include "gfxTextRun.h"
+#include "nsXULAppAPI.h"
 #include "nsIScreen.h"
 #include "nsServiceManagerUtils.h"
 #include "nsUnicodeProperties.h"
-#include "nsXULAppAPI.h"
+#include "cairo.h"
+#include "VsyncSource.h"
+
+#include "ft2build.h"
 #include FT_FREETYPE_H
 #include FT_MODULE_H
 

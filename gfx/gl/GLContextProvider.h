@@ -5,9 +5,11 @@
 #ifndef GLCONTEXTPROVIDER_H_
 #define GLCONTEXTPROVIDER_H_
 
+#include "mozilla/AlreadyAddRefed.h"
+
 #include "GLContextTypes.h"
 #include "SurfaceTypes.h"
-#include "mozilla/AlreadyAddRefed.h"
+
 #include "nsSize.h"  // for gfx::IntSize (needed by GLContextProviderImpl.h below)
 #include "nsStringFwd.h"  // needed by GLContextProviderImpl.h below
 

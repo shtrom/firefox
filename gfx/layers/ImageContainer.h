@@ -5,35 +5,34 @@
 #ifndef GFX_IMAGECONTAINER_H
 #define GFX_IMAGECONTAINER_H
 
-#include <stdint.h>  // for int32_t, uint32_t, uint8_t, uint64_t
-
+#include <stdint.h>      // for int32_t, uint32_t, uint8_t, uint64_t
 #include "ImageTypes.h"  // for ImageFormat, etc
-#include "MediaData.h"
-#include "TimeUnits.h"
 #include "mozilla/AlreadyAddRefed.h"
-#include "mozilla/Assertions.h"  // for MOZ_ASSERT_HELPER2
-#include "mozilla/Atomics.h"
-#include "mozilla/DataMutex.h"  // for DataMutex
-#include "mozilla/EnumeratedArray.h"
+#include "mozilla/Assertions.h"      // for MOZ_ASSERT_HELPER2
+#include "mozilla/DataMutex.h"       // for DataMutex
 #include "mozilla/Mutex.h"           // for Mutex
 #include "mozilla/RecursiveMutex.h"  // for RecursiveMutex, etc
 #include "mozilla/ThreadSafeWeakPtr.h"
 #include "mozilla/TimeStamp.h"  // for TimeStamp
-#include "mozilla/TypedEnumBits.h"
-#include "mozilla/UniquePtr.h"
-#include "mozilla/gfx/2D.h"
 #include "mozilla/gfx/Point.h"  // For IntSize
 #include "mozilla/gfx/Rect.h"
-#include "mozilla/gfx/Types.h"  // For ColorDepth
-#include "mozilla/layers/CompositorTypes.h"
+#include "mozilla/gfx/Types.h"           // For ColorDepth
 #include "mozilla/layers/LayersTypes.h"  // for LayersBackend, etc
-#include "mozilla/mozalloc.h"            // for operator delete, etc
-#include "nsDebug.h"                     // for NS_ASSERTION
-#include "nsISupportsImpl.h"             // for Image::Release, etc
-#include "nsProxyRelease.h"              // for NS_ReleaseOnMainThread
-#include "nsTArray.h"                    // for nsTArray
+#include "mozilla/layers/CompositorTypes.h"
+#include "mozilla/mozalloc.h"  // for operator delete, etc
+#include "mozilla/TypedEnumBits.h"
+#include "nsDebug.h"          // for NS_ASSERTION
+#include "nsISupportsImpl.h"  // for Image::Release, etc
+#include "nsTArray.h"         // for nsTArray
+#include "nsThreadUtils.h"    // for NS_IsMainThread
+#include "nsProxyRelease.h"   // for NS_ReleaseOnMainThread
+#include "mozilla/Atomics.h"
+#include "mozilla/gfx/2D.h"
+#include "mozilla/EnumeratedArray.h"
+#include "mozilla/UniquePtr.h"
 #include "nsTHashMap.h"
-#include "nsThreadUtils.h"  // for NS_IsMainThread
+#include "TimeUnits.h"
+#include "MediaData.h"
 
 #ifdef XP_WIN
 struct ID3D10Texture2D;

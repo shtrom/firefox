@@ -5,8 +5,8 @@
 #ifndef MOZILLA_GFX_CONVOLUTION_FILTER_H_
 #define MOZILLA_GFX_CONVOLUTION_FILTER_H_
 
-#include "Types.h"
 #include "mozilla/UniquePtr.h"
+#include "Types.h"
 
 namespace skia {
 class SkConvolutionFilter1D;

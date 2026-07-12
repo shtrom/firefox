@@ -8,8 +8,8 @@
 #include <d3d11.h>
 
 #include "GLTypes.h"
-#include "RenderTextureHostSWGL.h"
 #include "mozilla/gfx/FileHandleWrapper.h"
+#include "RenderTextureHostSWGL.h"
 
 struct ID3D11Texture2D;
 struct IDCompositionTexture;

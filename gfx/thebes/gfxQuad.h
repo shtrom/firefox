@@ -5,11 +5,10 @@
 #ifndef GFX_QUAD_H
 #define GFX_QUAD_H
 
-#include <algorithm>
-
-#include "gfxLineSegment.h"
-#include "gfxRect.h"
 #include "gfxTypes.h"
+#include "gfxRect.h"
+#include "gfxLineSegment.h"
+#include <algorithm>
 
 struct gfxQuad {
   gfxQuad(const gfxPoint& aOne, const gfxPoint& aTwo, const gfxPoint& aThree,

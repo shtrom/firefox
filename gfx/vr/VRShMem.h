@@ -12,10 +12,9 @@
 // process should be reading or writing to the same members, except for the
 // versioning members used for synchronization.
 
-#include <functional>
-
-#include "base/process.h"  // for base::ProcessHandle
 #include "moz_external_vr.h"
+#include "base/process.h"  // for base::ProcessHandle
+#include <functional>
 
 namespace mozilla {
 namespace gfx {

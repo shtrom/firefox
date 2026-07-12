@@ -10,23 +10,24 @@
  * writing APZ gtests.
  */
 
-#include "TestWRScrollData.h"
-#include "UnitTransforms.h"
+#include "gtest/gtest.h"
+#include "gmock/gmock.h"
+
+#include "mozilla/layers/GeckoContentController.h"
+#include "mozilla/layers/CompositorBridgeParent.h"
+#include "mozilla/layers/DoubleTapToZoom.h"
+#include "mozilla/layers/APZThreadUtils.h"
+#include "mozilla/layers/MatrixMessage.h"
+#include "mozilla/StaticPrefs_layout.h"
+#include "mozilla/TypedEnumBits.h"
+#include "mozilla/UniquePtr.h"
 #include "apz/src/APZCTreeManager.h"
 #include "apz/src/AsyncPanZoomController.h"
 #include "apz/src/HitTestingTreeNode.h"
 #include "base/task.h"
 #include "gfxPlatform.h"
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
-#include "mozilla/StaticPrefs_layout.h"
-#include "mozilla/TypedEnumBits.h"
-#include "mozilla/UniquePtr.h"
-#include "mozilla/layers/APZThreadUtils.h"
-#include "mozilla/layers/CompositorBridgeParent.h"
-#include "mozilla/layers/DoubleTapToZoom.h"
-#include "mozilla/layers/GeckoContentController.h"
-#include "mozilla/layers/MatrixMessage.h"
+#include "TestWRScrollData.h"
+#include "UnitTransforms.h"
 
 using namespace mozilla;
 using namespace mozilla::gfx;

@@ -6,7 +6,6 @@
 #define GFX_IMAGETYPES_H
 
 #include <stdint.h>  // for uint32_t
-
 #include "mozilla/Maybe.h"
 #include "mozilla/TimeStamp.h"
 #include "mozilla/Variant.h"

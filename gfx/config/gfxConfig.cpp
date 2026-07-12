@@ -3,7 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "gfxConfig.h"
-
 #include "mozilla/StaticPtr.h"
 #include "mozilla/gfx/GPUParent.h"
 #include "mozilla/gfx/GraphicsMessages.h"

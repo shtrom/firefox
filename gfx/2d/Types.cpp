@@ -4,9 +4,9 @@
 
 #include "Types.h"
 
-#include <ostream>
-
 #include "nsPrintfCString.h"
+
+#include <ostream>
 
 namespace mozilla {
 

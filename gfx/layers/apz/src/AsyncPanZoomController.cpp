@@ -7,9 +7,8 @@
 #include <math.h>       // for fabsf, fabs, atan2
 #include <stdint.h>     // for uint32_t, uint64_t
 #include <sys/types.h>  // for int32_t
-
-#include <algorithm>  // for max, min
-#include <utility>    // for std::make_pair
+#include <algorithm>    // for max, min
+#include <utility>      // for std::make_pair
 
 #include "APZCTreeManager.h"            // for APZCTreeManager
 #include "AsyncPanZoomAnimation.h"      // for AsyncPanZoomAnimation
@@ -23,14 +22,14 @@
 #include "GenericFlingAnimation.h"      // for GenericFlingAnimation
 #include "GestureEventListener.h"       // for GestureEventListener
 #include "HitTestingTreeNode.h"         // for HitTestingTreeNode
-#include "InputBlockState.h"            // for InputBlockState, TouchBlockState
 #include "InputData.h"                  // for MultiTouchInput, etc
+#include "InputBlockState.h"            // for InputBlockState, TouchBlockState
 #include "InputQueue.h"                 // for InputQueue
 #include "Overscroll.h"                 // for OverscrollAnimation
 #include "OverscrollHandoffState.h"     // for OverscrollHandoffState
 #include "SimpleVelocityTracker.h"      // for SimpleVelocityTracker
-#include "UnitTransforms.h"             // for TransformTo
 #include "Units.h"                      // for CSSRect, CSSPoint, etc
+#include "UnitTransforms.h"             // for TransformTo
 #include "apz/public/CompositorScrollUpdate.h"
 #include "base/message_loop.h"          // for MessageLoop
 #include "base/task.h"                  // for NewRunnableMethod, etc
@@ -38,46 +37,43 @@
 #include "mozilla/Assertions.h"         // for MOZ_ASSERT, etc
 #include "mozilla/BasicEvents.h"        // for Modifiers, MODIFIER_*
 #include "mozilla/ClearOnShutdown.h"    // for ClearOnShutdown
+#include "mozilla/ServoStyleConsts.h"   // for StyleComputedTimingFunction
 #include "mozilla/EventForwards.h"      // for nsEventStatus_*
 #include "mozilla/EventStateManager.h"  // for EventStateManager
-#include "mozilla/MouseEvents.h"        // for WidgetWheelEvent
-#include "mozilla/Preferences.h"        // for Preferences
-#include "mozilla/RecursiveMutex.h"     // for RecursiveMutexAutoLock, etc
-#include "mozilla/RefPtr.h"             // for RefPtr
+#include "mozilla/glean/GfxMetrics.h"
+#include "mozilla/MouseEvents.h"     // for WidgetWheelEvent
+#include "mozilla/Preferences.h"     // for Preferences
+#include "mozilla/RecursiveMutex.h"  // for RecursiveMutexAutoLock, etc
+#include "mozilla/RefPtr.h"          // for RefPtr
 #include "mozilla/ScrollTypes.h"
-#include "mozilla/ServoStyleConsts.h"  // for StyleComputedTimingFunction
 #include "mozilla/StaticPrefs_apz.h"
 #include "mozilla/StaticPrefs_general.h"
 #include "mozilla/StaticPrefs_gfx.h"
+#include "mozilla/StaticPrefs_mousewheel.h"
 #include "mozilla/StaticPrefs_layers.h"
 #include "mozilla/StaticPrefs_layout.h"
-#include "mozilla/StaticPrefs_mousewheel.h"
 #include "mozilla/StaticPrefs_slider.h"
 #include "mozilla/StaticPrefs_test.h"
 #include "mozilla/StaticPrefs_toolkit.h"
 #include "mozilla/Telemetry.h"  // for Telemetry
 #include "mozilla/TimeStamp.h"  // for TimeDuration, TimeStamp
 #include "mozilla/dom/CheckerboardReportService.h"  // for CheckerboardEventStorage
-#include "mozilla/glean/GfxMetrics.h"
 // note: CheckerboardReportService.h actually lives in gfx/layers/apz/util/
-#include "ScrollAnimationPhysics.h"  // for ComputeAcceleratedWheelDelta
-#include "ScrollSnap.h"              // for ScrollSnapUtils
-#include "SmoothScrollAnimation.h"
 #include "mozilla/dom/Touch.h"              // for Touch
+#include "mozilla/gfx/gfxVars.h"            // for gfxVars
 #include "mozilla/gfx/BasePoint.h"          // for BasePoint
 #include "mozilla/gfx/BaseRect.h"           // for BaseRect
 #include "mozilla/gfx/Point.h"              // for Point, RoundedToInt, etc
 #include "mozilla/gfx/Rect.h"               // for RoundedIn
 #include "mozilla/gfx/ScaleFactor.h"        // for ScaleFactor
-#include "mozilla/gfx/gfxVars.h"            // for gfxVars
-#include "mozilla/layers/APZPublicUtils.h"  // for GetScrollMode
 #include "mozilla/layers/APZThreadUtils.h"  // for AssertOnControllerThread, etc
 #include "mozilla/layers/APZUtils.h"        // for AsyncTransform
 #include "mozilla/layers/CompositorController.h"  // for CompositorController
 #include "mozilla/layers/DirectionUtils.h"  // for GetAxis{Start,End,Length,Scale}
 #include "mozilla/layers/DoubleTapToZoom.h"  // for ZoomTarget
-#include "mozilla/mozalloc.h"                // for operator new, etc
+#include "mozilla/layers/APZPublicUtils.h"   // for GetScrollMode
 #include "mozilla/webrender/WebRenderAPI.h"  // for MinimapData
+#include "mozilla/mozalloc.h"                // for operator new, etc
 #include "mozilla/webrender/WebRenderTypes.h"
 #include "nsCOMPtr.h"  // for already_AddRefed
 #include "nsDebug.h"   // for NS_WARNING
@@ -89,6 +85,9 @@
 #include "nsThreadUtils.h"   // for NS_IsMainThread
 #include "nsViewportInfo.h"  // for ViewportMinScale(), ViewportMaxScale()
 #include "prsystem.h"        // for PR_GetPhysicalMemorySize
+#include "ScrollSnap.h"      // for ScrollSnapUtils
+#include "ScrollAnimationPhysics.h"  // for ComputeAcceleratedWheelDelta
+#include "SmoothScrollAnimation.h"
 #if defined(MOZ_WIDGET_ANDROID)
 #  include "AndroidAPZ.h"
 #endif  // defined(MOZ_WIDGET_ANDROID)

@@ -3,22 +3,26 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "gfxFontUtils.h"
-
 #include "gfxFontEntry.h"
 #include "gfxFontVariations.h"
 #include "gfxUtils.h"
-#include "mozilla/Base64.h"
-#include "mozilla/BinarySearch.h"
-#include "mozilla/Encoding.h"
-#include "mozilla/EndianUtils.h"
-#include "mozilla/Logging.h"
+
+#include "nsServiceManagerUtils.h"
+
 #include "mozilla/Preferences.h"
-#include "mozilla/ServoStyleSet.h"
+#include "mozilla/BinarySearch.h"
+#include "mozilla/EndianUtils.h"
 #include "mozilla/Sprintf.h"
-#include "mozilla/dom/WorkerCommon.h"
+
 #include "nsCOMPtr.h"
 #include "nsIUUIDGenerator.h"
-#include "nsServiceManagerUtils.h"
+#include "mozilla/Encoding.h"
+
+#include "mozilla/ServoStyleSet.h"
+#include "mozilla/dom/WorkerCommon.h"
+
+#include "mozilla/Logging.h"
+#include "mozilla/Base64.h"
 
 #ifdef XP_DARWIN
 #  include <CoreFoundation/CoreFoundation.h>

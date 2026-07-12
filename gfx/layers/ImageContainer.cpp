@@ -6,22 +6,21 @@
 
 #include <string.h>  // for memcpy, memset
 
-#include "GLImages.h"  // for SurfaceTextureImage
-#include "GPUVideoImage.h"
+#include "GLImages.h"    // for SurfaceTextureImage
 #include "MediaInfo.h"   // VideoInfo::Rotation
 #include "YCbCrUtils.h"  // for YCbCr conversions
 #include "gfx2DGlue.h"
 #include "gfxPlatform.h"  // for gfxPlatform
 #include "gfxUtils.h"     // for gfxUtils
+#include "GPUVideoImage.h"
 #include "libyuv.h"
 #include "mozilla/CheckedInt.h"
 #include "mozilla/ProfilerLabels.h"
 #include "mozilla/RefPtr.h"  // for already_AddRefed
 #include "mozilla/StaticPrefs_layers.h"
-#include "mozilla/UniquePtrExtensions.h"
 #include "mozilla/gfx/2D.h"
-#include "mozilla/gfx/Swizzle.h"
 #include "mozilla/gfx/gfxVars.h"
+#include "mozilla/gfx/Swizzle.h"
 #include "mozilla/ipc/CrossProcessMutex.h"  // for CrossProcessMutex, etc
 #include "mozilla/layers/CompositorTypes.h"
 #include "mozilla/layers/ImageBridgeChild.h"     // for ImageBridgeChild
@@ -31,8 +30,9 @@
 #include "mozilla/layers/SharedPlanarYCbCrImage.h"
 #include "mozilla/layers/SharedRGBImage.h"
 #include "mozilla/layers/TextureClientRecycleAllocator.h"
-#include "nsISupportsUtils.h"  // for NS_IF_ADDREF
+#include "mozilla/UniquePtrExtensions.h"
 #include "nsProxyRelease.h"
+#include "nsISupportsUtils.h"  // for NS_IF_ADDREF
 
 #ifdef XP_DARWIN
 #  include "MacIOSurfaceImage.h"

@@ -7,23 +7,24 @@
 #endif
 
 #include "nsFxrCommandLineHandler.h"
-
-#include <windows.h>
-
 #include "FxRWindowManager.h"
-#include "VRShMem.h"
-#include "WinUtils.h"
-#include "mozIDOMWindow.h"
-#include "mozilla/StaticPrefs_extensions.h"
-#include "mozilla/WidgetUtils.h"
-#include "nsArray.h"
-#include "nsCOMPtr.h"
+
 #include "nsICommandLine.h"
-#include "nsIWidget.h"
 #include "nsIWindowWatcher.h"
+#include "mozIDOMWindow.h"
 #include "nsPIDOMWindow.h"
+#include "mozilla/WidgetUtils.h"
+#include "nsIWidget.h"
 #include "nsServiceManagerUtils.h"
 #include "nsString.h"
+#include "nsArray.h"
+#include "nsCOMPtr.h"
+#include "mozilla/StaticPrefs_extensions.h"
+
+#include <windows.h>
+#include "WinUtils.h"
+
+#include "VRShMem.h"
 
 NS_IMPL_ISUPPORTS(nsFxrCommandLineHandler, nsICommandLineHandler)
 

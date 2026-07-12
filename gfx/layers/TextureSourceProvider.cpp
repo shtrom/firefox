@@ -3,9 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "mozilla/layers/TextureSourceProvider.h"
-
-#include "mozilla/layers/PTextureParent.h"
 #include "mozilla/layers/TextureHost.h"
+#include "mozilla/layers/PTextureParent.h"
 
 namespace mozilla {
 namespace layers {

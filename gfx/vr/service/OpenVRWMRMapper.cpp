@@ -4,8 +4,8 @@
 
 #include "OpenVRWMRMapper.h"
 
-#include "VRSession.h"
 #include "moz_external_vr.h"
+#include "VRSession.h"
 
 namespace mozilla::gfx {
 

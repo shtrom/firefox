@@ -7,8 +7,8 @@
 #include <algorithm>  // for std::max()
 #include <cmath>      // for sqrtf()
 
-#include "APZCTreeManager.h"
 #include "AsyncPanZoomController.h"
+#include "APZCTreeManager.h"
 #include "FrameMetrics.h"
 #include "mozilla/StaticPrefs_general.h"
 

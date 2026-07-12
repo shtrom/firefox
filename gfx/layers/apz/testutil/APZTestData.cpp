@@ -3,7 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "APZTestData.h"
-
 #include "mozilla/dom/APZTestDataBinding.h"
 #include "mozilla/dom/ToJSValue.h"
 #include "nsString.h"

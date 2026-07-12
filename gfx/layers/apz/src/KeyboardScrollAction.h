@@ -7,8 +7,8 @@
 
 #include <cstdint>  // for uint8_t
 
-#include "mozilla/DefineEnum.h"  // for MOZ_DEFINE_ENUM
 #include "mozilla/ScrollTypes.h"
+#include "mozilla/DefineEnum.h"  // for MOZ_DEFINE_ENUM
 
 namespace mozilla {
 namespace layers {

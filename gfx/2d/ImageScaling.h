@@ -5,8 +5,9 @@
 #ifndef MOZILLA_GFX_IMAGESCALING_H
 #define MOZILLA_GFX_IMAGESCALING_H
 
-#include "Point.h"
 #include "Types.h"
+
+#include "Point.h"
 
 namespace mozilla {
 namespace gfx {

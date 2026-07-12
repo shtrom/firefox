@@ -6,8 +6,9 @@
 #define mozilla_layers_APZInputBridgeChild_h
 
 #include "mozilla/layers/APZInputBridge.h"
-#include "mozilla/layers/GeckoContentControllerTypes.h"
 #include "mozilla/layers/PAPZInputBridgeChild.h"
+
+#include "mozilla/layers/GeckoContentControllerTypes.h"
 
 namespace mozilla {
 namespace layers {

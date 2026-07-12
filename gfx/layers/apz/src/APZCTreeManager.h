@@ -10,14 +10,9 @@
 #include "FocusState.h"          // for FocusState
 #include "HitTestingTreeNode.h"  // for HitTestingTreeNodeAutoLock
 #include "IAPZHitTester.h"       // for IAPZHitTester::HitTestResult
-#include "VsyncSource.h"
-#include "gfxPoint.h"                // for gfxPoint
-#include "mozilla/Assertions.h"      // for MOZ_ASSERT_HELPER2
-#include "mozilla/DataMutex.h"       // for DataMutex
-#include "mozilla/RecursiveMutex.h"  // for RecursiveMutex
-#include "mozilla/RefPtr.h"          // for RefPtr
-#include "mozilla/TimeStamp.h"       // for mozilla::TimeStamp
-#include "mozilla/UniquePtr.h"       // for UniquePtr
+#include "gfxPoint.h"            // for gfxPoint
+#include "mozilla/Assertions.h"  // for MOZ_ASSERT_HELPER2
+#include "mozilla/DataMutex.h"   // for DataMutex
 #include "mozilla/gfx/CompositorHitTestInfo.h"
 #include "mozilla/gfx/Logging.h"            // for gfx::TreeLog
 #include "mozilla/gfx/Matrix.h"             // for Matrix4x4
@@ -25,15 +20,20 @@
 #include "mozilla/layers/APZUtils.h"        // for AsyncTransformComponents
 #include "mozilla/layers/CompositorScrollUpdate.h"  // for CompositorScrollUpdate
 #include "mozilla/layers/IAPZCTreeManager.h"        // for IAPZCTreeManager
-#include "mozilla/layers/KeyboardMap.h"             // for KeyboardMap
-#include "mozilla/layers/LayersTypes.h"
 #include "mozilla/layers/PWebRenderBridgeParent.h"
 #include "mozilla/layers/ScrollbarData.h"
+#include "mozilla/layers/LayersTypes.h"
+#include "mozilla/layers/KeyboardMap.h"      // for KeyboardMap
 #include "mozilla/layers/TouchCounter.h"     // for TouchCounter
 #include "mozilla/layers/ZoomConstraints.h"  // for ZoomConstraints
 #include "mozilla/webrender/webrender_ffi.h"
-#include "nsCOMPtr.h"  // for already_AddRefed
+#include "mozilla/RecursiveMutex.h"  // for RecursiveMutex
+#include "mozilla/RefPtr.h"          // for RefPtr
+#include "mozilla/TimeStamp.h"       // for mozilla::TimeStamp
+#include "mozilla/UniquePtr.h"       // for UniquePtr
+#include "nsCOMPtr.h"                // for already_AddRefed
 #include "nsTArray.h"
+#include "VsyncSource.h"
 
 namespace mozilla {
 class MultiTouchInput;

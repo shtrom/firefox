@@ -3,9 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "X11Util.h"
-
-#include "MainThreadUtils.h"  // for NS_IsMainThread
 #include "nsDebug.h"          // for NS_ASSERTION, etc
+#include "MainThreadUtils.h"  // for NS_IsMainThread
 
 namespace mozilla {
 

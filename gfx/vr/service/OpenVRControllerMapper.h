@@ -5,9 +5,10 @@
 #ifndef GFX_VR_SERVICE_OPENVRCONTROLLERMAPPER_H
 #define GFX_VR_SERVICE_OPENVRCONTROLLERMAPPER_H
 
-#include "moz_external_vr.h"
-#include "nsString.h"
 #include "openvr.h"
+#include "nsString.h"
+
+#include "moz_external_vr.h"
 
 namespace mozilla {
 namespace gfx {

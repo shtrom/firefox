@@ -3,7 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "BSPTree.h"
-
 #include "mozilla/gfx/Polygon.h"
 
 namespace mozilla {

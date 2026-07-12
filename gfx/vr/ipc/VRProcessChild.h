@@ -5,8 +5,8 @@
 #ifndef GFX_VR_PROCESS_CHILD_H
 #define GFX_VR_PROCESS_CHILD_H
 
-#include "VRParent.h"
 #include "mozilla/ipc/ProcessChild.h"
+#include "VRParent.h"
 
 namespace mozilla {
 namespace gfx {

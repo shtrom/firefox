@@ -5,8 +5,8 @@
 #ifndef SHARED_SURFACEIO_H_
 #define SHARED_SURFACEIO_H_
 
-#include "SharedSurface.h"
 #include "mozilla/RefPtr.h"
+#include "SharedSurface.h"
 
 class MacIOSurface;
 

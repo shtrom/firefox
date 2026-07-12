@@ -5,8 +5,8 @@
 #ifndef GFX_VR_PARENT_H
 #define GFX_VR_PARENT_H
 
-#include "VRGPUParent.h"
 #include "mozilla/gfx/PVRParent.h"
+#include "VRGPUParent.h"
 
 namespace mozilla {
 namespace gfx {

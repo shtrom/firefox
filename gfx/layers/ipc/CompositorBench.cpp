@@ -5,14 +5,13 @@
 #include "CompositorBench.h"
 
 #ifdef MOZ_COMPOSITOR_BENCH
-#  include <math.h>
-
-#  include "mozilla/ProfilerMarkers.h"
-#  include "mozilla/StaticPrefs_layers.h"
-#  include "mozilla/TimeStamp.h"
 #  include "mozilla/gfx/2D.h"
 #  include "mozilla/layers/Compositor.h"
 #  include "mozilla/layers/Effects.h"
+#  include "mozilla/ProfilerMarkers.h"
+#  include "mozilla/StaticPrefs_layers.h"
+#  include "mozilla/TimeStamp.h"
+#  include <math.h>
 
 #  define TEST_STEPS 1000
 #  define DURATION_THRESHOLD 30

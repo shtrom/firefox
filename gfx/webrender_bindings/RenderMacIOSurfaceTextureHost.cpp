@@ -10,12 +10,12 @@
 #  include "GLContextEAGL.h"
 #endif
 
-#include "ScopedGLHelpers.h"
+#include "mozilla/gfx/Logging.h"
+#include "mozilla/layers/GpuFence.h"
 #include "mozilla/ProfilerLabels.h"
 #include "mozilla/ProfilerMarkers.h"
 #include "mozilla/TimeStamp.h"
-#include "mozilla/gfx/Logging.h"
-#include "mozilla/layers/GpuFence.h"
+#include "ScopedGLHelpers.h"
 
 namespace mozilla {
 namespace wr {

@@ -4,13 +4,13 @@
 
 #include "PrintTargetCG.h"
 
-#include "cairo-quartz.h"
 #include "cairo.h"
-#include "mozilla/StaticPrefs_print.h"
+#include "cairo-quartz.h"
 #include "mozilla/gfx/HelpersCairo.h"
-#include "nsIOutputStream.h"
+#include "mozilla/StaticPrefs_print.h"
 #include "nsObjCExceptions.h"
 #include "nsString.h"
+#include "nsIOutputStream.h"
 
 namespace mozilla::gfx {
 

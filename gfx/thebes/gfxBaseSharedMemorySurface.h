@@ -5,10 +5,11 @@
 #ifndef GFX_SHARED_MEMORYSURFACE_H
 #define GFX_SHARED_MEMORYSURFACE_H
 
-#include "gfxASurface.h"
-#include "gfxImageSurface.h"
 #include "mozilla/gfx/2D.h"
 #include "mozilla/ipc/Shmem.h"
+
+#include "gfxASurface.h"
+#include "gfxImageSurface.h"
 #include "pratom.h"
 
 typedef struct _cairo_user_data_key cairo_user_data_key_t;

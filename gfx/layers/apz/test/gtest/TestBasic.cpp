@@ -4,6 +4,7 @@
 
 #include "APZCBasicTester.h"
 #include "APZTestCommon.h"
+
 #include "InputUtils.h"
 #include "mozilla/ScrollPositionUpdate.h"
 #include "mozilla/layers/ScrollableLayerGuid.h"

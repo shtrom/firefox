@@ -11,8 +11,8 @@
 #include "GPUParent.h"
 #include "GPUProcessHost.h"
 #include "GPUProcessManager.h"
+#include "gfxGradientCache.h"
 #include "GfxInfoBase.h"
-#include "MediaCodecsSupport.h"
 #include "VRGPUChild.h"
 #include "VRManager.h"
 #include "VRManagerParent.h"
@@ -20,8 +20,8 @@
 #include "cairo.h"
 #include "gfxConfig.h"
 #include "gfxCrashReporterUtils.h"
-#include "gfxGradientCache.h"
 #include "gfxPlatform.h"
+#include "MediaCodecsSupport.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/Components.h"
 #include "mozilla/FOGIPC.h"
@@ -72,7 +72,6 @@
 #  include <process.h>
 #  include <windows.h>
 
-#  include "WMFDecoderModule.h"
 #  include "gfxDWriteFonts.h"
 #  include "gfxWindowsPlatform.h"
 #  include "mozilla/gfx/DeviceManagerDx.h"
@@ -80,6 +79,7 @@
 #  include "mozilla/layers/GpuProcessD3D11TextureMap.h"
 #  include "mozilla/layers/TextureD3D11.h"
 #  include "mozilla/widget/WinCompositorWindowThread.h"
+#  include "WMFDecoderModule.h"
 #else
 #  include <unistd.h>
 #endif

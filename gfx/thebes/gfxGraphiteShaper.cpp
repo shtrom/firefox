@@ -3,18 +3,21 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "gfxGraphiteShaper.h"
-
-#include "ThebesRLBox.h"
+#include "nsString.h"
 #include "gfxContext.h"
 #include "gfxFontConstants.h"
 #include "gfxTextRun.h"
+
 #include "graphite2/Font.h"
 #include "graphite2/GraphiteExtra.h"
 #include "graphite2/Segment.h"
+
 #include "harfbuzz/hb.h"
+
 #include "mozilla/ScopeExit.h"
 #include "mozilla/Utf16.h"
-#include "nsString.h"
+
+#include "ThebesRLBox.h"
 
 #define FloatToFixed(f) (65536 * (f))
 #define FixedToFloat(f) ((f) * (1.0 / 65536.0))

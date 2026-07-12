@@ -2,61 +2,63 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "gfxPlatform.h"
-
-#include "GfxDriverInfo.h"
-#include "VRProcessManager.h"
-#include "VRThread.h"
-#include "gfxBlur.h"
-#include "gfxConfig.h"
-#include "gfxCrashReporterUtils.h"
-#include "gfxEnv.h"
-#include "gfxPlatformWorker.h"
-#include "gfxTextRun.h"
-#include "gfxUserFontSet.h"
-#include "mozilla/Base64.h"
-#include "mozilla/ClearOnShutdown.h"
-#include "mozilla/Components.h"
-#include "mozilla/EnumTypeTraits.h"
 #include "mozilla/FontPropertyTypes.h"
-#include "mozilla/IntegerPrintfMacros.h"
-#include "mozilla/Logging.h"
 #include "mozilla/RDDProcessManager.h"
-#include "mozilla/StaticPrefs_accessibility.h"
-#include "mozilla/StaticPrefs_apz.h"
-#include "mozilla/StaticPrefs_bidi.h"
-#include "mozilla/StaticPrefs_gfx.h"
-#include "mozilla/StaticPrefs_layers.h"
-#include "mozilla/StaticPrefs_layout.h"
-#include "mozilla/StaticPrefs_media.h"
-#include "mozilla/StaticPrefs_privacy.h"
-#include "mozilla/StaticPrefs_webgl.h"
-#include "mozilla/StaticPrefs_widget.h"
-#include "mozilla/TimeStamp.h"
-#include "mozilla/VsyncDispatcher.h"
-#include "mozilla/gfx/BuildConstants.h"
-#include "mozilla/gfx/CanvasRenderThread.h"
-#include "mozilla/gfx/CanvasShutdownManager.h"
-#include "mozilla/gfx/GPUProcessManager.h"
-#include "mozilla/gfx/GraphicsMessages.h"
-#include "mozilla/gfx/gfxConfigManager.h"
-#include "mozilla/gfx/gfxVars.h"
-#include "mozilla/glean/GfxMetrics.h"
 #include "mozilla/image/ImageMemoryReporter.h"
-#include "mozilla/layers/CompositorBridgeChild.h"
 #include "mozilla/layers/CompositorManagerChild.h"
 #include "mozilla/layers/CompositorThread.h"
-#include "mozilla/layers/ISurfaceAllocator.h"  // for GfxMemoryImageReporter
 #include "mozilla/layers/ImageBridgeChild.h"
+#include "mozilla/layers/ISurfaceAllocator.h"  // for GfxMemoryImageReporter
+#include "mozilla/layers/CompositorBridgeChild.h"
 #include "mozilla/layers/RemoteTextureMap.h"
 #include "mozilla/layers/VideoBridgeParent.h"
 #include "mozilla/webrender/RenderThread.h"
 #include "mozilla/webrender/WebRenderAPI.h"
 #include "mozilla/webrender/webrender_ffi.h"
-#include "nsAppDirectoryServiceDefs.h"
+#include "mozilla/gfx/BuildConstants.h"
+#include "mozilla/gfx/gfxConfigManager.h"
+#include "mozilla/gfx/gfxVars.h"
+#include "mozilla/gfx/GPUProcessManager.h"
+#include "mozilla/gfx/GraphicsMessages.h"
+#include "mozilla/gfx/CanvasRenderThread.h"
+#include "mozilla/gfx/CanvasShutdownManager.h"
+#include "mozilla/ClearOnShutdown.h"
+#include "mozilla/EnumTypeTraits.h"
+#include "mozilla/StaticPrefs_accessibility.h"
+#include "mozilla/StaticPrefs_apz.h"
+#include "mozilla/StaticPrefs_bidi.h"
+#include "mozilla/StaticPrefs_gfx.h"
+#include "mozilla/StaticPrefs_layout.h"
+#include "mozilla/StaticPrefs_layers.h"
+#include "mozilla/StaticPrefs_media.h"
+#include "mozilla/StaticPrefs_privacy.h"
+#include "mozilla/StaticPrefs_webgl.h"
+#include "mozilla/StaticPrefs_widget.h"
+#include "mozilla/glean/GfxMetrics.h"
+#include "mozilla/TimeStamp.h"
+#include "mozilla/IntegerPrintfMacros.h"
+#include "mozilla/Base64.h"
+#include "mozilla/VsyncDispatcher.h"
+
+#include "mozilla/Logging.h"
+#include "mozilla/Components.h"
 #include "nsAppRunner.h"
+#include "nsAppDirectoryServiceDefs.h"
 #include "nsCSSProps.h"
 #include "nsContentUtils.h"
+
+#include "gfxCrashReporterUtils.h"
+#include "gfxPlatform.h"
+#include "gfxPlatformWorker.h"
+
+#include "gfxBlur.h"
+#include "gfxEnv.h"
+#include "gfxTextRun.h"
+#include "gfxUserFontSet.h"
+#include "gfxConfig.h"
+#include "GfxDriverInfo.h"
+#include "VRProcessManager.h"
+#include "VRThread.h"
 
 #ifdef XP_WIN
 #  include <process.h>
@@ -65,10 +67,10 @@
 #  include <unistd.h>
 #endif
 
-#include "nsDirectoryServiceDefs.h"
-#include "nsDirectoryServiceUtils.h"
-#include "nsIXULAppInfo.h"
 #include "nsXULAppAPI.h"
+#include "nsIXULAppInfo.h"
+#include "nsDirectoryServiceUtils.h"
+#include "nsDirectoryServiceDefs.h"
 
 #if defined(XP_WIN)
 #  include "gfxWindowsPlatform.h"
@@ -78,8 +80,8 @@
 #  include "gfxPlatformMac.h"
 #  include "gfxQuartzSurface.h"
 #elif defined(MOZ_WIDGET_GTK)
-#  include "DMABufFormats.h"
 #  include "gfxPlatformGtk.h"
+#  include "DMABufFormats.h"
 #elif defined(ANDROID)
 #  include "gfxAndroidPlatform.h"
 #endif
@@ -88,35 +90,40 @@
 #endif
 
 #ifdef XP_WIN
-#  include "WinUtils.h"
 #  include "mozilla/WindowsVersion.h"
+#  include "WinUtils.h"
 #endif
 
-#include "GLContext.h"
-#include "GLContextProvider.h"
-#include "MainThreadUtils.h"
-#include "cairo.h"
-#include "gfx2DGlue.h"
-#include "gfxContext.h"
-#include "gfxFontMissingGlyphs.h"
-#include "gfxGradientCache.h"
-#include "gfxGraphiteShaper.h"
-#include "gfxImageSurface.h"
 #include "gfxPlatformFontList.h"
-#include "gfxUtils.h"  // for NextPowerOfTwo
+#include "gfxContext.h"
+#include "gfxImageSurface.h"
+#include "nsUnicodeProperties.h"
 #include "harfbuzz/hb.h"
-#include "imgITools.h"
-#include "mozilla/gfx/Logging.h"
-#include "mozilla/widget/Screen.h"
-#include "mozilla/widget/ScreenManager.h"
-#include "nsCRT.h"
+#include "gfxGraphiteShaper.h"
+#include "gfx2DGlue.h"
+#include "gfxGradientCache.h"
+#include "gfxUtils.h"  // for NextPowerOfTwo
+#include "gfxFontMissingGlyphs.h"
+
 #include "nsExceptionHandler.h"
-#include "nsIObserverService.h"
 #include "nsServiceManagerUtils.h"
 #include "nsTArray.h"
-#include "nsUnicodeProperties.h"
+#include "nsIObserverService.h"
+#include "mozilla/widget/Screen.h"
+#include "mozilla/widget/ScreenManager.h"
+#include "MainThreadUtils.h"
+
 #include "nsWeakReference.h"
+
+#include "cairo.h"
 #include "qcms.h"
+
+#include "imgITools.h"
+
+#include "nsCRT.h"
+#include "GLContext.h"
+#include "GLContextProvider.h"
+#include "mozilla/gfx/Logging.h"
 
 #ifdef __GNUC__
 #  pragma GCC diagnostic push
@@ -132,26 +139,28 @@
 #endif
 static const uint32_t kDefaultGlyphCacheSize = -1;
 
-#include "SoftwareVsyncSource.h"
-#include "VRManager.h"
-#include "VRManagerChild.h"
-#include "VsyncSource.h"
-#include "gfxVR.h"
+#include "mozilla/Preferences.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/Atomics.h"
 #include "mozilla/Attributes.h"
 #include "mozilla/Mutex.h"
-#include "mozilla/Preferences.h"
+
+#include "nsIGfxInfo.h"
+#include "nsIXULRuntime.h"
+#include "VsyncSource.h"
+#include "SoftwareVsyncSource.h"
+#include "nscore.h"  // for NS_FREE_PERMANENT_DATA
 #include "mozilla/dom/ContentChild.h"
 #include "mozilla/dom/ContentParent.h"
 #include "mozilla/dom/TouchEvent.h"
-#include "mozilla/gfx/2D.h"
+#include "gfxVR.h"
+#include "VRManager.h"
+#include "VRManagerChild.h"
 #include "mozilla/gfx/GPUParent.h"
-#include "mozilla/gfx/SourceSurfaceCairo.h"
-#include "nsIGfxInfo.h"
-#include "nsIXULRuntime.h"
-#include "nscore.h"  // for NS_FREE_PERMANENT_DATA
 #include "prsystem.h"
+
+#include "mozilla/gfx/2D.h"
+#include "mozilla/gfx/SourceSurfaceCairo.h"
 
 using namespace mozilla;
 using namespace mozilla::layers;

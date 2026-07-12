@@ -3,7 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "GPUVideoTextureClient.h"
-
 #include "GPUVideoImage.h"
 #include "mozilla/gfx/2D.h"
 

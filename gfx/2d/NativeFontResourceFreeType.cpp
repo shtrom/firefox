@@ -4,8 +4,8 @@
 
 #include "NativeFontResourceFreeType.h"
 
-#include "UnscaledFontFreeType.h"
 #include "mozilla/UniquePtrExtensions.h"
+#include "UnscaledFontFreeType.h"
 
 namespace mozilla::gfx {
 

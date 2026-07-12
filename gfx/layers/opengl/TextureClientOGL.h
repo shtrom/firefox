@@ -14,8 +14,8 @@
 #include "mozilla/layers/LayersSurfaces.h"  // for SurfaceDescriptor
 #include "mozilla/layers/TextureClient.h"   // for TextureClient, etc
 #ifdef MOZ_WIDGET_ANDROID
-#  include "AndroidNativeWindow.h"
 #  include "AndroidSurfaceTexture.h"
+#  include "AndroidNativeWindow.h"
 #  include "mozilla/java/GeckoSurfaceWrappers.h"
 #  include "mozilla/layers/AndroidHardwareBuffer.h"
 #endif

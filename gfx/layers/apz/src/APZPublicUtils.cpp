@@ -5,8 +5,8 @@
 #include "mozilla/layers/APZPublicUtils.h"
 
 #include "AsyncPanZoomController.h"
-#include "mozilla/StaticPrefs_general.h"
 #include "nsLayoutUtils.h"
+#include "mozilla/StaticPrefs_general.h"
 
 namespace mozilla {
 namespace layers {

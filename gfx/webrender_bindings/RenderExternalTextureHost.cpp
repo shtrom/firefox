@@ -4,9 +4,10 @@
 
 #include "RenderExternalTextureHost.h"
 
-#include "GLContext.h"
 #include "mozilla/gfx/Logging.h"
 #include "mozilla/layers/ImageDataSerializer.h"
+
+#include "GLContext.h"
 
 namespace mozilla {
 namespace wr {

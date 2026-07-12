@@ -7,8 +7,8 @@
 
 #include <dwrite.h>
 
-#include "Types.h"
 #include "mozilla/AlreadyAddRefed.h"
+#include "Types.h"
 
 namespace mozilla {
 namespace gfx {

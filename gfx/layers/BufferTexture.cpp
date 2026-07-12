@@ -6,7 +6,6 @@
 
 #include <utility>
 
-#include "gfxPlatform.h"
 #include "libyuv.h"
 #include "mozilla/fallible.h"
 #include "mozilla/gfx/2D.h"
@@ -15,6 +14,8 @@
 #include "mozilla/layers/ISurfaceAllocator.h"
 #include "mozilla/layers/ImageDataSerializer.h"
 #include "mozilla/layers/TextureForwarder.h"
+
+#include "gfxPlatform.h"
 
 #ifdef MOZ_WIDGET_GTK
 #  include "gfxPlatformGtk.h"

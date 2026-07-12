@@ -6,20 +6,20 @@
 
 #include "GLContextEGL.h"  // for GLContext, etc
 #include "GLLibraryEGL.h"  // for GLLibraryEGL
-#include "GLReadTexImageHelper.h"
 #include "GLUploadHelpers.h"
-#include "GeckoProfiler.h"
-#include "GfxTexturesReporter.h"   // for GfxTexturesReporter
+#include "GLReadTexImageHelper.h"
 #include "gfx2DGlue.h"             // for ContentForFormat, etc
 #include "mozilla/gfx/2D.h"        // for DataSourceSurface
 #include "mozilla/gfx/BaseSize.h"  // for BaseSize
-#include "mozilla/gfx/Logging.h"   // for gfxCriticalError
 #include "mozilla/gfx/gfxVars.h"
+#include "mozilla/gfx/Logging.h"  // for gfxCriticalError
 #include "mozilla/layers/Fence.h"
 #include "mozilla/layers/ISurfaceAllocator.h"
 #include "mozilla/webrender/RenderEGLImageTextureHost.h"
 #include "mozilla/webrender/WebRenderAPI.h"
-#include "nsRegion.h"  // for nsIntRegion
+#include "nsRegion.h"             // for nsIntRegion
+#include "GfxTexturesReporter.h"  // for GfxTexturesReporter
+#include "GeckoProfiler.h"
 
 #ifdef XP_MACOSX
 #  include "mozilla/layers/MacIOSurfaceTextureHostOGL.h"

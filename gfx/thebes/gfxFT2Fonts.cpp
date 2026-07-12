@@ -13,20 +13,22 @@
 #  define gfxToolkitPlatform gfxAndroidPlatform
 #endif
 
-#include "gfxFT2FontBase.h"
-#include "gfxFT2FontList.h"
-#include "gfxFT2Fonts.h"
-#include "gfxFT2Utils.h"
-#include "gfxTextRun.h"
 #include "gfxTypes.h"
+#include "gfxFT2Fonts.h"
+#include "gfxFT2FontBase.h"
+#include "gfxFT2Utils.h"
+#include "gfxFT2FontList.h"
+#include "gfxTextRun.h"
+#include "nsTArray.h"
+#include "nsCRT.h"
+#include "nsXULAppAPI.h"
+
 #include "mozilla/Logging.h"
+#include "prinit.h"
+
 #include "mozilla/MemoryReporting.h"
 #include "mozilla/Preferences.h"
 #include "mozilla/gfx/2D.h"
-#include "nsCRT.h"
-#include "nsTArray.h"
-#include "nsXULAppAPI.h"
-#include "prinit.h"
 
 using namespace mozilla;
 using namespace mozilla::gfx;

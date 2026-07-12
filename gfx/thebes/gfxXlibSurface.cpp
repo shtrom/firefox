@@ -4,20 +4,18 @@
 
 #include "gfxXlibSurface.h"
 
-#include <X11/Xlibint.h> /* For XESetCloseDisplay */
-
-#include "cairo-xlib.h"
 #include "cairo.h"
-#undef max  // Xlibint.h defines this and it breaks std::max
-#undef min  // Xlibint.h defines this and it breaks std::min
+#include "cairo-xlib.h"
+#include <X11/Xlibint.h> /* For XESetCloseDisplay */
+#undef max               // Xlibint.h defines this and it breaks std::max
+#undef min               // Xlibint.h defines this and it breaks std::min
 #undef Data
 
-#include <algorithm>
-
-#include "mozilla/CheckedInt.h"
-#include "mozilla/Preferences.h"
-#include "mozilla/gfx/2D.h"
 #include "nsTArray.h"
+#include "mozilla/gfx/2D.h"
+#include "mozilla/Preferences.h"
+#include <algorithm>
+#include "mozilla/CheckedInt.h"
 
 using namespace mozilla;
 using namespace mozilla::gfx;

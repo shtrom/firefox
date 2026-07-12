@@ -4,8 +4,8 @@
 
 #include "gfxFontSrcPrincipal.h"
 
-#include "mozilla/BasePrincipal.h"
 #include "nsURIHashKey.h"
+#include "mozilla/BasePrincipal.h"
 
 using mozilla::BasePrincipal;
 

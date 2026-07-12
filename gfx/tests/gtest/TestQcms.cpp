@@ -2,16 +2,17 @@
  * http://creativecommons.org/publicdomain/zero/1.0/
  */
 
-#include <cmath>
-
-#include "gmock/gmock.h"
-#include "gtest/MozGTestBench.h"
 #include "gtest/gtest.h"
-#include "mozilla/SSE.h"
+#include "gtest/MozGTestBench.h"
+#include "gmock/gmock.h"
+
 #include "mozilla/UniquePtr.h"
+#include "mozilla/SSE.h"
 #include "mozilla/arm.h"
 #include "qcms.h"
 #include "qcmsint.h"
+
+#include <cmath>
 
 /* SSEv1 is only included in non-Windows or non-x86-64-bit builds. */
 #if defined(MOZILLA_MAY_SUPPORT_SSE) && \

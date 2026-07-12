@@ -5,9 +5,11 @@
 #ifndef GFX_GRAPHITESHAPER_H
 #define GFX_GRAPHITESHAPER_H
 
-#include "ThebesRLBoxTypes.h"
 #include "gfxFont.h"
+
 #include "nsTHashSet.h"
+
+#include "ThebesRLBoxTypes.h"
 
 struct gr_face;
 struct gr_font;

@@ -3,16 +3,15 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "gfxCoreTextShaper.h"
-
-#include <dlfcn.h>
+#include "gfxMacFont.h"
+#include "gfxFontUtils.h"
+#include "gfxTextRun.h"
+#include "mozilla/gfx/ScaledFontMac.h"
+#include "mozilla/UniquePtrExtensions.h"
 
 #include <algorithm>
 
-#include "gfxFontUtils.h"
-#include "gfxMacFont.h"
-#include "gfxTextRun.h"
-#include "mozilla/UniquePtrExtensions.h"
-#include "mozilla/gfx/ScaledFontMac.h"
+#include <dlfcn.h>
 
 using namespace mozilla;
 using namespace mozilla::gfx;

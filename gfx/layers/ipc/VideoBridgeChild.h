@@ -5,10 +5,10 @@
 #ifndef MOZILLA_GFX_VIDEOBRIDGECHILD_H
 #define MOZILLA_GFX_VIDEOBRIDGECHILD_H
 
-#include "ISurfaceAllocator.h"
-#include "TextureForwarder.h"
 #include "mozilla/layers/PVideoBridgeChild.h"
 #include "mozilla/layers/VideoBridgeUtils.h"
+#include "ISurfaceAllocator.h"
+#include "TextureForwarder.h"
 
 namespace mozilla {
 namespace layers {

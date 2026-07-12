@@ -7,19 +7,20 @@
 #include <inttypes.h>
 
 #include "AsyncPanZoomController.h"
+
 #include "GestureEventListener.h"
 #include "InputBlockState.h"
-#include "OverscrollHandoffState.h"
-#include "QueuedInput.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/EventForwards.h"
+#include "mozilla/layers/APZInputBridge.h"
+#include "mozilla/layers/APZThreadUtils.h"
 #include "mozilla/RefPtr.h"
+#include "mozilla/ToString.h"
+#include "OverscrollHandoffState.h"
+#include "QueuedInput.h"
 #include "mozilla/StaticPrefs_apz.h"
 #include "mozilla/StaticPrefs_layout.h"
 #include "mozilla/StaticPrefs_ui.h"
-#include "mozilla/ToString.h"
-#include "mozilla/layers/APZInputBridge.h"
-#include "mozilla/layers/APZThreadUtils.h"
 
 static mozilla::LazyLogModule sApzInpLog("apz.inputqueue");
 #define INPQ_LOG(...) MOZ_LOG(sApzInpLog, LogLevel::Debug, (__VA_ARGS__))

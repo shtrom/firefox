@@ -5,9 +5,8 @@
 #ifndef GFX_2D_PATHANALYSIS_H_
 #define GFX_2D_PATHANALYSIS_H_
 
-#include <vector>
-
 #include "2D.h"
+#include <vector>
 
 namespace mozilla {
 namespace gfx {

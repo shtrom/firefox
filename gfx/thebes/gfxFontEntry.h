@@ -5,26 +5,24 @@
 #ifndef GFX_FONTENTRY_H
 #define GFX_FONTENTRY_H
 
-#include <math.h>
-
 #include <limits>
+#include <math.h>
 #include <utility>
-
 #include "ThebesRLBoxTypes.h"
-#include "gfxFontFeatures.h"
-#include "gfxFontUtils.h"
 #include "gfxFontVariations.h"
 #include "gfxRect.h"
-#include "gfxSparseBitSet.h"
 #include "gfxTypes.h"
+#include "gfxSparseBitSet.h"
+#include "gfxFontUtils.h"
+#include "gfxFontFeatures.h"
 #include "harfbuzz/hb.h"
 #include "mozilla/AlreadyAddRefed.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/FontPropertyTypes.h"
 #include "mozilla/MemoryReporting.h"
 #include "mozilla/Mutex.h"
-#include "mozilla/RWLock.h"
 #include "mozilla/RefPtr.h"
+#include "mozilla/RWLock.h"
 #include "mozilla/TypedEnumBits.h"
 #include "mozilla/UniquePtr.h"
 #include "mozilla/intl/UnicodeScriptCodes.h"

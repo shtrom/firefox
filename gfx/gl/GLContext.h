@@ -5,9 +5,8 @@
 #ifndef GLCONTEXT_H_
 #define GLCONTEXT_H_
 
-#include <stdint.h>
-
 #include <bitset>
+#include <stdint.h>
 #include <stack>
 #include <vector>
 
@@ -25,22 +24,23 @@
 #  define MOZ_GL_DEBUG_BUILD 1
 #endif
 
-#include "GLConsts.h"
-#include "GLContextSymbols.h"
-#include "GLContextTypes.h"
-#include "GLDefs.h"
-#include "GLTypes.h"
-#include "MozFramebuffer.h"
-#include "base/platform_thread.h"  // for PlatformThreadId
-#include "mozilla/GenericRefCounted.h"
 #include "mozilla/IntegerRange.h"
 #include "mozilla/RefPtr.h"
-#include "mozilla/ThreadLocal.h"
 #include "mozilla/UniquePtr.h"
-#include "mozilla/WeakPtr.h"
+#include "mozilla/ThreadLocal.h"
+
+#include "MozFramebuffer.h"
+#include "nsTArray.h"
+#include "GLConsts.h"
+#include "GLDefs.h"
+#include "GLTypes.h"
 #include "nsRegionFwd.h"
 #include "nsString.h"
-#include "nsTArray.h"
+#include "GLContextTypes.h"
+#include "GLContextSymbols.h"
+#include "base/platform_thread.h"  // for PlatformThreadId
+#include "mozilla/GenericRefCounted.h"
+#include "mozilla/WeakPtr.h"
 
 template <class ElemT, class... More>
 constexpr inline std::array<ElemT, 1 + sizeof...(More)> make_array(

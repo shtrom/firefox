@@ -5,9 +5,6 @@
 #include "WebRenderLayerManager.h"
 
 #include "GeckoProfiler.h"
-#include "LayerUserData.h"
-#include "WebRenderCanvasRenderer.h"
-#include "mozilla/PerfStats.h"
 #include "mozilla/StaticPrefs_apz.h"
 #include "mozilla/StaticPrefs_layers.h"
 #include "mozilla/dom/BrowserChild.h"
@@ -18,8 +15,11 @@
 #include "mozilla/layers/TextureClient.h"
 #include "mozilla/layers/TransactionIdAllocator.h"
 #include "mozilla/layers/WebRenderBridgeChild.h"
+#include "mozilla/PerfStats.h"
 #include "nsDisplayList.h"
 #include "nsLayoutUtils.h"
+#include "WebRenderCanvasRenderer.h"
+#include "LayerUserData.h"
 
 #ifdef XP_WIN
 #  include "gfxDWriteFonts.h"

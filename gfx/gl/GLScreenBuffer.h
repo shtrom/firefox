@@ -14,13 +14,13 @@
 #ifndef SCREEN_BUFFER_H_
 #define SCREEN_BUFFER_H_
 
-#include <functional>
-#include <memory>
-#include <queue>
-
 #include "GLTypes.h"
-#include "mozilla/UniquePtr.h"
 #include "mozilla/gfx/Point.h"
+#include "mozilla/UniquePtr.h"
+
+#include <functional>
+#include <queue>
+#include <memory>
 
 namespace mozilla {
 namespace gl {

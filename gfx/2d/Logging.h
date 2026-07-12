@@ -5,10 +5,9 @@
 #ifndef MOZILLA_GFX_LOGGING_H_
 #define MOZILLA_GFX_LOGGING_H_
 
-#include <stdio.h>
-
-#include <sstream>
 #include <string>
+#include <sstream>
+#include <stdio.h>
 #include <vector>
 
 #ifdef MOZ_LOGGING
@@ -19,11 +18,11 @@
 #  include "nsDebug.h"
 #endif
 #include "2D.h"
-#include "BaseRect.h"
-#include "LoggingConstants.h"
-#include "Matrix.h"
-#include "Point.h"
 #include "mozilla/StaticPrefs_gfx.h"
+#include "Point.h"
+#include "BaseRect.h"
+#include "Matrix.h"
+#include "LoggingConstants.h"
 
 #if defined(MOZ_LOGGING)
 extern GFX2D_API mozilla::LogModule* GetGFX2DLog();

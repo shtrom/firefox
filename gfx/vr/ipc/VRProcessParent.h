@@ -6,6 +6,7 @@
 #define GFX_VR_PROCESS_PARENT_H
 
 #include "mozilla/UniquePtr.h"
+
 #include "mozilla/ipc/GeckoChildProcessHost.h"
 #include "mozilla/ipc/TaskFactory.h"
 

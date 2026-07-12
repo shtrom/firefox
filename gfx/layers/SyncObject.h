@@ -5,8 +5,8 @@
 #ifndef MOZILLA_GFX_LAYERS_SYNCOBJECT_H
 #define MOZILLA_GFX_LAYERS_SYNCOBJECT_H
 
-#include "mozilla/RefCounted.h"
 #include "mozilla/gfx/FileHandleWrapper.h"
+#include "mozilla/RefCounted.h"
 
 struct ID3D11Device;
 

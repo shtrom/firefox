@@ -5,20 +5,18 @@
 #ifndef MOZILLA_GFX_MATRIX_H_
 #define MOZILLA_GFX_MATRIX_H_
 
-#include <math.h>
-
-#include <iosfwd>
-
+#include "Types.h"
+#include "Triangle.h"
+#include "Rect.h"
 #include "Point.h"
 #include "Quaternion.h"
-#include "Rect.h"
-#include "Triangle.h"
-#include "Types.h"
+#include <iosfwd>
+#include <math.h>
 #include "mozilla/Attributes.h"
 #include "mozilla/DebugOnly.h"
 #include "mozilla/FloatingPoint.h"
-#include "mozilla/Span.h"
 #include "mozilla/gfx/ScaleFactors2D.h"
+#include "mozilla/Span.h"
 
 namespace mozilla {
 

@@ -3,18 +3,17 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "TestWRScrollData.h"
-
-#include <stack>
-
 #include "APZTestAccess.h"
-#include "FrameMetrics.h"
-#include "apz/src/APZCTreeManager.h"
-#include "gfxPlatform.h"
 #include "gtest/gtest.h"
+#include "FrameMetrics.h"
+#include "gfxPlatform.h"
 #include "mozilla/layers/APZUpdater.h"
 #include "mozilla/layers/LayersTypes.h"
 #include "mozilla/layers/ScrollableLayerGuid.h"
 #include "mozilla/layers/WebRenderScrollDataWrapper.h"
+#include "apz/src/APZCTreeManager.h"
+
+#include <stack>
 
 using mozilla::layers::APZCTreeManager;
 using mozilla::layers::APZUpdater;

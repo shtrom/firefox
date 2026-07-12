@@ -5,23 +5,25 @@
 #include "mozilla/layers/APZInputBridge.h"
 
 #include "AsyncPanZoomController.h"
-#include "InputBlockState.h"         // for InputBlockState
 #include "InputData.h"               // for MouseInput, etc
+#include "InputBlockState.h"         // for InputBlockState
 #include "OverscrollHandoffState.h"  // for OverscrollHandoffState
+#include "nsLayoutUtils.h"           // for IsSmoothScrollingEnabled
 #include "mozilla/EventForwards.h"
-#include "mozilla/EventStateManager.h"  // for EventStateManager
-#include "mozilla/MouseEvents.h"        // for WidgetMouseEvent
+#include "mozilla/dom/WheelEventBinding.h"  // for WheelEvent constants
+#include "mozilla/EventStateManager.h"      // for EventStateManager
+#include "mozilla/layers/APZThreadUtils.h"  // for AssertOnControllerThread, etc
+#include "mozilla/MouseEvents.h"            // for WidgetMouseEvent
+#include "mozilla/StaticPrefs_apz.h"
 #include "mozilla/StaticPrefs_general.h"
 #include "mozilla/StaticPrefs_test.h"
-#include "mozilla/TextEvents.h"             // for WidgetKeyboardEvent
-#include "mozilla/TouchEvents.h"            // for WidgetTouchEvent
-#include "mozilla/WheelHandlingHelper.h"    // for WheelDeltaHorizontalizer,
-                                            //     WheelDeltaAdjustmentStrategy
-#include "mozilla/dom/WheelEventBinding.h"  // for WheelEvent constants
-#include "mozilla/layers/APZThreadUtils.h"  // for AssertOnControllerThread, etc
-#include "nsLayoutUtils.h"                  // for IsSmoothScrollingEnabled
+#include "mozilla/TextEvents.h"           // for WidgetKeyboardEvent
+#include "mozilla/TouchEvents.h"          // for WidgetTouchEvent
+#include "mozilla/WheelHandlingHelper.h"  // for WheelDeltaHorizontalizer,
+                                          //     WheelDeltaAdjustmentStrategy
 
-namespace mozilla::layers {
+namespace mozilla {
+namespace layers {
 
 APZHandledResult::APZHandledResult(APZHandledPlace aPlace,
                                    const AsyncPanZoomController* aTarget,
@@ -480,4 +482,5 @@ std::ostream& operator<<(std::ostream& aOut,
   return aOut;
 }
 
-}  // namespace mozilla::layers
+}  // namespace layers
+}  // namespace mozilla

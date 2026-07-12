@@ -3,9 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "VRPuppetCommandBuffer.h"
-
-#include "mozilla/ClearOnShutdown.h"
 #include "prthread.h"
+#include "mozilla/ClearOnShutdown.h"
 
 namespace mozilla::gfx {
 

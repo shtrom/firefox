@@ -5,35 +5,35 @@
 #ifndef GFXMESSAGEUTILS_H_
 #define GFXMESSAGEUTILS_H_
 
-#include <stdint.h>
-
 #include "DriverCrashGuard.h"
 #include "FilterSupport.h"
 #include "ImageTypes.h"
 #include "RegionBuilder.h"
-#include "SharedFontList.h"
 #include "chrome/common/ipc_message_utils.h"
-#include "gfxFallback.h"
 #include "gfxFeature.h"
+#include "gfxFallback.h"
 #include "gfxPoint.h"
 #include "gfxRect.h"
 #include "gfxSparseBitSet.h"
 #include "gfxTelemetry.h"
 #include "gfxTypes.h"
 #include "ipc/EnumSerializer.h"
-#include "ipc/IPCMessageUtilsSpecializations.h"
 #include "mozilla/EnumTypeTraits.h"
+#include "ipc/IPCMessageUtilsSpecializations.h"
 #include "mozilla/gfx/CrossProcessPaint.h"
 #include "mozilla/gfx/FileHandleWrapper.h"
 #include "mozilla/gfx/Matrix.h"
 #include "mozilla/gfx/ScaleFactor.h"
 #include "mozilla/gfx/ScaleFactors2D.h"
+#include "SharedFontList.h"
+#include "nsRect.h"
+#include "nsRegion.h"
 #include "mozilla/ipc/FileDescriptor.h"
 #include "mozilla/ipc/ProtocolMessageUtils.h"
 #include "mozilla/ipc/ProtocolUtils.h"
 #include "mozilla/ipc/ShmemMessageUtils.h"
-#include "nsRect.h"
-#include "nsRegion.h"
+
+#include <stdint.h>
 
 #ifdef _MSC_VER
 #  pragma warning(disable : 4800)

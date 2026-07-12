@@ -5,17 +5,17 @@
 #ifndef GFX_WEBRENDERCOMMANDBUILDER_H
 #define GFX_WEBRENDERCOMMANDBUILDER_H
 
-#include "ImgDrawResult.h"
-#include "mozilla/SVGIntegrationUtils.h"  // for WrFiltersHolder
+#include "mozilla/webrender/WebRenderAPI.h"
 #include "mozilla/layers/ClipManager.h"
 #include "mozilla/layers/HitTestInfoManager.h"
 #include "mozilla/layers/WebRenderMessages.h"
 #include "mozilla/layers/WebRenderScrollData.h"
 #include "mozilla/layers/WebRenderUserData.h"
-#include "mozilla/webrender/WebRenderAPI.h"
+#include "mozilla/SVGIntegrationUtils.h"  // for WrFiltersHolder
 #include "nsDisplayList.h"
 #include "nsIFrame.h"
 #include "nsTHashSet.h"
+#include "ImgDrawResult.h"
 
 namespace mozilla {
 

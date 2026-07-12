@@ -5,9 +5,8 @@
 #include "LayersTypes.h"
 
 #include <cinttypes>
-
-#include "mozilla/gfx/gfxVars.h"
 #include "nsPrintfCString.h"
+#include "mozilla/gfx/gfxVars.h"
 
 #ifdef XP_WIN
 #  include "gfxConfig.h"

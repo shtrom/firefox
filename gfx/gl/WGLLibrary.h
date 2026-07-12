@@ -5,11 +5,10 @@
 #ifndef GFX_GL_WGLLIBRARY_H_
 #define GFX_GL_WGLLIBRARY_H_
 
-#include <windows.h>
-
 #include "GLContextTypes.h"
 #include "GLLibraryLoader.h"
 #include "mozilla/UniquePtr.h"
+#include <windows.h>
 
 struct PRLibrary;
 

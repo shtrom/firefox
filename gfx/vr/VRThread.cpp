@@ -3,10 +3,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "VRThread.h"
-
 #include "nsDebug.h"
-#include "nsThread.h"
 #include "nsThreadManager.h"
+#include "nsThread.h"
 #include "nsThreadUtils.h"
 
 namespace mozilla {

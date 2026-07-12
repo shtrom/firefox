@@ -5,9 +5,8 @@
 #include "OverscrollHandoffState.h"
 
 #include <algorithm>  // for std::stable_sort
-
-#include "AsyncPanZoomController.h"
 #include "mozilla/Assertions.h"
+#include "AsyncPanZoomController.h"
 
 namespace mozilla {
 namespace layers {

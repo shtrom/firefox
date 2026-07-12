@@ -3,7 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "Effects.h"
-
 #include "nsAString.h"
 #include "nsPrintfCString.h"  // for nsPrintfCString
 #include "nsString.h"         // for nsAutoCString

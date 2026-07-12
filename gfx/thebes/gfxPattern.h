@@ -5,8 +5,9 @@
 #ifndef GFX_PATTERN_H
 #define GFX_PATTERN_H
 
-#include "gfxMatrix.h"
 #include "gfxTypes.h"
+
+#include "gfxMatrix.h"
 #include "mozilla/gfx/2D.h"
 #include "mozilla/gfx/PatternHelpers.h"
 #include "nsISupportsImpl.h"

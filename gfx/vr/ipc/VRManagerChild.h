@@ -5,6 +5,7 @@
 #ifndef MOZILLA_GFX_VR_VRMANAGERCHILD_H
 #define MOZILLA_GFX_VR_VRMANAGERCHILD_H
 
+#include "nsISupportsImpl.h"
 #include "mozilla/Attributes.h"
 #include "mozilla/dom/AnimationFrameProviderBinding.h"
 #include "mozilla/dom/WebXRBinding.h"
@@ -12,7 +13,6 @@
 #include "mozilla/gfx/PVRManagerChild.h"
 #include "mozilla/layers/ISurfaceAllocator.h"  // for ISurfaceAllocator
 #include "mozilla/layers/LayersTypes.h"        // for LayersBackend
-#include "nsISupportsImpl.h"
 
 namespace mozilla {
 namespace dom {

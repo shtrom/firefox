@@ -5,13 +5,12 @@
 #ifndef mozilla_layers_CheckerboardEvent_h
 #define mozilla_layers_CheckerboardEvent_h
 
-#include <sstream>
-#include <vector>
-
-#include "Units.h"
 #include "mozilla/DefineEnum.h"
 #include "mozilla/Monitor.h"
 #include "mozilla/TimeStamp.h"
+#include <sstream>
+#include "Units.h"
+#include <vector>
 
 namespace mozilla {
 namespace layers {

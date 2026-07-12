@@ -3,7 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "IAPZHitTester.h"
-
 #include "APZCTreeManager.h"
 #include "AsyncPanZoomController.h"
 

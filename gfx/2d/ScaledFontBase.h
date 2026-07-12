@@ -6,6 +6,7 @@
 #define MOZILLA_GFX_SCALEDFONTBASE_H_
 
 #include "2D.h"
+
 #include "skia/include/core/SkFont.h"
 #include "skia/include/core/SkPath.h"
 #include "skia/include/core/SkTypeface.h"

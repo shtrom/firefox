@@ -6,7 +6,6 @@
 
 #ifdef XP_DARWIN
 #  include <IOSurface/IOSurfaceRef.h>
-
 #  include "CFTypeRefPtr.h"
 #endif
 

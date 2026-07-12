@@ -3,12 +3,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "Matrix.h"
-
-#include <float.h>  // for FLT_EPSILON
-#include <math.h>
-
 #include "Quaternion.h"
 #include "Tools.h"
+#include <math.h>
+#include <float.h>  // for FLT_EPSILON
+
 #include "mozilla/FloatingPoint.h"  // for UnspecifiedNaN
 
 namespace mozilla {

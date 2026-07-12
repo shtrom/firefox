@@ -2,14 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "NativeFontResourceMac.h"
-
 #include <unordered_map>
-
-#include "Types.h"
+#include "NativeFontResourceMac.h"
 #include "UnscaledFontMac.h"
-#include "mozilla/DataMutex.h"
+#include "Types.h"
+
 #include "mozilla/RefPtr.h"
+#include "mozilla/DataMutex.h"
 
 #ifdef MOZ_WIDGET_UIKIT
 #  include <CoreFoundation/CoreFoundation.h>

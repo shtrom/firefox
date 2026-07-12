@@ -6,9 +6,7 @@
 #define mozilla_gfx_layers_d3d11_HelpersD3D11_h
 
 #include <d3d11.h>
-
 #include <array>
-
 #include "mozilla/TimeStamp.h"
 
 namespace mozilla {

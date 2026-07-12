@@ -10,6 +10,7 @@
  */
 
 #include "APZTestCommon.h"
+
 #include "mozilla/layers/APZSampler.h"
 #include "mozilla/layers/APZUpdater.h"
 

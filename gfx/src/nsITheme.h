@@ -7,11 +7,11 @@
 #ifndef nsITheme_h_
 #define nsITheme_h_
 
-#include "Units.h"
 #include "mozilla/AlreadyAddRefed.h"
-#include "nsID.h"
 #include "nsISupports.h"
+#include "nsID.h"
 #include "nscore.h"
+#include "Units.h"
 
 struct nsRect;
 class gfxContext;

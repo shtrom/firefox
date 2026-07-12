@@ -2,12 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "MacIOSurfaceHelpers.h"
-
-#include "YCbCrUtils.h"
 #include "libyuv.h"
-#include "mozilla/ScopeExit.h"
+#include "MacIOSurfaceHelpers.h"
 #include "mozilla/gfx/MacIOSurface.h"
+#include "mozilla/ScopeExit.h"
+#include "YCbCrUtils.h"
 
 namespace mozilla {
 

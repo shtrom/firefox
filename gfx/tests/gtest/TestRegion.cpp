@@ -4,10 +4,10 @@
 
 #include <algorithm>
 
-#include "RegionBuilder.h"
 #include "gtest/gtest.h"
-#include "mozilla/UniquePtr.h"
 #include "nsRegion.h"
+#include "RegionBuilder.h"
+#include "mozilla/UniquePtr.h"
 
 using namespace mozilla::gfx;
 

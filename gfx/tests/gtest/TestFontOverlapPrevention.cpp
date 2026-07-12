@@ -2,10 +2,9 @@
  * http://creativecommons.org/publicdomain/zero/1.0/
  */
 
-#include <string>
-#include <vector>
-
 #include "gtest/gtest.h"
+#include <vector>
+#include <string>
 
 #define StandardFonts
 #ifdef XP_WIN
