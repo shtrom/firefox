@@ -118,7 +118,12 @@ add_task(async function basic() {
   EventUtils.synthesizeKey("KEY_Tab", {}, window);
   assertAccessibilityWhenSelected("testaction");
   EventUtils.synthesizeKey("KEY_Enter", {}, window);
-  Assert.equal(testActionCalled, 1, "Test action was called");
+  // The action's onPick runs parent-side, so on the actor message path it fires
+  // asynchronously after the pick rather than synchronously.
+  await TestUtils.waitForCondition(
+    () => testActionCalled == 1,
+    "Test action was called"
+  );
 });
 
 add_task(async function match_in_phrase() {
@@ -205,7 +210,10 @@ add_task(async function testAfterTabSwitch() {
   EventUtils.synthesizeKey("KEY_Tab", {}, window);
   assertAccessibilityWhenSelected("testaction");
   EventUtils.synthesizeKey("KEY_Enter", {}, window);
-  Assert.equal(testActionCalled, 2, "Test action was called");
+  await TestUtils.waitForCondition(
+    () => testActionCalled == 2,
+    "Test action was called"
+  );
 
   BrowserTestUtils.removeTab(tab2);
 });

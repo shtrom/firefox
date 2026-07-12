@@ -136,7 +136,6 @@ export class UrlbarProviderGlobalActions extends UrlbarProvider {
       p => p.name == action.providerName
     );
     provider.onPick(queryContext, controller, action);
-    controller.view.close();
   }
 
   onSearchSessionEnd(queryContext, controller, details) {

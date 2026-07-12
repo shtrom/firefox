@@ -283,19 +283,22 @@ add_task(async function test_pages() {
     }
     EventUtils.synthesizeKey("KEY_Enter", {}, window);
 
-    let newTab;
-    if (loadType == LOAD_TYPE.PRE_LOADED) {
-      newTab = gBrowser.selectedTab;
-    } else if (onLoad) {
-      newTab = await onLoad;
-    } else {
-      newTab = null;
+    let newTab = null;
+    if (loadType != LOAD_TYPE.PRE_LOADED && onLoad) {
+      newTab = (await onLoad) ?? null;
     }
 
     Assert.ok(
       await testFun(),
       `The command "${cmd}" passed completed its test`
     );
+
+    if (loadType == LOAD_TYPE.PRE_LOADED) {
+      // The action opens and selects the tab from a parent-side engagement
+      // hook, which is async on the actor message path, so capture it only
+      // after testFun has confirmed the page is loaded.
+      newTab = gBrowser.selectedTab;
+    }
 
     if ([LOAD_TYPE.NEW_TAB, LOAD_TYPE.PRE_LOADED].includes(loadType)) {
       await BrowserTestUtils.removeTab(newTab);
