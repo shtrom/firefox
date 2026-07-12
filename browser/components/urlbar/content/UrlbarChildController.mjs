@@ -11,6 +11,8 @@ const { AppConstants } = ChromeUtils.importESModule(
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
+  UrlbarChildTelemetry:
+    "chrome://browser/content/urlbar/UrlbarChildTelemetry.mjs",
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
 });
@@ -68,6 +70,10 @@ export class UrlbarChildController {
 
   #userSelectionBehavior = /** @type {"arrow"|"tab"|"none"} */ ("none");
 
+  // The content-side engagement-telemetry collector, created lazily on the
+  // message path (where the parent stand-in has no `engagementEvent`).
+  #childTelemetry = null;
+
   /**
    * @param {object} options
    * @param {UrlbarInput} options.input
@@ -89,14 +95,22 @@ export class UrlbarChildController {
   get input() {
     return this.#input;
   }
-  get browserWindow() {
+  // The window the input lives in. For a chrome `<moz-urlbar>` this is the
+  // browser window; for a content-process one it's the content window.
+  get window() {
     return this.#input.window;
   }
   get view() {
     return this.#view;
   }
   get engagementEvent() {
-    return this.#parent.engagementEvent;
+    // Direct path: the real parent controller's recorder. Message path: the
+    // parent stand-in has none, so use a content-side collector that ships
+    // engagements to the parent recorder.
+    return (
+      this.#parent.engagementEvent ??
+      (this.#childTelemetry ??= new lazy.UrlbarChildTelemetry(this))
+    );
   }
   get platform() {
     return AppConstants.platform;
@@ -175,6 +189,15 @@ export class UrlbarChildController {
         }
       }
     }
+  }
+  recordEngagement(wire) {
+    return this.#parent.recordEngagement(wire);
+  }
+  resetEngagement() {
+    return this.#parent.resetEngagement();
+  }
+  handleBounceTrigger(payload) {
+    return this.#parent.handleBounceTrigger(payload);
   }
   startQuery(queryContext) {
     return this.#parent.startQuery(queryContext);
@@ -263,17 +286,21 @@ export class UrlbarChildController {
           if (this.view.isOpen) {
             this.view.close();
           } else if (
+            // Moving focus into the content document only makes sense for a
+            // chrome moz-urlbar; a content-process one already has focus in
+            // content. Only a browser window has `gBrowser`.
+            this.window.gBrowser &&
             lazy.UrlbarPrefs.get("focusContentDocumentOnEsc") &&
             !this.input.searchMode &&
             (this.input.sapName == "searchbar"
               ? this.input.value == ""
               : this.input.getAttribute("pageproxystate") == "valid" ||
                 (this.input.value == "" &&
-                  this.browserWindow.isBlankPageURL(
-                    this.browserWindow.gBrowser.currentURI.spec
+                  this.window.isBlankPageURL(
+                    this.window.gBrowser.currentURI.spec
                   )))
           ) {
-            this.browserWindow.gBrowser.selectedBrowser.focus();
+            this.window.gBrowser.selectedBrowser.focus();
           } else {
             this.input.handleRevert();
           }

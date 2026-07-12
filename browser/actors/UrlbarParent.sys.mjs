@@ -115,6 +115,15 @@ export class UrlbarParent extends JSWindowActorParent {
             lazy.UrlbarQueryContext.fromWire(message.data.queryContext)
           )
           .then(result => result?.toWire() ?? null);
+      case "RecordEngagement":
+        controller.recordEngagement(message.data.wire);
+        break;
+      case "ResetEngagement":
+        controller.resetEngagement();
+        break;
+      case "HandleBounceTrigger":
+        controller.handleBounceTrigger(message.data.payload);
+        break;
       case "StartQuery":
         // Round-trips so the proxy's startQuery resolves at true completion with
         // the finished context. The context's results keep their data in private

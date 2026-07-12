@@ -73,6 +73,43 @@ export class UrlbarParentControllerProxy {
     this.#actor.registerChildController(this.#instanceId, child);
   }
 
+  /**
+   * Ships an engagement (already built and serialized by the child collector
+   * with `UrlbarTelemetryUtils.recordedEngagementToWire()`) to the parent
+   * recorder, which fills the parent-only fields and makes the `Glean` call.
+   *
+   * @param {object} wire The serialized engagement payload.
+   */
+  recordEngagement(wire) {
+    this.#actor.sendAsyncMessage("RecordEngagement", {
+      instanceId: this.#instanceId,
+      wire,
+    });
+  }
+
+  /**
+   * Resets the parent recorder's cross-session telemetry state.
+   */
+  resetEngagement() {
+    this.#actor.sendAsyncMessage("ResetEngagement", {
+      instanceId: this.#instanceId,
+    });
+  }
+
+  /**
+   * Asks the parent recorder to record a bounce: the child collector owns the
+   * tracking and sends the resolved payload on a trigger.
+   *
+   * @param {object} payload
+   *   `{snapshot, startTime, browsingContextId, contentData}`.
+   */
+  handleBounceTrigger(payload) {
+    this.#actor.sendAsyncMessage("HandleBounceTrigger", {
+      instanceId: this.#instanceId,
+      payload,
+    });
+  }
+
   // Named to match the controller property the child controller forwards to.
   get _lastQueryContextWrapper() {
     return this.#lastQueryContextWrapper;
