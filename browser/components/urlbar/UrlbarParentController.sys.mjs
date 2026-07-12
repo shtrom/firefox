@@ -730,6 +730,9 @@ class TelemetryEvent {
     this.#previousSearchWordsSet = previousSearchWords;
 
     let { queryContext } = this._controller._lastQueryContextWrapper || {};
+    let exposures = details.isSessionOngoing
+      ? null
+      : this.#resolveExposureList(queryContext, engagementData.visibleResults);
 
     this.recordFromChild({
       built,
@@ -737,11 +740,8 @@ class TelemetryEvent {
       searchSource: snapshot.internalDetails.searchSource,
       internalDetails: snapshot.internalDetails,
       visibleResults: engagementData.visibleResults,
+      exposures,
     });
-
-    if (!details.isSessionOngoing) {
-      this.#recordExposures(queryContext);
-    }
   }
 
   /**
@@ -815,8 +815,9 @@ class TelemetryEvent {
    * Records an engagement a message-path child collector built and shipped via
    * `RecordEngagement`. The child already built the Glean event; the parent
    * fills the fields that need parent-only services and makes the `Glean` call,
-   * and runs the parent-side provider steps (disable-tracking and
-   * `notifyEngagementChange`) from the shipped result and visible results.
+   * records the shipped exposures, and runs the parent-side provider steps
+   * (disable-tracking and `notifyEngagementChange`) from the shipped result and
+   * visible results.
    *
    * @param {object} data
    *   The deserialized `recordedEngagementToWire()` payload.
@@ -830,6 +831,8 @@ class TelemetryEvent {
    *   The interaction details (picked result reconstructed; event/element null).
    * @param {UrlbarResult[]} data.visibleResults
    *   The results shown when the engagement was captured.
+   * @param {?object[]} data.exposures
+   *   The resolved exposure list, or null when the session stays open.
    */
   recordFromChild({
     built,
@@ -837,6 +840,7 @@ class TelemetryEvent {
     searchSource,
     internalDetails,
     visibleResults,
+    exposures,
   }) {
     try {
       let { queryContext } = this._controller._lastQueryContextWrapper || {};
@@ -844,6 +848,10 @@ class TelemetryEvent {
 
       if (built && sap) {
         this.#fillAndRecord(built, sap);
+      }
+
+      if (sap && exposures?.length) {
+        this.#recordExposureList(exposures, sap);
       }
 
       // Start tracking for a disable event if there was a Suggest result
@@ -1068,36 +1076,53 @@ class TelemetryEvent {
   }
 
   /**
+   * Resolves the queued exposures to their recordable form (computing the
+   * terminal flag against the live results and query context) and clears the
+   * queues. `recordFromChild()` records the returned list, so the direct and
+   * message paths record exposures the same way.
+   *
    * @param {UrlbarQueryContext} queryContext
+   *   The query the exposures belong to.
+   * @param {UrlbarResult[]} visibleResults
+   *   The results shown at session end.
+   * @returns {Array<{resultType: string, keyword: ?string, terminal: boolean}>}
+   *   The resolved exposures (empty when none were queued).
    */
-  #recordExposures(queryContext) {
+  #resolveExposureList(queryContext, visibleResults) {
     let exposures = this.#exposures;
     this.#exposures = [];
     this.#tentativeExposures = [];
-    if (!exposures.length) {
-      return;
-    }
-    let { searchSource, visibleResults } = this.#engagementData;
-    let sap = this.#searchSourceToSap(searchSource);
-    if (!sap) {
-      // Window started closing.
-      return;
-    }
-
-    let terminalByType = new Map();
-    let keywordExposureRecorded = false;
-    for (let { weakResult, resultType, keyword } of exposures) {
-      let terminal = false;
+    return exposures.map(({ weakResult, resultType, keyword }) => {
       let result = weakResult.get();
+      let terminal = false;
       if (result) {
         this.#exposureResults.delete(result);
-
-        let endResults = result.isHiddenExposure
-          ? queryContext.results
-          : visibleResults;
-        terminal = endResults?.includes(result);
+        terminal = lazy.UrlbarTelemetryUtils.exposureTerminal(
+          result,
+          queryContext,
+          visibleResults
+        );
       }
+      return { resultType, keyword, terminal };
+    });
+  }
 
+  /**
+   * Records the `exposure` Glean event (and any `keyword_exposure` events and
+   * the `urlbar-keyword-exposure` ping) from a resolved exposure list. The
+   * parent-side recording half of exposure telemetry; fed either by
+   * `#recordExposures()` on the direct path or by the list a child collector
+   * ships on the message path.
+   *
+   * @param {Array<{resultType: string, keyword: ?string, terminal: boolean}>} list
+   *   The resolved exposures.
+   * @param {string} sap
+   *   The search access point.
+   */
+  #recordExposureList(list, sap) {
+    let terminalByType = new Map();
+    let keywordExposureRecorded = false;
+    for (let { resultType, keyword, terminal } of list) {
       terminalByType.set(resultType, terminal);
 
       // Record the `keyword_exposure` event if there's a keyword.
@@ -1203,15 +1228,14 @@ class TelemetryEvent {
     // its update process, but we should record at most one exposure per result.
     if (!this.#exposureResults.has(result)) {
       this.#exposureResults.add(result);
-      let resultType = lazy.UrlbarUtils.searchEngagementTelemetryType(result);
+      let { resultType, keyword } = lazy.UrlbarTelemetryUtils.exposureEntry(
+        result,
+        queryContext
+      );
       this.#exposures.push({
         resultType,
+        keyword,
         weakResult: Cu.getWeakReference(result),
-        keyword:
-          !queryContext.isPrivate &&
-          lazy.UrlbarPrefs.get("keywordExposureResults").has(resultType)
-            ? queryContext.trimmedLowerCaseSearchString
-            : null,
       });
     }
   }

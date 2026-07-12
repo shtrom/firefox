@@ -119,6 +119,13 @@ export class UrlbarView {
     return this.input.hasAttribute("open");
   }
 
+  /**
+   * @returns {UrlbarQueryContext} The context of the most recent query.
+   */
+  get queryContext() {
+    return this.#queryContext;
+  }
+
   get allowEmptySelection() {
     let { heuristicResult } = this.#queryContext || {};
     return !heuristicResult || !this.#shouldShowHeuristic(heuristicResult);

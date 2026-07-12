@@ -46,6 +46,13 @@ export class UrlbarChildTelemetry {
   // keeps its own copy for the direct path).
   #previousSearchWords = null;
 
+  // The session's exposures, mirroring the parent recorder's queues: results
+  // exposed during the session, the deferred (hidden) ones, and a set to record
+  // at most one exposure per result. Resolved and shipped at session end.
+  #exposures = [];
+  #tentativeExposures = [];
+  #exposureResults = new WeakSet();
+
   /**
    * @param {UrlbarChildController} controller
    *   The paired child controller, used to reach the live input/view and to
@@ -156,7 +163,14 @@ export class UrlbarChildTelemetry {
           );
         this.#previousSearchWords = previousSearchWords;
 
-        let exposures = null;
+        // Exposures are recorded only when the session ends, alongside the
+        // engagement, so resolve and ship them with it.
+        let exposures = details.isSessionOngoing
+          ? null
+          : this.#resolveExposures(
+              view.queryContext,
+              engagementData.visibleResults
+            );
 
         this.#controller.recordEngagement(
           lazy.UrlbarTelemetryUtils.recordedEngagementToWire({
@@ -195,12 +209,86 @@ export class UrlbarChildTelemetry {
     this.#controller.resetEngagement();
   }
 
-  // Exposure recording isn't carried over the actor yet; no-ops on the message
-  // path.
-  addExposure() {}
-  addTentativeExposure() {}
-  acceptTentativeExposures() {}
-  discardTentativeExposures() {}
+  /**
+   * Queues an exposure for a result, if it records exposure telemetry.
+   *
+   * @param {object} result The exposed result.
+   * @param {object} queryContext The query the result belongs to.
+   */
+  addExposure(result, queryContext) {
+    if (result.exposureTelemetry) {
+      this.#addExposureInternal(result, queryContext);
+    }
+  }
+
+  /**
+   * Queues a tentative (hidden) exposure, to be confirmed or discarded later.
+   *
+   * @param {object} result The exposed result.
+   * @param {object} queryContext The query the result belongs to.
+   */
+  addTentativeExposure(result, queryContext) {
+    if (result.exposureTelemetry) {
+      this.#tentativeExposures.push({ result, queryContext });
+    }
+  }
+
+  /**
+   * Promotes the queued tentative exposures to real exposures.
+   */
+  acceptTentativeExposures() {
+    for (let { result, queryContext } of this.#tentativeExposures) {
+      this.#addExposureInternal(result, queryContext);
+    }
+    this.#tentativeExposures = [];
+  }
+
+  /**
+   * Drops the queued tentative exposures.
+   */
+  discardTentativeExposures() {
+    this.#tentativeExposures = [];
+  }
+
+  #addExposureInternal(result, queryContext) {
+    // Record at most one exposure per result, like the parent recorder.
+    if (!this.#exposureResults.has(result)) {
+      this.#exposureResults.add(result);
+      let { resultType, keyword } = lazy.UrlbarTelemetryUtils.exposureEntry(
+        result,
+        queryContext
+      );
+      this.#exposures.push({ result, resultType, keyword });
+    }
+  }
+
+  /**
+   * Resolves the queued exposures to their recordable form (computing the
+   * terminal flag against the live results) and clears the queues.
+   *
+   * @param {?UrlbarQueryContext} queryContext
+   *   The terminal query's context, for hidden exposures' terminal flag.
+   * @param {object[]} visibleResults
+   *   The results shown at session end.
+   * @returns {Array<{resultType: string, keyword: ?string, terminal: boolean}>}
+   */
+  #resolveExposures(queryContext, visibleResults) {
+    let exposures = this.#exposures;
+    this.#exposures = [];
+    this.#tentativeExposures = [];
+    return exposures.map(({ result, resultType, keyword }) => {
+      this.#exposureResults.delete(result);
+      return {
+        resultType,
+        keyword,
+        terminal: lazy.UrlbarTelemetryUtils.exposureTerminal(
+          result,
+          queryContext,
+          visibleResults
+        ),
+      };
+    });
+  }
 
   // Bounce recording isn't carried over the actor yet; no-op on the message
   // path.
