@@ -192,7 +192,7 @@ void DataRequestWayland::RequestData(const char* aMimeType) {
   MOZ_CLIPBOARD_LOG("DataRequestWayland::RequestData() mime %s\n", aMimeType);
 
   int pipe_fd[2];
-  if (!g_unix_open_pipe(pipe_fd, FD_CLOEXEC, NULL)) {
+  if (!g_unix_open_pipe(pipe_fd, FD_CLOEXEC, nullptr)) {
     NS_WARNING("DataRequestWayland::RequestData() g_unix_open_pipe() failed!");
     mFailed = true;
     return;
