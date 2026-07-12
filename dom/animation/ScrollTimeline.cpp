@@ -100,7 +100,7 @@ already_AddRefed<ScrollTimeline> ScrollTimeline::Constructor(
 
 Element* ScrollTimeline::GetSource() const { return SourceElement(); }
 
-ScrollTimeline::StateSnapshot ScrollTimeline::GetSnapshot() const {
+ScrollTimeline::StateSnapshot ScrollTimeline::ComputeSnapshot() const {
   const auto source = mScrollerInfo.Source();
   // Use document.scrollingElement to tell whether it's the root scroll
   // container. Note that we can't use mScrollerInfo.mType since Type::Nearest
@@ -110,6 +110,10 @@ ScrollTimeline::StateSnapshot ScrollTimeline::GetSnapshot() const {
       source.mElement->OwnerDoc()->GetScrollingElementNoFlush() ==
           source.mElement;
   return StateSnapshot{source, mAxis, isRoot};
+}
+
+ScrollTimeline::StateSnapshot ScrollTimeline::GetSnapshot() const {
+  return mCachedStateSnapshot.valueOr(StateSnapshot{});
 }
 
 dom::ScrollAxis ScrollTimeline::GetScrollAxis() const {
@@ -387,20 +391,21 @@ bool ScrollTimeline::UpdateCachedCurrentTime() {
 
   mCachedCurrentTime.reset();
 
-  const auto state = GetSnapshot();
+  mCachedStateSnapshot = Some(ComputeSnapshot());
   // The timeline is inactive if it has no principal box or its source is not a
   // scroll container, and it has no current time if there is no scrollable
   // overflow in its axis.
   // https://drafts.csswg.org/scroll-animations-1/#scrolltimeline-interface
-  if (!state.IsActive() || !state.ScrollingDirectionIsAvailable()) {
+  if (!mCachedStateSnapshot->IsActive() ||
+      !mCachedStateSnapshot->ScrollingDirectionIsAvailable()) {
     return prevCachedCurrentTime.isSome();
   }
 
   const ScrollContainerFrame* scrollContainerFrame =
-      state.GetScrollContainerFrame();
+      mCachedStateSnapshot->GetScrollContainerFrame();
   MOZ_ASSERT(scrollContainerFrame);
 
-  const auto orientation = state.Axis();
+  const auto orientation = mCachedStateSnapshot->Axis();
   const nsPoint& scrollPosition = scrollContainerFrame->GetScrollPosition();
   const nsRect& scrollRange = scrollContainerFrame->GetScrollRange();
 

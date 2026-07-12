@@ -254,15 +254,15 @@ bool ViewTimeline::UpdateCachedCurrentTime() {
 
   mCachedCurrentTime.reset();
 
-  const auto state = GetSnapshot();
+  mCachedStateSnapshot = Some(ComputeSnapshot());
   // The timeline is inactive if it has no principal box or its source is not a
   // scroll container.
-  if (!state.IsActive()) {
+  if (!mCachedStateSnapshot->IsActive()) {
     return prevCachedCurrentTime.isSome();
   }
 
   const ScrollContainerFrame* scrollContainerFrame =
-      state.GetScrollContainerFrame();
+      mCachedStateSnapshot->GetScrollContainerFrame();
   MOZ_ASSERT(scrollContainerFrame);
 
   // Don't try to update against a frame that hasn't been laid out yet.
@@ -310,7 +310,7 @@ bool ViewTimeline::UpdateCachedCurrentTime() {
   // (i.e. the box of the scrollport), where as |startOffset| refers to the
   // start of the timeline, and similarly for end side/offset. [1]
   // https://drafts.csswg.org/css-writing-modes-4/#css-start
-  const auto orientation = state.Axis();
+  const auto orientation = mCachedStateSnapshot->Axis();
   const auto sideInsets =
       ComputeInsets(scrollContainerFrame, orientation, mAxis, mInset);
 

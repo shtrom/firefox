@@ -228,6 +228,9 @@ class ScrollTimeline : public AnimationTimeline,
   Element* GetSource() const;
   dom::ScrollAxis GetScrollAxis() const;
 
+  // Returns the snapshot captured at the last UpdateCachedCurrentTime(). If we
+  // haven't sampled yet, returns an inactive snapshot rather than recomputing
+  // live.
   StateSnapshot GetSnapshot() const;
 
   // AnimationTimeline methods.
@@ -306,6 +309,9 @@ class ScrollTimeline : public AnimationTimeline,
 
   void TimelineDataDidChange();
 
+  // Builds a fresh snapshot of the scroll state from the current layout.
+  StateSnapshot ComputeSnapshot() const;
+
   // The timeline data used to represent the full range of the timeline.
   struct ComputedTimelineData {
     nscoord mPosition = 0;
@@ -328,11 +334,13 @@ class ScrollTimeline : public AnimationTimeline,
 
   RefPtr<Document> mDocument;
 
-  // FIXME: Bug 1765211: We may have to update the source element once the
-  // overflow property of the scroll-container is updated when we are using
-  // nearest scroller.
   ScrollerInfo mScrollerInfo;
   StyleScrollAxis mAxis;
+
+  // The scroll state captured when the current time was last sampled. Kept in
+  // sync with mCachedCurrentTime by the UpdateCachedCurrentTime() overrides,
+  // and returned by GetSnapshot().
+  Maybe<StateSnapshot> mCachedStateSnapshot;
 
   struct CurrentTimeData {
     // The position of the scroller, and this may be negative for RTL or
