@@ -146,7 +146,19 @@ export class UrlbarParentControllerProxy {
         instanceId: this.#instanceId,
         queryContext: queryContext.toWire(),
       })
-      .then(wire => lazy.UrlbarQueryContext.fromWire(wire));
+      .then(
+        wire => lazy.UrlbarQueryContext.fromWire(wire),
+        error => {
+          if (error?.name == "AbortError") {
+            // The actor was destroyed before the query finished (the window or
+            // tab was torn down mid-query). The query is moot; resolve with the
+            // context we started rather than leaving an unhandled rejection,
+            // mirroring the direct path.
+            return queryContext;
+          }
+          throw error;
+        }
+      );
   }
 
   /**
