@@ -254,18 +254,16 @@ bool ViewTimeline::UpdateCachedCurrentTime() {
 
   mCachedCurrentTime.reset();
 
-  const auto state = GetState();
-  // If no layout box, this timeline is inactive.
-  if (const auto* e = state.mSource.mElement; !e || !e->GetPrimaryFrame()) {
+  const auto state = GetSnapshot();
+  // The timeline is inactive if it has no principal box or its source is not a
+  // scroll container.
+  if (!state.IsActive()) {
     return prevCachedCurrentTime.isSome();
   }
 
-  // if this is not a scroller container, this timeline is inactive.
   const ScrollContainerFrame* scrollContainerFrame =
       state.GetScrollContainerFrame();
-  if (!scrollContainerFrame) {
-    return prevCachedCurrentTime.isSome();
-  }
+  MOZ_ASSERT(scrollContainerFrame);
 
   // Don't try to update against a frame that hasn't been laid out yet.
   if (scrollContainerFrame->HasAnyStateBits(NS_FRAME_FIRST_REFLOW)) {

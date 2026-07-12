@@ -338,7 +338,7 @@ static Maybe<ScrollTimelineOptions> GetScrollTimelineOptions(
   }
 
   const dom::ScrollTimeline* timeline = aTimeline->AsScrollTimeline();
-  const auto state = timeline->GetState();
+  const auto state = timeline->GetSnapshot();
   MOZ_ASSERT(state.IsActive(),
              "We send scroll animation to the compositor only if its timeline "
              "is active");
