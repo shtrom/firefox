@@ -22,7 +22,6 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "moz-src:///toolkit/components/search/ConfigSearchEngine.sys.mjs",
   OpenSearchManager:
     "moz-src:///browser/components/search/OpenSearchManager.sys.mjs",
-  PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
   SearchService: "moz-src:///toolkit/components/search/SearchService.sys.mjs",
   SearchUIUtils: "moz-src:///browser/components/search/SearchUIUtils.sys.mjs",
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
@@ -565,9 +564,7 @@ export class SearchModeSwitcher {
     if (!searchMode || searchMode.engineName) {
       let engine = searchMode
         ? lazy.UrlbarSearchUtils.getEngineByName(searchMode.engineName)
-        : lazy.UrlbarSearchUtils.getDefaultEngine(
-            lazy.PrivateBrowsingUtils.isWindowPrivate(this.#input.window)
-          );
+        : lazy.UrlbarSearchUtils.getDefaultEngine(this.#input.isPrivate);
       if (!engine) {
         return { label: null, icon: SearchModeSwitcher.ICON_GLASS };
       }
