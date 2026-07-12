@@ -170,15 +170,13 @@ newtab-privacy-menu-learn-more = Көбірек білу
 
 # Context menu item for searching stock ticker symbols.
 newtab-stocks-menu-search = Тикерлерді іздеу
-# Context menu item that hides the Stocks widget.
-newtab-stocks-menu-hide = Акцияларды жасыру
 # Context menu item linking to more information about the Stocks widget.
 newtab-stocks-menu-learn-more = Көбірек білу
 
 ## Strings for the Picture of the Day widget
 
-# Eyebrow shown at the top of the widget. Wikimedia Commons is a brand name and
-# should not be translated.
+# Title shown at the top of the widget, with the source name appended.
+# "Wikimedia Commons" is a brand name and should not be translated.
 newtab-picture-header = Күн суреті · Wikimedia Commons
 # Button that sets the current picture as the New Tab background wallpaper. The
 # button collapses to an icon when not hovered/focused, so .title is its tooltip.
@@ -528,6 +526,8 @@ newtab-recommended-stories-toggle =
     .label = Ұсынылатын оқиғалар
 newtab-custom-stories-personalized-toggle =
     .label = Әңгімелер
+newtab-custom-stories-personalized-checkbox =
+    .label = Әрекетіңізге негізделген жекелендірілген хикаялар
 newtab-custom-stories-personalized-checkbox-label = Әрекетіңізге негізделген жекелендірілген хикаялар
 newtab-custom-pocket-sponsored = Демеушілер мақалалары
 newtab-custom-pocket-show-recent-saves = Соңғы сақтауларды көрсету

@@ -170,8 +170,6 @@ newtab-privacy-menu-learn-more = Més informació
 
 # Context menu item for searching stock ticker symbols.
 newtab-stocks-menu-search = Cerca símbols de tíquer
-# Context menu item that hides the Stocks widget.
-newtab-stocks-menu-hide = Amaga les accions
 # Context menu item linking to more information about the Stocks widget.
 newtab-stocks-menu-learn-more = Més informació
 
@@ -499,6 +497,8 @@ newtab-recommended-stories-toggle =
     .label = Articles recomanats
 newtab-custom-stories-personalized-toggle =
     .label = Articles
+newtab-custom-stories-personalized-checkbox =
+    .label = Articles personalitzats basats en la vostra activitat
 newtab-custom-stories-personalized-checkbox-label = Articles personalitzats basats en la vostra activitat
 newtab-custom-pocket-sponsored = Articles patrocinats
 newtab-custom-pocket-show-recent-saves = Mostra els elements desats recentment

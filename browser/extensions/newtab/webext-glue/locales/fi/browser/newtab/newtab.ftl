@@ -168,15 +168,13 @@ newtab-privacy-menu-learn-more = Lue lisää
 
 ## Strings for the Stocks widget
 
-# Context menu item that hides the Stocks widget.
-newtab-stocks-menu-hide = Piilota osakkeet
 # Context menu item linking to more information about the Stocks widget.
 newtab-stocks-menu-learn-more = Lue lisää
 
 ## Strings for the Picture of the Day widget
 
-# Eyebrow shown at the top of the widget. Wikimedia Commons is a brand name and
-# should not be translated.
+# Title shown at the top of the widget, with the source name appended.
+# "Wikimedia Commons" is a brand name and should not be translated.
 newtab-picture-header = Päivän kuva · Wikimedia Commons
 # Button that sets the current picture as the New Tab background wallpaper. The
 # button collapses to an icon when not hovered/focused, so .title is its tooltip.
@@ -526,6 +524,8 @@ newtab-recommended-stories-toggle =
     .label = Suositellut tarinat
 newtab-custom-stories-personalized-toggle =
     .label = Tarinat
+newtab-custom-stories-personalized-checkbox =
+    .label = Personoituja tarinoita aktiivisuuteesi pohjautuen
 newtab-custom-stories-personalized-checkbox-label = Personoituja tarinoita aktiivisuuteesi pohjautuen
 newtab-custom-pocket-sponsored = Sponsoroidut tarinat
 newtab-custom-pocket-show-recent-saves = Näytä viimeisimmät tallennukset

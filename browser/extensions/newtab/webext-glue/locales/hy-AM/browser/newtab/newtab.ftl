@@ -245,7 +245,7 @@ newtab-menu-topsites-placeholder-tooltip =
 ## Context Menu: These strings are displayed in a context menu and are meant as a call to action for a given page.
 
 newtab-menu-edit-topsites = Խմբագրել
-newtab-menu-open-new-window = Բացել Նոր Պատուհանով
+newtab-menu-open-new-window = Բացել նոր պատուհանում
 newtab-menu-open-new-private-window = Բացել նոր գաղտնի պատուհանում
 newtab-menu-dismiss = Բաց թողնել
 newtab-menu-pin = Ամրացնել
@@ -456,6 +456,8 @@ newtab-recommended-stories-toggle =
     .label = Առաջարկվող պատմություններ
 newtab-custom-stories-personalized-toggle =
     .label = Պատմություններ
+newtab-custom-stories-personalized-checkbox =
+    .label = Անհատականացված պատմություններ՝ հիմնված ձեր գործունեության վրա
 newtab-custom-stories-personalized-checkbox-label = Անհատականացված պատմություններ՝ հիմնված ձեր գործունեության վրա
 newtab-custom-pocket-sponsored = Հովանավորված պատմություններ
 newtab-custom-pocket-show-recent-saves = Ցուցադրել վերջին պահումները

@@ -43,6 +43,9 @@ home-custom-homepage-address =
     .placeholder = زیذن نشۊوی
 home-custom-homepage-address-button =
     .label = ٱووردن نشۊوی
+home-custom-homepage-delete-address-button =
+    .title = پاک کردن نشۊوی
+    .aria-label = پاک کردن نشۊوی
 # Further options to use when setting the home page. Two action buttons are placed in line with this prompt
 # to replace the current home page with a currently open page or bookmark.
 home-custom-homepage-replace-with-prompt =
@@ -68,6 +71,18 @@ home-prefs-lists-header =
 # Timer is a widget on New Tab, similar to the Pomodoro timer.
 home-prefs-timer-header =
     .label = زمووݩ سنج
+# Sports is a widget on New Tab showing sports scores and schedules.
+home-prefs-sports-widget-header =
+    .label = ورزش
+# Clock is a widget on New Tab that displays time zones around the world.
+home-prefs-clocks-header =
+    .label = ساعت
+# Privacy is a widget on New Tab that shows tracking protection activity.
+home-prefs-privacy-header =
+    .label = سیخومی
+# Stocks is a widget on New Tab that shows stock ticker prices.
+home-prefs-stocks-header =
+    .label = سهام
 home-prefs-manage-topics-link2 =
     .label = دؽوۉداری سرتالا
 home-prefs-choose-wallpaper-link2 =
@@ -116,6 +131,63 @@ home-prefs-weather-header-srd =
     .label = ٱو وو هوا
 home-prefs-support-firefox-header-srd =
     .label = لادرار { -brand-product-name }
+
+## Strings for the Privacy widget
+
+# Context menu item linking to more information about the Privacy widget.
+newtab-privacy-menu-learn-more = قلوه دووسته بۊین
+
+## Privacy widget — informational messages
+##
+## Rotating "info" secondary messages. Each message has a body plus a matched
+## "-cta" button label sharing the same id stem (the CTA button isn't rendered
+## yet; the labels are authored so the pairing is ready).
+
+newtab-privacy-message-info-6-cta = قلوه دووسته بۊین
+newtab-privacy-message-info-11-cta = قلوه دووسته بۊین
+
+## Privacy widget — promotional messages
+##
+## Rotating "promo" secondary messages suggesting another Firefox feature. Each
+## has a body plus a matched "-cta" button label.
+
+newtab-privacy-message-promo-monitor-1-cta = قلوه دووسته بۊین
+newtab-privacy-message-promo-monitor-2-cta = قلوه دووسته بۊین
+newtab-privacy-message-promo-signin-1-cta = و من ٱووڌن
+newtab-privacy-message-promo-vpn-1-cta = گۊشیڌن VPN
+newtab-privacy-message-promo-vpn-2-cta = گۊشیڌن VPN
+newtab-privacy-message-promo-vpn-3-cta = گۊشیڌن VPN
+newtab-privacy-message-promo-private-window-1-cta = گۊشیڌن نیمدری سیخومی
+
+## Strings for the Stocks widget
+
+# Context menu item linking to more information about the Stocks widget.
+newtab-stocks-menu-learn-more = قلوه دووسته بۊین
+# Heading for the Stocks widget.
+newtab-stocks-widget-title = سهام
+
+## Screen-reader summary of a stock ticker.
+## Variables:
+##   $name (String) - the full fund/ETF name, e.g. "SPDR S&P 500 ETF Trust".
+##   $change (String) - the day's percentage change, e.g. "+2.1%".
+##   $price (String) - the last price, e.g. "$559.44".
+
+# Stock increased (went up) during the day
+newtab-stocks-ticker-status-up = { $name }، روء { $change }، { $price }
+# Stock decreased (went down) during the day
+newtab-stocks-ticker-status-down = { $name }، لم { $change }، { $price }
+# Stock didn't change during the day
+newtab-stocks-ticker-status-flat = { $name }، بؽ آلشتکاری { $change }، { $price }
+
+## Strings for the Picture of the Day widget
+
+# Attribution line shown under the title once a picture loads: an author
+# credit, a link to the picture's source page, and a link to its license.
+# "©" is the copyright symbol.
+# $author (string) - the name of the image's author.
+newtab-picture-attribution-author = © { $author }
+# Context menu item linking to more information about the widget.
+newtab-picture-menu-learn-more = قلوه دووسته بۊین
 
 ## Search box component.
 
@@ -317,6 +389,8 @@ newtab-toast-dismiss-button =
 ## Customization Menu
 
 newtab-custom-shortcuts-title = ره نهنگا
+newtab-custom-shortcuts-nova =
+    .label = ره نهنگا
 newtab-custom-sponsored-sites = ره نهنگا هؽزگرووݩ
 newtab-custom-stories-personalized-toggle =
     .label = داستانا
@@ -328,6 +402,14 @@ newtab-custom-widget-lists-toggle =
     .label = نومگه یل
 newtab-custom-widget-timer-toggle =
     .label = زمووݩ سنج
+newtab-custom-widget-sports-toggle =
+    .label = جام جهۊوی
+newtab-custom-widget-clock-toggle =
+    .label = ساعت
+newtab-custom-widget-sports-toggle2 =
+    .label = ورزش
+newtab-custom-widget-privacy-toggle =
+    .label = سیخومی
 newtab-custom-widget-section-title = ویجتا
 newtab-custom-widget-section-toggle =
     .label = ویجتا
@@ -347,6 +429,7 @@ newtab-wallpaper-title = کاقز دیواری یل
 newtab-wallpaper-reset = وورگندن و سامووا پؽش فرز
 #  (developer note): @nova-cleanup(remove-string): Remove old "Upload an image" string once Nova lands. The new "Add an image"  string will take over
 newtab-wallpaper-upload-image = آپلود ی شؽوات
+newtab-wallpaper-add-an-image = ٱووردن ی شؽوات
 newtab-wallpaper-custom-color = ی رنگ پسند کۊنین
 newtab-wallpaper-toggle-title =
     .label = کاقز دیواری یل
@@ -358,12 +441,15 @@ newtab-wallpaper-light-sky = آسمۊوی وا ٱورا بناوش وو آل
 
 #  (developer note): @nova-cleanup(remove-string): Remove old "Solid colors" string once Nova lands. The simplified "Colors" string will take over
 newtab-wallpaper-category-title-colors = رنگا سابت
+newtab-wallpaper-colors = رنگا
 newtab-wallpaper-blue = کوۊ
 newtab-wallpaper-light-blue = کوۊ رۊشن
 newtab-wallpaper-light-purple = بناوش رۊشن
 newtab-wallpaper-light-green = ساوز رۊشن
 newtab-wallpaper-green = ساوز
 newtab-wallpaper-beige = بژ
+newtab-wallpaper-yellow = هیل
+newtab-wallpaper-orange = نارنجی
 newtab-wallpaper-pink = آل
 newtab-wallpaper-light-pink = آل رۊشن
 newtab-wallpaper-red = سوئر
@@ -417,6 +503,12 @@ newtab-weather-opt-in-yes =
     .label = هری
 # We'll be showing static (fake) weather data if the user has not opted in to using their location
 newtab-weather-static-city = شئر نیویورک
+# "Highest" here refers to the highest temperature of the day
+newtab-weather-high =
+    .aria-label = قلوه
+# "Lowest" here refers to the lowest temperature of the day
+newtab-weather-low =
+    .aria-label = کم
 
 ## Topic Labels
 
@@ -465,6 +557,10 @@ newtab-section-follow-highlight-title = فید خوتووݩ ن دییق سامو
 newtab-section-block-button = مسدۊد کردن
 newtab-section-blocked-button = مسدۊد وابیڌه
 newtab-section-unblock-button = ز مسدۊدی دراووردن
+# Variables:
+#   $topic (string) - Name of topic that user is blocking
+newtab-section-block-topic =
+    .aria-label = مسدۊد کردن { $topic }
 
 ## Confirmation modal for blocking a section
 
@@ -561,11 +657,15 @@ newtab-widget-lists-name-placeholder-new2 =
     .placeholder = نومگه نۊ
     .aria-label = آلشت نومگه نوم
 newtab-widget-section-title = ویجتا
+newtab-widget-size-small = کۊچیر
+newtab-widget-size-medium = منجقا
+newtab-widget-size-large = گپ
 # Tooltip for hide all widgets button
 newtab-widget-section-hide-all-button =
     .title = بؽڌار کردن ویجتا
     .aria-label = بؽڌار کردن پوی ویجتا
 newtab-widget-section-menu-manage = دؽوۉداری ویجتا
+newtab-widget-section-menu-hide-all = بؽڌار کردن ویجتا
 newtab-widget-section-menu-learn-more = قلوه دووسته بۊین
 
 ## Strings introduced by the Nova redesign of the Timer widget
@@ -586,17 +686,81 @@ newtab-widget-timer-menu-notifications = کۊر کردن وارسۊویا
 newtab-widget-timer-menu-notifications-on = رۊشن کردن وارسۊویا
 newtab-widget-timer-menu-learn-more = قلوه دووسته بۊین
 newtab-daily-briefing-card-menu-dismiss = رڌ کردن
+newtab-promo-card-cta-addons = هیم سکو امتهووݩ کوݩ
 newtab-promo-card-title = لادرار { -brand-product-name }
 newtab-promo-card-cta = قلوه دووسته بۊین
 newtab-promo-card-dismiss-button =
     .title = رڌ کردن
     .aria-label = رڌ کردن
 
+## Strings introduced by the Nova redesign of the Timer widget
+
+# Small label shown beneath the live time while the focus timer is running or paused.
+newtab-widget-timer-running-focus = فوکۊس
+# Small label shown beneath the live time while the break timer is running or paused.
+newtab-widget-timer-running-break = اشکستن
+# Context-menu item to hide the Timer widget. Replaces the shared "Hide widget"
+# copy with a widget-specific string per the Nova design.
+newtab-widget-timer-menu-hide = بؽڌار کردن زمووݩ سنج
+
 ##
 
+newtab-sports-widget-menu-view-schedule = نیشتن برنومه زمووی
 newtab-sports-widget-menu-learn-more = قلوه دووسته بۊین
+# “Keep tabs on” is an informal expression meaning to stay updated on, stay informed on, or regularly follow something (in this case, World Cup matches and updates).
+newtab-sports-widget-keep-tabs = جام جهۊوی ن وا ویر جمعی و دین کۊنین
+newtab-sports-widget-get-updates = ورۊ رسۊویا زنده موسابقات وو مووردا قلوه ن بگیرین.
+newtab-sports-widget-view-schedule =
+    .label = نیشتن برنومه زمووی
+newtab-sports-widget-choose-wallpaper =
+    .label = پسند شؽوات زمینه
+newtab-sports-widget-skip = گوم زیڌن
 newtab-sports-widget-cancel = لقو
+newtab-sports-widget-back-button =
+    .aria-label = وورگشتن
+newtab-sports-widget-done-button =
+    .label = ٱنجوم وابی
+newtab-sports-widget-view-all =
+    .label = نیشتن پوی
+newtab-sports-widget-show-less =
+    .label = نشووݩ داڌن کمتر
+newtab-sports-widget-watch-dialog-close =
+    .title = بستن
+    .aria-label = بستن
+newtab-sports-widget-group-stage = مرهله بونکۊیی
+newtab-sports-widget-group-a = بونکۊ A
+newtab-sports-widget-group-b = بونکۊ B
+newtab-sports-widget-group-c = بونکۊ C
+newtab-sports-widget-group-d = بونکۊ D
+newtab-sports-widget-group-e = بونکۊ E
+newtab-sports-widget-group-f = بونکۊ F
+newtab-sports-widget-group-g = بونکۊ G
+newtab-sports-widget-group-h = بونکۊ H
+newtab-sports-widget-group-i = بونکۊ I
+newtab-sports-widget-group-j = بونکۊ J
+newtab-sports-widget-group-k = بونکۊ K
+newtab-sports-widget-group-l = بونکۊ L
+newtab-sports-widget-round-32 = دور 32
+newtab-sports-widget-round-16 = دور 16
+newtab-sports-widget-quarter-finals = مرهله ی چاروم دیندایی
+# The "LIVE" string is meant to be uppercase in English, but other languages and locales may vary in how they handle this.
+newtab-sports-widget-live = زنده
+newtab-sports-widget-upcoming = آینده
+newtab-sports-widget-semi-finals = نیمه دیندایی
+newtab-sports-widget-bronze-finals = فینال بورونز
+# Final is the final match for 1st place.
+newtab-sports-widget-final = فینال
+# Variables:
+#   $start (Date) - Start date of a tournament stage
+#   $end (Date) - End date of a tournament stage
+newtab-sports-widget-key-date-range = { DATETIME($start, month: "short", day: "numeric") } – { DATETIME($end, month: "short", day: "numeric") }
 newtab-sports-widget-cancelled = لقو وابی
+newtab-sports-widget-third-place = مقام سووم
+newtab-sports-widget-world-cup-champions = قئرمووا جام جهۊوی 2026
+newtab-sports-widget-match-full-time = پوی مجال
+newtab-sports-widget-match-halftime = نیمه ٱول
+newtab-sports-widget-match-extra-time = مجال ازافه
+newtab-sports-widget-match-penalties = جریمه یل
 
 ## Accessible labels for match rows in the sports widget. These are read by
 ## screen readers to announce the match details and status.
@@ -608,6 +772,15 @@ newtab-sports-widget-cancelled = لقو وابی
 newtab-sports-widget-match-aria-label-upcoming-cancelled =
     .aria-label = { $homeTeam } ری و ری { $awayTeam }، لقو وابی
 
+## Sports widget — team names (FIFA country codes)
+## Only includes names not adequately covered by standard country-code
+## internationalization tooling.
+
+newtab-sports-widget-team-name-label-eng =
+    .label = انگلستووݩ
+newtab-sports-widget-team-name-label-sco =
+    .label = اسکاتلند
+
 ## Strings for activation window message variants. In certain experiment configurations,
 ## the strings from these variants may be displayed in a message below the search input
 ## for the first 48 hours of a new profile's lifetime. Some messages include buttons with
@@ -616,8 +789,19 @@ newtab-sports-widget-match-aria-label-upcoming-cancelled =
 newtab-activation-window-message-dismiss-button =
     .title = رڌ کردن
     .aria-label = رڌ کردن
+newtab-activation-window-message-customization-focus-primary-button =
+    .label = ناهاڌن پا سفارشی کردن
 
 ## Strings for the Clock widget
 
 newtab-clock-widget-menu-learn-more = قلوه دووسته بۊین
+newtab-clock-widget-button-add-clock = ٱووردن
 newtab-clock-widget-button-cancel = لقو
+newtab-clock-widget-button-save = زفت
+# Accessible name for a clock row in the "Your clocks" management panel
+# when the row has no user-provided nickname. Read aloud by screen
+# readers when focus lands on the row.
+# Variables:
+#   $city (string) - The city name displayed in the row.
+newtab-clock-widget-edit-item =
+    .aria-label = { $city }

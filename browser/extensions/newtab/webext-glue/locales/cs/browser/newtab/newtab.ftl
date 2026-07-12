@@ -175,18 +175,31 @@ home-prefs-mission-message-learn-more-link-srd = Zjistěte jak
 # Context menu item linking to more information about the Privacy widget.
 newtab-privacy-menu-learn-more = Zjistit více
 
+## Privacy widget — promotional messages
+##
+## Rotating "promo" secondary messages suggesting another Firefox feature. Each
+## has a body plus a matched "-cta" button label.
+
+newtab-privacy-message-promo-private-window-1-cta = Otevřít anonymní okno
+newtab-privacy-message-promo-relay-1-cta = Získat masky
+newtab-privacy-message-promo-relay-2 = Chraňte svou doručenou poštu před nevyžádanou poštou pomocí bezplatného maskování e-mailových adres.
+newtab-privacy-message-promo-relay-2-cta = Získat masky
+newtab-privacy-message-promo-relay-3-cta = Získat masky
+
 ## Strings for the Stocks widget
 
-# Context menu item that hides the Stocks widget.
-newtab-stocks-menu-hide = Skrýt akcie
+# Context menu item for searching stock ticker symbols.
+newtab-stocks-menu-search = Hledat burzové symboly
 # Context menu item linking to more information about the Stocks widget.
 newtab-stocks-menu-learn-more = Zjistit více
 
 ## Strings for the Picture of the Day widget
 
-# Eyebrow shown at the top of the widget. Wikimedia Commons is a brand name and
-# should not be translated.
+# Title shown at the top of the widget, with the source name appended.
+# "Wikimedia Commons" is a brand name and should not be translated.
 newtab-picture-header = Obrázek dne · Wikimedia Commons
+# Shorter title shown at the top of the widget, without the source name.
+newtab-picture-header-main = Obrázek dne
 # Context menu item linking to more information about the widget.
 newtab-picture-menu-learn-more = Zjistit více
 
@@ -522,6 +535,8 @@ newtab-recommended-stories-toggle =
     .label = Doporučené příběhy
 newtab-custom-stories-personalized-toggle =
     .label = Příběhy
+newtab-custom-stories-personalized-checkbox =
+    .label = Personalizované příběhy na základě vaší aktivity
 newtab-custom-stories-personalized-checkbox-label = Personalizované příběhy na základě vaší aktivity
 newtab-custom-pocket-sponsored = Sponzorované příběhy
 newtab-custom-pocket-show-recent-saves = Zobrazit nedávno uložené
@@ -1369,6 +1384,10 @@ newtab-sports-widget-message-explore-widgets-cta =
 
 ## Survey prompts shown after the World Cup to gather feedback on the widgets experience.
 
+newtab-sports-widget-message-survey-title = Pomozte nám vylepšit widgety
+newtab-sports-widget-message-survey-body = To je úplný závěr k Mistrovství světa. Podělte se o zpětnou vazbu.
+newtab-sports-widget-message-survey-widget-title = Jaký byl widget k Mistrovství světa?
+newtab-sports-widget-message-survey-widget-body = Podělte se o zpětnou vazbu a pomozte nám vylepšit budoucí widgety. Pak vyzkoušejte nový ve vaší sestavě.
 newtab-sports-widget-message-survey-cta =
     .label = Vyplnit průzkum
 

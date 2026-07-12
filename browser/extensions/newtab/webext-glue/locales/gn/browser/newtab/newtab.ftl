@@ -166,17 +166,131 @@ home-prefs-mission-message-learn-more-link-srd = Eikuaa mba’éichapa
 # Context menu item linking to more information about the Privacy widget.
 newtab-privacy-menu-learn-more = Eikuaave
 
+## Privacy widget — count readout
+
+# Label shown under the large tracker-count number, appearing like:
+# Line 1: 86
+# Line 2: Trackers blocked today
+# Translations can be adjusted to "Today's blocked trackers" or something
+# similar if this fixed order causes issues.
+# Variables:
+#   $count (number) - Number of trackers blocked today
+newtab-privacy-trackers-blocked-today =
+    { $count ->
+        [one] Tapykuehoha ojejoko ko árape
+       *[other] Tapykuehohaita ojejoko ko árape
+    }
+# Second line of the readout, under the large number and "Trackers blocked
+# today". Counts the sites those trackers were blocked on. The English is
+# shortened from "Blocked across { $count } sites" — translate it that fuller way
+# if the short fragment doesn't work in your language.
+# Variables:
+#   $count (number) - Number of sites where trackers were blocked
+newtab-privacy-across-sites =
+    { $count ->
+        [one] Opaite tendápe { $count }
+       *[other] Opaite tendaitápe { $count }
+    }
+
+## Privacy widget — informational messages
+##
+## Rotating "info" secondary messages. Each message has a body plus a matched
+## "-cta" button label sharing the same id stem (the CTA button isn't rendered
+## yet; the labels are authored so the pairing is ready).
+
+newtab-privacy-message-info-1-cta = Ehecha ñemo’ãrã
+newtab-privacy-message-info-2-cta = Ehecha ñemo’ãrã
+newtab-privacy-message-info-3-cta = Ehecha ñemo’ãrã
+newtab-privacy-message-info-4-cta = Ehecha ñemo’ãrã
+newtab-privacy-message-info-5-cta = Ehecha ñemo’ãrã
+newtab-privacy-message-info-6-cta = Eikuaave
+newtab-privacy-message-info-7 = Ehecha mba’e tapykuehoha { -brand-short-name } ojoko.
+newtab-privacy-message-info-7-cta = Ehecha ñemo’ãrã
+newtab-privacy-message-info-8-cta = Eikuaave
+newtab-privacy-message-info-9-cta = Ejapo chugui yjypykuéva
+newtab-privacy-message-info-10-cta = Eho ñe’ẽñemíme
+newtab-privacy-message-info-11-cta = Eikuaave
+newtab-privacy-message-info-12-cta = Ehecha ñemo’ãrã
+newtab-privacy-message-info-13-cta = Ehecha ñemo’ãrã
+
+## Privacy widget — promotional messages
+##
+## Rotating "promo" secondary messages suggesting another Firefox feature. Each
+## has a body plus a matched "-cta" button label.
+
+newtab-privacy-message-promo-monitor-1-cta = Eikuaave
+newtab-privacy-message-promo-monitor-2-cta = Eikuaave
+newtab-privacy-message-promo-signin-1-cta = Eñemboheraguapy
+newtab-privacy-message-promo-vpn-1-cta = Embojuruja VPN
+newtab-privacy-message-promo-vpn-2-cta = Embojuruja VPN
+newtab-privacy-message-promo-vpn-3-cta = Embojuruja VPN
+newtab-privacy-message-promo-private-window-1-cta = Embojuruja ovetã ñemi
+newtab-privacy-message-promo-relay-1-cta = Erekóke jurumo’ãha
+newtab-privacy-message-promo-relay-2-cta = Erekóke jurumo’ãha
+newtab-privacy-message-promo-relay-3-cta = Erekóke jurumo’ãha
+
+## Privacy widget — celebration messages
+##
+## Earned "celebration" moments (milestones, daily cap, streak, first
+## protection). Count-bearing ones interpolate { $count }.
+
+newtab-privacy-message-milestone-week-cta = Ehecha ñemo’ãrã
+newtab-privacy-message-milestone-month-cta = Ehecha ñemo’ãrã
+newtab-privacy-message-milestone-year-cta = Ehecha ñemo’ãrã
+newtab-privacy-message-milestone-total-cta = Ehecha ñemo’ãrã
+newtab-privacy-message-daily-cap-cta = Ehecha ñemo’ãrã
+newtab-privacy-message-streak-cta = Ehecha ñemo’ãrã
+newtab-privacy-message-first-protection-cta = Ehecha ñemo’ãrã
+
 ## Strings for the Stocks widget
 
 # Context menu item for searching stock ticker symbols.
 newtab-stocks-menu-search = Eheka jeku’e reheguáva
-# Context menu item that hides the Stocks widget.
-newtab-stocks-menu-hide = Eñomi jeku’ekue
 # Context menu item linking to more information about the Stocks widget.
 newtab-stocks-menu-learn-more = Eikuaave
 
+## Screen-reader summary of a stock ticker.
+## Variables:
+##   $name (String) - the full fund/ETF name, e.g. "SPDR S&P 500 ETF Trust".
+##   $change (String) - the day's percentage change, e.g. "+2.1%".
+##   $price (String) - the last price, e.g. "$559.44".
+
+# Stock increased (went up) during the day
+newtab-stocks-ticker-status-up = { $name }, jupi { $change }, { $price }
+# Stock decreased (went down) during the day
+newtab-stocks-ticker-status-down = { $name }, karape { $change }, { $price }
+
 ## Strings for the Picture of the Day widget
 
+# Title shown at the top of the widget, with the source name appended.
+# "Wikimedia Commons" is a brand name and should not be translated.
+newtab-picture-header = Picture of the day · Wikimedia Commons
+# Shorter title shown at the top of the widget, without the source name.
+newtab-picture-header-main = Ta’ãnga araguáva
+# Attribution line shown under the title once a picture loads: an author
+# credit, a link to the picture's source page, and a link to its license.
+# "©" is the copyright symbol.
+# $author (string) - the name of the image's author.
+newtab-picture-attribution-author = © { $author }
+# Link to the picture's source page (its Wikimedia Commons file page).
+# "Wikimedia Commons" is a brand name and should not be translated.
+newtab-picture-attribution-source-link = Wikimedia Commons
+# Screen-reader label for the license link; the visible text is the license
+# name (for example "CC BY-SA 4.0") provided with the picture.
+# $license (string) - the name of the license.
+newtab-picture-attribution-license =
+    .aria-label = Ehecha moneĩha { $license }
+# Tooltip and screen-reader label for the icon-only button that opens the
+# widget's context menu. The button never renders visible text.
+newtab-picture-widget-menu-button =
+    .title = Ta’ãnga aragua poravorã
+    .aria-label = Ta’ãnga aragua poravorã
+# Button that sets the current picture as the New Tab background wallpaper. The
+# button collapses to an icon when not hovered/focused, so .title is its tooltip.
+newtab-picture-set-wallpaper =
+    .label = Emoĩ mba’erechaha ruguárõ
+    .title = Emoĩ mba’erechaha ruguárõ
+    .aria-label = Emoĩ ta’ãnga aragua mba’erechaha ruguárõ
 # Context menu item that opens the New Tab customization panel.
 newtab-picture-menu-manage-wallpaper = Emongu’e jehechaha rugua
 # Context menu item that hides today’s picture, replacing it with an existing
@@ -186,6 +300,12 @@ newtab-picture-menu-hide-photo = Eñomi ta’ãnga aragua
 newtab-picture-menu-show-photo = Ehechauka ta’ãnga aragua
 # Context menu item linking to more information about the widget.
 newtab-picture-menu-learn-more = Eikuaave
+# Icon button shown on the widget once the picture is hidden; restores it.
+newtab-picture-show-button =
+    .title = Ehechauka ta’ãnga aragua
+    .aria-label = Ehechauka ta’ãnga aragua
+# Shown when there is no new picture to display yet.
+newtab-picture-check-back = Eju jey ko’ẽrõ ta’ãnga pyahurã rekávo
 # Screen-reader text alternative for the picture; fallback used when the source
 # provides no localized description.
 newtab-picture-image-alt = Wikimedia Commons ra’ãnga araguáva
@@ -514,6 +634,8 @@ newtab-recommended-stories-toggle =
     .label = Tembiasakue momba’epyre
 newtab-custom-stories-personalized-toggle =
     .label = Tembiasakue
+newtab-custom-stories-personalized-checkbox =
+    .label = Tembiasakueita teéva ipyendáva ne rembiapóre
 newtab-custom-stories-personalized-checkbox-label = Tembiasakueita teéva ipyendáva ne rembiapóre
 newtab-custom-pocket-sponsored = Tembiasakue jehepyme’ẽguáva
 newtab-custom-pocket-show-recent-saves = Ehechauka eñongaturamóva
@@ -1313,6 +1435,7 @@ newtab-sports-widget-team-tbd = Ojekuaa’ỹva gueteri
 newtab-sports-widget-message-wallpapers-title = Eg̃uahẽ Mundial ñepyrũme mba’erechaha rugua pyahu reheve
 newtab-sports-widget-message-wallpapers-body = Emog̃uahẽ upe energía partído oikotaha ára ne mohendahápe.
 newtab-sports-widget-message-wallpapers-cta = Eiporavo mba’erechaha rugua
+newtab-sports-widget-message-wallpapers-semifinals-title = Erekóke mba’erechaha rugua pyahu semifinal-pe g̃uarã
 newtab-sports-widget-message-add-widgets-cta =
     .label = Embojuaju widgets
 newtab-sports-widget-message-day-in-play-title = Ereko nde ára pukukue jeku’épe umi widget { -brand-product-name } rupi.
@@ -1322,6 +1445,8 @@ newtab-sports-widget-message-explore-widgets-cta =
 
 ## Survey prompts shown after the World Cup to gather feedback on the widgets experience.
 
+newtab-sports-widget-message-survey-title = Ore pytyvõ widgets porãverã
+newtab-sports-widget-message-survey-widget-title = ¿Mba’éicha oĩ Copa del Mundo widget?
 newtab-sports-widget-message-survey-cta =
     .label = Ejapo encuesta
 

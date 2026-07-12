@@ -166,21 +166,196 @@ home-prefs-mission-message-learn-more-link-srd = Μάθετε πώς
 # Context menu item linking to more information about the Privacy widget.
 newtab-privacy-menu-learn-more = Μάθετε περισσότερα
 
+## Privacy widget — count readout
+
+# Label shown under the large tracker-count number, appearing like:
+# Line 1: 86
+# Line 2: Trackers blocked today
+# Translations can be adjusted to "Today's blocked trackers" or something
+# similar if this fixed order causes issues.
+# Variables:
+#   $count (number) - Number of trackers blocked today
+newtab-privacy-trackers-blocked-today =
+    { $count ->
+        [one] Αποκλεισμένος ιχνηλάτης σήμερα
+       *[other] Αποκλεισμένοι ιχνηλάτες σήμερα
+    }
+# Second line of the readout, under the large number and "Trackers blocked
+# today". Counts the sites those trackers were blocked on. The English is
+# shortened from "Blocked across { $count } sites" — translate it that fuller way
+# if the short fragment doesn't work in your language.
+# Variables:
+#   $count (number) - Number of sites where trackers were blocked
+newtab-privacy-across-sites =
+    { $count ->
+        [one] Σε { $count } ιστότοπο
+       *[other] Σε { $count } ιστοτόπους
+    }
+
+## Privacy widget — empty state
+
+# Shown when no trackers have been blocked yet today.
+newtab-privacy-empty = Το { -brand-short-name } αποκλείει ιχνηλάτες κατά την περιήγησή σας. Θα τους βλέπετε εδώ.
+
+## Privacy widget — informational messages
+##
+## Rotating "info" secondary messages. Each message has a body plus a matched
+## "-cta" button label sharing the same id stem (the CTA button isn't rendered
+## yet; the labels are authored so the pairing is ready).
+
+newtab-privacy-message-info-1 = Το { -brand-short-name } αποκλείει αυτόματα ιχνηλάτες κατά την περιήγησή σας.
+newtab-privacy-message-info-1-cta = Προβολή μέτρων προστασίας
+newtab-privacy-message-info-2 = Ο αποκλεισμός ιχνηλατών εμποδίζει την καταγραφή σας από εταιρείες στο διαδίκτυο.
+newtab-privacy-message-info-2-cta = Προβολή μέτρων προστασίας
+newtab-privacy-message-info-3 = Πολλοί ιστότοποι περιέχουν ιχνηλάτες, με αποτέλεσμα να μπορούν να σας καταγράφουν στο διαδίκτυο εταιρείες που δεν έχετε επισκεφθεί.
+newtab-privacy-message-info-3-cta = Προβολή μέτρων προστασίας
+newtab-privacy-message-info-4 = Επιλέγοντας το { -brand-short-name }, επιλέγετε την προστασία από προεπιλογή.
+newtab-privacy-message-info-4-cta = Προβολή μέτρων προστασίας
+newtab-privacy-message-info-5 = Ο αποκλεισμός ιχνηλατών σημαίνει ότι λιγότερες εταιρείες μπορούν να σας καταγράφουν σε όλους τους ιστοτόπους.
+newtab-privacy-message-info-5-cta = Προβολή μέτρων προστασίας
+newtab-privacy-message-info-6 = Διατηρήστε τα δεδομένα σας στο { -brand-short-name }. Δεν τα πωλούμε ποτέ, σε αντίθεση με άλλα προγράμματα περιήγησης.
+newtab-privacy-message-info-6-cta = Μάθετε περισσότερα
+newtab-privacy-message-info-7 = Δείτε ποιους ιχνηλάτες απέκλεισε το { -brand-short-name }.
+newtab-privacy-message-info-7-cta = Προβολή μέτρων προστασίας
+newtab-privacy-message-info-8 = Κάνοντας περιήγηση με το { -brand-short-name }, υποστηρίζετε την αποστολή της { -vendor-short-name } για ένα καλύτερο διαδίκτυο.
+newtab-privacy-message-info-8-cta = Μάθετε περισσότερα
+newtab-privacy-message-info-9 = Ορίστε το { -brand-short-name } ως το προεπιλεγμένο πρόγραμμα περιήγησής σας για ενσωματωμένη ιδιωτικότητα.
+newtab-privacy-message-info-9-cta = Ορισμός ως προεπιλογή
+newtab-privacy-message-info-10 = Αποθηκεύστε κωδικούς πρόσβασης στο { -brand-short-name } για χρήση ισχυρών, μοναδικών στοιχείων σύνδεσης παντού.
+newtab-privacy-message-info-10-cta = Μετάβαση στους κωδικούς πρόσβασης
+newtab-privacy-message-info-11 = Μάθετε πώς το { -brand-short-name } βοηθά στη διατήρηση της ιδιωτικότητας της περιήγησής σας.
+newtab-privacy-message-info-11-cta = Μάθετε περισσότερα
+newtab-privacy-message-info-12 = Ο αποκλεισμός ιχνηλατών συμβάλλει στην εξοικονόμηση εύρους ζώνης σε πακέτα με περιορισμένα δεδομένα.
+newtab-privacy-message-info-12-cta = Προβολή μέτρων προστασίας
+newtab-privacy-message-info-13 = Το { -brand-short-name } αποκλείει ιχνηλάτες, ελευθερώνοντας εύρος ζώνης για ομαλότερο streaming.
+newtab-privacy-message-info-13-cta = Προβολή μέτρων προστασίας
+
+## Privacy widget — promotional messages
+##
+## Rotating "promo" secondary messages suggesting another Firefox feature. Each
+## has a body plus a matched "-cta" button label.
+
+newtab-privacy-message-promo-monitor-1 = Μάθετε αν τα προσωπικά σας δεδομένα έχουν εμφανιστεί σε κάποια παραβίαση δεδομένων.
+newtab-privacy-message-promo-monitor-1-cta = Μάθετε περισσότερα
+newtab-privacy-message-promo-monitor-2 = Προστατέψτε τα δεδομένα σας με τη δωρεάν εποπτεία για παραβιάσεις δεδομένων, για έως και 20 email.
+newtab-privacy-message-promo-monitor-2-cta = Μάθετε περισσότερα
+newtab-privacy-message-promo-signin-1 = Διατηρήστε κρυπτογραφημένους τους σελιδοδείκτες, τους κωδικούς πρόσβασης και τις καρτέλες σας, σε όλες τις συσκευές σας, με τον λογαριασμό { -vendor-short-name } σας.
+newtab-privacy-message-promo-signin-1-cta = Σύνδεση
+newtab-privacy-message-promo-vpn-1 = Κάνετε αγορές σε δημόσια Wi-Fi; Ενεργοποιήστε το ενσωματωμένο VPN για επιπλέον προστασία.
+newtab-privacy-message-promo-vpn-1-cta = Άνοιγμα VPN
+newtab-privacy-message-promo-vpn-2 = Χρησιμοποιείτε το Wi-Fi ενός αεροδρομίου; Προστατέψτε την περιήγησή σας ενεργοποιώντας το ενσωματωμένο VPN.
+newtab-privacy-message-promo-vpn-2-cta = Άνοιγμα VPN
+newtab-privacy-message-promo-vpn-3 = Ενεργοποιήστε το ενσωματωμένο VPN για να διατηρήσετε την τοποθεσία σας πιο ιδιωτική.
+newtab-privacy-message-promo-vpn-3-cta = Άνοιγμα VPN
+newtab-privacy-message-promo-private-window-1 = Δοκιμάστε ένα ιδιωτικό παράθυρο για πιο ιδιωτική περιήγηση όταν χρησιμοποιείτε έναν κοινόχρηστο υπολογιστή.
+newtab-privacy-message-promo-private-window-1-cta = Άνοιγμα ιδιωτικού παραθύρου
+newtab-privacy-message-promo-relay-1 = Κρατήστε το πραγματικό σας email για τα άτομα που εμπιστεύεστε· χρησιμοποιήστε μια μάσκα email για εγγραφές σε ιστοτόπους.
+newtab-privacy-message-promo-relay-1-cta = Απόκτηση μασκών
+newtab-privacy-message-promo-relay-2 = Προστατέψτε τα εισερχόμενά σας από ανεπιθύμητα μηνύματα με τη δωρεάν απόκρυψη email.
+newtab-privacy-message-promo-relay-2-cta = Απόκτηση μασκών
+newtab-privacy-message-promo-relay-3 = Αποκτήστε 50 δωρεάν μάσκες email για να διατηρήσετε το πραγματικό σας email ιδιωτικό.
+newtab-privacy-message-promo-relay-3-cta = Απόκτηση μασκών
+
+## Privacy widget — celebration messages
+##
+## Earned "celebration" moments (milestones, daily cap, streak, first
+## protection). Count-bearing ones interpolate { $count }.
+
+# Variables:
+#   $count (number) - Trackers blocked this week
+newtab-privacy-message-milestone-week =
+    { $count ->
+        [one] { $count } αποκλεισμένος ιχνηλάτης αυτήν την εβδομάδα. Δείτε τι εμποδίζει για εσάς το { -brand-short-name }
+       *[other] { $count } αποκλεισμένοι ιχνηλάτες αυτήν την εβδομάδα. Δείτε τι εμποδίζει για εσάς το { -brand-short-name }
+    }
+newtab-privacy-message-milestone-week-cta = Προβολή μέτρων προστασίας
+# Variables:
+#   $count (number) - Trackers blocked this month
+newtab-privacy-message-milestone-month =
+    { $count ->
+        [one] { $count } αποκλεισμένος ιχνηλάτης αυτόν τον μήνα. Ένα μικρό βήμα για την ιδιωτικότητα. Ένα μεγάλο βήμα για την ηρεμία και την ασφάλεια.
+       *[other] { $count } αποκλεισμένοι ιχνηλάτες αυτόν τον μήνα. Ένα μικρό βήμα για την ιδιωτικότητα. Ένα μεγάλο βήμα για την ηρεμία και την ασφάλεια.
+    }
+newtab-privacy-message-milestone-month-cta = Προβολή μέτρων προστασίας
+# Variables:
+#   $count (number) - Trackers blocked this year
+newtab-privacy-message-milestone-year =
+    { $count ->
+        [one] { $count } αποκλεισμένος ιχνηλάτης αυτό το έτος. Αυτός ήταν ένας δυναμικός χρόνος για την προστασία του απορρήτου σας.
+       *[other] { $count } αποκλεισμένοι ιχνηλάτες αυτό το έτος. Αυτός ήταν ένας δυναμικός χρόνος για την προστασία του απορρήτου σας.
+    }
+newtab-privacy-message-milestone-year-cta = Προβολή μέτρων προστασίας
+# Variables:
+#   $count (number) - Trackers blocked all-time
+newtab-privacy-message-milestone-total =
+    { $count ->
+        [one] { $count } αποκλεισμένος ιχνηλάτης. Αυτή είναι σημαντική πρόοδος προς την ιδιωτικότητα, με τους δικούς σας όρους.
+       *[other] { $count } αποκλεισμένοι ιχνηλάτες. Αυτή είναι σημαντική πρόοδος προς την ιδιωτικότητα, με τους δικούς σας όρους.
+    }
+newtab-privacy-message-milestone-total-cta = Προβολή μέτρων προστασίας
+# Shown when today's blocked-tracker count reaches the display cap ("100+").
+newtab-privacy-message-daily-cap = (100+ αποκλεισμένοι ιχνηλάτες σήμερα.) Λιγότεροι ιχνηλάτες, περισσότερη ιδιωτικότητα.
+newtab-privacy-message-daily-cap-cta = Προβολή μέτρων προστασίας
+# Variables:
+#   $count (number) - Consecutive days the user has had trackers blocked
+newtab-privacy-message-streak =
+    { $count ->
+        [one] Προστατεύεστε { $count } συνεχόμενη ημέρα.
+       *[other] Προστατεύεστε { $count } συνεχόμενες ημέρες.
+    }
+newtab-privacy-message-streak-cta = Προβολή μέτρων προστασίας
+# Shown the first time the tracker count goes above zero.
+newtab-privacy-message-first-protection = Συνεχίστε την περιήγηση, το { -brand-short-name } θα συνεχίσει να κάνει αποκλεισμό.
+newtab-privacy-message-first-protection-cta = Προβολή μέτρων προστασίας
+
 ## Strings for the Stocks widget
 
 # Context menu item for searching stock ticker symbols.
 newtab-stocks-menu-search = Αναζήτηση συμβόλων μετοχών
-# Context menu item that hides the Stocks widget.
-newtab-stocks-menu-hide = Απόκρυψη μετοχών
 # Context menu item linking to more information about the Stocks widget.
 newtab-stocks-menu-learn-more = Μάθετε περισσότερα
 
 ## Strings for the Picture of the Day widget
 
+# Title shown at the top of the widget, with the source name appended.
+# "Wikimedia Commons" is a brand name and should not be translated.
+newtab-picture-header = Εικόνα της ημέρας · Wikimedia Commons
+# Shorter title shown at the top of the widget, without the source name.
+newtab-picture-header-main = Εικόνα της ημέρας
+# Screen-reader label for the license link; the visible text is the license
+# name (for example "CC BY-SA 4.0") provided with the picture.
+# $license (string) - the name of the license.
+newtab-picture-attribution-license =
+    .aria-label = Προβολή της άδειας { $license }
+# Tooltip and screen-reader label for the icon-only button that opens the
+# widget's context menu. The button never renders visible text.
+newtab-picture-widget-menu-button =
+    .title = Επιλογές εικόνας ημέρας
+    .aria-label = Επιλογές εικόνας ημέρας
+# Button that sets the current picture as the New Tab background wallpaper. The
+# button collapses to an icon when not hovered/focused, so .title is its tooltip.
+newtab-picture-set-wallpaper =
+    .label = Ορισμός ταπετσαρίας
+    .title = Ορισμός ταπετσαρίας
+    .aria-label = Ορισμός σημερινής εικόνας ως ταπετσαρίας
 # Context menu item that opens the New Tab customization panel.
 newtab-picture-menu-manage-wallpaper = Διαχείριση ταπετσαρίας
+# Context menu item that hides today’s picture, replacing it with an existing
+# wallpaper.
+newtab-picture-menu-hide-photo = Απόκρυψη σημερινής εικόνας
+# Context menu item that restores today’s picture after it has been hidden.
+newtab-picture-menu-show-photo = Εμφάνιση σημερινής εικόνας
 # Context menu item linking to more information about the widget.
 newtab-picture-menu-learn-more = Μάθετε περισσότερα
+# Icon button shown on the widget once the picture is hidden; restores it.
+newtab-picture-show-button =
+    .title = Εμφάνιση σημερινής εικόνας
+    .aria-label = Εμφάνιση σημερινής εικόνας
+# Shown when there is no new picture to display yet.
+newtab-picture-check-back = Επιστρέψτε αύριο για μια νέα εικόνα
+# Screen-reader text alternative for the picture; fallback used when the source
+# provides no localized description.
+newtab-picture-image-alt = Εικόνα της ημέρας από το Wikimedia Commons
 
 ## Search box component.
 
@@ -507,6 +682,8 @@ newtab-recommended-stories-toggle =
     .label = Προτεινόμενα άρθρα
 newtab-custom-stories-personalized-toggle =
     .label = Άρθρα
+newtab-custom-stories-personalized-checkbox =
+    .label = Εξατομικευμένα άρθρα με βάση τη δραστηριότητά σας
 newtab-custom-stories-personalized-checkbox-label = Εξατομικευμένα άρθρα με βάση τη δραστηριότητά σας
 newtab-custom-pocket-sponsored = Χορηγούμενα άρθρα
 newtab-custom-pocket-show-recent-saves = Εμφάνιση πρόσφατων αποθηκεύσεων
@@ -1317,6 +1494,10 @@ newtab-sports-widget-message-explore-widgets-cta =
 
 ## Survey prompts shown after the World Cup to gather feedback on the widgets experience.
 
+newtab-sports-widget-message-survey-title = Βοηθήστε μας να βελτιώσουμε τα γραφικά στοιχεία
+newtab-sports-widget-message-survey-body = Το Παγκόσμιο Κύπελλο τελείωσε. Μοιραστείτε τα σχόλιά σας σχετικά με την εμπειρία σας.
+newtab-sports-widget-message-survey-widget-title = Πώς ήταν το γραφικό στοιχείο του Παγκοσμίου Κυπέλλου;
+newtab-sports-widget-message-survey-widget-body = Μοιραστείτε τα σχόλιά σας για να μας βοηθήσετε να βελτιώσουμε τα μελλοντικά γραφικά στοιχεία. Στη συνέχεια, δοκιμάστε το νέο γραφικό στοιχείο στη συλλογή σας.
 newtab-sports-widget-message-survey-cta =
     .label = Συμμετοχή στην έρευνα
 

@@ -167,20 +167,179 @@ home-prefs-mission-message-learn-more-link-srd = Află cum
 # Context menu item linking to more information about the Privacy widget.
 newtab-privacy-menu-learn-more = Află mai multe
 
+## Privacy widget — count readout
+
+# Label shown under the large tracker-count number, appearing like:
+# Line 1: 86
+# Line 2: Trackers blocked today
+# Translations can be adjusted to "Today's blocked trackers" or something
+# similar if this fixed order causes issues.
+# Variables:
+#   $count (number) - Number of trackers blocked today
+newtab-privacy-trackers-blocked-today =
+    { $count ->
+        [one] element de urmărire blocat azi
+        [few] elemente de urmărire blocate azi
+       *[other] de elemente de urmărire blocate azi
+    }
+# Second line of the readout, under the large number and "Trackers blocked
+# today". Counts the sites those trackers were blocked on. The English is
+# shortened from "Blocked across { $count } sites" — translate it that fuller way
+# if the short fragment doesn't work in your language.
+# Variables:
+#   $count (number) - Number of sites where trackers were blocked
+newtab-privacy-across-sites =
+    { $count ->
+        [one] Pe { $count } site
+        [few] Pe { $count } site-uri
+       *[other] Pe { $count } de site-uri
+    }
+
+## Privacy widget — empty state
+
+# Shown when no trackers have been blocked yet today.
+newtab-privacy-empty = { -brand-short-name } blochează elementele de urmărire în timp ce navighezi. Le vei vedea aici.
+
+## Privacy widget — informational messages
+##
+## Rotating "info" secondary messages. Each message has a body plus a matched
+## "-cta" button label sharing the same id stem (the CTA button isn't rendered
+## yet; the labels are authored so the pairing is ready).
+
+newtab-privacy-message-info-1 = { -brand-short-name } blochează automat elementele de urmărire în timp ce navighezi.
+newtab-privacy-message-info-1-cta = Vezi protecțiile
+newtab-privacy-message-info-2 = Blocarea elementelor de urmărire ajută la împiedicarea companiilor să te urmărească online.
+newtab-privacy-message-info-2-cta = Vezi protecțiile
+newtab-privacy-message-info-3 = Multe site-uri au elemente de urmărire, astfel încât companii pe care nu le-ai vizitat niciodată să te urmărească online.
+newtab-privacy-message-info-3-cta = Vezi protecțiile
+newtab-privacy-message-info-4 = Când alegi { -brand-short-name } ai protecție implicit.
+newtab-privacy-message-info-4-cta = Vezi protecțiile
+newtab-privacy-message-info-5 = Blocarea elementelor de urmărire înseamnă mai puține companii care te pot urmări de la un site la altul.
+newtab-privacy-message-info-5-cta = Vezi protecțiile
+newtab-privacy-message-info-6 = Păstrează-ți datele cu { -brand-short-name }. Nu le vindem niciodată, dar alte browsere s-ar putea să o facă.
+newtab-privacy-message-info-6-cta = Află mai multe
+newtab-privacy-message-info-7 = Vezi ce elemente de urmărire a blocat { -brand-short-name }.
+newtab-privacy-message-info-7-cta = Vezi protecțiile
+newtab-privacy-message-info-8 = Navigarea cu { -brand-short-name } susține misiunea { -vendor-short-name } de a construi un web mai bun.
+newtab-privacy-message-info-8-cta = Află mai multe
+newtab-privacy-message-info-9 = Fă { -brand-short-name } browserul tău implicit pentru confidențialitate încorporată.
+newtab-privacy-message-info-9-cta = Setează ca implicit
+newtab-privacy-message-info-10 = Salvează parolele în { -brand-short-name } ca să folosești peste tot autentificări unice și puternice.
+newtab-privacy-message-info-10-cta = Mergi la parole
+newtab-privacy-message-info-11 = Află cum te ajută { -brand-short-name } să navighezi mai privat.
+newtab-privacy-message-info-11-cta = Află mai multe
+newtab-privacy-message-info-12 = Blocarea elementelor de urmărire ajută la economisirea lățimii de bandă în cazul abonamentelor de date limitate.
+newtab-privacy-message-info-12-cta = Vezi protecțiile
+newtab-privacy-message-info-13 = { -brand-short-name } blochează elementele de urmărire, eliberând lățime de bandă pentru un flux mai fluid.
+newtab-privacy-message-info-13-cta = Vezi protecțiile
+
+## Privacy widget — promotional messages
+##
+## Rotating "promo" secondary messages suggesting another Firefox feature. Each
+## has a body plus a matched "-cta" button label.
+
+newtab-privacy-message-promo-monitor-1 = Vezi dacă datele tale personale apar într-o încălcare a securității datelor.
+newtab-privacy-message-promo-monitor-1-cta = Află mai multe
+newtab-privacy-message-promo-monitor-2 = Protejează-ți informațiile cu o monitorizare gratuită a încălcărilor de securitate a datelor, pentru până la 20 de adrese de e-mail.
+newtab-privacy-message-promo-monitor-2-cta = Află mai multe
+newtab-privacy-message-promo-signin-1 = Păstrează-ți marcajele, parolele și filele criptate pe toate dispozitivele cu contul { -vendor-short-name }.
+newtab-privacy-message-promo-signin-1-cta = Intră în cont
+newtab-privacy-message-promo-vpn-1 = Faci cumpărături prin Wi-Fi public? Activează VPN-ul încorporat pentru un plus de protecție.
+newtab-privacy-message-promo-vpn-1-cta = Deschide VPN-ul
+newtab-privacy-message-promo-vpn-2 = Folosești Wi-Fi de la aeroport? Protejează-ți navigarea activând VPN-ul încorporat.
+newtab-privacy-message-promo-vpn-2-cta = Deschide VPN-ul
+newtab-privacy-message-promo-vpn-3 = Activează VPN-ul încorporat ca să îți menții locația mai privată.
+newtab-privacy-message-promo-vpn-3-cta = Deschide VPN-ul
+newtab-privacy-message-promo-private-window-1 = Încearcă o fereastră privată ca să navighezi mai privat când folosești un calculator împreună cu mai multe persoane.
+newtab-privacy-message-promo-private-window-1-cta = Deschide o fereastră privată
+newtab-privacy-message-promo-relay-1 = Păstrează-ți adresa de e-mail reală pentru cei în care ai încredere; folosește o mască de e-mail pentru creări de conturi.
+newtab-privacy-message-promo-relay-1-cta = Obține măști
+newtab-privacy-message-promo-relay-2 = Protejează-ți căsuța poștală de spam cu mascarea gratuită a adresei de e-mail.
+newtab-privacy-message-promo-relay-2-cta = Obține măști
+newtab-privacy-message-promo-relay-3 = Obține 50 de măști gratuite ca să-ți păstrezi adresa de e-mail reală privată.
+newtab-privacy-message-promo-relay-3-cta = Obține măști
+
+## Privacy widget — celebration messages
+##
+## Earned "celebration" moments (milestones, daily cap, streak, first
+## protection). Count-bearing ones interpolate { $count }.
+
+# Variables:
+#   $count (number) - Trackers blocked this week
+newtab-privacy-message-milestone-week =
+    { $count ->
+        [one] { $count } element de urmărire blocat în această săptămână. Vezi ce ține { -brand-short-name } la distanță
+        [few] { $count } elemente de urmărire blocate în această săptămână. Vezi ce ține { -brand-short-name } la distanță
+       *[other] { $count } de elemente de urmărire blocate în această săptămână. Vezi ce ține { -brand-short-name } la distanță
+    }
+newtab-privacy-message-milestone-week-cta = Vezi protecțiile
+# Variables:
+#   $count (number) - Trackers blocked this month
+newtab-privacy-message-milestone-month =
+    { $count ->
+        [one] { $count } element de urmărire blocat în această lună. Un pas mic pentru confidențialitate. Un pas mare pentru liniștea minții.
+        [few] { $count } elemente de urmărire blocate în această lună. Un pas mic pentru confidențialitate. Un pas mare pentru liniștea minții.
+       *[other] { $count } de elemente de urmărire blocate în această lună. Un pas mic pentru confidențialitate. Un pas mare pentru liniștea minții.
+    }
+newtab-privacy-message-milestone-month-cta = Vezi protecțiile
+# Variables:
+#   $count (number) - Trackers blocked this year
+newtab-privacy-message-milestone-year =
+    { $count ->
+        [one] { $count } element de urmărire blocat în acest an. Este un an important pentru protejarea confidențialității tale.
+        [few] { $count } elemente de urmărire blocate în acest an. Este un an important pentru protejarea confidențialității tale.
+       *[other] { $count } de elemente de urmărire blocate în acest an. Este un an important pentru protejarea confidențialității tale.
+    }
+newtab-privacy-message-milestone-year-cta = Vezi protecțiile
+# Variables:
+#   $count (number) - Trackers blocked all-time
+newtab-privacy-message-milestone-total =
+    { $count ->
+        [one] { $count } element de urmărire blocat. E un progres major către confidențialitate, în condițiile tale.
+        [few] { $count } elemente de urmărire blocate. E un progres major către confidențialitate, în condițiile tale.
+       *[other] { $count } de elemente de urmărire blocate. E un progres major către confidențialitate, în condițiile tale.
+    }
+newtab-privacy-message-milestone-total-cta = Vezi protecțiile
+# Shown when today's blocked-tracker count reaches the display cap ("100+").
+newtab-privacy-message-daily-cap = (100+ de elemente de urmărire blocate azi.) Mai puține elemente de urmărire, confidențialitate mai mare.
+newtab-privacy-message-daily-cap-cta = Vezi protecțiile
+# Variables:
+#   $count (number) - Consecutive days the user has had trackers blocked
+newtab-privacy-message-streak =
+    { $count ->
+        [one] Ai fost protejat(ă) { $count } zi.
+        [few] Ai fost protejat(ă) { $count } zile la rând.
+       *[other] Ai fost protejat(ă) { $count } de zile la rând.
+    }
+newtab-privacy-message-streak-cta = Vezi protecțiile
+# Shown the first time the tracker count goes above zero.
+newtab-privacy-message-first-protection = Continuă să navighezi, { -brand-short-name } le va bloca în continuare.
+newtab-privacy-message-first-protection-cta = Vezi protecțiile
+
 ## Strings for the Stocks widget
 
 # Context menu item for searching stock ticker symbols.
 newtab-stocks-menu-search = Caută simboluri bursiere
-# Context menu item that hides the Stocks widget.
-newtab-stocks-menu-hide = Ascunde acțiunile
 # Context menu item linking to more information about the Stocks widget.
 newtab-stocks-menu-learn-more = Află mai multe
 
 ## Strings for the Picture of the Day widget
 
-# Eyebrow shown at the top of the widget. Wikimedia Commons is a brand name and
-# should not be translated.
+# Title shown at the top of the widget, with the source name appended.
+# "Wikimedia Commons" is a brand name and should not be translated.
 newtab-picture-header = Imaginea zilei · Wikimedia Commons
+# Shorter title shown at the top of the widget, without the source name.
+newtab-picture-header-main = Imaginea zilei
+# Screen-reader label for the license link; the visible text is the license
+# name (for example "CC BY-SA 4.0") provided with the picture.
+# $license (string) - the name of the license.
+newtab-picture-attribution-license =
+    .aria-label = Vezi licența { $license }
+# Tooltip and screen-reader label for the icon-only button that opens the
+# widget's context menu. The button never renders visible text.
+newtab-picture-widget-menu-button =
+    .title = Opțiuni pentru imaginea zilei
+    .aria-label = Opțiuni pentru imaginea zilei
 # Button that sets the current picture as the New Tab background wallpaper. The
 # button collapses to an icon when not hovered/focused, so .title is its tooltip.
 newtab-picture-set-wallpaper =
@@ -529,6 +688,8 @@ newtab-recommended-stories-toggle =
     .label = Articole recomandate
 newtab-custom-stories-personalized-toggle =
     .label = Povești
+newtab-custom-stories-personalized-checkbox =
+    .label = Povești personalizate bazate pe activitatea ta
 newtab-custom-stories-personalized-checkbox-label = Povești personalizate bazate pe activitatea ta
 newtab-custom-pocket-sponsored = Articole sponsorizate
 newtab-custom-pocket-show-recent-saves = Afișează salvările recente

@@ -170,15 +170,13 @@ newtab-privacy-menu-learn-more = Daha fazla bilgi al
 
 # Context menu item for searching stock ticker symbols.
 newtab-stocks-menu-search = Sembollerde ara
-# Context menu item that hides the Stocks widget.
-newtab-stocks-menu-hide = Borsayı gizle
 # Context menu item linking to more information about the Stocks widget.
 newtab-stocks-menu-learn-more = Daha fazla bilgi al
 
 ## Strings for the Picture of the Day widget
 
-# Eyebrow shown at the top of the widget. Wikimedia Commons is a brand name and
-# should not be translated.
+# Title shown at the top of the widget, with the source name appended.
+# "Wikimedia Commons" is a brand name and should not be translated.
 newtab-picture-header = Günün resmi · Wikimedia Commons
 # Button that sets the current picture as the New Tab background wallpaper. The
 # button collapses to an icon when not hovered/focused, so .title is its tooltip.
@@ -199,6 +197,11 @@ newtab-picture-menu-learn-more = Daha fazla bilgi al
 newtab-picture-show-button =
     .title = Günün resmini göster
     .aria-label = Günün resmini göster
+# Shown when there is no new picture to display yet.
+newtab-picture-check-back = Yarın yeni bir resim burada sizi bekleyecek
+# Screen-reader text alternative for the picture; fallback used when the source
+# provides no localized description.
+newtab-picture-image-alt = Günün Wikimedia Commons resmi
 
 ## Search box component.
 
@@ -521,6 +524,8 @@ newtab-recommended-stories-toggle =
     .label = Önerilen makaleler
 newtab-custom-stories-personalized-toggle =
     .label = Haberler
+newtab-custom-stories-personalized-checkbox =
+    .label = Etkinliğinize göre kişiselleştirilmiş haberler
 newtab-custom-stories-personalized-checkbox-label = Etkinliğinize göre kişiselleştirilmiş haberler
 newtab-custom-pocket-sponsored = Sponsorlu haberler
 newtab-custom-pocket-show-recent-saves = Son kaydedilenleri göster
@@ -545,6 +550,8 @@ newtab-custom-widget-privacy-toggle =
     .label = Gizlilik
 newtab-custom-widget-stocks-toggle =
     .label = Borsa
+newtab-custom-widget-picture-toggle =
+    .label = Günün resmi
 newtab-custom-widget-section-title = Araçlar
 newtab-custom-widget-section-toggle =
     .label = Araçlar
@@ -1327,6 +1334,15 @@ newtab-sports-widget-message-day-in-play-title = { -brand-product-name } araçla
 newtab-sports-widget-message-day-in-play-body = Dünya Kupası’nı takip edin, işinize odaklanın, dünya saatlerini takip edin ve daha fazlasını yapın.
 newtab-sports-widget-message-explore-widgets-cta =
     .label = Araçları keşfedin
+
+## Survey prompts shown after the World Cup to gather feedback on the widgets experience.
+
+newtab-sports-widget-message-survey-title = Araçları iyileştirmemize yardım edin
+newtab-sports-widget-message-survey-body = Dünya Kupaları sona erdi. Bu deneyimle ilgili görüşlerinizi paylaşın.
+newtab-sports-widget-message-survey-widget-title = Dünya Kupası aracını nasıl buldunuz?
+newtab-sports-widget-message-survey-widget-body = Yeni araçlar geliştirmemize yardımcı olmak için geri bildiriminizi bizimle paylaşın. Sonra da sıradaki aracımızı deneyin.
+newtab-sports-widget-message-survey-cta =
+    .label = Ankete katıl
 
 ## Strings for activation window message variants. In certain experiment configurations,
 ## the strings from these variants may be displayed in a message below the search input

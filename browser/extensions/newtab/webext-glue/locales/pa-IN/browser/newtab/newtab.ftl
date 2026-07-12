@@ -163,14 +163,198 @@ home-prefs-mission-message-learn-more-link-srd = ਸਮਝੋ ਕਿ ਕਿਵ�
 # Context menu item linking to more information about the Privacy widget.
 newtab-privacy-menu-learn-more = ਹੋਰ ਜਾਣੋ
 
+## Privacy widget — count readout
+
+# Label shown under the large tracker-count number, appearing like:
+# Line 1: 86
+# Line 2: Trackers blocked today
+# Translations can be adjusted to "Today's blocked trackers" or something
+# similar if this fixed order causes issues.
+# Variables:
+#   $count (number) - Number of trackers blocked today
+newtab-privacy-trackers-blocked-today =
+    { $count ->
+        [one] ਅੱਜ ਪਾਬੰਦੀ ਲਾਏ ਟਰੈਕਰ
+       *[other] ਅੱਜ ਪਾਬੰਦੀ ਲਾਏ ਟਰੈਕਰ
+    }
+# Second line of the readout, under the large number and "Trackers blocked
+# today". Counts the sites those trackers were blocked on. The English is
+# shortened from "Blocked across { $count } sites" — translate it that fuller way
+# if the short fragment doesn't work in your language.
+# Variables:
+#   $count (number) - Number of sites where trackers were blocked
+newtab-privacy-across-sites =
+    { $count ->
+        [one] { $count } ਸਾਈਟ ਵਿੱਚ
+       *[other] { $count } ਸਾਈਟਾਂ ਵਿੱਚ
+    }
+
+## Privacy widget — empty state
+
+# Shown when no trackers have been blocked yet today.
+newtab-privacy-empty = ਜਦੋਂ ਤੁਸੀਂ ਬਰਾਊਜ਼ ਕਰ ਰਹੇ ਸੀ ਤਾਂ { -brand-short-name } ਨੇ ਟਰੈਕਰਾਂ ਉੱਤੇ ਪਾਬੰਦੀ ਲਾਈ। ਤੁਸੀਂ ਉਹਨਾਂ ਨੂੰ ਇੱਥੇ ਵੇਖ ਸਕਦੇ ਹੋ।
+
+## Privacy widget — informational messages
+##
+## Rotating "info" secondary messages. Each message has a body plus a matched
+## "-cta" button label sharing the same id stem (the CTA button isn't rendered
+## yet; the labels are authored so the pairing is ready).
+
+newtab-privacy-message-info-1 = ਜਦੋਂ ਤੁਸੀਂ ਬਰਾਊਜ਼ ਕਰਦੇ ਸੀ ਤਾਂ { -brand-short-name } ਨੇ ਆਪਣੇ-ਆਪ ਟਰੈਕਰਾਂ ਉੱਤੇ ਪਾਬੰਦੀ ਲਾਈ।
+newtab-privacy-message-info-1-cta = ਸੁਰੱਖਿਆਵਾਂ ਨੂੰ ਵੇਖੋ
+newtab-privacy-message-info-2 = ਟਰੈਕਰਾਂ ਉੱਤੇ ਪਾਬੰਦੀ ਲਾਉਣ ਨਾਲ ਕੰਪਨੀਆਂ ਨੂੰ ਆਨਲਾਈਨ ਤੁਹਾਡੀ ਸੂਹ ਲੈਣ ਤੋਂ ਰੋਕਣ ਲਈ ਮਦਦ ਹੁੰਦੀ ਹੈ।
+newtab-privacy-message-info-2-cta = ਸੁਰੱਖਿਆਵਾਂ ਨੂੰ ਵੇਖੋ
+newtab-privacy-message-info-3 = ਕਈ ਸਾਈਟਾਂ ਉੱਤੇ ਟਰੈਕਰ ਹੁੰਦੇ ਹਨ ਤਾਂ ਕਿ ਜੋ ਕੰਪਨੀਆਂ ਤੁਸੀਂ ਕਦੇ ਖੋਲ੍ਹੀਆਂ ਵੀ ਨਹੀਂ, ਉਹ ਆਨਲਾਈਨ ਤੁਹਾਡੀ ਸੂਹ ਲੈ ਸਕਦੀਆਂ ਹਨ।
+newtab-privacy-message-info-3-cta = ਸੁਰੱਖਿਆਵਾਂ ਨੂੰ ਵੇਖੋ
+newtab-privacy-message-info-4 = { -brand-short-name } ਚੁਣਨ ਦਾ ਮਤਲਬ ਮੂਲ ਰੂਪ ਵਿੱਚ ਸੁਰੱਖਿਆ ਨੂੰ ਚੁਣਨਾ ਹੈ।
+newtab-privacy-message-info-4-cta = ਸੁਰੱਖਿਆਵਾਂ ਨੂੰ ਵੇਖੋ
+newtab-privacy-message-info-5 = ਟਰੈਕਰਾਂ ਉੱਤੇ ਪਾਬੰਦੀ ਲਾਉਣ ਦਾ ਮਤਲਬ ਹੈ ਕਿ ਹੋਰ ਘੱਟ ਕੰਪਨੀਆਂ ਸਾਈਟਾਂ ਦੁਆਲੇ ਤੁਹਾਡੀ ਸੂਹ ਲੈ ਸਕਦੀਆਂ ਹਨ।
+newtab-privacy-message-info-5-cta = ਸੁਰੱਖਿਆਵਾਂ ਨੂੰ ਵੇਖੋ
+newtab-privacy-message-info-6 = ਆਪਣੇ ਡਾਟੇ ਨੂੰ { -brand-short-name } ਨਾਲ ਰੱਖੋ। ਅਸੀਂ ਇਸ ਨੂੰ ਕਦੇ ਵੇਚਦੇ ਨਹੀਂ ਹਾਂ, ਪਰ ਹੋਰ ਬਰਾਊਜ਼ ਕਰ ਸਕਦੇ ਹਨ।
+newtab-privacy-message-info-6-cta = ਹੋਰ ਜਾਣੋ
+newtab-privacy-message-info-7 = ਵੇਖੋ ਕਿ { -brand-short-name } ਨੇ ਕਿਹੜੇ ਟਰੈਕਰਾਂ ਉੱਤੇ ਪਾਬੰਦੀ ਲਾਈ ਹੈ।
+newtab-privacy-message-info-7-cta = ਸੁਰੱਖਿਆਵਾਂ ਨੂੰ ਵੇਖੋ
+newtab-privacy-message-info-8 = { -brand-short-name } ਨਾਲ ਬਰਾਊਜ਼ ਕਰਨਾ { -vendor-short-name } ਦੇ ਵਧੀਆ ਵੈੱਬ ਬਣਾਉਣ ਦੇ ਮਕਸਦ ਲਈ ਸਹਿਯੋਗ ਦਿੰਦਾ ਹੈ।
+newtab-privacy-message-info-8-cta = ਹੋਰ ਜਾਣੋ
+newtab-privacy-message-info-9 = ਹਮੇਸ਼ਾਂ ਨਾਲ ਮੌਜੂਦ ਪਰਦੇਦਾਰੀ ਲਈ { -brand-short-name } ਨੂੰ ਆਪਣਾ ਬਰਾਊਜ਼ਰ ਬਣਾਓ।
+newtab-privacy-message-info-9-cta = ਮੂਲ ਬਣਾਓ
+newtab-privacy-message-info-10 = ਹਰ ਥਾਂ ਉੱਤੇ ਮਜ਼ਬੂਤ, ਵਿਲੱਖਣ ਲਾਗਇਨ ਵਰਤਣ ਵਾਸਤੇ { -brand-short-name } ਵਿੱਚ ਪਾਸਵਰਡਾਂ ਨੂੰ ਸੰਭਾਲੋ।
+newtab-privacy-message-info-10-cta = ਪਾਸਵਰਡਾਂ ਉੱਤੇ ਜਾਓ
+newtab-privacy-message-info-11 = ਜਾਣਕਾਰੀ ਹਾਸਲ ਕਰੋ ਕਿ ਕਿਵੇਂ { -brand-short-name } ਤੁਹਾਡੀ ਬਰਾਊਜ਼ਿੰਗ ਨੂੰ ਵੱਧ ਪ੍ਰਾਈਵੇਟ ਰੱਖਣ ਲਈ ਮਦਦ ਕਰਦਾ ਹੈ।
+newtab-privacy-message-info-11-cta = ਹੋਰ ਜਾਣੋ
+newtab-privacy-message-info-12 = ਟਰੈਕਰਾਂ ਉੱਤੇ ਪਾਬੰਦੀ ਲਾਉਣ ਨਾਲ ਸੀਮਿਤ ਡਾਟਾ ਪਲਾਨ ਲਈ ਬੈਂਡਵਿਡਥ ਬਚਾਉਣ ਲਈ ਮਦਦ ਹੁੰਦੀ ਹੈ।
+newtab-privacy-message-info-12-cta = ਸੁਰੱਖਿਆਵਾਂ ਨੂੰ ਵੇਖੋ
+newtab-privacy-message-info-13 = { -brand-short-name } ਟਰੈਕਰਾਂ ਉੱਤੇ ਪਾਬੰਦੀ ਲਾਉਂਦਾ ਹੈ, ਜਿਸ ਨਾਲ ਨਿਰੰਤਰ ਸਟਰੀਮਿੰਗ ਵਾਸਤੇ ਬੈਂਥਵਿਡਥ ਖਾਲੀ ਹੋ ਜਾਂਦੀ ਹੈ।
+newtab-privacy-message-info-13-cta = ਸੁਰੱਖਿਆਵਾਂ ਨੂੰ ਵੇਖੋ
+
+## Privacy widget — promotional messages
+##
+## Rotating "promo" secondary messages suggesting another Firefox feature. Each
+## has a body plus a matched "-cta" button label.
+
+newtab-privacy-message-promo-monitor-1 = ਪਤਾ ਕਰੋ ਕਿ ਜੇ ਕਿਸੇ ਡਾਟਾ ਉਲੰਘਣ ਵਿੱਚ ਤੁਹਾਡੀ ਨਿੱਜੀ ਜਾਣਕਾਰੀ ਲਪੇਟ ਵਿੱਚ ਆ ਗਈ ਹੈ।
+newtab-privacy-message-promo-monitor-1-cta = ਹੋਰ ਜਾਣੋ
+newtab-privacy-message-promo-monitor-2 = ਮੁਫ਼ਤ ਡਾਟਾ ਉਲੰਘਣ ਦੀ ਨਿਗਰਾਨੀ ਰਾਹੀਂ, 20 ਈਮੇਲਾਂ ਤੱਕ, ਆਪਣੀ ਨਿੱਜੀ ਜਾਣਕਾਰੀ ਨੂੰ ਸੁਰੱਖਿਆ ਦਿਓ।
+newtab-privacy-message-promo-monitor-2-cta = ਹੋਰ ਜਾਣੋ
+newtab-privacy-message-promo-signin-1 = ਆਪਣੇ { -vendor-short-name } ਖਾਤੇ ਨਾਲ ਬੁੱਕਮਾਰਕਾਂ, ਪਾਸਵਰਡਾਂ ਅਤੇ ਟੈਬਾਂ ਨੂੰ ਡਿਵਾਈਸ ਉੱਤੇ ਇੰਕ੍ਰਿਪਟ ਕਰਕੇ ਰੱਖੋ।
+newtab-privacy-message-promo-signin-1-cta = ਸਾਈਨ ਇਨ
+newtab-privacy-message-promo-vpn-1 = ਪਬਲਿਕ Wi-Fi ਉੱਤੇ ਖਰੀਦਦਾਰੀ ਕਰ ਰਹੇ ਹੋ? ਵਧੀਕ ਸੁਰੱਖਿਆ ਵਾਸਤੇ ਵਿੱਚ ਮੌਜੂਦ VPN ਨੂੰ ਚਾਲੂ ਕਰੋ।
+newtab-privacy-message-promo-vpn-1-cta = VPN ਨੂੰ ਖੋਲ੍ਹੋ
+newtab-privacy-message-promo-vpn-2 = ਏਅਰਪੋਰਟ Wi-Fi ਨੂੰ ਵਰਤ ਰਹੇ ਹੋ? ਨਾਲ ਮੌਜੂਦ VPN ਨੂੰ ਚਾਲੂ ਕਰਕੇ ਆਪਣੀ ਬਰਾਊਜ਼ਿੰਗ ਨੂੰ ਸੁਰੱਖਿਆ ਬਣਾਓ।
+newtab-privacy-message-promo-vpn-2-cta = VPN ਨੂੰ ਖੋਲ੍ਹੋ
+newtab-privacy-message-promo-vpn-3 = ਨਾਲ ਮੌਜੂਦ VPN ਨੂੰ ਚਾਲੂ ਕਰਨ ਨਾਲ ਤੁਹਾਡੇ ਟਿਕਾਣੇ ਨੂੰ ਵੱਧ ਪ੍ਰਾਈਵੇਟ ਬਣਾਉਣ ਲਈ ਮਦਦ ਹੁੰਦੀ ਹੈ।
+newtab-privacy-message-promo-vpn-3-cta = VPN ਨੂੰ ਖੋਲ੍ਹੋ
+newtab-privacy-message-promo-private-window-1 = ਜਦੋਂ ਵੀ ਤੁਸੀਂ ਸਾਂਝੇ ਕੰਪਿਊਟਰ ਨੂੰ ਵਰਤਦੇ ਹੋ ਤਾਂ ਵੱਧ ਪ੍ਰਾਈਵੇਟ ਢੰਗ ਨਾਲ ਬਰਾਊਜ਼ ਕਰਨ ਲਈ ਇੱਕ ਪ੍ਰਾਈਵੇਟ ਵਿੰਡੋ ਨੂੰ ਅਜ਼ਮਾਓ॥
+newtab-privacy-message-promo-private-window-1-cta = ਪ੍ਰਾਈਵੇਟ ਵਿੰਡੋ ਨੂੰ ਖੋਲ੍ਹੋ
+newtab-privacy-message-promo-relay-1 = ਆਪਣੇ ਅਸਲ ਈਮੇਲ ਨੂੰ ਭਰੋਸੇਮੰਦ ਲੋਕਾਂ ਲਈ ਸੰਭਾਲ ਕੇ ਰੱਖੋ, ਸਾਈਨ ਅੱਪ ਵਗੈਰਾ ਲਈ ਇੱਕ ਈਮੇਲ ਮਾਸਕ ਨੂੰ ਵਰਤੋਂ।
+newtab-privacy-message-promo-relay-1-cta = ਮਾਸਕ ਲਵੋ
+newtab-privacy-message-promo-relay-2 = ਮੁਫ਼ਤ ਈਮੇਲ ਮਾਸਕਾਂ ਨਾਲ ਸਪੈਮ ਤੋਂ ਆਪਣੇ ਮੇਲ-ਬਾਕਸ ਨੂੰ ਸੁਰੱਖਿਆ ਦਿਓ।
+newtab-privacy-message-promo-relay-2-cta = ਮਾਸਕ ਲਵੋ
+newtab-privacy-message-promo-relay-3 = ਆਪਣੇ ਅਸਲ ਈਮੇਲ ਨੂੰ ਪ੍ਰਾਈਵੇਟ ਰੱਖਣ ਲਈ 50 ਮੁਫ਼਼ਤ ਈਮੇਲ ਮਾਸਕ ਲਵੋ।
+newtab-privacy-message-promo-relay-3-cta = ਮਾਸਕ ਲਵੋ
+
+## Privacy widget — celebration messages
+##
+## Earned "celebration" moments (milestones, daily cap, streak, first
+## protection). Count-bearing ones interpolate { $count }.
+
+# Variables:
+#   $count (number) - Trackers blocked this week
+newtab-privacy-message-milestone-week =
+    { $count ->
+        [one] ਇਸ ਹਫ਼ਤੇ { $count } ਟਰੈਕਰ ਉੱਤੇ ਪਾਬੰਦੀ ਲਾਈ। ਵੇਖੋ ਕਿ { -brand-short-name } ਨੇ ਕਿਸ ਕਿਸ ਨੂੰ ਤੁਹਾਡੇ ਤੋਂ ਦੂਰ ਰੱਖਿਆ
+       *[other] ਇਸ ਹਫ਼ਤੇ { $count } ਟਰੈਕਰਾਂ ਉੱਤੇ ਪਾਬੰਦੀ ਲਾਈ। ਵੇਖੋ ਕਿ { -brand-short-name } ਨੇ ਕਿਸ ਕਿਸ ਨੂੰ ਤੁਹਾਡੇ ਤੋਂ ਦੂਰ ਰੱਖਿਆ
+    }
+newtab-privacy-message-milestone-week-cta = ਸੁਰੱਖਿਆਵਾਂ ਨੂੰ ਵੇਖੋ
+# Variables:
+#   $count (number) - Trackers blocked this month
+newtab-privacy-message-milestone-month =
+    { $count ->
+        [one] ਇਸ ਮਹੀਨੇ { $count } ਟਰੈਕਰ ਉੱਤੇ ਪਾਬੰਦੀ ਲਾਈ। ਪਰਦੇਦਾਰੀ ਲਈ ਇੱਕ ਛੋਟਾ ਪੜਾਅ। ਮਨ ਦੇ ਸਹਿਜ ਲਈ ਇੱਕ ਵੱਡਾ ਪੜਾਅ।
+       *[other] ਇਸ ਮਹੀਨੇ { $count } ਟਰੈਕਰਾਂ ਉੱਤੇ ਪਾਬੰਦੀ ਲਾਈ। ਪਰਦੇਦਾਰੀ ਲਈ ਇੱਕ ਛੋਟਾ ਪੜਾਅ। ਮਨ ਦੇ ਸਹਿਜ ਲਈ ਇੱਕ ਵੱਡਾ ਪੜਾਅ।
+    }
+newtab-privacy-message-milestone-month-cta = ਸੁਰੱਖਿਆਵਾਂ ਨੂੰ ਵੇਖੋ
+# Variables:
+#   $count (number) - Trackers blocked this year
+newtab-privacy-message-milestone-year =
+    { $count ->
+        [one] ਇਸ ਸਾਲ { $count } ਟਰੈਕਰ ਉੱਤੇ ਪਾਬੰਦੀ ਲਾਈ। ਤੁਹਾਡੀ ਪਰਦੇਦਾਰੀ ਲਈ ਇਹ ਮਜ਼ਬੂਤ ਸਾਲ ਸੀ।
+       *[other] ਇਸ ਸਾਲ { $count } ਟਰੈਕਰਾਂ ਉੱਤੇ ਪਾਬੰਦੀ ਲਾਈ। ਤੁਹਾਡੀ ਪਰਦੇਦਾਰੀ ਲਈ ਇਹ ਮਜ਼ਬੂਤ ਸਾਲ ਸੀ।
+    }
+newtab-privacy-message-milestone-year-cta = ਸੁਰੱਖਿਆਵਾਂ ਨੂੰ ਵੇਖੋ
+# Variables:
+#   $count (number) - Trackers blocked all-time
+newtab-privacy-message-milestone-total =
+    { $count ->
+        [one] { $count } ਟਰੈਕਰ ਉੱਤੇ ਪਾਬੰਦੀ ਲਾਈ। ਇਹ ਤੁਹਾਡੀਆਂ ਸ਼ਰਤਾਂ ਮੁਤਾਬਕ ਪਰਦੇਦਾਰੀ ਵੱਲ ਇੱਕ ਵੱਡਾ ਕਦਮ ਹੈ।
+       *[other] { $count } ਟਰੈਕਰਾਂ ਉੱਤੇ ਪਾਬੰਦੀ ਲਾਈ। ਇਹ ਤੁਹਾਡੀਆਂ ਸ਼ਰਤਾਂ ਮੁਤਾਬਕ ਪਰਦੇਦਾਰੀ ਵੱਲ ਇੱਕ ਵੱਡਾ ਕਦਮ ਹੈ।
+    }
+newtab-privacy-message-milestone-total-cta = ਸੁਰੱਖਿਆਵਾਂ ਨੂੰ ਵੇਖੋ
+# Shown when today's blocked-tracker count reaches the display cap ("100+").
+newtab-privacy-message-daily-cap = (ਅੱਜ 100+ ਟਰੈਕਰਾਂ ਉੱਤੇ ਪਾਬੰਦੀ ਲਾਈ ਗਈ।) ਘੱਟ ਟਰੈਕਰ ਵੱਧ ਪਰਦੇਦਾਰੀ।
+newtab-privacy-message-daily-cap-cta = ਸੁਰੱਖਿਆਵਾਂ ਨੂੰ ਵੇਖੋ
+# Variables:
+#   $count (number) - Consecutive days the user has had trackers blocked
+newtab-privacy-message-streak =
+    { $count ->
+        [one] ਲਗਾਤਾਰ { $count } ਦਿਨ ਲਈ ਤੁਹਾਨੂੰ ਸੁਰੱਖਿਅਤ ਪ੍ਰਦਾਨ ਕੀਤੀ ਗਈ।
+       *[other] ਲਗਾਤਾਰ { $count } ਦਿਨਾਂ ਲਈ ਤੁਹਾਨੂੰ ਸੁਰੱਖਿਅਤ ਪ੍ਰਦਾਨ ਕੀਤੀ ਗਈ।
+    }
+newtab-privacy-message-streak-cta = ਸੁਰੱਖਿਆਵਾਂ ਨੂੰ ਵੇਖੋ
+# Shown the first time the tracker count goes above zero.
+newtab-privacy-message-first-protection = ਤੁਸੀਂ ਬਰਾਊਜ਼ਰ ਕਰਦੇ ਰਹੋ, { -brand-short-name } ਪਾਬੰਦੀ ਲਾਉਂਦਾ ਰਹੇਗਾ।
+newtab-privacy-message-first-protection-cta = ਸੁਰੱਖਿਆਵਾਂ ਨੂੰ ਵੇਖੋ
+
 ## Strings for the Stocks widget
 
 # Context menu item for searching stock ticker symbols.
 newtab-stocks-menu-search = ਟਿੱਕਰ ਨਿਸ਼ਾਨ ਨੂੰ ਖੋਜੋ
-# Context menu item that hides the Stocks widget.
-newtab-stocks-menu-hide = ਸਟਾਕਾਂ ਨੂੰ ਲੁਕਾਓ
 # Context menu item linking to more information about the Stocks widget.
 newtab-stocks-menu-learn-more = ਹੋਰ ਜਾਣੋ
+# "Stocks widget options" is an icon-only button in the widget toolbar — the
+# attributes are consumed as tooltip/screen-reader label only. The button
+# never renders visible text.
+newtab-stocks-widget-menu-button =
+    .title = ਸਟਾਕ ਵਿਜੈਟ ਚੋਣਾਂ
+    .aria-label = ਸਟਾਕ ਵਿਜੈੱਟ ਚੋਣਾਂ
+# Heading for the Stocks widget.
+newtab-stocks-widget-title = ਸਟਾਕ
+
+## Screen-reader summary of a stock ticker.
+## Variables:
+##   $name (String) - the full fund/ETF name, e.g. "SPDR S&P 500 ETF Trust".
+##   $change (String) - the day's percentage change, e.g. "+2.1%".
+##   $price (String) - the last price, e.g. "$559.44".
+
+# Stock increased (went up) during the day
+newtab-stocks-ticker-status-up = { $name }, { $change } ਵਧੇ, { $price }
+# Stock decreased (went down) during the day
+newtab-stocks-ticker-status-down = { $name }, { $change } ਘਟੇ, { $price }
+# Stock didn't change during the day
+newtab-stocks-ticker-status-flat = { $name }, { $change } ਤਬਦੀਲੀ ਨਹੀ, { $price }
+
+## Strings for the Picture of the Day widget
+
+# Shorter title shown at the top of the widget, without the source name.
+newtab-picture-header-main = ਅੱਜ ਦੀ ਤਸਵੀਰ
+# Attribution line shown under the title once a picture loads: an author
+# credit, a link to the picture's source page, and a link to its license.
+# "©" is the copyright symbol.
+# $author (string) - the name of the image's author.
+newtab-picture-attribution-author = © { $author }
+# Link to the picture's source page (its Wikimedia Commons file page).
+# "Wikimedia Commons" is a brand name and should not be translated.
+newtab-picture-attribution-source-link = ਵਿਕੀਮੀਡੀਆ ਕਾਮਨਜ਼
+# Screen-reader label for the license link; the visible text is the license
+# name (for example "CC BY-SA 4.0") provided with the picture.
+# $license (string) - the name of the license.
+newtab-picture-attribution-license =
+    .aria-label = { $license } ਲਸੰਸ ਨੂੰ ਵੇਖੋ
+# Tooltip and screen-reader label for the icon-only button that opens the
+# widget's context menu. The button never renders visible text.
+newtab-picture-widget-menu-button =
+    .title = ਦਿਨ ਦੀ ਤਸਵੀਰ ਲਈ ਚੋਣਾਂ
+    .aria-label = ਦਿਨ ਦੀ ਤਸਵੀਰ ਲਈ ਚੋਣਾਂ
 
 ## Search box component.
 
@@ -496,6 +680,8 @@ newtab-recommended-stories-toggle =
     .label = ਸਿਫ਼ਾਰਸ਼ੀ ਕਹਾਣੀਆਂ
 newtab-custom-stories-personalized-toggle =
     .label = ਲੇਖ
+newtab-custom-stories-personalized-checkbox =
+    .label = ਤੁਹਾਡੀ ਸਰਗਰਮੀ ਦੇ ਮੁਤਾਬਕ ਨਿੱਜੀ ਬਣਾਏ ਗਏ ਲੇਖ
 newtab-custom-stories-personalized-checkbox-label = ਤੁਹਾਡੀ ਸਰਗਰਮੀ ਦੇ ਮੁਤਾਬਕ ਨਿੱਜੀ ਬਣਾਏ ਗਏ ਲੇਖ
 newtab-custom-pocket-sponsored = ਸਪਾਂਸਰ ਕੀਤੀਆਂ ਕਹਾਣੀਆਂ
 newtab-custom-pocket-show-recent-saves = ਸੱਜਰੇ ਸੰਭਾਲੇ ਵੇਖੋ
