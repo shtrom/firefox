@@ -382,11 +382,17 @@
       "chrome://browser/content/urlbar/UrlbarChildController.mjs": [
         "../../../browser/components/urlbar/content/UrlbarChildController.mjs"
       ],
+      "chrome://browser/content/urlbar/UrlbarChildTelemetry.mjs": [
+        "../../../browser/components/urlbar/content/UrlbarChildTelemetry.mjs"
+      ],
       "chrome://browser/content/urlbar/UrlbarEventBufferer.mjs": [
         "../../../browser/components/urlbar/content/UrlbarEventBufferer.mjs"
       ],
       "chrome://browser/content/urlbar/UrlbarInput.mjs": [
         "../../../browser/components/urlbar/content/UrlbarInput.mjs"
+      ],
+      "chrome://browser/content/urlbar/UrlbarParentControllerProxy.mjs": [
+        "../../../browser/components/urlbar/content/UrlbarParentControllerProxy.mjs"
       ],
       "chrome://browser/content/urlbar/UrlbarResult.mjs": [
         "../../../browser/components/urlbar/content/UrlbarResult.mjs"

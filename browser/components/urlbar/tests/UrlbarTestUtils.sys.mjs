@@ -26,12 +26,12 @@ ChromeUtils.defineESModuleGetters(lazy, {
   NimbusFeatures: "resource://nimbus/ExperimentAPI.sys.mjs",
   NimbusTestUtils: "resource://testing-common/NimbusTestUtils.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
+  ProvidersManager:
+    "moz-src:///browser/components/urlbar/UrlbarProvidersManager.sys.mjs",
   SearchService: "moz-src:///toolkit/components/search/SearchService.sys.mjs",
   TestUtils: "resource://testing-common/TestUtils.sys.mjs",
   UrlbarChildController:
     "chrome://browser/content/urlbar/UrlbarChildController.mjs",
-  UrlbarParentController:
-    "moz-src:///browser/components/urlbar/UrlbarParentController.sys.mjs",
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
   UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
   UrlbarSearchUtils:
@@ -1380,32 +1380,36 @@ class UrlbarInputTestUtils {
       },
       options
     );
-    // The parent controller resolves the browser window from the actor (for
-    // the SAP window facts telemetry reads). Mock a minimal one representing a
-    // non-blank, non-extension page.
+    // The parent controller resolves the browser window from its actor (for the
+    // SAP window facts telemetry reads). Mock a minimal one representing a
+    // non-blank, non-extension page, exposed on the stubbed actor.
     let browserWindow = {
       closed: false,
       isBlankPageURL: () => false,
       gBrowser: { currentURI: Services.io.newURI("https://example.com/") },
     };
-    let parentController = new lazy.UrlbarParentController({
-      sapName,
-      isPrivate: parentOptions.input.isPrivate,
-      manager: parentOptions.manager,
-      actor: { browsingContext: { topChromeWindow: browserWindow } },
-    });
-    // Stub the actor plumbing so the child controller's constructor reaches
-    // the parent we just built.
+    // Stub the actor so the child controller builds a direct-path parent
+    // controller (the child owns construction; the actor only resolves the
+    // chrome window). It is exposed as `controller.parentController`.
     parentOptions.input.window.windowGlobalChild = {
       getActor: () => ({
-        getOrCreateController: () => parentController,
+        usesMessagePath: false,
+        browsingContext: { topChromeWindow: browserWindow },
       }),
     };
-    let controller = new lazy.UrlbarChildController({
-      input: parentOptions.input,
-    });
-    controller.parentController = parentController;
-    return controller;
+    // A provided `manager` stands in for the per-sap `ProvidersManager` the
+    // child-built parent controller resolves at construction. Swap it in for the
+    // duration of construction so the controller adopts it without touching the
+    // real per-sap instance (and its search-service init).
+    let originalGetInstanceForSap = lazy.ProvidersManager.getInstanceForSap;
+    if (parentOptions.manager) {
+      lazy.ProvidersManager.getInstanceForSap = () => parentOptions.manager;
+    }
+    try {
+      return new lazy.UrlbarChildController({ input: parentOptions.input });
+    } finally {
+      lazy.ProvidersManager.getInstanceForSap = originalGetInstanceForSap;
+    }
   }
 
   /**

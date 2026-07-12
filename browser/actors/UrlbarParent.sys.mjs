@@ -18,53 +18,24 @@ ChromeUtils.defineESModuleGetters(lazy, {
  */
 
 /**
- * Parent-process counterpart of `UrlbarChild`. Owns the
- * `UrlbarParentController` instances created for the `<moz-urlbar>`
- * elements served by this window global, across both transports:
+ * Parent-process endpoint of the `UrlbarChild` actor pair, for the message path.
+ * A content-side `UrlbarChildController` (content-process `<moz-urlbar>`, or
+ * chrome with `browser.urlbar.ipc.chromeMessagePassing`) holds a
+ * `UrlbarParentControllerProxy` and trades actor messages with us: we build the
+ * `UrlbarParentController` from the `Init` payload and retain it in a `Map` keyed
+ * by the child-assigned `instanceId`, routing subsequent messages to it. The
+ * controller's notifications go back to the child as `Notify` messages
+ * (dispatched through a parent-side `UrlbarChildControllerProxy` stand-in). The
+ * controller is dropped on the `Destroy` message the child sends when its input
+ * is collected (via a `FinalizationRegistry`).
  *
- * - Direct path (chrome `<moz-urlbar>`, default): `getOrCreateController`
- *   hands the real `UrlbarParentController` back to the in-process child,
- *   cached in a `WeakMap` keyed by the input element so a controller's
- *   lifetime tracks its element rather than the actor's. Reconnecting the
- *   same element (e.g. toggling customize mode) reuses the same controller.
- *
- * - Message path (content-process `<moz-urlbar>`, or chrome with
- *   `browser.urlbar.ipc.chromeMessagePassing`): the child holds a
- *   `UrlbarParentControllerProxy` and trades actor messages with us. We build
- *   the controller from the `Init` payload and retain it in a `Map` keyed by
- *   the child-assigned `instanceId`, routing subsequent messages to it. The
- *   controller's notifications go back to the child as `Notify` messages
- *   (dispatched through a parent-side `UrlbarChildControllerProxy` stand-in).
- *   The controller is dropped on the `Destroy` message the child sends when its
- *   input is collected (via a `FinalizationRegistry`).
+ * The direct path (in-process chrome `<moz-urlbar>`) doesn't go through this
+ * actor at all: `UrlbarChildController` builds its `UrlbarParentController` in
+ * place, since both live in the same process.
  */
 export class UrlbarParent extends JSWindowActorParent {
-  /** @type {WeakMap<object, UrlbarParentController>} */
-  #controllers = new WeakMap();
-
   /** @type {Map<number, UrlbarParentController>} */
   #messageControllers = new Map();
-
-  /**
-   * Direct path only: returns the in-process controller for an input,
-   * creating it on demand.
-   *
-   * @param {object} input
-   *   The `UrlbarInput`/`SmartbarInput` owning the controller.
-   * @returns {UrlbarParentController}
-   */
-  getOrCreateController(input) {
-    let controller = this.#controllers.get(input);
-    if (!controller) {
-      controller = new lazy.UrlbarParentController({
-        sapName: input.sapName,
-        isPrivate: input.isPrivate,
-        actor: this,
-      });
-      this.#controllers.set(input, controller);
-    }
-    return controller;
-  }
 
   /**
    * Message path: routes child->parent messages to the controller identified

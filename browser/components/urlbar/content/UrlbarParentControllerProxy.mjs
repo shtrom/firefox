@@ -11,7 +11,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
 });
 
 /**
- * @import {UrlbarChild} from "../../actors/UrlbarChild.sys.mjs"
+ * @import {UrlbarChild} from "../../../actors/UrlbarChild.sys.mjs"
  */
 
 /**

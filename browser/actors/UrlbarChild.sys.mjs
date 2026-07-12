@@ -5,8 +5,6 @@
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
-  UrlbarParentControllerProxy:
-    "moz-src:///browser/components/urlbar/UrlbarParentControllerProxy.sys.mjs",
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
   UrlbarQueryContext:
     "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
@@ -19,28 +17,25 @@ ChromeUtils.defineESModuleGetters(lazy, {
  */
 
 /**
- * Child-process counterpart of `UrlbarParent`. Each `UrlbarChildController`
- * created by a `<moz-urlbar>` instance asks this actor for the object that
- * runs the query lifecycle and parent-only telemetry on its behalf.
+ * Child-process counterpart of `UrlbarParent`. `UrlbarChildController` builds its
+ * own parent controller; this actor tells the two transports apart
+ * (`usesMessagePath`) and runs the message-path lifecycle.
  *
- * Two transports back that object:
  * - Direct (default for chrome `<moz-urlbar>`): both actors live in the parent
- *   process, so we hand the real `UrlbarParentController` reference back and
- *   methods are invoked synchronously in-process.
- * - Message-passing: used for a content-process `<moz-urlbar>` (e.g.
- *   about:newtab), and for chrome when
- *   `browser.urlbar.ipc.chromeMessagePassing` is set (so the wire path runs in
- *   CI). We hand back a `UrlbarParentControllerProxy` that trades messages with
- *   the parent-side controller, identified by an `instanceId`. The parent's
- *   `Notify` messages are dispatched back to the paired child controller, which
- *   we hold weakly (keyed by `instanceId`) so as not to pin its input.
+ *   process, so the child builds a real `UrlbarParentController` in place and
+ *   invokes it synchronously.
+ * - Message-passing: a content-process `<moz-urlbar>` (e.g. about:newtab), or
+ *   chrome when `browser.urlbar.ipc.chromeMessagePassing` is set (so the wire
+ *   path runs in CI). The child builds a `UrlbarParentControllerProxy` that
+ *   trades messages with the parent-side controller, identified by an
+ *   `instanceId` this actor allocates. The parent's `Notify` messages are
+ *   dispatched back to the paired child controller, held weakly (keyed by
+ *   `instanceId`) so as not to pin its input.
  *
  * On the message path the parent retains its controller strongly (keyed by
- * `instanceId`), so we tie that controller's lifetime to the input: the input
- * is registered in a `FinalizationRegistry` that sends `Destroy(instanceId)`
- * when the input is collected, letting the parent drop its entry. (The direct
- * path needs none of this: its controllers are cached in a `WeakMap` keyed by
- * the input.)
+ * `instanceId`), so we tie its lifetime to the input: the input is registered in
+ * a `FinalizationRegistry` that sends `Destroy(instanceId)` when the input is
+ * collected, letting the parent drop its entry.
  */
 export class UrlbarChild extends JSWindowActorChild {
   #nextInstanceId = 0;
@@ -61,33 +56,35 @@ export class UrlbarChild extends JSWindowActorChild {
   });
 
   /**
-   * Returns the object that backs a given `<moz-urlbar>` input's child
-   * controller, creating it on demand. On the direct path, reconnecting the
-   * same element returns the existing controller.
+   * Whether this `<moz-urlbar>` uses the actor message path -- a content-process
+   * input (no in-process parent global), or chrome with
+   * `browser.urlbar.ipc.chromeMessagePassing` -- rather than the in-process
+   * direct path. `UrlbarChildController` keys its controller construction on
+   * this: direct builds a real `UrlbarParentController` in place, message builds
+   * a `UrlbarParentControllerProxy`.
+   *
+   * @type {boolean}
+   */
+  get usesMessagePath() {
+    return (
+      !this.manager.parentActor ||
+      lazy.UrlbarPrefs.get("ipc.chromeMessagePassing")
+    );
+  }
+
+  /**
+   * Registers a message-path `<moz-urlbar>` input for teardown -- so the parent
+   * drops the controller once the input is collected -- and returns the instance
+   * id the child controller pairs with the proxy it builds.
    *
    * @param {object} input
    *   The `UrlbarInput`/`SmartbarInput` that owns the child controller.
-   * @returns {UrlbarParentController} The real controller (direct path) or, on
-   *   the message path, a `UrlbarParentControllerProxy` that stands in for one.
+   * @returns {number} The instance id to construct the proxy with.
    */
-  getOrCreateController(input) {
-    let parentActor = this.#parentActor;
-    // In-process and not forcing the wire path: hand back the real controller.
-    if (parentActor && !lazy.UrlbarPrefs.get("ipc.chromeMessagePassing")) {
-      return parentActor.getOrCreateController(input);
-    }
-    // Message-passing path: cross-process, or chrome with the pref on.
+  registerMessagePathInput(input) {
     let instanceId = ++this.#nextInstanceId;
     this.#destroyRegistry.register(input, instanceId);
-    // The proxy duck-types as a UrlbarParentController for the child controller.
-    return /** @type {UrlbarParentController} */ (
-      /** @type {unknown} */ (
-        new lazy.UrlbarParentControllerProxy(this, instanceId, {
-          sapName: input.sapName,
-          isPrivate: input.isPrivate,
-        })
-      )
-    );
+    return instanceId;
   }
 
   /**
@@ -145,15 +142,5 @@ export class UrlbarChild extends JSWindowActorChild {
       });
     }
     child.notify(name, ...deserialized);
-  }
-
-  /**
-   * In the parent process: the parent actor
-   * In a child process: undefined
-   *
-   * @type {UrlbarParent | undefined}
-   */
-  get #parentActor() {
-    return this.manager.parentActor?.getActor("Urlbar");
   }
 }

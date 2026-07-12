@@ -3,6 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
+import { UrlbarChildTelemetry } from "chrome://browser/content/urlbar/UrlbarChildTelemetry.mjs";
+import { UrlbarParentControllerProxy } from "chrome://browser/content/urlbar/UrlbarParentControllerProxy.mjs";
 
 const { AppConstants } = ChromeUtils.importESModule(
   "resource://gre/modules/AppConstants.sys.mjs"
@@ -11,8 +13,8 @@ const { AppConstants } = ChromeUtils.importESModule(
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
-  UrlbarChildTelemetry:
-    "chrome://browser/content/urlbar/UrlbarChildTelemetry.mjs",
+  UrlbarParentController:
+    "moz-src:///browser/components/urlbar/UrlbarParentController.sys.mjs",
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
 });
@@ -52,6 +54,8 @@ export class UrlbarChildController {
     return UrlbarChildController.#logger;
   }
 
+  // TODO: rename to `#parentController` to mirror the public getter and avoid
+  // confusion with the `UrlbarParent` actor.
   /** @type {UrlbarParentController} */
   #parent;
 
@@ -86,7 +90,18 @@ export class UrlbarChildController {
         options.input.window.windowGlobalChild.getActor("Urlbar")
       )
     );
-    this.#parent = actor.getOrCreateController(options.input);
+    let { sapName, isPrivate } = options.input;
+    // The message path builds a proxy that trades actor messages with the
+    // parent-side controller; the direct path builds the real controller in
+    // place (both live in the same process, and it only needs the actor to
+    // resolve the chrome window). Either way the child owns construction.
+    this.#parent = actor.usesMessagePath
+      ? new UrlbarParentControllerProxy(
+          actor,
+          actor.registerMessagePathInput(options.input),
+          { sapName, isPrivate }
+        )
+      : new lazy.UrlbarParentController({ sapName, isPrivate, actor });
     this.#parent.setChild(this);
   }
 
@@ -101,13 +116,22 @@ export class UrlbarChildController {
   get view() {
     return this.#view;
   }
+  /**
+   * The paired parent controller -- the real `UrlbarParentController` on the
+   * direct path, or the `UrlbarParentControllerProxy` on the message path.
+   *
+   * @type {UrlbarParentController}
+   */
+  get parentController() {
+    return this.#parent;
+  }
   get engagementEvent() {
     // Direct path: the real parent controller's recorder. Message path: the
     // parent stand-in has none, so use a content-side collector that ships
     // engagements to the parent recorder.
     return (
       this.#parent.engagementEvent ??
-      (this.#childTelemetry ??= new lazy.UrlbarChildTelemetry(this))
+      (this.#childTelemetry ??= new UrlbarChildTelemetry(this))
     );
   }
   get platform() {
