@@ -163,9 +163,6 @@ export class UrlbarChildController {
   setView(view) {
     this.#view = view;
   }
-  getViewTemplate(result) {
-    return this.#parent.getViewTemplate(result);
-  }
   getViewUpdate(result, idsByName) {
     return this.#parent.getViewUpdate(result, idsByName);
   }
@@ -174,9 +171,6 @@ export class UrlbarChildController {
   }
   onSelection(result, element) {
     return this.#parent.onSelection(result, element);
-  }
-  getResultCommands(result, isPrivate) {
-    return this.#parent.getResultCommands(result, isPrivate);
   }
   getHeuristicResult(queryContext) {
     return this.#parent.getHeuristicResult(queryContext);

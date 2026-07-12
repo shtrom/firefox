@@ -444,6 +444,11 @@ export class RealtimeSuggestProvider extends SuggestProvider {
         role: hasMultipleItems ? "group" : "option",
       },
       classList: ["urlbarView-realtime-root"],
+      dataset: {
+        // This `url` or `query` is used when there's only one item.
+        url: items[0].url,
+        query: items[0].query,
+      },
       children: items.map((item, i) => ({
         name: `item_${i}`,
         tag: "span",
@@ -451,6 +456,11 @@ export class RealtimeSuggestProvider extends SuggestProvider {
         attributes: {
           selectable: !hasMultipleItems ? null : "",
           role: hasMultipleItems ? "option" : "presentation",
+        },
+        dataset: {
+          // These `url`s or `query`s are used when there are multiple items.
+          url: item.url,
+          query: item.query,
         },
         children: [
           ...this.getViewTemplateForImageContainer(item, i),
@@ -515,11 +525,6 @@ export class RealtimeSuggestProvider extends SuggestProvider {
 
     let update = {
       root: {
-        dataset: {
-          // This `url` or `query` will be used when there's only one item.
-          url: items[0].url,
-          query: items[0].query,
-        },
         l10n: hasMultipleItems ? this.ariaGroupL10n : null,
       },
     };
@@ -527,13 +532,6 @@ export class RealtimeSuggestProvider extends SuggestProvider {
     for (let i = 0; i < items.length; i++) {
       let item = items[i];
       Object.assign(update, this.getViewUpdateForPayloadItem(item, i));
-
-      // These `url` or `query`s will be used when there are multiple items.
-      let itemName = `item_${i}`;
-      update[itemName] ??= {};
-      update[itemName].dataset ??= {};
-      update[itemName].dataset.url ??= item.url;
-      update[itemName].dataset.query ??= item.query;
     }
 
     return update;
@@ -612,11 +610,7 @@ export class RealtimeSuggestProvider extends SuggestProvider {
         break;
       }
       case "show_less_frequently": {
-        controller.view.acknowledgeFeedback(result);
-        this.incrementShowLessFrequentlyCount();
-        if (!this.canShowLessFrequently) {
-          controller.view.invalidateResultMenuCommands();
-        }
+        this.handleShowLessFrequently(controller, result);
         lazy.UrlbarPrefs.set(
           this.minKeywordLengthPref,
           searchString.length + 1

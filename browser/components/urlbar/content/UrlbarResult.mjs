@@ -159,6 +159,24 @@ export class UrlbarResult {
    */
   rowIndex = undefined;
 
+  /**
+   * A dynamic result's view template, computed eagerly when the result is
+   * finalized so the view can read it synchronously without asking the
+   * provider (which, on the actor message path, lives in another process).
+   * Undefined for non-dynamic results.
+   *
+   * @type {object|undefined}
+   */
+  viewTemplate = undefined;
+
+  /**
+   * The result menu commands the result's provider offers, computed eagerly
+   * alongside `viewTemplate`. Undefined if the provider offers none.
+   *
+   * @type {?UrlbarResultCommand[]|undefined}
+   */
+  commands = undefined;
+
   get type() {
     return this.#type;
   }
@@ -449,9 +467,9 @@ export class UrlbarResult {
 
   /**
    * Serializes this result to a plain, structured-cloneable object for sending
-   * across the Urlbar actor boundary. The data lives in private fields that a
-   * bare structuredClone() would drop, so capture it explicitly. `rowIndex` is
-   * the only public own property.
+   * across the Urlbar actor boundary. Most data lives in private fields that a
+   * bare structuredClone() would drop, so capture it explicitly; `rowIndex`,
+   * `viewTemplate`, and `commands` are the public own properties.
    *
    * @returns {object} The wire representation; reconstruct with fromWire().
    */
@@ -479,6 +497,8 @@ export class UrlbarResult {
       payload: this.#payload,
       highlights: this.#highlights,
       rowIndex: this.rowIndex,
+      viewTemplate: this.viewTemplate,
+      commands: this.commands,
     };
   }
 
@@ -494,6 +514,8 @@ export class UrlbarResult {
     // providerType and rowIndex aren't constructor parameters, so re-apply them.
     result.providerType = wire.providerType;
     result.rowIndex = wire.rowIndex;
+    result.viewTemplate = wire.viewTemplate;
+    result.commands = wire.commands;
     return result;
   }
 

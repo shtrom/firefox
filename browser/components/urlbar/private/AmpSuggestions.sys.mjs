@@ -253,11 +253,7 @@ export class AmpSuggestions extends SuggestProvider {
         break;
       }
       case "show_less_frequently": {
-        controller.view.acknowledgeFeedback(result);
-        this.incrementShowLessFrequentlyCount();
-        if (!this.canShowLessFrequently) {
-          controller.view.invalidateResultMenuCommands();
-        }
+        this.handleShowLessFrequently(controller, result);
         lazy.UrlbarPrefs.set("amp.minKeywordLength", searchString.length + 1);
         break;
       }

@@ -142,19 +142,6 @@ export class UrlbarParentController {
   }
 
   /**
-   * Returns the view template a dynamic result's provider uses to build its
-   * row. Mediates the view's access to the (parent-process) provider.
-   *
-   * @param {UrlbarResult} result The dynamic result.
-   * @returns {object} The view template.
-   */
-  getViewTemplate(result) {
-    return this.manager
-      .getProvider(result.providerName)
-      .getViewTemplate(result);
-  }
-
-  /**
    * Returns the view update a dynamic result's provider produces for the
    * given node ids. Mediates the view's access to the (parent-process)
    * provider.
@@ -198,20 +185,6 @@ export class UrlbarParentController {
     this.manager
       .getProvider(result?.providerName)
       ?.tryMethod("onSelection", result, element);
-  }
-
-  /**
-   * Returns the result menu commands a result's provider offers, if any.
-   * Mediates the view's access to the (parent-process) provider.
-   *
-   * @param {UrlbarResult} result The result.
-   * @param {boolean} isPrivate Whether the query is private.
-   * @returns {?UrlbarResultCommand[]} The commands, or null/undefined.
-   */
-  getResultCommands(result, isPrivate) {
-    return this.manager
-      .getProvider(result.providerName)
-      ?.tryMethod("getResultCommands", result, isPrivate);
   }
 
   /**

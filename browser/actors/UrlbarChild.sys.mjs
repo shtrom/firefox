@@ -105,7 +105,7 @@ export class UrlbarChild extends JSWindowActorChild {
     if (message.name != "Notify") {
       return;
     }
-    let { instanceId, name, params, resultViewData } = message.data;
+    let { instanceId, name, params } = message.data;
     let child = this.#childControllers.get(instanceId)?.deref();
     if (!child) {
       this.#childControllers.delete(instanceId);
@@ -127,19 +127,6 @@ export class UrlbarChild extends JSWindowActorChild {
       ) {
         return;
       }
-    }
-    if (resultViewData) {
-      // params[0] is the query context; reattach the per-result view data the
-      // parent pre-fetched so the view can read it synchronously. Non-enumerable
-      // so this message-path-only cache doesn't leak into result comparisons or
-      // serialization (e.g. tests that deep-compare results).
-      deserialized[0].results.forEach((result, i) => {
-        Object.defineProperty(result, "viewData", {
-          value: resultViewData[i],
-          enumerable: false,
-          configurable: true,
-        });
-      });
     }
     child.notify(name, ...deserialized);
   }

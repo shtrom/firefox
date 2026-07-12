@@ -357,13 +357,13 @@ build a general DOM structure appropriate for all results of a particular
 dynamic result type. View update objects are used to fill in that structure for
 a specific result.
 
-When a result is shown in the view, first the view asks the result's provider
-for a view template by calling ``getViewTemplate``. It uses the view template
-to build a DOM subtree. Next, the view requests a view update object for the
-result from its provider. The view update object tells the view which
-result-specific attributes to set on which elements, result-specific text
-content to set on elements, and so on. View update objects cannot create new
-elements or otherwise modify the structure of the result's DOM subtree.
+When a result is shown in the view, the view builds a DOM subtree from the view
+template the result's provider returned from ``getViewTemplate``. Next, the
+view requests a view update object for the result from its provider. The view
+update object tells the view which result-specific attributes to set on which
+elements, result-specific text content to set on elements, and so on. View
+update objects cannot create new elements or otherwise modify the structure
+of the result's DOM subtree.
 
 Typically the view update object is based on the result's payload.
 

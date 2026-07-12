@@ -24,10 +24,6 @@ ChromeUtils.defineESModuleGetters(lazy, {
  * them to the real controller keyed by `instanceId`. Parent->child
  * notifications come back as `Notify` messages that the child actor dispatches
  * to the paired `UrlbarChildController`.
- *
- * The view's synchronous per-result data (`getViewTemplate`/`getResultCommands`)
- * can't be fetched across the boundary on demand, so it's pre-fetched with each
- * `QueryResults` and read back here from the result.
  */
 export class UrlbarParentControllerProxy {
   /** @type {UrlbarChild} */
@@ -246,32 +242,6 @@ export class UrlbarParentControllerProxy {
       instanceId: this.#instanceId,
       result: result.toWire(),
     });
-  }
-
-  /**
-   * Returns a dynamic result's view template, pre-fetched and attached to the
-   * result when its `QueryResults` was delivered (see `UrlbarChild`).
-   *
-   * @param {UrlbarResult} result The dynamic result.
-   * @returns {object} The view template.
-   */
-  getViewTemplate(result) {
-    // @ts-expect-error FIXME(bug 2051959): viewData is a message-path expando
-    // (see `UrlbarChild`), not declared on UrlbarResult.
-    return result.viewData?.viewTemplate;
-  }
-
-  /**
-   * Returns a result's menu commands, pre-fetched and attached to the result
-   * when its `QueryResults` was delivered (see `UrlbarChild`).
-   *
-   * @param {UrlbarResult} result The result.
-   * @returns {?object[]} The commands, or null/undefined.
-   */
-  getResultCommands(result) {
-    // @ts-expect-error FIXME(bug 2051959): viewData is a message-path expando
-    // (see `UrlbarChild`), not declared on UrlbarResult.
-    return result.viewData?.resultCommands;
   }
 
   /**

@@ -955,6 +955,22 @@ export class Query {
 
     result.providerName = provider.name;
     result.providerType = provider.type;
+
+    // Pre-compute the view's per-result data now so the view can read it
+    // synchronously later without calling back into the provider, which may
+    // live in another process.
+    if (result.type == lazy.UrlbarShared.RESULT_TYPE.DYNAMIC) {
+      result.viewTemplate = provider.getViewTemplate(result);
+    }
+    let commands = provider.tryMethod(
+      "getResultCommands",
+      result,
+      this.context.isPrivate
+    );
+    if (commands) {
+      result.commands = commands;
+    }
+
     this.unsortedResults.push(result);
 
     this._notifyResultsFromProvider(provider);

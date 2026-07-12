@@ -1715,7 +1715,7 @@ export class UrlbarView {
 
   #createRowContentForDynamicType(item, result) {
     let { dynamicType } = result.payload;
-    let viewTemplate = this.controller.getViewTemplate(result);
+    let viewTemplate = result.viewTemplate;
     if (!viewTemplate) {
       console.error(`No viewTemplate found for ${result.providerName}`);
       return;
@@ -2201,8 +2201,8 @@ export class UrlbarView {
 
       if (
         !lazy.ObjectUtils.deepEqual(
-          this.controller.getViewTemplate(oldResult),
-          this.controller.getViewTemplate(newResult)
+          oldResult.viewTemplate,
+          newResult.viewTemplate
         )
       ) {
         return true;
@@ -3891,10 +3891,7 @@ export class UrlbarView {
     /**
      * @type {?UrlbarResultCommand[]}
      */
-    let commands = this.controller.getResultCommands(
-      result,
-      this.#queryContext?.isPrivate
-    );
+    let commands = result.commands;
     if (commands) {
       this.#resultMenuCommands.set(result, commands);
       return commands;
