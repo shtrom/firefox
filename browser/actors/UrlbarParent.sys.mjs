@@ -124,6 +124,9 @@ export class UrlbarParent extends JSWindowActorParent {
       case "HandleBounceTrigger":
         controller.handleBounceTrigger(message.data.payload);
         break;
+      case "TrackBounceBrowser":
+        controller.trackBounceBrowser(message.data.browserId);
+        break;
       case "StartQuery":
         // Round-trips so the proxy's startQuery resolves at true completion with
         // the finished context. The context's results keep their data in private

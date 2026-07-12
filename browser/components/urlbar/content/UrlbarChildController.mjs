@@ -199,6 +199,9 @@ export class UrlbarChildController {
   handleBounceTrigger(payload) {
     return this.#parent.handleBounceTrigger(payload);
   }
+  trackBounceBrowser(browserId) {
+    return this.#parent.trackBounceBrowser(browserId);
+  }
   startQuery(queryContext) {
     return this.#parent.startQuery(queryContext);
   }
