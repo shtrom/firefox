@@ -4,16 +4,15 @@
 
 #include "WMFClearKeyCDM.h"
 
-#include <mfapi.h>
 #include <mferror.h>
+#include <mfapi.h>
+#include <mutex>
 #include <oleauto.h>
 #include <windows.h>
 #include <windows.media.h>
 
-#include <mutex>
-
-#include "WMFClearKeySession.h"
 #include "WMFClearKeyTrustedInput.h"
+#include "WMFClearKeySession.h"
 #include "WMFDecryptedBlock.h"
 #include "WMFPMPServer.h"
 #include "nss.h"

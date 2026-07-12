@@ -3,11 +3,13 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #define GTEST_HAS_RTTI 0
+#include "gtest/gtest.h"
+
+#include "api/audio_codecs/opus/audio_encoder_opus_config.h"
 #include "AudioConduit.h"
 #include "Canonicals.h"
+
 #include "MockCall.h"
-#include "api/audio_codecs/opus/audio_encoder_opus_config.h"
-#include "gtest/gtest.h"
 
 using namespace mozilla;
 using namespace testing;

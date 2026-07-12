@@ -5,20 +5,22 @@
 #include <iostream>
 #include <map>
 
-#include "mozilla/Preferences.h"
 #include "nss.h"
 #include "ssl.h"
 
+#include "mozilla/Preferences.h"
+
 #define GTEST_HAS_RTTI 0
-#include "CodecConfig.h"
-#include "PeerConnectionImpl.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "jsep/JsepSession.h"
-#include "jsep/JsepSessionImpl.h"
-#include "jsep/JsepTrack.h"
+
+#include "CodecConfig.h"
+#include "PeerConnectionImpl.h"
 #include "sdp/SdpMediaSection.h"
 #include "sdp/SipccSdpParser.h"
+#include "jsep/JsepTrack.h"
+#include "jsep/JsepSession.h"
+#include "jsep/JsepSessionImpl.h"
 
 using testing::ElementsAre;
 using testing::Pair;

@@ -4,11 +4,10 @@
 
 #include "WMFClearKeySession.h"
 
+#include <codecvt>
+#include <cmath>
 #include <mferror.h>
 #include <winerror.h>
-
-#include <cmath>
-#include <codecvt>
 
 #include "WMFClearKeyCDM.h"
 #include "WMFClearKeyUtils.h"

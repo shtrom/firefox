@@ -4,9 +4,9 @@
 
 #include "WMFClearKeyCDMFactory.h"
 
-#include <mferror.h>
-
 #include <string>
+
+#include <mferror.h>
 
 #include "WMFClearKeyCDMAccess.h"
 #include "WMFClearKeyUtils.h"

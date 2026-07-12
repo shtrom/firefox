@@ -18,7 +18,6 @@
 #define ClearKeyCencParser_h_
 
 #include <stdint.h>
-
 #include <vector>
 
 #define CENC_KEY_LEN ((size_t)16)

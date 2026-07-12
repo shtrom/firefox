@@ -22,8 +22,8 @@
 
 #include <queue>
 
-#include "WMFH264Decoder.h"
 #include "content_decryption_module.h"
+#include "WMFH264Decoder.h"
 
 class VideoDecoder : public RefCounted {
  public:

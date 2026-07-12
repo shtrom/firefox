@@ -23,16 +23,17 @@
 #include <string>
 #include <vector>
 
-#include "ClearKeyCDM.h"
-#include "ClearKeySessionManager.h"
 #include "content_decryption_module.h"
 #include "content_decryption_module_ext.h"
-#include "mozilla/dom/KeySystemNames.h"
 #include "nss.h"
 
+#include "ClearKeyCDM.h"
+#include "ClearKeySessionManager.h"
+#include "mozilla/dom/KeySystemNames.h"
+
 #ifndef XP_WIN
-#  include <sys/stat.h>
 #  include <sys/types.h>
+#  include <sys/stat.h>
 #  include <unistd.h>
 #endif
 

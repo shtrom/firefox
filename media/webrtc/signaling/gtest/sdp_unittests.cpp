@@ -6,17 +6,19 @@
 
 #define GTEST_HAS_RTTI 0
 #include "gtest/gtest.h"
+
 #include "nss.h"
-#include "sdp/ParsingResultComparer.h"
-#include "sdp/RsdparsaSdpParser.h"
-#include "sdp/SdpAttribute.h"
-#include "sdp/SdpMediaSection.h"
-#include "sdp/SipccSdpParser.h"
 #include "ssl.h"
 
+#include "sdp/RsdparsaSdpParser.h"
+#include "sdp/SipccSdpParser.h"
+#include "sdp/SdpMediaSection.h"
+#include "sdp/SdpAttribute.h"
+#include "sdp/ParsingResultComparer.h"
+
 extern "C" {
-#include "sdp_private.h"
 #include "sipcc_sdp.h"
+#include "sdp_private.h"
 }
 
 #ifdef CRLF

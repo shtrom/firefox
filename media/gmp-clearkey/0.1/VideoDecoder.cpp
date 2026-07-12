@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-#include "VideoDecoder.h"
-
 #include <algorithm>
 #include <cstdint>
 #include <thread>
 
 #include "BigEndian.h"
-#include "ClearKeyDecryptionManager.h"
 #include "ClearKeyUtils.h"
+#include "ClearKeyDecryptionManager.h"
+#include "VideoDecoder.h"
 #include "content_decryption_module.h"
 #include "mozilla/CheckedInt.h"
 
