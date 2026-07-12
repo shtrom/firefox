@@ -39,12 +39,9 @@ ChromeUtils.defineLazyGetter(lazy, "logger", () =>
  *
  * In the parent/child controller split, this class owns the bits that must
  * run in the parent process: the {@link ProvidersManager}, query lifecycle,
- * and parent-only telemetry. It is reached by `UrlbarChildController`
- * through the `Urlbar` JSWindowActor pair. For chrome `<moz-urlbar>`
- * instances both controllers are in the parent process and
- * `UrlbarChildController` holds a direct reference to this class; future
- * content-process consumers (e.g. about:newtab) will route calls through
- * the actor pair instead.
+ * and parent-only telemetry. `UrlbarChildController` reaches it directly when
+ * both run in the parent process (chrome `<moz-urlbar>`), or through the
+ * `Urlbar` JSWindowActor pair when the child runs in a content process.
  *
  * Listeners may be added to listen for the results. They may support the
  * following methods which may be called when a query is run:
@@ -61,8 +58,7 @@ export class UrlbarParentController {
   // The paired UrlbarChildController, which registers itself via setChild().
   // Listener registration and notification dispatch live on it, keeping
   // dispatch on the side where the listeners (the view, the event bufferer)
-  // live — required once `<moz-urlbar>` runs in a content process. The child
-  // is always set before any query runs.
+  // live. The child is always set before any query runs.
   #child = null;
 
   // The owning JSWindowActor, used to resolve the chrome window parent-side
@@ -72,11 +68,8 @@ export class UrlbarParentController {
   #actor = null;
 
   /**
-   * Initialises the class. Takes the standalone data the controller needs
-   * rather than a DOM input, so it can also serve a content-process
-   * `<moz-urlbar>` whose input lives across the actor boundary. The live
-   * input/view are reached at runtime through the paired
-   * `UrlbarChildController`.
+   * Initialises the controller from standalone data; the live input/view are
+   * reached at runtime through the paired `UrlbarChildController`.
    *
    * @param {object} options
    *   The initial options for UrlbarParentController.
@@ -119,11 +112,8 @@ export class UrlbarParentController {
   }
 
   /**
-   * The input, owned by the paired `UrlbarChildController`. The parent no
-   * longer holds the input or view directly; it reads them through the child
-   * for the query-lifecycle and telemetry call sites that still need them.
-   * These getters go away together with the `#child` back-reference once those
-   * call sites get their data another way.
+   * The input, owned by the paired `UrlbarChildController` and read through it
+   * for the query-lifecycle and telemetry call sites that need it.
    *
    * @type {UrlbarInput}
    */

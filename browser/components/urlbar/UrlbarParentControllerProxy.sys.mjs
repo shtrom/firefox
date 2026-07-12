@@ -27,8 +27,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
  *
  * The view's synchronous per-result data (`getViewTemplate`/`getResultCommands`)
  * can't be fetched across the boundary on demand, so it's pre-fetched with each
- * `QueryResults` and read back here from the result. Telemetry is wired up in a
- * later patch; until then this path is incomplete and off by default.
+ * `QueryResults` and read back here from the result.
  */
 export class UrlbarParentControllerProxy {
   /** @type {UrlbarChild} */

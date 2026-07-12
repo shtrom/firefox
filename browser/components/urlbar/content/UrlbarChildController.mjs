@@ -33,12 +33,11 @@ ChromeUtils.defineESModuleGetters(lazy, {
  * per-instance bookkeeping (instance id, lifetime); this wrapper just
  * holds the controller it hands back.
  *
- * Today both chrome `<moz-urlbar>` instances live in the parent process,
- * so the actor pair hands the real `UrlbarParentController` reference
- * back and method calls happen synchronously. The wrapper exists so that
- * a future content-process `<moz-urlbar>` (e.g. on about:newtab) can
- * swap in async/message-passing implementations of the same surface
- * without touching `UrlbarInput`, `UrlbarView`, or other callers.
+ * The wrapper abstracts the transport: for a chrome `<moz-urlbar>` the actor
+ * pair hands back the real `UrlbarParentController` and calls happen
+ * synchronously, while a content-process `<moz-urlbar>` gets a message-passing
+ * implementation of the same surface. Callers (`UrlbarInput`, `UrlbarView`)
+ * don't distinguish them.
  */
 export class UrlbarChildController {
   /** @type {Console} */
@@ -61,11 +60,10 @@ export class UrlbarChildController {
   /** @type {UrlbarView} */
   #view = null;
 
-  // Listeners (the view, the event bufferer, the search one-offs) live here,
-  // on the input's side, rather than on the parent controller. The parent
-  // delegates its notifications to us via setChild(). This keeps dispatch on
-  // the side where the listeners are, which is required once `<moz-urlbar>`
-  // runs in a content process.
+  // Listeners (the view, the event bufferer, the search one-offs) live here, on
+  // the child's side; the parent delegates its notifications to us via
+  // setChild(). Keeping dispatch where the listeners are is what lets
+  // `<moz-urlbar>` run in a content process.
   #listeners = new Set();
 
   #userSelectionBehavior = /** @type {"arrow"|"tab"|"none"} */ ("none");
