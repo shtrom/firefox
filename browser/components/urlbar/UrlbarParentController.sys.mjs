@@ -541,7 +541,7 @@ export class UrlbarParentController {
  *
  * @see Events.yaml
  */
-class TelemetryEvent {
+export class TelemetryEvent {
   /**
    * @param {UrlbarParentController} controller
    *  The associated UrlbarParentController.
@@ -753,6 +753,17 @@ class TelemetryEvent {
       );
     this.#previousSearchWordsSet = previousSearchWords;
 
+    let disableBuilt = engagementData.visibleResults.some(
+      r => r.providerName == "UrlbarProviderQuickSuggest"
+    )
+      ? lazy.UrlbarTelemetryUtils.buildRecordedDisableCandidate(
+          snapshot,
+          engagementData,
+          this.#smartbarData,
+          this.#previousSearchWordsSet
+        )
+      : null;
+
     let { queryContext } = this._controller._lastQueryContextWrapper || {};
     let exposures = details.isSessionOngoing
       ? null
@@ -760,10 +771,10 @@ class TelemetryEvent {
 
     this.recordFromChild({
       built,
+      disableBuilt,
       method: snapshot.method,
       searchSource: snapshot.internalDetails.searchSource,
       internalDetails: snapshot.internalDetails,
-      visibleResults: engagementData.visibleResults,
       exposures,
     });
   }
@@ -840,30 +851,30 @@ class TelemetryEvent {
    * `RecordEngagement`. The child already built the Glean event; the parent
    * fills the fields that need parent-only services and makes the `Glean` call,
    * records the shipped exposures, and runs the parent-side provider steps
-   * (disable-tracking and `notifyEngagementChange`) from the shipped result and
-   * visible results.
+   * (disable-tracking and `notifyEngagementChange`) from the shipped result.
    *
    * @param {object} data
    *   The deserialized `recordedEngagementToWire()` payload.
    * @param {?{metric: string, eventInfo: object}} data.built
    *   The built Glean event (metric + partial event), or null.
+   * @param {?object} data.disableBuilt
+   *   The built disable-suggest candidate event when a Suggest result showed, or
+   *   null.
    * @param {"engagement"|"abandonment"} data.method
    *   The engagement method.
    * @param {string} data.searchSource
    *   The search source.
    * @param {object} data.internalDetails
    *   The interaction details (picked result reconstructed; event/element null).
-   * @param {UrlbarResult[]} data.visibleResults
-   *   The results shown when the engagement was captured.
    * @param {?object[]} data.exposures
    *   The resolved exposure list, or null when the session stays open.
    */
   recordFromChild({
     built,
+    disableBuilt,
     method,
     searchSource,
     internalDetails,
-    visibleResults,
     exposures,
   }) {
     try {
@@ -878,17 +889,10 @@ class TelemetryEvent {
         this.#recordExposureList(exposures, sap);
       }
 
-      // Start tracking for a disable event if there was a Suggest result
-      // during an engagement or abandonment event.
-      if (
-        (method == "engagement" || method == "abandonment") &&
-        visibleResults.some(r => r.providerName == "UrlbarProviderQuickSuggest")
-      ) {
-        this.startTrackingDisableSuggest(
-          internalDetails.event,
-          internalDetails,
-          visibleResults
-        );
+      // Start tracking for a disable event if a Suggest result showed during
+      // this engagement or abandonment (the candidate was built content-side).
+      if (disableBuilt) {
+        this.startTrackingDisableSuggest(disableBuilt, searchSource);
       }
 
       this._controller.manager.notifyEngagementChange(
@@ -1374,89 +1378,42 @@ class TelemetryEvent {
   #exposureResults = new WeakSet();
 
   /**
-   * Start tracking a potential disable suggest event after user has seen a
-   * suggest result.
+   * Start tracking a potential disable suggest event after the user has seen a
+   * suggest result. The candidate event is built content-side at engagement
+   * time, so the deferred recording needs neither the DOM event nor an
+   * in-process input.
    *
-   * @param {event} event
-   *   A DOM event.
-   * @param {InternalActionDetails} details
-   *   An object describing interaction details.
-   * @param {UrlbarResult[]} visibleResults
-   *   The results shown when the engagement was captured, stored so the deferred
-   *   recording indexes `selIndex` into the same set it was captured against.
+   * @param {{metric: string, eventInfo: object}} built
+   *   The built disable event from `buildRecordedDisableCandidate()`.
+   * @param {string} searchSource
+   *   The search source, resolved to a sap when the event is recorded.
    */
-  startTrackingDisableSuggest(event, details, visibleResults) {
-    details.visibleResults = visibleResults;
+  startTrackingDisableSuggest(built, searchSource) {
     this._lastSearchDetailsForDisableSuggestTracking = {
       // The time when a user interacts a suggest result, either through
       // an engagement or an abandonment.
       interactionTime: this.getCurrentTime(),
-      event,
-      details,
+      built,
+      searchSource,
     };
   }
 
   handleDisableSuggest() {
     let state = this._lastSearchDetailsForDisableSuggestTracking;
+    this._lastSearchDetailsForDisableSuggestTracking = null;
     if (
       !state ||
       this.getCurrentTime() - state.interactionTime >
         lazy.UrlbarPrefs.get("events.disableSuggest.maxSecondsFromLastSearch") *
           1000
     ) {
-      this._lastSearchDetailsForDisableSuggestTracking = null;
       return;
     }
 
-    let event = state.event;
-    let details = state.details;
-
-    let startEventInfo = {
-      interactionType: lazy.UrlbarTelemetryUtils.startInteractionType(
-        event,
-        details.searchString
-      ),
-      searchString: details.searchString,
-    };
-
-    if (
-      !event &&
-      startEventInfo.interactionType != "pasted" &&
-      startEventInfo.interactionType != "dropped"
-    ) {
-      // If no event is passed, we must be executing either paste&go or drop&go.
-      throw new Error("Event must be defined, unless input was pasted/dropped");
+    let sap = this.#searchSourceToSap(state.searchSource);
+    if (sap) {
+      this.#fillAndRecord(state.built, sap);
     }
-    if (!details) {
-      throw new Error("Invalid event details: " + details);
-    }
-
-    let action = lazy.UrlbarTelemetryUtils.actionFromEvent(
-      event,
-      details,
-      startEventInfo.interactionType
-    );
-
-    let { numChars, numWords, searchWords } =
-      lazy.UrlbarTelemetryUtils.parseSearchString(details.searchString);
-
-    this.#recordSearchEngagementTelemetry("disable", startEventInfo, {
-      action,
-      numChars,
-      numWords,
-      searchWords,
-      provider: details.provider,
-      searchSource: details.searchSource,
-      searchMode: details.searchMode,
-      selIndex: details.selIndex,
-      visibleResults: details.visibleResults,
-      selType: details.selType,
-      location: details.location,
-      windowMode: details.windowMode,
-      ...this.#getOptionalSmartbarTelemetry(details.searchSource),
-    });
-
-    this._lastSearchDetailsForDisableSuggestTracking = null;
   }
 
   getCurrentTime() {

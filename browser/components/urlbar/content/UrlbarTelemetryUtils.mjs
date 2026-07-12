@@ -292,18 +292,18 @@ export class UrlbarTelemetryUtils {
   /**
    * Serializes a recorded engagement for the `RecordEngagement` actor message.
    * The child has already built the Glean event; the parent still needs the
-   * picked result and the visible results (in wire form) for the provider
-   * notifications and disable-tracking it runs, alongside the primitive built
-   * event, the search source, and the resolved exposure list.
+   * picked result (in wire form) for the provider notifications it runs,
+   * alongside the primitive built event, the disable candidate, the search
+   * source, and the resolved exposure list.
    *
    * @param {object} data
-   *   `{built, method, searchSource, internalDetails, visibleResults, exposures}`.
+   *   `{built, disableBuilt, method, searchSource, internalDetails, exposures}`.
    * @returns {object} The wire payload; reconstruct with
    *   `recordedEngagementFromWire()`.
    */
   static recordedEngagementToWire(data) {
     // The DOM event and element can't cross the boundary, and the parent-side
-    // steps don't need them; drop them and reduce the results to wire form.
+    // steps don't need them; drop them and reduce the picked result to wire form.
     let { result, ...internalDetails } = data.internalDetails;
     delete internalDetails.event;
     delete internalDetails.element;
@@ -313,7 +313,6 @@ export class UrlbarTelemetryUtils {
         ...internalDetails,
         result: result?.toWire() ?? null,
       },
-      visibleResults: data.visibleResults.map(r => r.toWire()),
     };
   }
 
@@ -336,9 +335,6 @@ export class UrlbarTelemetryUtils {
           ? lazy.UrlbarResult.fromWire(wire.internalDetails.result)
           : null,
       },
-      visibleResults: wire.visibleResults.map(r =>
-        lazy.UrlbarResult.fromWire(r)
-      ),
     };
   }
 
@@ -746,10 +742,58 @@ export class UrlbarTelemetryUtils {
     smartbarData,
     previousSearchWords
   ) {
+    return this.#buildRecorded(
+      snapshot.method,
+      snapshot,
+      engagementData,
+      smartbarData,
+      previousSearchWords
+    );
+  }
+
+  /**
+   * Builds the disable-tracking candidate event for an engagement/abandonment
+   * that showed a Suggest result. It's recorded later, if the user turns Suggest
+   * off soon enough, but built now while the input and view are live so the
+   * deferred recording needs neither. The `disable` method never advances the
+   * "refined"-check words, so only the built event is returned.
+   *
+   * @param {object} snapshot
+   *   The `collectSnapshot()` snapshot.
+   * @param {object} engagementData
+   *   `{searchMode, visibleResults, viewIsOpen, searchSource}`.
+   * @param {object} smartbarData
+   *   `{chatId, intent, model}`.
+   * @param {?Set<string>} previousSearchWords
+   *   The prior session's search words, for the "refined" interaction check.
+   * @returns {?{metric: string, eventInfo: object}} The built event.
+   */
+  static buildRecordedDisableCandidate(
+    snapshot,
+    engagementData,
+    smartbarData,
+    previousSearchWords
+  ) {
+    return this.#buildRecorded(
+      "disable",
+      snapshot,
+      engagementData,
+      smartbarData,
+      previousSearchWords
+    ).built;
+  }
+
+  static #buildRecorded(
+    method,
+    snapshot,
+    engagementData,
+    smartbarData,
+    previousSearchWords
+  ) {
     let { internalDetails } = snapshot;
     let searchMode = internalDetails.searchMode ?? engagementData.searchMode;
     let interactionResult = this.getInteractionType(
-      snapshot.method,
+      method,
       snapshot.startEventInfo,
       internalDetails.searchSource,
       snapshot.searchWords,
@@ -757,7 +801,7 @@ export class UrlbarTelemetryUtils {
       previousSearchWords
     );
     let built = this.buildEventInfo({
-      method: snapshot.method,
+      method,
       action: snapshot.action,
       interaction: interactionResult.interaction,
       numChars: snapshot.numChars,

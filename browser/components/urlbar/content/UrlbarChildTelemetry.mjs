@@ -124,9 +124,9 @@ export class UrlbarChildTelemetry {
   /**
    * Builds the engagement/abandonment Glean event from the live input and view
    * and ships it to the parent recorder, which fills the parent-only fields and
-   * makes the `Glean` call. The picked result and visible results ride along in
-   * wire form for the provider notifications and disable-tracking the parent
-   * runs; exposures are resolved here and shipped as their recordable form.
+   * makes the `Glean` call. The picked result rides along in wire form for the
+   * provider notifications the parent runs; the disable-tracking candidate and
+   * the exposures are built and resolved here and shipped in recordable form.
    *
    * @param {?Event} event
    *   The DOM event behind the engagement, or null for paste&go / drop&go.
@@ -163,6 +163,20 @@ export class UrlbarChildTelemetry {
           );
         this.#previousSearchWords = previousSearchWords;
 
+        // If a Suggest result was shown, build the disable-tracking candidate
+        // now too, so the parent can record it should the user turn Suggest off
+        // shortly after, without needing the live input at that point.
+        let disableBuilt = engagementData.visibleResults.some(
+          r => r.providerName == "UrlbarProviderQuickSuggest"
+        )
+          ? lazy.UrlbarTelemetryUtils.buildRecordedDisableCandidate(
+              snapshot,
+              engagementData,
+              smartbarData,
+              this.#previousSearchWords
+            )
+          : null;
+
         // Exposures are recorded only when the session ends, alongside the
         // engagement, so resolve and ship them with it.
         let exposures = details.isSessionOngoing
@@ -175,10 +189,10 @@ export class UrlbarChildTelemetry {
         this.#controller.recordEngagement(
           lazy.UrlbarTelemetryUtils.recordedEngagementToWire({
             built,
+            disableBuilt,
             method: snapshot.method,
             searchSource: snapshot.internalDetails.searchSource,
             internalDetails: snapshot.internalDetails,
-            visibleResults: engagementData.visibleResults,
             exposures,
           })
         );

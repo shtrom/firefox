@@ -4,10 +4,9 @@
 // Tests that a recorded engagement survives the Urlbar actor's
 // `RecordEngagement` message and that recording it parent-side from the
 // deserialized payload produces the same Glean event the in-process path would.
-// The child builds the Glean event content-side; the picked and visible results
-// ride along in wire form (structured-clone drops their private-field data
-// unless reduced) so the parent can run the provider notifications and record
-// the exposures.
+// The child builds the Glean event content-side; the picked result rides along
+// in wire form (structured-clone drops its private-field data unless reduced) so
+// the parent can run the provider notifications.
 
 "use strict";
 
@@ -71,13 +70,12 @@ function makeRecordedEngagement({ exposures = null } = {}) {
 }
 
 // The wire payload a `RecordEngagement` message carries.
-function toWire({ built, internalDetails, visibleResults, exposures }) {
+function toWire({ built, internalDetails, exposures }) {
   return UrlbarTelemetryUtils.recordedEngagementToWire({
     built,
     method: "engagement",
     searchSource: internalDetails.searchSource,
     internalDetails,
-    visibleResults,
     exposures,
   });
 }
@@ -138,13 +136,6 @@ add_task(function test_recordedEngagement_roundtrip() {
     "picked result payload preserved"
   );
   Assert.equal(result.rowIndex, 2, "picked result rowIndex preserved");
-
-  // The visible results are reconstructed too.
-  Assert.equal(restored.visibleResults.length, 2, "visible results preserved");
-  Assert.ok(
-    restored.visibleResults.every(r => r instanceof UrlbarResult),
-    "visible results reconstructed as UrlbarResults"
-  );
 });
 
 add_task(function test_recordFromChild_records_engagement() {
