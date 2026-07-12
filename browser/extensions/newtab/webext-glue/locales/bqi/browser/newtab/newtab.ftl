@@ -246,7 +246,7 @@ newtab-topsites-clear-input =
 newtab-topsites-cancel-button = لقو
 newtab-topsites-delete-history-button = پاک کردن ز ویرگار
 newtab-topsites-save-button = زفت
-newtab-topsites-preview-button = پؽش نیر
+newtab-topsites-preview-button = پؽش نشووݩ
 newtab-topsites-add-button = ٱووردن
 
 ## Top Sites - Delete history confirmation dialog.
@@ -410,6 +410,8 @@ newtab-custom-widget-sports-toggle2 =
     .label = ورزش
 newtab-custom-widget-privacy-toggle =
     .label = سیخومی
+newtab-custom-widget-stocks-toggle =
+    .label = سهام
 newtab-custom-widget-section-title = ویجتا
 newtab-custom-widget-section-toggle =
     .label = ویجتا
@@ -459,6 +461,10 @@ newtab-wallpaper-dark-green = ساوز تاریک
 
 ## Firefox
 
+# Variables
+#   $author_string (String) - The name of the creator of the photo.
+#   $webpage_string (String) - The name of the webpage where the photo is located.
+newtab-wallpaper-attribution = شؽوات و دست <a data-l10n-name="name-link">{ $author_string }</a> ری <a data-l10n-name="webpage-link">{ $webpage_string }</a>
 newtab-wallpaper-feature-highlight-header = رنگا شاڌ ن امتهووݩ کۊنین
 newtab-wallpaper-feature-highlight-button = فئمیم
 feature-highlight-wallpaper =
@@ -625,6 +631,7 @@ newtab-widget-lists-label-beta =
 # Variables:
 #   $number (number) - Amount of list items marked complete
 newtab-widget-lists-completed-list = تموم وابیڌه ({ $number })
+newtab-widget-lists-celebration-headline = کار خوو
 newtab-widget-task-list-menu-copy = لف گیری
 newtab-widget-lists-menu-edit = آلشت نومگه نوم
 newtab-widget-lists-menu-edit2 =
@@ -657,6 +664,16 @@ newtab-widget-lists-name-placeholder-new2 =
     .placeholder = نومگه نۊ
     .aria-label = آلشت نومگه نوم
 newtab-widget-section-title = ویجتا
+newtab-widget-menu-change-size = آلشت هندا
+# Parent label for a submenu in the widget menu that reorders the widget
+# among its siblings. "Left" and "Right" appear as items inside this submenu.
+newtab-widget-menu-move = جا گورو
+# Submenu item under "Move"; moves the widget one position to the left.
+# RTL locales should translate this as "Right".
+newtab-widget-menu-move-left = چپ
+# Submenu item under "Move"; moves the widget one position to the right.
+# RTL locales should translate this as "Left".
+newtab-widget-menu-move-right = راست
 newtab-widget-size-small = کۊچیر
 newtab-widget-size-medium = منجقا
 newtab-widget-size-large = گپ
@@ -664,9 +681,20 @@ newtab-widget-size-large = گپ
 newtab-widget-section-hide-all-button =
     .title = بؽڌار کردن ویجتا
     .aria-label = بؽڌار کردن پوی ویجتا
+newtab-widget-add-widgets-button =
+    .title = ٱووردن ویجت
+    .aria-label = ٱووردن ویجت
 newtab-widget-section-menu-manage = دؽوۉداری ویجتا
 newtab-widget-section-menu-hide-all = بؽڌار کردن ویجتا
 newtab-widget-section-menu-learn-more = قلوه دووسته بۊین
+# Button shown when additional widgets are hidden beyond the
+# first row, allowing users to show them.
+newtab-widget-section-show-more =
+    .label = نشووݩ داڌن ویجتا قلوه
+# Button shown when the widgets row is expanded to multiple rows,
+# allowing users to collapse it back to one row.
+newtab-widget-section-show-less =
+    .label = نشووݩ داڌن ویجتا کمتر
 
 ## Strings introduced by the Nova redesign of the Timer widget
 
@@ -695,6 +723,16 @@ newtab-promo-card-dismiss-button =
 
 ## Strings introduced by the Nova redesign of the Timer widget
 
+# Variables:
+#   $minutes (number) - The currently selected timer duration in minutes
+newtab-widget-timer-spinbutton-name =
+    .aria-label =
+        { $minutes ->
+            [one] { $minutes } دیقه
+           *[other] { $minutes } دیقه
+        }
+newtab-widget-timer-mode-group =
+    .aria-label = هالت زمووݩ سنج
 # Small label shown beneath the live time while the focus timer is running or paused.
 newtab-widget-timer-running-focus = فوکۊس
 # Small label shown beneath the live time while the break timer is running or paused.
@@ -702,16 +740,21 @@ newtab-widget-timer-running-break = اشکستن
 # Context-menu item to hide the Timer widget. Replaces the shared "Hide widget"
 # copy with a widget-specific string per the Nova design.
 newtab-widget-timer-menu-hide = بؽڌار کردن زمووݩ سنج
+# Heading shown inside the Timer widget after a focus session ends.
+newtab-widget-timer-celebration-heading-focus = کار نشمینی بی
 
 ##
 
 newtab-sports-widget-menu-view-schedule = نیشتن برنومه زمووی
+newtab-sports-widget-menu-view-results = نیشتن نتیجه یل
 newtab-sports-widget-menu-learn-more = قلوه دووسته بۊین
 # “Keep tabs on” is an informal expression meaning to stay updated on, stay informed on, or regularly follow something (in this case, World Cup matches and updates).
 newtab-sports-widget-keep-tabs = جام جهۊوی ن وا ویر جمعی و دین کۊنین
 newtab-sports-widget-get-updates = ورۊ رسۊویا زنده موسابقات وو مووردا قلوه ن بگیرین.
 newtab-sports-widget-view-schedule =
     .label = نیشتن برنومه زمووی
+newtab-sports-widget-follow-teams =
+    .label = و دین کردن تیما
 newtab-sports-widget-choose-wallpaper =
     .label = پسند شؽوات زمینه
 newtab-sports-widget-skip = گوم زیڌن
@@ -746,6 +789,7 @@ newtab-sports-widget-quarter-finals = مرهله ی چاروم دیندایی
 # The "LIVE" string is meant to be uppercase in English, but other languages and locales may vary in how they handle this.
 newtab-sports-widget-live = زنده
 newtab-sports-widget-upcoming = آینده
+newtab-sports-widget-results = نتیجه یل
 newtab-sports-widget-semi-finals = نیمه دیندایی
 newtab-sports-widget-bronze-finals = فینال بورونز
 # Final is the final match for 1st place.
@@ -754,7 +798,11 @@ newtab-sports-widget-final = فینال
 #   $start (Date) - Start date of a tournament stage
 #   $end (Date) - End date of a tournament stage
 newtab-sports-widget-key-date-range = { DATETIME($start, month: "short", day: "numeric") } – { DATETIME($end, month: "short", day: "numeric") }
+# Variables:
+#   $date (Date) - Date of a single tournament event
+newtab-sports-widget-key-date = { DATETIME($date, month: "short", day: "numeric") }
 newtab-sports-widget-cancelled = لقو وابی
+newtab-sports-widget-view-results-link = نیشتن نتیجه یل
 newtab-sports-widget-third-place = مقام سووم
 newtab-sports-widget-world-cup-champions = قئرمووا جام جهۊوی 2026
 newtab-sports-widget-match-full-time = پوی مجال

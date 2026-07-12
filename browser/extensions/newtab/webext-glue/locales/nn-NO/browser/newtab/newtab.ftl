@@ -192,25 +192,41 @@ newtab-privacy-across-sites =
        *[other] På tvers av { $count } nettstadar
     }
 
+## Privacy widget — empty state
+
+# Shown when no trackers have been blocked yet today.
+newtab-privacy-empty = { -brand-short-name } blokkerer sporarar når du surfar. Du vil sjå dei her.
+
 ## Privacy widget — informational messages
 ##
 ## Rotating "info" secondary messages. Each message has a body plus a matched
 ## "-cta" button label sharing the same id stem (the CTA button isn't rendered
 ## yet; the labels are authored so the pairing is ready).
 
+newtab-privacy-message-info-1 = { -brand-short-name } blokkerer sporarar  automatisk når du surfar
 newtab-privacy-message-info-1-cta = Vis vern
+newtab-privacy-message-info-2 = Sporingsblokkering hjelper til med å stoppe selskap frå å følgje deg på nettet.
 newtab-privacy-message-info-2-cta = Vis vern
+newtab-privacy-message-info-3 = Mange nettstadar har sporingsverktøy slik at selskap du aldri har vore innom kan følgje deg på nettet.
 newtab-privacy-message-info-3-cta = Vis vern
+newtab-privacy-message-info-4 = Å velje { -brand-short-name } betyr å velje vern som standard.
 newtab-privacy-message-info-4-cta = Vis vern
+newtab-privacy-message-info-5 = Blokkerte sporarar tyder færre selskap kan følgje deg på tvers av nettstadar.
 newtab-privacy-message-info-5-cta = Vis vern
+newtab-privacy-message-info-6 = Vern dataa dine med { -brand-short-name }. Vi sel dei aldri, men det kan hende at andre nettlesarar gjer det.
 newtab-privacy-message-info-6-cta = Les meir
 newtab-privacy-message-info-7 = Sjå kva for nokre sporarar { -brand-short-name } blokkerte.
 newtab-privacy-message-info-7-cta = Vis vern
+newtab-privacy-message-info-8 = Surfing med { -brand-short-name } støttar oppdraget til { -vendor-short-name } om å skape eit betre internett.
 newtab-privacy-message-info-8-cta = Les meir
 newtab-privacy-message-info-9-cta = Bruk som standard
+newtab-privacy-message-info-10 = Lagre passord i { -brand-short-name } for å bruke sterke, unike påloggingar overalt.
 newtab-privacy-message-info-10-cta = Gå til passord
+newtab-privacy-message-info-11 = Finn ut korleis { -brand-short-name } bidreg til å halde nettlesinga di meir privat.
 newtab-privacy-message-info-11-cta = Les meir
+newtab-privacy-message-info-12 = Blokkering av sporarar kan bidra til å spare bandbreidde på avgrensa dataabonnement.
 newtab-privacy-message-info-12-cta = Vis vern
+newtab-privacy-message-info-13 = { -brand-short-name } blokkerer sporarar, og frigjer bandbreidde for jamnare strøyming.
 newtab-privacy-message-info-13-cta = Vis vern
 
 ## Privacy widget — promotional messages
@@ -218,13 +234,24 @@ newtab-privacy-message-info-13-cta = Vis vern
 ## Rotating "promo" secondary messages suggesting another Firefox feature. Each
 ## has a body plus a matched "-cta" button label.
 
+newtab-privacy-message-promo-monitor-1 = Finn ut om den personlege informasjonen din dukkar opp i ein datalekkasje.
 newtab-privacy-message-promo-monitor-1-cta = Les meir
+newtab-privacy-message-promo-monitor-2 = Vern informasjonen din med gratis overvaking av datalekkasjar, for opptil 20 e-postar.
 newtab-privacy-message-promo-monitor-2-cta = Les meir
+newtab-privacy-message-promo-signin-1 = Hald bokmerke, passord og faner krypterte på tvers av einingar med { -vendor-short-name }-kontoen din.
 newtab-privacy-message-promo-signin-1-cta = Logg inn
+newtab-privacy-message-promo-vpn-1 = Handlar du på offentleg Wi-Fi? Slå på innebygd VPN for ekstra vern.
 newtab-privacy-message-promo-vpn-1-cta = Opne VPN
+newtab-privacy-message-promo-vpn-2 = Brukar du Wi-Fi på flyplassen? Vern nettlesinga di ved å slå på innebygd VPN.
 newtab-privacy-message-promo-vpn-2-cta = Opne VPN
+newtab-privacy-message-promo-vpn-3 = Slå på innebygd VPN for å halde plasseringa di meir privat.
 newtab-privacy-message-promo-vpn-3-cta = Opne VPN
+newtab-privacy-message-promo-private-window-1 = Prøv eit privat vindauge for å surfe meir privat når du deler datamaskin med andre.
+newtab-privacy-message-promo-private-window-1-cta = Opne privat vindauge
 newtab-privacy-message-promo-relay-1-cta = Få e-postalias
+newtab-privacy-message-promo-relay-2 = Vern innboksen din mot spam med gratis e-postalias.
+newtab-privacy-message-promo-relay-2-cta = Få e-postalias
+newtab-privacy-message-promo-relay-3 = Få 50 gratis e-postalias for å halde den ekte e-postadressa di privat.
 newtab-privacy-message-promo-relay-3-cta = Få e-postalias
 
 ## Privacy widget — celebration messages
@@ -236,6 +263,13 @@ newtab-privacy-message-milestone-week-cta = Vis vern
 newtab-privacy-message-milestone-month-cta = Vis vern
 newtab-privacy-message-milestone-year-cta = Vis vern
 newtab-privacy-message-milestone-total-cta = Vis vern
+# Shown when today's blocked-tracker count reaches the display cap ("100+").
+newtab-privacy-message-daily-cap = (Over 100 sporarar vart blokkerte i dag.) Færre sporarar betyr meir personvern.
+newtab-privacy-message-daily-cap-cta = Vis vern
+newtab-privacy-message-streak-cta = Vis vern
+# Shown the first time the tracker count goes above zero.
+newtab-privacy-message-first-protection = Surf vidare, { -brand-short-name } blokkerer framleis sporingsverktøy.
+newtab-privacy-message-first-protection-cta = Vis vern
 
 ## Strings for the Stocks widget
 
@@ -243,6 +277,27 @@ newtab-privacy-message-milestone-total-cta = Vis vern
 newtab-stocks-menu-search = Søk etter aksjesymbol
 # Context menu item linking to more information about the Stocks widget.
 newtab-stocks-menu-learn-more = Les meir
+# "Stocks widget options" is an icon-only button in the widget toolbar — the
+# attributes are consumed as tooltip/screen-reader label only. The button
+# never renders visible text.
+newtab-stocks-widget-menu-button =
+    .title = Innstillingar for aksje-widgeten
+    .aria-label = Innstillingar for aksje-widgeten
+# Heading for the Stocks widget.
+newtab-stocks-widget-title = Aksjar
+
+## Screen-reader summary of a stock ticker.
+## Variables:
+##   $name (String) - the full fund/ETF name, e.g. "SPDR S&P 500 ETF Trust".
+##   $change (String) - the day's percentage change, e.g. "+2.1%".
+##   $price (String) - the last price, e.g. "$559.44".
+
+# Stock increased (went up) during the day
+newtab-stocks-ticker-status-up = { $name }, opp { $change }, { $price }
+# Stock decreased (went down) during the day
+newtab-stocks-ticker-status-down = { $name }, ned { $change }, { $price }
+# Stock didn't change during the day
+newtab-stocks-ticker-status-flat = { $name }, inga endring, { $change }, { $price }
 
 ## Strings for the Picture of the Day widget
 
@@ -251,9 +306,24 @@ newtab-stocks-menu-learn-more = Les meir
 newtab-picture-header = Dagens bilde · Wikimedia Commons
 # Shorter title shown at the top of the widget, without the source name.
 newtab-picture-header-main = Dagens bilde
+# Attribution line shown under the title once a picture loads: an author
+# credit, a link to the picture's source page, and a link to its license.
+# "©" is the copyright symbol.
+# $author (string) - the name of the image's author.
+newtab-picture-attribution-author = © { $author }
 # Link to the picture's source page (its Wikimedia Commons file page).
 # "Wikimedia Commons" is a brand name and should not be translated.
 newtab-picture-attribution-source-link = Wikimedia Commons
+# Screen-reader label for the license link; the visible text is the license
+# name (for example "CC BY-SA 4.0") provided with the picture.
+# $license (string) - the name of the license.
+newtab-picture-attribution-license =
+    .aria-label = Vis { $license }-lisensen
+# Tooltip and screen-reader label for the icon-only button that opens the
+# widget's context menu. The button never renders visible text.
+newtab-picture-widget-menu-button =
+    .title = Innstillingar for «Dagens bilde»
+    .aria-label = Innstillingar for «Dagens bilde»
 # Button that sets the current picture as the New Tab background wallpaper. The
 # button collapses to an icon when not hovered/focused, so .title is its tooltip.
 newtab-picture-set-wallpaper =
