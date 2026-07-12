@@ -64,8 +64,6 @@ run-if = ["os == 'mac'"]
 
 ["browser_open_migration_wizard.js"]
 
-["browser_sessionRestoreNewTab.js"]
-
 ["browser_spotlight.js"]
 
 ["browser_subdialogs.js"]

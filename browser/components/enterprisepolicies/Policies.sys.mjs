@@ -2133,18 +2133,6 @@ export var Policies = {
           param.StartPage == "homepage-locked"
         );
       }
-      if ("NewTabOnRestore" in param) {
-        PoliciesUtils.setDefaultPref(
-          "browser.sessionstore.newTabOnRestore",
-          param.NewTabOnRestore
-        );
-        // Make the UI visible so the user can see what's been configured
-        // on their behalf, regardless of the configured value.
-        PoliciesUtils.setDefaultPref(
-          "browser.sessionstore.newTabOnRestore.showSetting",
-          true
-        );
-      }
     },
   },
 
