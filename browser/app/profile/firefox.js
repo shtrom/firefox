@@ -2307,8 +2307,6 @@ pref("browser.smartwindow.sidebar.openByDefault", true);
 pref("browser.smartwindow.isDefaultWindow", false);
 pref("browser.smartwindow.firstrun.explainerURL", "https://www.firefox.com/en-US/smart-window/?v=product");
 pref("places.semanticHistory.smartwindow.featureGate", false);
-// TODO Bug 2053495: remove with mistral release pref
-pref("browser.smartwindow.mistralRelease", false);
 
 // Smart Window: Merino World Cup Soccer tool call (bug 2038266)
 pref("browser.smartwindow.worldcup.enabled", true);
