@@ -213,15 +213,23 @@ newtab-privacy-message-info-1 = { -brand-short-name } přesćěhowaki awtomatisc
 newtab-privacy-message-info-1-cta = Škity pokazać
 newtab-privacy-message-info-2-cta = Škity pokazać
 newtab-privacy-message-info-3-cta = Škity pokazać
+newtab-privacy-message-info-4 = Hdyž { -brand-short-name } wuběraće, to rěka, zo po standardźe škit wuběraće.
 newtab-privacy-message-info-4-cta = Škity pokazać
+newtab-privacy-message-info-5 = Zablokowane přesćěhowaki rěka, zo mjenje předewzaćow móže was po sydłach slědować.
 newtab-privacy-message-info-5-cta = Škity pokazać
+newtab-privacy-message-info-6 = Wobchowajće swoje daty z { -brand-short-name }. Njepředawamy je ženje, ale druhe wobhladowaki to snano činja.
 newtab-privacy-message-info-6-cta = Dalše informacije
 newtab-privacy-message-info-7 = Hladajće, kotre přesćěhowaki { -brand-short-name } je zablokował.
 newtab-privacy-message-info-7-cta = Škity pokazać
+newtab-privacy-message-info-8 = Přehladowanje z { -brand-short-name } misiju { -vendor-short-name } podpěruje, lěpši web wutworić.
 newtab-privacy-message-info-8-cta = Dalše informacije
+newtab-privacy-message-info-9 = Čińće { -brand-short-name } k swojemu standardnemu wobhladowakej za zatwarjenu priwatnosć.
 newtab-privacy-message-info-9-cta = K standardej činić
+newtab-privacy-message-info-10 = Składujće hesła w { -brand-short-name }, zo byšće wšudźe mócne, jónkróćne přizjewjenja wužiwał.
 newtab-privacy-message-info-10-cta = K hesłam
+newtab-privacy-message-info-11 = Wuslědźće, kak { -brand-short-name } pomha, waše přehladowanje priwatniše dźeržeć.
 newtab-privacy-message-info-11-cta = Dalše informacije
+newtab-privacy-message-info-12 = Blokowanje přesćěhowakow móže pomhać, šěrokosć pasma za plany z wobmjezowanymi mnóstwom datow zalutować.
 newtab-privacy-message-info-12-cta = Škity pokazać
 newtab-privacy-message-info-13-cta = Škity pokazać
 
@@ -237,8 +245,10 @@ newtab-privacy-message-promo-vpn-1-cta = VPN wočinić
 newtab-privacy-message-promo-vpn-2-cta = VPN wočinić
 newtab-privacy-message-promo-vpn-3-cta = VPN wočinić
 newtab-privacy-message-promo-private-window-1-cta = Priwatne wokno wočinić
+newtab-privacy-message-promo-relay-1 = Składujće swoju woprawdźitu za ludźi, kotrymž dowěrjeće; wužiwajće e-mejlowu masku za registracije.
 newtab-privacy-message-promo-relay-1-cta = Maski wobstarać
 newtab-privacy-message-promo-relay-2-cta = Maski wobstarać
+newtab-privacy-message-promo-relay-3 = Dóstańće 50 darmotnych e-mejlowych maskow, zo byšće swoju woprawdźitu e-mejlowu adresu priwatnu dźeržał.
 newtab-privacy-message-promo-relay-3-cta = Maski wobstarać
 
 ## Privacy widget — celebration messages
@@ -250,6 +260,8 @@ newtab-privacy-message-milestone-week-cta = Škity pokazać
 newtab-privacy-message-milestone-month-cta = Škity pokazać
 newtab-privacy-message-milestone-year-cta = Škity pokazać
 newtab-privacy-message-milestone-total-cta = Škity pokazać
+# Shown when today's blocked-tracker count reaches the display cap ("100+").
+newtab-privacy-message-daily-cap = (Přez 100 přesćěhowakow dźensa zablokowanych. ) Mjenje přesćěhowakow wjace priwatnosće rěka.
 newtab-privacy-message-daily-cap-cta = Škity pokazać
 # Variables:
 #   $count (number) - Consecutive days the user has had trackers blocked
@@ -261,6 +273,8 @@ newtab-privacy-message-streak =
        *[other] Sće { $count } dnjow za sobu škitany
     }
 newtab-privacy-message-streak-cta = Škity pokazać
+# Shown the first time the tracker count goes above zero.
+newtab-privacy-message-first-protection = Přehladujće dale, { -brand-short-name } dale blokuje.
 newtab-privacy-message-first-protection-cta = Škity pokazać
 
 ## Strings for the Stocks widget
@@ -269,8 +283,27 @@ newtab-privacy-message-first-protection-cta = Škity pokazać
 newtab-stocks-menu-search = Tikerowe symbole přepytać
 # Context menu item linking to more information about the Stocks widget.
 newtab-stocks-menu-learn-more = Dalše informacije
+# "Stocks widget options" is an icon-only button in the widget toolbar — the
+# attributes are consumed as tooltip/screen-reader label only. The button
+# never renders visible text.
+newtab-stocks-widget-menu-button =
+    .title = Nastajenja akcijneho asistenta
+    .aria-label = Nastajenja akcijneho asistenta
 # Heading for the Stocks widget.
 newtab-stocks-widget-title = Akcije
+
+## Screen-reader summary of a stock ticker.
+## Variables:
+##   $name (String) - the full fund/ETF name, e.g. "SPDR S&P 500 ETF Trust".
+##   $change (String) - the day's percentage change, e.g. "+2.1%".
+##   $price (String) - the last price, e.g. "$559.44".
+
+# Stock increased (went up) during the day
+newtab-stocks-ticker-status-up = { $name }, rosćena wo { $change }, { $price }
+# Stock decreased (went down) during the day
+newtab-stocks-ticker-status-down = { $name }, spadnjena wo { $change }, { $price }
+# Stock didn't change during the day
+newtab-stocks-ticker-status-flat = { $name }, žana změna, { $change }, { $price }
 
 ## Strings for the Picture of the Day widget
 

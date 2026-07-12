@@ -540,6 +540,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -1143,6 +1144,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -1791,6 +1793,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -2389,6 +2392,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -2682,6 +2686,7 @@
           "newtab-weather-static-city",
           "newtab-widget-add-widgets-button",
           "newtab-widget-lists-edit-clear",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-manage-title",
           "newtab-widget-menu-move",
           "newtab-widget-menu-move-left",
@@ -3234,6 +3239,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -3834,6 +3840,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -4441,6 +4448,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -4610,7 +4618,8 @@
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title"
+          "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
@@ -5005,6 +5014,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-edit",
@@ -5584,6 +5594,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -6191,6 +6202,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -6798,6 +6810,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -7454,6 +7467,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -7566,7 +7580,6 @@
           "newtab-custom-weather-toggle",
           "newtab-custom-widget-live-refresh",
           "newtab-custom-widget-picture-toggle",
-          "newtab-custom-widget-stocks-toggle",
           "newtab-daily-briefing-card-timestamp",
           "newtab-daily-briefing-card-title",
           "newtab-discovery-empty-section-topstories-content",
@@ -7687,11 +7700,9 @@
           "newtab-shortcuts-pinned-area",
           "newtab-sports-widget-champions",
           "newtab-sports-widget-delayed",
-          "newtab-sports-widget-follow-teams",
           "newtab-sports-widget-follow-teams-title",
           "newtab-sports-widget-followed-only-toggle",
           "newtab-sports-widget-information",
-          "newtab-sports-widget-key-date",
           "newtab-sports-widget-key-dates",
           "newtab-sports-widget-loading-more",
           "newtab-sports-widget-match-aria-label-now",
@@ -7705,7 +7716,6 @@
           "newtab-sports-widget-match-vs",
           "newtab-sports-widget-menu-follow-teams",
           "newtab-sports-widget-menu-key-dates",
-          "newtab-sports-widget-menu-view-results",
           "newtab-sports-widget-menu-view-upcoming",
           "newtab-sports-widget-message-add-widgets-cta",
           "newtab-sports-widget-message-day-in-play-body",
@@ -7728,7 +7738,6 @@
           "newtab-sports-widget-pagination-next",
           "newtab-sports-widget-pagination-previous",
           "newtab-sports-widget-postponed",
-          "newtab-sports-widget-results",
           "newtab-sports-widget-runner-up",
           "newtab-sports-widget-search-country",
           "newtab-sports-widget-suspended",
@@ -7738,7 +7747,6 @@
           "newtab-sports-widget-team-name-label-cod",
           "newtab-sports-widget-team-tbd",
           "newtab-sports-widget-view-matches",
-          "newtab-sports-widget-view-results-link",
           "newtab-sports-widget-watch",
           "newtab-sports-widget-watch-available-other-regions",
           "newtab-sports-widget-watch-available-region",
@@ -7765,7 +7773,6 @@
           "newtab-wallpaper-abstract-purple",
           "newtab-wallpaper-abstract-purple-green",
           "newtab-wallpaper-abstract-white-curves",
-          "newtab-wallpaper-attribution",
           "newtab-wallpaper-beach-at-sunrise",
           "newtab-wallpaper-beach-at-sunset",
           "newtab-wallpaper-blue-flowers",
@@ -7815,19 +7822,14 @@
           "newtab-weather-see-full-forecast",
           "newtab-weather-sponsored",
           "newtab-weather-todays-forecast",
-          "newtab-widget-add-widgets-button",
-          "newtab-widget-lists-celebration-headline",
           "newtab-widget-lists-celebration-subhead",
           "newtab-widget-lists-input-error",
           "newtab-widget-lists-input-menu-edit2",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-name-default",
           "newtab-widget-lists-name-label-checklist",
           "newtab-widget-lists-name-placeholder-checklist2",
-          "newtab-widget-menu-change-size",
           "newtab-widget-menu-hide",
-          "newtab-widget-menu-move",
-          "newtab-widget-menu-move-left",
-          "newtab-widget-menu-move-right",
           "newtab-widget-message-copy",
           "newtab-widget-message-focus-forecasts-body",
           "newtab-widget-message-focus-forecasts-title",
@@ -7836,20 +7838,15 @@
           "newtab-widget-section-maximize",
           "newtab-widget-section-menu-button",
           "newtab-widget-section-minimize",
-          "newtab-widget-section-show-less",
-          "newtab-widget-section-show-more",
           "newtab-widget-timer-celebration-heading-break",
-          "newtab-widget-timer-celebration-heading-focus",
           "newtab-widget-timer-celebration-message-break",
           "newtab-widget-timer-celebration-message-focus",
           "newtab-widget-timer-decrease-min",
           "newtab-widget-timer-increase-min",
           "newtab-widget-timer-menu-button",
-          "newtab-widget-timer-mode-group",
           "newtab-widget-timer-notification-break",
           "newtab-widget-timer-notification-focus",
           "newtab-widget-timer-pause-aria",
-          "newtab-widget-timer-spinbutton-name",
           "newtab-widget-timer-start-aria"
         ]
       }
@@ -8257,6 +8254,7 @@
           "newtab-widget-lists-input-menu-move-down",
           "newtab-widget-lists-input-menu-move-up",
           "newtab-widget-lists-label-beta",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-delete",
           "newtab-widget-lists-menu-edit",
@@ -8871,6 +8869,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -9273,6 +9272,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -9571,6 +9571,7 @@
           "newtab-stocks-widget-menu-button",
           "newtab-stocks-widget-title",
           "newtab-widget-lists-input-menu-edit2",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-message-focus-forecasts-body",
           "newtab-widget-message-focus-forecasts-title",
           "newtab-widget-timer-celebration-heading-break",
@@ -10100,6 +10101,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -10677,6 +10679,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -11273,6 +11276,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -11888,6 +11892,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -11959,83 +11964,19 @@
       "errors": null,
       "missing": {
         "browser/newtab/newtab.ftl": [
-          "newtab-picture-attribution-author",
-          "newtab-picture-attribution-license",
-          "newtab-picture-attribution-source-link",
-          "newtab-picture-check-back",
-          "newtab-picture-image-alt",
-          "newtab-picture-menu-hide-photo",
-          "newtab-picture-menu-manage-wallpaper",
-          "newtab-picture-menu-show-photo",
-          "newtab-picture-set-wallpaper",
-          "newtab-picture-show-button",
-          "newtab-picture-widget-menu-button",
-          "newtab-privacy-across-sites",
-          "newtab-privacy-empty",
           "newtab-privacy-message-daily-cap",
-          "newtab-privacy-message-daily-cap-cta",
           "newtab-privacy-message-first-protection",
-          "newtab-privacy-message-first-protection-cta",
-          "newtab-privacy-message-info-1",
-          "newtab-privacy-message-info-1-cta",
-          "newtab-privacy-message-info-10",
-          "newtab-privacy-message-info-10-cta",
-          "newtab-privacy-message-info-11",
-          "newtab-privacy-message-info-11-cta",
-          "newtab-privacy-message-info-12",
-          "newtab-privacy-message-info-12-cta",
-          "newtab-privacy-message-info-13",
-          "newtab-privacy-message-info-13-cta",
-          "newtab-privacy-message-info-2",
-          "newtab-privacy-message-info-2-cta",
-          "newtab-privacy-message-info-3",
-          "newtab-privacy-message-info-3-cta",
-          "newtab-privacy-message-info-4",
-          "newtab-privacy-message-info-4-cta",
-          "newtab-privacy-message-info-5",
-          "newtab-privacy-message-info-5-cta",
-          "newtab-privacy-message-info-6",
-          "newtab-privacy-message-info-6-cta",
-          "newtab-privacy-message-info-7",
-          "newtab-privacy-message-info-7-cta",
-          "newtab-privacy-message-info-8",
-          "newtab-privacy-message-info-8-cta",
-          "newtab-privacy-message-info-9",
-          "newtab-privacy-message-info-9-cta",
           "newtab-privacy-message-milestone-month",
-          "newtab-privacy-message-milestone-month-cta",
           "newtab-privacy-message-milestone-total",
-          "newtab-privacy-message-milestone-total-cta",
           "newtab-privacy-message-milestone-week",
-          "newtab-privacy-message-milestone-week-cta",
           "newtab-privacy-message-milestone-year",
-          "newtab-privacy-message-milestone-year-cta",
-          "newtab-privacy-message-promo-monitor-1",
-          "newtab-privacy-message-promo-monitor-1-cta",
-          "newtab-privacy-message-promo-monitor-2",
-          "newtab-privacy-message-promo-monitor-2-cta",
-          "newtab-privacy-message-promo-private-window-1",
-          "newtab-privacy-message-promo-relay-1",
-          "newtab-privacy-message-promo-relay-3",
-          "newtab-privacy-message-promo-signin-1",
-          "newtab-privacy-message-promo-signin-1-cta",
-          "newtab-privacy-message-promo-vpn-1",
-          "newtab-privacy-message-promo-vpn-1-cta",
-          "newtab-privacy-message-promo-vpn-2",
-          "newtab-privacy-message-promo-vpn-2-cta",
-          "newtab-privacy-message-promo-vpn-3",
-          "newtab-privacy-message-promo-vpn-3-cta",
           "newtab-privacy-message-streak",
-          "newtab-privacy-message-streak-cta",
-          "newtab-privacy-trackers-blocked-today",
-          "newtab-shortcuts-pinned-area",
           "newtab-sports-widget-message-wallpapers-semifinals-body",
-          "newtab-sports-widget-message-wallpapers-semifinals-title",
           "newtab-stocks-ticker-status-down",
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title"
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
@@ -12049,7 +11990,8 @@
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title"
+          "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
@@ -12171,6 +12113,7 @@
           "newtab-stocks-widget-menu-button",
           "newtab-stocks-widget-title",
           "newtab-widget-lists-celebration-subhead",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-message-focus-forecasts-body",
           "newtab-widget-message-focus-forecasts-title",
           "newtab-widget-timer-celebration-heading-focus",
@@ -12184,7 +12127,11 @@
     },
     "de": {
       "errors": null,
-      "missing": null
+      "missing": {
+        "browser/newtab/newtab.ftl": [
+          "newtab-widget-lists-menu-button"
+        ]
+      }
     },
     "dsb": {
       "errors": null,
@@ -12222,7 +12169,8 @@
           "newtab-stocks-ticker-status-down",
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
-          "newtab-stocks-widget-menu-button"
+          "newtab-stocks-widget-menu-button",
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
@@ -12236,7 +12184,8 @@
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title"
+          "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
@@ -12345,13 +12294,18 @@
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
           "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-timer-menu-button"
         ]
       }
     },
     "en-GB": {
       "errors": null,
-      "missing": null
+      "missing": {
+        "browser/newtab/newtab.ftl": [
+          "newtab-widget-lists-menu-button"
+        ]
+      }
     },
     "en-US": {
       "errors": null,
@@ -12454,7 +12408,8 @@
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title"
+          "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
@@ -12483,6 +12438,7 @@
           "newtab-stocks-widget-menu-button",
           "newtab-stocks-widget-title",
           "newtab-wallpaper-feature-highlight-subtitle",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-message-focus-forecasts-body",
           "newtab-widget-message-focus-forecasts-title",
           "newtab-widget-timer-celebration-message-break",
@@ -12566,7 +12522,8 @@
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title"
+          "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
@@ -12675,6 +12632,7 @@
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
           "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-timer-menu-button"
         ]
       }
@@ -12777,7 +12735,8 @@
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title"
+          "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
@@ -13292,6 +13251,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -13461,7 +13421,8 @@
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title"
+          "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
@@ -13941,6 +13902,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -14538,6 +14500,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -14691,13 +14654,18 @@
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title"
+          "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
     "fr": {
       "errors": null,
-      "missing": null
+      "missing": {
+        "browser/newtab/newtab.ftl": [
+          "newtab-widget-lists-menu-button"
+        ]
+      }
     },
     "frp": {
       "errors": null,
@@ -15291,6 +15259,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -15461,6 +15430,7 @@
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
           "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-timer-menu-button"
         ]
       }
@@ -15475,7 +15445,8 @@
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title"
+          "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
@@ -15807,6 +15778,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -16373,6 +16345,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -16758,6 +16731,7 @@
           "newtab-widget-lists-input-menu-move-down",
           "newtab-widget-lists-input-menu-move-up",
           "newtab-widget-lists-input-menu-open-link",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-name-default",
           "newtab-widget-lists-name-label-checklist",
           "newtab-widget-lists-name-label-default",
@@ -16851,6 +16825,7 @@
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-widget-menu-button",
           "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-message-focus-forecasts-body"
         ]
       }
@@ -17390,6 +17365,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -18049,6 +18025,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -18124,7 +18101,8 @@
           "newtab-discovery-empty-section-topstories-header",
           "newtab-discovery-empty-section-topstories-timed-out",
           "newtab-menu-show-privacy-info",
-          "newtab-privacy-message-streak"
+          "newtab-privacy-message-streak",
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
@@ -18645,6 +18623,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -18960,6 +18939,7 @@
           "newtab-widget-lists-celebration-subhead",
           "newtab-widget-lists-edit-clear",
           "newtab-widget-lists-input-menu-edit2",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-name-default",
           "newtab-widget-lists-name-label-checklist",
           "newtab-widget-lists-name-placeholder-checklist2",
@@ -18993,19 +18973,9 @@
       "errors": null,
       "missing": {
         "browser/newtab/newtab.ftl": [
-          "newtab-privacy-message-daily-cap",
-          "newtab-privacy-message-first-protection",
-          "newtab-privacy-message-info-10",
-          "newtab-privacy-message-info-11",
-          "newtab-privacy-message-info-12",
           "newtab-privacy-message-info-13",
           "newtab-privacy-message-info-2",
           "newtab-privacy-message-info-3",
-          "newtab-privacy-message-info-4",
-          "newtab-privacy-message-info-5",
-          "newtab-privacy-message-info-6",
-          "newtab-privacy-message-info-8",
-          "newtab-privacy-message-info-9",
           "newtab-privacy-message-milestone-month",
           "newtab-privacy-message-milestone-total",
           "newtab-privacy-message-milestone-week",
@@ -19013,19 +18983,14 @@
           "newtab-privacy-message-promo-monitor-1",
           "newtab-privacy-message-promo-monitor-2",
           "newtab-privacy-message-promo-private-window-1",
-          "newtab-privacy-message-promo-relay-1",
           "newtab-privacy-message-promo-relay-2",
-          "newtab-privacy-message-promo-relay-3",
           "newtab-privacy-message-promo-signin-1",
           "newtab-privacy-message-promo-vpn-1",
           "newtab-privacy-message-promo-vpn-2",
           "newtab-privacy-message-promo-vpn-3",
           "newtab-sports-widget-message-survey-body",
           "newtab-sports-widget-message-survey-widget-body",
-          "newtab-stocks-ticker-status-down",
-          "newtab-stocks-ticker-status-flat",
-          "newtab-stocks-ticker-status-up",
-          "newtab-stocks-widget-menu-button"
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
@@ -19111,7 +19076,8 @@
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title"
+          "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
@@ -19274,6 +19240,7 @@
           "newtab-weather-change-location-search-use-current",
           "newtab-weather-opt-in-headline",
           "newtab-widget-lists-edit-clear",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-message-copy",
           "newtab-widget-message-focus-forecasts-body",
           "newtab-widget-message-focus-forecasts-title",
@@ -19800,6 +19767,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -19869,7 +19837,11 @@
     },
     "ia": {
       "errors": null,
-      "missing": null
+      "missing": {
+        "browser/newtab/newtab.ftl": [
+          "newtab-widget-lists-menu-button"
+        ]
+      }
     },
     "id": {
       "errors": null,
@@ -20196,6 +20168,7 @@
           "newtab-widget-lists-input-add-an-item2",
           "newtab-widget-lists-input-error",
           "newtab-widget-lists-input-menu-edit2",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-name-default",
           "newtab-widget-lists-name-label-checklist",
           "newtab-widget-lists-name-placeholder-checklist2",
@@ -20546,6 +20519,7 @@
           "newtab-widget-lists-celebration-subhead",
           "newtab-widget-lists-edit-clear",
           "newtab-widget-lists-input-menu-edit2",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-name-default",
           "newtab-widget-lists-name-label-checklist",
           "newtab-widget-lists-name-placeholder-checklist2",
@@ -21131,6 +21105,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -21295,7 +21270,8 @@
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title"
+          "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
@@ -21396,7 +21372,8 @@
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title"
+          "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
@@ -21404,71 +21381,33 @@
       "errors": null,
       "missing": {
         "browser/newtab/newtab.ftl": [
-          "home-prefs-picture-header",
-          "home-prefs-privacy-header",
-          "home-prefs-stocks-header",
           "newtab-custom-widget-picture-toggle",
           "newtab-custom-widget-privacy-toggle",
           "newtab-custom-widget-stocks-toggle",
           "newtab-picture-attribution-author",
           "newtab-picture-attribution-license",
           "newtab-picture-attribution-source-link",
-          "newtab-picture-check-back",
-          "newtab-picture-header",
           "newtab-picture-header-main",
-          "newtab-picture-image-alt",
-          "newtab-picture-menu-hide-photo",
-          "newtab-picture-menu-learn-more",
-          "newtab-picture-menu-manage-wallpaper",
-          "newtab-picture-menu-show-photo",
-          "newtab-picture-set-wallpaper",
-          "newtab-picture-show-button",
           "newtab-picture-widget-menu-button",
-          "newtab-privacy-across-sites",
-          "newtab-privacy-empty",
-          "newtab-privacy-menu-learn-more",
           "newtab-privacy-message-daily-cap",
-          "newtab-privacy-message-daily-cap-cta",
           "newtab-privacy-message-first-protection",
-          "newtab-privacy-message-first-protection-cta",
-          "newtab-privacy-message-info-1",
-          "newtab-privacy-message-info-1-cta",
           "newtab-privacy-message-info-10",
-          "newtab-privacy-message-info-10-cta",
           "newtab-privacy-message-info-11",
-          "newtab-privacy-message-info-11-cta",
           "newtab-privacy-message-info-12",
-          "newtab-privacy-message-info-12-cta",
           "newtab-privacy-message-info-13",
-          "newtab-privacy-message-info-13-cta",
           "newtab-privacy-message-info-2",
-          "newtab-privacy-message-info-2-cta",
           "newtab-privacy-message-info-3",
-          "newtab-privacy-message-info-3-cta",
           "newtab-privacy-message-info-4",
-          "newtab-privacy-message-info-4-cta",
           "newtab-privacy-message-info-5",
-          "newtab-privacy-message-info-5-cta",
           "newtab-privacy-message-info-6",
-          "newtab-privacy-message-info-6-cta",
-          "newtab-privacy-message-info-7",
-          "newtab-privacy-message-info-7-cta",
           "newtab-privacy-message-info-8",
-          "newtab-privacy-message-info-8-cta",
           "newtab-privacy-message-info-9",
-          "newtab-privacy-message-info-9-cta",
           "newtab-privacy-message-milestone-month",
-          "newtab-privacy-message-milestone-month-cta",
           "newtab-privacy-message-milestone-total",
-          "newtab-privacy-message-milestone-total-cta",
           "newtab-privacy-message-milestone-week",
-          "newtab-privacy-message-milestone-week-cta",
           "newtab-privacy-message-milestone-year",
-          "newtab-privacy-message-milestone-year-cta",
           "newtab-privacy-message-promo-monitor-1",
-          "newtab-privacy-message-promo-monitor-1-cta",
           "newtab-privacy-message-promo-monitor-2",
-          "newtab-privacy-message-promo-monitor-2-cta",
           "newtab-privacy-message-promo-private-window-1",
           "newtab-privacy-message-promo-private-window-1-cta",
           "newtab-privacy-message-promo-relay-1",
@@ -21486,9 +21425,6 @@
           "newtab-privacy-message-promo-vpn-3",
           "newtab-privacy-message-promo-vpn-3-cta",
           "newtab-privacy-message-streak",
-          "newtab-privacy-message-streak-cta",
-          "newtab-privacy-trackers-blocked-today",
-          "newtab-shortcuts-pinned-area",
           "newtab-sports-widget-loading-more",
           "newtab-sports-widget-match-extra-time",
           "newtab-sports-widget-match-halftime",
@@ -21506,13 +21442,13 @@
           "newtab-sports-widget-pagination-previous",
           "newtab-sports-widget-team-tbd",
           "newtab-sports-widget-world-cup-champions-short",
-          "newtab-stocks-menu-learn-more",
           "newtab-stocks-menu-search",
           "newtab-stocks-ticker-status-down",
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
           "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-timer-menu-button"
         ]
       }
@@ -21897,6 +21833,7 @@
           "newtab-widget-lists-input-menu-delete",
           "newtab-widget-lists-input-menu-edit",
           "newtab-widget-lists-input-menu-edit2",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-name-default",
           "newtab-widget-lists-name-label-checklist",
           "newtab-widget-lists-name-label-default",
@@ -21952,79 +21889,7 @@
       "errors": null,
       "missing": {
         "browser/newtab/newtab.ftl": [
-          "newtab-picture-attribution-author",
-          "newtab-picture-attribution-license",
-          "newtab-picture-attribution-source-link",
-          "newtab-picture-header-main",
-          "newtab-picture-widget-menu-button",
-          "newtab-privacy-across-sites",
-          "newtab-privacy-empty",
-          "newtab-privacy-message-daily-cap",
-          "newtab-privacy-message-daily-cap-cta",
-          "newtab-privacy-message-first-protection",
-          "newtab-privacy-message-first-protection-cta",
-          "newtab-privacy-message-info-1",
-          "newtab-privacy-message-info-1-cta",
-          "newtab-privacy-message-info-10",
-          "newtab-privacy-message-info-10-cta",
-          "newtab-privacy-message-info-11",
-          "newtab-privacy-message-info-11-cta",
-          "newtab-privacy-message-info-12",
-          "newtab-privacy-message-info-12-cta",
-          "newtab-privacy-message-info-13",
-          "newtab-privacy-message-info-13-cta",
-          "newtab-privacy-message-info-2",
-          "newtab-privacy-message-info-2-cta",
-          "newtab-privacy-message-info-3",
-          "newtab-privacy-message-info-3-cta",
-          "newtab-privacy-message-info-4",
-          "newtab-privacy-message-info-4-cta",
-          "newtab-privacy-message-info-5",
-          "newtab-privacy-message-info-5-cta",
-          "newtab-privacy-message-info-6",
-          "newtab-privacy-message-info-6-cta",
-          "newtab-privacy-message-info-7",
-          "newtab-privacy-message-info-7-cta",
-          "newtab-privacy-message-info-8",
-          "newtab-privacy-message-info-8-cta",
-          "newtab-privacy-message-info-9",
-          "newtab-privacy-message-info-9-cta",
-          "newtab-privacy-message-milestone-month",
-          "newtab-privacy-message-milestone-month-cta",
-          "newtab-privacy-message-milestone-total",
-          "newtab-privacy-message-milestone-total-cta",
-          "newtab-privacy-message-milestone-week",
-          "newtab-privacy-message-milestone-week-cta",
-          "newtab-privacy-message-milestone-year",
-          "newtab-privacy-message-milestone-year-cta",
-          "newtab-privacy-message-promo-monitor-1",
-          "newtab-privacy-message-promo-monitor-1-cta",
-          "newtab-privacy-message-promo-monitor-2",
-          "newtab-privacy-message-promo-monitor-2-cta",
-          "newtab-privacy-message-promo-private-window-1",
-          "newtab-privacy-message-promo-private-window-1-cta",
-          "newtab-privacy-message-promo-relay-1",
-          "newtab-privacy-message-promo-relay-1-cta",
-          "newtab-privacy-message-promo-relay-2",
-          "newtab-privacy-message-promo-relay-2-cta",
-          "newtab-privacy-message-promo-relay-3",
-          "newtab-privacy-message-promo-relay-3-cta",
-          "newtab-privacy-message-promo-signin-1",
-          "newtab-privacy-message-promo-signin-1-cta",
-          "newtab-privacy-message-promo-vpn-1",
-          "newtab-privacy-message-promo-vpn-1-cta",
-          "newtab-privacy-message-promo-vpn-2",
-          "newtab-privacy-message-promo-vpn-2-cta",
-          "newtab-privacy-message-promo-vpn-3",
-          "newtab-privacy-message-promo-vpn-3-cta",
-          "newtab-privacy-message-streak",
-          "newtab-privacy-message-streak-cta",
-          "newtab-privacy-trackers-blocked-today",
-          "newtab-stocks-ticker-status-down",
-          "newtab-stocks-ticker-status-flat",
-          "newtab-stocks-ticker-status-up",
-          "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title"
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
@@ -22553,6 +22418,7 @@
           "newtab-widget-lists-input-menu-move-up",
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-edit",
@@ -23169,6 +23035,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -23238,7 +23105,11 @@
     },
     "ko": {
       "errors": null,
-      "missing": null
+      "missing": {
+        "browser/newtab/newtab.ftl": [
+          "newtab-widget-lists-menu-button"
+        ]
+      }
     },
     "ks": {
       "errors": null,
@@ -23833,6 +23704,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -24490,6 +24362,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -25150,6 +25023,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -25752,6 +25626,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -26329,6 +26204,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -26906,6 +26782,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -27507,6 +27384,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -27675,9 +27553,7 @@
           "newtab-new-user-custom-wallpaper-cta",
           "newtab-new-user-custom-wallpaper-subtitle",
           "newtab-new-user-custom-wallpaper-title",
-          "newtab-picture-attribution-author",
           "newtab-picture-attribution-license",
-          "newtab-picture-attribution-source-link",
           "newtab-picture-check-back",
           "newtab-picture-header",
           "newtab-picture-header-main",
@@ -27910,11 +27786,6 @@
           "newtab-sports-widget-world-cup-champions-short",
           "newtab-stocks-menu-learn-more",
           "newtab-stocks-menu-search",
-          "newtab-stocks-ticker-status-down",
-          "newtab-stocks-ticker-status-flat",
-          "newtab-stocks-ticker-status-up",
-          "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title",
           "newtab-toast-thanks-for-reporting",
           "newtab-toast-widgets-hidden",
           "newtab-topsites-clear-input",
@@ -27976,6 +27847,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -28590,6 +28462,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -29170,6 +29043,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -29788,6 +29662,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -30392,6 +30267,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -30827,6 +30703,7 @@
           "newtab-widget-lists-empty-cta",
           "newtab-widget-lists-input-error",
           "newtab-widget-lists-input-menu-edit2",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -31424,6 +31301,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -32031,6 +31909,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -32641,6 +32520,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -32782,7 +32662,8 @@
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title"
+          "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
@@ -33329,6 +33210,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -33406,7 +33288,8 @@
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title"
+          "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
@@ -33414,49 +33297,14 @@
       "errors": null,
       "missing": {
         "browser/newtab/newtab.ftl": [
-          "newtab-picture-attribution-author",
-          "newtab-picture-attribution-license",
-          "newtab-picture-widget-menu-button",
-          "newtab-privacy-empty",
-          "newtab-privacy-message-daily-cap",
-          "newtab-privacy-message-daily-cap-cta",
-          "newtab-privacy-message-first-protection",
-          "newtab-privacy-message-first-protection-cta",
-          "newtab-privacy-message-info-1",
-          "newtab-privacy-message-info-10",
-          "newtab-privacy-message-info-11",
-          "newtab-privacy-message-info-12",
-          "newtab-privacy-message-info-13",
-          "newtab-privacy-message-info-2",
-          "newtab-privacy-message-info-3",
-          "newtab-privacy-message-info-4",
-          "newtab-privacy-message-info-5",
-          "newtab-privacy-message-info-6",
-          "newtab-privacy-message-info-8",
           "newtab-privacy-message-info-9",
           "newtab-privacy-message-milestone-month",
           "newtab-privacy-message-milestone-total",
           "newtab-privacy-message-milestone-week",
           "newtab-privacy-message-milestone-year",
-          "newtab-privacy-message-promo-monitor-1",
-          "newtab-privacy-message-promo-monitor-2",
-          "newtab-privacy-message-promo-private-window-1",
-          "newtab-privacy-message-promo-private-window-1-cta",
           "newtab-privacy-message-promo-relay-1",
-          "newtab-privacy-message-promo-relay-2",
-          "newtab-privacy-message-promo-relay-2-cta",
-          "newtab-privacy-message-promo-relay-3",
-          "newtab-privacy-message-promo-signin-1",
-          "newtab-privacy-message-promo-vpn-1",
-          "newtab-privacy-message-promo-vpn-2",
-          "newtab-privacy-message-promo-vpn-3",
           "newtab-privacy-message-streak",
-          "newtab-privacy-message-streak-cta",
-          "newtab-stocks-ticker-status-down",
-          "newtab-stocks-ticker-status-flat",
-          "newtab-stocks-ticker-status-up",
-          "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title"
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
@@ -33875,6 +33723,7 @@
           "newtab-widget-lists-input-menu-move-up",
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-delete",
           "newtab-widget-lists-menu-edit",
@@ -34485,6 +34334,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -34571,7 +34421,8 @@
           "newtab-sports-widget-message-survey-cta",
           "newtab-sports-widget-message-survey-title",
           "newtab-sports-widget-message-survey-widget-body",
-          "newtab-sports-widget-message-survey-widget-title"
+          "newtab-sports-widget-message-survey-widget-title",
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
@@ -35165,6 +35016,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -35236,29 +35088,9 @@
       "errors": null,
       "missing": {
         "browser/newtab/newtab.ftl": [
-          "home-prefs-picture-header",
-          "home-prefs-privacy-header",
-          "home-prefs-stocks-header",
-          "newtab-custom-widget-picture-toggle",
-          "newtab-custom-widget-privacy-toggle",
-          "newtab-custom-widget-stocks-toggle",
-          "newtab-picture-attribution-author",
-          "newtab-picture-attribution-license",
-          "newtab-picture-attribution-source-link",
           "newtab-picture-check-back",
-          "newtab-picture-header",
-          "newtab-picture-header-main",
-          "newtab-picture-image-alt",
-          "newtab-picture-menu-hide-photo",
-          "newtab-picture-menu-learn-more",
-          "newtab-picture-menu-manage-wallpaper",
-          "newtab-picture-menu-show-photo",
-          "newtab-picture-set-wallpaper",
-          "newtab-picture-show-button",
-          "newtab-picture-widget-menu-button",
           "newtab-privacy-across-sites",
           "newtab-privacy-empty",
-          "newtab-privacy-menu-learn-more",
           "newtab-privacy-message-daily-cap",
           "newtab-privacy-message-daily-cap-cta",
           "newtab-privacy-message-first-protection",
@@ -35268,7 +35100,6 @@
           "newtab-privacy-message-info-10",
           "newtab-privacy-message-info-10-cta",
           "newtab-privacy-message-info-11",
-          "newtab-privacy-message-info-11-cta",
           "newtab-privacy-message-info-12",
           "newtab-privacy-message-info-12-cta",
           "newtab-privacy-message-info-13",
@@ -35282,11 +35113,9 @@
           "newtab-privacy-message-info-5",
           "newtab-privacy-message-info-5-cta",
           "newtab-privacy-message-info-6",
-          "newtab-privacy-message-info-6-cta",
           "newtab-privacy-message-info-7",
           "newtab-privacy-message-info-7-cta",
           "newtab-privacy-message-info-8",
-          "newtab-privacy-message-info-8-cta",
           "newtab-privacy-message-info-9",
           "newtab-privacy-message-info-9-cta",
           "newtab-privacy-message-milestone-month",
@@ -35298,11 +35127,8 @@
           "newtab-privacy-message-milestone-year",
           "newtab-privacy-message-milestone-year-cta",
           "newtab-privacy-message-promo-monitor-1",
-          "newtab-privacy-message-promo-monitor-1-cta",
           "newtab-privacy-message-promo-monitor-2",
-          "newtab-privacy-message-promo-monitor-2-cta",
           "newtab-privacy-message-promo-private-window-1",
-          "newtab-privacy-message-promo-private-window-1-cta",
           "newtab-privacy-message-promo-relay-1",
           "newtab-privacy-message-promo-relay-1-cta",
           "newtab-privacy-message-promo-relay-2",
@@ -35310,38 +35136,33 @@
           "newtab-privacy-message-promo-relay-3",
           "newtab-privacy-message-promo-relay-3-cta",
           "newtab-privacy-message-promo-signin-1",
-          "newtab-privacy-message-promo-signin-1-cta",
           "newtab-privacy-message-promo-vpn-1",
-          "newtab-privacy-message-promo-vpn-1-cta",
           "newtab-privacy-message-promo-vpn-2",
-          "newtab-privacy-message-promo-vpn-2-cta",
           "newtab-privacy-message-promo-vpn-3",
-          "newtab-privacy-message-promo-vpn-3-cta",
           "newtab-privacy-message-streak",
           "newtab-privacy-message-streak-cta",
           "newtab-privacy-trackers-blocked-today",
           "newtab-shortcuts-pinned-area",
           "newtab-sports-widget-message-survey-body",
-          "newtab-sports-widget-message-survey-cta",
           "newtab-sports-widget-message-survey-title",
           "newtab-sports-widget-message-survey-widget-body",
           "newtab-sports-widget-message-survey-widget-title",
           "newtab-sports-widget-message-wallpapers-semifinals-body",
-          "newtab-sports-widget-message-wallpapers-semifinals-title",
-          "newtab-stocks-menu-learn-more",
           "newtab-stocks-menu-search",
           "newtab-stocks-ticker-status-down",
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
-          "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title",
-          "newtab-widget-timer-menu-button"
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
     "pt-BR": {
       "errors": null,
-      "missing": null
+      "missing": {
+        "browser/newtab/newtab.ftl": [
+          "newtab-widget-lists-menu-button"
+        ]
+      }
     },
     "pt-PT": {
       "errors": null,
@@ -35520,6 +35341,7 @@
           "newtab-stocks-widget-title",
           "newtab-widget-add-widgets-button",
           "newtab-widget-lists-edit-clear",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-menu-move",
           "newtab-widget-menu-move-left",
           "newtab-widget-menu-move-right",
@@ -35817,6 +35639,7 @@
           "newtab-widget-lists-celebration-subhead",
           "newtab-widget-lists-edit-clear",
           "newtab-widget-lists-input-menu-edit2",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-name-default",
           "newtab-widget-lists-name-label-checklist",
           "newtab-widget-lists-name-placeholder-checklist2",
@@ -35864,13 +35687,18 @@
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title"
+          "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
     "ru": {
       "errors": null,
-      "missing": null
+      "missing": {
+        "browser/newtab/newtab.ftl": [
+          "newtab-widget-lists-menu-button"
+        ]
+      }
     },
     "sat": {
       "errors": null,
@@ -36278,6 +36106,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -36628,6 +36457,7 @@
           "newtab-widget-lists-celebration-subhead",
           "newtab-widget-lists-edit-clear",
           "newtab-widget-lists-input-menu-edit2",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-name-default",
           "newtab-widget-lists-name-label-checklist",
           "newtab-widget-lists-name-placeholder-checklist2",
@@ -37194,6 +37024,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -37772,6 +37603,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -38319,6 +38151,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -38473,7 +38306,8 @@
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title"
+          "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
@@ -38885,6 +38719,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -38956,153 +38791,65 @@
       "errors": null,
       "missing": {
         "browser/newtab/newtab.ftl": [
-          "home-prefs-firefox-home-disabled-notice",
-          "home-prefs-picture-header",
-          "home-prefs-stocks-header",
           "newtab-activation-window-message-values-focus-message",
           "newtab-clock-widget-edit-item-with-nickname",
           "newtab-clock-widget-input-nickname",
           "newtab-clock-widget-label-nickname-with-value",
           "newtab-clock-widget-search-location-input",
-          "newtab-custom-widget-picture-toggle",
-          "newtab-custom-widget-stocks-toggle",
-          "newtab-picture-attribution-author",
-          "newtab-picture-attribution-license",
-          "newtab-picture-attribution-source-link",
           "newtab-picture-check-back",
-          "newtab-picture-header",
-          "newtab-picture-header-main",
-          "newtab-picture-image-alt",
-          "newtab-picture-menu-hide-photo",
-          "newtab-picture-menu-learn-more",
-          "newtab-picture-menu-manage-wallpaper",
-          "newtab-picture-menu-show-photo",
-          "newtab-picture-set-wallpaper",
-          "newtab-picture-show-button",
-          "newtab-picture-widget-menu-button",
-          "newtab-privacy-across-sites",
           "newtab-privacy-empty",
-          "newtab-privacy-message-daily-cap",
-          "newtab-privacy-message-daily-cap-cta",
           "newtab-privacy-message-first-protection",
-          "newtab-privacy-message-first-protection-cta",
           "newtab-privacy-message-info-1",
-          "newtab-privacy-message-info-1-cta",
           "newtab-privacy-message-info-10",
-          "newtab-privacy-message-info-10-cta",
-          "newtab-privacy-message-info-11",
-          "newtab-privacy-message-info-11-cta",
-          "newtab-privacy-message-info-12",
-          "newtab-privacy-message-info-12-cta",
           "newtab-privacy-message-info-13",
-          "newtab-privacy-message-info-13-cta",
-          "newtab-privacy-message-info-2",
-          "newtab-privacy-message-info-2-cta",
           "newtab-privacy-message-info-3",
-          "newtab-privacy-message-info-3-cta",
           "newtab-privacy-message-info-4",
-          "newtab-privacy-message-info-4-cta",
           "newtab-privacy-message-info-5",
-          "newtab-privacy-message-info-5-cta",
           "newtab-privacy-message-info-6",
-          "newtab-privacy-message-info-6-cta",
-          "newtab-privacy-message-info-7",
-          "newtab-privacy-message-info-7-cta",
           "newtab-privacy-message-info-8",
-          "newtab-privacy-message-info-8-cta",
           "newtab-privacy-message-info-9",
-          "newtab-privacy-message-info-9-cta",
           "newtab-privacy-message-milestone-month",
-          "newtab-privacy-message-milestone-month-cta",
           "newtab-privacy-message-milestone-total",
-          "newtab-privacy-message-milestone-total-cta",
           "newtab-privacy-message-milestone-week",
-          "newtab-privacy-message-milestone-week-cta",
           "newtab-privacy-message-milestone-year",
-          "newtab-privacy-message-milestone-year-cta",
           "newtab-privacy-message-promo-monitor-1",
-          "newtab-privacy-message-promo-monitor-1-cta",
           "newtab-privacy-message-promo-monitor-2",
-          "newtab-privacy-message-promo-monitor-2-cta",
           "newtab-privacy-message-promo-private-window-1",
-          "newtab-privacy-message-promo-private-window-1-cta",
           "newtab-privacy-message-promo-relay-1",
-          "newtab-privacy-message-promo-relay-1-cta",
-          "newtab-privacy-message-promo-relay-2",
-          "newtab-privacy-message-promo-relay-2-cta",
           "newtab-privacy-message-promo-relay-3",
-          "newtab-privacy-message-promo-relay-3-cta",
           "newtab-privacy-message-promo-signin-1",
-          "newtab-privacy-message-promo-signin-1-cta",
-          "newtab-privacy-message-promo-vpn-1",
-          "newtab-privacy-message-promo-vpn-1-cta",
-          "newtab-privacy-message-promo-vpn-2",
-          "newtab-privacy-message-promo-vpn-2-cta",
           "newtab-privacy-message-promo-vpn-3",
-          "newtab-privacy-message-promo-vpn-3-cta",
           "newtab-privacy-message-streak",
-          "newtab-privacy-message-streak-cta",
-          "newtab-privacy-trackers-blocked-today",
-          "newtab-promo-card-body-addons",
-          "newtab-promo-card-title-addons",
-          "newtab-section-block-topic",
-          "newtab-section-follow-topic",
-          "newtab-section-unfollow-button-label",
-          "newtab-section-unfollow-topic",
-          "newtab-shortcuts-pinned-area",
           "newtab-sports-widget-delayed",
-          "newtab-sports-widget-done-button",
-          "newtab-sports-widget-follow-teams",
-          "newtab-sports-widget-follow-teams-title",
-          "newtab-sports-widget-followed-only-toggle",
-          "newtab-sports-widget-loading-more",
           "newtab-sports-widget-match-aria-label-upcoming-delayed",
           "newtab-sports-widget-match-aria-label-upcoming-postponed",
           "newtab-sports-widget-match-aria-label-upcoming-suspended",
-          "newtab-sports-widget-match-full-time",
-          "newtab-sports-widget-match-time",
-          "newtab-sports-widget-menu-follow-teams",
-          "newtab-sports-widget-menu-view-upcoming",
           "newtab-sports-widget-message-day-in-play-body",
           "newtab-sports-widget-message-day-in-play-title",
-          "newtab-sports-widget-message-survey-body",
-          "newtab-sports-widget-message-survey-cta",
-          "newtab-sports-widget-message-survey-title",
           "newtab-sports-widget-message-survey-widget-body",
-          "newtab-sports-widget-message-survey-widget-title",
           "newtab-sports-widget-message-wallpapers-body",
           "newtab-sports-widget-message-wallpapers-cta",
           "newtab-sports-widget-message-wallpapers-semifinals-body",
           "newtab-sports-widget-message-wallpapers-semifinals-title",
           "newtab-sports-widget-message-wallpapers-title",
           "newtab-sports-widget-no-live-data",
-          "newtab-sports-widget-no-upcoming-matches",
           "newtab-sports-widget-now",
           "newtab-sports-widget-pagination-dot",
-          "newtab-sports-widget-team-tbd",
-          "newtab-sports-widget-view-matches",
-          "newtab-sports-widget-watch",
           "newtab-sports-widget-watch-available-other-regions",
           "newtab-sports-widget-watch-available-region",
           "newtab-sports-widget-watch-play",
-          "newtab-sports-widget-watch-stream-free",
           "newtab-sports-widget-watch-stream-free-paid",
           "newtab-sports-widget-watch-stream-free-trial",
           "newtab-sports-widget-watch-stream-paid",
           "newtab-sports-widget-watch-stream-select-games-only",
-          "newtab-stocks-menu-learn-more",
           "newtab-stocks-menu-search",
           "newtab-stocks-ticker-status-down",
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
-          "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title",
-          "newtab-wallpaper-feature-highlight-cta",
           "newtab-wallpaper-feature-highlight-subtitle",
-          "newtab-wallpaper-feature-highlight-title",
-          "newtab-weather-opt-in-choose-location",
           "newtab-weather-opt-in-headline",
           "newtab-weather-opt-in-see-weather",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-name-default",
           "newtab-widget-lists-name-label-checklist",
           "newtab-widget-lists-name-placeholder-checklist2",
@@ -39711,6 +39458,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -40043,6 +39791,7 @@
           "newtab-widget-lists-celebration-subhead",
           "newtab-widget-lists-edit-clear",
           "newtab-widget-lists-input-menu-edit2",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-name-default",
           "newtab-widget-lists-name-label-checklist",
           "newtab-widget-lists-name-placeholder-checklist2",
@@ -40078,11 +39827,19 @@
     },
     "sr": {
       "errors": null,
-      "missing": null
+      "missing": {
+        "browser/newtab/newtab.ftl": [
+          "newtab-widget-lists-menu-button"
+        ]
+      }
     },
     "sv-SE": {
       "errors": null,
-      "missing": null
+      "missing": {
+        "browser/newtab/newtab.ftl": [
+          "newtab-widget-lists-menu-button"
+        ]
+      }
     },
     "sw": {
       "errors": null,
@@ -40677,6 +40434,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -41255,6 +41013,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -41857,6 +41616,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -42393,6 +42153,7 @@
           "newtab-widget-lists-input-menu-move-down",
           "newtab-widget-lists-input-menu-move-up",
           "newtab-widget-lists-input-menu-open-link",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -42647,6 +42408,7 @@
           "newtab-wallpaper-feature-highlight-title",
           "newtab-weather-opt-in-headline",
           "newtab-widget-lists-celebration-subhead",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-name-default",
           "newtab-widget-lists-name-label-checklist",
           "newtab-widget-lists-name-placeholder-checklist2",
@@ -42775,6 +42537,7 @@
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
           "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-timer-menu-button"
         ]
       }
@@ -43297,6 +43060,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -43382,43 +43146,27 @@
           "newtab-privacy-message-info-1",
           "newtab-privacy-message-info-1-cta",
           "newtab-privacy-message-info-10",
-          "newtab-privacy-message-info-10-cta",
           "newtab-privacy-message-info-11",
-          "newtab-privacy-message-info-11-cta",
           "newtab-privacy-message-info-12",
-          "newtab-privacy-message-info-12-cta",
           "newtab-privacy-message-info-13",
-          "newtab-privacy-message-info-13-cta",
           "newtab-privacy-message-info-2",
-          "newtab-privacy-message-info-2-cta",
           "newtab-privacy-message-info-3",
-          "newtab-privacy-message-info-3-cta",
           "newtab-privacy-message-info-4",
-          "newtab-privacy-message-info-4-cta",
           "newtab-privacy-message-info-5",
-          "newtab-privacy-message-info-5-cta",
           "newtab-privacy-message-info-6",
-          "newtab-privacy-message-info-6-cta",
           "newtab-privacy-message-info-7",
-          "newtab-privacy-message-info-7-cta",
           "newtab-privacy-message-info-8",
-          "newtab-privacy-message-info-8-cta",
           "newtab-privacy-message-info-9",
-          "newtab-privacy-message-info-9-cta",
           "newtab-privacy-message-milestone-month",
           "newtab-privacy-message-milestone-month-cta",
           "newtab-privacy-message-milestone-total",
           "newtab-privacy-message-milestone-total-cta",
           "newtab-privacy-message-milestone-week",
-          "newtab-privacy-message-milestone-week-cta",
           "newtab-privacy-message-milestone-year",
           "newtab-privacy-message-milestone-year-cta",
           "newtab-privacy-message-promo-monitor-1",
-          "newtab-privacy-message-promo-monitor-1-cta",
           "newtab-privacy-message-promo-monitor-2",
-          "newtab-privacy-message-promo-monitor-2-cta",
           "newtab-privacy-message-promo-private-window-1",
-          "newtab-privacy-message-promo-private-window-1-cta",
           "newtab-privacy-message-promo-relay-1",
           "newtab-privacy-message-promo-relay-1-cta",
           "newtab-privacy-message-promo-relay-2",
@@ -43426,13 +43174,9 @@
           "newtab-privacy-message-promo-relay-3",
           "newtab-privacy-message-promo-relay-3-cta",
           "newtab-privacy-message-promo-signin-1",
-          "newtab-privacy-message-promo-signin-1-cta",
           "newtab-privacy-message-promo-vpn-1",
-          "newtab-privacy-message-promo-vpn-1-cta",
           "newtab-privacy-message-promo-vpn-2",
-          "newtab-privacy-message-promo-vpn-2-cta",
           "newtab-privacy-message-promo-vpn-3",
-          "newtab-privacy-message-promo-vpn-3-cta",
           "newtab-privacy-message-streak",
           "newtab-privacy-message-streak-cta",
           "newtab-privacy-trackers-blocked-today",
@@ -43440,7 +43184,8 @@
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title"
+          "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
@@ -43977,6 +43722,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -44276,6 +44022,7 @@
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
           "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-message-focus-forecasts-body",
           "newtab-widget-message-focus-forecasts-title",
           "newtab-widget-section-show-less",
@@ -44812,6 +44559,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -45396,6 +45144,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -45465,7 +45214,11 @@
     },
     "vi": {
       "errors": null,
-      "missing": null
+      "missing": {
+        "browser/newtab/newtab.ftl": [
+          "newtab-widget-lists-menu-button"
+        ]
+      }
     },
     "wo": {
       "errors": null,
@@ -46060,6 +45813,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -46720,6 +46474,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -47380,6 +47135,7 @@
           "newtab-widget-lists-input-menu-open-link",
           "newtab-widget-lists-label-beta",
           "newtab-widget-lists-label-new",
+          "newtab-widget-lists-menu-button",
           "newtab-widget-lists-menu-copy",
           "newtab-widget-lists-menu-create",
           "newtab-widget-lists-menu-delete",
@@ -47542,13 +47298,18 @@
           "newtab-stocks-ticker-status-flat",
           "newtab-stocks-ticker-status-up",
           "newtab-stocks-widget-menu-button",
-          "newtab-stocks-widget-title"
+          "newtab-stocks-widget-title",
+          "newtab-widget-lists-menu-button"
         ]
       }
     },
     "zh-TW": {
       "errors": null,
-      "missing": null
+      "missing": {
+        "browser/newtab/newtab.ftl": [
+          "newtab-widget-lists-menu-button"
+        ]
+      }
     }
   },
   "message_dates": {
@@ -48141,6 +47902,7 @@
     "newtab-widget-lists-input-menu-open-link": "2025-08-06T13:12:52",
     "newtab-widget-lists-label-beta": "2025-08-12T16:53:56",
     "newtab-widget-lists-label-new": "2025-08-12T16:53:56",
+    "newtab-widget-lists-menu-button": "2026-07-10T09:25:18",
     "newtab-widget-lists-menu-copy": "2025-08-06T13:12:52",
     "newtab-widget-lists-menu-create": "2025-08-06T13:12:52",
     "newtab-widget-lists-menu-delete": "2025-08-06T13:12:52",
@@ -48208,7 +47970,7 @@
   },
   "meta": {
     "repository": "https://github.com/mozilla-l10n/firefox-l10n.git",
-    "revision": "0fa3723160a196d0044141df43dcc4cdc2d00313",
-    "updated": "2026-07-12T01:52:06.891162"
+    "revision": "f1e804f52c41caf31febaa3cbd838b54889769ec",
+    "updated": "2026-07-12T21:49:56.541058"
   }
 }

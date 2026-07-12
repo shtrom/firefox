@@ -175,16 +175,132 @@ home-prefs-mission-message-learn-more-link-srd = Zjistěte jak
 # Context menu item linking to more information about the Privacy widget.
 newtab-privacy-menu-learn-more = Zjistit více
 
+## Privacy widget — count readout
+
+# Label shown under the large tracker-count number, appearing like:
+# Line 1: 86
+# Line 2: Trackers blocked today
+# Translations can be adjusted to "Today's blocked trackers" or something
+# similar if this fixed order causes issues.
+# Variables:
+#   $count (number) - Number of trackers blocked today
+newtab-privacy-trackers-blocked-today =
+    { $count ->
+        [one] dnes zablokovaný sledovací prvek
+        [few] dnes zablokované sledovací prvky
+        [many] dnes zablokovaných sledovacích prvků
+       *[other] dnes zablokovaných sledovacích prvků
+    }
+# Second line of the readout, under the large number and "Trackers blocked
+# today". Counts the sites those trackers were blocked on. The English is
+# shortened from "Blocked across { $count } sites" — translate it that fuller way
+# if the short fragment doesn't work in your language.
+# Variables:
+#   $count (number) - Number of sites where trackers were blocked
+newtab-privacy-across-sites =
+    { $count ->
+        [one] napříč { $count } stránkou
+        [few] napříč { $count } stránkami
+        [many] napříč { $count } stránkami
+       *[other] napříč { $count } stránkami
+    }
+
+## Privacy widget — empty state
+
+# Shown when no trackers have been blocked yet today.
+newtab-privacy-empty = { -brand-short-name } blokuje sledovací prvky při prohlížení webu. Uvidíte je zde.
+
+## Privacy widget — informational messages
+##
+## Rotating "info" secondary messages. Each message has a body plus a matched
+## "-cta" button label sharing the same id stem (the CTA button isn't rendered
+## yet; the labels are authored so the pairing is ready).
+
+newtab-privacy-message-info-1 = { -brand-short-name } automaticky blokuje sledovací prvky během vašeho prohlížení.
+newtab-privacy-message-info-1-cta = Zobrazit ochrany
+newtab-privacy-message-info-2 = Blokování sledovacích prvků pomáhá zabránit společnostem, aby vás na internetu sledovaly.
+newtab-privacy-message-info-2-cta = Zobrazit ochrany
+newtab-privacy-message-info-3 = Mnoho stránek má sledovací prvky, takže společnosti, které jste nikdy nenavštívili, vás mohou na internetu sledovat.
+newtab-privacy-message-info-3-cta = Zobrazit ochrany
+newtab-privacy-message-info-4 =
+    { -brand-short-name.case-status ->
+        [with-cases] Výběrem { -brand-short-name(case: "gen") } si automaticky zvolíte ochranu.
+       *[no-cases] Výběrem aplikace { -brand-short-name } si automaticky zvolíte ochranu.
+    }
+newtab-privacy-message-info-4-cta = Zobrazit ochrany
+newtab-privacy-message-info-5 = Blokování sledovacích prvků znamená, že vás na stránkách může sledovat méně společností.
+newtab-privacy-message-info-5-cta = Zobrazit ochrany
+newtab-privacy-message-info-6 =
+    { -brand-short-name.case-status ->
+        [with-cases] Svěřte svá data { -brand-short-name(case: "gen") }. My je nikdy neprodáváme, ale jiné prohlížeče možná ano.
+       *[no-cases] Svěřte svá data aplikaci { -brand-short-name }. My je nikdy neprodáváme, ale jiné prohlížeče možná ano.
+    }
+newtab-privacy-message-info-6-cta = Zjistit více
+newtab-privacy-message-info-7 = Podívejte se, které sledovací prvky { -brand-short-name } zablokoval.
+newtab-privacy-message-info-7-cta = Zobrazit ochrany
+newtab-privacy-message-info-8 =
+    { -brand-short-name.case-status ->
+        [with-cases] Prohlížení pomocí { -brand-short-name(case: "gen") } podporuje misi organizace { -vendor-short-name } vytvářet lepší web.
+       *[no-cases] Prohlížení pomocí aplikace { -brand-short-name } podporuje misi organizace { -vendor-short-name } vytvářet lepší web.
+    }
+newtab-privacy-message-info-8-cta = Zjistit více
+newtab-privacy-message-info-9 =
+    { -brand-short-name.case-status ->
+        [with-cases] Udělejte si z { -brand-short-name(case: "gen") } svůj oblíbený prohlížeč s integrovanými funkcemi na ochranu soukromí.
+       *[no-cases] Udělejte si z aplikace { -brand-short-name } svůj oblíbený prohlížeč s integrovanými funkcemi na ochranu soukromí.
+    }
+newtab-privacy-message-info-9-cta = Nastavit jako výchozí
+newtab-privacy-message-info-10 =
+    { -brand-short-name.case-status ->
+        [with-cases] Ukládejte si hesla do { -brand-short-name(case: "gen") }, abyste mohli všude používat silná a jedinečná přihlašovací hesla.
+       *[no-cases] Ukládejte si hesla do aplikace { -brand-short-name }, abyste mohli všude používat silná a jedinečná přihlašovací hesla.
+    }
+newtab-privacy-message-info-10-cta = Přejít na hesla
+newtab-privacy-message-info-11 = Zjistěte, jak vám { -brand-short-name } pomáhá zajistit větší soukromí při procházení webu.
+newtab-privacy-message-info-11-cta = Zjistit více
+newtab-privacy-message-info-12 = Blokování sledovacích modulů může pomoci ušetřit přenos u datových tarifů s omezeným objemem dat.
+newtab-privacy-message-info-12-cta = Zobrazit ochrany
+newtab-privacy-message-info-13 = { -brand-short-name } blokuje sledovací soubory, čímž uvolňuje šířku pásma pro plynulejší streamování.
+newtab-privacy-message-info-13-cta = Zobrazit ochrany
+
 ## Privacy widget — promotional messages
 ##
 ## Rotating "promo" secondary messages suggesting another Firefox feature. Each
 ## has a body plus a matched "-cta" button label.
 
+newtab-privacy-message-promo-monitor-1 = Zjistěte, zda se vaše osobní údaje objevují v seznamu obětí úniku dat.
+newtab-privacy-message-promo-monitor-1-cta = Zjistit více
+newtab-privacy-message-promo-monitor-2 = Chraňte své údaje pomocí bezplatného monitorování úniků dat – až pro 20 e-mailových adres.
+newtab-privacy-message-promo-monitor-2-cta = Zjistit více
+newtab-privacy-message-promo-signin-1 = Pomocí svého účtu { -vendor-short-name } můžete zajistit šifrování záložek, hesel a otevřených panelů na všech zařízeních.
+newtab-privacy-message-promo-signin-1-cta = Přihlásit se
+newtab-privacy-message-promo-vpn-1 = Nakupujete přes veřejnou Wi-Fi? Zapněte vestavěnou VPN a zajistěte si tak větší ochranu.
+newtab-privacy-message-promo-vpn-1-cta = Otevřít VPN
+newtab-privacy-message-promo-vpn-2 = Používáte Wi-Fi na letišti? Chraňte své prohlížení internetu zapnutím vestavěné VPN.
+newtab-privacy-message-promo-vpn-2-cta = Otevřít VPN
+newtab-privacy-message-promo-vpn-3 = Zapněte vestavěnou síť VPN, abyste lépe ochránili svou polohu.
+newtab-privacy-message-promo-vpn-3-cta = Otevřít VPN
+newtab-privacy-message-promo-private-window-1 = Zkuste použít anonymní okno, abyste mohli při používání sdíleného počítače procházet internet diskrétněji.
 newtab-privacy-message-promo-private-window-1-cta = Otevřít anonymní okno
+newtab-privacy-message-promo-relay-1 = Svou skutečnou e-mailovou adresu si schovejte pro lidi, kterým důvěřujete; při registracích používejte fiktivní e-mailovou adresu.
 newtab-privacy-message-promo-relay-1-cta = Získat masky
 newtab-privacy-message-promo-relay-2 = Chraňte svou doručenou poštu před nevyžádanou poštou pomocí bezplatného maskování e-mailových adres.
 newtab-privacy-message-promo-relay-2-cta = Získat masky
+newtab-privacy-message-promo-relay-3 = Získejte 50 bezplatných e-mailových masek, které vám pomohou uchovat vaši skutečnou e-mailovou adresu v tajnosti.
 newtab-privacy-message-promo-relay-3-cta = Získat masky
+
+## Privacy widget — celebration messages
+##
+## Earned "celebration" moments (milestones, daily cap, streak, first
+## protection). Count-bearing ones interpolate { $count }.
+
+newtab-privacy-message-milestone-week-cta = Zobrazit ochrany
+newtab-privacy-message-milestone-month-cta = Zobrazit ochrany
+newtab-privacy-message-milestone-year-cta = Zobrazit ochrany
+newtab-privacy-message-milestone-total-cta = Zobrazit ochrany
+newtab-privacy-message-daily-cap-cta = Zobrazit ochrany
+newtab-privacy-message-streak-cta = Zobrazit ochrany
+newtab-privacy-message-first-protection-cta = Zobrazit ochrany
 
 ## Strings for the Stocks widget
 
@@ -192,6 +308,8 @@ newtab-privacy-message-promo-relay-3-cta = Získat masky
 newtab-stocks-menu-search = Hledat burzové symboly
 # Context menu item linking to more information about the Stocks widget.
 newtab-stocks-menu-learn-more = Zjistit více
+# Heading for the Stocks widget.
+newtab-stocks-widget-title = Akcie
 
 ## Strings for the Picture of the Day widget
 
@@ -200,8 +318,48 @@ newtab-stocks-menu-learn-more = Zjistit více
 newtab-picture-header = Obrázek dne · Wikimedia Commons
 # Shorter title shown at the top of the widget, without the source name.
 newtab-picture-header-main = Obrázek dne
+# Attribution line shown under the title once a picture loads: an author
+# credit, a link to the picture's source page, and a link to its license.
+# "©" is the copyright symbol.
+# $author (string) - the name of the image's author.
+newtab-picture-attribution-author = © { $author }
+# Link to the picture's source page (its Wikimedia Commons file page).
+# "Wikimedia Commons" is a brand name and should not be translated.
+newtab-picture-attribution-source-link = Wikimedia Commons
+# Screen-reader label for the license link; the visible text is the license
+# name (for example "CC BY-SA 4.0") provided with the picture.
+# $license (string) - the name of the license.
+newtab-picture-attribution-license =
+    .aria-label = Zobrazit licenci { $license }
+# Tooltip and screen-reader label for the icon-only button that opens the
+# widget's context menu. The button never renders visible text.
+newtab-picture-widget-menu-button =
+    .title = Možnosti pro obrázek dne
+    .aria-label = Možnosti pro obrázek dne
+# Button that sets the current picture as the New Tab background wallpaper. The
+# button collapses to an icon when not hovered/focused, so .title is its tooltip.
+newtab-picture-set-wallpaper =
+    .label = Nastavit tapetu
+    .title = Nastavit tapetu
+    .aria-label = Nastavte si dnešní obrázek jako tapetu
+# Context menu item that opens the New Tab customization panel.
+newtab-picture-menu-manage-wallpaper = Nastavení tapety
+# Context menu item that hides today’s picture, replacing it with an existing
+# wallpaper.
+newtab-picture-menu-hide-photo = Skrýt dnešní obrázek
+# Context menu item that restores today’s picture after it has been hidden.
+newtab-picture-menu-show-photo = Ukázat dnešní obrázek
 # Context menu item linking to more information about the widget.
 newtab-picture-menu-learn-more = Zjistit více
+# Icon button shown on the widget once the picture is hidden; restores it.
+newtab-picture-show-button =
+    .title = Ukázat dnešní obrázek
+    .aria-label = Ukázat dnešní obrázek
+# Shown when there is no new picture to display yet.
+newtab-picture-check-back = Zítra se sem zase podívejte na novou fotku
+# Screen-reader text alternative for the picture; fallback used when the source
+# provides no localized description.
+newtab-picture-image-alt = Obrázek dne od Wikimedia Commons
 
 ## Search box component.
 
@@ -238,6 +396,7 @@ newtab-topsites-add-shortcut-label = Přidat zkratku
 newtab-topsites-add-shortcut-title =
     .title = Přidat zkratku
     .aria-label = Přidat zkratku
+newtab-shortcuts-pinned-area = Připnutá oblast
 newtab-topsites-title-label = Název stránky
 newtab-topsites-title-input =
     .placeholder = Zadejte název
@@ -1371,6 +1530,7 @@ newtab-sports-widget-team-tbd = Bude upřesněno
 newtab-sports-widget-message-wallpapers-title = Odstartujte světový šampionát s novými tapetami
 newtab-sports-widget-message-wallpapers-body = Vneste do svého prohlížeče trochu té zápasové energie na dobu turnaje.
 newtab-sports-widget-message-wallpapers-cta = Zvolte si tapetu
+newtab-sports-widget-message-wallpapers-semifinals-title = Získejte novou tapetu pro semi-finále
 newtab-sports-widget-message-add-widgets-cta =
     .label = Přidat widgety
 newtab-sports-widget-message-day-in-play-title =
