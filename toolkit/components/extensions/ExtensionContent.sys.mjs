@@ -162,14 +162,12 @@ class CacheMap extends DefaultMap {
   }
 }
 
-/** @typedef {Promise<PrecompiledScript> & { script?: PrecompiledScript }} PromisedScript */
-
 class ScriptCache extends CacheMap {
   constructor(options, extension) {
     super(
       SCRIPT_EXPIRY_TIMEOUT_MS,
       url => {
-        /** @type {PromisedScript} */
+        /** @type {Promise<PrecompiledScript> & { script?: PrecompiledScript }} */
         let promise = ChromeUtils.compileScript(url, options);
         promise.then(script => {
           promise.script = script;
@@ -395,7 +393,7 @@ class Script {
 
     // If set jsDynamicScripts takes precedence over js.
     // Requires scriptCache and world to be set.
-    /** @type {PromisedScript[]} */
+    /** @type {Array<Promise<PrecompiledScript> & {script?: PrecompiledScript}>} */
     this.jsDynamicScripts = this.matcher.jsExecuteScriptSources?.map(s =>
       this.#compileScriptSource(s)
     );
@@ -445,7 +443,7 @@ class Script {
       };
       // Note: this logic is similar to this.scriptCaches.get(...), but we are
       // not using scriptCaches because we don't want the URL to be cached.
-      /** @type {PromisedScript} */
+      /** @type {Promise<PrecompiledScript> & {script?: PrecompiledScript}} */
       const promisedScript = ChromeUtils.compileScript(dataUrl, options);
       promisedScript.then(script => {
         promisedScript.script = script;
@@ -472,7 +470,6 @@ class Script {
         );
       },
     };
-    /** @type {PromisedScript} */
     const promisedScript = Promise.resolve(precompiledScriptImitation);
     promisedScript.script = precompiledScriptImitation;
     return promisedScript;
@@ -978,10 +975,9 @@ class UserScript extends Script {
   }
 }
 
-/** @type {WeakMap<WebExtensionContentScript, UserScript | Script>} */
 var contentScripts = new DefaultWeakMap(matcher => {
-  const extension = /** @type {ExtensionChild & ExtensionChildContent} */ (
-    lazy.ExtensionProcessScript.extensions.get(matcher.extension)
+  const extension = lazy.ExtensionProcessScript.extensions.get(
+    matcher.extension
   );
 
   if ("userScriptOptions" in matcher) {

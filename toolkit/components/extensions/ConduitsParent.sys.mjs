@@ -427,7 +427,7 @@ export class ConduitsParent extends JSWindowActorParent {
    * Group webRequest events to send them as a batch, reducing IPC overhead.
    *
    * @param {string} name
-   * @param {import("./ConduitsChild.sys.mjs").MessageData} data
+   * @param {import("ConduitsChild.sys.mjs").MessageData} data
    * @returns {Promise<object>}
    */
   batch(name, data) {
@@ -465,7 +465,7 @@ export class ConduitsParent extends JSWindowActorParent {
    *
    * @param {object} options
    * @param {string} options.name
-   * @param {import("./ConduitsChild.sys.mjs").MessageData} options.data
+   * @param {import("ConduitsChild.sys.mjs").MessageData} options.data
    * @returns {Promise?}
    */
   async receiveMessage({ name, data: { arg, query, sender } }) {

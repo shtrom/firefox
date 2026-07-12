@@ -55,8 +55,6 @@ function ensureMapper() {
   return gMapper;
 }
 
-/** @typedef {number} integer */
-
 export const ExtensionDocumentId = {
   /**
    * @param {integer} [innerWindowId]

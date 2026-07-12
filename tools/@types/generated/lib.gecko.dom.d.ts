@@ -866,7 +866,6 @@ interface EffectTiming {
 }
 
 interface ElementCreationOptions {
-    customElementRegistry?: CustomElementRegistry | null;
     is?: string;
     pseudo?: string;
 }
@@ -4664,6 +4663,8 @@ interface WebExtensionInit {
     baseURL: string;
     contentScripts?: WebExtensionContentScriptInit[];
     extensionPageCSP?: string | null;
+    sandboxPageCSP?: string | null;
+    sandboxPages?: MatchGlobOrString[] | null;
     hasRecommendedState?: boolean;
     id: string;
     ignoreQuarantine?: boolean;
@@ -4674,8 +4675,6 @@ interface WebExtensionInit {
     name?: string;
     permissions?: string[];
     readyPromise?: Promise<WebExtensionPolicy | null>;
-    sandboxPageCSP?: string | null;
-    sandboxPages?: MatchGlobOrString[] | null;
     temporarilyInstalled?: boolean;
     type?: string;
     version?: string;
@@ -6835,7 +6834,6 @@ interface CSSStyleProperties extends CSSStyleDeclaration {
     MozFontLanguageOverride: string;
     MozForceBrokenImageIcon: string;
     MozHyphens: string;
-    MozImageDecoding: string;
     MozMarginEnd: string;
     MozMarginStart: string;
     MozOrient: string;
@@ -7651,6 +7649,7 @@ interface CanonicalBrowsingContext extends BrowsingContext {
     goForward(aCancelContentJSEpoch?: number, aRequireUserInteraction?: boolean, aUserActivation?: boolean): void;
     goToIndex(aIndex: number, aCancelContentJSEpoch?: number, aUserActivation?: boolean): void;
     loadURI(aURI: URI, aOptions?: LoadURIOptions): void;
+    notifyMediaMutedChanged(muted: boolean): void;
     notifyStartDelayedAutoplayMedia(): void;
     print(aPrintSettings: nsIPrintSettings): Promise<void>;
     reload(aReloadFlags: number): void;
@@ -7950,7 +7949,7 @@ interface ChannelWrapper extends EventTarget {
     getRequestHeaders(): MozHTTPHeader[];
     getResponseHeaders(): MozHTTPHeader[];
     redirectTo(url: URI): void;
-    registerTraceableChannel(extension: WebExtensionPolicy): void;
+    registerTraceableChannel(extension: WebExtensionPolicy, remoteTab: RemoteTab | null): void;
     resume(): void;
     setRequestHeader(header: string, value: string, merge?: boolean): void;
     setResponseHeader(header: string, value: string, merge?: boolean): void;
@@ -18548,10 +18547,6 @@ declare var RadioNodeList: {
 
 interface Range extends AbstractRange {
     readonly commonAncestorContainer: Node;
-    readonly mayCrossShadowBoundaryEndContainer: Node;
-    readonly mayCrossShadowBoundaryEndOffset: number;
-    readonly mayCrossShadowBoundaryStartContainer: Node;
-    readonly mayCrossShadowBoundaryStartOffset: number;
     cloneContents(): DocumentFragment;
     cloneRange(): Range;
     collapse(toStart?: boolean): void;
@@ -23598,7 +23593,6 @@ interface WebExtensionPolicy {
     permissions: string[];
     readonly privateBrowsingAllowed: boolean;
     readonly readyPromise: any;
-    readonly sandboxPageCSP: string;
     readonly temporarilyInstalled: boolean;
     readonly type: string;
     readonly version: string;
@@ -26978,7 +26972,6 @@ declare namespace ChromeUtils {
     function registerWindowActor(aName: string, aOptions?: WindowActorOptions): void;
     function releaseAssert(condition: boolean, message?: string): void;
     function requestProcInfo(): Promise<ParentProcInfoDictionary>;
-    function requestXDGActivationToken(): Promise<string | null>;
     function resetLastExternalProtocolIframeAllowed(): void;
     function saveHeapSnapshot(boundaries?: HeapSnapshotBoundaries): string;
     function saveHeapSnapshotGetId(boundaries?: HeapSnapshotBoundaries): string;

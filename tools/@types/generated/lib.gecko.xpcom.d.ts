@@ -1501,12 +1501,6 @@ interface mozIGeckoMediaPluginService extends nsISupports {
   RunPluginCrashCallbacks(pluginId: u32, pluginName: string): void;
 }
 
-// https://searchfox.org/firefox-main/source/toolkit/crashreporter/test/test_utils/nsICrashReporterTestUtils.idl
-
-interface nsICrashReporterTestUtils extends nsISupports {
-  getCrashHelperPid(): u32;
-}
-
 // https://searchfox.org/firefox-main/source/toolkit/components/dap/nsIDAPTelemetry.idl
 
 interface nsIDAPTelemetry extends nsISupports {
@@ -3097,6 +3091,13 @@ interface nsIScriptError extends nsIConsoleMessage {
   initSourceId(sourceId: u32): void;
 }
 
+// https://searchfox.org/firefox-main/source/dom/bindings/test/mozITestInterfaceJS.idl
+
+interface mozITestInterfaceJS extends nsISupports {
+  testThrowNsresult(): void;
+  testThrowNsresultFromNative(): void;
+}
+
 // https://searchfox.org/firefox-main/source/dom/interfaces/events/nsIDOMEventListener.idl
 
 // https://searchfox.org/firefox-main/source/dom/geolocation/nsIGeolocationUIUtils.idl
@@ -3554,7 +3555,7 @@ interface nsIWakeLock extends nsISupports {
   unlock(): void;
 }
 
-// https://searchfox.org/firefox-main/source/dom/push/nsIPushErrorReporter.idl
+// https://searchfox.org/firefox-main/source/dom/interfaces/push/nsIPushErrorReporter.idl
 
 interface nsIPushErrorReporter extends nsISupports {
   readonly ACK_DELIVERED?: 0;
@@ -3570,7 +3571,7 @@ interface nsIPushErrorReporter extends nsISupports {
   reportDeliveryError(messageId: string, reason?: u16): void;
 }
 
-// https://searchfox.org/firefox-main/source/dom/push/nsIPushNotifier.idl
+// https://searchfox.org/firefox-main/source/dom/interfaces/push/nsIPushNotifier.idl
 
 interface nsIPushNotifier extends nsISupports {
   notifyPush(scope: string, principal: nsIPrincipal, messageId: string): void;
@@ -5424,6 +5425,37 @@ interface nsISVGPaintContext extends nsISupports {
   readonly strokeOpacity: float;
 }
 
+// https://searchfox.org/firefox-main/source/layout/tools/layout-debug/src/nsILayoutDebuggingTools.idl
+
+}  // global
+
+declare enum nsILayoutDebuggingTools_DumpFrameFlags {
+  DUMP_FRAME_FLAGS_CSS_PIXELS = 1,
+  DUMP_FRAME_FLAGS_DETERMINISTIC = 2,
+}
+
+declare global {
+
+namespace nsILayoutDebuggingTools {
+  type DumpFrameFlags = nsILayoutDebuggingTools_DumpFrameFlags;
+}
+
+interface nsILayoutDebuggingTools extends nsISupports, Enums<typeof nsILayoutDebuggingTools_DumpFrameFlags> {
+  init(win: mozIDOMWindow): void;
+  forceRefresh(): void;
+  setReflowCounts(enabled: boolean): void;
+  setPagedMode(enabled: boolean): void;
+  dumpContent(anonymousSubtrees: boolean): void;
+  dumpFrames(flags: u8): void;
+  dumpTextRuns(): void;
+  dumpCounterManager(): void;
+  dumpRetainedDisplayList(): void;
+  dumpStyleSheets(): void;
+  dumpMatchedRules(): void;
+  dumpComputedStyles(): void;
+  dumpReflowStats(): void;
+}
+
 // https://searchfox.org/firefox-main/source/layout/style/nsIPreloadedStyleSheet.idl
 
 interface nsIPreloadedStyleSheet extends nsISupports {
@@ -6476,7 +6508,6 @@ interface nsILoadGroup extends nsIRequest {
   readonly requestContextID: u64;
   defaultLoadFlags: nsLoadFlags;
   readonly isBrowsingContextDiscarded: boolean;
-  cancelRequest(aRequest: nsIRequest, aReason: string, aStatus: nsresult): void;
 }
 
 // https://searchfox.org/firefox-main/source/netwerk/base/nsILoadGroupChild.idl
@@ -6716,6 +6747,7 @@ interface nsILoadInfo extends nsISupports, Enums<typeof nsILoadInfo_StoragePermi
   loadingEmbedderPolicy: nsILoadInfo.CrossOriginEmbedderPolicy;
   isOriginTrialCoepCredentiallessEnabledForTopLevel: boolean;
   isMediaRequest: boolean;
+  isMediaInitialRequest: boolean;
   isFromObjectOrEmbed: boolean;
   unstrippedURI: nsIURI;
   hasInjectedCookieForCookieBannerHandling: boolean;
@@ -7199,8 +7231,8 @@ interface nsIRandomGenerator extends nsISupports {
 // https://searchfox.org/firefox-main/source/netwerk/base/nsIRedirectChannelRegistrar.idl
 
 interface nsIRedirectChannelRegistrar extends nsISupports {
-  registerChannel(channel: nsIChannel, id: u64, aContentParentId: u64): void;
-  linkChannels(id: u64, aContentParentId: u64, channel: nsIParentChannel): nsIChannel;
+  registerChannel(channel: nsIChannel, id: u64): void;
+  linkChannels(id: u64, channel: nsIParentChannel): nsIChannel;
   getRegisteredChannel(id: u64): nsIChannel;
   getParentChannel(id: u64): nsIParentChannel;
   deregisterChannels(id: u64): void;
@@ -7779,7 +7811,8 @@ interface nsIUploadChannel extends nsISupports {
 // https://searchfox.org/firefox-main/source/netwerk/base/nsIUploadChannel2.idl
 
 interface nsIUploadChannel2 extends nsISupports {
-  explicitSetUploadStream(aStream: nsIInputStream, aContentType: string, aContentLength: i64, aMethod: string): void;
+  explicitSetUploadStream(aStream: nsIInputStream, aContentType: string, aContentLength: i64, aMethod: string, aStreamHasHeaders: boolean): void;
+  readonly uploadStreamHasHeaders: boolean;
 }
 
 // https://searchfox.org/firefox-main/source/netwerk/base/nsPISocketTransportService.idl
@@ -7962,8 +7995,6 @@ interface nsICacheTesting extends nsISupports {
   suspendCacheIOThread(aLevel: u32): void;
   resumeCacheIOThread(): void;
   flush(aObserver: nsIObserver): void;
-  shutdownCacheForTesting(): void;
-  startupCacheForTesting(): void;
   clearDictionaryCacheMemory(): void;
   corruptDictionaryHash(aURI: string): void;
   clearDictionaryDataForTesting(aURI: string): void;
@@ -8294,7 +8325,6 @@ declare enum nsIDNSService_DNSFlags {
   RESOLVE_TRR_DISABLED_MODE = 2048,
   RESOLVE_IGNORE_SOCKS_DNS = 8192,
   RESOLVE_IP_HINT = 16384,
-  RESOLVE_REFRESH_NEGATIVE_CACHE = 32768,
   RESOLVE_WANT_RECORD_ON_ERROR = 65536,
   RESOLVE_DISABLE_NATIVE_HTTPS_QUERY = 131072,
   RESOLVE_CREATE_MOCK_HTTPS_RR = 262144,
@@ -9610,10 +9640,10 @@ interface nsIPKCS11Token extends nsISupports {
   readonly tokenFWVersion: string;
   readonly tokenSerialNumber: string;
   readonly isLoggedIn: boolean;
-  login(): Promise<any>;
-  logout(): Promise<any>;
-  reset(): Promise<any>;
-  changePassword(oldPassword: string, newPassword: string): Promise<any>;
+  login(): void;
+  logout(): void;
+  reset(): void;
+  changePassword(oldPassword: string, newPassword: string): void;
   readonly canHavePassword: boolean;
   readonly hasPassword: boolean;
 }
@@ -10415,7 +10445,6 @@ interface nsIPrefBranch extends nsISupports, Enums<typeof nsIPrefBranch_Preferen
   prefIsLocked(aPrefName: string): boolean;
   prefIsSanitized(aPrefName: string): boolean;
   unlockPref(aPrefName: string): void;
-  clearUserBranch(aStartingAt: string): void;
   deleteBranch(aStartingAt: string): void;
   getChildList(aStartingAt: string): string[];
   addObserver(aDomain: string, aObserver: nsIObserver, aHoldWeak?: boolean): void;
@@ -10512,9 +10541,6 @@ interface nsIProfiler extends nsISupports {
   getProfileDataAsGzippedArrayBuffer(aSinceTime?: double): Promise<any>;
   dumpProfileToFileAsync(aFilename: string, aSinceTime?: double): Promise<any>;
   dumpProfileToFile(aFilename: string): void;
-  scheduleDumpToFile(aDelaySeconds: double, aFilename: string, aExitAfterDump: boolean): void;
-  cancelScheduledDump(): void;
-  waitForScheduledDump(): void;
   IsActive(): boolean;
   ClearAllPages(): void;
   GetFeatures(): string[];
@@ -10579,6 +10605,13 @@ interface mozISandboxSettings extends nsISupports {
   readonly effectiveContentSandboxLevel: i32;
   readonly contentWin32kLockdownState: i32;
   readonly contentWin32kLockdownStateString: string;
+}
+
+// https://searchfox.org/firefox-main/source/security/sandbox/common/test/mozISandboxTest.idl
+
+interface mozISandboxTest extends nsISupports {
+  startTests(aProcessesList: string[]): void;
+  finishTests(): void;
 }
 
 // https://searchfox.org/firefox-main/source/toolkit/components/satchel/nsIFormFillController.idl
@@ -11390,13 +11423,7 @@ declare enum nsIScopedPrefs_Pref {
   PRIVACY_TRACKINGPROTECTION_FINGERPRINTING_ENABLED = 2,
   PRIVACY_TRACKINGPROTECTION_SOCIALTRACKING_ENABLED = 3,
   PRIVACY_TRACKINGPROTECTION_EMAILTRACKING_ENABLED = 4,
-  PRIVACY_TRACKINGPROTECTION_CONTENT_ENABLED = 5,
-  PRIVACY_TRACKINGPROTECTION_CONTENT_CRYPTOMINING_ENABLED = 6,
-  PRIVACY_TRACKINGPROTECTION_CONTENT_FINGERPRINTING_ENABLED = 7,
-  PRIVACY_TRACKINGPROTECTION_CONTENT_SOCIALTRACKING_ENABLED = 8,
-  PRIVACY_TRACKINGPROTECTION_CONTENT_EMAILTRACKING_ENABLED = 9,
-  PRIVACY_TRACKINGPROTECTION_CONTENT_TEST_ENABLED = 10,
-  NUM_SCOPED_BOOL_PREFS = 11,
+  NUM_SCOPED_BOOL_PREFS = 5,
 }
 
 declare global {
@@ -14015,7 +14042,6 @@ interface nsIInterfaceRequestor extends nsISupports {
 // https://searchfox.org/firefox-main/source/xpcom/base/nsIKeyedUUIDMapper.idl
 
 interface nsIKeyedUUIDMapper extends nsISupports {
-  generateKey(): u8[];
   init(aKey: u8[]): void;
   toUUID(aValue: u64): string;
   fromUUID(aUUID: string): u64;
@@ -14970,7 +14996,6 @@ interface nsIDeviceSensorData extends nsISupports {
 
 interface nsIDeviceSensors extends nsISupports {
   hasWindowListener(aType: u32, aWindow: nsIDOMWindow): boolean;
-  notifySensorEvent(aType: u32, aX: float, aY: float, aZ: float, aW: float): void;
 }
 
 // https://searchfox.org/firefox-main/source/xpcom/system/nsIGIOService.idl
@@ -15803,7 +15828,6 @@ interface nsIXPCComponents_Interfaces {
   nsIEventListenerService: nsJSIID<nsIEventListenerService>;
   mozIGeckoMediaPluginChromeService: nsJSIID<mozIGeckoMediaPluginChromeService>;
   mozIGeckoMediaPluginService: nsJSIID<mozIGeckoMediaPluginService>;
-  nsICrashReporterTestUtils: nsJSIID<nsICrashReporterTestUtils>;
   nsIDAPTelemetry: nsJSIID<nsIDAPTelemetry>;
   nsIDocShell: nsJSIID<nsIDocShell, typeof nsIDocShell_DocShellEnumeratorDirection & typeof nsIDocShell_AppType & typeof nsIDocShell_BusyFlags & typeof nsIDocShell_LoadCommand>;
   nsIDocShellTreeItem: nsJSIID<nsIDocShellTreeItem>;
@@ -15883,6 +15907,7 @@ interface nsIXPCComponents_Interfaces {
   nsITextInputProcessorCallback: nsJSIID<nsITextInputProcessorCallback>;
   nsIScriptErrorNote: nsJSIID<nsIScriptErrorNote>;
   nsIScriptError: nsJSIID<nsIScriptError>;
+  mozITestInterfaceJS: nsJSIID<mozITestInterfaceJS>;
   nsIGeolocationUIUtils: nsJSIID<nsIGeolocationUIUtils>;
   nsIDOMGeoPosition: nsJSIID<nsIDOMGeoPosition>;
   nsIDOMGeoPositionCallback: nsJSIID<nsIDOMGeoPositionCallback>;
@@ -16085,6 +16110,7 @@ interface nsIXPCComponents_Interfaces {
   nsIKeyValueVoidCallback: nsJSIID<nsIKeyValueVoidCallback>;
   nsILayoutHistoryState: nsJSIID<nsILayoutHistoryState>;
   nsISVGPaintContext: nsJSIID<nsISVGPaintContext>;
+  nsILayoutDebuggingTools: nsJSIID<nsILayoutDebuggingTools, typeof nsILayoutDebuggingTools_DumpFrameFlags>;
   nsIPreloadedStyleSheet: nsJSIID<nsIPreloadedStyleSheet>;
   nsIStyleSheetService: nsJSIID<nsIStyleSheetService>;
   nsITreeSelection: nsJSIID<nsITreeSelection>;
@@ -16468,6 +16494,7 @@ interface nsIXPCComponents_Interfaces {
   nsIApplicationReputationQuery: nsJSIID<nsIApplicationReputationQuery>;
   nsIApplicationReputationCallback: nsJSIID<nsIApplicationReputationCallback>;
   mozISandboxSettings: nsJSIID<mozISandboxSettings>;
+  mozISandboxTest: nsJSIID<mozISandboxTest>;
   nsIFormFillFocusListener: nsJSIID<nsIFormFillFocusListener>;
   nsIFormFillController: nsJSIID<nsIFormFillController>;
   nsIFormFillCompleteObserver: nsJSIID<nsIFormFillCompleteObserver>;
