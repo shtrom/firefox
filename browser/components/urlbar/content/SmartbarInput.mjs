@@ -2629,7 +2629,7 @@ ${
         searchSource: this.getSearchSource(event),
         windowMode: this.windowMode,
       })
-      .catch(lazy.logger.error);
+      .catch(e => lazy.logger.error(e));
 
     this.controller.engagementEvent.record(event, {
       result,
