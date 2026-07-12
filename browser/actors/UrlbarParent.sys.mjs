@@ -59,6 +59,7 @@ export class UrlbarParent extends JSWindowActorParent {
       controller = new lazy.UrlbarParentController({
         sapName: input.sapName,
         isPrivate: input.isPrivate,
+        actor: this,
       });
       this.#controllers.set(input, controller);
     }
@@ -77,7 +78,11 @@ export class UrlbarParent extends JSWindowActorParent {
 
     if (message.name == "Init") {
       let { sapName, isPrivate } = message.data;
-      let controller = new lazy.UrlbarParentController({ sapName, isPrivate });
+      let controller = new lazy.UrlbarParentController({
+        sapName,
+        isPrivate,
+        actor: this,
+      });
       // The real child controller lives across the boundary, so hand the
       // parent controller a proxy that forwards its notifications over the
       // actor.

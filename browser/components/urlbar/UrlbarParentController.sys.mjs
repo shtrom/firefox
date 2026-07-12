@@ -65,6 +65,12 @@ export class UrlbarParentController {
   // is always set before any query runs.
   #child = null;
 
+  // The owning JSWindowActor, used to resolve the chrome window parent-side
+  // (see `browserWindow`). Unlike the input and view, the browser window is a
+  // parent-process object, so we don't reach through the content-side child
+  // for it.
+  #actor = null;
+
   /**
    * Initialises the class. Takes the standalone data the controller needs
    * rather than a DOM input, so it can also serve a content-process
@@ -78,17 +84,21 @@ export class UrlbarParentController {
    *   The search access point name, e.g. `urlbar`, `searchbar`.
    * @param {boolean} [options.isPrivate]
    *   Whether the controller serves a private-browsing input.
+   * @param {object} [options.actor]
+   *   The owning `UrlbarParent` JSWindowActor, used to resolve the chrome
+   *   window. Omitted in unit tests.
    * @param {object} [options.manager]
    *   Optional fake providers manager to override the built-in providers manager.
    *   Intended for use in unit tests only.
    */
-  constructor({ sapName, isPrivate = false, manager }) {
+  constructor({ sapName, isPrivate = false, actor, manager }) {
     if (!sapName) {
       throw new Error("Missing options: sapName");
     }
 
     this.sapName = sapName;
     this.isPrivate = isPrivate;
+    this.#actor = actor;
 
     /**
      * @type {ProvidersManager}
@@ -110,10 +120,10 @@ export class UrlbarParentController {
 
   /**
    * The input, owned by the paired `UrlbarChildController`. The parent no
-   * longer holds the input, browser window, or view directly; it reads them
-   * through the child for the query-lifecycle and telemetry call sites that
-   * still need them. These getters go away together with the `#child`
-   * back-reference once those call sites get their data another way.
+   * longer holds the input or view directly; it reads them through the child
+   * for the query-lifecycle and telemetry call sites that still need them.
+   * These getters go away together with the `#child` back-reference once those
+   * call sites get their data another way.
    *
    * @type {UrlbarInput}
    */
@@ -122,12 +132,14 @@ export class UrlbarParentController {
   }
 
   /**
-   * The browser window the input lives in.
+   * The chrome window the urlbar lives in, resolved parent-side from the actor.
+   * Parent-side providers read this (icons, speculative connect, opening help
+   * links), so it can't come from the content-side child.
    *
    * @type {ChromeWindow}
    */
   get browserWindow() {
-    return this.#child?.browserWindow;
+    return this.#actor?.browsingContext?.topChromeWindow;
   }
 
   /**
@@ -270,6 +282,29 @@ export class UrlbarParentController {
     }
 
     return queryContext;
+  }
+
+  /**
+   * Records an engagement shipped by a message-path child collector. The
+   * counterpart to the proxy's `recordEngagement()`: deserializes the payload
+   * and hands it to the recorder. On the direct path the child collector isn't
+   * used, so this isn't called.
+   *
+   * @param {object} wire
+   *   The payload from `UrlbarTelemetryUtils.recordedEngagementToWire()`.
+   */
+  recordEngagement(wire) {
+    this.engagementEvent.recordFromChild(
+      lazy.UrlbarTelemetryUtils.recordedEngagementFromWire(wire)
+    );
+  }
+
+  /**
+   * Resets the recorder's cross-session telemetry state. The counterpart to the
+   * proxy's `resetEngagement()`.
+   */
+  resetEngagement() {
+    this.engagementEvent.reset();
   }
 
   /**
@@ -665,7 +700,10 @@ class TelemetryEvent {
   }
 
   /**
-   * Internal record method, see the record function.
+   * Internal record method, see the record function. Builds the engagement the
+   * same way the content-side collector does, then records it through the shared
+   * `recordFromChild()`; the only in-process difference is that exposures are
+   * resolved here from the parent's own queue rather than shipped.
    *
    * @param {Event} event
    * @param {ActionDetails} details
@@ -676,79 +714,33 @@ class TelemetryEvent {
       details,
       this._startEventInfo
     );
-    if (snapshot) {
-      this.#recordEngagement(snapshot);
+    if (!snapshot) {
+      return;
     }
-  }
 
-  /**
-   * Records the engagement (or abandonment) telemetry from a snapshot gathered
-   * by `UrlbarTelemetryUtils.collectSnapshot()`. Runs parent-side: it reads the
-   * parent's query context, records Glean telemetry and exposures, and notifies
-   * the providers.
-   *
-   * @param {object} snapshot
-   *   The snapshot to record from.
-   */
-  #recordEngagement(snapshot) {
-    let {
-      method,
-      action,
-      startEventInfo,
-      numChars,
-      numWords,
-      searchWords,
-      internalDetails,
-    } = snapshot;
+    // `details.isSessionOngoing` was set by collectSnapshot() above.
+    let engagementData = this.#engagementData;
+    let { built, previousSearchWords } =
+      lazy.UrlbarTelemetryUtils.buildRecordedEngagement(
+        snapshot,
+        engagementData,
+        this.#smartbarData,
+        this.#previousSearchWordsSet
+      );
+    this.#previousSearchWordsSet = previousSearchWords;
 
     let { queryContext } = this._controller._lastQueryContextWrapper || {};
 
-    // The engagement is recorded immediately, so the live results still match
-    // the picked selIndex; the deferred disable/bounce paths instead capture
-    // this at tracking time (see startTrackingDisableSuggest/BounceEvent).
-    const visibleResults = this.#engagementData.visibleResults;
-
-    this.#recordSearchEngagementTelemetry(method, startEventInfo, {
-      action,
-      numChars,
-      numWords,
-      searchWords,
-      provider: internalDetails.provider,
-      searchSource: internalDetails.searchSource,
-      searchMode: internalDetails.searchMode,
-      selIndex: internalDetails.selIndex,
-      visibleResults,
-      selType: internalDetails.selType,
-      pickedActionKey: internalDetails.pickedActionKey,
-      location: internalDetails.location,
-      windowMode: internalDetails.windowMode,
-      ...this.#getOptionalSmartbarTelemetry(internalDetails.searchSource),
+    this.recordFromChild({
+      built,
+      method: snapshot.method,
+      searchSource: snapshot.internalDetails.searchSource,
+      internalDetails: snapshot.internalDetails,
+      visibleResults: engagementData.visibleResults,
     });
 
-    if (!internalDetails.isSessionOngoing) {
+    if (!details.isSessionOngoing) {
       this.#recordExposures(queryContext);
-    }
-
-    // Start tracking for a disable event if there was a Suggest result
-    // during an engagement or abandonment event.
-    if (
-      (method == "engagement" || method == "abandonment") &&
-      visibleResults.some(r => r.providerName == "UrlbarProviderQuickSuggest")
-    ) {
-      this.startTrackingDisableSuggest(internalDetails.event, internalDetails);
-    }
-
-    try {
-      this._controller.manager.notifyEngagementChange(
-        method,
-        queryContext,
-        internalDetails,
-        this._controller
-      );
-    } catch (error) {
-      // We handle and report any error here to avoid hitting the record()
-      // handler, that would look like we didn't send telemetry at all.
-      console.error(error);
     }
   }
 
@@ -796,34 +788,109 @@ class TelemetryEvent {
   }
 
   /**
-   * The content-side state the engagement-telemetry recording needs.
+   * The input/view state the engagement-telemetry recording needs. Read from
+   * the live input/view: only the direct path and the parent-side bounce/disable
+   * recording reach this getter, and both have the live objects. (Message-path
+   * engagement builds its event content-side, so nothing is injected here.)
    *
    * @type {{searchMode: object, visibleResults: UrlbarResult[], viewIsOpen: boolean, searchSource: string}}
    */
   get #engagementData() {
-    return {
-      searchMode: this._controller.input.searchMode,
-      visibleResults: this._controller.view?.visibleResults ?? [],
-      viewIsOpen: this._controller.view?.isOpen ?? false,
-      searchSource: this._controller.input.getSearchSource(),
-    };
+    return lazy.UrlbarTelemetryUtils.engagementData(
+      this._controller.input,
+      this._controller.view
+    );
   }
 
   /**
-   * The smartbar-only telemetry fields, read fresh from the input.
+   * The smartbar-only telemetry fields, from the live input.
    *
    * @type {{chatId: string, intent: string, model: string}}
    */
   get #smartbarData() {
-    // Only read when the SAP is `smartbar`, so the input is a SmartbarInput.
-    const input = /** @type {SmartbarInput} */ (
-      /** @type {unknown} */ (this._controller.input)
-    );
-    return {
-      chatId: input.conversationTelemetryInfo?.chat_id ?? "",
-      intent: input.smartbarAction ?? "",
-      model: input.modelName ?? "",
-    };
+    return lazy.UrlbarTelemetryUtils.smartbarData(this._controller.input);
+  }
+
+  /**
+   * Records an engagement a message-path child collector built and shipped via
+   * `RecordEngagement`. The child already built the Glean event; the parent
+   * fills the fields that need parent-only services and makes the `Glean` call,
+   * and runs the parent-side provider steps (disable-tracking and
+   * `notifyEngagementChange`) from the shipped result and visible results.
+   *
+   * @param {object} data
+   *   The deserialized `recordedEngagementToWire()` payload.
+   * @param {?{metric: string, eventInfo: object}} data.built
+   *   The built Glean event (metric + partial event), or null.
+   * @param {"engagement"|"abandonment"} data.method
+   *   The engagement method.
+   * @param {string} data.searchSource
+   *   The search source.
+   * @param {object} data.internalDetails
+   *   The interaction details (picked result reconstructed; event/element null).
+   * @param {UrlbarResult[]} data.visibleResults
+   *   The results shown when the engagement was captured.
+   */
+  recordFromChild({
+    built,
+    method,
+    searchSource,
+    internalDetails,
+    visibleResults,
+  }) {
+    try {
+      let { queryContext } = this._controller._lastQueryContextWrapper || {};
+      let sap = this.#searchSourceToSap(searchSource);
+
+      if (built && sap) {
+        this.#fillAndRecord(built, sap);
+      }
+
+      // Start tracking for a disable event if there was a Suggest result
+      // during an engagement or abandonment event.
+      if (
+        (method == "engagement" || method == "abandonment") &&
+        visibleResults.some(r => r.providerName == "UrlbarProviderQuickSuggest")
+      ) {
+        this.startTrackingDisableSuggest(
+          internalDetails.event,
+          internalDetails,
+          visibleResults
+        );
+      }
+
+      this._controller.manager.notifyEngagementChange(
+        method,
+        queryContext,
+        internalDetails,
+        this._controller
+      );
+    } catch (ex) {
+      console.error("Could not record engagement: ", ex);
+    }
+  }
+
+  /**
+   * Fills the fields a built Glean event needs from parent-only services and
+   * records it. Shared by the engagement/abandonment recorder, the disable and
+   * bounce recorders, and the message-path bounce trigger.
+   *
+   * @param {{metric: string, eventInfo: object}} built
+   *   The built event from `UrlbarTelemetryUtils.buildEventInfo()`.
+   * @param {string} sap
+   *   The already-resolved search access point.
+   */
+  #fillAndRecord(built, sap) {
+    let { metric, eventInfo } = built;
+    eventInfo.sap = sap;
+    eventInfo.search_engine_default_id =
+      lazy.SearchService.defaultEngine.telemetryId;
+    if (metric === "engagement" || metric === "abandonment") {
+      eventInfo.available_semantic_sources =
+        this.#getAvailableSemanticSources().join();
+    }
+    lazy.logger.info(`${metric} event:`, eventInfo);
+    Glean.urlbar[metric].record(eventInfo);
   }
 
   /**
@@ -914,173 +981,43 @@ class TelemetryEvent {
     }
     searchMode = searchMode ?? engagementData.searchMode;
 
-    // Distinguish user typed search strings from persisted search terms.
-    const interaction = this.#getInteractionType(
+    // Distinguish user typed search strings from persisted search terms. The
+    // "refined" check compares against the previous session's search words, so
+    // thread that state through and store what comes back.
+    let { interaction, previousSearchWords } =
+      lazy.UrlbarTelemetryUtils.getInteractionType(
+        method,
+        startEventInfo,
+        searchSource,
+        searchWords,
+        searchMode,
+        this.#previousSearchWordsSet
+      );
+    this.#previousSearchWordsSet = previousSearchWords;
+
+    let built = lazy.UrlbarTelemetryUtils.buildEventInfo({
       method,
-      startEventInfo,
+      action,
+      interaction,
+      numChars,
+      numWords,
+      provider,
       searchSource,
-      searchWords,
-      searchMode
-    );
-    const search_mode = this.#getSearchMode(searchMode);
-    let numResults = visibleResults.length;
-    let groups = visibleResults
-      .map(r => lazy.UrlbarUtils.searchEngagementTelemetryGroup(r))
-      .join(",");
-    let results = visibleResults
-      .map(r => lazy.UrlbarUtils.searchEngagementTelemetryType(r))
-      .join(",");
-    let actions = visibleResults
-      .map(r => lazy.UrlbarUtils.searchEngagementTelemetryAction(r))
-      .filter(v => v)
-      .join(",");
-    let available_semantic_sources = this.#getAvailableSemanticSources().join();
-    const search_engine_default_id =
-      lazy.SearchService.defaultEngine.telemetryId;
-
-    switch (method) {
-      case "engagement": {
-        let selected_result = lazy.UrlbarUtils.searchEngagementTelemetryType(
-          visibleResults[selIndex],
-          selType
-        );
-
-        if (selType == "action") {
-          let actionKey = lazy.UrlbarUtils.searchEngagementTelemetryAction(
-            visibleResults[selIndex],
-            pickedActionKey
-          );
-          selected_result = `action_${actionKey}`;
-        }
-
-        if (selected_result === "input_field" && !engagementData.viewIsOpen) {
-          numResults = 0;
-          groups = "";
-          results = "";
-        }
-
-        let eventInfo = {
-          sap,
-          interaction,
-          search_mode,
-          n_chars: numChars.toString(),
-          n_words: numWords.toString(),
-          n_results: numResults.toString(),
-          selected_position: (selIndex + 1).toString(),
-          selected_result,
-          provider,
-          engagement_type:
-            selType === "help" ||
-            selType === "dismiss" ||
-            selType === "ask_button" ||
-            selType === "navigate_button" ||
-            selType === "search_button"
-              ? selType
-              : action,
-          search_engine_default_id,
-          groups,
-          results,
-          actions,
-          available_semantic_sources,
-          window_mode: windowMode,
-          ...(sap === "smartbar"
-            ? { location, chat_id: chatId, intent, model }
-            : {}),
-        };
-        lazy.logger.info(`engagement event:`, eventInfo);
-        Glean.urlbar.engagement.record(eventInfo);
-        break;
-      }
-      case "abandonment": {
-        let eventInfo = {
-          abandonment_type: action,
-          sap,
-          interaction,
-          search_mode,
-          n_chars: numChars.toString(),
-          n_words: numWords.toString(),
-          n_results: numResults.toString(),
-          search_engine_default_id,
-          groups,
-          results,
-          actions,
-          available_semantic_sources,
-          window_mode: windowMode,
-          ...(sap === "smartbar"
-            ? { location, chat_id: chatId, intent, model }
-            : {}),
-        };
-        lazy.logger.info(`abandonment event:`, eventInfo);
-        Glean.urlbar.abandonment.record(eventInfo);
-        break;
-      }
-      case "disable": {
-        const previousEvent =
-          action == "blur" || action == "tab_switch"
-            ? "abandonment"
-            : "engagement";
-        let selected_result = "none";
-        if (previousEvent == "engagement") {
-          selected_result = lazy.UrlbarUtils.searchEngagementTelemetryType(
-            visibleResults[selIndex],
-            selType
-          );
-        }
-        let eventInfo = {
-          sap,
-          interaction,
-          search_mode,
-          search_engine_default_id,
-          n_chars: numChars.toString(),
-          n_words: numWords.toString(),
-          n_results: numResults.toString(),
-          selected_result,
-          results,
-          feature: "suggest",
-          window_mode: windowMode,
-          ...(sap === "smartbar"
-            ? { location, chat_id: chatId, intent, model }
-            : {}),
-        };
-        lazy.logger.info(`disable event:`, eventInfo);
-        Glean.urlbar.disable.record(eventInfo);
-        break;
-      }
-      case "bounce": {
-        let selected_result = lazy.UrlbarUtils.searchEngagementTelemetryType(
-          visibleResults[selIndex],
-          selType
-        );
-        let eventInfo = {
-          sap,
-          interaction,
-          search_mode,
-          search_engine_default_id,
-          n_chars: numChars.toString(),
-          n_words: numWords.toString(),
-          n_results: numResults.toString(),
-          selected_result,
-          selected_position: (selIndex + 1).toString(),
-          provider,
-          engagement_type:
-            selType === "help" || selType === "dismiss" ? selType : action,
-          results,
-          view_time: viewTime.toString(),
-          threshold: lazy.UrlbarPrefs.get(
-            "events.bounce.maxSecondsFromLastSearch"
-          ),
-          window_mode: windowMode,
-          ...(sap === "smartbar"
-            ? { location, chat_id: chatId, intent, model }
-            : {}),
-        };
-        lazy.logger.info(`bounce event:`, eventInfo);
-        Glean.urlbar.bounce.record(eventInfo);
-        break;
-      }
-      default: {
-        console.error(`Unknown telemetry event method: ${method}`);
-      }
+      searchMode,
+      selIndex,
+      visibleResults,
+      viewIsOpen: engagementData.viewIsOpen,
+      selType,
+      pickedActionKey,
+      viewTime,
+      location,
+      chatId,
+      intent,
+      model,
+      windowMode,
+    });
+    if (built) {
+      this.#fillAndRecord(built, sap);
     }
   }
 
@@ -1279,97 +1216,6 @@ class TelemetryEvent {
     }
   }
 
-  #getInteractionType(
-    method,
-    startEventInfo,
-    searchSource,
-    searchWords,
-    searchMode
-  ) {
-    if (searchMode?.entry === "topsites_newtab") {
-      return "topsite_search";
-    }
-
-    let interaction = startEventInfo.interactionType;
-    if (
-      (interaction === "returned" || interaction === "restarted") &&
-      this._isRefined(new Set(searchWords), this.#previousSearchWordsSet)
-    ) {
-      interaction = "refined";
-    }
-
-    if (searchSource === "urlbar_persisted") {
-      switch (interaction) {
-        case "returned": {
-          interaction = "persisted_search_terms";
-          break;
-        }
-        case "restarted":
-        case "refined": {
-          interaction = `persisted_search_terms_${interaction}`;
-          break;
-        }
-      }
-    }
-
-    if (
-      (method === "engagement" &&
-        lazy.UrlbarPrefs.isPersistedSearchTermsEnabled()) ||
-      method === "abandonment"
-    ) {
-      this.#previousSearchWordsSet = new Set(searchWords);
-    } else if (method === "engagement") {
-      this.#previousSearchWordsSet = null;
-    }
-
-    return interaction;
-  }
-
-  #getSearchMode(searchMode) {
-    if (!searchMode) {
-      return "";
-    }
-
-    if (searchMode.engineName) {
-      return "search_engine";
-    }
-
-    const source = lazy.UrlbarUtils.LOCAL_SEARCH_MODES.find(
-      m => m.source == searchMode.source
-    )?.telemetryLabel;
-    return source ?? "unknown";
-  }
-
-  /**
-   * Checks whether re-searched by modifying some of the keywords from the
-   * previous search. Concretely, returns true if there is intersects between
-   * both keywords, otherwise returns false. Also, returns false even if both
-   * are the same.
-   *
-   * @param {Set} currentSet The current keywords.
-   * @param {Set} [previousSet] The previous keywords.
-   * @returns {boolean} true if current searching are refined.
-   */
-  _isRefined(currentSet, previousSet = null) {
-    if (!previousSet) {
-      return false;
-    }
-
-    const intersect = (setA, setB) => {
-      let count = 0;
-      for (const word of setA.values()) {
-        if (setB.has(word)) {
-          count += 1;
-        }
-      }
-      return count > 0 && count != setA.size;
-    };
-
-    return (
-      intersect(currentSet, previousSet) || intersect(previousSet, currentSet)
-    );
-  }
-
   /**
    * Resets the currently tracked user-generated event that was registered via
    * start(), so it won't be recorded.  If there's no tracked event, this is a
@@ -1487,11 +1333,12 @@ class TelemetryEvent {
    *   A DOM event.
    * @param {InternalActionDetails} details
    *   An object describing interaction details.
+   * @param {UrlbarResult[]} visibleResults
+   *   The results shown when the engagement was captured, stored so the deferred
+   *   recording indexes `selIndex` into the same set it was captured against.
    */
-  startTrackingDisableSuggest(event, details) {
-    // Capture the visible results now so the deferred recording indexes the
-    // same set as the tracked selIndex, not the live view's at trigger time.
-    details.visibleResults = this.#engagementData.visibleResults;
+  startTrackingDisableSuggest(event, details, visibleResults) {
+    details.visibleResults = visibleResults;
     this._lastSearchDetailsForDisableSuggestTracking = {
       // The time when a user interacts a suggest result, either through
       // an engagement or an abandonment.

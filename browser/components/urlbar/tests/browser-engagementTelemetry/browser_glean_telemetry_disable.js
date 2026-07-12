@@ -153,7 +153,7 @@ add_task(async function test_disable_suggest_after_engagement() {
 
         await doClick();
 
-        assertEngagementTelemetry([
+        await assertEngagementTelemetry([
           {
             results: test.expectedResults,
             n_results: test.expectedNumResults,
@@ -203,7 +203,7 @@ add_task(async function test_disable_suggest_after_abandonment() {
 
       await doBlur();
 
-      assertAbandonmentTelemetry([
+      await assertAbandonmentTelemetry([
         {
           selectedResult: null,
           results: test.expectedResults,

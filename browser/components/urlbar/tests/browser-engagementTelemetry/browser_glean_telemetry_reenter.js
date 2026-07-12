@@ -62,8 +62,8 @@ add_task(async function () {
     EventUtils.synthesizeKey("VK_RETURN");
     await Promise.all([onEngagementDeferred]);
 
-    assertEngagementTelemetry([{ engagement_type: "enter" }]);
-    assertAbandonmentTelemetry([]);
+    await assertEngagementTelemetry([{ engagement_type: "enter" }]);
+    await assertAbandonmentTelemetry([]);
 
     Assert.ok(recordReentered, "`record()` was re-entered");
     Assert.equal(engagementSpy.callCount, 1, "`onEngagement` was invoked once");

@@ -1380,10 +1380,19 @@ class UrlbarInputTestUtils {
       },
       options
     );
+    // The parent controller resolves the browser window from the actor (for
+    // the SAP window facts telemetry reads). Mock a minimal one representing a
+    // non-blank, non-extension page.
+    let browserWindow = {
+      closed: false,
+      isBlankPageURL: () => false,
+      gBrowser: { currentURI: Services.io.newURI("https://example.com/") },
+    };
     let parentController = new lazy.UrlbarParentController({
       sapName,
       isPrivate: parentOptions.input.isPrivate,
       manager: parentOptions.manager,
+      actor: { browsingContext: { topChromeWindow: browserWindow } },
     });
     // Stub the actor plumbing so the child controller's constructor reaches
     // the parent we just built.
