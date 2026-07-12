@@ -952,6 +952,7 @@ class UserScript extends Script {
       sandboxPrototype: contentWindow,
       sameZoneAs: contentWindow,
       wantXrays: true,
+      isWebExtensionContentScript: true,
       wantGlobalProperties: [
         "XMLHttpRequest",
         "fetch",
