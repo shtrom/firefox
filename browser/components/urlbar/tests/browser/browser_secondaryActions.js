@@ -204,6 +204,7 @@ add_task(async function enter_action_search_mode() {
       "about:preferences"
     );
     EventUtils.synthesizeKey(keyword, {}, window);
+    await UrlbarTestUtils.promiseSearchComplete(window);
     EventUtils.synthesizeKey("KEY_Tab");
     EventUtils.synthesizeKey("KEY_Enter");
     await promiseNewTab;
