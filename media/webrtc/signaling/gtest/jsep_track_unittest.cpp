@@ -6,19 +6,18 @@
 #include "ssl.h"
 
 #define GTEST_HAS_RTTI 0
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <tuple>
 
 #include "CodecConfig.h"
 #include "MockJsepCodecPreferences.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "jsapi/DefaultCodecPreferences.h"
 #include "jsapi/RTCRtpTransceiver.h"
 #include "jsep/JsepTrack.h"
+#include "sdp/SdpHelper.h"
 #include "sdp/SipccSdp.h"
 #include "sdp/SipccSdpParser.h"
-#include "sdp/SdpHelper.h"
-
-#include <tuple>
 
 using testing::UnorderedElementsAre;
 
