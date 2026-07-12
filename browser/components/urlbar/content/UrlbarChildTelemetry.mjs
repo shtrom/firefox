@@ -14,8 +14,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
  */
 
 /**
- * Content-side engagement-telemetry collector for the urlbar actor's
- * message-passing path. It owns the synchronous session state (`start()` info)
+ * Content-side engagement-telemetry collector for the urlbar actor's message
+ * path. It owns the synchronous session state (`start()` info)
  * and, on `record()`, assembles the engagement snapshot plus the input/view
  * content the recording needs and ships it to the parent recorder as a
  * `RecordEngagement` message. The parent does the actual `Glean`/`Interactions`

@@ -15,8 +15,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
  */
 
 /**
- * Stand-in for a `UrlbarParentController` on the Urlbar actor's
- * message-passing path. A `UrlbarChildController` whose `<moz-urlbar>` runs in
+ * Stand-in for a `UrlbarParentController` on the Urlbar actor's message path. A
+ * `UrlbarChildController` whose `<moz-urlbar>` runs in
  * a content process (or in chrome with
  * `browser.urlbar.ipc.chromeMessagePassing`) holds one of these instead of a
  * direct controller reference: it forwards the child->parent query-lifecycle

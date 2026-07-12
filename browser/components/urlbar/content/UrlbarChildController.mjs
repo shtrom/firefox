@@ -35,11 +35,11 @@ ChromeUtils.defineESModuleGetters(lazy, {
  * per-instance bookkeeping (instance id, lifetime); this wrapper just
  * holds the controller it hands back.
  *
- * The wrapper abstracts the transport: for a chrome `<moz-urlbar>` the actor
- * pair hands back the real `UrlbarParentController` and calls happen
- * synchronously, while a content-process `<moz-urlbar>` gets a message-passing
- * implementation of the same surface. Callers (`UrlbarInput`, `UrlbarView`)
- * don't distinguish them.
+ * The wrapper abstracts the transport: on the direct path (chrome `<moz-urlbar>`)
+ * the actor pair hands back the real `UrlbarParentController` and calls happen
+ * synchronously, while on the message path (a content-process `<moz-urlbar>`, or
+ * chrome with the pref) it gets a proxy implementing the same surface. Callers
+ * (`UrlbarInput`, `UrlbarView`) don't distinguish them.
  */
 export class UrlbarChildController {
   /** @type {Console} */

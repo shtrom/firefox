@@ -21,11 +21,11 @@ ChromeUtils.defineESModuleGetters(lazy, {
  * own parent controller; this actor tells the two transports apart
  * (`usesMessagePath`) and runs the message-path lifecycle.
  *
- * - Direct (default for chrome `<moz-urlbar>`): both actors live in the parent
- *   process, so the child builds a real `UrlbarParentController` in place and
- *   invokes it synchronously.
- * - Message-passing: a content-process `<moz-urlbar>` (e.g. about:newtab), or
- *   chrome when `browser.urlbar.ipc.chromeMessagePassing` is set (so the wire
+ * - Direct path (default for chrome `<moz-urlbar>`): both actors live in the
+ *   parent process, so the child builds a real `UrlbarParentController` in place
+ *   and invokes it synchronously.
+ * - Message path: a content-process `<moz-urlbar>` (e.g. about:newtab), or
+ *   chrome when `browser.urlbar.ipc.chromeMessagePassing` is set (so the message
  *   path runs in CI). The child builds a `UrlbarParentControllerProxy` that
  *   trades messages with the parent-side controller, identified by an
  *   `instanceId` this actor allocates. The parent's `Notify` messages are
