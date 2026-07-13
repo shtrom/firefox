@@ -182,9 +182,11 @@ test_newtab({
       "No context menu found"
     );
 
-    const dismissBtn = content.document.querySelector(
-      ".top-sites li:nth-child(7) button"
-    );
+    const dismissBtn = content.document
+      .querySelector(
+        '.top-sites-list .context-menu [data-l10n-id="newtab-menu-dismiss"]'
+      )
+      .closest("button");
     dismissBtn.click();
 
     // Wait for Topsite to be removed

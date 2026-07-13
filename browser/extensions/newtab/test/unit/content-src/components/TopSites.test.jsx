@@ -715,6 +715,7 @@ describe("<TopSite>", () => {
     assert.deepEqual(linkMenuProps.options, [
       "CheckPinTopSite",
       "EditTopSite",
+      "AddTopSite",
       "Separator",
       "OpenInNewWindow",
       "OpenInPrivateWindow",
