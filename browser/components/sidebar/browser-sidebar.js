@@ -303,8 +303,47 @@ var SidebarController = {
   lastOpenedId: null,
 
   _box: null,
-  _pinnedTabsContainer: null,
-  _pinnedTabsItemsWrapper: null,
+  _pinnedTabsContainerNode: null,
+  _pinnedTabsItemsWrapperNode: null,
+  _pinnedTabsSplitterNode: null,
+
+  /**
+   * The pinned tabs container.
+   *
+   * @returns {Element}
+   */
+  get _pinnedTabsContainer() {
+    this._pinnedTabsContainerNode ??= document.getElementById(
+      "pinned-tabs-container"
+    );
+    return this._pinnedTabsContainerNode;
+  },
+
+  /**
+   * The items wrapper which holds the collection of pinned tabs.
+   *
+   * @returns {Element}
+   */
+  get _pinnedTabsItemsWrapper() {
+    this._pinnedTabsItemsWrapperNode ??=
+      this._pinnedTabsContainer.shadowRoot.querySelector(
+        "[part=items-wrapper]"
+      );
+    return this._pinnedTabsItemsWrapperNode;
+  },
+
+  /**
+   * The splitter that separates pinned + unpinned tabs in vertical mode.
+   *
+   * @returns {Element}
+   */
+  get _pinnedTabsSplitter() {
+    this._pinnedTabsSplitterNode ??= document.getElementById(
+      "vertical-pinned-tabs-splitter"
+    );
+    return this._pinnedTabsSplitterNode;
+  },
+
   // The constructor of this label accesses the browser element due to the
   // control="sidebar" attribute, so avoid getting this label during startup.
   get _title() {
@@ -445,20 +484,10 @@ var SidebarController = {
       "fullscreenNavToolboxHidden"
     );
 
-    this._pinnedTabsContainer = document.getElementById(
-      "pinned-tabs-container"
-    );
-    this._pinnedTabsItemsWrapper =
-      this._pinnedTabsContainer.shadowRoot.querySelector(
-        "[part=items-wrapper]"
-      );
     this._box = document.getElementById("sidebar-box");
     this._splitter = document.getElementById("sidebar-splitter");
     this._launcherSplitter = document.getElementById(
       "sidebar-launcher-splitter"
-    );
-    this._pinnedTabsSplitter = document.getElementById(
-      "vertical-pinned-tabs-splitter"
     );
     if (!this._splitterAriaUpdateTask) {
       this._splitterAriaUpdateTask = new DeferredTask(
@@ -1828,8 +1857,9 @@ var SidebarController = {
     if (this._itemsWrapperResizeObserver) {
       this._itemsWrapperResizeObserver.disconnect();
     }
-
-    this._pinnedTabsSplitter.hidden = true;
+    if (this._pinnedTabsSplitter) {
+      this._pinnedTabsSplitter.hidden = true;
+    }
   },
 
   _loadSidebarExtension(commandID) {
