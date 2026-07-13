@@ -544,8 +544,9 @@ nsresult nsLookAndFeel::NativeGetInt(IntID aID, int32_t& aResult) {
       aResult = GetSystemParam(SPI_GETMENUSHOWDELAY, 400);
       break;
     case IntID::MenusCanOverlapOSBar:
-      // we want XUL popups to be able to overlap the task bar.
-      aResult = 1;
+      // Context menus should not overlap the OS taskbar (default Windows
+      // behavior).
+      aResult = 0;
       break;
     case IntID::DragThresholdX:
       // The system metric is the number of pixels at which a drag should
