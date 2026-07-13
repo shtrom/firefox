@@ -319,15 +319,40 @@ add_task(async function test_open_tools_from_sidebar_horizontal() {
     "Unchecking turns on the panel switcher dropdown (hide-launcher)."
   );
 
-  info("Re-check to place tools back in the launcher.");
+  // Let the launcher's overflow IntersectionObserver run while the
+  // launcher is hidden and ensure we aren't left with a sidebar
+  // with unexpectedly hidden buttons
+  const { sidebarMain } = window.SidebarController;
+  await sidebarMain.updateComplete;
+  await waitForRepaint();
+  for (const button of sidebarMain.toolButtons) {
+    isnot(
+      button.style.visibility,
+      "hidden",
+      `Tool button ${button.getAttribute("view")} isn't hidden while the ` +
+        `launcher is hidden.`
+    );
+  }
+
   input.click();
   await panel.updateComplete;
   ok(input.checked, "Open tools from sidebar is checked again.");
   is(
     Services.prefs.getStringPref(SIDEBAR_VISIBILITY_PREF),
     "hide-on-close",
-    "Checking places tools in the launcher (hide-on-close)."
+    "Checking 'Open tools from sidebar' option places tool buttons back in the launcher."
   );
+
+  await sidebarMain.updateComplete;
+  await waitForRepaint();
+  ok(sidebarMain.toolButtons.length, "Launcher still has tool buttons.");
+  for (const button of sidebarMain.toolButtons) {
+    is(
+      window.getComputedStyle(button).visibility,
+      "visible",
+      `Tool button ${button.getAttribute("view")} is visible in the launcher.`
+    );
+  }
 
   Services.prefs.clearUserPref(SIDEBAR_VISIBILITY_PREF);
   await SpecialPowers.popPrefEnv();
