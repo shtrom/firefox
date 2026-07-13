@@ -236,7 +236,6 @@ include = [
   "LineClamp",
   "WordBreak",
   "Contain",
-  "MarginTrim",
   "ContainerType",
   "ContainerName",
   "ContentVisibility",

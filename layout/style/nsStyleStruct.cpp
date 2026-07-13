@@ -397,16 +397,14 @@ nsStyleMargin::nsStyleMargin()
           StyleMargin::LengthPercentage(LengthPercentage::Zero()))),
       mScrollMargin(StyleRectWithAllSides(StyleLength{0.})),
       mOverflowClipMargin(
-          {StyleLength::Zero(), StyleOverflowClipMarginBox::PaddingBox}),
-      mMarginTrim(StyleMarginTrim::NONE) {
+          {StyleLength::Zero(), StyleOverflowClipMarginBox::PaddingBox}) {
   MOZ_COUNT_CTOR(nsStyleMargin);
 }
 
 nsStyleMargin::nsStyleMargin(const nsStyleMargin& aSrc)
     : mMargin(aSrc.mMargin),
       mScrollMargin(aSrc.mScrollMargin),
-      mOverflowClipMargin(aSrc.mOverflowClipMargin),
-      mMarginTrim(aSrc.mMarginTrim) {
+      mOverflowClipMargin(aSrc.mOverflowClipMargin) {
   MOZ_COUNT_CTOR(nsStyleMargin);
 }
 

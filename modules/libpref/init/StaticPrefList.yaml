@@ -10614,14 +10614,6 @@
   mirror: always
   rust: true
 
-# Whether to enable the CSS margin-trim property
-# https://drafts.csswg.org/css-box-4/#margin-trim
-- name: layout.css.margin-trim.enabled
-  type: RelaxedAtomicBool
-  value: false
-  mirror: always
-  rust: true
-
 # Whether to enable CSS Module Scripts support.
 # https://html.spec.whatwg.org/#creating-a-css-module-script
 - name: layout.css.module-scripts.enabled
