@@ -1221,12 +1221,13 @@ void TRRService::RecordTRRStatus(TRR* aTrrRequest) {
 
   nsresult channelStatus = aTrrRequest->ChannelStatus();
 
-  glean::dns::trr_success.Get(
-      ProviderKey(),
-      NS_SUCCEEDED(channelStatus)
-          ? "Fine"_ns
-          : (channelStatus == NS_ERROR_NET_TIMEOUT_EXTERNAL ? "Timeout"_ns
-                                                            : "Bad"_ns));
+  glean::dns::trr_success
+      .Get(ProviderKey(),
+           NS_SUCCEEDED(channelStatus)
+               ? "Fine"_ns
+               : (channelStatus == NS_ERROR_NET_TIMEOUT_EXTERNAL ? "Timeout"_ns
+                                                                 : "Bad"_ns))
+      .Add();
   mConfirmation.RecordTRRStatus(aTrrRequest);
 }
 
