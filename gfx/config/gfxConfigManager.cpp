@@ -43,8 +43,10 @@ void gfxConfigManager::Init() {
       StaticPrefs::gfx_webrender_scissored_cache_clears_enabled_AtStartup();
   mWrScissoredCacheClearsForceEnabled = StaticPrefs::
       gfx_webrender_scissored_cache_clears_force_enabled_AtStartup();
+  EmplaceUserPref(StaticPrefs::GetPrefName_gfx_webrender_enable_angle(),
+                  mWrAngleEnabled);
 #ifdef XP_WIN
-  mWrForceAngle = StaticPrefs::gfx_webrender_force_angle_AtStartup();
+  mWrRequireAngle = StaticPrefs::gfx_webrender_require_angle_AtStartup();
   mWrDCompWinEnabled =
       Preferences::GetBool("gfx.webrender.dcomp-win.enabled", false);
 #endif
@@ -205,24 +207,22 @@ void gfxConfigManager::ConfigureWebRender() {
                              "FEATURE_FAILURE_SAFE_MODE"_ns);
   }
 
-  mFeatureWrAngle->EnableByDefault();
+  mFeatureWrAngle->SetDefaultFromPref(
+      StaticPrefs::GetPrefName_gfx_webrender_enable_angle(), true,
+      StaticPrefs::GetPrefDefault_gfx_webrender_enable_angle(),
+      mWrAngleEnabled);
   if (mFeatureD3D11HwAngle) {
-    if (mWrForceAngle) {
-      if (!mFeatureD3D11HwAngle->IsEnabled()) {
-        mFeatureWrAngle->ForceDisable(FeatureStatus::UnavailableNoAngle,
-                                      "ANGLE is disabled",
-                                      mFeatureD3D11HwAngle->GetFailureId());
-      }
-    } else {
-      mFeatureWrAngle->Disable(FeatureStatus::Disabled, "ANGLE is not forced",
-                               "FEATURE_FAILURE_ANGLE_NOT_FORCED"_ns);
+    if (!mFeatureD3D11HwAngle->IsEnabled()) {
+      mFeatureWrAngle->ForceDisable(FeatureStatus::UnavailableNoAngle,
+                                    "ANGLE is disabled",
+                                    mFeatureD3D11HwAngle->GetFailureId());
     }
   } else {
     mFeatureWrAngle->Disable(FeatureStatus::Unavailable, "OS not supported",
                              "FEATURE_FAILURE_OS_NOT_SUPPORTED"_ns);
   }
 
-  if (mWrForceAngle && mFeatureWr->IsEnabled() &&
+  if (mWrRequireAngle && mFeatureWr->IsEnabled() &&
       !mFeatureWrAngle->IsEnabled()) {
     // Ensure we disable WebRender if ANGLE is unavailable and it is required.
     mFeatureWr->ForceDisable(FeatureStatus::UnavailableNoAngle,

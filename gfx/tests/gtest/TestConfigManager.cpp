@@ -294,10 +294,11 @@ class GfxConfigManager : public ::testing::Test, public gfxConfigManager {
     mFeatureGPUProcess->EnableByDefault();
 
     mWrCompositorEnabled.emplace(true);
+    mWrAngleEnabled.emplace(true);
     mWrPartialPresent = true;
     mWrShaderCache.emplace(true);
     mWrOptimizedShaders = true;
-    mWrForceAngle = true;
+    mWrRequireAngle = false;
     mWrDCompWinEnabled = true;
     mWrCompositorDCompRequired = true;
     mWrScissoredCacheClearsEnabled = true;
@@ -561,8 +562,8 @@ TEST_F(GfxConfigManager, WebRenderDCompBlocked) {
   EXPECT_TRUE(mFeatures.mGLNorm16Textures.IsEnabled());
 }
 
-TEST_F(GfxConfigManager, WebRenderForceAngleDisabled) {
-  mWrForceAngle = false;
+TEST_F(GfxConfigManager, WebRenderAngleDisabled) {
+  mWrAngleEnabled = Some(false);
   ConfigureWebRender();
 
   EXPECT_TRUE(mFeatures.mWr.IsEnabled());
@@ -579,8 +580,9 @@ TEST_F(GfxConfigManager, WebRenderForceAngleDisabled) {
   EXPECT_TRUE(mFeatures.mGLNorm16Textures.IsEnabled());
 }
 
-TEST_F(GfxConfigManager, WebRenderD3D11HwAngleDisabled) {
-  mFeatures.mD3D11HwAngle.UserDisable("", ""_ns);
+TEST_F(GfxConfigManager, WebRenderAngleDisabledAndRequired) {
+  mWrAngleEnabled = Some(false);
+  mWrRequireAngle = true;
   ConfigureWebRender();
 
   EXPECT_FALSE(mFeatures.mWr.IsEnabled());
@@ -593,12 +595,11 @@ TEST_F(GfxConfigManager, WebRenderD3D11HwAngleDisabled) {
   EXPECT_TRUE(mFeatures.mWrScissoredCacheClears.IsEnabled());
   EXPECT_TRUE(mFeatures.mHwCompositing.IsEnabled());
   EXPECT_TRUE(mFeatures.mGPUProcess.IsEnabled());
-  EXPECT_FALSE(mFeatures.mD3D11HwAngle.IsEnabled());
+  EXPECT_TRUE(mFeatures.mD3D11HwAngle.IsEnabled());
   EXPECT_TRUE(mFeatures.mGLNorm16Textures.IsEnabled());
 }
 
-TEST_F(GfxConfigManager, WebRenderD3D11HwAngleAndForceAngleDisabled) {
-  mWrForceAngle = false;
+TEST_F(GfxConfigManager, WebRenderD3D11HwAngleDisabled) {
   mFeatures.mD3D11HwAngle.UserDisable("", ""_ns);
   ConfigureWebRender();
 
@@ -609,6 +610,25 @@ TEST_F(GfxConfigManager, WebRenderD3D11HwAngleAndForceAngleDisabled) {
   EXPECT_TRUE(mFeatures.mWrPartial.IsEnabled());
   EXPECT_TRUE(mFeatures.mWrShaderCache.IsEnabled());
   EXPECT_TRUE(mFeatures.mWrOptimizedShaders.IsEnabled());
+  EXPECT_TRUE(mFeatures.mWrScissoredCacheClears.IsEnabled());
+  EXPECT_TRUE(mFeatures.mHwCompositing.IsEnabled());
+  EXPECT_TRUE(mFeatures.mGPUProcess.IsEnabled());
+  EXPECT_FALSE(mFeatures.mD3D11HwAngle.IsEnabled());
+  EXPECT_TRUE(mFeatures.mGLNorm16Textures.IsEnabled());
+}
+
+TEST_F(GfxConfigManager, WebRenderD3D11HwAngleDisabledAndRequired) {
+  mWrRequireAngle = true;
+  mFeatures.mD3D11HwAngle.UserDisable("", ""_ns);
+  ConfigureWebRender();
+
+  EXPECT_FALSE(mFeatures.mWr.IsEnabled());
+  EXPECT_FALSE(mFeatures.mWrCompositor.IsEnabled());
+  EXPECT_FALSE(mFeatures.mWrAngle.IsEnabled());
+  EXPECT_FALSE(mFeatures.mWrDComp.IsEnabled());
+  EXPECT_TRUE(mFeatures.mWrPartial.IsEnabled());
+  EXPECT_FALSE(mFeatures.mWrShaderCache.IsEnabled());
+  EXPECT_FALSE(mFeatures.mWrOptimizedShaders.IsEnabled());
   EXPECT_TRUE(mFeatures.mWrScissoredCacheClears.IsEnabled());
   EXPECT_TRUE(mFeatures.mHwCompositing.IsEnabled());
   EXPECT_TRUE(mFeatures.mGPUProcess.IsEnabled());

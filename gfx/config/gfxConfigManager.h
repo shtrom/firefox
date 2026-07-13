@@ -32,7 +32,7 @@ class gfxConfigManager {
         mWrForceEnabled(false),
         mWrSoftwareForceEnabled(false),
         mWrCompositorForceEnabled(false),
-        mWrForceAngle(false),
+        mWrRequireAngle(false),
         mWrDCompWinEnabled(false),
         mWrCompositorDCompRequired(false),
         mWrForcePartialPresent(false),
@@ -77,10 +77,11 @@ class gfxConfigManager {
    * Prefs
    */
   Maybe<bool> mWrCompositorEnabled;
+  Maybe<bool> mWrAngleEnabled;
   bool mWrForceEnabled;
   bool mWrSoftwareForceEnabled;
   bool mWrCompositorForceEnabled;
-  bool mWrForceAngle;
+  bool mWrRequireAngle;
   bool mWrDCompWinEnabled;
   bool mWrCompositorDCompRequired;
   bool mWrForcePartialPresent;
