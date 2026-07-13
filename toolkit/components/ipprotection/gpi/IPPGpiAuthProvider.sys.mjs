@@ -12,8 +12,6 @@ const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
   EventDispatcher: "resource://gre/modules/Messaging.sys.mjs",
-  IPProtectionActivator:
-    "moz-src:///toolkit/components/ipprotection/IPProtectionActivator.sys.mjs",
   IPProtectionService:
     "moz-src:///toolkit/components/ipprotection/IPProtectionService.sys.mjs",
   clearTimeout: "resource://gre/modules/Timer.sys.mjs",
@@ -40,15 +38,7 @@ class IPPGpiAuthProviderSingleton extends IPPAuthProvider {
   }
 
   init() {
-    this.#listener = {
-      onEvent: event => {
-        if (event === "GeckoView:IPProtection:GPI:WarmUpCompleted") {
-          this._onGpiWarmUpCompleted();
-        } else {
-          this._onGpiWarmUpFailed();
-        }
-      },
-    };
+    this.#listener = { onEvent: () => this._onGpiWarmUpCompleted() };
     this._registerGpiListener(this.#listener);
     this._dispatchGpiWarmUp();
 
@@ -74,29 +64,20 @@ class IPPGpiAuthProviderSingleton extends IPPAuthProvider {
     lazy.IPProtectionService.updateState();
   }
 
-  _onGpiWarmUpFailed() {
-    lazy.IPProtectionActivator.reinitWithFallback();
-  }
-
   _registerGpiListener(listener) {
     lazy.EventDispatcher.instance.registerListener(listener, [
-      "GeckoView:IPProtection:GPI:WarmUpCompleted",
-      "GeckoView:IPProtection:GPI:WarmUpFailed",
+      "GPI:WarmUpCompleted",
     ]);
   }
 
   _unregisterGpiListener(listener) {
     lazy.EventDispatcher.instance.unregisterListener(listener, [
-      "GeckoView:IPProtection:GPI:WarmUpCompleted",
-      "GeckoView:IPProtection:GPI:WarmUpFailed",
+      "GPI:WarmUpCompleted",
     ]);
   }
 
   _dispatchGpiWarmUp() {
-    lazy.EventDispatcher.instance.dispatch(
-      "GeckoView:IPProtection:GPI:WarmUp",
-      {}
-    );
+    lazy.EventDispatcher.instance.dispatch("GPI:WarmUp", {});
   }
 
   #scheduleRenewal() {
@@ -232,7 +213,7 @@ class IPPGpiAuthProviderSingleton extends IPPAuthProvider {
     try {
       const tasks = [
         lazy.EventDispatcher.instance.sendRequestForResult(
-          "GeckoView:IPProtection:GPI:RequestToken",
+          "GPI:RequestToken",
           {}
         ),
       ];
@@ -275,14 +256,12 @@ class IPPGpiAuthProviderSingleton extends IPPAuthProvider {
       headers.Authorization = `Bearer ${previousJwt}`;
     }
 
-    const packageName = Services.env.get("MOZ_ANDROID_PACKAGE_NAME");
-
     let response;
     try {
       response = await fetch(url.href, {
         method: "POST",
         headers,
-        body: JSON.stringify({ integrityToken: gpiToken, packageName }),
+        body: JSON.stringify({ integrityToken: gpiToken }),
       });
     } catch {
       return null;
