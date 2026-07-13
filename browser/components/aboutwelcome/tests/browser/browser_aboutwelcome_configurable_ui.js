@@ -85,6 +85,12 @@ async function testAboutWelcomeLogoFor(logo = {}) {
   browser.closeBrowser();
 }
 
+add_setup(async function () {
+  registerCleanupFunction(function () {
+    Services.prefs.clearUserPref("browser.aboutwelcome.didSeeFinalScreen");
+  });
+});
+
 /**
  * Test rendering a screen in about welcome with decorative noodles
  */
