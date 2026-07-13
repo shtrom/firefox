@@ -12,9 +12,8 @@
  */
 
 #include "mozilla/Assertions.h"
-#include "nsAString.h"
 #include "mozilla/TextUtils.h"
-
+#include "nsAString.h"
 #include "nsTArrayForwardDeclare.h"
 
 // From the nsstring crate

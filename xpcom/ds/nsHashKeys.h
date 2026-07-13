@@ -5,15 +5,6 @@
 #ifndef nsTHashKeys_h_
 #define nsTHashKeys_h_
 
-#include "nsID.h"
-#include "nsISupports.h"
-#include "nsCOMPtr.h"
-#include "PLDHashTable.h"
-
-#include "nsString.h"
-#include "nsUnicharUtils.h"
-#include "nsPointerHashKeys.h"
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,8 +12,15 @@
 #include <type_traits>
 #include <utility>
 
+#include "PLDHashTable.h"
 #include "mozilla/HashFunctions.h"
 #include "mozilla/ThreadSafeWeakPtr.h"
+#include "nsCOMPtr.h"
+#include "nsID.h"
+#include "nsISupports.h"
+#include "nsPointerHashKeys.h"
+#include "nsString.h"
+#include "nsUnicharUtils.h"
 
 namespace mozilla {
 

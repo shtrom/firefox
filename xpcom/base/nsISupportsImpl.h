@@ -6,23 +6,24 @@
 #ifndef nsISupportsImpl_h_
 #define nsISupportsImpl_h_
 
-#include "nscore.h"
 #include "nsISupports.h"
 #include "nsISupportsUtils.h"
+#include "nscore.h"
 
 #if !defined(XPCOM_GLUE_AVOID_NSPR)
 #  include "prthread.h" /* needed for cargo-culting headers */
 #endif
 
-#include "nsDebug.h"
-#include "nsXPCOM.h"
 #include <atomic>
 #include <type_traits>
 #include <utility>
-#include "mozilla/Attributes.h"
+
 #include "mozilla/Assertions.h"
+#include "mozilla/Attributes.h"
 #include "mozilla/MacroArgs.h"
 #include "mozilla/MacroForEach.h"
+#include "nsDebug.h"
+#include "nsXPCOM.h"
 
 #define MOZ_ASSERT_TYPE_OK_FOR_REFCOUNTING(X)            \
   static_assert(!std::is_destructible_v<X>,              \

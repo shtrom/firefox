@@ -2,21 +2,24 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include <new>
+#include "PLDHashTable.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "PLDHashTable.h"
-#include "nsDebug.h"
+
+#include <new>
+
+#include "mozilla/ChaosMode.h"
 #include "mozilla/HashFunctions.h"
+#include "mozilla/Likely.h"
+#include "mozilla/Maybe.h"
+#include "mozilla/MemoryReporting.h"
 #include "mozilla/OperatorNewExtensions.h"
 #include "mozilla/ScopeExit.h"
 #include "nsAlgorithm.h"
+#include "nsDebug.h"
 #include "nsPointerHashKeys.h"
-#include "mozilla/Likely.h"
-#include "mozilla/MemoryReporting.h"
-#include "mozilla/Maybe.h"
-#include "mozilla/ChaosMode.h"
 
 using namespace mozilla;
 

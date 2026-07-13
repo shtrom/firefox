@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "IdleTaskRunner.h"
+
 #include "mozilla/AppShutdown.h"
 #include "mozilla/TaskController.h"
 #include "nsRefreshDriver.h"

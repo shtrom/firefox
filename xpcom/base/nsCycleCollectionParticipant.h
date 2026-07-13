@@ -6,6 +6,7 @@
 #define nsCycleCollectionParticipant_h_
 
 #include <type_traits>
+
 #include "js/HeapAPI.h"
 #include "js/TypeDecls.h"
 #include "mozilla/MacroForEach.h"

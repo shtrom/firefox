@@ -7,10 +7,9 @@
 #include "mozilla/CheckedInt.h"
 #include "mozilla/Utf16.h"
 #include "mozilla/Utf8.h"
-
-#include "nscore.h"
 #include "nsString.h"
 #include "nsTArray.h"
+#include "nscore.h"
 
 using mozilla::Span;
 

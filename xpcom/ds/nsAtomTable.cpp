@@ -2,6 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include "nsAtomTable.h"
+
+#include "PLDHashTable.h"
+#include "mozilla/AppShutdown.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/Attributes.h"
 #include "mozilla/HashFunctions.h"
@@ -9,18 +13,14 @@
 #include "mozilla/MruCache.h"
 #include "mozilla/RWLock.h"
 #include "mozilla/TextUtils.h"
-#include "mozilla/AppShutdown.h"
-#include "nsHashKeys.h"
-#include "nsTHashtable.h"
-#include "nsThreadUtils.h"
-
 #include "nsAtom.h"
-#include "nsAtomTable.h"
 #include "nsGkAtoms.h"
+#include "nsHashKeys.h"
 #include "nsPrintfCString.h"
 #include "nsString.h"
+#include "nsTHashtable.h"
+#include "nsThreadUtils.h"
 #include "nsUnicharUtils.h"
-#include "PLDHashTable.h"
 #include "prenv.h"
 
 // There are two kinds of atoms handled by this module.

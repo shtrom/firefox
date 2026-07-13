@@ -9,8 +9,8 @@
 
 #include "mozilla/Atomics.h"
 #include "mozilla/Char16.h"
-#include "mozilla/TextUtils.h"
 #include "mozilla/MemoryReporting.h"
+#include "mozilla/TextUtils.h"
 #include "nsISupports.h"
 #include "nsString.h"
 

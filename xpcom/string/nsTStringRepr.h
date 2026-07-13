@@ -11,15 +11,14 @@
 
 #include "fmt/format.h"
 #include "fmt/xchar.h"
-
 #include "mozilla/Char16.h"
 #include "mozilla/CheckedInt.h"
-#include "mozilla/fallible.h"
 #include "mozilla/StringBuffer.h"
+#include "mozilla/fallible.h"
+#include "nsCharTraits.h"
 #include "nsStringFlags.h"
 #include "nsStringFwd.h"
 #include "nsStringIterator.h"
-#include "nsCharTraits.h"
 
 template <typename T>
 class nsTSubstringTuple;
