@@ -8,7 +8,7 @@
 # documentation and how to modify this file.
 repo: mozilla-central
 created_at: '2021-10-14T12:50:40.073465'
-updated_at: '2026-06-24T13:35:09.623323+00:00'
+updated_at: '2026-07-13T04:57:12.132229+00:00'
 export:
   path: ./docs/mots/index.md
   format: md
@@ -336,10 +336,6 @@ people:
     bmo_id: 455480
     name: Edgar Chen
     nick: edgar
-  - &edgul
-    bmo_id: 701256
-    name: edgul
-    nick: edgul
   - &eeejay
     bmo_id: 291675
     name: Eitan Isaacson
@@ -1587,18 +1583,19 @@ modules:
         - Honza Bambas
         - Emma Zühlcke
         - Tom Schuster
+        - Ed Guloien
       group: dev-platform
       components:
         - 'Core::Networking: Cookies'
       review_group: cookies
     owners:
-      - *dveditz
       - *timhuang
-      - *valentin
       - *baku
     peers:
-      - *edgul
+      - *manuel
       - *bvandersloot
+      - *valentin
+      - *dveditz
     machine_name: core_cookies
 
   - name: 'Core: Crash reporting'
@@ -4800,5 +4797,5 @@ modules:
         - Ryan Tilder
       group: dev-platform
 hashes:
-  config: f76af66e70a647591557a42ecc1cd5a1c13e922f
-  export: 26ca53b86692a3584fe24811a6db0cd0e788c65b
+  config: 5b4cdf53c3cc1ea274e66d1d53c22671e3b40a59
+  export: daa1bc434fce3f183425d4132076a1667cb76d4c

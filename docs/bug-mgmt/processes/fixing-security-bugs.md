@@ -74,8 +74,9 @@ sensitive information about the bug in public places, such as Bugzilla:
 - Do not comment sensitive information in public related bugs.
 - Also be careful about who you give bug access to: **double check
   before CC’ing the wrong person or alias**.
-- As of recently, you may now add public bugs in the “duplicate”,
-  “depends on”, “blocks”, “regression”, “regressed by”, or “see also” section.
+- You may add public bugs in the “duplicate”,
+  “depends on”, “blocks”, “regression”, “regressed by”, or “see also” section,
+  as well as adding security bugs into those sections of public bugs.
   Bugzilla will only reveal those relationships to people with `editbugs`
   permission or access to the security bug.
 
@@ -96,8 +97,9 @@ bug.
 
 Because of the public visibility, pushing to Try has all the same concerns
 as committing the patch. Please heed the concerns in the
-{ref}`landing-your-patch` section before thinking about it, and check with
-the security team for an informal "sec-approval" before doing so.
+{ref}`landing-your-patch` section.  If necessary, you can fold your changes
+into another working patch and send them to try together, not referencing
+the security fixes in the commit or comments.
 
 **Do not push the bug's own vulnerability testcase to Try.**
 
@@ -107,18 +109,12 @@ anywhere it is security related.
 
 ### Obfuscating a security patch
 
-If your security patch looks obvious because of the code it contains
-(e.g. a one-line fix), or if you really need to push to Try servers,
+If you really need to push to Try servers,
 **consider integrating your security-related patch to non-security work
 in the same area**. And/or pretend it is related to something else, like
 some performance improvement or a correctness fix. **Definitely don't
-include the bug number in the commit message.** This will help making
-the security issue less easily identifiable. (The absolute ban against
-"Security through Obscurity" is in relation to cryptographic systems. In
-other situations you still can't *rely* on obscurity but it can
-sometimes buy you a little time. In this context we need to get the
-fixes into the hands of our users faster than attackers can weaponize
-and deploy attacks and a little extra time can help.)
+include the bug number in the commit message.** This will help make
+the security issue less easily identifiable.
 
 ### Requesting sec-approval
 
@@ -141,11 +137,15 @@ information about the security vulnerability unnecessarily. Specifically:
    should be omitted for security bugs and instead be posted in the bug
    (which will eventually become public.)
 
-2. Separate out tests into a separate commit.
-   **Do not land tests when landing the patch. Remember we don’t want
-   to 0-day ourselves!** This includes when pushing to try.
+2. Consider separating out tests into a separate commit.
+   While previously we did not land tests with the patch ever, the advent of
+   AI tools has frequently made this precaution not worth the extra effort
+   for the developer.  Instead **consider with your experience if the
+   vulnerability is unusually difficult to determine from the patch,
+   or unusually difficult to trigger** - this is when it is appropriate to
+   separate the test into a separate commit.
 
-   - Tests should only be checked in later, after an official Firefox
+   - Those tests should be checked in later, after an official Firefox
      release that contains the fix has been live for at least
      four weeks. For example, if Firefox 53
      contains a security issue that affects the world and that issue is
@@ -153,7 +153,7 @@ information about the security vulnerability unnecessarily. Specifically:
      until four weeks after 54 goes live.
 
      The exception to this is if there is a security issue that doesn't
-     affect any release branches, only mozilla-central and/or other
+     affect Firefox Release or ESR, only mozilla-central and/or other
      development branches. Since the security problem was never
      released to the world, once the bug is fixed in all affected
      places, tests can be checked in to the various branches.
@@ -172,8 +172,13 @@ information about the security vulnerability unnecessarily. Specifically:
    >    when ready, rather than having your reviewer and you have to remember
    >    what this was about a month or two down the line.
    >
-3. Or, set the "in-testsuite" flag to "?", and later set it to "+"
-   >    when the tests get checked in.
+   > 2. Or, set the "in-testsuite" flag to "?" and add a whiteboard tag of the
+   >    form [reminder-test 2026-11-30]. Bugbot will needinfo the bug assignee
+   >    on that date. When the tests get checked in, change the "in-testsuite"
+   >    flag to "+".
+   >
+   >    If the tests are revealing enough to separate this way, the reminder
+   >    date should be 4 weeks after the release containing the fix.
 
 ### Landing tests
 
@@ -199,9 +204,6 @@ This is the responsibility of the security management team.
 - If any doubt: '''request sec-approval? '''
 
 - If any doubt: **needinfo security folks**.
-
-- **If there’s no rating, assume the worst and treat the bug as
-  sec-critical**.
 
 ## Documentation & Contacts
 

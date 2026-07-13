@@ -2086,7 +2086,7 @@ KeyframeEffect::MatchForCompositor KeyframeEffect::IsMatchForCompositor(
   if (mAnimation->UsingScrollTimeline()) {
     const ScrollTimeline* scrollTimeline =
         mAnimation->GetTimeline()->AsScrollTimeline();
-    const auto state = scrollTimeline->GetState();
+    const auto state = scrollTimeline->GetSnapshot();
     // We don't send this animation to the compositor if:
     // 1. The timeline doesn't have a source, in which case we don't need to
     //    run the compositor animations since we don't have its ViewID info for

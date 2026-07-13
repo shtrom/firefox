@@ -13914,7 +13914,7 @@
 #if defined(MOZ_WIDGET_ANDROID)
   value: true
 #else
-  value: false
+  value: @IS_NIGHTLY_BUILD@
 #endif
   mirror: always
 
