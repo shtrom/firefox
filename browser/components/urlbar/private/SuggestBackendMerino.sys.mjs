@@ -38,8 +38,20 @@ export class SuggestBackendMerino extends SuggestBackend {
     }
   }
 
-  async query(searchString, { queryContext }) {
-    if (!queryContext.allowRemoteResults()) {
+  /**
+   * Issues a Merino fetch for `searchString` on the live session.
+   *
+   * @param {string} searchString
+   *   The string to fetch.
+   * @param {object} [options]
+   *   Options object.
+   * @param {UrlbarQueryContext} [options.queryContext]
+   *   The query context.
+   * @returns {Promise<Array>}
+   *   Matching suggestions. Empty when nothing is fetched.
+   */
+  async query(searchString, { queryContext } = {}) {
+    if (!searchString || !queryContext?.allowRemoteResults()) {
       return [];
     }
 
