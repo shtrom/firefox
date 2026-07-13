@@ -8,6 +8,14 @@
  */
 
 const DEFAULT_THEME_ID = "default-theme@mozilla.org";
+const COMPACT_MODE_THEMES = [
+  "default-theme@mozilla.org",
+  "nova-ash@mozilla.org",
+  "nova-sun@mozilla.org",
+  "nova-flare@mozilla.org",
+  "nova-lagoon@mozilla.org",
+  "nova-pine@mozilla.org",
+];
 
 // TODO: Bug 2053217 Consider moving this out to a separate JSON file
 const FIREFOX_THEMES_LIST = [
@@ -199,10 +207,22 @@ export class ThemePickerStorybookController {
     );
   }
 
+  updateThemes() {
+    let themes = FIREFOX_THEMES_LIST;
+
+    if (this.host.layout === "compact") {
+      themes = FIREFOX_THEMES_LIST.filter(theme =>
+        COMPACT_MODE_THEMES.includes(theme.id)
+      );
+    }
+
+    this.host.themes = themes;
+  }
+
   hostConnected() {
-    this.host.themes = FIREFOX_THEMES_LIST;
     this.host.activeThemeId = DEFAULT_THEME_ID;
     this.host.appearance = "device";
     this.host.nativeTheme = false;
+    this.updateThemes();
   }
 }
