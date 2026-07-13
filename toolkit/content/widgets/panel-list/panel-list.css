@@ -2,8 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-@import url("chrome://global/content/elements/panel-list.tokens.css");
-
 /*
  * Override the default popover styles to ensure the panel-list
  * stays anchored to the element that opened it.
@@ -24,15 +22,21 @@
 }
 
 :host {
+  --panel-list-background-color: var(--background-color-box);
+  --panel-list-color: var(--text-color);
+  --panel-list-border-radius: var(--border-radius-small);
+  --panel-list-box-shadow: var(--popup-box-shadow);
+  --panel-list-border-color: var(--border-color-deemphasized);
+
   /* display: block ensures dimensions are available during setAlign()
      positioning, since the popover UA stylesheet hides [popover]:not(:popover-open). */
   display: block;
   position: absolute;
   font: menu;
   background-color: var(--panel-list-background-color);
-  color: var(--panel-list-text-color);
+  color: var(--panel-list-color);
   border-radius: var(--panel-list-border-radius);
-  padding-block: var(--panel-padding-block);
+  padding-block: var(--space-small);
   margin-block-end: var(--space-large);
   box-shadow: var(--panel-list-box-shadow);
   min-width: 12em;
@@ -75,11 +79,9 @@
   /* This element is used like a border, so border tokens apply. */
   /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
   height: var(--border-width) !important;
-  /* The background color is used to style the separator, so the separator token applies. */
-  /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
-  background-color: var(--panel-separator-color) !important;
+  background-color: var(--panel-list-border-color) !important;
   color: inherit !important;
   padding: 0 !important;
-  margin: var(--panel-separator-padding) !important;
+  margin-block: var(--space-small) !important;
   border: none !important;
 }
