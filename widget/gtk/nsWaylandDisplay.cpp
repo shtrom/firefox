@@ -1153,6 +1153,15 @@ MOZ_NEVER_INLINE static void WlLogHandler_XdgSurfaceBufferMismatch(
                           WaylandProxy::GetState());
 }
 
+// Compositor connection lost - Example: "Error reading events from display:
+// Broken pipe". The Wayland compositor terminated our connection (e.g. session
+// end, monitor hot-unplug); this is outside Firefox's control. See Bug 1984696.
+MOZ_NEVER_INLINE static void WlLogHandler_DisplayReadError(const char* error) {
+  MOZ_CRASH_UNSAFE_PRINTF("(%s) %s Proxy: %s",
+                          GetDesktopEnvironmentIdentifier().get(), error,
+                          WaylandProxy::GetState());
+}
+
 // Timestamp of the last "still attached" message ignored by WlLogHandler.
 // Written on the main thread (libwayland event dispatch) with release ordering
 // after writing sStillAttachedMessage, so any thread that observes the
@@ -1245,6 +1254,11 @@ static void WlLogHandler(const char* format, va_list args) {
   if (strstr(error, "xdg_surface") && strstr(error, "buffer") &&
       strstr(error, "fullscreen state")) {
     WlLogHandler_XdgSurfaceBufferMismatch(error);
+  }
+
+  // Pattern 12: compositor connection lost (Bug 1984696)
+  if (strstr(error, "Error reading events from display")) {
+    WlLogHandler_DisplayReadError(error);
   }
 
   // Fallback for unmatched patterns - use original inline code
