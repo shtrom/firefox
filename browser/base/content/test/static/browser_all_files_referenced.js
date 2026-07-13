@@ -346,15 +346,6 @@ var allowlist = [
   {
     file: "resource://app/modules/asrouter/MessagingTargetingConstants.sys.mjs",
   },
-
-  // Bug 2051554 - Added a new FirefoxThemesList.sys.mjs as single source of truth for the Nova themes
-  // to be shown in the new Firefox Themes Picker UI components.
-  //
-  // TODO: remove this exception once the first patch using the new module has been landed
-  // (e.g. Bug 2050529 and/or Bug 2051571)
-  {
-    file: "moz-src:///browser/themes/ThemesList.sys.mjs",
-  },
 ];
 
 if (AppConstants.NIGHTLY_BUILD) {

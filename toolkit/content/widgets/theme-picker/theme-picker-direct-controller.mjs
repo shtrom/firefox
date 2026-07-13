@@ -18,14 +18,6 @@ const lazy = XPCOMUtils.declareLazy({
 const PREF_SYSTEM_USES_DARK = "ui.systemUsesDarkTheme";
 const PREF_NATIVE_THEME = "browser.theme.native-theme";
 const PREF_ACTIVE_THEME_ID = "extensions.activeThemeID";
-const COMPACT_MODE_THEMES = [
-  "default-theme@mozilla.org",
-  "nova-ash@mozilla.org",
-  "nova-sun@mozilla.org",
-  "nova-flare@mozilla.org",
-  "nova-lagoon@mozilla.org",
-  "nova-pine@mozilla.org",
-];
 
 /**
  * @implements {ReactiveController}
@@ -43,7 +35,9 @@ export class ThemePickerDirectController {
       })
       .then(tm => {
         this.themesManager = tm;
-        this.updateThemes();
+        this.host.themes = tm.getThemesInfo({
+          showInCompactLayout: this.host.layout === "compact",
+        });
         this.updateHost();
       });
     this.lazy = XPCOMUtils.declareLazy({
@@ -104,15 +98,6 @@ export class ThemePickerDirectController {
    */
   async setTheme(themeId) {
     await this.themesManager.updateThemeState(themeId, true);
-  }
-
-  updateThemes() {
-    let themes = this.themesManager.getThemesInfo();
-    if (this.host.layout === "compact") {
-      themes = themes.filter(theme => COMPACT_MODE_THEMES.includes(theme.id));
-    }
-
-    this.host.themes = themes;
   }
 
   updateHost() {
