@@ -559,16 +559,16 @@ GVariant* MPRISServiceHandler::GetPlaybackStatus() const {
 
 void MPRISServiceHandler::SetMediaMetadata(
     const dom::MediaMetadataBase& aMetadata) {
-  SetMediaMetadataInternal(aMetadata);
-
+  bool clearArt = true;
   for (const dom::MediaImageData& image : aMetadata.mArtwork) {
-    if (!image.mDataSurface) {
-      continue;
-    }
-
     if (mCurrentImageUrl == image.mSrc) {
       LOGMPRIS("Artwork image URL did not change");
+      clearArt = false;
       break;
+    }
+
+    if (!image.mDataSurface) {
+      continue;
     }
 
     uint32_t size = 0;
@@ -586,11 +586,13 @@ void MPRISServiceHandler::SetMediaMetadata(
 
     if (SetImageToDisplay(data, size)) {
       mCurrentImageUrl = image.mSrc;
+      clearArt = false;
       LOGMPRIS("The MPRIS image is updated to the image from: %s",
                NS_ConvertUTF16toUTF8(mCurrentImageUrl).get());
       break;
     }
   }
+  SetMediaMetadataInternal(aMetadata, clearArt);
 }
 
 bool MPRISServiceHandler::EmitMetadataChanged() const {
