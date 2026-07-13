@@ -1376,7 +1376,10 @@ sftk_CryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
                     break;
                 }
             } else if ((pMechanism->mechanism == CKM_AES_CTR && BAD_PARAM_CAST(pMechanism, sizeof(CK_AES_CTR_PARAMS))) ||
-                       ((pMechanism->mechanism == CKM_AES_CBC || pMechanism->mechanism == CKM_AES_CTS) && BAD_PARAM_CAST(pMechanism, AES_BLOCK_SIZE))) {
+                       ((pMechanism->mechanism == CKM_AES_CBC ||
+                         pMechanism->mechanism == CKM_AES_CBC_PAD ||
+                         pMechanism->mechanism == CKM_AES_CTS) &&
+                        BAD_PARAM_CAST(pMechanism, AES_BLOCK_SIZE))) {
                 crv = CKR_MECHANISM_PARAM_INVALID;
                 break;
             }
@@ -3351,7 +3354,7 @@ NSC_SignInit(CK_SESSION_HANDLE hSession,
 #define INIT_HMAC_MECH(mmm)                                        \
     case CKM_##mmm##_HMAC_GENERAL:                                 \
         PORT_Assert(pMechanism->pParameter);                       \
-        if (BAD_PARAM_CAST(pMechanism, sizeof(CK_ULONG))) {       \
+        if (BAD_PARAM_CAST(pMechanism, sizeof(CK_ULONG))) {        \
             crv = CKR_MECHANISM_PARAM_INVALID;                     \
             break;                                                 \
         }                                                          \
