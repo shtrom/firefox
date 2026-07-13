@@ -69,6 +69,11 @@ bool nsIGlobalObject::IsScriptForbidden(JSObject* aCallback,
 }
 
 bool nsIGlobalObject::CanRunJSMicroTask(JSObject* aCallbackGlobal) const {
+  auto* principal = PrincipalOrNull();
+  if (principal && principal->IsSystemPrincipal()) {
+    return !IsScriptForbidden(aCallbackGlobal, false);
+  }
+
   if (NS_IsMainThread()) {
     return xpc::Scriptability::AllowedIfExists(aCallbackGlobal);
   }
