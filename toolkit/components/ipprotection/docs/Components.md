@@ -60,7 +60,6 @@ flowchart LR
       IPPAuthProvider
       IPPFxaActivateAuthProvider["Activate Auth Provider"]
       IPPSignInWatcher["Sign-in Observer"]
-      IPPEnrollAndEntitleManager["Enroll & Entitle Manager"]
       GuardianClient
     end
 
@@ -95,7 +94,6 @@ flowchart LR
   %% FxA auth wiring
   IPPFxaActivateAuthProvider -->|extends| IPPAuthProvider
   IPPFxaActivateAuthProvider --> IPPSignInWatcher
-  IPPFxaActivateAuthProvider --> IPPEnrollAndEntitleManager
   IPPFxaActivateAuthProvider --> GuardianClient
 
   %% Android auth wiring
@@ -202,22 +200,12 @@ IPPFxaActivateAuthProvider
   OAuth tokens from `fxAccounts` via `getToken()`, passes them to
   `GuardianClient` for all Guardian HTTP calls, and enrolls the user by sending
   the FxA Bearer token directly to Guardian's activate endpoint, without using a
-  hidden tab or window. It also lists the FxA endpoint prefs whose URL values
-  should bypass the proxy. Its `helpers` getter exposes `IPPSignInWatcher`
-  and `IPPEnrollAndEntitleManager` so they can be registered as service helpers.
-  The provider and its helpers are wired up from `IPProtectionHelpers.sys.mjs`
-  in the browser layer via `IPProtectionActivator.setAuthProvider()` and
-  `IPProtectionActivator.addHelpers()`.
+  hidden tab or window.
 
 IPPSignInWatcher
 
 : Observes user authentication state. It informs the state machine when the
   user signs in or out.
-
-IPPEnrollAndEntitleManager
-
-: Orchestrates the FxA-based enrollment flow with Guardian and updates the
-  service when enrollment or entitlement status changes.
 
 IPPSessionPrefManager
 
