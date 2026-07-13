@@ -947,7 +947,12 @@ uint32_t gfxTextRun::BreakAndMeasureText(
   // GetHyphensOption() is a virtual call returning a value that is constant
   // for the whole measurement, so fetch it once instead of on every use.
   const StyleHyphens hyphensOption = aProvider.GetHyphensOption();
+  // Hyphenation data is only consulted in the break-detection block below,
+  // which is skipped entirely when all breaks are suppressed. In that case we
+  // avoid fetching and classifying hyphenation data (which can involve per-word
+  // dictionary lookups) since it would never be used.
   bool haveHyphenation =
+      aSuppressBreak != eSuppressAllBreaks &&
       (hyphensOption == StyleHyphens::Auto ||
        (hyphensOption == StyleHyphens::Manual &&
         !!(mFlags & gfx::ShapedTextFlags::TEXT_ENABLE_HYPHEN_BREAKS)));
