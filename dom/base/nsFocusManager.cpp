@@ -4278,7 +4278,8 @@ nsIContent* nsFocusManager::GetNextTabbableContentInScope(
   if (!aSkipOwner && (aForward && aOwner == aStartContent)) {
     if (nsIFrame* frame = aOwner->GetPrimaryFrame()) {
       auto focusable = frame->IsFocusable();
-      if (focusable && focusable.mTabIndex >= 0) {
+      if (focusable && focusable.mTabIndex >= 0 &&
+          (!aForDocumentNavigation || aReachedToEndForDocumentNavigation)) {
         return aOwner;
       }
     }
@@ -4402,7 +4403,8 @@ nsIContent* nsFocusManager::GetNextTabbableContentInScope(
   if (!aSkipOwner && !aForward) {
     if (nsIFrame* frame = aOwner->GetPrimaryFrame()) {
       auto focusable = frame->IsFocusable();
-      if (focusable && focusable.mTabIndex >= 0) {
+      if (focusable && focusable.mTabIndex >= 0 &&
+          (!aForDocumentNavigation || aReachedToEndForDocumentNavigation)) {
         return aOwner;
       }
     }
