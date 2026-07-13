@@ -649,7 +649,14 @@ already_AddRefed<nsDragService> nsDragService::GetInstance() {
   return service.forget();
 }
 
-nsDragService::nsDragService() = default;
+nsDragService::nsDragService() {
+#ifdef MOZ_WAYLAND
+  if (StaticPrefs::widget_wayland_native_data_session_AtStartup() &&
+      GdkIsWaylandDisplay()) {
+    mContext = MakeRefPtr<RetrievalContextWayland>(/* aIsDragContext */ true);
+  }
+#endif
+}
 
 already_AddRefed<nsIDragSession> nsDragService::CreateDragSession() {
 #ifdef MOZ_WAYLAND

@@ -9,9 +9,8 @@
 #  include "RetrievalContextX11.h"
 #endif
 #if defined(MOZ_WAYLAND)
-#  include "nsWaylandDisplay.h"
-#  include "RetrievalContextWayland.h"
 #  include "RetrievalContextGtk.h"
+#  include "nsWaylandDisplay.h"
 #endif
 #include "nsGtkUtils.h"
 #include "nsIURI.h"
@@ -32,7 +31,6 @@
 #include "mozilla/SchedulerGroup.h"
 #include "mozilla/Services.h"
 #include "mozilla/StaticPrefs_clipboard.h"
-#include "mozilla/StaticPrefs_widget.h"
 #include "mozilla/TimeStamp.h"
 #include "GRefPtr.h"
 #include "WidgetUtilsGtk.h"
@@ -194,16 +192,12 @@ NS_IMPL_ISUPPORTS_INHERITED(nsClipboard, nsBaseClipboard, nsIObserver)
 nsresult nsClipboard::Init(void) {
 #if defined(MOZ_X11)
   if (widget::GdkIsX11Display()) {
-    mContext = MakeRefPtr<RetrievalContextX11>();
+    mContext = new RetrievalContextX11();
   }
 #endif
 #if defined(MOZ_WAYLAND)
-  if (widget::GdkIsWaylandDisplay() &&
-      StaticPrefs::widget_wayland_native_data_session_AtStartup()) {
-    mContext = MakeRefPtr<RetrievalContextWayland>();
-  }
-  if (!mContext) {
-    mContext = MakeRefPtr<RetrievalContextGtk>();
+  if (widget::GdkIsWaylandDisplay()) {
+    mContext = new RetrievalContextGtk();
   }
 #endif
 
