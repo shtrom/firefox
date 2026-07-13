@@ -1393,6 +1393,9 @@ browsertime-indexeddb:
             - addkBL1
             - addkBLN
             - getkeyrng
+            - idbCurNext
+            - idbCurPKey
+            - idbCurPrev
     run-on-projects:
         by-app:
             firefox:
