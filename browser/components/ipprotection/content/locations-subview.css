@@ -43,6 +43,11 @@
     }
   }
 
+  /* Keep idle items transparent so only hovered/current items stand out. */
+  @media (forced-colors) {
+    background-color: transparent;
+  }
+
   &:focus-visible {
     outline: var(--focus-outline);
     outline-offset: var(--focus-outline-inset);
