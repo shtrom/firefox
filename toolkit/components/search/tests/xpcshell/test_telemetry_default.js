@@ -583,8 +583,6 @@ add_task(async function test_non_telemetry_event_change_config_engine() {
   await SearchTestUtils.updateRemoteSettingsConfig(BASE_CONFIG);
   clearTelemetry();
 
-  // Change an engine property that is not stored in
-  // AppProvidedConfigEngine.#prevEngineInfo.
   let reloadObserved =
     SearchTestUtils.promiseSearchNotification("engines-reloaded");
   await SearchTestUtils.updateRemoteSettingsConfig(
