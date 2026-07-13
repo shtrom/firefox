@@ -253,8 +253,11 @@ add_task(async function test_preview_form_fields_on_hover() {
       await openPopupOn(browser, `#${TEST.focusedInputId}`);
 
       const [firstItem] = getDisplayedPopupItems(browser);
-      browser.autoCompletePopup.mLastMoveTime = 0;
-      EventUtils.synthesizeMouseAtCenter(firstItem, { type: "mousemove" });
+      await TestUtils.waitForCondition(() => {
+        browser.autoCompletePopup.mLastMoveTime = 0;
+        EventUtils.synthesizeMouseAtCenter(firstItem, { type: "mousemove" });
+        return browser.autoCompletePopup.selectedIndex == 0;
+      }, "Pointer should select the first autocomplete row");
       await previewCompeletePromise;
 
       // Check preview state & value
