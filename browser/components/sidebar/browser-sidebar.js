@@ -2362,7 +2362,15 @@ var SidebarController = {
       this._state.command = "";
       this.lastOpenedId = null;
       if (this._launcherStateAtOpen !== undefined) {
-        if (this.sidebarRevampVisibility === "hide-sidebar") {
+        // Restore the launcher to its pre-open visibility in the modes where the
+        // launcher can be toggled hidden: vertical "hide-sidebar" and horizontal
+        // "hide-on-close". Otherwise a launcher the user had hidden would remain
+        // visible after closing a panel.
+        if (
+          ["hide-sidebar", "hide-on-close"].includes(
+            this.sidebarRevampVisibility
+          )
+        ) {
           this._state.launcherVisible = this._launcherStateAtOpen;
         }
         delete this._launcherStateAtOpen;

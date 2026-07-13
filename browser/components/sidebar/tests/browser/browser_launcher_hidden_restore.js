@@ -103,6 +103,41 @@ add_task(async function test_launcher_hidden_restored_via_toggle() {
   );
 });
 
+add_task(
+  async function test_horizontal_hide_on_close_launcher_restored_after_panel_close() {
+    // Regression test for bug 2052334: in horizontal-tabs "hide-on-close" mode,
+    // a launcher the user has hidden must return to hidden after a panel is
+    // opened and then closed.
+    await SpecialPowers.pushPrefEnv({
+      set: [
+        [VERTICAL_TABS_PREF, false],
+        [SIDEBAR_VISIBILITY_PREF, "hide-on-close"],
+      ],
+    });
+    await SidebarTestUtils.waitForTabstripOrientation(window, "horizontal");
+    await SidebarController.waitUntilStable();
+
+    await SidebarTestUtils.ensureLauncherHidden(window);
+
+    await SidebarTestUtils.showPanel(window, "viewHistorySidebar");
+    await SidebarController.waitUntilStable();
+    Assert.ok(
+      !SidebarController.sidebarContainer.hidden,
+      "Launcher is visible while panel is open"
+    );
+
+    SidebarTestUtils.closePanel(window);
+    await waitForElementHidden(SidebarController.sidebarContainer);
+    Assert.ok(
+      SidebarController.sidebarContainer.hidden,
+      "Launcher is hidden again after panel close in hide-on-close mode"
+    );
+
+    await SpecialPowers.popPrefEnv();
+    await SidebarController.waitUntilStable();
+  }
+);
+
 add_task(async function test_visibility_mode_change_while_panel_open() {
   // When the launcher is initially hidden, if the visibility pref changes to something
   // that isn't hide-sidebar, it should remain visible regardless of the origin state.
