@@ -8,6 +8,21 @@ import { html, styleMap } from "../vendor/lit.all.mjs";
 import { MozLitElement } from "../lit-utils.mjs";
 import { ThemePickerStorybookController } from "chrome://global/content/elements/theme-picker-storybook-controller.mjs";
 
+const THEME_L10N_IDS = {
+  "default-theme@mozilla.org": "theme-picker-default",
+  "nova-sun@mozilla.org": "theme-picker-sun",
+  "nova-spark@mozilla.org": "theme-picker-spark",
+  "nova-flame@mozilla.org": "theme-picker-flame",
+  "nova-flare@mozilla.org": "theme-picker-flare",
+  "nova-lavender@mozilla.org": "theme-picker-lavender",
+  "nova-dusk@mozilla.org": "theme-picker-dusk",
+  "nova-lagoon@mozilla.org": "theme-picker-lagoon",
+  "nova-pine@mozilla.org": "theme-picker-pine",
+  "nova-tide@mozilla.org": "theme-picker-tide",
+  "nova-ash@mozilla.org": "theme-picker-ash",
+  "nova-smoke@mozilla.org": "theme-picker-smoke",
+};
+
 const XPCOMUtils = ChromeUtils.importESModule(
   "resource://gre/modules/XPCOMUtils.sys.mjs"
 ).XPCOMUtils;
@@ -201,8 +216,14 @@ export class ThemePicker extends MozLitElement {
       >
         ${this.themes.map(
           theme =>
-            html`<moz-visual-picker-item value=${theme.id}
-              ><div class="theme-preview" style=${this.themeStyle(theme)}></div
+            html`<moz-visual-picker-item
+              value=${theme.id}
+              labelposition="outside"
+              data-l10n-id=${THEME_L10N_IDS[theme.id]}
+              ><span
+                class="theme-preview"
+                style=${this.themeStyle(theme)}
+              ></span
             ></moz-visual-picker-item>`
         )}
       </moz-visual-picker>

@@ -36,6 +36,7 @@ moz-visual-picker-item {
 }
 
 .theme-preview {
+  display: block;
   width: var(--size-item-xlarge);
   height: var(--size-item-xlarge);
 }
