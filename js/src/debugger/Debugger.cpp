@@ -7386,7 +7386,7 @@ extern JS_PUBLIC_API bool JS_DefineDebuggerObject(JSContext* cx,
                                                   HandleObject obj) {
   Rooted<NativeObject*> debugCtor(cx), debugProto(cx), frameProto(cx),
       scriptProto(cx), sourceProto(cx), objectProto(cx), envProto(cx),
-      memoryProto(cx);
+      memoryProto(cx), privateNameProto(cx);
   RootedObject debuggeeWouldRunProto(cx);
   RootedValue debuggeeWouldRunCtor(cx);
   Handle<GlobalObject*> global = obj.as<GlobalObject>();
@@ -7431,6 +7431,11 @@ extern JS_PUBLIC_API bool JS_DefineDebuggerObject(JSContext* cx,
     return false;
   }
 
+  privateNameProto = DebuggerPrivateName::initClass(cx, global, debugCtor);
+  if (!privateNameProto) {
+    return false;
+  }
+
   debuggeeWouldRunProto = GlobalObject::getOrCreateCustomErrorPrototype(
       cx, global, JSEXN_DEBUGGEEWOULDRUN);
   if (!debuggeeWouldRunProto) {
@@ -7457,6 +7462,8 @@ extern JS_PUBLIC_API bool JS_DefineDebuggerObject(JSContext* cx,
                               ObjectValue(*envProto));
   debugProto->setReservedSlot(Debugger::JSSLOT_DEBUG_MEMORY_PROTO,
                               ObjectValue(*memoryProto));
+  debugProto->setReservedSlot(Debugger::JSSLOT_DEBUG_PRIVATE_NAME_PROTO,
+                              ObjectValue(*privateNameProto));
   return true;
 }
 
