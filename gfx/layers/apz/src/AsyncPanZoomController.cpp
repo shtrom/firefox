@@ -5934,6 +5934,14 @@ void AsyncPanZoomController::NotifyMainThreadTransaction(
         APZC_LOG("%p pure-relative smooth scrolling from %s by %s\n", this,
                  ToString(base).c_str(), ToString(delta).c_str());
         destination = Metrics().CalculateScrollRange().ClampPoint(base + delta);
+      } else if (scrollUpdate.GetType() ==
+                 ScrollUpdateType::ZeroDeltaLayoutScroll) {
+        if (InScrollAnimationTriggeredByScript()) {
+          APZC_LOG("%p cancelling the smooth animation triggered by script",
+                   this);
+          CancelAnimation();
+        }
+        continue;
       } else {
         MOZ_ASSERT(scrollUpdate.GetType() != ScrollUpdateType::Relative,
                    "Smooth relative update should never happen");
@@ -6027,6 +6035,11 @@ void AsyncPanZoomController::NotifyMainThreadTransaction(
       relativeDelta =
           Some(Metrics().ApplyPureRelativeScrollUpdateFrom(scrollUpdate));
       Metrics().RecalculateLayoutViewportOffset();
+    } else if (scrollUpdate.GetType() ==
+               ScrollUpdateType::ZeroDeltaLayoutScroll) {
+      MOZ_ASSERT_UNREACHABLE(
+          "instant zero delta layout scroll offset update is not yet "
+          "supported");
     } else {
       APZC_LOG("%p updating scroll offset from %s to %s\n", this,
                ToString(Metrics().GetVisualScrollOffset()).c_str(),
