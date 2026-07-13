@@ -1138,7 +1138,7 @@ uint32_t gfxTextRun::BreakAndMeasureText(
 
     gfxFloat charAdvance;
     if (i >= ligatureRange.start && i < ligatureRange.end) {
-      charAdvance = GetAdvanceForGlyphs(Range(i, i + 1), letterSpacing);
+      charAdvance = GetAdvanceForGlyph(i, letterSpacing);
       if (haveSpacing) {
         PropertyProvider::Spacing* space =
             &spacingBuffer[i - bufferRange.start];
