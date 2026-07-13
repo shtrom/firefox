@@ -199,6 +199,8 @@ toolkit.jar:
    content/global/elements/textrecognition.js  (widgets/textrecognition.js)
    content/global/elements/theme-picker.css    (widgets/theme-picker/theme-picker.css)
    content/global/elements/theme-picker.mjs    (widgets/theme-picker/theme-picker.mjs)
+   content/global/elements/theme-picker-storybook-controller.mjs    (widgets/theme-picker/theme-picker-storybook-controller.mjs)
+   content/global/elements/theme-picker-direct-controller.mjs       (widgets/theme-picker/theme-picker-direct-controller.mjs)
    content/global/elements/toolbarbutton.js    (widgets/toolbarbutton.js)
    content/global/elements/videocontrols.js    (widgets/videocontrols.js)
    content/global/elements/tree.js             (widgets/tree.js)
