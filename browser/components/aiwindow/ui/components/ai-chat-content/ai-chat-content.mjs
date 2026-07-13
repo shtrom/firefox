@@ -16,6 +16,8 @@ import "chrome://browser/content/aiwindow/components/website-chip-container.mjs"
 import "chrome://browser/content/aiwindow/components/ai-website-confirmation.mjs";
 // eslint-disable-next-line import/no-unassigned-import
 import "chrome://browser/content/aiwindow/components/kit-mention.mjs";
+// eslint-disable-next-line import/no-unassigned-import
+import "chrome://browser/content/aiwindow/components/agent-monitor-item.mjs";
 
 const FOLLOW_UP_QTY = 2;
 /**
