@@ -282,10 +282,6 @@
 
 /* All tabs menupopup */
 
-.alltabs-item[selected="true"] {
-  font-weight: var(--font-weight-bold);
-}
-
 #UITourTooltipButtons {
   /**
    * Override the --panel-padding so the background extends

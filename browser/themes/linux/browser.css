@@ -121,10 +121,6 @@
 
 /* All tabs menupopup */
 
-.alltabs-item[selected="true"] {
-  font-weight: var(--font-weight-bold);
-}
-
 #UITourHighlight {
   /* Below are some fixes for people without an X compositor on Linux.
      This is why we can't have nice things: */
