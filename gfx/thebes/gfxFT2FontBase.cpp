@@ -3,16 +3,19 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "gfxFT2FontBase.h"
+
+#include <dlfcn.h>
+
+#include <algorithm>
+#include <limits>
+
 #include "gfxFT2Utils.h"
-#include "harfbuzz/hb.h"
-#include "mozilla/Likely.h"
-#include "mozilla/StaticPrefs_gfx.h"
 #include "gfxFontConstants.h"
 #include "gfxFontUtils.h"
 #include "gfxHarfBuzzShaper.h"
-#include <algorithm>
-#include <dlfcn.h>
-#include <limits>
+#include "harfbuzz/hb.h"
+#include "mozilla/Likely.h"
+#include "mozilla/StaticPrefs_gfx.h"
 
 #include FT_TRUETYPE_TAGS_H
 #include FT_TRUETYPE_TABLES_H

@@ -10,9 +10,9 @@
 #include <utility>
 
 #include "FrameMetrics.h"
+#include "ImageContainer.h"
 #include "VsyncSource.h"
 #include "chrome/common/ipc_message_utils.h"
-#include "ImageContainer.h"
 #include "ipc/EnumSerializer.h"
 #include "ipc/IPCMessageUtils.h"
 #include "mozilla/RelativeTo.h"
@@ -26,6 +26,7 @@
 #include "mozilla/layers/CompositorOptions.h"
 #include "mozilla/layers/CompositorScrollUpdate.h"
 #include "mozilla/layers/CompositorTypes.h"
+#include "mozilla/layers/DoubleTapToZoom.h"
 #include "mozilla/layers/FocusTarget.h"
 #include "mozilla/layers/GeckoContentControllerTypes.h"
 #include "mozilla/layers/GpuFence.h"
@@ -36,7 +37,6 @@
 #include "mozilla/layers/RepaintRequest.h"
 #include "mozilla/layers/ScrollbarData.h"
 #include "nsSize.h"
-#include "mozilla/layers/DoubleTapToZoom.h"
 
 // For ParamTraits, could be moved to cpp file
 #include "ipc/nsGUIEventIPC.h"

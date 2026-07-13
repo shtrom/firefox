@@ -6,12 +6,11 @@
 #define GFX_WEBRENDERMESSAGEUTILS_H
 
 #include "chrome/common/ipc_message_utils.h"
-
 #include "ipc/EnumSerializer.h"
 #include "ipc/IPCMessageUtils.h"
-#include "mozilla/webrender/webrender_ffi.h"
-#include "mozilla/webrender/WebRenderTypes.h"
 #include "mozilla/dom/MediaIPCUtils.h"
+#include "mozilla/webrender/WebRenderTypes.h"
+#include "mozilla/webrender/webrender_ffi.h"
 
 namespace IPC {
 

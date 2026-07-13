@@ -4,6 +4,8 @@
 
 #include "gfxTextRun.h"
 
+#include "SharedFontList-impl.h"
+#include "TextDrawTarget.h"
 #include "gfx2DGlue.h"
 #include "gfxContext.h"
 #include "gfxFontConstants.h"
@@ -13,13 +15,6 @@
 #include "gfxPlatformFontList.h"
 #include "gfxUserFontSet.h"
 #include "mozilla/ClearOnShutdown.h"
-#include "mozilla/dom/WorkerCommon.h"
-#include "mozilla/gfx/2D.h"
-#include "mozilla/gfx/Logging.h"  // for gfxCriticalError
-#include "mozilla/gfx/PathHelpers.h"
-#include "mozilla/intl/Locale.h"
-#include "mozilla/intl/String.h"
-#include "mozilla/intl/UnicodeProperties.h"
 #include "mozilla/Likely.h"
 #include "mozilla/MruCache.h"
 #include "mozilla/ServoStyleSet.h"
@@ -27,12 +22,17 @@
 #include "mozilla/StaticPresData.h"
 #include "mozilla/UniquePtr.h"
 #include "mozilla/Utf16.h"
+#include "mozilla/dom/WorkerCommon.h"
+#include "mozilla/gfx/2D.h"
+#include "mozilla/gfx/Logging.h"  // for gfxCriticalError
+#include "mozilla/gfx/PathHelpers.h"
+#include "mozilla/intl/Locale.h"
+#include "mozilla/intl/String.h"
+#include "mozilla/intl/UnicodeProperties.h"
 #include "nsLayoutUtils.h"
 #include "nsStyleConsts.h"
 #include "nsStyleUtil.h"
 #include "nsUnicodeProperties.h"
-#include "SharedFontList-impl.h"
-#include "TextDrawTarget.h"
 
 #ifdef XP_WIN
 #  include "gfxWindowsPlatform.h"

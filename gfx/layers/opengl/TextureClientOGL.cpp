@@ -2,24 +2,26 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "GLContext.h"           // for GLContext, etc
-#include "mozilla/Assertions.h"  // for MOZ_ASSERT, etc
-#include "mozilla/layers/ISurfaceAllocator.h"
 #include "mozilla/layers/TextureClientOGL.h"
-#include "mozilla/gfx/2D.h"     // for Factory
-#include "mozilla/gfx/Point.h"  // for IntSize
+
+#include "GLContext.h"  // for GLContext, etc
 #include "GLLibraryEGL.h"
+#include "mozilla/Assertions.h"  // for MOZ_ASSERT, etc
+#include "mozilla/gfx/2D.h"      // for Factory
+#include "mozilla/gfx/Point.h"   // for IntSize
+#include "mozilla/layers/ISurfaceAllocator.h"
 
 #ifdef MOZ_WIDGET_ANDROID
-#  include <jni.h>
 #  include <android/native_window.h>
 #  include <android/native_window_jni.h>
+#  include <jni.h>
 #  include <sys/socket.h>
+
+#  include "mozilla/UniquePtrExtensions.h"
 #  include "mozilla/ipc/FileDescriptor.h"
 #  include "mozilla/java/GeckoSurfaceWrappers.h"
 #  include "mozilla/java/SurfaceAllocatorWrappers.h"
 #  include "mozilla/layers/AndroidHardwareBuffer.h"
-#  include "mozilla/UniquePtrExtensions.h"
 #endif
 
 using namespace mozilla::gl;

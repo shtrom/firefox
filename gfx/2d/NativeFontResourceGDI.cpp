@@ -5,9 +5,9 @@
 #include "NativeFontResourceGDI.h"
 
 #include "Logging.h"
-#include "mozilla/RefPtr.h"
 #include "ScaledFontWin.h"
 #include "UnscaledFontGDI.h"
+#include "mozilla/RefPtr.h"
 
 namespace mozilla {
 namespace gfx {

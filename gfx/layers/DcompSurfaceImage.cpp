@@ -4,12 +4,12 @@
 
 #include "DcompSurfaceImage.h"
 
-#include "mozilla/ipc/FileDescriptor.h"
 #include "mozilla/gfx/gfxVars.h"
+#include "mozilla/ipc/FileDescriptor.h"
 #include "mozilla/layers/CompositorTypes.h"
+#include "mozilla/layers/KnowsCompositor.h"
 #include "mozilla/layers/LayersSurfaces.h"
 #include "mozilla/layers/TextureForwarder.h"
-#include "mozilla/layers/KnowsCompositor.h"
 #include "mozilla/webrender/RenderDcompSurfaceTextureHost.h"
 #include "mozilla/webrender/WebRenderAPI.h"
 

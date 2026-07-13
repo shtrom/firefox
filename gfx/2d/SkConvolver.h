@@ -8,8 +8,9 @@
 #include <cfloat>
 #include <cmath>
 #include <numbers>
-#include "mozilla/Vector.h"
+
 #include "Types.h"
+#include "mozilla/Vector.h"
 
 namespace skia {
 

@@ -5,17 +5,17 @@
 #ifndef MOZILLA_GFX_RECT_H_
 #define MOZILLA_GFX_RECT_H_
 
-#include "BaseRect.h"
-#include "BaseMargin.h"
-#include "NumericTools.h"
-#include "Point.h"
-#include "Tools.h"
-#include "mozilla/Maybe.h"
-
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <iterator>
+
+#include "BaseMargin.h"
+#include "BaseRect.h"
+#include "NumericTools.h"
+#include "Point.h"
+#include "Tools.h"
+#include "mozilla/Maybe.h"
 
 namespace mozilla {
 

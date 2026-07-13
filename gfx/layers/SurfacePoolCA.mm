@@ -11,15 +11,15 @@
 #include <unordered_set>
 #include <utility>
 
-#include "mozilla/gfx/MacIOSurface.h"
 #include "mozilla/ProfilerLabels.h"
 #include "mozilla/ProfilerMarkers.h"
 #include "mozilla/StaticMutex.h"
 #include "mozilla/StaticPrefs_gfx.h"
+#include "mozilla/gfx/MacIOSurface.h"
 
 #ifdef XP_IOS
-#  include "GLContextEAGL.h"
 #  include <OpenGLES/EAGLIOSurface.h>
+#  include "GLContextEAGL.h"
 #endif
 
 #include "GLContext.h"

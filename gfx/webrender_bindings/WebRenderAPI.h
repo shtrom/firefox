@@ -5,29 +5,30 @@
 #ifndef MOZILLA_LAYERS_WEBRENDERAPI_H
 #define MOZILLA_LAYERS_WEBRENDERAPI_H
 
-#include <queue>
 #include <stdint.h>
-#include <vector>
-#include <unordered_map>
 
+#include <queue>
+#include <unordered_map>
+#include <vector>
+
+#include "GLTypes.h"
+#include "Units.h"
 #include "mozilla/AlreadyAddRefed.h"
-#include "mozilla/gfx/CompositorHitTestInfo.h"
-#include "mozilla/layers/AsyncImagePipelineOp.h"
-#include "mozilla/layers/IpcResourceUpdateQueue.h"
-#include "mozilla/layers/RemoteTextureMap.h"
-#include "mozilla/layers/ScrollableLayerGuid.h"
-#include "mozilla/layers/SyncObject.h"
-#include "mozilla/layers/CompositionRecorder.h"
 #include "mozilla/MozPromise.h"
 #include "mozilla/Range.h"
 #include "mozilla/TimeStamp.h"
 #include "mozilla/UniquePtr.h"
 #include "mozilla/VsyncDispatcher.h"
-#include "mozilla/webrender/webrender_ffi.h"
+#include "mozilla/gfx/CompositorHitTestInfo.h"
+#include "mozilla/layers/AsyncImagePipelineOp.h"
+#include "mozilla/layers/CompositionRecorder.h"
+#include "mozilla/layers/IpcResourceUpdateQueue.h"
+#include "mozilla/layers/RemoteTextureMap.h"
+#include "mozilla/layers/ScrollableLayerGuid.h"
+#include "mozilla/layers/SyncObject.h"
 #include "mozilla/webrender/WebRenderTypes.h"
+#include "mozilla/webrender/webrender_ffi.h"
 #include "nsString.h"
-#include "GLTypes.h"
-#include "Units.h"
 
 class gfxContext;
 

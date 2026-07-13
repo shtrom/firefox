@@ -5,10 +5,10 @@
 #ifndef GFX_MACFONT_H
 #define GFX_MACFONT_H
 
-#include "mozilla/MemoryReporting.h"
-#include "gfxFont.h"
 #include <CoreText/CoreText.h>
 
+#include "gfxFont.h"
+#include "mozilla/MemoryReporting.h"
 #include "mozilla/gfx/UnscaledFontMac.h"
 
 class CTFontEntry;

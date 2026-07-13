@@ -6,10 +6,10 @@
 // via CreateSourceSurfaceFromMacIOSurface produces correct BGRA pixel values
 // for 8-bit and 10-bit biplanar formats (NV12, NV16, P010, P210).
 
+#include "MacIOSurfaceHelpers.h"
 #include "gtest/gtest.h"
 #include "mozilla/gfx/2D.h"
 #include "mozilla/gfx/MacIOSurface.h"
-#include "MacIOSurfaceHelpers.h"
 
 using namespace mozilla;
 using namespace mozilla::gfx;
