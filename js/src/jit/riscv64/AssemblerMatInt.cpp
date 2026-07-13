@@ -9,47 +9,64 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <array>
 #include <bit>
 
 #include "jit/riscv64/Assembler-riscv64.h"
 #include "jit/riscv64/base/Integer.h"
 
-namespace js {
-namespace jit {
-void Assembler::RecursiveLi(Register rd, int64_t imm) {
-  if (imm > 0 && RecursiveLiImplCount(imm) > 2) {
-    unsigned LeadingZeros = std::countl_zero((uint64_t)imm);
-    uint64_t ShiftedVal = (uint64_t)imm << LeadingZeros;
-    int countFillZero = RecursiveLiImplCount(ShiftedVal) + 1;
-    if (countFillZero < RecursiveLiImplCount(imm)) {
-      RecursiveLiImpl(rd, ShiftedVal);
-      srli(rd, rd, LeadingZeros);
-      return;
-    }
-  }
-  RecursiveLiImpl(rd, imm);
-}
+using namespace js::jit;
 
-int Assembler::RecursiveLiCount(int64_t imm) {
-  if (imm > 0 && RecursiveLiImplCount(imm) > 2) {
-    unsigned LeadingZeros = std::countl_zero((uint64_t)imm);
-    uint64_t ShiftedVal = (uint64_t)imm << LeadingZeros;
-    // Fill in the bits that will be shifted out with 1s. An example where
-    // this helps is trailing one masks with 32 or more ones. This will
-    // generate ADDI -1 and an SRLI.
-    int countFillZero = RecursiveLiImplCount(ShiftedVal) + 1;
-    if (countFillZero < RecursiveLiImplCount(imm)) {
-      return countFillZero;
-    }
-  }
-  return RecursiveLiImplCount(imm);
-}
+class Inst : public InstructionBase {
+  Instr instr_{};
 
-inline int64_t signExtend(uint64_t V, int N) {
+ public:
+  operator Instr() const { return instr_; }
+};
+
+class InstSeq {
+  // Maximum number of instructions needed to materialize a 64-bit immediate.
+  static constexpr size_t MaxLength = 8;
+
+  std::array<Inst, MaxLength> insts_;
+  size_t size_ = 0;
+
+  auto* next() {
+    MOZ_RELEASE_ASSERT(size_ < MaxLength);
+    return &instrs_[size_++];
+  }
+
+ public:
+  size_t size() const { return size_; }
+
+  auto begin() { return insts_.begin(); }
+  auto begin() const { return insts_.begin(); }
+
+  auto end() { return std::next(insts_.begin(), size_); }
+  auto end() const { return std::next(insts_.begin(), size_); }
+
+  void lui(Register rd, int32_t imm20) {
+    next()->SetUFormat(RO_LUI, rd.code(), imm20);
+  }
+  void addi(Register rd, Register rs1, int16_t imm12) {
+    next()->SetIFormat(RO_ADDI, rd.code(), rs1.code(), imm12);
+  }
+  void addiw(Register rd, Register rs1, int16_t imm12) {
+    next()->SetIFormat(RO_ADDIW, rd.code(), rs1.code(), imm12);
+  }
+  void slli(Register rd, Register rs1, uint8_t shamt) {
+    next()->SetIShiftFormat(RO_SLLI, rd.code(), rs1.code(), shamt);
+  }
+  void srli(Register rd, Register rs1, uint8_t shamt) {
+    next()->SetIShiftFormat(RO_SRLI, rd.code(), rs1.code(), shamt);
+  }
+};
+
+static inline int64_t signExtend(uint64_t V, int N) {
   return int64_t(V << (64 - N)) >> (64 - N);
 }
 
-void Assembler::RecursiveLiImpl(Register rd, int64_t imm) {
+static void RecursiveLiImpl(Register rd, int64_t imm, InstSeq& result) {
   if (is_int32(imm)) {
     // Depending on the active bits in the immediate Value v, the following
     // instruction sequences are emitted:
@@ -61,14 +78,14 @@ void Assembler::RecursiveLiImpl(Register rd, int64_t imm) {
     auto [Hi20, Lo12] = ToHigh20Low12(int32_t(imm));
 
     if (Hi20) {
-      lui(rd, (int32_t)Hi20);
+      result.lui(rd, (int32_t)Hi20);
     }
 
     if (Lo12 || Hi20 == 0) {
       if (Hi20) {
-        addiw(rd, rd, Lo12);
+        result.addiw(rd, rd, Lo12);
       } else {
-        addi(rd, zero_reg, Lo12);
+        result.addi(rd, zero_reg, Lo12);
       }
     }
     return;
@@ -114,96 +131,53 @@ void Assembler::RecursiveLiImpl(Register rd, int64_t imm) {
       Hi52 = (uint64_t)Hi52 << 12;
     }
   }
-  RecursiveLi(rd, Hi52);
+  RecursiveLiImpl(rd, Hi52, result);
 
   if (Unsigned) {
   } else {
-    slli(rd, rd, ShiftAmount);
+    result.slli(rd, rd, ShiftAmount);
   }
   if (Lo12) {
-    addi(rd, rd, Lo12);
+    result.addi(rd, rd, Lo12);
   }
 }
 
-int Assembler::RecursiveLiImplCount(int64_t imm) {
-  int count = 0;
-  if (is_int32(imm)) {
-    // Depending on the active bits in the immediate Value v, the following
-    // instruction sequences are emitted:
-    //
-    // v == 0                        : ADDI
-    // v[0,12) != 0 && v[12,32) == 0 : ADDI
-    // v[0,12) == 0 && v[12,32) != 0 : LUI
-    // v[0,32) != 0                  : LUI+ADDI(W)
-    auto [Hi20, Lo12] = ToHigh20Low12(int32_t(imm));
+static void RecursiveLi(Register rd, int64_t imm, InstSeq& result) {
+  MOZ_ASSERT(result.size() == 0);
 
-    if (Hi20) {
-      // lui(rd, (int32_t)Hi20);
-      count++;
-    }
+  RecursiveLiImpl(rd, imm, result);
 
-    if (Lo12 || Hi20 == 0) {
-      //   unsigned AddiOpc = (IsRV64 && Hi20) ? RISCV::ADDIW : RISCV::ADDI;
-      //   Res.push_back(RISCVMatInt::Inst(AddiOpc, Lo12));
-      count++;
-    }
-    return count;
-  }
+  if (imm > 0 && result.size() > 2) {
+    // Fill in the bits that will be shifted out with 1s. An example where
+    // this helps is trailing one masks with 32 or more ones. This will
+    // generate ADDI -1 and an SRLI.InstrList list;
+    unsigned LeadingZeros = std::countl_zero((uint64_t)imm);
+    uint64_t ShiftedVal = (uint64_t)imm << LeadingZeros;
 
-  // In the worst case, for a full 64-bit constant, a sequence of 8
-  // instructions (i.e., LUI+ADDIW+SLLI+ADDI+SLLI+ADDI+SLLI+ADDI) has to be
-  // emitted. Note that the first two instructions (LUI+ADDIW) can contribute
-  // up to 32 bits while the following ADDI instructions contribute up to 12
-  // bits each.
-  //
-  // On the first glance, implementing this seems to be possible by simply
-  // emitting the most significant 32 bits (LUI+ADDIW) followed by as many
-  // left shift (SLLI) and immediate additions (ADDI) as needed. However, due
-  // to the fact that ADDI performs a sign extended addition, doing it like
-  // that would only be possible when at most 11 bits of the ADDI instructions
-  // are used. Using all 12 bits of the ADDI instructions, like done by GAS,
-  // actually requires that the constant is processed starting with the least
-  // significant bit.
-  //
-  // In the following, constants are processed from LSB to MSB but instruction
-  // emission is performed from MSB to LSB by recursively calling
-  // generateInstSeq. In each recursion, first the lowest 12 bits are removed
-  // from the constant and the optimal shift amount, which can be greater than
-  // 12 bits if the constant is sparse, is determined. Then, the shifted
-  // remaining constant is processed recursively and gets emitted as soon as
-  // it fits into 32 bits. The emission of the shifts and additions is
-  // subsequently performed when the recursion returns.
+    InstSeq shifted;
+    ::RecursiveLi(shifted, rd, ShiftedVal);
 
-  int64_t Lo12 = imm << 52 >> 52;
-  int64_t Hi52 = ((uint64_t)imm + 0x800ull) >> 12;
-  int ShiftAmount = 12 + std::countr_zero((uint64_t)Hi52);
-  Hi52 = signExtend(Hi52 >> (ShiftAmount - 12), 64 - ShiftAmount);
-
-  // If the remaining bits don't fit in 12 bits, we might be able to reduce
-  // the shift amount in order to use LUI which will zero the lower 12 bits.
-  bool Unsigned = false;
-  if (ShiftAmount > 12 && !is_int12(Hi52)) {
-    if (is_int32((uint64_t)Hi52 << 12)) {
-      // Reduce the shift amount and add zeros to the LSBs so it will match
-      // LUI.
-      ShiftAmount -= 12;
-      Hi52 = (uint64_t)Hi52 << 12;
+    size_t countFillZero = shifted.size() + 1;
+    if (countFillZero < result.size()) {
+      result = shifted;
+      result.srli(rd, rd, LeadingZeros);
     }
   }
-
-  count += RecursiveLiImplCount(Hi52);
-
-  if (Unsigned) {
-  } else {
-    // slli(rd, rd, ShiftAmount);
-    count++;
-  }
-  if (Lo12) {
-    // addi(rd, rd, Lo12);
-    count++;
-  }
-  return count;
 }
 
-}  // namespace jit
-}  // namespace js
+void js::jit::Assembler::RecursiveLi(Register rd, int64_t imm) {
+  InstSeq seq;
+  ::RecursiveLi(rd, imm, seq);
+
+  AutoForbidPoolsAndNops afp(this, 8);
+  for (auto instr : seq) {
+    emit(instr);
+  }
+}
+
+int js::jit::Assembler::RecursiveLiCount(int64_t imm) {
+  InstSeq seq;
+  ::RecursiveLi(zero, imm, seq);
+
+  return seq.size();
+}
