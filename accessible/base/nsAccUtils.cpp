@@ -4,26 +4,25 @@
 
 #include "nsAccUtils.h"
 
-#include "AccAttributes.h"
 #include "ARIAMap.h"
-#include "nsCoreUtils.h"
-#include "nsGenericHTMLElement.h"
+#include "AccAttributes.h"
 #include "DocAccessible.h"
 #include "DocAccessibleParent.h"
 #include "HyperTextAccessible.h"
-#include "nsIAccessibleTypes.h"
-#include "mozilla/a11y/Role.h"
 #include "States.h"
 #include "TextLeafAccessible.h"
-
-#include "nsIBaseWindow.h"
-#include "nsIDocShellTreeOwner.h"
-#include "nsIDOMXULContainerElement.h"
 #include "mozilla/a11y/RemoteAccessible.h"
+#include "mozilla/a11y/Role.h"
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/Element.h"
 #include "mozilla/dom/ElementInternals.h"
 #include "nsAccessibilityService.h"
+#include "nsCoreUtils.h"
+#include "nsGenericHTMLElement.h"
+#include "nsIAccessibleTypes.h"
+#include "nsIBaseWindow.h"
+#include "nsIDOMXULContainerElement.h"
+#include "nsIDocShellTreeOwner.h"
 
 using namespace mozilla;
 using namespace mozilla::a11y;

@@ -7,9 +7,9 @@
 #include "ApplicationAccessible.h"
 #include "DocAccessible-inl.h"
 #include "DocAccessibleParent.h"
-#include "nsAccessibilityService.h"
 #include "Platform.h"
 #include "RootAccessibleWrap.h"
+#include "nsAccessibilityService.h"
 
 #ifdef A11Y_LOG
 #  include "Logging.h"
@@ -26,12 +26,12 @@
 #include "mozilla/StaticPrefs_accessibility.h"
 #include "mozilla/dom/Event.h"  // for Event
 #include "nsContentUtils.h"
+#include "nsCoreUtils.h"
 #include "nsDocShellLoadTypes.h"
 #include "nsIChannel.h"
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsIWebNavigation.h"
 #include "nsIWebProgress.h"
-#include "nsCoreUtils.h"
 #include "xpcAccessibleDocument.h"
 
 using namespace mozilla;

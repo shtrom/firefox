@@ -6,15 +6,15 @@
 
 #include "AccIterator.h"
 #include "HTMLTableAccessible.h"
-#include "mozilla/a11y/DocAccessibleParent.h"
+#include "Pivot.h"
+#include "RemoteAccessible.h"
 #include "mozilla/ClearOnShutdown.h"
 #include "mozilla/StaticPtr.h"
 #include "mozilla/UniquePtr.h"
+#include "mozilla/a11y/DocAccessibleParent.h"
 #include "nsAccUtils.h"
 #include "nsIAccessiblePivot.h"
 #include "nsThreadUtils.h"
-#include "Pivot.h"
-#include "RemoteAccessible.h"
 
 namespace mozilla::a11y {
 
