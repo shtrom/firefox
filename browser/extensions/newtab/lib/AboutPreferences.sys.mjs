@@ -298,6 +298,7 @@ export class AboutPreferences {
       const { SettingGroupManager } = window;
 
       window.MozXULElement.insertFTLIfNeeded("browser/newtab/newtab.ftl");
+      window.MozXULElement.insertFTLIfNeeded("preview/newtabPreview.ftl");
 
       // We observe 2 signals that about:settings is loading - the
       // PREFERENCES_LOADED_EVENT and PREFERENCES_LOADED_EVENT_SUBPANE
@@ -417,6 +418,14 @@ export class AboutPreferences {
       },
       {
         id: "browser.newtabpage.activity-stream.widgets.privacy.enabled",
+        type: "bool",
+      },
+      {
+        id: "browser.newtabpage.activity-stream.widgets.system.crossword.enabled",
+        type: "bool",
+      },
+      {
+        id: "browser.newtabpage.activity-stream.widgets.crossword.enabled",
         type: "bool",
       },
       {
@@ -1378,6 +1387,18 @@ export class AboutPreferences {
     });
 
     Preferences.addSetting({
+      id: "crosswordEnabled",
+      pref: "browser.newtabpage.activity-stream.widgets.system.crossword.enabled",
+    });
+
+    Preferences.addSetting({
+      id: "crossword",
+      pref: "browser.newtabpage.activity-stream.widgets.crossword.enabled",
+      deps: ["crosswordEnabled"],
+      visible: widgetToggleVisible("crossword"),
+    });
+
+    Preferences.addSetting({
       id: "stocksEnabled",
       pref: "browser.newtabpage.activity-stream.widgets.system.stocks.enabled",
     });
@@ -1617,6 +1638,10 @@ export class AboutPreferences {
             {
               id: "privacy",
               l10nId: "home-prefs-privacy-header",
+            },
+            {
+              id: "crossword",
+              l10nId: "home-prefs-crossword-widget-header",
             },
             {
               id: "stocks",
