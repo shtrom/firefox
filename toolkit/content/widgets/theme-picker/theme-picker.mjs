@@ -70,6 +70,9 @@ const DEFAULT_THEME_ID = "default-theme@mozilla.org";
  * @property {string} layout
  *   Display layout: "full" (with mode selector and native theme checkbox) or
  *   "compact" (color swatches only)
+ * @property {boolean} showLabels
+ *   Whether to show visible text labels outside the theme swatches. When false,
+ *   aria-labels are provided for accessibility.
  * @fires themechange - Fired when appearance, theme, or nativeTheme changes.
  * Detail contains {property, value}
  */
@@ -80,6 +83,7 @@ export class ThemePicker extends MozLitElement {
     nativeTheme: { type: Boolean },
     themes: { type: Array },
     layout: { type: String },
+    showLabels: { type: Boolean },
   };
 
   constructor() {
@@ -89,6 +93,7 @@ export class ThemePicker extends MozLitElement {
     /** @type {ThemePickerTheme[]} */
     this.themes = [];
     this.nativeTheme = false;
+    this.showLabels = true;
     this.controller = ThemePicker.createController(this);
     this.layout = "full";
   }
@@ -214,18 +219,17 @@ export class ThemePicker extends MozLitElement {
         .value=${this.activeThemeId}
         @change=${this.themeChange}
       >
-        ${this.themes.map(
-          theme =>
-            html`<moz-visual-picker-item
-              value=${theme.id}
-              labelposition="outside"
-              data-l10n-id=${THEME_L10N_IDS[theme.id]}
-              ><span
-                class="theme-preview"
-                style=${this.themeStyle(theme)}
-              ></span
-            ></moz-visual-picker-item>`
-        )}
+        ${this.themes.map(theme => {
+          const baseL10nId = THEME_L10N_IDS[theme.id];
+          return html`<moz-visual-picker-item
+            value=${theme.id}
+            labelposition="outside"
+            data-l10n-id=${this.showLabels
+              ? baseL10nId
+              : `${baseL10nId}-aria-label`}
+            ><span class="theme-preview" style=${this.themeStyle(theme)}></span
+          ></moz-visual-picker-item>`;
+        })}
       </moz-visual-picker>
       ${this.defaultThemeTemplate()}
     `;
