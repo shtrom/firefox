@@ -33,7 +33,6 @@ class gfxConfigManager {
         mWrSoftwareForceEnabled(false),
         mWrCompositorForceEnabled(false),
         mWrForceAngle(false),
-        mWrForceAngleNoGPUProcess(false),
         mWrDCompWinEnabled(false),
         mWrCompositorDCompRequired(false),
         mWrForcePartialPresent(false),
@@ -82,7 +81,6 @@ class gfxConfigManager {
   bool mWrSoftwareForceEnabled;
   bool mWrCompositorForceEnabled;
   bool mWrForceAngle;
-  bool mWrForceAngleNoGPUProcess;
   bool mWrDCompWinEnabled;
   bool mWrCompositorDCompRequired;
   bool mWrForcePartialPresent;

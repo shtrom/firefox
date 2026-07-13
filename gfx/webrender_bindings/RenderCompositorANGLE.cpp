@@ -179,20 +179,13 @@ bool RenderCompositorANGLE::Initialize(nsACString& aError) {
 }
 
 HWND RenderCompositorANGLE::GetCompositorHwnd() {
-  HWND hwnd = 0;
-
   if (XRE_IsGPUProcess()) {
-    hwnd = mWidget->AsWindows()->GetCompositorHwnd();
-  } else if (
-      StaticPrefs::
-          gfx_webrender_enabled_no_gpu_process_with_angle_win_AtStartup()) {
-    MOZ_ASSERT(XRE_IsParentProcess());
-
-    // When GPU process does not exist, we do not need to use compositor window.
-    hwnd = mWidget->AsWindows()->GetHwnd();
+    return mWidget->AsWindows()->GetCompositorHwnd();
   }
 
-  return hwnd;
+  MOZ_ASSERT(XRE_IsParentProcess());
+  // When GPU process does not exist, we do not need to use compositor window.
+  return mWidget->AsWindows()->GetHwnd();
 }
 
 bool RenderCompositorANGLE::CreateSwapChainForHWND() {

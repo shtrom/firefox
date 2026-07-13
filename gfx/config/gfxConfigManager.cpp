@@ -45,8 +45,6 @@ void gfxConfigManager::Init() {
       gfx_webrender_scissored_cache_clears_force_enabled_AtStartup();
 #ifdef XP_WIN
   mWrForceAngle = StaticPrefs::gfx_webrender_force_angle_AtStartup();
-  mWrForceAngleNoGPUProcess = StaticPrefs::
-      gfx_webrender_enabled_no_gpu_process_with_angle_win_AtStartup();
   mWrDCompWinEnabled =
       Preferences::GetBool("gfx.webrender.dcomp-win.enabled", false);
 #endif
@@ -214,12 +212,6 @@ void gfxConfigManager::ConfigureWebRender() {
         mFeatureWrAngle->ForceDisable(FeatureStatus::UnavailableNoAngle,
                                       "ANGLE is disabled",
                                       mFeatureD3D11HwAngle->GetFailureId());
-      } else if (!mFeatureGPUProcess->IsEnabled() &&
-                 !mWrForceAngleNoGPUProcess) {
-        // WebRender with ANGLE relies on the GPU process when on Windows
-        mFeatureWrAngle->ForceDisable(
-            FeatureStatus::UnavailableNoGpuProcess, "GPU Process is disabled",
-            "FEATURE_FAILURE_GPU_PROCESS_DISABLED"_ns);
       }
     } else {
       mFeatureWrAngle->Disable(FeatureStatus::Disabled, "ANGLE is not forced",
