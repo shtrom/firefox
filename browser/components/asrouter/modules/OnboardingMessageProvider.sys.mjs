@@ -3165,7 +3165,7 @@ const BASE_MESSAGES = () => [
                   id: "chat-log-preview",
                   content: "",
                   style: {
-                    backgroundColor: "#F9F9FB",
+                    backgroundColor: "var(--background-color-box)",
                     maxHeight: "130px",
                   },
                 },
@@ -3311,7 +3311,7 @@ const BASE_MESSAGES = () => [
                   id: "chat-log-preview",
                   content: "",
                   style: {
-                    backgroundColor: "#F9F9FB",
+                    backgroundColor: "var(--background-color-box)",
                     maxHeight: "130px",
                   },
                 },
