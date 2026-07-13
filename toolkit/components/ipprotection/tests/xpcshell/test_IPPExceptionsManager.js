@@ -8,6 +8,9 @@ const ONBOARDING_MESSAGE_MASK_PREF =
   "browser.ipProtection.onboardingMessageMask";
 const PERM_NAME = "ipp-vpn";
 const INCLUSION_PREF = "browser.ipProtection.inclusion.match_patterns";
+const MODE_PREF = "browser.ipProtection.mode";
+const MODE_INCLUSION = 3;
+const GUARDIAN_PREF = "browser.ipProtection.guardian.endpoint";
 
 const makePrincipal = url =>
   Services.scriptSecurityManager.createContentPrincipal(
@@ -300,7 +303,6 @@ add_task(async function test_getPrincipalRule_inclusion() {
  * excluded-origins set tracks the pref via its observer.
  */
 add_task(async function test_getPrincipalRule_excluded_origin() {
-  const GUARDIAN_PREF = "browser.ipProtection.guardian.endpoint";
   Services.prefs.setStringPref(
     GUARDIAN_PREF,
     "https://pageexcluded.example.com/api"
@@ -325,6 +327,45 @@ add_task(async function test_getPrincipalRule_excluded_origin() {
 
   IPPExceptionsManager.uninit();
 });
+
+add_task(
+  async function test_getPrincipalRule_excluded_origin_beats_inclusion() {
+    Services.perms.removeByType(PERM_NAME);
+    // MODE_INCLUSION with an all-URLs pattern: every http(s) origin matches the
+    // inclusion set. Set both prefs before init() so #inclusionSet is built from
+    // them.
+    Services.prefs.setIntPref(MODE_PREF, MODE_INCLUSION);
+    Services.prefs.setStringPref(INCLUSION_PREF, JSON.stringify(["*://*/*"]));
+    Services.prefs.setStringPref(
+      GUARDIAN_PREF,
+      "https://guardian.example.com/api"
+    );
+
+    IPPExceptionsManager.init();
+
+    const excludedPrincipal = makePrincipal("https://guardian.example.com");
+    Assert.equal(
+      IPPExceptionsManager.getPrincipalRule(excludedPrincipal),
+      IPPPrincipalRules.EXCLUDED,
+      "excluded-origin pref must beat an all-URLs inclusion pattern -> EXCLUDED"
+    );
+
+    // Sanity check that an ordinary origin is still INCLUDED under this config,
+    // so the assertion above isn't trivially passing because inclusion is off.
+    const otherPrincipal = makePrincipal("https://example.com");
+    Assert.equal(
+      IPPExceptionsManager.getPrincipalRule(otherPrincipal),
+      IPPPrincipalRules.INCLUDED,
+      "a non-excluded origin still matches the all-URLs inclusion pattern -> INCLUDED"
+    );
+
+    Services.prefs.clearUserPref(MODE_PREF);
+    Services.prefs.clearUserPref(INCLUSION_PREF);
+    Services.prefs.clearUserPref(GUARDIAN_PREF);
+    IPPExceptionsManager.uninit();
+    Services.perms.removeByType(PERM_NAME);
+  }
+);
 
 /**
  * canManage is true only for normal content pages: about:/resource: pages,

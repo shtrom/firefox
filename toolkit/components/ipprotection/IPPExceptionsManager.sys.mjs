@@ -332,9 +332,6 @@ class ExceptionsManager extends EventTarget {
     }
     try {
       const uri = principal?.URI;
-      if (uri && this.#inclusionSet.matches(uri)) {
-        return IPPPrincipalRules.INCLUDED;
-      }
       // Exclude non-http(s) schemes (about:, file:, etc.), but NOT null
       // principals: a null principal's scheme is moz-nullprincipal even when it
       // backs real http(s) content (e.g. a sandboxed iframe), so its scheme says
@@ -349,10 +346,15 @@ class ExceptionsManager extends EventTarget {
       if (ExceptionsManager.isLocal(principal)) {
         return IPPPrincipalRules.EXCLUDED;
       }
-      if (this.hasExclusion(principal)) {
+      // Infrastructure origins the VPN itself depends on (guardian endpoint,
+      // captive detection). These must beat inclusion.
+      if (uri && this.#excludedOrigins.matches(uri)) {
         return IPPPrincipalRules.EXCLUDED;
       }
-      if (uri && this.#excludedOrigins.matches(uri)) {
+      if (uri && this.#inclusionSet.matches(uri)) {
+        return IPPPrincipalRules.INCLUDED;
+      }
+      if (this.hasExclusion(principal)) {
         return IPPPrincipalRules.EXCLUDED;
       }
       return IPPPrincipalRules.DEFAULT;

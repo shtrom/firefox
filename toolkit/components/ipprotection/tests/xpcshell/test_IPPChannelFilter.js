@@ -938,14 +938,17 @@ add_task(async function test_shouldProxy() {
     "MODE_FULL: excluded origin should not be proxied"
   );
 
-  // 3. Inclusion rule overrides exclusion
+  // 3. An excluded-origin pref overrides an inclusion rule. These origins cover
+  //    infrastructure the VPN depends on (guardian endpoint, captive
+  //    detection); proxying them can deadlock the VPN, so they must win even
+  //    against an all-URLs inclusion pattern.
   Services.prefs.setStringPref(
     INCLUSION_PREF,
     JSON.stringify(["*://excluded.com/*"])
   );
   Assert.ok(
-    makeFilter().shouldProxy(makeChannel("http://excluded.com/")),
-    "Inclusion rule should override exclusion rule"
+    !makeFilter().shouldProxy(makeChannel("http://excluded.com/")),
+    "Excluded-origin pref should override an inclusion rule"
   );
   Services.prefs.clearUserPref(INCLUSION_PREF);
 
