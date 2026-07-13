@@ -11,6 +11,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "moz-src:///browser/components/aiwindow/ui/modules/AIWindow.sys.mjs",
 });
 const MODEL_PREF = "browser.smartwindow.firstrun.modelChoice";
+const MISTRAL_RELEASE_PREF = "browser.smartwindow.mistralRelease";
 const AUTO_ADVANCE_PREF = "browser.smartwindow.firstrun.autoAdvanceMS";
 const FIRST_RUN_COMPLETE_PREF = "browser.smartwindow.firstrun.hasCompleted";
 const EXPLAINER_PAGE_PREF = "browser.smartwindow.firstrun.explainerURL";
@@ -22,11 +23,94 @@ const IS_DEFAULT_WINDOW_PREF = "browser.smartwindow.isDefaultWindow";
 const MEMORIES_CHATS_CHECKBOX_ID = "memories-chats";
 const MEMORIES_BROWSING_CHECKBOX_ID = "memories-browsing";
 const SET_DEFAULT_CHECKBOX_ID = "set-default-window";
-const { getAllModelsData } = ChromeUtils.importESModule(
+const { getAllModelsData, getModelDisplayOrder } = ChromeUtils.importESModule(
   "moz-src:///browser/components/aiwindow/models/Utils.sys.mjs"
 );
 
 const autoAdvanceMS = Services.prefs.getIntPref(AUTO_ADVANCE_PREF);
+
+const isMistralRelease = Services.prefs.getBoolPref(
+  MISTRAL_RELEASE_PREF,
+  false
+);
+
+/**
+ * Model card content is keyed by the model's labelId.
+ * Full l10n IDs and icon URLs are inlined so they stay greppable in the codebase.
+ * Card display order comes from getModelDisplayOrder().
+ *
+ * TODO Bug 2053495
+ * When the mistral release pref is removed, delete MODEL_CARDS and
+ * make MODEL_CARDS_V2 the only set.
+ */
+const MODEL_CARDS = {
+  fast: {
+    label: "aiwindow-firstrun-model-fast-label",
+    body: "aiwindow-firstrun-model-fast-body",
+    icon: "chrome://browser/content/aiwindow/assets/model-choice-1.svg",
+  },
+  allpurpose: {
+    label: "aiwindow-firstrun-model-allpurpose-label",
+    body: "aiwindow-firstrun-model-allpurpose-body",
+    icon: "chrome://browser/content/aiwindow/assets/model-choice-2.svg",
+  },
+  personal: {
+    label: "aiwindow-firstrun-model-personal-label",
+    body: "aiwindow-firstrun-model-personal-body",
+    icon: "chrome://browser/content/aiwindow/assets/model-choice-3.svg",
+  },
+};
+
+const MODEL_CARDS_V2 = {
+  fast: {
+    label: "aiwindow-firstrun-model-fast-label-v2",
+    body: "aiwindow-firstrun-model-fast-body-v2",
+    icon: "chrome://browser/content/aiwindow/assets/model-choice-gemini.svg",
+  },
+  allpurpose: {
+    label: "aiwindow-firstrun-model-flexible-label",
+    body: "aiwindow-firstrun-model-flexible-body",
+    icon: "chrome://browser/content/aiwindow/assets/model-choice-qwen.svg",
+  },
+  personal: {
+    label: "aiwindow-firstrun-model-personal-label-v2",
+    body: "aiwindow-firstrun-model-personal-body-v2",
+    icon: "chrome://browser/content/aiwindow/assets/model-choice-mistral.svg",
+  },
+};
+
+function buildModelCards(modelData) {
+  const cards = isMistralRelease ? MODEL_CARDS_V2 : MODEL_CARDS;
+  return getModelDisplayOrder().map(choiceId => {
+    const model = modelData[choiceId] ?? {};
+    const cardContent = cards[model.labelId] ?? {};
+    const card = {
+      id: `model_${choiceId}`,
+      label: {
+        string_id: cardContent.label,
+        fontSize: "17px",
+        fontWeight: 590,
+      },
+      icon: {
+        background: `var(--card-icon-bg) center / calc(100% - var(--space-medium)) calc(100% - var(--space-medium)) no-repeat url("${cardContent.icon}")`,
+      },
+      body: { string_id: cardContent.body },
+      action: {
+        type: "SET_PREF",
+        data: { pref: { name: MODEL_PREF, value: choiceId } },
+      },
+    };
+    if (isMistralRelease) {
+      card.label.args = model;
+    } else {
+      card.subtitle = {
+        string_id: "aiwindow-firstrun-model-chip-subtitle",
+        args: model,
+      };
+    }
+    return card;
+  });
+}
 
 function createAIWindowConfig(modelData) {
   return {
@@ -79,14 +163,18 @@ function createAIWindowConfig(modelData) {
             width: "100%",
           },
           title: {
-            string_id: "aiwindow-firstrun-model-title",
+            string_id: isMistralRelease
+              ? "aiwindow-firstrun-model-title-v2"
+              : "aiwindow-firstrun-model-title",
             fontSize: "40px",
             fontWeight: "350",
             letterSpacing: 0,
             lineHeight: "normal",
           },
           subtitle: {
-            string_id: "aiwindow-firstrun-model-subtitle",
+            string_id: isMistralRelease
+              ? "aiwindow-firstrun-model-subtitle-v2"
+              : "aiwindow-firstrun-model-subtitle",
             fontSize: "17px",
             fontWeight: 320,
           },
@@ -97,92 +185,7 @@ function createAIWindowConfig(modelData) {
             action: {
               picker: "<event>",
             },
-            data: [
-              {
-                id: "model_1",
-                label: {
-                  string_id: "aiwindow-firstrun-model-fast-label",
-                  fontSize: "17px",
-                  fontWeight: 590,
-                },
-                icon: {
-                  background:
-                    'var(--card-icon-bg) center / calc(100% - var(--space-medium)) calc(100% - var(--space-medium)) no-repeat url("chrome://browser/content/aiwindow/assets/model-choice-1.svg")',
-                },
-                body: {
-                  string_id: "aiwindow-firstrun-model-fast-body",
-                },
-                subtitle: {
-                  string_id: "aiwindow-firstrun-model-chip-subtitle",
-                  args: modelData["1"],
-                },
-                action: {
-                  type: "SET_PREF",
-                  data: {
-                    pref: {
-                      name: MODEL_PREF,
-                      value: "1",
-                    },
-                  },
-                },
-              },
-              {
-                id: "model_2",
-                label: {
-                  string_id: "aiwindow-firstrun-model-allpurpose-label",
-                  fontSize: "17px",
-                  fontWeight: 590,
-                },
-                icon: {
-                  background:
-                    'var(--card-icon-bg) center / calc(100% - var(--space-medium)) calc(100% - var(--space-medium)) no-repeat url("chrome://browser/content/aiwindow/assets/model-choice-2.svg")',
-                },
-                body: {
-                  string_id: "aiwindow-firstrun-model-allpurpose-body",
-                },
-                subtitle: {
-                  string_id: "aiwindow-firstrun-model-chip-subtitle",
-                  args: modelData["2"],
-                },
-                action: {
-                  type: "SET_PREF",
-                  data: {
-                    pref: {
-                      name: MODEL_PREF,
-                      value: "2",
-                    },
-                  },
-                },
-              },
-              {
-                id: "model_3",
-                label: {
-                  string_id: "aiwindow-firstrun-model-personal-label",
-                  fontSize: "17px",
-                  fontWeight: 590,
-                },
-                icon: {
-                  background:
-                    'var(--card-icon-bg) center / calc(100% - var(--space-medium)) calc(100% - var(--space-medium)) no-repeat url("chrome://browser/content/aiwindow/assets/model-choice-3.svg")',
-                },
-                body: {
-                  string_id: "aiwindow-firstrun-model-personal-body",
-                },
-                subtitle: {
-                  string_id: "aiwindow-firstrun-model-chip-subtitle",
-                  args: modelData["3"],
-                },
-                action: {
-                  type: "SET_PREF",
-                  data: {
-                    pref: {
-                      name: MODEL_PREF,
-                      value: "3",
-                    },
-                  },
-                },
-              },
-            ],
+            data: buildModelCards(modelData),
           },
           primary_button: {
             disabled: "hasActiveSingleSelect",
