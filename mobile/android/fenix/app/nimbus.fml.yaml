@@ -756,15 +756,6 @@ features:
         type: Boolean
         default: false
 
-  search-suggestions-on-homepage:
-    description: Enables search suggestions on homepage.
-    variables:
-      enabled:
-        description: >
-          Whether or not to enable search suggestions on homepage.
-        type: Boolean
-        default: false
-
   homepage-as-new-tab:
     description: Enables homepage as a a new tab.
     variables:
