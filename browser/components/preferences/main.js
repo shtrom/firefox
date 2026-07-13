@@ -395,18 +395,14 @@ Preferences.addSetting({
   id: "isDefaultPane",
   deps: ["alwaysCheckDefault"],
   visible: () =>
-    DefaultBrowserHelper.canCheck &&
-    DefaultBrowserHelper.isBrowserDefault &&
-    Services.policies.isAllowed("setDefaultBrowser"),
+    DefaultBrowserHelper.canCheck && DefaultBrowserHelper.isBrowserDefault,
 });
 
 Preferences.addSetting({
   id: "isNotDefaultPane",
   deps: ["alwaysCheckDefault"],
   visible: () =>
-    DefaultBrowserHelper.canCheck &&
-    !DefaultBrowserHelper.isBrowserDefault &&
-    Services.policies.isAllowed("setDefaultBrowser"),
+    DefaultBrowserHelper.canCheck && !DefaultBrowserHelper.isBrowserDefault,
   onUserClick: (e, { alwaysCheckDefault }) => {
     if (!DefaultBrowserHelper.canCheck) {
       return;
