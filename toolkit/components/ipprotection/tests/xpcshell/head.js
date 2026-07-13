@@ -25,8 +25,9 @@ const { IPProtectionActivator } = ChromeUtils.importESModule(
 const { IPPDummyAuthProvider } = ChromeUtils.importESModule(
   "resource://testing-common/ipprotection/IPPDummyAuthProvider.sys.mjs"
 );
-IPProtectionActivator.setAuthProvider(IPPDummyAuthProvider);
+IPProtectionActivator.addHelpers(IPPDummyAuthProvider.helpers);
 IPProtectionActivator.setupHelpers();
+IPProtectionActivator.setAuthProvider(IPPDummyAuthProvider);
 
 const { sinon } = ChromeUtils.importESModule(
   "resource://testing-common/Sinon.sys.mjs"
