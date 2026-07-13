@@ -87,26 +87,6 @@ const tests = {
           "asrouter-admin.bundle.js"
         ),
       },
-      "asrouter-newtab-multistage bundle": {
-        path: path.join(
-          "../",
-          "asrouter",
-          "content",
-          "components",
-          "asrouter-newtab-multistage",
-          "asrouter-newtab-multistage.bundle.js"
-        ),
-      },
-      "asrouter-newtab-multistage.css": {
-        path: path.join(
-          "../",
-          "asrouter",
-          "content",
-          "components",
-          "asrouter-newtab-multistage",
-          "asrouter-newtab-multistage.css"
-        ),
-      },
       "ASRouterAdmin.css": {
         path: path.join(
           "../",
