@@ -122,9 +122,11 @@ codegenTestRISCV64_adhoc(
        (func (export "f") (result i32)
          (i32.load offset=0x7fff_ffff (i32.const 0x7fff_ffff))))`,
     "f",
-    `li        t4, 1
+    `(li        t4, 1
      slli      t4, t4, 32
-     addi      t4, t4, -2
+     addi      t4, t4, -2)
+  | (li        t4, -2
+     zext.w    t4, t4)
      add       t5, s7, t4
      lw        a0, 0\\(t5\\)`);
 
@@ -135,9 +137,8 @@ codegenTestRISCV64_adhoc(
        (func (export "f") (result i32)
          (i32.load (i32.const -1))))`,
     "f",
-    `li        t4, 1
-     slli      t4, t4, 32
-     addi      t4, t4, -1
+    `li        t4, -1
+     srli      t4, t4, 32
      add       t5, s7, t4
      lw        a0, 0\\(t5\\)`);
 
@@ -148,7 +149,8 @@ codegenTestRISCV64_adhoc(
        (func (export "f") (result i32)
          (i32.load (i32.const 0x8000_0000))))`,
     "f",
-    `li        t4, 1
-     slli      t4, t4, 31
+    `(li        t4, 1
+     slli      t4, t4, 31)
+  | (bseti     t4, zero, 31)
      add       t5, s7, t4
      lw        a0, 0\\(t5\\)`);
