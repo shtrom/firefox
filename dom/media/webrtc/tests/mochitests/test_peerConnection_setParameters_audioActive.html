@@ -60,6 +60,14 @@ runNetworkTest(async function (options) {
       is(received, 0,
         "Packets stop being received while active is false");
     },
+    async function PC_LOCAL_INSERT_DTMF_WHILE_INACTIVE() {
+      // While inactive the send stream is torn down. Inserting DTMF must not
+      // crash the conduit (bug 2054208).
+      ok(sender.dtmf, "Audio sender has a DTMFSender");
+      sender.dtmf.insertDTMF("1");
+      await wait(500);
+      ok(true, "Inserting DTMF while inactive does not crash");
+    },
     async function PC_LOCAL_ACTIVE_TRUE_RESUMES_TRANSMIT() {
       await setActive(true);
       // Wait for the reactivation to propagate to the receiver.
