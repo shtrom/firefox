@@ -944,14 +944,17 @@ uint32_t gfxTextRun::BreakAndMeasureText(
   AutoTArray<HyphenType, 4096> hyphenBuffer;
   HyphenationState wordState;
   wordState.mostRecentBoundary = aStart;
+  // GetHyphensOption() is a virtual call returning a value that is constant
+  // for the whole measurement, so fetch it once instead of on every use.
+  const StyleHyphens hyphensOption = aProvider.GetHyphensOption();
   bool haveHyphenation =
-      (aProvider.GetHyphensOption() == StyleHyphens::Auto ||
-       (aProvider.GetHyphensOption() == StyleHyphens::Manual &&
+      (hyphensOption == StyleHyphens::Auto ||
+       (hyphensOption == StyleHyphens::Manual &&
         !!(mFlags & gfx::ShapedTextFlags::TEXT_ENABLE_HYPHEN_BREAKS)));
   if (haveHyphenation) {
     if (hyphenBuffer.AppendElements(bufferRange.Length(), fallible)) {
       aProvider.GetHyphenationBreaks(bufferRange, hyphenBuffer.Elements());
-      if (aProvider.GetHyphensOption() == StyleHyphens::Auto) {
+      if (hyphensOption == StyleHyphens::Auto) {
         ClassifyAutoHyphenations(aStart, bufferRange, hyphenBuffer, &wordState);
       }
     } else {
@@ -1016,7 +1019,7 @@ uint32_t gfxTextRun::BreakAndMeasureText(
         if (hyphenBuffer.AppendElements(bufferRange.Length(), fallible)) {
           aProvider.GetHyphenationBreaks(
               bufferRange, hyphenBuffer.Elements() + oldHyphenBufferLength);
-          if (aProvider.GetHyphensOption() == StyleHyphens::Auto) {
+          if (hyphensOption == StyleHyphens::Auto) {
             uint32_t prevMostRecentWordBoundary = wordState.mostRecentBoundary;
             ClassifyAutoHyphenations(aStart, bufferRange, hyphenBuffer,
                                      &wordState);
