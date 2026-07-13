@@ -1196,7 +1196,7 @@ void nsBidiPresUtils::TraverseFrames(nsIFrame* aCurrentFrame,
     if (childFrame->IsPlaceholderFrame()) {
       nsIFrame* realFrame =
           nsPlaceholderFrame::GetRealFrameForPlaceholder(childFrame);
-      if (realFrame->IsLetterFrame()) {
+      if (realFrame && realFrame->IsLetterFrame()) {
         frame = realFrame;
       }
     }
@@ -1442,7 +1442,7 @@ bool nsBidiPresUtils::ChildListMayRequireBidi(nsIFrame* aFirstChild,
     if (childFrame->IsPlaceholderFrame()) {
       nsIFrame* realFrame =
           nsPlaceholderFrame::GetRealFrameForPlaceholder(childFrame);
-      if (realFrame->IsLetterFrame()) {
+      if (realFrame && realFrame->IsLetterFrame()) {
         frame = realFrame;
       }
     }

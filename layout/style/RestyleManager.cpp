@@ -1125,6 +1125,9 @@ static bool ContainingBlockChangeAffectsDescendants(
       nsIFrame* frameToDiveInto = f;
       if (f->IsPlaceholderFrame()) {
         nsIFrame* outOfFlow = nsPlaceholderFrame::GetRealFrameForPlaceholder(f);
+        if (!outOfFlow) {
+          continue;
+        }
         // If SVG text frames could appear here, they could confuse us since
         // they ignore their position style ... but they can't.
         NS_ASSERTION(!outOfFlow->IsInSVGTextSubtree(),
