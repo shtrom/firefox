@@ -264,6 +264,7 @@ export class SidebarCustomize extends SidebarPage {
           </moz-fieldset>
           <moz-fieldset
             class="customize-group medium-top-margin no-end-margin no-label"
+            ?disabled=${this.verticalTabsEnabled}
           >
             <moz-checkbox
               type="checkbox"
@@ -274,7 +275,6 @@ export class SidebarCustomize extends SidebarPage {
               ?checked=${
                 this.verticalTabsEnabled || this.visibility !== "hide-launcher"
               }
-              ?disabled=${this.verticalTabsEnabled}
             ></moz-checkbox>
           </moz-fieldset>
           <moz-fieldset class="customize-group medium-top-margin no-label">
