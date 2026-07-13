@@ -6222,21 +6222,23 @@ static gboolean key_press_event_cb(GtkWidget* widget, GdkEventKey* event) {
 #  ifndef KeyPress
 #    define KeyPress 2
 #  endif
-  GdkDisplay* gdkDisplay = gtk_widget_get_display(widget);
-  if (GdkIsX11Display(gdkDisplay)) {
-    Display* dpy = GDK_DISPLAY_XDISPLAY(gdkDisplay);
-    while (XPending(dpy)) {
-      XEvent next_event;
-      XPeekEvent(dpy, &next_event);
-      GdkWindow* nextGdkWindow =
-          gdk_x11_window_lookup_for_display(gdkDisplay, next_event.xany.window);
-      if (nextGdkWindow != event->window || next_event.type != KeyPress ||
-          next_event.xkey.keycode != event->hardware_keycode ||
-          next_event.xkey.state != (event->state & NS_GDKEVENT_MATCH_MASK)) {
-        break;
+  if (StaticPrefs::widget_gtk_x11_key_repeat_throttle_enabled()) {
+    GdkDisplay* gdkDisplay = gtk_widget_get_display(widget);
+    if (GdkIsX11Display(gdkDisplay)) {
+      Display* dpy = GDK_DISPLAY_XDISPLAY(gdkDisplay);
+      while (XPending(dpy)) {
+        XEvent next_event;
+        XPeekEvent(dpy, &next_event);
+        GdkWindow* nextGdkWindow = gdk_x11_window_lookup_for_display(
+            gdkDisplay, next_event.xany.window);
+        if (nextGdkWindow != event->window || next_event.type != KeyPress ||
+            next_event.xkey.keycode != event->hardware_keycode ||
+            next_event.xkey.state != (event->state & NS_GDKEVENT_MATCH_MASK)) {
+          break;
+        }
+        XNextEvent(dpy, &next_event);
+        event->time = next_event.xkey.time;
       }
-      XNextEvent(dpy, &next_event);
-      event->time = next_event.xkey.time;
     }
   }
 #endif

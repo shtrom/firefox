@@ -20551,6 +20551,14 @@
   value: true
   mirror: always
 
+# Whether to throttle X11 key press events that look like auto-repeat.
+# Disabling this can fix dropped characters with barcode scanners and other
+# fast input devices (bug 1098981).
+- name: widget.gtk.x11-key-repeat-throttle.enabled
+  type: bool
+  value: true
+  mirror: always
+
 # Whether we enable rounded bottom corners on GTK by default.
 #
 # The implementation is a bit hacky (see details in bug 1850827) so behind a
