@@ -980,6 +980,11 @@ uint32_t gfxTextRun::BreakAndMeasureText(
   Range ligatureRange(aStart, end);
   ShrinkToLigatureBoundaries(&ligatureRange);
 
+  // Cache the glyph array pointer in a local so the compiler doesn't reload
+  // the member on every iteration across the calls made in the loop below;
+  // it does not change while we're measuring.
+  const CompressedGlyph* charGlyphs = mCharacterGlyphs;
+
   // We may need to move `i` backwards in the following loop, and re-scan
   // part of the textrun; we'll use `rescanLimit` so we can tell when that
   // is happening: if `i < rescanLimit` then we're rescanning.
@@ -1033,7 +1038,7 @@ uint32_t gfxTextRun::BreakAndMeasureText(
     // would trigger an infinite loop.
     if (aSuppressBreak != eSuppressAllBreaks &&
         (aSuppressBreak != eSuppressInitialBreak || i > aStart)) {
-      bool atNaturalBreak = mCharacterGlyphs[i].CanBreakBefore() ==
+      bool atNaturalBreak = charGlyphs[i].CanBreakBefore() ==
                             CompressedGlyph::FLAG_BREAK_TYPE_NORMAL;
       // atHyphenationBreak indicates we're at a "soft" hyphen, where an extra
       // hyphen glyph will need to be painted. It is NOT set for breaks at an
@@ -1051,15 +1056,15 @@ uint32_t gfxTextRun::BreakAndMeasureText(
       bool wordWrapping =
           (aCanWordWrap ||
            (aCanWhitespaceWrap &&
-            mCharacterGlyphs[i].CanBreakBefore() ==
+            charGlyphs[i].CanBreakBefore() ==
                 CompressedGlyph::FLAG_BREAK_TYPE_EMERGENCY_WRAP)) &&
-          mCharacterGlyphs[i].IsClusterStart() &&
+          charGlyphs[i].IsClusterStart() &&
           aBreakPriority <= gfxBreakPriority::eWordWrapBreak;
 
       bool whitespaceWrapping = false;
       if (i > aStart) {
         // The spec says the breaking opportunity is *after* whitespace.
-        auto const& g = mCharacterGlyphs[i - 1];
+        auto const& g = charGlyphs[i - 1];
         whitespaceWrapping =
             aIsBreakSpaces &&
             (g.CharIsSpace() || g.CharIsTab() || g.CharIsNewline());
@@ -1134,7 +1139,7 @@ uint32_t gfxTextRun::BreakAndMeasureText(
 
     advance += charAdvance;
     if (aOutTrimmableWhitespace) {
-      if (mCharacterGlyphs[i].CharIsSpace()) {
+      if (charGlyphs[i].CharIsSpace()) {
         ++trimmableChars;
         trimmableAdvance += charAdvance;
       } else {
