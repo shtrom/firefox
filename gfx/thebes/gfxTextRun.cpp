@@ -985,6 +985,10 @@ uint32_t gfxTextRun::BreakAndMeasureText(
   // it does not change while we're measuring.
   const CompressedGlyph* charGlyphs = mCharacterGlyphs;
 
+  // LetterSpacing() is a virtual call returning a value that is constant for
+  // the whole measurement, so hoist it out of the per-character loop.
+  const nscoord letterSpacing = aProvider.LetterSpacing();
+
   // We may need to move `i` backwards in the following loop, and re-scan
   // part of the textrun; we'll use `rescanLimit` so we can tell when that
   // is happening: if `i < rescanLimit` then we're rescanning.
@@ -1126,8 +1130,7 @@ uint32_t gfxTextRun::BreakAndMeasureText(
 
     gfxFloat charAdvance;
     if (i >= ligatureRange.start && i < ligatureRange.end) {
-      charAdvance =
-          GetAdvanceForGlyphs(Range(i, i + 1), aProvider.LetterSpacing());
+      charAdvance = GetAdvanceForGlyphs(Range(i, i + 1), letterSpacing);
       if (haveSpacing) {
         PropertyProvider::Spacing* space =
             &spacingBuffer[i - bufferRange.start];
