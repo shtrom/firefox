@@ -2,33 +2,34 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "ipc/IPCMessageUtils.h"
-
-#include "nsASCIIMask.h"
 #include "nsStandardURL.h"
-#include "nsCRT.h"
-#include "nsEscape.h"
-#include "nsIFile.h"
-#include "nsIObjectInputStream.h"
-#include "nsIObjectOutputStream.h"
-#include "nsIIDNService.h"
+
+#include <string.h>
+
+#include "IPv4Parser.h"
+#include "ipc/IPCMessageUtils.h"
 #include "mozilla/Logging.h"
-#include "nsIURLParser.h"
-#include "nsPrintfCString.h"
-#include "nsNetCID.h"
 #include "mozilla/MemoryReporting.h"
-#include "mozilla/ipc/URIUtils.h"
 #include "mozilla/ScopeExit.h"
 #include "mozilla/StaticPrefs_network.h"
 #include "mozilla/TextUtils.h"
-#include "nsContentUtils.h"
-#include "prprf.h"
-#include "nsReadableUtils.h"
-#include "mozilla/net/MozURL_ffi.h"
 #include "mozilla/Utf8.h"
+#include "mozilla/ipc/URIUtils.h"
+#include "mozilla/net/MozURL_ffi.h"
+#include "nsASCIIMask.h"
+#include "nsCRT.h"
+#include "nsContentUtils.h"
+#include "nsEscape.h"
 #include "nsIClassInfoImpl.h"
-#include <string.h>
-#include "IPv4Parser.h"
+#include "nsIFile.h"
+#include "nsIIDNService.h"
+#include "nsIObjectInputStream.h"
+#include "nsIObjectOutputStream.h"
+#include "nsIURLParser.h"
+#include "nsNetCID.h"
+#include "nsPrintfCString.h"
+#include "nsReadableUtils.h"
+#include "prprf.h"
 
 //
 // setenv MOZ_LOG nsStandardURL:5

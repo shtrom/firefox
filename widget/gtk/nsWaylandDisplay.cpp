@@ -902,12 +902,15 @@ static void global_registry_handler(void* data, wl_registry* registry,
   } else if (iface.EqualsLiteral("wl_fixes")) {
     // wl_fixes_interface was introduced in libwayland-client 1.24, but
     // Ubuntu 22.04 still ships 1.20.
-    // We force wl_fixes v.1 interface.
     static auto* sWlFixesInterface =
         (wl_interface*)dlsym(RTLD_DEFAULT, "wl_fixes_interface");
     if (sWlFixesInterface) {
-      auto* fixes =
-          WaylandRegistryBind<wl_fixes>(registry, id, sWlFixesInterface, 1);
+      // Note that we cannot simply do MIN(version, 2) because the dynamically
+      // loaded wl_fixes_interface can be v1, which can then lead to out of
+      // bounds reads when sending v2 requests.
+      const uint32_t libraryVersion = MIN(sWlFixesInterface->version, 2);
+      auto* fixes = WaylandRegistryBind<wl_fixes>(
+          registry, id, sWlFixesInterface, MIN(version, libraryVersion));
       display->SetFixes(fixes);
     } else {
       LOG("wl_fixes_interface is missing!");
@@ -1150,6 +1153,15 @@ MOZ_NEVER_INLINE static void WlLogHandler_XdgSurfaceBufferMismatch(
                           WaylandProxy::GetState());
 }
 
+// Compositor connection lost - Example: "Error reading events from display:
+// Broken pipe". The Wayland compositor terminated our connection (e.g. session
+// end, monitor hot-unplug); this is outside Firefox's control. See Bug 1984696.
+MOZ_NEVER_INLINE static void WlLogHandler_DisplayReadError(const char* error) {
+  MOZ_CRASH_UNSAFE_PRINTF("(%s) %s Proxy: %s",
+                          GetDesktopEnvironmentIdentifier().get(), error,
+                          WaylandProxy::GetState());
+}
+
 // Timestamp of the last "still attached" message ignored by WlLogHandler.
 // Written on the main thread (libwayland event dispatch) with release ordering
 // after writing sStillAttachedMessage, so any thread that observes the
@@ -1242,6 +1254,11 @@ static void WlLogHandler(const char* format, va_list args) {
   if (strstr(error, "xdg_surface") && strstr(error, "buffer") &&
       strstr(error, "fullscreen state")) {
     WlLogHandler_XdgSurfaceBufferMismatch(error);
+  }
+
+  // Pattern 12: compositor connection lost (Bug 1984696)
+  if (strstr(error, "Error reading events from display")) {
+    WlLogHandler_DisplayReadError(error);
   }
 
   // Fallback for unmatched patterns - use original inline code

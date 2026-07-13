@@ -5,10 +5,10 @@
 #ifndef mozilla_a11y_DocAccessibleParent_h
 #define mozilla_a11y_DocAccessibleParent_h
 
-#include "nsAccessibilityService.h"
 #include "mozilla/a11y/PDocAccessibleParent.h"
 #include "mozilla/a11y/RemoteAccessible.h"
 #include "mozilla/dom/BrowserBridgeParent.h"
+#include "nsAccessibilityService.h"
 #include "nsClassHashtable.h"
 #include "nsHashKeys.h"
 #include "nsIMemoryReporter.h"

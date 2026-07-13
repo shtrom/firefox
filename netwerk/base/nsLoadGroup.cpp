@@ -2,31 +2,30 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "mozilla/DebugOnly.h"
-
 #include "nsLoadGroup.h"
 
+#include "CacheObserver.h"
+#include "MainThreadUtils.h"
+#include "RequestContextService.h"
+#include "mozilla/DebugOnly.h"
+#include "mozilla/Logging.h"
+#include "mozilla/StaticPrefs_network.h"
+#include "mozilla/StoragePrincipalHelper.h"
+#include "mozilla/glean/NetwerkMetrics.h"
+#include "mozilla/glean/NetwerkProtocolHttpMetrics.h"
+#include "mozilla/net/NeckoChild.h"
+#include "mozilla/net/NeckoCommon.h"
 #include "nsArrayEnumerator.h"
 #include "nsCOMArray.h"
 #include "nsCOMPtr.h"
 #include "nsContentUtils.h"
-#include "mozilla/Logging.h"
-#include "nsString.h"
-#include "nsTArray.h"
 #include "nsIHttpChannel.h"
 #include "nsIHttpChannelInternal.h"
-#include "nsITimedChannel.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIRequestObserver.h"
-#include "CacheObserver.h"
-#include "MainThreadUtils.h"
-#include "RequestContextService.h"
-#include "mozilla/glean/NetwerkMetrics.h"
-#include "mozilla/glean/NetwerkProtocolHttpMetrics.h"
-#include "mozilla/StoragePrincipalHelper.h"
-#include "mozilla/net/NeckoCommon.h"
-#include "mozilla/net/NeckoChild.h"
-#include "mozilla/StaticPrefs_network.h"
+#include "nsITimedChannel.h"
+#include "nsString.h"
+#include "nsTArray.h"
 
 namespace mozilla {
 namespace net {

@@ -5,24 +5,24 @@
 #ifndef CacheIndex_h_
 #define CacheIndex_h_
 
-#include "CacheLog.h"
 #include "CacheFileIOManager.h"
-#include "nsIRunnable.h"
 #include "CacheHashUtils.h"
-#include "nsICacheStorageService.h"
-#include "nsICacheEntry.h"
-#include "nsILoadContextInfo.h"
-#include "nsIWeakReferenceUtils.h"
-#include "nsTHashtable.h"
-#include "nsThreadUtils.h"
+#include "CacheLog.h"
+#include "gtest/MozGtestFriend.h"
+#include "mozilla/EndianUtils.h"
 #include "mozilla/IntegerPrintfMacros.h"
 #include "mozilla/SHA1.h"
 #include "mozilla/StaticMutex.h"
 #include "mozilla/StaticPtr.h"
-#include "mozilla/EndianUtils.h"
 #include "mozilla/TimeStamp.h"
 #include "mozilla/UniquePtr.h"
-#include "gtest/MozGtestFriend.h"
+#include "nsICacheEntry.h"
+#include "nsICacheStorageService.h"
+#include "nsILoadContextInfo.h"
+#include "nsIRunnable.h"
+#include "nsIWeakReferenceUtils.h"
+#include "nsTHashtable.h"
+#include "nsThreadUtils.h"
 
 class nsIFile;
 class nsIDirectoryEnumerator;

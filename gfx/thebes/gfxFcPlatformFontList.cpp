@@ -2,46 +2,47 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "mozilla/Logging.h"
-
 #include "gfxFcPlatformFontList.h"
-#include "gfxFont.h"
+
+#include "SharedFontList-impl.h"
 #include "gfxFT2Utils.h"
+#include "gfxFont.h"
 #include "gfxPlatform.h"
-#include "nsPresContext.h"
-#include "mozilla/dom/ContentChild.h"
-#include "mozilla/dom/ContentParent.h"
+#include "mozilla/Components.h"
+#include "mozilla/Logging.h"
 #include "mozilla/Preferences.h"
 #include "mozilla/Sprintf.h"
 #include "mozilla/StaticPrefs_gfx.h"
 #include "mozilla/StaticPrefs_mathml.h"
+#include "mozilla/dom/ContentChild.h"
+#include "mozilla/dom/ContentParent.h"
 #include "mozilla/glean/GfxMetrics.h"
+#include "nsCharSeparatedTokenizer.h"
+#include "nsDirectoryServiceDefs.h"
+#include "nsDirectoryServiceUtils.h"
 #include "nsGkAtoms.h"
 #include "nsIConsoleService.h"
 #include "nsIGfxInfo.h"
-#include "mozilla/Components.h"
+#include "nsPresContext.h"
 #include "nsString.h"
 #include "nsStringFwd.h"
-#include "nsDirectoryServiceUtils.h"
-#include "nsDirectoryServiceDefs.h"
-#include "nsCharSeparatedTokenizer.h"
 #include "nsXULAppAPI.h"
-#include "SharedFontList-impl.h"
 #define StandardFonts
 #include "StandardFonts-linux.inc"
 #undef StandardFonts
-#include "mozilla/intl/Locale.h"
-
 #include <cairo-ft.h>
+#include <dlfcn.h>
 #include <fontconfig/fcfreetype.h>
 #include <fontconfig/fontconfig.h>
 #include <harfbuzz/hb.h>
-#include <dlfcn.h>
 #include <unistd.h>
+
+#include "mozilla/intl/Locale.h"
 
 #ifdef MOZ_WIDGET_GTK
 #  include <gdk/gdk.h>
 #  include <gtk/gtk.h>
+
 #  include "gfxPlatformGtk.h"
 #  include "mozilla/WidgetUtilsGtk.h"
 #endif

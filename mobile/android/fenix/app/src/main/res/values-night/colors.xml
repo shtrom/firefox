@@ -40,7 +40,7 @@
     <color name="fx_mobile_warning_container">@color/novaYellow70</color>
     <color name="fx_mobile_on_warning_container">@color/novaVioletDesaturated0</color>
     <color name="fx_mobile_outline">@color/novaGray45</color>
-    <color name="fx_mobile_outline_variant">@color/novaGray65</color>
+    <color name="fx_mobile_outline_variant">@color/novaGray60</color>
     <color name="fx_mobile_surface_bright">@color/novaGray65</color>
     <color name="fx_mobile_surface_dim">@color/novaGray85</color>
     <color name="fx_mobile_surface_container">@color/novaGray75</color>

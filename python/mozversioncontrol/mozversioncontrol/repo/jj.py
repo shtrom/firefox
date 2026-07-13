@@ -46,27 +46,11 @@ class JujutsuRepository(Repository):
         super().__init__(path, tool=jj)
         self._git = GitRepository(path, git=git)
 
-        # Find git root. Newer jj has `jj git root`, but this should support
-        # older versions for now.
-        out = self._run("root")
-        if not out:
-            raise MissingVCSInfo("cannot find jj workspace root")
+        git_dir = self._run("git", "root")
+        if not git_dir:
+            raise MissingVCSInfo("cannot find `jj git root`")
 
-        try:
-            jj_ws_root = Path(out.rstrip())
-            jj_repo = jj_ws_root / ".jj" / "repo"
-            if not jj_repo.is_dir():
-                # Path / absolute discards the left operand, so this handles both relative and absolute paths.
-                jj_repo = jj_repo.parent / Path(jj_repo.read_text())
-        except Exception:
-            raise MissingVCSInfo("cannot find jj repo")
-
-        try:
-            git_target = jj_repo / "store" / "git_target"
-            git_dir = git_target.parent / Path(git_target.read_text())
-        except Exception:
-            raise MissingVCSInfo("cannot find git dir")
-
+        git_dir = Path(git_dir.rstrip())
         if not git_dir.is_dir():
             raise MissingVCSInfo("cannot find git dir")
 
@@ -730,33 +714,25 @@ class JujutsuRepository(Repository):
 
             # This enables watchman if it's installed.
             if which("watchman"):
-                # Use appropriate config keys based on jj version. 0.32.0+ renamed these config keys
-                if jj_version >= Version("0.32"):
-                    # Remove deprecated config keys to prevent warnings
-                    for key in [
-                        "core.fsmonitor",
-                        "core.watchman.register-snapshot-trigger",
-                    ]:
-                        self._run(
-                            "config",
-                            "unset",
-                            "--repo",
-                            key,
-                            return_codes=[0, 1],
-                            stderr=subprocess.DEVNULL,
-                        )
+                # Remove deprecated config keys (renamed in 0.32.0) to prevent warnings
+                for key in [
+                    "core.fsmonitor",
+                    "core.watchman.register-snapshot-trigger",
+                ]:
+                    self._run(
+                        "config",
+                        "unset",
+                        "--repo",
+                        key,
+                        return_codes=[0, 1],
+                        stderr=subprocess.DEVNULL,
+                    )
 
-                    # Set 0.32.0+ config keys
-                    self._set_default_if_missing("fsmonitor.backend", "watchman")
-                    self._set_default_if_missing(
-                        "fsmonitor.watchman.register-snapshot-trigger", False
-                    )
-                else:
-                    # Set old config keys
-                    self._set_default_if_missing("core.fsmonitor", "watchman")
-                    self._set_default_if_missing(
-                        "core.watchman.register-snapshot-trigger", False
-                    )
+                # Set 0.32.0+ config keys
+                self._set_default_if_missing("fsmonitor.backend", "watchman")
+                self._set_default_if_missing(
+                    "fsmonitor.watchman.register-snapshot-trigger", False
+                )
 
                 print("Checking if watchman is enabled...")
                 output = self._run_read_only("debug", "watchman", "status")

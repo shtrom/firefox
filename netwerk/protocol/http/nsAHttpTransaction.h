@@ -5,11 +5,11 @@
 #ifndef nsAHttpTransaction_h_
 #define nsAHttpTransaction_h_
 
-#include "nsTArray.h"
-#include "nsWeakReference.h"
+#include "nsILoadInfo.h"
 #include "nsIRequest.h"
 #include "nsITRRSkipReason.h"
-#include "nsILoadInfo.h"
+#include "nsTArray.h"
+#include "nsWeakReference.h"
 
 #ifdef Status
 /* Xlib headers insist on this for some reason... Nuke it because

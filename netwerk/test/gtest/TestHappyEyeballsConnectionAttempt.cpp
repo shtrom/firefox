@@ -9,8 +9,6 @@
 // real Rust engine stays live, driven via its FFI inputs; an IP-literal origin
 // avoids DNS.
 
-#include "gtest/gtest.h"
-
 #include "ConnectionEntry.h"
 #include "ConnectionEstablisher.h"
 #include "HappyEyeballsConnMgrDelegate.h"
@@ -21,15 +19,16 @@
 #include "NullHttpTransaction.h"
 #include "PendingTransactionInfo.h"
 #include "ZeroRttHandle.h"
+#include "gtest/gtest.h"
 #include "mozilla/Preferences.h"
 #include "mozilla/net/ClassOfService.h"
 #include "mozilla/net/DNS.h"
 #include "nsHttpConnectionInfo.h"
 #include "nsHttpRequestHead.h"
 #include "nsHttpTransaction.h"
+#include "nsIHttpProtocolHandler.h"
 #include "nsISeekableStream.h"
 #include "nsISocketTransportService.h"
-#include "nsIHttpProtocolHandler.h"
 #include "nsNetAddr.h"
 #include "nsServiceManagerUtils.h"
 #include "nsSocketTransportService2.h"

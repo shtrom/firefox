@@ -2,23 +2,23 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "CacheLog.h"
 #include "CacheFileMetadata.h"
 
 #include "CacheCrypto.h"
-#include "CacheFileIOManager.h"
-#include "nsICacheEntry.h"
-#include "CacheHashUtils.h"
 #include "CacheFileChunk.h"
+#include "CacheFileIOManager.h"
 #include "CacheFileUtils.h"
-#include "nsILoadContextInfo.h"
-#include "nsICacheEntry.h"  // for nsICacheEntryMetaDataVisitor
-#include "nsIFile.h"
-#include "mozilla/ScopeExit.h"
+#include "CacheHashUtils.h"
+#include "CacheLog.h"
 #include "mozilla/DebugOnly.h"
 #include "mozilla/IntegerPrintfMacros.h"
+#include "mozilla/ScopeExit.h"
 #include "mozilla/glean/NetwerkMetrics.h"
 #include "nsCRT.h"
+#include "nsICacheEntry.h"
+#include "nsICacheEntry.h"  // for nsICacheEntryMetaDataVisitor
+#include "nsIFile.h"
+#include "nsILoadContextInfo.h"
 #include "prnetdb.h"
 
 namespace mozilla::net {

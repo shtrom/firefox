@@ -8,33 +8,33 @@
 #include "gfxCrashReporterUtils.h"
 #include "gfxEnv.h"
 #include "gfxUtils.h"
-#include "mozilla/Preferences.h"
 #include "mozilla/Assertions.h"
-#include "mozilla/gfx/gfxVars.h"
-#include "mozilla/gfx/Logging.h"
-#include "mozilla/glean/DomCanvasMetrics.h"
-#include "mozilla/Tokenizer.h"
+#include "mozilla/Preferences.h"
 #include "mozilla/ScopeExit.h"
 #include "mozilla/StaticPrefs_gfx.h"
 #include "mozilla/StaticPrefs_webgl.h"
+#include "mozilla/Tokenizer.h"
+#include "mozilla/gfx/Logging.h"
+#include "mozilla/gfx/gfxVars.h"
+#include "mozilla/glean/DomCanvasMetrics.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsDirectoryServiceUtils.h"
 #include "nsPrintfCString.h"
 #ifdef XP_WIN
+#  include <d3d11.h>
+
 #  include "mozilla/gfx/DeviceManagerDx.h"
 #  include "nsWindowsHelpers.h"
 #  include "prerror.h"
-
-#  include <d3d11.h>
 #endif
-#include "OGLShaderProgram.h"
-#include "prenv.h"
-#include "prsystem.h"
 #include "GLContext.h"
 #include "GLContextProvider.h"
 #include "GLLibraryLoader.h"
 #include "GLReadTexImageHelper.h"
+#include "OGLShaderProgram.h"
 #include "ScopedGLHelpers.h"
+#include "prenv.h"
+#include "prsystem.h"
 #ifdef MOZ_WIDGET_GTK
 #  include "mozilla/WidgetUtilsGtk.h"
 #  include "mozilla/widget/DMABufDevice.h"

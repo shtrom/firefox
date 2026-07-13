@@ -5,16 +5,16 @@
 #ifndef nsHttpConnectionInfo_h_
 #define nsHttpConnectionInfo_h_
 
-#include "nsHttp.h"
-#include "nsProxyInfo.h"
-#include "nsCOMPtr.h"
-#include "nsStringFwd.h"
-#include "mozilla/Logging.h"
-#include "mozilla/BasePrincipal.h"
-#include "mozilla/AlreadyAddRefed.h"
 #include "ARefBase.h"
-#include "nsIRequest.h"
+#include "mozilla/AlreadyAddRefed.h"
+#include "mozilla/BasePrincipal.h"
+#include "mozilla/Logging.h"
 #include "mozilla/net/happy_eyeballs_glue.h"
+#include "nsCOMPtr.h"
+#include "nsHttp.h"
+#include "nsIRequest.h"
+#include "nsProxyInfo.h"
+#include "nsStringFwd.h"
 
 //-----------------------------------------------------------------------------
 // nsHttpConnectionInfo - holds the properties of a connection

@@ -634,6 +634,10 @@ class DefaultTabManagerController(
         } else {
             handleNavigateToBrowser()
         }
+
+        if (!appStore.state.mode.isPrivate && settings.privateBrowsingLockedFeatureEnabled) {
+            appStore.dispatch(AppAction.PrivateBrowsingLockAction.UpdatePrivateBrowsingLock(isLocked = true))
+        }
     }
 
     override fun handleBackPressed(): Boolean {

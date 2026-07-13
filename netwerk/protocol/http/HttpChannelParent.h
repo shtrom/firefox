@@ -6,18 +6,18 @@
 #define mozilla_net_HttpChannelParent_h
 
 #include "HttpBaseChannel.h"
-#include "nsHttp.h"
-#include "mozilla/net/PHttpChannelParent.h"
+#include "mozilla/MozPromise.h"
+#include "mozilla/dom/ipc/IdType.h"
 #include "mozilla/net/NeckoCommon.h"
 #include "mozilla/net/NeckoParent.h"
-#include "mozilla/MozPromise.h"
+#include "mozilla/net/PHttpChannelParent.h"
+#include "nsHttp.h"
+#include "nsHttpChannel.h"
+#include "nsIChannelEventSink.h"
+#include "nsIMultiPartChannel.h"
 #include "nsIParentRedirectingChannel.h"
 #include "nsIProgressEventSink.h"
-#include "nsIChannelEventSink.h"
 #include "nsIRedirectResultListener.h"
-#include "nsHttpChannel.h"
-#include "mozilla/dom/ipc/IdType.h"
-#include "nsIMultiPartChannel.h"
 #include "nsIURI.h"
 
 class nsICacheEntry;

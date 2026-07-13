@@ -3591,6 +3591,29 @@ export const SearchService = new (class SearchService {
   }
 
   /**
+   * @type { Record<"private"|"normal", ?Parameters<typeof Glean.searchEngineDefault.changed.record>[0]>}
+   *   Records the previous changed event details that were sent on telemetry.
+   */
+  #previousEngineChangedEvent = { private: null, normal: null };
+
+  /**
+   * Determines if the current event record has the same details as the previous
+   * one or not. This only matches against the `new_` fields because the
+   * `previous_engine_id` may indeed have changed from an earlier event.
+   *
+   * @param {Parameters<typeof Glean.searchEngineDefault.changed.record>[0]} previous
+   * @param {Parameters<typeof Glean.searchEngineDefault.changed.record>[0]} current
+   */
+  #changedEventIsSame(previous, current) {
+    return (
+      previous.new_engine_id == current.new_engine_id &&
+      previous.new_display_name == current.new_display_name &&
+      previous.new_load_path == current.new_load_path &&
+      previous.new_submission_url == current.new_submission_url
+    );
+  }
+
+  /**
    * Records the telemetry event when the default engine has changed, and
    * also updates the related non-event probes.
    *
@@ -3629,11 +3652,26 @@ export const SearchService = new (class SearchService {
       new_submission_url: submissionURL.slice(0, 100),
       change_reason: changeReason,
     };
-    if (isPrivate) {
-      Glean.searchEnginePrivate.changed.record(extraArgs);
-    } else {
-      Glean.searchEngineDefault.changed.record(extraArgs);
+
+    let previousEventType = isPrivate ? "private" : "normal";
+    let previousEvent = this.#previousEngineChangedEvent[previousEventType];
+
+    if (
+      changeReason != this.CHANGE_REASON.ENGINE_UPDATE ||
+      !previousEvent ||
+      // For engine updates, we don't send the event unless the details are
+      // different.
+      !this.#changedEventIsSame(previousEvent, extraArgs)
+    ) {
+      if (isPrivate) {
+        Glean.searchEnginePrivate.changed.record(extraArgs);
+      } else {
+        Glean.searchEngineDefault.changed.record(extraArgs);
+      }
     }
+
+    this.#previousEngineChangedEvent[previousEventType] = extraArgs;
+
     this.#recordDefaultEngineTelemetryData();
   }
 

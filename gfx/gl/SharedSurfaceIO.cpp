@@ -6,10 +6,10 @@
 
 #include "GLContextCGL.h"
 #include "MozFramebuffer.h"
+#include "ScopedGLHelpers.h"
 #include "mozilla/gfx/MacIOSurface.h"
 #include "mozilla/layers/LayersSurfaces.h"  // for SurfaceDescriptor, etc
 #include "mozilla/layers/LayersTypes.h"
-#include "ScopedGLHelpers.h"
 
 namespace mozilla {
 namespace gl {

@@ -5,6 +5,7 @@
 #define mozilla_gfx_config_gfxVars_h
 
 #include <stdint.h>
+
 #include "mozilla/Assertions.h"
 #include "mozilla/StaticPtr.h"
 #include "mozilla/gfx/GraphicsMessages.h"

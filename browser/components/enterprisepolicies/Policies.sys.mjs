@@ -2133,6 +2133,18 @@ export var Policies = {
           param.StartPage == "homepage-locked"
         );
       }
+      if ("NewTabOnRestore" in param) {
+        lazy.PoliciesUtils.setDefaultPref(
+          "browser.sessionstore.newTabOnRestore",
+          param.NewTabOnRestore
+        );
+        // Make the UI visible so the user can see what's been configured
+        // on their behalf, regardless of the configured value.
+        lazy.PoliciesUtils.setDefaultPref(
+          "browser.sessionstore.newTabOnRestore.showSetting",
+          true
+        );
+      }
     },
   },
 

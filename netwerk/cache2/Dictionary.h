@@ -5,7 +5,15 @@
 #ifndef mozilla_net_Dictionary_h
 #define mozilla_net_Dictionary_h
 
+#include <vector>
+
+#include "mozilla/RefPtr.h"
+#include "mozilla/TimeStamp.h"
+#include "mozilla/Vector.h"
+#include "mozilla/dom/RequestBinding.h"
+#include "mozilla/net/urlpattern_glue.h"
 #include "nsCOMPtr.h"
+#include "nsHashKeys.h"
 #include "nsICacheEntry.h"
 #include "nsICacheEntryOpenCallback.h"
 #include "nsICacheStorageService.h"
@@ -14,16 +22,9 @@
 #include "nsIInterfaceRequestor.h"
 #include "nsIObserver.h"
 #include "nsIStreamListener.h"
-#include "mozilla/RefPtr.h"
-#include "mozilla/Vector.h"
 #include "nsString.h"
 #include "nsTArray.h"
-#include <vector>
-#include "mozilla/dom/RequestBinding.h"
-#include "mozilla/TimeStamp.h"
 #include "nsTHashMap.h"
-#include "nsHashKeys.h"
-#include "mozilla/net/urlpattern_glue.h"
 
 class nsICacheStorage;
 class nsIIOService;

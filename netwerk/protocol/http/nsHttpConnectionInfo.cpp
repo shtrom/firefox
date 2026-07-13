@@ -11,16 +11,15 @@
 #undef LOG_ENABLED
 #define LOG_ENABLED() LOG5_ENABLED()
 
-#include "nsHttpConnectionInfo.h"
 #include "mozilla/HashFunctions.h"
-
 #include "mozilla/net/DNS.h"
 #include "mozilla/net/NeckoChannelParams.h"
 #include "nsComponentManagerUtils.h"
+#include "nsHttpConnectionInfo.h"
+#include "nsHttpHandler.h"
 #include "nsICryptoHash.h"
 #include "nsIDNSByTypeRecord.h"
 #include "nsIProtocolProxyService.h"
-#include "nsHttpHandler.h"
 #include "nsNetCID.h"
 #include "nsProxyInfo.h"
 #include "prnetdb.h"

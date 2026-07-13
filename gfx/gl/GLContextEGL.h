@@ -5,10 +5,11 @@
 #ifndef GLCONTEXTEGL_H_
 #define GLCONTEXTEGL_H_
 
+#include <memory>
+
 #include "GLContext.h"
 #include "GLLibraryEGL.h"
 #include "nsRegion.h"
-#include <memory>
 
 namespace mozilla {
 namespace layers {

@@ -8,17 +8,17 @@
 
 #include "GLContextEGL.h"
 #include "GLLibraryEGL.h"
-#include "RenderThread.h"
 #include "RenderCompositor.h"
 #include "RenderCompositorD3D11SWGL.h"
+#include "RenderThread.h"
 #include "ScopedGLHelpers.h"
 #include "mozilla/gfx/CanvasManagerParent.h"
 #include "mozilla/gfx/DeviceManagerDx.h"
-#include "mozilla/gfx/gfxVars.h"
 #include "mozilla/gfx/Logging.h"
+#include "mozilla/gfx/gfxVars.h"
+#include "mozilla/layers/CompositeProcessD3D11FencesHolderMap.h"
 #include "mozilla/layers/FenceD3D11.h"
 #include "mozilla/layers/GpuProcessD3D11TextureMap.h"
-#include "mozilla/layers/CompositeProcessD3D11FencesHolderMap.h"
 #include "mozilla/layers/TextureD3D11.h"
 
 namespace mozilla {

@@ -4,19 +4,19 @@
 
 #include "MozNewTabWallpaperProtocolHandler.h"
 
+#include "SimpleChannel.h"
 #include "mozilla/ClearOnShutdown.h"
 #include "mozilla/net/NeckoParent.h"
+#include "nsAppDirectoryServiceDefs.h"
 #include "nsContentUtils.h"
+#include "nsDirectoryServiceUtils.h"
 #include "nsIFile.h"
 #include "nsIFileChannel.h"
 #include "nsIFileURL.h"
 #include "nsIMIMEService.h"
-#include "nsDirectoryServiceUtils.h"
-#include "nsAppDirectoryServiceDefs.h"
 #include "nsNetUtil.h"
 #include "nsURLHelper.h"
 #include "prio.h"
-#include "SimpleChannel.h"
 
 #define NEWTAB_WALLPAPER_SCHEME "moz-newtab-wallpaper"
 

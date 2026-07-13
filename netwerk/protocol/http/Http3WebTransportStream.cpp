@@ -4,15 +4,15 @@
 
 #include "Http3WebTransportStream.h"
 
-#include "HttpLog.h"
 #include "Http3Session.h"
 #include "Http3WebTransportSession.h"
+#include "HttpLog.h"
 #include "mozilla/TimeStamp.h"
 #include "nsHttpHandler.h"
 #include "nsIOService.h"
 #include "nsIPipe.h"
-#include "nsSocketTransportService2.h"
 #include "nsIWebTransportStream.h"
+#include "nsSocketTransportService2.h"
 
 namespace mozilla::net {
 

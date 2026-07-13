@@ -6,16 +6,18 @@
 #define HappyEyeballsConnectionAttempt_h_
 
 #include "ConnectionAttempt.h"
-#include "nsAHttpConnection.h"
-#include "nsICancelable.h"
-#include "nsIDNSListener.h"
-#include "mozilla/Maybe.h"
-#include "mozilla/Result.h"
-#include "nsTHashSet.h"
-#include "happy_eyeballs_glue/HappyEyeballs.h"
 #include "ConnectionEstablisher.h"
 #include "HappyEyeballsConnMgrDelegate.h"
 #include "HappyEyeballsTransaction.h"
+#include "happy_eyeballs_glue/HappyEyeballs.h"
+#include "mozilla/Maybe.h"
+#include "mozilla/Result.h"
+#include "nsAHttpConnection.h"
+#include "nsICancelable.h"
+#include "nsIDNSListener.h"
+#include "nsIDNSService.h"
+#include "nsRefPtrHashtable.h"
+#include "nsTHashSet.h"
 
 namespace mozilla {
 namespace net {

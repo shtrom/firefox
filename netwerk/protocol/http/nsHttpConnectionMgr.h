@@ -5,23 +5,22 @@
 #ifndef nsHttpConnectionMgr_h_
 #define nsHttpConnectionMgr_h_
 
+#include "ARefBase.h"
+#include "ConnectionEntry.h"
 #include "DnsAndConnectSocket.h"
 #include "HttpConnectionMgrShell.h"
-#include "nsHttpConnection.h"
-#include "nsHttpTransaction.h"
-#include "nsTArray.h"
-#include "nsTHashSet.h"
-#include "nsThreadUtils.h"
-#include "nsClassHashtable.h"
 #include "mozilla/DataMutex.h"
 #include "mozilla/TimeStamp.h"
-#include "ARefBase.h"
-#include "nsWeakReference.h"
-#include "ConnectionEntry.h"
-
+#include "nsClassHashtable.h"
+#include "nsHttpConnection.h"
+#include "nsHttpTransaction.h"
 #include "nsINamed.h"
 #include "nsIObserver.h"
 #include "nsITimer.h"
+#include "nsTArray.h"
+#include "nsTHashSet.h"
+#include "nsThreadUtils.h"
+#include "nsWeakReference.h"
 
 class nsIHttpUpgradeListener;
 

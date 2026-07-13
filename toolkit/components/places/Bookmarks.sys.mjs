@@ -1363,9 +1363,17 @@ export var Bookmarks = Object.freeze({
 
       await removeBookmarks(removeItems, options);
 
+      let untaggedURLs = new Set();
+      for (let item of removeItems) {
+        if (item.url && item._grandParentId == lazy.PlacesUtils.tagsFolderId) {
+          untaggedURLs.add(item.url.href);
+        }
+      }
+      let entriesByURL = untaggedURLs.size
+        ? await fetchBookmarksByURLs([...untaggedURLs], { concurrent: true })
+        : new Map();
       // Notify bookmark-removed to listeners.
       let notifications = [];
-
       for (let item of removeItems) {
         let isUntagging = item._grandParentId == lazy.PlacesUtils.tagsFolderId;
         let url = "";
@@ -1390,9 +1398,7 @@ export var Bookmarks = Object.freeze({
         );
 
         if (isUntagging) {
-          for (let entry of await fetchBookmarksByURL(item, {
-            concurrent: true,
-          })) {
+          for (let entry of entriesByURL.get(url) || []) {
             notifications.push(
               new PlacesBookmarkTags({
                 id: entry._id,
@@ -2589,7 +2595,6 @@ async function fetchBookmarksByGUIDPrefix(info, options = {}) {
   );
 }
 
-// eslint-disable-next-line no-unused-vars
 async function fetchBookmarksByURLs(urls, options = {}) {
   if (!urls.length) {
     throw new Error("URLs array must not be empty");

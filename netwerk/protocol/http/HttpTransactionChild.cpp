@@ -3,30 +3,29 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 // HttpLog.h should generally be included first
-#include "HttpLog.h"
-
 #include "HttpTransactionChild.h"
 
+#include "HttpLog.h"
+#include "OpaqueResponseUtils.h"
+#include "mozilla/ScopeExit.h"
+#include "mozilla/StaticPrefs_network.h"
 #include "mozilla/ipc/IPCStreamUtils.h"
 #include "mozilla/net/BackgroundDataBridgeParent.h"
 #include "mozilla/net/ChannelEventQueue.h"
 #include "mozilla/net/InputChannelThrottleQueueChild.h"
 #include "mozilla/net/SocketProcessChild.h"
-#include "mozilla/ScopeExit.h"
-#include "mozilla/StaticPrefs_network.h"
+#include "nsHttpHandler.h"
 #include "nsHttpResponseHead.h"
-#include "nsInputStreamPump.h"
+#include "nsHttpTransaction.h"
+#include "nsIRequestContext.h"
 #include "nsISocketTransport.h"
 #include "nsITransportSecurityInfo.h"
-#include "nsHttpHandler.h"
-#include "nsHttpTransaction.h"
+#include "nsInputStreamPump.h"
 #include "nsNetUtil.h"
 #include "nsProxyInfo.h"
 #include "nsProxyRelease.h"
 #include "nsQueryObject.h"
 #include "nsSerializationHelper.h"
-#include "OpaqueResponseUtils.h"
-#include "nsIRequestContext.h"
 
 namespace mozilla::net {
 

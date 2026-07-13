@@ -8,20 +8,18 @@
 #include "DocAccessible-inl.h"
 #include "DocAccessibleChild.h"
 #include "LocalAccessible-inl.h"
-#include "nsEventShell.h"
 #include "TextLeafAccessible.h"
 #include "TextUpdater.h"
-
-#include "nsIContentInlines.h"
-
 #include "mozilla/AppShutdown.h"
-#include "mozilla/dom/BrowserChild.h"
-#include "mozilla/dom/Element.h"
 #include "mozilla/PerfStats.h"
 #include "mozilla/PresShell.h"
 #include "mozilla/ProfilerMarkers.h"
-#include "nsAccessibilityService.h"
+#include "mozilla/dom/BrowserChild.h"
+#include "mozilla/dom/Element.h"
 #include "mozilla/glean/AccessibleMetrics.h"
+#include "nsAccessibilityService.h"
+#include "nsEventShell.h"
+#include "nsIContentInlines.h"
 
 using namespace mozilla;
 using namespace mozilla::a11y;

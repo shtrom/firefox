@@ -4,12 +4,11 @@
 #ifndef include_gfx_ipc_UiCompositorControllerChild_h
 #define include_gfx_ipc_UiCompositorControllerChild_h
 
-#include "mozilla/layers/PUiCompositorControllerChild.h"
-
-#include "mozilla/gfx/2D.h"
 #include "mozilla/Maybe.h"
-#include "mozilla/layers/UiCompositorControllerParent.h"
 #include "mozilla/RefPtr.h"
+#include "mozilla/gfx/2D.h"
+#include "mozilla/layers/PUiCompositorControllerChild.h"
+#include "mozilla/layers/UiCompositorControllerParent.h"
 #include "nsThread.h"
 #ifdef MOZ_WIDGET_ANDROID
 #  include "SurfaceTexture.h"

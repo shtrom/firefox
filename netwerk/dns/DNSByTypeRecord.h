@@ -5,8 +5,8 @@
 #ifndef DNSByTypeRecord_h_
 #define DNSByTypeRecord_h_
 
-#include "mozilla/net/HTTPSSVC.h"
 #include "ipc/IPCMessageUtils.h"
+#include "mozilla/net/HTTPSSVC.h"
 #include "mozilla/net/NeckoMessageUtils.h"
 
 namespace mozilla {

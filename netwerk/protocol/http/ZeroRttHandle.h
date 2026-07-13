@@ -7,8 +7,8 @@
 #define ZeroRttHandle_h_
 
 #include "mozilla/Maybe.h"
-#include "nsIWeakReferenceUtils.h"
 #include "nsISupportsImpl.h"
+#include "nsIWeakReferenceUtils.h"
 #include "nscore.h"
 
 namespace mozilla::net {

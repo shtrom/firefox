@@ -3,17 +3,14 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "ScaledFontWin.h"
-#include "UnscaledFontGDI.h"
 
 #include "AutoHelpersWin.h"
-#include "Logging.h"
-#include "nsString.h"
-
-#include "skia/include/ports/SkTypeface_win.h"
-
-#include "cairo-win32.h"
-
 #include "HelpersWinFonts.h"
+#include "Logging.h"
+#include "UnscaledFontGDI.h"
+#include "cairo-win32.h"
+#include "nsString.h"
+#include "skia/include/ports/SkTypeface_win.h"
 
 namespace mozilla {
 namespace gfx {

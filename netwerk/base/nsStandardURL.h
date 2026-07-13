@@ -7,20 +7,20 @@
 
 #include <bitset>
 
-#include "nsString.h"
-#include "nsIIPCSerializableURI.h"
-#include "nsISerializable.h"
-#include "nsIFileURL.h"
-#include "nsIStandardURL.h"
-#include "mozilla/Encoding.h"
-#include "nsCOMPtr.h"
-#include "nsURLHelper.h"
-#include "mozilla/Atomics.h"
-#include "mozilla/LinkedList.h"
 #include "URIHasher.h"
+#include "mozilla/Atomics.h"
+#include "mozilla/Encoding.h"
+#include "mozilla/LinkedList.h"
+#include "nsCOMPtr.h"
+#include "nsIFileURL.h"
+#include "nsIIPCSerializableURI.h"
 #include "nsISensitiveInfoHiddenURI.h"
+#include "nsISerializable.h"
+#include "nsIStandardURL.h"
 #include "nsIURIMutator.h"
 #include "nsIURIWithSizeOf.h"
+#include "nsString.h"
+#include "nsURLHelper.h"
 
 #ifdef NS_BUILD_REFCNT_LOGGING
 #  define DEBUG_DUMP_URLS_AT_SHUTDOWN

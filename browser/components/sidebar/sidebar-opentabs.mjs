@@ -209,6 +209,8 @@ export class SidebarOpenTabs extends SidebarPage {
           secondaryActionClass="dismiss-button"
           .multiSelect=${false}
           .searchQuery=${this.searchQuery}
+          .mediumView=${true}
+          .dateTimeFormat=${"time"}
           .tabItems=${unpinnedTabItems}
           @fxview-tab-list-primary-action=${this.onPrimaryAction}
           @fxview-tab-list-secondary-action=${this.onSecondaryAction}

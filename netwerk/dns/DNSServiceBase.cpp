@@ -5,14 +5,14 @@
 #include "DNSServiceBase.h"
 
 #include "DNS.h"
+#include "mozilla/ClearOnShutdown.h"
 #include "mozilla/Preferences.h"
 #include "mozilla/StaticPrefs_network.h"
 #include "nsIDNSService.h"
-#include "nsIProtocolProxyService2.h"
 #include "nsIPrefBranch.h"
+#include "nsIProtocolProxyService2.h"
 #include "nsIProxyInfo.h"
 #include "nsThreadUtils.h"
-#include "mozilla/ClearOnShutdown.h"
 
 #if defined(XP_WIN)
 #  include <shlobj.h>

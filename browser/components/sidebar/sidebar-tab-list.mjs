@@ -29,6 +29,10 @@ export class SidebarTabList extends FxviewTabListBase {
     },
   };
 
+  static properties = {
+    mediumView: { type: Boolean, reflect: true, attribute: "medium-view" },
+  };
+
   /**
    * The tree view controller that owns selection state for the page this list
    * belongs to.
@@ -109,6 +113,13 @@ export class SidebarTabList extends FxviewTabListBase {
     } else if (!this.searchQuery) {
       tabIndex = 0;
     }
+    let time;
+    if (tabItem.time) {
+      // Some APIs report the timestamp in microseconds (16 digits); the row
+      // expects milliseconds.
+      const stringTime = tabItem.time.toString();
+      time = stringTime.length === 16 ? tabItem.time / 1000 : tabItem.time;
+    }
     return html`
       <sidebar-tab-row
         ?active=${i == this.activeIndex}
@@ -118,11 +129,13 @@ export class SidebarTabList extends FxviewTabListBase {
         .currentActiveElementId=${this.currentActiveElementId}
         .closeRequested=${tabItem.closeRequested}
         .containerObj=${tabItem.containerObj}
+        .dateTimeFormat=${this.dateTimeFormat}
         .fxaDeviceId=${ifDefined(tabItem.fxaDeviceId)}
         .favicon=${tabItem.icon}
         .guid=${tabItem.guid}
         .hasPopup=${this.hasPopup}
         .indicators=${tabItem.indicators}
+        .mediumView=${this.mediumView}
         .primaryL10nArgs=${ifDefined(tabItem.primaryL10nArgs)}
         .primaryL10nId=${tabItem.primaryL10nId}
         role="listitem"
@@ -137,6 +150,8 @@ export class SidebarTabList extends FxviewTabListBase {
         .sourceWindowId=${ifDefined(tabItem.sourceWindowId)}
         .tabElement=${ifDefined(tabItem.tabElement)}
         tabindex=${tabIndex}
+        .time=${time}
+        .timeMsPref=${this.timeMsPref}
         .title=${tabItem.title}
         .url=${tabItem.url}
         @keydown=${e => e.currentTarget.primaryActionHandler(e)}
@@ -180,6 +195,13 @@ export class SidebarTabRow extends FxviewTabRowBase {
     selected: { type: Boolean, reflect: true },
     current: { type: Boolean, reflect: true },
     indicators: { type: Array },
+    mediumView: { type: Boolean, reflect: true, attribute: "medium-view" },
+  };
+
+  static queries = {
+    ...FxviewTabRowBase.queries,
+    domainEl: "#sidebar-tab-row-domain",
+    timeEl: "#fxview-tab-row-time",
   };
 
   #tabSelectObserver = null;
@@ -241,6 +263,28 @@ export class SidebarTabRow extends FxviewTabRowBase {
     )}`;
   }
 
+  #getDomain() {
+    if (!this.url) {
+      return "";
+    }
+    try {
+      return Services.eTLD.getBaseDomain(Services.io.newURI(this.url));
+    } catch (e) {
+      // No base domain (about:, file:, IP hosts, etc.); show a friendly label
+      // the way Firefox View does.
+      return this.formatURIForDisplay(this.url);
+    }
+  }
+
+  #domainTemplate() {
+    return html`<span
+      class="sidebar-tab-row-domain text-truncated-ellipsis"
+      id="sidebar-tab-row-domain"
+    >
+      ${this.#getDomain()}
+    </span>`;
+  }
+
   secondaryButtonTemplate() {
     return html`${when(
       this.secondaryL10nId && this.secondaryActionClass,
@@ -300,6 +344,10 @@ export class SidebarTabRow extends FxviewTabRowBase {
         @keydown=${this.primaryActionHandler}
       >
         ${this.faviconTemplate()} ${this.titleTemplate()}
+        ${when(
+          this.mediumView,
+          () => html`${this.#domainTemplate()} ${this.timeTemplate()}`
+        )}
       </a>
       ${this.secondaryButtonTemplate()} ${this.#containerIndicatorTemplate()}
     `;

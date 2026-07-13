@@ -444,6 +444,7 @@ export default [
       "testing/raptor/browsertime/browsertime_scenario.js",
       "testing/raptor/browsertime/browsertime_tp6_bench.js",
       "testing/raptor/browsertime/constant_regression_test.js",
+      "testing/raptor/browsertime/indexeddb_cursor.js",
       "testing/raptor/browsertime/indexeddb_getkeyrange.js",
       "testing/raptor/browsertime/indexeddb_open.js",
       "testing/raptor/browsertime/indexeddb_write.js",

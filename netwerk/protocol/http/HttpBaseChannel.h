@@ -5,15 +5,16 @@
 #ifndef mozilla_net_HttpBaseChannel_h
 #define mozilla_net_HttpBaseChannel_h
 
+#include <mozilla/Maybe.h>
+
 #include <utility>
 
 #include "OpaqueResponseUtils.h"
 #include "mozilla/AtomicBitfields.h"
 #include "mozilla/Atomics.h"
 #include "mozilla/CompactPair.h"
-#include "mozilla/dom/DOMTypes.h"
 #include "mozilla/DataMutex.h"
-#include <mozilla/Maybe.h>
+#include "mozilla/dom/DOMTypes.h"
 #include "mozilla/net/DNS.h"
 #include "mozilla/net/NeckoChannelParams.h"
 #include "mozilla/net/NeckoCommon.h"

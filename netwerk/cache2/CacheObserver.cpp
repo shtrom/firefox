@@ -4,24 +4,25 @@
 
 #include "CacheObserver.h"
 
-#include "CacheCrypto.h"
-#include "CacheStorageService.h"
-#include "CacheFileIOManager.h"
-#include "CacheIndex.h"
-#include "LoadContextInfo.h"
-#include "nsICacheStorage.h"
-#include "nsIObserverService.h"
-#include "mozilla/Services.h"
-#include "mozilla/Preferences.h"
-#include "mozilla/TimeStamp.h"
-#include "nsServiceManagerUtils.h"
-#include "mozilla/net/NeckoCommon.h"
-#include "prsystem.h"
-#include <time.h>
 #include <math.h>
-#include "nsIUserIdleService.h"
+#include <time.h>
 
 #include <numbers>
+
+#include "CacheCrypto.h"
+#include "CacheFileIOManager.h"
+#include "CacheIndex.h"
+#include "CacheStorageService.h"
+#include "LoadContextInfo.h"
+#include "mozilla/Preferences.h"
+#include "mozilla/Services.h"
+#include "mozilla/TimeStamp.h"
+#include "mozilla/net/NeckoCommon.h"
+#include "nsICacheStorage.h"
+#include "nsIObserverService.h"
+#include "nsIUserIdleService.h"
+#include "nsServiceManagerUtils.h"
+#include "prsystem.h"
 
 namespace mozilla::net {
 

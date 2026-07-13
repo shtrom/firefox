@@ -3,14 +3,13 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 // HttpLog.h should generally be included first
-#include "HttpLog.h"
-
 #include "HappyEyeballsTransaction.h"
 
 #include "ConnectionHandle.h"
-#include "HttpConnectionBase.h"
 #include "Http2Session.h"
 #include "Http3Session.h"
+#include "HttpConnectionBase.h"
+#include "HttpLog.h"
 #include "nsHttpConnection.h"
 #include "nsHttpTransaction.h"
 #include "nsITLSSocketControl.h"

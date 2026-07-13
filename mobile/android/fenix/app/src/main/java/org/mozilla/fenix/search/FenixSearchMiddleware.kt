@@ -51,7 +51,6 @@ import org.mozilla.fenix.components.search.HISTORY_SEARCH_ENGINE_ID
 import org.mozilla.fenix.components.search.TABS_SEARCH_ENGINE_ID
 import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.ext.telemetryName
-import org.mozilla.fenix.nimbus.FxNimbus
 import org.mozilla.fenix.search.SearchFragmentAction.Init
 import org.mozilla.fenix.search.SearchFragmentAction.PrivateSuggestionsCardAccepted
 import org.mozilla.fenix.search.SearchFragmentAction.SearchEnginesSelectedActions
@@ -239,7 +238,7 @@ class FenixSearchMiddleware(
     ) {
         val shouldShowTrendingSearches = store.state.run {
             (showTrendingSearches || showRecentSearches) &&
-                (searchStartedForCurrentUrl || FxNimbus.features.searchSuggestionsOnHomepage.value().enabled)
+                (searchStartedForCurrentUrl || settings.enableHomepageTrendingRecentSearch)
         }
         val shouldShowSearchSuggestions = with(store.state) {
             url != query && query.isNotBlank()

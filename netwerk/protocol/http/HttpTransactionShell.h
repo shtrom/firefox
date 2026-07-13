@@ -10,14 +10,14 @@
 #include "TimingStruct.h"
 #include "mozilla/RefPtr.h"
 #include "mozilla/UniquePtr.h"
+#include "nsHttpRequestHead.h"
 #include "nsIClassOfService.h"
 #include "nsIEarlyHintObserver.h"
 #include "nsILoadInfo.h"
 #include "nsISupports.h"
+#include "nsITRRSkipReason.h"
 #include "nsITransportSecurityInfo.h"
 #include "nsInputStreamPump.h"
-#include "nsHttpRequestHead.h"
-#include "nsITRRSkipReason.h"
 
 class nsIEventTraget;
 class nsIInputStream;

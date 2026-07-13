@@ -4,6 +4,8 @@
 
 #include "gfxTextRun.h"
 
+#include "SharedFontList-impl.h"
+#include "TextDrawTarget.h"
 #include "gfx2DGlue.h"
 #include "gfxContext.h"
 #include "gfxFontConstants.h"
@@ -13,13 +15,6 @@
 #include "gfxPlatformFontList.h"
 #include "gfxUserFontSet.h"
 #include "mozilla/ClearOnShutdown.h"
-#include "mozilla/dom/WorkerCommon.h"
-#include "mozilla/gfx/2D.h"
-#include "mozilla/gfx/Logging.h"  // for gfxCriticalError
-#include "mozilla/gfx/PathHelpers.h"
-#include "mozilla/intl/Locale.h"
-#include "mozilla/intl/String.h"
-#include "mozilla/intl/UnicodeProperties.h"
 #include "mozilla/Likely.h"
 #include "mozilla/MruCache.h"
 #include "mozilla/ServoStyleSet.h"
@@ -27,12 +22,17 @@
 #include "mozilla/StaticPresData.h"
 #include "mozilla/UniquePtr.h"
 #include "mozilla/Utf16.h"
+#include "mozilla/dom/WorkerCommon.h"
+#include "mozilla/gfx/2D.h"
+#include "mozilla/gfx/Logging.h"  // for gfxCriticalError
+#include "mozilla/gfx/PathHelpers.h"
+#include "mozilla/intl/Locale.h"
+#include "mozilla/intl/String.h"
+#include "mozilla/intl/UnicodeProperties.h"
 #include "nsLayoutUtils.h"
 #include "nsStyleConsts.h"
 #include "nsStyleUtil.h"
 #include "nsUnicodeProperties.h"
-#include "SharedFontList-impl.h"
-#include "TextDrawTarget.h"
 
 #ifdef XP_WIN
 #  include "gfxWindowsPlatform.h"
@@ -980,6 +980,15 @@ uint32_t gfxTextRun::BreakAndMeasureText(
   Range ligatureRange(aStart, end);
   ShrinkToLigatureBoundaries(&ligatureRange);
 
+  // Cache the glyph array pointer in a local so the compiler doesn't reload
+  // the member on every iteration across the calls made in the loop below;
+  // it does not change while we're measuring.
+  const CompressedGlyph* charGlyphs = mCharacterGlyphs;
+
+  // LetterSpacing() is a virtual call returning a value that is constant for
+  // the whole measurement, so hoist it out of the per-character loop.
+  const nscoord letterSpacing = aProvider.LetterSpacing();
+
   // We may need to move `i` backwards in the following loop, and re-scan
   // part of the textrun; we'll use `rescanLimit` so we can tell when that
   // is happening: if `i < rescanLimit` then we're rescanning.
@@ -1033,7 +1042,7 @@ uint32_t gfxTextRun::BreakAndMeasureText(
     // would trigger an infinite loop.
     if (aSuppressBreak != eSuppressAllBreaks &&
         (aSuppressBreak != eSuppressInitialBreak || i > aStart)) {
-      bool atNaturalBreak = mCharacterGlyphs[i].CanBreakBefore() ==
+      bool atNaturalBreak = charGlyphs[i].CanBreakBefore() ==
                             CompressedGlyph::FLAG_BREAK_TYPE_NORMAL;
       // atHyphenationBreak indicates we're at a "soft" hyphen, where an extra
       // hyphen glyph will need to be painted. It is NOT set for breaks at an
@@ -1051,15 +1060,15 @@ uint32_t gfxTextRun::BreakAndMeasureText(
       bool wordWrapping =
           (aCanWordWrap ||
            (aCanWhitespaceWrap &&
-            mCharacterGlyphs[i].CanBreakBefore() ==
+            charGlyphs[i].CanBreakBefore() ==
                 CompressedGlyph::FLAG_BREAK_TYPE_EMERGENCY_WRAP)) &&
-          mCharacterGlyphs[i].IsClusterStart() &&
+          charGlyphs[i].IsClusterStart() &&
           aBreakPriority <= gfxBreakPriority::eWordWrapBreak;
 
       bool whitespaceWrapping = false;
       if (i > aStart) {
         // The spec says the breaking opportunity is *after* whitespace.
-        auto const& g = mCharacterGlyphs[i - 1];
+        auto const& g = charGlyphs[i - 1];
         whitespaceWrapping =
             aIsBreakSpaces &&
             (g.CharIsSpace() || g.CharIsTab() || g.CharIsNewline());
@@ -1121,8 +1130,7 @@ uint32_t gfxTextRun::BreakAndMeasureText(
 
     gfxFloat charAdvance;
     if (i >= ligatureRange.start && i < ligatureRange.end) {
-      charAdvance =
-          GetAdvanceForGlyphs(Range(i, i + 1), aProvider.LetterSpacing());
+      charAdvance = GetAdvanceForGlyphs(Range(i, i + 1), letterSpacing);
       if (haveSpacing) {
         PropertyProvider::Spacing* space =
             &spacingBuffer[i - bufferRange.start];
@@ -1134,7 +1142,7 @@ uint32_t gfxTextRun::BreakAndMeasureText(
 
     advance += charAdvance;
     if (aOutTrimmableWhitespace) {
-      if (mCharacterGlyphs[i].CharIsSpace()) {
+      if (charGlyphs[i].CharIsSpace()) {
         ++trimmableChars;
         trimmableAdvance += charAdvance;
       } else {

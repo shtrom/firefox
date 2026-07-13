@@ -13,8 +13,7 @@ passing in a command line option to Gecko, or by using a Marionette-enabled
 build. The server listens for connections from various clients. Clients can
 then control Gecko by sending commands to the server.
 
-This is the official Python client for Marionette. There also exists a
-[NodeJS client] maintained by the Firefox OS automation team.
+This is the official Python client for Marionette.
 
 ## Getting the Client
 
@@ -35,7 +34,7 @@ a python shell and follow along with the
 
 ## Using the Client for Testing
 
-Please visit the [Marionette Tests] section on MDN for information regarding
+Please visit the [Marionette Tests] documentation for information regarding
 testing with Marionette.
 
 ## Session Management
@@ -180,8 +179,7 @@ set a script timeout using {func}`~Marionette.timeout.script` and handling
 `ScriptTimeoutException`.
 
 [marionette]: https://developer.mozilla.org/en-US/docs/Marionette
-[marionette tests]: https://developer.mozilla.org/en/Marionette/Tests
+[marionette tests]: https://firefox-source-docs.mozilla.org/testing/marionette/PythonTests.html
 [marionette-enabled instance of firefox]: https://developer.mozilla.org/en-US/docs/Mozilla/QA/Marionette/Builds
-[nodejs client]: https://github.com/mozilla-b2g/gaia/tree/master/tests/jsmarionette
 [pip installed]: https://pip.pypa.io/en/latest/installing.html
 [virtualenv]: http://virtualenv.readthedocs.org/en/latest/

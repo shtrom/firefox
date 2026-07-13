@@ -2,13 +2,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "ASpdySession.h"  // because of SoftStreamError()
 #include "Http3Session.h"
+
+#include "ASpdySession.h"  // because of SoftStreamError()
+#include "Http3ConnectUDPStream.h"
 #include "Http3Stream.h"
 #include "Http3StreamBase.h"
-#include "Http3WebTransportSession.h"
-#include "Http3ConnectUDPStream.h"
 #include "Http3StreamTunnel.h"
+#include "Http3WebTransportSession.h"
 #include "Http3WebTransportStream.h"
 #include "HttpConnectionUDP.h"
 #include "HttpLog.h"
@@ -16,6 +17,7 @@
 #include "SSLServerCertVerification.h"
 #include "SSLTokensCache.h"
 #include "ScopedNSSTypes.h"
+#include "WebTransportCertificateVerifier.h"
 #include "mozilla/RandomNum.h"
 #include "mozilla/RefPtr.h"
 #include "mozilla/ScopeExit.h"
@@ -34,7 +36,6 @@
 #include "nsSocketTransportService2.h"
 #include "nsThreadUtils.h"
 #include "sslerr.h"
-#include "WebTransportCertificateVerifier.h"
 
 namespace mozilla::net {
 

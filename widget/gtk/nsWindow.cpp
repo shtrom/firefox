@@ -14,6 +14,7 @@
 #include <cstdint>
 #ifdef MOZ_X11
 #  include <X11/Xlib.h>
+#  include <X11/extensions/XInput2.h>
 #endif
 #include <dlfcn.h>
 #include <gdk/gdkkeysyms.h>
@@ -6222,21 +6223,23 @@ static gboolean key_press_event_cb(GtkWidget* widget, GdkEventKey* event) {
 #  ifndef KeyPress
 #    define KeyPress 2
 #  endif
-  GdkDisplay* gdkDisplay = gtk_widget_get_display(widget);
-  if (GdkIsX11Display(gdkDisplay)) {
-    Display* dpy = GDK_DISPLAY_XDISPLAY(gdkDisplay);
-    while (XPending(dpy)) {
-      XEvent next_event;
-      XPeekEvent(dpy, &next_event);
-      GdkWindow* nextGdkWindow =
-          gdk_x11_window_lookup_for_display(gdkDisplay, next_event.xany.window);
-      if (nextGdkWindow != event->window || next_event.type != KeyPress ||
-          next_event.xkey.keycode != event->hardware_keycode ||
-          next_event.xkey.state != (event->state & NS_GDKEVENT_MATCH_MASK)) {
-        break;
+  if (StaticPrefs::widget_gtk_x11_key_repeat_throttle_enabled()) {
+    GdkDisplay* gdkDisplay = gtk_widget_get_display(widget);
+    if (GdkIsX11Display(gdkDisplay)) {
+      Display* dpy = GDK_DISPLAY_XDISPLAY(gdkDisplay);
+      while (XPending(dpy)) {
+        XEvent next_event;
+        XPeekEvent(dpy, &next_event);
+        GdkWindow* nextGdkWindow = gdk_x11_window_lookup_for_display(
+            gdkDisplay, next_event.xany.window);
+        if (nextGdkWindow != event->window || next_event.type != KeyPress ||
+            next_event.xkey.keycode != event->hardware_keycode ||
+            next_event.xkey.state != (event->state & NS_GDKEVENT_MATCH_MASK)) {
+          break;
+        }
+        XNextEvent(dpy, &next_event);
+        event->time = next_event.xkey.time;
       }
-      XNextEvent(dpy, &next_event);
-      event->time = next_event.xkey.time;
     }
   }
 #endif
@@ -7674,6 +7677,50 @@ uint32_t nsWindow::GetMaxTouchPoints() const {
   if (GdkIsWaylandDisplay()) {
     static constexpr uint32_t sMaxTouchPoints = 5;
     return WaylandDisplayGet()->GetTouch() ? sMaxTouchPoints : 0;
+  }
+#endif
+#ifdef MOZ_X11
+  if (GdkIsX11Display()) {
+    static const uint32_t sMaxTouchPoints = [] {
+      Display* xDisplay = mozilla::DefaultXDisplay();
+      if (!xDisplay) {
+        return 0u;
+      }
+
+      using XIQueryDeviceFunc = XIDeviceInfo* (*)(Display*, int, int*);
+      using XIFreeDeviceInfoFunc = void (*)(XIDeviceInfo*);
+      auto queryDevice =
+          (XIQueryDeviceFunc)dlsym(RTLD_DEFAULT, "XIQueryDevice");
+      auto freeDeviceInfo =
+          (XIFreeDeviceInfoFunc)dlsym(RTLD_DEFAULT, "XIFreeDeviceInfo");
+      if (!queryDevice || !freeDeviceInfo) {
+        return 0u;
+      }
+
+      int nDevices = 0;
+      XIDeviceInfo* devices = queryDevice(xDisplay, XIAllDevices, &nDevices);
+      if (!devices) {
+        return 0u;
+      }
+
+      uint32_t maxTouchPoints = 0;
+      for (int i = 0; i < nDevices; i++) {
+        for (int j = 0; j < devices[i].num_classes; j++) {
+          if (devices[i].classes[j]->type == XITouchClass) {
+            auto* touchClass =
+                reinterpret_cast<XITouchClassInfo*>(devices[i].classes[j]);
+            if (touchClass->mode == XIDirectTouch &&
+                static_cast<uint32_t>(touchClass->num_touches) >
+                    maxTouchPoints) {
+              maxTouchPoints = touchClass->num_touches;
+            }
+          }
+        }
+      }
+      freeDeviceInfo(devices);
+      return maxTouchPoints;
+    }();
+    return sMaxTouchPoints;
   }
 #endif
   return 0;

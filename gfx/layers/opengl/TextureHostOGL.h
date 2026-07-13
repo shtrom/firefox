@@ -7,13 +7,14 @@
 
 #include <stddef.h>  // for size_t
 #include <stdint.h>  // for uint64_t
+
 #include "CompositableHost.h"
 #include "GLContextTypes.h"  // for GLContext
 #include "GLDefs.h"          // for GLenum, LOCAL_GL_CLAMP_TO_EDGE, etc
 #include "GLTextureImage.h"  // for TextureImage
 #include "gfxTypes.h"
-#include "mozilla/GfxMessageUtils.h"         // for gfxContentType
 #include "mozilla/Assertions.h"              // for MOZ_ASSERT, etc
+#include "mozilla/GfxMessageUtils.h"         // for gfxContentType
 #include "mozilla/RefPtr.h"                  // for RefPtr
 #include "mozilla/gfx/Matrix.h"              // for Matrix4x4
 #include "mozilla/gfx/Point.h"               // for IntSize, IntPoint

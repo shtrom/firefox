@@ -16,37 +16,38 @@
 #include "ScaledFontBase.h"
 
 #if defined(WIN32)
-#  include "ScaledFontWin.h"
 #  include "NativeFontResourceGDI.h"
+#  include "ScaledFontWin.h"
 #  include "UnscaledFontGDI.h"
 #endif
 
 #ifdef XP_DARWIN
-#  include "ScaledFontMac.h"
 #  include "NativeFontResourceMac.h"
+#  include "ScaledFontMac.h"
 #  include "UnscaledFontMac.h"
 #endif
 
 #ifdef MOZ_WIDGET_GTK
-#  include "ScaledFontFontconfig.h"
 #  include "NativeFontResourceFreeType.h"
+#  include "ScaledFontFontconfig.h"
 #  include "UnscaledFontFreeType.h"
 #endif
 
 #ifdef MOZ_WIDGET_ANDROID
-#  include "ScaledFontFreeType.h"
 #  include "NativeFontResourceFreeType.h"
+#  include "ScaledFontFreeType.h"
 #  include "UnscaledFontFreeType.h"
 #endif
 
 #ifdef WIN32
-#  include "ScaledFontDWrite.h"
-#  include "NativeFontResourceDWrite.h"
-#  include "UnscaledFontDWrite.h"
 #  include <d3d10_1.h>
 #  include <stdlib.h>
+
 #  include "HelpersWin.h"
 #  include "ImageContainer.h"
+#  include "NativeFontResourceDWrite.h"
+#  include "ScaledFontDWrite.h"
+#  include "UnscaledFontDWrite.h"
 #  include "mozilla/layers/LayersSurfaces.h"
 #  include "mozilla/layers/TextureD3D11.h"
 #  include "mozilla/layers/VideoProcessorD3D11.h"
@@ -56,9 +57,7 @@
 #include "DrawTargetOffset.h"
 #include "DrawTargetRecording.h"
 #include "PathRecording.h"
-
 #include "SourceSurfaceRawData.h"
-
 #include "mozilla/CheckedInt.h"
 
 #ifdef MOZ_ENABLE_FREETYPE

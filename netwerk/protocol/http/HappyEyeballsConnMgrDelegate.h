@@ -5,10 +5,10 @@
 #ifndef HappyEyeballsConnMgrDelegate_h_
 #define HappyEyeballsConnMgrDelegate_h_
 
-#include "nsISupportsImpl.h"
-#include "nsTArray.h"
 #include "mozilla/AlreadyAddRefed.h"
 #include "mozilla/net/DNS.h"
+#include "nsISupportsImpl.h"
+#include "nsTArray.h"
 
 namespace mozilla {
 namespace net {

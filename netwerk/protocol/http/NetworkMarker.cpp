@@ -5,10 +5,10 @@
 #include "NetworkMarker.h"
 
 #include "HttpBaseChannel.h"
-#include "nsIChannelEventSink.h"
-#include "mozilla/Perfetto.h"
 #include "mozilla/ErrorNames.h"
+#include "mozilla/Perfetto.h"
 #include "nsHttpHandler.h"
+#include "nsIChannelEventSink.h"
 #include "nsIClassOfService.h"
 
 namespace mozilla::net {

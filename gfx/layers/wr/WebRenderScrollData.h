@@ -7,17 +7,17 @@
 
 #include <iosfwd>
 
-#include "chrome/common/ipc_message_utils.h"
 #include "FrameMetrics.h"
-#include "ipc/IPCMessageUtils.h"
 #include "LayersTypes.h"
+#include "chrome/common/ipc_message_utils.h"
+#include "ipc/IPCMessageUtils.h"
 #include "mozilla/Attributes.h"
 #include "mozilla/GfxMessageUtils.h"
+#include "mozilla/HashTable.h"
+#include "mozilla/Maybe.h"
 #include "mozilla/layers/FocusTarget.h"
 #include "mozilla/layers/ScrollbarData.h"
 #include "mozilla/webrender/WebRenderTypes.h"
-#include "mozilla/HashTable.h"
-#include "mozilla/Maybe.h"
 #include "nsTArrayForwardDeclare.h"
 
 namespace mozilla {

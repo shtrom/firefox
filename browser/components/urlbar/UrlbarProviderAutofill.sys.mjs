@@ -538,7 +538,7 @@ export class UrlbarProviderAutofill extends UrlbarProvider {
       controller.input._setValue(queryContext.searchString);
       controller.input.startQuery({
         searchString: queryContext.searchString,
-        allowAutofill: false,
+        allowAutofill: true,
         resetSearchState: false,
       });
     }
