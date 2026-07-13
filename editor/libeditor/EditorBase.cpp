@@ -5904,7 +5904,14 @@ nsresult EditorBase::InitializeSelection(
   NS_WARNING_ASSERTION(
       NS_SUCCEEDED(rvIgnored),
       "nsISelectionController::SetCaretReadOnly() failed, but ignored");
-  rvIgnored = selectionController->SetCaretEnabled(true);
+  const bool isCanvasEditContext =
+      selectionRootContent->HasFlag(ELEMENT_HAS_EDIT_CONTEXT) &&
+      selectionRootContent->IsHTMLElement(nsGkAtoms::canvas);
+  // <canvas>-based EditContext shouldn't enable the caret, even in
+  // caret browsing mode, since it's the web app's responsibility to
+  // render it, and the arrow keys should be interacting with the text
+  // rendered to the canvas.
+  rvIgnored = selectionController->SetCaretEnabled(!isCanvasEditContext);
   NS_WARNING_ASSERTION(
       NS_SUCCEEDED(rvIgnored),
       "nsISelectionController::SetCaretEnabled() failed, but ignored");
