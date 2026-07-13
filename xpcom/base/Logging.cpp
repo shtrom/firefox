@@ -305,7 +305,7 @@ struct LogMarker : public BaseMarkerType<LogMarker> {
                                                MS::Location::MarkerTable};
   static constexpr MS::PayloadField PayloadFields[] = {
       {"level", MS::InputType::CString, "Level", MS::Format::UniqueString},
-      {"message", MS::InputType::CString, "Message", MS::Format::UniqueString},
+      {"message", MS::InputType::CString, "Message", MS::Format::String},
       {"color", MS::InputType::CString, nullptr, MS::Format::String,
        MS::PayloadFlags::Hidden},
   };
@@ -314,7 +314,7 @@ struct LogMarker : public BaseMarkerType<LogMarker> {
                                    const ProfilerString8View& aText,
                                    const ProfilerString8View& aColor) {
     aWriter.UniqueStringProperty("level", aLevel);
-    aWriter.UniqueStringProperty("message", aText);
+    aWriter.StringProperty("message", aText);
     aWriter.StringProperty("color", aColor);
   }
 };
