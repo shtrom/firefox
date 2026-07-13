@@ -10,7 +10,6 @@ import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.concept.engine.Engine
 import mozilla.components.feature.ipprotection.IPProtectionFeature
 import mozilla.components.feature.ipprotection.IPProtectionStorageSynchronizer
-import mozilla.components.feature.ipprotection.auth.gpi.IPProtectionGpiProvider
 import mozilla.components.feature.ipprotection.store.IPProtectionStore
 import mozilla.components.lib.integrity.googleplay.GooglePlayIntegrityClient
 import mozilla.components.service.fxa.manager.FxaAccountManager
@@ -75,7 +74,7 @@ class IPProtection(
             store = store,
             engine = engine,
             accountManager = authSources.fxaAccountManager.value,
-            extraAuthProvider = IPProtectionGpiProvider(authSources.integrityClient.value),
+            integrityClient = authSources.integrityClient.value,
         )
     }
 
