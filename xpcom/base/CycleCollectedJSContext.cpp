@@ -851,7 +851,7 @@ static bool ExtractTaskData(
 static bool CanRunJSCallback(nsIGlobalObject* aGlobalObject,
                              JSObject* aCallbackGlobal,
                              nsIGlobalObject* aIncumbentGlobal) {
-  if (aGlobalObject->IsScriptForbidden(aCallbackGlobal, false)) {
+  if (!aGlobalObject->CanRunJSMicroTask(aCallbackGlobal)) {
     return false;
   }
 
