@@ -1072,21 +1072,6 @@ nsresult nsWindow::Create(nsIWidget* aParent, const LayoutDeviceIntRect& aRect,
       ::SetClassLongPtrW(mWnd, GCLP_WNDPROC,
                          reinterpret_cast<LONG_PTR>(
                              WinUtils::NonClientDpiScalingDefWindowProcW));
-      // Since we're consuming the PreXULSkeletonUI we must have a custom
-      // titlebar. Doing this here means the OnWindowMaximized() call below will
-      // work as intended.
-      SetCustomTitlebar(true);
-
-      // A window that starts out maximized (e.g. one that took over the
-      // maximized pre-XUL skeleton UI) never transitions into the maximized
-      // size mode, so TaskbarConcealer never gets a chance to tell Windows that
-      // it isn't actually fullscreen. Now that the window has a custom
-      // non-client area -- the configuration Windows may misdetect as
-      // fullscreen -- re-assert that state if we're already maximized. See bug
-      // 1957069.
-      if (mFrameState->GetSizeMode() == nsSizeMode_Maximized) {
-        TaskbarConcealer::OnWindowMaximized(this, /* aForce = */ true);
-      }
     }
   }
 
@@ -1693,6 +1678,17 @@ void nsWindow::Show(bool aState) {
       ::NotifyWinEvent(EVENT_OBJECT_FOCUS, mWnd, OBJID_CLIENT, CHILDID_SELF);
     }
 #endif  // defined(ACCESSIBILITY)
+
+    // A window that took over the pre-XUL skeleton UI was born in its size mode
+    // rather than transitioning into it, so
+    // TaskbarConcealer::OnWindowMaximized() was never called and Windows may
+    // misdetect the maximized window as fullscreen. BrowserGlue applies the
+    // custom titlebar before showing the window, so mCustomNonClient is already
+    // accurate here.
+    if (mCustomNonClient &&
+        mFrameState->GetSizeMode() == nsSizeMode_Maximized) {
+      TaskbarConcealer::OnWindowMaximized(this, /* aForce = */ true);
+    }
   }
 
   MOZ_ASSERT_IF(mWindowType == WindowType::Popup,
