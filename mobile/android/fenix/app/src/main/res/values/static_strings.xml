@@ -142,6 +142,8 @@
     <string name="preferences_debug_settings_enable_persistent_onboarding" translatable="false">Show onboarding on each app cold open</string>
     <!-- Label for enabling Homepage Sports Widget -->
     <string name="preferences_debug_settings_homepage_sports_widget" translatable="false">Enable Homepage Sports Widget</string>
+    <!-- Label for enabling Homepage Customization -->
+    <string name="preferences_debug_settings_homepage_customization" translatable="false">Enable Homepage Customization</string>
 
     <!-- Search Optimization Secret Settings -->
     <string name="preferences_debug_settings_search_optimization" translatable="false">Search Optimization Feature</string>
@@ -180,7 +182,7 @@
     <string name="preferences_terms_of_use_debug_timer" translatable="false">30s ToU timer enabled</string>
     <string name="preferences_terms_of_use_latest_update_date" translatable="false">Set latest ToU update date to now</string>
 
-  <!-- Label for enabling IPProtection through secret settings -->
+    <!-- Label for enabling IPProtection through secret settings -->
     <string name="preferences_debug_settings_ip_protection" translatable="false">Enable IP Protection UI</string>
 
     <!-- Label for enabling LNA blocking -->

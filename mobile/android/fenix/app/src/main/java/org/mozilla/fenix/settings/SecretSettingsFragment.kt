@@ -355,6 +355,11 @@ class SecretSettingsFragment : PreferenceFragmentCompat(), SystemInsetsPaddedFra
             onPreferenceChangeListener = SharedPreferenceUpdater()
         }
 
+        requirePreference<SwitchPreferenceCompat>(R.string.pref_key_enable_homepage_customization).apply {
+            isChecked = settings.enableHomepageCustomization
+            onPreferenceChangeListener = SharedPreferenceUpdater()
+        }
+
         requirePreference<SwitchPreferenceCompat>(R.string.pref_key_persistent_debug_menu).apply {
             isVisible = true
             isChecked = settings.isDebugMenuPersistentlyRevealed

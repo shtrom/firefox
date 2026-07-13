@@ -3299,4 +3299,12 @@ class Settings(
         key = appContext.getPreferenceKey(R.string.pref_key_enable_uninstall_survey),
         default = { FxNimbus.features.uninstallSurvey.value().enabled },
     )
+
+    /**
+     * Indicates if Homepage Customization is enabled.
+     */
+    var enableHomepageCustomization by booleanPreference(
+        key = appContext.getPreferenceKey(R.string.pref_key_enable_homepage_customization),
+        default = { FxNimbus.features.homepageCustomization.value().enabled },
+    )
 }
