@@ -127,8 +127,11 @@ parent:
   // principals collected. In order to be compatible with that API, we need to
   // update the document's principal. This is only allowed if the principals are
   // `equals` to each other.
-  [LazySend] async UpdateDocumentPrincipal(nullable nsIPrincipal aPrincipal,
-                                           nullable nsIPrincipal aStoragePrincipal);
+  [LazySend] async UpdateDocumentPrincipal(nsIPrincipal aPrincipal,
+                                           nsIPrincipal aPartitionedPrincipal);
+
+  // Update partitioning of the storage principal in this WindowGlobal.
+  [LazySend] async UpdatePrincipalPartitioning(bool aPartitionStoragePrincipal);
 
   // Update document's `documentHasLoaded` bit in this WindowGlobal.
   [LazySend] async UpdateDocumentHasLoaded(bool aDocumentHasLoaded);

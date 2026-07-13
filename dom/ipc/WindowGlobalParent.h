@@ -122,7 +122,14 @@ class WindowGlobalParent final : public WindowContext,
   // |document.domain|.
   nsIPrincipal* DocumentPrincipal() { return mDocumentPrincipal; }
 
-  nsIPrincipal* DocumentStoragePrincipal() { return mDocumentStoragePrincipal; }
+  nsIPrincipal* DocumentPartitionedPrincipal() {
+    return mDocumentPartitionedPrincipal;
+  }
+
+  nsIPrincipal* DocumentStoragePrincipal() {
+    return mPartitionStoragePrincipal ? DocumentPartitionedPrincipal()
+                                      : DocumentPrincipal();
+  }
 
   // The BrowsingContext which this WindowGlobal has been loaded into.
   // FIXME: It's quite awkward that this method has a slightly different name
@@ -295,7 +302,9 @@ class WindowGlobalParent final : public WindowContext,
   mozilla::ipc::IPCResult RecvUpdateDocumentURI(NotNull<nsIURI*> aURI);
   mozilla::ipc::IPCResult RecvUpdateDocumentPrincipal(
       nsIPrincipal* aNewDocumentPrincipal,
-      nsIPrincipal* aNewDocumentStoragePrincipal);
+      nsIPrincipal* aNewDocumentPartitionedPrincipal);
+  mozilla::ipc::IPCResult RecvUpdatePrincipalPartitioning(
+      bool aPartitionStoragePrincipal);
   mozilla::ipc::IPCResult RecvUpdateDocumentHasLoaded(bool aDocumentHasLoaded);
   mozilla::ipc::IPCResult RecvUpdateDocumentHasUserInteracted(
       bool aDocumentHasUserInteracted);
@@ -426,16 +435,11 @@ class WindowGlobalParent final : public WindowContext,
   using PageUseCounterResult = EnumSet<PageUseCounterResultBits>;
   PageUseCounterResult FinishAccumulatingPageUseCounters();
 
-  // Returns failure if the new storage principal cannot be validated
-  // against the current document principle.
-  nsresult SetDocumentStoragePrincipal(
-      nsIPrincipal* aNewDocumentStoragePrincipal);
-
-  // NOTE: Neither this document principal nor the document storage
-  // principal doesn't reflect possible |document.domain| mutations
-  // which may have been made in the actual document.
+  // NOTE: Neither this document principal nor the partitioned principal reflect
+  // possible |document.domain| mutations which may have been made in the actual
+  // document.
   nsCOMPtr<nsIPrincipal> mDocumentPrincipal;
-  nsCOMPtr<nsIPrincipal> mDocumentStoragePrincipal;
+  nsCOMPtr<nsIPrincipal> mDocumentPartitionedPrincipal;
 
   // The principal to use for the content blocking allow list.
   nsCOMPtr<nsIPrincipal> mDocContentBlockingAllowListPrincipal;
@@ -491,6 +495,7 @@ class WindowGlobalParent final : public WindowContext,
   bool mDocumentTreeWouldPreloadResources = false;
   bool mBlockAllMixedContent;
   bool mUpgradeInsecureRequests;
+  bool mPartitionStoragePrincipal;
 
   // HTTPS-Only Mode flags
   uint32_t mHttpsOnlyStatus;

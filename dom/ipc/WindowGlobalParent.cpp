@@ -126,7 +126,8 @@ WindowGlobalParent::WindowGlobalParent(
       mDocumentHasLoaded(false),
       mDocumentHasUserInteracted(false),
       mBlockAllMixedContent(false),
-      mUpgradeInsecureRequests(false) {
+      mUpgradeInsecureRequests(false),
+      mPartitionStoragePrincipal(false) {
   MOZ_DIAGNOSTIC_ASSERT(XRE_IsParentProcess(), "Parent process only");
 }
 
@@ -144,11 +145,16 @@ already_AddRefed<WindowGlobalParent> WindowGlobalParent::CreateDisconnected(
       GetByInnerWindowId(aInit.context().mInnerWindowId);
   MOZ_RELEASE_ASSERT(!wgp, "Creating duplicate WindowGlobalParent");
 
+  MOZ_RELEASE_ASSERT(VerifyPartitionedPrincipalMatchesDocumentPrincipal(
+                         aInit.principal(), aInit.partitionedPrincipal()),
+                     "Invalid partitioned principal from content");
+
   FieldValues fields(aInit.context().mFields);
   wgp =
       new WindowGlobalParent(browsingContext, aInit.context().mInnerWindowId,
                              aInit.context().mOuterWindowId, std::move(fields));
   wgp->mDocumentPrincipal = aInit.principal();
+  wgp->mDocumentPartitionedPrincipal = aInit.partitionedPrincipal();
   wgp->mDocumentURI = aInit.documentURI();
   if (aInit.isVideoDocument() && wgp->mDocumentURI) {
     wgp->RecordSubsequentNoCorsRequestState(wgp->mDocumentURI);
@@ -158,19 +164,15 @@ already_AddRefed<WindowGlobalParent> WindowGlobalParent::CreateDisconnected(
   wgp->mIsUncommittedInitialDocument = aInit.isUncommittedInitialDocument();
   wgp->mBlockAllMixedContent = aInit.blockAllMixedContent();
   wgp->mUpgradeInsecureRequests = aInit.upgradeInsecureRequests();
+  wgp->mPartitionStoragePrincipal = aInit.partitionStoragePrincipal();
   wgp->mSandboxFlags = aInit.sandboxFlags();
   wgp->mHttpsOnlyStatus = aInit.httpsOnlyStatus();
   net::CookieJarSettings::Deserialize(aInit.cookieJarSettings(),
                                       getter_AddRefs(wgp->mCookieJarSettings));
-  MOZ_RELEASE_ASSERT(wgp->mDocumentPrincipal, "Must have a valid principal");
   MOZ_RELEASE_ASSERT(
       !aForProcess || !wgp->mStaticCloneOf ||
           wgp->mStaticCloneOf->GetContentParent() == aForProcess,
       "Cannot static clone from a document in a different process!");
-
-  nsresult rv = wgp->SetDocumentStoragePrincipal(aInit.storagePrincipal());
-  MOZ_RELEASE_ASSERT(NS_SUCCEEDED(rv),
-                     "Must succeed in setting storage principal");
 
   if (aInit.documentChannelHandle()) {
     auto result = aInit.documentChannelHandle()->GetChannel(
@@ -488,57 +490,41 @@ IPCResult WindowGlobalParent::RecvUpdateDocumentURI(NotNull<nsIURI*> aURI) {
   return IPC_OK();
 }
 
-nsresult WindowGlobalParent::SetDocumentStoragePrincipal(
-    nsIPrincipal* aNewDocumentStoragePrincipal) {
-  if (mDocumentPrincipal->Equals(aNewDocumentStoragePrincipal)) {
-    mDocumentStoragePrincipal = mDocumentPrincipal;
-    return NS_OK;
-  }
-
-  // Compare originNoSuffix to ensure it's equal.
-  nsCString noSuffix;
-  nsresult rv = mDocumentPrincipal->GetOriginNoSuffix(noSuffix);
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-
-  nsCString storageNoSuffix;
-  rv = aNewDocumentStoragePrincipal->GetOriginNoSuffix(storageNoSuffix);
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-
-  if (noSuffix != storageNoSuffix) {
-    return NS_ERROR_FAILURE;
-  }
-
-  if (!mDocumentPrincipal->OriginAttributesRef().EqualsIgnoringPartitionKey(
-          aNewDocumentStoragePrincipal->OriginAttributesRef())) {
-    return NS_ERROR_FAILURE;
-  }
-
-  mDocumentStoragePrincipal = aNewDocumentStoragePrincipal;
-  return NS_OK;
-}
-
 IPCResult WindowGlobalParent::RecvUpdateDocumentPrincipal(
     nsIPrincipal* aNewDocumentPrincipal,
-    nsIPrincipal* aNewDocumentStoragePrincipal) {
+    nsIPrincipal* aNewDocumentPartitionedPrincipal) {
   if (!mDocumentPrincipal->Equals(aNewDocumentPrincipal)) {
     return IPC_FAIL(this,
                     "Trying to reuse WindowGlobalParent but the principal of "
                     "the new document does not match the old one");
   }
-  mDocumentPrincipal = aNewDocumentPrincipal;
+  // NOTE: Unfortunately, we cannot check ->Equals for our old & new partitioned
+  // principals, as the partition key for an initial about:blank document may
+  // not match the partition key of the load which replaces it.
+  if (!VerifyPartitionedPrincipalMatchesDocumentPrincipal(
+          aNewDocumentPrincipal, aNewDocumentPartitionedPrincipal)) {
+    return IPC_FAIL(
+        this, "Invalid PartitionedPrincipal when re-using WindowGlobalParent");
+  }
 
-  if (NS_FAILED(SetDocumentStoragePrincipal(aNewDocumentStoragePrincipal))) {
-    return IPC_FAIL(this,
-                    "Trying to reuse WindowGlobalParent but the principal of "
-                    "the new document does not match the storage principal");
+  mDocumentPrincipal = aNewDocumentPrincipal;
+  if (mDocumentPrincipal->Equals(aNewDocumentPartitionedPrincipal)) {
+    // Keep only one copy of the principal around if we don't have a partition
+    // key.
+    mDocumentPartitionedPrincipal = mDocumentPrincipal;
+  } else {
+    mDocumentPartitionedPrincipal = aNewDocumentPartitionedPrincipal;
   }
 
   return IPC_OK();
 }
+
+mozilla::ipc::IPCResult WindowGlobalParent::RecvUpdatePrincipalPartitioning(
+    bool aPartitionStoragePrincipal) {
+  mPartitionStoragePrincipal = aPartitionStoragePrincipal;
+  return IPC_OK();
+}
+
 mozilla::ipc::IPCResult WindowGlobalParent::RecvUpdateDocumentTitle(
     const nsString& aTitle) {
   if (mDocumentTitle.isSome() && mDocumentTitle.value() == aTitle) {
