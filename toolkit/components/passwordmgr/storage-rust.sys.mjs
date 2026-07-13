@@ -9,9 +9,6 @@
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
-  FXA_PWDMGR_HOST: "resource://gre/modules/FxAccountsCommon.sys.mjs",
-  FXA_PWDMGR_REALM: "resource://gre/modules/FxAccountsCommon.sys.mjs",
-
   LoginHelper: "resource://gre/modules/LoginHelper.sys.mjs",
 
   AsyncShutdown: "resource://gre/modules/AsyncShutdown.sys.mjs",
@@ -107,6 +104,16 @@ const loginToLoginInfo = login => {
   return loginInfo;
 };
 
+// Build a bare LoginInfo carrying only the given guid. Used to report the ids
+// of removed logins in "removeAllLogins" notifications, since the bulk deletion
+// APIs only return guids rather than full logins.
+const guidToLoginInfo = guid => {
+  const loginInfo = new LoginInfo("", "", null, "", "", "", "");
+  loginInfo.QueryInterface(Ci.nsILoginMetaInfo);
+  loginInfo.guid = guid;
+  return loginInfo;
+};
+
 // An adapter which talks to the Rust Logins Store via LoginInfo objects
 class RustLoginsStoreAdapter {
   #store = null;
@@ -181,12 +188,24 @@ class RustLoginsStoreAdapter {
     return await this.#store.deleteMany(ids);
   }
 
+  async deleteAll() {
+    return await this.#store.deleteAll();
+  }
+
+  async deleteAllExceptFxa() {
+    return await this.#store.deleteAllExceptFxa();
+  }
+
   // reset() {
   //   return this.#store.reset()
   // }
 
   async wipeLocal() {
     return await this.#store.wipeLocal();
+  }
+
+  async wipeLocalExceptFxa() {
+    return await this.#store.wipeLocalExceptFxa();
   }
 
   async count() {
@@ -774,64 +793,48 @@ export class LoginManagerRustStorage {
   }
 
   /**
-   * Removes all logins from local storage, including FxA Sync key.
+   * Removes all logins from local storage, including the FxA Sync key. The
+   * logins are marked as deleted so the deletions propagate to Sync.
    *
-   * NOTE: You probably want removeAllUserFacingLogins instead of this function.
-   *
+   * NOTE: You probably want removeAllUserFacingLoginsAsync instead of this
+   * function.
    */
   async removeAllLoginsAsync() {
-    return await this.#removeLogins(false, true);
+    this.log("Removing all logins.");
+    const removedIds = await this.#storageAdapter.deleteAll();
+
+    if (this.#isActive) {
+      lazy.LoginHelper.notifyStorageChanged(
+        "removeAllLogins",
+        removedIds.map(guidToLoginInfo)
+      );
+    }
   }
 
   /**
-   * Removes all user facing logins from storage. e.g. all logins except the FxA Sync key
+   * Removes all user facing logins from storage, i.e. all logins except the
+   * FxA Sync key.
    *
-   * If you need to remove the FxA key, use `removeAllLogins` instead
+   * If you need to remove the FxA key, use `removeAllLoginsAsync` instead.
    *
    * @param fullyRemove remove the logins rather than mark them deleted.
    */
   async removeAllUserFacingLoginsAsync(fullyRemove) {
-    return await this.#removeLogins(fullyRemove, true);
-  }
-
-  /**
-   * Removes all logins from storage. If removeFXALogin is true, then the FxA Sync
-   * key is also removed.
-   *
-   * @param fullyRemove remove the logins rather than mark them deleted.
-   * @param removeFXALogin also remove the FxA Sync key.
-   */
-  async #removeLogins(fullyRemove, removeFXALogin = false) {
-    this.log("Removing all logins.");
-
-    const removedLogins = [];
-    const remainingLogins = [];
-
-    const logins = await this.#storageAdapter.list();
-    const idsToDelete = [];
-    for (const login of logins) {
-      if (
-        !removeFXALogin &&
-        login.hostname == lazy.FXA_PWDMGR_HOST &&
-        login.httpRealm == lazy.FXA_PWDMGR_REALM
-      ) {
-        remainingLogins.push(login);
-      } else {
-        removedLogins.push(login);
-
-        idsToDelete.push(login.guid);
-      }
-    }
-
-    if (idsToDelete.length) {
-      await this.#storageAdapter.deleteMany(idsToDelete);
+    this.log("Removing all user facing logins.");
+    let removedIds = [];
+    if (fullyRemove) {
+      // wipeLocalExceptFxa() does not return the removed ids.
+      await this.#storageAdapter.wipeLocalExceptFxa();
+    } else {
+      removedIds = await this.#storageAdapter.deleteAllExceptFxa();
     }
 
     if (this.#isActive) {
-      lazy.LoginHelper.notifyStorageChanged("removeAllLogins", removedLogins);
+      lazy.LoginHelper.notifyStorageChanged(
+        "removeAllLogins",
+        removedIds.map(guidToLoginInfo)
+      );
     }
-
-    return removedLogins;
   }
 
   async countLoginsAsync(origin, formActionOrigin, httpRealm) {
