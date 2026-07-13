@@ -296,7 +296,7 @@ sidebar-main,
     --sidebar-launcher-button-padding-inline: round(var(--space-xsmall), 0.5px);
   }
 
-  @media -moz-pref("browser.nova.enabled") {
+  @media -moz-pref("browser.nova.enabled") and (not -moz-pref("sidebar.verticalTabs")) {
     --sidebar-launcher-button-padding-inline: 4px;
   }
 }

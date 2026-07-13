@@ -52,10 +52,6 @@
     min-height: 4px;
   }
 
-  @media -moz-pref("browser.nova.enabled") {
-    min-height: 4px;
-  }
-
   &:hover {
     background-color: var(--focus-outline-color);
     border-radius: var(--border-radius-medium);
@@ -97,7 +93,7 @@
     &:first-of-type {
       --button-outer-padding-block-start: var(--space-small);
 
-      @media -moz-pref("browser.nova.enabled") {
+      @media -moz-pref("browser.nova.enabled") and (not -moz-pref("sidebar.verticalTabs")) {
         --button-outer-padding-block-start: 4px;
       }
     }
@@ -105,7 +101,7 @@
     &:last-of-type {
       --button-outer-padding-block-end: var(--space-small);
 
-      @media -moz-pref("browser.nova.enabled") {
+      @media -moz-pref("browser.nova.enabled") and (not -moz-pref("sidebar.verticalTabs")) {
         --button-outer-padding-block-end: 4px;
       }
     }
