@@ -279,8 +279,8 @@ WrFiltersStatus FilterInstance::BuildWebRenderFiltersImpl(
 
       const Size& stdDev = blur.mStdDeviation;
       if (stdDev.width != 0.0 || stdDev.height != 0.0) {
-        aWrFilters.filters.AppendElement(
-            wr::FilterOp::Blur(stdDev.width, stdDev.height));
+        aWrFilters.filters.AppendElement(wr::FilterOp::Blur(
+            stdDev.width, stdDev.height, /* should_inflate */ true));
       } else {
         filterIsNoop = true;
       }
