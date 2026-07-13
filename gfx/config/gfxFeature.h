@@ -66,6 +66,7 @@ namespace gfx {
   _(MESA_THREADING, Feature, "Mesa glthread enabled")                        \
   _(WEBGL, Feature, "WebGL")                                                 \
   _(VIDEO_HDR, Feature, "HDR video supported")                               \
+  _(WEBRENDER_ANGLE_METAL, Feature, "WebRender ANGLE Metal")                 \
   /* Add new entries above this comment */
 
 enum class Feature : uint32_t {

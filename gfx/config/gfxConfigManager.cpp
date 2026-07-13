@@ -90,7 +90,11 @@ void gfxConfigManager::Init() {
   mFeatureHwCompositing = &gfxConfig::GetFeature(Feature::HW_COMPOSITING);
 #ifdef XP_WIN
   mFeatureD3D11HwAngle = &gfxConfig::GetFeature(Feature::D3D11_HW_ANGLE);
+  mFeatureWrAngleBackend = mFeatureD3D11HwAngle;
   mFeatureD3D11Compositing = &gfxConfig::GetFeature(Feature::D3D11_COMPOSITING);
+#elif defined(XP_MACOSX)
+  mFeatureMetalAngle = &gfxConfig::GetFeature(Feature::WEBRENDER_ANGLE_METAL);
+  mFeatureWrAngleBackend = mFeatureMetalAngle;
 #endif
   mFeatureGPUProcess = &gfxConfig::GetFeature(Feature::GPU_PROCESS);
   mFeatureGLNorm16Textures =
@@ -207,19 +211,23 @@ void gfxConfigManager::ConfigureWebRender() {
                              "FEATURE_FAILURE_SAFE_MODE"_ns);
   }
 
+  if (mFeatureMetalAngle) {
+    mFeatureMetalAngle->EnableByDefault();
+    ConfigureFromBlocklist(nsIGfxInfo::FEATURE_WEBRENDER_ANGLE_METAL,
+                           mFeatureMetalAngle);
+  }
+
   mFeatureWrAngle->SetDefaultFromPref(
       StaticPrefs::GetPrefName_gfx_webrender_enable_angle(), true,
       StaticPrefs::GetPrefDefault_gfx_webrender_enable_angle(),
       mWrAngleEnabled);
-  if (mFeatureD3D11HwAngle) {
-    if (!mFeatureD3D11HwAngle->IsEnabled()) {
-      mFeatureWrAngle->ForceDisable(FeatureStatus::UnavailableNoAngle,
-                                    "ANGLE is disabled",
-                                    mFeatureD3D11HwAngle->GetFailureId());
-    }
-  } else {
+  if (!mFeatureWrAngleBackend) {
     mFeatureWrAngle->Disable(FeatureStatus::Unavailable, "OS not supported",
                              "FEATURE_FAILURE_OS_NOT_SUPPORTED"_ns);
+  } else if (!mFeatureWrAngleBackend->IsEnabled()) {
+    mFeatureWrAngle->ForceDisable(FeatureStatus::UnavailableNoAngle,
+                                  "ANGLE backend is disabled",
+                                  mFeatureWrAngleBackend->GetFailureId());
   }
 
   if (mWrRequireAngle && mFeatureWr->IsEnabled() &&

@@ -2640,11 +2640,9 @@ void gfxPlatform::InitWebRenderConfig() {
   }
 #endif
 
-#ifdef XP_WIN
   if (gfxConfig::IsEnabled(Feature::WEBRENDER_ANGLE)) {
     gfxVars::SetUseWebRenderANGLE(true);
   }
-#endif
 
   if (gfxConfig::IsEnabled(Feature::WEBRENDER_SHADER_CACHE)) {
     gfxVars::SetUseWebRenderProgramBinaryDisk(true);

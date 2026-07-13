@@ -26,6 +26,8 @@ class gfxConfigManager {
         mFeatureWrScissoredCacheClears(nullptr),
         mFeatureHwCompositing(nullptr),
         mFeatureD3D11HwAngle(nullptr),
+        mFeatureMetalAngle(nullptr),
+        mFeatureWrAngleBackend(nullptr),
         mFeatureD3D11Compositing(nullptr),
         mFeatureGPUProcess(nullptr),
         mFeatureGLNorm16Textures(nullptr),
@@ -69,6 +71,8 @@ class gfxConfigManager {
 
   FeatureState* mFeatureHwCompositing;
   FeatureState* mFeatureD3D11HwAngle;
+  FeatureState* mFeatureMetalAngle;
+  FeatureState* mFeatureWrAngleBackend;
   FeatureState* mFeatureD3D11Compositing;
   FeatureState* mFeatureGPUProcess;
   FeatureState* mFeatureGLNorm16Textures;

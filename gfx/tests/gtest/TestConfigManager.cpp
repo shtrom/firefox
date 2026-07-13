@@ -24,6 +24,7 @@ class MockGfxInfo final : public nsIGfxInfo {
   int32_t mStatusWrScissoredCacheClears = nsIGfxInfo::FEATURE_STATUS_OK;
   int32_t mStatusWrDComp = nsIGfxInfo::FEATURE_STATUS_OK;
   int32_t mStatusGLNorm16Textures = nsIGfxInfo::FEATURE_STATUS_OK;
+  int32_t mStatusMetalAngle = nsIGfxInfo::FEATURE_STATUS_OK;
   Maybe<bool> mHasBattery = Some(false);
   const char* mVendorId = "0x10de";
   const char* mDeviceId = "";
@@ -57,6 +58,9 @@ class MockGfxInfo final : public nsIGfxInfo {
         break;
       case nsIGfxInfo::FEATURE_GL_NORM16_TEXTURES:
         *_retval = mStatusGLNorm16Textures;
+        break;
+      case nsIGfxInfo::FEATURE_WEBRENDER_ANGLE_METAL:
+        *_retval = mStatusMetalAngle;
         break;
       default:
         return NS_ERROR_NOT_IMPLEMENTED;
@@ -284,6 +288,9 @@ class GfxConfigManager : public ::testing::Test, public gfxConfigManager {
     mGfxInfo = mMockGfxInfo;
 
     mFeatureD3D11HwAngle = &mFeatures.mD3D11HwAngle;
+    mFeatureMetalAngle = &mFeatures.mMetalAngle;
+    // Test as if we're on Windows by default.
+    mFeatureWrAngleBackend = mFeatureD3D11HwAngle;
     mFeatureD3D11Compositing = &mFeatures.mD3D11Compositing;
 
     // By default, turn everything on. This effectively assumes we are on
@@ -318,6 +325,7 @@ class GfxConfigManager : public ::testing::Test, public gfxConfigManager {
     mFeatures.mWrScissoredCacheClears.Reset();
     mFeatures.mHwCompositing.Reset();
     mFeatures.mD3D11HwAngle.Reset();
+    mFeatures.mMetalAngle.Reset();
     mFeatures.mD3D11Compositing.Reset();
     mFeatures.mGPUProcess.Reset();
     mFeatures.mGLNorm16Textures.Reset();
@@ -334,6 +342,7 @@ class GfxConfigManager : public ::testing::Test, public gfxConfigManager {
     FeatureState mWrScissoredCacheClears;
     FeatureState mHwCompositing;
     FeatureState mD3D11HwAngle;
+    FeatureState mMetalAngle;
     FeatureState mD3D11Compositing;
     FeatureState mGPUProcess;
     FeatureState mGLNorm16Textures;
@@ -633,6 +642,25 @@ TEST_F(GfxConfigManager, WebRenderD3D11HwAngleDisabledAndRequired) {
   EXPECT_TRUE(mFeatures.mHwCompositing.IsEnabled());
   EXPECT_TRUE(mFeatures.mGPUProcess.IsEnabled());
   EXPECT_FALSE(mFeatures.mD3D11HwAngle.IsEnabled());
+  EXPECT_TRUE(mFeatures.mGLNorm16Textures.IsEnabled());
+}
+
+TEST_F(GfxConfigManager, WebRenderMetalAngleBlocked) {
+  mFeatureWrAngleBackend = mFeatureMetalAngle;
+  mMockGfxInfo->mStatusMetalAngle = nsIGfxInfo::FEATURE_BLOCKED_DEVICE;
+  ConfigureWebRender();
+
+  EXPECT_TRUE(mFeatures.mWr.IsEnabled());
+  EXPECT_FALSE(mFeatures.mWrCompositor.IsEnabled());
+  EXPECT_FALSE(mFeatures.mWrAngle.IsEnabled());
+  EXPECT_FALSE(mFeatures.mWrDComp.IsEnabled());
+  EXPECT_TRUE(mFeatures.mWrPartial.IsEnabled());
+  EXPECT_TRUE(mFeatures.mWrShaderCache.IsEnabled());
+  EXPECT_TRUE(mFeatures.mWrOptimizedShaders.IsEnabled());
+  EXPECT_TRUE(mFeatures.mWrScissoredCacheClears.IsEnabled());
+  EXPECT_TRUE(mFeatures.mHwCompositing.IsEnabled());
+  EXPECT_TRUE(mFeatures.mGPUProcess.IsEnabled());
+  EXPECT_FALSE(mFeatures.mMetalAngle.IsEnabled());
   EXPECT_TRUE(mFeatures.mGLNorm16Textures.IsEnabled());
 }
 

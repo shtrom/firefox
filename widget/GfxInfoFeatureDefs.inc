@@ -161,3 +161,5 @@ GFXINFO_FEATURE(WEBGL, "webgl")
 GFXINFO_FEATURE(VIDEO_HDR, "video-hdr")
 /* Whether WebGL is supported via ANGLE's Metal backend, starting in 154. */
 GFXINFO_FEATURE(WEBGL_ANGLE_METAL, "webgl.angle-metal")
+/* Whether webrender is supported on ANGLE's Metal backend, starting in 154. */
+GFXINFO_FEATURE(WEBRENDER_ANGLE_METAL, "webrender.angle-metal")
