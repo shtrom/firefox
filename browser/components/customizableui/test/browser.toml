@@ -367,7 +367,7 @@ tags = "fullscreen"
 
 ["browser_panelUINotifications_multiWindow.js"]
 
-["browser_panelUINotifications_novaUpdatePromo.js"]
+["browser_panelUINotifications_novaUpdateBanner.js"]
 
 ["browser_panel_keyboard_navigation.js"]
 

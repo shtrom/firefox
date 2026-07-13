@@ -9,19 +9,17 @@
       <vbox id="appMenu-addon-banners"/>
       <toolbarbutton id="appMenu-update-banner" class="panel-banner-item subviewbutton"
                      wrap="true"
-                     hidden="true"/>
-      <html:moz-promo id="appMenu-nova-update-promo"
-                      type="vibrant"
-                      imagedisplay="padded"
-                      imagesrc="chrome://browser/skin/update-badge.svg"
-                      data-l10n-id="appmenu-nova-update-promo"
-                      data-l10n-attrs="message"
-                      hidden="true">
-        <html:a id="appMenu-nova-update-link"
-                slot="support-link"
-                href="#"
-                data-l10n-id="appmenu-nova-update-link"></html:a>
-      </html:moz-promo>
+                     hidden="true">
+        <box class="appMenu-update-banner-pulse-ring"/>
+        <box class="appMenu-update-banner-text" orient="vertical">
+          <label id="appMenu-update-banner-title"
+                 class="appMenu-update-banner-title text-box-trim-start"
+                 data-l10n-id="appmenu-nova-update-title"/>
+          <label id="appMenu-update-banner-description"
+                 class="appMenu-update-banner-description"
+                 data-l10n-id="appmenu-nova-update-description"/>
+        </box>
+      </toolbarbutton>
 
       <toolbaritem id="appMenu-menu-message"
                    closemenu="none">
