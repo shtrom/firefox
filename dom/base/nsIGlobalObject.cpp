@@ -82,7 +82,6 @@ bool nsIGlobalObject::CanRunJSMicroTask(JSObject* aCallbackGlobal) const {
   return !mIsDying;
 }
 
-
 nsIGlobalObject::~nsIGlobalObject() {
   UnlinkObjectsInGlobal();
   DisconnectGlobalTeardownObservers();
