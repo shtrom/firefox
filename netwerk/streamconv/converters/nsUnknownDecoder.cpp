@@ -3,29 +3,27 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "nsUnknownDecoder.h"
-#include "nsIPipe.h"
-#include "nsIInputStream.h"
-#include "nsIOutputStream.h"
-#include "nsMimeTypes.h"
 
+#include <algorithm>
+
+#include "mozilla/StaticPrefs_network.h"
 #include "nsCRT.h"
-
-#include "nsIMIMEService.h"
-
-#include "nsIViewSourceChannel.h"
-#include "nsIHttpChannel.h"
-#include "nsIForcePendingChannel.h"
+#include "nsComponentManagerUtils.h"
 #include "nsIEncodedChannel.h"
+#include "nsIForcePendingChannel.h"
+#include "nsIHttpChannel.h"
+#include "nsIInputStream.h"
+#include "nsIMIMEService.h"
+#include "nsIOutputStream.h"
+#include "nsIPipe.h"
 #include "nsIURI.h"
-#include "nsStringStream.h"
+#include "nsIViewSourceChannel.h"
+#include "nsMimeTypes.h"
 #include "nsNetCID.h"
 #include "nsNetUtil.h"
 #include "nsQueryObject.h"
-#include "nsComponentManagerUtils.h"
 #include "nsServiceManagerUtils.h"
-#include "mozilla/StaticPrefs_network.h"
-
-#include <algorithm>
+#include "nsStringStream.h"
 
 #define MAX_BUFFER_SIZE 512u
 

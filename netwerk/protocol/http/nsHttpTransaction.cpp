@@ -8,31 +8,33 @@
 #include <algorithm>
 #include <utility>
 
-#include "HttpLog.h"
 #include "HTTPSRecordResolver.h"
+#include "HttpLog.h"
+#include "MockHttpAuth.h"
 #include "NSSErrorsService.h"
 #include "base/basictypes.h"
 #include "mozilla/AppShutdown.h"
 #include "mozilla/Components.h"
+#include "mozilla/ScopeExit.h"
+#include "mozilla/StaticPrefs_network.h"
+#include "mozilla/Tokenizer.h"
 #include "mozilla/glean/NetwerkMetrics.h"
 #include "mozilla/glean/NetwerkProtocolHttpMetrics.h"
 #include "mozilla/net/SSLTokensCache.h"
-#include "mozilla/ScopeExit.h"
-#include "mozilla/Tokenizer.h"
-#include "mozilla/StaticPrefs_network.h"
-#include "MockHttpAuth.h"
 #include "nsCRT.h"
 #include "nsComponentManagerUtils.h"  // do_CreateInstance
 #include "nsHttpBasicAuth.h"
 #include "nsHttpChannel.h"
 #include "nsHttpChunkedDecoder.h"
+#include "nsHttpConnectionMgr.h"
 #include "nsHttpDigestAuth.h"
 #include "nsHttpHandler.h"
-#include "nsHttpConnectionMgr.h"
 #include "nsHttpNTLMAuth.h"
 #ifdef MOZ_AUTH_EXTENSION
 #  include "nsHttpNegotiateAuth.h"
 #endif
+#include "SpeculativeTransaction.h"
+#include "mozilla/Preferences.h"
 #include "nsHttpRequestHead.h"
 #include "nsHttpResponseHead.h"
 #include "nsICancelable.h"
@@ -62,8 +64,6 @@
 #include "nsThreadUtils.h"
 #include "nsTransportUtils.h"
 #include "sslerr.h"
-#include "SpeculativeTransaction.h"
-#include "mozilla/Preferences.h"
 
 //-----------------------------------------------------------------------------
 

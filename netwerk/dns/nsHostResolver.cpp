@@ -4,46 +4,47 @@
 
 #include "nsIThreadPool.h"
 #if defined(HAVE_RES_NINIT)
-#  include <sys/types.h>
-#  include <netinet/in.h>
 #  include <arpa/inet.h>
 #  include <arpa/nameser.h>
+#  include <netinet/in.h>
 #  include <resolv.h>
+#  include <sys/types.h>
 #endif
 
 #include <stdlib.h>
+
 #include <ctime>
-#include "nsHostResolver.h"
+
+#include "GetAddrInfo.h"
+#include "PLDHashTable.h"
+#include "TRR.h"
+#include "TRRQuery.h"
+#include "TRRService.h"
+#include "mozilla/Atomics.h"
+#include "mozilla/DebugOnly.h"
+#include "mozilla/Logging.h"
+#include "mozilla/Preferences.h"
+#include "mozilla/StaticPrefs_network.h"
+#include "mozilla/TimeStamp.h"
+#include "mozilla/glean/NetwerkDnsMetrics.h"
+#include "mozilla/glean/NetwerkMetrics.h"
+#include "nsComponentManagerUtils.h"
 #include "nsError.h"
+#include "nsHostResolver.h"
 #include "nsIOService.h"
 #include "nsISupports.h"
 #include "nsISupportsUtils.h"
 #include "nsIThreadManager.h"
-#include "nsComponentManagerUtils.h"
 #include "nsNetUtil.h"
 #include "nsPrintfCString.h"
-#include "nsXPCOMCIDInternal.h"
-#include "prthread.h"
-#include "prerror.h"
-#include "prtime.h"
-#include "mozilla/Logging.h"
-#include "PLDHashTable.h"
 #include "nsQueryObject.h"
-#include "nsURLHelper.h"
-#include "nsThreadUtils.h"
 #include "nsThreadPool.h"
-#include "GetAddrInfo.h"
-#include "TRR.h"
-#include "TRRQuery.h"
-#include "TRRService.h"
-
-#include "mozilla/Atomics.h"
-#include "mozilla/glean/NetwerkMetrics.h"
-#include "mozilla/TimeStamp.h"
-#include "mozilla/glean/NetwerkDnsMetrics.h"
-#include "mozilla/DebugOnly.h"
-#include "mozilla/Preferences.h"
-#include "mozilla/StaticPrefs_network.h"
+#include "nsThreadUtils.h"
+#include "nsURLHelper.h"
+#include "nsXPCOMCIDInternal.h"
+#include "prerror.h"
+#include "prthread.h"
+#include "prtime.h"
 // Put DNSLogging.h at the end to avoid LOG being overwritten by other headers.
 #include "DNSLogging.h"
 

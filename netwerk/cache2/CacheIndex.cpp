@@ -4,26 +4,27 @@
 
 #include "CacheIndex.h"
 
+#include <algorithm>
+#include <limits>
+
 #include "CacheCrypto.h"
-#include "CacheLog.h"
 #include "CacheFileIOManager.h"
 #include "CacheFileMetadata.h"
 #include "CacheFileUtils.h"
-#include "CacheIndexIterator.h"
 #include "CacheIndexContextIterator.h"
-#include "nsThreadUtils.h"
-#include "nsPrintfCString.h"
-#include "mozilla/DebugOnly.h"
-#include "prinrval.h"
-#include "nsIFile.h"
-#include "nsITimer.h"
-#include "nsNetUtil.h"
+#include "CacheIndexIterator.h"
+#include "CacheLog.h"
 #include "mozilla/AutoRestore.h"
-#include <algorithm>
-#include <limits>
+#include "mozilla/DebugOnly.h"
 #include "mozilla/StaticPrefs_browser.h"
 #include "mozilla/StaticPrefs_network.h"
 #include "mozilla/glean/NetwerkCache2Metrics.h"
+#include "nsIFile.h"
+#include "nsITimer.h"
+#include "nsNetUtil.h"
+#include "nsPrintfCString.h"
+#include "nsThreadUtils.h"
+#include "prinrval.h"
 
 #define kMaxBufSize 16384
 #define kIndexVersion 0x0000000D

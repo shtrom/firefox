@@ -6,13 +6,14 @@
 #define ConnectionEstablisher_h_
 
 #include <functional>
+
 #include "ConnectionHandle.h"
+#include "HappyEyeballsTransaction.h"
 #include "mozilla/Result.h"
 #include "mozilla/net/DNS.h"
 #include "nsAHttpConnection.h"
 #include "nsHttpConnection.h"
 #include "nsIAsyncOutputStream.h"
-#include "HappyEyeballsTransaction.h"
 
 class nsIDNSAddrRecord;
 class nsISocketTransport;

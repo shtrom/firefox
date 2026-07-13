@@ -7,16 +7,16 @@
 
 #include "CertVerifier.h"  // For EVStatus
 #include "mozilla/Maybe.h"
+#include "mozilla/OriginAttributes.h"
 #include "mozilla/Span.h"
 #include "mozilla/StaticMutex.h"
 #include "mozilla/StaticPrefs_network.h"
 #include "mozilla/StaticPtr.h"
-#include "mozilla/OriginAttributes.h"
 #include "mozilla/TimeStamp.h"
 #include "nsClassHashtable.h"
+#include "nsIAsyncShutdown.h"
 #include "nsIFile.h"
 #include "nsIMemoryReporter.h"
-#include "nsIAsyncShutdown.h"
 #include "nsIObserver.h"
 #include "nsISerialEventTarget.h"
 #include "nsISupportsImpl.h"

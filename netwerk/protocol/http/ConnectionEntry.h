@@ -5,9 +5,9 @@
 #ifndef ConnectionEntry_h_
 #define ConnectionEntry_h_
 
+#include "ConnectionAttemptPool.h"
 #include "PendingTransactionInfo.h"
 #include "PendingTransactionQueue.h"
-#include "ConnectionAttemptPool.h"
 #include "mozilla/WeakPtr.h"
 #include "nsTHashSet.h"
 

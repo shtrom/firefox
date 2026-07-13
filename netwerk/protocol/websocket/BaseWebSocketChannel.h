@@ -6,12 +6,12 @@
 #define mozilla_net_BaseWebSocketChannel_h
 
 #include "mozilla/DataMutex.h"
-#include "nsIWebSocketChannel.h"
-#include "nsIWebSocketListener.h"
+#include "nsCOMPtr.h"
 #include "nsIProtocolHandler.h"
 #include "nsIThread.h"
 #include "nsIThreadRetargetableRequest.h"
-#include "nsCOMPtr.h"
+#include "nsIWebSocketChannel.h"
+#include "nsIWebSocketListener.h"
 #include "nsString.h"
 
 namespace mozilla {

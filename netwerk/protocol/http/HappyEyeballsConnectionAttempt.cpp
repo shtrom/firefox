@@ -3,24 +3,24 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 // HttpLog.h should generally be included first
-#include "HttpLog.h"
+#include "HappyEyeballsConnectionAttempt.h"
 
 #include <algorithm>
 
-#include "HappyEyeballsConnectionAttempt.h"
 #include "ConnectionEntry.h"
-#include "NSSErrorsService.h"
-#include "mozilla/net/NeckoChannelParams.h"
-#include "mozilla/StaticPrefs_network.h"
-#include "nsIHttpActivityObserver.h"
-#include "PendingTransactionInfo.h"
-#include "nsHttpTransaction.h"
 #include "HttpConnectionUDP.h"
-#include "nsIDNSAdditionalInfo.h"
+#include "HttpLog.h"
+#include "NSSErrorsService.h"
+#include "NetworkConnectivityService.h"
+#include "PendingTransactionInfo.h"
+#include "mozilla/StaticPrefs_network.h"
+#include "mozilla/net/NeckoChannelParams.h"
 #include "nsDNSService2.h"
 #include "nsHttpConnectionMgr.h"
 #include "nsHttpHandler.h"
-#include "NetworkConnectivityService.h"
+#include "nsHttpTransaction.h"
+#include "nsIDNSAdditionalInfo.h"
+#include "nsIHttpActivityObserver.h"
 #include "nsQueryObject.h"
 #include "nsSocketTransport2.h"
 #include "nsSocketTransportService2.h"

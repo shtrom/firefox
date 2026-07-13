@@ -2,9 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include <algorithm>
-
 #include "WebSocketChannel.h"
+
+#include <algorithm>
 
 #include "WebSocketConnectionBase.h"
 #include "WebSocketFrame.h"
@@ -18,9 +18,9 @@
 #include "mozilla/ScopeExit.h"
 #include "mozilla/StaticMutex.h"
 #include "mozilla/StaticPrefs_privacy.h"
-#include "mozilla/glean/NetwerkProtocolWebsocketMetrics.h"
 #include "mozilla/TimeStamp.h"
 #include "mozilla/Utf8.h"
+#include "mozilla/glean/NetwerkProtocolWebsocketMetrics.h"
 #include "mozilla/net/WebSocketEventService.h"
 #include "nsCRT.h"
 #include "nsCharSeparatedTokenizer.h"

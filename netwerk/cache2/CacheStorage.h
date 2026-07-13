@@ -5,10 +5,9 @@
 #ifndef CacheStorage_h_
 #define CacheStorage_h_
 
-#include "nsICacheStorage.h"
 #include "CacheEntry.h"
 #include "LoadContextInfo.h"
-
+#include "nsICacheStorage.h"
 #include "nsILoadContextInfo.h"
 #include "nsTArray.h"
 #include "nsTHashMap.h"

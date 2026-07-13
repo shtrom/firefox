@@ -6,28 +6,29 @@
 #define nsNetUtil_h_
 
 #include <functional>
+
 #include "mozilla/Maybe.h"
+#include "mozilla/NotNull.h"
 #include "mozilla/ResultExtensions.h"
+#include "mozilla/Services.h"
+#include "mozilla/net/MozURL_ffi.h"
+#include "mozilla/net/idna_glue.h"
 #include "nsAttrValue.h"
 #include "nsCOMPtr.h"
+#include "nsIIOService.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsILoadGroup.h"
+#include "nsILoadInfo.h"
 #include "nsINestedURI.h"
 #include "nsINetUtil.h"
 #include "nsIRequest.h"
-#include "nsILoadInfo.h"
-#include "nsIIOService.h"
 #include "nsIURI.h"
-#include "mozilla/NotNull.h"
-#include "mozilla/Services.h"
 #include "nsNetCID.h"
 #include "nsReadableUtils.h"
 #include "nsServiceManagerUtils.h"
 #include "nsString.h"
 #include "nsTArray.h"
-#include "mozilla/net/idna_glue.h"
-#include "mozilla/net/MozURL_ffi.h"
 
 class nsIPrincipal;
 class nsIAsyncStreamCopier;

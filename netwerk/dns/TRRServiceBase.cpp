@@ -4,18 +4,18 @@
 
 #include "TRRServiceBase.h"
 
-#include "TRRService.h"
-#include "mozilla/Preferences.h"
-#include "nsHostResolver.h"
-#include "nsNetUtil.h"
-#include "nsIOService.h"
-#include "nsIDNSService.h"
-#include "nsIProxyInfo.h"
-#include "nsHttpConnectionInfo.h"
-#include "nsHttpHandler.h"
-#include "mozilla/StaticPrefs_network.h"
 #include "AlternateServices.h"
 #include "ProxyConfigLookup.h"
+#include "TRRService.h"
+#include "mozilla/Preferences.h"
+#include "mozilla/StaticPrefs_network.h"
+#include "nsHostResolver.h"
+#include "nsHttpConnectionInfo.h"
+#include "nsHttpHandler.h"
+#include "nsIDNSService.h"
+#include "nsIOService.h"
+#include "nsIProxyInfo.h"
+#include "nsNetUtil.h"
 // Put DNSLogging.h at the end to avoid LOG being overwritten by other headers.
 #include "DNSLogging.h"
 

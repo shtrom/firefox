@@ -5,27 +5,28 @@
 #ifndef NETWERK_SCTP_DATACHANNEL_DATACHANNEL_H_
 #define NETWERK_SCTP_DATACHANNEL_DATACHANNEL_H_
 
+#include <errno.h>
+
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
-#include <errno.h>
-#include "nsISupports.h"
-#include "nsCOMPtr.h"
+
+#include "DataChannelProtocol.h"
+#include "MediaEventSource.h"
 #include "mozilla/MozPromise.h"
+#include "mozilla/Mutex.h"
 #include "mozilla/StopGapEventTarget.h"
 #include "mozilla/WeakPtr.h"
-#include "mozilla/dom/RTCStatsReportBinding.h"
-#include "nsString.h"
-#include "nsThreadUtils.h"
-#include "nsTArray.h"
-#include "nsDeque.h"
 #include "mozilla/dom/Blob.h"
-#include "mozilla/Mutex.h"
-#include "DataChannelProtocol.h"
+#include "mozilla/dom/RTCStatsReportBinding.h"
 #include "mozilla/net/NeckoTargetHolder.h"
-#include "MediaEventSource.h"
-
+#include "nsCOMPtr.h"
+#include "nsDeque.h"
+#include "nsISupports.h"
+#include "nsString.h"
+#include "nsTArray.h"
+#include "nsThreadUtils.h"
 #include "transport/transportlayer.h"  // For TransportLayer::State
 
 namespace mozilla {

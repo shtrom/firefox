@@ -3,17 +3,17 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 // HttpLog.h should generally be included first
-#include "HttpLog.h"
-
 #include "ConnectionEstablisher.h"
+
 #include "HappyEyeballsConnectionAttempt.h"
+#include "HttpConnectionUDP.h"
+#include "HttpLog.h"
 #include "mozilla/Components.h"
-#include "nsSocketTransportService2.h"
 #include "nsHttpConnectionMgr.h"
 #include "nsHttpHandler.h"
-#include "nsIDNSRecord.h"
 #include "nsHttpTransaction.h"
-#include "HttpConnectionUDP.h"
+#include "nsIDNSRecord.h"
+#include "nsSocketTransportService2.h"
 
 // Log on level :5, instead of default :4.
 #undef LOG

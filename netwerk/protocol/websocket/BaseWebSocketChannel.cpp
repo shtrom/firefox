@@ -2,20 +2,21 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "WebSocketLog.h"
 #include "BaseWebSocketChannel.h"
-#include "mozilla/dom/Document.h"
+
+#include "LoadInfo.h"
 #include "MainThreadUtils.h"
+#include "WebSocketLog.h"
+#include "mozilla/dom/ContentChild.h"
+#include "mozilla/dom/Document.h"
 #include "nsContentUtils.h"
 #include "nsIClassifiedChannel.h"
+#include "nsIInterfaceRequestor.h"
 #include "nsILoadGroup.h"
 #include "nsINode.h"
-#include "nsIInterfaceRequestor.h"
+#include "nsITransportProvider.h"
 #include "nsProxyRelease.h"
 #include "nsStandardURL.h"
-#include "LoadInfo.h"
-#include "mozilla/dom/ContentChild.h"
-#include "nsITransportProvider.h"
 
 using mozilla::dom::ContentChild;
 
