@@ -609,7 +609,10 @@ static void reportHandshakeResult(int32_t bytesTransferred, bool wasReading,
       TLSPrivacyResult |= usedPrivateDNS << 2;
       TLSPrivacyResult |= usedECH << 3;
 
-      glean::ssl_handshake::privacy.AccumulateSingleSample(TLSPrivacyResult);
+      glean::tls_handshake::privacy
+          .EnumGet(
+              static_cast<glean::tls_handshake::PrivacyLabel>(TLSPrivacyResult))
+          .Add();
     }
   }
 }
