@@ -60,6 +60,17 @@ export class IPProtectionToolbarButton {
   static CONFIRMATION_HINT_MESSAGE_ID =
     "confirmation-hint-ipprotection-navigated-to-excluded-site";
 
+  // Non-default icon states rendered as always-painted overlay layers in the
+  // toolbar so switching states never triggers a fresh image decode
+  // (bug 2034698). The default "off" state is the base .toolbarbutton-icon.
+  static ICON_LAYER_STATES = [
+    "on",
+    "network-error",
+    "error",
+    "excluded",
+    "paused",
+  ];
+
   /**
    * Gets the gBrowser from the weak reference to the window.
    *
@@ -403,6 +414,8 @@ export class IPProtectionToolbarButton {
       return;
     }
 
+    this.#buildIconLayers(toolbaritem);
+
     let isActive = status.isActive;
     let isNetworkError = status.isNetworkError;
     let isError = status.isError && !isNetworkError;
@@ -434,6 +447,45 @@ export class IPProtectionToolbarButton {
     }
 
     toolbaritem.setAttribute("data-l10n-id", l10nId);
+  }
+
+  /**
+   * Wraps the toolbar button's icon in a <stack> and renders one overlay
+   * <image> layer per non-default icon state on top of it. Keeps every
+   * state's artwork painted and updates opacity via CSS.
+   * This approach prevents flickers between initial state changes since
+   * there is no fresh image decode - Bug 2034698.
+   *
+   * @param {XULElement} toolbaritem
+   *  The toolbaritem to add the icon layers to.
+   */
+  #buildIconLayers(toolbaritem) {
+    if (toolbaritem.querySelector(".ipprotection-icon-stack")) {
+      return;
+    }
+
+    let icon = toolbaritem.querySelector(".toolbarbutton-icon");
+    if (!icon) {
+      // The button hasn't rendered its DOM yet; try again on the next update.
+      return;
+    }
+
+    let doc = toolbaritem.ownerDocument;
+    let stack = doc.createXULElement("stack");
+    stack.classList.add("ipprotection-icon-stack");
+
+    // Move the existing icon into the stack as the base (off) layer, then
+    // stack the remaining states on top of it.
+    icon.replaceWith(stack);
+    stack.appendChild(icon);
+    for (let state of IPProtectionToolbarButton.ICON_LAYER_STATES) {
+      let layer = doc.createXULElement("image");
+      layer.classList.add("ipprotection-icon-layer");
+      layer.setAttribute("data-state", state);
+      // Purely presentational; the button itself carries the accessible name.
+      layer.setAttribute("aria-hidden", "true");
+      stack.appendChild(layer);
+    }
   }
 
   /**
