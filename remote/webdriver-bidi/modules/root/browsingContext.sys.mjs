@@ -2508,6 +2508,7 @@ class BrowsingContextModule extends RootBiDiModule {
       const {
         canceled,
         contextId,
+        downloadId,
         filepath,
         navigableId,
         navigationId,
@@ -2517,6 +2518,7 @@ class BrowsingContextModule extends RootBiDiModule {
 
       const browsingContextInfo = {
         context: navigableId,
+        download: downloadId,
         navigation: navigationId,
         status: canceled
           ? DownloadEndStatus.canceled
@@ -2544,6 +2546,7 @@ class BrowsingContextModule extends RootBiDiModule {
     if (this.#subscribedEvents.has("browsingContext.downloadWillBegin")) {
       const {
         contextId,
+        downloadId,
         navigationId,
         navigableId,
         suggestedFilename,
@@ -2553,6 +2556,7 @@ class BrowsingContextModule extends RootBiDiModule {
 
       const browsingContextInfo = {
         context: navigableId,
+        download: downloadId,
         navigation: navigationId,
         suggestedFilename,
         timestamp,
