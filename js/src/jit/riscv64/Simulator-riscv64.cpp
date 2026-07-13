@@ -4003,7 +4003,7 @@ void Simulator::DecodeRVIType() {
           set_rd(zext32(rs1()) << shamt6());
           break;
         case OP_COUNTW: {
-          switch (instr_.Shamt()) {
+          switch (instr_.Shamt32()) {
             case 0: {  // clzw
               sreg_t x = rs1();
               int highest_setbit = -1;

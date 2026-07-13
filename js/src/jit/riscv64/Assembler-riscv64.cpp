@@ -564,13 +564,13 @@ class LiPtr {
     at(1)->SetIFormat(RO_ADDI, rd.code(), rd.code(), low_12);
 
     // slli(rd, rd, 11);  // Space for next 11 bits
-    at(2)->SetIFormat(RO_SLLI, rd.code(), rd.code(), 11);
+    at(2)->SetIShiftFormat(RO_SLLI, rd.code(), rd.code(), 11);
 
     // ori(rd, rd, b11);  // 11 bits are added, 42 bit in rd.
     at(3)->SetIFormat(RO_ORI, rd.code(), rd.code(), b11);
 
     // slli(rd, rd, 6);  // Space for next 6 bits
-    at(4)->SetIFormat(RO_SLLI, rd.code(), rd.code(), 6);
+    at(4)->SetIShiftFormat(RO_SLLI, rd.code(), rd.code(), 6);
 
     // ori(rd, rd, a6);  // 6 bits are added, 48 bit in rd.
     at(5)->SetIFormat(RO_ORI, rd.code(), rd.code(), a6);
