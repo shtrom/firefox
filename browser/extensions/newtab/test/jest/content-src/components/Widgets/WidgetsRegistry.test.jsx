@@ -108,14 +108,15 @@ describe("getWidgetOrder", () => {
       "clocks",
       "privacy",
       "crossword",
-      "stocks",
       "pictureOfTheDay",
+      "stocks",
     ]);
   });
 
   it("appends missing registry IDs after saved ones", () => {
     expect(getWidgetOrder("weather")).toEqual([
       "weather",
+      "pictureOfTheDay",
       "sportsWidget",
       "clocks",
       "lists",
@@ -123,7 +124,6 @@ describe("getWidgetOrder", () => {
       "privacy",
       "crossword",
       "stocks",
-      "pictureOfTheDay",
     ]);
   });
 
@@ -131,13 +131,13 @@ describe("getWidgetOrder", () => {
     expect(getWidgetOrder("unknownWidget,lists,weather")).toEqual([
       "lists",
       "weather",
+      "pictureOfTheDay",
       "sportsWidget",
       "clocks",
       "focusTimer",
       "privacy",
       "crossword",
       "stocks",
-      "pictureOfTheDay",
     ]);
   });
 
@@ -152,13 +152,13 @@ describe("getWidgetOrder", () => {
     expect(result).toEqual([
       "focusTimer",
       "lists",
+      "pictureOfTheDay",
       "sportsWidget",
       "clocks",
       "weather",
       "privacy",
       "crossword",
       "stocks",
-      "pictureOfTheDay",
     ]);
     expect(result.length).toBe(registryIds.length);
   });
@@ -178,12 +178,12 @@ describe("resolveWidgetOrder", () => {
       "weather",
       "lists",
       "focusTimer",
+      "pictureOfTheDay",
       "sportsWidget",
       "clocks",
       "privacy",
       "crossword",
       "stocks",
-      "pictureOfTheDay",
     ]);
   });
 
@@ -197,12 +197,12 @@ describe("resolveWidgetOrder", () => {
       "focusTimer",
       "weather",
       "lists",
+      "pictureOfTheDay",
       "sportsWidget",
       "clocks",
       "privacy",
       "crossword",
       "stocks",
-      "pictureOfTheDay",
     ]);
   });
 
@@ -216,12 +216,12 @@ describe("resolveWidgetOrder", () => {
       "lists",
       "focusTimer",
       "weather",
+      "pictureOfTheDay",
       "sportsWidget",
       "clocks",
       "privacy",
       "crossword",
       "stocks",
-      "pictureOfTheDay",
     ]);
   });
 });
