@@ -18,8 +18,9 @@ class APZCPanningTester : public APZCBasicTester {
   void DoPanTest(bool aShouldTriggerScroll, bool aShouldBeConsumed,
                  uint32_t aBehavior) {
     if (aShouldTriggerScroll) {
-      // Three repaint request for each pan.
-      EXPECT_CALL(*mcc, RequestContentRepaint(_)).Times(6);
+      // Three repaint request for each pan plus one for
+      // the scrolling gesture end state transition
+      EXPECT_CALL(*mcc, RequestContentRepaint(_)).Times(7);
     } else {
       EXPECT_CALL(*mcc, RequestContentRepaint(_)).Times(0);
     }
