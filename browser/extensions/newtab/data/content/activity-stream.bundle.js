@@ -22449,7 +22449,7 @@ function Crossword({
     // allow-same-origin is required for the crossword to work, but is
     // currently under security review to see if it's safe to keep in our codebase right now.
     ,
-    sandbox: "allow-scripts allow-same-origin"
+    sandbox: "allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
   })));
 }
 
