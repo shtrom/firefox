@@ -1054,6 +1054,13 @@ class Component : public JS::WasmComponent {
     return total;
   }
 
+  // --------------------------------------------------------------------------
+  // Instantiation
+
+  [[nodiscard]] bool instantiate(
+      JSContext* cx, HandleObject instanceProto,
+      MutableHandle<WasmComponentInstanceObject*> instance) const;
+
  private:
   // JS API and JS::WasmComponent implementation:
   JSObject* createObject(JSContext* cx) const override;
@@ -1061,6 +1068,51 @@ class Component : public JS::WasmComponent {
 
 using MutableComponent = RefPtr<Component>;
 using SharedComponent = RefPtr<const Component>;
+
+class ComponentInstance {
+  // The containing JS::Realm.
+  JS::Realm* realm_;
+
+  // The containing JSContext.
+  JSContext* cx_;
+
+  // The wasm::Component for this instance.
+  const SharedComponent component_;
+
+  using CoreInstanceVector =
+      GCVector<WasmInstanceObject*, 0, SystemAllocPolicy>;
+  // An array of all the core instances owned by this component instance. NOTE!
+  // This array is sparse; its indices will always correspond 1:1 with
+  // Component::coreInstances(), but not all such instances will get a
+  // WasmInstanceObject.
+  CoreInstanceVector coreInstances_;
+
+  // Only WasmComponentInstanceObject can call the private trace function.
+  friend class js::WasmComponentInstanceObject;
+  void tracePrivate(JSTracer* trc);
+
+ public:
+  ComponentInstance(JSContext* cx, Handle<WasmComponentInstanceObject*> object,
+                    const SharedComponent component);
+  ~ComponentInstance();
+
+  static ComponentInstance* create(JSContext* cx,
+                                   Handle<WasmComponentInstanceObject*> object,
+                                   const SharedComponent component);
+  static void destroy(ComponentInstance* instance);
+
+  [[nodiscard]] bool init(JSContext* cx);
+
+  // Gets a core instance object for a given index in the component, if one
+  // exists. (It may not; inline-export instances do not get actual objects.)
+  // The result may therefore be null.
+  WasmInstanceObject* coreInstance(uint32_t index) const {
+    if (coreInstances_.length() <= index) {
+      return nullptr;
+    }
+    return coreInstances_[index];
+  }
+};
 
 UniqueChars ToString(ComponentItem item);
 UniqueChars ToString(ComponentSortIndex sortIndex);

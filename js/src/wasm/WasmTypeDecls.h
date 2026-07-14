@@ -58,6 +58,7 @@ class Instance;
 class Module;
 #ifdef ENABLE_WASM_COMPONENTS
 class Component;
+class ComponentInstance;
 #endif
 
 class Code;
