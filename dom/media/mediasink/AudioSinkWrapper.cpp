@@ -399,9 +399,12 @@ nsresult AudioSinkWrapper::Start(const TimeUnit& aStartTime,
           fmt::ptr(this), mStashedAudioSink->IsErrored(),
           mStashedAudioSink->IsStreamDrained());
       DiscardStashedAudioSink();
-    } else {
-      return ResumeStashedAudioSink(aStartTime);
+    } else if (NS_SUCCEEDED(ResumeStashedAudioSink(aStartTime))) {
+      return NS_OK;
     }
+    // Reuse failed because the stream died during the resume; the sink has been
+    // torn down, so fall through to create a fresh one below.
+    LOG("{}: reuse failed, creating a fresh audio sink", fmt::ptr(this));
   }
   // With no stashed stream to reuse (stream reuse disabled on this platform, or
   // the stashed stream was discarded above), fall back to asynchronous init on
@@ -578,7 +581,20 @@ nsresult AudioSinkWrapper::ResumeStashedAudioSink(const TimeUnit& aStartTime) {
   // does the one-shot UpdateStartTime rebase to the new position, avoiding a
   // clock discontinuity.
   mLastClockSource = ClockSource::SystemClock;
-  mAudioSink->ResetForReuse(mParams, aStartTime)
+  RefPtr<MediaSink::EndedPromise> ended =
+      mAudioSink->ResetForReuse(mParams, aStartTime);
+  // The stream can error or drain in the narrow window between Start()'s health
+  // check and the rebase above, for instance a seek landing right at end of
+  // stream. A dead stream will not play the post-seek audio and hands back an
+  // ended promise that never settles, so tear it down and let the caller create
+  // a fresh sink instead.
+  if (mAudioSink->IsErrored() || mAudioSink->IsStreamDrained()) {
+    LOG("{}: stashed stream died during resume, recreating instead of reusing",
+        fmt::ptr(this));
+    ShutDownAudioSink();
+    return NS_ERROR_FAILURE;
+  }
+  ended
       ->Then(mOwnerThread.GetEventTarget(), __func__, this,
              &AudioSinkWrapper::OnAudioEnded)
       ->Track(mAudioSinkEndedRequest);
