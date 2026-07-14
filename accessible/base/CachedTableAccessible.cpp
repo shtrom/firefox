@@ -29,7 +29,7 @@ class MOZ_STACK_CLASS TablePartRule : public PivotRule {
       MOZ_ASSERT(aAcc->IsTable());
       return nsIAccessibleTraversalRule::FILTER_IGNORE;
     }
-    if (aAcc->IsTable()) {
+    if (aAcc->IsTable() || aAcc->IsOuterDoc() || aAcc->IsDoc()) {
       // Don't walk inside nested tables at all.
       return nsIAccessibleTraversalRule::FILTER_IGNORE_SUBTREE;
     }
