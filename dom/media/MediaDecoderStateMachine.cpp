@@ -1729,7 +1729,7 @@ class MediaDecoderStateMachine::SeekingState
       // Don't stop playback for a video-only seek since we want to keep playing
       // audio and we don't need to stop playback while leaving dormant for the
       // playback should has been stopped.
-      mMaster->StopPlayback();
+      mMaster->StopPlayback(MediaSink::StopReason::Seeking);
       mMaster->UpdatePlaybackPositionInternal(mSeekJob.mTarget->GetTime());
       mMaster->mOnPlaybackEvent.Notify(MediaPlaybackEvent::SeekStarted);
       mMaster->mOnNextFrameStatus.Notify(
@@ -1917,7 +1917,13 @@ class MediaDecoderStateMachine::AccurateSeekingState
 
     // Resetting decode should be called after stopping media sink, which can
     // ensure that we have an empty media queue before seeking the demuxer.
-    mMaster->StopMediaSink();
+    // Only observable seeks paused playback for reuse, so only they stop as a
+    // seek; a suppressed seek keeps playing and stops normally.
+    if (mVisibility == EventVisibility::Observable) {
+      mMaster->StopMediaSink(MediaSink::StopReason::Seeking);
+    } else {
+      mMaster->StopMediaSink();
+    }
     mMaster->ResetDecode();
 
     DemuxerSeek();
@@ -2306,7 +2312,13 @@ class MediaDecoderStateMachine::NextFrameSeekingState
   }
 
   void DoSeek() override {
-    mMaster->StopMediaSink();
+    // Only observable seeks paused playback for reuse, so only they stop as a
+    // seek; a suppressed seek keeps playing and stops normally.
+    if (mVisibility == EventVisibility::Observable) {
+      mMaster->StopMediaSink(MediaSink::StopReason::Seeking);
+    } else {
+      mMaster->StopMediaSink();
+    }
 
     auto currentTime = mCurrentTime;
     DiscardFrames(VideoQueue(), [currentTime](int64_t aSampleTime) {
@@ -3664,14 +3676,14 @@ nsresult MediaDecoderStateMachine::Init(MediaDecoder* aDecoder) {
   return NS_OK;
 }
 
-void MediaDecoderStateMachine::StopPlayback() {
+void MediaDecoderStateMachine::StopPlayback(MediaSink::StopReason aReason) {
   MOZ_ASSERT(OnTaskQueue());
-  LOG("StopPlayback()");
+  LOG("StopPlayback(reason={})", MediaSink::EnumValueToString(aReason));
 
   if (IsPlaying()) {
     mOnPlaybackEvent.Notify(MediaPlaybackEvent{
         MediaPlaybackEvent::PlaybackStopped, mPlaybackOffset});
-    mMediaSink->SetPlaying(false);
+    mMediaSink->SetPlaying(false, aReason);
     MOZ_ASSERT(!IsPlaying());
   }
 }
@@ -3939,11 +3951,11 @@ RefPtr<MediaDecoder::SeekPromise> MediaDecoderStateMachine::Seek(
   return mStateObj->HandleSeek(aTarget);
 }
 
-void MediaDecoderStateMachine::StopMediaSink() {
+void MediaDecoderStateMachine::StopMediaSink(MediaSink::StopReason aReason) {
   MOZ_ASSERT(OnTaskQueue());
   if (mMediaSink->IsStarted()) {
-    LOG("Stop MediaSink");
-    mMediaSink->Stop();
+    LOG("Stop MediaSink (reason={})", MediaSink::EnumValueToString(aReason));
+    mMediaSink->Stop(aReason);
     mMediaSinkAudioEndedPromise.DisconnectIfExists();
     mMediaSinkVideoEndedPromise.DisconnectIfExists();
   }

@@ -24,9 +24,21 @@ using media::TimeUnit;
 
 AudioSinkWrapper::~AudioSinkWrapper() = default;
 
+void AudioSinkWrapper::DiscardStashedAudioSink() {
+  AssertOwnerThread();
+  if (mStashedAudioSink) {
+    LOG("{}: AudioSinkWrapper::DiscardStashedAudioSink: shutting down stashed "
+        "sink",
+        fmt::ptr(this));
+    mStashedAudioSink->ShutDown();
+    mStashedAudioSink = nullptr;
+  }
+}
+
 void AudioSinkWrapper::Shutdown() {
   AssertOwnerThread();
   MOZ_ASSERT(!mIsStarted, "Must be called after playback stopped.");
+  DiscardStashedAudioSink();
   mSinkCreator = nullptr;
   // Ensure that async init tasks complete while the MDSM TaskQueue is still
   // available to resolve pending promises.
@@ -294,10 +306,11 @@ void AudioSinkWrapper::SetPreservesPitch(bool aPreservesPitch) {
   }
 }
 
-void AudioSinkWrapper::SetPlaying(bool aPlaying) {
+void AudioSinkWrapper::SetPlaying(bool aPlaying, StopReason aReason) {
   AssertOwnerThread();
-  LOG("{}: AudioSinkWrapper::SetPlaying {}", fmt::ptr(this),
-      aPlaying ? "true" : "false");
+  LOG("{}: AudioSinkWrapper::SetPlaying {} (reason: {})", fmt::ptr(this),
+      aPlaying ? "true" : "false",
+      aReason == StopReason::Seeking ? "seeking" : "regular");
 
   // Resume/pause matters only when playback started.
   if (!mIsStarted) {
@@ -305,6 +318,15 @@ void AudioSinkWrapper::SetPlaying(bool aPlaying) {
   }
 
   if (mAudioSink) {
+    if (!aPlaying) {
+      // A seek pause keeps the backend running so the following stop/start can
+      // reuse the stream; any other pause stops the backend. This is decided
+      // before pausing, because once the sink is paused it is too late to keep
+      // the backend alive.
+      const bool keepRunning = aReason == StopReason::Seeking &&
+                               mReuseStreamOnSeek && !mAudioSink->IsErrored();
+      mAudioSink->SetStreamKeepRunning(keepRunning);
+    }
     mAudioSink->SetPlaying(aPlaying);
   }
 
@@ -360,15 +382,35 @@ nsresult AudioSinkWrapper::Start(const TimeUnit& aStartTime,
 
   mEndedPromise = mEndedPromiseHolder.Ensure(__func__);
   if (!NeedAudioSink()) {
+    // A sink stashed for reuse is no longer wanted, for instance because
+    // playback was muted; discard it.
+    DiscardStashedAudioSink();
     return NS_OK;
   }
-  // On a seek resume, initialize the audio stream asynchronously: cubeb stream
-  // init can take tens of milliseconds (CoreAudio/AudioUnit on macOS) and doing
-  // it synchronously here stalls the state machine thread, delaying the
-  // playback clock and the resume. Instead, return immediately; playback
-  // resumes on the system clock and switches to the audio clock once the sink
-  // is ready (the same path used when unmuting). Initial playback start stays
-  // synchronous.
+  if (mStashedAudioSink) {
+    // A stream that errored or drained during the enlarged keep-running window,
+    // for instance a seek issued near end-of-stream, cannot be resumed: the
+    // audio backend has stopped and will issue no further callbacks, so reusing
+    // it would hang with audio never playing and the ended promise never
+    // settling. Discard it and create a fresh sink instead.
+    if (mStashedAudioSink->IsErrored() ||
+        mStashedAudioSink->IsStreamDrained()) {
+      LOG("{}: stashed stream unusable (errored={}, drained={}), discarding it",
+          fmt::ptr(this), mStashedAudioSink->IsErrored(),
+          mStashedAudioSink->IsStreamDrained());
+      DiscardStashedAudioSink();
+    } else {
+      return ResumeStashedAudioSink(aStartTime);
+    }
+  }
+  // With no stashed stream to reuse (stream reuse disabled on this platform, or
+  // the stashed stream was discarded above), fall back to asynchronous init on
+  // a seek resume: cubeb stream init can take tens of milliseconds
+  // (CoreAudio/AudioUnit on macOS) and doing it synchronously here stalls the
+  // state machine thread, delaying the playback clock and the resume. Instead,
+  // return immediately; playback resumes on the system clock and switches to
+  // the audio clock once the sink is ready (the same path used when unmuting).
+  // Initial playback start stays synchronous.
   if (aStartType == StartType::SeekResume) {
     LOG("{}: AudioSinkWrapper::Start, async audio sink init for seek resume",
         fmt::ptr(this));
@@ -522,6 +564,32 @@ RefPtr<GenericPromise> AudioSinkWrapper::MaybeAsyncCreateAudioSink(
           });
 }
 
+nsresult AudioSinkWrapper::ResumeStashedAudioSink(const TimeUnit& aStartTime) {
+  AssertOwnerThread();
+  MOZ_ASSERT(mStashedAudioSink);
+  MOZ_ASSERT(!mAudioSink);
+  MOZ_ASSERT(!mAudioSinkEndedRequest.Exists(),
+             "ended-promise consumer must be disconnected before reuse");
+  LOG("{}: AudioSinkWrapper::ResumeStashedAudioSink({})", fmt::ptr(this),
+      aStartTime.ToSeconds());
+
+  mAudioSink = std::move(mStashedAudioSink);
+  // Route the clock through the system clock first so the next position read
+  // does the one-shot UpdateStartTime rebase to the new position, avoiding a
+  // clock discontinuity.
+  mLastClockSource = ClockSource::SystemClock;
+  mAudioSink->ResetForReuse(mParams, aStartTime)
+      ->Then(mOwnerThread.GetEventTarget(), __func__, this,
+             &AudioSinkWrapper::OnAudioEnded)
+      ->Track(mAudioSinkEndedRequest);
+  // Allow normal pause again now that the resume is done. This is safe to clear
+  // here because the whole resume runs synchronously on the owner thread, so no
+  // seek can interleave; a later seek re-arms keep-running when it pauses for
+  // that seek.
+  mAudioSink->SetStreamKeepRunning(false);
+  return NS_OK;
+}
+
 nsresult AudioSinkWrapper::SyncCreateAudioSink(const TimeUnit& aStartTime) {
   AssertOwnerThread();
   MOZ_ASSERT(!mAudioSink);
@@ -565,7 +633,7 @@ bool AudioSinkWrapper::IsAudioSourceEnded(const MediaInfo& aInfo) const {
          (mAudioQueue.IsFinished() && mAudioQueue.GetSize() == 0u);
 }
 
-void AudioSinkWrapper::Stop() {
+void AudioSinkWrapper::Stop(StopReason aReason) {
   AssertOwnerThread();
   MOZ_ASSERT(mIsStarted, "playback not started.");
 
@@ -576,7 +644,18 @@ void AudioSinkWrapper::Stop() {
   mPositionAtClockStart = TimeUnit::Invalid();
   mAudioEnded = true;
   if (mAudioSink) {
-    ShutDownAudioSink();
+    if (aReason == StopReason::Seeking && mReuseStreamOnSeek &&
+        !mAudioSink->IsErrored() && !mAudioSink->IsStreamDrained()) {
+      // Keep the sink and its still-running audio stream alive so the next
+      // start can reset and reuse them instead of paying for a destroy +
+      // recreate.
+      LOG("{}: stashing AudioSink for seek reuse", fmt::ptr(this));
+      mAudioSinkEndedRequest.DisconnectIfExists();
+      mAudioSink->PrepareForReuse();
+      mStashedAudioSink = std::move(mAudioSink);
+    } else {
+      ShutDownAudioSink();
+    }
   }
 
   mEndedPromiseHolder.ResolveIfExists(true, __func__);

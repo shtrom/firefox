@@ -14052,6 +14052,21 @@
   value: 8
   mirror: always
 
+# Reuse the cubeb audio stream across a seek instead of destroying and
+# recreating it. The stream is kept running (not stopped) and its clock is
+# rebased in place, avoiding the synchronous cubeb_stream_start on the seek
+# critical path that otherwise dominates audible seek-resume latency on macOS.
+# Enabled on macOS first, where the win is largest; once it proves out there it
+# can be turned on for other platforms.
+- name: media.audio.reuse-stream-on-seek
+  type: RelaxedAtomicBool
+#if defined(XP_MACOSX)
+  value: true
+#else
+  value: false
+#endif
+  mirror: always
+
 # The duration, in milliseconds, of decoded audio to keep around in the
 # AudioSink ring-buffer. New decoding operations are started when this limit is
 # reached. The total size of the ring-buffer is slightly bigger than this.
