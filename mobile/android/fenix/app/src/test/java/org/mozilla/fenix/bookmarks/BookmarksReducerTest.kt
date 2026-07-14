@@ -10,6 +10,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.collections.listOf
 
 class BookmarksReducerTest {
     @Test
@@ -115,10 +116,10 @@ class BookmarksReducerTest {
     @Test
     fun `WHEN a user clicks on the search button THEN update the search state`() {
         val state = BookmarksState.default.copy(
-            isSearching = false,
+            searchState = null,
         )
 
-        val result = bookmarksReducer(state, SearchClicked).isSearching
+        val result = bookmarksReducer(state, SearchAction.SearchClicked).isSearching
 
         assertTrue(result)
     }
@@ -126,12 +127,62 @@ class BookmarksReducerTest {
     @Test
     fun `WHEN search ends THEN update the search state`() {
         val state = BookmarksState.default.copy(
-            isSearching = true,
+            searchState = SearchState(""),
         )
 
-        val result = bookmarksReducer(state, SearchDismissed).isSearching
+        val result = bookmarksReducer(state, SearchAction.SearchDismissed).isSearching
 
         assertFalse(result)
+    }
+
+    @Test
+    fun `WHEN a user updates the search query THEN it is reflected in the state`() {
+        val state = BookmarksState.default.copy(
+            searchState = SearchState(searchQuery = ""),
+        )
+
+        val result = bookmarksReducer(state, SearchAction.SearchQueryChanged("abc")).searchState?.searchQuery
+
+        assertEquals("abc", result)
+    }
+
+    @Test
+    fun `GIVEN the user is searching WHEN the search results are updated THEN it is reflected in the state`() {
+        val state = BookmarksState.default.copy(
+            searchState = SearchState(searchQuery = "Test"),
+        )
+
+        val updatedSearchResults = listOf(
+            BookmarkItem.Folder(
+                title = "Test Title",
+                guid = "0",
+                position = 0.toUInt(),
+            ),
+        )
+
+        val result = bookmarksReducer(state, SearchAction.ReceivedSearchResults(updatedSearchResults)).bookmarkItems
+
+        assertEquals(updatedSearchResults, result)
+    }
+
+    @Test
+    fun `GIVEN the user is not searching WHEN the search results are updated THEN the state remains the same`() {
+        val state = BookmarksState.default.copy(
+            bookmarkItems = listOf(),
+            searchState = null,
+        )
+
+        val updatedSearchResults = listOf(
+            BookmarkItem.Folder(
+                title = "Test Title",
+                guid = "0",
+                position = 0.toUInt(),
+            ),
+        )
+
+        val result = bookmarksReducer(state, SearchAction.ReceivedSearchResults(updatedSearchResults)).bookmarkItems
+
+        assertEquals(listOf<BookmarkItem>(), result)
     }
 
     @Test

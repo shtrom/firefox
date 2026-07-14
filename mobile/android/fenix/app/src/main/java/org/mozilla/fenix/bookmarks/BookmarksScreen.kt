@@ -330,7 +330,7 @@ private fun BookmarksList(
     }
 
     BackInvokedHandler(state.isSearching) {
-        store.dispatch(SearchDismissed)
+        store.dispatch(SearchAction.SearchDismissed)
     }
 
     WarnDialog(store = store)
@@ -360,7 +360,7 @@ private fun BookmarksList(
                     modifier = Modifier.onPlaced { fabHeight.intValue = it.size.height },
                     icon = painterResource(iconsR.drawable.mozac_ic_search_24),
                     contentDescription = stringResource(R.string.bookmark_search_button_content_description),
-                    onClick = { store.dispatch(SearchClicked) },
+                    onClick = { store.dispatch(SearchAction.SearchClicked) },
                 )
             }
         },
@@ -563,7 +563,7 @@ private fun BookmarksList(
                             onPress = {
                                 focusManager.clearFocus()
                                 keyboardController?.hide()
-                                store.dispatch(SearchDismissed)
+                                store.dispatch(SearchAction.SearchDismissed)
                             },
                         )
                     },
@@ -1530,7 +1530,7 @@ private fun EditBookmarkScreenPreview() {
             bookmarksEditFolderState = null,
             bookmarksMultiselectMoveState = null,
             isLoading = false,
-            isSearching = false,
+            searchState = null,
         ),
     )
 
@@ -1581,7 +1581,7 @@ private fun BookmarksScreenPreview() {
                 bookmarksEditFolderState = null,
                 bookmarksMultiselectMoveState = null,
                 isLoading = false,
-                isSearching = false,
+                searchState = null,
             ),
         )
     }
@@ -1627,7 +1627,7 @@ private fun EmptyBookmarksScreenPreview() {
                 bookmarksEditFolderState = null,
                 bookmarksMultiselectMoveState = null,
                 isLoading = false,
-                isSearching = false,
+                searchState = null,
             ),
         )
     }
