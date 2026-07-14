@@ -164,11 +164,6 @@ class Assembler : public AssemblerShared,
   Buffer m_buffer;
   bool isFinished = false;
 
-  // Return the Instruction at a given byte offset.
-  Instruction* getInstructionAt(BufferOffset offset) {
-    return m_buffer.getInst(offset);
-  }
-
   struct RelativePatch {
     // the offset within the code buffer where the value is loaded that
     // we want to fix-up
@@ -262,6 +257,11 @@ class Assembler : public AssemblerShared,
                              BufferOffset dest);
 
   void processCodeLabels(uint8_t* rawCode);
+
+  // Return the Instruction at a given byte offset.
+  Instruction* getInstructionAt(BufferOffset offset) {
+    return m_buffer.getInst(offset);
+  }
 
   // Get the next usable buffer offset. Note that a constant pool may be placed
   // here before the next instruction is emitted.
