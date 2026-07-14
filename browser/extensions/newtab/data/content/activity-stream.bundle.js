@@ -22148,13 +22148,19 @@ const MENU_ACTION_ITEMS = [{
   hideWhenCompleted: true
 }];
 const CROSSWORD_ENTRY = WIDGET_REGISTRY.find(w => w.id === "crossword");
+
+// Flipped to true the first time the user interacts with the crossword. Used to
+// hide the "New" badge once the widget has been used.
+const PREF_CROSSWORD_INTERACTION = "widgets.crossword.interaction";
 function Crossword({
   dispatch,
+  handleUserInteraction,
   widgetsMayBeMaximized,
   widgetEnabledMap
 }) {
   const prefs = (0,external_ReactRedux_namespaceObject.useSelector)(state => state.Prefs.values);
   const widgetSize = resolveWidgetSize(CROSSWORD_ENTRY, prefs);
+  const hasInteracted = prefs[PREF_CROSSWORD_INTERACTION];
   const crosswordEndpoint = resolveCrosswordEndpoint(prefs);
   const impressionFired = (0,external_React_namespaceObject.useRef)(false);
   const iframeRef = (0,external_React_namespaceObject.useRef)(null);
@@ -22162,6 +22168,10 @@ function Crossword({
   // Set once the widget reports the puzzle is finished, so menu actions that
   // only apply to an in-progress game (Solve puzzle) can be hidden.
   const [puzzleCompleted, setPuzzleCompleted] = (0,external_React_namespaceObject.useState)(false);
+
+  // Any real interaction flips the interaction pref, which hides the "New"
+  // badge. The helper is a no-op once the pref is already true.
+  const handleInteraction = (0,external_React_namespaceObject.useCallback)(() => handleUserInteraction("crossword"), [handleUserInteraction]);
 
   // The single origin we accept inbound messages from and target for outbound
   // ones.
@@ -22221,6 +22231,7 @@ function Crossword({
         }));
         break;
       case EVENT_TYPES.INTERACTION:
+        handleInteraction();
         dispatch(actionCreators.AlsoToMain({
           type: actionTypes.WIDGETS_USER_EVENT,
           data: {
@@ -22235,7 +22246,7 @@ function Crossword({
       default:
         break;
     }
-  }, [dispatch, widgetSize]);
+  }, [dispatch, handleInteraction, widgetSize]);
 
   // Listen for events from the widget, discarding anything that fails origin,
   // source, channel, or payload validation before it can touch Redux/telemetry.
@@ -22265,6 +22276,7 @@ function Crossword({
     return () => window.removeEventListener("message", handleMessage);
   }, [merinoOrigin, handleWidgetEvent]);
   const handleMenuAction = (0,external_React_namespaceObject.useCallback)(action => {
+    handleInteraction();
     postMenuAction(action);
     dispatch(actionCreators.OnlyToMain({
       type: actionTypes.WIDGETS_USER_EVENT,
@@ -22276,7 +22288,7 @@ function Crossword({
         widget_size: widgetSize
       }
     }));
-  }, [postMenuAction, dispatch, widgetSize]);
+  }, [handleInteraction, postMenuAction, dispatch, widgetSize]);
   const handleIntersection = (0,external_React_namespaceObject.useCallback)(() => {
     if (impressionFired.current) {
       return;
@@ -22312,6 +22324,7 @@ function Crossword({
     });
   }
   const handleChangeSize = (0,external_React_namespaceObject.useCallback)(size => {
+    handleInteraction();
     (0,external_ReactRedux_namespaceObject.batch)(() => {
       dispatch(actionCreators.OnlyToMain({
         type: actionTypes.SET_PREF,
@@ -22331,9 +22344,10 @@ function Crossword({
         }
       }));
     });
-  }, [dispatch]);
+  }, [dispatch, handleInteraction]);
   const sizeSubmenuRef = useSizeSubmenu(handleChangeSize);
   function handleLearnMore() {
+    handleInteraction();
     (0,external_ReactRedux_namespaceObject.batch)(() => {
       dispatch(actionCreators.OnlyToMain({
         type: actionTypes.OPEN_LINK,
@@ -22353,6 +22367,7 @@ function Crossword({
     });
   }
   function handlePoweredByParticle() {
+    handleInteraction();
     (0,external_ReactRedux_namespaceObject.batch)(() => {
       dispatch(actionCreators.OnlyToMain({
         type: actionTypes.OPEN_LINK,
@@ -22378,9 +22393,14 @@ function Crossword({
     }
   }, /*#__PURE__*/external_React_default().createElement("div", {
     className: "crossword-title-wrapper"
-  }, /*#__PURE__*/external_React_default().createElement("h3", {
+  }, /*#__PURE__*/external_React_default().createElement("div", {
+    className: "crossword-badge-title-wrapper"
+  }, !hasInteracted && /*#__PURE__*/external_React_default().createElement("moz-badge", {
+    className: "crossword-new-badge",
+    "data-l10n-id": "newtab-widget-lists-label-new"
+  }), /*#__PURE__*/external_React_default().createElement("h3", {
     className: "newtab-crossword-title"
-  }, "Daily crossword"), /*#__PURE__*/external_React_default().createElement("div", {
+  }, "Daily crossword")), /*#__PURE__*/external_React_default().createElement("div", {
     className: "crossword-context-menu-wrapper"
   }, /*#__PURE__*/external_React_default().createElement("moz-button", {
     className: "crossword-context-menu-button",

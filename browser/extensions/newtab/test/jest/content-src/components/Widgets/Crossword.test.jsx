@@ -39,6 +39,7 @@ function WrapWithProvider({ children, state = baseState }) {
 function renderCrossword({
   state = baseState,
   dispatch = jest.fn(),
+  handleUserInteraction = jest.fn(),
   widgetsMayBeMaximized = true,
 } = {}) {
   const widgetEnabledMap = { crossword: true };
@@ -46,12 +47,13 @@ function renderCrossword({
     <WrapWithProvider state={state}>
       <Crossword
         dispatch={dispatch}
+        handleUserInteraction={handleUserInteraction}
         widgetsMayBeMaximized={widgetsMayBeMaximized}
         widgetEnabledMap={widgetEnabledMap}
       />
     </WrapWithProvider>
   );
-  return { ...utils, dispatch };
+  return { ...utils, dispatch, handleUserInteraction };
 }
 
 // Dispatch a postMessage-style event at the window as if it came from the
@@ -629,6 +631,64 @@ describe("<Crossword>", () => {
       ).toBeInTheDocument();
 
       expect(menu.querySelector("hr")).toBeInTheDocument();
+    });
+  });
+
+  describe("new badge", () => {
+    it("renders the New badge before the title when not interacted with", () => {
+      const { container } = renderCrossword();
+      const badge = container.querySelector("moz-badge.crossword-new-badge");
+      expect(badge).toBeInTheDocument();
+      // No type="new": that looks up the unregistered moz-badge-new2 string.
+      expect(badge).not.toHaveAttribute("type");
+      expect(badge).toHaveAttribute(
+        "data-l10n-id",
+        "newtab-widget-lists-label-new"
+      );
+      // The badge renders immediately before the title.
+      expect(badge.nextElementSibling).toBe(
+        container.querySelector("h3.newtab-crossword-title")
+      );
+    });
+
+    it("hides the New badge once the interaction pref is set", () => {
+      const state = {
+        ...baseState,
+        Prefs: {
+          ...baseState.Prefs,
+          values: {
+            ...baseState.Prefs.values,
+            "widgets.crossword.interaction": true,
+          },
+        },
+      };
+      const { container } = renderCrossword({ state });
+      expect(
+        container.querySelector("moz-badge.crossword-new-badge")
+      ).not.toBeInTheDocument();
+      expect(
+        container.querySelector("h3.newtab-crossword-title")
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe("interaction pref", () => {
+    it("flips the interaction pref via handleUserInteraction on a menu action", () => {
+      const handleUserInteraction = jest.fn();
+      const { container } = renderCrossword({ handleUserInteraction });
+      fireEvent.click(container.querySelector("panel-item.learn-more"));
+      expect(handleUserInteraction).toHaveBeenCalledWith("crossword");
+    });
+
+    it("does NOT flip the interaction pref when hiding the widget", () => {
+      const handleUserInteraction = jest.fn();
+      const { container } = renderCrossword({ handleUserInteraction });
+      fireEvent.click(
+        container.querySelector(
+          "panel-item[data-l10n-id='newtab-widget-menu-hide']"
+        )
+      );
+      expect(handleUserInteraction).not.toHaveBeenCalled();
     });
   });
 });
