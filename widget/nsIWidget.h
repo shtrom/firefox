@@ -1381,6 +1381,8 @@ class nsIWidget : public nsSupportsWeakReference {
   // Returns whether compositing should use an external surface size.
   virtual bool UseExternalCompositingSurface() const { return false; }
 
+  void SetIsTiled(bool);
+
   /**
    * Starts the OMTC compositor destruction sequence.
    *

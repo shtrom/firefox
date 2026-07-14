@@ -3685,7 +3685,7 @@ void nsWindow::OnWindowStateEvent(GtkWidget* aWidget,
 #endif  // ACCESSIBILITY
   }
 
-  mIsTiled = aEvent->new_window_state & GDK_WINDOW_STATE_TILED;
+  SetIsTiled(aEvent->new_window_state & GDK_WINDOW_STATE_TILED);
   LOG("\tTiled: %d\n", int(mIsTiled));
   mResizableEdges = [&] {
     Sides result;
