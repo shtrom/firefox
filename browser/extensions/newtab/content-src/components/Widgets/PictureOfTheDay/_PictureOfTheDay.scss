@@ -60,6 +60,15 @@
   min-inline-size: 0;
 }
 
+// The "…" menu sits in the toolbar over the photo's dark overlay, so force its
+// icon white like the caption — the ghost button's theme text color is dark in
+// light mode and the widget doesn't adapt to the photo. moz-button colors the icon
+// via --button-text-color-ghost, so override the token (a host `color` won't win).
+.picture-of-the-day-context-menu-button {
+  // stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens
+  --button-text-color-ghost: var(--color-white);
+}
+
 // In the populated state the toolbar (source line + "…" menu) reveals on
 // hover/focus. Legibility comes from the dark transparent overlay at the top of .picture-of-the-day-populated.
 .picture-of-the-day.has-picture .picture-of-the-day-toolbar {
@@ -273,13 +282,14 @@
 .picture-of-the-day-source {
   // The title; sits at the top-left of the card.
   margin: 0;
+  padding-block-start: var(--space-small);
   min-inline-size: 0;
   overflow: hidden;
   // The caption always sits on the dark transparent overlay on the photo. It stays white in both light and dark mode.
   // stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens
   color: var(--color-white);
-  font-size: var(--font-size-small);
-  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-root);
+  font-weight: var(--font-weight);
   white-space: nowrap;
   text-overflow: ellipsis;
   // Legible over any image; a long localized string ellipsizes on one line.
@@ -394,6 +404,11 @@
         background-color: var(--button-text-color-ghost-hover);
       }
     }
+  }
+
+  .picture-of-the-day-context-menu-button {
+    // Over the solid system canvas, let the icon use the system button color.
+    --button-text-color-ghost: revert;
   }
 
   .picture-of-the-day-source {
