@@ -126,10 +126,7 @@ function Crossword({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
       }}
     >
       <div className="crossword-title-wrapper">
-        <h3
-          className="newtab-crossword-title"
-          data-l10n-id="newtab-crossword-widget-header"
-        ></h3>
+        <h3 className="newtab-crossword-title">Daily crossword</h3>
         <div className="crossword-context-menu-wrapper">
           <moz-button
             className="crossword-context-menu-button"
@@ -168,11 +165,9 @@ function Crossword({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
               data-l10n-id="newtab-widget-menu-hide"
               onClick={handleCrosswordHide}
             />
-            <panel-item
-              className="learn-more"
-              data-l10n-id="newtab-crossword-menu-learn-more"
-              onClick={handleLearnMore}
-            />
+            <panel-item className="learn-more" onClick={handleLearnMore}>
+              Learn more
+            </panel-item>
           </panel-list>
         </div>
       </div>
