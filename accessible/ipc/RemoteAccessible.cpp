@@ -245,7 +245,7 @@ bool RemoteAccessible::ApplyCache(CacheUpdateType aUpdateType,
     mCachedFields->Update(aFields);
   }
 
-  if (IsTextLeaf()) {
+  if (IsText()) {
     RemoteAccessible* parent = RemoteParent();
     if (parent && parent->IsHyperText()) {
       parent->InvalidateCachedHyperTextOffsets();
