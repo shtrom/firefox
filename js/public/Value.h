@@ -513,11 +513,6 @@ class Value {
  private:
   explicit constexpr Value(uint64_t asBits) : asBits_(asBits) {}
 
-  static uint64_t bitsFromDouble(double d) {
-    d = CanonicalizeNaN(d);
-    return mozilla::BitwiseCast<uint64_t>(d);
-  }
-
   static_assert(sizeof(JSValueType) == 1,
                 "type bits must fit in a single byte");
   static_assert(sizeof(JSValueTag) == 4,
@@ -550,8 +545,6 @@ class Value {
     return fromTagAndPayload(JSVAL_TAG_INT32, uint32_t(i));
   }
 
-  static Value fromDouble(double d) { return fromRawBits(bitsFromDouble(d)); }
-
   /**
    * Returns false if creating a NumberValue containing the given type would
    * be lossy, true otherwise. Note that this will return false for NaN,
@@ -580,7 +573,8 @@ class Value {
   }
 
   void setDouble(double d) {
-    asBits_ = bitsFromDouble(d);
+    d = CanonicalizeNaN(d);
+    asBits_ = mozilla::BitwiseCast<uint64_t>(d);
     MOZ_ASSERT(isDouble());
   }
 
@@ -1210,8 +1204,7 @@ static inline Value MagicValueUint32(uint32_t payload) {
 }
 
 static constexpr Value NumberValue(uint32_t i) {
-  return i <= JSVAL_INT_MAX ? Int32Value(int32_t(i))
-                            : Value::fromDouble(double(i));
+  return i <= JSVAL_INT_MAX ? Int32Value(int32_t(i)) : DoubleValue(double(i));
 }
 
 template <typename T>
