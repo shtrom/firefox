@@ -1261,7 +1261,7 @@ const TypeDef& Component::getTypeForCoreFunc(uint32_t coreFuncIndex) const {
   MOZ_ASSERT(item.sort() == ComponentSort::CoreFunction);
   switch (item.kind()) {
     case ComponentItem::ItemKind::Defined:
-      return *loweredFuncs_[item.itemIndex()].flattenedType();
+      return *definedCoreFuncs_[item.itemIndex()].coreFuncType();
     case ComponentItem::ItemKind::Import:
     case ComponentItem::ItemKind::Export:
       // Core funcs cannot be imported or exported.

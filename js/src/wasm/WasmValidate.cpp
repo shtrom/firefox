@@ -5398,6 +5398,7 @@ enum class ComponentTypeKindRaw : uint8_t {
       }
 
       // Require (rep i32)
+      // TODO(wasm-cm): Update for memory64 support
       if (repType != 0x7f) {
         return d.failf("unexpected rep type 0x%02x for resource type", repType);
       }
@@ -6204,6 +6205,9 @@ enum class CanonOptKindRaw : uint8_t {
 enum class CanonDefKindRaw : uint8_t {
   Lift = 0x00,
   Lower = 0x01,
+  ResourceNew = 0x02,
+  ResourceDrop = 0x03,
+  ResourceRep = 0x04,
 };
 
 [[nodiscard]] static bool DecodeComponentCanonDef(Decoder& d,
@@ -6350,8 +6354,69 @@ enum class CanonDefKindRaw : uint8_t {
         return d.fail("realloc required for canon lower");
       }
 
-      if (!c->addLoweredFunc(ComponentLoweredFuncDesc(
+      if (!c->addDefinedCoreFunc(ComponentCoreFuncDesc::lowered(
               funcIndex, std::move(flattenedCanonical)))) {
+        return false;
+      }
+    } break;
+    case uint8_t(CanonDefKindRaw::ResourceNew):
+    case uint8_t(CanonDefKindRaw::ResourceDrop):
+    case uint8_t(CanonDefKindRaw::ResourceRep): {
+      if (c->coreFuncs().length() >= MaxComponentCoreFuncs) {
+        return d.failf("too many core funcs (max %d)", MaxComponentCoreFuncs);
+      }
+
+      uint32_t resourceTypeIndex;
+      if (!d.readVarU32(&resourceTypeIndex)) {
+        return d.fail("expected resource type index");
+      }
+      if (c->types().length() <= resourceTypeIndex) {
+        return d.failf("invalid type index %d", resourceTypeIndex);
+      }
+      ComponentType resourceType = c->getType(resourceTypeIndex);
+      if (resourceType.kind() != ComponentTypeKind::Resource) {
+        return d.fail("expected a resource type");
+      }
+
+      // The values for the Kind enum are chosen to align with the binary
+      // format.
+      ComponentResourceBuiltin builtin(ComponentResourceBuiltin::Kind(kind),
+                                       resourceType);
+
+      ValTypeVector args;
+      ValTypeVector results;
+      switch (builtin.kind()) {
+        case ComponentResourceBuiltin::Kind::ResourceNew: {
+          // TODO(wasm-cm): Update for memory64 support
+          if (!args.append(ValType::i32())) {
+            return false;
+          }
+          if (!results.append(ValType::i32())) {
+            return false;
+          }
+        } break;
+        case ComponentResourceBuiltin::Kind::ResourceDrop: {
+          if (!args.append(ValType::i32())) {
+            return false;
+          }
+        } break;
+        case ComponentResourceBuiltin::Kind::ResourceRep: {
+          if (!args.append(ValType::i32())) {
+            return false;
+          }
+          // TODO(wasm-cm): Update for memory64 support
+          if (!results.append(ValType::i32())) {
+            return false;
+          }
+        } break;
+        default:
+          MOZ_CRASH();
+      }
+      SharedTypeDef coreFuncType = TypeContext::canonicalizeSingleType(
+          FuncType(std::move(args), std::move(results)));
+
+      if (!c->addDefinedCoreFunc(ComponentCoreFuncDesc::builtin(
+              std::move(builtin), std::move(coreFuncType)))) {
         return false;
       }
     } break;
