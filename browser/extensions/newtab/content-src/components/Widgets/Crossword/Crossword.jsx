@@ -87,9 +87,19 @@ const MENU_ACTION_ITEMS = [
 
 const CROSSWORD_ENTRY = WIDGET_REGISTRY.find(w => w.id === "crossword");
 
-function Crossword({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
+// Flipped to true the first time the user interacts with the crossword. Used to
+// hide the "New" badge once the widget has been used.
+const PREF_CROSSWORD_INTERACTION = "widgets.crossword.interaction";
+
+function Crossword({
+  dispatch,
+  handleUserInteraction,
+  widgetsMayBeMaximized,
+  widgetEnabledMap,
+}) {
   const prefs = useSelector(state => state.Prefs.values);
   const widgetSize = resolveWidgetSize(CROSSWORD_ENTRY, prefs);
+  const hasInteracted = prefs[PREF_CROSSWORD_INTERACTION];
   const crosswordEndpoint = resolveCrosswordEndpoint(prefs);
   const impressionFired = useRef(false);
   const iframeRef = useRef(null);
@@ -97,6 +107,13 @@ function Crossword({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
   // Set once the widget reports the puzzle is finished, so menu actions that
   // only apply to an in-progress game (Solve puzzle) can be hidden.
   const [puzzleCompleted, setPuzzleCompleted] = useState(false);
+
+  // Any real interaction flips the interaction pref, which hides the "New"
+  // badge. The helper is a no-op once the pref is already true.
+  const handleInteraction = useCallback(
+    () => handleUserInteraction("crossword"),
+    [handleUserInteraction]
+  );
 
   // The single origin we accept inbound messages from and target for outbound
   // ones.
@@ -166,6 +183,7 @@ function Crossword({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
           );
           break;
         case EVENT_TYPES.INTERACTION:
+          handleInteraction();
           dispatch(
             ac.AlsoToMain({
               type: at.WIDGETS_USER_EVENT,
@@ -183,7 +201,7 @@ function Crossword({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
           break;
       }
     },
-    [dispatch, widgetSize]
+    [dispatch, handleInteraction, widgetSize]
   );
 
   // Listen for events from the widget, discarding anything that fails origin,
@@ -220,6 +238,7 @@ function Crossword({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
 
   const handleMenuAction = useCallback(
     action => {
+      handleInteraction();
       postMenuAction(action);
       dispatch(
         ac.OnlyToMain({
@@ -234,7 +253,7 @@ function Crossword({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
         })
       );
     },
-    [postMenuAction, dispatch, widgetSize]
+    [handleInteraction, postMenuAction, dispatch, widgetSize]
   );
 
   const handleIntersection = useCallback(() => {
@@ -279,6 +298,7 @@ function Crossword({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
 
   const handleChangeSize = useCallback(
     size => {
+      handleInteraction();
       batch(() => {
         dispatch(
           ac.OnlyToMain({
@@ -300,12 +320,13 @@ function Crossword({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
         );
       });
     },
-    [dispatch]
+    [dispatch, handleInteraction]
   );
 
   const sizeSubmenuRef = useSizeSubmenu(handleChangeSize);
 
   function handleLearnMore() {
+    handleInteraction();
     batch(() => {
       dispatch(
         ac.OnlyToMain({
@@ -330,6 +351,7 @@ function Crossword({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
   }
 
   function handlePoweredByParticle() {
+    handleInteraction();
     batch(() => {
       dispatch(
         ac.OnlyToMain({
@@ -361,7 +383,15 @@ function Crossword({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
       }}
     >
       <div className="crossword-title-wrapper">
-        <h3 className="newtab-crossword-title">Daily crossword</h3>
+        <div className="crossword-badge-title-wrapper">
+          {!hasInteracted && (
+            <moz-badge
+              className="crossword-new-badge"
+              data-l10n-id="newtab-widget-lists-label-new"
+            ></moz-badge>
+          )}
+          <h3 className="newtab-crossword-title">Daily crossword</h3>
+        </div>
         <div className="crossword-context-menu-wrapper">
           <moz-button
             className="crossword-context-menu-button"
