@@ -2023,9 +2023,9 @@ already_AddRefed<Promise> VideoFrame::CopyTo(
       gfx::IntSize size(
           l.mSourceWidthBytes / mResource->mFormat->SampleBytes(planes[i]),
           l.mSourceHeight);
-      if (!mResource->CopyTo(planes[i], {origin, size},
-                             aData.From(destinationOffset),
-                             static_cast<size_t>(l.mDestinationStride))) {
+      if (!mResource->CopyPlaneInto(
+              planes[i], {origin, size}, aData.From(destinationOffset),
+              static_cast<size_t>(l.mDestinationStride))) {
         p->MaybeRejectWithTypeError(
             nsPrintfCString("Failed to copy image data in %s plane",
                             mResource->mFormat->PlaneName(planes[i])));
@@ -2892,10 +2892,10 @@ static size_t PlaneByteLengthOrZero(int32_t aStride, int32_t aHeight) {
   return length.isValid() ? length.value() : 0;
 }
 
-bool VideoFrame::Resource::CopyTo(const Format::Plane& aPlane,
-                                  const gfx::IntRect& aRect,
-                                  Span<uint8_t>&& aPlaneDest,
-                                  size_t aDestinationStride) const {
+bool VideoFrame::Resource::CopyPlaneInto(const Format::Plane& aPlane,
+                                         const gfx::IntRect& aRect,
+                                         Span<uint8_t> aPlaneDest,
+                                         size_t aDestinationStride) const {
   if (!mFormat) {
     return false;
   }
