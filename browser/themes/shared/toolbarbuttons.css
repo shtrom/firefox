@@ -33,6 +33,7 @@
   }
 
   /* Smart window properties */
+  --smartwindow-ai-toggle-padding: 4px;
   --smartwindow-ask-btn-gradient: linear-gradient(
     117deg,
     rgba(50, 27, 253, 0.3) -17.87%,

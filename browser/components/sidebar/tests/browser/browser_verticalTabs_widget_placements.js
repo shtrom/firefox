@@ -66,7 +66,6 @@ add_task(async function moveAndRestoreTabsToolbarWidgets() {
   );
   let expectedMovedWidgetIds = [
     "alltabs-button",
-    "ai-window-toggle",
     "panic-button",
     "privatebrowsing-button",
   ];

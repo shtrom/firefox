@@ -404,7 +404,6 @@ var CustomizableUIInternal = {
           "tabbrowser-tabs",
           "new-tab-button",
           "alltabs-button",
-          "ai-window-toggle",
         ],
         verticalTabsDefaultPlacements: [],
         defaultCollapsed: null,

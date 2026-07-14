@@ -44,8 +44,6 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "moz-src:///browser/components/aiwindow/ui/modules/AIWindowUI.sys.mjs",
   ChatStore:
     "moz-src:///browser/components/aiwindow/ui/modules/ChatStore.sys.mjs",
-  CustomizableUI:
-    "moz-src:///browser/components/customizableui/CustomizableUI.sys.mjs",
   MemoryStore:
     "moz-src:///browser/components/aiwindow/services/MemoryStore.sys.mjs",
   NewTabPagePreloading:
@@ -81,7 +79,6 @@ export const AIWindow = {
   _initialized: false,
   _windowStates: new WeakMap(),
   _aiWindowMenu: null,
-  _switcherWidgetCreated: false,
 
   /**
    * A WeakMap<window, AIWindowTabStatesManager> that keeps references
@@ -96,7 +93,8 @@ export const AIWindow = {
   init(win) {
     if (!this._windowStates.has(win)) {
       this._windowStates.set(win, {});
-      this._updateHamburgerMenuPosition(win);
+      this.initializeAITabsToolbar(win);
+      this._updateToolbarButtonPositions(win);
       this._initializeAskButtonOnToolbox(win);
       const windowArgs = win?.arguments?.[1];
       if (
@@ -137,7 +135,6 @@ export const AIWindow = {
     lazy.getAllModelsData(); // loads model data into cache for about:preferences
     lazy.NimbusFeatures.smartWindow.onUpdate(this.onNimbusUpdate);
     this._initialized = true;
-    this._updateSwitcherWidgetRegistration();
 
     // On startup/restart, if the first window initialized is an
     // AI window, we need to start the memories schedulers.
@@ -282,11 +279,7 @@ export const AIWindow = {
   },
 
   _onAIWindowEnabledPrefChange() {
-    this._updateSwitcherWidgetRegistration();
-    const widget = lazy.CustomizableUI.getWidget("ai-window-toggle");
-    for (const { node } of widget?.instances ?? []) {
-      this._updateButtonVisibility(node);
-    }
+    this._forEachWindow(win => this._updateButtonVisibility(win));
     Services.prefs.setBoolPref(
       PREF_SEMANTIC_HISTORY_SMARTWINDOW_FEATURE_GATE,
       this.isAvailable
@@ -296,27 +289,20 @@ export const AIWindow = {
     }
   },
 
-  _updateButtonVisibility(node) {
-    if (node) {
-      node.hidden = !this.isAIWindowEnabled();
+  _updateButtonVisibility(win) {
+    const isPrivateWindow = lazy.PrivateBrowsingUtils.isWindowPrivate(win);
+    const modeSwitcherButton = win.document.getElementById("ai-window-toggle");
+    if (modeSwitcherButton) {
+      modeSwitcherButton.hidden = !this.isAIWindowEnabled() || isPrivateWindow;
     }
   },
 
   _onTabstripOrientationChange() {
-    this._forEachWindow(win => this._updateHamburgerMenuPosition(win));
+    this._forEachWindow(win => this._updateToolbarButtonPositions(win));
   },
 
-  /**
-   * Move the hamburger menu next to the window controls on Smart Window and Vertical
-   * tabs, and restores it to its default nav-bar position for Classic.
-   * The mode switcher button itself is a customizable widget, so its
-   * placement is owned by CustomizableUI and not touched here.
-   *
-   * @param {Window} win The window to update.
-   * @param {object} [options]
-   * @param {boolean} [options.isToggling]
-   */
-  _updateHamburgerMenuPosition(win, { isToggling = false } = {}) {
+  _updateToolbarButtonPositions(win, { isToggling = false } = {}) {
+    const modeSwitcherButton = win.document.getElementById("ai-window-toggle");
     const hamburgerMenu = win.document.getElementById("PanelUI-button");
     const targetToolbar = win.document.getElementById(
       this.verticalTabsEnabled ? "nav-bar" : "TabsToolbar"
@@ -325,8 +311,10 @@ export const AIWindow = {
       ".titlebar-buttonbox-container"
     );
 
+    titlebarContainer.after(modeSwitcherButton);
+
     if (this.isAIWindowActive(win) || this.verticalTabsEnabled) {
-      titlebarContainer.after(hamburgerMenu);
+      modeSwitcherButton.after(hamburgerMenu);
     } else if (isToggling) {
       // Restore hamburger menu to its original position in nav-bar.
       const postTabsSpacer = win.document
@@ -544,6 +532,29 @@ export const AIWindow = {
   },
 
   /**
+   * Show Window Switcher button in tabs toolbar
+   *
+   * @param {Window} win caller window
+   */
+  initializeAITabsToolbar(win) {
+    const modeSwitcherButton = win.document.getElementById("ai-window-toggle");
+    if (!modeSwitcherButton) {
+      return;
+    }
+
+    this._updateButtonVisibility(win);
+
+    modeSwitcherButton.addEventListener("command", event => {
+      if (win.PanelUI.panel.state == "open") {
+        win.PanelUI.hide();
+      } else if (win.PanelUI.panel.state == "closed") {
+        this.handleAIWindowSwitcher(win);
+        win.PanelUI.showSubView("ai-window-toggle-view", event.target, event);
+      }
+    });
+  },
+
+  /**
    * Is current window an AI Window
    *
    * @param {Window} win current Window
@@ -752,7 +763,7 @@ export const AIWindow = {
       win.document.documentElement.toggleAttribute("ai-window");
 
       this._reconcileNewTabPages(win, newTabPref, homePagePref);
-      this._updateHamburgerMenuPosition(win, { isToggling: true });
+      this._updateToolbarButtonPositions(win, { isToggling: true });
       this._initializeAskButtonOnToolbox(win);
       Services.obs.notifyObservers(
         win,
@@ -1051,55 +1062,6 @@ export const AIWindow = {
     let { contentDocument } = window.gBrowser.selectedBrowser;
     let aiWindowCE = contentDocument?.querySelector("ai-window");
     return aiWindowCE?.shadowRoot.getElementById("ai-window-smartbar");
-  },
-
-  _createSwitcherWidget() {
-    if (this._switcherWidgetCreated) {
-      return;
-    }
-
-    lazy.CustomizableUI.createWidget({
-      id: "ai-window-toggle",
-      l10nId: "toolbar-switcher-customizable-label",
-      type: "button",
-      defaultArea: lazy.CustomizableUI.AREA_TABSTRIP,
-      removable: true,
-      showInPrivateBrowsing: false,
-      onCreated: node => {
-        node.setAttribute("aria-haspopup", "true");
-        this._updateButtonVisibility(node);
-      },
-      onCommand: event => {
-        const win = event.view;
-        if (win.PanelUI.panel.state == "open") {
-          win.PanelUI.hide();
-        } else if (win.PanelUI.panel.state == "closed") {
-          this.handleAIWindowSwitcher(win);
-          win.PanelUI.showSubView("ai-window-toggle-view", event.target, event);
-        }
-      },
-    });
-    this._switcherWidgetCreated = true;
-  },
-
-  _destroySwitcherWidget() {
-    if (!this._switcherWidgetCreated) {
-      return;
-    }
-
-    lazy.CustomizableUI.destroyWidget("ai-window-toggle");
-    this._switcherWidgetCreated = false;
-  },
-
-  // The window switcher must not appear anywhere in the customizable UI (toolbar or
-  // customize palette) when Smart Window is blocked by the browser.ai.control
-  // or browser.ai.control.smartWindow.
-  _updateSwitcherWidgetRegistration() {
-    if (this.isBlocked) {
-      this._destroySwitcherWidget();
-    } else {
-      this._createSwitcherWidget();
-    }
   },
 
   // AIFeature interface implementation
