@@ -3222,9 +3222,6 @@ var gUIDensity = {
     Services.prefs.addObserver(this.autoCompactThresholdPref, this);
     window.addEventListener("resize", this);
 
-    this._sidebarShownHandler = () => this.update();
-    window.addEventListener("SidebarShown", this._sidebarShownHandler);
-
     // Re-evaluate auto-compact when the sidebar.revamp launcher opens,
     // closes, or toggles between collapsed and expanded, since the
     // collapsed launcher width feeds into the auto-compact ratio.
@@ -3244,10 +3241,6 @@ var gUIDensity = {
     Services.prefs.removeObserver(this.autoTouchModePref, this);
     Services.prefs.removeObserver(this.autoCompactThresholdPref, this);
     window.removeEventListener("resize", this);
-    if (this._sidebarShownHandler) {
-      window.removeEventListener("SidebarShown", this._sidebarShownHandler);
-      this._sidebarShownHandler = null;
-    }
     if (this._sidebarStateObserver) {
       this._sidebarStateObserver.disconnect();
       this._sidebarStateObserver = null;
