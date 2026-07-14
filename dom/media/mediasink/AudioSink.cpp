@@ -35,22 +35,17 @@ using media::TimeUnit;
 AudioSink::AudioSink(AbstractThread* aThread,
                      MediaQueue<AudioData>& aAudioQueue, const AudioInfo& aInfo,
                      bool aShouldResistFingerprinting)
-    : mPlaying(true),
-      mWritten(0),
-      mErrored(false),
-      mOwnerThread(aThread),
-      mFramesParsed(0),
+    : mOwnerThread(aThread),
       mOutputRate(
           DecideAudioPlaybackSampleRate(aInfo, aShouldResistFingerprinting)),
       mOutputChannels(DecideAudioPlaybackChannels(aInfo)),
       mAudibilityMonitor(
           mOutputRate,
           StaticPrefs::dom_media_silence_duration_for_audibility()),
-      mIsAudioDataAudible(false),
-      mProcessedQueueFinished(false),
       mAudioQueue(aAudioQueue),
       mProcessedQueueThresholdMS(
           StaticPrefs::media_audio_audiosink_threshold_ms()) {
+  InitPlaybackState();
   // Not much to initialize here if there's no audio.
   if (!aInfo.IsValid()) {
     mProcessedSPSCQueue = MakeUnique<SPSCQueue<AudioDataValue>>(0);
@@ -141,16 +136,8 @@ RefPtr<MediaSink::EndedPromise> AudioSink::Start(
 
   // Set playback params before calling Start() so they can take effect
   // as soon as the 1st DataCallback of the AudioStream fires.
-  mAudioStream->SetVolume(aParams.mVolume);
-  mAudioStream->SetPlaybackRate(aParams.mPlaybackRate);
-  mAudioStream->SetPreservesPitch(aParams.mPreservesPitch);
-
-  mAudioQueueListener = mAudioQueue.PushEvent().Connect(
-      mOwnerThread, this, &AudioSink::OnAudioPushed);
-  mAudioQueueFinishListener = mAudioQueue.FinishEvent().Connect(
-      mOwnerThread, this, &AudioSink::NotifyAudioNeeded);
-  mProcessedQueueListener =
-      mAudioPopped.Connect(mOwnerThread, this, &AudioSink::OnAudioPopped);
+  ApplyPlaybackParams(aParams);
+  ConnectAudioQueues();
 
   mStartTime = aStartTime;
 
@@ -159,6 +146,34 @@ RefPtr<MediaSink::EndedPromise> AudioSink::Start(
   NotifyAudioNeeded();
 
   return mAudioStream->Start();
+}
+
+void AudioSink::InitPlaybackState() {
+  // The fields reset here are safe to modify while the audio callback thread is
+  // running concurrently.
+  mPlaying = true;
+  mWritten = 0;
+  mErrored = false;
+  mFramesParsed = 0;
+  mIsAudioDataAudible = false;
+  mProcessedQueueFinished = false;
+}
+
+void AudioSink::ApplyPlaybackParams(const PlaybackParams& aParams) {
+  MOZ_ASSERT(mOwnerThread->IsCurrentThreadIn());
+  mAudioStream->SetVolume(aParams.mVolume);
+  mAudioStream->SetPlaybackRate(aParams.mPlaybackRate);
+  mAudioStream->SetPreservesPitch(aParams.mPreservesPitch);
+}
+
+void AudioSink::ConnectAudioQueues() {
+  MOZ_ASSERT(mOwnerThread->IsCurrentThreadIn());
+  mAudioQueueListener = mAudioQueue.PushEvent().Connect(
+      mOwnerThread, this, &AudioSink::OnAudioPushed);
+  mAudioQueueFinishListener = mAudioQueue.FinishEvent().Connect(
+      mOwnerThread, this, &AudioSink::NotifyAudioNeeded);
+  mProcessedQueueListener =
+      mAudioPopped.Connect(mOwnerThread, this, &AudioSink::OnAudioPopped);
 }
 
 TimeUnit AudioSink::GetPosition() {

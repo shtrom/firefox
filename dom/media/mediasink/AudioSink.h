@@ -134,6 +134,13 @@ class AudioSink : private AudioStream::DataSource {
 
   const RefPtr<AbstractThread> mOwnerThread;
 
+  // Set the playback accounting fields to their initial values.
+  void InitPlaybackState();
+
+  void ApplyPlaybackParams(const PlaybackParams& aParams);
+
+  void ConnectAudioQueues();
+
   // Audio Processing objects and methods
   void OnAudioPopped();
   void OnAudioPushed(const RefPtr<AudioData>& aSample);
@@ -162,7 +169,7 @@ class AudioSink : private AudioStream::DataSource {
   uint32_t mOutputRate;
   uint32_t mOutputChannels;
   AudibilityMonitor mAudibilityMonitor;
-  bool mIsAudioDataAudible;
+  Atomic<bool> mIsAudioDataAudible;
   MediaEventProducer<bool> mAudibleEvent;
   // Only signed on the real-time audio thread.
   MediaEventProducer<void> mAudioPopped;
