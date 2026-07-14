@@ -121,8 +121,27 @@ class FrameHistory {
     }
   }
 
+  // Re-zero the reported playback position for a stream reused across a seek.
+  // The audio engine's frame counter keeps climbing across the seek, so without
+  // this the position would keep reporting the pre-seek time; rebasing lets the
+  // position resume from zero at the seek target while the same stream keeps
+  // running.
+  void Rebase(int64_t aBaseOffset) {
+    LOG("FrameHistory::Rebase to base offset {}", aBaseOffset);
+    mChunks.Clear();
+    mBaseOffset = aBaseOffset;
+    mBasePosition = 0;
+  }
+
  private:
   AutoTArray<Chunk, 7> mChunks;
+  // The engine frame count (mBaseOffset) and the media position in microseconds
+  // (mBasePosition) of the oldest chunk still tracked in mChunks. They diverge
+  // because playback-rate changes and underruns make engine frames and media
+  // time advance at different rates; GetPosition walks mChunks starting from
+  // mBaseOffset to turn a raw engine count into a media position, and Rebase
+  // moves mBaseOffset (resetting mBasePosition to 0) to re-zero a reused
+  // stream.
   int64_t mBaseOffset;
   double mBasePosition;
 };
@@ -715,6 +734,8 @@ AudioClock::AudioClock(uint32_t aInRate)
       mPreservesPitch(true),
       mFrameHistory(new FrameHistory()) {}
 
+AudioClock::~AudioClock() = default;
+
 // Audio thread only
 void AudioClock::UpdateFrameHistory(uint32_t aServiced, uint32_t aUnderrun,
                                     bool aAudioThreadChanged) {
@@ -742,6 +763,24 @@ void AudioClock::UpdateFrameHistory(uint32_t aServiced, uint32_t aUnderrun,
 #else
   MutexAutoLock lock(mMutex);
   mFrameHistory->Append(aServiced, aUnderrun, mOutRate);
+#endif
+}
+
+void AudioClock::Rebase(int64_t aBaseOffset) {
+#ifdef XP_MACOSX
+  // The callback may still be running (the stream is reused, not stopped), so
+  // only touch owner/consumer-thread state. The queue is single-consumer and
+  // its Dequeue asserts this is that thread, which also guards the macOS
+  // owner-thread-only history. Discard the queued pre-seek callback info, then
+  // rebase. A stale item still held on the audio thread is applied later,
+  // adding at most a small bounded offset that the next rebase clears.
+  CallbackInfo info;
+  while (mCallbackInfoQueue.Dequeue(&info, 1)) {
+  }
+  mFrameHistory->Rebase(aBaseOffset);
+#else
+  MutexAutoLock lock(mMutex);
+  mFrameHistory->Rebase(aBaseOffset);
 #endif
 }
 

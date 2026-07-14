@@ -29,6 +29,7 @@ UNIFIED_SOURCES += [
     "TestAudioBufferAddWithScale.cpp",
     "TestAudioBuffers.cpp",
     "TestAudioCallbackDriver.cpp",
+    "TestAudioClock.cpp",
     "TestAudioCompactor.cpp",
     "TestAudioConfig.cpp",
     "TestAudioData.cpp",

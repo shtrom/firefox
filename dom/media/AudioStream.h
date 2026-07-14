@@ -48,11 +48,23 @@ struct CallbackInfo {
 class AudioClock {
  public:
   explicit AudioClock(uint32_t aInRate);
+  // Out-of-line so FrameHistory only needs to be a complete type in
+  // AudioStream.cpp; this lets other translation units construct and destroy an
+  // AudioClock without FrameHistory's definition, e.g. gtest.
+  ~AudioClock();
 
   // Update the number of samples that has been written in the audio backend.
   // Called on the audio thread only.
   void UpdateFrameHistory(uint32_t aServiced, uint32_t aUnderrun,
                           bool aAudioThreadChanged);
+
+  // Rebase the clock for a stream reused across a seek so the reported playback
+  // position resumes from zero. |aBaseOffset| is the current raw engine frame
+  // count. Safe to call while the audio callback is still running (the stream
+  // is reused, not stopped): on macOS it only touches owner/consumer-thread
+  // state, elsewhere it takes mMutex. Must be called on the same
+  // (owner/consumer) thread as GetPosition.
+  void Rebase(int64_t aBaseOffset);
 
   /**
    * @param aFrames The playback position in frames of the audio engine.
