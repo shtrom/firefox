@@ -6057,14 +6057,10 @@ bool nsDisplayStickyPosition::UpdateScrollData(
     }
 
     if (ShouldGetStickyAnimationId()) {
-      // TODO(follow-up to bug 1730749): Should there be a
-      // "GetWebRenderUserData" method we should be calling here, rather than
-      // "CreateOrRecycle"?
       RefPtr<WebRenderAPZAnimationData> animationData =
           aData->GetManager()
               ->CommandBuilder()
-              .CreateOrRecycleWebRenderUserData<WebRenderAPZAnimationData>(
-                  this);
+              .GetWebRenderUserData<WebRenderAPZAnimationData>(this);
       MOZ_ASSERT(animationData);
       aLayerData->SetStickyPositionAnimationId(animationData->GetAnimationId());
     }
