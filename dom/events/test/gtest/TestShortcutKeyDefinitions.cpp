@@ -57,7 +57,7 @@ static bool GetCommandFor(KeyEventHandler* aFirstHandler,
   for (KeyEventHandler* handler = aFirstHandler; handler;
        handler = handler->GetNextHandler()) {
     if (handler->KeyEventMatched(aDOMEvent, 0, IgnoreModifierState())) {
-      handler->GetCommandStr(aCommand);
+      handler->GetCommand(aCommand);
       return true;
     }
   }

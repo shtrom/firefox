@@ -202,22 +202,8 @@ void GlobalKeyListener::HandleEventOnCaptureInDefaultEventGroup(
     return;
   }
 
-  WalkHandlersResult result = HasHandlerForEvent(aEvent);
-  if (result.mReservedHandlerForChromeFound) {
+  if (HasHandlerForEvent(aEvent).mReservedHandlerForChromeFound) {
     widgetKeyboardEvent->MarkAsReservedByChrome();
-  }
-
-  // A key may match both a built-in shortcut and a XUL <key> handler, but we
-  // only record the built-in shortcut's command (from
-  // RootWindowGlobalKeyListener), since it runs first during the capture phase.
-  //
-  // Recording only the built-in command also matches the execution order for
-  // remote targets, where the built-in command runs in the content process
-  // first if any, while the parent waits for the reply. We also avoid exposing
-  // the command that executes in the parent process to content.
-  if (!widgetKeyboardEvent->mRelevantCommand) {
-    widgetKeyboardEvent->mRelevantCommand.emplace(static_cast<CommandInt>(
-        result.mRelevantCommand.valueOr(Command::DoNothing)));
   }
 }
 
@@ -275,7 +261,6 @@ GlobalKeyListener::WalkHandlersResult GlobalKeyListener::WalkHandlersInternal(
   }
 
   bool foundDisabledHandler = false;
-  Maybe<Command> relevantCommand;
   for (const ShortcutKeyCandidate& key : shortcutKeys) {
     const bool skipIfEarlierHandlerDisabled =
         key.mSkipIfEarlierHandlerDisabled ==
@@ -289,13 +274,6 @@ GlobalKeyListener::WalkHandlersResult GlobalKeyListener::WalkHandlersInternal(
     WalkHandlersResult result = WalkHandlersAndExecute(
         aPurpose, aKeyEvent, key.mCharCode, ignoreModifierState);
     if (result.mMeaningfulHandlerFound) {
-      // If the result indicates that a meaningful handler was found, it must be
-      // one of the following cases:
-      // - The handler executes the command.
-      // - The handler reserves the command, so the event won't be dispatched to
-      //   web content.
-      // In either case, we report this command as the relevant command instead
-      // of the first candidate's command.
       return result;
     }
     // Note that if the candidate should not match if an earlier handler is
@@ -307,13 +285,8 @@ GlobalKeyListener::WalkHandlersResult GlobalKeyListener::WalkHandlersInternal(
     if (!skipIfEarlierHandlerDisabled && !foundDisabledHandler) {
       foundDisabledHandler = result.mDisabledHandlerFound;
     }
-    if (!relevantCommand) {
-      relevantCommand = result.mRelevantCommand;
-    }
   }
-  WalkHandlersResult result;
-  result.mRelevantCommand = std::move(relevantCommand);
-  return result;
+  return {};
 }
 
 GlobalKeyListener::WalkHandlersResult GlobalKeyListener::WalkHandlersAndExecute(
@@ -330,7 +303,6 @@ GlobalKeyListener::WalkHandlersResult GlobalKeyListener::WalkHandlersAndExecute(
 
   // Try all of the handlers until we find one that matches the event.
   bool foundDisabledHandler = false;
-  Maybe<Command> relevantCommand;
   for (KeyEventHandler* handler = mHandler; handler;
        handler = handler->GetNextHandler()) {
     bool stopped = aKeyEvent->IsDispatchStopped();
@@ -380,11 +352,6 @@ GlobalKeyListener::WalkHandlersResult GlobalKeyListener::WalkHandlersAndExecute(
         result.mMeaningfulHandlerFound = true;
         result.mReservedHandlerForChromeFound =
             IsReservedKey(widgetKeyboardEvent, handler);
-        // Only set relevantCommand if the handler can be executed for the
-        // command.
-        if (CanHandle(handler, true)) {
-          result.mRelevantCommand.emplace(handler->GetCommand());
-        }
         return result;
       }
 
@@ -397,17 +364,7 @@ GlobalKeyListener::WalkHandlersResult GlobalKeyListener::WalkHandlersAndExecute(
           WalkHandlersResult result;
           result.mMeaningfulHandlerFound = true;
           result.mReservedHandlerForChromeFound = true;
-          // Only set relevantCommand if the handler can be executed for the
-          // command.
-          if (CanHandle(handler, true)) {
-            result.mRelevantCommand.emplace(handler->GetCommand());
-          }
           return result;
-        }
-        // Only set relevantCommand if the handler can be executed for the
-        // command.
-        if (!relevantCommand && CanHandle(handler, true)) {
-          relevantCommand.emplace(handler->GetCommand());
         }
       }
       // Otherwise, we've not found a handler for the event yet.
@@ -444,7 +401,6 @@ GlobalKeyListener::WalkHandlersResult GlobalKeyListener::WalkHandlersAndExecute(
 
   WalkHandlersResult result;
   result.mDisabledHandlerFound = foundDisabledHandler;
-  result.mRelevantCommand = std::move(relevantCommand);
   return result;
 }
 
@@ -480,7 +436,11 @@ bool GlobalKeyListener::IsReservedKey(WidgetKeyboardEvent* aKeyEvent,
   // fullscreen-exit shortcut (View:FullScreen), which must always remain
   // reserved so users can always exit fullscreen.
   if (KeyboardLockEnabledAndIsReservedKey(reserved, mTarget)) {
-    return aHandler->IsCommand("View:FullScreen");
+    nsCOMPtr<dom::Element> handlerElement = aHandler->GetHandlerElement();
+    nsAutoString command;
+    return handlerElement &&
+           handlerElement->GetAttr(nsGkAtoms::command, command) &&
+           command.EqualsLiteral("View:FullScreen");
   }
 
   if (reserved != ReservedKey_True &&

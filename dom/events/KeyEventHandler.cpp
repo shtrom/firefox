@@ -95,38 +95,15 @@ KeyEventHandler::~KeyEventHandler() {
   NS_CONTENT_DELETE_LIST_MEMBER(KeyEventHandler, this, mNextHandler);
 }
 
-bool KeyEventHandler::IsCommand(const char* aCommandStr) const {
-  MOZ_ASSERT(aCommandStr);
-  if (mIsXULKey) {
-    nsAutoString command;
-    if (nsCOMPtr<dom::Element> handlerElement = GetHandlerElement()) {
-      handlerElement->GetAttr(nsGkAtoms::command, command);
-    }
-    return command.EqualsASCII(aCommandStr);
-  }
-  if (mCommand) {
-    return nsDependentString(mCommand).EqualsASCII(aCommandStr);
-  }
-  return false;
-}
-
-void KeyEventHandler::GetCommandStr(nsAString& aCommand) const {
+void KeyEventHandler::GetCommand(nsAString& aCommand) const {
   MOZ_ASSERT(aCommand.IsEmpty());
   if (mIsXULKey) {
-    if (nsCOMPtr<dom::Element> handlerElement = GetHandlerElement()) {
-      handlerElement->GetAttr(nsGkAtoms::command, aCommand);
-    }
+    MOZ_ASSERT_UNREACHABLE("Not yet implemented");
     return;
   }
   if (mCommand) {
     aCommand.Assign(mCommand);
   }
-}
-
-Command KeyEventHandler::GetCommand() const {
-  nsAutoString command;
-  GetCommandStr(command);
-  return GetInternalCommand(NS_LossyConvertUTF16toASCII(command));
 }
 
 bool KeyEventHandler::TryConvertToKeyboardShortcut(
