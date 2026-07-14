@@ -609,6 +609,10 @@ mozilla::ipc::IPCResult DocAccessibleParent::RecvCaretMoveEvent(
     return IPC_OK();
   }
 
+  if (aOffset < -1) {
+    return IPC_FAIL(this, "Invalid caret offset");
+  }
+
   mCaretId = aID;
   mCaretOffset = aOffset;
   mIsCaretAtEndOfLine = aIsAtEndOfLine;
