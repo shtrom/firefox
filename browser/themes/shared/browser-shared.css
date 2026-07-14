@@ -1629,6 +1629,10 @@ popupnotificationcontent {
     color-mix(in srgb, var(--color-violet-desaturated-40) 24%, transparent)
   );
 
+  moz-badge {
+    margin-inline-start: var(--space-medium);
+  }
+
   .toolbarbutton-icon {
     margin-inline-end: var(--space-small);
     width: var(--icon-size-medium);
@@ -1658,10 +1662,6 @@ popupnotificationcontent {
     /* TODO: replace with token when available - Bug 2033070 */
     /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
     border-radius: 12px;
-
-    #ai-window-switch-ai-badge {
-      display: none;
-    }
 
     .toolbarbutton-icon {
       width: var(--icon-size-large);
@@ -1696,13 +1696,9 @@ popupnotificationcontent {
   }
 
   @media not -moz-pref("browser.nova.enabled") {
-    & > .toolbarbutton-icon {
+    > .toolbarbutton-icon {
       /* Smart Window icon has additional 0.125rem padding per side, to be slightly smaller than Classic Window icon when used in Switcher */
       padding: var(--space-xxsmall);
-    }
-
-    & moz-badge {
-      margin-inline-start: var(--space-medium);
     }
   }
 }
