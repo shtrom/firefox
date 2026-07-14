@@ -35,7 +35,7 @@ static void RegisterAppWithLaunchServices(NSString* aBundlePath) {
  * Helper to launch macOS tasks via NSTask and wait for the launched task to
  * terminate.
  */
-void LaunchTask(NSString* aPath, NSArray* aArguments) {
+static void LaunchTask(NSString* aPath, NSArray* aArguments) {
   MacAutoreleasePool pool;
 
   @try {
@@ -146,7 +146,7 @@ void LaunchMacApp(int aArgc, char** aArgv) {
   LaunchMacAppWithBundle(launchPath, arguments);
 }
 
-bool InstallPrivilegedHelperWithId(const char* helperId, os_log_t logger) {
+bool InstallPrivilegedHelper() {
   AuthorizationRef authRef = nullptr;
   OSStatus status = AuthorizationCreate(
       nullptr, kAuthorizationEmptyEnvironment,
@@ -154,10 +154,8 @@ bool InstallPrivilegedHelperWithId(const char* helperId, os_log_t logger) {
       &authRef);
   if (status != errAuthorizationSuccess) {
     // AuthorizationCreate really shouldn't fail.
-    os_log_error(
-        logger,
-        "AuthorizationCreate failed! NSOSStatusErrorDomain / %{public}d",
-        (int)status);
+    NSLog(@"AuthorizationCreate failed! NSOSStatusErrorDomain / %d",
+          (int)status);
     return NO;
   }
 
@@ -172,34 +170,25 @@ bool InstallPrivilegedHelperWithId(const char* helperId, os_log_t logger) {
   status = AuthorizationCopyRights(
       authRef, &authRights, kAuthorizationEmptyEnvironment, flags, nullptr);
   if (status != errAuthorizationSuccess) {
-    os_log_error(
-        logger,
-        "AuthorizationCopyRights failed! NSOSStatusErrorDomain / %{public}d",
-        (int)status);
+    NSLog(@"AuthorizationCopyRights failed! NSOSStatusErrorDomain / %d",
+          (int)status);
   } else {
     CFErrorRef cfError;
-    NSString* helperIdString = [NSString stringWithUTF8String:helperId];
     // This does all the work of verifying the helper tool against the
     // application and vice-versa. Once verification has passed, the embedded
     // launchd.plist is extracted and placed in /Library/LaunchDaemons and
     // then loaded. The executable is placed in
     // /Library/PrivilegedHelperTools.
     result = (BOOL)SMJobBless(kSMDomainSystemLaunchd,
-                              (CFStringRef)helperIdString, authRef, &cfError);
+                              (CFStringRef) @"org.mozilla.updater", authRef,
+                              &cfError);
     if (!result) {
-      os_log_error(logger, "Unable to install helper: %ld",
-                   CFErrorGetCode(cfError));
+      NSLog(@"Unable to install helper!");
       CFRelease(cfError);
     }
   }
 
-  AuthorizationFree(authRef, kAuthorizationFlagDefaults);
-
   return result;
-}
-
-bool InstallElevatedUpdater() {
-  return InstallPrivilegedHelperWithId("org.mozilla.updater");
 }
 
 void AbortElevatedUpdate() {
@@ -234,7 +223,7 @@ void AbortElevatedUpdate() {
 
 bool LaunchElevatedUpdate(int aArgc, char** aArgv, pid_t* aPid) {
   LaunchChildMac(aArgc, aArgv, aPid);
-  bool didSucceed = InstallElevatedUpdater();
+  bool didSucceed = InstallPrivilegedHelper();
   if (!didSucceed) {
     AbortElevatedUpdate();
   }

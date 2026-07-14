@@ -264,7 +264,8 @@
   <string>GeckoNSApplication</string>
 	<key>SMPrivilegedExecutables</key>
 	<dict>
-		@MOZ_SMPRIVILEGEDEXECUTABLES_REQUIREMENTS@
+		<key>org.mozilla.updater</key>
+		<string>@MOZ_SMPRIVILEGEDEXECUTABLES_REQUIREMENTS@</string>
 	</dict>
   <key>MozillaDeveloperRepoPath</key>
   <string>@MOZ_DEVELOPER_REPO_PATH@</string>
