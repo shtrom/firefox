@@ -2763,10 +2763,9 @@ CodeOffset MacroAssembler::nopPatchableToCall() {
 }
 
 FaultingCodeOffset MacroAssembler::wasmTrapInstruction() {
-  AutoForbidPoolsAndNops afp(this, 2);
-  FaultingCodeOffset fco = FaultingCodeOffset(currentOffset());
-  illegal_trap(kWasmTrapCode);
-  ebreak();
+  AutoForbidPoolsAndNops afp(this, 1);
+  FaultingCodeOffset fco(currentOffset());
+  illegal_trap(kWasmTrapCode);  // "csrwi csr_cycle, 0x6"
   return fco;
 }
 
