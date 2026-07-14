@@ -162,7 +162,11 @@ export var UrlbarUtils = {
     EXTENSION: "chrome://mozapps/skin/extensions/extension.svg",
     HISTORY: "chrome://browser/skin/history.svg",
     SEARCH_GLASS: "chrome://global/skin/icons/search-glass.svg",
-    TRENDING: "chrome://global/skin/icons/trending.svg",
+    get TRENDING() {
+      return Services.prefs.getBoolPref("browser.nova.enabled", false)
+        ? "chrome://browser/skin/trending.svg"
+        : "chrome://global/skin/icons/trending.svg";
+    },
     TIP: "chrome://global/skin/icons/lightbulb.svg",
     GLOBE: "chrome://global/skin/icons/defaultFavicon.svg",
   },
