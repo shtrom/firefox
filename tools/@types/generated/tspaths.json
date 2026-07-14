@@ -5749,9 +5749,6 @@
       "resource://gre/modules/BinarySearch.sys.mjs": [
         "../../../toolkit/modules/BinarySearch.sys.mjs"
       ],
-      "resource://gre/modules/Bits.sys.mjs": [
-        "../../../toolkit/components/bitsdownload/Bits.sys.mjs"
-      ],
       "resource://gre/modules/Blocklist.sys.mjs": [
         "../../../toolkit/mozapps/extensions/Blocklist.sys.mjs"
       ],
@@ -5784,12 +5781,6 @@
       ],
       "resource://gre/modules/CanvasHashData.sys.mjs": [
         "../../../toolkit/components/resistfingerprinting/CanvasHashData.sys.mjs"
-      ],
-      "resource://gre/modules/CaptchaDetectionPingUtils.sys.mjs": [
-        "../../../toolkit/components/captchadetection/CaptchaDetectionPingUtils.sys.mjs"
-      ],
-      "resource://gre/modules/CaptchaResponseObserver.sys.mjs": [
-        "../../../toolkit/components/captchadetection/CaptchaResponseObserver.sys.mjs"
       ],
       "resource://gre/modules/CertUtils.sys.mjs": [
         "../../../toolkit/modules/CertUtils.sys.mjs"
@@ -5835,6 +5826,9 @@
       ],
       "resource://gre/modules/ContentDOMReference.sys.mjs": [
         "../../../toolkit/modules/ContentDOMReference.sys.mjs"
+      ],
+      "resource://gre/modules/ContentDispatchChooser.sys.mjs": [
+        "../../../toolkit/mozapps/handling/ContentDispatchChooser.sys.mjs"
       ],
       "resource://gre/modules/ContentPrefServiceChild.sys.mjs": [
         "../../../toolkit/components/contentprefs/ContentPrefServiceChild.sys.mjs"
@@ -6072,9 +6066,6 @@
       ],
       "resource://gre/modules/FirstStartup.sys.mjs": [
         "../../../toolkit/modules/FirstStartup.sys.mjs"
-      ],
-      "resource://gre/modules/ForgetAboutSite.sys.mjs": [
-        "../../../toolkit/components/forgetaboutsite/ForgetAboutSite.sys.mjs"
       ],
       "resource://gre/modules/FormHistory.sys.mjs": [
         "../../../toolkit/components/satchel/FormHistory.sys.mjs"
@@ -6361,12 +6352,6 @@
       "resource://gre/modules/PermissionsUtils.sys.mjs": [
         "../../../toolkit/modules/PermissionsUtils.sys.mjs"
       ],
-      "resource://gre/modules/PictureInPicture.sys.mjs": [
-        "../../../toolkit/components/pictureinpicture/PictureInPicture.sys.mjs"
-      ],
-      "resource://gre/modules/PictureInPictureControls.sys.mjs": [
-        "../../../toolkit/components/pictureinpicture/PictureInPictureControls.sys.mjs"
-      ],
       "resource://gre/modules/PlacesBackups.sys.mjs": [
         "../../../toolkit/components/places/PlacesBackups.sys.mjs"
       ],
@@ -6393,6 +6378,9 @@
       ],
       "resource://gre/modules/PlacesUtils.sys.mjs": [
         "../../../toolkit/components/places/PlacesUtils.sys.mjs"
+      ],
+      "resource://gre/modules/PoliciesHelpers.sys.mjs": [
+        "../../../toolkit/components/enterprisepolicies/PoliciesHelpers.sys.mjs"
       ],
       "resource://gre/modules/PopupNotifications.sys.mjs": [
         "../../../toolkit/modules/PopupNotifications.sys.mjs"
@@ -7075,11 +7063,17 @@
       "resource://newtab/lib/Widgets/ListsFeed.sys.mjs": [
         "../../../browser/extensions/newtab/lib/Widgets/ListsFeed.sys.mjs"
       ],
+      "resource://newtab/lib/Widgets/PictureOfTheDayFeed.sys.mjs": [
+        "../../../browser/extensions/newtab/lib/Widgets/PictureOfTheDayFeed.sys.mjs"
+      ],
       "resource://newtab/lib/Widgets/PrivacyFeed.sys.mjs": [
         "../../../browser/extensions/newtab/lib/Widgets/PrivacyFeed.sys.mjs"
       ],
       "resource://newtab/lib/Widgets/SportsFeed.sys.mjs": [
         "../../../browser/extensions/newtab/lib/Widgets/SportsFeed.sys.mjs"
+      ],
+      "resource://newtab/lib/Widgets/StocksFeed.sys.mjs": [
+        "../../../browser/extensions/newtab/lib/Widgets/StocksFeed.sys.mjs"
       ],
       "resource://newtab/lib/Widgets/TimerFeed.sys.mjs": [
         "../../../browser/extensions/newtab/lib/Widgets/TimerFeed.sys.mjs"
