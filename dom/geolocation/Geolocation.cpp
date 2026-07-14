@@ -9,6 +9,7 @@
 #include "mozilla/ClearOnShutdown.h"
 #include "mozilla/CycleCollectedJSContext.h"  // for nsAutoMicroTask
 #include "mozilla/EventStateManager.h"
+#include "mozilla/GeolocationService.h"
 #include "mozilla/Preferences.h"
 #include "mozilla/Services.h"
 #include "mozilla/StaticPrefs_geo.h"
@@ -26,7 +27,6 @@
 #include "nsComponentManagerUtils.h"
 #include "nsContentPermissionHelper.h"
 #include "nsContentUtils.h"
-#include "nsGeolocationService.h"
 #include "nsGlobalWindowInner.h"
 #include "nsINamed.h"
 #include "nsIObserverService.h"
@@ -417,8 +417,8 @@ nsGeolocationRequest::Allow(JS::Handle<JS::Value> aChoices) {
     return NS_OK;
   }
 
-  RefPtr<nsGeolocationService> gs = nsGeolocationService::GetGeolocationService(
-      mLocator->GetBrowsingContext());
+  RefPtr<GeolocationService> gs =
+      GeolocationService::GetGeolocationService(mLocator->GetBrowsingContext());
   bool canUseCache = false;
   CachedPositionAndAccuracy lastPosition = gs->GetCachedPosition();
   if (lastPosition.position) {
@@ -440,7 +440,7 @@ nsGeolocationRequest::Allow(JS::Handle<JS::Value> aChoices) {
 
   // Enforce using cache in case the geolocation override server is set,
   // since this server can return only cached values.
-  if (!canUseCache && gs != nsGeolocationService::sService.get()) {
+  if (!canUseCache && gs != GeolocationService::sService.get()) {
     canUseCache = true;
   }
 
@@ -649,9 +649,8 @@ void nsGeolocationRequest::Shutdown() {
   // If there are no other high accuracy requests, the geolocation service will
   // notify the provider to switch to the default accuracy.
   if (mOptions && mOptions->mEnableHighAccuracy) {
-    RefPtr<nsGeolocationService> gs =
-        nsGeolocationService::GetGeolocationService(
-            mLocator->GetBrowsingContext());
+    RefPtr<GeolocationService> gs = GeolocationService::GetGeolocationService(
+        mLocator->GetBrowsingContext());
     if (gs) {
       gs->UpdateAccuracy();
     }
@@ -774,7 +773,7 @@ nsresult Geolocation::Init(nsPIDOMWindowInner* aContentDom) {
   // If no aContentDom was passed into us, we are being used
   // by chrome/c++ and have no mOwner, no mPrincipal, and no need
   // to prompt.
-  mService = nsGeolocationService::GetGeolocationService(mBrowsingContext);
+  mService = GeolocationService::GetGeolocationService(mBrowsingContext);
 
   if (mService) {
     mService->AddLocator(this);
@@ -1213,7 +1212,7 @@ void Geolocation::RequestIfPermitted(nsGeolocationRequest* request) {
   }
 }
 
-void Geolocation::SetService(nsGeolocationService* aService) {
+void Geolocation::SetService(GeolocationService* aService) {
   mService = aService;
 }
 

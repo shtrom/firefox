@@ -28,9 +28,10 @@
 #include "nsTArray.h"
 #include "nsWrapperCache.h"
 
-class nsGeolocationService;
 class nsGeolocationRequest;
-
+namespace mozilla {
+class GeolocationService;
+}
 namespace mozilla::dom {
 class Geolocation;
 using GeoPositionCallback =
@@ -50,7 +51,7 @@ namespace mozilla::dom {
 class Geolocation final : public nsIGeolocationUpdate,
                           public nsWrapperCache,
                           public SupportsWeakPtr {
-  friend class ::nsGeolocationService;
+  friend class ::mozilla::GeolocationService;
 
  public:
   NS_DECL_CYCLE_COLLECTING_ISUPPORTS_FINAL
@@ -161,7 +162,7 @@ class Geolocation final : public nsIGeolocationUpdate,
   static void RequestIfPermitted(nsGeolocationRequest* request);
 
   // Allow updating service for shutdown deregistering
-  void SetService(nsGeolocationService* aService);
+  void SetService(GeolocationService* aService);
 
   // Two callback arrays.  The first |mPendingCallbacks| holds objects for only
   // one callback and then they are released/removed from the array.  The second
@@ -186,9 +187,9 @@ class Geolocation final : public nsIGeolocationUpdate,
   ProtocolType mProtocolType;
 
   // owning back pointer.
-  RefPtr<nsGeolocationService> mService;
+  RefPtr<GeolocationService> mService;
   // owning back pointer for service override.
-  RefPtr<nsGeolocationService> mServiceOverride;
+  RefPtr<GeolocationService> mServiceOverride;
 
   // Watch ID
   uint32_t mLastWatchId;

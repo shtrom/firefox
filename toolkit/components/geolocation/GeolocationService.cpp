@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "nsGeolocationService.h"
+#include "GeolocationService.h"
 
 #include "mozilla/Services.h"
 #include "mozilla/StaticPrefs_geo.h"
@@ -40,19 +40,19 @@ using namespace mozilla::dom;
 mozilla::LazyLogModule gGeolocationLog("Geolocation");
 
 ////////////////////////////////////////////////////
-// nsGeolocationService
+// GeolocationService
 ////////////////////////////////////////////////////
-NS_INTERFACE_MAP_BEGIN(nsGeolocationService)
+NS_INTERFACE_MAP_BEGIN(GeolocationService)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIGeolocationUpdate)
   NS_INTERFACE_MAP_ENTRY(nsIGeolocationService)
   NS_INTERFACE_MAP_ENTRY(nsIGeolocationUpdate)
   NS_INTERFACE_MAP_ENTRY(nsIObserver)
 NS_INTERFACE_MAP_END
 
-NS_IMPL_ADDREF(nsGeolocationService)
-NS_IMPL_RELEASE(nsGeolocationService)
+NS_IMPL_ADDREF(GeolocationService)
+NS_IMPL_RELEASE(GeolocationService)
 
-nsresult nsGeolocationService::Init() {
+nsresult GeolocationService::Init() {
   if (!StaticPrefs::geo_enabled()) {
     return NS_ERROR_FAILURE;
   }
@@ -135,11 +135,11 @@ nsresult nsGeolocationService::Init() {
   return NS_OK;
 }
 
-nsGeolocationService::~nsGeolocationService() = default;
+GeolocationService::~GeolocationService() = default;
 
 NS_IMETHODIMP
-nsGeolocationService::Observe(nsISupports* aSubject, const char* aTopic,
-                              const char16_t* aData) {
+GeolocationService::Observe(nsISupports* aSubject, const char* aTopic,
+                            const char16_t* aData) {
   if (!strcmp("xpcom-shutdown", aTopic)) {
     nsCOMPtr<nsIObserverService> obs = services::GetObserverService();
     if (obs) {
@@ -172,7 +172,7 @@ nsGeolocationService::Observe(nsISupports* aSubject, const char* aTopic,
 }
 
 NS_IMETHODIMP
-nsGeolocationService::Update(nsIDOMGeoPosition* aSomewhere) {
+GeolocationService::Update(nsIDOMGeoPosition* aSomewhere) {
   if (aSomewhere) {
     mStarting.reset();
     SetCachedPosition(aSomewhere);
@@ -186,10 +186,9 @@ nsGeolocationService::Update(nsIDOMGeoPosition* aSomewhere) {
 }
 
 NS_IMETHODIMP
-nsGeolocationService::NotifyError(uint16_t aErrorCode) {
-  MOZ_LOG(
-      gGeolocationLog, LogLevel::Debug,
-      ("nsGeolocationService::NotifyError with error code: %u", aErrorCode));
+GeolocationService::NotifyError(uint16_t aErrorCode) {
+  MOZ_LOG(gGeolocationLog, LogLevel::Debug,
+          ("GeolocationService::NotifyError with error code: %u", aErrorCode));
   // nsTArray doesn't have a constructors that takes a different-type TArray.
   nsTArray<RefPtr<Geolocation>> geolocators;
   geolocators.AppendElements(mGeolocators);
@@ -200,16 +199,16 @@ nsGeolocationService::NotifyError(uint16_t aErrorCode) {
   return NS_OK;
 }
 
-void nsGeolocationService::SetCachedPosition(nsIDOMGeoPosition* aPosition) {
+void GeolocationService::SetCachedPosition(nsIDOMGeoPosition* aPosition) {
   mLastPosition.position = aPosition;
   mLastPosition.isHighAccuracy = mHigherAccuracy;
 }
 
-CachedPositionAndAccuracy nsGeolocationService::GetCachedPosition() {
+CachedPositionAndAccuracy GeolocationService::GetCachedPosition() {
   return mLastPosition;
 }
 
-nsresult nsGeolocationService::StartDevice() {
+nsresult GeolocationService::StartDevice() {
   if (!StaticPrefs::geo_enabled()) {
     return NS_ERROR_NOT_AVAILABLE;
   }
@@ -256,7 +255,7 @@ nsresult nsGeolocationService::StartDevice() {
   return NS_OK;
 }
 
-void nsGeolocationService::SetDisconnectTimer() {
+void GeolocationService::SetDisconnectTimer() {
   if (!mDisconnectTimer) {
     mDisconnectTimer = NS_NewTimer();
   } else {
@@ -267,7 +266,7 @@ void nsGeolocationService::SetDisconnectTimer() {
                          nsITimer::TYPE_ONE_SHOT);
 }
 
-bool nsGeolocationService::HighAccuracyRequested() {
+bool GeolocationService::HighAccuracyRequested() {
   for (uint32_t i = 0; i < mGeolocators.Length(); i++) {
     if (mGeolocators[i]->HighAccuracyRequested()) {
       return true;
@@ -277,7 +276,7 @@ bool nsGeolocationService::HighAccuracyRequested() {
   return false;
 }
 
-void nsGeolocationService::UpdateAccuracy(bool aForceHigh) {
+void GeolocationService::UpdateAccuracy(bool aForceHigh) {
   bool highRequired = aForceHigh || HighAccuracyRequested();
 
   if (XRE_IsContentProcess()) {
@@ -293,7 +292,7 @@ void nsGeolocationService::UpdateAccuracy(bool aForceHigh) {
   mHigherAccuracy = highRequired;
 }
 
-NS_IMETHODIMP nsGeolocationService::StopDevice() {
+NS_IMETHODIMP GeolocationService::StopDevice() {
   if (mDisconnectTimer) {
     mDisconnectTimer->Cancel();
     mDisconnectTimer = nullptr;
@@ -324,12 +323,11 @@ NS_IMETHODIMP nsGeolocationService::StopDevice() {
   return NS_OK;
 }
 
-StaticRefPtr<nsGeolocationService> nsGeolocationService::sService;
+StaticRefPtr<GeolocationService> GeolocationService::sService;
 
-already_AddRefed<nsGeolocationService>
-nsGeolocationService::GetGeolocationService(
+already_AddRefed<GeolocationService> GeolocationService::GetGeolocationService(
     mozilla::dom::BrowsingContext* aBrowsingContext) {
-  RefPtr<nsGeolocationService> result;
+  RefPtr<GeolocationService> result;
   if (aBrowsingContext) {
     result = aBrowsingContext->GetGeolocationServiceOverride();
 
@@ -337,31 +335,31 @@ nsGeolocationService::GetGeolocationService(
       return result.forget();
     }
   }
-  if (nsGeolocationService::sService) {
-    result = nsGeolocationService::sService;
+  if (GeolocationService::sService) {
+    result = GeolocationService::sService;
 
     return result.forget();
   }
 
-  result = new nsGeolocationService();
+  result = new GeolocationService();
   if (NS_FAILED(result->Init())) {
     return nullptr;
   }
 
-  ClearOnShutdown(&nsGeolocationService::sService);
-  nsGeolocationService::sService = result;
+  ClearOnShutdown(&GeolocationService::sService);
+  GeolocationService::sService = result;
   return result.forget();
 }
 
-void nsGeolocationService::AddLocator(Geolocation* aLocator) {
+void GeolocationService::AddLocator(Geolocation* aLocator) {
   mGeolocators.AppendElement(aLocator);
 }
 
-void nsGeolocationService::RemoveLocator(Geolocation* aLocator) {
+void GeolocationService::RemoveLocator(Geolocation* aLocator) {
   mGeolocators.RemoveElement(aLocator);
 }
 
-void nsGeolocationService::MoveLocators(nsGeolocationService* aService) {
+void GeolocationService::MoveLocators(GeolocationService* aService) {
   for (Geolocation* loc : mGeolocators) {
     aService->AddLocator(loc);
     loc->SetService(aService);

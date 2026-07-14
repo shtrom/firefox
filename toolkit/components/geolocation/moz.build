@@ -5,12 +5,12 @@
 with Files("**"):
     BUG_COMPONENT = ("Core", "Geolocation Provider")
 
-EXPORTS += [
-    "nsGeolocationService.h",
+EXPORTS.mozilla += [
+    "GeolocationService.h",
 ]
 
 UNIFIED_SOURCES += [
-    "nsGeolocationService.cpp",
+    "GeolocationService.cpp",
 ]
 
 XPCOM_MANIFESTS += [
