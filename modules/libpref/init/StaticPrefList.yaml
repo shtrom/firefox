@@ -20585,7 +20585,7 @@
 # fast input devices (bug 1098981).
 - name: widget.gtk.x11-key-repeat-throttle.enabled
   type: bool
-  value: true
+  value: false
   mirror: always
 
 # Whether we enable rounded bottom corners on GTK by default.
