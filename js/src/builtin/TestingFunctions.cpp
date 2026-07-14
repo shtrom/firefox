@@ -4950,7 +4950,6 @@ static bool SettlePromiseNow(JSContext* cx, unsigned argc, Value* vp) {
       Int32Value(flags | PROMISE_FLAG_RESOLVED | PROMISE_FLAG_FULFILLED));
   promise->setFixedSlot(PromiseSlot_ReactionsOrResult, UndefinedValue());
 
-  DebugAPI::onPromiseSettled(cx, promise);
   return true;
 }
 
@@ -10620,9 +10619,7 @@ static const JSFunctionSpecWithHelp TestingFunctions[] = {
     JS_FN_HELP("settlePromiseNow", SettlePromiseNow, 1, 0,
 "settlePromiseNow(promise)",
 "  'Settle' a 'promise' immediately. This just marks the promise as resolved\n"
-"  with a value of `undefined` and causes the firing of any onPromiseSettled\n"
-"  hooks set on Debugger instances that are observing the given promise's\n"
-"  global as a debuggee."),
+"  with a value of `undefined`."),
     JS_FN_HELP("getWaitForAllPromise", GetWaitForAllPromise, 1, 0,
 "getWaitForAllPromise(densePromisesArray)",
 "  Calls the 'GetWaitForAllPromise' JSAPI function and returns the result\n"

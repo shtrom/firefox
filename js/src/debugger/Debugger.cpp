@@ -3071,7 +3071,7 @@ bool Debugger::appendAllocationSite(JSContext* cx, HandleObject obj,
 }
 
 bool Debugger::firePromiseHook(JSContext* cx, Hook hook, HandleObject promise) {
-  MOZ_ASSERT(hook == OnNewPromise || hook == OnPromiseSettled);
+  MOZ_ASSERT(hook == OnNewPromise);
 
   RootedObject hookObj(cx, getHook(hook));
   MOZ_ASSERT(hookObj);
@@ -3099,13 +3099,7 @@ bool Debugger::firePromiseHook(JSContext* cx, Hook hook, HandleObject promise) {
 /* static */
 void Debugger::slowPathPromiseHook(JSContext* cx, Hook hook,
                                    Handle<PromiseObject*> promise) {
-  MOZ_ASSERT(hook == OnNewPromise || hook == OnPromiseSettled);
-
-  if (hook == OnPromiseSettled) {
-    // We should be in the right compartment, but for simplicity always enter
-    // the promise's realm below.
-    cx->check(promise);
-  }
+  MOZ_ASSERT(hook == OnNewPromise);
 
   AutoRealm ar(cx, promise);
 
@@ -3120,12 +3114,6 @@ void Debugger::slowPathPromiseHook(JSContext* cx, Hook hook,
 void DebugAPI::slowPathOnNewPromise(JSContext* cx,
                                     Handle<PromiseObject*> promise) {
   Debugger::slowPathPromiseHook(cx, Debugger::OnNewPromise, promise);
-}
-
-/* static */
-void DebugAPI::slowPathOnPromiseSettled(JSContext* cx,
-                                        Handle<PromiseObject*> promise) {
-  Debugger::slowPathPromiseHook(cx, Debugger::OnPromiseSettled, promise);
 }
 
 /*** Debugger code invalidation for observing execution *********************/
@@ -4329,8 +4317,6 @@ struct MOZ_STACK_CLASS Debugger::CallData {
   bool setOnNewGlobalObject();
   bool getOnNewPromise();
   bool setOnNewPromise();
-  bool getOnPromiseSettled();
-  bool setOnPromiseSettled();
   bool getUncaughtExceptionHook();
   bool setUncaughtExceptionHook();
   bool getAllowUnobservedWasm();
@@ -4502,14 +4488,6 @@ bool Debugger::CallData::getOnNewPromise() {
 
 bool Debugger::CallData::setOnNewPromise() {
   return setHookImpl(cx, args, *dbg, OnNewPromise);
-}
-
-bool Debugger::CallData::getOnPromiseSettled() {
-  return getHookImpl(cx, args, *dbg, OnPromiseSettled);
-}
-
-bool Debugger::CallData::setOnPromiseSettled() {
-  return setHookImpl(cx, args, *dbg, OnPromiseSettled);
 }
 
 bool Debugger::CallData::getOnEnterFrame() {
@@ -6945,7 +6923,6 @@ const JSPropertySpec Debugger::properties[] = {
                   setOnExceptionUnwind),
     JS_DEBUG_PSGS("onNewScript", getOnNewScript, setOnNewScript),
     JS_DEBUG_PSGS("onNewPromise", getOnNewPromise, setOnNewPromise),
-    JS_DEBUG_PSGS("onPromiseSettled", getOnPromiseSettled, setOnPromiseSettled),
     JS_DEBUG_PSGS("onEnterFrame", getOnEnterFrame, setOnEnterFrame),
     JS_DEBUG_PSGS("onNativeCall", getOnNativeCall, setOnNativeCall),
     JS_DEBUG_PSGS("shouldAvoidSideEffects", getShouldAvoidSideEffects,
