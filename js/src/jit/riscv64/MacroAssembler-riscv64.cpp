@@ -4773,32 +4773,38 @@ static void CompareExchange(MacroAssembler& masm,
       if (signExtend) {
         masm.SignExtendByte(valueTemp, oldval);
         masm.SignExtendByte(output, output);
-        masm.SignExtendByte(newval, newval);
       } else {
         masm.andi(valueTemp, oldval, 0xff);
         masm.andi(output, output, 0xff);
-        masm.andi(newval, newval, 0xff);
       }
       break;
     case 2:
       if (signExtend) {
         masm.SignExtendShort(valueTemp, oldval);
         masm.SignExtendShort(output, output);
-        masm.SignExtendShort(newval, newval);
       } else {
         UseScratchRegisterScope temps(&masm);
         Register mask = temps.Acquire();
         masm.ma_li(mask, Imm32(0xffff));
         masm.and_(valueTemp, oldval, mask);
         masm.and_(output, output, mask);
-        masm.and_(newval, newval, mask);
       }
       break;
   }
 
   masm.ma_b(output, valueTemp, &end, Assembler::NotEqual, ShortJump);
 
-  masm.sllw(valueTemp, newval, offsetTemp);
+  switch (nbytes) {
+  case 1:
+    masm.andi(valueTemp, newval, 0xff);
+    break;
+  case 2:
+    masm.slli(valueTemp, newval, 48);
+    masm.srli(valueTemp, valueTemp, 48);
+    break;
+  }
+
+  masm.sllw(valueTemp, valueTemp, offsetTemp);
   if (masm.HasZbbExtension()) {
     masm.andn(scratch1, scratch1, maskTemp);
   } else {
