@@ -249,7 +249,8 @@ nsresult UnboxValue(JSContext* aCx, const jni::Object::LocalRef& aData,
   } else if (aData.IsInstanceOf<jni::DoubleArray>()) {
     return UnboxArrayPrimitive<
         double, jdouble, jdoubleArray, &JNIEnv::GetDoubleArrayElements,
-        &JNIEnv::ReleaseDoubleArrayElements, &JS_NumberValue>(aCx, aData, aOut);
+        &JNIEnv::ReleaseDoubleArrayElements, &JS::NumberValue<double>>(
+        aCx, aData, aOut);
 
   } else if (aData.IsInstanceOf<StringArray>()) {
     return UnboxArrayObject<&UnboxString>(aCx, aData, aOut);
