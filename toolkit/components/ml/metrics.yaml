@@ -373,6 +373,19 @@ firefox.ai.runtime:
       character_count:
         description: The number of characters generated for text generation tasks.
         type: quantity
+      time_to_first_chunk:
+        description: >
+          Milliseconds from the run request being dispatched until the first
+          generated (non-prompt) chunk is received by the consumer. Measured in
+          the parent process end-to-end, so it includes IPC and streaming
+          overhead, and is populated for all streaming backends.
+        type: quantity
+      average_chunk_time:
+        description: >
+          The mean milliseconds elapsed between consecutive generated
+          (non-prompt) chunks for a streamed text generation run. Null when
+          fewer than two generated chunks were produced.
+        type: quantity
       system_memory_mb:
         description: The total physical system memory in MB.
         type: quantity
@@ -380,9 +393,11 @@ firefox.ai.runtime:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1992779
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1997016
       - https://bugzilla.mozilla.org/show_bug.cgi?id=2029250
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2016214
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1992779
       - https://phabricator.services.mozilla.com/D270909
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2016214
     data_sensitivity:
       - interaction
     notification_emails:

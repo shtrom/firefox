@@ -616,7 +616,19 @@ add_task(async function test_run_with_generator_telemetry() {
     checkNumber("memory_bytes");
     checkNumber("system_memory_mb");
     checkNumber("character_count");
+    checkNumber("time_to_first_chunk");
     Assert.ok(!extra.token_count, "Token count is not implemented yet.");
+
+    Assert.notEqual(
+      extra.average_chunk_time,
+      null,
+      "average_chunk_time is recorded when more than one chunk streams"
+    );
+    Assert.greaterOrEqual(
+      Number(extra.average_chunk_time),
+      0,
+      "average_chunk_time should be a non-negative number"
+    );
 
     Assert.equal(extra.feature_id, "about-inference");
     Assert.equal(extra.backend, "openai");
