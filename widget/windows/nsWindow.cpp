@@ -6425,6 +6425,9 @@ void nsWindow::OnWindowPosChanged(WINDOWPOS* wp) {
     }
   }
 
+  // Recompute tiled state.
+  SetIsTiled(mWnd && ::IsWindowArranged(mWnd));
+
   // Notify visibility change when window is activated.
   if (!(wp->flags & SWP_NOACTIVATE) && NeedsToTrackWindowOcclusionState()) {
     WinWindowOcclusionTracker::Get()->OnWindowVisibilityChanged(
