@@ -29,7 +29,6 @@
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/DocumentPictureInPicture.h"
 #include "mozilla/dom/Element.h"
-#include "mozilla/dom/Geolocation.h"
 #include "mozilla/dom/HTMLEmbedElement.h"
 #include "mozilla/dom/HTMLIFrameElement.h"
 #include "mozilla/dom/Location.h"
@@ -73,6 +72,7 @@
 #include "mozilla/StartupTimeline.h"
 #include "GeckoProfiler.h"
 #include "mozilla/ProfilerMarkers.h"
+#include "nsGeolocationService.h"
 #include "nsIURIFixup.h"
 #include "nsIXULRuntime.h"
 

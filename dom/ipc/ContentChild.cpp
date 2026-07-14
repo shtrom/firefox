@@ -10,7 +10,6 @@
 #include "ContentChild.h"
 #include "GMPServiceChild.h"
 #include "GeckoProfiler.h"
-#include "Geolocation.h"
 #include "HandlerServiceChild.h"
 #include "ScrollingMetrics.h"
 #include "imgLoader.h"
@@ -133,6 +132,7 @@
 #include "nsBaseDragService.h"
 #include "nsDocShellLoadTypes.h"
 #include "nsFocusManager.h"
+#include "nsGeolocationService.h"
 #include "nsHttpHandler.h"
 #include "nsIConsoleService.h"
 #include "nsIInputStreamChannel.h"
@@ -642,9 +642,9 @@ ContentChild::ContentChild()
 
 #ifdef _MSC_VER
 #  pragma warning(push)
-#  pragma warning(disable                                               \
-                  : 4722) /* Silence "destructor never returns" warning \
-                           */
+#  pragma warning(                                                  \
+      disable : 4722) /* Silence "destructor never returns" warning \
+                       */
 #endif
 
 ContentChild::~ContentChild() {
