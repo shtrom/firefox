@@ -11704,6 +11704,14 @@
   value: false
   mirror: always
 
+# TODO(Bug 1540681): Merge with the prefixed version.
+# Is support for the unprefixed 'line-clamp' property enabled?
+- name: layout.css.line-clamp.enabled
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
+  rust: true
+
 # Does webkit-line-clamp skip painting clamped lines?
 # See bug 1934547.
 - name: layout.css.webkit-line-clamp.skip-paint
