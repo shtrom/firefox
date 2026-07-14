@@ -162,9 +162,9 @@ class Module : public JS::WasmModule {
 
   // Instantiate this module with the given imports:
 
-  bool instantiate(JSContext* cx, ImportValues& imports,
-                   HandleObject instanceProto,
-                   MutableHandle<WasmInstanceObject*> instanceObj) const;
+  [[nodiscard]] bool instantiate(
+      JSContext* cx, ImportValues& imports, HandleObject instanceProto,
+      MutableHandle<WasmInstanceObject*> instanceObj) const;
 
   // Tier-2 compilation may be initiated after the Module is constructed at
   // most once. When tier-2 compilation completes, ModuleGenerator calls

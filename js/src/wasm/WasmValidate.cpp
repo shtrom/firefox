@@ -5982,8 +5982,18 @@ enum class AliasKindRaw : uint8_t {
             // normal modules. If a module simply re-exports an item, the same
             // trick could be performed.
             ComponentSortIndex original = inlineExports.resolveOriginal(exp);
-            return ComponentItem::alias(ComponentAliasKind::Outer,
-                                        original.sort, 0, original.index);
+            ComponentItem originalItem = c->resolveSortIndex(original);
+            if (originalItem.isOuterAlias()) {
+              // Never let an outer alias point at an outer alias; always just
+              // point it at the original item.
+              MOZ_ASSERT(
+                  !c->resolveSortIndex(originalItem.outerAliasSortIndex())
+                       .isOuterAlias());
+              return originalItem;
+            } else {
+              return ComponentItem::alias(ComponentAliasKind::Outer,
+                                          original.sort, 0, original.index);
+            }
           });
 
       ComponentSortIndex newAliasSortIndex;

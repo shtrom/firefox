@@ -3969,6 +3969,7 @@ bool Instance::getExportedFunction(JSContext* cx, uint32_t funcIndex,
     const FuncExport& funcExport = codeBlock.lookupFuncExport(funcIndex);
     if (!funcExport.hasEagerStubs()) {
       if (!EnsureBuiltinThunksInitialized()) {
+        ReportOutOfMemory(cx);
         return false;
       }
       void* provisionalLazyJitEntryStub = ProvisionalLazyJitEntryStub();
