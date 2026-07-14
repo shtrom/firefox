@@ -5507,13 +5507,13 @@ void MacroAssemblerRiscv64::ma_add64(Register rd, Register rs, Imm64 rt) {
 }
 
 void MacroAssemblerRiscv64::ma_sub32(Register rd, Register rs, Imm32 rt) {
-  if (is_int12(-rt.value)) {
+  if (is_int12(int32_t(-uint32_t(rt.value)))) {
     // No subi instr, use addi(x, y, -imm).
     addiw(rd, rs, static_cast<int32_t>(-rt.value));
-  } else if (is_two_int12(rt.value)) {
-    auto [first, second] = ToTwoInt12(rt.value);
-    addiw(rd, rs, -first);
-    addiw(rd, rd, -second);
+  } else if (is_two_int12(int32_t(-uint32_t(rt.value)))) {
+    auto [first, second] = ToTwoInt12(-rt.value);
+    addiw(rd, rs, first);
+    addiw(rd, rd, second);
   } else {
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
@@ -5526,10 +5526,10 @@ void MacroAssemblerRiscv64::ma_sub64(Register rd, Register rs, Imm64 rt) {
   if (is_int12(-rt.value)) {
     // No subi instr, use addi(x, y, -imm).
     addi(rd, rs, static_cast<int32_t>(-rt.value));
-  } else if (is_two_int12(rt.value)) {
-    auto [first, second] = ToTwoInt12(rt.value);
-    addi(rd, rs, -first);
-    addi(rd, rd, -second);
+  } else if (is_two_int12(-rt.value)) {
+    auto [first, second] = ToTwoInt12(-rt.value);
+    addi(rd, rs, first);
+    addi(rd, rd, second);
   } else {
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
