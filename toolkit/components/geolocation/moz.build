@@ -13,6 +13,12 @@ UNIFIED_SOURCES += [
     "nsGeolocationService.cpp",
 ]
 
+XPCOM_MANIFESTS += [
+    "components.conf",
+]
+XPIDL_SOURCES += ["nsIGeolocationService.idl"]
+XPIDL_MODULE = "toolkit_geolocation"
+
 include("/ipc/chromium/chromium-config.mozbuild")
 
 FINAL_LIBRARY = "xul"

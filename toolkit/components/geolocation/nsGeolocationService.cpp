@@ -44,6 +44,7 @@ mozilla::LazyLogModule gGeolocationLog("Geolocation");
 ////////////////////////////////////////////////////
 NS_INTERFACE_MAP_BEGIN(nsGeolocationService)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIGeolocationUpdate)
+  NS_INTERFACE_MAP_ENTRY(nsIGeolocationService)
   NS_INTERFACE_MAP_ENTRY(nsIGeolocationUpdate)
   NS_INTERFACE_MAP_ENTRY(nsIObserver)
 NS_INTERFACE_MAP_END
@@ -292,7 +293,7 @@ void nsGeolocationService::UpdateAccuracy(bool aForceHigh) {
   mHigherAccuracy = highRequired;
 }
 
-void nsGeolocationService::StopDevice() {
+NS_IMETHODIMP nsGeolocationService::StopDevice() {
   if (mDisconnectTimer) {
     mDisconnectTimer->Cancel();
     mDisconnectTimer = nullptr;
@@ -303,22 +304,24 @@ void nsGeolocationService::StopDevice() {
     ContentChild* cpc = ContentChild::GetSingleton();
     cpc->SendRemoveGeolocationListener();
 
-    return;  // bail early
+    return NS_OK;  // bail early
   }
 
   nsCOMPtr<nsIObserverService> obs = services::GetObserverService();
   if (!obs) {
-    return;
+    return NS_OK;
   }
 
   if (!mProvider) {
-    return;
+    return NS_OK;
   }
 
   mHigherAccuracy = false;
 
   mProvider->Shutdown();
   obs->NotifyObservers(mProvider, "geolocation-device-events", u"shutdown");
+
+  return NS_OK;
 }
 
 StaticRefPtr<nsGeolocationService> nsGeolocationService::sService;
