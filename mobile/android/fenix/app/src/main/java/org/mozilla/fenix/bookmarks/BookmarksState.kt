@@ -105,6 +105,9 @@ internal data class BookmarksState(
     val isSearching: Boolean
         get() = searchState != null
 
+    val canEnterSearch: Boolean
+        get() = !isLoading && !isSearching && bookmarkItems.isNotEmpty()
+
     val showNewFolderButton: Boolean
         get() = bookmarksSelectFolderState?.innerSelectionGuid == null &&
             bookmarksAddFolderState == null && bookmarksEditFolderState == null

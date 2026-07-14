@@ -125,12 +125,60 @@ class BookmarksReducerTest {
     }
 
     @Test
-    fun `WHEN search ends THEN update the search state`() {
+    fun `WHEN user enters search THEN canEnterSearch should be false`() {
+        val state = BookmarksState.default.copy(
+            bookmarkItems = listOf(generateBookmark()),
+            isLoading = false,
+            searchState = null,
+        )
+        assertTrue(state.canEnterSearch)
+
+        val result = bookmarksReducer(state, SearchAction.SearchClicked)
+
+        assertFalse(result.canEnterSearch)
+    }
+
+    @Test
+    fun `WHEN search ends THEN update the search state and canEnterSearch`() {
         val state = BookmarksState.default.copy(
             searchState = SearchState(""),
         )
 
-        val result = bookmarksReducer(state, SearchAction.SearchDismissed).isSearching
+        val newState = bookmarksReducer(state, SearchAction.SearchDismissed)
+
+        assertFalse(newState.isSearching)
+        // In loading state
+        assertFalse(newState.canEnterSearch)
+    }
+
+    @Test
+    fun `WHEN the user has bookmarks after loading THEN canEnterSearch should be true`() {
+        val state = BookmarksState.default.copy(isLoading = true)
+        assertFalse(state.canEnterSearch)
+
+        val result = bookmarksReducer(
+            state,
+            BookmarksLoaded(
+            folder = BookmarkItem.Folder("", "", null),
+            bookmarkItems = listOf(generateBookmark()),
+        ),
+        ).canEnterSearch
+
+        assertTrue(result)
+    }
+
+    @Test
+    fun `WHEN the user does not have bookmarks after loading THEN canEnterSearch should be false`() {
+        val state = BookmarksState.default.copy(isLoading = true)
+        assertFalse(state.canEnterSearch)
+
+        val result = bookmarksReducer(
+            state,
+            BookmarksLoaded(
+            folder = BookmarkItem.Folder("", "", null),
+            bookmarkItems = listOf(),
+        ),
+        ).canEnterSearch
 
         assertFalse(result)
     }

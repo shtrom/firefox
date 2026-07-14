@@ -286,13 +286,8 @@ class BookmarksTest {
         }.clickSearchButton {
             verifySearchToolbar(true)
             verifyBookmarkSearchBarPlaceholder()
-            tapOutsideToDismissSearchBar(defaultWebPage.url.toString())
+            pressBack()
             verifySearchToolbar(false)
-        }
-
-        homeScreen(composeTestRule) {
-        }.openThreeDotMenu {
-        }.clickBookmarksButton {
         }
 
         composeBookmarksMenu(composeTestRule) {
