@@ -6132,16 +6132,9 @@ bool TypedArrayObjectTemplate<float16>::getElementPure(TypedArrayObject* tarray,
                                                        size_t index,
                                                        Value* vp) {
   float16 f16 = getIndex(tarray, index);
-  /*
-   * Doubles in typed arrays could be typed-punned arrays of integers. This
-   * could allow user code to break the engine-wide invariant that only
-   * canonical nans are stored into jsvals, which means user code could
-   * confuse the engine into interpreting a double-typed jsval as an
-   * object-typed jsval.
-   *
-   * This could be removed for platforms/compilers known to convert a 32-bit
-   * non-canonical nan to a 64-bit canonical nan.
-   */
+
+  // The value may be a non-canonical NaN. DoubleValue canonicalizes it to
+  // preserve the invariant that only canonical NaNs are stored in Values.
   *vp = DoubleValue(static_cast<double>(f16));
   return true;
 }
@@ -6152,16 +6145,8 @@ bool TypedArrayObjectTemplate<float>::getElementPure(TypedArrayObject* tarray,
   float val = getIndex(tarray, index);
   double dval = val;
 
-  /*
-   * Doubles in typed arrays could be typed-punned arrays of integers. This
-   * could allow user code to break the engine-wide invariant that only
-   * canonical nans are stored into jsvals, which means user code could
-   * confuse the engine into interpreting a double-typed jsval as an
-   * object-typed jsval.
-   *
-   * This could be removed for platforms/compilers known to convert a 32-bit
-   * non-canonical nan to a 64-bit canonical nan.
-   */
+  // The value may be a non-canonical NaN. DoubleValue canonicalizes it to
+  // preserve the invariant that only canonical NaNs are stored in Values.
   *vp = DoubleValue(dval);
   return true;
 }
@@ -6171,13 +6156,8 @@ bool TypedArrayObjectTemplate<double>::getElementPure(TypedArrayObject* tarray,
                                                       size_t index, Value* vp) {
   double val = getIndex(tarray, index);
 
-  /*
-   * Doubles in typed arrays could be typed-punned arrays of integers. This
-   * could allow user code to break the engine-wide invariant that only
-   * canonical nans are stored into jsvals, which means user code could
-   * confuse the engine into interpreting a double-typed jsval as an
-   * object-typed jsval.
-   */
+  // The value may be a non-canonical NaN. DoubleValue canonicalizes it to
+  // preserve the invariant that only canonical NaNs are stored in Values.
   *vp = DoubleValue(val);
   return true;
 }

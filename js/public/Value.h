@@ -579,7 +579,10 @@ class Value {
   }
 
   // Like setDouble but only canonicalizes NaNs on architectures with
-  // non-canonical hardware NaNs (see JS_NONCANONICAL_HARDWARE_NAN).
+  // non-canonical hardware NaNs (see JS_NONCANONICAL_HARDWARE_NAN). Because
+  // storing a non-canonical NaN breaks the Value representation, this should
+  // only be used in performance-sensitive SpiderMonkey code where the input is
+  // guaranteed not to be a non-canonical NaN.
   void setDoubleAssumeCanonicalNaN(double d) {
 #if defined(JS_NONCANONICAL_HARDWARE_NAN)
     d = CanonicalizeNaN(d);
@@ -705,8 +708,11 @@ class Value {
     }
   }
 
-  // Like setNumber(double), but skips NaN canonicalization. See
-  // setDoubleAssumeCanonicalNaN.
+  // Like setNumber(double) but only canonicalizes NaNs on architectures with
+  // non-canonical hardware NaNs (see JS_NONCANONICAL_HARDWARE_NAN). Because
+  // storing a non-canonical NaN breaks the Value representation, this should
+  // only be used in performance-sensitive SpiderMonkey code where the input is
+  // guaranteed not to be a non-canonical NaN.
   void setNumberAssumeCanonicalNaN(double d) {
     int32_t i;
     if (mozilla::NumberIsInt32(d, &i)) {
