@@ -69,11 +69,16 @@
   --button-text-color-ghost: var(--color-white);
 }
 
-// In the populated state the toolbar (source line + "…" menu) reveals on
-// hover/focus. Legibility comes from the dark transparent overlay at the top of .picture-of-the-day-populated.
-.picture-of-the-day.has-picture .picture-of-the-day-toolbar {
-  opacity: 0;
-  transition: opacity 150ms;
+// In the populated state the title, attribution, and "…" menu reveal on
+// hover/focus; the "New" badge stays visible so it isn't hidden with them.
+// Legibility comes from the dark transparent overlay at the top of .picture-of-the-day-populated.
+.picture-of-the-day.has-picture {
+  .picture-of-the-day-source,
+  .picture-of-the-day-attribution,
+  .picture-of-the-day-context-menu-wrapper {
+    opacity: 0;
+    transition: opacity 150ms;
+  }
 }
 
 // Eye button and empty-state message share a row at the bottom of the card.
@@ -137,7 +142,9 @@
 .picture-of-the-day:focus-within {
   .picture-of-the-day-message,
   .picture-of-the-day-description,
-  .picture-of-the-day-toolbar,
+  .picture-of-the-day-source,
+  .picture-of-the-day-attribution,
+  .picture-of-the-day-context-menu-wrapper,
   .picture-of-the-day-populated::before,
   .picture-of-the-day-populated::after {
     opacity: 1;
@@ -197,6 +204,39 @@
   block-size: 100%;
   object-fit: cover;
   z-index: 0;
+}
+
+// The "New" badge sits inline before the title so the title makes room for it
+// instead of overlapping. The badge stays visible at rest; the title
+// hover-reveals (see the opacity rules above), so the badge isn't hidden with it.
+.picture-of-the-day-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-small);
+  min-inline-size: 0;
+}
+
+// The green "filled" fill only comes from moz-badge's type="new" variant, which
+// errors on the unregistered moz-badge-new2 string, so paint the pill on the host
+// instead and recolor the label/outline via the tokens the default badge reads.
+.picture-of-the-day-new-badge {
+  flex: none;
+  // Mirror the title's top padding without growing the pill (background is on the
+  // host, so padding here would fill green above the label).
+  margin-block-start: var(--space-small);
+  // The green filled look only exists on :host([type="new"]); reading the same
+  // moz-badge token onto the host reproduces it (and keeps the forced-colors
+  // override below working) without type="new"'s l10n error.
+  background-color: var(--badge-background-color-filled);
+  border-radius: var(--badge-border-radius);
+
+  --badge-padding-block: 1px;
+  --badge-padding-inline: var(--space-small);
+  --badge-background-color-filled: var(--color-green-40);
+  --badge-text-color: var(--badge-text-color-filled);
+  --badge-border-color: transparent;
+
+  text-transform: uppercase;
 }
 
 .picture-of-the-day-details {
@@ -431,6 +471,11 @@
 
   .picture-of-the-day-details {
     color: var(--text-color);
+  }
+
+  .picture-of-the-day-new-badge {
+    // Use the system accent so the badge stays readable in High Contrast Mode.
+    --badge-background-color-filled: AccentColor;
   }
 
   .picture-of-the-day-populated::before,

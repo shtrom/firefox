@@ -22621,6 +22621,11 @@ const PictureOfTheDay_PictureOfTheDay = ({
   const isSetAsWallpaper = Boolean(prefs["newtabWallpapers.user.enabled"]) && pictureDate === prefs["widgets.pictureOfTheDay.wallpaperActive"];
   const hasPicture = Boolean(pictureData.imageUrl) && !dismissed && !imageFailed;
 
+  // Show the "New" badge until the user first interacts with the widget;
+  // handleInteraction flips widgets.pictureOfTheDay.interaction on any action,
+  // which removes it.
+  const hasInteracted = prefs["widgets.pictureOfTheDay.interaction"];
+
   // Show a brief checkmark right after the user sets the wallpaper, then settle
   // into the collapsed "already set" state.
   const [justSet, setJustSet] = (0,external_React_namespaceObject.useState)(false);
@@ -22886,10 +22891,15 @@ const PictureOfTheDay_PictureOfTheDay = ({
     className: "picture-of-the-day-toolbar"
   }, hasPicture ? /*#__PURE__*/external_React_default().createElement("div", {
     className: "picture-of-the-day-heading"
-  }, /*#__PURE__*/external_React_default().createElement("p", {
+  }, /*#__PURE__*/external_React_default().createElement("div", {
+    className: "picture-of-the-day-title-row"
+  }, !hasInteracted && /*#__PURE__*/external_React_default().createElement("moz-badge", {
+    className: "picture-of-the-day-new-badge",
+    "data-l10n-id": "newtab-widget-lists-label-new"
+  }), /*#__PURE__*/external_React_default().createElement("p", {
     className: "picture-of-the-day-source",
     "data-l10n-id": "newtab-picture-header-main"
-  }), renderAttribution()) : null, /*#__PURE__*/external_React_default().createElement("div", {
+  })), renderAttribution()) : null, /*#__PURE__*/external_React_default().createElement("div", {
     className: "picture-of-the-day-context-menu-wrapper"
   }, /*#__PURE__*/external_React_default().createElement("moz-button", {
     className: "picture-of-the-day-context-menu-button",

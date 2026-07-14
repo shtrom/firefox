@@ -10437,7 +10437,9 @@ dialog:dir(rtl)::after {
   --button-text-color-ghost: var(--color-white);
 }
 
-.picture-of-the-day.has-picture .picture-of-the-day-toolbar {
+.picture-of-the-day.has-picture .picture-of-the-day-source,
+.picture-of-the-day.has-picture .picture-of-the-day-attribution,
+.picture-of-the-day.has-picture .picture-of-the-day-context-menu-wrapper {
   opacity: 0;
   transition: opacity 150ms;
 }
@@ -10488,12 +10490,16 @@ dialog:dir(rtl)::after {
 
 .picture-of-the-day:hover .picture-of-the-day-message,
 .picture-of-the-day:hover .picture-of-the-day-description,
-.picture-of-the-day:hover .picture-of-the-day-toolbar,
+.picture-of-the-day:hover .picture-of-the-day-source,
+.picture-of-the-day:hover .picture-of-the-day-attribution,
+.picture-of-the-day:hover .picture-of-the-day-context-menu-wrapper,
 .picture-of-the-day:hover .picture-of-the-day-populated::before,
 .picture-of-the-day:hover .picture-of-the-day-populated::after,
 .picture-of-the-day:focus-within .picture-of-the-day-message,
 .picture-of-the-day:focus-within .picture-of-the-day-description,
-.picture-of-the-day:focus-within .picture-of-the-day-toolbar,
+.picture-of-the-day:focus-within .picture-of-the-day-source,
+.picture-of-the-day:focus-within .picture-of-the-day-attribution,
+.picture-of-the-day:focus-within .picture-of-the-day-context-menu-wrapper,
 .picture-of-the-day:focus-within .picture-of-the-day-populated::before,
 .picture-of-the-day:focus-within .picture-of-the-day-populated::after {
   opacity: 1;
@@ -10542,6 +10548,26 @@ dialog:dir(rtl)::after {
   block-size: 100%;
   object-fit: cover;
   z-index: 0;
+}
+
+.picture-of-the-day-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-small);
+  min-inline-size: 0;
+}
+
+.picture-of-the-day-new-badge {
+  flex: none;
+  margin-block-start: var(--space-small);
+  background-color: var(--badge-background-color-filled);
+  border-radius: var(--badge-border-radius);
+  --badge-padding-block: 1px;
+  --badge-padding-inline: var(--space-small);
+  --badge-background-color-filled: var(--color-green-40);
+  --badge-text-color: var(--badge-text-color-filled);
+  --badge-border-color: transparent;
+  text-transform: uppercase;
 }
 
 .picture-of-the-day-details {
@@ -10710,6 +10736,10 @@ dialog:dir(rtl)::after {
 
   .picture-of-the-day-details {
     color: var(--text-color);
+  }
+
+  .picture-of-the-day-new-badge {
+    --badge-background-color-filled: AccentColor;
   }
 
   .picture-of-the-day-populated::before,

@@ -89,6 +89,11 @@ const PictureOfTheDay = ({
   const hasPicture =
     Boolean(pictureData.imageUrl) && !dismissed && !imageFailed;
 
+  // Show the "New" badge until the user first interacts with the widget;
+  // handleInteraction flips widgets.pictureOfTheDay.interaction on any action,
+  // which removes it.
+  const hasInteracted = prefs["widgets.pictureOfTheDay.interaction"];
+
   // Show a brief checkmark right after the user sets the wallpaper, then settle
   // into the collapsed "already set" state.
   const [justSet, setJustSet] = useState(false);
@@ -366,10 +371,18 @@ const PictureOfTheDay = ({
       <div className="picture-of-the-day-toolbar">
         {hasPicture ? (
           <div className="picture-of-the-day-heading">
-            <p
-              className="picture-of-the-day-source"
-              data-l10n-id="newtab-picture-header-main"
-            ></p>
+            <div className="picture-of-the-day-title-row">
+              {!hasInteracted && (
+                <moz-badge
+                  className="picture-of-the-day-new-badge"
+                  data-l10n-id="newtab-widget-lists-label-new"
+                ></moz-badge>
+              )}
+              <p
+                className="picture-of-the-day-source"
+                data-l10n-id="newtab-picture-header-main"
+              ></p>
+            </div>
             {renderAttribution()}
           </div>
         ) : null}

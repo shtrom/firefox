@@ -238,6 +238,28 @@ describe("PictureOfTheDay widget", () => {
       ).toBeFalsy();
     });
 
+    it("renders the New badge until the widget has been interacted with", () => {
+      const { container } = renderWidget(jest.fn(), {}, populatedState);
+      const badge = container.querySelector(".picture-of-the-day-new-badge");
+      expect(badge).toBeTruthy();
+      // type="new" logs a missing-string error on newtab, so it must stay off.
+      expect(badge.hasAttribute("type")).toBe(false);
+      expect(badge.getAttribute("data-l10n-id")).toBe(
+        "newtab-widget-lists-label-new"
+      );
+    });
+
+    it("hides the New badge once the interaction pref is set", () => {
+      const { container } = renderWidget(
+        jest.fn(),
+        {},
+        withPrefs({ "widgets.pictureOfTheDay.interaction": true })
+      );
+      expect(
+        container.querySelector(".picture-of-the-day-new-badge")
+      ).toBeFalsy();
+    });
+
     it("falls back to the empty state when the picture fails to load", () => {
       const { container } = renderWidget(jest.fn(), {}, populatedState);
       const img = container.querySelector("img.picture-of-the-day-image");
