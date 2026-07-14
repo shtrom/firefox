@@ -57,31 +57,23 @@ export const ActionChecklistItem = ({ item, index, handleAction }) => {
 
 export const ActionChecklistProgressBar = ({ progress }) => {
   return (
-    <div className="action-checklist-progress-bar-container">
-      <div className="action-checklist-progress-bar">
-        <progress className="sr-only" value={progress || 0} max="100" />
-        <div
-          className="indicator"
-          role="presentation"
-          style={{
-            "--action-checklist-progress-bar-progress": `${progress || 0}%`,
-          }}
-        />
-      </div>
-      <span className="action-checklist-progress-text">
-        {Math.round(progress || 0)}%
-      </span>
+    <div className="action-checklist-progress-bar">
+      <progress className="sr-only" value={progress || 0} max="100" />
+      <div
+        className="indicator"
+        role="presentation"
+        style={{
+          "--action-checklist-progress-bar-progress": `${progress || 0}%`,
+        }}
+      />
     </div>
   );
 };
 
-export const ActionChecklist = ({ content, message_id, handleAction }) => {
+export const ActionChecklist = ({ content, message_id }) => {
   const tiles = content.tiles.data;
   const [progressValue, setProgressValue] = useState(0);
   const [numberOfCompletedActions, setNumberOfCompletedActions] = useState(0);
-
-  const allComplete =
-    !!tiles.length && numberOfCompletedActions === tiles.length;
 
   function determineProgressValue() {
     let newValue = (numberOfCompletedActions / tiles.length) * 100;
@@ -110,7 +102,7 @@ export const ActionChecklist = ({ content, message_id, handleAction }) => {
     determineProgressValue();
   }, [numberOfCompletedActions]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function handleTileClick(event) {
+  function handleAction(event) {
     let { action, source_id } = content.tiles.data[event.currentTarget.value];
     let { type, data } = action;
 
@@ -118,14 +110,6 @@ export const ActionChecklist = ({ content, message_id, handleAction }) => {
 
     MultiStageUtils.handleUserAction({ type, data });
     MultiStageUtils.sendActionTelemetry(message_id, source_id, "CLICK_BUTTON");
-  }
-
-  function handleRemoveChecklistClick(event) {
-    let { action, source_id } = content[event.currentTarget.value];
-    handleAction(
-      { currentTarget: event.currentTarget, source: source_id },
-      action
-    );
   }
 
   return (
@@ -143,22 +127,11 @@ export const ActionChecklist = ({ content, message_id, handleAction }) => {
             key={item.id}
             index={index}
             item={item}
-            handleAction={handleTileClick}
+            handleAction={handleAction}
             showExternalLinkIcon={item.showExternalLinkIcon}
           />
         ))}
       </div>
-      {allComplete && content.remove_checklist_button && (
-        <button
-          className="action-checklist-complete-button"
-          value="remove_checklist_button"
-          onClick={handleRemoveChecklistClick}
-        >
-          <Localized text={content.remove_checklist_button.label}>
-            <span />
-          </Localized>
-        </button>
-      )}
     </div>
   );
 };

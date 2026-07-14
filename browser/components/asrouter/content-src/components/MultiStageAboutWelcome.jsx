@@ -785,10 +785,7 @@ export class WelcomeScreen extends React.PureComponent {
       event.name,
       context
     );
-    if (
-      (value === "dismiss_button" && !event.name) ||
-      action.sendDismissTelemetry
-    ) {
+    if (value === "dismiss_button" && !event.name) {
       MultiStageUtils.sendDismissTelemetry(props.messageId, source);
     }
 
