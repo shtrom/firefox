@@ -403,6 +403,10 @@ class HTMLMediaElement::MediaControlKeyListener final
       NotifyMediaStoppedPlaying();
       NotifyPlaybackStateChanged(MediaPlaybackState::eStopped);
     }
+    // A media-control mute can only be lifted by an Unmute key delivered to a
+    // registered receiver, so drop it here; otherwise the element would stay
+    // muted with no way to receive that key once it deregisters.
+    Owner()->SetMuted(false, HTMLMediaElement::MUTED_BY_MEDIA_CONTROL);
     // Remove ourselves from media agent, which would stop receiving event.
     mControlAgent->RemoveReceiver(this, mControlType);
     mControlAgent = nullptr;
