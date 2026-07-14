@@ -1813,14 +1813,13 @@ Value SnapshotIterator::allocationValue(const RValueAllocation& alloc,
       return NullValue();
 
     case RValueAllocation::DOUBLE_REG:
-      return JS::CanonicalizedDoubleValue(fromRegister<double>(alloc.fpuReg()));
+      return DoubleValue(fromRegister<double>(alloc.fpuReg()));
 
     case RValueAllocation::FLOAT32_REG:
-      return JS::CanonicalizedDoubleValue(fromRegister<float>(alloc.fpuReg()));
+      return DoubleValue(fromRegister<float>(alloc.fpuReg()));
 
     case RValueAllocation::FLOAT32_STACK:
-      return JS::CanonicalizedDoubleValue(
-          ReadFrameFloat32Slot(fp_, alloc.stackOffset()));
+      return DoubleValue(ReadFrameFloat32Slot(fp_, alloc.stackOffset()));
 
     case RValueAllocation::TYPED_REG:
       return FromTypedPayload(alloc.knownType(), fromRegister(alloc.reg2()));
@@ -1828,8 +1827,7 @@ Value SnapshotIterator::allocationValue(const RValueAllocation& alloc,
     case RValueAllocation::TYPED_STACK: {
       switch (alloc.knownType()) {
         case JSVAL_TYPE_DOUBLE:
-          return JS::CanonicalizedDoubleValue(
-              ReadFrameDoubleSlot(fp_, alloc.stackOffset2()));
+          return DoubleValue(ReadFrameDoubleSlot(fp_, alloc.stackOffset2()));
         case JSVAL_TYPE_INT32:
           return Int32Value(ReadFrameInt32Slot(fp_, alloc.stackOffset2()));
         case JSVAL_TYPE_BOOLEAN:

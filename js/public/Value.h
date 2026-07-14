@@ -1141,10 +1141,6 @@ static inline Value DoubleValueAssumeCanonicalNaN(double dbl) {
   return v;
 }
 
-static inline Value CanonicalizedDoubleValue(double d) {
-  return DoubleValue(d);
-}
-
 static inline Value NaNValue() {
   return Value::fromRawBits(detail::CanonicalizedNaNBits);
 }
