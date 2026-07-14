@@ -316,7 +316,7 @@ pref("browser.shell.focusSetDefaultBrowserButton", false);
 // - "animated": Display an animated image.
 pref("browser.shell.displayKitImageBehindSetDefaultBrowserButton", "off");
 
-pref("browser.shell.customIcon.enabled", false);
+pref("browser.shell.customIcon.enabled", true);
 
 // After a failed UserChoice attempt, show the OS "Open with" picker via the
 // undocumented IOpenWithLauncher API so the user can pick Firefox themselves.
