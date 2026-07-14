@@ -191,6 +191,8 @@ export const MultiStageProtonScreen = props => {
       setActiveSingleSelectSelection={props.setActiveSingleSelectSelection}
       textInputs={props.textInputs}
       setTextInput={props.setTextInput}
+      pinnedSites={props.pinnedSites}
+      setPinnedSite={props.setPinnedSite}
       contentToggleChecked={props.contentToggleChecked}
       setContentToggleChecked={props.setContentToggleChecked}
       totalNumberOfScreens={props.totalNumberOfScreens}
@@ -233,6 +235,7 @@ export const ProtonScreenActionButtons = props => {
     activeMultiSelect,
     activeSingleSelectSelections,
     textInputs,
+    pinnedSites,
     installedAddons,
   } = props;
   const defaultValue = content.checkbox?.defaultValue;
@@ -297,6 +300,10 @@ export const ProtonScreenActionButtons = props => {
       return Object.values(textInputs).every(
         input => !input.isValid || input.value.trim().length === 0
       );
+    }
+    // Disables the primary button until the user has pinned at least one site.
+    if (disabledValue === "hasPinnedSite") {
+      return !pinnedSites;
     }
     return disabledValue;
   };
@@ -858,6 +865,7 @@ export class ProtonScreen extends React.PureComponent {
         activeMultiSelect={this.props.activeMultiSelect}
         activeSingleSelectSelections={this.props.activeSingleSelectSelections}
         textInputs={this.props.textInputs}
+        pinnedSites={this.props.pinnedSites}
       />
     ) : null;
   }

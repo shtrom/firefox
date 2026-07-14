@@ -393,6 +393,7 @@ export const ContentTiles = props => {
                 tile={tile}
                 messageId={props.messageId}
                 handleAction={props.handleAction}
+                setPinnedSite={props.setPinnedSite}
               />
             )}
             {tile.type === "content-toggle" && tile.data && (

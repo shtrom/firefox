@@ -233,6 +233,11 @@ export const MultiStageAboutWelcome = props => {
   // structured like this: { screenId: { textareaId: { value, isValid } } }
   const [textInputs, setTextInputs] = useState({});
 
+  // Track whether each screen has had at least one successful pin, keyed by
+  // screen id. This is a boolean (there is no "unpin"), used to gate a
+  // primary button with `disabled: "hasPinnedSite"`.
+  const [pinnedSites, setPinnedSites] = useState({});
+
   // Whether animated backgrounds/illustrations are paused for this session.
   // Defaults to paused when the user has prefers-reduced-motion: reduce set,
   // so we never autoplay motion for those users. The toggle stays consistent
@@ -348,6 +353,13 @@ export const MultiStageAboutWelcome = props => {
             });
           };
 
+          const setPinnedSite = () => {
+            setPinnedSites(prevState => ({
+              ...prevState,
+              [currentScreen.id]: true,
+            }));
+          };
+
           const setTextInput = (value, inputId) => {
             setTextInputs(prevState => {
               const currentScreenInputs = prevState[currentScreen.id] || {};
@@ -393,6 +405,8 @@ export const MultiStageAboutWelcome = props => {
               setActiveSingleSelectSelection={setActiveSingleSelectSelection}
               textInputs={textInputs[currentScreen.id]}
               setTextInput={setTextInput}
+              pinnedSites={pinnedSites[currentScreen.id]}
+              setPinnedSite={setPinnedSite}
               contentToggleChecked={contentToggleChecked}
               setContentToggleChecked={setContentToggleChecked}
               negotiatedLanguage={negotiatedLanguage}
@@ -1018,6 +1032,8 @@ export class WelcomeScreen extends React.PureComponent {
         }
         textInputs={this.props.textInputs}
         setTextInput={this.props.setTextInput}
+        pinnedSites={this.props.pinnedSites}
+        setPinnedSite={this.props.setPinnedSite}
         contentToggleChecked={this.props.contentToggleChecked}
         setContentToggleChecked={this.props.setContentToggleChecked}
         totalNumberOfScreens={this.props.totalNumberOfScreens}

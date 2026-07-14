@@ -4229,6 +4229,7 @@ const MESSAGES = () => [
                 fontSize: "18px",
               },
               pinButtonLabel: { raw: "Add" },
+              alwaysShowPinButton: true,
               data: [
                 {
                   id: "fifa-plus",
@@ -4274,6 +4275,7 @@ const MESSAGES = () => [
             },
             primary_button: {
               label: { raw: "Done" },
+              disabled: "hasPinnedSite",
               action: { dismiss: true },
             },
             dismiss_button: {
