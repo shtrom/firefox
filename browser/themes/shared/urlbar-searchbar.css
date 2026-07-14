@@ -288,6 +288,7 @@ toolbar[inactive="true"] .urlbar,
   outline: var(--urlbar-input-container-border);
   outline-offset: calc(-1 * var(--urlbar-input-container-border-width));
   overflow: clip;
+  padding-inline-end: var(--urlbar-input-container-padding);
 
   &:focus-within {
     background-color: var(--urlbar-background-color-focus);
@@ -298,6 +299,7 @@ toolbar[inactive="true"] .urlbar,
 
   @media not -moz-pref("browser.nova.enabled") {
     outline: none;
+    padding-inline-end: 0;
     border: var(--urlbar-input-container-border);
 
     &:focus-within {
@@ -326,6 +328,7 @@ toolbar[inactive="true"] .urlbar,
   outline: none;
 }
 
+.searchbar-textbox::selection,
 .urlbar-input::selection {
   /* urlbar and searchbar */
   border-radius: var(--urlbar-selection-border-radius);
@@ -757,6 +760,7 @@ toolbar[inactive="true"] .urlbar,
 .urlbar-page-action,
 .urlbar-go-button,
 .search-go-button,
+.searchbar-textbox::-moz-search-clear-button,
 .urlbar-input::-moz-search-clear-button {
   width: var(--urlbar-basic-component-size);
   height: var(--urlbar-basic-component-size);
@@ -781,17 +785,20 @@ toolbar[inactive="true"] .urlbar,
   }
 }
 
+.searchbar-textbox::-moz-search-clear-button,
 .urlbar-input::-moz-search-clear-button {
   /* Overrides forms.css */
   padding: 0;
 }
 
+.searchbar-textbox::-moz-search-clear-button:hover,
 .urlbar-input::-moz-search-clear-button:hover {
   background-color: var(--urlbar-box-background-color-hover);
   color: var(--urlbar-box-text-color-hover);
   outline-color: var(--toolbarbutton-outline-color-hover);
 }
 
+.searchbar-textbox::-moz-search-clear-button:hover:active,
 .urlbar-input::-moz-search-clear-button:hover:active {
   background-color: var(--urlbar-box-background-color-active);
   color: var(--urlbar-box-text-color-hover);
