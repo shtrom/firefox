@@ -224,11 +224,10 @@ nsresult UnboxValue(JSContext* aCx, const jni::Object::LocalRef& aData,
              aData.IsInstanceOf<jni::Short>()) {
     aOut.setInt32(java::sdk::Number::Ref::From(aData)->IntValue());
   } else if (aData.IsInstanceOf<jni::Double>()) {
-    aOut.set(JS_NumberValue(Java2Native<double>(aData, aData.Env())));
+    aOut.setNumber(Java2Native<double>(aData, aData.Env()));
   } else if (aData.IsInstanceOf<jni::Float>() ||
              aData.IsInstanceOf<jni::Long>()) {
-    aOut.set(
-        JS_NumberValue(java::sdk::Number::Ref::From(aData)->DoubleValue()));
+    aOut.setNumber(java::sdk::Number::Ref::From(aData)->DoubleValue());
   } else if (aData.IsInstanceOf<jni::String>()) {
     return UnboxString(aCx, aData, aOut);
   } else if (aData.IsInstanceOf<jni::Character>()) {

@@ -4824,7 +4824,7 @@ static bool ShapeOf(JSContext* cx, unsigned argc, JS::Value* vp) {
     return false;
   }
   JSObject* obj = &args[0].toObject();
-  args.rval().set(JS_NumberValue(double(uintptr_t(obj->shape()) >> 3)));
+  args.rval().setNumber(double(uintptr_t(obj->shape()) >> 3));
   return true;
 }
 
@@ -11300,7 +11300,7 @@ static bool dom_get_x(JSContext* cx, HandleObject obj, void* self,
                       JSJitGetterCallArgs args) {
   MOZ_ASSERT(JS::GetClass(obj) == GetDomClass());
   MOZ_ASSERT(self == DOM_PRIVATE_VALUE);
-  args.rval().set(JS_NumberValue(double(3.14)));
+  args.rval().setNumber(double(3.14));
   return true;
 }
 
