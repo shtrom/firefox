@@ -5,11 +5,11 @@
 #include "EventDispatcher.h"
 
 #include "CFTypeRefPtr.h"
+#include "jsapi.h"
 #include "mozilla/MacStringHelpers.h"
 #include "mozilla/dom/ScriptSettings.h"
 #include "mozilla/dom/TypedArray.h"
 #include "mozilla/widget/GeckoViewSupport.h"
-#include "jsapi.h"
 
 using namespace mozilla;
 using namespace mozilla::widget;

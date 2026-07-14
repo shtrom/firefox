@@ -7,9 +7,10 @@
 
 #include <cmath>
 #include <cstdint>
-#include "imgIContainer.h"
+
 #include "ErrorList.h"
 #include "Units.h"
+#include "imgIContainer.h"
 #include "mozilla/AlreadyAddRefed.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/Attributes.h"
@@ -21,11 +22,12 @@
 #include "mozilla/UniquePtr.h"
 #include "mozilla/gfx/Matrix.h"
 #include "mozilla/gfx/Rect.h"
+#include "mozilla/image/Resolution.h"
 #include "mozilla/layers/LayersTypes.h"
 #include "mozilla/layers/ScrollableLayerGuid.h"
 #include "mozilla/layers/ZoomConstraints.h"
-#include "mozilla/image/Resolution.h"
 #include "mozilla/widget/IMEData.h"
+#include "mozilla/widget/InitData.h"
 #include "nsCOMPtr.h"
 #include "nsColor.h"
 #include "nsDebug.h"
@@ -41,7 +43,6 @@
 #include "nsTArray.h"
 #include "nsTHashMap.h"
 #include "nsWeakReference.h"
-#include "mozilla/widget/InitData.h"
 #include "nsXULAppAPI.h"
 
 // Windows specific constant indicating the maximum number of touch points the
