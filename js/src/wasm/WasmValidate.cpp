@@ -5985,6 +5985,7 @@ enum class AliasKindRaw : uint8_t {
                                         original.sort, 0, original.index);
           });
 
+      ComponentSortIndex newAliasSortIndex;
       switch (sort) {
         case ComponentSort::CoreFunction: {
           if (c->coreFuncs().length() >= MaxComponentCoreFuncs) {
@@ -5996,6 +5997,8 @@ enum class AliasKindRaw : uint8_t {
                 "export \"%.*s\" of core instance %d is not a function",
                 ComponentName_Printf(exportName), instanceIndex);
           }
+          newAliasSortIndex = ComponentSortIndex(ComponentSort::CoreFunction,
+                                                 c->coreFuncs().length());
           if (!c->addAliasOfExportedCoreFunc(newAlias)) {
             return false;
           }
@@ -6009,6 +6012,8 @@ enum class AliasKindRaw : uint8_t {
             return d.failf("export \"%.*s\" of core instance %d is not a table",
                            ComponentName_Printf(exportName), instanceIndex);
           }
+          newAliasSortIndex = ComponentSortIndex(ComponentSort::CoreTable,
+                                                 c->coreTables().length());
           if (!c->addCoreTable(newAlias)) {
             return false;
           }
@@ -6023,6 +6028,8 @@ enum class AliasKindRaw : uint8_t {
                 "export \"%.*s\" of core instance %d is not a memory",
                 ComponentName_Printf(exportName), instanceIndex);
           }
+          newAliasSortIndex = ComponentSortIndex(ComponentSort::CoreMemory,
+                                                 c->coreMemories().length());
           if (!c->addCoreMemory(newAlias)) {
             return false;
           }
@@ -6037,6 +6044,8 @@ enum class AliasKindRaw : uint8_t {
                 "export \"%.*s\" of core instance %d is not a global",
                 ComponentName_Printf(exportName), instanceIndex);
           }
+          newAliasSortIndex = ComponentSortIndex(ComponentSort::CoreGlobal,
+                                                 c->coreGlobals().length());
           if (!c->addCoreGlobal(newAlias)) {
             return false;
           }
@@ -6049,12 +6058,20 @@ enum class AliasKindRaw : uint8_t {
             return d.failf("export \"%.*s\" of core instance %d is not a tag",
                            ComponentName_Printf(exportName), instanceIndex);
           }
+          newAliasSortIndex = ComponentSortIndex(ComponentSort::CoreTag,
+                                                 c->coreTags().length());
           if (!c->addCoreTag(newAlias)) {
             return false;
           }
         } break;
         default:
           return d.failf("invalid alias sort 0x%02x", uint8_t(sort));
+      }
+
+      if (newAlias.aliasKind() == ComponentAliasKind::CoreExport &&
+          !c->saveExportNameForAlias(newAliasSortIndex,
+                                     std::move(exportName))) {
+        return false;
       }
     } break;
     case uint8_t(AliasKindRaw::Outer): {
