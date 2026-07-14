@@ -92,7 +92,7 @@ class PrimaryDataOffer : public DataOffer {
 
 class RetrievalContextWayland : public RetrievalContext {
  public:
-  explicit RetrievalContextWayland(bool aIsDragContext);
+  explicit RetrievalContextWayland(bool aIsDragContext = false);
 
   virtual ClipboardData GetClipboardData(const char* aMimeType,
                                          int32_t aWhichClipboard) override;
