@@ -303,6 +303,17 @@ add_task(async function test_model_download_telemetry_success() {
       "end_download_success",
     ]
   );
+
+  let endDownload = observed.at(-1);
+  let fileDurationSum = observed
+    .filter(obj => obj.extra.step === "end_file_download_success")
+    .reduce((sum, obj) => sum + Number(obj.extra.duration), 0);
+  Assert.greaterOrEqual(
+    Number(endDownload.extra.duration),
+    fileDurationSum,
+    "end_download_success reports the total model download time, which spans at least the individual file downloads"
+  );
+
   await EngineProcess.destroyMLEngine();
   await IndexedDBCache.init({ reset: true });
 
