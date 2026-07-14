@@ -9,6 +9,7 @@
 #ifdef ENABLE_WASM_COMPONENTS
 
 #  include "js/friend/ErrorMessages.h"  // js::GetErrorMessage, JSMSG_*
+#  include "js/Printf.h"                // JS_smprintf
 #  include "threading/ExclusiveData.h"
 #  include "util/Text.h"
 #  include "vm/GlobalObject.h"
@@ -167,29 +168,28 @@ uint32_t ComponentInlineExports::Builder::trackItemOfSort(ComponentSort sort) {
 }
 
 bool ComponentInlineExports::addExport(Builder* builder, CacheableName&& name,
-                                       ComponentSort sort, uint32_t index) {
-  uint32_t indexInThisInstance = builder->trackItemOfSort(sort);
-  ComponentItem exportItem = ComponentItem::raw(sort, indexInThisInstance);
+                                       ComponentSortIndex exported) {
+  uint32_t indexInThisInstance = builder->trackItemOfSort(exported.sort);
+  ComponentSortIndex itemInThisInstance(exported.sort, indexInThisInstance);
 
   // Add export name -> item-in-this-instance mapping
   auto p1 = exports_.lookupForAdd(name.utf8Bytes());
   MOZ_RELEASE_ASSERT(!p1, "duplicates should have been caught in validation");
-  if (!exports_.add(p1, std::move(name), exportItem)) {
+  if (!exports_.add(p1, std::move(name), itemInThisInstance)) {
     return false;
   }
 
   // Add item-in-this-instance -> original index mapping
-  auto p2 = originalIndices_.lookupForAdd(
-      ComponentItem::raw(sort, indexInThisInstance));
+  auto p2 = originalIndices_.lookupForAdd(itemInThisInstance);
   MOZ_RELEASE_ASSERT(!p2);
-  if (!originalIndices_.add(p2, exportItem, index)) {
+  if (!originalIndices_.add(p2, itemInThisInstance, exported.index)) {
     return false;
   }
 
   return true;
 }
 
-mozilla::Maybe<ComponentItem> ComponentInlineExports::getExport(
+mozilla::Maybe<ComponentSortIndex> ComponentInlineExports::getExport(
     const CacheableName& name) const {
   auto p = exports_.lookup(name.utf8Bytes());
   if (!p) {
@@ -198,20 +198,26 @@ mozilla::Maybe<ComponentItem> ComponentInlineExports::getExport(
   return mozilla::Some(p->value());
 }
 
-ComponentItem ComponentInlineExports::resolveOriginalItem(
-    ComponentItem exp) const {
-  auto p = originalIndices_.lookup(exp);
+ComponentSortIndex ComponentInlineExports::resolveOriginal(
+    ComponentSortIndex expFromThis) const {
+  auto p = originalIndices_.lookup(expFromThis);
   MOZ_RELEASE_ASSERT(p.found());
-  ComponentItem orig = ComponentItem::raw(exp.sort(), p->value());
-  MOZ_ASSERT(orig.sort() == exp.sort());
+  ComponentSortIndex orig = ComponentSortIndex(expFromThis.sort, p->value());
+  MOZ_ASSERT(orig.sort == expFromThis.sort);
   return orig;
 }
 
-mozilla::Maybe<ComponentItem> CoreInstanceDesc::getExport(
+ComponentSortIndex ComponentInlineExports::mustResolveExportToOriginal(
+    const CacheableName& name) const {
+  ComponentSortIndex expInThis = getExport(name).value();
+  return resolveOriginal(expInThis);
+}
+
+mozilla::Maybe<ComponentSortIndex> CoreInstanceDesc::getExport(
     const CacheableName& name) const {
   return desc_.match(
       [&](const CoreInstanceDescFromModule& fromModule)
-          -> mozilla::Maybe<ComponentItem> {
+          -> mozilla::Maybe<ComponentSortIndex> {
         SharedModule mod = component_->getCoreModule(fromModule.moduleIndex);
         mozilla::Maybe<const Export&> exp = mod->moduleMeta().getExport(name);
         if (exp.isNothing()) {
@@ -219,26 +225,26 @@ mozilla::Maybe<ComponentItem> CoreInstanceDesc::getExport(
         }
         switch (exp->kind()) {
           case DefinitionKind::Function:
-            return mozilla::Some(ComponentItem::raw(ComponentSort::CoreFunction,
+            return mozilla::Some(ComponentSortIndex(ComponentSort::CoreFunction,
                                                     exp->funcIndex()));
           case DefinitionKind::Table:
-            return mozilla::Some(ComponentItem::raw(ComponentSort::CoreTable,
+            return mozilla::Some(ComponentSortIndex(ComponentSort::CoreTable,
                                                     exp->tableIndex()));
           case DefinitionKind::Memory:
-            return mozilla::Some(ComponentItem::raw(ComponentSort::CoreMemory,
+            return mozilla::Some(ComponentSortIndex(ComponentSort::CoreMemory,
                                                     exp->memoryIndex()));
           case DefinitionKind::Global:
-            return mozilla::Some(ComponentItem::raw(ComponentSort::CoreGlobal,
+            return mozilla::Some(ComponentSortIndex(ComponentSort::CoreGlobal,
                                                     exp->globalIndex()));
           case DefinitionKind::Tag:
             return mozilla::Some(
-                ComponentItem::raw(ComponentSort::CoreTag, exp->tagIndex()));
+                ComponentSortIndex(ComponentSort::CoreTag, exp->tagIndex()));
           default:
             MOZ_CRASH();
         }
       },
       [&](const ComponentInlineExports& inlineExports)
-          -> mozilla::Maybe<ComponentItem> {
+          -> mozilla::Maybe<ComponentSortIndex> {
         return inlineExports.getExport(name);
       });
 }
@@ -250,9 +256,9 @@ const TypeDef& CoreInstanceDesc::getCoreFuncType(uint32_t coreFuncIndex) const {
         return mod->codeMeta().getFuncTypeDef(coreFuncIndex);
       },
       [&](const ComponentInlineExports& inlineExports) -> const TypeDef& {
-        ComponentItem originalFunc = inlineExports.resolveOriginalItem(
-            ComponentItem::raw(ComponentSort::CoreFunction, coreFuncIndex));
-        return component_->getTypeForCoreFunc(originalFunc.itemIndex());
+        ComponentSortIndex originalFunc = inlineExports.resolveOriginal(
+            ComponentSortIndex(ComponentSort::CoreFunction, coreFuncIndex));
+        return component_->getTypeForCoreFunc(originalFunc.index);
       });
 }
 
@@ -263,9 +269,9 @@ const TableDesc& CoreInstanceDesc::getTable(uint32_t tableIndex) const {
         return mod->codeMeta().tables[tableIndex];
       },
       [&](const ComponentInlineExports& inlineExports) -> const TableDesc& {
-        ComponentItem originalTable = inlineExports.resolveOriginalItem(
-            ComponentItem::raw(ComponentSort::CoreTable, tableIndex));
-        return component_->getCoreTable(originalTable.itemIndex());
+        ComponentSortIndex originalTable = inlineExports.resolveOriginal(
+            ComponentSortIndex(ComponentSort::CoreTable, tableIndex));
+        return component_->getCoreTable(originalTable.index);
       });
 }
 
@@ -276,9 +282,9 @@ const MemoryDesc& CoreInstanceDesc::getMemory(uint32_t memoryIndex) const {
         return mod->codeMeta().memories[memoryIndex];
       },
       [&](const ComponentInlineExports& inlineExports) -> const MemoryDesc& {
-        ComponentItem originalMemory = inlineExports.resolveOriginalItem(
-            ComponentItem::raw(ComponentSort::CoreMemory, memoryIndex));
-        return component_->getCoreMemory(originalMemory.itemIndex());
+        ComponentSortIndex originalMemory = inlineExports.resolveOriginal(
+            ComponentSortIndex(ComponentSort::CoreMemory, memoryIndex));
+        return component_->getCoreMemory(originalMemory.index);
       });
 }
 
@@ -289,9 +295,9 @@ const GlobalDesc& CoreInstanceDesc::getGlobal(uint32_t globalIndex) const {
         return mod->codeMeta().globals[globalIndex];
       },
       [&](const ComponentInlineExports& inlineExports) -> const GlobalDesc& {
-        ComponentItem originalGlobal = inlineExports.resolveOriginalItem(
-            ComponentItem::raw(ComponentSort::CoreGlobal, globalIndex));
-        return component_->getCoreGlobal(originalGlobal.itemIndex());
+        ComponentSortIndex originalGlobal = inlineExports.resolveOriginal(
+            ComponentSortIndex(ComponentSort::CoreGlobal, globalIndex));
+        return component_->getCoreGlobal(originalGlobal.index);
       });
 }
 
@@ -302,9 +308,9 @@ const TagDesc& CoreInstanceDesc::getTag(uint32_t tagIndex) const {
         return mod->codeMeta().tags[tagIndex];
       },
       [&](const ComponentInlineExports& inlineExports) -> const TagDesc& {
-        ComponentItem originalTag = inlineExports.resolveOriginalItem(
-            ComponentItem::raw(ComponentSort::CoreTag, tagIndex));
-        return component_->getCoreTag(originalTag.itemIndex());
+        ComponentSortIndex originalTag = inlineExports.resolveOriginal(
+            ComponentSortIndex(ComponentSort::CoreTag, tagIndex));
+        return component_->getCoreTag(originalTag.index);
       });
 }
 
@@ -1427,6 +1433,80 @@ const CoreInstanceDesc& Component::getCoreInstance(
     default:
       MOZ_CRASH();
   }
+}
+
+static const char* ComponentSortKeyword(ComponentSort sort) {
+  switch (sort) {
+    case ComponentSort::Func:
+      return "func";
+    case ComponentSort::Type:
+      return "type";
+    case ComponentSort::Component:
+      return "component";
+    case ComponentSort::Instance:
+      return "instance";
+    case ComponentSort::CoreFunction:
+      return "core func";
+    case ComponentSort::CoreTable:
+      return "core table";
+    case ComponentSort::CoreMemory:
+      return "core memory";
+    case ComponentSort::CoreGlobal:
+      return "core global";
+    case ComponentSort::CoreTag:
+      return "core tag";
+    case ComponentSort::CoreType:
+      return "core type";
+    case ComponentSort::CoreModule:
+      return "core module";
+    case ComponentSort::CoreInstance:
+      return "core instance";
+    case ComponentSort::Invalid:
+      return "invalid";
+
+    default:
+      MOZ_CRASH();
+  }
+}
+
+static const char* ComponentAliasKindKeyword(ComponentAliasKind kind) {
+  switch (kind) {
+    case ComponentAliasKind::CoreExport:
+      return "core export";
+    case ComponentAliasKind::Export:
+      return "export";
+    case ComponentAliasKind::Outer:
+      return "outer";
+
+    default:
+      MOZ_CRASH();
+  }
+}
+
+UniqueChars wasm::ToString(ComponentItem item) {
+  const char* sort = ComponentSortKeyword(item.sort());
+  switch (item.kind()) {
+    case ComponentItem::ItemKind::Invalid:
+      return JS_smprintf("(invalid)");
+    case ComponentItem::ItemKind::Defined:
+      return JS_smprintf("(%s (defined %u))", sort, item.itemIndex());
+    case ComponentItem::ItemKind::Import:
+      return JS_smprintf("(%s (import %u))", sort, item.itemIndex());
+    case ComponentItem::ItemKind::Export:
+      return JS_smprintf("(%s (export %u))", sort, item.itemIndex());
+    case ComponentItem::ItemKind::Alias:
+      return JS_smprintf("(alias %s %u (%s %u))",
+                         ComponentAliasKindKeyword(item.aliasKind()),
+                         item.aliasInstanceIndex(), sort, item.itemIndex());
+
+    default:
+      MOZ_CRASH();
+  }
+}
+
+UniqueChars wasm::ToString(ComponentSortIndex sortIndex) {
+  return JS_smprintf("(%s %u)", ComponentSortKeyword(sortIndex.sort),
+                     sortIndex.index);
 }
 
 #endif  // ENABLE_WASM_COMPONENTS
