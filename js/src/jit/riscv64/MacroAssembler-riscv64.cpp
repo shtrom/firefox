@@ -4795,13 +4795,13 @@ static void CompareExchange(MacroAssembler& masm,
   masm.ma_b(output, valueTemp, &end, Assembler::NotEqual, ShortJump);
 
   switch (nbytes) {
-  case 1:
-    masm.andi(valueTemp, newval, 0xff);
-    break;
-  case 2:
-    masm.slli(valueTemp, newval, 48);
-    masm.srli(valueTemp, valueTemp, 48);
-    break;
+    case 1:
+      masm.andi(valueTemp, newval, 0xff);
+      break;
+    case 2:
+      masm.slli(valueTemp, newval, 48);
+      masm.srli(valueTemp, valueTemp, 48);
+      break;
   }
 
   masm.sllw(valueTemp, valueTemp, offsetTemp);
