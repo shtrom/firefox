@@ -3758,6 +3758,81 @@ const MESSAGES = () => [
       id: "newtabMessageCheck",
     },
   },
+  // TEST_NOVA_MULTISTAGE_SPLIT exercises the OMC-owned embedded multi-stage
+  // (spotlight) New Tab surface for the Nova design-token audit. Force it on via
+  // about:asrouter while Nova is enabled to check token, spacing, and layout
+  // rendering. This surface is bundled / multi-stage, so notify HNT of changes.
+  {
+    id: "TEST_NOVA_MULTISTAGE_SPLIT",
+    template: "newtab_message",
+    groups: [],
+    content: {
+      messageType: "ASRouterMultistageMessage",
+      id: "TEST_NOVA_MULTISTAGE_SPLIT",
+      transitions: false,
+      backdrop: "transparent",
+      screens: [
+        {
+          id: "NOVA_SPLIT_SCREEN_1",
+          content: {
+            position: "split",
+            screen_style: { height: "500px" },
+            hero_text: {
+              title: {
+                raw: "Nova multistage, split layout",
+                fontSize: "24px",
+              },
+              subtitle: {
+                raw: "First of two screens. Verifies the steps indicator and split hero area under Nova.",
+              },
+            },
+            title: {
+              raw: "Screen one",
+            },
+            subtitle: {
+              raw: "Check spacing and contrast of the content column.",
+            },
+            primary_button: {
+              label: { raw: "Next" },
+              action: { navigate: true },
+            },
+          },
+        },
+        {
+          id: "NOVA_SPLIT_SCREEN_2",
+          content: {
+            position: "split",
+            screen_style: { height: "500px" },
+            hero_text: {
+              title: {
+                raw: "Almost done",
+                fontSize: "24px",
+              },
+            },
+            title: {
+              raw: "Screen two",
+            },
+            subtitle: {
+              raw: "Final screen, confirm the primary and secondary button styling under Nova.",
+            },
+            primary_button: {
+              label: { raw: "Finish" },
+              action: { dismiss: true },
+            },
+            secondary_button: {
+              label: { raw: "Not now" },
+              // navigate on the last screen falls through to AWFinish (dismiss);
+              // this matches the pattern shipping split-screen messages use.
+              action: { navigate: true },
+            },
+          },
+        },
+      ],
+    },
+    trigger: {
+      id: "newtabMessageCheck",
+    },
+  },
   {
     id: "UNIVERSAL_INFOBAR_WITH_EMBEDDED_LINKS",
     content: {
@@ -4137,6 +4212,7 @@ const MESSAGES = () => [
             hero_text: {
               title: {
                 raw: "Follow the World Cup in Firefox",
+                fontSize: "24px",
               },
               subtitle: {
                 raw: "One click launches your most used sites in a streamlined window with all of Firefox’s protections.",
@@ -4150,6 +4226,7 @@ const MESSAGES = () => [
               type: "pinnable_sites",
               title: {
                 raw: "Select to add to your taskbar",
+                fontSize: "18px",
               },
               pinButtonLabel: { raw: "Add" },
               data: [
