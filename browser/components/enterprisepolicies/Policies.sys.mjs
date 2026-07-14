@@ -958,6 +958,23 @@ export var Policies = {
     },
   },
 
+  DefaultBrowserSettingEnabled: {
+    onBeforeAddons(manager, param) {
+      if (param) {
+        lazy.PoliciesUtils.setAndLockPref(
+          "browser.shell.checkDefaultBrowser",
+          true
+        );
+      } else {
+        manager.disallowFeature("setDefaultBrowser");
+        lazy.PoliciesUtils.setAndLockPref(
+          "browser.shell.checkDefaultBrowser",
+          false
+        );
+      }
+    },
+  },
+
   DefaultDownloadDirectory: {
     onBeforeAddons(manager, param) {
       lazy.PoliciesUtils.setDefaultPref(
