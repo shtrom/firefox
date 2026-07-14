@@ -327,7 +327,7 @@ JSString* js::ObjectToSource(JSContext* cx, HandleObject obj) {
        * If id is a string that's not an identifier, or if it's a
        * negative integer, then it must be quoted.
        */
-      if (id.isAtom() ? !IsIdentifier(id.toAtom()) : id.toInt() < 0) {
+      if (id.isAtom() && !IsIdentifier(id.toAtom())) {
         UniqueChars quotedId = QuoteString(cx, idstr, '\'');
         if (!quotedId) {
           return false;
