@@ -566,19 +566,22 @@ split-view-footer {
 
 #statuspanel-label {
   margin: 0;
-  padding: 2px 4px;
+  padding-block-start: 2px;
+  /* Avoid clipping by a large window corner radius by adding proportional
+     bottom padding */
+  padding-block-end: max(2px, calc(var(--chrome-block-radius, 0px) / 5));
+
   border-width: 1px;
   border-style: none;
   border-top-style: solid;
-
-  @media (-moz-mac-tahoe-theme) {
-    /* Slightly increasing the padding to prevent the first letter from partially getting cut off by the large window corner radius. */
-    padding: 3px 5px;
-  }
-
   #statuspanel:not([mirror]) > &:-moz-locale-dir(ltr),
   #statuspanel[mirror] > &:-moz-locale-dir(rtl) {
     border-right-style: solid;
+    /* When the label is on the left, avoid clipping from a large window corner radius
+       by adding proportional left padding */
+    padding-left: max(4px, calc(var(--chrome-block-radius, 0px) / 2));
+    padding-right: 4px;
+
     /* disabled on Windows for triggering grayscale AA (bug 659213): */
     @media not (-moz-platform: windows) {
       border-top-right-radius: 0.3em;
@@ -589,6 +592,11 @@ split-view-footer {
   #statuspanel:not([mirror]) > &:-moz-locale-dir(rtl),
   #statuspanel[mirror] > &:-moz-locale-dir(ltr) {
     border-left-style: solid;
+    /* When the label is on the right, avoid clipping from a large window corner radius
+       by adding proportional right padding */
+    padding-left: 4px;
+    padding-right: max(4px, calc(var(--chrome-block-radius, 0px) / 2));
+
     /* disabled on Windows for triggering grayscale AA (bug 659213): */
     @media not (-moz-platform: windows) {
       border-top-left-radius: 0.3em;
