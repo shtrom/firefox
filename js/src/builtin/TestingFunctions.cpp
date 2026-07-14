@@ -871,16 +871,11 @@ static bool GCParameter(JSContext* cx, unsigned argc, Value* vp) {
     return false;
   }
 
-  if (fuzzingSafe) {
-    // Some Params are not yet fuzzing safe and so we silently skip
-    // changing said parameters.
-    switch (param) {
-      case JSGC_SEMISPACE_NURSERY_ENABLED:
-        args.rval().setUndefined();
-        return true;
-      default:
-        break;
-    }
+  // Some Params are not yet fuzzing safe and so we silently skip changing said
+  // parameters.
+  if (fuzzingSafe && !IsGCParameterFuzzingSafe(param)) {
+    args.rval().setUndefined();
+    return true;
   }
 
   if (disableOOMFunctions) {
