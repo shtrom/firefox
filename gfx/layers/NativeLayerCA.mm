@@ -876,7 +876,9 @@ void NativeLayerCA::AttachExternalImage(wr::RenderTextureHost* aExternalImage) {
   mIsDRM = isDRM;
 
   MacIOSurface* macIOSurface = texture->GetSurface();
-  mIsHDR = macIOSurface->IsHDRSurface() && gfxPlatform::UseHDR();
+  bool isHDR = macIOSurface->IsHDRSurface() && gfxPlatform::UseHDR();
+  bool changedIsHDR = (mIsHDR != isHDR);
+  mIsHDR = isHDR;
 
   bool specializeVideo = ShouldSpecializeVideo(lock);
   bool changedSpecializeVideo = (mSpecializeVideo != specializeVideo);
@@ -897,6 +899,7 @@ void NativeLayerCA::AttachExternalImage(wr::RenderTextureHost* aExternalImage) {
     r.mMutatedSize |= changedSizeAndDisplayRect;
     r.mMutatedSpecializeVideo |= changedSpecializeVideo;
     r.mMutatedIsDRM |= changedIsDRM;
+    r.mMutatedIsHDR |= changedIsHDR;
   });
 }
 
@@ -1336,6 +1339,7 @@ void NativeLayerCA::SetSurfaceToPresent(CFTypeRefPtr<IOSurfaceRef> aSurfaceRef,
   bool changedIsDRM = (mIsDRM != aIsDRM);
   mIsDRM = aIsDRM;
 
+  bool changedIsHDR = (mIsHDR != aIsHDR);
   mIsHDR = aIsHDR;
 
   bool specializeVideo = ShouldSpecializeVideo(lock);
@@ -1356,6 +1360,7 @@ void NativeLayerCA::SetSurfaceToPresent(CFTypeRefPtr<IOSurfaceRef> aSurfaceRef,
     r.mMutatedSize |= changedSize;
     r.mMutatedSpecializeVideo |= changedSpecializeVideo;
     r.mMutatedIsDRM |= changedIsDRM;
+    r.mMutatedIsHDR |= changedIsHDR;
   });
 }
 
@@ -1372,7 +1377,8 @@ NativeLayerCARepresentation::NativeLayerCARepresentation()
       mMutatedFrontSurface(true),
       mMutatedSamplingFilter(true),
       mMutatedSpecializeVideo(true),
-      mMutatedIsDRM(true) {}
+      mMutatedIsDRM(true),
+      mMutatedIsHDR(true) {}
 
 NativeLayerCARepresentation::~NativeLayerCARepresentation() {
   [mContentCALayer release];
@@ -1513,7 +1519,7 @@ bool NativeLayerCA::ApplyChanges(WhichRepresentation aRepresentation,
   bool updateSucceeded = r.ApplyChanges(
       aUpdate, size, mIsOpaque, mPosition, mTransform, displayRect, mClipRect,
       mRoundedClipRect, mBackingScale, surfaceIsFlipped, mSamplingFilter,
-      mSpecializeVideo, surface, mColor, mIsDRM, IsVideo(lock));
+      mSpecializeVideo, surface, mColor, IsVideo(lock), mIsDRM, mIsHDR);
   bool hasExtentAfterUpdate = r.UnderlyingCALayer() != nullptr;
   if (hasExtentAfterUpdate != hadExtentBeforeUpdate) {
     *aMustRebuild = true;
@@ -1526,7 +1532,8 @@ CALayer* NativeLayerCA::UnderlyingCALayer(WhichRepresentation aRepresentation) {
   return GetRepresentation(aRepresentation).UnderlyingCALayer();
 }
 
-bool NativeLayerCARepresentation::EnqueueSurface(IOSurfaceRef aSurfaceRef) {
+bool NativeLayerCARepresentation::EnqueueSurface(IOSurfaceRef aSurfaceRef,
+                                                 bool aIsHDR) {
   MOZ_ASSERT(
       [mContentCALayer isKindOfClass:[AVSampleBufferDisplayLayer class]]);
   AVSampleBufferDisplayLayer* videoLayer =
@@ -1666,6 +1673,17 @@ bool NativeLayerCARepresentation::EnqueueSurface(IOSurfaceRef aSurfaceRef) {
                          kCFBooleanTrue);
   }
 
+  // Set a layer property for HDR video. We would like to set this
+  // property exactly once, at time of layer creation, but correct
+  // HDR display seems to require that it is set before every call to
+  // enqueueSampleBuffer.
+  if (@available(macOS 26.0, *)) {
+    videoLayer.preferredDynamicRange =
+        aIsHDR ? CADynamicRangeHigh : CADynamicRangeStandard;
+  } else if (@available(macOS 14.0, *)) {
+    videoLayer.wantsExtendedDynamicRangeContent = aIsHDR;
+  }
+
 #ifdef NIGHTLY_BUILD
   if (mLogNextVideoSurface &&
       StaticPrefs::gfx_core_animation_specialize_video_log()) {
@@ -1689,7 +1707,8 @@ bool NativeLayerCARepresentation::ApplyChanges(
     const Maybe<gfx::RoundedRect>& aRoundedClip, float aBackingScale,
     bool aSurfaceIsFlipped, gfx::SamplingFilter aSamplingFilter,
     bool aSpecializeVideo, const CFTypeRefPtr<IOSurfaceRef>& aFrontSurface,
-    const Maybe<gfx::DeviceColor>& aColor, bool aIsDRM, bool aIsVideo) {
+    const Maybe<gfx::DeviceColor>& aColor, bool aIsVideo, bool aIsDRM,
+    bool aIsHDR) {
   // If we have an OnlyVideo update, handle it and early exit.
   if (aUpdate == UpdateType::OnlyVideo) {
     // If we don't have any updates to do, exit early with success. This is
@@ -1705,7 +1724,7 @@ bool NativeLayerCARepresentation::ApplyChanges(
     bool updateSucceeded = false;
     if (aSpecializeVideo) {
       IOSurfaceRef surface = aFrontSurface.get();
-      updateSucceeded = EnqueueSurface(surface);
+      updateSucceeded = EnqueueSurface(surface, aIsHDR);
 
       if (updateSucceeded) {
         mMutatedFrontSurface = false;
@@ -2016,7 +2035,7 @@ bool NativeLayerCARepresentation::ApplyChanges(
 
       // Attempt to enqueue this as a video frame. If we fail, we'll rebuild
       // our video layer in the next update.
-      bool isEnqueued = EnqueueSurface(surface);
+      bool isEnqueued = EnqueueSurface(surface, aIsHDR);
       if (!isEnqueued) {
         // Set mMutatedSpecializeVideo, which will ensure that the next update
         // will rebuild the video layer.
@@ -2052,6 +2071,7 @@ bool NativeLayerCARepresentation::ApplyChanges(
   mMutatedSamplingFilter = false;
   mMutatedSpecializeVideo = false;
   mMutatedIsDRM = false;
+  mMutatedIsHDR = false;
 
   return true;
 }
@@ -2067,7 +2087,7 @@ NativeLayerCA::UpdateType NativeLayerCARepresentation::HasUpdate(
   if (mMutatedPosition || mMutatedTransform || mMutatedDisplayRect ||
       mMutatedClipRect || mMutatedRoundedClipRect || mMutatedBackingScale ||
       mMutatedSize || mMutatedSurfaceIsFlipped || mMutatedSamplingFilter ||
-      mMutatedSpecializeVideo || mMutatedIsDRM) {
+      mMutatedSpecializeVideo || mMutatedIsDRM || mMutatedIsHDR) {
     return UpdateType::All;
   }
 
