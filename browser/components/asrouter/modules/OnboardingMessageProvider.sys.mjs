@@ -19,7 +19,10 @@ const { AppConstants } = ChromeUtils.importESModule(
 );
 
 import { FeatureCalloutMessages } from "resource:///modules/asrouter/FeatureCalloutMessages.sys.mjs";
-import { WIN_OS_PIN_PROMPT_ENABLED } from "resource:///modules/asrouter/MessagingTargetingConstants.sys.mjs";
+import {
+  WIN_OS_PIN_PROMPT_ENABLED,
+  FXA_NOT_SIGNED_IN,
+} from "resource:///modules/asrouter/MessagingTargetingConstants.sys.mjs";
 
 const lazy = {};
 
@@ -62,6 +65,76 @@ const isMSIX =
   Services.sysinfo.getProperty("hasWinPackageId", false);
 
 const BASE_MESSAGES = () => [
+  {
+    id: "LOGIN_STATUS_ADVISORY",
+    template: "feature_callout",
+    groups: ["cfr"],
+    content: {
+      id: "LOGIN_STATUS_ADVISORY",
+      template: "multistage",
+      backdrop: "transparent",
+      transitions: false,
+      disableHistoryUpdates: true,
+      screens: [
+        {
+          id: "LOGIN_STATUS_ADVISORY_A",
+          anchors: [
+            {
+              selector: "#fxa-toolbar-menu-button",
+              panel_position: {
+                anchor_attachment: "bottomcenter",
+                callout_attachment: "topright",
+                panel_position_string: "bottomcenter topright",
+              },
+              no_open_on_anchor: true,
+              arrow_width: "19.79899",
+            },
+          ],
+          content: {
+            position: "callout",
+            width: "fit-content",
+            padding: "0",
+            autohide: true,
+            title: {
+              string_id: "login-status-advisory-title",
+              marginInline: "16px",
+              marginBlock: "10px",
+              fontWeight: "normal",
+              fontSize: "0.6875em",
+              lineHeight: "1",
+              letterSpacing: "0",
+            },
+            page_event_listeners: [
+              {
+                params: {
+                  type: "tourend",
+                  options: {
+                    once: true,
+                  },
+                },
+                action: {
+                  dismiss: true,
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+    targeting: `source == 'startup' && previousSessionEnd && !willShowDefaultPrompt && !activeNotifications && ${FXA_NOT_SIGNED_IN} && (currentDate|date - profileAgeCreated|date) / 86400000 >= 7`,
+    frequency: {
+      custom: [
+        {
+          cap: 1,
+          period: 604800000,
+        },
+      ],
+      lifetime: 3,
+    },
+    trigger: {
+      id: "defaultBrowserCheck",
+    },
+  },
   {
     id: "MENU_MESSAGE_DEFAULT_CTA_ILLUSTRATION_LAYOUT",
     template: "menu_message",
