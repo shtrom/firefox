@@ -348,35 +348,14 @@ appmenu-other-protection-header3 = Privacy tools
 
 ## Profiles panel
 
-appmenu-profiles-header = Profiles
-appmenu-all-profiles =
-    .label = All Profiles
-appmenu-secure-sync-header = Secure sync
-
 appmenu-profiles-2 =
     .label = Profiles
 appmenu-other-profiles = Other profiles
 appmenu-manage-profiles =
-    .label = Manage Profiles
+    .label = Manage profiles
 appmenu-copy-profile =
-    .label = Copy This Profile
-appmenu-create-profile2 =
-    .label = Create a New Profile
+    .label = Copy this profile
+appmenu-create-profile =
+    .label = New profile
 appmenu-edit-profile =
     .aria-label = Edit profile
-appmenu-edit-this-profile =
-    .label = Edit This Profile
-appmenu-profile-current-in-use = Current profile in use
-
-fxa-menu-create-profile-subpanel =
-    .title = Create a new profile
-
-fxa-menu-create-profile-heading = Level up your browsing with a new profile
-
-fxa-menu-create-profile-description = Keep your bookmarks, passwords, and history separate for work and personal browsing.
-
-fxa-menu-create-profile-confirm =
-    .label = Create New profile
-
-fxa-menu-create-profile-learn-more =
-    .label = What Are Profiles?

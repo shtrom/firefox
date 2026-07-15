@@ -1268,17 +1268,9 @@ var gSync = {
       document,
       "PanelUI-sign-out-separator"
     );
-    const profilesHeaderSeparator = PanelMultiView.getViewNode(
+    const emptyProfilesButton = PanelMultiView.getViewNode(
       document,
-      "PanelUI-fxa-menu-profiles-header-separator"
-    );
-    const profilesHeaderLabel = PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-profiles-header-label"
-    );
-    const profileButtonsContainer = PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-profile-buttons"
+      "PanelUI-fxa-menu-empty-profiles-button"
     );
     const sendTabButton = PanelMultiView.getViewNode(
       document,
@@ -1288,13 +1280,13 @@ var gSync = {
       document,
       "PanelUI-fxa-menu-sendtab-separator"
     );
+    const profilesButton = PanelMultiView.getViewNode(
+      document,
+      "PanelUI-fxa-menu-profiles-button"
+    );
     const profilesSeparator = PanelMultiView.getViewNode(
       document,
       "PanelUI-fxa-menu-profiles-separator"
-    );
-    const secureSyncHeader = PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-secure-sync-header"
     );
     const syncSetupEl = PanelMultiView.getViewNode(
       document,
@@ -1376,24 +1368,19 @@ var gSync = {
         }
 
         // Reposition profiles elements
-        profilesHeaderSeparator.remove();
-        profilesHeaderLabel.remove();
-        profileButtonsContainer.remove();
+        emptyProfilesButton.remove();
+        profilesButton.remove();
         profilesSeparator.remove();
-        secureSyncHeader.remove();
         sendTabButton.remove();
         sendTabSeparator.remove();
 
         profilesSeparator.hidden = true;
-        secureSyncHeader.hidden = true;
 
         signedInContainer.after(sendTabButton);
         signedInContainer.after(sendTabSeparator);
-        signedInContainer.after(secureSyncHeader);
         signedInContainer.after(profilesSeparator);
-        signedInContainer.after(profileButtonsContainer);
-        signedInContainer.after(profilesHeaderLabel);
-        signedInContainer.after(profilesHeaderSeparator);
+        signedInContainer.after(profilesButton);
+        signedInContainer.after(emptyProfilesButton);
 
         break;
 
@@ -1443,20 +1430,15 @@ var gSync = {
         }
 
         // Reposition profiles elements
-        profilesHeaderSeparator.remove();
-        profilesHeaderLabel.remove();
-        profileButtonsContainer.remove();
+        emptyProfilesButton.remove();
+        profilesButton.remove();
         profilesSeparator.remove();
-        secureSyncHeader.remove();
 
         profilesSeparator.hidden = false;
-        secureSyncHeader.hidden = false;
 
-        fxaMenuAccountButtonEl.after(secureSyncHeader);
         fxaMenuAccountButtonEl.after(profilesSeparator);
-        fxaMenuAccountButtonEl.after(profileButtonsContainer);
-        fxaMenuAccountButtonEl.after(profilesHeaderLabel);
-        fxaMenuAccountButtonEl.after(profilesHeaderSeparator);
+        fxaMenuAccountButtonEl.after(profilesButton);
+        fxaMenuAccountButtonEl.after(emptyProfilesButton);
 
         break;
 
