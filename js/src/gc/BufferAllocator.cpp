@@ -997,17 +997,16 @@ void* BufferAllocator::TraceEdge(JSTracer* trc, void** bufferp,
   BufferAllocator& allocator = chunk->zone->bufferAllocator;
 
   if (IsSmallAlloc(buffer)) {
-    allocator.traceSmallAlloc(trc, bufferp, name);
+    allocator.traceSmallAlloc(trc, buffer, name);
     return buffer;
   }
 
-  allocator.traceMediumAlloc(trc, bufferp, name);
+  allocator.traceMediumAlloc(trc, buffer, name);
   return buffer;
 }
 
-void BufferAllocator::traceSmallAlloc(JSTracer* trc, void** allocp,
+void BufferAllocator::traceSmallAlloc(JSTracer* trc, void* alloc,
                                       const char* name) {
-  void* alloc = *allocp;
   auto* region = SmallBufferRegion::from(alloc);
 
   if (trc->isTenuringTracer()) {
@@ -1026,9 +1025,8 @@ void BufferAllocator::traceSmallAlloc(JSTracer* trc, void** allocp,
   }
 }
 
-void BufferAllocator::traceMediumAlloc(JSTracer* trc, void** allocp,
+void BufferAllocator::traceMediumAlloc(JSTracer* trc, void* alloc,
                                        const char* name) {
-  void* alloc = *allocp;
   BufferChunk* chunk = BufferChunk::from(alloc);
 
   if (trc->isTenuringTracer()) {
