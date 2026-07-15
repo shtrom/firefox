@@ -204,7 +204,6 @@ export const INITIAL_STATE = {
   Stocks: {
     tickers: [],
     lastUpdated: null,
-    error: false,
   },
   PictureOfTheDay: {
     initialized: false,
@@ -1334,7 +1333,6 @@ function Stocks(prevState = INITIAL_STATE.Stocks, action) {
         ...prevState,
         tickers: action.data.tickers,
         lastUpdated: action.data.lastUpdated,
-        error: action.data.error ?? false,
       };
     default:
       return prevState;
