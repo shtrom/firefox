@@ -78,16 +78,13 @@ void NativeLayerRemoteMac::AttachExternalImage(
   mIsDRM = isDRM;
 
   MacIOSurface* macIOSurface = texture->GetSurface();
-  bool isHDR = macIOSurface->IsHDRSurface() && gfxPlatform::UseHDR();
-  bool changedIsHDR = mIsHDR != isHDR;
-  mIsHDR = isHDR;
+  mIsHDR = macIOSurface->IsHDRSurface() && gfxPlatform::UseHDR();
 
   mDirtyLayerInfo |= changedDisplayRect;
   mSnapshotLayer.mMutatedFrontSurface = true;
   mSnapshotLayer.mMutatedSize |= changedDisplayRect;
   mSnapshotLayer.mMutatedDisplayRect |= changedDisplayRect;
   mSnapshotLayer.mMutatedIsDRM |= changedIsDRM;
-  mSnapshotLayer.mMutatedIsHDR |= changedIsHDR;
   mDirtyChangedSurface = true;
 }
 
@@ -276,7 +273,7 @@ void NativeLayerRemoteMac::UpdateSnapshotLayer() {
       NativeLayerCAUpdateType::All, rect.Size(), mIsOpaque, rect.TopLeft(),
       mTransform, displayRect, mClipRect, mRoundedClipRect, mBackingScale,
       mSurfaceIsFlipped, mSamplingFilter, specializeVideo, surface, mColor,
-      isVideo, mIsDRM, mIsHDR);
+      mIsDRM, isVideo);
 }
 
 CALayer* NativeLayerRemoteMac::CALayerForSnapshot() {
