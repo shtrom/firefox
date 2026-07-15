@@ -627,22 +627,21 @@
                  data-l10n-id="fxa-menu-turn-on-sync"/>
         </vbox>
       </toolbarbutton>
-      <toolbarbutton id="PanelUI-fxa-menu-syncnow-button"
-                     align="center"
-                     class="subviewbutton"
-                     closemenu="none">
-        <hbox flex="1">
-          <image id="PanelUI-appMenu-fxa-image-last-synced"
-                 class="syncNowBtn"/>
-          <label class="syncnow-label"
-                 data-l10n-id="appmenuitem-fxa-toolbar-sync-now2"
-                 sync-now-data-l10n-id="appmenuitem-fxa-toolbar-sync-now2"
-                 syncing-data-l10n-id="fxa-toolbar-sync-syncing2"
-                 flex="1"
-                 crop="end"/>
-        </hbox>
-      </toolbarbutton>
       <vbox id="PanelUI-signedin-panel" hidden="true">
+        <toolbarbutton id="PanelUI-fxa-menu-sync-status-button"
+                       class="subviewbutton subviewbutton-nav fxa-menu-sync-status-button"
+                       closemenu="none"
+                       hidden="true">
+          <image class="fxa-menu-sync-status-icon" role="presentation"/>
+          <vbox flex="1">
+            <label id="PanelUI-fxa-menu-sync-status-title"
+                   class="fxa-menu-sync-status-title"
+                   crop="end"/>
+            <label id="PanelUI-fxa-menu-sync-status-description"
+                   class="fxa-menu-sync-status-description"
+                   crop="end"/>
+          </vbox>
+        </toolbarbutton>
         <vbox id="PanelUI-fxa-menu-setup-sync-container" hidden="true">
           <vbox class="PanelUI-fxa-menu-setup-sync" flex="1">
             <hbox class="sync-status-container" align="center">
@@ -661,27 +660,12 @@
                     class="subviewbutton"
                     data-l10n-id="appmenu-fxa-setup-sync-new"/>
           </vbox>
+          <toolbarbutton id="PanelUI-fxa-menu-get-firefox-mobile"
+                  class="subviewbutton subviewbutton-iconic"
+                  data-l10n-id="fxa-menu-get-firefox-mobile"/>
           <toolbarseparator id="PanelUI-set-up-sync-separator" />
       </vbox>
-      <!-- The `Connect Another Device` button is disabled by default until the user logs into Sync. -->
-      <toolbarbutton id="PanelUI-fxa-menu-connect-device-button"
-                      class="subviewbutton"
-                      data-l10n-id="fxa-menu-connect-another-device"
-                      disabled="true"
-                      />
-      <toolbarbutton id="PanelUI-fxa-menu-sync-prefs-button"
-                      class="subviewbutton"
-                      data-l10n-id="fxa-menu-sync-settings"
-                      hidden="true"
-                      />
-      <toolbarseparator id="PanelUI-fxa-menu-sendtab-separator" hidden="true" />
-      <toolbarbutton id="PanelUI-fxa-menu-sendtab-button"
-                      class="subviewbutton subviewbutton-nav"
-                      data-l10n-id="fxa-menu-send-to-device"
-                      data-l10n-args='{"tabCount":1}'
-                      closemenu="none"
-                      hidden="true"
-                      />
+      <vbox id="PanelUI-fxa-menu-devices-list" hidden="true"/>
       <toolbarseparator id="PanelUI-sign-out-separator" />
       <toolbarbutton id="PanelUI-fxa-menu-account-signout-button"
               class="subviewbutton"
@@ -742,28 +726,56 @@
           </hbox>
         </toolbarbutton>
       </vbox>
-      <deck id="PanelUI-fxa-remotetabs-deck">
-        <!-- Sync is ready to Sync and the "tabs" engine is enabled -->
-        <vbox id="PanelUI-fxa-remotetabs-tabspane">
-          <toolbarseparator id="PanelUI-remote-tabs-separator" />
-          <vbox id="PanelUI-fxa-remotetabs-tabslist"
-          notabsforclientlabel="appmenu-remote-tabs-notabs"
-          />
-        </vbox>
-        <!-- Sync is ready to Sync but we are still fetching the tabs to show -->
-        <vbox id="PanelUI-fxa-remotetabs-fetching">
-          <!-- Show intentionally blank panel, see bug 1239845 -->
-        </vbox>
-      </deck>
     </vbox>
   </panelview>
 
-  <!-- This panelview is used to contain the dynamically created buttons for send tab to devices -->
-  <panelview id="PanelUI-sendTabToDevice" class="PanelUI-subView">
+  <!-- This panelview shows recent tabs for a specific synced device -->
+  <panelview id="PanelUI-fxa-device-recent-tabs" class="PanelUI-subView"
+             data-l10n-id="fxa-menu-device-recent-tabs-panel">
     <vbox class="panel-subview-body">
-      <toolbarbutton id="PanelUI-sendTabToDevice-syncingDevices" class="subviewbutton subviewbutton-iconic pageAction-sendToDevice-notReady"
-                     data-l10n-id="fxa-menu-send-tab-to-device-syncnotready"
-                     disabled="true"/>
+      <vbox id="PanelUI-fxa-device-recent-tabs-list"/>
+      <label id="PanelUI-fxa-device-no-open-tabs"
+             class="PanelUI-remotetabs-notabsforclient-label"
+             data-l10n-id="appmenu-remote-tabs-notabs"
+             hidden="true"/>
+      <toolbarseparator id="PanelUI-fxa-device-recent-tabs-footer-separator"/>
+      <toolbarbutton id="PanelUI-fxa-device-view-all-tabs"
+                     class="subviewbutton panel-subview-footer-button"
+                     closemenu="none"/>
+      <toolbarbutton id="PanelUI-fxa-device-send-current-page"
+                     class="subviewbutton panel-subview-footer-button"
+                     data-l10n-id="fxa-menu-device-send-current-page"/>
+    </vbox>
+  </panelview>
+
+  <!-- Secure sync sub-panel with sync actions -->
+  <panelview id="PanelUI-fxa-menu-secure-sync-subpanel"
+             class="PanelUI-subView"
+             data-l10n-id="fxa-menu-secure-sync-subpanel">
+    <vbox class="panel-subview-body">
+      <toolbarbutton id="PanelUI-fxa-menu-secure-sync-now"
+                     class="subviewbutton subviewbutton-iconic"
+                     closemenu="none">
+        <hbox class="fxa-menu-secure-sync-now-content" flex="1" align="center">
+          <image class="syncNowBtn" role="presentation"/>
+          <label id="PanelUI-fxa-menu-secure-sync-now-label"
+                 flex="1"
+                 crop="end"/>
+        </hbox>
+      </toolbarbutton>
+      <toolbarbutton id="PanelUI-fxa-menu-secure-sync-settings"
+                     class="subviewbutton"
+                     data-l10n-id="fxa-menu-manage-sync-settings"/>
+      <toolbarseparator/>
+      <toolbarbutton id="PanelUI-fxa-menu-secure-sync-add-device"
+                     class="subviewbutton"
+                     data-l10n-id="fxa-menu-add-device"/>
+      <toolbarbutton id="PanelUI-fxa-menu-secure-sync-manage-devices"
+                     class="subviewbutton"
+                     data-l10n-id="fxa-menu-manage-devices"/>
+      <toolbarbutton id="PanelUI-fxa-menu-secure-sync-device-missing"
+                     class="subviewbutton"
+                     data-l10n-id="fxa-menu-device-missing"/>
     </vbox>
   </panelview>
 
