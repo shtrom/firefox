@@ -19,7 +19,6 @@ const { AppConstants } = ChromeUtils.importESModule(
 );
 
 import { FeatureCalloutMessages } from "resource:///modules/asrouter/FeatureCalloutMessages.sys.mjs";
-import { WIN_OS_PIN_PROMPT_ENABLED } from "resource:///modules/asrouter/MessagingTargetingConstants.sys.mjs";
 
 const lazy = {};
 
@@ -2513,24 +2512,6 @@ const BASE_MESSAGES = () => [
     },
     targeting:
       "source == 'startup' && doesAppNeedPin && !willShowDefaultPrompt &&(!'browser.shell.checkDefaultBrowser'|preferenceValue || isDefaultBrowser) && 'browser.backup.profile-restoration-date'|preferenceValue && !'browser.profiles.profile-copied'|preferenceValue",
-    trigger: {
-      id: "defaultBrowserCheck",
-    },
-    frequency: {
-      lifetime: 1,
-    },
-  },
-  {
-    // Silently pins for users Windows will itself ask to consent to pin via
-    // an OS-level prompt, in lieu of the AW_EASY_SETUP pin checkbox.
-    id: "PIN_FIREFOX_TASKBAR_WIN_OS_PROMPT",
-    template: "action_only",
-    content: {
-      action: {
-        type: "PIN_FIREFOX_TO_TASKBAR",
-      },
-    },
-    targeting: `source == 'startup' && !previousSessionEnd && doesAppNeedPin && ${WIN_OS_PIN_PROMPT_ENABLED} && (unhandledCampaignAction != 'PIN_FIREFOX_TO_TASKBAR') && (unhandledCampaignAction != 'PIN_AND_DEFAULT')`,
     trigger: {
       id: "defaultBrowserCheck",
     },
