@@ -645,9 +645,17 @@ nsCertOverrideService::
     return NS_ERROR_NOT_AVAILABLE;
   }
 
+  bool changed;
   {
     MutexAutoLock lock(mMutex);
+    changed = (mDisableAllSecurityCheck != aDisable);
     mDisableAllSecurityCheck = aDisable;
+  }
+
+  // Only clear the TLS session cache when the disable-state actually changes;
+  // a redundant call with the same value must not evict live session tickets.
+  if (!changed) {
+    return NS_OK;
   }
 
   mozilla::net::SSLTokensCache::ClearSessionCacheAndTokens();
