@@ -116,7 +116,8 @@ export class UrlbarParent extends JSWindowActorParent {
         break;
       case "RemoveResult":
         controller.removeResult(
-          lazy.UrlbarResult.fromWire(message.data.result)
+          lazy.UrlbarResult.fromWire(message.data.result),
+          message.data.options
         );
         break;
       case "SetLastQueryContextCache":
@@ -210,6 +211,10 @@ class ViewProxy {
       method,
       args,
     });
+  }
+
+  acknowledgeFeedback(result) {
+    this.#invoke("acknowledgeFeedback", [result.toWire()]);
   }
 
   close() {

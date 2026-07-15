@@ -841,6 +841,31 @@ class UrlbarInputTestUtils {
   }
 
   /**
+   * Returns a promise that resolves the next time the given controller
+   * notification is dispatched. Useful for awaiting an effect that arrives
+   * asynchronously on the actor message path (e.g. a result dismissal) while
+   * resolving synchronously on the in-process path. Register it before
+   * triggering the effect.
+   *
+   * @param {ChromeWindow} win The window containing the urlbar.
+   * @param {string} notification The listener method name, e.g.
+   *   "onQueryResultRemoved".
+   * @returns {Promise<any[]>} Resolves with the notification's arguments.
+   */
+  promiseControllerNotification(win, notification) {
+    let { controller } = this.#urlbar(win);
+    return new Promise(resolve => {
+      let listener = {
+        [notification](...args) {
+          controller.removeListener(listener);
+          resolve(args);
+        },
+      };
+      controller.addListener(listener);
+    });
+  }
+
+  /**
    * Open the input field context menu and run a task on it.
    *
    * @param {ChromeWindow} win the current window

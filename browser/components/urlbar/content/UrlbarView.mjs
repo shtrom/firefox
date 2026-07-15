@@ -561,10 +561,16 @@ export class UrlbarView {
     if (!row) {
       return;
     }
+    // Compare against the row's own result rather than `result`: across the
+    // actor boundary `result` is a wire copy, so an identity check would always
+    // fail. This still guards against the row's result changing during the
+    // async l10n fetch below, though it can't confirm the row still matches the
+    // dismissed result -- that needs a stable result id (Bug 2052875).
+    let { result: rowResult } = row;
 
     let l10n = { id: "urlbar-feedback-acknowledgment" };
     await this.#l10nCache.ensure(l10n);
-    if (row.result != result) {
+    if (row.result != rowResult) {
       return;
     }
 
@@ -1083,14 +1089,20 @@ export class UrlbarView {
    * This assumes that the result rows are in index order.
    *
    * @param {number} index The index of the result that has been removed.
+   * @param {object} [acknowledgeDismissalL10n]
+   *   The dismissal-acknowledgment l10n the dismissing provider set on the
+   *   result, supplied by the caller. It isn't read from this row's result
+   *   because the provider sets it after the results were serialized to this
+   *   process, so this row's result -- a query-time snapshot -- never received
+   *   it. Undefined when the row is removed without acknowledgment.
    */
-  onQueryResultRemoved(index) {
+  onQueryResultRemoved(index, acknowledgeDismissalL10n) {
     let rowToRemove = this.#rows.children[index];
 
     let { result } = rowToRemove;
-    if (result.acknowledgeDismissalL10n) {
+    if (acknowledgeDismissalL10n) {
       // Replace the result's row with a dismissal acknowledgment tip.
-      this.#acknowledgeDismissal(result, result.acknowledgeDismissalL10n);
+      this.#acknowledgeDismissal(result, acknowledgeDismissalL10n);
       return;
     }
 
