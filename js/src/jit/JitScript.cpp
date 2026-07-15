@@ -535,6 +535,8 @@ void JitScript::purgeStubs(JSScript* script, ICStubSpace& newStubSpace) {
 }
 
 void ICScript::purgeStubs(Zone* zone, ICStubSpace& newStubSpace) {
+  gc::AutoMarkingLock lock(zone, markingLock());
+
   for (size_t i = 0; i < numICEntries(); i++) {
     ICEntry& entry = icEntry(i);
     ICFallbackStub* fallback = fallbackStub(i);
@@ -578,7 +580,7 @@ void ICScript::purgeStubs(Zone* zone, ICStubSpace& newStubSpace) {
 
     MOZ_ASSERT(!hasInlinedChild(fallback->pcOffset()));
 
-    fallback->discardStubs(zone, &entry);
+    fallback->discardStubs(zone, &entry, lock);
     fallback->state().reset();
   }
 }

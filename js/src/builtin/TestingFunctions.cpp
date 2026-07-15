@@ -9946,11 +9946,13 @@ static bool ResetFallbackStubStates(JSContext* cx, unsigned argc, Value* vp) {
   }
 
   jit::ICScript* icScript = script->jitScript()->icScript();
+  gc::AutoMarkingLock lock(cx->zone(), icScript->markingLock());
+
   uint32_t numEntries = script->jitScript()->numICEntries();
   JS::Zone* zone = script->zone();
   for (uint32_t i = 0; i < numEntries; i++) {
     jit::ICFallbackStub* stub = script->jitScript()->fallbackStub(i);
-    stub->discardStubs(zone, &icScript->icEntry(i));
+    stub->discardStubs(zone, &icScript->icEntry(i), lock);
 
     if (icScript->hasInlinedChild(stub->pcOffset())) {
       icScript->removeInlinedChild(stub->pcOffset());
