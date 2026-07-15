@@ -947,30 +947,6 @@
     "kind": "boolean",
     "description": "Whether or not a new alt-svc mapping would change the target hostname of the existing mapping"
   },
-  "NETWORKING_DOWNLOAD_THROUGHPUT_HTTP_2": {
-    "record_in_processes": ["main"],
-    "products": ["firefox"],
-    "alert_emails": ["necko@mozilla.com", "acreskey@mozilla.com"],
-    "expires_in_version": "never",
-    "releaseChannelCollection": "opt-out",
-    "kind": "exponential",
-    "high": 10000,
-    "n_buckets": 100,
-    "bug_numbers": [1846798],
-    "description": "The download throughput for http/2 requests larger than 10MB. Measured in megabits per second, Mbps."
-  },
-  "NETWORKING_DOWNLOAD_THROUGHPUT_HTTP_3": {
-    "record_in_processes": ["main"],
-    "products": ["firefox"],
-    "alert_emails": ["necko@mozilla.com", "acreskey@mozilla.com"],
-    "expires_in_version": "never",
-    "releaseChannelCollection": "opt-out",
-    "kind": "exponential",
-    "high": 10000,
-    "n_buckets": 100,
-    "bug_numbers": [1846798],
-    "description": "The download throughput for http/3 requests larger than 10MB. Measured in megabits per second, Mbps."
-  },
   "NETWORK_BACK_PRESSURE_SUSPENSION_RATE_V2": {
     "record_in_processes": ["main"],
     "products": ["firefox", "fennec"],
@@ -1049,17 +1025,6 @@
     "n_buckets": 50,
     "description": "DNS Cache Entry Age for by-type queries at Removal Time (minutes)"
   },
-  "DNS_LOOKUP_TIME": {
-    "record_in_processes": ["main", "socket"],
-    "products": ["firefox", "fennec"],
-    "expires_in_version": "never",
-    "kind": "exponential",
-    "high": 60000,
-    "releaseChannelCollection": "opt-out",
-    "alert_emails": ["necko@mozilla.com"],
-    "n_buckets": 50,
-    "description": "Time for a successful DNS resolution (msec)"
-  },
   "TAB_COUNT": {
     "record_in_processes": ["main"],
     "products": ["firefox", "fennec"],
@@ -1105,17 +1070,6 @@
     "bug_numbers": [1364235, 1590385, 1623098, 1649954, 1689257, 1754639],
     "releaseChannelCollection": "opt-out",
     "description": "Time spent waiting for off-thread compiles in the script preloader."
-  },
-  "NETWORK_ID_ONLINE": {
-    "record_in_processes": ["main", "socket"],
-    "products": ["firefox", "fennec"],
-    "alert_emails": ["necko@mozilla.com"],
-    "bug_numbers": [1580130],
-    "expires_in_version": "never",
-    "kind": "categorical",
-    "releaseChannelCollection": "opt-out",
-    "labels": ["absent", "present"],
-    "description": "Network ID presence when the network connectivity checker reports that we have connectivity"
   },
   "IDLE_NOTIFY_IDLE_MS": {
     "record_in_processes": ["main", "content"],
@@ -5657,28 +5611,6 @@
     "bug_numbers": [1627708, 1672576],
     "description": "Input device that triggered the zoom gesture (InputData::PinchGestureSource)",
     "releaseChannelCollection": "opt-out"
-  },
-  "REL_PRELOAD_MISS_RATIO": {
-    "record_in_processes": ["content"],
-    "products": ["firefox"],
-    "alert_emails": ["necko@mozilla.com", "kershaw@mozilla.com"],
-    "bug_numbers": [1658532, 1583604, 1666981, 1700831, 1736687, 1777403],
-    "expires_in_version": "never",
-    "kind": "categorical",
-    "labels": [
-      "TYPE_SCRIPT_USED",
-      "TYPE_SCRIPT_UNUSED",
-      "TYPE_STYLE_USED",
-      "TYPE_STYLE_UNUSED",
-      "TYPE_IMAGE_USED",
-      "TYPE_IMAGE_UNUSED",
-      "TYPE_FONT_USED",
-      "TYPE_FONT_UNUSED",
-      "TYPE_FETCH_USED",
-      "TYPE_FETCH_UNUSED"
-    ],
-    "releaseChannelCollection": "opt-out",
-    "description": "Ratio of used and unused resources preloaded with link rel=preload tag or response header, broken down by supported resource type."
   },
   "TEXT_RECOGNITION_API_PERFORMANCE": {
     "record_in_processes": ["main"],
