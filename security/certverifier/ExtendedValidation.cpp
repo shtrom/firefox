@@ -46,18 +46,15 @@ struct EVInfo {
 // use plain text representation, we rather use the original encoding
 // as it can be found in the root certificate (in base64 format).
 //
-// We can use the NSS utility named "pp" to extract the encoding.
-//
-// Build standalone NSS including the NSS tools, then run
-//   pp -t certificate-identity -i the-cert-filename
-//
-// You will need the output from sections "Issuer", "Fingerprint (SHA-256)",
-// "Issuer DER Base64" and "Serial DER Base64".
+// The script security/manager/tools/ev_cert_info.py extracts this data from a
+// certificate file and prints an entry ready to paste below. Run
+//   ./ev_cert_info.py [--oid POLICY_OID] the-cert-filename
+// The OID defaults to the CA/Browser Forum EV OID (2.23.140.1.1), and the
+// oidName description is filled in automatically for OIDs already used here.
 //
 // The new section consists of the following components:
 //
-// - a comment that should contain the human readable issuer name
-//   of the certificate, as printed by the pp tool
+// - a comment that contains the human readable issuer name of the certificate
 // - the EV policy OID that is associated to the EV grant
 // - a text description of the EV policy OID. The array can contain
 //   multiple entries with the same OID.
@@ -69,15 +66,26 @@ struct EVInfo {
 //   all the other descriptions (again use the text search feature
 //   to be sure).
 // - the SHA-256 fingerprint
-// - the "Issuer DER Base64" as printed by the pp tool.
-//   Remove all whitespaces. If you use multiple lines, make sure that
-//   only the final line will be followed by a comma.
-// - the "Serial DER Base64" (as printed by pp)
+// - the issuer name in DER, encoded in base64.
+//   If you use multiple lines, make sure that only the final line will be
+//   followed by a comma.
+// - the serial number in DER, encoded in base64
 //
 // After adding an entry, test it locally against the test site that
 // has been provided by the CA. Note that you must use a version of NSS
 // where the root certificate has already been added and marked as trusted
 // for issuing SSL server certificates (at least).
+//
+// Navigate to the CA's test site and check the site identity information
+// (click the padlock, then "Connection secure") to see if the certificate is
+// recognized as EV. Alternatively, evaluate the following in the Browser
+// Console (Ctrl+Shift+J, or Cmd+Shift+J on macOS) to read the EV status of the
+// current tab:
+//   (() => {
+//     let s = gBrowser.securityUI;
+//     return { ev: s.secInfo?.isExtendedValidation,
+//              issuer: s.secInfo?.serverCert?.issuerName };
+//   })()
 //
 // If you are able to connect to the site without certificate errors,
 // but you don't see the EV status indicator, then most likely the CA
