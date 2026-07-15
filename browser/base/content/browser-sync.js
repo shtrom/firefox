@@ -1209,13 +1209,7 @@ var gSync = {
       document,
       "PanelUI-fxa-menu-sync-status-button"
     ).addEventListener("click", e =>
-      this._onSyncStatusButtonClick(e.currentTarget, e)
-    );
-    PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-sync-status-off-button"
-    ).addEventListener("click", e =>
-      this.openPrefsFromFxaMenu("sync_settings", e.currentTarget)
+      this._showSecureSyncSubpanel(e.currentTarget, e)
     );
     PanelMultiView.getViewNode(
       document,
@@ -1358,111 +1352,6 @@ var gSync = {
       })
     );
     PanelUI.showSubView("PanelUI-fxa-menu-secure-sync-subpanel", anchor, event);
-  },
-
-  /**
-   * Configures the sync status button, which sits where "Sync is On" appears
-   * when sync is enabled. It has three variants:
-   *  - signed in with sync on: "Sync is On" with the last sync time, a chevron,
-   *    and opens the secure sync subpanel.
-   *  - signed in with sync off: "Sync is Off" with an error-colored
-   *    "Your data isn't syncing" and opens sync preferences.
-   *  - signed out, or signed in but needing (re-)authentication: "Sync is Off"
-   *    with an error-colored "Sign in to sync" and opens the sign-in page.
-   */
-  _updateSyncStatusButton(state) {
-    const btn = PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-sync-status-button"
-    );
-    const titleEl = PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-sync-status-title"
-    );
-    const descEl = PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-sync-status-description"
-    );
-    const offCard = PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-sync-status-off-card"
-    );
-    const offTitleEl = PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-sync-status-off-title"
-    );
-    const offDescEl = PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-sync-status-off-description"
-    );
-
-    const syncOn =
-      state.status == UIState.STATUS_SIGNED_IN && state.syncEnabled;
-    const signedIn = state.status == UIState.STATUS_SIGNED_IN;
-    // Signed in with sync off uses a dedicated card with a "Turn on" button
-    // instead of the navigable status button.
-    const syncOffCard = signedIn && !state.syncEnabled;
-
-    offCard.hidden = !syncOffCard;
-    if (syncOffCard) {
-      btn.hidden = true;
-      offTitleEl.setAttribute(
-        "value",
-        this.fluentStrings.formatValueSync("fxa-menu-sync-status-off")
-      );
-      offDescEl.setAttribute(
-        "value",
-        this.fluentStrings.formatValueSync("fxa-menu-sync-off-data-description")
-      );
-      return;
-    }
-
-    // The chevron is only meaningful when the button navigates to the secure
-    // sync subpanel (sync on).
-    btn.classList.toggle("subviewbutton-nav", syncOn);
-
-    let titleId = syncOn
-      ? "fxa-menu-sync-status-on"
-      : "fxa-menu-sync-status-off";
-    titleEl.setAttribute("value", this.fluentStrings.formatValueSync(titleId));
-
-    if (syncOn) {
-      descEl.classList.remove("fxa-menu-sync-status-description-error");
-      let lastSyncDate = this.formatLastSyncDate(state.lastSync);
-      if (lastSyncDate) {
-        descEl.setAttribute(
-          "value",
-          this.fluentStrings.formatValueSync("appmenu-fxa-last-sync", {
-            time: lastSyncDate,
-          })
-        );
-      } else {
-        descEl.removeAttribute("value");
-      }
-    } else {
-      descEl.classList.add("fxa-menu-sync-status-description-error");
-      descEl.setAttribute(
-        "value",
-        this.fluentStrings.formatValueSync(
-          "fxa-menu-sync-off-signin-description"
-        )
-      );
-    }
-
-    btn.hidden = false;
-  },
-
-  _onSyncStatusButtonClick(anchor, event) {
-    const state = UIState.get();
-    if (state.status == UIState.STATUS_SIGNED_IN && state.syncEnabled) {
-      this._showSecureSyncSubpanel(anchor, event);
-    } else if (state.status == UIState.STATUS_SIGNED_IN) {
-      // Signed in with sync off: open preferences to turn sync on.
-      this.openPrefsFromFxaMenu("sync_settings", anchor);
-    } else {
-      // Needs (re-)authentication: open the sign-in page.
-      this.openFxAEmailFirstPageFromFxaMenu(anchor);
-    }
   },
 
   onCommand(button) {
@@ -1783,7 +1672,6 @@ var gSync = {
 
     // Reset FxA/Sync UI elements to default, which is signed out
     syncStatusBtn.hidden = true;
-    signedInContainer.prepend(syncStatusBtn);
     syncSetupEl.setAttribute("hidden", "true");
     signedInContainer.hidden = false;
     fxaMenuAccountButtonEl.classList.remove("subviewbutton-nav");
@@ -1853,16 +1741,14 @@ var gSync = {
         profilesSeparator.remove();
         secureSyncHeader.remove();
 
-        profilesSeparator.hidden = false;
-        secureSyncHeader.hidden = false;
+        profilesSeparator.hidden = true;
+        secureSyncHeader.hidden = true;
 
         signedInContainer.after(secureSyncHeader);
         signedInContainer.after(profilesSeparator);
         signedInContainer.after(profileButtonsContainer);
         signedInContainer.after(profilesHeaderLabel);
         signedInContainer.after(profilesHeaderSeparator);
-
-        secureSyncHeader.after(syncStatusBtn);
 
         break;
 
@@ -1872,6 +1758,7 @@ var gSync = {
         headerTitleL10nId = "account-disconnected2";
         headerDescription = state.displayName || state.email;
         mainWindowEl.style.removeProperty("--avatar-image-url");
+        syncSetupEl.removeAttribute("hidden");
         break;
 
       case UIState.STATUS_NOT_VERIFIED:
@@ -1879,6 +1766,7 @@ var gSync = {
         stateValue = "unverified";
         headerTitleL10nId = "account-finish-account-setup";
         headerDescription = state.displayName || state.email;
+        syncSetupEl.removeAttribute("hidden");
         break;
 
       case UIState.STATUS_SIGNED_IN:
@@ -1892,7 +1780,38 @@ var gSync = {
         );
         signOutSeparator.hidden = false;
         signedInContainer.hidden = false;
-        syncSetupSeparator.setAttribute("hidden", "true");
+
+        if (state.syncEnabled) {
+          syncSetupEl.setAttribute("hidden", "true");
+          syncSetupSeparator.setAttribute("hidden", "true");
+          const titleEl = PanelMultiView.getViewNode(
+            document,
+            "PanelUI-fxa-menu-sync-status-title"
+          );
+          const descEl = PanelMultiView.getViewNode(
+            document,
+            "PanelUI-fxa-menu-sync-status-description"
+          );
+          titleEl.setAttribute(
+            "value",
+            this.fluentStrings.formatValueSync("fxa-menu-sync-status-on")
+          );
+          let lastSyncDate = this.formatLastSyncDate(state.lastSync);
+          if (lastSyncDate) {
+            descEl.setAttribute(
+              "value",
+              this.fluentStrings.formatValueSync("appmenu-fxa-last-sync", {
+                time: lastSyncDate,
+              })
+            );
+          } else {
+            descEl.removeAttribute("value");
+          }
+          syncStatusBtn.hidden = false;
+        } else {
+          syncSetupEl.removeAttribute("hidden");
+          syncStatusBtn.hidden = true;
+        }
 
         // Reposition profiles elements
         profilesHeaderSeparator.remove();
@@ -1921,8 +1840,6 @@ var gSync = {
         );
         break;
     }
-
-    this._updateSyncStatusButton(state);
 
     // Update UI elements with determined values
     mainWindowEl.setAttribute("fxastatus", stateValue);
@@ -3454,15 +3371,9 @@ var gSync = {
       );
     VpnPanelEl.hidden = !vpnEnabled;
 
-    // The services section carries its own leading separator, so only show the
-    // privacy tools separator when that section is hidden (e.g. when signed
-    // out) to keep the header visually separated from the section above.
-    let privacyToolsSeparatorEl = PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-privacy-tools-separator"
-    );
-    privacyToolsSeparatorEl.hidden = !servicesContainerEl.hidden;
-
+    // We should only the show the separator if we have at least one CTA enabled
+    PanelMultiView.getViewNode(document, "PanelUI-products-separator").hidden =
+      !monitorEnabled && !relayEnabled && !vpnEnabled;
     mainPanelEl.hidden = false;
   },
 

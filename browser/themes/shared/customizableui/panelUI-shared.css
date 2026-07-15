@@ -991,20 +991,10 @@ toolbarbutton[constrain-size="true"][cui-areatype="panel"] > .toolbarbutton-badg
   width: var(--size-item-small);
   height: var(--size-item-small);
   flex-shrink: 0;
-  margin-inline-end: var(--space-medium);
 }
 
 .fxa-menu-sync-status-button {
   align-items: center;
-
-  > vbox {
-    min-width: 0;
-  }
-}
-
-.fxa-menu-sync-status-off-card {
-  gap: var(--space-medium);
-  padding: var(--panel-menuitem-padding);
 
   > vbox {
     min-width: 0;
@@ -1018,10 +1008,6 @@ toolbarbutton[constrain-size="true"][cui-areatype="panel"] > .toolbarbutton-badg
 .fxa-menu-sync-status-description {
   color: var(--text-color-deemphasized);
   font-size: var(--font-size-small);
-}
-
-.fxa-menu-sync-status-description.fxa-menu-sync-status-description-error {
-  color: var(--text-color-error);
 }
 
 /* Firefox Account Toolbar Panel */
