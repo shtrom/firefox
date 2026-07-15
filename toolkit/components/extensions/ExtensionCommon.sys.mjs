@@ -1438,7 +1438,7 @@ class SchemaAPIManager extends EventEmitter {
    *     "addon" - An addon process.
    *     "content" - A content process.
    *     "devtools" - A devtools process.
-   * @param {import("Schemas.sys.mjs").SchemaInject} [schema]
+   * @param {import("./Schemas.sys.mjs").SchemaInject} [schema]
    */
   constructor(processType, schema) {
     super();

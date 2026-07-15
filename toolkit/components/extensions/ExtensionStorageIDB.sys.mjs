@@ -800,7 +800,7 @@ export var ExtensionStorageIDB = {
    * child context is going to ask the main process only once per child process, and on the
    * main process side the backend selection and data migration will happen only once.
    *
-   * @param {import("ExtensionPageChild.sys.mjs").ExtensionBaseContextChild} context
+   * @param {import("./ExtensionPageChild.sys.mjs").ExtensionBaseContextChild} context
    *        The extension context that is selecting the storage backend.
    *
    * @returns {Promise<object>}
@@ -954,7 +954,7 @@ export var ExtensionStorageIDB = {
    * from the internal IndexedDB operations have to be converted into an ExtensionError
    * to be accessible to the extension code).
    *
-   * @typedef {import("ExtensionUtils.sys.mjs").ExtensionError} ExtensionError
+   * @typedef {import("./ExtensionUtils.sys.mjs").ExtensionError} ExtensionError
    *
    * @param {object} params
    * @param {Error|ExtensionError|DOMException} params.error
