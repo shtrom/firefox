@@ -31,6 +31,7 @@ void RenderBundleEncoder::SetBindGroup(uint32_t aSlot,
   RawId bindGroup = 0;
   if (aBindGroup) {
     mUsedCanvasContexts.AppendElements(aBindGroup->GetCanvasContexts());
+    mExternalTextures.AppendElements(aBindGroup->GetExternalTextures());
     bindGroup = aBindGroup->GetId();
   }
   const ffi::WGPUFfiSlice_DynamicOffset dynamicOffsets{
@@ -160,8 +161,9 @@ already_AddRefed<RenderBundle> RenderBundleEncoder::Finish(
       GetClient(), mParent->GetId(), GetId(), &desc);
 
   auto canvasContexts = mUsedCanvasContexts.Clone();
-  RefPtr<RenderBundle> bundle =
-      new RenderBundle(mParent, id, std::move(canvasContexts));
+  auto externalTextures = mExternalTextures.Clone();
+  RefPtr<RenderBundle> bundle = new RenderBundle(
+      mParent, id, std::move(canvasContexts), std::move(externalTextures));
   return bundle.forget();
 }
 

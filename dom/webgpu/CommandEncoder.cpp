@@ -75,8 +75,7 @@ static ffi::WGPUTexelCopyTextureInfo ConvertTextureCopyView(
 CommandEncoder::CommandEncoder(Device* const aParent, RawId aId)
     : ObjectBase(aParent->GetChild(), aId,
                  ffi::wgpu_client_drop_command_encoder),
-      ChildOf(aParent),
-      mState(CommandEncoderState::Open) {}
+      ChildOf(aParent) {}
 
 CommandEncoder::~CommandEncoder() = default;
 
@@ -192,9 +191,6 @@ already_AddRefed<ComputePassEncoder> CommandEncoder::BeginComputePass(
       GetClient(), mParent->GetId(), GetId(), &desc);
   RefPtr<ComputePassEncoder> pass = new ComputePassEncoder(this, id);
   pass->SetLabel(aDesc.mLabel);
-  if (mState != CommandEncoderState::Ended) {
-    mState = CommandEncoderState::Locked;
-  }
   return pass.forget();
 }
 
@@ -237,25 +233,9 @@ already_AddRefed<RenderPassEncoder> CommandEncoder::BeginRenderPass(
     coerceToViewInPlace(desc.mDepthStencilAttachment.Value().mView);
   }
 
-  auto id = ffi::wgpu_client_make_render_pass_encoder_id(GetClient());
-  RefPtr<RenderPassEncoder> pass = new RenderPassEncoder(this, id, desc);
+  auto id = BeginFfiRenderPass(GetClient(), mParent->GetId(), GetId(), desc);
+  RefPtr<RenderPassEncoder> pass = new RenderPassEncoder(this, id);
   pass->SetLabel(desc.mLabel);
-  if (mState == CommandEncoderState::Ended) {
-    // Because we do not call wgpu until the pass is ended, we need to generate
-    // this error ourselves in order to report it at the correct time.
-
-    const auto* message = "Encoding must not have ended";
-    ffi::wgpu_report_validation_error(GetClient(), mParent->GetId(), message);
-
-    pass->Invalidate();
-  } else if (mState == CommandEncoderState::Locked) {
-    // This is not sufficient to handle this case properly. Invalidity
-    // needs to be transferred from the pass to the encoder when the pass
-    // ends. Bug 1971650.
-    pass->Invalidate();
-  } else {
-    mState = CommandEncoderState::Locked;
-  }
   return pass.forget();
 }
 
@@ -271,10 +251,6 @@ void CommandEncoder::ResolveQuerySet(QuerySet& aQuerySet, uint32_t aFirstQuery,
 void CommandEncoder::EndComputePass(
     RawId aComputePassEncoderId, CanvasContextArray& aCanvasContexts,
     Span<RefPtr<ExternalTexture>> aExternalTextures) {
-  if (mState == CommandEncoderState::Locked) {
-    mState = CommandEncoderState::Open;
-  }
-
   for (const auto& context : aCanvasContexts) {
     TrackPresentationContext(context);
   }
@@ -285,21 +261,15 @@ void CommandEncoder::EndComputePass(
 }
 
 void CommandEncoder::EndRenderPass(
-    ffi::WGPURecordedRenderPass& aPass, CanvasContextArray& aCanvasContexts,
+    RawId aRenderPassEncoderId, CanvasContextArray& aCanvasContexts,
     Span<RefPtr<ExternalTexture>> aExternalTextures) {
-  if (mState != CommandEncoderState::Locked) {
-    const auto* message = "Encoder is not currently locked";
-    ffi::wgpu_report_validation_error(GetClient(), mParent->GetId(), message);
-    return;
-  }
-  mState = CommandEncoderState::Open;
-
   for (const auto& context : aCanvasContexts) {
     TrackPresentationContext(context);
   }
   mExternalTextures.AppendElements(aExternalTextures);
 
-  ffi::wgpu_render_pass_finish(GetClient(), mParent->GetId(), GetId(), &aPass);
+  ffi::wgpu_client_render_pass_encoder_end(GetClient(), mParent->GetId(),
+                                           aRenderPassEncoderId);
 }
 
 already_AddRefed<CommandBuffer> CommandEncoder::Finish(
@@ -309,18 +279,8 @@ already_AddRefed<CommandBuffer> CommandEncoder::Finish(
   webgpu::StringHelper label(aDesc.mLabel);
   desc.label = label.Get();
 
-  if (mState == CommandEncoderState::Locked) {
-    // Most errors that could occur here will be raised by wgpu. But since we
-    // don't tell wgpu about passes until they are ended, we need to raise an
-    // error if the application left a pass open.
-    const auto* message =
-        "Encoder is locked by a previously created render/compute pass";
-    ffi::wgpu_report_validation_error(GetClient(), mParent->GetId(), message);
-  }
   RawId command_buffer_id = ffi::wgpu_client_command_encoder_finish(
       GetClient(), mParent->GetId(), GetId(), &desc);
-
-  mState = CommandEncoderState::Ended;
 
   RefPtr<CommandBuffer> comb = new CommandBuffer(
       mParent, command_buffer_id, std::move(mPresentationContexts),

@@ -2620,7 +2620,20 @@ impl Global {
         error_buf: &mut OwnedErrorBuffer,
     ) {
         let res = match cmd {
-            CommandEncoderCommand::BeginRenderPass { .. } => unreachable!(),
+            CommandEncoderCommand::BeginRenderPass {
+                desc,
+                render_pass_encoder_id,
+            } => {
+                let (_, err) = self.command_encoder_begin_render_pass_with_id(
+                    id,
+                    &desc,
+                    Some(render_pass_encoder_id),
+                );
+                if let Some(err) = err {
+                    error_buf.init(err, device_id);
+                }
+                Ok(())
+            }
             CommandEncoderCommand::BeginComputePass {
                 desc,
                 compute_pass_encoder_id,
@@ -3021,8 +3034,8 @@ unsafe fn process_message(
         Message::CommandEncoder(device_id, id, cmd) => {
             global.command_encoder_command(device_id, id, cmd, error_buf)
         }
-        Message::ReplayRenderPass(device_id, id, pass) => {
-            crate::command::replay_render_pass(global, device_id, id, &pass, error_buf);
+        Message::RenderPassEncoder(device_id, id, cmd) => {
+            crate::command::render_pass_encoder_command(global, device_id, id, cmd, error_buf);
         }
         Message::ComputePassEncoder(device_id, id, cmd) => {
             crate::command::compute_pass_encoder_command(global, device_id, id, cmd, error_buf);
@@ -3188,7 +3201,7 @@ unsafe fn process_message(
             global.buffer_drop(id)
         }
         Message::DropCommandEncoder(id) => global.command_encoder_drop(id),
-        Message::DropRenderPassEncoder(_id) => {}
+        Message::DropRenderPassEncoder(id) => global.render_pass_drop(id),
         Message::DropComputePassEncoder(id) => global.compute_pass_drop(id),
         Message::DropRenderBundleEncoder(id) => global.render_bundle_encoder_drop(id),
         Message::DropCommandBuffer(id) => global.command_buffer_drop(id),

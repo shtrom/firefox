@@ -2,7 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use crate::command::RecordedRenderPass;
 use wgc::id;
 
 pub mod client;
@@ -264,7 +263,11 @@ pub(crate) enum Message<'a> {
         id::CommandEncoderId,
         CommandEncoderCommand<'a>,
     ),
-    ReplayRenderPass(id::DeviceId, id::CommandEncoderId, RecordedRenderPass),
+    RenderPassEncoder(
+        id::DeviceId,
+        id::RenderPassEncoderId,
+        RenderPassEncoderCommand,
+    ),
     ComputePassEncoder(
         id::DeviceId,
         id::ComputePassEncoderId,
@@ -561,6 +564,34 @@ enum CommandEncoderCommand<'a> {
         desc: wgt::CommandBufferDescriptor<wgc::Label<'a>>,
         command_buffer_id: id::CommandBufferId,
     },
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+/// Corresponds to [`GPURenderPassEncoder`](https://www.w3.org/TR/webgpu/#gpurenderpassencoder).
+enum RenderPassEncoderCommand {
+    SetViewport {
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        min_depth: f32,
+        max_depth: f32,
+    },
+    SetScissorRect {
+        x: u32,
+        y: u32,
+        width: u32,
+        height: u32,
+    },
+    SetBlendConstant(wgt::Color),
+    SetStencilReference(u32),
+    BeginOcclusionQuery(u32),
+    EndOcclusionQuery,
+    ExecuteBundles(Vec<id::RenderBundleId>),
+    BindingCommand(BindingCommand),
+    RenderCommand(RenderCommand),
+    DebugCommand(DebugCommand),
+    End,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]

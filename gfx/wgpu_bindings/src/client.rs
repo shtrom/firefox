@@ -549,13 +549,6 @@ pub extern "C" fn wgpu_client_request_device(
     }
 }
 
-#[no_mangle]
-pub extern "C" fn wgpu_client_make_render_pass_encoder_id(
-    client: &Client,
-) -> id::RenderPassEncoderId {
-    client.identities.lock().render_pass_encoders.process()
-}
-
 #[rustfmt::skip]
 mod drop {
     use super::*;
@@ -1559,8 +1552,11 @@ pub struct RenderPassDescriptor<'a> {
 
 #[no_mangle]
 pub unsafe extern "C" fn wgpu_client_command_encoder_begin_render_pass(
+    client: &Client,
+    device_id: id::DeviceId,
+    encoder_id: id::CommandEncoderId,
     desc: &RenderPassDescriptor,
-) -> *mut crate::command::RecordedRenderPass {
+) -> id::RenderPassEncoderId {
     let &RenderPassDescriptor {
         label,
         color_attachments,
@@ -1569,7 +1565,7 @@ pub unsafe extern "C" fn wgpu_client_command_encoder_begin_render_pass(
         occlusion_query_set,
     } = desc;
 
-    let label = wgpu_string(label).map(|l| l.to_string());
+    let label = wgpu_string(label);
 
     let timestamp_writes = timestamp_writes.map(|tsw| {
         let &PassTimestampWrites {
@@ -1592,31 +1588,25 @@ pub unsafe extern "C" fn wgpu_client_command_encoder_begin_render_pass(
         .map(|att_opt| att_opt.as_ref().map(|att| att.clone().to_wgpu()))
         .collect();
     let depth_stencil_attachment = depth_stencil_attachment.cloned().map(|dsa| dsa.to_wgpu());
-    let pass = crate::command::RecordedRenderPass::new(
+
+    let desc = wgc::command::RenderPassDescriptor {
         label,
-        color_attachments,
+        color_attachments: Cow::Owned(color_attachments),
         depth_stencil_attachment,
         timestamp_writes,
         occlusion_query_set,
-    );
-    Box::into_raw(Box::new(pass))
-}
+        multiview_mask: None,
+    };
 
-#[no_mangle]
-pub unsafe extern "C" fn wgpu_render_pass_finish(
-    client: &Client,
-    device_id: id::DeviceId,
-    encoder_id: id::CommandEncoderId,
-    pass: *mut crate::command::RecordedRenderPass,
-) {
-    let pass = *Box::from_raw(pass);
-    let message = Message::ReplayRenderPass(device_id, encoder_id, pass);
+    let render_pass_encoder_id = client.identities.lock().render_pass_encoders.process();
+
+    let command = CommandEncoderCommand::BeginRenderPass {
+        desc,
+        render_pass_encoder_id,
+    };
+    let message = Message::CommandEncoder(device_id, encoder_id, command);
     client.queue_message(&message);
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn wgpu_render_pass_destroy(pass: *mut crate::command::RecordedRenderPass) {
-    let _ = Box::from_raw(pass);
+    render_pass_encoder_id
 }
 
 #[no_mangle]

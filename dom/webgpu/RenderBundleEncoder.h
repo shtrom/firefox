@@ -21,6 +21,7 @@ class Buffer;
 class RenderPipeline;
 class Device;
 class RenderBundle;
+class ExternalTexture;
 
 class RenderBundleEncoder final : public nsWrapperCache,
                                   public ObjectBase,
@@ -37,6 +38,7 @@ class RenderBundleEncoder final : public nsWrapperCache,
   // The canvas contexts of any canvas textures used in bind groups of this
   // render bundle.
   CanvasContextArray mUsedCanvasContexts;
+  nsTArray<RefPtr<ExternalTexture>> mExternalTextures;
 
  private:
   void SetBindGroup(uint32_t aSlot, BindGroup* const aBindGroup,
@@ -78,6 +80,10 @@ class RenderBundleEncoder final : public nsWrapperCache,
   // helpers not defined by WebGPU
   mozilla::Span<const WeakPtr<CanvasContext>> GetCanvasContexts() const {
     return mUsedCanvasContexts;
+  }
+
+  mozilla::Span<const RefPtr<ExternalTexture>> GetExternalTextures() const {
+    return mExternalTextures;
   }
 };
 
