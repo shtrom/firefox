@@ -473,7 +473,6 @@ this.SyncedTabsPanelList = class SyncedTabsPanelList {
 
 this.FxAMenuDeviceList = class FxAMenuDeviceList {
   static MAX_RECENT_TABS = 5;
-  static MAX_DEVICES = 3;
 
   constructor(devicesList) {
     this.QueryInterface = ChromeUtils.generateQI([
@@ -549,66 +548,28 @@ this.FxAMenuDeviceList = class FxAMenuDeviceList {
       .getElementById("appMenu-popup")
       ?.contains(this.devicesList);
 
-    if (inAppMenu) {
-      for (let client of clients) {
-        let device = this._getDeviceForClient(client);
+    for (let client of clients) {
+      let device =
+        fxAccounts.device.recentDeviceList &&
+        fxAccounts.device.recentDeviceList.find(
+          d =>
+            d.id === Weave.Service.clientsEngine.getClientFxaDeviceId(client.id)
+        );
+      if (inAppMenu) {
         // A separator precedes each section, including the first, so the list
         // of devices is separated from the content above it.
         this.devicesList.appendChild(
           document.createXULElement("toolbarseparator")
         );
         this._appendDeviceSection(client, device);
-      }
-    } else {
-      // Only the first few devices are shown inline; the rest are reachable
-      // through the "All Devices" button.
-      for (let client of clients.slice(0, FxAMenuDeviceList.MAX_DEVICES)) {
-        let device = this._getDeviceForClient(client);
+      } else {
         this.devicesList.appendChild(this._createDeviceEntry(client, device));
-      }
-      if (clients.length > FxAMenuDeviceList.MAX_DEVICES) {
-        this.devicesList.appendChild(this._createAllDevicesButton(clients));
       }
     }
 
     this.devicesList.hidden = false;
 
     Services.obs.notifyObservers(null, "synced-tabs-menu:test:tabs-updated");
-  }
-
-  _getDeviceForClient(client) {
-    return (
-      fxAccounts.device.recentDeviceList &&
-      fxAccounts.device.recentDeviceList.find(
-        d =>
-          d.id === Weave.Service.clientsEngine.getClientFxaDeviceId(client.id)
-      )
-    );
-  }
-
-  _createAllDevicesButton(clients) {
-    let btn = document.createXULElement("toolbarbutton");
-    btn.id = "PanelUI-fxa-menu-all-devices-button";
-    btn.classList.add("subviewbutton", "subviewbutton-nav");
-    btn.setAttribute("closemenu", "none");
-    btn.setAttribute("data-l10n-id", "fxa-menu-all-devices");
-    btn.addEventListener("click", e => {
-      this._showAllDevices(clients, btn, e);
-    });
-    return btn;
-  }
-
-  _showAllDevices(clients, anchor, event) {
-    let list = PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-all-devices-list"
-    );
-    list.replaceChildren();
-    for (let client of clients) {
-      let device = this._getDeviceForClient(client);
-      list.appendChild(this._createDeviceEntry(client, device));
-    }
-    PanelUI.showSubView("PanelUI-fxa-menu-all-devices", anchor, event);
   }
 
   _getDeviceClientType(device) {
@@ -1215,10 +1176,6 @@ var gSync = {
       document,
       "PanelUI-fxa-menu-secure-sync-subpanel"
     ).addEventListener("command", this);
-    PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-all-devices"
-    ).addEventListener("command", this);
 
     PanelUI.mainView.addEventListener("ViewShowing", this);
 
@@ -1366,15 +1323,12 @@ var gSync = {
       case "PanelUI-fxa-menu-sendtab-connect-device-button":
       // fall through
       case "PanelUI-fxa-menu-secure-sync-add-device":
-      case "PanelUI-fxa-menu-all-devices-add-device":
         this.clickOpenConnectAnotherDevice(button);
         break;
       case "PanelUI-fxa-menu-secure-sync-manage-devices":
-      case "PanelUI-fxa-menu-all-devices-manage-devices":
         this.openDevicesManagementPage(this._getEntryPointForElement(button));
         break;
       case "PanelUI-fxa-menu-secure-sync-device-missing":
-      case "PanelUI-fxa-menu-all-devices-device-missing":
         this.openDeviceMissingHelp();
         break;
 

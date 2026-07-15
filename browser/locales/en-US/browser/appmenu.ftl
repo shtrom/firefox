@@ -144,14 +144,6 @@ fxa-menu-manage-devices =
 fxa-menu-device-missing =
     .label = Don’t See Your Device?
 
-# Mozilla account menu item when selected opens a panel with all devices synced to the user's account
-fxa-menu-all-devices =
-    .label = All Devices
-
-# Mozilla account panel title which shows all devices synced to a user's account
-fxa-menu-all-devices-panel =
-    .title = All Devices
-
 fxa-menu-get-firefox-mobile =
     .label = Get { -brand-product-name } for Android or iOS
 
