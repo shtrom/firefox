@@ -1951,6 +1951,12 @@ ${
             searchSource: this.getSearchSource(event),
             windowMode: this.windowMode,
           });
+          if (result.payload.providesSearchMode) {
+            this.maybeConfirmSearchModeFromResult({
+              result,
+              checkValue: false,
+            });
+          }
           return;
         }
         break;
