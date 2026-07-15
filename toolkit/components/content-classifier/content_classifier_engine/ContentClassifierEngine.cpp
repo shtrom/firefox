@@ -6,10 +6,10 @@
 #include "ContentClassifierFeatureUtils.h"
 #include "ContentClassifierService.h"
 #include "mozilla/extensions/WebExtensionPolicy.h"
+#include "mozilla/net/UrlClassifierCommon.h"
 #include "nsIEffectiveTLDService.h"
 #include "nsNetUtil.h"
 #include "mozilla/Components.h"
-#include "mozIThirdPartyUtil.h"
 
 namespace mozilla {
 
@@ -38,46 +38,33 @@ ContentClassifierEngineResult ContentClassifierEngine::CheckNetworkRequest(
   bool important = false;
   nsCString exception;
 
+  const nsCString& sourceSite = mFeature.mUseTopWindowAsSource
+                                    ? aRequest.mTopWindowSchemelessSite
+                                    : aRequest.mSourceSchemelessSite;
+  const bool thirdParty = mFeature.mUseTopWindowAsSource
+                              ? aRequest.mThirdParty
+                              : aRequest.mThirdPartyToSource;
+
   nsresult rv = content_classifier_engine_check_network_request_preparsed(
-      mEngine, &aRequest.mUrl, &aRequest.mSchemelessSite,
-      &aRequest.mSourceSchemelessSite, &aRequest.mRequestType,
-      aRequest.mThirdParty, aPreviouslyMatched, &matched, &important,
-      &exception);
+      mEngine, &aRequest.mUrl, &aRequest.mSchemelessSite, &sourceSite,
+      &aRequest.mRequestType, thirdParty, aPreviouslyMatched, &matched,
+      &important, &exception);
   return ContentClassifierEngineResult(matched, !exception.IsEmpty(), important,
                                        rv, mFeature);
 }
 
 ContentClassifierRequest::ContentClassifierRequest(nsIChannel* aChannel)
-    : mThirdParty(true), mValid(false) {
+    : mThirdParty(true), mThirdPartyToSource(true), mValid(false) {
   nsCOMPtr<nsIURI> uri;
   nsresult rv = aChannel->GetURI(getter_AddRefs(uri));
-  if (NS_FAILED(rv)) return;
+  if (NS_FAILED(rv) || !uri) return;
 
   rv = uri->GetSpec(mUrl);
-  if (NS_FAILED(rv)) return;
-
-  nsCString host;
-  rv = uri->GetHost(host);
-  if (NS_FAILED(rv)) return;
-
-  nsCOMPtr<nsIEffectiveTLDService> eTLDService =
-      components::EffectiveTLD::Service();
-  if (!eTLDService) return;
-
-  rv = eTLDService->GetSchemelessSiteFromHost(host, mSchemelessSite);
   if (NS_FAILED(rv)) return;
 
   nsCOMPtr<nsILoadInfo> loadInfo;
   rv = aChannel->GetLoadInfo(getter_AddRefs(loadInfo));
   if (NS_FAILED(rv)) return;
-
-  // Best-effort: some principals (extension, null, system) have no usable
-  // base domain. Leave mSourceSchemelessSite empty rather than invalidating
-  // the whole request.
-  nsCOMPtr<nsIPrincipal> loadingPrincipal = loadInfo->GetLoadingPrincipal();
-  if (loadingPrincipal) {
-    (void)loadingPrincipal->GetBaseDomain(mSourceSchemelessSite);
-  }
 
   ExtContentPolicyType contentPolicyType =
       loadInfo->GetExternalContentPolicyType();
@@ -124,22 +111,66 @@ ContentClassifierRequest::ContentClassifierRequest(nsIChannel* aChannel)
       mRequestType.AssignLiteral("other");
       break;
   }
-
-  nsCOMPtr<mozIThirdPartyUtil> thirdPartyUtil =
-      components::ThirdPartyUtil::Service();
-  if (!thirdPartyUtil) {
-    return;
-  }
-  rv = thirdPartyUtil->IsThirdPartyChannel(aChannel, nullptr, &mThirdParty);
-  if (NS_FAILED(rv)) {
-    mThirdParty = true;
-  }
-
   mPrivateBrowsing = NS_UsePrivateBrowsing(aChannel);
 
   mIsNonRecommendedAddon = IsNonRecommendedAddonFromLoadInfo(loadInfo);
 
   mValid = true;
+
+  // Unwrap nested URI schemes (jar:, view-source:, ...) before looking
+  // at the host, mirroring AsyncUrlChannelClassifier::FeatureData::
+  // InitializeList which calls NS_GetInnermostURI on the channel URI
+  // and then GetHost on that.
+  nsCOMPtr<nsIURI> innermostURI = NS_GetInnermostURI(uri);
+  if (!innermostURI) return;
+
+  nsCString host;
+  rv = innermostURI->GetHost(host);
+  if (NS_FAILED(rv)) return;
+
+  nsCOMPtr<nsIEffectiveTLDService> eTLDService =
+      components::EffectiveTLD::Service();
+  if (!eTLDService) return;
+
+  rv = eTLDService->GetSchemelessSiteFromHost(host, mSchemelessSite);
+  if (NS_FAILED(rv)) return;
+
+  // Top-window schemeless site is the outermost page's site, used by
+  // features whose mUseTopWindowAsSource flag is set.
+  nsCOMPtr<nsIURI> topWindowURI;
+  if (NS_SUCCEEDED(net::UrlClassifierCommon::GetTopWindowURI(
+          aChannel, getter_AddRefs(topWindowURI))) &&
+      topWindowURI) {
+    nsCOMPtr<nsIURI> innermostTopURI = NS_GetInnermostURI(topWindowURI);
+    if (innermostTopURI) {
+      nsCString topHost;
+      if (NS_SUCCEEDED(innermostTopURI->GetHost(topHost))) {
+        rv = eTLDService->GetSchemelessSiteFromHost(topHost,
+                                                    mTopWindowSchemelessSite);
+        if (NS_FAILED(rv)) {
+          mTopWindowSchemelessSite.Truncate();
+        }
+      }
+    }
+  }
+
+  // Source schemeless site is the loading frame's site (the immediate
+  // initiator of the request), not the outermost top-window. Top-level
+  // document loads are filtered out further below by the third-party
+  // check in CheckNetworkRequest.
+  nsCOMPtr<nsIPrincipal> loadingPrincipal = loadInfo->GetLoadingPrincipal();
+  if (loadingPrincipal) {
+    rv = loadingPrincipal->GetBaseDomain(mSourceSchemelessSite);
+    if (NS_FAILED(rv)) return;
+  }
+
+  // Third-party-ness is the precomputed BrowsingContext flag the
+  // production AsyncUrl features consult
+  // (UrlClassifierFeatureTrackingProtection.cpp uses
+  // GetIsThirdPartyContextToTopWindow), not the cookie/storage-aware
+  // mozIThirdPartyUtil check.
+  mThirdParty = loadInfo->GetIsThirdPartyContextToTopWindow();
+  mThirdPartyToSource = !mSchemelessSite.Equals(mSourceSchemelessSite);
 }
 
 static bool IsValidRequestType(const nsACString& aRequestType) {
@@ -164,7 +195,8 @@ ContentClassifierRequest::ContentClassifierRequest(
     bool aPrivateBrowsing, bool aForceThirdPartyToTop,
     bool aIsNonRecommendedAddon)
     : mRequestType(aRequestType),
-      mThirdParty(true),
+      mThirdParty(false),
+      mThirdPartyToSource(true),
       mPrivateBrowsing(aPrivateBrowsing),
       mValid(false),
       mIsNonRecommendedAddon(aIsNonRecommendedAddon) {
@@ -201,7 +233,26 @@ ContentClassifierRequest::ContentClassifierRequest(
                                                 mSourceSchemelessSite);
     if (NS_FAILED(rv)) return;
 
-    mThirdParty = !mSchemelessSite.Equals(mSourceSchemelessSite);
+    mThirdPartyToSource = !mSchemelessSite.Equals(mSourceSchemelessSite);
+  }
+
+  if (!aTopWindowUrl.IsEmpty()) {
+    nsCOMPtr<nsIURI> topUri;
+    rv = NS_NewURI(getter_AddRefs(topUri), aTopWindowUrl);
+    if (NS_FAILED(rv)) return;
+
+    nsCString topHost;
+    rv = topUri->GetHost(topHost);
+    if (NS_FAILED(rv)) return;
+
+    rv = eTLDService->GetSchemelessSiteFromHost(topHost,
+                                                mTopWindowSchemelessSite);
+    if (NS_FAILED(rv)) {
+      mTopWindowSchemelessSite.Truncate();
+      return;
+    }
+
+    mThirdParty = !mSchemelessSite.Equals(mTopWindowSchemelessSite);
   }
 
   if (aForceThirdPartyToTop) {

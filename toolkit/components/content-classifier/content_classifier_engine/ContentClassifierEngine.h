@@ -53,8 +53,10 @@ class ContentClassifierRequest {
   nsCString mUrl;
   nsCString mSchemelessSite;
   nsCString mSourceSchemelessSite;
+  nsCString mTopWindowSchemelessSite;
   nsCString mRequestType;
   bool mThirdParty = false;
+  bool mThirdPartyToSource = false;
   bool mPrivateBrowsing = false;
   bool mValid = false;
   bool mIsNonRecommendedAddon = false;

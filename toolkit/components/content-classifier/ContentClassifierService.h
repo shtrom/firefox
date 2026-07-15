@@ -77,6 +77,13 @@ struct ContentClassifierFeature {
   // except in the engines pref.
   bool mExceptionOnly;
 
+  // If true, the engine is called with the top-window site as the source
+  // site (and third-party-to-top-window as the third-party bit) instead of
+  // the loading frame's site. Used by features that expect to key on the top
+  // level, rather than the requesting frame- specifically all rules emulating
+  // the old behavior.
+  bool mUseTopWindowAsSource;
+
   // The scoped pref that gates this feature's blocking decision. When the
   // scoped pref is set to false, blocking is suppressed for the channel's site.
   // Only consulted on the blocking path.
