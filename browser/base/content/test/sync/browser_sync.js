@@ -282,14 +282,10 @@ add_task(async function test_ui_state_signedin() {
     BrowserTestUtils.isVisible(manageButton),
     "expected manage button to be visible after opening"
   );
-  let profileButtonsContainer = PanelMultiView.getViewNode(
-    document,
-    "PanelUI-fxa-menu-profile-buttons"
+  let profilesButton = fxaView.querySelector(
+    "PanelUI-fxa-menu-profiles-button"
   );
-  ok(
-    !BrowserTestUtils.isVisible(profileButtonsContainer),
-    "expected profile buttons container to not be visible"
-  );
+  ok(!profilesButton, "expected profiles button to not be present");
 
   await closeTabAndMainPanel();
   sandbox.restore();
@@ -1225,25 +1221,33 @@ async function checkProfilesButtons(
   previousElementSibling,
   separatorVisible = false
 ) {
-  const profilesHeaderSeparator = PanelMultiView.getViewNode(
-    document,
-    "PanelUI-fxa-menu-profiles-header-separator"
+  const profilesButton = document.getElementById(
+    "PanelUI-fxa-menu-profiles-button"
   );
-  const profilesSeparator = PanelMultiView.getViewNode(
-    document,
+  const emptyProfilesButton = document.getElementById(
+    "PanelUI-fxa-menu-empty-profiles-button"
+  );
+  const profilesSeparator = document.getElementById(
     "PanelUI-fxa-menu-profiles-separator"
+  );
+
+  ok(
+    (profilesButton.hidden || emptyProfilesButton.hidden) &&
+      !(profilesButton.hidden && emptyProfilesButton.hidden),
+    "Only one of the profiles button is visible"
   );
 
   is(
     !profilesSeparator.hidden,
     separatorVisible,
-    "The profiles separator has the correct visibility"
+    "The profile separator is visible"
   );
 
   is(
     previousElementSibling,
-    profilesHeaderSeparator.previousElementSibling,
-    "The profiles section starts after " + previousElementSibling.id
+    emptyProfilesButton.previousElementSibling,
+    "The profiles button is displayed after " +
+      emptyProfilesButton.previousElementSibling.id
   );
 }
 
@@ -1421,9 +1425,9 @@ add_task(async function test_ui_state_signed_out_send_tab() {
   gSync.updateAllUI(state);
   await openFxaPanel();
 
-  let profileButtonsContainer = PanelMultiView.getViewNode(
+  let profilesButton = PanelMultiView.getViewNode(
     document,
-    "PanelUI-fxa-menu-profile-buttons"
+    "PanelUI-fxa-menu-profiles-button"
   );
 
   let sendTabButton = PanelMultiView.getViewNode(
@@ -1432,9 +1436,9 @@ add_task(async function test_ui_state_signed_out_send_tab() {
   );
 
   Assert.equal(
-    profileButtonsContainer.compareDocumentPosition(sendTabButton),
+    profilesButton.compareDocumentPosition(sendTabButton),
     4, // Equates to Node.DOCUMENT_POSITION_FOLLOWING (4)
-    "Profile buttons container is above the send tab button"
+    "Profiles button is above the send tab button"
   );
 
   Assert.equal(
