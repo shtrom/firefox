@@ -17611,6 +17611,9 @@ bool CodeGenerator::link(JSContext* cx) {
     ionScript->nurseryObjects()[i].init(nurseryObjects[i]);
   }
 
+  // Initialization fence for the IonScript.
+  MemoryReleaseFence(script.get());
+
   // Transfer ownership of the IonScript to the JitScript. At this point enough
   // of the IonScript must be initialized for IonScript::Destroy to work.
   freeIonScript.release();

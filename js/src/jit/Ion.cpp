@@ -769,9 +769,7 @@ IonScript* IonScript::New(JSContext* cx, IonCompilationId compilationId,
 }
 
 void IonScript::trace(JSTracer* trc) {
-  if (method_) {
-    TraceEdge(trc, &method_, "method");
-  }
+  TraceEdge(trc, &method_, "method");
 
   for (size_t i = 0; i < numConstants(); i++) {
     TraceEdge(trc, &getConstant(i), "constant");
