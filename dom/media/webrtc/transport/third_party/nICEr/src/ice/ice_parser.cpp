@@ -49,9 +49,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ice_reg.h"
 
 static void
-skip_whitespace(char **str)
+skip_whitespace(const char **str)
 {
-    char *c = *str;
+    const char *c = *str;
     while (*c == ' ')
         ++c;
 
@@ -59,9 +59,9 @@ skip_whitespace(char **str)
 }
 
 static void
-fast_forward(char **str, int skip)
+fast_forward(const char **str, int skip)
 {
-    char *c = *str;
+    const char *c = *str;
     while (*c != '\0' && skip-- > 0)
         ++c;
 
@@ -69,9 +69,9 @@ fast_forward(char **str, int skip)
 }
 
 static void
-skip_to_past_space(char **str)
+skip_to_past_space(const char **str)
 {
-    char *c = *str;
+    const char *c = *str;
     while (*c != ' ' && *c != '\0')
         ++c;
 
@@ -81,10 +81,10 @@ skip_to_past_space(char **str)
 }
 
 static int
-grab_token(char **str, char **out)
+grab_token(const char **str, char **out)
 {
     int _status;
-    char *c = *str;
+    const char *c = *str;
     int len;
     char *tmp;
 
@@ -111,10 +111,10 @@ abort:
 }
 
 int
-nr_ice_peer_candidate_from_attribute(nr_ice_ctx *ctx,char *orig,nr_ice_media_stream *stream,nr_ice_candidate **candp)
+nr_ice_peer_candidate_from_attribute(nr_ice_ctx *ctx,const char *orig,nr_ice_media_stream *stream,nr_ice_candidate **candp)
 {
     int r,_status;
-    char* str = orig;
+    const char* str = orig;
     nr_ice_candidate *cand;
     char *connection_address=0;
     unsigned int port;
@@ -361,8 +361,8 @@ int
 nr_ice_peer_ctx_parse_media_stream_attribute(nr_ice_peer_ctx *pctx, nr_ice_media_stream *stream, char *attr)
 {
     int r,_status;
-    char *orig = 0;
-    char *str;
+    const char *orig = 0;
+    const char *str;
 
     orig = str = attr;
 
@@ -419,8 +419,8 @@ nr_ice_peer_ctx_parse_global_attributes(nr_ice_peer_ctx *pctx, char **attrs, int
 {
     int r,_status;
     int i;
-    char *orig = 0;
-    char *str;
+    const char *orig = 0;
+    const char *str;
     char *component_id = 0;
     char *connection_address = 0;
     unsigned int port;

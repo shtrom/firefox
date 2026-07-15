@@ -1049,7 +1049,7 @@ int nr_ice_stun_server_get_url(const nr_ice_stun_server *server, int is_turn, ch
     const char *scheme;
     const char *query;
     char host_buf[256];
-    int port;
+    uint16_t port;
 
     if (nr_transport_addr_get_port(&server->addr, &port))
       ABORT(R_FAILED);
@@ -1069,9 +1069,9 @@ int nr_ice_stun_server_get_url(const nr_ice_stun_server *server, int is_turn, ch
     }
 
     if (!server->addr.fqdn[0] && server->addr.ip_version == NR_IPV6) {
-      snprintf(buf, sizeof(buf), "%s:[%s]:%d%s", scheme, host_buf, port, query);
+      snprintf(buf, sizeof(buf), "%s:[%s]:%u%s", scheme, host_buf, port, query);
     } else {
-      snprintf(buf, sizeof(buf), "%s:%s:%d%s", scheme, host_buf, port, query);
+      snprintf(buf, sizeof(buf), "%s:%s:%u%s", scheme, host_buf, port, query);
     }
 
     if (!(*urlp = strdup(buf)))
