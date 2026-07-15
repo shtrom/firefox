@@ -376,7 +376,8 @@ nsresult NrIceMediaStream::GetActivePairAsAttributes(
   // address.
   if (aLocal) {
     int obfuscate =
-        (ctx_->ctx()->flags & NR_ICE_CTX_FLAGS_OBFUSCATE_HOST_ADDRESSES) ? 1 : 0;
+        (ctx_->ctx()->flags & NR_ICE_CTX_FLAGS_OBFUSCATE_HOST_ADDRESSES) ? 1
+                                                                         : 0;
     if (nr_ice_format_candidate_attribute(local_cand, buf, sizeof(buf),
                                           obfuscate)) {
       return NS_ERROR_FAILURE;

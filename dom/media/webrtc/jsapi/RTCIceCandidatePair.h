@@ -7,10 +7,10 @@
 
 #include "js/RootingAPI.h"
 #include "mozilla/RefPtr.h"
+#include "mozilla/dom/RTCIceCandidate.h"
 #include "nsCycleCollectionParticipant.h"
 #include "nsIGlobalObject.h"
 #include "nsWrapperCache.h"
-#include "mozilla/dom/RTCIceCandidate.h"
 
 namespace mozilla::dom {
 class RTCIceCandidatePair final : public nsISupports, public nsWrapperCache {
