@@ -559,7 +559,7 @@ var SidebarController = {
       // the shared chrome-level header stays hidden.
       document.getElementById("sidebar-header").hidden = true;
       if (!this._mainResizeObserverAdded) {
-        this._mainResizeObserver.observe(this.sidebarMain);
+        this._mainResizeObserver.observe(this.sidebarContainer);
         this._mainResizeObserverAdded = true;
       }
       if (!this._browserResizeObserver) {
@@ -700,7 +700,7 @@ var SidebarController = {
    * @param {ResizeObserverEntry} entry
    */
   _handleLauncherResize(entry) {
-    this._state.launcherWidth = entry.contentBoxSize[0].inlineSize;
+    this._state.launcherWidth = entry.borderBoxSize[0].inlineSize;
     if (this.isLauncherDragging) {
       this._state.launcherDragActive = true;
     }
@@ -1773,7 +1773,7 @@ var SidebarController = {
     if (!this._panelResizeObserver) {
       this._panelResizeObserver = new ResizeObserver(
         ([entry]) =>
-          (this._state.panelWidth = entry.contentBoxSize[0].inlineSize)
+          (this._state.panelWidth = entry.borderBoxSize[0].inlineSize)
       );
     }
     this._panelResizeObserver.observe(this._box);
