@@ -1898,11 +1898,11 @@ if (SECURITY_PRIVACY_STATUS_CARD_ENABLED) {
       id: "warningSafeBrowsing",
     },
     {
-      l10nId: "security-privacy-issue-warning-doh",
+      l10nId: "security-privacy-issue-warning-doh2",
       id: "warningDoH",
     },
     {
-      l10nId: "security-privacy-issue-warning-ech",
+      l10nId: "security-privacy-issue-warning-ech2",
       id: "warningECH",
     },
 
