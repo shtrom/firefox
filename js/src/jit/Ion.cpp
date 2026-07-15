@@ -922,6 +922,9 @@ const OsiIndex* IonScript::getOsiIndex(uint8_t* retAddr) const {
 }
 
 void IonScript::Destroy(JS::GCContext* gcx, IonScript* script) {
+  // Trigger write barrier since we are destroying this outside GC.
+  script->method_ = nullptr;
+
   // Destroy the HeapPtrs to ensure there are no pointers into the IonScript's
   // nursery objects list or constants list in the store buffer. Because this
   // can be called during sweeping when discarding JIT code, we have to lock the
