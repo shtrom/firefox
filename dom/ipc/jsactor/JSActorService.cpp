@@ -321,14 +321,8 @@ void JSActorService::UnregisterProcessActor(const nsACString& aName) {
         }
         managers.AppendElement(cp);
       }
-      InProcessChild* ipChild = InProcessChild::Singleton();
-      if (ipChild) {
-        managers.AppendElement(ipChild);
-      }
-      InProcessParent* ipParent = InProcessParent::Singleton();
-      if (ipParent) {
-        managers.AppendElement(ipParent);
-      }
+      managers.AppendElement(InProcessChild::Singleton());
+      managers.AppendElement(InProcessParent::Singleton());
     } else {
       managers.AppendElement(ContentChild::GetSingleton());
     }
