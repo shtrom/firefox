@@ -11,8 +11,6 @@ pub mod error;
 pub mod server;
 pub mod telemetry;
 
-pub use wgc::command::ffi::Command as CommandEncoderAction;
-
 use std::marker::PhantomData;
 use std::{borrow::Cow, mem, slice};
 
@@ -261,12 +259,10 @@ enum Message<'a> {
         id::RenderBundleEncoderId,
         RenderBundleEncoderCommand<'a>,
     ),
-    CommandEncoder(id::DeviceId, id::CommandEncoderId, CommandEncoderAction),
-    CommandEncoderFinish(
+    CommandEncoder(
         id::DeviceId,
         id::CommandEncoderId,
-        id::CommandBufferId,
-        wgt::CommandBufferDescriptor<wgc::Label<'a>>,
+        CommandEncoderCommand<'a>,
     ),
     ReplayRenderPass(id::DeviceId, id::CommandEncoderId, RecordedRenderPass),
     ReplayComputePass(id::DeviceId, id::CommandEncoderId, RecordedComputePass),
@@ -508,6 +504,58 @@ enum RenderBundleEncoderCommand<'a> {
     Finish {
         desc: wgc::command::RenderBundleDescriptor<'a>, // optional, defaults to {}
         render_bundle_id: id::RenderBundleId,
+    },
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+/// Corresponds to [`GPUCommandEncoder`](https://www.w3.org/TR/webgpu/#gpucommandencoder).
+enum CommandEncoderCommand<'a> {
+    BeginRenderPass {
+        desc: wgc::command::RenderPassDescriptor<'a>,
+        render_pass_encoder_id: id::RenderPassEncoderId,
+    },
+    BeginComputePass {
+        desc: wgc::command::ComputePassDescriptor<'a>, // optional, defaults to {}
+        compute_pass_encoder_id: id::ComputePassEncoderId,
+    },
+    CopyBufferToBuffer {
+        source: id::BufferId,
+        source_offset: u64,
+        destination: id::BufferId,
+        destination_offset: u64,
+        size: Option<u64>,
+    },
+    CopyBufferToTexture {
+        source: wgt::TexelCopyBufferInfo<id::BufferId>,
+        destination: wgt::TexelCopyTextureInfo<id::TextureId>,
+        copy_size: wgt::Extent3d,
+    },
+    CopyTextureToBuffer {
+        source: wgt::TexelCopyTextureInfo<id::TextureId>,
+        destination: wgt::TexelCopyBufferInfo<id::BufferId>,
+        copy_size: wgt::Extent3d,
+    },
+    CopyTextureToTexture {
+        source: wgt::TexelCopyTextureInfo<id::TextureId>,
+        destination: wgt::TexelCopyTextureInfo<id::TextureId>,
+        copy_size: wgt::Extent3d,
+    },
+    ClearBuffer {
+        buffer: id::BufferId,
+        offset: u64, // optional, defaults to 0
+        size: Option<u64>,
+    },
+    ResolveQuerySet {
+        query_set: id::QuerySetId,
+        first_query: u32,
+        query_count: u32,
+        destination: id::BufferId,
+        destination_offset: u64,
+    },
+    DebugCommand(DebugCommand),
+    Finish {
+        desc: wgt::CommandBufferDescriptor<wgc::Label<'a>>,
+        command_buffer_id: id::CommandBufferId,
     },
 }
 

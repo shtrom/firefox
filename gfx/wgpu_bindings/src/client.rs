@@ -4,7 +4,7 @@
 
 use crate::{
     cow_label, raw_string_to_string, wgpu_string, AdapterInformation, BindingCommand, ByteBuf,
-    CommandEncoderAction, DebugCommand, DeviceAction, FfiSlice, QueueWriteAction, RawString,
+    CommandEncoderCommand, DebugCommand, DeviceAction, FfiSlice, QueueWriteAction, RawString,
     RenderBundleEncoderCommand, RenderCommand, TexelCopyBufferLayout, TextureAction,
 };
 
@@ -1510,7 +1510,7 @@ pub struct PassTimestampWrites<'a> {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn wgpu_command_encoder_begin_compute_pass(
+pub unsafe extern "C" fn wgpu_client_command_encoder_begin_compute_pass(
     desc: &ComputePassDescriptor,
 ) -> *mut crate::command::RecordedComputePass {
     let &ComputePassDescriptor {
@@ -1569,7 +1569,7 @@ pub struct RenderPassDescriptor<'a> {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn wgpu_command_encoder_begin_render_pass(
+pub unsafe extern "C" fn wgpu_client_command_encoder_begin_render_pass(
     desc: &RenderPassDescriptor,
 ) -> *mut crate::command::RecordedRenderPass {
     let &RenderPassDescriptor {
@@ -1903,14 +1903,14 @@ pub unsafe extern "C" fn wgpu_client_create_render_pipeline(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn wgpu_command_encoder_copy_buffer_to_buffer(
+pub unsafe extern "C" fn wgpu_client_command_encoder_copy_buffer_to_buffer(
     client: &Client,
     device_id: id::DeviceId,
     command_encoder_id: id::CommandEncoderId,
-    src: id::BufferId,
-    src_offset: wgt::BufferAddress,
-    dst: id::BufferId,
-    dst_offset: wgt::BufferAddress,
+    source: id::BufferId,
+    source_offset: wgt::BufferAddress,
+    destination: id::BufferId,
+    destination_offset: wgt::BufferAddress,
     size: wgt::BufferAddress,
 ) {
     // In Javascript, `size === undefined` means "copy from src_offset to end of
@@ -1921,150 +1921,172 @@ pub unsafe extern "C" fn wgpu_command_encoder_copy_buffer_to_buffer(
     // CommandEncoder::CopyBufferToBuffer decrements it by four, which
     // will still fail for mis-alignment.)
     let size = (size != wgt::BufferAddress::MAX).then_some(size);
-    let action = CommandEncoderAction::CopyBufferToBuffer {
-        src,
-        src_offset,
-        dst,
-        dst_offset,
+    let command = CommandEncoderCommand::CopyBufferToBuffer {
+        source,
+        source_offset,
+        destination,
+        destination_offset,
         size,
     };
-    let message = Message::CommandEncoder(device_id, command_encoder_id, action);
+    let message = Message::CommandEncoder(device_id, command_encoder_id, command);
     client.queue_message(&message);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn wgpu_command_encoder_copy_texture_to_buffer(
-    client: &Client,
-    device_id: id::DeviceId,
-    command_encoder_id: id::CommandEncoderId,
-    src: wgc::command::TexelCopyTextureInfo,
-    dst_buffer: wgc::id::BufferId,
-    dst_layout: &TexelCopyBufferLayout,
-    size: wgt::Extent3d,
-) {
-    let action = CommandEncoderAction::CopyTextureToBuffer {
-        src,
-        dst: wgc::command::TexelCopyBufferInfo {
-            buffer: dst_buffer,
-            layout: dst_layout.into_wgt(),
-        },
-        size,
-    };
-    let message = Message::CommandEncoder(device_id, command_encoder_id, action);
-    client.queue_message(&message);
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn wgpu_command_encoder_copy_buffer_to_texture(
+pub unsafe extern "C" fn wgpu_client_command_encoder_copy_buffer_to_texture(
     client: &Client,
     device_id: id::DeviceId,
     command_encoder_id: id::CommandEncoderId,
     src_buffer: wgc::id::BufferId,
     src_layout: &TexelCopyBufferLayout,
-    dst: wgc::command::TexelCopyTextureInfo,
-    size: wgt::Extent3d,
+    destination: wgc::command::TexelCopyTextureInfo,
+    copy_size: wgt::Extent3d,
 ) {
-    let action = CommandEncoderAction::CopyBufferToTexture {
-        src: wgc::command::TexelCopyBufferInfo {
+    let command = CommandEncoderCommand::CopyBufferToTexture {
+        source: wgc::command::TexelCopyBufferInfo {
             buffer: src_buffer,
             layout: src_layout.into_wgt(),
         },
-        dst,
-        size,
+        destination,
+        copy_size,
     };
-    let message = Message::CommandEncoder(device_id, command_encoder_id, action);
+    let message = Message::CommandEncoder(device_id, command_encoder_id, command);
     client.queue_message(&message);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn wgpu_command_encoder_copy_texture_to_texture(
+pub unsafe extern "C" fn wgpu_client_command_encoder_copy_texture_to_buffer(
     client: &Client,
     device_id: id::DeviceId,
     command_encoder_id: id::CommandEncoderId,
-    src: wgc::command::TexelCopyTextureInfo,
-    dst: wgc::command::TexelCopyTextureInfo,
-    size: wgt::Extent3d,
+    source: wgc::command::TexelCopyTextureInfo,
+    dst_buffer: wgc::id::BufferId,
+    dst_layout: &TexelCopyBufferLayout,
+    copy_size: wgt::Extent3d,
 ) {
-    let action = CommandEncoderAction::CopyTextureToTexture { src, dst, size };
-    let message = Message::CommandEncoder(device_id, command_encoder_id, action);
+    let command = CommandEncoderCommand::CopyTextureToBuffer {
+        source,
+        destination: wgc::command::TexelCopyBufferInfo {
+            buffer: dst_buffer,
+            layout: dst_layout.into_wgt(),
+        },
+        copy_size,
+    };
+    let message = Message::CommandEncoder(device_id, command_encoder_id, command);
     client.queue_message(&message);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn wgpu_command_encoder_clear_buffer(
+pub unsafe extern "C" fn wgpu_client_command_encoder_copy_texture_to_texture(
     client: &Client,
     device_id: id::DeviceId,
     command_encoder_id: id::CommandEncoderId,
-    dst: wgc::id::BufferId,
+    source: wgc::command::TexelCopyTextureInfo,
+    destination: wgc::command::TexelCopyTextureInfo,
+    copy_size: wgt::Extent3d,
+) {
+    let command = CommandEncoderCommand::CopyTextureToTexture {
+        source,
+        destination,
+        copy_size,
+    };
+    let message = Message::CommandEncoder(device_id, command_encoder_id, command);
+    client.queue_message(&message);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn wgpu_client_command_encoder_clear_buffer(
+    client: &Client,
+    device_id: id::DeviceId,
+    command_encoder_id: id::CommandEncoderId,
+    buffer: wgc::id::BufferId,
     offset: u64,
     size: Option<&u64>,
 ) {
-    let action = CommandEncoderAction::ClearBuffer {
-        dst,
+    let command = CommandEncoderCommand::ClearBuffer {
+        buffer,
         offset,
         size: size.cloned(),
     };
-    let message = Message::CommandEncoder(device_id, command_encoder_id, action);
+    let message = Message::CommandEncoder(device_id, command_encoder_id, command);
     client.queue_message(&message);
 }
 
 #[no_mangle]
-pub extern "C" fn wgpu_command_encoder_push_debug_group(
-    client: &Client,
-    device_id: id::DeviceId,
-    command_encoder_id: id::CommandEncoderId,
-    marker: &nsACString,
-) {
-    let string = marker.to_string();
-    let action = CommandEncoderAction::PushDebugGroup(string);
-    let message = Message::CommandEncoder(device_id, command_encoder_id, action);
-    client.queue_message(&message);
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn wgpu_command_encoder_pop_debug_group(
-    client: &Client,
-    device_id: id::DeviceId,
-    command_encoder_id: id::CommandEncoderId,
-) {
-    let action = CommandEncoderAction::PopDebugGroup;
-    let message = Message::CommandEncoder(device_id, command_encoder_id, action);
-    client.queue_message(&message);
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn wgpu_command_encoder_insert_debug_marker(
-    client: &Client,
-    device_id: id::DeviceId,
-    command_encoder_id: id::CommandEncoderId,
-    marker: &nsACString,
-) {
-    let string = marker.to_string();
-    let action = CommandEncoderAction::InsertDebugMarker(string);
-    let message = Message::CommandEncoder(device_id, command_encoder_id, action);
-    client.queue_message(&message);
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn wgpu_command_encoder_resolve_query_set(
+pub unsafe extern "C" fn wgpu_client_command_encoder_resolve_query_set(
     client: &Client,
     device_id: id::DeviceId,
     command_encoder_id: id::CommandEncoderId,
     query_set_id: id::QuerySetId,
-    start_query: u32,
+    first_query: u32,
     query_count: u32,
     destination: id::BufferId,
     destination_offset: wgt::BufferAddress,
 ) {
-    let action = CommandEncoderAction::ResolveQuerySet {
+    let command = CommandEncoderCommand::ResolveQuerySet {
         query_set: query_set_id,
-        start_query,
+        first_query,
         query_count,
         destination,
         destination_offset,
     };
-    let message = Message::CommandEncoder(device_id, command_encoder_id, action);
+    let message = Message::CommandEncoder(device_id, command_encoder_id, command);
     client.queue_message(&message);
+}
+
+#[no_mangle]
+pub extern "C" fn wgpu_client_command_encoder_push_debug_group(
+    client: &Client,
+    device_id: id::DeviceId,
+    command_encoder_id: id::CommandEncoderId,
+    marker: &nsACString,
+) {
+    let string = marker.to_string();
+    let command = CommandEncoderCommand::DebugCommand(DebugCommand::PushDebugGroup(string));
+    let message = Message::CommandEncoder(device_id, command_encoder_id, command);
+    client.queue_message(&message);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn wgpu_client_command_encoder_pop_debug_group(
+    client: &Client,
+    device_id: id::DeviceId,
+    command_encoder_id: id::CommandEncoderId,
+) {
+    let command = CommandEncoderCommand::DebugCommand(DebugCommand::PopDebugGroup);
+    let message = Message::CommandEncoder(device_id, command_encoder_id, command);
+    client.queue_message(&message);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn wgpu_client_command_encoder_insert_debug_marker(
+    client: &Client,
+    device_id: id::DeviceId,
+    command_encoder_id: id::CommandEncoderId,
+    marker: &nsACString,
+) {
+    let string = marker.to_string();
+    let command = CommandEncoderCommand::DebugCommand(DebugCommand::InsertDebugMarker(string));
+    let message = Message::CommandEncoder(device_id, command_encoder_id, command);
+    client.queue_message(&message);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn wgpu_client_command_encoder_finish(
+    client: &Client,
+    device_id: id::DeviceId,
+    command_encoder_id: id::CommandEncoderId,
+    desc: &wgt::CommandBufferDescriptor<Option<&nsACString>>,
+) -> id::CommandBufferId {
+    let command_buffer_id = client.identities.lock().command_buffers.process();
+    let label = wgpu_string(desc.label);
+    let command = CommandEncoderCommand::Finish {
+        desc: desc.map_label(|_| label),
+        command_buffer_id,
+    };
+    let message = Message::CommandEncoder(device_id, command_encoder_id, command);
+    client.queue_message(&message);
+    command_buffer_id
 }
 
 #[no_mangle]
@@ -2099,25 +2121,6 @@ pub unsafe extern "C" fn wgpu_report_validation_error(
     };
     let message = Message::Device(device_id, action);
     client.queue_message(&message);
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn wgpu_command_encoder_finish(
-    client: &Client,
-    device_id: id::DeviceId,
-    command_encoder_id: id::CommandEncoderId,
-    desc: &wgt::CommandBufferDescriptor<Option<&nsACString>>,
-) -> id::CommandBufferId {
-    let command_buffer_id = client.identities.lock().command_buffers.process();
-    let label = wgpu_string(desc.label);
-    let message = Message::CommandEncoderFinish(
-        device_id,
-        command_encoder_id,
-        command_buffer_id,
-        desc.map_label(|_| label),
-    );
-    client.queue_message(&message);
-    command_buffer_id
 }
 
 #[no_mangle]

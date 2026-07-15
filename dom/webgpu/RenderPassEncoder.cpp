@@ -227,7 +227,7 @@ ffi::WGPURecordedRenderPass* BeginRenderPass(
     desc.timestamp_writes = &passTimestampWrites;
   }
 
-  return ffi::wgpu_command_encoder_begin_render_pass(&desc);
+  return ffi::wgpu_client_command_encoder_begin_render_pass(&desc);
 }
 
 RenderPassEncoder::RenderPassEncoder(CommandEncoder* const aParent, RawId aId,

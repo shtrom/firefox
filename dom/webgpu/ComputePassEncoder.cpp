@@ -39,7 +39,7 @@ ffi::WGPURecordedComputePass* BeginComputePass(
     desc.timestamp_writes = &passTimestampWrites;
   }
 
-  return ffi::wgpu_command_encoder_begin_compute_pass(&desc);
+  return ffi::wgpu_client_command_encoder_begin_compute_pass(&desc);
 }
 
 ComputePassEncoder::ComputePassEncoder(
