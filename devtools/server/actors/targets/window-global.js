@@ -1797,7 +1797,12 @@ class DebuggerProgressListener {
     // inner-window-destroyed events. Bug 1016952 would remove the need for this.
     this._knownWindowIDs = new Map();
 
-    this._watchedDocShells = new WeakSet();
+    // Map of all the currently watched top level docshells.
+    //   Map(docshell => AbortController)
+    // We mostly keep track of all the docshells via the Map keys,
+    // but store as value the AbortController to unregister all event listeners
+    // against the docshell document.
+    this._watchedDocShellsAbortControllersMap = new Map();
   }
 
   QueryInterface = ChromeUtils.generateQI([
@@ -1809,14 +1814,18 @@ class DebuggerProgressListener {
     Services.obs.removeObserver(this, "inner-window-destroyed");
     this._knownWindowIDs.clear();
     this._knownWindowIDs = null;
+
+    // TargetActor should have manually unwatch the docshells,
+    // but just to be safe, cleanup any leftover
+    for (const abortController of this._watchedDocShellsAbortControllersMap.values()) {
+      abortController.abort();
+    }
+    this._watchedDocShellsAbortControllersMap.clear();
   }
 
   watch(docShell) {
-    // Add the docshell to the watched set. We're actually adding the window,
-    // because docShell objects are not wrappercached and would be rejected
-    // by the WeakSet.
-    const docShellWindow = docShell.domWindow;
-    this._watchedDocShells.add(docShellWindow);
+    const abortController = new AbortController();
+    this._watchedDocShellsAbortControllersMap.set(docShell, abortController);
 
     const webProgress = docShell
       .QueryInterface(Ci.nsIInterfaceRequestor)
@@ -1827,12 +1836,23 @@ class DebuggerProgressListener {
         Ci.nsIWebProgress.NOTIFY_STATE_DOCUMENT
     );
 
+    const { signal } = abortController;
     const handler = getDocShellChromeEventHandler(docShell);
-    handler.addEventListener("DOMWindowCreated", this._onWindowCreated, true);
-    handler.addEventListener("pageshow", this._onWindowCreated, true);
-    handler.addEventListener("pagehide", this._onWindowHidden, true);
+    handler.addEventListener("DOMWindowCreated", this._onWindowCreated, {
+      capture: true,
+      signal,
+    });
+    handler.addEventListener("pageshow", this._onWindowCreated, {
+      capture: true,
+      signal,
+    });
+    handler.addEventListener("pagehide", this._onWindowHidden, {
+      capture: true,
+      signal,
+    });
 
     // Dispatch the _windowReady event on the targetActor for pre-existing windows
+    const docShellWindow = docShell.domWindow;
     const windows = this._targetActor.ignoreSubFrames
       ? [docShellWindow]
       : this._getWindowsInDocShell(docShell);
@@ -1852,18 +1872,6 @@ class DebuggerProgressListener {
   }
 
   unwatch(docShell) {
-    // If the docshell is being destroyed, we won't be able to retrieve its related window object,
-    // which is the key ingredient for all cleanup operations done in this method.
-    if (docShell.isBeingDestroyed()) {
-      return;
-    }
-
-    const docShellWindow = docShell.domWindow;
-    if (!this._watchedDocShells.has(docShellWindow)) {
-      return;
-    }
-    this._watchedDocShells.delete(docShellWindow);
-
     const webProgress = docShell
       .QueryInterface(Ci.nsIInterfaceRequestor)
       .getInterface(Ci.nsIWebProgress);
@@ -1874,15 +1882,21 @@ class DebuggerProgressListener {
       // ignore
     }
 
-    const handler = getDocShellChromeEventHandler(docShell);
-    handler.removeEventListener(
-      "DOMWindowCreated",
-      this._onWindowCreated,
-      true
-    );
-    handler.removeEventListener("pageshow", this._onWindowCreated, true);
-    handler.removeEventListener("pagehide", this._onWindowHidden, true);
+    const abortController =
+      this._watchedDocShellsAbortControllersMap.get(docShell);
+    if (!abortController) {
+      return;
+    }
+    this._watchedDocShellsAbortControllersMap.delete(docShell);
+    abortController.abort();
 
+    // If the docshell is being destroyed, we won't be able to retrieve its related window object,
+    // which is the key ingredient for all cleanup operations done in this method.
+    if (docShell.isBeingDestroyed()) {
+      return;
+    }
+
+    const docShellWindow = docShell.domWindow;
     const windows = this._targetActor.ignoreSubFrames
       ? [docShellWindow]
       : this._getWindowsInDocShell(docShell);
@@ -1987,7 +2001,7 @@ class DebuggerProgressListener {
     // That's because we registered the listener on docShell.domWindow as
     // top level windows don't have a chromeEventHandler.
     if (
-      this._watchedDocShells.has(window) &&
+      this._watchedDocShellsAbortControllersMap.has(window?.docShell) &&
       // Avoid exception when the notified window is a cross origin object
       // (most likely an iframe running in a distinct origin)
       !Cu.isRemoteProxy(window) &&
