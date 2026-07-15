@@ -83,8 +83,8 @@ async function closeAppMenu() {
   await panelHidden;
 }
 
-// A synced client with a single tab, used to render a device's inline section
-// in the app menu (where the "Send Current Page to This Device" option lives).
+// A synced client with a single tab, used to open the per-device recent tabs
+// subpanel (where the "Send Current Page to This Device" option now lives).
 const appMenuSendTabClient = {
   id: "client1",
   name: "Device 1",
@@ -100,11 +100,10 @@ const appMenuSendTabClient = {
   ],
 };
 
-// Opens the FxA panel from the app menu and renders a device's inline section.
-// In the app menu, each device is rendered as its own section (rather than a
-// button opening a subpanel), so the section is built into the app-menu devices
-// list and its send tab telemetry is attributed to fxa_app_menu.
-async function renderDeviceSectionFromAppMenu() {
+// Opens the FxA panel from the app menu, then opens the recent tabs subpanel
+// for a device. The subpanel is anchored inside the app menu, so its send tab
+// telemetry is attributed to fxa_app_menu.
+async function openDeviceRecentTabsFromAppMenu() {
   gSync.updateAllUI({
     status: UIState.STATUS_SIGNED_IN,
     syncEnabled: true,
@@ -113,10 +112,21 @@ async function renderDeviceSectionFromAppMenu() {
   await openFxaPanelFromAppMenu();
 
   let panelview = PanelMultiView.getViewNode(document, "PanelUI-fxa");
-  panelview.syncedTabsPanelList._appendDeviceSection(
-    appMenuSendTabClient,
-    fxaDevices[0]
+  let devicesListContainer = PanelMultiView.getViewNode(
+    document,
+    "PanelUI-fxa-menu-devices-list"
   );
+  let subviewShown = BrowserTestUtils.waitForEvent(
+    PanelMultiView.getViewNode(document, "PanelUI-fxa-device-recent-tabs"),
+    "ViewShown"
+  );
+  panelview.syncedTabsPanelList._showDeviceRecentTabs(
+    appMenuSendTabClient,
+    fxaDevices[0],
+    devicesListContainer,
+    new PointerEvent("click")
+  );
+  await subviewShown;
 }
 
 add_task(async function test_sendtab_exposed_app_menu() {
@@ -131,7 +141,7 @@ add_task(async function test_sendtab_exposed_app_menu() {
   await Services.fog.testFlushAllChildren();
   Services.fog.testResetFOG();
 
-  await renderDeviceSectionFromAppMenu();
+  await openDeviceRecentTabsFromAppMenu();
 
   await Services.fog.testFlushAllChildren();
   let appMenuExposed = Glean.fxaAppMenu.sendTabExposed.testGetValue();
@@ -162,7 +172,7 @@ add_task(async function test_sendtab_opened_app_menu() {
   await Services.fog.testFlushAllChildren();
   Services.fog.testResetFOG();
 
-  await renderDeviceSectionFromAppMenu();
+  await openDeviceRecentTabsFromAppMenu();
 
   await Services.fog.testFlushAllChildren();
   let appMenuOpened = Glean.fxaAppMenu.sendTabOpened.testGetValue();
@@ -194,16 +204,13 @@ add_task(async function test_sendtab_click_device_app_menu() {
   await Services.fog.testFlushAllChildren();
   Services.fog.testResetFOG();
 
-  await renderDeviceSectionFromAppMenu();
+  await openDeviceRecentTabsFromAppMenu();
 
-  let devicesList = PanelMultiView.getViewNode(
+  let sendPageBtn = PanelMultiView.getViewNode(
     document,
-    "PanelUI-fxa-menu-devices-list"
+    "PanelUI-fxa-device-send-current-page"
   );
-  let sendPageBtn = devicesList.querySelector(
-    '[data-l10n-id="fxa-menu-device-send-current-page"]'
-  );
-  ok(sendPageBtn, "Send Current Page button rendered in the device section");
+  ok(!sendPageBtn.hidden, "Send Current Page button is visible");
   sendPageBtn.click();
 
   await TestUtils.waitForCondition(async () => {
