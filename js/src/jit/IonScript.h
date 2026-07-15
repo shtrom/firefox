@@ -135,6 +135,10 @@ class alignas(8) IonScript final : public TrailingArray<IonScript> {
   mozilla::HashNumber icHash_ = 0;
 #endif
 
+  // Lock used to synchronise IonIC stub chain mutation on the main thread with
+  // a concurrent marking thread tracing the ICs.
+  gc::MarkingLock markingLock_;
+
   // End of fields.
 
  private:
@@ -395,6 +399,8 @@ class alignas(8) IonScript final : public TrailingArray<IonScript> {
   void copyRuntimeData(const uint8_t* data);
   void copyICEntries(const uint32_t* icEntries);
   void copySafepoints(const SafepointWriter* writer);
+
+  gc::MarkingLock& markingLock() { return markingLock_; }
 
   bool invalidated() const { return invalidationCount_ != 0; }
 
