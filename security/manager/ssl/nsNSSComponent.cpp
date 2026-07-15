@@ -1742,7 +1742,13 @@ nsNSSComponent::Observe(nsISupports* aSubject, const char* aTopic,
     if (certVerifier) {
       certVerifier->ClearPrivateBrowsingOCSPCache();
     }
-    mozilla::net::SSLTokensCache::ClearSessionCacheAndTokens();
+    // NSS client session cache has no PBM scoping; clear it fully.
+    // Called here (not in SSLTokensCache::Observe) because
+    // SSL_ClearSessionCache requires NSS to be initialized, which is guaranteed
+    // in this context.
+    SSL_ClearSessionCache();
+    // SSLTokensCache observes this notification itself and clears PBM
+    // token-cache entries and forwards a scoped clear to the socket process.
     return NS_OK;
   }
 
