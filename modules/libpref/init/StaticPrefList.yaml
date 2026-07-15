@@ -11276,7 +11276,7 @@
 # https://drafts.csswg.org/css-inline-3/#text-box-shorthand
 - name: layout.css.text-box.enabled
   type: bool
-  value: @IS_NIGHTLY_BUILD@
+  value: true
   mirror: always
 
 # Maximum number of lines to try balancing.
@@ -13925,11 +13925,7 @@
 
 - name: media.webrtc.hw.h264.enabled
   type: RelaxedAtomicBool
-#if defined(MOZ_WIDGET_ANDROID)
   value: true
-#else
-  value: @IS_NIGHTLY_BUILD@
-#endif
   mirror: always
 
 - name: media.webrtc.codec.video.av1.enabled

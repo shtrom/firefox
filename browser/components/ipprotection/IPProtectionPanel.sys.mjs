@@ -36,6 +36,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "moz-src:///browser/components/customizableui/PanelMultiView.sys.mjs",
   SpecialMessageActions:
     "resource://messaging-system/lib/SpecialMessageActions.sys.mjs",
+  ShellService: "moz-src:///browser/components/shell/ShellService.sys.mjs",
 });
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 
@@ -148,6 +149,8 @@ export class IPProtectionPanel {
    *  True if the VPN service is in the process of connecting, else false.
    * @property {boolean} showLocationButtonBadge
    *  True if the "new" badge on the location selection button should be visible.
+   * @property {boolean} isPremium
+   * True if the current device has Firefox set as the default browser or the user has a Mozilla VPN subscription and/or unlimited bandwidth
    */
 
   /**
@@ -357,6 +360,19 @@ export class IPProtectionPanel {
     );
   }
 
+  get isDefaultBrowser() {
+    let isDefaultBrowser = lazy.ShellService.isDefaultBrowser();
+    return isDefaultBrowser;
+  }
+
+  get isPremium() {
+    let isPremium =
+      !this.#getBandwidthUsage() ||
+      lazy.IPProtectionService.authProvider.hasUpgraded ||
+      this.isDefaultBrowser;
+    return isPremium;
+  }
+
   /**
    * Creates an instance of IPProtectionPanel for a specific browser window.
    *
@@ -395,6 +411,7 @@ export class IPProtectionPanel {
         LOCATION_BADGE_DISMISSED_PREF,
         false
       ),
+      isPremium: this.isPremium,
     };
 
     // The progress listener to listen for page navigations.
@@ -493,10 +510,19 @@ export class IPProtectionPanel {
     const win = this.#window.get();
     const inPrivateBrowsing =
       !!win && lazy.PrivateBrowsingUtils.isWindowPrivate(win);
+
+    let country = this.state.location;
+    if (!this.isPremium && country) {
+      const location = lazy.IPProtectionServerlist.getLocation(country);
+      if (location?.country.locked) {
+        country = undefined;
+      }
+    }
+
     const { error } = await lazy.IPPProxyManager.start(
       true,
       inPrivateBrowsing,
-      this.state.location
+      country
     );
     if (error && error !== lazy.ERRORS.CANCELED) {
       const errorMessage =
@@ -566,7 +592,11 @@ export class IPProtectionPanel {
       });
     }
 
+    // Only check default browser on panel open if not premium to limit calls to the Shell Service
+    const isPremium = this.state.isPremium ? true : this.isPremium;
+
     this.setState({
+      isPremium,
       isSiteExceptionsEnabled: this.isExceptionsFeatureEnabled,
       bandwidthWarning: this.#shouldShowBandwidthWarning(),
     });

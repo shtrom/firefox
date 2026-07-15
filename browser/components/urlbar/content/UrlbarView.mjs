@@ -2690,6 +2690,22 @@ export class UrlbarView {
   }
 
   async #updateRowForDynamicType(item, result) {
+    // The update is applied asynchronously (getViewUpdate round-trips to
+    // another process on the message path), so expose a promise that resolves
+    // once it lands. Callers that read the updated DOM await it via
+    // UrlbarTestUtils.waitForAutocompleteResultAt.
+    let resolveViewUpdate;
+    item._dynamicViewUpdatePromise = new Promise(
+      resolve => (resolveViewUpdate = resolve)
+    );
+    try {
+      await this.#applyDynamicTypeViewUpdate(item, result);
+    } finally {
+      resolveViewUpdate();
+    }
+  }
+
+  async #applyDynamicTypeViewUpdate(item, result) {
     item.setAttribute("dynamicType", result.payload.dynamicType);
 
     let idsByName = new Map();
