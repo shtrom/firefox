@@ -251,8 +251,8 @@ class InputProxy {
     this.#invoke("search", [value, options]);
   }
 
-  _setValue(value) {
-    this.#invoke("_setValue", [value]);
+  setValue(value) {
+    this.#invoke("setValue", [value]);
   }
 
   startQuery(options) {

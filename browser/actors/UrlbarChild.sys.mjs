@@ -14,7 +14,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
 // over the actor (see the `input`/`view` stand-ins on `UrlbarChildControllerProxy`).
 // An allowlist, so an `InvokeContentAction` message can't reach arbitrary methods.
 const INVOKABLE_CONTENT_ACTIONS = {
-  input: new Set(["search", "_setValue", "startQuery"]),
+  input: new Set(["search", "setValue", "startQuery"]),
   view: new Set(["close", "startTail150"]),
 };
 

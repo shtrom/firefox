@@ -194,7 +194,7 @@ class UrlbarInputTestUtils {
         lazy.UrlbarPrefs.get("trimURLs") &&
         value != lazy.BrowserUIUtils.trimURL(value)
       ) {
-        this.#urlbar(window)._setValue(value);
+        this.#urlbar(window).setValue(value);
         fireInputEvent = true;
       } else {
         this.#urlbar(window).value = value;
@@ -1511,7 +1511,7 @@ class UrlbarInputTestUtils {
       // Set most of the string directly instead of going through sendString,
       // so that we don't make life unnecessarily hard for consumers by
       // possibly starting multiple searches.
-      this.#urlbar(win)._setValue(text.substr(0, text.length - 1));
+      this.#urlbar(win).setValue(text.substr(0, text.length - 1));
     }
     this.EventUtils.sendString(text.substr(-1, 1), win);
   }
