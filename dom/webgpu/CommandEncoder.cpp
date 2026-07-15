@@ -176,23 +176,23 @@ void CommandEncoder::InsertDebugMarker(const nsAString& aString) {
 
 already_AddRefed<ComputePassEncoder> CommandEncoder::BeginComputePass(
     const dom::GPUComputePassDescriptor& aDesc) {
-  auto id = ffi::wgpu_client_make_compute_pass_encoder_id(GetClient());
-  RefPtr<ComputePassEncoder> pass = new ComputePassEncoder(this, id, aDesc);
+  ffi::WGPUComputePassDescriptor desc = {};
+
+  webgpu::StringHelper label(aDesc.mLabel);
+  desc.label = label.Get();
+
+  ffi::WGPUPassTimestampWrites passTimestampWrites = {};
+  if (aDesc.mTimestampWrites.WasPassed()) {
+    AssignPassTimestampWrites(aDesc.mTimestampWrites.Value(),
+                              passTimestampWrites);
+    desc.timestamp_writes = &passTimestampWrites;
+  }
+
+  RawId id = ffi::wgpu_client_command_encoder_begin_compute_pass(
+      GetClient(), mParent->GetId(), GetId(), &desc);
+  RefPtr<ComputePassEncoder> pass = new ComputePassEncoder(this, id);
   pass->SetLabel(aDesc.mLabel);
-  if (mState == CommandEncoderState::Ended) {
-    // Because we do not call wgpu until the pass is ended, we need to generate
-    // this error ourselves in order to report it at the correct time.
-
-    const auto* message = "Encoding must not have ended";
-    ffi::wgpu_report_validation_error(GetClient(), mParent->GetId(), message);
-
-    pass->Invalidate();
-  } else if (mState == CommandEncoderState::Locked) {
-    // This is not sufficient to handle this case properly. Invalidity
-    // needs to be transferred from the pass to the encoder when the pass
-    // ends. Bug 1971650.
-    pass->Invalidate();
-  } else {
+  if (mState != CommandEncoderState::Ended) {
     mState = CommandEncoderState::Locked;
   }
   return pass.forget();
@@ -269,21 +269,19 @@ void CommandEncoder::ResolveQuerySet(QuerySet& aQuerySet, uint32_t aFirstQuery,
 }
 
 void CommandEncoder::EndComputePass(
-    ffi::WGPURecordedComputePass& aPass, CanvasContextArray& aCanvasContexts,
+    RawId aComputePassEncoderId, CanvasContextArray& aCanvasContexts,
     Span<RefPtr<ExternalTexture>> aExternalTextures) {
-  if (mState != CommandEncoderState::Locked) {
-    const auto* message = "Encoder is not currently locked";
-    ffi::wgpu_report_validation_error(GetClient(), mParent->GetId(), message);
-    return;
+  if (mState == CommandEncoderState::Locked) {
+    mState = CommandEncoderState::Open;
   }
-  mState = CommandEncoderState::Open;
 
   for (const auto& context : aCanvasContexts) {
     TrackPresentationContext(context);
   }
   mExternalTextures.AppendElements(aExternalTextures);
 
-  ffi::wgpu_compute_pass_finish(GetClient(), mParent->GetId(), GetId(), &aPass);
+  ffi::wgpu_client_compute_pass_encoder_end(GetClient(), mParent->GetId(),
+                                            aComputePassEncoderId);
 }
 
 void CommandEncoder::EndRenderPass(

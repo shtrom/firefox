@@ -367,7 +367,7 @@ pub struct Client {
 }
 
 impl Client {
-    fn queue_message(&self, message: &Message) {
+    pub(crate) fn queue_message(&self, message: &Message) {
         let mut message_queue = self.message_queue.lock();
         message_queue.push(self.owner, message);
     }
@@ -554,12 +554,6 @@ pub extern "C" fn wgpu_client_make_render_pass_encoder_id(
     client: &Client,
 ) -> id::RenderPassEncoderId {
     client.identities.lock().render_pass_encoders.process()
-}
-#[no_mangle]
-pub extern "C" fn wgpu_client_make_compute_pass_encoder_id(
-    client: &Client,
-) -> id::ComputePassEncoderId {
-    client.identities.lock().compute_pass_encoders.process()
 }
 
 #[rustfmt::skip]
@@ -1511,8 +1505,11 @@ pub struct PassTimestampWrites<'a> {
 
 #[no_mangle]
 pub unsafe extern "C" fn wgpu_client_command_encoder_begin_compute_pass(
+    client: &Client,
+    device_id: id::DeviceId,
+    encoder_id: id::CommandEncoderId,
     desc: &ComputePassDescriptor,
-) -> *mut crate::command::RecordedComputePass {
+) -> id::ComputePassEncoderId {
     let &ComputePassDescriptor {
         label,
         timestamp_writes,
@@ -1535,28 +1532,20 @@ pub unsafe extern "C" fn wgpu_client_command_encoder_begin_compute_pass(
         }
     });
 
-    let pass = crate::command::RecordedComputePass::new(&wgc::command::ComputePassDescriptor {
+    let desc = wgc::command::ComputePassDescriptor {
         label,
         timestamp_writes,
-    });
-    Box::into_raw(Box::new(pass))
-}
+    };
 
-#[no_mangle]
-pub unsafe extern "C" fn wgpu_compute_pass_finish(
-    client: &Client,
-    device_id: id::DeviceId,
-    encoder_id: id::CommandEncoderId,
-    pass: *mut crate::command::RecordedComputePass,
-) {
-    let pass = *Box::from_raw(pass);
-    let message = Message::ReplayComputePass(device_id, encoder_id, pass);
+    let compute_pass_encoder_id = client.identities.lock().compute_pass_encoders.process();
+
+    let command = CommandEncoderCommand::BeginComputePass {
+        desc,
+        compute_pass_encoder_id,
+    };
+    let message = Message::CommandEncoder(device_id, encoder_id, command);
     client.queue_message(&message);
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn wgpu_compute_pass_destroy(pass: *mut crate::command::RecordedComputePass) {
-    let _ = Box::from_raw(pass);
+    compute_pass_encoder_id
 }
 
 #[repr(C)]

@@ -79,7 +79,7 @@ class CommandEncoder final : public nsWrapperCache,
 
   CommandEncoderState GetState() const { return mState; };
 
-  void EndComputePass(ffi::WGPURecordedComputePass& aPass,
+  void EndComputePass(RawId aComputePassEncoderId,
                       CanvasContextArray& aCanvasContexts,
                       Span<RefPtr<ExternalTexture>> aExternalTextures);
   void EndRenderPass(ffi::WGPURecordedRenderPass& aPass,

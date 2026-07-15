@@ -2,13 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use crate::{id, server::Global, FfiSlice, RawString};
+use crate::{
+    client::Client, id, raw_string_to_string, server::Global, BindingCommand,
+    ComputePassEncoderCommand, DebugCommand, FfiSlice, Message, RawString,
+};
 use std::{borrow::Cow, ffi};
 use wgc::{
-    command::{
-        ComputePassDescriptor, PassTimestampWrites, RenderPassColorAttachment,
-        RenderPassDepthStencilAttachment,
-    },
+    command::{PassTimestampWrites, RenderPassColorAttachment, RenderPassDepthStencilAttachment},
     id::{CommandEncoderId, TextureViewId},
 };
 use wgt::{BufferAddress, BufferSize, Color, DynamicOffset, IndexFormat};
@@ -75,26 +75,6 @@ impl RecordedRenderPass {
             depth_stencil_attachment,
             timestamp_writes,
             occlusion_query_set_id,
-        }
-    }
-}
-
-#[derive(serde::Deserialize, serde::Serialize)]
-pub struct RecordedComputePass {
-    base: Pass<ComputeCommand>,
-    timestamp_writes: Option<PassTimestampWrites>,
-}
-
-impl RecordedComputePass {
-    pub fn new(desc: &ComputePassDescriptor) -> Self {
-        Self {
-            base: Pass {
-                label: desc.label.as_ref().map(|cow| cow.to_string()),
-                commands: Vec::new(),
-                dynamic_offsets: Vec::new(),
-                string_data: Vec::new(),
-            },
-            timestamp_writes: desc.timestamp_writes.clone(),
         }
     }
 }
@@ -187,40 +167,6 @@ pub enum RenderCommand {
     },
     EndPipelineStatisticsQuery,
     ExecuteBundle(id::RenderBundleId),
-}
-
-#[doc(hidden)]
-#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
-pub enum ComputeCommand {
-    SetBindGroup {
-        index: u32,
-        num_dynamic_offsets: usize,
-        bind_group_id: Option<id::BindGroupId>,
-    },
-    SetPipeline(id::ComputePipelineId),
-    Dispatch([u32; 3]),
-    DispatchIndirect {
-        buffer_id: id::BufferId,
-        offset: wgt::BufferAddress,
-    },
-    PushDebugGroup {
-        color: u32,
-        len: usize,
-    },
-    PopDebugGroup,
-    InsertDebugMarker {
-        color: u32,
-        len: usize,
-    },
-    WriteTimestamp {
-        query_set_id: id::QuerySetId,
-        query_index: u32,
-    },
-    BeginPipelineStatisticsQuery {
-        query_set_id: id::QuerySetId,
-        query_index: u32,
-    },
-    EndPipelineStatisticsQuery,
 }
 
 #[no_mangle]
@@ -575,53 +521,67 @@ pub unsafe extern "C" fn wgpu_recorded_render_pass_execute_bundles(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn wgpu_recorded_compute_pass_set_bind_group(
-    pass: &mut RecordedComputePass,
+pub unsafe extern "C" fn wgpu_client_compute_pass_encoder_set_bind_group(
+    client: &Client,
+    device_id: id::DeviceId,
+    encoder_id: id::ComputePassEncoderId,
     index: u32,
-    bind_group_id: Option<id::BindGroupId>,
-    offsets: FfiSlice<'_, DynamicOffset>,
+    bind_group: Option<id::BindGroupId>,
+    dynamic_offsets: FfiSlice<'_, DynamicOffset>,
 ) {
-    let offsets = offsets.as_slice();
-    pass.base.dynamic_offsets.extend_from_slice(offsets);
-
-    pass.base.commands.push(ComputeCommand::SetBindGroup {
+    let command = ComputePassEncoderCommand::BindingCommand(BindingCommand::SetBindGroup {
         index,
-        num_dynamic_offsets: offsets.len(),
-        bind_group_id,
+        bind_group,
+        dynamic_offsets: dynamic_offsets.as_slice().to_vec(),
     });
+    let message = Message::ComputePassEncoder(device_id, encoder_id, command);
+    client.queue_message(&message);
 }
 
 #[no_mangle]
-pub extern "C" fn wgpu_recorded_compute_pass_set_pipeline(
-    pass: &mut RecordedComputePass,
+pub extern "C" fn wgpu_client_compute_pass_encoder_set_pipeline(
+    client: &Client,
+    device_id: id::DeviceId,
+    encoder_id: id::ComputePassEncoderId,
     pipeline_id: id::ComputePipelineId,
 ) {
-    pass.base
-        .commands
-        .push(ComputeCommand::SetPipeline(pipeline_id));
+    let command = ComputePassEncoderCommand::SetPipeline(pipeline_id);
+    let message = Message::ComputePassEncoder(device_id, encoder_id, command);
+    client.queue_message(&message);
 }
 
 #[no_mangle]
-pub extern "C" fn wgpu_recorded_compute_pass_dispatch_workgroups(
-    pass: &mut RecordedComputePass,
-    groups_x: u32,
-    groups_y: u32,
-    groups_z: u32,
+pub extern "C" fn wgpu_client_compute_pass_encoder_dispatch_workgroups(
+    client: &Client,
+    device_id: id::DeviceId,
+    encoder_id: id::ComputePassEncoderId,
+    workgroup_count_x: u32,
+    workgroup_count_y: u32,
+    workgroup_count_z: u32,
 ) {
-    pass.base
-        .commands
-        .push(ComputeCommand::Dispatch([groups_x, groups_y, groups_z]));
+    let command = ComputePassEncoderCommand::DispatchWorkgroups {
+        workgroup_count_x,
+        workgroup_count_y,
+        workgroup_count_z,
+    };
+    let message = Message::ComputePassEncoder(device_id, encoder_id, command);
+    client.queue_message(&message);
 }
 
 #[no_mangle]
-pub extern "C" fn wgpu_recorded_compute_pass_dispatch_workgroups_indirect(
-    pass: &mut RecordedComputePass,
-    buffer_id: id::BufferId,
-    offset: BufferAddress,
+pub extern "C" fn wgpu_client_compute_pass_encoder_dispatch_workgroups_indirect(
+    client: &Client,
+    device_id: id::DeviceId,
+    encoder_id: id::ComputePassEncoderId,
+    indirect_buffer: id::BufferId,
+    indirect_offset: BufferAddress,
 ) {
-    pass.base
-        .commands
-        .push(ComputeCommand::DispatchIndirect { buffer_id, offset });
+    let command = ComputePassEncoderCommand::DispatchWorkgroupsIndirect {
+        indirect_buffer,
+        indirect_offset,
+    };
+    let message = Message::ComputePassEncoder(device_id, encoder_id, command);
+    client.queue_message(&message);
 }
 
 /// # Safety
@@ -629,23 +589,28 @@ pub extern "C" fn wgpu_recorded_compute_pass_dispatch_workgroups_indirect(
 /// This function is unsafe as there is no guarantee that the given `label`
 /// is a valid null-terminated string.
 #[no_mangle]
-pub unsafe extern "C" fn wgpu_recorded_compute_pass_push_debug_group(
-    pass: &mut RecordedComputePass,
+pub unsafe extern "C" fn wgpu_client_compute_pass_encoder_push_debug_group(
+    client: &Client,
+    device_id: id::DeviceId,
+    encoder_id: id::ComputePassEncoderId,
     label: RawString,
-    color: u32,
 ) {
-    let bytes = unsafe { ffi::CStr::from_ptr(label) }.to_bytes();
-    pass.base.string_data.extend_from_slice(bytes);
-
-    pass.base.commands.push(ComputeCommand::PushDebugGroup {
-        color,
-        len: bytes.len(),
-    });
+    let command = ComputePassEncoderCommand::DebugCommand(DebugCommand::PushDebugGroup(
+        raw_string_to_string(label),
+    ));
+    let message = Message::ComputePassEncoder(device_id, encoder_id, command);
+    client.queue_message(&message);
 }
 
 #[no_mangle]
-pub extern "C" fn wgpu_recorded_compute_pass_pop_debug_group(pass: &mut RecordedComputePass) {
-    pass.base.commands.push(ComputeCommand::PopDebugGroup);
+pub extern "C" fn wgpu_client_compute_pass_encoder_pop_debug_group(
+    client: &Client,
+    device_id: id::DeviceId,
+    encoder_id: id::ComputePassEncoderId,
+) {
+    let command = ComputePassEncoderCommand::DebugCommand(DebugCommand::PopDebugGroup);
+    let message = Message::ComputePassEncoder(device_id, encoder_id, command);
+    client.queue_message(&message);
 }
 
 /// # Safety
@@ -653,53 +618,28 @@ pub extern "C" fn wgpu_recorded_compute_pass_pop_debug_group(pass: &mut Recorded
 /// This function is unsafe as there is no guarantee that the given `label`
 /// is a valid null-terminated string.
 #[no_mangle]
-pub unsafe extern "C" fn wgpu_recorded_compute_pass_insert_debug_marker(
-    pass: &mut RecordedComputePass,
+pub unsafe extern "C" fn wgpu_client_compute_pass_encoder_insert_debug_marker(
+    client: &Client,
+    device_id: id::DeviceId,
+    encoder_id: id::ComputePassEncoderId,
     label: RawString,
-    color: u32,
 ) {
-    let bytes = unsafe { ffi::CStr::from_ptr(label) }.to_bytes();
-    pass.base.string_data.extend_from_slice(bytes);
-
-    pass.base.commands.push(ComputeCommand::InsertDebugMarker {
-        color,
-        len: bytes.len(),
-    });
+    let command = ComputePassEncoderCommand::DebugCommand(DebugCommand::InsertDebugMarker(
+        raw_string_to_string(label),
+    ));
+    let message = Message::ComputePassEncoder(device_id, encoder_id, command);
+    client.queue_message(&message);
 }
 
 #[no_mangle]
-pub extern "C" fn wgpu_recorded_compute_pass_write_timestamp(
-    pass: &mut RecordedComputePass,
-    query_set_id: id::QuerySetId,
-    query_index: u32,
+pub unsafe extern "C" fn wgpu_client_compute_pass_encoder_end(
+    client: &Client,
+    device_id: id::DeviceId,
+    encoder_id: id::ComputePassEncoderId,
 ) {
-    pass.base.commands.push(ComputeCommand::WriteTimestamp {
-        query_set_id,
-        query_index,
-    });
-}
-
-#[no_mangle]
-pub extern "C" fn wgpu_recorded_compute_pass_begin_pipeline_statistics_query(
-    pass: &mut RecordedComputePass,
-    query_set_id: id::QuerySetId,
-    query_index: u32,
-) {
-    pass.base
-        .commands
-        .push(ComputeCommand::BeginPipelineStatisticsQuery {
-            query_set_id,
-            query_index,
-        });
-}
-
-#[no_mangle]
-pub extern "C" fn wgpu_recorded_compute_pass_end_pipeline_statistics_query(
-    pass: &mut RecordedComputePass,
-) {
-    pass.base
-        .commands
-        .push(ComputeCommand::EndPipelineStatisticsQuery);
+    let command = ComputePassEncoderCommand::End;
+    let message = Message::ComputePassEncoder(device_id, encoder_id, command);
+    client.queue_message(&message);
 }
 
 pub fn replay_render_pass(
@@ -908,105 +848,65 @@ pub fn replay_render_pass_impl(
     Ok(())
 }
 
-pub fn replay_compute_pass(
+pub(crate) fn compute_pass_encoder_command(
     global: &Global,
     device_id: id::DeviceId,
-    id: CommandEncoderId,
-    src_pass: &RecordedComputePass,
+    id: id::ComputePassEncoderId,
+    cmd: ComputePassEncoderCommand,
     error_buf: &mut crate::error::OwnedErrorBuffer,
 ) {
-    let (mut dst_pass, err) = global.command_encoder_begin_compute_pass(
-        id,
-        &wgc::command::ComputePassDescriptor {
-            label: src_pass.base.label.as_ref().map(|s| s.as_str().into()),
-            timestamp_writes: src_pass.timestamp_writes.clone(),
-        },
-    );
-    if let Some(err) = err {
-        error_buf.init(err, device_id);
-        return;
-    }
-    if let Err(err) = replay_compute_pass_impl(global, src_pass, &mut dst_pass) {
-        error_buf.init(err, device_id);
-        return;
-    }
-
-    match global.compute_pass_end(&mut dst_pass) {
-        Ok(()) => (),
-        Err(err) => error_buf.init(err, device_id),
-    }
-}
-
-fn replay_compute_pass_impl(
-    global: &Global,
-    src_pass: &RecordedComputePass,
-    dst_pass: &mut wgc::command::ComputePass,
-) -> Result<(), wgc::command::PassStateError> {
-    let mut dynamic_offsets = src_pass.base.dynamic_offsets.as_slice();
-    let mut dynamic_offsets = |len| {
-        let offsets;
-        (offsets, dynamic_offsets) = dynamic_offsets.split_at(len);
-        offsets
-    };
-    let mut strings = src_pass.base.string_data.as_slice();
-    let mut strings = |len| {
-        let label;
-        (label, strings) = strings.split_at(len);
-        label
-    };
-    for command in &src_pass.base.commands {
-        match *command {
-            ComputeCommand::SetBindGroup {
+    let res = match cmd {
+        ComputePassEncoderCommand::BindingCommand(binding_command) => match binding_command {
+            BindingCommand::SetBindGroup {
                 index,
-                num_dynamic_offsets,
-                bind_group_id,
+                bind_group,
+                dynamic_offsets,
             } => {
-                let offsets = dynamic_offsets(num_dynamic_offsets);
-                global.compute_pass_set_bind_group(dst_pass, index, bind_group_id, offsets)?;
+                global.compute_pass_set_bind_group_with_id(id, index, bind_group, &dynamic_offsets)
             }
-            ComputeCommand::SetPipeline(pipeline_id) => {
-                global.compute_pass_set_pipeline(dst_pass, pipeline_id)?;
+            BindingCommand::SetImmediates { range_offset, data } => {
+                global.compute_pass_set_immediates_with_id(id, range_offset, &data)
             }
-            ComputeCommand::Dispatch([x, y, z]) => {
-                global.compute_pass_dispatch_workgroups(dst_pass, x, y, z)?;
-            }
-            ComputeCommand::DispatchIndirect { buffer_id, offset } => {
-                global.compute_pass_dispatch_workgroups_indirect(dst_pass, buffer_id, offset)?;
-            }
-            ComputeCommand::PushDebugGroup { color, len } => {
-                let label = strings(len);
-                let label = std::str::from_utf8(label).unwrap();
-                global.compute_pass_push_debug_group(dst_pass, label, color)?;
-            }
-            ComputeCommand::PopDebugGroup => {
-                global.compute_pass_pop_debug_group(dst_pass)?;
-            }
-            ComputeCommand::InsertDebugMarker { color, len } => {
-                let label = strings(len);
-                let label = std::str::from_utf8(label).unwrap();
-                global.compute_pass_insert_debug_marker(dst_pass, label, color)?;
-            }
-            ComputeCommand::WriteTimestamp {
-                query_set_id,
-                query_index,
-            } => {
-                global.compute_pass_write_timestamp(dst_pass, query_set_id, query_index)?;
-            }
-            ComputeCommand::BeginPipelineStatisticsQuery {
-                query_set_id,
-                query_index,
-            } => {
-                global.compute_pass_begin_pipeline_statistics_query(
-                    dst_pass,
-                    query_set_id,
-                    query_index,
-                )?;
-            }
-            ComputeCommand::EndPipelineStatisticsQuery => {
-                global.compute_pass_end_pipeline_statistics_query(dst_pass)?;
-            }
+        },
+        ComputePassEncoderCommand::SetPipeline(pipeline_id) => {
+            global.compute_pass_set_pipeline_with_id(id, pipeline_id)
         }
+        ComputePassEncoderCommand::DispatchWorkgroups {
+            workgroup_count_x,
+            workgroup_count_y,
+            workgroup_count_z,
+        } => global.compute_pass_dispatch_workgroups_with_id(
+            id,
+            workgroup_count_x,
+            workgroup_count_y,
+            workgroup_count_z,
+        ),
+        ComputePassEncoderCommand::DispatchWorkgroupsIndirect {
+            indirect_buffer,
+            indirect_offset,
+        } => global.compute_pass_dispatch_workgroups_indirect_with_id(
+            id,
+            indirect_buffer,
+            indirect_offset,
+        ),
+        ComputePassEncoderCommand::DebugCommand(debug_command) => match debug_command {
+            DebugCommand::PushDebugGroup(label) => {
+                global.compute_pass_push_debug_group_with_id(id, &label, 0)
+            }
+            DebugCommand::PopDebugGroup => global.compute_pass_pop_debug_group_with_id(id),
+            DebugCommand::InsertDebugMarker(label) => {
+                global.compute_pass_insert_debug_marker_with_id(id, &label, 0)
+            }
+        },
+        ComputePassEncoderCommand::End => {
+            let res = global.compute_pass_end_with_id(id);
+            if let Err(err) = res {
+                error_buf.init(err, device_id);
+            }
+            Ok(())
+        }
+    };
+    if let Err(err) = res {
+        error_buf.init(err, device_id);
     }
-
-    Ok(())
 }

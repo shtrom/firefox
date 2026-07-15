@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use crate::command::{RecordedComputePass, RecordedRenderPass};
+use crate::command::RecordedRenderPass;
 use wgc::id;
 
 pub mod client;
@@ -240,7 +240,7 @@ pub enum QueueWriteDataSource {
 const MAX_SWAPCHAIN_BUFFER_COUNT: usize = 10;
 
 #[derive(serde::Serialize, serde::Deserialize)]
-enum Message<'a> {
+pub(crate) enum Message<'a> {
     RequestAdapter {
         adapter_id: id::AdapterId,
         power_preference: wgt::PowerPreference,
@@ -265,7 +265,11 @@ enum Message<'a> {
         CommandEncoderCommand<'a>,
     ),
     ReplayRenderPass(id::DeviceId, id::CommandEncoderId, RecordedRenderPass),
-    ReplayComputePass(id::DeviceId, id::CommandEncoderId, RecordedComputePass),
+    ComputePassEncoder(
+        id::DeviceId,
+        id::ComputePassEncoderId,
+        ComputePassEncoderCommand,
+    ),
     QueueWrite {
         device_id: id::DeviceId,
         queue_id: id::QueueId,
@@ -557,6 +561,24 @@ enum CommandEncoderCommand<'a> {
         desc: wgt::CommandBufferDescriptor<wgc::Label<'a>>,
         command_buffer_id: id::CommandBufferId,
     },
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+/// Corresponds to [`GPUComputePassEncoder`](https://www.w3.org/TR/webgpu/#gpucomputepassencoder).
+enum ComputePassEncoderCommand {
+    BindingCommand(BindingCommand),
+    SetPipeline(id::ComputePipelineId),
+    DispatchWorkgroups {
+        workgroup_count_x: u32,
+        workgroup_count_y: u32, // optional, defaults to 1
+        workgroup_count_z: u32, // optional, defaults to 1
+    },
+    DispatchWorkgroupsIndirect {
+        indirect_buffer: id::BufferId,
+        indirect_offset: u64,
+    },
+    DebugCommand(DebugCommand),
+    End,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
