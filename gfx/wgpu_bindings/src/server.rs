@@ -6,9 +6,10 @@ use crate::{
     error::{error_to_string, ErrMsg, ErrorBuffer, ErrorBufferType, OwnedErrorBuffer},
     make_byte_buf,
     telemetry::build_telemetry_struct,
-    wgpu_string, AdapterInformation, BufferMapResult, ByteBuf, CommandEncoderAction, DeviceAction,
-    FfiSlice, Message, PipelineError, QueueWriteAction, QueueWriteDataSource, ServerMessage,
-    ShaderModuleCompilationMessage, SwapChainId, TextureAction,
+    wgpu_string, AdapterInformation, BindingCommand, BufferMapResult, ByteBuf,
+    CommandEncoderAction, DebugCommand, DeviceAction, FfiSlice, Message, PipelineError,
+    QueueWriteAction, QueueWriteDataSource, RenderBundleEncoderCommand, RenderCommand,
+    ServerMessage, ShaderModuleCompilationMessage, SwapChainId, TextureAction,
 };
 
 use nsstring::{nsACString, nsCString};
@@ -2426,18 +2427,12 @@ impl Global {
                     }
                 }
             }
-            DeviceAction::CreateRenderBundle(id, mut encoder, desc) => {
-                let (_, error) = self.render_bundle_encoder_finish(&mut encoder, &desc, Some(id));
+            DeviceAction::CreateRenderBundleEncoder(id, desc) => {
+                let (_, error) =
+                    self.device_create_render_bundle_encoder_with_id(device_id, &desc, Some(id));
                 if let Some(err) = error {
                     error_buf.init(err, device_id);
                 }
-            }
-            DeviceAction::CreateRenderBundleError(buffer_id, label) => {
-                self.create_render_bundle_error(
-                    device_id,
-                    Some(buffer_id),
-                    &wgt::RenderBundleDescriptor { label },
-                );
             }
             DeviceAction::CreateQuerySet(id, desc) => {
                 let (_, error) = self.device_create_query_set(device_id, &desc, Some(id));
@@ -2492,6 +2487,128 @@ impl Global {
                     error_buf.init(err, device_id);
                 }
             }
+        }
+    }
+
+    fn render_bundle_encoder_command(
+        &self,
+        device_id: id::DeviceId,
+        id: id::RenderBundleEncoderId,
+        cmd: RenderBundleEncoderCommand,
+        error_buf: &mut OwnedErrorBuffer,
+    ) {
+        let res = match cmd {
+            RenderBundleEncoderCommand::BindingCommand(binding_command) => match binding_command {
+                BindingCommand::SetBindGroup {
+                    index,
+                    bind_group,
+                    dynamic_offsets,
+                } => self.render_bundle_encoder_set_bind_group_with_id(
+                    id,
+                    index,
+                    bind_group,
+                    &dynamic_offsets,
+                ),
+                BindingCommand::SetImmediates { range_offset, data } => {
+                    self.render_bundle_encoder_set_immediates_with_id(id, range_offset, &data)
+                }
+            },
+            RenderBundleEncoderCommand::RenderCommand(render_command) => match render_command {
+                RenderCommand::SetPipeline(pipeline_id) => {
+                    self.render_bundle_encoder_set_pipeline_with_id(id, pipeline_id)
+                }
+                RenderCommand::SetIndexBuffer {
+                    buffer,
+                    index_format,
+                    offset,
+                    size,
+                } => self.render_bundle_encoder_set_index_buffer_with_id(
+                    id,
+                    buffer,
+                    index_format,
+                    offset,
+                    size.and_then(core::num::NonZeroU64::new), // pass size directly once https://github.com/gfx-rs/wgpu/issues/3170 is resolved
+                ),
+                RenderCommand::SetVertexBuffer {
+                    slot,
+                    buffer,
+                    offset,
+                    size,
+                } => self.render_bundle_encoder_set_vertex_buffer_with_id(
+                    id,
+                    slot,
+                    buffer,
+                    offset,
+                    size.and_then(core::num::NonZeroU64::new), // pass size directly once https://github.com/gfx-rs/wgpu/issues/3170 is resolved
+                ),
+                RenderCommand::Draw {
+                    vertex_count,
+                    instance_count,
+                    first_vertex,
+                    first_instance,
+                } => self.render_bundle_encoder_draw_with_id(
+                    id,
+                    vertex_count,
+                    instance_count,
+                    first_vertex,
+                    first_instance,
+                ),
+                RenderCommand::DrawIndexed {
+                    index_count,
+                    instance_count,
+                    first_index,
+                    base_vertex,
+                    first_instance,
+                } => self.render_bundle_encoder_draw_indexed_with_id(
+                    id,
+                    index_count,
+                    instance_count,
+                    first_index,
+                    base_vertex,
+                    first_instance,
+                ),
+                RenderCommand::DrawIndirect {
+                    indirect_buffer,
+                    indirect_offset,
+                } => self.render_bundle_encoder_draw_indirect_with_id(
+                    id,
+                    indirect_buffer,
+                    indirect_offset,
+                ),
+                RenderCommand::DrawIndexedIndirect {
+                    indirect_buffer,
+                    indirect_offset,
+                } => self.render_bundle_encoder_draw_indexed_indirect_with_id(
+                    id,
+                    indirect_buffer,
+                    indirect_offset,
+                ),
+            },
+            RenderBundleEncoderCommand::DebugCommand(debug_command) => match debug_command {
+                DebugCommand::PushDebugGroup(label) => {
+                    self.render_bundle_encoder_push_debug_group_with_id(id, &label)
+                }
+                DebugCommand::PopDebugGroup => {
+                    self.render_bundle_encoder_pop_debug_group_with_id(id)
+                }
+                DebugCommand::InsertDebugMarker(label) => {
+                    self.render_bundle_encoder_insert_debug_marker_with_id(id, &label)
+                }
+            },
+            RenderBundleEncoderCommand::Finish {
+                desc,
+                render_bundle_id,
+            } => {
+                let (_, error) =
+                    self.render_bundle_encoder_finish_with_id(id, &desc, Some(render_bundle_id));
+                if let Some(err) = error {
+                    error_buf.init(err, device_id);
+                }
+                Ok(())
+            }
+        };
+        if let Err(err) = res {
+            error_buf.init(err, device_id);
         }
     }
 
@@ -2910,6 +3027,9 @@ unsafe fn process_message(
         Message::Texture(device_id, id, action) => {
             global.texture_action(device_id, id, action, error_buf)
         }
+        Message::RenderBundleEncoder(device_id, id, cmd) => {
+            global.render_bundle_encoder_command(device_id, id, cmd, error_buf)
+        }
         Message::CommandEncoder(device_id, id, action) => {
             global.command_encoder_action(device_id, id, action, error_buf)
         }
@@ -3089,7 +3209,7 @@ unsafe fn process_message(
         Message::DropCommandEncoder(id) => global.command_encoder_drop(id),
         Message::DropRenderPassEncoder(_id) => {}
         Message::DropComputePassEncoder(_id) => {}
-        Message::DropRenderBundleEncoder(_id) => {}
+        Message::DropRenderBundleEncoder(id) => global.render_bundle_encoder_drop(id),
         Message::DropCommandBuffer(id) => global.command_buffer_drop(id),
         Message::DropRenderBundle(id) => global.render_bundle_drop(id),
         Message::DropBindGroupLayout(id) => global.bind_group_layout_drop(id),

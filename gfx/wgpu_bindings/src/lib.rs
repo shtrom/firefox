@@ -29,6 +29,13 @@ fn cow_label(raw: &RawString) -> Option<Cow<'_, str>> {
     }
 }
 
+fn raw_string_to_string(raw: RawString) -> String {
+    unsafe { std::ffi::CStr::from_ptr(raw) }
+        .to_str()
+        .unwrap()
+        .to_string()
+}
+
 // Hides the repeated boilerplate of turning a `Option<&nsACString>` into a `Option<Cow<str>`.
 pub fn wgpu_string(gecko_string: Option<&nsACString>) -> Option<Cow<'_, str>> {
     gecko_string.map(|s| s.to_utf8())
@@ -249,6 +256,11 @@ enum Message<'a> {
     },
     Device(id::DeviceId, DeviceAction<'a>),
     Texture(id::DeviceId, id::TextureId, TextureAction<'a>),
+    RenderBundleEncoder(
+        id::DeviceId,
+        id::RenderBundleEncoderId,
+        RenderBundleEncoderCommand<'a>,
+    ),
     CommandEncoder(id::DeviceId, id::CommandEncoderId, CommandEncoderAction),
     CommandEncoderFinish(
         id::DeviceId,
@@ -379,12 +391,10 @@ enum DeviceAction<'a> {
         wgc::pipeline::RenderPipelineDescriptor<'a>,
         bool,
     ),
-    CreateRenderBundle(
-        id::RenderBundleId,
-        wgc::command::RenderBundleEncoder,
-        wgc::command::RenderBundleDescriptor<'a>,
+    CreateRenderBundleEncoder(
+        id::RenderBundleEncoderId,
+        wgc::command::RenderBundleEncoderDescriptor<'a>,
     ),
-    CreateRenderBundleError(id::RenderBundleId, wgc::Label<'a>),
     CreateQuerySet(id::QuerySetId, wgc::resource::QuerySetDescriptor<'a>),
     CreateCommandEncoder(
         id::CommandEncoderId,
@@ -488,3 +498,76 @@ impl<'a> TexelCopyBufferLayout<'a> {
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub struct SwapChainId(pub u64);
+
+#[derive(serde::Serialize, serde::Deserialize)]
+/// Corresponds to [`GPURenderBundleEncoder`](https://www.w3.org/TR/webgpu/#gpurenderbundleencoder).
+enum RenderBundleEncoderCommand<'a> {
+    BindingCommand(BindingCommand),
+    RenderCommand(RenderCommand),
+    DebugCommand(DebugCommand),
+    Finish {
+        desc: wgc::command::RenderBundleDescriptor<'a>, // optional, defaults to {}
+        render_bundle_id: id::RenderBundleId,
+    },
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+/// Corresponds to [`GPUDebugCommandsMixin`](https://www.w3.org/TR/webgpu/#gpudebugcommandsmixin).
+enum DebugCommand {
+    PushDebugGroup(String),
+    PopDebugGroup,
+    InsertDebugMarker(String),
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+/// Corresponds to [`GPUBindingCommandsMixin`](https://www.w3.org/TR/webgpu/#gpubindingcommandsmixin).
+enum BindingCommand {
+    SetBindGroup {
+        index: u32,
+        bind_group: Option<id::BindGroupId>,
+        dynamic_offsets: Vec<u32>, // optional, defaults to []
+    },
+    SetImmediates {
+        range_offset: u32,
+        data: Vec<u8>,
+    },
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+/// Corresponds to [`GPURenderCommandsMixin`](https://www.w3.org/TR/webgpu/#gpurendercommandsmixin).
+enum RenderCommand {
+    SetPipeline(id::RenderPipelineId),
+    SetIndexBuffer {
+        buffer: id::BufferId,
+        index_format: wgt::IndexFormat,
+        offset: u64, // optional, defaults to 0
+        size: Option<u64>,
+    },
+    SetVertexBuffer {
+        slot: u32,
+        buffer: Option<id::BufferId>,
+        offset: u64, // optional, defaults to 0
+        size: Option<u64>,
+    },
+    Draw {
+        vertex_count: u32,
+        instance_count: u32, // optional, defaults to 1
+        first_vertex: u32,   // optional, defaults to 0
+        first_instance: u32, // optional, defaults to 0
+    },
+    DrawIndexed {
+        index_count: u32,
+        instance_count: u32, // optional, defaults to 1
+        first_index: u32,    // optional, defaults to 0
+        base_vertex: i32,    // optional, defaults to 0
+        first_instance: u32, // optional, defaults to 0
+    },
+    DrawIndirect {
+        indirect_buffer: id::BufferId,
+        indirect_offset: u64,
+    },
+    DrawIndexedIndirect {
+        indirect_buffer: id::BufferId,
+        indirect_offset: u64,
+    },
+}
