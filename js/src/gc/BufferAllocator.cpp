@@ -496,14 +496,14 @@ bool SmallBufferRegion::hasNurseryOwnedAllocs() const {
 BufferAllocatorRuntime::BufferAllocatorRuntime()
     : lock(mutexid::BufferAllocator) {}
 
-void BufferAllocatorRuntime::incSweepCount() { allocatorSweepCount++; }
+void BufferAllocatorRuntime::incOffThreadCount() { offThreadAccessCount++; }
 
-void BufferAllocatorRuntime::decSweepCount() {
-  MOZ_ALWAYS_TRUE(allocatorSweepCount-- != 0);
+void BufferAllocatorRuntime::decOffThreadCount() {
+  MOZ_ALWAYS_TRUE(offThreadAccessCount-- != 0);
 }
 
 bool BufferAllocatorRuntime::needLockToAccessBufferMap() const {
-  return allocatorSweepCount != 0;
+  return offThreadAccessCount != 0;
 }
 
 LargeBuffer* BufferAllocatorRuntime::lookupLargeBuffer(void* alloc) {
@@ -527,7 +527,7 @@ LargeBuffer* BufferAllocatorRuntime::lookupLargeBuffer(void* alloc,
 }
 
 void BufferAllocatorRuntime::checkGCStateNotInUse() {
-  MOZ_ASSERT(allocatorSweepCount == 0);
+  MOZ_ASSERT(offThreadAccessCount == 0);
 }
 
 BufferAllocator::BufferAllocator(GCRuntime* gc, Zone* zone)
@@ -1208,7 +1208,7 @@ bool BufferAllocator::startMinorSweeping() {
   }
 
   minorState = State::Sweeping;
-  runtime()->incSweepCount();
+  runtime()->incOffThreadCount();
 
   return true;
 }
@@ -1371,7 +1371,7 @@ void BufferAllocator::startMajorSweeping(MaybeLock& lock) {
   }
 
   majorState = State::Sweeping;
-  runtime()->incSweepCount();
+  runtime()->incOffThreadCount();
 }
 
 void BufferAllocator::sweepForMajorCollection(bool shouldDecommit) {
@@ -1652,7 +1652,7 @@ void BufferAllocator::mergeSweptData(const AutoLock& lock) {
 
   if (minorSweepingFinished) {
     MOZ_ASSERT(minorState == State::Sweeping);
-    runtime()->decSweepCount();
+    runtime()->decOffThreadCount();
     minorState = State::NotCollecting;
     minorSweepingFinished = false;
     majorStartedWhileMinorSweeping = false;
@@ -1671,7 +1671,7 @@ void BufferAllocator::mergeSweptData(const AutoLock& lock) {
 
   if (majorSweepingFinished) {
     MOZ_ASSERT(majorState == State::Sweeping);
-    runtime()->decSweepCount();
+    runtime()->decOffThreadCount();
     majorState = State::NotCollecting;
     majorSweepingFinished = false;
 
