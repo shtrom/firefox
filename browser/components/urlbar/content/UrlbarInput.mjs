@@ -2054,11 +2054,12 @@ ${
         lazy.UrlbarUtils.addToInputHistory(url, input).catch(console.error);
       }
 
-      // Re-integration: If the user picks a non-autofill result for a URL
-      // that has a blocked origin, clear the block.
+      // Re-integration: If the user picks a non-autofill result, or a "url"
+      // autofill from manually typing the URL for a blocked origin, clear the
+      // block.
       if (
         lazy.UrlbarPrefs.get("autoFill.adaptiveHistory.enabled") &&
-        !result.autofill &&
+        (!result.autofill || result.autofill.type == "url") &&
         result.type == UrlbarShared.RESULT_TYPE.URL
       ) {
         let isOrigin = lazy.UrlbarUtils.isOriginUrl(url);
