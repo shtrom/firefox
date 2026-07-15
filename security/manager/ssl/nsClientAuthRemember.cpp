@@ -5,12 +5,11 @@
 
 #include "nsClientAuthRemember.h"
 
+#include "SSLTokensCache.h"
 #include "mozilla/BasePrincipal.h"
 #include "mozilla/RefPtr.h"
 #include "nsCRT.h"
-#include "nsINSSComponent.h"
 #include "nsPrintfCString.h"
-#include "nsNSSComponent.h"
 #include "nsIDataStorage.h"
 #include "nsIObserverService.h"
 #include "nsNetUtil.h"
@@ -94,11 +93,8 @@ nsClientAuthRememberService::ForgetRememberedDecision(const nsACString& key) {
   if (NS_FAILED(rv)) {
     return rv;
   }
-  nsCOMPtr<nsINSSComponent> nssComponent(do_GetService(NS_NSSCOMPONENT_CID));
-  if (!nssComponent) {
-    return NS_ERROR_NOT_AVAILABLE;
-  }
-  return nssComponent->ClearSSLExternalAndInternalSessionCache();
+  mozilla::net::SSLTokensCache::ClearSessionCacheAndTokens();
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -142,11 +138,8 @@ nsClientAuthRememberService::ClearRememberedDecisions() {
   if (NS_FAILED(rv)) {
     return rv;
   }
-  nsCOMPtr<nsINSSComponent> nssComponent(do_GetService(NS_NSSCOMPONENT_CID));
-  if (!nssComponent) {
-    return NS_ERROR_NOT_AVAILABLE;
-  }
-  return nssComponent->ClearSSLExternalAndInternalSessionCache();
+  mozilla::net::SSLTokensCache::ClearSessionCacheAndTokens();
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -194,11 +187,8 @@ nsClientAuthRememberService::DeleteDecisionsByHost(
       }
     }
   }
-  nsCOMPtr<nsINSSComponent> nssComponent(do_GetService(NS_NSSCOMPONENT_CID));
-  if (!nssComponent) {
-    return NS_ERROR_NOT_AVAILABLE;
-  }
-  return nssComponent->ClearSSLExternalAndInternalSessionCache();
+  mozilla::net::SSLTokensCache::ClearSessionCacheAndTokens();
+  return NS_OK;
 }
 
 NS_IMETHODIMP

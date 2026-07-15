@@ -24,13 +24,14 @@
 #ifdef ENABLE_WEBDRIVER
 #  include "nsIRemoteAgent.h"
 #endif
+#include "SSLTokensCache.h"
 #include "nsISafeOutputStream.h"
 #include "nsIX509Cert.h"
 #include "nsNSSCertificate.h"
-#include "nsNSSComponent.h"
 #include "nsNetUtil.h"
 #include "nsStreamUtils.h"
 #include "nsThreadUtils.h"
+#include "prenv.h"
 
 using namespace mozilla;
 using namespace mozilla::psm;
@@ -557,12 +558,7 @@ nsCertOverrideService::ClearValidityOverride(
     Write(lock);
   }
 
-  nsCOMPtr<nsINSSComponent> nss(do_GetService(PSM_COMPONENT_CONTRACTID));
-  if (nss) {
-    nss->ClearSSLExternalAndInternalSessionCache();
-  } else {
-    return NS_ERROR_NOT_AVAILABLE;
-  }
+  mozilla::net::SSLTokensCache::ClearSessionCacheAndTokens();
 
   nsCOMPtr<nsIObserverService> os = mozilla::services::GetObserverService();
   if (os) {
@@ -595,12 +591,7 @@ nsCertOverrideService::ClearAllOverrides() {
     Write(lock);
   }
 
-  nsCOMPtr<nsINSSComponent> nss(do_GetService(PSM_COMPONENT_CONTRACTID));
-  if (nss) {
-    nss->ClearSSLExternalAndInternalSessionCache();
-  } else {
-    return NS_ERROR_NOT_AVAILABLE;
-  }
+  mozilla::net::SSLTokensCache::ClearSessionCacheAndTokens();
 
   nsCOMPtr<nsIObserverService> os = mozilla::services::GetObserverService();
   if (os) {
@@ -659,12 +650,7 @@ nsCertOverrideService::
     mDisableAllSecurityCheck = aDisable;
   }
 
-  nsCOMPtr<nsINSSComponent> nss(do_GetService(PSM_COMPONENT_CONTRACTID));
-  if (nss) {
-    nss->ClearSSLExternalAndInternalSessionCache();
-  } else {
-    return NS_ERROR_NOT_AVAILABLE;
-  }
+  mozilla::net::SSLTokensCache::ClearSessionCacheAndTokens();
 
   return NS_OK;
 }
