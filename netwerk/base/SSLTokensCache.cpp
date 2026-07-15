@@ -485,8 +485,6 @@ nsresult SSLTokensCache::Init() {
 
     RegisterWeakMemoryReporter(gInstance);
 
-    // Register unconditionally: user prefs are applied during
-    // profile-after-change, after Init() runs.
     nsCOMPtr<nsIObserverService> obs = mozilla::services::GetObserverService();
     if (obs && XRE_IsParentProcess()) {
       obs->AddObserver(gInstance, "profile-after-change", false);
@@ -555,6 +553,8 @@ nsresult SSLTokensCache::Shutdown() {
       obs->RemoveObserver(instance, "idle-daily");
     }
     if (XRE_IsParentProcess()) {
+      Preferences::UnregisterCallback(&SSLTokensCache::ReconcilePersistence,
+                                      "network.ssl_tokens_cache_persistence");
       obs->RemoveObserver(instance, "profile-after-change");
       obs->RemoveObserver(instance, "last-pb-context-exited");
     }
@@ -1408,6 +1408,69 @@ void SSLTokensCache::PutForTest(const nsACString& aKey) {
 
 #endif  // ENABLE_TESTS
 
+// static
+void SSLTokensCache::ReconcilePersistence(const char*, void*) {
+  MOZ_ASSERT(XRE_IsParentProcess());
+  nsCOMPtr<nsIObserverService> obs = mozilla::services::GetObserverService();
+  if (!obs) {
+    return;
+  }
+
+  bool wantPersistence = StaticPrefs::network_ssl_tokens_cache_persistence();
+  bool addObservers = false;
+  bool removeObservers = false;
+  nsCString loadPath;
+  uint32_t loadGen = 0;
+  RefPtr<SSLTokensCache> instance;
+  nsCOMPtr<nsIFile> backingFileToRemove;
+  nsCOMPtr<nsISerialEventTarget> backingTaskQueue;
+  {
+    StaticMutexAutoLock lock(sLock);
+    instance = gInstance;
+    if (!instance) {
+      return;
+    }
+    bool wasRegistered = instance->mWriteObserversRegistered;
+    instance->mWriteObserversRegistered = wantPersistence;
+    addObservers = wantPersistence && !wasRegistered;
+    removeObservers = !wantPersistence && wasRegistered;
+    if (wantPersistence && !instance->mBackingFile) {
+      loadPath = SetupPersistenceLocked(loadGen);
+    }
+    if (!wantPersistence) {
+      backingFileToRemove = std::move(instance->mBackingFile);
+      // Capture the queue before nulling so the deletion can be ordered
+      // after any write tasks already queued on it.
+      backingTaskQueue = std::move(instance->mWriteTaskQueue);
+      instance->ClearCacheLocked();
+    }
+  }
+  if (backingFileToRemove) {
+    if (backingTaskQueue) {
+      // Route deletion through the serial write queue so it runs after any
+      // pending write task (mirrors the pattern in Clear()).
+      InvokeAsync(backingTaskQueue.get(), __func__,
+                  [bf = std::move(backingFileToRemove)]() mutable {
+                    RemoveFilesSync(bf);
+                    return GenericPromise::CreateAndResolve(true, __func__);
+                  });
+    } else {
+      DispatchFileRemoval(std::move(backingFileToRemove));
+    }
+  }
+  if (addObservers) {
+    obs->AddObserver(instance, "application-background", false);
+    obs->AddObserver(instance, "idle-daily", false);
+  } else if (removeObservers) {
+    obs->RemoveObserver(instance, "application-background");
+    obs->RemoveObserver(instance, "idle-daily");
+  }
+  if (wantPersistence) {
+    DispatchLoad(std::move(loadPath), loadGen);
+    instance->RegisterShutdownBlocker();
+  }
+}
+
 NS_IMETHODIMP
 SSLTokensCache::Observe(nsISupports* aSubject, const char* aTopic,
                         const char16_t* aData) {
@@ -1418,45 +1481,14 @@ SSLTokensCache::Observe(nsISupports* aSubject, const char* aTopic,
   } else if (!strcmp(aTopic, "profile-after-change")) {
     MOZ_ASSERT(XRE_IsParentProcess());
     LOG(("SSLTokensCache::Observe [topic=profile-after-change]"));
-    nsCOMPtr<nsIObserverService> obs = mozilla::services::GetObserverService();
-    if (!obs) {
-      return NS_OK;
-    }
-
-    // Reconcile persistence state with the pref, which may differ from
-    // what Init() saw (user.js is applied between Init() and here).
-    bool wantPersistence = StaticPrefs::network_ssl_tokens_cache_persistence();
-    bool addObservers = false;
-    bool removeObservers = false;
-    nsCString loadPath;
-    uint32_t loadGen = 0;
-    {
-      StaticMutexAutoLock lock(sLock);
-      if (gInstance) {
-        bool wasRegistered = gInstance->mWriteObserversRegistered;
-        gInstance->mWriteObserversRegistered = wantPersistence;
-        addObservers = wantPersistence && !wasRegistered;
-        removeObservers = !wantPersistence && wasRegistered;
-        if (wantPersistence && !gInstance->mBackingFile) {
-          loadPath = SetupPersistenceLocked(loadGen);
-        }
-        if (!wantPersistence) {
-          gInstance->mBackingFile = nullptr;
-          gInstance->mWriteTaskQueue = nullptr;
-          gInstance->ClearCacheLocked();
-        }
-      }
-    }
-    if (addObservers) {
-      obs->AddObserver(this, "application-background", false);
-      obs->AddObserver(this, "idle-daily", false);
-    } else if (removeObservers) {
-      obs->RemoveObserver(this, "application-background");
-      obs->RemoveObserver(this, "idle-daily");
-    }
-    if (wantPersistence) {
-      DispatchLoad(std::move(loadPath), loadGen);
-      RegisterShutdownBlocker();
+    ReconcilePersistence();
+    if (!mPrefCallbackRegistered) {
+      // Register for live pref changes now that the JS environment is ready.
+      // Registering earlier (in Init()) would fire the callback during startup
+      // pref-loading before the JS module loader is initialised.
+      Preferences::RegisterCallback(&SSLTokensCache::ReconcilePersistence,
+                                    "network.ssl_tokens_cache_persistence");
+      mPrefCallbackRegistered = true;
     }
   } else if (!strcmp(aTopic, "last-pb-context-exited")) {
     MOZ_ASSERT(XRE_IsParentProcess());
