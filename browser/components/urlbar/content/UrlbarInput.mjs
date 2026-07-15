@@ -1813,6 +1813,7 @@ ${
         }
 
         if (
+          this.#isAddressbar &&
           !this.searchMode &&
           result.heuristic &&
           // If we asked the DNS earlier, avoid the post-facto check.
@@ -1820,7 +1821,6 @@ ${
           // TODO (bug 1642623): for now there is no smart heuristic to skip the
           // DNS lookup, so any value above 0 will run it.
           lazy.UrlbarPrefs.get("dnsResolveSingleWordsAfterSearch") > 0 &&
-          this.window.gKeywordURIFixup &&
           lazy.UrlbarUtils.looksLikeSingleWordHost(originalUntrimmedValue)
         ) {
           // When fixing a single word to a search, the docShell would also
@@ -3580,6 +3580,7 @@ ${
     // trim the http protocol from the input value, as https-first may upgrade
     // it to https, breaking user expectations.
     let stripHttp =
+      this.#isAddressbar &&
       result.heuristic &&
       result.payload.url.startsWith("http://") &&
       this.userTypedValue &&
@@ -5469,7 +5470,7 @@ ${
     // This is necessary when a protocol was typed, but the whole url has
     // invalid parts, like the origin, then editing and confirming the trimmed
     // value would execute a search instead of visiting the typed url.
-    if (this._protocolIsTrimmed) {
+    if (this.#isAddressbar && this._protocolIsTrimmed) {
       let untrim = false;
       let fixedURI = this._getURIFixupInfo(this.value)?.preferredURI;
       if (fixedURI) {
