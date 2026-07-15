@@ -114,7 +114,6 @@ enum class InitPhase {
 // right feature definitions.
 class ContentClassifierResult {
  public:
-
   // Aggregation ordering follows the numeric
   // value of nsIContentClassifierService::ProbeStatus: higher values
   // supersede lower ones in Accumulate, so any Exception promotes the
