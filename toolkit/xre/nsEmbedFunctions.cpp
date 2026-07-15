@@ -452,8 +452,7 @@ nsresult XRE_InitChildProcess(int aArgc, char* aArgv[],
   }
 
   nsID messageChannelId{};
-  if (NS_WARN_IF(!messageChannelId.Parse(
-          nsDependentCString(*initialChannelIdString)))) {
+  if (NS_WARN_IF(!messageChannelId.Parse(*initialChannelIdString))) {
     return NS_ERROR_FAILURE;
   }
 

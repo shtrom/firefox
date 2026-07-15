@@ -11,7 +11,6 @@
 #include "mozilla/Assertions.h"
 #include "mozilla/RandomNum.h"
 #include "mozilla/Sprintf.h"
-#include "nsTSubstring.h"
 #include "nss.h"
 
 [[nodiscard]] static bool GenerateRandomBytesFromNSS(void* aBuffer,
@@ -126,46 +125,34 @@ void nsID::Clear() {
  * an nsID. It can also handle the old format without the { and }.
  */
 
-bool nsID::Parse(const nsACString& aIDStr) {
-  const nsACString::size_type length = aIDStr.Length();
-
-  if (aIDStr.IsEmpty()) {
-    // Early out for speed - but also to avoid out-of-range access below
-    // as we need to read the first char to know if we have braces.
+bool nsID::Parse(const char* aIDStr) {
+  /* Optimized for speed */
+  if (!aIDStr) {
     return false;
   }
 
-  const bool expectFormat1 = (aIDStr[0] == '{');
-  const nsACString::size_type minLength = expectFormat1 ? 38 : 36;
-  if (length < minLength) {
-    // String is too short
-    return false;
-  }
-
-  const char* rawIdStr = aIDStr.BeginReading();
-
+  bool expectFormat1 = (aIDStr[0] == '{');
   if (expectFormat1) {
-    // Advance the opening brace if we have braces
-    rawIdStr++;
+    ++aIDStr;
   }
 
-  PARSE_CHARS_TO_NUM(rawIdStr, m0, 8);
-  PARSE_HYPHEN(rawIdStr);
-  PARSE_CHARS_TO_NUM(rawIdStr, m1, 4);
-  PARSE_HYPHEN(rawIdStr);
-  PARSE_CHARS_TO_NUM(rawIdStr, m2, 4);
-  PARSE_HYPHEN(rawIdStr);
+  PARSE_CHARS_TO_NUM(aIDStr, m0, 8);
+  PARSE_HYPHEN(aIDStr);
+  PARSE_CHARS_TO_NUM(aIDStr, m1, 4);
+  PARSE_HYPHEN(aIDStr);
+  PARSE_CHARS_TO_NUM(aIDStr, m2, 4);
+  PARSE_HYPHEN(aIDStr);
   int i;
   for (i = 0; i < 2; ++i) {
-    PARSE_CHARS_TO_NUM(rawIdStr, m3[i], 2);
+    PARSE_CHARS_TO_NUM(aIDStr, m3[i], 2);
   }
-  PARSE_HYPHEN(rawIdStr);
+  PARSE_HYPHEN(aIDStr);
   while (i < 8) {
-    PARSE_CHARS_TO_NUM(rawIdStr, m3[i], 2);
+    PARSE_CHARS_TO_NUM(aIDStr, m3[i], 2);
     i++;
   }
 
-  return expectFormat1 ? *rawIdStr == '}' : true;
+  return expectFormat1 ? *aIDStr == '}' : true;
 }
 
 #ifndef XPCOM_GLUE_AVOID_NSPR

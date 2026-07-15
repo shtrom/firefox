@@ -7,7 +7,6 @@
 
 #include <string.h>
 
-#include "nsStringFwd.h"
 #include "nscore.h"
 
 #define NSID_LENGTH 39
@@ -65,16 +64,10 @@ struct nsID {
   inline bool operator==(const nsID& aOther) const { return Equals(aOther); }
 
   /**
-   * nsID Parsing method. Turns a valid string into a nsID.
-   * Returns true on success, or false if the string is not valid.
-   * Valid strings are of one of these forms:
-   *   "{xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}"
-   *   "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-   * Any characters after the end of the ID will be ignored.
-   * This means that this ID will be valid:
-   *   "{xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}something else"
+   * nsID Parsing method. Turns a {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}
+   * string into an nsID
    */
-  bool Parse(const nsACString& aIDStr);
+  bool Parse(const char* aIDStr);
 
 #ifndef XPCOM_GLUE_AVOID_NSPR
   /**

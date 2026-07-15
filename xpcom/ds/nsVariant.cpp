@@ -604,24 +604,37 @@ nsresult nsDiscriminatedUnion::ConvertToUint64(uint64_t* aResult) const {
 /***************************************************************************/
 
 bool nsDiscriminatedUnion::String2ID(nsID* aPid) const {
+  nsAutoString tempString;
+  nsAString* pString;
+
   switch (mType) {
     case nsIDataType::VTYPE_CHAR_STR:
     case nsIDataType::VTYPE_STRING_SIZE_IS:
-      return aPid->Parse(nsDependentCString(u.str.mStringValue));
+      return aPid->Parse(u.str.mStringValue);
     case nsIDataType::VTYPE_CSTRING:
-      return aPid->Parse(*u.mCStringValue);
+      return aPid->Parse(PromiseFlatCString(*u.mCStringValue).get());
     case nsIDataType::VTYPE_UTF8STRING:
-      return aPid->Parse(*u.mUTF8StringValue);
+      return aPid->Parse(PromiseFlatUTF8String(*u.mUTF8StringValue).get());
     case nsIDataType::VTYPE_ASTRING:
-      return aPid->Parse(NS_ConvertUTF16toUTF8(*u.mAStringValue));
+      pString = u.mAStringValue;
+      break;
     case nsIDataType::VTYPE_WCHAR_STR:
     case nsIDataType::VTYPE_WSTRING_SIZE_IS:
-      return aPid->Parse(
-          NS_ConvertUTF16toUTF8(nsDependentString(u.wstr.mWStringValue)));
+      tempString.Assign(u.wstr.mWStringValue);
+      pString = &tempString;
+      break;
     default:
       NS_ERROR("bad type in call to String2ID");
       return false;
   }
+
+  char* pChars = ToNewCString(*pString, mozilla::fallible);
+  if (!pChars) {
+    return false;
+  }
+  bool result = aPid->Parse(pChars);
+  free(pChars);
+  return result;
 }
 
 nsresult nsDiscriminatedUnion::ConvertToID(nsID* aResult) const {

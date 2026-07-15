@@ -5,31 +5,30 @@
 #include "gtest/gtest.h"
 #include "nsID.h"
 #include "nsIDUtils.h"
-#include "nsTLiteralString.h"
 
-static const nsLiteralCString bare_ids[] = {
-    "5c347b10-d55c-11d1-89b7-006008911b81"_ns,
-    "fc347b10-d55c-f1d1-f9b7-006008911b81"_ns,
+static const char* const bare_ids[] = {
+    "5c347b10-d55c-11d1-89b7-006008911b81",
+    "fc347b10-d55c-f1d1-f9b7-006008911b81",
 };
 
 TEST(nsIDUtils, NSID_TrimBracketsUTF16)
 {
   nsID id{};
-  for (const nsLiteralCString& idstr : bare_ids) {
-    ASSERT_TRUE(id.Parse(idstr.AsString()));
+  for (const auto* idstr : bare_ids) {
+    ASSERT_TRUE(id.Parse(idstr));
 
     NSID_TrimBracketsUTF16 trimmed(id);
-    ASSERT_TRUE(trimmed.Equals(NS_ConvertUTF8toUTF16(idstr)));
+    ASSERT_TRUE(trimmed.EqualsASCII(idstr));
   }
 }
 
 TEST(nsIDUtils, NSID_TrimBracketsASCII)
 {
   nsID id{};
-  for (const nsLiteralCString& idstr : bare_ids) {
-    ASSERT_TRUE(id.Parse(idstr.AsString()));
+  for (const auto* idstr : bare_ids) {
+    ASSERT_TRUE(id.Parse(idstr));
 
     NSID_TrimBracketsASCII trimmed(id);
-    ASSERT_TRUE(trimmed.Equals(idstr));
+    ASSERT_TRUE(trimmed.EqualsASCII(idstr));
   }
 }

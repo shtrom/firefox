@@ -635,13 +635,13 @@ nsresult nsXPCComponents_ID::CallOrConstruct(nsIXPConnectWrappedNative* wrapper,
     return ThrowAndFail(NS_ERROR_XPC_BAD_ID_STRING, cx, _retval);
   }
 
-  JS::UniqueChars chars = JS_EncodeStringToLatin1(cx, jsstr);
-  if (!chars) {
+  JS::UniqueChars bytes = JS_EncodeStringToLatin1(cx, jsstr);
+  if (!bytes) {
     return ThrowAndFail(NS_ERROR_XPC_BAD_ID_STRING, cx, _retval);
   }
 
   nsID id;
-  if (!id.Parse(nsDependentCString(chars.get()))) {
+  if (!id.Parse(bytes.get())) {
     return ThrowAndFail(NS_ERROR_XPC_BAD_ID_STRING, cx, _retval);
   }
 
