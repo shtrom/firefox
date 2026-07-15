@@ -697,7 +697,9 @@ class WorkerContextChild extends BaseContext {
       { envType: "addon_parent" },
       WebIDLChildAPIManager
     ).call(this);
-    return redefineGetter(this, "childManager", childManager);
+    return /** @type {WebIDLChildAPIManager} */ (
+      redefineGetter(this, "childManager", childManager)
+    );
   }
 
   get messenger() {
