@@ -1234,6 +1234,45 @@ void NativeLayerCA::DumpLayer(std::ostream& aOutputStream) {
   aOutputStream << "\"/></div>\n";
 }
 
+static NSString* NSStringForOSType(OSType type) {
+  unichar c[4];
+  c[0] = (type >> 24) & 0xFF;
+  c[1] = (type >> 16) & 0xFF;
+  c[2] = (type >> 8) & 0xFF;
+  c[3] = (type >> 0) & 0xFF;
+  NSString* string = [[NSString stringWithCharacters:c length:4] autorelease];
+  return string;
+}
+
+/* static */ void NativeLayerCA::LogSurface(
+    IOSurfaceRef aSurfaceRef, CVPixelBufferRef aBuffer,
+    CMVideoFormatDescriptionRef aFormat) {
+  NSLog(@"VIDEO_LOG: LogSurface...\n");
+
+  CFDictionaryRef surfaceValues = IOSurfaceCopyAllValues(aSurfaceRef);
+  NSLog(@"Surface values are %@.\n", surfaceValues);
+  CFRelease(surfaceValues);
+
+  if (aBuffer) {
+#ifdef XP_MACOSX
+    CGColorSpaceRef colorSpace = CVImageBufferGetColorSpace(aBuffer);
+    NSLog(@"ColorSpace is %@.\n", colorSpace);
+#endif
+
+    CFDictionaryRef bufferAttachments =
+        CVBufferGetAttachments(aBuffer, kCVAttachmentMode_ShouldPropagate);
+    NSLog(@"Buffer attachments are %@.\n", bufferAttachments);
+  }
+
+  if (aFormat) {
+    OSType codec = CMFormatDescriptionGetMediaSubType(aFormat);
+    NSLog(@"Codec is %@.\n", NSStringForOSType(codec));
+
+    CFDictionaryRef extensions = CMFormatDescriptionGetExtensions(aFormat);
+    NSLog(@"Format extensions are %@.\n", extensions);
+  }
+}
+
 gfx::IntRect NativeLayerCA::CurrentSurfaceDisplayRect() {
   MutexAutoLock lock(mMutex);
   if (mSurfaceHandler) {
@@ -1482,44 +1521,6 @@ CALayer* NativeLayerCA::UnderlyingCALayer(WhichRepresentation aRepresentation) {
   return GetRepresentation(aRepresentation).UnderlyingCALayer();
 }
 
-static NSString* NSStringForOSType(OSType type) {
-  unichar c[4];
-  c[0] = (type >> 24) & 0xFF;
-  c[1] = (type >> 16) & 0xFF;
-  c[2] = (type >> 8) & 0xFF;
-  c[3] = (type >> 0) & 0xFF;
-  NSString* string = [[NSString stringWithCharacters:c length:4] autorelease];
-  return string;
-}
-
-/* static */ void LogSurface(IOSurfaceRef aSurfaceRef, CVPixelBufferRef aBuffer,
-                             CMVideoFormatDescriptionRef aFormat) {
-  NSLog(@"VIDEO_LOG: LogSurface...\n");
-
-  CFDictionaryRef surfaceValues = IOSurfaceCopyAllValues(aSurfaceRef);
-  NSLog(@"Surface values are %@.\n", surfaceValues);
-  CFRelease(surfaceValues);
-
-  if (aBuffer) {
-#ifdef XP_MACOSX
-    CGColorSpaceRef colorSpace = CVImageBufferGetColorSpace(aBuffer);
-    NSLog(@"ColorSpace is %@.\n", colorSpace);
-#endif
-
-    CFDictionaryRef bufferAttachments =
-        CVBufferGetAttachments(aBuffer, kCVAttachmentMode_ShouldPropagate);
-    NSLog(@"Buffer attachments are %@.\n", bufferAttachments);
-  }
-
-  if (aFormat) {
-    OSType codec = CMFormatDescriptionGetMediaSubType(aFormat);
-    NSLog(@"Codec is %@.\n", NSStringForOSType(codec));
-
-    CFDictionaryRef extensions = CMFormatDescriptionGetExtensions(aFormat);
-    NSLog(@"Format extensions are %@.\n", extensions);
-  }
-}
-
 bool NativeLayerCARepresentation::EnqueueSurface(IOSurfaceRef aSurfaceRef) {
   MOZ_ASSERT(
       [mContentCALayer isKindOfClass:[AVSampleBufferDisplayLayer class]]);
@@ -1613,7 +1614,7 @@ bool NativeLayerCARepresentation::EnqueueSurface(IOSurfaceRef aSurfaceRef) {
 #ifdef NIGHTLY_BUILD
   if (mLogNextVideoSurface &&
       StaticPrefs::gfx_core_animation_specialize_video_log()) {
-    LogSurface(aSurfaceRef, pixelBuffer, formatDescription);
+    NativeLayerCA::LogSurface(aSurfaceRef, pixelBuffer, formatDescription);
     mLogNextVideoSurface = false;
   }
 #endif
@@ -2023,7 +2024,7 @@ bool NativeLayerCARepresentation::ApplyChanges(
 #ifdef NIGHTLY_BUILD
       if (mLogNextVideoSurface &&
           StaticPrefs::gfx_core_animation_specialize_video_log()) {
-        LogSurface(surface, nullptr, nullptr);
+        NativeLayerCA::LogSurface(surface, nullptr, nullptr);
         mLogNextVideoSurface = false;
       }
 #endif
