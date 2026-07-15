@@ -168,19 +168,11 @@ void InitializeHitTestInfo(nsDisplayListBuilder* aBuilder,
 
 /* static */
 already_AddRefed<ActiveScrolledRoot> ActiveScrolledRoot::GetOrCreateASRForFrame(
-    const ActiveScrolledRoot* aParent, nsIFrame* aFrame,
-    nsTArray<RefPtr<ActiveScrolledRoot>>& aActiveScrolledRoots,
-    ASRKind asrKind) {
-  MOZ_ASSERT(aFrame->IsScrollContainerOrSubclass() ==
-             (asrKind == ASRKind::Scroll));
-
-  if (asrKind == ASRKind::Sticky) {
-    aFrame = aFrame->FirstContinuation();
-  }
-
-  RefPtr<ActiveScrolledRoot> asr = aFrame->GetProperty(
-      asrKind == ASRKind::Scroll ? ActiveScrolledRootCache()
-                                 : StickyActiveScrolledRootCache());
+    const ActiveScrolledRoot* aParent,
+    ScrollContainerFrame* aScrollContainerFrame,
+    nsTArray<RefPtr<ActiveScrolledRoot>>& aActiveScrolledRoots) {
+  RefPtr<ActiveScrolledRoot> asr =
+      aScrollContainerFrame->GetProperty(ActiveScrolledRootCache());
 
 #ifdef DEBUG
   if (asr && aActiveScrolledRoots.Contains(asr)) {
@@ -188,8 +180,8 @@ already_AddRefed<ActiveScrolledRoot> ActiveScrolledRoot::GetOrCreateASRForFrame(
     // paint, assert that we aren't changing any of the values. (The values can
     // change *between* paints, but not during one paint.)
     MOZ_ASSERT(asr->mParent == aParent);
-    MOZ_ASSERT(asr->mFrame == aFrame);
-    MOZ_ASSERT(asr->mKind == asrKind);
+    MOZ_ASSERT(asr->mFrame == aScrollContainerFrame);
+    MOZ_ASSERT(asr->mKind == ASRKind::Scroll);
     asr->AssertDepthInvariant();
   }
 #endif
@@ -198,15 +190,52 @@ already_AddRefed<ActiveScrolledRoot> ActiveScrolledRoot::GetOrCreateASRForFrame(
     asr = new ActiveScrolledRoot();
 
     RefPtr<ActiveScrolledRoot> ref = asr;
-    aFrame->SetProperty(asrKind == ASRKind::Scroll
-                            ? ActiveScrolledRootCache()
-                            : StickyActiveScrolledRootCache(),
-                        ref.forget().take());
+    aScrollContainerFrame->SetProperty(ActiveScrolledRootCache(),
+                                       ref.forget().take());
     aActiveScrolledRoots.AppendElement(asr);
   }
   asr->mParent = aParent;
-  asr->mFrame = aFrame;
-  asr->mKind = asrKind;
+  asr->mFrame = aScrollContainerFrame;
+  asr->mKind = ASRKind::Scroll;
+  asr->mDepth = aParent ? aParent->mDepth + 1 : 1;
+
+  return asr.forget();
+}
+
+/* static */
+already_AddRefed<ActiveScrolledRoot>
+ActiveScrolledRoot::GetOrCreateASRForStickyFrame(
+    const ActiveScrolledRoot* aParent, nsIFrame* aStickyFrame,
+    nsTArray<RefPtr<ActiveScrolledRoot>>& aActiveScrolledRoots) {
+  aStickyFrame = aStickyFrame->FirstContinuation();
+
+  RefPtr<ActiveScrolledRoot> asr =
+      aStickyFrame->GetProperty(StickyActiveScrolledRootCache());
+
+#ifdef DEBUG
+  if (asr && aActiveScrolledRoots.Contains(asr)) {
+    // If this is the second time we are called for this frame in this same
+    // paint, assert that we aren't changing any of the values. (The values can
+    // change *between* paints, but not during one paint.)
+    MOZ_ASSERT(asr->mParent == aParent);
+    MOZ_ASSERT(asr->mFrame == aStickyFrame);
+    MOZ_ASSERT(asr->mKind == ASRKind::Sticky);
+    asr->AssertDepthInvariant();
+  }
+#endif
+
+  if (!asr) {
+    asr = new ActiveScrolledRoot();
+
+    RefPtr<ActiveScrolledRoot> ref = asr;
+    aStickyFrame->SetProperty(StickyActiveScrolledRootCache(),
+                              ref.forget().take());
+    aActiveScrolledRoots.AppendElement(asr);
+  }
+
+  asr->mParent = aParent;
+  asr->mFrame = aStickyFrame;
+  asr->mKind = ASRKind::Sticky;
   asr->mDepth = aParent ? aParent->mDepth + 1 : 1;
 
   return asr.forget();
@@ -570,15 +599,6 @@ void nsDisplayListBuilder::AutoCurrentActiveScrolledRootSetter::
     }
   }
 
-  mUsed = true;
-}
-
-void nsDisplayListBuilder::AutoCurrentActiveScrolledRootSetter::
-    EnterScrollFrame(ScrollContainerFrame* aScrollContainerFrame) {
-  MOZ_ASSERT(!mUsed);
-  ActiveScrolledRoot* asr = mBuilder->GetOrCreateActiveScrolledRoot(
-      mBuilder->mCurrentActiveScrolledRoot, aScrollContainerFrame);
-  mBuilder->mCurrentActiveScrolledRoot = asr;
   mUsed = true;
 }
 
@@ -1558,10 +1578,19 @@ void nsDisplayListBuilder::MarkPreserve3DFramesForDisplayList(
 }
 
 ActiveScrolledRoot* nsDisplayListBuilder::GetOrCreateActiveScrolledRoot(
-    const ActiveScrolledRoot* aParent, nsIFrame* aFrame,
-    ActiveScrolledRoot::ASRKind asrKind) {
+    const ActiveScrolledRoot* aParent,
+    ScrollContainerFrame* aScrollContainerFrame) {
   RefPtr<ActiveScrolledRoot> asr = ActiveScrolledRoot::GetOrCreateASRForFrame(
-      aParent, aFrame, mActiveScrolledRoots, asrKind);
+      aParent, aScrollContainerFrame, mActiveScrolledRoots);
+  return asr;
+}
+
+ActiveScrolledRoot*
+nsDisplayListBuilder::GetOrCreateActiveScrolledRootForSticky(
+    const ActiveScrolledRoot* aParent, nsIFrame* aStickyFrame) {
+  RefPtr<ActiveScrolledRoot> asr =
+      ActiveScrolledRoot::GetOrCreateASRForStickyFrame(aParent, aStickyFrame,
+                                                       mActiveScrolledRoots);
   return asr;
 }
 
