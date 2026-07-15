@@ -1919,6 +1919,8 @@ const ActionChecklistProgressBar = ({
   progress
 }) => {
   return /*#__PURE__*/external_React_default().createElement("div", {
+    className: "action-checklist-progress-bar-container"
+  }, /*#__PURE__*/external_React_default().createElement("div", {
     className: "action-checklist-progress-bar"
   }, /*#__PURE__*/external_React_default().createElement("progress", {
     className: "sr-only",
@@ -1930,15 +1932,19 @@ const ActionChecklistProgressBar = ({
     style: {
       "--action-checklist-progress-bar-progress": `${progress || 0}%`
     }
-  }));
+  })), /*#__PURE__*/external_React_default().createElement("span", {
+    className: "action-checklist-progress-text"
+  }, Math.round(progress || 0), "%"));
 };
 const ActionChecklist = ({
   content,
-  message_id
+  message_id,
+  handleAction
 }) => {
   const tiles = content.tiles.data;
   const [progressValue, setProgressValue] = (0,external_React_namespaceObject.useState)(0);
   const [numberOfCompletedActions, setNumberOfCompletedActions] = (0,external_React_namespaceObject.useState)(0);
+  const allComplete = !!tiles.length && numberOfCompletedActions === tiles.length;
   function determineProgressValue() {
     let newValue = numberOfCompletedActions / tiles.length * 100;
     setProgressValue(newValue);
@@ -1964,7 +1970,7 @@ const ActionChecklist = ({
     determineProgressValue();
   }, [numberOfCompletedActions]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function handleAction(event) {
+  function handleTileClick(event) {
     let {
       action,
       source_id
@@ -1979,6 +1985,16 @@ const ActionChecklist = ({
       data
     });
     MultiStageUtils.sendActionTelemetry(message_id, source_id, "CLICK_BUTTON");
+  }
+  function handleRemoveChecklistClick(event) {
+    let {
+      action,
+      source_id
+    } = content[event.currentTarget.value];
+    handleAction({
+      currentTarget: event.currentTarget,
+      source: source_id
+    }, action);
   }
   return /*#__PURE__*/external_React_default().createElement("div", {
     className: "action-checklist"
@@ -1996,9 +2012,15 @@ const ActionChecklist = ({
     key: item.id,
     index: index,
     item: item,
-    handleAction: handleAction,
+    handleAction: handleTileClick,
     showExternalLinkIcon: item.showExternalLinkIcon
-  }))));
+  }))), allComplete && content.remove_checklist_button && /*#__PURE__*/external_React_default().createElement("button", {
+    className: "action-checklist-complete-button",
+    value: "remove_checklist_button",
+    onClick: handleRemoveChecklistClick
+  }, /*#__PURE__*/external_React_default().createElement(Localized, {
+    text: content.remove_checklist_button.label
+  }, /*#__PURE__*/external_React_default().createElement("span", null))));
 };
 ;// ./content-src/components/EmbeddedBrowser.jsx
 /* This Source Code Form is subject to the terms of the Mozilla Public
@@ -2586,7 +2608,8 @@ const ContentTiles = props => {
       }
     }), tile.type === "action_checklist" && tile.data && /*#__PURE__*/external_React_default().createElement(ActionChecklist, {
       content: content,
-      message_id: props.messageId
+      message_id: props.messageId,
+      handleAction: props.handleAction
     }), tile.type === "embedded_browser" && tile.data?.url && /*#__PURE__*/external_React_default().createElement(EmbeddedBrowser, {
       url: tile.data.url,
       style: tile.data.style
@@ -4100,7 +4123,7 @@ class WelcomeScreen extends (external_React_default()).PureComponent {
       context.contentToggleState = props.contentToggleChecked;
     }
     MultiStageUtils.sendActionTelemetry(props.messageId, source, event.name, context);
-    if (value === "dismiss_button" && !event.name) {
+    if (value === "dismiss_button" && !event.name || action.sendDismissTelemetry) {
       MultiStageUtils.sendDismissTelemetry(props.messageId, source);
     }
     if (action.collectSelect) {

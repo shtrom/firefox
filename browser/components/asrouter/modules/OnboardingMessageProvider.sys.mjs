@@ -2858,6 +2858,7 @@ const BASE_MESSAGES = () => [
                   action: {
                     type: "MULTI_ACTION",
                     dismiss: true,
+                    sendDismissTelemetry: true,
                     data: {
                       actions: [
                         {
@@ -2902,6 +2903,30 @@ const BASE_MESSAGES = () => [
                   id: "remove_checklist",
                 },
               ],
+            },
+            remove_checklist_button: {
+              label: { string_id: "onboarding-checklist-remove-2" },
+              source_id: "remove_checklist_button",
+              action: {
+                type: "MULTI_ACTION",
+                dismiss: true,
+                data: {
+                  actions: [
+                    {
+                      type: "BLOCK_MESSAGE",
+                      data: {
+                        id: "FINISH_SETUP_CHECKLIST",
+                      },
+                    },
+                    {
+                      type: "DESTROY_UIWIDGET",
+                      data: {
+                        widget_id: "fxms-bmb-button",
+                      },
+                    },
+                  ],
+                },
+              },
             },
           },
         },
