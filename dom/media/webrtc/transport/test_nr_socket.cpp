@@ -1080,6 +1080,12 @@ bool TestNrSocket::maybe_send_fake_response(const void* msg, size_t len,
                                                  IPPROTO_UDP, &addr))) {
       continue;
     }
+    // TODO: ALTERNATE-SERVER is defined as an IP address only; FQDNs would
+    // need ALTERNATE-DOMAIN (RFC 5389).
+    // See https://bugzilla.mozilla.org/show_bug.cgi?id=1710634
+    if (addr.fqdn[0] != '\0') {
+      continue;
+    }
     if (nr_stun_message_add_alternate_server_attribute(response.get(), &addr)) {
       MOZ_CRASH("nr_stun_message_add_alternate_server_attribute failed!");
     }

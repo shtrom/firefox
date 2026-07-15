@@ -889,9 +889,12 @@ nsresult NrIceCtx::SetIceServers(const nsTArray<ParsedIceServer>& aServers,
     // Test whether this uses an IP addr, or is an FQDN.
     // We could use PR_StringToNetAddr instead, but that pulls in an extra
     // dependency.
-    nr_transport_addr unused;
-    bool isFqdn = !!nr_str_port_to_transport_addr(
-        entry.mUri.mHost.get(), entry.mUri.mPort, IPPROTO_UDP, &unused);
+    nr_transport_addr parsed;
+    bool isFqdn = false;
+    if (!nr_str_port_to_transport_addr(entry.mUri.mHost.get(), entry.mUri.mPort,
+                                       IPPROTO_UDP, &parsed)) {
+      isFqdn = parsed.fqdn[0] != '\0';
+    }
 
     if (isFqdn) {
       // Not a parseable IP address -- treat as FQDN.

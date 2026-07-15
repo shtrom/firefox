@@ -9,13 +9,11 @@ ChromeUtils.defineESModuleGetters(lazy, {
 
 const PC_CONTRACT = "@mozilla.org/dom/peerconnection;1";
 const PC_OBS_CONTRACT = "@mozilla.org/dom/peerconnectionobserver;1";
-const PC_ICE_CONTRACT = "@mozilla.org/dom/rtcicecandidate;1";
 const PC_SESSION_CONTRACT = "@mozilla.org/dom/rtcsessiondescription;1";
 const PC_COREQUEST_CONTRACT = "@mozilla.org/dom/createofferrequest;1";
 
 const PC_CID = Components.ID("{bdc2e533-b308-4708-ac8e-a8bfade6d851}");
 const PC_OBS_CID = Components.ID("{d1748d4c-7f6a-4dc5-add6-d55b7678537e}");
-const PC_ICE_CID = Components.ID("{02b9970c-433d-4cc2-923d-f7028ac66073}");
 const PC_SESSION_CID = Components.ID("{1775081b-b62d-4954-8ffe-a067bbf508a7}");
 const PC_MANAGER_CID = Components.ID("{7293e901-2be3-4c02-b4bd-cbef6fc24f78}");
 const PC_COREQUEST_CID = Components.ID(
@@ -195,86 +193,6 @@ setupPrototype(GlobalPCList, {
 });
 
 var _globalPCList = new GlobalPCList();
-
-// Parses grammar in RFC5245 section 15 and ICE TCP from RFC6544 section 4.5.
-function parseCandidate(line) {
-  const match = line.match(
-    /^(a=)?candidate:([A-Za-z0-9+\/]{1,32}) (\d+) (UDP|TCP) (\d+) ([A-Za-z0-9.:-]+) (\d+) typ (host|srflx|prflx|relay)(?: raddr ([A-Za-z0-9.:-]+) rport (\d+))?(.*)$/i
-  );
-  if (!match) {
-    return null;
-  }
-  const candidate = {
-    foundation: match[2],
-    componentId: parseInt(match[3], 10),
-    transport: match[4],
-    priority: parseInt(match[5], 10),
-    address: match[6],
-    port: parseInt(match[7], 10),
-    type: match[8],
-    relatedAddress: match[9],
-    relatedPort: match[10],
-  };
-  if (candidate.componentId < 1 || candidate.componentId > 256) {
-    return null;
-  }
-  if (candidate.priority < 0 || candidate.priority > 4294967295) {
-    return null;
-  }
-  if (candidate.port < 0 || candidate.port > 65535) {
-    return null;
-  }
-  candidate.component = { 1: "rtp", 2: "rtcp" }[candidate.componentId] || null;
-  candidate.protocol =
-    { udp: "udp", tcp: "tcp" }[candidate.transport.toLowerCase()] || null;
-
-  const tcpTypeMatch = match[11].match(/tcptype (\S+)/i);
-  if (tcpTypeMatch) {
-    candidate.tcpType = tcpTypeMatch[1];
-    if (
-      candidate.protocol != "tcp" ||
-      !["active", "passive", "so"].includes(candidate.tcpType)
-    ) {
-      return null;
-    }
-  }
-  return candidate;
-}
-
-export class RTCIceCandidate {
-  init(win) {
-    this._win = win;
-  }
-
-  __init(dict) {
-    if (dict.sdpMid == null && dict.sdpMLineIndex == null) {
-      throw new this._win.TypeError(
-        "Either sdpMid or sdpMLineIndex must be specified"
-      );
-    }
-    Object.assign(this, dict);
-    const candidate = parseCandidate(this.candidate);
-    if (!candidate) {
-      return;
-    }
-    Object.assign(this, candidate);
-  }
-
-  toJSON() {
-    return {
-      candidate: this.candidate,
-      sdpMid: this.sdpMid,
-      sdpMLineIndex: this.sdpMLineIndex,
-      usernameFragment: this.usernameFragment,
-    };
-  }
-}
-
-setupPrototype(RTCIceCandidate, {
-  classID: PC_ICE_CID,
-  contractID: PC_ICE_CONTRACT,
-  QueryInterface: ChromeUtils.generateQI(["nsIDOMGlobalPropertyInitializer"]),
-});
 
 export class RTCSessionDescription {
   init(win) {
@@ -1300,6 +1218,9 @@ export class RTCPeerConnection {
   }
 
   addIceCandidate(cand, onSucc, onErr) {
+    // Spec requires us to return an already-rejected (with TypeError) promise
+    // if this fails, without any chaining or using RTCIceCandidate's
+    // constructor to catch the error.
     if (
       cand.candidate != "" &&
       cand.sdpMid == null &&
