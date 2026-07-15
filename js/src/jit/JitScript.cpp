@@ -2,8 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "jit/JitScript-inl.h"
-
 #include "mozilla/BinarySearch.h"
 #include "mozilla/CheckedInt.h"
 
@@ -30,6 +28,7 @@
 #include "vm/JSScript.h"
 
 #include "gc/GCContext-inl.h"
+#include "jit/JitScript-inl.h"
 #include "jit/JSJitFrameIter-inl.h"
 #include "vm/JSContext-inl.h"
 #include "vm/JSScript-inl.h"

@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#include "wasm/WasmInstance-inl.h"
-
 #include "mozilla/CheckedInt.h"
 #include "mozilla/DebugOnly.h"
 
@@ -70,6 +68,7 @@
 #include "vm/ArrayBufferObject-inl.h"
 #include "vm/JSObject-inl.h"
 #include "wasm/WasmGcObject-inl.h"
+#include "wasm/WasmInstance-inl.h"
 
 using namespace js;
 using namespace js::jit;

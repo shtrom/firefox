@@ -2,8 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "jit/JitFrames-inl.h"
-
 #include "mozilla/ScopeExit.h"
 
 #include <algorithm>
@@ -36,6 +34,7 @@
 
 #include "builtin/Sorting-inl.h"
 #include "debugger/DebugAPI-inl.h"
+#include "jit/JitFrames-inl.h"
 #include "jit/JSJitFrameIter-inl.h"
 #include "vm/GeckoProfiler-inl.h"
 #include "vm/JSScript-inl.h"

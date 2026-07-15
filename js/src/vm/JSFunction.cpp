@@ -6,8 +6,6 @@
  * JS function support.
  */
 
-#include "vm/JSFunction-inl.h"
-
 #include "mozilla/Maybe.h"
 
 #include "jsapi.h"
@@ -54,7 +52,9 @@
 #include "vm/StringObject.h"
 #include "wasm/WasmCode.h"
 #include "wasm/WasmInstance.h"
+
 #include "vm/Interpreter-inl.h"
+#include "vm/JSFunction-inl.h"
 #include "vm/JSScript-inl.h"
 
 using namespace js;

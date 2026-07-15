@@ -73,6 +73,7 @@
 #include "vm/StringObject.h"
 #include "wasm/WasmFeatures.h"
 #include "wasm/WasmJS.h"
+
 #include "gc/GCContext-inl.h"
 #include "vm/JSObject-inl.h"
 #include "vm/Realm-inl.h"

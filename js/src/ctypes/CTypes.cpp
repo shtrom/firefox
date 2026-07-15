@@ -3,7 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "ctypes/CTypes.h"
-#include "js/experimental/CTypes.h"  // JS::CTypesActivity{Callback,Type}, JS::InitCTypesClass, JS::SetCTypesActivityCallback, JS::SetCTypesCallbacks
 
 #include "mozilla/CheckedInt.h"
 #include "mozilla/MemoryReporting.h"
@@ -11,6 +10,8 @@
 #include "mozilla/TextUtils.h"
 #include "mozilla/Vector.h"
 #include "mozilla/WrappingOperations.h"
+
+#include "js/experimental/CTypes.h"  // JS::CTypesActivity{Callback,Type}, JS::InitCTypesClass, JS::SetCTypesActivityCallback, JS::SetCTypesCallbacks
 
 #if defined(XP_UNIX)
 #  include <errno.h>

@@ -2,8 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "debugger/Debugger-inl.h"
-
 #include "mozilla/Attributes.h"        // for MOZ_STACK_CLASS, MOZ_RAII
 #include "mozilla/DebugOnly.h"         // for DebugOnly
 #include "mozilla/DoublyLinkedList.h"  // for DoublyLinkedList<>::Iterator
@@ -32,6 +30,8 @@
 #include "debugger/DebuggerMemory.h"  // for DebuggerMemory
 #include "debugger/DebugScript.h"     // for DebugScript
 #include "debugger/Environment.h"     // for DebuggerEnvironment
+
+#include "debugger/Debugger-inl.h"
 #ifdef MOZ_EXECUTION_TRACING
 #  include "debugger/ExecutionTracer.h"  // for ExecutionTracer::onEnterFrame, ExecutionTracer::onLeaveFrame
 #endif

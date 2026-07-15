@@ -17,9 +17,8 @@
 #ifndef wasm_module_h
 #define wasm_module_h
 
-#include "js/WasmModule.h"
 #include "js/BuildId.h"
-
+#include "js/WasmModule.h"
 #include "wasm/WasmCode.h"
 #include "wasm/WasmException.h"
 #include "wasm/WasmJS.h"

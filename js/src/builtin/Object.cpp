@@ -3,7 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "builtin/Object.h"
-#include "js/Object.h"  // JS::GetBuiltinClass
 
 #include "mozilla/Maybe.h"
 #include "mozilla/Range.h"
@@ -20,6 +19,7 @@
 #include "jit/InlinableNatives.h"
 #include "js/friend/ErrorMessages.h"  // js::GetErrorMessage, JSMSG_*
 #include "js/friend/StackLimits.h"    // js::AutoCheckRecursionLimit
+#include "js/Object.h"                // JS::GetBuiltinClass
 #include "js/PropertySpec.h"
 #include "js/UniquePtr.h"
 #include "util/Identifier.h"  // js::IsIdentifier
@@ -38,6 +38,7 @@
 #include "vm/StringType.h"
 #include "vm/ToSource.h"  // js::ValueToSource
 #include "vm/Watchtower.h"
+
 #include "vm/GeckoProfiler-inl.h"
 #include "vm/JSObject-inl.h"
 #include "vm/NativeObject-inl.h"

@@ -2,7 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "builtin/MapObject-inl.h"
 #include "builtin/MapObject.h"
 
 #include "jsapi.h"
@@ -23,6 +22,7 @@
 #include "vm/SelfHosting.h"
 #include "vm/SymbolType.h"
 
+#include "builtin/MapObject-inl.h"
 #include "builtin/OrderedHashTableObject-inl.h"
 #include "gc/GCContext-inl.h"
 #include "gc/Marking-inl.h"

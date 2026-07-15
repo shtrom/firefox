@@ -6,12 +6,13 @@
  * API functions and methods used by the rest of SpiderMonkey and by embeddings.
  */
 
+#include "gc/GC.h"
+
 #include "mozilla/TimeStamp.h"
 
 #include "jsapi.h"
 #include "jsfriendapi.h"
 
-#include "gc/GC.h"
 #include "gc/PublicIterators.h"
 #include "jit/JitZone.h"
 #include "js/HeapAPI.h"

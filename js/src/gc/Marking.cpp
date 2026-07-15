@@ -2,8 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "gc/Marking-inl.h"
-
 #include "mozilla/DebugOnly.h"
 #include "mozilla/IntegerRange.h"
 #include "mozilla/MathAlgorithms.h"
@@ -28,6 +26,7 @@
 
 #include "gc/BufferAllocator-inl.h"
 #include "gc/GC-inl.h"
+#include "gc/Marking-inl.h"
 #include "gc/PrivateIterators-inl.h"
 #include "gc/TraceMethods-inl.h"
 #include "gc/WeakMap-inl.h"

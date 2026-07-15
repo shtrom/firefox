@@ -9,14 +9,14 @@
 
 #ifdef ENABLE_WASM_COMPONENTS
 
-#  include "js/WasmComponent.h"
-
 #  include "mozilla/HashTable.h"
 #  include "mozilla/Maybe.h"
 #  include "mozilla/RefPtr.h"
 #  include "mozilla/Span.h"
 #  include "mozilla/Variant.h"
 #  include "mozilla/Vector.h"
+
+#  include "js/WasmComponent.h"
 #  include "wasm/WasmModule.h"
 
 namespace js {

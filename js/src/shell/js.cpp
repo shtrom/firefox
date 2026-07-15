@@ -65,6 +65,7 @@
 #include "jsapi.h"
 #include "jsfriendapi.h"
 #include "jstypes.h"
+
 #include "fmt/format.h"
 #ifndef JS_WITHOUT_NSPR
 #  include "prerror.h"

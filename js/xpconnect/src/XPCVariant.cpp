@@ -4,17 +4,17 @@
 
 /* nsIVariant implementation for xpconnect. */
 
+#include "mozilla/HoldDropJSObjects.h"
 #include "mozilla/Range.h"
 
+#include "jsfriendapi.h"
 #include "xpcprivate.h"
 
-#include "jsfriendapi.h"
 #include "js/Array.h"  // JS::GetArrayLength, JS::IsArrayObject, JS::NewArrayObject
 #include "js/friend/StackLimits.h"  // js::AutoCheckRecursionLimit
 #include "js/friend/WindowProxy.h"  // js::ToWindowIfWindowProxy
 #include "js/PropertyAndElement.h"  // JS_GetElement
 #include "js/Wrapper.h"
-#include "mozilla/HoldDropJSObjects.h"
 
 using namespace JS;
 using namespace mozilla;

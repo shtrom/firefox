@@ -5,6 +5,7 @@
  */
 
 #include "wasm/WasmComponent.h"
+
 #include "wasm/WasmBinary.h"
 #include "wasm/WasmFeatures.h"
 #include "wasm/WasmGenerator.h"
