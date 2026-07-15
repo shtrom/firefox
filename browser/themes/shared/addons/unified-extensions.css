@@ -168,7 +168,7 @@ unified-extensions-item {
 }
 
 .unified-extensions-item-menu-button.subviewbutton {
-  list-style-image: url("chrome://global/skin/icons/settings.svg");
+  list-style-image: url("chrome://global/skin/icons/more.svg");
   /* subtract the child's ~1px border from the block padding */
   padding: calc(var(--panel-menuitem-margin-inline) - 1px) var(--panel-menuitem-margin-inline);
   padding-inline-end: 0;
