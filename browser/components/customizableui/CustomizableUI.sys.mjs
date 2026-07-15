@@ -378,7 +378,7 @@ var CustomizableUIInternal = {
         type: CustomizableUI.TYPE_TOOLBAR,
         overflowable: true,
         defaultPlacements: navbarPlacements,
-        verticalTabsDefaultPlacements: ["alltabs-button"],
+        verticalTabsDefaultPlacements: ["alltabs-button", "ai-window-toggle"],
         defaultCollapsed: false,
       },
       true
@@ -404,6 +404,7 @@ var CustomizableUIInternal = {
           "tabbrowser-tabs",
           "new-tab-button",
           "alltabs-button",
+          "ai-window-toggle",
         ],
         verticalTabsDefaultPlacements: [],
         defaultCollapsed: null,
