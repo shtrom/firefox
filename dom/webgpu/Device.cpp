@@ -304,8 +304,7 @@ already_AddRefed<RenderBundleEncoder> Device::CreateRenderBundleEncoder(
   RawId id = ffi::wgpu_client_create_render_bundle_encoder(GetClient(), GetId(),
                                                            &desc);
 
-  RefPtr<RenderBundleEncoder> encoder =
-      new RenderBundleEncoder(this, id);
+  RefPtr<RenderBundleEncoder> encoder = new RenderBundleEncoder(this, id);
   encoder->SetLabel(aDesc.mLabel);
   return encoder.forget();
 }
