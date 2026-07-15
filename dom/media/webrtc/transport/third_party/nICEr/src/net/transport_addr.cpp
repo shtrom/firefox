@@ -248,16 +248,7 @@ int nr_str_port_to_transport_addr(const char *ip, UINT2 port, int protocol, nr_t
       if(r=nr_ip6_port_to_transport_addr(&addr6,port,protocol,addr_out))
         ABORT(r);
     } else {
-      /* Not an IP literal; treat as an FQDN. Use 0.0.0.0 as a placeholder
-       * address; callers that act on the addr (rather than just reading
-       * fqdn) are expected to resolve the FQDN. */
-      size_t fqdn_len = strlen(ip);
-      if (fqdn_len == 0 || fqdn_len >= sizeof(addr_out->fqdn)) {
-        ABORT(R_BAD_DATA);
-      }
-      if(r=nr_ip4_port_to_transport_addr(0,port,protocol,addr_out))
-        ABORT(r);
-      strncpy(addr_out->fqdn, ip, sizeof(addr_out->fqdn));
+      ABORT(R_BAD_DATA);
     }
 
     _status=0;
@@ -320,7 +311,7 @@ int nr_transport_addr_get_addrstring(const nr_transport_addr *addr, char *str, i
     return(_status);
   }
 
-int nr_transport_addr_get_port(const nr_transport_addr *addr, uint16_t *port)
+int nr_transport_addr_get_port(const nr_transport_addr *addr, int *port)
   {
     int _status;
 

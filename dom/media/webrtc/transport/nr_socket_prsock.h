@@ -310,6 +310,6 @@ int nr_praddr_to_transport_addr(const PRNetAddr* praddr,
                                 nr_transport_addr* addr, int protocol,
                                 int keep);
 int nr_transport_addr_get_addrstring_and_port(const nr_transport_addr* addr,
-                                              nsACString* host, uint16_t* port);
+                                              nsACString* host, int32_t* port);
 }  // namespace mozilla
 #endif

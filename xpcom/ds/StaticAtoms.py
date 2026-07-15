@@ -947,7 +947,6 @@ STATIC_ATOMS = [
     Atom("onscroll", "onscroll"),
     Atom("onsecuritypolicyviolation", "onsecuritypolicyviolation"),
     Atom("onselect", "onselect"),
-    Atom("onselectedcandidatepairchange", "onselectedcandidatepairchange"),
     Atom("onselectionchange", "onselectionchange"),
     Atom("onselectend", "onselectend"),
     Atom("onselectstart", "onselectstart"),

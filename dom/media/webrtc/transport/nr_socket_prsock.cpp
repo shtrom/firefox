@@ -524,8 +524,7 @@ abort:
  * convert nr_transport_addr to IP address string and port number
  */
 int nr_transport_addr_get_addrstring_and_port(const nr_transport_addr* addr,
-                                              nsACString* host,
-                                              uint16_t* port) {
+                                              nsACString* host, int32_t* port) {
   int r, _status;
   char addr_string[256];
 
@@ -1202,7 +1201,7 @@ int NrUdpSocketIpc::create(nr_transport_addr* addr) {
 
   int r, _status;
   nsresult rv;
-  uint16_t port;
+  int32_t port;
   nsCString host;
 
   ReentrantMonitorAutoEnter mon(monitor_);
@@ -1231,7 +1230,8 @@ int NrUdpSocketIpc::create(nr_transport_addr* addr) {
   MOZ_ASSERT(io_thread_);
   RUN_ON_THREAD(io_thread_,
                 mozilla::WrapRunnable(RefPtr<NrUdpSocketIpc>(this),
-                                      &NrUdpSocketIpc::create_i, host, port),
+                                      &NrUdpSocketIpc::create_i, host,
+                                      static_cast<uint16_t>(port)),
                 NS_DISPATCH_NORMAL);
 
   // Wait until socket creation complete.
@@ -1358,7 +1358,7 @@ int NrUdpSocketIpc::getaddr(nr_transport_addr* addrp) {
 
 int NrUdpSocketIpc::connect(const nr_transport_addr* addr) {
   int r, _status;
-  uint16_t port;
+  int32_t port;
   nsCString host;
 
   ReentrantMonitorAutoEnter mon(monitor_);
@@ -1371,7 +1371,8 @@ int NrUdpSocketIpc::connect(const nr_transport_addr* addr) {
 
   RUN_ON_THREAD(io_thread_,
                 mozilla::WrapRunnable(RefPtr<NrUdpSocketIpc>(this),
-                                      &NrUdpSocketIpc::connect_i, host, port),
+                                      &NrUdpSocketIpc::connect_i, host,
+                                      static_cast<uint16_t>(port)),
                 NS_DISPATCH_NORMAL);
 
   // Wait until connect() completes.
@@ -1600,8 +1601,7 @@ abort:
 
 // static
 bool NrSocketBase::IsForbiddenAddress(nr_transport_addr* addr) {
-  uint16_t port;
-  int r;
+  int r, port;
 
   r = nr_transport_addr_get_port(addr, &port);
   if (r) {

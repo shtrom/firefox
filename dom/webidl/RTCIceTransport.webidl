@@ -37,10 +37,11 @@ interface RTCIceTransport : EventTarget {
   // TODO(bug 1307994)
   // sequence<RTCIceCandidate> getLocalCandidates();
   // sequence<RTCIceCandidate> getRemoteCandidates();
-  RTCIceCandidatePair? getSelectedCandidatePair();
+  // RTCIceCandidatePair? getSelectedCandidatePair();
   // RTCIceParameters? getLocalParameters();
   // RTCIceParameters? getRemoteParameters();
   attribute EventHandler onstatechange;
   attribute EventHandler ongatheringstatechange;
-  attribute EventHandler onselectedcandidatepairchange;
+  // TODO(bug 1307994)
+  // attribute EventHandler onselectedcandidatepairchange;
 };
