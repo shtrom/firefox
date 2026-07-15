@@ -1269,7 +1269,8 @@ template <typename S, typename T>
 void MarkingTracerT<opts>::markAndTraverseEdge(S* source, T* target) {
   if constexpr (std::is_same_v<T, JS::Symbol>) {
     if (markColor() == MarkColor::Black) {
-      MaybeUnmarkGraySymbol(this->runtime(), source->zone(), target);
+      Zone* zone = source->asTenured().zone();
+      MaybeUnmarkGraySymbol(this->runtime(), zone, target);
     }
   }
 
