@@ -6,8 +6,7 @@
 
 /**
  * Test-only interface for SSLTokensCache round-trip tests.
- * Implemented by mozilla::net::SSLTokensCacheService
- * (@mozilla.org/network/ssl-tokens-cache;1) when ENABLE_TESTS is set.
+ * Implemented by nsNSSComponent (@mozilla.org/psm;1) when ENABLE_TESTS is set.
  */
 [scriptable, uuid(7b3c4e2a-1d8f-4a5b-9c6d-2e0f1a3b5c7d)]
 interface nsISSLTokensCacheTest : nsISupports {

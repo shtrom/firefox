@@ -77,9 +77,7 @@ add_setup(
       return; // cert dir absent (e.g. comm-central); tasks will be skipped
     }
     gServerStarted = true;
-    let nssComponent = Cc["@mozilla.org/network/ssl-tokens-cache;1"].getService(
-      Ci.nsISSLTokensCache
-    );
+    let nssComponent = Cc["@mozilla.org/psm;1"].getService(Ci.nsINSSComponent);
     await nssComponent.asyncClearSSLExternalAndInternalSessionCache();
 
     Services.prefs.setBoolPref("network.http.happy_eyeballs_enabled", true);
@@ -303,9 +301,7 @@ async function runHe0RttRace(host, ipv6DelayMs, ipv4DelayMs) {
   // host. Without clearing it, this task's "first" fetch would attempt
   // 0-RTT instead of a full handshake, and the race between the two
   // HE attempts over the proxy trips the server's anti-replay guard.
-  let nssComponent = Cc["@mozilla.org/network/ssl-tokens-cache;1"].getService(
-    Ci.nsISSLTokensCache
-  );
+  let nssComponent = Cc["@mozilla.org/psm;1"].getService(Ci.nsINSSComponent);
   await nssComponent.asyncClearSSLExternalAndInternalSessionCache();
 
   let proxyPort = await startFamilyDelayProxy(node, ipv6DelayMs, ipv4DelayMs);

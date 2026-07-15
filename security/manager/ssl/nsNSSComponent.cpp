@@ -22,6 +22,7 @@
 #include "mozilla/Base64.h"
 #include "mozilla/EndianUtils.h"
 #include "mozilla/FilePreferences.h"
+#include "mozilla/OriginAttributes.h"
 #include "mozilla/Preferences.h"
 #include "mozilla/ProfilerLabels.h"
 #include "mozilla/ProfilerMarkers.h"
@@ -32,7 +33,9 @@
 #include "mozilla/StaticPtr.h"
 #include "mozilla/SyncRunnable.h"
 #include "mozilla/TimeStamp.h"
+#include "mozilla/dom/Promise.h"
 #include "mozilla/glean/SecurityManagerSslMetrics.h"
+#include "mozilla/net/SocketProcessParent.h"
 #include "mozpkix/pkixnss.h"
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsCRT.h"
@@ -41,6 +44,7 @@
 #include "nsDirectoryServiceDefs.h"
 #include "nsICertOverrideService.h"
 #include "nsIFile.h"
+#include "nsIOService.h"
 #include "nsIObserverService.h"
 #include "nsIPrompt.h"
 #include "nsIProperties.h"
@@ -56,6 +60,9 @@
 #include "nsServiceManagerUtils.h"
 #include "nsThreadUtils.h"
 #include "nsXULAppAPI.h"
+#ifdef ENABLE_TESTS
+#  include "nsISSLTokensCacheTest.h"
+#endif
 #include "nss.h"
 #include "p12plcy.h"
 #include "pk11pub.h"
@@ -289,7 +296,7 @@ void nsNSSComponent::UnloadEnterpriseRoots() {
   MutexAutoLock lock(mMutex);
   mEnterpriseCerts.Clear();
   setValidationOptions(lock);
-  mozilla::net::SSLTokensCache::ClearSessionCacheAndTokens();
+  ClearSSLExternalAndInternalSessionCache();
 }
 
 class BackgroundImportEnterpriseCertsTask final : public CryptoTask {
@@ -977,38 +984,26 @@ nsresult CipherSuiteChangeObserver::StartObserve() {
 // appropriate. If security.tls.version.enable-deprecated is true, these
 // ciphersuites may be enabled, if the corresponding preference is true.
 // Otherwise, these ciphersuites will be disabled.
-bool SetDeprecatedTLS1CipherPrefs(const char* aPref = nullptr) {
-  if (aPref != nullptr) {
-    bool relevant =
-        strcmp(aPref, "security.tls.version.enable-deprecated") == 0;
-    if (!relevant) {
-      for (const auto& cipherPref : sDeprecatedTLS1CipherPrefs) {
-        if (strcmp(aPref, cipherPref.pref) == 0) {
-          relevant = true;
-          break;
-        }
-      }
+void SetDeprecatedTLS1CipherPrefs() {
+  if (StaticPrefs::security_tls_version_enable_deprecated()) {
+    for (const auto& deprecatedTLS1CipherPref : sDeprecatedTLS1CipherPrefs) {
+      SSL_CipherPrefSetDefault(deprecatedTLS1CipherPref.id,
+                               deprecatedTLS1CipherPref.prefGetter());
     }
-    if (!relevant) return false;
+  } else {
+    for (const auto& deprecatedTLS1CipherPref : sDeprecatedTLS1CipherPrefs) {
+      SSL_CipherPrefSetDefault(deprecatedTLS1CipherPref.id, false);
+    }
   }
-  bool enabled = StaticPrefs::security_tls_version_enable_deprecated();
-  for (const auto& cipherPref : sDeprecatedTLS1CipherPrefs) {
-    SSL_CipherPrefSetDefault(cipherPref.id, enabled && cipherPref.prefGetter());
-  }
-  return true;
 }
 
 // static
-bool SetKyberPolicy(const char* aPref = nullptr) {
-  if (aPref != nullptr && strcmp(aPref, "security.tls.enable_kyber") != 0) {
-    return false;
-  }
+void SetKyberPolicy() {
   if (StaticPrefs::security_tls_enable_kyber()) {
     NSS_SetAlgorithmPolicy(SEC_OID_MLKEM768X25519, NSS_USE_ALG_IN_SSL_KX, 0);
   } else {
     NSS_SetAlgorithmPolicy(SEC_OID_MLKEM768X25519, 0, NSS_USE_ALG_IN_SSL_KX);
   }
-  return true;
 }
 
 nsresult CipherSuiteChangeObserver::Observe(nsISupports* /*aSubject*/,
@@ -1020,19 +1015,15 @@ nsresult CipherSuiteChangeObserver::Observe(nsISupports* /*aSubject*/,
   if (nsCRT::strcmp(aTopic, NS_PREFBRANCH_PREFCHANGE_TOPIC_ID) == 0) {
     NS_ConvertUTF16toUTF8 prefName(someData);
     // Look through the cipher table and set according to pref setting
-    bool cipherConfigChanged = false;
     for (const auto& cipherPref : sCipherPrefs) {
       if (prefName.Equals(cipherPref.pref)) {
         SSL_CipherPrefSetDefault(cipherPref.id, cipherPref.prefGetter());
-        cipherConfigChanged = true;
         break;
       }
     }
-    cipherConfigChanged |= SetDeprecatedTLS1CipherPrefs(prefName.get());
-    cipherConfigChanged |= SetKyberPolicy(prefName.get());
-    if (cipherConfigChanged) {
-      mozilla::net::SSLTokensCache::ClearSessionCacheAndTokens();
-    }
+    SetDeprecatedTLS1CipherPrefs();
+    SetKyberPolicy();
+    nsNSSComponent::DoClearSSLExternalAndInternalSessionCache();
   } else if (nsCRT::strcmp(aTopic, NS_XPCOM_SHUTDOWN_OBSERVER_ID) == 0) {
     Preferences::RemoveObserver(this, "security.");
     MOZ_ASSERT(sObserver.get() == this);
@@ -1666,7 +1657,12 @@ nsresult nsNSSComponent::Init() {
 }
 
 // nsISupports Implementation for the class
+#ifdef ENABLE_TESTS
+NS_IMPL_ISUPPORTS(nsNSSComponent, nsINSSComponent, nsIObserver,
+                  nsISSLTokensCacheTest)
+#else
 NS_IMPL_ISUPPORTS(nsNSSComponent, nsINSSComponent, nsIObserver)
+#endif
 
 static const char* const PROFILE_BEFORE_CHANGE_TOPIC = "profile-before-change";
 
@@ -1734,7 +1730,7 @@ nsNSSComponent::Observe(nsISupports* aSubject, const char* aTopic,
       clearSessionCache = false;
     }
     if (clearSessionCache) {
-      mozilla::net::SSLTokensCache::ClearSessionCacheAndTokens();
+      ClearSSLExternalAndInternalSessionCache();
     }
   } else if (!nsCRT::strcmp(aTopic, "last-pb-context-exited")) {
     RefPtr<SharedCertVerifier> certVerifier(
@@ -1742,14 +1738,7 @@ nsNSSComponent::Observe(nsISupports* aSubject, const char* aTopic,
     if (certVerifier) {
       certVerifier->ClearPrivateBrowsingOCSPCache();
     }
-    // NSS client session cache has no PBM scoping; clear it fully.
-    // Called here (not in SSLTokensCache::Observe) because
-    // SSL_ClearSessionCache requires NSS to be initialized, which is guaranteed
-    // in this context.
-    SSL_ClearSessionCache();
-    // SSLTokensCache observes this notification itself and clears PBM
-    // token-cache entries and forwards a scoped clear to the socket process.
-    return NS_OK;
+    return ClearSSLExternalAndInternalSessionCache();
   }
 
   return NS_OK;
@@ -1778,7 +1767,7 @@ nsresult nsNSSComponent::GetNewPrompter(nsIPrompt** result) {
 
 NS_IMETHODIMP
 nsNSSComponent::ClearTLSCacheAndCancelAllConnections() {
-  mozilla::net::SSLTokensCache::ClearSessionCacheAndTokens();
+  ClearSSLExternalAndInternalSessionCache();
 
   nsCOMPtr<nsIObserverService> os = mozilla::services::GetObserverService();
   if (os) {
@@ -1871,6 +1860,117 @@ nsNSSComponent::GetDefaultCertVerifier(SharedCertVerifier** result) {
   NS_ENSURE_ARG_POINTER(result);
   RefPtr<SharedCertVerifier> certVerifier(mDefaultCertVerifier);
   certVerifier.forget(result);
+  return NS_OK;
+}
+
+// static
+void nsNSSComponent::DoClearSSLExternalAndInternalSessionCache() {
+  SSL_ClearSessionCache();
+  mozilla::net::SSLTokensCache::Clear();
+}
+
+template <typename F>
+static nsresult WithParsedOAPattern(const nsAString& aPatternJson, F&& aFunc) {
+  MOZ_ASSERT(XRE_IsParentProcess());
+  if (!XRE_IsParentProcess()) {
+    return NS_ERROR_NOT_AVAILABLE;
+  }
+  mozilla::OriginAttributesPattern pattern;
+  if (!pattern.Init(aPatternJson)) {
+    return NS_ERROR_INVALID_ARG;
+  }
+  aFunc(pattern);
+  return NS_OK;
+}
+
+#ifdef ENABLE_TESTS
+
+NS_IMETHODIMP
+nsNSSComponent::CountSSLTokens(uint32_t* aCount) {
+  *aCount = mozilla::net::SSLTokensCache::CountForTest();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsNSSComponent::PutSSLTokenForTest(const nsACString& aKey) {
+  mozilla::net::SSLTokensCache::PutForTest(aKey);
+  return NS_OK;
+}
+
+#endif  // ENABLE_TESTS
+
+NS_IMETHODIMP
+nsNSSComponent::RemoveSSLTokensByHostAndOriginAttributesPattern(
+    const nsACString& aHost, const nsAString& aPattern) {
+  return WithParsedOAPattern(aPattern, [&aHost](const auto& pattern) {
+    mozilla::net::SSLTokensCache::RemoveByHostAndOAPattern(aHost, pattern);
+  });
+}
+
+NS_IMETHODIMP
+nsNSSComponent::RemoveSSLTokensBySiteAndOriginAttributesPattern(
+    const nsACString& aSite, const nsAString& aPattern) {
+  return WithParsedOAPattern(aPattern, [&aSite](const auto& pattern) {
+    mozilla::net::SSLTokensCache::RemoveBySiteAndOAPattern(aSite, pattern);
+  });
+}
+
+NS_IMETHODIMP
+nsNSSComponent::ClearSSLExternalAndInternalSessionCache() {
+  MOZ_ASSERT(XRE_IsParentProcess());
+  if (!XRE_IsParentProcess()) {
+    return NS_ERROR_NOT_AVAILABLE;
+  }
+
+  if (mozilla::net::nsIOService::UseSocketProcess()) {
+    if (mozilla::net::gIOService) {
+      mozilla::net::gIOService->CallOrWaitForSocketProcess([]() {
+        RefPtr<mozilla::net::SocketProcessParent> socketParent =
+            mozilla::net::SocketProcessParent::GetSingleton();
+        (void)socketParent->SendClearSessionCache();
+      });
+    }
+  }
+  DoClearSSLExternalAndInternalSessionCache();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsNSSComponent::AsyncClearSSLExternalAndInternalSessionCache(
+    JSContext* aCx, ::mozilla::dom::Promise** aPromise) {
+  MOZ_ASSERT(XRE_IsParentProcess());
+  if (!XRE_IsParentProcess()) {
+    return NS_ERROR_NOT_AVAILABLE;
+  }
+
+  nsIGlobalObject* globalObject = xpc::CurrentNativeGlobal(aCx);
+  if (NS_WARN_IF(!globalObject)) {
+    return NS_ERROR_FAILURE;
+  }
+
+  ErrorResult result;
+  RefPtr<mozilla::dom::Promise> promise =
+      mozilla::dom::Promise::Create(globalObject, result);
+  if (NS_WARN_IF(result.Failed())) {
+    return result.StealNSResult();
+  }
+
+  if (mozilla::net::nsIOService::UseSocketProcess() &&
+      mozilla::net::gIOService) {
+    mozilla::net::gIOService->CallOrWaitForSocketProcess([p = RefPtr{
+                                                              promise}]() {
+      RefPtr<mozilla::net::SocketProcessParent> socketParent =
+          mozilla::net::SocketProcessParent::GetSingleton();
+      (void)socketParent->SendClearSessionCache()->Then(
+          GetCurrentSerialEventTarget(), __func__,
+          [promise = RefPtr{p}] { promise->MaybeResolveWithUndefined(); },
+          [promise = RefPtr{p}] { promise->MaybeReject(NS_ERROR_UNEXPECTED); });
+    });
+  } else {
+    promise->MaybeResolveWithUndefined();
+  }
+  DoClearSSLExternalAndInternalSessionCache();
+  promise.forget(aPromise);
   return NS_OK;
 }
 
@@ -2137,8 +2237,7 @@ nsresult InitializeCipherSuite() {
     SSL_CipherPrefSetDefault(cipherPref.id, cipherPref.prefGetter());
   }
 
-  (void)SetDeprecatedTLS1CipherPrefs();  // applies all prefs; return value N/A
-                                         // at init
+  SetDeprecatedTLS1CipherPrefs();
 
   // Enable ciphers for PKCS#12
   SEC_PKCS12EnableCipher(PKCS12_RC4_40, 1);
@@ -2160,7 +2259,7 @@ nsresult InitializeCipherSuite() {
   // an override to do so, but they already do for such devices).
   NSS_OptionSet(NSS_RSA_MIN_KEY_SIZE, 512);
 
-  (void)SetKyberPolicy();  // applies Kyber policy; return value N/A at init
+  SetKyberPolicy();
 
   // Observe preference change around cipher suite setting.
   return CipherSuiteChangeObserver::StartObserve();

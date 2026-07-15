@@ -446,10 +446,8 @@ function clearOCSPCache() {
 }
 
 function clearSessionCache() {
-  let sslTokensCache = Cc["@mozilla.org/network/ssl-tokens-cache;1"].getService(
-    Ci.nsISSLTokensCache
-  );
-  sslTokensCache.clearSSLExternalAndInternalSessionCache();
+  let nssComponent = Cc["@mozilla.org/psm;1"].getService(Ci.nsINSSComponent);
+  nssComponent.clearSSLExternalAndInternalSessionCache();
 }
 
 function getSSLStatistics() {

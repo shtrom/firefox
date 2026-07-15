@@ -56,9 +56,7 @@ add_setup(
     }
     gServerStarted = true;
 
-    let nss = Cc["@mozilla.org/network/ssl-tokens-cache;1"].getService(
-      Ci.nsISSLTokensCache
-    );
+    let nss = Cc["@mozilla.org/psm;1"].getService(Ci.nsINSSComponent);
     await nss.asyncClearSSLExternalAndInternalSessionCache();
 
     Services.prefs.setBoolPref("network.http.happy_eyeballs_enabled", true);
@@ -191,9 +189,7 @@ add_task(
     await node.start();
 
     try {
-      let nss = Cc["@mozilla.org/network/ssl-tokens-cache;1"].getService(
-        Ci.nsISSLTokensCache
-      );
+      let nss = Cc["@mozilla.org/psm;1"].getService(Ci.nsINSSComponent);
       await nss.asyncClearSSLExternalAndInternalSessionCache();
 
       override.clearOverrides();
@@ -291,9 +287,7 @@ add_task(
     const TLS_PORT = 8443;
     const url = `https://${host}:${TLS_PORT}/`;
 
-    let nss = Cc["@mozilla.org/network/ssl-tokens-cache;1"].getService(
-      Ci.nsISSLTokensCache
-    );
+    let nss = Cc["@mozilla.org/psm;1"].getService(Ci.nsINSSComponent);
     await nss.asyncClearSSLExternalAndInternalSessionCache();
 
     override.clearOverrides();
@@ -374,9 +368,7 @@ add_task(
     const TLS_PORT = 8443;
     const url = `https://${host}:${TLS_PORT}/`;
 
-    let nss = Cc["@mozilla.org/network/ssl-tokens-cache;1"].getService(
-      Ci.nsISSLTokensCache
-    );
+    let nss = Cc["@mozilla.org/psm;1"].getService(Ci.nsINSSComponent);
     await nss.asyncClearSSLExternalAndInternalSessionCache();
 
     override.clearOverrides();

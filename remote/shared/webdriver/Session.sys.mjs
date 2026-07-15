@@ -307,9 +307,7 @@ export class WebDriverSession {
 
     this.#navigableSeenNodes = null;
 
-    if (this.acceptInsecureCerts) {
-      lazy.Certificates.enableSecurityChecks();
-    }
+    lazy.Certificates.enableSecurityChecks();
 
     // Close all open connections which unregister themselves.
     this.#connections.forEach(connection => connection.close());

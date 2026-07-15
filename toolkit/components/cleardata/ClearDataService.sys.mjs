@@ -40,9 +40,9 @@ XPCOMUtils.defineLazyServiceGetter(
 );
 XPCOMUtils.defineLazyServiceGetter(
   lazy,
-  "sslTokensCache",
-  "@mozilla.org/network/ssl-tokens-cache;1",
-  Ci.nsISSLTokensCache
+  "nssComponent",
+  "@mozilla.org/psm;1",
+  Ci.nsINSSComponent
 );
 
 XPCOMUtils.defineLazyPreferenceGetter(
@@ -1757,7 +1757,7 @@ const TlsTokenCacheCleaner = {
     if (aOriginAttributes.partitionKey) {
       pattern.partitionKey = aOriginAttributes.partitionKey;
     }
-    lazy.sslTokensCache.removeSSLTokensByHostAndOriginAttributesPattern(
+    lazy.nssComponent.removeSSLTokensByHostAndOriginAttributesPattern(
       aHost,
       JSON.stringify(pattern)
     );
@@ -1768,14 +1768,14 @@ const TlsTokenCacheCleaner = {
   },
 
   async deleteBySite(aSchemelessSite, aOriginAttributesPattern) {
-    lazy.sslTokensCache.removeSSLTokensBySiteAndOriginAttributesPattern(
+    lazy.nssComponent.removeSSLTokensBySiteAndOriginAttributesPattern(
       aSchemelessSite,
       JSON.stringify(aOriginAttributesPattern)
     );
   },
 
   async deleteAll() {
-    lazy.sslTokensCache.clearSSLExternalAndInternalSessionCache();
+    lazy.nssComponent.clearSSLExternalAndInternalSessionCache();
   },
 };
 

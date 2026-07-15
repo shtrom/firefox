@@ -68,9 +68,7 @@ async function openChan(uri) {
 
 async function resetConnections() {
   Services.obs.notifyObservers(null, "net:cancel-all-connections");
-  let nssComponent = Cc["@mozilla.org/network/ssl-tokens-cache;1"].getService(
-    Ci.nsISSLTokensCache
-  );
+  let nssComponent = Cc["@mozilla.org/psm;1"].getService(Ci.nsINSSComponent);
   await nssComponent.asyncClearSSLExternalAndInternalSessionCache();
   override.clearOverrides();
   mockController.clearBlockedTCPConnect();
