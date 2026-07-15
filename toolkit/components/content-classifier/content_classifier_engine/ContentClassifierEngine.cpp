@@ -142,4 +142,73 @@ ContentClassifierRequest::ContentClassifierRequest(nsIChannel* aChannel)
   mValid = true;
 }
 
+static bool IsValidRequestType(const nsACString& aRequestType) {
+  return aRequestType.EqualsLiteral("csp_report") ||
+         aRequestType.EqualsLiteral("document") ||
+         aRequestType.EqualsLiteral("font") ||
+         aRequestType.EqualsLiteral("image") ||
+         aRequestType.EqualsLiteral("media") ||
+         aRequestType.EqualsLiteral("object") ||
+         aRequestType.EqualsLiteral("ping") ||
+         aRequestType.EqualsLiteral("script") ||
+         aRequestType.EqualsLiteral("stylesheet") ||
+         aRequestType.EqualsLiteral("subdocument") ||
+         aRequestType.EqualsLiteral("websocket") ||
+         aRequestType.EqualsLiteral("xmlhttprequest") ||
+         aRequestType.EqualsLiteral("other");
+}
+
+ContentClassifierRequest::ContentClassifierRequest(
+    const nsACString& aUrl, const nsACString& aSourceUrl,
+    const nsACString& aTopWindowUrl, const nsACString& aRequestType,
+    bool aPrivateBrowsing, bool aForceThirdPartyToTop,
+    bool aIsNonRecommendedAddon)
+    : mRequestType(aRequestType),
+      mThirdParty(true),
+      mPrivateBrowsing(aPrivateBrowsing),
+      mValid(false),
+      mIsNonRecommendedAddon(aIsNonRecommendedAddon) {
+  if (!IsValidRequestType(aRequestType)) return;
+
+  nsCOMPtr<nsIURI> uri;
+  nsresult rv = NS_NewURI(getter_AddRefs(uri), aUrl);
+  if (NS_FAILED(rv)) return;
+
+  rv = uri->GetSpec(mUrl);
+  if (NS_FAILED(rv)) return;
+
+  nsCString host;
+  rv = uri->GetHost(host);
+  if (NS_FAILED(rv)) return;
+
+  nsCOMPtr<nsIEffectiveTLDService> eTLDService =
+      components::EffectiveTLD::Service();
+  if (!eTLDService) return;
+
+  rv = eTLDService->GetSchemelessSiteFromHost(host, mSchemelessSite);
+  if (NS_FAILED(rv)) return;
+
+  if (!aSourceUrl.IsEmpty()) {
+    nsCOMPtr<nsIURI> sourceUri;
+    rv = NS_NewURI(getter_AddRefs(sourceUri), aSourceUrl);
+    if (NS_FAILED(rv)) return;
+
+    nsCString sourceHost;
+    rv = sourceUri->GetHost(sourceHost);
+    if (NS_FAILED(rv)) return;
+
+    rv = eTLDService->GetSchemelessSiteFromHost(sourceHost,
+                                                mSourceSchemelessSite);
+    if (NS_FAILED(rv)) return;
+
+    mThirdParty = !mSchemelessSite.Equals(mSourceSchemelessSite);
+  }
+
+  if (aForceThirdPartyToTop) {
+    mThirdParty = true;
+  }
+
+  mValid = true;
+}
+
 }  // namespace mozilla
