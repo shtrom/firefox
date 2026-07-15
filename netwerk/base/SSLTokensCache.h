@@ -19,11 +19,16 @@
 #include "nsIMemoryReporter.h"
 #include "nsIObserver.h"
 #include "nsISerialEventTarget.h"
+#include "nsISSLTokensCache.h"
 #include "nsISupportsImpl.h"
 #include "nsITransportSecurityInfo.h"
 #include "nsTArray.h"
 #include "nsTHashMap.h"
 #include "nsXULAppAPI.h"
+
+#ifdef ENABLE_TESTS
+#  include "nsISSLTokensCacheTest.h"
+#endif
 
 class CommonSocketControl;
 struct SslTokensPersistedRecord;
@@ -74,6 +79,12 @@ class SSLTokensCache : public nsIMemoryReporter,
   static nsresult Remove(const nsACString& aKey, uint64_t aId);
   static nsresult RemoveAll(const nsACString& aKey);
   static void Clear();
+  // Clears the NSS in-memory client session cache (if NSS is initialized)
+  // and all resumption tokens, and (in the parent process) forwards the
+  // clear to the socket process via IPC. This is the entry point for
+  // "clear the TLS session cache" from anywhere in the tree; PSM no longer
+  // has its own copy of this logic.
+  static void ClearSessionCacheAndTokens();
   static void RemoveByHostAndOAPattern(
       const nsACString& aHost, const mozilla::OriginAttributesPattern& aPattern)
       MOZ_EXCLUDES(sLock);
@@ -231,6 +242,28 @@ class SSLTokensCache : public nsIMemoryReporter,
   nsClassHashtable<nsCStringHashKey, TokenCacheEntry> mTokenCacheRecords
       MOZ_GUARDED_BY(sLock);
   nsTArray<TokenCacheRecord*> mExpirationArray MOZ_GUARDED_BY(sLock);
+};
+
+// Scriptable entry point (@mozilla.org/network/ssl-tokens-cache;1) for
+// SSLTokensCache. Stateless: all state lives in the SSLTokensCache singleton
+// reached via its static methods.
+class SSLTokensCacheService final : public nsISSLTokensCache
+#ifdef ENABLE_TESTS
+    ,
+                                    public nsISSLTokensCacheTest
+#endif
+{
+ public:
+  NS_DECL_THREADSAFE_ISUPPORTS
+  NS_DECL_NSISSLTOKENSCACHE
+#ifdef ENABLE_TESTS
+  NS_DECL_NSISSLTOKENSCACHETEST
+#endif
+
+  SSLTokensCacheService() = default;
+
+ private:
+  ~SSLTokensCacheService() = default;
 };
 
 }  // namespace net

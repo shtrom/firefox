@@ -17,6 +17,7 @@
 #include "mozilla/Preferences.h"
 #include "mozilla/Services.h"
 #include "mozilla/StaticPrefs_privacy.h"
+#include "mozilla/dom/Promise.h"
 #include "mozilla/glean/NetwerkMetrics.h"
 #include "mozilla/ipc/ByteBuf.h"
 #include "mozilla/net/SocketProcessChild.h"
@@ -25,12 +26,15 @@
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsDirectoryServiceUtils.h"
 #include "nsIEventTarget.h"
+#include "nsIGlobalObject.h"
 #include "nsIOService.h"
 #include "nsIObserverService.h"
 #include "nsThreadUtils.h"
+#include "nss.h"
 #include "prtime.h"
 #include "ssl.h"
 #include "sslexp.h"
+#include "xpcpublic.h"
 
 namespace mozilla {
 namespace net {
@@ -998,6 +1002,27 @@ static void DispatchFileRemoval(nsCOMPtr<nsIFile> aBackingFile) {
       }));
 }
 
+static void MaybeClearNSSSessionCache() {
+  if (NSS_IsInitialized()) {
+    SSL_ClearSessionCache();
+  }
+}
+
+// static
+void SSLTokensCache::ClearSessionCacheAndTokens() {
+  MaybeClearNSSSessionCache();
+  Clear();
+  if (nsIOService::UseSocketProcess() && gIOService) {
+    gIOService->CallOrWaitForSocketProcess([]() {
+      RefPtr<SocketProcessParent> socketParent =
+          SocketProcessParent::GetSingleton();
+      if (socketParent) {
+        (void)socketParent->SendClearSessionCache();
+      }
+    });
+  }
+}
+
 // static
 void SSLTokensCache::Clear() {
   LOG(("SSLTokensCache::Clear"));
@@ -1498,6 +1523,111 @@ void SSLTokensCache::RemoveShutdownBlocker() {
     barrier->RemoveBlocker(this);
   }
 }
+
+#ifdef ENABLE_TESTS
+NS_IMPL_ISUPPORTS(SSLTokensCacheService, nsISSLTokensCache,
+                  nsISSLTokensCacheTest)
+#else
+NS_IMPL_ISUPPORTS(SSLTokensCacheService, nsISSLTokensCache)
+#endif
+
+// Most of nsISSLTokensCache is parent-process-only; the socket process has
+// no way to serve these requests itself.
+static nsresult EnsureParentProcess() {
+  MOZ_ASSERT(XRE_IsParentProcess());
+  return XRE_IsParentProcess() ? NS_OK : NS_ERROR_NOT_AVAILABLE;
+}
+
+NS_IMETHODIMP
+SSLTokensCacheService::ClearSSLExternalAndInternalSessionCache() {
+  nsresult rv = EnsureParentProcess();
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
+  SSLTokensCache::ClearSessionCacheAndTokens();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+SSLTokensCacheService::AsyncClearSSLExternalAndInternalSessionCache(
+    JSContext* aCx, mozilla::dom::Promise** aPromise) {
+  nsresult rv = EnsureParentProcess();
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
+
+  nsIGlobalObject* globalObject = xpc::CurrentNativeGlobal(aCx);
+  if (NS_WARN_IF(!globalObject)) {
+    return NS_ERROR_FAILURE;
+  }
+
+  ErrorResult result;
+  RefPtr<mozilla::dom::Promise> promise =
+      mozilla::dom::Promise::Create(globalObject, result);
+  if (NS_WARN_IF(result.Failed())) {
+    return result.StealNSResult();
+  }
+
+  if (nsIOService::UseSocketProcess() && gIOService) {
+    gIOService->CallOrWaitForSocketProcess([p = RefPtr{promise}]() {
+      RefPtr<SocketProcessParent> socketParent =
+          SocketProcessParent::GetSingleton();
+      (void)socketParent->SendClearSessionCache()->Then(
+          GetCurrentSerialEventTarget(), __func__,
+          [promise = RefPtr{p}] { promise->MaybeResolveWithUndefined(); },
+          [promise = RefPtr{p}] { promise->MaybeReject(NS_ERROR_UNEXPECTED); });
+    });
+  } else {
+    promise->MaybeResolveWithUndefined();
+  }
+  SSLTokensCache::ClearSessionCacheAndTokens();
+  promise.forget(aPromise);
+  return NS_OK;
+}
+
+template <typename F>
+static nsresult WithParsedOAPattern(const nsAString& aPatternJson, F&& aFunc) {
+  nsresult rv = EnsureParentProcess();
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
+  mozilla::OriginAttributesPattern pattern;
+  if (!pattern.Init(aPatternJson)) {
+    return NS_ERROR_INVALID_ARG;
+  }
+  aFunc(pattern);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+SSLTokensCacheService::RemoveSSLTokensByHostAndOriginAttributesPattern(
+    const nsACString& aHost, const nsAString& aPattern) {
+  return WithParsedOAPattern(aPattern, [&aHost](const auto& pattern) {
+    SSLTokensCache::RemoveByHostAndOAPattern(aHost, pattern);
+  });
+}
+
+NS_IMETHODIMP
+SSLTokensCacheService::RemoveSSLTokensBySiteAndOriginAttributesPattern(
+    const nsACString& aSite, const nsAString& aPattern) {
+  return WithParsedOAPattern(aPattern, [&aSite](const auto& pattern) {
+    SSLTokensCache::RemoveBySiteAndOAPattern(aSite, pattern);
+  });
+}
+
+#ifdef ENABLE_TESTS
+NS_IMETHODIMP
+SSLTokensCacheService::CountSSLTokens(uint32_t* aCount) {
+  *aCount = SSLTokensCache::CountForTest();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+SSLTokensCacheService::PutSSLTokenForTest(const nsACString& aKey) {
+  SSLTokensCache::PutForTest(aKey);
+  return NS_OK;
+}
+#endif  // ENABLE_TESTS
 
 }  // namespace net
 }  // namespace mozilla
