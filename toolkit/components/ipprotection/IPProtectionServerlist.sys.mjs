@@ -220,11 +220,30 @@ export class IPProtectionServerlistBase extends EventTarget {
    */
   __list = null;
 
-  init() {}
+  constructor() {
+    super();
+    this.handleEvent = this.#handleEvent.bind(this);
+  }
+
+  init() {
+    lazy.IPProtectionService.addEventListener(
+      "IPProtectionService:StateChanged",
+      this.handleEvent
+    );
+  }
+  uninit() {
+    lazy.IPProtectionService.removeEventListener(
+      "IPProtectionService:StateChanged",
+      this.handleEvent
+    );
+  }
+  #handleEvent(_event) {
+    if (lazy.IPProtectionService.state === lazy.IPProtectionStates.READY) {
+      this.maybeFetchList(true);
+    }
+  }
 
   async initOnStartupCompleted() {}
-
-  uninit() {}
 
   /**
    * Tries to refresh the list from the underlining source.
@@ -332,35 +351,16 @@ export class RemoteSettingsServerlist extends IPProtectionServerlistBase {
 
   constructor() {
     super();
-    this.handleEvent = this.#handleEvent.bind(this);
     this.__list = IPProtectionServerlistBase.dataToList(
       lazy.IPPStartupCache.locationList
     );
   }
-  init() {
-    lazy.IPProtectionService.addEventListener(
-      "IPProtectionService:StateChanged",
-      this.handleEvent
-    );
-  }
 
   async initOnStartupCompleted() {
+    super.initOnStartupCompleted();
     this.bucket.on("sync", async () => {
       await this.maybeFetchList(true);
     });
-  }
-
-  uninit() {
-    lazy.IPProtectionService.removeEventListener(
-      "IPProtectionService:StateChanged",
-      this.handleEvent
-    );
-  }
-
-  #handleEvent(_event) {
-    if (lazy.IPProtectionService.state === lazy.IPProtectionStates.READY) {
-      this.maybeFetchList();
-    }
   }
 
   maybeFetchList(forceUpdate = false) {
@@ -414,21 +414,22 @@ export class PrefServerList extends IPProtectionServerlistBase {
   }
 
   async initOnStartupCompleted() {
+    super.initOnStartupCompleted();
     Services.prefs.addObserver(PrefServerList.PREF_NAME, this.#observer);
-    // If the pref changed between startup and registering the observer we have
-    // not handled it yet. If the value hasn't actually changed, this is a no-op.
-    this.maybeFetchList();
   }
 
   uninit() {
+    super.uninit();
     Services.prefs.removeObserver(PrefServerList.PREF_NAME, this.#observer);
   }
 
-  maybeFetchList(forceUpdate = false) {
+  maybeFetchList(_forceUpdate = false) {
     const newList = Services.prefs.getStringPref(PrefServerList.PREF_NAME, "");
 
-    // If the list hasn't changed, we don't need to fetch it again.
-    if (!forceUpdate && newList === this.#previousList) {
+    // The pref is the source of truth, so a forced refetch that yields the same
+    // value is a no-op: re-announcing an unchanged list would emit a spurious
+    // ListChanged. Only parse and dispatch when the value actually changed.
+    if (newList === this.#previousList) {
       return Promise.resolve();
     }
     this.#previousList = newList;
