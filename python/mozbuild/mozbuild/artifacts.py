@@ -783,6 +783,7 @@ class MacArtifactJob(ArtifactJob):
                 "XUL",
             ],
         ),
+        ("Contents/Library/LaunchServices", ["org.mozilla.dmgInstallHelper"]),
     )
 
     @property
