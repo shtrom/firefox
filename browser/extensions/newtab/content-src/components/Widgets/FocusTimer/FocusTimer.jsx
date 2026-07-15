@@ -957,20 +957,6 @@ export const FocusTimer = ({
   // doesn't shift to a third position during the animation.
   const bodyShowsRunningLayout = hasProgressed || isCelebrating || isComplete;
 
-  // Small has no manual Focus/Break toggle; medium and large show it when idle.
-  const showModeGroup =
-    !bodyShowsRunningLayout &&
-    (widgetSize === "medium" || widgetSize === "large");
-
-  // Small shows the celebration headline only; other sizes add a subhead.
-  let celebrationSubheadL10nId;
-  if (widgetSize !== "small") {
-    celebrationSubheadL10nId =
-      timerType === "focus"
-        ? "newtab-widget-timer-celebration-message-focus"
-        : "newtab-widget-timer-celebration-message-break";
-  }
-
   return timerData ? (
     <article
       // @nova-cleanup(remove-conditional): Remove novaEnabled check; always apply col-4 and size class after Nova ships
@@ -995,7 +981,11 @@ export const FocusTimer = ({
             }
             illustrationSrc={null}
             onComplete={handleCelebrationComplete}
-            subheadL10nId={celebrationSubheadL10nId}
+            subheadL10nId={
+              timerType === "focus"
+                ? "newtab-widget-timer-celebration-message-focus"
+                : "newtab-widget-timer-celebration-message-break"
+            }
           />
         ) : null
       }
@@ -1176,7 +1166,7 @@ export const FocusTimer = ({
                     onClick={resetTimer}
                   />
                 )}
-                {showModeGroup && (
+                {!bodyShowsRunningLayout && (
                   <div
                     className="focus-timer-mode-group"
                     role="radiogroup"
