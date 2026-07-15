@@ -13890,9 +13890,18 @@ static void ConcatInlineString(MacroAssembler& masm, Register lhs, Register rhs,
 
   // State: result length in temp2.
 
+#ifdef DEBUG
+  Label skip, rope;
+
   // Ensure both strings are linear.
-  masm.branchIfRope(lhs, failure);
-  masm.branchIfRope(rhs, failure);
+  masm.branchIfRope(lhs, &rope);
+  masm.branchIfRope(rhs, &rope);
+
+  masm.jump(&skip);
+  masm.bind(&rope);
+  masm.assertUnreachable("Ropes encountered in ConcatInlineString.");
+  masm.bind(&skip);
+#endif
 
   // Allocate a JSThinInlineString or JSFatInlineString.
   AllocateThinOrFatInlineString(masm, output, temp2, temp1, initialStringHeap,
