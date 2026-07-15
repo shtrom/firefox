@@ -977,26 +977,38 @@ nsresult CipherSuiteChangeObserver::StartObserve() {
 // appropriate. If security.tls.version.enable-deprecated is true, these
 // ciphersuites may be enabled, if the corresponding preference is true.
 // Otherwise, these ciphersuites will be disabled.
-void SetDeprecatedTLS1CipherPrefs() {
-  if (StaticPrefs::security_tls_version_enable_deprecated()) {
-    for (const auto& deprecatedTLS1CipherPref : sDeprecatedTLS1CipherPrefs) {
-      SSL_CipherPrefSetDefault(deprecatedTLS1CipherPref.id,
-                               deprecatedTLS1CipherPref.prefGetter());
+bool SetDeprecatedTLS1CipherPrefs(const char* aPref = nullptr) {
+  if (aPref != nullptr) {
+    bool relevant =
+        strcmp(aPref, "security.tls.version.enable-deprecated") == 0;
+    if (!relevant) {
+      for (const auto& cipherPref : sDeprecatedTLS1CipherPrefs) {
+        if (strcmp(aPref, cipherPref.pref) == 0) {
+          relevant = true;
+          break;
+        }
+      }
     }
-  } else {
-    for (const auto& deprecatedTLS1CipherPref : sDeprecatedTLS1CipherPrefs) {
-      SSL_CipherPrefSetDefault(deprecatedTLS1CipherPref.id, false);
-    }
+    if (!relevant) return false;
   }
+  bool enabled = StaticPrefs::security_tls_version_enable_deprecated();
+  for (const auto& cipherPref : sDeprecatedTLS1CipherPrefs) {
+    SSL_CipherPrefSetDefault(cipherPref.id, enabled && cipherPref.prefGetter());
+  }
+  return true;
 }
 
 // static
-void SetKyberPolicy() {
+bool SetKyberPolicy(const char* aPref = nullptr) {
+  if (aPref != nullptr && strcmp(aPref, "security.tls.enable_kyber") != 0) {
+    return false;
+  }
   if (StaticPrefs::security_tls_enable_kyber()) {
     NSS_SetAlgorithmPolicy(SEC_OID_MLKEM768X25519, NSS_USE_ALG_IN_SSL_KX, 0);
   } else {
     NSS_SetAlgorithmPolicy(SEC_OID_MLKEM768X25519, 0, NSS_USE_ALG_IN_SSL_KX);
   }
+  return true;
 }
 
 nsresult CipherSuiteChangeObserver::Observe(nsISupports* /*aSubject*/,
@@ -1008,15 +1020,19 @@ nsresult CipherSuiteChangeObserver::Observe(nsISupports* /*aSubject*/,
   if (nsCRT::strcmp(aTopic, NS_PREFBRANCH_PREFCHANGE_TOPIC_ID) == 0) {
     NS_ConvertUTF16toUTF8 prefName(someData);
     // Look through the cipher table and set according to pref setting
+    bool cipherConfigChanged = false;
     for (const auto& cipherPref : sCipherPrefs) {
       if (prefName.Equals(cipherPref.pref)) {
         SSL_CipherPrefSetDefault(cipherPref.id, cipherPref.prefGetter());
+        cipherConfigChanged = true;
         break;
       }
     }
-    SetDeprecatedTLS1CipherPrefs();
-    SetKyberPolicy();
-    mozilla::net::SSLTokensCache::ClearSessionCacheAndTokens();
+    cipherConfigChanged |= SetDeprecatedTLS1CipherPrefs(prefName.get());
+    cipherConfigChanged |= SetKyberPolicy(prefName.get());
+    if (cipherConfigChanged) {
+      mozilla::net::SSLTokensCache::ClearSessionCacheAndTokens();
+    }
   } else if (nsCRT::strcmp(aTopic, NS_XPCOM_SHUTDOWN_OBSERVER_ID) == 0) {
     Preferences::RemoveObserver(this, "security.");
     MOZ_ASSERT(sObserver.get() == this);
@@ -2115,7 +2131,8 @@ nsresult InitializeCipherSuite() {
     SSL_CipherPrefSetDefault(cipherPref.id, cipherPref.prefGetter());
   }
 
-  SetDeprecatedTLS1CipherPrefs();
+  (void)SetDeprecatedTLS1CipherPrefs();  // applies all prefs; return value N/A
+                                         // at init
 
   // Enable ciphers for PKCS#12
   SEC_PKCS12EnableCipher(PKCS12_RC4_40, 1);
@@ -2137,7 +2154,7 @@ nsresult InitializeCipherSuite() {
   // an override to do so, but they already do for such devices).
   NSS_OptionSet(NSS_RSA_MIN_KEY_SIZE, 512);
 
-  SetKyberPolicy();
+  (void)SetKyberPolicy();  // applies Kyber policy; return value N/A at init
 
   // Observe preference change around cipher suite setting.
   return CipherSuiteChangeObserver::StartObserve();
