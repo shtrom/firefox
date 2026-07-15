@@ -32,6 +32,9 @@
   > img {
     /* The parent is a vbox using flexbox, which causes the img to grow to the full width by default. Avoid that: */
     align-self: center;
+    /* Guard against the illustration overflowing the panel at larger chrome font sizes. */
+    max-width: 100%;
+    height: auto;
   }
   > h2 {
     color: inherit; /* undo var(--text-color-deemphasized) from panelUI-shared.css */
