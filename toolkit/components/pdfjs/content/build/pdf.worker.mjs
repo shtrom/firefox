@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.1.310
- * pdfjsBuild = accfa9a16
+ * pdfjsVersion = 6.1.318
+ * pdfjsBuild = c661ba140
  */
 
 ;// ./src/shared/util.js
@@ -35268,40 +35268,64 @@ class PartialEvaluator {
               return;
             }
           case OPS.setFillColor:
+            if (!isNumberArray(args, null)) {
+              continue;
+            }
             cs = stateManager.state.fillColorSpace;
             args = [cs.getRgbHex(args, 0)];
             fn = OPS.setFillRGBColor;
             break;
           case OPS.setStrokeColor:
+            if (!isNumberArray(args, null)) {
+              continue;
+            }
             cs = stateManager.state.strokeColorSpace;
             args = [cs.getRgbHex(args, 0)];
             fn = OPS.setStrokeRGBColor;
             break;
           case OPS.setFillGray:
+            if (!isNumberArray(args, null)) {
+              continue;
+            }
             stateManager.state.fillColorSpace = ColorSpaceUtils.gray;
             args = [ColorSpaceUtils.gray.getRgbHex(args, 0)];
             fn = OPS.setFillRGBColor;
             break;
           case OPS.setStrokeGray:
+            if (!isNumberArray(args, null)) {
+              continue;
+            }
             stateManager.state.strokeColorSpace = ColorSpaceUtils.gray;
             args = [ColorSpaceUtils.gray.getRgbHex(args, 0)];
             fn = OPS.setStrokeRGBColor;
             break;
           case OPS.setFillCMYKColor:
+            if (!isNumberArray(args, null)) {
+              continue;
+            }
             stateManager.state.fillColorSpace = ColorSpaceUtils.cmyk;
             args = [ColorSpaceUtils.cmyk.getRgbHex(args, 0)];
             fn = OPS.setFillRGBColor;
             break;
           case OPS.setStrokeCMYKColor:
+            if (!isNumberArray(args, null)) {
+              continue;
+            }
             stateManager.state.strokeColorSpace = ColorSpaceUtils.cmyk;
             args = [ColorSpaceUtils.cmyk.getRgbHex(args, 0)];
             fn = OPS.setStrokeRGBColor;
             break;
           case OPS.setFillRGBColor:
+            if (!isNumberArray(args, null)) {
+              continue;
+            }
             stateManager.state.fillColorSpace = ColorSpaceUtils.rgb;
             args = [ColorSpaceUtils.rgb.getRgbHex(args, 0)];
             break;
           case OPS.setStrokeRGBColor:
+            if (!isNumberArray(args, null)) {
+              continue;
+            }
             stateManager.state.strokeColorSpace = ColorSpaceUtils.rgb;
             args = [ColorSpaceUtils.rgb.getRgbHex(args, 0)];
             break;
@@ -35318,8 +35342,14 @@ class PartialEvaluator {
               break;
             }
             if (cs.name === "Pattern") {
+              if (!Array.isArray(args)) {
+                continue;
+              }
               next(self.handleColorN(operatorList, OPS.setFillColorN, args, cs, patterns, resources, task, localColorSpaceCache, localTilingPatternCache, localShadingPatternCache, seenRefs));
               return;
+            }
+            if (!isNumberArray(args, null)) {
+              continue;
             }
             args = [cs.getRgbHex(args, 0)];
             fn = OPS.setFillRGBColor;
@@ -35337,8 +35367,14 @@ class PartialEvaluator {
               break;
             }
             if (cs.name === "Pattern") {
+              if (!Array.isArray(args)) {
+                continue;
+              }
               next(self.handleColorN(operatorList, OPS.setStrokeColorN, args, cs, patterns, resources, task, localColorSpaceCache, localTilingPatternCache, localShadingPatternCache, seenRefs));
               return;
+            }
+            if (!isNumberArray(args, null)) {
+              continue;
             }
             args = [cs.getRgbHex(args, 0)];
             fn = OPS.setStrokeRGBColor;
@@ -63934,7 +63970,7 @@ class WorkerMessageHandler {
       docId,
       apiVersion
     } = docParams;
-    const workerVersion = "6.1.310";
+    const workerVersion = "6.1.318";
     if (apiVersion !== workerVersion) {
       throw new Error(`The API version "${apiVersion}" does not match ` + `the Worker version "${workerVersion}".`);
     }
