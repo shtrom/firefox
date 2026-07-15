@@ -1106,9 +1106,9 @@ export class UrlbarView {
     if (index >= this.#queryContext.results.length) {
       newSelectionIndex = this.#queryContext.results.length - 1;
     }
-    if (newSelectionIndex >= 0) {
-      this.selectedRowIndex = newSelectionIndex;
-    }
+    // A negative index clears the selection, which resets the input value
+    // when no results remain.
+    this.selectedRowIndex = newSelectionIndex;
   }
 
   openResultMenu(result, anchor) {
