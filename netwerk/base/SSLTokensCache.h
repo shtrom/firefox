@@ -151,6 +151,11 @@ class SSLTokensCache : public nsIMemoryReporter,
   static bool ShouldPersistKey(const nsACString& aKey,
                                uint8_t aOverridableError);
 
+  // Reconcile persistence infrastructure with the current pref value.
+  // The signature matches PrefChangedFunc so it can be passed directly to
+  // Preferences::RegisterCallback; the two parameters are ignored.
+  static void ReconcilePersistence(const char* = nullptr, void* = nullptr);
+
   size_t SizeOfIncludingThis(mozilla::MallocSizeOf mallocSizeOf) const
       MOZ_REQUIRES(sLock);
 
@@ -161,6 +166,7 @@ class SSLTokensCache : public nsIMemoryReporter,
   uint32_t mCacheSize MOZ_GUARDED_BY(sLock){0};
 
   // Persistence state (parent process only)
+  bool mPrefCallbackRegistered{false};  // main-thread-only
   bool mWriteObserversRegistered MOZ_GUARDED_BY(sLock){false};
   nsCOMPtr<nsIFile> mBackingFile MOZ_GUARDED_BY(sLock);
   nsCOMPtr<nsISerialEventTarget> mWriteTaskQueue MOZ_GUARDED_BY(sLock);
