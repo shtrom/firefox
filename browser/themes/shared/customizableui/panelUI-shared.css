@@ -1127,6 +1127,37 @@ toolbarbutton[constrain-size="true"][cui-areatype="panel"] > .toolbarbutton-badg
   fill: currentColor;
 }
 
+#PanelUI-fxa-menu-create-profile-button,
+#appMenu-create-profile-button {
+  list-style-image: url("chrome://global/skin/icons/users.svg");
+}
+
+#PanelUI-fxa-menu-create-profile-content {
+  gap: var(--space-large);
+  padding: 0 var(--space-large) var(--space-large);
+}
+
+#PanelUI-fxa-menu-create-profile-illustration {
+  width: 224px;
+  height: 137px;
+  list-style-image: light-dark(
+    url("chrome://browser/content/profiles/assets/kit-profiles-light.svg"),
+    url("chrome://browser/content/profiles/assets/kit-profiles-dark.svg")
+  );
+}
+
+#PanelUI-fxa-menu-create-profile-text {
+  padding: var(--space-xxsmall);
+}
+
+#PanelUI-fxa-menu-create-profile-heading {
+  font-weight: var(--font-weight-semibold);
+}
+
+#PanelUI-fxa-menu-create-profile-description {
+  color: var(--text-color-deemphasized);
+}
+
 :root:not([fxastatus="signedin"]) #PanelUI-fxa-menu-connect-device-button {
   color: var(--text-color-disabled);
 }
@@ -1394,8 +1425,8 @@ panelview .toolbarbutton-1,
   }
 }
 
-#appMenu-profiles-button {
-  justify-content: space-between;
+#appMenu-profiles-button > .toolbarbutton-text {
+  flex: 1;
 }
 
 #PanelUI-fxa-menu-all-profiles-list {
