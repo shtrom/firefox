@@ -12,6 +12,7 @@
 #include "MediaEventSource.h"
 #include "RTCStatsReport.h"
 #include "common/CandidateInfo.h"
+#include "mozilla/Maybe.h"
 #include "mozilla/RefPtr.h"
 #include "mozilla/dom/PMediaTransportChild.h"
 #include "mozilla/dom/RTCConfigurationBinding.h"
@@ -144,7 +145,8 @@ class MediaTransportHandler {
   GetGatheringStateChange() {
     return mGatheringStateChange;
   }
-  MediaEventSource<std::string, dom::RTCIceTransportState>&
+  MediaEventSource<std::string, dom::RTCIceTransportState,
+                   Maybe<dom::IceCandidateAttributePair>>&
   GetConnectionStateChange() {
     return mConnectionStateChange;
   }
@@ -169,8 +171,9 @@ class MediaTransportHandler {
   void OnAlpnNegotiated(const std::string& aAlpn);
   void OnGatheringStateChange(const std::string& aTransportId,
                               dom::RTCIceGathererState aState);
-  void OnConnectionStateChange(const std::string& aTransportId,
-                               dom::RTCIceTransportState aState);
+  void OnConnectionStateChange(
+      const std::string& aTransportId, dom::RTCIceTransportState aState,
+      const Maybe<dom::IceCandidateAttributePair>& aSelectedPair);
   void OnPacketReceived(std::string&& aTransportId, MediaPacket&& aPacket);
   void OnEncryptedSending(const std::string& aTransportId,
                           MediaPacket&& aPacket);
@@ -198,7 +201,8 @@ class MediaTransportHandler {
   MediaEventProducer<std::string, bool> mAlpnNegotiated;
   MediaEventProducer<std::string, dom::RTCIceGathererState>
       mGatheringStateChange;
-  MediaEventProducer<std::string, dom::RTCIceTransportState>
+  MediaEventProducer<std::string, dom::RTCIceTransportState,
+                     Maybe<dom::IceCandidateAttributePair>>
       mConnectionStateChange;
   MediaEventProducer<std::string, MediaPacket> mEncryptedSending;
   MediaEventProducer<std::string, TransportLayer::State,
