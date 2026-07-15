@@ -12,8 +12,6 @@ prefs = [
   "messaging-system.log=all", # Enable all Nimbus logging.
 ]
 
-["test_bug2054546.js"]
-
 ["test_Enrollments.js"]
 
 ["test_ExperimentAPI.js"]
