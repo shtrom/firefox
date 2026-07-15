@@ -537,6 +537,14 @@ mozilla::ipc::IPCResult SocketProcessChild::RecvClearSessionCache(
   return IPC_OK();
 }
 
+mozilla::ipc::IPCResult
+SocketProcessChild::RecvClearPrivateBrowsingSessionCache(
+    ClearPrivateBrowsingSessionCacheResolver&& aResolve) {
+  SSLTokensCache::ClearSessionCacheAndPBMTokens();
+  aResolve(void_t{});
+  return IPC_OK();
+}
+
 already_AddRefed<PTRRServiceChild> SocketProcessChild::AllocPTRRServiceChild(
     const bool& aCaptiveIsPassed, const bool& aParentalControlEnabled,
     const nsTArray<nsCString>& aDNSSuffixList) {
