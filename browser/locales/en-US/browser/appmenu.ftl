@@ -127,6 +127,21 @@ appmenuitem-fxa-manage-account = Manage account
 
 fxa-menu-sync-status-on = Sync is On
 
+fxa-menu-sync-status-off = Sync is Off
+
+# Shown as a secondary label under "Sync is Off" when the user is signed in but
+# sync is turned off.
+fxa-menu-sync-off-data-description = Your data isn’t syncing
+
+# Button shown next to "Sync is Off" when the user is signed in but sync is
+# turned off. Turns syncing on by opening sync preferences.
+fxa-menu-sync-status-turn-on-button =
+    .label = Turn on
+
+# Shown as a secondary label under "Sync is Off" when the user needs to sign in
+# (again) for sync to work.
+fxa-menu-sync-off-signin-description = Sign in to sync
+
 # Sync is a verb, short for synchronize.
 # Variables:
 #   $deviceName (String): The name of the local device.
