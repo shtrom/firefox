@@ -3376,7 +3376,7 @@ class ProtonScreen extends (external_React_default()).PureComponent {
           ${screenClassName} ${textColorClass}`,
       "reverse-split": content.reverse_split ? "" : null,
       fullscreen: content.fullscreen ? "" : null,
-      style: content.screen_style && MultiStageUtils.getValidStyle(content.screen_style, ["overflow", "display", "height"]),
+      style: content.screen_style && MultiStageUtils.getValidStyle(content.screen_style, ["overflow", "display"]),
       role: ariaRole ?? "alertdialog",
       layout: content.layout,
       pos: content.position || "center",
@@ -3391,7 +3391,7 @@ class ProtonScreen extends (external_React_default()).PureComponent {
       className: `section-main ${isEmbeddedMigration ? "embedded-migration" : ""}${isSystemPromptStyleSpotlight ? "system-prompt-spotlight" : ""}`,
       "hide-secondary-section": content.hide_secondary_section ? String(content.hide_secondary_section) : null,
       role: "document",
-      style: content.screen_style && MultiStageUtils.getValidStyle(content.screen_style, ["width", "padding"])
+      style: content.screen_style && MultiStageUtils.getValidStyle(content.screen_style, ["width", "padding", "height"])
     }, content.secondary_button_top ? /*#__PURE__*/external_React_default().createElement(SecondaryCTA, {
       content: content,
       handleAction: this.props.handleAction,
@@ -4374,6 +4374,7 @@ class WelcomeScreen extends (external_React_default()).PureComponent {
 
 
 
+
 function MultistageWithDismiss({
   config,
   handleDismiss,
@@ -4384,7 +4385,10 @@ function MultistageWithDismiss({
     handleDismiss?.();
   }
   return /*#__PURE__*/external_React_default().createElement("div", {
-    className: "multistage-newtab-wrapper"
+    className: "multistage-newtab-wrapper",
+    style: config.wrapper_content_style ? MultiStageUtils.getValidStyle(config.wrapper_content_style, ["height"]) : {
+      height: "500px"
+    }
   }, /*#__PURE__*/external_React_default().createElement("moz-button", {
     type: "icon ghost",
     size: "small",

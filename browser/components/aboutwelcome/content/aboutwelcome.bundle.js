@@ -1905,7 +1905,7 @@ class ProtonScreen extends (react__WEBPACK_IMPORTED_MODULE_0___default().PureCom
           ${screenClassName} ${textColorClass}`,
       "reverse-split": content.reverse_split ? "" : null,
       fullscreen: content.fullscreen ? "" : null,
-      style: content.screen_style && _lib_multistage_utils_mjs__WEBPACK_IMPORTED_MODULE_2__.MultiStageUtils.getValidStyle(content.screen_style, ["overflow", "display", "height"]),
+      style: content.screen_style && _lib_multistage_utils_mjs__WEBPACK_IMPORTED_MODULE_2__.MultiStageUtils.getValidStyle(content.screen_style, ["overflow", "display"]),
       role: ariaRole ?? "alertdialog",
       layout: content.layout,
       pos: content.position || "center",
@@ -1920,7 +1920,7 @@ class ProtonScreen extends (react__WEBPACK_IMPORTED_MODULE_0___default().PureCom
       className: `section-main ${isEmbeddedMigration ? "embedded-migration" : ""}${isSystemPromptStyleSpotlight ? "system-prompt-spotlight" : ""}`,
       "hide-secondary-section": content.hide_secondary_section ? String(content.hide_secondary_section) : null,
       role: "document",
-      style: content.screen_style && _lib_multistage_utils_mjs__WEBPACK_IMPORTED_MODULE_2__.MultiStageUtils.getValidStyle(content.screen_style, ["width", "padding"])
+      style: content.screen_style && _lib_multistage_utils_mjs__WEBPACK_IMPORTED_MODULE_2__.MultiStageUtils.getValidStyle(content.screen_style, ["width", "padding", "height"])
     }, content.secondary_button_top ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_MultiStageAboutWelcome__WEBPACK_IMPORTED_MODULE_3__.SecondaryCTA, {
       content: content,
       handleAction: this.props.handleAction,

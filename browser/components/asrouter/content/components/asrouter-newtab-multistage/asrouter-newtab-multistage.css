@@ -4463,7 +4463,7 @@ html {
 }
 
 .onboardingContainer {
-  height: auto;
+  height: 100%;
 }
 .onboardingContainer .screen[pos=center] {
   background-color: unset;
@@ -4472,7 +4472,6 @@ html {
 .onboardingContainer .screen[pos=split]:where(:not([fullscreen])) {
   margin: auto;
   min-height: 280px; /* stylelint-disable-line stylelint-plugin-mozilla/use-design-tokens */
-  height: 280px; /* stylelint-disable-line stylelint-plugin-mozilla/use-design-tokens */
 }
 .onboardingContainer .screen[pos=split]:where(:not([fullscreen]))::before {
   height: 100%;
