@@ -1247,7 +1247,7 @@ finish_root:
   }
   root->changeStringType(wholeLength, flags);
   root->setNonInlineChars(wholeChars, hasStringBuffer);
-  root->d.s.u3.capacity = wholeCapacity;
+  setField(&root->d.s.u3.capacity, wholeCapacity);
   AddCellMemory(root, wholeCapacity * sizeof(CharT), MemoryUse::StringContents);
 
   if (reuseLeftmostBuffer) {
