@@ -46,6 +46,7 @@ import {
   LINKS,
   SIGNIN_DATA,
 } from "chrome://browser/content/ipprotection/ipprotection-constants.mjs";
+import { getSitePrincipal } from "chrome://browser/content/ipprotection/ipprotection-utils.mjs";
 
 const BANDWIDTH_THRESHOLD_PREF = "browser.ipProtection.bandwidthThreshold";
 const BANDWIDTH_WARNING_DISMISSED_PREF =
@@ -1046,7 +1047,7 @@ export class IPProtectionPanel {
   }
 
   /**
-   * Gets siteData by reading the current content principal.
+   * Gets siteData by reading the current URL bar's URI.
    *
    * @returns {object|null}
    *  An object with data relevant to a site (eg. isExclusion),
@@ -1056,7 +1057,7 @@ export class IPProtectionPanel {
    */
 
   #getSiteData() {
-    const principal = this.gBrowser?.contentPrincipal;
+    const principal = getSitePrincipal(this.gBrowser);
     if (!principal || !lazy.IPPExceptionsManager.canManage(principal)) {
       return null;
     }
@@ -1170,13 +1171,13 @@ export class IPProtectionPanel {
       });
     } else if (event.type == "IPProtection:UserEnableVPNForSite") {
       const win = event.target.documentGlobal;
-      const principal = win?.gBrowser.contentPrincipal;
+      const principal = getSitePrincipal(win?.gBrowser);
 
       lazy.IPPExceptionsManager.setExclusion(principal, false);
       Glean.ipprotection.exclusionToggled.record({ excluded: false });
     } else if (event.type == "IPProtection:UserDisableVPNForSite") {
       const win = event.target.documentGlobal;
-      const principal = win?.gBrowser.contentPrincipal;
+      const principal = getSitePrincipal(win?.gBrowser);
 
       lazy.IPPExceptionsManager.setExclusion(principal, true);
       Glean.ipprotection.exclusionToggled.record({ excluded: true });
