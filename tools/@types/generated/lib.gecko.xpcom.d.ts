@@ -5528,6 +5528,8 @@ interface mozILocaleService extends nsISupports {
   readonly acceptLanguages: string;
   readonly fontLanguageGroup: string;
   readonly urlFixupSuffix: string;
+  isLocalizedEnough(aFtlPath: string, aOverridePref: string, aMinCoverage: double): boolean;
+  areMessagesLocalized(aFtlPath: string, aRequiredIds: string[], aOverridePref: string): boolean;
 }
 
 // https://searchfox.org/firefox-main/source/intl/locale/mozIOSPreferences.idl
@@ -7293,6 +7295,22 @@ interface nsIRequestObserverProxy extends nsIRequestObserver {
 interface nsIResumableChannel extends nsISupports {
   resumeAt(startPos: u64, entityID: string): void;
   readonly entityID: string;
+}
+
+// https://searchfox.org/firefox-main/source/netwerk/base/nsISSLTokensCache.idl
+
+interface nsISSLTokensCache extends nsISupports {
+  clearSSLExternalAndInternalSessionCache(): void;
+  asyncClearSSLExternalAndInternalSessionCache(): Promise<any>;
+  removeSSLTokensByHostAndOriginAttributesPattern(aHost: string, aPattern: string): void;
+  removeSSLTokensBySiteAndOriginAttributesPattern(aSite: string, aPattern: string): void;
+}
+
+// https://searchfox.org/firefox-main/source/netwerk/base/nsISSLTokensCacheTest.idl
+
+interface nsISSLTokensCacheTest extends nsISupports {
+  countSSLTokens(): u32;
+  putSSLTokenForTest(aKey: string): void;
 }
 
 // https://searchfox.org/firefox-main/source/netwerk/base/nsISecCheckWrapChannel.idl
@@ -9186,12 +9204,6 @@ interface nsIWifiMonitor extends nsISupports {
   stopWatching(aListener: nsIWifiListener): void;
 }
 
-// https://searchfox.org/firefox-main/source/browser/app/installation_dir_layout/nsIInstallationDirLayout.idl
-
-interface nsIInstallationDirLayout extends nsISupports {
-  readonly isInstallationLayoutVersioned: boolean;
-}
-
 // https://searchfox.org/firefox-main/source/toolkit/components/parentalcontrols/nsIParentalControlsService.idl
 
 interface nsIParentalControlsService extends nsISupports {
@@ -9505,10 +9517,6 @@ interface nsINSSComponent extends nsISupports {
   getEnterpriseIntermediates(): u8[][];
   getEnterpriseIntermediatesPEM(): string;
   addEnterpriseIntermediate(intermediateBytes: u8[]): void;
-  clearSSLExternalAndInternalSessionCache(): void;
-  asyncClearSSLExternalAndInternalSessionCache(): Promise<any>;
-  removeSSLTokensByHostAndOriginAttributesPattern(aHost: string, aPattern: string): void;
-  removeSSLTokensBySiteAndOriginAttributesPattern(aSite: string, aPattern: string): void;
   readonly nssTaskQueue: nsISerialEventTarget;
 }
 
@@ -9623,13 +9631,6 @@ interface nsIPKCS11Token extends nsISupports {
 
 interface nsIPublicKeyPinningService extends nsISupports {
   hostHasPins(aURI: nsIURI): boolean;
-}
-
-// https://searchfox.org/firefox-main/source/security/manager/ssl/nsISSLTokensCacheTest.idl
-
-interface nsISSLTokensCacheTest extends nsISupports {
-  countSSLTokens(): u32;
-  putSSLTokenForTest(aKey: string): void;
 }
 
 // https://searchfox.org/firefox-main/source/security/manager/ssl/nsISecretDecoderRing.idl
@@ -10582,6 +10583,28 @@ interface mozISandboxSettings extends nsISupports {
   readonly contentWin32kLockdownStateString: string;
 }
 
+// https://searchfox.org/firefox-main/source/security/sandbox/linux/interfaces/mozISandboxReporter.idl
+
+interface mozISandboxReport extends nsISupports {
+  readonly msecAgo: u64;
+  readonly pid: i32;
+  readonly tid: i32;
+  readonly procType: string;
+  readonly syscall: u32;
+  readonly numArgs: u32;
+  getArg(aIndex: u32): string;
+}
+
+interface mozISandboxReportArray extends nsISupports {
+  readonly begin: u64;
+  readonly end: u64;
+  getElement(aIndex: u64): mozISandboxReport;
+}
+
+interface mozISandboxReporter extends nsISupports {
+  snapshot(): mozISandboxReportArray;
+}
+
 // https://searchfox.org/firefox-main/source/toolkit/components/satchel/nsIFormFillController.idl
 
 interface nsIFormFillFocusListener extends nsISupports {
@@ -10655,32 +10678,6 @@ interface nsISessionStoreRestoreData extends nsISupports {
   addMultipleSelect(aIsXPath: boolean, aIdOrXPath: string, aValues: string[]): void;
   addCustomElement(aIsXPath: boolean, aIdOrXPath: string, aValue: any, aState: any): void;
   addChild(aChild: nsISessionStoreRestoreData, aIndex: u32): void;
-}
-
-// https://searchfox.org/firefox-main/source/browser/components/shell/nsILimitedAccessFeature.idl
-
-interface nsILimitedAccessFeature extends nsISupports {
-  readonly featureId: string;
-  readonly token: string;
-  readonly attestation: string;
-  unlock(): boolean;
-}
-
-interface nsILimitedAccessFeatureService extends nsISupports {
-  readonly taskbarPinFeatureId: string;
-  generateLimitedAccessFeature(featureId: string): nsILimitedAccessFeature;
-}
-
-// https://searchfox.org/firefox-main/source/browser/components/shell/nsISecondaryTile.idl
-
-interface nsISecondaryTileListener extends nsISupports {
-  succeeded(accepted: boolean): void;
-  failed(aHresult: i32): void;
-}
-
-interface nsISecondaryTileService extends nsISupports {
-  requestCreateAndPin(aTileId: string, aName: string, aIconPath: string, aArguments: string[], aListener: nsISecondaryTileListener): void;
-  requestDelete(aTileId: string, aListener: nsISecondaryTileListener): void;
 }
 
 // https://searchfox.org/firefox-main/source/browser/components/shell/nsIShellService.idl
@@ -13741,24 +13738,6 @@ interface nsIUserIdleServiceInternal extends nsIUserIdleService {
   resetIdleTimeOut(idleDeltaInMS: u32): void;
 }
 
-// https://searchfox.org/firefox-main/source/widget/windows/nsIAlertsServiceRust.idl
-
-interface nsIAlertsServiceRust extends nsISupports {
-  getHistory(aAumid: string): string[];
-}
-
-// https://searchfox.org/firefox-main/source/widget/windows/nsIWindowsTestDebug.idl
-
-interface nsIWindowsDebugProcessData extends nsISupports {
-  readonly name: string;
-  readonly executablePath: string;
-  readonly pid: u32;
-}
-
-interface nsIWindowsTestDebug extends nsISupports {
-  processesThatOpenedFile(aFilename: string): nsIWindowsDebugProcessData[];
-}
-
 // https://searchfox.org/firefox-main/source/toolkit/components/windowcreator/nsIWindowCreator.idl
 
 interface nsIWindowCreator extends nsISupports {
@@ -13900,6 +13879,12 @@ interface nsITabUnloader extends nsISupports {
 interface nsIAvailableMemoryWatcherBase extends nsISupports {
   registerTabUnloader(aTabUnloader: nsITabUnloader): void;
   onUnloadAttemptCompleted(aResult: nsresult): void;
+}
+
+// https://searchfox.org/firefox-main/source/xpcom/base/nsIAvailableMemoryWatcherTestingLinux.idl
+
+interface nsIAvailableMemoryWatcherTestingLinux extends nsISupports {
+  setPSIPathForTesting(aPSIPath: string): void;
 }
 
 // https://searchfox.org/firefox-main/source/xpcom/base/nsIConsoleListener.idl
@@ -16227,6 +16212,8 @@ interface nsIXPCComponents_Interfaces {
   nsIRequestObserver: nsJSIID<nsIRequestObserver>;
   nsIRequestObserverProxy: nsJSIID<nsIRequestObserverProxy>;
   nsIResumableChannel: nsJSIID<nsIResumableChannel>;
+  nsISSLTokensCache: nsJSIID<nsISSLTokensCache>;
+  nsISSLTokensCacheTest: nsJSIID<nsISSLTokensCacheTest>;
   nsISecCheckWrapChannel: nsJSIID<nsISecCheckWrapChannel>;
   nsISecureBrowserUI: nsJSIID<nsISecureBrowserUI>;
   nsISensitiveInfoHiddenURI: nsJSIID<nsISensitiveInfoHiddenURI>;
@@ -16384,7 +16371,6 @@ interface nsIXPCComponents_Interfaces {
   nsIWifiAccessPoint: nsJSIID<nsIWifiAccessPoint>;
   nsIWifiListener: nsJSIID<nsIWifiListener>;
   nsIWifiMonitor: nsJSIID<nsIWifiMonitor>;
-  nsIInstallationDirLayout: nsJSIID<nsIInstallationDirLayout>;
   nsIParentalControlsService: nsJSIID<nsIParentalControlsService>;
   IPeerConnectionObserver: nsJSIID<IPeerConnectionObserver>;
   IPeerConnection: nsJSIID<IPeerConnection>;
@@ -16420,7 +16406,6 @@ interface nsIXPCComponents_Interfaces {
   nsIPKCS11Slot: nsJSIID<nsIPKCS11Slot>;
   nsIPKCS11Token: nsJSIID<nsIPKCS11Token>;
   nsIPublicKeyPinningService: nsJSIID<nsIPublicKeyPinningService>;
-  nsISSLTokensCacheTest: nsJSIID<nsISSLTokensCacheTest>;
   nsISecretDecoderRing: nsJSIID<nsISecretDecoderRing>;
   nsISecurityUITelemetry: nsJSIID<nsISecurityUITelemetry>;
   nsISiteIntegrityService: nsJSIID<nsISiteIntegrityService>;
@@ -16475,6 +16460,9 @@ interface nsIXPCComponents_Interfaces {
   nsIApplicationReputationQuery: nsJSIID<nsIApplicationReputationQuery>;
   nsIApplicationReputationCallback: nsJSIID<nsIApplicationReputationCallback>;
   mozISandboxSettings: nsJSIID<mozISandboxSettings>;
+  mozISandboxReport: nsJSIID<mozISandboxReport>;
+  mozISandboxReportArray: nsJSIID<mozISandboxReportArray>;
+  mozISandboxReporter: nsJSIID<mozISandboxReporter>;
   nsIFormFillFocusListener: nsJSIID<nsIFormFillFocusListener>;
   nsIFormFillController: nsJSIID<nsIFormFillController>;
   nsIFormFillCompleteObserver: nsJSIID<nsIFormFillCompleteObserver>;
@@ -16484,10 +16472,6 @@ interface nsIXPCComponents_Interfaces {
   mozIInterruptible: nsJSIID<mozIInterruptible>;
   nsISessionStoreFunctions: nsJSIID<nsISessionStoreFunctions>;
   nsISessionStoreRestoreData: nsJSIID<nsISessionStoreRestoreData>;
-  nsILimitedAccessFeature: nsJSIID<nsILimitedAccessFeature>;
-  nsILimitedAccessFeatureService: nsJSIID<nsILimitedAccessFeatureService>;
-  nsISecondaryTileListener: nsJSIID<nsISecondaryTileListener>;
-  nsISecondaryTileService: nsJSIID<nsISecondaryTileService>;
   nsIShellService: nsJSIID<nsIShellService>;
   nsIBFCacheEntry: nsJSIID<nsIBFCacheEntry>;
   nsISHEntry: nsJSIID<nsISHEntry>;
@@ -16706,9 +16690,6 @@ interface nsIXPCComponents_Interfaces {
   nsITransferable: nsJSIID<nsITransferable>;
   nsIUserIdleService: nsJSIID<nsIUserIdleService>;
   nsIUserIdleServiceInternal: nsJSIID<nsIUserIdleServiceInternal>;
-  nsIAlertsServiceRust: nsJSIID<nsIAlertsServiceRust>;
-  nsIWindowsDebugProcessData: nsJSIID<nsIWindowsDebugProcessData>;
-  nsIWindowsTestDebug: nsJSIID<nsIWindowsTestDebug>;
   nsIWindowCreator: nsJSIID<nsIWindowCreator>;
   nsIWindowProvider: nsJSIID<nsIWindowProvider>;
   nsIDialogParamBlock: nsJSIID<nsIDialogParamBlock>;
@@ -16719,6 +16700,7 @@ interface nsIXPCComponents_Interfaces {
   nsIWindowWatcher: nsJSIID<nsIWindowWatcher>;
   nsITabUnloader: nsJSIID<nsITabUnloader>;
   nsIAvailableMemoryWatcherBase: nsJSIID<nsIAvailableMemoryWatcherBase>;
+  nsIAvailableMemoryWatcherTestingLinux: nsJSIID<nsIAvailableMemoryWatcherTestingLinux>;
   nsIConsoleListener: nsJSIID<nsIConsoleListener>;
   nsIConsoleMessage: nsJSIID<nsIConsoleMessage>;
   nsIConsoleService: nsJSIID<nsIConsoleService, typeof nsIConsoleService_OutputMode>;

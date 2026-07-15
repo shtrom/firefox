@@ -7135,6 +7135,7 @@ interface CSSStyleProperties extends CSSStyleDeclaration {
     marginLeft: string;
     marginRight: string;
     marginTop: string;
+    marginTrim: string;
     marker: string;
     markerEnd: string;
     markerMid: string;

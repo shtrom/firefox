@@ -8,11 +8,30 @@ declare global {
 
 // https://searchfox.org/firefox-main/source/browser/components/shell/nsIGNOMEShellService.idl
 
-interface nsIGNOMEShellService extends nsIShellService {
+}  // global
+
+declare enum nsIGNOMEShellService_DesktopEntryStatus {
+  DESKTOP_ENTRY_ABSENT = 0,
+  DESKTOP_ENTRY_INVISIBLE = 1,
+  DESKTOP_ENTRY_VISIBLE = 2,
+}
+
+declare global {
+
+namespace nsIGNOMEShellService {
+  type DesktopEntryStatus = nsIGNOMEShellService_DesktopEntryStatus;
+}
+
+interface nsIGNOMEShellService extends nsIShellService, Enums<typeof nsIGNOMEShellService_DesktopEntryStatus> {
   readonly canSetDesktopBackground: boolean;
   isDefaultForScheme(aScheme: string): boolean;
   getGSettingsString(aScheme: string, aKey: string): string;
   setGSettingsString(aScheme: string, aKey: string, aValue: string): void;
+  getArgv0(): string;
+  getGlibPrgname(): string;
+  getDesktopEntryStatus(aEntryId: string): nsIGNOMEShellService.DesktopEntryStatus;
+  requestInstallDynamicLauncher(aEntryId: string, aDesktopEntry: nsIINIParserWriter, aWindow: mozIDOMWindowProxy): Promise<any>;
+  requestUninstallDynamicLauncher(aEntryId: string): Promise<any>;
 }
 
 // https://searchfox.org/firefox-main/source/browser/components/shell/nsIOpenTabsProvider.idl
@@ -52,7 +71,7 @@ interface nsITaskbarProgress extends nsISupports {
 }
 
 interface nsIXPCComponents_Interfaces {
-  nsIGNOMEShellService: nsJSIID<nsIGNOMEShellService>;
+  nsIGNOMEShellService: nsJSIID<nsIGNOMEShellService, typeof nsIGNOMEShellService_DesktopEntryStatus>;
   nsIOpenTabsProvider: nsJSIID<nsIOpenTabsProvider>;
   nsIApplicationChooserFinishedCallback: nsJSIID<nsIApplicationChooserFinishedCallback>;
   nsIApplicationChooser: nsJSIID<nsIApplicationChooser>;
