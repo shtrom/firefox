@@ -17,13 +17,13 @@ var gProfiles = {
       "chrome://browser/locale/browser.properties"
     );
 
-    this.emptyProfilesButton = PanelMultiView.getViewNode(
-      document,
-      "appMenu-empty-profiles-button"
-    );
     this.profilesButton = PanelMultiView.getViewNode(
       document,
       "appMenu-profiles-button"
+    );
+    this.appMenuCreateProfileButton = PanelMultiView.getViewNode(
+      document,
+      "appMenu-create-profile-button"
     );
     this.fxaMenuProfileButtonsContainer = PanelMultiView.getViewNode(
       document,
@@ -49,7 +49,7 @@ var gProfiles = {
     this.subview.addEventListener("command", this.handleCommand);
 
     PanelUI.mainView.addEventListener("ViewShowing", () =>
-      this._onPanelShowing(this.profilesButton, this.emptyProfilesButton)
+      this._onPanelShowing(this.profilesButton)
     );
 
     let fxaPanelView = PanelMultiView.getViewNode(document, "PanelUI-fxa");
@@ -58,12 +58,26 @@ var gProfiles = {
     );
 
     this.profilesButton.addEventListener("command", this.handleCommand);
-    this.emptyProfilesButton.addEventListener("command", this.handleCommand);
+    this.appMenuCreateProfileButton.addEventListener(
+      "command",
+      this.handleCommand
+    );
 
     this.fxaMenuProfileButtonsContainer.addEventListener(
       "command",
       this.handleCommand
     );
+
+    PanelMultiView.getViewNode(
+      document,
+      "PanelUI-fxa-menu-create-profile"
+    ).addEventListener("command", this.handleCommand);
+
+    // moz-button emits "click" rather than "command".
+    PanelMultiView.getViewNode(
+      document,
+      "PanelUI-fxa-menu-create-profile-confirm-button"
+    ).addEventListener("click", this.handleCommand);
 
     this.toggleProfileMenus(SelectableProfileService?.isEnabled);
 
@@ -82,10 +96,10 @@ var gProfiles = {
     profilesMenu.hidden = !isEnabled;
   },
 
-  async _onPanelShowing(profilesButton, emptyProfilesButton) {
+  async _onPanelShowing(profilesButton) {
     if (!SelectableProfileService?.isEnabled) {
-      emptyProfilesButton.hidden = true;
       profilesButton.hidden = true;
+      this.appMenuCreateProfileButton.hidden = true;
       return;
     }
 
@@ -96,29 +110,11 @@ var gProfiles = {
       : [];
     if (!profiles.length) {
       profilesButton.hidden = true;
-      emptyProfilesButton.hidden = true;
+      this.appMenuCreateProfileButton.hidden = false;
       return;
     }
-    if (profiles.length < 2) {
-      profilesButton.hidden = true;
-      emptyProfilesButton.hidden = false;
+    this.appMenuCreateProfileButton.hidden = true;
 
-      const profile = profiles[0];
-      let { themeBg, themeFg } = profile.theme;
-      emptyProfilesButton.style.setProperty(
-        "--appmenu-profiles-theme-bg",
-        themeBg
-      );
-      emptyProfilesButton.style.setProperty(
-        "--appmenu-profiles-theme-fg",
-        themeFg
-      );
-      emptyProfilesButton.setAttribute("label", profile.name);
-      emptyProfilesButton.setAttribute("profileid", profile.id);
-      return;
-    }
-
-    emptyProfilesButton.hidden = true;
     profilesButton.hidden = false;
 
     let { themeBg, themeFg } = SelectableProfileService.currentProfile.theme;
@@ -127,6 +123,10 @@ var gProfiles = {
     profilesButton.setAttribute(
       "label",
       SelectableProfileService.currentProfile.name
+    );
+    profilesButton.setAttribute(
+      "image",
+      await SelectableProfileService.currentProfile.getAvatarURL(24)
     );
   },
 
@@ -154,8 +154,23 @@ var gProfiles = {
       container.lastChild.remove();
     }
 
+    // When there are no user created profiles, surface a
+    // call to action to create a new profile instead of the profile list.
     if (!profiles.length) {
-      hideProfilesSection();
+      let createBtn = document.createXULElement("toolbarbutton");
+      createBtn.id = "PanelUI-fxa-menu-create-profile-button";
+      createBtn.classList.add(
+        "subviewbutton",
+        "subviewbutton-iconic",
+        "subviewbutton-nav"
+      );
+      createBtn.setAttribute("closemenu", "none");
+      createBtn.setAttribute("data-l10n-id", "appmenu-create-profile2");
+      container.appendChild(createBtn);
+
+      container.hidden = false;
+      headerSeparator.hidden = false;
+      headerLabel.hidden = false;
       return;
     }
 
@@ -400,10 +415,6 @@ var gProfiles = {
         this.updateView(aEvent.target);
         break;
       }
-      case "appMenu-empty-profiles-button": {
-        this.updateFxAView(aEvent.target);
-        break;
-      }
       /* FxA menu button events */
       case "PanelUI-fxa-menu-all-profiles-button": {
         aEvent.stopPropagation();
@@ -417,6 +428,32 @@ var gProfiles = {
       }
       case "PanelUI-fxa-menu-all-profiles-create-button": {
         this.createNewProfile("profiles-panel");
+        break;
+      }
+      case "appMenu-create-profile-button":
+      // fall through
+      case "PanelUI-fxa-menu-create-profile-button": {
+        aEvent.stopPropagation();
+        PanelUI.showSubView("PanelUI-fxa-menu-create-profile", aEvent.target);
+        break;
+      }
+      case "PanelUI-fxa-menu-create-profile-confirm-button": {
+        this.createNewProfile("profiles-panel");
+        break;
+      }
+      case "PanelUI-fxa-menu-create-profile-learn-more-button": {
+        openTrustedLinkIn(
+          "https://support.mozilla.org/kb/profile-management",
+          "tab"
+        );
+        break;
+      }
+      case "PanelUI-fxa-menu-create-profile-copy-button": {
+        this.copyProfile();
+        break;
+      }
+      case "PanelUI-fxa-menu-create-profile-manage-button": {
+        this.manageProfiles();
         break;
       }
       default: {
@@ -479,6 +516,7 @@ var gProfiles = {
     /* Subpanel profile events that may be triggered in FxA menu or app menu */
     if (
       aEvent.target.classList.contains("profile-item") &&
+      aEvent.target.hasAttribute("profileid") &&
       aEvent.target.getAttribute("profileid") !==
         String(SelectableProfileService.currentProfile?.id)
     ) {
@@ -504,7 +542,7 @@ var gProfiles = {
     }
 
     const targetProfile = displayProfile ?? currentProfile;
-    const showProfileInfo = displayProfile !== null || profiles.length > 1;
+    const showProfileInfo = displayProfile !== null || profiles.length >= 1;
 
     let subview = PanelMultiView.getViewNode(document, "PanelUI-profiles");
 
@@ -647,6 +685,7 @@ var gProfiles = {
       )?.remove();
       PanelMultiView.getViewNode(document, "profiles-subview-list")?.remove();
 
+      let hasOtherProfiles = false;
       if (displayProfile === null) {
         let profilesListStartSeparator =
           document.createXULElement("toolbarseparator");
@@ -676,13 +715,16 @@ var gProfiles = {
           btn.style.setProperty("--appmenu-profiles-theme-fg", themeFg);
           btn.setAttribute("image", await profile.getAvatarURL(24));
           profilesList.appendChild(btn);
+          hasOtherProfiles = true;
         }
 
-        footerSeparator.hidden = true;
-      } else {
-        footerSeparator.hidden = false;
-        subview.appendChild(footerSeparator);
+        // With no other profiles the list is empty, so hide it and the footer
+        // separator to avoid rendering two adjacent separators.
+        profilesList.hidden = !hasOtherProfiles;
       }
+
+      footerSeparator.hidden = displayProfile === null && !hasOtherProfiles;
+      subview.appendChild(footerSeparator);
 
       subview.appendChild(manageProfilesButton);
       subview.appendChild(createProfileButton);
