@@ -257,11 +257,11 @@ static const size_t kPhcPageSize =
 #endif
     ;
 
-// We align the PHC area to a multiple of the jemalloc and JS GC chunk
-// alignment (which use 2MB and 1MB respectively) so that their address
-// computations don't lead from non-PHC memory into PHC memory causing
-// misleading PHC stacks to be attached to a crash report.
-static const size_t kPhcAlign = 2 * 1024 * 1024;
+// We align the PHC area to a multiple of the jemalloc and JS GC chunk size
+// (both use 1MB aligned chunks) so that their address computations don't lead
+// from non-PHC memory into PHC memory causing misleading PHC stacks to be
+// attached to a crash report.
+static const size_t kPhcAlign = 1024 * 1024;
 
 static_assert(std::has_single_bit(kPhcAlign));
 static_assert((kPhcAlign % kPhcPageSize) == 0);
