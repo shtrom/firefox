@@ -679,9 +679,12 @@ void js::TraceGCCellPtrRoot(JSTracer* trc, JS::GCCellPtr* thingp,
 void js::TraceManuallyBarrieredGCCellPtr(JSTracer* trc, JS::GCCellPtr* thingp,
                                          const char* name) {
 #ifdef JS_GC_CONCURRENT_MARKING
-  Cell* thing = thingp->atomicGet().asCell();
+  JS::GCCellPtr ptr = thingp->atomicGet();
+  Cell* thing = ptr.asCell();
+  JS::TraceKind kind = ptr.kind();
 #else
   Cell* thing = thingp->asCell();
+  JS::TraceKind kind = thingp->kind();
 #endif
 
   if (!thing) {
@@ -698,8 +701,8 @@ void js::TraceManuallyBarrieredGCCellPtr(JSTracer* trc, JS::GCCellPtr* thingp,
     // If we are clearing edges, also erase the type. This happens when using
     // ClearEdgesTracer.
     *thingp = JS::GCCellPtr();
-  } else if (traced != thingp->asCell()) {
-    *thingp = JS::GCCellPtr(traced, thingp->kind());
+  } else if (traced != thing) {
+    *thingp = JS::GCCellPtr(traced, kind);
   }
 }
 
