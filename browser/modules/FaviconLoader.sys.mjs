@@ -582,7 +582,6 @@ class IconLoader {
         return;
       }
       this.actor.sendAsyncMessage("Link:SetIcon", {
-        pageURL: iconInfo.pageUri.spec,
         originalURL: iconInfo.iconUri.spec,
         expiration: undefined,
         iconURL: iconInfo.iconUri.spec,
@@ -606,7 +605,6 @@ class IconLoader {
         await this._loader.load();
 
       this.actor.sendAsyncMessage("Link:SetIcon", {
-        pageURL: iconInfo.pageUri.spec,
         originalURL: iconInfo.iconUri.spec,
         expiration,
         iconURL: dataURL,
@@ -710,7 +708,6 @@ export class FaviconLoader {
     // Currently ImageDocuments will just load the default favicon, see bug
     // 403651 for discussion.
     this.iconInfos.push({
-      pageUri,
       iconUri: pageUri.mutate().setPathQueryRef("/favicon.ico").finalize(),
       width: -1,
       isRichIcon: false,
@@ -749,7 +746,6 @@ function makeFaviconFromLink(aLink, aIsRichIcon) {
   let width = extractIconSize(aLink.sizes);
 
   return {
-    pageUri: aLink.ownerDocument.documentURIObject,
     iconUri,
     width,
     isRichIcon: aIsRichIcon,
