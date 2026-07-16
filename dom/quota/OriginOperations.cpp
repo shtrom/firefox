@@ -3652,8 +3652,8 @@ nsresult PersistOp::DoDirectoryWork(QuotaManager& aQuotaManager) {
   if (created) {
     // A new origin directory has been created.
 
-    const auto [timestamp, maintenanceDate, accessed] = [&aQuotaManager,
-                                                         &originMetadata]() {
+    FullOriginMetadata fullOriginMetadata =
+        [&aQuotaManager, &originMetadata]() -> FullOriginMetadata {
       // Update OriginInfo too if temporary origin was already initialized.
       if (aQuotaManager.IsTemporaryStorageInitializedInternal()) {
         if (aQuotaManager.IsTemporaryOriginInitializedInternal(
@@ -3663,33 +3663,28 @@ nsresult PersistOp::DoDirectoryWork(QuotaManager& aQuotaManager) {
           // and it needs to be updated because the origin directory has been
           // just created.
 
-          return aQuotaManager.WithOriginInfo(
+          auto metadata = aQuotaManager.WithOriginInfo(
               originMetadata, [](const auto& originInfo) {
-                const int64_t timestamp = originInfo->LockedAccessTime();
-                const int32_t maintenanceDate =
-                    originInfo->LockedMaintenanceDate();
-                const bool accessed = originInfo->LockedAccessed();
-
+                auto metadata = originInfo->LockedFlattenToFullOriginMetadata();
                 originInfo->LockedDirectoryCreated();
-
-                return std::make_tuple(timestamp, maintenanceDate, accessed);
+                return metadata;
               });
+
+          metadata.mPersisted = true;
+          return metadata;
         }
       }
 
       const int64_t timestamp = PR_Now();
 
-      return std::make_tuple(
-          /* timestamp */ timestamp,
-          /* maintenanceDate */ Date::FromTimestamp(timestamp).ToDays(),
-          /* accessed */ false);
+      return FullOriginMetadata{
+          originMetadata,
+          OriginStateMetadata{timestamp,
+                              Date::FromTimestamp(timestamp).ToDays(),
+                              /* aAccessed */ false, /* aPersisted */ true,
+                              /* aDirty */ false},
+          ClientUsageArray(), /* aUsage */ 0, kCurrentQuotaVersion};
     }();
-
-    FullOriginMetadata fullOriginMetadata = FullOriginMetadata{
-        originMetadata,
-        OriginStateMetadata{timestamp, maintenanceDate, accessed,
-                            /* aPersisted */ true, /* aDirty */ false},
-        ClientUsageArray(), /* aUsage */ 0, kCurrentQuotaVersion};
 
     if (aQuotaManager.IsTemporaryStorageInitializedInternal()) {
       // Usually, infallible operations are placed after fallible ones.
