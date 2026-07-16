@@ -17,7 +17,7 @@ add_task(async function test_receive_punycode_result() {
           url,
         },
         highlights: {
-          url: UrlbarUtils.HIGHLIGHT.TYPED,
+          url: UrlbarShared.HIGHLIGHT.TYPED,
         },
       });
       addCallback(this, result);

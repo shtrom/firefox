@@ -380,10 +380,10 @@ export class UrlbarProviderAutofill extends UrlbarProvider {
   }
 
   /**
-   * @returns {Values<typeof UrlbarUtils.PROVIDER_TYPE>}
+   * @returns {Values<typeof lazy.UrlbarShared.PROVIDER_TYPE>}
    */
   get type() {
-    return UrlbarUtils.PROVIDER_TYPE.HEURISTIC;
+    return lazy.UrlbarShared.PROVIDER_TYPE.HEURISTIC;
   }
 
   /**
@@ -415,7 +415,7 @@ export class UrlbarProviderAutofill extends UrlbarProvider {
 
     // Trying to autofill an extremely long string would be expensive, and
     // not particularly useful since the filled part falls out of screen anyway.
-    if (queryContext.searchString.length > UrlbarUtils.MAX_TEXT_LENGTH) {
+    if (queryContext.searchString.length > lazy.UrlbarShared.MAX_TEXT_LENGTH) {
       return false;
     }
 
@@ -1021,7 +1021,7 @@ export class UrlbarProviderAutofill extends UrlbarProvider {
 
     let payload = {
       url: finalCompleteValue,
-      icon: UrlbarUtils.getIconForUrl(finalCompleteValue),
+      icon: lazy.UrlbarShared.getIconForUrl(finalCompleteValue),
     };
 
     let noVisitAction = !!title;
@@ -1055,9 +1055,9 @@ export class UrlbarProviderAutofill extends UrlbarProvider {
       },
       payload,
       highlights: {
-        url: UrlbarUtils.HIGHLIGHT.TYPED,
-        title: UrlbarUtils.HIGHLIGHT.TYPED,
-        fallbackTitle: UrlbarUtils.HIGHLIGHT.TYPED,
+        url: lazy.UrlbarShared.HIGHLIGHT.TYPED,
+        title: lazy.UrlbarShared.HIGHLIGHT.TYPED,
+        fallbackTitle: lazy.UrlbarShared.HIGHLIGHT.TYPED,
       },
     });
   }
@@ -1103,11 +1103,11 @@ export class UrlbarProviderAutofill extends UrlbarProvider {
           payload: {
             title: trimmedUrl,
             url: aboutUrl,
-            icon: UrlbarUtils.getIconForUrl(aboutUrl),
+            icon: lazy.UrlbarShared.getIconForUrl(aboutUrl),
           },
           highlights: {
-            title: UrlbarUtils.HIGHLIGHT.TYPED,
-            url: UrlbarUtils.HIGHLIGHT.TYPED,
+            title: lazy.UrlbarShared.HIGHLIGHT.TYPED,
+            url: lazy.UrlbarShared.HIGHLIGHT.TYPED,
           },
         });
       }
@@ -1229,7 +1229,7 @@ export class UrlbarProviderAutofill extends UrlbarProvider {
       payload: {
         url: originUrl,
         title: title ?? originUrl,
-        icon: UrlbarUtils.getIconForUrl(originUrl),
+        icon: lazy.UrlbarShared.getIconForUrl(originUrl),
         isBlockable: true,
         blockL10n: { id: "urlbar-result-menu-remove-from-history2" },
         helpUrl:

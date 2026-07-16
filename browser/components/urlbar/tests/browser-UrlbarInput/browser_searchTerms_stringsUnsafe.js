@@ -105,7 +105,7 @@ add_task(async function unsafe_search_strings() {
     "www.example.org/path path",
     "www. example.org/path",
     // Long string exceeding threshold.
-    "h".repeat(UrlbarUtils.MAX_TEXT_LENGTH + 1),
+    "h".repeat(UrlbarShared.MAX_TEXT_LENGTH + 1),
   ];
   for (let searchString of searches) {
     await checkSearchString(searchString, false);

@@ -45,7 +45,7 @@ export class UrlbarResult {
   /**
    * @typedef {{ [name: string]: any }} Payload
    *
-   * @typedef {typeof lazy.UrlbarUtils.HIGHLIGHT} HighlightType
+   * @typedef {typeof lazy.UrlbarShared.HIGHLIGHT} HighlightType
    * @typedef {Array<[number, number]>} HighlightIndexes e.g. [[index, length],,]
    * @typedef {Record<string, HighlightType | HighlightIndexes>} Highlights
    */
@@ -78,7 +78,7 @@ export class UrlbarResult {
     type,
     source,
     autofill,
-    exposureTelemetry = lazy.UrlbarUtils.EXPOSURE_TELEMETRY.NONE,
+    exposureTelemetry = UrlbarShared.EXPOSURE_TELEMETRY.NONE,
     group,
     heuristic = false,
     hideRowLabel = false,
@@ -240,7 +240,7 @@ export class UrlbarResult {
   /**
    * The type of the UrlbarProvider providing the result.
    *
-   * @type {?Values<typeof lazy.UrlbarUtils.PROVIDER_TYPE>}
+   * @type {?Values<typeof UrlbarShared.PROVIDER_TYPE>}
    */
   get providerType() {
     return this.#providerType;
@@ -320,7 +320,7 @@ export class UrlbarResult {
    *   Whether the result should be hidden.
    */
   get isHiddenExposure() {
-    return this.exposureTelemetry == lazy.UrlbarUtils.EXPOSURE_TELEMETRY.HIDDEN;
+    return this.exposureTelemetry == UrlbarShared.EXPOSURE_TELEMETRY.HIDDEN;
   }
 
   /**
@@ -366,7 +366,7 @@ export class UrlbarResult {
       // always be shown because otherwise the result's row in the view will
       // look a little strange, so show the URL's domain as the title. Not all
       // valid URLs have a domain, so fall back to the full URL.
-      highlightType = lazy.UrlbarUtils.HIGHLIGHT.TYPED;
+      highlightType = UrlbarShared.HIGHLIGHT.TYPED;
       try {
         // This will throw if `this.payload.url` isn't a valid URL. If the URL
         // is valid but doesn't have a domain, it won't throw and
@@ -385,7 +385,7 @@ export class UrlbarResult {
     }
 
     if (typeof value == "string") {
-      value = value.substring(0, lazy.UrlbarUtils.MAX_TEXT_LENGTH);
+      value = value.substring(0, UrlbarShared.MAX_TEXT_LENGTH);
     }
 
     if (Array.isArray(this.#highlights?.[payloadName])) {

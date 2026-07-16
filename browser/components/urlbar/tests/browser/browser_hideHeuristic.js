@@ -28,7 +28,7 @@ add_setup(async function () {
   await PlacesUtils.history.clear();
 });
 
-// UrlbarUtils.RESULT_GROUP.HEURISTIC_EXTENSION should be hidden.
+// UrlbarShared.RESULT_GROUP.HEURISTIC_EXTENSION should be hidden.
 add_task(async function extension() {
   await BrowserTestUtils.withNewTab("about:blank", async () => {
     await withVisits(async visitURLs => {
@@ -36,7 +36,7 @@ add_task(async function extension() {
       let url = "http://example.com/extension-test";
       let provider = new UrlbarTestUtils.TestProvider({
         name: "ExtensionTest",
-        type: UrlbarUtils.PROVIDER_TYPE.EXTENSION,
+        type: UrlbarShared.PROVIDER_TYPE.EXTENSION,
         results: [
           new UrlbarResult({
             type: UrlbarShared.RESULT_TYPE.URL,
@@ -55,7 +55,7 @@ add_task(async function extension() {
       // Do a search that fetches the provider's result and check it.
       let heuristic = await search({
         value: "test",
-        expectedGroup: UrlbarUtils.RESULT_GROUP.HEURISTIC_EXTENSION,
+        expectedGroup: UrlbarShared.RESULT_GROUP.HEURISTIC_EXTENSION,
       });
       Assert.equal(heuristic.payload.url, url, "Heuristic URL is correct");
 
@@ -70,7 +70,7 @@ add_task(async function extension() {
   });
 });
 
-// UrlbarUtils.RESULT_GROUP.HEURISTIC_OMNIBOX should be hidden.
+// UrlbarShared.RESULT_GROUP.HEURISTIC_OMNIBOX should be hidden.
 add_task(async function omnibox() {
   await BrowserTestUtils.withNewTab("about:blank", async () => {
     // Load an extension.
@@ -93,7 +93,7 @@ add_task(async function omnibox() {
     // result.
     let heuristic = await search({
       value: "omniboxtest foo",
-      expectedGroup: UrlbarUtils.RESULT_GROUP.HEURISTIC_OMNIBOX,
+      expectedGroup: UrlbarShared.RESULT_GROUP.HEURISTIC_OMNIBOX,
     });
     Assert.equal(
       heuristic.payload.keyword,
@@ -110,7 +110,7 @@ add_task(async function omnibox() {
   });
 });
 
-// UrlbarUtils.RESULT_GROUP.HEURISTIC_SEARCH_TIP should be shown.
+// UrlbarShared.RESULT_GROUP.HEURISTIC_SEARCH_TIP should be shown.
 add_task(async function searchTip() {
   await SpecialPowers.pushPrefEnv({
     set: [["browser.urlbar.searchTips.test.ignoreShowLimits", true]],
@@ -135,7 +135,7 @@ add_task(async function searchTip() {
   await SpecialPowers.popPrefEnv();
 });
 
-// UrlbarUtils.RESULT_GROUP.HEURISTIC_ENGINE_ALIAS should be hidden.
+// UrlbarShared.RESULT_GROUP.HEURISTIC_ENGINE_ALIAS should be hidden.
 add_task(async function engineAlias() {
   await BrowserTestUtils.withNewTab("about:blank", async () => {
     await withVisits(async visitURLs => {
@@ -149,7 +149,7 @@ add_task(async function engineAlias() {
         // then an immediate second search, which returns HEURISTIC_FALLBACK.
         let heuristic = await search({
           value: "test foo",
-          expectedGroup: UrlbarUtils.RESULT_GROUP.HEURISTIC_FALLBACK,
+          expectedGroup: UrlbarShared.RESULT_GROUP.HEURISTIC_FALLBACK,
         });
         Assert.equal(
           heuristic.payload.engine,
@@ -176,7 +176,7 @@ add_task(async function engineAlias() {
   });
 });
 
-// UrlbarUtils.RESULT_GROUP.HEURISTIC_BOOKMARK_KEYWORD should be hidden.
+// UrlbarShared.RESULT_GROUP.HEURISTIC_BOOKMARK_KEYWORD should be hidden.
 add_task(async function bookmarkKeyword() {
   await BrowserTestUtils.withNewTab("about:blank", async () => {
     await withVisits(async visitURLs => {
@@ -192,7 +192,7 @@ add_task(async function bookmarkKeyword() {
       // Do a search using the keyword and check the hidden heuristic result.
       let heuristic = await search({
         value: "bm foo",
-        expectedGroup: UrlbarUtils.RESULT_GROUP.HEURISTIC_BOOKMARK_KEYWORD,
+        expectedGroup: UrlbarShared.RESULT_GROUP.HEURISTIC_BOOKMARK_KEYWORD,
       });
       Assert.equal(
         heuristic.payload.keyword,
@@ -218,7 +218,7 @@ add_task(async function bookmarkKeyword() {
   });
 });
 
-// UrlbarUtils.RESULT_GROUP.HEURISTIC_AUTOFILL should be hidden.
+// UrlbarShared.RESULT_GROUP.HEURISTIC_AUTOFILL should be hidden.
 add_task(async function autofill() {
   await BrowserTestUtils.withNewTab("about:blank", async () => {
     await withVisits(async visitURLs => {
@@ -226,7 +226,7 @@ add_task(async function autofill() {
       // result.
       let heuristic = await search({
         value: "ex",
-        expectedGroup: UrlbarUtils.RESULT_GROUP.HEURISTIC_AUTOFILL,
+        expectedGroup: UrlbarShared.RESULT_GROUP.HEURISTIC_AUTOFILL,
       });
       Assert.ok(heuristic.autofill, "Heuristic is autofill");
       let heuristicURL = "http://example.com/";
@@ -246,7 +246,7 @@ add_task(async function autofill() {
   });
 });
 
-// UrlbarUtils.RESULT_GROUP.HEURISTIC_FALLBACK with an unknown URL should be
+// UrlbarShared.RESULT_GROUP.HEURISTIC_FALLBACK with an unknown URL should be
 // hidden.
 add_task(async function fallback_unknownURL() {
   await BrowserTestUtils.withNewTab("about:blank", async () => {
@@ -254,7 +254,7 @@ add_task(async function fallback_unknownURL() {
     let url = "http://example.com/unknown-url";
     let heuristic = await search({
       value: url,
-      expectedGroup: UrlbarUtils.RESULT_GROUP.HEURISTIC_FALLBACK,
+      expectedGroup: UrlbarShared.RESULT_GROUP.HEURISTIC_FALLBACK,
     });
     Assert.equal(heuristic.payload.url, url, "Heuristic URL is correct");
 
@@ -263,7 +263,7 @@ add_task(async function fallback_unknownURL() {
   });
 });
 
-// UrlbarUtils.RESULT_GROUP.HEURISTIC_FALLBACK with the search restriction token
+// UrlbarShared.RESULT_GROUP.HEURISTIC_FALLBACK with the search restriction token
 // should be hidden.
 add_task(async function fallback_searchRestrictionToken() {
   await BrowserTestUtils.withNewTab("about:blank", async () => {
@@ -273,7 +273,7 @@ add_task(async function fallback_searchRestrictionToken() {
         // Do a search with `?` and check the hidden heuristic result.
         let heuristic = await search({
           value: UrlbarShared.RESTRICT_TOKENS.SEARCH + " foo",
-          expectedGroup: UrlbarUtils.RESULT_GROUP.HEURISTIC_FALLBACK,
+          expectedGroup: UrlbarShared.RESULT_GROUP.HEURISTIC_FALLBACK,
         });
         Assert.equal(
           heuristic.payload.engine,
@@ -303,7 +303,7 @@ add_task(async function fallback_searchRestrictionToken() {
   });
 });
 
-// UrlbarUtils.RESULT_GROUP.HEURISTIC_FALLBACK with a search string that falls
+// UrlbarShared.RESULT_GROUP.HEURISTIC_FALLBACK with a search string that falls
 // back to a search result should be hidden.
 add_task(async function fallback_search() {
   await BrowserTestUtils.withNewTab("about:blank", async () => {
@@ -313,7 +313,7 @@ add_task(async function fallback_search() {
         // Do a search and check the hidden heuristic result.
         let heuristic = await search({
           value: "foo",
-          expectedGroup: UrlbarUtils.RESULT_GROUP.HEURISTIC_FALLBACK,
+          expectedGroup: UrlbarShared.RESULT_GROUP.HEURISTIC_FALLBACK,
         });
         Assert.equal(
           heuristic.payload.engine,
@@ -347,7 +347,7 @@ add_task(async function pickNonHeuristic() {
       // result.
       let heuristic = await search({
         value: "ex",
-        expectedGroup: UrlbarUtils.RESULT_GROUP.HEURISTIC_AUTOFILL,
+        expectedGroup: UrlbarShared.RESULT_GROUP.HEURISTIC_AUTOFILL,
       });
       Assert.ok(heuristic.autofill, "Heuristic is autofill");
       Assert.equal(
@@ -472,7 +472,7 @@ async function checkVisitResults(expectedURLs) {
  *   Options object
  * @param {string} options.value
  *   The search string.
- * @param {UrlbarUtils.RESULT_GROUP} options.expectedGroup
+ * @param {UrlbarShared.RESULT_GROUP} options.expectedGroup
  *   The expected result group of the hidden heuristic.
  * @returns {UrlbarResult}
  *   The hidden heuristic result.

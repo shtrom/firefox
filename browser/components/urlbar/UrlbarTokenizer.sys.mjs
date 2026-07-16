@@ -52,7 +52,7 @@ let tokenToKeywords = new Map();
 export var UrlbarTokenizer = {
   async loadL10nRestrictKeywords() {
     let l10nKeywords = await lazy.gFluentStrings.formatValues(
-      lazy.UrlbarUtils.LOCAL_SEARCH_MODES.map(mode => {
+      UrlbarShared.LOCAL_SEARCH_MODES.map(mode => {
         let name = lazy.UrlbarUtils.getResultSourceName(mode.source);
         return { id: `urlbar-search-mode-${name}` };
       })
@@ -63,13 +63,13 @@ export var UrlbarTokenizer = {
     ]);
 
     let englishKeywords = await englishSearchStrings.formatValues(
-      lazy.UrlbarUtils.LOCAL_SEARCH_MODES.map(mode => {
+      UrlbarShared.LOCAL_SEARCH_MODES.map(mode => {
         let name = lazy.UrlbarUtils.getResultSourceName(mode.source);
         return { id: `urlbar-search-mode-${name}-en` };
       })
     );
 
-    for (let { restrict } of lazy.UrlbarUtils.LOCAL_SEARCH_MODES) {
+    for (let { restrict } of UrlbarShared.LOCAL_SEARCH_MODES) {
       let uniqueKeywords = [
         ...new Set([l10nKeywords.shift(), englishKeywords.shift()]),
       ];

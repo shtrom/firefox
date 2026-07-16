@@ -17,10 +17,10 @@ const TEST_DATA = [
   {
     description: "Test for characters over the limit",
     input: "A%E3%81%82%F0%A0%AE%B7%21".repeat(
-      Math.ceil(UrlbarUtils.MAX_TEXT_LENGTH / 25)
+      Math.ceil(UrlbarShared.MAX_TEXT_LENGTH / 25)
     ),
     expected: "A%E3%81%82%F0%A0%AE%B7%21".repeat(
-      Math.ceil(UrlbarUtils.MAX_TEXT_LENGTH / 25)
+      Math.ceil(UrlbarShared.MAX_TEXT_LENGTH / 25)
     ),
     testMessage: "Return given characters as it is because of over the limit",
   },

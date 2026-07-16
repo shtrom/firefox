@@ -191,7 +191,7 @@ function convertToUtf8(str) {
  * @param {Array} results The results for the provider to return.
  * @param {Function} [onCancel] Optional, called when the query provider
  *                              receives a cancel instruction.
- * @param {UrlbarUtils.PROVIDER_TYPE} type The provider type.
+ * @param {UrlbarShared.PROVIDER_TYPE} type The provider type.
  * @param {string} [name] Optional, use as the provider name.
  *                        If none, a default name is chosen.
  * @returns {UrlbarProvider} The provider
@@ -561,7 +561,7 @@ function makeOmniboxResult(
       title: description,
       content,
       keyword,
-      icon: UrlbarUtils.ICON.EXTENSION,
+      icon: UrlbarShared.ICON.EXTENSION,
     },
   });
 }
@@ -1231,10 +1231,10 @@ async function check_results({
       try {
         const payloadUrlProtocol = new URL(actual.payload.url).protocol;
         if (
-          !UrlbarUtils.PROTOCOLS_WITH_ICONS.includes(payloadUrlProtocol) &&
+          !UrlbarShared.PROTOCOLS_WITH_ICONS.includes(payloadUrlProtocol) &&
           actual.source != UrlbarShared.RESULT_SOURCE.OTHER_LOCAL
         ) {
-          expected.payload.icon = UrlbarUtils.ICON.DEFAULT;
+          expected.payload.icon = UrlbarShared.ICON.DEFAULT;
         }
       } catch (e) {
         console.error(e);

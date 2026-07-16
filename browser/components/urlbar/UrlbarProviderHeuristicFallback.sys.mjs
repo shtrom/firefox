@@ -33,10 +33,10 @@ export class UrlbarProviderHeuristicFallback extends UrlbarProvider {
   }
 
   /**
-   * @returns {Values<typeof UrlbarUtils.PROVIDER_TYPE>}
+   * @returns {Values<typeof lazy.UrlbarShared.PROVIDER_TYPE>}
    */
   get type() {
-    return UrlbarUtils.PROVIDER_TYPE.HEURISTIC;
+    return lazy.UrlbarShared.PROVIDER_TYPE.HEURISTIC;
   }
 
   /**
@@ -328,7 +328,7 @@ export class UrlbarProviderHeuristicFallback extends UrlbarProvider {
       heuristic,
       payload: {
         engine: engine.name,
-        icon: UrlbarUtils.ICON.SEARCH_GLASS,
+        icon: lazy.UrlbarShared.ICON.SEARCH_GLASS,
         query,
         title: query,
         keyword,

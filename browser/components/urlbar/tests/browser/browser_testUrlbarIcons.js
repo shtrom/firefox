@@ -39,7 +39,7 @@ add_task(async function test_icon_is_search_glass_when_empty() {
 
   Assert.equal(
     getSwitcherIconUrl(window),
-    UrlbarUtils.ICON.SEARCH_GLASS,
+    UrlbarShared.ICON.SEARCH_GLASS,
     "Icon is search glass when urlbar is unfocused"
   );
 
@@ -102,13 +102,13 @@ add_task(async function test_icon_updates_to_globe_on_url_result() {
   }, "Waiting for a URL result at index 0");
 
   await TestUtils.waitForCondition(
-    () => getSwitcherIconUrl(window) == UrlbarUtils.ICON.GLOBE,
+    () => getSwitcherIconUrl(window) == UrlbarShared.ICON.GLOBE,
     "Waiting for icon to update to globe for URL result"
   );
 
   Assert.equal(
     getSwitcherIconUrl(window),
-    UrlbarUtils.ICON.GLOBE,
+    UrlbarShared.ICON.GLOBE,
     "Icon should be the globe when the top result is a URL"
   );
 
@@ -130,13 +130,13 @@ add_task(async function test_icon_updates_to_globe_on_autofill_result() {
   }, "Waiting for an autofill result at index 0");
 
   await TestUtils.waitForCondition(
-    () => getSwitcherIconUrl(window) == UrlbarUtils.ICON.GLOBE,
+    () => getSwitcherIconUrl(window) == UrlbarShared.ICON.GLOBE,
     "Waiting for icon to update to globe for autofill result"
   );
 
   Assert.equal(
     getSwitcherIconUrl(window),
-    UrlbarUtils.ICON.GLOBE,
+    UrlbarShared.ICON.GLOBE,
     "Icon should be the globe when the top result is autofilled"
   );
 
