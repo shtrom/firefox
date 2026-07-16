@@ -387,18 +387,13 @@ void IMEContentObserver::ObserveEditableNode() {
           ("0x%p ObserveEditableNode(), starting to observe 0x%p (%s)", this,
            mRootElement.get(), ToString(*mRootElement).c_str()));
 
-  // For EditContext, we shouldn't observe the element for mutations,
-  // since updating the text is only done through the updateText() method
-  // or text input.
-  if (!mRootElement->HasFlag(ELEMENT_HAS_EDIT_CONTEXT)) {
-    mRootElement->AddMutationObserver(this);
-    // If it's in a document (should be so), we can use document observer to
-    // reduce redundant computation of text change offsets.
-    Document* doc = mRootElement->GetComposedDoc();
-    if (doc) {
-      RefPtr<DocumentObserver> documentObserver = mDocumentObserver;
-      documentObserver->Observe(doc);
-    }
+  mRootElement->AddMutationObserver(this);
+  // If it's in a document (should be so), we can use document observer to
+  // reduce redundant computation of text change offsets.
+  Document* doc = mRootElement->GetComposedDoc();
+  if (doc) {
+    RefPtr<DocumentObserver> documentObserver = mDocumentObserver;
+    documentObserver->Observe(doc);
   }
 
   if (mDocShell) {
@@ -726,12 +721,6 @@ nsresult IMEContentObserver::GetSelectionAndRoot(Selection** aSelection,
 
 void IMEContentObserver::OnSelectionChange(Selection& aSelection) {
   if (!mIsObserving || !mWidget) {
-    return;
-  }
-  if (mRootElement->HasFlag(ELEMENT_HAS_EDIT_CONTEXT)) {
-    // For EditContext, we notify the IME of selection change only when
-    // EditContext.updateSelection() is called, since the DOM selection
-    // should not be used by the IME.
     return;
   }
 
