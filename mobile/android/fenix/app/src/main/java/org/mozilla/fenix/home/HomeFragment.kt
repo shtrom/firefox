@@ -27,6 +27,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -178,6 +179,7 @@ import org.mozilla.fenix.utils.Settings
 import org.mozilla.fenix.utils.allowUndo
 import org.mozilla.fenix.utils.getUndoDelay
 import org.mozilla.fenix.utils.showAddSearchWidgetPromptIfSupported
+import org.mozilla.fenix.wallpapers.LocalWallpaperState
 import org.mozilla.fenix.wallpapers.Wallpaper
 import java.lang.ref.WeakReference
 import org.mozilla.fenix.ipprotection.store.Surface as IPProtectionSurface
@@ -668,18 +670,20 @@ class HomeFragment : Fragment() {
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            Homepage(
-                state = HomepageState.build(
-                    appState = appState,
-                    privacyNoticeBannerState = privacyNoticeBannerState,
-                    settings = settings,
-                    browsingModeManager = browsingModeManager,
-                ),
-                interactor = sessionControlInteractor,
-                onTopSitesItemBound = {
-                    StartupTimeline.onTopSitesItemBound(activity = (requireActivity() as HomeActivity))
-                },
-            )
+            CompositionLocalProvider(LocalWallpaperState provides appState.wallpaperState) {
+                Homepage(
+                    state = HomepageState.build(
+                        appState = appState,
+                        privacyNoticeBannerState = privacyNoticeBannerState,
+                        settings = settings,
+                        browsingModeManager = browsingModeManager,
+                    ),
+                    interactor = sessionControlInteractor,
+                    onTopSitesItemBound = {
+                        StartupTimeline.onTopSitesItemBound(activity = (requireActivity() as HomeActivity))
+                    },
+                )
+            }
 
             if (microsurveyVisible) {
                 MicrosurveyPrompt(

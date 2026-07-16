@@ -108,6 +108,7 @@ import org.mozilla.fenix.theme.Theme
 import org.mozilla.fenix.trackingprotection.TrackersBlockedCard
 import org.mozilla.fenix.utils.isLargeScreenSize
 import org.mozilla.fenix.wallpapers.WallpaperState
+import org.mozilla.fenix.wallpapers.WallpaperTheme
 import mozilla.components.ui.icons.R as iconsR
 
 private const val POPULAR_SITES_TO_SHOW = 8
@@ -304,7 +305,6 @@ internal fun Homepage(
                             if (showRecentTabs) {
                                 RecentTabsSection(
                                     interactor = interactor,
-                                    cardBackgroundColor = cardBackgroundColor,
                                     recentTabs = recentTabs,
                                     reducedTopSpacing = showPrivacyReport && showLongfoxAnimation,
                                 )
@@ -540,7 +540,6 @@ internal fun TopSitesSection(
 @Composable
 private fun RecentTabsSection(
     interactor: RecentTabInteractor,
-    cardBackgroundColor: Color,
     recentTabs: List<RecentTab>,
     reducedTopSpacing: Boolean = false,
 ) {
@@ -556,17 +555,20 @@ private fun RecentTabsSection(
 
         Spacer(Modifier.height(16.dp))
 
-        RecentTabs(
-            recentTabs = recentTabs,
-            backgroundColor = cardBackgroundColor,
-            onRecentTabClick = { interactor.onRecentTabClicked(it) },
-            menuItems = listOf(
-                RecentTabMenuItem(
-                    title = stringResource(id = R.string.recent_tab_menu_item_remove),
-                    onClick = interactor::onRemoveRecentTab,
+        // The cards read their background from the wallpaper-derived surfaceBright; card content
+        // keeps the ambient onSurface so it stays legible against the card.
+        WallpaperTheme {
+            RecentTabs(
+                recentTabs = recentTabs,
+                onRecentTabClick = { interactor.onRecentTabClicked(it) },
+                menuItems = listOf(
+                    RecentTabMenuItem(
+                        title = stringResource(id = R.string.recent_tab_menu_item_remove),
+                        onClick = interactor::onRemoveRecentTab,
+                    ),
                 ),
-            ),
-        )
+            )
+        }
     }
 }
 
