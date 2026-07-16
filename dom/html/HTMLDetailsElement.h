@@ -48,7 +48,7 @@ class HTMLDetailsElement final : public nsGenericHTMLElement {
 
   void GetName(nsAString& aName) { GetHTMLAttr(nsGkAtoms::name, aName); }
 
-  bool Open() const { return GetBoolAttr(nsGkAtoms::open); }
+  bool Open() const { return State().HasState(ElementState::OPEN); }
 
   void SetOpen(bool aOpen, ErrorResult& aError) {
     SetHTMLBoolAttr(nsGkAtoms::open, aOpen, aError);
