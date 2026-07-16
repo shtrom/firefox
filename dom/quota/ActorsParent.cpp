@@ -421,30 +421,7 @@ nsresult CreateCacheTables(mozIStorageConnection& aConnection) {
 OkOrErr InvalidateCache(mozIStorageConnection& aConnection) {
   AssertIsOnIOThread();
 
-  static constexpr auto kDeleteCacheQuery = "DELETE FROM origin;"_ns;
-  static constexpr auto kSetInvalidFlagQuery = "UPDATE cache SET valid = 0"_ns;
-
-  QM_TRY(QM_OR_ELSE_WARN(
-      // Expression.
-      ([&]() -> OkOrErr {
-        mozStorageTransaction transaction(&aConnection,
-                                          /*aCommitOnComplete */ false);
-
-        QM_TRY(QM_TO_RESULT(transaction.Start()));
-        QM_TRY(QM_TO_RESULT(aConnection.ExecuteSimpleSQL(kDeleteCacheQuery)));
-        QM_TRY(
-            QM_TO_RESULT(aConnection.ExecuteSimpleSQL(kSetInvalidFlagQuery)));
-        QM_TRY(QM_TO_RESULT(transaction.Commit()));
-
-        return Ok{};
-      }()),
-      // Fallback.
-      ([&](const QMResult& rv) -> OkOrErr {
-        QM_TRY(
-            QM_TO_RESULT(aConnection.ExecuteSimpleSQL(kSetInvalidFlagQuery)));
-
-        return Ok{};
-      })));
+  QM_TRY(QM_TO_RESULT(aConnection.ExecuteSimpleSQL("DELETE FROM origin;"_ns)));
 
   return Ok{};
 }
@@ -3258,11 +3235,11 @@ void QuotaManager::UnloadQuota() {
 
   auto autoRemoveQuota = MakeScopeExit([&] { RemoveQuota(); });
 
-  mozStorageTransaction transaction(
-      mStorageConnection, false, mozIStorageConnection::TRANSACTION_IMMEDIATE);
-
-  QM_TRY(MOZ_TO_RESULT(transaction.Start()), QM_VOID);
-
+  // Each per-origin CreateDirectoryMetadata2 auto-commits its own
+  // statement; a crash mid-loop leaves the cache `valid` bit unchanged
+  // (still 0 from InvalidateQuotaCache earlier), and the next startup's
+  // InitializeRepository reconciliation will patch up any divergent
+  // rows and delete orphans.
   {
     MutexAutoLock lock(mQuotaMutex);
 
@@ -3314,14 +3291,12 @@ void QuotaManager::UnloadQuota() {
       const auto& stmt,
       MOZ_TO_RESULT_INVOKE_MEMBER_TYPED(
           nsCOMPtr<mozIStorageStatement>, mStorageConnection, CreateStatement,
-          "UPDATE cache SET valid = :valid, build_id = :buildId;"_ns),
+          "UPDATE cache SET build_id = :buildId;"_ns),
       QM_VOID);
 
-  QM_TRY(MOZ_TO_RESULT(stmt->BindInt32ByName("valid"_ns, 1)), QM_VOID);
   QM_TRY(MOZ_TO_RESULT(stmt->BindUTF8StringByName("buildId"_ns, *gBuildId)),
          QM_VOID);
   QM_TRY(MOZ_TO_RESULT(stmt->Execute()), QM_VOID);
-  QM_TRY(MOZ_TO_RESULT(transaction.Commit()), QM_VOID);
 }
 
 void QuotaManager::RemoveOriginFromCacheForEviction(
