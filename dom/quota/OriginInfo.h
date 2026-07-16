@@ -12,6 +12,8 @@
 
 namespace mozilla::dom::quota {
 
+class DirtyTrackingAutoLock;
+
 class CanonicalQuotaObject;
 class GroupInfo;
 class OriginUpserter;
@@ -36,23 +38,7 @@ class OriginInfo final : public SupportsThreadSafeWeakPtr<OriginInfo> {
 
   const nsCString& Origin() const { return mOrigin; }
 
-  int64_t LockedUsage() const {
-    AssertCurrentThreadOwnsQuotaMutex();
-
-#ifdef DEBUG
-    QuotaManager* quotaManager = QuotaManager::Get();
-    MOZ_ASSERT(quotaManager);
-
-    uint64_t usage = 0;
-    for (Client::Type type : quotaManager->AllClientTypes()) {
-      AssertNoOverflow(usage, mClientUsages[type].valueOr(0));
-      usage += mClientUsages[type].valueOr(0);
-    }
-    MOZ_ASSERT(mUsage == usage);
-#endif
-
-    return mUsage;
-  }
+  int64_t LockedUsage() const;
 
   int64_t LockedAccessTime() const {
     AssertCurrentThreadOwnsQuotaMutex();
@@ -92,6 +78,11 @@ class OriginInfo final : public SupportsThreadSafeWeakPtr<OriginInfo> {
     return mDirectoryExists;
   }
 
+  void LockedSetClean() {
+    AssertCurrentThreadOwnsQuotaMutex();
+    mMetadataDirty = false;
+  }
+
   OriginMetadata FlattenToOriginMetadata() const;
 
   OriginStateMetadata LockedFlattenToOriginStateMetadata() const;
@@ -112,16 +103,20 @@ class OriginInfo final : public SupportsThreadSafeWeakPtr<OriginInfo> {
     MOZ_ASSERT(!mCanonicalQuotaObjects.Count());
   }
 
-  void LockedDecreaseUsage(Client::Type aClientType, int64_t aSize);
+  void LockedDecreaseUsage(Client::Type aClientType, int64_t aSize,
+                           DirtyTrackingAutoLock& aProofOfLock);
 
-  void LockedResetUsageForClient(Client::Type aClientType);
+  void LockedResetUsageForClient(Client::Type aClientType,
+                                 DirtyTrackingAutoLock& aProofOfLock);
 
   UsageInfo LockedGetUsageForClient(Client::Type aClientType);
 
-  void LockedUpdateAccessTime(int64_t aAccessTime) {
+  void LockedUpdateAccessTime(int64_t aAccessTime,
+                              DirtyTrackingAutoLock& aProofOfLock) {
     AssertCurrentThreadOwnsQuotaMutex();
 
     mAccessTime = aAccessTime;
+    MakeDirty(aProofOfLock);
     if (!mAccessed) {
       mAccessed = true;
     }
@@ -133,23 +128,29 @@ class OriginInfo final : public SupportsThreadSafeWeakPtr<OriginInfo> {
     mMaintenanceDate = aMaintenanceDate;
   }
 
-  void LockedUpdateAccessed() {
+  void LockedUpdateAccessed(DirtyTrackingAutoLock& aProofOfLock) {
     AssertCurrentThreadOwnsQuotaMutex();
 
     if (!mAccessed) {
       mAccessed = true;
+      MakeDirty(aProofOfLock);
     }
   }
 
-  void LockedPersist();
+  void LockedPersist(DirtyTrackingAutoLock& aProofOfLock);
 
   void LockedDirectoryCreated();
 
-  void LockedTruncateUsages(Client::Type aClientType, uint64_t aDelta);
+  void LockedTruncateUsages(Client::Type aClientType, uint64_t aDelta,
+                            DirtyTrackingAutoLock& aProofOfLock);
 
-  Maybe<bool> LockedUpdateUsages(Client::Type aClientType, uint64_t aDelta);
+  Maybe<bool> LockedUpdateUsages(Client::Type aClientType, uint64_t aDelta,
+                                 DirtyTrackingAutoLock& aProofOfLock);
 
-  bool LockedUpdateUsagesForEviction(Client::Type aClientType, uint64_t aDelta);
+  bool LockedUpdateUsagesForEviction(Client::Type aClientType, uint64_t aDelta,
+                                     DirtyTrackingAutoLock& aProofOfLock);
+
+  constexpr TimeStamp GetLastModifiedTime() const { return mLastModifiedTime; }
 
   nsTHashMap<nsStringHashKey, NotNull<CanonicalQuotaObject*>>
       mCanonicalQuotaObjects;
@@ -179,9 +180,12 @@ class OriginInfo final : public SupportsThreadSafeWeakPtr<OriginInfo> {
  private:
   bool IsDirty() const { return mMetadataDirty; }
 
+  void MakeDirty(DirtyTrackingAutoLock& aProofOfLock);
+
   ClientUsageArray mClientUsages;
   uint64_t mUsage;
-  bool mMetadataDirty{false};
+  TimeStamp mLastModifiedTime;
+  bool mMetadataDirty = false;
 };
 
 class OriginInfoAccessTimeComparator {

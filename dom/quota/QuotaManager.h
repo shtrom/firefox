@@ -86,7 +86,6 @@ class OriginUpserter;
 class QuotaObject;
 class SaveOriginAccessTimeOp;
 class UniversalDirectoryLock;
-class UsageTracker;
 
 namespace test {
 class GTEST_CLASS(TestQuotaManagerAndShutdownFixture,
@@ -117,6 +116,7 @@ class QuotaManager final : public BackgroundThreadObject {
   friend class test::GTEST_CLASS(TestQuotaManagerAndShutdownFixture,
                                  ThumbnailPrivateIdentityTemporaryOriginCount);
   friend class UniversalDirectoryLock;
+  friend class UsageTracker;
 
   friend Result<PrincipalMetadata, nsresult> GetInfoFromValidatedPrincipalInfo(
       QuotaManager& aQuotaManager,
@@ -558,6 +558,8 @@ class QuotaManager final : public BackgroundThreadObject {
   nsresult InitializeTemporaryStorageInternal();
 
   nsresult EnsureTemporaryStorageIsInitializedInternal();
+
+  void RegisterDirtyOriginInfo(DirtyTrackingAutoLock& /* TODO */) {}
 
  public:
   RefPtr<BoolPromise> InitializeAllTemporaryOrigins();

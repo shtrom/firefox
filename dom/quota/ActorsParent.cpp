@@ -2674,48 +2674,28 @@ void QuotaManager::DecreaseUsageForClient(const ClientMetadata& aClientMetadata,
   MOZ_ASSERT(!NS_IsMainThread());
   MOZ_ASSERT(IsBestEffortPersistenceType(aClientMetadata.mPersistenceType));
 
-  MutexAutoLock lock(mQuotaMutex);
-
-  GroupInfoPair* pair;
-  if (!mGroupInfoPairs.Get(aClientMetadata.mGroup, &pair)) {
+  DirtyTrackingAutoLock lock(mQuotaMutex, mGroupInfoPairs, aClientMetadata);
+  if (!lock.IsValid()) {
     return;
   }
 
-  RefPtr<GroupInfo> groupInfo =
-      pair->LockedGetGroupInfo(aClientMetadata.mPersistenceType);
-  if (!groupInfo) {
-    return;
-  }
-
-  RefPtr<OriginInfo> originInfo =
-      groupInfo->LockedGetOriginInfo(aClientMetadata.mOrigin);
-  if (originInfo) {
-    originInfo->LockedDecreaseUsage(aClientMetadata.mClientType, aSize);
-  }
+  RefPtr<OriginInfo> originInfo = lock.GetOriginInfo();
+  originInfo->LockedDecreaseUsage(aClientMetadata.mClientType, aSize, lock);
 }
 
 void QuotaManager::ResetUsageForClient(const ClientMetadata& aClientMetadata) {
   MOZ_ASSERT(!NS_IsMainThread());
   MOZ_ASSERT(IsBestEffortPersistenceType(aClientMetadata.mPersistenceType));
 
-  MutexAutoLock lock(mQuotaMutex);
-
-  GroupInfoPair* pair;
-  if (!mGroupInfoPairs.Get(aClientMetadata.mGroup, &pair)) {
+  DirtyTrackingAutoLock lock(
+      mQuotaMutex, mGroupInfoPairs,
+      static_cast<const OriginMetadata&>(aClientMetadata));
+  if (!lock.IsValid()) {
     return;
   }
 
-  RefPtr<GroupInfo> groupInfo =
-      pair->LockedGetGroupInfo(aClientMetadata.mPersistenceType);
-  if (!groupInfo) {
-    return;
-  }
-
-  RefPtr<OriginInfo> originInfo =
-      groupInfo->LockedGetOriginInfo(aClientMetadata.mOrigin);
-  if (originInfo) {
-    originInfo->LockedResetUsageForClient(aClientMetadata.mClientType);
-  }
+  RefPtr<OriginInfo> originInfo = lock.GetOriginInfo();
+  originInfo->LockedResetUsageForClient(aClientMetadata.mClientType, lock);
 }
 
 UsageInfo QuotaManager::GetUsageForClient(PersistenceType aPersistenceType,
@@ -2750,26 +2730,13 @@ void QuotaManager::UpdateOriginAccessTime(const OriginMetadata& aOriginMetadata,
   AssertIsOnIOThread();
   MOZ_ASSERT(aOriginMetadata.mPersistenceType != PERSISTENCE_TYPE_PERSISTENT);
 
-  MutexAutoLock lock(mQuotaMutex);
-
-  GroupInfoPair* pair;
-  if (!mGroupInfoPairs.Get(aOriginMetadata.mGroup, &pair)) {
+  DirtyTrackingAutoLock lock(mQuotaMutex, mGroupInfoPairs, aOriginMetadata);
+  if (!lock.IsValid()) {
     return;
   }
 
-  RefPtr<GroupInfo> groupInfo =
-      pair->LockedGetGroupInfo(aOriginMetadata.mPersistenceType);
-  if (!groupInfo) {
-    return;
-  }
-
-  RefPtr<OriginInfo> originInfo =
-      groupInfo->LockedGetOriginInfo(aOriginMetadata.mOrigin);
-  if (!originInfo) {
-    return;
-  }
-
-  originInfo->LockedUpdateAccessTime(aTimestamp);
+  RefPtr<OriginInfo> originInfo = lock.GetOriginInfo();
+  originInfo->LockedUpdateAccessTime(aTimestamp, /* aProofOfLock */ lock);
 }
 
 void QuotaManager::UpdateOriginMaintenanceDate(
@@ -2803,26 +2770,13 @@ void QuotaManager::UpdateOriginAccessed(const OriginMetadata& aOriginMetadata) {
   AssertIsOnIOThread();
   MOZ_ASSERT(aOriginMetadata.mPersistenceType != PERSISTENCE_TYPE_PERSISTENT);
 
-  MutexAutoLock lock(mQuotaMutex);
-
-  GroupInfoPair* pair;
-  if (!mGroupInfoPairs.Get(aOriginMetadata.mGroup, &pair)) {
+  DirtyTrackingAutoLock lock(mQuotaMutex, mGroupInfoPairs, aOriginMetadata);
+  if (!lock.IsValid()) {
     return;
   }
 
-  RefPtr<GroupInfo> groupInfo =
-      pair->LockedGetGroupInfo(aOriginMetadata.mPersistenceType);
-  if (!groupInfo) {
-    return;
-  }
-
-  RefPtr<OriginInfo> originInfo =
-      groupInfo->LockedGetOriginInfo(aOriginMetadata.mOrigin);
-  if (!originInfo) {
-    return;
-  }
-
-  originInfo->LockedUpdateAccessed();
+  RefPtr<OriginInfo> originInfo = lock.GetOriginInfo();
+  originInfo->LockedUpdateAccessed(/* aProofOfLock */ lock);
 }
 
 void QuotaManager::RemoveQuota() {
@@ -3219,7 +3173,7 @@ void QuotaManager::UnloadQuota() {
           }
 
           auto metadata = originInfo->LockedFlattenToFullOriginMetadata();
-
+          metadata.mDirty = false;
           QM_WARNONLY_TRY(mOriginUpserter->Refresh(metadata));
         }
 
@@ -3448,12 +3402,12 @@ Nullable<bool> QuotaManager::OriginPersisted(
 void QuotaManager::PersistOrigin(const OriginMetadata& aOriginMetadata) {
   AssertIsOnIOThread();
 
-  MutexAutoLock lock(mQuotaMutex);
-
+  DirtyTrackingAutoLock lock(mQuotaMutex, mGroupInfoPairs, aOriginMetadata);
   RefPtr<OriginInfo> originInfo =
       LockedGetOriginInfo(PERSISTENCE_TYPE_DEFAULT, aOriginMetadata);
+
   if (originInfo && !originInfo->LockedPersisted()) {
-    originInfo->LockedPersist();
+    originInfo->LockedPersist(lock);
   }
 }
 
