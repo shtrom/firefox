@@ -1634,13 +1634,14 @@ bool BytecodeEmitter::emitTDZCheckIfNeeded(TaggedParserAtomIndex name,
   return innermostTDZCheckCache->noteTDZCheck(this, name, DontCheckTDZ);
 }
 
-bool BytecodeEmitter::emitPropLHS(PropertyAccess* prop) {
+bool BytecodeEmitter::emitPropLHS(NonOptonalPropertyAccessBase* prop) {
   MOZ_ASSERT(!prop->isSuper());
 
   ParseNode* expr = &prop->expression();
 
+  // Not all non-optional property accesses can be flattened (e.g. super.x or
+  // arguments.length); use emitTree for those instead.
   if (!expr->is<PropertyAccess>() || expr->as<PropertyAccess>().isSuper()) {
-    // The non-optimized case.
     return emitTree(expr);
   }
 
@@ -1707,7 +1708,8 @@ bool BytecodeEmitter::emitArgumentsLength() {
 }
 
 bool BytecodeEmitter::emitPropIncDec(UnaryNode* incDec, ValueUsage valueUsage) {
-  PropertyAccess* prop = &incDec->kid()->as<PropertyAccess>();
+  NonOptonalPropertyAccessBase* prop =
+      &incDec->kid()->as<NonOptonalPropertyAccessBase>();
   bool isSuper = prop->isSuper();
   ParseNodeKind kind = incDec->getKind();
   PropOpEmitter poe(
@@ -2660,7 +2662,8 @@ bool BytecodeEmitter::emitDestructuringLHSRef(ParseNode* target,
 
     case ParseNodeKind::ArgumentsLength:
     case ParseNodeKind::DotExpr: {
-      PropertyAccess* prop = &target->as<PropertyAccess>();
+      NonOptonalPropertyAccessBase* prop =
+          &target->as<NonOptonalPropertyAccessBase>();
       bool isSuper = prop->isSuper();
       PropOpEmitter poe(this, PropOpEmitter::Kind::SimpleAssignment,
                         isSuper ? PropOpEmitter::ObjKind::Super
@@ -2790,7 +2793,7 @@ bool BytecodeEmitter::emitSetOrInitializeDestructuring(
       //            [stack] # otherwise
       //            [stack] OBJ VAL
       auto& poe = lref.emitter<PropOpEmitter>();
-      auto* prop = &target->as<PropertyAccess>();
+      auto* prop = &target->as<NonOptonalPropertyAccessBase>();
 
       if (!poe.emitAssignment(prop->key().atom())) {
         //          [stack] # VAL
@@ -4415,7 +4418,8 @@ bool BytecodeEmitter::emitAssignmentOrInit(ParseNodeKind kind, ParseNode* lhs,
     }
     case ParseNodeKind::ArgumentsLength:
     case ParseNodeKind::DotExpr: {
-      PropertyAccess* prop = &lhs->as<PropertyAccess>();
+      NonOptonalPropertyAccessBase* prop =
+          &lhs->as<NonOptonalPropertyAccessBase>();
       bool isSuper = prop->isSuper();
       poe.emplace(this,
                   isCompound ? PropOpEmitter::Kind::CompoundAssignment
@@ -4515,7 +4519,8 @@ bool BytecodeEmitter::emitAssignmentOrInit(ParseNodeKind kind, ParseNode* lhs,
     switch (lhs->getKind()) {
       case ParseNodeKind::ArgumentsLength:
       case ParseNodeKind::DotExpr: {
-        PropertyAccess* prop = &lhs->as<PropertyAccess>();
+        NonOptonalPropertyAccessBase* prop =
+            &lhs->as<NonOptonalPropertyAccessBase>();
         if (!poe->emitGet(prop->key().atom())) {
           //        [stack] # if Super
           //        [stack] THIS SUPERBASE PROP
@@ -4630,7 +4635,8 @@ bool BytecodeEmitter::emitAssignmentOrInit(ParseNodeKind kind, ParseNode* lhs,
     }
     case ParseNodeKind::ArgumentsLength:
     case ParseNodeKind::DotExpr: {
-      PropertyAccess* prop = &lhs->as<PropertyAccess>();
+      NonOptonalPropertyAccessBase* prop =
+          &lhs->as<NonOptonalPropertyAccessBase>();
       if (!poe->emitAssignment(prop->key().atom())) {
         //          [stack] VAL
         return false;
@@ -4722,7 +4728,8 @@ bool BytecodeEmitter::emitShortCircuitAssignment(AssignmentNode* node) {
     }
     case ParseNodeKind::ArgumentsLength:
     case ParseNodeKind::DotExpr: {
-      PropertyAccess* prop = &lhs->as<PropertyAccess>();
+      NonOptonalPropertyAccessBase* prop =
+          &lhs->as<NonOptonalPropertyAccessBase>();
       bool isSuper = prop->isSuper();
 
       poe.emplace(this, PropOpEmitter::Kind::CompoundAssignment,
@@ -4858,7 +4865,8 @@ bool BytecodeEmitter::emitShortCircuitAssignment(AssignmentNode* node) {
     }
     case ParseNodeKind::ArgumentsLength:
     case ParseNodeKind::DotExpr: {
-      PropertyAccess* prop = &lhs->as<PropertyAccess>();
+      NonOptonalPropertyAccessBase* prop =
+          &lhs->as<NonOptonalPropertyAccessBase>();
 
       if (!poe->emitAssignment(prop->key().atom())) {
         //          [stack] RHS
@@ -7288,11 +7296,11 @@ bool BytecodeEmitter::emitDeleteName(UnaryNode* deleteNode) {
 bool BytecodeEmitter::emitDeleteProperty(UnaryNode* deleteNode) {
   MOZ_ASSERT(deleteNode->isKind(ParseNodeKind::DeletePropExpr));
 
-  PropertyAccess* propExpr = &deleteNode->kid()->as<PropertyAccess>();
+  NonOptonalPropertyAccessBase* propExpr =
+      &deleteNode->kid()->as<NonOptonalPropertyAccessBase>();
   PropOpEmitter poe(this, PropOpEmitter::Kind::Delete,
-                    propExpr->as<PropertyAccess>().isSuper()
-                        ? PropOpEmitter::ObjKind::Super
-                        : PropOpEmitter::ObjKind::Other);
+                    propExpr->isSuper() ? PropOpEmitter::ObjKind::Super
+                                        : PropOpEmitter::ObjKind::Other);
 
   if (!poe.prepareForObj()) {
     return false;
@@ -7427,8 +7435,7 @@ bool BytecodeEmitter::emitDeleteOptionalChain(UnaryNode* deleteNode) {
 
 bool BytecodeEmitter::emitDeletePropertyInOptChain(PropertyAccessBase* propExpr,
                                                    OptionalEmitter& oe) {
-  MOZ_ASSERT_IF(propExpr->is<PropertyAccess>(),
-                !propExpr->as<PropertyAccess>().isSuper());
+  MOZ_ASSERT(!propExpr->isSuper());
   PropOpEmitter poe(this, PropOpEmitter::Kind::Delete,
                     PropOpEmitter::ObjKind::Other);
 
@@ -8303,7 +8310,7 @@ ParseNode* BytecodeEmitter::getCoordNode(ParseNode* callNode,
         //
         // obj()['aprop']() // expression
         //       ^          // column coord
-        coordNode = &calleeNode->as<PropertyAccess>().key();
+        coordNode = &calleeNode->as<NonOptonalPropertyAccessBase>().key();
         break;
       case ParseNodeKind::Name: {
         // Use the start of callee name unless it is at a separator

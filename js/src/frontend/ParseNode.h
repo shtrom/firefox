@@ -2073,6 +2073,11 @@ class PropertyAccessBase : public BinaryNode {
     return match;
   }
 
+  bool isSuper() const {
+    // ParseNodeKind::SuperBase cannot result from any expression syntax.
+    return expression().isKind(ParseNodeKind::SuperBase);
+  }
+
   NameNode& key() const { return right()->as<NameNode>(); }
 
   // Method used by BytecodeEmitter::emitPropLHS for optimization.
@@ -2085,14 +2090,10 @@ class PropertyAccessBase : public BinaryNode {
   TaggedParserAtomIndex name() const { return right()->as<NameNode>().atom(); }
 };
 
-class PropertyAccess : public PropertyAccessBase {
+// A PropertyAccess or ArgumentsLength: a property access that isn't part of an
+// optional chain.
+class NonOptonalPropertyAccessBase : public PropertyAccessBase {
  public:
-  PropertyAccess(ParseNode* lhs, NameNode* name, uint32_t begin, uint32_t end)
-      : PropertyAccessBase(ParseNodeKind::DotExpr, lhs, name, begin, end) {
-    MOZ_ASSERT(lhs);
-    MOZ_ASSERT(name);
-  }
-
   static bool test(const ParseNode& node) {
     bool match = node.isKind(ParseNodeKind::DotExpr) ||
                  node.isKind(ParseNodeKind::ArgumentsLength);
@@ -2100,30 +2101,44 @@ class PropertyAccess : public PropertyAccessBase {
     return match;
   }
 
-  bool isSuper() const {
-    // ParseNodeKind::SuperBase cannot result from any expression syntax.
-    return expression().isKind(ParseNodeKind::SuperBase);
-  }
-
  protected:
   using PropertyAccessBase::PropertyAccessBase;
 };
 
-class ArgumentsLength : public PropertyAccess {
+class PropertyAccess : public NonOptonalPropertyAccessBase {
+ public:
+  PropertyAccess(ParseNode* lhs, NameNode* name, uint32_t begin, uint32_t end)
+      : NonOptonalPropertyAccessBase(ParseNodeKind::DotExpr, lhs, name, begin,
+                                     end) {
+    MOZ_ASSERT(lhs);
+    MOZ_ASSERT(name);
+  }
+
+  // Note: ArgumentsLength is deliberately not a PropertyAccess to ensure the
+  // arguments length optimization is respected.
+  static bool test(const ParseNode& node) {
+    bool match = node.isKind(ParseNodeKind::DotExpr);
+    MOZ_ASSERT_IF(match, node.is<NonOptonalPropertyAccessBase>());
+    return match;
+  }
+};
+
+// The optimizable |arguments.length| intrinsic. Deliberately not a
+// PropertyAccess to ensure we always respect the arguments.length optimization.
+class ArgumentsLength : public NonOptonalPropertyAccessBase {
  public:
   ArgumentsLength(ParseNode* lhs, NameNode* name, uint32_t begin, uint32_t end)
-      : PropertyAccess(ParseNodeKind::ArgumentsLength, lhs, name, begin, end) {
+      : NonOptonalPropertyAccessBase(ParseNodeKind::ArgumentsLength, lhs, name,
+                                     begin, end) {
     MOZ_ASSERT(lhs);
     MOZ_ASSERT(name);
   }
 
   static bool test(const ParseNode& node) {
     bool match = node.isKind(ParseNodeKind::ArgumentsLength);
-    MOZ_ASSERT_IF(match, node.is<PropertyAccessBase>());
+    MOZ_ASSERT_IF(match, node.is<NonOptonalPropertyAccessBase>());
     return match;
   }
-
-  bool isSuper() const { return false; }
 };
 
 class OptionalPropertyAccess : public PropertyAccessBase {
