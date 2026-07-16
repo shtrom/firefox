@@ -123,6 +123,7 @@ UNIFIED_SOURCES += [
     "ClientDirectoryLock.cpp",
     "ClientDirectoryLockHandle.cpp",
     "ClientUsageArray.cpp",
+    "CommonMetadata.cpp",
     "DecryptingInputStream.cpp",
     "DirectoryLockImpl.cpp",
     "DirectoryMetadata.cpp",

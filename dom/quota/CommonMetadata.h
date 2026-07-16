@@ -13,6 +13,8 @@
 #include "mozilla/dom/quota/PersistenceType.h"
 #include "nsString.h"
 
+class mozIStorageStatement;
+
 namespace mozilla::dom::quota {
 
 struct PrincipalMetadata {
@@ -46,8 +48,8 @@ struct PrincipalMetadata {
   // Templated to restrict Equals() to exactly PrincipalMetadata. Prevents
   // derived types from accidentally inheriting Equals() and comparing only
   // base fields without their own fields.
-  template <typename T, typename = std::enable_if_t<
-                            std::is_same<T, PrincipalMetadata>::value>>
+  template <typename T,
+            typename = std::enable_if_t<std::is_same_v<T, PrincipalMetadata>>>
   bool Equals(const T& aOther) const {
     return mSuffix == aOther.mSuffix && mGroup == aOther.mGroup &&
            mOrigin == aOther.mOrigin &&
@@ -78,7 +80,7 @@ struct OriginMetadata : public PrincipalMetadata {
   // derived types from accidentally inheriting Equals() and comparing only
   // base fields without their own fields.
   template <typename T,
-            typename = std::enable_if_t<std::is_same<T, OriginMetadata>::value>>
+            typename = std::enable_if_t<std::is_same_v<T, OriginMetadata>>>
   bool Equals(const T& aOther) const {
     return static_cast<const PrincipalMetadata&>(*this).Equals(
                static_cast<const PrincipalMetadata&>(aOther)) &&
@@ -118,8 +120,8 @@ struct OriginStateMetadata {
   // Templated to restrict Equals() to exactly OriginStateMetadata. Prevents
   // derived types from accidentally inheriting Equals() and comparing only
   // base fields without their own fields.
-  template <typename T, typename = std::enable_if_t<
-                            std::is_same<T, OriginStateMetadata>::value>>
+  template <typename T,
+            typename = std::enable_if_t<std::is_same_v<T, OriginStateMetadata>>>
   bool Equals(const T& aOther) const {
     return mLastAccessTime == aOther.mLastAccessTime &&
            mLastMaintenanceDate == aOther.mLastMaintenanceDate &&
@@ -147,8 +149,8 @@ struct FullOriginMetadata : OriginMetadata, OriginStateMetadata {
   // Templated to restrict Equals() to exactly FullOriginMetadata. Prevents
   // derived types from accidentally inheriting Equals() and comparing only
   // base fields without their own fields.
-  template <typename T, typename = std::enable_if_t<
-                            std::is_same<T, FullOriginMetadata>::value>>
+  template <typename T,
+            typename = std::enable_if_t<std::is_same_v<T, FullOriginMetadata>>>
   bool Equals(const T& aOther) const {
     return static_cast<const OriginMetadata&>(*this).Equals(
                static_cast<const OriginMetadata&>(aOther)) &&
@@ -161,8 +163,8 @@ struct FullOriginMetadata : OriginMetadata, OriginStateMetadata {
 
   // Compares all fields of this FullOriginMetadata instance with another,
   // except for the fields inherited from OriginStateMetadata.
-  template <typename T, typename = std::enable_if_t<
-                            std::is_same<T, FullOriginMetadata>::value>>
+  template <typename T,
+            typename = std::enable_if_t<std::is_same_v<T, FullOriginMetadata>>>
   bool EqualsIgnoringOriginState(const T& aOther) const {
     return static_cast<const OriginMetadata&>(*this).Equals(
                static_cast<const OriginMetadata&>(aOther)) &&
@@ -179,6 +181,8 @@ struct FullOriginMetadata : OriginMetadata, OriginStateMetadata {
             static_cast<const OriginStateMetadata&>(*this), mClientUsages,
             mOriginUsage, mQuotaVersion};
   }
+
+  nsresult BindToStatement(mozIStorageStatement* aStatement) const;
 };
 
 struct OriginUsageMetadata : FullOriginMetadata {
