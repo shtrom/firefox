@@ -619,6 +619,7 @@ export class TabsPanel extends TabsListBase {
 
     let button = doc.createXULElement("toolbarbutton");
     button.setAttribute("context", "open-tab-group-context-menu");
+    button.dataset.tabGroupId = group.id;
     button.classList.add(
       "all-tabs-button",
       "all-tabs-group-button",

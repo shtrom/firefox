@@ -88,6 +88,15 @@
         </toolbarbutton>
         <toolbarbutton
           tabindex="0"
+          id="tabGroupEditor_shareTabGroup"
+          class="subviewbutton"
+          badged="true"
+          data-l10n-id="tab-group-editor-action-share-group"
+          hidden="">
+          <html:moz-badge type="new" move-after-stack="true"></html:moz-badge>
+        </toolbarbutton>
+        <toolbarbutton
+          tabindex="0"
           id="tabGroupEditor_copyAllLinks"
           class="subviewbutton">
         </toolbarbutton>
@@ -102,15 +111,6 @@
           id="tabGroupEditor_ungroupTabs"
           class="subviewbutton"
           data-l10n-id="tab-group-editor-action-ungroup">
-        </toolbarbutton>
-        <toolbarbutton
-          tabindex="0"
-          id="tabGroupEditor_shareTabGroup"
-          class="subviewbutton"
-          badged="true"
-          data-l10n-id="tab-group-editor-action-share-tab-group"
-          hidden="">
-          <html:moz-badge type="new" move-after-stack="true"></html:moz-badge>
         </toolbarbutton>
         <toolbarseparator class="tab-group-edit-mode-only" />
         <toolbarbutton
