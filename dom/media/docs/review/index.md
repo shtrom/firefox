@@ -14,4 +14,5 @@ context) instead of living only in individual reviewers' heads.
 memory-safety
 threading
 async-lifecycle
+ipc
 ```
