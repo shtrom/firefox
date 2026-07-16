@@ -70,6 +70,9 @@ export class SearchModeSwitcher {
   /** @type {HTMLButtonElement} */
   #closebutton;
 
+  // The value of the urlbar the last time a search mode was changed.
+  #lastInputValue;
+
   // Keep a cache of the engine list as the keyboard functionality
   // needs sync access to them.
   #engines = [];
@@ -172,7 +175,7 @@ export class SearchModeSwitcher {
     }
 
     if (this.#isEnabled()) {
-      this.updateSearchIcon();
+      this.updateSearchIcon({ searchModeChanged: true });
 
       let engine = lazy.UrlbarSearchUtils.getEngineByName(
         this.#input.searchMode?.engineName
@@ -470,49 +473,20 @@ export class SearchModeSwitcher {
     }
   }
 
-  async updateSearchIcon() {
-    let searchMode = this.#input.searchMode;
+  /**
+   * Update the icon shown in the urlbar.
+   *
+   * @param {object} [options]
+   * @param [options.searchModeChanged]
+   *        Optional flag to note whether the icon is being updated due
+   *        the search mode being changed.
+   */
 
-    try {
-      await lazy.UrlbarSearchUtils.init();
-    } catch {
-      console.error("Search service failed to init");
-    }
-
-    let { label, icon } = await this.#getDisplayedEngineDetails(
-      this.#input.searchMode
-    );
-
-    if (searchMode?.source != this.#input.searchMode?.source) {
+  async updateSearchIcon(options = {}) {
+    let { label, icon } = await this.#getSearchIcon(options);
+    if (!icon) {
       return;
     }
-
-    const inSearchMode = this.#input.searchMode;
-
-    if (
-      this.#input.sapName != "searchbar" &&
-      !lazy.UrlbarPrefs.get("keyword.enabled") &&
-      !inSearchMode
-    ) {
-      icon = SearchModeSwitcher.ICON_GLOBE;
-    }
-
-    // If the pref is enabled, then update urlbar icons as user types.
-    if (lazy.UrlbarPrefs.get("unifiedSearchButton.always")) {
-      if (this.#input.focused && this.#input.value.length) {
-        let result = this.#input.view?.getResultAtIndex(0);
-        if (
-          result &&
-          (result.type == UrlbarShared.RESULT_TYPE.URL ||
-            result.type == UrlbarShared.RESULT_TYPE.TAB_SWITCH)
-        ) {
-          // If the user has typed a url then indicate that ENTER will visit
-          // that address.
-          icon = SearchModeSwitcher.ICON_GLOBE;
-        }
-      }
-    }
-
     this.#button.setAttribute("iconsrc", icon);
 
     if (label) {
@@ -529,7 +503,7 @@ export class SearchModeSwitcher {
     }
 
     let labelEl = this.#input.querySelector(".searchmode-switcher-title");
-    if (!inSearchMode) {
+    if (!this.#input.searchMode) {
       labelEl.replaceChildren();
     } else {
       labelEl.textContent = label;
@@ -544,6 +518,55 @@ export class SearchModeSwitcher {
         "urlbar-searchmode-no-keyword2"
       );
     }
+  }
+
+  async #getSearchIcon({ searchModeChanged = false }) {
+    let searchMode = this.#input.searchMode;
+
+    try {
+      await lazy.UrlbarSearchUtils.init();
+    } catch {
+      console.error("Search service failed to init");
+    }
+
+    if (
+      this.#input.sapName != "searchbar" &&
+      !lazy.UrlbarPrefs.get("keyword.enabled") &&
+      !searchMode
+    ) {
+      return { icon: SearchModeSwitcher.ICON_GLOBE };
+    }
+
+    // If we are updating because searchMode changed, record the value of the urlbar.
+    if (searchModeChanged) {
+      this.#lastInputValue = this.#input.value;
+    } else if (
+      this.#lastInputValue &&
+      this.#lastInputValue != this.#input.value
+    ) {
+      // If the urlbar value is stored, only update the icon when we see a new value.
+      this.#lastInputValue = null;
+    }
+
+    if (
+      lazy.UrlbarPrefs.get("unifiedSearchButton.always") &&
+      !this.#lastInputValue &&
+      this.#input.focused &&
+      this.#input.value.length
+    ) {
+      let result = this.#input.view?.getResultAtIndex(0);
+      if (
+        result &&
+        (result.type == UrlbarShared.RESULT_TYPE.URL ||
+          result.type == UrlbarShared.RESULT_TYPE.TAB_SWITCH)
+      ) {
+        // If the user has typed a url then indicate that ENTER will visit
+        // that address.
+        return { icon: SearchModeSwitcher.ICON_GLOBE };
+      }
+    }
+
+    return this.#getDisplayedEngineDetails(searchMode);
   }
 
   async #getSearchModeLabel(source) {
