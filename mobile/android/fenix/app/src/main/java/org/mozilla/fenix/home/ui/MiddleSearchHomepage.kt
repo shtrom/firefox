@@ -142,7 +142,6 @@ internal fun MiddleSearchHomepage(
                             if (showPocketStoriesCarousel) {
                                 PocketSection(
                                     state = pocketState,
-                                    cardBackgroundColor = cardBackgroundColor,
                                     interactor = interactor,
                                 )
                             }
