@@ -14,6 +14,9 @@ with Files("mots.yaml"):
 with Files("CODEOWNERS"):
     BUG_COMPONENT = ("Conduit", "mots")
 
+with Files(".cargo/**"):
+    BUG_COMPONENT = ("Firefox Build System", "General")
+
 with Files("Cargo.*"):
     BUG_COMPONENT = ("Firefox Build System", "General")
 
@@ -24,6 +27,18 @@ with Files("CLOBBER"):
     BUG_COMPONENT = ("Firefox Build System", "General")
 
 with Files("*configure*"):
+    BUG_COMPONENT = ("Firefox Build System", "General")
+
+with Files(".gitattributes"):
+    BUG_COMPONENT = ("Firefox Build System", "General")
+
+with Files(".gitignore"):
+    BUG_COMPONENT = ("Firefox Build System", "General")
+
+with Files(".hgignore"):
+    BUG_COMPONENT = ("Firefox Build System", "General")
+
+with Files(".hgtags"):
     BUG_COMPONENT = ("Firefox Build System", "General")
 
 with Files("docs/**"):
