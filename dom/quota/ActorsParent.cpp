@@ -3908,16 +3908,16 @@ Result<bool, nsresult> DidLatestShutdownFail(
   return !valid;
 }
 
-// Read every row of the `origin` table into an `OriginCacheMap`. The
-// map is keyed by (persistence_type, origin) and lets the
-// repository-scan path tell, per origin, whether the cached row already
-// matches the metadata we'd otherwise rewrite.
+// Read all rows of the `origin` table for a single repository into an
+// `OriginCacheMap`. The map is keyed by (persistence_type, origin) and
+// lets the repository-scan path tell, per origin, whether the cached
+// row already matches the metadata we'd otherwise rewrite.
 //
 // This is read-only: no transactional state change. We deliberately
 // build a parallel data structure rather than reusing `LoadQuotaFromCache`
 // because the cache path also pushes `OriginInfo`s into `mGroupInfoPairs`
 // and we need the raw row contents alone here.
-[[maybe_unused]] Result<OriginCacheMap, nsresult> LoadOriginCacheIntoMap(
+Result<OriginCacheMap, nsresult> LoadOriginCacheIntoMap(
     mozIStorageConnection& aConnection, PersistenceType aPersistenceType) {
   QM_TRY_INSPECT(
       const auto& stmt,
@@ -3989,6 +3989,39 @@ Result<bool, nsresult> DidLatestShutdownFail(
       }));
 
   return map;
+}
+
+// Delete every row in the `origin` table whose key remains in `aMap`
+// (origins present in the L1 cache but no longer found on disk).
+// Wraps the per-row DELETE in a single immediate transaction.
+Result<Ok, nsresult> DeleteStaleOriginRows(mozIStorageConnection& aConnection,
+                                           const OriginCacheMap& aMap) {
+  if (aMap.IsEmpty()) {
+    return Ok{};
+  }
+
+  mozStorageTransaction transaction(
+      &aConnection, false, mozIStorageConnection::TRANSACTION_IMMEDIATE);
+  QM_TRY(MOZ_TO_RESULT(transaction.Start()));
+
+  QM_TRY_INSPECT(
+      const auto& stmt,
+      MOZ_TO_RESULT_INVOKE_MEMBER_TYPED(
+          nsCOMPtr<mozIStorageStatement>, aConnection, CreateStatement,
+          "DELETE FROM origin "
+          "WHERE repository_id = :repository_id AND origin = :origin"_ns));
+
+  for (const auto& entry : aMap) {
+    const OriginCacheKey& key = entry.GetKey();
+    QM_TRY(MOZ_TO_RESULT(stmt->Reset()));
+    QM_TRY(MOZ_TO_RESULT(stmt->BindInt32ByName("repository_id"_ns, key.first)));
+    QM_TRY(MOZ_TO_RESULT(stmt->BindUTF8StringByName("origin"_ns, key.second)));
+    QM_TRY(MOZ_TO_RESULT(stmt->Execute()));
+  }
+
+  QM_TRY(MOZ_TO_RESULT(transaction.Commit()));
+
+  return Ok{};
 }
 
 }  // namespace
@@ -4441,6 +4474,12 @@ nsresult QuotaManager::InitializeRepository(PersistenceType aPersistenceType,
     return statusKeeper;
   }
 #endif
+
+  // Anything still in the map after the disk walk is a row that exists
+  // in the L1 cache but not on disk. Delete those stale rows.
+  if (cacheMap.IsActive()) {
+    QM_TRY(DeleteStaleOriginRows(*mStorageConnection, cacheMap));
+  }
 
   glean::quotamanager_initialize_repository::number_of_iterations
       .Get(PersistenceTypeToString(aPersistenceType))
