@@ -6777,7 +6777,28 @@ QuotaManager::EnsureTemporaryOriginIsInitializedInternal(
         ClientUsageArray(), /* aUsage */ 0, kCurrentQuotaVersion};
 
     if (!aCreateIfNonExistent) {
-      InitQuotaForOrigin(fullOriginMetadata, /* aDirectoryExists */ false);
+      // The caller asked us not to create the origin directory if it doesn't
+      // exist yet. But it may already exist from a previous session whose
+      // quota cache (storage.sqlite `origin` table) was invalidated at
+      // startup (e.g. on a binary version change via
+      // QuotaManager::InvalidateQuotaCache). In that case the origin
+      // metadata and client data are still on disk but our in-memory state
+      // doesn't know about them yet. We must scan the directory to recover
+      // mClientUsages — otherwise LS clients that find their `data.sqlite`
+      // on disk but get `Nothing` from `GetUsageForClient(LS)` will trip
+      // their `MOZ_ASSERT(hasUsage)`.
+      bool directoryExists = false;
+      QM_TRY(MOZ_TO_RESULT(directory->Exists(&directoryExists)));
+      if (directoryExists) {
+        QM_TRY_INSPECT(const auto& metadata,
+                       LoadFullOriginMetadataWithRestore(directory));
+
+        AddTemporaryOrigin(metadata);
+
+        QM_TRY(MOZ_TO_RESULT(InitializeOrigin(directory, metadata)));
+      } else {
+        InitQuotaForOrigin(fullOriginMetadata, /* aDirectoryExists */ false);
+      }
 
       return std::pair(std::move(directory), false);
     }
@@ -8150,7 +8171,19 @@ Result<PrincipalInfo, nsresult> QuotaManager::ParseOrigin(
 }
 
 // static
-void QuotaManager::InvalidateQuotaCache() { gInvalidateQuotaCache = true; }
+void QuotaManager::InvalidateQuotaCache() {
+  // The XRE invokes this when it detects that the profile was last touched
+  // by a different binary build (compatibility.ini mismatch), to force a
+  // re-scan of origin storage on the next launch. Tests that intentionally
+  // use a packaged profile from a different build can disable the build-id
+  // check via dom.quotaManager.caching.checkBuildId — when it's off, we also
+  // want this XRE-triggered invalidation suppressed, otherwise the L1 cache
+  // is wiped despite the test claiming the build mismatch is benign.
+  if (!StaticPrefs::dom_quotaManager_caching_checkBuildId()) {
+    return;
+  }
+  gInvalidateQuotaCache = true;
+}
 
 OriginMetadataArray QuotaManager::GetTemporaryOrigins(
     PersistenceType aPersistenceType) const {
