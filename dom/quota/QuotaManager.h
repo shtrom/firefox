@@ -13,7 +13,6 @@
 #include "PLDHashTable.h"
 #include "mozilla/AlreadyAddRefed.h"
 #include "mozilla/Assertions.h"
-#include "mozilla/HashFunctions.h"
 #include "mozilla/InitializedOnce.h"
 #include "mozilla/MozPromise.h"
 #include "mozilla/Mutex.h"
@@ -82,6 +81,7 @@ class DirtyTrackingAutoLock;
 class GroupInfo;
 class GroupInfoPair;
 class NormalOriginOperationBase;
+class OriginCacheMap;
 class OriginDirectoryLock;
 class OriginInfo;
 class OriginScope;
@@ -94,82 +94,6 @@ namespace test {
 class GTEST_CLASS(TestQuotaManagerAndShutdownFixture,
                   ThumbnailPrivateIdentityTemporaryOriginCount);
 }
-
-// Composite (persistence type, origin) key for the per-startup
-// reconciliation map. Mirrors the `(repository_id, origin)` PRIMARY
-// KEY of the `origin` table.
-using OriginCacheKey = std::pair<PersistenceType, nsCString>;
-
-class OriginCacheKeyHashKey : public PLDHashEntryHdr {
- public:
-  using KeyType = const OriginCacheKey&;
-  using KeyTypePointer = const OriginCacheKey*;
-
-  explicit OriginCacheKeyHashKey(KeyTypePointer aKey) : mKey(*aKey) {}
-  OriginCacheKeyHashKey(OriginCacheKeyHashKey&& aOther) noexcept
-      : PLDHashEntryHdr(std::move(aOther)), mKey(std::move(aOther.mKey)) {}
-  ~OriginCacheKeyHashKey() = default;
-
-  KeyType GetKey() const { return mKey; }
-  bool KeyEquals(KeyTypePointer aKey) const { return *aKey == mKey; }
-
-  static KeyTypePointer KeyToPointer(KeyType aKey) { return &aKey; }
-  static PLDHashNumber HashKey(KeyTypePointer aKey) {
-    return mozilla::HashGeneric(static_cast<uint32_t>(aKey->first),
-                                mozilla::HashString(aKey->second));
-  }
-
-  enum { ALLOW_MEMMOVE = false };
-
- private:
-  OriginCacheKey mKey;
-};
-
-// Map of `(persistenceType, origin) -> FullOriginMetadata` populated
-// once at the top of `InitializeRepository` from the L1 cache, and
-// consulted per-origin during the disk scan to decide whether the
-// existing DB row already matches what we'd write.
-//
-// The "active" flag lets callers outside the reconciliation path share
-// the same type by reference instead of plumbing a nullable pointer:
-// mutating operations are no-ops on an inactive map.
-class OriginCacheMap {
- public:
-  using HashMap = nsTHashMap<OriginCacheKeyHashKey, FullOriginMetadata>;
-
-  OriginCacheMap() = default;
-
-  void Activate() { mActive = true; }
-  bool IsActive() const { return mActive; }
-
-  void InsertOrUpdate(const OriginCacheKey& aKey, FullOriginMetadata aValue) {
-    if (!mActive) {
-      return;
-    }
-    mMap.InsertOrUpdate(aKey, std::move(aValue));
-  }
-
-  mozilla::Maybe<FullOriginMetadata> Extract(const OriginCacheKey& aKey) {
-    if (!mActive) {
-      return mozilla::Nothing();
-    }
-    return mMap.Extract(aKey);
-  }
-
-  bool IsEmpty() const { return mMap.IsEmpty(); }
-
-  auto begin() const { return mMap.begin(); }
-  auto end() const { return mMap.end(); }
-
-  // Process-wide inactive instance suitable as a default argument for
-  // callers that don't have a reconciliation map of their own. Safe to
-  // share: all mutating operations are no-ops when inactive.
-  static OriginCacheMap& Inactive();
-
- private:
-  bool mActive = false;
-  HashMap mMap;
-};
 
 class QuotaManager final : public BackgroundThreadObject {
   friend class CanonicalQuotaObject;
@@ -296,10 +220,11 @@ class QuotaManager final : public BackgroundThreadObject {
   // `(persistenceType, origin)` that the reconciliation logic (added in
   // a subsequent commit) will consult. Other callers leave the default
   // inactive map and the reconciliation step becomes a no-op.
-  void InitQuotaForOrigin(
-      const FullOriginMetadata& aFullOriginMetadata,
-      bool aDirectoryExists = true,
-      OriginCacheMap& aCacheMap = OriginCacheMap::Inactive());
+  void InitQuotaForOrigin(const FullOriginMetadata& aFullOriginMetadata,
+                          bool aDirectoryExists = true);
+
+  void InitQuotaForOrigin(const FullOriginMetadata& aFullOriginMetadata,
+                          bool aDirectoryExists, OriginCacheMap& aCacheMap);
 
   // XXX clients can use QuotaObject instead of calling this method directly.
   void DecreaseUsageForClient(const ClientMetadata& aClientMetadata,
@@ -971,8 +896,7 @@ class QuotaManager final : public BackgroundThreadObject {
       const nsCOMPtr<nsIFile>& aChildDirectory, const nsAutoString& aLeafName,
       PersistenceType aPersistenceType,
       nsTArray<struct RenameAndInitInfo>& aRenameAndInitInfos,
-      OriginFunc&& aOriginFunc,
-      OriginCacheMap& aCacheMap = OriginCacheMap::Inactive());
+      OriginFunc&& aOriginFunc, OriginCacheMap& aCacheMap);
 
   // Determine the type of a repository entry (directory, file, or absent)
   // and handle it accordingly.
@@ -981,17 +905,19 @@ class QuotaManager final : public BackgroundThreadObject {
       const nsCOMPtr<nsIFile>& aChildDirectory,
       PersistenceType aPersistenceType,
       nsTArray<RenameAndInitInfo>& aRenameAndInitInfos,
-      OriginFunc&& aOriginFunc,
-      OriginCacheMap& aCacheMap = OriginCacheMap::Inactive());
+      OriginFunc&& aOriginFunc, OriginCacheMap& aCacheMap);
 
   template <typename OriginFunc>
   nsresult InitializeRepository(PersistenceType aPersistenceType,
                                 OriginFunc&& aOriginFunc);
 
-  nsresult InitializeOrigin(
-      nsIFile* aDirectory, const FullOriginMetadata& aFullOriginMetadata,
-      bool aForGroup = false,
-      OriginCacheMap& aCacheMap = OriginCacheMap::Inactive());
+  nsresult InitializeOrigin(nsIFile* aDirectory,
+                            const FullOriginMetadata& aFullOriginMetadata,
+                            bool aForGroup = false);
+
+  nsresult InitializeOrigin(nsIFile* aDirectory,
+                            const FullOriginMetadata& aFullOriginMetadata,
+                            bool aForGroup, OriginCacheMap& aCacheMap);
 
   using OriginInfosFlatTraversable =
       nsTArray<NotNull<RefPtr<const OriginInfo>>>;

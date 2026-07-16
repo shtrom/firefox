@@ -17,6 +17,7 @@
 #include "GroupInfoPairImpl.h"
 #include "NormalOriginOperationBase.h"
 #include "OpenClientDirectoryUtils.h"
+#include "OriginCacheMap.h"
 #include "OriginInfo.h"
 #include "OriginOperationBase.h"
 #include "OriginOperations.h"
@@ -2683,6 +2684,12 @@ OriginCacheMap& OriginCacheMap::Inactive() {
 }
 
 void QuotaManager::InitQuotaForOrigin(
+    const FullOriginMetadata& aFullOriginMetadata, bool aDirectoryExists) {
+  InitQuotaForOrigin(aFullOriginMetadata, aDirectoryExists,
+                     OriginCacheMap::Inactive());
+}
+
+void QuotaManager::InitQuotaForOrigin(
     const FullOriginMetadata& aFullOriginMetadata, bool aDirectoryExists,
     OriginCacheMap& aCacheMap) {
   AssertIsOnIOThread();
@@ -2695,9 +2702,8 @@ void QuotaManager::InitQuotaForOrigin(
   // already correct.
   bool cacheRowMatches = false;
   if (aCacheMap.IsActive()) {
-    OriginCacheKey key(aFullOriginMetadata.mPersistenceType,
-                       aFullOriginMetadata.mOrigin);
-    Maybe<FullOriginMetadata> cachedMetadata = aCacheMap.Extract(key);
+    Maybe<FullOriginMetadata> cachedMetadata = aCacheMap.Extract(
+        aFullOriginMetadata.mPersistenceType, aFullOriginMetadata.mOrigin);
     if (cachedMetadata.isSome()) {
       cachedMetadata->CopyIntrinsicFieldsFrom(aFullOriginMetadata);
       if (cachedMetadata->Equals(aFullOriginMetadata)) {
@@ -2952,7 +2958,8 @@ nsresult QuotaManager::LoadQuota() {
 
     QM_TRY(MOZ_TO_RESULT(ResolveRepositoryEntry(
         originDirectory, aFullOriginMetadata.mPersistenceType,
-        aRenameAndInitInfos, MaybeCollectUnaccessedOrigin)));
+        aRenameAndInitInfos, MaybeCollectUnaccessedOrigin,
+        OriginCacheMap::Inactive())));
 
     return Ok{};
   };
@@ -3956,9 +3963,9 @@ Result<OriginCacheMap, nsresult> LoadOriginCacheIntoMap(
         fullOriginMetadata.FromMetadataFlags(
             static_cast<uint32_t>(metadataFlags));
 
-        OriginCacheKey key(fullOriginMetadata.mPersistenceType,
-                           fullOriginMetadata.mOrigin);
-        map.InsertOrUpdate(key, std::move(fullOriginMetadata));
+        map.InsertOrUpdate(fullOriginMetadata.mPersistenceType,
+                           fullOriginMetadata.mOrigin,
+                           std::move(fullOriginMetadata));
 
         return Ok{};
       }));
@@ -3986,13 +3993,16 @@ Result<Ok, nsresult> DeleteStaleOriginRows(mozIStorageConnection& aConnection,
           "DELETE FROM origin "
           "WHERE repository_id = :repository_id AND origin = :origin"_ns));
 
-  for (const auto& entry : aMap) {
-    const OriginCacheKey& key = entry.GetKey();
-    QM_TRY(MOZ_TO_RESULT(stmt->Reset()));
-    QM_TRY(MOZ_TO_RESULT(stmt->BindInt32ByName("repository_id"_ns, key.first)));
-    QM_TRY(MOZ_TO_RESULT(stmt->BindUTF8StringByName("origin"_ns, key.second)));
-    QM_TRY(MOZ_TO_RESULT(stmt->Execute()));
-  }
+  QM_TRY(aMap.ForEachEntry(
+      [&stmt](PersistenceType aPersistenceType,
+              const nsCString& aOrigin) -> Result<Ok, nsresult> {
+        QM_TRY(MOZ_TO_RESULT(stmt->Reset()));
+        QM_TRY(MOZ_TO_RESULT(
+            stmt->BindInt32ByName("repository_id"_ns, aPersistenceType)));
+        QM_TRY(MOZ_TO_RESULT(stmt->BindUTF8StringByName("origin"_ns, aOrigin)));
+        QM_TRY(MOZ_TO_RESULT(stmt->Execute()));
+        return Ok{};
+      }));
 
   QM_TRY(MOZ_TO_RESULT(transaction.Commit()));
 
@@ -4461,6 +4471,13 @@ nsresult QuotaManager::InitializeRepository(PersistenceType aPersistenceType,
       .AccumulateSingleSample(iterations);
 
   return NS_OK;
+}
+
+nsresult QuotaManager::InitializeOrigin(
+    nsIFile* aDirectory, const FullOriginMetadata& aFullOriginMetadata,
+    bool aForGroup) {
+  return InitializeOrigin(aDirectory, aFullOriginMetadata, aForGroup,
+                          OriginCacheMap::Inactive());
 }
 
 nsresult QuotaManager::InitializeOrigin(
