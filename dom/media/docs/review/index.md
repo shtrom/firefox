@@ -15,4 +15,5 @@ memory-safety
 threading
 async-lifecycle
 ipc
+spec-correctness
 ```
