@@ -2709,13 +2709,48 @@ void QuotaManager::InitQuotaForOrigin(
       aFullOriginMetadata.mPersistenceType, aFullOriginMetadata.mSuffix,
       aFullOriginMetadata.mGroup);
 
-  groupInfo->LockedAddOriginInfo(MakeNotNull<RefPtr<OriginInfo>>(
+  auto originInfo = MakeRefPtr<OriginInfo>(
       groupInfo, aFullOriginMetadata.mOrigin,
       aFullOriginMetadata.mStorageOrigin, aFullOriginMetadata.mIsPrivate,
       aFullOriginMetadata.mClientUsages, aFullOriginMetadata.mOriginUsage,
       aFullOriginMetadata.mLastAccessTime,
       aFullOriginMetadata.mLastMaintenanceDate, aFullOriginMetadata.mPersisted,
-      aDirectoryExists));
+      aDirectoryExists);
+
+  // A full directory scan is always performed before InitQuotaForOrigin
+  // receives a dirty origin. The two paths are:
+  //
+  // 1. Database cache dirty origins: RestoreAndInitializeOrigin ->
+  //    ResolveRepositoryEntry -> InitializeOriginDirectory ->
+  //    InitializeOrigin (full scan via CollectEachFile).
+  // 2. On-disk .metadata-v2 dirty origins: same InitializeOriginDirectory ->
+  //    InitializeOrigin path.
+  //
+  // This is guaranteed because the secondary-cache shortcut in
+  // InitializeOriginDirectory requires !mAccessed, but mDirty can only be
+  // true when mAccessed is true. Dirty origins fall through to
+  // InitializeOrigin.
+  //
+  // So the usage data in aFullOriginMetadata reflects the actual on-disk
+  // state. Enqueuing here ensures the corrected metadata is flushed back.
+  //
+  // We set mMetadataDirty directly because the OriginInfo is not yet
+  // registered in GroupInfo, so DirtyTrackingAutoLock cannot look it up.
+  //
+  // TODO: The mOriginUsage > 0 check avoids queuing origins whose directory
+  // may not exist, which would cause the flush path to requeue them
+  // indefinitely. This should be replaced by checking mDirectoryExists,
+  // with the flush path skipping origins without a directory instead of
+  // requeueing them.
+  if (aFullOriginMetadata.mDirty && aFullOriginMetadata.mOriginUsage > 0 &&
+      !mUsageModificationDisabled.load()) {
+    originInfo->mMetadataDirty = true;
+    auto* message = new UnboundedMPSCQueue<RefPtr<OriginInfo>>::Message();
+    message->data = originInfo;
+    mDirtyOriginInfos.Push(message);
+  }
+
+  groupInfo->LockedAddOriginInfo(WrapNotNullUnchecked(std::move(originInfo)));
 }
 
 void QuotaManager::DecreaseUsageForClient(const ClientMetadata& aClientMetadata,
@@ -3033,34 +3068,33 @@ nsresult QuotaManager::LoadQuota() {
     return NS_OK;
   };
 
-  QM_TRY_UNWRAP(
-      bool isCacheUseAllowed, ([this]() -> Result<bool, nsresult> {
-        if (!StaticPrefs::dom_quotaManager_loadQuotaFromCache()) {
-          return false;
-        }
+  QM_TRY_UNWRAP(bool isCacheUseAllowed, ([this]() -> Result<bool, nsresult> {
+                  if (!StaticPrefs::dom_quotaManager_loadQuotaFromCache()) {
+                    return false;
+                  }
 
-        if (mCacheUsable) {
-          QM_TRY_INSPECT(
-              const auto& stmt,
-              CreateAndExecuteSingleStepStatement<
-                  SingleStepResult::ReturnNullIfNoResult>(
-                  *mStorageConnection, "SELECT build_id FROM cache"_ns));
+                  if (mCacheUsable) {
+                    QM_TRY_INSPECT(const auto& stmt,
+                                   CreateAndExecuteSingleStepStatement<
+                                       SingleStepResult::ReturnNullIfNoResult>(
+                                       *mStorageConnection,
+                                       "SELECT build_id FROM cache"_ns));
 
-          QM_TRY(OkIf(stmt), Err(NS_ERROR_FILE_CORRUPTED));
+                    QM_TRY(OkIf(stmt), Err(NS_ERROR_FILE_CORRUPTED));
 
-          if (!StaticPrefs::dom_quotaManager_caching_checkBuildId()) {
-            return true;
-          }
+                    if (!StaticPrefs::dom_quotaManager_caching_checkBuildId()) {
+                      return true;
+                    }
 
-          QM_TRY_INSPECT(const auto& buildId,
-                         MOZ_TO_RESULT_INVOKE_MEMBER_TYPED(nsAutoCString, stmt,
-                                                           GetUTF8String, 0));
+                    QM_TRY_INSPECT(const auto& buildId,
+                                   MOZ_TO_RESULT_INVOKE_MEMBER_TYPED(
+                                       nsAutoCString, stmt, GetUTF8String, 0));
 
-          return buildId == *gBuildId;
-        }
+                    return buildId == *gBuildId;
+                  }
 
-        return false;
-      }()));
+                  return false;
+                }()));
 
   if (isCacheUseAllowed) {
     nsTArray<FullOriginMetadata> dirtyOrigins;
