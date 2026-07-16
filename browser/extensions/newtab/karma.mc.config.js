@@ -170,6 +170,17 @@ module.exports = function (config) {
               branches: 0,
             },
             /**
+             * DiscoveryStreamAdmin.jsx is tested via Jest
+             * (see test/jest/content-src/components/DiscoveryStreamAdmin.test.jsx).
+             */
+            "content-src/components/DiscoveryStreamAdmin/DiscoveryStreamAdmin.jsx":
+              {
+                statements: 0,
+                lines: 0,
+                functions: 0,
+                branches: 0,
+              },
+            /**
              * Logo.jsx and its variant components are tested via Jest
              * (see test/jest/content-src/components/Logo.test.jsx).
              */
