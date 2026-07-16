@@ -2604,7 +2604,7 @@ const BASE_MESSAGES = () => [
         type: "PIN_FIREFOX_TO_TASKBAR",
       },
     },
-    targeting: `source == 'startup' && !previousSessionEnd && doesAppNeedPin && ${WIN_OS_PIN_PROMPT_ENABLED} && (unhandledCampaignAction != 'PIN_FIREFOX_TO_TASKBAR') && (unhandledCampaignAction != 'PIN_AND_DEFAULT')`,
+    targeting: `!('browser.bypassAutoTriggerActions' | preferenceValue) && source == 'startup' && !previousSessionEnd && doesAppNeedPin && ${WIN_OS_PIN_PROMPT_ENABLED} && (unhandledCampaignAction != 'PIN_FIREFOX_TO_TASKBAR') && (unhandledCampaignAction != 'PIN_AND_DEFAULT')`,
     trigger: {
       id: "defaultBrowserCheck",
     },
