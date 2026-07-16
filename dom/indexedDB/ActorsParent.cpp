@@ -128,7 +128,6 @@
 #include "mozilla/dom/quota/DecryptingInputStream_impl.h"
 #include "mozilla/dom/quota/DirectoryLock.h"
 #include "mozilla/dom/quota/DirectoryLockInlines.h"
-#include "mozilla/dom/quota/DirectoryMetadata.h"
 #include "mozilla/dom/quota/EncryptingOutputStream_impl.h"
 #include "mozilla/dom/quota/ErrorHandling.h"
 #include "mozilla/dom/quota/FileStreams.h"
@@ -13661,9 +13660,9 @@ nsresult Maintenance::DirectoryWork() {
 
               if (!databasePaths.IsEmpty()) {
                 if (!persistent) {
-                  auto maybeOriginStateMetadata =
-                      quotaManager->GetOriginStateMetadata(metadata);
-                  auto originStateMetadata = maybeOriginStateMetadata.extract();
+                  auto maybeFullOriginMetadata =
+                      quotaManager->GetFullOriginMetadata(metadata);
+                  auto fullOriginMetadata = maybeFullOriginMetadata.extract();
 
                   // Skip origin maintenance if the origin hasn't been accessed
                   // since its last recorded maintenance. This avoids
@@ -13674,23 +13673,23 @@ nsresult Maintenance::DirectoryWork() {
                   // This early-out is safe because maintenance is only needed
                   // when something has changed (e.g., new access or activity).
                   const Date accessDate =
-                      Date::FromTimestamp(originStateMetadata.mLastAccessTime);
+                      Date::FromTimestamp(fullOriginMetadata.mLastAccessTime);
                   const Date maintenanceDate =
-                      Date::FromDays(originStateMetadata.mLastMaintenanceDate);
+                      Date::FromDays(fullOriginMetadata.mLastMaintenanceDate);
 
                   if (accessDate <= maintenanceDate) {
                     return Ok{};
                   }
 
-                  originStateMetadata.mLastMaintenanceDate =
+                  fullOriginMetadata.mLastMaintenanceDate =
                       Date::Today().ToDays();
-                  originStateMetadata.mAccessed = true;
+                  fullOriginMetadata.mAccessed = true;
 
-                  QM_TRY(MOZ_TO_RESULT(SaveDirectoryMetadataHeader(
-                      *originDir, originStateMetadata)));
+                  QM_TRY(MOZ_TO_RESULT(quotaManager->CreateDirectoryMetadata2(
+                      *originDir, fullOriginMetadata)));
 
                   quotaManager->UpdateOriginMaintenanceDate(
-                      metadata, originStateMetadata.mLastMaintenanceDate);
+                      metadata, fullOriginMetadata.mLastMaintenanceDate);
                   quotaManager->UpdateOriginAccessed(metadata);
                 }
 
