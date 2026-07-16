@@ -1323,10 +1323,14 @@ var snapshotFormatters = {
           "td",
           swEncode ? supportText : unsupportedText
         );
-        // Link to AV1 extension on MS store.
+        // Microsoft Store product page for each codec's extension.
+        const extensionStoreURLs = {
+          AV1: "ms-windows-store://pdp/?ProductId=9MVZQVXJBQ9V",
+          HEVC: "ms-windows-store://pdp/?ProductId=9NMZLZ57R3T7",
+        };
         let hwCell = $.new("td", [
           $.new("a", lackOfExtensionText, null, {
-            href: "ms-windows-store://pdp/?ProductId=9MVZQVXJBQ9V",
+            href: extensionStoreURLs[codec],
           }),
         ]);
         if (swDecode) {
