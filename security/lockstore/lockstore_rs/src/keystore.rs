@@ -56,7 +56,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use zeroize::Zeroize;
+use zeroize::Zeroizing;
 
 /// Logical kvstore database name under which keystore rows (DEK
 /// metadata, KEK records) live within `lockstore.keys.sqlite`. Single
@@ -206,17 +206,11 @@ impl<'a> ConnectionHandle<'a> {
     }
 }
 
-/// Bytes of a plaintext KEK held in memory for a bounded window;
-/// `Drop` runs `zeroize::Zeroize`.
+/// Bytes of a plaintext KEK held in memory for a bounded window. The
+/// `Zeroizing` wrapper wipes the bytes when the entry is dropped.
 struct CachedKek {
-    kek: Vec<u8>,
+    kek: Zeroizing<Vec<u8>>,
     expires_at: Instant,
-}
-
-impl Drop for CachedKek {
-    fn drop(&mut self) {
-        self.kek.zeroize();
-    }
 }
 
 #[derive(Clone)]
@@ -377,7 +371,7 @@ impl Keystore {
             )));
         }
 
-        let new_dek = crypto::generate_random_bytes(key_size);
+        let new_dek = Zeroizing::new(crypto::generate_random_bytes(key_size));
         let kek = self.get_kek_symkey(cipher_suite, kek_ref)?;
         let wrapped = crypto::encrypt_with_symkey(&new_dek, &kek, cipher_suite)?;
 
@@ -467,7 +461,7 @@ impl Keystore {
         &self,
         collection_name: &str,
         kek_ref: &str,
-    ) -> Result<(Vec<u8>, CipherSuite, bool), LockstoreError> {
+    ) -> Result<(Zeroizing<Vec<u8>>, CipherSuite, bool), LockstoreError> {
         // Parse upfront so a malformed kek_ref surfaces as
         // `InvalidKekRef` rather than a generic NotFound after the
         // metadata lookup.
@@ -516,7 +510,7 @@ impl Keystore {
         &self,
         collection_name: &str,
         kek_ref: &str,
-    ) -> Result<(Vec<u8>, CipherSuite), LockstoreError> {
+    ) -> Result<(Zeroizing<Vec<u8>>, CipherSuite), LockstoreError> {
         if !self.is_dek_extractable(collection_name)? {
             return Err(LockstoreError::NotExtractable(format!(
                 "DEK for '{}' is not extractable",
@@ -553,7 +547,7 @@ impl Keystore {
         collection: &str,
         kek_ref: &str,
         ciphertext: &[u8],
-    ) -> Result<Vec<u8>, LockstoreError> {
+    ) -> Result<Zeroizing<Vec<u8>>, LockstoreError> {
         let (dek, expected_suite, _) = self.get_dek_internal(collection, kek_ref)?;
         let blob_suite = crypto::cipher_suite_of_blob(ciphertext)?;
         if blob_suite != expected_suite {
@@ -704,11 +698,11 @@ impl Keystore {
         }
 
         let old_kek = self.get_kek_symkey(metadata.cipher_suite, old_kek_ref)?;
-        let mut dek = crypto::decrypt_with_symkey(&old_entry.wrapped_dek, &old_kek)?;
+        // `dek` is Zeroizing; it is wiped when this function returns.
+        let dek = crypto::decrypt_with_symkey(&old_entry.wrapped_dek, &old_kek)?;
 
         let new_kek = self.get_kek_symkey(metadata.cipher_suite, new_kek_ref)?;
         let new_wrapped = crypto::encrypt_with_symkey(&dek, &new_kek, metadata.cipher_suite)?;
-        dek.zeroize();
 
         // In-place replace preserves the "at least one wrapping" invariant
         // at every observable state — at no point during the metadata
@@ -1084,7 +1078,12 @@ impl Keystore {
         }
         let cipher_suite = DEFAULT_CIPHER_SUITE;
         let kek_bytes = crypto::generate_random_key(cipher_suite);
-        self.save_local_record(&kek_ref, &LocalKekRecord { kek_bytes })?;
+        self.save_local_record(
+            &kek_ref,
+            &LocalKekRecord {
+                kek_bytes: kek_bytes.to_vec(),
+            },
+        )?;
         Ok(kek_ref)
     }
 
@@ -1130,11 +1129,13 @@ impl Keystore {
         let cipher_suite = DEFAULT_CIPHER_SUITE;
         let salt = crypto::generate_random_bytes(pbkdf2::PBKDF2_SALT_SIZE);
 
-        let mut wrapping_key =
+        // `wrapping_key` (PBKDF2 output) and `kek_plaintext` are Zeroizing,
+        // so both are wiped on drop — including the early-return and
+        // no-cache paths below — without any explicit zeroize call.
+        let wrapping_key =
             pbkdf2::derive_kek(password, &salt, iterations, cipher_suite.key_size())?;
-        let mut kek_plaintext = crypto::generate_random_key(cipher_suite);
+        let kek_plaintext = crypto::generate_random_key(cipher_suite);
         let ciphertext = crypto::encrypt_with_key(&kek_plaintext, &wrapping_key, cipher_suite)?;
-        wrapping_key.zeroize();
 
         self.save_password_record(
             &kek_ref,
@@ -1147,25 +1148,16 @@ impl Keystore {
         )?;
 
         if !cache_timeout.is_zero() {
-            match self.password_kek_cache.lock() {
-                Ok(mut g) => {
-                    g.insert(
-                        kek_ref.clone(),
-                        CachedKek {
-                            kek: std::mem::take(&mut kek_plaintext),
-                            expires_at: unlock_deadline(cache_timeout),
-                        },
-                    );
-                }
-                Err(_) => {
-                    kek_plaintext.zeroize();
-                    return Err(LockstoreError::LockingFailure(
-                        "password_kek_cache poisoned".into(),
-                    ));
-                }
-            }
-        } else {
-            kek_plaintext.zeroize();
+            let mut g = self.password_kek_cache.lock().map_err(|_| {
+                LockstoreError::LockingFailure("password_kek_cache poisoned".into())
+            })?;
+            g.insert(
+                kek_ref.clone(),
+                CachedKek {
+                    kek: kek_plaintext,
+                    expires_at: unlock_deadline(cache_timeout),
+                },
+            );
         }
         Ok(kek_ref)
     }
@@ -1235,9 +1227,9 @@ impl Keystore {
         // Fresh software KEK, wrapped under the hardware-resident
         // wrapping key. The plaintext only exists in this function's
         // local scope until the AEAD consumes it.
-        let mut kek_plaintext = crypto::generate_random_key(cipher_suite);
+        // Zeroizing: the plaintext KEK is wiped when this scope ends.
+        let kek_plaintext = crypto::generate_random_key(cipher_suite);
         let ciphertext = crypto::encrypt_with_symkey(&kek_plaintext, &wrapping_key, cipher_suite)?;
-        kek_plaintext.zeroize();
 
         let record = Pkcs11KekRecord {
             ciphertext,
@@ -1312,7 +1304,8 @@ impl Keystore {
             LockstoreError::InvalidKekRef(format!("no Password record for kek_ref: {}", kek_ref))
         })?;
 
-        let mut wrapping_key = pbkdf2::derive_kek(
+        // Zeroizing: `wrapping_key` is wiped on drop on every path below.
+        let wrapping_key = pbkdf2::derive_kek(
             password,
             &record.salt,
             record.iterations,
@@ -1322,14 +1315,8 @@ impl Keystore {
         // AEAD tag verification doubles as the wrong-password check:
         // a successful decrypt means the supplied password produced the
         // same wrapping key that minted the record.
-        let kek_plaintext = match crypto::decrypt_with_key(&record.ciphertext, &wrapping_key) {
-            Ok(pt) => pt,
-            Err(_) => {
-                wrapping_key.zeroize();
-                return Err(LockstoreError::WrongPassword);
-            }
-        };
-        wrapping_key.zeroize();
+        let kek_plaintext = crypto::decrypt_with_key(&record.ciphertext, &wrapping_key)
+            .map_err(|_| LockstoreError::WrongPassword)?;
 
         let mut guard = self
             .password_kek_cache

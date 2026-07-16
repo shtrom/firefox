@@ -18,6 +18,7 @@ use kvstore::{DatabaseError, StoreError};
 use nss_rs::Error as NssError;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use zeroize::ZeroizeOnDrop;
 
 pub const KEYSTORE_FILENAME: &str = "lockstore.keys.sqlite";
 pub const DATASTORE_FILENAME_PREFIX: &str = "lockstore.data.";
@@ -149,9 +150,11 @@ impl KekType {
 /// at rest is provided by the underlying SQLite encryption layer; if
 /// the keystore file is exfiltrated without that layer's key, the
 /// bytes here are still recoverable only with the SQLite key.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ZeroizeOnDrop)]
 pub struct LocalKekRecord {
     /// Raw AES-256 KEK bytes (32 bytes for the default cipher suite).
+    /// This is the only at-rest record holding a plaintext key, so the
+    /// in-memory copy is wiped on drop via `ZeroizeOnDrop`.
     pub kek_bytes: Vec<u8>,
 }
 

@@ -3,17 +3,17 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 pub use lockstore_rs::LockstoreDatastore;
-use lockstore_rs::{Keystore, LockstoreError, KEYSTORE_FILENAME};
+use lockstore_rs::{KEYSTORE_FILENAME, Keystore, LockstoreError};
 use nserror::{
-    nsresult, NS_ERROR_ABORT, NS_ERROR_FAILURE, NS_ERROR_INVALID_ARG, NS_ERROR_NOT_AVAILABLE,
-    NS_ERROR_NOT_INITIALIZED, NS_OK,
+    NS_ERROR_ABORT, NS_ERROR_FAILURE, NS_ERROR_INVALID_ARG, NS_ERROR_NOT_AVAILABLE,
+    NS_ERROR_NOT_INITIALIZED, NS_OK, nsresult,
 };
 use nsstring::{nsACString, nsCString};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 use thin_vec::ThinVec;
-use zeroize::Zeroize;
+use zeroize::Zeroizing;
 
 // ============================================================================
 // Handle Types
@@ -204,7 +204,7 @@ pub extern "C" fn keystore_get_dek(
 
     match handle.keystore.get_dek(&coll_str, &kek_ref_str) {
         Ok((dek_bytes, _cipher_suite)) => {
-            *ret_dek = dek_bytes.into();
+            *ret_dek = ThinVec::from(dek_bytes.as_slice());
             NS_OK
         }
         Err(e) => error_to_nsresult(e),
@@ -404,7 +404,7 @@ pub unsafe extern "C" fn keystore_decrypt(
     let ciphertext = unsafe { std::slice::from_raw_parts(ciphertext_ptr, ciphertext_len) };
     match handle.keystore.decrypt(&coll_str, &kek_ref_str, ciphertext) {
         Ok(bytes) => {
-            *ret_plaintext = bytes.into();
+            *ret_plaintext = ThinVec::from(bytes.as_slice());
             NS_OK
         }
         Err(e) => error_to_nsresult(e),
@@ -460,13 +460,13 @@ pub extern "C" fn keystore_unlock_kek(
     if kek_ref.is_empty() {
         return NS_ERROR_INVALID_ARG;
     }
-    let mut secret_buf: Vec<u8> = secret[..].to_vec();
+    // Zeroizing: the copied secret is wiped when this function returns.
+    let secret_buf = Zeroizing::new(secret[..].to_vec());
     let kek_ref_str = kek_ref.to_utf8();
     let result =
         handle
             .keystore
             .unlock_kek(&kek_ref_str, &secret_buf, Duration::from_millis(timeout_ms));
-    secret_buf.zeroize();
 
     match result {
         Ok(()) => NS_OK,
@@ -541,14 +541,14 @@ pub extern "C" fn keystore_create_kek(
     };
 
     let identifier_str = identifier.to_utf8();
-    let mut secret_buf: Vec<u8> = secret[..].to_vec();
+    // Zeroizing: the copied secret is wiped when this function returns.
+    let secret_buf = Zeroizing::new(secret[..].to_vec());
     let result = handle.keystore.create_kek(
         parsed,
         &identifier_str,
         &secret_buf,
         Duration::from_millis(cache_timeout_ms),
     );
-    secret_buf.zeroize();
 
     match result {
         Ok(kek_ref) => {
