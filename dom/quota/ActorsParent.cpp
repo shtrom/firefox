@@ -4253,7 +4253,8 @@ Result<Ok, nsresult> QuotaManager::InitializeOriginDirectory(
             metadata.mAccessed));
 
     if (StaticPrefs::dom_quotaManager_loadQuotaFromSecondaryCache() &&
-        metadata.mQuotaVersion == kCurrentQuotaVersion && !metadata.mAccessed) {
+        IsInitializableQuotaVersion(metadata.mQuotaVersion) &&
+        !metadata.mAccessed) {
       QM_LOG(("Initializing quota for: %s", metadata.mOrigin.get()));
       InitQuotaForOrigin(metadata, /* aDirectoryExists */ true, aCacheMap);
 
@@ -4435,7 +4436,7 @@ nsresult QuotaManager::InitializeRepository(PersistenceType aPersistenceType,
               AddTemporaryOrigin(metadata);
 
               if (StaticPrefs::dom_quotaManager_loadQuotaFromSecondaryCache() &&
-                  metadata.mQuotaVersion == kCurrentQuotaVersion &&
+                  IsInitializableQuotaVersion(metadata.mQuotaVersion) &&
                   !metadata.mAccessed) {
                 InitQuotaForOrigin(metadata, /* aDirectoryExists */ true,
                                    cacheMap);

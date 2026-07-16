@@ -76,6 +76,15 @@ const uint32_t kNoQuotaVersion = 0;
 // will have to fall back to the slowest path: a full storage scan.
 const uint32_t kCurrentQuotaVersion = 2;
 
+// Minimum quota version whose .metadata-v2 files carry valid usage data.
+// Origins at or above this version can be initialized from cached metadata
+// without a full directory scan.
+const uint32_t kMinUsableQuotaVersion = 1;
+
+constexpr bool IsInitializableQuotaVersion(uint32_t aVersion) {
+  return aVersion >= kMinUsableQuotaVersion && aVersion <= kCurrentQuotaVersion;
+}
+
 }  // namespace mozilla::dom::quota
 
 #endif  // DOM_QUOTA_CONSTANTS_H_
