@@ -582,8 +582,29 @@ Maybe<nscoord> nsBlockFrame::GetBaselineBOffset(
                  (std::is_same_v<LineIteratorType, ConstReverseLineIterator> &&
                   aBaselineGroup == BaselineSharingGroup::Last),
              "Iterator direction must match baseline sharing group.");
+
+  // If we are happen to contain the line clamp ellipsis, the last baseline
+  // search should skip lineboxes that are clamped away.
+  //
+  // Note the that we don't care about this for GetFirstLineBaseline. While it's
+  // technically viable for the first baseline search to reach the clamped line,
+  // as per spec [1], the clamp point exists between two line boxes that will
+  // have a baseline. Even if the line gets displaced by the ellipsis, it
+  // provides a strut. As a result, the last unclamped line will always have a
+  // baseline.
+  // [1]: https://drafts.csswg.org/css-overflow-4/#line-clamp-containers
+  const bool isLineClamped =
+      aBaselineGroup == BaselineSharingGroup::Last &&
+      (HasLineClampEllipsis() || HasLineClampEllipsisDescendant());
+  bool hitLineClampEllipsis = false;
+
   for (auto line = aStart; line != aEnd; ++line) {
+    hitLineClampEllipsis = hitLineClampEllipsis || line->HasLineClampEllipsis();
     if (!line->IsBlock()) {
+      if (isLineClamped && !hitLineClampEllipsis) {
+        // This is clamped away, skip.
+        continue;
+      }
       // XXX Is this the right test?  We have some bogus empty lines
       // floating around, but IsEmpty is perhaps too weak.
       if (line->BSize() != 0 || !line->IsEmpty()) {
@@ -602,6 +623,11 @@ Maybe<nscoord> nsBlockFrame::GetBaselineBOffset(
     if (aExportContext == BaselineExportContext::LineLayout &&
         kid->IsTableWrapperFrame()) {
       // `<table>` in inline-block context does not export any baseline.
+      continue;
+    }
+    if (isLineClamped && !hitLineClampEllipsis &&
+        !HasLineClampEllipsisDescendant()) {
+      // This is clamped away, skip.
       continue;
     }
     const auto kidBaselineGroup =
