@@ -195,9 +195,6 @@
     min-width: 256px;
   }
 
-  panel-item::part(button) {
-    min-block-size: 30px;
-  }
 }
 
 // Classic layout padding (when Nova is disabled)

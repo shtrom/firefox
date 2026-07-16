@@ -4771,9 +4771,6 @@ button.arrow-button:dir(rtl) {
 .widgets-header-context-menu panel-list {
   min-width: 256px;
 }
-.widgets-header-context-menu panel-item::part(button) {
-  min-block-size: 30px;
-}
 
 @media (min-width: 1122px) {
   .classic-enabled .widgets-section-container {
