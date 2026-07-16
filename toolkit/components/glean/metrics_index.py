@@ -102,7 +102,6 @@ gecko_metrics = [
     "toolkit/content/widgets/metrics.yaml",
     "toolkit/modules/gecko_metrics.yaml",
     "toolkit/mozapps/extensions/metrics.yaml",
-    "toolkit/mozapps/extensions/metrics_legacy.yaml",
     "toolkit/mozapps/handling/metrics.yaml",
     "toolkit/mozapps/update/metrics.yaml",
     "toolkit/profile/metrics.yaml",
