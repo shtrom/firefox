@@ -3,7 +3,10 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
-import { UrlbarProvider } from "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs";
+import {
+  UrlbarProvider,
+  UrlbarUtils,
+} from "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs";
 
 const lazy = {};
 
@@ -466,10 +469,10 @@ export class UrlbarProviderInterventions extends UrlbarProvider {
   }
 
   /**
-   * @returns {Values<typeof lazy.UrlbarShared.PROVIDER_TYPE>}
+   * @returns {Values<typeof UrlbarUtils.PROVIDER_TYPE>}
    */
   get type() {
-    return lazy.UrlbarShared.PROVIDER_TYPE.PROFILE;
+    return UrlbarUtils.PROVIDER_TYPE.PROFILE;
   }
 
   /**
@@ -482,7 +485,7 @@ export class UrlbarProviderInterventions extends UrlbarProvider {
   async isActive(queryContext) {
     if (
       !queryContext.searchString ||
-      queryContext.searchString.length > lazy.UrlbarShared.MAX_TEXT_LENGTH ||
+      queryContext.searchString.length > UrlbarUtils.MAX_TEXT_LENGTH ||
       lazy.UrlUtils.REGEXP_LIKE_PROTOCOL.test(queryContext.searchString) ||
       !EN_LOCALE_MATCH.test(Services.locale.appLocaleAsBCP47) ||
       !Services.policies.isAllowed("urlbarinterventions") ||
@@ -644,7 +647,7 @@ export class UrlbarProviderInterventions extends UrlbarProvider {
       payload: {
         ...getPayloadForTip(this.currentTip),
         type: this.currentTip,
-        icon: lazy.UrlbarShared.ICON.TIP,
+        icon: UrlbarUtils.ICON.TIP,
         helpL10n: {
           id: "urlbar-result-menu-tip-get-help2",
         },

@@ -6,7 +6,7 @@
  * @import MozButton from "chrome://global/content/elements/moz-button.mjs";
  * @import { SearchEngine } from "moz-src:///toolkit/components/search/SearchEngine.sys.mjs"
  * @import { OpenSearchData } from "moz-src:///browser/components/search/OpenSearchManager.sys.mjs"
- * @import { LocalSearchMode } from "chrome://browser/content/urlbar/UrlbarShared.mjs"
+ * @import { LocalSearchMode } from "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs"
  * @import { PanelItem, PanelList } from "chrome://global/content/elements/panel-list.mjs"
  */
 
@@ -53,8 +53,8 @@ const DEFAULT_ENGINE_ICON =
  * Implements the SearchModeSwitcher in the urlbar.
  */
 export class SearchModeSwitcher {
-  static ICON_GLASS = UrlbarShared.ICON.SEARCH_GLASS;
-  static ICON_GLOBE = UrlbarShared.ICON.GLOBE;
+  static ICON_GLASS = lazy.UrlbarUtils.ICON.SEARCH_GLASS;
+  static ICON_GLOBE = lazy.UrlbarUtils.ICON.GLOBE;
   /**
    * The maximum number of openSearch engines available to install
    * to display.
@@ -465,7 +465,7 @@ export class SearchModeSwitcher {
       // search modes. Hence when the settings redesign is enabled we show
       // all local search modes regardless of the prefs.
       this.#engines = searchEngines.concat(
-        UrlbarShared.LOCAL_SEARCH_MODES.filter(
+        lazy.UrlbarUtils.LOCAL_SEARCH_MODES.filter(
           engine =>
             lazy.settingsRedesignEnabled || lazy.UrlbarPrefs.get(engine.pref)
         )
@@ -570,7 +570,9 @@ export class SearchModeSwitcher {
   }
 
   async #getSearchModeLabel(source) {
-    let mode = UrlbarShared.LOCAL_SEARCH_MODES.find(m => m.source == source);
+    let mode = lazy.UrlbarUtils.LOCAL_SEARCH_MODES.find(
+      m => m.source == source
+    );
     let [str] = await lazy.SearchModeSwitcherL10n.formatMessages([
       { id: mode.uiLabel },
     ]);
@@ -593,7 +595,7 @@ export class SearchModeSwitcher {
       return { label: engine.name, icon };
     }
 
-    let mode = UrlbarShared.LOCAL_SEARCH_MODES.find(
+    let mode = lazy.UrlbarUtils.LOCAL_SEARCH_MODES.find(
       m => m.source == searchMode.source
     );
     return {

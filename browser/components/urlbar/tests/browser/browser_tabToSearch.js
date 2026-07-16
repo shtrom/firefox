@@ -286,7 +286,7 @@ add_task(async function tab_key_race() {
         return "ListeningTestProvider";
       }
       get type() {
-        return UrlbarShared.PROVIDER_TYPE.PROFILE;
+        return UrlbarUtils.PROVIDER_TYPE.PROFILE;
       }
       async isActive(_context) {
         executeSoon(resolve);

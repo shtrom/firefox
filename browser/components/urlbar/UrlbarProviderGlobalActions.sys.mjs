@@ -7,7 +7,10 @@
  * global actions for a query.
  */
 
-import { UrlbarProvider } from "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs";
+import {
+  UrlbarProvider,
+  UrlbarUtils,
+} from "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs";
 
 const lazy = {};
 
@@ -49,10 +52,10 @@ let globalActionsProviders = [
  */
 export class UrlbarProviderGlobalActions extends UrlbarProvider {
   /**
-   * @returns {Values<typeof lazy.UrlbarShared.PROVIDER_TYPE>}
+   * @returns {Values<typeof UrlbarUtils.PROVIDER_TYPE>}
    */
   get type() {
-    return lazy.UrlbarShared.PROVIDER_TYPE.PROFILE;
+    return UrlbarUtils.PROVIDER_TYPE.PROFILE;
   }
 
   /**

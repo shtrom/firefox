@@ -772,7 +772,7 @@ class _QuickSuggest {
    * @param {object} options
    * @param {Array} options.tokens
    *   It is compatible to UrlbarQueryContext.tokens.
-   * @param {Values<typeof lazy.lazy.UrlbarShared.HIGHLIGHT>} [options.highlightType]
+   * @param {Values<typeof lazy.UrlbarUtils.HIGHLIGHT>} [options.highlightType]
    * @param {string} [options.fullKeyword]
    *   Full keyword if there is.
    * @param {string} options.title

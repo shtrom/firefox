@@ -302,7 +302,7 @@ async function ensureSearchIconVisible() {
     await TestUtils.waitForCondition(
       () =>
         UrlbarTestUtils.getSearchModeSwitcherIcon(window) !=
-        UrlbarShared.ICON.SEARCH_GLASS
+        UrlbarUtils.ICON.SEARCH_GLASS
     );
   }
 }

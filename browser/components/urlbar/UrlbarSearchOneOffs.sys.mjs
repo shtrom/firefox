@@ -296,7 +296,7 @@ export class UrlbarSearchOneOffs extends SearchOneOffs {
     // it has the necessary side effect of creating this._engineInfo.
     let superWillHide = await super.willHide();
     if (
-      lazy.UrlbarShared.LOCAL_SEARCH_MODES.some(m =>
+      lazy.UrlbarUtils.LOCAL_SEARCH_MODES.some(m =>
         lazy.UrlbarPrefs.get(m.pref)
       )
     ) {
@@ -316,7 +316,7 @@ export class UrlbarSearchOneOffs extends SearchOneOffs {
     // Invalidate the engine cache when the local-one-offs-related prefs change
     // so that the one-offs rebuild themselves the next time the view opens.
     if (
-      [...lazy.UrlbarShared.LOCAL_SEARCH_MODES.map(m => m.pref)].includes(
+      [...lazy.UrlbarUtils.LOCAL_SEARCH_MODES.map(m => m.pref)].includes(
         changedPref
       )
     ) {
@@ -341,7 +341,7 @@ export class UrlbarSearchOneOffs extends SearchOneOffs {
       history: "search-one-offs-history",
       tabs: "search-one-offs-tabs",
     };
-    for (let { source, pref, restrict } of lazy.UrlbarShared
+    for (let { source, pref, restrict } of lazy.UrlbarUtils
       .LOCAL_SEARCH_MODES) {
       if (!lazy.UrlbarPrefs.get(pref)) {
         continue;

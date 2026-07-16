@@ -16,6 +16,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   UrlbarParentController:
     "moz-src:///browser/components/urlbar/UrlbarParentController.sys.mjs",
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
+  UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
 });
 
 /**
@@ -469,7 +470,7 @@ export class UrlbarChildController {
             this.view.selectBy(
               event.keyCode == KeyEvent.DOM_VK_PAGE_DOWN ||
                 event.keyCode == KeyEvent.DOM_VK_PAGE_UP
-                ? UrlbarShared.PAGE_UP_DOWN_DELTA
+                ? lazy.UrlbarUtils.PAGE_UP_DOWN_DELTA
                 : 1,
               {
                 reverse:

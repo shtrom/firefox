@@ -24,10 +24,10 @@ ChromeUtils.defineESModuleGetters(lazy, {
  */
 export class UrlbarProviderBookmarkKeywords extends UrlbarProvider {
   /**
-   * @returns {Values<typeof lazy.UrlbarShared.PROVIDER_TYPE>}
+   * @returns {Values<typeof UrlbarUtils.PROVIDER_TYPE>}
    */
   get type() {
-    return lazy.UrlbarShared.PROVIDER_TYPE.HEURISTIC;
+    return UrlbarUtils.PROVIDER_TYPE.HEURISTIC;
   }
 
   /**
@@ -97,12 +97,12 @@ export class UrlbarProviderBookmarkKeywords extends UrlbarProvider {
         keyword,
         input: queryContext.searchString,
         postData,
-        icon: lazy.UrlbarShared.getIconForUrl(entry.url),
+        icon: UrlbarUtils.getIconForUrl(entry.url),
       },
       highlights: {
-        title: lazy.UrlbarShared.HIGHLIGHT.TYPED,
-        url: lazy.UrlbarShared.HIGHLIGHT.TYPED,
-        keyword: lazy.UrlbarShared.HIGHLIGHT.TYPED,
+        title: UrlbarUtils.HIGHLIGHT.TYPED,
+        url: UrlbarUtils.HIGHLIGHT.TYPED,
+        keyword: UrlbarUtils.HIGHLIGHT.TYPED,
       },
     });
     addCallback(this, result);

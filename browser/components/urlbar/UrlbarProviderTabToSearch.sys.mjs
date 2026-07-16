@@ -101,10 +101,10 @@ export class UrlbarProviderTabToSearch extends UrlbarProvider {
   }
 
   /**
-   * @returns {Values<typeof lazy.UrlbarShared.PROVIDER_TYPE>}
+   * @returns {Values<typeof UrlbarUtils.PROVIDER_TYPE>}
    */
   get type() {
-    return lazy.UrlbarShared.PROVIDER_TYPE.PROFILE;
+    return UrlbarUtils.PROVIDER_TYPE.PROFILE;
   }
 
   /**
@@ -349,7 +349,7 @@ function makeOnboardingResult(engine, satisfiesAutofillThreshold = false) {
       engine: engine.name,
       searchUrlDomainWithoutSuffix: searchUrlDomainWithoutSuffix(engine),
       providesSearchMode: true,
-      icon: lazy.UrlbarShared.ICON.SEARCH_GLASS,
+      icon: UrlbarUtils.ICON.SEARCH_GLASS,
       dynamicType: DYNAMIC_RESULT_TYPE,
       satisfiesAutofillThreshold,
     },
@@ -366,7 +366,7 @@ function makeResult(context, engine, satisfiesAutofillThreshold = false) {
       isGeneralPurposeEngine: engine.isGeneralPurposeEngine,
       searchUrlDomainWithoutSuffix: searchUrlDomainWithoutSuffix(engine),
       providesSearchMode: true,
-      icon: lazy.UrlbarShared.ICON.SEARCH_GLASS,
+      icon: UrlbarUtils.ICON.SEARCH_GLASS,
       query: "",
       satisfiesAutofillThreshold,
     },

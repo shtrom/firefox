@@ -79,10 +79,10 @@ export class UrlbarProviderSearchSuggestions extends UrlbarProvider {
   }
 
   /**
-   * @returns {Values<typeof lazy.UrlbarShared.PROVIDER_TYPE>}
+   * @returns {Values<typeof UrlbarUtils.PROVIDER_TYPE>}
    */
   get type() {
-    return lazy.UrlbarShared.PROVIDER_TYPE.NETWORK;
+    return UrlbarUtils.PROVIDER_TYPE.NETWORK;
   }
 
   /**
@@ -517,10 +517,10 @@ export class UrlbarProviderSearchSuggestions extends UrlbarProvider {
         let titleHighlight;
         if (tail && entry.tailOffsetIndex >= 0) {
           title = tail;
-          titleHighlight = lazy.UrlbarShared.HIGHLIGHT.SUGGESTED;
+          titleHighlight = UrlbarUtils.HIGHLIGHT.SUGGESTED;
         } else if (suggestion) {
           title = suggestion;
-          titleHighlight = lazy.UrlbarShared.HIGHLIGHT.SUGGESTED;
+          titleHighlight = UrlbarUtils.HIGHLIGHT.SUGGESTED;
         } else {
           title = query;
         }
@@ -697,7 +697,7 @@ function makeFormHistoryResult(queryContext, engine, entry) {
         "awesome-bar-result-menu",
     },
     highlights: {
-      suggestion: lazy.UrlbarShared.HIGHLIGHT.SUGGESTED,
+      suggestion: UrlbarUtils.HIGHLIGHT.SUGGESTED,
     },
   });
 }

@@ -58,7 +58,7 @@ add_task(async function rowCanUpdateToResult() {
     new UrlbarResult({
       type: UrlbarShared.RESULT_TYPE.URL,
       source: UrlbarShared.RESULT_SOURCE.HISTORY,
-      exposureTelemetry: UrlbarShared.EXPOSURE_TELEMETRY.HIDDEN,
+      exposureTelemetry: UrlbarUtils.EXPOSURE_TELEMETRY.HIDDEN,
       payload: {
         url: "https://example.com/hidden-exposure",
       },

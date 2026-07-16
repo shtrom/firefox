@@ -8,7 +8,6 @@ ChromeUtils.defineESModuleGetters(lazy, {
   UrlUtils: "resource://gre/modules/UrlUtils.sys.mjs",
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
   UrlbarResult: "chrome://browser/content/urlbar/UrlbarResult.mjs",
-  UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
 });
 
@@ -90,7 +89,7 @@ export class UrlbarTelemetryUtils {
   static parseSearchString(searchString) {
     let numChars = searchString.length.toString();
     let searchWords = searchString
-      .substring(0, lazy.UrlbarShared.MAX_TEXT_LENGTH)
+      .substring(0, lazy.UrlbarUtils.MAX_TEXT_LENGTH)
       .trim()
       .split(lazy.UrlUtils.REGEXP_SPACES)
       .filter(t => t);
@@ -414,7 +413,7 @@ export class UrlbarTelemetryUtils {
     if (searchMode.engineName) {
       return "search_engine";
     }
-    const source = lazy.UrlbarShared.LOCAL_SEARCH_MODES.find(
+    const source = lazy.UrlbarUtils.LOCAL_SEARCH_MODES.find(
       m => m.source == searchMode.source
     )?.telemetryLabel;
     return source ?? "unknown";

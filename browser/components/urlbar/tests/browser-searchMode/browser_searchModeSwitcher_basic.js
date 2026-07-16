@@ -288,7 +288,7 @@ add_task(async function test_search_icon_change() {
   });
 
   let newWin = await BrowserTestUtils.openNewBrowserWindow();
-  const globeIconUrl = UrlbarShared.ICON.GLOBE;
+  const globeIconUrl = UrlbarUtils.ICON.GLOBE;
 
   Assert.equal(
     UrlbarTestUtils.getSearchModeSwitcherIcon(newWin),
@@ -799,7 +799,7 @@ add_task(async function test_search_service_fail() {
 
   Assert.equal(
     searchModeSwitcherIconUrl,
-    UrlbarShared.ICON.GLOBE,
+    UrlbarUtils.ICON.GLOBE,
     "The search mode switcher should have the globe icon url since the search service init failed."
   );
 
@@ -845,7 +845,7 @@ add_task(async function test_search_mode_switcher_engine_no_icon() {
 
   Assert.equal(
     UrlbarTestUtils.getSearchModeSwitcherIcon(window),
-    UrlbarShared.ICON.SEARCH_GLASS,
+    UrlbarUtils.ICON.SEARCH_GLASS,
     "The search mode switcher should display the default search glass icon when the engine has no icon."
   );
 

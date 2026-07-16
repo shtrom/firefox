@@ -26,10 +26,10 @@ ChromeUtils.defineESModuleGetters(lazy, {
  */
 export class UrlbarProviderAliasEngines extends UrlbarProvider {
   /**
-   * @returns {Values<typeof lazy.UrlbarShared.PROVIDER_TYPE>}
+   * @returns {Values<typeof UrlbarUtils.PROVIDER_TYPE>}
    */
   get type() {
-    return lazy.UrlbarShared.PROVIDER_TYPE.HEURISTIC;
+    return UrlbarUtils.PROVIDER_TYPE.HEURISTIC;
   }
 
   /**

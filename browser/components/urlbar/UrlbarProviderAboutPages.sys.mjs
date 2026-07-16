@@ -6,7 +6,10 @@
  * This module exports a provider that offers about pages.
  */
 
-import { UrlbarProvider } from "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs";
+import {
+  UrlbarProvider,
+  UrlbarUtils,
+} from "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs";
 
 const lazy = {};
 
@@ -21,10 +24,10 @@ ChromeUtils.defineESModuleGetters(lazy, {
  */
 export class UrlbarProviderAboutPages extends UrlbarProvider {
   /**
-   * @returns {Values<typeof lazy.UrlbarShared.PROVIDER_TYPE>}
+   * @returns {Values<typeof UrlbarUtils.PROVIDER_TYPE>}
    */
   get type() {
-    return lazy.UrlbarShared.PROVIDER_TYPE.PROFILE;
+    return UrlbarUtils.PROVIDER_TYPE.PROFILE;
   }
 
   /**
@@ -55,11 +58,11 @@ export class UrlbarProviderAboutPages extends UrlbarProvider {
           payload: {
             title: aboutUrl,
             url: aboutUrl,
-            icon: lazy.UrlbarShared.getIconForUrl(aboutUrl),
+            icon: UrlbarUtils.getIconForUrl(aboutUrl),
           },
           highlights: {
-            title: lazy.UrlbarShared.HIGHLIGHT.TYPED,
-            url: lazy.UrlbarShared.HIGHLIGHT.TYPED,
+            title: UrlbarUtils.HIGHLIGHT.TYPED,
+            url: UrlbarUtils.HIGHLIGHT.TYPED,
           },
         });
         addCallback(this, result);

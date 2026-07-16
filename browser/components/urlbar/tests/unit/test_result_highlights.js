@@ -22,7 +22,7 @@ add_task(async function test_search_suggestion_normal() {
       {
         title: "test",
         highlights: {
-          title: UrlbarShared.HIGHLIGHT.SUGGESTED,
+          title: UrlbarUtils.HIGHLIGHT.SUGGESTED,
         },
       },
     ],
@@ -57,7 +57,7 @@ add_task(async function test_search_tail() {
         title: "tail",
         tail: "tail",
         highlights: {
-          title: UrlbarShared.HIGHLIGHT.SUGGESTED,
+          title: UrlbarUtils.HIGHLIGHT.SUGGESTED,
         },
       },
     ],

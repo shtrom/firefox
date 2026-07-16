@@ -11,6 +11,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
   UrlbarResult: "chrome://browser/content/urlbar/UrlbarResult.mjs",
   UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
+  UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
 });
 
 /**
@@ -146,7 +147,7 @@ export class DynamicSuggestions extends SuggestProvider {
       // set `exposureTelemetry` here. Otherwise experiments would need to set
       // the corresponding Nimbus variables properly. (They can still do that,
       // it's just not required.)
-      exposureTelemetry: lazy.UrlbarShared.EXPOSURE_TELEMETRY.HIDDEN,
+      exposureTelemetry: lazy.UrlbarUtils.EXPOSURE_TELEMETRY.HIDDEN,
       payload: {
         ...payload,
         dynamicType: "exposure",

@@ -247,7 +247,7 @@ class MuxerUnifiedComplete extends UrlbarMuxer {
 
     // Add global suggestedIndex results.
     let globalSuggestedIndexResults = state.resultsByGroup.get(
-      lazy.UrlbarShared.RESULT_GROUP.SUGGESTED_INDEX
+      UrlbarUtils.RESULT_GROUP.SUGGESTED_INDEX
     );
     if (globalSuggestedIndexResults) {
       this._addSuggestedIndexResults(
@@ -268,7 +268,7 @@ class MuxerUnifiedComplete extends UrlbarMuxer {
    * Search for group in rootGroup and return it.
    *
    * @param {object} rootGroup Root group definition.
-   * @param {Values<typeof lazy.UrlbarShared.RESULT_GROUP>} group The group to search for.
+   * @param {Values<typeof UrlbarUtils.RESULT_GROUP>} group The group to search for.
    * @returns {object|null} Group object from the root group. The
    *   SUGGESTED_INDEX group is not included in the rootGroup, so this
    *   will return null for it.
@@ -693,7 +693,7 @@ class MuxerUnifiedComplete extends UrlbarMuxer {
    * Adds results to a group using the results from its `RESULT_GROUP` in
    * `state.resultsByGroup`.
    *
-   * @param {Values<typeof lazy.UrlbarShared.RESULT_GROUP>} groupConst
+   * @param {Values<typeof UrlbarUtils.RESULT_GROUP>} groupConst
    *   The group's `RESULT_GROUP`.
    * @param {object} limits
    *   An object defining the group's limits as described in `_fillGroup`.
@@ -722,7 +722,7 @@ class MuxerUnifiedComplete extends UrlbarMuxer {
     // count here in that case. Other values of maxHistoricalSearchSuggestions
     // are ignored and we use the flex defined on the form history group.
     if (
-      groupConst == lazy.UrlbarShared.RESULT_GROUP.FORM_HISTORY &&
+      groupConst == UrlbarUtils.RESULT_GROUP.FORM_HISTORY &&
       !lazy.UrlbarPrefs.get("maxHistoricalSearchSuggestions")
     ) {
       // Create a new `limits` object so we don't modify the caller's.
@@ -1602,7 +1602,7 @@ class MuxerUnifiedComplete extends UrlbarMuxer {
   /**
    * Checks exposure eligibility and visibility for the given result.
    * If the result passes the exposure check, we set `result.exposureTelemetry`
-   * to the appropriate `UrlbarShared.EXPOSURE_TELEMETRY` value.
+   * to the appropriate `UrlbarUtils.EXPOSURE_TELEMETRY` value.
    *
    * @param {UrlbarResult} result
    *   The result.
@@ -1613,8 +1613,8 @@ class MuxerUnifiedComplete extends UrlbarMuxer {
       const telemetryType = UrlbarUtils.searchEngagementTelemetryType(result);
       if (exposureResults.has(telemetryType)) {
         result.exposureTelemetry = lazy.UrlbarPrefs.get("showExposureResults")
-          ? lazy.UrlbarShared.EXPOSURE_TELEMETRY.SHOWN
-          : lazy.UrlbarShared.EXPOSURE_TELEMETRY.HIDDEN;
+          ? UrlbarUtils.EXPOSURE_TELEMETRY.SHOWN
+          : UrlbarUtils.EXPOSURE_TELEMETRY.HIDDEN;
       }
     }
   }

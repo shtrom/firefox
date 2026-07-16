@@ -35,10 +35,10 @@ export class UrlbarProviderOmnibox extends UrlbarProvider {
   }
 
   /**
-   * @returns {Values<typeof lazy.UrlbarShared.PROVIDER_TYPE>}
+   * @returns {Values<typeof UrlbarUtils.PROVIDER_TYPE>}
    */
   get type() {
-    return lazy.UrlbarShared.PROVIDER_TYPE.HEURISTIC;
+    return UrlbarUtils.PROVIDER_TYPE.HEURISTIC;
   }
 
   /**
@@ -107,12 +107,12 @@ export class UrlbarProviderOmnibox extends UrlbarProvider {
         title: description,
         content: queryContext.searchString,
         keyword: queryContext.tokens[0].value,
-        icon: lazy.UrlbarShared.ICON.EXTENSION,
+        icon: UrlbarUtils.ICON.EXTENSION,
       },
       highlights: {
-        title: lazy.UrlbarShared.HIGHLIGHT.TYPED,
-        content: lazy.UrlbarShared.HIGHLIGHT.TYPED,
-        keyword: lazy.UrlbarShared.HIGHLIGHT.TYPED,
+        title: UrlbarUtils.HIGHLIGHT.TYPED,
+        content: UrlbarUtils.HIGHLIGHT.TYPED,
+        keyword: UrlbarUtils.HIGHLIGHT.TYPED,
       },
     });
     addCallback(this, heuristicResult);
@@ -142,12 +142,12 @@ export class UrlbarProviderOmnibox extends UrlbarProvider {
               content,
               keyword: queryContext.tokens[0].value,
               isBlockable: suggestion.deletable,
-              icon: lazy.UrlbarShared.ICON.EXTENSION,
+              icon: UrlbarUtils.ICON.EXTENSION,
             },
             highlights: {
-              title: lazy.UrlbarShared.HIGHLIGHT.TYPED,
-              content: lazy.UrlbarShared.HIGHLIGHT.TYPED,
-              keyword: lazy.UrlbarShared.HIGHLIGHT.TYPED,
+              title: UrlbarUtils.HIGHLIGHT.TYPED,
+              content: UrlbarUtils.HIGHLIGHT.TYPED,
+              keyword: UrlbarUtils.HIGHLIGHT.TYPED,
             },
           });
           addCallback(this, result);

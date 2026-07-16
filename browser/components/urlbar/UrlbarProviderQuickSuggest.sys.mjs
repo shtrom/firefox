@@ -2,7 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { UrlbarProvider } from "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs";
+import {
+  UrlbarProvider,
+  UrlbarUtils,
+} from "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs";
 
 const lazy = {};
 
@@ -27,10 +30,10 @@ const DEFAULT_SUGGESTION_SCORE = 0.2;
  */
 export class UrlbarProviderQuickSuggest extends UrlbarProvider {
   /**
-   * @returns {Values<typeof lazy.UrlbarShared.PROVIDER_TYPE>}
+   * @returns {Values<typeof UrlbarUtils.PROVIDER_TYPE>}
    */
   get type() {
-    return lazy.UrlbarShared.PROVIDER_TYPE.NETWORK;
+    return UrlbarUtils.PROVIDER_TYPE.NETWORK;
   }
 
   /**
@@ -473,7 +476,7 @@ export class UrlbarProviderQuickSuggest extends UrlbarProvider {
       let { value, highlights } =
         lazy.QuickSuggest.getFullKeywordTitleAndHighlights({
           tokens: queryContext.tokens,
-          highlightType: lazy.UrlbarShared.HIGHLIGHT.SUGGESTED,
+          highlightType: UrlbarUtils.HIGHLIGHT.SUGGESTED,
           fullKeyword: suggestion.full_keyword,
           title: suggestion.title,
         });
@@ -481,7 +484,7 @@ export class UrlbarProviderQuickSuggest extends UrlbarProvider {
       titleHighlights = highlights;
     } else {
       payload.title = suggestion.title;
-      titleHighlights = lazy.UrlbarShared.HIGHLIGHT.TYPED;
+      titleHighlights = UrlbarUtils.HIGHLIGHT.TYPED;
       payload.shouldShowUrl = true;
     }
 

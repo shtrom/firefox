@@ -204,7 +204,7 @@ add_task(function testTyped() {
       lowerCaseValue: t.toLocaleLowerCase(),
     }));
     Assert.deepEqual(
-      UrlbarUtils.getTokenMatches(tokens, phrase, UrlbarShared.HIGHLIGHT.TYPED),
+      UrlbarUtils.getTokenMatches(tokens, phrase, UrlbarUtils.HIGHLIGHT.TYPED),
       expected,
       `Match "${tokens.map(t => t.value).join(", ")}" on "${phrase}"`
     );
@@ -285,7 +285,7 @@ add_task(function testSuggestions() {
       UrlbarUtils.getTokenMatches(
         tokens,
         phrase,
-        UrlbarShared.HIGHLIGHT.SUGGESTED
+        UrlbarUtils.HIGHLIGHT.SUGGESTED
       ),
       expected,
       `Match "${tokens.map(t => t.value).join(", ")}" on "${phrase}"`
@@ -311,7 +311,7 @@ add_task(function testAll() {
   ];
   for (let { tokens, phrase, expected } of tests) {
     Assert.deepEqual(
-      UrlbarUtils.getTokenMatches(tokens, phrase, UrlbarShared.HIGHLIGHT.ALL),
+      UrlbarUtils.getTokenMatches(tokens, phrase, UrlbarUtils.HIGHLIGHT.ALL),
       expected,
       `Match "${tokens?.join(", ")}" on "${phrase}"`
     );
@@ -336,7 +336,7 @@ add_task(function testNoTokensWithTypedOrSuggetion() {
   ];
   for (let { tokens, phrase, expected } of tests) {
     Assert.deepEqual(
-      UrlbarUtils.getTokenMatches(tokens, phrase, UrlbarShared.HIGHLIGHT.TYPED),
+      UrlbarUtils.getTokenMatches(tokens, phrase, UrlbarUtils.HIGHLIGHT.TYPED),
       expected,
       `Match "${tokens?.join(", ")}" on "${phrase} for TYPED"`
     );
@@ -344,7 +344,7 @@ add_task(function testNoTokensWithTypedOrSuggetion() {
       UrlbarUtils.getTokenMatches(
         tokens,
         phrase,
-        UrlbarShared.HIGHLIGHT.SUGGESTED
+        UrlbarUtils.HIGHLIGHT.SUGGESTED
       ),
       expected,
       `Match "${tokens?.join(", ")}" on "${phrase} for SUGGESTED"`

@@ -226,7 +226,7 @@ add_task(async function shortcuts_without_other_engines() {
   }
 
   info("Remove local engines");
-  for (const { pref } of UrlbarShared.LOCAL_SEARCH_MODES) {
+  for (const { pref } of UrlbarUtils.LOCAL_SEARCH_MODES) {
     await SpecialPowers.pushPrefEnv({
       set: [[`browser.urlbar.${pref}`, false]],
     });

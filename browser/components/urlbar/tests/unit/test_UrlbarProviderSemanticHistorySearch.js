@@ -96,7 +96,7 @@ add_task(async function test_startQuery_adds_results() {
   Assert.equal(added[0].payload.url, url, "Correct URL should be used");
   Assert.equal(
     added[0].payload.icon,
-    UrlbarShared.getIconForUrl(url),
+    UrlbarUtils.getIconForUrl(url),
     "Correct icon should be used"
   );
   Assert.ok(added[0].payload.isBlockable, "Result should be blockable");
@@ -294,7 +294,7 @@ add_task(async function test_switchTab() {
     Assert.equal(result.payload.tabGroup, groupId, "Check tab group");
     Assert.equal(
       result.payload.icon,
-      UrlbarShared.getIconForUrl(url),
+      UrlbarUtils.getIconForUrl(url),
       "Check icon"
     );
   }

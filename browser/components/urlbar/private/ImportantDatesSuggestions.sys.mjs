@@ -12,6 +12,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   UrlbarSearchUtils:
     "moz-src:///browser/components/urlbar/UrlbarSearchUtils.sys.mjs",
   UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
+  UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
 });
 
 const SHOW_COUNTDOWN_THRESHOLD_DAYS = 30;
@@ -230,7 +231,7 @@ export class ImportantDatesSuggestions extends SuggestProvider {
         isBlockable: true,
       },
       highlights: {
-        title: lazy.UrlbarShared.HIGHLIGHT.ALL,
+        title: lazy.UrlbarUtils.HIGHLIGHT.ALL,
       },
     });
   }

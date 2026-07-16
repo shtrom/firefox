@@ -116,7 +116,7 @@ async function triggerAutofillAndPickResult(
 function createOtherAutofillProvider(searchString, autofilledValue) {
   return new UrlbarTestUtils.TestProvider({
     priority: Infinity,
-    type: UrlbarShared.PROVIDER_TYPE.HEURISTIC,
+    type: UrlbarUtils.PROVIDER_TYPE.HEURISTIC,
     results: [
       new UrlbarResult({
         type: UrlbarShared.RESULT_TYPE.URL,

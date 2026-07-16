@@ -73,10 +73,10 @@ ChromeUtils.defineLazyGetter(lazy, "SQL_ADAPTIVE_QUERY", () => {
  */
 export class UrlbarProviderInputHistory extends UrlbarProvider {
   /**
-   * @returns {Values<typeof lazy.UrlbarShared.PROVIDER_TYPE>}
+   * @returns {Values<typeof UrlbarUtils.PROVIDER_TYPE>}
    */
   get type() {
-    return lazy.UrlbarShared.PROVIDER_TYPE.PROFILE;
+    return UrlbarUtils.PROVIDER_TYPE.PROFILE;
   }
 
   /**
@@ -143,7 +143,7 @@ export class UrlbarProviderInputHistory extends UrlbarProvider {
           payload: {
             url,
             title: resultTitle,
-            icon: lazy.UrlbarShared.getIconForUrl(url),
+            icon: UrlbarUtils.getIconForUrl(url),
             userContextId,
             lastVisit,
             action: lazy.UrlbarPrefs.get("secondaryActions.switchToTab")
@@ -151,8 +151,8 @@ export class UrlbarProviderInputHistory extends UrlbarProvider {
               : undefined,
           },
           highlights: {
-            url: lazy.UrlbarShared.HIGHLIGHT.TYPED,
-            title: lazy.UrlbarShared.HIGHLIGHT.TYPED,
+            url: UrlbarUtils.HIGHLIGHT.TYPED,
+            title: UrlbarUtils.HIGHLIGHT.TYPED,
           },
         });
         addCallback(this, result);
@@ -185,7 +185,7 @@ export class UrlbarProviderInputHistory extends UrlbarProvider {
           url,
           title: resultTitle,
           tags: resultTags,
-          icon: lazy.UrlbarShared.getIconForUrl(url),
+          icon: UrlbarUtils.getIconForUrl(url),
           isBlockable,
           blockL10n: isBlockable
             ? { id: "urlbar-result-menu-remove-from-history2" }
@@ -197,9 +197,9 @@ export class UrlbarProviderInputHistory extends UrlbarProvider {
           lastVisit,
         },
         highlights: {
-          url: lazy.UrlbarShared.HIGHLIGHT.TYPED,
-          title: lazy.UrlbarShared.HIGHLIGHT.TYPED,
-          tags: lazy.UrlbarShared.HIGHLIGHT.TYPED,
+          url: UrlbarUtils.HIGHLIGHT.TYPED,
+          title: UrlbarUtils.HIGHLIGHT.TYPED,
+          tags: UrlbarUtils.HIGHLIGHT.TYPED,
         },
       });
       addCallback(this, result);

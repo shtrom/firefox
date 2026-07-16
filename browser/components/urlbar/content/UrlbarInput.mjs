@@ -249,7 +249,7 @@ ${
   _suppressPrimaryAdjustment = false;
   _lastSearchString = "";
   // Tracks IME composition.
-  #compositionState = UrlbarShared.COMPOSITION.NONE;
+  #compositionState = lazy.UrlbarUtils.COMPOSITION.NONE;
   #compositionClosedPopup = false;
   #compositionHadText = false;
 
@@ -1703,7 +1703,7 @@ ${
           // the urifixup prefs.
           if (
             lazy.UrlbarPrefs.get("browser.fixup.dns_first_for_single_words") &&
-            UrlbarShared.looksLikeSingleWordHost(originalUntrimmedValue)
+            lazy.UrlbarUtils.looksLikeSingleWordHost(originalUntrimmedValue)
           ) {
             url = originalUntrimmedValue;
           }
@@ -1821,7 +1821,7 @@ ${
           // TODO (bug 1642623): for now there is no smart heuristic to skip the
           // DNS lookup, so any value above 0 will run it.
           lazy.UrlbarPrefs.get("dnsResolveSingleWordsAfterSearch") > 0 &&
-          UrlbarShared.looksLikeSingleWordHost(originalUntrimmedValue)
+          lazy.UrlbarUtils.looksLikeSingleWordHost(originalUntrimmedValue)
         ) {
           // When fixing a single word to a search, the docShell would also
           // query the DNS and if resolved ask the user whether they would
@@ -2483,7 +2483,7 @@ ${
    *   Object options
    * @param {SearchEngine} [options.searchEngine]
    *   Search engine to use when the search is using a known alias.
-   * @param {UrlbarShared.SEARCH_MODE_ENTRY} [options.searchModeEntry]
+   * @param {UrlbarUtils.SEARCH_MODE_ENTRY} [options.searchModeEntry]
    *   If provided, we will record this parameter as the search mode entry point
    *   in Telemetry. Consumers should provide this if they expect their call
    *   to enter search mode.
@@ -2574,7 +2574,7 @@ ${
 
     let mode =
       this.#isAddressbar &&
-      UrlbarShared.LOCAL_SEARCH_MODES.find(m => m.restrict == token);
+      lazy.UrlbarUtils.LOCAL_SEARCH_MODES.find(m => m.restrict == token);
     if (mode) {
       // Return a copy so callers don't modify the object in LOCAL_SEARCH_MODES.
       return { ...mode };
@@ -2733,7 +2733,7 @@ ${
    *   A result source to restrict to.
    * @param {string} searchMode.entry
    *   How search mode was entered. This is recorded in event telemetry. One of
-   *   the values in UrlbarShared.SEARCH_MODE_ENTRY.
+   *   the values in UrlbarUtils.SEARCH_MODE_ENTRY.
    * @param {boolean} [searchMode.isPreview]
    *   If true, we will preview search mode. Search mode preview does not record
    *   telemetry and has slighly different UI behavior. The preview is exited in
@@ -2798,7 +2798,7 @@ ${
 
     if (searchMode) {
       searchMode.isPreview = isPreview;
-      if (UrlbarShared.SEARCH_MODE_ENTRY.has(entry)) {
+      if (lazy.UrlbarUtils.SEARCH_MODE_ENTRY.has(entry)) {
         searchMode.entry = entry;
       } else {
         // If we see this value showing up in telemetry, we should review
@@ -5297,7 +5297,7 @@ ${
   #maybeSelectAll() {
     if (
       !this.#preventClickSelectsAll &&
-      this.#compositionState != UrlbarShared.COMPOSITION.COMPOSING &&
+      this.#compositionState != lazy.UrlbarUtils.COMPOSITION.COMPOSING &&
       this.focused &&
       this.inputField.selectionStart == this.inputField.selectionEnd
     ) {
@@ -5654,12 +5654,15 @@ ${
     let compositionClosedPopup = this.#compositionClosedPopup;
 
     // Clear composition values if we're no more composing.
-    if (this.#compositionState != UrlbarShared.COMPOSITION.COMPOSING) {
-      this.#compositionState = UrlbarShared.COMPOSITION.NONE;
+    if (this.#compositionState != lazy.UrlbarUtils.COMPOSITION.COMPOSING) {
+      this.#compositionState = lazy.UrlbarUtils.COMPOSITION.NONE;
       this.#compositionClosedPopup = false;
     }
 
-    if (compositionState == UrlbarShared.COMPOSITION.COMPOSING && event.data) {
+    if (
+      compositionState == lazy.UrlbarUtils.COMPOSITION.COMPOSING &&
+      event.data
+    ) {
       this.#compositionHadText = true;
     }
 
@@ -5711,8 +5714,8 @@ ${
     // and we didn't close the popup on composition start.
     if (
       !lazy.UrlbarPrefs.get("keepPanelOpenDuringImeComposition") &&
-      (compositionState == UrlbarShared.COMPOSITION.COMPOSING ||
-        (compositionState == UrlbarShared.COMPOSITION.CANCELED &&
+      (compositionState == lazy.UrlbarUtils.COMPOSITION.COMPOSING ||
+        (compositionState == lazy.UrlbarUtils.COMPOSITION.CANCELED &&
           !compositionClosedPopup))
     ) {
       return;
@@ -5722,7 +5725,7 @@ ${
     // undoing/redoing.
     const allowAutofill =
       (!lazy.UrlbarPrefs.get("keepPanelOpenDuringImeComposition") ||
-        compositionState !== UrlbarShared.COMPOSITION.COMPOSING) &&
+        compositionState !== lazy.UrlbarUtils.COMPOSITION.COMPOSING) &&
       !event.inputType?.startsWith("delete") &&
       !event.inputType?.startsWith("history") &&
       !lazy.UrlbarUtils.isPasteEvent(event) &&
@@ -6065,10 +6068,10 @@ ${
   }
 
   _on_compositionstart() {
-    if (this.#compositionState == UrlbarShared.COMPOSITION.COMPOSING) {
+    if (this.#compositionState == lazy.UrlbarUtils.COMPOSITION.COMPOSING) {
       throw new Error("Trying to start a nested composition?");
     }
-    this.#compositionState = UrlbarShared.COMPOSITION.COMPOSING;
+    this.#compositionState = lazy.UrlbarUtils.COMPOSITION.COMPOSING;
     this.#compositionHadText = false;
 
     if (lazy.UrlbarPrefs.get("keepPanelOpenDuringImeComposition")) {
@@ -6097,7 +6100,7 @@ ${
   }
 
   _on_compositionend(event) {
-    if (this.#compositionState != UrlbarShared.COMPOSITION.COMPOSING) {
+    if (this.#compositionState != lazy.UrlbarUtils.COMPOSITION.COMPOSING) {
       throw new Error("Trying to stop a non existing composition?");
     }
 
@@ -6112,8 +6115,8 @@ ${
     // We can't yet retrieve the committed value from the editor, since it isn't
     // completely committed yet. We'll handle it at the next input event.
     this.#compositionState = event.data
-      ? UrlbarShared.COMPOSITION.COMMIT
-      : UrlbarShared.COMPOSITION.CANCELED;
+      ? lazy.UrlbarUtils.COMPOSITION.COMMIT
+      : lazy.UrlbarUtils.COMPOSITION.CANCELED;
 
     // Certain IMEs fire a spurious empty composition after each commit without
     // a subsequent input event. If this composition was empty throughout and it
@@ -6125,7 +6128,7 @@ ${
       this.#compositionClosedPopup &&
       !lazy.UrlbarPrefs.get("keepPanelOpenDuringImeComposition")
     ) {
-      this.#compositionState = UrlbarShared.COMPOSITION.NONE;
+      this.#compositionState = lazy.UrlbarUtils.COMPOSITION.NONE;
       this.#compositionClosedPopup = false;
       this.startQuery({ resetSearchState: false, event });
     }

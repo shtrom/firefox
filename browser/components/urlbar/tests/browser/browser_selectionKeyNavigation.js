@@ -98,14 +98,12 @@ add_task(async function pageDownKey() {
     0,
     "The heuristic autofill result should be selected initially"
   );
-  let pageCount = Math.ceil(
-    (MAX_RESULTS - 1) / UrlbarShared.PAGE_UP_DOWN_DELTA
-  );
+  let pageCount = Math.ceil((MAX_RESULTS - 1) / UrlbarUtils.PAGE_UP_DOWN_DELTA);
   for (let i = 0; i < pageCount; i++) {
     EventUtils.synthesizeKey("KEY_PageDown");
     Assert.equal(
       UrlbarTestUtils.getSelectedRowIndex(window),
-      Math.min((i + 1) * UrlbarShared.PAGE_UP_DOWN_DELTA, MAX_RESULTS - 1)
+      Math.min((i + 1) * UrlbarUtils.PAGE_UP_DOWN_DELTA, MAX_RESULTS - 1)
     );
   }
   EventUtils.synthesizeKey("KEY_PageDown");
@@ -133,14 +131,12 @@ add_task(async function pageUpKey() {
     MAX_RESULTS - 1,
     "Page up at start should wrap around to last result"
   );
-  let pageCount = Math.ceil(
-    (MAX_RESULTS - 1) / UrlbarShared.PAGE_UP_DOWN_DELTA
-  );
+  let pageCount = Math.ceil((MAX_RESULTS - 1) / UrlbarUtils.PAGE_UP_DOWN_DELTA);
   for (let i = 0; i < pageCount; i++) {
     EventUtils.synthesizeKey("KEY_PageUp");
     Assert.equal(
       UrlbarTestUtils.getSelectedRowIndex(window),
-      Math.max(MAX_RESULTS - 1 - (i + 1) * UrlbarShared.PAGE_UP_DOWN_DELTA, 0)
+      Math.max(MAX_RESULTS - 1 - (i + 1) * UrlbarUtils.PAGE_UP_DOWN_DELTA, 0)
     );
   }
 });

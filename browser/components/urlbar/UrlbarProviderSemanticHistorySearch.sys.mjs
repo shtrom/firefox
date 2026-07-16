@@ -80,10 +80,10 @@ export class UrlbarProviderSemanticHistorySearch extends UrlbarProvider {
   }
 
   /**
-   * @returns {Values<typeof lazy.UrlbarShared.PROVIDER_TYPE>}
+   * @returns {Values<typeof UrlbarUtils.PROVIDER_TYPE>}
    */
   get type() {
-    return lazy.UrlbarShared.PROVIDER_TYPE.PROFILE;
+    return UrlbarUtils.PROVIDER_TYPE.PROFILE;
   }
 
   /**
@@ -154,7 +154,7 @@ export class UrlbarProviderSemanticHistorySearch extends UrlbarProvider {
           payload: {
             title: res.title,
             url: res.url,
-            icon: lazy.UrlbarShared.getIconForUrl(res.url),
+            icon: UrlbarUtils.getIconForUrl(res.url),
             isBlockable: true,
             blockL10n: { id: "urlbar-result-menu-remove-from-history2" },
             helpUrl:
@@ -209,7 +209,7 @@ export class UrlbarProviderSemanticHistorySearch extends UrlbarProvider {
         payload: {
           url: res.url,
           title: res.title,
-          icon: lazy.UrlbarShared.getIconForUrl(res.url),
+          icon: UrlbarUtils.getIconForUrl(res.url),
           userContextId: tabUserContextId,
           tabGroup: tabGroupId,
           lastVisit: res.lastVisit,

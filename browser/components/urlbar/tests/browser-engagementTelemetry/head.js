@@ -399,7 +399,7 @@ async function loadRemoteTab(url) {
         type: "tab",
         title: "tesrt",
         url,
-        icon: UrlbarShared.ICON.DEFAULT,
+        icon: UrlbarUtils.ICON.DEFAULT,
         client: "test",
         lastUsed: Math.floor(Date.now() / 1000),
       },

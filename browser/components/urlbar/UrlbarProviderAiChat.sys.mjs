@@ -8,6 +8,7 @@
 import {
   SkippableTimer,
   UrlbarProvider,
+  UrlbarUtils,
 } from "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs";
 
 const lazy = {};
@@ -68,12 +69,12 @@ export class UrlbarProviderAiChat extends UrlbarProvider {
   static MIN_CHARS_FOR_CHAT = 3;
 
   /**
-   * @returns {Values<typeof lazy.UrlbarShared.PROVIDER_TYPE>}
+   * @returns {Values<typeof UrlbarUtils.PROVIDER_TYPE>}
    */
   get type() {
     // The behavior depends on the SAP and the user intent, thus we treat this
     // as an immediate heuristic provider and eventually delay later.
-    return lazy.UrlbarShared.PROVIDER_TYPE.HEURISTIC;
+    return UrlbarUtils.PROVIDER_TYPE.HEURISTIC;
   }
 
   /**
@@ -172,7 +173,7 @@ export class UrlbarProviderAiChat extends UrlbarProvider {
           icon,
         },
         highlights: {
-          engine: lazy.UrlbarShared.HIGHLIGHT.TYPED,
+          engine: UrlbarUtils.HIGHLIGHT.TYPED,
         },
       });
       addCallback(this, searchResult);

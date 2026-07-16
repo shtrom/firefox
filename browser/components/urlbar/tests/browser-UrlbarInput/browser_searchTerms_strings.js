@@ -6,7 +6,6 @@
 // in the Urlbar as a search term.
 
 ChromeUtils.defineESModuleGetters(this, {
-  UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
 });
 
@@ -41,7 +40,7 @@ add_task(async function search_strings() {
     "http",
     "https",
     // Long string within threshold.
-    "h".repeat(UrlbarShared.MAX_TEXT_LENGTH),
+    "h".repeat(UrlbarUtils.MAX_TEXT_LENGTH),
   ];
 
   let tab = await BrowserTestUtils.openNewForegroundTab(gBrowser);

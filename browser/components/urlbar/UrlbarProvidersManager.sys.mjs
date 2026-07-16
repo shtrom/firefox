@@ -28,6 +28,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
   UrlbarTokenizer:
     "moz-src:///browser/components/urlbar/UrlbarTokenizer.sys.mjs",
+  UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
 });
 
 ChromeUtils.defineLazyGetter(lazy, "logger", () =>
@@ -331,17 +332,17 @@ export class ProvidersManager {
       throw new Error(`Trying to register an invalid provider`);
     }
     if (
-      !Object.values(lazy.UrlbarShared.PROVIDER_TYPE).includes(provider.type)
+      !Object.values(lazy.UrlbarUtils.PROVIDER_TYPE).includes(provider.type)
     ) {
       throw new Error(`Unknown provider type ${provider.type}`);
     }
     lazy.logger.info(`Registering provider ${provider.name}`);
     let index = -1;
-    if (provider.type == lazy.UrlbarShared.PROVIDER_TYPE.HEURISTIC) {
+    if (provider.type == lazy.UrlbarUtils.PROVIDER_TYPE.HEURISTIC) {
       // Keep heuristic providers in order at the front of the array.  Find the
       // first non-heuristic provider and insert the new provider there.
       index = this.providers.findIndex(
-        p => p.type != lazy.UrlbarShared.PROVIDER_TYPE.HEURISTIC
+        p => p.type != lazy.UrlbarUtils.PROVIDER_TYPE.HEURISTIC
       );
     }
     if (index < 0) {
@@ -813,7 +814,7 @@ export class Query {
     for (let provider of activeProviders) {
       // Track heuristic providers. later we'll use this Set to wait for them
       // before returning results to the user.
-      if (provider.type == lazy.UrlbarShared.PROVIDER_TYPE.HEURISTIC) {
+      if (provider.type == lazy.UrlbarUtils.PROVIDER_TYPE.HEURISTIC) {
         this.context.pendingHeuristicProviders.add(provider.name);
         queryPromises.push(
           startQuery(provider).finally(() => {
@@ -989,7 +990,7 @@ export class Query {
       });
     } else if (
       !this.context.pendingHeuristicProviders.size &&
-      provider.type == lazy.UrlbarShared.PROVIDER_TYPE.HEURISTIC
+      provider.type == lazy.UrlbarUtils.PROVIDER_TYPE.HEURISTIC
     ) {
       // All the active heuristic providers have returned results, we can skip
       // the heuristic chunk timer and start showing results immediately.

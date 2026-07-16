@@ -20,7 +20,6 @@ const lazy = XPCOMUtils.declareLazy({
   SearchService: "moz-src:///toolkit/components/search/SearchService.sys.mjs",
   SearchUtils: "moz-src:///toolkit/components/search/SearchUtils.sys.mjs",
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
-  UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
 });
 
@@ -832,7 +831,7 @@ Preferences.addSetting(
       this.#localShortcutL10nNames = new Map();
 
       let getIDs = (suffix = "") =>
-        lazy.UrlbarShared.LOCAL_SEARCH_MODES.map(mode => {
+        lazy.UrlbarUtils.LOCAL_SEARCH_MODES.map(mode => {
           let sourceName = lazy.UrlbarUtils.getResultSourceName(mode.source);
           return { id: `urlbar-search-mode-${sourceName}${suffix}` };
         });
@@ -847,7 +846,7 @@ Preferences.addSetting(
         let localizedNames = await document.l10n.formatValues(localizedIDs);
         let englishNames = await englishSearchStrings.formatValues(englishIDs);
 
-        lazy.UrlbarShared.LOCAL_SEARCH_MODES.forEach(({ source }, index) => {
+        lazy.UrlbarUtils.LOCAL_SEARCH_MODES.forEach(({ source }, index) => {
           let localizedName = localizedNames[index];
           let englishName = englishNames[index];
 
@@ -1030,7 +1029,7 @@ Preferences.addSetting(
 
       /** @type {SettingControlConfig[]} */
       let configs = [];
-      for (let searchMode of lazy.UrlbarShared.LOCAL_SEARCH_MODES) {
+      for (let searchMode of lazy.UrlbarUtils.LOCAL_SEARCH_MODES) {
         let id = `searchmode-${searchMode.telemetryLabel}`;
         maybeMakeSetting({ id });
 

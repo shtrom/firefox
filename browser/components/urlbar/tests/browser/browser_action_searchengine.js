@@ -56,7 +56,7 @@ async function testSearch(win, expectedName, expectedBaseUrl) {
 
   Assert.equal(
     result.image,
-    UrlbarShared.ICON.SEARCH_GLASS,
+    UrlbarUtils.ICON.SEARCH_GLASS,
     "Should have the search icon image"
   );
 

@@ -20,7 +20,6 @@ ChromeUtils.defineESModuleGetters(lazy, {
   UrlbarResult: "chrome://browser/content/urlbar/UrlbarResult.mjs",
   UrlbarSearchOneOffs:
     "moz-src:///browser/components/urlbar/UrlbarSearchOneOffs.sys.mjs",
-  UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
 });
 
@@ -2647,7 +2646,7 @@ export class UrlbarView {
       (result.type == UrlbarShared.RESULT_TYPE.SEARCH ||
         result.type == UrlbarShared.RESULT_TYPE.KEYWORD)
     ) {
-      return lazy.UrlbarShared.ICON.HISTORY;
+      return lazy.UrlbarUtils.ICON.HISTORY;
     }
 
     if (iconUrlOverride) {
@@ -2668,17 +2667,17 @@ export class UrlbarView {
       result.type == UrlbarShared.RESULT_TYPE.SEARCH &&
       result.payload.trending
     ) {
-      return lazy.UrlbarShared.ICON.TRENDING;
+      return lazy.UrlbarUtils.ICON.TRENDING;
     }
 
     if (
       result.type == UrlbarShared.RESULT_TYPE.SEARCH ||
       result.type == UrlbarShared.RESULT_TYPE.KEYWORD
     ) {
-      return lazy.UrlbarShared.ICON.SEARCH_GLASS;
+      return lazy.UrlbarUtils.ICON.SEARCH_GLASS;
     }
 
-    return lazy.UrlbarShared.ICON.DEFAULT;
+    return lazy.UrlbarUtils.ICON.DEFAULT;
   }
 
   #getBlobUrlForResult(result, blob) {
@@ -3993,7 +3992,7 @@ export class UrlbarView {
 
     let localSearchMode;
     if (source) {
-      localSearchMode = lazy.UrlbarShared.LOCAL_SEARCH_MODES.find(
+      localSearchMode = lazy.UrlbarUtils.LOCAL_SEARCH_MODES.find(
         m => m.source == source
       );
     }
@@ -4112,7 +4111,7 @@ export class UrlbarView {
         if (item._originalActionSetter) {
           item._originalActionSetter();
           if (result.heuristic) {
-            favicon.src = result.payload.icon || lazy.UrlbarShared.ICON.DEFAULT;
+            favicon.src = result.payload.icon || lazy.UrlbarUtils.ICON.DEFAULT;
           }
         } else {
           console.error("An item is missing the action setter");
@@ -4133,7 +4132,7 @@ export class UrlbarView {
       if (!iconOverride && (localSearchMode || engine)) {
         // For one-offs without an icon, do not allow restyled URL results to
         // use their own icons.
-        iconOverride = lazy.UrlbarShared.ICON.SEARCH_GLASS;
+        iconOverride = lazy.UrlbarUtils.ICON.SEARCH_GLASS;
       }
       if (
         result.heuristic ||

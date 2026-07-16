@@ -424,7 +424,7 @@ add_task(async function highlighting() {
           text: "Test title",
         },
         highlights: {
-          text: UrlbarShared.HIGHLIGHT.TYPED,
+          text: UrlbarUtils.HIGHLIGHT.TYPED,
         },
       });
       addCallback(this, result);
