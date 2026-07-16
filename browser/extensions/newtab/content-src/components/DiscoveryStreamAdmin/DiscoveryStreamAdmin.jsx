@@ -69,7 +69,7 @@ export class ToggleStoryButton extends React.PureComponent {
   }
 
   render() {
-    return <button onClick={this.handleClick}>collapse/open</button>;
+    return <moz-button onClick={this.handleClick}>collapse/open</moz-button>;
   }
 }
 
@@ -491,7 +491,7 @@ export class DiscoveryStreamAdminUI extends React.PureComponent {
               onChange={this.handleWeatherUpdate}
               value={this.weatherQuery}
             />
-            <button type="submit">Submit</button>
+            <moz-button onClick={this.handleWeatherSubmit}>Submit</moz-button>
           </form>
           <table>
             <tbody>
@@ -578,15 +578,12 @@ export class DiscoveryStreamAdminUI extends React.PureComponent {
         <div className="inferred-overrides-header">
           <h3 className="inferred-overrides-title">Inferred Personalization</h3>
           <div className="inferred-overrides-actions">
-            <button
-              className="button"
-              onClick={this.refreshInferredPersonalizationAndDebug}
-            >
+            <moz-button onClick={this.refreshInferredPersonalizationAndDebug}>
               Recompute Interest Vector
-            </button>
-            <button className="button" onClick={this.refreshCache}>
+            </moz-button>
+            <moz-button onClick={this.refreshCache}>
               Refresh Story Cache
-            </button>
+            </moz-button>
           </div>
         </div>
         <div className="inferred-overrides-last-refreshed">
@@ -613,13 +610,12 @@ export class DiscoveryStreamAdminUI extends React.PureComponent {
             </Row>
             <Row className="inferred-overrides-refresh-row">
               <td colSpan="3">
-                <button
-                  className="button"
+                <moz-button
                   disabled={hasAnyNonZeroOverride ? null : true}
                   onClick={this.handleResetAllOverrides}
                 >
                   Reset overrides
-                </button>
+                </moz-button>
               </td>
             </Row>
             <Row className="inferred-overrides-table-header">
@@ -731,9 +727,7 @@ export class DiscoveryStreamAdminUI extends React.PureComponent {
     return (
       <>
         <h4>Blocks</h4>
-        <button className="button" onClick={this.resetBlocks}>
-          Reset Blocks
-        </button>{" "}
+        <moz-button onClick={this.resetBlocks}>Reset Blocks</moz-button>{" "}
         <table>
           <tbody>
             {Object.keys(blocks).map(key => {
@@ -849,13 +843,12 @@ export class DiscoveryStreamAdminUI extends React.PureComponent {
             </Row>
           </tbody>
         </table>
-        <button
-          className="button"
+        <moz-button
           style={{ marginBlockStart: "var(--space-large)" }}
           onClick={this.sendConversionEvent}
         >
           Send conversion event
-        </button>
+        </moz-button>
         <h4>Spoc data</h4>
         <table>
           <tbody>{spocsData.map(spoc => this.renderStoryData(spoc))}</tbody>
@@ -945,30 +938,21 @@ export class DiscoveryStreamAdminUI extends React.PureComponent {
 
     return (
       <div>
-        <button className="button" onClick={this.refreshCache}>
-          Refresh Cache
-        </button>
-        <br />
-        <button className="button" onClick={this.expireCache}>
-          Expire Cache
-        </button>{" "}
-        <button className="button" onClick={this.systemTick}>
-          Trigger System Tick
-        </button>{" "}
-        <button className="button" onClick={this.idleDaily}>
-          Trigger Idle Daily
-        </button>
-        <br />
-        <button className="button" onClick={this.syncRemoteSettings}>
-          Sync Remote Settings
-        </button>{" "}
-        <button className="button" onClick={this.refreshTopicSelectionCache}>
-          Refresh Topic selection count
-        </button>
-        <br />
-        <button className="button" onClick={this.showPlaceholder}>
-          Show Placeholder Cards
-        </button>{" "}
+        <div className="admin-button-row">
+          <moz-button onClick={this.refreshCache}>Refresh Cache</moz-button>
+          <moz-button onClick={this.expireCache}>Expire Cache</moz-button>
+          <moz-button onClick={this.systemTick}>Trigger System Tick</moz-button>
+          <moz-button onClick={this.idleDaily}>Trigger Idle Daily</moz-button>
+          <moz-button onClick={this.syncRemoteSettings}>
+            Sync Remote Settings
+          </moz-button>
+          <moz-button onClick={this.refreshTopicSelectionCache}>
+            Refresh Topic selection count
+          </moz-button>
+          <moz-button onClick={this.showPlaceholder}>
+            Show Placeholder Cards
+          </moz-button>
+        </div>
         <div className="toggle-wrapper">
           <moz-toggle
             id="sections-toggle"
@@ -1015,9 +999,11 @@ export class DiscoveryStreamAdminUI extends React.PureComponent {
               label="Enable widget system"
             />
           </div>
-          <button className="button" onClick={this.handleWidgetsToggleAll}>
-            {this.areAllWidgetsEnabled() ? "Disable all" : "Enable all"}
-          </button>
+          <div className="admin-button-row">
+            <moz-button onClick={this.handleWidgetsToggleAll}>
+              {this.areAllWidgetsEnabled() ? "Disable all" : "Enable all"}
+            </moz-button>
+          </div>
           <hr />
           {WIDGET_REGISTRY.map(widget => (
             <div className="toggle-wrapper" key={widget.id}>

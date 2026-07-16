@@ -4188,6 +4188,13 @@ button.arrow-button:dir(rtl) {
   margin-block: var(--space-large);
   width: 200px;
 }
+.discoverystream-admin .admin-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-medium);
+  margin-block: var(--space-large);
+}
 .discoverystream-admin .inferred-personalization-overrides {
   margin-block: var(--space-large);
 }

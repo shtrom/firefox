@@ -151,7 +151,7 @@ describe("DiscoveryStreamAdmin", () => {
       assert.equal(spocText, '{\n  "id": 12345\n}');
     });
     it("should fire refresh cache with DISCOVERY_STREAM_DEV_REFRESH_CACHE", () => {
-      wrapper.find("button").at(0).simulate("click");
+      wrapper.find("moz-button").at(0).simulate("click");
       assert.calledWith(
         dispatch,
         ac.OnlyToMain({
@@ -160,7 +160,7 @@ describe("DiscoveryStreamAdmin", () => {
       );
     });
     it("should fire expireCache with DISCOVERY_STREAM_DEV_EXPIRE_CACHE", () => {
-      wrapper.find("button").at(1).simulate("click");
+      wrapper.find("moz-button").at(1).simulate("click");
       assert.calledWith(
         dispatch,
         ac.OnlyToMain({
@@ -169,7 +169,7 @@ describe("DiscoveryStreamAdmin", () => {
       );
     });
     it("should fire systemTick with DISCOVERY_STREAM_DEV_SYSTEM_TICK", () => {
-      wrapper.find("button").at(2).simulate("click");
+      wrapper.find("moz-button").at(2).simulate("click");
       assert.calledWith(
         dispatch,
         ac.OnlyToMain({
@@ -178,7 +178,7 @@ describe("DiscoveryStreamAdmin", () => {
       );
     });
     it("should fire idleDaily with DISCOVERY_STREAM_DEV_IDLE_DAILY", () => {
-      wrapper.find("button").at(3).simulate("click");
+      wrapper.find("moz-button").at(3).simulate("click");
       assert.calledWith(
         dispatch,
         ac.OnlyToMain({
@@ -218,14 +218,14 @@ describe("DiscoveryStreamAdmin", () => {
 
       it('should render the "Recompute Interest Vector" button', () => {
         const recomputeButton = wrapper
-          .find("button")
+          .find("moz-button")
           .filterWhere(node => node.text() === "Recompute Interest Vector");
         assert.equal(recomputeButton.length, 1);
       });
 
       it('should call refreshInferredPersonalizationAndDebug when "Recompute Interest Vector" is clicked', () => {
         const recomputeButton = wrapper
-          .find("button")
+          .find("moz-button")
           .filterWhere(node => node.text() === "Recompute Interest Vector")
           .first();
         recomputeButton.simulate("click");
@@ -239,14 +239,14 @@ describe("DiscoveryStreamAdmin", () => {
 
       it('should render the "Refresh Story Cache" button', () => {
         const refreshStoryCacheButton = wrapper
-          .find("button")
+          .find("moz-button")
           .filterWhere(node => node.text() === "Refresh Story Cache");
         assert.equal(refreshStoryCacheButton.length, 1);
       });
 
       it('should call refreshCache when "Refresh Story Cache" is clicked', () => {
         const refreshStoryCacheButton = wrapper
-          .find("button")
+          .find("moz-button")
           .filterWhere(node => node.text() === "Refresh Story Cache")
           .first();
         refreshStoryCacheButton.simulate("click");
@@ -339,7 +339,7 @@ describe("DiscoveryStreamAdmin", () => {
           />
         );
         let resetButton = wrapper
-          .find("button")
+          .find("moz-button")
           .filterWhere(node => node.text() === "Reset overrides")
           .first();
         assert.equal(resetButton.prop("disabled"), true);
@@ -366,7 +366,7 @@ describe("DiscoveryStreamAdmin", () => {
           />
         );
         resetButton = wrapper
-          .find("button")
+          .find("moz-button")
           .filterWhere(node => node.text() === "Reset overrides")
           .first();
         assert.equal(resetButton.prop("disabled"), null);
@@ -436,7 +436,7 @@ describe("DiscoveryStreamAdmin", () => {
 
     it("should enable the system and every widget from the Enable all button", () => {
       wrapper
-        .find("button")
+        .find("moz-button")
         .filterWhere(node => node.text() === "Enable all")
         .first()
         .simulate("click");
@@ -458,7 +458,7 @@ describe("DiscoveryStreamAdmin", () => {
       wrapper.setProps({ otherPrefs: allEnabledPrefs });
 
       wrapper
-        .find("button")
+        .find("moz-button")
         .filterWhere(node => node.text() === "Disable all")
         .first()
         .simulate("click");
@@ -481,7 +481,7 @@ describe("DiscoveryStreamAdmin", () => {
       }
 
       wrapper = shallow(<ToggleStoryButton story="spoc" onClick={onClick} />);
-      wrapper.find("button").simulate("click");
+      wrapper.find("moz-button").simulate("click");
 
       assert.equal(result, "spoc");
     });

@@ -119,6 +119,14 @@
     width: 200px;
   }
 
+  .admin-button-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-medium);
+    margin-block: var(--space-large);
+  }
+
   .inferred-personalization-overrides {
     margin-block: var(--space-large);
   }
