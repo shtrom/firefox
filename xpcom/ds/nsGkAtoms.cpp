@@ -6,7 +6,7 @@
 
 #include "mozilla/HashFunctions.h"
 
-namespace mozilla::detail {
+namespace nsGkAtoms::detail {
 
 // Because this is `constexpr` it ends up in read-only memory where it can be
 // shared between processes.
@@ -19,9 +19,9 @@ extern constexpr GkAtoms gGkAtoms = {
 //   u"bb",
 //   u"Ccc",
 //
-#define GK_ATOM(name_, value_) u"" value_,
-#include "nsGkAtomList.h"
-#undef GK_ATOM
+#define STATIC_ATOM(name_, value_, index_) u"" value_,
+#include "StaticAtomList.h"
+#undef STATIC_ATOM
     {
 // The initialization of the atoms themselves.
 //
@@ -38,16 +38,13 @@ extern constexpr GkAtoms gGkAtoms = {
 //       offsetof(GkAtoms, a_string),
 //     nsAtom::ComputeIsAsciiLowercase(u"" "a")),
 //
-#define GK_ATOM(name_, value_)                                                \
-  nsStaticAtom(                                                               \
-      sizeof(value_) - 1, mozilla::HashString(u"" value_),                    \
-      offsetof(GkAtoms, mAtoms[static_cast<size_t>(GkAtoms::Atoms::name_)]) - \
-          offsetof(GkAtoms, name_##_string),                                  \
+#define STATIC_ATOM(name_, value_, index_)                                   \
+  nsStaticAtom(                                                              \
+      sizeof(value_) - 1, mozilla::HashString(u"" value_),                   \
+      offsetof(GkAtoms, mAtoms[index_]) - offsetof(GkAtoms, name_##_string), \
       nsAtom::ComputeIsAsciiLowercase(u"" value_)),
-#include "nsGkAtomList.h"
-#undef GK_ATOM
+#include "StaticAtomList.h"
+#undef STATIC_ATOM
     }};
 
-}  // namespace mozilla::detail
-
-const nsStaticAtom* const nsGkAtoms::sAtoms = mozilla::detail::gGkAtoms.mAtoms;
+}  // namespace nsGkAtoms::detail

@@ -328,7 +328,7 @@ inline bool StyleAtom::IsStatic() const { return !!(_0 & 1); }
 
 inline nsAtom* StyleAtom::AsAtom() const {
   if (IsStatic()) {
-    return const_cast<nsStaticAtom*>(&detail::gGkAtoms.mAtoms[_0 >> 1]);
+    return nsGkAtoms::GetAtomByIndex(_0 >> 1);
   }
   return reinterpret_cast<nsAtom*>(_0);
 }
@@ -348,7 +348,7 @@ inline void StyleAtom::Release() {
 inline StyleAtom::StyleAtom(already_AddRefed<nsAtom> aAtom) {
   nsAtom* atom = aAtom.take();
   if (atom->IsStatic()) {
-    size_t index = atom->AsStatic() - &detail::gGkAtoms.mAtoms[0];
+    size_t index = nsGkAtoms::IndexOf(atom->AsStatic());
     _0 = (index << 1) | 1;
   } else {
     _0 = reinterpret_cast<uintptr_t>(atom);

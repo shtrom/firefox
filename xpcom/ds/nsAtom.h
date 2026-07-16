@@ -122,10 +122,7 @@ class nsAtom {
   const uint32_t mHash;
 };
 
-// This class would be |final| if it wasn't for nsCSSAnonBoxPseudoStaticAtom
-// and nsCSSPseudoElementStaticAtom, which are trivial subclasses used to
-// ensure only certain static atoms are passed to certain functions.
-class nsStaticAtom : public nsAtom {
+class nsStaticAtom final : public nsAtom {
  public:
   // These are deleted so it's impossible to RefPtr<nsStaticAtom>. Raw
   // nsStaticAtom pointers should be used instead.
