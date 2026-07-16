@@ -426,7 +426,7 @@ const ProxyMessenger = {
       resolve();
 
       // If there are no active onConnect listeners.
-      if (!all.some(x => x.value)) {
+      if (!all.some(x => x.status === "fulfilled" && x.value)) {
         throw new ExtensionError(ERROR_NO_RECEIVERS);
       }
     } catch (err) {
@@ -517,7 +517,7 @@ ProxyMessenger.init();
  * used to resolve a runtime.sendMessage query with its first explicit response
  * across all onMessage listeners.
  *
- * @typedef {{response?: any, received?: boolean}} Response
+ * @typedef {{response?: boolean, received?: boolean, value?: any}} Response
  *
  * @param {Promise<Response>[]} promises
  * @returns {Promise<Response?>}
