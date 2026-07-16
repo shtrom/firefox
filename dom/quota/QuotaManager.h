@@ -75,6 +75,7 @@ class ClientUsageArray;
 class ClientDirectoryLock;
 class ClientDirectoryLockHandle;
 class DirectoryLockImpl;
+class DirtyTrackingAutoLock;
 class GroupInfo;
 class GroupInfoPair;
 class NormalOriginOperationBase;
@@ -85,6 +86,7 @@ class OriginUpserter;
 class QuotaObject;
 class SaveOriginAccessTimeOp;
 class UniversalDirectoryLock;
+class UsageTracker;
 
 namespace test {
 class GTEST_CLASS(TestQuotaManagerAndShutdownFixture,
@@ -98,6 +100,7 @@ class QuotaManager final : public BackgroundThreadObject {
   friend class ClearStorageOp;
   friend class ClientDirectoryLockHandle;
   friend class DirectoryLockImpl;
+  friend class DirtyTrackingAutoLock;
   friend class FinalizeOriginEvictionOp;
   friend class GroupInfo;
   friend class InitOp;
@@ -413,6 +416,10 @@ class QuotaManager final : public BackgroundThreadObject {
 #endif
 
   RefPtr<BoolPromise> TemporaryStorageInitialized();
+
+  nsresult FlagOriginInfoAsDirtyOnDisk(
+      DirtyTrackingAutoLock& aProofOfLock,
+      const OriginStateMetadata& aStateMetadata);
 
  private:
   nsresult EnsureStorageIsInitializedInternal();
@@ -1158,9 +1165,10 @@ class QuotaManager final : public BackgroundThreadObject {
   };
   ThreadBound<BackgroundThreadAccessible> mBackgroundThreadAccessible;
 
+  mutable mozilla::Mutex mInitializedOriginsMutex MOZ_UNANNOTATED;
   using BoolArray = AutoTArray<bool, PERSISTENCE_TYPE_INVALID>;
-  nsTHashMap<nsCStringHashKeyWithDisabledMemmove, BoolArray>
-      mInitializedOrigins;
+  nsTHashMap<nsCStringHashKeyWithDisabledMemmove, BoolArray> mInitializedOrigins
+      MOZ_GUARDED_BY(mInitializedOriginsMutex);
 
   using BitSetArray =
       AutoTArray<BitSet<Client::TYPE_MAX>, PERSISTENCE_TYPE_INVALID>;
@@ -1232,6 +1240,7 @@ class QuotaManager final : public BackgroundThreadObject {
   bool mInitializingAllTemporaryOrigins;
   bool mAllTemporaryOriginsInitialized;
   bool mCacheUsable;
+  std::atomic<bool> mUsageModificationDisabled{false};
 };
 
 }  // namespace mozilla::dom::quota

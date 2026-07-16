@@ -5,9 +5,11 @@
 #include "ActorsParent.h"
 
 // Local includes
+#include "Assertions.h"
 #include "CanonicalQuotaObject.h"
 #include "ClientUsageArray.h"
 #include "DirectoryMetadata.h"
+#include "DirtyTrackingAutoLock.h"
 #include "FirstInitializationAttemptsImpl.h"
 #include "Flatten.h"
 #include "GroupInfo.h"
@@ -36,6 +38,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <functional>
+#include <memory>
 #include <new>
 #include <numeric>
 #include <tuple>
@@ -1813,6 +1816,7 @@ QuotaManager::Observer::Observe(nsISupports* aSubject, const char* aTopic,
 QuotaManager::QuotaManager(const nsAString& aBasePath,
                            const nsAString& aStorageName)
     : mQuotaMutex("QuotaManager.mQuotaMutex"),
+      mInitializedOriginsMutex("QuotaManager.mInitializedOriginsMutex"),
       mBasePath(aBasePath),
       mStorageName(aStorageName),
       mTemporaryStorageUsage(0),
@@ -7109,6 +7113,89 @@ RefPtr<BoolPromise> QuotaManager::InitializeAllTemporaryOrigins() {
   return promise;
 }
 
+nsresult QuotaManager::FlagOriginInfoAsDirtyOnDisk(
+    DirtyTrackingAutoLock& aProofOfLock,
+    const OriginStateMetadata& aStateMetadata) {
+  AssertNotCurrentThreadOwnsQuotaMutex();
+
+  struct SharedState {
+    mozilla::Mutex mMutex;
+    mozilla::CondVar mCondVar;
+    nsresult mResult;
+    std::atomic<bool> mDone;
+
+    SharedState()
+        : mMutex("FlagOriginInfoAsDirtyOnDisk"),
+          mCondVar(mMutex, "FlagOriginInfoAsDirtyOnDisk::CondVar"),
+          mResult(NS_OK),
+          mDone(false) {}
+
+    void Done(nsresult result) {
+      MutexAutoLock lock(mMutex);
+      mResult = result;
+      mDone = true;
+      mCondVar.Notify();
+    }
+
+    nsresult WaitForResult() {
+      MutexAutoLock lock(mMutex);
+      while (!mDone) {
+        mCondVar.Wait();
+      }
+
+      return mResult;
+    }
+  };
+
+  auto sharedState = std::make_shared<SharedState>();
+
+  RefPtr<OriginInfo> originInfo = aProofOfLock.GetOriginInfo();
+  uint32_t metadataFlags = aStateMetadata.ToMetadataFlags();
+  int64_t lastAccessTime = aStateMetadata.mLastAccessTime;
+  nsCOMPtr<nsIRunnable> runnable = NS_NewRunnableFunction(
+      "QuotaManager::FlagOriginInfoAsDirtyOnDisk",
+      [sharedState, originInfo = std::move(originInfo), metadataFlags,
+       lastAccessTime]() mutable {
+        AssertIsOnIOThread();
+
+        QuotaManager* self = QuotaManager::Get();
+        if (!self) {
+          sharedState->Done(NS_ERROR_ILLEGAL_DURING_SHUTDOWN);
+          return;
+        }
+
+        nsresult result = NS_OK;
+        do {
+          if (!self->IsStorageInitializedInternal() ||
+              !self->IsTemporaryStorageInitializedInternal()) {
+            QM_LOG(("FlagOriginInfoAsDirtyOnDisk: storage not initialized"));
+            result = NS_ERROR_NOT_INITIALIZED;
+            break;
+          }
+
+          result = originInfo->UpdateDirtyMetadata(
+              self->mStorageConnection, metadataFlags, lastAccessTime);
+        } while (false);
+
+        sharedState->Done(result);
+      });
+
+  if (IsOnIOThread()) {
+    // If we are already on the IO thread, run the task directly to avoid
+    // deadlock.
+    runnable->Run();
+    return sharedState->mResult;
+  }
+
+  nsresult rv = mIOThread->get()->Dispatch(runnable, NS_DISPATCH_NORMAL);
+  if (NS_WARN_IF(NS_FAILED(rv))) {
+    return rv;
+  }
+
+  const auto result = sharedState->WaitForResult();
+  return result;
+}
+
 RefPtr<BoolPromise> QuotaManager::SaveOriginAccessTime(
     const OriginMetadata& aOriginMetadata) {
   AssertIsOnOwningThread();
@@ -7382,7 +7469,10 @@ RefPtr<BoolPromise> QuotaManager::ClearStorage() {
         }
 
         self->mInitializedClients.Clear();
-        self->mInitializedOrigins.Clear();
+        {
+          MutexAutoLock lock(self->mInitializedOriginsMutex);
+          self->mInitializedOrigins.Clear();
+        }
         self->mBackgroundThreadAccessible.Access()->mInitializedGroups.Clear();
         self->mAllTemporaryOriginsInitialized = false;
         self->mTemporaryStorageInitialized = false;
@@ -7462,7 +7552,10 @@ RefPtr<BoolPromise> QuotaManager::ShutdownStorage(
         }
 
         self->mInitializedClients.Clear();
-        self->mInitializedOrigins.Clear();
+        {
+          MutexAutoLock lock(self->mInitializedOriginsMutex);
+          self->mInitializedOrigins.Clear();
+        }
         self->mBackgroundThreadAccessible.Access()->mInitializedGroups.Clear();
         self->mAllTemporaryOriginsInitialized = false;
         self->mTemporaryStorageInitialized = false;
@@ -8559,7 +8652,7 @@ uint32_t QuotaManager::ThumbnailPrivateIdentityTemporaryOriginCount() const {
 
 void QuotaManager::NoteInitializedOrigin(PersistenceType aPersistenceType,
                                          const nsACString& aOrigin) {
-  AssertIsOnOwningThread();
+  MutexAutoLock lock(mInitializedOriginsMutex);
 
   auto& boolArray = mInitializedOrigins.LookupOrInsertWith(aOrigin, []() {
     BoolArray boolArray;
@@ -8573,7 +8666,7 @@ void QuotaManager::NoteInitializedOrigin(PersistenceType aPersistenceType,
 
 void QuotaManager::NoteUninitializedOrigins(
     const OriginMetadataArray& aOriginMetadataArray) {
-  AssertIsOnOwningThread();
+  MutexAutoLock lock(mInitializedOriginsMutex);
 
   for (const auto& originMetadata : aOriginMetadataArray) {
     auto entry = mInitializedOrigins.Lookup(originMetadata.mOrigin);
@@ -8596,7 +8689,7 @@ void QuotaManager::NoteUninitializedOrigins(
 
 void QuotaManager::NoteUninitializedRepository(
     PersistenceType aPersistenceType) {
-  AssertIsOnOwningThread();
+  MutexAutoLock lock(mInitializedOriginsMutex);
 
   for (auto iter = mInitializedOrigins.Iter(); !iter.Done(); iter.Next()) {
     auto& boolArray = iter.Data();
@@ -8614,7 +8707,7 @@ void QuotaManager::NoteUninitializedRepository(
 
 bool QuotaManager::IsOriginInitialized(PersistenceType aPersistenceType,
                                        const nsACString& aOrigin) const {
-  AssertIsOnOwningThread();
+  MutexAutoLock lock(mInitializedOriginsMutex);
 
   const auto entry = mInitializedOrigins.Lookup(aOrigin);
 

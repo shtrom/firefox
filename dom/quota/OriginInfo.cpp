@@ -7,6 +7,8 @@
 #include "GroupInfo.h"
 #include "GroupInfoPair.h"
 #include "OriginUpserter.h"
+#include "mozIStorageConnection.h"
+#include "mozIStorageStatement.h"
 #include "mozilla/dom/quota/AssertionsImpl.h"
 #include "mozilla/dom/quota/ResultExtensions.h"
 #include "mozilla/dom/quota/UsageInfo.h"
@@ -109,6 +111,32 @@ nsresult OriginInfo::LockedBindToStatement(
   QM_TRY(MOZ_TO_RESULT(aStatement->BindInt32ByName("accessed"_ns, mAccessed)));
   QM_TRY(
       MOZ_TO_RESULT(aStatement->BindInt32ByName("persisted"_ns, mPersisted)));
+
+  return NS_OK;
+}
+
+nsresult OriginInfo::UpdateDirtyMetadata(mozIStorageConnection* aConnection,
+                                         uint32_t aMetadataFlags,
+                                         int64_t aLastAccessTime) const {
+  MOZ_ASSERT(aConnection);
+
+  nsCOMPtr<mozIStorageStatement> stmt;
+  QM_TRY(MOZ_TO_RESULT(aConnection->CreateStatement(
+      "UPDATE origin SET metadata_flags = :metadata_flags, "
+      "last_access_time = :last_access_time "
+      "WHERE repository_id = :repository_id "
+      "AND origin = :origin;"_ns,
+      getter_AddRefs(stmt))));
+
+  QM_TRY(MOZ_TO_RESULT(
+      stmt->BindInt32ByName("metadata_flags"_ns, aMetadataFlags)));
+  QM_TRY(MOZ_TO_RESULT(
+      stmt->BindInt64ByName("last_access_time"_ns, aLastAccessTime)));
+  QM_TRY(MOZ_TO_RESULT(
+      stmt->BindInt32ByName("repository_id"_ns, mGroupInfo->mPersistenceType)));
+  QM_TRY(MOZ_TO_RESULT(stmt->BindUTF8StringByName("origin"_ns, mOrigin)));
+
+  QM_TRY(MOZ_TO_RESULT(stmt->Execute()));
 
   return NS_OK;
 }

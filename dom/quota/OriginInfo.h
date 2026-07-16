@@ -100,6 +100,10 @@ class OriginInfo final : public SupportsThreadSafeWeakPtr<OriginInfo> {
 
   nsresult LockedBindToStatement(mozIStorageStatement* aStatement) const;
 
+  nsresult UpdateDirtyMetadata(mozIStorageConnection* aConnection,
+                               uint32_t aMetadataFlags,
+                               int64_t aLastAccessTime) const;
+
  private:
   // Private destructor, to discourage deletion outside of Release():
   ~OriginInfo() {
