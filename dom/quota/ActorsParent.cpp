@@ -3089,22 +3089,22 @@ nsresult QuotaManager::LoadQuota() {
 
           // We don't need to update the .metadata-v2 file on disk here,
           // EnsureTemporaryOriginIsInitializedInternal is responsible for
-          // doing that. We just need to use correct group and last access time
-          // before initializing quota for the given origin. (Note that calling
-          // LoadFullOriginMetadataWithRestore below might update the group in
-          // the metadata file, but only as a side-effect. The actual place we
-          // ensure consistency is in
-          // EnsureTemporaryOriginIsInitializedInternal.)
+          // doing that. We just need to use correct group and last access
+          // time before initializing quota for the given origin.
 
-          if (fullOriginMetadata.mAccessed) {
+          if (fullOriginMetadata.mDirty) {
             QM_TRY(
                 RestoreMetadataFromDiskAndInitializeOrigin(fullOriginMetadata));
-          } else {
+          } else if (IsBestEffortPersistenceType(
+                         /* Persistent origins are initialized separately */
+                         fullOriginMetadata.mPersistenceType)) {
             MaybeCollectUnaccessedOrigin(fullOriginMetadata);
 
-            AddTemporaryOrigin(fullOriginMetadata);
+            if (fullOriginMetadata.mAccessed) {
+              AddTemporaryOrigin(fullOriginMetadata);
 
-            InitQuotaForOrigin(fullOriginMetadata);
+              InitQuotaForOrigin(fullOriginMetadata);
+            }
           }
 
           return Ok{};
@@ -3256,6 +3256,10 @@ void QuotaManager::UnloadQuota() {
           }
 
           if (originInfo->mIsPrivate) {
+            continue;
+          }
+
+          if (!originInfo->LockedDirty()) {
             continue;
           }
 
