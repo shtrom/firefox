@@ -96,6 +96,12 @@ void GroupInfo::LockedRemoveOriginInfo(const nsACString& aOrigin) {
   if (foundIt != mOriginInfos.cend()) {
     LockedAdjustUsageForRemovedOriginInfo(**foundIt);
 
+    // The OriginInfo may still be referenced by mDirtyOriginInfos (which
+    // holds RefPtr<OriginInfo>). Nulling mGroupInfo lets
+    // FlushDirtyOriginInfos detect and skip it via its existing null check.
+    // The dirty flag persists on disk, so the origin will be rescanned on
+    // next initialization.
+    foundIt->get()->mGroupInfo = nullptr;
     mOriginInfos.RemoveElementAt(foundIt);
   }
 }
@@ -105,6 +111,7 @@ void GroupInfo::LockedRemoveOriginInfos() {
 
   for (const auto& originInfo : std::exchange(mOriginInfos, {})) {
     LockedAdjustUsageForRemovedOriginInfo(*originInfo);
+    originInfo->mGroupInfo = nullptr;
   }
 }
 

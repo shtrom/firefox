@@ -8440,19 +8440,6 @@ void QuotaManager::LockedRemoveQuotaForRepository(
   mQuotaMutex.AssertCurrentThreadOwns();
   MOZ_ASSERT(aPersistenceType != PERSISTENCE_TYPE_PERSISTENT);
 
-  nsTArray<RefPtr<OriginInfo>> remainingOriginInfos;
-  RefPtr<OriginInfo> originInfo;
-  while (mDirtyOriginInfos.Pop(&originInfo)) {
-    if (originInfo->GetGroupInfo()->GetPersistenceType() != aPersistenceType) {
-      remainingOriginInfos.AppendElement(std::move(originInfo));
-    }
-  }
-  for (auto& info : remainingOriginInfos) {
-    auto* message = new UnboundedMPSCQueue<RefPtr<OriginInfo>>::Message();
-    message->data = std::move(info);
-    mDirtyOriginInfos.Push(message);
-  }
-
   for (auto iter = mGroupInfoPairs.Iter(); !iter.Done(); iter.Next()) {
     auto& pair = iter.Data();
 
@@ -8483,26 +8470,6 @@ void QuotaManager::LockedRemoveQuotaForOrigin(
 
   if (RefPtr<GroupInfo> groupInfo =
           pair->LockedGetGroupInfo(aOriginMetadata.mPersistenceType)) {
-    RefPtr<OriginInfo> originInfoToRemove =
-        groupInfo->LockedGetOriginInfo(aOriginMetadata.mOrigin);
-
-    // TODO: Replace drain-and-repush with a lock-protected cancel set that
-    // FlushDirtyOriginInfos consults before flushing. This avoids the O(N)
-    // queue manipulation and works naturally with the lock-free MPSC queue.
-    nsTArray<RefPtr<OriginInfo>> skippedOriginInfos;
-    RefPtr<OriginInfo> originInfo;
-    while (mDirtyOriginInfos.Pop(&originInfo)) {
-      if (originInfo.get() == originInfoToRemove.get()) {
-        break;
-      }
-      skippedOriginInfos.AppendElement(std::move(originInfo));
-    }
-    for (auto& info : skippedOriginInfos) {
-      auto* message = new UnboundedMPSCQueue<RefPtr<OriginInfo>>::Message();
-      message->data = std::move(info);
-      mDirtyOriginInfos.Push(message);
-    }
-
     groupInfo->LockedRemoveOriginInfo(aOriginMetadata.mOrigin);
 
     if (!groupInfo->LockedHasOriginInfos()) {
