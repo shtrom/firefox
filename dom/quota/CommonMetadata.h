@@ -7,6 +7,7 @@
 
 #include <utility>
 
+#include "DirectoryMetadata.h"
 #include "mozilla/dom/quota/Client.h"
 #include "mozilla/dom/quota/ClientUsageArray.h"
 #include "mozilla/dom/quota/Constants.h"
@@ -107,15 +108,30 @@ struct OriginStateMetadata {
   int32_t mLastMaintenanceDate;
   bool mAccessed;
   bool mPersisted;
+  bool mDirty;
 
   OriginStateMetadata() = default;
 
   OriginStateMetadata(int64_t aLastAccessTime, int32_t aLastMaintenanceDate,
-                      bool aAccessed, bool aPersisted)
+                      bool aAccessed, bool aPersisted, bool aDirty)
       : mLastAccessTime(aLastAccessTime),
         mLastMaintenanceDate(aLastMaintenanceDate),
         mAccessed(aAccessed),
-        mPersisted(aPersisted) {}
+        mPersisted(aPersisted),
+        mDirty(aDirty) {}
+
+  uint32_t ToMetadataFlags() const {
+    return DirectoryMetadataFlags::Initialized |
+           (mAccessed ? DirectoryMetadataFlags::Accessed : 0u) |
+           (mDirty ? DirectoryMetadataFlags::Dirty : 0u) |
+           (mPersisted ? DirectoryMetadataFlags::Persisted : 0u);
+  }
+
+  void FromMetadataFlags(uint32_t aFlags) {
+    mAccessed = (aFlags & DirectoryMetadataFlags::Accessed) != 0;
+    mPersisted = (aFlags & DirectoryMetadataFlags::Persisted) != 0;
+    mDirty = (aFlags & DirectoryMetadataFlags::Dirty) != 0;
+  }
 
   // Templated to restrict Equals() to exactly OriginStateMetadata. Prevents
   // derived types from accidentally inheriting Equals() and comparing only
@@ -125,7 +141,8 @@ struct OriginStateMetadata {
   bool Equals(const T& aOther) const {
     return mLastAccessTime == aOther.mLastAccessTime &&
            mLastMaintenanceDate == aOther.mLastMaintenanceDate &&
-           mAccessed == aOther.mAccessed && mPersisted == aOther.mPersisted;
+           mAccessed == aOther.mAccessed && mPersisted == aOther.mPersisted &&
+           mDirty == aOther.mDirty;
   }
 };
 

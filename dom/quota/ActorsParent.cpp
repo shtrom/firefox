@@ -3543,22 +3543,24 @@ QuotaManager::GetOrCreateTemporaryOriginDirectory(
     // respective origin directory. So OriginInfo already exists and it needs
     // to be updated because the origin directory has been just created.
 
-    auto [timestamp, maintenanceDate, accessed, persisted] =
+    auto [timestamp, maintenanceDate, accessed, persisted, dirty] =
         WithOriginInfo(aOriginMetadata, [](const auto& originInfo) {
           const int64_t timestamp = originInfo->LockedAccessTime();
           const int32_t maintenanceDate = originInfo->LockedMaintenanceDate();
           const bool accessed = originInfo->LockedAccessed();
           const bool persisted = originInfo->LockedPersisted();
+          const bool dirty = originInfo->LockedDirty();
 
           originInfo->LockedDirectoryCreated();
 
           return std::make_tuple(timestamp, maintenanceDate, accessed,
-                                 persisted);
+                                 persisted, dirty);
         });
 
     FullOriginMetadata fullOriginMetadata{
         aOriginMetadata,
-        OriginStateMetadata{timestamp, maintenanceDate, accessed, persisted},
+        OriginStateMetadata{timestamp, maintenanceDate, accessed, persisted,
+                            dirty},
         ClientUsageArray(), /* aUsage */ 0, kCurrentQuotaVersion};
 
     // Usually, infallible operations are placed after fallible ones. However,
@@ -6398,7 +6400,8 @@ QuotaManager::EnsurePersistentOriginIsInitializedInternal(
                                     /* aLastMaintenanceDate */
                                     Date::FromTimestamp(timestamp).ToDays(),
                                     /* aAccessed */ false,
-                                    /* aPersisted */ true},
+                                    /* aPersisted */ true,
+                                    /* aDirty */ false},
                 ClientUsageArray(), /* aUsage */ 0, kCurrentQuotaVersion};
 
             // Only creating .metadata-v2 to reduce IO.
@@ -6599,7 +6602,8 @@ QuotaManager::EnsureTemporaryOriginIsInitializedInternal(
             /* aLastAccessTime */ timestamp,
             /* aLastMaintenanceDate */ Date::FromTimestamp(timestamp).ToDays(),
             /* aAccessed */ false,
-            /* aPersisted */ false},
+            /* aPersisted */ false,
+            /* aDirty */ false},
         ClientUsageArray(), /* aUsage */ 0, kCurrentQuotaVersion};
 
     if (!aCreateIfNonExistent) {
@@ -10151,7 +10155,8 @@ nsresult RestoreDirectoryMetadata2Helper::ProcessOriginDirectory(
               /* aLastMaintenanceDate */
               Date::FromTimestamp(aOriginProps.mTimestamp).ToDays(),
               /* aAccessed */ true,
-              /* aPersisted */ false},
+              /* aPersisted */ false,
+              /* aDirty */ false},
           ClientUsageArray(), /* aUsage */ 0, kNoQuotaVersion})));
 
   return NS_OK;

@@ -70,7 +70,7 @@ OriginMetadata OriginInfo::FlattenToOriginMetadata() const {
 OriginStateMetadata OriginInfo::LockedFlattenToOriginStateMetadata() const {
   AssertCurrentThreadOwnsQuotaMutex();
 
-  return {mAccessTime, mMaintenanceDate, mAccessed, mPersisted};
+  return {mAccessTime, mMaintenanceDate, mAccessed, mPersisted, LockedDirty()};
 }
 
 FullOriginMetadata OriginInfo::LockedFlattenToFullOriginMetadata() const {

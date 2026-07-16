@@ -78,6 +78,12 @@ class OriginInfo final : public SupportsThreadSafeWeakPtr<OriginInfo> {
     return mPersisted;
   }
 
+  bool LockedDirty() const {
+    AssertCurrentThreadOwnsQuotaMutex();
+
+    return IsDirty();
+  }
+
   bool IsExtensionOrigin() const { return mIsExtension; }
 
   bool LockedDirectoryExists() const {
@@ -167,8 +173,11 @@ class OriginInfo final : public SupportsThreadSafeWeakPtr<OriginInfo> {
   bool mDirectoryExists;
 
  private:
+  bool IsDirty() const { return mMetadataDirty; }
+
   ClientUsageArray mClientUsages;
   uint64_t mUsage;
+  bool mMetadataDirty{false};
 };
 
 class OriginInfoAccessTimeComparator {
