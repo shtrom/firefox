@@ -474,6 +474,11 @@ split-view-footer {
   height: var(--icon-size);
 }
 
+.split-view-icon-insecure {
+  -moz-context-properties: fill, stroke;
+  stroke: var(--icon-color-critical);
+}
+
 .split-view-uri {
   overflow: hidden;
   text-overflow: ellipsis;
