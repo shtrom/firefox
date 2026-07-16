@@ -222,14 +222,12 @@ void UiCompositorControllerParent::NotifyFirstPaint() {
   ToolbarAnimatorMessageFromCompositor(FIRST_PAINT);
 }
 
-void UiCompositorControllerParent::NotifyCompositorScrollUpdates(
-    nsTArray<CompositorScrollUpdate>&& aUpdates) {
-  CompositorThread()->Dispatch(
-      NewRunnableMethod<nsTArray<CompositorScrollUpdate>>(
-          "UiCompositorControllerParent::SendNotifyCompositorScrollUpdates",
-          this,
-          &UiCompositorControllerParent::SendNotifyCompositorScrollUpdates,
-          std::move(aUpdates)));
+void UiCompositorControllerParent::NotifyCompositorScrollUpdate(
+    const CompositorScrollUpdate& aUpdate) {
+  CompositorThread()->Dispatch(NewRunnableMethod<CompositorScrollUpdate>(
+      "UiCompositorControllerParent::SendNotifyCompositorScrollUpdate", this,
+      &UiCompositorControllerParent::SendNotifyCompositorScrollUpdate,
+      aUpdate));
 }
 
 UiCompositorControllerParent::UiCompositorControllerParent(

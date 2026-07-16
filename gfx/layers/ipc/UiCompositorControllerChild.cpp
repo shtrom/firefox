@@ -265,10 +265,10 @@ UiCompositorControllerChild::RecvToolbarAnimatorMessageFromCompositor(
 }
 
 mozilla::ipc::IPCResult
-UiCompositorControllerChild::RecvNotifyCompositorScrollUpdates(
-    const nsTArray<mozilla::layers::CompositorScrollUpdate>& aUpdates) {
+UiCompositorControllerChild::RecvNotifyCompositorScrollUpdate(
+    const CompositorScrollUpdate& aUpdate) {
   if (mWidget) {
-    mWidget->NotifyCompositorScrollUpdates(aUpdates);
+    mWidget->NotifyCompositorScrollUpdate(aUpdate);
   }
 
   return IPC_OK();

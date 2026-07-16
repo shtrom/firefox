@@ -37,7 +37,7 @@ parent:
   async EnableLayerUpdateNotifications(bool aEnable);
 child:
   async ToolbarAnimatorMessageFromCompositor(int32_t aMessage);
-  async NotifyCompositorScrollUpdates(CompositorScrollUpdate[] aUpdates);
+  async NotifyCompositorScrollUpdate(CompositorScrollUpdate aUpdate);
   async ScreenPixels(uint64_t aRequestId, bool aSuccess,
                      FileDescriptor? aAcquireFence);
 };
