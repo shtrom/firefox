@@ -433,8 +433,11 @@ add_task(async function test_drag_tab_group_label_with_splitview() {
 
   info("Drag and drop tab group containing splitview tabs");
   let dragend = BrowserTestUtils.waitForEvent(group.labelElement, "dragend");
+  const labelRect = group.labelElement.getBoundingClientRect();
   EventUtils.synthesizePlainDragAndDrop({
     srcElement: group.labelElement,
+    srcX: Math.floor(labelRect.width / 2),
+    srcY: Math.floor(labelRect.height / 2),
     destElement: tab2,
   });
   await dragend;
