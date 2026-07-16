@@ -1125,6 +1125,32 @@ export class DiscoveryStreamAdminInner extends React.PureComponent {
   constructor(props) {
     super(props);
     this.setState = this.setState.bind(this);
+    this.dismiss = this.dismiss.bind(this);
+    this.handleKeyDown = this.handleKeyDown.bind(this);
+  }
+
+  componentDidMount() {
+    globalThis.addEventListener("keydown", this.handleKeyDown);
+  }
+
+  componentWillUnmount() {
+    globalThis.removeEventListener("keydown", this.handleKeyDown);
+  }
+
+  dismiss() {
+    globalThis.location.hash = "";
+  }
+
+  handleKeyDown(e) {
+    if (e.key !== "Escape" || e.defaultPrevented) {
+      return;
+    }
+    // Don't hijack Escape while the user is typing in a field.
+    const tag = e.target?.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA") {
+      return;
+    }
+    this.dismiss();
   }
 
   render() {
@@ -1134,6 +1160,14 @@ export class DiscoveryStreamAdminInner extends React.PureComponent {
           this.props.collapsed ? "collapsed" : "expanded"
         }`}
       >
+        <moz-button
+          className="discoverystream-admin-close"
+          type="icon ghost"
+          title="Close devtools"
+          aria-label="Close devtools"
+          iconsrc="chrome://global/skin/icons/close.svg"
+          onClick={this.dismiss}
+        />
         <main className="main-panel">
           <h1>Discovery Stream Admin</h1>
 

@@ -4086,10 +4086,17 @@ button.arrow-button:dir(rtl) {
   position: fixed;
   inset-block-end: calc(var(--button-size-icon) + var(--space-xxlarge) + var(--space-small));
   inset-inline-end: var(--space-xlarge);
-  z-index: 4;
+  z-index: 2;
 }
 .discoverystream-admin-toggle:dir(rtl) {
   transform: scaleX(-1);
+}
+
+.discoverystream-admin-close {
+  position: fixed;
+  inset-block-start: var(--space-xlarge);
+  inset-inline-end: var(--space-xlarge);
+  z-index: 4;
 }
 
 .discoverystream-admin-toggle.classic-enabled {

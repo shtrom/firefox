@@ -171,6 +171,33 @@ describe("<DiscoveryStreamAdminInner>", () => {
     );
     expect(getByText("Discovery Stream Admin")).toBeInTheDocument();
   });
+
+  it("should dismiss the panel from the close button", () => {
+    globalThis.location.hash = "#devtools";
+    const { container } = render(
+      <DiscoveryStreamAdminInner collapsed={false} {...innerProps()} />
+    );
+    fireEvent.click(
+      container.querySelector("moz-button.discoverystream-admin-close")
+    );
+    expect(globalThis.location.hash).toBe("");
+  });
+
+  it("should dismiss the panel when Escape is pressed", () => {
+    globalThis.location.hash = "#devtools";
+    render(<DiscoveryStreamAdminInner collapsed={false} {...innerProps()} />);
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(globalThis.location.hash).toBe("");
+  });
+
+  it("should not dismiss when Escape is pressed inside an input", () => {
+    globalThis.location.hash = "#devtools";
+    const { container } = render(
+      <DiscoveryStreamAdminInner collapsed={false} {...innerProps()} />
+    );
+    fireEvent.keyDown(container.querySelector("input"), { key: "Escape" });
+    expect(globalThis.location.hash).toBe("#devtools");
+  });
 });
 
 describe("<DiscoveryStreamAdminUI>", () => {

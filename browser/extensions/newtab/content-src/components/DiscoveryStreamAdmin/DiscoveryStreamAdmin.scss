@@ -7,11 +7,20 @@
   // Adjust spacing for DevTools wrench icon to avoid overlapping the customize button
   inset-block-end: calc(var(--button-size-icon) + var(--space-xxlarge) + var(--space-small));
   inset-inline-end: var(--space-xlarge);
-  z-index: 4;
+  // Sit below the admin panel (z-index 3) so the open panel covers the wrench.
+  z-index: 2;
 
   &:dir(rtl) {
     transform: scaleX(-1);
   }
+}
+
+// Dismiss button for the open admin panel (top-inline-end corner).
+.discoverystream-admin-close {
+  position: fixed;
+  inset-block-start: var(--space-xlarge);
+  inset-inline-end: var(--space-xlarge);
+  z-index: 4;
 }
 
 // Legacy (non-Nova) plain-button styling, isolated via the classic-enabled
