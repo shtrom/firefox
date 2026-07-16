@@ -48,6 +48,13 @@ XPCOMUtils.defineLazyPreferenceGetter(
   false
 );
 
+XPCOMUtils.defineLazyPreferenceGetter(
+  lazy,
+  "BROWSER_NOVA_ENABLED",
+  "browser.nova.enabled",
+  false
+);
+
 export const UPDATES_RECENT_TIMESPAN = 2 * 24 * 3600000; // 2 days (in milliseconds)
 
 export const HTML_NS = "http://www.w3.org/1999/xhtml";
@@ -730,7 +737,9 @@ export function nl2br(text) {
  */
 export function getScreenshotUrlForAddon(addon) {
   if (addon.id == "default-theme@mozilla.org") {
-    return "chrome://mozapps/content/extensions/default-theme/preview.svg";
+    return !lazy.BROWSER_NOVA_ENABLED
+      ? "chrome://mozapps/content/extensions/default-theme/preview.svg"
+      : "chrome://mozapps/content/extensions/default-theme/preview-nova.svg";
   }
   const builtInThemePreview = lazy.BuiltInThemes.previewForBuiltInThemeId(
     addon.id
