@@ -491,12 +491,7 @@ nsresult UpgradeCacheFrom2To3(mozIStorageConnection& aConnection) {
 }
 
 Result<bool, nsresult> DidLatestShutdownFail(
-    mozIStorageConnection& aConnection) {
-  AssertIsOnIOThread();
-  /* TODO */
-
-  return false;
-}
+    mozIStorageConnection& aConnection);
 
 Result<bool, nsresult> UpgradeCacheFrom3To4(
     mozIStorageConnection& aConnection) {
@@ -3053,6 +3048,17 @@ nsresult QuotaManager::LoadQuota() {
         }
 
         if (mCacheUsable) {
+          // If the previous session didn't reach UnloadQuota's commit,
+          // the `origin` table may be inconsistent with on-disk state
+          // (or empty). Force fall-through to InitializeRepository — a
+          // full scan is the cheapest way to recover ground truth. This
+          // signal is independent of the build-id check below.
+          QM_TRY_INSPECT(const bool& shutdownFailed,
+                         DidLatestShutdownFail(*mStorageConnection));
+          if (shutdownFailed) {
+            return false;
+          }
+
           QM_TRY_INSPECT(
               const auto& stmt,
               CreateAndExecuteSingleStepStatement<
@@ -3835,6 +3841,29 @@ Result<Ok, nsresult> UpdateFullOriginMetadataPrincipalProperties(
 
   return Ok{};
 }
+
+namespace {
+
+Result<bool, nsresult> DidLatestShutdownFail(
+    mozIStorageConnection& aConnection) {
+  // The `cache.valid` bit is the source of truth for "did the previous
+  // session reach UnloadQuota's commit?" — InvalidateCache writes 0 and
+  // UnloadQuota's final UPDATE writes 1 atomically. A row-by-row
+  // DB-vs-disk scan is unnecessary here.
+  QM_TRY_INSPECT(const auto& stmt,
+                 CreateAndExecuteSingleStepStatement<
+                     SingleStepResult::ReturnNullIfNoResult>(
+                     aConnection, "SELECT valid FROM cache"_ns));
+
+  QM_TRY(OkIf(stmt), Err(NS_ERROR_FILE_CORRUPTED));
+
+  QM_TRY_INSPECT(const int32_t& valid,
+                 MOZ_TO_RESULT_INVOKE_MEMBER(stmt, GetInt32, 0));
+
+  return !valid;
+}
+
+}  // namespace
 
 Result<FullOriginMetadata, nsresult> QuotaManager::LoadFullOriginMetadata(
     nsIFile* aDirectory, PersistenceType aPersistenceType) {
