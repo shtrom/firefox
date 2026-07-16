@@ -26,9 +26,6 @@
   --icon-ok-color: light-dark(var(--green-70), var(--white-100));
   --icon-info-color: light-dark(var(--grey-90), var(--white-100));
 
-  --popup-header-background-color: light-dark(var(--grey-20), var(--grey-50));
-  --popup-header-color: light-dark(var(--grey-90), var(--white-100));
-
   /* Colors from Photon */
   --grey-20: #ededf0; /* for ui, no special semantic */
   --grey-50: #737373; /* for ui, no special semantic */
