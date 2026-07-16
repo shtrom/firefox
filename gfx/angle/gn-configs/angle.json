@@ -5,6 +5,7 @@
   "mozilla_add_override_dir": "",
   "gn_target": {
     "*": "//:translator",
+    "mac": "//:libEGL",
     "win": "//:libEGL"
   },
   "gn_args": {
@@ -31,6 +32,10 @@
       "use_custom_libcxx": false,
       "use_sysroot": false
     },
+    "mac": {
+      "angle_enable_metal": true,
+      "angle_enable_msl": true
+    },
     "win": {
       "angle_enable_d3d9": true,
       "angle_enable_d3d11": true,
@@ -48,7 +53,7 @@
       "ANGLE_SKIP_DXGI_1_2_CHECK": true
     }
   },
-  "mozilla_flags": [],
+  "mozilla_flags": ["-Wno-unguarded-availability"],
   "write_mozbuild_variables": {
     "INCLUDE_GECKO_ZLIB_HANDLING": [
       "third_party/angle/third_party/zlib/zlib_gn"
@@ -59,11 +64,19 @@
     "third_party/angle/src/compiler/translator/VariablePacker.cpp",
     "third_party/angle/src/compiler/translator/glslang_lex_autogen.cpp",
     "third_party/angle/src/compiler/translator/glslang_tab_autogen.cpp",
+    "third_party/angle/src/compiler/translator/msl/AstHelpers.cpp",
     "third_party/angle/src/compiler/translator/tree_ops/RewriteStructSamplers.cpp",
     "third_party/angle/src/compiler/translator/tree_ops/RewriteTexelFetchOffset.cpp",
     "third_party/angle/src/compiler/translator/tree_ops/SeparateStructFromUniformDeclarations.cpp",
     "third_party/angle/src/compiler/translator/tree_ops/hlsl/ExpandIntegerPowExpressions.cpp",
     "third_party/angle/src/compiler/translator/tree_ops/hlsl/RewriteUnaryMinusOperatorInt.cpp",
+    "third_party/angle/src/compiler/translator/tree_ops/msl/AddExplicitTypeCasts.cpp",
+    "third_party/angle/src/compiler/translator/tree_ops/msl/GuardFragDepthWrite.cpp",
+    "third_party/angle/src/compiler/translator/tree_ops/msl/HoistConstants.cpp",
+    "third_party/angle/src/compiler/translator/tree_ops/msl/IntroduceVertexIndexID.cpp",
+    "third_party/angle/src/compiler/translator/tree_ops/msl/RewriteCaseDeclarations.cpp",
+    "third_party/angle/src/compiler/translator/tree_ops/msl/RewriteOutArgs.cpp",
+    "third_party/angle/src/compiler/translator/tree_ops/msl/TransposeRowMajorMatrices.cpp",
     "third_party/angle/src/libANGLE/Context.cpp",
     "third_party/angle/src/libANGLE/Context_gles_1_0.cpp",
     "third_party/angle/src/libANGLE/Device.cpp",
@@ -72,6 +85,7 @@
     "third_party/angle/src/libANGLE/OverlayWidgets.cpp",
     "third_party/angle/src/libANGLE/Overlay_autogen.cpp",
     "third_party/angle/src/libANGLE/renderer/d3d/d3d11/win32/NativeWindow11Win32.cpp",
+    "third_party/angle/src/libANGLE/renderer/metal/ProgramExecutableMtl.mm",
     "third_party/angle/src/libANGLE/validationES2.cpp",
     "third_party/angle/src/libANGLE/validationESEXT.cpp",
     "third_party/angle/src/libGLESv2/entry_points_gles_1_0_autogen.cpp",
