@@ -145,11 +145,11 @@ HappyEyeballsConnectionAttempt::HappyEyeballsConnectionAttempt(
       mZeroRttHandle(new ZeroRttHandle(this)) {
   LOG(("HappyEyeballsConnectionAttempt ctor %p retryWithoutTRR=%d", this,
        retryWithoutTRR));
-  if (mConnInfo->GetRoutedHost().IsEmpty()) {
-    mHost = mConnInfo->GetOrigin();
-  } else {
-    mHost = mConnInfo->GetRoutedHost();
-  }
+  // mHost is the origin host: the base Happy Eyeballs resolves and falls back
+  // to. An alt-svc route's alternate host is passed to Happy Eyeballs as an
+  // alt-svc entry (see CreateHappyEyeballs) so it is attempted ahead of, but
+  // still falls back to, the origin.
+  mHost = mConnInfo->GetOrigin();
 
   NotifyConnectionActivity(
       mConnInfo, mSpeculative
@@ -202,37 +202,35 @@ nsresult HappyEyeballsConnectionAttempt::CreateHappyEyeballs(
 
   LOG(("CreateHappyEyeballs ipPref=%d", static_cast<uint32_t>(ipPref)));
 
-  // An explicit HTTP/3 connection info (an alt-svc HTTP/3 route, or a direct
-  // HTTP/3 connection such as WebTransport) must race HTTP/3. When there's an
-  // alt-svc route the HTTP/3 port is the routed port; for a direct HTTP/3
-  // connection (no routed host) it's the origin port. This is checked before
-  // the routed-host-empty case below so direct HTTP/3 connections aren't
-  // mistakenly raced over TCP.
-  if (mConnInfo->IsHttp3()) {
-    LOG(("HappyEyeballsConnectionAttempt for HTTP/3"));
-    nsTArray<happy_eyeballs::AltSvc> altSvcArray;
+  // Happy Eyeballs always resolves and races the origin (mHost / origin port)
+  // as the baseline. An alt-svc route is expressed as an alt-svc entry that
+  // names the alternate host, port and protocol, so the engine attempts the
+  // alternate ahead of the origin but still falls back to the origin if the
+  // alternate is unreachable (bug 2052534).
+  const uint16_t originPort = static_cast<uint16_t>(mConnInfo->OriginPort());
+  const nsCString& routedHost = mConnInfo->GetRoutedHost();
+
+  // Add an alt-svc entry when the connection must race HTTP/3 (an explicit
+  // HTTP/3 connection info: an alt-svc HTTP/3 route, or a direct HTTP/3
+  // connection such as WebTransport) or when there is an HTTP/2 alt-svc route.
+  // A routed host names the alternate; without one (a direct HTTP/3 connection)
+  // the entry carries only the protocol and the state machine races the origin
+  // over HTTP/3 at the origin port.
+  nsTArray<happy_eyeballs::AltSvc> altSvcArray;
+  const bool isHttp3 = mConnInfo->IsHttp3();
+  if (isHttp3 || !routedHost.IsEmpty()) {
     happy_eyeballs::AltSvc altsvc{};
-    altsvc.http_version = happy_eyeballs::HttpVersion::H3;
-    altsvc.port = mConnInfo->GetRoutedHost().IsEmpty()
-                      ? static_cast<uint16_t>(mConnInfo->OriginPort())
-                      : static_cast<uint16_t>(mConnInfo->RoutedPort());
-    altSvcArray.AppendElement(altsvc);
-    return HappyEyeballs::Init(getter_AddRefs(mHappyEyeballs), mHost,
-                               static_cast<uint16_t>(mConnInfo->OriginPort()),
-                               &altSvcArray, ipPref, httpVersions);
+    altsvc.http_version = isHttp3 ? happy_eyeballs::HttpVersion::H3
+                                  : happy_eyeballs::HttpVersion::H2;
+    if (!routedHost.IsEmpty()) {
+      altsvc.host = routedHost;
+      altsvc.port = static_cast<uint16_t>(mConnInfo->RoutedPort());
+    }
+    altSvcArray.AppendElement(std::move(altsvc));
   }
 
-  if (mConnInfo->GetRoutedHost().IsEmpty()) {
-    nsTArray<happy_eyeballs::AltSvc> emptyAltSvc;
-    return HappyEyeballs::Init(getter_AddRefs(mHappyEyeballs), mHost,
-                               static_cast<uint16_t>(mConnInfo->OriginPort()),
-                               &emptyAltSvc, ipPref, httpVersions);
-  }
-
-  nsTArray<happy_eyeballs::AltSvc> emptyAltSvc;
-  return HappyEyeballs::Init(getter_AddRefs(mHappyEyeballs), mHost,
-                             static_cast<uint16_t>(mConnInfo->RoutedPort()),
-                             &emptyAltSvc, ipPref, httpVersions);
+  return HappyEyeballs::Init(getter_AddRefs(mHappyEyeballs), mHost, originPort,
+                             &altSvcArray, ipPref, httpVersions);
 }
 
 nsresult HappyEyeballsConnectionAttempt::Init(ConnectionEntry* ent) {
