@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <utility>
 
-#include "DirectoryMetadata.h"
 #include "ErrorList.h"
 #include "FileUtils.h"
 #include "GroupInfo.h"
@@ -3752,9 +3751,6 @@ nsresult PersistOp::DoDirectoryWork(QuotaManager& aQuotaManager) {
       // Update OriginInfo too if temporary storage was already initialized.
       if (aQuotaManager.IsTemporaryStorageInitializedInternal()) {
         aQuotaManager.PersistOrigin(originMetadata);
-
-        // XXX The origin access time should be updated too (but not the
-        // accessed flag).
       }
     }
   }

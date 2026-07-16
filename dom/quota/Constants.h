@@ -74,7 +74,7 @@ const uint32_t kNoQuotaVersion = 0;
 // changes, after a crash, or on Android in general, and the L2 quota info
 // cache is also unavailable due to the version bump, storage initialization
 // will have to fall back to the slowest path: a full storage scan.
-const uint32_t kCurrentQuotaVersion = 1;
+const uint32_t kCurrentQuotaVersion = 2;
 
 }  // namespace mozilla::dom::quota
 

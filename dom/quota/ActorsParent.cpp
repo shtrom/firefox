@@ -294,7 +294,7 @@ const char kContextualIdentityServiceLoadFinishedTopic[] =
     "contextual-identity-service-load-finished";
 const char kPrivateBrowsingObserverTopic[] = "last-pb-context-exited";
 
-const int32_t kCacheVersion = 3;
+const int32_t kCacheVersion = 4;
 
 // Sentinel value written at the end of the metadata file to indicate that the
 // file includes the extended origin metadata format. The sentinel allows us to
@@ -399,8 +399,7 @@ nsresult CreateCacheTables(mozIStorageConnection& aConnection) {
                                    ", usage INTEGER NOT NULL"
                                    ", last_access_time INTEGER NOT NULL"
                                    ", last_maintenance_date INTEGER NOT NULL"
-                                   ", accessed INTEGER NOT NULL"
-                                   ", persisted INTEGER NOT NULL"
+                                   ", metadata_flags INTEGER NOT NULL"
                                    ", PRIMARY KEY (repository_id, origin)"
                                    ", FOREIGN KEY (repository_id) "
                                    "REFERENCES repository(id) "
@@ -491,6 +490,53 @@ nsresult UpgradeCacheFrom2To3(mozIStorageConnection& aConnection) {
   return NS_OK;
 }
 
+Result<bool, nsresult> DidLatestShutdownFail(
+    mozIStorageConnection& aConnection) {
+  AssertIsOnIOThread();
+  /* TODO */
+
+  return false;
+}
+
+Result<bool, nsresult> UpgradeCacheFrom3To4(
+    mozIStorageConnection& aConnection) {
+  AssertIsOnIOThread();
+
+#ifdef DEBUG
+  {
+    QM_TRY_INSPECT(const int32_t& cacheVersion, LoadCacheVersion(aConnection));
+
+    MOZ_ASSERT(cacheVersion == 3);
+  }
+#endif
+
+  // Check for unclean shutdown BEFORE renaming columns, because
+  // DidLatestShutdownFail references the old column names.
+  QM_TRY_UNWRAP(const bool lastShutdownFailed,
+                DidLatestShutdownFail(aConnection));
+
+  QM_TRY(MOZ_TO_RESULT(aConnection.ExecuteSimpleSQL(nsLiteralCString(
+      "ALTER TABLE origin RENAME COLUMN accessed TO metadata_flags;"))));
+
+  if (lastShutdownFailed) {
+    // 5 = Initialized (bit 0) | Dirty (bit 2)
+    QM_TRY(MOZ_TO_RESULT(aConnection.ExecuteSimpleSQL(
+        nsLiteralCString("UPDATE origin SET metadata_flags = "
+                         "5 | (metadata_flags << 1) | (persisted << 3);"))));
+  } else {
+    QM_TRY(MOZ_TO_RESULT(aConnection.ExecuteSimpleSQL(
+        nsLiteralCString("UPDATE origin SET metadata_flags = "
+                         "1 | (metadata_flags << 1) | (persisted << 3);"))));
+  }
+
+  QM_TRY(MOZ_TO_RESULT(aConnection.ExecuteSimpleSQL(
+      nsLiteralCString("ALTER TABLE origin DROP COLUMN persisted;"))));
+
+  QM_TRY(MOZ_TO_RESULT(SaveCacheVersion(aConnection, 4)));
+
+  return lastShutdownFailed;
+}
+
 Result<bool, nsresult> MaybeCreateOrUpgradeCache(
     mozIStorageConnection& aConnection) {
   GECKO_TRACE_SCOPE("dom::quota", "MaybeCreateOrUpgradeCache");
@@ -547,14 +593,22 @@ Result<bool, nsresult> MaybeCreateOrUpgradeCache(
       }
     } else {
       // This logic needs to change next time we change the cache!
-      static_assert(kCacheVersion == 3,
+      static_assert(kCacheVersion == 4,
                     "Upgrade function needed due to cache version increase.");
 
       while (cacheVersion != kCacheVersion) {
         if (cacheVersion == 1) {
           QM_TRY(MOZ_TO_RESULT(UpgradeCacheFrom1To2(aConnection)));
+          cacheUsable = false;
         } else if (cacheVersion == 2) {
           QM_TRY(MOZ_TO_RESULT(UpgradeCacheFrom2To3(aConnection)));
+          cacheUsable = false;
+        } else if (cacheVersion == 3) {
+          QM_TRY_UNWRAP(const bool lastShutdownFailed,
+                        UpgradeCacheFrom3To4(aConnection));
+          if (lastShutdownFailed) {
+            cacheUsable = false;
+          }
         } else {
           QM_FAIL(Err(NS_ERROR_FAILURE), []() {
             QM_WARNING(
@@ -2949,7 +3003,7 @@ nsresult QuotaManager::LoadQuota() {
             nsCOMPtr<mozIStorageStatement>, mStorageConnection, CreateStatement,
             "SELECT repository_id, suffix, group_, "
             "origin, client_usages, usage, "
-            "last_access_time, last_maintenance_date, accessed, persisted "
+            "last_access_time, last_maintenance_date, metadata_flags "
             "FROM origin"_ns));
 
     auto autoRemoveQuota = MakeScopeExit([&] {
@@ -3017,10 +3071,10 @@ nsresult QuotaManager::LoadQuota() {
                         MOZ_TO_RESULT_INVOKE_MEMBER(stmt, GetInt64, 6));
           QM_TRY_UNWRAP(fullOriginMetadata.mLastMaintenanceDate,
                         MOZ_TO_RESULT_INVOKE_MEMBER(stmt, GetInt32, 7));
-          QM_TRY_UNWRAP(fullOriginMetadata.mAccessed,
-                        MOZ_TO_RESULT_INVOKE_MEMBER(stmt, GetInt32, 8));
-          QM_TRY_UNWRAP(fullOriginMetadata.mPersisted,
-                        MOZ_TO_RESULT_INVOKE_MEMBER(stmt, GetInt32, 9));
+          QM_TRY_INSPECT(const int32_t& metadataFlags,
+                         MOZ_TO_RESULT_INVOKE_MEMBER(stmt, GetInt32, 8));
+          fullOriginMetadata.FromMetadataFlags(
+              static_cast<uint32_t>(metadataFlags));
 
           QM_TRY_INSPECT(const bool& groupUpdated,
                          MaybeUpdateGroupForOrigin(fullOriginMetadata));
@@ -3720,6 +3774,13 @@ Result<FullOriginMetadata, nsresult> ReadFullOriginMetadataFromMetadataV2File(
 
     QM_TRY_UNWRAP(fullOriginMetadata.mQuotaVersion,
                   MOZ_TO_RESULT_INVOKE_MEMBER(binaryStream, Read32));
+    if (fullOriginMetadata.mAccessed &&
+        fullOriginMetadata.mQuotaVersion != kCurrentQuotaVersion) {
+      // The dirty flag is not stored in older .metadata-v2 files.
+      // Conservatively assume dirty=true (requires full scan) when the flag is
+      // missing. InitializeOrigin upgrades the version.
+      fullOriginMetadata.mDirty = true;
+    }
 
     QM_TRY_UNWRAP(fullOriginMetadata.mOriginUsage,
                   MOZ_TO_RESULT_INVOKE_MEMBER(binaryStream, Read64));

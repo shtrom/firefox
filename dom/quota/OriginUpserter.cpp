@@ -57,8 +57,7 @@ Result<Ok, nsresult> OriginUpserter::Reset() {
           "  usage, "
           "  last_access_time, "
           "  last_maintenance_date, "
-          "  accessed, "
-          "  persisted ) "
+          "  metadata_flags ) "
           "VALUES ( "
           "  :repository_id, "
           "  :suffix, "
@@ -68,8 +67,7 @@ Result<Ok, nsresult> OriginUpserter::Reset() {
           "  :usage, "
           "  :last_access_time, "
           "  :last_maintenance_date, "
-          "  :accessed, "
-          "  :persisted ) "
+          "  :metadata_flags ) "
           "ON CONFLICT ( "
           "  repository_id, "
           "  origin ) "
@@ -80,8 +78,7 @@ Result<Ok, nsresult> OriginUpserter::Reset() {
           "  usage = excluded.usage, "
           "  last_access_time = excluded.last_access_time, "
           "  last_maintenance_date = excluded.last_maintenance_date, "
-          "  accessed = excluded.accessed, "
-          "  persisted = excluded.persisted;"_ns));
+          "  metadata_flags = excluded.metadata_flags;"_ns));
 
   return Ok{};
 }

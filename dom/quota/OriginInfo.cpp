@@ -128,9 +128,9 @@ nsresult OriginInfo::LockedBindToStatement(
       aStatement->BindInt64ByName("last_access_time"_ns, mAccessTime)));
   QM_TRY(MOZ_TO_RESULT(aStatement->BindInt32ByName("last_maintenance_date"_ns,
                                                    mMaintenanceDate)));
-  QM_TRY(MOZ_TO_RESULT(aStatement->BindInt32ByName("accessed"_ns, mAccessed)));
-  QM_TRY(
-      MOZ_TO_RESULT(aStatement->BindInt32ByName("persisted"_ns, mPersisted)));
+  OriginStateMetadata stateMetadata = LockedFlattenToOriginStateMetadata();
+  QM_TRY(MOZ_TO_RESULT(aStatement->BindInt32ByName(
+      "metadata_flags"_ns, stateMetadata.ToMetadataFlags())));
 
   return NS_OK;
 }

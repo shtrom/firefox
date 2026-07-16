@@ -111,4 +111,4 @@ nsresult WriteDirectoryMetadataHeader(
 
 }  // namespace mozilla::dom::quota
 
-#endif  // DOM_QUOTA_NOTIFYUTILS_H_
+#endif  // DOM_QUOTA_DIRECTORYMETADATA_H_

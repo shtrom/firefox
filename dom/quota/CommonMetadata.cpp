@@ -32,9 +32,8 @@ nsresult FullOriginMetadata::BindToStatement(
       aStatement->BindInt64ByName("last_access_time"_ns, mLastAccessTime)));
   QM_TRY(MOZ_TO_RESULT(aStatement->BindInt32ByName("last_maintenance_date"_ns,
                                                    mLastMaintenanceDate)));
-  QM_TRY(MOZ_TO_RESULT(aStatement->BindInt32ByName("accessed"_ns, mAccessed)));
-  QM_TRY(
-      MOZ_TO_RESULT(aStatement->BindInt32ByName("persisted"_ns, mPersisted)));
+  QM_TRY(MOZ_TO_RESULT(
+      aStatement->BindInt32ByName("metadata_flags"_ns, ToMetadataFlags())));
 
   return NS_OK;
 }
