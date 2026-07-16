@@ -316,19 +316,20 @@ internal fun Homepage(
                                             top = verticalMargin,
                                         ),
                                     ) {
-                                        RecentSyncedTab(
-                                            tab = syncedTab,
-                                            backgroundColor = cardBackgroundColor,
-                                            buttonBackgroundColor = if (syncedTab != null) {
-                                                buttonBackgroundColor
-                                            } else {
-                                                MaterialTheme.colorScheme.surfaceContainerHighest
-                                            },
-                                            buttonTextColor = buttonTextColor,
-                                            onRecentSyncedTabClick = interactor::onRecentSyncedTabClicked,
-                                            onSeeAllSyncedTabsButtonClick = interactor::onSyncedTabShowAllClicked,
-                                            onRemoveSyncedTab = interactor::onRemovedRecentSyncedTab,
-                                        )
+                                        WallpaperTheme {
+                                            RecentSyncedTab(
+                                                tab = syncedTab,
+                                                buttonBackgroundColor = if (syncedTab != null) {
+                                                    WallpaperTheme.buttonBackgroundColor
+                                                } else {
+                                                    MaterialTheme.colorScheme.surfaceContainerHighest
+                                                },
+                                                buttonTextColor = WallpaperTheme.buttonTextColor,
+                                                onRecentSyncedTabClick = interactor::onRecentSyncedTabClicked,
+                                                onSeeAllSyncedTabsButtonClick = interactor::onSyncedTabShowAllClicked,
+                                                onRemoveSyncedTab = interactor::onRemovedRecentSyncedTab,
+                                            )
+                                        }
                                     }
                                 }
                             }

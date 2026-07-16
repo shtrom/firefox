@@ -30,9 +30,24 @@ val LocalWallpaperState = compositionLocalOf { WallpaperState.default }
 private val LocalOnWallpaperColor = compositionLocalOf { Color.Unspecified }
 
 /**
+ * Background color for buttons over the wallpaper, provided by [WallpaperTheme] and read through
+ * [WallpaperTheme.buttonBackgroundColor]. Unspecified when no [WallpaperTheme] is in scope.
+ */
+private val LocalWallpaperButtonBackgroundColor = compositionLocalOf { Color.Unspecified }
+
+/**
+ * Content color for buttons over the wallpaper, provided by [WallpaperTheme] and read through
+ * [WallpaperTheme.buttonTextColor]. Unspecified when no [WallpaperTheme] is in scope.
+ */
+private val LocalWallpaperButtonTextColor = compositionLocalOf { Color.Unspecified }
+
+/**
  * Themes [content] with colors derived from the current wallpaper:
- * - The color for content drawn on the wallpaper is exposed as the custom [WallpaperTheme.onWallpaper]
- *   token.
+ * - Content drawn on the wallpaper is exposed as [WallpaperTheme.onWallpaper].
+ * - Button colors over the wallpaper are exposed as [WallpaperTheme.buttonBackgroundColor] and
+ *   [WallpaperTheme.buttonTextColor]. These don't map to a single Material slot (they flip between the
+ *   default `FilledButton` colors and `surface`/`onSurface` depending on the wallpaper), so they are
+ *   custom tokens rather than a color scheme override.
  * - `surfaceBright` <- [wallpaperCardColor], so cards laid over the wallpaper pick up its card color.
  *
  * `onSurface` is left untouched, so text inside cards stays legible against the card background.
@@ -43,12 +58,18 @@ private val LocalOnWallpaperColor = compositionLocalOf { Color.Unspecified }
  * Defaults to the current wallpaper's text color (the default wallpaper resolves to `onSurface`).
  * @param wallpaperCardColor Background color for cards over the wallpaper. Defaults to the current
  * wallpaper's card color (the default wallpaper resolves to `surfaceBright`).
+ * @param wallpaperButtonBackgroundColor Background color for buttons over the wallpaper, exposed as
+ * [WallpaperTheme.buttonBackgroundColor].
+ * @param wallpaperButtonTextColor Content color for buttons over the wallpaper, exposed as
+ * [WallpaperTheme.buttonTextColor].
  * @param content The content to be themed.
  */
 @Composable
 fun WallpaperTheme(
     wallpaperTextColor: Color = LocalWallpaperState.current.textColor,
     wallpaperCardColor: Color = LocalWallpaperState.current.cardBackgroundColor,
+    wallpaperButtonBackgroundColor: Color = LocalWallpaperState.current.buttonBackgroundColor,
+    wallpaperButtonTextColor: Color = LocalWallpaperState.current.buttonTextColor,
     content: @Composable () -> Unit,
 ) {
     val baseColorScheme = MaterialTheme.colorScheme
@@ -57,13 +78,17 @@ fun WallpaperTheme(
         baseColorScheme.copy(surfaceBright = wallpaperCardColor)
     }
 
-    CompositionLocalProvider(LocalOnWallpaperColor provides wallpaperTextColor) {
+    CompositionLocalProvider(
+        LocalOnWallpaperColor provides wallpaperTextColor,
+        LocalWallpaperButtonBackgroundColor provides wallpaperButtonBackgroundColor,
+        LocalWallpaperButtonTextColor provides wallpaperButtonTextColor,
+    ) {
         MaterialTheme(colorScheme = colorScheme, content = content)
     }
 }
 
 /**
- * Design tokens for content themed against the wallpaper, accessed as `WallpaperTheme.onWallpaper`.
+ * Design tokens for content themed against the wallpaper, accessed as `WallpaperTheme.<token>`.
  */
 object WallpaperTheme {
     /**
@@ -74,4 +99,22 @@ object WallpaperTheme {
         @Composable
         @ReadOnlyComposable
         get() = LocalOnWallpaperColor.current.takeOrElse { MaterialTheme.colorScheme.onSurface }
+
+    /**
+     * Background color for buttons drawn over the wallpaper. Falls back to the default `FilledButton`
+     * container color (`primary`) when no [WallpaperTheme] is in scope.
+     */
+    val buttonBackgroundColor: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalWallpaperButtonBackgroundColor.current.takeOrElse { MaterialTheme.colorScheme.tertiary }
+
+    /**
+     * Content color for buttons drawn over the wallpaper. Falls back to the default `FilledButton`
+     * content color (`onPrimary`) when no [WallpaperTheme] is in scope.
+     */
+    val buttonTextColor: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalWallpaperButtonTextColor.current.takeOrElse { MaterialTheme.colorScheme.onTertiary }
 }
