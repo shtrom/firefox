@@ -34,6 +34,26 @@ function widgetLabel(id) {
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
+// Internal, pref-gated widget features that default off but we want to test in
+// devtools. Hand-maintained (outside the automatic registry-driven toggles).
+// Each `pref` is the full activity-stream-relative pref; toggles reuse
+// handleWidgetToggle, which sets the pref named by the toggle's id.
+const WIDGET_EXTRA_FEATURES = {
+  pictureOfTheDay: [
+    {
+      pref: "widgets.pictureOfTheDay.setAsWallpaper.enabled",
+      label: "Set as wallpaper",
+    },
+  ],
+  sportsWidget: [
+    { pref: "widgets.sportsWidget.live.enabled", label: "Live scores" },
+    {
+      pref: "widgets.sportsWidget.celebrations.enabled",
+      label: "Celebrations",
+    },
+  ],
+};
+
 const Row = props => (
   <tr className="message-item" {...props}>
     {props.children}
@@ -127,6 +147,10 @@ export class DiscoveryStreamAdminUI extends React.PureComponent {
     this.handleWidgetsSystemToggle = this.handleWidgetsSystemToggle.bind(this);
     this.handleWidgetToggle = this.handleWidgetToggle.bind(this);
     this.handleWidgetsToggleAll = this.handleWidgetsToggleAll.bind(this);
+    this.handleResetWidgetInteractions =
+      this.handleResetWidgetInteractions.bind(this);
+    this.handleResetWidgetsToDefaults =
+      this.handleResetWidgetsToDefaults.bind(this);
     this.toggleIABBanners = this.toggleIABBanners.bind(this);
     this.handleAllizomToggle = this.handleAllizomToggle.bind(this);
     this.sendConversionEvent = this.sendConversionEvent.bind(this);
@@ -440,6 +464,30 @@ export class DiscoveryStreamAdminUI extends React.PureComponent {
     return Boolean(
       otherPrefs[PREF_WIDGETS_SYSTEM_ENABLED] &&
       WIDGET_REGISTRY.every(widget => otherPrefs[widget.systemEnabledPref])
+    );
+  }
+
+  clearPrefs(prefNames) {
+    for (const prefName of prefNames) {
+      this.props.dispatch(
+        ac.OnlyToMain({ type: at.CLEAR_PREF, data: { name: prefName } })
+      );
+    }
+  }
+
+  handleResetWidgetInteractions() {
+    this.clearPrefs(
+      Object.keys(this.props.otherPrefs).filter(prefName =>
+        /^widgets\..+\.interaction$/.test(prefName)
+      )
+    );
+  }
+
+  handleResetWidgetsToDefaults() {
+    this.clearPrefs(
+      Object.keys(this.props.otherPrefs).filter(prefName =>
+        prefName.startsWith("widgets.")
+      )
     );
   }
 
@@ -1003,20 +1051,46 @@ export class DiscoveryStreamAdminUI extends React.PureComponent {
             <moz-button onClick={this.handleWidgetsToggleAll}>
               {this.areAllWidgetsEnabled() ? "Disable all" : "Enable all"}
             </moz-button>
+            <moz-button onClick={this.handleResetWidgetInteractions}>
+              Reset interaction
+            </moz-button>
+            <moz-button
+              type="destructive"
+              onClick={this.handleResetWidgetsToDefaults}
+            >
+              Reset to defaults
+            </moz-button>
           </div>
           <hr />
           {WIDGET_REGISTRY.map(widget => (
-            <div className="toggle-wrapper" key={widget.id}>
-              <moz-toggle
-                id={widget.systemEnabledPref}
-                pressed={
-                  this.props.otherPrefs[widget.systemEnabledPref] || null
-                }
-                disabled={!widgetsSystemEnabled || null}
-                ontoggle={this.handleWidgetToggle}
-                label={widgetLabel(widget.id)}
-              />
-            </div>
+            <React.Fragment key={widget.id}>
+              <div className="toggle-wrapper">
+                <moz-toggle
+                  id={widget.systemEnabledPref}
+                  pressed={
+                    this.props.otherPrefs[widget.systemEnabledPref] || null
+                  }
+                  disabled={!widgetsSystemEnabled || null}
+                  ontoggle={this.handleWidgetToggle}
+                  label={widgetLabel(widget.id)}
+                />
+              </div>
+              {(WIDGET_EXTRA_FEATURES[widget.id] || []).map(feature => (
+                <div
+                  className="toggle-wrapper"
+                  key={feature.pref}
+                  style={{ marginInlineStart: "var(--space-large)" }}
+                >
+                  <moz-toggle
+                    id={feature.pref}
+                    pressed={this.props.otherPrefs[feature.pref] || null}
+                    disabled={!widgetsSystemEnabled || null}
+                    ontoggle={this.handleWidgetToggle}
+                    label={feature.label}
+                  />
+                </div>
+              ))}
+            </React.Fragment>
           ))}
         </details>
         <h3>Layout</h3>

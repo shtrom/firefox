@@ -715,6 +715,24 @@ const actionUtils = {
  *    user-pref-wins pattern as resolveWidgetSize().
  * 3. Update components to call the helper instead of reading the pref directly.
  *
+ * DEVTOOLS ADMIN INTEGRATION
+ * The New Tab admin devtools panel (DiscoveryStreamAdmin.jsx, shown when
+ * browser.newtabpage.activity-stream.asrouter.devtoolsEnabled is true) drives a
+ * "Widgets" section directly off this registry: it maps WIDGET_REGISTRY to render
+ * one system-enable toggle per widget (from systemEnabledPref), plus "Enable all"
+ * / "Disable all" and reset controls. Any widget added here appears there
+ * automatically -- no devtools edit needed.
+ *
+ * To expose an extra pref-gated widget feature in that panel (e.g. an internal
+ * feature that defaults off but QA/devs want to flip, such as
+ * widgets.pictureOfTheDay.setAsWallpaper.enabled or
+ * widgets.sportsWidget.live.enabled), add an entry to the hand-maintained
+ * WIDGET_EXTRA_FEATURES map in DiscoveryStreamAdmin.jsx keyed by widget id:
+ *   sportsWidget: [{ pref: "widgets.sportsWidget.live.enabled", label: "Live scores" }]
+ * Each entry becomes a boolean toggle nested under that widget's row. This map is
+ * intentionally kept in the devtools component, not the registry, so shipping code
+ * carries no dependency on dev-only feature lists.
+ *
  * The widgets.order pref (CSV of widget IDs) persists user-defined order.
  * It is only written when the user explicitly reorders widgets — never on
  * enable/disable. Disabled widgets keep their slot so they reappear in the
@@ -1163,6 +1181,24 @@ function widgetLabel(id) {
   const spaced = id.replace(/([A-Z])/g, " $1");
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
+
+// Internal, pref-gated widget features that default off but we want to test in
+// devtools. Hand-maintained (outside the automatic registry-driven toggles).
+// Each `pref` is the full activity-stream-relative pref; toggles reuse
+// handleWidgetToggle, which sets the pref named by the toggle's id.
+const WIDGET_EXTRA_FEATURES = {
+  pictureOfTheDay: [{
+    pref: "widgets.pictureOfTheDay.setAsWallpaper.enabled",
+    label: "Set as wallpaper"
+  }],
+  sportsWidget: [{
+    pref: "widgets.sportsWidget.live.enabled",
+    label: "Live scores"
+  }, {
+    pref: "widgets.sportsWidget.celebrations.enabled",
+    label: "Celebrations"
+  }]
+};
 const Row = props => /*#__PURE__*/external_React_default().createElement("tr", _extends({
   className: "message-item"
 }, props), props.children);
@@ -1239,6 +1275,8 @@ class DiscoveryStreamAdminUI extends (external_React_default()).PureComponent {
     this.handleWidgetsSystemToggle = this.handleWidgetsSystemToggle.bind(this);
     this.handleWidgetToggle = this.handleWidgetToggle.bind(this);
     this.handleWidgetsToggleAll = this.handleWidgetsToggleAll.bind(this);
+    this.handleResetWidgetInteractions = this.handleResetWidgetInteractions.bind(this);
+    this.handleResetWidgetsToDefaults = this.handleResetWidgetsToDefaults.bind(this);
     this.toggleIABBanners = this.toggleIABBanners.bind(this);
     this.handleAllizomToggle = this.handleAllizomToggle.bind(this);
     this.sendConversionEvent = this.sendConversionEvent.bind(this);
@@ -1506,6 +1544,22 @@ class DiscoveryStreamAdminUI extends (external_React_default()).PureComponent {
       otherPrefs
     } = this.props;
     return Boolean(otherPrefs[PREF_WIDGETS_SYSTEM_ENABLED] && WIDGET_REGISTRY.every(widget => otherPrefs[widget.systemEnabledPref]));
+  }
+  clearPrefs(prefNames) {
+    for (const prefName of prefNames) {
+      this.props.dispatch(actionCreators.OnlyToMain({
+        type: actionTypes.CLEAR_PREF,
+        data: {
+          name: prefName
+        }
+      }));
+    }
+  }
+  handleResetWidgetInteractions() {
+    this.clearPrefs(Object.keys(this.props.otherPrefs).filter(prefName => /^widgets\..+\.interaction$/.test(prefName)));
+  }
+  handleResetWidgetsToDefaults() {
+    this.clearPrefs(Object.keys(this.props.otherPrefs).filter(prefName => prefName.startsWith("widgets.")));
   }
   sendConversionEvent() {
     const detail = {
@@ -1903,16 +1957,34 @@ class DiscoveryStreamAdminUI extends (external_React_default()).PureComponent {
       className: "admin-button-row"
     }, /*#__PURE__*/external_React_default().createElement("moz-button", {
       onClick: this.handleWidgetsToggleAll
-    }, this.areAllWidgetsEnabled() ? "Disable all" : "Enable all")), /*#__PURE__*/external_React_default().createElement("hr", null), WIDGET_REGISTRY.map(widget => /*#__PURE__*/external_React_default().createElement("div", {
-      className: "toggle-wrapper",
+    }, this.areAllWidgetsEnabled() ? "Disable all" : "Enable all"), /*#__PURE__*/external_React_default().createElement("moz-button", {
+      onClick: this.handleResetWidgetInteractions
+    }, "Reset interaction"), /*#__PURE__*/external_React_default().createElement("moz-button", {
+      type: "destructive",
+      onClick: this.handleResetWidgetsToDefaults
+    }, "Reset to defaults")), /*#__PURE__*/external_React_default().createElement("hr", null), WIDGET_REGISTRY.map(widget => /*#__PURE__*/external_React_default().createElement((external_React_default()).Fragment, {
       key: widget.id
+    }, /*#__PURE__*/external_React_default().createElement("div", {
+      className: "toggle-wrapper"
     }, /*#__PURE__*/external_React_default().createElement("moz-toggle", {
       id: widget.systemEnabledPref,
       pressed: this.props.otherPrefs[widget.systemEnabledPref] || null,
       disabled: !widgetsSystemEnabled || null,
       ontoggle: this.handleWidgetToggle,
       label: widgetLabel(widget.id)
-    })))), /*#__PURE__*/external_React_default().createElement("h3", null, "Layout"), layout.map((row, rowIndex) => /*#__PURE__*/external_React_default().createElement("div", {
+    })), (WIDGET_EXTRA_FEATURES[widget.id] || []).map(feature => /*#__PURE__*/external_React_default().createElement("div", {
+      className: "toggle-wrapper",
+      key: feature.pref,
+      style: {
+        marginInlineStart: "var(--space-large)"
+      }
+    }, /*#__PURE__*/external_React_default().createElement("moz-toggle", {
+      id: feature.pref,
+      pressed: this.props.otherPrefs[feature.pref] || null,
+      disabled: !widgetsSystemEnabled || null,
+      ontoggle: this.handleWidgetToggle,
+      label: feature.label
+    })))))), /*#__PURE__*/external_React_default().createElement("h3", null, "Layout"), layout.map((row, rowIndex) => /*#__PURE__*/external_React_default().createElement("div", {
       key: `row-${rowIndex}`
     }, row.components.map((component, componentIndex) => /*#__PURE__*/external_React_default().createElement("div", {
       key: `component-${componentIndex}`,
