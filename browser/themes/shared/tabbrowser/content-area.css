@@ -24,7 +24,7 @@
     margin-block-start: var(--chrome-window-gap);
     margin-block-end: var(--chrome-window-gap);
     margin-inline: var(--chrome-window-gap);
-    overflow: hidden;
+    overflow: clip;
 
     /* Both the #browser and #navigator-toolbox (when it's showing) should sit flush
        against the window edge in fullscreen. */
