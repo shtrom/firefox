@@ -190,6 +190,14 @@ struct FullOriginMetadata : OriginMetadata, OriginStateMetadata {
            mQuotaVersion == aOther.mQuotaVersion;
   }
 
+  // Copies mStorageOrigin, mIsPrivate, and mQuotaVersion from aOther; call
+  // before Equals() when *this was loaded from an L1 row that omits these.
+  void CopyIntrinsicFieldsFrom(const FullOriginMetadata& aOther) {
+    mStorageOrigin = aOther.mStorageOrigin;
+    mIsPrivate = aOther.mIsPrivate;
+    mQuotaVersion = aOther.mQuotaVersion;
+  }
+
   // Convenient method for duplicating a FullOriginMetadata instance. Creates
   // a new object by copying both the OriginMetadata and OriginStateMetadata
   // parts of this instance.
