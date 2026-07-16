@@ -1000,19 +1000,13 @@ bool SetDeprecatedTLS1CipherPrefs(const char* aPref = nullptr) {
 
 // static
 bool SetKyberPolicy(const char* aPref = nullptr) {
-  if (aPref != nullptr && strcmp(aPref, "security.tls.enable_kyber") != 0 &&
-      strcmp(aPref, "security.tls.enable_mlkem1024") != 0) {
+  if (aPref != nullptr && strcmp(aPref, "security.tls.enable_kyber") != 0) {
     return false;
   }
   if (StaticPrefs::security_tls_enable_kyber()) {
     NSS_SetAlgorithmPolicy(SEC_OID_MLKEM768X25519, NSS_USE_ALG_IN_SSL_KX, 0);
   } else {
     NSS_SetAlgorithmPolicy(SEC_OID_MLKEM768X25519, 0, NSS_USE_ALG_IN_SSL_KX);
-  }
-  if (StaticPrefs::security_tls_enable_mlkem1024()) {
-    NSS_SetAlgorithmPolicy(SEC_OID_ML_KEM_1024, NSS_USE_ALG_IN_SSL_KX, 0);
-  } else {
-    NSS_SetAlgorithmPolicy(SEC_OID_ML_KEM_1024, 0, NSS_USE_ALG_IN_SSL_KX);
   }
   return true;
 }

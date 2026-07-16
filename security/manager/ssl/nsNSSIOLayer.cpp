@@ -1580,27 +1580,26 @@ static nsresult nsSSLIOLayerSetOptions(PRFileDesc* fd, bool forSTARTTLS,
   // nsNSSCallbacks.cpp when changing the lists here.
   unsigned int additional_shares =
       StaticPrefs::security_tls_client_hello_send_p256_keyshare();
-  bool tls13 = range.max >= SSL_LIBRARY_VERSION_TLS_1_3;
-
-  AutoTArray<SSLNamedGroup, 8> namedGroups;
-  if (StaticPrefs::security_tls_enable_kyber() && tls13) {
-    namedGroups.AppendElement(ssl_grp_kem_mlkem768x25519);
+  if (StaticPrefs::security_tls_enable_kyber() &&
+      range.max >= SSL_LIBRARY_VERSION_TLS_1_3) {
+    const SSLNamedGroup namedGroups[] = {
+        ssl_grp_kem_mlkem768x25519, ssl_grp_ec_curve25519, ssl_grp_ec_secp256r1,
+        ssl_grp_ec_secp384r1,       ssl_grp_ec_secp521r1,  ssl_grp_ffdhe_2048,
+        ssl_grp_ffdhe_3072};
+    if (SECSuccess !=
+        SSL_NamedGroupConfig(fd, namedGroups, std::size(namedGroups))) {
+      return NS_ERROR_FAILURE;
+    }
     additional_shares += 1;
-  }
-  namedGroups.AppendElement(ssl_grp_ec_curve25519);
-  namedGroups.AppendElement(ssl_grp_ec_secp256r1);
-  namedGroups.AppendElement(ssl_grp_ec_secp384r1);
-  namedGroups.AppendElement(ssl_grp_ec_secp521r1);
-  namedGroups.AppendElement(ssl_grp_ffdhe_2048);
-  namedGroups.AppendElement(ssl_grp_ffdhe_3072);
-
-  if (StaticPrefs::security_tls_enable_mlkem1024() && tls13) {
-    namedGroups.AppendElement(ssl_grp_kem_mlkem1024);
-  }
-
-  if (SECSuccess !=
-      SSL_NamedGroupConfig(fd, namedGroups.Elements(), namedGroups.Length())) {
-    return NS_ERROR_FAILURE;
+  } else {
+    const SSLNamedGroup namedGroups[] = {
+        ssl_grp_ec_curve25519, ssl_grp_ec_secp256r1, ssl_grp_ec_secp384r1,
+        ssl_grp_ec_secp521r1,  ssl_grp_ffdhe_2048,   ssl_grp_ffdhe_3072};
+    // Skip the |ssl_grp_kem_mlkem768x25519| entry.
+    if (SECSuccess !=
+        SSL_NamedGroupConfig(fd, namedGroups, std::size(namedGroups))) {
+      return NS_ERROR_FAILURE;
+    }
   }
 
   // If additional_shares == 2, send mlkem768x25519, x25519, and p256.
@@ -1611,7 +1610,7 @@ static nsresult nsSSLIOLayerSetOptions(PRFileDesc* fd, bool forSTARTTLS,
   }
 
   // Enabling Certificate Compression Decoding mechanisms.
-  if (tls13 &&
+  if (range.max >= SSL_LIBRARY_VERSION_TLS_1_3 &&
       !(infoObject->GetProviderFlags() &
         (nsISocketProvider::BE_CONSERVATIVE | nsISocketProvider::IS_RETRY))) {
     SSLCertificateCompressionAlgorithm zlibAlg = {1, "zlib", nullptr,
