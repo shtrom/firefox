@@ -1167,26 +1167,43 @@ export class DiscoveryStreamAdminInner extends React.PureComponent {
 export function CollapseToggle(props) {
   const { devtoolsCollapsed } = props;
   const label = `${devtoolsCollapsed ? "Expand" : "Collapse"} devtools`;
+  // @nova-cleanup(remove-conditional): Remove this novaEnabled read and the
+  // ternary below in the returned JSX; always render the moz-button icon button
+  // and delete the legacy classic-enabled <button> branch.
+  const novaEnabled = props.Prefs?.values?.["nova.enabled"];
+  const className = `discoverystream-admin-toggle ${
+    devtoolsCollapsed ? "expanded" : "collapsed"
+  }`;
+  const onToggleClick = () => {
+    globalThis.location.hash = devtoolsCollapsed ? "#devtools" : "";
+  };
 
   return (
     <>
-      <button
-        title={label}
-        aria-label={label}
-        className={`discoverystream-admin-toggle ${
-          devtoolsCollapsed ? "expanded" : "collapsed"
-        }`}
-        onClick={() => {
-          globalThis.location.hash = devtoolsCollapsed ? "#devtools" : "";
-        }}
-      >
-        <div>
-          <img
-            role="presentation"
-            src="chrome://global/skin/icons/developer.svg"
-          />
-        </div>
-      </button>
+      {novaEnabled ? (
+        <moz-button
+          type="icon"
+          className={className}
+          title={label}
+          aria-label={label}
+          iconsrc="chrome://global/skin/icons/developer.svg"
+          onClick={onToggleClick}
+        />
+      ) : (
+        <button
+          title={label}
+          aria-label={label}
+          className={`${className} classic-enabled`}
+          onClick={onToggleClick}
+        >
+          <div>
+            <img
+              role="presentation"
+              src="chrome://global/skin/icons/developer.svg"
+            />
+          </div>
+        </button>
+      )}
       {!devtoolsCollapsed ? (
         <DiscoveryStreamAdminInner {...props} collapsed={devtoolsCollapsed} />
       ) : null}

@@ -100,15 +100,31 @@ function fireToggle(element, pressed) {
 }
 
 describe("<CollapseToggle>", () => {
-  it("should render the toggle button", () => {
+  it("should render a plain button toggle by default", () => {
     const { container } = render(
       <WrapWithProvider>
         <CollapseToggle devtoolsCollapsed={true} dispatch={jest.fn()} />
       </WrapWithProvider>
     );
     expect(
-      container.querySelector(".discoverystream-admin-toggle")
+      container.querySelector("button.discoverystream-admin-toggle")
     ).toBeInTheDocument();
+  });
+
+  it("should render a moz-button toggle when Nova is enabled", () => {
+    const { container } = render(
+      <CollapseToggle
+        devtoolsCollapsed={true}
+        dispatch={jest.fn()}
+        Prefs={{ values: { "nova.enabled": true } }}
+      />
+    );
+    expect(
+      container.querySelector("moz-button.discoverystream-admin-toggle")
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector("button.discoverystream-admin-toggle")
+    ).not.toBeInTheDocument();
   });
 });
 
