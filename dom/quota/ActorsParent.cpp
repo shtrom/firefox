@@ -3267,11 +3267,12 @@ void QuotaManager::UnloadQuota() {
           }
 
           auto metadata = originInfo->LockedFlattenToFullOriginMetadata();
-          metadata.mDirty = false;
           QM_WARNONLY_TRY_UNWRAP(auto originDirectory,
                                  GetOriginDirectory(metadata));
           if (originDirectory) {
-            CreateDirectoryMetadata2(*originDirectory.ref(), metadata);
+            DebugOnly<nsresult> rv =
+                CreateDirectoryMetadata2(*originDirectory.ref(), metadata);
+            MOZ_ASSERT(NS_FAILED(rv) == metadata.mDirty);
           }
         }
 
@@ -3633,6 +3634,9 @@ QuotaManager::GetOrCreateTemporaryOriginDirectory(
 
     QM_TRY(MOZ_TO_RESULT(
         CreateDirectoryMetadata2(*directory, fullOriginMetadata)));
+    // CreateDirectoryMetadata2 clears mDirty as part of writing the canonical
+    // state; the in-memory metadata reflects the post-write state from here on.
+    MOZ_ASSERT(!fullOriginMetadata.mDirty);
   }
 
   return std::move(directory);
@@ -3645,7 +3649,7 @@ Result<Ok, nsresult> QuotaManager::EnsureTemporaryOriginDirectoryCreated(
 }
 
 nsresult QuotaManager::CreateDirectoryMetadata2(
-    nsIFile& aDirectory, const FullOriginMetadata& aFullOriginMetadata) {
+    nsIFile& aDirectory, FullOriginMetadata& aFullOriginMetadata) {
   GECKO_TRACE_SCOPE("dom::quota", "QuotaManager::CreateDirectoryMetadata2");
 
   AssertIsOnIOThread();
@@ -3653,10 +3657,18 @@ nsresult QuotaManager::CreateDirectoryMetadata2(
   QM_TRY(ArtificialFailure(
       nsIQuotaArtificialFailure::CATEGORY_CREATE_DIRECTORY_METADATA2));
 
+  // We are about to persist the canonical metadata for this origin to disk
+  // and DB right now, so the on-disk state cannot be stale relative to what
+  // we are writing. Force the dirty bit off so callers don't accidentally
+  // propagate the legacy/conservative `mDirty=true` value (set during reads
+  // of old-format metadata) back into storage.sqlite.
+  aFullOriginMetadata.mDirty = false;
+  auto resetBackToDirty = MakeScopeExit(
+      [&aFullOriginMetadata]() { aFullOriginMetadata.mDirty = true; });
+
   if (!aFullOriginMetadata.mIsPrivate) {
     MOZ_ASSERT(mOriginUpserter, "We must have an origin upserter here");
-    // Warnonly because we still want to create the metadata file.
-    QM_WARNONLY_TRY(mOriginUpserter->Refresh(aFullOriginMetadata));
+    QM_TRY(mOriginUpserter->Refresh(aFullOriginMetadata));
   }
 
   QM_TRY_INSPECT(const auto& file, MOZ_TO_RESULT_INVOKE_MEMBER_TYPED(
@@ -3709,6 +3721,8 @@ nsresult QuotaManager::CreateDirectoryMetadata2(
 
   QM_TRY(MOZ_TO_RESULT(
       file->RenameTo(nullptr, nsLiteralString(METADATA_V2_FILE_NAME))));
+
+  resetBackToDirty.release();
 
   return NS_OK;
 }
@@ -3901,6 +3915,9 @@ Result<FullOriginMetadata, nsresult> QuotaManager::LoadFullOriginMetadata(
     // I/O.
     QM_TRY(MOZ_TO_RESULT(
         CreateDirectoryMetadata2(*aDirectory, fullOriginMetadata)));
+    // CreateDirectoryMetadata2 clears mDirty as part of writing the canonical
+    // state; the in-memory metadata reflects the post-write state from here on.
+    MOZ_ASSERT(!fullOriginMetadata.mDirty);
   }
 
   return fullOriginMetadata;
@@ -4503,6 +4520,12 @@ nsresult QuotaManager::InitializeOrigin(
 
       QM_TRY(MOZ_TO_RESULT(
           CreateDirectoryMetadata2(*aDirectory, fullOriginMetadata)));
+      // CreateDirectoryMetadata2 clears mDirty as part of writing the canonical
+      // state; the in-memory metadata reflects the post-write state from here
+      // on. The subsequent InitQuotaForOrigin call relies on this — otherwise
+      // a legacy mDirty=true (from rawFlags=0 reads) would re-queue the freshly
+      // initialized origin onto mDirtyOriginInfos.
+      MOZ_ASSERT(!fullOriginMetadata.mDirty);
     }
 
     InitQuotaForOrigin(fullOriginMetadata);
@@ -5743,6 +5766,18 @@ void QuotaManager::FlushDirtyOriginInfos() {
       continue;
     }
 
+    // The OriginInfo may have been cleaned by a direct CreateDirectoryMetadata2
+    // call (e.g. via InitializeOrigin) since it was queued. Skip the redundant
+    // write in that case.
+    if (!info->LockedDirty()) {
+      continue;
+    }
+
+    if (flushed >= maxOriginsToSaveInOneBatch) {
+      itemsToRequeue.AppendElement(std::move(info));
+      continue;
+    }
+
     const auto age = now - info->GetLastModifiedTime();
     if (age < writeQuiescentThresholdDuration) {
       itemsToRequeue.AppendElement(std::move(info));
@@ -5772,12 +5807,15 @@ void QuotaManager::FlushDirtyOriginInfos() {
 
     const nsCOMPtr<nsIFile>& directory = directoryResult.inspect();
 
-    fullOriginMetadata.mDirty = false;
     if (NS_WARN_IF(NS_FAILED(
             CreateDirectoryMetadata2(*directory, fullOriginMetadata)))) {
       itemsToRequeue.AppendElement(std::move(info));
       continue;
     }
+    // CreateDirectoryMetadata2 clears mDirty as part of writing the canonical
+    // state; the in-memory metadata reflects the post-write state from here
+    // on.
+    MOZ_ASSERT(!fullOriginMetadata.mDirty);
 
     info->LockedSetClean();
     ++flushed;
@@ -6577,6 +6615,10 @@ QuotaManager::EnsurePersistentOriginIsInitializedInternal(
             // Only creating .metadata-v2 to reduce IO.
             QM_TRY(MOZ_TO_RESULT(
                 CreateDirectoryMetadata2(*directory, fullOriginMetadata)));
+            // CreateDirectoryMetadata2 clears mDirty as part of writing the
+            // canonical state; the in-memory metadata reflects the post-write
+            // state from here on.
+            MOZ_ASSERT(!fullOriginMetadata.mDirty);
 
             return fullOriginMetadata;
           }
@@ -6815,6 +6857,11 @@ QuotaManager::EnsureTemporaryOriginIsInitializedInternal(
       // Only creating .metadata-v2 to reduce IO.
       QM_TRY(MOZ_TO_RESULT(
           CreateDirectoryMetadata2(*directory, fullOriginMetadata)));
+      // CreateDirectoryMetadata2 clears mDirty as part of writing the canonical
+      // state; the in-memory metadata reflects the post-write state from here
+      // on. The subsequent InitQuotaForOrigin call relies on this — otherwise
+      // a freshly created origin would be pushed onto mDirtyOriginInfos.
+      MOZ_ASSERT(!fullOriginMetadata.mDirty);
 
       // Don't need to traverse the directory, since it's empty.
       InitQuotaForOrigin(fullOriginMetadata);
@@ -10518,19 +10565,23 @@ nsresult RestoreDirectoryMetadata2Helper::ProcessOriginDirectory(
   QuotaManager* qm = QuotaManager::Get();
   MOZ_DIAGNOSTIC_ASSERT(qm);
 
+  FullOriginMetadata fullOriginMetadata{
+      aOriginProps.mOriginMetadata,
+      OriginStateMetadata{aOriginProps.mTimestamp,
+                          /* aLastMaintenanceDate */
+                          Date::FromTimestamp(aOriginProps.mTimestamp).ToDays(),
+                          /* aAccessed */ true,
+                          /* aPersisted */ false,
+                          /* aDirty */ false},
+      ClientUsageArray(), /* aUsage */ 0, kNoQuotaVersion};
+
   // We don't have any approach to restore aPersisted, so reset it to false.
-  QM_TRY(MOZ_TO_RESULT(qm->CreateDirectoryMetadata2(
-      *aOriginProps.mDirectory,
-      FullOriginMetadata{
-          aOriginProps.mOriginMetadata,
-          OriginStateMetadata{
-              aOriginProps.mTimestamp,
-              /* aLastMaintenanceDate */
-              Date::FromTimestamp(aOriginProps.mTimestamp).ToDays(),
-              /* aAccessed */ true,
-              /* aPersisted */ false,
-              /* aDirty */ false},
-          ClientUsageArray(), /* aUsage */ 0, kNoQuotaVersion})));
+  QM_TRY(MOZ_TO_RESULT(qm->CreateDirectoryMetadata2(*aOriginProps.mDirectory,
+                                                    fullOriginMetadata)));
+
+  // CreateDirectoryMetadata2 clears mDirty as part of writing the canonical
+  // state; the in-memory metadata reflects the post-write state from here on.
+  MOZ_ASSERT(!fullOriginMetadata.mDirty);
 
   return NS_OK;
 }
