@@ -11,6 +11,7 @@ import { WIDGET_REGISTRY, resolveWidgetSize } from "common/WidgetsRegistry.mjs";
 import { WidgetMenuFooter } from "../WidgetMenuFooter";
 import { SizeSubmenu } from "../SizeSubmenu";
 import { StockTicker } from "./StockTicker";
+import { StocksError } from "./StocksError";
 
 const USER_ACTION_TYPES = {
   CHANGE_SIZE: "change_size",
@@ -23,11 +24,12 @@ const STOCKS_PLACEHOLDER_COUNT = 4;
 
 function Stocks({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
   const prefs = useSelector(state => state.Prefs.values);
-  const { tickers } = useSelector(state => state.Stocks);
+  const { tickers, error } = useSelector(state => state.Stocks);
 
   // Resolve size through the registry helper, not the pref, so trainhop and the
   // default can apply.
   const widgetSize = resolveWidgetSize(STOCKS_ENTRY, prefs);
+  const showError = error && !tickers.length;
   const impressionFired = useRef(false);
 
   const handleIntersection = useCallback(() => {
@@ -156,7 +158,10 @@ function Stocks({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
       </div>
 
       <div className="stocks-body">
-        {widgetSize === "medium" && (
+        {showError && (
+          <StocksError widgetSize={widgetSize} dispatch={dispatch} />
+        )}
+        {!showError && widgetSize === "medium" && (
           <ul
             className={`stocks-grid${tickers.length ? "" : " stocks-grid--loading"}`}
           >
@@ -175,7 +180,7 @@ function Stocks({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
                 ))}
           </ul>
         )}
-        {widgetSize === "large" && (
+        {!showError && widgetSize === "large" && (
           <ul
             className={`stocks-list${tickers.length ? "" : " stocks-list--loading"}`}
           >

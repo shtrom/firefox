@@ -6855,6 +6855,7 @@ const INITIAL_STATE = {
   Stocks: {
     tickers: [],
     lastUpdated: null,
+    error: false,
   },
   PictureOfTheDay: {
     initialized: false,
@@ -7984,6 +7985,7 @@ function Stocks(prevState = INITIAL_STATE.Stocks, action) {
         ...prevState,
         tickers: action.data.tickers,
         lastUpdated: action.data.lastUpdated,
+        error: action.data.error ?? false,
       };
     default:
       return prevState;
@@ -22622,12 +22624,67 @@ function StockTicker({
   }, displayPrice)), changeText)));
 }
 
+;// CONCATENATED MODULE: ./content-src/components/Widgets/Stocks/StocksError.jsx
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+
+
+
+
+
+// The Stocks widget's error box. It only mounts while there's an error, so the
+// intersection observer set up on mount reports WIDGETS_ERROR the first time the
+// message is actually on screen.
+function StocksError({
+  widgetSize,
+  dispatch
+}) {
+  const errorFired = (0,external_React_namespaceObject.useRef)(false);
+  const handleErrorIntersection = (0,external_React_namespaceObject.useCallback)(() => {
+    if (errorFired.current) {
+      return;
+    }
+    errorFired.current = true;
+    // Fire from content so the event ties to this tab's session, matching the
+    // other widgets' error telemetry.
+    dispatch(actionCreators.AlsoToMain({
+      type: actionTypes.WIDGETS_ERROR,
+      data: {
+        widget_name: "stocks",
+        widget_size: widgetSize,
+        error_type: "load_error"
+      }
+    }));
+  }, [dispatch, widgetSize]);
+  const errorRef = useIntersectionObserver(handleErrorIntersection);
+  return (
+    /*#__PURE__*/
+    // role="alert" so a screen reader announces the failure when the box
+    // appears, since it replaces the widget's data without moving focus.
+    external_React_default().createElement("div", {
+      className: "stocks-error",
+      role: "alert",
+      ref: el => {
+        errorRef.current = [el];
+      }
+    }, /*#__PURE__*/external_React_default().createElement("span", {
+      className: "icon icon-info-warning",
+      "aria-hidden": "true"
+    }), /*#__PURE__*/external_React_default().createElement("p", {
+      className: "stocks-error-text",
+      "data-l10n-id": "newtab-stocks-error-not-available"
+    }))
+  );
+}
+
 ;// CONCATENATED MODULE: ./content-src/components/Widgets/Stocks/Stocks.jsx
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 // eslint-disable-next-line no-unused-vars
+
 
 
 
@@ -22650,12 +22707,14 @@ function Stocks_Stocks({
 }) {
   const prefs = (0,external_ReactRedux_namespaceObject.useSelector)(state => state.Prefs.values);
   const {
-    tickers
+    tickers,
+    error
   } = (0,external_ReactRedux_namespaceObject.useSelector)(state => state.Stocks);
 
   // Resolve size through the registry helper, not the pref, so trainhop and the
   // default can apply.
   const widgetSize = resolveWidgetSize(STOCKS_ENTRY, prefs);
+  const showError = error && !tickers.length;
   const impressionFired = (0,external_React_namespaceObject.useRef)(false);
   const handleIntersection = (0,external_React_namespaceObject.useCallback)(() => {
     if (impressionFired.current) {
@@ -22760,7 +22819,10 @@ function Stocks_Stocks({
     }) : null
   })))), /*#__PURE__*/external_React_default().createElement("div", {
     className: "stocks-body"
-  }, widgetSize === "medium" && /*#__PURE__*/external_React_default().createElement("ul", {
+  }, showError && /*#__PURE__*/external_React_default().createElement(StocksError, {
+    widgetSize: widgetSize,
+    dispatch: dispatch
+  }), !showError && widgetSize === "medium" && /*#__PURE__*/external_React_default().createElement("ul", {
     className: `stocks-grid${tickers.length ? "" : " stocks-grid--loading"}`
   }, tickers.length ? tickers.map(t => /*#__PURE__*/external_React_default().createElement(StockTicker, {
     key: t.ticker,
@@ -22773,7 +22835,7 @@ function Stocks_Stocks({
   }).map((_, i) => /*#__PURE__*/external_React_default().createElement(StockTicker, {
     key: i,
     loading: true
-  }))), widgetSize === "large" && /*#__PURE__*/external_React_default().createElement("ul", {
+  }))), !showError && widgetSize === "large" && /*#__PURE__*/external_React_default().createElement("ul", {
     className: `stocks-list${tickers.length ? "" : " stocks-list--loading"}`
   }, tickers.length ? tickers.map(t => /*#__PURE__*/external_React_default().createElement(StockTicker, {
     key: t.ticker,
