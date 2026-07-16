@@ -483,32 +483,37 @@ struct IpcFailCustomRetVal {
     static_assert(false, "Did you forget arguments?"); \
   } while (0)
 
+#define QM_NORMALIZED_FILE \
+  mozilla::dom::quota::NormalizedSourcePath(__FILE__).value
+
 #ifdef DEBUG
 #  define QM_HANDLE_ERROR(expr, error, severity) \
-    HandleError(#expr, error, __FILE__, __LINE__, severity)
+    HandleError(#expr, error, QM_NORMALIZED_FILE, __LINE__, severity)
 #else
 #  define QM_HANDLE_ERROR(expr, error, severity) \
-    HandleError("Unavailable", error, __FILE__, __LINE__, severity)
+    HandleError("Unavailable", error, QM_NORMALIZED_FILE, __LINE__, severity)
 #endif
 
 #ifdef DEBUG
-#  define QM_HANDLE_ERROR_RETURN_NOTHING(expr, error, severity) \
-    HandleErrorReturnNothing(#expr, error, __FILE__, __LINE__, severity)
+#  define QM_HANDLE_ERROR_RETURN_NOTHING(expr, error, severity)          \
+    HandleErrorReturnNothing(#expr, error, QM_NORMALIZED_FILE, __LINE__, \
+                             severity)
 #else
-#  define QM_HANDLE_ERROR_RETURN_NOTHING(expr, error, severity) \
-    HandleErrorReturnNothing("Unavailable", error, __FILE__, __LINE__, severity)
+#  define QM_HANDLE_ERROR_RETURN_NOTHING(expr, error, severity)        \
+    HandleErrorReturnNothing("Unavailable", error, QM_NORMALIZED_FILE, \
+                             __LINE__, severity)
 #endif
 
 #ifdef DEBUG
 #  define QM_HANDLE_ERROR_WITH_CLEANUP_RETURN_NOTHING(expr, error, severity, \
                                                       cleanup)               \
-    HandleErrorWithCleanupReturnNothing(#expr, error, __FILE__, __LINE__,    \
-                                        severity, cleanup)
-#else
-#  define QM_HANDLE_ERROR_WITH_CLEANUP_RETURN_NOTHING(expr, error, severity, \
-                                                      cleanup)               \
-    HandleErrorWithCleanupReturnNothing("Unavailable", error, __FILE__,      \
+    HandleErrorWithCleanupReturnNothing(#expr, error, QM_NORMALIZED_FILE,    \
                                         __LINE__, severity, cleanup)
+#else
+#  define QM_HANDLE_ERROR_WITH_CLEANUP_RETURN_NOTHING(expr, error, severity, \
+                                                      cleanup)               \
+    HandleErrorWithCleanupReturnNothing(                                     \
+        "Unavailable", error, QM_NORMALIZED_FILE, __LINE__, severity, cleanup)
 #endif
 
 // Handles the case when QM_VOID is passed as a custom return value.
@@ -1365,7 +1370,23 @@ Result<SingleStepSuccessType<ResultHandling>, nsresult>
 CreateAndExecuteSingleStepStatement(mozIStorageConnection& aConnection,
                                     const nsACString& aStatementString);
 
+// Compile-time normalization of __FILE__ paths: replaces backslashes with
+// forward slashes so that path suffix/prefix matching works regardless of
+// which separator the compiler uses in __FILE__ expansions on Windows.
+template <size_t N>
+struct NormalizedSourcePath {
+  char value[N];
+  constexpr NormalizedSourcePath(const char (&aSrc)[N]) : value() {
+    for (size_t i = 0; i < N; ++i) {
+      value[i] = (aSrc[i] == '\\') ? '/' : aSrc[i];
+    }
+  }
+};
+
 namespace detail {
+
+nsDependentCSubstring GetTreeBase(const nsLiteralCString& aPath,
+                                  const nsLiteralCString& aRelativePath);
 
 // Determine the absolute path of the root of our built source tree so we can
 // derive source-relative paths for non-exported header files in
@@ -1374,12 +1395,18 @@ namespace detail {
 nsDependentCSubstring GetSourceTreeBase();
 
 // Determine the absolute path of the root of our built OBJDIR/dist/include
-// directory. The aQuotaCommonHPath argument cleverly defaults to __FILE__
-// initialized in our exported header; no argument should ever be provided to
-// this method. GetSourceTreeBase handles identifying the root of the source
-// tree.
-nsDependentCSubstring GetObjdirDistIncludeTreeBase(
-    const nsLiteralCString& aQuotaCommonHPath = nsLiteralCString(__FILE__));
+// directory. The template parameter defaults to __FILE__ normalized at compile
+// time, capturing the path to this exported header. No argument should ever
+// be provided.
+template <
+    NormalizedSourcePath QuotaCommonHPath = NormalizedSourcePath(__FILE__)>
+nsDependentCSubstring GetObjdirDistIncludeTreeBase() {
+  static constexpr auto quotaCommonHSourceFileRelativePath =
+      "/mozilla/dom/quota/QuotaCommon.h"_ns;
+
+  return GetTreeBase(nsLiteralCString(QuotaCommonHPath.value),
+                     quotaCommonHSourceFileRelativePath);
+}
 
 nsDependentCSubstring MakeSourceFileRelativePath(
     const nsACString& aSourceFilePath);
