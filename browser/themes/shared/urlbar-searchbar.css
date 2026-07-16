@@ -261,7 +261,7 @@ toolbar[inactive="true"] .urlbar,
 }
 
 .urlbar-input-container {
-  padding: var(--urlbar-input-container-padding);
+  padding-inline: var(--urlbar-input-container-padding);
   min-width: 0;
   display: flex;
   align-items: center;
@@ -487,7 +487,7 @@ toolbar[inactive="true"] .urlbar,
 
     > .urlbar-input-container {
       height: var(--urlbar-container-height);
-      padding-block: calc((var(--urlbar-container-height) - var(--urlbar-height)) / 2 + var(--urlbar-input-container-padding));
+      padding-block: calc((var(--urlbar-container-height) - var(--urlbar-height)) / 2);
       padding-inline: calc(var(--urlbar-margin-inline) + var(--urlbar-input-container-padding));
     }
 
@@ -511,6 +511,8 @@ toolbar[inactive="true"] .urlbar,
 }
 
 .urlbar-input-box {
+  height: 100%;
+
   #urlbar & {
     /* Show the url scheme in a static box when overflowing to the left */
     position: relative;
