@@ -2292,3 +2292,12 @@ bool nsWindowWayland::ApplyEnterLeaveMutterWorkaround() {
   }
   return false;
 }
+
+void nsWindowWayland::OnUnmapNative() {
+  ClearPipResources();
+  // Mark tracked popup as closed in case it was hidden by an external
+  // signal (xdg_popup.popup_done for instance) and not by us.
+  if (IsInPopupHierarchy()) {
+    WaylandPopupMarkAsClosed();
+  }
+}

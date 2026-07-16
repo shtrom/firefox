@@ -7445,7 +7445,7 @@ void nsWindow::OnUnmap() {
 
 #ifdef MOZ_WAYLAND
   if (AsWayland()) {
-    AsWayland()->ClearPipResources();
+    AsWayland()->OnUnmapNative();
   }
 #endif
 
