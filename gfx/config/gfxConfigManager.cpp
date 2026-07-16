@@ -159,6 +159,11 @@ void gfxConfigManager::ConfigureWebRender() {
   if (mWrCompositorForceEnabled) {
     mFeatureWrCompositor->UserForceEnable("Force enabled by pref");
   }
+#ifdef MOZ_WAYLAND
+  else if (gfxPlatform::UseHDR()) {
+    mFeatureWrCompositor->UserForceEnable("Force enabled by HDR pref");
+  }
+#endif
 
   ConfigureFromBlocklist(nsIGfxInfo::FEATURE_WEBRENDER_COMPOSITOR,
                          mFeatureWrCompositor);

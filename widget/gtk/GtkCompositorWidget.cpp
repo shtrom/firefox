@@ -144,7 +144,8 @@ LayoutDeviceIntRegion GtkCompositorWidget::GetTransparentRegion() {
 
 #ifdef MOZ_WAYLAND
 mozilla::layers::NativeLayerRoot* GtkCompositorWidget::GetNativeLayerRoot() {
-  if (!mNativeLayerRoot) {
+  if (!mNativeLayerRoot && gfx::gfxVars::UseWebRenderCompositor() &&
+      WaylandDisplayGet()->GetFractionalScaleManager()) {
     LOG("GtkCompositorWidget::GetNativeLayerRoot [%p] create",
         (void*)mWidget.get());
     MOZ_ASSERT(mWidget && mWidget->GetMozContainer());
