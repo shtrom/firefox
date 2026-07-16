@@ -1198,6 +1198,19 @@ abstract class BasePage(
 
                 if (!obj.exists()) null else obj
             }
+
+            SelectorStrategy.COMPOSE_BY_TEXT_SUBSTRING -> {
+                val node = composeRule
+                    .onAllNodesWithText(selector.value, substring = true, useUnmergedTree = true)
+                    .onFirst()
+                try {
+                    node.assertExists()
+                    node
+                } catch (_: AssertionError) {
+                    Log.i("mozGetElement", "Compose node not found for text substring: ${selector.value}")
+                    null
+                }
+            }
         }
     }
 

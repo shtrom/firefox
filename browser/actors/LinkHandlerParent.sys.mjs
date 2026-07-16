@@ -111,6 +111,12 @@ export class LinkHandlerParent extends JSWindowActorParent {
         this.notifyTestListeners("LoadingIcon", aMsg.data);
         break;
 
+      case "Link:ExpireFavicons":
+        lazy.PlacesUtils.favicons
+          .expireFaviconsForPage(this.manager.documentURI)
+          .catch(console.error);
+        break;
+
       case "Link:SetIcon":
         if (!gBrowser) {
           return;

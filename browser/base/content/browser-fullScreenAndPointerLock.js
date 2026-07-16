@@ -503,13 +503,10 @@ var FullScreen = {
     let translate = shiftSize > 0 ? `0 ${shiftSize}px` : "";
     gNavToolbox.classList.toggle("fullscreen-floating-toolbox", shiftSize > 0);
     gNavToolbox.style.translate = translate;
-    gURLBar.style.translate = gURLBar.hasAttribute("breakout") ? translate : "";
-    let searchbar = document.getElementById("searchbar-new");
-    if (searchbar) {
-      searchbar.style.translate = searchbar.hasAttribute("breakout")
-        ? translate
-        : "";
-    }
+    gURLBar.style.setProperty("--toolbar-shift-translate", translate);
+    document
+      .getElementById("searchbar-new")
+      ?.style.setProperty("--toolbar-shift-translate", translate);
     if (shiftSize > 0) {
       // If the mouse tracking missed our fullScreenToggler, then the toolbox
       // might not have been shown before the menubar is animated down. Make

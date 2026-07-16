@@ -4,46 +4,35 @@
 
 #include "nsPrintDialogGTK.h"
 
+#include <gdk/gdk.h>  // for gdk_x11_window_get_xid
 #include <gtk/gtk.h>
 #include <gtk/gtkunixprint.h>
 #include <stdlib.h>
+#ifdef MOZ_X11
+#  include <gdk/gdkx.h>
+
+#  include "X11UndefineNone.h"
+#endif
+#include <dlfcn.h>
+#include <fcntl.h>
+#include <gio/gunixfdlist.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include "GRefPtr.h"
-#include "MozContainer.h"
+#include "MainThreadUtils.h"
 #include "WidgetUtils.h"
-#include "WidgetUtilsGtk.h"
-#include "mozilla/Services.h"
 #include "mozilla/dom/Promise.h"
-#include "nsIGIOService.h"
 #include "nsIGlobalObject.h"
-#include "nsIObserverService.h"
 #include "nsIPrintSettings.h"
 #include "nsIPrintSettingsService.h"
 #include "nsIStringBundle.h"
 #include "nsIWidget.h"
 #include "nsPIDOMWindow.h"
 #include "nsPrintSettingsGTK.h"
-#include "nsPrintfCString.h"
-#include "nsReadableUtils.h"
 #include "nsServiceManagerUtils.h"
 #include "nsString.h"
-#include "nsThreadUtils.h"
 #include "xpcpublic.h"
-
-// for gdk_x11_window_get_xid
-#include <gdk/gdk.h>
-#ifdef MOZ_X11
-#  include <gdk/gdkx.h>
-#endif
-#include <fcntl.h>
-#include <gio/gunixfdlist.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-
-// for dlsym
-#include <dlfcn.h>
-
-#include "MainThreadUtils.h"
 
 using namespace mozilla;
 using namespace mozilla::dom;

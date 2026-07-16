@@ -49,11 +49,60 @@ object CollectionsSelectors {
         groups = listOf("collectionTabItem"),
     )
 
+    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    fun COLLECTION_TAB_WITH_URL(url: String = "") = Selector(
+        strategy = SelectorStrategy.COMPOSE_BY_TEXT_SUBSTRING,
+        value = url,
+        description = "Collection tab with url: $url",
+        groups = listOf("collectionTabItem"),
+    )
+
+    val COLLECTION_ITEM_REMOVE_BUTTON = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR_WITH_DESCRIPTION_CONTAINS,
+        value = "Remove tab from collection",
+        description = "Collection item remove button",
+        groups = listOf("collectionControls"),
+    )
+
+    val COLLECTION_TAB_SHARE_BUTTON = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR_WITH_DESCRIPTION_CONTAINS,
+        value = "Share",
+        description = "Collection tab share button",
+        groups = listOf("collectionControls"),
+    )
+
+    val COLLECTION_TAB_MAIN_MENU_BUTTON = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR_WITH_DESCRIPTION_CONTAINS,
+        value = "Collection menu",
+        description = "Collection tab main menu button",
+        groups = listOf("collectionControls"),
+    )
+
+    val OPEN_TABS_BUTTON = Selector(
+        strategy = SelectorStrategy.COMPOSE_BY_TEXT,
+        value = "Open tabs",
+        description = "Collection tab Open tabs menu button",
+        groups = listOf("collectionThreeDotMenu"),
+    )
+
+    val DELETE_COLLECTION_BUTTON = Selector(
+        strategy = SelectorStrategy.COMPOSE_BY_TEXT,
+        value = "Delete collection",
+        description = "Collection tab Delete Collection menu button",
+        groups = listOf("collectionThreeDotMenu"),
+    )
+
     val all = listOf(
         ADD_NEW_COLLECTION_BUTTON,
         EXISTING_COLLECTION_WITH_TITLE(),
         TAB_SAVED_SNACK_BAR,
         COLLECTION_WITH_TITLE(),
         COLLECTION_TAB_WITH_TITLE(),
+        COLLECTION_TAB_WITH_URL(),
+        COLLECTION_ITEM_REMOVE_BUTTON,
+        COLLECTION_TAB_SHARE_BUTTON,
+        COLLECTION_TAB_MAIN_MENU_BUTTON,
+        OPEN_TABS_BUTTON,
+        DELETE_COLLECTION_BUTTON,
     )
 }

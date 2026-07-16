@@ -362,6 +362,13 @@ skip-if = [
 
 ["test_bug2034752.js"]
 
+["test_bug2052534.js"]
+run-sequentially = ["true"] # http3server
+skip-if = [
+  "os == 'android'",
+  "os == 'win'",
+]
+
 ["test_bug_1918928.js"]
 run-if = [
   "!socketprocess_networking", # confirmation state isn't passed cross-process

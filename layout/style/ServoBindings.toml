@@ -179,7 +179,8 @@ allowlist-vars = [
     "nsNameSpaceManager_.*",
     "GECKO_IS_NIGHTLY",
     "NS_SAME_AS_FOREGROUND_COLOR",
-    "mozilla::detail::gGkAtoms",
+    "nsGkAtoms::detail::gGkAtoms",
+    "nsGkAtoms::kStaticAtomCount",
 ]
 # TODO(emilio): A bunch of types here can go away once we generate bindings and
 # structs together.

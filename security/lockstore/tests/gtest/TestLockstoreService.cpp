@@ -5,10 +5,10 @@
 #include <atomic>
 #include <set>
 
+#include "LockstoreService.h"
 #include "gtest/gtest.h"
 #include "mozilla/SpinEventLoopUntil.h"
 #include "mozilla/gtest/MozAssertions.h"
-#include "LockstoreService.h"
 #include "nsString.h"
 #include "nsTArray.h"
 #include "nsThreadUtils.h"

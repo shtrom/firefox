@@ -5,13 +5,14 @@
 
 #include "SecretDecoderRing.h"
 
+#include "SSLTokensCache.h"
 #include "ScopedNSSTypes.h"
 #include "mozilla/Base64.h"
 #include "mozilla/Casting.h"
+#include "mozilla/ErrorResult.h"
 #include "mozilla/Logging.h"
 #include "mozilla/Services.h"
 #include "mozilla/StaticPrefs_security.h"
-#include "mozilla/ErrorResult.h"
 #include "mozilla/dom/Promise.h"
 #include "nsCOMPtr.h"
 #include "nsIInterfaceRequestor.h"
@@ -21,7 +22,6 @@
 #include "nsNetCID.h"
 #include "pk11func.h"
 #include "pk11sdr.h"
-#include "SSLTokensCache.h"
 
 static mozilla::LazyLogModule gSDRLog("sdrlog");
 

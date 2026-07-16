@@ -66,10 +66,10 @@ void HTMLDetailsElement::AfterSetAttr(int32_t aNameSpaceID, nsAtom* aName,
             new AsyncEventDispatcher(this, toggleEvent.forget());
         mToggleEventDispatcher->PostDOMEvent();
 
+        SetStates(ElementState::OPEN, isOpen);
         if (isOpen) {
           CloseOtherElementsIfNeeded();
         }
-        SetStates(ElementState::OPEN, isOpen);
       }
     } else if (aName == nsGkAtoms::name) {
       CloseElementIfNeeded();
@@ -270,7 +270,7 @@ void HTMLDetailsElement::CloseOtherElementsIfNeeded() {
     return;
   }
 
-  const RefPtr<nsAtom> name = GetParsedAttr(nsGkAtoms::name)->GetAsAtom();
+  nsAtom* name = GetParsedAttr(nsGkAtoms::name)->GetAtomValue();
   nsINode* const root = SubtreeRoot();
   for (nsINode* cur = root; cur; cur = cur->GetNextNode(root)) {
     if (!cur->HasName()) {
@@ -278,8 +278,7 @@ void HTMLDetailsElement::CloseOtherElementsIfNeeded() {
     }
     if (auto* other = HTMLDetailsElement::FromNode(cur)) {
       if (other != this && other->Open() &&
-          other->AttrValueIs(kNameSpaceID_None, nsGkAtoms::name, name,
-                             eCaseMatters)) {
+          other->GetParsedAttr(nsGkAtoms::name)->GetAtomValue() == name) {
         RefPtr<HTMLDetailsElement> otherDetails = other;
         otherDetails->SetOpen(false, IgnoreErrors());
         break;

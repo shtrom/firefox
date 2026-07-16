@@ -3,7 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "gtest/gtest.h"
-
 #include "mozilla/gtest/MozAssertions.h"
 #include "mozilla/security/lockstore/lockstore_ffi_generated.h"
 #include "nsCOMPtr.h"

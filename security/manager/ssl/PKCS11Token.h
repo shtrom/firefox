@@ -6,12 +6,12 @@
 #ifndef PKCS11Token_h
 #define PKCS11Token_h
 
+#include "ScopedNSSTypes.h"
 #include "nsCOMPtr.h"
 #include "nsIPKCS11Token.h"
 #include "nsISupports.h"
 #include "nsString.h"
 #include "pk11func.h"
-#include "ScopedNSSTypes.h"
 
 class PKCS11Token : public nsIPKCS11Token {
  public:

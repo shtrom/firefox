@@ -5,8 +5,9 @@
 
 #include "nsNSSCallbacks.h"
 
-#include "NSSSocketControl.h"
 #include "EnabledSignatureSchemes.h"
+#include "NSSSocketControl.h"
+#include "SSLTokensCache.h"
 #include "ScopedNSSTypes.h"
 #include "SharedCertVerifier.h"
 #include "mozilla/Assertions.h"
@@ -21,6 +22,7 @@
 #include "mozilla/SyncRunnable.h"
 #include "mozilla/dom/ScriptSettings.h"
 #include "mozilla/glean/SecurityManagerSslMetrics.h"
+#include "mozpkix/pkixtypes.h"
 #include "nsComponentManagerUtils.h"
 #include "nsContentUtils.h"
 #include "nsIChannel.h"
@@ -29,8 +31,8 @@
 #include "nsIObserverService.h"
 #include "nsIPrompt.h"
 #include "nsIProtocolProxyService.h"
-#include "nsISupportsPriority.h"
 #include "nsIStreamLoader.h"
+#include "nsISupportsPriority.h"
 #include "nsIUploadChannel.h"
 #include "nsIWebProgressListener.h"
 #include "nsIWindowWatcher.h"
@@ -42,10 +44,8 @@
 #include "nsNetUtil.h"
 #include "nsProxyRelease.h"
 #include "nsStringStream.h"
-#include "mozpkix/pkixtypes.h"
 #include "ssl.h"
 #include "sslproto.h"
-#include "SSLTokensCache.h"
 
 using namespace mozilla;
 using namespace mozilla::pkix;

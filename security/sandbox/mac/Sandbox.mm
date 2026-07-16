@@ -32,8 +32,8 @@
 #include "mozilla/Assertions.h"
 
 #include "mozilla/GeckoArgs.h"
-#include "mozilla/ipc/UtilityProcessSandboxing.h"
 #include "mozilla/SandboxSettings.h"
+#include "mozilla/ipc/UtilityProcessSandboxing.h"
 
 // Undocumented sandbox setup routines.
 extern "C" int sandbox_init_with_parameters(const char* profile, uint64_t flags,

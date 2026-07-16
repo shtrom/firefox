@@ -240,6 +240,8 @@ export class ContentSharingModal extends MozLitElement {
       >`;
     }
 
+    // Links that fail schema validation are dropped when the share is built, so
+    // this error only occurs when no shareable links remain.
     if (this.shareResult.error === ERRORS.INVALID_SCHEMA) {
       return html`<moz-message-bar
         type="critical"

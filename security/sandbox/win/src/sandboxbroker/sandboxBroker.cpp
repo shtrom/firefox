@@ -9,12 +9,14 @@
 #include <aclapi.h>
 #include <sddl.h>
 #include <shlobj.h>
+
 #include <string>
 
-#include "base/win/windows_version.h"
-#include "base/win/sid.h"
 #include "ConfigHelpers.h"
 #include "GfxDriverInfo.h"
+#include "WinUtils.h"
+#include "base/win/sid.h"
+#include "base/win/windows_version.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/ClearOnShutdown.h"
 #include "mozilla/Components.h"
@@ -23,16 +25,16 @@
 #include "mozilla/NSPRLogModulesParser.h"
 #include "mozilla/Omnijar.h"
 #include "mozilla/Preferences.h"
-#include "mozilla/SandboxSettings.h"
 #include "mozilla/SHA1.h"
+#include "mozilla/SandboxSettings.h"
 #include "mozilla/StaticPrefs_network.h"
 #include "mozilla/StaticPrefs_security.h"
 #include "mozilla/StaticPrefs_widget.h"
 #include "mozilla/StaticPtr.h"
 #include "mozilla/UniquePtr.h"
-#include "mozilla/glean/SecuritySandboxMetrics.h"
 #include "mozilla/WinDllServices.h"
 #include "mozilla/WindowsVersion.h"
+#include "mozilla/glean/SecuritySandboxMetrics.h"
 #include "mozilla/ipc/LaunchError.h"
 #include "mozilla/ipc/UtilityProcessSandboxing.h"
 #include "nsAppDirectoryServiceDefs.h"
@@ -49,7 +51,6 @@
 #include "sandbox/win/src/app_container.h"
 #include "sandbox/win/src/sandbox.h"
 #include "sandbox/win/src/security_level.h"
-#include "WinUtils.h"
 
 #define SANDBOX_SUCCEED_OR_CRASH(x)                                   \
   do {                                                                \

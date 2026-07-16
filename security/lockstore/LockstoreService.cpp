@@ -4,6 +4,10 @@
 
 #include "LockstoreService.h"
 
+#include <cstring>
+#include <type_traits>
+#include <utility>
+
 #include "mozilla/AppShutdown.h"
 #include "mozilla/ErrorResult.h"
 #include "mozilla/RefPtr.h"
@@ -22,10 +26,6 @@
 #include "nsTArray.h"
 #include "nsThreadUtils.h"
 #include "xpcpublic.h"
-
-#include <cstring>
-#include <type_traits>
-#include <utility>
 
 namespace mozilla::security::lockstore {
 

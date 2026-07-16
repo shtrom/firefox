@@ -209,6 +209,17 @@ document.addEventListener(
             adoptedTabGroup.select();
           }
           break;
+        case "open-tab-group-context-menu_share":
+          {
+            let { triggerNode } = event.target.parentElement;
+            let { tabGroupId } = triggerNode.dataset;
+            let tabGroup = gBrowser.getTabGroupById(tabGroupId);
+            // Close the panel this context menu was opened from (e.g. the
+            // "List all tabs" panel) so it doesn't overlap the share dialog.
+            triggerNode.closest("panel")?.hidePopup();
+            lazy.ContentSharingUtils.handleShareTabGroup(tabGroup);
+          }
+          break;
         case "open-tab-group-context-menu_delete":
           {
             let { tabGroupId } = event.target.parentElement.triggerNode.dataset;
@@ -671,6 +682,11 @@ document.addEventListener(
           event.target.querySelector(
             "#open-tab-group-context-menu_moveToNewWindow"
           ).disabled = groupAloneInWindow;
+
+          // Only show "Share Group" when content sharing is enabled.
+          event.target.querySelector(
+            "#open-tab-group-context-menu_share"
+          ).hidden = !lazy.ContentSharingUtils.isEnabled;
         }
       });
 

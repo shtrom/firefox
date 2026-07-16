@@ -129,6 +129,11 @@ add_task(async function toolbar_icon_status() {
   let baseIcon = button.querySelector(
     ".ipprotection-icon-stack > .toolbarbutton-icon"
   );
+  let iconStack = button.querySelector(".ipprotection-icon-stack");
+  Assert.ok(
+    iconStack.classList.contains("toolbarbutton-badge-stack"),
+    "Icon stack should have the toolbarbutton-badge-stack class for positioning and hover state"
+  );
   Assert.ok(onLayer, "On-state overlay layer should exist");
   Assert.equal(
     getComputedStyle(onLayer).opacity,

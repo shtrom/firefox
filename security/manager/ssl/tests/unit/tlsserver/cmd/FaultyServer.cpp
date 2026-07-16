@@ -4,15 +4,14 @@
 
 #include <stdio.h>
 
-#include "nspr.h"
 #include "ScopedNSSTypes.h"
+#include "TLSServer.h"
+#include "mozilla/Sprintf.h"
+#include "nspr.h"
 #include "ssl.h"
 #include "ssl3prot.h"
 #include "sslexp.h"
 #include "sslimpl.h"
-#include "TLSServer.h"
-
-#include "mozilla/Sprintf.h"
 
 using namespace mozilla;
 using namespace mozilla::test;

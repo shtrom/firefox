@@ -475,7 +475,7 @@ export class IPProtectionToolbarButton {
 
     let doc = toolbaritem.ownerDocument;
     let stack = doc.createXULElement("stack");
-    stack.classList.add("ipprotection-icon-stack");
+    stack.classList.add("ipprotection-icon-stack", "toolbarbutton-badge-stack");
 
     // Move the existing icon into the stack as the base (off) layer, then
     // stack the remaining states on top of it.

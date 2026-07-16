@@ -1901,6 +1901,14 @@ pref("termsofuse.minimumVersion", 4);
   pref("termsofuse.bypassNotification", true);
 #endif
 
+// Should we bypass auto-triggering actions that show an OS-level consent
+// prompt, currently only true for local/non-official builds
+#ifdef MOZILLA_OFFICIAL
+  pref("browser.bypassAutoTriggerActions", false);
+#else
+  pref("browser.bypassAutoTriggerActions", true);
+#endif
+
 // Show "Download Firefox for mobile" QR code modal on newtab
 pref("browser.newtabpage.activity-stream.mobileDownloadModal.enabled", false);
 pref("browser.newtabpage.activity-stream.mobileDownloadModal.variant-a", false);
