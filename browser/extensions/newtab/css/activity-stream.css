@@ -134,21 +134,11 @@ input {
 .icon.icon-small-spacer {
   margin-inline-end: var(--space-xsmall);
 }
-.icon.icon-button-style {
-  fill: var(--newtab-text-secondary-color);
-  border: 0;
-}
-.icon.icon-button-style:focus, .icon.icon-button-style:hover {
-  fill: var(--newtab-text-primary-color);
-}
 .icon.icon-bookmark-added {
   background-image: url("chrome://browser/skin/bookmark.svg");
 }
 .icon.icon-bookmark-hollow {
   background-image: url("chrome://browser/skin/bookmark-hollow.svg");
-}
-.icon.icon-clear-input {
-  background-image: url("chrome://global/skin/icons/close-fill.svg");
 }
 .icon.icon-delete {
   background-image: url("chrome://global/skin/icons/delete.svg");
@@ -1693,12 +1683,6 @@ main.newtab-main section {
   direction: ltr;
   text-align: end;
 }
-.topsite-form .form-wrapper .enable-custom-image-input {
-  display: inline-block;
-  font-size: var(--font-size-small);
-  margin-block-start: var(--space-xsmall);
-  cursor: pointer;
-}
 .topsite-form .form-wrapper .custom-image-input-container {
   margin-block-start: var(--space-xsmall);
 }
@@ -1778,6 +1762,16 @@ main.newtab-main section {
 .topsite-form .actions {
   justify-content: flex-end;
   padding: var(--space-large) var(--space-xlarge);
+}
+.topsite-form .topsite-form-footer {
+  display: flex;
+  align-items: center;
+  padding: var(--space-large) var(--space-xlarge);
+}
+.topsite-form .topsite-form-footer .actions {
+  margin-inline-start: auto;
+  padding: 0;
+  border-block-start: none;
 }
 @media (max-width: 610px) {
   .topsite-form .fields-and-preview {
@@ -17617,6 +17611,59 @@ hr {
     inset-inline-start: var(--space-small);
   }
 }
+.nova-enabled .edit-topsites .modalOverlayOuter {
+  background: var(--panel-background-color);
+  border: 1px solid var(--panel-border-color);
+  border-radius: var(--panel-border-radius);
+}
+.nova-enabled .edit-topsites .modal {
+  width: 100%;
+}
+.nova-enabled .edit-topsites .topsite-form {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-xlarge);
+  gap: var(--space-xlarge);
+}
+.nova-enabled .edit-topsites .topsite-form label {
+  font-size: var(--font-size-root);
+}
+.nova-enabled .edit-topsites .topsite-form .form-input-container {
+  max-width: none;
+  padding: 0;
+}
+.nova-enabled .edit-topsites .topsite-form .form-wrapper input[type=text] {
+  /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
+  width: 368px;
+  background-color: var(--panel-background-color);
+  border-radius: var(--border-radius-medium);
+}
+.nova-enabled .edit-topsites .topsite-form .form-wrapper input[type=text]:focus-visible {
+  outline: var(--focus-outline);
+}
+.nova-enabled .edit-topsites .topsite-form .top-site-outer {
+  margin-block-start: var(--space-large);
+}
+.nova-enabled .edit-topsites .topsite-form .topsite-form-footer {
+  padding: 0;
+}
+.nova-enabled .edit-topsites .topsite-form .enable-custom-image-input {
+  color: var(--link-color);
+  text-decoration: underline;
+}
+.nova-enabled .edit-topsites .topsite-form .enable-custom-image-input:hover {
+  color: var(--link-color-hover);
+  text-decoration: none;
+}
+.nova-enabled .edit-topsites .topsite-form .enable-custom-image-input:active {
+  color: var(--link-color-active);
+}
+.nova-enabled .edit-topsites .topsite-form .enable-custom-image-input:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: var(--focus-outline-offset);
+  border-radius: var(--border-radius-small);
+}
+
 @media (forced-colors: active) {
   .nova-enabled .top-site-outer .tile {
     background-color: var(--button-background-color);

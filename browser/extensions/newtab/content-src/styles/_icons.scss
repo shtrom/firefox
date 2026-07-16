@@ -19,16 +19,6 @@
     margin-inline-end: var(--space-xsmall);
   }
 
-  &.icon-button-style {
-    fill: var(--newtab-text-secondary-color);
-    border: 0;
-
-    &:focus,
-    &:hover {
-      fill: var(--newtab-text-primary-color);
-    }
-  }
-
   // icon images
   &.icon-bookmark-added {
     background-image: url('chrome://browser/skin/bookmark.svg');
@@ -36,10 +26,6 @@
 
   &.icon-bookmark-hollow {
     background-image: url('chrome://browser/skin/bookmark-hollow.svg');
-  }
-
-  &.icon-clear-input {
-    background-image: url('chrome://global/skin/icons/close-fill.svg');
   }
 
   &.icon-delete {
