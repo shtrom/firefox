@@ -8,7 +8,7 @@
 # documentation and how to modify this file.
 repo: mozilla-central
 created_at: '2021-10-14T12:50:40.073465'
-updated_at: '2026-07-13T04:57:12.132229+00:00'
+updated_at: '2026-07-16T14:38:22.699835+00:00'
 export:
   path: ./docs/mots/index.md
   format: md
@@ -54,6 +54,10 @@ people:
     bmo_id: 693303
     name: Alex Hochheiden
     nick: ahochheiden
+  - &alaskanemily
+    bmo_id: 650458
+    name: Emily McDonough
+    nick: alaskanemily
   - &aleiserson
     bmo_id: 713407
     name: Andy Leiserson
@@ -2239,6 +2243,7 @@ modules:
       - *emilio
       - *TYLin
       - *jwatt
+      - *alaskanemily
     machine_name: core_layout_engine
 
   - name: 'Core: Legacy HTML Parser'
@@ -2975,6 +2980,7 @@ modules:
       - *dshin
       - *tlouw
       - *zrhoffman
+      - *alaskanemily
     machine_name: core_style_system
 
   - name: 'Core: Supply Chain'
@@ -4797,5 +4803,5 @@ modules:
         - Ryan Tilder
       group: dev-platform
 hashes:
-  config: 5b4cdf53c3cc1ea274e66d1d53c22671e3b40a59
-  export: daa1bc434fce3f183425d4132076a1667cb76d4c
+  config: 7f3f39072cdfe8276ee0338d3431eaadb7fc5ce2
+  export: 52cb1e07a475512694ad2f7c88561e678c8d135c
