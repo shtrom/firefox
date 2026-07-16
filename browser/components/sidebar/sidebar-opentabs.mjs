@@ -4,7 +4,11 @@
 
 const lazy = {};
 
-import { html, when } from "chrome://global/content/vendor/lit.all.mjs";
+import {
+  classMap,
+  html,
+  when,
+} from "chrome://global/content/vendor/lit.all.mjs";
 import { searchTabList } from "chrome://browser/content/firefoxview/search-helpers.mjs";
 
 import { SidebarPage } from "./sidebar-page.mjs";
@@ -49,6 +53,7 @@ export class SidebarOpenTabs extends SidebarPage {
       this.openTabsTarget = lazy.NonPrivateTabs;
     }
     this.openTabsTarget.addEventListener("TabChange", this);
+    this.openTabsTarget.addEventListener("TabRecencyChange", this);
     lazy.SidebarCollapsedWindows.addEventListener(
       "CollapsedWindowsChanged",
       this
@@ -63,6 +68,7 @@ export class SidebarOpenTabs extends SidebarPage {
   disconnectedCallback() {
     super.disconnectedCallback();
     this.openTabsTarget.removeEventListener("TabChange", this);
+    this.openTabsTarget.removeEventListener("TabRecencyChange", this);
     lazy.SidebarCollapsedWindows.removeEventListener(
       "CollapsedWindowsChanged",
       this
@@ -82,6 +88,7 @@ export class SidebarOpenTabs extends SidebarPage {
       case "TabChange":
         this.#updateWindowList();
         break;
+      case "TabRecencyChange":
       case "CollapsedWindowsChanged":
         this.requestUpdate();
         break;
@@ -164,6 +171,7 @@ export class SidebarOpenTabs extends SidebarPage {
           item => html`
             <moz-button
               type="icon ghost"
+              class=${classMap({ selected: item.tabElement?.selected })}
               .iconSrc=${this.#getPinnedIconSrc(item)}
               title=${item.title}
               @click=${() => this.#activateTab(item.tabElement)}
