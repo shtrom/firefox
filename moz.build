@@ -161,6 +161,18 @@ with Files(".zed/**"):
 with Files(".ycm_extra_conf.py"):
     BUG_COMPONENT = ("Developer Infrastructure", "Developer Environment Integration")
 
+with Files(".git-blame-ignore-revs"):
+    BUG_COMPONENT = ("Developer Infrastructure", "General")
+
+with Files(".hg-annotate-ignore-revs"):
+    BUG_COMPONENT = ("Developer Infrastructure", "General")
+
+with Files(".mailmap"):
+    BUG_COMPONENT = ("Developer Infrastructure", "General")
+
+with Files(".trackerignore"):
+    BUG_COMPONENT = ("Developer Infrastructure", "General")
+
 with Files("**/Makefile.in"):
     BUG_COMPONENT = ("Firefox Build System", "General")
     FINAL = True
