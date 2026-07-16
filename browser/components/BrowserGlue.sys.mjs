@@ -50,6 +50,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
   PdfJs: "resource://pdf.js/PdfJs.sys.mjs",
   PlacesBrowserStartup:
     "moz-src:///browser/components/places/PlacesBrowserStartup.sys.mjs",
+  PreonboardingSplash:
+    "resource:///modules/asrouter/PreonboardingSplash.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
   ProfileDataUpgrader:
     "moz-src:///browser/components/ProfileDataUpgrader.sys.mjs",
@@ -938,6 +940,7 @@ BrowserGlue.prototype = {
     }
     this._windowsWereRestored = true;
 
+    lazy.PreonboardingSplash.maybeShowStartupSplash();
     lazy.BrowserUsageTelemetry.init();
     lazy.SearchSERPTelemetry.init();
 

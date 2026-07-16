@@ -174,6 +174,12 @@ class NrIceMediaStream {
   nsresult GetActivePair(int component, UniquePtr<NrIceCandidate>* local,
                          UniquePtr<NrIceCandidate>* remote);
 
+  // Like GetActivePair, but returns the local and remote candidates as
+  // candidate-attribute strings (eg; "candidate:...") suitable for re-parse on
+  // the DOM side.
+  nsresult GetActivePairAsAttributes(int aComponent, std::string* aLocal,
+                                     std::string* aRemote) const;
+
   // Get the current ICE consent send status plus the timeval of the last
   // consent update time.
   nsresult GetConsentStatus(int component, bool* can_send, struct timeval* ts);

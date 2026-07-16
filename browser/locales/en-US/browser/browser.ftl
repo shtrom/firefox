@@ -469,8 +469,8 @@ identity-clear-site-data =
     .label = Clear cookies and site data…
 identity-connection-not-secure-security-view = You are not securely connected to this site.
 identity-connection-verified = You are securely connected to this site.
-identity-ev-owner-label = Certificate issued to:
-identity-verifier-label = Verified by:
+identity-ev-owner-label2 = Certificate issued to
+identity-verifier-label2 = Verified by
 # "qualified" here refers to the qualified website authentication certificate presented by the site.
 identity-etsi = Qualified as specified in Regulation (EU) 2024/1183.
 identity-description-custom-root2 = Mozilla does not recognize this certificate issuer. It may have been added from your operating system or by an administrator.

@@ -217,8 +217,9 @@ class PeerConnectionImpl final
   virtual const std::string& GetName();
 
   // ICE events
-  void IceConnectionStateChange(const std::string& aTransportId,
-                                dom::RTCIceTransportState state);
+  void IceConnectionStateChange(
+      const std::string& aTransportId, dom::RTCIceTransportState state,
+      const Maybe<dom::IceCandidateAttributePair>& aSelectedPair);
   void IceGatheringStateChange(const std::string& aTransportId,
                                dom::RTCIceGathererState state);
   void OnCandidateFound(const std::string& aTransportId,
