@@ -7,7 +7,7 @@ use crate::utils;
 use crate::{datastore_filename, Keystore, LockstoreError, StoredValue};
 
 use kvstore::{Database, DatabaseError, GetOptions, Key, Store, StorePath};
-use std::path::PathBuf;
+use std::path::Path;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -20,19 +20,19 @@ pub struct LockstoreDatastore {
 
 impl LockstoreDatastore {
     pub fn new(
-        dir: PathBuf,
+        dir: &Path,
         collection_name: String,
         keystore: Arc<Keystore>,
         kek_ref: &str,
     ) -> Result<Self, LockstoreError> {
         keystore.get_dek_internal(&collection_name, kek_ref)?;
         let data_path = dir.join(datastore_filename(&collection_name));
-        Self::init(
+        Ok(Self::init(
             StorePath::OnDisk(data_path),
             collection_name,
             keystore,
             kek_ref,
-        )
+        ))
     }
 
     pub fn new_in_memory(
@@ -41,12 +41,12 @@ impl LockstoreDatastore {
         kek_ref: &str,
     ) -> Result<Self, LockstoreError> {
         keystore.get_dek_internal(&collection_name, kek_ref)?;
-        Self::init(
+        Ok(Self::init(
             StorePath::for_in_memory(),
             collection_name,
             keystore,
             kek_ref,
-        )
+        ))
     }
 
     fn init(
@@ -54,14 +54,14 @@ impl LockstoreDatastore {
         collection_name: String,
         keystore: Arc<Keystore>,
         kek_ref: &str,
-    ) -> Result<Self, LockstoreError> {
+    ) -> Self {
         let store = Arc::new(Store::new(store_path));
-        Ok(Self {
+        Self {
             store,
             keystore,
             collection_name,
             kek_ref: kek_ref.to_string(),
-        })
+        }
     }
 
     pub fn put(&self, entry_name: &str, data: &[u8]) -> Result<(), LockstoreError> {
@@ -143,7 +143,7 @@ impl LockstoreDatastore {
                     )
                     .map_err(DatabaseError::from)?;
 
-                let pattern = format!("{}%", prefix);
+                let pattern = format!("{prefix}%");
                 let entry_strings: Result<Vec<String>, _> = stmt
                     .query_map([&self.collection_name, &pattern], |row| {
                         let key: String = row.get(0)?;

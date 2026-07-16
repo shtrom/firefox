@@ -28,16 +28,14 @@ pub struct KeystoreHandle {
 // Helpers
 // ============================================================================
 
-fn error_to_nsresult(err: LockstoreError) -> nsresult {
-    log::error!("Lockstore error: {}", err);
+fn error_to_nsresult(err: &LockstoreError) -> nsresult {
+    log::error!("Lockstore error: {err}");
     match err {
-        LockstoreError::NotFound(_) => NS_ERROR_NOT_AVAILABLE,
-        LockstoreError::Serialization(_) => NS_ERROR_INVALID_ARG,
-        LockstoreError::NotExtractable(_) => NS_ERROR_NOT_AVAILABLE,
-        LockstoreError::AuthenticationCancelled => NS_ERROR_ABORT,
-        LockstoreError::InvalidKekRef(_) => NS_ERROR_INVALID_ARG,
-        LockstoreError::Locked => NS_ERROR_NOT_AVAILABLE,
-        LockstoreError::WrongPassword => NS_ERROR_ABORT,
+        LockstoreError::NotFound(_)
+        | LockstoreError::NotExtractable(_)
+        | LockstoreError::Locked => NS_ERROR_NOT_AVAILABLE,
+        LockstoreError::Serialization(_) | LockstoreError::InvalidKekRef(_) => NS_ERROR_INVALID_ARG,
+        LockstoreError::AuthenticationCancelled | LockstoreError::WrongPassword => NS_ERROR_ABORT,
         LockstoreError::NotInitialized => NS_ERROR_NOT_INITIALIZED,
         _ => NS_ERROR_FAILURE,
     }
@@ -46,7 +44,7 @@ fn error_to_nsresult(err: LockstoreError) -> nsresult {
 fn result_to_nsresult(r: Result<(), LockstoreError>) -> nsresult {
     match r {
         Ok(()) => NS_OK,
-        Err(e) => error_to_nsresult(e),
+        Err(e) => error_to_nsresult(&e),
     }
 }
 
@@ -78,7 +76,7 @@ pub unsafe extern "C" fn keystore_open(
     // Password cache, one PKCS#11 auth-cache per process.
     let keystore = match Keystore::get(keystore_path) {
         Ok(k) => k,
-        Err(e) => return error_to_nsresult(e),
+        Err(e) => return error_to_nsresult(&e),
     };
 
     let handle = Box::new(KeystoreHandle {
@@ -111,7 +109,7 @@ pub extern "C" fn keystore_create_dek(
         .create_dek(&coll_str, &kek_ref_str, extractable, key_size)
     {
         Ok(_) => NS_OK,
-        Err(e) => error_to_nsresult(e),
+        Err(e) => error_to_nsresult(&e),
     }
 }
 
@@ -162,7 +160,7 @@ pub unsafe extern "C" fn keystore_import_dek(
         .import_dek(&coll_str, &kek_ref_str, dek, extractable)
     {
         Ok(()) => NS_OK,
-        Err(e) => error_to_nsresult(e),
+        Err(e) => error_to_nsresult(&e),
     }
 }
 
@@ -183,7 +181,7 @@ pub extern "C" fn keystore_is_dek_extractable(
             *out_extractable = b;
             NS_OK
         }
-        Err(e) => error_to_nsresult(e),
+        Err(e) => error_to_nsresult(&e),
     }
 }
 
@@ -207,7 +205,7 @@ pub extern "C" fn keystore_get_dek(
             *ret_dek = ThinVec::from(dek_bytes.as_slice());
             NS_OK
         }
-        Err(e) => error_to_nsresult(e),
+        Err(e) => error_to_nsresult(&e),
     }
 }
 
@@ -229,7 +227,7 @@ pub extern "C" fn keystore_delete_dek(
 
     match handle.keystore.delete_dek(&coll_str) {
         Ok(()) => NS_OK,
-        Err(e) => error_to_nsresult(e),
+        Err(e) => error_to_nsresult(&e),
     }
 }
 
@@ -246,7 +244,7 @@ pub extern "C" fn keystore_list_deks(
                 .collect();
             NS_OK
         }
-        Err(e) => error_to_nsresult(e),
+        Err(e) => error_to_nsresult(&e),
     }
 }
 
@@ -265,7 +263,7 @@ pub extern "C" fn keystore_list_keks(
             *ret_kek_refs = refs.into_iter().map(|s| nsCString::from(&s[..])).collect();
             NS_OK
         }
-        Err(e) => error_to_nsresult(e),
+        Err(e) => error_to_nsresult(&e),
     }
 }
 
@@ -285,7 +283,7 @@ pub extern "C" fn keystore_add_kek(
     let to_str = to_kek_ref.to_utf8();
     match handle.keystore.add_kek(&coll_str, &from_str, &to_str) {
         Ok(()) => NS_OK,
-        Err(e) => error_to_nsresult(e),
+        Err(e) => error_to_nsresult(&e),
     }
 }
 
@@ -303,7 +301,7 @@ pub extern "C" fn keystore_remove_kek(
     let kek_ref_str = kek_ref.to_utf8();
     match handle.keystore.remove_kek(&coll_str, &kek_ref_str) {
         Ok(()) => NS_OK,
-        Err(e) => error_to_nsresult(e),
+        Err(e) => error_to_nsresult(&e),
     }
 }
 
@@ -327,7 +325,7 @@ pub extern "C" fn keystore_switch_kek(
     let new_str = new_kek_ref.to_utf8();
     match handle.keystore.switch_kek(&coll_str, &old_str, &new_str) {
         Ok(()) => NS_OK,
-        Err(e) => error_to_nsresult(e),
+        Err(e) => error_to_nsresult(&e),
     }
 }
 
@@ -370,7 +368,7 @@ pub unsafe extern "C" fn keystore_encrypt(
             *ret_ciphertext = bytes.into();
             NS_OK
         }
-        Err(e) => error_to_nsresult(e),
+        Err(e) => error_to_nsresult(&e),
     }
 }
 
@@ -407,7 +405,7 @@ pub unsafe extern "C" fn keystore_decrypt(
             *ret_plaintext = ThinVec::from(bytes.as_slice());
             NS_OK
         }
-        Err(e) => error_to_nsresult(e),
+        Err(e) => error_to_nsresult(&e),
     }
 }
 
@@ -470,7 +468,7 @@ pub extern "C" fn keystore_unlock_kek(
 
     match result {
         Ok(()) => NS_OK,
-        Err(e) => error_to_nsresult(e),
+        Err(e) => error_to_nsresult(&e),
     }
 }
 
@@ -498,7 +496,7 @@ pub extern "C" fn keystore_is_kek_unlocked(
             *out_unlocked = b;
             NS_OK
         }
-        Err(e) => error_to_nsresult(e),
+        Err(e) => error_to_nsresult(&e),
     }
 }
 
@@ -535,9 +533,8 @@ pub extern "C" fn keystore_create_kek(
     ret_kek_ref: &mut nsCString,
 ) -> nsresult {
     let kek_type_str = kek_type.to_utf8();
-    let parsed = match lockstore_rs::KekType::parse(&kek_type_str) {
-        Some(t) => t,
-        None => return NS_ERROR_INVALID_ARG,
+    let Some(parsed) = lockstore_rs::KekType::parse(&kek_type_str) else {
+        return NS_ERROR_INVALID_ARG;
     };
 
     let identifier_str = identifier.to_utf8();
@@ -555,7 +552,7 @@ pub extern "C" fn keystore_create_kek(
             ret_kek_ref.assign(&kek_ref);
             NS_OK
         }
-        Err(e) => error_to_nsresult(e),
+        Err(e) => error_to_nsresult(&e),
     }
 }
 
@@ -571,7 +568,7 @@ pub extern "C" fn keystore_delete_kek(handle: &KeystoreHandle, kek_ref: &nsACStr
     let kek_ref_str = kek_ref.to_utf8();
     match handle.keystore.delete_kek(&kek_ref_str) {
         Ok(()) => NS_OK,
-        Err(e) => error_to_nsresult(e),
+        Err(e) => error_to_nsresult(&e),
     }
 }
 
@@ -599,13 +596,13 @@ pub unsafe extern "C" fn lockstore_datastore_open(
     let kek_ref_str = kek_ref.to_utf8();
 
     let datastore = match LockstoreDatastore::new(
-        keystore_handle.profile_path.clone(),
+        &keystore_handle.profile_path,
         coll_str.to_string(),
         keystore_handle.keystore.clone(),
         &kek_ref_str,
     ) {
         Ok(d) => d,
-        Err(e) => return error_to_nsresult(e),
+        Err(e) => return error_to_nsresult(&e),
     };
 
     *ret_handle = Box::into_raw(Box::new(datastore));
@@ -640,7 +637,7 @@ pub unsafe extern "C" fn lockstore_datastore_put(
 
     match handle.put(&entry_str, data_slice) {
         Ok(_) => NS_OK,
-        Err(e) => error_to_nsresult(e),
+        Err(e) => error_to_nsresult(&e),
     }
 }
 
@@ -662,7 +659,7 @@ pub extern "C" fn lockstore_datastore_get(
             *ret_data = data.into();
             NS_OK
         }
-        Err(e) => error_to_nsresult(e),
+        Err(e) => error_to_nsresult(&e),
     }
 }
 
@@ -680,7 +677,7 @@ pub extern "C" fn lockstore_datastore_delete(
 
     match handle.delete(&entry_str) {
         Ok(()) => NS_OK,
-        Err(e) => error_to_nsresult(e),
+        Err(e) => error_to_nsresult(&e),
     }
 }
 
@@ -697,7 +694,7 @@ pub extern "C" fn lockstore_datastore_keys(
                 .collect();
             NS_OK
         }
-        Err(e) => error_to_nsresult(e),
+        Err(e) => error_to_nsresult(&e),
     }
 }
 

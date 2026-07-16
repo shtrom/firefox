@@ -24,43 +24,40 @@ pub enum CipherSuite {
 impl CipherSuite {
     pub const fn key_size(&self) -> usize {
         match self {
-            CipherSuite::Aes256Gcm => 32,
-            CipherSuite::ChaCha20Poly1305 => 32,
+            Self::Aes256Gcm | Self::ChaCha20Poly1305 => 32,
         }
     }
 
     pub const fn nonce_size(&self) -> usize {
         match self {
-            CipherSuite::Aes256Gcm => 12,
-            CipherSuite::ChaCha20Poly1305 => 12,
+            Self::Aes256Gcm | Self::ChaCha20Poly1305 => 12,
         }
     }
 
     pub const fn tag_size(&self) -> usize {
         match self {
-            CipherSuite::Aes256Gcm => 16,
-            CipherSuite::ChaCha20Poly1305 => 16,
+            Self::Aes256Gcm | Self::ChaCha20Poly1305 => 16,
         }
     }
 
     pub(crate) fn to_nss_algorithm(self) -> AeadAlgorithms {
         match self {
-            CipherSuite::Aes256Gcm => AeadAlgorithms::Aes256Gcm,
-            CipherSuite::ChaCha20Poly1305 => AeadAlgorithms::ChaCha20Poly1305,
+            Self::Aes256Gcm => AeadAlgorithms::Aes256Gcm,
+            Self::ChaCha20Poly1305 => AeadAlgorithms::ChaCha20Poly1305,
         }
     }
 
     pub fn as_str(&self) -> &str {
         match self {
-            CipherSuite::Aes256Gcm => "aes256gcm",
-            CipherSuite::ChaCha20Poly1305 => "chacha20poly1305",
+            Self::Aes256Gcm => "aes256gcm",
+            Self::ChaCha20Poly1305 => "chacha20poly1305",
         }
     }
 
     pub fn parse(s: &str) -> Option<Self> {
         match s {
-            "aes256gcm" => Some(CipherSuite::Aes256Gcm),
-            "chacha20poly1305" => Some(CipherSuite::ChaCha20Poly1305),
+            "aes256gcm" => Some(Self::Aes256Gcm),
+            "chacha20poly1305" => Some(Self::ChaCha20Poly1305),
             _ => None,
         }
     }
@@ -132,7 +129,7 @@ pub fn encrypt_with_symkey(
 
     let alg = cipher_suite.to_nss_algorithm();
     let mut aead = Aead::new(Mode::Encrypt, alg, key, nonce_bytes)
-        .map_err(|e| LockstoreError::Encryption(format!("Failed to create AEAD: {}", e)))?;
+        .map_err(|e| LockstoreError::Encryption(format!("Failed to create AEAD: {e}")))?;
 
     // The cipher-suite id is prepended to the blob as its first byte;
     // pass that same byte as AAD so the AEAD tag authenticates it
@@ -141,7 +138,7 @@ pub fn encrypt_with_symkey(
     let aad = [cipher_suite_id(cipher_suite)];
     let ciphertext = aead
         .encrypt(&aad, plaintext)
-        .map_err(|e| LockstoreError::Encryption(format!("Encryption failed: {}", e)))?;
+        .map_err(|e| LockstoreError::Encryption(format!("Encryption failed: {e}")))?;
 
     let mut result = Vec::with_capacity(1 + nonce.len() + ciphertext.len());
     result.push(aad[0]);
@@ -165,7 +162,7 @@ pub fn decrypt_with_symkey(
 
     let suite_byte = ciphertext[0];
     let cipher_suite = cipher_suite_from_id(suite_byte).ok_or_else(|| {
-        LockstoreError::Decryption(format!("Unknown cipher suite id: {}", suite_byte))
+        LockstoreError::Decryption(format!("Unknown cipher suite id: {suite_byte}"))
     })?;
     let ciphertext = &ciphertext[1..];
     let nonce_size = cipher_suite.nonce_size();
@@ -182,14 +179,14 @@ pub fn decrypt_with_symkey(
 
     let alg = cipher_suite.to_nss_algorithm();
     let mut aead = Aead::new(Mode::Decrypt, alg, key, nonce_bytes)
-        .map_err(|e| LockstoreError::Decryption(format!("Failed to create AEAD: {}", e)))?;
+        .map_err(|e| LockstoreError::Decryption(format!("Failed to create AEAD: {e}")))?;
 
     // AAD = the suite-id prefix byte (see `encrypt_with_symkey`); tag
     // verification fails if the prefix has been tampered with.
     let aad = [suite_byte];
     let plaintext = aead
         .decrypt(&aad, 0, actual_ciphertext)
-        .map_err(|e| LockstoreError::Decryption(format!("Decryption failed: {}", e)))?;
+        .map_err(|e| LockstoreError::Decryption(format!("Decryption failed: {e}")))?;
 
     Ok(Zeroizing::new(plaintext))
 }
@@ -210,7 +207,7 @@ pub fn encrypt_with_key(
     }
     let alg = cipher_suite.to_nss_algorithm();
     let nss_key = Aead::import_key(alg, key)
-        .map_err(|e| LockstoreError::Encryption(format!("Failed to import key: {}", e)))?;
+        .map_err(|e| LockstoreError::Encryption(format!("Failed to import key: {e}")))?;
     encrypt_with_symkey(plaintext, &nss_key, cipher_suite)
 }
 
@@ -237,7 +234,7 @@ pub fn decrypt_with_key(
     }
     let alg = cipher_suite.to_nss_algorithm();
     let nss_key = Aead::import_key(alg, key)
-        .map_err(|e| LockstoreError::Decryption(format!("Failed to import key: {}", e)))?;
+        .map_err(|e| LockstoreError::Decryption(format!("Failed to import key: {e}")))?;
     decrypt_with_symkey(ciphertext, &nss_key)
 }
 
