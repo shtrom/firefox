@@ -309,6 +309,10 @@ class QuotaManager final : public BackgroundThreadObject {
   nsresult CreateDirectoryMetadata2(nsIFile& aDirectory,
                                     FullOriginMetadata& aFullOriginMetadata);
 
+  // Clears the dirty flag before writing metadata, restoring it on failure.
+  nsresult SettleDirectoryMetadata2(nsIFile& aDirectory,
+                                    FullOriginMetadata& aFullOriginMetadata);
+
   nsresult RestoreDirectoryMetadata2(nsIFile* aDirectory);
 
   // XXX Remove aPersistenceType argument once the persistence type is stored
