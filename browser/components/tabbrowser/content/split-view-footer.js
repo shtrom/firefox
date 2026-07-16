@@ -24,8 +24,8 @@
     securityElement = null;
 
     /** @type {HTMLImageElement} */
-    tabImageIconElement = null;
-    #tabImageIconSrc = "";
+    iconElement = null;
+    #iconSrc = "";
 
     /** @type {HTMLSpanElement} */
     uriElement = null;
@@ -56,10 +56,10 @@
 
     static markup = `
       <hbox class="split-view-security-warning" hidden="">
-        <html:img class="split-view-icon split-view-icon-insecure" role="presentation" src="chrome://global/skin/icons/security-broken.svg" />
+        <html:img role="presentation" src="chrome://global/skin/icons/security-broken.svg" />
         <html:span data-l10n-id="urlbar-trust-icon-notsecure-label"></html:span>
       </hbox>
-      <html:img class="split-view-icon split-view-tab-image" hidden="" role="presentation"/>
+      <html:img class="split-view-icon" hidden="" role="presentation"/>
       <html:span class="split-view-uri"></html:span>
       <toolbarbutton image="chrome://global/skin/icons/more.svg"
                      data-l10n-id="urlbar-split-view-button" />
@@ -72,14 +72,14 @@
       this.appendChild(this.constructor.fragment);
 
       this.securityElement = this.querySelector(".split-view-security-warning");
-      this.tabImageIconElement = this.querySelector(".split-view-tab-image");
+      this.iconElement = this.querySelector(".split-view-icon");
       this.uriElement = this.querySelector(".split-view-uri");
       this.menuButtonElement = this.querySelector("toolbarbutton");
 
       // Ensure these elements are up-to-date, as this info may have been set
       // prior to inserting this element into the DOM.
       this.#updateSecurityElement();
-      this.#updateTabImageIconElement();
+      this.#updateIconElement();
       this.#updateUriElement();
 
       this.addEventListener("click", this);
@@ -111,7 +111,7 @@
     #handleTabAttrModified(attribute) {
       switch (attribute) {
         case "image":
-          this.#updateTabImageIconSrc(this.#tab.image);
+          this.#updateIconSrc(this.#tab.image);
           break;
       }
     }
@@ -126,8 +126,8 @@
       if (this.securityElement) {
         this.#updateSecurityElement();
       }
-      if (this.tabImageIconElement) {
-        this.#updateTabImageIconElement();
+      if (this.iconElement) {
+        this.#updateIconElement();
       }
     }
 
@@ -142,21 +142,21 @@
      *
      * @param {string} iconSrc
      */
-    #updateTabImageIconSrc(iconSrc) {
-      this.#tabImageIconSrc = iconSrc;
-      if (this.tabImageIconElement) {
-        this.#updateTabImageIconElement();
+    #updateIconSrc(iconSrc) {
+      this.#iconSrc = iconSrc;
+      if (this.iconElement) {
+        this.#updateIconElement();
       }
     }
 
-    #updateTabImageIconElement() {
-      let canShowIcon = !this.#isInsecure && this.#tabImageIconSrc;
+    #updateIconElement() {
+      let canShowIcon = !this.#isInsecure && this.#iconSrc;
       if (canShowIcon) {
-        this.tabImageIconElement.setAttribute("src", this.#tabImageIconSrc);
+        this.iconElement.setAttribute("src", this.#iconSrc);
       } else {
-        this.tabImageIconElement.removeAttribute("src");
+        this.iconElement.removeAttribute("src");
       }
-      this.tabImageIconElement.hidden = !canShowIcon;
+      this.iconElement.hidden = !canShowIcon;
     }
 
     /**
@@ -191,7 +191,7 @@
       this.#resetTab();
 
       // Track favicon changes.
-      this.#updateTabImageIconSrc(tab.image);
+      this.#updateIconSrc(tab.image);
       tab.addEventListener("TabAttrModified", this);
 
       // Track URI and security changes.

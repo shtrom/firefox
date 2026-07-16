@@ -245,8 +245,7 @@
   margin: var(--panel-menuitem-margin);
   padding: var(--panel-menuitem-padding);
   padding-block: var(--space-large);
-  -moz-context-properties: fill, stroke;
-  stroke: var(--icon-color-critical);
+  -moz-context-properties: fill;
 }
 
 .site-information-popup[connection="chrome"] .identity-popup-security-connection {
@@ -1066,8 +1065,6 @@
 #trustpanel-connection-icon,
 #trustpanel-siteinfo-icon {
   list-style-image: url(chrome://global/skin/icons/security-broken.svg);
-  -moz-context-properties: fill, stroke;
-  stroke: var(--icon-color-critical);
 
   #trustpanel-popup:is([connection^="secure"], [connection="extension"], [connection="chrome"], [connection="file"]):not(
       [connection="secure-cert-user-overridden"]
@@ -1169,8 +1166,7 @@
     background-repeat: no-repeat;
     background-size: var(--icon-size);
     padding-inline-start: calc(var(--icon-size) + var(--space-small));
-    -moz-context-properties: fill, stroke;
-    stroke: var(--icon-color-critical);
+    -moz-context-properties: fill;
 
     &:-moz-locale-dir(rtl) {
       background-position-x: right;
