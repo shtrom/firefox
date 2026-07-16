@@ -274,10 +274,6 @@ toolbar[inactive="true"] .urlbar,
     width: 100%;
     height: 100%;
   }
-
-  > .urlbar-input-box {
-    margin-inline: var(--urlbar-input-gap);
-  }
 }
 
 .urlbar:not([open]) > .urlbarView,
@@ -512,11 +508,13 @@ toolbar[inactive="true"] .urlbar,
 
 .urlbar-input-box {
   height: 100%;
+  margin-inline-start: var(--urlbar-input-gap);
 
   #urlbar & {
     /* Show the url scheme in a static box when overflowing to the left */
     position: relative;
     direction: ltr;
+    margin-inline-end: var(--urlbar-input-gap);
   }
 
   :root[customizing] & {
