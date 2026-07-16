@@ -2854,6 +2854,89 @@ nsresult QuotaManager::LoadQuota() {
         }
       };
 
+  auto RestoreMetadataFromDiskAndInitializeOrigin =
+      [this, &MaybeCollectUnaccessedOrigin](
+          const FullOriginMetadata& fullOriginMetadata)
+      -> Result<Ok, nsresult> {
+    QM_TRY_INSPECT(const auto& directory,
+                   GetOriginDirectory(fullOriginMetadata));
+
+    QM_TRY_INSPECT(const bool& exists,
+                   MOZ_TO_RESULT_INVOKE_MEMBER(directory, Exists));
+
+    QM_TRY(OkIf(exists), Err(NS_ERROR_FILE_NOT_FOUND));
+
+    QM_TRY_INSPECT(const bool& isDirectory,
+                   MOZ_TO_RESULT_INVOKE_MEMBER(directory, IsDirectory));
+
+    QM_TRY(OkIf(isDirectory), Err(NS_ERROR_FILE_DESTINATION_NOT_DIR));
+
+    // Calling LoadFullOriginMetadataWithRestore might update the group
+    // in the metadata file, but only as a side-effect. The actual place
+    // we ensure consistency is in
+    // EnsureTemporaryOriginIsInitializedInternal.
+
+    QM_TRY_INSPECT(const FullOriginMetadata& metadata,
+                   LoadFullOriginMetadataWithRestore(directory));
+
+    QM_WARNONLY_TRY(
+        OkIf(fullOriginMetadata.mLastAccessTime == metadata.mLastAccessTime));
+
+    QM_TRY(OkIf(fullOriginMetadata.mPersisted == metadata.mPersisted),
+           Err(NS_ERROR_FAILURE));
+
+    // There was a previous regression where mLastAccessTime did not
+    // match. To avoid failing on similar non-critical mismatches, we
+    // wrap this check in a warn-only try macro for now.
+    QM_WARNONLY_TRY(OkIf(fullOriginMetadata.mAccessed == metadata.mAccessed));
+
+    // There was a previous regression where mLastMaintenanceDate did not
+    // match. To avoid failing on similar non-critical mismatches, we
+    // wrap this check in a warn-only try macro for now.
+    QM_WARNONLY_TRY(OkIf(fullOriginMetadata.mLastMaintenanceDate ==
+                         metadata.mLastMaintenanceDate));
+
+    QM_TRY(
+        OkIf(fullOriginMetadata.mPersistenceType == metadata.mPersistenceType),
+        Err(NS_ERROR_FAILURE));
+
+    QM_TRY(OkIf(fullOriginMetadata.mSuffix == metadata.mSuffix),
+           Err(NS_ERROR_FAILURE));
+
+    QM_TRY(OkIf(fullOriginMetadata.mGroup == metadata.mGroup),
+           Err(NS_ERROR_FAILURE));
+
+    QM_TRY(OkIf(fullOriginMetadata.mOrigin == metadata.mOrigin),
+           Err(NS_ERROR_FAILURE));
+
+    QM_TRY(OkIf(fullOriginMetadata.mStorageOrigin == metadata.mStorageOrigin),
+           Err(NS_ERROR_FAILURE));
+
+    QM_TRY(OkIf(fullOriginMetadata.mIsPrivate == metadata.mIsPrivate),
+           Err(NS_ERROR_FAILURE));
+
+    // fullOriginMetadata.mQuotaVersion and metadata.mQuotaVersion do
+    // not need to match, since fullOriginMetadata.mQuotaVersion is
+    // always set to kNoQuotaVersion (see the comment above for more
+    // details about fullOriginMetadata.mQuotaVersion).
+
+    // fullOriginMetadata.mOriginUsage and metadata.mOriginUsage do not
+    // need to match, since mClientUsages is currently not saved after
+    // last origin directory access.
+
+    // fullOriginMetadata.mClientUsages and metadata.mClientUsages do
+    // not need to match, since mClientUsages is currently not saved
+    // after last origin directory access.
+
+    MaybeCollectUnaccessedOrigin(metadata);
+
+    AddTemporaryOrigin(metadata);
+
+    QM_TRY(MOZ_TO_RESULT(InitializeOrigin(directory, metadata)));
+
+    return Ok{};
+  };
+
   auto recordTimeDeltaHelper =
       MakeRefPtr<RecordTimeDeltaHelper>(glean::dom_quota::info_load_time);
 
@@ -2877,8 +2960,9 @@ nsresult QuotaManager::LoadQuota() {
 
     QM_TRY(quota::CollectWhileHasResult(
         *stmt,
-        [this,
-         &MaybeCollectUnaccessedOrigin](auto& stmt) -> Result<Ok, nsresult> {
+        [this, &MaybeCollectUnaccessedOrigin,
+         &RestoreMetadataFromDiskAndInitializeOrigin](
+            auto& stmt) -> Result<Ok, nsresult> {
           QM_TRY_INSPECT(const int32_t& repositoryId,
                          MOZ_TO_RESULT_INVOKE_MEMBER(stmt, GetInt32, 0));
 
@@ -2959,83 +3043,8 @@ nsresult QuotaManager::LoadQuota() {
           // EnsureTemporaryOriginIsInitializedInternal.)
 
           if (fullOriginMetadata.mAccessed) {
-            QM_TRY_INSPECT(const auto& directory,
-                           GetOriginDirectory(fullOriginMetadata));
-
-            QM_TRY_INSPECT(const bool& exists,
-                           MOZ_TO_RESULT_INVOKE_MEMBER(directory, Exists));
-
-            QM_TRY(OkIf(exists), Err(NS_ERROR_FILE_NOT_FOUND));
-
-            QM_TRY_INSPECT(const bool& isDirectory,
-                           MOZ_TO_RESULT_INVOKE_MEMBER(directory, IsDirectory));
-
-            QM_TRY(OkIf(isDirectory), Err(NS_ERROR_FILE_DESTINATION_NOT_DIR));
-
-            // Calling LoadFullOriginMetadataWithRestore might update the group
-            // in the metadata file, but only as a side-effect. The actual place
-            // we ensure consistency is in
-            // EnsureTemporaryOriginIsInitializedInternal.
-
-            QM_TRY_INSPECT(const auto& metadata,
-                           LoadFullOriginMetadataWithRestore(directory));
-
-            QM_WARNONLY_TRY(OkIf(fullOriginMetadata.mLastAccessTime ==
-                                 metadata.mLastAccessTime));
-
-            QM_TRY(OkIf(fullOriginMetadata.mPersisted == metadata.mPersisted),
-                   Err(NS_ERROR_FAILURE));
-
-            // There was a previous regression where mLastAccessTime did not
-            // match. To avoid failing on similar non-critical mismatches, we
-            // wrap this check in a warn-only try macro for now.
-            QM_WARNONLY_TRY(
-                OkIf(fullOriginMetadata.mAccessed == metadata.mAccessed));
-
-            // There was a previous regression where mLastAccessTime did not
-            // match. To avoid failing on similar non-critical mismatches, we
-            // wrap this check in a warn-only try macro for now.
-            QM_WARNONLY_TRY(OkIf(fullOriginMetadata.mLastMaintenanceDate ==
-                                 metadata.mLastMaintenanceDate));
-
-            QM_TRY(OkIf(fullOriginMetadata.mPersistenceType ==
-                        metadata.mPersistenceType),
-                   Err(NS_ERROR_FAILURE));
-
-            QM_TRY(OkIf(fullOriginMetadata.mSuffix == metadata.mSuffix),
-                   Err(NS_ERROR_FAILURE));
-
-            QM_TRY(OkIf(fullOriginMetadata.mGroup == metadata.mGroup),
-                   Err(NS_ERROR_FAILURE));
-
-            QM_TRY(OkIf(fullOriginMetadata.mOrigin == metadata.mOrigin),
-                   Err(NS_ERROR_FAILURE));
-
-            QM_TRY(OkIf(fullOriginMetadata.mStorageOrigin ==
-                        metadata.mStorageOrigin),
-                   Err(NS_ERROR_FAILURE));
-
-            QM_TRY(OkIf(fullOriginMetadata.mIsPrivate == metadata.mIsPrivate),
-                   Err(NS_ERROR_FAILURE));
-
-            // fullOriginMetadata.mQuotaVersion and metadata.mQuotaVersion do
-            // not need to match, since fullOriginMetadata.mQuotaVersion is
-            // always set to kNoQuotaVersion (see the comment above for more
-            // details about fullOriginMetadata.mQuotaVersion).
-
-            // fullOriginMetadata.mOriginUsage and metadata.mOriginUsage do not
-            // need to match, since mClientUsages is currently not saved after
-            // last origin directory access.
-
-            // fullOriginMetadata.mClientUsages and metadata.mClientUsages do
-            // not need to match, since mClientUsages is currently not saved
-            // after last origin directory access.
-
-            MaybeCollectUnaccessedOrigin(metadata);
-
-            AddTemporaryOrigin(metadata);
-
-            QM_TRY(MOZ_TO_RESULT(InitializeOrigin(directory, metadata)));
+            QM_TRY(
+                RestoreMetadataFromDiskAndInitializeOrigin(fullOriginMetadata));
           } else {
             MaybeCollectUnaccessedOrigin(fullOriginMetadata);
 
