@@ -477,15 +477,15 @@ function Widgets() {
       <div className="widgets-title-heading">
         <h1 data-l10n-id="newtab-widget-section-title"></h1>
         {showWidgetsSizeToggle ? (
-          <button
+          <moz-button
             id="toggle-widgets-size-button"
-            type="button"
             className={`widgets-expand-button${isMaximized ? " is-maximized" : ""}`}
             data-l10n-id={
               isMaximized
                 ? "newtab-widget-section-minimize"
                 : "newtab-widget-section-maximize"
             }
+            iconsrc="chrome://global/skin/icons/arrow-down.svg"
             onClick={handleToggleMaximizeClick}
             onKeyDown={handleToggleMaximizeKeyDown}
           />

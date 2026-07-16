@@ -4706,47 +4706,14 @@ button.arrow-button:dir(rtl) {
 }
 
 .widgets-expand-button {
-  appearance: none;
-  align-items: center;
-  background-color: transparent;
-  border: 1px solid var(--newtab-primary-action-background);
-  border-radius: var(--border-radius-circle);
-  color: var(--newtab-primary-action-background);
-  cursor: pointer;
-  display: inline-flex;
-  height: var(--size-item-large);
-  justify-content: center;
-  margin: 0;
-  padding: 0;
-  width: var(--size-item-large);
-}
-.widgets-expand-button::before {
-  background-color: currentColor;
-  content: "";
-  height: var(--size-item-small);
-  mask: url("chrome://global/skin/icons/arrow-down.svg") center/contain no-repeat;
   transition: transform 160ms ease;
-  width: var(--size-item-small);
 }
-.widgets-expand-button.is-maximized::before {
+.widgets-expand-button.is-maximized {
   transform: rotate(180deg);
-}
-.widgets-expand-button:hover {
-  background-color: var(--newtab-element-secondary-hover-color);
-}
-.widgets-expand-button:active {
-  background-color: var(--newtab-element-secondary-active-color);
-}
-.widgets-expand-button:focus {
-  outline: none;
-}
-.widgets-expand-button:focus-visible {
-  outline: var(--focus-outline);
-  outline-offset: var(--focus-outline-offset);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .widgets-expand-button::before {
+  .widgets-expand-button {
     transition: none;
   }
 }
