@@ -13,15 +13,12 @@ namespace nsGkAtoms::detail {
 extern constexpr GkAtoms gGkAtoms = {
 // The initialization of each atom's string.
 //
-// Expansion of the example GK_ATOM entries in nsGkAtoms.h:
+//   u"a" u"\0" "bb" "\0",
 //
-//   u"a",
-//   u"bb",
-//   u"Ccc",
-//
-#define STATIC_ATOM(name_, value_, index_) u"" value_,
+#define STATIC_ATOM(name_, value_, index_, offset_) u"" value_ u"\0"
 #include "StaticAtomList.h"
 #undef STATIC_ATOM
+    ,
     {
 // The initialization of the atoms themselves.
 //
@@ -29,20 +26,19 @@ extern constexpr GkAtoms gGkAtoms = {
 // to the number of chars (including the terminating '\0'). The |u""| prefix
 // converts |value_| to a 16-bit string.
 //
-// Expansion of the example GK_ATOM entries in nsGkAtoms.h:
+// Similarly, offset_ is in chars, so we need to multiply to get to the right
+// offset in bytes.
 //
 //   nsStaticAtom(
 //     1,
 //     HashString(u"" "a"),
-//     offsetof(GkAtoms, mAtoms[static_cast<size_t>(GkAtoms::Atoms::a)]) -
-//       offsetof(GkAtoms, a_string),
+//     offsetof(GkAtoms, mAtoms[index_]) - offset_ * 2,
 //     nsAtom::ComputeIsAsciiLowercase(u"" "a")),
 //
-#define STATIC_ATOM(name_, value_, index_)                                   \
-  nsStaticAtom(                                                              \
-      sizeof(value_) - 1, mozilla::HashString(u"" value_),                   \
-      offsetof(GkAtoms, mAtoms[index_]) - offsetof(GkAtoms, name_##_string), \
-      nsAtom::ComputeIsAsciiLowercase(u"" value_)),
+#define STATIC_ATOM(name_, value_, index_, offset_)                 \
+  nsStaticAtom(sizeof(value_) - 1, mozilla::HashString(u"" value_), \
+               offsetof(GkAtoms, mAtoms[index_]) - offset_ * 2,     \
+               nsAtom::ComputeIsAsciiLowercase(u"" value_)),
 #include "StaticAtomList.h"
 #undef STATIC_ATOM
     }};
