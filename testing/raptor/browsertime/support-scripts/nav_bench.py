@@ -35,6 +35,8 @@ class NavBenchSupport(BasePythonSupport):
         super().__init__(**kwargs)
         # (site, phase) -> [SpeedIndex per cycle]
         self._speedindex = {}
+        # (site, phase) -> {perfstat metric -> [value per cycle]}
+        self._perfstats = {}
 
     def handle_result(self, bt_result, raw_result, last_result=False, **kwargs):
         """One raw_result per measure.start/stop pair, with alias set in
@@ -52,6 +54,13 @@ class NavBenchSupport(BasePythonSupport):
                 )
                 continue
             self._speedindex.setdefault((site, phase), []).append(int(si))
+
+        # geckoPerfStats: one {metric: ms} dict per cycle, only with --collect-perfstats.
+        for cycle in raw_result.get("geckoPerfStats", []):
+            for metric, value in cycle.items():
+                self._perfstats.setdefault((site, phase), {}).setdefault(
+                    metric, []
+                ).append(value)
 
     def summarize_test(self, test, suite, **kwargs):
         """One suite per measure.start/stop alias. Contains only min-si (ms)
@@ -117,5 +126,20 @@ class NavBenchSupport(BasePythonSupport):
         overall["unit"] = "score"
         overall["subtests"] = sorted(all_subtests, key=lambda s: s["name"])
         overall["value"] = round(filters.geometric_mean(all_replicates), 3)
+
+        # PerfStats subtests (only with --collect-perfstats); skip all-zero metrics.
+        for (site, phase), metrics in sorted(self._perfstats.items()):
+            for metric, values in sorted(metrics.items()):
+                if not any(values):
+                    continue
+                overall["subtests"].append({
+                    "name": f"{site}-{phase}-perfstat-{metric}",
+                    "lowerIsBetter": True,
+                    "alertThreshold": alert_threshold,
+                    "unit": "ms",
+                    "replicates": list(values),
+                    "value": round(filters.mean(values), 3),
+                    "shouldAlert": False,
+                })
 
         suites.insert(0, overall)
