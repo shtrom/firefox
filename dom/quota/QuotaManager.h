@@ -10,8 +10,10 @@
 
 #include "Client.h"
 #include "ErrorList.h"
+#include "PLDHashTable.h"
 #include "mozilla/AlreadyAddRefed.h"
 #include "mozilla/Assertions.h"
+#include "mozilla/HashFunctions.h"
 #include "mozilla/InitializedOnce.h"
 #include "mozilla/MozPromise.h"
 #include "mozilla/Mutex.h"
@@ -289,8 +291,15 @@ class QuotaManager final : public BackgroundThreadObject {
    * not created during origin initialization is currently utilized only by
    * LSNG.
    */
-  void InitQuotaForOrigin(const FullOriginMetadata& aFullOriginMetadata,
-                          bool aDirectoryExists = true);
+  // When called from the InitializeRepository disk-scan path, `aCacheMap`
+  // is the active map of pre-loaded L1 cache rows keyed by
+  // `(persistenceType, origin)` that the reconciliation logic (added in
+  // a subsequent commit) will consult. Other callers leave the default
+  // inactive map and the reconciliation step becomes a no-op.
+  void InitQuotaForOrigin(
+      const FullOriginMetadata& aFullOriginMetadata,
+      bool aDirectoryExists = true,
+      OriginCacheMap& aCacheMap = OriginCacheMap::Inactive());
 
   // XXX clients can use QuotaObject instead of calling this method directly.
   void DecreaseUsageForClient(const ClientMetadata& aClientMetadata,
@@ -962,7 +971,8 @@ class QuotaManager final : public BackgroundThreadObject {
       const nsCOMPtr<nsIFile>& aChildDirectory, const nsAutoString& aLeafName,
       PersistenceType aPersistenceType,
       nsTArray<struct RenameAndInitInfo>& aRenameAndInitInfos,
-      OriginFunc&& aOriginFunc);
+      OriginFunc&& aOriginFunc,
+      OriginCacheMap& aCacheMap = OriginCacheMap::Inactive());
 
   // Determine the type of a repository entry (directory, file, or absent)
   // and handle it accordingly.
@@ -971,15 +981,17 @@ class QuotaManager final : public BackgroundThreadObject {
       const nsCOMPtr<nsIFile>& aChildDirectory,
       PersistenceType aPersistenceType,
       nsTArray<RenameAndInitInfo>& aRenameAndInitInfos,
-      OriginFunc&& aOriginFunc);
+      OriginFunc&& aOriginFunc,
+      OriginCacheMap& aCacheMap = OriginCacheMap::Inactive());
 
   template <typename OriginFunc>
   nsresult InitializeRepository(PersistenceType aPersistenceType,
                                 OriginFunc&& aOriginFunc);
 
-  nsresult InitializeOrigin(nsIFile* aDirectory,
-                            const FullOriginMetadata& aFullOriginMetadata,
-                            bool aForGroup = false);
+  nsresult InitializeOrigin(
+      nsIFile* aDirectory, const FullOriginMetadata& aFullOriginMetadata,
+      bool aForGroup = false,
+      OriginCacheMap& aCacheMap = OriginCacheMap::Inactive());
 
   using OriginInfosFlatTraversable =
       nsTArray<NotNull<RefPtr<const OriginInfo>>>;

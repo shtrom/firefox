@@ -2706,7 +2706,8 @@ OriginCacheMap& OriginCacheMap::Inactive() {
 }
 
 void QuotaManager::InitQuotaForOrigin(
-    const FullOriginMetadata& aFullOriginMetadata, bool aDirectoryExists) {
+    const FullOriginMetadata& aFullOriginMetadata, bool aDirectoryExists,
+    OriginCacheMap& aCacheMap) {
   AssertIsOnIOThread();
   MOZ_ASSERT(IsBestEffortPersistenceType(aFullOriginMetadata.mPersistenceType));
 
@@ -3898,7 +3899,7 @@ Result<bool, nsresult> DidLatestShutdownFail(
 // because the cache path also pushes `OriginInfo`s into `mGroupInfoPairs`
 // and we need the raw row contents alone here.
 [[maybe_unused]] Result<OriginCacheMap, nsresult> LoadOriginCacheIntoMap(
-    mozIStorageConnection& aConnection) {
+    mozIStorageConnection& aConnection, PersistenceType aPersistenceType) {
   QM_TRY_INSPECT(
       const auto& stmt,
       MOZ_TO_RESULT_INVOKE_MEMBER_TYPED(
@@ -3906,7 +3907,11 @@ Result<bool, nsresult> DidLatestShutdownFail(
           "SELECT repository_id, suffix, group_, "
           "origin, client_usages, usage, "
           "last_access_time, last_maintenance_date, metadata_flags "
-          "FROM origin"_ns));
+          "FROM origin "
+          "WHERE repository_id = :repository_id"_ns));
+
+  QM_TRY(MOZ_TO_RESULT(
+      stmt->BindInt32ByName("repository_id"_ns, aPersistenceType)));
 
   OriginCacheMap map;
   map.Activate();
@@ -4144,8 +4149,8 @@ template <typename OriginFunc>
 Result<Ok, nsresult> QuotaManager::InitializeOriginDirectory(
     const nsCOMPtr<nsIFile>& aChildDirectory, const nsAutoString& aLeafName,
     PersistenceType aPersistenceType,
-    nsTArray<RenameAndInitInfo>& aRenameAndInitInfos,
-    OriginFunc&& aOriginFunc) {
+    nsTArray<RenameAndInitInfo>& aRenameAndInitInfos, OriginFunc&& aOriginFunc,
+    OriginCacheMap& aCacheMap) {
   QM_TRY_UNWRAP(auto maybeMetadata,
                 QM_OR_ELSE_WARN_IF(
                     // Expression
@@ -4210,7 +4215,7 @@ Result<Ok, nsresult> QuotaManager::InitializeOriginDirectory(
     if (StaticPrefs::dom_quotaManager_loadQuotaFromSecondaryCache() &&
         metadata.mQuotaVersion == kCurrentQuotaVersion && !metadata.mAccessed) {
       QM_LOG(("Initializing quota for: %s", metadata.mOrigin.get()));
-      InitQuotaForOrigin(metadata);
+      InitQuotaForOrigin(metadata, /* aDirectoryExists */ true, aCacheMap);
 
       return Ok{};
     }
@@ -4219,7 +4224,8 @@ Result<Ok, nsresult> QuotaManager::InitializeOriginDirectory(
 
   QM_TRY(QM_OR_ELSE_WARN_IF(
       // Expression.
-      MOZ_TO_RESULT(InitializeOrigin(aChildDirectory, metadata)),
+      MOZ_TO_RESULT(InitializeOrigin(aChildDirectory, metadata,
+                                     /* aForGroup */ false, aCacheMap)),
       // Predicate.
       IsDatabaseCorruptionError,
       // Fallback.
@@ -4243,8 +4249,8 @@ Result<Ok, nsresult> QuotaManager::InitializeOriginDirectory(
 template <typename OriginFunc>
 Result<Ok, nsresult> QuotaManager::ResolveRepositoryEntry(
     const nsCOMPtr<nsIFile>& aChildDirectory, PersistenceType aPersistenceType,
-    nsTArray<RenameAndInitInfo>& aRenameAndInitInfos,
-    OriginFunc&& aOriginFunc) {
+    nsTArray<RenameAndInitInfo>& aRenameAndInitInfos, OriginFunc&& aOriginFunc,
+    OriginCacheMap& aCacheMap) {
   QM_TRY_INSPECT(const auto& leafName,
                  MOZ_TO_RESULT_INVOKE_MEMBER_TYPED(
                      nsAutoString, aChildDirectory, GetLeafName));
@@ -4253,9 +4259,9 @@ Result<Ok, nsresult> QuotaManager::ResolveRepositoryEntry(
 
   switch (dirEntryKind) {
     case nsIFileKind::ExistsAsDirectory: {
-      QM_TRY(InitializeOriginDirectory(aChildDirectory, leafName,
-                                       aPersistenceType, aRenameAndInitInfos,
-                                       std::forward<OriginFunc>(aOriginFunc)));
+      QM_TRY(InitializeOriginDirectory(
+          aChildDirectory, leafName, aPersistenceType, aRenameAndInitInfos,
+          std::forward<OriginFunc>(aOriginFunc), aCacheMap));
       break;
     }
     case nsIFileKind::ExistsAsFile:
@@ -4286,6 +4292,20 @@ nsresult QuotaManager::InitializeRepository(PersistenceType aPersistenceType,
   MOZ_ASSERT(aPersistenceType == PERSISTENCE_TYPE_PERSISTENT ||
              aPersistenceType == PERSISTENCE_TYPE_TEMPORARY ||
              aPersistenceType == PERSISTENCE_TYPE_DEFAULT);
+
+  // Pre-load the L1 cache rows for this repository so the disk walk
+  // can decide per-origin whether the cached row already matches the
+  // metadata we'd otherwise rewrite. Keys claimed during the walk are
+  // removed from the map; the leftovers are stale rows for origins no
+  // longer on disk and are deleted post-walk.
+  QM_TRY_UNWRAP(
+      auto cacheMap,
+      ([this, aPersistenceType]() -> Result<OriginCacheMap, nsresult> {
+        if (mCacheUsable) {
+          return LoadOriginCacheIntoMap(*mStorageConnection, aPersistenceType);
+        }
+        return OriginCacheMap{};
+      }()));
 
   QM_TRY_INSPECT(const auto& directory,
                  QM_NewLocalFile(GetStoragePath(aPersistenceType)));
@@ -4319,18 +4339,18 @@ nsresult QuotaManager::InitializeRepository(PersistenceType aPersistenceType,
 
               nsCOMPtr<nsIFile> childDirectory = std::move(aChildDirectory);
 
-              QM_TRY(
-                  ([this, &iterations, &childDirectory, &renameAndInitInfos,
-                    aPersistenceType, &aOriginFunc]() -> Result<Ok, nsresult> {
-                    QM_TRY(ResolveRepositoryEntry(
-                        childDirectory, aPersistenceType, renameAndInitInfos,
-                        std::forward<OriginFunc>(aOriginFunc)));
+              QM_TRY(([this, &iterations, &childDirectory, &renameAndInitInfos,
+                       aPersistenceType, &aOriginFunc,
+                       &cacheMap]() -> Result<Ok, nsresult> {
+                       QM_TRY(ResolveRepositoryEntry(
+                           childDirectory, aPersistenceType, renameAndInitInfos,
+                           std::forward<OriginFunc>(aOriginFunc), cacheMap));
 
-                    iterations++;
+                       iterations++;
 
-                    return Ok{};
-                  }()),
-                  OK_IN_NIGHTLY_PROPAGATE_IN_OTHERS, statusKeeperFunc);
+                       return Ok{};
+                     }()),
+                     OK_IN_NIGHTLY_PROPAGATE_IN_OTHERS, statusKeeperFunc);
 
               return Ok{};
             }),
@@ -4342,8 +4362,8 @@ nsresult QuotaManager::InitializeRepository(PersistenceType aPersistenceType,
   for (auto& info : renameAndInitInfos) {
     QM_TRY(([&]() -> Result<Ok, nsresult> {
       QM_TRY(
-          ([&directory, &info, this, aPersistenceType,
-            &aOriginFunc]() -> Result<Ok, nsresult> {
+          ([&directory, &info, this, aPersistenceType, &aOriginFunc,
+            &cacheMap]() -> Result<Ok, nsresult> {
             const auto& metadata = info.mFullOriginMetadata;
 
             const auto extraInfo =
@@ -4377,14 +4397,17 @@ nsresult QuotaManager::InitializeRepository(PersistenceType aPersistenceType,
               if (StaticPrefs::dom_quotaManager_loadQuotaFromSecondaryCache() &&
                   metadata.mQuotaVersion == kCurrentQuotaVersion &&
                   !metadata.mAccessed) {
-                InitQuotaForOrigin(metadata);
+                InitQuotaForOrigin(metadata, /* aDirectoryExists */ true,
+                                   cacheMap);
 
                 return Ok{};
               }
             }
 
             // XXX We don't check corruption here ?
-            QM_TRY(MOZ_TO_RESULT(InitializeOrigin(targetDirectory, metadata)));
+            QM_TRY(MOZ_TO_RESULT(InitializeOrigin(targetDirectory, metadata,
+                                                  /* aForGroup */ false,
+                                                  cacheMap)));
 
             return Ok{};
           }()),
@@ -4409,7 +4432,7 @@ nsresult QuotaManager::InitializeRepository(PersistenceType aPersistenceType,
 
 nsresult QuotaManager::InitializeOrigin(
     nsIFile* aDirectory, const FullOriginMetadata& aFullOriginMetadata,
-    bool aForGroup) {
+    bool aForGroup, OriginCacheMap& aCacheMap) {
   GECKO_TRACE_SCOPE("dom::quota", "QuotaManager::InitializeOrigin");
 
   QM_LOG(("Starting origin initialization for: %s",
@@ -4614,7 +4637,8 @@ nsresult QuotaManager::InitializeOrigin(
       MOZ_ASSERT(!fullOriginMetadata.mDirty);
     }
 
-    InitQuotaForOrigin(fullOriginMetadata);
+    InitQuotaForOrigin(fullOriginMetadata, /* aDirectoryExists */ true,
+                       aCacheMap);
   }
 
   SleepIfEnabled(
