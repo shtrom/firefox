@@ -3660,11 +3660,10 @@ nsresult QuotaManager::RestoreDirectoryMetadata2(nsIFile* aDirectory) {
   return NS_OK;
 }
 
-Result<FullOriginMetadata, nsresult> QuotaManager::LoadFullOriginMetadata(
-    nsIFile* aDirectory, PersistenceType aPersistenceType) {
+Result<FullOriginMetadata, nsresult> ReadFullOriginMetadataFromMetadataV2File(
+    nsIFile* aDirectory) {
   MOZ_ASSERT(!NS_IsMainThread());
   MOZ_ASSERT(aDirectory);
-  MOZ_ASSERT(mStorageConnection);
 
   QM_TRY_INSPECT(const auto& binaryStream,
                  GetBinaryInputStream(*aDirectory,
@@ -3676,8 +3675,6 @@ Result<FullOriginMetadata, nsresult> QuotaManager::LoadFullOriginMetadata(
                  ReadDirectoryMetadataHeader(*binaryStream));
 
   static_cast<OriginStateMetadata&>(fullOriginMetadata) = originStateMetadata;
-
-  fullOriginMetadata.mPersistenceType = aPersistenceType;
 
   // Legacy field, previously used for suffix. This value is no longer used,
   // but still read and discarded to preserve compatibility with older builds
@@ -3740,9 +3737,14 @@ Result<FullOriginMetadata, nsresult> QuotaManager::LoadFullOriginMetadata(
 
   QM_TRY(MOZ_TO_RESULT(binaryStream->Close()));
 
+  return fullOriginMetadata;
+}
+
+Result<Ok, nsresult> UpdateFullOriginMetadataPrincipalProperties(
+    QuotaManager& aQuotaManager, FullOriginMetadata& aFullOriginMetadata) {
   auto principal =
       [&storageOrigin =
-           fullOriginMetadata.mStorageOrigin]() -> nsCOMPtr<nsIPrincipal> {
+           aFullOriginMetadata.mStorageOrigin]() -> nsCOMPtr<nsIPrincipal> {
     if (storageOrigin.EqualsLiteral(kChromeOrigin)) {
       return SystemPrincipal::Get();
     }
@@ -3756,13 +3758,34 @@ Result<FullOriginMetadata, nsresult> QuotaManager::LoadFullOriginMetadata(
   QM_TRY(MOZ_TO_RESULT(IsPrincipalInfoValid(principalInfo)),
          Err(NS_ERROR_MALFORMED_URI));
 
-  QM_TRY_UNWRAP(auto principalMetadata,
-                GetInfoFromValidatedPrincipalInfo(*this, principalInfo));
+  QM_TRY_UNWRAP(auto principalMetadata, GetInfoFromValidatedPrincipalInfo(
+                                            aQuotaManager, principalInfo));
 
-  fullOriginMetadata.mSuffix = std::move(principalMetadata.mSuffix);
-  fullOriginMetadata.mGroup = std::move(principalMetadata.mGroup);
-  fullOriginMetadata.mOrigin = std::move(principalMetadata.mOrigin);
-  fullOriginMetadata.mIsPrivate = principalMetadata.mIsPrivate;
+  aFullOriginMetadata.mSuffix = std::move(principalMetadata.mSuffix);
+  aFullOriginMetadata.mGroup = std::move(principalMetadata.mGroup);
+  aFullOriginMetadata.mOrigin = std::move(principalMetadata.mOrigin);
+  aFullOriginMetadata.mIsPrivate = principalMetadata.mIsPrivate;
+
+  return Ok{};
+}
+
+Result<FullOriginMetadata, nsresult> QuotaManager::LoadFullOriginMetadata(
+    nsIFile* aDirectory, PersistenceType aPersistenceType) {
+  MOZ_ASSERT(!NS_IsMainThread());
+  MOZ_ASSERT(aDirectory);
+  MOZ_ASSERT(mStorageConnection);
+
+  QM_TRY_UNWRAP(FullOriginMetadata fullOriginMetadata,
+                ReadFullOriginMetadataFromMetadataV2File(aDirectory));
+
+  fullOriginMetadata.mPersistenceType = aPersistenceType;
+
+  const auto extraInfo =
+      ScopedLogExtraInfo{ScopedLogExtraInfo::kTagStorageOriginTainted,
+                         fullOriginMetadata.mStorageOrigin};
+
+  QM_TRY(
+      UpdateFullOriginMetadataPrincipalProperties(*this, fullOriginMetadata));
 
   QM_TRY_INSPECT(const bool& groupUpdated,
                  MaybeUpdateGroupForOrigin(fullOriginMetadata));
