@@ -167,6 +167,7 @@
 #include "nsStringFlags.h"
 #include "nsStringFwd.h"
 #include "nsTArray.h"
+#include "nsTHashMap.h"
 #include "nsTHashtable.h"
 #include "nsTLiteralString.h"
 #include "nsTPromiseFlatString.h"
@@ -2699,6 +2700,11 @@ void QuotaManager::Shutdown() {
   stopCrashBrowserTimer();
 }
 
+OriginCacheMap& OriginCacheMap::Inactive() {
+  static OriginCacheMap sInstance;
+  return sInstance;
+}
+
 void QuotaManager::InitQuotaForOrigin(
     const FullOriginMetadata& aFullOriginMetadata, bool aDirectoryExists) {
   AssertIsOnIOThread();
@@ -3880,6 +3886,85 @@ Result<bool, nsresult> DidLatestShutdownFail(
                  MOZ_TO_RESULT_INVOKE_MEMBER(stmt, GetInt32, 0));
 
   return !valid;
+}
+
+// Read every row of the `origin` table into an `OriginCacheMap`. The
+// map is keyed by (persistence_type, origin) and lets the
+// repository-scan path tell, per origin, whether the cached row already
+// matches the metadata we'd otherwise rewrite.
+//
+// This is read-only: no transactional state change. We deliberately
+// build a parallel data structure rather than reusing `LoadQuotaFromCache`
+// because the cache path also pushes `OriginInfo`s into `mGroupInfoPairs`
+// and we need the raw row contents alone here.
+[[maybe_unused]] Result<OriginCacheMap, nsresult> LoadOriginCacheIntoMap(
+    mozIStorageConnection& aConnection) {
+  QM_TRY_INSPECT(
+      const auto& stmt,
+      MOZ_TO_RESULT_INVOKE_MEMBER_TYPED(
+          nsCOMPtr<mozIStorageStatement>, aConnection, CreateStatement,
+          "SELECT repository_id, suffix, group_, "
+          "origin, client_usages, usage, "
+          "last_access_time, last_maintenance_date, metadata_flags "
+          "FROM origin"_ns));
+
+  OriginCacheMap map;
+  map.Activate();
+
+  QM_TRY(quota::CollectWhileHasResult(
+      *stmt, [&map](auto& stmt) -> Result<Ok, nsresult> {
+        QM_TRY_INSPECT(const int32_t& repositoryId,
+                       MOZ_TO_RESULT_INVOKE_MEMBER(stmt, GetInt32, 0));
+
+        const auto maybePersistenceType =
+            PersistenceTypeFromInt32(repositoryId, fallible);
+        QM_TRY(OkIf(maybePersistenceType.isSome()), Err(NS_ERROR_FAILURE));
+
+        FullOriginMetadata fullOriginMetadata;
+        fullOriginMetadata.mPersistenceType = maybePersistenceType.value();
+
+        QM_TRY_UNWRAP(fullOriginMetadata.mSuffix,
+                      MOZ_TO_RESULT_INVOKE_MEMBER_TYPED(nsCString, stmt,
+                                                        GetUTF8String, 1));
+        QM_TRY_UNWRAP(fullOriginMetadata.mGroup,
+                      MOZ_TO_RESULT_INVOKE_MEMBER_TYPED(nsCString, stmt,
+                                                        GetUTF8String, 2));
+        QM_TRY_UNWRAP(fullOriginMetadata.mOrigin,
+                      MOZ_TO_RESULT_INVOKE_MEMBER_TYPED(nsCString, stmt,
+                                                        GetUTF8String, 3));
+        fullOriginMetadata.mStorageOrigin = fullOriginMetadata.mOrigin;
+        fullOriginMetadata.mIsPrivate = false;
+
+        QM_TRY_INSPECT(const auto& clientUsagesText,
+                       MOZ_TO_RESULT_INVOKE_MEMBER_TYPED(nsCString, stmt,
+                                                         GetUTF8String, 4));
+        ClientUsageArray clientUsages;
+        QM_TRY(MOZ_TO_RESULT(clientUsages.Deserialize(clientUsagesText)));
+        fullOriginMetadata.mClientUsages = clientUsages;
+
+        QM_TRY_INSPECT(fullOriginMetadata.mOriginUsage,
+                       MOZ_TO_RESULT_INVOKE_MEMBER(stmt, GetInt64, 5));
+
+        // mQuotaVersion is not cached in the DB; mirror LoadQuotaFromCache.
+        fullOriginMetadata.mQuotaVersion = kNoQuotaVersion;
+
+        QM_TRY_UNWRAP(fullOriginMetadata.mLastAccessTime,
+                      MOZ_TO_RESULT_INVOKE_MEMBER(stmt, GetInt64, 6));
+        QM_TRY_UNWRAP(fullOriginMetadata.mLastMaintenanceDate,
+                      MOZ_TO_RESULT_INVOKE_MEMBER(stmt, GetInt32, 7));
+        QM_TRY_INSPECT(const int32_t& metadataFlags,
+                       MOZ_TO_RESULT_INVOKE_MEMBER(stmt, GetInt32, 8));
+        fullOriginMetadata.FromMetadataFlags(
+            static_cast<uint32_t>(metadataFlags));
+
+        OriginCacheKey key(fullOriginMetadata.mPersistenceType,
+                           fullOriginMetadata.mOrigin);
+        map.InsertOrUpdate(key, std::move(fullOriginMetadata));
+
+        return Ok{};
+      }));
+
+  return map;
 }
 
 }  // namespace
