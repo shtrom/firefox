@@ -802,6 +802,9 @@ nsCString getKeaGroupName(uint32_t aKeaGroup) {
     case ssl_grp_kem_secp384r1mlkem1024:
       groupName = "secp384r1mlkem1024"_ns;
       break;
+    case ssl_grp_kem_mlkem1024:
+      groupName = "mlkem1024"_ns;
+      break;
     case ssl_grp_ffdhe_2048:
       groupName = "FF 2048"_ns;
       break;
@@ -1163,6 +1166,7 @@ void HandshakeCallback(PRFileDesc* fd, void* client_data) {
             ECCCurve(channelInfo.keaKeyBits));
         break;
       case ssl_kea_ecdh_hybrid:
+      case ssl_kea_kem:
         break;
       default:
         MOZ_CRASH("impossible KEA");

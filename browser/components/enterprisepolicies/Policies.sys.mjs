@@ -2585,6 +2585,12 @@ export var Policies = {
     },
   },
 
+  CNSA2KeyAgreementEnabled: {
+    onBeforeAddons(manager, param) {
+      lazy.PoliciesUtils.setAndLockPref("security.tls.enable_mlkem1024", param);
+    },
+  },
+
   PostQuantumKeyAgreementEnabled: {
     onBeforeAddons(manager, param) {
       lazy.PoliciesUtils.setAndLockPref(
