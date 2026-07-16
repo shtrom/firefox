@@ -6,7 +6,6 @@
 #include "nsArrayUtils.h"
 #include "nsComponentManagerUtils.h"
 #include "nsWidgetsCID.h"
-#include "nsIObserverService.h"
 #include "nsWindow.h"
 #include "nsSystemInfo.h"
 #include "nsICookieJarSettings.h"
@@ -281,14 +280,8 @@ static void OnSourceGrabEventAfter(GtkWidget* widget, GdkEvent* event,
       G_PRIORITY_DEFAULT_IDLE, 350, DispatchMotionEventCopy, nullptr, nullptr);
 }
 
-NS_IMPL_ISUPPORTS_INHERITED(nsDragSessionSource, nsDragSession, nsIObserver)
-
 nsDragSessionSource::nsDragSessionSource() {
   LOGDRAGSERVICE("nsDragSessionSource::nsDragSessionSource()");
-
-  nsCOMPtr<nsIObserverService> obsServ =
-      mozilla::services::GetObserverService();
-  obsServ->AddObserver(this, "quit-application", false);
 
   // Using an offscreen window works around bug 983843.
   mHiddenWidget = gtk_offscreen_window_new();
@@ -313,23 +306,6 @@ nsDragSessionSource::~nsDragSessionSource() {
   MozClearHandleID(mTempFileTimerID, g_source_remove);
   RemoveTempFiles();
   MozClearPointer(mHiddenWidget, gtk_widget_destroy);
-}
-
-NS_IMETHODIMP
-nsDragSessionSource::Observe(nsISupports* aSubject, const char* aTopic,
-                             const char16_t* aData) {
-  if (!nsCRT::strcmp(aTopic, "quit-application")) {
-    LOGDRAGSERVICE("nsDragSessionSource::Observe(\"quit-application\")");
-    if (mHiddenWidget) {
-      gtk_widget_destroy(mHiddenWidget);
-      mHiddenWidget = nullptr;
-    }
-  } else {
-    MOZ_ASSERT_UNREACHABLE("unexpected topic");
-    return NS_ERROR_UNEXPECTED;
-  }
-
-  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -473,15 +449,6 @@ nsresult nsDragSessionSource::EndDragSessionImpl(bool aDoneDrag,
   if (mSourceWindow) {
     mSourceWindow->SetDragSource(nullptr);
     mSourceWindow = nullptr;
-  }
-
-  nsCOMPtr<nsIObserverService> obsServ =
-      mozilla::services::GetObserverService();
-  obsServ->RemoveObserver(this, "quit-application");
-
-  if (mHiddenWidget) {
-    gtk_widget_destroy(mHiddenWidget);
-    mHiddenWidget = nullptr;
   }
 
   return nsDragSession::EndDragSessionImpl(aDoneDrag, aKeyModifiers);
@@ -1322,6 +1289,8 @@ static void invisibleSourceDragBegin(GtkWidget* aWidget,
   LOGDRAGSERVICESTATIC("invisibleSourceDragBegin (%p)", aContext);
   nsDragSessionSource* dragSession = (nsDragSessionSource*)aData;
 
+  // Keep nsDragSessionSource until D&D is finished.
+  dragSession->AddRef();
   dragSession->SourceBeginDrag(aContext);
   dragSession->SetDragIcon(aContext);
 }
@@ -1354,8 +1323,8 @@ static gboolean invisibleSourceDragFailed(GtkWidget* aWidget,
 static void invisibleSourceDragEnd(GtkWidget* aWidget, GdkDragContext* aContext,
                                    gpointer aData) {
   LOGDRAGSERVICESTATIC("invisibleSourceDragEnd(%p)", aContext);
-  nsDragSessionSource* dragSession = (nsDragSessionSource*)aData;
-
+  // Release reference taken at invisibleSourceDragBegin.
+  RefPtr dragSession = dont_AddRef(static_cast<nsDragSessionSource*>(aData));
   dragSession->SourceEndDragSession(aContext, GTK_DRAG_RESULT_SUCCESS);
 }
 
