@@ -68,7 +68,7 @@ newtab-topsites-clear-input =
     .aria-label = Clear text
 
 newtab-topsites-image-url-label = Custom Image URL
-newtab-topsites-use-custom-image-link = Use a custom image
+newtab-topsites-use-image-link = Use a custom image…
 newtab-topsites-image-validation = Image failed to load. Try a different URL.
 
 ## Top Sites - General form dialog buttons. These are verbs/actions.

@@ -702,6 +702,13 @@ $calculated-max-width-twice-widest: $break-point-widest + 2 * $card-width;
       }
     }
 
+    .enable-custom-image-input {
+      display: inline-block;
+      font-size: var(--font-size-small);
+      margin-block-start: var(--space-xsmall);
+      cursor: pointer;
+    }
+
     .custom-image-input-container {
       margin-block-start: var(--space-xsmall);
 
@@ -798,19 +805,6 @@ $calculated-max-width-twice-widest: $break-point-widest + 2 * $card-width;
   .actions {
     justify-content: flex-end;
     padding: var(--space-large) var(--space-xlarge);
-  }
-
-  // "Use a custom image" and the action buttons share one padded row.
-  .topsite-form-footer {
-    display: flex;
-    align-items: center;
-    padding: var(--space-large) var(--space-xlarge);
-
-    .actions {
-      margin-inline-start: auto;
-      padding: 0;
-      border-block-start: none;
-    }
   }
 
   @media (max-width: $break-point-medium) {

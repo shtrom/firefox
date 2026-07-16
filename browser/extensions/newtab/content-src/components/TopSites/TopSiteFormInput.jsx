@@ -32,6 +32,12 @@ export function TopSiteFormInput({
     setValidationError(validationErrorProp);
   }, [validationErrorProp]);
 
+  const onClearIconPress = event => {
+    if (event.key === "Enter") {
+      onClear();
+    }
+  };
+
   const handleChange = ev => {
     if (validationError) {
       setValidationError(false);
@@ -50,12 +56,11 @@ export function TopSiteFormInput({
       );
     } else if (showClearButton) {
       return (
-        <moz-button
-          className="icon-clear-input"
-          type="icon ghost"
-          size="small"
-          iconSrc="chrome://global/skin/icons/close.svg"
+        <button
+          type="button"
+          className="icon icon-clear-input icon-button-style"
           onClick={onClear}
+          onKeyDown={onClearIconPress}
           data-l10n-id="newtab-topsites-clear-input"
         />
       );
