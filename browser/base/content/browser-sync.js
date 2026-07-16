@@ -1041,42 +1041,6 @@ var gSync = {
     return this.getSendTabTargets().length === 0;
   },
 
-  // Returns the call to action ("signin", "turnonsync", or "connectdevice") for
-  // showing the remote tabs promo, or null when the promo should be hidden.
-  // `requiredEngines` are the sync engines that must be disabled to show the promo ["tabs"]
-  getSyncPromoState(requiredEngines) {
-    if (!this.FXA_ENABLED) {
-      return null;
-    }
-    const state = UIState.get();
-    switch (state.status) {
-      case UIState.STATUS_NOT_CONFIGURED:
-      case UIState.STATUS_NOT_VERIFIED:
-        return "signin";
-      case UIState.STATUS_SIGNED_IN: {
-        const engineDisabled = requiredEngines.some(
-          engine =>
-            !Services.prefs.getBoolPref(`services.sync.engine.${engine}`, true)
-        );
-        if (!state.syncEnabled || engineDisabled) {
-          return "turnonsync";
-        }
-        // A null list means it's still loading, so defer to the existing
-        // synced-tabs menuitem rather than promoting "connect a device". The
-        // current device isn't always present (e.g. just after signing in
-        // again), so look for any device other than this one.
-        const devices = fxAccounts.device.recentDeviceList;
-        const hasOtherDevice = devices?.some(d => !d.isCurrentDevice);
-        if (devices && !hasOtherDevice) {
-          return "connectdevice";
-        }
-        return null;
-      }
-      default:
-        return null;
-    }
-  },
-
   shouldHideSendContextMenuItems(enabled) {
     return !enabled || !this.FXA_ENABLED;
   },
@@ -3196,25 +3160,25 @@ var gSync = {
     this.openPrefs(entryPoint, null, { action: "choose-what-to-sync" });
   },
 
-  openSyncSetup(type, sourceElement, extraParams = {}) {
+  /**
+   * Opens the appropriate sync setup flow based on whether the user has sync keys.
+   * - If the user has sync keys: opens sync preferences to configure what to sync
+   * - If the user doesn't have sync keys (third-party auth): opens FxA to create password
+   */
+  async openSyncSetup(type, sourceElement, extraParams = {}) {
     this.emitFxaToolbarTelemetry(type, sourceElement);
     const entryPoint = this._getEntryPointForElement(sourceElement);
-    return this.openSyncSetupForEntryPoint(entryPoint, extraParams);
-  },
 
-  /**
-   * Opens the right flow to turn on Sync for the given entry point. Users who
-   * already have sync keys go to "Choose what to sync"; passwordless
-   * (third-party auth) users go to FxA to create a password, which
-   *  allows sync keys to get generated.
-   */
-  async openSyncSetupForEntryPoint(entryPoint, extraParams = {}) {
     try {
+      // Check if the user has sync keys
       const hasKeys = await fxAccounts.keys.hasKeysForScope(SCOPE_APP_SYNC);
 
       if (hasKeys) {
+        // User has keys - go to prefs to configure what to sync
         this.openPrefs(entryPoint, null, { action: "choose-what-to-sync" });
       } else {
+        // User doesn't have keys (third-party auth) - go to FxA to create password
+        // This will request SCOPE_APP_SYNC so FxA knows to generate sync keys
         if (!(await FxAccounts.canConnectAccount())) {
           return;
         }
@@ -3226,6 +3190,7 @@ var gSync = {
       }
     } catch (err) {
       this.log.error("Failed to determine sync setup flow", err);
+      // Fall back to opening prefs
       this.openPrefs(entryPoint);
     }
   },
