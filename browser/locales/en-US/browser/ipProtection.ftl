@@ -216,7 +216,8 @@ ipprotection-connection-status-network-error-description = Connect to the intern
 
 ipprotection-connection-status-blocked-error-title-1 = VPN is unavailable
   .aria-label = VPN is unavailable
-ipprotection-connection-status-blocked-error-description = Local laws prevent us from providing VPN service in this region. <a data-l10n-name="learn-more-link">Learn more</a>
+# "Where" refers to the user's location. It does not refer to apps or devices because the built-in VPN only protects a user's browsing in Firefox
+ipprotection-connection-status-blocked-error-description-1 = Local laws and restrictions limit where you can use VPN. <a data-l10n-name="learn-more-link">Learn more</a>
 
 # Variables
 #   $usageLeft (string) - The amount of data a user has left in a month (in GB)
