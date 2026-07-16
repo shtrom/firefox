@@ -81,7 +81,7 @@ tasks:
         treeherder:
             symbol: UpInt({locale})
             kind: other
-            tier: 3
+            tier: 2
         worker:
             artifacts:
                 - name: public/build
