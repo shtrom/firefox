@@ -1877,13 +1877,6 @@ pref("browser.partnerlink.campaign.topsites", "amzn_2020_a1");
 // Activates preloading of the new tab url.
 pref("browser.newtab.preload", true);
 
-// Preonboarding is disabled by default on platforms other than Windows and
-// macOS. For official Mozilla distributions (only for Linux), enabled at
-// runtime in TelemetryReportingPolicy.
-#if !defined(XP_WIN) && !defined(XP_MACOSX)
-  pref("browser.preonboarding.enabled", false);
-#endif
-
 // For further detail on the TOU prefs below, see the `preonboarding` feature in
 // FeatureManifest.yaml
 // Version of the TOU that the user last accepted
@@ -2155,13 +2148,10 @@ pref("browser.aboutwelcome.enabled", true);
 // Used to set multistage welcome UX
 pref("browser.aboutwelcome.screens", "");
 // Whether to gate loading about:welcome on Nimbus experiments having loaded.
-// Enable the Nimbus experiments gate on Mac and Windows. The gate shows a splash
-// screen while experiments load, then auto-advances. On platforms where experiments
-// are already loaded when the modal opens, skipSplashIfLoaded (true by default)
-// causes the splash to be skipped via screen targeting.
-#if defined(XP_MACOSX) || defined(XP_WIN)
-  pref("browser.aboutwelcome.experimentsGate.enabled", true);
-#endif
+// The gate shows a splash screen while experiments load, then auto-advances.
+// On platforms where experiments are already loaded when the modal opens,
+// skipSplashIfLoaded causes the splash to be skipped via screen targeting.
+pref("browser.aboutwelcome.experimentsGate.enabled", true);
 // Whether to skip showing the experiment loading splash screen if Nimbus is
 // already initialized when the preonboarding modal's screen targeting is
 // evaluated.

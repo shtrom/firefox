@@ -658,6 +658,8 @@ class DesktopInstance(GeckoInstance):
         # Background thumbnails in particular cause grief, and disabling thumbnails
         # in general can"t hurt - we re-enable them when tests need them
         "browser.pagethumbnails.capturing_disabled": True,
+        # Do not show the preonboarding modal/splash which can interfere with tests
+        "browser.preonboarding.enabled": False,
         # Disable safe browsing / tracking protection updates
         "browser.safebrowsing.update.enabled": False,
         # Disable updates to search engines
