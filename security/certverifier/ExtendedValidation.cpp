@@ -15,7 +15,6 @@
 #include "mozpkix/pkixder.h"
 #include "mozpkix/pkixtypes.h"
 #include "mozpkix/pkixutil.h"
-
 #include "nsDependentString.h"
 #include "nsString.h"
 #include "pk11pub.h"

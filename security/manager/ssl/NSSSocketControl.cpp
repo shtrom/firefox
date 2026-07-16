@@ -5,17 +5,17 @@
 
 #include "NSSSocketControl.h"
 
-#include "ssl.h"
-#include "sslexp.h"
-#include "nsISocketProvider.h"
-#include "secerr.h"
 #include "mozilla/Base64.h"
+#include "mozilla/StaticPrefs_network.h"
 #include "mozilla/dom/Promise.h"
 #include "mozilla/glean/SecurityManagerSslMetrics.h"
-#include "mozilla/StaticPrefs_network.h"
+#include "nsISocketProvider.h"
 #include "nsNSSCallbacks.h"
 #include "nsNSSComponent.h"
 #include "nsProxyRelease.h"
+#include "secerr.h"
+#include "ssl.h"
+#include "sslexp.h"
 
 using namespace mozilla;
 using namespace mozilla::psm;

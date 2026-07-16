@@ -9,25 +9,25 @@
 #include "mozilla/BasePrincipal.h"
 #include "mozilla/RefPtr.h"
 #include "nsCRT.h"
-#include "nsPrintfCString.h"
 #include "nsIDataStorage.h"
+#include "nsINSSComponent.h"
 #include "nsIObserverService.h"
+#include "nsJSUtils.h"
+#include "nsNSSComponent.h"
 #include "nsNetUtil.h"
+#include "nsPrintfCString.h"
 #include "nsPromiseFlatString.h"
 #include "nsThreadUtils.h"
-#include "cert.h"
 #include "nspr.h"
 #include "pk11pub.h"
-#include "certdb.h"
 #include "sechash.h"
-
-#include "nsJSUtils.h"
 
 #ifdef XP_MACOSX
 #  include <CoreFoundation/CoreFoundation.h>
 #  include <Security/Security.h>
+
 #  include "KeychainSecret.h"  // for ScopedCFType
-#endif                         // XP_MACOSX
+#endif
 
 using namespace mozilla;
 using namespace mozilla::psm;

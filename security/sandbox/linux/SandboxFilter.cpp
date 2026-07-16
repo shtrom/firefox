@@ -31,7 +31,6 @@
 #include <algorithm>
 #include <utility>
 
-#include "mozilla/ProfilerPlatformMacros.h"
 #include "Sandbox.h"  // for ContentProcessSandboxParams
 #include "SandboxBrokerClient.h"
 #include "SandboxFilterUtil.h"
@@ -41,6 +40,7 @@
 #include "SandboxOpenedFiles.h"
 #include "mozilla/PodOperations.h"
 #include "mozilla/ProcInfo_linux.h"
+#include "mozilla/ProfilerPlatformMacros.h"
 #include "mozilla/UniquePtr.h"
 #include "prenv.h"
 #include "sandbox/linux/bpf_dsl/bpf_dsl.h"
