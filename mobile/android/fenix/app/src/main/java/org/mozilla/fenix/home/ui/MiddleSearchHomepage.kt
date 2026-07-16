@@ -25,13 +25,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
-import mozilla.components.ui.icons.R
 import org.mozilla.fenix.components.appstate.sports.SportsWidgetState
 import org.mozilla.fenix.components.components
 import org.mozilla.fenix.components.toolbar.ToolbarPosition
@@ -205,14 +203,7 @@ private fun MiddleSearchHomepagePreview() {
                 showLongfoxAnimation = true,
                 trackersBlockedCount = 754,
                 sportsWidgetState = SportsWidgetState(),
-                headerState = HeaderState.Normal(
-                    wordmarkTextColor = null,
-                    privateBrowsingButtonColor = colorResource(
-                        getAttr(
-                            R.attr.mozac_ic_private_mode_circle_fill_icon_color,
-                        ),
-                    ),
-                ),
+                headerState = HeaderState.Normal,
                 searchBarVisible = true,
                 searchBarEnabled = true,
                 firstFrameDrawn = true,

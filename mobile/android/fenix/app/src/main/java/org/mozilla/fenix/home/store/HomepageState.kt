@@ -6,11 +6,8 @@ package org.mozilla.fenix.home.store
 
 import android.content.res.Configuration
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.colorResource
 import mozilla.components.feature.top.sites.TopSite
-import mozilla.components.ui.icons.R
 import org.mozilla.fenix.browser.browsingmode.BrowsingMode
 import org.mozilla.fenix.browser.browsingmode.BrowsingModeManager
 import org.mozilla.fenix.components.appstate.AppState
@@ -28,7 +25,6 @@ import org.mozilla.fenix.home.recentsyncedtabs.RecentSyncedTabState
 import org.mozilla.fenix.home.recenttabs.RecentTab
 import org.mozilla.fenix.home.recentvisits.RecentlyVisitedItem
 import org.mozilla.fenix.home.topsites.TopSiteColors
-import org.mozilla.fenix.home.ui.getAttr
 import org.mozilla.fenix.termsofuse.store.PrivacyNoticeBannerState
 import org.mozilla.fenix.utils.Settings
 
@@ -245,11 +241,7 @@ internal sealed class HomepageState {
                 showLongfoxAnimation = settings.longfoxEnabled && longfoxEntryPointReady,
                 trackersBlockedCount = blockedTrackersState.trackersBlockedCount,
                 sportsWidgetState = sportsWidgetState,
-                headerState = buildHeaderState(
-                    settings = settings,
-                    textColor = wallpaperState.textColor,
-                    privateBrowsingButtonColor = wallpaperState.iconColor,
-                ),
+                headerState = buildHeaderState(settings = settings),
                 searchBarVisible = shouldShowSearchBar(appState = appState),
                 searchBarEnabled = settings.enableHomepageSearchBar &&
                     settings.toolbarPosition == ToolbarPosition.TOP &&
@@ -268,39 +260,22 @@ internal sealed class HomepageState {
     }
 }
 
-@Composable
-private fun buildHeaderState(
-    settings: Settings,
-    textColor: Color,
-    privateBrowsingButtonColor: Color,
-): HeaderState {
+private fun buildHeaderState(settings: Settings): HeaderState {
     return if (settings.privateModeAndStoriesEntryPointEnabled) {
         HeaderState.Experimental.Normal(
-            wordmarkTextColor = textColor,
             showButtonAnimation = settings.shouldShowNewsButtonAnimation(),
             showStoriesButton = settings.showPocketRecommendationsFeature,
         )
     } else {
-        HeaderState.Normal(
-            wordmarkTextColor = textColor,
-            privateBrowsingButtonColor = privateBrowsingButtonColor,
-        )
+        HeaderState.Normal
     }
 }
 
-@Composable
 private fun buildPrivateHeaderState(settings: Settings): HeaderState {
     return if (settings.privateModeAndStoriesEntryPointEnabled) {
         HeaderState.Experimental.Private
     } else {
-        HeaderState.Normal(
-            wordmarkTextColor = null,
-            privateBrowsingButtonColor = colorResource(
-                getAttr(
-                    R.attr.mozac_ic_private_mode_circle_fill_icon_color,
-                ),
-            ),
-        )
+        HeaderState.Normal
     }
 }
 
@@ -310,15 +285,11 @@ private fun buildPrivateHeaderState(settings: Settings): HeaderState {
 internal sealed class HeaderState {
 
     /**
-     * Represents the non-experimental header state for both normal and private mode.
-     *
-     * @property wordmarkTextColor an optional color for the wordmark text.
-     * @property privateBrowsingButtonColor the color to use for the private browsing button.
+     * Represents the non-experimental header state for both normal and private mode. The header's
+     * colors are derived from the wallpaper at render time (see `HomepageHeader`), so no colors are
+     * held here.
      */
-    data class Normal(
-        val wordmarkTextColor: Color?,
-        val privateBrowsingButtonColor: Color,
-    ) : HeaderState()
+    data object Normal : HeaderState()
 
     /**
      * Represents the experimental states for the entry points experiment.
@@ -328,12 +299,10 @@ internal sealed class HeaderState {
         /**
          * Represents the header in normal mode for the entry points experiment.
          *
-         * @property wordmarkTextColor Color for the wordmark.
          * @property showStoriesButton Whether to show the stories button.
          * @property showButtonAnimation Whether to animate the news button label.
          */
         data class Normal(
-            val wordmarkTextColor: Color?,
             val showStoriesButton: Boolean,
             val showButtonAnimation: Boolean,
         ) : Experimental()

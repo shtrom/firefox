@@ -30,7 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
@@ -107,7 +106,6 @@ import org.mozilla.fenix.theme.Theme
 import org.mozilla.fenix.trackingprotection.TrackersBlockedCard
 import org.mozilla.fenix.utils.isLargeScreenSize
 import org.mozilla.fenix.wallpapers.WallpaperTheme
-import mozilla.components.ui.icons.R as iconsR
 
 private const val POPULAR_SITES_TO_SHOW = 8
 
@@ -171,21 +169,22 @@ internal fun Homepage(
                         settings.enableHomepageSportsWidget && settings.showHomepageSportsWidget &&
                             !hasWorldCupEnded()
 
-                    ExperimentalHomepageHeader(
-                        wordmarkTextColor = headerState.wordmarkTextColor,
-                        showStoriesButton = headerState.showStoriesButton,
-                        showButtonAnimation = headerState.showButtonAnimation,
-                        isSportsWidgetEnabled = shouldDisplaySportsLogo,
-                        onPrivateModeTapped = { browsingModeChanged(BrowsingMode.Private) },
-                        onStoriesTapped = { interactor.onDiscoverMoreClicked() },
-                        onNewsAnimationShown = { settings.recordNewsButtonAnimationShown() },
-                        onLogoClicked = {
-                            if (settings.showHomepageSportsWidget) {
-                                interactor.onCountrySelectorShown(CountrySelectorSource.SPORTS_LOGO)
-                                showSportsCountrySelector = true
-                            }
-                        },
-                    )
+                    WallpaperTheme {
+                        ExperimentalHomepageHeader(
+                            showStoriesButton = headerState.showStoriesButton,
+                            showButtonAnimation = headerState.showButtonAnimation,
+                            isSportsWidgetEnabled = shouldDisplaySportsLogo,
+                            onPrivateModeTapped = { browsingModeChanged(BrowsingMode.Private) },
+                            onStoriesTapped = { interactor.onDiscoverMoreClicked() },
+                            onNewsAnimationShown = { settings.recordNewsButtonAnimationShown() },
+                            onLogoClicked = {
+                                if (settings.showHomepageSportsWidget) {
+                                    interactor.onCountrySelectorShown(CountrySelectorSource.SPORTS_LOGO)
+                                    showSportsCountrySelector = true
+                                }
+                            },
+                        )
+                    }
                 }
 
                 is HeaderState.Experimental.Private -> {
@@ -200,19 +199,19 @@ internal fun Homepage(
                         settings.enableHomepageSportsWidget && settings.showHomepageSportsWidget &&
                             !hasWorldCupEnded()
 
-                    HomepageHeader(
-                        wordmarkTextColor = headerState.wordmarkTextColor,
-                        privateBrowsingButtonColor = headerState.privateBrowsingButtonColor,
-                        browsingMode = state.browsingMode,
-                        browsingModeChanged = browsingModeChanged,
-                        isSportsWidgetEnabled = shouldDisplaySportsLogo,
-                        onLogoClicked = {
-                            if (settings.showHomepageSportsWidget) {
-                                interactor.onCountrySelectorShown(CountrySelectorSource.SPORTS_LOGO)
-                                showSportsCountrySelector = true
-                            }
-                        },
-                    )
+                    WallpaperTheme {
+                        HomepageHeader(
+                            browsingMode = state.browsingMode,
+                            browsingModeChanged = browsingModeChanged,
+                            isSportsWidgetEnabled = shouldDisplaySportsLogo,
+                            onLogoClicked = {
+                                if (settings.showHomepageSportsWidget) {
+                                    interactor.onCountrySelectorShown(CountrySelectorSource.SPORTS_LOGO)
+                                    showSportsCountrySelector = true
+                                }
+                            },
+                        )
+                    }
                 }
             }
 
@@ -714,14 +713,7 @@ private fun HomepagePreview() {
                     showLongfoxAnimation = false,
                     trackersBlockedCount = 754,
                     sportsWidgetState = SportsWidgetState(),
-                    headerState = HeaderState.Normal(
-                        wordmarkTextColor = null,
-                        privateBrowsingButtonColor = colorResource(
-                            getAttr(
-                                iconsR.attr.mozac_ic_private_mode_circle_fill_icon_color,
-                            ),
-                        ),
-                    ),
+                    headerState = HeaderState.Normal,
                     searchBarVisible = true,
                     searchBarEnabled = false,
                     firstFrameDrawn = true,
@@ -767,14 +759,7 @@ private fun HomepageBannerPreview() {
                     showLongfoxAnimation = false,
                     trackersBlockedCount = 754,
                     sportsWidgetState = SportsWidgetState(),
-                    headerState = HeaderState.Normal(
-                        wordmarkTextColor = null,
-                        privateBrowsingButtonColor = colorResource(
-                            getAttr(
-                                iconsR.attr.mozac_ic_private_mode_circle_fill_icon_color,
-                            ),
-                        ),
-                    ),
+                    headerState = HeaderState.Normal,
                     searchBarVisible = true,
                     searchBarEnabled = false,
                     firstFrameDrawn = true,
@@ -820,14 +805,7 @@ private fun HomepagePreviewCollections() {
                     showLongfoxAnimation = false,
                     trackersBlockedCount = 754,
                     sportsWidgetState = SportsWidgetState(),
-                    headerState = HeaderState.Normal(
-                        wordmarkTextColor = null,
-                        privateBrowsingButtonColor = colorResource(
-                            getAttr(
-                                iconsR.attr.mozac_ic_private_mode_circle_fill_icon_color,
-                            ),
-                        ),
-                    ),
+                    headerState = HeaderState.Normal,
                     searchBarVisible = true,
                     searchBarEnabled = false,
                     firstFrameDrawn = true,
@@ -873,14 +851,7 @@ private fun MinimalHomepagePreview() {
                     showLongfoxAnimation = false,
                     trackersBlockedCount = 754,
                     sportsWidgetState = SportsWidgetState(),
-                    headerState = HeaderState.Normal(
-                        wordmarkTextColor = null,
-                        privateBrowsingButtonColor = colorResource(
-                            getAttr(
-                                iconsR.attr.mozac_ic_private_mode_circle_fill_icon_color,
-                            ),
-                        ),
-                    ),
+                    headerState = HeaderState.Normal,
                     searchBarVisible = false,
                     searchBarEnabled = false,
                     firstFrameDrawn = true,
@@ -904,14 +875,7 @@ private fun PrivateHomepagePreview() {
     FirefoxTheme(theme = Theme.Private) {
         Homepage(
             state = HomepageState.Private(
-                headerState = HeaderState.Normal(
-                    wordmarkTextColor = null,
-                    privateBrowsingButtonColor = colorResource(
-                        getAttr(
-                            iconsR.attr.mozac_ic_private_mode_circle_fill_icon_color,
-                        ),
-                    ),
-                ),
+                headerState = HeaderState.Normal,
                 firstFrameDrawn = true,
                 isSearchInProgress = false,
             ),
