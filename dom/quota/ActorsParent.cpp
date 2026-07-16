@@ -1013,7 +1013,8 @@ void ReportInternalError(const char* aFile, uint32_t aLine, const char* aStr) {
 
 namespace {
 
-bool gInvalidateQuotaCache = false;
+Atomic<QuotaManager::CacheInvalidationLevel> gInvalidateQuotaCache{
+    QuotaManager::CacheInvalidationLevel::None};
 StaticAutoPtr<nsString> gBasePath;
 StaticAutoPtr<nsString> gStorageName;
 StaticAutoPtr<nsCString> gBuildId;
@@ -4906,7 +4907,10 @@ nsresult QuotaManager::MaybeRemoveLocalStorageDataAndArchive(
 
   QM_TRY(MOZ_TO_RESULT(MaybeRemoveLocalStorageDirectories()));
 
-  InvalidateQuotaCache();
+  // We just deleted on-disk LS data that the cache may reference; the cache
+  // is definitively inconsistent. Hard, not Soft — this should not be
+  // suppressed by the test-only checkBuildId pref.
+  InvalidateQuotaCache(CacheInvalidationLevel::Hard);
 
   // Finally remove the ls archive, so we don't have to check all origin
   // directories next time this method is called.
@@ -5692,10 +5696,18 @@ nsresult QuotaManager::EnsureStorageIsInitializedInternal() {
 
     QM_TRY_UNWRAP(mCacheUsable, MaybeCreateOrUpgradeCache(*connection));
 
-    if (mCacheUsable && gInvalidateQuotaCache) {
-      QM_TRY(InvalidateCache(*connection));
+    // Read-and-reset the invalidation level. Soft is gated on the
+    // checkBuildId pref (so tests using a packaged profile from a different
+    // binary can opt out of the build-id-mismatch wipe); Hard always wins.
+    const auto invalidationLevel = gInvalidateQuotaCache.exchange(
+        QuotaManager::CacheInvalidationLevel::None);
+    const bool shouldInvalidateCache =
+        (invalidationLevel == QuotaManager::CacheInvalidationLevel::Hard) ||
+        (invalidationLevel == QuotaManager::CacheInvalidationLevel::Soft &&
+         StaticPrefs::dom_quotaManager_caching_checkBuildId());
 
-      gInvalidateQuotaCache = false;
+    if (mCacheUsable && shouldInvalidateCache) {
+      QM_TRY(InvalidateCache(*connection));
     }
 
     uint32_t pauseOnIOThreadMs =
@@ -8218,18 +8230,23 @@ Result<PrincipalInfo, nsresult> QuotaManager::ParseOrigin(
 }
 
 // static
-void QuotaManager::InvalidateQuotaCache() {
-  // The XRE invokes this when it detects that the profile was last touched
-  // by a different binary build (compatibility.ini mismatch), to force a
-  // re-scan of origin storage on the next launch. Tests that intentionally
-  // use a packaged profile from a different build can disable the build-id
-  // check via dom.quotaManager.caching.checkBuildId — when it's off, we also
-  // want this XRE-triggered invalidation suppressed, otherwise the L1 cache
-  // is wiped despite the test claiming the build mismatch is benign.
-  if (!StaticPrefs::dom_quotaManager_caching_checkBuildId()) {
-    return;
+void QuotaManager::InvalidateQuotaCache(CacheInvalidationLevel aLevel) {
+  switch (aLevel) {
+    case CacheInvalidationLevel::None:
+      MOZ_ASSERT_UNREACHABLE("Pass Soft or Hard");
+      return;
+    case CacheInvalidationLevel::Soft: {
+      // Promote only from None — never downgrade Soft over Hard.
+      CacheInvalidationLevel expected = CacheInvalidationLevel::None;
+      gInvalidateQuotaCache.compareExchange(expected,
+                                            CacheInvalidationLevel::Soft);
+      return;
+    }
+    case CacheInvalidationLevel::Hard:
+      // Hard always wins.
+      gInvalidateQuotaCache = CacheInvalidationLevel::Hard;
+      return;
   }
-  gInvalidateQuotaCache = true;
 }
 
 OriginMetadataArray QuotaManager::GetTemporaryOrigins(
