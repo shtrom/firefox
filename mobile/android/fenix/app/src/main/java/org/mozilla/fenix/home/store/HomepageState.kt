@@ -96,9 +96,6 @@ internal sealed class HomepageState {
      * @property firstFrameDrawn Flag indicating whether the first frame of the homescreen has been drawn.
      * @property setupChecklistState Optional state of the setup checklist feature.
      * @property topSiteColors The color set defined by [TopSiteColors] used to style a top site.
-     * @property cardBackgroundColor Background color for card items.
-     * @property buttonBackgroundColor Background [Color] for buttons.
-     * @property buttonTextColor Text [Color] for buttons.
      * @property isSearchInProgress Whether search is currently active on the homepage.
      * @property bottomPadding Amount of padding to display at the bottom of the homepage.
      */
@@ -131,9 +128,6 @@ internal sealed class HomepageState {
         override val firstFrameDrawn: Boolean = false,
         val setupChecklistState: SetupChecklistState?,
         val topSiteColors: TopSiteColors,
-        val cardBackgroundColor: Color,
-        val buttonBackgroundColor: Color,
-        val buttonTextColor: Color,
         override val isSearchInProgress: Boolean,
         val bottomPadding: Int,
     ) : HomepageState()
@@ -263,9 +257,6 @@ internal sealed class HomepageState {
                 firstFrameDrawn = firstFrameDrawn,
                 setupChecklistState = setupChecklistState,
                 topSiteColors = TopSiteColors.colors(wallpaperState = wallpaperState),
-                cardBackgroundColor = wallpaperState.cardBackgroundColor,
-                buttonBackgroundColor = wallpaperState.buttonBackgroundColor,
-                buttonTextColor = wallpaperState.buttonTextColor,
                 isSearchInProgress = searchState.isSearchActive,
                 bottomPadding = if (settings.toolbarPosition == ToolbarPosition.TOP) {
                     BOTTOM_PADDING_TOP_TOOLBAR

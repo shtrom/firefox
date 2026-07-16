@@ -44,7 +44,6 @@ import org.mozilla.fenix.home.toolbar.HomeToolbarComposable
 import org.mozilla.fenix.home.topsites.TopSiteColors
 import org.mozilla.fenix.home.ui.HomepageTestTag.HOMEPAGE
 import org.mozilla.fenix.theme.FirefoxTheme
-import org.mozilla.fenix.wallpapers.WallpaperState
 
 private const val BOTTOM_PADDING = 47
 
@@ -219,9 +218,6 @@ private fun MiddleSearchHomepagePreview() {
                 firstFrameDrawn = true,
                 setupChecklistState = null,
                 topSiteColors = TopSiteColors.colors(),
-                cardBackgroundColor = WallpaperState.default.cardBackgroundColor,
-                buttonTextColor = WallpaperState.default.buttonTextColor,
-                buttonBackgroundColor = WallpaperState.default.buttonBackgroundColor,
                 isSearchInProgress = false,
                 bottomPadding = 68,
                 showTopSitesHeader = true,

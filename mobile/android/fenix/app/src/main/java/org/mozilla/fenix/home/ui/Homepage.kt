@@ -106,7 +106,6 @@ import org.mozilla.fenix.theme.FirefoxTheme
 import org.mozilla.fenix.theme.Theme
 import org.mozilla.fenix.trackingprotection.TrackersBlockedCard
 import org.mozilla.fenix.utils.isLargeScreenSize
-import org.mozilla.fenix.wallpapers.WallpaperState
 import org.mozilla.fenix.wallpapers.WallpaperTheme
 import mozilla.components.ui.icons.R as iconsR
 
@@ -728,9 +727,6 @@ private fun HomepagePreview() {
                     firstFrameDrawn = true,
                     setupChecklistState = null,
                     topSiteColors = TopSiteColors.colors(),
-                    cardBackgroundColor = WallpaperState.default.cardBackgroundColor,
-                    buttonTextColor = WallpaperState.default.buttonTextColor,
-                    buttonBackgroundColor = WallpaperState.default.buttonBackgroundColor,
                     isSearchInProgress = false,
                     bottomPadding = 68,
                     showTopSitesHeader = true,
@@ -784,9 +780,6 @@ private fun HomepageBannerPreview() {
                     firstFrameDrawn = true,
                     setupChecklistState = null,
                     topSiteColors = TopSiteColors.colors(),
-                    cardBackgroundColor = WallpaperState.default.cardBackgroundColor,
-                    buttonTextColor = WallpaperState.default.buttonTextColor,
-                    buttonBackgroundColor = WallpaperState.default.buttonBackgroundColor,
                     isSearchInProgress = false,
                     bottomPadding = 68,
                     showTopSitesHeader = true,
@@ -840,9 +833,6 @@ private fun HomepagePreviewCollections() {
                     firstFrameDrawn = true,
                     setupChecklistState = null,
                     topSiteColors = TopSiteColors.colors(),
-                    cardBackgroundColor = WallpaperState.default.cardBackgroundColor,
-                    buttonTextColor = WallpaperState.default.buttonTextColor,
-                    buttonBackgroundColor = WallpaperState.default.buttonBackgroundColor,
                     isSearchInProgress = false,
                     bottomPadding = 68,
                     showTopSitesHeader = true,
@@ -896,9 +886,6 @@ private fun MinimalHomepagePreview() {
                     firstFrameDrawn = true,
                     setupChecklistState = null,
                     topSiteColors = TopSiteColors.colors(),
-                    cardBackgroundColor = WallpaperState.default.cardBackgroundColor,
-                    buttonTextColor = WallpaperState.default.buttonTextColor,
-                    buttonBackgroundColor = WallpaperState.default.buttonBackgroundColor,
                     isSearchInProgress = false,
                     bottomPadding = 68,
                     showTopSitesHeader = true,
