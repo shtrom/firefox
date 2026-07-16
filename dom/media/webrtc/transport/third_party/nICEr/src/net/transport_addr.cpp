@@ -311,7 +311,7 @@ int nr_transport_addr_get_addrstring(const nr_transport_addr *addr, char *str, i
     return(_status);
   }
 
-int nr_transport_addr_get_port(const nr_transport_addr *addr, int *port)
+int nr_transport_addr_get_port(const nr_transport_addr *addr, uint16_t *port)
   {
     int _status;
 

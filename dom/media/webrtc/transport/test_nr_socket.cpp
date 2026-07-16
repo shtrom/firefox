@@ -89,6 +89,8 @@ nrappkit copyright:
 
 #include "test_nr_socket.h"
 
+#include <cstdint>
+
 #include "mozilla/RefPtr.h"
 
 namespace mozilla {
@@ -1065,7 +1067,7 @@ bool TestNrSocket::maybe_send_fake_response(const void* msg, size_t len,
   nr_stun_form_error_response(request.get(), response.get(), 300,
                               (char*)"Try alternate");
 
-  int port = 0;
+  uint16_t port = 0;
   if (nr_transport_addr_get_port(to, &port)) {
     MOZ_CRASH();
   }
@@ -1093,7 +1095,7 @@ bool TestNrSocket::maybe_send_fake_response(const void* msg, size_t len,
     // aren't _actually_ going to do that though, so we select a bogus address
     // for the response to come from. TEST-NET is a fairly reasonable thing to
     // use for this.
-    int port = 0;
+    uint16_t port = 0;
     if (nr_transport_addr_get_port(to, &port)) {
       MOZ_CRASH();
     }

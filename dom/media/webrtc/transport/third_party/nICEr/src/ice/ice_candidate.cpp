@@ -687,12 +687,12 @@ int nr_ice_candidate_initialize(nr_ice_candidate *cand, NR_async_cb ready_cb, vo
               cand->stun_server->addr.ip_version,
               cand->stun_server->addr.protocol == IPPROTO_UDP ? "UDP" : "TCP");
           nr_resolver_resource resource;
-          int port;
+          uint16_t port;
           resource.domain_name = cand->stun_server->addr.fqdn;
           if (r = nr_transport_addr_get_port(&cand->stun_server->addr, &port)) {
             ABORT(r);
           }
-          resource.port = (uint16_t)port;
+          resource.port = port;
           resource.stun_turn=protocol;
           resource.transport_protocol = cand->stun_server->addr.protocol;
 
@@ -1037,7 +1037,7 @@ int nr_ice_format_candidate_attribute(nr_ice_candidate *cand, char *attr, int ma
   {
     int r,_status;
     char addr[64];
-    int port;
+    uint16_t port;
     int len;
     nr_transport_addr *raddr;
 
@@ -1057,7 +1057,7 @@ int nr_ice_format_candidate_attribute(nr_ice_candidate *cand, char *attr, int ma
     /* https://tools.ietf.org/html/rfc6544#section-4.5 */
     if (cand->base.protocol==IPPROTO_TCP && cand->tcp_type==TCP_TYPE_ACTIVE)
       port=9;
-    snprintf(attr,maxlen,"candidate:%s %d %s %u %s %d typ %s",
+    snprintf(attr,maxlen,"candidate:%s %d %s %u %s %u typ %s",
       cand->foundation, cand->component_id, cand->addr.protocol==IPPROTO_UDP?"UDP":"TCP",cand->priority, addr, port,
       nr_ctype_name(cand->type));
 
@@ -1080,7 +1080,7 @@ int nr_ice_format_candidate_attribute(nr_ice_candidate *cand, char *attr, int ma
             ABORT(r);
           if(r=nr_transport_addr_get_port(raddr,&port))
             ABORT(r);
-          snprintf(attr,maxlen," raddr %s rport %d",addr,port);
+          snprintf(attr,maxlen," raddr %s rport %u",addr,port);
         }
         break;
       case PEER_REFLEXIVE:
@@ -1088,7 +1088,7 @@ int nr_ice_format_candidate_attribute(nr_ice_candidate *cand, char *attr, int ma
           ABORT(r);
         if(r=nr_transport_addr_get_port(raddr,&port))
           ABORT(r);
-        snprintf(attr,maxlen," raddr %s rport %d",addr,port);
+        snprintf(attr,maxlen," raddr %s rport %u",addr,port);
         break;
       case RELAYED:
         // comes from XorMappedAddress via AllocateResponse
@@ -1097,7 +1097,7 @@ int nr_ice_format_candidate_attribute(nr_ice_candidate *cand, char *attr, int ma
         if(r=nr_transport_addr_get_port(raddr,&port))
           ABORT(r);
 
-        snprintf(attr,maxlen," raddr %s rport %d",addr,port);
+        snprintf(attr,maxlen," raddr %s rport %u",addr,port);
         break;
       default:
         assert(0);

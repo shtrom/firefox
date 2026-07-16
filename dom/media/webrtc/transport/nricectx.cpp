@@ -502,11 +502,9 @@ int NrIceCtx::candidate_error(void* obj, nr_ice_media_stream* stream,
   uint16_t port = 0;
   if (!(ctx->ctx_->flags & NR_ICE_CTX_FLAGS_OBFUSCATE_HOST_ADDRESSES)) {
     nsCString host;
-    int32_t portInt = 0;
     if (!nr_transport_addr_get_addrstring_and_port(&candidate->base, &host,
-                                                   &portInt)) {
+                                                   &port)) {
       address = host.get();
-      port = static_cast<uint16_t>(portInt);
     }
   }
 

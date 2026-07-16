@@ -71,7 +71,7 @@ static bool ToNrIceAddr(nr_transport_addr& addr, NrIceAddr* out) {
   if (r) return false;
   out->host = addrstring;
 
-  int port;
+  uint16_t port;
   r = nr_transport_addr_get_port(&addr, &port);
   if (r) return false;
 
