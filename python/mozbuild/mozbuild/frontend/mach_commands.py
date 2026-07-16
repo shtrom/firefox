@@ -301,7 +301,7 @@ def _get_files_info(command_context, paths, rev=None):
 
     # Normalize to relative from topsrcdir.
     relpaths = []
-    finder = FileFinder(command_context.topsrcdir)
+    finder = FileFinder(command_context.topsrcdir, find_dotfiles=True)
     for path in paths:
         for p, _ in finder.find(path):
             a = mozpath.abspath(p)
