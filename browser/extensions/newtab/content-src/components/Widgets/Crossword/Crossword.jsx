@@ -52,6 +52,15 @@ const EVENT_TYPES = {
 // (the compact returning-completion card) use the user's configured size.
 const PUZZLE_STATES = ["intro", "in_progress", "completed"];
 
+// Actions that force the widget size to be large when the puzzle is
+// completed if "show clues", "view completed crossword", or "solve puzzle"
+// are clicked.
+const LARGE_LAYOUT_INTERACTIONS = new Set([
+  "admire_crossword_clicked",
+  "all_clues_opened",
+  "reveal_grid_requested",
+]);
+
 const isNonNegativeNumber = value =>
   typeof value === "number" && Number.isFinite(value) && value >= 0;
 
@@ -117,7 +126,8 @@ function Crossword({
 
   // Grow to large once a puzzle is in progress and stay large through the
   // completed screen; only the intro state (or loading directly into completed,
-  // i.e. the returning-completion card) stays medium. Driven by puzzle_state.
+  // i.e. the returning-completion card) stays medium. Driven by puzzle_state,
+  // plus the interactions in LARGE_LAYOUT_INTERACTIONS that open a large screen
   const [showLarge, setShowLarge] = useState(false);
 
   // Gated on widgetsMayBeMaximized so we never render a large-widget on a layout
@@ -191,6 +201,12 @@ function Crossword({
           } else if (payload.state === "intro") {
             setShowLarge(false);
           }
+          //  This keeps "Solve puzzle" hidden when the puzzle's been completed.
+          if (payload.state === "completed") {
+            setPuzzleCompleted(true);
+          } else if (payload.state === "intro") {
+            setPuzzleCompleted(false);
+          }
           break;
         case EVENT_TYPES.PUZZLE_COMPLETED:
           setPuzzleCompleted(true);
@@ -208,6 +224,11 @@ function Crossword({
           );
           break;
         case EVENT_TYPES.INTERACTION:
+          // Viewing the completed grid or opening the all-clues panel both need
+          // the large layout, even from the medium completed/returning card.
+          if (LARGE_LAYOUT_INTERACTIONS.has(payload.action)) {
+            setShowLarge(true);
+          }
           handleInteraction();
           dispatch(
             ac.AlsoToMain({
