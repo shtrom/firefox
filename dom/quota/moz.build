@@ -146,6 +146,7 @@ UNIFIED_SOURCES += [
     "OriginOperationBase.cpp",
     "OriginOperations.cpp",
     "OriginParser.cpp",
+    "OriginUpserter.cpp",
     "PersistenceScope.cpp",
     "PersistenceType.cpp",
     "PrincipalUtils.cpp",

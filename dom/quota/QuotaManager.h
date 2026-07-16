@@ -81,6 +81,7 @@ class NormalOriginOperationBase;
 class OriginDirectoryLock;
 class OriginInfo;
 class OriginScope;
+class OriginUpserter;
 class QuotaObject;
 class SaveOriginAccessTimeOp;
 class UniversalDirectoryLock;
@@ -1109,6 +1110,8 @@ class QuotaManager final : public BackgroundThreadObject {
   LazyInitializedOnceNotNull<const nsCOMPtr<nsIThread>> mIOThread;
 
   nsCOMPtr<mozIStorageConnection> mStorageConnection;
+
+  RefPtr<OriginUpserter> mOriginUpserter;
 
   EnumeratedArray<Client::Type, nsCString, size_t(Client::TYPE_MAX)>
       mShutdownSteps;

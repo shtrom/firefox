@@ -6,6 +6,7 @@
 
 #include "GroupInfo.h"
 #include "GroupInfoPair.h"
+#include "OriginUpserter.h"
 #include "mozilla/dom/quota/AssertionsImpl.h"
 #include "mozilla/dom/quota/ResultExtensions.h"
 #include "mozilla/dom/quota/UsageInfo.h"

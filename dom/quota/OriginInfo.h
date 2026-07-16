@@ -14,6 +14,7 @@ namespace mozilla::dom::quota {
 
 class CanonicalQuotaObject;
 class GroupInfo;
+class OriginUpserter;
 
 class OriginInfo final : public SupportsThreadSafeWeakPtr<OriginInfo> {
   friend class CanonicalQuotaObject;

@@ -20,6 +20,7 @@
 #include "OriginOperations.h"
 #include "OriginParser.h"
 #include "OriginScope.h"
+#include "OriginUpserter.h"
 #include "QuotaCommon.h"
 #include "QuotaManager.h"
 #include "QuotaPrefs.h"
@@ -3187,8 +3188,6 @@ void QuotaManager::UnloadQuota() {
              mStorageConnection->ExecuteSimpleSQL("DELETE FROM origin;"_ns)),
          QM_VOID);
 
-  nsCOMPtr<mozIStorageStatement> insertStmt;
-
   {
     MutexAutoLock lock(mQuotaMutex);
 
@@ -3215,27 +3214,9 @@ void QuotaManager::UnloadQuota() {
             continue;
           }
 
-          if (insertStmt) {
-            MOZ_ALWAYS_SUCCEEDS(insertStmt->Reset());
-          } else {
-            QM_TRY_UNWRAP(
-                insertStmt,
-                MOZ_TO_RESULT_INVOKE_MEMBER_TYPED(
-                    nsCOMPtr<mozIStorageStatement>, mStorageConnection,
-                    CreateStatement,
-                    "INSERT INTO origin (repository_id, suffix, group_, "
-                    "origin, client_usages, usage, last_access_time, "
-                    "last_maintenance_date, accessed, persisted) "
-                    "VALUES (:repository_id, :suffix, :group_, :origin, "
-                    ":client_usages, :usage, :last_access_time, "
-                    ":last_maintenance_date, :accessed, :persisted)"_ns),
-                QM_VOID);
-          }
+          auto metadata = originInfo->LockedFlattenToFullOriginMetadata();
 
-          QM_TRY(MOZ_TO_RESULT(originInfo->LockedBindToStatement(insertStmt)),
-                 QM_VOID);
-
-          QM_TRY(MOZ_TO_RESULT(insertStmt->Execute()), QM_VOID);
+          QM_WARNONLY_TRY(mOriginUpserter->Refresh(metadata));
         }
 
         groupInfo->LockedRemoveOriginInfos();
@@ -5591,6 +5572,7 @@ nsresult QuotaManager::EnsureStorageIsInitializedInternal() {
     }
 
     mStorageConnection = std::move(connection);
+    mOriginUpserter = MakeRefPtr<OriginUpserter>(mStorageConnection);
 
     return NS_OK;
   };
@@ -7492,6 +7474,7 @@ void QuotaManager::ShutdownStorageInternal() {
 
     ReleaseIOThreadObjects();
 
+    mOriginUpserter = nullptr;
     mStorageConnection = nullptr;
     mCacheUsable = false;
   }
