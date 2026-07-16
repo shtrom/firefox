@@ -1780,15 +1780,25 @@ PeerConnectionImpl::AddIceCandidate(
     const dom::Nullable<unsigned short>& aLevel) {
   PC_AUTO_ENTER_API_CALL(true);
 
-  if (mForceIceTcp &&
-      std::string::npos != std::string(aCandidate).find(" UDP ")) {
-    CSFLogError(LOGTAG, "Blocking remote UDP candidate: %s", aCandidate);
+  // TODO(https://bugzilla.mozilla.org/show_bug.cgi?id=2036944)
+  // Tighten this up.
+
+  // We may end up storing an RTCIceCandidate for this when we implement
+  // RTCIceTransport.getRemoteCandidates(), in which case it will handle
+  // stripping the "a=" off.
+  std::string candidate(aCandidate);
+  if (candidate.find("a=") == 0) {
+    candidate = candidate.substr(2);
+  }
+
+  if (mForceIceTcp && std::string::npos != candidate.find(" UDP ")) {
+    CSFLogError(LOGTAG, "Blocking remote UDP candidate: %s", candidate.c_str());
     return NS_OK;
   }
 
   STAMP_TIMECARD(mTimeCard, "Add Ice Candidate");
 
-  CSFLogDebug(LOGTAG, "AddIceCandidate: %s %s", aCandidate, aUfrag);
+  CSFLogDebug(LOGTAG, "AddIceCandidate: %s %s", candidate.c_str(), aUfrag);
 
   std::string transportId;
   Maybe<unsigned short> level;
@@ -1800,15 +1810,15 @@ PeerConnectionImpl::AddIceCandidate(
       "AddIceCandidate is chained, which means it should never "
       "run while an sRD/sLD is in progress");
   JsepSession::Result result = mJsepSession->AddRemoteIceCandidate(
-      aCandidate, aMid, level, aUfrag, &transportId);
+      candidate, aMid, level, aUfrag, &transportId);
 
   if (!result.mError.isSome()) {
     // We do not bother the MediaTransportHandler about this before
     // offer/answer concludes.  Once offer/answer concludes, we will extract
     // these candidates from the remote SDP.
     if (mSignalingState == RTCSignalingState::Stable && !transportId.empty()) {
-      AddIceCandidate(aCandidate, transportId, aUfrag);
-      mRawTrickledCandidates.push_back(aCandidate);
+      AddIceCandidate(candidate, transportId, aUfrag);
+      mRawTrickledCandidates.push_back(candidate);
     }
     // Spec says we queue a task for these updates
     GetMainThreadSerialEventTarget()->Dispatch(NS_NewRunnableFunction(
@@ -1829,7 +1839,7 @@ PeerConnectionImpl::AddIceCandidate(
     CSFLogError(LOGTAG,
                 "Failed to incorporate remote candidate into SDP:"
                 " res = %u, candidate = %s, level = %i, error = %s",
-                static_cast<unsigned>(*result.mError), aCandidate,
+                static_cast<unsigned>(*result.mError), candidate.c_str(),
                 level.valueOr(-1), errorString.c_str());
 
     GetMainThreadSerialEventTarget()->Dispatch(NS_NewRunnableFunction(
