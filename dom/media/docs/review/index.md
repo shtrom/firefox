@@ -12,4 +12,5 @@ context) instead of living only in individual reviewers' heads.
 :maxdepth: 1
 
 memory-safety
+threading
 ```
