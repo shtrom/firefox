@@ -3126,6 +3126,8 @@ nsresult QuotaManager::LoadQuota() {
     QM_WARNONLY_TRY(ArchiveOrigins(unaccessedOrigins));
   }
 
+  QM_TRY(MOZ_TO_RESULT(InitializeFlushTimer()));
+
   return NS_OK;
 }
 
@@ -3134,6 +3136,8 @@ void QuotaManager::UnloadQuota() {
   MOZ_ASSERT(mStorageConnection);
   MOZ_ASSERT(mTemporaryStorageInitializedInternal);
   MOZ_ASSERT(mCacheUsable);
+
+  UninitializeFlushTimer();
 
   auto autoRemoveQuota = MakeScopeExit([&] { RemoveQuota(); });
 
@@ -7002,6 +7006,34 @@ nsresult QuotaManager::EnsureTemporaryStorageIsInitializedInternal() {
   return ExecuteInitialization(
       Initialization::TemporaryStorage,
       "dom::quota::FirstInitializationAttempt::TemporaryStorage"_ns, innerFunc);
+}
+
+nsresult QuotaManager::InitializeFlushTimer() {
+  const uint32_t flushInterval = std::max(
+      100u, StaticPrefs::dom_quotaManager_originMetadataFlushCheckIntervalMs());
+  const auto originInfoFlushInterval =
+      TimeDuration::FromMilliseconds(flushInterval);
+
+  QM_TRY(MOZ_TO_RESULT(NS_NewTimerWithCallback(
+      getter_AddRefs(mFlushDirtyOriginInfosTimer),
+      [](nsITimer*) {
+        if (QuotaManager* qm = QuotaManager::Get()) {
+          qm->FlushDirtyOriginInfos();
+        }
+      },
+      std::ceil(originInfoFlushInterval.ToMilliseconds()),
+      nsITimer::TYPE_REPEATING_SLACK_LOW_PRIORITY,
+      "FlushDirtyOriginInfosTimer"_ns, mIOThread.ref())));
+
+  return NS_OK;
+}
+
+void QuotaManager::UninitializeFlushTimer() {
+  // Failed initialization does not set the timer.
+  if (mFlushDirtyOriginInfosTimer) {
+    QM_WARNONLY_TRY(MOZ_TO_RESULT(mFlushDirtyOriginInfosTimer->Cancel()));
+    mFlushDirtyOriginInfosTimer = nullptr;
+  }
 }
 
 RefPtr<BoolPromise> QuotaManager::InitializeAllTemporaryOrigins() {

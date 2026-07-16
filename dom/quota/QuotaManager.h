@@ -421,6 +421,8 @@ class QuotaManager final : public BackgroundThreadObject {
       DirtyTrackingAutoLock& aProofOfLock,
       const OriginStateMetadata& aStateMetadata);
 
+  void FlushDirtyOriginInfos() { /* TODO */ }
+
  private:
   nsresult EnsureStorageIsInitializedInternal();
 
@@ -554,12 +556,16 @@ class QuotaManager final : public BackgroundThreadObject {
     return mTemporaryStorageInitialized;
   }
 
+  void RegisterDirtyOriginInfo(DirtyTrackingAutoLock& /* TODO */) {}
+
  private:
   nsresult InitializeTemporaryStorageInternal();
 
   nsresult EnsureTemporaryStorageIsInitializedInternal();
 
-  void RegisterDirtyOriginInfo(DirtyTrackingAutoLock& /* TODO */) {}
+  nsresult InitializeFlushTimer();
+
+  void UninitializeFlushTimer();
 
  public:
   RefPtr<BoolPromise> InitializeAllTemporaryOrigins();
@@ -1152,6 +1158,8 @@ class QuotaManager final : public BackgroundThreadObject {
   // reads on the owning thread don't have to be protected by mQuotaMutex.
   nsTHashMap<nsUint64HashKey, NotNull<DirectoryLockImpl*>>
       mDirectoryLockIdTable;
+
+  nsCOMPtr<nsITimer> mFlushDirtyOriginInfosTimer;
 
   // Things touched on the owning (PBackground) thread only.
   struct BackgroundThreadAccessible {
