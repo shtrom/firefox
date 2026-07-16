@@ -71,6 +71,24 @@ const DEK_PREFIX: &str = "lockstore::dek::";
 /// rotate it without invalidating existing records.
 const PKCS11_WRAPPING_KEY_NICKNAME: &str = "lockstore::pkcs11-wrapping-key";
 
+/// Upper bound on an in-memory unlock / KEK-cache window (~10 years).
+/// The FFI passes the caller's timeout as a `u64` count of milliseconds
+/// (a `u32` would cap it at ~49 days); a request larger than this is
+/// clamped. The clamp keeps `Instant + Duration` from overflowing the
+/// platform monotonic clock and panicking on a pathological value, while
+/// still lifting the old ceiling to "effectively unlimited" for real use.
+const MAX_UNLOCK: Duration = Duration::from_secs(10 * 365 * 24 * 60 * 60);
+
+/// Compute the cache-expiry deadline `now + timeout`, clamped to
+/// [`MAX_UNLOCK`] and evaluated with `checked_add` so an extreme timeout
+/// saturates instead of panicking.
+fn unlock_deadline(timeout: Duration) -> Instant {
+    let clamped = timeout.min(MAX_UNLOCK);
+    Instant::now()
+        .checked_add(clamped)
+        .unwrap_or_else(|| Instant::now() + MAX_UNLOCK)
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct WrappedDek {
     kek_type: KekType,
@@ -1135,7 +1153,7 @@ impl Keystore {
                         kek_ref.clone(),
                         CachedKek {
                             kek: std::mem::take(&mut kek_plaintext),
-                            expires_at: Instant::now() + cache_timeout,
+                            expires_at: unlock_deadline(cache_timeout),
                         },
                     );
                 }
@@ -1321,7 +1339,7 @@ impl Keystore {
             kek_ref.to_string(),
             CachedKek {
                 kek: kek_plaintext,
-                expires_at: Instant::now() + timeout,
+                expires_at: unlock_deadline(timeout),
             },
         );
 
@@ -1412,7 +1430,7 @@ impl Keystore {
             kek_ref.to_string(),
             CachedKek {
                 kek: kek_plaintext,
-                expires_at: Instant::now() + timeout,
+                expires_at: unlock_deadline(timeout),
             },
         );
         Ok(())
@@ -1676,3 +1694,27 @@ use std::sync::{OnceLock, Weak};
 /// across tests that exercise multiple temporary profiles in one
 /// process; production has exactly one entry.
 static SHARED_KEYSTORES: OnceLock<Mutex<HashMap<PathBuf, Weak<Keystore>>>> = OnceLock::new();
+
+#[cfg(test)]
+mod tests {
+    use super::{unlock_deadline, MAX_UNLOCK};
+    use std::time::{Duration, Instant};
+
+    #[test]
+    fn unlock_deadline_extends_beyond_u32_ms() {
+        // A timeout larger than the old u32::MAX ms cap (~49 days) must
+        // yield a deadline comfortably past that ceiling (Bug 2051136).
+        let beyond_u32 = Duration::from_millis(u32::MAX as u64 + 1);
+        let deadline = unlock_deadline(beyond_u32);
+        assert!(deadline > Instant::now() + Duration::from_secs(49 * 24 * 60 * 60));
+    }
+
+    #[test]
+    fn unlock_deadline_saturates_without_panic() {
+        // A near-u64::MAX ms timeout would overflow `Instant + Duration`;
+        // the helper must clamp to MAX_UNLOCK and return without panicking.
+        let deadline = unlock_deadline(Duration::from_millis(u64::MAX));
+        assert!(deadline > Instant::now());
+        assert!(deadline <= Instant::now() + MAX_UNLOCK + Duration::from_secs(60));
+    }
+}

@@ -49,7 +49,10 @@ interface nsILockstore : nsISupports
 
   /**
    * Unlock `kekRef` so subsequent DEK accesses under it succeed for at
-   * most `timeoutMs` milliseconds.
+   * most `timeoutMs` milliseconds. `timeoutMs` is a 64-bit count of
+   * milliseconds: a `uint32_t` would cap the window at ~49 days, so the
+   * boundary is widened to `uint64_t`; the core clamps absurdly large
+   * values to a generous maximum to keep the deadline arithmetic safe.
    *
    * The returned Promise resolves with `undefined` on success and rejects
    * with:
@@ -61,7 +64,7 @@ interface nsILockstore : nsISupports
   [implicit_jscontext]
   Promise unlockKek(in AUTF8String kekRef,
                     in ACString secret,
-                    in uint32_t timeoutMs);
+                    in uint64_t timeoutMs);
 
   /// Drop any cached authentication for `kekRef`. Subsequent DEK accesses
   /// will throw NS_ERROR_NOT_AVAILABLE until the caller re-unlocks. For
@@ -295,7 +298,10 @@ interface nsILockstore : nsISupports
    *
    * `cacheTimeoutMs` is the duration (in milliseconds) that the
    * just-derived KEK is kept in the in-memory auth cache. Only
-   * meaningful for the `"password"` tier; ignored elsewhere.
+   * meaningful for the `"password"` tier; ignored elsewhere. It is a
+   * 64-bit millisecond count (a `uint32_t` would cap the window at
+   * ~49 days); the core clamps absurdly large values to a generous
+   * maximum.
    *
    * Lockstore copies the secret bytes into its own buffer, consumes
    * them, and zeroises the buffer before resolving the Promise; the
@@ -315,7 +321,7 @@ interface nsILockstore : nsISupports
   Promise createKek(in ACString kekType,
                     in ACString identifier,
                     in ACString secret,
-                    in uint32_t cacheTimeoutMs);
+                    in uint64_t cacheTimeoutMs);
 
   /**
    * Destroy the KEK referenced by `kekRef`. The persisted row is

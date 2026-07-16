@@ -455,18 +455,17 @@ pub extern "C" fn keystore_unlock_kek(
     handle: &KeystoreHandle,
     kek_ref: &nsACString,
     secret: &nsACString,
-    timeout_ms: u32,
+    timeout_ms: u64,
 ) -> nsresult {
     if kek_ref.is_empty() {
         return NS_ERROR_INVALID_ARG;
     }
     let mut secret_buf: Vec<u8> = secret[..].to_vec();
     let kek_ref_str = kek_ref.to_utf8();
-    let result = handle.keystore.unlock_kek(
-        &kek_ref_str,
-        &secret_buf,
-        Duration::from_millis(timeout_ms as u64),
-    );
+    let result =
+        handle
+            .keystore
+            .unlock_kek(&kek_ref_str, &secret_buf, Duration::from_millis(timeout_ms));
     secret_buf.zeroize();
 
     match result {
@@ -532,7 +531,7 @@ pub extern "C" fn keystore_create_kek(
     kek_type: &nsACString,
     identifier: &nsACString,
     secret: &nsACString,
-    cache_timeout_ms: u32,
+    cache_timeout_ms: u64,
     ret_kek_ref: &mut nsCString,
 ) -> nsresult {
     let kek_type_str = kek_type.to_utf8();
@@ -547,7 +546,7 @@ pub extern "C" fn keystore_create_kek(
         parsed,
         &identifier_str,
         &secret_buf,
-        Duration::from_millis(cache_timeout_ms as u64),
+        Duration::from_millis(cache_timeout_ms),
     );
     secret_buf.zeroize();
 

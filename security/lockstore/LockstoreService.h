@@ -51,7 +51,7 @@ class LockstoreService final : public nsILockstore, public nsIObserver {
   // ---------------------------------------------------------------------
 
   nsresult DoUnlockKek(const nsACString& aKekRef, const nsACString& aSecret,
-                       uint32_t aTimeoutMs);
+                       uint64_t aTimeoutMs);
   nsresult DoLockKek(const nsACString& aKekRef);
   nsresult DoLock();
   nsresult DoCreateDek(const nsACString& aCollection, const nsACString& aKekRef,
@@ -80,7 +80,7 @@ class LockstoreService final : public nsILockstore, public nsIObserver {
   Result<nsCString, nsresult> DoCreateKek(const nsACString& aKekType,
                                           const nsACString& aIdentifier,
                                           const nsACString& aSecret,
-                                          uint32_t aCacheTimeoutMs);
+                                          uint64_t aCacheTimeoutMs);
   nsresult DoDeleteKek(const nsACString& aKekRef);
 
  private:

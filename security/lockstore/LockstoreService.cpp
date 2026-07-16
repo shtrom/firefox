@@ -277,7 +277,7 @@ LockstoreService::IsKekUnlocked(const nsACString& aKekRef, bool* aOut) {
 
 nsresult LockstoreService::DoUnlockKek(const nsACString& aKekRef,
                                        const nsACString& aSecret,
-                                       uint32_t aTimeoutMs) {
+                                       uint64_t aTimeoutMs) {
   LOCKSTORE_SYNC_PREAMBLE;
   return keystore_unlock_kek(mKeystore, &aKekRef, &aSecret, aTimeoutMs);
 }
@@ -388,7 +388,7 @@ Result<nsTArray<uint8_t>, nsresult> LockstoreService::DoGetDek(
 
 Result<nsCString, nsresult> LockstoreService::DoCreateKek(
     const nsACString& aKekType, const nsACString& aIdentifier,
-    const nsACString& aSecret, uint32_t aCacheTimeoutMs) {
+    const nsACString& aSecret, uint64_t aCacheTimeoutMs) {
   LOCKSTORE_SYNC_PREAMBLE;
   nsCString out;
   MOZ_TRY(keystore_create_kek(mKeystore, &aKekType, &aIdentifier, &aSecret,
@@ -410,7 +410,7 @@ nsresult LockstoreService::DoDeleteKek(const nsACString& aKekRef) {
 
 NS_IMETHODIMP
 LockstoreService::UnlockKek(const nsACString& aKekRef,
-                            const nsACString& aSecret, uint32_t aTimeoutMs,
+                            const nsACString& aSecret, uint64_t aTimeoutMs,
                             JSContext* aCx, Promise** aPromise) {
   return ImplXpcomMethod(this, aCx, aPromise, &LockstoreService::DoUnlockKek,
                          nsCString{aKekRef}, nsCString{aSecret}, aTimeoutMs);
@@ -535,7 +535,7 @@ LockstoreService::GetDek(const nsACString& aCollection,
 NS_IMETHODIMP
 LockstoreService::CreateKek(const nsACString& aKekType,
                             const nsACString& aIdentifier,
-                            const nsACString& aSecret, uint32_t aCacheTimeoutMs,
+                            const nsACString& aSecret, uint64_t aCacheTimeoutMs,
                             JSContext* aCx, Promise** aPromise) {
   return ImplXpcomMethod(this, aCx, aPromise, &LockstoreService::DoCreateKek,
                          nsCString{aKekType}, nsCString{aIdentifier},
