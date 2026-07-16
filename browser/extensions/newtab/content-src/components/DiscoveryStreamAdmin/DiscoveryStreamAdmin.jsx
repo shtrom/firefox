@@ -3,6 +3,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { actionCreators as ac, actionTypes as at } from "common/Actions.mjs";
+import { WIDGET_REGISTRY } from "common/WidgetsRegistry.mjs";
 import { connect } from "react-redux";
 import React from "react";
 
@@ -24,6 +25,14 @@ const PREF_UNIFIED_ADS_ENDPOINT = "unifiedAds.endpoint";
 const PREF_ALLOWED_ENDPOINTS = "discoverystream.endpoints";
 const PREF_OHTTP_CONFIG = "discoverystream.ohttp.configURL";
 const PREF_OHTTP_RELAY = "discoverystream.ohttp.relayURL";
+const PREF_WIDGETS_SYSTEM_ENABLED = "widgets.system.enabled";
+
+// Turn a camelCase widget id into a human-readable label, e.g.
+// "pictureOfTheDay" -> "Picture Of The Day".
+function widgetLabel(id) {
+  const spaced = id.replace(/([A-Z])/g, " $1");
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
 
 const Row = props => (
   <tr className="message-item" {...props}>
@@ -115,6 +124,9 @@ export class DiscoveryStreamAdminUI extends React.PureComponent {
     this.handleDebugOverrideChange = this.handleDebugOverrideChange.bind(this);
     this.handleResetAllOverrides = this.handleResetAllOverrides.bind(this);
     this.handleSectionsToggle = this.handleSectionsToggle.bind(this);
+    this.handleWidgetsSystemToggle = this.handleWidgetsSystemToggle.bind(this);
+    this.handleWidgetToggle = this.handleWidgetToggle.bind(this);
+    this.handleWidgetsToggleAll = this.handleWidgetsToggleAll.bind(this);
     this.toggleIABBanners = this.toggleIABBanners.bind(this);
     this.handleAllizomToggle = this.handleAllizomToggle.bind(this);
     this.sendConversionEvent = this.sendConversionEvent.bind(this);
@@ -400,6 +412,34 @@ export class DiscoveryStreamAdminUI extends React.PureComponent {
     this.props.dispatch(ac.SetPref(PREF_SECTIONS_ENABLED, pressed));
     this.props.dispatch(
       ac.SetPref("discoverystream.sections.cards.enabled", pressed)
+    );
+  }
+
+  handleWidgetsSystemToggle(e) {
+    this.props.dispatch(
+      ac.SetPref(PREF_WIDGETS_SYSTEM_ENABLED, e.target.pressed)
+    );
+  }
+
+  handleWidgetToggle(e) {
+    // e.target.id is the widget's systemEnabledPref (widgets.system.<name>.enabled)
+    this.props.dispatch(ac.SetPref(e.target.id, e.target.pressed));
+  }
+
+  handleWidgetsToggleAll() {
+    const value = !this.areAllWidgetsEnabled();
+    const values = { [PREF_WIDGETS_SYSTEM_ENABLED]: value };
+    for (const widget of WIDGET_REGISTRY) {
+      values[widget.systemEnabledPref] = value;
+    }
+    this.props.dispatch(ac.SetMultiplePrefs(values));
+  }
+
+  areAllWidgetsEnabled() {
+    const { otherPrefs } = this.props;
+    return Boolean(
+      otherPrefs[PREF_WIDGETS_SYSTEM_ENABLED] &&
+      WIDGET_REGISTRY.every(widget => otherPrefs[widget.systemEnabledPref])
     );
   }
 
@@ -809,6 +849,13 @@ export class DiscoveryStreamAdminUI extends React.PureComponent {
             </Row>
           </tbody>
         </table>
+        <button
+          className="button"
+          style={{ marginBlockStart: "var(--space-large)" }}
+          onClick={this.sendConversionEvent}
+        >
+          Send conversion event
+        </button>
         <h4>Spoc data</h4>
         <table>
           <tbody>{spocsData.map(spoc => this.renderStoryData(spoc))}</tbody>
@@ -893,6 +940,9 @@ export class DiscoveryStreamAdminUI extends React.PureComponent {
     const leaderboardPressed =
       leaderboardEnabled && spocPlacements.includes("newtab_leaderboard");
 
+    const widgetsSystemEnabled =
+      this.props.otherPrefs[PREF_WIDGETS_SYSTEM_ENABLED];
+
     return (
       <div>
         <button className="button" onClick={this.refreshCache}>
@@ -955,9 +1005,34 @@ export class DiscoveryStreamAdminUI extends React.PureComponent {
             />
           </div>
         </details>
-        <button className="button" onClick={this.sendConversionEvent}>
-          Send conversion event
-        </button>
+        <details className="details-section">
+          <summary>Widgets</summary>
+          <div className="toggle-wrapper">
+            <moz-toggle
+              id="widgets-system-enabled"
+              pressed={widgetsSystemEnabled || null}
+              ontoggle={this.handleWidgetsSystemToggle}
+              label="Enable widget system"
+            />
+          </div>
+          <button className="button" onClick={this.handleWidgetsToggleAll}>
+            {this.areAllWidgetsEnabled() ? "Disable all" : "Enable all"}
+          </button>
+          <hr />
+          {WIDGET_REGISTRY.map(widget => (
+            <div className="toggle-wrapper" key={widget.id}>
+              <moz-toggle
+                id={widget.systemEnabledPref}
+                pressed={
+                  this.props.otherPrefs[widget.systemEnabledPref] || null
+                }
+                disabled={!widgetsSystemEnabled || null}
+                ontoggle={this.handleWidgetToggle}
+                label={widgetLabel(widget.id)}
+              />
+            </div>
+          ))}
+        </details>
         <h3>Layout</h3>
         {layout.map((row, rowIndex) => (
           <div key={`row-${rowIndex}`}>

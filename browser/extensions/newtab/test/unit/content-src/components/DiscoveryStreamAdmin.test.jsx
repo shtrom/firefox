@@ -4,6 +4,7 @@ import {
   DiscoveryStreamAdminUI,
   ToggleStoryButton,
 } from "content-src/components/DiscoveryStreamAdmin/DiscoveryStreamAdmin";
+import { WIDGET_REGISTRY } from "common/WidgetsRegistry.mjs";
 import React from "react";
 import { shallow } from "enzyme";
 
@@ -370,6 +371,105 @@ describe("DiscoveryStreamAdmin", () => {
           .first();
         assert.equal(resetButton.prop("disabled"), null);
       });
+    });
+  });
+
+  describe("#Widgets", () => {
+    let dispatch;
+    beforeEach(() => {
+      dispatch = sandbox.stub();
+      wrapper = shallow(
+        <DiscoveryStreamAdminUI
+          dispatch={dispatch}
+          otherPrefs={{ "widgets.system.enabled": false }}
+          state={{
+            DiscoveryStream: {
+              config: { enabled: true },
+              layout: [],
+              spocs: { frequency_caps: [] },
+              feeds: { data: {} },
+              blocks: {},
+              impressions: { feed: {} },
+            },
+            Weather: { suggestions: [] },
+            InferredPersonalization: {
+              inferredInterests: {},
+              coarseInferredInterests: {},
+              coarsePrivateInferredInterests: {},
+              debugFeatures: null,
+            },
+          }}
+        />
+      );
+    });
+
+    it("should flip widgets.system.enabled from the master toggle", () => {
+      wrapper
+        .find("#widgets-system-enabled")
+        .props()
+        .ontoggle({ target: { pressed: true } });
+      assert.calledWith(dispatch, ac.SetPref("widgets.system.enabled", true));
+    });
+
+    it("should flip a widget's system pref from its toggle", () => {
+      wrapper
+        .find('[id="widgets.system.lists.enabled"]')
+        .props()
+        .ontoggle({
+          target: { id: "widgets.system.lists.enabled", pressed: true },
+        });
+      assert.calledWith(
+        dispatch,
+        ac.SetPref("widgets.system.lists.enabled", true)
+      );
+    });
+
+    it("should disable per-widget toggles when the widget system is off", () => {
+      assert.equal(
+        wrapper.find('[id="widgets.system.lists.enabled"]').prop("disabled"),
+        true
+      );
+    });
+
+    const getToggleAllAction = () =>
+      dispatch.args.map(([a]) => a).find(a => a.type === at.SET_MULTIPLE_PREFS);
+
+    it("should enable the system and every widget from the Enable all button", () => {
+      wrapper
+        .find("button")
+        .filterWhere(node => node.text() === "Enable all")
+        .first()
+        .simulate("click");
+      const action = getToggleAllAction();
+      assert.ok(action, "dispatched SET_MULTIPLE_PREFS");
+      assert.propertyVal(action.data.values, "widgets.system.enabled", true);
+      assert.propertyVal(
+        action.data.values,
+        "widgets.system.lists.enabled",
+        true
+      );
+    });
+
+    it("should disable the system and every widget from the Disable all button", () => {
+      const allEnabledPrefs = { "widgets.system.enabled": true };
+      for (const widget of WIDGET_REGISTRY) {
+        allEnabledPrefs[widget.systemEnabledPref] = true;
+      }
+      wrapper.setProps({ otherPrefs: allEnabledPrefs });
+
+      wrapper
+        .find("button")
+        .filterWhere(node => node.text() === "Disable all")
+        .first()
+        .simulate("click");
+      const action = getToggleAllAction();
+      assert.ok(action, "dispatched SET_MULTIPLE_PREFS");
+      assert.propertyVal(action.data.values, "widgets.system.enabled", false);
+      assert.propertyVal(
+        action.data.values,
+        "widgets.system.lists.enabled",
+        false
+      );
     });
   });
 
