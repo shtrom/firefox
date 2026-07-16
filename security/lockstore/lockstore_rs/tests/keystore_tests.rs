@@ -30,8 +30,8 @@ fn test_create_dek() {
         .create_dek("col1", &local, true, 32)
         .expect("Failed to create DEK");
 
-    let collections = keystore.list_deks().expect("Failed to list");
-    assert_eq!(collections, vec!["col1"]);
+    let dek_names = keystore.list_deks().expect("Failed to list");
+    assert_eq!(dek_names, vec!["col1"]);
 
     keystore.close();
 }
@@ -65,8 +65,8 @@ fn test_delete_dek() {
 
     keystore.delete_dek("to_delete").expect("Failed to delete");
 
-    let collections = keystore.list_deks().expect("Failed to list");
-    assert!(collections.is_empty());
+    let dek_names = keystore.list_deks().expect("Failed to list");
+    assert!(dek_names.is_empty());
 
     keystore.close();
 }
@@ -185,8 +185,8 @@ fn test_get_dek_returns_correct_data() {
 fn test_list_deks_empty() {
     let keystore = Keystore::new_in_memory().expect("Failed to create keystore");
 
-    let collections = keystore.list_deks().expect("Failed to list");
-    assert!(collections.is_empty());
+    let dek_names = keystore.list_deks().expect("Failed to list");
+    assert!(dek_names.is_empty());
 
     keystore.close();
 }
@@ -200,8 +200,8 @@ fn test_list_deks_single() {
         .create_dek("only", &local, true, 32)
         .expect("Failed to create DEK");
 
-    let collections = keystore.list_deks().expect("Failed to list");
-    assert_eq!(collections, vec!["only"]);
+    let dek_names = keystore.list_deks().expect("Failed to list");
+    assert_eq!(dek_names, vec!["only"]);
 
     keystore.close();
 }
@@ -221,11 +221,11 @@ fn test_list_deks_multiple() {
         .create_dek("gamma", &local, true, 32)
         .expect("Failed to create DEK");
 
-    let collections = keystore.list_deks().expect("Failed to list");
-    assert_eq!(collections.len(), 3);
-    assert!(collections.contains(&"alpha".to_string()));
-    assert!(collections.contains(&"beta".to_string()));
-    assert!(collections.contains(&"gamma".to_string()));
+    let dek_names = keystore.list_deks().expect("Failed to list");
+    assert_eq!(dek_names.len(), 3);
+    assert!(dek_names.contains(&"alpha".to_string()));
+    assert!(dek_names.contains(&"beta".to_string()));
+    assert!(dek_names.contains(&"gamma".to_string()));
 
     keystore.close();
 }
@@ -244,8 +244,8 @@ fn test_list_deks_after_delete() {
 
     keystore.delete_dek("a").expect("Failed to delete");
 
-    let collections = keystore.list_deks().expect("Failed to list");
-    assert_eq!(collections, vec!["b"]);
+    let dek_names = keystore.list_deks().expect("Failed to list");
+    assert_eq!(dek_names, vec!["b"]);
 
     keystore.close();
 }
@@ -303,7 +303,7 @@ fn test_list_keks_unknown_dek() {
 }
 
 #[test]
-fn test_get_dek_missing_collection() {
+fn test_get_dek_missing_dek_name() {
     let keystore = Keystore::new_in_memory().expect("Failed to create keystore");
     let local = mint_local(&keystore);
 
@@ -314,7 +314,7 @@ fn test_get_dek_missing_collection() {
 }
 
 #[test]
-fn test_is_dek_extractable_missing_collection() {
+fn test_is_dek_extractable_missing_dek_name() {
     let keystore = Keystore::new_in_memory().expect("Failed to create keystore");
 
     let result = keystore.is_dek_extractable("nonexistent");
@@ -340,8 +340,8 @@ fn test_new_on_disk() {
         .create_dek("col1", &local, true, 32)
         .expect("Failed to create DEK");
 
-    let collections = keystore.list_deks().expect("Failed to list");
-    assert_eq!(collections, vec!["col1"]);
+    let dek_names = keystore.list_deks().expect("Failed to list");
+    assert_eq!(dek_names, vec!["col1"]);
 
     keystore.close();
 }
@@ -397,11 +397,11 @@ fn test_on_disk_list_deks_persists() {
     }
 
     let keystore = Keystore::get(path).expect("Failed to reopen keystore");
-    let collections = keystore.list_deks().expect("Failed to list");
-    assert_eq!(collections.len(), 3);
-    assert!(collections.contains(&"alpha".to_string()));
-    assert!(collections.contains(&"beta".to_string()));
-    assert!(collections.contains(&"gamma".to_string()));
+    let dek_names = keystore.list_deks().expect("Failed to list");
+    assert_eq!(dek_names.len(), 3);
+    assert!(dek_names.contains(&"alpha".to_string()));
+    assert!(dek_names.contains(&"beta".to_string()));
+    assert!(dek_names.contains(&"gamma".to_string()));
 
     keystore.close();
 }
@@ -428,8 +428,8 @@ fn test_on_disk_delete_dek_persists() {
     let result = keystore.get_dek("to_delete", &local);
     assert!(matches!(result, Err(LockstoreError::NotFound(_))));
 
-    let collections = keystore.list_deks().expect("Failed to list");
-    assert!(collections.is_empty());
+    let dek_names = keystore.list_deks().expect("Failed to list");
+    assert!(dek_names.is_empty());
 
     keystore.close();
 }
@@ -670,7 +670,7 @@ fn test_encrypt_bypasses_extractability() {
 }
 
 #[test]
-fn test_encrypt_missing_collection() {
+fn test_encrypt_missing_dek_name() {
     let keystore = Keystore::new_in_memory().expect("Failed to create keystore");
     let local = mint_local(&keystore);
     let err = keystore.encrypt("nosuch", &local, b"x").unwrap_err();
@@ -679,7 +679,7 @@ fn test_encrypt_missing_collection() {
 }
 
 #[test]
-fn test_encrypt_unknown_kek_ref_on_existing_collection() {
+fn test_encrypt_unknown_kek_ref_on_existing_dek_name() {
     let keystore = Keystore::new_in_memory().expect("Failed to create keystore");
     let local = mint_local(&keystore);
     keystore
@@ -921,9 +921,9 @@ fn test_keystore_get_state_visible_across_handles() {
         .expect("create DEK via first handle");
 
     let b = Keystore::get(path).expect("second open");
-    let collections = b.list_deks().expect("list via second handle");
+    let dek_names = b.list_deks().expect("list via second handle");
     assert!(
-        collections.contains(&"shared-state".to_string()),
+        dek_names.contains(&"shared-state".to_string()),
         "DEK created via the first handle must be visible via the second"
     );
 }
@@ -973,7 +973,7 @@ fn test_import_dek_rejects_wrong_length() {
 }
 
 #[test]
-fn test_import_dek_rejects_existing_collection() {
+fn test_import_dek_rejects_existing_dek_name() {
     let keystore = Keystore::new_in_memory().expect("Failed to create keystore");
     let local = mint_local(&keystore);
 
@@ -1036,7 +1036,7 @@ fn test_switch_kek_local_to_test() {
     assert_eq!(
         keks,
         vec![test.clone()],
-        "only the new kek_ref should wrap the collection after switch"
+        "only the new kek_ref should wrap the dek_name after switch"
     );
 
     let (after, _) = keystore
@@ -1047,7 +1047,7 @@ fn test_switch_kek_local_to_test() {
     let missing = keystore.get_dek("col", &local);
     assert!(
         matches!(missing, Err(LockstoreError::NotFound(_))),
-        "old kek_ref no longer wraps the collection"
+        "old kek_ref no longer wraps the dek_name"
     );
 
     keystore.close();

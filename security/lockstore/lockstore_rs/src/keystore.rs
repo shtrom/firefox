@@ -7,7 +7,7 @@
 //! All keystore rows live in `lockstore.keys.sqlite`, in the logical
 //! kvstore database `"lockstore.keys"`. Two row families:
 //!
-//! - **DEK metadata** at row key `"lockstore::dek::<collection>"`.
+//! - **DEK metadata** at row key `"lockstore::dek::<dek_name>"`.
 //!   Value is a JSON `DekMetadata` (via `utils::bytes_to_value`):
 //!
 //!   ```text
@@ -34,7 +34,7 @@
 //! the KEK named by `kek_ref`). Every structural field — including the
 //! `kek_ref` strings — is plaintext on disk, so a plain `sqlite3` dump
 //! of `lockstore.keys.sqlite` is enough to enumerate which KEKs wrap
-//! each collection. The `nsILockstore.listKeks` API surfaces this same
+//! each DEK. The `nsILockstore.listKeks` API surfaces this same
 //! data programmatically; the on-disk format is documented here as a
 //! stable contract for offline tooling.
 
@@ -124,10 +124,10 @@ struct DekMetadata {
 ///
 /// Holding a `ConnectionHandle` is the witness that the caller has
 /// exclusive write access to DEK metadata: every operation that walks
-/// or mutates collection rows
+/// or mutates dek_name rows
 /// ([`list_deks`](Self::list_deks), `load_metadata`,
 /// `save_metadata`) is a method on this type, so the compiler enforces
-/// that a thread cannot read the collection list and then load a row
+/// that a thread cannot read the dek_name list and then load a row
 /// without holding the lock across both steps. Single-step mutations
 /// on [`Keystore`] (`create_dek`, `add_kek`, `remove_kek`,
 /// `delete_dek`, `create_kek`) acquire a connection internally;
@@ -142,7 +142,7 @@ pub struct ConnectionHandle<'a> {
 }
 
 impl ConnectionHandle<'_> {
-    /// Returns the names of every collection that currently has DEK
+    /// Returns the names of every DEK that currently has
     /// metadata stored.
     pub fn list_deks(&self) -> Result<Vec<String>, LockstoreError> {
         use kvstore::DatabaseError;
@@ -150,7 +150,7 @@ impl ConnectionHandle<'_> {
         let reader = self.keystore.store.reader()?;
         let db_name = DB_NAME.to_string();
 
-        let collections = reader
+        let dek_names = reader
             .read(|conn| {
                 let mut stmt = conn
                     .prepare(
@@ -175,28 +175,24 @@ impl ConnectionHandle<'_> {
             })
             .map_err(LockstoreError::Database)?;
 
-        Ok(collections)
+        Ok(dek_names)
     }
 
-    fn load_metadata(&self, collection_name: &str) -> Result<DekMetadata, LockstoreError> {
-        let dek_key = format!("{DEK_PREFIX}{collection_name}");
+    fn load_metadata(&self, dek_name: &str) -> Result<DekMetadata, LockstoreError> {
+        let dek_key = format!("{DEK_PREFIX}{dek_name}");
         let db = Database::new(&self.keystore.store, DB_NAME);
         let key = Key::from(dek_key.as_str());
 
         let metadata_value = db.get(&key, &GetOptions::default())?.ok_or_else(|| {
-            LockstoreError::NotFound(format!("DEK not found for collection: {collection_name}"))
+            LockstoreError::NotFound(format!("DEK not found for dek_name: {dek_name}"))
         })?;
 
         let metadata_bytes = utils::value_to_bytes(&metadata_value)?;
         Ok(serde_json::from_slice(&metadata_bytes)?)
     }
 
-    fn save_metadata(
-        &self,
-        collection_name: &str,
-        metadata: &DekMetadata,
-    ) -> Result<(), LockstoreError> {
-        let dek_key = format!("{DEK_PREFIX}{collection_name}");
+    fn save_metadata(&self, dek_name: &str, metadata: &DekMetadata) -> Result<(), LockstoreError> {
+        let dek_key = format!("{DEK_PREFIX}{dek_name}");
         let db = Database::new(&self.keystore.store, DB_NAME);
         let key = Key::from(dek_key.as_str());
         let metadata_bytes = serde_json::to_vec(metadata)?;
@@ -232,10 +228,10 @@ pub struct Keystore {
     /// acquired by every operation that walks or mutates DEK metadata.
     /// Callers acquire a handle via [`acquire_connection`](Self::acquire_connection)
     /// rather than touching this directly; the handle's `Drop` releases
-    /// the guard. Rotation walks every collection and rewraps each
+    /// the guard. Rotation walks every DEK and rewraps each
     /// `Password`-bound DEK under the new KEK; holding the connection
     /// across the whole pass ensures a concurrent `create_dek` cannot
-    /// leave a fresh collection wrapped under the about-to-be-stale
+    /// leave a fresh dek_name wrapped under the about-to-be-stale
     /// KEK only.
     connection_lock: Arc<Mutex<()>>,
 }
@@ -319,13 +315,13 @@ impl Keystore {
 
     pub fn create_dek(
         &self,
-        collection_name: &str,
+        dek_name: &str,
         kek_ref: &str,
         extractable: bool,
         key_size: usize,
     ) -> Result<(), LockstoreError> {
         self.create_dek_with_cipher(
-            collection_name,
+            dek_name,
             kek_ref,
             extractable,
             DEFAULT_CIPHER_SUITE,
@@ -335,7 +331,7 @@ impl Keystore {
 
     pub fn create_dek_with_cipher(
         &self,
-        collection_name: &str,
+        dek_name: &str,
         kek_ref: &str,
         extractable: bool,
         cipher_suite: CipherSuite,
@@ -358,14 +354,14 @@ impl Keystore {
         // brand-new DEK can't be wrapped under an about-to-be-rotated KEK.
         let conn = self.acquire_connection()?;
 
-        let dek_key = format!("{DEK_PREFIX}{collection_name}");
+        let dek_key = format!("{DEK_PREFIX}{dek_name}");
         let db = Database::new(&self.store, DB_NAME);
         let key = Key::from(dek_key.as_str());
         let existing = db.get(&key, &GetOptions::default())?;
 
         if existing.is_some() {
             return Err(LockstoreError::InvalidConfiguration(format!(
-                "DEK already exists for collection: {collection_name}"
+                "DEK already exists for dek_name: {dek_name}"
             )));
         }
 
@@ -384,17 +380,17 @@ impl Keystore {
             key_size,
         };
 
-        conn.save_metadata(collection_name, &metadata)
+        conn.save_metadata(dek_name, &metadata)
     }
 
-    /// Install caller-supplied `dek_bytes` as the DEK for `collection_name`,
+    /// Install caller-supplied `dek_bytes` as the DEK for `dek_name`,
     /// wrapped under the existing KEK at `kek_ref`. Migration primitive: use
     /// this to bring data already encrypted under a known external DEK under
     /// keystore management without re-encrypting ciphertexts at rest.
     ///
     /// `dek_bytes` must match the wire length of the default cipher suite
     /// (32 bytes for AES-256-GCM); other lengths are rejected with
-    /// `InvalidConfiguration`. The collection must not already have a DEK
+    /// `InvalidConfiguration`. The dek_name must not already have a DEK
     /// and the KEK at `kek_ref` must be unlocked (required so we can wrap
     /// the caller's bytes).
     ///
@@ -403,7 +399,7 @@ impl Keystore {
     /// whether future `get_dek` calls succeed.
     pub fn import_dek(
         &self,
-        collection_name: &str,
+        dek_name: &str,
         kek_ref: &str,
         dek_bytes: &[u8],
         extractable: bool,
@@ -424,14 +420,14 @@ impl Keystore {
         // the same reason `create_dek` does (see comment there).
         let conn = self.acquire_connection()?;
 
-        let dek_key = format!("{DEK_PREFIX}{collection_name}");
+        let dek_key = format!("{DEK_PREFIX}{dek_name}");
         let db = Database::new(&self.store, DB_NAME);
         let key = Key::from(dek_key.as_str());
         let existing = db.get(&key, &GetOptions::default())?;
 
         if existing.is_some() {
             return Err(LockstoreError::InvalidConfiguration(format!(
-                "DEK already exists for collection: {collection_name}"
+                "DEK already exists for dek_name: {dek_name}"
             )));
         }
 
@@ -451,12 +447,12 @@ impl Keystore {
             key_size: dek_bytes.len(),
         };
 
-        conn.save_metadata(collection_name, &metadata)
+        conn.save_metadata(dek_name, &metadata)
     }
 
     pub(crate) fn get_dek_internal(
         &self,
-        collection_name: &str,
+        dek_name: &str,
         kek_ref: &str,
     ) -> Result<(Zeroizing<Vec<u8>>, CipherSuite, bool), LockstoreError> {
         // Parse upfront so a malformed kek_ref surfaces as
@@ -465,7 +461,7 @@ impl Keystore {
         KekType::from_kek_ref(kek_ref)?;
 
         let conn = self.acquire_connection()?;
-        let metadata = conn.load_metadata(collection_name)?;
+        let metadata = conn.load_metadata(dek_name)?;
 
         let entry = metadata
             .wrapped_deks
@@ -473,7 +469,7 @@ impl Keystore {
             .find(|w| w.kek_ref == kek_ref)
             .ok_or_else(|| {
                 LockstoreError::NotFound(format!(
-                    "No DEK for collection '{collection_name}' with kek_ref '{kek_ref}'"
+                    "No DEK for dek_name '{dek_name}' with kek_ref '{kek_ref}'"
                 ))
             })?;
 
@@ -486,52 +482,52 @@ impl Keystore {
         // (data corruption, downgrade, or wrong KEK).
         if dek.len() != metadata.key_size {
             return Err(LockstoreError::InvalidConfiguration(format!(
-                "DEK length {} does not match stored key_size {} for collection '{}'",
+                "DEK length {} does not match stored key_size {} for dek_name '{}'",
                 dek.len(),
                 metadata.key_size,
-                collection_name
+                dek_name
             )));
         }
 
         Ok((dek, metadata.cipher_suite, metadata.extractable))
     }
 
-    pub fn is_dek_extractable(&self, collection_name: &str) -> Result<bool, LockstoreError> {
+    pub fn is_dek_extractable(&self, dek_name: &str) -> Result<bool, LockstoreError> {
         let conn = self.acquire_connection()?;
-        let metadata = conn.load_metadata(collection_name)?;
+        let metadata = conn.load_metadata(dek_name)?;
         Ok(metadata.extractable)
     }
 
     pub fn get_dek(
         &self,
-        collection_name: &str,
+        dek_name: &str,
         kek_ref: &str,
     ) -> Result<(Zeroizing<Vec<u8>>, CipherSuite), LockstoreError> {
-        if !self.is_dek_extractable(collection_name)? {
+        if !self.is_dek_extractable(dek_name)? {
             return Err(LockstoreError::NotExtractable(format!(
-                "DEK for '{collection_name}' is not extractable"
+                "DEK for '{dek_name}' is not extractable"
             )));
         }
 
-        let (dek, cipher_suite, _) = self.get_dek_internal(collection_name, kek_ref)?;
+        let (dek, cipher_suite, _) = self.get_dek_internal(dek_name, kek_ref)?;
         Ok((dek, cipher_suite))
     }
 
-    /// Encrypts `plaintext` with the DEK for `(collection, kek_ref)`. The returned
+    /// Encrypts `plaintext` with the DEK for `(dek_name, kek_ref)`. The returned
     /// blob is self-describing: `[cipher_suite_id(1)] || [nonce] || [ciphertext+tag]`.
     /// The DEK does not need to be extractable; the DEK bytes never leave Lockstore.
     pub fn encrypt(
         &self,
-        collection: &str,
+        dek_name: &str,
         kek_ref: &str,
         plaintext: &[u8],
     ) -> Result<Vec<u8>, LockstoreError> {
-        let (dek, cipher_suite, _) = self.get_dek_internal(collection, kek_ref)?;
+        let (dek, cipher_suite, _) = self.get_dek_internal(dek_name, kek_ref)?;
         crypto::encrypt_with_key(plaintext, &dek, cipher_suite)
     }
 
     /// Decrypts a blob produced by `encrypt` using the DEK for
-    /// `(collection, kek_ref)`. The cipher suite is encoded in the
+    /// `(dek_name, kek_ref)`. The cipher suite is encoded in the
     /// blob's leading byte and must match the suite recorded for this
     /// DEK in `DekMetadata.cipher_suite`; a mismatch (e.g. the blob's
     /// prefix was tampered with to point at a different suite) is
@@ -539,11 +535,11 @@ impl Keystore {
     /// gets a chance to fail with a less specific error.
     pub fn decrypt(
         &self,
-        collection: &str,
+        dek_name: &str,
         kek_ref: &str,
         ciphertext: &[u8],
     ) -> Result<Zeroizing<Vec<u8>>, LockstoreError> {
-        let (dek, expected_suite, _) = self.get_dek_internal(collection, kek_ref)?;
+        let (dek, expected_suite, _) = self.get_dek_internal(dek_name, kek_ref)?;
         let blob_suite = crypto::cipher_suite_of_blob(ciphertext)?;
         if blob_suite != expected_suite {
             return Err(LockstoreError::Decryption(format!(
@@ -557,14 +553,14 @@ impl Keystore {
 
     pub fn add_kek(
         &self,
-        collection_name: &str,
+        dek_name: &str,
         source_kek_ref: &str,
         new_kek_ref: &str,
     ) -> Result<(), LockstoreError> {
         let new_kek_type = KekType::from_kek_ref(new_kek_ref)?;
 
         let conn = self.acquire_connection()?;
-        let mut metadata = conn.load_metadata(collection_name)?;
+        let mut metadata = conn.load_metadata(dek_name)?;
 
         if metadata
             .wrapped_deks
@@ -572,7 +568,7 @@ impl Keystore {
             .any(|w| w.kek_ref == new_kek_ref)
         {
             return Err(LockstoreError::InvalidConfiguration(format!(
-                "kek_ref '{new_kek_ref}' already exists for collection '{collection_name}'"
+                "kek_ref '{new_kek_ref}' already exists for dek_name '{dek_name}'"
             )));
         }
 
@@ -582,7 +578,7 @@ impl Keystore {
             .find(|w| w.kek_ref == source_kek_ref)
             .ok_or_else(|| {
                 LockstoreError::NotFound(format!(
-                    "No DEK for collection '{collection_name}' with kek_ref '{source_kek_ref}'"
+                    "No DEK for dek_name '{dek_name}' with kek_ref '{source_kek_ref}'"
                 ))
             })?;
 
@@ -598,16 +594,16 @@ impl Keystore {
             dek: new_wrapped,
         });
 
-        conn.save_metadata(collection_name, &metadata)
+        conn.save_metadata(dek_name, &metadata)
     }
 
-    pub fn remove_kek(&self, collection_name: &str, kek_ref: &str) -> Result<(), LockstoreError> {
+    pub fn remove_kek(&self, dek_name: &str, kek_ref: &str) -> Result<(), LockstoreError> {
         let conn = self.acquire_connection()?;
-        let mut metadata = conn.load_metadata(collection_name)?;
+        let mut metadata = conn.load_metadata(dek_name)?;
 
         if metadata.wrapped_deks.len() <= 1 {
             return Err(LockstoreError::InvalidConfiguration(format!(
-                "Cannot remove the last KEK from collection '{collection_name}'"
+                "Cannot remove the last KEK from dek_name '{dek_name}'"
             )));
         }
 
@@ -617,7 +613,7 @@ impl Keystore {
             .find(|w| w.kek_ref == kek_ref)
             .ok_or_else(|| {
                 LockstoreError::NotFound(format!(
-                    "No DEK for collection '{collection_name}' with kek_ref '{kek_ref}'"
+                    "No DEK for dek_name '{dek_name}' with kek_ref '{kek_ref}'"
                 ))
             })?;
 
@@ -626,31 +622,31 @@ impl Keystore {
 
         metadata.wrapped_deks.retain(|w| w.kek_ref != kek_ref);
 
-        conn.save_metadata(collection_name, &metadata)?;
+        conn.save_metadata(dek_name, &metadata)?;
 
         // The per-kek_ref record on disk is left intact. Callers that
         // want to drop the record itself must invoke `delete_kek`
         // explicitly — a separate lifecycle step that refuses to act
-        // while any collection still wraps under the kek_ref.
+        // while any DEK still wraps under the kek_ref.
         Ok(())
     }
 
-    /// Atomically rewrap the DEK for `collection_name` from `old_kek_ref` to
+    /// Atomically rewrap the DEK for `dek_name` from `old_kek_ref` to
     /// `new_kek_ref`. The DEK bytes are unchanged, so ciphertexts at rest
-    /// under this collection remain valid.
+    /// under this dek_name remain valid.
     ///
     /// Equivalent in effect to `add_kek` followed by `remove_kek` but
     /// atomic at the kvstore-row level: a crash mid-operation leaves the
     /// keystore in the old state or the new state, never an intermediate
     /// half-state. The wrapping entry is replaced in place, so the
-    /// "collection always has at least one wrapping" invariant is
+    /// "dek_name always has at least one wrapping" invariant is
     /// preserved at every observable disk state.
     ///
-    /// `old_kek_ref` must currently wrap the collection and be unlocked.
-    /// `new_kek_ref` must not currently wrap the collection.
+    /// `old_kek_ref` must currently wrap the dek_name and be unlocked.
+    /// `new_kek_ref` must not currently wrap the dek_name.
     pub fn switch_kek(
         &self,
-        collection_name: &str,
+        dek_name: &str,
         old_kek_ref: &str,
         new_kek_ref: &str,
     ) -> Result<(), LockstoreError> {
@@ -663,7 +659,7 @@ impl Keystore {
         let new_kek_type = KekType::from_kek_ref(new_kek_ref)?;
 
         let conn = self.acquire_connection()?;
-        let mut metadata = conn.load_metadata(collection_name)?;
+        let mut metadata = conn.load_metadata(dek_name)?;
 
         let old_entry = metadata
             .wrapped_deks
@@ -671,7 +667,7 @@ impl Keystore {
             .find(|w| w.kek_ref == old_kek_ref)
             .ok_or_else(|| {
                 LockstoreError::NotFound(format!(
-                    "No DEK for collection '{collection_name}' with kek_ref '{old_kek_ref}'"
+                    "No DEK for dek_name '{dek_name}' with kek_ref '{old_kek_ref}'"
                 ))
             })?;
 
@@ -681,7 +677,7 @@ impl Keystore {
             .any(|w| w.kek_ref == new_kek_ref)
         {
             return Err(LockstoreError::InvalidConfiguration(format!(
-                "new_kek_ref '{new_kek_ref}' already wraps collection '{collection_name}'"
+                "new_kek_ref '{new_kek_ref}' already wraps dek_name '{dek_name}'"
             )));
         }
 
@@ -704,19 +700,19 @@ impl Keystore {
             }
         }
 
-        conn.save_metadata(collection_name, &metadata)
+        conn.save_metadata(dek_name, &metadata)
     }
 
-    pub fn delete_dek(&self, collection_name: &str) -> Result<(), LockstoreError> {
+    pub fn delete_dek(&self, dek_name: &str) -> Result<(), LockstoreError> {
         let _conn = self.acquire_connection()?;
 
-        let dek_key = format!("{DEK_PREFIX}{collection_name}");
+        let dek_key = format!("{DEK_PREFIX}{dek_name}");
         let db = Database::new(&self.store, DB_NAME);
         let key = Key::from(dek_key.as_str());
 
         if !db.has(&key, &GetOptions::default())? {
             return Err(LockstoreError::NotFound(format!(
-                "DEK not found for collection: {collection_name}"
+                "DEK not found for dek_name: {dek_name}"
             )));
         }
 
@@ -726,7 +722,7 @@ impl Keystore {
         // left intact on disk. Callers that want to drop those records
         // must invoke `delete_kek` explicitly for each kek_ref — a
         // separate lifecycle step that refuses to act while any other
-        // collection still wraps under the kek_ref.
+        // dek_name still wraps under the kek_ref.
         Ok(())
     }
 
@@ -758,9 +754,9 @@ impl Keystore {
             )));
         }
 
-        if let Some(coll) = self.kek_ref_referenced_by_collection(&conn, kek_ref)? {
+        if let Some(dek_name) = self.kek_ref_referenced_by_dek_name(&conn, kek_ref)? {
             return Err(LockstoreError::InvalidConfiguration(format!(
-                "kek_ref '{kek_ref}' is still in use to wrap DEK '{coll}'; remove the wrapping before deleting the KEK")));
+                "kek_ref '{kek_ref}' is still in use to wrap DEK '{dek_name}'; remove the wrapping before deleting the KEK")));
         }
 
         match kek_type {
@@ -770,19 +766,19 @@ impl Keystore {
         }
     }
 
-    /// If any collection wraps a DEK under `kek_ref`, return the name
-    /// of the first such collection (used for error messages on
-    /// `delete_kek`). Returns `None` if no collection references
+    /// If any DEK is wrapped under `kek_ref`, return its name
+    /// of the first such dek_name (used for error messages on
+    /// `delete_kek`). Returns `None` if no dek_name references
     /// `kek_ref`.
-    fn kek_ref_referenced_by_collection(
+    fn kek_ref_referenced_by_dek_name(
         &self,
         conn: &ConnectionHandle<'_>,
         kek_ref: &str,
     ) -> Result<Option<String>, LockstoreError> {
-        for collection in conn.list_deks()? {
-            let metadata = conn.load_metadata(&collection)?;
+        for dek_name in conn.list_deks()? {
+            let metadata = conn.load_metadata(&dek_name)?;
             if metadata.wrapped_deks.iter().any(|w| w.kek_ref == kek_ref) {
-                return Ok(Some(collection));
+                return Ok(Some(dek_name));
             }
         }
         Ok(None)
@@ -805,7 +801,7 @@ impl Keystore {
         })
     }
 
-    /// Snapshot of all collections that currently have DEK metadata
+    /// Snapshot of all dek_names that currently have DEK metadata
     /// stored. Internally acquires a short-lived connection; callers
     /// that need a stable view across multiple operations should call
     /// [`acquire_connection`](Self::acquire_connection) and use

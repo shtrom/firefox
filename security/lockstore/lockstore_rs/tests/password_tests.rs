@@ -490,7 +490,7 @@ fn delete_kek_after_switch_kek_succeeds() {
         .expect("unlock");
     ks.create_dek("col", &pw, false, 32).expect("create_dek");
 
-    // Switch the collection's wrapping to a new password kek.
+    // Switch the dek_name's wrapping to a new password kek.
     let pw2 = ks
         .create_password_kek_test_only(PW_NEW)
         .expect("create password 2");
@@ -498,9 +498,9 @@ fn delete_kek_after_switch_kek_succeeds() {
         .expect("unlock pw2");
     ks.switch_kek("col", &pw, &pw2).expect("switch_kek");
 
-    // After switch_kek, `pw` no longer wraps any collection but its
+    // After switch_kek, `pw` no longer wraps any dek_name but its
     // record is still on disk. delete_kek can drop it cleanly because
-    // no collection references it any more.
+    // no dek_name references it any more.
     ks.delete_kek(&pw).expect("delete unreferenced pw");
 
     // Subsequent unlock surfaces InvalidKekRef: the kek_ref parses,

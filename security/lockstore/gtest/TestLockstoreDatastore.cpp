@@ -28,7 +28,7 @@ class LockstoreDatastoreTest : public ::testing::Test {
  protected:
   nsCOMPtr<nsIFile> mTmpDir;
   nsAutoCString mProfilePath;
-  const nsCString mTestColl{"test"};
+  const nsCString mTestDekName{"test"};
   nsCString mLocalKekRef;
   KeystoreHandle* mKeystore = nullptr;
   LockstoreDatastore* mDatastore = nullptr;
@@ -55,7 +55,7 @@ class LockstoreDatastoreTest : public ::testing::Test {
                              /* cache_timeout_ms */ 0, &mLocalKekRef);
     ASSERT_NS_SUCCEEDED(rv);
 
-    rv = keystore_create_dek(mKeystore, &mTestColl, &mLocalKekRef, false,
+    rv = keystore_create_dek(mKeystore, &mTestDekName, &mLocalKekRef, false,
                              /*key_size=*/32);
     ASSERT_NS_SUCCEEDED(rv);
   }
@@ -76,8 +76,8 @@ class LockstoreDatastoreTest : public ::testing::Test {
 };
 
 TEST_F(LockstoreDatastoreTest, OpenAndClose) {
-  nsresult rv = lockstore_datastore_open(mKeystore, &mTestColl, &mLocalKekRef,
-                                         &mDatastore);
+  nsresult rv = lockstore_datastore_open(mKeystore, &mTestDekName,
+                                         &mLocalKekRef, &mDatastore);
   ASSERT_NS_SUCCEEDED(rv);
   ASSERT_NE(mDatastore, nullptr);
   nsresult rvClose = lockstore_datastore_close(mDatastore);
@@ -85,7 +85,7 @@ TEST_F(LockstoreDatastoreTest, OpenAndClose) {
   ASSERT_NS_SUCCEEDED(rvClose);
 }
 
-TEST_F(LockstoreDatastoreTest, OpenEmptyCollection) {
+TEST_F(LockstoreDatastoreTest, OpenEmptyDekName) {
   nsAutoCString empty;
   nsresult rv =
       lockstore_datastore_open(mKeystore, &empty, &mLocalKekRef, &mDatastore);
@@ -94,16 +94,16 @@ TEST_F(LockstoreDatastoreTest, OpenEmptyCollection) {
 }
 
 TEST_F(LockstoreDatastoreTest, OpenNoDek) {
-  const nsCString noDekColl("nodek");
-  nsresult rv = lockstore_datastore_open(mKeystore, &noDekColl, &mLocalKekRef,
+  const nsCString noDekName("nodek");
+  nsresult rv = lockstore_datastore_open(mKeystore, &noDekName, &mLocalKekRef,
                                          &mDatastore);
   ASSERT_EQ(rv, NS_ERROR_NOT_AVAILABLE);
   ASSERT_EQ(mDatastore, nullptr);
 }
 
 TEST_F(LockstoreDatastoreTest, PutGetRoundtrip) {
-  nsresult rv = lockstore_datastore_open(mKeystore, &mTestColl, &mLocalKekRef,
-                                         &mDatastore);
+  nsresult rv = lockstore_datastore_open(mKeystore, &mTestDekName,
+                                         &mLocalKekRef, &mDatastore);
   ASSERT_NS_SUCCEEDED(rv);
 
   const nsCString entry("entry1");
@@ -119,8 +119,8 @@ TEST_F(LockstoreDatastoreTest, PutGetRoundtrip) {
 }
 
 TEST_F(LockstoreDatastoreTest, PutEmptyEntry) {
-  nsresult rv = lockstore_datastore_open(mKeystore, &mTestColl, &mLocalKekRef,
-                                         &mDatastore);
+  nsresult rv = lockstore_datastore_open(mKeystore, &mTestDekName,
+                                         &mLocalKekRef, &mDatastore);
   ASSERT_NS_SUCCEEDED(rv);
 
   nsAutoCString empty;
@@ -130,8 +130,8 @@ TEST_F(LockstoreDatastoreTest, PutEmptyEntry) {
 }
 
 TEST_F(LockstoreDatastoreTest, PutZeroLength) {
-  nsresult rv = lockstore_datastore_open(mKeystore, &mTestColl, &mLocalKekRef,
-                                         &mDatastore);
+  nsresult rv = lockstore_datastore_open(mKeystore, &mTestDekName,
+                                         &mLocalKekRef, &mDatastore);
   ASSERT_NS_SUCCEEDED(rv);
 
   const nsCString entry("entry1");
@@ -141,8 +141,8 @@ TEST_F(LockstoreDatastoreTest, PutZeroLength) {
 }
 
 TEST_F(LockstoreDatastoreTest, PutOverwrite) {
-  nsresult rv = lockstore_datastore_open(mKeystore, &mTestColl, &mLocalKekRef,
-                                         &mDatastore);
+  nsresult rv = lockstore_datastore_open(mKeystore, &mTestDekName,
+                                         &mLocalKekRef, &mDatastore);
   ASSERT_NS_SUCCEEDED(rv);
 
   const nsCString entry("entry1");
@@ -162,8 +162,8 @@ TEST_F(LockstoreDatastoreTest, PutOverwrite) {
 }
 
 TEST_F(LockstoreDatastoreTest, GetEmptyEntry) {
-  nsresult rv = lockstore_datastore_open(mKeystore, &mTestColl, &mLocalKekRef,
-                                         &mDatastore);
+  nsresult rv = lockstore_datastore_open(mKeystore, &mTestDekName,
+                                         &mLocalKekRef, &mDatastore);
   ASSERT_NS_SUCCEEDED(rv);
 
   nsAutoCString empty;
@@ -173,8 +173,8 @@ TEST_F(LockstoreDatastoreTest, GetEmptyEntry) {
 }
 
 TEST_F(LockstoreDatastoreTest, GetNonexistent) {
-  nsresult rv = lockstore_datastore_open(mKeystore, &mTestColl, &mLocalKekRef,
-                                         &mDatastore);
+  nsresult rv = lockstore_datastore_open(mKeystore, &mTestDekName,
+                                         &mLocalKekRef, &mDatastore);
   ASSERT_NS_SUCCEEDED(rv);
 
   const nsCString entry("nosuch");
@@ -184,8 +184,8 @@ TEST_F(LockstoreDatastoreTest, GetNonexistent) {
 }
 
 TEST_F(LockstoreDatastoreTest, DeleteExisting) {
-  nsresult rv = lockstore_datastore_open(mKeystore, &mTestColl, &mLocalKekRef,
-                                         &mDatastore);
+  nsresult rv = lockstore_datastore_open(mKeystore, &mTestDekName,
+                                         &mLocalKekRef, &mDatastore);
   ASSERT_NS_SUCCEEDED(rv);
 
   const nsCString entry("entry1");
@@ -198,8 +198,8 @@ TEST_F(LockstoreDatastoreTest, DeleteExisting) {
 }
 
 TEST_F(LockstoreDatastoreTest, DeleteEmptyEntry) {
-  nsresult rv = lockstore_datastore_open(mKeystore, &mTestColl, &mLocalKekRef,
-                                         &mDatastore);
+  nsresult rv = lockstore_datastore_open(mKeystore, &mTestDekName,
+                                         &mLocalKekRef, &mDatastore);
   ASSERT_NS_SUCCEEDED(rv);
 
   nsAutoCString empty;
@@ -208,8 +208,8 @@ TEST_F(LockstoreDatastoreTest, DeleteEmptyEntry) {
 }
 
 TEST_F(LockstoreDatastoreTest, DeleteNonexistent) {
-  nsresult rv = lockstore_datastore_open(mKeystore, &mTestColl, &mLocalKekRef,
-                                         &mDatastore);
+  nsresult rv = lockstore_datastore_open(mKeystore, &mTestDekName,
+                                         &mLocalKekRef, &mDatastore);
   ASSERT_NS_SUCCEEDED(rv);
 
   const nsCString entry("nosuch");
@@ -218,8 +218,8 @@ TEST_F(LockstoreDatastoreTest, DeleteNonexistent) {
 }
 
 TEST_F(LockstoreDatastoreTest, DeleteThenGet) {
-  nsresult rv = lockstore_datastore_open(mKeystore, &mTestColl, &mLocalKekRef,
-                                         &mDatastore);
+  nsresult rv = lockstore_datastore_open(mKeystore, &mTestDekName,
+                                         &mLocalKekRef, &mDatastore);
   ASSERT_NS_SUCCEEDED(rv);
 
   const nsCString entry("entry1");
@@ -236,8 +236,8 @@ TEST_F(LockstoreDatastoreTest, DeleteThenGet) {
 }
 
 TEST_F(LockstoreDatastoreTest, KeysEmpty) {
-  nsresult rv = lockstore_datastore_open(mKeystore, &mTestColl, &mLocalKekRef,
-                                         &mDatastore);
+  nsresult rv = lockstore_datastore_open(mKeystore, &mTestDekName,
+                                         &mLocalKekRef, &mDatastore);
   ASSERT_NS_SUCCEEDED(rv);
 
   nsTArray<nsCString> entries;
@@ -247,8 +247,8 @@ TEST_F(LockstoreDatastoreTest, KeysEmpty) {
 }
 
 TEST_F(LockstoreDatastoreTest, ListEntries) {
-  nsresult rv = lockstore_datastore_open(mKeystore, &mTestColl, &mLocalKekRef,
-                                         &mDatastore);
+  nsresult rv = lockstore_datastore_open(mKeystore, &mTestDekName,
+                                         &mLocalKekRef, &mDatastore);
   ASSERT_NS_SUCCEEDED(rv);
 
   const nsCString keyA("key_a");
@@ -272,8 +272,8 @@ TEST_F(LockstoreDatastoreTest, ListEntries) {
 }
 
 TEST_F(LockstoreDatastoreTest, PersistenceAcrossReopen) {
-  nsresult rv = lockstore_datastore_open(mKeystore, &mTestColl, &mLocalKekRef,
-                                         &mDatastore);
+  nsresult rv = lockstore_datastore_open(mKeystore, &mTestDekName,
+                                         &mLocalKekRef, &mDatastore);
   ASSERT_NS_SUCCEEDED(rv);
 
   const nsCString entry("persist");
@@ -284,7 +284,7 @@ TEST_F(LockstoreDatastoreTest, PersistenceAcrossReopen) {
   ASSERT_NS_SUCCEEDED(lockstore_datastore_close(mDatastore));
   mDatastore = nullptr;
 
-  rv = lockstore_datastore_open(mKeystore, &mTestColl, &mLocalKekRef,
+  rv = lockstore_datastore_open(mKeystore, &mTestDekName, &mLocalKekRef,
                                 &mDatastore);
   ASSERT_NS_SUCCEEDED(rv);
 
@@ -296,8 +296,8 @@ TEST_F(LockstoreDatastoreTest, PersistenceAcrossReopen) {
 }
 
 TEST_F(LockstoreDatastoreTest, KeystoreCloseBeforeDatastore) {
-  nsresult rv = lockstore_datastore_open(mKeystore, &mTestColl, &mLocalKekRef,
-                                         &mDatastore);
+  nsresult rv = lockstore_datastore_open(mKeystore, &mTestDekName,
+                                         &mLocalKekRef, &mDatastore);
   ASSERT_NS_SUCCEEDED(rv);
 
   const nsCString entry("item");

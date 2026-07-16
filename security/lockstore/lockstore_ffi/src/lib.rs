@@ -91,29 +91,29 @@ pub unsafe extern "C" fn keystore_open(
 #[no_mangle]
 pub extern "C" fn keystore_create_dek(
     handle: &KeystoreHandle,
-    collection: &nsACString,
+    dek_name: &nsACString,
     kek_ref: &nsACString,
     extractable: bool,
     key_size: usize,
 ) -> nsresult {
-    if collection.is_empty() || kek_ref.is_empty() {
-        log::error!("Collection and kek_ref cannot be empty");
+    if dek_name.is_empty() || kek_ref.is_empty() {
+        log::error!("DEK name and kek_ref cannot be empty");
         return NS_ERROR_INVALID_ARG;
     }
 
-    let coll_str = collection.to_utf8();
+    let dek_name_str = dek_name.to_utf8();
     let kek_ref_str = kek_ref.to_utf8();
 
     match handle
         .keystore
-        .create_dek(&coll_str, &kek_ref_str, extractable, key_size)
+        .create_dek(&dek_name_str, &kek_ref_str, extractable, key_size)
     {
         Ok(_) => NS_OK,
         Err(e) => error_to_nsresult(&e),
     }
 }
 
-/// Install caller-supplied `dek_bytes` as the DEK for `collection`,
+/// Install caller-supplied `dek_bytes` as the DEK for `dek_name`,
 /// wrapped under `kek_ref`. Migration primitive used to bring data
 /// already encrypted under a known external DEK under keystore
 /// management without re-encrypting ciphertexts at rest.
@@ -128,14 +128,14 @@ pub extern "C" fn keystore_create_dek(
 #[no_mangle]
 pub unsafe extern "C" fn keystore_import_dek(
     handle: &KeystoreHandle,
-    collection: &nsACString,
+    dek_name: &nsACString,
     kek_ref: &nsACString,
     dek_ptr: *const u8,
     dek_len: usize,
     extractable: bool,
 ) -> nsresult {
-    if collection.is_empty() || kek_ref.is_empty() {
-        log::error!("Collection and kek_ref cannot be empty");
+    if dek_name.is_empty() || kek_ref.is_empty() {
+        log::error!("DEK name and kek_ref cannot be empty");
         return NS_ERROR_INVALID_ARG;
     }
     // Length-first check: short-circuits before any pointer
@@ -149,7 +149,7 @@ pub unsafe extern "C" fn keystore_import_dek(
         return NS_ERROR_INVALID_ARG;
     }
 
-    let coll_str = collection.to_utf8();
+    let dek_name_str = dek_name.to_utf8();
     let kek_ref_str = kek_ref.to_utf8();
     // SAFETY: non-zero len + non-null ptr validated above; caller's
     // contract requires `dek_len` valid bytes at `dek_ptr`.
@@ -157,7 +157,7 @@ pub unsafe extern "C" fn keystore_import_dek(
 
     match handle
         .keystore
-        .import_dek(&coll_str, &kek_ref_str, dek, extractable)
+        .import_dek(&dek_name_str, &kek_ref_str, dek, extractable)
     {
         Ok(()) => NS_OK,
         Err(e) => error_to_nsresult(&e),
@@ -167,16 +167,16 @@ pub unsafe extern "C" fn keystore_import_dek(
 #[no_mangle]
 pub extern "C" fn keystore_is_dek_extractable(
     handle: &KeystoreHandle,
-    collection: &nsACString,
+    dek_name: &nsACString,
     out_extractable: &mut bool,
 ) -> nsresult {
-    if collection.is_empty() {
-        log::error!("Collection cannot be empty");
+    if dek_name.is_empty() {
+        log::error!("DEK name cannot be empty");
         return NS_ERROR_INVALID_ARG;
     }
 
-    let coll_str = collection.to_utf8();
-    match handle.keystore.is_dek_extractable(&coll_str) {
+    let dek_name_str = dek_name.to_utf8();
+    match handle.keystore.is_dek_extractable(&dek_name_str) {
         Ok(b) => {
             *out_extractable = b;
             NS_OK
@@ -188,19 +188,19 @@ pub extern "C" fn keystore_is_dek_extractable(
 #[no_mangle]
 pub extern "C" fn keystore_get_dek(
     handle: &KeystoreHandle,
-    collection: &nsACString,
+    dek_name: &nsACString,
     kek_ref: &nsACString,
     ret_dek: &mut ThinVec<u8>,
 ) -> nsresult {
-    if collection.is_empty() || kek_ref.is_empty() {
-        log::error!("Collection and kek_ref cannot be empty");
+    if dek_name.is_empty() || kek_ref.is_empty() {
+        log::error!("DEK name and kek_ref cannot be empty");
         return NS_ERROR_INVALID_ARG;
     }
 
-    let coll_str = collection.to_utf8();
+    let dek_name_str = dek_name.to_utf8();
     let kek_ref_str = kek_ref.to_utf8();
 
-    match handle.keystore.get_dek(&coll_str, &kek_ref_str) {
+    match handle.keystore.get_dek(&dek_name_str, &kek_ref_str) {
         Ok((dek_bytes, _cipher_suite)) => {
             *ret_dek = ThinVec::from(dek_bytes.as_slice());
             NS_OK
@@ -209,23 +209,20 @@ pub extern "C" fn keystore_get_dek(
     }
 }
 
-/// Delete the DEK for `collection`. The keystore does not track the
+/// Delete the DEK for `dek_name`. The keystore does not track the
 /// associated datastore; callers are responsible for disposing of any
-/// ciphertext under this collection by other means before (or after)
+/// ciphertext under this dek_name by other means before (or after)
 /// this call.
 #[no_mangle]
-pub extern "C" fn keystore_delete_dek(
-    handle: &KeystoreHandle,
-    collection: &nsACString,
-) -> nsresult {
-    if collection.is_empty() {
-        log::error!("Collection cannot be empty");
+pub extern "C" fn keystore_delete_dek(handle: &KeystoreHandle, dek_name: &nsACString) -> nsresult {
+    if dek_name.is_empty() {
+        log::error!("DEK name cannot be empty");
         return NS_ERROR_INVALID_ARG;
     }
 
-    let coll_str = collection.to_utf8();
+    let dek_name_str = dek_name.to_utf8();
 
-    match handle.keystore.delete_dek(&coll_str) {
+    match handle.keystore.delete_dek(&dek_name_str) {
         Ok(()) => NS_OK,
         Err(e) => error_to_nsresult(&e),
     }
@@ -234,11 +231,11 @@ pub extern "C" fn keystore_delete_dek(
 #[no_mangle]
 pub extern "C" fn keystore_list_deks(
     handle: &KeystoreHandle,
-    ret_collections: &mut ThinVec<nsCString>,
+    ret_dek_names: &mut ThinVec<nsCString>,
 ) -> nsresult {
     match handle.keystore.list_deks() {
-        Ok(collections) => {
-            *ret_collections = collections
+        Ok(dek_names) => {
+            *ret_dek_names = dek_names
                 .into_iter()
                 .map(|c| nsCString::from(&c[..]))
                 .collect();
@@ -270,18 +267,18 @@ pub extern "C" fn keystore_list_keks(
 #[no_mangle]
 pub extern "C" fn keystore_add_kek(
     handle: &KeystoreHandle,
-    collection: &nsACString,
+    dek_name: &nsACString,
     from_kek_ref: &nsACString,
     to_kek_ref: &nsACString,
 ) -> nsresult {
-    if collection.is_empty() || from_kek_ref.is_empty() || to_kek_ref.is_empty() {
-        log::error!("Collection, from_kek_ref and to_kek_ref cannot be empty");
+    if dek_name.is_empty() || from_kek_ref.is_empty() || to_kek_ref.is_empty() {
+        log::error!("DEK name, from_kek_ref and to_kek_ref cannot be empty");
         return NS_ERROR_INVALID_ARG;
     }
-    let coll_str = collection.to_utf8();
+    let dek_name_str = dek_name.to_utf8();
     let from_str = from_kek_ref.to_utf8();
     let to_str = to_kek_ref.to_utf8();
-    match handle.keystore.add_kek(&coll_str, &from_str, &to_str) {
+    match handle.keystore.add_kek(&dek_name_str, &from_str, &to_str) {
         Ok(()) => NS_OK,
         Err(e) => error_to_nsresult(&e),
     }
@@ -290,40 +287,43 @@ pub extern "C" fn keystore_add_kek(
 #[no_mangle]
 pub extern "C" fn keystore_remove_kek(
     handle: &KeystoreHandle,
-    collection: &nsACString,
+    dek_name: &nsACString,
     kek_ref: &nsACString,
 ) -> nsresult {
-    if collection.is_empty() || kek_ref.is_empty() {
-        log::error!("Collection and kek_ref cannot be empty");
+    if dek_name.is_empty() || kek_ref.is_empty() {
+        log::error!("DEK name and kek_ref cannot be empty");
         return NS_ERROR_INVALID_ARG;
     }
-    let coll_str = collection.to_utf8();
+    let dek_name_str = dek_name.to_utf8();
     let kek_ref_str = kek_ref.to_utf8();
-    match handle.keystore.remove_kek(&coll_str, &kek_ref_str) {
+    match handle.keystore.remove_kek(&dek_name_str, &kek_ref_str) {
         Ok(()) => NS_OK,
         Err(e) => error_to_nsresult(&e),
     }
 }
 
-/// Atomically rewrap the DEK for `collection` from `old_kek_ref` to
+/// Atomically rewrap the DEK for `dek_name` from `old_kek_ref` to
 /// `new_kek_ref`. The DEK bytes are unchanged; ciphertexts at rest stay
 /// valid. Equivalent in effect to `add_kek` + `remove_kek` but atomic
 /// at the kvstore-row level.
 #[no_mangle]
 pub extern "C" fn keystore_switch_kek(
     handle: &KeystoreHandle,
-    collection: &nsACString,
+    dek_name: &nsACString,
     old_kek_ref: &nsACString,
     new_kek_ref: &nsACString,
 ) -> nsresult {
-    if collection.is_empty() || old_kek_ref.is_empty() || new_kek_ref.is_empty() {
-        log::error!("Collection, old_kek_ref and new_kek_ref cannot be empty");
+    if dek_name.is_empty() || old_kek_ref.is_empty() || new_kek_ref.is_empty() {
+        log::error!("DEK name, old_kek_ref and new_kek_ref cannot be empty");
         return NS_ERROR_INVALID_ARG;
     }
-    let coll_str = collection.to_utf8();
+    let dek_name_str = dek_name.to_utf8();
     let old_str = old_kek_ref.to_utf8();
     let new_str = new_kek_ref.to_utf8();
-    match handle.keystore.switch_kek(&coll_str, &old_str, &new_str) {
+    match handle
+        .keystore
+        .switch_kek(&dek_name_str, &old_str, &new_str)
+    {
         Ok(()) => NS_OK,
         Err(e) => error_to_nsresult(&e),
     }
@@ -339,13 +339,13 @@ pub extern "C" fn keystore_switch_kek(
 #[no_mangle]
 pub unsafe extern "C" fn keystore_encrypt(
     handle: &KeystoreHandle,
-    collection: &nsACString,
+    dek_name: &nsACString,
     kek_ref: &nsACString,
     plaintext_ptr: *const u8,
     plaintext_len: usize,
     ret_ciphertext: &mut ThinVec<u8>,
 ) -> nsresult {
-    if collection.is_empty() || kek_ref.is_empty() {
+    if dek_name.is_empty() || kek_ref.is_empty() {
         return NS_ERROR_INVALID_ARG;
     }
     // Length-first check: short-circuits before any pointer
@@ -358,12 +358,15 @@ pub unsafe extern "C" fn keystore_encrypt(
     if plaintext_ptr.is_null() {
         return NS_ERROR_INVALID_ARG;
     }
-    let coll_str = collection.to_utf8();
+    let dek_name_str = dek_name.to_utf8();
     let kek_ref_str = kek_ref.to_utf8();
     // SAFETY: non-zero len + non-null ptr validated above; caller's
     // contract requires this to point at `plaintext_len` valid bytes.
     let plaintext = unsafe { std::slice::from_raw_parts(plaintext_ptr, plaintext_len) };
-    match handle.keystore.encrypt(&coll_str, &kek_ref_str, plaintext) {
+    match handle
+        .keystore
+        .encrypt(&dek_name_str, &kek_ref_str, plaintext)
+    {
         Ok(bytes) => {
             *ret_ciphertext = bytes.into();
             NS_OK
@@ -380,13 +383,13 @@ pub unsafe extern "C" fn keystore_encrypt(
 #[no_mangle]
 pub unsafe extern "C" fn keystore_decrypt(
     handle: &KeystoreHandle,
-    collection: &nsACString,
+    dek_name: &nsACString,
     kek_ref: &nsACString,
     ciphertext_ptr: *const u8,
     ciphertext_len: usize,
     ret_plaintext: &mut ThinVec<u8>,
 ) -> nsresult {
-    if collection.is_empty() || kek_ref.is_empty() {
+    if dek_name.is_empty() || kek_ref.is_empty() {
         return NS_ERROR_INVALID_ARG;
     }
     if ciphertext_len == 0 {
@@ -395,12 +398,15 @@ pub unsafe extern "C" fn keystore_decrypt(
     if ciphertext_ptr.is_null() {
         return NS_ERROR_INVALID_ARG;
     }
-    let coll_str = collection.to_utf8();
+    let dek_name_str = dek_name.to_utf8();
     let kek_ref_str = kek_ref.to_utf8();
     // SAFETY: non-zero len + non-null ptr validated above; caller's
     // contract requires this to point at `ciphertext_len` valid bytes.
     let ciphertext = unsafe { std::slice::from_raw_parts(ciphertext_ptr, ciphertext_len) };
-    match handle.keystore.decrypt(&coll_str, &kek_ref_str, ciphertext) {
+    match handle
+        .keystore
+        .decrypt(&dek_name_str, &kek_ref_str, ciphertext)
+    {
         Ok(bytes) => {
             *ret_plaintext = ThinVec::from(bytes.as_slice());
             NS_OK
@@ -583,21 +589,21 @@ pub extern "C" fn keystore_delete_kek(handle: &KeystoreHandle, kek_ref: &nsACStr
 #[no_mangle]
 pub unsafe extern "C" fn lockstore_datastore_open(
     keystore_handle: &KeystoreHandle,
-    collection: &nsACString,
+    dek_name: &nsACString,
     kek_ref: &nsACString,
     ret_handle: &mut *mut LockstoreDatastore,
 ) -> nsresult {
-    if collection.is_empty() || kek_ref.is_empty() {
-        log::error!("Collection and kek_ref cannot be empty");
+    if dek_name.is_empty() || kek_ref.is_empty() {
+        log::error!("DEK name and kek_ref cannot be empty");
         return NS_ERROR_INVALID_ARG;
     }
 
-    let coll_str = collection.to_utf8();
+    let dek_name_str = dek_name.to_utf8();
     let kek_ref_str = kek_ref.to_utf8();
 
     let datastore = match LockstoreDatastore::new(
         &keystore_handle.profile_path,
-        coll_str.to_string(),
+        dek_name_str.to_string(),
         keystore_handle.keystore.clone(),
         &kek_ref_str,
     ) {

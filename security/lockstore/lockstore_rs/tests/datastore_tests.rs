@@ -7,15 +7,15 @@ use std::sync::Arc;
 use std::time::Duration;
 use tempfile::tempdir;
 
-fn make_in_memory_ds(collection: &str) -> LockstoreDatastore {
+fn make_in_memory_ds(dek_name: &str) -> LockstoreDatastore {
     let keystore = Arc::new(Keystore::new_in_memory().expect("Failed to create keystore"));
     let local = keystore
         .create_kek(KekType::LocalKey, "", b"", Duration::ZERO)
         .expect("create local kek");
     keystore
-        .create_dek(collection, &local, false, 32)
+        .create_dek(dek_name, &local, false, 32)
         .expect("Failed to create DEK");
-    LockstoreDatastore::new_in_memory(collection.to_string(), keystore, &local)
+    LockstoreDatastore::new_in_memory(dek_name.to_string(), keystore, &local)
         .expect("Failed to create datastore")
 }
 
@@ -172,7 +172,7 @@ fn test_large_data() {
 }
 
 #[test]
-fn test_multiple_collections_independent() {
+fn test_multiple_dek_names_independent() {
     let ks1 = Arc::new(Keystore::new_in_memory().expect("Failed to create keystore"));
     let local1 = ks1
         .create_kek(KekType::LocalKey, "", b"", Duration::ZERO)
@@ -351,7 +351,7 @@ fn test_on_disk_datastore_with_in_memory_keystore() {
 }
 
 #[test]
-fn test_multiple_collections_shared_on_disk_keystore() {
+fn test_multiple_dek_names_shared_on_disk_keystore() {
     let dir = tempdir().expect("Failed to create temp dir");
     let ks_path = dir.path().join("keystore.sqlite");
 

@@ -24,8 +24,8 @@ pub const KEYSTORE_FILENAME: &str = "lockstore.keys.sqlite";
 pub const DATASTORE_FILENAME_PREFIX: &str = "lockstore.data.";
 pub const DATASTORE_FILENAME_SUFFIX: &str = ".sqlite";
 
-pub fn datastore_filename(collection_name: &str) -> String {
-    format!("{DATASTORE_FILENAME_PREFIX}{collection_name}{DATASTORE_FILENAME_SUFFIX}")
+pub fn datastore_filename(dek_name: &str) -> String {
+    format!("{DATASTORE_FILENAME_PREFIX}{dek_name}{DATASTORE_FILENAME_SUFFIX}")
 }
 
 #[derive(Error, Debug)]
