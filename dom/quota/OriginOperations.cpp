@@ -1333,6 +1333,7 @@ nsresult FinalizeOriginEvictionOp::DoDirectoryWork(
   for (const auto& lock : mLocks) {
     aQuotaManager.OriginClearCompleted(lock->OriginMetadata(),
                                        ClientStorageScope::CreateFromNull());
+    aQuotaManager.RemoveOriginFromCacheForEviction(lock->OriginMetadata());
   }
 
   return NS_OK;
@@ -2950,6 +2951,8 @@ void ClearRequestBase::DeleteFilesInternal(
             aQuotaManager.OriginClearCompleted(
                 metadata, ClientStorageScope::CreateFromNull());
 
+            aQuotaManager.RemoveOriginFromCacheForEviction(metadata);
+
             break;
           }
 
@@ -2991,6 +2994,8 @@ void ClearRequestBase::DeleteFilesInternal(
 
             aQuotaManager.OriginClearCompleted(
                 metadata, ClientStorageScope::CreateFromNull());
+
+            aQuotaManager.RemoveOriginFromCacheForEviction(metadata);
 
             break;
           }

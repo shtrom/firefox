@@ -253,6 +253,8 @@ class QuotaManager final : public BackgroundThreadObject {
 
   void RemoveOriginFromCache(const OriginMetadata& aOriginMetadata);
 
+  void RemoveOriginFromCacheForEviction(const OriginMetadata& aOriginMetadata);
+
   already_AddRefed<QuotaObject> GetQuotaObject(
       PersistenceType aPersistenceType, const OriginMetadata& aOriginMetadata,
       Client::Type aClientType, nsIFile* aFile, int64_t aFileSize = -1,

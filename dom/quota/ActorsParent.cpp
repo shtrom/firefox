@@ -3278,11 +3278,10 @@ void QuotaManager::UnloadQuota() {
   QM_TRY(MOZ_TO_RESULT(transaction.Commit()), QM_VOID);
 }
 
-void QuotaManager::RemoveOriginFromCache(
+void QuotaManager::RemoveOriginFromCacheForEviction(
     const OriginMetadata& aOriginMetadata) {
   AssertIsOnIOThread();
   MOZ_ASSERT(mStorageConnection);
-  MOZ_ASSERT(!mTemporaryStorageInitializedInternal);
 
   if (!mCacheUsable) {
     return;
@@ -3313,6 +3312,13 @@ void QuotaManager::RemoveOriginFromCache(
   QM_TRY(MOZ_TO_RESULT(stmt->Execute()), QM_VOID);
 
   QM_TRY(MOZ_TO_RESULT(transaction.Commit()), QM_VOID);
+}
+
+void QuotaManager::RemoveOriginFromCache(
+    const OriginMetadata& aOriginMetadata) {
+  MOZ_ASSERT(!mTemporaryStorageInitializedInternal);
+
+  RemoveOriginFromCacheForEviction(aOriginMetadata);
 }
 
 already_AddRefed<QuotaObject> QuotaManager::GetQuotaObject(
@@ -8502,6 +8508,7 @@ void QuotaManager::ClearOrigins(
 
   for (const auto& clearedOrigin : clearedOrigins) {
     OriginClearCompleted(clearedOrigin, ClientStorageScope::CreateFromNull());
+    RemoveOriginFromCacheForEviction(clearedOrigin);
   }
 }
 
