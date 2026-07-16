@@ -5,8 +5,8 @@
 #ifndef nsGkAtoms_h_
 #define nsGkAtoms_h_
 
-#include "nsAtom.h"
 #include "mozilla/StaticAtoms.h"
+#include "nsAtom.h"
 
 // Static atoms are structured carefully to satisfy a lot of constraints.
 //
