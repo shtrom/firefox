@@ -146,6 +146,21 @@ with Files(".cron.yml"):
 with Files(".taskcluster.yml"):
     BUG_COMPONENT = ("Firefox Build System", "Task Configuration")
 
+with Files(".editorconfig"):
+    BUG_COMPONENT = ("Developer Infrastructure", "Developer Environment Integration")
+
+with Files(".lldbinit"):
+    BUG_COMPONENT = ("Developer Infrastructure", "Developer Environment Integration")
+
+with Files(".vscode/**"):
+    BUG_COMPONENT = ("Developer Infrastructure", "Developer Environment Integration")
+
+with Files(".zed/**"):
+    BUG_COMPONENT = ("Developer Infrastructure", "Developer Environment Integration")
+
+with Files(".ycm_extra_conf.py"):
+    BUG_COMPONENT = ("Developer Infrastructure", "Developer Environment Integration")
+
 with Files("**/Makefile.in"):
     BUG_COMPONENT = ("Firefox Build System", "General")
     FINAL = True
