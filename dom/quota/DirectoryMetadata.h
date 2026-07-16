@@ -109,12 +109,6 @@ nsresult WriteDirectoryMetadataHeader(
     nsIBinaryOutputStream& aStream,
     const OriginStateMetadata& aOriginStateMetadata);
 
-Result<OriginStateMetadata, nsresult> LoadDirectoryMetadataHeader(
-    nsIFile& aDirectory);
-
-nsresult SaveDirectoryMetadataHeader(
-    nsIFile& aDirectory, const OriginStateMetadata& aOriginStateMetadata);
-
 }  // namespace mozilla::dom::quota
 
 #endif  // DOM_QUOTA_NOTIFYUTILS_H_

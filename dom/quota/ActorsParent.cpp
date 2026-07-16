@@ -3207,7 +3207,11 @@ void QuotaManager::UnloadQuota() {
 
           auto metadata = originInfo->LockedFlattenToFullOriginMetadata();
           metadata.mDirty = false;
-          QM_WARNONLY_TRY(mOriginUpserter->Refresh(metadata));
+          QM_WARNONLY_TRY_UNWRAP(auto originDirectory,
+                                 GetOriginDirectory(metadata));
+          if (originDirectory) {
+            CreateDirectoryMetadata2(*originDirectory.ref(), metadata);
+          }
         }
 
         groupInfo->LockedRemoveOriginInfos();
@@ -3581,6 +3585,12 @@ nsresult QuotaManager::CreateDirectoryMetadata2(
 
   QM_TRY(ArtificialFailure(
       nsIQuotaArtificialFailure::CATEGORY_CREATE_DIRECTORY_METADATA2));
+
+  if (!aFullOriginMetadata.mIsPrivate) {
+    MOZ_ASSERT(mOriginUpserter, "We must have an origin upserter here");
+    // Warnonly because we still want to create the metadata file.
+    QM_WARNONLY_TRY(mOriginUpserter->Refresh(aFullOriginMetadata));
+  }
 
   QM_TRY_INSPECT(const auto& file, MOZ_TO_RESULT_INVOKE_MEMBER_TYPED(
                                        nsCOMPtr<nsIFile>, aDirectory, Clone));
@@ -4394,21 +4404,8 @@ nsresult QuotaManager::InitializeOrigin(
       // stored, update the metadata file to reflect the most recent state.
       // This is essential for ensuring correctness of the L2 quota info cache.
 
-      if (fullOriginMetadata.EqualsIgnoringOriginState(aFullOriginMetadata)) {
-        // If only the OriginStateMetadata (header) differs, we can perform a
-        // fast, crash-safe in-place update of just the header.
-
-        QM_TRY(MOZ_TO_RESULT(
-            SaveDirectoryMetadataHeader(*aDirectory, fullOriginMetadata)));
-
-      } else {
-        // Otherwise, we fall back to recreating the full metadata file using a
-        // temporary file and atomic rename, which is slower but safe for
-        // structural changes.
-
-        QM_TRY(MOZ_TO_RESULT(
-            CreateDirectoryMetadata2(*aDirectory, fullOriginMetadata)));
-      }
+      QM_TRY(MOZ_TO_RESULT(
+          CreateDirectoryMetadata2(*aDirectory, fullOriginMetadata)));
     }
 
     InitQuotaForOrigin(fullOriginMetadata);
