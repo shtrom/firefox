@@ -3,42 +3,44 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "nsDragSessionSource.h"
-#include "nsArrayUtils.h"
-#include "nsComponentManagerUtils.h"
-#include "nsWidgetsCID.h"
-#include "nsWindow.h"
-#include "nsSystemInfo.h"
-#include "nsICookieJarSettings.h"
-#include "nsISupportsPrimitives.h"
-#include "nsIIOService.h"
-#include "nsIFileURL.h"
-#include "nsNetUtil.h"
-#include "mozilla/Logging.h"
-#include "nsPrimitiveHelpers.h"
+
 #include <dlfcn.h>
 #include <gtk/gtk.h>
-#include "nsCRT.h"
-#include "mozilla/Services.h"
-#include "mozilla/PresShell.h"
-#include "mozilla/WidgetUtilsGtk.h"
-#include "mozilla/StaticPrefs_widget.h"
+
 #include "GRefPtr.h"
+#include "mozilla/Logging.h"
+#include "mozilla/PresShell.h"
+#include "mozilla/Services.h"
+#include "mozilla/StaticPrefs_widget.h"
+#include "mozilla/WidgetUtilsGtk.h"
 #include "nsAppShell.h"
+#include "nsArrayUtils.h"
+#include "nsCRT.h"
+#include "nsComponentManagerUtils.h"
+#include "nsICookieJarSettings.h"
+#include "nsIFileURL.h"
+#include "nsIIOService.h"
+#include "nsISupportsPrimitives.h"
+#include "nsNetUtil.h"
+#include "nsPrimitiveHelpers.h"
+#include "nsSystemInfo.h"
+#include "nsWidgetsCID.h"
+#include "nsWindow.h"
 #ifdef MOZ_X11
 #  include "gfxXlibSurface.h"
 #endif
-#include "nsImageToPixbuf.h"
-#include "nsPresContext.h"
-#include "nsIContent.h"
-#include "mozilla/dom/Document.h"
-#include "nsGtkUtils.h"
-#include "mozilla/widget/nsGtkHtmlUtils.h"
-#include "mozilla/gfx/2D.h"
-#include "gfxPlatform.h"
 #include "ScreenHelperGTK.h"
-#include "nsStringStream.h"
+#include "gfxPlatform.h"
+#include "mozilla/dom/Document.h"
+#include "mozilla/gfx/2D.h"
+#include "mozilla/widget/nsGtkHtmlUtils.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsEscape.h"
+#include "nsGtkUtils.h"
+#include "nsIContent.h"
+#include "nsImageToPixbuf.h"
+#include "nsPresContext.h"
+#include "nsStringStream.h"
 
 using namespace mozilla;
 using namespace mozilla::widget;
@@ -259,8 +261,7 @@ static void OnSourceGrabEventAfter(GtkWidget* widget, GdkEvent* event,
   if (event->type == GDK_MOTION_NOTIFY) {
     SetMotionEvent(GUniquePtr<GdkEvent>(gdk_event_copy(event)));
 
-    nsDragSessionSource* session =
-        static_cast<nsDragSessionSource*>(user_data);
+    nsDragSessionSource* session = static_cast<nsDragSessionSource*>(user_data);
     gint scale = mozilla::widget::ScreenHelperGTK::GetGTKMonitorScaleFactor();
     auto p = LayoutDeviceIntPoint::Round(event->motion.x_root * scale,
                                          event->motion.y_root * scale);
@@ -480,8 +481,7 @@ bool nsDragSessionSource::RemoveTempFiles() {
 
 /* static */
 gboolean nsDragSessionSource::TaskRemoveTempFiles(gpointer data) {
-  RefPtr<nsDragSessionSource> session =
-      static_cast<nsDragSessionSource*>(data);
+  RefPtr<nsDragSessionSource> session = static_cast<nsDragSessionSource*>(data);
   session.get()->Release();
   return session->RemoveTempFiles();
 }
@@ -496,8 +496,7 @@ void nsDragSessionSource::SourceEndDragSession(GdkDragContext* aContext,
   GdkAtom property = sXdndDirectSaveTypeAtom;
   gdk_property_delete(gdk_drag_context_get_source_window(aContext), property);
 
-  if (!mDoingDrag || mDragTaskSourceFinished)
-    return;
+  if (!mDoingDrag || mDragTaskSourceFinished) return;
 
   if (mEndDragPoint.x < 0) {
     gint x, y;
@@ -834,9 +833,9 @@ bool nsDragSessionSource::SourceDataAppendURLItem(nsITransferable* aItem,
   return NS_SUCCEEDED(CreateTempFile(aItem, aURI));
 }
 
-void nsDragSessionSource::SourceDataGetUriList(
-    GdkDragContext* aContext, GtkSelectionData* aSelectionData,
-    uint32_t aDragItems) {
+void nsDragSessionSource::SourceDataGetUriList(GdkDragContext* aContext,
+                                               GtkSelectionData* aSelectionData,
+                                               uint32_t aDragItems) {
   const bool isExternalDrop =
       widget::GdkIsX11Display()
           ? !nsWindow::GetWindow(gdk_drag_context_get_dest_window(aContext))
@@ -872,8 +871,8 @@ void nsDragSessionSource::SourceDataGetUriList(
                          uriList.Length());
 }
 
-bool nsDragSessionSource::SourceDataGetImage(
-    nsITransferable* aItem, GtkSelectionData* aSelectionData) {
+bool nsDragSessionSource::SourceDataGetImage(nsITransferable* aItem,
+                                             GtkSelectionData* aSelectionData) {
   LOGDRAGSERVICE("nsDragSessionSource::SourceDataGetImage()");
 
   nsresult rv;

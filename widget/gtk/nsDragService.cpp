@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "nsDragService.h"
+
 #include "nsDragServiceGtk.h"
 #include "nsDragSessionSource.h"
 #ifdef MOZ_WAYLAND
@@ -10,7 +11,9 @@
 #endif
 #include <dlfcn.h>
 #include <gtk/gtk.h>
+
 #include <mutex>
+
 #include "mozilla/AutoRestore.h"
 #include "mozilla/BasicEvents.h"
 #include "mozilla/ClearOnShutdown.h"
@@ -19,8 +22,8 @@
 #include "mozilla/WidgetUtilsGtk.h"
 #include "mozilla/widget/nsGtkHtmlUtils.h"
 #include "nsArrayUtils.h"
-#include "nsIFileURL.h"
 #include "nsGtkKeyUtils.h"
+#include "nsIFileURL.h"
 #include "nsPrimitiveHelpers.h"
 #include "nsString.h"
 #include "nsStringStream.h"
@@ -901,8 +904,6 @@ RefPtr<DragData> nsDragSession::GetDragData(GdkAtom aRequestedFlavor) {
                  GUniquePtr<gchar>(gdk_atom_name(aRequestedFlavor)).get());
   return data;
 }
-
-
 
 #ifdef MOZ_LOGGING
 const char* nsDragSession::GetDragServiceTaskName(DragTaskType aTask) {

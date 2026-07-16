@@ -5,6 +5,14 @@
 #include "nsWindowWayland.h"
 
 #include <dlfcn.h>
+
+#include "WaylandVsyncSource.h"
+#include "WidgetUtilsGtk.h"
+#include "mozilla/PresShell.h"
+#include "mozilla/StaticPrefs_widget.h"
+#include "mozilla/VsyncDispatcher.h"
+#include "mozilla/gfx/Logging.h"
+#include "mozilla/webrender/WebRenderTypes.h"
 #include "nsAppShell.h"
 #include "nsDragService.h"
 #include "nsDragSessionSource.h"
@@ -19,13 +27,6 @@
 #include "nsPIDOMWindow.h"
 #include "nsWaylandDisplay.h"
 #include "nsWindow.h"
-#include "mozilla/gfx/Logging.h"
-#include "mozilla/PresShell.h"
-#include "mozilla/StaticPrefs_widget.h"
-#include "mozilla/VsyncDispatcher.h"
-#include "mozilla/webrender/WebRenderTypes.h"
-#include "WaylandVsyncSource.h"
-#include "WidgetUtilsGtk.h"
 
 using namespace mozilla;
 using namespace mozilla::gfx;

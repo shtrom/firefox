@@ -283,7 +283,6 @@ class nsDragSession : public nsBaseDragSession {
   // specific flavor
   RefPtr<DragData> GetDragData(GdkAtom aRequestedFlavor);
   virtual bool GetDragDataImpl(GdkAtom aRequestedFlavor) = 0;
-
 };
 
 /**
