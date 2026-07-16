@@ -112,6 +112,9 @@ with Files(".agents/**"):
 with Files(".claude/**"):
     BUG_COMPONENT = ("Developer Infrastructure", "AI for Development")
 
+with Files(".codex/**"):
+    BUG_COMPONENT = ("Developer Infrastructure", "AI for Development")
+
 with Files("*.json"):
     BUG_COMPONENT = ("Firefox Build System", "General")
 
