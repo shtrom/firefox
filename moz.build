@@ -140,6 +140,12 @@ with Files("CLAUDE.md"):
 with Files("nsprpub/**"):
     BUG_COMPONENT = ("NSPR", "NSPR")
 
+with Files(".cron.yml"):
+    BUG_COMPONENT = ("Firefox Build System", "Task Configuration")
+
+with Files(".taskcluster.yml"):
+    BUG_COMPONENT = ("Firefox Build System", "Task Configuration")
+
 with Files("**/Makefile.in"):
     BUG_COMPONENT = ("Firefox Build System", "General")
     FINAL = True
