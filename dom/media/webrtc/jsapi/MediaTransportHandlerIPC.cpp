@@ -421,10 +421,11 @@ mozilla::ipc::IPCResult MediaTransportChild::RecvOnGatheringStateChange(
 }
 
 mozilla::ipc::IPCResult MediaTransportChild::RecvOnConnectionStateChange(
-    const string& transportId, const RTCIceTransportState& state) {
+    const string& transportId, const RTCIceTransportState& state,
+    const Maybe<IceCandidateAttributePair>& selectedPair) {
   MutexAutoLock lock(mMutex);
   if (mUser) {
-    mUser->OnConnectionStateChange(transportId, state);
+    mUser->OnConnectionStateChange(transportId, state, selectedPair);
   }
   return ipc::IPCResult::Ok();
 }
