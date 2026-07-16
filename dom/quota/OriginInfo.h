@@ -70,6 +70,8 @@ class OriginInfo final : public SupportsThreadSafeWeakPtr<OriginInfo> {
     return IsDirty();
   }
 
+  bool IsPrivate() const { return mIsPrivate; }
+
   bool IsExtensionOrigin() const { return mIsExtension; }
 
   bool LockedDirectoryExists() const {

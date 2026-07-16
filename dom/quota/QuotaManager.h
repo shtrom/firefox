@@ -422,7 +422,7 @@ class QuotaManager final : public BackgroundThreadObject {
       DirtyTrackingAutoLock& aProofOfLock,
       const OriginStateMetadata& aStateMetadata);
 
-  void FlushDirtyOriginInfos() { /* TODO */ }
+  void FlushDirtyOriginInfos();
 
  private:
   nsresult EnsureStorageIsInitializedInternal();
