@@ -5,27 +5,24 @@
 #include "nsUserIdleServiceGTK.h"
 
 #include <gtk/gtk.h>
-
-#include "WidgetUtilsGtk.h"
-#include "mozilla/Logging.h"
-#include "mozilla/SpinEventLoopUntil.h"
-#include "nsDebug.h"
-#include "nsITimer.h"
-#include "prlink.h"
 #ifdef MOZ_X11
 #  include <X11/Xlib.h>
 #  include <X11/Xutil.h>
 #  include <gdk/gdkx.h>
+
+#  include "X11UndefineNone.h"
 #endif
+
+#include "WidgetUtilsGtk.h"
+#include "mozilla/Logging.h"
+#include "mozilla/SpinEventLoopUntil.h"
+#include "nsITimer.h"
+#include "prlink.h"
+
 #ifdef MOZ_ENABLE_DBUS
-#  include <gio/gio.h>
-
 #  include "AsyncDBus.h"
-#  include "WakeLockListener.h"
-#  include "nsIObserverService.h"
 #endif
 
-using mozilla::LogLevel;
 static mozilla::LazyLogModule sIdleLog("nsIUserIdleService");
 
 using namespace mozilla;
