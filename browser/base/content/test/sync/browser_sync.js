@@ -431,7 +431,7 @@ add_task(async function test_ui_state_unconfigured() {
 
   await checkProfilesButtons(
     document.getElementById("PanelUI-signedin-panel"),
-    false
+    true
   );
 
   await closeFxaPanel();
@@ -457,10 +457,13 @@ add_task(async function test_ui_state_signed_in() {
   checkFxaToolbarButtonPanel({
     headerTitle: "Manage account",
     headerDescription: "Foo Bar",
-    enabledItems: ["PanelUI-fxa-menu-account-signout-button"],
+    enabledItems: [
+      "PanelUI-fxa-menu-account-signout-button",
+      "PanelUI-fxa-menu-sync-status-button",
+    ],
     disabledItems: [],
-    hiddenItems: ["PanelUI-fxa-menu-sync-status-button"],
-    visibleItems: ["PanelUI-fxa-menu-setup-sync-container"],
+    hiddenItems: ["PanelUI-fxa-menu-setup-sync-container"],
+    visibleItems: [],
   });
   checkFxAAvatar("signedin");
   await closeFxaPanel();
@@ -495,10 +498,13 @@ add_task(async function test_ui_state_signed_in_no_display_name() {
   checkFxaToolbarButtonPanel({
     headerTitle: "Manage account",
     headerDescription: "foo@bar.com",
-    enabledItems: ["PanelUI-fxa-menu-account-signout-button"],
+    enabledItems: [
+      "PanelUI-fxa-menu-account-signout-button",
+      "PanelUI-fxa-menu-sync-status-button",
+    ],
     disabledItems: [],
-    hiddenItems: ["PanelUI-fxa-menu-sync-status-button"],
-    visibleItems: ["PanelUI-fxa-menu-setup-sync-container"],
+    hiddenItems: ["PanelUI-fxa-menu-setup-sync-container"],
+    visibleItems: [],
   });
   checkFxAAvatar("signedin");
   await closeFxaPanel();
@@ -536,10 +542,13 @@ add_task(async function test_ui_state_unverified() {
   checkFxaToolbarButtonPanel({
     headerTitle: expectedLabel,
     headerDescription: state.email,
-    enabledItems: ["PanelUI-fxa-menu-account-signout-button"],
+    enabledItems: [
+      "PanelUI-fxa-menu-account-signout-button",
+      "PanelUI-fxa-menu-sync-status-button",
+    ],
     disabledItems: [],
-    hiddenItems: [],
-    visibleItems: ["PanelUI-fxa-menu-setup-sync-container"],
+    hiddenItems: ["PanelUI-fxa-menu-setup-sync-container"],
+    visibleItems: [],
   });
   checkFxAAvatar("unverified");
   await closeFxaPanel();
@@ -577,10 +586,13 @@ add_task(async function test_ui_state_loginFailed() {
   checkFxaToolbarButtonPanel({
     headerTitle: expectedLabel,
     headerDescription: state.displayName,
-    enabledItems: ["PanelUI-fxa-menu-account-signout-button"],
+    enabledItems: [
+      "PanelUI-fxa-menu-account-signout-button",
+      "PanelUI-fxa-menu-sync-status-button",
+    ],
     disabledItems: [],
-    hiddenItems: [],
-    visibleItems: ["PanelUI-fxa-menu-setup-sync-container"],
+    hiddenItems: ["PanelUI-fxa-menu-setup-sync-container"],
+    visibleItems: [],
   });
   checkFxAAvatar("login-failed");
   await closeFxaPanel();
@@ -797,23 +809,21 @@ add_task(async function test_new_sync_setup_ui() {
   checkMenuBarItem("sync-enable");
   checkPanelHeader();
 
+  // The "Sync is Off" status button now stands in for the old sync-setup
+  // container when signed in with sync off.
   checkFxaToolbarButtonPanel({
     headerTitle: "Manage account",
     headerDescription: "Foo Bar",
-    enabledItems: ["PanelUI-fxa-menu-account-signout-button"],
+    enabledItems: [
+      "PanelUI-fxa-menu-account-signout-button",
+      "PanelUI-fxa-menu-sync-status-button",
+    ],
     disabledItems: [],
-    hiddenItems: ["PanelUI-fxa-menu-sync-status-button"],
-    visibleItems: ["PanelUI-fxa-menu-setup-sync-container"],
+    hiddenItems: ["PanelUI-fxa-menu-setup-sync-container"],
+    visibleItems: [],
   });
 
   await closeFxaPanel();
-
-  // We need to reset the panel back to hidden since in the code we flip between the old and new sync setup ids
-  // so subsequent tests will fail if checking this new container
-  let newSyncSetup = document.getElementById(
-    "PanelUI-fxa-menu-setup-sync-container"
-  );
-  newSyncSetup.setAttribute("hidden", true);
 });
 
 // Ensure we can see the new "My services" section if the user has enabled relay on their account
@@ -1636,14 +1646,17 @@ add_task(async function test_sync_status_button_visible_when_sync_on() {
   await closeFxaPanel();
 });
 
-add_task(async function test_sync_status_button_hidden_when_sync_off() {
-  let state = {
+add_task(async function test_sync_status_button_sync_off_signed_in() {
+  const sandbox = sinon.createSandbox();
+  sandbox.stub(UIState, "get").returns({
     status: UIState.STATUS_SIGNED_IN,
     syncEnabled: false,
     email: "foo@bar.com",
     displayName: "Foo Bar",
-  };
-  gSync.updateAllUI(state);
+  });
+  let openPrefsStub = sandbox.stub(gSync, "openPrefsFromFxaMenu");
+
+  gSync.updateAllUI(UIState.get());
   await openFxaPanel();
 
   const syncStatusBtn = PanelMultiView.getViewNode(
@@ -1652,21 +1665,93 @@ add_task(async function test_sync_status_button_hidden_when_sync_off() {
   );
   ok(
     syncStatusBtn.hidden,
-    "Sync status button is hidden when signed in but sync is off"
+    "Navigable sync status button is hidden when signed in but sync is off"
   );
 
-  await closeFxaPanel();
+  const offCard = PanelMultiView.getViewNode(
+    document,
+    "PanelUI-fxa-menu-sync-status-off-card"
+  );
+  ok(
+    BrowserTestUtils.isVisible(offCard),
+    "Sync-off card is visible when signed in but sync is off"
+  );
+  is(
+    PanelMultiView.getViewNode(
+      document,
+      "PanelUI-fxa-menu-sync-status-off-title"
+    ).getAttribute("value"),
+    gSync.fluentStrings.formatValueSync("fxa-menu-sync-status-off"),
+    "Sync status title reads 'Sync is Off'"
+  );
+  const descEl = PanelMultiView.getViewNode(
+    document,
+    "PanelUI-fxa-menu-sync-status-off-description"
+  );
+  is(
+    descEl.getAttribute("value"),
+    gSync.fluentStrings.formatValueSync("fxa-menu-sync-off-data-description"),
+    "Description reads 'Your data isn't syncing'"
+  );
+  ok(
+    descEl.classList.contains("fxa-menu-sync-status-description-error"),
+    "Description uses the error color"
+  );
+
+  let hidden = BrowserTestUtils.waitForEvent(document, "popuphidden", true);
+  PanelMultiView.getViewNode(
+    document,
+    "PanelUI-fxa-menu-sync-status-off-button"
+  ).click();
+  await hidden;
+  ok(
+    openPrefsStub.called,
+    "Clicking 'Turn on' opens preferences to turn sync on when signed in"
+  );
+
+  sandbox.restore();
 });
 
-add_task(async function test_sync_status_button_hidden_when_signed_out() {
-  let state = { status: UIState.STATUS_NOT_CONFIGURED };
-  gSync.updateAllUI(state);
+add_task(async function test_sync_status_button_sync_off_signed_out() {
+  const sandbox = sinon.createSandbox();
+  sandbox.stub(UIState, "get").returns({
+    status: UIState.STATUS_NOT_CONFIGURED,
+  });
+  let signInStub = sandbox.stub(gSync, "openFxAEmailFirstPageFromFxaMenu");
+
+  gSync.updateAllUI(UIState.get());
 
   const syncStatusBtn = PanelMultiView.getViewNode(
     document,
     "PanelUI-fxa-menu-sync-status-button"
   );
-  ok(syncStatusBtn.hidden, "Sync status button is hidden when signed out");
+  ok(!syncStatusBtn.hidden, "Sync status button is shown when signed out");
+  is(
+    PanelMultiView.getViewNode(
+      document,
+      "PanelUI-fxa-menu-sync-status-title"
+    ).getAttribute("value"),
+    gSync.fluentStrings.formatValueSync("fxa-menu-sync-status-off"),
+    "Sync status title reads 'Sync is Off'"
+  );
+  const descEl = PanelMultiView.getViewNode(
+    document,
+    "PanelUI-fxa-menu-sync-status-description"
+  );
+  is(
+    descEl.getAttribute("value"),
+    gSync.fluentStrings.formatValueSync("fxa-menu-sync-off-signin-description"),
+    "Description reads 'Sign in to sync'"
+  );
+  ok(
+    descEl.classList.contains("fxa-menu-sync-status-description-error"),
+    "Description uses the error color"
+  );
+
+  gSync._onSyncStatusButtonClick(syncStatusBtn, new PointerEvent("click"));
+  ok(signInStub.called, "Clicking leads to the sign-in page when signed out");
+
+  sandbox.restore();
 });
 
 add_task(
@@ -1680,6 +1765,10 @@ add_task(
       lastSync: new Date(),
       syncing: false,
     };
+    // The sync status button routes its click based on the live UIState, so it
+    // needs to report sync as on to open the secure sync subpanel.
+    const sandbox = sinon.createSandbox();
+    sandbox.stub(UIState, "get").returns(state);
     gSync.updateAllUI(state);
     await openFxaPanel();
 
@@ -1711,5 +1800,6 @@ add_task(
     }
 
     await closeFxaPanel();
+    sandbox.restore();
   }
 );

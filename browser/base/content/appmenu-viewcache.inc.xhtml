@@ -642,6 +642,21 @@
                    crop="end"/>
           </vbox>
         </toolbarbutton>
+        <hbox id="PanelUI-fxa-menu-sync-status-off-card"
+              class="fxa-menu-sync-status-off-card"
+              align="center"
+              hidden="true">
+          <vbox flex="1">
+            <label id="PanelUI-fxa-menu-sync-status-off-title"
+                   class="fxa-menu-sync-status-title"
+                   crop="end"/>
+            <label id="PanelUI-fxa-menu-sync-status-off-description"
+                   class="fxa-menu-sync-status-description fxa-menu-sync-status-description-error"
+                   crop="end"/>
+          </vbox>
+          <html:moz-button id="PanelUI-fxa-menu-sync-status-off-button"
+                           data-l10n-id="fxa-menu-sync-status-turn-on-button"/>
+        </hbox>
         <vbox id="PanelUI-fxa-menu-setup-sync-container" hidden="true">
           <vbox class="PanelUI-fxa-menu-setup-sync" flex="1">
             <hbox class="sync-status-container" align="center">
@@ -696,7 +711,7 @@
       </vbox>
       <!-- updateCTAPanel will control if we show this panel -->
       <vbox id="PanelUI-fxa-cta-menu" hidden="true">
-        <toolbarseparator id="PanelUI-products-separator" />
+        <toolbarseparator id="PanelUI-fxa-menu-privacy-tools-separator" hidden="true"/>
         <label crop="end" class="subview-subheader" data-l10n-id="appmenu-other-protection-header3" />
         <toolbarbutton id="PanelUI-fxa-menu-monitor-button" class="fxa-cta-button subviewbutton subviewbutton-iconic">
           <hbox align="center">
