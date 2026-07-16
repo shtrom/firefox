@@ -2934,12 +2934,6 @@ nsresult QuotaManager::LoadQuota() {
             "last_access_time, last_maintenance_date, metadata_flags "
             "FROM origin"_ns));
 
-    auto autoRemoveQuota = MakeScopeExit([&] {
-      RemoveQuota();
-      RemoveTemporaryOrigins();
-      unaccessedOrigins.Clear();
-    });
-
     QM_TRY(quota::CollectWhileHasResult(
         *stmt,
         [this, &MaybeCollectUnaccessedOrigin,
@@ -3035,8 +3029,6 @@ nsresult QuotaManager::LoadQuota() {
 
           return Ok{};
         }));
-
-    autoRemoveQuota.release();
 
     return NS_OK;
   };
@@ -3151,11 +3143,6 @@ nsresult QuotaManager::LoadQuota() {
     }
   }
 
-  auto autoRemoveQuota = MakeScopeExit([&] {
-    RemoveQuota();
-    RemoveTemporaryOrigins();
-  });
-
   if (!isCacheUseAllowed) {
     RemoveQuota();
     RemoveTemporaryOrigins();
@@ -3203,8 +3190,6 @@ nsresult QuotaManager::LoadQuota() {
 #endif
   }
 
-  autoRemoveQuota.release();
-
   const auto endTime = recordTimeDeltaHelper->End();
 
   if (StaticPrefs::dom_quotaManager_checkQuotaInfoLoadTime() &&
@@ -3223,7 +3208,6 @@ void QuotaManager::UnloadQuota() {
   AssertIsOnIOThread();
   MOZ_ASSERT(mStorageConnection);
   MOZ_ASSERT(mTemporaryStorageInitializedInternal);
-  MOZ_ASSERT(mCacheUsable);
 
   UninitializeFlushTimer();
 
@@ -3233,10 +3217,6 @@ void QuotaManager::UnloadQuota() {
       mStorageConnection, false, mozIStorageConnection::TRANSACTION_IMMEDIATE);
 
   QM_TRY(MOZ_TO_RESULT(transaction.Start()), QM_VOID);
-
-  QM_TRY(MOZ_TO_RESULT(
-             mStorageConnection->ExecuteSimpleSQL("DELETE FROM origin;"_ns)),
-         QM_VOID);
 
   {
     MutexAutoLock lock(mQuotaMutex);
@@ -7166,10 +7146,6 @@ nsresult QuotaManager::InitializeTemporaryStorageInternal() {
     RecordTemporaryStorageMetrics();
   }
 
-  if (mCacheUsable) {
-    QM_TRY(InvalidateCache(*mStorageConnection));
-  }
-
   return NS_OK;
 }
 
@@ -7790,11 +7766,7 @@ void QuotaManager::ShutdownStorageInternal() {
     mInitializedOriginsInternal.Clear();
 
     if (mTemporaryStorageInitializedInternal) {
-      if (mCacheUsable) {
-        UnloadQuota();
-      } else {
-        RemoveQuota();
-      }
+      UnloadQuota();
 
       RemoveTemporaryOrigins();
 
