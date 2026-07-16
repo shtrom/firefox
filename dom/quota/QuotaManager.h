@@ -19,6 +19,7 @@
 #include "mozilla/Result.h"
 #include "mozilla/ThreadBound.h"
 #include "mozilla/dom/Nullable.h"
+#include "mozilla/dom/UnboundedMPSCQueue.h"
 #include "mozilla/dom/ipc/IdType.h"
 #include "mozilla/dom/quota/Assertions.h"
 #include "mozilla/dom/quota/BackgroundThreadObject.h"
@@ -556,7 +557,7 @@ class QuotaManager final : public BackgroundThreadObject {
     return mTemporaryStorageInitialized;
   }
 
-  void RegisterDirtyOriginInfo(DirtyTrackingAutoLock& /* TODO */) {}
+  void RegisterDirtyOriginInfo(DirtyTrackingAutoLock& aProofOfLock);
 
  private:
   nsresult InitializeTemporaryStorageInternal();
@@ -1160,6 +1161,7 @@ class QuotaManager final : public BackgroundThreadObject {
       mDirectoryLockIdTable;
 
   nsCOMPtr<nsITimer> mFlushDirtyOriginInfosTimer;
+  UnboundedMPSCQueue<RefPtr<OriginInfo>> mDirtyOriginInfos;
 
   // Things touched on the owning (PBackground) thread only.
   struct BackgroundThreadAccessible {
