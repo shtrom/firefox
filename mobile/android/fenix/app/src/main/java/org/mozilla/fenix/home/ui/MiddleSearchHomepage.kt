@@ -73,82 +73,82 @@ internal fun MiddleSearchHomepage(
         modifier = Modifier
             .fillMaxSize(),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .semantics {
-                    testTagsAsResourceId = true
-                    testTag = HOMEPAGE
-                }
-                .pointerInput(state.isSearchInProgress) {
-                    if (state.isSearchInProgress) {
-                        awaitEachGesture {
-                            awaitFirstDown(false, PointerEventPass.Initial)
-                            interactor.onHomeContentFocusedWhileSearchIsActive()
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .semantics {
+                        testTagsAsResourceId = true
+                        testTag = HOMEPAGE
+                    }
+                    .pointerInput(state.isSearchInProgress) {
+                        if (state.isSearchInProgress) {
+                            awaitEachGesture {
+                                awaitFirstDown(false, PointerEventPass.Initial)
+                                interactor.onHomeContentFocusedWhileSearchIsActive()
+                            }
                         }
                     }
-                }
-                .verticalScroll(scrollState),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
+                    .verticalScroll(scrollState),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
 
-            if (state.firstFrameDrawn) {
-                with(state) {
-                    when (this) {
-                        is HomepageState.Private -> {
-                            LaunchedEffect(key1 = state) {
-                                onMiddleSearchBarVisibilityChanged(false)
+                if (state.firstFrameDrawn) {
+                    with(state) {
+                        when (this) {
+                            is HomepageState.Private -> {
+                                LaunchedEffect(key1 = state) {
+                                    onMiddleSearchBarVisibilityChanged(false)
+                                }
+
+                                Box(modifier = Modifier.padding(horizontal = horizontalMargin)) {
+                                    PrivateBrowsingDescription(
+                                        onLearnMoreClick = interactor::onLearnMoreClicked,
+                                    )
+                                }
                             }
 
-                            Box(modifier = Modifier.padding(horizontal = horizontalMargin)) {
-                                PrivateBrowsingDescription(
-                                    onLearnMoreClick = interactor::onLearnMoreClicked,
-                                )
+                            is HomepageState.Normal -> {
+                                if (showTopSites) {
+                                    TopSitesSection(
+                                        topSites = topSites,
+                                        topSiteColors = topSiteColors,
+                                        interactor = interactor,
+                                        onTopSitesItemBound = onTopSitesItemBound,
+                                        onAddShortcutClicked = onAddShortcutClicked,
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.weight(1f))
+
+                                LaunchedEffect(key1 = searchBarEnabled, key2 = searchBarVisible) {
+                                    onMiddleSearchBarVisibilityChanged(searchBarEnabled && searchBarVisible)
+                                }
+
+                                if (searchBarEnabled && searchBarVisible) {
+                                    SearchBar(
+                                        modifier = Modifier
+                                            .padding(horizontal = horizontalMargin)
+                                            .graphicsLayer { this.alpha = alpha },
+                                        onClick = interactor::onNavigateSearch,
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.weight(1f))
+
+                                if (showPocketStoriesCarousel) {
+                                    PocketSection(
+                                        state = pocketState,
+                                        interactor = interactor,
+                                    )
+                                }
+
+                                Spacer(Modifier.height(BOTTOM_PADDING.dp))
                             }
-                        }
-
-                        is HomepageState.Normal -> {
-                            if (showTopSites) {
-                                TopSitesSection(
-                                    topSites = topSites,
-                                    topSiteColors = topSiteColors,
-                                    interactor = interactor,
-                                    onTopSitesItemBound = onTopSitesItemBound,
-                                    onAddShortcutClicked = onAddShortcutClicked,
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.weight(1f))
-
-                            LaunchedEffect(key1 = searchBarEnabled, key2 = searchBarVisible) {
-                                onMiddleSearchBarVisibilityChanged(searchBarEnabled && searchBarVisible)
-                            }
-
-                            if (searchBarEnabled && searchBarVisible) {
-                                SearchBar(
-                                    modifier = Modifier
-                                        .padding(horizontal = horizontalMargin)
-                                        .graphicsLayer { this.alpha = alpha },
-                                    onClick = interactor::onNavigateSearch,
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.weight(1f))
-
-                            if (showPocketStoriesCarousel) {
-                                PocketSection(
-                                    state = pocketState,
-                                    interactor = interactor,
-                                )
-                            }
-
-                            Spacer(Modifier.height(BOTTOM_PADDING.dp))
                         }
                     }
                 }
             }
-        }
 
         if (state.isSearchInProgress) {
             Scrim(onDismiss = interactor::onHomeContentFocusedWhileSearchIsActive)

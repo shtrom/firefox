@@ -127,7 +127,6 @@ internal fun Homepage(
 ) {
     val scrollState = rememberScrollState()
     val browsingModeChanged = interactor::onPrivateModeButtonClicked
-    val appStore = components.appStore
     var showSportsCountrySelector by remember { mutableStateOf(false) }
     var shortcutsDialogState by remember { mutableStateOf<DialogState>(DialogState.Closed) }
 
@@ -169,22 +168,20 @@ internal fun Homepage(
                         settings.enableHomepageSportsWidget && settings.showHomepageSportsWidget &&
                             !hasWorldCupEnded()
 
-                    WallpaperTheme {
-                        ExperimentalHomepageHeader(
-                            showStoriesButton = headerState.showStoriesButton,
-                            showButtonAnimation = headerState.showButtonAnimation,
-                            isSportsWidgetEnabled = shouldDisplaySportsLogo,
-                            onPrivateModeTapped = { browsingModeChanged(BrowsingMode.Private) },
-                            onStoriesTapped = { interactor.onDiscoverMoreClicked() },
-                            onNewsAnimationShown = { settings.recordNewsButtonAnimationShown() },
-                            onLogoClicked = {
-                                if (settings.showHomepageSportsWidget) {
-                                    interactor.onCountrySelectorShown(CountrySelectorSource.SPORTS_LOGO)
-                                    showSportsCountrySelector = true
-                                }
-                            },
-                        )
-                    }
+                    ExperimentalHomepageHeader(
+                        showStoriesButton = headerState.showStoriesButton,
+                        showButtonAnimation = headerState.showButtonAnimation,
+                        isSportsWidgetEnabled = shouldDisplaySportsLogo,
+                        onPrivateModeTapped = { browsingModeChanged(BrowsingMode.Private) },
+                        onStoriesTapped = { interactor.onDiscoverMoreClicked() },
+                        onNewsAnimationShown = { settings.recordNewsButtonAnimationShown() },
+                        onLogoClicked = {
+                            if (settings.showHomepageSportsWidget) {
+                                interactor.onCountrySelectorShown(CountrySelectorSource.SPORTS_LOGO)
+                                showSportsCountrySelector = true
+                            }
+                        },
+                    )
                 }
 
                 is HeaderState.Experimental.Private -> {
@@ -199,19 +196,17 @@ internal fun Homepage(
                         settings.enableHomepageSportsWidget && settings.showHomepageSportsWidget &&
                             !hasWorldCupEnded()
 
-                    WallpaperTheme {
-                        HomepageHeader(
-                            browsingMode = state.browsingMode,
-                            browsingModeChanged = browsingModeChanged,
-                            isSportsWidgetEnabled = shouldDisplaySportsLogo,
-                            onLogoClicked = {
-                                if (settings.showHomepageSportsWidget) {
-                                    interactor.onCountrySelectorShown(CountrySelectorSource.SPORTS_LOGO)
-                                    showSportsCountrySelector = true
-                                }
-                            },
-                        )
-                    }
+                    HomepageHeader(
+                        browsingMode = state.browsingMode,
+                        browsingModeChanged = browsingModeChanged,
+                        isSportsWidgetEnabled = shouldDisplaySportsLogo,
+                        onLogoClicked = {
+                            if (settings.showHomepageSportsWidget) {
+                                interactor.onCountrySelectorShown(CountrySelectorSource.SPORTS_LOGO)
+                                showSportsCountrySelector = true
+                            }
+                        },
+                    )
                 }
             }
 
@@ -314,20 +309,18 @@ internal fun Homepage(
                                             top = verticalMargin,
                                         ),
                                     ) {
-                                        WallpaperTheme {
-                                            RecentSyncedTab(
-                                                tab = syncedTab,
-                                                buttonBackgroundColor = if (syncedTab != null) {
-                                                    WallpaperTheme.buttonBackgroundColor
-                                                } else {
-                                                    MaterialTheme.colorScheme.surfaceContainerHighest
-                                                },
-                                                buttonTextColor = WallpaperTheme.buttonTextColor,
-                                                onRecentSyncedTabClick = interactor::onRecentSyncedTabClicked,
-                                                onSeeAllSyncedTabsButtonClick = interactor::onSyncedTabShowAllClicked,
-                                                onRemoveSyncedTab = interactor::onRemovedRecentSyncedTab,
-                                            )
-                                        }
+                                        RecentSyncedTab(
+                                            tab = syncedTab,
+                                            buttonBackgroundColor = if (syncedTab != null) {
+                                                WallpaperTheme.buttonBackgroundColor
+                                            } else {
+                                                MaterialTheme.colorScheme.surfaceContainerHighest
+                                            },
+                                            buttonTextColor = WallpaperTheme.buttonTextColor,
+                                            onRecentSyncedTabClick = interactor::onRecentSyncedTabClicked,
+                                            onSeeAllSyncedTabsButtonClick = interactor::onSyncedTabShowAllClicked,
+                                            onRemoveSyncedTab = interactor::onRemovedRecentSyncedTab,
+                                        )
                                     }
                                 }
                             }
@@ -550,20 +543,16 @@ private fun RecentTabsSection(
 
         Spacer(Modifier.height(16.dp))
 
-        // The cards read their background from the wallpaper-derived surfaceBright; card content
-        // keeps the ambient onSurface so it stays legible against the card.
-        WallpaperTheme {
-            RecentTabs(
-                recentTabs = recentTabs,
-                onRecentTabClick = { interactor.onRecentTabClicked(it) },
-                menuItems = listOf(
-                    RecentTabMenuItem(
-                        title = stringResource(id = R.string.recent_tab_menu_item_remove),
-                        onClick = interactor::onRemoveRecentTab,
-                    ),
+        RecentTabs(
+            recentTabs = recentTabs,
+            onRecentTabClick = { interactor.onRecentTabClicked(it) },
+            menuItems = listOf(
+                RecentTabMenuItem(
+                    title = stringResource(id = R.string.recent_tab_menu_item_remove),
+                    onClick = interactor::onRemoveRecentTab,
                 ),
-            )
-        }
+            ),
+        )
     }
 }
 
@@ -587,18 +576,16 @@ private fun BookmarksSection(
 
     Spacer(Modifier.height(16.dp))
 
-    WallpaperTheme {
-        Bookmarks(
-            bookmarks = bookmarks,
-            menuItems = listOf(
-                BookmarksMenuItem(
-                    stringResource(id = R.string.home_bookmarks_menu_item_remove),
-                    onClick = interactor::onBookmarkRemoved,
-                ),
+    Bookmarks(
+        bookmarks = bookmarks,
+        menuItems = listOf(
+            BookmarksMenuItem(
+                stringResource(id = R.string.home_bookmarks_menu_item_remove),
+                onClick = interactor::onBookmarkRemoved,
             ),
-            onBookmarkClick = interactor::onBookmarkClicked,
-        )
-    }
+        ),
+        onBookmarkClick = interactor::onBookmarkClicked,
+    )
 }
 
 @Composable
@@ -618,42 +605,40 @@ private fun RecentlyVisitedSection(
 
     Spacer(Modifier.height(16.dp))
 
-    WallpaperTheme {
-        RecentlyVisited(
-            recentVisits = recentVisits,
-            menuItems = listOfNotNull(
-                RecentVisitMenuItem(
-                    title = stringResource(R.string.recently_visited_menu_item_remove),
-                    onClick = { visit ->
-                        when (visit) {
-                            is RecentHistoryGroup -> interactor.onRemoveRecentHistoryGroup(visit.title)
-                            is RecentHistoryHighlight -> interactor.onRemoveRecentHistoryHighlight(
-                                visit.url,
-                            )
-                        }
-                    },
-                ),
-            ),
-            onRecentVisitClick = { recentlyVisitedItem, pageNumber ->
-                when (recentlyVisitedItem) {
-                    is RecentHistoryHighlight -> {
-                        RecentlyVisitedHomepage.historyHighlightOpened.record(NoExtras())
-                        interactor.onRecentHistoryHighlightClicked(recentlyVisitedItem)
-                    }
-
-                    is RecentHistoryGroup -> {
-                        RecentlyVisitedHomepage.searchGroupOpened.record(NoExtras())
-                        History.recentSearchesTapped.record(
-                            History.RecentSearchesTappedExtra(
-                                pageNumber.toString(),
-                            ),
+    RecentlyVisited(
+        recentVisits = recentVisits,
+        menuItems = listOfNotNull(
+            RecentVisitMenuItem(
+                title = stringResource(R.string.recently_visited_menu_item_remove),
+                onClick = { visit ->
+                    when (visit) {
+                        is RecentHistoryGroup -> interactor.onRemoveRecentHistoryGroup(visit.title)
+                        is RecentHistoryHighlight -> interactor.onRemoveRecentHistoryHighlight(
+                            visit.url,
                         )
-                        interactor.onRecentHistoryGroupClicked(recentlyVisitedItem)
                     }
+                },
+            ),
+        ),
+        onRecentVisitClick = { recentlyVisitedItem, pageNumber ->
+            when (recentlyVisitedItem) {
+                is RecentHistoryHighlight -> {
+                    RecentlyVisitedHomepage.historyHighlightOpened.record(NoExtras())
+                    interactor.onRecentHistoryHighlightClicked(recentlyVisitedItem)
                 }
-            },
-        )
-    }
+
+                is RecentHistoryGroup -> {
+                    RecentlyVisitedHomepage.searchGroupOpened.record(NoExtras())
+                    History.recentSearchesTapped.record(
+                        History.RecentSearchesTappedExtra(
+                            pageNumber.toString(),
+                        ),
+                    )
+                    interactor.onRecentHistoryGroupClicked(recentlyVisitedItem)
+                }
+            }
+        },
+    )
 }
 
 @Composable

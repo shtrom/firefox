@@ -24,7 +24,6 @@ import org.mozilla.fenix.home.pocket.PocketState
 import org.mozilla.fenix.home.pocket.controller.StoriesImpressionSource
 import org.mozilla.fenix.home.pocket.interactor.PocketStoriesInteractor
 import org.mozilla.fenix.theme.FirefoxTheme
-import org.mozilla.fenix.wallpapers.WallpaperTheme
 
 /**
  * Pocket section for the homepage.
@@ -61,16 +60,14 @@ fun PocketSection(
 
         Spacer(Modifier.height(16.dp))
 
-        WallpaperTheme {
-            Stories(
-                stories = state.stories,
-                contentPadding = horizontalPadding,
-                onStoryShown = interactor::onStoryShown,
-                onStoryClicked = { story, position ->
-                    interactor.onStoryClicked(story, position, StoriesImpressionSource.HOMEPAGE)
-                },
-            )
-        }
+        Stories(
+            stories = state.stories,
+            contentPadding = horizontalPadding,
+            onStoryShown = interactor::onStoryShown,
+            onStoryClicked = { story, position ->
+                interactor.onStoryClicked(story, position, StoriesImpressionSource.HOMEPAGE)
+            },
+        )
     }
 }
 
