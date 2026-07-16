@@ -1580,7 +1580,7 @@ static TextBoxEdgeMetrics ResolveTextBoxEdgeMetrics(
       break;
     default:
     case StyleTextEdgeKeyword::Text:
-      result.mOver = aFontMetrics->MaxAscent();
+      result.mOver = aFontMetrics->TrimmedAscent();
       break;
   }
 
@@ -1596,7 +1596,7 @@ static TextBoxEdgeMetrics ResolveTextBoxEdgeMetrics(
       break;
     default:
     case StyleTextEdgeKeyword::Text:
-      result.mUnder = aFontMetrics->MaxDescent();
+      result.mUnder = aFontMetrics->TrimmedDescent();
       break;
   }
 
