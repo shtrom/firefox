@@ -62,7 +62,8 @@ let winTaskbarMock = {
   },
 };
 
-// Reset stub history + default behaviour and clear the pref before each task.
+// Reset stub history + default behaviour, clear the pref, and drop any recorded
+// Glean values before each task.
 function resetMocks() {
   shellServiceMock.enumerateInstallShortcuts.reset();
   shellServiceMock.enumerateInstallShortcuts.resolves(TEST_SHORTCUTS.slice());
@@ -70,9 +71,21 @@ function resetMocks() {
   shellServiceMock.setShortcutsIcon.resolves();
   winTaskbarMock.setAllWindowIcons.reset();
   Services.prefs.clearUserPref(PREF_ICON_ID);
+  Services.fog.testResetFOG();
+}
+
+// The single "changed" event recorded since the last reset, or undefined if
+// none. Fails if more than one was recorded (each task exercises one change).
+function singleChangedEvent() {
+  let events = Glean.customIcon.changed.testGetValue() ?? [];
+  Assert.lessOrEqual(events.length, 1, "at most one changed event recorded");
+  return events[0];
 }
 
 add_setup(function () {
+  do_get_profile();
+  Services.fog.initializeFOG();
+
   let shellCid = MockRegistrar.register(
     "@mozilla.org/browser/shell-service;1",
     shellServiceMock
@@ -135,6 +148,16 @@ add_task(
       Services.prefs.getStringPref(PREF_ICON_ID, ""),
       "retro2004",
       "pref records the applied id"
+    );
+
+    let event = singleChangedEvent();
+    Assert.ok(event, "a changed event was recorded");
+    Assert.equal(event.category, "custom_icon", "event category");
+    Assert.equal(event.name, "changed", "event name");
+    Assert.equal(
+      event.extra.icon_id,
+      "retro2004",
+      "changed event carries the applied id"
     );
   }
 );
@@ -237,6 +260,14 @@ add_task(
       "runtime window icon cleared (0)"
     );
     Assert.ok(!Services.prefs.prefHasUserValue(PREF_ICON_ID), "pref cleared");
+
+    let event = singleChangedEvent();
+    Assert.ok(event, "reverting from a custom icon records a changed event");
+    Assert.equal(
+      event.extra.icon_id,
+      "default",
+      "revert records the default id as the new selection"
+    );
   }
 );
 
@@ -264,6 +295,11 @@ add_task(skipOnMsix(), async function test_apply_no_matching_shortcuts() {
     Services.prefs.getStringPref(PREF_ICON_ID, ""),
     "retro2004",
     "pref still recorded"
+  );
+  Assert.equal(
+    singleChangedEvent()?.extra.icon_id,
+    "retro2004",
+    "changed event still recorded even though no shortcut matched"
   );
 });
 
@@ -298,6 +334,98 @@ add_task(
       Services.prefs.getStringPref(PREF_ICON_ID, ""),
       "retro2004",
       "pref still recorded"
+    );
+    Assert.equal(
+      singleChangedEvent()?.extra.icon_id,
+      "retro2004",
+      "changed event still recorded despite the shortcut-write failure"
+    );
+  }
+);
+
+/**
+ * This test verifies that re-applying the icon that is already active (as the
+ * theme observer and startup reconcile do) records no changed event, so the
+ * probe only fires on a genuine change of icon.
+ */
+add_task(skipOnMsix(), async function test_apply_same_id_records_no_change() {
+  resetMocks();
+
+  await CustomIconManager.apply("retro2004");
+  Assert.ok(singleChangedEvent(), "first apply records a change");
+
+  Services.fog.testResetFOG();
+  await CustomIconManager.apply("retro2004");
+  Assert.equal(
+    Glean.customIcon.changed.testGetValue(),
+    undefined,
+    "re-applying the same id records no changed event"
+  );
+});
+
+/**
+ * This test verifies that revert() over the already-default state (no custom
+ * icon active) records no changed event.
+ */
+add_task(
+  skipOnMsix(),
+  async function test_revert_when_default_records_nothing() {
+    resetMocks();
+
+    await CustomIconManager.revert();
+
+    Assert.equal(
+      Glean.customIcon.changed.testGetValue(),
+      undefined,
+      "reverting when already default records no changed event"
+    );
+  }
+);
+
+/**
+ * This test verifies that a rejected apply() (unknown id) records no changed
+ * event.
+ */
+add_task(skipOnMsix(), async function test_unknown_id_records_no_change() {
+  resetMocks();
+
+  await Assert.rejects(
+    CustomIconManager.apply("does-not-exist"),
+    /Unknown icon id/,
+    "apply rejects for an unknown catalog id"
+  );
+
+  Assert.equal(
+    Glean.customIcon.changed.testGetValue(),
+    undefined,
+    "no changed event recorded for a rejected apply"
+  );
+});
+
+/**
+ * This test verifies that ensureAppliedOrRevert() records the current-icon
+ * string metric once at startup: the active id for a known custom icon, and
+ * "default" when no custom icon is set.
+ */
+add_task(
+  skipOnMsix(),
+  async function test_ensureAppliedOrRevert_records_current() {
+    resetMocks();
+    Services.prefs.setStringPref(PREF_ICON_ID, "retro2004");
+
+    await CustomIconManager.ensureAppliedOrRevert();
+    Assert.equal(
+      Glean.customIcon.current.testGetValue(),
+      "retro2004",
+      "current records the active custom icon id"
+    );
+
+    resetMocks();
+    await CustomIconManager.ensureAppliedOrRevert();
+    Assert.equal(
+      Glean.customIcon.current.testGetValue(),
+      "default",
+      "current records the default id when no custom icon is set"
     );
   }
 );
@@ -360,6 +488,11 @@ add_task(
       "runtime icon cleared"
     );
     Assert.ok(!Services.prefs.prefHasUserValue(PREF_ICON_ID), "pref cleared");
+    Assert.equal(
+      Glean.customIcon.changed.testGetValue(),
+      undefined,
+      "the startup reconcile of an unknown id is not a user change"
+    );
   }
 );
 

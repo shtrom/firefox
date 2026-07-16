@@ -140,6 +140,7 @@ firefox_desktop_metrics = [
     "browser/components/screenshots/metrics.yaml",
     "browser/components/search/metrics.yaml",
     "browser/components/sessionstore/metrics.yaml",
+    "browser/components/shell/metrics.yaml",
     "browser/components/sidebar/metrics.yaml",
     "browser/components/tabbrowser/metrics.yaml",
     "browser/components/tabnotes/metrics.yaml",
