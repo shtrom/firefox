@@ -2702,10 +2702,10 @@ def nasm_asflags(target):
 set_config("NASM_ASFLAGS", nasm_asflags)
 
 
-# ANGLE renderer
+# ANGLE OpenGL->D3D translator for WebGL
 # ==============================================================
 
-with only_when(compile_environment & (target_is_windows | target_is_osx)):
+with only_when(compile_environment & target_is_windows):
     set_config("MOZ_ANGLE_RENDERER", True)
 
 with only_when(target_is_windows):
