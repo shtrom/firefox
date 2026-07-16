@@ -172,6 +172,10 @@ toolbar[inactive="true"] .urlbar,
     &[breakout-extend] {
       margin-block-start: var(--urlbar-margin-block-start-breakout);
     }
+
+    &:popover-open {
+      translate: var(--toolbar-shift-translate, none);
+    }
   }
 }
 
