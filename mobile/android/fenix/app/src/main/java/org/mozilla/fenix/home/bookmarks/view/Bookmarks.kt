@@ -71,7 +71,7 @@ private fun Modifier.getImageModifier(): Modifier = this
 fun Bookmarks(
     bookmarks: List<Bookmark>,
     menuItems: List<BookmarksMenuItem>,
-    backgroundColor: Color,
+    backgroundColor: Color = MaterialTheme.colorScheme.surfaceBright,
     onBookmarkClick: (Bookmark) -> Unit = {},
 ) {
     LazyRow(

@@ -27,7 +27,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -337,7 +336,6 @@ internal fun Homepage(
                             if (showBookmarks) {
                                 BookmarksSection(
                                     bookmarks = bookmarks,
-                                    cardBackgroundColor = cardBackgroundColor,
                                     interactor = interactor,
                                 )
                             }
@@ -345,7 +343,6 @@ internal fun Homepage(
                             if (showRecentlyVisited) {
                                 RecentlyVisitedSection(
                                     recentVisits = recentlyVisited,
-                                    cardBackgroundColor = cardBackgroundColor,
                                     interactor = interactor,
                                 )
                             }
@@ -575,7 +572,6 @@ private fun RecentTabsSection(
 @Composable
 private fun BookmarksSection(
     bookmarks: List<Bookmark>,
-    cardBackgroundColor: Color,
     interactor: BookmarksInteractor,
 ) {
     LaunchedEffect(Unit) {
@@ -593,23 +589,23 @@ private fun BookmarksSection(
 
     Spacer(Modifier.height(16.dp))
 
-    Bookmarks(
-        bookmarks = bookmarks,
-        menuItems = listOf(
-            BookmarksMenuItem(
-                stringResource(id = R.string.home_bookmarks_menu_item_remove),
-                onClick = interactor::onBookmarkRemoved,
+    WallpaperTheme {
+        Bookmarks(
+            bookmarks = bookmarks,
+            menuItems = listOf(
+                BookmarksMenuItem(
+                    stringResource(id = R.string.home_bookmarks_menu_item_remove),
+                    onClick = interactor::onBookmarkRemoved,
+                ),
             ),
-        ),
-        backgroundColor = cardBackgroundColor,
-        onBookmarkClick = interactor::onBookmarkClicked,
-    )
+            onBookmarkClick = interactor::onBookmarkClicked,
+        )
+    }
 }
 
 @Composable
 private fun RecentlyVisitedSection(
     recentVisits: List<RecentlyVisitedItem>,
-    cardBackgroundColor: Color,
     interactor: RecentVisitsInteractor,
 ) {
     Spacer(modifier = Modifier.height(40.dp))
@@ -624,41 +620,42 @@ private fun RecentlyVisitedSection(
 
     Spacer(Modifier.height(16.dp))
 
-    RecentlyVisited(
-        recentVisits = recentVisits,
-        menuItems = listOfNotNull(
-            RecentVisitMenuItem(
-                title = stringResource(R.string.recently_visited_menu_item_remove),
-                onClick = { visit ->
-                    when (visit) {
-                        is RecentHistoryGroup -> interactor.onRemoveRecentHistoryGroup(visit.title)
-                        is RecentHistoryHighlight -> interactor.onRemoveRecentHistoryHighlight(
-                            visit.url,
-                        )
-                    }
-                },
+    WallpaperTheme {
+        RecentlyVisited(
+            recentVisits = recentVisits,
+            menuItems = listOfNotNull(
+                RecentVisitMenuItem(
+                    title = stringResource(R.string.recently_visited_menu_item_remove),
+                    onClick = { visit ->
+                        when (visit) {
+                            is RecentHistoryGroup -> interactor.onRemoveRecentHistoryGroup(visit.title)
+                            is RecentHistoryHighlight -> interactor.onRemoveRecentHistoryHighlight(
+                                visit.url,
+                            )
+                        }
+                    },
+                ),
             ),
-        ),
-        backgroundColor = cardBackgroundColor,
-        onRecentVisitClick = { recentlyVisitedItem, pageNumber ->
-            when (recentlyVisitedItem) {
-                is RecentHistoryHighlight -> {
-                    RecentlyVisitedHomepage.historyHighlightOpened.record(NoExtras())
-                    interactor.onRecentHistoryHighlightClicked(recentlyVisitedItem)
-                }
+            onRecentVisitClick = { recentlyVisitedItem, pageNumber ->
+                when (recentlyVisitedItem) {
+                    is RecentHistoryHighlight -> {
+                        RecentlyVisitedHomepage.historyHighlightOpened.record(NoExtras())
+                        interactor.onRecentHistoryHighlightClicked(recentlyVisitedItem)
+                    }
 
-                is RecentHistoryGroup -> {
-                    RecentlyVisitedHomepage.searchGroupOpened.record(NoExtras())
-                    History.recentSearchesTapped.record(
-                        History.RecentSearchesTappedExtra(
-                            pageNumber.toString(),
-                        ),
-                    )
-                    interactor.onRecentHistoryGroupClicked(recentlyVisitedItem)
+                    is RecentHistoryGroup -> {
+                        RecentlyVisitedHomepage.searchGroupOpened.record(NoExtras())
+                        History.recentSearchesTapped.record(
+                            History.RecentSearchesTappedExtra(
+                                pageNumber.toString(),
+                            ),
+                        )
+                        interactor.onRecentHistoryGroupClicked(recentlyVisitedItem)
+                    }
                 }
-            }
-        },
-    )
+            },
+        )
+    }
 }
 
 @Composable
