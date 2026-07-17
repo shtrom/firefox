@@ -151,11 +151,11 @@ async function checkAllLoginsRendered(megalist) {
   ok(true, `${logins.length} password cards are rendered.`);
 }
 
-async function addLocalOriginLogin() {
+async function addNavigableOriginLogin() {
   LoginTestUtils.addLogin({
     username: "john",
     password: "pass4",
-    origin: "about:preferences#privacy",
+    origin: "https://example.com",
   });
 }
 
