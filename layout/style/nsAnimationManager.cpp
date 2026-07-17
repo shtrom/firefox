@@ -275,14 +275,17 @@ static void UpdateOldAnimationPropertiesWithNew(
   }
 }
 
-static bool ScopedNameLooselyMatches(
-    const dom::ShadowRoot* aTargetShadowRoot,
-    const Element* aTimelineElement, StyleCascadeLevel aTimelineCascadeLevel) {
+static bool ScopedNameLooselyMatches(const dom::ShadowRoot* aTargetShadowRoot,
+                                     const Element* aTimelineElement,
+                                     StyleCascadeLevel aTimelineCascadeLevel) {
   const auto* timelineShadowRoot =
       Servo_GetShadowRootForScoped(aTimelineElement, aTimelineCascadeLevel);
-  for (auto* root = aTargetShadowRoot; root; root = root->Host()->GetContainingShadow()) {
+  for (auto* root = aTargetShadowRoot; root;
+       root = root->Host()->GetContainingShadow()) {
     // Is `timelineShadowRoot` an ancestor of `aTargetShadowRoot`?
-    if (root == timelineShadowRoot) { return true; }
+    if (root == timelineShadowRoot) {
+      return true;
+    }
   }
   // Reached light DOM, so is the timeline there too?
   return !timelineShadowRoot;
