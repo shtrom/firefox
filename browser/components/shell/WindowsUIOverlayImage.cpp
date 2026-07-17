@@ -197,9 +197,17 @@ static RefPtr<IWICBitmapDecoder> CreateWICBitmapDecoder(
 }
 
 static already_AddRefed<nsIFile> GetImageFile() {
+  nsresult rv{NS_ERROR_FAILURE};
   nsCOMPtr<nsIFile> file;
-  nsresult rv{NS_GetSpecialDirectory(NS_GRE_BIN_DIR, getter_AddRefs(file))};
-  if (NS_FAILED(rv)) {
+  // The directory service must be used on the main thread
+  const nsresult dispatchToThreadRv{mozilla::SyncRunnable::DispatchToThread(
+      mozilla::GetMainThreadSerialEventTarget(),
+      NS_NewRunnableFunction(
+          "WindowsUIOverlayImage::GetImageFile", [&rv, &file] {
+            rv = NS_GetSpecialDirectory(NS_GRE_BIN_DIR, getter_AddRefs(file));
+          }))};
+
+  if (NS_FAILED(dispatchToThreadRv) || NS_FAILED(rv)) {
     return nullptr;
   }
 
