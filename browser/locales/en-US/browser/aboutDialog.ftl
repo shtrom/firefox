@@ -82,6 +82,8 @@ community-2 = { -brand-short-name } is designed by <label data-l10n-name="commun
 
 helpus = Want to help? <label data-l10n-name="helpus-donateLink">Make a donation</label> or <label data-l10n-name="helpus-getInvolvedLink">get involved!</label>
 
+helpus-referrals = Want to help? <label data-l10n-name="helpus-donateLink">Make a donation</label>, <label data-l10n-name="helpus-shareFirefoxLink">Share { -brand-short-name }</label>, or <label data-l10n-name="helpus-getInvolvedLink">get involved!</label>
+
 bottomLinks-license = Licensing Information
 bottom-links-terms = Terms of Use
 bottom-links-privacy = Privacy Notice
