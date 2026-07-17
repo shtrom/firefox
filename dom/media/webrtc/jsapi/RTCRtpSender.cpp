@@ -554,6 +554,8 @@ nsTArray<RefPtr<dom::RTCStatsPromise>> RTCRtpSender::GetStatsInternal(
               local.mHugeFramesSent.Construct(0);
               local.mTotalEncodeTime.Construct(0);
             }
+            aConduit->GetAssociatedLocalRtxSSRC(ssrc).apply(
+                [&](const auto rtxSsrc) { local.mRtxSsrc.Construct(rtxSsrc); });
             /*
              * Potential new stats that are now available upstream.
             local.mTargetBitrate.Construct(videoStats->target_media_bitrate_bps);

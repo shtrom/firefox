@@ -1018,6 +1018,14 @@ Maybe<Ssrc> WebrtcVideoConduit::GetAssociatedLocalRtxSSRC(Ssrc aSsrc) const {
   return Nothing();
 }
 
+Maybe<Ssrc> WebrtcVideoConduit::GetAssociatedRemoteRtxSSRC() const {
+  MOZ_ASSERT(mCallThread->IsOnCurrentThread());
+  if (mRecvStreamConfig.rtp.rtx_ssrc) {
+    return Some(mRecvStreamConfig.rtp.rtx_ssrc);
+  }
+  return Nothing();
+}
+
 Maybe<gfx::IntSize> WebrtcVideoConduit::GetLastResolution() const {
   MOZ_ASSERT(mCallThread->IsOnCurrentThread());
   return mLastSize;

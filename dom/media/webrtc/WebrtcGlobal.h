@@ -150,11 +150,12 @@ DEFINE_IPC_SERIALIZER_WITH_SUPER_CLASS_AND_FIELDS(
     mTotalInterFrameDelay, mTotalSquaredInterFrameDelay, mPauseCount,
     mTotalPausesDuration, mFreezeCount, mTotalFreezesDuration,
     mLastPacketReceivedTimestamp, mHeaderBytesReceived, mFecPacketsReceived,
-    mFecPacketsDiscarded, mBytesReceived, mNackCount, mFirCount, mPliCount,
-    mTotalProcessingDelay, mEstimatedPlayoutTimestamp, mFramesReceived,
-    mJitterBufferDelay, mJitterBufferEmittedCount, mJitterBufferTargetDelay,
-    mJitterBufferMinimumDelay, mTotalSamplesReceived, mConcealedSamples,
-    mSilentConcealedSamples, mConcealmentEvents,
+    mFecPacketsDiscarded, mBytesReceived, mRtxSsrc,
+    mRetransmittedPacketsReceived, mRetransmittedBytesReceived, mNackCount,
+    mFirCount, mPliCount, mTotalProcessingDelay, mEstimatedPlayoutTimestamp,
+    mFramesReceived, mJitterBufferDelay, mJitterBufferEmittedCount,
+    mJitterBufferTargetDelay, mJitterBufferMinimumDelay, mTotalSamplesReceived,
+    mConcealedSamples, mSilentConcealedSamples, mConcealmentEvents,
     mInsertedSamplesForDeceleration, mRemovedSamplesForAcceleration,
     mAudioLevel, mTotalAudioEnergy, mTotalSamplesDuration,
     mFramesAssembledFromMultiplePackets, mTotalAssemblyTime);
@@ -171,9 +172,10 @@ DEFINE_IPC_SERIALIZER_WITH_SUPER_CLASS_AND_FIELDS(
     mozilla::dom::RTCOutboundRtpStreamStats,
     mozilla::dom::RTCSentRtpStreamStats, mRemoteId, mFramesEncoded,
     mKeyFramesEncoded, mQpSum, mNackCount, mFirCount, mPliCount,
-    mHeaderBytesSent, mRetransmittedPacketsSent, mRetransmittedBytesSent,
-    mTotalEncodedBytesTarget, mFrameWidth, mFrameHeight, mFramesPerSecond,
-    mFramesSent, mHugeFramesSent, mTotalEncodeTime);
+    mHeaderBytesSent, mRtxSsrc, mRetransmittedPacketsSent,
+    mRetransmittedBytesSent, mTotalEncodedBytesTarget, mFrameWidth,
+    mFrameHeight, mFramesPerSecond, mFramesSent, mHugeFramesSent,
+    mTotalEncodeTime);
 
 DEFINE_IPC_SERIALIZER_WITH_SUPER_CLASS_AND_FIELDS(
     mozilla::dom::RTCRemoteInboundRtpStreamStats,

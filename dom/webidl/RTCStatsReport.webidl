@@ -108,6 +108,9 @@ dictionary RTCInboundRtpStreamStats : RTCReceivedRtpStreamStats {
   unsigned long framesReceived;
   unsigned long framesAssembledFromMultiplePackets;
   double totalAssemblyTime;
+  unsigned long long retransmittedPacketsReceived;
+  unsigned long long retransmittedBytesReceived;
+  unsigned long rtxSsrc;
 };
 
 dictionary RTCRemoteInboundRtpStreamStats : RTCReceivedRtpStreamStats {
@@ -130,6 +133,7 @@ dictionary RTCOutboundRtpStreamStats : RTCSentRtpStreamStats {
   unsigned long long headerBytesSent;
   unsigned long long retransmittedPacketsSent;
   unsigned long long retransmittedBytesSent;
+  unsigned long rtxSsrc;
   unsigned long long totalEncodedBytesTarget;
   unsigned long frameWidth;
   unsigned long frameHeight;
