@@ -128,6 +128,16 @@ const PanelUI = {
       }
     );
 
+    XPCOMUtils.defineLazyPreferenceGetter(
+      this,
+      "referralsEnabled",
+      "browser.referrals.enabled",
+      false,
+      (_pref, _previousValue, _newValue) => {
+        this._showReferralsMenuItem();
+      }
+    );
+
     if (this.autoHideToolbarInFullScreen) {
       window.addEventListener("fullscreen", this);
     } else {
@@ -157,6 +167,7 @@ const PanelUI = {
 
     this._showAIMenuItem();
     this._showTabGroupsMenuItem();
+    this._showReferralsMenuItem();
     this._initialized = true;
   },
 
@@ -1189,6 +1200,20 @@ const PanelUI = {
       "appMenu-tab-groups-button"
     );
     button.hidden = !this.tabGroupsAlternateMenu;
+  },
+
+  _showReferralsMenuItem() {
+    const button = PanelMultiView.getViewNode(
+      document,
+      "appMenu-referrals-button"
+    );
+    const separator = PanelMultiView.getViewNode(
+      document,
+      "appMenu-referrals-separator"
+    );
+    const hidden = !this.referralsEnabled;
+    button.hidden = hidden;
+    separator.hidden = hidden;
   },
 
   _showBadge(notification) {

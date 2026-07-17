@@ -10,6 +10,7 @@ document.addEventListener(
       TranslationsParent: "resource://gre/actors/TranslationsParent.sys.mjs",
       AIWindowUI:
         "moz-src:///browser/components/aiwindow/ui/modules/AIWindowUI.sys.mjs",
+      Referrals: "resource:///modules/referrals/Referrals.sys.mjs",
     });
 
     // <commandset id="mainCommandSet"> defined in browser-sets.inc.xhtml
@@ -144,6 +145,9 @@ document.addEventListener(
             break;
           case "cmd_editPDF":
             switchToTabHavingURI("about:pdf", true);
+            break;
+          case "cmd_openReferrals":
+            lazy.Referrals.openReferralsTab(window);
             break;
           case "Browser:AddBookmarkAs":
             PlacesCommandHook.bookmarkPage();
