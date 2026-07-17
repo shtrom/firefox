@@ -1313,6 +1313,13 @@
   value: false
   mirror: always
 
+# If true, content analysis uses an in-process WebAssembly DLP module
+# instead of an external agent.
+- name: browser.contentanalysis.use_wasm_backend
+  type: bool
+  value: false
+  mirror: always
+
 # If true, the content analysis extension must be signed before Firefox will
 # read and run its DLP module. Should only be set to false for testing.
 - name: browser.contentanalysis.wasm_module_extension_require_signature

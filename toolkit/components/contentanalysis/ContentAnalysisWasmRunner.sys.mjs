@@ -50,7 +50,7 @@ function readExtensionBytes(extensionId, path) {
   );
   if (requireSignature) {
     const signedState = extension.addonData?.signedState;
-    if (!(signedState >= lazy.AddonManager.SIGNEDSTATE_SIGNED)) {
+    if (!(signedState >= lazy.AddonManager.SIGNEDSTATE_SYSTEM)) {
       throw Components.Exception(
         `DLP wasm extension '${extensionId}' is not acceptably signed ` +
           `(signedState=${signedState}); refusing to load its module`,

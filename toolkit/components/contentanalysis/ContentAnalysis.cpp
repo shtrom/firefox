@@ -344,6 +344,7 @@ ContentAnalysisRequest::ContentAnalysisRequest(
   if (aStringIsFilePath) {
     mFilePath = std::move(aString);
   } else {
+    MOZ_ASSERT(!aString.IsEmpty());
     mTextContent = std::move(aString);
   }
   if (mOperationTypeForDisplay == OperationType::eUpload ||
