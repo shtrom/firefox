@@ -109,11 +109,9 @@ struct Extractor {
 
 [[nodiscard]] RefPtr<WinFileDialogParent::ShowFileDialogPromise>
 WinFileDialogParent::ShowFileDialogImpl(HWND parent, const FileDialogType& type,
-                                        mozilla::Span<Command const> commands,
-                                        bool aNeedsInputProtection) {
+                                        mozilla::Span<Command const> commands) {
   auto inner_promise = PWinFileDialogParent::SendShowFileDialog(
-      reinterpret_cast<WindowsHandle>(parent), type, std::move(commands),
-      aNeedsInputProtection);
+      reinterpret_cast<WindowsHandle>(parent), type, std::move(commands));
 
   return ConvertToFDPromise(
       __func__,
@@ -123,12 +121,10 @@ WinFileDialogParent::ShowFileDialogImpl(HWND parent, const FileDialogType& type,
 }
 
 [[nodiscard]] RefPtr<WinFileDialogParent::ShowFolderDialogPromise>
-WinFileDialogParent::ShowFolderDialogImpl(HWND parent,
-                                          mozilla::Span<Command const> commands,
-                                          bool aNeedsInputProtection) {
+WinFileDialogParent::ShowFolderDialogImpl(
+    HWND parent, mozilla::Span<Command const> commands) {
   auto inner_promise = PWinFileDialogParent::SendShowFolderDialog(
-      reinterpret_cast<WindowsHandle>(parent), std::move(commands),
-      aNeedsInputProtection);
+      reinterpret_cast<WindowsHandle>(parent), std::move(commands));
 
   return ConvertToFDPromise(
       __func__,

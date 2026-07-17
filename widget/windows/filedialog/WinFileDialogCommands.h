@@ -258,18 +258,13 @@ void LogProcessingError(LogModule* aModule, ipc::IProtocol* aCaller,
 }  // namespace detail
 
 // Show a file-picker on another thread in the current process.
-// aNeedsInputProtection enables ignoring confirmations that arrive too soon
-// after the dialog is shown; it is only set for content-initiated pickers.
 RefPtr<Promise<Maybe<Results>>> SpawnFilePicker(HWND parent,
                                                 FileDialogType type,
-                                                nsTArray<Command> commands,
-                                                bool aNeedsInputProtection);
+                                                nsTArray<Command> commands);
 
 // Show a folder-picker on another thread in the current process.
-// See SpawnFilePicker for aNeedsInputProtection.
 RefPtr<Promise<Maybe<nsString>>> SpawnFolderPicker(HWND parent,
-                                                   nsTArray<Command> commands,
-                                                   bool aNeedsInputProtection);
+                                                   nsTArray<Command> commands);
 
 }  // namespace mozilla::widget::filedialog
 
