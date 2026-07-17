@@ -51,7 +51,7 @@ support-files = [
 ]
 prefs = [
   "gfx.font_rendering.fallback.async=false",
-  "browser.nova.enabled=false",
+  "browser.nova.enabled=true",
 ]
 
 ["test_about_networking.html"]
