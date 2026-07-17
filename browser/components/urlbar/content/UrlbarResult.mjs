@@ -72,6 +72,10 @@ export class UrlbarResult {
    * @param {Payload} [params.payload]
    * @param {Highlights} [params.highlights]
    * @param {boolean} [params.testForceNewContent] Used for test only.
+   * @param {boolean} [params.skipPayloadValidation]
+   *   Skips payload schema validation. Set by {@link UrlbarResult.fromWire} when
+   *   reconstructing a result that was already validated before serialization;
+   *   the wire payload can carry internal fields added after validation.
    */
   constructor({
     type,
@@ -95,6 +99,7 @@ export class UrlbarResult {
     payload,
     highlights = null,
     testForceNewContent,
+    skipPayloadValidation = false,
   }) {
     // Type describes the payload and visualization that should be used for
     // this result.
@@ -124,7 +129,9 @@ export class UrlbarResult {
       this.#highlights = Object.freeze(highlights);
     }
 
-    this.#payload = this.#validatePayload(payload);
+    this.#payload = skipPayloadValidation
+      ? payload
+      : this.#validatePayload(payload);
 
     this.#autofill = autofill;
     this.#exposureTelemetry = exposureTelemetry;
@@ -423,6 +430,11 @@ export class UrlbarResult {
    * Returns the given payload if it's valid or throws an error if it's not.
    * The schemas in UrlbarUtils.RESULT_PAYLOAD_SCHEMA are used for validation.
    *
+   * This must only validate the payload, never transform it or add/remove
+   * properties: the constructor's skipPayloadValidation option bypasses this
+   * method entirely, so any such change would make skipPayloadValidation
+   * consumers (e.g. fromWire) diverge from validated results.
+   *
    * @param {object} payload The payload object.
    * @returns {object} `payload` if it's valid.
    */
@@ -510,7 +522,7 @@ export class UrlbarResult {
    * @returns {UrlbarResult} The reconstructed result.
    */
   static fromWire(wire) {
-    let result = new UrlbarResult(wire);
+    let result = new UrlbarResult({ ...wire, skipPayloadValidation: true });
     // providerType and rowIndex aren't constructor parameters, so re-apply them.
     result.providerType = wire.providerType;
     result.rowIndex = wire.rowIndex;
