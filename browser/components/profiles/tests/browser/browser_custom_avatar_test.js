@@ -117,7 +117,7 @@ add_task(async function test_edit_profile_custom_avatar() {
         await new Promise(resolve => content.requestAnimationFrame(resolve));
 
         EventUtils.synthesizeMouseAtCenter(
-          editProfileCard.avatarSelectorLink,
+          editProfileCard.avatarSelectorButton,
           {},
           content
         );
@@ -183,7 +183,7 @@ add_task(async function test_edit_profile_custom_avatar_upload() {
           await new Promise(resolve => content.requestAnimationFrame(resolve));
 
           EventUtils.synthesizeMouseAtCenter(
-            editProfileCard.avatarSelectorLink,
+            editProfileCard.avatarSelectorButton,
             {},
             content
           );
@@ -304,7 +304,7 @@ add_task(async function test_avatar_selector_tabs() {
         await new Promise(resolve => content.requestAnimationFrame(resolve));
 
         EventUtils.synthesizeMouseAtCenter(
-          editProfileCard.avatarSelectorLink,
+          editProfileCard.avatarSelectorButton,
           {},
           content
         );
@@ -443,7 +443,7 @@ add_task(async function test_edit_profile_custom_avatar_crop() {
           const avatarSelector = editProfileCard.avatarSelector;
 
           EventUtils.synthesizeMouseAtCenter(
-            editProfileCard.avatarSelectorLink,
+            editProfileCard.avatarSelectorButton,
             {},
             content
           );
@@ -698,7 +698,7 @@ add_task(async function test_edit_profile_custom_avatar_keyboard_crop() {
           const avatarSelector = editProfileCard.avatarSelector;
 
           EventUtils.synthesizeMouseAtCenter(
-            editProfileCard.avatarSelectorLink,
+            editProfileCard.avatarSelectorButton,
             {},
             content
           );
@@ -926,7 +926,7 @@ add_task(async function test_edit_profile_custom_avatar_keyboard_crop() {
         const avatarSelector = editProfileCard.avatarSelector;
 
         EventUtils.synthesizeMouseAtCenter(
-          editProfileCard.avatarSelectorLink,
+          editProfileCard.avatarSelectorButton,
           {},
           content
         );
@@ -948,7 +948,7 @@ add_task(async function test_edit_profile_custom_avatar_keyboard_crop() {
         );
 
         EventUtils.synthesizeMouseAtCenter(
-          editProfileCard.avatarSelectorLink,
+          editProfileCard.avatarSelectorButton,
           {},
           content
         );
@@ -986,7 +986,7 @@ add_task(async function test_edit_profile_custom_avatar_keyboard_crop() {
         );
 
         EventUtils.synthesizeMouseAtCenter(
-          editProfileCard.avatarSelectorLink,
+          editProfileCard.avatarSelectorButton,
           {},
           content
         );
