@@ -12,6 +12,7 @@ BROWSER_CHROME_MANIFESTS += [
 
 MOCHITEST_CHROME_MANIFESTS += [
     "chrome/chrome.toml",
+    "widgets/chrome-nova.toml",
     "widgets/chrome.toml",
 ]
 

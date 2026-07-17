@@ -10,7 +10,7 @@ support-files = [
 ]
 prefs = [
   "app.support.baseURL='https://support.mozilla.org/'",
-  "browser.nova.enabled=false",
+  "browser.nova.enabled=true",
 ]
 
 ["test_contextmenu_menugroup.xhtml"]
