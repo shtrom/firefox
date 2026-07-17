@@ -78,14 +78,14 @@
                      key="key_privatebrowsing"
                      command="Tools:PrivateBrowsing"/>
       <toolbarseparator/>
-      <toolbarbutton id="appMenu-bookmarks-button"
-                     class="subviewbutton subviewbutton-nav"
-                     data-l10n-id="library-bookmarks-menu"
-                     closemenu="none"
-                     />
       <toolbarbutton id="appMenu-history-button"
                      class="subviewbutton subviewbutton-nav"
                      data-l10n-id="appmenuitem-history"
+                     closemenu="none"
+                     />
+      <toolbarbutton id="appMenu-bookmarks-button"
+                     class="subviewbutton subviewbutton-nav"
+                     data-l10n-id="library-bookmarks-menu"
                      closemenu="none"
                      />
       <toolbarbutton id="appMenu-tab-groups-button"
@@ -131,15 +131,15 @@
                      data-l10n-id="appmenuitem-save-page"
                      key="key_savePage"
                      command="Browser:SavePage"/>
+      <toolbarbutton id="appMenu-translate-button"
+                     class="subviewbutton"
+                     data-l10n-id="appmenuitem-translate"
+                     command="cmd_translate"/>
       <toolbarbutton id="appMenu-find-button2"
                      class="subviewbutton"
                      data-l10n-id="appmenuitem-find-in-page"
                      key="key_find"
                      command="cmd_find"/>
-      <toolbarbutton id="appMenu-translate-button"
-                     class="subviewbutton"
-                     data-l10n-id="appmenuitem-translate"
-                     command="cmd_translate"/>
       <toolbaritem id="appMenu-zoom-controls" class="subviewbutton toolbaritem-combined-buttons" closemenu="none">
         <label class="toolbarbutton-text" data-l10n-id="appmenuitem-zoom"/>
         <toolbarbutton id="appMenu-zoomReduce-button2"
@@ -177,15 +177,9 @@
                      data-l10n-id="appmenuitem-more-tools"
                      closemenu="none"
                      />
-      <toolbarbutton id="appMenu-report-broken-site-button"
-                     class="subviewbutton subviewbutton-nav"
-                     data-l10n-id="appmenuitem-report-broken-site"
-                     closemenu="none"
-                     disabled="true"
-                     command="cmd_reportBrokenSite"/>
       <toolbarbutton id="appMenu-help-button2"
                      class="subviewbutton subviewbutton-nav"
-                     data-l10n-id="appmenuitem-help"
+                     data-l10n-id="appmenuitem-help-and-report"
                      closemenu="none"
                      />
       <toolbarseparator id="appMenu-referrals-separator" hidden="true"/>
@@ -281,7 +275,7 @@
     <vbox id="PanelUI-containersItems"/>
   </panelview>
 
-  <panelview id="PanelUI-helpView" class="PanelUI-subView" data-l10n-id="appmenu-help-header" data-l10n-attrs="title">
+  <panelview id="PanelUI-helpView" class="PanelUI-subView" data-l10n-id="appmenu-help-and-report-header" data-l10n-attrs="title">
     <vbox id="PanelUI-helpItems" class="panel-subview-body"/>
   </panelview>
 

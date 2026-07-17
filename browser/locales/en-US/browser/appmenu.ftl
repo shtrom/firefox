@@ -62,8 +62,9 @@ appmenuitem-referrals =
     .label = Share { -brand-product-name }
 appmenuitem-more-tools =
     .label = More Tools
-appmenuitem-help =
-    .label = Help
+# Menu combining the previous "Help" menu and report broken site
+appmenuitem-help-and-report =
+    .label = Help and Report
 appmenuitem-exit2 =
     .label =
         { PLATFORM() ->
@@ -328,8 +329,9 @@ appmenu-search-history =
 
 ## Help panel
 
-appmenu-help-header =
-    .title = { -brand-shorter-name } help
+# Menu header for combination of "Help" menu and report broken site
+appmenu-help-and-report-header =
+    .title = Help and Report
 appmenu-about =
     .label = About { -brand-shorter-name }
     .accesskey = A

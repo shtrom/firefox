@@ -276,8 +276,11 @@ add_task(async function testBackButtons() {
         "KEY_Enter"
       );
 
-      if (menu.menuDescription == "Help Menu") {
-        ok(!rbs.backButton, "Help menu main panel has no back button");
+      if (!menu.showsBackButton) {
+        ok(
+          !rbs.backButton,
+          `${menu.menuDescription} main panel has no back button`
+        );
       } else {
         await rbs.tabTo(
           "#report-broken-site-popup-mainView .subviewbutton-back"
