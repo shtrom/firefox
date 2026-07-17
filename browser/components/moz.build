@@ -61,7 +61,6 @@ DIRS += [
     "protections",
     "protocolhandler",
     "qrcode",
-    "referrals",
     "reportbrokensite",
     "resistfingerprinting",
     "screenshots",
