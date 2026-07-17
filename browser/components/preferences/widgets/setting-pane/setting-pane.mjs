@@ -13,17 +13,19 @@ import { SettingGroupManager } from "chrome://browser/content/preferences/config
 
 /**
  * Whether the sub-pane back arrow should call `history.back()` (and let
- * the browser restore the parent pane's saved scroll position) instead of
- * doing a fresh navigation. True when the previous history entry is the
- * current sub-pane's parent; false when the sub-pane was loaded directly
- * (e.g. via the URL bar).
+ * the browser restore the previous entry's saved scroll position and
+ * search state) instead of doing a fresh navigation. True when the
+ * previous history entry is the sub-pane's parent, or when it's the
+ * search-results view the user drilled in from. False when the sub-pane
+ * was loaded directly (e.g. via the URL bar).
  *
  * @param {Window} win
  * @param {string} parentCategory The friendly id of this sub-pane's parent.
  * @returns {boolean}
  */
 function shouldGoBackToParent(win, parentCategory) {
-  if (win.history.state?.previousCategory !== parentCategory) {
+  let prev = win.history.state?.previousCategory;
+  if (prev !== parentCategory && prev !== "searchResults") {
     return false;
   }
   // Defense in depth: confirm with the Navigation API where available. If

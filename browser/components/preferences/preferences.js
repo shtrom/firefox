@@ -660,8 +660,33 @@ function init_all() {
   });
 }
 
+/**
+ * Fires when navigating back/forward from or to
+ * a hashed URL or if the hash is changed in the URL bar.
+ */
 function onHashChange() {
-  gotoPref(null, "Hash");
+  /**
+   * If there is a query that was active, it would be on `history.state.searchQuery`,
+   * in which case this reapplies it or {@link gotoPref} will inadvertently
+   * redirect to the default pane if the input is empty. Then it replays the search
+   * after {@link gotoPref} settles so results are shown and highlighted again.
+   */
+  let restoredQuery =
+    document.location.hash === "#searchResults" &&
+    history.state?.searchQuery &&
+    !gSearchResultsPane.searchInput.value
+      ? history.state.searchQuery
+      : null;
+  if (restoredQuery) {
+    gSearchResultsPane.searchInput.value = restoredQuery;
+  }
+  gotoPref(null, "Hash").then(() => {
+    if (restoredQuery) {
+      gSearchResultsPane.searchFunction({
+        target: gSearchResultsPane.searchInput,
+      });
+    }
+  });
 }
 
 function onBeforeunload() {
@@ -802,10 +827,11 @@ async function gotoPref(
       }
     }
   }
-  // Treat back/forward navigations (aShowReason == "Hash") as visits to the
-  // existing history entry so we can restore the scroll position saved when
-  // leaving it. Everything else — initial load, sidebar click, openPreferences
-  // call — is a brand-new entry and gets a fresh id.
+  /**
+   * On back/forward (aShowReason == "Hash") reuse the entry's saved id
+   * so its scroll position gets restored. Any other reason is a new
+   * entry with a fresh id.
+   */
   let historyEntryId =
     (aShowReason == "Hash" && history.state?.historyEntryId) ||
     scrollOffsets.newHistoryEntryId();
@@ -861,14 +887,17 @@ async function gotoPref(
   } else if (aShowReason == "Click" && prevCategory) {
     previousCategory = internalPrefCategoryNameToFriendlyName(prevCategory);
   }
-  window.history.replaceState(
-    {
-      historyEntryId,
-      category: internalPrefCategoryNameToFriendlyName(category),
-      previousCategory,
-    },
-    document.title
-  );
+  // history.state may be a string (set as `category` by the pushState/
+  // replaceState calls above), so only spread it when it's an object.
+  let prevState =
+    history.state && typeof history.state === "object" ? history.state : null;
+  let newState = {
+    ...prevState,
+    historyEntryId,
+    category: internalPrefCategoryNameToFriendlyName(category),
+    previousCategory,
+  };
+  window.history.replaceState(newState, document.title);
 
   let categoryInfo = gCategoryInits.get(category);
   if (!categoryInfo) {

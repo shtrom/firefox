@@ -339,6 +339,11 @@ var gSearchResultsPane = {
       }
       srHeader.hidden = false;
 
+      history.replaceState(
+        { ...history.state, searchQuery: this.query },
+        document.title
+      );
+
       let resultsFound = false;
 
       // Building the range for highlighted areas
