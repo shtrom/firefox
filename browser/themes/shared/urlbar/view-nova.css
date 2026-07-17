@@ -316,6 +316,7 @@
   background-repeat: no-repeat;
   background-size: contain;
   object-fit: contain;
+  mask-mode: luminance;
   mask-position: var(--urlbarView-favicon-mask-position);
   -moz-context-properties: fill, fill-opacity;
 
