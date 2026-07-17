@@ -1512,7 +1512,8 @@ void nsTableRowGroupFrame::RemoveFrame(DestroyContext& aContext,
   ClearRowCursor();
 
   // XXX why are we doing the QI stuff?  There shouldn't be any non-rows here.
-  if (nsTableRowFrame* rowFrame = do_QueryFrame(aOldFrame)) {
+  nsTableRowFrame* rowFrame = do_QueryFrame(aOldFrame);
+  if (rowFrame) {
     nsTableFrame* tableFrame = GetTableFrame();
     // remove the rows from the table (and flag a rebalance)
     tableFrame->RemoveRows(*rowFrame, 1, true);
@@ -1521,7 +1522,7 @@ void nsTableRowGroupFrame::RemoveFrame(DestroyContext& aContext,
                                   NS_FRAME_HAS_DIRTY_CHILDREN);
     tableFrame->SetGeometryDirty();
   }
-  nsContainerFrame::RemoveFrame(aContext, aListID, aOldFrame);
+  mFrames.DestroyFrame(aContext, aOldFrame);
 }
 
 /* virtual */
