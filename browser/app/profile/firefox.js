@@ -3679,6 +3679,12 @@ pref("widget.support-xdg-config", true, locked);
 // A preference that enables Content Sharing
 pref("browser.contentsharing.enabled", false);
 
+// Preferences for the Firefox Referral program #2051647).
+pref("browser.referrals.enabled", false);
+// This is locked to the user, but will be unlcoked
+// and relocked when a referral code in generated
+pref("browser.referrals.code", "", locked);
+
 // When enabled, Firefox ignores the distribution.ini file if global.id is MozillaOnline.
 pref("distribution.mozillaonline.ignore", true);
 
