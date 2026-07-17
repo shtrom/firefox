@@ -6,7 +6,6 @@
 #include "nsArrayUtils.h"
 #include "nsComponentManagerUtils.h"
 #include "nsWidgetsCID.h"
-#include "nsIObserverService.h"
 #include "nsWindow.h"
 #include "nsSystemInfo.h"
 #include "nsICookieJarSettings.h"
@@ -51,6 +50,8 @@ using namespace mozilla::gfx;
 
 #define DRAG_IMAGE_ALPHA_LEVEL 0.5
 
+#undef LOGDRAGSERVICE
+#undef LOGDRAGSERVICESTATIC
 #ifdef MOZ_LOGGING
 extern mozilla::LazyLogModule gWidgetDragLog;
 #  define LOGDRAGSERVICE(str, ...)                                             \
@@ -67,14 +68,6 @@ extern mozilla::LazyLogModule gWidgetDragLog;
 #  define LOGDRAGSERVICE(...)
 #  define LOGDRAGSERVICESTATIC(...)
 #endif
-
-static const char gMozUrlType[] = "_NETSCAPE_URL";
-static const char gMimeListType[] = "application/x-moz-internal-item-list";
-static const char gTextUriListType[] = "text/uri-list";
-static const char gTextPlainUTF8Type[] = "text/plain;charset=utf-8";
-static const char gXdndDirectSaveType[] = "XdndDirectSave0";
-static const char gUTF8STRINGType[] = "UTF8_STRING";
-static const char gSTRINGType[] = "STRING";
 
 class MOZ_STACK_CLASS AutoSuspendNativeEvents {
  public:
@@ -281,14 +274,8 @@ static void OnSourceGrabEventAfter(GtkWidget* widget, GdkEvent* event,
       G_PRIORITY_DEFAULT_IDLE, 350, DispatchMotionEventCopy, nullptr, nullptr);
 }
 
-NS_IMPL_ISUPPORTS_INHERITED(nsDragSessionSource, nsDragSession, nsIObserver)
-
 nsDragSessionSource::nsDragSessionSource() {
   LOGDRAGSERVICE("nsDragSessionSource::nsDragSessionSource()");
-
-  nsCOMPtr<nsIObserverService> obsServ =
-      mozilla::services::GetObserverService();
-  obsServ->AddObserver(this, "quit-application", false);
 
   // Using an offscreen window works around bug 983843.
   mHiddenWidget = gtk_offscreen_window_new();
@@ -313,23 +300,6 @@ nsDragSessionSource::~nsDragSessionSource() {
   MozClearHandleID(mTempFileTimerID, g_source_remove);
   RemoveTempFiles();
   MozClearPointer(mHiddenWidget, gtk_widget_destroy);
-}
-
-NS_IMETHODIMP
-nsDragSessionSource::Observe(nsISupports* aSubject, const char* aTopic,
-                             const char16_t* aData) {
-  if (!nsCRT::strcmp(aTopic, "quit-application")) {
-    LOGDRAGSERVICE("nsDragSessionSource::Observe(\"quit-application\")");
-    if (mHiddenWidget) {
-      gtk_widget_destroy(mHiddenWidget);
-      mHiddenWidget = nullptr;
-    }
-  } else {
-    MOZ_ASSERT_UNREACHABLE("unexpected topic");
-    return NS_ERROR_UNEXPECTED;
-  }
-
-  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -473,15 +443,6 @@ nsresult nsDragSessionSource::EndDragSessionImpl(bool aDoneDrag,
   if (mSourceWindow) {
     mSourceWindow->SetDragSource(nullptr);
     mSourceWindow = nullptr;
-  }
-
-  nsCOMPtr<nsIObserverService> obsServ =
-      mozilla::services::GetObserverService();
-  obsServ->RemoveObserver(this, "quit-application");
-
-  if (mHiddenWidget) {
-    gtk_widget_destroy(mHiddenWidget);
-    mHiddenWidget = nullptr;
   }
 
   return nsDragSession::EndDragSessionImpl(aDoneDrag, aKeyModifiers);
@@ -1322,6 +1283,8 @@ static void invisibleSourceDragBegin(GtkWidget* aWidget,
   LOGDRAGSERVICESTATIC("invisibleSourceDragBegin (%p)", aContext);
   nsDragSessionSource* dragSession = (nsDragSessionSource*)aData;
 
+  // Keep nsDragSessionSource until D&D is finished.
+  dragSession->AddRef();
   dragSession->SourceBeginDrag(aContext);
   dragSession->SetDragIcon(aContext);
 }
@@ -1354,8 +1317,8 @@ static gboolean invisibleSourceDragFailed(GtkWidget* aWidget,
 static void invisibleSourceDragEnd(GtkWidget* aWidget, GdkDragContext* aContext,
                                    gpointer aData) {
   LOGDRAGSERVICESTATIC("invisibleSourceDragEnd(%p)", aContext);
-  nsDragSessionSource* dragSession = (nsDragSessionSource*)aData;
-
+  // Release reference taken at invisibleSourceDragBegin.
+  RefPtr dragSession = dont_AddRef(static_cast<nsDragSessionSource*>(aData));
   dragSession->SourceEndDragSession(aContext, GTK_DRAG_RESULT_SUCCESS);
 }
 
