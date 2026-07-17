@@ -587,8 +587,8 @@ static void DisplayOverlayImageWhenElementIsStill(
     DisplayOverlayImageWhileVisible(aSerialEventTarget, aElement, aDisplayMode);
   }};
 
-  const uint32_t kTrackingDelayMs{500};
-  NS_NewTimerWithCallback(getter_AddRefs(*timer), callback, kTrackingDelayMs,
+  const uint32_t kDelayMs{500};
+  NS_NewTimerWithCallback(getter_AddRefs(*timer), callback, kDelayMs,
                           nsITimer::TYPE_REPEATING_SLACK,
                           "DisplayOverlayImageWhenElementIsStillTimer"_ns,
                           aSerialEventTarget);
@@ -665,8 +665,8 @@ static void HighlightSetDefaultBrowserButton() {
     }
   }};
 
-  const uint32_t kRetryDelayMs{500};
-  NS_NewTimerWithCallback(getter_AddRefs(*timer), callback, kRetryDelayMs,
+  const uint32_t kDelayMs{500};
+  NS_NewTimerWithCallback(getter_AddRefs(*timer), callback, kDelayMs,
                           nsITimer::TYPE_REPEATING_SLACK,
                           "HighlightSetDefaultBrowserButtonTimer"_ns,
                           serialEventTarget);
