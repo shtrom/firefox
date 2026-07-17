@@ -231,4 +231,5 @@
 
 moz-visual-picker-item {
   --visual-picker-item-border-color: transparent;
+  --visual-picker-item-border-radius: var(--button-border-radius);
 }

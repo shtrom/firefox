@@ -294,7 +294,7 @@ export class ProfileAvatarSelector extends MozLitElement {
   iconTabContentTemplate() {
     return html`<moz-visual-picker
       type="listbox"
-      value=${this.avatar}
+      value=${this.value}
       name="avatar"
       id="avatars"
       @change=${this.handleAvatarChange}
