@@ -22,7 +22,7 @@ mod winrt;
 
 // Result from the attempt to pin to taskbar.
 enum PinResult {
-    // Pin request affirmed by user or system.
+    // Pin request affirmed by user.
     Pinned,
     // Pin request rejected by user or system.
     Rejected,
@@ -38,6 +38,25 @@ impl From<PinResult> for u8 {
             PinResult::Rejected => nsIWindowsShellService::REJECTED,
             PinResult::Unknown => nsIWindowsShellService::UNKNOWN,
         }
+    }
+}
+
+impl TryFrom<PinResult> for RefPtr<nsIWritableVariant> {
+    type Error = nsresult;
+
+    fn try_from(result: PinResult) -> Result<Self, Self::Error> {
+        let variant = xpcom::create_instance::<nsIWritableVariant>(c"@mozilla.org/variant;1")
+            .ok_or_else(|| {
+                log::error!("Failed to create writable variant.");
+                NS_ERROR_UNEXPECTED
+            })?;
+
+        // SAFETY: No invariants to uphold as parameter is POD.
+        unsafe { variant.SetAsUint8(result.into()) }
+            .to_result()
+            .inspect_err(|e| log::error!("Failed to set Uint8 on nsIWritableVariant: {e:?}"))?;
+
+        Ok(variant)
     }
 }
 
@@ -130,23 +149,11 @@ pub unsafe extern "C" fn shell_windows_taskbar_pin_app_to_taskbar(
     let promise = RefPtr::new(promise);
 
     moz_task::spawn_local("Pin to Taskbar", async move {
-        let result = pin_app(&aumid, &shortcut_path, fire_and_forget, main_guard)
-            .await
-            .and_then(|result| {
-                let variant =
-                    xpcom::create_instance::<nsIWritableVariant>(c"@mozilla.org/variant;1")
-                        .ok_or_else(|| {
-                            log::error!("Failed to create writable variant.");
-                            NS_ERROR_UNEXPECTED
-                        })?;
-                // SAFETY: No invariants to uphold as parameter is POD.
-                unsafe { variant.SetAsUint8(result.into()) }
-                    .to_result()
-                    .inspect_err(|e| {
-                        log::error!("Failed to set Uint8 on nsIWritableVariant: {e:?}")
-                    })?;
-                Ok(variant)
-            });
+        let result: Result<RefPtr<nsIWritableVariant>, nsresult> =
+            pin_app(&aumid, &shortcut_path, fire_and_forget, main_guard)
+                .await
+                .and_then(TryInto::try_into);
+
         match result {
             Ok(variant) => promise.resolve_with_variant(&variant),
             Err(e) => promise.reject_with_nsresult(e),
