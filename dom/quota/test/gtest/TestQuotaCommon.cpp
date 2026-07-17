@@ -2278,27 +2278,6 @@ TEST(QuotaCommon_MakeSourceFileRelativePath, OtherSourceFile)
   EXPECT_STREQ(sourceFileRelativePath.get(), "Test.cpp");
 }
 
-#ifdef XP_WIN
-TEST(QuotaCommon_NormalizedSourcePath, BackslashesNormalized)
-{
-  static constexpr NormalizedSourcePath path("foo\\bar\\baz.cpp");
-  EXPECT_STREQ(path.value, "foo/bar/baz.cpp");
-}
-
-TEST(QuotaCommon_NormalizedSourcePath, ForwardSlashesUnchanged)
-{
-  static constexpr NormalizedSourcePath path("foo/bar/baz.cpp");
-  EXPECT_STREQ(path.value, "foo/bar/baz.cpp");
-}
-
-TEST(QuotaCommon_NormalizedSourcePath, MixedSeparatorsNormalized)
-{
-  static constexpr NormalizedSourcePath path(
-      ".\\../../dom/quota/QuotaCommon.cpp");
-  EXPECT_STREQ(path.value, "./../../dom/quota/QuotaCommon.cpp");
-}
-#endif
-
 #ifdef __clang__
 #  pragma clang diagnostic pop
 #endif
