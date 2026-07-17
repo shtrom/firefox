@@ -558,7 +558,7 @@ static void DisplayOverlayImageWhileVisible(
     *lastTime = now;
   }};
 
-  const uint32_t kDelayMs{30};
+  const uint32_t kDelayMs{10};
   NS_NewTimerWithCallback(getter_AddRefs(*timer), callback, kDelayMs,
                           nsITimer::TYPE_REPEATING_SLACK,
                           "DisplayOverlayImageWhileVisibleTimer"_ns,
