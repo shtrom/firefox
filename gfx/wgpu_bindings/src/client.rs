@@ -494,7 +494,13 @@ pub extern "C" fn wgpu_client_instance_get_wgsl_language_feature(
     buffer: &mut nsstring::nsCString,
     index: usize,
 ) {
-    match ImplementedLanguageExtension::all().get(index) {
+    // TODO(Bug 2005059): Exclude `ImmediateAddressSpace` until we expose the
+    // rest of the immediates API.
+    let extensions = ImplementedLanguageExtension::all()
+        .iter()
+        .filter(|ext| !matches!(ext, ImplementedLanguageExtension::ImmediateAddressSpace))
+        .collect::<Vec<_>>();
+    match extensions.get(index) {
         Some(some) => buffer.write_str(some.to_ident()).unwrap(),
         None => (),
     }
