@@ -20,6 +20,7 @@
 #include "mozilla/dom/DocumentInlines.h"
 #include "mozilla/dom/ElementInlines.h"
 #include "mozilla/dom/ScrollTimelineBinding.h"
+#include "mozilla/dom/TimelineName.h"
 #include "nsIFrame.h"
 #include "nsLayoutUtils.h"
 #include "nsRefreshDriver.h"
@@ -368,7 +369,7 @@ ScrollTimeline::StateSnapshot::GetScrollContainerFrame() const {
 
 void ScrollTimeline::ReplacePropertiesWith(
     const Element* aReferenceElement, const PseudoStyleRequest& aPseudoRequest,
-    nsAtom* aName, StyleScrollAxis aAxis) {
+    const dom::ScopedTimelineName& aName, StyleScrollAxis aAxis) {
   MOZ_ASSERT(!mScrollerInfo.IsAnonymous());
   MOZ_ASSERT(aReferenceElement == mScrollerInfo.Source().mElement &&
              aPseudoRequest == mScrollerInfo.Source().mPseudoRequest);

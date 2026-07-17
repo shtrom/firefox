@@ -21,6 +21,7 @@
 #include "mozilla/dom/KeyframeEffect.h"
 #include "mozilla/dom/MutationObservers.h"
 #include "mozilla/dom/ScrollTimeline.h"
+#include "mozilla/dom/TimelineName.h"
 #include "mozilla/dom/ViewTimeline.h"
 #include "nsDOMMutationObserver.h"
 #include "nsIFrame.h"
@@ -152,6 +153,8 @@ static void RemoveCorrespondingAnimation(
   auto result = aTimelineNamesToAnimationMap.Lookup(aName);
   if (result) {
     auto& l = result.Data();
+    // Note that we don't care about scoped names - we already know that
+    // we need to remove this exact animation.
     auto foundIt =
         std::find_if(l.cbegin(), l.cend(), AnimationMatches{aAnimation});
     if (foundIt != l.cend()) {
@@ -177,15 +180,16 @@ static void UpdateOldAnimationPropertiesWithNew(
     nsTArray<Keyframe>&& aNewKeyframes, bool aNewIsStylePaused,
     CSSAnimationProperties aOverriddenProperties,
     ServoCSSAnimationBuilder& aBuilder, dom::AnimationTimeline* aTimeline,
-    const nsAtom* aTimelineName, dom::CompositeOperation aNewComposite,
-    dom::AnimationRange&& aTimelineRange,
+    const dom::ScopedTimelineName& aTimelineName,
+    dom::CompositeOperation aNewComposite, dom::AnimationRange&& aTimelineRange,
     nsAnimationManager::TimelineNamesToAnimationMap&
         aTimelineNamesToAnimationMap) {
-  const auto* oldTimelineName = aOld.GetTimelineName();
+  const auto oldTimelineName = aOld.GetTimelineName();
   const bool timelineReferenceChanged =
-      aOld.GetTimeline() != aTimeline || oldTimelineName != aTimelineName;
-  if (timelineReferenceChanged && oldTimelineName) {
-    RemoveCorrespondingAnimation(oldTimelineName, &aOld,
+      aOld.GetTimeline() != aTimeline ||
+      oldTimelineName.mName != aTimelineName.mName;
+  if (timelineReferenceChanged && oldTimelineName.mName) {
+    RemoveCorrespondingAnimation(oldTimelineName.mName, &aOld,
                                  aTimelineNamesToAnimationMap);
   }
   bool animationChanged = false;
@@ -264,16 +268,16 @@ static void UpdateOldAnimationPropertiesWithNew(
     MutationObservers::NotifyAnimationChanged(&aOld);
   }
 
-  if (timelineReferenceChanged && aTimelineName) {
+  if (timelineReferenceChanged && aTimelineName.mName) {
     auto& entries = aTimelineNamesToAnimationMap.LookupOrInsert(
-        aTimelineName, nsTArray<RefPtr<CSSAnimation>>{});
+        aTimelineName.mName, nsTArray<RefPtr<CSSAnimation>>{});
     entries.AppendElement(&aOld);
   }
 }
 
 static already_AddRefed<dom::AnimationTimeline> GetNamedProgressTimeline(
     dom::Document* aDocument, const NonOwningAnimationTarget& aTarget,
-    const nsAtom* aName) {
+    const dom::ScopedTimelineName& aName) {
   auto* presContext = aDocument->GetPresContext();
   const auto* timelineManager =
       presContext ? presContext->TimelineManager() : nullptr;
@@ -291,15 +295,19 @@ static already_AddRefed<dom::AnimationTimeline> GetNamedProgressTimeline(
     const auto [element, pseudo] = AnimationUtils::GetElementPseudoPair(e);
     if (auto* collection =
             TimelineCollection<ScrollTimeline>::Get(element, pseudo)) {
-      if (RefPtr<ScrollTimeline> timeline = collection->Lookup(aName)) {
-        return timeline.forget();
+      auto result = collection->Lookup(aName.mName);
+      // TODO(dshin): Scoped lookup.
+      if (result.mTimeline) {
+        return result.mTimeline.forget();
       }
     }
 
     if (auto* collection =
             TimelineCollection<ViewTimeline>::Get(element, pseudo)) {
-      if (RefPtr<ViewTimeline> timeline = collection->Lookup(aName)) {
-        return timeline.forget();
+      auto result = collection->Lookup(aName.mName);
+      // TODO(dshin): Scoped lookup.
+      if (result.mTimeline) {
+        return result.mTimeline.forget();
       }
     }
 
@@ -307,7 +315,9 @@ static already_AddRefed<dom::AnimationTimeline> GetNamedProgressTimeline(
       continue;
     }
 
-    if (auto scopedTimeline = timelineManager->GetScopedTimeline(e, aName)) {
+    // TODO(dshin): Scoped lookup.
+    if (auto scopedTimeline =
+            timelineManager->GetScopedTimeline(e, aName.mName)) {
       auto* result = scopedTimeline->take();
       if (!result) {
         // https://drafts.csswg.org/scroll-animations-1/#timeline-scoping
@@ -330,12 +340,14 @@ static already_AddRefed<dom::AnimationTimeline> GetTimeline(
   switch (aStyleTimeline.tag) {
     case StyleAnimationTimeline::Tag::Timeline: {
       // Check scroll-timeline-name property or view-timeline-property.
-      nsAtom* name = aStyleTimeline.AsTimeline().value.AsAtom();
-      if (name == nsGkAtoms::_empty) {
+      const auto& scopedName =
+          dom::ScopedTimelineName{aStyleTimeline.AsTimeline()};
+      if (scopedName.mName == nsGkAtoms::_empty) {
         // `animation-timeline: none`.
         return nullptr;
       }
-      return GetNamedProgressTimeline(aPresContext->Document(), aTarget, name);
+      return GetNamedProgressTimeline(aPresContext->Document(), aTarget,
+                                      scopedName);
     }
     case StyleAnimationTimeline::Tag::Scroll: {
       const auto& scroll = aStyleTimeline.AsScroll();
@@ -355,7 +367,7 @@ static already_AddRefed<dom::AnimationTimeline> GetTimeline(
 }
 
 static bool RefersToNamedTimeline(const CSSAnimation* aAnimation) {
-  return aAnimation->GetTimelineName();
+  return aAnimation->GetTimelineName().mName;
 }
 
 // Returns a new animation set up with given StyleAnimation.
@@ -393,16 +405,16 @@ static already_AddRefed<CSSAnimation> BuildAnimation(
   const auto& styleTimeline = aStyle.GetTimeline(animIdx);
   RefPtr<dom::AnimationTimeline> timeline =
       GetTimeline(styleTimeline, aPresContext, aTarget);
-  auto timelineName = [&]() -> const nsAtom* {
+  auto timelineName = [&]() -> dom::ScopedTimelineName {
     if (!styleTimeline.IsTimeline()) {
-      return nullptr;
+      return {};
     }
     const auto* atom = styleTimeline.AsTimeline().value.AsAtom();
     if (atom == nsGkAtoms::_empty) {
       // This is actually `animation-timeline: none`.
-      return nullptr;
+      return {};
     }
-    return atom;
+    return dom::ScopedTimelineName{styleTimeline.AsTimeline()};
   }();
 
   auto range = dom::AnimationRange{aStyle.GetAnimationRangeStart(animIdx),
@@ -429,7 +441,7 @@ static already_AddRefed<CSSAnimation> BuildAnimation(
         composition, std::move(range), aTimelineNamesToAnimationMap);
     // For now, only name-referenced timeline, or `none`, which is represented
     // as IsTimeline with the empty atom, can result in no timeline.
-    MOZ_ASSERT_IF(timelineName && !timeline, styleTimeline.IsTimeline());
+    MOZ_ASSERT_IF(timelineName.mName && !timeline, styleTimeline.IsTimeline());
     return oldAnim.forget();
   }
 
@@ -549,12 +561,15 @@ static void UpdateNamedTimelineAnimation(
     const nsAtom* aTimelineName,
     Maybe<nsTHashSet<RefPtr<mozilla::dom::CSSAnimation>>&>
         aAnimationsWithDeferredUpdate) {
-  if (aTimelineName != aAnimation->GetTimelineName()) {
+  const auto scopedName = aAnimation->GetTimelineName();
+  if (aTimelineName != scopedName.mName) {
     return;
   }
   const auto target = aAnimation->GetTargetForAnimation();
+  // Ok, we know at least one timeline by this name got updated, which may
+  // change our lookup result. Lookup by our scoped name again.
   const RefPtr<dom::AnimationTimeline> newTimeline =
-      GetNamedProgressTimeline(aDocument, target, aTimelineName);
+      GetNamedProgressTimeline(aDocument, target, scopedName);
   const auto* oldTimeline = aAnimation->GetTimeline();
   if (oldTimeline == newTimeline) {
     return;
@@ -570,7 +585,7 @@ static void UpdateNamedTimelineAnimation(
   // No need to call `SetTimeline` and force compositor animation update -
   // timeline changing shouldn't cause change in animation state or playback
   // rate.
-  aAnimation->SetTimelineNoUpdate(newTimeline, aTimelineName,
+  aAnimation->SetTimelineNoUpdate(newTimeline, scopedName,
                                   Animation::FromJS::No);
 }
 
@@ -605,7 +620,7 @@ void nsAnimationManager::UpdateNamedTimelineAnimations(
 void nsAnimationManager::UpdateAllNamedTimelineAnimations() {
   auto* document = mPresContext->Document();
   for (auto& entry : mAnimationsWithNamedTimeline) {
-    const auto& name = entry.GetKey();
+    const auto* name = entry.GetKey();
     for (auto& animation : entry.GetData()) {
       UpdateNamedTimelineAnimation(document, animation.get(), name,
                                    SomeRef(mAnimationsWithDeferredUpdate));
@@ -622,13 +637,13 @@ void nsAnimationManager::UpdateDeferredTimelineChanges() {
   }
   auto* document = mPresContext->Document();
   for (auto* animation : mAnimationsWithDeferredUpdate) {
-    if (!animation->GetTimelineName()) {
+    if (!animation->GetTimelineName().mName) {
       // May have switched to e.g. a document timeline.
       // That's ok, just skip it.
       continue;
     }
     UpdateNamedTimelineAnimation(document, animation,
-                                 animation->GetTimelineName(), Nothing{});
+                                 animation->GetTimelineName().mName, Nothing{});
   }
   mAnimationsWithDeferredUpdate.Clear();
 #ifdef DEBUG
@@ -672,8 +687,8 @@ void nsAnimationManager::DoUpdateAnimations(
         if (!RefersToNamedTimeline(animation)) {
           continue;
         }
-        RemoveCorrespondingAnimation(animation->GetTimelineName(), animation,
-                                     mAnimationsWithNamedTimeline);
+        RemoveCorrespondingAnimation(animation->GetTimelineName().mName,
+                                     animation, mAnimationsWithNamedTimeline);
       }
       collection->Destroy();
     }
@@ -696,7 +711,7 @@ void nsAnimationManager::DoUpdateAnimations(
     aBuilder.NotifyNewOrRemovedAnimation(*anim);
     newAnimations[newAnimIdx]->CancelFromStyle(PostRestyleMode::IfNeeded);
     if (RefersToNamedTimeline(anim)) {
-      RemoveCorrespondingAnimation(anim->GetTimelineName(), anim,
+      RemoveCorrespondingAnimation(anim->GetTimelineName().mName, anim,
                                    mAnimationsWithNamedTimeline);
     }
   }

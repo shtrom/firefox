@@ -33,6 +33,7 @@ class ElementAnimationData;
 namespace dom {
 class Document;
 class Element;
+struct ScopedTimelineName;
 
 /**
  * Implementation notes
@@ -287,7 +288,8 @@ class ScrollTimeline : public AnimationTimeline,
 
   void ReplacePropertiesWith(const Element* aReferenceElement,
                              const PseudoStyleRequest& aPseudoRequest,
-                             nsAtom* aName, StyleScrollAxis aAxis);
+                             const dom::ScopedTimelineName& aName,
+                             StyleScrollAxis aAxis);
 
   void NotifyAnimationUpdated(Animation& aAnimation) override;
 

@@ -13,6 +13,7 @@
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/DocumentInlines.h"
 #include "mozilla/dom/ElementInlines.h"
+#include "mozilla/dom/TimelineName.h"
 #include "mozilla/dom/ViewTimelineBinding.h"
 #include "nsComputedDOMStyle.h"
 #include "nsLayoutUtils.h"
@@ -197,7 +198,7 @@ already_AddRefed<CSSNumericValue> ViewTimeline::GetEndOffset(
 
 void ViewTimeline::ReplacePropertiesWith(
     Element* aSubjectElement, const PseudoStyleRequest& aPseudoRequest,
-    nsAtom* aName, StyleScrollAxis aAxis,
+    const dom::ScopedTimelineName& aName, StyleScrollAxis aAxis,
     const StyleViewTimelineInset& aInset) {
   mSubject = aSubjectElement;
   mSubjectPseudoType = aPseudoRequest.mType;
