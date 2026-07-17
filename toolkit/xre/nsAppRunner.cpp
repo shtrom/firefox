@@ -4887,7 +4887,8 @@ enum struct ShouldNotProcessUpdatesReason {
   DevToolsLaunching,
   NotAnUpdatingTask,
   OtherInstanceRunning,
-  FirstStartup
+  FirstStartup,
+  DisabledByEnvironment
 };
 
 const char* ShouldNotProcessUpdatesReasonAsString(
@@ -4899,6 +4900,8 @@ const char* ShouldNotProcessUpdatesReasonAsString(
       return "NotAnUpdatingTask";
     case ShouldNotProcessUpdatesReason::OtherInstanceRunning:
       return "OtherInstanceRunning";
+    case ShouldNotProcessUpdatesReason::DisabledByEnvironment:
+      return "DisabledByEnvironment";
     default:
       MOZ_CRASH("impossible value for ShouldNotProcessUpdatesReason");
   }
@@ -4912,6 +4915,13 @@ Maybe<ShouldNotProcessUpdatesReason> ShouldNotProcessUpdates(
   if (ARG_FOUND == CheckArgExists("first-startup")) {
     NS_WARNING("ShouldNotProcessUpdates(): FirstStartup");
     return Some(ShouldNotProcessUpdatesReason::FirstStartup);
+  }
+
+  // Bug 2055849: Don't process updates if MOZ_DISABLE_UPDATE_PROCESSING is set.
+  // Set by default when using https://github.com/mozilla/firefox-devtools-mcp.
+  if (EnvHasValue("MOZ_DISABLE_UPDATE_PROCESSING")) {
+    NS_WARNING("ShouldNotProcessUpdates(): DisabledByEnvironment");
+    return Some(ShouldNotProcessUpdatesReason::DisabledByEnvironment);
   }
 
   // Do not process updates if we're launching devtools, as evidenced by
