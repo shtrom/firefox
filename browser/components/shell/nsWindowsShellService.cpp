@@ -535,13 +535,7 @@ static void DisplayOverlayImageWhileVisible(
   auto lastTime{std::make_shared<TimeStamp>(TimeStamp::Now())};
   auto callback{[timer, lastTime, aElement, overlayImage](nsITimer* aTimer) {
     if (aElement->IsMoving().valueOr(true)) {
-      // The element is moving
-      aTimer->Cancel();
-      return;
-    }
-
-    if (!aElement->IsVisible()) {
-      // The element isn't visible
+      // The element is moving or not available
       aTimer->Cancel();
       return;
     }
