@@ -623,6 +623,31 @@ export const AIWindowUI = {
   },
 
   /**
+   * Restores the per-tab context chips on the sidebar ai-window.
+   *
+   * @param {Window} win
+   * @param {ContextWebsite[]} [contextChips] - The user-added chips to restore.
+   * @param {boolean} [removedImplicitContextChip] - Restored dismissal of the
+   *   implicit current-tab chip.
+   */
+  updateSidebarContextChips(
+    win,
+    contextChips = [],
+    removedImplicitContextChip = false
+  ) {
+    if (!this.isSidebarOpen(win)) {
+      return;
+    }
+
+    const aiWindowEl = this._getSidebarAiWindow(win);
+    if (!aiWindowEl?.restoreContextChips) {
+      return;
+    }
+
+    aiWindowEl.restoreContextChips(contextChips, removedImplicitContextChip);
+  },
+
+  /**
    * Triggers updating the starter prompts on the active ai-window
    * for the given chrome window. The target is resolved by mode:
    * sidebar uses the chrome window's sidebar ai-window, fullpage

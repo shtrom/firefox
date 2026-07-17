@@ -46,6 +46,7 @@ const SESSION_STORE_KEY = "ai-window-tab-state";
 
 /**
  * @typedef {import("chrome://browser/content/aiwindow/components/ai-window/ai-window.mjs").SmartbarInputState} SmartbarInputState
+ * @typedef {import("chrome://browser/content/urlbar/SmartbarInput.mjs").ContextWebsite} ContextWebsite
  *
  * @typedef {{
  *   input: SmartbarInputState,
@@ -55,6 +56,8 @@ const SESSION_STORE_KEY = "ai-window-tab-state";
  *   keepSidebarOpen: boolean,
  *   conversation: ChatConversation,
  *   modelChoiceId: ?string,
+ *   contextChips: ContextWebsite[],
+ *   removedImplicitContextChip: boolean
  * }} TabState
  */
 
@@ -239,6 +242,11 @@ export class AIWindowTabStatesManager {
     this.#window.addEventListener(
       "ai-window:model-changed",
       this.#onModelChanged
+    );
+
+    this.#window.addEventListener(
+      "ai-window:context-chips-changed",
+      this.#onContextChipsChanged
     );
 
     this.#window.addEventListener(
@@ -495,12 +503,8 @@ export class AIWindowTabStatesManager {
     }
 
     lazy.AIWindowUI.openSidebar(this.#window, conversation);
-    if (tabState?.state) {
-      lazy.AIWindowUI.updateSidebarInput(
-        this.#window,
-        tabState.state.input ?? EMPTY_SMARTBAR_INPUT_STATE
-      );
-    }
+    this.#updateSidebarState(tabState);
+
     lazy.AIWindowUI.updateSidebarModel(
       this.#window,
       this.#resolveTabModelChoice(tabState)
@@ -685,16 +689,25 @@ export class AIWindowTabStatesManager {
 
     // Update the sidebar input and model when the sidebar ai-window connects
     if (mode === "sidebar" && selectedTab === tab) {
-      lazy.AIWindowUI.updateSidebarInput(
-        this.#window,
-        tabState.state.input ?? EMPTY_SMARTBAR_INPUT_STATE
-      );
+      this.#updateSidebarState(tabState);
       lazy.AIWindowUI.updateSidebarModel(
         this.#window,
         this.#resolveTabModelChoice(tabState)
       );
     }
   };
+
+  #updateSidebarState(tabState) {
+    lazy.AIWindowUI.updateSidebarInput(
+      this.#window,
+      tabState?.state?.input ?? EMPTY_SMARTBAR_INPUT_STATE
+    );
+    lazy.AIWindowUI.updateSidebarContextChips(
+      this.#window,
+      tabState?.state?.contextChips,
+      tabState?.state?.removedImplicitContextChip
+    );
+  }
 
   /**
    * On init, opens the sidebar for the currently selected tab if its persisted
@@ -922,6 +935,25 @@ export class AIWindowTabStatesManager {
   };
 
   /**
+   * Handles ai-window:context-chips-changed events dispatched when the user adds
+   * at least one context chip in the smartbar header.
+   *
+   * @param {event} event
+   */
+  #onContextChipsChanged = event => {
+    const { tab, contextChips, removedImplicitContextChip } = event.detail;
+    const currentTabState = this.#getTabState(tab);
+    if (!currentTabState?.state) {
+      return;
+    }
+
+    this.#getTabState(tab, {
+      contextChips,
+      removedImplicitContextChip,
+    });
+  };
+
+  /**
    * Handles ai-window:sidebar-toggle events from the AIWindowUI.sys.mjs,
    * updates sidebar state flags based on toggle action
    *
@@ -947,10 +979,7 @@ export class AIWindowTabStatesManager {
           currentTabState?.state?.conversation ?? null
         );
       }
-      lazy.AIWindowUI.updateSidebarInput(
-        this.#window,
-        currentTabState?.state?.input ?? EMPTY_SMARTBAR_INPUT_STATE
-      );
+      this.#updateSidebarState(currentTabState);
     } else {
       this.#updateEmptyCloseCount(
         currentTabState?.state?.conversation ?? null,

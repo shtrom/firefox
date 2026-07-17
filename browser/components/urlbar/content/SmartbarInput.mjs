@@ -1092,7 +1092,7 @@ ${
       case "keyword.enabled":
         this._updatePlaceholderFromDefaultEngine().catch(e =>
           // This can happen if the search service failed.
-          console.warn("Falied to update urlbar placeholder:", e)
+          console.warn("Failed to update urlbar placeholder:", e)
         );
         break;
       case "browser.search.widget.new": {
@@ -2703,6 +2703,11 @@ ${
     this.#updateCtaSearchEngineInfo();
     this.#contextWebsites = [];
     this.#updateContextChips();
+    this.dispatchEvent(
+      new CustomEvent("smartbar-context-chips-changed", {
+        bubbles: true,
+      })
+    );
     this.setSelectionRange(0, 0);
     this.view.close();
   }
@@ -7365,6 +7370,45 @@ ${
   }
 
   /**
+   * Returns the user-added context chips, excluding the
+   * implicit current-tab chip, which is derived per tab.
+   *
+   * @returns {ContextWebsite[]}
+   */
+  get contextChips() {
+    return this.#contextWebsites;
+  }
+
+  /**
+   * Whether the user dismissed the implicit current-tab chip. Persisted with
+   * the chips so the dismissal is restored per tab.
+   *
+   * @returns {boolean}
+   */
+  get removedImplicitContextChip() {
+    return !!this.#removedImplicitTabUrl;
+  }
+
+  /**
+   * Replaces the context chips with the saved ones during a tab-state restore and
+   * re-renders. Does not emit the context-chips-change event, so re-applying
+   * saved chips doesn't feed back into the tab state manager.
+   *
+   * @param {ContextWebsite[]} [chips] - The user-added chips to restore.
+   * @param {boolean} [removedImplicitContextChip] - Restored dismissal of the
+   *   implicit current-tab chip.
+   */
+  restoreContextChips(chips = [], removedImplicitContextChip = false) {
+    this.#contextWebsites = [...chips];
+    const currentTabUrl =
+      this.window.gBrowser?.selectedTab?.linkedBrowser?.currentURI?.spec;
+    this.#removedImplicitTabUrl = removedImplicitContextChip
+      ? currentTabUrl
+      : null;
+    this.#updateContextChips();
+  }
+
+  /**
    * Resolves a tab favicon to a URL safe for use in both aiWindow.html and
    * aiChatContent.html. Only chrome: URLs are passed through; all others
    * (data:, moz-remote-image:, https:, etc.) fall back to page-icon: which
@@ -7449,6 +7493,11 @@ ${
       this.#contextWebsites = [...this.#contextWebsites, mention];
     }
     this.#updateContextChips();
+    this.dispatchEvent(
+      new CustomEvent("smartbar-context-chips-changed", {
+        bubbles: true,
+      })
+    );
   }
 
   /**
@@ -7471,6 +7520,11 @@ ${
 
     if (this.#contextWebsites.length !== originalLength || isCurrentTab) {
       this.#updateContextChips();
+      this.dispatchEvent(
+        new CustomEvent("smartbar-context-chips-changed", {
+          bubbles: true,
+        })
+      );
     }
   }
 }

@@ -1085,6 +1085,21 @@ export class AIWindow extends MozLitElement {
   }
 
   /**
+   * Restores the smartbar context chips from a persisted per-tab state. Called
+   * on tab switch so the chips are scoped to the tab they were added in.
+   *
+   * @param {ContextWebsite[]} [contextChips] - The user-added chips to restore.
+   * @param {boolean} [removedImplicitContextChip] - Restored dismissal of the
+   *   implicit current-tab chip.
+   */
+  restoreContextChips(contextChips = [], removedImplicitContextChip = false) {
+    this.#smartbar?.restoreContextChips(
+      contextChips,
+      removedImplicitContextChip
+    );
+  }
+
+  /**
    * Captures the current smartbar input as a structured state suitable for
    * persistence: plain text plus the list of inline mention chips with their
    * text-character offsets.
@@ -1407,6 +1422,10 @@ export class AIWindow extends MozLitElement {
         "aiwindow-memories-toggle:on-change",
         this.#handleMemoriesToggle
       );
+      smartbar.addEventListener(
+        "smartbar-context-chips-changed",
+        this.#handleContextChips
+      );
     }
     this.#smartbar = smartbar;
     this.#memoriesButton = smartbar.querySelector("memories-icon-button");
@@ -1436,6 +1455,23 @@ export class AIWindow extends MozLitElement {
     this.#smartbarToggleButton = toggleButton;
     this.#updateSmartbarAndHeaderVisibility();
   }
+
+  /**
+   * Dispatches the context chips via ai-window:context-chips-changed
+   * to the tab state manager to save them"
+   *
+   * @private
+   */
+  #handleContextChips = () => {
+    this.#dispatchChromeEvent("ai-window:context-chips-changed", {
+      bubbles: true,
+      detail: {
+        contextChips: this.#smartbar?.contextChips,
+        removedImplicitContextChip: this.#smartbar?.removedImplicitContextChip,
+        tab: this.#getEventTab(),
+      },
+    });
+  };
 
   #setupSmartbarFocus(smartbar) {
     let hasAutoFocused = false;
@@ -2412,6 +2448,25 @@ export class AIWindow extends MozLitElement {
   }
 
   /**
+   * Resolves the tab this ai-window instance relates to: for fullpage that's
+   * the tab hosting the element; for sidebar (no owner tab), fall back to the
+   * currently selected tab the sidebar reflects. Intention is to get the
+   * correct reference for fullpage tabs that might be opening in the
+   * background, like for session restore or tab restores.
+   *
+   * @returns {?MozTabbrowserTab}
+   *
+   * @private
+   */
+  #getEventTab() {
+    const gBrowser = window?.browsingContext?.topChromeWindow?.gBrowser;
+    const ownerTab = this.#hostBrowser
+      ? gBrowser?.getTabForBrowser(this.#hostBrowser)
+      : null;
+    return ownerTab ?? gBrowser?.selectedTab;
+  }
+
+  /**
    * Gets event options for a TabStateEvent
    *
    * @param {false|string} [input=false] The latest input contents
@@ -2422,12 +2477,6 @@ export class AIWindow extends MozLitElement {
    * @private
    */
   #getAIWindowEventOptions(input = false, isAsk = false) {
-    const topChromeWindow = window?.browsingContext?.topChromeWindow;
-    const gBrowser = topChromeWindow?.gBrowser;
-    const ownerTab = this.#hostBrowser
-      ? gBrowser?.getTabForBrowser(this.#hostBrowser)
-      : null;
-
     return {
       bubbles: true,
       detail: {
@@ -2440,14 +2489,7 @@ export class AIWindow extends MozLitElement {
         modelChoiceId: this.#hasModelChoiceOverride
           ? this.#selectedModelChoiceId
           : null,
-
-        // The tab this ai-window instance relates to: for fullpage that's
-        // the tab hosting the element; for sidebar (no owner tab), fall
-        // back to the currently selected tab the sidebar reflects.
-        // Intention is to get the correct reference for fullpage tabs
-        // that might be opening in the background, like for session restore
-        // or tab restores.
-        tab: ownerTab ?? gBrowser?.selectedTab,
+        tab: this.#getEventTab(),
       },
     };
   }
