@@ -346,7 +346,7 @@ add_task(async function test_avatar_selector_tabs() {
         );
         Assert.equal(
           avatarSelector.customTabButton.type,
-          "default",
+          "ghost",
           "Custom tab should be inactive by default"
         );
 
@@ -366,7 +366,7 @@ add_task(async function test_avatar_selector_tabs() {
         );
         Assert.equal(
           avatarSelector.iconTabButton.type,
-          "default",
+          "ghost",
           "Icon tab should be inactive"
         );
 
@@ -386,7 +386,7 @@ add_task(async function test_avatar_selector_tabs() {
         );
         Assert.equal(
           avatarSelector.customTabButton.type,
-          "default",
+          "ghost",
           "Custom tab should be inactive"
         );
       });
