@@ -9,6 +9,7 @@ add_setup(async function () {
       ["sidebar.verticalTabs", true],
       ["sidebar.verticalTabs.dragToPinPromo.dismissed", false],
       ["sidebar.visibility", "always-show"],
+      ["browser.nova.enabled", false],
     ],
   });
 });
