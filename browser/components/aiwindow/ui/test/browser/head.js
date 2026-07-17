@@ -54,7 +54,7 @@ let gIntentEngineStub;
 // Minimal RS records returned by the global getRemoteClient stub.
 // Version numbers must match FEATURE_MAJOR_VERSIONS in models/Utils.sys.mjs.
 const MOCK_RS_RECORDS = [
-  ["chat", 7],
+  ["chat", 8],
   ["title-generation", 1],
   ["conversation-starters-sidebar-system", 1],
   ["conversation-suggestions-sidebar-starter", 3],
@@ -72,6 +72,7 @@ const MOCK_RS_RECORDS = [
   ["memories-message-classification-system", 1],
   ["memories-message-classification-user", 1],
   ["memories-relevant-context", 2],
+  ["search-answer-generation", 1],
 ]
   .map(([feature, major]) => ({
     feature,
@@ -104,7 +105,7 @@ const MOCK_RS_RECORDS = [
       purpose: "chat",
       parameters: {},
       prompts: "Test system prompt.",
-      version: "v7.0",
+      version: "v8.0",
     },
     {
       feature: "chat",
@@ -121,7 +122,7 @@ const MOCK_RS_RECORDS = [
       purpose: "chat",
       parameters: {},
       prompts: "Test system prompt.",
-      version: "v7.0",
+      version: "v8.0",
     },
     {
       feature: "chat",
@@ -138,7 +139,7 @@ const MOCK_RS_RECORDS = [
       purpose: "chat",
       parameters: {},
       prompts: "Test system prompt.",
-      version: "v7.0",
+      version: "v8.0",
     },
     // TODO 2053495
     // v9 records for mistral release (browser.smartwindow.mistralRelease pref)
@@ -148,30 +149,13 @@ const MOCK_RS_RECORDS = [
       service_type: "ai",
       parameters: {},
       prompts: "Test system prompt.",
-      version: "v8.0",
+      version: "v9.0",
       is_default: true,
     },
     {
       feature: "chat",
-      model: "mistral-small-2603",
-      model_choice_id: "1",
-      model_details: {
-        model: "mistral-small-2603",
-        ownerName: "Mistral",
-        labelId: "personal",
-        shortName: "Mistral Small 4",
-        brandName: "Mistral",
-      },
-      service_type: "ai",
-      purpose: "chat",
-      parameters: {},
-      prompts: "Test system prompt.",
-      version: "v8.0",
-    },
-    {
-      feature: "chat",
       model: "gemini-3.1-flash-lite",
-      model_choice_id: "2",
+      model_choice_id: "1",
       model_details: {
         model: "gemini-3.1-flash-lite",
         ownerName: "Google",
@@ -183,12 +167,12 @@ const MOCK_RS_RECORDS = [
       purpose: "chat",
       parameters: {},
       prompts: "Test system prompt.",
-      version: "v8.0",
+      version: "v9.0",
     },
     {
       feature: "chat",
       model: "qwen3-235b-a22b-instruct-2507-maas",
-      model_choice_id: "3",
+      model_choice_id: "2",
       model_details: {
         model: "qwen3-235b-a22b-instruct-2507-maas",
         ownerName: "Alibaba",
@@ -200,7 +184,24 @@ const MOCK_RS_RECORDS = [
       purpose: "chat",
       parameters: {},
       prompts: "Test system prompt.",
-      version: "v8.0",
+      version: "v9.0",
+    },
+    {
+      feature: "chat",
+      model: "mistral-small-2603",
+      model_choice_id: "3",
+      model_details: {
+        model: "mistral-small-2603",
+        ownerName: "Mistral",
+        labelId: "personal",
+        shortName: "Mistral Small 4",
+        brandName: "Mistral",
+      },
+      service_type: "ai",
+      purpose: "chat",
+      parameters: {},
+      prompts: "Test system prompt.",
+      version: "v9.0",
     },
   ]);
 

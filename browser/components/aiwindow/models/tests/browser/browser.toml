@@ -15,5 +15,6 @@ prefs = [
 ["browser_monitor_agent.js"]
 ["browser_monitor_store.js"]
 ["browser_schedule.js"]
+["browser_search_the_web.js"]
 ["browser_title_generation.js"]
 ["browser_utils_fxAccount.js"]
