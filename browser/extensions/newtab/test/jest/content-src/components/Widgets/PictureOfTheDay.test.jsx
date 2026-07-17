@@ -538,9 +538,6 @@ describe("PictureOfTheDay widget", () => {
       },
     };
 
-    const findOpenLink = dispatch =>
-      dispatch.mock.calls.find(([action]) => action.type === at.OPEN_LINK);
-
     it("renders the author credit, source link, and license link", () => {
       const { container } = renderWidget(jest.fn(), {}, attributedState);
       const author = container.querySelector(
@@ -572,27 +569,22 @@ describe("PictureOfTheDay widget", () => {
       ).toBeTruthy();
     });
 
-    it("opens the source page in a new tab from the attribution link", () => {
-      const dispatch = jest.fn();
-      const { container } = renderWidget(dispatch, {}, attributedState);
+    it("links the source page via the anchor href for same-tab navigation", () => {
+      const { container } = renderWidget(jest.fn(), {}, attributedState);
       const sourceLink = container.querySelector(
         '[data-l10n-id="newtab-picture-attribution-source-link"]'
       );
-      fireEvent.click(sourceLink);
-      const openLink = findOpenLink(dispatch);
-      expect(openLink[0].data.url).toBe(SOURCE_URL);
-      expect(openLink[0].data.where).toBe("tab");
+      expect(sourceLink.tagName).toBe("A");
+      expect(sourceLink.getAttribute("href")).toBe(SOURCE_URL);
     });
 
-    it("opens the license page in a new tab from the license link", () => {
-      const dispatch = jest.fn();
-      const { container } = renderWidget(dispatch, {}, attributedState);
-      fireEvent.click(
-        container.querySelector(
-          '[data-l10n-id="newtab-picture-attribution-license"]'
-        )
+    it("links the license page via the anchor href for same-tab navigation", () => {
+      const { container } = renderWidget(jest.fn(), {}, attributedState);
+      const licenseLink = container.querySelector(
+        '[data-l10n-id="newtab-picture-attribution-license"]'
       );
-      expect(findOpenLink(dispatch)[0].data.url).toBe(LICENSE_URL);
+      expect(licenseLink.tagName).toBe("A");
+      expect(licenseLink.getAttribute("href")).toBe(LICENSE_URL);
     });
 
     it("records an open_license user event when the license link is clicked", () => {
@@ -612,13 +604,13 @@ describe("PictureOfTheDay widget", () => {
       expect(evt[0].data.widget_name).toBe("picture_of_the_day");
     });
 
-    it("opens the source when the image is clicked", () => {
-      const dispatch = jest.fn();
-      const { container } = renderWidget(dispatch, {}, attributedState);
-      fireEvent.click(
-        container.querySelector(".picture-of-the-day-image-link")
+    it("links the image to the source page via the anchor href", () => {
+      const { container } = renderWidget(jest.fn(), {}, attributedState);
+      const imageLink = container.querySelector(
+        ".picture-of-the-day-image-link"
       );
-      expect(findOpenLink(dispatch)[0].data.url).toBe(SOURCE_URL);
+      expect(imageLink.tagName).toBe("A");
+      expect(imageLink.getAttribute("href")).toBe(SOURCE_URL);
     });
 
     it("omits attribution parts and links whose fields are absent", () => {

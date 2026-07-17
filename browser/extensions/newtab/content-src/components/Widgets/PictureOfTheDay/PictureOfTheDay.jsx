@@ -235,40 +235,22 @@ const PictureOfTheDay = ({
     setSuppressExpand(true);
   };
 
-  // The image, source line, and description open the picture's source page
-  // (Wikimedia Commons) in a new tab. Only wired when the feed supplies a source
-  // URL; otherwise the elements render as their plain text/image equivalents.
+  // The image, source line, and description are anchors whose href opens the
+  // picture's source page (Wikimedia Commons) in the current tab via native
+  // navigation; the handler only records telemetry (mirrors the Weather widget).
   const canOpenSource = Boolean(pictureData.sourceUrl);
   const handleOpenSource = () => {
-    if (!pictureData.sourceUrl) {
-      return;
-    }
     batch(() => {
-      dispatch(
-        ac.OnlyToMain({
-          type: at.OPEN_LINK,
-          data: { url: pictureData.sourceUrl, where: "tab" },
-        })
-      );
       recordUserAction("open_source", { source: "widget" });
       handleInteraction();
     });
   };
 
-  // The license name links to the license terms (Creative Commons) in a new
-  // tab, separate from the source page link above.
+  // The license name is an anchor whose href opens the license terms (Creative
+  // Commons) in the current tab, separate from the source page link above.
   const canOpenLicense = Boolean(pictureData.licenseUrl);
   const handleOpenLicense = () => {
-    if (!pictureData.licenseUrl) {
-      return;
-    }
     batch(() => {
-      dispatch(
-        ac.OnlyToMain({
-          type: at.OPEN_LINK,
-          data: { url: pictureData.licenseUrl, where: "tab" },
-        })
-      );
       recordUserAction("open_license", { source: "widget" });
       handleInteraction();
     });
@@ -291,21 +273,21 @@ const PictureOfTheDay = ({
     }
     if (canOpenSource) {
       parts.push(
-        <button
+        <a
           key="source"
-          type="button"
+          href={pictureData.sourceUrl}
           className="picture-of-the-day-attribution-link picture-of-the-day-source-link"
           data-l10n-id="newtab-picture-attribution-source-link"
           onClick={handleOpenSource}
-        ></button>
+        ></a>
       );
     }
     if (pictureData.licenseLabel) {
       parts.push(
         canOpenLicense ? (
-          <button
+          <a
             key="license"
-            type="button"
+            href={pictureData.licenseUrl}
             className="picture-of-the-day-attribution-link picture-of-the-day-source-link"
             data-l10n-id="newtab-picture-attribution-license"
             data-l10n-args={JSON.stringify({
@@ -314,7 +296,7 @@ const PictureOfTheDay = ({
             onClick={handleOpenLicense}
           >
             {pictureData.licenseLabel}
-          </button>
+          </a>
         ) : (
           <span key="license" className="picture-of-the-day-attribution-item">
             {pictureData.licenseLabel}
@@ -452,13 +434,13 @@ const PictureOfTheDay = ({
       {hasPicture ? (
         <div className="picture-of-the-day-populated">
           {canOpenSource ? (
-            <button
-              type="button"
+            <a
+              href={pictureData.sourceUrl}
               className="picture-of-the-day-image-link"
               onClick={handleOpenSource}
             >
               {pictureImage}
-            </button>
+            </a>
           ) : (
             pictureImage
           )}

@@ -23264,22 +23264,12 @@ const PictureOfTheDay_PictureOfTheDay = ({
     setSuppressExpand(true);
   };
 
-  // The image, source line, and description open the picture's source page
-  // (Wikimedia Commons) in a new tab. Only wired when the feed supplies a source
-  // URL; otherwise the elements render as their plain text/image equivalents.
+  // The image, source line, and description are anchors whose href opens the
+  // picture's source page (Wikimedia Commons) in the current tab via native
+  // navigation; the handler only records telemetry (mirrors the Weather widget).
   const canOpenSource = Boolean(pictureData.sourceUrl);
   const handleOpenSource = () => {
-    if (!pictureData.sourceUrl) {
-      return;
-    }
     (0,external_ReactRedux_namespaceObject.batch)(() => {
-      dispatch(actionCreators.OnlyToMain({
-        type: actionTypes.OPEN_LINK,
-        data: {
-          url: pictureData.sourceUrl,
-          where: "tab"
-        }
-      }));
       recordUserAction("open_source", {
         source: "widget"
       });
@@ -23287,21 +23277,11 @@ const PictureOfTheDay_PictureOfTheDay = ({
     });
   };
 
-  // The license name links to the license terms (Creative Commons) in a new
-  // tab, separate from the source page link above.
+  // The license name is an anchor whose href opens the license terms (Creative
+  // Commons) in the current tab, separate from the source page link above.
   const canOpenLicense = Boolean(pictureData.licenseUrl);
   const handleOpenLicense = () => {
-    if (!pictureData.licenseUrl) {
-      return;
-    }
     (0,external_ReactRedux_namespaceObject.batch)(() => {
-      dispatch(actionCreators.OnlyToMain({
-        type: actionTypes.OPEN_LINK,
-        data: {
-          url: pictureData.licenseUrl,
-          where: "tab"
-        }
-      }));
       recordUserAction("open_license", {
         source: "widget"
       });
@@ -23325,18 +23305,18 @@ const PictureOfTheDay_PictureOfTheDay = ({
       }));
     }
     if (canOpenSource) {
-      parts.push(/*#__PURE__*/external_React_default().createElement("button", {
+      parts.push(/*#__PURE__*/external_React_default().createElement("a", {
         key: "source",
-        type: "button",
+        href: pictureData.sourceUrl,
         className: "picture-of-the-day-attribution-link picture-of-the-day-source-link",
         "data-l10n-id": "newtab-picture-attribution-source-link",
         onClick: handleOpenSource
       }));
     }
     if (pictureData.licenseLabel) {
-      parts.push(canOpenLicense ? /*#__PURE__*/external_React_default().createElement("button", {
+      parts.push(canOpenLicense ? /*#__PURE__*/external_React_default().createElement("a", {
         key: "license",
-        type: "button",
+        href: pictureData.licenseUrl,
         className: "picture-of-the-day-attribution-link picture-of-the-day-source-link",
         "data-l10n-id": "newtab-picture-attribution-license",
         "data-l10n-args": JSON.stringify({
@@ -23433,8 +23413,8 @@ const PictureOfTheDay_PictureOfTheDay = ({
     onClick: handleLearnMore
   })))), hasPicture ? /*#__PURE__*/external_React_default().createElement("div", {
     className: "picture-of-the-day-populated"
-  }, canOpenSource ? /*#__PURE__*/external_React_default().createElement("button", {
-    type: "button",
+  }, canOpenSource ? /*#__PURE__*/external_React_default().createElement("a", {
+    href: pictureData.sourceUrl,
     className: "picture-of-the-day-image-link",
     onClick: handleOpenSource
   }, pictureImage) : pictureImage, /*#__PURE__*/external_React_default().createElement("div", {
