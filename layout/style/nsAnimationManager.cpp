@@ -275,10 +275,25 @@ static void UpdateOldAnimationPropertiesWithNew(
   }
 }
 
+static bool ScopedNameLooselyMatches(
+    const dom::ShadowRoot* aTargetShadowRoot,
+    const Element* aTimelineElement, StyleCascadeLevel aTimelineCascadeLevel) {
+  const auto* timelineShadowRoot =
+      Servo_GetShadowRootForScoped(aTimelineElement, aTimelineCascadeLevel);
+  for (auto* root = aTargetShadowRoot; root; root = root->Host()->GetContainingShadow()) {
+    // Is `timelineShadowRoot` an ancestor of `aTargetShadowRoot`?
+    if (root == timelineShadowRoot) { return true; }
+  }
+  // Reached light DOM, so is the timeline there too?
+  return !timelineShadowRoot;
+}
+
 static already_AddRefed<dom::AnimationTimeline> GetNamedProgressTimeline(
     dom::Document* aDocument, const NonOwningAnimationTarget& aTarget,
     const dom::ScopedTimelineName& aName) {
   auto* presContext = aDocument->GetPresContext();
+  const auto* targetShadowRoot =
+      Servo_GetShadowRootForScoped(aTarget.mElement, aName.mCascadeLevel);
   const auto* timelineManager =
       presContext ? presContext->TimelineManager() : nullptr;
   // A named progress timeline is referenceable in animation-timeline by:
@@ -286,7 +301,7 @@ static already_AddRefed<dom::AnimationTimeline> GetNamedProgressTimeline(
   // 2. that element’s descendants
   // https://drafts.csswg.org/scroll-animations-1/#timeline-scope
   for (Element* e = aTarget.mElement->GetPseudoElement(aTarget.mPseudoRequest);
-       e; e = e->GetFlattenedTreeParentElement()) {
+       e; e = e->GetParentElementCrossingShadowRoot()) {
     // If multiple elements have declared the same timeline name, the matching
     // timeline is the one declared on the nearest element in tree order, which
     // considers siblings closer than parents.
@@ -296,8 +311,9 @@ static already_AddRefed<dom::AnimationTimeline> GetNamedProgressTimeline(
     if (auto* collection =
             TimelineCollection<ScrollTimeline>::Get(element, pseudo)) {
       auto result = collection->Lookup(aName.mName);
-      // TODO(dshin): Scoped lookup.
-      if (result.mTimeline) {
+      if (result.mTimeline &&
+          ScopedNameLooselyMatches(targetShadowRoot, element,
+                                   result.mCascadeLevel)) {
         return result.mTimeline.forget();
       }
     }
@@ -305,8 +321,9 @@ static already_AddRefed<dom::AnimationTimeline> GetNamedProgressTimeline(
     if (auto* collection =
             TimelineCollection<ViewTimeline>::Get(element, pseudo)) {
       auto result = collection->Lookup(aName.mName);
-      // TODO(dshin): Scoped lookup.
-      if (result.mTimeline) {
+      if (result.mTimeline &&
+          ScopedNameLooselyMatches(targetShadowRoot, element,
+                                   result.mCascadeLevel)) {
         return result.mTimeline.forget();
       }
     }
@@ -315,7 +332,11 @@ static already_AddRefed<dom::AnimationTimeline> GetNamedProgressTimeline(
       continue;
     }
 
-    // TODO(dshin): Scoped lookup.
+    // TODO(dshin, bug 2024012): This requires scoped name lookup as
+    // well, but the current implementation of timeline-scope where
+    // the timeline is made more visible is hard to test. Once bug
+    // 2024012 lands timelines are more visible and are stopped instead
+    // by timeline-scope, this should be implemented and tested.
     if (auto scopedTimeline =
             timelineManager->GetScopedTimeline(e, aName.mName)) {
       auto* result = scopedTimeline->take();
