@@ -57,6 +57,7 @@ static const char* sEGLLibraryExtensionNames[] = {
     "EGL_ANDROID_get_native_client_buffer",
     "EGL_ANGLE_device_creation",
     "EGL_ANGLE_device_creation_d3d11",
+    "EGL_ANGLE_display_power_preference",
     "EGL_ANGLE_platform_angle",
     "EGL_ANGLE_platform_angle_d3d",
     "EGL_EXT_device_enumeration",
@@ -997,6 +998,27 @@ std::shared_ptr<EglDisplay> GLLibraryEGL::CreateDisplayLocked(
     MOZ_ASSERT(!aFlags.mForceSoftware,
                "Software rendering not supported by EGL on macOS");
 #endif
+
+    // Initialize a display selecting a power preference, if supported.
+    if (!ret && !aFlags.mForceSoftware &&
+        IsExtensionSupported(EGLLibExtension::ANGLE_display_power_preference)) {
+      // The docs state "if this extension is advertised and this display
+      // creation attribute is not specified, the default value is
+      // EGL_LOW_POWER_ANGLE."
+      // In testing, however, it was found that EGL_LOW_POWER_ANGLE had to be
+      // specifically requested in order to obtain a low power display.
+      const EGLAttrib attrib_list[] = {LOCAL_EGL_POWER_PREFERENCE_ANGLE,
+                                       aFlags.mPreferHighPower
+                                           ? LOCAL_EGL_HIGH_POWER_ANGLE
+                                           : LOCAL_EGL_LOW_POWER_ANGLE,
+                                       LOCAL_EGL_NONE};
+      const EGLDisplay display = fGetPlatformDisplay(
+          LOCAL_EGL_PLATFORM_ANGLE_ANGLE, EGL_DEFAULT_DISPLAY, attrib_list);
+      if (display) {
+        ret = EglDisplay::Create(*this, display, false, aProofOfLock);
+      }
+    }
+
     if (!ret && !aFlags.mForceSoftware) {
       ret = GetAndInitDisplay(*this, nativeDisplay, aProofOfLock);
     }

@@ -60,6 +60,7 @@
 #include "mozilla/Preferences.h"
 #include "mozilla/Services.h"
 #include "mozilla/StaticPrefs_gfx.h"
+#include "mozilla/StaticPrefs_gl.h"
 #include "mozilla/gfx/BuildConstants.h"
 #include "mozilla/gfx/Logging.h"
 #include "mozilla/gfx/gfxVars.h"
@@ -1261,9 +1262,18 @@ already_AddRefed<GLContext> GLContextProviderEGL::CreateHeadless(
     const GLContextCreateDesc& desc, nsACString* const out_failureId) {
   bool useSoftwareDisplay =
       static_cast<bool>(desc.flags & CreateContextFlags::FORBID_HARDWARE);
-  const auto display = useSoftwareDisplay
-                           ? CreateSoftwareEglDisplay(out_failureId)
-                           : DefaultEglDisplay(out_failureId);
+  const bool useHighPowerDisplay =
+      (desc.flags & CreateContextFlags::HIGH_POWER) &&
+      StaticPrefs::gl_allow_high_power();
+
+  std::shared_ptr<EglDisplay> display;
+  if (useSoftwareDisplay) {
+    display = CreateSoftwareEglDisplay(out_failureId);
+  } else if (useHighPowerDisplay) {
+    display = CreateHighPowerEglDisplay(out_failureId);
+  } else {
+    display = DefaultEglDisplay(out_failureId);
+  }
   if (!display) {
     return nullptr;
   }

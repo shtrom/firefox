@@ -74,6 +74,7 @@ enum class EGLLibExtension {
   ANDROID_get_native_client_buffer,
   ANGLE_device_creation,
   ANGLE_device_creation_d3d11,
+  ANGLE_display_power_preference,
   ANGLE_platform_angle,
   ANGLE_platform_angle_d3d,
   EXT_device_enumeration,
@@ -129,6 +130,11 @@ struct EGLCreateDisplayFlags {
   bool mForceAccel = false;
   // Force creation of a software display. Must be false if mForceAccel is true.
   bool mForceSoftware = false;
+  // Request display to be created on a high-power (discrete) GPU. If false,
+  // the low-power (integrated) GPU will be preferred. This is just a hint and
+  // may be ignored. Ignored if mForceSoftware is true or if there is only a
+  // single GPU.
+  bool mPreferHighPower = false;
 };
 
 // -
