@@ -123,6 +123,14 @@ enum class EGLExtension {
   Max
 };
 
+struct EGLCreateDisplayFlags {
+  // Force creation of a hardware accelerated Display. Must be false if
+  // mForceSoftware is true.
+  bool mForceAccel = false;
+  // Force creation of a software display. Must be false if mForceAccel is true.
+  bool mForceSoftware = false;
+};
+
 // -
 
 class GLLibraryEGL final {
@@ -153,13 +161,13 @@ class GLLibraryEGL final {
   void InitLibExtensions();
 
   std::shared_ptr<EglDisplay> CreateDisplayLocked(
-      bool forceAccel, bool forceSoftware, nsACString* const out_failureId,
+      const EGLCreateDisplayFlags& aFlags, nsACString* const out_failureId,
       const StaticMutexAutoLock& aProofOfLock);
 
  public:
   Maybe<SymbolLoader> GetSymbolLoader() const;
 
-  std::shared_ptr<EglDisplay> CreateDisplay(bool forceAccel, bool forceSoftware,
+  std::shared_ptr<EglDisplay> CreateDisplay(const EGLCreateDisplayFlags& aFlags,
                                             nsACString* const out_failureId);
   std::shared_ptr<EglDisplay> CreateDisplay(ID3D11Device*);
   std::shared_ptr<EglDisplay> DefaultDisplay(nsACString* const out_failureId);

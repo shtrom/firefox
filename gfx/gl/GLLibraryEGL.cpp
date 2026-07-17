@@ -904,28 +904,32 @@ std::shared_ptr<EglDisplay> GLLibraryEGL::DefaultDisplay(
   auto ret = mDefaultDisplay.lock();
   if (ret) return ret;
 
-  ret = CreateDisplayLocked(false, false, out_failureId, lock);
+  ret = CreateDisplayLocked({}, out_failureId, lock);
   mDefaultDisplay = ret;
   return ret;
 }
 
 std::shared_ptr<EglDisplay> GLLibraryEGL::CreateDisplay(
-    const bool forceAccel, const bool forceSoftware,
-    nsACString* const out_failureId) {
+    const EGLCreateDisplayFlags& aFlags, nsACString* const out_failureId) {
   StaticMutexAutoLock lock(sMutex);
-  return CreateDisplayLocked(forceAccel, forceSoftware, out_failureId, lock);
+  return CreateDisplayLocked(aFlags, out_failureId, lock);
 }
 
 std::shared_ptr<EglDisplay> GLLibraryEGL::CreateDisplayLocked(
-    const bool forceAccel, const bool forceSoftware,
-    nsACString* const out_failureId, const StaticMutexAutoLock& aProofOfLock) {
+    const EGLCreateDisplayFlags& aFlags, nsACString* const out_failureId,
+    const StaticMutexAutoLock& aProofOfLock) {
   std::shared_ptr<EglDisplay> ret;
+
+  MOZ_ASSERT(!(aFlags.mForceAccel && aFlags.mForceSoftware),
+             "Cannot force accelerated and software display");
 
   if (IsExtensionSupported(EGLLibExtension::ANGLE_platform_angle_d3d)) {
     nsCString accelAngleFailureId;
     bool accelAngleSupport = IsAccelAngleSupported(&accelAngleFailureId);
-    bool shouldTryAccel = (forceAccel || accelAngleSupport) && !forceSoftware;
-    bool shouldTryWARP = !forceAccel;  // Only if ANGLE not supported or fails
+    bool shouldTryAccel =
+        (aFlags.mForceAccel || accelAngleSupport) && !aFlags.mForceSoftware;
+    bool shouldTryWARP =
+        !aFlags.mForceAccel;  // Only if ANGLE not supported or fails
 
     // If WARP preferred, will override ANGLE support
     if (StaticPrefs::webgl_angle_force_warp()) {
@@ -968,19 +972,19 @@ std::shared_ptr<EglDisplay> GLLibraryEGL::CreateDisplayLocked(
   } else {
     void* nativeDisplay = EGL_DEFAULT_DISPLAY;
 #ifdef MOZ_WIDGET_GTK
-    if (!ret && (!gfx::gfxVars::WebglUseHardware() || forceSoftware)) {
+    if (!ret && (!gfx::gfxVars::WebglUseHardware() || aFlags.mForceSoftware)) {
       // Initialize a swrast egl device such as llvmpipe
       ret = GetAndInitSoftwareDisplay(*this, aProofOfLock);
     }
     // Initialize the display the normal way
-    if (!ret && !gdk_display_get_default() && !forceSoftware) {
+    if (!ret && !gdk_display_get_default() && !aFlags.mForceSoftware) {
       ret = GetAndInitDeviceDisplay(*this, aProofOfLock);
       if (!ret) {
         ret = GetAndInitSurfacelessDisplay(*this, aProofOfLock);
       }
     }
 #  ifdef MOZ_WAYLAND
-    else if (!ret && widget::GdkIsWaylandDisplay() && !forceSoftware) {
+    else if (!ret && widget::GdkIsWaylandDisplay() && !aFlags.mForceSoftware) {
       // Wayland does not support EGL_DEFAULT_DISPLAY
       nativeDisplay = widget::WaylandDisplayGetWLDisplay();
       if (!nativeDisplay) {
@@ -990,10 +994,10 @@ std::shared_ptr<EglDisplay> GLLibraryEGL::CreateDisplayLocked(
     }
 #  endif
 #elif defined(XP_MACOSX)
-    MOZ_ASSERT(!forceSoftware,
+    MOZ_ASSERT(!aFlags.mForceSoftware,
                "Software rendering not supported by EGL on macOS");
 #endif
-    if (!ret && !forceSoftware) {
+    if (!ret && !aFlags.mForceSoftware) {
       ret = GetAndInitDisplay(*this, nativeDisplay, aProofOfLock);
     }
   }
