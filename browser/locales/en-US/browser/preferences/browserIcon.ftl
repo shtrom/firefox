@@ -2,9 +2,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-### Preview strings for the custom browser-icon feature (Bug 2049877), which
-### will show these strings in about:settings.
-
 # Entry in the Appearance pane (Windows only) that opens the browser-icon
 # subpage. The browser icon is the icon shown on the desktop, taskbar, and
 # Start Menu.
@@ -37,6 +34,11 @@ appearance-browser-icon-bonus-group =
 # “Bonus” means “additional” in this context
 appearance-browser-icon-requirement =
     .message = Complete and unlock bonus fox icons to personalize { -brand-short-name }.
+
+# Shown in place of appearance-browser-icon-requirement once the bonus icons are
+# unlocked (the browser is both the default and pinned to the taskbar).
+appearance-browser-icon-unlocked =
+    .message = You unlocked all of the bonus icons!
 
 appearance-browser-icon-set-default-button =
     .label = Set to default
