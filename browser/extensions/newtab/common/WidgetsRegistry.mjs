@@ -146,7 +146,7 @@ export const PREF_WIDGETS_SYSTEM_PICTURE_OF_THE_DAY_ENABLED =
  * @property {string|null} trainhopSidebarKey - Key in trainhopConfig.widgets.* for the hasSidebar override.
  * @property {string} widgetsSettingsVisibleKey - Key in trainhopConfig.widgetsSettings.* that additively reveals this widget's toggle in the settings UIs (does not enable the widget).
  * @property {string} widgetsSettingsEnabledKey - Key in trainhopConfig.widgetsSettings.* that overrides this widget's default enabled value (written to the pref default branch; an explicit user toggle still wins).
- * @property {string|null} [trainhopNamespace] - When set, the widget ships its whole config in one dedicated object at trainhopConfig.<namespace>. Its `enabled` overrides the default value of enabledPref on the default branch (user toggle still wins, like widgetsSettings.*Enabled); `visible` reveals the widget (isWidgetAddable) without writing a pref; `size` is read by resolveWidgetSize. Only Picture of the Day uses this today.
+ * @property {string|null} [trainhopNamespace] - When set, the widget ships its whole config in one dedicated object at trainhopConfig.<namespace>. Its `enabled` overrides the default value of enabledPref on the default branch (user toggle still wins, like widgetsSettings.*Enabled); `visible` reveals the widget (isWidgetAddable) without writing a pref; `size` is read by resolveWidgetSize. Picture of the Day and Crossword use this today.
  */
 
 /** @type {WidgetRegistryEntry[]} */
@@ -279,6 +279,7 @@ export const WIDGET_REGISTRY = [
     trainhopSidebarKey: null,
     widgetsSettingsVisibleKey: "crosswordVisible",
     widgetsSettingsEnabledKey: "crosswordEnabled",
+    trainhopNamespace: "widgetCrossword",
   },
   {
     id: "stocks",
@@ -459,15 +460,17 @@ export function resolveWidgetHasSidebar(widget, prefs) {
 
 /**
  * Returns the Merino endpoint the Crossword widget iframe should load.
- * A trainhopConfig.widgets.crosswordEndpoint override wins over the raw pref so
- * the endpoint can be swapped (e.g. staging to production) without a release.
- * The raw pref is never read directly by the component.
+ * The dedicated widgetCrossword trainhop object wins, then the legacy
+ * widgets.crosswordEndpoint key, then the raw pref, so the endpoint can be
+ * swapped (e.g. staging to production) without a release. The raw pref is never
+ * read directly by the component.
  *
  * @param {object} prefs - current pref values from the Redux store
  * @returns {string}
  */
 export function resolveCrosswordEndpoint(prefs) {
   return (
+    prefs.trainhopConfig?.widgetCrossword?.endpoint ||
     prefs.trainhopConfig?.widgets?.crosswordEndpoint ||
     prefs[PREF_CROSSWORD_ENDPOINT]
   );

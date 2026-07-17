@@ -12,6 +12,7 @@ import {
   resolveWidgetSize,
   resolveWidgetOrder,
   resolveWidgetHasSidebar,
+  resolveCrosswordEndpoint,
   PREF_WIDGETS_ORDER,
 } from "common/WidgetsRegistry.mjs";
 
@@ -283,6 +284,16 @@ describe("isWidgetAddable", () => {
       })
     ).toBe(true);
   });
+
+  it("is addable when revealed via the dedicated widgetCrossword namespace", () => {
+    const crossword = WIDGET_REGISTRY.find(w => w.id === "crossword");
+    expect(
+      isWidgetAddable(crossword, {
+        [crossword.systemEnabledPref]: false,
+        trainhopConfig: { widgetCrossword: { visible: true } },
+      })
+    ).toBe(true);
+  });
 });
 
 describe("isWidgetEnabled", () => {
@@ -416,6 +427,29 @@ describe("resolveWidgetSize", () => {
       })
     ).toBe("large");
   });
+
+  it("prefers the dedicated widgetCrossword size over the shared widgets key", () => {
+    const crossword = WIDGET_REGISTRY.find(w => w.id === "crossword");
+    expect(
+      resolveWidgetSize(crossword, {
+        [crossword.sizePref]: "",
+        trainhopConfig: {
+          widgetCrossword: { size: "large" },
+          widgets: { [crossword.trainhopSizeKey]: "medium" },
+        },
+      })
+    ).toBe("large");
+  });
+
+  it("falls back to the shared widgets size key for crossword when no dedicated size", () => {
+    const crossword = WIDGET_REGISTRY.find(w => w.id === "crossword");
+    expect(
+      resolveWidgetSize(crossword, {
+        [crossword.sizePref]: "",
+        trainhopConfig: { widgets: { [crossword.trainhopSizeKey]: "large" } },
+      })
+    ).toBe("large");
+  });
 });
 
 describe("resolveWidgetHasSidebar", () => {
@@ -448,5 +482,38 @@ describe("resolveWidgetHasSidebar", () => {
         },
       })
     ).toBe(true);
+  });
+});
+
+describe("resolveCrosswordEndpoint", () => {
+  const dedicatedEndpoint = "https://dedicated.example.com/index.html";
+  const sharedEndpoint = "https://shared.example.com/index.html";
+  const prefEndpoint = "https://pref.example.com/index.html";
+
+  it("prefers the dedicated widgetCrossword endpoint over the shared key and pref", () => {
+    expect(
+      resolveCrosswordEndpoint({
+        "widgets.crossword.endpoint": prefEndpoint,
+        trainhopConfig: {
+          widgetCrossword: { endpoint: dedicatedEndpoint },
+          widgets: { crosswordEndpoint: sharedEndpoint },
+        },
+      })
+    ).toBe(dedicatedEndpoint);
+  });
+
+  it("falls back to the shared widgets endpoint when no dedicated endpoint", () => {
+    expect(
+      resolveCrosswordEndpoint({
+        "widgets.crossword.endpoint": prefEndpoint,
+        trainhopConfig: { widgets: { crosswordEndpoint: sharedEndpoint } },
+      })
+    ).toBe(sharedEndpoint);
+  });
+
+  it("falls back to the raw pref when no trainhop override is present", () => {
+    expect(
+      resolveCrosswordEndpoint({ "widgets.crossword.endpoint": prefEndpoint })
+    ).toBe(prefEndpoint);
   });
 });

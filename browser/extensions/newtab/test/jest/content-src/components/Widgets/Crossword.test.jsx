@@ -267,6 +267,29 @@ describe("<Crossword>", () => {
         trainhopEndpoint
       );
     });
+
+    it("prefers the dedicated widgetCrossword endpoint over the shared widgets key", () => {
+      const dedicatedEndpoint = "https://example.com/dedicated/index.html";
+      const sharedEndpoint = "https://example.com/shared/index.html";
+      const state = {
+        ...baseState,
+        Prefs: {
+          ...baseState.Prefs,
+          values: {
+            ...baseState.Prefs.values,
+            trainhopConfig: {
+              widgetCrossword: { endpoint: dedicatedEndpoint },
+              widgets: { crosswordEndpoint: sharedEndpoint },
+            },
+          },
+        },
+      };
+      const { container } = renderCrossword({ state });
+      expect(container.querySelector("iframe.crossword-frame")).toHaveAttribute(
+        "src",
+        dedicatedEndpoint
+      );
+    });
   });
 
   describe("change size action", () => {
