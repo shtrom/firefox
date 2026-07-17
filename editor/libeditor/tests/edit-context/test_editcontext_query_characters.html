@@ -37,6 +37,8 @@ function clearRectCache() {
   const host = document.activeElement;
   host.blur();
   host.focus();
+  // Also clear the current character bounds
+  editContext.updateCharacterBounds(0, []);
 }
 
 // Add information about active EditContext to assertion message
@@ -116,6 +118,7 @@ function checkTextRect(start, count) {
 }
 
 function checkCharacterAtPoint(characterIndex) {
+  clearRectCache();
   const rect = convertToRootRelativeRect(bounds[characterIndex]);
   let result = synthesizeCharAtPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
   ok(firedCharacterBoundsUpdate,
@@ -175,6 +178,7 @@ async function runTests(aHost) {
   editContext.addEventListener('characterboundsupdate', e => {
     firedCharacterBoundsUpdate = true;
     characterBoundsUpdateRange = `${e.rangeStart}-${e.rangeEnd}`;
+    editContext.updateCharacterBounds(0, bounds);
   });
   firedCharacterBoundsUpdate = false;
   checkText(4, 5);

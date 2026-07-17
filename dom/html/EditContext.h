@@ -123,7 +123,7 @@ class EditContext final : public DOMEventTargetHelper {
 
   MOZ_CAN_RUN_SCRIPT void FireTextFormatUpdate(const TextRangeArray* aRanges,
                                                uint32_t aCompositionOffset);
-  MOZ_CAN_RUN_SCRIPT nsresult FireCharacterBoundsUpdateAndGetRects(
+  MOZ_CAN_RUN_SCRIPT nsresult FireCharacterBoundsUpdateIfNeededAndGetRects(
       uint32_t aStart, uint32_t aEnd, nsTArray<LayoutDeviceIntRect>& aRects);
   // Get the control bounds for the EditContext,
   // or Nothing if updateControlBounds has not been called.
@@ -154,6 +154,10 @@ class EditContext final : public DOMEventTargetHelper {
 
   RefPtr<DOMRect> ToDOMRect(const Rect& aCopy) const;
   Rect ToRect(const DOMRect& aRect) const;
+  // Returns bounds set by UpdateControlBounds(), or else associated
+  // element client rectangle if that's not available, or Nothing()
+  // if there is no associated element or it's not framed.
+  Maybe<nsRect> GetControlBoundsOrClientRect() const;
 
   // Convert aRect to a LayoutDeviceIntRect that is relative to the
   // top-level viewport (this is what QueryContentEvent is supposed
@@ -168,6 +172,11 @@ class EditContext final : public DOMEventTargetHelper {
   nsTArray<Rect> mCodepointRects;
   Maybe<Rect> mControlBounds;
   Maybe<Rect> mSelectionBounds;
+  // Control bounds or client rect of associated element when
+  // updateCharacterBounds() was most recently called. If this has changed, we
+  // want to fire characterboundsupdate again the next time character bounds are
+  // requested.
+  Maybe<nsRect> mControlBoundsAtLastUpdateCharacterBounds;
   RefPtr<nsTextNode> mText;
   uint32_t mSelectionStart = 0;
   uint32_t mSelectionEnd = 0;
@@ -176,6 +185,8 @@ class EditContext final : public DOMEventTargetHelper {
   bool mTextNextToCaretChangedByTextUpdateHandler = false;
   bool mExpectingCharacterBounds = false;
   bool mIsFiringTextUpdate = false;
+  // Set to true if the text which corresponds to mCodepointRects has changed.
+  bool mCodepointRectsTextChanged = false;
 };
 
 }  // namespace mozilla::dom

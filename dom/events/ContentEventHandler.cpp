@@ -2023,8 +2023,8 @@ nsresult ContentEventHandler::OnQueryTextRectArray(
       MOZ_ASSERT(aEvent->Succeeded());
       return NS_OK;
     }
-    rv = editContext->FireCharacterBoundsUpdateAndGetRects(offset, endOffset,
-                                                           rects);
+    rv = editContext->FireCharacterBoundsUpdateIfNeededAndGetRects(
+        offset, endOffset, rects);
     if (NS_SUCCEEDED(rv) && !rects.IsEmpty()) {
       LayoutDeviceIntRect lastRect = rects.LastElement();
       // If a range that goes past the end of the text content was requested,
@@ -2478,7 +2478,8 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
       MOZ_ASSERT(aEvent->Succeeded());
       return NS_OK;
     }
-    rv = editContext->FireCharacterBoundsUpdateAndGetRects(start, end, rects);
+    rv = editContext->FireCharacterBoundsUpdateIfNeededAndGetRects(start, end,
+                                                                   rects);
     // rects will be empty if start >= TextLength()
     if (NS_SUCCEEDED(rv) && !rects.IsEmpty()) {
       // Return union of the character rects.
@@ -2979,8 +2980,8 @@ nsresult ContentEventHandler::OnQueryCharacterAtPoint(
   if (RefPtr<EditContext> editContext = GetEditContext()) {
     AutoTArray<LayoutDeviceIntRect, 8> rects;
     // XXX: Getting all the rects is not ideal. Maybe do some kind of binary
-    //      search and fallback to this if it fails?
-    rv = editContext->FireCharacterBoundsUpdateAndGetRects(
+    //      search and fallback to this if it fails? (bug 2054998)
+    rv = editContext->FireCharacterBoundsUpdateIfNeededAndGetRects(
         0, editContext->TextLength(), rects);
     if (NS_SUCCEEDED(rv)) {
       for (size_t i : IntegerRange(0u, rects.Length())) {
