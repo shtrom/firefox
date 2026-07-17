@@ -5,6 +5,7 @@
 #ifndef nsDragServiceWayland_h_
 #define nsDragServiceWayland_h_
 
+#include "nsDragSessionSource.h"
 #include "RetrievalContextWayland.h"
 #include "nsDragService.h"
 
@@ -13,7 +14,7 @@ namespace mozilla::widget {
 /**
  * Wayland specific D&D routines
  */
-class nsDragSessionWayland : public nsDragSession {
+class nsDragSessionWayland : public nsDragSessionSource {
  public:
   void ReplyToDragMotion(RefPtr<mozilla::widget::DataOffer> aDataOffer);
   void ReplyToDragMotion() override;

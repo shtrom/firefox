@@ -5,19 +5,9 @@
 #include "nsWindowWayland.h"
 
 #include <dlfcn.h>
-#include <gdk/gdkkeysyms-compat.h>
-#include <gdk/gdkwayland.h>
-
-#include "WaylandVsyncSource.h"
-#include "WidgetUtilsGtk.h"
-#include "mozilla/Preferences.h"
-#include "mozilla/PresShell.h"
-#include "mozilla/StaticPrefs_widget.h"
-#include "mozilla/VsyncDispatcher.h"
-#include "mozilla/gfx/Logging.h"
-#include "mozilla/layers/WebRenderLayerManager.h"
 #include "nsAppShell.h"
 #include "nsDragService.h"
+#include "nsDragSessionSource.h"
 #include "nsGtkKeyUtils.h"
 #include "nsGtkUtils.h"
 #include "nsIAppWindow.h"
@@ -29,6 +19,13 @@
 #include "nsPIDOMWindow.h"
 #include "nsWaylandDisplay.h"
 #include "nsWindow.h"
+#include "mozilla/gfx/Logging.h"
+#include "mozilla/PresShell.h"
+#include "mozilla/StaticPrefs_widget.h"
+#include "mozilla/VsyncDispatcher.h"
+#include "mozilla/webrender/WebRenderTypes.h"
+#include "WaylandVsyncSource.h"
+#include "WidgetUtilsGtk.h"
 
 using namespace mozilla;
 using namespace mozilla::gfx;
@@ -212,7 +209,7 @@ void nsWindowWayland::WaylandDragWorkaround(GdkEventButton* aEvent) {
   nsCOMPtr<nsIDragSession> currentDragSession =
       dragService->GetCurrentSession(this);
   if (!currentDragSession ||
-      static_cast<nsDragSession*>(currentDragSession.get())->IsActive()) {
+      static_cast<nsDragSessionSource*>(currentDragSession.get())->IsActive()) {
     return;
   }
 
