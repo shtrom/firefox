@@ -66,21 +66,16 @@ internal sealed class HomepageState {
      *
      * @property shouldShowPrivacyNoticeBanner If the privacy notice banner should show.
      * @property nimbusMessage Optional message to display.
-     * @property topSites List of [TopSite] to display.
-     * @property recentTabs List of [RecentTab] to display.
+     * @property topSites List of [TopSite] to display, or null when the top sites section is hidden.
+     * @property recentTabs List of [RecentTab] to display, or null when the recent tabs section is hidden.
      * @property syncedTab The [RecentSyncedTab] to display.
-     * @property bookmarks List of [Bookmark] to display.
-     * @property recentlyVisited List of [RecentlyVisitedItem] to display.
+     * @property bookmarks List of [Bookmark] to display, or null when the bookmarks section is hidden.
+     * @property recentlyVisited List of [RecentlyVisitedItem] to display, or null when the recent history
+     * section is hidden.
      * @property collectionsState State of the collections section to display.
-     * @property pocketState State of the pocket section to display.
-     * @property showTopSites Whether to show top sites or not.
+     * @property pocketState State of the pocket section to display, or null when the section is hidden.
      * @property showTopSitesHeader Whether to show the shortcuts section header and "show all" button.
-     * @property showRecentTabs Whether to show recent tabs or not.
      * @property showRecentSyncedTab Whether to show recent synced tab or not.
-     * @property showBookmarks Whether to show bookmarks.
-     * @property showRecentlyVisited Whether to show recent history section.
-     * @property showPocketStoriesCarousel Whether to show the pocket stories section.
-     * @property showCollections Whether to show the collections section.
      * @property showPrivacyReport Whether to show the privacy report section.
      * @property longfoxEnabled Whether the longfox game is enabled.
      * @property showLongfoxAnimation Whether to play the fox peek animation on the privacy report card.
@@ -98,21 +93,15 @@ internal sealed class HomepageState {
     internal data class Normal(
         val shouldShowPrivacyNoticeBanner: Boolean,
         val nimbusMessage: NimbusMessageState?,
-        val topSites: List<TopSite>,
-        val recentTabs: List<RecentTab>,
-        val syncedTab: RecentSyncedTab?,
-        val bookmarks: List<Bookmark>,
-        val recentlyVisited: List<RecentlyVisitedItem>,
+        val topSites: List<TopSite>? = null,
+        val recentTabs: List<RecentTab>? = null,
+        val syncedTab: RecentSyncedTab? = null,
+        val bookmarks: List<Bookmark>? = null,
+        val recentlyVisited: List<RecentlyVisitedItem>? = null,
         val collectionsState: CollectionsState,
-        val pocketState: PocketState,
-        val showTopSites: Boolean,
+        val pocketState: PocketState? = null,
         val showTopSitesHeader: Boolean,
-        val showRecentTabs: Boolean,
         val showRecentSyncedTab: Boolean,
-        val showBookmarks: Boolean,
-        val showRecentlyVisited: Boolean,
-        val showPocketStoriesCarousel: Boolean,
-        val showCollections: Boolean,
         val showPrivacyReport: Boolean,
         val longfoxEnabled: Boolean,
         val showLongfoxAnimation: Boolean,
@@ -141,7 +130,7 @@ internal sealed class HomepageState {
      */
     internal fun isMinimalLayout(): Boolean {
         return (this as? Normal)?.run {
-            !showRecentTabs && !showRecentSyncedTab && !showBookmarks && !showRecentlyVisited
+            recentTabs == null && !showRecentSyncedTab && bookmarks == null && recentlyVisited == null
         } ?: false
     }
 
@@ -212,30 +201,33 @@ internal sealed class HomepageState {
             Normal(
                 shouldShowPrivacyNoticeBanner = privacyNoticeBannerState.visible,
                 nimbusMessage = NimbusMessageState.build(appState, privacyNoticeBannerState),
-                topSites = topSites,
-                recentTabs = recentTabs,
+                topSites = topSites.takeIf { settings.showTopSitesFeature && it.isNotEmpty() },
+                recentTabs = recentTabs.takeIf { shouldShowRecentTabs(settings) },
                 syncedTab = when (recentSyncedTabState) {
                     RecentSyncedTabState.None,
                     RecentSyncedTabState.Loading,
                     -> null
                     is RecentSyncedTabState.Success -> recentSyncedTabState.tabs.firstOrNull()
                 },
-                bookmarks = bookmarks,
-                recentlyVisited = recentHistory,
-                collectionsState = CollectionsState.build(
-                    appState = appState,
-                    browserState = components.core.store.state,
-                ),
-                pocketState = PocketState.build(appState = appState),
-                showTopSites = settings.showTopSitesFeature && topSites.isNotEmpty(),
+                bookmarks = bookmarks.takeIf { settings.showBookmarksHomeFeature && it.isNotEmpty() },
+                recentlyVisited = recentHistory.takeIf {
+                    settings.historyMetadataUIFeature && it.isNotEmpty()
+                },
+                collectionsState = if (settings.collections) {
+                    CollectionsState.build(
+                        appState = appState,
+                        browserState = components.core.store.state,
+                    )
+                } else {
+                    CollectionsState.Gone
+                },
+                pocketState = PocketState.build(appState = appState).takeIf {
+                    settings.showPocketRecommendationsFeature &&
+                        recommendationState.pocketStories.isNotEmpty() &&
+                        !settings.privateModeAndStoriesEntryPointEnabled
+                },
                 showTopSitesHeader = !(settings.privateModeAndStoriesEntryPointEnabled && topSites.size < 8),
-                showRecentTabs = shouldShowRecentTabs(settings),
-                showBookmarks = settings.showBookmarksHomeFeature && bookmarks.isNotEmpty(),
                 showRecentSyncedTab = shouldShowRecentSyncedTabs() && settings.showSyncedTabs,
-                showRecentlyVisited = settings.historyMetadataUIFeature && recentHistory.isNotEmpty(),
-                showPocketStoriesCarousel = settings.showPocketRecommendationsFeature &&
-                    recommendationState.pocketStories.isNotEmpty() && !settings.privateModeAndStoriesEntryPointEnabled,
-                showCollections = settings.collections,
                 showPrivacyReport = settings.showPrivacyReportFeature,
                 longfoxEnabled = settings.longfoxEnabled,
                 showLongfoxAnimation = settings.longfoxEnabled && longfoxEntryPointReady,

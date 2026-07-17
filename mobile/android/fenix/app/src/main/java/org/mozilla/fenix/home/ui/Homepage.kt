@@ -238,7 +238,7 @@ internal fun Homepage(
                                 }
                             }
 
-                            if (showTopSites) {
+                            if (topSites != null) {
                                 TopSitesSection(
                                     topSites = topSites,
                                     topSiteColors = topSiteColors,
@@ -294,7 +294,7 @@ internal fun Homepage(
 
                             MaybeAddSetupChecklist(setupChecklistState, interactor)
 
-                            if (showRecentTabs) {
+                            if (recentTabs != null) {
                                 RecentTabsSection(
                                     interactor = interactor,
                                     recentTabs = recentTabs,
@@ -325,28 +325,26 @@ internal fun Homepage(
                                 }
                             }
 
-                            if (showBookmarks) {
+                            if (bookmarks != null) {
                                 BookmarksSection(
                                     bookmarks = bookmarks,
                                     interactor = interactor,
                                 )
                             }
 
-                            if (showRecentlyVisited) {
+                            if (recentlyVisited != null) {
                                 RecentlyVisitedSection(
                                     recentVisits = recentlyVisited,
                                     interactor = interactor,
                                 )
                             }
 
-                            if (showCollections) {
-                                CollectionsSection(
-                                    collectionsState = collectionsState,
-                                    interactor = interactor,
-                                )
-                            }
+                            CollectionsSection(
+                                collectionsState = collectionsState,
+                                interactor = interactor,
+                            )
 
-                            if (showPocketStoriesCarousel) {
+                            if (pocketState != null) {
                                 Spacer(
                                     modifier = if (isMinimalLayout()) {
                                         Modifier.weight(1f)
@@ -392,7 +390,7 @@ internal fun Homepage(
                                         value = withContext(Dispatchers.IO) {
                                             merinoManifestProvider.getTopDomains(
                                                 limit = POPULAR_SITES_TO_SHOW,
-                                                excludedDomains = topSites.mapNotNullTo(mutableSetOf()) {
+                                                excludedDomains = topSites.orEmpty().mapNotNullTo(mutableSetOf()) {
                                                     it.url.toUri().hostWithoutCommonPrefixes
                                                 },
                                             ).map { it.toPopularSite() }
@@ -686,13 +684,7 @@ private fun HomepagePreview() {
                     recentlyVisited = FakeHomepagePreview.recentHistory(),
                     collectionsState = CollectionsState.Gone,
                     pocketState = FakeHomepagePreview.pocketState(),
-                    showTopSites = true,
-                    showRecentTabs = true,
                     showRecentSyncedTab = true,
-                    showBookmarks = true,
-                    showRecentlyVisited = true,
-                    showPocketStoriesCarousel = true,
-                    showCollections = true,
                     showPrivacyReport = true,
                     longfoxEnabled = false,
                     showLongfoxAnimation = false,
@@ -732,13 +724,7 @@ private fun HomepageBannerPreview() {
                     recentlyVisited = FakeHomepagePreview.recentHistory(),
                     collectionsState = CollectionsState.Gone,
                     pocketState = FakeHomepagePreview.pocketState(),
-                    showTopSites = true,
-                    showRecentTabs = true,
                     showRecentSyncedTab = true,
-                    showBookmarks = true,
-                    showRecentlyVisited = true,
-                    showPocketStoriesCarousel = true,
-                    showCollections = true,
                     showPrivacyReport = true,
                     longfoxEnabled = false,
                     showLongfoxAnimation = false,
@@ -771,20 +757,11 @@ private fun HomepagePreviewCollections() {
                 state = HomepageState.Normal(
                     shouldShowPrivacyNoticeBanner = false,
                     nimbusMessage = null,
-                    topSites = FakeHomepagePreview.topSites(),
-                    recentTabs = FakeHomepagePreview.recentTabs(),
                     syncedTab = FakeHomepagePreview.recentSyncedTab(),
-                    bookmarks = FakeHomepagePreview.bookmarks(),
                     recentlyVisited = FakeHomepagePreview.recentHistory(),
                     collectionsState = FakeHomepagePreview.collectionState(),
                     pocketState = FakeHomepagePreview.pocketState(),
-                    showTopSites = false,
-                    showRecentTabs = false,
                     showRecentSyncedTab = false,
-                    showBookmarks = false,
-                    showRecentlyVisited = true,
-                    showPocketStoriesCarousel = true,
-                    showCollections = true,
                     showPrivacyReport = true,
                     longfoxEnabled = false,
                     showLongfoxAnimation = false,
@@ -818,19 +795,10 @@ private fun MinimalHomepagePreview() {
                     shouldShowPrivacyNoticeBanner = false,
                     nimbusMessage = null,
                     topSites = FakeHomepagePreview.topSites(),
-                    recentTabs = FakeHomepagePreview.recentTabs(),
                     syncedTab = FakeHomepagePreview.recentSyncedTab(),
-                    bookmarks = FakeHomepagePreview.bookmarks(),
-                    recentlyVisited = FakeHomepagePreview.recentHistory(),
-                    collectionsState = FakeHomepagePreview.collectionState(),
+                    collectionsState = CollectionsState.Gone,
                     pocketState = FakeHomepagePreview.pocketState(),
-                    showTopSites = true,
-                    showRecentTabs = false,
                     showRecentSyncedTab = false,
-                    showBookmarks = false,
-                    showRecentlyVisited = false,
-                    showPocketStoriesCarousel = true,
-                    showCollections = false,
                     showPrivacyReport = true,
                     longfoxEnabled = false,
                     showLongfoxAnimation = false,
