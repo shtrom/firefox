@@ -22,10 +22,10 @@ class nsDragSessionSource : public nsDragSession {
   nsDragSessionSource();
 
   // nsBaseDragSession
-  MOZ_CAN_RUN_SCRIPT nsresult InvokeDragSessionImpl(
-      nsIWidget* aWidget, nsIArray* anArrayTransferables,
-      const mozilla::Maybe<mozilla::CSSIntRegion>& aRegion,
-      uint32_t aActionType) override;
+  MOZ_CAN_RUN_SCRIPT nsresult
+  InvokeDragSessionImpl(nsIWidget* aWidget, nsIArray* anArrayTransferables,
+                        const mozilla::Maybe<mozilla::CSSIntRegion>& aRegion,
+                        uint32_t aActionType) override;
 
   // nsIDragSession
   MOZ_CAN_RUN_SCRIPT NS_IMETHOD InvokeDragSession(

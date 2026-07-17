@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "nsDragService.h"
+
 #include "nsDragServiceGtk.h"
 #include "nsDragSessionSource.h"
 #ifdef MOZ_WAYLAND
@@ -10,7 +11,9 @@
 #endif
 #include <dlfcn.h>
 #include <gtk/gtk.h>
+
 #include <mutex>
+
 #include "mozilla/AutoRestore.h"
 #include "mozilla/BasicEvents.h"
 #include "mozilla/ClearOnShutdown.h"
@@ -19,8 +22,8 @@
 #include "mozilla/WidgetUtilsGtk.h"
 #include "mozilla/widget/nsGtkHtmlUtils.h"
 #include "nsArrayUtils.h"
-#include "nsIFileURL.h"
 #include "nsGtkKeyUtils.h"
+#include "nsIFileURL.h"
 #include "nsPrimitiveHelpers.h"
 #include "nsString.h"
 #include "nsStringStream.h"
@@ -45,13 +48,15 @@ extern mozilla::LazyLogModule gWidgetDragLog;
 #endif
 
 const char nsDragSession::gMozUrlType[] = "_NETSCAPE_URL";
-const char nsDragSession::gMimeListType[] = "application/x-moz-internal-item-list";
+const char nsDragSession::gMimeListType[] =
+    "application/x-moz-internal-item-list";
 const char nsDragSession::gTextUriListType[] = "text/uri-list";
 const char nsDragSession::gTextPlainUTF8Type[] = "text/plain; charset=utf-8";
 const char nsDragSession::gXdndDirectSaveType[] = "XdndDirectSave0";
 const char nsDragSession::gTabDropType[] = "application/x-moz-tabbrowser-tab";
 const char nsDragSession::gPortalFile[] = "application/vnd.portal.files";
-const char nsDragSession::gPortalFileTransfer[] = "application/vnd.portal.filetransfer";
+const char nsDragSession::gPortalFileTransfer[] =
+    "application/vnd.portal.filetransfer";
 const char nsDragSession::gUTF8STRINGType[] = "UTF8_STRING";
 const char nsDragSession::gSTRINGType[] = "STRING";
 
@@ -152,7 +157,8 @@ int DragData::GetURIsNum() const {
 bool DragData::Export(nsITransferable* aTransferable, uint32_t aItemIndex) {
   GUniquePtr<gchar> flavorName(gdk_atom_name(mDataFlavor));
 
-  LOGDRAGSERVICE("DragData::Export() MIME %s index %d", flavorName.get(), aItemIndex);
+  LOGDRAGSERVICE("DragData::Export() MIME %s index %d", flavorName.get(),
+                 aItemIndex);
 
   if (IsFileFlavor()) {
     MOZ_ASSERT(mDragUris.get());
@@ -176,7 +182,7 @@ bool DragData::Export(nsITransferable* aTransferable, uint32_t aItemIndex) {
       return false;
     }
     LOGDRAGSERVICE("  export file %s (flavor: %s) as %s", list[aItemIndex],
-            flavorName.get(), kFileMime);
+                   flavorName.get(), kFileMime);
     aTransferable->SetTransferData(kFileMime, file);
     return true;
   }
@@ -192,7 +198,7 @@ bool DragData::Export(nsITransferable* aTransferable, uint32_t aItemIndex) {
     }
 
     LOGDRAGSERVICE("%d URI:\n%s", (int)aItemIndex,
-            NS_ConvertUTF16toUTF8(mUris[aItemIndex]).get());
+                   NS_ConvertUTF16toUTF8(mUris[aItemIndex]).get());
 
     // put it into the transferable.
     nsCOMPtr<nsISupports> genericDataWrapper;
@@ -308,7 +314,7 @@ RefPtr<DragData> DragData::ConvertToMozURL() const {
   }
 
   LOGDRAGSERVICE("ConvertToMozURL(): failed, wrong MIME %s to convert!",
-          GUniquePtr<gchar>(gdk_atom_name(mDataFlavor)).get());
+                 GUniquePtr<gchar>(gdk_atom_name(mDataFlavor)).get());
   return nullptr;
 }
 
@@ -365,7 +371,7 @@ void DragData::ConvertToMozURIList() {
   const nsDependentSubstring uris((char16_t*)mDragData.get(), mDragDataLen / 2);
 
   LOGDRAGSERVICE("DragData::ConvertToMozURIList(), data %s",
-          NS_ConvertUTF16toUTF8(uris).get());
+                 NS_ConvertUTF16toUTF8(uris).get());
 
   int32_t uriBegin = 0;
   do {
@@ -410,18 +416,18 @@ void DragData::Print() const {
     if (IsTextFlavor()) {
       nsCString text((char*)mDragData.get(), mDragDataLen);
       LOGDRAGSERVICE("DragData() plain data MIME: %s : %s",
-              GUniquePtr<gchar>(gdk_atom_name(mDataFlavor)).get(),
-              (char*)text.get());
+                     GUniquePtr<gchar>(gdk_atom_name(mDataFlavor)).get(),
+                     (char*)text.get());
     }
     if (IsURIFlavor()) {
       nsString text((char16_t*)mDragData.get(), mDragDataLen / 2);
       LOGDRAGSERVICE("DragData() plain data MIME: %s : %s",
-              GUniquePtr<gchar>(gdk_atom_name(mDataFlavor)).get(),
-              NS_ConvertUTF16toUTF8(text).get());
+                     GUniquePtr<gchar>(gdk_atom_name(mDataFlavor)).get(),
+                     NS_ConvertUTF16toUTF8(text).get());
     }
   } else if (mDragUris) {
     LOGDRAGSERVICE("DragData() URI MIME %s",
-            GUniquePtr<gchar>(gdk_atom_name(mDataFlavor)).get());
+                   GUniquePtr<gchar>(gdk_atom_name(mDataFlavor)).get());
     if (MOZ_LOG_TEST(gWidgetDragLog, mozilla::LogLevel::Debug)) {
       int i = 0;
       for (gchar** uri = mDragUris.get(); uri && *uri; uri++, i++) {
@@ -430,14 +436,15 @@ void DragData::Print() const {
     }
   } else if (mUris.Length()) {
     LOGDRAGSERVICE("DragData() URI MIME: %s len %d",
-            GUniquePtr<gchar>(gdk_atom_name(mDataFlavor)).get(),
-            (int)mUris.Length());
+                   GUniquePtr<gchar>(gdk_atom_name(mDataFlavor)).get(),
+                   (int)mUris.Length());
     for (size_t i = 0; i < mUris.Length(); i++) {
-      LOGDRAGSERVICE("%d URI:\n%s", (int)i, NS_ConvertUTF16toUTF8(mUris[i]).get());
+      LOGDRAGSERVICE("%d URI:\n%s", (int)i,
+                     NS_ConvertUTF16toUTF8(mUris[i]).get());
     }
   } else {
     LOGDRAGSERVICE("DragData() MIME %s is missing data",
-            GUniquePtr<gchar>(gdk_atom_name(mDataFlavor)).get());
+                   GUniquePtr<gchar>(gdk_atom_name(mDataFlavor)).get());
   }
 }
 #endif
@@ -902,8 +909,6 @@ RefPtr<DragData> nsDragSession::GetDragData(GdkAtom aRequestedFlavor) {
                  GUniquePtr<gchar>(gdk_atom_name(aRequestedFlavor)).get());
   return data;
 }
-
-
 
 #ifdef MOZ_LOGGING
 const char* nsDragSession::GetDragServiceTaskName(DragTaskType aTask) {

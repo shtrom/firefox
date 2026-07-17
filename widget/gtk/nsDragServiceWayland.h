@@ -5,9 +5,9 @@
 #ifndef nsDragServiceWayland_h_
 #define nsDragServiceWayland_h_
 
-#include "nsDragSessionSource.h"
 #include "RetrievalContextWayland.h"
 #include "nsDragService.h"
+#include "nsDragSessionSource.h"
 
 namespace mozilla::widget {
 
