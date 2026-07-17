@@ -48,6 +48,7 @@ var {
   DefaultMap,
   DefaultWeakMap,
   ExtensionError,
+  promiseDocumentLoaded,
   promiseEvent,
   promiseObserved,
 } = ExtensionUtils;
@@ -1533,13 +1534,12 @@ class HiddenXULWindow {
     webNav.loadURI(DUMMY_PAGE_URI, {
       triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
     });
-    await Promise.race([
-      ExtensionParent.shuttingDownPromise,
-      promiseObserved(
-        "chrome-document-loaded",
-        doc => doc === windowlessBrowser.document
-      ),
-    ]);
+
+    await promiseObserved(
+      "chrome-document-global-created",
+      win => win.document == webNav.document
+    );
+    await promiseDocumentLoaded(windowlessBrowser.document);
     if (this.unloaded) {
       windowlessBrowser.close();
       return;
@@ -1563,10 +1563,6 @@ class HiddenXULWindow {
     }
 
     await this.waitInitialized;
-
-    if (Services.startup.shuttingDown) {
-      throw new Error("Cannot create hidden browser past shutdown");
-    }
 
     const chromeDoc = this.chromeDocument;
 
@@ -1596,14 +1592,7 @@ class HiddenXULWindow {
     // Forcibly flush layout so that we get a pres shell soon enough, see
     // bug 1274775.
     browser.getBoundingClientRect();
-    await Promise.race([ExtensionParent.shuttingDownPromise, awaitFrameLoader]);
-
-    if (Services.startup.shuttingDown) {
-      browser.remove();
-      // We already checked shuttingDown above; if we reach this point, then
-      // shutdown somehow started while awaiting XULFrameLoaderCreated.
-      throw new Error("Aborted hidden browser creation at shutdown");
-    }
+    await awaitFrameLoader;
 
     // FIXME(emilio): This unconditionally active frame seems rather
     // unfortunate, but matches previous behavior.
@@ -2547,13 +2536,6 @@ ExtensionParent._resetStartupPromises = () => {
   ]).then(() => {});
 };
 ExtensionParent._resetStartupPromises();
-
-ChromeUtils.defineLazyGetter(ExtensionParent, "shuttingDownPromise", () => {
-  if (Services.startup.shuttingDown) {
-    return Promise.resolve();
-  }
-  return promiseObserved("quit-application-granted").then(() => {});
-});
 
 ChromeUtils.defineLazyGetter(ExtensionParent, "PlatformInfo", () => {
   return Object.freeze({
