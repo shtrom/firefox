@@ -54,6 +54,15 @@ skip-if = [
 
 ["test_ext_background_early_quit.js"]
 
+["test_ext_background_early_quit2.js"]
+
+["test_ext_background_early_quit3.js"]
+
+["test_ext_background_early_quit4.js"]
+skip-if = [
+  "debug", # bug 2055827: debug-only "ASSERTION: Couldn't create child process."
+]
+
 ["test_ext_background_early_shutdown.js"]
 requesttimeoutfactor = 3  # Slow on Linux TSan/ASan (replaces manifest 2x)
 run-sequentially = ["os == 'mac'"] # frequent fail in parallel on Mac
