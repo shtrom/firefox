@@ -216,6 +216,7 @@ export class ThemePicker extends MozLitElement {
       />
       ${this.appearanceChooserTemplate()}
       <moz-visual-picker
+        type="listbox"
         .value=${this.activeThemeId}
         @change=${this.themeChange}
       >
