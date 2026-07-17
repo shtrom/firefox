@@ -81,8 +81,7 @@ internal sealed class HomepageState {
      * @property trackersBlockedCount The number of trackers blocked for the privacy report.
      * @property sportsWidgetState State of the sports widget on the homepage.
      * @property headerState State related to the header of the homepage.
-     * @property searchBarVisible Whether the middle search bar should be visible or not.
-     * @property searchBarEnabled Whether the middle search bar is enabled or not.
+     * @property middleSearchState State of the middle search bar on the homepage.
      * @property firstFrameDrawn Flag indicating whether the first frame of the homescreen has been drawn.
      * @property setupChecklistState Optional state of the setup checklist feature.
      * @property topSiteColors The color set defined by [TopSiteColors] used to style a top site.
@@ -106,8 +105,7 @@ internal sealed class HomepageState {
         val trackersBlockedCount: Int,
         val sportsWidgetState: SportsWidgetState,
         override val headerState: HeaderState,
-        val searchBarVisible: Boolean,
-        val searchBarEnabled: Boolean,
+        val middleSearchState: MiddleSearchState = MiddleSearchState(),
         override val firstFrameDrawn: Boolean = false,
         val setupChecklistState: SetupChecklistState?,
         val topSiteColors: TopSiteColors,
@@ -229,10 +227,12 @@ internal sealed class HomepageState {
                 trackersBlockedCount = blockedTrackersState.trackersBlockedCount,
                 sportsWidgetState = sportsWidgetState,
                 headerState = buildHeaderState(settings = settings),
-                searchBarVisible = shouldShowSearchBar(appState = appState),
-                searchBarEnabled = settings.enableHomepageSearchBar &&
-                    settings.toolbarPosition == ToolbarPosition.TOP &&
-                    LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT,
+                middleSearchState = MiddleSearchState(
+                    searchBarVisible = shouldShowSearchBar(appState = appState),
+                    searchBarEnabled = settings.enableHomepageSearchBar &&
+                        settings.toolbarPosition == ToolbarPosition.TOP &&
+                        LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT,
+                ),
                 firstFrameDrawn = firstFrameDrawn,
                 setupChecklistState = setupChecklistState,
                 topSiteColors = TopSiteColors.colors(wallpaperState = wallpaperState),
@@ -299,6 +299,23 @@ internal sealed class HeaderState {
          */
         data object Private : Experimental()
     }
+}
+
+/**
+ * State of the middle search bar on the homepage.
+ *
+ * @property searchBarVisible Whether the middle search bar should be visible or not.
+ * @property searchBarEnabled Whether the middle search bar is enabled or not.
+ */
+internal data class MiddleSearchState(
+    val searchBarVisible: Boolean = false,
+    val searchBarEnabled: Boolean = false,
+) {
+    /**
+     * Whether the middle search bar should be shown, i.e. it is both enabled and visible.
+     */
+    val isShown: Boolean
+        get() = searchBarEnabled && searchBarVisible
 }
 
 /**

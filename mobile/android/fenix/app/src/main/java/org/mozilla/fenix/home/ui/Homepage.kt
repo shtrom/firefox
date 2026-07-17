@@ -87,6 +87,7 @@ import org.mozilla.fenix.home.sports.ui.SportsCountrySelectorBottomSheet
 import org.mozilla.fenix.home.sports.ui.SportsWidget
 import org.mozilla.fenix.home.store.HeaderState
 import org.mozilla.fenix.home.store.HomepageState
+import org.mozilla.fenix.home.store.MiddleSearchState
 import org.mozilla.fenix.home.store.NimbusMessageState
 import org.mozilla.fenix.home.store.RecentSyncedTabSectionState
 import org.mozilla.fenix.home.termsofuse.PrivacyNoticeBanner
@@ -700,8 +701,7 @@ private fun HomepagePreview() {
                     trackersBlockedCount = 754,
                     sportsWidgetState = SportsWidgetState(),
                     headerState = HeaderState.Normal,
-                    searchBarVisible = true,
-                    searchBarEnabled = false,
+                    middleSearchState = MiddleSearchState(searchBarVisible = true, searchBarEnabled = false),
                     firstFrameDrawn = true,
                     setupChecklistState = null,
                     topSiteColors = TopSiteColors.colors(),
@@ -741,8 +741,7 @@ private fun HomepageBannerPreview() {
                     trackersBlockedCount = 754,
                     sportsWidgetState = SportsWidgetState(),
                     headerState = HeaderState.Normal,
-                    searchBarVisible = true,
-                    searchBarEnabled = false,
+                    middleSearchState = MiddleSearchState(searchBarVisible = true, searchBarEnabled = false),
                     firstFrameDrawn = true,
                     setupChecklistState = null,
                     topSiteColors = TopSiteColors.colors(),
@@ -776,8 +775,7 @@ private fun HomepagePreviewCollections() {
                     trackersBlockedCount = 754,
                     sportsWidgetState = SportsWidgetState(),
                     headerState = HeaderState.Normal,
-                    searchBarVisible = true,
-                    searchBarEnabled = false,
+                    middleSearchState = MiddleSearchState(searchBarVisible = true, searchBarEnabled = false),
                     firstFrameDrawn = true,
                     setupChecklistState = null,
                     topSiteColors = TopSiteColors.colors(),
@@ -811,8 +809,6 @@ private fun MinimalHomepagePreview() {
                     trackersBlockedCount = 754,
                     sportsWidgetState = SportsWidgetState(),
                     headerState = HeaderState.Normal,
-                    searchBarVisible = false,
-                    searchBarEnabled = false,
                     firstFrameDrawn = true,
                     setupChecklistState = null,
                     topSiteColors = TopSiteColors.colors(),

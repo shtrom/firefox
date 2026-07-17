@@ -38,6 +38,7 @@ import org.mozilla.fenix.home.interactor.HomepageInteractor
 import org.mozilla.fenix.home.pocket.ui.PocketSection
 import org.mozilla.fenix.home.store.HeaderState
 import org.mozilla.fenix.home.store.HomepageState
+import org.mozilla.fenix.home.store.MiddleSearchState
 import org.mozilla.fenix.home.toolbar.HomeToolbarComposable
 import org.mozilla.fenix.home.topsites.TopSiteColors
 import org.mozilla.fenix.home.ui.HomepageTestTag.HOMEPAGE
@@ -121,11 +122,11 @@ internal fun MiddleSearchHomepage(
 
                             Spacer(modifier = Modifier.weight(1f))
 
-                            LaunchedEffect(key1 = searchBarEnabled, key2 = searchBarVisible) {
-                                onMiddleSearchBarVisibilityChanged(searchBarEnabled && searchBarVisible)
+                            LaunchedEffect(key1 = middleSearchState) {
+                                onMiddleSearchBarVisibilityChanged(middleSearchState.isShown)
                             }
 
-                            if (searchBarEnabled && searchBarVisible) {
+                            if (middleSearchState.isShown) {
                                 SearchBar(
                                     modifier = Modifier
                                         .padding(horizontal = horizontalMargin)
@@ -194,8 +195,7 @@ private fun MiddleSearchHomepagePreview() {
                 trackersBlockedCount = 754,
                 sportsWidgetState = SportsWidgetState(),
                 headerState = HeaderState.Normal,
-                searchBarVisible = true,
-                searchBarEnabled = true,
+                middleSearchState = MiddleSearchState(searchBarVisible = true, searchBarEnabled = true),
                 firstFrameDrawn = true,
                 setupChecklistState = null,
                 topSiteColors = TopSiteColors.colors(),
