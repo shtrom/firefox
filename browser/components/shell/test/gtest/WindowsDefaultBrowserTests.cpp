@@ -107,7 +107,7 @@ static bool IsElementFocus(const UIElement& aElement) {
   return isFocus;
 }
 
-class SetDefaultBrowserButtonTests : public ::testing::Test {
+class FindSetDefaultBrowserButtonTests : public ::testing::Test {
  protected:
   static void SetUpTestSuite() {
     ASSERT_TRUE(GetAppRegName(sAppRegName));
@@ -218,7 +218,7 @@ class SetDefaultBrowserButtonTests : public ::testing::Test {
   inline static mozilla::UniquePtr<WCHAR[]> sAppRegName;
 };
 
-TEST_F(SetDefaultBrowserButtonTests, FindDefaultBrowserButton) {
+TEST_F(FindSetDefaultBrowserButtonTests, ButtonFound) {
   ASSERT_TRUE(LaunchModernSettingsDialogDefaultApps());
 
   auto [window, button]{WaitForSetDefaultBrowserButton()};
@@ -226,7 +226,7 @@ TEST_F(SetDefaultBrowserButtonTests, FindDefaultBrowserButton) {
   ASSERT_THAT(button, testing::NotNull());
 }
 
-TEST_F(SetDefaultBrowserButtonTests, FocusDefaultBrowserButton) {
+TEST_F(FindSetDefaultBrowserButtonTests, ButtonFocused) {
   ASSERT_TRUE(LaunchModernSettingsDialogDefaultApps());
 
   auto [window, button]{WaitForSetDefaultBrowserButton()};
