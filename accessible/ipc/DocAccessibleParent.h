@@ -16,8 +16,9 @@
 
 namespace mozilla {
 namespace dom {
+class BrowserParent;
 class CanonicalBrowsingContext;
-}
+}  // namespace dom
 
 namespace a11y {
 
@@ -97,6 +98,12 @@ class DocAccessibleParent : public RemoteAccessible,
   dom::CanonicalBrowsingContext* GetBrowsingContext() const {
     return mBrowsingContext;
   }
+
+  /**
+   * Return our manager as a BrowserParent. This document's manager is always
+   * a BrowserParent since PDocAccessible is managed by PBrowser.
+   */
+  dom::BrowserParent* Manager() const;
 
   /*
    * Called when a message from a document in a child process notifies the main

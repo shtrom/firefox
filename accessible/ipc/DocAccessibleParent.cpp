@@ -129,6 +129,10 @@ void DocAccessibleParent::SetBrowsingContext(
   mBrowsingContext = aBrowsingContext;
 }
 
+dom::BrowserParent* DocAccessibleParent::Manager() const {
+  return static_cast<dom::BrowserParent*>(PDocAccessibleParent::Manager());
+}
+
 mozilla::ipc::IPCResult DocAccessibleParent::ProcessShowEvent(
     nsTArray<AccessibleData>&& aNewTree, const bool& aEventSuppressed,
     const bool& aComplete, const bool& aFromUser) {
@@ -1118,7 +1122,7 @@ mozilla::ipc::IPCResult DocAccessibleParent::RecvShutdown() {
   ACQUIRE_ANDROID_LOCK
   Destroy();
 
-  auto mgr = static_cast<dom::BrowserParent*>(Manager());
+  auto mgr = Manager();
   if (!mgr->IsDestroyed()) {
     if (!PDocAccessibleParent::Send__delete__(this)) {
       return IPC_FAIL_NO_REASON(mgr);
@@ -1292,7 +1296,7 @@ void DocAccessibleParent::MaybeInitWindowEmulation() {
     rect.MoveToX(rootRect.X() - rect.X());
     rect.MoveToY(rect.Y() - rootRect.Y());
 
-    auto browserParent = static_cast<dom::BrowserParent*>(Manager());
+    auto browserParent = Manager();
     isActive = browserParent->GetDocShellIsActive();
   }
 

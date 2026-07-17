@@ -354,15 +354,14 @@ RefPtr<SessionAccessibility> SessionAccessibility::GetInstanceFor(
       return GetInstanceFor(doc->GetPresShell());
     }
   } else {
-    dom::CanonicalBrowsingContext* cbc =
-        static_cast<dom::BrowserParent*>(
-            aAccessible->AsRemote()->Document()->Manager())
-            ->GetBrowsingContext()
-            ->Top();
+    dom::CanonicalBrowsingContext* cbc = aAccessible->AsRemote()
+                                             ->Document()
+                                             ->Manager()
+                                             ->GetBrowsingContext()
+                                             ->Top();
     dom::BrowserParent* bp = cbc->GetBrowserParent();
     if (!bp) {
-      bp = static_cast<dom::BrowserParent*>(
-          aAccessible->AsRemote()->Document()->Manager());
+      bp = aAccessible->AsRemote()->Document()->Manager();
     }
     if (auto element = bp->GetOwnerElement()) {
       if (auto doc = element->OwnerDoc()) {
