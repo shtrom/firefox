@@ -426,10 +426,9 @@ static bool str_resolve(JSContext* cx, HandleObject obj, HandleId id,
 
   RootedString str(cx, obj->as<StringObject>().unbox());
 
-  int32_t slot = id.toInt();
-  if ((size_t)slot < str->length()) {
-    JSString* str1 =
-        cx->staticStrings().getUnitStringForElement(cx, str, size_t(slot));
+  uint32_t slot = id.toInt();
+  if (slot < str->length()) {
+    JSString* str1 = cx->staticStrings().getUnitStringForElement(cx, str, slot);
     if (!str1) {
       return false;
     }

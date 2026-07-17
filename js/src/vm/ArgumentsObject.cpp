@@ -514,7 +514,7 @@ bool ArgumentsObject::obj_delProperty(JSContext* cx, HandleObject obj,
                                       HandleId id, ObjectOpResult& result) {
   ArgumentsObject& argsobj = obj->as<ArgumentsObject>();
   if (id.isInt()) {
-    unsigned arg = unsigned(id.toInt());
+    uint32_t arg = id.toInt();
     if (argsobj.isElement(arg)) {
       if (!argsobj.markElementDeleted(cx, arg)) {
         return false;
@@ -550,7 +550,7 @@ bool js::MappedArgGetter(JSContext* cx, HandleObject obj, HandleId id,
      * arg can exceed the number of arguments if a script changed the
      * prototype to point to another Arguments object with a bigger argc.
      */
-    unsigned arg = unsigned(id.toInt());
+    uint32_t arg = id.toInt();
     if (argsobj.isElement(arg)) {
       vp.set(argsobj.element(arg));
     }
@@ -572,7 +572,7 @@ bool js::MappedArgSetter(JSContext* cx, HandleObject obj, HandleId id,
   Handle<MappedArgumentsObject*> argsobj = obj.as<MappedArgumentsObject>();
 
   if (id.isInt()) {
-    unsigned arg = unsigned(id.toInt());
+    uint32_t arg = id.toInt();
     if (argsobj->isElement(arg)) {
       argsobj->setElement(arg, v);
       return result.succeed();
@@ -684,7 +684,7 @@ bool MappedArgumentsObject::obj_resolve(JSContext* cx, HandleObject obj,
   PropertyFlags flags = {PropertyFlag::CustomDataProperty,
                          PropertyFlag::Configurable, PropertyFlag::Writable};
   if (id.isInt()) {
-    uint32_t arg = uint32_t(id.toInt());
+    uint32_t arg = id.toInt();
     if (!argsobj->isElement(arg)) {
       return true;
     }
@@ -819,8 +819,7 @@ bool MappedArgumentsObject::obj_defineProperty(JSContext* cx, HandleObject obj,
   // Steps 2-3.
   bool isMapped = false;
   if (id.isInt()) {
-    unsigned arg = unsigned(id.toInt());
-    isMapped = argsobj->isElement(arg);
+    isMapped = argsobj->isElement(id.toInt());
   }
 
   // Step 4.
@@ -865,7 +864,7 @@ bool MappedArgumentsObject::obj_defineProperty(JSContext* cx, HandleObject obj,
 
   // Step 8.
   if (isMapped) {
-    unsigned arg = unsigned(id.toInt());
+    uint32_t arg = id.toInt();
     if (desc.isAccessorDescriptor()) {
       bool ok = argsobj->markElementDeleted(cx, arg);
       MOZ_RELEASE_ASSERT(ok, "shouldn't fail after getOrCreateRareData");
@@ -893,7 +892,7 @@ bool js::UnmappedArgGetter(JSContext* cx, HandleObject obj, HandleId id,
      * arg can exceed the number of arguments if a script changed the
      * prototype to point to another Arguments object with a bigger argc.
      */
-    unsigned arg = unsigned(id.toInt());
+    uint32_t arg = id.toInt();
     if (argsobj.isElement(arg)) {
       vp.set(argsobj.element(arg));
     }
@@ -911,7 +910,7 @@ bool js::UnmappedArgSetter(JSContext* cx, HandleObject obj, HandleId id,
   Handle<UnmappedArgumentsObject*> argsobj = obj.as<UnmappedArgumentsObject>();
 
   if (id.isInt()) {
-    unsigned arg = unsigned(id.toInt());
+    uint32_t arg = id.toInt();
     if (argsobj->isElement(arg)) {
       argsobj->setElement(arg, v);
       return result.succeed();
@@ -963,7 +962,7 @@ bool UnmappedArgumentsObject::obj_resolve(JSContext* cx, HandleObject obj,
   PropertyFlags flags = {PropertyFlag::CustomDataProperty,
                          PropertyFlag::Configurable, PropertyFlag::Writable};
   if (id.isInt()) {
-    uint32_t arg = uint32_t(id.toInt());
+    uint32_t arg = id.toInt();
     if (!argsobj->isElement(arg)) {
       return true;
     }
