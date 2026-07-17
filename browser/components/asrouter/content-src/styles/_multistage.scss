@@ -741,6 +741,7 @@ html {
     }
 
     &[pos='split'] {
+
       // Prevent the drop shadow from appearing in fullscreen mode
       &:where(:not([fullscreen])) {
         margin: auto;
@@ -798,13 +799,7 @@ html {
       .section-main {
         width: $split-section-width;
         height: $split-screen-height;
-
-        @media (width <= 820px) {
-          width: 100%;
-          max-width: 100%;
-          height: auto;
-        }
-      } 
+      }
 
       .secondary-cta.top {
         position: fixed;
