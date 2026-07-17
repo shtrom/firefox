@@ -119,6 +119,7 @@ pub(super) fn modify_taskbar(
         PinOp::UnPin => (*pidl, std::ptr::null()),
     };
 
+    #[cfg(feature = "enable_tests")]
     if xpcom::is_in_automation() {
         // Return early in tests to avoid actually pinning the app.
         return Ok(PinResult::Unknown);

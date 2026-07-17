@@ -3,6 +3,9 @@ name = "shell_windows"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+enable_tests = []
+
 [dependencies]
 base64 = "0.22"
 futures = { version = "0.3", features = ["alloc"]}

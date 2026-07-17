@@ -103,6 +103,7 @@ pub(super) async fn pin_to_taskbar(
     })?;
 
     async {
+        #[cfg(feature = "enable_tests")]
         if xpcom::is_in_automation() {
             // Return early in tests to avoid actually pinning the app. Also
             // forces the AUMID to reset immediately by dropping the AUMID
