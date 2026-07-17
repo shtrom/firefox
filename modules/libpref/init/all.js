@@ -1742,7 +1742,6 @@ pref("font.blacklist.underline_offset", "FangSong,Gulim,GulimChe,MingLiU,MingLiU
 
 // security-sensitive dialogs should delay button enabling. In milliseconds.
 pref("security.dialog_enable_delay", 1000);
-pref("security.notification_enable_delay", 500);
 
 #ifdef NIGHTLY_BUILD
   // Disallow web documents loaded with the SystemPrincipal
