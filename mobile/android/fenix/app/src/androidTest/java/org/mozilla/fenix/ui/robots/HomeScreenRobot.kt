@@ -216,6 +216,15 @@ class HomeScreenRobot(private val composeTestRule: ComposeTestRule) {
             exists = false,
         )
 
+    fun sponsoredTopSitesLoaded(): Boolean {
+        mDevice.waitForIdle()
+        val loaded = mDevice.findObject(UiSelector().resourceId("top_sites_list.top_site_item"))
+            .getChild(UiSelector().textContains(getStringResource(R.string.top_sites_sponsored_label)))
+            .exists()
+        Log.i(TAG, "sponsoredTopSitesLoaded: sponsored top sites present = $loaded")
+        return loaded
+    }
+
     @OptIn(ExperimentalTestApi::class)
     fun verifyExistingTopSitesTabs(vararg titles: String) {
         titles.forEach { title ->
@@ -229,6 +238,13 @@ class HomeScreenRobot(private val composeTestRule: ComposeTestRule) {
             this@HomeScreenRobot.composeTestRule.topSiteItem(title).assertExists()
             Log.i(TAG, "verifyExistingTopSiteItem: Verified that the top site with title: $title exists")
         }
+    }
+
+    fun verifyAddShortcutExists() {
+        Log.i(TAG, "verifyAddShortcutExists: Trying to verify that the \"Add shortcut\" button exists")
+        this@HomeScreenRobot.composeTestRule.onNodeWithTag(TopSitesTestTag.ADD_SHORTCUT_ROOT).assertExists()
+        this@HomeScreenRobot.composeTestRule.onNodeWithTag(TopSitesTestTag.ADD_SHORTCUT_TITLE, useUnmergedTree = true).assert(hasText("Add shortcut"))
+        Log.i(TAG, "verifyAddShortcutExists: Verified that the \"Add shortcut\" button exists")
     }
 
     fun verifySponsoredShortcutDetails(sponsoredShortcutTitle: String, position: Int) {

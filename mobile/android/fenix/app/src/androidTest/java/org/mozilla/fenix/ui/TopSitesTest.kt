@@ -4,11 +4,14 @@
 
 package org.mozilla.fenix.ui
 
+import android.util.Log
 import org.junit.Rule
 import org.junit.Test
 import org.mozilla.fenix.R
 import org.mozilla.fenix.customannotations.Converted
 import org.mozilla.fenix.customannotations.SmokeTest
+import org.mozilla.fenix.helpers.Constants.RETRY_COUNT
+import org.mozilla.fenix.helpers.Constants.TAG
 import org.mozilla.fenix.helpers.Constants.defaultTopSitesList
 import org.mozilla.fenix.helpers.DataGenerationHelper.generateRandomString
 import org.mozilla.fenix.helpers.DataGenerationHelper.getStringResource
@@ -213,11 +216,30 @@ class TopSitesTest {
     // Expected for en-us defaults
     @Test
     fun verifyENLocalesDefaultTopSitesListTest() {
+        for (i in 1..RETRY_COUNT) {
+            var sponsoredTilesLoaded = false
+            homeScreen(composeTestRule) {
+                verifyExistingTopSitesList()
+                sponsoredTilesLoaded = sponsoredTopSitesLoaded()
+            }
+            if (sponsoredTilesLoaded) {
+                break
+            }
+            Log.i(TAG, "setUp: Started try #$i")
+
+            homeScreen(composeTestRule) {
+            }.openTabDrawer {
+            }.openNewTab {
+            }.dismissSearchBar {
+            }
+        }
+
         homeScreen(composeTestRule) {
             verifyExistingTopSitesList()
             defaultTopSitesList.values.forEach { value ->
                 verifyExistingTopSitesTabs(value)
             }
+            verifyAddShortcutExists()
         }
     }
 
