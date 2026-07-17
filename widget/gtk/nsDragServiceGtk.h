@@ -5,12 +5,12 @@
 #ifndef nsDragServiceGtk_h_
 #define nsDragServiceGtk_h_
 
-#include "nsDragSessionSource.h"
-#include "mozilla/RefPtr.h"
 #include <gtk/gtk.h>
 
 #include "GRefPtr.h"
 #include "GUniquePtr.h"
+#include "mozilla/RefPtr.h"
+#include "nsDragSessionSource.h"
 
 namespace mozilla::widget {
 
