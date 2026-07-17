@@ -2883,10 +2883,14 @@ toolbar:not(#TabsToolbar) #firefox-view-button {
 }
 
 .all-tabs-close-button {
-  list-style-image: url(resource://content-accessible/close-12.svg);
+  list-style-image: url(chrome://global/skin/icons/close.svg);
 
-  > .toolbarbutton-icon {
-    margin-inline: 2px !important; /* override panelUI-shared.css */
+  @media not -moz-pref("browser.nova.enabled") {
+    list-style-image: url(resource://content-accessible/close-12.svg);
+
+    > .toolbarbutton-icon {
+      margin-inline: 2px !important; /* override panelUI-shared.css */
+    }
   }
 }
 
