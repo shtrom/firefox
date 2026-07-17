@@ -8829,11 +8829,6 @@ function TopSiteFormInput({
   (0,external_React_namespaceObject.useEffect)(() => {
     setValidationError(validationErrorProp);
   }, [validationErrorProp]);
-  const onClearIconPress = event => {
-    if (event.key === "Enter") {
-      onClear();
-    }
-  };
   const handleChange = ev => {
     if (validationError) {
       setValidationError(false);
@@ -8849,11 +8844,12 @@ function TopSiteFormInput({
         className: "loading-animation"
       }));
     } else if (showClearButton) {
-      return /*#__PURE__*/external_React_default().createElement("button", {
-        type: "button",
-        className: "icon icon-clear-input icon-button-style",
+      return /*#__PURE__*/external_React_default().createElement("moz-button", {
+        className: "icon-clear-input",
+        type: "icon ghost",
+        size: "small",
+        iconSrc: "chrome://global/skin/icons/close.svg",
         onClick: onClear,
-        onKeyDown: onClearIconPress,
         "data-l10n-id": "newtab-topsites-clear-input"
       });
     }
@@ -10245,13 +10241,6 @@ class TopSiteForm extends (external_React_default()).PureComponent {
     // Set focus on error if the url field is valid or when the input is first rendered and is empty
     const shouldFocus = validationError && this.validateUrl(this.state.url) || !customScreenshotUrl;
     const isLoading = this.props.previewResponse === null && customScreenshotUrl && this.props.previewUrl === this.cleanUrl(customScreenshotUrl);
-    if (!this.state.showCustomScreenshotForm) {
-      return /*#__PURE__*/external_React_default().createElement(A11yLinkButton, {
-        onClick: this.onEnableScreenshotUrlForm,
-        className: "enable-custom-image-input",
-        "data-l10n-id": "newtab-topsites-use-image-link"
-      });
-    }
     return /*#__PURE__*/external_React_default().createElement("div", {
       className: "custom-image-input-container"
     }, /*#__PURE__*/external_React_default().createElement(TopSiteFormInput, {
@@ -10317,11 +10306,17 @@ class TopSiteForm extends (external_React_default()).PureComponent {
       typeUrl: true,
       placeholderId: "newtab-topsites-url-input",
       errorMessageId: "newtab-topsites-url-validation"
-    }), this._renderCustomScreenshotInput()), /*#__PURE__*/external_React_default().createElement(TopSiteLink, {
+    }), this.state.showCustomScreenshotForm && this._renderCustomScreenshotInput()), /*#__PURE__*/external_React_default().createElement(TopSiteLink, {
       link: previewLink,
       defaultStyle: requestFailed,
       title: this.state.label
-    }))), /*#__PURE__*/external_React_default().createElement("section", {
+    }))), /*#__PURE__*/external_React_default().createElement("footer", {
+      className: "topsite-form-footer"
+    }, !this.state.showCustomScreenshotForm && /*#__PURE__*/external_React_default().createElement(A11yLinkButton, {
+      onClick: this.onEnableScreenshotUrlForm,
+      className: "enable-custom-image-input",
+      "data-l10n-id": "newtab-topsites-use-custom-image-link"
+    }), /*#__PURE__*/external_React_default().createElement("section", {
       className: "actions"
     }, /*#__PURE__*/external_React_default().createElement("moz-button-group", {
       className: "button-group"
@@ -10340,7 +10335,7 @@ class TopSiteForm extends (external_React_default()).PureComponent {
       type: "primary",
       "data-l10n-id": showAsAdd ? "newtab-topsites-add-button" : "newtab-topsites-save-button",
       onClick: this.onDoneButtonClick
-    }))));
+    })))));
   }
 }
 TopSiteForm.defaultProps = {

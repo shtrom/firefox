@@ -1209,6 +1209,16 @@ describe("<TopSiteForm>", () => {
 
       assert.isTrue(wrapper.state().showCustomScreenshotForm);
     });
+    it("should swap the custom image link for the input when opened", () => {
+      assert.equal(wrapper.find(".custom-image-input-container").length, 0);
+      assert.equal(wrapper.find(A11yLinkButton).length, 1);
+
+      wrapper.find(A11yLinkButton).simulate("click");
+      wrapper.update();
+
+      assert.equal(wrapper.find(".custom-image-input-container").length, 1);
+      assert.equal(wrapper.find(A11yLinkButton).length, 0);
+    });
   });
 
   describe("edit existing Topsite", () => {
