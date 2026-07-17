@@ -2,9 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-package org.mozilla.fenix.ui.efficiency.factory.logging
-
-import org.mozilla.fenix.ui.efficiency.factory.steps.StepResult
+package org.mozilla.fenix.ui.efficiency.logging
 
 /**
  * Enumeration of final outcomes for a test or step.

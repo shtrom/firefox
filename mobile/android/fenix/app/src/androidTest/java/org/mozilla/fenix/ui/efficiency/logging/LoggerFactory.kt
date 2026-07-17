@@ -2,11 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-package org.mozilla.fenix.ui.efficiency.factory.logging
+package org.mozilla.fenix.ui.efficiency.logging
 
 import android.content.Context
 import androidx.test.platform.app.InstrumentationRegistry
-import org.mozilla.fenix.ui.efficiency.factory.steps.StepResult
 import java.io.File
 
 /**
