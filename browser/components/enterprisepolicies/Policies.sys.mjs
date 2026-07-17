@@ -831,6 +831,10 @@ export var Policies = {
         // to be consistent.
         Services.prefs.lockPref("browser.contentanalysis.enabled");
       }
+      lazy.PoliciesUtils.setAndLockPref(
+        "browser.contentanalysis.wasm_module_extension_require_signature",
+        true
+      );
     },
   },
 
