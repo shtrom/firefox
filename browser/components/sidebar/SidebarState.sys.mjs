@@ -59,7 +59,6 @@ const DEFAULT_LAUNCHER_VISIBLE = false;
  */
 
 const LAUNCHER_MINIMUM_WIDTH = 100;
-const SIDEBAR_MAXIMUM_WIDTH = "75vw";
 
 const LEGACY_USED_PREF = "sidebar.old-sidebar.has-used";
 const REVAMP_USED_PREF = "sidebar.new-sidebar.has-used";
@@ -392,6 +391,7 @@ export class SidebarState {
     }
     boxEl.toggleAttribute("sidebar-panel-open", open);
     contentAreaEl.toggleAttribute("sidebar-panel-open", open);
+    this.#controller.requestMaxWidthUpdate();
   }
 
   get panelWidth() {
@@ -401,7 +401,7 @@ export class SidebarState {
   }
 
   set panelWidth(width) {
-    this.#launcherContainerEl.style.maxWidth = `calc(${SIDEBAR_MAXIMUM_WIDTH} - ${width}px)`;
+    this.#controller.requestMaxWidthUpdate();
   }
 
   get expandedPinnedTabsHeight() {
@@ -727,11 +727,11 @@ export class SidebarState {
     this.#props.launcherWidth = width;
     const { document } = this.#controllerGlobal;
     if (!document.documentElement.hasAttribute("inDOMFullscreen")) {
-      this.#panelEl.style.maxWidth = `calc(${SIDEBAR_MAXIMUM_WIDTH} - ${width}px)`;
       // Expand the launcher when it gets wide enough.
       if (this.launcherDragActive) {
         this.launcherExpanded = width >= LAUNCHER_MINIMUM_WIDTH;
       }
+      this.#controller.requestMaxWidthUpdate();
     }
   }
 
