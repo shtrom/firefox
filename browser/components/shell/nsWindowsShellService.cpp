@@ -532,7 +532,8 @@ static void DisplayOverlayImageWhileVisible(
   }
 
   auto timer{std::make_shared<nsCOMPtr<nsITimer>>()};
-  auto callback{[timer, aElement, overlayImage](nsITimer* aTimer) {
+  auto lastTime{std::make_shared<TimeStamp>(TimeStamp::Now())};
+  auto callback{[timer, lastTime, aElement, overlayImage](nsITimer* aTimer) {
     if (aElement->IsMoving().valueOr(true)) {
       // The element is moving
       aTimer->Cancel();
@@ -551,7 +552,10 @@ static void DisplayOverlayImageWhileVisible(
       return;
     }
 
-    overlayImage->AdvanceFrame();
+    const TimeStamp now{TimeStamp::Now()};
+    const TimeDuration elapsed{now - *lastTime};
+    overlayImage->AdvanceAnimation(elapsed);
+    *lastTime = now;
   }};
 
   const uint32_t kDelayMs{30};
