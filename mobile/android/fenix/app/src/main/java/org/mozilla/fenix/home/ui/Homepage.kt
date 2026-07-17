@@ -88,6 +88,7 @@ import org.mozilla.fenix.home.sports.ui.SportsWidget
 import org.mozilla.fenix.home.store.HeaderState
 import org.mozilla.fenix.home.store.HomepageState
 import org.mozilla.fenix.home.store.NimbusMessageState
+import org.mozilla.fenix.home.store.RecentSyncedTabSectionState
 import org.mozilla.fenix.home.termsofuse.PrivacyNoticeBanner
 import org.mozilla.fenix.home.termsofuse.PrivacyNoticeBannerInteractor
 import org.mozilla.fenix.home.topsites.AddShortcutEntryPoint
@@ -301,26 +302,33 @@ internal fun Homepage(
                                     reducedTopSpacing = showPrivacyReport && showLongfoxAnimation,
                                 )
 
-                                if (showRecentSyncedTab) {
-                                    Box(
-                                        modifier = Modifier.padding(
-                                            start = horizontalMargin,
-                                            end = horizontalMargin,
-                                            top = verticalMargin,
-                                        ),
-                                    ) {
-                                        RecentSyncedTab(
-                                            tab = syncedTab,
-                                            buttonBackgroundColor = if (syncedTab != null) {
-                                                WallpaperTheme.buttonBackgroundColor
-                                            } else {
-                                                MaterialTheme.colorScheme.surfaceContainerHighest
-                                            },
-                                            buttonTextColor = WallpaperTheme.buttonTextColor,
-                                            onRecentSyncedTabClick = interactor::onRecentSyncedTabClicked,
-                                            onSeeAllSyncedTabsButtonClick = interactor::onSyncedTabShowAllClicked,
-                                            onRemoveSyncedTab = interactor::onRemovedRecentSyncedTab,
-                                        )
+                                when (val syncedTabState = recentSyncedTabSectionState) {
+                                    RecentSyncedTabSectionState.Gone -> Unit
+                                    RecentSyncedTabSectionState.Loading,
+                                    is RecentSyncedTabSectionState.Visible,
+                                        -> {
+                                        val syncedTab =
+                                            (syncedTabState as? RecentSyncedTabSectionState.Visible)?.tab
+                                        Box(
+                                            modifier = Modifier.padding(
+                                                start = horizontalMargin,
+                                                end = horizontalMargin,
+                                                top = verticalMargin,
+                                            ),
+                                        ) {
+                                            RecentSyncedTab(
+                                                tab = syncedTab,
+                                                buttonBackgroundColor = if (syncedTab != null) {
+                                                    WallpaperTheme.buttonBackgroundColor
+                                                } else {
+                                                    MaterialTheme.colorScheme.surfaceContainerHighest
+                                                },
+                                                buttonTextColor = WallpaperTheme.buttonTextColor,
+                                                onRecentSyncedTabClick = interactor::onRecentSyncedTabClicked,
+                                                onSeeAllSyncedTabsButtonClick = interactor::onSyncedTabShowAllClicked,
+                                                onRemoveSyncedTab = interactor::onRemovedRecentSyncedTab,
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -679,12 +687,13 @@ private fun HomepagePreview() {
                     nimbusMessage = null,
                     topSites = FakeHomepagePreview.topSites(),
                     recentTabs = FakeHomepagePreview.recentTabs(),
-                    syncedTab = FakeHomepagePreview.recentSyncedTab(),
+                    recentSyncedTabSectionState = RecentSyncedTabSectionState.Visible(
+                        FakeHomepagePreview.recentSyncedTab(),
+                    ),
                     bookmarks = FakeHomepagePreview.bookmarks(),
                     recentlyVisited = FakeHomepagePreview.recentHistory(),
                     collectionsState = CollectionsState.Gone,
                     pocketState = FakeHomepagePreview.pocketState(),
-                    showRecentSyncedTab = true,
                     showPrivacyReport = true,
                     longfoxEnabled = false,
                     showLongfoxAnimation = false,
@@ -719,12 +728,13 @@ private fun HomepageBannerPreview() {
                     nimbusMessage = null,
                     topSites = FakeHomepagePreview.topSites(),
                     recentTabs = FakeHomepagePreview.recentTabs(),
-                    syncedTab = FakeHomepagePreview.recentSyncedTab(),
+                    recentSyncedTabSectionState = RecentSyncedTabSectionState.Visible(
+                        FakeHomepagePreview.recentSyncedTab(),
+                    ),
                     bookmarks = FakeHomepagePreview.bookmarks(),
                     recentlyVisited = FakeHomepagePreview.recentHistory(),
                     collectionsState = CollectionsState.Gone,
                     pocketState = FakeHomepagePreview.pocketState(),
-                    showRecentSyncedTab = true,
                     showPrivacyReport = true,
                     longfoxEnabled = false,
                     showLongfoxAnimation = false,
@@ -757,11 +767,9 @@ private fun HomepagePreviewCollections() {
                 state = HomepageState.Normal(
                     shouldShowPrivacyNoticeBanner = false,
                     nimbusMessage = null,
-                    syncedTab = FakeHomepagePreview.recentSyncedTab(),
                     recentlyVisited = FakeHomepagePreview.recentHistory(),
                     collectionsState = FakeHomepagePreview.collectionState(),
                     pocketState = FakeHomepagePreview.pocketState(),
-                    showRecentSyncedTab = false,
                     showPrivacyReport = true,
                     longfoxEnabled = false,
                     showLongfoxAnimation = false,
@@ -795,10 +803,8 @@ private fun MinimalHomepagePreview() {
                     shouldShowPrivacyNoticeBanner = false,
                     nimbusMessage = null,
                     topSites = FakeHomepagePreview.topSites(),
-                    syncedTab = FakeHomepagePreview.recentSyncedTab(),
                     collectionsState = CollectionsState.Gone,
                     pocketState = FakeHomepagePreview.pocketState(),
-                    showRecentSyncedTab = false,
                     showPrivacyReport = true,
                     longfoxEnabled = false,
                     showLongfoxAnimation = false,

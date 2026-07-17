@@ -68,14 +68,13 @@ internal sealed class HomepageState {
      * @property nimbusMessage Optional message to display.
      * @property topSites List of [TopSite] to display, or null when the top sites section is hidden.
      * @property recentTabs List of [RecentTab] to display, or null when the recent tabs section is hidden.
-     * @property syncedTab The [RecentSyncedTab] to display.
+     * @property recentSyncedTabSectionState State of the recent synced tab section to display.
      * @property bookmarks List of [Bookmark] to display, or null when the bookmarks section is hidden.
      * @property recentlyVisited List of [RecentlyVisitedItem] to display, or null when the recent history
      * section is hidden.
      * @property collectionsState State of the collections section to display.
      * @property pocketState State of the pocket section to display, or null when the section is hidden.
      * @property showTopSitesHeader Whether to show the shortcuts section header and "show all" button.
-     * @property showRecentSyncedTab Whether to show recent synced tab or not.
      * @property showPrivacyReport Whether to show the privacy report section.
      * @property longfoxEnabled Whether the longfox game is enabled.
      * @property showLongfoxAnimation Whether to play the fox peek animation on the privacy report card.
@@ -95,13 +94,12 @@ internal sealed class HomepageState {
         val nimbusMessage: NimbusMessageState?,
         val topSites: List<TopSite>? = null,
         val recentTabs: List<RecentTab>? = null,
-        val syncedTab: RecentSyncedTab? = null,
+        val recentSyncedTabSectionState: RecentSyncedTabSectionState = RecentSyncedTabSectionState.Gone,
         val bookmarks: List<Bookmark>? = null,
         val recentlyVisited: List<RecentlyVisitedItem>? = null,
         val collectionsState: CollectionsState,
         val pocketState: PocketState? = null,
         val showTopSitesHeader: Boolean,
-        val showRecentSyncedTab: Boolean,
         val showPrivacyReport: Boolean,
         val longfoxEnabled: Boolean,
         val showLongfoxAnimation: Boolean,
@@ -130,7 +128,10 @@ internal sealed class HomepageState {
      */
     internal fun isMinimalLayout(): Boolean {
         return (this as? Normal)?.run {
-            recentTabs == null && !showRecentSyncedTab && bookmarks == null && recentlyVisited == null
+            recentTabs == null &&
+                recentSyncedTabSectionState is RecentSyncedTabSectionState.Gone &&
+                bookmarks == null &&
+                recentlyVisited == null
         } ?: false
     }
 
@@ -203,12 +204,7 @@ internal sealed class HomepageState {
                 nimbusMessage = NimbusMessageState.build(appState, privacyNoticeBannerState),
                 topSites = topSites.takeIf { settings.showTopSitesFeature && it.isNotEmpty() },
                 recentTabs = recentTabs.takeIf { shouldShowRecentTabs(settings) },
-                syncedTab = when (recentSyncedTabState) {
-                    RecentSyncedTabState.None,
-                    RecentSyncedTabState.Loading,
-                    -> null
-                    is RecentSyncedTabState.Success -> recentSyncedTabState.tabs.firstOrNull()
-                },
+                recentSyncedTabSectionState = buildRecentSyncedTabSectionState(settings),
                 bookmarks = bookmarks.takeIf { settings.showBookmarksHomeFeature && it.isNotEmpty() },
                 recentlyVisited = recentHistory.takeIf {
                     settings.historyMetadataUIFeature && it.isNotEmpty()
@@ -227,7 +223,6 @@ internal sealed class HomepageState {
                         !settings.privateModeAndStoriesEntryPointEnabled
                 },
                 showTopSitesHeader = !(settings.privateModeAndStoriesEntryPointEnabled && topSites.size < 8),
-                showRecentSyncedTab = shouldShowRecentSyncedTabs() && settings.showSyncedTabs,
                 showPrivacyReport = settings.showPrivacyReportFeature,
                 longfoxEnabled = settings.longfoxEnabled,
                 showLongfoxAnimation = settings.longfoxEnabled && longfoxEntryPointReady,
@@ -304,6 +299,41 @@ internal sealed class HeaderState {
          */
         data object Private : Experimental()
     }
+}
+
+/**
+ * Represents the state of the recent synced tab section on the homepage.
+ */
+internal sealed class RecentSyncedTabSectionState {
+
+    /**
+     * The section is not shown.
+     */
+    data object Gone : RecentSyncedTabSectionState()
+
+    /**
+     * The section is shown while the synced tab is still being resolved and a placeholder is displayed.
+     */
+    data object Loading : RecentSyncedTabSectionState()
+
+    /**
+     * The section is shown with a synced tab to display.
+     *
+     * @property tab The [RecentSyncedTab] to display.
+     */
+    data class Visible(val tab: RecentSyncedTab) : RecentSyncedTabSectionState()
+}
+
+/**
+ * Builds the [RecentSyncedTabSectionState] for the homepage from the current [AppState] and [Settings].
+ */
+private fun AppState.buildRecentSyncedTabSectionState(settings: Settings): RecentSyncedTabSectionState {
+    if (!(shouldShowRecentSyncedTabs(settings))) {
+        return RecentSyncedTabSectionState.Gone
+    }
+
+    val tab = (recentSyncedTabState as? RecentSyncedTabState.Success)?.tabs?.firstOrNull()
+    return tab?.let { RecentSyncedTabSectionState.Visible(it) } ?: RecentSyncedTabSectionState.Loading
 }
 
 /**
