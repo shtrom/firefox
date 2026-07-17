@@ -282,13 +282,10 @@ async function checkOnlyLoginWasUsedTwice({ justChanged }) {
     "timeLastUsed bumped"
   );
   if (justChanged) {
-    // The Rust storage backend records the password change and the use in two
-    // separate internal operations, so timeLastUsed may be a few ms after
-    // timePasswordChanged rather than exactly equal.
-    Assert.lessOrEqual(
-      logins[0].timePasswordChanged,
+    Assert.equal(
       logins[0].timeLastUsed,
-      "timePasswordChanged <= timeLastUsed"
+      logins[0].timePasswordChanged,
+      "timeLastUsed == timePasswordChanged"
     );
   } else {
     Assert.equal(
@@ -485,20 +482,14 @@ async function clearMessageCache(browser) {
  * @param {string} password The password.
  */
 async function checkDoorhangerUsernamePassword(username, password) {
-  // allow extra time before giving up (default is 50 tries / 5s).
-  await TestUtils.waitForCondition(
-    () => {
-      return (
-        document.getElementById("password-notification-username").value ==
-          username &&
-        document.getElementById("password-notification-password").value ==
-          password
-      );
-    },
-    "Wait for nsLoginManagerPrompter writeDataToUI() to update to the correct username/password values",
-    100,
-    100
-  );
+  await TestUtils.waitForCondition(() => {
+    return (
+      document.getElementById("password-notification-username").value ==
+        username &&
+      document.getElementById("password-notification-password").value ==
+        password
+    );
+  }, "Wait for nsLoginManagerPrompter writeDataToUI() to update to the correct username/password values");
 }
 
 /**

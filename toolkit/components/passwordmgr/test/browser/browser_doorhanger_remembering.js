@@ -49,7 +49,7 @@ let login2B = new nsLoginInfo(
   "pass"
 );
 
-requestLongerTimeout(3);
+requestLongerTimeout(2);
 
 add_setup(async function () {
   // We do not want http://example.com etc. to be upgraded to https
@@ -437,11 +437,6 @@ add_task(async function test_pwOnlyNewLoginMatchesUPForm() {
   info("Check for update popup when new existing pw-only login matches form.");
   await Services.logins.addLoginAsync(login2);
 
-  let storageChangedPromise = TestUtils.topicObserved(
-    "passwordmgr-storage-changed",
-    (_, data) => data == "modifyLogin"
-  );
-
   await testSubmittingLoginFormHTTP(
     "subtst_notifications_1.html",
     async fieldValues => {
@@ -473,8 +468,6 @@ add_task(async function test_pwOnlyNewLoginMatchesUPForm() {
       );
     }
   );
-
-  await storageChangedPromise;
 
   let logins = await Services.logins.getAllLogins();
   Assert.equal(logins.length, 1, "Should only have 1 login");
@@ -502,11 +495,6 @@ add_task(async function test_pwOnlyOldLoginMatchesUPForm() {
     })
   );
 
-  let storageChangedPromise = TestUtils.topicObserved(
-    "passwordmgr-storage-changed",
-    (_, data) => data == "modifyLogin"
-  );
-
   await testSubmittingLoginFormHTTP(
     "subtst_notifications_1.html",
     async fieldValues => {
@@ -539,8 +527,6 @@ add_task(async function test_pwOnlyOldLoginMatchesUPForm() {
     }
   );
 
-  await storageChangedPromise;
-
   let logins = await Services.logins.getAllLogins();
   Assert.equal(logins.length, 1, "Should only have 1 login");
   let login = logins[0].QueryInterface(Ci.nsILoginMetaInfo);
@@ -557,11 +543,6 @@ add_task(async function test_pwOnlyFormMatchesLogin() {
   );
   await Services.logins.addLoginAsync(login1);
 
-  let storageChangedPromise = TestUtils.topicObserved(
-    "passwordmgr-storage-changed",
-    (_, data) => data == "modifyLogin"
-  );
-
   await testSubmittingLoginFormHTTP(
     "subtst_notifications_6.html",
     function (fieldValues) {
@@ -575,8 +556,6 @@ add_task(async function test_pwOnlyFormMatchesLogin() {
       Assert.ok(!notif, "checking for no notification popup");
     }
   );
-
-  await storageChangedPromise;
 
   let logins = await Services.logins.getAllLogins();
   Assert.equal(logins.length, 1, "Should only have 1 login");
@@ -765,11 +744,6 @@ add_task(async function test_changePLoginOnUPForm() {
   info("Check for change-password popup, p-only login on u+p form (empty u).");
   await Services.logins.addLoginAsync(login2);
 
-  let storageChangedPromise = TestUtils.topicObserved(
-    "passwordmgr-storage-changed",
-    (_, data) => data == "modifyLogin"
-  );
-
   await testSubmittingLoginFormHTTP(
     "subtst_notifications_9.html",
     async fieldValues => {
@@ -798,8 +772,6 @@ add_task(async function test_changePLoginOnUPForm() {
     }
   );
 
-  await storageChangedPromise;
-
   let logins = await Services.logins.getAllLogins();
   Assert.equal(logins.length, 1, "Should only have 1 login");
   let login = logins[0].QueryInterface(Ci.nsILoginMetaInfo);
@@ -812,11 +784,6 @@ add_task(async function test_changePLoginOnUPForm() {
 
 add_task(async function test_changePLoginOnPForm() {
   info("Check for change-password popup, p-only login on p-only form.");
-
-  let storageChangedPromise = TestUtils.topicObserved(
-    "passwordmgr-storage-changed",
-    (_, data) => data == "modifyLogin"
-  );
 
   await testSubmittingLoginFormHTTP(
     "subtst_notifications_10.html",
@@ -845,8 +812,6 @@ add_task(async function test_changePLoginOnPForm() {
       );
     }
   );
-
-  await storageChangedPromise;
 
   let logins = await Services.logins.getAllLogins();
   Assert.equal(logins.length, 1, "Should only have 1 login");
@@ -1065,11 +1030,6 @@ add_task(async function test_changeUPLoginOnPUpdateForm() {
   info("Check for change-password popup, u+p login on password update form.");
   await Services.logins.addLoginAsync(login1);
 
-  let storageChangedPromise = TestUtils.topicObserved(
-    "passwordmgr-storage-changed",
-    (_, data) => data == "modifyLogin"
-  );
-
   await testSubmittingLoginFormHTTP(
     "subtst_notifications_change_p.html",
     async fieldValues => {
@@ -1092,8 +1052,6 @@ add_task(async function test_changeUPLoginOnPUpdateForm() {
       );
     }
   );
-
-  await storageChangedPromise;
 
   let logins = await Services.logins.getAllLogins();
   Assert.equal(logins.length, 1, "Should only have 1 login");

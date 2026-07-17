@@ -232,16 +232,7 @@ export class LoginManagerPrompter {
       did_select_pw: false,
     };
 
-    const updateButtonStatus = () => {
-      if (!currentNotification) {
-        return;
-      }
-      const element = [...currentNotification.owner.panel.childNodes].find(
-        n => n.notification == currentNotification
-      );
-      if (!element) {
-        return;
-      }
+    const updateButtonStatus = element => {
       const mainActionButton = element.button;
       // Disable the main button inside the menu-button if the password field is empty.
       if (!login.password.length) {
@@ -292,7 +283,7 @@ export class LoginManagerPrompter {
       if (element) {
         element.setAttribute("buttonlabel", mainButton.label);
         element.setAttribute("buttonaccesskey", mainButton.accessKey);
-        updateButtonStatus();
+        updateButtonStatus(element);
       }
     };
 
@@ -325,9 +316,6 @@ export class LoginManagerPrompter {
 
     const onInput = () => {
       readDataFromUI();
-      // Update the button's disabled state synchronously so it doesn't depend
-      // on the async searchLoginsAsync call in updateButtonLabel.
-      updateButtonStatus();
       updateButtonLabel();
     };
 
@@ -595,21 +583,6 @@ export class LoginManagerPrompter {
     const { PopupNotifications } = browser.documentGlobal.wrappedJSObject;
 
     const notificationID = "password";
-
-    // Don't downgrade an already-open (shown) doorhanger to dismissed. A form
-    // submission and a field-edit notification can race to (re)create the same
-    // "password" doorhanger, so the dismissed edit prompt can land last and
-    // hide a doorhanger the user is looking at.
-    if (showOptions.dismissed) {
-      const existing = PopupNotifications?.getNotification(
-        notificationID,
-        browser
-      );
-      if (existing && !existing.dismissed) {
-        showOptions = { ...showOptions, dismissed: false };
-      }
-    }
-
     // keep attention notifications around for longer after a locationchange
     const timeoutMs =
       showOptions.dismissed && showOptions.extraAttr == "attention"
@@ -661,18 +634,10 @@ export class LoginManagerPrompter {
                 chromeDoc
                   .getElementById("password-notification-password")
                   .addEventListener("input", onPasswordInput);
-                let popup = chromeDoc.getElementById("PopupAutoComplete");
-                popup.onUsernameSelect = onUsernameSelect;
-                popup.onPasswordSelect = onPasswordSelect;
-
                 LoginManagerPrompter._getUsernameSuggestions(
                   login,
                   possibleValues?.usernames
                 ).then(usernameSuggestions => {
-                  // Set autocomplete result before enabling the dropmarker
-                  LoginManagerPrompter._setUsernameAutocomplete(
-                    usernameSuggestions
-                  );
                   const usernameField = chromeDoc?.getElementById(
                     "password-notification-username"
                   );
@@ -680,6 +645,15 @@ export class LoginManagerPrompter {
                     usernameField.showDropmarker = !!usernameSuggestions.length;
                   }
                 });
+
+                let popup = chromeDoc.getElementById("PopupAutoComplete");
+                popup.onUsernameSelect = onUsernameSelect;
+                popup.onPasswordSelect = onPasswordSelect;
+
+                LoginManagerPrompter._setUsernameAutocomplete(
+                  login,
+                  possibleValues?.usernames
+                );
               }
               break;
             case "shown": {
@@ -996,14 +970,19 @@ export class LoginManagerPrompter {
   /**
    * Set the values that will be used the next time the username autocomplete popup is opened.
    *
-   * @param {object[]} usernames - ordered suggestions from _getUsernameSuggestions.
+   * @param {nsILoginInfo} login - used only for its information about the current domain.
+   * @param {Set<string>?} possibleUsernames - values that we believe may be new/changed login usernames.
    */
-  static _setUsernameAutocomplete(usernames) {
+  static async _setUsernameAutocomplete(login, possibleUsernames = new Set()) {
     const result = Cc[
       "@mozilla.org/autocomplete/simple-result;1"
     ].createInstance(Ci.nsIAutoCompleteSimpleResult);
     result.setDefaultIndex(0);
 
+    const usernames = await this._getUsernameSuggestions(
+      login,
+      possibleUsernames
+    );
     for (const { text, style } of usernames) {
       const value = text;
       const comment = "";

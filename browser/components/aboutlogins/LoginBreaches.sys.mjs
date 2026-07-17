@@ -49,10 +49,6 @@ export const LoginBreaches = {
    */
   async getPotentialBreachesByLoginGUID(logins, breaches = null) {
     const breachesByLoginGUID = new Map();
-    // With no logins to check there is nothing to report
-    if (!logins.length) {
-      return breachesByLoginGUID;
-    }
     if (!breaches) {
       try {
         breaches = await lazy

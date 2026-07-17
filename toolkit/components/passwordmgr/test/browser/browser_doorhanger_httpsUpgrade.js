@@ -86,11 +86,6 @@ add_task(async function test_httpsUpgradeCaptureFields_changePW() {
   let logins = await Services.logins.getAllLogins();
   Assert.equal(logins.length, 1, "Should have the HTTP login");
 
-  let storageChangedPromise = TestUtils.topicObserved(
-    "passwordmgr-storage-changed",
-    (_, data) => data == "modifyLogin"
-  );
-
   await testSubmittingLoginForm(
     "subtst_notifications_8.html",
     async function (fieldValues) {
@@ -117,8 +112,6 @@ add_task(async function test_httpsUpgradeCaptureFields_changePW() {
     },
     "https://example.com"
   ); // This is HTTPS whereas the saved login is HTTP
-
-  await storageChangedPromise;
 
   await checkOnlyLoginWasUsedTwice({ justChanged: true });
   logins = await Services.logins.getAllLogins();
@@ -151,11 +144,6 @@ add_task(
     let logins = await Services.logins.getAllLogins();
     Assert.equal(logins.length, 2, "Should have both HTTP and HTTPS logins");
 
-    let storageChangedPromise = TestUtils.topicObserved(
-      "passwordmgr-storage-changed",
-      (_, data) => data == "modifyLogin"
-    );
-
     await testSubmittingLoginForm(
       "subtst_notifications_8.html",
       async function (fieldValues) {
@@ -182,8 +170,6 @@ add_task(
       },
       "https://example.com"
     );
-
-    await storageChangedPromise;
 
     logins = await Services.logins.getAllLogins();
     Assert.equal(logins.length, 2, "Should have 2 logins still");
@@ -223,13 +209,10 @@ add_task(
       loginHTTPS.timePasswordChanged,
       "login.timeCreated < login.timePasswordChanged"
     );
-    // The Rust storage backend records the password change and the use in two
-    // separate internal operations, so timeLastUsed may be a few ms after
-    // timePasswordChanged rather than exactly equal.
-    Assert.lessOrEqual(
-      loginHTTPS.timePasswordChanged,
+    Assert.equal(
       loginHTTPS.timeLastUsed,
-      "timePasswordChanged <= timeLastUsed"
+      loginHTTPS.timePasswordChanged,
+      "timeLastUsed == timePasswordChanged"
     );
 
     await Services.logins.removeAllUserFacingLoginsAsync();

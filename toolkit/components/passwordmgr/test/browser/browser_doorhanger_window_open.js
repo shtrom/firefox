@@ -98,25 +98,17 @@ add_task(async function test_saveChromeHiddenAutoClose() {
 });
 
 add_task(async function test_changeChromeHiddenAutoClose() {
+  let notifShownPromise = BrowserTestUtils.waitForEvent(
+    PopupNotifications.panel,
+    "popupshown"
+  );
   let url =
     "subtst_notifications_11.html?notifyu1|pass2|menubar=no,toolbar=no,location=no|autoclose";
   await withTestTabUntilStorageChange(url, async function () {
-    info("waiting for the change doorhanger");
-    // Wait for the doorhanger to exist
-    await waitForDoorhanger(gBrowser.selectedBrowser, "password-change");
+    info("waiting for popupshown");
+    await notifShownPromise;
     let popup = await getCaptureDoorhangerThatMayOpen("password-change");
     Assert.ok(popup, "got notification popup");
-    // Ensure the panel is open so writeDataToUI has populated the fields.
-    if (PopupNotifications.panel.state !== "open") {
-      let promiseShown = BrowserTestUtils.waitForEvent(
-        PopupNotifications.panel,
-        "popupshown"
-      );
-      if (PopupNotifications.panel.state !== "showing") {
-        EventUtils.synthesizeMouseAtCenter(popup.anchorElement, {});
-      }
-      await promiseShown;
-    }
     await checkDoorhangerUsernamePassword("notifyu1", "pass2");
     clickDoorhangerButton(popup, CHANGE_BUTTON);
   });
@@ -130,13 +122,10 @@ add_task(async function test_changeChromeHiddenAutoClose() {
   Assert.equal(login.password, "pass2", "Check password changed");
   Assert.equal(login.timesUsed, 2, "check .timesUsed incremented on change");
   Assert.less(login.timeCreated, login.timeLastUsed, "timeLastUsed bumped");
-  // The Rust storage backend records the password change and the use in two
-  // separate internal operations, so timeLastUsed may be a few ms after
-  // timePasswordChanged rather than exactly equal.
-  Assert.lessOrEqual(
-    login.timePasswordChanged,
+  Assert.equal(
     login.timeLastUsed,
-    "timeChanged <= timeUsed"
+    login.timePasswordChanged,
+    "timeUsed == timeChanged"
   );
 
   login1.password = "pass2";
@@ -201,13 +190,10 @@ add_task(async function test_changeChromeVisibleSameWindow() {
   Assert.equal(login.password, "pass2", "Check password changed");
   Assert.equal(login.timesUsed, 2, "check .timesUsed incremented on change");
   Assert.less(login.timeCreated, login.timeLastUsed, "timeLastUsed bumped");
-  // The Rust storage backend records the password change and the use in two
-  // separate internal operations, so timeLastUsed may be a few ms after
-  // timePasswordChanged rather than exactly equal.
-  Assert.lessOrEqual(
-    login.timePasswordChanged,
+  Assert.equal(
     login.timeLastUsed,
-    "timeChanged <= timeUsed"
+    login.timePasswordChanged,
+    "timeUsed == timeChanged"
   );
 
   // cleanup

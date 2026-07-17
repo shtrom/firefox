@@ -500,19 +500,6 @@ export class LoginManagerRustStorage {
       return logins;
     }
 
-    // The Rust backend only treats an exact formActionOrigin match as a
-    // duplicate, whereas desktop treats an empty formActionOrigin as a wildcard
-    // (see LoginHelper.doLoginsMatch). Reproduce the JSON backend's check up
-    // front so a manually-added login (formActionOrigin === "") is rejected as
-    // a duplicate, and so callers such as about:logins get the existing login's
-    // GUID to link to and select the conflicting login.
-    if (!continueOnDuplicates) {
-      const existing = await this.#findExistingDuplicate(logins);
-      if (existing) {
-        throw lazy.LoginHelper.createLoginAlreadyExistsError(existing.guid);
-      }
-    }
-
     const result = await this.#storageAdapter.addManyWithMeta(
       logins,
       continueOnDuplicates
@@ -533,37 +520,14 @@ export class LoginManagerRustStorage {
     return result;
   }
 
-  // Finds the stored login that a to-be-added login duplicates, so the existing
-  // login's GUID can be reported in the "already exists" error. Mirrors the
-  // duplicate lookup in modifyLoginAsync.
-  async #findExistingDuplicate(logins) {
-    for (const login of logins) {
-      const matchData = {};
-      for (const field of ["origin", "formActionOrigin", "httpRealm"]) {
-        if (login[field] != "") {
-          matchData[field] = login[field];
-        }
-      }
-      const [matches] = await this.#searchLogins(matchData);
-      const match = matches.find(l => login.matches(l, true));
-      if (match) {
-        return match;
-      }
-    }
-    return null;
-  }
-
   async modifyLoginAsync(oldLogin, newLoginData, _fromSync) {
-    // Resolve the stored login by value so callers may pass a login without a
-    // guid, matching the JSON storage backend.
-    const oldStoredLogin =
-      await this.#storageAdapter.findLoginToUpdate(oldLogin);
+    const oldStoredLogin = await this.#storageAdapter.get(oldLogin.guid);
 
     if (!oldStoredLogin) {
       throw new Error("No matching logins");
     }
 
-    const idToModify = oldStoredLogin.guid;
+    const idToModify = oldLogin.guid;
 
     const newLogin = lazy.LoginHelper.buildModifiedLogin(
       oldStoredLogin,
@@ -601,26 +565,14 @@ export class LoginManagerRustStorage {
       newLogin
     );
 
-    // The Rust `update` deliberately treats an edit as "not a use" and leaves
-    // timesUsed/timeLastUsed unchanged (bug 2045032). Honor a requested
-    // increment (e.g. timesUsedIncrement) by recording the use(s) via `touch`.
-    let finalLogin = updatedLogin;
-    const increment = newLogin.timesUsed - oldStoredLogin.timesUsed;
-    for (let i = 0; i < increment; i++) {
-      await this.#storageAdapter.touch(updatedLogin.guid);
-    }
-    if (increment > 0) {
-      finalLogin = await this.#storageAdapter.get(updatedLogin.guid);
-    }
-
     if (this.#isActive) {
       lazy.LoginHelper.notifyStorageChanged("modifyLogin", [
         oldStoredLogin,
-        finalLogin,
+        updatedLogin,
       ]);
     }
 
-    return finalLogin;
+    return updatedLogin;
   }
 
   async recordPasswordUseAsync(login) {
@@ -630,15 +582,7 @@ export class LoginManagerRustStorage {
       throw new Error("No matching logins");
     }
 
-    await this.#storageAdapter.touch(oldStoredLogin.guid);
-    const updatedLogin = await this.#storageAdapter.get(oldStoredLogin.guid);
-
-    if (this.#isActive) {
-      lazy.LoginHelper.notifyStorageChanged("modifyLogin", [
-        oldStoredLogin,
-        updatedLogin,
-      ]);
-    }
+    return await this.#storageAdapter.touch(oldStoredLogin.guid);
   }
 
   async recordBreachAlertDismissal(loginGUID) {
@@ -664,28 +608,7 @@ export class LoginManagerRustStorage {
         Cr.NS_ERROR_NOT_IMPLEMENTED
       );
     }
-    try {
-      return await this.#storageAdapter.list();
-    } catch (e) {
-      // The store fails to decrypt when the primary password is locked (either
-      // the user cancelled the prompt, or the key can't be unlocked). Translate
-      // that into NS_ERROR_ABORT so callers (e.g. getAllUserFacingLogins) treat
-      // it as "no logins available right now" instead of leaking a raw Rust
-      // error, matching crypto-SDR and searchLoginsAsync.
-      if (
-        this.#authenticator?.authCanceled ||
-        /decryption failed/i.test(e.message)
-      ) {
-        if (this.#authenticator) {
-          this.#authenticator.authCanceled = false;
-        }
-        throw Components.Exception(
-          "Primary password locked",
-          Cr.NS_ERROR_ABORT
-        );
-      }
-      throw e;
-    }
+    return await this.#storageAdapter.list();
   }
 
   async searchLoginsAsync(matchData, includeDeleted) {
@@ -854,20 +777,16 @@ export class LoginManagerRustStorage {
   }
 
   async removeLoginAsync(login, _fromSync) {
-    // Resolve the stored login by value so callers may pass a login without a
-    // guid, matching the JSON storage backend.
-    const storedLogin = await this.#storageAdapter.findLoginToUpdate(login);
-    if (!storedLogin) {
+    const deleted = await this.#storageAdapter.delete(login.guid);
+    if (!deleted) {
       throw new Error("No matching logins");
     }
-
-    await this.#storageAdapter.delete(storedLogin.guid);
 
     if (this.#isActive) {
       Glean.pwmgr.numSavedPasswords.set(
         await this.countLoginsAsync("", "", "")
       );
-      lazy.LoginHelper.notifyStorageChanged("removeLogin", storedLogin);
+      lazy.LoginHelper.notifyStorageChanged("removeLogin", login);
     }
   }
 
@@ -969,17 +888,13 @@ export class LoginManagerRustStorage {
   }
 
   async arePotentiallyVulnerablePasswords(logins) {
-    // Logins without a guid aren't stored, so they can't be recorded as
-    // vulnerable. Filter them out to avoid passing null guids to the Rust API.
-    const ids = logins
-      .map(
-        l =>
-          (typeof l.QueryInterface === "function"
-            ? l.QueryInterface(Ci.nsILoginMetaInfo)
-            : l
-          ).guid
-      )
-      .filter(Boolean);
+    const ids = logins.map(
+      l =>
+        (typeof l.QueryInterface === "function"
+          ? l.QueryInterface(Ci.nsILoginMetaInfo)
+          : l
+        ).guid
+    );
     return this.#storageAdapter.arePotentiallyVulnerablePasswords(ids);
   }
 

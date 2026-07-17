@@ -29,12 +29,9 @@ const PREF_ATTEMPTS = "signon.storage.rust.migrationAttempts";
 
 // Brings the shared state (prefs + telemetry) back to a known-clean baseline.
 // Called at the start of every test so a previously failed test can't bleed in.
-// signon.storage.rust.enabled is enabled by default, so the enabled/active prefs
-// are set explicitly (not cleared) to make every test start from the
-// JSON-primary state.
 function resetState() {
-  Services.prefs.setBoolPref(PREF_ENABLED, false);
-  Services.prefs.setBoolPref(PREF_ACTIVE, false);
+  Services.prefs.clearUserPref(PREF_ENABLED);
+  Services.prefs.clearUserPref(PREF_ACTIVE);
   Services.prefs.clearUserPref(PREF_ATTEMPTS);
   Services.fog.testResetFOG();
 }
