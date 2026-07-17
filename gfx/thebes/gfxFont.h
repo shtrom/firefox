@@ -2245,6 +2245,17 @@ class gfxFont {
     bool mTextIs8Bit;
     // 3 bytes of padding here
 
+    static constexpr PLDHashNumber ComputeHash(uint32_t aStringHash,
+                                               Script aScriptCode,
+                                               uint32_t aLanguageHash,
+                                               int16_t aAppUnitsPerDevUnit,
+                                               ShapedTextFlags aFlags,
+                                               RoundingFlags aRounding) {
+      return (aStringHash + static_cast<int32_t>(aScriptCode) +
+              aAppUnitsPerDevUnit * 0x100 + uint16_t(aFlags) * 0x10000 +
+              int(aRounding) + aLanguageHash);
+    }
+
     WordCacheKey(const uint8_t* aText, uint8_t aLength, uint32_t aStringHash,
                  Script aScriptCode, nsAtom* aLanguage,
                  uint16_t aAppUnitsPerDevUnit, ShapedTextFlags aFlags,
@@ -2255,9 +2266,9 @@ class gfxFont {
           mAppUnitsPerDevUnit(aAppUnitsPerDevUnit),
           mLength(aLength),
           mRounding(aRounding),
-          mHashKey(aStringHash + static_cast<int32_t>(aScriptCode) +
-                   aAppUnitsPerDevUnit * 0x100 + uint16_t(aFlags) * 0x10000 +
-                   int(aRounding) + (aLanguage ? aLanguage->hash() : 0)),
+          mHashKey(ComputeHash(aStringHash, aScriptCode,
+                               aLanguage ? aLanguage->hash() : 0,
+                               aAppUnitsPerDevUnit, aFlags, aRounding)),
           mTextIs8Bit(true) {
       NS_ASSERTION(aFlags & ShapedTextFlags::TEXT_IS_8BIT,
                    "8-bit flag should have been set");
@@ -2274,9 +2285,9 @@ class gfxFont {
           mAppUnitsPerDevUnit(aAppUnitsPerDevUnit),
           mLength(aLength),
           mRounding(aRounding),
-          mHashKey(aStringHash + static_cast<int32_t>(aScriptCode) +
-                   aAppUnitsPerDevUnit * 0x100 + uint16_t(aFlags) * 0x10000 +
-                   int(aRounding)),
+          mHashKey(ComputeHash(aStringHash, aScriptCode,
+                               aLanguage ? aLanguage->hash() : 0,
+                               aAppUnitsPerDevUnit, aFlags, aRounding)),
           mTextIs8Bit(false) {
       // We can NOT assert that TEXT_IS_8BIT is false in aFlags here,
       // because this might be an 8bit-only word from a 16-bit textrun,
