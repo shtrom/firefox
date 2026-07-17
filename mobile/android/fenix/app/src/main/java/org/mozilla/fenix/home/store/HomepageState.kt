@@ -7,7 +7,6 @@ package org.mozilla.fenix.home.store
 import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalConfiguration
-import mozilla.components.feature.top.sites.TopSite
 import org.mozilla.fenix.browser.browsingmode.BrowsingMode
 import org.mozilla.fenix.browser.browsingmode.BrowsingModeManager
 import org.mozilla.fenix.components.appstate.AppState
@@ -24,7 +23,7 @@ import org.mozilla.fenix.home.recentsyncedtabs.RecentSyncedTab
 import org.mozilla.fenix.home.recentsyncedtabs.RecentSyncedTabState
 import org.mozilla.fenix.home.recenttabs.RecentTab
 import org.mozilla.fenix.home.recentvisits.RecentlyVisitedItem
-import org.mozilla.fenix.home.topsites.TopSiteColors
+import org.mozilla.fenix.home.topsites.TopSiteState
 import org.mozilla.fenix.termsofuse.store.PrivacyNoticeBannerState
 import org.mozilla.fenix.utils.Settings
 
@@ -66,7 +65,7 @@ internal sealed class HomepageState {
      *
      * @property shouldShowPrivacyNoticeBanner If the privacy notice banner should show.
      * @property nimbusMessage Optional message to display.
-     * @property topSites List of [TopSite] to display, or null when the top sites section is hidden.
+     * @property topSiteState State of the top sites section to display, or null when the section is hidden.
      * @property recentTabs List of [RecentTab] to display, or null when the recent tabs section is hidden.
      * @property recentSyncedTabSectionState State of the recent synced tab section to display.
      * @property bookmarks List of [Bookmark] to display, or null when the bookmarks section is hidden.
@@ -84,14 +83,13 @@ internal sealed class HomepageState {
      * @property middleSearchState State of the middle search bar on the homepage.
      * @property firstFrameDrawn Flag indicating whether the first frame of the homescreen has been drawn.
      * @property setupChecklistState Optional state of the setup checklist feature.
-     * @property topSiteColors The color set defined by [TopSiteColors] used to style a top site.
      * @property isSearchInProgress Whether search is currently active on the homepage.
      * @property bottomPadding Amount of padding to display at the bottom of the homepage.
      */
     internal data class Normal(
         val shouldShowPrivacyNoticeBanner: Boolean,
         val nimbusMessage: NimbusMessageState?,
-        val topSites: List<TopSite>? = null,
+        val topSiteState: TopSiteState? = null,
         val recentTabs: List<RecentTab>? = null,
         val recentSyncedTabSectionState: RecentSyncedTabSectionState = RecentSyncedTabSectionState.Gone,
         val bookmarks: List<Bookmark>? = null,
@@ -108,7 +106,6 @@ internal sealed class HomepageState {
         val middleSearchState: MiddleSearchState = MiddleSearchState(),
         override val firstFrameDrawn: Boolean = false,
         val setupChecklistState: SetupChecklistState?,
-        val topSiteColors: TopSiteColors,
         override val isSearchInProgress: Boolean,
         val bottomPadding: Int,
     ) : HomepageState()
@@ -200,7 +197,7 @@ internal sealed class HomepageState {
             Normal(
                 shouldShowPrivacyNoticeBanner = privacyNoticeBannerState.visible,
                 nimbusMessage = NimbusMessageState.build(appState, privacyNoticeBannerState),
-                topSites = topSites.takeIf { settings.showTopSitesFeature && it.isNotEmpty() },
+                topSiteState = TopSiteState.build(appState = appState, settings = settings),
                 recentTabs = recentTabs.takeIf { shouldShowRecentTabs(settings) },
                 recentSyncedTabSectionState = buildRecentSyncedTabSectionState(settings),
                 bookmarks = bookmarks.takeIf { settings.showBookmarksHomeFeature && it.isNotEmpty() },
@@ -235,7 +232,6 @@ internal sealed class HomepageState {
                 ),
                 firstFrameDrawn = firstFrameDrawn,
                 setupChecklistState = setupChecklistState,
-                topSiteColors = TopSiteColors.colors(wallpaperState = wallpaperState),
                 isSearchInProgress = searchState.isSearchActive,
                 bottomPadding = if (settings.toolbarPosition == ToolbarPosition.TOP) {
                     BOTTOM_PADDING_TOP_TOOLBAR

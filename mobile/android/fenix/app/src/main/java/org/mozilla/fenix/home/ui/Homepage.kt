@@ -42,7 +42,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import mozilla.components.feature.top.sites.TopSite
 import mozilla.components.support.ktx.android.net.hostWithoutCommonPrefixes
 import mozilla.telemetry.glean.private.NoExtras
 import org.mozilla.fenix.GleanMetrics.History
@@ -94,8 +93,8 @@ import org.mozilla.fenix.home.termsofuse.PrivacyNoticeBanner
 import org.mozilla.fenix.home.termsofuse.PrivacyNoticeBannerInteractor
 import org.mozilla.fenix.home.topsites.AddShortcutEntryPoint
 import org.mozilla.fenix.home.topsites.AddShortcutSource
-import org.mozilla.fenix.home.topsites.TOP_SITES_TO_SHOW
 import org.mozilla.fenix.home.topsites.TopSiteColors
+import org.mozilla.fenix.home.topsites.TopSiteState
 import org.mozilla.fenix.home.topsites.TopSites
 import org.mozilla.fenix.home.topsites.interactor.TopSiteInteractor
 import org.mozilla.fenix.home.topsites.store.DialogState
@@ -240,15 +239,12 @@ internal fun Homepage(
                                 }
                             }
 
-                            if (topSites != null) {
+                            if (topSiteState != null) {
                                 TopSitesSection(
-                                    topSites = topSites,
-                                    topSiteColors = topSiteColors,
+                                    state = topSiteState,
                                     showHeader = showTopSitesHeader,
                                     interactor = interactor,
                                     onTopSitesItemBound = onTopSitesItemBound,
-                                    showAddShortcut = components.settings.enableAddShortcutsImprovement &&
-                                        topSites.size < TOP_SITES_TO_SHOW,
                                     onAddShortcutClicked = {
                                         appStore.dispatch(
                                             ShortcutAction.AddShortcutSheetShown(
@@ -394,12 +390,13 @@ internal fun Homepage(
                                     val popularSites by produceState(
                                         initialValue = emptyList(),
                                         key1 = merinoManifestProvider,
-                                        key2 = topSites,
+                                        key2 = topSiteState?.topSites,
                                     ) {
                                         value = withContext(Dispatchers.IO) {
                                             merinoManifestProvider.getTopDomains(
                                                 limit = POPULAR_SITES_TO_SHOW,
-                                                excludedDomains = topSites.orEmpty().mapNotNullTo(mutableSetOf()) {
+                                                excludedDomains = topSiteState?.topSites.orEmpty()
+                                                    .mapNotNullTo(mutableSetOf()) {
                                                     it.url.toUri().hostWithoutCommonPrefixes
                                                 },
                                             ).map { it.toPopularSite() }
@@ -502,10 +499,8 @@ private fun BannerCardSection(
 
 @Composable
 internal fun TopSitesSection(
-    topSites: List<TopSite>,
-    topSiteColors: TopSiteColors = TopSiteColors.colors(),
+    state: TopSiteState,
     showHeader: Boolean = true,
-    showAddShortcut: Boolean = false,
     interactor: TopSiteInteractor,
     onTopSitesItemBound: () -> Unit,
     onAddShortcutClicked: () -> Unit,
@@ -522,13 +517,11 @@ internal fun TopSitesSection(
     }
 
     TopSites(
-        topSites = topSites,
+        state = state,
         interactor = interactor,
         onTopSitesItemBound = onTopSitesItemBound,
         onAddShortcutClicked = onAddShortcutClicked,
-        topSiteColors = topSiteColors,
         isPager = components.settings.topSitesPager,
-        showAddShortcut = showAddShortcut,
     )
 }
 
@@ -686,7 +679,10 @@ private fun HomepagePreview() {
                 state = HomepageState.Normal(
                     shouldShowPrivacyNoticeBanner = false,
                     nimbusMessage = null,
-                    topSites = FakeHomepagePreview.topSites(),
+                    topSiteState = TopSiteState(
+                        topSites = FakeHomepagePreview.topSites(),
+                        colors = TopSiteColors.colors(),
+                    ),
                     recentTabs = FakeHomepagePreview.recentTabs(),
                     recentSyncedTabSectionState = RecentSyncedTabSectionState.Visible(
                         FakeHomepagePreview.recentSyncedTab(),
@@ -704,7 +700,6 @@ private fun HomepagePreview() {
                     middleSearchState = MiddleSearchState(searchBarVisible = true, searchBarEnabled = false),
                     firstFrameDrawn = true,
                     setupChecklistState = null,
-                    topSiteColors = TopSiteColors.colors(),
                     isSearchInProgress = false,
                     bottomPadding = 68,
                     showTopSitesHeader = true,
@@ -726,7 +721,10 @@ private fun HomepageBannerPreview() {
                 state = HomepageState.Normal(
                     shouldShowPrivacyNoticeBanner = true,
                     nimbusMessage = null,
-                    topSites = FakeHomepagePreview.topSites(),
+                    topSiteState = TopSiteState(
+                        topSites = FakeHomepagePreview.topSites(),
+                        colors = TopSiteColors.colors(),
+                    ),
                     recentTabs = FakeHomepagePreview.recentTabs(),
                     recentSyncedTabSectionState = RecentSyncedTabSectionState.Visible(
                         FakeHomepagePreview.recentSyncedTab(),
@@ -744,7 +742,6 @@ private fun HomepageBannerPreview() {
                     middleSearchState = MiddleSearchState(searchBarVisible = true, searchBarEnabled = false),
                     firstFrameDrawn = true,
                     setupChecklistState = null,
-                    topSiteColors = TopSiteColors.colors(),
                     isSearchInProgress = false,
                     bottomPadding = 68,
                     showTopSitesHeader = true,
@@ -778,7 +775,6 @@ private fun HomepagePreviewCollections() {
                     middleSearchState = MiddleSearchState(searchBarVisible = true, searchBarEnabled = false),
                     firstFrameDrawn = true,
                     setupChecklistState = null,
-                    topSiteColors = TopSiteColors.colors(),
                     isSearchInProgress = false,
                     bottomPadding = 68,
                     showTopSitesHeader = true,
@@ -800,7 +796,10 @@ private fun MinimalHomepagePreview() {
                 state = HomepageState.Normal(
                     shouldShowPrivacyNoticeBanner = false,
                     nimbusMessage = null,
-                    topSites = FakeHomepagePreview.topSites(),
+                    topSiteState = TopSiteState(
+                        topSites = FakeHomepagePreview.topSites(),
+                        colors = TopSiteColors.colors(),
+                    ),
                     collectionsState = CollectionsState.Gone,
                     pocketState = FakeHomepagePreview.pocketState(),
                     showPrivacyReport = true,
@@ -811,7 +810,6 @@ private fun MinimalHomepagePreview() {
                     headerState = HeaderState.Normal,
                     firstFrameDrawn = true,
                     setupChecklistState = null,
-                    topSiteColors = TopSiteColors.colors(),
                     isSearchInProgress = false,
                     bottomPadding = 68,
                     showTopSitesHeader = true,

@@ -41,6 +41,7 @@ import org.mozilla.fenix.home.store.HomepageState
 import org.mozilla.fenix.home.store.MiddleSearchState
 import org.mozilla.fenix.home.toolbar.HomeToolbarComposable
 import org.mozilla.fenix.home.topsites.TopSiteColors
+import org.mozilla.fenix.home.topsites.TopSiteState
 import org.mozilla.fenix.home.ui.HomepageTestTag.HOMEPAGE
 import org.mozilla.fenix.theme.FirefoxTheme
 
@@ -110,10 +111,9 @@ internal fun MiddleSearchHomepage(
                         }
 
                         is HomepageState.Normal -> {
-                            if (topSites != null) {
+                            if (topSiteState != null) {
                                 TopSitesSection(
-                                    topSites = topSites,
-                                    topSiteColors = topSiteColors,
+                                    state = topSiteState,
                                     interactor = interactor,
                                     onTopSitesItemBound = onTopSitesItemBound,
                                     onAddShortcutClicked = onAddShortcutClicked,
@@ -185,7 +185,10 @@ private fun MiddleSearchHomepagePreview() {
             HomepageState.Normal(
                 shouldShowPrivacyNoticeBanner = false,
                 nimbusMessage = null,
-                topSites = FakeHomepagePreview.topSites(),
+                topSiteState = TopSiteState(
+                    topSites = FakeHomepagePreview.topSites(),
+                    colors = TopSiteColors.colors(),
+                ),
                 recentlyVisited = FakeHomepagePreview.recentHistory(),
                 collectionsState = FakeHomepagePreview.collectionState(),
                 pocketState = FakeHomepagePreview.pocketState(),
@@ -198,7 +201,6 @@ private fun MiddleSearchHomepagePreview() {
                 middleSearchState = MiddleSearchState(searchBarVisible = true, searchBarEnabled = true),
                 firstFrameDrawn = true,
                 setupChecklistState = null,
-                topSiteColors = TopSiteColors.colors(),
                 isSearchInProgress = false,
                 bottomPadding = 68,
                 showTopSitesHeader = true,
