@@ -559,7 +559,7 @@ var SidebarController = {
       // the shared chrome-level header stays hidden.
       document.getElementById("sidebar-header").hidden = true;
       if (!this._mainResizeObserverAdded) {
-        this._mainResizeObserver.observe(this.sidebarContainer);
+        this._mainResizeObserver.observe(this.sidebarMain);
         this._mainResizeObserverAdded = true;
       }
       if (!this._browserResizeObserver) {
@@ -700,45 +700,13 @@ var SidebarController = {
    * @param {ResizeObserverEntry} entry
    */
   _handleLauncherResize(entry) {
-    this._state.launcherWidth = entry.borderBoxSize[0].inlineSize;
+    this._state.launcherWidth = entry.contentBoxSize[0].inlineSize;
     if (this.isLauncherDragging) {
       this._state.launcherDragActive = true;
     }
     if (this._state.visibilitySetting === "expand-on-hover") {
       this.setLauncherCollapsedWidth();
     }
-  },
-
-  requestMaxWidthUpdate() {
-    if (this._pendingMaxWidthUpdate) {
-      return;
-    }
-    this._pendingMaxWidthUpdate = true;
-    this._updateLauncherAndPanelMaxWidths().finally(() => {
-      this._pendingMaxWidthUpdate = false;
-    });
-  },
-
-  /**
-   * Update the max widths on the sidebar launcher and panel, so that their
-   * combined widths don't exceed 75% of the viewport width.
-   */
-  async _updateLauncherAndPanelMaxWidths() {
-    const launcherEl = this.sidebarContainer;
-    const panelEl = this._box;
-    if (!this._state.launcherExpanded || !this._state.panelOpen) {
-      // We don't have both the launcher + panel open. Fallback to css max widths.
-      launcherEl.style.removeProperty("max-width");
-      panelEl.style.removeProperty("max-width");
-      return;
-    }
-    const { launcherWidth, panelMinWidth } =
-      await window.promiseDocumentFlushed(() => ({
-        launcherWidth: launcherEl.getBoundingClientRect().width,
-        panelMinWidth: parseFloat(getComputedStyle(panelEl).minWidth),
-      }));
-    launcherEl.style.maxWidth = `calc(75vw - ${panelMinWidth}px)`;
-    panelEl.style.maxWidth = `calc(75vw - ${launcherWidth}px)`;
   },
 
   getUIState() {
@@ -1805,7 +1773,7 @@ var SidebarController = {
     if (!this._panelResizeObserver) {
       this._panelResizeObserver = new ResizeObserver(
         ([entry]) =>
-          (this._state.panelWidth = entry.borderBoxSize[0].inlineSize)
+          (this._state.panelWidth = entry.contentBoxSize[0].inlineSize)
       );
     }
     this._panelResizeObserver.observe(this._box);
