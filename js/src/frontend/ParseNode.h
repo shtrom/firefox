@@ -2092,7 +2092,7 @@ class PropertyAccessBase : public BinaryNode {
 
 // A PropertyAccess or ArgumentsLength: a property access that isn't part of an
 // optional chain.
-class NonOptonalPropertyAccessBase : public PropertyAccessBase {
+class NonOptionalPropertyAccessBase : public PropertyAccessBase {
  public:
   static bool test(const ParseNode& node) {
     bool match = node.isKind(ParseNodeKind::DotExpr) ||
@@ -2105,11 +2105,11 @@ class NonOptonalPropertyAccessBase : public PropertyAccessBase {
   using PropertyAccessBase::PropertyAccessBase;
 };
 
-class PropertyAccess : public NonOptonalPropertyAccessBase {
+class PropertyAccess : public NonOptionalPropertyAccessBase {
  public:
   PropertyAccess(ParseNode* lhs, NameNode* name, uint32_t begin, uint32_t end)
-      : NonOptonalPropertyAccessBase(ParseNodeKind::DotExpr, lhs, name, begin,
-                                     end) {
+      : NonOptionalPropertyAccessBase(ParseNodeKind::DotExpr, lhs, name, begin,
+                                      end) {
     MOZ_ASSERT(lhs);
     MOZ_ASSERT(name);
   }
@@ -2118,25 +2118,25 @@ class PropertyAccess : public NonOptonalPropertyAccessBase {
   // arguments length optimization is respected.
   static bool test(const ParseNode& node) {
     bool match = node.isKind(ParseNodeKind::DotExpr);
-    MOZ_ASSERT_IF(match, node.is<NonOptonalPropertyAccessBase>());
+    MOZ_ASSERT_IF(match, node.is<NonOptionalPropertyAccessBase>());
     return match;
   }
 };
 
 // The optimizable |arguments.length| intrinsic. Deliberately not a
 // PropertyAccess to ensure we always respect the arguments.length optimization.
-class ArgumentsLength : public NonOptonalPropertyAccessBase {
+class ArgumentsLength : public NonOptionalPropertyAccessBase {
  public:
   ArgumentsLength(ParseNode* lhs, NameNode* name, uint32_t begin, uint32_t end)
-      : NonOptonalPropertyAccessBase(ParseNodeKind::ArgumentsLength, lhs, name,
-                                     begin, end) {
+      : NonOptionalPropertyAccessBase(ParseNodeKind::ArgumentsLength, lhs, name,
+                                      begin, end) {
     MOZ_ASSERT(lhs);
     MOZ_ASSERT(name);
   }
 
   static bool test(const ParseNode& node) {
     bool match = node.isKind(ParseNodeKind::ArgumentsLength);
-    MOZ_ASSERT_IF(match, node.is<NonOptonalPropertyAccessBase>());
+    MOZ_ASSERT_IF(match, node.is<NonOptionalPropertyAccessBase>());
     return match;
   }
 };
