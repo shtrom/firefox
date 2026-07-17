@@ -2688,7 +2688,7 @@ describe("<SportsWidget> followed teams matches view", () => {
     },
   ];
 
-  function renderMatchesWith({
+  async function renderMatchesWith({
     selectedTeams = [],
     matchesTab = "upcoming",
     previous = [],
@@ -2697,22 +2697,32 @@ describe("<SportsWidget> followed teams matches view", () => {
     followedOnly,
     teams = teamsWithColors,
   } = {}) {
-    return render(
-      <WrapWithProvider
-        state={makeState(
-          { [PREF_SPORTS_WIDGET_SIZE]: "large" },
-          {
-            widgetState: "sports-matches",
-            matchesTab,
-            selectedTeams,
-            followedOnly,
-            data: { teams, matches: { previous, current, next } },
-          }
-        )}
-      >
-        <SportsWidget dispatch={jest.fn()} handleUserInteraction={jest.fn()} />
-      </WrapWithProvider>
-    );
+    let result;
+    // Flush useLocalizedTeamNames' async name resolution inside act so its
+    // setResolved doesn't fire after the test body.
+    await act(async () => {
+      result = render(
+        <WrapWithProvider
+          state={makeState(
+            { [PREF_SPORTS_WIDGET_SIZE]: "large" },
+            {
+              widgetState: "sports-matches",
+              matchesTab,
+              selectedTeams,
+              followedOnly,
+              data: { teams, matches: { previous, current, next } },
+            }
+          )}
+        >
+          <SportsWidget
+            dispatch={jest.fn()}
+            handleUserInteraction={jest.fn()}
+          />
+        </WrapWithProvider>
+      );
+      await Promise.resolve();
+    });
+    return result;
   }
 
   function visiblePanel(container) {
@@ -2732,10 +2742,10 @@ describe("<SportsWidget> followed teams matches view", () => {
     );
   }
 
-  it("bubbles a followed team's upcoming match to the highlight position", () => {
+  it("bubbles a followed team's upcoming match to the highlight position", async () => {
     // Without a followed team, the original chronological order would put
     // ENG vs USA first. Following CAN should bring CAN vs AUS to the front.
-    const { container } = renderMatchesWith({
+    const { container } = await renderMatchesWith({
       selectedTeams: ["CAN"],
       matchesTab: "upcoming",
       previous: [matchEngUsa],
@@ -2744,8 +2754,8 @@ describe("<SportsWidget> followed teams matches view", () => {
     expect(highlightMatchCodes(container)).toEqual(["CAN", "AUS"]);
   });
 
-  it("preserves chronological order when none of the matches involve a followed team", () => {
-    const { container } = renderMatchesWith({
+  it("preserves chronological order when none of the matches involve a followed team", async () => {
+    const { container } = await renderMatchesWith({
       selectedTeams: ["IRQ"],
       matchesTab: "upcoming",
       previous: [matchEngUsa],
@@ -2754,8 +2764,8 @@ describe("<SportsWidget> followed teams matches view", () => {
     expect(highlightMatchCodes(container)).toEqual(["ENG", "USA"]);
   });
 
-  it("does not show the followed-only toggle when no teams are followed", () => {
-    const { container } = renderMatchesWith({
+  it("does not show the followed-only toggle when no teams are followed", async () => {
+    const { container } = await renderMatchesWith({
       selectedTeams: [],
       matchesTab: "upcoming",
       previous: [matchEngUsa],
@@ -2771,8 +2781,8 @@ describe("<SportsWidget> followed teams matches view", () => {
     ).toBeNull();
   });
 
-  it("shows the followed-only toggle in the expanded list when teams are followed", () => {
-    const { container } = renderMatchesWith({
+  it("shows the followed-only toggle in the expanded list when teams are followed", async () => {
+    const { container } = await renderMatchesWith({
       selectedTeams: ["CAN"],
       matchesTab: "upcoming",
       previous: [matchEngUsa],
@@ -2791,8 +2801,8 @@ describe("<SportsWidget> followed teams matches view", () => {
     expect(toggle.getAttribute("pressed")).not.toBeNull();
   });
 
-  it("filters the expanded Upcoming list to followed teams when the toggle is on", () => {
-    const { container } = renderMatchesWith({
+  it("filters the expanded Upcoming list to followed teams when the toggle is on", async () => {
+    const { container } = await renderMatchesWith({
       selectedTeams: ["CAN"],
       matchesTab: "upcoming",
       previous: [matchEngUsa],
@@ -2811,8 +2821,8 @@ describe("<SportsWidget> followed teams matches view", () => {
     expect(codes).toEqual(["CAN", "AUS"]);
   });
 
-  it("shows every upcoming match when the persisted followedOnly toggle is off", () => {
-    const { container } = renderMatchesWith({
+  it("shows every upcoming match when the persisted followedOnly toggle is off", async () => {
+    const { container } = await renderMatchesWith({
       selectedTeams: ["CAN"],
       matchesTab: "upcoming",
       previous: [matchEngUsa],
@@ -2833,10 +2843,10 @@ describe("<SportsWidget> followed teams matches view", () => {
     expect(toggle.getAttribute("pressed")).toBeNull();
   });
 
-  it("keeps the chronological-first match in the Upcoming highlight when the toggle is off", () => {
+  it("keeps the chronological-first match in the Upcoming highlight when the toggle is off", async () => {
     // With the toggle on (default) CAN would bubble to the highlight; off, the
     // chronological-first match (ENG vs USA) should stay highlighted.
-    const { container } = renderMatchesWith({
+    const { container } = await renderMatchesWith({
       selectedTeams: ["CAN"],
       matchesTab: "upcoming",
       next: [matchEngUsa, matchCanAus, matchAlgGer],
@@ -2845,8 +2855,8 @@ describe("<SportsWidget> followed teams matches view", () => {
     expect(highlightMatchCodes(container)).toEqual(["ENG", "USA"]);
   });
 
-  it("renders the expanded Upcoming list in chronological order when the toggle is off", () => {
-    const { container } = renderMatchesWith({
+  it("renders the expanded Upcoming list in chronological order when the toggle is off", async () => {
+    const { container } = await renderMatchesWith({
       selectedTeams: ["CAN"],
       matchesTab: "upcoming",
       next: [matchEngUsa, matchCanAus, matchAlgGer],
@@ -2863,8 +2873,8 @@ describe("<SportsWidget> followed teams matches view", () => {
     expect(homeCodes).toEqual(["ENG", "CAN", "ALG"]);
   });
 
-  it("filters the expanded Results list to followed teams when the toggle is on", () => {
-    const { container } = renderMatchesWith({
+  it("filters the expanded Results list to followed teams when the toggle is on", async () => {
+    const { container } = await renderMatchesWith({
       selectedTeams: ["CAN"],
       matchesTab: "results",
       previous: [matchEngUsa, matchCanAus, matchAlgGer],
@@ -2879,7 +2889,7 @@ describe("<SportsWidget> followed teams matches view", () => {
     expect(rows[0].querySelector(".sports-match-code").textContent).toBe("CAN");
   });
 
-  it("dispatches CHANGE_FOLLOWED_ONLY for the upcoming tab when the toggle is flipped", () => {
+  it("dispatches CHANGE_FOLLOWED_ONLY for the upcoming tab when the toggle is flipped", async () => {
     const dispatch = jest.fn();
     const { container } = render(
       <WrapWithProvider
@@ -2903,6 +2913,10 @@ describe("<SportsWidget> followed teams matches view", () => {
         <SportsWidget dispatch={dispatch} handleUserInteraction={jest.fn()} />
       </WrapWithProvider>
     );
+    // Flush useLocalizedTeamNames' async name resolution inside act.
+    await act(async () => {
+      await Promise.resolve();
+    });
     fireEvent.click(
       visiblePanel(container).querySelector(
         "[data-l10n-id='newtab-sports-widget-view-all']"
@@ -2937,7 +2951,7 @@ describe("<SportsWidget> followed teams matches view", () => {
     );
   });
 
-  it("dispatches CHANGE_FOLLOWED_ONLY for the results tab when the toggle is flipped", () => {
+  it("dispatches CHANGE_FOLLOWED_ONLY for the results tab when the toggle is flipped", async () => {
     const dispatch = jest.fn();
     const { container } = render(
       <WrapWithProvider
@@ -2962,6 +2976,10 @@ describe("<SportsWidget> followed teams matches view", () => {
         <SportsWidget dispatch={dispatch} handleUserInteraction={jest.fn()} />
       </WrapWithProvider>
     );
+    // Flush useLocalizedTeamNames' async name resolution inside act.
+    await act(async () => {
+      await Promise.resolve();
+    });
     fireEvent.click(
       visiblePanel(container).querySelector(
         "[data-l10n-id='newtab-sports-widget-view-all']"
@@ -2995,8 +3013,8 @@ describe("<SportsWidget> followed teams matches view", () => {
     );
   });
 
-  it("applies the followed-team gradient to the widget when the highlight involves exactly one followed team", () => {
-    const { container } = renderMatchesWith({
+  it("applies the followed-team gradient to the widget when the highlight involves exactly one followed team", async () => {
+    const { container } = await renderMatchesWith({
       selectedTeams: ["ENG"],
       matchesTab: "upcoming",
       previous: [matchEngUsa],
@@ -3009,8 +3027,8 @@ describe("<SportsWidget> followed teams matches view", () => {
     );
   });
 
-  it("does not apply the gradient when both teams in the highlight are followed", () => {
-    const { container } = renderMatchesWith({
+  it("does not apply the gradient when both teams in the highlight are followed", async () => {
+    const { container } = await renderMatchesWith({
       selectedTeams: ["ENG", "USA"],
       matchesTab: "upcoming",
       previous: [matchEngUsa],
@@ -3023,9 +3041,9 @@ describe("<SportsWidget> followed teams matches view", () => {
     );
   });
 
-  it("does not apply the gradient when the followed team has fewer than two colors", () => {
+  it("does not apply the gradient when the followed team has fewer than two colors", async () => {
     // USA in teamsWithColors has only one color entry.
-    const { container } = renderMatchesWith({
+    const { container } = await renderMatchesWith({
       selectedTeams: ["USA"],
       matchesTab: "upcoming",
       previous: [matchEngUsa],
@@ -3038,9 +3056,9 @@ describe("<SportsWidget> followed teams matches view", () => {
     ).toBe(false);
   });
 
-  it("does not apply the gradient when the followed team has no colors entry at all", () => {
+  it("does not apply the gradient when the followed team has no colors entry at all", async () => {
     // AUS in teamsWithColors has no `colors` property.
-    const { container } = renderMatchesWith({
+    const { container } = await renderMatchesWith({
       selectedTeams: ["AUS"],
       matchesTab: "upcoming",
       previous: [matchEngUsa],
@@ -3053,8 +3071,8 @@ describe("<SportsWidget> followed teams matches view", () => {
     ).toBe(false);
   });
 
-  it("does not apply the gradient once the user expands the list view", () => {
-    const { container } = renderMatchesWith({
+  it("does not apply the gradient once the user expands the list view", async () => {
+    const { container } = await renderMatchesWith({
       selectedTeams: ["ENG"],
       matchesTab: "upcoming",
       previous: [matchEngUsa],
@@ -3072,8 +3090,8 @@ describe("<SportsWidget> followed teams matches view", () => {
     ).toBe(false);
   });
 
-  it("passes followedTeams down to highlight rows so they render the followed treatment", () => {
-    const { container } = renderMatchesWith({
+  it("passes followedTeams down to highlight rows so they render the followed treatment", async () => {
+    const { container } = await renderMatchesWith({
       selectedTeams: ["ENG"],
       matchesTab: "upcoming",
       previous: [matchEngUsa],
@@ -3103,8 +3121,8 @@ describe("<SportsWidget> followed teams matches view", () => {
       team.key === "ENG" ? { ...team, eliminated: true } : team
     );
 
-    it("does not bubble an eliminated followed team's matches to the front", () => {
-      const { container } = renderMatchesWith({
+    it("does not bubble an eliminated followed team's matches to the front", async () => {
+      const { container } = await renderMatchesWith({
         selectedTeams: ["ENG"],
         matchesTab: "upcoming",
         previous: [matchCanAus],
@@ -3115,8 +3133,8 @@ describe("<SportsWidget> followed teams matches view", () => {
       expect(highlightMatchCodes(container)).toEqual(["CAN", "AUS"]);
     });
 
-    it("does not apply the gradient border when the only followed team is eliminated", () => {
-      const { container } = renderMatchesWith({
+    it("does not apply the gradient border when the only followed team is eliminated", async () => {
+      const { container } = await renderMatchesWith({
         selectedTeams: ["ENG"],
         matchesTab: "upcoming",
         previous: [matchEngUsa],
@@ -3130,8 +3148,8 @@ describe("<SportsWidget> followed teams matches view", () => {
       ).toBe(false);
     });
 
-    it("does not render the check/bold treatment on rows for eliminated followed teams", () => {
-      const { container } = renderMatchesWith({
+    it("does not render the check/bold treatment on rows for eliminated followed teams", async () => {
+      const { container } = await renderMatchesWith({
         selectedTeams: ["ENG"],
         matchesTab: "upcoming",
         previous: [matchEngUsa],
@@ -3148,8 +3166,8 @@ describe("<SportsWidget> followed teams matches view", () => {
       expect(highlight.querySelector(".sports-match-code strong")).toBeNull();
     });
 
-    it("hides the followed-only toggle when every followed team is eliminated", () => {
-      const { container } = renderMatchesWith({
+    it("hides the followed-only toggle when every followed team is eliminated", async () => {
+      const { container } = await renderMatchesWith({
         selectedTeams: ["ENG"],
         matchesTab: "upcoming",
         previous: [matchEngUsa],
@@ -3166,10 +3184,10 @@ describe("<SportsWidget> followed teams matches view", () => {
       ).toBeNull();
     });
 
-    it("shows the unfiltered list when every followed team is eliminated", () => {
+    it("shows the unfiltered list when every followed team is eliminated", async () => {
       // followedOnly defaults to true, but with no active followed teams the
       // filter must be a no-op so the user still sees the schedule.
-      const { container } = renderMatchesWith({
+      const { container } = await renderMatchesWith({
         selectedTeams: ["ENG"],
         matchesTab: "upcoming",
         previous: [matchEngUsa],
@@ -3186,10 +3204,10 @@ describe("<SportsWidget> followed teams matches view", () => {
       ).toHaveLength(3);
     });
 
-    it("keeps the followed treatment for the still-active followed teams when only some are eliminated", () => {
+    it("keeps the followed treatment for the still-active followed teams when only some are eliminated", async () => {
       // Follow ENG (eliminated) and CAN (still active). CAN's match should
       // bubble and get the followed-team treatment; ENG should not.
-      const { container } = renderMatchesWith({
+      const { container } = await renderMatchesWith({
         selectedTeams: ["ENG", "CAN"],
         matchesTab: "upcoming",
         previous: [matchEngUsa],
@@ -4613,44 +4631,55 @@ describe("<SportsWidget> matches missing a team (bug 2044931)", () => {
     query: "ENG vs USA upcoming",
   };
 
-  function renderWithFollowedTeamAndTbd() {
-    return render(
-      <WrapWithProvider
-        state={makeState(
-          {},
-          {
-            widgetState: "sports-matches",
-            matchesTab: "upcoming",
-            selectedTeams: ["ENG"],
-            data: {
-              teams: makeTeams(),
-              // The team-less match sits ahead of the followed one in both the
-              // results and upcoming buckets, so sortFollowedFirst has to sort
-              // past it and filterFollowed has to test it.
-              matches: {
-                previous: [tbdMatch, followedMatch],
-                current: [],
-                next: [tbdMatch, followedMatch],
+  beforeEach(() => mockDocumentL10n());
+  afterEach(() => {
+    delete document.l10n;
+  });
+
+  async function renderWithFollowedTeamAndTbd() {
+    let result;
+    // Flush useLocalizedTeamNames' async name resolution inside act.
+    await act(async () => {
+      result = render(
+        <WrapWithProvider
+          state={makeState(
+            {},
+            {
+              widgetState: "sports-matches",
+              matchesTab: "upcoming",
+              selectedTeams: ["ENG"],
+              data: {
+                teams: makeTeams(),
+                // The team-less match sits ahead of the followed one in both
+                // the results and upcoming buckets, so sortFollowedFirst has to
+                // sort past it and filterFollowed has to test it.
+                matches: {
+                  previous: [tbdMatch, followedMatch],
+                  current: [],
+                  next: [tbdMatch, followedMatch],
+                },
               },
-            },
-          }
-        )}
-      >
-        <SportsWidget {...defaultProps} />
-      </WrapWithProvider>
-    );
+            }
+          )}
+        >
+          <SportsWidget {...defaultProps} />
+        </WrapWithProvider>
+      );
+      await Promise.resolve();
+    });
+    return result;
   }
 
-  it("renders without crashing when a team is followed and a match has no teams", () => {
-    const { container } = renderWithFollowedTeamAndTbd();
+  it("renders without crashing when a team is followed and a match has no teams", async () => {
+    const { container } = await renderWithFollowedTeamAndTbd();
     // The section renders rather than tripping the React error boundary.
     expect(
       container.querySelector(".sports.sports-matches")
     ).toBeInTheDocument();
   });
 
-  it("bubbles the followed match ahead of the team-less one in the highlight", () => {
-    const { container } = renderWithFollowedTeamAndTbd();
+  it("bubbles the followed match ahead of the team-less one in the highlight", async () => {
+    const { container } = await renderWithFollowedTeamAndTbd();
     const panel = getVisibleTabPanel(container);
     const titles = [...panel.querySelectorAll(".sports-match-flag")].map(f =>
       f.getAttribute("title")

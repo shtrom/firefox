@@ -1,4 +1,4 @@
-import { render, fireEvent } from "@testing-library/react";
+import { render, fireEvent, act } from "@testing-library/react";
 import { WrapWithProvider } from "test/jest/test-utils";
 import {
   TopSite,
@@ -177,14 +177,14 @@ describe("<TopSiteList> arrow-key navigation", () => {
 
   it("moves focus to the next tile on ArrowRight", () => {
     const targets = focusTargetsFor(buildTopSitesList(makeRows(3), 1, 8));
-    targets[0].focus();
+    act(() => targets[0].focus());
     fireEvent.keyDown(targets[0], { key: "ArrowRight" });
     expect(document.activeElement).toBe(targets[1]);
   });
 
   it("moves focus to the previous tile on ArrowLeft", () => {
     const targets = focusTargetsFor(buildTopSitesList(makeRows(3), 1, 8));
-    targets[1].focus();
+    act(() => targets[1].focus());
     fireEvent.keyDown(targets[1], { key: "ArrowLeft" });
     expect(document.activeElement).toBe(targets[0]);
   });
@@ -195,7 +195,7 @@ describe("<TopSiteList> arrow-key navigation", () => {
     const addButton = targets.at(-1);
     expect(addButton).toHaveClass("add-button");
 
-    targets[1].focus();
+    act(() => targets[1].focus());
     fireEvent.keyDown(targets[1], { key: "ArrowRight" });
     expect(document.activeElement).toBe(addButton);
   });
@@ -208,7 +208,7 @@ describe("<TopSiteList> arrow-key navigation", () => {
     const lastTile = targets.at(-2);
     expect(overlay).toHaveClass("add-button");
 
-    lastTile.focus();
+    act(() => lastTile.focus());
     fireEvent.keyDown(lastTile, { key: "ArrowRight" });
     expect(document.activeElement).toBe(overlay);
 
@@ -221,7 +221,7 @@ describe("<TopSiteList> arrow-key navigation", () => {
     const [first] = targets;
     const last = targets.at(-1);
 
-    last.focus();
+    act(() => last.focus());
     fireEvent.keyDown(last, { key: "ArrowRight" });
     expect(document.activeElement).toBe(first);
 
