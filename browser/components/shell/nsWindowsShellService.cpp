@@ -532,10 +532,15 @@ static void DisplayOverlayImageWhileVisible(
   }
 
   auto timer{std::make_shared<nsCOMPtr<nsITimer>>()};
-  auto lastTime{std::make_shared<TimeStamp>(TimeStamp::Now())};
-  auto callback{[timer, lastTime, aElement, overlayImage](nsITimer* aTimer) {
+  auto callback{[timer, aElement, overlayImage](nsITimer* aTimer) {
     if (aElement->IsMoving().valueOr(true)) {
-      // The element is moving or not available
+      // The element is moving
+      aTimer->Cancel();
+      return;
+    }
+
+    if (!aElement->IsVisible()) {
+      // The element isn't visible
       aTimer->Cancel();
       return;
     }
@@ -546,13 +551,10 @@ static void DisplayOverlayImageWhileVisible(
       return;
     }
 
-    const TimeStamp now{TimeStamp::Now()};
-    const TimeDuration elapsed{now - *lastTime};
-    overlayImage->AdvanceAnimation(elapsed);
-    *lastTime = now;
+    overlayImage->AdvanceFrame();
   }};
 
-  const uint32_t kDelayMs{10};
+  const uint32_t kDelayMs{30};
   NS_NewTimerWithCallback(getter_AddRefs(*timer), callback, kDelayMs,
                           nsITimer::TYPE_REPEATING_SLACK,
                           "DisplayOverlayImageWhileVisibleTimer"_ns,
@@ -585,8 +587,8 @@ static void DisplayOverlayImageWhenElementIsStill(
     DisplayOverlayImageWhileVisible(aSerialEventTarget, aElement, aDisplayMode);
   }};
 
-  const uint32_t kDelayMs{500};
-  NS_NewTimerWithCallback(getter_AddRefs(*timer), callback, kDelayMs,
+  const uint32_t kTrackingDelayMs{500};
+  NS_NewTimerWithCallback(getter_AddRefs(*timer), callback, kTrackingDelayMs,
                           nsITimer::TYPE_REPEATING_SLACK,
                           "DisplayOverlayImageWhenElementIsStillTimer"_ns,
                           aSerialEventTarget);
@@ -663,8 +665,8 @@ static void HighlightSetDefaultBrowserButton() {
     }
   }};
 
-  const uint32_t kDelayMs{500};
-  NS_NewTimerWithCallback(getter_AddRefs(*timer), callback, kDelayMs,
+  const uint32_t kRetryDelayMs{500};
+  NS_NewTimerWithCallback(getter_AddRefs(*timer), callback, kRetryDelayMs,
                           nsITimer::TYPE_REPEATING_SLACK,
                           "HighlightSetDefaultBrowserButtonTimer"_ns,
                           serialEventTarget);

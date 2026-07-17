@@ -9,12 +9,9 @@
 #include <objbase.h>
 #include <uiautomation.h>
 #include <vector>
-#include <wincodec.h>
 #include <windows.h>
 
 #include "mozilla/RefPtr.h"
-#include "mozilla/TimeStamp.h"
-#include "nsIFile.h"
 #include "nsISupportsImpl.h"
 #include "nsWindowsHelpers.h"
 
@@ -27,12 +24,7 @@ class WindowsUIOverlayImage final {
  public:
   enum class DisplayMode { Static, Animated };
 
-  struct Frame {
-    std::vector<uint8_t> pixels;
-    TimeDuration duration;
-  };
-
-  NS_INLINE_DECL_THREADSAFE_REFCOUNTING(WindowsUIOverlayImage)
+  NS_INLINE_DECL_REFCOUNTING(WindowsUIOverlayImage)
 
   /**
    * Creates an overlay image for a given element.
@@ -54,11 +46,9 @@ class WindowsUIOverlayImage final {
   bool IsVisible();
 
   /**
-   * Advances the animation.
-   *
-   * @param aElapsed Elapsed time since the last call.
+   * Advances to the next frame of the image.
    */
-  void AdvanceAnimation(TimeDuration aElapsed);
+  void AdvanceFrame();
 
   // Non-copyable and non-movable
   WindowsUIOverlayImage(const WindowsUIOverlayImage&) = delete;
@@ -79,8 +69,7 @@ class WindowsUIOverlayImage final {
   RefPtr<IUIAutomationElement> mElement;
   DisplayMode mDisplayMode;
   SIZE mSize;
-  std::vector<Frame> mFrames;
-  TimeDuration mAccumulatedTime;
+  std::vector<std::vector<uint8_t>> mFrames;
   nsAutoBitmap mDib;
   nsAutoHDC mMemDC;
   void* mDibBits;
@@ -89,18 +78,6 @@ class WindowsUIOverlayImage final {
   HWND mOverlayWindow;
   size_t mCurrentFrame;
 };
-
-#if defined(ENABLE_TESTS)
-TimeDuration GetFrameDuration(IWICBitmapFrameDecode* aFrame,
-                              TimeDuration aDefaultFrameDuration);
-RefPtr<IWICBitmapDecoder> CreateWICBitmapDecoder(
-    RefPtr<IWICImagingFactory> aFactory, nsIFile* aImageFile);
-already_AddRefed<nsIFile> GetImageFile();
-RefPtr<IWICImagingFactory> CreateWICImagingFactory();
-size_t ComputeAdvancedFrame(
-    const std::vector<WindowsUIOverlayImage::Frame>& aFrames,
-    size_t aCurrentFrame, TimeDuration& aAccumulatedTime);
-#endif
 
 }  // namespace mozilla
 
