@@ -2048,6 +2048,11 @@ static Result<nsString, nsresult> EnsurePinnableShortcutExists(
       !NS_IsMainThread(),
       "EnsurePinnableShortcutExists should be called off main thread only");
 
+  if (xpc::IsInAutomation()) {
+    // We don't create or use pinnable shortcuts in tests.
+    return nsString(u"dummy_test_shortcut_path"_ns);
+  }
+
   nsString shortcutPath;
   nsresult rv = FindPinnableShortcut(aAppUserModelId, aShortcutSubstring,
                                      aPrivateBrowsing, shortcutPath);

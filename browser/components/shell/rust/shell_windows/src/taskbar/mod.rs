@@ -49,12 +49,37 @@ async fn pin_app(
     main_guard: MainThreadGuard,
 ) -> Result<PinResult, nsresult> {
     // Attempt to use the documented WinRT pinning API.
-    winrt::pin_to_taskbar(aumid, fire_and_forget, main_guard)
-        .await
-        .or_else(|_| {
-            // Fallback to undocumented COM API.
-            com::modify_taskbar(com::PinOp::Pin, shortcut_path, main_guard)
-        })
+    let winrt_pin = winrt::pin_to_taskbar(aumid, fire_and_forget, main_guard).await;
+
+    record_winrt_pin_telemetry(&winrt_pin);
+
+    winrt_pin.or_else(|e| {
+        use winrt::WinRtPinError::GetTaskbarManager;
+        match e {
+            GetTaskbarManager(_) => log::debug!("Error pinning with WinRT API: {e:?}"),
+            _ => log::error!("Error pinning with WinRT API: {e:?}"),
+        }
+
+        // Fallback to undocumented COM API.
+        com::modify_taskbar(com::PinOp::Pin, shortcut_path, main_guard)
+    })
+}
+
+/// Records Glean telemetry for the attempted pin to taskbar using WinRT.
+fn record_winrt_pin_telemetry(pin_result: &Result<PinResult, winrt::WinRtPinError>) {
+    use firefox_on_glean::metrics::taskbar::{self, PinWinrtExtra};
+
+    use PinResult::*;
+    let metric_extra = match pin_result {
+        Ok(Pinned) => "success_pinned",
+        Ok(Rejected) => "success_rejected",
+        Ok(Unknown) => "success_fire_and_forget",
+        Err(e) => e.to_metric_taskbar_pin_winrt(),
+    };
+
+    taskbar::pin_winrt.record(PinWinrtExtra {
+        result: Some(metric_extra.into()),
+    });
 }
 
 /// FFI accessible interface to check if taskbar pinning APIs are available.

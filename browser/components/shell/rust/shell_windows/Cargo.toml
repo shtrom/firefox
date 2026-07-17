@@ -8,6 +8,7 @@ enable_tests = []
 
 [dependencies]
 base64 = "0.22"
+firefox-on-glean = { path = "../../../../../toolkit/components/glean/api" }
 futures = { version = "0.3", features = ["alloc"]}
 log = "0.4"
 nserror = { path = "../../../../../xpcom/rust/nserror" }

@@ -7425,6 +7425,7 @@ name = "shell_windows"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
+ "firefox-on-glean",
  "futures",
  "log",
  "moz_task",

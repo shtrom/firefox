@@ -84,6 +84,12 @@ pub(super) fn modify_taskbar(
     // threads rely on implicit MTA thus should not be used here.
     _main_guard: MainThreadGuard,
 ) -> Result<PinResult, nsresult> {
+    #[cfg(feature = "enable_tests")]
+    if xpcom::is_in_automation() {
+        // Return early in tests to avoid actually pinning the app.
+        return Ok(PinResult::Unknown);
+    }
+
     // Ensure path is a null-terminated string.
     let shortcut_path: nsString = shortcut_path.into();
 
@@ -118,12 +124,6 @@ pub(super) fn modify_taskbar(
         PinOp::Pin => (std::ptr::null(), *pidl),
         PinOp::UnPin => (*pidl, std::ptr::null()),
     };
-
-    #[cfg(feature = "enable_tests")]
-    if xpcom::is_in_automation() {
-        // Return early in tests to avoid actually pinning the app.
-        return Ok(PinResult::Unknown);
-    }
 
     // SAFETY: ITEMIDLIST arguments are defined above and either initialized or
     // set to null (known valid for this API).
