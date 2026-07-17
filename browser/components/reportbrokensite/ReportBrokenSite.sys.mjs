@@ -668,15 +668,21 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
     const cmd = document.getElementById("cmd_reportBrokenSite");
     const allowedByPolicy = Services.policies.isAllowed("feedbackCommands");
     cmd.toggleAttribute("hidden", !allowedByPolicy);
+    const app = document.documentGlobal.PanelMultiView.getViewNode(
+      document,
+      "appMenu-report-broken-site-button"
+    );
     // Note that this element does not exist until the protections popup is actually opened.
     const prot = document.getElementById(
       "protections-popup-report-broken-site-button"
     );
     if (canReportUrl) {
       cmd.removeAttribute("disabled");
+      app.removeAttribute("disabled");
       prot?.removeAttribute("disabled");
     } else {
       cmd.setAttribute("disabled", "true");
+      app.setAttribute("disabled", "true");
       prot?.setAttribute("disabled", "true");
     }
 
@@ -727,13 +733,6 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
           state.reset();
         });
     }
-  }
-
-  handleParentMenuButtonCommand(button) {
-    this.#onReportBrokenSiteHandler({
-      target: button,
-      sourceEvent: { target: button },
-    });
   }
 
   #onURLInputReset(event) {
@@ -1221,21 +1220,17 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
     const { document } = documentGlobal;
 
     switch (target.id) {
-      case "protections-popup-report-broken-site-button":
-        document
-          .getElementById("protections-popup-multiView")
-          .showSubView(ReportBrokenSite.MAIN_PANELVIEW_ID);
-        break;
-      // Open the "Report Broken Site" menu from the "Help and Report" subview.
-      case "appMenu_help_reportBrokenSite":
+      case "appMenu-report-broken-site-button":
         documentGlobal.PanelUI.showSubView(
           ReportBrokenSite.MAIN_PANELVIEW_ID,
           target
         );
         break;
-      // Open the "Report Broken Site" menu from the top menu bar (Help > Report
-      // Broken Site). This has to be directly anchored to the app menu button
-      // since it is not a subview of any other menu.
+      case "protections-popup-report-broken-site-button":
+        document
+          .getElementById("protections-popup-multiView")
+          .showSubView(ReportBrokenSite.MAIN_PANELVIEW_ID);
+        break;
       case "help_reportBrokenSite": {
         // hide the hamburger menu first, as we overlap with it.
         const appMenuPopup = document.getElementById("appMenu-popup");
