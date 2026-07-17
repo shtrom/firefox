@@ -233,6 +233,17 @@ class nsDragSession : public nsBaseDragSession {
   bool mCanDrop = false;
 
  public:
+  static const char gMozUrlType[];
+  static const char gMimeListType[];
+  static const char gTextUriListType[];
+  static const char gTextPlainUTF8Type[];
+  static const char gXdndDirectSaveType[];
+  static const char gTabDropType[];
+  static const char gPortalFile[];
+  static const char gPortalFileTransfer[];
+  static const char gUTF8STRINGType[];
+  static const char gSTRINGType[];
+
   static GdkAtom sJPEGImageMimeAtom;
   static GdkAtom sJPGImageMimeAtom;
   static GdkAtom sPNGImageMimeAtom;

@@ -43,16 +43,16 @@ extern mozilla::LazyLogModule gWidgetDragLog;
 #  define LOGDRAGSERVICE(...)
 #endif
 
-static const char gMozUrlType[] = "_NETSCAPE_URL";
-static const char gMimeListType[] = "application/x-moz-internal-item-list";
-static const char gTextUriListType[] = "text/uri-list";
-static const char gTextPlainUTF8Type[] = "text/plain;charset=utf-8";
-static const char gXdndDirectSaveType[] = "XdndDirectSave0";
-static const char gTabDropType[] = "application/x-moz-tabbrowser-tab";
-static const char gPortalFile[] = "application/vnd.portal.files";
-static const char gPortalFileTransfer[] = "application/vnd.portal.filetransfer";
-static const char gUTF8STRINGType[] = "UTF8_STRING";
-static const char gSTRINGType[] = "STRING";
+const char nsDragSession::gMozUrlType[] = "_NETSCAPE_URL";
+const char nsDragSession::gMimeListType[] = "application/x-moz-internal-item-list";
+const char nsDragSession::gTextUriListType[] = "text/uri-list";
+const char nsDragSession::gTextPlainUTF8Type[] = "text/plain; charset=utf-8";
+const char nsDragSession::gXdndDirectSaveType[] = "XdndDirectSave0";
+const char nsDragSession::gTabDropType[] = "application/x-moz-tabbrowser-tab";
+const char nsDragSession::gPortalFile[] = "application/vnd.portal.files";
+const char nsDragSession::gPortalFileTransfer[] = "application/vnd.portal.filetransfer";
+const char nsDragSession::gUTF8STRINGType[] = "UTF8_STRING";
+const char nsDragSession::gSTRINGType[] = "STRING";
 
 GdkAtom nsDragSession::sJPEGImageMimeAtom;
 GdkAtom nsDragSession::sJPGImageMimeAtom;
