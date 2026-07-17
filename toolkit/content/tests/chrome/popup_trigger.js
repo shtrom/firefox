@@ -8,10 +8,6 @@ var gScreenX = -1,
 var gCachedEvent = null;
 var gCachedEvent2 = null;
 
-// Synthesize a few pixels in from the corner: (0, 0) can be clipped by the
-// window's rounded border (e.g. with Nova), dispatching no mousedown.
-const CACHE_EVENT_OFFSET = 10;
-
 function cacheEvent(modifiers) {
   var cachedEvent = null;
 
@@ -20,12 +16,7 @@ function cacheEvent(modifiers) {
   };
 
   window.addEventListener("mousedown", mouseFn);
-  synthesizeMouse(
-    document.documentElement,
-    CACHE_EVENT_OFFSET,
-    CACHE_EVENT_OFFSET,
-    modifiers
-  );
+  synthesizeMouse(document.documentElement, 0, 0, modifiers);
   window.removeEventListener("mousedown", mouseFn);
 
   return cachedEvent;
@@ -47,8 +38,8 @@ function runTests() {
   // a hacky way to get the screen position of the document. Cache the event
   // so that we can use it in calls to openPopup.
   gCachedEvent = cacheEvent({ shiftKey: true });
-  gScreenX = gCachedEvent.screenX - CACHE_EVENT_OFFSET;
-  gScreenY = gCachedEvent.screenY - CACHE_EVENT_OFFSET;
+  gScreenX = gCachedEvent.screenX;
+  gScreenY = gCachedEvent.screenY;
   gCachedEvent2 = cacheEvent({
     altKey: true,
     ctrlKey: true,

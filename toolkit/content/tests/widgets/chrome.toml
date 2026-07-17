@@ -1,5 +1,4 @@
 [DEFAULT]
-dupe-manifest = true
 support-files = [
   "tree_shared.js",
   "popup_shared.js",
@@ -8,10 +7,7 @@ support-files = [
   "seek_with_sound.webm",
   "lit-test-helpers.js",
 ]
-prefs = [
-  "app.support.baseURL='https://support.mozilla.org/'",
-  "browser.nova.enabled=false",
-]
+prefs = ["app.support.baseURL='https://support.mozilla.org/'"]
 
 ["test_contextmenu_menugroup.xhtml"]
 skip-if = [
