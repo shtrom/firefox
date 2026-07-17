@@ -152,6 +152,7 @@ interface nsIContentAnalysisRequest : nsISupports
     eBulkDataEntry = 3,
     ePrint = 4,
     eFileTransfer = 5,
+    eDataCopied = 6,
   };
   readonly attribute nsIContentAnalysisRequest_AnalysisType analysisType;
 
@@ -174,6 +175,9 @@ interface nsIContentAnalysisRequest : nsISupports
     // Only possible for the eFileDownloaded AnalysisType
     eNormalDownload = 6,
     eSaveAsDownload = 7,
+
+    // Only possible for the eDataCopied AnalysisType
+    eClipboardCopy = 8,
   };
   readonly attribute nsIContentAnalysisRequest_Reason reason;
 
@@ -514,4 +518,36 @@ interface nsIContentAnalysis : nsISupports
    * Force the content analysis client to be recreated. For use in tests only.
    */
   void forceRecreateClientForTest();
+};
+
+/**
+ * A single Content Analysis rule passed to the built-in DLP module
+ */
+[scriptable, uuid(b7e6d5c4-3a2f-4e1d-8c9b-0a1f2e3d4c5b)]
+interface nsIContentAnalysisRule : nsISupports {
+  // Values for `verdict`
+  const octet REPORT = 0;
+  const octet WARN = 1;
+  const octet BLOCK = 2;
+
+  // Stable rule identifier (config "Name").
+  readonly attribute AString name;
+
+  // Operations this rule applies to, as nsIContentAnalysisRequest.AnalysisType
+  // values. Empty means it applies to all operations.
+  readonly attribute Array<unsigned long> operations;
+
+  // Hosts the rule applies to (config "Domains"); a request matches when its URL
+  // host equals one of these or is a subdomain of it. Empty means any host.
+  readonly attribute Array<AString> domains;
+
+  // Regular expressions tested against the request content; the rule matches if any
+  // one matches. Empty means no content restriction.
+  readonly attribute Array<AString> contentPatterns;
+
+  // The action to apply on a match; one of the constants above.
+  readonly attribute octet verdict;
+
+  // Optional user-facing message (config "Message"); empty if none.
+  readonly attribute AString message;
 };
