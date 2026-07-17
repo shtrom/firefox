@@ -30,6 +30,7 @@ export class CustomKeysParent extends JSWindowActorParent {
           ? ShortcutUtils.prettifyShortcut(keyEl)
           : "",
       isCustomized: !!CustomKeys.getDefaultKey(id),
+      internal: keyEl.getAttribute("internal") == "true",
     };
   }
 
@@ -196,16 +197,26 @@ export class CustomKeysParent extends JSWindowActorParent {
         return this.getKeyData(id);
       }
       case "CustomKeys:Confirm": {
+        let flags = Ci.nsIPromptService.BUTTON_POS_0_DEFAULT;
+        if (message.data.buttonConfirm) {
+          flags |=
+            (Ci.nsIPromptService.BUTTON_TITLE_IS_STRING *
+              Ci.nsIPromptService.BUTTON_POS_0) |
+            (Ci.nsIPromptService.BUTTON_TITLE_IS_STRING *
+              Ci.nsIPromptService.BUTTON_POS_1);
+        } else {
+          // If buttonConfirm and buttonCancel aren't specified, just display
+          // an OK button.
+          flags |=
+            Ci.nsIPromptService.BUTTON_POS_0 *
+            Ci.nsIPromptService.BUTTON_TITLE_OK;
+        }
         const result = await Services.prompt.asyncConfirmEx(
           this.browsingContext,
           Ci.nsIPrompt.MODAL_TYPE_CONTENT,
           message.data.title,
           message.data.body,
-          Ci.nsIPromptService.BUTTON_POS_0_DEFAULT |
-            (Ci.nsIPromptService.BUTTON_TITLE_IS_STRING *
-              Ci.nsIPromptService.BUTTON_POS_0) |
-            (Ci.nsIPromptService.BUTTON_TITLE_IS_STRING *
-              Ci.nsIPromptService.BUTTON_POS_1),
+          flags,
           message.data.buttonConfirm,
           message.data.buttonCancel,
           null,
