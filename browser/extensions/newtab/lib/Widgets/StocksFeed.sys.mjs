@@ -20,6 +20,8 @@ const MERINO_CLIENT_KEY = "HNT_STOCKS_FEED";
 const MERINO_PROVIDER = ["polygon"];
 const STOCKS_UPDATE_TIME = 15 * 60 * 1000; // 15 minutes
 const MERINO_TIMEOUT_MS = 5000;
+const RETRY_DELAY_MS = 60 * 1000; // 1 minute
+const MAX_RETRIES = 1;
 
 const PREF_WIDGETS_STOCKS_ENABLED = "widgets.stocks.enabled";
 const PREF_WIDGETS_SYSTEM_STOCKS_ENABLED = "widgets.system.stocks.enabled";
@@ -38,6 +40,8 @@ export class StocksFeed {
     this.fetchIntervalMs = STOCKS_UPDATE_TIME;
     this.fetchGeneration = 0;
     this.cache = this.PersistentCache(CACHE_KEY, true);
+    this.error = false;
+    this.retryTimer = null;
   }
 
   isEnabled() {
@@ -68,6 +72,9 @@ export class StocksFeed {
     this.merino = null;
     this.tickers = [];
     this.lastUpdated = null;
+    this.clearTimeout(this.retryTimer);
+    this.retryTimer = null;
+    this.error = false;
   }
 
   restartFetchTimer(ms = this.fetchIntervalMs) {
@@ -97,7 +104,7 @@ export class StocksFeed {
 
   // `query` defaults to "" (the default ETF set). A non-empty query (e.g.
   // "$AAPL") performs an individual lookup through the same path; unused for now.
-  async fetch(query = "") {
+  async fetch(query = "", retryCount = 0) {
     const generation = this.fetchGeneration;
     try {
       if (!this.merino) {
@@ -114,12 +121,33 @@ export class StocksFeed {
       if (tickers.length) {
         this.tickers = tickers;
         this.lastUpdated = this.Date().now();
+        this.error = false;
+        // A success cancels any retry still pending from an earlier failure.
+        this.clearTimeout(this.retryTimer);
+        this.retryTimer = null;
         await this.cache.set("stocks", {
           tickers: this.tickers,
           lastUpdated: this.lastUpdated,
         });
+      } else {
+        this.error = true;
       }
+      // Show the result immediately so a failed request surfaces the error
+      // state instead of leaving placeholders on screen.
       this.update();
+      // Retry a failure once in the background; if it succeeds the tickers
+      // replace the error state on their own.
+      if (!tickers.length && retryCount < MAX_RETRIES) {
+        this.clearTimeout(this.retryTimer);
+        this.retryTimer = this.setTimeout(() => {
+          this.retryTimer = null;
+          // Skip a retry scheduled before the widget was torn down.
+          if (generation !== this.fetchGeneration) {
+            return undefined;
+          }
+          return this.fetch(query, retryCount + 1);
+        }, RETRY_DELAY_MS);
+      }
     } catch (e) {
       console.error("StocksFeed fetch failed", e);
     }
@@ -127,6 +155,8 @@ export class StocksFeed {
 
   /**
    * Thin wrapper around the Merino call so tests can simulate responses.
+   * Returns the ticker values, or an empty array when the request fails or
+   * comes back empty; fetch() handles the retry and the error state.
    */
   async _fetchHelper(query = "") {
     try {
@@ -140,7 +170,7 @@ export class StocksFeed {
         otherParams: { source: "newtab" },
       });
       const values = result?.[0]?.custom_details?.polygon?.values;
-      return Array.isArray(values) ? values : [];
+      return Array.isArray(values) && values.length ? values : [];
     } catch (e) {
       console.error("StocksFeed Merino request failed", e);
       return [];
@@ -154,6 +184,7 @@ export class StocksFeed {
         data: {
           tickers: this.tickers,
           lastUpdated: this.lastUpdated,
+          error: this.error,
         },
       })
     );

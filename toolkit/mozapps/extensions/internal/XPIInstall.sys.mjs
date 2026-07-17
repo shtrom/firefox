@@ -4374,6 +4374,16 @@ export var XPIInstall = {
       true
     );
 
+    // Distribution installs don't go through AddonInstall, so the metadata
+    // fetch in AddonInstall.loadManifest() never runs for them. Fetch it here
+    // (if not already cached) so themes get their preview image. This is
+    // fire-and-forget: a failure shouldn't block the install.
+    if (!(await lazy.AddonRepository.getCachedAddonByID(id))) {
+      lazy.AddonRepository.cacheAddons([id]).catch(err => {
+        logger.debug(`Error getting metadata for ${id}: ${err.message}`);
+      });
+    }
+
     return addon;
   },
 

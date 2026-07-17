@@ -180,14 +180,12 @@ LazyLogModule& GetLoggerByProcess();
  *    is on the stack.
  */
 struct ActiveScrolledRoot {
-  // TODO: Just have one function with an extra ASRKind parameter
+  enum class ASRKind { Scroll, Sticky };
+
   static already_AddRefed<ActiveScrolledRoot> GetOrCreateASRForFrame(
-      const ActiveScrolledRoot* aParent,
-      ScrollContainerFrame* aScrollContainerFrame,
-      nsTArray<RefPtr<ActiveScrolledRoot>>& aActiveScrolledRoots);
-  static already_AddRefed<ActiveScrolledRoot> GetOrCreateASRForStickyFrame(
-      const ActiveScrolledRoot* aParent, nsIFrame* aStickyFrame,
-      nsTArray<RefPtr<ActiveScrolledRoot>>& aActiveScrolledRoots);
+      const ActiveScrolledRoot* aParent, nsIFrame* aFrame,
+      nsTArray<RefPtr<ActiveScrolledRoot>>& aActiveScrolledRoots,
+      ASRKind asrKind = ASRKind::Scroll);
 
   static const ActiveScrolledRoot* PickAncestor(
       const ActiveScrolledRoot* aOne, const ActiveScrolledRoot* aTwo) {
@@ -246,8 +244,6 @@ struct ActiveScrolledRoot {
   // continuation.
   static const ActiveScrolledRoot* GetStickyASRFromFrame(
       nsIFrame* aStickyFrame);
-
-  enum class ASRKind { Scroll, Sticky };
 
   RefPtr<const ActiveScrolledRoot> mParent;
   nsIFrame* mFrame = nullptr;
@@ -982,10 +978,9 @@ class nsDisplayListBuilder {
    * cleaned up automatically when the arena goes away.
    */
   ActiveScrolledRoot* GetOrCreateActiveScrolledRoot(
-      const ActiveScrolledRoot* aParent,
-      ScrollContainerFrame* aScrollContainerFrame);
-  ActiveScrolledRoot* GetOrCreateActiveScrolledRootForSticky(
-      const ActiveScrolledRoot* aParent, nsIFrame* aStickyFrame);
+      const ActiveScrolledRoot* aParent, nsIFrame* aFrame,
+      ActiveScrolledRoot::ASRKind asrKind =
+          ActiveScrolledRoot::ASRKind::Scroll);
 
   /**
    * Allocate a new DisplayItemClipChain object in the arena. Will be cleaned
@@ -1234,13 +1229,7 @@ class nsDisplayListBuilder {
     void SetCurrentActiveScrolledRoot(
         const ActiveScrolledRoot* aActiveScrolledRoot);
 
-    void EnterScrollFrame(ScrollContainerFrame* aScrollContainerFrame) {
-      MOZ_ASSERT(!mUsed);
-      ActiveScrolledRoot* asr = mBuilder->GetOrCreateActiveScrolledRoot(
-          mBuilder->mCurrentActiveScrolledRoot, aScrollContainerFrame);
-      mBuilder->mCurrentActiveScrolledRoot = asr;
-      mUsed = true;
-    }
+    void EnterScrollFrame(ScrollContainerFrame* aScrollContainerFrame);
 
     void InsertScrollFrame(ScrollContainerFrame* aScrollContainerFrame);
 

@@ -850,6 +850,12 @@ already_AddRefed<nsRange> nsFind::FindFromRangeBoundaries(
         !intl::UnicodeProperties::IsMathOrMusicSymbol(prevChar)) {
       continue;
     }
+
+    if (c == CH_SHY) {
+      // Ignore soft hyphens in the document.
+      continue;
+    }
+
     patc = DecodeChar(patStr, &pindex);
 
     DEBUG_FIND_PRINTF(
@@ -882,11 +888,6 @@ already_AddRefed<nsRange> nsFind::FindFromRangeBoundaries(
       if (!mMatchDiacritics) {
         c = ToNaked(c);
       }
-    }
-
-    if (c == CH_SHY) {
-      // ignore soft hyphens in the document
-      continue;
     }
 
     if (pindex != patternStart && c != patc && !inWhitespace) {

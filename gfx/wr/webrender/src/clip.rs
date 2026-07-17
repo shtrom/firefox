@@ -103,12 +103,12 @@ use crate::ellipse::Ellipse;
 use crate::intern;
 use crate::internal_types::{FastHashMap, FastHashSet, LayoutPrimitiveInfo};
 use crate::prim_store::{VisibleMaskImageTile};
-use crate::prim_store::{RectKey, PolygonKey};
+use crate::prim_store::{ClipSnap, RectKey, PolygonKey};
 use crate::render_task::RenderTask;
 use crate::render_task_graph::RenderTaskGraphBuilder;
 use crate::resource_cache::{ImageRequest, ResourceCache};
 use crate::scene_builder_thread::Interners;
-use crate::space::{SpaceMapper, SpaceSnapper};
+use crate::space::{SnapRounding, SpaceMapper, SpaceSnapper};
 use crate::util::{extract_inner_rect_safe, project_rect, MatrixHelpers, MaxRect, ScaleOffset};
 use euclid::approxeq::ApproxEq;
 use std::{iter, ops, u32, mem};
@@ -153,6 +153,7 @@ impl ClipTreeNode {
         &self,
         snapper: &mut SpaceSnapper,
         spatial_tree: &SpatialTree,
+        rounding: SnapRounding,
     ) -> LayoutRect {
         debug_assert!(self.spatial_node_index != SpatialNodeIndex::INVALID);
         snapper.set_target_spatial_node(self.spatial_node_index, spatial_tree);
@@ -162,9 +163,9 @@ impl ClipTreeNode {
             // recover it (e.g. the box-shadow element), snap that, then inset
             // by the outset. See `snap_outset`.
             let anchor = self.unsnapped_clip_rect.inflate(outset, outset);
-            snapper.snap_rect(&anchor).inflate(-outset, -outset)
+            snapper.snap_rect_rounded(&anchor, rounding).inflate(-outset, -outset)
         } else {
-            snapper.snap_rect(&self.unsnapped_clip_rect)
+            snapper.snap_rect_rounded(&self.unsnapped_clip_rect, rounding)
         }
     }
 }
@@ -596,8 +597,9 @@ impl ClipTreeBuilder {
         handle: ClipDataHandle,
         spatial_node_index: SpatialNodeIndex,
         clip_rect: LayoutRect,
+        snap_outset: Au,
     ) {
-        self.clip_map.insert(id, ClipEntry { handle, spatial_node_index, clip_rect: clip_rect.into(), snap_outset: Au(0) });
+        self.clip_map.insert(id, ClipEntry { handle, spatial_node_index, clip_rect: clip_rect.into(), snap_outset });
     }
 
     /// Define a image mask clip
@@ -1011,18 +1013,16 @@ impl ClipTreeBuilder {
         &mut self,
         clip_node_id: ClipNodeId,
         info: &LayoutPrimitiveInfo,
-        extra_clips: &[ClipItemEntry],
-        interners: &mut Interners,
         // False for device-space prims (text): the leaf is built to snap
         // nothing (encoded as a `ClipNodeId::INVALID` prim_clip_root).
         snap_clips: bool,
     ) -> ClipLeafId {
         // The prim's own clips are `clip_node_id` (the `build_clip_set` result
-        // for this item) plus any `extra_clips`, appended on top of the
-        // inherited clip root = `clip_stack.last().clip_node_id`. That inherited
-        // root is the own/shared boundary. Device-space prims snap nothing, so
-        // record the `INVALID` sentinel instead. This assumes the clip stack was
-        // not pushed/popped between `build_clip_set` and here (they run
+        // for this item), appended on top of the inherited clip root =
+        // `clip_stack.last().clip_node_id`. That inherited root is the
+        // own/shared boundary. Device-space prims snap nothing, so record the
+        // `INVALID` sentinel instead. This assumes the clip stack was not
+        // pushed/popped between `build_clip_set` and here (they run
         // back-to-back per item) - asserted below.
         let prim_clip_root = if snap_clips {
             self.clip_stack.last().unwrap().clip_node_id
@@ -1030,35 +1030,7 @@ impl ClipTreeBuilder {
             ClipNodeId::INVALID
         };
 
-        let node_id = if extra_clips.is_empty() {
-            clip_node_id
-        } else {
-            // TODO(gw): Cache the previous build of clip-node / clip-leaf to handle cases where we get a
-            //           lot of primitives referencing the same clip set (e.g. dl_mutate and similar tests)
-            self.clip_handles_buffer.clear();
-
-            for clip_item_entry in extra_clips {
-                // Intern this clip item, and store the handle
-                // in the clip chain node.
-                let handle = interners.clip.intern(&clip_item_entry.key, || {
-                    ClipInternData {
-                        key: clip_item_entry.key.clone(),
-                    }
-                });
-
-                self.clip_handles_buffer.push(ClipEntry {
-                    handle,
-                    spatial_node_index: clip_item_entry.spatial_node_index,
-                    clip_rect: clip_item_entry.clip_rect.into(),
-                    snap_outset: clip_item_entry.snap_outset,
-                });
-            }
-
-            self.tree.add(
-                clip_node_id,
-                &self.clip_handles_buffer,
-            )
-        };
+        let node_id = clip_node_id;
 
         // When snapping, `prim_clip_root` must be an ancestor of (or equal to)
         // `node_id`, since `node_id` is built on top of it. If not, the clip
@@ -1539,6 +1511,7 @@ impl ClipStore {
         pic_spatial_node_index: SpatialNodeIndex,
         visibility_spatial_node_index: SpatialNodeIndex,
         snapper: &mut SpaceSnapper,
+        clip_snap: ClipSnap,
         clip_leaf_id: ClipLeafId,
         spatial_tree: &SpatialTree,
         clip_data_store: &ClipDataStore,
@@ -1551,24 +1524,35 @@ impl ClipStore {
         let clip_root = clip_tree.current_clip_root();
         let clip_leaf = clip_tree.get_leaf(clip_leaf_id);
 
-        // A snapping primitive snaps every clip in its chain to the device pixel
-        // grid, so a fractional clip edge (an animated clip-path, a rounded
-        // overflow clip, etc.) lands on the same grid as the primitive's own
-        // snapped geometry. Device-space primitives (text) carry the INVALID
-        // sentinel and snap nothing, so their clips stay at the exact sub-pixel
-        // position that matches the glyphs (bug 2050692). The leaf clip rect was
-        // pre-snapped accordingly by the visibility pass.
-        let snaps = clip_leaf.prim_clip_root != ClipNodeId::INVALID;
+        // How each clip in the chain rounds to the device grid is the prim's
+        // clip policy (`ClipSnap`), resolved by the caller from the prim kind and
+        // its clip-leaf sentinel. A snapping prim snaps every clip to nearest so
+        // a fractional clip edge (an animated clip-path, a rounded overflow clip,
+        // etc.) lands on the same grid as the prim's own snapped geometry; a
+        // surface leaves its clips exact so they stay at the sub-pixel position
+        // matching its contents (bug 2050692); a text run rounds out on the
+        // non-sub-pixel axis (bug 2055145). The leaf clip rect was pre-snapped
+        // accordingly by the visibility pass.
         let mut local_clip_rect = clip_leaf.snapped_local_clip_rect;
         let mut current = clip_leaf.node_id;
 
         while current != clip_root && current != ClipNodeId::NONE {
             let node = clip_tree.get_node(current);
 
-            let clip_rect = if snaps {
-                node.snapped_clip_rect(snapper, spatial_tree)
-            } else {
-                node.unsnapped_clip_rect
+            let clip_rect = match clip_snap {
+                ClipSnap::Nearest =>
+                    node.snapped_clip_rect(snapper, spatial_tree, SnapRounding::Nearest),
+                // A device-space text run rounds its clip *out* on the
+                // non-sub-pixel axis: the glyph is snapped to the device grid on
+                // that axis, so an exact fractional clip edge would shave a whole
+                // glyph row whose center lies just beyond it. Rounding out keeps
+                // the snapped glyph's own rows while never rounding a clip edge
+                // inward, so it can't shave the last glyph the way snapping used
+                // to (bug 2050692, bug 2055145).
+                ClipSnap::Text(rounding) =>
+                    node.snapped_clip_rect(snapper, spatial_tree, rounding),
+                // Surface / other device-space prim: leave the clip exact.
+                ClipSnap::Exact => node.unsnapped_clip_rect,
             };
 
             if !add_clip_node_to_current_chain(
@@ -1934,16 +1918,6 @@ impl ClipItemKeyKind {
 #[cfg_attr(feature = "replay", derive(Deserialize))]
 pub struct ClipItemKey {
     pub kind: ClipItemKeyKind,
-}
-
-/// A clip item key paired with the spatial node that positions it, used during scene building.
-#[derive(Copy, Clone)]
-pub struct ClipItemEntry {
-    pub key: ClipItemKey,
-    pub spatial_node_index: SpatialNodeIndex,
-    pub clip_rect: LayoutRect,
-    /// Propagated to `ClipTreeNode::snap_outset`. See that field.
-    pub snap_outset: Au,
 }
 
 /// The data available about an interned clip node during scene building
@@ -2577,7 +2551,6 @@ mod tests {
         );
 
         let mut builder = ClipTreeBuilder::new();
-        let mut interners = Interners::default();
         let info = LayoutPrimitiveInfo::with_clip_rect(
             lr(0.0, 0.0, 100.0, 100.0),
             lr(0.0, 0.0, 100.0, 100.0),
@@ -2585,7 +2558,7 @@ mod tests {
 
         // A text run (SNAP_CLIPS == false) records the INVALID snap sentinel.
         let text_leaf =
-            builder.build_for_prim(ClipNodeId::NONE, &info, &[], &mut interners, TextRun::SNAP_CLIPS);
+            builder.build_for_prim(ClipNodeId::NONE, &info, TextRun::SNAP_CLIPS);
         assert_eq!(
             builder.get_leaf(text_leaf).prim_clip_root,
             ClipNodeId::INVALID,
@@ -2595,7 +2568,7 @@ mod tests {
         // A snapping primitive (backgrounds, borders, ...) records a real
         // prim_clip_root, so its clips are snapped to the device grid.
         let snapping_leaf =
-            builder.build_for_prim(ClipNodeId::NONE, &info, &[], &mut interners, true);
+            builder.build_for_prim(ClipNodeId::NONE, &info, true);
         assert_ne!(
             builder.get_leaf(snapping_leaf).prim_clip_root,
             ClipNodeId::INVALID,

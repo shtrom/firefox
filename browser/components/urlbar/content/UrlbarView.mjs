@@ -10,7 +10,6 @@ const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   ContextualIdentityService:
     "moz-src:///toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs",
-  ObjectUtils: "resource://gre/modules/ObjectUtils.sys.mjs",
   SearchService: "moz-src:///toolkit/components/search/SearchService.sys.mjs",
   UrlbarProviderOpenTabs:
     "moz-src:///browser/components/urlbar/UrlbarProviderOpenTabs.sys.mjs",
@@ -1975,7 +1974,7 @@ export class UrlbarView {
 
     if (
       oldResult.payload.buttons?.length != newResult.payload.buttons?.length ||
-      !lazy.ObjectUtils.deepEqual(
+      !UrlbarShared.deepEqual(
         oldResult.payload.buttons,
         newResult.payload.buttons
       )
@@ -2212,10 +2211,7 @@ export class UrlbarView {
       }
 
       if (
-        !lazy.ObjectUtils.deepEqual(
-          oldResult.viewTemplate,
-          newResult.viewTemplate
-        )
+        !UrlbarShared.deepEqual(oldResult.viewTemplate, newResult.viewTemplate)
       ) {
         return true;
       }
@@ -2984,7 +2980,7 @@ export class UrlbarView {
     if (
       !label ||
       item.result.hideRowLabel ||
-      lazy.ObjectUtils.deepEqual(label, lastVisibleLabel)
+      UrlbarShared.deepEqual(label, lastVisibleLabel)
     ) {
       this.#l10nCache.removeElementL10n(item, { attribute: "label" });
       if (groupAriaLabel) {

@@ -160,22 +160,30 @@ class UserIdleServiceMutter : public UserIdleServiceImpl {
     if (!mCacheTimestamp.IsNull()) {
       TimeDuration elapsed = TimeStamp::Now() - mCacheTimestamp;
 
-      if (elapsed < TimeDuration::FromMilliseconds(kCacheFreshMs)) {
-        // Cache is fresh, return immediately
-        *aIdleTime = mCachedIdleTime;
-        MOZ_LOG(sIdleLog, LogLevel::Info,
-                ("PollIdleTime() returns cached (fresh) %d\n", *aIdleTime));
-        return true;
-      }
       if (elapsed < TimeDuration::FromMilliseconds(kCacheStaleMs)) {
-        // Cache is acceptable but getting stale
-        // Return cached value but kick off background refresh
-        *aIdleTime = mCachedIdleTime;
-        MOZ_LOG(sIdleLog, LogLevel::Info,
-                ("PollIdleTime() returns cached (stale) %d, refreshing\n",
-                 *aIdleTime));
-        if (!mPollRequest.Exists()) {
-          StartAsyncPoll();
+        // Serve from cache, advanced by the elapsed time so the value stays
+        // monotonic. A frozen value that lags the wall clock looks like a
+        // return from idle to nsUserIdleService, which re-arms its timer in a
+        // tight loop. A real poll corrects it within kCacheStaleMs.
+        uint64_t advanced =
+            uint64_t(mCachedIdleTime) + uint64_t(elapsed.ToMilliseconds());
+        if (advanced > std::numeric_limits<uint32_t>::max()) {
+          advanced = std::numeric_limits<uint32_t>::max();
+        }
+        *aIdleTime = static_cast<uint32_t>(advanced);
+
+        if (elapsed < TimeDuration::FromMilliseconds(kCacheFreshMs)) {
+          MOZ_LOG(sIdleLog, LogLevel::Info,
+                  ("PollIdleTime() returns cached (fresh) %d\n", *aIdleTime));
+        } else {
+          // Cache is acceptable but getting stale: kick off a background
+          // refresh while returning the advanced cached value.
+          MOZ_LOG(sIdleLog, LogLevel::Info,
+                  ("PollIdleTime() returns cached (stale) %d, refreshing\n",
+                   *aIdleTime));
+          if (!mPollRequest.Exists()) {
+            StartAsyncPoll();
+          }
         }
         return true;
       }
@@ -369,6 +377,10 @@ class UserIdleServiceMutter : public UserIdleServiceImpl {
   // Tolerance thresholds for cache freshness
   static constexpr uint32_t kCacheFreshMs = 1000;
   static constexpr uint32_t kCacheStaleMs = 5000;
+  static_assert(kCacheStaleMs >= kCacheFreshMs,
+                "The fresh window must be a subset of the stale window: "
+                "PollIdleTime picks the fresh vs. stale branch by nesting "
+                "elapsed < kCacheFreshMs inside elapsed < kCacheStaleMs.");
   static constexpr uint32_t kPollTimeoutMs = 3000;
   static constexpr uint32_t kProbeTimeoutMs = 3000;
 

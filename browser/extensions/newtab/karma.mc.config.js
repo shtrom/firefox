@@ -170,6 +170,17 @@ module.exports = function (config) {
               branches: 0,
             },
             /**
+             * DiscoveryStreamAdmin.jsx is tested via Jest
+             * (see test/jest/content-src/components/DiscoveryStreamAdmin.test.jsx).
+             */
+            "content-src/components/DiscoveryStreamAdmin/DiscoveryStreamAdmin.jsx":
+              {
+                statements: 0,
+                lines: 0,
+                functions: 0,
+                branches: 0,
+              },
+            /**
              * Logo.jsx and its variant components are tested via Jest
              * (see test/jest/content-src/components/Logo.test.jsx).
              */
@@ -393,6 +404,13 @@ module.exports = function (config) {
             },
             // Coverage for this component lives in Jest (test/jest/content-src/components/Widgets/Stocks.test.jsx)
             "content-src/components/Widgets/Stocks/Stocks.jsx": {
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
+            },
+            // Coverage for this component lives in Jest (test/jest/content-src/components/Widgets/StocksError.test.jsx)
+            "content-src/components/Widgets/Stocks/StocksError.jsx": {
               statements: 0,
               lines: 0,
               functions: 0,

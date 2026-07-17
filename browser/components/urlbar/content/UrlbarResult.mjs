@@ -20,7 +20,6 @@ const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   JsonSchemaValidator:
     "resource://gre/modules/components-utils/JsonSchemaValidator.sys.mjs",
-  ObjectUtils: "resource://gre/modules/ObjectUtils.sys.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
 });
 
@@ -347,7 +346,7 @@ export class UrlbarResult {
       if (
         options.isURL == cached.options.isURL &&
         (options.tokens == undefined ||
-          lazy.ObjectUtils.deepEqual(options.tokens, cached.options.tokens))
+          UrlbarShared.deepEqual(options.tokens, cached.options.tokens))
       ) {
         return this.#displayValuesCache.get(payloadName);
       }

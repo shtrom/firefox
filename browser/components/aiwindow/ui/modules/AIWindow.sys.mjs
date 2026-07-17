@@ -27,6 +27,7 @@ const PREF_MEMORIES_HISTORY =
   "browser.smartwindow.memories.generateFromHistory";
 const PREF_SEMANTIC_HISTORY_SMARTWINDOW_FEATURE_GATE =
   "places.semanticHistory.smartwindow.featureGate";
+const PREF_AUTO_TAB_GROUPING = "browser.smartwindow.autoTabGrouping.enabled";
 
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
@@ -98,6 +99,7 @@ export const AIWindow = {
       this._windowStates.set(win, {});
       this._updateHamburgerMenuPosition(win);
       this._initializeAskButtonOnToolbox(win);
+      this._initializeGroupTabsButtonOnToolbox(win);
       const windowArgs = win?.arguments?.[1];
       if (
         windowArgs instanceof Ci.nsIPropertyBag2 &&
@@ -345,6 +347,21 @@ export const AIWindow = {
       return;
     }
     askButton.hidden = !this.isAIWindowActive(win);
+  },
+
+  /**
+   * Initializes the toolbox button that opens the "Group my tabs" panel. The
+   * whole Auto Tab Grouping feature is gated behind a default-off pref.
+   *
+   * @param {Window} win
+   */
+  _initializeGroupTabsButtonOnToolbox(win) {
+    const button = win.document.getElementById("smartwindow-group-tabs-button");
+    if (!button) {
+      return;
+    }
+    const enabled = Services.prefs.getBoolPref(PREF_AUTO_TAB_GROUPING, false);
+    button.hidden = !(enabled && this.isAIWindowActive(win));
   },
 
   get isDefaultWindow() {
@@ -754,6 +771,7 @@ export const AIWindow = {
       this._reconcileNewTabPages(win, newTabPref, homePagePref);
       this._updateHamburgerMenuPosition(win, { isToggling: true });
       this._initializeAskButtonOnToolbox(win);
+      this._initializeGroupTabsButtonOnToolbox(win);
       Services.obs.notifyObservers(
         win,
         "ai-window-state-changed",
@@ -1004,6 +1022,17 @@ export const AIWindow = {
     const askButton = win.document.getElementById("smartwindow-ask-button");
     if (askButton) {
       askButton.hidden = isImmersiveView;
+    }
+
+    const groupTabsButton = win.document.getElementById(
+      "smartwindow-group-tabs-button"
+    );
+    if (groupTabsButton) {
+      const groupTabsEnabled = Services.prefs.getBoolPref(
+        PREF_AUTO_TAB_GROUPING,
+        false
+      );
+      groupTabsButton.hidden = isImmersiveView || !groupTabsEnabled;
     }
 
     // Set attr on the specific browser that has content to override color scheme

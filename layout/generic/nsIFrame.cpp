@@ -3421,8 +3421,9 @@ void nsIFrame::BuildDisplayListForStackingContext(
     if (shouldFlattenStickyItem) {
       stickyASR = aBuilder->CurrentActiveScrolledRoot();
     } else {
-      stickyASR = aBuilder->GetOrCreateActiveScrolledRootForSticky(
-          aBuilder->CurrentActiveScrolledRoot(), this);
+      stickyASR = aBuilder->GetOrCreateActiveScrolledRoot(
+          aBuilder->CurrentActiveScrolledRoot(), this,
+          ActiveScrolledRoot::ASRKind::Sticky);
       asrSetter.SetCurrentActiveScrolledRoot(stickyASR);
       stickyItemClipState.MaybeRemoveDisplayportClip();
     }

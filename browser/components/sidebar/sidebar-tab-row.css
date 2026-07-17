@@ -118,11 +118,16 @@
 }
 
 :host([current]) {
-  @media (not (prefers-contrast)) and (-moz-pref("browser.nova.enabled")) {
-    border: 1px solid transparent;
-    background:
-      var(--tab-border-color-accent) border-box border-area,
-      var(--tab-background-color-selected) padding-box;
+  @media -moz-pref("browser.nova.enabled") {
+    outline: 1px solid var(--tab-selected-outline-color);
+    outline-offset: -1px;
+
+    @media (not (prefers-contrast)) {
+      border: 1px solid transparent;
+      background:
+        var(--tab-border-color-accent) border-box border-area,
+        var(--tab-background-color-selected) padding-box;
+    }
   }
 }
 

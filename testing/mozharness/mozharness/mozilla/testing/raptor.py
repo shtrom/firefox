@@ -1121,7 +1121,11 @@ class Raptor(
             options.extend([f"--browser-cycles={self.config.get('browser_cycles')}"])
         if self.config.get("test_bytecode_cache", False):
             options.extend(["--test-bytecode-cache"])
-        if self.config.get("collect_perfstats", False):
+        # Also opt in on try via `mach try --env MOZ_RAPTOR_COLLECT_PERFSTATS=1`.
+        if (
+            self.config.get("collect_perfstats", False)
+            or os.environ.get("MOZ_RAPTOR_COLLECT_PERFSTATS") == "1"
+        ):
             options.extend(["--collect-perfstats"])
         if self.config.get("simpleperf", False):
             options.extend(["--simpleperf"])

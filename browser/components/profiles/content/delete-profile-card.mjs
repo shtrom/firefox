@@ -105,8 +105,6 @@ export class DeleteProfileCard extends MozLitElement {
         ><div id="delete-profile-card">
           <img
             id="header-avatar"
-            width="80"
-            height="80"
             data-l10n-id=${this.data.profile.avatarL10nId}
             src=${this.data.profile.avatarURLs.url80}
           />
@@ -152,12 +150,14 @@ export class DeleteProfileCard extends MozLitElement {
             <moz-button-group>
               <moz-button
                 id="cancel-delete"
+                size="large"
                 @click=${this.cancelDelete}
                 data-l10n-id="delete-profile-cancel"
               ></moz-button>
               <moz-button
                 type="destructive"
                 id="confirm-delete"
+                size="large"
                 @click=${this.confirmDelete}
                 data-l10n-id="delete-profile-confirm"
               ></moz-button>

@@ -354,6 +354,11 @@ export const CustomIconManager = {
       throw new Error(`Unknown icon id: ${id}`);
     }
 
+    // Captured before the pref is written so re-applies of the already-active
+    // icon (the theme observer, the startup reconcile) can be distinguished
+    // from a genuine change to a different icon.
+    let previousId = this.currentId;
+
     let scheme = osColorScheme();
     let iconResourceId = resolveResourceId(entry, scheme);
 
@@ -372,6 +377,10 @@ export const CustomIconManager = {
     Services.prefs.setStringPref(PREF_ICON_ID, id);
     applyRuntimeWindowsIcon(iconResourceId);
     gLastAppliedScheme = scheme;
+
+    if (id !== previousId) {
+      Glean.customIcon.changed.record({ icon_id: id });
+    }
   },
 
   /**
@@ -387,10 +396,21 @@ export const CustomIconManager = {
       return;
     }
 
+    let previousId = this.currentId;
+
     await applyIconToWindowsShortcuts(browserExePath(), 0);
 
     Services.prefs.clearUserPref(PREF_ICON_ID);
     applyRuntimeWindowsIcon(0);
+
+    // Reverting is a change to the "default" icon, recorded only when a real
+    // (catalog-known, non-default) custom icon was active. This excludes both a
+    // revert() over the already-default state and the startup reconcile that
+    // reverts an unknown id (e.g. a retired or newer-build icon) - neither is a
+    // user changing their icon.
+    if (ICON_CATALOG[previousId] && previousId !== "default") {
+      Glean.customIcon.changed.record({ icon_id: "default" });
+    }
   },
 
   /**
@@ -442,6 +462,11 @@ export const CustomIconManager = {
     }
 
     let id = this.currentId;
+
+    // Record the active icon once per session. An unset pref is the default
+    // (no-override) icon.
+    Glean.customIcon.current.set(id || "default");
+
     if (!id) {
       return;
     }

@@ -48,6 +48,8 @@ skip-if = [
 
 ["browser_fxa_menu_profiles.js"]
 
+["browser_icon_avatar_test.js"]
+
 ["browser_menubar_profiles.js"]
 head = "../unit/head.js head.js"
 

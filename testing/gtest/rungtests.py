@@ -154,10 +154,13 @@ class GTests:
             result = run_test_process("gtest", env)
         else:
             suites = get_gtest_suites(args, cwd, env)
-            result = all(
+            # Some suites have side-effects like emitting PERFHERDER_DATA, so
+            # don't short-circuit on the first failure.
+            results = [
                 run_test_process(f"gtest.{filt.suite}", filt(env))
                 for filt in suite_filters(suites)
-            )
+            ]
+            result = all(results)
 
         if perfherder_data and "MOZ_AUTOMATION" in os.environ:
             upload_dir = pathlib.Path(os.getenv("MOZ_UPLOAD_DIR"))

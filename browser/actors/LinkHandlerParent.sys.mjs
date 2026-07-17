@@ -170,7 +170,6 @@ export class LinkHandlerParent extends JSWindowActorParent {
     gBrowser,
     browser,
     {
-      pageURL,
       originalURL,
       expiration,
       iconURL,
@@ -253,7 +252,7 @@ export class LinkHandlerParent extends JSWindowActorParent {
       try {
         lazy.PlacesUtils.favicons
           .setFaviconForPage(
-            Services.io.newURI(pageURL),
+            this.manager.documentURI,
             Services.io.newURI(originalURL),
             iconURI,
             expiration && lazy.PlacesUtils.toPRTime(expiration),

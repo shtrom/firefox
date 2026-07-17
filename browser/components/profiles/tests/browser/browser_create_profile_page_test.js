@@ -79,6 +79,7 @@ add_task(async function test_new_profile_beforeunload() {
         Assert.equal(nameInput.value, "", "Profile name is empty to start");
 
         let deleteButton = newProfileCard.deleteButton;
+        deleteButton.scrollIntoView();
         EventUtils.synthesizeMouseAtCenter(deleteButton, {}, content);
       });
 
@@ -195,7 +196,7 @@ add_task(async function test_new_profile_avatar() {
         newProfileCard.nameInput.value = "test";
 
         EventUtils.synthesizeMouseAtCenter(
-          newProfileCard.avatarSelectorLink,
+          newProfileCard.avatarSelectorButton,
           {},
           content
         );
@@ -388,6 +389,7 @@ add_task(async function test_new_profile_explore_more_themes() {
         // To simplify the test, deactivate the link before clicking.
         newProfileCard.moreThemesLink.href = "#";
         newProfileCard.moreThemesLink.target = "";
+        newProfileCard.moreThemesLink.scrollIntoView();
         EventUtils.synthesizeMouseAtCenter(
           newProfileCard.moreThemesLink,
           {},
@@ -459,6 +461,7 @@ add_task(async function test_new_profile_displayed_closed_telemetry() {
         });
 
         // Click the done editing button to trigger closed event.
+        newProfileCard.doneButton.scrollIntoView();
         EventUtils.synthesizeMouseAtCenter(
           newProfileCard.doneButton,
           {},
@@ -534,6 +537,7 @@ add_task(async function test_new_profile_delete_telemetry() {
           return ContentTaskUtils.isVisible(savedMessage);
         });
 
+        newProfileCard.deleteButton.scrollIntoView();
         EventUtils.synthesizeMouseAtCenter(
           newProfileCard.deleteButton,
           {},

@@ -392,9 +392,7 @@ export class LoginManagerRustStorage {
     // TODO: Currently we do not mark the instance as closed, not sure if later
     // calls would be rejected elsewhere.
 
-    // Note: This is a synchronous call.
-    this.#storageAdapter.shutdown();
-    return Promise.resolve();
+    await this.#storageAdapter.shutdown();
   }
 
   /**

@@ -62,7 +62,6 @@ const lazy = XPCOMUtils.declareLazy({
   ExtensionSearchHandler:
     "resource://gre/modules/ExtensionSearchHandler.sys.mjs",
   ExtensionUtils: "resource://gre/modules/ExtensionUtils.sys.mjs",
-  ObjectUtils: "resource://gre/modules/ObjectUtils.sys.mjs",
   PartnerLinkAttribution: "resource:///modules/PartnerLinkAttribution.sys.mjs",
   PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
@@ -2748,7 +2747,7 @@ ${
     let currentSearchMode = this.getSearchMode(browser);
     let areSearchModesSame =
       (!currentSearchMode && !searchMode) ||
-      lazy.ObjectUtils.deepEqual(currentSearchMode, searchMode);
+      UrlbarShared.deepEqual(currentSearchMode, searchMode);
 
     // Exit search mode if the passed-in engine is invalid or hidden.
     let engine;
@@ -6634,7 +6633,7 @@ class AddSearchEngineHelper {
     if (engines1?.length != engines2?.length) {
       return false;
     }
-    return lazy.ObjectUtils.deepEqual(
+    return UrlbarShared.deepEqual(
       engines1.map(e => e.title),
       engines2.map(e => e.title)
     );

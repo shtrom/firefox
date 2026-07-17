@@ -646,6 +646,502 @@ const actionUtils = {
   _RouteMessage,
 };
 
+;// CONCATENATED MODULE: ./common/WidgetsRegistry.mjs
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/**
+ * WIDGET_REGISTRY — single source of truth for all New Tab widgets.
+ *
+ * WHY THIS EXISTS
+ * Previously, every widget was hardcoded in three places: the render loop in
+ * Widgets.jsx, the hideAllWidgets handler, and the toggleMaximize handler.
+ * Adding or removing a widget required edits in all three spots and was easy
+ * to get out of sync. This registry replaces those hardcoded lists so that
+ * Widgets.jsx, WidgetsSidebar.jsx, and any future consumers share one
+ * authoritative definition.
+ *
+ * HOW IT WORKS
+ * Each entry describes one widget's static metadata:
+ *
+ *   id                — unique string key used in prefs and the order pref
+ *   telemetryName     — the name sent in Glean events (snake_case; may differ from id)
+ *   order             — default render position (0-indexed); used when widgets.order is empty
+ *   enabledPref       — the user-facing pref that toggles this widget on/off
+ *   sizePref          — the pref that stores the user's chosen size (empty string = not set)
+ *   defaultSize       — size to use when sizePref is empty and no trainhop suggestion exists
+ *   validSizes        — the sizes this widget supports (drives size picker options)
+ *   hasSidebar        — when true, the widget renders in the sidebar instead of the
+ *                       widget row when its effective size equals "small". Size alone is not
+ *                       sufficient — this flag must be set explicitly so that future
+ *                       widgets that support "small" but stay in the row are not
+ *                       accidentally moved to the sidebar.
+ *   systemEnabledPref — system/operator pref that gates this widget independent of the user pref
+ *   trainhopEnabledKey — key in trainhopConfig.widgets.* for the enabled override
+ *   trainhopSizeKey    — key in trainhopConfig.widgets.* for the size default suggestion
+ *                        (only applies when the user has not explicitly set sizePref)
+ *   trainhopSidebarKey — key in trainhopConfig.widgets.* for the hasSidebar override;
+ *                        null means the sidebar placement is not overridable via trainhop
+ *
+ * SIZE PRIORITY
+ * sizePref defaults to "" (empty string) in PREFS_CONFIG. An empty value
+ * means the user has not explicitly chosen a size; resolveWidgetSize() falls
+ * through to a trainhop suggestion and then to widget.defaultSize. Once the
+ * user resizes a widget via the UI the pref is written with a real value and
+ * trainhop can no longer override it. resolveWidgetSize() applies these in order:
+ *   1. User-set pref (sizePref is non-empty) — always wins
+ *   2. trainhopConfig suggestion (trainhopSizeKey) — acts as default, not override
+ *   3. widget.defaultSize — final fallback
+ *
+ * Note: widgets.weather.size uses getValue: getWeatherWidgetSize in
+ * ActivityStream.sys.mjs rather than value: "" because it has a Nova migration
+ * path that infers the correct initial size from the user's previous weather
+ * configuration. After migration the stored value is non-empty and the sentinel
+ * logic above applies normally.
+ *
+ * ADDING A NEW WIDGET
+ * 1. Add a new entry to WIDGET_REGISTRY below with the next `order` integer.
+ *    Set telemetryName to the snake_case Glean name for this widget.
+ * 2. Export its pref key constants from this file.
+ * 3. Register both prefs (enabled + size) in lib/ActivityStream.sys.mjs.
+ * 4. Add the component to WIDGET_ROW_COMPONENTS in WidgetsComponentRegistry.jsx.
+ * 5. If it has a sidebar variant, set hasSidebar: true and add its component
+ *    to WIDGET_SIDEBAR_COMPONENTS in WidgetsComponentRegistry.jsx.
+ *
+ * ADDING A NEW PER-WIDGET DIMENSION (e.g. "scale")
+ * 1. Add scalePref and trainhopScaleKey fields to each registry entry.
+ * 2. Export a resolveWidgetScale(widget, prefs) helper following the same
+ *    user-pref-wins pattern as resolveWidgetSize().
+ * 3. Update components to call the helper instead of reading the pref directly.
+ *
+ * DEVTOOLS ADMIN INTEGRATION
+ * The New Tab admin devtools panel (DiscoveryStreamAdmin.jsx, shown when
+ * browser.newtabpage.activity-stream.asrouter.devtoolsEnabled is true) drives a
+ * "Widgets" section directly off this registry: it maps WIDGET_REGISTRY to render
+ * one system-enable toggle per widget (from systemEnabledPref), plus "Enable all"
+ * / "Disable all" and reset controls. Any widget added here appears there
+ * automatically -- no devtools edit needed.
+ *
+ * To expose an extra pref-gated widget feature in that panel (e.g. an internal
+ * feature that defaults off but QA/devs want to flip, such as
+ * widgets.pictureOfTheDay.setAsWallpaper.enabled or
+ * widgets.sportsWidget.live.enabled), add an entry to the hand-maintained
+ * WIDGET_EXTRA_FEATURES map in DiscoveryStreamAdmin.jsx keyed by widget id:
+ *   sportsWidget: [{ pref: "widgets.sportsWidget.live.enabled", label: "Live scores" }]
+ * Each entry becomes a boolean toggle nested under that widget's row. This map is
+ * intentionally kept in the devtools component, not the registry, so shipping code
+ * carries no dependency on dev-only feature lists.
+ *
+ * The widgets.order pref (CSV of widget IDs) persists user-defined order.
+ * It is only written when the user explicitly reorders widgets — never on
+ * enable/disable. Disabled widgets keep their slot so they reappear in the
+ * same position when re-enabled. See resolveWidgetOrder() below.
+ */
+
+const PREF_WIDGETS_LISTS_ENABLED = "widgets.lists.enabled";
+const PREF_WIDGETS_TIMER_ENABLED = "widgets.focusTimer.enabled";
+const PREF_WIDGETS_WEATHER_ENABLED = "widgets.weather.enabled";
+const PREF_LISTS_SIZE = "widgets.lists.size";
+const PREF_FOCUS_TIMER_SIZE = "widgets.focusTimer.size";
+const PREF_WEATHER_SIZE = "widgets.weather.size";
+const PREF_WIDGETS_ORDER = "widgets.order";
+const PREF_WIDGETS_SYSTEM_LISTS_ENABLED = "widgets.system.lists.enabled";
+const PREF_WIDGETS_SYSTEM_TIMER_ENABLED =
+  "widgets.system.focusTimer.enabled";
+const PREF_WIDGETS_SYSTEM_WEATHER_ENABLED =
+  "widgets.system.weather.enabled";
+const PREF_WIDGETS_SPORTS_WIDGET_ENABLED =
+  "widgets.sportsWidget.enabled";
+const PREF_SPORTS_WIDGET_SIZE = "widgets.sportsWidget.size";
+const PREF_WIDGETS_SYSTEM_SPORTS_WIDGET_ENABLED =
+  "widgets.system.sportsWidget.enabled";
+const PREF_WIDGETS_CLOCKS_ENABLED = "widgets.clocks.enabled";
+const PREF_CLOCKS_SIZE = "widgets.clocks.size";
+const PREF_WIDGETS_SYSTEM_CLOCKS_ENABLED =
+  "widgets.system.clocks.enabled";
+const PREF_WIDGETS_PRIVACY_ENABLED = "widgets.privacy.enabled";
+const PREF_PRIVACY_SIZE = "widgets.privacy.size";
+const PREF_WIDGETS_SYSTEM_PRIVACY_ENABLED =
+  "widgets.system.privacy.enabled";
+const PREF_WIDGETS_CROSSWORD_ENABLED = "widgets.crossword.enabled";
+const PREF_CROSSWORD_SIZE = "widgets.crossword.size";
+const PREF_WIDGETS_SYSTEM_CROSSWORD_ENABLED =
+  "widgets.system.crossword.enabled";
+const PREF_WIDGETS_STOCKS_ENABLED = "widgets.stocks.enabled";
+const PREF_STOCKS_SIZE = "widgets.stocks.size";
+const PREF_WIDGETS_SYSTEM_STOCKS_ENABLED =
+  "widgets.system.stocks.enabled";
+const PREF_CROSSWORD_ENDPOINT = "widgets.crossword.endpoint";
+const PREF_WIDGETS_PICTURE_OF_THE_DAY_ENABLED =
+  "widgets.pictureOfTheDay.enabled";
+const PREF_PICTURE_OF_THE_DAY_SIZE = "widgets.pictureOfTheDay.size";
+const PREF_WIDGETS_SYSTEM_PICTURE_OF_THE_DAY_ENABLED =
+  "widgets.system.pictureOfTheDay.enabled";
+
+/**
+ * @typedef {object} WidgetRegistryEntry
+ * @property {string} id - Unique key used in prefs and the order pref.
+ * @property {string} telemetryName - Snake_case name sent in Glean events. May differ from id (e.g. "focus_timer" for id "focusTimer").
+ * @property {number} order - Default render position (0-indexed).
+ * @property {string} enabledPref - User-facing pref that toggles this widget on/off.
+ * @property {string} sizePref - Pref that stores the user's chosen size ("" = not yet set).
+ * @property {string} defaultSize - Fallback size when sizePref is empty and no trainhop suggestion exists.
+ * @property {string[]} validSizes - Sizes this widget supports.
+ * @property {boolean} hasSidebar - When true, the widget moves to the sidebar at size "small".
+ * @property {string} systemEnabledPref - Operator pref that gates the widget independently of the user pref.
+ * @property {string} trainhopEnabledKey - Key in trainhopConfig.widgets.* for the enabled override.
+ * @property {string|null} trainhopSizeKey - Key in trainhopConfig.widgets.* for the size default suggestion.
+ * @property {string|null} trainhopSidebarKey - Key in trainhopConfig.widgets.* for the hasSidebar override.
+ * @property {string} widgetsSettingsVisibleKey - Key in trainhopConfig.widgetsSettings.* that additively reveals this widget's toggle in the settings UIs (does not enable the widget).
+ * @property {string} widgetsSettingsEnabledKey - Key in trainhopConfig.widgetsSettings.* that overrides this widget's default enabled value (written to the pref default branch; an explicit user toggle still wins).
+ * @property {string|null} [trainhopNamespace] - When set, the widget ships its whole config in one dedicated object at trainhopConfig.<namespace>. Its `enabled` overrides the default value of enabledPref on the default branch (user toggle still wins, like widgetsSettings.*Enabled); `visible` reveals the widget (isWidgetAddable) without writing a pref; `size` is read by resolveWidgetSize. Only Picture of the Day uses this today.
+ */
+
+/** @type {WidgetRegistryEntry[]} */
+const WIDGET_REGISTRY = [
+  {
+    id: "pictureOfTheDay",
+    telemetryName: "picture_of_the_day",
+    order: 0,
+    enabledPref: PREF_WIDGETS_PICTURE_OF_THE_DAY_ENABLED,
+    sizePref: PREF_PICTURE_OF_THE_DAY_SIZE,
+    defaultSize: "medium",
+    validSizes: ["medium", "large"],
+    hasSidebar: false,
+    systemEnabledPref: PREF_WIDGETS_SYSTEM_PICTURE_OF_THE_DAY_ENABLED,
+    trainhopEnabledKey: "pictureOfTheDayEnabled",
+    trainhopSizeKey: "pictureOfTheDaySize",
+    trainhopSidebarKey: null,
+    widgetsSettingsVisibleKey: "pictureOfTheDayVisible",
+    widgetsSettingsEnabledKey: "pictureOfTheDayEnabled",
+    trainhopNamespace: "widgetPictureOfTheDay",
+  },
+  {
+    id: "sportsWidget",
+    telemetryName: "sports",
+    order: 1,
+    enabledPref: PREF_WIDGETS_SPORTS_WIDGET_ENABLED,
+    sizePref: PREF_SPORTS_WIDGET_SIZE,
+    defaultSize: "medium",
+    validSizes: ["medium", "large"],
+    hasSidebar: false,
+    systemEnabledPref: PREF_WIDGETS_SYSTEM_SPORTS_WIDGET_ENABLED,
+    trainhopEnabledKey: "sportsWidgetEnabled",
+    trainhopSizeKey: "sportsWidgetSize",
+    trainhopSidebarKey: null,
+    widgetsSettingsVisibleKey: "sportsWidgetVisible",
+    widgetsSettingsEnabledKey: "sportsWidgetEnabled",
+  },
+  {
+    id: "clocks",
+    telemetryName: "clocks",
+    order: 2,
+    enabledPref: PREF_WIDGETS_CLOCKS_ENABLED,
+    sizePref: PREF_CLOCKS_SIZE,
+    defaultSize: "medium",
+    validSizes: ["small", "medium", "large"],
+    hasSidebar: false,
+    systemEnabledPref: PREF_WIDGETS_SYSTEM_CLOCKS_ENABLED,
+    trainhopEnabledKey: "clocksEnabled",
+    trainhopSizeKey: "clocksSize",
+    trainhopSidebarKey: null,
+    widgetsSettingsVisibleKey: "clocksVisible",
+    widgetsSettingsEnabledKey: "clocksEnabled",
+  },
+  {
+    id: "lists",
+    telemetryName: "lists",
+    order: 3,
+    enabledPref: PREF_WIDGETS_LISTS_ENABLED,
+    sizePref: PREF_LISTS_SIZE,
+    defaultSize: "medium",
+    validSizes: ["small", "medium", "large"],
+    hasSidebar: false,
+    systemEnabledPref: PREF_WIDGETS_SYSTEM_LISTS_ENABLED,
+    trainhopEnabledKey: "listsEnabled",
+    trainhopSizeKey: "listsSize",
+    trainhopSidebarKey: null,
+    widgetsSettingsVisibleKey: "listsVisible",
+    widgetsSettingsEnabledKey: "listsEnabled",
+  },
+  {
+    id: "focusTimer",
+    telemetryName: "focus_timer",
+    order: 4,
+    enabledPref: PREF_WIDGETS_TIMER_ENABLED,
+    sizePref: PREF_FOCUS_TIMER_SIZE,
+    defaultSize: "medium",
+    validSizes: ["small", "medium", "large"],
+    hasSidebar: false,
+    systemEnabledPref: PREF_WIDGETS_SYSTEM_TIMER_ENABLED,
+    trainhopEnabledKey: "timerEnabled",
+    trainhopSizeKey: "timerSize",
+    trainhopSidebarKey: null,
+    widgetsSettingsVisibleKey: "focusTimerVisible",
+    widgetsSettingsEnabledKey: "focusTimerEnabled",
+  },
+  {
+    id: "weather",
+    telemetryName: "weather",
+    order: 5,
+    enabledPref: PREF_WIDGETS_WEATHER_ENABLED,
+    sizePref: PREF_WEATHER_SIZE,
+    defaultSize: "small",
+    validSizes: ["small", "medium", "large"],
+    hasSidebar: true,
+    systemEnabledPref: PREF_WIDGETS_SYSTEM_WEATHER_ENABLED,
+    trainhopEnabledKey: "weatherEnabled",
+    trainhopSizeKey: "weatherSize",
+    trainhopSidebarKey: "weatherSidebar",
+    widgetsSettingsVisibleKey: "weatherVisible",
+    widgetsSettingsEnabledKey: "weatherEnabled",
+  },
+  {
+    id: "privacy",
+    telemetryName: "privacy",
+    order: 6,
+    enabledPref: PREF_WIDGETS_PRIVACY_ENABLED,
+    sizePref: PREF_PRIVACY_SIZE,
+    defaultSize: "medium",
+    validSizes: ["medium", "large"],
+    hasSidebar: false,
+    systemEnabledPref: PREF_WIDGETS_SYSTEM_PRIVACY_ENABLED,
+    trainhopEnabledKey: "privacyEnabled",
+    trainhopSizeKey: "privacySize",
+    trainhopSidebarKey: null,
+    widgetsSettingsVisibleKey: "privacyVisible",
+    widgetsSettingsEnabledKey: "privacyEnabled",
+  },
+  {
+    id: "crossword",
+    telemetryName: "crossword",
+    order: 7,
+    enabledPref: PREF_WIDGETS_CROSSWORD_ENABLED,
+    sizePref: PREF_CROSSWORD_SIZE,
+    defaultSize: "medium",
+    validSizes: ["medium", "large"],
+    hasSidebar: false,
+    systemEnabledPref: PREF_WIDGETS_SYSTEM_CROSSWORD_ENABLED,
+    trainhopEnabledKey: "crosswordEnabled",
+    trainhopSizeKey: "crosswordSize",
+    trainhopSidebarKey: null,
+    widgetsSettingsVisibleKey: "crosswordVisible",
+    widgetsSettingsEnabledKey: "crosswordEnabled",
+  },
+  {
+    id: "stocks",
+    telemetryName: "stocks",
+    order: 8,
+    enabledPref: PREF_WIDGETS_STOCKS_ENABLED,
+    sizePref: PREF_STOCKS_SIZE,
+    defaultSize: "medium",
+    validSizes: ["small", "medium", "large"],
+    hasSidebar: false,
+    systemEnabledPref: PREF_WIDGETS_SYSTEM_STOCKS_ENABLED,
+    trainhopEnabledKey: "stocksEnabled",
+    trainhopSizeKey: "stocksSize",
+    trainhopSidebarKey: null,
+    widgetsSettingsVisibleKey: "stocksVisible",
+    widgetsSettingsEnabledKey: "stocksEnabled",
+  },
+];
+
+/**
+ * Returns an ordered list of all widget IDs (including disabled ones).
+ * Saved order is respected; any widget IDs not in the saved pref are appended
+ * in registry-default order. Unknown IDs in the saved pref are dropped.
+ *
+ * @param {string} orderPref - value of the widgets.order pref (CSV string)
+ */
+function getWidgetOrder(orderPref) {
+  const registryIds = WIDGET_REGISTRY.map(w => w.id);
+  if (!orderPref) {
+    return registryIds;
+  }
+  const seen = new Set();
+  const saved = orderPref
+    .split(",")
+    .filter(id => registryIds.includes(id) && !seen.has(id) && seen.add(id));
+  const appended = registryIds.filter(id => !seen.has(id));
+  return [...saved, ...appended];
+}
+
+/**
+ * Returns the effective widget render order. The user's saved order wins;
+ * a trainhop suggestion applies only when no user order is saved.
+ *
+ * @param {object} prefs - current pref values from the Redux store
+ * @returns {string[]} ordered array of widget IDs
+ */
+function resolveWidgetOrder(prefs) {
+  const userOrder = prefs[PREF_WIDGETS_ORDER];
+  if (userOrder) {
+    return getWidgetOrder(userOrder);
+  }
+  const trainhopOrder = prefs.trainhopConfig?.widgets?.order;
+  if (trainhopOrder) {
+    return getWidgetOrder(trainhopOrder);
+  }
+  return getWidgetOrder(null);
+}
+
+/**
+ * Returns true if the widget is available to the user, based on the
+ * system pref, the trainhopConfig.widgets addable key, or a
+ * widgetsSettings.*Visible override (revealing a toggle also makes the widget
+ * addable so the toggle is functional). Does not consider whether the user has
+ * turned the widget on, or whether the widgets container is enabled.
+ *
+ * @param {object} widget - a WIDGET_REGISTRY entry
+ * @param {object} prefs - current pref values from the Redux store
+ * @returns {boolean}
+ */
+function isWidgetAddable(widget, prefs) {
+  return Boolean(
+    (widget.trainhopNamespace &&
+      prefs.trainhopConfig?.[widget.trainhopNamespace]?.visible) ||
+    prefs.trainhopConfig?.widgets?.[widget.trainhopEnabledKey] ||
+    prefs.trainhopConfig?.widgetsSettings?.[widget.widgetsSettingsVisibleKey] ||
+    prefs[widget.systemEnabledPref]
+  );
+}
+
+/**
+ * Returns true if this widget's toggle should be shown in the settings UIs
+ * (about:preferences#home and the Customize menu). A widget is shown when it is
+ * addable (system pref, trainhopConfig.widgets, or widgetsSettings.*Visible) or
+ * when the legacy `widgetsConfig` Nimbus variable enables it. Showing a toggle
+ * does NOT enable the widget — enablement is the widget's own enabled pref,
+ * whose default can be overridden via widgetsSettings.*Enabled.
+ *
+ * @param {object} widget - a WIDGET_REGISTRY entry
+ * @param {object} prefs - current pref values from the Redux store
+ * @returns {boolean}
+ */
+function isWidgetToggleVisible(widget, prefs) {
+  return Boolean(
+    isWidgetAddable(widget, prefs) ||
+    prefs.widgetsConfig?.[widget.trainhopEnabledKey]
+  );
+}
+
+/**
+ * Returns true if the Widgets container/section toggle should be shown.
+ * Additive across the system pref, the legacy `widgetsConfig` variable, the
+ * `trainhopConfig.widgets.enabled` addable key, and the new
+ * `trainhopConfig.widgetsSettings.enabled` override.
+ *
+ * @param {object} prefs - current pref values from the Redux store
+ * @returns {boolean}
+ */
+function isWidgetsContainerVisible(prefs) {
+  return Boolean(
+    prefs["widgets.system.enabled"] ||
+    prefs.widgetsConfig?.enabled ||
+    prefs.trainhopConfig?.widgets?.enabled ||
+    prefs.trainhopConfig?.widgetsSettings?.enabled
+  );
+}
+
+/**
+ * Returns true if the widget is currently enabled: the widgets container is
+ * on, the widget is addable, and the user's enabled pref is set.
+ *
+ * @param {object} widget - a WIDGET_REGISTRY entry
+ * @param {object} prefs - current pref values from the Redux store
+ * @param {boolean} widgetsEnabled - value of the widgets.enabled container pref
+ * @returns {boolean}
+ */
+function isWidgetEnabled(widget, prefs, widgetsEnabled) {
+  return Boolean(
+    widgetsEnabled &&
+    isWidgetAddable(widget, prefs) &&
+    prefs[widget.enabledPref]
+  );
+}
+
+/**
+ * Returns the effective size for a widget, applying priority:
+ *   user-set pref > trainhop suggestion > registry defaultSize
+ *
+ * A sizePref value of "" means the user has not explicitly chosen a size,
+ * so trainhop and defaultSize are consulted. Any non-empty value was written
+ * by a user action (size picker, maximize/minimize button) and always wins.
+ *
+ * @param {object} widget - a WIDGET_REGISTRY entry
+ * @param {object} prefs - current pref values from the Redux store
+ * @returns {string}
+ */
+function resolveWidgetSize(widget, prefs) {
+  const userPref = prefs[widget.sizePref];
+  if (userPref) {
+    return userPref;
+  }
+  const dedicatedSize = widget.trainhopNamespace
+    ? prefs.trainhopConfig?.[widget.trainhopNamespace]?.size
+    : null;
+  const trainhopSize = widget.trainhopSizeKey
+    ? prefs.trainhopConfig?.widgets?.[widget.trainhopSizeKey]
+    : null;
+  return dedicatedSize || trainhopSize || widget.defaultSize;
+}
+
+/**
+ * Returns whether the widget should be placed in the sidebar.
+ * A trainhop override (trainhopSidebarKey) takes precedence over the
+ * static registry hasSidebar flag when present.
+ *
+ * @param {object} widget - a WIDGET_REGISTRY entry
+ * @param {object} prefs - current pref values from the Redux store
+ * @returns {boolean}
+ */
+function resolveWidgetHasSidebar(widget, prefs) {
+  if (widget.trainhopSidebarKey) {
+    const override = prefs.trainhopConfig?.widgets?.[widget.trainhopSidebarKey];
+    if (override !== undefined) {
+      return override;
+    }
+  }
+  return widget.hasSidebar;
+}
+
+/**
+ * Returns the Merino endpoint the Crossword widget iframe should load.
+ * A trainhopConfig.widgets.crosswordEndpoint override wins over the raw pref so
+ * the endpoint can be swapped (e.g. staging to production) without a release.
+ * The raw pref is never read directly by the component.
+ *
+ * @param {object} prefs - current pref values from the Redux store
+ * @returns {string}
+ */
+function resolveCrosswordEndpoint(prefs) {
+  return (
+    prefs.trainhopConfig?.widgets?.crosswordEndpoint ||
+    prefs[PREF_CROSSWORD_ENDPOINT]
+  );
+}
+
+/**
+ * Returns the list of widgets to disable when "hide all" is triggered.
+ * A widget is included if it has no sidebar variant OR if it is currently
+ * in the row (not the sidebar). Each entry carries the pref to disable,
+ * the telemetry name, and whether it was active (for telemetry filtering).
+ *
+ * @param {object} prefs - current pref values from the Redux store
+ * @param {object} widgetEnabledMap - map of widget id → boolean (currently active in row)
+ * @returns {{ enabledPref: string, telemetryName: string, active: boolean }[]}
+ */
+function getHideAllTargets(prefs, widgetEnabledMap) {
+  return WIDGET_REGISTRY.filter(
+    w => !resolveWidgetHasSidebar(w, prefs) || widgetEnabledMap[w.id]
+  ).map(w => ({
+    enabledPref: w.enabledPref,
+    telemetryName: w.telemetryName,
+    active: !!widgetEnabledMap[w.id],
+  }));
+}
+
 ;// CONCATENATED MODULE: external "ReactRedux"
 const external_ReactRedux_namespaceObject = window["ReactRedux"];
 ;// CONCATENATED MODULE: external "React"
@@ -656,6 +1152,7 @@ function _extends() { return _extends = Object.assign ? Object.assign.bind() : f
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 
 
 
@@ -676,6 +1173,32 @@ const PREF_UNIFIED_ADS_ENDPOINT = "unifiedAds.endpoint";
 const PREF_ALLOWED_ENDPOINTS = "discoverystream.endpoints";
 const PREF_OHTTP_CONFIG = "discoverystream.ohttp.configURL";
 const PREF_OHTTP_RELAY = "discoverystream.ohttp.relayURL";
+const PREF_WIDGETS_SYSTEM_ENABLED = "widgets.system.enabled";
+
+// Turn a camelCase widget id into a human-readable label, e.g.
+// "pictureOfTheDay" -> "Picture Of The Day".
+function widgetLabel(id) {
+  const spaced = id.replace(/([A-Z])/g, " $1");
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+// Internal, pref-gated widget features that default off but we want to test in
+// devtools. Hand-maintained (outside the automatic registry-driven toggles).
+// Each `pref` is the full activity-stream-relative pref; toggles reuse
+// handleWidgetToggle, which sets the pref named by the toggle's id.
+const WIDGET_EXTRA_FEATURES = {
+  pictureOfTheDay: [{
+    pref: "widgets.pictureOfTheDay.setAsWallpaper.enabled",
+    label: "Set as wallpaper"
+  }],
+  sportsWidget: [{
+    pref: "widgets.sportsWidget.live.enabled",
+    label: "Live scores"
+  }, {
+    pref: "widgets.sportsWidget.celebrations.enabled",
+    label: "Celebrations"
+  }]
+};
 const Row = props => /*#__PURE__*/external_React_default().createElement("tr", _extends({
   className: "message-item"
 }, props), props.children);
@@ -705,7 +1228,7 @@ class ToggleStoryButton extends (external_React_default()).PureComponent {
     this.props.onClick(this.props.story);
   }
   render() {
-    return /*#__PURE__*/external_React_default().createElement("button", {
+    return /*#__PURE__*/external_React_default().createElement("moz-button", {
       onClick: this.handleClick
     }, "collapse/open");
   }
@@ -749,6 +1272,11 @@ class DiscoveryStreamAdminUI extends (external_React_default()).PureComponent {
     this.handleDebugOverrideChange = this.handleDebugOverrideChange.bind(this);
     this.handleResetAllOverrides = this.handleResetAllOverrides.bind(this);
     this.handleSectionsToggle = this.handleSectionsToggle.bind(this);
+    this.handleWidgetsSystemToggle = this.handleWidgetsSystemToggle.bind(this);
+    this.handleWidgetToggle = this.handleWidgetToggle.bind(this);
+    this.handleWidgetsToggleAll = this.handleWidgetsToggleAll.bind(this);
+    this.handleResetWidgetInteractions = this.handleResetWidgetInteractions.bind(this);
+    this.handleResetWidgetsToDefaults = this.handleResetWidgetsToDefaults.bind(this);
     this.toggleIABBanners = this.toggleIABBanners.bind(this);
     this.handleAllizomToggle = this.handleAllizomToggle.bind(this);
     this.sendConversionEvent = this.sendConversionEvent.bind(this);
@@ -994,6 +1522,45 @@ class DiscoveryStreamAdminUI extends (external_React_default()).PureComponent {
     this.props.dispatch(actionCreators.SetPref(PREF_SECTIONS_ENABLED, pressed));
     this.props.dispatch(actionCreators.SetPref("discoverystream.sections.cards.enabled", pressed));
   }
+  handleWidgetsSystemToggle(e) {
+    this.props.dispatch(actionCreators.SetPref(PREF_WIDGETS_SYSTEM_ENABLED, e.target.pressed));
+  }
+  handleWidgetToggle(e) {
+    // e.target.id is the widget's systemEnabledPref (widgets.system.<name>.enabled)
+    this.props.dispatch(actionCreators.SetPref(e.target.id, e.target.pressed));
+  }
+  handleWidgetsToggleAll() {
+    const value = !this.areAllWidgetsEnabled();
+    const values = {
+      [PREF_WIDGETS_SYSTEM_ENABLED]: value
+    };
+    for (const widget of WIDGET_REGISTRY) {
+      values[widget.systemEnabledPref] = value;
+    }
+    this.props.dispatch(actionCreators.SetMultiplePrefs(values));
+  }
+  areAllWidgetsEnabled() {
+    const {
+      otherPrefs
+    } = this.props;
+    return Boolean(otherPrefs[PREF_WIDGETS_SYSTEM_ENABLED] && WIDGET_REGISTRY.every(widget => otherPrefs[widget.systemEnabledPref]));
+  }
+  clearPrefs(prefNames) {
+    for (const prefName of prefNames) {
+      this.props.dispatch(actionCreators.OnlyToMain({
+        type: actionTypes.CLEAR_PREF,
+        data: {
+          name: prefName
+        }
+      }));
+    }
+  }
+  handleResetWidgetInteractions() {
+    this.clearPrefs(Object.keys(this.props.otherPrefs).filter(prefName => /^widgets\..+\.interaction$/.test(prefName)));
+  }
+  handleResetWidgetsToDefaults() {
+    this.clearPrefs(Object.keys(this.props.otherPrefs).filter(prefName => prefName.startsWith("widgets.")));
+  }
   sendConversionEvent() {
     const detail = {
       partnerId: "295BEEF7-1E3B-4128-B8F8-858E12AA660B",
@@ -1033,8 +1600,8 @@ class DiscoveryStreamAdminUI extends (external_React_default()).PureComponent {
         id: "weather-query",
         onChange: this.handleWeatherUpdate,
         value: this.weatherQuery
-      }), /*#__PURE__*/external_React_default().createElement("button", {
-        type: "submit"
+      }), /*#__PURE__*/external_React_default().createElement("moz-button", {
+        onClick: this.handleWeatherSubmit
       }, "Submit")), /*#__PURE__*/external_React_default().createElement("table", null, /*#__PURE__*/external_React_default().createElement("tbody", null, suggestions.map(suggestion => /*#__PURE__*/external_React_default().createElement("tr", {
         className: "message-item",
         key: suggestion.city_name
@@ -1093,11 +1660,9 @@ class DiscoveryStreamAdminUI extends (external_React_default()).PureComponent {
       className: "inferred-overrides-title"
     }, "Inferred Personalization"), /*#__PURE__*/external_React_default().createElement("div", {
       className: "inferred-overrides-actions"
-    }, /*#__PURE__*/external_React_default().createElement("button", {
-      className: "button",
+    }, /*#__PURE__*/external_React_default().createElement("moz-button", {
       onClick: this.refreshInferredPersonalizationAndDebug
-    }, "Recompute Interest Vector"), /*#__PURE__*/external_React_default().createElement("button", {
-      className: "button",
+    }, "Recompute Interest Vector"), /*#__PURE__*/external_React_default().createElement("moz-button", {
       onClick: this.refreshCache
     }, "Refresh Story Cache"))), /*#__PURE__*/external_React_default().createElement("div", {
       className: "inferred-overrides-last-refreshed"
@@ -1122,8 +1687,7 @@ class DiscoveryStreamAdminUI extends (external_React_default()).PureComponent {
       className: "inferred-overrides-refresh-row"
     }, /*#__PURE__*/external_React_default().createElement("td", {
       colSpan: "3"
-    }, /*#__PURE__*/external_React_default().createElement("button", {
-      className: "button",
+    }, /*#__PURE__*/external_React_default().createElement("moz-button", {
       disabled: hasAnyNonZeroOverride ? null : true,
       onClick: this.handleResetAllOverrides
     }, "Reset overrides"))), /*#__PURE__*/external_React_default().createElement(Row, {
@@ -1195,8 +1759,7 @@ class DiscoveryStreamAdminUI extends (external_React_default()).PureComponent {
     const {
       blocks
     } = this.props.state.DiscoveryStream;
-    return /*#__PURE__*/external_React_default().createElement((external_React_default()).Fragment, null, /*#__PURE__*/external_React_default().createElement("h4", null, "Blocks"), /*#__PURE__*/external_React_default().createElement("button", {
-      className: "button",
+    return /*#__PURE__*/external_React_default().createElement((external_React_default()).Fragment, null, /*#__PURE__*/external_React_default().createElement("h4", null, "Blocks"), /*#__PURE__*/external_React_default().createElement("moz-button", {
       onClick: this.resetBlocks
     }, "Reset Blocks"), " ", /*#__PURE__*/external_React_default().createElement("table", null, /*#__PURE__*/external_React_default().createElement("tbody", null, Object.keys(blocks).map(key => {
       return /*#__PURE__*/external_React_default().createElement(Row, {
@@ -1272,7 +1835,12 @@ class DiscoveryStreamAdminUI extends (external_React_default()).PureComponent {
       className: "min"
     }, "spocs endpoint"), /*#__PURE__*/external_React_default().createElement("td", null, spocsEndpoint)), /*#__PURE__*/external_React_default().createElement(Row, null, /*#__PURE__*/external_React_default().createElement("td", {
       className: "min"
-    }, "Data last fetched"), /*#__PURE__*/external_React_default().createElement("td", null, relativeTime(spocs.lastUpdated))))), /*#__PURE__*/external_React_default().createElement("h4", null, "Spoc data"), /*#__PURE__*/external_React_default().createElement("table", null, /*#__PURE__*/external_React_default().createElement("tbody", null, spocsData.map(spoc => this.renderStoryData(spoc)))), /*#__PURE__*/external_React_default().createElement("h4", null, "Spoc frequency caps"), /*#__PURE__*/external_React_default().createElement("table", null, /*#__PURE__*/external_React_default().createElement("tbody", null, spocs.frequency_caps.map(spoc => this.renderStoryData(spoc)))));
+    }, "Data last fetched"), /*#__PURE__*/external_React_default().createElement("td", null, relativeTime(spocs.lastUpdated))))), /*#__PURE__*/external_React_default().createElement("moz-button", {
+      style: {
+        marginBlockStart: "var(--space-large)"
+      },
+      onClick: this.sendConversionEvent
+    }, "Send conversion event"), /*#__PURE__*/external_React_default().createElement("h4", null, "Spoc data"), /*#__PURE__*/external_React_default().createElement("table", null, /*#__PURE__*/external_React_default().createElement("tbody", null, spocsData.map(spoc => this.renderStoryData(spoc)))), /*#__PURE__*/external_React_default().createElement("h4", null, "Spoc frequency caps"), /*#__PURE__*/external_React_default().createElement("table", null, /*#__PURE__*/external_React_default().createElement("tbody", null, spocs.frequency_caps.map(spoc => this.renderStoryData(spoc)))));
   }
   onStoryToggle(story) {
     const {
@@ -1329,28 +1897,24 @@ class DiscoveryStreamAdminUI extends (external_React_default()).PureComponent {
     const mediumRectangleEnabledPressed = mediumRectangleEnabled && spocPlacements.includes("newtab_rectangle");
     const billboardPressed = billboardsEnabled && spocPlacements.includes("newtab_billboard");
     const leaderboardPressed = leaderboardEnabled && spocPlacements.includes("newtab_leaderboard");
-    return /*#__PURE__*/external_React_default().createElement("div", null, /*#__PURE__*/external_React_default().createElement("button", {
-      className: "button",
+    const widgetsSystemEnabled = this.props.otherPrefs[PREF_WIDGETS_SYSTEM_ENABLED];
+    return /*#__PURE__*/external_React_default().createElement("div", null, /*#__PURE__*/external_React_default().createElement("div", {
+      className: "admin-button-row"
+    }, /*#__PURE__*/external_React_default().createElement("moz-button", {
       onClick: this.refreshCache
-    }, "Refresh Cache"), /*#__PURE__*/external_React_default().createElement("br", null), /*#__PURE__*/external_React_default().createElement("button", {
-      className: "button",
+    }, "Refresh Cache"), /*#__PURE__*/external_React_default().createElement("moz-button", {
       onClick: this.expireCache
-    }, "Expire Cache"), " ", /*#__PURE__*/external_React_default().createElement("button", {
-      className: "button",
+    }, "Expire Cache"), /*#__PURE__*/external_React_default().createElement("moz-button", {
       onClick: this.systemTick
-    }, "Trigger System Tick"), " ", /*#__PURE__*/external_React_default().createElement("button", {
-      className: "button",
+    }, "Trigger System Tick"), /*#__PURE__*/external_React_default().createElement("moz-button", {
       onClick: this.idleDaily
-    }, "Trigger Idle Daily"), /*#__PURE__*/external_React_default().createElement("br", null), /*#__PURE__*/external_React_default().createElement("button", {
-      className: "button",
+    }, "Trigger Idle Daily"), /*#__PURE__*/external_React_default().createElement("moz-button", {
       onClick: this.syncRemoteSettings
-    }, "Sync Remote Settings"), " ", /*#__PURE__*/external_React_default().createElement("button", {
-      className: "button",
+    }, "Sync Remote Settings"), /*#__PURE__*/external_React_default().createElement("moz-button", {
       onClick: this.refreshTopicSelectionCache
-    }, "Refresh Topic selection count"), /*#__PURE__*/external_React_default().createElement("br", null), /*#__PURE__*/external_React_default().createElement("button", {
-      className: "button",
+    }, "Refresh Topic selection count"), /*#__PURE__*/external_React_default().createElement("moz-button", {
       onClick: this.showPlaceholder
-    }, "Show Placeholder Cards"), " ", /*#__PURE__*/external_React_default().createElement("div", {
+    }, "Show Placeholder Cards")), /*#__PURE__*/external_React_default().createElement("div", {
       className: "toggle-wrapper"
     }, /*#__PURE__*/external_React_default().createElement("moz-toggle", {
       id: "sections-toggle",
@@ -1380,10 +1944,47 @@ class DiscoveryStreamAdminUI extends (external_React_default()).PureComponent {
       pressed: mediumRectangleEnabledPressed || null,
       ontoggle: this.toggleIABBanners,
       label: "Enable IAB Medium Rectangle (MREC)"
-    }))), /*#__PURE__*/external_React_default().createElement("button", {
-      className: "button",
-      onClick: this.sendConversionEvent
-    }, "Send conversion event"), /*#__PURE__*/external_React_default().createElement("h3", null, "Layout"), layout.map((row, rowIndex) => /*#__PURE__*/external_React_default().createElement("div", {
+    }))), /*#__PURE__*/external_React_default().createElement("details", {
+      className: "details-section"
+    }, /*#__PURE__*/external_React_default().createElement("summary", null, "Widgets"), /*#__PURE__*/external_React_default().createElement("div", {
+      className: "toggle-wrapper"
+    }, /*#__PURE__*/external_React_default().createElement("moz-toggle", {
+      id: "widgets-system-enabled",
+      pressed: widgetsSystemEnabled || null,
+      ontoggle: this.handleWidgetsSystemToggle,
+      label: "Enable widget system"
+    })), /*#__PURE__*/external_React_default().createElement("div", {
+      className: "admin-button-row"
+    }, /*#__PURE__*/external_React_default().createElement("moz-button", {
+      onClick: this.handleWidgetsToggleAll
+    }, this.areAllWidgetsEnabled() ? "Disable all" : "Enable all"), /*#__PURE__*/external_React_default().createElement("moz-button", {
+      onClick: this.handleResetWidgetInteractions
+    }, "Reset interaction"), /*#__PURE__*/external_React_default().createElement("moz-button", {
+      type: "destructive",
+      onClick: this.handleResetWidgetsToDefaults
+    }, "Reset to defaults")), /*#__PURE__*/external_React_default().createElement("hr", null), WIDGET_REGISTRY.map(widget => /*#__PURE__*/external_React_default().createElement((external_React_default()).Fragment, {
+      key: widget.id
+    }, /*#__PURE__*/external_React_default().createElement("div", {
+      className: "toggle-wrapper"
+    }, /*#__PURE__*/external_React_default().createElement("moz-toggle", {
+      id: widget.systemEnabledPref,
+      pressed: this.props.otherPrefs[widget.systemEnabledPref] || null,
+      disabled: !widgetsSystemEnabled || null,
+      ontoggle: this.handleWidgetToggle,
+      label: widgetLabel(widget.id)
+    })), (WIDGET_EXTRA_FEATURES[widget.id] || []).map(feature => /*#__PURE__*/external_React_default().createElement("div", {
+      className: "toggle-wrapper",
+      key: feature.pref,
+      style: {
+        marginInlineStart: "var(--space-large)"
+      }
+    }, /*#__PURE__*/external_React_default().createElement("moz-toggle", {
+      id: feature.pref,
+      pressed: this.props.otherPrefs[feature.pref] || null,
+      disabled: !widgetsSystemEnabled || null,
+      ontoggle: this.handleWidgetToggle,
+      label: feature.label
+    })))))), /*#__PURE__*/external_React_default().createElement("h3", null, "Layout"), layout.map((row, rowIndex) => /*#__PURE__*/external_React_default().createElement("div", {
       key: `row-${rowIndex}`
     }, row.components.map((component, componentIndex) => /*#__PURE__*/external_React_default().createElement("div", {
       key: `component-${componentIndex}`,
@@ -1401,11 +2002,40 @@ class DiscoveryStreamAdminInner extends (external_React_default()).PureComponent
   constructor(props) {
     super(props);
     this.setState = this.setState.bind(this);
+    this.dismiss = this.dismiss.bind(this);
+    this.handleKeyDown = this.handleKeyDown.bind(this);
+  }
+  componentDidMount() {
+    globalThis.addEventListener("keydown", this.handleKeyDown);
+  }
+  componentWillUnmount() {
+    globalThis.removeEventListener("keydown", this.handleKeyDown);
+  }
+  dismiss() {
+    globalThis.location.hash = "";
+  }
+  handleKeyDown(e) {
+    if (e.key !== "Escape" || e.defaultPrevented) {
+      return;
+    }
+    // Don't hijack Escape while the user is typing in a field.
+    const tag = e.target?.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA") {
+      return;
+    }
+    this.dismiss();
   }
   render() {
     return /*#__PURE__*/external_React_default().createElement("div", {
       className: `discoverystream-admin ${this.props.collapsed ? "collapsed" : "expanded"}`
-    }, /*#__PURE__*/external_React_default().createElement("main", {
+    }, /*#__PURE__*/external_React_default().createElement("moz-button", {
+      className: "discoverystream-admin-close",
+      type: "icon ghost",
+      title: "Close devtools",
+      "aria-label": "Close devtools",
+      iconsrc: "chrome://global/skin/icons/close.svg",
+      onClick: this.dismiss
+    }), /*#__PURE__*/external_React_default().createElement("main", {
       className: "main-panel"
     }, /*#__PURE__*/external_React_default().createElement("h1", null, "Discovery Stream Admin"), /*#__PURE__*/external_React_default().createElement("p", {
       className: "helpLink"
@@ -1430,13 +2060,26 @@ function CollapseToggle(props) {
     devtoolsCollapsed
   } = props;
   const label = `${devtoolsCollapsed ? "Expand" : "Collapse"} devtools`;
-  return /*#__PURE__*/external_React_default().createElement((external_React_default()).Fragment, null, /*#__PURE__*/external_React_default().createElement("button", {
+  // @nova-cleanup(remove-conditional): Remove this novaEnabled read and the
+  // ternary below in the returned JSX; always render the moz-button icon button
+  // and delete the legacy classic-enabled <button> branch.
+  const novaEnabled = props.Prefs?.values?.["nova.enabled"];
+  const className = `discoverystream-admin-toggle ${devtoolsCollapsed ? "expanded" : "collapsed"}`;
+  const onToggleClick = () => {
+    globalThis.location.hash = devtoolsCollapsed ? "#devtools" : "";
+  };
+  return /*#__PURE__*/external_React_default().createElement((external_React_default()).Fragment, null, novaEnabled ? /*#__PURE__*/external_React_default().createElement("moz-button", {
+    type: "icon",
+    className: className,
     title: label,
     "aria-label": label,
-    className: `discoverystream-admin-toggle ${devtoolsCollapsed ? "expanded" : "collapsed"}`,
-    onClick: () => {
-      globalThis.location.hash = devtoolsCollapsed ? "#devtools" : "";
-    }
+    iconsrc: "chrome://global/skin/icons/developer.svg",
+    onClick: onToggleClick
+  }) : /*#__PURE__*/external_React_default().createElement("button", {
+    title: label,
+    "aria-label": label,
+    className: `${className} classic-enabled`,
+    onClick: onToggleClick
   }, /*#__PURE__*/external_React_default().createElement("div", null, /*#__PURE__*/external_React_default().createElement("img", {
     role: "presentation",
     src: "chrome://global/skin/icons/developer.svg"
@@ -6855,6 +7498,7 @@ const INITIAL_STATE = {
   Stocks: {
     tickers: [],
     lastUpdated: null,
+    error: false,
   },
   PictureOfTheDay: {
     initialized: false,
@@ -7984,6 +8628,7 @@ function Stocks(prevState = INITIAL_STATE.Stocks, action) {
         ...prevState,
         tickers: action.data.tickers,
         lastUpdated: action.data.lastUpdated,
+        error: action.data.error ?? false,
       };
     default:
       return prevState;
@@ -13083,484 +13728,6 @@ function CardSections({
 
 
 const BaseContext = /*#__PURE__*/external_React_default().createContext({});
-;// CONCATENATED MODULE: ./common/WidgetsRegistry.mjs
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
-
-/**
- * WIDGET_REGISTRY — single source of truth for all New Tab widgets.
- *
- * WHY THIS EXISTS
- * Previously, every widget was hardcoded in three places: the render loop in
- * Widgets.jsx, the hideAllWidgets handler, and the toggleMaximize handler.
- * Adding or removing a widget required edits in all three spots and was easy
- * to get out of sync. This registry replaces those hardcoded lists so that
- * Widgets.jsx, WidgetsSidebar.jsx, and any future consumers share one
- * authoritative definition.
- *
- * HOW IT WORKS
- * Each entry describes one widget's static metadata:
- *
- *   id                — unique string key used in prefs and the order pref
- *   telemetryName     — the name sent in Glean events (snake_case; may differ from id)
- *   order             — default render position (0-indexed); used when widgets.order is empty
- *   enabledPref       — the user-facing pref that toggles this widget on/off
- *   sizePref          — the pref that stores the user's chosen size (empty string = not set)
- *   defaultSize       — size to use when sizePref is empty and no trainhop suggestion exists
- *   validSizes        — the sizes this widget supports (drives size picker options)
- *   hasSidebar        — when true, the widget renders in the sidebar instead of the
- *                       widget row when its effective size equals "small". Size alone is not
- *                       sufficient — this flag must be set explicitly so that future
- *                       widgets that support "small" but stay in the row are not
- *                       accidentally moved to the sidebar.
- *   systemEnabledPref — system/operator pref that gates this widget independent of the user pref
- *   trainhopEnabledKey — key in trainhopConfig.widgets.* for the enabled override
- *   trainhopSizeKey    — key in trainhopConfig.widgets.* for the size default suggestion
- *                        (only applies when the user has not explicitly set sizePref)
- *   trainhopSidebarKey — key in trainhopConfig.widgets.* for the hasSidebar override;
- *                        null means the sidebar placement is not overridable via trainhop
- *
- * SIZE PRIORITY
- * sizePref defaults to "" (empty string) in PREFS_CONFIG. An empty value
- * means the user has not explicitly chosen a size; resolveWidgetSize() falls
- * through to a trainhop suggestion and then to widget.defaultSize. Once the
- * user resizes a widget via the UI the pref is written with a real value and
- * trainhop can no longer override it. resolveWidgetSize() applies these in order:
- *   1. User-set pref (sizePref is non-empty) — always wins
- *   2. trainhopConfig suggestion (trainhopSizeKey) — acts as default, not override
- *   3. widget.defaultSize — final fallback
- *
- * Note: widgets.weather.size uses getValue: getWeatherWidgetSize in
- * ActivityStream.sys.mjs rather than value: "" because it has a Nova migration
- * path that infers the correct initial size from the user's previous weather
- * configuration. After migration the stored value is non-empty and the sentinel
- * logic above applies normally.
- *
- * ADDING A NEW WIDGET
- * 1. Add a new entry to WIDGET_REGISTRY below with the next `order` integer.
- *    Set telemetryName to the snake_case Glean name for this widget.
- * 2. Export its pref key constants from this file.
- * 3. Register both prefs (enabled + size) in lib/ActivityStream.sys.mjs.
- * 4. Add the component to WIDGET_ROW_COMPONENTS in WidgetsComponentRegistry.jsx.
- * 5. If it has a sidebar variant, set hasSidebar: true and add its component
- *    to WIDGET_SIDEBAR_COMPONENTS in WidgetsComponentRegistry.jsx.
- *
- * ADDING A NEW PER-WIDGET DIMENSION (e.g. "scale")
- * 1. Add scalePref and trainhopScaleKey fields to each registry entry.
- * 2. Export a resolveWidgetScale(widget, prefs) helper following the same
- *    user-pref-wins pattern as resolveWidgetSize().
- * 3. Update components to call the helper instead of reading the pref directly.
- *
- * The widgets.order pref (CSV of widget IDs) persists user-defined order.
- * It is only written when the user explicitly reorders widgets — never on
- * enable/disable. Disabled widgets keep their slot so they reappear in the
- * same position when re-enabled. See resolveWidgetOrder() below.
- */
-
-const PREF_WIDGETS_LISTS_ENABLED = "widgets.lists.enabled";
-const PREF_WIDGETS_TIMER_ENABLED = "widgets.focusTimer.enabled";
-const PREF_WIDGETS_WEATHER_ENABLED = "widgets.weather.enabled";
-const PREF_LISTS_SIZE = "widgets.lists.size";
-const PREF_FOCUS_TIMER_SIZE = "widgets.focusTimer.size";
-const PREF_WEATHER_SIZE = "widgets.weather.size";
-const PREF_WIDGETS_ORDER = "widgets.order";
-const PREF_WIDGETS_SYSTEM_LISTS_ENABLED = "widgets.system.lists.enabled";
-const PREF_WIDGETS_SYSTEM_TIMER_ENABLED =
-  "widgets.system.focusTimer.enabled";
-const PREF_WIDGETS_SYSTEM_WEATHER_ENABLED =
-  "widgets.system.weather.enabled";
-const PREF_WIDGETS_SPORTS_WIDGET_ENABLED =
-  "widgets.sportsWidget.enabled";
-const PREF_SPORTS_WIDGET_SIZE = "widgets.sportsWidget.size";
-const PREF_WIDGETS_SYSTEM_SPORTS_WIDGET_ENABLED =
-  "widgets.system.sportsWidget.enabled";
-const PREF_WIDGETS_CLOCKS_ENABLED = "widgets.clocks.enabled";
-const PREF_CLOCKS_SIZE = "widgets.clocks.size";
-const PREF_WIDGETS_SYSTEM_CLOCKS_ENABLED =
-  "widgets.system.clocks.enabled";
-const PREF_WIDGETS_PRIVACY_ENABLED = "widgets.privacy.enabled";
-const PREF_PRIVACY_SIZE = "widgets.privacy.size";
-const PREF_WIDGETS_SYSTEM_PRIVACY_ENABLED =
-  "widgets.system.privacy.enabled";
-const PREF_WIDGETS_CROSSWORD_ENABLED = "widgets.crossword.enabled";
-const PREF_CROSSWORD_SIZE = "widgets.crossword.size";
-const PREF_WIDGETS_SYSTEM_CROSSWORD_ENABLED =
-  "widgets.system.crossword.enabled";
-const PREF_WIDGETS_STOCKS_ENABLED = "widgets.stocks.enabled";
-const PREF_STOCKS_SIZE = "widgets.stocks.size";
-const PREF_WIDGETS_SYSTEM_STOCKS_ENABLED =
-  "widgets.system.stocks.enabled";
-const PREF_CROSSWORD_ENDPOINT = "widgets.crossword.endpoint";
-const PREF_WIDGETS_PICTURE_OF_THE_DAY_ENABLED =
-  "widgets.pictureOfTheDay.enabled";
-const PREF_PICTURE_OF_THE_DAY_SIZE = "widgets.pictureOfTheDay.size";
-const PREF_WIDGETS_SYSTEM_PICTURE_OF_THE_DAY_ENABLED =
-  "widgets.system.pictureOfTheDay.enabled";
-
-/**
- * @typedef {object} WidgetRegistryEntry
- * @property {string} id - Unique key used in prefs and the order pref.
- * @property {string} telemetryName - Snake_case name sent in Glean events. May differ from id (e.g. "focus_timer" for id "focusTimer").
- * @property {number} order - Default render position (0-indexed).
- * @property {string} enabledPref - User-facing pref that toggles this widget on/off.
- * @property {string} sizePref - Pref that stores the user's chosen size ("" = not yet set).
- * @property {string} defaultSize - Fallback size when sizePref is empty and no trainhop suggestion exists.
- * @property {string[]} validSizes - Sizes this widget supports.
- * @property {boolean} hasSidebar - When true, the widget moves to the sidebar at size "small".
- * @property {string} systemEnabledPref - Operator pref that gates the widget independently of the user pref.
- * @property {string} trainhopEnabledKey - Key in trainhopConfig.widgets.* for the enabled override.
- * @property {string|null} trainhopSizeKey - Key in trainhopConfig.widgets.* for the size default suggestion.
- * @property {string|null} trainhopSidebarKey - Key in trainhopConfig.widgets.* for the hasSidebar override.
- * @property {string} widgetsSettingsVisibleKey - Key in trainhopConfig.widgetsSettings.* that additively reveals this widget's toggle in the settings UIs (does not enable the widget).
- * @property {string} widgetsSettingsEnabledKey - Key in trainhopConfig.widgetsSettings.* that overrides this widget's default enabled value (written to the pref default branch; an explicit user toggle still wins).
- * @property {string|null} [trainhopNamespace] - When set, the widget ships its whole config in one dedicated object at trainhopConfig.<namespace>. Its `enabled` overrides the default value of enabledPref on the default branch (user toggle still wins, like widgetsSettings.*Enabled); `visible` reveals the widget (isWidgetAddable) without writing a pref; `size` is read by resolveWidgetSize. Only Picture of the Day uses this today.
- */
-
-/** @type {WidgetRegistryEntry[]} */
-const WIDGET_REGISTRY = [
-  {
-    id: "pictureOfTheDay",
-    telemetryName: "picture_of_the_day",
-    order: 0,
-    enabledPref: PREF_WIDGETS_PICTURE_OF_THE_DAY_ENABLED,
-    sizePref: PREF_PICTURE_OF_THE_DAY_SIZE,
-    defaultSize: "medium",
-    validSizes: ["medium", "large"],
-    hasSidebar: false,
-    systemEnabledPref: PREF_WIDGETS_SYSTEM_PICTURE_OF_THE_DAY_ENABLED,
-    trainhopEnabledKey: "pictureOfTheDayEnabled",
-    trainhopSizeKey: "pictureOfTheDaySize",
-    trainhopSidebarKey: null,
-    widgetsSettingsVisibleKey: "pictureOfTheDayVisible",
-    widgetsSettingsEnabledKey: "pictureOfTheDayEnabled",
-    trainhopNamespace: "widgetPictureOfTheDay",
-  },
-  {
-    id: "sportsWidget",
-    telemetryName: "sports",
-    order: 1,
-    enabledPref: PREF_WIDGETS_SPORTS_WIDGET_ENABLED,
-    sizePref: PREF_SPORTS_WIDGET_SIZE,
-    defaultSize: "medium",
-    validSizes: ["medium", "large"],
-    hasSidebar: false,
-    systemEnabledPref: PREF_WIDGETS_SYSTEM_SPORTS_WIDGET_ENABLED,
-    trainhopEnabledKey: "sportsWidgetEnabled",
-    trainhopSizeKey: "sportsWidgetSize",
-    trainhopSidebarKey: null,
-    widgetsSettingsVisibleKey: "sportsWidgetVisible",
-    widgetsSettingsEnabledKey: "sportsWidgetEnabled",
-  },
-  {
-    id: "clocks",
-    telemetryName: "clocks",
-    order: 2,
-    enabledPref: PREF_WIDGETS_CLOCKS_ENABLED,
-    sizePref: PREF_CLOCKS_SIZE,
-    defaultSize: "medium",
-    validSizes: ["small", "medium", "large"],
-    hasSidebar: false,
-    systemEnabledPref: PREF_WIDGETS_SYSTEM_CLOCKS_ENABLED,
-    trainhopEnabledKey: "clocksEnabled",
-    trainhopSizeKey: "clocksSize",
-    trainhopSidebarKey: null,
-    widgetsSettingsVisibleKey: "clocksVisible",
-    widgetsSettingsEnabledKey: "clocksEnabled",
-  },
-  {
-    id: "lists",
-    telemetryName: "lists",
-    order: 3,
-    enabledPref: PREF_WIDGETS_LISTS_ENABLED,
-    sizePref: PREF_LISTS_SIZE,
-    defaultSize: "medium",
-    validSizes: ["small", "medium", "large"],
-    hasSidebar: false,
-    systemEnabledPref: PREF_WIDGETS_SYSTEM_LISTS_ENABLED,
-    trainhopEnabledKey: "listsEnabled",
-    trainhopSizeKey: "listsSize",
-    trainhopSidebarKey: null,
-    widgetsSettingsVisibleKey: "listsVisible",
-    widgetsSettingsEnabledKey: "listsEnabled",
-  },
-  {
-    id: "focusTimer",
-    telemetryName: "focus_timer",
-    order: 4,
-    enabledPref: PREF_WIDGETS_TIMER_ENABLED,
-    sizePref: PREF_FOCUS_TIMER_SIZE,
-    defaultSize: "medium",
-    validSizes: ["small", "medium", "large"],
-    hasSidebar: false,
-    systemEnabledPref: PREF_WIDGETS_SYSTEM_TIMER_ENABLED,
-    trainhopEnabledKey: "timerEnabled",
-    trainhopSizeKey: "timerSize",
-    trainhopSidebarKey: null,
-    widgetsSettingsVisibleKey: "focusTimerVisible",
-    widgetsSettingsEnabledKey: "focusTimerEnabled",
-  },
-  {
-    id: "weather",
-    telemetryName: "weather",
-    order: 5,
-    enabledPref: PREF_WIDGETS_WEATHER_ENABLED,
-    sizePref: PREF_WEATHER_SIZE,
-    defaultSize: "small",
-    validSizes: ["small", "medium", "large"],
-    hasSidebar: true,
-    systemEnabledPref: PREF_WIDGETS_SYSTEM_WEATHER_ENABLED,
-    trainhopEnabledKey: "weatherEnabled",
-    trainhopSizeKey: "weatherSize",
-    trainhopSidebarKey: "weatherSidebar",
-    widgetsSettingsVisibleKey: "weatherVisible",
-    widgetsSettingsEnabledKey: "weatherEnabled",
-  },
-  {
-    id: "privacy",
-    telemetryName: "privacy",
-    order: 6,
-    enabledPref: PREF_WIDGETS_PRIVACY_ENABLED,
-    sizePref: PREF_PRIVACY_SIZE,
-    defaultSize: "medium",
-    validSizes: ["medium", "large"],
-    hasSidebar: false,
-    systemEnabledPref: PREF_WIDGETS_SYSTEM_PRIVACY_ENABLED,
-    trainhopEnabledKey: "privacyEnabled",
-    trainhopSizeKey: "privacySize",
-    trainhopSidebarKey: null,
-    widgetsSettingsVisibleKey: "privacyVisible",
-    widgetsSettingsEnabledKey: "privacyEnabled",
-  },
-  {
-    id: "crossword",
-    telemetryName: "crossword",
-    order: 7,
-    enabledPref: PREF_WIDGETS_CROSSWORD_ENABLED,
-    sizePref: PREF_CROSSWORD_SIZE,
-    defaultSize: "medium",
-    validSizes: ["medium", "large"],
-    hasSidebar: false,
-    systemEnabledPref: PREF_WIDGETS_SYSTEM_CROSSWORD_ENABLED,
-    trainhopEnabledKey: "crosswordEnabled",
-    trainhopSizeKey: "crosswordSize",
-    trainhopSidebarKey: null,
-    widgetsSettingsVisibleKey: "crosswordVisible",
-    widgetsSettingsEnabledKey: "crosswordEnabled",
-  },
-  {
-    id: "stocks",
-    telemetryName: "stocks",
-    order: 8,
-    enabledPref: PREF_WIDGETS_STOCKS_ENABLED,
-    sizePref: PREF_STOCKS_SIZE,
-    defaultSize: "medium",
-    validSizes: ["small", "medium", "large"],
-    hasSidebar: false,
-    systemEnabledPref: PREF_WIDGETS_SYSTEM_STOCKS_ENABLED,
-    trainhopEnabledKey: "stocksEnabled",
-    trainhopSizeKey: "stocksSize",
-    trainhopSidebarKey: null,
-    widgetsSettingsVisibleKey: "stocksVisible",
-    widgetsSettingsEnabledKey: "stocksEnabled",
-  },
-];
-
-/**
- * Returns an ordered list of all widget IDs (including disabled ones).
- * Saved order is respected; any widget IDs not in the saved pref are appended
- * in registry-default order. Unknown IDs in the saved pref are dropped.
- *
- * @param {string} orderPref - value of the widgets.order pref (CSV string)
- */
-function getWidgetOrder(orderPref) {
-  const registryIds = WIDGET_REGISTRY.map(w => w.id);
-  if (!orderPref) {
-    return registryIds;
-  }
-  const seen = new Set();
-  const saved = orderPref
-    .split(",")
-    .filter(id => registryIds.includes(id) && !seen.has(id) && seen.add(id));
-  const appended = registryIds.filter(id => !seen.has(id));
-  return [...saved, ...appended];
-}
-
-/**
- * Returns the effective widget render order. The user's saved order wins;
- * a trainhop suggestion applies only when no user order is saved.
- *
- * @param {object} prefs - current pref values from the Redux store
- * @returns {string[]} ordered array of widget IDs
- */
-function resolveWidgetOrder(prefs) {
-  const userOrder = prefs[PREF_WIDGETS_ORDER];
-  if (userOrder) {
-    return getWidgetOrder(userOrder);
-  }
-  const trainhopOrder = prefs.trainhopConfig?.widgets?.order;
-  if (trainhopOrder) {
-    return getWidgetOrder(trainhopOrder);
-  }
-  return getWidgetOrder(null);
-}
-
-/**
- * Returns true if the widget is available to the user, based on the
- * system pref, the trainhopConfig.widgets addable key, or a
- * widgetsSettings.*Visible override (revealing a toggle also makes the widget
- * addable so the toggle is functional). Does not consider whether the user has
- * turned the widget on, or whether the widgets container is enabled.
- *
- * @param {object} widget - a WIDGET_REGISTRY entry
- * @param {object} prefs - current pref values from the Redux store
- * @returns {boolean}
- */
-function isWidgetAddable(widget, prefs) {
-  return Boolean(
-    (widget.trainhopNamespace &&
-      prefs.trainhopConfig?.[widget.trainhopNamespace]?.visible) ||
-    prefs.trainhopConfig?.widgets?.[widget.trainhopEnabledKey] ||
-    prefs.trainhopConfig?.widgetsSettings?.[widget.widgetsSettingsVisibleKey] ||
-    prefs[widget.systemEnabledPref]
-  );
-}
-
-/**
- * Returns true if this widget's toggle should be shown in the settings UIs
- * (about:preferences#home and the Customize menu). A widget is shown when it is
- * addable (system pref, trainhopConfig.widgets, or widgetsSettings.*Visible) or
- * when the legacy `widgetsConfig` Nimbus variable enables it. Showing a toggle
- * does NOT enable the widget — enablement is the widget's own enabled pref,
- * whose default can be overridden via widgetsSettings.*Enabled.
- *
- * @param {object} widget - a WIDGET_REGISTRY entry
- * @param {object} prefs - current pref values from the Redux store
- * @returns {boolean}
- */
-function isWidgetToggleVisible(widget, prefs) {
-  return Boolean(
-    isWidgetAddable(widget, prefs) ||
-    prefs.widgetsConfig?.[widget.trainhopEnabledKey]
-  );
-}
-
-/**
- * Returns true if the Widgets container/section toggle should be shown.
- * Additive across the system pref, the legacy `widgetsConfig` variable, the
- * `trainhopConfig.widgets.enabled` addable key, and the new
- * `trainhopConfig.widgetsSettings.enabled` override.
- *
- * @param {object} prefs - current pref values from the Redux store
- * @returns {boolean}
- */
-function isWidgetsContainerVisible(prefs) {
-  return Boolean(
-    prefs["widgets.system.enabled"] ||
-    prefs.widgetsConfig?.enabled ||
-    prefs.trainhopConfig?.widgets?.enabled ||
-    prefs.trainhopConfig?.widgetsSettings?.enabled
-  );
-}
-
-/**
- * Returns true if the widget is currently enabled: the widgets container is
- * on, the widget is addable, and the user's enabled pref is set.
- *
- * @param {object} widget - a WIDGET_REGISTRY entry
- * @param {object} prefs - current pref values from the Redux store
- * @param {boolean} widgetsEnabled - value of the widgets.enabled container pref
- * @returns {boolean}
- */
-function isWidgetEnabled(widget, prefs, widgetsEnabled) {
-  return Boolean(
-    widgetsEnabled &&
-    isWidgetAddable(widget, prefs) &&
-    prefs[widget.enabledPref]
-  );
-}
-
-/**
- * Returns the effective size for a widget, applying priority:
- *   user-set pref > trainhop suggestion > registry defaultSize
- *
- * A sizePref value of "" means the user has not explicitly chosen a size,
- * so trainhop and defaultSize are consulted. Any non-empty value was written
- * by a user action (size picker, maximize/minimize button) and always wins.
- *
- * @param {object} widget - a WIDGET_REGISTRY entry
- * @param {object} prefs - current pref values from the Redux store
- * @returns {string}
- */
-function resolveWidgetSize(widget, prefs) {
-  const userPref = prefs[widget.sizePref];
-  if (userPref) {
-    return userPref;
-  }
-  const dedicatedSize = widget.trainhopNamespace
-    ? prefs.trainhopConfig?.[widget.trainhopNamespace]?.size
-    : null;
-  const trainhopSize = widget.trainhopSizeKey
-    ? prefs.trainhopConfig?.widgets?.[widget.trainhopSizeKey]
-    : null;
-  return dedicatedSize || trainhopSize || widget.defaultSize;
-}
-
-/**
- * Returns whether the widget should be placed in the sidebar.
- * A trainhop override (trainhopSidebarKey) takes precedence over the
- * static registry hasSidebar flag when present.
- *
- * @param {object} widget - a WIDGET_REGISTRY entry
- * @param {object} prefs - current pref values from the Redux store
- * @returns {boolean}
- */
-function resolveWidgetHasSidebar(widget, prefs) {
-  if (widget.trainhopSidebarKey) {
-    const override = prefs.trainhopConfig?.widgets?.[widget.trainhopSidebarKey];
-    if (override !== undefined) {
-      return override;
-    }
-  }
-  return widget.hasSidebar;
-}
-
-/**
- * Returns the Merino endpoint the Crossword widget iframe should load.
- * A trainhopConfig.widgets.crosswordEndpoint override wins over the raw pref so
- * the endpoint can be swapped (e.g. staging to production) without a release.
- * The raw pref is never read directly by the component.
- *
- * @param {object} prefs - current pref values from the Redux store
- * @returns {string}
- */
-function resolveCrosswordEndpoint(prefs) {
-  return (
-    prefs.trainhopConfig?.widgets?.crosswordEndpoint ||
-    prefs[PREF_CROSSWORD_ENDPOINT]
-  );
-}
-
-/**
- * Returns the list of widgets to disable when "hide all" is triggered.
- * A widget is included if it has no sidebar variant OR if it is currently
- * in the row (not the sidebar). Each entry carries the pref to disable,
- * the telemetry name, and whether it was active (for telemetry filtering).
- *
- * @param {object} prefs - current pref values from the Redux store
- * @param {object} widgetEnabledMap - map of widget id → boolean (currently active in row)
- * @returns {{ enabledPref: string, telemetryName: string, active: boolean }[]}
- */
-function getHideAllTargets(prefs, widgetEnabledMap) {
-  return WIDGET_REGISTRY.filter(
-    w => !resolveWidgetHasSidebar(w, prefs) || widgetEnabledMap[w.id]
-  ).map(w => ({
-    enabledPref: w.enabledPref,
-    telemetryName: w.telemetryName,
-    active: !!widgetEnabledMap[w.id],
-  }));
-}
-
 ;// CONCATENATED MODULE: ./content-src/components/Widgets/WidgetCelebration.jsx
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -16200,6 +16367,15 @@ const FocusTimer = ({
   // Keep the running-state body layout through the celebration so the ring
   // doesn't shift to a third position during the animation.
   const bodyShowsRunningLayout = hasProgressed || isCelebrating || isComplete;
+
+  // Small has no manual Focus/Break toggle; medium and large show it when idle.
+  const showModeGroup = !bodyShowsRunningLayout && (widgetSize === "medium" || widgetSize === "large");
+
+  // Small shows the celebration headline only; other sizes add a subhead.
+  let celebrationSubheadL10nId;
+  if (widgetSize !== "small") {
+    celebrationSubheadL10nId = timerType === "focus" ? "newtab-widget-timer-celebration-message-focus" : "newtab-widget-timer-celebration-message-break";
+  }
   return timerData ? /*#__PURE__*/external_React_default().createElement("article", {
     // @nova-cleanup(remove-conditional): Remove novaEnabled check; always apply col-4 and size class after Nova ships
     className: `focus-timer widget ${novaEnabled ? `col-4 ${widgetSize}-widget` : ""} ${isSmallSize ? "is-small" : ""} ${isMaximized ? "is-maximized" : ""}${isComplete ? " is-complete" : ""}${isCelebrating ? " is-celebrating" : ""}${hasProgressed && !isComplete ? " is-active" : ""}`,
@@ -16217,7 +16393,7 @@ const FocusTimer = ({
     headlineL10nId: timerType === "focus" ? "newtab-widget-timer-celebration-heading-focus" : "newtab-widget-timer-celebration-heading-break",
     illustrationSrc: null,
     onComplete: handleCelebrationComplete,
-    subheadL10nId: timerType === "focus" ? "newtab-widget-timer-celebration-message-focus" : "newtab-widget-timer-celebration-message-break"
+    subheadL10nId: celebrationSubheadL10nId
   }) : null, /*#__PURE__*/external_React_default().createElement("div", {
     className: "newtab-widget-timer-notification-title-wrapper"
   }, /*#__PURE__*/external_React_default().createElement("h2", {
@@ -16346,7 +16522,7 @@ const FocusTimer = ({
     iconsrc: "chrome://newtab/content/data/content/assets/arrow-clockwise-16.svg",
     "data-l10n-id": "newtab-widget-timer-reset",
     onClick: resetTimer
-  }), !bodyShowsRunningLayout && /*#__PURE__*/external_React_default().createElement("div", {
+  }), showModeGroup && /*#__PURE__*/external_React_default().createElement("div", {
     className: "focus-timer-mode-group",
     role: "radiogroup",
     "data-l10n-id": "newtab-widget-timer-mode-group",
@@ -22627,12 +22803,67 @@ function StockTicker({
   }, displayPrice)), changeText)));
 }
 
+;// CONCATENATED MODULE: ./content-src/components/Widgets/Stocks/StocksError.jsx
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+
+
+
+
+
+// The Stocks widget's error box. It only mounts while there's an error, so the
+// intersection observer set up on mount reports WIDGETS_ERROR the first time the
+// message is actually on screen.
+function StocksError({
+  widgetSize,
+  dispatch
+}) {
+  const errorFired = (0,external_React_namespaceObject.useRef)(false);
+  const handleErrorIntersection = (0,external_React_namespaceObject.useCallback)(() => {
+    if (errorFired.current) {
+      return;
+    }
+    errorFired.current = true;
+    // Fire from content so the event ties to this tab's session, matching the
+    // other widgets' error telemetry.
+    dispatch(actionCreators.AlsoToMain({
+      type: actionTypes.WIDGETS_ERROR,
+      data: {
+        widget_name: "stocks",
+        widget_size: widgetSize,
+        error_type: "load_error"
+      }
+    }));
+  }, [dispatch, widgetSize]);
+  const errorRef = useIntersectionObserver(handleErrorIntersection);
+  return (
+    /*#__PURE__*/
+    // role="alert" so a screen reader announces the failure when the box
+    // appears, since it replaces the widget's data without moving focus.
+    external_React_default().createElement("div", {
+      className: "stocks-error",
+      role: "alert",
+      ref: el => {
+        errorRef.current = [el];
+      }
+    }, /*#__PURE__*/external_React_default().createElement("span", {
+      className: "icon icon-info-warning",
+      "aria-hidden": "true"
+    }), /*#__PURE__*/external_React_default().createElement("p", {
+      className: "stocks-error-text",
+      "data-l10n-id": "newtab-stocks-error-not-available"
+    }))
+  );
+}
+
 ;// CONCATENATED MODULE: ./content-src/components/Widgets/Stocks/Stocks.jsx
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 // eslint-disable-next-line no-unused-vars
+
 
 
 
@@ -22655,12 +22886,14 @@ function Stocks_Stocks({
 }) {
   const prefs = (0,external_ReactRedux_namespaceObject.useSelector)(state => state.Prefs.values);
   const {
-    tickers
+    tickers,
+    error
   } = (0,external_ReactRedux_namespaceObject.useSelector)(state => state.Stocks);
 
   // Resolve size through the registry helper, not the pref, so trainhop and the
   // default can apply.
   const widgetSize = resolveWidgetSize(STOCKS_ENTRY, prefs);
+  const showError = error && !tickers.length;
   const impressionFired = (0,external_React_namespaceObject.useRef)(false);
   const handleIntersection = (0,external_React_namespaceObject.useCallback)(() => {
     if (impressionFired.current) {
@@ -22765,7 +22998,10 @@ function Stocks_Stocks({
     }) : null
   })))), /*#__PURE__*/external_React_default().createElement("div", {
     className: "stocks-body"
-  }, widgetSize === "medium" && /*#__PURE__*/external_React_default().createElement("ul", {
+  }, showError && /*#__PURE__*/external_React_default().createElement(StocksError, {
+    widgetSize: widgetSize,
+    dispatch: dispatch
+  }), !showError && widgetSize === "medium" && /*#__PURE__*/external_React_default().createElement("ul", {
     className: `stocks-grid${tickers.length ? "" : " stocks-grid--loading"}`
   }, tickers.length ? tickers.map(t => /*#__PURE__*/external_React_default().createElement(StockTicker, {
     key: t.ticker,
@@ -22778,7 +23014,7 @@ function Stocks_Stocks({
   }).map((_, i) => /*#__PURE__*/external_React_default().createElement(StockTicker, {
     key: i,
     loading: true
-  }))), widgetSize === "large" && /*#__PURE__*/external_React_default().createElement("ul", {
+  }))), !showError && widgetSize === "large" && /*#__PURE__*/external_React_default().createElement("ul", {
     className: `stocks-list${tickers.length ? "" : " stocks-list--loading"}`
   }, tickers.length ? tickers.map(t => /*#__PURE__*/external_React_default().createElement(StockTicker, {
     key: t.ticker,
@@ -23915,11 +24151,11 @@ function Widgets() {
       className: "widgets-title-heading"
     }, /*#__PURE__*/external_React_default().createElement("h1", {
       "data-l10n-id": "newtab-widget-section-title"
-    }), showWidgetsSizeToggle ? /*#__PURE__*/external_React_default().createElement("button", {
+    }), showWidgetsSizeToggle ? /*#__PURE__*/external_React_default().createElement("moz-button", {
       id: "toggle-widgets-size-button",
-      type: "button",
       className: `widgets-expand-button${isMaximized ? " is-maximized" : ""}`,
       "data-l10n-id": isMaximized ? "newtab-widget-section-minimize" : "newtab-widget-section-maximize",
+      iconsrc: "chrome://global/skin/icons/arrow-down.svg",
       onClick: handleToggleMaximizeClick,
       onKeyDown: handleToggleMaximizeKeyDown
     }) : null);

@@ -31,6 +31,7 @@
 @import url("chrome://browser/skin/searchbar.css");
 @import url("chrome://browser/skin/sidebar.css");
 @import url("chrome://browser/skin/aiWindowSidebar.css");
+@import url("chrome://browser/skin/smartwindowGroupTabs.css");
 @import url("chrome://browser/skin/customizableui/customizeMode.css");
 @import url("chrome://browser/skin/UITour.css");
 @import url("chrome://browser/skin/formautofill-notification.css");
@@ -603,10 +604,13 @@ body {
 
   @media -moz-pref("browser.nova.enabled") {
     :root:not([lwtheme]) & {
-      /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
-      border-top: 1px solid var(--chrome-content-separator-color);
       background-color: var(--toolbar-background-color);
       color: var(--toolbar-text-color);
+
+      &:not([collapsed]) {
+        /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
+        border-top: 1px solid var(--chrome-content-separator-color);
+      }
     }
   }
 

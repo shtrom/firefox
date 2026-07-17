@@ -81,6 +81,8 @@ skip-if = [
 
 ["browser_aiwindow_followup_tokens.js"]
 
+["browser_aiwindow_group_tabs_button.js"]
+
 ["browser_aiwindow_grouped_chips.js"]
 
 ["browser_aiwindow_immersive.js"]
