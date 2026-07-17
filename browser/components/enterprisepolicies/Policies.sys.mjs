@@ -663,6 +663,12 @@ export var Policies = {
     },
   },
 
+  CNSA2KeyAgreementEnabled: {
+    onBeforeAddons(manager, param) {
+      lazy.PoliciesUtils.setAndLockPref("security.tls.enable_mlkem1024", param);
+    },
+  },
+
   Containers: {
     // Queried directly by ContextualIdentityService.sys.mjs
   },
