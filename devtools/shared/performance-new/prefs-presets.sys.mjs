@@ -377,12 +377,16 @@ export function getPrefPostfix(pageContext) {
   switch (pageContext) {
     case "devtools":
     case "aboutprofiling":
-    case "aboutlogging":
       // Don't use any postfix on the prefs.
       return "";
     case "devtools-remote":
     case "aboutprofiling-remote":
       return ".remote";
+    case "aboutlogging":
+      // about:logging uses its own set of recording prefs, so that using it
+      // doesn't clobber the settings used for normal profiling (the popup,
+      // about:profiling).
+      return ".aboutlogging";
     default: {
       const { UnhandledCaseError } = ChromeUtils.importESModule(
         "resource://devtools/shared/performance-new/errors.sys.mjs",
@@ -496,7 +500,7 @@ export function setRecordingSettings(pageContext, prefs) {
  * @return {void}
  */
 export function revertRecordingSettings() {
-  for (const prefPostfix of ["", ".remote"]) {
+  for (const prefPostfix of ["", ".remote", ".aboutlogging"]) {
     Services.prefs.clearUserPref(PRESET_PREF + prefPostfix);
     Services.prefs.clearUserPref(ENTRIES_PREF + prefPostfix);
     Services.prefs.clearUserPref(INTERVAL_PREF + prefPostfix);

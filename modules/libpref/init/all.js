@@ -640,9 +640,11 @@ pref("devtools.performance.recording.child.timeout_s", 15);
   // Use a more advanced preset on Nightly and local builds.
   pref("devtools.performance.recording.preset", "firefox-platform");
   pref("devtools.performance.recording.preset.remote", "firefox-platform");
+  pref("devtools.performance.recording.preset.aboutlogging", "firefox-platform");
 #else
   pref("devtools.performance.recording.preset", "web-developer");
   pref("devtools.performance.recording.preset.remote", "web-developer");
+  pref("devtools.performance.recording.preset.aboutlogging", "web-developer");
 #endif
 // The profiler's active tab view has a few issues. Disable it until the issues
 // are ironed out.
@@ -651,23 +653,28 @@ pref("devtools.performance.recording.active-tab-view.enabled", false);
 // profiler's buffer. 10000000 is ~80mb.
 pref("devtools.performance.recording.entries", 10000000);
 pref("devtools.performance.recording.entries.remote", 10000000);
+pref("devtools.performance.recording.entries.aboutlogging", 10000000);
 // Profiler interval in microseconds. 1000µs is 1ms
 pref("devtools.performance.recording.interval", 1000);
 pref("devtools.performance.recording.interval.remote", 1000);
+pref("devtools.performance.recording.interval.aboutlogging", 1000);
 // Profiler duration of entries in the profiler's buffer in seconds.
 // `0` means no time limit for the markers, they roll off naturally from the
 // circular buffer.
 pref("devtools.performance.recording.duration", 0);
 pref("devtools.performance.recording.duration.remote", 0);
+pref("devtools.performance.recording.duration.aboutlogging", 0);
 // Profiler feature set. See tools/profiler/core/platform.cpp for features and
 // explanations. Remote profiling also includes the java feature by default.
 // If the remote debuggee isn't an Android phone, then this feature will
 // be ignored.
 pref("devtools.performance.recording.features", "[\"js\",\"stackwalk\",\"cpu\",\"screenshots\",\"memory\"]");
 pref("devtools.performance.recording.features.remote", "[\"js\",\"stackwalk\",\"cpu\",\"screenshots\",\"memory\",\"java\"]");
+pref("devtools.performance.recording.features.aboutlogging", "[\"js\",\"stackwalk\",\"cpu\",\"screenshots\",\"memory\"]");
 // Threads to be captured by the profiler.
 pref("devtools.performance.recording.threads", "[\"GeckoMain\",\"Compositor\",\"Renderer\"]");
 pref("devtools.performance.recording.threads.remote", "[\"GeckoMain\",\"Compositor\",\"Renderer\"]");
+pref("devtools.performance.recording.threads.aboutlogging", "[\"GeckoMain\",\"Compositor\",\"Renderer\"]");
 // A JSON array of strings, where each string is a file path to an objdir on
 // the host machine. This is used in order to look up symbol information from
 // build artifacts of local builds.
