@@ -260,6 +260,8 @@ namespace detail {
 
 // Given aPath of /foo/bar/baz and aRelativePath of /bar/baz, returns the
 // absolute portion of aPath /foo by removing the common suffix from aPath.
+// Callers are expected to pass paths with normalized (forward-slash)
+// separators; use NormalizedSourcePath for __FILE__ values.
 nsDependentCSubstring GetTreeBase(const nsLiteralCString& aPath,
                                   const nsLiteralCString& aRelativePath) {
   MOZ_ASSERT(StringEndsWith(aPath, aRelativePath));
@@ -269,16 +271,10 @@ nsDependentCSubstring GetTreeBase(const nsLiteralCString& aPath,
 nsDependentCSubstring GetSourceTreeBase() {
   static constexpr auto thisSourceFileRelativePath =
       "/dom/quota/QuotaCommon.cpp"_sp;
+  static constexpr NormalizedSourcePath normalizedFile(__FILE__);
 
-  return GetTreeBase(nsLiteralCString(__FILE__), thisSourceFileRelativePath);
-}
-
-nsDependentCSubstring GetObjdirDistIncludeTreeBase(
-    const nsLiteralCString& aQuotaCommonHPath) {
-  static constexpr auto quotaCommonHSourceFileRelativePath =
-      "/mozilla/dom/quota/QuotaCommon.h"_sp;
-
-  return GetTreeBase(aQuotaCommonHPath, quotaCommonHSourceFileRelativePath);
+  return GetTreeBase(nsLiteralCString(normalizedFile.value),
+                     thisSourceFileRelativePath);
 }
 
 static constexpr auto kSourceFileRelativePathMap =
@@ -356,18 +352,19 @@ nsDependentCSubstring MakeSourceFileRelativePath(
 
   static const auto sourceTreeBase = GetSourceTreeBase();
 
-  if (MOZ_LIKELY(StringBeginsWith(aSourceFilePath, sourceTreeBase))) {
-    return Substring(aSourceFilePath, sourceTreeBase.Length() + 1);
-  }
-
   // The source file could have been exported to the OBJDIR/dist/include
-  // directory, so we need to check that case as well.
+  // directory. Check the objdir base first because when the objdir is under
+  // the source tree, the source tree base is a prefix of the objdir base and
+  // would incorrectly match exported headers.
   static const auto objdirDistIncludeTreeBase = GetObjdirDistIncludeTreeBase();
 
-  if (MOZ_LIKELY(
-          StringBeginsWith(aSourceFilePath, objdirDistIncludeTreeBase))) {
+  if (StringBeginsWith(aSourceFilePath, objdirDistIncludeTreeBase)) {
     return MapDistIncludePathToSource(
         Substring(aSourceFilePath, objdirDistIncludeTreeBase.Length() + 1));
+  }
+
+  if (MOZ_LIKELY(StringBeginsWith(aSourceFilePath, sourceTreeBase))) {
+    return Substring(aSourceFilePath, sourceTreeBase.Length() + 1);
   }
 
   nsCString::const_iterator begin, end;
