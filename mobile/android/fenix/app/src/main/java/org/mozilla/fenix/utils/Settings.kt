@@ -2464,6 +2464,16 @@ class Settings(
     )
 
     /**
+     * Whether the universal edge-to-edge wallpaper treatment is enabled, which extends the homepage
+     * wallpaper edge-to-edge and adapts the toolbar, navigation bar and system bars to it for any
+     * non-default wallpaper. Secret setting under the Homepage category.
+     */
+    var universalEdgeToEdgeWallpaper by booleanPreference(
+        key = appContext.getPreferenceKey(R.string.pref_key_universal_edge_to_edge_wallpaper),
+        default = { FxNimbus.features.universalEdgeToEdgeWallpaper.value().enabled },
+    )
+
+    /**
      * Indicates if the Homepage Search Bar is enabled.
      */
     var enableHomepageSearchBar by booleanPreference(

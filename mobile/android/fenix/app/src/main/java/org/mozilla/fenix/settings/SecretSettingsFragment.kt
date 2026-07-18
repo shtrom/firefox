@@ -194,6 +194,11 @@ class SecretSettingsFragment : PreferenceFragmentCompat(), SystemInsetsPaddedFra
             onPreferenceChangeListener = SharedPreferenceUpdater()
         }
 
+        requirePreference<SwitchPreferenceCompat>(R.string.pref_key_universal_edge_to_edge_wallpaper).apply {
+            isChecked = settings.universalEdgeToEdgeWallpaper
+            onPreferenceChangeListener = SharedPreferenceUpdater()
+        }
+
         requirePreference<SwitchPreferenceCompat>(R.string.pref_key_enable_firefox_labs).apply {
             isChecked = settings.enableFirefoxLabs
             onPreferenceChangeListener = SharedPreferenceUpdater()
