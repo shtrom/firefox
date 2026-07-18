@@ -23,6 +23,7 @@
 #include "mozAutoDocUpdate.h"
 #include "mozilla/AnimationComparator.h"
 #include "mozilla/AnimationTarget.h"
+#include "mozilla/AnimationUtils.h"
 #include "mozilla/AsyncEventDispatcher.h"
 #include "mozilla/CORSMode.h"
 #include "mozilla/Components.h"
@@ -5164,9 +5165,17 @@ already_AddRefed<Animation> Element::Animate(
   }
 
   // Step 5. If options is a KeyframeAnimationOptions object, assign the value
-  // of the id member of options to animation's id attribute.
+  // of the id member of options to animation's id attribute, and (Web
+  // Animations Level 2) apply its rangeStart and rangeEnd members to the
+  // animation's animation range.
   if (aOptions.IsKeyframeAnimationOptions()) {
-    animation->SetId(aOptions.GetAsKeyframeAnimationOptions().mId);
+    const KeyframeAnimationOptions& options =
+        aOptions.GetAsKeyframeAnimationOptions();
+    animation->SetId(options.mId);
+    if (!AnimationUtils::ApplyKeyframeAnimationRange(options, animation,
+                                                     aError)) {
+      return nullptr;
+    }
   }
 
   // Step 6. Play animation.
