@@ -24,7 +24,7 @@ class WindowsUIOverlayImage final {
  public:
   enum class DisplayMode { Static, Animated };
 
-  NS_INLINE_DECL_REFCOUNTING(WindowsUIOverlayImage)
+  NS_INLINE_DECL_THREADSAFE_REFCOUNTING(WindowsUIOverlayImage)
 
   /**
    * Creates an overlay image for a given element.
