@@ -1450,6 +1450,16 @@ pub extern "C" fn Servo_Property_IsAnimatable(prop: &structs::CSSPropertyId) -> 
 }
 
 #[no_mangle]
+pub extern "C" fn Servo_Property_ResolveAlias(
+    property: NonCustomCSSPropertyId,
+) -> NonCustomCSSPropertyId {
+    match NonCustomPropertyId::from_noncustomcsspropertyid(property) {
+        Some(id) => id.unaliased().to_noncustomcsspropertyid(),
+        None => property,
+    }
+}
+
+#[no_mangle]
 pub extern "C" fn Servo_Property_IsDiscreteAnimatable(property: NonCustomCSSPropertyId) -> bool {
     match LonghandId::from_noncustomcsspropertyid(property) {
         Some(longhand) => longhand.is_discrete_animatable(),
