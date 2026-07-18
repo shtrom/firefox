@@ -740,15 +740,20 @@ _ContextualIdentityService.prototype = {
     let userContextId = tab.getAttribute("usercontextid");
     let identity = this.getPublicIdentityFromId(userContextId);
 
-    let prefix = "identity-color-";
-    /* Remove the existing container color highlight if it exists */
-    for (let className of tab.classList) {
-      if (className.startsWith(prefix)) {
+    /* Remove any existing container color/icon classes. */
+    for (let className of [...tab.classList]) {
+      if (
+        className.startsWith("identity-color-") ||
+        className.startsWith("identity-icon-")
+      ) {
         tab.classList.remove(className);
       }
     }
-    if (identity && identity.color) {
-      tab.classList.add(prefix + identity.color);
+    if (identity?.color) {
+      tab.classList.add("identity-color-" + identity.color);
+    }
+    if (identity?.icon) {
+      tab.classList.add("identity-icon-" + identity.icon);
     }
   },
 

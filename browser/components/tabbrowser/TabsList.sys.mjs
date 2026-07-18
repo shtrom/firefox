@@ -543,11 +543,14 @@ export class TabsPanel extends TabsListBase {
 
     if (tab.userContextId) {
       tab.classList.forEach(property => {
-        if (property.startsWith("identity-color")) {
+        if (
+          property.startsWith("identity-color") ||
+          property.startsWith("identity-icon")
+        ) {
           button.classList.add(property);
-          button.classList.add("all-tabs-container-indicator");
         }
       });
+      button.classList.add("all-tabs-container-indicator");
     }
 
     if (tab.group) {
