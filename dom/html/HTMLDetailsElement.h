@@ -72,7 +72,7 @@ class HTMLDetailsElement final : public nsGenericHTMLElement {
   void OnChildUnslotted(ShadowRoot&, nsIContent&) override;
 
   // https://html.spec.whatwg.org/#ensure-details-exclusivity-by-closing-the-given-element-if-needed
-  void CloseElementIfNeeded();
+  void CloseElementIfNeeded(nsAtom* aName);
 
   // https://html.spec.whatwg.org/#ensure-details-exclusivity-by-closing-other-elements-if-needed
   void CloseOtherElementsIfNeeded();
