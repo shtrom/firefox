@@ -1764,7 +1764,9 @@ void nsTableFrame::Reflow(nsPresContext* aPresContext,
   // do this on the fly during ReflowChildren(), because in vertical-rl mode
   // with unconstrained width, we weren't placing them in their final positions
   // until the fixupKidPositions loop just above.
-  UnionChildOverflow(aDesiredSize.mOverflowAreas);
+  for (nsIFrame* kid : groups.mRowGroups) {
+    ConsiderChildOverflow(aDesiredSize.mOverflowAreas, kid);
+  }
 
   // If there are any relatively-positioned table parts, we need to reflow their
   // absolutely-positioned descendants now that their dimensions are final.
@@ -1834,24 +1836,11 @@ void nsTableFrame::FixupPositionedTableParts(nsPresContext* aPresContext,
   // Update our own overflow areas. (OverflowChangedTracker doesn't update the
   // subtree root itself.)
   aDesiredSize.SetOverflowAreasToDesiredBounds();
-  UnionChildOverflow(aDesiredSize.mOverflowAreas);
+  nsLayoutUtils::UnionChildOverflow(this, aDesiredSize.mOverflowAreas);
 }
 
-void nsTableFrame::UnionChildOverflow(OverflowAreas& aOverflowAreas,
-                                      bool aAsIfScrolled) {
-  if (aAsIfScrolled || !DoesClipChildrenInBothAxes()) {
-    // Only rowgroups get considered, not colgroups.
-    for (nsIFrame* f : mFrames) {
-      if (f->IsTableColGroupFrame()) {
-        continue;
-      }
-      ConsiderChildOverflow(aOverflowAreas, f);
-    }
-    // NOTE(emilio): We don't need to call nsLayoutUtils::UnionChildOverflow
-    // here. We don't care about non-main frame lists, and we'd need to
-    // explicitly skip overflow lists and so on (which for some reason don't get
-    // skipped by default).
-  }
+bool nsTableFrame::ComputeCustomOverflow(OverflowAreas& aOverflowAreas) {
+  return nsContainerFrame::ComputeCustomOverflow(aOverflowAreas);
 }
 
 void nsTableFrame::ReflowTable(ReflowOutput& aDesiredSize,

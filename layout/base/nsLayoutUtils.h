@@ -2624,6 +2624,7 @@ class nsLayoutUtils {
   /**
    * Unions the overflow areas of the children of aFrame with aOverflowAreas.
    * aSkipChildLists specifies any child lists that should be skipped.
+   * FrameChildListID::Popup is always skipped.
    */
   static void UnionChildOverflow(
       nsIFrame* aFrame, mozilla::OverflowAreas& aOverflowAreas,
