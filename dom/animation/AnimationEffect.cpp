@@ -364,6 +364,12 @@ void AnimationEffect::GetComputedTimingAsDict(
   }
   // TODO: for "auto", 'fill' should depend on whether we are a keyframe effect.
   aRetVal.mFill = computedTiming.mFill;
+  // For a top-level (non-grouped) effect the start time is always 0. See
+  // https://drafts.csswg.org/web-animations-2/#animation-effect-start-time
+  // Once we implement group effects (sequence effects, specifically) this code
+  // will change. See https://bugzilla.mozilla.org/show_bug.cgi?id=1778417
+  AnimationUtils::DoubleToCSSNumberish(0.0, hasProgressTimeline, progressGlobal,
+                                       aRetVal.mStartTime.Construct());
   AnimationUtils::DoubleToCSSNumberish(
       computedTiming.mActiveDuration.ToMilliseconds(), hasProgressTimeline,
       progressGlobal, aRetVal.mActiveDuration.Construct());
