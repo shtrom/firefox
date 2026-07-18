@@ -265,4 +265,8 @@
     <color name="mozac_ic_private_mode_circle_fill" tools:ignore="UnusedResources">@color/fx_mobile_icon_private</color>
     <color name="mozac_ic_private_mode_circle_stroke_fill" tools:ignore="UnusedResources">@color/fx_mobile_private_surface</color>
     <color name="mozac_ic_private_mode_mask_fill" tools:ignore="UnusedResources">@color/fx_mobile_private_on_surface</color>
+
+    <!-- Private mode circle fill colors for mozac_ic_private_mode_circle_fill_72 -->
+    <color name="mozac_ic_private_mode_circle_fill_72_background_color" tools:ignore="UnusedResources">@color/fx_mobile_icon_private</color>
+    <color name="mozac_ic_private_mode_circle_fill_72_icon_color" tools:ignore="UnusedResources">@color/private_mode_mask_gradient</color>
 </resources>
