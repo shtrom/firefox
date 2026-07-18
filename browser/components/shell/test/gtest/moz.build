@@ -9,6 +9,7 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "windows":
         "LimitedAccessFeatureTests.cpp",
         "ShellLinkTests.cpp",
         "WindowsDefaultBrowserTests.cpp",
+        "WindowsUIElementTests.cpp",
     ]
 
 FINAL_LIBRARY = "xul-gtest"
