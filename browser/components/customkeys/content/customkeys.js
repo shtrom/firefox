@@ -213,7 +213,8 @@ async function onAction(event) {
   if (event.target.className == "reset") {
     Glean.browserCustomkeys.actions.reset.add();
     const data = await RPMSendQuery("CustomKeys:GetDefaultKey", keyId);
-    if (await maybeHandleConflict(data)) {
+    // If the shortcut is unassigned by default, there can't be a conflict.
+    if (!data.shortcut || (await maybeHandleConflict(data))) {
       const newData = await RPMSendQuery("CustomKeys:ResetKey", keyId);
       updateKey(row, newData);
       if (newData.shortcut) {
