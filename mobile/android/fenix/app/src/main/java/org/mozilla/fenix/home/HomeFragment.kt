@@ -51,6 +51,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.state.TabSessionState
 import mozilla.components.browser.state.store.BrowserStore
+import mozilla.components.compose.base.modifier.thenConditional
 import mozilla.components.compose.base.snackbar.Snackbar
 import mozilla.components.compose.base.snackbar.displaySnackbar
 import mozilla.components.compose.browser.toolbar.store.BrowserToolbarState
@@ -67,8 +68,10 @@ import mozilla.components.lib.state.ext.flow
 import mozilla.components.lib.state.ext.observeAsComposableState
 import mozilla.components.service.nimbus.messaging.Message
 import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
+import mozilla.components.support.ktx.android.view.createWindowInsetsController
 import mozilla.components.support.ktx.android.view.toScope
 import mozilla.components.support.utils.BuildManufacturerChecker
+import mozilla.components.support.utils.ColorUtils.isDark
 import mozilla.components.support.utils.DateTimeProvider
 import mozilla.components.support.utils.DefaultDateTimeProvider
 import mozilla.components.support.utils.ext.navigateToDefaultBrowserAppsSettings
@@ -419,6 +422,7 @@ class HomeFragment : Fragment() {
 
         homeNavigationBar = HomeNavigationBar(
             toolbarStore = toolbarStore,
+            browsingModeManager = activity.browsingModeManager,
             settings = activity.components.settings,
             hideWhenKeyboardShown = true,
         )
@@ -596,61 +600,111 @@ class HomeFragment : Fragment() {
                     settings.shouldShowMicrosurveyPrompt = microsurveyVisible
                 }
 
-                Box(modifier = Modifier.fillMaxSize().systemBarsPadding().displayCutoutPadding()) {
-                    if (!appState.value.mode.isPrivate) {
-                        WallpaperBackground(
-                            wallpaper = appState.value.wallpaperState.currentWallpaper,
-                            loadBitmap = components.useCases.wallpaperUseCases.loadBitmap::invoke,
-                            onLoadFailed = {
-                                requireComponents.settings.currentWallpaperTextColor = 0L
-                                showComposeSnackbar(
-                                    SnackbarState(
-                                        message = resources.getString(
-                                            R.string.wallpaper_select_error_snackbar_message,
-                                        ),
-                                    ),
-                                )
-                            },
-                        )
-                    }
+                val isPrivateMode = appState.value.mode.isPrivate
+                val currentWallpaper = appState.value.wallpaperState.currentWallpaper
+                val universalEdgeToEdge = settings.enableUniversalEdgeToEdgeWallpapers
 
-                    Scaffold(
+                LaunchedEffect(currentWallpaper.name, isPrivateMode, universalEdgeToEdge) {
+                    if (universalEdgeToEdge) {
+                        applyWallpaperSystemBarsTheme(activity, settings, isPrivateMode)
+                    }
+                }
+
+                CompositionLocalProvider(LocalWallpaperState provides appState.value.wallpaperState) {
+                    Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .imePadding(),
-                        topBar = {
-                            if (isToolbarAtTop) {
-                                toolbarView.Content()
-                            }
-                        },
-                        bottomBar = {
-                            if (isToolbarAtTop) {
-                                homeNavigationBar?.Content()
-                            } else {
-                                toolbarView.Content()
-                            }
-                        },
-                        containerColor = Color.Transparent,
-                    ) { innerPadding ->
-                        HomeContent(
-                            appState = appState.value,
-                            privacyNoticeBannerState = privacyNoticeBannerState.value,
-                            settings = settings,
-                            innerPadding = innerPadding,
-                            microsurveyVisible = microsurveyVisible,
-                            microsurveyMessage = appState.value.messaging.messageToShow[
-                                FenixMessageSurfaceId.MICROSURVEY,
-                            ],
-                            onMicrosurveyDismiss = {
-                                activity.isMicrosurveyPromptDismissed.value = true
+                            .thenConditional(
+                                // Without the universal treatment the wallpaper is inset by the system
+                                // bars; with it, the wallpaper stays edge-to-edge and only the Scaffold
+                                // content is inset (below).
+                                Modifier
+                                    .systemBarsPadding()
+                                    .displayCutoutPadding(),
+                            ) { !universalEdgeToEdge },
+                    ) {
+                        if (!isPrivateMode) {
+                            WallpaperBackground(
+                                wallpaper = currentWallpaper,
+                                loadBitmap = components.useCases.wallpaperUseCases.loadBitmap::invoke,
+                                onLoadFailed = {
+                                    requireComponents.settings.currentWallpaperTextColor = 0L
+                                    showComposeSnackbar(
+                                        SnackbarState(
+                                            message = resources.getString(
+                                                R.string.wallpaper_select_error_snackbar_message,
+                                            ),
+                                        ),
+                                    )
+                                },
+                            )
+                        }
+
+                        Scaffold(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .thenConditional(
+                                    Modifier
+                                        .systemBarsPadding()
+                                        .displayCutoutPadding(),
+                                ) { universalEdgeToEdge }
+                                .imePadding(),
+                            topBar = {
+                                if (isToolbarAtTop) {
+                                    toolbarView.Content()
+                                }
                             },
-                        )
+                            bottomBar = {
+                                if (isToolbarAtTop) {
+                                    homeNavigationBar?.Content()
+                                } else {
+                                    toolbarView.Content()
+                                }
+                            },
+                            containerColor = Color.Transparent,
+                        ) { innerPadding ->
+                            HomeContent(
+                                appState = appState.value,
+                                privacyNoticeBannerState = privacyNoticeBannerState.value,
+                                settings = settings,
+                                innerPadding = innerPadding,
+                                microsurveyVisible = microsurveyVisible,
+                                microsurveyMessage = appState.value.messaging.messageToShow[
+                                    FenixMessageSurfaceId.MICROSURVEY,
+                                ],
+                                onMicrosurveyDismiss = {
+                                    activity.isMicrosurveyPromptDismissed.value = true
+                                },
+                            )
+                        }
                     }
                 }
 
                 LaunchedEffect(Unit) {
                     onFirstHomepageFrameDrawn()
                 }
+            }
+        }
+    }
+
+    /**
+     * Matches the status bar and navigation bar icon appearance to the current wallpaper's text
+     * color so they stay legible over the edge-to-edge wallpaper. Falls back to the theme's system
+     * bar appearance when there is no wallpaper text color or while in private browsing mode.
+     */
+    private fun applyWallpaperSystemBarsTheme(
+        activity: HomeActivity,
+        settings: Settings,
+        isPrivateMode: Boolean,
+    ) {
+        val wallpaperTextColor = settings.currentWallpaperTextColor
+        if (isPrivateMode || wallpaperTextColor == 0L) {
+            activity.themeManager.applyStatusBarTheme(activity)
+        } else {
+            val isLightAppearance = isDark(wallpaperTextColor.toInt())
+            activity.window.createWindowInsetsController().apply {
+                isAppearanceLightStatusBars = isLightAppearance
+                isAppearanceLightNavigationBars = isLightAppearance
             }
         }
     }
@@ -670,20 +724,18 @@ class HomeFragment : Fragment() {
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            CompositionLocalProvider(LocalWallpaperState provides appState.wallpaperState) {
-                Homepage(
-                    state = HomepageState.build(
-                        appState = appState,
-                        privacyNoticeBannerState = privacyNoticeBannerState,
-                        settings = settings,
-                        browsingModeManager = browsingModeManager,
-                    ),
-                    interactor = sessionControlInteractor,
-                    onTopSitesItemBound = {
-                        StartupTimeline.onTopSitesItemBound(activity = (requireActivity() as HomeActivity))
-                    },
-                )
-            }
+            Homepage(
+                state = HomepageState.build(
+                    appState = appState,
+                    privacyNoticeBannerState = privacyNoticeBannerState,
+                    settings = settings,
+                    browsingModeManager = browsingModeManager,
+                ),
+                interactor = sessionControlInteractor,
+                onTopSitesItemBound = {
+                    StartupTimeline.onTopSitesItemBound(activity = (requireActivity() as HomeActivity))
+                },
+            )
 
             if (microsurveyVisible) {
                 MicrosurveyPrompt(

@@ -765,7 +765,7 @@ features:
         type: Boolean
         default: false
 
-  universal-edge-to-edge-wallpaper:
+  universal-edge-to-edge-wallpapers:
     description: >
       Extends non-default homepage wallpapers edge-to-edge and adapts the toolbar, navigation bar
       and system bars to them.
