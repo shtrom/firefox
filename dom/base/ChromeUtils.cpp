@@ -5,6 +5,7 @@
 #include "ChromeUtils.h"
 
 #include "JSOracleParent.h"
+#include "NonSharedGlobalSyncModuleLoaderScope.h"
 #include "ThirdPartyUtil.h"
 #include "VsyncSource.h"
 #include "WrapperFactory.h"
