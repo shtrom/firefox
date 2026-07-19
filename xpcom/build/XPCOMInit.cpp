@@ -81,6 +81,9 @@
 #include "mozilla/ServoStyleConsts.h"
 #include "mozilla/ipc/GeckoChildProcessHost.h"
 #include "ogg/ogg.h"
+#ifdef XP_MACOSX
+#  include "mozilla/MacAutoreleasePool.h"
+#endif
 
 using base::AtExitManager;
 using mozilla::ipc::IOThreadParent;
@@ -196,6 +199,13 @@ EXPORT_XPCOM_API(nsresult)
 NS_InitXPCOM(nsIServiceManager** aResult, nsIFile* aBinDirectory,
              nsIDirectoryServiceProvider* aAppFileLocationProvider,
              bool aInitJSContext) {
+#ifdef XP_MACOSX
+  // Some of the work done here calls into macOS APIs that need an Obj-C
+  // autorelease pool in place. For example, nsComponentManagerImpl::Init
+  // will call a lot of macOS APIs as part of initializing nsLookAndFeel.
+  mozilla::MacAutoreleasePool pool;
+#endif
+
   static bool sInitialized = false;
   if (sInitialized) {
     XPCOM_INIT_FATAL("!sInitialized", NS_ERROR_FAILURE)
