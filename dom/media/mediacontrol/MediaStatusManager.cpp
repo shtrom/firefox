@@ -7,7 +7,6 @@
 #include "MediaControlService.h"
 #include "mozilla/StaticPrefs_media.h"
 #include "mozilla/dom/CanonicalBrowsingContext.h"
-#include "mozilla/dom/Document.h"
 #include "mozilla/dom/Element.h"
 #include "mozilla/dom/MediaControlUtils.h"
 #include "mozilla/dom/WindowGlobalParent.h"

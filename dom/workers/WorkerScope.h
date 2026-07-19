@@ -6,6 +6,7 @@
 #define mozilla_dom_workerscope_h_
 
 #include "js/TypeDecls.h"
+#include "js/loader/ModuleLoaderBase.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/Attributes.h"
 #include "mozilla/DOMEventTargetHelper.h"
@@ -33,10 +34,6 @@
 
 class nsAtom;
 class nsISerialEventTarget;
-
-namespace JS::loader {
-class ModuleLoaderBase;
-}  // namespace JS::loader
 
 namespace mozilla {
 class ErrorResult;
@@ -166,7 +163,11 @@ class WorkerGlobalScopeBase : public DOMEventTargetHelper,
 
   Console* GetConsoleIfExists() const { return mConsole; }
 
-  void InitModuleLoader(JS::loader::ModuleLoaderBase* aModuleLoader);
+  void InitModuleLoader(JS::loader::ModuleLoaderBase* aModuleLoader) {
+    if (!mModuleLoader) {
+      mModuleLoader = aModuleLoader;
+    }
+  }
 
   // The nullptr here is not used, but is required to make the override method
   // have the same signature as other GetModuleLoader methods on globals.

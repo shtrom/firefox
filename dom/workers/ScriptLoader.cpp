@@ -38,7 +38,6 @@
 #include "mozilla/dom/workerinternals/CacheLoadHandler.h"
 #include "mozilla/dom/workerinternals/NetworkLoadHandler.h"
 #include "mozilla/dom/workerinternals/ScriptResponseHeaderProcessor.h"
-#include "mozilla/dom/workerinternals/WorkerModuleLoader.h"
 #include "mozilla/ipc/BackgroundUtils.h"
 #include "nsComponentManagerUtils.h"
 #include "nsContentPolicyUtils.h"

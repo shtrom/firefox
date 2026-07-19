@@ -20,7 +20,6 @@
 #include "mozilla/StaticPrefs_extensions.h"
 #include "mozilla/StaticPrefs_fission.h"
 #include "mozilla/StaticPrefs_security.h"
-#include "mozilla/StoragePrincipalHelper.h"
 #include "mozilla/dom/BrowserParent.h"
 #include "mozilla/dom/BrowsingContextGroup.h"
 #include "mozilla/dom/CanonicalBrowsingContext.h"

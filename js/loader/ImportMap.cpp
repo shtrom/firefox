@@ -7,13 +7,12 @@
 #include "mozilla/StaticPrefs_dom.h"
 
 #include "LoadedScript.h"
-#include "ModuleLoaderBase.h"
+#include "ModuleLoaderBase.h"  // ScriptLoaderInterface
 #include "nsContentUtils.h"
 #include "nsIScriptElement.h"
 #include "nsIScriptError.h"
 #include "nsJSUtils.h"  // nsAutoJSString
 #include "nsNetUtil.h"  // NS_NewURI
-#include "ScriptLoaderInterface.h"
 #include "ScriptLoadRequest.h"
 
 #include "js/Array.h"                 // IsArrayObject

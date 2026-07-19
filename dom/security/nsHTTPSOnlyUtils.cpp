@@ -10,7 +10,6 @@
 #include "mozilla/NullPrincipal.h"
 #include "mozilla/OriginAttributes.h"
 #include "mozilla/StaticPrefs_dom.h"
-#include "mozilla/StoragePrincipalHelper.h"
 #include "mozilla/TimeStamp.h"
 #include "mozilla/extensions/WebExtensionPolicy.h"
 #include "mozilla/glean/DomSecurityMetrics.h"

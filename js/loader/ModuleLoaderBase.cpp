@@ -19,7 +19,6 @@
 #include "nsContentUtils.h"
 #include "nsICacheInfoChannel.h"  // nsICacheInfoChannel
 #include "nsNetUtil.h"            // NS_NewURI
-#include "ScriptLoaderInterface.h"
 #include "ScriptLoadRequest.h"
 #include "xpcpublic.h"
 
@@ -1531,8 +1530,6 @@ ModuleLoaderBase::~ModuleLoaderBase() {
 
   LOG(("ModuleLoaderBase::~ModuleLoaderBase %p", this));
 }
-
-nsIURI* ModuleLoaderBase::GetBaseURI() const { return mLoader->GetBaseURI(); }
 
 void ModuleLoaderBase::CancelFetchingModules() {
   for (const auto& entry : mFetchingModules) {

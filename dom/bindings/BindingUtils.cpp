@@ -41,7 +41,6 @@
 #include "mozilla/dom/CustomElementRegistry.h"
 #include "mozilla/dom/DOMException.h"
 #include "mozilla/dom/DocGroup.h"
-#include "mozilla/dom/Document.h"
 #include "mozilla/dom/ElementBinding.h"
 #include "mozilla/dom/Exceptions.h"
 #include "mozilla/dom/HTMLElementBinding.h"

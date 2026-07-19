@@ -12,7 +12,6 @@ EXPORTS.js.loader += [
     "ResolveResult.h",
     "ScriptFetchOptions.h",
     "ScriptKind.h",
-    "ScriptLoaderInterface.h",
     "ScriptLoadRequest.h",
     "ScriptLoadRequestList.h",
 ]

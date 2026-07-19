@@ -18,12 +18,9 @@
 #include "nsWeakReference.h"
 #include "nsWrapperCache.h"
 
+#include "js/loader/ModuleLoaderBase.h"
 #include "js/Object.h"  // JS::GetPrivate, JS::SetPrivate
 #include "js/RootingAPI.h"
-
-namespace JS::loader {
-class ModuleLoaderBase;
-}  // namespace JS::loader
 
 class SandboxPrivate final : public nsIGlobalObject,
                              public nsIScriptObjectPrincipal,
@@ -123,9 +120,12 @@ class SandboxPrivate final : public nsIGlobalObject,
   bool IsXPCSandbox() override { return true; }
 
  private:
-  explicit SandboxPrivate(nsIPrincipal* principal);
+  explicit SandboxPrivate(nsIPrincipal* principal)
+      : mPrincipal(principal),
+        mCookieJarSettings(
+            mozilla::net::CookieJarSettings::Create(mPrincipal)) {}
 
-  virtual ~SandboxPrivate();
+  virtual ~SandboxPrivate() = default;
 
   nsCOMPtr<nsIPrincipal> mPrincipal;
 

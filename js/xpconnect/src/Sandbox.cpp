@@ -2349,12 +2349,6 @@ nsresult xpc::SetSandboxMetadata(JSContext* cx, HandleObject sandbox,
   return NS_OK;
 }
 
-SandboxPrivate::SandboxPrivate(nsIPrincipal* principal)
-    : mPrincipal(principal),
-      mCookieJarSettings(mozilla::net::CookieJarSettings::Create(mPrincipal)) {}
-
-SandboxPrivate::~SandboxPrivate() = default;
-
 ModuleLoaderBase* SandboxPrivate::GetModuleLoader(JSContext* aCx) {
   if (mModuleLoader) {
     return mModuleLoader;

@@ -4,7 +4,6 @@
 
 #include "DynamicFpiNavigationHeuristic.h"
 
-#include "StorageAccessAPIHelper.h"
 #include "mozIThirdPartyUtil.h"
 #include "mozilla/dom/CanonicalBrowsingContext.h"
 #include "mozilla/dom/WindowGlobalParent.h"

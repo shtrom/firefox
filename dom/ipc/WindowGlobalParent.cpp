@@ -21,7 +21,6 @@
 #include "mozilla/ServoStyleSet.h"
 #include "mozilla/StaticPrefs_dom.h"
 #include "mozilla/StaticPrefs_network.h"
-#include "mozilla/StoragePrincipalHelper.h"
 #include "mozilla/dom/BrowserBridgeParent.h"
 #include "mozilla/dom/BrowserHost.h"
 #include "mozilla/dom/BrowserParent.h"

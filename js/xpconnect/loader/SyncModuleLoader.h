@@ -7,7 +7,6 @@
 
 #include "js/loader/LoadContextBase.h"
 #include "js/loader/ModuleLoaderBase.h"
-#include "js/loader/ScriptLoaderInterface.h"
 
 class mozJSModuleLoader;
 

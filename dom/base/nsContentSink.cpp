@@ -30,7 +30,6 @@
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/HTMLDNSPrefetch.h"
 #include "mozilla/dom/LinkStyle.h"
-#include "mozilla/dom/ModuleLoader.h"
 #include "mozilla/dom/MutationObservers.h"
 #include "mozilla/dom/ReferrerInfo.h"
 #include "mozilla/dom/SRILogHelper.h"

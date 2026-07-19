@@ -20,7 +20,6 @@
 #include "js/SourceText.h"
 #include "js/Value.h"
 #include "js/Wrapper.h"
-#include "js/loader/ModuleLoaderBase.h"
 #include "jsapi.h"
 #include "jsfriendapi.h"
 #include "mozilla/AlreadyAddRefed.h"
@@ -288,13 +287,6 @@ WorkerGlobalScopeBase::WorkerGlobalScopeBase(
 }
 
 WorkerGlobalScopeBase::~WorkerGlobalScopeBase() = default;
-
-void WorkerGlobalScopeBase::InitModuleLoader(
-    JS::loader::ModuleLoaderBase* aModuleLoader) {
-  if (!mModuleLoader) {
-    mModuleLoader = aModuleLoader;
-  }
-}
 
 JSObject* WorkerGlobalScopeBase::GetGlobalJSObject() {
   AssertIsOnWorkerThread();
