@@ -1200,17 +1200,21 @@ void MediaTrackGraphImpl::PrepareUpdatesToMainThreadState(bool aFinalUpdate) {
   }
 }
 
-GraphTime MediaTrackGraphImpl::RoundUpToEndOfAudioBlock(GraphTime aTime) {
+MediaTime MediaTrackGraphImpl::RoundUpToEndOfAudioBlock(MediaTime aTime) {
   if (aTime % WEBAUDIO_BLOCK_SIZE == 0) {
     return aTime;
   }
   return RoundUpToNextAudioBlock(aTime);
 }
 
-GraphTime MediaTrackGraphImpl::RoundUpToNextAudioBlock(GraphTime aTime) {
+MediaTime MediaTrackGraphImpl::RoundUpToNextAudioBlock(MediaTime aTime) {
+  // >> on negative signed integers is implementation-defined behavior, where
+  // implementations perform an arithmetic right shift, which rounds toward
+  // negative infinity.
   uint64_t block = aTime >> WEBAUDIO_BLOCK_SIZE_BITS;
   uint64_t nextBlock = block + 1;
   GraphTime nextTime = nextBlock << WEBAUDIO_BLOCK_SIZE_BITS;
+  MOZ_ASSERT(nextTime > aTime);
   return nextTime;
 }
 
