@@ -285,20 +285,6 @@ launch-on-login-autostart-infobar-keep-button = Keep on
 launch-on-login-autostart-infobar-turn-off-button = Turn off
   .accesskey = T
 
-## Launch on login spotlight
-##
-## Shown as a spotlight message when the user closes the browser, offering to set
-## { -brand-short-name } to launch when the computer starts up.
-
-launch-on-login-spotlight-title = Open { -brand-short-name } next time your computer starts up?
-launch-on-login-spotlight-startup-checkbox = Launch { -brand-short-name } at startup
-launch-on-login-spotlight-pin-taskbar-checkbox = Pin to taskbar
-# This checkbox label intentionally matches “startup-restore-windows-and-tabs”
-# in the Settings (preferences.ftl). Localizers can reuse the existing
-# translation suggested by translation memory.
-launch-on-login-spotlight-restore-checkbox = Open previous windows and tabs
-launch-on-login-spotlight-primary-button = Save and close { -brand-short-name }
-
 ## Tail Fox Set Default Spotlight
 
 # This title is displayed together with the picture of a running fox with a long tail.
@@ -498,9 +484,20 @@ nova-early-access-share-feedback-link = Share feedback
 nova-early-access-infobar-primary-button = Got it
   .accesskey = G
 
-## App Exit Spotlight dialog
+## Firefox launch options spotlight
+##
+## Shown as a spotlight prompt on browser close or launch, offering
+## launch-on-login, taskbar pinning, and session restore.
 
-app-exit-spotlight-title = Start { -brand-short-name } every time you sign in to Windows?
-app-exit-spotlight-checkbox-launch-on-login = Open { -brand-short-name } at startup
-app-exit-spotlight-checkbox-pin-to-taskbar = Pin to your taskbar
-app-exit-spotlight-primary-button = Save and close { -brand-short-name }
+launch-options-spotlight-title-launch-on-login = Start { -brand-short-name } every time you sign in to Windows?
+launch-options-spotlight-title-session-restore = Reopen your session when { -brand-short-name } restarts?
+launch-options-spotlight-checkbox-launch-on-login = Open { -brand-short-name } at startup
+launch-options-spotlight-checkbox-pin-to-taskbar = Pin to your taskbar
+# Shown on the browser-close prompt only
+launch-options-spotlight-checkbox-restore-current = Reopen current windows and tabs
+# Shown on the browser-launch prompt only
+launch-options-spotlight-checkbox-restore-previous = Reopen previous windows and tabs
+# Primary button on the browser-close prompt
+launch-options-spotlight-primary-button-close = Save and close { -brand-short-name }
+# Primary button on the browser-launch prompt
+launch-options-spotlight-primary-button-launch = Save and continue
