@@ -140,6 +140,7 @@
 #include "mozilla/dom/Location.h"
 #include "mozilla/dom/MediaDevices.h"
 #include "mozilla/dom/MediaKeys.h"
+#include "mozilla/dom/ModuleLoader.h"
 #include "mozilla/dom/Navigation.h"
 #include "mozilla/dom/NavigatorBinding.h"
 #include "mozilla/dom/Nullable.h"
