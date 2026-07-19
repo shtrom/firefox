@@ -15,6 +15,7 @@
 #include "nsStringFwd.h"
 #include "nsTArray.h"
 #include "ResolveResult.h"
+#include "ScriptLoaderInterface.h"
 
 #include "js/SourceText.h"
 
@@ -26,7 +27,6 @@ namespace JS::loader {
 class ModuleLoaderBase;
 class ScriptFetchInfo;
 class ScriptLoadRequest;
-class ScriptLoaderInterface;
 
 /**
  * A helper class to report warning to ScriptLoaderInterface.
