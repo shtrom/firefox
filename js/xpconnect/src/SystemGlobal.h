@@ -16,10 +16,13 @@
 #include "nsWeakReference.h"
 
 #include "js/HeapAPI.h"
-#include "js/loader/ModuleLoaderBase.h"
 
 class nsICookieJarSettings;
 class XPCWrappedNative;
+
+namespace JS::loader {
+class ModuleLoaderBase;
+}  // namespace JS::loader
 
 // The shared system global (used by ChromeUtils.importESModule), and also
 // the xpcshell's global.
@@ -75,10 +78,7 @@ class SystemGlobal final : public nsIGlobalObject,
 
   void SetGlobalObject(JSObject* global);
 
-  void InitModuleLoader(ModuleLoaderBase* aModuleLoader) {
-    MOZ_ASSERT(!mModuleLoader);
-    mModuleLoader = aModuleLoader;
-  }
+  void InitModuleLoader(ModuleLoaderBase* aModuleLoader);
 
   nsISerialEventTarget* SerialEventTarget() const final {
     return mozilla::GetMainThreadSerialEventTarget();
@@ -96,7 +96,7 @@ class SystemGlobal final : public nsIGlobalObject,
   }
 
  private:
-  virtual ~SystemGlobal() = default;
+  virtual ~SystemGlobal();
 
   const nsID mAgentClusterId;
   nsCOMPtr<nsIPrincipal> mPrincipal;

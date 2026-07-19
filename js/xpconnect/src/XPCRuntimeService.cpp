@@ -15,6 +15,8 @@
 #include "xpc_make_class.h"
 #include "xpcprivate.h"
 
+#include "js/loader/ModuleLoaderBase.h"
+
 using namespace mozilla::dom;
 
 NS_IMPL_ISUPPORTS(SystemGlobal, nsIXPCScriptable, nsIGlobalObject, nsIClassInfo,
@@ -25,6 +27,14 @@ SystemGlobal::SystemGlobal()
       mPrincipal(nsContentUtils::GetSystemPrincipal()),
       mCookieJarSettings(mozilla::net::CookieJarSettings::Create(mPrincipal)),
       mWrapper(nullptr) {}
+
+SystemGlobal::~SystemGlobal() = default;
+
+void SystemGlobal::InitModuleLoader(
+    JS::loader::ModuleLoaderBase* aModuleLoader) {
+  MOZ_ASSERT(!mModuleLoader);
+  mModuleLoader = aModuleLoader;
+}
 // XXX(nika): It appears we don't have support for mayresolve hooks in
 // nsIXPCScriptable, and I don't really want to add it because I'd rather just
 // kill nsIXPCScriptable alltogether, so we don't use it here.
