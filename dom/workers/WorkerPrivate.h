@@ -9,7 +9,6 @@
 
 #include "FontVisibilityProvider.h"
 #include "MainThreadUtils.h"
-#include "ScriptLoader.h"
 #include "js/ContextOptions.h"
 #include "mozilla/Atomics.h"
 #include "mozilla/Attributes.h"
