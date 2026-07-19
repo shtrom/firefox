@@ -12,6 +12,7 @@
 #include "mozilla/a11y/TableCellAccessible.h"
 #include "mozilla/dom/BrowserParent.h"
 #include "mozilla/dom/CanonicalBrowsingContext.h"
+#include "mozilla/dom/Document.h"
 #include "skia/include/docs/SkPDFDocument.h"
 
 namespace mozilla::a11y {

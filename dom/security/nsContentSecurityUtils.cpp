@@ -17,6 +17,7 @@
 #include "nsIContentSecurityPolicy.h"
 #include "nsIHttpChannel.h"
 #include "nsIMultiPartChannel.h"
+#include "nsIScriptElement.h"
 #include "nsITransfer.h"
 #include "nsIURI.h"
 #include "nsNetUtil.h"

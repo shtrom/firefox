@@ -206,6 +206,7 @@
 #include "mozilla/dom/ReferrerPolicyBinding.h"
 #include "mozilla/dom/ReportingUtils.h"
 #include "mozilla/dom/Sanitizer.h"
+#include "mozilla/dom/ScriptLoader.h"
 #include "mozilla/dom/ScriptSettings.h"
 #include "mozilla/dom/Selection.h"
 #include "mozilla/dom/ShadowRoot.h"

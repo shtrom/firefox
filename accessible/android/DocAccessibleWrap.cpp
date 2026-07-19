@@ -11,6 +11,7 @@
 #include "SessionAccessibility.h"
 #include "TraversalRule.h"
 #include "mozilla/PresShell.h"
+#include "mozilla/dom/Document.h"
 #include "nsAccUtils.h"
 #include "nsAccessibilityService.h"
 #include "nsIDocShell.h"
