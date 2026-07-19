@@ -44,14 +44,8 @@ const DUMMY_PAGE_URI = Services.io.newURI(
 var { BaseContext, CanOfAPIs, SchemaAPIManager, SpreadArgs, redefineGetter } =
   ExtensionCommon;
 
-var {
-  DefaultMap,
-  DefaultWeakMap,
-  ExtensionError,
-  promiseDocumentLoaded,
-  promiseEvent,
-  promiseObserved,
-} = ExtensionUtils;
+var { DefaultMap, DefaultWeakMap, ExtensionError, promiseObserved } =
+  ExtensionUtils;
 
 const ERROR_NO_RECEIVERS =
   "Could not establish connection. Receiving end does not exist.";
@@ -1531,20 +1525,53 @@ class HiddenXULWindow {
     }
 
     windowlessBrowser.browsingContext.useGlobalHistory = false;
+
+    const loadPromise = this.#promiseWindowlessBrowserReady(windowlessBrowser);
     webNav.loadURI(DUMMY_PAGE_URI, {
       triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
     });
+    await loadPromise;
 
-    await promiseObserved(
-      "chrome-document-global-created",
-      win => win.document == webNav.document
-    );
-    await promiseDocumentLoaded(windowlessBrowser.document);
     if (this.unloaded) {
       windowlessBrowser.close();
       return;
     }
     this._windowlessBrowser = windowlessBrowser;
+  }
+
+  #promiseWindowlessBrowserReady(windowlessBrowser) {
+    const webProgress = windowlessBrowser
+      .QueryInterface(Ci.nsIInterfaceRequestor)
+      .getInterface(Ci.nsIWebProgress);
+    return new Promise(resolve => {
+      const { shutdownSignal } = ExtensionParent;
+      const listener = {
+        QueryInterface: ChromeUtils.generateQI([
+          "nsIWebProgressListener",
+          "nsISupportsWeakReference",
+        ]),
+        onStateChange(webProgress, request, stateFlags) {
+          if (stateFlags & Ci.nsIWebProgressListener.STATE_STOP) {
+            unregisterAndResolve();
+          }
+        },
+      };
+
+      function unregisterAndResolve() {
+        webProgress.removeProgressListener(listener);
+        shutdownSignal.removeEventListener("abort", unregisterAndResolve);
+        resolve();
+      }
+
+      webProgress.addProgressListener(
+        listener,
+        Ci.nsIWebProgress.NOTIFY_STATE_DOCUMENT
+      );
+      shutdownSignal.addEventListener("abort", unregisterAndResolve);
+      if (shutdownSignal.aborted) {
+        unregisterAndResolve();
+      }
+    });
   }
 
   /**
@@ -1564,6 +1591,10 @@ class HiddenXULWindow {
 
     await this.waitInitialized;
 
+    if (Services.startup.shuttingDown) {
+      throw new Error("Cannot create hidden browser past shutdown");
+    }
+
     const chromeDoc = this.chromeDocument;
 
     const browser = chromeDoc.createXULElement("browser");
@@ -1581,7 +1612,7 @@ class HiddenXULWindow {
     let awaitFrameLoader;
 
     if (browser.hasAttribute("remote")) {
-      awaitFrameLoader = promiseEvent(browser, "XULFrameLoaderCreated");
+      awaitFrameLoader = this.#promiseXULFrameLoaderCreated(browser);
     }
 
     // Prevent initial about:blank load before navigating to extension URI
@@ -1594,11 +1625,34 @@ class HiddenXULWindow {
     browser.getBoundingClientRect();
     await awaitFrameLoader;
 
+    if (Services.startup.shuttingDown) {
+      browser.remove();
+      // We already checked shuttingDown above; if we reach this point, then
+      // shutdown somehow started while awaiting XULFrameLoaderCreated.
+      throw new Error("Aborted hidden browser creation at shutdown");
+    }
+
     // FIXME(emilio): This unconditionally active frame seems rather
     // unfortunate, but matches previous behavior.
     browser.docShellIsActive = true;
 
     return browser;
+  }
+
+  #promiseXULFrameLoaderCreated(browser) {
+    return new Promise(resolve => {
+      const { shutdownSignal } = ExtensionParent;
+      function handleDone() {
+        browser.removeEventListener("XULFrameLoaderCreated", handleDone);
+        shutdownSignal.removeEventListener("abort", handleDone);
+        resolve();
+      }
+      browser.addEventListener("XULFrameLoaderCreated", handleDone);
+      shutdownSignal.addEventListener("abort", handleDone);
+      if (shutdownSignal.aborted) {
+        handleDone();
+      }
+    });
   }
 }
 
@@ -2536,6 +2590,18 @@ ExtensionParent._resetStartupPromises = () => {
   ]).then(() => {});
 };
 ExtensionParent._resetStartupPromises();
+
+ChromeUtils.defineLazyGetter(ExtensionParent, "shutdownSignal", () => {
+  const abortControllerForShutdownSignal = new AbortController();
+  if (Services.startup.shuttingDown) {
+    abortControllerForShutdownSignal.abort();
+  } else {
+    promiseObserved("quit-application").then(() => {
+      abortControllerForShutdownSignal.abort();
+    });
+  }
+  return abortControllerForShutdownSignal.signal;
+});
 
 ChromeUtils.defineLazyGetter(ExtensionParent, "PlatformInfo", () => {
   return Object.freeze({
