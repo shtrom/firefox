@@ -75,6 +75,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "moz-src:///browser/components/aiwindow/ui/modules/ToolActionLog.sys.mjs",
   UI_UPDATE_TYPES:
     "moz-src:///browser/components/aiwindow/ui/modules/ToolUI.sys.mjs",
+  UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
 });
 
 ChromeUtils.defineLazyGetter(lazy, "log", function () {
@@ -1698,6 +1699,7 @@ export class AIWindow extends MozLitElement {
           type: mention.type,
           url: mention.id,
           label: mention.label,
+          iconSrc: lazy.UrlbarUtils.getIconForUrl(mention.id),
         });
         contextUrls.add(mention.id);
       }
