@@ -10,8 +10,6 @@
 
 #include "content_decryption_module_export.h"
 
-#include "mozilla/DefineEnum.h"
-
 // The version number must be rolled when the exported functions are updated!
 // If the CDM and the adapter use different versions of these functions, the
 // adapter will fail to load or crash!
@@ -69,15 +67,15 @@ CDM_API const char* GetCdmVersion();
 
 namespace cdm {
 
-MOZ_DEFINE_ENUM_WITH_BASE_AND_TOSTRING(Status, uint32_t, (
-  kSuccess,
+enum Status : uint32_t {
+  kSuccess = 0,
   kNeedMoreData,  // Decoder needs more data to produce a decoded frame/sample.
   kNoKey,         // The required decryption key is not available.
   kInitializationError,    // Initialization error.
   kDecryptError,           // Decryption failed.
   kDecodeError,            // Error decoding audio or video.
   kDeferredInitialization  // Decoder is not ready for initialization.
-));
+};
 CHECK_TYPE(Status, 4, 4);
 
 // Exceptions used by the CDM to reject promises.
@@ -666,6 +664,8 @@ class CDM_CLASS_API FileIOClient {
 // function. To add a new metric, please add it to the end of this enum list
 // without changing any existing enum values.
 // Metric names that use generic naming like `Time1` are key system specific.
+// The Widevine documentation and UKM privacy approval related to these metrics
+// can be found here http://shortn/_pX9Q6zEcX8.
 // Note: For forward compatibility, Host implementations must gracefully handle
 // unexpected (new) enum values, e.g. no-op.
 enum MetricName : uint32_t {
@@ -679,6 +679,7 @@ enum MetricName : uint32_t {
   kKeySystemDataTime2,
   kKeySystemDataTime3,
   kKeySystemDataBool1,
+  kSessionInitDataType,
 };
 CHECK_TYPE(MetricName, 4, 4);
 
