@@ -2271,6 +2271,15 @@ void MacroAssemblerLOONG64::minMaxDouble(FloatRegister srcDest,
                                          bool isMax) {
   if (srcDest == second) return;
 
+  if (!handleNaN) {
+    if (isMax) {
+      as_fmax_d(srcDest, srcDest, second);
+    } else {
+      as_fmin_d(srcDest, srcDest, second);
+    }
+    return;
+  }
+
   Label nan, done;
 
   // First or second is NaN, result is NaN.
@@ -2292,6 +2301,15 @@ void MacroAssemblerLOONG64::minMaxFloat32(FloatRegister srcDest,
                                           FloatRegister second, bool handleNaN,
                                           bool isMax) {
   if (srcDest == second) return;
+
+  if (!handleNaN) {
+    if (isMax) {
+      as_fmax_s(srcDest, srcDest, second);
+    } else {
+      as_fmin_s(srcDest, srcDest, second);
+    }
+    return;
+  }
 
   Label nan, done;
 

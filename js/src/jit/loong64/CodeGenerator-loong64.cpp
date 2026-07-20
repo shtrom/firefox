@@ -15,6 +15,7 @@
 #include "jit/MIR-wasm.h"
 #include "jit/MIR.h"
 #include "jit/MIRGraph.h"
+#include "jit/RangeAnalysis.h"
 #include "vm/JSContext.h"
 #include "vm/Realm.h"
 #include "vm/Shape.h"
@@ -621,10 +622,13 @@ void CodeGenerator::visitMinMaxD(LMinMaxD* ins) {
 
   MOZ_ASSERT(first == ToFloatRegister(ins->output()));
 
+  const bool handleNaN =
+      !ins->mir()->range() || ins->mir()->range()->canBeNaN();
+
   if (ins->mir()->isMax()) {
-    masm.maxDouble(second, first, true);
+    masm.maxDouble(second, first, handleNaN);
   } else {
-    masm.minDouble(second, first, true);
+    masm.minDouble(second, first, handleNaN);
   }
 }
 
@@ -634,10 +638,13 @@ void CodeGenerator::visitMinMaxF(LMinMaxF* ins) {
 
   MOZ_ASSERT(first == ToFloatRegister(ins->output()));
 
+  const bool handleNaN =
+      !ins->mir()->range() || ins->mir()->range()->canBeNaN();
+
   if (ins->mir()->isMax()) {
-    masm.maxFloat32(second, first, true);
+    masm.maxFloat32(second, first, handleNaN);
   } else {
-    masm.minFloat32(second, first, true);
+    masm.minFloat32(second, first, handleNaN);
   }
 }
 
