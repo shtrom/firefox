@@ -8,6 +8,42 @@ import { MozLitElement } from "chrome://global/content/lit-utils.mjs";
 import "chrome://global/content/elements/moz-input-text.mjs";
 // eslint-disable-next-line import/no-unassigned-import
 import "chrome://global/content/elements/moz-input-url.mjs";
+// eslint-disable-next-line import/no-unassigned-import
+import "chrome://global/content/elements/moz-select.mjs";
+// eslint-disable-next-line import/no-unassigned-import
+import "chrome://global/content/elements/moz-button.mjs";
+
+const SCHEDULE_TYPES = Object.freeze({
+  DAILY: "daily",
+  WEEKLY: "weekly",
+});
+
+const SCHEDULE_ICON = "chrome://browser/skin/calendar-24.svg";
+const MAX_WATCH_URLS = 5;
+
+// Check times offered by the create card in 30-minute increments
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
+  const hour24 = Math.floor(i / 2);
+  const minute = i % 2 ? 30 : 0;
+  const period = hour24 < 12 ? "AM" : "PM";
+  const hour12 = hour24 % 12 || 12;
+  const mm = String(minute).padStart(2, "0");
+  return {
+    value: `${String(hour24).padStart(2, "0")}:${mm}`,
+    label: `${hour12}:${mm} ${period}`,
+  };
+});
+
+// Indexed by the weekday values used by the scheduler (0 = Sunday)
+const WEEKDAYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
 
 /**
  * A single monitor card:
@@ -25,17 +61,17 @@ import "chrome://global/content/elements/moz-input-url.mjs";
  * Dispatches:
  *  - agent-monitor-item:toggle       detail: { expanded }
  *  - agent-monitor-item:edit-toggle  detail: { editing }
- *  - agent-monitor-item:submit       detail: { mode, id, productName, value, condition, watchUrls }
+ *  - agent-monitor-item:submit       detail: { mode, id, monitorName, condition, watchUrls, schedule }
  *  - agent-monitor-item:cancel
  *  - agent-monitor-item:delete       detail: { id }
- *  - agent-monitor-item:pause        detail: { id }
+ *  - agent-monitor-item:pause        detail: { id, paused }
  *  - agent-monitor-item:check-now    detail: { id }
  *  - agent-monitor-item:open         detail: { id, url }
  *
  * @property {Agent} agent - Monitor data:
  *  {
  *    id: string,
- *    productName: string,
+ *    monitorName: string,
  *    url: string,
  *    faviconText?: string,      // 1-2 char fallback favicon glyph
  *    faviconColor?: string,     // fallback favicon background
@@ -43,14 +79,14 @@ import "chrome://global/content/elements/moz-input-url.mjs";
  *    valueMeta?: string,        // e.g. "checked 2:14 PM · was $299"
  *    condition?: string,        // e.g. "the price drops below $270"
  *    conditionPresets?: string[],
- *    status?: { label: string, kind?: "watching"|"triggered"|"paused" },
- *    cadence?: string,          // e.g. "Auto · on-device"
+ *    status?: { label: string, kind?: "watching"|"paused" },
+ *    cadence?: string,
  *    history?: Array<{ when: string, oldValue?: string, newValue?: string,
  *                      note?: string, flag?: string, low?: boolean }>,
  *  }
- * @property {"display"|"create"} mode - Which card layout to render.
- * @property {boolean} expanded - Whether the display card is expanded.
- * @property {boolean} editing - Whether the editable condition field is shown.
+ * @property {"display"|"create"} mode - Which card layout to render
+ * @property {boolean} expanded - Whether the display card is expanded
+ * @property {boolean} editing - Whether the editable condition field is shown
  */
 export class AgentMonitorItem extends MozLitElement {
   static properties = {
@@ -58,6 +94,13 @@ export class AgentMonitorItem extends MozLitElement {
     mode: { type: String, reflect: true },
     expanded: { type: Boolean, reflect: true },
     editing: { type: Boolean, reflect: true },
+    checkFrequency: { type: String, state: true },
+    scheduleTime: { type: String, state: true },
+    scheduleWeekday: { type: String, state: true },
+    alertDescription: { type: String, state: true },
+    pageUrls: { type: Array, state: true },
+    pendingUrl: { type: String, state: true },
+    pendingUrlError: { type: String, state: true },
   };
 
   constructor() {
@@ -66,29 +109,42 @@ export class AgentMonitorItem extends MozLitElement {
     this.mode = "display";
     this.expanded = false;
     this.editing = false;
-    this.#draftCondition = null;
-    this.#draftUrls = null;
-    this.#isAddingUrl = false;
-    this.#pendingUrl = "";
+    this.checkFrequency = SCHEDULE_TYPES.DAILY;
+    this.scheduleTime = "09:00";
+    this.scheduleWeekday = "1";
+    this.alertDescription = "";
+    this.pageUrls = [];
+    this.pendingUrl = "";
+    this.pendingUrlError = "";
     this.#draftName = null;
-    this.#draftValue = null;
   }
 
-  #draftCondition;
-  #draftUrls;
-  #isAddingUrl;
-  #pendingUrl;
   #draftName;
-  #draftValue;
 
   willUpdate(changed) {
     if (changed.has("agent")) {
-      this.#draftCondition = null;
       this.#draftName = null;
-      this.#draftValue = null;
-      this.#draftUrls = null;
-      this.#pendingUrl = "";
-      this.#isAddingUrl = false;
+
+      const { watchUrls, url, condition } = this.agent ?? {};
+      let seededUrls = [];
+      if (watchUrls?.length) {
+        seededUrls = watchUrls;
+      } else if (url) {
+        seededUrls = [url];
+      }
+      this.pageUrls = seededUrls.filter(u => u?.trim().length);
+      this.alertDescription = condition ?? "";
+      this.pendingUrl = "";
+      this.pendingUrlError = "";
+
+      // Seed the schedule fields from an existing monitor so edit mode reflects
+      // its current scheduled
+      const schedule = this.agent?.schedule;
+      if (schedule) {
+        this.checkFrequency = schedule.frequency ?? this.checkFrequency;
+        this.scheduleTime = schedule.time ?? this.scheduleTime;
+        this.scheduleWeekday = schedule.weekday ?? this.scheduleWeekday;
+      }
     }
   }
 
@@ -98,24 +154,18 @@ export class AgentMonitorItem extends MozLitElement {
     );
   }
 
-  get #condition() {
-    return this.#draftCondition ?? this.agent?.condition ?? "";
+  get #monitorName() {
+    return this.#draftName ?? this.agent?.monitorName ?? "";
   }
 
-  get #productName() {
-    return this.#draftName ?? this.agent?.productName ?? "";
-  }
-
-  get #value() {
-    return this.#draftValue ?? this.agent?.value ?? "";
+  get #isFormValid() {
+    const hasDescription = this.alertDescription?.trim().length > 0;
+    const hasValidUrl = !!this.pageUrls.length;
+    return hasDescription && hasValidUrl && !this.pendingUrlError;
   }
 
   #onNameInput(event) {
     this.#draftName = event.target.value;
-  }
-
-  #onValueInput(event) {
-    this.#draftValue = event.target.value;
   }
 
   #onCardClick(e) {
@@ -140,40 +190,61 @@ export class AgentMonitorItem extends MozLitElement {
   }
 
   #onConditionInput(event) {
-    this.#draftCondition = event.target.value;
+    this.alertDescription = event.target.value;
   }
 
   #onPresetClick(preset) {
-    this.#draftCondition = preset;
-    this.requestUpdate();
+    this.alertDescription = preset;
   }
 
-  #onSubmit() {
-    this.#dispatch("agent-monitor-item:submit", {
-      mode: this.mode,
-      id: this.agent?.id,
-      productName: this.#productName,
-      value: this.#value,
-      condition: this.#condition,
-      watchUrls: this.#collectAddUrls(),
-    });
-  }
-
-  #currentUrls() {
-    if (this.#draftUrls) {
-      return this.#draftUrls;
+  // TODO: Bug 2054529 - share this URL validation with about:tools' create form
+  #validateUrl(url) {
+    const value = url.trim();
+    if (!value) {
+      return { valid: true, error: "" };
     }
-    const { watchUrls, url } = this.agent ?? {};
-    return watchUrls ?? (url ? [url] : []);
+    try {
+      const { protocol } = new URL(value);
+      if (protocol !== "http:" && protocol !== "https:") {
+        return { valid: false, error: "Only HTTP and HTTPS URLs are allowed" };
+      }
+      return { valid: true, error: "" };
+    } catch {
+      return { valid: false, error: "Please enter a valid URL" };
+    }
   }
 
-  #collectAddUrls() {
-    const urls = [...this.#currentUrls()];
-    const pending = (this.#pendingUrl ?? "").trim();
-    if (pending && !urls.includes(pending)) {
-      urls.push(pending);
+  #validatePendingUrl() {
+    this.pendingUrlError = this.pendingUrl.trim()
+      ? this.#validateUrl(this.pendingUrl).error
+      : "";
+  }
+
+  #addUrl() {
+    const url = this.pendingUrl.trim();
+    if (!url) {
+      return;
     }
-    return urls;
+    const { valid, error } = this.#validateUrl(url);
+    if (!valid) {
+      this.pendingUrlError = error;
+      return;
+    }
+    if (this.pageUrls.includes(url)) {
+      this.pendingUrlError = "This URL has already been added";
+      return;
+    }
+    if (this.pageUrls.length >= MAX_WATCH_URLS) {
+      this.pendingUrlError = `Maximum of ${MAX_WATCH_URLS} URLs allowed`;
+      return;
+    }
+    this.pageUrls = [...this.pageUrls, url];
+    this.pendingUrl = "";
+    this.pendingUrlError = "";
+  }
+
+  #removeUrl(url) {
+    this.pageUrls = this.pageUrls.filter(u => u !== url);
   }
 
   #displayUrl(url) {
@@ -184,19 +255,9 @@ export class AgentMonitorItem extends MozLitElement {
     }
   }
 
-  #onRemoveUrl(url) {
-    this.#draftUrls = this.#currentUrls().filter(u => u !== url);
-    this.requestUpdate();
-  }
-
-  #onAddUrlClick() {
-    this.#isAddingUrl = true;
-    this.#pendingUrl = "";
-    this.requestUpdate();
-  }
-
   #onPendingUrlInput(event) {
-    this.#pendingUrl = event.target.value;
+    this.pendingUrl = event.target.value;
+    this.#validatePendingUrl();
   }
 
   #onPendingUrlKeydown(event) {
@@ -204,20 +265,25 @@ export class AgentMonitorItem extends MozLitElement {
       return;
     }
     event.preventDefault();
-    const url = event.target.value.trim();
-    if (url && !this.#currentUrls().includes(url)) {
-      this.#draftUrls = [...this.#currentUrls(), url];
-    }
-    this.#pendingUrl = "";
-    this.#isAddingUrl = false;
-    this.requestUpdate();
+    this.#addUrl();
   }
 
-  #renderFavicon() {
-    const { url, faviconText = "" } = this.agent ?? {};
-    return faviconText.length
-      ? html`<span class="favicon-sq favicon-fallback">${faviconText}</span>`
-      : html`<img class="favicon-sq" src="page-icon:${url}" alt="" />`;
+  #onSubmit() {
+    if (!this.#isFormValid) {
+      return;
+    }
+    this.#dispatch("agent-monitor-item:submit", {
+      mode: this.mode,
+      id: this.agent?.id,
+      monitorName: this.#monitorName,
+      condition: this.alertDescription.trim(),
+      watchUrls: [...this.pageUrls],
+      schedule: {
+        frequency: this.checkFrequency,
+        time: this.scheduleTime,
+        weekday: this.scheduleWeekday,
+      },
+    });
   }
 
   #renderStatusChip() {
@@ -226,7 +292,7 @@ export class AgentMonitorItem extends MozLitElement {
       return nothing;
     }
     return html`<span
-      class="status-chip"
+      class="status-chip ${statusInfo.kind}"
       data-kind=${statusInfo.kind ?? "watching"}
     >
       ${statusInfo.kind === "watching"
@@ -238,14 +304,15 @@ export class AgentMonitorItem extends MozLitElement {
 
   #renderConditionField() {
     const presets = this.agent?.conditionPresets ?? [];
-    /* TODO: Add localize strings */
+    /* TODO: Bug 2054529 - Add localize strings */
     return html`
       <div class="field">
         <span class="field-label">Alert me when</span>
         <moz-input-text
           class="monitor-condition-input"
           placeholder="e.g. the price drops below $270"
-          .value=${this.#condition}
+          .value=${this.alertDescription}
+          @input=${this.#onConditionInput}
           @change=${this.#onConditionInput}
           aria-label="Alert condition"
         ></moz-input-text>
@@ -254,11 +321,12 @@ export class AgentMonitorItem extends MozLitElement {
               ${presets.map(
                 preset =>
                   html`<moz-button
-                    class="chip ${preset === this.#condition ? "selected" : ""}"
+                    class="chip ${preset === this.alertDescription
+                      ? "selected"
+                      : ""}"
+                    label=${preset}
                     @click=${() => this.#onPresetClick(preset)}
-                  >
-                    ${preset}
-                  </moz-button>`
+                  ></moz-button>`
               )}
             </div>`
           : nothing}
@@ -267,41 +335,54 @@ export class AgentMonitorItem extends MozLitElement {
   }
 
   #renderPagesField() {
-    /* TODO: Add localize strings */
+    /* TODO: Bug 2054529 - Add localize strings */
     return html`
       <div class="field">
         <span class="field-label">Pages</span>
-        <div class="chip-row">
-          ${this.#currentUrls().map(
-            url =>
-              html`<span class="page-pill">
-                <img class="page-pill-favicon" src="page-icon:${url}" alt="" />
-                <span class="page-pill-url">${this.#displayUrl(url)}</span>
-                <button
-                  type="button"
-                  class="page-pill-remove"
-                  aria-label="Remove page"
-                  @click=${() => this.#onRemoveUrl(url)}
-                ></button>
-              </span>`
-          )}
-          ${this.#isAddingUrl
-            ? html`<moz-input-url
-                class="page-add-input"
-                placeholder="Paste a URL"
-                aria-label="Add a page URL"
-                .value=${this.#pendingUrl}
-                @change=${this.#onPendingUrlInput}
-                @keydown=${this.#onPendingUrlKeydown}
-              ></moz-input-url>`
-            : html`<button
-                type="button"
-                class="chip chip-add"
-                @click=${this.#onAddUrlClick}
-              >
-                <span class="chip-add-icon" aria-hidden="true"></span>
-                Add URL
-              </button>`}
+        <div class="pages-container">
+          ${this.pageUrls.length
+            ? html`<div class="page-pills-row">
+                ${this.pageUrls.map(
+                  url =>
+                    html`<span class="page-pill">
+                      <span class="page-pill-url"
+                        >${this.#displayUrl(url)}</span
+                      >
+                      <button
+                        type="button"
+                        class="page-pill-remove"
+                        aria-label="Remove page"
+                        @click=${() => this.#removeUrl(url)}
+                      ></button>
+                    </span>`
+                )}
+              </div>`
+            : nothing}
+          <div class="page-input-row">
+            <moz-input-url
+              class="form-input page-url-input ${this.pendingUrlError
+                ? "error"
+                : ""}"
+              placeholder="Enter URL"
+              .value=${this.pendingUrl}
+              @input=${this.#onPendingUrlInput}
+              @keydown=${this.#onPendingUrlKeydown}
+              @blur=${() => this.#validatePendingUrl()}
+              aria-label="Add a page URL"
+            ></moz-input-url>
+            <moz-button
+              size="small"
+              type="icon ghost"
+              class="add-page-btn"
+              iconsrc="chrome://global/skin/icons/plus.svg"
+              aria-label="Add URL"
+              ?disabled=${this.pageUrls.length >= MAX_WATCH_URLS}
+              @click=${() => this.#addUrl()}
+            ></moz-button>
+          </div>
+          ${this.pendingUrlError
+            ? html`<div class="error-message">${this.pendingUrlError}</div>`
+            : nothing}
         </div>
       </div>
     `;
@@ -312,9 +393,8 @@ export class AgentMonitorItem extends MozLitElement {
     if (!historyItems.length) {
       return nothing;
     }
-    /* TODO: Add localize strings */
+    /* TODO: Bug 2054529 - Add localize strings */
     return html`
-      <hr class="rule" />
       <div class="section-toggle">Change history</div>
       <div class="history">
         ${historyItems.map(
@@ -340,30 +420,121 @@ export class AgentMonitorItem extends MozLitElement {
     `;
   }
 
+  #onFrequencyChange(event) {
+    this.checkFrequency = event.target.value;
+  }
+
+  #onScheduleTimeChange(event) {
+    this.scheduleTime = event.target.value;
+  }
+
+  #onWeekdayChange(event) {
+    this.scheduleWeekday = event.target.value;
+  }
+
+  #scheduleSummary() {
+    const schedule = this.agent?.schedule;
+    if (!schedule) {
+      return this.agent?.cadence ?? "";
+    }
+    const time =
+      TIME_OPTIONS.find(opt => opt.value === schedule.time)?.label ??
+      schedule.time;
+    /* TODO: Bug 2054529 - Add localize strings */
+    if (schedule.frequency === SCHEDULE_TYPES.WEEKLY) {
+      const day = WEEKDAYS[Number(schedule.weekday)] ?? "";
+      return `Weekly on ${day} at ${time}`;
+    }
+    return `Daily at ${time}`;
+  }
+
+  #renderTimeField() {
+    return html`<div class="form-section-half">
+      <label class="form-label">Time</label>
+      <moz-select
+        class="form-select"
+        .value=${this.scheduleTime}
+        @change=${this.#onScheduleTimeChange}
+        aria-label="Check time"
+      >
+        ${TIME_OPTIONS.map(
+          opt =>
+            html`<moz-option
+              value=${opt.value}
+              label=${opt.label}
+              iconsrc=${SCHEDULE_ICON}
+            ></moz-option>`
+        )}
+      </moz-select>
+    </div>`;
+  }
+
+  #renderScheduler() {
+    return html`
+      <div class="form-row">
+        <div class="schedule-container">
+          <div class="form-section-half">
+            <label class="form-label">Check</label>
+            <moz-select
+              class="form-select"
+              .value=${this.checkFrequency}
+              @change=${this.#onFrequencyChange}
+              aria-label="Check frequency"
+            >
+              <moz-option
+                value=${SCHEDULE_TYPES.DAILY}
+                label="Daily"
+                iconsrc=${SCHEDULE_ICON}
+              ></moz-option>
+              <moz-option
+                value=${SCHEDULE_TYPES.WEEKLY}
+                label="Weekly"
+                iconsrc=${SCHEDULE_ICON}
+              ></moz-option>
+            </moz-select>
+          </div>
+          ${this.checkFrequency === SCHEDULE_TYPES.WEEKLY
+            ? html`<div class="form-section-half">
+                <label class="form-label">Day</label>
+                <moz-select
+                  class="form-select"
+                  .value=${this.scheduleWeekday}
+                  @change=${this.#onWeekdayChange}
+                  aria-label="Check day"
+                >
+                  ${WEEKDAYS.map(
+                    (day, index) =>
+                      html`<moz-option
+                        value=${String(index)}
+                        label=${day}
+                        iconsrc=${SCHEDULE_ICON}
+                      ></moz-option>`
+                  )}
+                </moz-select>
+              </div>`
+            : nothing}
+        </div>
+        ${this.#renderTimeField()}
+      </div>
+    `;
+  }
+
   #renderCreate() {
     const agent = this.agent ?? {};
-    /* TODO: Add localize strings */
+    /* TODO: Bug 2054529 - Add localize strings */
     return html`
       <div class="monitor-card">
         <div class="monitor-card-head">
-          ${this.#renderFavicon()}
-          ${agent.productName
-            ? html`<span class="monitor-card-title"
-                ><span class="monitor-card-name">${agent.productName}</span
-                ><span class="monitor-card-url">${agent.url}</span></span
-              >`
-            : html`<span class="monitor-name-field"
-                ><moz-input-text
-                  class="monitor-name-input"
-                  placeholder="Name this monitor"
-                  .value=${this.#draftName}
-                  @change=${this.#onNameInput}
-                  aria-label="Monitor name"
-                ></moz-input-text
-                >${agent.url
-                  ? html`<span class="monitor-card-url">${agent.url}</span>`
-                  : nothing}</span
-              >`}
+          <div class="monitor-name-field">
+            <span class="field-label">Monitor Name</span>
+            <moz-input-text
+              class="monitor-name-input"
+              placeholder="Name this monitor"
+              .value=${this.#monitorName}
+              @change=${this.#onNameInput}
+              aria-label="Monitor name"
+            ></moz-input-text>
+          </div>
         </div>
         ${agent.value
           ? html`<div class="monitor-value">
@@ -372,34 +543,22 @@ export class AgentMonitorItem extends MozLitElement {
                 ? html`<span class="from">${agent.valueMeta}</span>`
                 : nothing}
             </div>`
-          : html`<div class="field">
-              <span class="field-label">Current price</span>
-              <moz-input-text
-                class="monitor-price-input"
-                placeholder="e.g. $278"
-                .value=${this.#draftValue}
-                @change=${this.#onValueInput}
-                aria-label="Current price"
-              ></moz-input-text>
-            </div>`}
+          : html``}
         ${this.#renderConditionField()} ${this.#renderPagesField()}
+        ${this.#renderScheduler()}
+
         <div class="monitor-card-actions">
-          <span class="mono-dim">Runs on-device</span>
           <span class="spacer"></span>
-          <button
-            type="button"
-            class="btn-ghost monitor-button"
+          <moz-button
+            type="default"
+            label="Cancel"
             @click=${() => this.#dispatch("agent-monitor-item:cancel", {})}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="btn-primary monitor-start"
+          ></moz-button>
+          <moz-button
+            type="primary"
+            label="Start monitoring"
             @click=${this.#onSubmit}
-          >
-            Start monitoring
-          </button>
+          ></moz-button>
         </div>
       </div>
     `;
@@ -407,18 +566,12 @@ export class AgentMonitorItem extends MozLitElement {
 
   #renderDisplay() {
     const agent = this.agent ?? {};
-    const subtitle =
-      agent.status?.kind === "watching" ? agent.cadence : agent.url;
-    /* TODO: Add localize strings */
+    /* TODO: Bug 2054529 - Add localize strings */
     return html`
       <div class="monitor-card chatcard live" @click=${this.#onCardClick}>
         <div class="monitor-card-head">
-          ${this.#renderFavicon()}
           <span class="monitor-card-title"
-            ><span class="monitor-card-name">${agent.productName}</span
-            ><span class="monitor-card-url"
-              >${subtitle ?? agent.url}</span
-            ></span
+            ><span class="monitor-card-name">${agent.monitorName}</span></span
           >
           <span class="spacer"></span>
           ${this.#renderStatusChip()}
@@ -445,7 +598,7 @@ export class AgentMonitorItem extends MozLitElement {
 
   #renderExpand() {
     const agent = this.agent ?? {};
-    /* TODO: Add localize strings */
+    /* TODO: Bug 2054529 - Add localize strings */
     return html`
       <div class="watch-expand" @click=${e => e.stopPropagation()}>
         ${agent.value
@@ -457,17 +610,32 @@ export class AgentMonitorItem extends MozLitElement {
             </div>`
           : nothing}
         ${this.editing
-          ? this.#renderConditionField()
+          ? html`${this.#renderConditionField()} ${this.#renderPagesField()}
+            ${this.#renderScheduler()}`
           : html`<div class="monitor-row">
-              <span class="label">Alert me when</span>
-              <span class="val">${agent.condition}</span>
-            </div>`}
-        ${agent.cadence
-          ? html`<div class="monitor-row">
-              <span class="label">Check</span
-              ><span class="val">${agent.cadence}</span>
-            </div>`
-          : nothing}
+                <span class="label">Alert me when</span>
+                <span class="val">${agent.condition}</span>
+              </div>
+              ${agent.watchUrls?.length
+                ? html`<div class="monitor-row">
+                    <span class="label">Pages</span>
+                    <div class="page-url-list">
+                      ${agent.watchUrls.map(
+                        url =>
+                          html`<span class="page-url-item"
+                            >${this.#displayUrl(url)}</span
+                          >`
+                      )}
+                    </div>
+                  </div>`
+                : nothing}
+              ${this.#scheduleSummary()
+                ? html`<div class="monitor-row">
+                    <span class="label">Check</span
+                    ><span class="val">${this.#scheduleSummary()}</span>
+                  </div>`
+                : nothing}`}
+        ${this.#renderHistory()}
         <div class="monitor-card-actions">
           <button
             type="button"
@@ -477,35 +645,31 @@ export class AgentMonitorItem extends MozLitElement {
             @click=${() =>
               this.#dispatch("agent-monitor-item:delete", { id: agent.id })}
           ></button>
-          <button
-            type="button"
-            class="btn-ghost monitor-button"
+          <moz-button
+            type="default"
             @click=${() =>
-              this.#dispatch("agent-monitor-item:pause", { id: agent.id })}
+              this.#dispatch("agent-monitor-item:pause", {
+                id: agent.id,
+                paused: agent.status?.kind !== "paused",
+              })}
           >
-            Pause
-          </button>
+            ${agent.status?.kind === "paused" ? "Resume" : "Pause"}
+          </moz-button>
           <span class="spacer"></span>
           ${this.editing
-            ? html`<button
-                type="button"
-                class="btn-ghost monitor-button save"
-                @click=${this.#onSubmit}
-              >
+            ? html`<moz-button type="primary" @click=${this.#onSubmit}>
                 Save
-              </button>`
-            : html`<button
-                type="button"
-                class="btn-ghost monitor-button check-now"
+              </moz-button>`
+            : html`<moz-button
+                type="default"
                 @click=${() =>
                   this.#dispatch("agent-monitor-item:check-now", {
                     id: agent.id,
                   })}
               >
                 Check now
-              </button>`}
+              </moz-button>`}
         </div>
-        ${this.#renderHistory()}
       </div>
     `;
   }

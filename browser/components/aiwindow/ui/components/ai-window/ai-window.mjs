@@ -66,6 +66,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   getCurrentModelName:
     "moz-src:///browser/components/aiwindow/models/Utils.sys.mjs",
   ToolUI: "moz-src:///browser/components/aiwindow/ui/modules/ToolUI.sys.mjs",
+  AgentUI: "moz-src:///browser/components/aiwindow/ui/modules/AgentUI.sys.mjs",
   ACTION_LOG_UI_TYPE:
     "moz-src:///browser/components/aiwindow/ui/modules/ToolActionLog.sys.mjs",
   getActionLogConfigForTool:
@@ -152,6 +153,7 @@ const TAB_FAVICON_CHAT =
   "chrome://browser/content/aiwindow/assets/ask-icon.svg";
 const PREF_CHAT_INTERACTION_COUNT = "browser.smartwindow.chat.interactionCount";
 const PREF_HIDE_TOP_SITES = "browser.smartwindow.hideTopSites";
+const PREF_AGENT_ENABLED = "browser.smartwindow.agent.enabled";
 const MAX_INTERACTION_COUNT = 1000;
 const MAX_SIDEBAR_STARTER_CACHE_KEYS = 20;
 const MAX_TOP_SITES = 8;
@@ -410,6 +412,12 @@ export class AIWindow extends MozLitElement {
       false,
       () => this.#syncTopSites()
     );
+    XPCOMUtils.defineLazyPreferenceGetter(
+      this,
+      "agentEnabledPref",
+      PREF_AGENT_ENABLED,
+      false
+    );
     // TODO Bug 2053495: remove with mistral release pref
     XPCOMUtils.defineLazyPreferenceGetter(
       this,
@@ -467,6 +475,7 @@ export class AIWindow extends MozLitElement {
       "chat-conversation:seen-urls-updated",
       this.#onSeenUrlsUpdated
     );
+    lazy.AgentUI.observeMonitorChanges(this.#conversation);
   }
 
   #removeConversationListeners() {
@@ -486,6 +495,7 @@ export class AIWindow extends MozLitElement {
       "chat-conversation:seen-urls-updated",
       this.#onSeenUrlsUpdated
     );
+    lazy.AgentUI.unobserveMonitorChanges(this.#conversation);
   }
 
   #onSeenUrlsUpdated = () => {
@@ -1581,6 +1591,7 @@ export class AIWindow extends MozLitElement {
     const {
       value,
       action,
+      command,
       contextMentions = [],
       contextPageUrl,
       detectedIntent,
@@ -1604,6 +1615,18 @@ export class AIWindow extends MozLitElement {
     this.#smartbar.clearSmartbarInput();
 
     if (action === ACTION.CHAT) {
+      if (
+        lazy.AgentUI.tryHandleCommand({
+          command,
+          value,
+          contextPageUrl,
+          conversation: this.#conversation,
+          window: this.#topChromeWindow,
+        })
+      ) {
+        return;
+      }
+
       const { mergedMentions, allUrls, inlineMentions } = currentMentions;
 
       if (allUrls.size) {
@@ -2729,6 +2752,15 @@ export class AIWindow extends MozLitElement {
   }
 
   async handleToolUIUpdate(data) {
+    if (lazy.AgentUI.isAgentUpdate(data)) {
+      await lazy.AgentUI.handleUpdate(
+        data,
+        this.#conversation,
+        this.#topChromeWindow
+      );
+      return;
+    }
+
     const success = await lazy.ToolUI.handleUpdate(
       data,
       this.#conversation,

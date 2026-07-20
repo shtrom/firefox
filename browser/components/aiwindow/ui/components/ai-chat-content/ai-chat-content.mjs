@@ -30,6 +30,7 @@ const UI_TYPES = {
   CANCELLED_COMPONENT: "cancelled-component",
   ACTION_LOG: "action-log",
   RETRY_COMPONENT: "retry-component",
+  AGENT_MONITOR: "agent-monitor-item",
 };
 /**
  * UI update types for communicating user interactions with tool UIs back to the actor.
@@ -41,6 +42,12 @@ const UI_UPDATE_TYPES = {
   UNDO_TAB_CLOSE: "undo-tab-close",
   UNDO_TAB_GROUP: "undo-tab-group",
   RETRY_PROMPT: "retry-prompt",
+  CREATE_MONITOR: "create-monitor",
+  CANCEL_MONITOR: "cancel-monitor",
+  UPDATE_MONITOR: "update-monitor",
+  DELETE_MONITOR: "delete-monitor",
+  PAUSE_MONITOR: "pause-monitor",
+  CHECK_MONITOR: "check-monitor",
 };
 
 const CONFIRMATION_UI_TYPES = [
@@ -108,6 +115,7 @@ export class AIChatContent extends MozLitElement {
       [UI_TYPES.AI_ACTION_RESULT]: msg => this.#renderActionResult(msg),
       [UI_TYPES.CANCELLED_COMPONENT]: () => this.#renderCancelledComponent(),
       [UI_TYPES.RETRY_COMPONENT]: msg => this.#renderRetryComponent(msg),
+      [UI_TYPES.AGENT_MONITOR]: msg => this.#renderAgentMonitorComponent(msg),
     };
 
     /**
@@ -1111,6 +1119,73 @@ export class AIChatContent extends MozLitElement {
       updateData: event.detail,
     });
   };
+
+  #handleMonitorSubmit = (event, messageId, toolCallId) => {
+    // The display card reuses submit for edits; create only happens from the
+    // "create" card.
+    const isEdit = event.detail?.mode === "display";
+    this.#dispatchToolUIUpdate({
+      messageId,
+      toolCallId,
+      updateType: isEdit
+        ? UI_UPDATE_TYPES.UPDATE_MONITOR
+        : UI_UPDATE_TYPES.CREATE_MONITOR,
+      updateData: event.detail,
+    });
+  };
+
+  #handleMonitorCancel = (event, messageId, toolCallId) => {
+    /* TODO: Bug 2055336 - Add cancel monitor view */
+    this.#dispatchToolUIUpdate({
+      messageId,
+      toolCallId,
+      updateType: UI_UPDATE_TYPES.CANCEL_MONITOR,
+      updateData: event.detail,
+    });
+  };
+
+  #handleMonitorAction = (event, messageId, toolCallId, updateType) => {
+    this.#dispatchToolUIUpdate({
+      messageId,
+      toolCallId,
+      updateType,
+      updateData: event.detail,
+    });
+  };
+
+  #renderAgentMonitorComponent(msg) {
+    const { messageId, toolUIData } = msg;
+    const toolCallId = toolUIData.toolCallId;
+    return html`<agent-monitor-item
+      mode=${toolUIData.properties?.mode ?? "create"}
+      .agent=${toolUIData.properties?.agent}
+      @agent-monitor-item:submit=${event =>
+        this.#handleMonitorSubmit(event, messageId, toolCallId)}
+      @agent-monitor-item:cancel=${event =>
+        this.#handleMonitorCancel(event, messageId, toolCallId)}
+      @agent-monitor-item:delete=${event =>
+        this.#handleMonitorAction(
+          event,
+          messageId,
+          toolCallId,
+          UI_UPDATE_TYPES.DELETE_MONITOR
+        )}
+      @agent-monitor-item:pause=${event =>
+        this.#handleMonitorAction(
+          event,
+          messageId,
+          toolCallId,
+          UI_UPDATE_TYPES.PAUSE_MONITOR
+        )}
+      @agent-monitor-item:check-now=${event =>
+        this.#handleMonitorAction(
+          event,
+          messageId,
+          toolCallId,
+          UI_UPDATE_TYPES.CHECK_MONITOR
+        )}
+    ></agent-monitor-item>`;
+  }
 
   #handleCreateTabGroupSubmit = (event, messageId, toolCallId) => {
     this.#dispatchToolUIUpdate({

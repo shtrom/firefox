@@ -103,6 +103,7 @@ export const MonitorAgent = {
     }
     monitor.scheduleNextRun();
     Glean.smartWindow.monitorCreate.record(monitorTelemetryExtra(monitor));
+    return monitor.id;
   },
 
   async updateMonitor(id, updates) {

@@ -8,7 +8,7 @@ const TEST_PAGE =
 
 const AGENT = {
   id: "agent-1",
-  productName: "Sony WH-1000XM5 price",
+  monitorName: "Sony WH-1000XM5 price",
   url: "soundnest.com/audio/sony-wh-1000xm5",
   condition: "the price drops below $270",
   conditionPresets: ["Any drop", "Below $270", "Below $250"],
@@ -56,7 +56,7 @@ add_task(async function test_display_collapsed_and_expanded() {
       Assert.equal(
         shadow.querySelector(".monitor-card-name").textContent.trim(),
         "Sony WH-1000XM5 price",
-        "Head shows the product name from the agent property"
+        "Head shows the monitor name from the agent property"
       );
       Assert.ok(
         !shadow.querySelector(".watch-expand"),
@@ -87,10 +87,14 @@ add_task(async function test_toggle_dispatches_and_expands() {
         events.push(e.detail?.expanded)
       );
 
-      shadow.querySelector(".chatcard").click();
+      shadow.querySelector(".chev").click();
       await el.updateComplete;
 
-      Assert.equal(el.expanded, true, "Clicking the card expands it");
+      Assert.equal(
+        el.expanded,
+        true,
+        "Activating the chevron expands the card"
+      );
       Assert.deepEqual(
         events,
         [true],
@@ -181,20 +185,25 @@ add_task(async function test_submit_and_delete_dispatch_detail() {
         e => (deleteDetail = e.detail)
       );
 
+      const buttonByText = text =>
+        Array.from(shadow.querySelectorAll("moz-button")).find(b =>
+          b.textContent.includes(text)
+        );
+
       // Save dispatches submit
-      shadow.querySelector(".save").click();
+      buttonByText("Save").click();
       await el.updateComplete;
       Assert.deepEqual(
         submitDetail,
         {
           mode: "display",
           id: "agent-1",
-          productName: "Sony WH-1000XM5 price",
-          value: "",
+          monitorName: "Sony WH-1000XM5 price",
           condition: "the price drops below $270",
           watchUrls: ["soundnest.com/audio/sony-wh-1000xm5"],
+          schedule: { frequency: "daily", time: "09:00", weekday: "1" },
         },
-        "submit carries mode, id, product name, value, condition and watch URLs"
+        "submit carries mode, id, monitor name, condition, watch URLs and schedule"
       );
 
       shadow.querySelector(".page-action.delete").click();
@@ -203,6 +212,156 @@ add_task(async function test_submit_and_delete_dispatch_detail() {
         deleteDetail,
         { id: "agent-1" },
         "delete carries the agent id"
+      );
+    });
+  });
+});
+
+add_task(async function test_pause_button_toggles_label_and_detail() {
+  await withTestPage(async browser => {
+    await setProps(browser, { agent: AGENT, mode: "display", expanded: true });
+
+    const pausedAgent = {
+      ...AGENT,
+      status: { label: "Paused", kind: "paused" },
+    };
+
+    await SpecialPowers.spawn(browser, [pausedAgent], async pausedAgentArg => {
+      const el = content.document.getElementById("test-agent-monitor-item");
+      const shadow = el.shadowRoot;
+
+      const pauseDetails = [];
+      el.addEventListener("agent-monitor-item:pause", e =>
+        pauseDetails.push(e.detail)
+      );
+
+      const findButton = label =>
+        Array.from(
+          shadow.querySelectorAll(".monitor-card-actions moz-button")
+        ).find(b => b.textContent.includes(label));
+
+      const pauseButton = findButton("Pause");
+      Assert.ok(pauseButton, "Watching monitor shows a Pause button");
+      pauseButton.click();
+      await el.updateComplete;
+      Assert.deepEqual(
+        pauseDetails.at(-1),
+        { id: "agent-1", paused: true },
+        "Pause requests paused: true"
+      );
+
+      el.agent = pausedAgentArg;
+      await el.updateComplete;
+
+      const resumeButton = findButton("Resume");
+      Assert.ok(resumeButton, "Paused monitor shows a Resume button");
+      resumeButton.click();
+      await el.updateComplete;
+      Assert.deepEqual(
+        pauseDetails.at(-1),
+        { id: "agent-1", paused: false },
+        "Resume requests paused: false"
+      );
+    });
+  });
+});
+
+add_task(async function test_check_now_dispatches_detail() {
+  await withTestPage(async browser => {
+    await setProps(browser, { agent: AGENT, mode: "display", expanded: true });
+
+    await SpecialPowers.spawn(browser, [], async () => {
+      const el = content.document.getElementById("test-agent-monitor-item");
+      const shadow = el.shadowRoot;
+
+      let checkDetail = null;
+      el.addEventListener(
+        "agent-monitor-item:check-now",
+        e => (checkDetail = e.detail)
+      );
+
+      Array.from(shadow.querySelectorAll("moz-button"))
+        .find(b => b.textContent.includes("Check now"))
+        .click();
+      await el.updateComplete;
+
+      Assert.deepEqual(
+        checkDetail,
+        { id: "agent-1" },
+        "check-now carries the agent id"
+      );
+    });
+  });
+});
+
+add_task(async function test_edit_mode_shows_pages_and_scheduler() {
+  await withTestPage(async browser => {
+    await setProps(browser, {
+      agent: AGENT,
+      mode: "display",
+      expanded: true,
+      editing: true,
+    });
+
+    await SpecialPowers.spawn(browser, [], async () => {
+      const el = content.document.getElementById("test-agent-monitor-item");
+      const shadow = el.shadowRoot;
+
+      Assert.equal(
+        shadow.querySelectorAll(".page-pill").length,
+        1,
+        "Edit mode seeds a pill for the monitor's existing URL"
+      );
+      Assert.ok(
+        shadow.querySelector(".page-input-row moz-input-url.page-url-input"),
+        "A pending URL input is shown for adding pages"
+      );
+      Assert.ok(
+        shadow.querySelector(".page-input-row moz-button.add-page-btn"),
+        "The pending URL input has an add-page button"
+      );
+      const selects = shadow.querySelectorAll(".schedule-container moz-select");
+      Assert.equal(
+        selects.length,
+        1,
+        "Daily edit shows only the frequency select"
+      );
+
+      el.checkFrequency = "weekly";
+      await el.updateComplete;
+      Assert.equal(
+        shadow.querySelectorAll(".schedule-container moz-select").length,
+        2,
+        "Weekly edit reveals the Day select alongside frequency"
+      );
+    });
+  });
+});
+
+add_task(async function test_expanded_display_shows_saved_schedule() {
+  await withTestPage(async browser => {
+    await setProps(browser, {
+      agent: {
+        ...AGENT,
+        cadence: undefined,
+        schedule: { frequency: "weekly", time: "09:00", weekday: "1" },
+      },
+      mode: "display",
+      expanded: true,
+    });
+
+    await SpecialPowers.spawn(browser, [], async () => {
+      const el = content.document.getElementById("test-agent-monitor-item");
+      const shadow = el.shadowRoot;
+
+      const checkRow = Array.from(shadow.querySelectorAll(".monitor-row")).find(
+        row => row.querySelector(".label")?.textContent.trim() === "Check"
+      );
+      Assert.ok(checkRow, "Expanded display shows a Check row");
+      Assert.equal(
+        checkRow.querySelector(".val").textContent.trim(),
+        "Weekly on Monday at 9:00 AM",
+        "Check row summarizes the saved schedule"
       );
     });
   });
@@ -235,7 +394,7 @@ add_task(async function test_create_mode_renders_form() {
         e => (submitDetail = e.detail)
       );
       // Start monitoring
-      shadow.querySelector(".btn-primary").click();
+      shadow.querySelector(`moz-button[label="Start monitoring"]`).click();
       await el.updateComplete;
 
       Assert.equal(
@@ -249,7 +408,7 @@ add_task(async function test_create_mode_renders_form() {
 
 add_task(async function test_create_mode_empty_state_inputs() {
   await withTestPage(async browser => {
-    // when no productName or value is available the card should offer editable inputs instead
+    // when no monitorName or value is available the card should offer editable inputs instead
     await setProps(browser, {
       agent: { conditionPresets: ["Any drop"] },
       mode: "create",
@@ -262,11 +421,13 @@ add_task(async function test_create_mode_empty_state_inputs() {
       const nameInput = shadow.querySelector(
         "moz-input-text.monitor-name-input"
       );
-      const priceInput = shadow.querySelector(
-        "moz-input-text.monitor-price-input"
-      );
-      Assert.ok(nameInput, "Name input is shown when there is no product name");
-      Assert.ok(priceInput, "Price input is shown when there is no value");
+      Assert.ok(nameInput, "Name input is shown when there is no monitor name");
+
+      const setValue = (input, value) => {
+        input.value = value;
+        input.dispatchEvent(new content.Event("input", { bubbles: true }));
+        input.dispatchEvent(new content.Event("change", { bubbles: true }));
+      };
 
       let submitDetail = null;
       el.addEventListener(
@@ -274,24 +435,123 @@ add_task(async function test_create_mode_empty_state_inputs() {
         e => (submitDetail = e.detail)
       );
 
-      nameInput.value = "Sony Headphone";
-      nameInput.dispatchEvent(new content.Event("change", { bubbles: true }));
-      priceInput.value = "$233.99";
-      priceInput.dispatchEvent(new content.Event("change", { bubbles: true }));
-      await el.updateComplete;
+      const startButton = shadow.querySelector(
+        `moz-button[label="Start monitoring"]`
+      );
 
-      shadow.querySelector(".btn-primary").click();
+      startButton.click();
+      await el.updateComplete;
+      Assert.equal(
+        submitDetail,
+        null,
+        "Submit is blocked while the form is empty"
+      );
+
+      setValue(nameInput, "Sony Headphone");
+      setValue(
+        shadow.querySelector("moz-input-text.monitor-condition-input"),
+        "the price drops"
+      );
+
+      const urlInput = shadow.querySelector("moz-input-url.page-url-input");
+      urlInput.value = "https://example.com/product";
+      urlInput.dispatchEvent(new content.Event("input", { bubbles: true }));
+      urlInput.dispatchEvent(
+        new content.KeyboardEvent("keydown", { key: "Enter", bubbles: true })
+      );
+      await el.updateComplete;
+      Assert.equal(
+        shadow.querySelectorAll(".page-pill").length,
+        1,
+        "Adding a URL shows a pill"
+      );
+
+      startButton.click();
       await el.updateComplete;
 
       Assert.equal(
-        submitDetail?.productName,
+        submitDetail?.monitorName,
         "Sony Headphone",
-        "submit carries the typed product name"
+        "submit carries the typed monitor name"
       );
       Assert.equal(
-        submitDetail?.value,
-        "$233.99",
-        "submit carries the typed current value"
+        submitDetail?.condition,
+        "the price drops",
+        "submit carries the typed condition"
+      );
+      Assert.deepEqual(
+        submitDetail?.watchUrls,
+        ["https://example.com/product"],
+        "submit carries the added page URL"
+      );
+    });
+  });
+});
+
+add_task(async function test_add_and_remove_page_pills() {
+  await withTestPage(async browser => {
+    await setProps(browser, {
+      agent: { conditionPresets: [] },
+      mode: "create",
+    });
+
+    await SpecialPowers.spawn(browser, [], async () => {
+      const el = content.document.getElementById("test-agent-monitor-item");
+      const shadow = el.shadowRoot;
+
+      Assert.equal(
+        shadow.querySelectorAll(".page-pill").length,
+        0,
+        "Starts with no page pills when nothing is seeded"
+      );
+
+      const urlInput = shadow.querySelector("moz-input-url.page-url-input");
+      urlInput.value = "https://example.com/a";
+      urlInput.dispatchEvent(new content.Event("input", { bubbles: true }));
+      shadow.querySelector("moz-button.add-page-btn").click();
+      await el.updateComplete;
+      Assert.equal(
+        shadow.querySelectorAll(".page-pill").length,
+        1,
+        "Add button adds the typed URL as a pill"
+      );
+
+      shadow.querySelector(".page-pill .page-pill-remove").click();
+      await el.updateComplete;
+      Assert.equal(
+        shadow.querySelectorAll(".page-pill").length,
+        0,
+        "Pill remove button removes the URL"
+      );
+    });
+  });
+});
+
+add_task(async function test_invalid_url_shows_error() {
+  await withTestPage(async browser => {
+    await setProps(browser, {
+      agent: { conditionPresets: [] },
+      mode: "create",
+    });
+
+    await SpecialPowers.spawn(browser, [], async () => {
+      const el = content.document.getElementById("test-agent-monitor-item");
+      const shadow = el.shadowRoot;
+
+      const urlInput = shadow.querySelector("moz-input-url.page-url-input");
+      urlInput.value = "not a url";
+      urlInput.dispatchEvent(new content.Event("input", { bubbles: true }));
+      shadow.querySelector("moz-button.add-page-btn").click();
+      await el.updateComplete;
+
+      Assert.ok(
+        shadow.querySelector(".error-message"),
+        "An invalid URL surfaces an error message"
+      );
+      Assert.equal(
+        shadow.querySelectorAll(".page-pill").length,
+        0,
+        "An invalid URL is not added as a pill"
       );
     });
   });
