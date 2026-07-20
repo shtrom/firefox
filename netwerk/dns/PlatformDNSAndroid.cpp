@@ -9,7 +9,6 @@
 
 #include "GetAddrInfo.h"
 #include "mozilla/Atomics.h"
-#include "mozilla/Maybe.h"
 #include "mozilla/StaticPrefs_network.h"
 #include "mozilla/glean/NetwerkMetrics.h"
 #include "mozilla/net/DNSPacket.h"
@@ -33,10 +32,10 @@ static Atomic<android_res_nquery_ptr> sAndroidResNQuery;
 
 nsresult ResolveHTTPSRecordImpl(const nsACString& aHost,
                                 nsIDNSService::DNSFlags aFlags,
-                                TypeRecordResultType& aResult, uint32_t& aTTL) {
+                                TypeRecordResultType& aResult, uint32_t& aTTL,
+                                nsACString& aAliasName) {
   DNSPacket packet;
   nsAutoCString host(aHost);
-  nsAutoCString cname;
   nsresult rv;
 
   if (xpc::IsInAutomation() &&
@@ -114,33 +113,8 @@ nsresult ResolveHTTPSRecordImpl(const nsACString& aHost,
     LOG("failed rv");
     return rv;
   }
-  packet.SetNativePacket(true);
 
-  int32_t loopCount = 64;
-  while (loopCount > 0 && aResult.is<Nothing>()) {
-    loopCount--;
-    DOHresp resp;
-    nsClassHashtable<nsCStringHashKey, DOHresp> additionalRecords;
-    rv = packet.Decode(host, TRRTYPE_HTTPSSVC, cname, true, resp, aResult,
-                       additionalRecords, aTTL);
-    if (NS_FAILED(rv)) {
-      LOG("Decode failed %x", static_cast<uint32_t>(rv));
-      return rv;
-    }
-    if (!cname.IsEmpty() && aResult.is<Nothing>()) {
-      host = cname;
-      cname.Truncate();
-      continue;
-    }
-  }
-
-  if (aResult.is<Nothing>()) {
-    LOG("Result is nothing");
-    // The call succeeded, but no HTTPS records were found.
-    return NS_ERROR_UNKNOWN_HOST;
-  }
-
-  return NS_OK;
+  return ParseHTTPSRecord(host, packet, aResult, aTTL, aAliasName);
 }
 
 void DNSThreadShutdown() {}
