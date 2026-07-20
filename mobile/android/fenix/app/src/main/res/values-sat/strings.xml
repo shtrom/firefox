@@ -2626,8 +2626,20 @@
   <string name="preference_enhanced_tracking_protection_explanation_2">​%s​ ᱫᱚ ᱟᱭᱢᱟ ᱥᱚᱢᱟᱱ ᱯᱟᱧᱡᱟ ᱫᱟᱱᱟᱲ ᱠᱚ ᱴᱷᱮᱱ ᱠᱷᱚᱱ ᱚᱱᱞᱟᱭᱤᱱ ᱨᱩᱠᱷᱤᱭᱟᱹᱭ ᱢᱮᱟᱭ ᱾</string>
   <!-- Text displayed that links to website about enhanced tracking protection -->
   <string name="preference_enhanced_tracking_protection_explanation_learn_more">ᱰᱷᱮᱨ ᱥᱮᱬᱟᱭ ᱢᱮ</string>
+  <plurals name="trackers_blocked_count_2">
+    <!--
+      Trackers blocked card on homepage
+
+      Text shown on the trackers blocked card. %d is the number of trackers blocked.
+    -->
+    <item quantity="one">%d ᱴᱨᱮᱠᱟᱨ ᱟᱠᱚᱴ ᱠᱟᱱᱟᱭ</item>
+    <item quantity="two">%d ᱴᱨᱮᱠᱟᱨ ᱟᱠᱚᱴ ᱠᱟᱱᱟ ᱠᱤᱱ</item>
+    <item quantity="other">%d ᱴᱨᱮᱠᱟᱨ ᱟᱠᱚᱴ ᱠᱟᱱᱟ ᱠᱚ</item>
+  </plurals>
   <!-- Text shown on the trackers blocked card when no trackers have been blocked yet -->
   <string name="trackers_blocked_empty">ᱟᱢ ᱨᱩᱠᱷᱤᱭᱟᱹ ᱜᱮᱭᱟᱢ</string>
+  <!-- Text shown below the trackers blocked card with typing animation -->
+  <string name="help_catch_trackers">ᱴᱨᱮᱠᱟᱨ ᱠᱚ ᱥᱟᱵ ᱞᱟᱹᱜᱤᱫ ᱜᱚᱲᱚ ᱮᱢ ᱢᱮ</string>
   <!-- Preference for enhanced tracking protection for the standard protection settings -->
   <string name="preference_enhanced_tracking_protection_standard_default_1">ᱱᱟᱯ (ᱢᱩᱞ ᱯᱷᱮᱲᱟᱛ)</string>
   <!-- Preference description for enhanced tracking protection for the standard protection settings -->
@@ -3006,14 +3018,65 @@
   <string name="saved_logins_sort_strategy_last_used">ᱢᱟᱲᱟᱝ ᱵᱮᱵᱷᱟᱨᱟᱜ</string>
   <!-- Content description (not visible, for screen readers etc.) -->
   <string name="saved_logins_menu_dropdown_chevron_icon_content_description_2">ᱫᱟᱱᱟᱝ ᱥᱟᱵᱟᱫᱽ ᱢᱮᱱᱩ ᱥᱮᱴ ᱢᱮ</string>
+  <!-- Label for button to import passwords from file. -->
+  <string name="passwords_import_menu_button">ᱨᱮᱫᱽ ᱠᱷᱚᱱ ᱟᱹᱜᱩᱭ ᱢᱮ</string>
+  <!--
+    Email Masks
+
+    Title for the Email Masks in the settings menu
+  -->
+  <string name="preferences_email_masks">ᱤᱢᱮᱞ ᱢᱟᱥᱠ ᱠᱚ</string>
+  <!-- Title for the Suggest Email Masks toggle -->
+  <string name="preferences_email_masks_suggest_title">ᱤᱢᱮᱞ ᱢᱟᱥᱠ ᱥᱚᱞᱦᱟ ᱮᱢᱚᱜ ᱢᱮ</string>
+  <!-- Summary for the Suggest Email Masks toggle. -->
+  <string name="preferences_email_masks_suggest_summary">ᱟᱢᱟᱜ ᱤᱱᱵᱚᱠᱥ ᱥᱯᱟᱢ ᱠᱷᱚᱱ ᱨᱩᱠᱷᱤᱭᱟᱹ ᱞᱟᱹᱜᱤᱫ ᱟᱢᱟᱜ ᱥᱟᱹᱨᱤ ᱤᱢᱮᱞ ᱩᱠᱩᱭ ᱢᱮ ᱾ ᱛᱤᱱᱟᱹᱜ ᱜᱟᱱ ᱥᱟᱭᱤᱴ ᱤᱢᱮᱞ ᱢᱟᱥᱠ ᱵᱟᱠᱚ ᱥᱟᱯᱚᱨᱴ ᱮᱫᱟ ᱾</string>
+  <!-- Text that links to additional information about the Email Masks -->
+  <string name="preferences_email_masks_suggest_learn_more">ᱰᱷᱮᱨ ᱥᱮᱬᱟᱭ ᱢᱮ</string>
+  <!-- Title for the Manage Email Masks links to Firefox Relay dashboard -->
+  <string name="preferences_email_masks_manage_title">ᱤᱢᱮᱞ ᱢᱟᱥᱠ ᱠᱚ ᱥᱟᱸᱵᱽᱲᱟᱣ ᱢᱮ</string>
+  <!-- The message displayed when a user has used all of their free-tier email masks, so now the application will choose an existing one at random. -->
+  <string name="email_masks_max_free_tier_reached">ᱟᱢ ᱟᱢᱟᱜ 5 ᱯᱷᱨᱤ ᱤᱢᱮᱞ ᱢᱟᱥᱠ ᱮᱢ ᱵᱮᱵᱷᱟᱨ ᱟᱠᱟᱫᱟ, ᱚᱱᱟᱛᱮ ᱟᱞᱮ ᱟᱢ ᱞᱟᱹᱜᱤᱫ ᱢᱤᱫᱴᱟᱹᱝ ᱞᱮ ᱵᱟᱪᱷᱟᱣ ᱠᱮᱫᱟ ᱫᱚᱦᱲᱟ ᱵᱮᱵᱷᱟᱨ ᱞᱟᱹᱜᱤᱫ ᱾</string>
+  <!-- The message displayed when there was an error with the email mask or Firefox Account services. -->
+  <string name="email_masks_error_retrieving_masks">ᱤᱢᱮᱞ ᱢᱟᱥᱠ ᱫᱚ ᱱᱤᱛᱚᱜ ᱵᱟᱝ ᱧᱟᱢᱚᱜ ᱠᱟᱱᱟ ᱾ ᱛᱤᱱᱟᱹᱜ ᱜᱟᱱ ᱴᱤᱯᱤᱡ ᱛᱟᱭᱚᱢ ᱫᱚᱦᱲᱟ ᱪᱮᱥᱴᱟᱭ ᱢᱮ ᱾</string>
+  <!--
+    Firefox browser VPN (a browser-only proxy, distinct from the Mozilla VPN service)
+
+    Title for the browser VPN entry in the settings list
+  -->
+  <string name="preferences_ip_protection_title_2">ᱢᱩᱪᱟᱹᱫᱛᱮᱭᱟᱨ ᱠᱟᱱ VPN</string>
+  <!-- Label for the BETA badge for the browser VPN entry in the settings list -->
+  <string name="preferences_ip_protection_beta_badge_label">BETA</string>
+  <!-- Title for the browser VPN settings screen (displayed in the app bar) -->
+  <string name="ip_protection_title">VPN</string>
   <!-- Label for the browser VPN toggle on the settings screen -->
   <string name="ip_protection_toggle_label">VPN</string>
+  <!-- Content description for the browser VPN settings screen top bar back button -->
+  <string name="ip_protection_navigate_back_button_content_description">ᱯᱟᱹᱪᱷᱞᱟᱹᱥᱮᱱ ᱪᱟᱞᱟᱜ ᱢᱮ</string>
   <!-- Headline for the browser VPN promo card. %s is the name of the app (for example "Firefox"). -->
   <string name="ip_protection_promo_headline">%s ᱨᱮᱭᱟᱜ ᱵᱤᱞᱴ-ᱤᱱ VPN</string>
+  <!-- Body text for the browser VPN promo card . %s is a learn more link using ip_protection_learn_more as text. -->
+  <string name="ip_protection_promo_body_2">ᱟᱢᱟᱜ ᱴᱷᱟᱶ ᱩᱠᱩ ᱠᱟᱛᱮ ᱵᱟᱹᱲᱛᱤ ᱨᱩᱠᱷᱤᱭᱟᱹ ᱥᱟᱶ ᱵᱽᱨᱟᱣᱩᱡᱽ ᱢᱮ, ᱥᱟᱱᱟᱢ ᱦᱚᱲᱟᱜ Wi-Fi ᱨᱮᱦᱚᱸ ᱾ %s</string>
   <!-- Link text that opens additional information about the browser VPN -->
   <string name="ip_protection_learn_more">ᱰᱷᱮᱨ ᱥᱮᱬᱟᱭ ᱢᱮ</string>
   <!-- Label for the monthly data allowance section on the browser VPN settings screen -->
   <string name="ip_protection_data_limit_label">ᱪᱟᱸᱫᱚ ᱰᱟᱴᱟ ᱥᱤᱢᱟᱹ</string>
+  <!--
+    Data usage shown on the browser VPN settings screen.
+    %1$.1f is the data remaining in GB (for example "8.3").
+    %2$.1f is the total monthly allowance in GB (for example "50.0").
+  -->
+  <string name="ip_protection_data_limit_value">%2$.1f GB ᱠᱷᱚᱱ %1$.1f GB ᱥᱟᱨᱮᱡ ᱠᱟᱱᱟ</string>
+  <!--
+    Text shown below the data usage bar describing when the monthly allowance resets.
+    %1$.0f is the total monthly data allowance in GB (for example "50").
+  -->
+  <string name="ip_protection_data_reset_info">ᱥᱟᱱᱟᱢ ᱪᱟᱸᱫᱚ ᱨᱮᱭᱟᱜ ᱯᱩᱭᱞᱩ ᱢᱟᱦᱟᱸ ᱦᱤᱞᱚᱜ %1$.0f GB ᱨᱮ ᱨᱤᱥᱮᱴᱚᱜᱼᱟ ᱾</string>
+  <!-- Header for the browser VPN `location` section -->
+  <string name="ip_protection_location_section">ᱡᱟᱭᱜᱟ</string>
+  <!-- Label for the recommended automatic location option on the browser VPN settings screen -->
+  <string name="ip_protection_location_recommended_label">ᱵᱟᱛᱟᱣᱟᱜ</string>
+  <!-- Description for the recommended automatic location option on the browser VPN settings screen -->
+  <string name="ip_protection_location_recommended_description">ᱟᱢ ᱞᱟᱹᱜᱤᱫ ᱡᱷᱚᱛᱚ ᱠᱷᱚᱱ ᱩᱥᱟᱹᱨᱟ VPN ᱴᱷᱟᱶ ᱵᱟᱪᱷᱟᱣ ᱟᱭ ᱾</string>
   <!-- Badge label shown in the menu item when the browser VPN is active -->
   <string name="preferences_ip_protection_on">ᱪᱟᱹᱞᱩ</string>
   <!-- Badge label shown in the menu item when the browser VPN is off -->
@@ -3085,6 +3148,12 @@
   <string name="ip_protection_mozilla_vpn_upsell_headline" tools:ignore="UnusedResources,BrandUsage">Mozilla VPN ᱥᱟᱶ ᱟᱨᱦᱚᱸ ᱨᱩᱠᱷᱤᱭᱟᱹ ᱢᱮ</string>
   <!-- Body for the card that promotes the standalone Mozilla VPN product. -->
   <string name="ip_protection_mozilla_vpn_upsell_body" tools:ignore="UnusedResources">᱓᱐᱐+ ᱴᱷᱟᱶ ᱠᱷᱚᱱ ᱵᱟᱪᱷᱟᱣ ᱢᱮ ᱟᱨ ᱟᱢᱟᱜ ᱡᱚᱛᱚ ᱮᱯᱥ ᱠᱚ ᱕ ᱰᱤᱵᱷᱟᱭᱤᱥ ᱦᱟᱹᱵᱤᱡ ᱨᱟᱠᱷᱟ ᱫᱚᱦᱚᱭ ᱢᱮ ᱾</string>
+  <!-- Label for the button that takes the user to get the standalone Mozilla VPN product. -->
+  <string name="ip_protection_mozilla_vpn_upsell_button" tools:ignore="UnusedResources,BrandUsage">Mozilla VPN ᱦᱟᱢᱮᱴ ᱡᱚᱝ ᱢᱮ</string>
+  <!-- Title for the browser VPN location picker screen. -->
+  <string name="ip_protection_location_picker_title" tools:ignore="UnusedResources">VPN ᱴᱷᱟᱶ ᱵᱟᱪᱷᱟᱣ ᱢᱮ</string>
+  <!-- Description for what it means to use the Recommended setting and let the app automatically pick the best server location. -->
+  <string name="ip_protection_location_fastest_description" tools:ignore="UnusedResources, BrandUsage">Firefox ᱫᱚ ᱡᱷᱚᱛᱚ ᱠᱷᱚᱱ ᱩᱥᱟᱹᱨᱟ ᱴᱷᱟᱶ ᱧᱟᱢᱟᱭ</string>
   <!-- Error message shown when the selected browser VPN location is unavailable. -->
   <string name="ip_protection_location_unavailable" tools:ignore="UnusedResources">ᱴᱷᱟᱶ ᱵᱟᱝ ᱧᱟᱢᱚᱜ ᱠᱟᱱᱟ ᱾ ᱮᱴᱟᱜ ᱴᱷᱟᱶ ᱵᱟᱪᱷᱟᱣ ᱢᱮ᱾</string>
   <!-- Snackbar (in-app pop-up notification) text shown when the previously selected browser VPN location is unavailable and the recommended location was used instead. -->
@@ -3623,6 +3692,12 @@
   <string name="translation_settings_automatic_never_translate_sites">ᱱᱚᱶᱟ ᱥᱟᱭᱤᱴᱠᱚᱫᱚ ᱛᱮᱥ ᱦᱚᱸ ᱟᱞᱚᱢ ᱛᱚᱨᱡᱚᱢᱟᱭᱟ</string>
   <!-- Button text for the button that will take the user to the download languages dialog. On the download languages dialog, the user can manage which languages they would like to download for translations. -->
   <string name="translation_settings_download_language">ᱯᱟᱹᱨᱥᱤᱠᱚ ᱰᱟᱣᱱᱞᱚᱰ ᱢᱮ</string>
+  <!-- Toggle switch title and description for the translation settings control. -->
+  <string name="translation_settings_control_title">ᱛᱚᱨᱡᱚᱢᱟ ᱠᱚ</string>
+  <!-- Description for the translation settings toggle switch. -->
+  <string name="translation_settings_control_description">ᱟᱢᱟᱜ ᱥᱟᱫᱷᱚᱱ ᱨᱮ ᱥᱟᱱᱟᱢ ᱛᱚᱨᱡᱚᱢᱟ ᱟᱹᱯᱱᱟᱹᱛ ᱛᱟᱦᱮᱱᱟ ᱾</string>
+  <!-- Clickable text for the translations settings item that links to a website. -->
+  <string name="translation_settings_control_learn_more">ᱰᱷᱮᱨ ᱥᱮᱬᱟᱭ ᱢᱮ</string>
   <!--
     Automatic translation preference screen
 
@@ -3780,6 +3855,20 @@
     %s is the name of the app (for example "Firefox").
   -->
   <string name="protection_panel_banner_protected_title">%s ᱨᱩᱠᱷᱤᱭᱟᱹ ᱨᱮ ᱢᱮᱱᱟᱜ ᱠᱟᱹᱫᱮᱭᱟ</string>
+  <plurals name="protection_panel_banner_protected_blocked_trackers_description">
+    <!--
+      Description text for the protection panel banner when privacy dashboard is enabled.
+      %1$d is the number of trackers blocked.
+    -->
+    <item quantity="one">ᱱᱚᱣᱟ ᱥᱟᱭᱤᱴ ᱨᱮ %1$d ᱴᱨᱮᱠᱟᱨ ᱟᱠᱚᱴ ᱟᱠᱟᱱᱭ ᱾</item>
+    <item quantity="two">ᱱᱚᱣᱟ ᱥᱟᱭᱤᱴ ᱨᱮ %1$d ᱴᱨᱮᱠᱟᱨ ᱟᱠᱚᱴ ᱟᱠᱟᱱᱟ ᱠᱤᱱ ᱾</item>
+    <item quantity="other">ᱱᱚᱣᱟ ᱥᱟᱭᱤᱴ ᱨᱮ %1$d ᱴᱨᱮᱠᱟᱨ ᱟᱠᱚᱴ ᱟᱠᱟᱱᱟ ᱠᱚ ᱾</item>
+  </plurals>
+  <!--
+    Description text for the protection panel banner when privacy dashboard is enabled.
+    and there are no trackers blocked.
+  -->
+  <string name="protection_panel_banner_protected_no_blocked_trackers_description">ᱟᱢ ᱨᱩᱠᱷᱤᱭᱟᱹ ᱜᱮᱭᱟᱢ ᱾</string>
   <!-- Label text for the Enhanced Tracking Protection toggle. -->
   <string name="protection_panel_etp_toggle_label">ᱵᱟᱲᱦᱟᱣᱟᱠᱟᱱ ᱯᱟᱸᱡᱟ ᱨᱚᱯᱷᱟ</string>
   <!-- Toggle if Enhanced Tracking Protection is turned on -->
@@ -3801,6 +3890,69 @@
   <string name="protection_panel_privacy_and_security_settings_2">ᱯᱨᱟᱭᱣᱮᱥᱤ ᱥᱮᱴᱤᱝ</string>
   <!-- Title text for the protection panel permissions section. -->
   <string name="protection_panel_permissions_title">ᱪᱷᱟᱹᱰ ᱠᱚ</string>
+  <plurals name="trackers_blocked_panel_total_num_trackers_blocked_2">
+    <!--
+      Text for displaying the total number of trackers blocked in the trackers blocked panel.
+      %1$d is a placeholder for the number of trackers blocked.
+    -->
+    <item quantity="one">ᱱᱚᱣᱟ ᱥᱟᱭᱤᱴ ᱨᱮ %1$d ᱴᱨᱮᱠᱟᱨ ᱟᱠᱚᱴ ᱠᱟᱱᱟᱭ</item>
+    <item quantity="two">ᱱᱚᱣᱟ ᱥᱟᱭᱤᱴ ᱨᱮ %1$d ᱴᱨᱮᱠᱟᱨ ᱟᱠᱚᱴ ᱠᱟᱱᱟ ᱠᱤᱱ</item>
+    <item quantity="other">ᱱᱚᱣᱟ ᱥᱟᱭᱤᱴ ᱨᱮ %1$d ᱴᱨᱮᱠᱟᱨ ᱟᱠᱚᱴ ᱟᱠᱟᱱᱟ ᱠᱚ</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_social_media_trackers">
+    <!--
+      Text for displaying in the trackers blocked panel the total number of blocked social media trackers.
+      %1$d is a placeholder for the number of social media trackers blocked.
+    -->
+    <item quantity="one">%1$d ᱥᱟᱸᱣᱛᱟ ᱢᱤᱰᱤᱭᱟ ᱯᱟᱧᱡᱟ ᱫᱟᱱᱟᱲ</item>
+    <item quantity="two">%1$d ᱥᱟᱸᱣᱛᱟ ᱢᱤᱰᱤᱭᱟ ᱯᱟᱧᱡᱟ ᱫᱟᱱᱟᱲ ᱠᱤᱱ</item>
+    <item quantity="other">%1$d ᱥᱟᱸᱣᱛᱟ ᱢᱤᱰᱤᱭᱟ ᱯᱟᱧᱡᱟ ᱫᱟᱱᱟᱲ ᱠᱚ</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_cross_site_cookies">
+    <!--
+      Text for displaying in the trackers blocked panel the total number of blocked cross-site tracking cookies.
+      %1$d is a placeholder for the number of cross-site tracking cookies blocked.
+    -->
+    <item quantity="one">%1$d ᱠᱨᱚᱥᱼᱥᱟᱭᱤᱴ ᱜᱷᱮᱨ ᱮᱥᱮᱫ ᱠᱩᱠᱤ</item>
+    <item quantity="two">%1$d ᱠᱨᱚᱥᱼᱥᱟᱭᱤᱴ ᱜᱷᱮᱨ ᱮᱥᱮᱫ ᱠᱩᱠᱤ ᱠᱤᱱ</item>
+    <item quantity="other">%1$d ᱠᱨᱚᱥᱼᱥᱟᱭᱤᱴ ᱜᱷᱮᱨ ᱮᱥᱮᱫ ᱠᱩᱠᱤ ᱠᱚ</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_cryptominers">
+    <!--
+      Text for displaying in the trackers blocked panel the total number of blocked cryptomining scripts.
+      %1$d is a placeholder for the number of cryptominers blocked.
+    -->
+    <item quantity="one">%1$d ᱠᱨᱭᱯᱴᱚᱢᱟᱭᱱᱟᱹᱨ</item>
+    <item quantity="two">%1$d ᱠᱨᱭᱯᱴᱚᱢᱟᱭᱱᱟᱹᱨ ᱠᱤᱱ</item>
+    <item quantity="other">%1$d ᱠᱨᱭᱯᱴᱚᱢᱟᱭᱱᱟᱹᱨ ᱠᱚ</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_fingerprinters">
+    <!--
+      Text for displaying in the trackers blocked panel the total number of blocked fingerprinter scripts.
+      %1$d is a placeholder for the number of fingerprinters blocked.
+    -->
+    <item quantity="one">%1$d ᱴᱤᱯᱟᱹᱪᱷᱟᱯ</item>
+    <item quantity="two">ᱴᱤᱯᱟᱹᱪᱷᱟᱯ ᱠᱤᱱ</item>
+    <item quantity="other">ᱴᱤᱯᱟᱹᱪᱷᱟᱯ ᱠᱚ</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_trackers_2">
+    <!--
+      Text for displaying in the trackers blocked panel the total number of blocked generic tracking scripts.
+      %1$d is a placeholder for the number of trackers blocked.
+    -->
+    <item quantity="one">%1$d ᱯᱟᱧᱡᱟ ᱫᱟᱱᱟᱲ ᱡᱤᱱᱤᱥ</item>
+    <item quantity="two">%1$d ᱯᱟᱧᱡᱟ ᱫᱟᱱᱟᱲ ᱡᱤᱱᱤᱥ ᱠᱤᱱ</item>
+    <item quantity="other">%1$d ᱯᱟᱧᱡᱟ ᱫᱟᱱᱟᱲ ᱡᱤᱱᱤᱥ ᱠᱚ</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_trackers_blocked_this_week_2">
+    <!--
+      Text for displaying the number of trackers blocked this week in the trackers blocked panel.
+      %1$d is a placeholder for the number of trackers blocked this week.
+    -->
+    <item quantity="one">ᱱᱤᱭᱟᱹ ᱦᱟᱴ %1$d ᱴᱨᱮᱠᱚᱨ ᱟᱠᱚᱴ ᱠᱟᱱᱟᱭ</item>
+    <item quantity="two">ᱱᱤᱭᱟᱹ ᱦᱟᱴ %1$d ᱴᱨᱮᱠᱚᱨ ᱠᱤᱱ ᱟᱠᱚᱴ ᱮᱱᱟ</item>
+    <item quantity="other">ᱱᱤᱭᱟᱹ ᱦᱟᱴ %1$d ᱴᱨᱮᱠᱚᱨ ᱠᱚ ᱟᱠᱚᱴ ᱮᱱᱟ</item>
+  </plurals>
   <!--
     Description text for a dialog confirming whether the user wants to delete all data for current site.
     %s is a placeholder for the base domain of website.
@@ -3821,11 +3973,15 @@
     %s is a placeholder for the name of the certificate authority that issued the certificate.
   -->
   <string name="connection_security_panel_verified_by">ᱫᱟᱨᱟᱭ ᱛᱮ ᱧᱮᱞ ᱢᱮᱲᱟᱣ %s</string>
+  <!-- Content description (not visible, for screen readers etc.) for the handle used to drag the protections dashboard to the bottom of the screen and close it. -->
+  <string name="tracker_protections_dashboard_close_handlebar_content_description">ᱰᱮᱥᱵᱚᱨᱰ ᱵᱚᱸᱫᱚᱭ ᱢᱮ</string>
   <!--
     Text for the connection security panel when the site uses a QWAC.
     %s is a placeholder for the organization for which the certificate was issued.
   -->
   <string name="connection_security_panel_issued_to">%s ᱛᱮ ᱮᱢ ᱪᱟᱞ ᱢᱮ</string>
+  <!-- Text for the connection security panel when the site uses a QWAC. -->
+  <string name="connection_security_panel_qualified_certificate">ᱨᱮᱜᱩᱞᱮᱥᱚᱱ (EU) 2024/1183 ᱫᱟᱨᱟᱭᱛᱮ ᱞᱟᱹᱭ ᱟᱠᱟᱱ ᱞᱮᱠᱟ ᱥᱩᱦᱤ ᱜᱟᱱ ᱠᱟᱱᱟᱭ ᱾</string>
   <!--
     Debug drawer
 
@@ -3916,6 +4072,16 @@
   <string name="likert_scale_option_7" tools:ignore="BrandUsage,UnusedResources">Firefox ᱨᱮ ᱤᱧ ᱥᱮᱸᱫᱽᱨᱟ ᱵᱟᱹᱧ ᱵᱮᱵᱷᱟᱨ ᱟ</string>
   <!-- Option for likert scale -->
   <string name="likert_scale_option_8" tools:ignore="UnusedResources">ᱤᱧ ᱥᱤᱝᱠ ᱵᱟᱹᱧ ᱵᱮᱵᱷᱟᱨ ᱟ</string>
+  <!-- Option for likert scale -->
+  <string name="likert_scale_option_slow_or_buggy" tools:ignore="UnusedResources">ᱱᱚᱣᱟ ᱫᱚ ᱵᱟᱹᱭ ᱵᱟᱹᱭ ᱥᱮ ᱵᱚᱜᱭ ᱜᱮᱭᱟ</string>
+  <!-- Option for likert scale -->
+  <string name="likert_scale_option_features_hard_to_find_or_missing" tools:ignore="UnusedResources">ᱯᱷᱤᱪᱟᱨ ᱠᱚ ᱧᱟᱢ ᱞᱟᱹᱜᱤᱫ ᱟᱨ ᱵᱟᱝ ᱟᱫ ᱞᱟᱹᱜᱤᱫ ᱟᱸᱴ ᱜᱮᱭᱟ</string>
+  <!-- Option for likert scale -->
+  <string name="likert_scale_option_confusing_or_hard_to_use" tools:ignore="UnusedResources">ᱱᱚᱣᱟ ᱫᱚ ᱩᱞᱡᱷᱟᱹᱣ ᱥᱮ ᱵᱮᱵᱷᱟᱨ ᱞᱟᱹᱜᱤᱫ ᱟᱸᱴ ᱜᱮᱭᱟ</string>
+  <!-- Option for likert scale -->
+  <string name="likert_scale_option_its_okay" tools:ignore="UnusedResources">ᱱᱚᱣᱟ ᱫᱚ ᱴᱷᱤᱠ ᱜᱮᱭᱟ, ᱢᱮᱱᱠᱷᱟᱱ ᱮᱴᱟᱜ ᱵᱽᱨᱟᱣᱩᱡᱟᱨ ᱠᱷᱚᱱ ᱵᱟᱝ ᱵᱮᱥ ᱜᱮᱭᱟ</string>
+  <!-- Option for likert scale. Note: The word "Firefox" should NOT be translated. -->
+  <string name="likert_scale_option_i_plan_to_keep_using" tools:ignore="BrandUsage,UnusedResources">ᱤᱧ Firefox ᱵᱮᱵᱷᱟᱨ ᱞᱟᱹᱜᱤᱫ ᱢᱚᱱᱮ ᱮᱫᱟᱹᱧ</string>
   <!-- Text shown in prompt for printing microsurvey. "sec" It's an abbreviation for "second". Note: The word "Firefox" should NOT be translated. -->
   <string name="microsurvey_prompt_printing_title" tools:ignore="BrandUsage,UnusedResources">Firefox ᱨᱮ ᱪᱷᱟᱯᱟ ᱜᱟᱱᱪᱷᱚ ᱞᱟᱹᱜᱤᱫ ᱜᱚᱲᱚ ᱮᱢᱚᱜ ᱢᱮ ᱾ ᱱᱚᱶᱟ ᱫᱚ ᱢᱤᱫ ᱴᱤᱡ ᱜᱟᱱ ᱚᱠᱛᱚ ᱤᱫᱤᱭᱟᱭ</string>
   <!-- Text shown in prompt for search microsurvey. Note: The word "Firefox" should NOT be translated. -->
@@ -3930,6 +4096,28 @@
   <string name="microsurvey_search_title" tools:ignore="BrandUsage,UnusedResources">Firefox ᱨᱮ ᱥᱮᱸᱫᱽᱨᱟ ᱠᱟᱹᱢᱤᱦᱚᱨᱟ ᱥᱟᱞᱟᱜ ᱛᱤᱱᱟᱹᱜ ᱨᱟᱹᱥᱠᱟᱹ ᱢᱮᱱᱟᱢᱟᱸ ?</string>
   <!-- Text shown in the survey title for sync experience microsurvey. Note: The word "Firefox" should NOT be translated. -->
   <string name="microsurvey_sync_title" tools:ignore="BrandUsage,UnusedResources">Firefox ᱨᱮ ᱥᱤᱝᱠ ᱠᱟᱹᱢᱤᱦᱚᱨᱟ ᱥᱟᱞᱟᱜ ᱛᱤᱱᱟᱹᱜ ᱨᱟᱹᱥᱠᱟᱹ ᱢᱮᱱᱟᱢᱟᱸ ?</string>
+  <!-- Text shown in the survey title for 'describe your experience so far' microsurvey. Note: The word "Firefox" should NOT be translated. -->
+  <string name="microsurvey_describe_your_experience_title" tools:ignore="BrandUsage,UnusedResources">Firefox ᱥᱩᱫᱷᱨᱟᱹᱣ ᱞᱟᱹᱜᱤᱫ ᱟᱞᱮ ᱜᱚᱲᱚ ᱞᱮᱢ ᱾ ᱱᱤᱛ ᱦᱟᱵᱤᱡ ᱟᱢᱟᱜ ᱟᱹᱱᱟᱹᱭᱠᱟᱹᱣ ᱚᱠᱟᱴᱟᱜ ᱵᱮᱥ ᱛᱮ ᱵᱚᱨᱱᱚᱱ ᱮᱢᱟᱭᱟ ?</string>
+  <!--
+    Uninstall Survey
+
+    Title text for the uninstall survey dialog, asking the user for the reason they are removing the app
+  -->
+  <string name="microsurvey_uninstall_survey_title">ᱟᱢᱟᱜ ᱢᱚᱱᱚᱛ ᱫᱚ ᱢᱟᱱᱚᱛ ᱜᱮᱭᱟ ᱾ ᱟᱢ ᱪᱮᱫᱟᱜ ᱮᱢ ᱚᱪᱚᱜᱽ ᱮᱫᱟ?</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_1_v2">ᱱᱚᱣᱟ ᱫᱚ ᱵᱟᱹᱭ ᱵᱟᱹᱭ ᱟ ᱥᱮ ᱵᱟᱝ ᱯᱟᱹᱛᱭᱟᱹᱣᱟᱱ ᱜᱮᱭᱟ</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_2_v2">ᱣᱮᱵᱽᱥᱟᱭᱤᱴ ᱠᱚ ᱵᱮᱥ ᱞᱮᱠᱟ ᱵᱟᱝ ᱠᱚ ᱠᱟᱹᱢᱤ ᱞᱮᱫᱟ</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_3_v2">ᱟᱫ ᱠᱟᱱ ᱜᱩᱱ ᱠᱚ ᱤᱧ ᱞᱟᱹᱠᱛᱤᱭᱟᱹᱧ ᱠᱟᱱᱟ</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_4_v2">ᱵᱷᱤᱰᱤᱭᱳ, ᱰᱟᱣᱩᱱᱞᱳᱰ, ᱵᱟᱝᱠᱷᱟᱱ ᱢᱤᱰᱤᱭᱟ ᱵᱟᱝ ᱠᱟᱹᱢᱤ ᱞᱮᱫᱟ</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_5_v2">ᱱᱚᱣᱟ ᱫᱚ ᱵᱮᱵᱷᱟᱨ ᱞᱟᱹᱜᱤᱫ ᱟᱸᱴ ᱜᱮᱭᱟ ᱵᱟᱝᱠᱷᱟᱱ ᱵᱟᱹᱲᱤᱡ ᱰᱤᱡᱟᱭᱤᱱ ᱟᱠᱟᱱᱟ</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_6_v2">ᱯᱨᱟᱭᱣᱮᱥᱤ ᱵᱟᱝᱠᱷᱟᱱ ᱨᱩᱠᱷᱤᱭᱟᱹ ᱪᱤᱱᱛᱟᱹ</string>
+  <!-- Button label shown at the bottom of the uninstall survey -->
+  <string name="uninstall_survey_button_label">ᱢᱚᱱᱚᱛ ᱡᱚᱢᱟᱣ ᱢᱮ ᱟᱨ ᱚᱪᱚᱜᱽ ᱢᱮ</string>
   <!--
     Accessibility
 
@@ -4236,6 +4424,8 @@
   <string name="settings_search_no_results_title">ᱪᱮᱫ ᱦᱚᱸ ᱵᱟᱭ ᱧᱟᱢ ᱞᱮᱱᱟ</string>
   <!-- Sub-message displayed when the search field is not empty but search results is empty. -->
   <string name="settings_search_no_results_message">ᱮᱴᱟᱜᱟᱜ ᱥᱮᱸᱫᱽᱨᱟ ᱵᱤᱰᱟᱹᱣ ᱢᱮ</string>
+  <!-- Content Description for the button to open Settings Search (to search through settings). -->
+  <string name="settings_search_button_content_description">ᱥᱮᱴᱤᱝ ᱥᱮᱸᱫᱽᱨᱟ ᱵᱩᱛᱟᱢ</string>
   <!-- ==== Terms of use pop up prompt ==== -->
 
   <!-- Title for the pop up prompt -->
@@ -4278,6 +4468,221 @@
   <string name="terms_of_use_prompt_body_line_two_alternative" tools:ignore="UnusedResources">ᱟᱢ ᱵᱟᱹᱲᱛᱤ ᱪᱮᱫ ᱫᱟᱲᱮᱭᱟᱜᱼᱟᱢ %1$s᱾</string>
   <!-- Link text for terms_of_use_prompt_body_line_two_alternative that links to a site with more information about the Terms of Use -->
   <string name="terms_of_use_prompt_body_line_two_alternative_link" tools:ignore="UnusedResources">ᱱᱚᱰᱮ</string>
+  <!--
+    Sports widget
+
+    Title text shown at the top of the sports widget country selector, encouraging the user to pick a national team to follow.
+  -->
+  <string name="sports_widget_country_selector_title">ᱟᱢᱟᱜ ᱫᱚᱞ ᱯᱟᱧᱡᱟᱭ ᱢᱮ</string>
+  <!-- Section header for the North America region in the sports widget country selector. -->
+  <string name="sports_widget_confederation_north_america">ᱠᱚᱸᱭᱮ ᱟᱢᱮᱨᱤᱠᱟ</string>
+  <!-- Section header for the Africa confederation group in the sports widget country selector. -->
+  <string name="sports_widget_confederation_africa">ᱟᱯᱷᱨᱤᱠᱟ</string>
+  <!-- Section header for the Asia confederation group in the sports widget country selector. -->
+  <string name="sports_widget_confederation_asia">ᱮᱥᱤᱭᱟ</string>
+  <!-- Section header for the CONCACAF confederation group in the sports widget country selector. "CONCACAF" is the abbreviation for "Confederation of North, Central America and Caribbean Association Football". -->
+  <string name="sports_widget_confederation_concacaf">CONCACAF</string>
+  <!-- Section header for the Europe confederation group in the sports widget country selector. -->
+  <string name="sports_widget_confederation_europe">ᱭᱩᱨᱚᱯ</string>
+  <!-- Section header for the Oceania confederation group in the sports widget country selector. -->
+  <string name="sports_widget_confederation_oceania">ᱚᱥᱮᱱᱤᱭᱟ</string>
+  <!-- Section header for the South America confederation group in the sports widget country selector. -->
+  <string name="sports_widget_confederation_south_america">ᱮᱛᱚᱢ ᱟᱢᱮᱨᱤᱠᱟ</string>
+  <!-- Country name for England in the sports widget. England cannot be resolved with the Android Intl APIs so it needs an explicit string. -->
+  <string name="sports_widget_country_england">ᱤᱝᱞᱟᱸᱰ</string>
+  <!-- Country name for Scotland in the sports widget. Scotland cannot be resolved with the Android Intl APIs so it needs an explicit string. -->
+  <string name="sports_widget_country_scotland">ᱥᱠᱚᱴᱞᱮᱸᱰ</string>
+  <!-- Label shown on the sports widget scoreboard when a match is currently being played live. -->
+  <string name="sports_widget_match_live">ᱞᱟᱭᱤᱵᱷ</string>
+  <!-- Title shown on the sports widget champion scoreboard row celebrating the soccer tournament winner. -->
+  <string name="sports_widget_champions_title">᱒᱐᱒᱖ ᱣᱟᱨᱞᱰ ᱠᱚᱯ ᱪᱮᱢᱯᱤᱭᱚᱱᱥ</string>
+  <!-- Title shown on the sports widget champion scoreboard celebrating the soccer tournament runners-up. Runners-up means second place. -->
+  <string name="sports_widget_runner_up_title" tools:ignore="UnusedResources">ᱨᱚᱱᱚᱨ ᱚᱯᱷ</string>
+  <!-- Title shown on the sports widget champion scoreboard celebrating the soccer tournament third place winners. -->
+  <string name="sports_widget_third_place_title">ᱛᱮᱥᱟᱨ ᱡᱟᱭᱜᱟ</string>
+  <!-- Round name shown on the sports widget for the Round of 32 stage in the soccer tournament. -->
+  <string name="sports_widget_round_of_32">ᱨᱟᱣᱱᱰ 32</string>
+  <!-- Round name shown on the sports widget for the Round of 16 stage in the soccer tournament. -->
+  <string name="sports_widget_round_of_16">16 ᱨᱟᱣᱱᱰ</string>
+  <!-- Round name shown on the sports widget for the quarter-finals stage in the soccer tournament. -->
+  <string name="sports_widget_quarter_final">ᱠᱣᱟᱴᱟᱨ-ᱯᱷᱟᱭᱱᱟᱞ</string>
+  <!-- Round name shown on the sports widget for the semi-finals stage in the soccer tournament. -->
+  <string name="sports_widget_semi_final">ᱥᱮᱢᱤ-ᱯᱷᱟᱭᱱᱟᱞ</string>
+  <!-- Round name shown on the sports widget for the final stage in the soccer tournament. -->
+  <string name="sports_widget_final">ᱯᱷᱟᱭᱱᱟᱞ</string>
+  <!-- Round name shown on the sports widget for the bronze final stage in the soccer tournament. -->
+  <string name="sports_widget_bronze_final">ᱠᱟᱸᱥᱟ ᱯᱷᱟᱭᱱᱟᱞ</string>
+  <!-- Sports widget error card message shown when match data fails to load. -->
+  <string name="sports_widget_error_load_failed" tools:ignore="UnusedResources">ᱠᱷᱮᱞ ᱵᱟᱯᱟᱰᱟᱭ ᱫᱚ ᱱᱤᱛᱚᱜ ᱵᱟᱝ ᱧᱟᱢᱚᱜ ᱠᱟᱱᱟ ᱾ ᱛᱤᱱᱟᱹᱜ ᱜᱟᱱ ᱴᱤᱯᱤᱡ ᱛᱟᱭᱚᱢ ᱨᱤᱯᱷᱨᱮᱥᱤᱝ ᱨᱮᱭᱟᱜ ᱠᱩᱨᱩᱢᱩᱴᱩᱭ ᱢᱮ ᱾</string>
+  <!-- Sports widget error card message shown when the network connection is interrupted and live updates pause. -->
+  <string name="sports_widget_error_connection_interrupted" tools:ignore="UnusedResources">ᱡᱚᱯᱲᱟᱣ ᱛᱟᱲᱟᱜ ᱮᱱᱟ — ᱞᱟᱭᱤᱵᱽ ᱦᱟᱹᱞᱤᱭᱟᱹᱠ ᱠᱚ ᱵᱚᱸᱫ ᱮᱱᱟ ᱾</string>
+  <!-- Sports widget action label to refresh match data after an error. -->
+  <string name="sports_widget_error_refresh">ᱱᱟᱶᱟ ᱟᱹᱨᱩ</string>
+  <!-- Sports widget group stage label for group A in the soccer tournament. -->
+  <string name="sports_widget_group_a">ᱫᱳᱞ A</string>
+  <!-- Sports widget group stage label for group B in the soccer tournament. -->
+  <string name="sports_widget_group_b">ᱫᱳᱞ B</string>
+  <!-- Sports widget group stage label for group C in the soccer tournament. -->
+  <string name="sports_widget_group_c">ᱫᱳᱞ C</string>
+  <!-- Sports widget group stage label for group D in the soccer tournament. -->
+  <string name="sports_widget_group_d">ᱫᱳᱞ D</string>
+  <!-- Sports widget group stage label for group E in the soccer tournament. -->
+  <string name="sports_widget_group_e">ᱫᱳᱞ E</string>
+  <!-- Sports widget group stage label for group F in the soccer tournament. -->
+  <string name="sports_widget_group_f">ᱫᱳᱞ F</string>
+  <!-- Sports widget group stage label for group G in the soccer tournament. -->
+  <string name="sports_widget_group_g">ᱫᱳᱞ G</string>
+  <!-- Sports widget group stage label for group H in the soccer tournament. -->
+  <string name="sports_widget_group_h">ᱫᱳᱞ H</string>
+  <!-- Sports widget group stage label for group I in the soccer tournament. -->
+  <string name="sports_widget_group_i">ᱫᱳᱞ I</string>
+  <!-- Sports widget group stage label for group J in the soccer tournament. -->
+  <string name="sports_widget_group_j">ᱫᱳᱞ J</string>
+  <!-- Sports widget group stage label for group K in the soccer tournament. -->
+  <string name="sports_widget_group_k">ᱫᱳᱞ K</string>
+  <!-- Sports widget group stage label for group L in the soccer tournament. -->
+  <string name="sports_widget_group_l">ᱫᱳᱞ L</string>
+  <!-- Sports widget button label to see match results. -->
+  <string name="sports_widget_see_results" tools:ignore="UnusedResources">ᱛᱮᱞᱟᱠᱚ ᱧᱮᱞ ᱢᱮ</string>
+  <!-- Sports widget button label to view details of a soccer match results. -->
+  <string name="sports_widget_view_match_details" tools:ignore="UnusedResources">ᱢᱮᱲᱟᱣ ᱠᱟᱱ ᱵᱤᱵᱨᱚᱬ ᱫᱮᱠᱷᱟᱣ ᱢᱮ</string>
+  <!-- Sports widget section header for related soccer matches in the same group. -->
+  <string name="sports_widget_related_matches" tools:ignore="UnusedResources">ᱡᱚᱲᱟᱣ ᱢᱮᱲᱟᱣ ᱠᱚ</string>
+  <!-- Sports widget section header for a list of upcoming soccer matches that have not yet started. -->
+  <string name="sports_widget_upcoming" tools:ignore="UnusedResources">ᱦᱟᱹᱡᱩᱜ ᱠᱟᱱ</string>
+  <!-- Sports widget match status suffix appended to match scores (e.g., "3 - 2 (Full time)") to indicate the match has been completed. -->
+  <string name="sports_widget_match_full_time_suffix">(ᱯᱩᱨᱟᱹ ᱚᱠᱛᱚ)</string>
+  <!-- Sports widget match status to indicate the match has been completed. -->
+  <string name="sports_widget_match_full_time_2">ᱯᱩᱨᱟᱹ ᱚᱠᱛᱚ</string>
+  <!--
+    Sports widget card title encouraging the user to follow the soccer tournament. “Keep tabs on” is an informal expression
+    meaning to stay updated on or regularly follow something (in this case, World Cup matches and updates).
+    It’s playfully related to Firefox in that “tabs” are a browser feature.
+    It suggests ongoing awareness rather than active monitoring or control. Not to be translated literally as physical “tabs”
+    or tracking in a technical sense; the meaning is about staying informed.
+  -->
+  <string name="sports_widget_card_title">ᱣᱟᱨᱞᱰ ᱠᱟᱯ ᱨᱮ ᱴᱮᱵᱽ ᱫᱚᱦᱚ ᱠᱟᱜ ᱢᱮ</string>
+  <!-- Sports widget card description shown below the title on the homepage entry point. -->
+  <string name="sports_widget_card_description">ᱞᱟᱭᱤᱵᱽ ᱢᱮᱪ ᱟᱯᱰᱮᱴ ᱟᱨ ᱟᱭᱢᱟ ᱧᱟᱢ ᱢᱮ ᱾</string>
+  <!-- Sports widget menu item to change the selected team. -->
+  <string name="sports_widget_change_team">ᱫᱚᱞ ᱵᱚᱫᱚᱞ ᱢᱮ</string>
+  <!-- Sports widget menu item to get a custom wallpaper for the widget. -->
+  <string name="sports_widget_get_custom_wallpaper">ᱠᱟᱥᱴᱚᱢ ᱣᱟᱞᱯᱮᱯᱟᱨ ᱧᱟᱢ ᱢᱮ</string>
+  <!-- Sports widget menu item to remove the widget from the homepage. -->
+  <string name="sports_widget_remove">ᱚᱪᱚᱜᱽ ᱢᱮ</string>
+  <!-- Sports widget card title shown after a team is eliminated, asking if the user still wants to continue following the soccer tournament. -->
+  <string name="sports_widget_still_want_to_follow">ᱱᱤᱛ ᱦᱚᱸ ᱥᱟᱶ ᱯᱟᱧᱡᱟ ᱥᱟᱱᱟᱭᱮᱫ ᱢᱮᱭᱟ ?</string>
+  <!-- Sports widget card description shown after a team is eliminated, suggesting to choose another team. -->
+  <string name="sports_widget_choose_another_team">ᱣᱟᱨᱞᱰ ᱠᱟᱯ ᱥᱟᱶ ᱛᱟᱦᱮᱱ ᱞᱟᱹᱜᱤᱫ ᱮᱴᱟᱜ ᱴᱤᱢ ᱵᱟᱪᱷᱟᱣ ᱢᱮ ᱾</string>
+  <!-- Sports widget button label to follow another team after the current team is eliminated. -->
+  <string name="sports_widget_follow_another_team">ᱮᱴᱟᱜ ᱫᱚᱞ ᱯᱟᱧᱡᱟᱭ ᱢᱮ</string>
+  <!-- Sports widget card title shown before the soccer tournament begins on top of a timer that is counting down. -->
+  <string name="sports_widget_countdown_to_world_cup">ᱡᱮᱜᱮᱫ ᱠᱚᱯ ᱨᱮᱭᱟᱜ ᱞᱮᱠᱷᱟ ᱦᱤᱥᱟᱹᱵ</string>
+  <!-- Sports widget button label that navigates the user to the full soccer tournament match schedule. -->
+  <string name="sports_widget_view_schedule">ᱥᱮᱰᱭᱩᱞ ᱧᱮᱞ ᱢᱮ</string>
+  <!-- Sports widget button label that dismisses the step of choosing a team to follow. -->
+  <string name="sports_widget_skip">ᱟᱲᱟᱜ</string>
+  <!-- Sports widget match status label shown during halftime of a match. -->
+  <string name="sports_widget_halftime" tools:ignore="UnusedResources">ᱛᱟᱞᱟᱚᱠᱛᱚ</string>
+  <!-- Sports widget match status label shown during extra time of a match. -->
+  <string name="sports_widget_extra_time">ᱵᱟᱹᱲᱛᱤ ᱚᱠᱛᱚ</string>
+  <!-- Sports widget match status label shown during penalties of a match. -->
+  <string name="sports_widget_penalties">ᱯᱮᱱᱟᱞᱴᱤ</string>
+  <!--
+    Sports widget countdown label for days. D is short for Day. The layout only allows for 1–2 characters:
+    if there is an equivalent single character for your language, use that (e.g. T for German).
+    Your translation will be automatically truncated at 2 characters to avoid layout issues.
+  -->
+  <string name="sports_widget_countdown_days">ᱫ</string>
+  <!--
+    Sports widget countdown pill abbreviated label for hours. H is short for Hour. The layout only allows for 1–2 characters:
+    if there is an equivalent single character for your language, use that (e.g. S for German).
+    Your translation will be automatically truncated at 2 characters to avoid layout issues.
+  -->
+  <string name="sports_widget_countdown_hours">ᱴ</string>
+  <!--
+    Sports widget countdown pill abbreviated label for minutes. M is short for Minute. The layout only allows for 1–2 characters:
+    if there is an equivalent single character for your language, use that.
+    Your translation will be automatically truncated at 2 characters to avoid layout issues
+  -->
+  <string name="sports_widget_countdown_minutes">ᱴᱤ</string>
+  <!-- Content description (for accessibility, not displayed) for the close button on the sports widget team / country selector. -->
+  <string name="sports_widget_close_team_selection_sheet_content_description">ᱫᱚᱞ ᱵᱟᱪᱷᱟᱣ ᱥᱤᱴ ᱵᱚᱸᱫᱚᱭ ᱢᱮ</string>
+  <!-- Content description (for accessibility, not displayed) for the close button on the sports widget card. -->
+  <string name="sports_widget_close_content_description">ᱵᱚᱸᱫᱚᱭ ᱢᱮ</string>
+  <!-- Content description (for accessibility, not displayed) for the overflow (more options) menu button on the sports widget card. -->
+  <string name="sports_widget_more_options_content_description">ᱰᱷᱮᱨ ᱮᱴᱟᱜᱟᱜ</string>
+  <!--
+    Content description (for accessibility, not displayed) announcing the time remaining until the soccer tournament kickoff.
+    %1$d is the number of days, %2$d is the number of hours, and %3$d is the number of minutes.
+  -->
+  <string name="sports_widget_countdown_remaining_content_description">ᱛᱟᱲᱟᱢ ᱚᱠᱛᱚ ᱾ ᱢᱟᱦᱟᱸ: %1$d ᱾ ᱴᱟᱲᱟᱝ: %2$d ᱾ ᱴᱤᱯᱤᱡ: %3$d ᱾</string>
+  <!-- Content description (for accessibility, not displayed)  for the action that navigates to the World Cup website. -->
+  <string name="sports_widget_go_to_world_cup_site_content_description" tools:ignore="UnusedResources">ᱡᱮᱜᱮᱫ ᱠᱟᱯ ᱥᱟᱭᱤᱴ ᱨᱮ ᱥᱮᱱᱚᱜ ᱢᱮ</string>
+  <!--
+    Content description (for accessibility, not displayed)  announcing an upcoming soccer match.
+    %1$s is the home team name, %2$s is the away team name, %3$s is the match date, %4$s is the kickoff time.
+  -->
+  <string name="sports_widget_upcoming_match_content_description">ᱦᱤᱡᱩᱜ ᱠᱟᱱ: %1$s ᱵᱚᱱᱟᱢ %2$s, %3$s %4$s ᱴᱷᱮᱱ</string>
+  <!--
+    Content description (for accessibility, not displayed) announcing a soccer match.
+    %1$s is the home team name, %2$s is the away team name, %3$s is trailing context
+    (e.g. formatted score "1 - 2 (Full time)", upcoming match info "Jun 19 5:00 PM",
+    or a match status like "Full time").
+  -->
+  <string name="sports_widget_match_content_description">%1$s ᱵᱚᱱᱟᱢ %2$s, %3$s</string>
+  <!--
+    Content description (for accessibility, not displayed)  used for the sports widget card header announcing a live match for a group or stage.
+    %s is the soccer tournament group name or stage (e.g. Group A represented by sports_widget_group_a, Round of 32 represented by sports_widget_round_of_32,
+    or Final represented by sports_widget_final).
+  -->
+  <string name="sports_widget_live_game_content_description">%s, ᱞᱟᱭᱤᱵᱽ ᱠᱷᱮᱞ</string>
+  <!--
+    Content description (for accessibility, not displayed) announcing a live score.
+    %1$s is the home team name, %2$d is the home team score, %3$s is the away team name, %4$d is the away team score,
+    and %5$s is the match elapsed time (e.g. 72 minutes).
+  -->
+  <string name="sports_widget_live_score_content_description">%1$s %2$d, %3$s %4$d, %5$s, ᱞᱟᱭᱤᱵ</string>
+  <!--
+    Content description (for accessibility, not displayed) announcing the elapsed minutes of a live match.
+    %1$s is the clock value, which may be a plain number (e.g. "72") or include extra time (e.g. "90+3").
+  -->
+  <string name="sports_widget_match_elapsed_minutes">ᱴᱤᱯᱤᱡ ᱨᱮ ᱯᱟᱨᱚᱢᱮᱱ ᱚᱠᱛᱚ: %1$s</string>
+  <!--
+    Content description (for accessibility, not displayed) for a paginated item.
+    %1$s is the soccer tournament group name or stage (e.g. Group A represented by sports_widget_group_a, Round of 32 represented by sports_widget_round_of_32),
+    %2$d is the current page number, and %3$d is the total number of pages.
+  -->
+  <string name="sports_widget_page_position_content_description">%1$s, ᱥᱟᱦᱴᱟ %3$d ᱠᱷᱚᱱ %2$d</string>
+  <!--
+    Content description (for accessibility, not displayed) for a page within the World Cup final results carousel.
+    %1$d is the current page number, and %2$d is the total number of pages.
+  -->
+  <string name="sports_widget_final_results_page_content_description" tools:ignore="UnusedResources">ᱡᱮᱜᱮᱫ ᱠᱟᱯ ᱢᱩᱪᱟᱹᱫ ᱛᱟᱞᱟ, ᱥᱟᱦᱴᱟ %2$d ᱠᱷᱚᱱ %1$d</string>
+  <!-- Content description (for accessibility, not displayed) for the World Cup final results page. -->
+  <string name="sports_widget_final_results_content_description">ᱡᱮᱜᱮᱫ ᱠᱟᱯ ᱨᱮᱭᱟᱜ ᱢᱩᱪᱟᱹᱫ ᱛᱮᱞᱟ</string>
+  <!-- Content description (for accessibility, not displayed) for the remove button that removes the sports widget from the homepage. -->
+  <string name="sports_widget_remove_content_description" tools:ignore="UnusedResources">ᱚᱲᱟᱜ ᱠᱷᱚᱱ ᱡᱮᱜᱮᱫ ᱠᱚᱯ ᱚᱪᱚᱜᱽ ᱢᱮ</string>
+  <!-- Title shown on the sports widget immediately after the user has followed a team. %s is the selected team (e.g., "USA"). -->
+  <string name="sports_widget_team_followed_title">ᱯᱟᱧᱡᱟ: %s</string>
+  <!-- Description shown on the sports widget immediately after the user has followed a team -->
+  <string name="sports_widget_team_followed_description">ᱴᱩᱱᱟᱢᱮᱱᱴ ᱥᱮᱴᱮᱨᱚᱜ ᱥᱟᱶ ᱥᱟᱶᱛᱮ ᱢᱮᱪ ᱵᱟᱯᱟᱰᱟᱭ ᱞᱟᱹᱜᱤᱫ ᱫᱚᱦᱲᱟ ᱧᱮᱞ ᱢᱮ ᱾</string>
+  <!-- Sports widget match status label shown during first half of a match. -->
+  <string name="sports_widget_first_half" tools:ignore="UnusedResources">ᱯᱩᱭᱞᱩ ᱟᱫᱷᱟ</string>
+  <!-- Sports widget match status label shown during second half of a match. -->
+  <string name="sports_widget_second_half" tools:ignore="UnusedResources">ᱫᱚᱥᱟᱨ ᱦᱟᱯ</string>
+  <!-- Sports widget error card title shown when the user is offline. -->
+  <string name="sports_widget_error_connection_offline_title">ᱧᱮᱞᱚᱜ ᱠᱟᱱᱟ ᱟᱢ ᱚᱯᱷᱞᱟᱭᱤᱱ ᱢᱮᱱᱟᱢᱟ ᱾</string>
+  <!-- Sports widget error card description shown when the user is offline. -->
+  <string name="sports_widget_error_connection_offline_description">ᱟᱢᱟᱜ ᱤᱱᱴᱚᱨᱱᱮᱴ ᱡᱩᱲᱟᱹᱣ ᱧᱮᱞ ᱢᱮ ᱟᱨ ᱫᱩᱦᱲᱟᱹ ᱪᱮᱥᱴᱟᱭ ᱢᱮ ᱾</string>
+  <!-- Sports widget general group stage label in the soccer tournament. -->
+  <string name="sports_widget_group_stage">ᱜᱟᱫᱮᱞ ᱥᱴᱮᱡᱽ</string>
+  <!-- Sports widget error card title shown when match data fails to load. -->
+  <string name="sports_widget_error_load_failed_title">ᱠᱷᱮᱞ ᱵᱟᱯᱟᱰᱟᱭ ᱫᱚ ᱱᱤᱛᱚᱜ ᱵᱟᱝ ᱧᱟᱢᱚᱜ ᱠᱟᱱᱟ ᱾</string>
+  <!-- Sports widget error card description shown when match data fails to load. -->
+  <string name="sports_widget_error_load_failed_description">ᱛᱤᱱᱟᱹᱜ ᱜᱟᱱ ᱴᱤᱯᱤᱡ ᱛᱟᱭᱚᱢ ᱨᱤᱯᱷᱨᱮᱥᱤᱝ ᱨᱮᱭᱟᱜ ᱠᱩᱨᱩᱢᱩᱴᱩᱭ ᱢᱮ ᱾</string>
+  <!-- Content description (for accessibility, not displayed) for teams which have not yet been determined in the match schedule. -->
+  <string name="sports_widget_team_to_be_determined">ᱫᱚᱞ ᱴᱷᱟᱹᱣᱠᱟᱹ ᱦᱩᱭᱩᱜᱼᱟ</string>
   <!-- ==== End of Terms of use popup prompt. ==== -->
 
   <!--
@@ -4292,4 +4697,82 @@
   <string name="privacy_notice_updated_homepage_message_privacy_notice" tools:ignore="UnusedResources">ᱫᱟᱱᱟᱝ ᱧᱮᱛᱮᱞ</string>
   <!-- The second active link used in privacy_notice_updated_homepage_message -->
   <string name="privacy_notice_updated_homepage_message_learn_more" tools:ignore="UnusedResources">ᱵᱟᱹᱲᱛᱤ ᱵᱟᱰᱟᱭ ᱢᱮ</string>
+  <!-- Google Lens prototype related strings -->
+  <string name="preferences_debug_settings_google_lens_integration">Google Lens ᱠᱷᱚᱧᱡᱟ ᱮᱢᱪᱷᱚᱭ ᱢᱮ</string>
+  <!-- Lens image search button content description -->
+  <string name="lens_search_content_description">ᱪᱤᱛᱟᱹᱨ ᱥᱟᱶ ᱥᱮᱸᱫᱽᱨᱟ ᱢᱮ</string>
+  <!-- Content description for the gallery picker button in the Lens camera screen -->
+  <string name="content_description_gallery">Google Lens ᱨᱮ ᱵᱷᱮᱡᱟ ᱞᱟᱹᱜᱤᱫ ᱜᱮᱞᱮᱨᱤ ᱠᱷᱚᱱ ᱵᱟᱪᱷᱟᱣ ᱢᱮ</string>
+  <!-- Content description for the shutter button in the Lens camera screen -->
+  <string name="content_description_take_photo">ᱪᱤᱛᱟᱹᱨ ᱦᱟᱛᱟᱣ ᱢᱮ ᱟᱨ Google Lens ᱨᱮ ᱵᱷᱮᱡᱟᱭ ᱢᱮ</string>
+  <!-- Image context menu entry that sends the long-pressed image to Google Lens -->
+  <string name="context_menu_open_image_with_google_lens">Google Lens ᱥᱟᱶ ᱥᱮᱸᱫᱽᱨᱟᱭ ᱢᱮ</string>
+  <!-- Toast shown when the user denies the camera permission requested by the Lens camera screen -->
+  <string name="lens_camera_permission_denied">ᱟᱹᱭᱫᱟᱹᱨ ᱵᱟᱝ ᱦᱩᱭ ᱟᱠᱟᱱᱟ</string>
+  <!--
+    Title shown at the top of the camera screen, next to the close button, telling the
+    user that the photo they capture will be sent to Google Lens for a visual search.
+  -->
+  <string name="lens_camera_title_lens">Google Lens</string>
+  <!--
+    Title shown at the top of the camera screen, next to the close button, telling the
+    user that the camera is being used to scan a QR code.
+  -->
+  <string name="lens_camera_title_qr">QR ᱠᱳᱰ</string>
+  <!-- Title for the Google Lens Search Settings page feature toggle -->
+  <string name="search_settings_google_lens_title">Google Lens ᱥᱮᱸᱫᱽᱨᱟ ᱪᱟᱹᱞᱩᱭ ᱢᱮ</string>
+  <!-- Description for the Google Lens Search Settings page feature toggle -->
+  <string name="search_settings_google_lens_description">ᱧᱮᱞᱚᱜ ᱥᱮᱸᱫᱽᱨᱟ ᱞᱟᱹᱜᱤᱫ Google ᱴᱷᱮᱱ ᱪᱤᱛᱟᱹᱨ ᱟᱨ ᱯᱷᱳᱴᱳ ᱵᱷᱮᱡᱟᱭ ᱢᱮ ᱾</string>
+  <!-- Caption shown under the Google Lens toggle clarifying when the feature is available -->
+  <string name="preferences_google_lens_availability_caption">ᱥᱩᱢᱩᱝ ᱧᱟᱢᱚᱜᱼᱟ ᱡᱚᱠᱷᱚᱱ Google ᱪᱮᱛᱟᱱ ᱨᱮ ᱪᱟᱹᱞᱩ ᱛᱟᱦᱮᱱᱟ ᱟᱨ ᱵᱽᱨᱟᱣᱩᱡᱽ ᱚᱠᱛᱮ ᱟᱢᱟᱜ ᱮᱠᱴᱤᱵᱷ ᱥᱮᱸᱫᱽᱨᱟ ᱤᱧᱡᱤᱱ ᱛᱟᱦᱮᱱᱟ ᱾</string>
+  <!-- Title for the Google Lens AI feature toggle -->
+  <string name="ai_controls_google_lens_title">Google Lens</string>
+  <!-- Description for the Google Lens AI feature toggle -->
+  <string name="ai_controls_google_lens_description">ᱧᱮᱞᱚᱜ ᱥᱮᱸᱫᱽᱨᱟ ᱞᱟᱹᱜᱤᱫ Google ᱴᱷᱮᱱ ᱪᱤᱛᱟᱹᱨ ᱟᱨ ᱯᱷᱳᱴᱳ ᱵᱷᱮᱡᱟᱭ ᱢᱮ ᱾</string>
+  <!-- Content description for the Google Lens half of the camera mode toggle -->
+  <string name="lens_camera_mode_lens">Google Lens</string>
+  <!-- Content description for the QR scanner half of the camera mode toggle -->
+  <string name="lens_camera_mode_qr">QR ᱥᱠᱟᱱᱚᱨ</string>
+  <!-- Toast shown when the user picks an image from the gallery in QR mode but no QR code is found in it -->
+  <string name="lens_camera_qr_no_code_found">ᱪᱤᱛᱟᱹᱨ ᱨᱮ ᱪᱮᱫ QR ᱠᱳᱰ ᱵᱟᱝ ᱧᱟᱢ ᱟᱠᱟᱱᱟ</string>
+  <!--
+    Firefox Labs
+
+    Firefox Labs is the name of a screen in Settings to allow users to learn about
+    experimental and in-development features, and turn those features on and off.
+    The "Labs" portion can be localized, "Firefox" must be treated as a brand and kept
+    in English.
+  -->
+  <string name="firefox_labs_title" tools:ignore="BrandUsage">Firefox Labs</string>
+  <!-- Banner title text on the Firefox Labs screen. -->
+  <string name="firefox_labs_banner_title_2">ᱟᱞᱮᱭᱟᱜ ᱮᱠᱥᱯᱮᱨᱤᱢᱮᱱᱴᱟᱞ ᱯᱷᱤᱪᱟᱨ ᱠᱚ ᱵᱤᱰᱟᱹᱣ ᱢᱮ!</string>
+  <!--
+    Banner description text on the Firefox Labs screen. Provides information on what Firefox Labs does. %s is the name of the app (for example "Firefox Nightly").
+    Text will appear under the Firefox Labs banner title.
+  -->
+  <string name="firefox_labs_experimental_description">ᱩᱱᱠᱩ ᱫᱚ ᱩᱛᱱᱟᱹᱣ ᱟᱨ ᱩᱛᱱᱟᱹᱣ ᱨᱮ ᱢᱮᱱᱟᱜ ᱠᱚᱣᱟ ᱡᱟᱦᱟᱸ ᱫᱚ %s ᱪᱮᱫ ᱞᱮᱠᱟ ᱠᱟᱹᱢᱤᱭᱟ ᱚᱱᱟ ᱨᱮ ᱮᱥᱮᱨ ᱫᱟᱲᱮᱭᱟᱜᱼᱟ ᱾</string>
+  <!-- The link text shown when a feedback URL for a Firefox Labs feature is available. The feedback URL page will allow users to provide opinions and suggestions. -->
+  <string name="firefox_labs_share_feedback">ᱢᱚᱱᱚᱛ ᱦᱟᱹᱴᱤᱧ ᱢᱮ</string>
+  <!-- Content description for the share feedback link on a Firefox Labs feature. This text will be used by screen readers to provide more context on the feedback link. %s is the name of the Firefox Labs feature. -->
+  <string name="firefox_labs_share_feedback_content_description">%s ᱞᱟᱹᱜᱤᱫ ᱢᱚᱱᱚᱛ ᱦᱟᱹᱴᱤᱧ ᱢᱮ᱾</string>
+  <!-- Button text on the Firefox Labs screen for restoring all toggles back to the default settings. The button will turn off any experimental features. -->
+  <string name="firefox_labs_restore_default_button_text">ᱦᱩᱲᱟᱹᱜ ᱠᱚ ᱡᱚᱜᱟᱣ ᱫᱚᱦᱲᱟᱹ</string>
+  <!-- The title used in a confirmation dialog on the Firefox Labs screen when toggling "on" or "off" an experimental feature that requires a restart. -->
+  <string name="firefox_labs_feature_dialog_title">ᱫᱚᱦᱚᱲᱟ ᱮᱛᱦᱚᱵ ᱢᱮ</string>
+  <!-- The text on the dialog on the Firefox Labs screen for the positive button when toggling "on" and "off" experimental features. This prompts the user to confirm that they want to restart the app. -->
+  <string name="firefox_labs_dialog_restart_button">ᱫᱚᱦᱲᱟ ᱮᱦᱚᱵ</string>
+  <!-- The text on the dialog on the Firefox Labs screen for the negative button when toggling "on" and "off" experimental features. This is used to cancel the action and return to the previous screen. -->
+  <string name="firefox_labs_dialog_cancel_button">ᱵᱟᱹᱰᱨᱟᱹ</string>
+  <!-- The title used in a confirmation dialog on the Firefox Labs screen when restoring the application to its defaults by turning "off" any experimental features. -->
+  <string name="firefox_labs_restore_defaults_dialog_title">ᱫᱚᱦᱚᱲᱟ ᱮᱛᱦᱚᱵ ᱢᱮ</string>
+  <!-- The description used in a confirmation dialog on the Firefox Labs screen when restoring the application to its defaults by turning "off" any experimental features. %s is the name of the app (for example "Firefox Nightly") -->
+  <string name="firefox_labs_restore_defaults_dialog_message">ᱢᱩᱞ ᱛᱮ ᱨᱩᱣᱟᱹᱨ ᱞᱟᱹᱜᱤᱫ, ᱫᱚᱦᱲᱟ ᱪᱟᱹᱞᱩᱭ ᱢᱮ %s ᱾</string>
+  <!-- The description text that is displayed in the confirmation dialog on the Firefox Labs screen for toggling "on" experimental features. %s is the name of the app (for example "Firefox Nightly") -->
+  <string name="firefox_labs_feature_enable_dialog_message">ᱱᱚᱣᱟ ᱜᱩᱱ ᱪᱟᱹᱞᱩ ᱞᱟᱹᱜᱤᱫ, %s ᱫᱚᱦᱲᱟ ᱪᱟᱹᱞᱩᱭ ᱢᱮ ᱾</string>
+  <!-- The description text that is displayed in the confirmation dialog on the Firefox Labs screen for toggling "off" experimental features. %s is the name of the app (for example "Firefox Nightly") -->
+  <string name="firefox_labs_feature_disable_dialog_message">ᱱᱚᱣᱟ ᱜᱩᱱ ᱵᱚᱱᱫᱚ ᱞᱟᱹᱜᱤᱫ, %s ᱫᱚᱦᱲᱟ ᱪᱟᱹᱞᱩᱭ ᱢᱮ ᱾</string>
+  <!-- Helper text shown beneath a Firefox Labs item when it is blocked from being turned on. -->
+  <string name="firefox_labs_feature_conflict">ᱯᱷᱤᱪᱟᱨ ᱫᱚ ᱪᱮᱥᱴᱟ ᱞᱟᱹᱜᱤᱫ ᱵᱟᱝ ᱧᱟᱢᱚᱜ ᱠᱟᱱᱟ ᱾</string>
+  <!-- Text displayed on the Firefox Labs screen when there are no Labs experimental features present. -->
+  <string name="firefox_labs_no_labs_available_description">ᱱᱤᱛᱚᱜ ᱫᱚ ᱪᱮᱥᱴᱟ ᱞᱟᱹᱜᱤᱫ ᱪᱮᱫ ᱮᱠᱥᱯᱮᱨᱤᱢᱮᱱᱴᱟᱞ ᱯᱷᱤᱪᱟᱨ ᱵᱟᱹᱱᱩᱜᱼᱟ</string>
 </resources>
