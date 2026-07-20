@@ -6,7 +6,6 @@ $schema: moz://mozilla.org/schemas/glean/metrics/2-0-0
 
 no_lint:
   - CATEGORY_GENERIC
-  - COMMON_PREFIX
 
 browser:
   default_search_engine:

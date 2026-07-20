@@ -196,7 +196,6 @@ address:
           event's `value` parameter.
           The flowId.
         type: string
-    no_lint: [COMMON_PREFIX]
 
   show_update_doorhanger:
     type: event
@@ -209,7 +208,6 @@ address:
     notification_emails: *address_show_emails
     expires: never
     extra_keys: *address_show_extra
-    no_lint: [COMMON_PREFIX]
 
   show_edit_doorhanger:
     type: event
@@ -222,7 +220,6 @@ address:
     notification_emails: *address_show_emails
     expires: never
     extra_keys: *address_show_extra
-    no_lint: [COMMON_PREFIX]
 
   save_capture_doorhanger:
     type: event
@@ -235,7 +232,6 @@ address:
     notification_emails: *address_show_emails
     expires: never
     extra_keys: *address_show_extra
-    no_lint: [COMMON_PREFIX]
 
   save_update_doorhanger:
     type: event
@@ -248,7 +244,6 @@ address:
     notification_emails: *address_show_emails
     expires: never
     extra_keys: *address_show_extra
-    no_lint: [COMMON_PREFIX]
 
   save_edit_doorhanger:
     type: event
@@ -261,7 +256,6 @@ address:
     notification_emails: *address_show_emails
     expires: never
     extra_keys: *address_show_extra
-    no_lint: [COMMON_PREFIX]
 
   update_capture_doorhanger:
     type: event
@@ -274,7 +268,6 @@ address:
     notification_emails: *address_show_emails
     expires: never
     extra_keys: *address_show_extra
-    no_lint: [COMMON_PREFIX]
 
   update_update_doorhanger:
     type: event
@@ -287,7 +280,6 @@ address:
     notification_emails: *address_show_emails
     expires: never
     extra_keys: *address_show_extra
-    no_lint: [COMMON_PREFIX]
 
   update_edit_doorhanger:
     type: event
@@ -300,7 +292,6 @@ address:
     notification_emails: *address_show_emails
     expires: never
     extra_keys: *address_show_extra
-    no_lint: [COMMON_PREFIX]
 
   cancel_capture_doorhanger:
     type: event
@@ -313,7 +304,6 @@ address:
     notification_emails: *address_show_emails
     expires: never
     extra_keys: *address_show_extra
-    no_lint: [COMMON_PREFIX]
 
   cancel_update_doorhanger:
     type: event
@@ -326,7 +316,6 @@ address:
     notification_emails: *address_show_emails
     expires: never
     extra_keys: *address_show_extra
-    no_lint: [COMMON_PREFIX]
 
   cancel_edit_doorhanger:
     type: event
@@ -339,7 +328,6 @@ address:
     notification_emails: *address_show_emails
     expires: never
     extra_keys: *address_show_extra
-    no_lint: [COMMON_PREFIX]
 
   disable_capture_doorhanger:
     type: event
@@ -352,7 +340,6 @@ address:
     notification_emails: *address_show_emails
     expires: never
     extra_keys: *address_show_extra
-    no_lint: [COMMON_PREFIX]
 
   disable_update_doorhanger:
     type: event
@@ -365,7 +352,6 @@ address:
     notification_emails: *address_show_emails
     expires: never
     extra_keys: *address_show_extra
-    no_lint: [COMMON_PREFIX]
 
   disable_edit_doorhanger:
     type: event
@@ -378,7 +364,6 @@ address:
     notification_emails: *address_show_emails
     expires: never
     extra_keys: *address_show_extra
-    no_lint: [COMMON_PREFIX]
 
   pref_capture_doorhanger:
     type: event
@@ -391,7 +376,6 @@ address:
     notification_emails: *address_show_emails
     expires: never
     extra_keys: *address_show_extra
-    no_lint: [COMMON_PREFIX]
 
   pref_update_doorhanger:
     type: event
@@ -404,7 +388,6 @@ address:
     notification_emails: *address_show_emails
     expires: never
     extra_keys: *address_show_extra
-    no_lint: [COMMON_PREFIX]
 
   pref_edit_doorhanger:
     type: event
@@ -417,7 +400,6 @@ address:
     notification_emails: *address_show_emails
     expires: never
     extra_keys: *address_show_extra
-    no_lint: [COMMON_PREFIX]
 
   learn_more_capture_doorhanger:
     type: event
@@ -430,7 +412,6 @@ address:
     notification_emails: *address_show_emails
     expires: never
     extra_keys: *address_show_extra
-    no_lint: [COMMON_PREFIX]
 
   learn_more_update_doorhanger:
     type: event
@@ -443,7 +424,6 @@ address:
     notification_emails: *address_show_emails
     expires: never
     extra_keys: *address_show_extra
-    no_lint: [COMMON_PREFIX]
 
   learn_more_edit_doorhanger:
     type: event
@@ -456,7 +436,6 @@ address:
     notification_emails: *address_show_emails
     expires: never
     extra_keys: *address_show_extra
-    no_lint: [COMMON_PREFIX]
 
   show_manage:
     type: event
@@ -982,7 +961,6 @@ creditcard:
           event's `value` parameter.
           The flowId.
         type: string
-    no_lint: [COMMON_PREFIX]
 
   show_update_doorhanger:
     type: event
@@ -995,7 +973,6 @@ creditcard:
     notification_emails: *creditcard_show_emails
     expires: never
     extra_keys: *creditcard_show_extra
-    no_lint: [COMMON_PREFIX]
 
   save_capture_doorhanger:
     type: event
@@ -1008,7 +985,6 @@ creditcard:
     notification_emails: *creditcard_show_emails
     expires: never
     extra_keys: *creditcard_show_extra
-    no_lint: [COMMON_PREFIX]
 
   save_update_doorhanger:
     type: event
@@ -1021,7 +997,6 @@ creditcard:
     notification_emails: *creditcard_show_emails
     expires: never
     extra_keys: *creditcard_show_extra
-    no_lint: [COMMON_PREFIX]
 
   update_capture_doorhanger:
     type: event
@@ -1034,7 +1009,6 @@ creditcard:
     notification_emails: *creditcard_show_emails
     expires: never
     extra_keys: *creditcard_show_extra
-    no_lint: [COMMON_PREFIX]
 
   update_update_doorhanger:
     type: event
@@ -1047,7 +1021,6 @@ creditcard:
     notification_emails: *creditcard_show_emails
     expires: never
     extra_keys: *creditcard_show_extra
-    no_lint: [COMMON_PREFIX]
 
   cancel_capture_doorhanger:
     type: event
@@ -1060,7 +1033,6 @@ creditcard:
     notification_emails: *creditcard_show_emails
     expires: never
     extra_keys: *creditcard_show_extra
-    no_lint: [COMMON_PREFIX]
 
   cancel_update_doorhanger:
     type: event
@@ -1073,7 +1045,6 @@ creditcard:
     notification_emails: *creditcard_show_emails
     expires: never
     extra_keys: *creditcard_show_extra
-    no_lint: [COMMON_PREFIX]
 
   disable_capture_doorhanger:
     type: event
@@ -1086,7 +1057,6 @@ creditcard:
     notification_emails: *creditcard_show_emails
     expires: never
     extra_keys: *creditcard_show_extra
-    no_lint: [COMMON_PREFIX]
 
   disable_update_doorhanger:
     type: event
@@ -1099,7 +1069,6 @@ creditcard:
     notification_emails: *creditcard_show_emails
     expires: never
     extra_keys: *creditcard_show_extra
-    no_lint: [COMMON_PREFIX]
 
   show_manage:
     type: event

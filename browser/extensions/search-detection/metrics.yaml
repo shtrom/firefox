@@ -41,8 +41,6 @@ addons.search_detection:
         type: string
     expires: never
     telemetry_mirror: Addonssearchdetection_EtldChange_Webrequest
-    no_lint:
-      - COMMON_PREFIX
 
   etld_change_other:
     type: event
@@ -63,8 +61,6 @@ addons.search_detection:
     extra_keys: *etld_change_extra_keys
     expires: never
     telemetry_mirror: Addonssearchdetection_EtldChange_Other
-    no_lint:
-      - COMMON_PREFIX
 
   same_site_redirect:
     type: event
@@ -93,5 +89,3 @@ addons.search_detection:
         description: Whether the paramName was changed in the redirect.
         type: string
     expires: never
-    no_lint:
-      - COMMON_PREFIX

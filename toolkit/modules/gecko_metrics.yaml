@@ -44,8 +44,6 @@ region:
       - fx-search-telemetry@mozilla.com
     expires: never
     telemetry_mirror: SEARCH_SERVICE_COUNTRY_FETCH_TIME_MS
-    no_lint:
-      - COMMON_PREFIX
 
   fetch_result:
     type: custom_distribution
@@ -68,8 +66,6 @@ region:
       - fx-search-telemetry@mozilla.com
     expires: never
     telemetry_mirror: SEARCH_SERVICE_COUNTRY_FETCH_RESULT
-    no_lint:
-      - COMMON_PREFIX
 
   home_region:
     type: string

@@ -934,8 +934,6 @@ slow_script_warning:
         description: >
           How long the notification was up (ms).
         type: string
-    no_lint:
-      - COMMON_PREFIX
 
   notify_delay:
     type: timing_distribution

@@ -951,8 +951,6 @@ installation:
           (optional, present if object is "full") Whether the default path was used
         type: string
     telemetry_mirror: Installation_FirstSeen_Full
-    no_lint:
-      - COMMON_PREFIX
 
   first_seen_stub:
     type: event
@@ -969,8 +967,6 @@ installation:
     expires: never
     extra_keys: *installation_first_seen_extra
     telemetry_mirror: Installation_FirstSeen_Stub
-    no_lint:
-      - COMMON_PREFIX
 
   first_seen_msix:
     type: event
@@ -987,8 +983,6 @@ installation:
     expires: never
     extra_keys: *installation_first_seen_extra
     telemetry_mirror: Installation_FirstSeen_Msix
-    no_lint:
-      - COMMON_PREFIX
 
 partner_link:
   click_newtab:
