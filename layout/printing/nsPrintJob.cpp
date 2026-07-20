@@ -833,17 +833,6 @@ nsresult nsPrintJob::SetupToPrintContent() {
     }
   }
 
-  // If the document is a PDF, then we will allow the user to scale the
-  // page up past 100% despite it having a CSS page size.
-  // This allows the page to increase in size on the sheet.
-  {
-    PresShell* const presShell = mPrintObject->mPresShell;
-    if (nsContentUtils::IsPDFJS(presShell->GetDocument()->GetPrincipal())) {
-      const float pageZoomRatio = std::max(mPrintObject->mZoomRatio, 1.0f);
-      presShell->GetPageSequenceFrame()->SetMaxPageZoomRatio(pageZoomRatio);
-    }
-  }
-
   // If the frames got reconstructed and reflowed the number of pages might
   // has changed.
   if (didReconstruction) {
