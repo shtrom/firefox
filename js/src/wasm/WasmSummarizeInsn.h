@@ -5,8 +5,6 @@
 #ifndef wasm_WasmSummarizeInsn_h
 #define wasm_WasmSummarizeInsn_h
 
-#include "mozilla/Maybe.h"
-
 #include "wasm/WasmCodegenTypes.h"  // TrapMachineInsn
 
 namespace js {
@@ -88,17 +86,21 @@ class SummarizeResult {
 };
 
 // Inspect the machine instruction at `insn` and return a classification as to
-// what it is.  If the instruction can't be identified, return
-// `mozilla::Nothing`.  If the instruction is identified, the identification
-// must be correct -- in other words, if a `mozilla::Some(i)` is returned, `i`
-// must be the correct classification for the instruction.  Return
-// `mozilla::Nothing` in case of doubt.
+// what it is, and its length.  If the instruction can't be identified, return
+// `SummarizeResult()`.  If the instruction is identified, the identification
+// must be correct -- in other words, the `kind()` and `length()` values must be
+// correct.  Return `SummarizeResult()` in case of doubt.
 //
 // This function is only used to inspect trapping instructions that have been
 // created by wasm-baseline or -Ion.  So it doesn't need to handle the whole
 // complexity of the machine's instruction set.  It only needs to handle the
 // subset used by the trappable instructions we actually generate.
-mozilla::Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insn);
+
+// The main entry point.
+SummarizeResult SummarizeTrapInstruction(const InstructionBytes& insn);
+
+// Convenience function that calls the above.
+SummarizeResult SummarizeTrapInstruction(const uint8_t* insn);
 
 }  // namespace wasm
 }  // namespace js
