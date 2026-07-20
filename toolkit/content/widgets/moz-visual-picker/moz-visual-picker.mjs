@@ -163,12 +163,14 @@ export class MozVisualPickerItem extends SelectControlItemMixin(MozLitElement) {
 
     const labelElement =
       this.labelPosition == "outside"
-        ? html`<label class="label" for="picker-item">${this.label}</label>`
-        : html`<p class="label">${this.label}</p>`;
+        ? html`<label class="label" id="label" for="picker-item"
+            >${this.label}</label
+          >`
+        : html`<p class="label" id="label">${this.label}</p>`;
     return html`<div class="text-content">
       ${this.label ? labelElement : nothing}
       ${this.description
-        ? html`<p class="description">${this.description}</p>`
+        ? html`<p class="description" id="description">${this.description}</p>`
         : nothing}
     </div>`;
   }
@@ -188,6 +190,12 @@ export class MozVisualPickerItem extends SelectControlItemMixin(MozLitElement) {
         role=${this.role}
         value=${this.value}
         aria-label=${ifDefined(this.ariaLabel)}
+        aria-labelledby=${ifDefined(
+          this.label && !this.ariaLabel ? "label" : undefined
+        )}
+        aria-describedby=${ifDefined(
+          this.description && this.label ? "description" : undefined
+        )}
         aria-checked=${this.role == "radio" ? this.checked : nothing}
         aria-selected=${this.role == "option" ? this.checked : nothing}
         tabindex=${this.itemTabIndex}
