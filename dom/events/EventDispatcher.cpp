@@ -305,32 +305,31 @@ class EventTargetChainItem {
 
   /**
    * Resets aVisitor object and calls GetEventTargetParent.
-   * Copies mItemFlags to the current EventTargetChainItem.
+   * Copies mItemFlags and mItemData to the current EventTargetChainItem.
    */
   void GetEventTargetParent(EventChainPreVisitor& aVisitor);
 
   /**
-   * Copies mItemFlags to aVisitor.
-   * Calls LegacyPreActivationBehavior, copies mItemFlags and moves mItemData
-   * to this EventTargetChainItem.
+   * Copies mItemFlags, mItemData to aVisitor,
+   * calls LegacyPreActivationBehavior and copies both members back
+   * to this EventTargetChainitem.
    */
   void LegacyPreActivationBehavior(EventChainVisitor& aVisitor);
 
   /**
-   * Copies mItemFlags and moves mItemData to aVisitor.
-   * Calls ActivationBehavior.
+   * Copies mItemFlags and mItemData to aVisitor and calls ActivationBehavior.
    */
   MOZ_CAN_RUN_SCRIPT
   void ActivationBehavior(EventChainPostVisitor& aVisitor);
 
   /**
-   * Copies mItemFlags and moves mItemData to aVisitor.
-   * Calls LegacyCanceledActivationBehavior.
+   * Copies mItemFlags and mItemData to aVisitor and
+   * calls LegacyCanceledActivationBehavior.
    */
   void LegacyCanceledActivationBehavior(EventChainPostVisitor& aVisitor);
 
   /**
-   * Copies mItemFlags to aVisitor.
+   * Copies mItemFlags and mItemData to aVisitor.
    * Calls PreHandleEvent for those items which called SetWantsPreHandleEvent.
    */
   MOZ_CAN_RUN_SCRIPT void PreHandleEvent(EventChainVisitor& aVisitor);
@@ -373,7 +372,7 @@ class EventTargetChainItem {
   }
 
   /**
-   * Copies mItemFlags to aVisitor and calls PostHandleEvent.
+   * Copies mItemFlags and mItemData to aVisitor and calls PostHandleEvent.
    */
   MOZ_CAN_RUN_SCRIPT void PostHandleEvent(EventChainPostVisitor& aVisitor);
 
@@ -443,15 +442,16 @@ void EventTargetChainItem::GetEventTargetParent(
   SetRetargetedRelatedTarget(aVisitor.mRetargetedRelatedTarget);
   SetRetargetedTouchTarget(std::move(aVisitor.mRetargetedTouchTargets));
   mItemFlags = aVisitor.mItemFlags;
-  MOZ_ASSERT(!aVisitor.mItemData, "Should not be set by target at this time");
+  mItemData = aVisitor.mItemData;
 }
 
 void EventTargetChainItem::LegacyPreActivationBehavior(
     EventChainVisitor& aVisitor) {
   aVisitor.mItemFlags = mItemFlags;
+  aVisitor.mItemData = mItemData;
   mTarget->LegacyPreActivationBehavior(aVisitor);
   mItemFlags = aVisitor.mItemFlags;
-  mItemData = aVisitor.mItemData.forget();
+  mItemData = aVisitor.mItemData;
 }
 
 void EventTargetChainItem::PreHandleEvent(EventChainVisitor& aVisitor) {
@@ -459,33 +459,35 @@ void EventTargetChainItem::PreHandleEvent(EventChainVisitor& aVisitor) {
     return;
   }
   aVisitor.mItemFlags = mItemFlags;
+  aVisitor.mItemData = mItemData;
   (void)mTarget->PreHandleEvent(aVisitor);
   MOZ_ASSERT(mItemFlags == aVisitor.mItemFlags);
-  MOZ_ASSERT(!aVisitor.mItemData, "Should not be set by target at this time");
+  MOZ_ASSERT(mItemData == aVisitor.mItemData);
 }
 
 void EventTargetChainItem::ActivationBehavior(EventChainPostVisitor& aVisitor) {
   aVisitor.mItemFlags = mItemFlags;
-  // We're at the end of dispatch, no need to keep mItemData.
-  aVisitor.mItemData = mItemData.forget();
+  aVisitor.mItemData = mItemData;
   mTarget->ActivationBehavior(aVisitor);
   MOZ_ASSERT(mItemFlags == aVisitor.mItemFlags);
+  MOZ_ASSERT(mItemData == aVisitor.mItemData);
 }
 
 void EventTargetChainItem::LegacyCanceledActivationBehavior(
     EventChainPostVisitor& aVisitor) {
   aVisitor.mItemFlags = mItemFlags;
-  // We're at the end of dispatch, no need to keep mItemData.
-  aVisitor.mItemData = mItemData.forget();
+  aVisitor.mItemData = mItemData;
   mTarget->LegacyCanceledActivationBehavior(aVisitor);
   MOZ_ASSERT(mItemFlags == aVisitor.mItemFlags);
+  MOZ_ASSERT(mItemData == aVisitor.mItemData);
 }
 
 void EventTargetChainItem::PostHandleEvent(EventChainPostVisitor& aVisitor) {
   aVisitor.mItemFlags = mItemFlags;
+  aVisitor.mItemData = mItemData;
   mTarget->PostHandleEvent(aVisitor);
   MOZ_ASSERT(mItemFlags == aVisitor.mItemFlags);
-  MOZ_ASSERT(!aVisitor.mItemData, "Should not be set by target at this time");
+  MOZ_ASSERT(mItemData == aVisitor.mItemData);
 }
 
 void EventTargetChainItem::HandleEventTargetChain(
