@@ -349,6 +349,7 @@ Preferences.addAll([
   { id: "browser.urlbar.trustPanel.breachAlerts", type: "bool" },
   { id: "browser.urlbar.trustPanel.featureGate", type: "bool" },
   { id: "browser.urlbar.trustPanel.breachAlerts.featureGate", type: "bool" },
+  { id: "browser.urlbar.trackerCount.enabled", type: "bool" },
 
   // Button prefs
   { id: "pref.privacy.disable_button.cookie_exceptions", type: "bool" },
@@ -1209,6 +1210,11 @@ SettingGroupManager.registerGroups({
             control: "moz-box-button",
           },
         ],
+      },
+      {
+        id: "etpTrackerCountEnabled",
+        l10nId: "preferences-etp-tracker-count-enabled",
+        control: "moz-checkbox",
       },
       {
         id: "protectionsDashboardLink",
@@ -3699,6 +3705,22 @@ Preferences.addSetting({
     e.preventDefault();
     gotoPref("etp");
   },
+});
+
+Preferences.addSetting({
+  id: "urlbarNimbusListener",
+  setup(onChange) {
+    window.NimbusFeatures.urlbar.onUpdate(onChange);
+    return () => window.NimbusFeatures.urlbar.offUpdate(onChange);
+  },
+});
+
+Preferences.addSetting({
+  id: "etpTrackerCountEnabled",
+  pref: "browser.urlbar.trackerCount.enabled",
+  deps: ["urlbarNimbusListener"],
+  visible: () =>
+    window.NimbusFeatures.urlbar.getVariable("trackerCountFeatureGate"),
 });
 
 Preferences.addSetting({
