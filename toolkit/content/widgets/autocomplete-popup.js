@@ -126,6 +126,16 @@
                 this.mLastMoveTime = Date.now();
                 break;
               }
+              case "mouseout": {
+                if (
+                  this.richlistbox.hasAttribute("pointerselected") &&
+                  !this.richlistbox.contains(event.relatedTarget)
+                ) {
+                  this.mousedOverIndex = -1;
+                  this.selectedIndex = -1;
+                }
+                break;
+              }
             }
           },
         };
@@ -133,6 +143,7 @@
       this.richlistbox.addEventListener("mousedown", this.listEvents);
       this.richlistbox.addEventListener("mouseup", this.listEvents);
       this.richlistbox.addEventListener("mousemove", this.listEvents);
+      this.richlistbox.addEventListener("mouseout", this.listEvents);
     }
 
     get richlistbox() {
@@ -566,6 +577,7 @@
         this.richlistbox.removeEventListener("mousedown", this.listEvents);
         this.richlistbox.removeEventListener("mouseup", this.listEvents);
         this.richlistbox.removeEventListener("mousemove", this.listEvents);
+        this.richlistbox.removeEventListener("mouseout", this.listEvents);
         delete this.listEvents;
       }
     }
