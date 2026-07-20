@@ -93,7 +93,7 @@ add_task(async function viewContainsStaleRows() {
 
   // Wait for the search to stop.
   info("Waiting for the search to stop... ");
-  await gURLBar.lastQueryContextPromise;
+  let queryContext = await gURLBar.lastQueryContextPromise;
 
   // Check stale status of results.
   Assert.ok(
@@ -107,8 +107,6 @@ add_task(async function viewContainsStaleRows() {
 
   // The query context for the last search ("xx") should contain only
   // halfResults + 1 results (+ 1 for the heuristic).
-  Assert.ok(gURLBar.controller._lastQueryContextWrapper);
-  let { queryContext } = gURLBar.controller._lastQueryContextWrapper;
   Assert.ok(queryContext);
   Assert.equal(queryContext.results.length, halfResults + 1);
 
