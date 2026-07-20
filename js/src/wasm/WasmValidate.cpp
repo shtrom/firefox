@@ -17,6 +17,7 @@
 #include "wasm/WasmValidate.h"
 
 #include "mozilla/CheckedInt.h"
+#include "mozilla/ScopeExit.h"
 #include "mozilla/Span.h"
 #include "mozilla/Utf8.h"
 
@@ -2750,6 +2751,12 @@ static bool DecodeTypeSection(Decoder& d, CodeMetadata* codeMeta) {
       return false;
     }
 
+    // Cancel the pending rec group if we return early due to a validation
+    // error, so that the bad group is not left in recGroups_ for ~TypeContext
+    // to hash during cleanup.
+    auto cancelRecGroup =
+        mozilla::MakeScopeExit([&] { codeMeta->types->cancelStartRecGroup(); });
+
     // First, iterate over the types, validate them and set super types.
     // Subtyping relationship will be checked in a second iteration.
     for (uint32_t recGroupTypeIndex = 0; recGroupTypeIndex < recGroupLength;
@@ -2898,6 +2905,7 @@ static bool DecodeTypeSection(Decoder& d, CodeMetadata* codeMeta) {
     }
 
     // Finish the recursion group, which will canonicalize the types.
+    cancelRecGroup.release();
     if (!codeMeta->types->endRecGroup()) {
       return false;
     }

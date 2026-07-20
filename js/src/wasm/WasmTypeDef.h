@@ -1258,8 +1258,22 @@ class TypeContext : public AtomicRefCounted<TypeContext> {
     return recGroup;
   }
 
+  // Cancel a pending recursion group, undoing what startRecGroup did.
+  // Call this instead of endRecGroup when the group must be discarded due to
+  // a validation error.
+  void cancelStartRecGroup() {
+    MOZ_ASSERT(pendingRecGroup_);
+    uint32_t numTypes = pendingRecGroup_->numTypes();
+    for (uint32_t i = 0; i < numTypes; i++) {
+      moduleIndices_.remove(&pendingRecGroup_->type(i));
+    }
+    types_.shrinkBy(numTypes);
+    recGroups_.popBack();
+    pendingRecGroup_ = nullptr;
+  }
+
   // Finish creation of a recursion group after type definitions have been
-  // initialized. This must be paired with `startGroup`.
+  // initialized. This must be paired with `startRecGroup`.
   [[nodiscard]] bool endRecGroup() {
     // We must have started a recursion group
     MOZ_ASSERT(pendingRecGroup_);
@@ -1405,10 +1419,13 @@ using MutableTypeContext = RefPtr<TypeContext>;
 #ifdef ENABLE_WASM_JSPI
 
 inline HashNumber ContType::hash(const RecGroup* recGroup) const {
-  // Don't assume this is a function type. We don't validate it's a function
-  // type until after the rec group is constructed. If that validation fails,
-  // we may still use this hash method when checking if we need to clean up
-  // the canonical type set.
+  // A cont type's referenced type may not be a func type if the rec group was
+  // malformed and validation failed before cancelStartRecGroup could remove it.
+  // Guard here as defense-in-depth to avoid infinite recursion through a
+  // self-referencing cont type.
+  if (!funcTypeDef_->isFuncType()) {
+    return 0;
+  }
   return funcTypeDef_->hash();
 }
 
