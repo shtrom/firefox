@@ -5,7 +5,9 @@
 #include "jit/loong64/Assembler-loong64.h"
 
 #include "mozilla/DebugOnly.h"
+#include "mozilla/IntegerPrintfMacros.h"
 #include "mozilla/Maybe.h"
+#include "mozilla/Sprintf.h"
 
 #include "gc/Marking.h"
 #include "jit/AutoWritableJitCode.h"
@@ -303,7 +305,7 @@ void AssemblerLOONG64::WriteInstStatic(uint32_t x, uint32_t* dest) {
 BufferOffset AssemblerLOONG64::emit(uint32_t x) {
   BufferOffset offset = writeInst(x);
 #ifdef JS_DISASM_LOONG64
-  spewInstruction(m_buffer.getInstOrNull(offset));
+  spew(offset, m_buffer.getInstOrNull(offset));
 #endif
   return offset;
 }
@@ -317,9 +319,30 @@ BufferOffset AssemblerLOONG64::emit(uint32_t x, LabelDoc target) {
 }
 
 #ifdef JS_DISASM_LOONG64
-void AssemblerLOONG64::spewInstruction(Instruction* instruction) {
-#  ifdef JS_JITSPEW
-  if (!instruction || !(printer || JitSpewEnabled(JitSpew_Codegen))) {
+class NameConverterWithLabelDoc final : public disasm::NameConverter {
+  LabelDoc target_;
+  mutable char targetBuffer_[32];
+  mutable bool usedAddress_ = false;
+
+ public:
+  explicit NameConverterWithLabelDoc(LabelDoc target) : target_(target) {}
+
+  const char* nameOfAddress(const uint8_t*) const override {
+    usedAddress_ = true;
+    if (target_.valid) {
+      SprintfLiteral(targetBuffer_, "%u%s", target_.doc,
+                     !target_.bound ? "f" : "");
+    } else {
+      SprintfLiteral(targetBuffer_, "(link-time target)");
+    }
+    return targetBuffer_;
+  }
+
+  bool usedAddress() const { return usedAddress_; }
+};
+
+void AssemblerLOONG64::spew(BufferOffset offset, Instruction* instruction) {
+  if (spew_.isDisabled() || !instruction) {
     return;
   }
 
@@ -327,13 +350,40 @@ void AssemblerLOONG64::spewInstruction(Instruction* instruction) {
   disasm::NameConverter converter;
   disasm::Disassembler disassembler(converter);
   disassembler.disassemble(mozilla::Span<char>(buffer), instruction);
-  spew("%s", buffer);
-#  endif
+
+  spew_.spew("%06" PRIx32 " %08" PRIx32 "  %s", uint32_t(offset.getOffset()),
+             instruction->encode(), buffer);
 }
 
-void AssemblerLOONG64::spewBranch(BufferOffset, Instruction* instruction,
-                                  LabelDoc) {
-  spewInstruction(instruction);
+void AssemblerLOONG64::spewBranch(BufferOffset offset, Instruction* instruction,
+                                  LabelDoc target) {
+  if (spew_.isDisabled() || !instruction) {
+    return;
+  }
+
+  char buffer[disasm::ReasonableBufferSize];
+  NameConverterWithLabelDoc converter(target);
+  disasm::Disassembler disassembler(converter);
+  disassembler.disassemble(mozilla::Span<char>(buffer), instruction);
+
+  char targetBuffer[32] = {};
+  if (!converter.usedAddress() && !target.valid) {
+    SprintfLiteral(targetBuffer, " -> (link-time target)");
+  }
+
+  spew_.spew("%06" PRIx32 " %08" PRIx32 "  %s%s", uint32_t(offset.getOffset()),
+             instruction->encode(), buffer, targetBuffer);
+
+  if (!converter.usedAddress() && target.valid) {
+    spew_.spewRef(target);
+  }
+}
+
+DisassemblerSpew::LabelDoc AssemblerLOONG64::refLabel(Label* label) {
+  if (spew_.isDisabled()) {
+    return LabelDoc();
+  }
+  return spew_.refLabel(label);
 }
 #endif
 
@@ -1713,6 +1763,9 @@ BufferOffset AssemblerLOONG64::as_fstx_d(FloatRegister fd, Register rj,
 /* ========================================================================= */
 
 void AssemblerLOONG64::bind(Label* label, BufferOffset boff) {
+#ifdef JS_DISASM_LOONG64
+  spew_.spewBind(label);
+#endif
   // If our caller didn't give us an explicit target to bind to
   // then we want to bind to the location of the next instruction
   BufferOffset dest = boff.assigned() ? boff : nextOffset();
@@ -1740,6 +1793,9 @@ void AssemblerLOONG64::bind(Label* label, BufferOffset boff) {
 }
 
 void AssemblerLOONG64::retarget(Label* label, Label* target) {
+#ifdef JS_DISASM_LOONG64
+  spew_.spewRetarget(label, target);
+#endif
   if (label->used() && !oom()) {
     if (target->bound()) {
       bind(label, BufferOffset(target));

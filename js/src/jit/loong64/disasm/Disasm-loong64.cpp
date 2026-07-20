@@ -356,9 +356,10 @@ bool Decoder::formatBranch16(const char* mnemonic,
                              const Instruction* instruction,
                              uint32_t word) const {
   int32_t offset = SignExtend(Extract(word, Imm16Shift, Imm16Bits), 16) * 4;
-  FormatTo(output_, "%-12s %s,%s,%s", mnemonic,
+  FormatTo(output_, "%-12s %s,%s,%d -> %s", mnemonic,
            cpu(Extract(word, RJShift, RJBits)),
-           cpu(Extract(word, RDShift, RDBits)), target(instruction, offset));
+           cpu(Extract(word, RDShift, RDBits)), offset,
+           target(instruction, offset));
   return true;
 }
 
@@ -368,8 +369,9 @@ bool Decoder::formatBranch21(const char* mnemonic,
   uint32_t encoded =
       Extract(word, Imm16Shift, Imm16Bits) | (Extract(word, 0, 5) << 16);
   int32_t offset = SignExtend(encoded, 21) * 4;
-  FormatTo(output_, "%-12s %s,%s", mnemonic,
-           cpu(Extract(word, RJShift, RJBits)), target(instruction, offset));
+  FormatTo(output_, "%-12s %s,%d -> %s", mnemonic,
+           cpu(Extract(word, RJShift, RJBits)), offset,
+           target(instruction, offset));
   return true;
 }
 
@@ -381,8 +383,8 @@ bool Decoder::formatBcz(const Instruction* instruction, uint32_t word) const {
   uint32_t encoded =
       Extract(word, Imm16Shift, Imm16Bits) | (Extract(word, 0, 5) << 16);
   int32_t offset = SignExtend(encoded, 21) * 4;
-  FormatTo(output_, "%-12s fcc%u,%s", condition == 1 ? "bcnez" : "bceqz",
-           Extract(word, CJShift, CJBits), target(instruction, offset));
+  FormatTo(output_, "%-12s fcc%u,%d -> %s", condition == 1 ? "bcnez" : "bceqz",
+           Extract(word, CJShift, CJBits), offset, target(instruction, offset));
   return true;
 }
 
@@ -392,7 +394,8 @@ bool Decoder::formatBranch26(const char* mnemonic,
   uint32_t encoded =
       Extract(word, Imm16Shift, Imm16Bits) | (Extract(word, 0, 10) << 16);
   int32_t offset = SignExtend(encoded, 26) * 4;
-  FormatTo(output_, "%-12s %s", mnemonic, target(instruction, offset));
+  FormatTo(output_, "%-12s %d -> %s", mnemonic, offset,
+           target(instruction, offset));
   return true;
 }
 

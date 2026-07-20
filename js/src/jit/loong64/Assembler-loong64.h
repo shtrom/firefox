@@ -5,11 +5,8 @@
 #ifndef jit_loong64_Assembler_loong64_h
 #define jit_loong64_Assembler_loong64_h
 
-#include "mozilla/Sprintf.h"
-
 #include "jit/CompactBuffer.h"
 #include "jit/JitCode.h"
-#include "jit/JitSpewer.h"
 #include "jit/loong64/Architecture-loong64.h"
 #include "jit/shared/Assembler-shared.h"
 #include "jit/shared/Disassembler-shared.h"
@@ -953,19 +950,29 @@ class AssemblerLOONG64 : public AssemblerShared {
 
   LOONGBufferWithExecutableCopy m_buffer;
 
-#ifdef JS_JITSPEW
-  Sprinter* printer;
+#ifdef JS_DISASM_LOONG64
+  static constexpr const char* const LabelIndent = "                 ";
+  static constexpr const char* const TargetIndent = "                    ";
+
+  DisassemblerSpew spew_;
 #endif
 
  public:
   AssemblerLOONG64()
       : m_buffer(),
-#ifdef JS_JITSPEW
-        printer(nullptr),
-#endif
         isFinished(false),
         scratch_register_list_((1 << t6.code()) | (1 << t7.code()) |
                                (1 << t8.code())) {
+#ifdef JS_DISASM_LOONG64
+    spew_.setLabelIndent(LabelIndent);
+    spew_.setTargetIndent(TargetIndent);
+#endif
+  }
+
+  ~AssemblerLOONG64() {
+#ifdef JS_DISASM_LOONG64
+    spew_.spewOrphans();
+#endif
   }
 
   static Condition InvertCondition(Condition cond);
@@ -1001,39 +1008,10 @@ class AssemblerLOONG64 : public AssemblerShared {
   bool oom() const;
 
   void setPrinter(Sprinter* sp) {
-#ifdef JS_JITSPEW
-    printer = sp;
+#ifdef JS_DISASM_LOONG64
+    spew_.setPrinter(sp);
 #endif
   }
-
-#ifdef JS_JITSPEW
-  inline void spew(const char* fmt, ...) MOZ_FORMAT_PRINTF(2, 3) {
-    if (MOZ_UNLIKELY(printer || JitSpewEnabled(JitSpew_Codegen))) {
-      va_list va;
-      va_start(va, fmt);
-      spewVA(fmt, va);
-      va_end(va);
-    }
-  }
-#else
-  MOZ_ALWAYS_INLINE void spew(const char* fmt, ...) MOZ_FORMAT_PRINTF(2, 3) {}
-#endif
-
-#ifdef JS_JITSPEW
-  MOZ_COLD void spewVA(const char* fmt, va_list va) MOZ_FORMAT_PRINTF(2, 0) {
-    // Buffer to hold the formatted string. Note that this may contain
-    // '%' characters, so do not pass it directly to printf functions.
-    char buf[200];
-
-    int i = VsprintfLiteral(buf, fmt, va);
-    if (i > -1) {
-      if (printer) {
-        printer->printf("%s\n", buf);
-      }
-      js::jit::JitSpew(js::jit::JitSpew_Codegen, "%s", buf);
-    }
-  }
-#endif
 
   Register getStackPointer() const { return StackPointer; }
 
@@ -1066,17 +1044,22 @@ class AssemblerLOONG64 : public AssemblerShared {
   BufferOffset writeInst(uint32_t x, uint32_t* dest = nullptr);
   BufferOffset emit(uint32_t x);
   BufferOffset emit(uint32_t x, LabelDoc target);
+
+ protected:
 #ifdef JS_DISASM_LOONG64
-  void spewInstruction(Instruction* instruction);
+  void spew(BufferOffset offset, Instruction* instruction);
   void spewBranch(BufferOffset offset, Instruction* instruction,
                   LabelDoc target);
-#endif
+  LabelDoc refLabel(Label* label);
+#else
   LabelDoc refLabel(Label*) { return {}; }
+#endif
+
+ public:
   // A static variant for the cases where we don't want to have an assembler
   // object at all. Normally, you would use the dummy (nullptr) object.
   static void WriteInstStatic(uint32_t x, uint32_t* dest);
 
- public:
   BufferOffset haltingAlign(int alignment);
   BufferOffset nopAlign(int alignment);
   BufferOffset as_nop() { return as_andi(zero, zero, 0); }
@@ -1483,7 +1466,11 @@ class AssemblerLOONG64 : public AssemblerShared {
  public:
   void flushBuffer() {}
 
-  void comment(const char* msg) { spew("; %s", msg); }
+  void comment(const char* msg) {
+#ifdef JS_DISASM_LOONG64
+    spew_.spew("; %s", msg);
+#endif
+  }
 
   static uint32_t NopSize() { return 4; }
 
