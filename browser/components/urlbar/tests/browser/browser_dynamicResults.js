@@ -292,8 +292,12 @@ add_task(async function pick() {
         EventUtils.synthesizeKey("KEY_Enter")
       );
       let [result, pickedElement] = await pickPromise;
-      Assert.equal(result, row.result, "Picked result");
-      Assert.equal(pickedElement, element, "Picked element");
+      UrlbarTestUtils.assertPickedResult(
+        result,
+        pickedElement,
+        row.result,
+        element
+      );
     }
   });
 });
@@ -361,8 +365,12 @@ add_task(async function shouldNavigate() {
     );
     // Verify that onEngagement was still called.
     let [result, pickedElement] = await pickPromise;
-    Assert.equal(result, row.result, "Picked result");
-    Assert.equal(pickedElement, element, "Picked element");
+    UrlbarTestUtils.assertPickedResult(
+      result,
+      pickedElement,
+      row.result,
+      element
+    );
 
     await BrowserTestUtils.browserLoaded(gBrowser.selectedBrowser);
     is(
@@ -395,8 +403,12 @@ add_task(async function shouldNavigate() {
     pickPromise = provider.promisePick();
     EventUtils.synthesizeMouseAtCenter(element, {});
     [result, pickedElement] = await pickPromise;
-    Assert.equal(result, row.result, "Picked result");
-    Assert.equal(pickedElement, element, "Picked element");
+    UrlbarTestUtils.assertPickedResult(
+      result,
+      pickedElement,
+      row.result,
+      element
+    );
 
     await BrowserTestUtils.browserLoaded(gBrowser.selectedBrowser);
     is(

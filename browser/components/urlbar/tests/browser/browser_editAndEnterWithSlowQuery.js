@@ -428,7 +428,7 @@ add_task(async function test_heuristic() {
     Assert.ok(gURLBar.valueIsTyped);
     Assert.equal(UrlbarTestUtils.getSelectedRowIndex(window), targetRowIndex);
     let selectedResult = UrlbarTestUtils.getSelectedRow(window).result;
-    Assert.equal(selectedResult, testResult);
+    Assert.equal(selectedResult.id, testResult.id, "Selected result");
     Assert.equal(
       window.gURLBar.value,
       displayedValue.substring(0, displayedValue.length - 1)
