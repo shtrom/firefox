@@ -189,6 +189,19 @@
     grid-template-columns: repeat(auto-fill, var(--col-width));
     grid-auto-rows: var(--row-height);
     gap: var(--space-medium);
+
+    @include widget-size-transition-tokens;
+  }
+
+  .nova-enabled &.is-animating-height {
+    overflow: hidden;
+    transition: height var(--widget-size-transition-duration) var(--widget-size-transition-easing);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nova-enabled &.is-animating-height {
+      transition: none;
+    }
   }
 
   // Classic layout (when Nova is disabled)
