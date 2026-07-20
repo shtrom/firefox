@@ -155,6 +155,8 @@ export class SidebarBookmarkList extends SidebarTabList {
       if (!tabItem.children.length) {
         return html`<div
           class="bookmark-folder-label"
+          role="listitem"
+          aria-label=${tabItem.title}
           data-folder-kind=${ifDefined(folderKind)}
           tabindex="0"
           draggable="true"

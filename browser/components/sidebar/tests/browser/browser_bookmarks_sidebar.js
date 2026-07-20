@@ -1136,6 +1136,16 @@ add_task(async function test_bookmarks_empty_folder_shows_label() {
     "Empty Folder",
     "Empty folder label text matches."
   );
+  Assert.equal(
+    nestedList.folderLabelEl.getAttribute("role"),
+    "listitem",
+    "Empty folder has a listitem role."
+  );
+  Assert.equal(
+    nestedList.folderLabelEl.getAttribute("aria-label"),
+    "Empty Folder",
+    "Empty folder has an accessible name matching its title."
+  );
 
   await PlacesUtils.bookmarks.remove({ guid: folder.guid });
   SidebarTestUtils.closePanel(window);
