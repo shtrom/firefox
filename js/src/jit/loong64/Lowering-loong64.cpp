@@ -207,6 +207,14 @@ void LIRGeneratorLOONG64::lowerDivI(MDiv* div) {
 }
 
 void LIRGeneratorLOONG64::lowerDivI64(MDiv* div) {
+  if (div->rhs()->isConstant()) {
+    int64_t rhs = div->rhs()->toConstant()->toInt64();
+
+    auto* lir = new (alloc()) LDivConstantI64(useRegister(div->lhs()), rhs);
+    define(lir, div);
+    return;
+  }
+
   auto* lir = new (alloc())
       LDivOrModI64(useRegister(div->lhs()), useRegister(div->rhs()));
   defineInt64(lir, div);
@@ -254,6 +262,14 @@ void LIRGeneratorLOONG64::lowerModI(MMod* mod) {
 }
 
 void LIRGeneratorLOONG64::lowerModI64(MMod* mod) {
+  if (mod->rhs()->isConstant()) {
+    int64_t rhs = mod->rhs()->toConstant()->toInt64();
+
+    auto* lir = new (alloc()) LModConstantI64(useRegister(mod->lhs()), rhs);
+    define(lir, mod);
+    return;
+  }
+
   auto* lir = new (alloc())
       LDivOrModI64(useRegister(mod->lhs()), useRegister(mod->rhs()));
   defineInt64(lir, mod);
@@ -297,6 +313,15 @@ void LIRGeneratorLOONG64::lowerUDiv(MDiv* div) {
 }
 
 void LIRGeneratorLOONG64::lowerUDivI64(MDiv* div) {
+  if (div->rhs()->isConstant()) {
+    // NOTE: the result of toInt64 is coerced to uint64_t.
+    uint64_t rhs = div->rhs()->toConstant()->toInt64();
+
+    auto* lir = new (alloc()) LUDivConstantI64(useRegister(div->lhs()), rhs);
+    define(lir, div);
+    return;
+  }
+
   auto* lir = new (alloc())
       LUDivOrModI64(useRegister(div->lhs()), useRegister(div->rhs()));
   defineInt64(lir, div);
@@ -339,6 +364,15 @@ void LIRGeneratorLOONG64::lowerUMod(MMod* mod) {
 }
 
 void LIRGeneratorLOONG64::lowerUModI64(MMod* mod) {
+  if (mod->rhs()->isConstant()) {
+    // NOTE: the result of toInt64 is coerced to uint64_t.
+    uint64_t rhs = mod->rhs()->toConstant()->toInt64();
+
+    auto* lir = new (alloc()) LUModConstantI64(useRegister(mod->lhs()), rhs);
+    define(lir, mod);
+    return;
+  }
+
   auto* lir = new (alloc())
       LUDivOrModI64(useRegister(mod->lhs()), useRegister(mod->rhs()));
   defineInt64(lir, mod);

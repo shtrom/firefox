@@ -4377,6 +4377,38 @@
     denominator: uint32_t
   mir_op: Mod
 
+- name: DivConstantI64
+  result_type: WordSized
+  operands:
+    numerator: WordSized
+  arguments:
+    denominator: int64_t
+  mir_op: Div
+
+- name: ModConstantI64
+  result_type: WordSized
+  operands:
+    numerator: WordSized
+  arguments:
+    denominator: int64_t
+  mir_op: Mod
+
+- name: UDivConstantI64
+  result_type: WordSized
+  operands:
+    numerator: WordSized
+  arguments:
+    denominator: uint64_t
+  mir_op: Div
+
+- name: UModConstantI64
+  result_type: WordSized
+  operands:
+    numerator: WordSized
+  arguments:
+    denominator: uint64_t
+  mir_op: Mod
+
 - name: DivOrModI64
   gen_boilerplate: false
 
