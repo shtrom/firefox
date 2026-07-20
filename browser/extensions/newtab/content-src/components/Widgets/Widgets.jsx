@@ -30,6 +30,7 @@ import { WIDGET_ROW_COMPONENTS } from "./WidgetsComponentRegistry.jsx";
 import { WidgetWrapper } from "./WidgetWrapper";
 import { ErrorBoundary } from "content-src/components/ErrorBoundary/ErrorBoundary";
 import { useWidgetDnD } from "./useWidgetDnD.jsx";
+import { useReorderFlip } from "content-src/lib/useReorderFlip.jsx";
 
 const CONTAINER_ACTION_TYPES = {
   HIDE_ALL: "hide_all",
@@ -235,6 +236,7 @@ function Widgets() {
   const {
     effectiveOrder,
     draggedId,
+    previewOrder,
     previewOrderMap,
     handleDragStart,
     handleDragOver,
@@ -245,6 +247,21 @@ function Widgets() {
     widgetOrder,
     prefs,
     dispatch,
+  });
+
+  // Drives the FLIP reorder animation off the actual visual id sequence: the
+  // live preview order while dragging, otherwise the committed order. Keying
+  // off the sequence keeps the key stable across the drop/dragend re-renders so
+  // the last move's animation isn't cancelled. The dragged tile is excluded so
+  // it tracks the cursor instantly instead of being flung by its own (largest)
+  // inverse transform.
+  const flipKey = (previewOrder || effectiveOrder).join(",");
+  const widgetsContainerRef = useReorderFlip({
+    orderKey: flipKey,
+    resetKey: draggedId,
+    enabled: novaEnabled,
+    childSelector: "[data-widget-id]",
+    skipSelector: ".is-dragging",
   });
 
   const anyWidgetInRow =
@@ -620,6 +637,7 @@ function Widgets() {
         )}
         <div
           id="widgets-container"
+          ref={widgetsContainerRef}
           className={`widgets-container${isMaximized ? " is-maximized" : ""}`}
           data-row-collapsed={isCollapsed ? "" : undefined}
         >
