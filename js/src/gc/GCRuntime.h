@@ -877,6 +877,7 @@ class GCRuntime {
   void incrementalSlice(JS::SliceBudget& budget, JS::GCReason reason,
                         bool budgetWasIncreased);
 
+  bool shouldYieldAtEndOfMarkPhase() const;
   bool mightSweepInThisSlice(bool nonIncremental);
   void collectNurseryFromMajorGC(JS::GCReason reason);
   void collectNursery(JS::GCOptions options, JS::GCReason reason,
@@ -1290,8 +1291,8 @@ class GCRuntime {
   const bool useZeal;
 #endif
 
-  /* Indicates that the last incremental slice exhausted the mark stack. */
-  MainThreadData<bool> lastMarkSlice;
+  /* Indicates that we previously yielded after finishing marking work. */
+  MainThreadData<bool> didYieldAtEndOfMarkPhase;
 
   // Whether it's currently safe to yield to the mutator in an incremental GC.
   MainThreadData<bool> safeToYield;
