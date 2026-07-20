@@ -12,6 +12,11 @@ let gAppMenuStrings = new Localization(
 
 const CLONED_ATTRS = ["command", "oncommand", "onclick", "key", "disabled"];
 
+// Help menu items that are intentionally repurposed as subview-nav buttons in
+// the AppMenu have their command attribute stripped, so their
+// command/oncommand attributes are not expected to match the original menuitem.
+const NAV_REPURPOSED_IDS = new Set(["help_reportBrokenSite"]);
+
 /**
  * Tests that the Help panel inside of the AppMenu properly clones
  * the items from the Help menupopup. Also ensures that the AppMenu
@@ -62,6 +67,12 @@ add_task(async function test_help_panel_cloning() {
 
     // Make sure the CLONED_ATTRs are actually cloned.
     for (let attr of CLONED_ATTRS) {
+      if (
+        (attr == "command" || attr == "oncommand") &&
+        NAV_REPURPOSED_IDS.has(helpMenuPopupItem.id)
+      ) {
+        continue;
+      }
       if (attr == "oncommand" && helpMenuPopupItem.hasAttribute("command")) {
         // If the original element had a "command" attribute set, then the
         // cloned element will have its "oncommand" attribute set to equal
