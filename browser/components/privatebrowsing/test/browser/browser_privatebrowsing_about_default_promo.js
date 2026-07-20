@@ -3,7 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 const PromoInfo = {
-  FOCUS: { enabledPref: "browser.promo.focus.enabled" },
   VPN: { enabledPref: "browser.vpn_promo.enabled" },
   PIN: { enabledPref: "browser.promo.pin.enabled" },
   COOKIE_BANNERS: { enabledPref: "browser.promo.cookiebanners.enabled" },
@@ -24,7 +23,11 @@ add_setup(async function () {
   registerCleanupFunction(resetState);
   await resetState();
   await SpecialPowers.pushPrefEnv({
-    set: [["browser.promo.pin.enabled", false]],
+    set: [
+      ["browser.promo.pin.enabled", false],
+      ["browser.promo.cookiebanners.enabled", true],
+      ["cookiebanners.service.mode.privateBrowsing", 1],
+    ],
   });
   await ASRouter.onPrefChange();
 });
@@ -42,7 +45,7 @@ add_task(async function test_privatebrowsing_asrouter_messages_state() {
 
   await SpecialPowers.spawn(tab, [], async function () {
     const promoContainer = content.document.querySelector(".promo");
-    ok(promoContainer, "Focus promo is shown");
+    ok(promoContainer, "Promo is shown");
   });
 
   Assert.equal(
@@ -78,14 +81,14 @@ add_task(async function test_default_promo() {
     const promoContainer = content.document.querySelector(".promo"); // container which is present if promo is enabled and should show
     const promoHeader = content.document.getElementById("promo-header");
 
-    ok(promoContainer, "Focus promo is shown");
+    ok(promoContainer, "Cookie banners promo is shown");
     ok(
       ContentTaskUtils.isVisible(promoContainer),
-      "Focus promo container is visible"
+      "Promo container is visible"
     );
     is(
       promoHeader.getAttribute("data-l10n-id"),
-      "about-private-browsing-focus-promo-header-c",
+      "about-private-browsing-cookie-banners-promo-heading",
       "Correct default values are shown"
     );
   });
@@ -119,7 +122,7 @@ add_task(async function test_remove_promo_from_prerendered_tab_if_blocked() {
   await SpecialPowers.spawn(tab1, [], async function () {
     // container which is present if promo message is not blocked
     const promoContainer = content.document.querySelector(".promo");
-    ok(promoContainer, "Focus promo is shown in tab 1");
+    ok(promoContainer, "Promo is shown in tab 1");
   });
 
   // Open a new background tab (tab 2) while the promo message is unblocked
@@ -146,7 +149,7 @@ add_task(async function test_remove_promo_from_prerendered_tab_if_blocked() {
     async function () {
       await ContentTaskUtils.waitForCondition(
         () => !content.document.querySelector(".promo"),
-        "Focus promo is not shown in a new tab after being dismissed in another tab"
+        "Promo is not shown in a new tab after being dismissed in another tab"
       );
     }
   );
@@ -184,7 +187,7 @@ add_task(async function test_default_content_deferred_message_load() {
     const promoContainer = content.document.querySelector(".promo");
     ok(
       promoContainer && !promoContainer.classList.contains("promo-visible"),
-      "Focus promo is hidden but not removed"
+      "Promo is hidden but not removed"
     );
     const infoContainer = content.document.querySelector(".info");
     ok(infoContainer && !infoContainer.hidden, "Info container is shown");

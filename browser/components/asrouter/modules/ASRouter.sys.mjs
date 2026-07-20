@@ -2481,7 +2481,6 @@ export class _ASRouter {
   async sendPBNewTabMessage({ hideDefault }) {
     let message = null;
     const PromoInfo = {
-      FOCUS: { enabledPref: "browser.promo.focus.enabled" },
       VPN: { enabledPref: "browser.vpn_promo.enabled" },
       PIN: { enabledPref: "browser.promo.pin.enabled" },
       COOKIE_BANNERS: { enabledPref: "browser.promo.cookiebanners.enabled" },

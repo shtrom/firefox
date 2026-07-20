@@ -5,7 +5,11 @@
 add_setup(async function () {
   ASRouter.resetMessageState();
   await SpecialPowers.pushPrefEnv({
-    set: [["browser.promo.pin.enabled", false]],
+    set: [
+      ["browser.promo.pin.enabled", false],
+      ["browser.promo.cookiebanners.enabled", true],
+      ["cookiebanners.service.mode.privateBrowsing", 1],
+    ],
   });
   await ASRouter.onPrefChange();
 });
@@ -108,7 +112,7 @@ add_task(async function test_experiment_messaging_show_default_on_dismiss() {
     );
     is(
       promoHeader.getAttribute("data-l10n-id"),
-      "about-private-browsing-focus-promo-header-c",
+      "about-private-browsing-cookie-banners-promo-heading",
       "Correct default values are shown"
     );
   });
