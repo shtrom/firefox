@@ -31,6 +31,11 @@ export class SidebarTabList extends FxviewTabListBase {
 
   static properties = {
     mediumView: { type: Boolean, reflect: true, attribute: "medium-view" },
+    inactiveWindow: {
+      type: Boolean,
+      reflect: true,
+      attribute: "inactive-window",
+    },
   };
 
   /**
@@ -136,6 +141,7 @@ export class SidebarTabList extends FxviewTabListBase {
         .hasPopup=${this.hasPopup}
         .indicators=${tabItem.indicators}
         .mediumView=${this.mediumView}
+        .inactiveWindow=${this.inactiveWindow}
         .primaryL10nArgs=${ifDefined(tabItem.primaryL10nArgs)}
         .primaryL10nId=${tabItem.primaryL10nId}
         role="listitem"
@@ -196,6 +202,11 @@ export class SidebarTabRow extends FxviewTabRowBase {
     current: { type: Boolean, reflect: true },
     indicators: { type: Array },
     mediumView: { type: Boolean, reflect: true, attribute: "medium-view" },
+    inactiveWindow: {
+      type: Boolean,
+      reflect: true,
+      attribute: "inactive-window",
+    },
   };
 
   static queries = {

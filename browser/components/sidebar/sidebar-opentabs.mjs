@@ -160,7 +160,7 @@ export class SidebarOpenTabs extends SidebarPage {
     }
   }
 
-  #pinnedTabsTemplate(pinnedTabItems) {
+  #pinnedTabsTemplate(pinnedTabItems, isCurrent) {
     return html`
       <div
         class="pinned-tabs"
@@ -171,7 +171,10 @@ export class SidebarOpenTabs extends SidebarPage {
           item => html`
             <moz-button
               type="icon ghost"
-              class=${classMap({ selected: item.tabElement?.selected })}
+              class=${classMap({
+                selected: item.tabElement?.selected,
+                inactive: !isCurrent,
+              })}
               .iconSrc=${this.#getPinnedIconSrc(item)}
               title=${item.title}
               @click=${() => this.#activateTab(item.tabElement)}
@@ -210,7 +213,7 @@ export class SidebarOpenTabs extends SidebarPage {
         @toggle=${this.#onCardToggle}
       >
         ${when(pinnedTabItems.length, () =>
-          this.#pinnedTabsTemplate(pinnedTabItems)
+          this.#pinnedTabsTemplate(pinnedTabItems, isCurrent)
         )}
         <sidebar-tab-list
           maxTabsLength="-1"
@@ -218,6 +221,7 @@ export class SidebarOpenTabs extends SidebarPage {
           .multiSelect=${false}
           .searchQuery=${this.searchQuery}
           .mediumView=${true}
+          .inactiveWindow=${!isCurrent}
           .dateTimeFormat=${"time"}
           .tabItems=${unpinnedTabItems}
           @fxview-tab-list-primary-action=${this.onPrimaryAction}
