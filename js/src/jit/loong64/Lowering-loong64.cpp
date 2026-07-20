@@ -6,6 +6,8 @@
 
 #include "mozilla/MathAlgorithms.h"
 
+#include <bit>
+
 #include "jit/loong64/Assembler-loong64.h"
 #include "jit/Lowering.h"
 #include "jit/MIR-wasm.h"
@@ -173,15 +175,14 @@ void LIRGeneratorLOONG64::lowerDivI(MDiv* div) {
   // rewritten to use other instructions.
   if (div->rhs()->isConstant()) {
     int32_t rhs = div->rhs()->toConstant()->toInt32();
-    // Check for division by a positive power of two, which is an easy and
-    // important case to optimize. Note that other optimizations are also
-    // possible; division by negative powers of two can be optimized in a
-    // similar manner as positive powers of two, and division by other
-    // constants can be optimized by a reciprocal multiplication technique.
-    int32_t shift = FloorLog2(uint32_t(rhs));
-    if (rhs > 0 && 1 << shift == rhs) {
-      LDivPowTwoI* lir =
-          new (alloc()) LDivPowTwoI(useRegister(div->lhs()), temp(), shift);
+
+    // Check for division by a power of two, which is an easy and important case
+    // to optimize. Division by other constants can be optimized by a reciprocal
+    // multiplication technique.
+    if (std::has_single_bit(mozilla::Abs(rhs))) {
+      int32_t shift = mozilla::FloorLog2(mozilla::Abs(rhs));
+      auto* lir = new (alloc())
+          LDivPowTwoI(useRegister(div->lhs()), temp(), shift, rhs < 0);
       if (div->fallible()) {
         assignSnapshot(lir, div->bailoutKind());
       }
@@ -242,6 +243,22 @@ void LIRGeneratorLOONG64::lowerModI64(MMod* mod) {
 }
 
 void LIRGeneratorLOONG64::lowerUDiv(MDiv* div) {
+  if (div->rhs()->isConstant()) {
+    // NOTE: the result of toInt32 is coerced to uint32_t.
+    uint32_t rhs = div->rhs()->toConstant()->toInt32();
+
+    if (std::has_single_bit(rhs)) {
+      int32_t shift = mozilla::FloorLog2(rhs);
+      auto* lir = new (alloc())
+          LDivPowTwoI(useRegister(div->lhs()), temp(), shift, false);
+      if (div->fallible()) {
+        assignSnapshot(lir, div->bailoutKind());
+      }
+      define(lir, div);
+      return;
+    }
+  }
+
   MDefinition* lhs = div->getOperand(0);
   MDefinition* rhs = div->getOperand(1);
 
