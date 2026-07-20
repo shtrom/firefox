@@ -2775,17 +2775,25 @@ Maybe<wr::ImageMask> WebRenderCommandBuilder::BuildWrMaskImage(
 
   LayoutDeviceToLayerScale2D layerScale(scale.xScale, scale.yScale);
 
-  // Rect the mask image is placed and sampled over. The blob itself must stay
-  // integer-sized (itemRect/visibleRect, above), but the placement rect we
-  // hand to WebRender becomes the mask clip node's rect, which WebRender snaps
-  // to device pixels at frame time. With pixel alignment disabled, send the
-  // true (unrounded) rect -- the same one the masked content uses -- so the
-  // mask snaps in lockstep with its content instead of carrying our own stale
-  // device-pixel RoundOut.
+  // Rect the mask image is placed and sampled over; it becomes the mask clip
+  // node's rect, which WebRender snaps to device pixels at frame time. Send the
+  // true (unrounded) bounds so WebRender snaps the clip in lockstep with the
+  // masked content -- rather than a stale display-list-time RoundOut -- when
+  // pixel alignment is disabled (bug 1973192). Clamp bounds to the region the
+  // blob actually covers so the clip stays aligned to the blob's alpha: the
+  // union of the building rect (what needs to be painted) and visibleRect (the
+  // rasterized region on the blob's nearest-pixel grid). Clamping to the
+  // building rect alone would drop a partially-covered edge row that the blob
+  // did rasterize (bug 2055747); not clamping at all would span inflated bounds
+  // that were never drawn into the blob (svg/filters/filter-clipped-rect-01).
   LayoutDeviceRect imageRect;
   if (StaticPrefs::layout_disable_pixel_alignment()) {
-    imageRect = LayoutDeviceRect::FromAppUnits(
-        bounds.Intersect(aMaskItem->GetBuildingRect()), appUnitsPerDevPixel);
+    LayoutDeviceRect coverage =
+        LayoutDeviceRect::FromAppUnits(aMaskItem->GetBuildingRect(),
+                                       appUnitsPerDevPixel)
+            .Union(LayerRect(visibleRect) / layerScale);
+    imageRect = LayoutDeviceRect::FromAppUnits(bounds, appUnitsPerDevPixel)
+                    .Intersect(coverage);
   } else {
     imageRect = LayerRect(visibleRect) / layerScale;
   }
