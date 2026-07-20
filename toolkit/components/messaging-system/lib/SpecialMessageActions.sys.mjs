@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
+
 const DOH_DOORHANGER_DECISION_PREF = "doh-rollout.doorhanger-decision";
 const NETWORK_TRR_MODE_PREF = "network.trr.mode";
 
@@ -30,12 +32,18 @@ ChromeUtils.defineESModuleGetters(lazy, {
   AIWindow:
     // eslint-disable-next-line mozilla/no-browser-refs-in-toolkit
     "moz-src:///browser/components/aiwindow/ui/modules/AIWindow.sys.mjs",
+  CustomIconManager:
+    // eslint-disable-next-line mozilla/no-browser-refs-in-toolkit
+    "moz-src:///browser/components/shell/CustomIconManager.sys.mjs",
   // eslint-disable-next-line mozilla/no-browser-refs-in-toolkit
   CustomizableUI:
     "moz-src:///browser/components/customizableui/CustomizableUI.sys.mjs",
   ExperimentAPI: "resource://nimbus/ExperimentAPI.sys.mjs",
   FxAccounts: "resource://gre/modules/FxAccounts.sys.mjs",
   GenAI: "resource:///modules/GenAI.sys.mjs",
+  ICON_CATALOG:
+    // eslint-disable-next-line mozilla/no-browser-refs-in-toolkit
+    "moz-src:///browser/components/shell/CustomIconManager.sys.mjs",
   IPProtection:
     // eslint-disable-next-line mozilla/no-browser-refs-in-toolkit
     "moz-src:///browser/components/ipprotection/IPProtection.sys.mjs",
@@ -708,6 +716,30 @@ export const SpecialMessageActions = {
     }
   },
 
+  /**
+   * Change the browser icon to the one identified by `id` via
+   * CustomIconManager. Icon IDs that are not in the catalog are ignored. The
+   * "default" id reverts to the browser's own icon (the no-override state).
+   *
+   * CustomIconManager is only packaged on Windows, so this is a no-op on other
+   * platforms to avoid importing a module that does not exist.
+   *
+   * @param {string} id A key in ICON_CATALOG.
+   */
+  async setBrowserIcon(id) {
+    if (AppConstants.platform !== "win") {
+      return;
+    }
+    if (!lazy.ICON_CATALOG[id]) {
+      return;
+    }
+    if (id === "default") {
+      await lazy.CustomIconManager.revert();
+      return;
+    }
+    await lazy.CustomIconManager.apply(id);
+  },
+
   async createAndOpenProfile() {
     await lazy.SelectableProfileService.createNewProfile(
       true,
@@ -1098,6 +1130,9 @@ export const SpecialMessageActions = {
       }
       case "IPPROTECTION_ENROLL":
         await lazy.IPProtection.getPanel(window)?.enroll();
+        break;
+      case "SET_BROWSER_ICON":
+        await this.setBrowserIcon(action.data.id);
         break;
       default:
         throw new Error(
