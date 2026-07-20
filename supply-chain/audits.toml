@@ -4758,9 +4758,9 @@ criteria = "safe-to-deploy"
 delta = "0.3.0 -> 0.4.1"
 
 [[audits.mtu]]
-who = ["Henrik Skupin <mail@hskupin.info>", "Lars Eggert <leggert@mozilla.com>"]
+who = "Max Inden <mail@max-inden.de>"
 criteria = "safe-to-deploy"
-delta = "0.4.1 -> 0.4.1@git:18832752db4700df4bdbb26f655b675931b234ac"
+delta = "0.4.1 -> 0.4.1@git:e2a2a7459b8b51778b50209251a61fc5ca020893"
 importable = false
 
 [[audits.naga]]

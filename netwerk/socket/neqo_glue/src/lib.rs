@@ -33,7 +33,8 @@ use neqo_common::{
     Header, Role, Tos,
 };
 use neqo_http3::{
-    features::extended_connect::session, ConnectUdpEvent, Error as Http3Error, Http3Client,
+    connect_udp::ClientSession as _, features::extended_connect::session,
+    webtransport::ClientSession as _, ConnectUdpEvent, Error as Http3Error, Http3Client,
     Http3ClientEvent, Http3Parameters, Http3State, Priority, WebTransportEvent,
 };
 use neqo_transport::{
@@ -63,6 +64,13 @@ use zlib_rs::{decompress_slice, InflateConfig, ReturnCode};
 std::thread_local! {
     static RECV_BUF: RefCell<neqo_udp::RecvBuf> = RefCell::new(neqo_udp::RecvBuf::default());
 }
+
+/// Upper bound on the bytes read from the socket in a single `neqo_http3conn_process_input` pass.
+/// No legitimate connection reads this much at once, so the cap only bounds a misbehaving or
+/// malicious peer that would otherwise make us buffer datagrams unboundedly. Nothing is lost when
+/// the cap is hit: buffered events are delivered to the upper layer right after, and the
+/// level-triggered poll re-fires `RecvData` to read the rest.
+const MAX_BYTES_READ_PER_PASS: usize = 50 * 1024 * 1024;
 
 #[cfg(target_vendor = "apple")]
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -752,14 +760,17 @@ impl NeqoHttp3Conn {
                 }
             };
         // Records the unfiltered (old) slow start exit ratio
-        if stats.cc.slow_start_exit_cwnd.is_some() {
+        if stats.cc.slow_start_exit.is_some() {
             glean::http_3_slow_start_exited.get("exited").add(1);
         } else {
             glean::http_3_slow_start_exited.get("not_exited").add(1);
         }
 
         let cwnd_that_grew = stats.cc.cwnd.filter(|&c| c > MAX_INITIAL_CWND);
-        let growth_label = match (cwnd_that_grew, stats.cc.slow_start_exit_cwnd) {
+        let growth_label = match (
+            cwnd_that_grew,
+            stats.cc.slow_start_exit.as_ref().map(|s| s.exit_cwnd),
+        ) {
             (Some(_), Some(exit_cwnd)) if exit_cwnd < MAX_INITIAL_CWND => {
                 "no_growth_then_exit_then_growth"
             }
@@ -777,17 +788,11 @@ impl NeqoHttp3Conn {
                 glean::http_3_loss_ratio_filtered.accumulate_single_sample_signed(loss);
             }
             // Record metrics concerning the slow start exit point below this filter.
-            debug_assert_eq!(
-                stats.cc.slow_start_exit_cwnd.is_some(),
-                stats.cc.slow_start_exit_reason.is_some(),
-                "slow_start_exit_cwnd and slow_start_exit_reason must always be set together"
-            );
             let mut hystart_label = "not_exited";
             let mut search_label = "not_exited";
-            if let (Some(exit_cwnd), Some(reason)) = (
-                stats.cc.slow_start_exit_cwnd,
-                stats.cc.slow_start_exit_reason,
-            ) {
+            if let Some(slow_start_exit) = stats.cc.slow_start_exit.as_ref() {
+                let exit_cwnd = slow_start_exit.exit_cwnd;
+                let reason = &slow_start_exit.reason;
                 glean::http_3_slow_start_exit_cwnd.accumulate(exit_cwnd as u64);
                 glean::http_3_slow_start_exited_filtered
                     .get("exited")
@@ -807,7 +812,7 @@ impl NeqoHttp3Conn {
                     Ordering::Equal => "exact",
                 };
                 let (reason_label, accuracy_label) = match reason {
-                    SlowStartExitReason::CongestionEvent => {
+                    SlowStartExitReason::CongestionEvent(_) => {
                         glean::http_3_slow_start_exit_direction_loss
                             .get(direction_label)
                             .add(1);
@@ -1194,6 +1199,14 @@ pub unsafe extern "C" fn neqo_http3conn_process_input(
             conn.datagram_size_received.accumulate(sum as u64);
             conn.datagram_segments_received.accumulate(segment_count);
             bytes_read += sum;
+
+            if bytes_read >= MAX_BYTES_READ_PER_PASS {
+                qwarn!(
+                    "reached the {MAX_BYTES_READ_PER_PASS} byte receive cap in a single pass; \
+                     yielding to deliver buffered events, will continue on the next RecvData"
+                );
+                break;
+            }
         }
 
         ProcessInputResult {
@@ -1916,6 +1929,9 @@ pub enum WebTransportEventExternal {
     Datagram {
         session_id: u64,
     },
+    Draining {
+        session_id: u64,
+    },
 }
 #[repr(C)]
 pub enum ConnectUdpEventExternal {
@@ -1973,6 +1989,9 @@ impl WebTransportEventExternal {
                     session_id: session_id.as_u64(),
                 }
             }
+            WebTransportEvent::Draining { stream_id } => Self::Draining {
+                session_id: stream_id.as_u64(),
+            },
         }
     }
 }
