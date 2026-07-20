@@ -310,12 +310,6 @@ class MacroAssemblerLOONG64 : public Assembler {
   void ma_mul32TestOverflow(Register rd, Register rj, Imm32 imm,
                             Label* overflow);
 
-  // fast mod, uses scratch registers, and thus needs to be in the assembler
-  // implicitly assumes that we can overwrite dest at the beginning of the
-  // sequence
-  void ma_mod_mask(Register src, Register dest, Register hold, Register remain,
-                   int32_t shift, Label* negZero = nullptr);
-
   // branches when done from within la-specific code
   void ma_b(Register lhs, Register rhs, Label* l, Condition c,
             JumpKind jumpKind = LongJump,

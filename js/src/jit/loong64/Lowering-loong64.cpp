@@ -242,17 +242,6 @@ void LIRGeneratorLOONG64::lowerModI(MMod* mod) {
       return;
     }
 
-    int32_t shift = mozilla::FloorLog2(uint32_t(rhs));
-    if (shift < 31 && (1 << (shift + 1)) - 1 == rhs) {
-      LModMaskI* lir = new (alloc())
-          LModMaskI(useRegister(mod->lhs()), temp(), temp(), shift + 1);
-      if (mod->fallible()) {
-        assignSnapshot(lir, mod->bailoutKind());
-      }
-      define(lir, mod);
-      return;
-    }
-
     auto* lir = new (alloc()) LModConstantI(useRegister(mod->lhs()), rhs);
     if (mod->fallible()) {
       assignSnapshot(lir, mod->bailoutKind());
