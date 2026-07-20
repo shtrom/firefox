@@ -37,11 +37,9 @@ namespace wasm {
 // and IA-32 Architectures Software Developer’s Manual Combined Volumes: 1,
 // 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4".  It's easy to find.
 
-#if defined(DEBUG)
-
 // ===================================================== x86_32 and x86_64 ====
 
-#  if defined(JS_CODEGEN_X64) || defined(JS_CODEGEN_X86)
+#if defined(JS_CODEGEN_X64) || defined(JS_CODEGEN_X86)
 
 // Returns true iff a "Mod R/M" byte indicates a memory transaction.
 static bool ModRMisM(uint8_t modrm) {
@@ -640,7 +638,7 @@ Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insn) {
 
 // ================================================================= arm64 ====
 
-#  elif defined(JS_CODEGEN_ARM64)
+#elif defined(JS_CODEGEN_ARM64)
 
 Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
   // Check instruction alignment.
@@ -648,8 +646,8 @@ Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
 
   const uint32_t insn = *(uint32_t*)insnAddr;
 
-#    define INSN(_maxIx, _minIx) \
-      ((insn >> (_minIx)) & ((uint32_t(1) << ((_maxIx) - (_minIx) + 1)) - 1))
+#  define INSN(_maxIx, _minIx) \
+    ((insn >> (_minIx)) & ((uint32_t(1) << ((_maxIx) - (_minIx) + 1)) - 1))
 
   // MacroAssembler::wasmTrapInstruction uses this to create SIGILL.
   if (insn == 0xD4A00000) {
@@ -970,7 +968,7 @@ Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
     return Some(TrapMachineInsn::Atomic);
   }
 
-#    undef INSN
+#  undef INSN
 
   // The instruction was not identified.
 
@@ -989,7 +987,7 @@ Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
 
 // =================================================================== arm ====
 
-#  elif defined(JS_CODEGEN_ARM)
+#elif defined(JS_CODEGEN_ARM)
 
 Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
   // Almost all AArch32 instructions that use the ARM encoding (not Thumb) use
@@ -1004,8 +1002,8 @@ Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
 
   const uint32_t insn = *(uint32_t*)insnAddr;
 
-#    define INSN(_maxIx, _minIx) \
-      ((insn >> (_minIx)) & ((uint32_t(1) << ((_maxIx) - (_minIx) + 1)) - 1))
+#  define INSN(_maxIx, _minIx) \
+    ((insn >> (_minIx)) & ((uint32_t(1) << ((_maxIx) - (_minIx) + 1)) - 1))
 
   // MacroAssembler::wasmTrapInstruction uses this to create SIGILL.
   if (insn == 0xE7F000F0) {
@@ -1167,7 +1165,7 @@ Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
     }
   }
 
-#    undef INSN
+#  undef INSN
 
   // The instruction was not identified.
 
@@ -1186,7 +1184,7 @@ Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
 
 // =============================================================== riscv64 ====
 
-#  elif defined(JS_CODEGEN_RISCV64)
+#elif defined(JS_CODEGEN_RISCV64)
 
 Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
   // Check instruction alignment.
@@ -1194,8 +1192,8 @@ Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
 
   const uint32_t insn = *(uint32_t*)insnAddr;
 
-#    define INSN(_maxIx, _minIx) \
-      ((insn >> (_minIx)) & ((uint32_t(1) << ((_maxIx) - (_minIx) + 1)) - 1))
+#  define INSN(_maxIx, _minIx) \
+    ((insn >> (_minIx)) & ((uint32_t(1) << ((_maxIx) - (_minIx) + 1)) - 1))
   // MacroAssembler::wasmTrapInstruction uses this to create SIGILL.
   if (insn ==
       (RO_CSRRWI | csr_cycle << kCsrShift | kWasmTrapCode << kRs1Shift)) {
@@ -1276,14 +1274,14 @@ Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
     }
   }
 
-#    undef INSN
+#  undef INSN
 
   return Nothing();
 }
 
 // =========================================================== loongarch64 ====
 
-#  elif defined(JS_CODEGEN_LOONG64)
+#elif defined(JS_CODEGEN_LOONG64)
 
 Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
   // Check instruction alignment.
@@ -1291,8 +1289,8 @@ Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
 
   const uint32_t insn = *(uint32_t*)insnAddr;
 
-#    define INSN(_maxIx, _minIx) \
-      ((insn >> (_minIx)) & ((uint32_t(1) << ((_maxIx) - (_minIx) + 1)) - 1))
+#  define INSN(_maxIx, _minIx) \
+    ((insn >> (_minIx)) & ((uint32_t(1) << ((_maxIx) - (_minIx) + 1)) - 1))
 
   // LoongArch instructions encoding document:
   // https://loongson.github.io/LoongArch-Documentation/LoongArch-Vol1-EN#table-of-instruction-encoding
@@ -1448,14 +1446,14 @@ Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
     }
   }
 
-#    undef INSN
+#  undef INSN
 
   return Nothing();
 }
 
 // ================================================================ mips64 ====
 
-#  elif defined(JS_CODEGEN_MIPS64)
+#elif defined(JS_CODEGEN_MIPS64)
 
 Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
   // Check instruction alignment.
@@ -1463,8 +1461,8 @@ Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
 
   const uint32_t insn = *(uint32_t*)insnAddr;
 
-#    define INSN(_maxIx, _minIx) \
-      ((insn >> (_minIx)) & ((uint32_t(1) << ((_maxIx) - (_minIx) + 1)) - 1))
+#  define INSN(_maxIx, _minIx) \
+    ((insn >> (_minIx)) & ((uint32_t(1) << ((_maxIx) - (_minIx) + 1)) - 1))
 
   // MIPS64R2 instruction encoding document:
   // https://scc.ustc.edu.cn/_upload/article/files/c6/06/45556c084631b2855f0022175eaf/W020100308600769158777.pdf#G254.1001018
@@ -1727,13 +1725,13 @@ Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
     }
   }
 
-#    undef INSN
+#  undef INSN
   return Nothing();
 }
 
 // ================================================================== none ====
 
-#  elif defined(JS_CODEGEN_NONE)
+#elif defined(JS_CODEGEN_NONE)
 
 Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
   MOZ_CRASH();
@@ -1741,13 +1739,11 @@ Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
 
 // ================================================================= other ====
 
-#  else
+#else
 
-#    error "SummarizeTrapInstruction: not implemented on this architecture"
+#  error "SummarizeTrapInstruction: not implemented on this architecture"
 
-#  endif  // defined(JS_CODEGEN_*)
-
-#endif  // defined(DEBUG)
+#endif  // defined(JS_CODEGEN_*)
 
 }  // namespace wasm
 }  // namespace js

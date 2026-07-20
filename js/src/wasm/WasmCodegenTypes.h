@@ -167,7 +167,8 @@ enum class TrapMachineInsn {
   // Any kind of atomic r-m-w or CAS memory transaction, but not including
   // Load-Linked or Store-Checked style insns -- those count as plain LoadX
   // and StoreX.
-  Atomic
+  Atomic,
+  INVALID
 };
 using TrapMachineInsnVector =
     mozilla::Vector<TrapMachineInsn, 0, SystemAllocPolicy>;
