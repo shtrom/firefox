@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.1.335
- * pdfjsBuild = dd7e3731d
+ * pdfjsVersion = 6.1.363
+ * pdfjsBuild = cd03276d6
  */
 
 ;// ./src/shared/util.js
@@ -790,6 +790,11 @@ const makeArr = () => [];
 const makeMap = () => new Map();
 const makeObj = () => Object.create(null);
 const makeSet = () => new Set();
+if (typeof Iterator.prototype.join !== "function") {
+  Iterator.prototype.join = function (separator) {
+    return [...this].join(separator);
+  };
+}
 
 ;// ./src/shared/math_clamp.js
 function MathClamp(v, min, max) {
@@ -2002,7 +2007,7 @@ class FloatingToolbar {
 }
 
 ;// ./src/shared/internal_evt.js
-const INTERNAL_EVT = "ef6148f6-6ec0-4217-9ce6-b56c33db7fbd";
+const INTERNAL_EVT = "23f16e14-a4cd-4ac8-b5cd-95bb4c67f308";
 const internalOpt = Object.freeze({
   internal: INTERNAL_EVT
 });
@@ -9117,6 +9122,7 @@ function applyBoundingBox(ctx, bbox) {
   ctx.clip(region);
 }
 class BaseShadingPattern {
+  matrix = null;
   isModifyingCurrentTransform() {
     return false;
   }
@@ -9134,7 +9140,6 @@ class RadialAxialShadingPattern extends BaseShadingPattern {
     this._p1 = IR[5];
     this._r0 = IR[6];
     this._r1 = IR[7];
-    this.matrix = null;
   }
   isOriginBased() {
     return this._p0[0] === 0 && this._p0[1] === 0 && (!this.isRadial() || this._p1[0] === 0 && this._p1[1] === 0);
@@ -9373,7 +9378,6 @@ class MeshShadingPattern extends BaseShadingPattern {
     this._bounds = IR[5];
     this._bbox = IR[6];
     this._background = IR[7];
-    this.matrix = null;
     loadMeshShader();
   }
   _createMeshCanvas(combinedScale, backgroundColor, canvasFactory) {
@@ -11564,13 +11568,7 @@ class CanvasGraphics {
     this.current.tilingPatternDims = null;
   }
   _getPattern(opIdx, objId, matrix = null) {
-    let pattern;
-    if (this.cachedPatterns.has(objId)) {
-      pattern = this.cachedPatterns.get(objId);
-    } else {
-      pattern = getShadingPattern(this.getObject(opIdx, objId));
-      this.cachedPatterns.set(objId, pattern);
-    }
+    const pattern = this.cachedPatterns.getOrInsertComputed(objId, () => getShadingPattern(this.getObject(opIdx, objId)));
     if (matrix) {
       pattern.matrix = matrix;
     }
@@ -14217,7 +14215,7 @@ function getDocument(src = {}) {
   }
   const docParams = {
     docId,
-    apiVersion: "6.1.335",
+    apiVersion: "6.1.363",
     data,
     password,
     disableAutoFetch,
@@ -15878,8 +15876,8 @@ class InternalRenderTask {
     }
   }
 }
-const version = "6.1.335";
-const build = "dd7e3731d";
+const version = "6.1.363";
+const build = "cd03276d6";
 
 ;// ./src/display/editor/color_picker.js
 
@@ -26268,7 +26266,7 @@ class DrawLayer {
     return !!selection && !selection.isCollapsed;
   }
   static #getOrderedTextLayers() {
-    return [...this.#textLayerSet].filter(textLayer => textLayer.isConnected).sort(compareTextLayers);
+    return this.#textLayerSet.keys().filter(textLayer => textLayer.isConnected).toArray().sort(compareTextLayers);
   }
   static #selectionChange() {
     const selection = document.getSelection();
