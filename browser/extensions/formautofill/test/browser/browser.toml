@@ -97,8 +97,6 @@ skip-if = [
   "os == 'win' && os_version == '11.26200' && arch == 'x86_64' && debug && socketprocess_networking && verify-standalone",
 ]
 
-["browser_editPassportDialog.js"]
-
 ["browser_email_dropdown.js"]
 
 ["browser_fathom_cc.js"]
@@ -131,8 +129,6 @@ skip-if = [
 ["browser_label_matching.js"]
 
 ["browser_manageAddressesDialog.js"]
-
-["browser_managePersonalInfoSubpage.js"]
 
 ["browser_ml_heuristics.js"]
 

@@ -1678,14 +1678,12 @@ setting-pane[onsearchpane] {
 }
 
 #addresses-list-header,
-#payments-list-header,
-#passports-list-header {
+#payments-list-header {
   --box-label-font-weight: var(--font-weight-heading);
 }
 
 #no-addresses-stored,
-#no-payments-stored,
-#no-passports-stored {
+#no-payments-stored {
   color: var(--text-color-deemphasized);
 }
 
