@@ -1349,17 +1349,6 @@ already_AddRefed<Promise> nsImageLoadingContent::RecognizeCurrentImageText(
             auto& textRecognitionResult = aValue.ResolveValue();
             Element* el = ilc->AsContent()->AsElement();
 
-            // When enabled, this feature will place the recognized text as
-            // spans inside of the shadow dom of the img element. These are then
-            // positioned so that the user can select the text.
-            if (Preferences::GetBool("dom.text-recognition.shadow-dom-enabled",
-                                     false)) {
-              el->AttachAndSetUAShadowRoot(Element::NotifyUAWidget::Yes);
-              TextRecognition::FillShadow(*el->GetShadowRoot(),
-                                          textRecognitionResult);
-              el->NotifyUAWidgetSetupOrChange();
-            }
-
             nsTArray<ImageText> imageTexts(
                 textRecognitionResult.quads().Length());
             // XXX shouldn't this be GetRelevantGlobal? But it's privileged code
