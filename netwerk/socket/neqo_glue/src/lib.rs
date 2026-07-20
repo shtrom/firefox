@@ -685,8 +685,12 @@ impl NeqoHttp3Conn {
             && static_prefs::pref!("network.http.http3.ecn_report")
         {
             let rx_ect0_sum: u64 = stats.ecn_rx.into_values().map(|v| v[Ecn::Ect0]).sum();
+            let rx_ect1_sum: u64 = stats.ecn_rx.into_values().map(|v| v[Ecn::Ect1]).sum();
             let rx_ce_sum: u64 = stats.ecn_rx.into_values().map(|v| v[Ecn::Ce]).sum();
-            if rx_ect0_sum > 0 {
+
+            // A CE mark can't be attributed to a specific ECT type on connections that saw
+            // both, so the per-type ratio and count metrics below are gated on exclusivity.
+            if rx_ect0_sum > 0 && rx_ect1_sum == 0 {
                 if let Ok(ratio) = i64::try_from((rx_ce_sum * PRECISION_FACTOR) / rx_ect0_sum) {
                     glean::http_3_ecn_ce_ect0_ratio_received.accumulate_single_sample_signed(ratio);
                 } else {
@@ -695,6 +699,18 @@ impl NeqoHttp3Conn {
                     debug_assert!(false, "{msg}");
                 }
             }
+
+            // Per-connection classification of the server's ECN marking (answers "% of servers").
+            let label = match (rx_ect0_sum > 0, rx_ect1_sum > 0, rx_ce_sum > 0) {
+                (true, true, _) => "ect0-and-ect1",
+                (true, false, false) => "ect0",
+                (false, true, false) => "ect1",
+                (true, false, true) => "ect0-and-ce",
+                (false, true, true) => "ect1-and-ce",
+                (false, false, true) => "ce-only",
+                (false, false, false) => "none",
+            };
+            glean::http_3_ecn_ect_received.get(label).add(1);
         }
 
         if !static_prefs::pref!("network.http.http3.use_nspr_for_io")
