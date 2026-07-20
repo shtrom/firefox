@@ -67,6 +67,7 @@ enum BufMode<'a> {
 
 impl JxlApiDecoder {
     pub fn new(metadata_only: bool, has_cms: bool) -> Self {
+        log::debug!("JxlApiDecoder::new metadata_only={metadata_only} has_cms={has_cms}");
         let options = JxlDecoderOptions::default();
         let inner = JxlDecoderInner::new(options);
 
@@ -84,6 +85,7 @@ impl JxlApiDecoder {
     }
 
     pub fn new_scanner() -> Self {
+        log::debug!("JxlApiDecoder::new_scanner");
         let mut options = JxlDecoderOptions::default();
         options.scan_frames_only = true;
 
@@ -156,7 +158,12 @@ impl JxlApiDecoder {
             .checked_mul(self.bytes_per_pixel())
             .ok_or(Error::Overflow)?;
 
-        match k_buffer {
+        log::trace!(
+            "flush_pixels: {width}x{height} bytes_per_row={bytes_per_row} completed_passes={}",
+            self.num_completed_passes()
+        );
+
+        let result = match k_buffer {
             Some(k) if self.has_black_channel => {
                 let mut bufs = [
                     JxlOutputBuffer::new(output_buffer, height, bytes_per_row),
@@ -170,7 +177,12 @@ impl JxlApiDecoder {
                     .flush_pixels(std::slice::from_mut(&mut buf))
                     .map_err(Error::from)
             }
+        };
+        match &result {
+            Ok(rendered) => log::trace!("flush_pixels: rendered_new={rendered}"),
+            Err(e) => log::debug!("flush_pixels: error: {e:?}"),
         }
+        result
     }
 
     pub fn num_completed_passes(&self) -> usize {
@@ -248,6 +260,15 @@ impl JxlApiDecoder {
         // Request f16 output only when CMS is available; without CMS, u8 output
         // lets jxl-rs convert HDR → sRGB u8 so the user sees something.
         self.use_f16 = is_hdr && self.has_cms;
+        log::debug!(
+            "set_pixel_format: {}x{} is_hdr={is_hdr} has_cms={} has_black_channel={} \
+             color_type={color_type:?} use_f16={}",
+            basic_info.size.0,
+            basic_info.size.1,
+            self.has_cms,
+            self.has_black_channel,
+            self.use_f16
+        );
         let pixel_format = JxlPixelFormat {
             color_type,
             color_data_format: Some(if self.use_f16 {
@@ -304,10 +325,14 @@ impl JxlApiDecoder {
             let result = self.inner.process(data, bufs);
 
             let need_more = match result {
-                Err(e) => return Err(e.into()),
+                Err(e) => {
+                    log::debug!("process_data: decode error: {e:?}");
+                    return Err(e.into());
+                }
                 Ok(ProcessingResult::Complete { .. }) => false,
                 Ok(ProcessingResult::NeedsMoreInput { .. }) => true,
             };
+            log::trace!("process_data: inner.process -> need_more={need_more}");
 
             // For metadata-only decode of non-animated images, return once
             // we have basic_info. For animated images, continue until frame
@@ -344,10 +369,15 @@ impl JxlApiDecoder {
             if let Some(frame_header) = frame_header {
                 self.frame_duration = frame_header.duration.or(Some(0.0));
                 self.frame_ready = true;
+                log::debug!(
+                    "process_data: frame header ready, duration={:?}ms",
+                    self.frame_duration
+                );
                 return Ok(true);
             } else if self.frame_ready {
                 // Frame was rendered
                 self.frame_ready = false;
+                log::trace!("process_data: frame rendered");
                 return Ok(true);
             }
             // No frame yet, need more data

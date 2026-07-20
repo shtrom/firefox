@@ -69,6 +69,9 @@ LexerResult nsJXLDecoder::DoDecode(SourceBufferIterator& aIterator,
       }
 
       if (state == SourceBufferIterator::WAITING) {
+        MOZ_LOG(
+            sJXLLog, LogLevel::Verbose,
+            ("[this=%p] nsJXLDecoder::DoDecode -- yield NEED_MORE_DATA", this));
         return LexerResult(Yield::NEED_MORE_DATA);
       }
       if (state == SourceBufferIterator::COMPLETE) {
@@ -205,6 +208,9 @@ nsJXLDecoder::ProcessResult nsJXLDecoder::ProcessAvailableData(
     JxlDecoderStatus status = ProcessInput(aData, aLength);
 
     if (status == JxlDecoderStatus::Error) {
+      MOZ_LOG(sJXLLog, LogLevel::Debug,
+              ("[this=%p] nsJXLDecoder::ProcessAvailableData -- decode error",
+               this));
       return ProcessResult::Error;
     }
 
@@ -218,6 +224,10 @@ nsJXLDecoder::ProcessResult nsJXLDecoder::ProcessAvailableData(
       JxlBasicInfo basicInfo = jxl_decoder_get_basic_info(mDecoder.get());
       if (basicInfo.valid) {
         if (basicInfo.width > INT32_MAX || basicInfo.height > INT32_MAX) {
+          MOZ_LOG(sJXLLog, LogLevel::Debug,
+                  ("[this=%p] nsJXLDecoder::ProcessAvailableData -- dimensions "
+                   "%ux%u exceed INT32_MAX, failing",
+                   this, basicInfo.width, basicInfo.height));
           return ProcessResult::Error;
         }
 
@@ -234,6 +244,10 @@ nsJXLDecoder::ProcessResult nsJXLDecoder::ProcessAvailableData(
         }
 
         mDecoderState = DecoderState::HaveBasicInfo;
+        MOZ_LOG(sJXLLog, LogLevel::Debug,
+                ("[this=%p] nsJXLDecoder::ProcessAvailableData -- have basic "
+                 "info (animated=%d, hasAlpha=%d)",
+                 this, basicInfo.is_animated, basicInfo.has_alpha));
 
         // Allocate the pixel buffer for non-animated images here so that
         // FlushPartialFrame can render an LF preview during the LF-frame
@@ -288,10 +302,22 @@ nsJXLDecoder::ProcessResult nsJXLDecoder::ProcessAvailableData(
       case FrameOutputResult::NoOutput:
         continue;
       case FrameOutputResult::FrameAdvanced:
+        MOZ_LOG(sJXLLog, LogLevel::Verbose,
+                ("[this=%p] nsJXLDecoder::ProcessAvailableData -- frame "
+                 "advanced, yielding output",
+                 this));
         return ProcessResult::YieldOutput;
       case FrameOutputResult::DecodeComplete:
+        MOZ_LOG(
+            sJXLLog, LogLevel::Debug,
+            ("[this=%p] nsJXLDecoder::ProcessAvailableData -- decode complete",
+             this));
         return ProcessResult::Complete;
       case FrameOutputResult::Error:
+        MOZ_LOG(sJXLLog, LogLevel::Debug,
+                ("[this=%p] nsJXLDecoder::ProcessAvailableData -- frame output "
+                 "error",
+                 this));
         return ProcessResult::Error;
     }
     MOZ_CRASH("Unhandled FrameOutputResult");
@@ -299,6 +325,9 @@ nsJXLDecoder::ProcessResult nsJXLDecoder::ProcessAvailableData(
 }
 
 LexerResult nsJXLDecoder::DrainFrames() {
+  MOZ_LOG(sJXLLog, LogLevel::Verbose,
+          ("[this=%p] nsJXLDecoder::DrainFrames -- draining buffered frames",
+           this));
   while (true) {
     const uint8_t* noData = nullptr;
     size_t noLength = 0;
@@ -314,9 +343,15 @@ LexerResult nsJXLDecoder::DrainFrames() {
           case FrameOutputResult::BufferAllocated:
             break;
           case FrameOutputResult::FrameAdvanced:
+            MOZ_LOG(sJXLLog, LogLevel::Verbose,
+                    ("[this=%p] nsJXLDecoder::DrainFrames -- yield "
+                     "OUTPUT_AVAILABLE",
+                     this));
             return LexerResult(Yield::OUTPUT_AVAILABLE);
           case FrameOutputResult::DecodeComplete:
           case FrameOutputResult::NoOutput:
+            MOZ_LOG(sJXLLog, LogLevel::Debug,
+                    ("[this=%p] nsJXLDecoder::DrainFrames -- SUCCESS", this));
             return LexerResult(TerminalState::SUCCESS);
           case FrameOutputResult::Error:
             return LexerResult(TerminalState::FAILURE);
@@ -551,8 +586,29 @@ void nsJXLDecoder::BuildCMSTransform() {
       if (compatible) {
         mTransform = qcms_transform_create(
             mInProfile, inType, GetCMSOutputProfile(), outType, intent);
+        MOZ_LOG(
+            sJXLLog, LogLevel::Debug,
+            ("[this=%p] nsJXLDecoder::BuildCMSTransform -- CMS transform %s "
+             "(ICC %zu bytes, color space 0x%x)",
+             this, mTransform ? "created" : "creation FAILED", iccLen,
+             profileSpace));
+      } else {
+        MOZ_LOG(sJXLLog, LogLevel::Debug,
+                ("[this=%p] nsJXLDecoder::BuildCMSTransform -- ICC color space "
+                 "0x%x incompatible with pixel format, skipping CMS",
+                 this, profileSpace));
       }
+    } else {
+      MOZ_LOG(sJXLLog, LogLevel::Debug,
+              ("[this=%p] nsJXLDecoder::BuildCMSTransform -- failed to parse "
+               "%zu-byte ICC profile, skipping CMS",
+               this, iccLen));
     }
+  } else {
+    MOZ_LOG(sJXLLog, LogLevel::Debug,
+            ("[this=%p] nsJXLDecoder::BuildCMSTransform -- no ICC profile "
+             "available, skipping CMS",
+             this));
   }
 }
 
@@ -687,6 +743,10 @@ nsresult nsJXLDecoder::FinishFrame() {
   // WritePixelRowsToPipe).
   bool hasTransparency =
       basicInfo.has_alpha && mPixelFormat.value() != PixelFormat::Cmyk8;
+  MOZ_LOG(sJXLLog, LogLevel::Debug,
+          ("[this=%p] nsJXLDecoder::FinishFrame -- frame %u committed, "
+           "hasTransparency=%d",
+           this, mFrameIndex, hasTransparency));
   PostFrameStop(hasTransparency ? Opacity::SOME_TRANSPARENCY
                                 : Opacity::FULLY_OPAQUE);
   mCurrentPipe.reset();
