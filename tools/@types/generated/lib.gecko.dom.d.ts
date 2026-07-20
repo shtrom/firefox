@@ -534,6 +534,7 @@ interface ComputedEffectTiming extends EffectTiming {
     endTime?: CSSNumberish;
     localTime?: CSSNumberish | null;
     progress?: number | null;
+    startTime?: CSSNumberish;
 }
 
 interface ConsoleInstanceOptions {
@@ -1830,6 +1831,8 @@ interface KeyboardEventInit extends EventModifierInit {
 
 interface KeyframeAnimationOptions extends KeyframeEffectOptions {
     id?: string;
+    rangeEnd?: TimelineRangeOffset | CSSNumericValue | CSSKeywordValue | string;
+    rangeStart?: TimelineRangeOffset | CSSNumericValue | CSSKeywordValue | string;
     timeline?: AnimationTimeline | null;
 }
 
@@ -3525,6 +3528,9 @@ interface RTCInboundRtpStreamStats extends RTCReceivedRtpStreamStats {
     qpSum?: number;
     remoteId?: string;
     removedSamplesForAcceleration?: number;
+    retransmittedBytesReceived?: number;
+    retransmittedPacketsReceived?: number;
+    rtxSsrc?: number;
     silentConcealedSamples?: number;
     totalAssemblyTime?: number;
     totalAudioEnergy?: number;
@@ -3576,6 +3582,7 @@ interface RTCOutboundRtpStreamStats extends RTCSentRtpStreamStats {
     retransmittedBytesSent?: number;
     retransmittedPacketsSent?: number;
     rid?: string;
+    rtxSsrc?: number;
     totalEncodeTime?: number;
     totalEncodedBytesTarget?: number;
 }
@@ -4333,6 +4340,11 @@ interface ThreadInfoDictionary {
     cpuTime?: number;
     name?: string;
     tid?: number;
+}
+
+interface TimelineRangeOffset {
+    offset?: CSSNumericValue;
+    rangeName?: string | null;
 }
 
 interface ToggleEventInit extends EventInit {
@@ -18265,17 +18277,31 @@ declare var RTCIceCandidate: {
     isInstance: IsInstance<RTCIceCandidate>;
 };
 
+interface RTCIceCandidatePair {
+    readonly local: RTCIceCandidate;
+    readonly remote: RTCIceCandidate;
+}
+
+declare var RTCIceCandidatePair: {
+    prototype: RTCIceCandidatePair;
+    new(): RTCIceCandidatePair;
+    isInstance: IsInstance<RTCIceCandidatePair>;
+};
+
 interface RTCIceTransportEventMap {
     "gatheringstatechange": Event;
+    "selectedcandidatepairchange": Event;
     "statechange": Event;
 }
 
 interface RTCIceTransport extends EventTarget {
     readonly gatheringState: RTCIceGathererState;
     ongatheringstatechange: ((this: RTCIceTransport, ev: Event) => any) | null;
+    onselectedcandidatepairchange: ((this: RTCIceTransport, ev: Event) => any) | null;
     onstatechange: ((this: RTCIceTransport, ev: Event) => any) | null;
     readonly role: RTCIceRole;
     readonly state: RTCIceTransportState;
+    getSelectedCandidatePair(): RTCIceCandidatePair | null;
     addEventListener<K extends keyof RTCIceTransportEventMap>(type: K, listener: (this: RTCIceTransport, ev: RTCIceTransportEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
     addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
     removeEventListener<K extends keyof RTCIceTransportEventMap>(type: K, listener: (this: RTCIceTransport, ev: RTCIceTransportEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
