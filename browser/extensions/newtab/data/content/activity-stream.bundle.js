@@ -23937,6 +23937,9 @@ const PREF_WIDGETS_ROW_EXPANDED = "widgets.row.expanded";
 const PREF_WIDGETS_FEEDBACK_ENABLED = "widgets.feedback.enabled";
 const PREF_WIDGETS_HIDE_ALL_TOAST_ENABLED = "widgets.hideAllToast.enabled";
 const WIDGETS_FEEDBACK_URL = "https://support.mozilla.org/kb/firefox-new-tab-widgets";
+// Safety net in case transitionend never fires. Keep this above the CSS
+// height transition duration (--widget-size-transition-duration, 180ms).
+const ROW_TOGGLE_HEIGHT_ANIMATION_FALLBACK_MS = 300;
 
 // resets timer to default values (exported for testing)
 // In practice, this logic runs inside a useEffect when
@@ -24111,6 +24114,45 @@ function Widgets() {
 
   // track previous timerEnabled state to detect when it becomes disabled
   const prevTimerEnabledRef = (0,external_React_namespaceObject.useRef)(timerEnabled);
+  const rowToggleFromHeightRef = (0,external_React_namespaceObject.useRef)(null);
+  (0,external_React_namespaceObject.useLayoutEffect)(() => {
+    const fromHeight = rowToggleFromHeightRef.current;
+    rowToggleFromHeightRef.current = null;
+    const container = widgetsContainerRef.current;
+    if (fromHeight === null || !container) {
+      return undefined;
+    }
+    const toHeight = container.getBoundingClientRect().height;
+    if (fromHeight === toHeight) {
+      return undefined;
+    }
+    container.style.height = `${fromHeight}px`;
+    container.classList.add("is-animating-height");
+    // Commit the start height before transitioning to the target.
+    void container.offsetHeight;
+    container.style.height = `${toHeight}px`;
+    let fallbackTimer;
+    // Invoked from transitionend/transitioncancel (with an event), from the
+    // fallback timer, or as the effect cleanup (no event). Ignore events
+    // bubbling up from child widgets; the container only transitions height,
+    // so its own events need no propertyName check.
+    const finishRowHeightAnimation = e => {
+      if (e && e.target !== container) {
+        return;
+      }
+      globalThis.clearTimeout(fallbackTimer);
+      container.style.height = "";
+      container.classList.remove("is-animating-height");
+      container.removeEventListener("transitionend", finishRowHeightAnimation);
+      container.removeEventListener("transitioncancel", finishRowHeightAnimation);
+    };
+    container.addEventListener("transitionend", finishRowHeightAnimation);
+    container.addEventListener("transitioncancel", finishRowHeightAnimation);
+    fallbackTimer = globalThis.setTimeout(finishRowHeightAnimation, ROW_TOGGLE_HEIGHT_ANIMATION_FALLBACK_MS);
+    return finishRowHeightAnimation;
+    // widgetsContainerRef is a stable ref from useReorderFlip; listed to satisfy
+    // exhaustive-deps, its identity never changes so only rowExpanded reruns this.
+  }, [rowExpanded, widgetsContainerRef]);
 
   // Reset timer when it becomes disabled
   (0,external_React_namespaceObject.useEffect)(() => {
@@ -24235,6 +24277,11 @@ function Widgets() {
   }
   function toggleRowExpanded() {
     const next = !rowExpanded;
+    const container = widgetsContainerRef.current;
+    const prefersReducedMotion = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    if (container && !prefersReducedMotion) {
+      rowToggleFromHeightRef.current = container.getBoundingClientRect().height;
+    }
     (0,external_ReactRedux_namespaceObject.batch)(() => {
       dispatch(actionCreators.SetPref(PREF_WIDGETS_ROW_EXPANDED, next));
       dispatch(actionCreators.OnlyToMain({
