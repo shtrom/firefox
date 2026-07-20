@@ -364,6 +364,14 @@ const CONFIG_PANES = Object.freeze({
     module:
       "chrome://browser/content/preferences/config/passwords-autofill.mjs",
   },
+  managePersonalInfo: {
+    parent: "passwordsAutofill",
+    l10nId: "autofill-personal-info-manage-title",
+    groupIds: ["managePersonalInfo"],
+    iconSrc: "chrome://browser/skin/personal-info-16.svg",
+    module:
+      "chrome://browser/content/preferences/config/passwords-autofill.mjs",
+  },
   manageMemories: {
     parent: "personalizeSmartWindow",
     l10nId: "ai-window-manage-memories-header",
@@ -402,7 +410,7 @@ const CONFIG_PANES = Object.freeze({
   passwordsAutofill: {
     l10nId: "preferences-passwords-autofill-header",
     iconSrc: "chrome://browser/skin/login.svg",
-    groupIds: ["passwords", "payments", "addresses"],
+    groupIds: ["passwords", "payments", "addresses", "personalInfo"],
     module:
       "chrome://browser/content/preferences/config/passwords-autofill.mjs",
     visible: () => srdSectionEnabled("passwordsAutofill"),
