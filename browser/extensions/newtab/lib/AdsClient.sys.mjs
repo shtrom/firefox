@@ -64,13 +64,14 @@ export class _AdsClient {
 
   /**
    * Options for requestTileAds/requestSpocAds/record*, with the OHTTP channel
-   * configured from prefs.
+   * configured from prefs, and flags from passed in prefValues.
    *
+   * @param {object} prefValues The New Tab store's Prefs.values.
    * @returns {MozAdsRequestOptions}
    */
-  requestOptions() {
+  requestOptions(prefValues) {
     return new lazy.MozAdsRequestOptions({
-      flags: new Map(),
+      flags: new Map(Object.entries(prefValues?.adsBackendConfig || {})),
       ohttp: this.#configureOhttp(),
     });
   }
