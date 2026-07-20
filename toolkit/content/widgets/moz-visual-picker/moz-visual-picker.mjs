@@ -53,6 +53,7 @@ customElements.define("moz-visual-picker", MozVisualPicker);
  * @property {string} label - Visible label for the picker item.
  * @property {string} description - Additional text shown beneath the label.
  * @property {string} ariaLabel - Value for the aria-label attribute.
+ * @property {string} title - Native title tooltip. Mapped onto the inner shadow DOM item and removed from moz-visual-picker-item itself.
  * @property {string} imageSrc - Path to an image to display in the picker item.
  * @property {string} labelPosition
  *  Position of the label: "inside" (default, label rendered inside the picker
@@ -65,6 +66,7 @@ export class MozVisualPickerItem extends SelectControlItemMixin(MozLitElement) {
     label: { type: String, fluent: true },
     description: { type: String, fluent: true },
     ariaLabel: { type: String, fluent: true, mapped: true },
+    title: { type: String, mapped: true },
     imageSrc: { type: String },
     labelPosition: { type: String, reflect: true },
   };
@@ -196,6 +198,7 @@ export class MozVisualPickerItem extends SelectControlItemMixin(MozLitElement) {
         aria-describedby=${ifDefined(
           this.description && this.label ? "description" : undefined
         )}
+        title=${ifDefined(this.title)}
         aria-checked=${this.role == "radio" ? this.checked : nothing}
         aria-selected=${this.role == "option" ? this.checked : nothing}
         tabindex=${this.itemTabIndex}
