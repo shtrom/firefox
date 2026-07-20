@@ -78,14 +78,6 @@ export class PrivacyFeed {
   }
 
   async updateStats() {
-    // @backward-compat { version 145 }
-    // getTodayStats() ships alongside this widget; older platforms have
-    // PrivacyMetricsService (Bug 2010368) without it. Guard until that
-    // version reaches release, then remove this check.
-    if (typeof lazy.PrivacyMetricsService?.getTodayStats !== "function") {
-      return;
-    }
-
     const [stats, sitesToday] = await Promise.all([
       lazy.PrivacyMetricsService.getTodayStats(),
       this.getSitesVisitedToday(),
