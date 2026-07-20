@@ -126,7 +126,6 @@ Preferences.addAll([
 if (AppConstants.HAVE_SHELL_SERVICE) {
   Preferences.addAll([
     { id: "browser.shell.checkDefaultBrowser", type: "bool" },
-    { id: "pref.general.disable_button.default_browser", type: "bool" },
   ]);
 }
 
@@ -397,7 +396,8 @@ Preferences.addSetting({
   visible: () =>
     DefaultBrowserHelper.canCheck &&
     DefaultBrowserHelper.isBrowserDefault &&
-    Services.policies.isAllowed("setDefaultBrowser"),
+    Services.policies.isAllowed("setDefaultBrowser") &&
+    !Services.prefs.prefIsLocked("pref.general.disable_button.default_browser"),
 });
 
 Preferences.addSetting({
@@ -406,7 +406,8 @@ Preferences.addSetting({
   visible: () =>
     DefaultBrowserHelper.canCheck &&
     !DefaultBrowserHelper.isBrowserDefault &&
-    Services.policies.isAllowed("setDefaultBrowser"),
+    Services.policies.isAllowed("setDefaultBrowser") &&
+    !Services.prefs.prefIsLocked("pref.general.disable_button.default_browser"),
   onUserClick: (e, { alwaysCheckDefault }) => {
     if (!DefaultBrowserHelper.canCheck) {
       return;
