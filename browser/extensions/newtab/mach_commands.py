@@ -687,7 +687,6 @@ def process_yaml_file(main_yaml, compare_yaml, yaml_type: YamlType, temp_dir_pat
     # Remove $tags if present to avoid invalid tag lint error
     if "$tags" in new_yaml:
         del new_yaml["$tags"]
-    new_yaml["no_lint"] = ["COMMON_PREFIX"]
 
     yaml_content = yaml.dump(new_yaml, sort_keys=False)
     print(yaml_content)
