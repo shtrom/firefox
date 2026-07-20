@@ -1417,27 +1417,36 @@ void CodeGenerator::visitUrshD(LUrshD* ins) {
 }
 
 void CodeGenerator::visitPowHalfD(LPowHalfD* ins) {
-  FloatRegister input = ToFloatRegister(ins->input());
-  FloatRegister output = ToFloatRegister(ins->output());
+  const FloatRegister input = ToFloatRegister(ins->input());
+  const FloatRegister output = ToFloatRegister(ins->output());
   ScratchDoubleScope fpscratch(masm);
 
-  Label done, skip;
+  FloatRegister fsqrtFj = input;
 
-  // Masm.pow(-Infinity, 0.5) == Infinity.
-  masm.loadConstantDouble(NegativeInfinity<double>(), fpscratch);
-  masm.ma_bc_d(input, fpscratch, &skip, Assembler::DoubleNotEqualOrUnordered,
-               ShortJump);
-  masm.as_fneg_d(output, fpscratch);
-  masm.ma_b(&done, ShortJump);
+  Label done, notNegInf;
+  if (!ins->mir()->operandIsNeverNegativeInfinity()) {
+    // Masm.pow(-Infinity, 0.5) == Infinity.
+    masm.loadConstantDouble(NegativeInfinity<double>(), fpscratch);
+    masm.ma_bc_d(input, fpscratch, &notNegInf,
+                 Assembler::DoubleNotEqualOrUnordered, ShortJump);
+    masm.as_fneg_d(output, fpscratch);
+    masm.ma_b(&done, ShortJump);
 
-  masm.bind(&skip);
-  // Math.pow(-0, 0.5) == 0 == Math.pow(0, 0.5).
-  // Adding 0 converts any -0 to 0.
-  masm.loadConstantDouble(0.0, fpscratch);
-  masm.as_fadd_d(output, input, fpscratch);
-  masm.as_fsqrt_d(output, output);
+    masm.bind(&notNegInf);
+  }
 
-  masm.bind(&done);
+  if (!ins->mir()->operandIsNeverNegativeZero()) {
+    // Math.pow(-0, 0.5) == 0 == Math.pow(0, 0.5).
+    // Adding 0 converts any -0 to 0.
+    masm.loadConstantDouble(0.0, fpscratch);
+    masm.as_fadd_d(output, input, fpscratch);
+    fsqrtFj = output;
+  }
+  masm.as_fsqrt_d(output, fsqrtFj);
+
+  if (!ins->mir()->operandIsNeverNegativeInfinity()) {
+    masm.bind(&done);
+  }
 }
 
 void CodeGenerator::visitMathD(LMathD* math) {
