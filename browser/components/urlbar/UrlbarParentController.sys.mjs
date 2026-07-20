@@ -50,7 +50,7 @@ ChromeUtils.defineLazyGetter(lazy, "logger", () =>
  * - onQueryResults(queryContext)
  * - onQueryCancelled(queryContext)
  * - onQueryFinished(queryContext)
- * - onQueryResultRemoved(index)
+ * - onQueryResultRemoved(resultId)
  * - onViewOpen()
  * - onViewClose()
  */
@@ -465,15 +465,8 @@ export class UrlbarParentController {
     }
     let { queryContext } = this._lastQueryContextWrapper;
 
-    let index = queryContext.results.indexOf(result);
+    let index = queryContext.results.findIndex(r => r.id === result.id);
     if (index < 0) {
-      // On the actor message path `result` is reconstructed from the wire, so
-      // it isn't identity-equal to the context's instance; its row index, which
-      // matches the results order, locates it instead. Bug 2052875 will match by
-      // a stable result id so this doesn't rely on that ordering.
-      index = result.rowIndex ?? -1;
-    }
-    if (index < 0 || index >= queryContext.results.length) {
       console.error("Failed to find the selected result in the results");
       return;
     }
@@ -481,7 +474,7 @@ export class UrlbarParentController {
     queryContext.results.splice(index, 1);
     this.notify(
       lazy.UrlbarShared.NOTIFICATIONS.QUERY_RESULT_REMOVED,
-      index,
+      result.id,
       acknowledgeDismissalL10n
     );
   }

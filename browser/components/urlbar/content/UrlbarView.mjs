@@ -557,20 +557,16 @@ export class UrlbarView {
   }
 
   async acknowledgeFeedback(result) {
-    let row = this.#rows.children[result.rowIndex];
+    let row = this.#getRowByResultId(result.id);
     if (!row) {
       return;
     }
-    // Compare against the row's own result rather than `result`: across the
-    // actor boundary `result` is a wire copy, so an identity check would always
-    // fail. This still guards against the row's result changing during the
-    // async l10n fetch below, though it can't confirm the row still matches the
-    // dismissed result -- that needs a stable result id (Bug 2052875).
-    let { result: rowResult } = row;
 
     let l10n = { id: "urlbar-feedback-acknowledgment" };
     await this.#l10nCache.ensure(l10n);
-    if (row.result != rowResult) {
+    // Confirm the row still holds the dismissed result: a re-query may have
+    // swapped it during the async l10n fetch above.
+    if (row.result?.id != result.id) {
       return;
     }
 
@@ -588,8 +584,8 @@ export class UrlbarView {
    *   The localization object shown as dismissed feedback.
    */
   #acknowledgeDismissal(result, titleL10n) {
-    let row = this.#rows.children[result.rowIndex];
-    if (!row || row.result != result) {
+    let row = this.#getRowByResultId(result.id);
+    if (!row) {
       return;
     }
 
@@ -1086,9 +1082,7 @@ export class UrlbarView {
    * Handles removing a result from the view when it is removed from the query,
    * and attempts to select the new result on the same row.
    *
-   * This assumes that the result rows are in index order.
-   *
-   * @param {number} index The index of the result that has been removed.
+   * @param {number} id The id of the UrlbarResult that has been removed.
    * @param {object} [acknowledgeDismissalL10n]
    *   The dismissal-acknowledgment l10n the dismissing provider set on the
    *   result, supplied by the caller. It isn't read from this row's result
@@ -1096,8 +1090,21 @@ export class UrlbarView {
    *   process, so this row's result -- a query-time snapshot -- never received
    *   it. Undefined when the row is removed without acknowledgment.
    */
-  onQueryResultRemoved(index, acknowledgeDismissalL10n) {
-    let rowToRemove = this.#rows.children[index];
+  onQueryResultRemoved(id, acknowledgeDismissalL10n) {
+    let removedIndex = -1;
+    let rowToRemove = null;
+    for (let i = 0; i < this.#rows.children.length; i++) {
+      if (this.#rows.children[i].result?.id === id) {
+        removedIndex = i;
+        rowToRemove = this.#rows.children[i];
+        break;
+      }
+    }
+    if (!rowToRemove) {
+      // The row is already gone, e.g. a re-query replaced the results before
+      // this notification arrived over the actor.
+      return;
+    }
 
     let { result } = rowToRemove;
     if (acknowledgeDismissalL10n) {
@@ -1113,13 +1120,14 @@ export class UrlbarView {
     if (!updateSelection) {
       return;
     }
-    // Select the row at the same index, if possible.
-    let newSelectionIndex = index;
-    if (index >= this.#queryContext.results.length) {
-      newSelectionIndex = this.#queryContext.results.length - 1;
-    }
-    // A negative index clears the selection, which resets the input value
-    // when no results remain.
+    // Select the row that shifted into the removed row's position, clamping to
+    // the last remaining row when the last row was removed. A negative index
+    // clears the selection, which resets the input value when no results
+    // remain.
+    let newSelectionIndex = Math.min(
+      removedIndex,
+      this.#rows.children.length - 1
+    );
     this.selectedRowIndex = newSelectionIndex;
   }
 
@@ -3416,6 +3424,22 @@ export class UrlbarView {
    */
   #getRowFromElement(element) {
     return element?.closest(".urlbarView-row");
+  }
+
+  /**
+   * @param {number} id
+   *   A UrlbarResult id.
+   * @returns {Element|null}
+   *   The row currently displaying the result with that id, or null. A result
+   *   appears in the view at most once, so this matches at most one row.
+   */
+  #getRowByResultId(id) {
+    for (let row of this.#rows.children) {
+      if (row.result?.id === id) {
+        return row;
+      }
+    }
+    return null;
   }
 
   #setAccessibleFocus(item) {

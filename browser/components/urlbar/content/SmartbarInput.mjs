@@ -2244,7 +2244,7 @@ ${
         selType: "dismiss",
         windowMode: this.windowMode,
       });
-      this.view.onQueryResultRemoved(result.rowIndex);
+      this.view.onQueryResultRemoved(result.id);
       return;
     }
 
