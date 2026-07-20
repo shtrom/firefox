@@ -15,7 +15,12 @@ ChromeUtils.defineESModuleGetters(lazy, {
 // An allowlist, so an `InvokeContentAction` message can't reach arbitrary methods.
 const INVOKABLE_CONTENT_ACTIONS = {
   input: new Set(["search", "setValue", "startQuery"]),
-  view: new Set(["acknowledgeFeedback", "close", "startTail150"]),
+  view: new Set([
+    "acknowledgeFeedback",
+    "close",
+    "updateResultMenuCommands",
+    "startTail150",
+  ]),
 };
 
 /**

@@ -224,6 +224,10 @@ class ViewProxy {
   startTail150() {
     this.#invoke("startTail150", []);
   }
+
+  updateResultMenuCommands(resultId, commands) {
+    this.#invoke("updateResultMenuCommands", [resultId, commands]);
+  }
 }
 
 /**

@@ -293,8 +293,8 @@ async function doShowLessFrequently({ input, expected, keepViewOpen = false }) {
       gURLBar.view.isOpen,
       "The view should remain open clicking the command"
     );
-    Assert.ok(
-      details.element.row.hasAttribute("feedback-acknowledgment"),
+    await TestUtils.waitForCondition(
+      () => details.element.row.hasAttribute("feedback-acknowledgment"),
       "Row should have feedback acknowledgment after clicking command"
     );
   } catch (e) {
