@@ -4,6 +4,8 @@
 
 #include "jit/loong64/disasm/Disasm-loong64.h"
 
+#include "mozilla/IntegerPrintfMacros.h"
+
 #include <stdarg.h>
 #include <stdio.h>
 
@@ -56,9 +58,10 @@ class Decoder {
   }
 
   bool formatRdRjRk(const char* mnemonic, uint32_t word) const;
+  bool formatRdRkRj(const char* mnemonic, uint32_t word) const;
   bool formatRdRj(const char* mnemonic, uint32_t word) const;
-  bool formatRd(const char* mnemonic, uint32_t word) const;
-  bool formatRj(const char* mnemonic, uint32_t word) const;
+  bool formatFcsrRj(const char* mnemonic, uint32_t word) const;
+  bool formatRdFcsr(const char* mnemonic, uint32_t word) const;
   bool formatRdRjSigned12(const char* mnemonic, uint32_t word) const;
   bool formatRdRjUnsigned12(const char* mnemonic, uint32_t word) const;
   bool formatRdRjSigned14Scaled(const char* mnemonic, uint32_t word) const;
@@ -67,6 +70,7 @@ class Decoder {
   bool formatRdRjUnsigned5(const char* mnemonic, uint32_t word) const;
   bool formatRdRjUnsigned6(const char* mnemonic, uint32_t word) const;
   bool formatRdRjRkSa2(const char* mnemonic, uint32_t word) const;
+  bool formatRdRjRkSa2PlusOne(const char* mnemonic, uint32_t word) const;
   bool formatRdRjRkSa3(const char* mnemonic, uint32_t word) const;
   bool formatRdRjMsbWLsbW(const char* mnemonic, uint32_t word) const;
   bool formatRdRjMsbDLsbD(const char* mnemonic, uint32_t word) const;
@@ -113,39 +117,50 @@ class Decoder {
 };
 
 bool Decoder::formatRdRjRk(const char* mnemonic, uint32_t word) const {
-  FormatTo(
-      output_, "%-12s %s,%s,%s", mnemonic, cpu(Extract(word, RDShift, RDBits)),
-      cpu(Extract(word, RJShift, RJBits)), cpu(Extract(word, RKShift, RKBits)));
+  FormatTo(output_, "%-12s %s, %s, %s", mnemonic,
+           cpu(Extract(word, RDShift, RDBits)),
+           cpu(Extract(word, RJShift, RJBits)),
+           cpu(Extract(word, RKShift, RKBits)));
+  return true;
+}
+
+bool Decoder::formatRdRkRj(const char* mnemonic, uint32_t word) const {
+  FormatTo(output_, "%-12s %s, %s, %s", mnemonic,
+           cpu(Extract(word, RDShift, RDBits)),
+           cpu(Extract(word, RKShift, RKBits)),
+           cpu(Extract(word, RJShift, RJBits)));
   return true;
 }
 
 bool Decoder::formatRdRj(const char* mnemonic, uint32_t word) const {
-  FormatTo(output_, "%-12s %s,%s", mnemonic,
+  FormatTo(output_, "%-12s %s, %s", mnemonic,
            cpu(Extract(word, RDShift, RDBits)),
            cpu(Extract(word, RJShift, RJBits)));
   return true;
 }
 
-bool Decoder::formatRd(const char* mnemonic, uint32_t word) const {
-  FormatTo(output_, "%-12s %s", mnemonic, cpu(Extract(word, RDShift, RDBits)));
+bool Decoder::formatFcsrRj(const char* mnemonic, uint32_t word) const {
+  FormatTo(output_, "%-12s $fcsr%" PRIu32 ", %s", mnemonic,
+           Extract(word, FDShift, FDBits), cpu(Extract(word, RJShift, RJBits)));
   return true;
 }
 
-bool Decoder::formatRj(const char* mnemonic, uint32_t word) const {
-  FormatTo(output_, "%-12s %s", mnemonic, cpu(Extract(word, RJShift, RJBits)));
+bool Decoder::formatRdFcsr(const char* mnemonic, uint32_t word) const {
+  FormatTo(output_, "%-12s %s, $fcsr%" PRIu32, mnemonic,
+           cpu(Extract(word, RDShift, RDBits)), Extract(word, FJShift, FJBits));
   return true;
 }
 
 bool Decoder::formatRdRjSigned12(const char* mnemonic, uint32_t word) const {
-  FormatTo(output_, "%-12s %s,%s,0x%x", mnemonic,
+  FormatTo(output_, "%-12s %s, %s, %" PRId32, mnemonic,
            cpu(Extract(word, RDShift, RDBits)),
            cpu(Extract(word, RJShift, RJBits)),
-           uint32_t(SignExtend(Extract(word, Imm12Shift, Imm12Bits), 12)));
+           SignExtend(Extract(word, Imm12Shift, Imm12Bits), 12));
   return true;
 }
 
 bool Decoder::formatRdRjUnsigned12(const char* mnemonic, uint32_t word) const {
-  FormatTo(output_, "%-12s %s,%s,0x%x", mnemonic,
+  FormatTo(output_, "%-12s %s, %s, 0x%" PRIx32, mnemonic,
            cpu(Extract(word, RDShift, RDBits)),
            cpu(Extract(word, RJShift, RJBits)),
            Extract(word, Imm12Shift, Imm12Bits));
@@ -154,30 +169,30 @@ bool Decoder::formatRdRjUnsigned12(const char* mnemonic, uint32_t word) const {
 
 bool Decoder::formatRdRjSigned14Scaled(const char* mnemonic,
                                        uint32_t word) const {
-  FormatTo(output_, "%-12s %s,%s,0x%x", mnemonic,
+  FormatTo(output_, "%-12s %s, %s, %" PRId32, mnemonic,
            cpu(Extract(word, RDShift, RDBits)),
            cpu(Extract(word, RJShift, RJBits)),
-           uint32_t(SignExtend(Extract(word, Imm14Shift, Imm14Bits), 14) * 4));
+           SignExtend(Extract(word, Imm14Shift, Imm14Bits), 14) * 4);
   return true;
 }
 
 bool Decoder::formatRdRjSigned16(const char* mnemonic, uint32_t word) const {
-  FormatTo(output_, "%-12s %s,%s,0x%x", mnemonic,
+  FormatTo(output_, "%-12s %s, %s, %" PRId32, mnemonic,
            cpu(Extract(word, RDShift, RDBits)),
            cpu(Extract(word, RJShift, RJBits)),
-           uint32_t(SignExtend(Extract(word, Imm16Shift, Imm16Bits), 16)));
+           SignExtend(Extract(word, Imm16Shift, Imm16Bits), 16));
   return true;
 }
 
 bool Decoder::formatRdSigned20(const char* mnemonic, uint32_t word) const {
-  FormatTo(output_, "%-12s %s,0x%x", mnemonic,
+  FormatTo(output_, "%-12s %s, %" PRId32, mnemonic,
            cpu(Extract(word, RDShift, RDBits)),
-           uint32_t(SignExtend(Extract(word, Imm20Shift, Imm20Bits), 20)));
+           SignExtend(Extract(word, Imm20Shift, Imm20Bits), 20));
   return true;
 }
 
 bool Decoder::formatRdRjUnsigned5(const char* mnemonic, uint32_t word) const {
-  FormatTo(output_, "%-12s %s,%s,0x%x", mnemonic,
+  FormatTo(output_, "%-12s %s, %s, 0x%" PRIx32, mnemonic,
            cpu(Extract(word, RDShift, RDBits)),
            cpu(Extract(word, RJShift, RJBits)),
            Extract(word, Imm5Shift, Imm5Bits));
@@ -185,7 +200,7 @@ bool Decoder::formatRdRjUnsigned5(const char* mnemonic, uint32_t word) const {
 }
 
 bool Decoder::formatRdRjUnsigned6(const char* mnemonic, uint32_t word) const {
-  FormatTo(output_, "%-12s %s,%s,0x%x", mnemonic,
+  FormatTo(output_, "%-12s %s, %s, 0x%" PRIx32, mnemonic,
            cpu(Extract(word, RDShift, RDBits)),
            cpu(Extract(word, RJShift, RJBits)),
            Extract(word, Imm6Shift, Imm6Bits));
@@ -194,15 +209,24 @@ bool Decoder::formatRdRjUnsigned6(const char* mnemonic, uint32_t word) const {
 
 bool Decoder::formatRdRjRkSa2(const char* mnemonic, uint32_t word) const {
   FormatTo(
-      output_, "%-12s %s,%s,%s,0x%x", mnemonic,
+      output_, "%-12s %s, %s, %s, 0x%" PRIx32, mnemonic,
       cpu(Extract(word, RDShift, RDBits)), cpu(Extract(word, RJShift, RJBits)),
       cpu(Extract(word, RKShift, RKBits)), Extract(word, SAShift, SA2Bits));
   return true;
 }
 
+bool Decoder::formatRdRjRkSa2PlusOne(const char* mnemonic,
+                                     uint32_t word) const {
+  FormatTo(
+      output_, "%-12s %s, %s, %s, 0x%" PRIx32, mnemonic,
+      cpu(Extract(word, RDShift, RDBits)), cpu(Extract(word, RJShift, RJBits)),
+      cpu(Extract(word, RKShift, RKBits)), Extract(word, SAShift, SA2Bits) + 1);
+  return true;
+}
+
 bool Decoder::formatRdRjRkSa3(const char* mnemonic, uint32_t word) const {
   FormatTo(
-      output_, "%-12s %s,%s,%s,0x%x", mnemonic,
+      output_, "%-12s %s, %s, %s, 0x%" PRIx32, mnemonic,
       cpu(Extract(word, RDShift, RDBits)), cpu(Extract(word, RJShift, RJBits)),
       cpu(Extract(word, RKShift, RKBits)), Extract(word, SAShift, SA3Bits));
   return true;
@@ -210,7 +234,7 @@ bool Decoder::formatRdRjRkSa3(const char* mnemonic, uint32_t word) const {
 
 bool Decoder::formatRdRjMsbWLsbW(const char* mnemonic, uint32_t word) const {
   FormatTo(
-      output_, "%-12s %s,%s,0x%x,0x%x", mnemonic,
+      output_, "%-12s %s, %s, 0x%" PRIx32 ", 0x%" PRIx32, mnemonic,
       cpu(Extract(word, RDShift, RDBits)), cpu(Extract(word, RJShift, RJBits)),
       Extract(word, MSBWShift, MSBWBits), Extract(word, LSBWShift, LSBWBits));
   return true;
@@ -218,21 +242,22 @@ bool Decoder::formatRdRjMsbWLsbW(const char* mnemonic, uint32_t word) const {
 
 bool Decoder::formatRdRjMsbDLsbD(const char* mnemonic, uint32_t word) const {
   FormatTo(
-      output_, "%-12s %s,%s,0x%x,0x%x", mnemonic,
+      output_, "%-12s %s, %s, 0x%" PRIx32 ", 0x%" PRIx32, mnemonic,
       cpu(Extract(word, RDShift, RDBits)), cpu(Extract(word, RJShift, RJBits)),
       Extract(word, MSBDShift, MSBDBits), Extract(word, LSBDShift, LSBDBits));
   return true;
 }
 
 bool Decoder::formatFdFjFk(const char* mnemonic, uint32_t word) const {
-  FormatTo(
-      output_, "%-12s %s,%s,%s", mnemonic, fpu(Extract(word, FDShift, FDBits)),
-      fpu(Extract(word, FJShift, FJBits)), fpu(Extract(word, FKShift, FKBits)));
+  FormatTo(output_, "%-12s %s, %s, %s", mnemonic,
+           fpu(Extract(word, FDShift, FDBits)),
+           fpu(Extract(word, FJShift, FJBits)),
+           fpu(Extract(word, FKShift, FKBits)));
   return true;
 }
 
 bool Decoder::formatFdFj(const char* mnemonic, uint32_t word) const {
-  FormatTo(output_, "%-12s %s,%s", mnemonic,
+  FormatTo(output_, "%-12s %s, %s", mnemonic,
            fpu(Extract(word, FDShift, FDBits)),
            fpu(Extract(word, FJShift, FJBits)));
   return true;
@@ -240,14 +265,14 @@ bool Decoder::formatFdFj(const char* mnemonic, uint32_t word) const {
 
 bool Decoder::formatFdFjFkFa(const char* mnemonic, uint32_t word) const {
   FormatTo(
-      output_, "%-12s %s,%s,%s,%s", mnemonic,
+      output_, "%-12s %s, %s, %s, %s", mnemonic,
       fpu(Extract(word, FDShift, FDBits)), fpu(Extract(word, FJShift, FJBits)),
       fpu(Extract(word, FKShift, FKBits)), fpu(Extract(word, FAShift, FABits)));
   return true;
 }
 
 bool Decoder::formatFdFjFkCa(const char* mnemonic, uint32_t word) const {
-  FormatTo(output_, "%-12s %s,%s,%s,%u", mnemonic,
+  FormatTo(output_, "%-12s %s, %s, %s, $fcc%" PRIu32, mnemonic,
            fpu(Extract(word, FDShift, FDBits)),
            fpu(Extract(word, FJShift, FJBits)),
            fpu(Extract(word, FKShift, FKBits)), Extract(word, CAShift, CABits));
@@ -255,74 +280,75 @@ bool Decoder::formatFdFjFkCa(const char* mnemonic, uint32_t word) const {
 }
 
 bool Decoder::formatFdRj(const char* mnemonic, uint32_t word) const {
-  FormatTo(output_, "%-12s %s,%s", mnemonic,
+  FormatTo(output_, "%-12s %s, %s", mnemonic,
            fpu(Extract(word, FDShift, FDBits)),
            cpu(Extract(word, RJShift, RJBits)));
   return true;
 }
 
 bool Decoder::formatRdFj(const char* mnemonic, uint32_t word) const {
-  FormatTo(output_, "%-12s %s,%s", mnemonic,
+  FormatTo(output_, "%-12s %s, %s", mnemonic,
            cpu(Extract(word, RDShift, RDBits)),
            fpu(Extract(word, FJShift, FJBits)));
   return true;
 }
 
 bool Decoder::formatFdRjRk(const char* mnemonic, uint32_t word) const {
-  FormatTo(
-      output_, "%-12s %s,%s,%s", mnemonic, fpu(Extract(word, FDShift, FDBits)),
-      cpu(Extract(word, RJShift, RJBits)), cpu(Extract(word, RKShift, RKBits)));
+  FormatTo(output_, "%-12s %s, %s, %s", mnemonic,
+           fpu(Extract(word, FDShift, FDBits)),
+           cpu(Extract(word, RJShift, RJBits)),
+           cpu(Extract(word, RKShift, RKBits)));
   return true;
 }
 
 bool Decoder::formatFdRjSigned12(const char* mnemonic, uint32_t word) const {
-  FormatTo(output_, "%-12s %s,%s,0x%x", mnemonic,
+  FormatTo(output_, "%-12s %s, %s, %" PRId32, mnemonic,
            fpu(Extract(word, FDShift, FDBits)),
            cpu(Extract(word, RJShift, RJBits)),
-           uint32_t(SignExtend(Extract(word, Imm12Shift, Imm12Bits), 12)));
+           SignExtend(Extract(word, Imm12Shift, Imm12Bits), 12));
   return true;
 }
 
 bool Decoder::formatCdFj(const char* mnemonic, uint32_t word) const {
-  FormatTo(output_, "%-12s FCC%u,%s", mnemonic, Extract(word, CDShift, CDBits),
-           fpu(Extract(word, FJShift, FJBits)));
+  FormatTo(output_, "%-12s $fcc%" PRIu32 ", %s", mnemonic,
+           Extract(word, CDShift, CDBits), fpu(Extract(word, FJShift, FJBits)));
   return true;
 }
 
 bool Decoder::formatFdCj(const char* mnemonic, uint32_t word) const {
-  FormatTo(output_, "%-12s %s,FCC%u", mnemonic,
+  FormatTo(output_, "%-12s %s, $fcc%" PRIu32, mnemonic,
            fpu(Extract(word, FDShift, FDBits)), Extract(word, CJShift, CJBits));
   return true;
 }
 
 bool Decoder::formatCdRj(const char* mnemonic, uint32_t word) const {
-  FormatTo(output_, "%-12s FCC%u,%s", mnemonic, Extract(word, CDShift, CDBits),
-           cpu(Extract(word, RJShift, RJBits)));
+  FormatTo(output_, "%-12s $fcc%" PRIu32 ", %s", mnemonic,
+           Extract(word, CDShift, CDBits), cpu(Extract(word, RJShift, RJBits)));
   return true;
 }
 
 bool Decoder::formatRdCj(const char* mnemonic, uint32_t word) const {
-  FormatTo(output_, "%-12s %s,FCC%u", mnemonic,
+  FormatTo(output_, "%-12s %s, $fcc%" PRIu32, mnemonic,
            cpu(Extract(word, RDShift, RDBits)), Extract(word, CJShift, CJBits));
   return true;
 }
 
 bool Decoder::formatCdFjFk(const char* mnemonic, uint32_t word) const {
-  FormatTo(output_, "%-12s FCC%u,%s,%s", mnemonic,
+  FormatTo(output_, "%-12s $fcc%" PRIu32 ", %s, %s", mnemonic,
            Extract(word, CDShift, CDBits), fpu(Extract(word, FJShift, FJBits)),
            fpu(Extract(word, FKShift, FKBits)));
   return true;
 }
 
 bool Decoder::formatHintRjSigned12(const char* mnemonic, uint32_t word) const {
-  FormatTo(output_, "%-12s 0x%x,%s,0x%x", mnemonic,
+  FormatTo(output_, "%-12s 0x%" PRIx32 ", %s, %" PRId32, mnemonic,
            Extract(word, RDShift, RDBits), cpu(Extract(word, RJShift, RJBits)),
-           uint32_t(SignExtend(Extract(word, Imm12Shift, Imm12Bits), 12)));
+           SignExtend(Extract(word, Imm12Shift, Imm12Bits), 12));
   return true;
 }
 
 bool Decoder::formatUnsigned15(const char* mnemonic, uint32_t word) const {
-  FormatTo(output_, "%-12s 0x%x", mnemonic, Extract(word, 0, 15));
+  FormatTo(output_, "%-12s 0x%" PRIx32, mnemonic, Extract(word, 0, 15));
   return true;
 }
 
@@ -355,7 +381,7 @@ bool Decoder::formatBcz(const Instruction* instruction, uint32_t word) const {
   uint32_t encoded =
       Extract(word, Imm16Shift, Imm16Bits) | (Extract(word, 0, 5) << 16);
   int32_t offset = SignExtend(encoded, 21) * 4;
-  FormatTo(output_, "%-12s FCC%u,%s", condition == 1 ? "bcnez" : "bceqz",
+  FormatTo(output_, "%-12s fcc%u,%s", condition == 1 ? "bcnez" : "bceqz",
            Extract(word, CJShift, CJBits), target(instruction, offset));
   return true;
 }
@@ -371,7 +397,7 @@ bool Decoder::formatBranch26(const char* mnemonic,
 }
 
 bool Decoder::formatRdRjBranch16(const char* mnemonic, uint32_t word) const {
-  FormatTo(output_, "%-12s %s,%s,%d", mnemonic,
+  FormatTo(output_, "%-12s %s, %s, %" PRId32, mnemonic,
            cpu(Extract(word, RDShift, RDBits)),
            cpu(Extract(word, RJShift, RJBits)),
            SignExtend(Extract(word, Imm16Shift, Imm16Bits), 16) * 4);
@@ -381,25 +407,25 @@ bool Decoder::formatRdRjBranch16(const char* mnemonic, uint32_t word) const {
 bool Decoder::formatFCompare(bool isDouble, uint32_t word) const {
   switch (Extract(word, CONDShift, CONDBits)) {
     case AssemblerLOONG64::COR:
-      return formatCdFjFk(isDouble ? "fcmp_cor_d" : "fcmp_cor_s", word);
+      return formatCdFjFk(isDouble ? "fcmp.cor.d" : "fcmp.cor.s", word);
     case AssemblerLOONG64::CEQ:
-      return formatCdFjFk(isDouble ? "fcmp_ceq_d" : "fcmp_ceq_s", word);
+      return formatCdFjFk(isDouble ? "fcmp.ceq.d" : "fcmp.ceq.s", word);
     case AssemblerLOONG64::CNE:
-      return formatCdFjFk(isDouble ? "fcmp_cne_d" : "fcmp_cne_s", word);
+      return formatCdFjFk(isDouble ? "fcmp.cne.d" : "fcmp.cne.s", word);
     case AssemblerLOONG64::CLE:
-      return formatCdFjFk(isDouble ? "fcmp_cle_d" : "fcmp_cle_s", word);
+      return formatCdFjFk(isDouble ? "fcmp.cle.d" : "fcmp.cle.s", word);
     case AssemblerLOONG64::CLT:
-      return formatCdFjFk(isDouble ? "fcmp_clt_d" : "fcmp_clt_s", word);
+      return formatCdFjFk(isDouble ? "fcmp.clt.d" : "fcmp.clt.s", word);
     case AssemblerLOONG64::CUN:
-      return formatCdFjFk(isDouble ? "fcmp_cun_d" : "fcmp_cun_s", word);
+      return formatCdFjFk(isDouble ? "fcmp.cun.d" : "fcmp.cun.s", word);
     case AssemblerLOONG64::CUEQ:
-      return formatCdFjFk(isDouble ? "fcmp_cueq_d" : "fcmp_cueq_s", word);
+      return formatCdFjFk(isDouble ? "fcmp.cueq.d" : "fcmp.cueq.s", word);
     case AssemblerLOONG64::CUNE:
-      return formatCdFjFk(isDouble ? "fcmp_cune_d" : "fcmp_cune_s", word);
+      return formatCdFjFk(isDouble ? "fcmp.cune.d" : "fcmp.cune.s", word);
     case AssemblerLOONG64::CULE:
-      return formatCdFjFk(isDouble ? "fcmp_cule_d" : "fcmp_cule_s", word);
+      return formatCdFjFk(isDouble ? "fcmp.cule.d" : "fcmp.cule.s", word);
     case AssemblerLOONG64::CULT:
-      return formatCdFjFk(isDouble ? "fcmp_cult_d" : "fcmp_cult_s", word);
+      return formatCdFjFk(isDouble ? "fcmp.cult.d" : "fcmp.cult.s", word);
     default:
       return false;
   }
@@ -433,7 +459,7 @@ bool Decoder::decodeOp6(const Instruction* instruction) const {
     case op_bgeu:
       return formatBranch16("bgeu", instruction, word);
     case op_addu16i_d:
-      return formatRdRjSigned16("addu16i_d", word);
+      return formatRdRjSigned16("addu16i.d", word);
     default:
       return false;
   }
@@ -444,7 +470,7 @@ bool Decoder::decodeOp11(const Instruction* instruction) const {
   switch (word & OpcodeMask(11)) {
     case op_bstr_w:
       return formatRdRjMsbWLsbW(
-          Extract(word, 15, 1) ? "bstrpick_w" : "bstrins_w", word);
+          Extract(word, 15, 1) ? "bstrpick.w" : "bstrins.w", word);
     default:
       return false;
   }
@@ -454,21 +480,21 @@ bool Decoder::decodeOp12(const Instruction* instruction) const {
   uint32_t word = instruction->encode();
   switch (word & OpcodeMask(12)) {
     case op_fmadd_s:
-      return formatFdFjFkFa("fmadd_s", word);
+      return formatFdFjFkFa("fmadd.s", word);
     case op_fmadd_d:
-      return formatFdFjFkFa("fmadd_d", word);
+      return formatFdFjFkFa("fmadd.d", word);
     case op_fmsub_s:
-      return formatFdFjFkFa("fmsub_s", word);
+      return formatFdFjFkFa("fmsub.s", word);
     case op_fmsub_d:
-      return formatFdFjFkFa("fmsub_d", word);
+      return formatFdFjFkFa("fmsub.d", word);
     case op_fnmadd_s:
-      return formatFdFjFkFa("fnmadd_s", word);
+      return formatFdFjFkFa("fnmadd.s", word);
     case op_fnmadd_d:
-      return formatFdFjFkFa("fnmadd_d", word);
+      return formatFdFjFkFa("fnmadd.d", word);
     case op_fnmsub_s:
-      return formatFdFjFkFa("fnmsub_s", word);
+      return formatFdFjFkFa("fnmsub.s", word);
     case op_fnmsub_d:
-      return formatFdFjFkFa("fnmsub_d", word);
+      return formatFdFjFkFa("fnmsub.d", word);
     case op_fcmp_cond_s:
       return formatFCompare(false, word);
     case op_fcmp_cond_d:
@@ -482,9 +508,9 @@ bool Decoder::decodeOp7(const Instruction* instruction) const {
   uint32_t word = instruction->encode();
   switch (word & OpcodeMask(7)) {
     case op_lu12i_w:
-      return formatRdSigned20("lu12i_w", word);
+      return formatRdSigned20("lu12i.w", word);
     case op_lu32i_d:
-      return formatRdSigned20("lu32i_d", word);
+      return formatRdSigned20("lu32i.d", word);
     case op_pcaddi:
       return formatRdSigned20("pcaddi", word);
     case op_pcaddu12i:
@@ -502,21 +528,21 @@ bool Decoder::decodeOp8(const Instruction* instruction) const {
   uint32_t word = instruction->encode();
   switch (word & OpcodeMask(8)) {
     case op_ldptr_d:
-      return formatRdRjSigned14Scaled("ldptr_d", word);
+      return formatRdRjSigned14Scaled("ldptr.d", word);
     case op_ldptr_w:
-      return formatRdRjSigned14Scaled("ldptr_w", word);
+      return formatRdRjSigned14Scaled("ldptr.w", word);
     case op_ll_d:
-      return formatRdRjSigned14Scaled("ll_d", word);
+      return formatRdRjSigned14Scaled("ll.d", word);
     case op_ll_w:
-      return formatRdRjSigned14Scaled("ll_w", word);
+      return formatRdRjSigned14Scaled("ll.w", word);
     case op_sc_d:
-      return formatRdRjSigned14Scaled("sc_d", word);
+      return formatRdRjSigned14Scaled("sc.d", word);
     case op_sc_w:
-      return formatRdRjSigned14Scaled("sc_w", word);
+      return formatRdRjSigned14Scaled("sc.w", word);
     case op_stptr_d:
-      return formatRdRjSigned14Scaled("stptr_d", word);
+      return formatRdRjSigned14Scaled("stptr.d", word);
     case op_stptr_w:
-      return formatRdRjSigned14Scaled("stptr_w", word);
+      return formatRdRjSigned14Scaled("stptr.w", word);
     default:
       return false;
   }
@@ -526,39 +552,39 @@ bool Decoder::decodeOp10(const Instruction* instruction) const {
   uint32_t word = instruction->encode();
   switch (word & OpcodeMask(10)) {
     case op_addi_d:
-      return formatRdRjSigned12("addi_d", word);
+      return formatRdRjSigned12("addi.d", word);
     case op_addi_w:
-      return formatRdRjSigned12("addi_w", word);
+      return formatRdRjSigned12("addi.w", word);
     case op_andi:
       return formatRdRjUnsigned12("andi", word);
     case op_bstrins_d:
-      return formatRdRjMsbDLsbD("bstrins_d", word);
+      return formatRdRjMsbDLsbD("bstrins.d", word);
     case op_bstrpick_d:
-      return formatRdRjMsbDLsbD("bstrpick_d", word);
+      return formatRdRjMsbDLsbD("bstrpick.d", word);
     case op_fld_d:
-      return formatFdRjSigned12("fld_d", word);
+      return formatFdRjSigned12("fld.d", word);
     case op_fld_s:
-      return formatFdRjSigned12("fld_s", word);
+      return formatFdRjSigned12("fld.s", word);
     case op_fst_d:
-      return formatFdRjSigned12("fst_d", word);
+      return formatFdRjSigned12("fst.d", word);
     case op_fst_s:
-      return formatFdRjSigned12("fst_s", word);
+      return formatFdRjSigned12("fst.s", word);
     case op_ld_b:
-      return formatRdRjSigned12("ld_b", word);
+      return formatRdRjSigned12("ld.b", word);
     case op_ld_bu:
-      return formatRdRjSigned12("ld_bu", word);
+      return formatRdRjSigned12("ld.bu", word);
     case op_ld_d:
-      return formatRdRjSigned12("ld_d", word);
+      return formatRdRjSigned12("ld.d", word);
     case op_ld_h:
-      return formatRdRjSigned12("ld_h", word);
+      return formatRdRjSigned12("ld.h", word);
     case op_ld_hu:
-      return formatRdRjSigned12("ld_hu", word);
+      return formatRdRjSigned12("ld.hu", word);
     case op_ld_w:
-      return formatRdRjSigned12("ld_w", word);
+      return formatRdRjSigned12("ld.w", word);
     case op_ld_wu:
-      return formatRdRjSigned12("ld_wu", word);
+      return formatRdRjSigned12("ld.wu", word);
     case op_lu52i_d:
-      return formatRdRjSigned12("lu52i_d", word);
+      return formatRdRjSigned12("lu52i.d", word);
     case op_ori:
       return formatRdRjUnsigned12("ori", word);
     case op_preld:
@@ -568,13 +594,13 @@ bool Decoder::decodeOp10(const Instruction* instruction) const {
     case op_sltui:
       return formatRdRjSigned12("sltui", word);
     case op_st_b:
-      return formatRdRjSigned12("st_b", word);
+      return formatRdRjSigned12("st.b", word);
     case op_st_d:
-      return formatRdRjSigned12("st_d", word);
+      return formatRdRjSigned12("st.d", word);
     case op_st_h:
-      return formatRdRjSigned12("st_h", word);
+      return formatRdRjSigned12("st.h", word);
     case op_st_w:
-      return formatRdRjSigned12("st_w", word);
+      return formatRdRjSigned12("st.w", word);
     case op_xori:
       return formatRdRjUnsigned12("xori", word);
     default:
@@ -586,7 +612,7 @@ bool Decoder::decodeOp14(const Instruction* instruction) const {
   uint32_t word = instruction->encode();
   switch (word & OpcodeMask(14)) {
     case op_bytepick_d:
-      return formatRdRjRkSa3("bytepick_d", word);
+      return formatRdRjRkSa3("bytepick.d", word);
     case op_fsel:
       return formatFdFjFkCa("fsel", word);
     default:
@@ -598,13 +624,13 @@ bool Decoder::decodeOp15(const Instruction* instruction) const {
   uint32_t word = instruction->encode();
   switch (word & OpcodeMask(15)) {
     case op_alsl_d:
-      return formatRdRjRkSa2("alsl_d", word);
+      return formatRdRjRkSa2PlusOne("alsl.d", word);
     case op_alsl_w:
-      return formatRdRjRkSa2("alsl_w", word);
+      return formatRdRjRkSa2PlusOne("alsl.w", word);
     case op_alsl_wu:
-      return formatRdRjRkSa2("alsl_wu", word);
+      return formatRdRjRkSa2PlusOne("alsl.wu", word);
     case op_bytepick_w:
-      return formatRdRjRkSa2("bytepick_w", word);
+      return formatRdRjRkSa2("bytepick.w", word);
     default:
       return false;
   }
@@ -614,13 +640,13 @@ bool Decoder::decodeOp16(const Instruction* instruction) const {
   uint32_t word = instruction->encode();
   switch (word & OpcodeMask(16)) {
     case op_rotri_d:
-      return formatRdRjUnsigned6("rotri_d", word);
+      return formatRdRjUnsigned6("rotri.d", word);
     case op_slli_d:
-      return formatRdRjUnsigned6("slli_d", word);
+      return formatRdRjUnsigned6("slli.d", word);
     case op_srai_d:
-      return formatRdRjUnsigned6("srai_d", word);
+      return formatRdRjUnsigned6("srai.d", word);
     case op_srli_d:
-      return formatRdRjUnsigned6("srli_d", word);
+      return formatRdRjUnsigned6("srli.d", word);
     default:
       return false;
   }
@@ -630,185 +656,187 @@ bool Decoder::decodeOp17(const Instruction* instruction) const {
   uint32_t word = instruction->encode();
   switch (word & OpcodeMask(17)) {
     case op_add_d:
-      return formatRdRjRk("add_d", word);
+      return formatRdRjRk("add.d", word);
     case op_add_w:
-      return formatRdRjRk("add_w", word);
+      return formatRdRjRk("add.w", word);
     case op_amadd_d:
-      return formatRdRjRk("amadd_d", word);
+      return formatRdRkRj("amadd.d", word);
     case op_amadd_db_d:
-      return formatRdRjRk("amadd_db_d", word);
+      return formatRdRkRj("amadd_db.d", word);
     case op_amadd_db_w:
-      return formatRdRjRk("amadd_db_w", word);
+      return formatRdRkRj("amadd_db.w", word);
     case op_amadd_w:
-      return formatRdRjRk("amadd_w", word);
+      return formatRdRkRj("amadd.w", word);
     case op_amand_d:
-      return formatRdRjRk("amand_d", word);
+      return formatRdRkRj("amand.d", word);
     case op_amand_db_d:
-      return formatRdRjRk("amand_db_d", word);
+      return formatRdRkRj("amand_db.d", word);
     case op_amand_db_w:
-      return formatRdRjRk("amand_db_w", word);
+      return formatRdRkRj("amand_db.w", word);
     case op_amand_w:
-      return formatRdRjRk("amand_w", word);
+      return formatRdRkRj("amand.w", word);
     case op_ammax_d:
-      return formatRdRjRk("ammax_d", word);
+      return formatRdRkRj("ammax.d", word);
     case op_ammax_db_d:
-      return formatRdRjRk("ammax_db_d", word);
+      return formatRdRkRj("ammax_db.d", word);
     case op_ammax_db_du:
-      return formatRdRjRk("ammax_db_du", word);
+      return formatRdRkRj("ammax_db.du", word);
     case op_ammax_db_w:
-      return formatRdRjRk("ammax_db_w", word);
+      return formatRdRkRj("ammax_db.w", word);
     case op_ammax_db_wu:
-      return formatRdRjRk("ammax_db_wu", word);
+      return formatRdRkRj("ammax_db.wu", word);
     case op_ammax_du:
-      return formatRdRjRk("ammax_du", word);
+      return formatRdRkRj("ammax.du", word);
     case op_ammax_w:
-      return formatRdRjRk("ammax_w", word);
+      return formatRdRkRj("ammax.w", word);
     case op_ammax_wu:
-      return formatRdRjRk("ammax_wu", word);
+      return formatRdRkRj("ammax.wu", word);
     case op_ammin_d:
-      return formatRdRjRk("ammin_d", word);
+      return formatRdRkRj("ammin.d", word);
     case op_ammin_db_d:
-      return formatRdRjRk("ammin_db_d", word);
+      return formatRdRkRj("ammin_db.d", word);
     case op_ammin_db_du:
-      return formatRdRjRk("ammin_db_du", word);
+      return formatRdRkRj("ammin_db.du", word);
     case op_ammin_db_w:
-      return formatRdRjRk("ammin_db_w", word);
+      return formatRdRkRj("ammin_db.w", word);
     case op_ammin_db_wu:
-      return formatRdRjRk("ammin_db_wu", word);
+      return formatRdRkRj("ammin_db.wu", word);
     case op_ammin_du:
-      return formatRdRjRk("ammin_du", word);
+      return formatRdRkRj("ammin.du", word);
     case op_ammin_w:
-      return formatRdRjRk("ammin_w", word);
+      return formatRdRkRj("ammin.w", word);
     case op_ammin_wu:
-      return formatRdRjRk("ammin_wu", word);
+      return formatRdRkRj("ammin.wu", word);
     case op_amor_d:
-      return formatRdRjRk("amor_d", word);
+      return formatRdRkRj("amor.d", word);
     case op_amor_db_d:
-      return formatRdRjRk("amor_db_d", word);
+      return formatRdRkRj("amor_db.d", word);
     case op_amor_db_w:
-      return formatRdRjRk("amor_db_w", word);
+      return formatRdRkRj("amor_db.w", word);
     case op_amor_w:
-      return formatRdRjRk("amor_w", word);
+      return formatRdRkRj("amor.w", word);
     case op_amswap_d:
-      return formatRdRjRk("amswap_d", word);
+      return formatRdRkRj("amswap.d", word);
     case op_amswap_db_d:
-      return formatRdRjRk("amswap_db_d", word);
+      return formatRdRkRj("amswap_db.d", word);
     case op_amswap_db_w:
-      return formatRdRjRk("amswap_db_w", word);
+      return formatRdRkRj("amswap_db.w", word);
     case op_amswap_w:
-      return formatRdRjRk("amswap_w", word);
+      return formatRdRkRj("amswap.w", word);
     case op_amxor_d:
-      return formatRdRjRk("amxor_d", word);
+      return formatRdRkRj("amxor.d", word);
     case op_amxor_db_d:
-      return formatRdRjRk("amxor_db_d", word);
+      return formatRdRkRj("amxor_db.d", word);
     case op_amxor_db_w:
-      return formatRdRjRk("amxor_db_w", word);
+      return formatRdRkRj("amxor_db.w", word);
     case op_amxor_w:
-      return formatRdRjRk("amxor_w", word);
+      return formatRdRkRj("amxor.w", word);
     case op_and:
       return formatRdRjRk("and", word);
     case op_andn:
       return formatRdRjRk("andn", word);
     case op_break:
       return formatUnsigned15("break", word);
+    case op_syscall:
+      return formatUnsigned15("syscall", word);
     case op_dbar:
       return formatUnsigned15("dbar", word);
     case op_div_d:
-      return formatRdRjRk("div_d", word);
+      return formatRdRjRk("div.d", word);
     case op_div_du:
-      return formatRdRjRk("div_du", word);
+      return formatRdRjRk("div.du", word);
     case op_div_w:
-      return formatRdRjRk("div_w", word);
+      return formatRdRjRk("div.w", word);
     case op_div_wu:
-      return formatRdRjRk("div_wu", word);
+      return formatRdRjRk("div.wu", word);
     case op_fadd_d:
-      return formatFdFjFk("fadd_d", word);
+      return formatFdFjFk("fadd.d", word);
     case op_fadd_s:
-      return formatFdFjFk("fadd_s", word);
+      return formatFdFjFk("fadd.s", word);
     case op_fcopysign_d:
-      return formatFdFjFk("fcopysign_d", word);
+      return formatFdFjFk("fcopysign.d", word);
     case op_fcopysign_s:
-      return formatFdFjFk("fcopysign_s", word);
+      return formatFdFjFk("fcopysign.s", word);
     case op_fdiv_d:
-      return formatFdFjFk("fdiv_d", word);
+      return formatFdFjFk("fdiv.d", word);
     case op_fdiv_s:
-      return formatFdFjFk("fdiv_s", word);
+      return formatFdFjFk("fdiv.s", word);
     case op_fldx_d:
-      return formatFdRjRk("fldx_d", word);
+      return formatFdRjRk("fldx.d", word);
     case op_fldx_s:
-      return formatFdRjRk("fldx_s", word);
+      return formatFdRjRk("fldx.s", word);
     case op_fmax_d:
-      return formatFdFjFk("fmax_d", word);
+      return formatFdFjFk("fmax.d", word);
     case op_fmax_s:
-      return formatFdFjFk("fmax_s", word);
+      return formatFdFjFk("fmax.s", word);
     case op_fmaxa_d:
-      return formatFdFjFk("fmaxa_d", word);
+      return formatFdFjFk("fmaxa.d", word);
     case op_fmaxa_s:
-      return formatFdFjFk("fmaxa_s", word);
+      return formatFdFjFk("fmaxa.s", word);
     case op_fmin_d:
-      return formatFdFjFk("fmin_d", word);
+      return formatFdFjFk("fmin.d", word);
     case op_fmin_s:
-      return formatFdFjFk("fmin_s", word);
+      return formatFdFjFk("fmin.s", word);
     case op_fmina_d:
-      return formatFdFjFk("fmina_d", word);
+      return formatFdFjFk("fmina.d", word);
     case op_fmina_s:
-      return formatFdFjFk("fmina_s", word);
+      return formatFdFjFk("fmina.s", word);
     case op_fmul_d:
-      return formatFdFjFk("fmul_d", word);
+      return formatFdFjFk("fmul.d", word);
     case op_fmul_s:
-      return formatFdFjFk("fmul_s", word);
+      return formatFdFjFk("fmul.s", word);
     case op_fstx_d:
-      return formatFdRjRk("fstx_d", word);
+      return formatFdRjRk("fstx.d", word);
     case op_fstx_s:
-      return formatFdRjRk("fstx_s", word);
+      return formatFdRjRk("fstx.s", word);
     case op_fsub_d:
-      return formatFdFjFk("fsub_d", word);
+      return formatFdFjFk("fsub.d", word);
     case op_fsub_s:
-      return formatFdFjFk("fsub_s", word);
+      return formatFdFjFk("fsub.s", word);
     case op_ibar:
       return formatUnsigned15("ibar", word);
     case op_ldx_b:
-      return formatRdRjRk("ldx_b", word);
+      return formatRdRjRk("ldx.b", word);
     case op_ldx_bu:
-      return formatRdRjRk("ldx_bu", word);
+      return formatRdRjRk("ldx.bu", word);
     case op_ldx_d:
-      return formatRdRjRk("ldx_d", word);
+      return formatRdRjRk("ldx.d", word);
     case op_ldx_h:
-      return formatRdRjRk("ldx_h", word);
+      return formatRdRjRk("ldx.h", word);
     case op_ldx_hu:
-      return formatRdRjRk("ldx_hu", word);
+      return formatRdRjRk("ldx.hu", word);
     case op_ldx_w:
-      return formatRdRjRk("ldx_w", word);
+      return formatRdRjRk("ldx.w", word);
     case op_ldx_wu:
-      return formatRdRjRk("ldx_wu", word);
+      return formatRdRjRk("ldx.wu", word);
     case op_maskeqz:
       return formatRdRjRk("maskeqz", word);
     case op_masknez:
       return formatRdRjRk("masknez", word);
     case op_mod_d:
-      return formatRdRjRk("mod_d", word);
+      return formatRdRjRk("mod.d", word);
     case op_mod_du:
-      return formatRdRjRk("mod_du", word);
+      return formatRdRjRk("mod.du", word);
     case op_mod_w:
-      return formatRdRjRk("mod_w", word);
+      return formatRdRjRk("mod.w", word);
     case op_mod_wu:
-      return formatRdRjRk("mod_wu", word);
+      return formatRdRjRk("mod.wu", word);
     case op_mul_d:
-      return formatRdRjRk("mul_d", word);
+      return formatRdRjRk("mul.d", word);
     case op_mul_w:
-      return formatRdRjRk("mul_w", word);
+      return formatRdRjRk("mul.w", word);
     case op_mulh_d:
-      return formatRdRjRk("mulh_d", word);
+      return formatRdRjRk("mulh.d", word);
     case op_mulh_du:
-      return formatRdRjRk("mulh_du", word);
+      return formatRdRjRk("mulh.du", word);
     case op_mulh_w:
-      return formatRdRjRk("mulh_w", word);
+      return formatRdRjRk("mulh.w", word);
     case op_mulh_wu:
-      return formatRdRjRk("mulh_wu", word);
+      return formatRdRjRk("mulh.wu", word);
     case op_mulw_d_w:
-      return formatRdRjRk("mulw_d_w", word);
+      return formatRdRjRk("mulw.d.w", word);
     case op_mulw_d_wu:
-      return formatRdRjRk("mulw_d_wu", word);
+      return formatRdRjRk("mulw.d.wu", word);
     case op_nor:
       return formatRdRjRk("nor", word);
     case op_or:
@@ -816,45 +844,45 @@ bool Decoder::decodeOp17(const Instruction* instruction) const {
     case op_orn:
       return formatRdRjRk("orn", word);
     case op_rotr_d:
-      return formatRdRjRk("rotr_d", word);
+      return formatRdRjRk("rotr.d", word);
     case op_rotr_w:
-      return formatRdRjRk("rotr_w", word);
+      return formatRdRjRk("rotr.w", word);
     case op_rotri_w:
-      return formatRdRjUnsigned5("rotri_w", word);
+      return formatRdRjUnsigned5("rotri.w", word);
     case op_sll_d:
-      return formatRdRjRk("sll_d", word);
+      return formatRdRjRk("sll.d", word);
     case op_sll_w:
-      return formatRdRjRk("sll_w", word);
+      return formatRdRjRk("sll.w", word);
     case op_slli_w:
-      return formatRdRjUnsigned5("slli_w", word);
+      return formatRdRjUnsigned5("slli.w", word);
     case op_slt:
       return formatRdRjRk("slt", word);
     case op_sltu:
       return formatRdRjRk("sltu", word);
     case op_sra_d:
-      return formatRdRjRk("sra_d", word);
+      return formatRdRjRk("sra.d", word);
     case op_sra_w:
-      return formatRdRjRk("sra_w", word);
+      return formatRdRjRk("sra.w", word);
     case op_srai_w:
-      return formatRdRjUnsigned5("srai_w", word);
+      return formatRdRjUnsigned5("srai.w", word);
     case op_srl_d:
-      return formatRdRjRk("srl_d", word);
+      return formatRdRjRk("srl.d", word);
     case op_srl_w:
-      return formatRdRjRk("srl_w", word);
+      return formatRdRjRk("srl.w", word);
     case op_srli_w:
-      return formatRdRjUnsigned5("srli_w", word);
+      return formatRdRjUnsigned5("srli.w", word);
     case op_stx_b:
-      return formatRdRjRk("stx_b", word);
+      return formatRdRjRk("stx.b", word);
     case op_stx_d:
-      return formatRdRjRk("stx_d", word);
+      return formatRdRjRk("stx.d", word);
     case op_stx_h:
-      return formatRdRjRk("stx_h", word);
+      return formatRdRjRk("stx.h", word);
     case op_stx_w:
-      return formatRdRjRk("stx_w", word);
+      return formatRdRjRk("stx.w", word);
     case op_sub_d:
-      return formatRdRjRk("sub_d", word);
+      return formatRdRjRk("sub.d", word);
     case op_sub_w:
-      return formatRdRjRk("sub_w", word);
+      return formatRdRjRk("sub.w", word);
     case op_xor:
       return formatRdRjRk("xor", word);
     default:
@@ -866,137 +894,137 @@ bool Decoder::decodeOp22(const Instruction* instruction) const {
   uint32_t word = instruction->encode();
   switch (word & OpcodeMask(22)) {
     case op_bitrev_4b:
-      return formatRdRj("bitrev_4b", word);
+      return formatRdRj("bitrev.4b", word);
     case op_bitrev_8b:
-      return formatRdRj("bitrev_8b", word);
+      return formatRdRj("bitrev.8b", word);
     case op_bitrev_d:
-      return formatRdRj("bitrev_d", word);
+      return formatRdRj("bitrev.d", word);
     case op_bitrev_w:
-      return formatRdRj("bitrev_w", word);
+      return formatRdRj("bitrev.w", word);
     case op_clo_d:
-      return formatRdRj("clo_d", word);
+      return formatRdRj("clo.d", word);
     case op_clo_w:
-      return formatRdRj("clo_w", word);
+      return formatRdRj("clo.w", word);
     case op_clz_d:
-      return formatRdRj("clz_d", word);
+      return formatRdRj("clz.d", word);
     case op_clz_w:
-      return formatRdRj("clz_w", word);
+      return formatRdRj("clz.w", word);
     case op_cto_d:
-      return formatRdRj("cto_d", word);
+      return formatRdRj("cto.d", word);
     case op_cto_w:
-      return formatRdRj("cto_w", word);
+      return formatRdRj("cto.w", word);
     case op_ctz_d:
-      return formatRdRj("ctz_d", word);
+      return formatRdRj("ctz.d", word);
     case op_ctz_w:
-      return formatRdRj("ctz_w", word);
+      return formatRdRj("ctz.w", word);
     case op_ext_w_b:
-      return formatRdRj("ext_w_b", word);
+      return formatRdRj("ext.w.b", word);
     case op_ext_w_h:
-      return formatRdRj("ext_w_h", word);
+      return formatRdRj("ext.w.h", word);
     case op_fabs_d:
-      return formatFdFj("fabs_d", word);
+      return formatFdFj("fabs.d", word);
     case op_fabs_s:
-      return formatFdFj("fabs_s", word);
+      return formatFdFj("fabs.s", word);
     case op_fcvt_d_s:
-      return formatFdFj("fcvt_d_s", word);
+      return formatFdFj("fcvt.d.s", word);
     case op_fcvt_s_d:
-      return formatFdFj("fcvt_s_d", word);
+      return formatFdFj("fcvt.s.d", word);
     case op_ffint_d_l:
-      return formatFdFj("ffint_d_l", word);
+      return formatFdFj("ffint.d.l", word);
     case op_ffint_d_w:
-      return formatFdFj("ffint_d_w", word);
+      return formatFdFj("ffint.d.w", word);
     case op_ffint_s_l:
-      return formatFdFj("ffint_s_l", word);
+      return formatFdFj("ffint.s.l", word);
     case op_ffint_s_w:
-      return formatFdFj("ffint_s_w", word);
+      return formatFdFj("ffint.s.w", word);
     case op_fmov_d:
-      return formatFdFj("fmov_d", word);
+      return formatFdFj("fmov.d", word);
     case op_fmov_s:
-      return formatFdFj("fmov_s", word);
+      return formatFdFj("fmov.s", word);
     case op_fneg_d:
-      return formatFdFj("fneg_d", word);
+      return formatFdFj("fneg.d", word);
     case op_fneg_s:
-      return formatFdFj("fneg_s", word);
+      return formatFdFj("fneg.s", word);
     case op_frint_d:
-      return formatFdFj("frint_d", word);
+      return formatFdFj("frint.d", word);
     case op_frint_s:
-      return formatFdFj("frint_s", word);
+      return formatFdFj("frint.s", word);
     case op_fsqrt_d:
-      return formatFdFj("fsqrt_d", word);
+      return formatFdFj("fsqrt.d", word);
     case op_fsqrt_s:
-      return formatFdFj("fsqrt_s", word);
+      return formatFdFj("fsqrt.s", word);
     case op_ftint_l_d:
-      return formatFdFj("ftint_l_d", word);
+      return formatFdFj("ftint.l.d", word);
     case op_ftint_l_s:
-      return formatFdFj("ftint_l_s", word);
+      return formatFdFj("ftint.l.s", word);
     case op_ftint_w_d:
-      return formatFdFj("ftint_w_d", word);
+      return formatFdFj("ftint.w.d", word);
     case op_ftint_w_s:
-      return formatFdFj("ftint_w_s", word);
+      return formatFdFj("ftint.w.s", word);
     case op_ftintrm_l_d:
-      return formatFdFj("ftintrm_l_d", word);
+      return formatFdFj("ftintrm.l.d", word);
     case op_ftintrm_l_s:
-      return formatFdFj("ftintrm_l_s", word);
+      return formatFdFj("ftintrm.l.s", word);
     case op_ftintrm_w_d:
-      return formatFdFj("ftintrm_w_d", word);
+      return formatFdFj("ftintrm.w.d", word);
     case op_ftintrm_w_s:
-      return formatFdFj("ftintrm_w_s", word);
+      return formatFdFj("ftintrm.w.s", word);
     case op_ftintrne_l_d:
-      return formatFdFj("ftintrne_l_d", word);
+      return formatFdFj("ftintrne.l.d", word);
     case op_ftintrne_l_s:
-      return formatFdFj("ftintrne_l_s", word);
+      return formatFdFj("ftintrne.l.s", word);
     case op_ftintrne_w_d:
-      return formatFdFj("ftintrne_w_d", word);
+      return formatFdFj("ftintrne.w.d", word);
     case op_ftintrne_w_s:
-      return formatFdFj("ftintrne_w_s", word);
+      return formatFdFj("ftintrne.w.s", word);
     case op_ftintrp_l_d:
-      return formatFdFj("ftintrp_l_d", word);
+      return formatFdFj("ftintrp.l.d", word);
     case op_ftintrp_l_s:
-      return formatFdFj("ftintrp_l_s", word);
+      return formatFdFj("ftintrp.l.s", word);
     case op_ftintrp_w_d:
-      return formatFdFj("ftintrp_w_d", word);
+      return formatFdFj("ftintrp.w.d", word);
     case op_ftintrp_w_s:
-      return formatFdFj("ftintrp_w_s", word);
+      return formatFdFj("ftintrp.w.s", word);
     case op_ftintrz_l_d:
-      return formatFdFj("ftintrz_l_d", word);
+      return formatFdFj("ftintrz.l.d", word);
     case op_ftintrz_l_s:
-      return formatFdFj("ftintrz_l_s", word);
+      return formatFdFj("ftintrz.l.s", word);
     case op_ftintrz_w_d:
-      return formatFdFj("ftintrz_w_d", word);
+      return formatFdFj("ftintrz.w.d", word);
     case op_ftintrz_w_s:
-      return formatFdFj("ftintrz_w_s", word);
+      return formatFdFj("ftintrz.w.s", word);
     case op_movfcsr2gr:
-      return formatRd("movfcsr2gr", word);
+      return formatRdFcsr("movfcsr2gr", word);
     case op_movfr2cf:
       return formatCdFj("movfr2cf", word);
     case op_movfr2gr_d:
-      return formatRdFj("movfr2gr_d", word);
+      return formatRdFj("movfr2gr.d", word);
     case op_movfr2gr_s:
-      return formatRdFj("movfr2gr_s", word);
+      return formatRdFj("movfr2gr.s", word);
     case op_movfrh2gr_s:
-      return formatRdFj("movfrh2gr_s", word);
+      return formatRdFj("movfrh2gr.s", word);
     case op_movgr2cf:
       return formatCdRj("movgr2cf", word);
     case op_movgr2fcsr:
-      return formatRj("movgr2fcsr", word);
+      return formatFcsrRj("movgr2fcsr", word);
     case op_movgr2fr_d:
-      return formatFdRj("movgr2fr_d", word);
+      return formatFdRj("movgr2fr.d", word);
     case op_movgr2fr_w:
-      return formatFdRj("movgr2fr_w", word);
+      return formatFdRj("movgr2fr.w", word);
     case op_movgr2frh_w:
-      return formatFdRj("movgr2frh_w", word);
+      return formatFdRj("movgr2frh.w", word);
     case op_revb_2h:
-      return formatRdRj("revb_2h", word);
+      return formatRdRj("revb.2h", word);
     case op_revb_2w:
-      return formatRdRj("revb_2w", word);
+      return formatRdRj("revb.2w", word);
     case op_revb_4h:
-      return formatRdRj("revb_4h", word);
+      return formatRdRj("revb.4h", word);
     case op_revb_d:
-      return formatRdRj("revb_d", word);
+      return formatRdRj("revb.d", word);
     case op_revh_2w:
-      return formatRdRj("revh_2w", word);
+      return formatRdRj("revh.2w", word);
     case op_revh_d:
-      return formatRdRj("revh_d", word);
+      return formatRdRj("revh.d", word);
     default:
       return false;
   }
@@ -1021,7 +1049,7 @@ int Decoder::disassemble(const Instruction* instruction) const {
         decodeOp14(instruction) || decodeOp15(instruction) ||
         decodeOp16(instruction) || decodeOp17(instruction) ||
         decodeOp22(instruction) || decodeOp24(instruction))) {
-    FormatTo(output_, ".word 0x%08x", instruction->encode());
+    FormatTo(output_, ".word 0x%08" PRIx32, instruction->encode());
   }
   return sizeof(uint32_t);
 }
