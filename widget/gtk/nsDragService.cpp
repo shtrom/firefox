@@ -2729,14 +2729,20 @@ GdkDragAction nsDragSession::GetDragActionGtk() {
     // notify the dragger if we can drop
     switch (mDragAction) {
       case nsIDragService::DRAGDROP_ACTION_COPY:
+        LOGDRAGSERVICE("  set explicit action copy");
         action = GDK_ACTION_COPY;
         break;
       case nsIDragService::DRAGDROP_ACTION_LINK:
+        LOGDRAGSERVICE("  set explicit action link");
         action = GDK_ACTION_LINK;
         break;
       // if mCanDrop we switch DRAGDROP_ACTION_NONE to default.
       case nsIDragService::DRAGDROP_ACTION_NONE:
+        LOGDRAGSERVICE("  set explicit action none");
+        action = (GdkDragAction)0;
+        break;
       default:
+        LOGDRAGSERVICE("  set explicit action move");
         action = GDK_ACTION_MOVE;
         break;
     }
