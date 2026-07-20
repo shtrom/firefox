@@ -1146,7 +1146,7 @@ void MacroAssemblerLOONG64::ma_bl(Label* label) {
   m_buffer.ensureSpace(5 * sizeof(uint32_t));
 
   spew("bal .Llabel %p\n", label);
-  BufferOffset bo = writeInst(getBranchCode(BranchIsCall).encode());
+  BufferOffset bo = emit(getBranchCode(BranchIsCall).encode());
   writeInst(nextInChain);
   if (!oom()) {
     label->use(bo.getOffset());
@@ -1183,10 +1183,7 @@ void MacroAssemblerLOONG64::branchWithCode(InstImm code, Label* label,
       } else {
         code.setBOffImm16(BOffImm16(offset));
       }
-#ifdef JS_JITSPEW
-      decodeBranchInstAndSpew(code);
-#endif
-      writeInst(code.encode());
+      emit(code.encode());
       return;
     }
 
@@ -1212,10 +1209,7 @@ void MacroAssemblerLOONG64::branchWithCode(InstImm code, Label* label,
     // point to next instruction of nop at below.
     spew("invert branch .Llabel %p", label);
     InstImm code_r = invertBranch(code, BOffImm16(5 * sizeof(uint32_t)));
-#ifdef JS_JITSPEW
-    decodeBranchInstAndSpew(code_r);
-#endif
-    writeInst(code_r.encode());
+    emit(code_r.encode());
     addLongJump(nextOffset(), BufferOffset(label->offset()));
     if (scratch == Register::Invalid()) {
       UseScratchRegisterScope temps(asMasm());
@@ -1242,10 +1236,7 @@ void MacroAssemblerLOONG64::branchWithCode(InstImm code, Label* label,
 
     // Indicate that this is short jump with offset 4.
     code.setBOffImm16(BOffImm16(4));
-#ifdef JS_JITSPEW
-    decodeBranchInstAndSpew(code);
-#endif
-    BufferOffset bo = writeInst(code.encode());
+    BufferOffset bo = emit(code.encode());
     writeInst(nextInChain);
     if (!oom()) {
       label->use(bo.getOffset());
@@ -1259,10 +1250,7 @@ void MacroAssemblerLOONG64::branchWithCode(InstImm code, Label* label,
   // instructions are writing at below (contain conditional nop).
   m_buffer.ensureSpace(5 * sizeof(uint32_t));
 
-#ifdef JS_JITSPEW
-  decodeBranchInstAndSpew(code);
-#endif
-  BufferOffset bo = writeInst(code.encode());  // invert
+  BufferOffset bo = emit(code.encode());  // invert
   writeInst(nextInChain);
   if (!oom()) {
     label->use(bo.getOffset());

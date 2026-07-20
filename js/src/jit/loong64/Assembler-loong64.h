@@ -1013,8 +1013,6 @@ class AssemblerLOONG64 : public AssemblerShared {
       va_end(va);
     }
   }
-
-  void decodeBranchInstAndSpew(InstImm branch);
 #else
   MOZ_ALWAYS_INLINE void spew(const char* fmt, ...) MOZ_FORMAT_PRINTF(2, 3) {}
 #endif
@@ -1064,6 +1062,10 @@ class AssemblerLOONG64 : public AssemblerShared {
   // it is interpreted as a pointer to the location that we want the
   // instruction to be written.
   BufferOffset writeInst(uint32_t x, uint32_t* dest = nullptr);
+  BufferOffset emit(uint32_t x);
+#ifdef JS_DISASM_LOONG64
+  void spewInstruction(Instruction* instruction);
+#endif
   // A static variant for the cases where we don't want to have an assembler
   // object at all. Normally, you would use the dummy (nullptr) object.
   static void WriteInstStatic(uint32_t x, uint32_t* dest);
