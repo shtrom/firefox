@@ -581,6 +581,28 @@ void AppleVTDecoder::OutputFrame(CVPixelBufferRef aImage,
       }
     }
 
+    // Attach a CGColorSpace built from the relevant color information.
+    // The buffer may otherwise have a non-matching colorspace.
+    CFStringRef colorSpaceName = nullptr;
+    if (__builtin_available(macOS 11.0, *)) {
+      if (mTransferFunction == gfx::TransferFunction::PQ) {
+        colorSpaceName = kCGColorSpaceITUR_2100_PQ;
+      } else if (mTransferFunction == gfx::TransferFunction::HLG) {
+        colorSpaceName = kCGColorSpaceITUR_2100_HLG;
+      }
+    }
+    if (!colorSpaceName) {
+      colorSpaceName = mColorPrimaries == gfx::ColorSpace2::BT2020
+                           ? kCGColorSpaceITUR_2020
+                           : kCGColorSpaceITUR_709;
+    }
+    AutoCFTypeRef<CGColorSpaceRef> colorSpace(
+        CGColorSpaceCreateWithName(colorSpaceName));
+    if (colorSpace) {
+      CVBufferSetAttachment(aImage, kCVImageBufferCGColorSpaceKey, colorSpace,
+                            kCVAttachmentMode_ShouldPropagate);
+    }
+
     CFTypeRefPtr<IOSurfaceRef> surface =
         CFTypeRefPtr<IOSurfaceRef>::WrapUnderGetRule(
             CVPixelBufferGetIOSurface(aImage));
