@@ -1365,6 +1365,11 @@ criteria = "safe-to-deploy"
 delta = "0.1.1 -> 0.2.1"
 notes = "Very minor changes."
 
+[[audits.cfg_aliases]]
+who = "Erich Gubler <erichdongubler@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.1 -> 0.2.2"
+
 [[audits.cgl]]
 who = "Sotaro Ikeda <sotaro.ikeda.g@gmail.com>"
 criteria = "safe-to-deploy"
