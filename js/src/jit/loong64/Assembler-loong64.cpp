@@ -308,6 +308,14 @@ BufferOffset AssemblerLOONG64::emit(uint32_t x) {
   return offset;
 }
 
+BufferOffset AssemblerLOONG64::emit(uint32_t x, LabelDoc target) {
+  BufferOffset offset = writeInst(x);
+#ifdef JS_DISASM_LOONG64
+  spewBranch(offset, m_buffer.getInstOrNull(offset), target);
+#endif
+  return offset;
+}
+
 #ifdef JS_DISASM_LOONG64
 void AssemblerLOONG64::spewInstruction(Instruction* instruction) {
 #  ifdef JS_JITSPEW
@@ -321,6 +329,11 @@ void AssemblerLOONG64::spewInstruction(Instruction* instruction) {
   disassembler.disassemble(mozilla::Span<char>(buffer), instruction);
   spew("%s", buffer);
 #  endif
+}
+
+void AssemblerLOONG64::spewBranch(BufferOffset, Instruction* instruction,
+                                  LabelDoc) {
+  spewInstruction(instruction);
 }
 #endif
 
@@ -403,6 +416,11 @@ BufferOffset AssemblerLOONG64::as_bl(JOffImm26 off) {
 BufferOffset AssemblerLOONG64::as_jirl(Register rd, Register rj,
                                        BOffImm16 off) {
   return emit(InstImm(op_jirl, off, rj, rd).encode());
+}
+
+BufferOffset AssemblerLOONG64::as_jirl(Register rd, Register rj, BOffImm16 off,
+                                       LabelDoc doc) {
+  return emit(InstImm(op_jirl, off, rj, rd).encode(), doc);
 }
 
 InstImm AssemblerLOONG64::getBranchCode(JumpOrCall jumpOrCall) {
