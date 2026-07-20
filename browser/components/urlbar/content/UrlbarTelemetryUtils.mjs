@@ -298,7 +298,8 @@ export class UrlbarTelemetryUtils {
    * source, and the resolved exposure list.
    *
    * @param {object} data
-   *   `{built, disableBuilt, method, searchSource, internalDetails, exposures}`.
+   *   `{built, disableBuilt, method, searchSource, internalDetails, exposures,
+   *   visibleResults}`.
    * @returns {object} The wire payload; reconstruct with
    *   `recordedEngagementFromWire()`.
    */
@@ -310,6 +311,10 @@ export class UrlbarTelemetryUtils {
     delete internalDetails.element;
     return {
       ...data,
+      // The results shown at engagement, in wire form, so the parent can notify
+      // providers' impression/abandonment hooks (which key off them) -- the
+      // parent's own view has none on the message path.
+      visibleResults: data.visibleResults?.map(r => r.toWire()) ?? null,
       internalDetails: {
         ...internalDetails,
         result: result?.toWire() ?? null,
@@ -328,6 +333,8 @@ export class UrlbarTelemetryUtils {
   static recordedEngagementFromWire(wire) {
     return {
       ...wire,
+      visibleResults:
+        wire.visibleResults?.map(r => lazy.UrlbarResult.fromWire(r)) ?? [],
       internalDetails: {
         ...wire.internalDetails,
         event: null,

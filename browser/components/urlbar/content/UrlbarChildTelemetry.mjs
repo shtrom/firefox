@@ -194,6 +194,7 @@ export class UrlbarChildTelemetry {
             searchSource: snapshot.internalDetails.searchSource,
             internalDetails: snapshot.internalDetails,
             exposures,
+            visibleResults: engagementData.visibleResults,
           })
         );
       }

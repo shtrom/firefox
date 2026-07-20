@@ -752,6 +752,7 @@ export class TelemetryEvent {
       searchSource: snapshot.internalDetails.searchSource,
       internalDetails: snapshot.internalDetails,
       exposures,
+      visibleResults: engagementData.visibleResults,
     });
   }
 
@@ -844,6 +845,9 @@ export class TelemetryEvent {
    *   The interaction details (picked result reconstructed; event/element null).
    * @param {?object[]} data.exposures
    *   The resolved exposure list, or null when the session stays open.
+   * @param {?UrlbarResult[]} data.visibleResults
+   *   The results shown at engagement, for the provider impression/abandonment
+   *   hooks (the parent's own view has none on the message path).
    */
   recordFromChild({
     built,
@@ -852,6 +856,7 @@ export class TelemetryEvent {
     searchSource,
     internalDetails,
     exposures,
+    visibleResults,
   }) {
     try {
       let { queryContext } = this._controller._lastQueryContextWrapper || {};
@@ -871,17 +876,24 @@ export class TelemetryEvent {
         this.startTrackingDisableSuggest(disableBuilt, searchSource);
       }
 
-      // On the message path internalDetails.result was reconstructed from the
-      // wire, which strips data that doesn't survive structured-clone (e.g. a
-      // Rust suggestion's UniFFI class). Resolve it back to the parent's
-      // authoritative result by id so provider engagement handling -- notably
-      // dismissal against the Rust store -- operates on the live object.
+      // On the message path internalDetails.result was reconstructed from
+      // structured clone, which strips data that doesn't survive it (e.g. a Rust
+      // suggestion's UniFFI class) and yields an object distinct from the
+      // parent's authoritative result. Resolve it back to the live result by id
+      // so provider engagement handling -- notably dismissal against the Rust
+      // store -- operates on the live object, and carry the view-assigned
+      // rowIndex the wire preserves so the selection ping's position is right
+      // (the live result never went through a view). visibleResults stay as the
+      // wire results; the impression/abandonment hooks match them by id.
       // TODO(bug 2055935): remove this or bake the resolution into the actor
       // result deserialization.
       let liveResult = queryContext?.results?.find(
         r => r.id === internalDetails.result?.id
       );
       if (liveResult) {
+        if (internalDetails.result.rowIndex != null) {
+          liveResult.rowIndex = internalDetails.result.rowIndex;
+        }
         internalDetails.result = liveResult;
       }
 
@@ -889,7 +901,8 @@ export class TelemetryEvent {
         method,
         queryContext,
         internalDetails,
-        this._controller
+        this._controller,
+        visibleResults
       );
     } catch (ex) {
       console.error("Could not record engagement: ", ex);

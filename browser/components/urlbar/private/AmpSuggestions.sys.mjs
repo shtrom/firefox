@@ -407,8 +407,10 @@ export class AmpSuggestions extends SuggestProvider {
       pingType: lazy.CONTEXTUAL_SERVICES_PING_TYPES.QS_IMPRESSION,
       isClicked:
         // `selType` == "quicksuggest" if the result itself was clicked. It will
-        // be a command name if a command was clicked, e.g., "dismiss".
-        result == details.result && details.selType == "quicksuggest",
+        // be a command name if a command was clicked, e.g., "dismiss". Match by
+        // id: on the message path the visible result and the picked result are
+        // reconstructed as distinct objects.
+        result.id == details.result?.id && details.selType == "quicksuggest",
       reportingUrl: result.payload.sponsoredImpressionUrl,
     });
   }

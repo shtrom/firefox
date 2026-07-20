@@ -571,14 +571,25 @@ export class ProvidersManager {
    *   An object that describes the search string and the picked result, if any.
    * @param {UrlbarParentController} controller
    *   The controller associated with the engagement
+   * @param {UrlbarResult[]} [visibleResults]
+   *   The results shown at engagement. Passed on the message path, where the
+   *   parent's view has none; falls back to the view on the direct path.
    */
-  notifyEngagementChange(state, queryContext, details = {}, controller) {
+  notifyEngagementChange(
+    state,
+    queryContext,
+    details = {},
+    controller,
+    visibleResults
+  ) {
     if (!["engagement", "abandonment"].includes(state)) {
       lazy.logger.error(`Unsupported state for engagement change: ${state}`);
       return;
     }
 
-    const visibleResults = controller.view?.visibleResults ?? [];
+    // On the message path the parent's view has no results; the caller passes
+    // the results shown content-side. Fall back to the view for the direct path.
+    visibleResults = visibleResults ?? controller.view?.visibleResults ?? [];
     const visibleResultsByProviderName = new Map();
 
     visibleResults.forEach((result, index) => {
