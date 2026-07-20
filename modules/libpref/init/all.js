@@ -3147,6 +3147,12 @@ pref("extensions.htmlaboutaddons.inline-options.enabled", true);
 // Show recommendations on the extension and theme list views.
 pref("extensions.htmlaboutaddons.recommendations.enabled", true);
 
+// Whether the Nova Themes picker should be enabled in the about:addons page.
+// (disabled by default here, so that other applications embedding Gecko
+// like Thunderbird will not have it enabled by default, and enabled in the
+// Firefox Desktop prefs).
+pref("browser.aboutaddons.novaThemesPickerEnabled", false);
+
 // The URL for the privacy policy related to recommended add-ons.
 pref("extensions.recommendations.privacyPolicyUrl", "");
 // The URL for a recommended theme, shown on the theme page in about:addons.

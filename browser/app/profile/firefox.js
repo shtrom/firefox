@@ -79,6 +79,11 @@ pref("extensions.dataCollectionPermissions.enabled", true);
 // Dictionary download preference
 pref("browser.dictionaries.download.url", "https://addons.mozilla.org/%LOCALE%/firefox/language-tools/");
 
+// Whether the Nova Themes picker should be enabled in the about:addons page.
+// (needs also browser.nova.enabled for the Nova Themes picker to be shown
+// in the about:addons page).
+pref("browser.aboutaddons.novaThemesPickerEnabled", true);
+
 // At startup, should we check to see if the installation
 // date is older than some threshold
 pref("app.update.checkInstallTime", true);
