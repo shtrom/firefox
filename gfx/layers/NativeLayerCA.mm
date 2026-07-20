@@ -1245,24 +1245,29 @@ static NSString* NSStringForOSType(OSType type) {
 }
 
 /* static */ void NativeLayerCA::LogSurface(
-    IOSurfaceRef aSurfaceRef, CVPixelBufferRef aBuffer,
-    CMVideoFormatDescriptionRef aFormat) {
-  NSLog(@"VIDEO_LOG: LogSurface...\n");
+    const nsACString& aHeader, IOSurfaceRef aSurfaceRef,
+    CVPixelBufferRef aBuffer, CMVideoFormatDescriptionRef aFormat) {
+  nsCString header(aHeader);
+  NSLog(@"LogSurface(%s):\n", header.get());
 
-  CFDictionaryRef surfaceValues = IOSurfaceCopyAllValues(aSurfaceRef);
-  NSLog(@"Surface values are %@.\n", surfaceValues);
-  CFRelease(surfaceValues);
-
+  // List the buffer first, because it's likely the source of aSurfaceRef.
   if (aBuffer) {
 #ifdef XP_MACOSX
     CGColorSpaceRef colorSpace = CVImageBufferGetColorSpace(aBuffer);
     NSLog(@"ColorSpace is %@.\n", colorSpace);
 #endif
 
-    CFDictionaryRef bufferAttachments =
-        CVBufferGetAttachments(aBuffer, kCVAttachmentMode_ShouldPropagate);
-    NSLog(@"Buffer attachments are %@.\n", bufferAttachments);
+    if (@available(macOS 12.0, *)) {
+      CFDictionaryRef bufferAttachments =
+          CVBufferCopyAttachments(aBuffer, kCVAttachmentMode_ShouldPropagate);
+      NSLog(@"Buffer attachments are %@.\n", bufferAttachments);
+      CFRelease(bufferAttachments);
+    }
   }
+
+  CFDictionaryRef surfaceValues = IOSurfaceCopyAllValues(aSurfaceRef);
+  NSLog(@"Surface values are %@.\n", surfaceValues);
+  CFRelease(surfaceValues);
 
   if (aFormat) {
     OSType codec = CMFormatDescriptionGetMediaSubType(aFormat);
@@ -1611,14 +1616,6 @@ bool NativeLayerCARepresentation::EnqueueSurface(IOSurfaceRef aSurfaceRef) {
       CFTypeRefPtr<CMVideoFormatDescriptionRef>::WrapUnderCreateRule(
           formatDescription);
 
-#ifdef NIGHTLY_BUILD
-  if (mLogNextVideoSurface &&
-      StaticPrefs::gfx_core_animation_specialize_video_log()) {
-    NativeLayerCA::LogSurface(aSurfaceRef, pixelBuffer, formatDescription);
-    mLogNextVideoSurface = false;
-  }
-#endif
-
   CMSampleTimingInfo timingInfo = kCMTimingInfoInvalid;
 
   bool spoofTiming = false;
@@ -1668,6 +1665,17 @@ bool NativeLayerCARepresentation::EnqueueSurface(IOSurfaceRef aSurfaceRef) {
                          kCMSampleAttachmentKey_DisplayImmediately,
                          kCFBooleanTrue);
   }
+
+#ifdef NIGHTLY_BUILD
+  if (mLogNextVideoSurface &&
+      StaticPrefs::gfx_core_animation_specialize_video_log()) {
+    NativeLayerCA::LogSurface("EnqueueSurface"_ns, aSurfaceRef, pixelBuffer,
+                              formatDescription);
+
+    NSLog(@"%@", sampleBuffer);
+    mLogNextVideoSurface = false;
+  }
+#endif
 
   [videoLayer enqueueSampleBuffer:sampleBuffer];
 
@@ -2024,7 +2032,7 @@ bool NativeLayerCARepresentation::ApplyChanges(
 #ifdef NIGHTLY_BUILD
       if (mLogNextVideoSurface &&
           StaticPrefs::gfx_core_animation_specialize_video_log()) {
-        NativeLayerCA::LogSurface(surface, nullptr, nullptr);
+        NativeLayerCA::LogSurface("ApplyChanges"_ns, surface, nullptr, nullptr);
         mLogNextVideoSurface = false;
       }
 #endif
