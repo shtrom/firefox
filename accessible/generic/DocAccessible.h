@@ -880,6 +880,17 @@ class DocAccessible : public HyperTextAccessible,
 
   void MaybeFireEventsForChangedPopover(LocalAccessible* aAcc);
 
+  bool ShouldSendToParentProcess() const {
+    // For most documents, we should only send accessibility info to the parent
+    // process if the accessibility service is running there. It might not be
+    // running there if accessibility was started only in a content process,
+    // which happens in automation scenarios such as WebDriver. However, for
+    // print documents, we must send the tree regardless in order to generate a
+    // tagged PDF.
+    return IPCAccessibilityActive() &&
+           (nsAccessibilityService::IsRunningInParentProcess() || IsPrintDoc());
+  }
+
   PresShell* mPresShell;
 
   // Exclusively owned by IPDL so don't manually delete it!
