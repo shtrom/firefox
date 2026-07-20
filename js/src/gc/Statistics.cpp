@@ -1135,11 +1135,14 @@ void Statistics::sendGCTelemetry() {
   }
 
   {
-    // Buffer allocator heap density. Skipped for small heaps.
     size_t usedBytes, freeBytes, adminBytes;
     gc->bufferRuntime().getRetainedStats(&usedBytes, &freeBytes, &adminBytes);
 
+    // Buffer allocator heap size.
     size_t totalBytes = usedBytes + freeBytes + adminBytes;
+    runtime->metrics().GC_BUFFER_ALLOC_HEAP_BYTES(totalBytes);
+
+    // Buffer allocator heap density. Skipped for small heaps.
     if (totalBytes >= 2 * ChunkSize) {
       double density = 100.0 * double(usedBytes) / double(totalBytes);
       runtime->metrics().GC_BUFFER_ALLOC_HEAP_DENSITY(

@@ -2698,6 +2698,10 @@ static void AccumulateTelemetryCallback(JSMetric id,
       glean::javascript_gc::effectiveness.AccumulateSingleSample(
           sample.as<size_t>());
       break;
+    case JSMetric::GC_BUFFER_ALLOC_HEAP_BYTES:
+      glean::javascript_gc::buffer_alloc_heap_bytes.ProcessGet().Accumulate(
+          sample.as<size_t>());
+      break;
     case JSMetric::GC_BUFFER_ALLOC_HEAP_DENSITY:
       glean::javascript_gc::buffer_alloc_heap_density.AccumulateSingleSample(
           sample.as<size_t>());
