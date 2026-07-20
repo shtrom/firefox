@@ -1160,34 +1160,43 @@ void CodeGenerator::visitModPowTwoI(LModPowTwoI* ins) {
   Register in = ToRegister(ins->input());
   Register out = ToRegister(ins->output());
   MMod* mir = ins->mir();
-  Label negative, done;
+  int32_t shift = ins->shift();
+  const bool canBeNegative = !mir->isUnsigned() && mir->canBeNegativeDividend();
 
-  masm.move32(in, out);
-  masm.ma_b(in, in, &done, Assembler::Zero, ShortJump);
-  // Switch based on sign of the lhs.
-  // Positive numbers are just a bitmask
-  masm.ma_b(in, in, &negative, Assembler::Signed, ShortJump);
-  {
-    masm.and32(Imm32((1 << ins->shift()) - 1), out);
+  if (shift == 0) {
+    if (canBeNegative && !mir->isTruncated()) {
+      bailoutTest32(Assembler::Signed, in, in, ins->snapshot());
+    }
+    masm.move32(Imm32(0), out);
+    return;
+  }
+
+  Label negative;
+  if (canBeNegative) {
+    // Switch based on sign of the lhs.
+    masm.ma_b(in, in, &negative, Assembler::Signed, ShortJump);
+  }
+
+  masm.as_bstrpick_w(out, in, shift - 1, 0);
+
+  if (canBeNegative) {
+    Label done;
     masm.ma_b(&done, ShortJump);
-  }
 
-  // Negative numbers need a negate, bitmask, negate
-  {
+    // Negative numbers need a negate, bit extraction, negate.
     masm.bind(&negative);
+    masm.as_sub_w(out, zero, in);
+    masm.as_bstrpick_w(out, out, shift - 1, 0);
     masm.neg32(out);
-    masm.and32(Imm32((1 << ins->shift()) - 1), out);
-    masm.neg32(out);
-  }
-  if (mir->canBeNegativeDividend()) {
+
+    // Since a%b has the same sign as a, and a is negative in this branch,
+    // an answer of 0 means the correct result is actually -0. Bail out.
     if (!mir->isTruncated()) {
       MOZ_ASSERT(mir->fallible());
       bailoutCmp32(Assembler::Equal, out, zero, ins->snapshot());
-    } else {
-      // -0|0 == 0
     }
+    masm.bind(&done);
   }
-  masm.bind(&done);
 }
 
 void CodeGenerator::visitModMaskI(LModMaskI* ins) {
