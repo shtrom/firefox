@@ -26,6 +26,7 @@ class JS_PUBLIC_API JSObject;
   _(GC_IS_COMPARTMENTAL, Boolean)                   \
   _(GC_ZONE_COUNT, QuantityDistribution)            \
   _(GC_ZONES_COLLECTED, QuantityDistribution)       \
+  _(GC_MARK_STACK_MAX_CAPACITY, MemoryDistribution) \
   _(GC_MS, TimeDuration)                            \
   _(GC_BUDGET_MS_2, TimeDuration)                   \
   _(GC_BUDGET_WAS_INCREASED, Boolean)               \

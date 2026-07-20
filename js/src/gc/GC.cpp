@@ -3820,6 +3820,7 @@ void GCRuntime::finishCollection() {
 
   MOZ_ASSERT(!hasDelayedMarking());
   MOZ_ASSERT(!hasAnyDeferredWeakMaps());
+  size_t maxMarkStackCapacity = 0;
   for (size_t i = 0; i < markers.length(); i++) {
     const auto& marker = markers[i];
     marker->stop();
@@ -3828,7 +3829,12 @@ void GCRuntime::finishCollection() {
     } else {
       marker->freeStack();
     }
+    maxMarkStackCapacity =
+        std::max(maxMarkStackCapacity, marker->stackHighWaterMark());
+    marker->resetStackHighWaterMark();
   }
+  stats().setStat(gcstats::STAT_MARK_STACK_MAX_CAPACITY,
+                  uint32_t(maxMarkStackCapacity));
 
   maybeStopPretenuring();
 

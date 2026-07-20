@@ -2718,6 +2718,10 @@ static void AccumulateTelemetryCallback(JSMetric id,
       glean::javascript_gc::pretenure_count.AccumulateSingleSample(
           sample.as<size_t>());
       break;
+    case JSMetric::GC_MARK_STACK_MAX_CAPACITY:
+      glean::javascript_gc::mark_stack_max_capacity.ProcessGet().Accumulate(
+          sample.as<size_t>());
+      break;
     case JSMetric::GC_MARK_RATE_2:
       glean::javascript_gc::mark_rate.AccumulateSingleSample(
           sample.as<size_t>());

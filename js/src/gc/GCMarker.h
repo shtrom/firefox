@@ -195,6 +195,13 @@ class MarkStack {
   [[nodiscard]] bool init();
   [[nodiscard]] bool resetStackCapacity();
 
+  // The maximum capacity reached since the last call to resetHighWaterMark().
+  size_t highWaterMark() const;
+
+  // Reset the high-water mark to the current capacity, ready to track the
+  // next GC.
+  void resetHighWaterMark();
+
   template <typename T>
   [[nodiscard]] bool push(T* ptr);
   void infalliblePush(const SlotsOrElementsRange& range);
@@ -257,6 +264,9 @@ class MarkStack {
 
   // Size of the stack in words.
   MainThreadOrGCTaskData<size_t> capacity_;
+
+  // The maximum value of capacity_ seen since the last reset.
+  MainThreadOrGCTaskData<size_t> highWaterMark_;
 
   // Index of the top of the stack.
   MainThreadOrGCTaskData<size_t> topIndex_;
@@ -596,6 +606,9 @@ class GCMarker {
   [[nodiscard]] bool initStack();
   void resetStackCapacity();
   void freeStack();
+
+  size_t stackHighWaterMark() const;
+  void resetStackHighWaterMark();
 
   size_t sizeOfIncludingThis(mozilla::MallocSizeOf mallocSizeOf) const;
 

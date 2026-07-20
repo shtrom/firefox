@@ -1042,6 +1042,8 @@ void Statistics::sendGCTelemetry() {
   runtime->metrics().GC_IS_COMPARTMENTAL(!gc->fullGCRequested);
   runtime->metrics().GC_ZONE_COUNT(zoneStats.zoneCount);
   runtime->metrics().GC_ZONES_COLLECTED(zoneStats.collectedZoneCount);
+  runtime->metrics().GC_MARK_STACK_MAX_CAPACITY(
+      getStat(STAT_MARK_STACK_MAX_CAPACITY) * sizeof(uintptr_t));
 
   TimeDuration prepareTotal = phaseTimes[Phase::PREPARE];
   TimeDuration markTotal = SumPhase(PhaseKind::MARK, phaseTimes);

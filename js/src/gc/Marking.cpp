@@ -1414,6 +1414,15 @@ void GCMarker::freeStack() {
   stack.clearAndFreeStack();
 }
 
+size_t GCMarker::stackHighWaterMark() const {
+  return std::max(stack.highWaterMark(), otherStack.highWaterMark());
+}
+
+void GCMarker::resetStackHighWaterMark() {
+  stack.resetHighWaterMark();
+  otherStack.resetHighWaterMark();
+}
+
 bool GCMarker::markUntilBudgetExhausted(SliceBudget& budget,
                                         ShouldReportMarkTime reportTime) {
   MOZ_ASSERT(isRegularMarking() || isWeakMarking() || isConcurrentMarking());
@@ -2202,6 +2211,10 @@ bool MarkStack::resetStackCapacity() {
   return resize(capacity);
 }
 
+size_t MarkStack::highWaterMark() const { return highWaterMark_; }
+
+void MarkStack::resetHighWaterMark() { highWaterMark_ = capacity_; }
+
 #ifdef JS_GC_ZEAL
 void MarkStack::setMaxCapacity(size_t maxCapacity) {
   MOZ_ASSERT(maxCapacity != 0);
@@ -2493,6 +2506,7 @@ bool MarkStack::resize(size_t newCapacity) {
 
   stack_ = newStack;
   capacity_ = newCapacity;
+  highWaterMark_ = std::max<size_t>(highWaterMark_, capacity_);
   return true;
 }
 

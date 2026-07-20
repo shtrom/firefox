@@ -69,6 +69,10 @@ enum Stat {
   // Number of BigInts promoted.
   STAT_BIGINTS_PROMOTED,
 
+  // Maximum mark stack capacity (in words) reached by any marker during
+  // the marking phase of a major GC.
+  STAT_MARK_STACK_MAX_CAPACITY,
+
   STAT_LIMIT
 };
 
