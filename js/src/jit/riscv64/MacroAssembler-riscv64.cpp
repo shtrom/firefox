@@ -6689,8 +6689,8 @@ void MacroAssemblerRiscv64::ByteSwap(Register dest, Register src,
 
 template <typename F_TYPE>
 void MacroAssemblerRiscv64::FloatMinMaxHelper(FPURegister dst, FPURegister src1,
-                                              FPURegister src2,
-                                              MaxMinKind kind) {
+                                              FPURegister src2, MaxMinKind kind,
+                                              bool handleNaN) {
   MOZ_ASSERT((std::is_same<F_TYPE, float>::value) ||
              (std::is_same<F_TYPE, double>::value));
 
@@ -6719,6 +6719,23 @@ void MacroAssemblerRiscv64::FloatMinMaxHelper(FPURegister dst, FPURegister src1,
         fminm_s(dst, src1, src2);
       } else {
         fminm_d(dst, src1, src2);
+      }
+    }
+    return;
+  }
+
+  if (!handleNaN) {
+    if (kind == MaxMinKind::kMax) {
+      if (std::is_same_v<float, F_TYPE>) {
+        fmax_s(dst, src1, src2);
+      } else {
+        fmax_d(dst, src1, src2);
+      }
+    } else {
+      if (std::is_same_v<float, F_TYPE>) {
+        fmin_s(dst, src1, src2);
+      } else {
+        fmin_d(dst, src1, src2);
       }
     }
     return;
@@ -6763,23 +6780,23 @@ void MacroAssemblerRiscv64::FloatMinMaxHelper(FPURegister dst, FPURegister src1,
 }
 
 void MacroAssemblerRiscv64::Float32Max(FPURegister dst, FPURegister src1,
-                                       FPURegister src2) {
-  FloatMinMaxHelper<float>(dst, src1, src2, MaxMinKind::kMax);
+                                       FPURegister src2, bool handleNaN) {
+  FloatMinMaxHelper<float>(dst, src1, src2, MaxMinKind::kMax, handleNaN);
 }
 
 void MacroAssemblerRiscv64::Float32Min(FPURegister dst, FPURegister src1,
-                                       FPURegister src2) {
-  FloatMinMaxHelper<float>(dst, src1, src2, MaxMinKind::kMin);
+                                       FPURegister src2, bool handleNaN) {
+  FloatMinMaxHelper<float>(dst, src1, src2, MaxMinKind::kMin, handleNaN);
 }
 
 void MacroAssemblerRiscv64::Float64Max(FPURegister dst, FPURegister src1,
-                                       FPURegister src2) {
-  FloatMinMaxHelper<double>(dst, src1, src2, MaxMinKind::kMax);
+                                       FPURegister src2, bool handleNaN) {
+  FloatMinMaxHelper<double>(dst, src1, src2, MaxMinKind::kMax, handleNaN);
 }
 
 void MacroAssemblerRiscv64::Float64Min(FPURegister dst, FPURegister src1,
-                                       FPURegister src2) {
-  FloatMinMaxHelper<double>(dst, src1, src2, MaxMinKind::kMin);
+                                       FPURegister src2, bool handleNaN) {
+  FloatMinMaxHelper<double>(dst, src1, src2, MaxMinKind::kMin, handleNaN);
 }
 
 void MacroAssemblerRiscv64::Rol(Register rd, Register rs, Imm32 rt) {

@@ -501,14 +501,18 @@ class MacroAssemblerRiscv64 : public Assembler {
   void Dror(Register rd, Register rs, Imm32 rt);
   void Dror(Register rd, Register rs, Register rt);
 
-  void Float32Max(FPURegister dst, FPURegister src1, FPURegister src2);
-  void Float32Min(FPURegister dst, FPURegister src1, FPURegister src2);
-  void Float64Max(FPURegister dst, FPURegister src1, FPURegister src2);
-  void Float64Min(FPURegister dst, FPURegister src1, FPURegister src2);
+  void Float32Max(FPURegister dst, FPURegister src1, FPURegister src2,
+                  bool handleNaN);
+  void Float32Min(FPURegister dst, FPURegister src1, FPURegister src2,
+                  bool handleNaN);
+  void Float64Max(FPURegister dst, FPURegister src1, FPURegister src2,
+                  bool handleNaN);
+  void Float64Min(FPURegister dst, FPURegister src1, FPURegister src2,
+                  bool handleNaN);
 
   template <typename F>
   void FloatMinMaxHelper(FPURegister dst, FPURegister src1, FPURegister src2,
-                         MaxMinKind kind);
+                         MaxMinKind kind, bool handleNaN);
 
   inline void NegateBool(Register rd, Register rs) { xori(rd, rs, 1); }
 
