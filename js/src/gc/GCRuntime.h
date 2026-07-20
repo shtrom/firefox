@@ -878,7 +878,6 @@ class GCRuntime {
                         bool budgetWasIncreased);
 
   bool shouldYieldAtEndOfMarkPhase() const;
-  bool mightSweepInThisSlice(bool nonIncremental);
   void collectNurseryFromMajorGC(JS::GCReason reason);
   void collectNursery(JS::GCOptions options, JS::GCReason reason,
                       gcstats::PhaseKind phase);
@@ -1031,7 +1030,6 @@ class GCRuntime {
   void startBackgroundFree();
   void freeFromBackgroundThread(AutoLockHelperThreadState& lock);
   void sweepBackgroundThings(ZoneList& zones);
-  void prepareForSweepSlice();
   void disableIncrementalBarriers();
   void enableIncrementalBarriers();
   void assertBackgroundSweepingFinished();
@@ -1305,12 +1303,6 @@ class GCRuntime {
   // Whether any sweeping and decommitting will run on a separate GC helper
   // thread.
   MainThreadData<bool> useBackgroundThreads;
-
-  /*
-   * We're ready to start sweeping in this slice. Either we just marked roots in
-   * this slice or we called prepareForSweepSlice().
-   */
-  MainThreadData<bool> preparedForSweepInThisSlice;
 
   MainThreadData<size_t> markSliceCount;
 

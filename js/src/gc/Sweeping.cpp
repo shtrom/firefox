@@ -1994,7 +1994,6 @@ void GCRuntime::beginSweepPhase(AutoGCSession& session) {
    * fail, rather than nest badly and leave the unmarked newborn to be swept.
    */
 
-  MOZ_ASSERT(preparedForSweepInThisSlice);
   MOZ_ASSERT(!abortSweepAfterCurrentGroup);
   MOZ_ASSERT(!markOnBackgroundThreadDuringSweeping);
 
@@ -2684,33 +2683,6 @@ bool GCRuntime::initSweepActions() {
   return sweepActions != nullptr;
 }
 
-void GCRuntime::prepareForSweepSlice() {
-  // Work that must be done at the start of each slice where we sweep.
-  //
-  // Since this must happen at the start of the slice, it must be called in
-  // marking slices before any sweeping happens. Therefore it is called
-  // conservatively since we may not always transition to sweeping from marking.
-
-  // Clear out whole cell store buffer entries to unreachable cells.
-  if (storeBuffer().mayHavePointersToDeadCells()) {
-    collectNurseryFromMajorGC(sliceReason);
-  }
-
-  // Trace wrapper rooters before marking if we might start sweeping in
-  // this slice.
-  rt->mainContextFromOwnThread()->traceWrapperGCRooters(marker().tracer());
-
-  // Incremental marking validation re-runs all marking non-incrementally
-  // in the first sweep slice, which requires collecting the nursery.
-
-  if (state() == State::Mark &&
-      hasZealMode(ZealMode::IncrementalMarkingValidator)) {
-    collectNurseryFromMajorGC(JS::GCReason::EVICT_NURSERY);
-  }
-
-  preparedForSweepInThisSlice = true;
-}
-
 // Ensure barriers are disabled if required when entering a sweep slice and
 // re-enabled when yielding to the mutator. |disableBarriersForSweeping| is set
 // in beginSweepingSweepGroup and cleared in endSweepingSweepGroup.
@@ -2735,10 +2707,6 @@ class js::gc::AutoUpdateBarriersForSweeping {
 };
 
 IncrementalProgress GCRuntime::sweepPhase(SliceBudget& budget) {
-  MOZ_ASSERT(preparedForSweepInThisSlice);
-  MOZ_ASSERT_IF(storeBuffer().isEnabled(),
-                !storeBuffer().mayHavePointersToDeadCells());
-
   // The first time we enter the sweep phase we must not yield to the mutator
   // until we've started sweeping a sweep group but in that case the stack must
   // be empty already.
@@ -2761,6 +2729,12 @@ IncrementalProgress GCRuntime::sweepPhase(SliceBudget& budget) {
     auto [_, helperThreadBudget] = budgetConcurrentMarking(budget);
     maybeStartConcurrentMarking(helperThreadBudget);
     return NotFinished;
+  }
+
+  // Clear out whole cell store buffer entries with pointers to unreachable
+  // cells in case we free them.
+  if (storeBuffer().mayHavePointersToDeadCells()) {
+    collectNurseryFromMajorGC(JS::GCReason::EVICT_NURSERY);
   }
 
   JS::GCContext* gcx = rt->gcContext();

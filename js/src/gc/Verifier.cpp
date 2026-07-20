@@ -827,6 +827,10 @@ void GCRuntime::computeNonIncrementalMarkingForValidation(
     return;
   }
 
+  if (!nursery().isEmpty()) {
+    collectNurseryFromMajorGC(JS::GCReason::EVICT_NURSERY);
+  }
+
   AutoEnterOOMUnsafeRegion oomUnsafe;
   if (!markingValidator->nonIncrementalMark(session)) {
     // This may have failed to restore the original state, or may not have

@@ -3415,8 +3415,6 @@ void GCRuntime::beginMarkPhase(AutoGCSession& session) {
           atomMarking.getOrMarkAtomsUsedByUncollectedZones(this);
     }
   }
-
-  preparedForSweepInThisSlice = true;
 }
 
 void GCRuntime::findDeadCompartments() {
@@ -3592,6 +3590,12 @@ IncrementalProgress GCRuntime::markSynchronously(
     ShouldReportMarkTime reportTime) {
   // Run a marking slice for as long as the budget allows and return whether
   // marking is finished.
+
+  // Trace wrapper rooters before marking. These don't obey the same rules as
+  // other roots (in an attempt to avoid keeping dead wrappers alive) so they
+  // must be marked in any slice where we may end up sweeping. Conservatively
+  // mark them in every slice since they are likely to be few.
+  rt->mainContextFromOwnThread()->traceWrapperGCRooters(marker().tracer());
 
   AutoMajorGCProfilerEntry s(this);
 
@@ -4376,7 +4380,6 @@ void GCRuntime::incrementalSlice(SliceBudget& budget, JS::GCReason reason,
   initialState = incrementalState;
   isIncremental = !budget.isUnlimited();
   useBackgroundThreads = ShouldUseBackgroundThreads(isIncremental, reason);
-  preparedForSweepInThisSlice = false;
 
 #ifdef JS_GC_ZEAL
   // Do the incremental collection type specified by zeal mode if the collection
@@ -4449,11 +4452,6 @@ void GCRuntime::incrementalSlice(SliceBudget& budget, JS::GCReason reason,
       [[fallthrough]];
 
     case State::Mark:
-      if (!preparedForSweepInThisSlice &&
-          mightSweepInThisSlice(budget.isUnlimited())) {
-        prepareForSweepSlice();
-      }
-
       if (markPhase(budget) == NotFinished) {
         break;
       }
@@ -4480,10 +4478,6 @@ void GCRuntime::incrementalSlice(SliceBudget& budget, JS::GCReason reason,
       [[fallthrough]];
 
     case State::Sweep:
-      if (initialState == State::Sweep) {
-        prepareForSweepSlice();
-      }
-
       if (sweepPhase(budget) == NotFinished) {
         break;
       }
@@ -5079,12 +5073,6 @@ MOZ_NEVER_INLINE GCRuntime::IncrementalResult GCRuntime::gcCycle(
   MOZ_ASSERT_IF(result == IncrementalResult::Reset,
                 !isIncrementalGCInProgress());
   return result;
-}
-
-inline bool GCRuntime::mightSweepInThisSlice(bool nonIncremental) {
-  MOZ_ASSERT(incrementalState < State::Sweep);
-  return nonIncremental || markSliceCount == 0 || didYieldAtEndOfMarkPhase ||
-         zealModeControlsYieldPoint();
 }
 
 #ifdef JS_GC_ZEAL
