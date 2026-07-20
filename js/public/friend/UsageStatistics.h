@@ -60,6 +60,7 @@ class JS_PUBLIC_API JSObject;
   _(GC_TIME_BETWEEN_SLICES_MS, TimeDuration)    \
   _(GC_SLICE_COUNT, QuantityDistribution)       \
   _(GC_EFFECTIVENESS, MemoryDistribution)       \
+  _(GC_BUFFER_ALLOC_HEAP_DENSITY, Percentage)   \
   _(GC_PARALLEL_MARK, Boolean)                  \
   _(GC_PARALLEL_MARK_SPEEDUP, Integer)          \
   _(GC_PARALLEL_MARK_UTILIZATION, Percentage)   \

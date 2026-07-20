@@ -297,6 +297,10 @@ struct AllocSpace {
     bool isEmpty = false;
     bool hasNurseryOwnedAllocs = false;
     size_t bytesFreed = 0;
+    // Total bytes in allocations that survived this sweep. Computed as a
+    // byproduct of the sweep's allocation-bitmap walk so callers can derive
+    // used/free/admin byte totals without a separate free-region walk.
+    size_t usedBytes = 0;
   };
   SweepResult sweep(BufferAllocator* allocator, FreeLists& freeLists,
                     SweepKind sweepKind, bool sweptAnyPreviously,
@@ -393,6 +397,11 @@ struct BufferChunk
   // use.
   MainThreadOrGCTaskData<BufferAllocator::FreeLists> freeLists;
   MainThreadOrGCTaskData<bool> ownsFreeLists;
+
+  // Used and admin sizes after this chunk was last swept as part of a major
+  // collection.
+  MainThreadOrGCTaskData<size_t> usedBytesAfterSweep;
+  MainThreadOrGCTaskData<size_t> adminBytesAfterSweep;
 
   using SmallRegionIter = BitmapToBlockIter<SmallRegionBitmap::Iter,
                                             SmallRegionSize, SmallBufferRegion>;

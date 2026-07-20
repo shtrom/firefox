@@ -525,6 +525,7 @@ class BufferAllocator : public SlimLinkedListElement<BufferAllocator> {
   void maybeMergeSweptData(MaybeLock& lock);
   void mergeSweptData();
   void mergeSweptData(const AutoLock& lock);
+  void mergeChunkStatsToRuntime(BufferChunk* chunk);
   void abortMajorSweeping(const AutoLock& lock);
   void clearAllocatedDuringCollectionState(const AutoLock& lock);
 
@@ -578,7 +579,7 @@ class BufferAllocator : public SlimLinkedListElement<BufferAllocator> {
                       uintptr_t freeEnd, bool shouldDecommit,
                       bool expectUnchanged, FreeLists& freeLists);
   bool sweepSmallBufferRegion(BufferChunk* chunk, SmallBufferRegion* region,
-                              SweepKind sweepKind);
+                              SweepKind sweepKind, size_t* usedBytesOut);
   void addSweptRegion(SmallBufferRegion* region, uintptr_t freeStart,
                       uintptr_t freeEnd, bool shouldDecommit,
                       bool expectUnchanged, FreeLists& freeLists);

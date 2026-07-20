@@ -251,6 +251,12 @@ class BufferAllocatorRuntime {
   // Used to decide whether the mutex is required to access |largeAllocMap|.
   mozilla::Atomic<size_t, mozilla::ReleaseAcquire> offThreadAccessCount;
 
+  // Totals of buffer allocator used/free/admin bytes for retained chunks after
+  // the last GC (so not an up-to-date total). Used for telemetry.
+  MainThreadData<size_t> usedBytesInRetainedChunks;
+  MainThreadData<size_t> freeBytesInRetainedChunks;
+  MainThreadData<size_t> adminBytesInRetainedChunks;
+
  public:
   BufferAllocatorRuntime();
 
@@ -259,7 +265,14 @@ class BufferAllocatorRuntime {
   void incOffThreadCount();
   void decOffThreadCount();
 
+  // Report/reset the used/free/admin byte totals described above.
+  void getRetainedStats(size_t* usedBytesOut, size_t* freeBytesOut,
+                        size_t* adminBytesOut);
+  void resetRetainedStats();
+
  private:
+  void addRetainedStats(size_t usedBytes, size_t freeBytes, size_t adminBytes);
+
   bool needLockToAccessBufferMap() const;
 
   // Lookup a large buffer by pointer in the map.

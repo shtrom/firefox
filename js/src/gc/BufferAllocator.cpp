@@ -502,6 +502,28 @@ void BufferAllocatorRuntime::decOffThreadCount() {
   MOZ_ALWAYS_TRUE(offThreadAccessCount-- != 0);
 }
 
+void BufferAllocatorRuntime::resetRetainedStats() {
+  usedBytesInRetainedChunks = 0;
+  freeBytesInRetainedChunks = 0;
+  adminBytesInRetainedChunks = 0;
+}
+
+void BufferAllocatorRuntime::addRetainedStats(size_t usedBytes,
+                                              size_t freeBytes,
+                                              size_t adminBytes) {
+  usedBytesInRetainedChunks += usedBytes;
+  freeBytesInRetainedChunks += freeBytes;
+  adminBytesInRetainedChunks += adminBytes;
+}
+
+void BufferAllocatorRuntime::getRetainedStats(size_t* usedBytesOut,
+                                              size_t* freeBytesOut,
+                                              size_t* adminBytesOut) {
+  *usedBytesOut = usedBytesInRetainedChunks;
+  *freeBytesOut = freeBytesInRetainedChunks;
+  *adminBytesOut = adminBytesInRetainedChunks;
+}
+
 bool BufferAllocatorRuntime::needLockToAccessBufferMap() const {
   return offThreadAccessCount != 0;
 }
@@ -1301,14 +1323,14 @@ void BufferAllocator::startMajorCollection(MaybeLock& lock) {
   MOZ_ASSERT(mixedChunks.ref().isEmpty());
   MOZ_ASSERT(availableMixedChunks.ref().isEmpty());
   MOZ_ASSERT(largeNurseryAllocs.ref().isEmpty());
-#endif
 
-#ifdef DEBUG
   for (BufferChunk* chunk : tenuredChunks.ref()) {
     MOZ_ASSERT(!chunk->ownsFreeLists);
     chunk->freeLists.ref().assertEmpty();
   }
 #endif
+
+  gc->bufferRuntime().resetRetainedStats();
 
   largeTenuredAllocsToSweep.ref() = std::move(largeTenuredAllocs.ref());
 
@@ -1644,6 +1666,7 @@ void BufferAllocator::mergeSweptData(const AutoLock& lock) {
   while (BufferChunk* chunk = sweptTenuredChunks.ref().popFirst()) {
     size_t sizeClass = chunk->sizeClassForAvailableLists();
     availableTenuredChunks.ref().pushFront(sizeClass, chunk);
+    mergeChunkStatsToRuntime(chunk);
   }
 
   largeTenuredAllocs.ref().prepend(std::move(sweptLargeTenuredAllocs.ref()));
@@ -1677,6 +1700,14 @@ void BufferAllocator::mergeSweptData(const AutoLock& lock) {
 
     MOZ_ASSERT(tenuredChunksToSweep.ref().isEmpty());
   }
+}
+
+void BufferAllocator::mergeChunkStatsToRuntime(BufferChunk* chunk) {
+  size_t freeBytesAfterSweep =
+      ChunkSize - chunk->usedBytesAfterSweep - chunk->adminBytesAfterSweep;
+  MOZ_ASSERT(freeBytesAfterSweep < ChunkSize);
+  runtime()->addRetainedStats(chunk->usedBytesAfterSweep, freeBytesAfterSweep,
+                              chunk->adminBytesAfterSweep);
 }
 
 void BufferAllocator::clearMarkStateAfterBarrierVerification() {
@@ -2668,17 +2699,25 @@ bool BufferAllocator::sweepChunk(BufferChunk* chunk, SweepKind sweepKind,
   freeLists.clear();
   chunk->ownsFreeLists = true;
 
+  if (sweepKind == SweepKind::Tenured) {
+    chunk->usedBytesAfterSweep = 0;
+    chunk->adminBytesAfterSweep = 0;
+  }
+
   // First sweep any small buffer regions.
   bool sweptAny = false;
   bool hasNurseryOwnedSmallRegions = false;
   size_t smallRegionBytesFreed = 0;
+  size_t smallRegionBytesRetained = 0;
+
   for (auto iter = chunk->smallRegionIter(); !iter.done(); iter.next()) {
     SmallBufferRegion* region = iter.get();
     MOZ_ASSERT(!chunk->isMarked(region));
     MOZ_ASSERT(!chunk->isNurseryOwned(region));
     MOZ_ASSERT(chunk->allocBytes(region) == SmallRegionSize);
 
-    if (!sweepSmallBufferRegion(chunk, region, sweepKind)) {
+    size_t regionUsedBytes = 0;
+    if (!sweepSmallBufferRegion(chunk, region, sweepKind, &regionUsedBytes)) {
       chunk->setSmallBufferRegion(region, false);
       chunk->setDeallocated(region, SmallRegionSize);
       PoisonAlloc(region, JS_SWEPT_TENURED_PATTERN, sizeof(SmallBufferRegion),
@@ -2688,6 +2727,9 @@ bool BufferAllocator::sweepChunk(BufferChunk* chunk, SweepKind sweepKind,
     } else {
       if (sweepKind == SweepKind::Tenured) {
         chunk->setMarked(region);
+        chunk->usedBytesAfterSweep += regionUsedBytes;
+        chunk->adminBytesAfterSweep += FirstSmallAllocOffset;
+        smallRegionBytesRetained += SmallRegionSize;
       }
       if (region->hasNurseryOwnedAllocs()) {
         hasNurseryOwnedSmallRegions = true;
@@ -2708,13 +2750,21 @@ bool BufferAllocator::sweepChunk(BufferChunk* chunk, SweepKind sweepKind,
   }
 
   if (result.isEmpty) {
-    // Chunk is empty. Give it back to the system.
+    // Chunk is empty. Give it back to the system. It will never be merged, so
+    // it simply won't contribute to BufferAllocatorRuntime's used/free/admin
+    // byte totals for this GC (see mergeSweptData/resetRetainedStats).
     bool allMemoryCommitted = chunk->decommittedPages.ref().IsEmpty();
     chunk->~BufferChunk();
     ArenaChunk* tenuredChunk = ArenaChunk::init(chunk, gc, allMemoryCommitted);
-    AutoLockGC lock(gc);
-    gc->recycleChunk(tenuredChunk, lock);
+    AutoLockGC gcLock(gc);
+    gc->recycleChunk(tenuredChunk, gcLock);
     return false;
+  }
+
+  if (sweepKind == SweepKind::Tenured) {
+    // Don't double count small regions.
+    chunk->usedBytesAfterSweep += result.usedBytes - smallRegionBytesRetained;
+    chunk->adminBytesAfterSweep += FirstMediumAllocOffset;
   }
 
   chunk->hasNurseryOwnedAllocsAfterSweep =
@@ -2785,7 +2835,8 @@ void BufferAllocator::addSweptRegion(BufferChunk* chunk, uintptr_t freeStart,
 
 bool BufferAllocator::sweepSmallBufferRegion(BufferChunk* chunk,
                                              SmallBufferRegion* region,
-                                             SweepKind sweepKind) {
+                                             SweepKind sweepKind,
+                                             size_t* usedBytesOut) {
   FreeLists& freeLists = chunk->freeLists.ref();
   auto result = region->sweep(this, freeLists, sweepKind, false, false);
 
@@ -2794,6 +2845,7 @@ bool BufferAllocator::sweepSmallBufferRegion(BufferChunk* chunk,
   }
 
   region->setHasNurseryOwnedAllocs(result.hasNurseryOwnedAllocs);
+  *usedBytesOut = result.usedBytes;
   return true;
 }
 
@@ -2830,6 +2882,7 @@ AllocSpace<D, S, G>::SweepResult AllocSpace<D, S, G>::sweep(
                                   shouldDecommit, !sweptAny, freeLists);
       }
       freeStart = allocEnd;
+      result.usedBytes += bytes;
       if (canSweep) {
         setUnmarked(alloc);
       }
