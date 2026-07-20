@@ -8,7 +8,7 @@
 # documentation and how to modify this file.
 repo: mozilla-central
 created_at: '2021-10-14T12:50:40.073465'
-updated_at: '2026-07-16T14:38:22.699835+00:00'
+updated_at: '2026-07-20T21:41:23.943277+00:00'
 export:
   path: ./docs/mots/index.md
   format: md
@@ -997,6 +997,10 @@ people:
     bmo_id: 339062
     name: Luca Greco
     nick: rpl
+  - &rrando
+    bmo_id: 732678
+    name: Rolf Rando
+    nick: rrando
   - &rrelyea
     bmo_id: 11099
     name: Robert Relyea
@@ -1123,6 +1127,10 @@ people:
     bmo_id: 663555
     name: Tarik Eshaq
     nick: teshaq
+  - &tetchart
+    bmo_id: 783580
+    name: Tyler Etchart
+    nick: tetchart
   - &tgiles
     bmo_id: 666930
     name: Tim Giles
@@ -2304,19 +2312,58 @@ modules:
   - machine_name: core_machine_learning
     name: 'Core: Machine Learning'
     description: AI services and local inference
-    includes:
-      - browser/components/genai/
-      - toolkit/components/aboutinference/
-      - toolkit/components/ml/
     meta:
-      components:
-        - Core::Machine Learning
-      review_group: firefox-ai-ml-reviewers
+      owners_emeritus:
+        - *tarek
     owners:
       - *Mardak
-      - *tarek
     peers:
       - *gregtatum
+      - *pdahiya
+      - *rrando
+      - *tetchart
+    submodules:
+      - machine_name: core_machine_learning_frontend
+        name: 'Machine Learning: Frontend'
+        includes:
+          - browser/components/aiwindow/
+          - browser/components/genai/
+        meta:
+          components:
+            - 'Core::Machine Learning: Frontend'
+          review_group: ai-frontend-reviewers
+        owners:
+          - *Mardak
+        peers:
+          - *pdahiya
+
+      - machine_name: core_machine_learning_models
+        name: 'Machine Learning: Models'
+        includes:
+          - browser/components/aiwindow/models/
+          - browser/components/aiwindow/services/
+        meta:
+          components:
+            - 'Core::Machine Learning: General'
+          review_group: ai-models-reviewers
+        owners:
+          - *rrando
+          - *tetchart
+
+      - machine_name: core_machine_learning_platform
+        name: 'Machine Learning: Platform'
+        includes:
+          - toolkit/components/aboutinference/
+          - toolkit/components/ml/
+          - toolkit/components/pageextractor/
+        meta:
+          components:
+            - 'Core::Machine Learning: On Device'
+          review_group: ai-platform-reviewers
+        owners:
+          - *gregtatum
+        peers:
+          - *nordzilla
 
   - name: 'Core: MathML'
     description: MathML is a low-level specification for describing mathematics which
@@ -4803,5 +4850,5 @@ modules:
         - Ryan Tilder
       group: dev-platform
 hashes:
-  config: 7f3f39072cdfe8276ee0338d3431eaadb7fc5ce2
-  export: 52cb1e07a475512694ad2f7c88561e678c8d135c
+  config: 91932f78f5751aa1f75eb6fe65b3b4488a93b85a
+  export: 05ecd5df2b22fdc40f9966806c29b3b4865fd532
