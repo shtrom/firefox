@@ -60,8 +60,6 @@ class nsWindowWayland final : public nsWindow {
 
   bool ApplyEnterLeaveMutterWorkaround();
 
-  void OnUnmapNative();
-
  protected:
   virtual ~nsWindowWayland() = default;
 
