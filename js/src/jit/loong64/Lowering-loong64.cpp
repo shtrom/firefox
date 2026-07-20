@@ -189,6 +189,13 @@ void LIRGeneratorLOONG64::lowerDivI(MDiv* div) {
       define(lir, div);
       return;
     }
+
+    auto* lir = new (alloc()) LDivConstantI(useRegister(div->lhs()), rhs);
+    if (div->fallible()) {
+      assignSnapshot(lir, div->bailoutKind());
+    }
+    define(lir, div);
+    return;
   }
 
   LDivI* lir = new (alloc())
@@ -229,6 +236,13 @@ void LIRGeneratorLOONG64::lowerModI(MMod* mod) {
       define(lir, mod);
       return;
     }
+
+    auto* lir = new (alloc()) LModConstantI(useRegister(mod->lhs()), rhs);
+    if (mod->fallible()) {
+      assignSnapshot(lir, mod->bailoutKind());
+    }
+    define(lir, mod);
+    return;
   }
 
   auto* lir =
