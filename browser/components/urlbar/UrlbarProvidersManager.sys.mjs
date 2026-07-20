@@ -225,6 +225,12 @@ var localMuxerModules = {
  */
 var gProvidersManagerPerSap = new Map();
 
+// Monotonically increasing id stamped on every result as it is finalized, so a
+// result can be matched to its context entry and view row across the actor
+// boundary without relying on its position. Never reset, so a stale
+// notification from a superseded query can't collide with a new query's result.
+let gNextResultId = 0;
+
 const DEFAULT_MUXER = "UnifiedComplete";
 const DEFAULT_CHUNK_RESULTS_DELAY_MS = 16;
 
@@ -952,6 +958,7 @@ export class Query {
       return;
     }
 
+    result.id = gNextResultId++;
     result.providerName = provider.name;
     result.providerType = provider.type;
 

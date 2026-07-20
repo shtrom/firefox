@@ -166,6 +166,15 @@ export class UrlbarResult {
   rowIndex = undefined;
 
   /**
+   * @type {number}
+   *   A stable id assigned once when the result is finalized by
+   *   UrlbarProvidersManager. Unlike rowIndex it never changes and is
+   *   independent of the results' order, so it matches this result to its
+   *   context entry and view row across the actor boundary.
+   */
+  id = undefined;
+
+  /**
    * A dynamic result's view template, computed eagerly when the result is
    * finalized so the view can read it synchronously without asking the
    * provider (which, on the actor message path, lives in another process).
@@ -479,8 +488,8 @@ export class UrlbarResult {
   /**
    * Serializes this result to a plain, structured-cloneable object for sending
    * across the Urlbar actor boundary. Most data lives in private fields that a
-   * bare structuredClone() would drop, so capture it explicitly; `rowIndex`,
-   * `viewTemplate`, and `commands` are the public own properties.
+   * bare structuredClone() would drop, so capture it explicitly; `id`,
+   * `rowIndex`, `viewTemplate`, and `commands` are the public own properties.
    *
    * @returns {object} The wire representation; reconstruct with fromWire().
    */
@@ -508,6 +517,7 @@ export class UrlbarResult {
       testForceNewContent: this.#testForceNewContent,
       payload: this.#payload,
       highlights: this.#highlights,
+      id: this.id,
       rowIndex: this.rowIndex,
       viewTemplate: this.viewTemplate,
       commands: this.commands,
@@ -523,8 +533,10 @@ export class UrlbarResult {
    */
   static fromWire(wire) {
     let result = new UrlbarResult({ ...wire, skipPayloadValidation: true });
-    // providerType and rowIndex aren't constructor parameters, so re-apply them.
+    // providerType, id and rowIndex aren't constructor parameters, so re-apply
+    // them.
     result.providerType = wire.providerType;
+    result.id = wire.id;
     result.rowIndex = wire.rowIndex;
     result.viewTemplate = wire.viewTemplate;
     result.commands = wire.commands;
