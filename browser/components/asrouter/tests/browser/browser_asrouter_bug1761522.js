@@ -50,6 +50,7 @@ async function serveRemoteSettings() {
   server.registerPathHandler(
     "/v1/buckets/main/collections/ms-language-packs/changeset",
     (request, response) => {
+      const now = Date.now();
       response.setStatusLine(null, 200, "OK");
       response.setHeader(
         "Content-type",
@@ -59,7 +60,7 @@ async function serveRemoteSettings() {
       response.write(
         JSON.stringify({
           metadata: {},
-          timestamp: 42,
+          timestamp: now,
           changes: [
             {
               attachment: {
@@ -69,7 +70,7 @@ async function serveRemoteSettings() {
                 location: `main-workspace/ms-language-packs/${attachmentUuid}`,
               },
               id: "cfr-v1-ja-JP-mac",
-              last_modified: Date.now(),
+              last_modified: now,
             },
           ],
         })
@@ -193,6 +194,7 @@ add_task(async function test_asrouter() {
     await stop();
     sandbox.restore();
     await IOUtils.remove(MS_LANGUAGE_PACKS_DIR, { recursive: true });
+    Services.prefs.clearUserPref("services.settings.base_attachments_url");
     RemoteL10n.reloadL10n();
   });
 
