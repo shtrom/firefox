@@ -6,10 +6,6 @@
 
 // Test that the Partitioned cookies are displayed.
 
-SpecialPowers.pushPrefEnv({
-  set: [["security.allow_eval_with_system_principal", true]],
-});
-
 const doctype = `<!DOCTYPE html>`;
 const cookieAttrs = `Secure;SameSite=None;Path=/`;
 
