@@ -1136,7 +1136,8 @@ static bool IsLineClampRoot(const nsBlockFrame* aFrame) {
     return false;
   }
 
-  if (StaticPrefs::layout_css_webkit_line_clamp_block_enabled() ||
+  if (!aFrame->StyleDisplay()->mWebkitLineClamp.webkit_legacy ||
+      StaticPrefs::layout_css_webkit_line_clamp_block_enabled() ||
       aFrame->PresContext()->Document()->ChromeRulesEnabled()) {
     return true;
   }
