@@ -25,7 +25,7 @@ const REMOTE_TAB = {
       type: "tab",
       title: "Test Remote",
       url: TEST_URL,
-      icon: UrlbarUtils.ICON.DEFAULT,
+      icon: UrlbarShared.ICON.DEFAULT,
       client: "7cqCr77ptzX3",
       lastUsed: Math.floor(Date.now() / 1000),
     },

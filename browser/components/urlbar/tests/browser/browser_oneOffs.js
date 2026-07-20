@@ -456,7 +456,7 @@ add_task(async function allOneOffsHiddenExceptCurrentEngine() {
   );
   await SpecialPowers.pushPrefEnv({
     set: [
-      ...UrlbarUtils.LOCAL_SEARCH_MODES.map(m => [
+      ...UrlbarShared.LOCAL_SEARCH_MODES.map(m => [
         `browser.urlbar.${m.pref}`,
         false,
       ]),
@@ -725,7 +725,7 @@ add_task(async function avoidWillHideRace() {
   );
   await SpecialPowers.pushPrefEnv({
     set: [
-      ...UrlbarUtils.LOCAL_SEARCH_MODES.map(m => [
+      ...UrlbarShared.LOCAL_SEARCH_MODES.map(m => [
         `browser.urlbar.${m.pref}`,
         false,
       ]),
@@ -793,7 +793,7 @@ add_task(async function avoidWillHideRace() {
 // Hides each of the local shortcuts one at a time.  The search buttons should
 // automatically rebuild themselves.
 add_task(async function individualLocalShortcutsHidden() {
-  for (let { pref, source } of UrlbarUtils.LOCAL_SEARCH_MODES) {
+  for (let { pref, source } of UrlbarShared.LOCAL_SEARCH_MODES) {
     await SpecialPowers.pushPrefEnv({
       set: [[`browser.urlbar.${pref}`, false]],
     });
@@ -817,7 +817,7 @@ add_task(async function individualLocalShortcutsHidden() {
     let buttons = oneOffSearchButtons.localButtons;
     Assert.ok(buttons.length, "Sanity check: Local shortcuts exist");
 
-    let otherModes = UrlbarUtils.LOCAL_SEARCH_MODES.filter(
+    let otherModes = UrlbarShared.LOCAL_SEARCH_MODES.filter(
       filterActionsMode
     ).filter(m => m.source != source);
     Assert.equal(
@@ -842,7 +842,7 @@ add_task(async function individualLocalShortcutsHidden() {
 // Hides all the local shortcuts at once.
 add_task(async function allLocalShortcutsHidden() {
   await SpecialPowers.pushPrefEnv({
-    set: UrlbarUtils.LOCAL_SEARCH_MODES.map(m => [
+    set: UrlbarShared.LOCAL_SEARCH_MODES.map(m => [
       `browser.urlbar.${m.pref}`,
       false,
     ]),
@@ -907,7 +907,7 @@ add_task(async function localShortcutsShownWhenEnginesHidden() {
 
   Assert.equal(
     oneOffSearchButtons.localButtons.length,
-    UrlbarUtils.LOCAL_SEARCH_MODES.filter(filterActionsMode).length,
+    UrlbarShared.LOCAL_SEARCH_MODES.filter(filterActionsMode).length,
     "All local shortcuts are visible"
   );
 

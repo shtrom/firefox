@@ -278,7 +278,7 @@ async function checkRowVisibility() {
 
   Assert.equal(
     gTree.view.rowCount,
-    engines.length + UrlbarUtils.LOCAL_SEARCH_MODES.length,
+    engines.length + UrlbarShared.LOCAL_SEARCH_MODES.length,
     "Expected number of tree rows"
   );
 
@@ -319,8 +319,8 @@ async function checkRowVisibility() {
  */
 async function forEachLocalShortcutRow(callback) {
   let engines = await SearchService.getVisibleEngines();
-  for (let i = 0; i < UrlbarUtils.LOCAL_SEARCH_MODES.length; i++) {
-    let shortcut = UrlbarUtils.LOCAL_SEARCH_MODES[i];
+  for (let i = 0; i < UrlbarShared.LOCAL_SEARCH_MODES.length; i++) {
+    let shortcut = UrlbarShared.LOCAL_SEARCH_MODES[i];
     let row = engines.length + i;
     await callback(row, shortcut);
   }

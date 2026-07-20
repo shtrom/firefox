@@ -6,6 +6,7 @@ const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
   SessionStore: "resource:///modules/sessionstore/SessionStore.sys.mjs",
+  UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
   UrlbarTokenizer:
     "moz-src:///browser/components/urlbar/UrlbarTokenizer.sys.mjs",
@@ -87,7 +88,7 @@ export class SmartbarMentionsPanelSearch {
 
     const truncatedSearch = searchString.substring(
       0,
-      lazy.UrlbarUtils.MAX_TEXT_LENGTH
+      lazy.UrlbarShared.MAX_TEXT_LENGTH
     );
     const tokens = lazy.UrlbarTokenizer.tokenize({
       searchString: truncatedSearch,
@@ -101,7 +102,7 @@ export class SmartbarMentionsPanelSearch {
     return this.#tabs.filter(tab => {
       const normalizedUrl = this.#normalizeUrl(tab.url);
       const searchText = `${tab.title} ${normalizedUrl}`
-        .substring(0, lazy.UrlbarUtils.MAX_TEXT_LENGTH)
+        .substring(0, lazy.UrlbarShared.MAX_TEXT_LENGTH)
         .toLowerCase();
 
       // Check if ALL tokens appear in the search text
@@ -129,7 +130,7 @@ export class SmartbarMentionsPanelSearch {
         icon:
           tab.image && !tab.image.startsWith("http")
             ? tab.image
-            : lazy.UrlbarUtils.getIconForUrl(url),
+            : lazy.UrlbarShared.getIconForUrl(url),
         type: MENTION_TYPE.TAB_OPEN,
         timestamp: tab.lastAccessed,
       });
@@ -159,7 +160,7 @@ export class SmartbarMentionsPanelSearch {
         results.push({
           url,
           title: entry.title || url,
-          icon: lazy.UrlbarUtils.getIconForUrl(url),
+          icon: lazy.UrlbarShared.getIconForUrl(url),
           type: MENTION_TYPE.TAB_RECENTLY_CLOSED,
           timestamp: closedTab.closedAt,
         });

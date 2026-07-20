@@ -55,7 +55,7 @@ class TipTestProvider extends UrlbarProvider {
     return "TipTestProvider";
   }
   get type() {
-    return UrlbarUtils.PROVIDER_TYPE.PROFILE;
+    return UrlbarShared.PROVIDER_TYPE.PROFILE;
   }
   async isActive() {
     return true;
