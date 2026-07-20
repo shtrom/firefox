@@ -47,6 +47,7 @@
 }
 
 splitter.devtools-horizontal-splitter,
+splitter.devtools-toolbox-splitter,
 .devtools-side-splitter {
   appearance: none;
   background-image: none;
@@ -67,7 +68,8 @@ splitter.devtools-horizontal-splitter,
   forced-color-adjust: none;
 }
 
-splitter.devtools-horizontal-splitter {
+splitter.devtools-horizontal-splitter,
+splitter.devtools-toolbox-splitter.for-bottom-host {
   min-height: var(--devtools-horizontal-splitter-min-height);
 
   border-top-width: var(--devtools-splitter-top-width);
@@ -79,19 +81,17 @@ splitter.devtools-horizontal-splitter {
   cursor: ns-resize;
 }
 
+/* Specific style for split console splitter */
 #toolbox-deck ~ splitter.devtools-horizontal-splitter {
   min-height: var(--devtools-emphasized-horizontal-splitter-min-height);
+
+  &:hover {
+    background-color: var(--theme-emphasized-splitter-color-hover);
+  }
 }
 
-/**
- * Emphasized splitter has the hover style.
- * This emphasized splitter affect splitter console only.
- */
-#toolbox-deck ~ splitter.devtools-horizontal-splitter:hover {
-  background-color: var(--theme-emphasized-splitter-color-hover);
-}
-
-.devtools-side-splitter {
+.devtools-side-splitter,
+.devtools-toolbox-splitter.for-side-host {
   min-width: var(--devtools-vertical-splitter-min-width);
 
   border-inline-start-width: var(--devtools-splitter-inline-start-width);
@@ -104,6 +104,6 @@ splitter.devtools-horizontal-splitter {
 }
 
 /* Specific style for content page|devtools toolbox splitters */
-splitter:is(.devtools-horizontal-splitter, .devtools-side-splitter):focus-visible {
+splitter.devtools-toolbox-splitter:focus-visible {
   outline: auto;
 }

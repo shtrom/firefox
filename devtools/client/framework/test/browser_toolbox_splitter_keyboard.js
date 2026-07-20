@@ -22,14 +22,16 @@ add_task(async function () {
   const panel = gBrowser.getPanel();
   const toolbox = await gDevTools.showToolboxForTab(tab);
 
-  const bottomIframe = panel.querySelector(".devtools-toolbox-bottom-iframe");
+  const bottomIframe = panel.querySelector(
+    ".devtools-toolbox-iframe.bottom-host"
+  );
   is(
     bottomIframe.clientHeight,
     TOOLBOX_INITIAL_SIZE,
     "The bottom toolbox iframe has the expected height"
   );
   const horzSplitter = panel.querySelector(
-    "splitter.devtools-horizontal-splitter"
+    "splitter.devtools-toolbox-splitter.for-bottom-host"
   );
 
   Assert.equal(
@@ -102,7 +104,7 @@ add_task(async function () {
 
   info("Dock the toolbox to the side");
   await toolbox.switchHost(Toolbox.HostType.RIGHT);
-  const sideIframe = panel.querySelector(".devtools-toolbox-side-iframe");
+  const sideIframe = panel.querySelector(".devtools-toolbox-iframe.side-host");
   sideIframe.style.minWidth = "1px"; // Disable the min width set in css
   is(
     sideIframe.clientWidth,
@@ -110,7 +112,9 @@ add_task(async function () {
     "The iframe is resized properly"
   );
 
-  const sideSplitter = panel.querySelector(".devtools-side-splitter");
+  const sideSplitter = panel.querySelector(
+    ".devtools-toolbox-splitter.for-side-host"
+  );
 
   Assert.equal(
     sideSplitter.getAttribute("role"),

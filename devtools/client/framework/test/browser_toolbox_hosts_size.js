@@ -30,7 +30,7 @@ add_task(async function () {
     "Opening the toolbox hasn't changed the width of the panel"
   );
 
-  let iframe = panel.querySelector(".devtools-toolbox-bottom-iframe");
+  let iframe = panel.querySelector(".devtools-toolbox-iframe.bottom-host");
   is(
     iframe.clientHeight,
     panelHeight - 25,
@@ -45,7 +45,7 @@ add_task(async function () {
   );
 
   await toolbox.switchHost(Toolbox.HostType.RIGHT);
-  iframe = panel.querySelector(".devtools-toolbox-side-iframe");
+  iframe = panel.querySelector(".devtools-toolbox-iframe.side-host");
   iframe.style.minWidth = "1px"; // Disable the min width set in css
   is(
     iframe.clientWidth,
@@ -100,19 +100,23 @@ add_task(async function () {
     "Opening the toolbox hasn't changed the width of the panel"
   );
 
-  let iframe = panel.querySelector(".devtools-toolbox-bottom-iframe");
+  let iframe = panel.querySelector(".devtools-toolbox-iframe.bottom-host");
   is(iframe.clientHeight, 100, "The iframe is resized properly");
-  const horzSplitter = panel.querySelector(".devtools-horizontal-splitter");
+  const horzSplitter = panel.querySelector(
+    ".devtools-toolbox-splitter.for-bottom-host"
+  );
   dragElement(horzSplitter, { startX: 1, startY: 1, deltaX: 0, deltaY: -50 });
   is(iframe.clientHeight, 150, "The iframe was resized by the splitter");
 
   await toolbox.switchHost(Toolbox.HostType.RIGHT);
-  iframe = panel.querySelector(".devtools-toolbox-side-iframe");
+  iframe = panel.querySelector(".devtools-toolbox-iframe.side-host");
   iframe.style.minWidth = "1px"; // Disable the min width set in css
   is(iframe.clientWidth, 100, "The iframe is resized properly");
 
   info("Resize the toolbox manually by 50 pixels");
-  const sideSplitter = panel.querySelector(".devtools-side-splitter");
+  const sideSplitter = panel.querySelector(
+    ".devtools-toolbox-splitter.for-side-host"
+  );
   dragElement(sideSplitter, { startX: 1, startY: 1, deltaX: -50, deltaY: 0 });
   is(iframe.clientWidth, 150, "The iframe was resized by the splitter");
 

@@ -105,7 +105,7 @@ function testBottomHost(browser) {
 
   // test UI presence
   const panel = browser.getPanel();
-  const iframe = panel.querySelector(".devtools-toolbox-bottom-iframe");
+  const iframe = panel.querySelector(".devtools-toolbox-iframe.bottom-host");
   ok(iframe, "toolbox bottom iframe exists");
 
   checkToolboxLoaded(iframe);
@@ -117,10 +117,10 @@ async function testLeftHost(browser) {
 
   // test UI presence
   const panel = browser.getPanel();
-  const bottom = panel.querySelector(".devtools-toolbox-bottom-iframe");
+  const bottom = panel.querySelector(".devtools-toolbox-iframe.bottom-host");
   ok(!bottom, "toolbox bottom iframe doesn't exist");
 
-  const iframe = panel.querySelector(".devtools-toolbox-side-iframe");
+  const iframe = panel.querySelector(".devtools-toolbox-iframe.side-host");
   ok(iframe, "toolbox side iframe exists");
 
   checkToolboxLoaded(iframe);
@@ -132,10 +132,10 @@ async function testRightHost(browser) {
 
   // test UI presence
   const panel = browser.getPanel();
-  const bottom = panel.querySelector(".devtools-toolbox-bottom-iframe");
+  const bottom = panel.querySelector(".devtools-toolbox-iframe.bottom-host");
   ok(!bottom, "toolbox bottom iframe doesn't exist");
 
-  const iframe = panel.querySelector(".devtools-toolbox-side-iframe");
+  const iframe = panel.querySelector(".devtools-toolbox-iframe.side-host");
   ok(iframe, "toolbox side iframe exists");
 
   checkToolboxLoaded(iframe);
@@ -146,13 +146,15 @@ async function testWindowHost(browser) {
   checkHostType(toolbox, WINDOW);
 
   const panel = browser.getPanel();
-  const sidebar = panel.querySelector(".devtools-toolbox-side-iframe");
+  const sidebar = panel.querySelector(".devtools-toolbox-iframe.side-host");
   ok(!sidebar, "toolbox sidebar iframe doesn't exist");
 
   const win = Services.wm.getMostRecentWindow("devtools:toolbox");
   ok(win, "toolbox separate window exists");
 
-  const iframe = win.document.querySelector(".devtools-toolbox-window-iframe");
+  const iframe = win.document.querySelector(
+    ".devtools-toolbox-iframe.window-host"
+  );
   checkToolboxLoaded(iframe);
 }
 

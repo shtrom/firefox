@@ -67,9 +67,7 @@ class BaseInBrowserHost {
   _createFrame() {
     this.frame = createDevToolsFrame(
       this.hostTab.ownerDocument,
-      this.type == "bottom"
-        ? "devtools-toolbox-bottom-iframe"
-        : "devtools-toolbox-side-iframe"
+      this.type == "bottom" ? "bottom-host" : "side-host"
     );
     // Set an id on the frame so we can reference it in the splitter aria-controls attribute
     const container = this.hostTab.ownerDocument.querySelector(
@@ -148,7 +146,10 @@ class BottomHost extends BaseInBrowserHost {
   createElements() {
     const { ownerDocument } = this.hostTab;
     this.#splitter = ownerDocument.createXULElement("splitter");
-    this.#splitter.setAttribute("class", "devtools-horizontal-splitter");
+    this.#splitter.classList.add(
+      "devtools-toolbox-splitter",
+      "for-bottom-host"
+    );
     this.#splitter.setAttribute("resizebefore", "none");
     this.#splitter.setAttribute("resizeafter", "sibling");
 
@@ -170,8 +171,7 @@ class BottomHost extends BaseInBrowserHost {
     );
     this.#resizeObserver.observe(this.frame);
 
-    this._browserContainer.appendChild(this.#splitter);
-    this._browserContainer.appendChild(this.frame);
+    this._browserContainer.append(this.#splitter, this.frame);
   }
 
   async finalizeCreation() {
@@ -215,8 +215,8 @@ class BottomHost extends BaseInBrowserHost {
       }
 
       this.#resizeObserver.disconnect();
-      this._browserContainer.removeChild(this.#splitter);
-      this._browserContainer.removeChild(this.frame);
+      this.#splitter.remove();
+      this.frame.remove();
       this.frame = null;
 
       this.#resizeObserver = null;
@@ -252,7 +252,7 @@ class SidebarHost extends BaseInBrowserHost {
     const { ownerDocument } = this.hostTab;
 
     this.#splitter = ownerDocument.createXULElement("splitter");
-    this.#splitter.setAttribute("class", "devtools-side-splitter");
+    this.#splitter.classList.add("devtools-toolbox-splitter", "for-side-host");
     this.#splitter.setAttribute("resizebefore", "none");
     this.#splitter.setAttribute("resizeafter", "none");
 
@@ -351,8 +351,8 @@ class SidebarHost extends BaseInBrowserHost {
         .style.removeProperty("--devtools-toolbox-width");
 
       this.#resizeObserver.disconnect();
-      this.#browserPanel.removeChild(this.#splitter);
-      this.#browserPanel.removeChild(this.frame);
+      this.#splitter.remove();
+      this.frame.remove();
       this.#browserPanel = null;
 
       this.#resizeObserver = null;
@@ -448,10 +448,7 @@ class WindowHost extends EventEmitter {
         win.removeEventListener("load", frameLoad, true);
         win.focus();
 
-        this.frame = createDevToolsFrame(
-          win.document,
-          "devtools-toolbox-window-iframe"
-        );
+        this.frame = createDevToolsFrame(win.document, "window-host");
         win.document
           .getElementById("devtools-toolbox-window")
           .appendChild(this.frame);
@@ -525,10 +522,7 @@ class BrowserToolboxHost extends EventEmitter {
   type = "browsertoolbox";
 
   createElements() {
-    this.frame = createDevToolsFrame(
-      this.doc,
-      "devtools-toolbox-browsertoolbox-iframe"
-    );
+    this.frame = createDevToolsFrame(this.doc, "browsertoolbox-host");
 
     this.doc.body.appendChild(this.frame);
   }
@@ -600,12 +594,16 @@ function focusTab(tab) {
 
 /**
  * Create an iframe that can be used to load DevTools via about:devtools-toolbox.
+ *
+ * @property {Document} doc
+ * @property {string} className: A class that will be added to the iframe element
+ * @returns {XULFrameElement}
  */
 function createDevToolsFrame(doc, className) {
   const frame = doc.createXULElement("browser");
   frame.setAttribute("type", "content");
   frame.style.flex = "1 auto"; // Required to be able to shrink when the window shrinks
-  frame.className = className;
+  frame.classList.add("devtools-toolbox-iframe", className);
 
   const inXULDocument = doc.documentElement.namespaceURI === XUL_NS;
   if (inXULDocument) {
