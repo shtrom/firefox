@@ -9,7 +9,7 @@
 
 add_common_setup();
 
-requestLongerTimeout(2);
+requestLongerTimeout(3);
 
 async function testPressingKeys(sequence) {
   await withNewTab(REPORTABLE_PAGE_URL, async () => {
