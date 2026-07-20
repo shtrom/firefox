@@ -383,6 +383,18 @@ nsresult BounceTrackingState::HasBounceTrackingStateForSite(
       continue;
     }
 
+    // This active-site purge guard filters by the cached OriginAttributes but
+    // reads the live document principal. The two must agree, otherwise the
+    // guard would protect (or fail to protect) the wrong container's data. They
+    // only diverge if a tab's userContextId changes during its lifetime. See
+    // Bug 2054941.
+    MOZ_ASSERT(
+        principal->OriginAttributesRef().EqualsIgnoringFPD(
+            state->mOriginAttributes),
+        "BTP: active-site purge guard sees a live document whose container "
+        "differs from the cached BounceTrackingState OriginAttributes (Bug "
+        "2054941).");
+
     // Lastly, check if the site matches.
     nsAutoCString baseDomain;
     nsresult rv = principal->GetBaseDomain(baseDomain);
@@ -417,6 +429,17 @@ nsresult BounceTrackingState::OnDocumentStartRequest(nsIChannel* aChannel) {
   nsCOMPtr<nsILoadInfo> loadInfo;
   nsresult rv = aChannel->GetLoadInfo(getter_AddRefs(loadInfo));
   NS_ENSURE_SUCCESS(rv, rv);
+
+  // The channel we record bounces for must live in the same container as the
+  // BounceTrackingState which owns the per-tab record and selects the storage
+  // partition. This relies on a tab's userContextId staying constant for its
+  // whole lifetime. If that ever changes mid-load, bounces would be recorded
+  // under the tab's original container rather than the one the load ends up in,
+  // and BTP would need to account for the transition. See Bug 2054941.
+  MOZ_ASSERT(
+      loadInfo->GetOriginAttributes().EqualsIgnoringFPD(mOriginAttributes),
+      "BTP: channel OriginAttributes (userContextId/PBM) diverged from the "
+      "cached BounceTrackingState OriginAttributes (Bug 2054941).");
 
   // Used to keep track of whether we added entries to the site list that are
   // not "null".
@@ -529,6 +552,18 @@ BounceTrackingState::OnStateChange(nsIWebProgress* aWebProgress,
   dom::WindowGlobalParent* windowGlobalParent =
       browsingContext->Canonical()->GetCurrentWindowGlobal();
   NS_ENSURE_TRUE(windowGlobalParent, NS_ERROR_FAILURE);
+
+  // The committed document must live in the same container as the
+  // BounceTrackingState, i.e. the tab's userContextId has not changed during
+  // its lifetime. This also catches a container change on paths without a
+  // channel hook (e.g. bfcache / session restore). See the note in
+  // OnDocumentStartRequest and Bug 2054941.
+  MOZ_ASSERT(windowGlobalParent->DocumentPrincipal()
+                 ->OriginAttributesRef()
+                 .EqualsIgnoringFPD(mOriginAttributes),
+             "BTP: committed document OriginAttributes (userContextId/PBM) "
+             "diverged from the cached BounceTrackingState OriginAttributes "
+             "(Bug 2054941).");
 
   return OnDocumentLoaded(windowGlobalParent->DocumentPrincipal());
 }

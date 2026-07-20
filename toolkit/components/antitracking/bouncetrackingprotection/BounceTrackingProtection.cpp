@@ -306,6 +306,21 @@ nsresult BounceTrackingProtection::RecordStatefulBounces(
       mStorage->GetOrCreateStateGlobal(aBounceTrackingState);
   MOZ_ASSERT(globalState);
 
+  // The storage partition we're about to write bounce trackers into is keyed by
+  // the BounceTrackingState's cached OriginAttributes. Assert it still matches
+  // the tab's current top BrowsingContext, so that if a tab's userContextId
+  // were ever to change during its lifetime we don't file bounces under a
+  // container the tab no longer lives in. See Bug 2054941.
+#ifdef DEBUG
+  if (RefPtr<dom::BrowsingContext> bc =
+          aBounceTrackingState->CurrentBrowsingContext()) {
+    MOZ_ASSERT(bc->OriginAttributesRef().EqualsIgnoringFPD(
+                   aBounceTrackingState->OriginAttributesRef()),
+               "BTP: recording bounces under a container that no longer "
+               "matches the tab's BrowsingContext (Bug 2054941).");
+  }
+#endif
+
   nsTArray<nsCString> classifiedHosts;
 
   // For each host in navigable’s bounce tracking record's bounce set:
