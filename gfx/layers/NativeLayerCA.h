@@ -5,6 +5,7 @@
 #ifndef mozilla_layers_NativeLayerCA_h
 #define mozilla_layers_NativeLayerCA_h
 
+#include <CoreMedia/CoreMedia.h>
 #include <IOSurface/IOSurfaceRef.h>
 
 #include <ostream>
@@ -399,6 +400,8 @@ class NativeLayerCA : public NativeLayer {
                            gfx::IntSize& aSize, bool aIsDRM, bool aIsHDR);
 
   void DumpLayer(std::ostream& aOutputStream);
+  static void LogSurface(IOSurfaceRef aSurfaceRef, CVPixelBufferRef aBuffer,
+                         CMVideoFormatDescriptionRef aFormat);
 
   void AttachExternalImage(wr::RenderTextureHost* aExternalImage) override;
   GpuFence* GetGpuFence() override;
