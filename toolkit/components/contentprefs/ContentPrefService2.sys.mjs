@@ -1391,14 +1391,12 @@ ContentPrefService2.prototype = {
       return resetAndRetry(e);
     }
 
-    // Turn off disk synchronization checking to reduce disk churn and speed up
-    // operations when prefs are changed rapidly (such as when a user repeatedly
-    // changes the value of the browser zoom setting for a site).
-    //
-    // Note: this could cause database corruption if the OS crashes or machine
-    // loses power before the data gets written to disk, but this is considered
-    // a reasonable risk for the not-so-critical data stored in this database.
-    await conn.execute("PRAGMA synchronous = OFF");
+    // WAL with synchronous = NORMAL syncs only at checkpoints, avoiding disk
+    // churn on rapid pref changes (e.g. per-site zoom) without the corruption
+    // risk of synchronous = OFF.
+    await conn.execute("PRAGMA journal_mode = WAL");
+    await conn.execute("PRAGMA wal_autocheckpoint = 16");
+    await conn.execute("PRAGMA synchronous = NORMAL");
 
     return conn;
   },
