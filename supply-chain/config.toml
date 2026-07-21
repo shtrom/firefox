@@ -64,6 +64,10 @@ notes = "Used for testing."
 dependency-criteria = { tokio-reactor = [], tokio-threadpool = [] }
 notes = "The dependencies on tokio-reactor and tokio-threadpools are just a hack to pin the version used by audioipc-{client,server}. Suppress vetting on those for the same reasons behind the policy entries."
 
+[policy.glean-sym]
+audit-as-crates-io = false
+notes = "crates.io release is a placeholder for the moment. glean-sym is consumed via git"
+
 [policy.gluesmith]
 criteria = "safe-to-run"
 notes = "Used for fuzzing."
