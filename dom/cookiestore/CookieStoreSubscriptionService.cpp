@@ -164,7 +164,7 @@ void CookieStoreSubscriptionService::Subscribe(
 
   if (!registrationData) {
     registrationData = mData.AppendElement();
-    registrationData->mRegistration = tmp;
+    registrationData->mRegistration = std::move(tmp);
   }
 
   bool toStore = false;

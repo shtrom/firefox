@@ -94,7 +94,7 @@ WebAuthnService::MakeCredential(uint64_t aTransactionId,
   promise
       ->Then(
           GetCurrentSerialEventTarget(), __func__,
-          [self, origin, aTransactionId, aBrowsingContextId,
+          [self, origin = std::move(origin), aTransactionId, aBrowsingContextId,
            attestationRequested](
               const WebAuthnRegisterPromise::ResolveOrRejectValue& aValue) {
             MOZ_ASSERT(NS_IsMainThread());

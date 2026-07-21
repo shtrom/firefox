@@ -6992,7 +6992,7 @@ mozilla::ipc::IPCResult ContentParent::RecvDiscardBrowsingContext(
 
       context->Detach(/* aFromIPC */ true);
     }
-    context->AddFinalDiscardListener(aResolve);
+    context->AddFinalDiscardListener(std::move(aResolve));
     return IPC_OK();
   }
 

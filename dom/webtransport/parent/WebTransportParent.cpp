@@ -183,7 +183,7 @@ class BidiReceiveStream : public nsIWebTransportStreamCallback {
           void(uint64_t, WebTransportParent::OnResetOrStopSendingCallback&&,
                nsIWebTransportBidirectionalStream* aStream)>&& aStreamCallback,
       Maybe<int64_t> aSendOrder, nsCOMPtr<nsISerialEventTarget>& aSocketThread)
-      : mResolver(aResolver),
+      : mResolver(std::move(aResolver)),
         mStreamCallback(std::move(aStreamCallback)),
         mSendOrder(aSendOrder),
         mSocketThread(aSocketThread) {}
@@ -210,7 +210,7 @@ class UniReceiveStream : public nsIWebTransportStreamCallback {
                          WebTransportParent::OnResetOrStopSendingCallback&&,
                          nsIWebTransportSendStream* aStream)>&& aStreamCallback,
       Maybe<int64_t> aSendOrder, nsCOMPtr<nsISerialEventTarget>& aSocketThread)
-      : mResolver(aResolver),
+      : mResolver(std::move(aResolver)),
         mStreamCallback(std::move(aStreamCallback)),
         mSendOrder(aSendOrder),
         mSocketThread(aSocketThread) {}

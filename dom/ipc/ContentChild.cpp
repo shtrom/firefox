@@ -870,7 +870,7 @@ void ContentChild::SetProcessName(const nsACString& aName,
           nsAutoCString originSuffix;
           isolationPrincipal->GetOriginSuffix(originSuffix);
           schemeless.Append(originSuffix);
-          mProcessName = schemeless;
+          mProcessName = std::move(schemeless);
         } else
 #endif
         {

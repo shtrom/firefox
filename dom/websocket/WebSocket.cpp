@@ -2214,10 +2214,10 @@ nsresult WebSocketImpl::ParseURL(const nsAString& aURL, nsIURI* aBaseURI) {
       nsContentUtils::GetWebExposedOriginSerialization(parsedURL, mUTF16Origin);
   NS_ENSURE_SUCCESS(rv, NS_ERROR_DOM_SYNTAX_ERR);
 
-  mAsciiHost = host;
+  mAsciiHost = std::move(host);
   ToLowerCase(mAsciiHost);
 
-  mResource = filePath;
+  mResource = std::move(filePath);
   if (!query.IsEmpty()) {
     mResource.Append('?');
     mResource.Append(query);

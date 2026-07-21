@@ -713,7 +713,7 @@ void TErrorResult<CleanupPolicy>::EnsureUTF8Validity(nsCString& aValue,
   nsCString valid;
   if (NS_SUCCEEDED(UTF_8_ENCODING->DecodeWithoutBOMHandling(aValue, valid,
                                                             aValidUpTo))) {
-    aValue = valid;
+    aValue = std::move(valid);
   } else {
     aValue.SetLength(aValidUpTo);
   }

@@ -540,7 +540,7 @@ bool CookieStoreParent::DeleteRequestOnMainThread(
 
   nsAutoCString cookiesForDomain;
   if (aDomain.IsEmpty()) {
-    cookiesForDomain = hostName;
+    cookiesForDomain = std::move(hostName);
   } else {
     cookiesForDomain = NS_ConvertUTF16toUTF8(aDomain);
   }

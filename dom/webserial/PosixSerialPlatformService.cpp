@@ -232,7 +232,7 @@ nsresult PosixSerialPlatformService::EnumeratePortsImpl(
                NS_ConvertUTF16toUTF8(info.friendlyName()).get(),
                info.usbVendorId().valueOr(0), info.usbProductId().valueOr(0)));
 
-      aPorts.AppendElement(info);
+      aPorts.AppendElement(std::move(info));
     }
 
     IOObjectRelease(serialService);
@@ -352,7 +352,7 @@ nsresult PosixSerialPlatformService::EnumeratePortsImpl(
                NS_ConvertUTF16toUTF8(info.friendlyName()).get(),
                info.usbVendorId().valueOr(0), info.usbProductId().valueOr(0)));
 
-      aPorts.AppendElement(info);
+      aPorts.AppendElement(std::move(info));
     }
   }();
 
@@ -407,7 +407,7 @@ nsresult PosixSerialPlatformService::EnumeratePortsImpl(
         info.friendlyName() =
             NS_ConvertUTF8toUTF16(nsDependentCString(ent->d_name));
       }
-      aPorts.AppendElement(info);
+      aPorts.AppendElement(std::move(info));
     }
   }
 

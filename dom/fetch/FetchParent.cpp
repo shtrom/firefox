@@ -40,7 +40,7 @@ NS_IMETHODIMP FetchParent::FetchParentCSPEventListener::OnCSPViolationEvent(
 
   nsAutoString json(aJSON);
   nsCOMPtr<nsIRunnable> r = NS_NewRunnableFunction(
-      __func__, [actorID = mActorID, json,
+      __func__, [actorID = mActorID, json = std::move(json),
                  reportGroup = nsString{aReportGroupName}]() mutable {
         FETCH_LOG(
             ("FetchParentCSPEventListener::OnCSPViolationEvent, Runnale"));

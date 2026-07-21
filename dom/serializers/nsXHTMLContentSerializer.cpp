@@ -271,7 +271,7 @@ bool nsXHTMLContentSerializer::SerializeAttributes(
             nsAutoString absURI;
             rv = NS_MakeAbsoluteURI(absURI, valueStr, uri);
             if (NS_SUCCEEDED(rv)) {
-              valueStr = absURI;
+              valueStr = std::move(absURI);
             }
           }
         }

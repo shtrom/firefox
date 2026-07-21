@@ -182,8 +182,9 @@ already_AddRefed<Promise> FileSystemHandle::Move(const fs::EntryId& aParentId,
   // Other handles to this will be broken, and the spec is ok with this, but we
   // need to update our EntryId and name
   promise->AddCallbacksWithCycleCollectedArgs(
-      [newMetadata](JSContext* aCx, JS::Handle<JS::Value> aValue,
-                    ErrorResult& aRv, FileSystemHandle* aHandle) {
+      [newMetadata = std::move(newMetadata)](
+          JSContext* aCx, JS::Handle<JS::Value> aValue, ErrorResult& aRv,
+          FileSystemHandle* aHandle) {
         // XXX Fix entryId!
         LOG(("Changing FileSystemHandle name from %s to %s",
              NS_ConvertUTF16toUTF8(aHandle->mMetadata.entryName()).get(),

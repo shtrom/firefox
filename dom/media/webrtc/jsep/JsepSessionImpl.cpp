@@ -203,7 +203,7 @@ nsresult JsepSessionImpl::AddDtlsFingerprint(
   fp.mAlgorithm = algorithm;
   fp.mValue = value;
 
-  mDtlsFingerprints.push_back(fp);
+  mDtlsFingerprints.push_back(std::move(fp));
 
   return NS_OK;
 }
@@ -235,7 +235,7 @@ nsresult JsepSessionImpl::AddRtpExtension(
        // do we want to specify direction?
        direction != SdpDirectionAttribute::kSendrecv, extensionName, ""}};
 
-  mRtpExtensions.push_back(extMediaType);
+  mRtpExtensions.push_back(std::move(extMediaType));
   return NS_OK;
 }
 

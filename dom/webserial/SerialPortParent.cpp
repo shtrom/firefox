@@ -355,7 +355,7 @@ mozilla::ipc::IPCResult SerialPortParent::RecvDrain(DrainResolver&& aResolver) {
   // meaning the write pump may still have unconsumed data. We must wait for
   // the write pipe to be fully closed (all data written to the device)
   // before draining OS transmit buffers.
-  auto completeDrain = [portId = mPortId, aResolver]() {
+  auto completeDrain = [portId = mPortId, aResolver = std::move(aResolver)]() {
     RefPtr<SerialPlatformService> service =
         SerialPlatformService::GetInstance();
     nsresult rv = NS_ERROR_FAILURE;
