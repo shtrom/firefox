@@ -6,7 +6,6 @@
 #define nsDragSessionSource_h_
 
 #include "nsDragService.h"
-#include "nsIObserver.h"
 
 class nsICookieJarSettings;
 
@@ -18,18 +17,15 @@ class SourceSurface;
  * Intermediate class between nsDragSession and platform-specific
  * nsDragSessionGtk/nsDragSessionWayland, containing all drag source logic.
  */
-class nsDragSessionSource : public nsDragSession, public nsIObserver {
+class nsDragSessionSource : public nsDragSession {
  public:
-  NS_DECL_ISUPPORTS_INHERITED
-  NS_DECL_NSIOBSERVER
-
   nsDragSessionSource();
 
   // nsBaseDragSession
-  MOZ_CAN_RUN_SCRIPT nsresult InvokeDragSessionImpl(
-      nsIWidget* aWidget, nsIArray* anArrayTransferables,
-      const mozilla::Maybe<mozilla::CSSIntRegion>& aRegion,
-      uint32_t aActionType) override;
+  MOZ_CAN_RUN_SCRIPT nsresult
+  InvokeDragSessionImpl(nsIWidget* aWidget, nsIArray* anArrayTransferables,
+                        const mozilla::Maybe<mozilla::CSSIntRegion>& aRegion,
+                        uint32_t aActionType) override;
 
   // nsIDragSession
   MOZ_CAN_RUN_SCRIPT NS_IMETHOD InvokeDragSession(
