@@ -721,6 +721,16 @@ html {
         }
       }
 
+      .additional-cta {
+        &.cta-link {
+          background: none;
+          padding: 0;
+          font-weight: normal;
+
+          @include text-link-styles;
+        }
+      }
+
       migration-wizard {
         padding: 5px 60px;
 

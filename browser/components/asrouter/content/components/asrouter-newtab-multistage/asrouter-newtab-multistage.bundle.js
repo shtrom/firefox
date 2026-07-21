@@ -1291,7 +1291,7 @@ const SingleSelect = ({
     }
   }, [activeSingleSelectSelections]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const CONFIGURABLE_STYLES = ["background", "borderRadius", "height", "marginBlock", "marginBlockStart", "marginBlockEnd", "marginInline", "paddingBlock", "paddingBlockStart", "paddingBlockEnd", "paddingInline", "paddingInlineStart", "paddingInlineEnd", "width"];
+  const CONFIGURABLE_STYLES = ["background", "border", "borderRadius", "height", "marginBlock", "marginBlockStart", "marginBlockEnd", "marginInline", "paddingBlock", "paddingBlockStart", "paddingBlockEnd", "paddingInline", "paddingInlineStart", "paddingInlineEnd", "width"];
   return /*#__PURE__*/external_React_default().createElement("div", {
     className: `tiles-single-select-container`
   }, /*#__PURE__*/external_React_default().createElement("div", null, /*#__PURE__*/external_React_default().createElement("fieldset", {
@@ -2364,7 +2364,7 @@ function _extends() { return _extends = Object.assign ? Object.assign.bind() : f
 
 
 const HEADER_STYLES = ["backgroundColor", "border", "padding", "margin", "width", "height"];
-const ContentTiles_TILE_STYLES = ["marginBlock", "marginInline", "paddingBlock", "paddingInline"];
+const ContentTiles_TILE_STYLES = ["border", "borderRadius", "marginBlock", "marginInline", "paddingBlock", "paddingInline"];
 const CONTAINER_STYLES = ["padding", "margin", "marginBlock", "marginInline", "paddingBlock", "paddingInline", "flexDirection", "flexWrap", "flexFlow", "flexGrow", "flexShrink", "justifyContent", "alignItems", "gap"];
 const ContentTiles = props => {
   const {
@@ -3195,6 +3195,11 @@ class ProtonScreen extends (external_React_default()).PureComponent {
     return !!(content.background && content.background_static || content.hero_image?.url && content.hero_image?.static_url);
   }
   getEffectiveBackground(content) {
+    if (content.position !== "split") {
+      const combinedBackground = content.background && content.zap_border ? `linear-gradient(96deg, #B89CFF 20.68%, #FF9565 79.34%) border-box border-area, image(${content.background}) padding-box` : content.background;
+      const combinedBackgroundStatic = content.background_static && content.zap_border ? `linear-gradient(96deg, #B89CFF 20.68%, #FF9565 79.34%) border-box border-area, image(${content.background_static}) padding-box` : content.background_static;
+      return this.props.animationsPaused && content.background_static ? combinedBackgroundStatic : combinedBackground;
+    }
     return this.props.animationsPaused && content.background_static ? content.background_static : content.background;
   }
   getEffectiveHeroImageUrl(content) {

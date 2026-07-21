@@ -30,6 +30,8 @@ const HEADER_STYLES = [
 ];
 
 const TILE_STYLES = [
+  "border",
+  "borderRadius",
   "marginBlock",
   "marginInline",
   "paddingBlock",
