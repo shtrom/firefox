@@ -10062,24 +10062,17 @@ nsresult nsDocShell::CompleteInitialAboutBlankLoad(
   nsresult rv;
   // Match the DocumentChannel case where the default for third-partiness
   // differs from the default in LoadInfo construction here.
-  // toolkit/components/antitracking/test/browser/browser_aboutblank.js
-  // fails without this.
   BrowsingContext* top = mBrowsingContext->Top();
   if (top == mBrowsingContext) {
-    // If we're at the top, this must be a window.open()ed
-    // window, and we can't be third-party relative to ourselves.
     aLoadInfo->SetIsThirdPartyContextToTopWindow(false);
   } else {
-    if (Document* topDoc = top->GetDocument()) {
-      bool thirdParty = false;
+    bool thirdParty = true;
+    if (Document* topDoc = top->GetExtantDocument();
+        topDoc && aLoadState->PrincipalToInherit()) {
       (void)topDoc->GetPrincipal()->IsThirdPartyPrincipal(
           aLoadState->PrincipalToInherit(), &thirdParty);
-      aLoadInfo->SetIsThirdPartyContextToTopWindow(thirdParty);
-    } else {
-      // If top is in a different process, we have to be third-party relative
-      // to it.
-      aLoadInfo->SetIsThirdPartyContextToTopWindow(true);
     }
+    aLoadInfo->SetIsThirdPartyContextToTopWindow(thirdParty);
   }
 
   if (!mDocumentViewer) {
@@ -11235,9 +11228,11 @@ void nsDocShell::UpdateActiveEntry(
     // Link this entry to the previous active entry.
     mActiveEntry = MakeUnique<SessionHistoryInfo>(*previousActiveEntry, aURI);
   } else {
+    Document* doc = GetDocument();
+    MOZ_ASSERT(doc);
     mActiveEntry = MakeUnique<SessionHistoryInfo>(
-        aURI, aTriggeringPrincipal, nullptr, nullptr, aPolicyContainer,
-        mContentTypeHint);
+        aURI, aTriggeringPrincipal, doc->NodePrincipal(), nullptr,
+        aPolicyContainer, mContentTypeHint);
   }
   mActiveEntry->SetOriginalURI(aOriginalURI);
   mActiveEntry->SetUnstrippedURI(nullptr);
