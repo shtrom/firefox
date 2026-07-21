@@ -854,8 +854,8 @@ ServiceWorkerManager::RegisterForTest(nsIPrincipal* aPrincipal,
   const nsCOMPtr<nsIPrincipal> principal(aPrincipal);
   regPromise->Then(
       GetMainThreadSerialEventTarget(), __func__,
-      [self, outer, principal,
-       scope](const ServiceWorkerRegistrationDescriptor& regDesc) {
+      [self, outer, principal, scope = std::move(scope)](
+          const ServiceWorkerRegistrationDescriptor& regDesc) {
         RefPtr<ServiceWorkerRegistrationInfo> registration =
             self->GetRegistration(principal, NS_ConvertUTF16toUTF8(scope));
         if (registration) {
@@ -2985,8 +2985,8 @@ ServiceWorkerManager::RegisterForAddonPrincipal(nsIPrincipal* aPrincipal,
   const nsCOMPtr<nsIPrincipal> principal(aPrincipal);
   regPromise->Then(
       GetMainThreadSerialEventTarget(), __func__,
-      [self, outer, principal,
-       scope](const ServiceWorkerRegistrationDescriptor& regDesc) {
+      [self, outer, principal, scope = std::move(scope)](
+          const ServiceWorkerRegistrationDescriptor& regDesc) {
         RefPtr<ServiceWorkerRegistrationInfo> registration =
             self->GetRegistration(principal, scope);
         if (registration) {
