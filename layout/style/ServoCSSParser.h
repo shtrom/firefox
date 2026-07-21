@@ -161,17 +161,16 @@ class ServoCSSParser {
    * then compute it as StyleViewTimelineInset.
    * https://drafts.csswg.org/scroll-animations-1/#view-timeline-inset
    *
+   * Only accept absolute lengths and percentages, so we don't need the style
+   * context to compute it.
+   * https://github.com/w3c/csswg-drafts/issues/13852
+   *
    * @param aValue The specified value.
-   * @param aSubject The subject element of the view timeline.
-   * @param aStyle The style of the subject element.
-   * @param aRawData The style data of the document.
    * @param aResult The output view timeline inset. (output)
    * @return Whether the value was successfully parsed.
    */
-  static bool ParseAndComputeViewTimelineInset(
-      const nsACString& aValue, const dom::Element* aSubject,
-      const ComputedStyle* aStyle, const StylePerDocumentStyleData* aRawData,
-      StyleViewTimelineInset& aResult);
+  static bool ParseViewTimelineInset(const nsACString& aValue,
+                                     StyleViewTimelineInset& aResult);
 
   /**
    * Parse a specified transform list into a gfx matrix.

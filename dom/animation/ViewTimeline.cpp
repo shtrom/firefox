@@ -57,33 +57,6 @@ JSObject* ViewTimeline::WrapObject(JSContext* aCx,
   return ViewTimeline_Binding::Wrap(aCx, this, aGivenProto);
 }
 
-static MOZ_CAN_RUN_SCRIPT Maybe<StyleViewTimelineInset>
-ParseAndComputeInsetString(const nsACString& aInsetString, Element* aSubject,
-                           const Document* aDocument) {
-  if (!aSubject) {
-    // Use default.
-    return Some(StyleViewTimelineInset());
-  }
-
-  // We flush and get the computed style to compute the insets. The flush is not
-  // spec'ed but other browsers agree with this now so we follow them.
-  // https://github.com/w3c/csswg-drafts/issues/13852
-  //
-  // Note: ViewTimeline.subject doesn't allow pseudo-element per spec.
-  // Note: |style| could be null. We handle the null case in
-  // Servo_ParseAndComputeViewTimelineInset().
-  RefPtr<const ComputedStyle> style = nsComputedDOMStyle::GetComputedStyle(
-      aSubject, PseudoStyleRequest::NotPseudo());
-  const StylePerDocumentStyleData* rawData =
-      aDocument->EnsureStyleSet().RawData();
-  StyleViewTimelineInset inset;
-  if (!ServoCSSParser::ParseAndComputeViewTimelineInset(
-          aInsetString, aSubject, style, rawData, inset)) {
-    return Nothing();
-  }
-  return Some(std::move(inset));
-}
-
 /* static */
 already_AddRefed<ViewTimeline> ViewTimeline::Constructor(
     const GlobalObject& aGlobal, const ViewTimelineOptions& aOptions,
@@ -120,15 +93,13 @@ already_AddRefed<ViewTimeline> ViewTimeline::Constructor(
   if (aOptions.mInset.IsUTF8String()) {
     // If a DOMString value is provided as an inset, parse it as a
     // <'view-timeline-inset'> value;
-    Maybe<StyleViewTimelineInset> value = ParseAndComputeInsetString(
-        aOptions.mInset.GetAsUTF8String(), subject, doc);
-    if (!value) {
+    if (!ServoCSSParser::ParseViewTimelineInset(
+            aOptions.mInset.GetAsUTF8String(), inset)) {
       // We throw TypeError for the invalid inset, including DOMString, just
       // like the invalid sequence case per spec.
       aRv.ThrowTypeError("Invalid inset string");
       return nullptr;
     }
-    inset = std::move(*value);
   } else {
     if (!StaticPrefs::layout_css_typed_om_enabled()) {
       // CSSKeywordValue and CSSNumericValue are disabled.
@@ -156,6 +127,11 @@ already_AddRefed<ViewTimeline> ViewTimeline::Constructor(
   RefPtr<ViewTimeline> result = MakeAndAddRef<ViewTimeline>(
       doc, scroller, axis, subject, PseudoStyleType::NotPseudo, inset);
   if (subject) {
+    // The values of subject, source, and currentTime are all computed when any
+    // of them is requested or updated, per spec.
+    if (Document* doc = subject->GetComposedDoc()) {
+      doc->FlushPendingNotifications(FlushType::Layout);
+    }
     // Maybe our nearested scroller already exists, try to compute the current
     // time.
     result->UpdateCachedCurrentTime();

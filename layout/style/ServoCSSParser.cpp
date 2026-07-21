@@ -82,12 +82,9 @@ bool ServoCSSParser::ParseEasing(const nsACString& aValue,
 }
 
 /* static */
-bool ServoCSSParser::ParseAndComputeViewTimelineInset(
-    const nsACString& aValue, const Element* aSubject,
-    const ComputedStyle* aStyle, const StylePerDocumentStyleData* aRawData,
-    StyleViewTimelineInset& aResult) {
-  return Servo_ParseAndComputeViewTimelineInset(&aValue, aSubject, aStyle,
-                                                aRawData, &aResult);
+bool ServoCSSParser::ParseViewTimelineInset(const nsACString& aValue,
+                                            StyleViewTimelineInset& aResult) {
+  return Servo_ParseViewTimelineInset(&aValue, &aResult);
 }
 
 /* static */
