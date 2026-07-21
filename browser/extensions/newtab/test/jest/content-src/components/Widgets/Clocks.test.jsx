@@ -57,11 +57,20 @@ function renderClocks(
   dispatch = jest.fn(),
   handleUserInteraction = jest.fn()
 ) {
+  const stateWithSize = {
+    ...state,
+    Prefs: {
+      ...state.Prefs,
+      values: {
+        ...state.Prefs.values,
+        "widgets.clocks.size": size,
+      },
+    },
+  };
   const { container, unmount, rerender } = render(
-    <WrapWithProvider state={state}>
+    <WrapWithProvider state={stateWithSize}>
       <Clocks
         dispatch={dispatch}
-        size={size}
         handleUserInteraction={handleUserInteraction}
       />
     </WrapWithProvider>

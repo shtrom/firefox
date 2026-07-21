@@ -15,6 +15,7 @@ import {
   PREF_CLOCKS_SIZE,
   PREF_WIDGETS_CLOCKS_ENABLED,
   WIDGET_REGISTRY,
+  resolveWidgetSize,
 } from "common/WidgetsRegistry.mjs";
 import { useWidgetTelemetry } from "../useWidgetTelemetry";
 import { AddClockForm } from "./AddClockForm";
@@ -81,9 +82,12 @@ function getClockWidgetDisplayState({ activePanel, hourFormatPref, size }) {
  *
  * @param {object} props
  * @param {Function} props.dispatch
- * @param {"small"|"medium"|"large"} [props.size] Defaults to "medium".
+ * @param {Function} props.handleUserInteraction
  */
-function Clocks({ dispatch, handleUserInteraction, size, widgetEnabledMap }) {
+function Clocks({ dispatch, handleUserInteraction, widgetEnabledMap }) {
+  const size = useSelector(state =>
+    resolveWidgetSize(CLOCKS_WIDGET, state.Prefs.values)
+  );
   const clocksZonesPref = useSelector(
     state => state.Prefs.values[PREF_CLOCKS_ZONES]
   );
