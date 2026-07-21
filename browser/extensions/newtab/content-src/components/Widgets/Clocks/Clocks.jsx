@@ -15,7 +15,6 @@ import {
   PREF_CLOCKS_SIZE,
   PREF_WIDGETS_CLOCKS_ENABLED,
   WIDGET_REGISTRY,
-  resolveWidgetSize,
 } from "common/WidgetsRegistry.mjs";
 import { useWidgetTelemetry } from "../useWidgetTelemetry";
 import { AddClockForm } from "./AddClockForm";
@@ -82,12 +81,9 @@ function getClockWidgetDisplayState({ activePanel, hourFormatPref, size }) {
  *
  * @param {object} props
  * @param {Function} props.dispatch
- * @param {Function} props.handleUserInteraction
+ * @param {"small"|"medium"|"large"} [props.size] Defaults to "medium".
  */
-function Clocks({ dispatch, handleUserInteraction, widgetEnabledMap }) {
-  const size = useSelector(state =>
-    resolveWidgetSize(CLOCKS_WIDGET, state.Prefs.values)
-  );
+function Clocks({ dispatch, size, widgetEnabledMap }) {
   const clocksZonesPref = useSelector(
     state => state.Prefs.values[PREF_CLOCKS_ZONES]
   );
@@ -145,11 +141,6 @@ function Clocks({ dispatch, handleUserInteraction, widgetEnabledMap }) {
     return () => clearTimeout(timeoutId);
   }, []);
 
-  const handleClocksInteraction = useCallback(
-    () => handleUserInteraction("clocks"),
-    [handleUserInteraction]
-  );
-
   const handleChangeSize = useCallback(
     newSize => {
       batch(() => {
@@ -165,10 +156,9 @@ function Clocks({ dispatch, handleUserInteraction, widgetEnabledMap }) {
           size: newSize,
         });
       });
-      handleClocksInteraction();
       closeContextMenu();
     },
-    [dispatch, recordUserAction, handleClocksInteraction, closeContextMenu]
+    [dispatch, recordUserAction, closeContextMenu]
   );
 
   const handleToggleHourFormat = useCallback(() => {
@@ -185,23 +175,15 @@ function Clocks({ dispatch, handleUserInteraction, widgetEnabledMap }) {
         value: nextFormat,
       });
     });
-    handleClocksInteraction();
     closeContextMenu();
-  }, [
-    use12HourFormat,
-    dispatch,
-    recordUserAction,
-    closeContextMenu,
-    handleClocksInteraction,
-  ]);
+  }, [use12HourFormat, dispatch, recordUserAction, closeContextMenu]);
 
   const handleLearnMore = useCallback(() => {
     recordUserAction(USER_ACTION_TYPES.LEARN_MORE, {
       source: CLOCK_WIDGET_SOURCE.CONTEXT_MENU,
     });
-    handleClocksInteraction();
     closeContextMenu();
-  }, [recordUserAction, closeContextMenu, handleClocksInteraction]);
+  }, [recordUserAction, closeContextMenu]);
 
   const clockZones = useMemo(
     () => parseClockZonesPref(clocksZonesPref) || buildDefaultZones(),
@@ -235,9 +217,8 @@ function Clocks({ dispatch, handleUserInteraction, widgetEnabledMap }) {
       setFormSource(source);
       setEditingClockIndex(null);
       setIsDismissed(false);
-      handleClocksInteraction();
     },
-    [handleClocksInteraction]
+    []
   );
 
   const handleShowEditClocks = useCallback(
@@ -246,9 +227,8 @@ function Clocks({ dispatch, handleUserInteraction, widgetEnabledMap }) {
       setPanelOpenSource(source);
       setIsDismissed(false);
       recordUserAction(USER_ACTION_TYPES.EXPAND, { source });
-      handleClocksInteraction();
     },
-    [recordUserAction, handleClocksInteraction]
+    [recordUserAction]
   );
 
   const handleCloseDisplayPanel = useCallback(() => {
@@ -316,7 +296,6 @@ function Clocks({ dispatch, handleUserInteraction, widgetEnabledMap }) {
         resetAddClockForm();
         return;
       }
-      handleClocksInteraction();
       handleCloseDisplayPanel();
     },
     [
@@ -327,7 +306,6 @@ function Clocks({ dispatch, handleUserInteraction, widgetEnabledMap }) {
       resetAddClockForm,
       dispatch,
       recordUserAction,
-      handleClocksInteraction,
     ]
   );
 
@@ -348,9 +326,8 @@ function Clocks({ dispatch, handleUserInteraction, widgetEnabledMap }) {
         );
         recordUserAction(USER_ACTION_TYPES.REMOVE_CLOCK, { source });
       });
-      handleClocksInteraction();
     },
-    [clockZones, dispatch, recordUserAction, handleClocksInteraction]
+    [clockZones, dispatch, recordUserAction]
   );
 
   const isClockFormOpen = activePanel === CLOCKS_PANEL.FORM;
