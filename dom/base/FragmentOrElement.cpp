@@ -2091,11 +2091,8 @@ void FragmentOrElement::SetInnerHTMLInternal(const nsAString& aInnerHTML,
   // https://html.spec.whatwg.org/#create-an-element-for-the-token
   // Step 6: Let registry be the result of looking up a custom element registry
   // given intendedParent.
-  Maybe<RefPtr<CustomElementRegistry>> customElementRegistry;
-  if (StaticPrefs::dom_scoped_custom_element_registries_enabled()) {
-    customElementRegistry.emplace(
-        nsContentUtils::GetCustomElementRegistry(this));
-  }
+  Maybe<RefPtr<CustomElementRegistry>> customElementRegistry =
+      nsContentUtils::GetCustomElementRegistry(this);
 
   if (doc->IsHTMLDocument()) {
     doc->SuspendDOMNotifications();

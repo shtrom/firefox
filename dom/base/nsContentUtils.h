@@ -3264,9 +3264,16 @@ class nsContentUtils {
 
   /*
    * https://html.spec.whatwg.org/#look-up-a-custom-element-registry
+   *
+   * Maybe<RefPtr> maps to the following states:
+   *  - Nothing() - The node has no customised registry, and uses the
+   *  "traditional" global custom element registry, aka `window.customElements`.
+   *  - Maybe<nullptr> - The node has expressed that the custom registry must
+   *  remain null, aka "SetKeepCustomElementRegistryNull".
+   *  - Maybe<CER> - The node is using a defined, scoped registry.
    */
-  static mozilla::dom::CustomElementRegistry* GetCustomElementRegistry(
-      nsINode*);
+  static mozilla::Maybe<RefPtr<mozilla::dom::CustomElementRegistry>>
+  GetCustomElementRegistry(nsINode*);
 
   /**
    * Looking up a custom element definition.

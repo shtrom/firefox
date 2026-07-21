@@ -595,15 +595,15 @@ nsIContent* nsHtml5TreeOperation::CreateHTMLElement(
 
   // 6. Let registry be the result of looking up a custom element registry given
   // intendedParent.
-  // (When intendedParent has no scoped registry of its own (the common case
-  // during fragment parsing), fall back to the fragment context's registry,
-  // which the fragment root carries per the HTML fragment parsing algorithm).
-  Maybe<RefPtr<CustomElementRegistry>> customElementRegistry;
-  if (aIntendedParent && aIntendedParent->HasScopedRegistry()) {
-    if (auto* reg = nsContentUtils::GetCustomElementRegistry(aIntendedParent)) {
-      customElementRegistry.emplace(reg);
-    }
-  }
+  //
+  // (intendedParent may specify its own registry (the common case during
+  // fragment parsing). It might specify a scoped or "null" registry
+  // (Some(nullptr)). Both of these are valid and must be propagated to the
+  // node. In some cases, intendedParent will have an unspecified "global"
+  // registry (Nothing()); in these cases we assume registry from context and
+  // fall back to aContextRegistry).
+  Maybe<RefPtr<CustomElementRegistry>> customElementRegistry =
+      nsContentUtils::GetCustomElementRegistry(aIntendedParent);
   if (customElementRegistry.isNothing()) {
     customElementRegistry = std::move(aContextRegistry);
   }

@@ -12325,28 +12325,48 @@ nsresult nsContentUtils::NewXULOrHTMLElement(
 }
 
 // https://html.spec.whatwg.org/#look-up-a-custom-element-registry
-CustomElementRegistry* nsContentUtils::GetCustomElementRegistry(
+Maybe<RefPtr<CustomElementRegistry>> nsContentUtils::GetCustomElementRegistry(
     nsINode* aNode) {
   if (!aNode || !StaticPrefs::dom_scoped_custom_element_registries_enabled()) {
-    return nullptr;
+    return Nothing();
   }
   // 1. If node is an Element object, then return node's custom element
-  // registry.
-  if (aNode->IsElement()) {
-    return aNode->AsElement()->GetCustomElementRegistry();
-  }
+  //    registry.
   // 2. If node is a ShadowRoot object, then return node's custom element
-  // registry.
-  if (aNode->IsShadowRoot()) {
-    return ShadowRoot::FromNode(aNode)->GetCustomElementRegistry();
-  }
+  //    registry.
   // 3. If node is a Document object, then return node's custom element
-  // registry.
-  if (aNode->IsDocument()) {
-    return aNode->AsDocument()->GetEffectiveGlobalCustomElementRegistry();
+  //    registry.
+  // A node specifies its own registry only when its state is not Global (i.e.
+  // scoped, or explicitly null). A Global-state node inherits the global
+  // registry, which we report as Nothing() so callers can fall back to a
+  // context registry when parsing into the node.
+  CustomElementRegistryState state = CustomElementRegistryState::Global;
+  if (aNode->IsElement()) {
+    state = aNode->AsElement()->GetCustomElementRegistryState();
+  } else if (ShadowRoot* shadowRoot = ShadowRoot::FromNode(aNode)) {
+    state = shadowRoot->GetCustomElementRegistryState();
+  } else if (aNode->IsDocument()) {
+    if (!aNode->AsDocument()->HasScopedCustomElementRegistry()) {
+      // 4. Return null (reported as Nothing(): inherit the global registry).
+      return Nothing();
+    }
+    state = CustomElementRegistryState::Scoped;
+  } else {
+    // 4. Return null.
+    return Nothing();
   }
-  // 4. Return null.
-  return nullptr;
+  if (state == CustomElementRegistryState::Global) {
+    return Nothing();
+  }
+  RefPtr<CustomElementRegistry> registry;
+  if (aNode->IsElement()) {
+    registry = aNode->AsElement()->GetCustomElementRegistry();
+  } else if (ShadowRoot* shadowRoot = ShadowRoot::FromNode(aNode)) {
+    registry = shadowRoot->GetCustomElementRegistry();
+  } else {
+    registry = aNode->AsDocument()->GetCustomElementRegistry();
+  }
+  return Some(std::move(registry));
 }
 
 /* https://html.spec.whatwg.org/#look-up-a-custom-element-definition */

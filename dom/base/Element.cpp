@@ -5585,11 +5585,8 @@ void Element::InsertAdjacentHTML(
   // https://html.spec.whatwg.org/#create-an-element-for-the-token
   // Step 6: Let registry be the result of looking up a custom element registry
   // given intendedParent.
-  Maybe<RefPtr<CustomElementRegistry>> customElementRegistry;
-  if (StaticPrefs::dom_scoped_custom_element_registries_enabled()) {
-    customElementRegistry.emplace(
-        nsContentUtils::GetCustomElementRegistry(destination));
-  }
+  Maybe<RefPtr<CustomElementRegistry>> customElementRegistry =
+      nsContentUtils::GetCustomElementRegistry(destination);
 
   // XXX: Fast path - parse directly into destination if possible, bypassing
   // the fragment creation in steps 4-5.
