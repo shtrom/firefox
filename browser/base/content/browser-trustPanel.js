@@ -684,10 +684,7 @@ class TrustPanel {
   }
 
   async #updateToolbarTrackerCount() {
-    if (
-      !UrlbarPrefs.get("trackerCountFeatureGate") ||
-      !UrlbarPrefs.get("trackerCount.enabled")
-    ) {
+    if (!UrlbarPrefs.get("trackerCountFeatureGate")) {
       return;
     }
     const uri = this.#uri;
