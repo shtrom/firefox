@@ -451,7 +451,8 @@ class ComponentResourceBuiltin {
  public:
   ComponentResourceBuiltin(Kind kind, ComponentType resourceType)
       : kind_(kind), resourceType_(resourceType) {
-    MOZ_ASSERT(resourceType.kind() == ComponentTypeKind::Resource);
+    MOZ_ASSERT(resourceType.kind() == ComponentTypeKind::Resource ||
+               resourceType.kind() == ComponentTypeKind::SubResource);
   }
 
   Kind kind() const { return kind_; }
