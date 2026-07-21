@@ -2619,6 +2619,9 @@ preferences-etp-level-custom =
 preferences-etp-status-advanced-button =
     .label = Advanced settings
 
+preferences-etp-tracker-count-enabled =
+    .label = Show trackers blocked in address bar
+
 preferences-etp-status-protections-dashboard-link =
         .label = View your personalized protections dashboard
         .description = See how many sneaky trackers { -brand-short-name } has blocked for you, including social media trackers, fingerprinters, and cryptominers.

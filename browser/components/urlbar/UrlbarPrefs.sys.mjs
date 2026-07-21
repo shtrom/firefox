@@ -643,6 +643,9 @@ const PREF_URLBAR_DEFAULTS = /** @type {PreferenceDefinition[]} */ ([
   // The number of times the user has been shown the redirect search tip.
   ["tipShownCount.searchTip_redirect", 0],
 
+  // Whether to show the tracker count pill in the urlbar.
+  ["trackerCount.enabled", true],
+
   // Whether we've ever shown the pill in the address bar with the number of trackers (used to trigger a Feature Callout).
   ["trackerCountShown", false],
 
