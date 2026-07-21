@@ -668,11 +668,6 @@
   flex: 1;
 }
 
-/* user context box */
-.urlbarView-userContext {
-  border-top: 4px solid var(--identity-stroke-color);
-}
-
 .urlbarView-userContext-icon {
   height: 14px;
   width: 14px;
@@ -813,10 +808,6 @@
 
     :root[uidensity="compact"] & {
       padding-block: 3px;
-
-      &.urlbarView-userContext {
-        border-block-start-width: 3px;
-      }
     }
 
     &.urlbarView-tabGroup {
@@ -838,6 +829,27 @@
 
       &:-moz-locale-dir(rtl) {
         background-position-x: right var(--space-medium);
+      }
+    }
+
+    /* The container indicator is shown as the container icon on a background
+       tinted with the container color, rather than a bordered chiclet. */
+    &.action-contextualidentity {
+      border: none;
+      border-radius: var(--border-radius-circle);
+      background-color: var(--identity-fill-tint);
+      padding: 4px;
+
+      .urlbarView-userContext-textMode {
+        display: none;
+      }
+
+      .urlbarView-userContext-iconMode {
+        display: inline-flex;
+      }
+
+      .urlbarView-userContext-icon {
+        fill: var(--identity-fill-color);
       }
     }
 
@@ -1226,10 +1238,6 @@
   &[selected],
   &:hover:active {
     outline: var(--focus-outline);
-  }
-
-  &.urlbarView-userContext {
-    border-top-color: var(--identity-stroke-color);
   }
 
   .urlbarView[action-override] &[data-action="tabswitch"] {
