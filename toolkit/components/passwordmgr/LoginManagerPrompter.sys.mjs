@@ -621,6 +621,7 @@ export class LoginManagerPrompter {
         timeout: Date.now() + timeoutMs,
         autofocus: true,
         persistWhileVisible: true,
+        lowerPanelLevel: true,
         passwordNotificationType: type,
         hideClose: true,
         eventCallback(topic) {

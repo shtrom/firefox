@@ -515,6 +515,11 @@ PopupNotifications.prototype = {
    *        persistWhileVisible:
    *                     A boolean. If true, a visible notification will always
    *                     persist across location changes.
+   *        lowerPanelLevel:
+   *                     A boolean. If true, the panel's popup level is lowered
+   *                     to "parent" so a popup hosted inside the notification
+   *                     (such as an autocomplete dropdown) can stack above the
+   *                     panel instead of behind it.
    *        persistent:  A boolean. If true, the notification will always
    *                     persist even across tab and app changes (but not across
    *                     location changes), until the user accepts or rejects
@@ -1293,6 +1298,23 @@ PopupNotifications.prototype = {
     });
   },
 
+  /**
+   * Lowers the panel's popup level to "parent" when a notification hosts its
+   * own popup (e.g. the autocomplete dropdown in the password doorhanger), so
+   * that popup can stack above the panel. The level is only read when the
+   * popup widget is created, so changing the attribute recreates the widget.
+   *
+   * @param {Array} notificationsToShow
+   *        The notifications about to be shown in the panel.
+   */
+  _updatePanelLevel(notificationsToShow) {
+    if (notificationsToShow.some(n => n.options.lowerPanelLevel)) {
+      this.panel.setAttribute("level", "parent");
+    } else {
+      this.panel.removeAttribute("level");
+    }
+  },
+
   _showPanel: function PopupNotifications_showPanel(
     notificationsToShow,
     anchorElement
@@ -1353,6 +1375,8 @@ PopupNotifications.prototype = {
         this.panel.removeAttribute("noautohide");
       }
 
+      this._updatePanelLevel(notificationsToShow);
+
       // Let tests know that the panel was updated and what notifications it was
       // updated with so that tests can wait for the correct notifications to be
       // added.
@@ -1385,6 +1409,8 @@ PopupNotifications.prototype = {
       } else {
         this.panel.setAttribute("noautofocus", "true");
       }
+
+      this._updatePanelLevel(notificationsToShow);
 
       notificationsToShow.forEach(function (n) {
         // Record that the notification was actually displayed on screen.

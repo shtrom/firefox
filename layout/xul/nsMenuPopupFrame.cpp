@@ -2144,10 +2144,13 @@ nsresult nsMenuPopupFrame::AttributeChanged(int32_t aNameSpaceID,
     MoveToAttributePosition();
   }
 
-  if (aAttribute == nsGkAtoms::remote && GetWidget()) {
-    // When the remote attribute changes, we need to create a new widget to
-    // ensure that it has the correct compositor and transparency settings to
-    // match the new value. Do that only if we already have a widget.
+  if ((aAttribute == nsGkAtoms::remote || aAttribute == nsGkAtoms::level) &&
+      GetWidget() && !IsOpen()) {
+    // The remote and level attributes are only read when the widget is created,
+    // so recreate the widget to apply a changed value. The remote attribute
+    // affects the compositor and transparency settings, and the level attribute
+    // affects the popup's z-order. Only do this while the popup is closed to
+    // avoid tearing it down mid-display.
     // TODO(emilio): We should consider doing it only when we get re-shown or
     // so.
     PrepareWidget(true);
