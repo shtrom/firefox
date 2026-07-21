@@ -766,6 +766,28 @@ let JSWINDOWACTORS = {
     remoteTypes: ["privilegedabout"],
   },
 
+  ThemePicker: {
+    parent: {
+      esModuleURI: "resource:///actors/ThemePickerParent.sys.mjs",
+    },
+    child: {
+      esModuleURI: "resource:///actors/ThemePickerChild.sys.mjs",
+      events: {
+        ThemePickerGetInitialState: { wantUntrusted: true },
+        ThemePickerUpdateTheme: { wantUntrusted: true },
+        ThemePickerUpdateAppearance: { wantUntrusted: true },
+        ThemePickerUpdateNativeTheme: { wantUntrusted: true },
+      },
+    },
+    matches: [
+      "about:editprofile",
+      "about:newprofile",
+      "about:newtab",
+      "about:welcome",
+    ],
+    remoteTypes: ["privilegedabout"],
+  },
+
   Prompt: {
     parent: {
       esModuleURI: "resource:///actors/PromptParent.sys.mjs",
