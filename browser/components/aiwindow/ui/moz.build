@@ -14,6 +14,8 @@ MOZ_SRC_FILES += [
     "actors/AIChatContentParent.sys.mjs",
     "actors/AISmartBarChild.sys.mjs",
     "actors/AISmartBarParent.sys.mjs",
+    "actors/SmartWindowTasksChild.sys.mjs",
+    "actors/SmartWindowTasksParent.sys.mjs",
     "modules/AgentUI.sys.mjs",
     "modules/AIWindow.sys.mjs",
     "modules/AIWindowAccountAuth.sys.mjs",

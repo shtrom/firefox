@@ -17,7 +17,14 @@
       rel="stylesheet"
       href="chrome://browser/content/aiwindow/ai-window-shared.css"
     />
+    <link rel="localization" href="toolkit/branding/brandings.ftl" />
     <script src="chrome://browser/content/contentTheme.js"></script>
+    <script
+      type="module"
+      src="chrome://browser/content/aiwindow/components/ai-tasks.mjs"
+    ></script>
   </head>
-  <body></body>
+  <body>
+    <ai-tasks></ai-tasks>
+  </body>
 </html>
