@@ -936,6 +936,7 @@ BounceTrackingProtection::PurgeBounceTrackers() {
           const GenericNonExclusivePromise::ResolveOrRejectValue& aResult) {
         if (aResult.IsReject()) {
           nsresult rv = aResult.RejectValue();
+          self->mPurgeInProgress = false;
           resultPromise->Reject(rv, __func__);
           return;
         }
@@ -965,6 +966,7 @@ BounceTrackingProtection::PurgeBounceTrackers() {
           nsresult rv = self->PurgeBounceTrackersForStateGlobal(
               stateGlobal, bounceTrackingAllowList, clearPromises);
           if (NS_WARN_IF(NS_FAILED(rv))) {
+            self->mPurgeInProgress = false;
             resultPromise->Reject(rv, __func__);
             return;
           }
