@@ -286,13 +286,9 @@ void ThreadRegistrationLockedRWOnThread::ClearCycleCollectedJSContext() {
              !!mJsFrameBuffer);
 }
 
-ThreadRegistrationLockedRWOnThread::JSSamplingChange
-ThreadRegistrationLockedRWOnThread::TakeJSSamplingChange() {
-  JSSamplingChange change;
+void ThreadRegistrationLockedRWOnThread::PollJSSampling() {
   // We can't start/stop profiling until we have the thread's JSContext.
   if (mCCJSContext) {
-    change.mContext = mCCJSContext->Context();
-    change.mAllocationsEnabled = JSAllocationsEnabled();
     // It is possible for mJSSampling to go through the following sequences.
     //
     // - INACTIVE, ACTIVE_REQUESTED, INACTIVE_REQUESTED, INACTIVE
@@ -302,43 +298,29 @@ ThreadRegistrationLockedRWOnThread::TakeJSSamplingChange() {
     // Therefore, the if and else branches here aren't always interleaved.
     // This is ok because the JS engine can handle that.
     //
+    JSContext* cx = mCCJSContext->Context();
     if (mJSSampling == ACTIVE_REQUESTED) {
       mJSSampling = ACTIVE;
-      change.mAction = JSSamplingChange::Action::Start;
+      js::EnableContextProfilingStack(cx, true);
+
+      if (JSAllocationsEnabled()) {
+        // TODO - This probability should not be hardcoded. See Bug 1547284.
+        JS::EnableRecordingAllocations(cx, profiler_add_js_allocation_marker,
+                                       0.01);
+      }
+      js::RegisterContextProfilerMarkers(
+          cx, profiler_add_js_marker, profiler_add_js_interval,
+          profiler_add_js_flow, profiler_add_js_terminating_flow);
+
     } else if (mJSSampling == INACTIVE_REQUESTED) {
       mJSSampling = INACTIVE;
-      change.mAction = JSSamplingChange::Action::Stop;
+      js::EnableContextProfilingStack(cx, false);
+
+      if (JSAllocationsEnabled()) {
+        JS::DisableRecordingAllocations(cx);
+      }
     }
   }
-  return change;
-}
-
-/* static */ void ThreadRegistrationLockedRWOnThread::ApplyJSSamplingChange(
-    const JSSamplingChange& aChange) {
-  JSContext* cx = aChange.mContext;
-  if (aChange.mAction == JSSamplingChange::Action::Start) {
-    js::EnableContextProfilingStack(cx, true);
-
-    if (aChange.mAllocationsEnabled) {
-      // TODO - This probability should not be hardcoded. See Bug 1547284.
-      JS::EnableRecordingAllocations(cx, profiler_add_js_allocation_marker,
-                                     0.01);
-    }
-    js::RegisterContextProfilerMarkers(
-        cx, profiler_add_js_marker, profiler_add_js_interval,
-        profiler_add_js_flow, profiler_add_js_terminating_flow);
-
-  } else if (aChange.mAction == JSSamplingChange::Action::Stop) {
-    js::EnableContextProfilingStack(cx, false);
-
-    if (aChange.mAllocationsEnabled) {
-      JS::DisableRecordingAllocations(cx);
-    }
-  }
-}
-
-void ThreadRegistrationLockedRWOnThread::PollJSSampling() {
-  ApplyJSSamplingChange(TakeJSSamplingChange());
 }
 
 #ifdef NIGHTLY_BUILD

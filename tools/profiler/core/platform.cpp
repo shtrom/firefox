@@ -6120,23 +6120,17 @@ void profiler_init_signal_handlers() {
 #endif
 
 static void PollJSSamplingForCurrentThread() {
-  // Don't call into the JS engine with a profiler lock held as this can
-  // deadlock: the js::Enable* calls can block waiting on the JS helper threads,
-  // which in turn need the profiler locks. Besides the global profiler mutex
-  // asserted below, that includes the thread's own data lock -- so take that
-  // lock only to flip the sampling state (TakeJSSamplingChange), then apply the
-  // JS-engine change (ApplyJSSamplingChange) with no lock held.
+  // Don't call into the JS engine with the global profiler mutex held as this
+  // can deadlock.
   MOZ_ASSERT(!PSAutoLock::IsLockedOnCurrentThread());
 
-  ThreadRegistration::LockedRWOnThread::JSSamplingChange change;
   ThreadRegistration::WithOnThreadRef(
-      [&change](ThreadRegistration::OnThreadRef aOnThreadRef) {
+      [](ThreadRegistration::OnThreadRef aOnThreadRef) {
         aOnThreadRef.WithLockedRWOnThread(
-            [&change](ThreadRegistration::LockedRWOnThread& aThreadData) {
-              change = aThreadData.TakeJSSamplingChange();
+            [](ThreadRegistration::LockedRWOnThread& aThreadData) {
+              aThreadData.PollJSSampling();
             });
       });
-  ThreadRegistration::LockedRWOnThread::ApplyJSSamplingChange(change);
 }
 
 void profiler_init(void* aStackTop) {
