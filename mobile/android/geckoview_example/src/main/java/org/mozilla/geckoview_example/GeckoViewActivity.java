@@ -1431,6 +1431,8 @@ public class GeckoViewActivity extends AppCompatActivity
       translateSetEnabled(true);
     } else if (id == R.id.webcompat_info) {
       webCompatInfo(session);
+    } else if (id == R.id.take_screenshot) {
+      takeScreenshot();
     } else {
       return super.onOptionsItemSelected(item);
     }
@@ -1510,6 +1512,39 @@ public class GeckoViewActivity extends AppCompatActivity
     setGeckoViewSession(newSession);
     mToolbarView.updateTabCount();
     ProfilerController.addMarker("Create new tab", startTime);
+  }
+
+  private void takeScreenshot() {
+    mGeckoView.capturePixels().map(bitmap -> {
+      ContentResolver resolver = getContentResolver();
+
+      ContentValues contentValues = new ContentValues();
+      contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, "screenshot.jpg");
+      contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "image/png");
+      contentValues.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES);
+      contentValues.put(MediaStore.MediaColumns.IS_PENDING, 1);
+
+      Uri screenshotUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues);
+
+      if (screenshotUri != null) {
+        try (OutputStream out = resolver.openOutputStream(screenshotUri)) {
+          bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
+        } catch (Throwable e) {
+          Log.e(LOGTAG, "Error saving screenshot: " + e.getMessage());
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            resolver.delete(screenshotUri, null);
+          }
+        }
+      } else {
+        Log.e(LOGTAG, "Error saving screenshot: the screenshotUri is null");
+      }
+      contentValues.clear();
+      contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0);
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        resolver.update(screenshotUri, contentValues, null);
+      }
+      return null;
+    });
   }
 
   @SuppressLint("WrongThread")
