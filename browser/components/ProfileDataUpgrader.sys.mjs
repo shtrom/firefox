@@ -1055,6 +1055,11 @@ export let ProfileDataUpgrader = {
       Services.prefs.setStringPref("sidebar.visibility", "hide-on-close");
     }
 
+    if (existingDataVersion < 178) {
+      // The settings redesign promo has been removed.
+      Services.prefs.clearUserPref("browser.settings-redesign.promo.dismissed");
+    }
+
     // Update the migration version.
     Services.prefs.setIntPref("browser.migration.version", newVersion);
   },
