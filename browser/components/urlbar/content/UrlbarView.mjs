@@ -1646,16 +1646,27 @@ export class UrlbarView {
     let lastVisited = item._elements.get("explanationLastVisited");
     let hasLastVisit = setURL && !!result.payload.lastVisit;
     if (hasLastVisit) {
-      let { isRelative, formattedDate } = lazy.UrlbarUtils.formatDate(
+      let { formattedDate, dateFormatType } = lazy.UrlbarUtils.formatDate(
         new Date(result.payload.lastVisit)
       );
-      this.document.l10n.setAttributes(
-        lastVisited,
-        isRelative
-          ? "urlbar-result-explanation-last-visited-relative-2"
-          : "urlbar-result-explanation-last-visited-absolute-2",
-        { date: formattedDate }
-      );
+      let l10nId;
+      switch (dateFormatType) {
+        case lazy.UrlbarUtils.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW:
+          l10nId = "urlbar-result-explanation-last-visited-relative-2";
+          break;
+        case lazy.UrlbarUtils.DATE_FORMAT_TYPE.DAYS_WEEKS_MONTHS_AGO:
+          l10nId =
+            "urlbar-result-explanation-last-visited-days-weeks-months-ago";
+          break;
+        case lazy.UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE:
+          l10nId = "urlbar-result-explanation-last-visited-absolute-2";
+          break;
+        default:
+          throw new Error("Unhandled date format type: " + dateFormatType);
+      }
+      this.document.l10n.setAttributes(lastVisited, l10nId, {
+        date: formattedDate,
+      });
     } else {
       this.#l10nCache.removeElementL10n(lastVisited);
     }

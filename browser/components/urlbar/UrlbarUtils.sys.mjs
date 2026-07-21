@@ -2047,6 +2047,10 @@ export var UrlbarUtils = {
    * @param {boolean} [options.forceAbsoluteDate]
    *   Pass true to force the formatted date to be absolute ("May 11") when it
    *   otherwise would be formatted as relative ("tomorrow").
+   * @param {boolean} [options.forceMonthAndDayWhenAbsolute]
+   *   When the date format is absolute, normally the formatted date will simply
+   *   be the weekday name when the date is in the near future, e.g., "Mon"
+   *   instead of "May 11". Pass true to format it as a month and day instead.
    * @param {boolean} [options.capitalizeRelativeDate]
    *   Whether relative dates should be capitalized ("Tomorrow" instead of
    *   "tomorrow").
@@ -2062,9 +2066,13 @@ export var UrlbarUtils = {
    * @property {?string} formattedTime
    *   The formatted time. Depending on the passed-in date, a formatted time
    *   might not be generated, and in that case this will be undefined.
+   * @property {string} dateFormatType
+   *   The type of the formatted date. See `DATE_FORMAT_TYPE` values.
    * @property {boolean} isRelative
-   *   Whether the formatted date is relative ("tomorrow") rather than absolute
-   *   ("May 11").
+   *   Whether the formatted date is relative rather than absolute. Relative
+   *   date examples: "tomorrow", "5 days ago", "1 week ago", "2 months ago".
+   *   Absolute date examples: "Mon" (this coming Monday), "May 11" (this year),
+   *   "May 11, 2013"
    * @property {ParseDateResult} parseDateResult
    *   This function calls `parseDate()` as part of its operation, and the
    *   result is included here in case it's useful.
@@ -2073,33 +2081,59 @@ export var UrlbarUtils = {
     date,
     {
       forceAbsoluteDate = false,
+      forceMonthAndDayWhenAbsolute = false,
       capitalizeRelativeDate = false,
       includeTimeZone = false,
     } = {}
   ) {
     let parseDateResult = this.parseDate(date);
-    let { zonedNow, zonedDate, daysUntil, isFuture } = parseDateResult;
+    let { zonedNow, zonedDate, daysAgo, weeksAgo, monthsAgo, isFuture } =
+      parseDateResult;
 
     // First, format the date.
     let formattedDate;
-    let isRelative = false;
-    if (Math.abs(daysUntil) <= 1) {
-      // The date is recent. Format it as relative, e.g.: "today", "tomorrow"
-      isRelative = true;
-      formattedDate = new Intl.RelativeTimeFormat(undefined, {
-        numeric: "auto",
-      }).format(daysUntil, "day");
-      if (capitalizeRelativeDate) {
+    let dateFormatType;
+    let isRelative = true;
+    if (!forceAbsoluteDate) {
+      if (Math.abs(daysAgo) <= 1) {
+        // "yesterday", "today", or "tomorrow"
+        dateFormatType = this.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW;
+        formattedDate = new Intl.RelativeTimeFormat(undefined, {
+          numeric: "auto",
+        }).format(-daysAgo, "day");
+      } else if (0 < daysAgo && daysAgo <= 6) {
+        // <= 6 days ago: "{n} days ago"
+        dateFormatType = this.DATE_FORMAT_TYPE.DAYS_WEEKS_MONTHS_AGO;
+        formattedDate = new Intl.RelativeTimeFormat(undefined, {
+          numeric: "always",
+        }).format(-daysAgo, "day");
+      } else if (0 < weeksAgo && (weeksAgo <= 4 || monthsAgo == 0)) {
+        // <= 4 weeks ago or same month: "{n} weeks ago"
+        dateFormatType = this.DATE_FORMAT_TYPE.DAYS_WEEKS_MONTHS_AGO;
+        formattedDate = new Intl.RelativeTimeFormat(undefined, {
+          numeric: "always",
+        }).format(-weeksAgo, "week");
+      } else if (0 < monthsAgo && monthsAgo <= 11) {
+        // <= 11 months ago: "{n} months ago"
+        dateFormatType = this.DATE_FORMAT_TYPE.DAYS_WEEKS_MONTHS_AGO;
+        formattedDate = new Intl.RelativeTimeFormat(undefined, {
+          numeric: "always",
+        }).format(-monthsAgo, "month");
+      }
+
+      if (capitalizeRelativeDate && formattedDate) {
         formattedDate =
           formattedDate[0].toLocaleUpperCase() + formattedDate.substring(1);
       }
-    } else {
-      // The date is not recent. Format it with some combination of year, month,
-      // day, and weekday, e.g.: "May 11", "May 11, 2026", "Mon"
+    }
+
+    if (!formattedDate) {
+      // Format the date as an absolute date with some combination of year,
+      // month, day, and weekday, e.g.: "May 11", "May 11, 2026", "Mon"
       let opts = {
         timeZone: zonedNow.timeZoneId,
       };
-      if (!forceAbsoluteDate && 0 < daysUntil && daysUntil < 7) {
+      if (!forceMonthAndDayWhenAbsolute && 0 < -daysAgo && -daysAgo < 7) {
         // Include only the weekday.
         opts.weekday = "short";
       } else {
@@ -2111,6 +2145,8 @@ export var UrlbarUtils = {
         }
       }
       formattedDate = new Intl.DateTimeFormat(undefined, opts).format(date);
+      dateFormatType = this.DATE_FORMAT_TYPE.ABSOLUTE;
+      isRelative = false;
     }
 
     // Now format the time.
@@ -2126,14 +2162,28 @@ export var UrlbarUtils = {
 
     return {
       isRelative,
+      dateFormatType,
       formattedDate,
       formattedTime,
       parseDateResult,
     };
   },
 
+  // Date format types returned by `formatDate()`.
+  DATE_FORMAT_TYPE: Object.freeze({
+    // "yesterday", "today", or "tomorrow"
+    YESTERDAY_TODAY_TOMORROW: "yesterday_today_tomorrow",
+    // "{n} days ago", "{n} weeks ago", or "{n} months ago"
+    DAYS_WEEKS_MONTHS_AGO: "days_weeks_months_ago",
+    // "Mon" (this coming Monday), "May 11" (this year), or "May 11, 2013"
+    ABSOLUTE: "absolute",
+  }),
+
   /**
-   * Parses a `Date` and returns some info about it.
+   * Parses a `Date` and returns some info about it relative to today.
+   *
+   * For the "ago" values, a value will be positive if the date is in the past
+   * and negative if the date is in the future.
    *
    * @param {Date} date
    *   A JS `Date` object.
@@ -2147,10 +2197,18 @@ export var UrlbarUtils = {
    *   The passed-in date as a `ZonedDateTime`.
    * @property {boolean} isFuture
    *   Whether the date is in the future.
-   * @property {number} daysUntil
-   *   The number of calendar days from today to the date. If the date is in the
-   *   future, this number will be positive. If the date is in the past, it will
-   *   be negative. If the date is today, it will be zero.
+   * @property {number} daysAgo
+   *   The number of calendar days from the date to today. If the date is also
+   *   today, this value will be zero.
+   * @property {number} weeksAgo
+   *   The number of calendar weeks from the date to today. If the date is in
+   *   the same calendar week as today, this value will be zero. If the date is
+   *   in the previous calendar week, this value will be 1, and so on. The start
+   *   of the calendar week is determined by `UrlbarUtils._firstDayOfWeek()`.
+   * @property {number} monthsAgo
+   *   The number of calendar months from the date to today. If the date is in
+   *   the same calendar month as today, this value will be zero. If the date is
+   *   in the previous calendar month, this value will be 1, and so on.
    */
   parseDate(date) {
     let zonedNow = this._zonedDateTimeISO();
@@ -2160,22 +2218,58 @@ export var UrlbarUtils = {
     let today = zonedNow.startOfDay();
     let dateDay = zonedDate.startOfDay();
 
-    let duration = today.until(dateDay).round("days");
-    let daysUntil = duration.days;
+    let daysAgo = today.since(dateDay).round("days").days;
+    let firstDayOfWeek = this._firstDayOfWeek();
+    let thisWeek = today.subtract({
+      days: (today.dayOfWeek - firstDayOfWeek + 7) % 7,
+    });
+    let dateWeek = dateDay.subtract({
+      days: (dateDay.dayOfWeek - firstDayOfWeek + 7) % 7,
+    });
+    let weeksAgo = thisWeek.since(dateWeek).round({
+      smallestUnit: "weeks",
+      relativeTo: thisWeek,
+    }).weeks;
+
+    let thisMonth = today.with({ day: 1 });
+    let dateMonth = dateDay.with({ day: 1 });
+    let monthsAgo = thisMonth.since(dateMonth).round({
+      smallestUnit: "months",
+      relativeTo: thisMonth,
+    }).months;
 
     return {
       zonedNow,
       zonedDate,
       isFuture,
-      daysUntil,
+      daysAgo,
+      weeksAgo,
+      monthsAgo,
     };
   },
 
   // Thin wrapper around `zonedDateTimeISO` so that tests can easily set a mock
-  // "now" date and time. Use `UrlbarTestUtils.stubNowZonedDateTime()` to stub a
-  // "now".
+  // "now" date and time. See `UrlbarTestUtils.stubNowZonedDateTime()`.
   _zonedDateTimeISO() {
     return Temporal.Now.zonedDateTimeISO();
+  },
+
+  // Thin wrapper around `getWeekInfo` so that tests can easily set a mock first
+  // day of the week. See `UrlbarTestUtils.stubFirstDayOfWeek()`.
+  _firstDayOfWeek() {
+    // Getting locale info can be expensive, so cache this value. We don't re-
+    // cache it on locale change. That should be OK because we use it only to
+    // generate "{n} weeks ago" UI strings, which aren't very precise anyway.
+    if (this.__firstDayOfWeek === undefined) {
+      this.__firstDayOfWeek = new Intl.Locale(
+        Services.locale.appLocaleAsBCP47
+      ).getWeekInfo().firstDay;
+
+      // Make sure we always have a valid value in case the locale doesn't
+      // define one for whatever reason. 7 = Sunday.
+      this.__firstDayOfWeek ??= 7;
+    }
+    return this.__firstDayOfWeek;
   },
 };
 

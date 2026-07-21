@@ -113,13 +113,15 @@ add_task(async function selection() {
   await UrlbarTestUtils.promisePopupClose(window);
 });
 
-// Tests all "last visited" l10n explanation strings, which depend on the visit
-// date and current date.
 add_task(async function lastVisited() {
   await doTest([
     {
       url: URL_VISITED,
-      formattedDate: { isRelative: false, formattedDate: "May 11, 2013" },
+      formattedDate: {
+        isRelative: false,
+        dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+        formattedDate: "May 11, 2013",
+      },
       expected: {
         lastVisited: {
           id: "urlbar-result-explanation-last-visited-absolute-2",
@@ -127,9 +129,29 @@ add_task(async function lastVisited() {
         },
       },
     },
+
     {
       url: URL_VISITED,
-      formattedDate: { isRelative: true, formattedDate: "Today" },
+      formattedDate: {
+        isRelative: true,
+        dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.DAYS_WEEKS_MONTHS_AGO,
+        formattedDate: "11 months ago",
+      },
+      expected: {
+        lastVisited: {
+          id: "urlbar-result-explanation-last-visited-days-weeks-months-ago",
+          args: { date: "11 months ago" },
+        },
+      },
+    },
+
+    {
+      url: URL_VISITED,
+      formattedDate: {
+        isRelative: true,
+        dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW,
+        formattedDate: "Today",
+      },
       expected: {
         lastVisited: {
           id: "urlbar-result-explanation-last-visited-relative-2",
@@ -144,7 +166,11 @@ add_task(async function bookmark() {
   await doTest([
     {
       url: URL_BOOKMARKED,
-      formattedDate: { isRelative: false, formattedDate: "May 11, 2013" },
+      formattedDate: {
+        isRelative: false,
+        dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+        formattedDate: "May 11, 2013",
+      },
       expected: {
         bookmarked: {
           id: "urlbar-result-explanation-bookmarked",
@@ -159,7 +185,11 @@ add_task(async function visitedAndBookmarked() {
   await doTest([
     {
       url: URL_BOOKMARKED_AND_VISITED,
-      formattedDate: { isRelative: false, formattedDate: "May 11, 2013" },
+      formattedDate: {
+        isRelative: false,
+        dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+        formattedDate: "May 11, 2013",
+      },
       expected: {
         lastVisited: {
           id: "urlbar-result-explanation-last-visited-absolute-2",
