@@ -1450,6 +1450,10 @@ class UrlbarInputTestUtils {
       },
       options
     );
+    // The child controller arms the event bufferer when a query starts; a real
+    // input always has one, so give the mock's input a no-op stand-in. Set here
+    // after the merge, since a caller-supplied `input` replaces the default one.
+    parentOptions.input.eventBufferer = { queryStarting() {} };
     // The parent controller resolves the browser window from its actor (for the
     // SAP window facts telemetry reads). Mock a minimal one representing a
     // non-blank, non-extension page, exposed on the stubbed actor.

@@ -217,8 +217,22 @@ export class UrlbarChildController {
   trackBounceBrowser(browserId) {
     return this.#parent.trackBounceBrowser(browserId);
   }
+  /**
+   * Starts a query and returns the parent controller's promise so callers (the
+   * input's `lastQueryContextPromise`, which tests await) can track completion.
+   *
+   * @param {UrlbarQueryContext} queryContext
+   * @returns {Promise<UrlbarQueryContext>} Resolves with the finished context.
+   */
   startQuery(queryContext) {
-    return this.#parent.startQuery(queryContext);
+    let queryContextPromise = this.#parent.startQuery(queryContext);
+    // Arm the event bufferer as the query starts so a just-typed Enter is
+    // deferred until results arrive; it can't wait for the QUERY_STARTED
+    // notification, which arrives a round-trip late over the message path, after
+    // the key event. Arm after dispatching so the parent's synchronous teardown
+    // of the previous query (in-process) can't clobber the freshly-armed state.
+    this.#input.eventBufferer.queryStarting(queryContext);
+    return queryContextPromise;
   }
   cancelQuery() {
     return this.#parent.cancelQuery();
