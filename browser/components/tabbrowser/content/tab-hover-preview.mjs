@@ -52,6 +52,12 @@ export default class TabHoverPanelSet {
       "ui.popup.disable_autohide",
       false
     );
+    XPCOMUtils.defineLazyPreferenceGetter(
+      this,
+      "_novaEnabled",
+      "browser.nova.enabled",
+      false
+    );
 
     this.#win = win;
     this.#deactivateTimers = new WeakMap();
@@ -839,24 +845,29 @@ class TabGroupPanel extends HoverPanel {
   }
 
   get popupOptions() {
-    if (!this.win.gBrowser.tabContainer.verticalMode) {
+    // With Nova enabled, offset the panel by the border-radius (16px).
+
+    const nova = this.panelSet._novaEnabled;
+
+    if (this.win.gBrowser.tabContainer.verticalMode) {
       return {
-        position: "bottomleft topleft",
+        position: this.win.SidebarController._positionStart
+          ? "topright topleft"
+          : "topleft topright",
         x: 0,
-        y: 0,
+        y: nova ? -16 : -5,
       };
     }
-    if (!this.win.SidebarController._positionStart) {
-      return {
-        position: "topleft topright",
-        x: 0,
-        y: -5,
-      };
+
+    if (!nova) {
+      return { position: "bottomleft topleft", x: 0, y: 0 };
     }
+
+    const rtl = this.win.RTL_UI;
     return {
-      position: "topright topleft",
-      x: 0,
-      y: -5,
+      position: rtl ? "bottomright topright" : "bottomleft topleft",
+      x: rtl ? 16 : -16,
+      y: 0,
     };
   }
 
