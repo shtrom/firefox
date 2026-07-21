@@ -2,6 +2,7 @@
 
 
 - Transformers.js 
+- Wllama
 - openai client
 
 See each directory to build back the dependencies. 

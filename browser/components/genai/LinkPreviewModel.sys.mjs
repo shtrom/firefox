@@ -427,7 +427,7 @@ export const LinkPreviewModel = {
           numBatch: numContext,
           numContext,
           numUbatch: numContext,
-          taskName: "llama-text-generation",
+          taskName: "wllama-text-generation",
           timeoutMS: -1,
           useMlock: false,
           useMmap: false,

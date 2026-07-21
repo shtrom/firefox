@@ -65,7 +65,7 @@ const TASKS = [
   "depth-estimation",
   "feature-extraction",
   "image-feature-extraction",
-  "llama-text-generation",
+  "wllama-text-generation",
   "moz-text-to-goal",
 ];
 
@@ -368,7 +368,7 @@ const INFERENCE_PAD_PRESETS = {
     runOptions: {
       nPredict: 100,
     },
-    task: "llama-text-generation",
+    task: "wllama-text-generation",
     modelId:
       "HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/smollm2-360m-instruct-q8_0.gguf",
     modelRevision: "main",
@@ -836,9 +836,9 @@ async function runInference() {
     return;
   }
 
-  const isLlama = taskName == "llama-text-generation";
+  const isWllama = taskName.includes("wllama");
 
-  if (isLlama) {
+  if (isWllama) {
     const lastSlashIndex = modelId.lastIndexOf("/");
 
     const modelFile = modelId.substring(lastSlashIndex + 1);
@@ -849,7 +849,7 @@ async function runInference() {
     additionalEngineOptions = {
       modelFile,
       modelId,
-      backend: "llama.cpp",
+      backend: "wllama",
       numContext,
       numBatch,
       numUbatch: numBatch,
@@ -913,7 +913,7 @@ async function runInference() {
 
   let request = { args: inputData.inputArgs, options: inputData.runOptions };
 
-  if (isLlama) {
+  if (isWllama) {
     request = { prompt: inputData.inputArgs, ...inputData.runOptions };
   }
 
@@ -1229,13 +1229,13 @@ async function runBenchmark() {
     },
     {
       name: "link-preview",
-      compatibleBackends: [lazy.BACKENDS.llamaCpp],
+      compatibleBackends: [lazy.BACKENDS.wllama],
       inputArgs: `Summarize this: ${TINY_ARTICLE}`,
       runOptions: {
         nPredict: 100,
       },
       pipelineOptions: {
-        taskName: "llama-text-generation",
+        taskName: "wllama-text-generation",
         modelId: "HuggingFaceTB/SmolLM2-360M-Instruct-GGUF",
         modelFile: "smollm2-360m-instruct-q8_0.gguf",
         modelRevision: "main",
@@ -1295,7 +1295,7 @@ async function runBenchmark() {
           options: workload.runOptions,
         };
 
-        if (currentBackend == "llama.cpp") {
+        if (currentBackend == "wllama") {
           request = { prompt: workload.inputArgs, ...workload.runOptions };
         }
 

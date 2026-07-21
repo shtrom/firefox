@@ -628,6 +628,9 @@
       "chrome://global/content/ml/backends/LlamaCppPipeline.mjs": [
         "../../../toolkit/components/ml/content/backends/LlamaCppPipeline.mjs"
       ],
+      "chrome://global/content/ml/backends/LlamaPipeline.mjs": [
+        "../../../toolkit/components/ml/content/backends/LlamaPipeline.mjs"
+      ],
       "chrome://global/content/ml/backends/ONNXPipeline.mjs": [
         "../../../toolkit/components/ml/content/backends/ONNXPipeline.mjs"
       ],
@@ -672,6 +675,12 @@
       ],
       "chrome://global/content/ml/transformers.js": [
         "../../../toolkit/components/ml/vendor/transformers.js"
+      ],
+      "chrome://global/content/ml/wllama-module-dev.mjs": [
+        "../../../toolkit/components/ml/vendor/wllama-module-dev.mjs"
+      ],
+      "chrome://global/content/ml/wllama-module.mjs": [
+        "../../../toolkit/components/ml/vendor/wllama-module.mjs"
       ],
       "chrome://global/content/net-error-card.mjs": [
         "../../../toolkit/content/net-error-card.mjs"

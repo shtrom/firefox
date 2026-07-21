@@ -22,8 +22,10 @@ export const DEFAULT_ENGINE_ID = "default-engine";
  */
 export const BACKENDS = Object.freeze({
   onnx: "onnx",
+  wllama: "wllama",
   onnxNative: "onnx-native",
   llamaCpp: "llama.cpp",
+  bestLlama: "best-llama",
   bestOnnx: "best-onnx",
   openai: "openai",
   staticEmbeddings: "static-embeddings",
@@ -34,7 +36,7 @@ export const BACKENDS = Object.freeze({
  * @type {Array<string>}
  * @description Backends using WASM.
  */
-export const WASM_BACKENDS = [BACKENDS.onnx];
+export const WASM_BACKENDS = [BACKENDS.onnx, BACKENDS.wllama];
 
 /**
  * @constant
