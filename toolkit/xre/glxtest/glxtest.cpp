@@ -16,15 +16,21 @@
 // childgltest() static function. This creates a X connection, a GLX context,
 // calls glGetString, and writes that to the 'write' end of the pipe.
 
+#include <cstdio>
 #include <cstdlib>
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <vector>
 #include <stdint.h>
 #include <inttypes.h>
 #include <string.h>
 #include <gdk/gdk.h>
+
+#if defined(MOZ_ASAN) || defined(FUZZING)
+#  include <signal.h>
+#endif
 
 #ifdef __SUNPRO_CC
 #  include <stdio.h>
@@ -788,7 +794,7 @@ static void get_xrandr_info(Display* dpy) {
   log("GLX_TEST: get_xrandr_info finished\n");
 }
 
-void glx_probe() {
+void glxtest() {
   log("GLX_TEST: glxtest start\n");
 
   Display* dpy = nullptr;
@@ -1078,7 +1084,7 @@ int childgltest(bool aWayland) {
   if (!aWayland) {
     // TODO: --display command line argument is not properly handled
     if (!x11_egltest()) {
-      glx_probe();
+      glxtest();
     }
   }
 #endif
@@ -1091,8 +1097,51 @@ int childgltest(bool aWayland) {
 
 }  // extern "C"
 
-int glxtest(bool aWayland, int aOutputFd) {
-  output_pipe = aOutputFd;
+static void PrintUsage() {
+  printf(
+      "Firefox OpenGL probe utility\n"
+      "\n"
+      "usage: glxtest [options]\n"
+      "\n"
+      "Options:\n"
+      "\n"
+      "  -h --help                 show this message\n"
+      "  -f --fd num               where to print output, default it stdout\n"
+      "  -w --wayland              probe OpenGL/EGL on Wayland (default is "
+      "X11)\n"
+      "\n");
+}
+
+int main(int argc, char** argv) {
+  struct option longOptions[] = {{"help", no_argument, nullptr, 'h'},
+                                 {"fd", required_argument, nullptr, 'f'},
+                                 {"wayland", no_argument, nullptr, 'w'},
+                                 {nullptr, 0, nullptr, 0}};
+  const char* shortOptions = "hf:w";
+  int c;
+  bool wayland = false;
+  while ((c = getopt_long(argc, argv, shortOptions, longOptions, nullptr)) !=
+         -1) {
+    switch (c) {
+      case 'w':
+        wayland = true;
+        break;
+      case 'f':
+        output_pipe = atoi(optarg);
+        break;
+      case 'h':
+#ifdef MOZ_WAYLAND
+        // Dummy call to mozgtk to prevent the linker from removing
+        // the dependency with --as-needed.
+        // see toolkit/library/moz.build for details.
+        gdk_display_get_default();
+#endif
+        PrintUsage();
+        return 0;
+      default:
+        break;
+    }
+  }
   if (getenv("MOZ_AVOID_OPENGL_ALTOGETHER")) {
     const char* msg = "ERROR\nMOZ_AVOID_OPENGL_ALTOGETHER envvar set";
     [[maybe_unused]] ssize_t _ = write(output_pipe, msg, strlen(msg));
@@ -1103,5 +1152,10 @@ int glxtest(bool aWayland, int aOutputFd) {
   if (!enable_logging) {
     close_logging();
   }
-  return childgltest(aWayland);
+#if defined(MOZ_ASAN) || defined(FUZZING)
+  // If handle_segv=1 (default), then glxtest crash will print a sanitizer
+  // report which can confuse the harness in fuzzing automation.
+  signal(SIGSEGV, SIG_DFL);
+#endif
+  return childgltest(wayland);
 }
