@@ -60,6 +60,7 @@ class ProjectPlugin : Plugin<Project> {
         configureGleanVersionResolution(project)
         configureKtlint(project, mozilla)
         configureDetekt(project, mozilla)
+        configureAndroidComponentsLint(project, mozilla, topsrcdir)
         configureTestOutputFormatting(project)
         configurePackagingResourcesExcludes(project)
         registerPrintVariantsTask(project)
@@ -495,6 +496,50 @@ class ProjectPlugin : Plugin<Project> {
             args("--create-baseline")
             baselineFile?.let { args("--baseline", it.absolutePath) }
         }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun configureAndroidComponentsLint(project: Project, mozilla: ProjectExtension, topsrcdir: String) {
+        val action = Action<AppliedPlugin> {
+            if (!mozilla.androidComponentsProject.get()) {
+                return@Action
+            }
+            val sarifOutput = File(
+                topsrcdir,
+                "mobile/android/android-components/build/reports/lint/lint-report-${project.name}.sarif.json",
+            )
+            val android = project.extensions.getByName("android")
+            val lint = android.javaClass.getMethod("getLint").invoke(android)
+            lint.javaClass.getMethod("setBaseline", File::class.java)
+                .invoke(lint, project.file("lint-baseline.xml"))
+            lint.javaClass.getMethod("setWarningsAsErrors", Boolean::class.javaPrimitiveType)
+                .invoke(lint, true)
+            lint.javaClass.getMethod("setAbortOnError", Boolean::class.javaPrimitiveType)
+                .invoke(lint, false)
+            lint.javaClass.getMethod("setSarifReport", Boolean::class.javaPrimitiveType)
+                .invoke(lint, true)
+            lint.javaClass.getMethod("setSarifOutput", File::class.java)
+                .invoke(lint, sarifOutput)
+            val disable = lint.javaClass.getMethod("getDisable").invoke(lint) as MutableSet<String>
+            disable.addAll(
+                listOf(
+                    "MissingTranslation",
+                    "ExtraTranslation",
+                    "MissingDefaultResource",
+                    // We do not want to enforce this as a generic rule for all languages (see #6117, #6056, #6118)
+                    "TypographyEllipsis",
+                    // https://github.com/mozilla-mobile/android-components/issues/10641
+                    "UnspecifiedImmutableFlag",
+                    // https://bugzilla.mozilla.org/show_bug.cgi?id=1795427
+                    "UnusedResources",
+                    // "We do not impose rules on locales"
+                    // https://github.com/mozilla-mobile/android-components/pull/11069
+                    "TypographyDashes",
+                ),
+            )
+        }
+        project.pluginManager.withPlugin("com.android.library", action)
+        project.pluginManager.withPlugin("com.android.application", action)
     }
 
     // Translates JUnit test events into Mozilla's TBPL-like textual format that Taskcluster
