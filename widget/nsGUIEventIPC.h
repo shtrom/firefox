@@ -889,7 +889,7 @@ DEFINE_IPC_SERIALIZER_WITH_FIELDS(mozilla::SingleTouchData::HistoricalTouchData,
 DEFINE_IPC_SERIALIZER_WITH_FIELDS(mozilla::SingleTouchData, mHistoricalData,
                                   mIdentifier, mScreenPoint, mLocalScreenPoint,
                                   mRadius, mRotationAngle, mForce, mTiltX,
-                                  mTiltY, mTwist);
+                                  mTiltY, mTwist, mAngle);
 
 template <>
 struct ParamTraits<mozilla::MultiTouchInput::MultiTouchType>
