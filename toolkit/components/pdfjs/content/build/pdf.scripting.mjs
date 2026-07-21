@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.1.363
- * pdfjsBuild = cd03276d6
+ * pdfjsVersion = 6.2.24
+ * pdfjsBuild = 028c02f53
  */
 
 ;// ./src/scripting_api/constants.js
@@ -3815,7 +3815,7 @@ class Util extends PDFObject {
           action
         } = handlers[patternElement];
         actions.push(action);
-        return pattern;
+        return pattern.includes(",") ? `(?=${pattern})\\${actions.length}` : pattern;
       });
       this._scandCache.set(cFormat, [re, actions]);
     }

@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.1.363
- * pdfjsBuild = cd03276d6
+ * pdfjsVersion = 6.2.24
+ * pdfjsBuild = 028c02f53
  */
 
 ;// ./src/shared/util.js
@@ -31112,6 +31112,17 @@ class PsWasmCompiler {
       this._code.push(b);
     } while (n !== 0);
   }
+  _emitSLEB128(n) {
+    for (;;) {
+      const b = n & 0x7f;
+      n >>= 7;
+      if (n === 0 && (b & 0x40) === 0 || n === -1 && (b & 0x40) !== 0) {
+        this._code.push(b);
+        return;
+      }
+      this._code.push(b | 0x80);
+    }
+  }
   _emitF64Const(value) {
     this._code.push(wasm_compiler_OP.f64_const);
     PsWasmCompiler.#f64View.setFloat64(0, value, true);
@@ -31320,11 +31331,11 @@ class PsWasmCompiler {
     const shift = first.value;
     if (shift > 0) {
       code.push(wasm_compiler_OP.i32_const);
-      this._emitULEB128(shift);
+      this._emitSLEB128(shift);
       code.push(wasm_compiler_OP.i32_shl);
     } else if (shift < 0) {
       code.push(wasm_compiler_OP.i32_const);
-      this._emitULEB128(-shift);
+      this._emitSLEB128(-shift);
       code.push(wasm_compiler_OP.i32_shr_s);
     }
     code.push(wasm_compiler_OP.f64_convert_i32_s);
@@ -31605,7 +31616,7 @@ class PsWasmCompiler {
       const min = this._range[i * 2];
       const max = this._range[i * 2 + 1];
       code.push(wasm_compiler_OP.i32_const);
-      this._emitULEB128(i * 8);
+      this._emitSLEB128(i * 8);
       if (!this._compileNode(outputs[i])) {
         return null;
       }
@@ -40985,11 +40996,8 @@ class Catalog {
           }
           break;
         case "PrintPageRange":
-          if (Array.isArray(value) && value.length % 2 === 0) {
-            const isValid = value.every((page, i, arr) => Number.isInteger(page) && page > 0 && (i === 0 || page >= arr[i - 1]) && page <= this.numPages);
-            if (isValid) {
-              prefValue = value;
-            }
+          if (Array.isArray(value) && value.length % 2 === 0 && value.every((page, i, arr) => Number.isInteger(page) && page > 0 && (i === 0 || page >= arr[i - 1]) && page <= this.numPages)) {
+            prefValue = value;
           }
           break;
         case "NumCopies":
@@ -41005,8 +41013,7 @@ class Catalog {
         warn(`Bad value, for key "${key}", in ViewerPreferences: ${value}.`);
         continue;
       }
-      prefs ??= Object.create(null);
-      prefs[key] = prefValue;
+      (prefs ??= new Map()).set(key, prefValue);
     }
     return shadow(this, "viewerPreferences", prefs);
   }
@@ -64002,7 +64009,7 @@ class WorkerMessageHandler {
       docId,
       apiVersion
     } = docParams;
-    const workerVersion = "6.1.363";
+    const workerVersion = "6.2.24";
     if (apiVersion !== workerVersion) {
       throw new Error(`The API version "${apiVersion}" does not match ` + `the Worker version "${workerVersion}".`);
     }
