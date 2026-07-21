@@ -432,11 +432,6 @@ toolbar[inactive="true"] .urlbar,
   }
 }
 
-.urlbar-input::placeholder,
-.searchbar-textbox::placeholder {
-  opacity: 0.69;
-}
-
 #TabsToolbar #searchbar:not(:focus-within) {
   /* The tabs toolbar is usually a different color than the other toolbars, and
      we can't predict it, to avoid a transparent field we enforce a border. */

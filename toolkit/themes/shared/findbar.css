@@ -103,10 +103,6 @@ xul|findbar {
     }
   }
 
-  &::placeholder {
-    opacity: 0.69;
-  }
-
   &:focus {
     background-color: var(--toolbar-field-background-color-focus);
     color: var(--toolbar-field-text-color-focus);
