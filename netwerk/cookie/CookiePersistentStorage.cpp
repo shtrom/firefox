@@ -2236,8 +2236,9 @@ nsresult CookiePersistentStorage::InitDBConnInternal() {
   // Grow cookie db in 512KB increments
   mDBConn->SetGrowthIncrement(512 * 1024, ""_ns);
 
-  // make operations on the table asynchronous, for performance
-  mDBConn->ExecuteSimpleSQL("PRAGMA synchronous = OFF"_ns);
+  // In WAL mode, NORMAL avoids the per-commit fsync cost while still keeping
+  // the database safe from corruption on crash or power loss, unlike OFF.
+  mDBConn->ExecuteSimpleSQL("PRAGMA synchronous = NORMAL"_ns);
 
   // Use write-ahead-logging for performance. We cap the autocheckpoint limit at
   // 16 pages (around 500KB).
