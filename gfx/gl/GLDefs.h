@@ -69,6 +69,13 @@ bool CheckContextLost(const GLContext* gl);
 #define LOCAL_EGL_PLATFORM_ANGLE_DEVICE_TYPE_REFERENCE_ANGLE  0x320C
 #define LOCAL_EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE  0x320F
 
+// EGL_ANGLE_platform_angle_metal
+#define LOCAL_EGL_PLATFORM_ANGLE_TYPE_METAL_ANGLE             0x3489
+
+// EGL_ANGLE_platform_angle_device_id
+#define LOCAL_EGL_PLATFORM_ANGLE_DEVICE_ID_HIGH_ANGLE         0x34D6
+#define LOCAL_EGL_PLATFORM_ANGLE_DEVICE_ID_LOW_ANGLE          0x34D7
+
 // EGL_ANGLE_d3d_texture_client_buffer
 #define LOCAL_EGL_D3D_TEXTURE_ANGLE                          0x33A3
 

@@ -60,6 +60,8 @@ static const char* sEGLLibraryExtensionNames[] = {
     "EGL_ANGLE_display_power_preference",
     "EGL_ANGLE_platform_angle",
     "EGL_ANGLE_platform_angle_d3d",
+    "EGL_ANGLE_platform_angle_metal",
+    "EGL_ANGLE_platform_angle_device_id",
     "EGL_EXT_device_enumeration",
     "EGL_EXT_device_query",
     "EGL_EXT_platform_device",
@@ -344,6 +346,30 @@ std::shared_ptr<EglDisplay> GLLibraryEGL::CreateDisplay(
   }
   return ret;
 }
+
+std::shared_ptr<EglDisplay> GLLibraryEGL::CreateDisplayForMetalDevice(
+    uint64_t aMetalDeviceRegistryID) {
+  StaticMutexAutoLock lock(sMutex);
+  MOZ_ASSERT(IsExtensionSupported(EGLLibExtension::ANGLE_platform_angle_metal));
+  MOZ_ASSERT(
+      IsExtensionSupported(EGLLibExtension::ANGLE_platform_angle_device_id));
+
+  const EGLAttrib attrib_list[] = {
+      LOCAL_EGL_PLATFORM_ANGLE_TYPE_ANGLE,
+      LOCAL_EGL_PLATFORM_ANGLE_TYPE_METAL_ANGLE,
+      LOCAL_EGL_PLATFORM_ANGLE_DEVICE_ID_HIGH_ANGLE,
+      static_cast<EGLAttrib>(aMetalDeviceRegistryID >> 32),
+      LOCAL_EGL_PLATFORM_ANGLE_DEVICE_ID_LOW_ANGLE,
+      static_cast<EGLAttrib>(aMetalDeviceRegistryID & 0xFFFFFFFF),
+      LOCAL_EGL_NONE,
+  };
+  const EGLDisplay display = fGetPlatformDisplay(
+      LOCAL_EGL_PLATFORM_ANGLE_ANGLE, EGL_DEFAULT_DISPLAY, attrib_list);
+  if (!display) {
+    return nullptr;
+  }
+  return EglDisplay::Create(*this, display, false, lock);
+}  // namespace gl
 
 static bool IsAccelAngleSupported(nsACString* const out_failureId) {
   if (!gfx::gfxVars::AllowWebglAccelAngle()) {
