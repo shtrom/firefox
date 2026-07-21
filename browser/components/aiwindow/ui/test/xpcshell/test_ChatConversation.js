@@ -36,11 +36,31 @@ const { EmbeddingsGenerator } = ChromeUtils.importESModule(
 const { _setLoadPromptForTesting } = ChromeUtils.importESModule(
   "moz-src:///browser/components/aiwindow/ui/modules/ChatConversation.sys.mjs"
 );
+const { _setRemoteClientForTesting, _clearRemoteClientForTesting } =
+  ChromeUtils.importESModule(
+    "moz-src:///browser/components/aiwindow/models/Utils.sys.mjs"
+  );
 
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   sinon: "resource://testing-common/Sinon.sys.mjs",
 });
+
+function setTextSystemMessage(conversation, body, version) {
+  return conversation.setSystemMessage({
+    type: SYSTEM_PROMPT_TYPE.TEXT,
+    body,
+    ...(version && { version }),
+  });
+}
+
+function addLegacySystemMessage(conversation, type, body, version) {
+  return conversation.addMessage(
+    MESSAGE_ROLE.SYSTEM,
+    { type, body, ...(version && { version }) },
+    conversation.currentTurnIndex()
+  );
+}
 
 add_task(function test_ChatConversation_constructor_defaults() {
   const conversation = new ChatConversation({});
@@ -368,13 +388,13 @@ add_task(function test_opts_ChatConversation_addToolCallMessage() {
   });
 });
 
-add_task(function test_ChatConversation_addSystemMessage() {
+add_task(function test_ChatConversation_setTextSystemMessage() {
   const conversation = new ChatConversation({});
 
   const content = {
     random: "system call specific keys",
   };
-  conversation.addSystemMessage("text", content);
+  setTextSystemMessage(conversation, content);
 
   const message = conversation.messages[0];
 
@@ -448,7 +468,7 @@ add_task(function test_renderState_includes_tool_messages() {
     body: [{ url: "https://example.com/", title: "Example" }],
     name: "get_open_tabs",
   });
-  conversation.addSystemMessage("text", "some system message");
+  setTextSystemMessage(conversation, "some system message");
   conversation.addAssistantMessage("text", "You have one tab open.");
 
   const renderState = conversation.renderState();
@@ -465,7 +485,7 @@ add_task(function test_ChatConversation_currentTurnIndex() {
 
   const content = "user to assistant msg";
 
-  conversation.addSystemMessage("text", "the system prompt");
+  setTextSystemMessage(conversation, "the system prompt");
   conversation.addUserMessage(content, "about:aiwindow");
   conversation.addAssistantMessage("text", "a response");
   conversation.addUserMessage(content, "about:aiwindow");
@@ -483,7 +503,7 @@ add_task(function test_ChatConversation_currentTurnIndex() {
 add_task(function test_ChatConversation_helpersTurnIndexing() {
   const conversation = new ChatConversation({});
 
-  conversation.addSystemMessage("text", "the system prompt");
+  setTextSystemMessage(conversation, "the system prompt");
   conversation.addUserMessage("a user's prompt", "https://www.somesite.com");
   conversation.addToolCallMessage({ some: "tool call details" });
   conversation.addAssistantMessage("text", "the llm response");
@@ -509,7 +529,7 @@ add_task(function test_ChatConversation_helpersTurnIndexing() {
 
 add_task(function test_ChatConversation_getMessagesInChatCompletionsFormat() {
   const conversation = new ChatConversation({});
-  conversation.addSystemMessage("text", "the system prompt");
+  setTextSystemMessage(conversation, "the system prompt");
   conversation.addUserMessage(
     "a user's prompt",
     "https://www.somesite.com",
@@ -551,7 +571,7 @@ add_task(function test_ChatConversation_getMessagesInChatCompletionsFormat() {
 
 add_task(async function test_unrelatedMessage_ChatConversation_retryMessage() {
   const conversation = new ChatConversation({});
-  conversation.addSystemMessage("text", "the system prompt");
+  setTextSystemMessage(conversation, "the system prompt");
   conversation.addUserMessage("a user's prompt", "https://www.somesite.com");
 
   const unrelatedMessage = new ChatMessage({
@@ -572,7 +592,7 @@ add_task(async function test_unrelatedMessage_ChatConversation_retryMessage() {
 
 add_task(async function test_nonUserMessage_ChatConversation_retryMessage() {
   const conversation = new ChatConversation({});
-  conversation.addSystemMessage("text", "the system prompt");
+  setTextSystemMessage(conversation, "the system prompt");
   conversation.addUserMessage("a user's prompt", "https://www.somesite.com");
 
   await Assert.rejects(
@@ -591,20 +611,22 @@ add_task(
     const conversation = new ChatConversation({});
 
     sandbox.stub(conversation, "injectRealTimeContext").callsFake(() => {
-      conversation.addSystemMessage(
+      addLegacySystemMessage(
+        conversation,
         SYSTEM_PROMPT_TYPE.REAL_TIME,
         "real time data"
       );
     });
 
     sandbox.stub(conversation, "injectMemoriesContext").callsFake(() => {
-      conversation.addSystemMessage(
+      addLegacySystemMessage(
+        conversation,
         SYSTEM_PROMPT_TYPE.MEMORIES,
         "memories data"
       );
     });
 
-    conversation.addSystemMessage("text", "the system prompt");
+    setTextSystemMessage(conversation, "the system prompt");
     conversation.addUserMessage("a user's prompt", "https://www.somesite.com");
     conversation.addToolCallMessage({ some: "tool call details" });
     conversation.addAssistantMessage("text", "the llm response");
@@ -634,12 +656,17 @@ add_task(
   async function test_uniqueOrdinalsWithoutMemories_ChatConversation_retryMessage() {
     const conversation = new ChatConversation({});
 
-    conversation.addSystemMessage(SYSTEM_PROMPT_TYPE.TEXT, "the system prompt");
-    conversation.addSystemMessage(
+    setTextSystemMessage(conversation, "the system prompt");
+    addLegacySystemMessage(
+      conversation,
       SYSTEM_PROMPT_TYPE.REAL_TIME,
       "real time data"
     );
-    conversation.addSystemMessage(SYSTEM_PROMPT_TYPE.MEMORIES, "memories data");
+    addLegacySystemMessage(
+      conversation,
+      SYSTEM_PROMPT_TYPE.MEMORIES,
+      "memories data"
+    );
     conversation.addUserMessage("a user's prompt", "https://www.somesite.com");
     conversation.addAssistantMessage("text", "the llm response");
 
@@ -649,7 +676,8 @@ add_task(
     const originalUserOrdinal = retryTarget.ordinal;
     await conversation.retryMessage(retryTarget);
 
-    conversation.addSystemMessage(
+    addLegacySystemMessage(
+      conversation,
       SYSTEM_PROMPT_TYPE.REAL_TIME,
       "new real time data"
     );
@@ -677,31 +705,37 @@ add_task(
 
 add_task(
   async function test_injectRealTimeContext_writes_to_userMessage_userContext() {
-    const mockGetRealTimeMapping = lazy.sinon.stub().resolves({
-      todayDate: "2024-01-15",
-      url: "https://example.com",
-      title: "Example",
-      hasTabInfo: false,
-      locale: "en-US",
-      timezone: "America/Los_Angeles",
-      isoTimestamp: "2024-01-15T10:30:00",
+    _setRemoteClientForTesting({
+      get: () =>
+        Promise.resolve([
+          {
+            id: "browser-context--tab--v1--generic",
+            kind: "module",
+            feature: "browser-context",
+            module: "tab",
+            model: "generic",
+            prompts: "TAB: {title} ({url})",
+          },
+        ]),
+      on: () => {},
     });
-    _setLoadPromptForTesting(
-      lazy.sinon.stub().resolves("Current date: {todayDate}\nLocale: {locale}")
-    );
+    registerCleanupFunction(_clearRemoteClientForTesting);
 
     const conversation = new ChatConversation({});
     const userMessage = conversation.addUserMessage("hi");
     await conversation.injectRealTimeContext(userMessage, {
-      getRealTimeMapping: mockGetRealTimeMapping,
+      getRealTimeMapping: async () => ({
+        url: "https://example.com",
+        title: "Example",
+        hasTabInfo: true,
+      }),
     });
 
     Assert.equal(
       userMessage.content.userContext.realTimeContext,
-      "Current date: 2024-01-15\nLocale: en-US",
+      "TAB: Example (https://example.com)",
       "injectRealTimeContext writes rendered prompt onto userMessage.content.userContext.realTimeContext"
     );
-    _setLoadPromptForTesting(null);
   }
 );
 
@@ -717,6 +751,64 @@ add_task(async function test_injectRealTimeContext_no_op_when_mapping_null() {
   Assert.ok(
     !userMessage.content.userContext?.realTimeContext,
     "Leaves userContext.realTimeContext unset when mapping is null"
+  );
+});
+
+add_task(async function test_injectRealTimeContext_dedupes_when_unchanged() {
+  _setRemoteClientForTesting({
+    get: () =>
+      Promise.resolve([
+        {
+          id: "browser-context--tab--v1--generic",
+          kind: "module",
+          feature: "browser-context",
+          module: "tab",
+          model: "generic",
+          prompts: "TAB: {title} ({url})",
+        },
+      ]),
+    on: () => {},
+  });
+  registerCleanupFunction(_clearRemoteClientForTesting);
+
+  const conversation = new ChatConversation({});
+  const sameMapping = async () => ({
+    url: "https://example.com",
+    title: "Example",
+    hasTabInfo: true,
+  });
+
+  const firstMessage = conversation.addUserMessage("turn 1");
+  await conversation.injectRealTimeContext(firstMessage, {
+    getRealTimeMapping: sameMapping,
+  });
+  Assert.equal(
+    firstMessage.content.userContext.realTimeContext,
+    "TAB: Example (https://example.com)",
+    "First turn writes context"
+  );
+
+  const secondMessage = conversation.addUserMessage("turn 2");
+  await conversation.injectRealTimeContext(secondMessage, {
+    getRealTimeMapping: sameMapping,
+  });
+  Assert.ok(
+    !secondMessage.content.userContext?.realTimeContext,
+    "Second turn skips writing when context is identical to last-injected"
+  );
+
+  const thirdMessage = conversation.addUserMessage("turn 3");
+  await conversation.injectRealTimeContext(thirdMessage, {
+    getRealTimeMapping: async () => ({
+      url: "https://other.example",
+      title: "Other",
+      hasTabInfo: true,
+    }),
+  });
+  Assert.equal(
+    thirdMessage.content.userContext.realTimeContext,
+    "TAB: Other (https://other.example)",
+    "Third turn writes when context changes"
   );
 });
 
@@ -1058,7 +1150,19 @@ add_task(
       timezone: "America/Los_Angeles",
       isoTimestamp: "2024-01-15T10:30:00",
     });
-    _setLoadPromptForTesting(lazy.sinon.stub().resolves("{todayDate}"));
+    _setRemoteClientForTesting({
+      get: lazy.sinon.stub().resolves([
+        {
+          id: "browser-context--tab--v1--generic",
+          kind: "module",
+          feature: "browser-context",
+          module: "tab",
+          model: "generic",
+          version: "1.0",
+          prompts: "TAB {todayDate}",
+        },
+      ]),
+    });
 
     await conversation.injectRealTimeContext(userMessage, {
       getRealTimeMapping: mockGetRealTimeMapping,
@@ -1069,7 +1173,6 @@ add_task(
       conversation.securityProperties.privateData,
       "privateData should be true after commit when hasTabInfo is true"
     );
-    _setLoadPromptForTesting(null);
   }
 );
 
@@ -1084,7 +1187,9 @@ add_task(
       timezone: "America/Los_Angeles",
       isoTimestamp: "2024-01-15T10:30:00",
     });
-    _setLoadPromptForTesting(lazy.sinon.stub().resolves("{todayDate}"));
+    _setRemoteClientForTesting({
+      get: lazy.sinon.stub().resolves([]),
+    });
 
     await conversation.injectRealTimeContext(userMessage, {
       getRealTimeMapping: mockGetRealTimeMapping,
@@ -1095,7 +1200,6 @@ add_task(
       !conversation.securityProperties.privateData,
       "privateData should remain false when hasTabInfo is false"
     );
-    _setLoadPromptForTesting(null);
   }
 );
 
@@ -1361,7 +1465,7 @@ add_task(async function test_generatePrompt_persistsPromptVersion() {
 
 add_task(function test_systemPromptVersion_readsFromExistingSystemMessage() {
   const conversation = new ChatConversation({});
-  conversation.addSystemMessage(SYSTEM_PROMPT_TYPE.TEXT, "body", "chat-v2");
+  setTextSystemMessage(conversation, "body", "chat-v2");
 
   Assert.equal(
     conversation.systemPromptVersion,
@@ -1372,8 +1476,7 @@ add_task(function test_systemPromptVersion_readsFromExistingSystemMessage() {
 
 add_task(function test_systemPromptVersion_emptyForLegacyMessage() {
   const conversation = new ChatConversation({});
-  // Simulate a system message persisted before this change shipped.
-  conversation.addSystemMessage(SYSTEM_PROMPT_TYPE.TEXT, "body");
+  setTextSystemMessage(conversation, "body");
   Assert.equal(
     conversation.systemPromptVersion,
     "",

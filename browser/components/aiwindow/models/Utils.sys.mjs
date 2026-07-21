@@ -156,9 +156,9 @@ export const PURPOSES = Object.freeze({
  * Keep ui/test/browser/head.js MOCK_RS_RECORDS aligned with this table.
  */
 export const FEATURE_MAJOR_VERSIONS = Object.freeze({
-  // TODO Bug 2053495: remove with mistral release pref (CHAT becomes 9)
+  // TODO Bug 2053495: remove with mistral release pref (CHAT becomes 11)
   get [MODEL_FEATURES.CHAT]() {
-    return Services.prefs.getBoolPref(MISTRAL_RELEASE_PREF, false) ? 9 : 8;
+    return Services.prefs.getBoolPref(MISTRAL_RELEASE_PREF, false) ? 11 : 10;
   },
   [MODEL_FEATURES.TITLE_GENERATION]: 1,
   [MODEL_FEATURES.CONVERSATION_STARTERS_SIDEBAR_SYSTEM]: 1,
@@ -322,7 +322,7 @@ export function selectMainConfig(
   // We figure out which model the user wants and load prompts for that model
   // If we can't find a config for the user selection, we load the generic one
   if (feature === MODEL_FEATURES.CHAT) {
-    if (modelChoiceId !== "0") {
+    if (modelChoiceId !== "0" && modelChoiceId !== "") {
       // First check the choice ID. If it's not 0, use the model associated with that ID
 
       // Look for config based on model choice ID
@@ -359,12 +359,12 @@ export function selectMainConfig(
     const genericConfig = sameMajor.find(
       config => config.model === GENERIC_MODEL_NAME
     );
-    // Inject the user model if one was provided
-    // If one wasn't, we return the generic config plain, which will intentionally break inference
-    if (userModel) {
-      genericConfig.model = userModel;
+    if (!genericConfig) {
+      return null;
     }
-    return genericConfig;
+    // Inject the user model if provided (non-mutating; the record may be a
+    // shared RS cache object). Plain generic intentionally breaks inference.
+    return userModel ? { ...genericConfig, model: userModel } : genericConfig;
   }
 
   // **For all features other than "chat"**
@@ -435,7 +435,10 @@ export async function resolveChatModelChoice(
     const allRecords = await client.get();
 
     const record = selectMainConfig(
-      allRecords.filter(r => r.feature === MODEL_FEATURES.CHAT),
+      // CHAT model+params live in v2 kind:"params" records.
+      allRecords.filter(
+        r => r.feature === MODEL_FEATURES.CHAT && r.kind === "params"
+      ),
       {
         majorVersion: maxMajorVersion,
         feature: MODEL_FEATURES.CHAT,

@@ -208,11 +208,11 @@ add_task(async function test_Chat_fetchWithHistory_streams_and_forwards_args() {
       pageUrl: new URL("https://www.firefox.com"),
       pageMeta: {},
     });
-    conversation.addSystemMessage(
-      SYSTEM_PROMPT_TYPE.TEXT,
-      "You are helpful",
-      0
-    );
+    conversation.setSystemMessage({
+      type: SYSTEM_PROMPT_TYPE.TEXT,
+      body: "You are helpful",
+      version: 0,
+    });
     conversation.addUserMessage("Hi there", "https://www.firefox.com", 0);
     conversation.addAssistantMessage("text", "");
 
@@ -291,7 +291,11 @@ add_task(async function test_Chat_fetchWithHistory_sends_compacted_args() {
       pageUrl: new URL("https://example.test"),
       pageMeta: {},
     });
-    conversation.addSystemMessage(SYSTEM_PROMPT_TYPE.TEXT, "sys", 0);
+    conversation.setSystemMessage({
+      type: SYSTEM_PROMPT_TYPE.TEXT,
+      body: "sys",
+      version: 0,
+    });
     conversation.addUserMessage("Read this", "https://example.test", 0);
     conversation.addAssistantMessage("text", "");
 
@@ -1176,11 +1180,11 @@ add_task(
         pageUrl: new URL("https://www.firefox.com"),
         pageMeta: {},
       });
-      conversation.addSystemMessage(
-        SYSTEM_PROMPT_TYPE.TEXT,
-        "You are helpful",
-        0
-      );
+      conversation.setSystemMessage({
+        type: SYSTEM_PROMPT_TYPE.TEXT,
+        body: "You are helpful",
+        version: 0,
+      });
       conversation.addUserMessage("Hi there", "https://www.firefox.com", 0);
       conversation.addAssistantMessage("text", "");
 

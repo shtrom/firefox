@@ -54,7 +54,7 @@ let gIntentEngineStub;
 // Minimal RS records returned by the global getRemoteClient stub.
 // Version numbers must match FEATURE_MAJOR_VERSIONS in models/Utils.sys.mjs.
 const MOCK_RS_RECORDS = [
-  ["chat", 8],
+  ["chat", 11],
   ["title-generation", 1],
   ["conversation-starters-sidebar-system", 1],
   ["conversation-suggestions-sidebar-starter", 3],
@@ -88,9 +88,22 @@ const MOCK_RS_RECORDS = [
     version: `v${major}.0`,
     is_default: true,
   }))
-  // Per-choice records for chat so resolveChatModelChoice returns correct model names.
+  // Chat resolves model+params from v2 kind:"params" records (one generic
+  // fallback + one per model choice).
   .concat([
     {
+      kind: "params",
+      feature: "chat",
+      model: "generic",
+      model_choice_id: "0",
+      service_type: "ai",
+      purpose: "chat",
+      parameters: {},
+      is_default: true,
+      version: "v10.0",
+    },
+    {
+      kind: "params",
       feature: "chat",
       model: "gemini-3.1-flash-lite",
       model_choice_id: "1",
@@ -105,9 +118,10 @@ const MOCK_RS_RECORDS = [
       purpose: "chat",
       parameters: {},
       prompts: "Test system prompt.",
-      version: "v8.0",
+      version: "v10.0",
     },
     {
+      kind: "params",
       feature: "chat",
       model: "qwen3-235b-a22b-instruct-2507-maas",
       model_choice_id: "2",
@@ -122,9 +136,10 @@ const MOCK_RS_RECORDS = [
       purpose: "chat",
       parameters: {},
       prompts: "Test system prompt.",
-      version: "v8.0",
+      version: "v10.0",
     },
     {
+      kind: "params",
       feature: "chat",
       model: "gpt-oss-120b",
       model_choice_id: "3",
@@ -139,20 +154,41 @@ const MOCK_RS_RECORDS = [
       purpose: "chat",
       parameters: {},
       prompts: "Test system prompt.",
-      version: "v8.0",
+      version: "v10.0",
     },
     // TODO 2053495
-    // v9 records for mistral release (browser.smartwindow.mistralRelease pref)
+    // v11 records for mistral release (browser.smartwindow.mistralRelease pref)
     {
+      kind: "params",
       feature: "chat",
       model: "generic",
+      model_choice_id: "0",
       service_type: "ai",
+      purpose: "chat",
       parameters: {},
       prompts: "Test system prompt.",
-      version: "v9.0",
+      version: "v11.0",
       is_default: true,
     },
     {
+      kind: "params",
+      feature: "chat",
+      model: "mistral-small-2603",
+      model_choice_id: "3",
+      model_details: {
+        model: "mistral-small-2603",
+        ownerName: "Mistral",
+        labelId: "personal",
+        shortName: "Mistral Small 4",
+        brandName: "Mistral",
+      },
+      service_type: "ai",
+      purpose: "chat",
+      parameters: {},
+      version: "v11.0",
+    },
+    {
+      kind: "params",
       feature: "chat",
       model: "gemini-3.1-flash-lite",
       model_choice_id: "1",
@@ -167,9 +203,10 @@ const MOCK_RS_RECORDS = [
       purpose: "chat",
       parameters: {},
       prompts: "Test system prompt.",
-      version: "v9.0",
+      version: "v11.0",
     },
     {
+      kind: "params",
       feature: "chat",
       model: "qwen3-235b-a22b-instruct-2507-maas",
       model_choice_id: "2",
@@ -183,25 +220,7 @@ const MOCK_RS_RECORDS = [
       service_type: "ai",
       purpose: "chat",
       parameters: {},
-      prompts: "Test system prompt.",
-      version: "v9.0",
-    },
-    {
-      feature: "chat",
-      model: "mistral-small-2603",
-      model_choice_id: "3",
-      model_details: {
-        model: "mistral-small-2603",
-        ownerName: "Mistral",
-        labelId: "personal",
-        shortName: "Mistral Small 4",
-        brandName: "Mistral",
-      },
-      service_type: "ai",
-      purpose: "chat",
-      parameters: {},
-      prompts: "Test system prompt.",
-      version: "v9.0",
+      version: "v11.0",
     },
   ]);
 

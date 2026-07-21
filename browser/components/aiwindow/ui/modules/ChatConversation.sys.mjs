@@ -3,17 +3,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-import {
-  MODEL_FEATURES,
-  renderPrompt,
-} from "moz-src:///browser/components/aiwindow/models/Utils.sys.mjs";
+import { MODEL_FEATURES } from "moz-src:///browser/components/aiwindow/models/Utils.sys.mjs";
 
 import {
   constructRelevantMemoriesContextMessage,
-  constructRealTimeInfoInjectionMessage,
   replaceUrlsWithTokens,
   resolveMentionUrls,
-  sanitizeUntrustedContent,
   stripUnresolvedUrlTokens,
 } from "moz-src:///browser/components/aiwindow/models/ChatUtils.sys.mjs";
 
@@ -52,6 +47,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "moz-src:///browser/components/aiwindow/ui/modules/ChatStore.sys.mjs",
   MemoriesManager:
     "moz-src:///browser/components/aiwindow/models/memories/MemoriesManager.sys.mjs",
+  buildBrowserContextPrompt:
+    "moz-src:///browser/components/aiwindow/models/PromptLoader.sys.mjs",
   loadPrompt:
     "moz-src:///browser/components/aiwindow/models/PromptLoader.sys.mjs",
   ToolUI: "moz-src:///browser/components/aiwindow/ui/modules/ToolUI.sys.mjs",
@@ -183,6 +180,14 @@ export class ChatConversation extends Conversation {
    * @type {Map<string, object>}
    */
   #historyResultsPool = new Map();
+
+  /**
+   * Last browser-context string written; injectRealTimeContext skips
+   * rewriting an identical one so the prompt-cache prefix stays stable.
+   *
+   * @type {string|null}
+   */
+  #lastBrowserContext = null;
 
   /**
    * @param {object} params
@@ -629,49 +634,24 @@ export class ChatConversation extends Conversation {
   }
 
   /**
-   * Add a system message to the conversation
-   *
-   * @param {string} type - The assistant message type: text|injected_memories|injected_real_time_info
-   * @param {string} contentBody - The system message object to be saved as JSON
-   * @param {string} [version] - Prompt version for SYSTEM_PROMPT_TYPE.TEXT messages
-   * @returns {ChatMessage} The newly created system message
-   */
-  addSystemMessage(type, contentBody, version) {
-    const content = { type, body: contentBody, ...(version && { version }) };
-
-    return this.addMessage(
-      MESSAGE_ROLE.SYSTEM,
-      content,
-      this.currentTurnIndex()
-    );
-  }
-
-  /**
-   * Idempotent upsert of the chat system prompt at index 0. Writes the
-   * rendered body and the RS-record version onto the system message's
-   * `content`.
+   * Upserts the chat system prompt at index 0, always rewriting body and
+   * version so a fresh build (today's timestamp, latest RS content) wins.
    *
    * @param {object} [opts]
-   * @param {string} [opts.modelChoiceIdOverride]
+   * @param {string} [opts.model] - Model to assemble the prompt for; defaults
+   *   to the conversation engine's model.
    */
   async loadSystemPrompt(opts = {}) {
     const { prompt: body, version } = await lazy.loadPrompt(
       MODEL_FEATURES.CHAT,
-      opts
+      { ...opts, model: opts.model ?? this.engine?.model }
     );
 
-    const existing = this.messages.find(
-      message =>
-        message.role === MESSAGE_ROLE.SYSTEM &&
-        message.content?.type === SYSTEM_PROMPT_TYPE.TEXT
-    );
-    if (existing) {
-      existing.content.body = body;
-      existing.content.version = version;
-      return existing;
-    }
-
-    return this.addSystemMessage(SYSTEM_PROMPT_TYPE.TEXT, body, version);
+    return this.setSystemMessage({
+      type: SYSTEM_PROMPT_TYPE.TEXT,
+      body,
+      ...(version && { version }),
+    });
   }
 
   /**
@@ -766,8 +746,8 @@ export class ChatConversation extends Conversation {
   }
 
   /**
-   * Fetch real-time browser/tab data, render the prompt, mutate
-   * `userMessage.content.userContext.realTimeContext` in place.
+   * Fetch browser/tab + mentions context and write it onto
+   * `userMessage.content.userContext.realTimeContext`.
    *
    * SECURITY: current-tab info is private, so it raises setPrivateData() when
    * hasTabInfo is true. Context mentions inject only a URL and sanitized
@@ -779,49 +759,24 @@ export class ChatConversation extends Conversation {
    * @param {Function} [opts.getRealTimeMapping]
    */
   async injectRealTimeContext(userMessage, opts = {}) {
-    const {
-      contextMentions,
-      getRealTimeMapping = constructRealTimeInfoInjectionMessage,
-    } = opts;
-    const realTimeInfoMapping = await getRealTimeMapping(contextMentions);
-    if (!realTimeInfoMapping) {
+    const { contextMentions, getRealTimeMapping } = opts;
+    const realTimePrompt = await lazy.buildBrowserContextPrompt(
+      this.engine?.model,
+      {
+        ...(getRealTimeMapping && { getRealTimeMapping }),
+        contextMentions,
+        securityProperties: this.securityProperties,
+      }
+    );
+    if (!realTimePrompt || !userMessage?.content) {
       return;
     }
-    let { prompt: realTimePromptRaw } = await lazy.loadPrompt(
-      MODEL_FEATURES.REAL_TIME_CONTEXT_DATE
-    );
-    if (realTimeInfoMapping.hasTabInfo) {
-      this.securityProperties.setPrivateData();
-      const { prompt: realTimeTabPromptRaw } = await lazy.loadPrompt(
-        MODEL_FEATURES.REAL_TIME_CONTEXT_TAB
-      );
-      realTimePromptRaw += realTimeTabPromptRaw;
-    } else {
-      delete realTimeInfoMapping.url;
-      delete realTimeInfoMapping.title;
-      delete realTimeInfoMapping.description;
+    if (realTimePrompt === this.#lastBrowserContext) {
+      return;
     }
-    delete realTimeInfoMapping.hasTabInfo;
-
-    if (contextMentions?.length) {
-      const contextUrls = contextMentions
-        .map(
-          mention =>
-            `- URL: ${mention.url}\n  Title: ${sanitizeUntrustedContent(mention.label)}`
-        )
-        .join("\n");
-      realTimeInfoMapping.contextUrls = contextUrls;
-      const { prompt: contextMentionsPrompt } = await lazy.loadPrompt(
-        MODEL_FEATURES.REAL_TIME_CONTEXT_MENTIONS
-      );
-      realTimePromptRaw += contextMentionsPrompt;
-    }
-
-    const realTimePrompt = renderPrompt(realTimePromptRaw, realTimeInfoMapping);
-    if (realTimePrompt && userMessage?.content) {
-      userMessage.content.userContext ??= {};
-      userMessage.content.userContext.realTimeContext = realTimePrompt;
-    }
+    userMessage.content.userContext ??= {};
+    userMessage.content.userContext.realTimeContext = realTimePrompt;
+    this.#lastBrowserContext = realTimePrompt;
   }
 
   /**

@@ -22,8 +22,6 @@ ChromeUtils.defineESModuleGetters(lazy, {
   Chat: "moz-src:///browser/components/aiwindow/models/Chat.sys.mjs",
   GET_PAGE_CONTENT:
     "moz-src:///browser/components/aiwindow/models/Tools.sys.mjs",
-  FEATURE_MAJOR_VERSIONS:
-    "moz-src:///browser/components/aiwindow/models/Utils.sys.mjs",
   MODEL_FEATURES: "moz-src:///browser/components/aiwindow/models/Utils.sys.mjs",
   openAIEngine:
     "moz-src:///browser/components/aiwindow/models/openAIEngine.sys.mjs",
@@ -964,10 +962,11 @@ export class AIWindow extends MozLitElement {
     this.#hasModelChoiceOverride =
       isTabOverride && modelChoiceId !== lazy.getCurrentModelChoiceId();
 
-    // Update the system prompt for the new model
+    // Update the system prompt for the new model. The engine is rebuilt on the
+    // next send, so pass the freshly-selected model explicitly here.
     if (this.#conversation?.messages.length) {
       await this.#conversation.loadSystemPrompt({
-        modelChoiceIdOverride: modelChoiceId,
+        model: this.selectedModelId,
       });
     }
 
@@ -2063,11 +2062,10 @@ export class AIWindow extends MozLitElement {
       conversation.engine = engine;
       conversation.parameters = parameters;
 
-      // Upsert the system prompt for the current model choice. Idempotent —
-      // no-op if it already matches.
-      await conversation.loadSystemPrompt({
-        modelChoiceIdOverride: this.#selectedModelChoiceId,
-      });
+      // Rewrites the system prompt in place so a restored conversation gets
+      // today's timestamp and the latest RS content. The engine was just built
+      // for this model choice, so its model drives the v2 assembly.
+      await conversation.loadSystemPrompt();
 
       if (inputText) {
         await conversation.generatePrompt(
@@ -2841,7 +2839,7 @@ export class AIWindow extends MozLitElement {
       metadata: {
         model: this.modelName,
         turn_count: this.#conversation?.messageCount ?? 0,
-        prompt_version: lazy.FEATURE_MAJOR_VERSIONS[lazy.MODEL_FEATURES.CHAT],
+        prompt_version: this.#conversation?.systemPromptVersion ?? "",
       },
       chatLog: withPageContent,
       chatLogWithoutPageContent: withoutPageContent,

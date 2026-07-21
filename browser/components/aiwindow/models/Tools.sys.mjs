@@ -12,6 +12,7 @@
  * @import { ChatConversation } from "moz-src:///browser/components/aiwindow/ui/modules/ChatConversation.sys.mjs"
  */
 
+import { getSkillPrompt } from "moz-src:///browser/components/aiwindow/models/PromptLoader.sys.mjs";
 import { searchBrowsingHistory as implSearchBrowsingHistory } from "moz-src:///browser/components/aiwindow/models/SearchBrowsingHistory.sys.mjs";
 import {
   manageTabsAction,
@@ -27,10 +28,6 @@ import {
   sanitizeUntrustedContent,
   isNewPageUrl,
 } from "moz-src:///browser/components/aiwindow/models/ChatUtils.sys.mjs";
-import {
-  FEATURE_MAJOR_VERSIONS,
-  MODEL_FEATURES,
-} from "moz-src:///browser/components/aiwindow/models/Utils.sys.mjs";
 
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
@@ -104,6 +101,7 @@ export const SEARCH_THE_WEB = "search_the_web";
 export const GET_USER_MEMORIES = "get_user_memories";
 export const GET_NAVIGATION_INFO = "get_navigation_info";
 export const MANAGE_TABS = "manage_tabs";
+export const GET_SKILL = "get_skill";
 export const WORLD_CUP_MATCHES = "world_cup_matches";
 export const WORLD_CUP_LIVE = "world_cup_live";
 export const ADD_MEMORY = "add_memory";
@@ -128,6 +126,7 @@ export const TOOLS = [
   WORLD_CUP_LIVE,
   ADD_MEMORY,
   SEARCH_THE_WEB,
+  GET_SKILL,
 ];
 
 export const RUN_SEARCH_VERBATIM_QUERY_DESCRIPTION =
@@ -441,6 +440,24 @@ export const toolsConfig = [
           },
         },
         required: ["memorySummary", "containsPersonallyIdentifiableInfo"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: GET_SKILL,
+      description:
+        "Look up a focused instruction set ('skill') by name. Use when the user's request maps to a known specialty. The available skill names are listed in the system prompt.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: "The name of the skill to retrieve.",
+          },
+        },
+        required: ["name"],
       },
     },
   },
@@ -1250,6 +1267,12 @@ export async function worldCupLive(toolParams, conversation) {
   return trimmed;
 }
 
+// No securityProperties / trust flags: skill prompts are Remote Settings
+// content and carry the same trust level as the system prompt itself.
+export async function getSkill({ toolParams, model }) {
+  return getSkillPrompt(toolParams?.name, model);
+}
+
 /**
  * Counts open http(s) tabs across all active AI windows. Used for
  * browser_action_submit telemetry.
@@ -1324,7 +1347,7 @@ export async function manageTabs(
     conversation.lastBrowserActionType = actionType;
   }
 
-  const promptVersion = String(FEATURE_MAJOR_VERSIONS[MODEL_FEATURES.CHAT]);
+  const promptVersion = conversation?.systemPromptVersion ?? "";
 
   const baseTelemetryInfo = {
     location: mode,
@@ -1410,4 +1433,5 @@ export const toolFns = {
   worldCupLive,
   manageTabs,
   addMemory,
+  getSkill,
 };

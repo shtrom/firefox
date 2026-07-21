@@ -26,6 +26,7 @@ import {
   SEARCH_THE_WEB,
   RUN_SEARCH_TOOL_CONFIG_VERBATIM_QUERY,
   RUN_SEARCH_TOOL_CONFIG_GENERATED_QUERY,
+  GET_SKILL,
 } from "moz-src:///browser/components/aiwindow/models/Tools.sys.mjs";
 import { runSearchTheWeb } from "moz-src:///browser/components/aiwindow/models/search/SearchWorkflow.sys.mjs";
 
@@ -97,6 +98,12 @@ export async function executeToolByName(
       break;
     case GET_NAVIGATION_INFO:
       result = await toolFns.getNavigationInfo(toolParams);
+      break;
+    case GET_SKILL:
+      result = await toolFns.getSkill({
+        toolParams,
+        model: conversation.engine?.model,
+      });
       break;
     case MANAGE_TABS: {
       const { toolResult, uiData } = await toolFns.manageTabs(
