@@ -17,6 +17,17 @@
   }
 }
 
+#ctrlTab-previews {
+  flex-wrap: wrap;
+  row-gap: var(--space-medium);
+}
+
+.ctrlTab-preview {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+}
+
 .ctrlTab-preview,
 #ctrlTab-showAll {
   appearance: none;
