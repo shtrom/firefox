@@ -4152,6 +4152,9 @@ void CheckForBrokenChromeURL(nsILoadInfo* aLoadInfo, nsIURI* aURI) {
   // info-pages.css and aboutLicense.css are not - bug 1808987
   if (StringEndsWith(spec, "info-pages.css"_ns) ||
       StringEndsWith(spec, "aboutLicense.css"_ns) ||
+      // about:certificates is missing styles: bug 2055889
+      StringEndsWith(spec, "in-content/common.css"_ns) ||
+      StringEndsWith(spec, "text-and-typography.css"_ns) ||
       // Error page CSS is also missing: bug 1810039
       StringEndsWith(spec, "aboutNetError.css"_ns) ||
       StringEndsWith(spec, "aboutHttpsOnlyError.css"_ns) ||
