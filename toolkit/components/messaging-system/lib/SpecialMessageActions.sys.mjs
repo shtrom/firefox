@@ -369,6 +369,7 @@ export const SpecialMessageActions = {
     // Array of prefs that are allowed to be edited by SET_PREF
     const allowedPrefs = [
       "browser.aboutwelcome.didSeeFinalScreen",
+      "browser.sessionstore.newTabOnRestore",
       "browser.smartwindow.enabled",
       "browser.smartwindow.firstrun.hasCompleted",
       "browser.smartwindow.firstrun.modelChoice",
