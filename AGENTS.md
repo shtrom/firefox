@@ -30,7 +30,7 @@ that has definitely changed locally. If you're unsure, ask.
 - `./mach run`: Run the project
 - `./mach doc --no-serve --no-open`: Build the documentation
 - `./mach python --virtualenv <virtualenv_name>`: Execute Python of a Mach command's virtualenv. Value of `virtualenv_name` is in relevant `@Command` decorator. This avoids `ImportError`s.
-- `treeherder-cli`: Pull CI results for a try push
+- `treeherder-cli`: Pull CI results for a try push. If the command is missing, run `./mach bootstrap` to install it.
 - Use the MCP resource `@moz:bugzilla://bug/{bug_id}` to retrieve a bug
 - Use the MCP resource `@moz:phabricator://revision/D{revision_id}` to retrieve a Phabricator revision
 
