@@ -455,6 +455,7 @@ export const tokensTable = {
       value: "var(--background-color-dimmed-further)",
       name: "--panel-background-color-dimmed-further",
     },
+    { value: "var(--background-color-box)", name: "--popup-background-color" },
     {
       value: {
         light: "white",
@@ -1211,6 +1212,23 @@ export const tokensTable = {
     },
     {
       value: {
+        light: "rgb(240, 240, 244)",
+        dark: "rgb(82, 82, 94)",
+        nativeTheme: "var(--border-color-deemphasized)",
+        platform: {
+          default: "var(--border-color-deemphasized)",
+          browserTheme: {
+            light: "rgb(240, 240, 244)",
+            dark: "rgb(82, 82, 94)",
+            default: "light-dark(rgb(240, 240, 244), rgb(82, 82, 94))",
+          },
+        },
+        default: "light-dark(rgb(240, 240, 244), rgb(82, 82, 94))",
+      },
+      name: "--popup-border-color",
+    },
+    {
+      value: {
         default: "var(--card-border-color)",
         nativeTheme: "-moz-sidebarborder",
         prefersContrast: "var(--card-border-color)",
@@ -1354,6 +1372,7 @@ export const tokensTable = {
       name: "--panel-menuitem-border-radius",
     },
     { value: "var(--border-radius-medium)", name: "--panel-border-radius" },
+    { value: "var(--border-radius-medium)", name: "--popup-border-radius" },
     {
       value: "var(--button-border-radius)",
       name: "--toolbarbutton-border-radius",
@@ -2808,6 +2827,8 @@ export const tokensTable = {
     { value: "center", name: "--button-content-alignment" },
     { value: "cover", name: "--card-cover-image-object-fit-default" },
     { value: "center", name: "--card-cover-image-object-position-default" },
+    { value: "var(--button-min-height-small)", name: "--small" },
+    { value: "var(--button-padding-block)", name: "--block" },
     {
       value: {
         nativeTheme: "var(--toolbar-text-color)",
@@ -4597,6 +4618,22 @@ export const variableLookupTable = {
     default: "light-dark(var(--color-black), rgb(251, 251, 254))",
   },
   "panel-width": "initial",
+  "popup-background-color": "var(--background-color-box)",
+  "popup-border-color": {
+    light: "rgb(240, 240, 244)",
+    dark: "rgb(82, 82, 94)",
+    nativeTheme: "var(--border-color-deemphasized)",
+    platform: {
+      default: "var(--border-color-deemphasized)",
+      browserTheme: {
+        light: "rgb(240, 240, 244)",
+        dark: "rgb(82, 82, 94)",
+        default: "light-dark(rgb(240, 240, 244), rgb(82, 82, 94))",
+      },
+    },
+    default: "light-dark(rgb(240, 240, 244), rgb(82, 82, 94))",
+  },
+  "popup-border-radius": "var(--border-radius-medium)",
   "popup-box-shadow": "var(--box-shadow-level-3)",
   "sidebar-background-color": {
     light: "white",
@@ -5054,6 +5091,8 @@ export const variableLookupTable = {
   "segmented-control-border-radius":
     "calc(var(--button-border-radius) + var(--focus-outline-width) + var(--focus-outline-offset) + var(--border-width))",
   "segmented-control-padding": "var(--space-xsmall)",
+  small: "var(--button-min-height-small)",
+  block: "var(--button-padding-block)",
   "select-background-color": "var(--button-background-color)",
   "select-background-color-hover": "var(--button-background-color-hover)",
   "select-background-color-disabled": "var(--button-background-color-disabled)",

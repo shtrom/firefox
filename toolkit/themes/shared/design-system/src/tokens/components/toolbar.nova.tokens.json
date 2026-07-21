@@ -16,8 +16,9 @@
         },
         "focus": {
           "value": {
-            "default": "#ffffff",
-            "forcedColors": "SelectedItem"
+            "nativeTheme": "color-mix(in srgb, {focus.outline.color} 50%, transparent)",
+            "default": "{focus.outline.color}",
+            "prefersContrast": "{focus.outline.color}"
           }
         }
       }

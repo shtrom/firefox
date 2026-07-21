@@ -35,6 +35,7 @@ GeneratedFile(
         "/toolkit/themes/shared/design-system/src/tokens/base/background.nova.tokens.json",
         "/toolkit/themes/shared/design-system/src/tokens/base/color.tokens.json",
         "/toolkit/themes/shared/design-system/src/tokens/base/color.nova.tokens.json",
+        "/toolkit/themes/shared/design-system/src/tokens/base/focus.tokens.json",
         "/toolkit/themes/shared/design-system/src/tokens/base/text.nova.tokens.json",
         "/toolkit/themes/shared/design-system/src/tokens/components/toolbar.nova.tokens.json",
         "/toolkit/themes/shared/design-system/src/tokens/components/toolbarbutton.nova.tokens.json",

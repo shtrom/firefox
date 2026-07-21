@@ -1,13 +1,4 @@
 {
-  "nova": {
-    "padding": {
-      "inline": {
-        "small": {
-          "value": "{space.medium}"
-        }
-      }
-    }
-  },
   "background": {
     "color": {
       "@base": {

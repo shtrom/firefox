@@ -60,6 +60,9 @@
     --panel-border-color: var(--border-color-deemphasized);
     --panel-text-color: FieldText;
 
+    /** popup **/
+    --popup-border-color: var(--border-color-deemphasized);
+
     /** sidebar **/
     --sidebar-background-color: -moz-sidebar;
     --sidebar-border-color: -moz-sidebarborder;
@@ -137,6 +140,9 @@
       --panel-border-color: light-dark(rgb(240, 240, 244), rgb(82, 82, 94));
       --panel-text-color: light-dark(var(--color-black), rgb(251, 251, 254));
 
+      /** popup **/
+      --popup-border-color: light-dark(rgb(240, 240, 244), rgb(82, 82, 94));
+
       /** sidebar **/
       --sidebar-background-color: light-dark(white, rgb(28, 27, 34));
       --sidebar-border-color: var(--card-border-color);
@@ -189,6 +195,9 @@
       --panel-border-color: var(--border-color-deemphasized);
       --panel-text-color: FieldText;
 
+      /** popup **/
+      --popup-border-color: var(--border-color-deemphasized);
+
       /** text-color **/
       --text-color: currentColor;
       --text-color-accent-primary-selected: SelectedItemText;
@@ -196,6 +205,7 @@
       /** toolbar **/
       --toolbar-background-color: color-mix(in srgb, -moz-dialog 85%, var(--color-white));
       --toolbar-field-background-color-focus: Field;
+      --toolbar-field-border-color-focus: color-mix(in srgb, var(--focus-outline-color) 50%, transparent);
       --toolbar-field-text-color: inherit;
       --toolbar-field-text-color-focus: FieldText;
 
@@ -234,9 +244,12 @@
         --color-accent-primary-selected: var(--button-background-color-primary-active);
 
         /** panel **/
-        --panel-background-color: var(--background-color-box);
-        --panel-border-color: light-dark(var(--color-gray-10), var(--color-gray-60));
+        --panel-background-color: var(--popup-background-color);
+        --panel-border-color: var(--popup-border-color);
         --panel-text-color: var(--text-color);
+
+        /** popup **/
+        --popup-border-color: light-dark(var(--color-gray-10), var(--color-gray-65));
 
         /** text-color **/
         --text-color: light-dark(var(--color-violet-desaturated-90), var(--color-violet-desaturated-0));
@@ -244,6 +257,7 @@
         /** toolbar **/
         --toolbar-background-color: var(--background-color-box);
         --toolbar-field-background-color-focus: var(--background-color-box);
+        --toolbar-field-border-color-focus: var(--focus-outline-color);
         --toolbar-field-text-color: light-dark(var(--color-violet-desaturated-70), var(--color-violet-desaturated-10));
         --toolbar-field-text-color-focus: var(--toolbar-field-text-color);
 
