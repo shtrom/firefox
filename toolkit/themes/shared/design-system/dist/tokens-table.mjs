@@ -1340,6 +1340,10 @@ export const tokensTable = {
       value: "var(--border-radius-medium)",
       name: "--card-border-radius-compact",
     },
+    {
+      value: "var(--border-radius-medium)",
+      name: "--card-cover-image-border-radius",
+    },
     { value: "var(--border-radius-small)", name: "--checkbox-border-radius" },
     {
       value: "var(--border-radius-medium)",
@@ -1928,6 +1932,7 @@ export const tokensTable = {
       value: "var(--button-min-height-large)",
       name: "--button-size-icon-large",
     },
+    { value: "160px", name: "--card-cover-image-height-default" },
     { value: "var(--size-item-small)", name: "--checkbox-size" },
     { value: "var(--size-item-small)", name: "--input-height" },
     { value: "var(--button-min-height)", name: "--input-text-min-height" },
@@ -1998,6 +2003,11 @@ export const tokensTable = {
       name: "--button-padding-inline-small",
     },
     { value: 0, name: "--button-padding-icon" },
+    { value: "var(--space-small)", name: "--card-cover-image-padding" },
+    {
+      value: "var(--space-xsmall)",
+      name: "--card-cover-image-padding-compact",
+    },
     { value: "var(--space-large)", name: "--card-padding" },
     { value: "var(--space-small)", name: "--card-padding-compact" },
     { value: "var(--card-padding)", name: "--card-gap" },
@@ -2796,6 +2806,8 @@ export const tokensTable = {
   ],
   uncategorized: [
     { value: "center", name: "--button-content-alignment" },
+    { value: "cover", name: "--card-cover-image-object-fit-default" },
+    { value: "center", name: "--card-cover-image-object-position-default" },
     {
       value: {
         nativeTheme: "var(--toolbar-text-color)",
@@ -4319,6 +4331,12 @@ export const variableLookupTable = {
   "card-border-radius-compact": "var(--border-radius-medium)",
   "card-box-shadow": "var(--box-shadow-level-2)",
   "card-box-shadow-hover": "var(--box-shadow-level-4)",
+  "card-cover-image-border-radius": "var(--border-radius-medium)",
+  "card-cover-image-height-default": "160px",
+  "card-cover-image-padding": "var(--space-small)",
+  "card-cover-image-padding-compact": "var(--space-xsmall)",
+  "card-cover-image-object-fit-default": "cover",
+  "card-cover-image-object-position-default": "center",
   "card-focus-outline": "var(--focus-outline)",
   "card-font-size": "var(--font-size-root)",
   "card-font-size-compact": "var(--font-size-small)",

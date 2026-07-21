@@ -182,6 +182,12 @@
     --card-border-width: var(--border-width);
     --card-box-shadow: var(--box-shadow-level-2);
     --card-box-shadow-hover: var(--box-shadow-level-4);
+    --card-cover-image-border-radius: var(--border-radius-medium);
+    --card-cover-image-height-default: 160px;
+    --card-cover-image-object-fit-default: cover;
+    --card-cover-image-object-position-default: center;
+    --card-cover-image-padding: var(--space-small);
+    --card-cover-image-padding-compact: var(--space-xsmall);
     --card-focus-outline: var(--focus-outline);
     --card-font-size: var(--font-size-root);
     --card-font-size-compact: var(--font-size-small);

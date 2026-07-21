@@ -104,19 +104,23 @@ export default class MozCard extends MozLitElement {
   cardTemplate() {
     if (this.type === "accordion") {
       return html`
-        <details
-          id="moz-card-details"
-          @toggle=${this.onToggle}
-          ?open=${this.expanded}
-        >
-          <summary part="summary">${this.headingTemplate()}</summary>
-          <div id="content"><slot id="content-slot"></slot></div>
-        </details>
+        <div class="moz-card-wrapper">
+          <div id="cover-image"><slot name="cover-image"></slot></div>
+          <details
+            id="moz-card-details"
+            @toggle=${this.onToggle}
+            ?open=${this.expanded}
+          >
+            <summary part="summary">${this.headingTemplate()}</summary>
+            <div id="content"><slot id="content-slot"></slot></div>
+          </details>
+        </div>
       `;
     }
 
     return html`
       <div id="moz-card-details">
+        <div id="cover-image"><slot name="cover-image"></slot></div>
         ${this.headingTemplate()}
         <div id="content" aria-describedby="content">
           <slot></slot>
