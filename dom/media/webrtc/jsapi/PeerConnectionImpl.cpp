@@ -1936,7 +1936,7 @@ void PeerConnectionImpl::OnDtlsStateChange(
   for (const auto& cert : aRemoteCerts) {
     certsCopy.AppendElement(cert.Clone());
   }
-  dtlsTransport->UpdateState(aState, std::move(certsCopy), aError);
+  dtlsTransport->UpdateState(aState, std::move(certsCopy), std::move(aError));
   // Whenever the state of an RTCDtlsTransport changes or when the [[IsClosed]]
   // slot turns true, the user agent MUST update the connection state by
   // queueing a task that runs the following steps:
@@ -1962,7 +1962,7 @@ void PeerConnectionImpl::OnDtlsStateChange(
 void PeerConnectionImpl::OnRtcpStateChange(const std::string& aTransportId,
                                            TransportLayer::State aState,
                                            Maybe<dom::RTCErrorParams> aError) {
-  OnDtlsStateChange(aTransportId, aState, {}, aError);
+  OnDtlsStateChange(aTransportId, aState, {}, std::move(aError));
 }
 
 RTCPeerConnectionState PeerConnectionImpl::GetNewConnectionState() const {
