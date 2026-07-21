@@ -1081,7 +1081,7 @@ class ComponentInstance {
   const SharedComponent component_;
 
   using CoreInstanceVector =
-      GCVector<WasmInstanceObject*, 0, SystemAllocPolicy>;
+      GCVector<HeapPtr<WasmInstanceObject*>, 0, SystemAllocPolicy>;
   // An array of all the core instances owned by this component instance. NOTE!
   // This array is sparse; its indices will always correspond 1:1 with
   // Component::coreInstances(), but not all such instances will get a
