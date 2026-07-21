@@ -384,6 +384,12 @@ with modules["NETWORK"]:
     # The request occurred in docshell that lacks a treeowner, so it is
     # probably in the process of being torn down.
     errors["NS_ERROR_DOCSHELL_DYING"] = FAILURE(78)
+    # A document channel opened in the parent process to make a process
+    # selection decision was canceled because the parent channel was never
+    # linked up with a channel in the selected content process (which instead
+    # opened its own independent channel, e.g. for about: documents). This is an
+    # expected outcome rather than a real load failure.
+    errors["NS_ERROR_DOCUMENT_LOAD_LISTENER_NO_PARENT_CHANNEL"] = FAILURE(79)
 
     # DNS specific error codes:
 
