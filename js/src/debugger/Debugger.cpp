@@ -3111,9 +3111,16 @@ void Debugger::slowPathPromiseHook(JSContext* cx, Hook hook,
 }
 
 /* static */
-void DebugAPI::slowPathOnNewPromise(JSContext* cx,
+bool DebugAPI::slowPathOnNewPromise(JSContext* cx,
                                     Handle<PromiseObject*> promise) {
   Debugger::slowPathPromiseHook(cx, Debugger::OnNewPromise, promise);
+
+  if (promise->state() != JS::PromiseState::Pending) {
+    JS_ReportErrorASCII(cx, "Debugger hook violates the promise invariant");
+    return false;
+  }
+
+  return true;
 }
 
 /*** Debugger code invalidation for observing execution *********************/
