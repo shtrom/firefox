@@ -26,7 +26,7 @@ gcloud:
     - notPackage org.mozilla.fenix.ui.efficiency.tests
     - notPackage org.mozilla.fenix.ui.efficiency.examples
     - notPackage org.mozilla.fenix.ui.efficiency.generation.reachability.shards
-    - notPackage org.mozilla.fenix.ui.efficiency.navigation.pairs.shards
+    - notPackage org.mozilla.fenix.ui.efficiency.generation.pairs.shards
     - notPackage org.mozilla.fenix.ui.efficiency.navigation.interaction.shards
     - notPackage org.mozilla.fenix.ui.efficiency.navigation.behavior.shards
 
