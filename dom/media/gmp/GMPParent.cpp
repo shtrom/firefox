@@ -67,7 +67,7 @@ namespace mozilla::gmp {
 #endif
 #define __CLASS__ "GMPParent"
 
-GMPParent::GMPParent()
+GMPParent::GMPParent(nsISerialEventTarget* aGMPEventTarget)
     : mState(GMPState::NotLoaded),
       mPluginId(GeckoChildProcessHost::GetUniqueID()),
       mProcess(nullptr),
@@ -80,7 +80,8 @@ GMPParent::GMPParent()
 #ifdef ALLOW_GECKO_CHILD_PROCESS_ARCH
       mChildLaunchArch(base::PROCESS_ARCH_INVALID),
 #endif
-      mMainThread(GetMainThreadSerialEventTarget()) {
+      mMainThread(GetMainThreadSerialEventTarget()),
+      mGMPEventTarget(aGMPEventTarget) {
   MOZ_ASSERT(GMPEventTarget()->IsOnCurrentThread());
   GMP_PARENT_LOG_DEBUG("GMPParent ctor id={}", mPluginId);
 }
@@ -738,17 +739,7 @@ void GMPParent::DeleteProcess() {
 GMPState GMPParent::State() const { return mState; }
 
 nsCOMPtr<nsISerialEventTarget> GMPParent::GMPEventTarget() {
-  nsCOMPtr<mozIGeckoMediaPluginService> mps =
-      do_GetService("@mozilla.org/gecko-media-plugin-service;1");
-  MOZ_ASSERT(mps);
-  if (!mps) {
-    return nullptr;
-  }
-  // Note: GeckoMediaPluginService::GetThread() is threadsafe, and returns
-  // nullptr if the GeckoMediaPluginService has started shutdown.
-  nsCOMPtr<nsIThread> gmpThread;
-  mps->GetThread(getter_AddRefs(gmpThread));
-  return gmpThread;
+  return mGMPEventTarget;
 }
 
 /* static */
