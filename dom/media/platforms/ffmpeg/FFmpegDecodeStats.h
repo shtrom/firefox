@@ -14,7 +14,7 @@
 namespace mozilla {
 
 // Tracks per-frame decode timing and detects sustained slow decoding.
-// A decoder is considered "slow" when more than mMaxLateDecodedFrames frames
+// A decoder is considered "slow" when more than kMaxLateDecodedFrames frames
 // have decoded slower than both the current frame duration and the running
 // average frame duration.
 class FFmpegDecodeStats {
@@ -24,14 +24,15 @@ class FFmpegDecodeStats {
   void UpdateDecodeTimes(int64_t aDuration);
   bool IsDecodingSlow() const;
 
+  // Number of delayed frames until we consider decoding as slow.
+  static constexpr uint32_t kMaxLateDecodedFrames = 15;
+
  private:
   uint32_t mDecodedFrames = 0;
 
   double mAverageFrameDecodeTime = 0;  // in milliseconds
   double mAverageFrameDuration = 0;    // in milliseconds
 
-  // Number of delayed frames until we consider decoding as slow.
-  const uint32_t mMaxLateDecodedFrames = 15;
   // How many frames is decoded behind its pts time, i.e. video decode lags.
   uint32_t mDecodedFramesLate = 0;
 

@@ -16,7 +16,7 @@ namespace mozilla {
 void FFmpegDecodeStats::DecodeStart() { mDecodeStart = TimeStamp::Now(); }
 
 bool FFmpegDecodeStats::IsDecodingSlow() const {
-  return mDecodedFramesLate > mMaxLateDecodedFrames;
+  return mDecodedFramesLate > kMaxLateDecodedFrames;
 }
 
 void FFmpegDecodeStats::UpdateDecodeTimes(int64_t aDuration) {
