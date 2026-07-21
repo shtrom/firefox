@@ -116,6 +116,7 @@ DIRS += [
     "/third_party/libwebrtc/api/video/recordable_encoded_frame_gn",
     "/third_party/libwebrtc/api/video/render_resolution_gn",
     "/third_party/libwebrtc/api/video/resolution_gn",
+    "/third_party/libwebrtc/api/video/timing/video_jitter_timing_factory_gn",
     "/third_party/libwebrtc/api/video/timing/video_jitter_timing_interface_gn",
     "/third_party/libwebrtc/api/video/video_adaptation_gn",
     "/third_party/libwebrtc/api/video/video_adapter_gn",
