@@ -643,6 +643,10 @@ split-view-footer {
   --button-size-icon: 34px;
   --button-border-radius: 7px;
   margin: 1px;
+
+  @media -moz-pref("browser.nova.enabled") {
+    --button-border-radius: var(--border-radius-xlarge);
+  }
 }
 
 #ask-chat-shortcuts {
