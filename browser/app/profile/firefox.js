@@ -486,8 +486,6 @@ pref("browser.urlbar.deduplication.thresholdDays", 0);
 
 pref("browser.urlbar.scotchBonnet.enableOverride", true);
 
-pref("browser.urlbar.trackerCount.featureGate", true);
-
 pref("browser.urlbar.trustPanel.featureGate", true);
 pref("browser.urlbar.trustPanel.breachAlerts.featureGate", true);
 pref("browser.urlbar.trustPanel.breachAlerts", true);
