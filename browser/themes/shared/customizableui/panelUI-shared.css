@@ -1912,8 +1912,8 @@ toolbarbutton[itemtype="showinactivebutton"] {
     url(chrome://browser/skin/panic-panel/header.png),
     url(chrome://browser/skin/panic-panel/header@2x.png) 2x
   );
-  max-height: var(--size-item-xlarge);
-  width: var(--size-item-xlarge);
+  max-height: var(--icon-size-xxlarge);
+  width: var(--icon-size-xxlarge);
 }
 
 #panic-button-success-header {

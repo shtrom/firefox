@@ -437,6 +437,7 @@
     --icon-size-medium: var(--dimension-20);
     --icon-size-large: var(--dimension-24);
     --icon-size-xlarge: var(--dimension-32);
+    --icon-size-xxlarge: var(--size-item-xlarge);
 
     /** info-bar **/
     --info-bar-border-color: light-dark(var(--color-violet-desaturated-20), var(--color-gray-60));
