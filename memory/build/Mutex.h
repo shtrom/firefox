@@ -254,7 +254,7 @@ class MOZ_CAPABILITY("mutex") MaybeMutex : public Mutex {
     return false;
   }
 
-  DoLock mDoLock;
+  DoLock mDoLock = MUST_LOCK;
 #ifdef MOZ_DIAGNOSTIC_ASSERT_ENABLED
   ThreadId mThreadId;
 #endif
