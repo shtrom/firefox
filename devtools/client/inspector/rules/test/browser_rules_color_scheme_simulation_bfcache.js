@@ -10,25 +10,45 @@ add_task(async function testBfCacheNavigationWithDevTools() {
   await pushPref("layout.css.custom-media.enabled", true);
 
   await addTab(TEST_URI);
-  const { inspector, toolbox } = await openRuleView();
+  const defaultPrefersDark = await getCurrentPrefersDark();
+  const { inspector, view, toolbox } = await openRuleView();
 
-  is(await isSimulationEnabled(), false, "color scheme simulation is disabled");
-
-  const darkButton = inspector.panelDoc.querySelector(
-    "#color-scheme-simulation-dark-toggle"
+  is(
+    await isSimulationEnabled(defaultPrefersDark),
+    false,
+    "color scheme simulation is disabled"
   );
-  ok(darkButton, "The dark color scheme simulation button exists");
 
-  info("Click on the dark button");
-  darkButton.click();
-  await waitFor(async () => isSimulationEnabled());
-  is(await isSimulationEnabled(), true, "color scheme simulation is enabled");
+  await assertEmulationPanelClosed(view);
+  await openEmulationPanel(view);
+
+  const { lightButton, darkButton, noneButton } =
+    getColorSchemeSimulationButtons(inspector);
+  const buttonToEnable = defaultPrefersDark ? lightButton : darkButton;
+  ok(buttonToEnable, "The opposite color scheme simulation button exists");
+  ok(noneButton, "The none button exists");
+
+  info(`Click on the ${defaultPrefersDark ? "light" : "dark"} button`);
+  buttonToEnable.click();
+  await waitForSimulationEnabled(defaultPrefersDark);
+  is(
+    await isSimulationEnabled(defaultPrefersDark),
+    true,
+    "color scheme simulation is enabled"
+  );
 
   info("Navigate to a different URL and disable the color simulation");
   await navigateTo(TEST_URI + "?someparameter");
-  darkButton.click();
-  await waitFor(async () => !(await isSimulationEnabled()));
-  is(await isSimulationEnabled(), false, "color scheme simulation is disabled");
+
+  const { noneButton: noneButtonAfterNavigation } =
+    getColorSchemeSimulationButtons(inspector);
+  noneButtonAfterNavigation.click();
+  await waitForSimulationDisabled(defaultPrefersDark);
+  is(
+    await isSimulationEnabled(defaultPrefersDark),
+    false,
+    "color scheme simulation is disabled"
+  );
 
   info(
     "Perform a bfcache navigation and check that the simulation is still disabled"
@@ -38,26 +58,39 @@ add_task(async function testBfCacheNavigationWithDevTools() {
   );
   gBrowser.goBack();
   await waitForDevToolsReload();
-  is(await isSimulationEnabled(), false, "color scheme simulation is disabled");
+  is(
+    await isSimulationEnabled(defaultPrefersDark),
+    false,
+    "color scheme simulation is disabled"
+  );
 
   await toolbox.destroy();
 });
 
 add_task(async function testBfCacheNavigationAfterClosingDevTools() {
   await addTab(TEST_URI);
+  const defaultPrefersDark = await getCurrentPrefersDark();
   const { inspector, toolbox } = await openRuleView();
 
-  is(await isSimulationEnabled(), false, "color scheme simulation is disabled");
-
-  const darkButton = inspector.panelDoc.querySelector(
-    "#color-scheme-simulation-dark-toggle"
+  is(
+    await isSimulationEnabled(defaultPrefersDark),
+    false,
+    "color scheme simulation is disabled"
   );
-  ok(darkButton, "The dark color scheme simulation button exists");
 
-  info("Click on the dark button");
-  darkButton.click();
-  await waitFor(async () => isSimulationEnabled());
-  is(await isSimulationEnabled(), true, "color scheme simulation is enabled");
+  const { lightButton, darkButton } =
+    getColorSchemeSimulationButtons(inspector);
+  const buttonToEnable = defaultPrefersDark ? lightButton : darkButton;
+  ok(buttonToEnable, "The opposite color scheme simulation button exists");
+
+  info(`Click on the ${defaultPrefersDark ? "light" : "dark"} button`);
+  buttonToEnable.click();
+  await waitForSimulationEnabled(defaultPrefersDark);
+  is(
+    await isSimulationEnabled(defaultPrefersDark),
+    true,
+    "color scheme simulation is enabled"
+  );
 
   // Wait for the iframe target to be processed before destroying the toolbox,
   // to avoid unhandled promise rejections.
@@ -76,8 +109,12 @@ add_task(async function testBfCacheNavigationAfterClosingDevTools() {
 
   info("Close DevTools to disable the simulation");
   await toolbox.destroy();
-  await waitFor(async () => !(await isSimulationEnabled()));
-  is(await isSimulationEnabled(), false, "color scheme simulation is disabled");
+  await waitForSimulationDisabled(defaultPrefersDark);
+  is(
+    await isSimulationEnabled(defaultPrefersDark),
+    false,
+    "color scheme simulation is disabled"
+  );
 
   info(
     "Perform a bfcache navigation and check that the simulation is still disabled"
@@ -89,12 +126,34 @@ add_task(async function testBfCacheNavigationAfterClosingDevTools() {
   gBrowser.goBack();
   await awaitPageShow;
 
-  is(await isSimulationEnabled(), false, "color scheme simulation is disabled");
+  is(
+    await isSimulationEnabled(defaultPrefersDark),
+    false,
+    "color scheme simulation is disabled"
+  );
 });
 
-function isSimulationEnabled() {
-  return SpecialPowers.spawn(gBrowser.selectedBrowser, [], () => {
-    const { matches } = content.matchMedia("(prefers-color-scheme: dark)");
-    return matches;
-  });
+function getColorSchemeSimulationButtons(inspector) {
+  const doc = inspector.panelDoc;
+  return {
+    lightButton: doc.querySelector("#color-scheme-simulation-light"),
+    darkButton: doc.querySelector("#color-scheme-simulation-dark"),
+    noneButton: doc.querySelector("#color-scheme-simulation-none"),
+  };
+}
+
+async function isSimulationEnabled(defaultPrefersDark) {
+  return (await getCurrentPrefersDark()) !== defaultPrefersDark;
+}
+
+async function waitForSimulationEnabled(defaultPrefersDark) {
+  await waitFor(
+    async () => (await getCurrentPrefersDark()) !== defaultPrefersDark
+  );
+}
+
+async function waitForSimulationDisabled(defaultPrefersDark) {
+  await waitFor(
+    async () => (await getCurrentPrefersDark()) === defaultPrefersDark
+  );
 }

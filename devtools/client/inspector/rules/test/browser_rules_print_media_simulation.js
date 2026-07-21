@@ -13,15 +13,16 @@ add_task(async function () {
   await addTab(TEST_URI);
   const { inspector, view } = await openRuleView();
 
-  info("Check that the print simulation button exists");
-  const button = inspector.panelDoc.querySelector("#print-simulation-toggle");
-  ok(button, "The print simulation button exists");
-
-  is(
-    button.getAttribute("aria-pressed"),
-    "false",
-    "The print button is not pressed"
+  info(
+    "Open emulation panel and check that the print simulation switch exists"
   );
+  await openEmulationPanel(view);
+  const printSimulationSwitch = inspector.panelDoc.querySelector(
+    "#print-simulation-enabled"
+  );
+  ok(printSimulationSwitch, "The print simulation switch exists");
+
+  is(printSimulationSwitch.checked, false, "The print switch is not enabled");
 
   // Helper to retrieve the background-color property of the selected element
   // All the test elements are expected to have a single background-color rule
@@ -41,11 +42,11 @@ add_task(async function () {
     "No media query information are displayed initially"
   );
 
-  info("Click on the button and wait for print media to be applied");
-  button.click();
+  info("Click on the switch and wait for print media to be applied");
+  printSimulationSwitch.click();
 
-  await waitFor(() => button.getAttribute("aria-pressed") === "true");
-  ok(true, "The button is now pressed");
+  await waitFor(() => printSimulationSwitch.checked === true);
+  ok(true, "The switch is now enabled");
 
   await waitFor(() => ruleViewHasColor("#00f"));
   ok(
@@ -55,7 +56,7 @@ add_task(async function () {
   is(
     getRuleViewAncestorRulesDataTextByIndex(view, 1),
     "@media print {",
-    "Media queries information are displayed"
+    "Media queries information is displayed"
   );
 
   info("Select the node from the remote iframe");
@@ -74,17 +75,17 @@ add_task(async function () {
   info("Select the top level div again");
   await selectNode("div", inspector);
 
-  info("Click the button again to disable print simulation");
-  button.click();
+  info("Click the switch again to disable print simulation");
+  printSimulationSwitch.click();
 
-  await waitFor(() => button.getAttribute("aria-pressed") === "false");
-  ok(true, "The button is no longer checked");
+  await waitFor(() => printSimulationSwitch.checked === false);
+  ok(true, "The switch is no longer enabledF");
 
   await waitFor(() => ruleViewHasColor("#f00"));
   is(
     getRuleViewAncestorRulesDataElementByIndex(view, 1),
     null,
-    "media query is no longer displayed"
+    "The media query is no longer displayed"
   );
 
   info("Select the node from the remote iframe again");
@@ -95,6 +96,6 @@ add_task(async function () {
   is(
     getRuleViewAncestorRulesDataElementByIndex(view, 1),
     null,
-    "media query is no longer displayed on the remote iframe as well"
+    "The media query is no longer displayed on the remote iframe as well"
   );
 });

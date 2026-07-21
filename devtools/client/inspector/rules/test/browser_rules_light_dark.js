@@ -101,9 +101,8 @@ add_task(async function () {
   );
   if (isDarkScheme) {
     const onRuleViewRefreshed = inspector.once("rule-view-refreshed");
-    inspector.panelDoc
-      .querySelector("#color-scheme-simulation-light-toggle")
-      .click();
+    await openEmulationPanel(view);
+    inspector.panelDoc.querySelector("#color-scheme-simulation-light").click();
     await onRuleViewRefreshed;
   }
 
