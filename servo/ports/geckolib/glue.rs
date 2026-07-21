@@ -5146,6 +5146,47 @@ pub extern "C" fn Servo_ParseProperty(
     )
 }
 
+macro_rules! parse_for {
+    (
+        $input:ident,
+        $parse_func:path
+    ) => {{
+        let s = unsafe { $input.as_str_unchecked() };
+        let mut input = ParserInput::new(&s);
+        let mut parser = Parser::new(&mut input);
+        let context = ParserContext::new(
+            Origin::Author,
+            unsafe { dummy_url_data() },
+            Some(CssRuleType::Style),
+            ParsingMode::DEFAULT,
+            QuirksMode::NoQuirks,
+            /* namespaces = */ Default::default(),
+            None,
+            None,
+            /* attr_taint */ Default::default(),
+        );
+        parser.parse_entirely(|p| $parse_func(&context, p))
+    }};
+}
+
+#[no_mangle]
+pub extern "C" fn Servo_ParseLengthPercentageForAbsoluteLengths(
+    lp: &nsACString,
+    output: &mut computed::LengthPercentage,
+) -> bool {
+    let Ok(specified) = parse_for!(lp, specified::LengthPercentage::parse) else {
+        return false;
+    };
+
+    match specified.compute_without_context() {
+        Some(value) => {
+            *output = value;
+            true
+        },
+        _ => false,
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn Servo_ParseViewTimelineInset(
     inset: &nsACString,
@@ -5154,23 +5195,7 @@ pub extern "C" fn Servo_ParseViewTimelineInset(
     use style::properties::longhands::view_timeline_inset;
     use style::values::specified::length::LengthPercentageOrAuto;
 
-    let inset = unsafe { inset.as_str_unchecked() };
-    let mut input = ParserInput::new(&inset);
-    let mut parser = Parser::new(&mut input);
-    let context = ParserContext::new(
-        Origin::Author,
-        unsafe { dummy_url_data() },
-        Some(CssRuleType::Style),
-        ParsingMode::DEFAULT,
-        QuirksMode::NoQuirks,
-        /* namespaces = */ Default::default(),
-        None,
-        None,
-        /* attr_taint */ Default::default(),
-    );
-    let Ok(specified) =
-        parser.parse_entirely(|p| view_timeline_inset::single_value::parse(&context, p))
-    else {
+    let Ok(specified) = parse_for!(inset, view_timeline_inset::single_value::parse) else {
         return false;
     };
 
@@ -5199,29 +5224,12 @@ pub extern "C" fn Servo_ParseEasing(
 ) -> bool {
     use style::properties::longhands::transition_timing_function;
 
-    let context = ParserContext::new(
-        Origin::Author,
-        unsafe { dummy_url_data() },
-        Some(CssRuleType::Style),
-        ParsingMode::DEFAULT,
-        QuirksMode::NoQuirks,
-        /* namespaces = */ Default::default(),
-        None,
-        None,
-        /* attr_taint */ Default::default(),
-    );
-    let easing = easing.to_string();
-    let mut input = ParserInput::new(&easing);
-    let mut parser = Parser::new(&mut input);
-    let result =
-        parser.parse_entirely(|p| transition_timing_function::single_value::parse(&context, p));
-    match result {
-        Ok(parsed_easing) => {
-            *output = parsed_easing.to_computed_value_without_context();
-            true
-        },
-        Err(_) => false,
-    }
+    let Ok(specified) = parse_for!(easing, transition_timing_function::single_value::parse) else {
+        return false;
+    };
+
+    *output = specified.to_computed_value_without_context();
+    true
 }
 
 #[no_mangle]
@@ -5233,23 +5241,7 @@ pub extern "C" fn Servo_ParseKeyframeSelector(
     use style::stylesheets::keyframes_rule::KeyframeOffset;
     use style::values::specified::animation::TimelineRangeName;
 
-    let selector = unsafe { selector.as_str_unchecked() };
-    let mut input = ParserInput::new(&selector);
-    let mut parser = Parser::new(&mut input);
-
-    // We don't care about these consts for now since we only accept a pure percentage value.
-    let context = ParserContext::new(
-        Origin::Author,
-        unsafe { dummy_url_data() },
-        Some(CssRuleType::Style),
-        ParsingMode::DEFAULT,
-        QuirksMode::NoQuirks,
-        /* namespaces = */ Default::default(),
-        None,
-        None,
-        /* attr_taint */ Default::default(),
-    );
-    let Ok(specified) = parser.parse_entirely(|i| KeyframeOffset::parse(&context, i)) else {
+    let Ok(specified) = parse_for!(selector, KeyframeOffset::parse) else {
         return false;
     };
 
@@ -7723,23 +7715,7 @@ pub extern "C" fn Servo_ParseAnimationRangeStart(
     value: &nsACString,
     output: &mut computed::AnimationRangeStart,
 ) -> bool {
-    let context = ParserContext::new(
-        Origin::Author,
-        unsafe { dummy_url_data() },
-        Some(CssRuleType::Style),
-        ParsingMode::DEFAULT,
-        QuirksMode::NoQuirks,
-        /* namespaces = */ Default::default(),
-        None,
-        None,
-        /* attr_taint */ Default::default(),
-    );
-    let value = unsafe { value.as_str_unchecked() };
-    let mut input = ParserInput::new(&value);
-    let mut parser = Parser::new(&mut input);
-    let Ok(specified) =
-        parser.parse_entirely(|i| specified::animation::AnimationRangeStart::parse(&context, i))
-    else {
+    let Ok(specified) = parse_for!(value, specified::AnimationRangeStart::parse) else {
         return false;
     };
     let Some(lp) = specified.0.lp.compute_without_context() else {
@@ -7755,23 +7731,7 @@ pub extern "C" fn Servo_ParseAnimationRangeEnd(
     value: &nsACString,
     output: &mut computed::AnimationRangeEnd,
 ) -> bool {
-    let context = ParserContext::new(
-        Origin::Author,
-        unsafe { dummy_url_data() },
-        Some(CssRuleType::Style),
-        ParsingMode::DEFAULT,
-        QuirksMode::NoQuirks,
-        /* namespaces = */ Default::default(),
-        None,
-        None,
-        /* attr_taint */ Default::default(),
-    );
-    let value = unsafe { value.as_str_unchecked() };
-    let mut input = ParserInput::new(&value);
-    let mut parser = Parser::new(&mut input);
-    let Ok(specified) =
-        parser.parse_entirely(|i| specified::animation::AnimationRangeEnd::parse(&context, i))
-    else {
+    let Ok(specified) = parse_for!(value, specified::AnimationRangeEnd::parse) else {
         return false;
     };
     let Some(lp) = specified.0.lp.compute_without_context() else {

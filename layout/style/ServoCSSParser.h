@@ -173,6 +173,18 @@ class ServoCSSParser {
                                      StyleViewTimelineInset& aResult);
 
   /**
+   * Parse a length percentage but accept absolute lenghts only, and then
+   * compute it as StyleLengthPercentage.
+   * https://github.com/w3c/csswg-drafts/issues/13852
+   *
+   * @param aValue The specified value.
+   * @param aResult The output as StyleLengthPercentage. (output)
+   * @return Whether the value was successfully parsed.
+   */
+  static bool ParseLengthPercentageForAbsoluteLengths(
+      const nsACString& aValue, StyleLengthPercentage& aResult);
+
+  /**
    * Parse a specified transform list into a gfx matrix.
    *
    * @param aValue The specified value.
