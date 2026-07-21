@@ -2478,10 +2478,6 @@ pref("media.videocontrols.picture-in-picture.auto-close.enabled", true);
 pref("media.videocontrols.picture-in-picture.auto-close.timeoutMs", 1000);
 
 pref("media.contextmenu.video-overlay-detection", true);
-// TODO (Bug 1817084) - This pref is used for managing translation preferences
-// in the Firefox Translations addon. It should be removed when the addon is
-// removed.
-pref("browser.translation.neverForLanguages", "");
 
 // Enable Firefox translations powered by the Bergamot translations
 // engine https://browser.mt/.
