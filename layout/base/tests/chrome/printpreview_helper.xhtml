@@ -170,17 +170,15 @@ function addHTMLContent(parent) {
 
 // Convenience function to make a data URI for a document that has the given
 // width and height declared in a @page size rule, and is filled with blue.
-function makeBlueRectDoc(testName, width, height){
-  // If only one param is passed, use it for width and height:
-  if (height === undefined) {
-    height = width;
-  }
+function makeBlueRectDoc(testName, width, height = width, numPages = 1){
+  let rects = '<div class="rect"></div>'.repeat(numPages);
   return `data:text/html,<!-- ${testName} --><style> \
       @page{ size: ${width} ${height}; margin: 0; } \
       body { margin: 0; } \
       .rect{ background: blue; width: ${width}; height: ${height}; } \
+      .rect + .rect { break-before: page; } \
       </style> \
-      <div class="rect"></div>`;
+      ${rects}`;
 }
 
 async function startTest1() {
@@ -2184,6 +2182,18 @@ async function runTest72() {
       },
     },
     waitForMessageDuringPrintPreview: true
+  });
+  requestAnimationFrame(() => setTimeout(runTest73));
+}
+
+// Test that a multi-page PDF preserves the correct shrink-to-fit width.
+// Note: the test framework only screenshots the first page, which suffices
+// for this test.
+async function runTest73() {
+  let test = "2in_blue_3pages.pdf#test73";
+  let ref = makeBlueRectDoc("ref73", "2in", "2in", 3);
+  await compareFiles(test, ref, {
+    waitForMessageDuringPrintPreview: true,
   });
   finish();
 }
