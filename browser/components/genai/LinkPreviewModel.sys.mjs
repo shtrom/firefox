@@ -416,7 +416,7 @@ export const LinkPreviewModel = {
     try {
       engine = await this.createEngine(
         {
-          backend: "llama.cpp",
+          backend: "best-llama",
           engineId: this.engineId,
           featureId: this.id,
           kvCacheDtype: "q8_0",

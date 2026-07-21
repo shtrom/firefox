@@ -22,10 +22,6 @@ export const LABS_STATE = Object.freeze({
   ROLLOUT_ENDED: 2,
 });
 
-ChromeUtils.defineLazyGetter(lazy, "canUseLlamaCpp", () =>
-  Cc["@mozilla.org/ml-utils;1"].getService(Ci.nsIMLUtils).canUseLlamaCpp()
-);
-
 XPCOMUtils.defineLazyPreferenceGetter(
   lazy,
   "allowedLanguages",
@@ -234,8 +230,8 @@ export const LinkPreview = {
   },
 
   get canRunOnDevice() {
-    // Key points generation requires the native llama.cpp backend.
-    return lazy.canUseLlamaCpp;
+    // Link Preview has no known restrictions based on device hardware.
+    return true;
   },
 
   get isBlocked() {
@@ -269,7 +265,6 @@ export const LinkPreview = {
 
   get canShowKeyPoints() {
     return (
-      this.canRunOnDevice &&
       this._isRegionSupported() &&
       this._isLocaleSupported() &&
       !this._isDisabledByPolicy()
@@ -354,7 +349,7 @@ export const LinkPreview = {
     }
 
     // Prefetch the model when enabling by simulating a request.
-    if (enabled && lazy.prefetchOnEnable && this.canShowKeyPoints) {
+    if (enabled && lazy.prefetchOnEnable && this._isRegionSupported()) {
       this.generateKeyPoints();
     }
 
