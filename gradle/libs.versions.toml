@@ -318,7 +318,6 @@ android-lint-plugin = { id = "com.android.lint", version.ref = "android-gradle-p
 # No version: supplied by the buildscript classpath, which the plugins DSL must not version-check.
 androidx-safeargs = { id = "androidx.navigation.safeargs.kotlin" }
 dependency-analysis = { id = "com.autonomousapps.dependency-analysis", version.ref = "dependency-analysis" }
-detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 # No version: bundled in the Kotlin Gradle plugin classpath, which the plugins DSL must not version-check.
 kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize" }
