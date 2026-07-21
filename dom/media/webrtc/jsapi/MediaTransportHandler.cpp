@@ -1736,8 +1736,8 @@ void MediaTransportHandlerSTS::OnStateChange(TransportLayer* aLayer,
 
   // DTLS state indicates the readiness of the transport as a whole, because
   // SRTP uses the keys from the DTLS handshake.
-  MediaTransportHandler::OnStateChange(aLayer->flow_id(), aState,
-                                       std::move(remoteCerts), error);
+  MediaTransportHandler::OnStateChange(
+      aLayer->flow_id(), aState, std::move(remoteCerts), std::move(error));
 }
 
 void MediaTransportHandlerSTS::OnRtcpStateChange(TransportLayer* aLayer,
@@ -1749,7 +1749,8 @@ void MediaTransportHandlerSTS::OnRtcpStateChange(TransportLayer* aLayer,
     error = Some(GetErrorInfo(*dtlsLayer));
   }
 
-  MediaTransportHandler::OnRtcpStateChange(aLayer->flow_id(), aState, error);
+  MediaTransportHandler::OnRtcpStateChange(aLayer->flow_id(), aState,
+                                           std::move(error));
 }
 
 void MediaTransportHandlerSTS::PacketReceived(TransportLayer* aLayer,
