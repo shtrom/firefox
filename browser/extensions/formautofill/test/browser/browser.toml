@@ -97,6 +97,11 @@ skip-if = [
   "os == 'win' && os_version == '11.26200' && arch == 'x86_64' && debug && socketprocess_networking && verify-standalone",
 ]
 
+["browser_editPassportDialog.js"]
+skip-if = [
+  "true", # Bug 2056496: opens the Application Services autofill store, which crashes at LateWriteChecks on shutdown until the store's shutdown() lands
+]
+
 ["browser_email_dropdown.js"]
 
 ["browser_fathom_cc.js"]
@@ -129,6 +134,11 @@ skip-if = [
 ["browser_label_matching.js"]
 
 ["browser_manageAddressesDialog.js"]
+
+["browser_managePersonalInfoSubpage.js"]
+skip-if = [
+  "true", # Bug 2056496: opens the Application Services autofill store, which crashes at LateWriteChecks on shutdown until the store's shutdown() lands
+]
 
 ["browser_ml_heuristics.js"]
 
