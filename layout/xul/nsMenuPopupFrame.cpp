@@ -209,7 +209,7 @@ bool nsMenuPopupFrame::IsNoAutoHide() const {
          mContent->AsElement()->GetBoolAttr(nsGkAtoms::noautohide);
 }
 
-widget::PopupLevel nsMenuPopupFrame::GetPopupLevel(bool aIsNoAutoHide) const {
+widget::PopupLevel nsMenuPopupFrame::GetPopupLevel() const {
   // The popup level is determined as follows, in this order:
   //   1. non-panels (menus and tooltips) are always topmost
   //   2. any specified level attribute
@@ -236,7 +236,7 @@ widget::PopupLevel nsMenuPopupFrame::GetPopupLevel(bool aIsNoAutoHide) const {
   }
 
   // If this panel is a noautohide panel, the default is the parent level.
-  if (aIsNoAutoHide) {
+  if (IsNoAutoHide()) {
     return PopupLevel::Parent;
   }
 
@@ -264,7 +264,7 @@ void nsMenuPopupFrame::PrepareWidget(bool aForceRecreate) {
 }
 
 already_AddRefed<nsIWidget> nsMenuPopupFrame::ComputeParentWidget() const {
-  auto popupLevel = GetPopupLevel(IsNoAutoHide());
+  auto popupLevel = GetPopupLevel();
   // Panels which have a parent level need a parent widget. This allows them to
   // always appear in front of the parent window but behind other windows that
   // should be in front of it.
@@ -305,7 +305,7 @@ void nsMenuPopupFrame::CreateWidget() {
   const auto mode = nsLayoutUtils::GetFrameTransparency(this, this);
   widgetData.mHasRemoteContent = remote;
   widgetData.mTransparencyMode = mode;
-  widgetData.mPopupLevel = GetPopupLevel(IsNoAutoHide());
+  widgetData.mPopupLevel = GetPopupLevel();
 
   nsCOMPtr<nsIWidget> parentWidget = ComputeParentWidget();
   if (NS_WARN_IF(!parentWidget)) {
@@ -1517,8 +1517,7 @@ auto nsMenuPopupFrame::GetRects(const nsSize& aPrefSize) const -> Rects {
   // the screen rectangle of the root frame, in dev pixels.
   const nsRect rootScreenRect = rootFrame->GetScreenRectInAppUnits();
 
-  const bool isNoAutoHide = IsNoAutoHide();
-  const PopupLevel popupLevel = GetPopupLevel(isNoAutoHide);
+  const PopupLevel popupLevel = GetPopupLevel();
 
   Rects result;
 
