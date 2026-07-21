@@ -1063,7 +1063,7 @@ void NotificationController::WillRefresh(mozilla::TimeStamp aTime) {
     }
   }
 
-  if (IPCAccessibilityActive()) {
+  if (mDocument->ShouldSendToParentProcess()) {
     size_t newDocCount = newChildDocs.Length();
     for (size_t i = 0; i < newDocCount; i++) {
       DocAccessible* childDoc = newChildDocs[i];

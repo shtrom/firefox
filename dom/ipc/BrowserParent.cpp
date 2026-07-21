@@ -1236,6 +1236,11 @@ mozilla::ipc::IPCResult BrowserParent::RecvPDocAccessibleConstructor(
 #  endif
   auto doc = static_cast<a11y::DocAccessibleParent*>(aDoc);
   doc->SetIsPrintDoc(aIsPrintDoc);
+  if (!doc->ShouldAllowConstruction()) {
+    return IPC_FAIL(
+        this,
+        "Attempt to construct PDocAccessible when accessibility not in use");
+  }
 
   // If this tab is already shutting down just mark the new actor as shutdown
   // and ignore it.  When the tab actor is destroyed it will be too.

@@ -881,7 +881,7 @@ nsresult LocalAccessible::HandleAccEvent(AccEvent* aEvent) {
     PROFILER_MARKER_UNTYPED(strMarker, A11Y);
   }
 
-  if (IPCAccessibilityActive() && Document()) {
+  if (Document() && Document()->ShouldSendToParentProcess()) {
     DocAccessibleChild* ipcDoc = mDoc->IPCDoc();
     // If ipcDoc is null, we can't fire the event to the client. We shouldn't
     // have fired the event in the first place, since this makes events
