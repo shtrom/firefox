@@ -83,7 +83,7 @@ function getClockWidgetDisplayState({ activePanel, hourFormatPref, size }) {
  * @param {Function} props.dispatch
  * @param {"small"|"medium"|"large"} [props.size] Defaults to "medium".
  */
-function Clocks({ dispatch, size, widgetEnabledMap }) {
+function Clocks({ dispatch, handleUserInteraction, size, widgetEnabledMap }) {
   const clocksZonesPref = useSelector(
     state => state.Prefs.values[PREF_CLOCKS_ZONES]
   );
@@ -141,6 +141,11 @@ function Clocks({ dispatch, size, widgetEnabledMap }) {
     return () => clearTimeout(timeoutId);
   }, []);
 
+  const handleClocksInteraction = useCallback(
+    () => handleUserInteraction("clocks"),
+    [handleUserInteraction]
+  );
+
   const handleChangeSize = useCallback(
     newSize => {
       batch(() => {
@@ -156,9 +161,10 @@ function Clocks({ dispatch, size, widgetEnabledMap }) {
           size: newSize,
         });
       });
+      handleClocksInteraction();
       closeContextMenu();
     },
-    [dispatch, recordUserAction, closeContextMenu]
+    [dispatch, recordUserAction, handleClocksInteraction, closeContextMenu]
   );
 
   const handleToggleHourFormat = useCallback(() => {
@@ -175,15 +181,23 @@ function Clocks({ dispatch, size, widgetEnabledMap }) {
         value: nextFormat,
       });
     });
+    handleClocksInteraction();
     closeContextMenu();
-  }, [use12HourFormat, dispatch, recordUserAction, closeContextMenu]);
+  }, [
+    use12HourFormat,
+    dispatch,
+    recordUserAction,
+    closeContextMenu,
+    handleClocksInteraction,
+  ]);
 
   const handleLearnMore = useCallback(() => {
     recordUserAction(USER_ACTION_TYPES.LEARN_MORE, {
       source: CLOCK_WIDGET_SOURCE.CONTEXT_MENU,
     });
+    handleClocksInteraction();
     closeContextMenu();
-  }, [recordUserAction, closeContextMenu]);
+  }, [recordUserAction, closeContextMenu, handleClocksInteraction]);
 
   const clockZones = useMemo(
     () => parseClockZonesPref(clocksZonesPref) || buildDefaultZones(),
@@ -217,8 +231,9 @@ function Clocks({ dispatch, size, widgetEnabledMap }) {
       setFormSource(source);
       setEditingClockIndex(null);
       setIsDismissed(false);
+      handleClocksInteraction();
     },
-    []
+    [handleClocksInteraction]
   );
 
   const handleShowEditClocks = useCallback(
@@ -227,8 +242,9 @@ function Clocks({ dispatch, size, widgetEnabledMap }) {
       setPanelOpenSource(source);
       setIsDismissed(false);
       recordUserAction(USER_ACTION_TYPES.EXPAND, { source });
+      handleClocksInteraction();
     },
-    [recordUserAction]
+    [recordUserAction, handleClocksInteraction]
   );
 
   const handleCloseDisplayPanel = useCallback(() => {
@@ -296,6 +312,7 @@ function Clocks({ dispatch, size, widgetEnabledMap }) {
         resetAddClockForm();
         return;
       }
+      handleClocksInteraction();
       handleCloseDisplayPanel();
     },
     [
@@ -306,6 +323,7 @@ function Clocks({ dispatch, size, widgetEnabledMap }) {
       resetAddClockForm,
       dispatch,
       recordUserAction,
+      handleClocksInteraction,
     ]
   );
 
@@ -326,8 +344,9 @@ function Clocks({ dispatch, size, widgetEnabledMap }) {
         );
         recordUserAction(USER_ACTION_TYPES.REMOVE_CLOCK, { source });
       });
+      handleClocksInteraction();
     },
-    [clockZones, dispatch, recordUserAction]
+    [clockZones, dispatch, recordUserAction, handleClocksInteraction]
   );
 
   const isClockFormOpen = activePanel === CLOCKS_PANEL.FORM;
