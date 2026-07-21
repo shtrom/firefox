@@ -2450,7 +2450,7 @@ Maybe<webgl::IndexedName> webgl::ParseIndexed(const std::string& str) {
   const auto index =
       std::stoull(str.substr(firstDigit, closeBracket - firstDigit));
   std::string name = str.substr(0, openBracket);
-  return Some(webgl::IndexedName{name, index});
+  return Some(webgl::IndexedName{std::move(name), index});
 }
 
 // ExplodeName("foo.bar[3].x") -> ["foo", ".", "bar", "[", "3", "]", ".", "x"]
