@@ -245,6 +245,20 @@ export class UrlbarProviderTopSites extends UrlbarProvider {
           }
           payload.sendAttributionRequest = site.sendAttributionRequest;
 
+          // The "last visited" result explanation needs a fresh visit date.
+          // Top Sites data is cached and isn't refreshed on every visit, and a
+          // manually added shortcut's URL can differ from the URL recorded in
+          // Places (a trailing slash, an http->https upgrade, or another
+          // redirect).  Look the date up live, following the Places redirect
+          // chain, so the explanation is accurate.
+          if (lazy.UrlbarPrefs.get("resultExplanationsFeatureGate")) {
+            let lastVisit = await this.#fetchLastVisit(payload.url);
+            if (instance != this.queryInstance) {
+              break;
+            }
+            payload.lastVisit = lastVisit ?? site.lastVisitDate;
+          }
+
           /** @type {Values<typeof lazy.UrlbarShared.RESULT_SOURCE>} */
           let resultSource = lazy.UrlbarShared.RESULT_SOURCE.OTHER_LOCAL;
           if (lazy.UrlbarPrefs.get("suggest.bookmark")) {
@@ -322,6 +336,38 @@ export class UrlbarProviderTopSites extends UrlbarProvider {
         Glean.contextualServicesTopsites.impression[`urlbar_${index}`].add(1);
       }
     });
+  }
+
+  async #fetchLastVisit(url) {
+    let canonicalURL;
+    try {
+      canonicalURL = new URL(url).href;
+    } catch (e) {
+      return null;
+    }
+    let db = await lazy.PlacesUtils.promiseDBConnection();
+    let rows = await db.execute(
+      `WITH RECURSIVE redirect_chain(visit_id, visit_date) AS (
+         SELECT v.id, v.visit_date
+         FROM moz_places h
+         JOIN moz_historyvisits v ON v.place_id = h.id
+         WHERE h.url_hash = hash(:url) AND h.url = :url
+         UNION
+         SELECT v.id, v.visit_date
+         FROM moz_historyvisits v
+         JOIN redirect_chain c ON v.from_visit = c.visit_id
+         WHERE v.visit_type IN (:redirectPermanent, :redirectTemporary)
+       )
+       SELECT MAX(visit_date) / 1000 AS lastVisit FROM redirect_chain`,
+      {
+        url: canonicalURL,
+        redirectPermanent:
+          lazy.PlacesUtils.history.TRANSITIONS.REDIRECT_PERMANENT,
+        redirectTemporary:
+          lazy.PlacesUtils.history.TRANSITIONS.REDIRECT_TEMPORARY,
+      }
+    );
+    return rows[0]?.getResultByName("lastVisit");
   }
 
   /**

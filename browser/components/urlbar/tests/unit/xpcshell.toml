@@ -24,6 +24,8 @@ support-files = ["data/engine.xml"]
 
 ["test_UrlbarProviderSemanticHistorySearch.js"]
 
+["test_UrlbarProviderTopSites.js"]
+
 ["test_UrlbarQueryContext.js"]
 
 ["test_UrlbarQueryContext_restrictSource.js"]
@@ -32,11 +34,11 @@ support-files = ["data/engine.xml"]
 
 ["test_UrlbarResult_wireSerialization.js"]
 
-["test_UrlbarTelemetryUtils_wireSerialization.js"]
-
 ["test_UrlbarSearchUtils.js"]
 
 ["test_UrlbarShared_deepEqual.js"]
+
+["test_UrlbarTelemetryUtils_wireSerialization.js"]
 
 ["test_UrlbarUtils_addToInputHistoryWhenReady.js"]
 
