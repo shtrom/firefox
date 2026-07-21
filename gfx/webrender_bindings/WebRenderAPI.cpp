@@ -286,6 +286,7 @@ RefPtr<WebRenderAPI::CreatePromise> WebRenderAPI::Create(
                 renderThread->ThreadPool().Raw(),
                 renderThread->ThreadPoolLP().Raw(),
                 renderThread->MemoryChunkPool(),
+                renderThread->GetRenderBackendPool(),
                 renderThread->GlyphRasterThread().Raw(), &WebRenderMallocSizeOf,
                 &WebRenderMallocEnclosingSizeOf, 0, compositor.get(),
                 compositor->ShouldUseNativeCompositor(),
