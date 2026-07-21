@@ -5,13 +5,17 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include <cstdlib>
 #include <dlfcn.h>
 #include <fcntl.h>
+#include <getopt.h>
+#include <stdint.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <string.h>
-#include <stdint.h>
+
+#include <cstdio>
+#include <cstdlib>
+
 #ifdef __linux__
 #  include <sys/sysmacros.h>
 #elif defined(XP_SOLARIS) || defined(__sun)
@@ -19,10 +23,22 @@
 #elif defined(XP_FREEBSD) || defined(XP_OPENBSD) || defined(XP_NETBSD)
 #  include <sys/types.h>  // major(), minor() for st_rdev (BSD)
 #endif
+
+#if defined(MOZ_ASAN) || defined(FUZZING)
+#  include <signal.h>
+#endif
+
+#include "mozilla/ScopeExit.h"
+
+#ifdef __SUNPRO_CC
+#  include <stdio.h>
+#endif
+
 #include <vulkan/vulkan.h>
 
 #include "mozilla/GfxInfoUtils.h"
-#include "mozilla/ScopeExit.h"
+
+#define OUTPUT_PIPE 1
 
 constexpr int CODEC_HW_DEC_H264 = 1 << 4;
 constexpr int CODEC_HW_DEC_HEVC = 1 << 12;
@@ -200,7 +216,7 @@ extern "C" {
 
 // Query Vulkan Video Decode Support for the GPU decoder device,
 // following the existing selection logic in FFmpegVideoDecoder.cpp
-static void vulkan_probe(const char* aDrmRenderPath) {
+static void vulkantest(const char* aDrmRenderPath) {
   void* libvulkan = nullptr;
   void* vkGetInstanceProcAddrPtr = nullptr;
   VkInstance instance = VK_NULL_HANDLE;
@@ -449,13 +465,58 @@ static void vulkan_probe(const char* aDrmRenderPath) {
 
 }  // extern "C"
 
-int vulkantest(const char* aDrmDevice) {
-  const char* env = getenv("MOZ_GFX_DEBUG");
-  enable_logging = env && *env == '1';
-  if (!enable_logging) {
-    close_logging();
+static void PrintUsage() {
+  printf(
+      "Firefox Vulkan video decode probe utility\n"
+      "\n"
+      "usage: vulkantest [options]\n"
+      "\n"
+      "Options:\n"
+      "\n"
+      "  -h --help                 show this message\n"
+      "  -p --probe               probe Vulkan (no DRM device)\n"
+      "  -d --drm drm_device       probe Vulkan (drm_device is ignored)\n"
+      "\n");
+}
+
+int main(int argc, char** argv) {
+  struct option longOptions[] = {{"help", no_argument, nullptr, 'h'},
+                                 {"probe", no_argument, nullptr, 'p'},
+                                 {"drm", required_argument, nullptr, 'd'},
+                                 {nullptr, 0, nullptr, 0}};
+  const char* shortOptions = "hpd:";
+  int c;
+  bool doProbe = false;
+  const char* drmPath = nullptr;
+  while ((c = getopt_long(argc, argv, shortOptions, longOptions, nullptr)) !=
+         -1) {
+    switch (c) {
+      case 'p':
+        doProbe = true;
+        break;
+      case 'd':
+        doProbe = true;
+        drmPath = optarg;
+        break;
+      case 'h':
+      default:
+        break;
+    }
   }
-  vulkan_probe(aDrmDevice);
-  record_flush();
-  return EXIT_SUCCESS;
+  if (doProbe || optind < argc) {
+#if defined(MOZ_ASAN) || defined(FUZZING)
+    signal(SIGSEGV, SIG_DFL);
+#endif
+    const char* env = getenv("MOZ_GFX_DEBUG");
+    enable_logging = env && *env == '1';
+    output_pipe = OUTPUT_PIPE;
+    if (!enable_logging) {
+      close_logging();
+    }
+    vulkantest(drmPath);
+    record_flush();
+    return EXIT_SUCCESS;
+  }
+  PrintUsage();
+  return 0;
 }

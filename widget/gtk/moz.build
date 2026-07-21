@@ -27,6 +27,14 @@ if CONFIG["COMPILE_ENVIRONMENT"]:
 if CONFIG["MOZ_WAYLAND"]:
     DIRS += ["wayland", "mozwayland", "../../third_party/wayland-proxy"]
 
+if CONFIG["MOZ_ENABLE_VAAPI"]:
+    DIRS += ["vaapitest"]
+
+if CONFIG["MOZ_ENABLE_V4L2"]:
+    DIRS += ["v4l2test"]
+
+if CONFIG["MOZ_ENABLE_VULKAN_VIDEO"]:
+    DIRS += ["vulkantest"]
 
 EXPORTS += [
     "MozContainer.h",

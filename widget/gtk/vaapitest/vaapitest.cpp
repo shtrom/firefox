@@ -2,22 +2,35 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include <cstdlib>
 #include <dlfcn.h>
 #include <fcntl.h>
-#include <unistd.h>
+#include <getopt.h>
 #include <string.h>
 #include <unistd.h>
 
+#include <cstdio>
+#include <cstdlib>
+
+#if defined(MOZ_ASAN) || defined(FUZZING)
+#  include <signal.h>
+#endif
+
 #include "mozilla/ScopeExit.h"
+
+#ifdef __SUNPRO_CC
+#  include <stdio.h>
+#endif
+
+#include "mozilla/GfxInfoUtils.h"
 #include "prlink.h"
 #include "va/va.h"
 
-#include "mozilla/GfxInfoUtils.h"
+// Print VA-API test results to stdout and logging to stderr
+#define OUTPUT_PIPE 1
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-// bits to use decoding vaapi_probe() return values.
+// bits to use decoding vaapitest() return values.
 constexpr int CODEC_HW_DEC_H264 = 1 << 4;
 constexpr int CODEC_HW_ENC_H264 = 1 << 5;
 constexpr int CODEC_HW_DEC_VP8 = 1 << 6;
@@ -63,7 +76,7 @@ static const char* VAProfileName(VAProfile aVAProfile) {
   return nullptr;
 }
 
-static void vaapi_probe(const char* aRenderDevicePath) {
+static void vaapitest(const char* aRenderDevicePath) {
   int renderDeviceFD = -1;
   VAProfile* profiles = nullptr;
   VAEntrypoint* entryPoints = nullptr;
@@ -196,13 +209,54 @@ static void vaapi_probe(const char* aRenderDevicePath) {
 
 }  // extern "C"
 
-int vaapitest(const char* aDrmDevice) {
-  const char* env = getenv("MOZ_GFX_DEBUG");
-  enable_logging = env && *env == '1';
-  if (!enable_logging) {
-    close_logging();
+static void PrintUsage() {
+  printf(
+      "Firefox VA-API probe utility\n"
+      "\n"
+      "usage: vaapitest [options]\n"
+      "\n"
+      "Options:\n"
+      "\n"
+      "  -h --help                 show this message\n"
+      "  -d --drm drm_device       probe VA-API on drm_device (may be "
+      "/dev/dri/renderD128)\n"
+      "\n");
+}
+
+int main(int argc, char** argv) {
+  struct option longOptions[] = {{"help", no_argument, nullptr, 'h'},
+                                 {"drm", required_argument, nullptr, 'd'},
+                                 {nullptr, 0, nullptr, 0}};
+  const char* shortOptions = "hd:";
+  int c;
+  const char* drmDevice = nullptr;
+  while ((c = getopt_long(argc, argv, shortOptions, longOptions, nullptr)) !=
+         -1) {
+    switch (c) {
+      case 'd':
+        drmDevice = optarg;
+        break;
+      case 'h':
+      default:
+        break;
+    }
   }
-  vaapi_probe(aDrmDevice);
-  record_flush();
-  return EXIT_SUCCESS;
+  if (drmDevice) {
+#if defined(MOZ_ASAN) || defined(FUZZING)
+    // If handle_segv=1 (default), then glxtest crash will print a sanitizer
+    // report which can confuse the harness in fuzzing automation.
+    signal(SIGSEGV, SIG_DFL);
+#endif
+    const char* env = getenv("MOZ_GFX_DEBUG");
+    enable_logging = env && *env == '1';
+    output_pipe = OUTPUT_PIPE;
+    if (!enable_logging) {
+      close_logging();
+    }
+    vaapitest(drmDevice);
+    record_flush();
+    return EXIT_SUCCESS;
+  }
+  PrintUsage();
+  return 0;
 }
