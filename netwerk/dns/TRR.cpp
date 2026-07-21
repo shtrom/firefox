@@ -714,7 +714,7 @@ nsresult TRR::FollowCname(nsIChannel* aChannel) {
   }
 
   // restore mCname as DohDecode() change it
-  mCname = cname;
+  mCname = std::move(cname);
   if (NS_SUCCEEDED(rv) && HasUsableResponse()) {
     ReturnData(aChannel);
     return NS_OK;

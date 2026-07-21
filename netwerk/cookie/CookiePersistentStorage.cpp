@@ -2001,7 +2001,7 @@ CookiePersistentStorage::OpenDBResult CookiePersistentStorage::Read() {
            host.get()));
       CookieDomainTuple* cleanupTuple = mCleanupArray.AppendElement();
       cleanupTuple->key = CookieKey(baseDomain, attrs);
-      cleanupTuple->originAttributes = attrs;
+      cleanupTuple->originAttributes = std::move(attrs);
       cleanupTuple->cookie = Cookie::Create(*cookieStruct, attrs);
       continue;
     }

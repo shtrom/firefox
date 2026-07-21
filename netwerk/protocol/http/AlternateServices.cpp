@@ -85,8 +85,9 @@ void AltSvcMapping::ProcessHeader(
         NS_NewRunnableFunction(
             "AltSvcMapping::ProcessHeader",
             [buf(buf), originScheme(originScheme), originHost(originHost),
-             originPort, userName, privateBrowsing, cb, info, caps,
-             originAttributes, connInfo, aDontValidate]() {
+             originPort, userName = std::move(userName), privateBrowsing,
+             cb = std::move(cb), info = std::move(info), caps, originAttributes,
+             connInfo = std::move(connInfo), aDontValidate]() {
               AltSvcMapping::ProcessHeader(
                   buf, originScheme, originHost, originPort, userName,
                   privateBrowsing, cb, info, caps, originAttributes, connInfo,

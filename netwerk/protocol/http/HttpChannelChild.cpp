@@ -2236,7 +2236,8 @@ HttpChannelChild::Resume() {
       rv = neckoTarget->Dispatch(
           NS_NewRunnableFunction(
               "net::HttpChannelChild::mCallOnResume",
-              [callOnResume, self{std::move(self)}]() { callOnResume(self); }),
+              [callOnResume = std::move(callOnResume),
+               self{std::move(self)}]() { callOnResume(self); }),
           NS_DISPATCH_NORMAL);
     }
   }
@@ -2358,7 +2359,7 @@ nsresult HttpChannelChild::AsyncOpenInternal(nsIStreamListener* aListener) {
 
   nsAutoCString cookie;
   if (NS_SUCCEEDED(mRequestHead.GetHeader(nsHttp::Cookie, cookie))) {
-    mUserSetCookieHeader = cookie;
+    mUserSetCookieHeader = std::move(cookie);
   }
 
   DebugOnly<nsresult> check = AddCookiesToRequest();
@@ -3342,9 +3343,9 @@ void HttpChannelChild::CancelOnMainThread(nsresult aRv,
   // any ODA/OnStopRequest callbacks.
   nsCString reason(aReason);
   mEventQ->PrependEvent(MakeUnique<NeckoTargetChannelFunctionEvent>(
-      this, [self = UnsafePtr<HttpChannelChild>(this), aRv, reason]() {
-        self->CancelWithReason(aRv, reason);
-      }));
+      this,
+      [self = UnsafePtr<HttpChannelChild>(this), aRv,
+       reason = std::move(reason)]() { self->CancelWithReason(aRv, reason); }));
   mEventQ->Resume();
 }
 

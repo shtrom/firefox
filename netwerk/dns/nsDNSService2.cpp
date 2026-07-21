@@ -848,7 +848,7 @@ void nsDNSService::ReadPrefs(const char* name) {
     } else {
       mHasMockHTTPSRRDomainSet = true;
       MutexAutoLock lock(mLock);
-      mMockHTTPSRRDomain = mockHTTPSRRDomain;
+      mMockHTTPSRRDomain = std::move(mockHTTPSRRDomain);
     }
   }
 }

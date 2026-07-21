@@ -4520,7 +4520,7 @@ bool nsHttpChannel::ResponseWouldVary(nsICacheEntry* entry) {
         // If hash failed, be conservative (the cached hash
         // exists at this point) and claim response would vary
         if (NS_FAILED(rv)) return true;
-        newVal = hash;
+        newVal = std::move(hash);
 
         LOG(
             ("nsHttpChannel::ResponseWouldVary [this=%p] "
@@ -4880,14 +4880,14 @@ void nsHttpChannel::MaybeGenerateNELReport() {
 
   ReportDeliver::ReportData data;
   data.mType = u"network-error"_ns;
-  data.mGroupName = group;
-  data.mURL = url;
+  data.mGroupName = std::move(group);
+  data.mURL = std::move(url);
   data.mFailures = 0;
   data.mCreationTime = TimeStamp::Now();
 
   data.mPrincipal = std::move(channelPrincipal);
-  data.mEndpointURL = endpointURL;
-  data.mReportBodyJSON = body;
+  data.mEndpointURL = std::move(endpointURL);
+  data.mReportBodyJSON = std::move(body);
   nsAutoCString userAgent;
   // XXX(valentin): Should this be the potentially user set value of the header
   // or the current value of user_agent from http handler?
@@ -6303,7 +6303,7 @@ nsresult nsHttpChannel::UpdateCacheEntryHeaders(nsICacheEntry* entry,
               if (NS_FAILED(rv)) {
                 val = "<hash failed>"_ns;
               } else {
-                val = hash;
+                val = std::move(hash);
               }
 
               LOG(("   hashed to %s\n", val.get()));
@@ -6832,7 +6832,7 @@ nsresult nsHttpChannel::AsyncProcessRedirection(uint32_t redirectType) {
   nsAutoCString locationBuf;
   if (NS_EscapeURL(location.get(), -1, esc_OnlyNonASCII | esc_Spaces,
                    locationBuf)) {
-    location = locationBuf;
+    location = std::move(locationBuf);
   }
 
   mRedirectType = redirectType;
@@ -7796,7 +7796,7 @@ nsHttpChannel::AsyncOpen(nsIStreamListener* aListener) {
   if (NS_SUCCEEDED(mRequestHead.GetHeader(nsHttp::Cookie, cookieHeader))) {
     // if this is a cache revalidaing channel (mIsStaleRevalidation), then this
     // represents both user cookies and cookies from cookieService
-    mUserSetCookieHeader = cookieHeader;
+    mUserSetCookieHeader = std::move(cookieHeader);
   }
 
   // Set user agent override, do so before OnOpeningRequest notification

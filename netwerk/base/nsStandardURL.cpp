@@ -1248,7 +1248,7 @@ nsresult nsStandardURL::CheckIfHostIsAscii() {
   }
 
   if (!mozilla::IsAscii(displayHost)) {
-    mDisplayHost = displayHost;
+    mDisplayHost = std::move(displayHost);
   }
 
   return NS_OK;

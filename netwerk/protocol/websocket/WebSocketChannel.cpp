@@ -1147,8 +1147,8 @@ class OutboundMessage {
     }
 
     mDeflated = true;
-    mMsg.as<pString>().mOrigValue = mMsg.as<pString>().mValue;
-    mMsg.as<pString>().mValue = temp;
+    mMsg.as<pString>().mOrigValue = std::move(mMsg.as<pString>().mValue);
+    mMsg.as<pString>().mValue = std::move(temp);
     return true;
   }
 
@@ -2913,7 +2913,7 @@ nsresult WebSocketChannel::DoAdmissionDNS() {
   nsCString path;
   rv = mURI->GetFilePath(path);
   NS_ENSURE_SUCCESS(rv, rv);
-  mPath = path;
+  mPath = std::move(path);
   rv = mURI->GetPort(&mPort);
   NS_ENSURE_SUCCESS(rv, rv);
   if (mPort == -1) mPort = (mEncrypted ? kDefaultWSSPort : kDefaultWSPort);
@@ -4077,7 +4077,7 @@ WebSocketChannel::OnStartRequest(nsIRequest* aRequest) {
       if (NS_SUCCEEDED(rv)) {
         LOG(("WebsocketChannel::OnStartRequest: subprotocol %s confirmed",
              respProtocol.get()));
-        mProtocol = respProtocol;
+        mProtocol = std::move(respProtocol);
       } else {
         LOG(
             ("WebsocketChannel::OnStartRequest: "

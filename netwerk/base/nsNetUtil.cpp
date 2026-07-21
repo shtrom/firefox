@@ -1274,7 +1274,7 @@ nsresult NS_ParseRequestContentType(const nsACString& rawContentType,
   bool hadCharset;
   rv = util->ParseRequestContentType(rawContentType, charset, &hadCharset,
                                      contentType);
-  if (NS_SUCCEEDED(rv) && hadCharset) contentCharset = charset;
+  if (NS_SUCCEEDED(rv) && hadCharset) contentCharset = std::move(charset);
   return rv;
 }
 
@@ -1289,7 +1289,7 @@ nsresult NS_ParseResponseContentType(const nsACString& rawContentType,
   bool hadCharset;
   rv = util->ParseResponseContentType(rawContentType, charset, &hadCharset,
                                       contentType);
-  if (NS_SUCCEEDED(rv) && hadCharset) contentCharset = charset;
+  if (NS_SUCCEEDED(rv) && hadCharset) contentCharset = std::move(charset);
   return rv;
 }
 
@@ -2960,7 +2960,8 @@ static bool ShouldSecureUpgradeNoHSTS(nsIURI* aURI, nsILoadInfo* aLoadInfo) {
     scheme.AppendLiteral("s");
     NS_ConvertUTF8toUTF16 reportSpec(aURI->GetSpecOrDefault());
     NS_ConvertUTF8toUTF16 reportScheme(scheme);
-    AutoTArray<nsString, 2> params = {reportSpec, reportScheme};
+    AutoTArray<nsString, 2> params = {std::move(reportSpec),
+                                      std::move(reportScheme)};
     uint64_t innerWindowId = aLoadInfo->GetInnerWindowID();
     CSP_LogLocalizedStr("upgradeInsecureRequest", params,
                         ""_ns,   // aSourceFile
@@ -2982,7 +2983,8 @@ static bool ShouldSecureUpgradeNoHSTS(nsIURI* aURI, nsILoadInfo* aLoadInfo) {
     scheme.AppendLiteral("s");
     NS_ConvertUTF8toUTF16 reportSpec(aURI->GetSpecOrDefault());
     NS_ConvertUTF8toUTF16 reportScheme(scheme);
-    AutoTArray<nsString, 2> params = {reportSpec, reportScheme};
+    AutoTArray<nsString, 2> params = {std::move(reportSpec),
+                                      std::move(reportScheme)};
 
     nsAutoString localizedMsg;
     nsContentUtils::FormatLocalizedString(PropertiesFile::SECURITY_PROPERTIES,
@@ -3539,7 +3541,7 @@ static bool Decode5987Format(nsAString& aEncoded) {
   rv = mimehdrpar->DecodeRFC5987Param(asciiValue, language, decoded);
   if (NS_FAILED(rv)) return false;
 
-  aEncoded = decoded;
+  aEncoded = std::move(decoded);
   return true;
 }
 
@@ -3738,7 +3740,7 @@ nsTArray<LinkHeader> ParseLinkHeader(const nsAString& aLinkData) {
             nsAutoString tmp;
             tmp = value;
             if (Decode5987Format(tmp)) {
-              titleStar = tmp;
+              titleStar = std::move(tmp);
               titleStar.CompressWhitespace();
             } else {
               // header value did not parse, throw it away
@@ -3776,9 +3778,9 @@ nsTArray<LinkHeader> ParseLinkHeader(const nsAString& aLinkData) {
   if (!header.mHref.IsEmpty() && !header.mRel.IsEmpty()) {
     if (!titleStar.IsEmpty()) {
       // prefer RFC 5987 variant over non-I18zed version
-      header.mTitle = titleStar;
+      header.mTitle = std::move(titleStar);
     }
-    linkHeaders.AppendElement(header);
+    linkHeaders.AppendElement(std::move(header));
   }
 
   return linkHeaders;
