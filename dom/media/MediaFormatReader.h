@@ -13,6 +13,7 @@
 #  include "PlatformDecoderModule.h"
 #  include "SeekTarget.h"
 #  include "mozilla/Atomics.h"
+#  include "mozilla/CumulativeAverage.h"
 #  include "mozilla/Maybe.h"
 #  include "mozilla/MozPromise.h"
 #  include "mozilla/Mutex.h"
@@ -691,27 +692,7 @@ class MediaFormatReader final
     // on reader's task queue,
     bool mHasReportedVideoHardwareSupportTelemtry = false;
 
-    class {
-     public:
-      float Mean() const { return mMean; }
-
-      void Update(const media::TimeUnit& aValue) {
-        if (aValue == media::TimeUnit::Zero()) {
-          return;
-        }
-        mMean += static_cast<float>((1.0f / aValue.ToSeconds() - mMean) /
-                                    static_cast<double>(++mCount));
-      }
-
-      void Reset() {
-        mMean = 0;
-        mCount = 0;
-      }
-
-     private:
-      float mMean = 0;
-      uint64_t mCount = 0;
-    } mMeanRate;
+    CumulativeAverage<double> mMeanRate;
   };
 
   template <typename Type>
