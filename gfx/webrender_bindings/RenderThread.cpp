@@ -102,9 +102,9 @@ RenderThread::RenderThread(RefPtr<nsIThread> aThread)
   uint32_t poolSize =
       StaticPrefs::gfx_webrender_render_backend_thread_count_AtStartup();
   if (poolSize >= 1) {
-    mRenderBackendPool = wr_render_backend_pool_new(
-        poolSize, &WebRenderPoolMallocSizeOf,
-        &WebRenderPoolMallocEnclosingSizeOf);
+    mRenderBackendPool =
+        wr_render_backend_pool_new(poolSize, &WebRenderPoolMallocSizeOf,
+                                   &WebRenderPoolMallocEnclosingSizeOf);
     if (!mRenderBackendPool) {
       gfxCriticalNote << "wr_render_backend_pool_new(" << poolSize
                       << ") failed; falling back to private backend threads";
