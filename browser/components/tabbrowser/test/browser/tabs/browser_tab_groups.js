@@ -1255,7 +1255,8 @@ add_task(async function test_bug1957723_addTabsByIndex() {
   );
   gBrowser.removeTab(tab3);
 
-  gBrowser.removeAllTabsBut(initialTab);
+  // animate: false ensures tabs are synchronously removed from the DOM before the next test runs:
+  gBrowser.removeAllTabsBut(initialTab, { animate: false });
 });
 
 add_task(async function test_bug1959438_duplicateTabJustBeforeGroup() {
@@ -1285,7 +1286,8 @@ add_task(async function test_bug1959438_duplicateTabJustBeforeGroup() {
   // This will fail if the tab ends up merged with the tab label.
   Assert.equal(gBrowser.tabs.length, 5, "A new tab was added to the tab strip");
 
-  gBrowser.removeAllTabsBut(initialTab);
+  // animate: false ensures tabs are synchronously removed from the DOM before the next test runs:
+  gBrowser.removeAllTabsBut(initialTab, { animate: false });
 });
 
 add_task(async function test_bug1969925_adoptLastTabGroupFromWindow() {
