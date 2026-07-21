@@ -1956,11 +1956,16 @@ class nsContentUtils {
    * @param aFragment the string which is parsed to a DocumentFragment
    * @param aReturn the resulting fragment
    * @param aPreventScriptExecution whether to mark scripts as already started
+   * @param aCustomElementRegistry passed to the HTML parser for scoped
+   * registries.
    */
   static already_AddRefed<mozilla::dom::DocumentFragment>
-  CreateContextualFragment(nsINode* aContextNode, const nsAString& aFragment,
-                           bool aPreventScriptExecution,
-                           mozilla::ErrorResult& aRv);
+  CreateContextualFragment(
+      nsINode* aContextNode, const nsAString& aFragment,
+      bool aPreventScriptExecution,
+      mozilla::Maybe<RefPtr<mozilla::dom::CustomElementRegistry>>
+          aCustomElementRegistry,
+      mozilla::ErrorResult& aRv);
 
   static void SetHTML(mozilla::dom::FragmentOrElement* aTarget,
                       Element* aContext, const nsAString& aHTML,
@@ -2005,6 +2010,8 @@ class nsContentUtils {
    * pass explicit aFlags use any of the sanitization flags listed in
    * nsIParserUtils.idl. kParseFragmentHTMLNoSanitization should only be used
    * for setHTML(), which already does its own sanitization.
+   * @param aCustomElementRegistry the (scoped) registry to use for custom
+   * element definitions.
    * @return NS_ERROR_DOM_INVALID_STATE_ERR if a re-entrant attempt to parse
    *         fragments is made, NS_ERROR_OUT_OF_MEMORY if aSourceBuffer is too
    *         long and NS_OK otherwise.
@@ -2012,8 +2019,9 @@ class nsContentUtils {
   static nsresult ParseFragmentHTML(
       const nsAString& aSourceBuffer, nsIContent* aTargetNode,
       nsAtom* aContextLocalName, int32_t aContextNamespace, bool aQuirks,
-      bool aPreventScriptExecution,
-      int32_t aFlags = kParseFragmentPrivilegedDefaultSanitization);
+      bool aPreventScriptExecution, int32_t aFlags,
+      mozilla::Maybe<RefPtr<mozilla::dom::CustomElementRegistry>>
+          aCustomElementRegistry);
 
   /**
    * Invoke the fragment parsing algorithm (innerHTML) using the XML parser.

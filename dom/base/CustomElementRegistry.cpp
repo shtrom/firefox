@@ -1536,6 +1536,11 @@ void CustomElementRegistry::Upgrade(Element* aElement,
   CustomElementData* data = aElement->GetCustomElementData();
   MOZ_ASSERT(data, "CustomElementData should exist");
 
+  DocGroup* docGroup = aElement->OwnerDoc()->GetDocGroup();
+  if (!docGroup) {
+    return;
+  }
+
   // 1. If element's custom element state is not "undefined" or "uncustomized",
   //    then return.
   if (data->mState != CustomElementData::State::eUndefined) {
@@ -1590,14 +1595,34 @@ void CustomElementRegistry::Upgrade(Element* aElement,
   // 6. Add element to the end of definition's construction stack.
   AutoConstructionStackEntry acs(aDefinition->mConstructionStack, aElement);
 
-  // XXX: Steps 7-9 performed by DoUpgrade:
   // 7. Let C be definition's constructor.
-  // TODO(keithamus): 8. Set the active custom element constructor map[C] to
-  // element's custom element registry. Not yet using element's registry (scoped
-  // registries).
-  // 9. Run the following steps while catching any exceptions:
-  DoUpgrade(aElement, aDefinition, MOZ_KnownLive(aDefinition->mConstructor),
-            aRv);
+
+  // 8. Let previousRegistry be the surrounding agent's active custom element
+  //    constructor map[C] with default null.
+  // 9. Set the surrounding agent's active custom element constructor map[C] to
+  //    element's custom element registry.
+  {
+    Maybe<DocGroup::AutoActiveConstructorRegistry> activeRegistry;
+    if (StaticPrefs::dom_scoped_custom_element_registries_enabled()) {
+      activeRegistry.emplace(docGroup, aDefinition->mConstructor,
+                             aElement->GetCustomElementRegistry());
+    }
+
+    // 10. Run the following steps while catching any exceptions:
+    DoUpgrade(aElement, aDefinition, MOZ_KnownLive(aDefinition->mConstructor),
+              aRv);
+
+    // 9.x. Then, perform the following steps, regardless of whether the above
+    //      steps threw an exception or not:
+    //
+    // 9.x.1. If previousRegistry is null, then remove the surrounding agent's
+    //        active custom element constructor map[C].
+    // 9.x.2. Otherwise, set the surrounding agent 's active custom element
+    //        constructor map[C] to previousRegistry.
+    // (Handled by `activeRegistry`'s destructor during scope exit).
+  }
+
+  // 9.x. Finally, if the above steps threw an exception:
   if (aRv.Failed()) {
     MOZ_ASSERT(data->mState == CustomElementData::State::eFailed ||
                data->mState == CustomElementData::State::ePrecustomized);

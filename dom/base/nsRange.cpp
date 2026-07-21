@@ -2750,8 +2750,8 @@ already_AddRefed<DocumentFragment> nsRange::CreateContextualFragment(
     return nullptr;
   }
 
-  return nsContentUtils::CreateContextualFragment(mStart.GetContainer(),
-                                                  aFragment, false, aRv);
+  return nsContentUtils::CreateContextualFragment(
+      mStart.GetContainer(), aFragment, false, Nothing(), aRv);
 }
 
 already_AddRefed<DocumentFragment> nsRange::CreateContextualFragment(
@@ -2774,8 +2774,8 @@ already_AddRefed<DocumentFragment> nsRange::CreateContextualFragment(
     return nullptr;
   }
 
-  return nsContentUtils::CreateContextualFragment(mStart.GetContainer(),
-                                                  *compliantString, false, aRv);
+  return nsContentUtils::CreateContextualFragment(
+      mStart.GetContainer(), *compliantString, false, Nothing(), aRv);
 }
 
 nsresult nsRange::GetUsedFontFaces(nsLayoutUtils::UsedFontFaceList& aResult,

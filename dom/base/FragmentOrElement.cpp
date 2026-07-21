@@ -2088,6 +2088,15 @@ void FragmentOrElement::SetInnerHTMLInternal(const nsAString& aInnerHTML,
     parseContext = shadowRoot->GetHost();
   }
 
+  // https://html.spec.whatwg.org/#create-an-element-for-the-token
+  // Step 6: Let registry be the result of looking up a custom element registry
+  // given intendedParent.
+  Maybe<RefPtr<CustomElementRegistry>> customElementRegistry;
+  if (StaticPrefs::dom_scoped_custom_element_registries_enabled()) {
+    customElementRegistry.emplace(
+        nsContentUtils::GetCustomElementRegistry(this));
+  }
+
   if (doc->IsHTMLDocument()) {
     doc->SuspendDOMNotifications();
     nsAtom* contextLocalName = parseContext->NodeInfo()->NameAtom();
@@ -2095,7 +2104,9 @@ void FragmentOrElement::SetInnerHTMLInternal(const nsAString& aInnerHTML,
 
     aError = nsContentUtils::ParseFragmentHTML(
         aInnerHTML, target, contextLocalName, contextNameSpaceID,
-        doc->GetCompatibilityMode() == eCompatibility_NavQuirks, true);
+        doc->GetCompatibilityMode() == eCompatibility_NavQuirks, true,
+        nsContentUtils::kParseFragmentPrivilegedDefaultSanitization,
+        std::move(customElementRegistry));
     doc->ResumeDOMNotifications();
     if (target->GetFirstChild()) {
       MutationObservers::NotifyContentAppended(target, target->GetFirstChild(),
@@ -2104,7 +2115,8 @@ void FragmentOrElement::SetInnerHTMLInternal(const nsAString& aInnerHTML,
     mb.NodesAdded();
   } else {
     RefPtr<DocumentFragment> df = nsContentUtils::CreateContextualFragment(
-        parseContext, aInnerHTML, true, aError);
+        parseContext, aInnerHTML, true, std::move(customElementRegistry),
+        aError);
     if (!aError.Failed()) {
       // Suppress assertion about node removal mutation events that can't have
       // listeners anyway, because no one has had the chance to register

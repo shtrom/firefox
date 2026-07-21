@@ -4367,7 +4367,9 @@ nsresult HTMLEditor::HTMLWithContextInserter::FragmentParser::ParseFragment(
   nsresult rv = nsContentUtils::ParseFragmentHTML(
       aFragStr, fragment,
       aContextLocalName ? aContextLocalName : nsGkAtoms::body,
-      kNameSpaceID_XHTML, false, true);
+      kNameSpaceID_XHTML, false, true,
+      nsContentUtils::kParseFragmentPrivilegedDefaultSanitization,
+      mozilla::Nothing());
   NS_WARNING_ASSERTION(NS_SUCCEEDED(rv),
                        "nsContentUtils::ParseFragmentHTML() failed");
   if (aSafeToInsertData == SafeToInsertData::No) {

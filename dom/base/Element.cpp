@@ -592,7 +592,7 @@ void Element::SetKeepCustomElementRegistryNull() {
 CustomElementRegistry* Element::GetCustomElementRegistry() {
   switch (GetCustomElementRegistryState()) {
     case CustomElementRegistryState::Global:
-      return OwnerDoc()->GetEffectiveGlobalCustomElementRegistry();
+      return OwnerDoc()->GetCustomElementRegistry();
     case CustomElementRegistryState::Null:
       return nullptr;
     case CustomElementRegistryState::Scoped: {
@@ -5496,7 +5496,9 @@ void Element::SetOuterHTML(const TrustedHTMLOrNullIsEmptyString& aOuterHTML,
     RefPtr<DocumentFragment> fragment = new (nim) DocumentFragment(nim);
     nsContentUtils::ParseFragmentHTML(
         *compliantString, fragment, localName, namespaceID,
-        OwnerDoc()->GetCompatibilityMode() == eCompatibility_NavQuirks, true);
+        OwnerDoc()->GetCompatibilityMode() == eCompatibility_NavQuirks, true,
+        nsContentUtils::kParseFragmentPrivilegedDefaultSanitization,
+        mozilla::Nothing());
     parent->ReplaceChild(*fragment, *this, aError);
     return;
   }
@@ -5514,7 +5516,7 @@ void Element::SetOuterHTML(const TrustedHTMLOrNullIsEmptyString& aOuterHTML,
   }
 
   RefPtr<DocumentFragment> fragment = nsContentUtils::CreateContextualFragment(
-      context, *compliantString, true, aError);
+      context, *compliantString, true, Nothing(), aError);
   if (aError.Failed()) {
     return;
   }
@@ -5580,6 +5582,15 @@ void Element::InsertAdjacentHTML(
   mozAutoDocUpdate updateBatch(doc, true);
   nsAutoScriptLoaderDisabler sld(doc);
 
+  // https://html.spec.whatwg.org/#create-an-element-for-the-token
+  // Step 6: Let registry be the result of looking up a custom element registry
+  // given intendedParent.
+  Maybe<RefPtr<CustomElementRegistry>> customElementRegistry;
+  if (StaticPrefs::dom_scoped_custom_element_registries_enabled()) {
+    customElementRegistry.emplace(
+        nsContentUtils::GetCustomElementRegistry(destination));
+  }
+
   // XXX: Fast path - parse directly into destination if possible, bypassing
   // the fragment creation in steps 4-5.
   nsIContent* oldLastChild = destination->GetLastChild();
@@ -5599,7 +5610,9 @@ void Element::InsertAdjacentHTML(
     }
     aError = nsContentUtils::ParseFragmentHTML(
         *compliantString, destination, contextLocal, contextNs,
-        doc->GetCompatibilityMode() == eCompatibility_NavQuirks, true);
+        doc->GetCompatibilityMode() == eCompatibility_NavQuirks, true,
+        nsContentUtils::kParseFragmentPrivilegedDefaultSanitization,
+        std::move(customElementRegistry));
     doc->ResumeDOMNotifications();
     nsIContent* firstNewChild = oldLastChild ? oldLastChild->GetNextSibling()
                                              : destination->GetFirstChild();
@@ -5615,7 +5628,8 @@ void Element::InsertAdjacentHTML(
   // 5. "Let fragment be the result of invoking the fragment parsing algorithm
   //    steps with context and compliantString."
   RefPtr<DocumentFragment> fragment = nsContentUtils::CreateContextualFragment(
-      destination, *compliantString, true, aError);
+      destination, *compliantString, true, std::move(customElementRegistry),
+      aError);
   if (aError.Failed()) {
     return;
   }
