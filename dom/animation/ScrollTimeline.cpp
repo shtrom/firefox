@@ -37,11 +37,16 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(ScrollTimeline,
   tmp->Teardown();
   NS_IMPL_CYCLE_COLLECTION_UNLINK(mDocument)
   NS_IMPL_CYCLE_COLLECTION_UNLINK(mScrollerInfo.ElementForCycleCollection())
+  tmp->mCachedStateSnapshot.reset();
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN_INHERITED(ScrollTimeline,
                                                   AnimationTimeline)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mDocument)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mScrollerInfo.ElementForCycleCollection())
+  if (tmp->mCachedStateSnapshot) {
+    NS_IMPL_CYCLE_COLLECTION_TRAVERSE(
+        mCachedStateSnapshot->SourceElementForCycleCollection())
+  }
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
 
 NS_IMPL_ISUPPORTS_CYCLE_COLLECTION_INHERITED_0(ScrollTimeline,
@@ -308,7 +313,9 @@ bool ScrollTimeline::SourceMatches(
 ScrollTimeline::StateSnapshot::StateSnapshot(
     const NonOwningAnimationTarget& aResolvedSource, StyleScrollAxis aAxis,
     bool aIsRoot)
-    : mSource{aResolvedSource}, mAxis{aAxis}, mIsRoot{aIsRoot} {
+    : mSource{aResolvedSource.mElement, aResolvedSource.mPseudoRequest},
+      mAxis{aAxis},
+      mIsRoot{aIsRoot} {
   Element* e = mSource.mElement;
   // If there is no principal box, this timeline is inactive.
   if (!e || !e->GetPrimaryFrame()) {
@@ -339,7 +346,7 @@ ScrollTimeline::StateSnapshot::StateSnapshot(
 
 layers::ScrollDirection ScrollTimeline::StateSnapshot::ComputePhysicalAxis()
     const {
-  const auto* e = mSource.mElement;
+  const Element* e = mSource.mElement;
   MOZ_ASSERT(e && e->GetPrimaryFrame());
   const WritingMode wm = e->GetPrimaryFrame()->GetWritingMode();
   return mAxis == StyleScrollAxis::X ||
@@ -351,7 +358,7 @@ layers::ScrollDirection ScrollTimeline::StateSnapshot::ComputePhysicalAxis()
 
 const ScrollContainerFrame*
 ScrollTimeline::StateSnapshot::GetScrollContainerFrame() const {
-  auto* e = mSource.mElement;
+  Element* e = mSource.mElement;
   if (!e) {
     return nullptr;
   }

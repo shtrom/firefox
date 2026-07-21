@@ -184,13 +184,17 @@ class ScrollTimeline : public AnimationTimeline,
     // snapshot and while sampling the current time.
     const ScrollContainerFrame* GetScrollContainerFrame() const;
 
+    RefPtr<Element>& SourceElementForCycleCollection() {
+      return mSource.mElement;
+    }
+
    private:
     StateSnapshot(const NonOwningAnimationTarget& aResolvedSource,
                   StyleScrollAxis aAxis, bool aIsRoot);
 
     layers::ScrollDirection ComputePhysicalAxis() const;
 
-    NonOwningAnimationTarget mSource;
+    OwningAnimationTarget mSource;
     StyleScrollAxis mAxis{};
     bool mIsRoot = false;
 
