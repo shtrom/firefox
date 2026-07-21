@@ -684,6 +684,9 @@ class TrustPanel {
   }
 
   async #updateToolbarTrackerCount() {
+    if (!UrlbarPrefs.get("trackerCountFeatureGate")) {
+      return;
+    }
     const uri = this.#uri;
     const [count] = await Promise.all([
       this.#computeTrackerCount(),
