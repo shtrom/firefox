@@ -413,6 +413,8 @@ skip-if = [
 
 ["test_dynamic_change_causing_reflow.html"]
 
+["test_dynamic_change_causing_reflow_content.html"]
+
 ["test_exposed_prop_accessors.html"]
 
 ["test_extra_inherit_initial.html"]
