@@ -1628,7 +1628,7 @@ export class UrlbarView {
     }
 
     let bookmarked = item._elements.get("explanationBookmarked");
-    let hasBookmark = setURL && !!result.payload.bookmarkDateMs;
+    let hasBookmark = !!result.payload.bookmarkDateMs;
     if (hasBookmark) {
       let { formattedDate } = lazy.UrlbarUtils.formatDate(
         new Date(result.payload.bookmarkDateMs),

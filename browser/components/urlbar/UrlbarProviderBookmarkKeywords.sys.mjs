@@ -15,6 +15,7 @@ const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
   KeywordUtils: "resource://gre/modules/KeywordUtils.sys.mjs",
+  PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
   UrlbarResult: "chrome://browser/content/urlbar/UrlbarResult.mjs",
   UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
 });
@@ -87,6 +88,7 @@ export class UrlbarProviderBookmarkKeywords extends UrlbarProvider {
       title = UrlbarUtils.prepareUrlForDisplay(url);
     }
 
+    let bookmark = await lazy.PlacesUtils.bookmarks.fetch({ url: entry.url });
     let result = new lazy.UrlbarResult({
       type: lazy.UrlbarShared.RESULT_TYPE.KEYWORD,
       source: lazy.UrlbarShared.RESULT_SOURCE.BOOKMARKS,
@@ -98,6 +100,7 @@ export class UrlbarProviderBookmarkKeywords extends UrlbarProvider {
         input: queryContext.searchString,
         postData,
         icon: lazy.UrlbarShared.getIconForUrl(entry.url),
+        bookmarkDateMs: bookmark ? bookmark.dateAdded.getTime() : undefined,
       },
       highlights: {
         title: lazy.UrlbarShared.HIGHLIGHT.TYPED,

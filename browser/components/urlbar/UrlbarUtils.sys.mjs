@@ -2569,6 +2569,9 @@ UrlbarUtils.RESULT_PAYLOAD_SCHEMA = {
     type: "object",
     required: ["keyword", "url"],
     properties: {
+      bookmarkDateMs: {
+        type: "number",
+      },
       icon: {
         type: "string",
       },

@@ -271,6 +271,7 @@ export class UrlbarProviderTopSites extends UrlbarProvider {
             }
             if (bookmark) {
               resultSource = lazy.UrlbarShared.RESULT_SOURCE.BOOKMARKS;
+              payload.bookmarkDateMs = bookmark.dateAdded.getTime();
             }
           }
 
