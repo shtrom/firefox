@@ -63,6 +63,7 @@ export class GeckoViewMediaControl extends GeckoViewModule {
       "GeckoView:MediaSession:SkipAd",
       "GeckoView:MediaSession:SeekTo",
       "GeckoView:MediaSession:MuteAudio",
+      "GeckoView:MediaSession:SystemAudioFocus",
     ]);
   }
 
@@ -115,6 +116,13 @@ export class GeckoViewMediaControl extends GeckoViewModule {
           this.controller.mute();
         } else {
           this.controller.unmute();
+        }
+        break;
+      case "GeckoView:MediaSession:SystemAudioFocus":
+        if (aData.reason == "gain") {
+          this.controller.resume();
+        } else {
+          this.controller.pause(aData.reason);
         }
         break;
     }
