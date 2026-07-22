@@ -1187,8 +1187,7 @@ toolbarbutton[constrain-size="true"][cui-areatype="panel"] > .toolbarbutton-badg
   fill: currentColor;
 }
 
-#PanelUI-fxa-menu-create-profile-button,
-#appMenu-create-profile-button {
+#PanelUI-fxa-menu-create-profile-button {
   list-style-image: url("chrome://global/skin/icons/users.svg");
 }
 
