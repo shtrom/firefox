@@ -7,6 +7,8 @@ var { XPCOMUtils } = ChromeUtils.importESModule(
 );
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
+  ContextualIdentityService:
+    "moz-src:///toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs",
   PageWireframes: "resource:///modules/sessionstore/PageWireframes.sys.mjs",
   SponsorProtection:
     "moz-src:///browser/components/newtab/SponsorProtection.sys.mjs",
@@ -573,6 +575,40 @@ class TabPanel extends HoverPanel {
       : "";
   }
 
+  #updateContainerIndicator() {
+    const indicator = this.panelElement.querySelector(
+      ".tab-preview-container-indicator"
+    );
+
+    for (let className of [...indicator.classList]) {
+      if (
+        className.startsWith("identity-color-") ||
+        className.startsWith("identity-icon-")
+      ) {
+        indicator.classList.remove(className);
+      }
+    }
+
+    const userContextId = this.#tab?.userContextId;
+    const identity = userContextId
+      ? lazy.ContextualIdentityService.getPublicIdentityFromId(userContextId)
+      : null;
+    if (!identity) {
+      indicator.hidden = true;
+      return;
+    }
+
+    if (identity.color) {
+      indicator.classList.add(`identity-color-${identity.color}`);
+    }
+    if (identity.icon) {
+      indicator.classList.add(`identity-icon-${identity.icon}`);
+    }
+    indicator.querySelector(".tab-preview-container-label").textContent =
+      lazy.ContextualIdentityService.getUserContextLabel(userContextId);
+    indicator.hidden = false;
+  }
+
   /**
    * Opens the tab note menu in the context of the current tab. Since only
    * one panel should be open at a time, this also closes the tab hover preview
@@ -595,6 +631,8 @@ class TabPanel extends HoverPanel {
       this.#displayTitle;
     this.panelElement.querySelector(".tab-preview-uri").textContent =
       this.#displayURI;
+
+    this.#updateContainerIndicator();
 
     if (this.win.gBrowser.showPidAndActiveness) {
       this.panelElement.querySelector(".tab-preview-pid").textContent =
