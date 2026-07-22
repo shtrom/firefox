@@ -678,6 +678,10 @@ JS_PUBLIC_API void js::SetContextProfilingStack(
 
 JS_PUBLIC_API void js::EnableContextProfilingStack(JSContext* cx,
                                                    bool enabled) {
+  // Toggling leaves the engine transiently half-initialized (e.g. a Baseline
+  // Interpreter frame whose JitScript has no profiler label string yet), so the
+  // SamplerThread must not walk this thread's JS stack until we're done.
+  AutoSuppressProfilerSampling suppressSampling(cx);
   cx->geckoProfiler().enable(enabled);
   cx->runtime()->geckoProfiler().enable(enabled);
 }
