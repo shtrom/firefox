@@ -262,6 +262,9 @@ add_task(async function test_monitor_creation() {
     set: [["browser.smartwindow.enabled", true]],
   });
 
+  // Reset MonitorAgent state to ensure clean test environment
+  await MonitorAgent._resetForTesting();
+
   // MonitorAgent will auto-initialize on first use
   const initialMonitors = await MonitorAgent.listMonitors();
   const initialCount = initialMonitors.length;
@@ -382,6 +385,10 @@ add_task(async function test_monitor_creation() {
     );
   } finally {
     BrowserTestUtils.removeTab(tab);
+
+    // Reset MonitorAgent state after test to ensure clean state for next test
+    await MonitorAgent._resetForTesting();
+
     await SpecialPowers.popPrefEnv();
   }
 });
