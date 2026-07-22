@@ -1904,8 +1904,8 @@ nsresult HappyEyeballsConnectionAttempt::OnARecord(nsIDNSRecord* aRecord,
       MaybeBuildOriginCoalescingKeys();
     }
     nsTArray<NetAddr> emptyArray;
-    rv =
-        happy_eyeballs_process_dns_response_a(mHappyEyeballs, aId, &emptyArray);
+    rv = happy_eyeballs_process_dns_response_a(mHappyEyeballs, aId, &emptyArray,
+                                               mDnsMetadata.mIsTRR);
     if (NS_FAILED(rv)) {
       return rv;
     }
@@ -1930,8 +1930,8 @@ nsresult HappyEyeballsConnectionAttempt::OnARecord(nsIDNSRecord* aRecord,
     MaybeBuildOriginCoalescingKeys();
   }
 
-  rv = happy_eyeballs_process_dns_response_a(mHappyEyeballs, aId,
-                                             &ipv4Addresses);
+  rv = happy_eyeballs_process_dns_response_a(
+      mHappyEyeballs, aId, &ipv4Addresses, mDnsMetadata.mIsTRR);
   if (NS_FAILED(rv)) {
     return rv;
   }
@@ -1961,8 +1961,8 @@ nsresult HappyEyeballsConnectionAttempt::OnAAAARecord(nsIDNSRecord* aRecord,
       MaybeBuildOriginCoalescingKeys();
     }
     nsTArray<NetAddr> emptyArray;
-    rv = happy_eyeballs_process_dns_response_aaaa(mHappyEyeballs, aId,
-                                                  &emptyArray);
+    rv = happy_eyeballs_process_dns_response_aaaa(
+        mHappyEyeballs, aId, &emptyArray, mDnsMetadata.mIsTRR);
     if (NS_FAILED(rv)) {
       return rv;
     }
@@ -1987,8 +1987,8 @@ nsresult HappyEyeballsConnectionAttempt::OnAAAARecord(nsIDNSRecord* aRecord,
     MaybeBuildOriginCoalescingKeys();
   }
 
-  rv = happy_eyeballs_process_dns_response_aaaa(mHappyEyeballs, aId,
-                                                &ipv6Addresses);
+  rv = happy_eyeballs_process_dns_response_aaaa(
+      mHappyEyeballs, aId, &ipv6Addresses, mDnsMetadata.mIsTRR);
   if (NS_FAILED(rv)) {
     return rv;
   }

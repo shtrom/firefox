@@ -77,7 +77,12 @@ impl Metrics {
         );
     }
 
-    pub(crate) fn dns_response(&mut self, id: happy_eyeballs::Id) {
+    pub(crate) fn dns_response(&mut self, id: happy_eyeballs::Id, is_trr: bool) {
+        // Any record resolved via TRR marks the connection as DoH-resolved. The
+        // resolver is consistent across a connection's lookups, so OR-ing is
+        // order-independent and robust to failed responses that carry no
+        // resolver signal.
+        self.is_trr |= is_trr;
         let Some(info) = self.dns_infos.remove(&id) else {
             return;
         };
@@ -106,8 +111,7 @@ impl Metrics {
         });
         self.https_rr_ipv4hint |= infos.iter().any(|i| !i.ipv4_hints.is_empty());
         self.https_rr_ipv6hint |= infos.iter().any(|i| !i.ipv6_hints.is_empty());
-        self.is_trr = is_trr;
-        self.dns_response(id);
+        self.dns_response(id, is_trr);
     }
 
     pub(crate) fn connection_attempt_started(&mut self, id: happy_eyeballs::Id) {
@@ -189,8 +193,9 @@ impl Drop for Metrics {
             (false, true) => "https_rr_only",
             (true, true) => "both",
         };
-        glean::happy_eyeballs_h3_discovery
-            .get(h3_discovery_label)
+        let resolver = if self.is_trr { "doh" } else { "native" };
+        glean::happy_eyeballs_h3_discovery_by_resolver
+            .get(resolver, h3_discovery_label)
             .add(1);
 
         if self.https_record_received {
