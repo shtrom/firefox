@@ -11,6 +11,7 @@
 @import url(chrome://devtools/content/shared/widgets/filter-widget.css);
 @import url(chrome://devtools/content/shared/widgets/linear-widget.css);
 @import url(chrome://devtools/content/shared/widgets/spectrum.css);
+@import url(chrome://devtools/content/shared/components/MdnLink.css);
 /*
  * compatibility.css is primarily used by the Compatibility panel, so import it in a layer
  * to give it a lower importance than the rule here and mitigate styling mismatch.
