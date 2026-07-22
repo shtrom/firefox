@@ -1473,6 +1473,26 @@ The number of days since the most recent crash, as recorded in the [dump files c
 declare const daysSinceLastCrash: Promise<number|null>;
 ```
 
+### `crashCountInLastDay`
+
+The number of crashes the user has experienced in the last 24 hours, as recorded in the [dump files corresponding to submitted crashes](https://searchfox.org/firefox-main/source/toolkit/components/crashes/CrashManager.in.sys.mjs#297-322). This targeting is only available for Mac and Windows users; Linux users will always return a `crashCountInLastDay` of 0.
+
+#### Definition
+
+```ts
+declare const crashCountInLastDay: Promise<number>;
+```
+
+### `crashCountInLastWeek`
+
+The number of crashes the user has experienced in the last 7 days, as recorded in the [dump files corresponding to submitted crashes](https://searchfox.org/firefox-main/source/toolkit/components/crashes/CrashManager.in.sys.mjs#297-322). This targeting is only available for Mac and Windows users; Linux users will always return a `crashCountInLastWeek` of 0.
+
+#### Definition
+
+```ts
+declare const crashCountInLastWeek: Promise<number>;
+```
+
 ### `isLaunchOnLogin`
 
 `true` if this Firefox launch was initiated by the OS on login. Detected via the `-os-autostart` command-line flag, which is only injected by the Windows launch-on-login paths. This attribute is always `false` on macOS and Linux. It also will not detect cases where a user has manually added Firefox to OS-level login items outside of Firefox's own launch-on-login setting.
