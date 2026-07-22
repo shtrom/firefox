@@ -119,18 +119,7 @@ static char* jitDumpBuffer = nullptr;
 static bool IsPerfProfiling() { return JitDumpFilePtr != nullptr; }
 #endif
 
-AutoLockPerfSpewer::AutoLockPerfSpewer() {
-  // The profiler may re-enter us on the main thread when profiling native
-  // memory allocations and call JS::LookupJitCodeRecord which requires taking
-  // this lock. Therefore suppress the profiler when taking this lock if
-  // running on the main thread.
-  JSContext* cx = TlsContext.get();
-  if (cx) {
-    asps.emplace(cx);
-  }
-
-  PerfMutex.lock();
-}
+AutoLockPerfSpewer::AutoLockPerfSpewer() { PerfMutex.lock(); }
 
 AutoLockPerfSpewer::~AutoLockPerfSpewer() { PerfMutex.unlock(); }
 

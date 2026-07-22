@@ -5,8 +5,6 @@
 #ifndef jit_PerfSpewer_h
 #define jit_PerfSpewer_h
 
-#include "mozilla/Maybe.h"
-
 #ifdef JS_ION_PERF
 #  include <stdio.h>
 #endif
@@ -44,10 +42,7 @@ enum class CacheOp : uint16_t;
 
 void ResetPerfSpewer(bool enabled);
 
-class AutoLockPerfSpewer {
-  mozilla::Maybe<AutoSuppressProfilerSampling> asps;
-
- public:
+struct AutoLockPerfSpewer {
   AutoLockPerfSpewer();
   ~AutoLockPerfSpewer();
 };
