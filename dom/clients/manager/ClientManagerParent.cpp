@@ -36,7 +36,8 @@ ClientManagerParent::AllocPClientHandleParent(
 IPCResult ClientManagerParent::RecvPClientHandleConstructor(
     PClientHandleParent* aActor, const IPCClientInfo& aClientInfo) {
   ClientHandleParent* actor = static_cast<ClientHandleParent*>(aActor);
-  return actor->Init(aClientInfo);
+  actor->Init(aClientInfo);
+  return IPC_OK();
 }
 
 PClientManagerOpParent* ClientManagerParent::AllocPClientManagerOpParent(
@@ -53,9 +54,8 @@ bool ClientManagerParent::DeallocPClientManagerOpParent(
 IPCResult ClientManagerParent::RecvPClientManagerOpConstructor(
     PClientManagerOpParent* aActor, const ClientOpConstructorArgs& aArgs) {
   ClientManagerOpParent* actor = static_cast<ClientManagerOpParent*>(aActor);
-  RefPtr<ThreadsafeContentParentHandle> contentParentHandle =
-      ::mozilla::ipc::BackgroundParent::GetContentParentHandle(Manager());
-  return actor->Init(aArgs, contentParentHandle);
+  actor->Init(aArgs);
+  return IPC_OK();
 }
 
 PClientNavigateOpParent* ClientManagerParent::AllocPClientNavigateOpParent(
