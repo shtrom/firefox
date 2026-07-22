@@ -287,7 +287,13 @@ already_AddRefed<BrowsingContext> BrowsingContext::Get(uint64_t aId) {
 /* static */
 already_AddRefed<BrowsingContext> BrowsingContext::GetCurrentTopByBrowserId(
     uint64_t aBrowserId) {
-  return do_AddRef(sCurrentTopByBrowserId->Get(aBrowserId));
+  // The map is cleared on shutdown but callers may still run afterwards (e.g.
+  // during cycle collector teardown), so mirror Get() and null-check it.
+  if (sCurrentTopByBrowserId) {
+    return do_AddRef(sCurrentTopByBrowserId->Get(aBrowserId));
+  }
+
+  return nullptr;
 }
 
 /* static */
