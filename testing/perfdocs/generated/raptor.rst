@@ -47096,7 +47096,7 @@ A composite benchmark that measures page loading and sub-navigation performance 
         - mozilla-beta
       * - **browsertime-nav-bench-firefox-nav-bench**
         - ❌
-        - ❌
+        - ✅
         - ❌
         - ❌
 
@@ -47192,7 +47192,7 @@ A composite benchmark that measures page loading and sub-navigation performance 
         - mozilla-beta
       * - **browsertime-nav-bench-firefox-nav-bench**
         - ❌
-        - ❌
+        - ✅
         - ❌
         - ❌
 
@@ -47256,7 +47256,7 @@ A composite benchmark that measures page loading and sub-navigation performance 
         - mozilla-beta
       * - **browsertime-nav-bench-firefox-nav-bench**
         - ❌
-        - ❌
+        - ✅
         - ❌
         - ❌
 

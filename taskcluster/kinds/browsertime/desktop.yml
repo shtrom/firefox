@@ -1087,6 +1087,9 @@ browsertime-nav-bench:
                     macosx1500.*shippable.*: [autoland]
                     windows11-64-.*-hw-ref-shippable/opt: [autoland]
                     windows11-64-24h2-shippable/opt: [autoland]
+                    linux.*nightlyasrelease.*: [autoland]
+                    macosx1500.*nightlyasrelease.*: [autoland]
+                    windows11-64-24h2-nightlyasrelease.*: [autoland]
                     default: []
             default: []
     tier: 3
