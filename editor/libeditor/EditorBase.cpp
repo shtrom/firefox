@@ -1987,6 +1987,8 @@ nsresult EditorBase::PasteAsAction(nsIClipboard::ClipboardType aClipboardType,
         return EditorBase::ToGenericNSResult(rv);
       }
     }
+    // Active EditContext could have changed in the paste handler.
+    editActionData.UpdateEditContext();
   } else {
     // The caller must already have dispatched a "paste" event.
     editActionData.NotifyOfDispatchingClipboardEvent();
@@ -6945,6 +6947,13 @@ EditorBase::AutoEditActionDataSetter::SelectionLimitersAndCaretData() const {
     return LimitersAndCaretData{*frameSelection};
   }
   return {};
+}
+
+void EditorBase::AutoEditActionDataSetter::UpdateEditContext() {
+  MOZ_ASSERT(!mHasTriedToDispatchBeforeInputEvent,
+             "It's too late to update EditContext since this may have "
+             "already dispatched a beforeinput event");
+  mEditContext = mEditorBase.ComputeEditContext();
 }
 
 void EditorBase::AutoEditActionDataSetter::SetColorData(

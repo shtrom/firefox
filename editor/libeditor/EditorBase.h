@@ -1160,6 +1160,7 @@ class EditorBase : public nsIEditor,
     EditAction GetEditAction() const { return mEditAction; }
 
     dom::EditContext* GetEditContext() const { return mEditContext; }
+    void UpdateEditContext();
     bool EditContextHasBeenChanged() const {
       return mEditContext != mEditorBase.ComputeEditContext();
     }
