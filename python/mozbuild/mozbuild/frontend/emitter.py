@@ -261,13 +261,6 @@ class TreeMetadataEmitter(LoggingMixin):
         # Check that all static libraries refering shared libraries in
         # USE_LIBS are linked into a shared library or program.
         for lib in self._static_linking_shared:
-            # Rust tests can declare shared libraries in USE_LIBS for
-            # build-order purposes; actual linking is handled by Cargo. The
-            # dead-staticlib check is too strict for this case because it
-            # expects a moz.build-level consumer of the static library,
-            # which Rust-to-Rust linkage doesn't provide.
-            if isinstance(lib, RustTests):
-                continue
             if all(isinstance(o, StaticLibrary) for o in recurse_refs(lib)):
                 shared_libs = sorted(
                     l.basename
@@ -385,14 +378,7 @@ class TreeMetadataEmitter(LoggingMixin):
         # 1474022).
         if (
             not isinstance(
-                obj,
-                (
-                    StaticLibrary,
-                    HostLibrary,
-                    HostSharedLibrary,
-                    BaseRustProgram,
-                    RustTests,
-                ),
+                obj, (StaticLibrary, HostLibrary, HostSharedLibrary, BaseRustProgram)
             )
             and obj.cxx_link
         ):
@@ -508,7 +494,7 @@ class TreeMetadataEmitter(LoggingMixin):
                 context,
             )
 
-        elif isinstance(obj, (StaticLibrary, RustTests)) and isinstance(
+        elif isinstance(obj, StaticLibrary) and isinstance(
             candidates[0], SharedLibrary
         ):
             self._static_linking_shared.add(obj)
@@ -1680,10 +1666,7 @@ class TreeMetadataEmitter(LoggingMixin):
             # contents of the Cargo.toml file.
             features = context.get("RUST_TEST_FEATURES", [])
 
-            rust_tests_obj = RustTests(context, rust_tests, features)
-            # Add to linkage so USE_LIBS gets processed for build order.
-            self._linkage.append((context, rust_tests_obj, "USE_LIBS"))
-            yield rust_tests_obj
+            yield RustTests(context, rust_tests, features)
 
         for obj in self._process_test_manifests(context):
             yield obj
