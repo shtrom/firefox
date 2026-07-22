@@ -6,12 +6,15 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import os
+import shutil
+import subprocess
 from contextlib import nullcontext as does_not_raise
 
 import pytest
 from mozunit import main
 
-from mozbuild.vendor.vendor_manifest import _replace_in_file
+from mozbuild.vendor.vendor_manifest import VendorManifest, _replace_in_file
 
 
 @pytest.mark.parametrize(
@@ -128,6 +131,53 @@ def test_replace_in_file_regex(
     with exception:
         _replace_in_file(file, pattern, replacement, regex=True)
         assert file.read_text() == expected
+
+
+def _fake_manifest():
+    # import_local_patches only needs these four helpers, so build a bare
+    # instance rather than a full MozbuildObject.
+    vm = VendorManifest.__new__(VendorManifest)
+    vm.logInfo = lambda *args, **kwargs: None
+    vm.log = lambda *args, **kwargs: None
+    vm.convert_patterns_to_paths = lambda directory, patterns: [
+        os.path.join(directory, pattern) for pattern in patterns
+    ]
+
+    def run_process(args, log_name=None, ensure_exit_code=0):
+        result = subprocess.run(args, capture_output=True, text=True, check=False)
+        if result.returncode != ensure_exit_code:
+            raise Exception(f"{args[0]} exited {result.returncode}: {result.stderr}")
+
+    vm.run_process = run_process
+    return vm
+
+
+_PATCH = "--- a/f.txt\n+++ b/f.txt\n@@ -1,3 +1,4 @@\n line1\n line2\n+added\n line3\n"
+_ORIGINAL = "line1\nline2\nline3\n"
+_PATCHED = "line1\nline2\nadded\nline3\n"
+
+
+@pytest.mark.skipif(shutil.which("patch") is None, reason="requires patch(1)")
+def test_import_local_patches_applies_cleanly(tmp_path):
+    (tmp_path / "0.patch").write_text(_PATCH)
+    (tmp_path / "f.txt").write_text(_ORIGINAL)
+
+    _fake_manifest().import_local_patches(["0.patch"], str(tmp_path), str(tmp_path))
+
+    assert (tmp_path / "f.txt").read_text() == _PATCHED
+
+
+@pytest.mark.skipif(shutil.which("patch") is None, reason="requires patch(1)")
+def test_import_local_patches_fails_on_already_applied(tmp_path):
+    # Guards --forward: without it, `patch --batch` assumes -R and silently
+    # un-applies an already-present change (exit 0), reverting upstreamed code.
+    (tmp_path / "0.patch").write_text(_PATCH)
+    (tmp_path / "f.txt").write_text(_PATCHED)
+
+    with pytest.raises(Exception):
+        _fake_manifest().import_local_patches(["0.patch"], str(tmp_path), str(tmp_path))
+
+    assert (tmp_path / "f.txt").read_text() == _PATCHED
 
 
 if __name__ == "__main__":

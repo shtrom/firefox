@@ -945,6 +945,12 @@ class VendorManifest(MozbuildObject):
                         os.path.abspath(patch),
                         "--no-backup-if-mismatch",
                         "--batch",
+                        # --forward makes patch skip (and exit nonzero on) a
+                        # patch that looks already-applied or reversed, rather
+                        # than silently applying its reverse. Without it,
+                        # re-vendoring after a local patch was upstreamed could
+                        # quietly undo the upstreamed change.
+                        "--forward",
                     ]
                     self.run_process(
                         args=script,
