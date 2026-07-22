@@ -11,6 +11,7 @@ support-files = [
   "add_search_engine_1.xml",
   "add_search_engine_2.xml",
   "add_search_engine_3.xml",
+  "no_title.html",
   "print_postdata.sjs",
 ]
 prefs = [
@@ -31,22 +32,9 @@ skip-if = [
   "tsan", # Intermittently times out, see 1622698 (frequent on TSan).
 ]
 
-["browser_acknowledgeFeedbackAndDismissal.js"]
-
 ["browser_action_tabgroups.js"]
 
 ["browser_autoOpen.js"]
-
-["browser_autocomplete_a11y_label.js"]
-support-files = [
-  "../browser/searchSuggestionEngine.xml",
-  "../browser/searchSuggestionEngine.sjs",
-]
-skip-if = [
-  "a11y_checks", # Test times out (bug 1854660)
-]
-
-["browser_autocomplete_autoselect.js"]
 
 ["browser_autocomplete_cursor.js"]
 
@@ -55,25 +43,14 @@ skip-if = [
 ["browser_autocomplete_enter_race.js"]
 https_first_disabled = true
 
-["browser_autocomplete_no_title.js"]
-
-["browser_autocomplete_readline_navigation.js"]
-run-if = [
-  "os == 'mac'", # Mac only feature
-]
-
-["browser_autocomplete_tag_star_visibility.js"]
-
-["browser_bestMatch.js"]
-
 ["browser_blanking.js"]
 support-files = ["file_blank_but_not_blank.html"]
 
-["browser_blobIcons.js"]
-
 ["browser_bufferer_onQueryResults.js"]
-
-["browser_calculator.js"]
+support-files = [
+  "searchSuggestionEngine.xml",
+  "searchSuggestionEngine.sjs",
+]
 
 ["browser_canonizeURL.js"]
 https_first_disabled = true
@@ -83,8 +60,6 @@ support-files = [
 ]
 
 ["browser_caret_position.js"]
-
-["browser_click_row_border.js"]
 
 ["browser_clipboard.js"]
 
@@ -126,9 +101,6 @@ support-files = [
 
 ["browser_dragdropURL.js"]
 
-["browser_dynamicResults.js"]
-https_first_disabled = true
-
 ["browser_editAndEnterWithSlowQuery.js"]
 
 ["browser_edit_invalid_url.js"]
@@ -145,24 +117,9 @@ https_first_disabled = true
 
 ["browser_hashChangeProxyState.js"]
 
-["browser_heuristicNotAddedFirst.js"]
-
-["browser_hideHeuristic.js"]
-
 ["browser_historyInSearchMode.js"]
 
 ["browser_ime_composition.js"]
-
-["browser_inputHistory.js"]
-https_first_disabled = true
-support-files = [
-  "searchSuggestionEngine.xml",
-  "searchSuggestionEngine.sjs",
-]
-
-["browser_inputHistory_autofill.js"]
-
-["browser_inputHistory_emptystring.js"]
 
 ["browser_keepStateAcrossTabSwitches.js"]
 https_first_disabled = true
@@ -229,8 +186,6 @@ https_first_disabled = true
 
 ["browser_removeUnsafeProtocolsFromURLBarPaste.js"]
 
-["browser_remove_match.js"]
-
 ["browser_restoreEmptyInput.js"]
 
 ["browser_restrict_keywords.js"]
@@ -239,35 +194,9 @@ https_first_disabled = true
 
 ["browser_restrict_keywords_autofill_locales.js"]
 
-["browser_resultSpan.js"]
-
-["browser_result_explanations.js"]
-
-["browser_result_menu.js"]
-
-["browser_result_menu_general.js"]
-
-["browser_result_noTitle.js"]
-support-files = [
-  "no_title.html"
-]
-
-["browser_result_onSelection.js"]
-
-["browser_results_format_displayValue.js"]
-
-["browser_retainedResultsOnFocus.js"]
-
 ["browser_revert.js"]
 
-["browser_same_ref_deduplication.js"]
-support-files = ["dummy_page.html"]
-
-["browser_secondaryActions.js"]
-
 ["browser_selectionKeyNavigation.js"]
-
-["browser_slow_heuristic.js"]
 
 ["browser_speculative_connect_not_with_client_cert.js"]
 
@@ -286,8 +215,6 @@ skip-if = [
 ]
 
 ["browser_strip_on_share_telemetry.js"]
-
-["browser_suggestedIndex.js"]
 
 ["browser_suppressFocusBorder.js"]
 skip-if = [
@@ -314,8 +241,6 @@ support-files = ["moz.png"]
 
 ["browser_tabMatchesInAwesomebar_perwindowpb.js"]
 
-["browser_testUrlbarIcons.js"]
-
 ["browser_text_dont_shift_on_mousedown.js"]
 
 ["browser_textruns.js"]
@@ -327,8 +252,6 @@ https_first_disabled = true
 
 ["browser_top_sites_private.js"]
 https_first_disabled = true
-
-["browser_top_sites_switchtab.js"]
 
 ["browser_trust_panel.js"]
 https_first_disabled = true
@@ -349,8 +272,6 @@ https_first_disabled = true
 https_first_disabled = true
 
 ["browser_typed_value.js"]
-
-["browser_unitConversion.js"]
 
 ["browser_updateForDomainCompletion.js"]
 https_first_disabled = true
