@@ -7,6 +7,15 @@ function Child() {
   return <div className="child-content" />;
 }
 
+const VISIBLE_MESSAGE_STATE = {
+  ...INITIAL_STATE,
+  Messages: {
+    ...INITIAL_STATE.Messages,
+    isVisible: true,
+    messageData: { id: "TEST_MESSAGE" },
+  },
+};
+
 describe("<MessageWrapper>", () => {
   it("should not render when message is not visible", () => {
     const state = {
@@ -45,5 +54,43 @@ describe("<MessageWrapper>", () => {
     const wrapper = container.querySelector(".message-wrapper");
     expect(wrapper).toBeInTheDocument();
     expect(wrapper.classList.contains("extra-class")).toBe(true);
+  });
+
+  it("keeps injected callback references stable across re-renders when the message is unchanged", () => {
+    const received = [];
+    // MessageWrapper injects the callbacks via React.cloneElement, so a child
+    // component records the props it receives on every render.
+    function CaptureChild(props) {
+      received.push(props);
+      return <div className="child-content" />;
+    }
+    const dispatch = jest.fn();
+
+    const { rerender } = render(
+      <WrapWithProvider state={VISIBLE_MESSAGE_STATE}>
+        <MessageWrapper dispatch={dispatch}>
+          <CaptureChild />
+        </MessageWrapper>
+      </WrapWithProvider>
+    );
+    rerender(
+      <WrapWithProvider state={VISIBLE_MESSAGE_STATE}>
+        <MessageWrapper dispatch={dispatch}>
+          <CaptureChild />
+        </MessageWrapper>
+      </WrapWithProvider>
+    );
+
+    expect(received.length).toBeGreaterThanOrEqual(2);
+    const [first] = received;
+    const last = received[received.length - 1];
+    for (const key of [
+      "handleDismiss",
+      "handleClick",
+      "handleBlock",
+      "handleClose",
+    ]) {
+      expect(last[key]).toBe(first[key]);
+    }
   });
 });
