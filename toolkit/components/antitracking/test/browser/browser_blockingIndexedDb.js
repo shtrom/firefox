@@ -1,3 +1,5 @@
+requestLongerTimeout(2);
+
 AntiTracking.runTestInNormalAndPrivateMode(
   "IndexedDB",
   // blocking callback
