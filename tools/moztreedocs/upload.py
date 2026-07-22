@@ -54,13 +54,28 @@ def create_aws_session():
 
 
 @functools.cache
-def get_s3_keys(s3, bucket):
+def get_s3_keys(s3, bucket, include_prefix=None, exclude_prefix=None):
+    # When exclude_prefix is set, enumerate one level at a time with a
+    # delimiter and skip that subtree, descending into the other prefixes.
+    # Listing the whole bucket is prohibitively slow because every build
+    # leaves an immutable per-build copy under main/.
     kwargs = {"Bucket": bucket}
+    if include_prefix is not None:
+        kwargs["Prefix"] = include_prefix
+    if exclude_prefix is not None:
+        _, sep, rest = exclude_prefix.partition("/")
+        assert sep and not rest, "exclude_prefix must be a single top-level prefix"
+        kwargs["Delimiter"] = "/"
     all_keys = []
     while True:
         response = s3.list_objects_v2(**kwargs)
-        for obj in response["Contents"]:
+        for obj in response.get("Contents", []):
             all_keys.append(obj["Key"])
+        for common in response.get("CommonPrefixes", []):
+            if common["Prefix"] != exclude_prefix:
+                all_keys.extend(
+                    get_s3_keys(s3, bucket, include_prefix=common["Prefix"])
+                )
 
         try:
             kwargs["ContinuationToken"] = response["NextContinuationToken"]
@@ -100,15 +115,10 @@ def s3_delete_missing(files, key_prefix=None):
     will remove files with the same prefix as key_prefix.
     """
     s3, bucket = create_aws_session()
-    files_on_server = get_s3_keys(s3, bucket)
     if key_prefix:
-        files_on_server = [
-            path for path in files_on_server if path.startswith(key_prefix)
-        ]
+        files_on_server = get_s3_keys(s3, bucket, include_prefix=key_prefix)
     else:
-        files_on_server = [
-            path for path in files_on_server if not path.startswith("main/")
-        ]
+        files_on_server = get_s3_keys(s3, bucket, exclude_prefix="main/")
     files = [key_prefix + "/" + path if key_prefix else path for path, f in files]
     files_to_delete = [path for path in files_on_server if path not in files]
 
