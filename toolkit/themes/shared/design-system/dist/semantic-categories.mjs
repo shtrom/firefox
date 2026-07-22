@@ -363,6 +363,7 @@ export const tokensTable = {
       value: "var(--color-accent-attention)",
       name: "--button-badge-background-color",
     },
+    { value: "transparent", name: "--button-split-separator-background-color" },
     { value: "var(--background-color-box)", name: "--card-background-color" },
     {
       value: {
@@ -1456,6 +1457,7 @@ export const tokensTable = {
   ],
   "border-width": [
     { value: "1px", name: "--border-width" },
+    { value: "var(--border-width)", name: "--button-border-width-split" },
     { value: "var(--border-width)", name: "--card-border-width" },
     { value: "1px", name: "--badge-border-width" },
     { value: "var(--border-width)", name: "--message-bar-border-width" },
@@ -2035,6 +2037,7 @@ export const tokensTable = {
     { value: "var(--dimension-relative-100)", name: "--space-large" },
     { value: "var(--dimension-relative-150)", name: "--space-xlarge" },
     { value: "var(--dimension-relative-200)", name: "--space-xxlarge" },
+    { value: "var(--space-xxsmall)", name: "--button-gap-split" },
     {
       value: "var(--button-padding-block) var(--button-padding-inline)",
       name: "--button-padding",
@@ -4164,10 +4167,12 @@ export const variableLookupTable = {
   "button-border-color-toolbar-selected":
     "var(--button-border-color-ghost-active)",
   "button-border-radius": "var(--border-radius-medium)",
+  "button-border-width-split": "var(--border-width)",
   "button-content-alignment": "center",
   "button-font-size": "var(--font-size-root)",
   "button-font-size-small": "var(--font-size-small)",
   "button-font-weight": "var(--font-weight-semibold)",
+  "button-gap-split": "var(--space-xxsmall)",
   "button-icon-fill": "currentColor",
   "button-icon-stroke": "var(--button-icon-fill)",
   "button-min-height": "var(--size-item-large)",
@@ -4185,6 +4190,7 @@ export const variableLookupTable = {
   "button-size-icon": "var(--button-min-height)",
   "button-size-icon-small": "var(--button-min-height-small)",
   "button-size-icon-large": "var(--button-min-height-large)",
+  "button-split-separator-background-color": "transparent",
   "button-text-color": {
     forcedColors: "ButtonText",
     brand: {

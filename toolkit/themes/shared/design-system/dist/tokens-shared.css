@@ -117,10 +117,12 @@
     --button-border-color-toolbar-disabled: var(--button-border-color-disabled);
     --button-border-color-toolbar-selected: var(--button-border-color-ghost-active);
     --button-border-radius: var(--border-radius-medium);
+    --button-border-width-split: var(--border-width);
     --button-content-alignment: center;
     --button-font-size: var(--font-size-root);
     --button-font-size-small: var(--font-size-small);
     --button-font-weight: var(--font-weight-semibold);
+    --button-gap-split: var(--space-xxsmall);
     --button-icon-fill: currentColor;
     --button-icon-stroke: var(--button-icon-fill);
     --button-min-height: var(--size-item-large);
@@ -138,6 +140,7 @@
     --button-size-icon: var(--button-min-height);
     --button-size-icon-small: var(--button-min-height-small);
     --button-size-icon-large: var(--button-min-height-large);
+    --button-split-separator-background-color: transparent;
     --button-text-color-hover: var(--button-text-color);
     --button-text-color-active: var(--button-text-color);
     --button-text-color-disabled: var(--button-text-color);
@@ -872,9 +875,12 @@
       --button-border-color-primary-selected: var(--button-border-color-primary);
       --button-border-color-selected: var(--button-border-color);
       --button-border-radius: var(--border-radius-xlarge);
+      --button-border-width-split: 0;
+      --button-gap-split: 0;
       --button-opacity-disabled: 0.7;
       --button-padding-inline-small: var(--space-medium);
       --button-size-icon-small: var(--size-item-medium);
+      --button-split-separator-background-color: var(--button-border-color);
       --button-text-color: light-dark(var(--color-violet-90), var(--color-gray-0));
       --button-text-color-destructive: light-dark(var(--color-white), var(--button-text-color-primary));
       --button-text-color-destructive-disabled: var(--button-text-color-destructive);
@@ -1178,6 +1184,7 @@
         --button-background-color-muted-disabled: var(--button-background-color);
         --button-background-color-muted-selected: var(--button-background-color-ghost-active);
         --button-background-color-primary-disabled: GrayText;
+        --button-background-color-selected: SelectedItem;
         --button-border-color: var(--border-color-interactive);
         --button-border-color-destructive: var(--button-border-color-primary);
         --button-border-color-destructive-selected: var(--button-border-color-destructive-active);

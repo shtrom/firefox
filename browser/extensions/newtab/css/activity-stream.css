@@ -17190,9 +17190,12 @@ hr {
   --button-border-color-primary-selected: var(--button-border-color-primary);
   --button-border-color-selected: var(--button-border-color);
   --button-border-radius: var(--border-radius-xlarge);
+  --button-border-width-split: 0;
+  --button-gap-split: 0;
   --button-opacity-disabled: 0.7;
   --button-padding-inline-small: var(--space-medium);
   --button-size-icon-small: var(--size-item-medium);
+  --button-split-separator-background-color: var(--button-border-color);
   --button-text-color: light-dark(var(--color-violet-90), var(--color-gray-0));
   --button-text-color-destructive: light-dark(var(--color-white), var(--button-text-color-primary));
   --button-text-color-destructive-disabled: var(--button-text-color-destructive);
@@ -17455,6 +17458,7 @@ hr {
     --button-background-color-muted-disabled: var(--button-background-color);
     --button-background-color-muted-selected: var(--button-background-color-ghost-active);
     --button-background-color-primary-disabled: GrayText;
+    --button-background-color-selected: SelectedItem;
     --button-border-color: var(--border-color-interactive);
     --button-border-color-destructive: var(--button-border-color-primary);
     --button-border-color-destructive-selected: var(--button-border-color-destructive-active);
