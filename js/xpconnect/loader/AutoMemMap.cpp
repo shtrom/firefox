@@ -64,6 +64,9 @@ Result<Ok, nsresult> AutoMemMap::initInternal(PRFileMapProtect prot,
     // Some OSes' shared memory objects can't be stat()ed, either at
     // all (Android) or without loosening the sandbox (Mac) so just
     // use the size.
+    if (maybeSize > UINT32_MAX) {
+      return Err(NS_ERROR_INVALID_ARG);
+    }
     size_ = maybeSize;
   } else {
     // But if we don't have the size, assume it's a regular file and
