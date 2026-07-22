@@ -30,6 +30,15 @@ Do not print commands for the user to run, execute them and interpret the result
 
 Before giving the user a result or summary, always run `profiler-cli stop` to shut down the background daemon process (it persists beyond individual commands and must be explicitly stopped to free the port and memory), then present the findings.
 
+# Accuracy: Never Present Guesses as Facts
+
+Profiles invite plausible-sounding causal stories the data does not support. Engineers act on your conclusions, so a confident wrong guess wastes their time and erodes trust.
+
+- **Separate observation from inference.** State what the data shows (sample counts, marker durations, frames, thread states) as fact; treat root cause, "why it's slow", what a symbol does, and causal links as inference until validated.
+- **Validate before asserting, and back claims with data.** Confirm inferences first via `searchfox-cli`, marker payloads, or sample counts, and quantify (e.g. "4200 of 5000 main-thread samples").
+- **Label what you can't validate.** Say "hypothesis" or "guessing from the symbol name" plainly; never dress a guess as a conclusion, and give the user the concrete next step to confirm or refute it.
+- **Report inconclusive results as inconclusive** rather than inventing a tidy explanation; say plainly when the data doesn't support a conclusion.
+
 # Case Studies
 
 The `references/` directory in this skill contains real profiling investigations. Each scenario has two files:
