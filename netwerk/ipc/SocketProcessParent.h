@@ -95,7 +95,8 @@ class SocketProcessParent final
 
   mozilla::ipc::IPCResult RecvGeckoTraceExport(ByteBuf&& aBuf);
 
-  mozilla::ipc::IPCResult RecvSSLTokensCacheData(ByteBuf&& aBuf);
+  mozilla::ipc::IPCResult RecvSSLTokensCacheData(
+      nsTArray<SSLTokensCacheRecordInfo>&& aRecords);
 
 #if defined(XP_MACOSX) || defined(XP_IOS)
   mozilla::ipc::IPCResult RecvAppleFastDatapathProbeResult(
