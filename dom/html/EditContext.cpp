@@ -12,6 +12,7 @@
 #include "mozilla/IMEStateManager.h"
 #include "mozilla/InputEventOptions.h"
 #include "mozilla/MiscEvents.h"
+#include "mozilla/TextComposition.h"
 #include "mozilla/TextEvents.h"
 #include "mozilla/dom/AnonymousContent.h"
 #include "mozilla/dom/CharacterBoundsUpdateEvent.h"
@@ -35,8 +36,19 @@ using LineStyle = TextRangeStyle::LineStyle;
 
 NS_IMPL_ADDREF_INHERITED(EditContext, DOMEventTargetHelper)
 NS_IMPL_RELEASE_INHERITED(EditContext, DOMEventTargetHelper)
-NS_IMPL_CYCLE_COLLECTION_INHERITED(EditContext, DOMEventTargetHelper,
-                                   mAssociatedElement, mText, mTextContainer)
+NS_IMPL_CYCLE_COLLECTION_CLASS(EditContext)
+NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(EditContext,
+                                                DOMEventTargetHelper)
+  tmp->UnsuppressNotifyingIME();
+  MOZ_ASSERT(!tmp->mSuppressNotifyingIMETimer);
+  NS_IMPL_CYCLE_COLLECTION_UNLINK(mAssociatedElement, mText, mTextContainer)
+  NS_IMPL_CYCLE_COLLECTION_UNLINK_WEAK_PTR
+NS_IMPL_CYCLE_COLLECTION_UNLINK_END
+NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN_INHERITED(EditContext,
+                                                  DOMEventTargetHelper)
+  NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mAssociatedElement, mText, mTextContainer,
+                                    mSuppressNotifyingIMETimer)
+NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(EditContext)
 NS_INTERFACE_MAP_END_INHERITING(DOMEventTargetHelper)
@@ -96,6 +108,8 @@ void EditContext::SetForElement(const Element& aElement,
 
 void EditContext::Deactivate() {
   // https://w3c.github.io/edit-context/#dfn-deactivate-an-editcontext
+
+  UnsuppressNotifyingIME();
 
   // https://github.com/w3c/edit-context/pull/123
   if (!mIsComposing) {
@@ -206,6 +220,59 @@ LayoutDeviceIntRect EditContext::ToRootRelativeDeviceRect(
   return deviceRect;
 }
 
+// Suppress IME notifications until this goes out of scope.
+class MOZ_STACK_CLASS EditContext::AutoSuppressIMENotifications {
+ public:
+  explicit AutoSuppressIMENotifications(EditContext& editContext) {
+    if (IMEContentObserver* observer =
+            IMEStateManager::GetActiveContentObserver()) {
+      // If we're already suppressing notifications, don't do it again.
+      if (!editContext.mSuppressNotifyingIMETimer) {
+        observer->SuppressNotifyingIME();
+      }
+      mObserver = observer;
+      mEditContext = &editContext;
+    }
+  }
+
+  ~AutoSuppressIMENotifications() {
+    if (mObserver && !mEditContext->mSuppressNotifyingIMETimer) {
+      mObserver->UnsuppressNotifyingIME();
+    }
+  }
+
+  // Instead of unsuppressing now, wait for aTimeoutMillis milliseconds.
+  void SetTimerToUnsuppress(uint32_t aTimeoutMillis) {
+    if (!mObserver) {
+      return;
+    }
+    WeakPtr<EditContext> editContextWeak(mEditContext);
+    auto unsuppressCallback =
+        [editContextWeak]([[maybe_unused]] nsITimer* aTimer) {
+          EditContext* editContext = editContextWeak.get();
+          MOZ_ASSERT(editContext,
+                     "We should have cancelled the timer when the EditContext "
+                     "was destroyed.");
+          editContext->UnsuppressNotifyingIME();
+        };
+    auto result = NS_NewTimerWithCallback(
+        unsuppressCallback, aTimeoutMillis, nsITimer::TYPE_ONE_SHOT,
+        "EditContext::UnsuppressNotifyingIME"_ns);
+    if (result.isErr()) {
+      NS_WARNING("NS_NewTimerWithCallback() failed.");
+      return;
+    }
+    if (mEditContext->mSuppressNotifyingIMETimer) {
+      mEditContext->mSuppressNotifyingIMETimer->Cancel();
+    }
+    mEditContext->mSuppressNotifyingIMETimer = result.unwrap();
+  }
+
+ private:
+  RefPtr<IMEContentObserver> mObserver;
+  RefPtr<EditContext> mEditContext;
+};
+
 void EditContext::UpdateSelection(uint32_t aStart, uint32_t aEnd) {
   if (aStart == mSelectionStart && aEnd == mSelectionEnd) {
     return;
@@ -246,6 +313,7 @@ void EditContext::UpdateCharacterBounds(
       observer->EditContextPositionChanged();
     }
   }
+  UnsuppressNotifyingIME();
 }
 
 void EditContext::CharacterBounds(nsTArray<RefPtr<DOMRect>>& aRetVal) const {
@@ -308,11 +376,20 @@ void EditContext::UpdateText(uint32_t aRangeStart, uint32_t aRangeEnd,
   }
 }
 
-void EditContext::UpdateControlBounds(DOMRect& aControlBounds) {
-  mControlBounds = Some(ToRect(aControlBounds));
+void EditContext::UpdateControlBounds(const DOMRect& aControlBounds) {
+  Rect newRect = ToRect(aControlBounds);
+  if (mControlBounds == Some(newRect)) {
+    // Same rect as before - don't notify IME.
+    return;
+  }
+  mControlBounds = Some(newRect);
+  if (IMEContentObserver* observer =
+          IMEStateManager::GetActiveContentObserver()) {
+    observer->EditContextPositionChanged();
+  }
 }
 
-void EditContext::UpdateSelectionBounds(DOMRect& aSelectionBounds) {
+void EditContext::UpdateSelectionBounds(const DOMRect& aSelectionBounds) {
   mSelectionBounds = Some(ToRect(aSelectionBounds));
 }
 
@@ -328,6 +405,8 @@ void EditContext::UpdateTextAndFireEvent(
   if (aStart > aEnd) {
     std::swap(aStart, aEnd);
   }
+
+  AutoSuppressIMENotifications suppress(*this);
   IgnoredErrorResult rv;
   UpdateText(aStart, aEnd, aString, rv);
   if (rv.Failed()) {
@@ -365,6 +444,22 @@ void EditContext::UpdateTextAndFireEvent(
   AutoRestore restore(mIsFiringTextUpdate);
   mIsFiringTextUpdate = true;
   DispatchEvent(*e);
+  if (!IsActive()) {
+    return;
+  }
+
+  // Request new character bounds.
+  uint32_t start = SelectionMinClamped();
+  uint32_t end = SelectionMaxClamped();
+  if (mAssociatedElement) {
+    if (HTMLEditor* editor = mAssociatedElement->OwnerDoc()->GetHTMLEditor()) {
+      if (TextComposition* composition = editor->GetComposition()) {
+        start = composition->ClampedStartOffsetInTextNode();
+        end = composition->EndOffsetMaybeInFollowingTextNode();
+      }
+    }
+  }
+  FireCharacterBoundsUpdateIfNeeded(start, end, &suppress);
 }
 
 void EditContext::StartComposition(const WidgetCompositionEvent& aEvent) {
@@ -512,39 +607,31 @@ static InlineDir ReverseInlineDir(InlineDir dir) {
   return InlineDir::LTR;
 }
 
-nsresult EditContext::FireCharacterBoundsUpdateIfNeededAndGetRects(
-    uint32_t aStart, uint32_t aEnd, nsTArray<LayoutDeviceIntRect>& aRects) {
-  MOZ_ASSERT(aRects.IsEmpty());
+void EditContext::UnsuppressNotifyingIME() {
+  if (mSuppressNotifyingIMETimer) {
+    mSuppressNotifyingIMETimer->Cancel();
+    mSuppressNotifyingIMETimer = nullptr;
+    if (IMEContentObserver* observer =
+            IMEStateManager::GetActiveContentObserver()) {
+      observer->UnsuppressNotifyingIME();
+    }
+  }
+}
+
+nsresult EditContext::FireCharacterBoundsUpdateIfNeeded(
+    uint32_t aStart, uint32_t aEnd,
+    AutoSuppressIMENotifications* aSuppressIMENotifications) {
   aStart = std::min(aStart, TextLength());
   aEnd = std::min(aEnd, TextLength());
-  enum class CollapseDirection {
-    // Don't collapse returned rectangle
-    None,
-    // Collapse returned rectangle in the direction of the previous character
-    // (e.g. for LTR, set width = 0)
-    Previous,
-    // Collapse returned rectangle in the direction of the next character
-    // (e.g. for LTR, set x += width, width = 0)
-    Next,
-  };
-  CollapseDirection collapse = CollapseDirection::None;
   if (aStart == aEnd) {
-    // In this case, ContentEventHandler still wants a rectangle for the caret
-    if (TextLength() == 0) {
-      aRects.AppendElement(FallbackBounds());
-      return NS_OK;
-    }
+    // Extend empty range to include one character.
     if (aEnd < TextLength()) {
-      // If requested range is before end of text, query the next character,
-      // and collapse its rectangle in the opposite direction of the writing.
       aEnd++;
-      collapse = CollapseDirection::Previous;
-    } else {
-      // If requested range is at end of text, query the previous character,
-      // and collapse its rectangle in the direction of the writing.
-      MOZ_ASSERT(aStart > 0);
+    } else if (aStart) {
       aStart--;
-      collapse = CollapseDirection::Next;
+    } else {
+      // Text is empty - can't request character bounds.
+      return NS_OK;
     }
   }
   MOZ_ASSERT(aStart < aEnd);
@@ -586,39 +673,120 @@ nsresult EditContext::FireCharacterBoundsUpdateIfNeededAndGetRects(
     }
   }
 
-  RefPtr<nsPresContext> presContext = mText->OwnerDoc()->GetPresContext();
-
   // If we already have the requested character bounds and nothing relevant has
   // changed, don't fire characterboundsupdate again.
-  if (mCodepointRectsTextChanged ||
-      mControlBoundsAtLastUpdateCharacterBounds !=
-          GetControlBoundsOrClientRect() ||
-      aStart < mCodepointRectsStartIndex ||
-      aEnd > mCodepointRectsStartIndex + mCodepointRects.Length()) {
-    CharacterBoundsUpdateEventInit eventOptions;
-    eventOptions.mBubbles = false;
-    eventOptions.mCancelable = true;
-    eventOptions.mRangeStart = startExtendedToGraphemeCluster;
-    eventOptions.mRangeEnd = endExtendedToGraphemeCluster;
-    AutoRestore restore(mExpectingCharacterBounds);
-    mExpectingCharacterBounds = true;
-    RefPtr event = CharacterBoundsUpdateEvent::Constructor(
-        this, u"characterboundsupdate"_ns, eventOptions);
-    event->SetTrusted(true);
-    DispatchEvent(*event);
+  if (!(mCodepointRectsTextChanged ||
+        mControlBoundsAtLastUpdateCharacterBounds !=
+            GetControlBoundsOrClientRect() ||
+        aStart < mCodepointRectsStartIndex ||
+        aEnd > mCodepointRectsStartIndex + mCodepointRects.Length())) {
+    return NS_OK;
   }
-  aRects.SetCapacity(aEnd - aStart);
-  for (uint32_t i = aStart; i < aEnd; i++) {
-    CheckedUint32 indexInCodepointRects =
-        CheckedUint32(i) - mCodepointRectsStartIndex;
-    if (!indexInCodepointRects.isValid() ||
-        indexInCodepointRects.value() >= mCodepointRects.Length()) {
-      // Web app did not provide correct character bounds synchronously in the
-      // event handler.
-      // XXX: Should we emit a console warning about this?
-      return NS_ERROR_FAILURE;
+
+  if (aSuppressIMENotifications) {
+    // We want to suppress notifying the IME of
+    // NOTIFY_IME_OF_COMPOSITION_EVENT_HANDLED, etc. until the character bounds
+    // are provided, to avoid the IME user interface moving around too much.
+    // However, we don't want to suppress forever - if the web app doesn't give
+    // us the bounds quickly, we give up and unsuppress notifications.
+    constexpr static auto* kSuppressNotifyingIMETimeoutPref =
+        "dom.editcontext.suppress_notifying_ime_timeout";
+    const uint32_t suppressNotifyingIMETimeoutMillis =
+        Preferences::GetUint(kSuppressNotifyingIMETimeoutPref);
+    aSuppressIMENotifications->SetTimerToUnsuppress(
+        suppressNotifyingIMETimeoutMillis);
+  }
+
+  CharacterBoundsUpdateEventInit eventOptions;
+  eventOptions.mBubbles = false;
+  eventOptions.mCancelable = true;
+  eventOptions.mRangeStart = startExtendedToGraphemeCluster;
+  eventOptions.mRangeEnd = endExtendedToGraphemeCluster;
+  AutoRestore restore(mExpectingCharacterBounds);
+  mExpectingCharacterBounds = true;
+  RefPtr event = CharacterBoundsUpdateEvent::Constructor(
+      this, u"characterboundsupdate"_ns, eventOptions);
+  event->SetTrusted(true);
+  DispatchEvent(*event);
+  if ((mCodepointRectsStartIndex > startExtendedToGraphemeCluster ||
+       mCodepointRectsStartIndex + mCodepointRects.Length() <
+           endExtendedToGraphemeCluster) &&
+      !mWarnedAboutUpdateCharacterBoundsNotCalled) {
+    // characterboundsupdate handler didn't provide the requested bounds
+    // synchronously.
+    nsContentUtils::ReportToConsole(
+        nsIScriptError::warningFlag, "DOM"_ns, mText->OwnerDoc(),
+        PropertiesFile::DOM_PROPERTIES, "EditContextCharacterBoundsWarning");
+    mWarnedAboutUpdateCharacterBoundsNotCalled = true;
+  };
+  return NS_OK;
+}
+
+nsresult EditContext::FireCharacterBoundsUpdateIfNeededAndGetRects(
+    uint32_t aStart, uint32_t aEnd, nsTArray<LayoutDeviceIntRect>& aRects) {
+  MOZ_ASSERT(aRects.IsEmpty());
+  aStart = std::min(aStart, TextLength());
+  aEnd = std::min(aEnd, TextLength());
+  enum class CollapseDirection {
+    // Don't collapse returned rectangle
+    None,
+    // Collapse returned rectangle in the direction of the previous character
+    // (e.g. for LTR, set width = 0)
+    Previous,
+    // Collapse returned rectangle in the direction of the next character
+    // (e.g. for LTR, set x += width, width = 0)
+    Next,
+  };
+  CollapseDirection collapse = CollapseDirection::None;
+  if (aStart == aEnd) {
+    // In this case, ContentEventHandler still wants a rectangle for the caret
+    if (TextLength() == 0) {
+      aRects.AppendElement(FallbackBounds());
+      return NS_OK;
     }
-    Rect cssRect = mCodepointRects[indexInCodepointRects.value()];
+    if (aEnd < TextLength()) {
+      // If requested range is before end of text, query the next character,
+      // and collapse its rectangle in the opposite direction of the writing.
+      aEnd++;
+      collapse = CollapseDirection::Previous;
+    } else {
+      // If requested range is at end of text, query the previous character,
+      // and collapse its rectangle in the direction of the writing.
+      MOZ_ASSERT(aStart > 0);
+      aStart--;
+      collapse = CollapseDirection::Next;
+    }
+  }
+  RefPtr<nsPresContext> presContext = mText->OwnerDoc()->GetPresContext();
+  if (NS_WARN_IF(!presContext)) {
+    return NS_ERROR_FAILURE;
+  }
+
+  FireCharacterBoundsUpdateIfNeeded(aStart, aEnd, nullptr);
+  aRects.SetCapacity(aEnd - aStart);
+  if (mCodepointRects.IsEmpty()) {
+    // Web app never provided any character bounds - in this case,
+    // for DOM-based EditContext, we try to get the rectangles from the DOM
+    // in ContentEventHandler. For canvas-based EditContext, we end up
+    // using EditContext::FallbackBounds().
+    return NS_ERROR_FAILURE;
+  }
+  for (int64_t i = aStart; i < aEnd; i++) {
+    const int64_t indexInCodepointRects = i - mCodepointRectsStartIndex;
+    const int64_t clampedIndex = std::clamp<int64_t>(
+        indexInCodepointRects, 0, mCodepointRects.Length() - 1);
+    Rect cssRect = mCodepointRects[clampedIndex];
+    if (clampedIndex != indexInCodepointRects) {
+      // Web app didn't provide the requested bounds -
+      // use either the selection or the closest available
+      // character bound, whichever is closer.
+      int64_t distanceFromSelection = std::abs(i - mSelectionStart);
+      int64_t distanceFromClamped =
+          std::abs(indexInCodepointRects - clampedIndex);
+      if (mSelectionBounds && distanceFromSelection < distanceFromClamped) {
+        cssRect = *mSelectionBounds;
+      }
+    }
     LayoutDeviceIntRect deviceRect =
         ToRootRelativeDeviceRect(*presContext, cssRect);
     aRects.AppendElement(deviceRect);

@@ -97,6 +97,11 @@ pref("browser.cache.frecency_half_life_hours", 6);
 // Don't show "Open with" option on download dialog if true.
 pref("browser.download.forbid_open_with", false);
 
+// Number of milliseconds to wait after requesting character bounds from EditContext
+// for updateCharacterBounds() to be called before giving up and unsuppressing
+// IME notifications.
+pref("dom.editcontext.suppress_notifying_ime_timeout", 300);
+
 // Enable indexedDB logging.
 pref("dom.indexedDB.logging.enabled", true);
 // Detailed output in log messages.

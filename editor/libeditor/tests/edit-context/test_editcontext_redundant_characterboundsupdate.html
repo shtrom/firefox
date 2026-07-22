@@ -43,22 +43,16 @@ add_task(async () => {
     spanBefore.textContent = 'something';
     spanBefore.getBoundingClientRect();
   }, true, 'associated element bounding rect changes');
-  for (let viaUserInput of [false, true]) {
-    function insertChar(start, end, replacement) {
-      if (viaUserInput) {
-        editContext.updateSelection(start, end);
-        synthesizeKey(replacement);
-      } else {
-        editContext.updateText(start, end, replacement);
-      }
-    }
-    check(() => {
-      insertChar(1, 2, 'x');
-    }, true, 'text before queried character changes');
-    check(() => {
-      insertChar(4, 4, 'z');
-    }, false, 'text after queried character changes');
-  }
+  check(() => {
+    editContext.updateSelection(3, 3);
+    synthesizeKey('x');
+  }, true, 'user inputs text');
+  check(() => {
+    editContext.updateText(1, 2, 'y');
+  }, true, 'text before queried character changes');
+  check(() => {
+    editContext.updateText(4, 4, 'z');
+  }, false, 'text after queried character changes');
   check(() => {
     editContext.updateControlBounds(new DOMRect(99, 99, 1, 1));
   }, true, 'control bounds are set');
