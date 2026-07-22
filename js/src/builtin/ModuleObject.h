@@ -82,15 +82,26 @@ enum class ImportNameValueType : uint8_t {
 };
 
 class ModuleRequestObject : public NativeObject {
- public:
   enum {
-    SpecifierSlot = 0,
-    FirstUnsupportedAttributeKeySlot,
-    ModuleTypeSlot,
-    PhaseSlot,
+    SpecifierSlotIndex = 0,
+    FirstUnsupportedAttributeKeySlotIndex,
+    ModuleTypeSlotIndex,
+    PhaseSlotIndex,
     SlotCount
   };
 
+  static constexpr auto SPECIFIER_SLOT =
+      TypedSlot<ValueType::String, ValueType::Null>(SpecifierSlotIndex);
+  static constexpr auto FIRST_UNSUPPORTED_ATTRIBUTE_KEY_SLOT =
+      TypedSlot<ValueType::String, ValueType::Null, ValueType::Undefined>(
+          FirstUnsupportedAttributeKeySlotIndex);
+  static constexpr auto MODULE_TYPE_SLOT =
+      TypedSlot<ValueType::Int32>(ModuleTypeSlotIndex);
+  static constexpr auto PHASE_SLOT =
+      TypedSlot<ValueType::Int32>(PhaseSlotIndex);
+  static constexpr uint32_t SLOT_COUNT = SlotCount;
+
+ public:
   static const JSClass class_;
   static bool isInstance(HandleValue value);
   [[nodiscard]] static ModuleRequestObject* create(
@@ -219,9 +230,15 @@ class RequestedModule {
 using RequestedModuleVector = GCVector<RequestedModule, 0, SystemAllocPolicy>;
 
 class ResolvedBindingObject : public NativeObject {
- public:
-  enum { ModuleSlot = 0, BindingNameSlot, SlotCount };
+  enum { ModuleSlotIndex = 0, BindingNameSlotIndex, SlotCount };
 
+  static constexpr auto MODULE_SLOT =
+      TypedSlot<ValueType::Object>(ModuleSlotIndex);
+  static constexpr auto BINDING_NAME_SLOT =
+      TypedSlot<ValueType::String>(BindingNameSlotIndex);
+  static constexpr uint32_t SLOT_COUNT = SlotCount;
+
+ public:
   static const JSClass class_;
   static bool isInstance(HandleValue value);
   static ResolvedBindingObject* create(JSContext* cx,
@@ -429,22 +446,43 @@ using LoadedModuleMap =
 // TODO: See Bug 1880519.
 class ModuleObject : public NativeObject {
  public:
-  // Module fields including those for AbstractModuleRecords described by:
-  // https://tc39.es/ecma262/#sec-abstract-module-records
   enum ModuleSlot {
-    ScriptSlot = 0,
-    EnvironmentSlot,
-    NamespaceSlot,
-    CyclicModuleFieldsSlot,
-    // `SyntheticModuleFields` if a synthetic module. Otherwise `undefined`.
-    SyntheticModuleFieldsSlot,
+    ScriptSlotIndex = 0,
+    ModuleEnvironmentSlotIndex,
+    NamespaceSlotIndex,
+    CyclicModuleFieldsSlotIndex,
+    SyntheticModuleFieldsSlotIndex,
 #ifdef DEBUG
-    PreloadSlot,
+    PreloadSlotIndex,
 #endif
-    // Module Source object for source phase imports. Otherwise `undefined`.
-    ModuleSourceSlot,
+    ModuleSourceSlotIndex,
     SlotCount
   };
+
+  // Module fields including those for AbstractModuleRecords described by:
+  // https://tc39.es/ecma262/#sec-abstract-module-records
+  static constexpr auto SCRIPT_SLOT =
+      TypedSlot<ValueType::PrivateGCThing, ValueType::Undefined>(
+          ScriptSlotIndex);
+  static constexpr auto MODULE_ENVIRONMENT_SLOT =
+      TypedSlot<ValueType::Object>(ModuleEnvironmentSlotIndex);
+  static constexpr auto NAMESPACE_SLOT =
+      TypedSlot<ValueType::Object, ValueType::Undefined>(NamespaceSlotIndex);
+  static constexpr auto CYCLIC_MODULE_FIELDS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(
+          CyclicModuleFieldsSlotIndex);
+  // `SyntheticModuleFields` if a synthetic module. Otherwise `undefined`.
+  static constexpr auto SYNTHETIC_MODULE_FIELDS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(
+          SyntheticModuleFieldsSlotIndex);
+#ifdef DEBUG
+  static constexpr auto PRELOAD_SLOT =
+      TypedSlot<ValueType::Boolean, ValueType::Undefined>(PreloadSlotIndex);
+#endif
+  // Module Source object for source phase imports. Otherwise `undefined`.
+  static constexpr auto MODULE_SOURCE_SLOT =
+      TypedSlot<ValueType::Object, ValueType::Undefined>(ModuleSourceSlotIndex);
+  static constexpr uint32_t SLOT_COUNT = SlotCount;
 
   static const JSClass class_;
 
@@ -595,16 +633,17 @@ struct GraphLoadingStateRecord {
 };
 
 class GraphLoadingStateRecordObject : public NativeObject {
- public:
-  enum {
-    StateSlot = 0,
-    PromiseSlot,
-    IsLoadingSlot,
-    PendingModulesCountSlot,
-    HostDefinedSlot,
-    SlotCount
-  };
+  static constexpr auto STATE_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(0);
+  static constexpr auto PROMISE_SLOT =
+      TypedSlot<ValueType::Object, ValueType::Undefined>(1);
+  static constexpr auto IS_LOADING_SLOT = TypedSlot<ValueType::Int32>(2);
+  static constexpr auto PENDING_MODULES_COUNT_SLOT =
+      TypedSlot<ValueType::Int32>(3);
+  static constexpr uint32_t HOST_DEFINED_SLOT = 4;
+  static constexpr uint32_t SLOT_COUNT = 5;
 
+ public:
   static const JSClass class_;
   static const JSClassOps classOps_;
 
