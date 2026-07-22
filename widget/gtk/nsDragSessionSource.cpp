@@ -3,43 +3,44 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "nsDragSessionSource.h"
-#include "nsArrayUtils.h"
-#include "nsComponentManagerUtils.h"
-#include "nsWidgetsCID.h"
-#include "nsIObserverService.h"
-#include "nsWindow.h"
-#include "nsSystemInfo.h"
-#include "nsICookieJarSettings.h"
-#include "nsISupportsPrimitives.h"
-#include "nsIIOService.h"
-#include "nsIFileURL.h"
-#include "nsNetUtil.h"
-#include "mozilla/Logging.h"
-#include "nsPrimitiveHelpers.h"
+
 #include <dlfcn.h>
 #include <gtk/gtk.h>
-#include "nsCRT.h"
-#include "mozilla/Services.h"
-#include "mozilla/PresShell.h"
-#include "mozilla/WidgetUtilsGtk.h"
-#include "mozilla/StaticPrefs_widget.h"
+
 #include "GRefPtr.h"
+#include "mozilla/Logging.h"
+#include "mozilla/PresShell.h"
+#include "mozilla/Services.h"
+#include "mozilla/StaticPrefs_widget.h"
+#include "mozilla/WidgetUtilsGtk.h"
 #include "nsAppShell.h"
+#include "nsArrayUtils.h"
+#include "nsCRT.h"
+#include "nsComponentManagerUtils.h"
+#include "nsICookieJarSettings.h"
+#include "nsIFileURL.h"
+#include "nsIIOService.h"
+#include "nsISupportsPrimitives.h"
+#include "nsNetUtil.h"
+#include "nsPrimitiveHelpers.h"
+#include "nsSystemInfo.h"
+#include "nsWidgetsCID.h"
+#include "nsWindow.h"
 #ifdef MOZ_X11
 #  include "gfxXlibSurface.h"
 #endif
-#include "nsImageToPixbuf.h"
-#include "nsPresContext.h"
-#include "nsIContent.h"
-#include "mozilla/dom/Document.h"
-#include "nsGtkUtils.h"
-#include "mozilla/widget/nsGtkHtmlUtils.h"
-#include "mozilla/gfx/2D.h"
-#include "gfxPlatform.h"
 #include "ScreenHelperGTK.h"
-#include "nsStringStream.h"
+#include "gfxPlatform.h"
+#include "mozilla/dom/Document.h"
+#include "mozilla/gfx/2D.h"
+#include "mozilla/widget/nsGtkHtmlUtils.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsEscape.h"
+#include "nsGtkUtils.h"
+#include "nsIContent.h"
+#include "nsImageToPixbuf.h"
+#include "nsPresContext.h"
+#include "nsStringStream.h"
 
 using namespace mozilla;
 using namespace mozilla::widget;
@@ -51,6 +52,8 @@ using namespace mozilla::gfx;
 
 #define DRAG_IMAGE_ALPHA_LEVEL 0.5
 
+#undef LOGDRAGSERVICE
+#undef LOGDRAGSERVICESTATIC
 #ifdef MOZ_LOGGING
 extern mozilla::LazyLogModule gWidgetDragLog;
 #  define LOGDRAGSERVICE(str, ...)                                             \
@@ -67,14 +70,6 @@ extern mozilla::LazyLogModule gWidgetDragLog;
 #  define LOGDRAGSERVICE(...)
 #  define LOGDRAGSERVICESTATIC(...)
 #endif
-
-static const char gMozUrlType[] = "_NETSCAPE_URL";
-static const char gMimeListType[] = "application/x-moz-internal-item-list";
-static const char gTextUriListType[] = "text/uri-list";
-static const char gTextPlainUTF8Type[] = "text/plain;charset=utf-8";
-static const char gXdndDirectSaveType[] = "XdndDirectSave0";
-static const char gUTF8STRINGType[] = "UTF8_STRING";
-static const char gSTRINGType[] = "STRING";
 
 class MOZ_STACK_CLASS AutoSuspendNativeEvents {
  public:
@@ -260,8 +255,7 @@ static void OnSourceGrabEventAfter(GtkWidget* widget, GdkEvent* event,
   if (event->type == GDK_MOTION_NOTIFY) {
     SetMotionEvent(GUniquePtr<GdkEvent>(gdk_event_copy(event)));
 
-    nsDragSessionSource* session =
-        static_cast<nsDragSessionSource*>(user_data);
+    nsDragSessionSource* session = static_cast<nsDragSessionSource*>(user_data);
     gint scale = mozilla::widget::ScreenHelperGTK::GetGTKMonitorScaleFactor();
     auto p = LayoutDeviceIntPoint::Round(event->motion.x_root * scale,
                                          event->motion.y_root * scale);
@@ -281,14 +275,8 @@ static void OnSourceGrabEventAfter(GtkWidget* widget, GdkEvent* event,
       G_PRIORITY_DEFAULT_IDLE, 350, DispatchMotionEventCopy, nullptr, nullptr);
 }
 
-NS_IMPL_ISUPPORTS_INHERITED(nsDragSessionSource, nsDragSession, nsIObserver)
-
 nsDragSessionSource::nsDragSessionSource() {
   LOGDRAGSERVICE("nsDragSessionSource::nsDragSessionSource()");
-
-  nsCOMPtr<nsIObserverService> obsServ =
-      mozilla::services::GetObserverService();
-  obsServ->AddObserver(this, "quit-application", false);
 
   // Using an offscreen window works around bug 983843.
   mHiddenWidget = gtk_offscreen_window_new();
@@ -313,23 +301,6 @@ nsDragSessionSource::~nsDragSessionSource() {
   MozClearHandleID(mTempFileTimerID, g_source_remove);
   RemoveTempFiles();
   MozClearPointer(mHiddenWidget, gtk_widget_destroy);
-}
-
-NS_IMETHODIMP
-nsDragSessionSource::Observe(nsISupports* aSubject, const char* aTopic,
-                             const char16_t* aData) {
-  if (!nsCRT::strcmp(aTopic, "quit-application")) {
-    LOGDRAGSERVICE("nsDragSessionSource::Observe(\"quit-application\")");
-    if (mHiddenWidget) {
-      gtk_widget_destroy(mHiddenWidget);
-      mHiddenWidget = nullptr;
-    }
-  } else {
-    MOZ_ASSERT_UNREACHABLE("unexpected topic");
-    return NS_ERROR_UNEXPECTED;
-  }
-
-  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -475,15 +446,6 @@ nsresult nsDragSessionSource::EndDragSessionImpl(bool aDoneDrag,
     mSourceWindow = nullptr;
   }
 
-  nsCOMPtr<nsIObserverService> obsServ =
-      mozilla::services::GetObserverService();
-  obsServ->RemoveObserver(this, "quit-application");
-
-  if (mHiddenWidget) {
-    gtk_widget_destroy(mHiddenWidget);
-    mHiddenWidget = nullptr;
-  }
-
   return nsDragSession::EndDragSessionImpl(aDoneDrag, aKeyModifiers);
 }
 
@@ -513,8 +475,7 @@ bool nsDragSessionSource::RemoveTempFiles() {
 
 /* static */
 gboolean nsDragSessionSource::TaskRemoveTempFiles(gpointer data) {
-  RefPtr<nsDragSessionSource> session =
-      static_cast<nsDragSessionSource*>(data);
+  RefPtr<nsDragSessionSource> session = static_cast<nsDragSessionSource*>(data);
   session.get()->Release();
   return session->RemoveTempFiles();
 }
@@ -529,8 +490,7 @@ void nsDragSessionSource::SourceEndDragSession(GdkDragContext* aContext,
   GdkAtom property = sXdndDirectSaveTypeAtom;
   gdk_property_delete(gdk_drag_context_get_source_window(aContext), property);
 
-  if (!mDoingDrag || mDragTaskSourceFinished)
-    return;
+  if (!mDoingDrag || mDragTaskSourceFinished) return;
 
   if (mEndDragPoint.x < 0) {
     gint x, y;
@@ -867,9 +827,9 @@ bool nsDragSessionSource::SourceDataAppendURLItem(nsITransferable* aItem,
   return NS_SUCCEEDED(CreateTempFile(aItem, aURI));
 }
 
-void nsDragSessionSource::SourceDataGetUriList(
-    GdkDragContext* aContext, GtkSelectionData* aSelectionData,
-    uint32_t aDragItems) {
+void nsDragSessionSource::SourceDataGetUriList(GdkDragContext* aContext,
+                                               GtkSelectionData* aSelectionData,
+                                               uint32_t aDragItems) {
   const bool isExternalDrop =
       widget::GdkIsX11Display()
           ? !nsWindow::GetWindow(gdk_drag_context_get_dest_window(aContext))
@@ -905,8 +865,8 @@ void nsDragSessionSource::SourceDataGetUriList(
                          uriList.Length());
 }
 
-bool nsDragSessionSource::SourceDataGetImage(
-    nsITransferable* aItem, GtkSelectionData* aSelectionData) {
+bool nsDragSessionSource::SourceDataGetImage(nsITransferable* aItem,
+                                             GtkSelectionData* aSelectionData) {
   LOGDRAGSERVICE("nsDragSessionSource::SourceDataGetImage()");
 
   nsresult rv;
@@ -1322,6 +1282,8 @@ static void invisibleSourceDragBegin(GtkWidget* aWidget,
   LOGDRAGSERVICESTATIC("invisibleSourceDragBegin (%p)", aContext);
   nsDragSessionSource* dragSession = (nsDragSessionSource*)aData;
 
+  // Keep nsDragSessionSource until D&D is finished.
+  dragSession->AddRef();
   dragSession->SourceBeginDrag(aContext);
   dragSession->SetDragIcon(aContext);
 }
@@ -1354,8 +1316,8 @@ static gboolean invisibleSourceDragFailed(GtkWidget* aWidget,
 static void invisibleSourceDragEnd(GtkWidget* aWidget, GdkDragContext* aContext,
                                    gpointer aData) {
   LOGDRAGSERVICESTATIC("invisibleSourceDragEnd(%p)", aContext);
-  nsDragSessionSource* dragSession = (nsDragSessionSource*)aData;
-
+  // Release reference taken at invisibleSourceDragBegin.
+  RefPtr dragSession = dont_AddRef(static_cast<nsDragSessionSource*>(aData));
   dragSession->SourceEndDragSession(aContext, GTK_DRAG_RESULT_SUCCESS);
 }
 
