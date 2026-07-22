@@ -47,12 +47,16 @@ add_task(async function test() {
     }),
   ];
 
+  const EXPECTED_SELECTION_COUNT = 6;
   let selectionCount = 0;
+  let allSelected = Promise.withResolvers();
   let provider = new UrlbarTestUtils.TestProvider({
     results,
     priority: 1,
     onSelection: () => {
-      selectionCount++;
+      if (++selectionCount == EXPECTED_SELECTION_COUNT) {
+        allSelected.resolve();
+      }
     },
   });
   let providersManager = ProvidersManager.getInstanceForSap("urlbar");
@@ -72,6 +76,11 @@ add_task(async function test() {
     "a one off button is selected"
   );
 
-  Assert.equal(selectionCount, 6, "Number of elements selected in the view.");
+  await allSelected.promise;
+  Assert.equal(
+    selectionCount,
+    EXPECTED_SELECTION_COUNT,
+    "Number of elements selected in the view."
+  );
   providersManager.unregisterProvider(provider);
 });
