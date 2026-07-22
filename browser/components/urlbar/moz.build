@@ -93,6 +93,8 @@ TESTING_JS_MODULES += [
 BROWSER_CHROME_MANIFESTS += [
     "tests/browser-autofill/browser.toml",
     "tests/browser-autofill/browserNova.toml",
+    "tests/browser-editing/browser.toml",
+    "tests/browser-editing/browserNova.toml",
     "tests/browser-engagementTelemetry/browser.toml",
     "tests/browser-engagementTelemetry/browserNova.toml",
     "tests/browser-quickactions/browser.toml",

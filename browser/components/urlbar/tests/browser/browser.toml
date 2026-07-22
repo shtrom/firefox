@@ -36,13 +36,6 @@ skip-if = [
 
 ["browser_autoOpen.js"]
 
-["browser_autocomplete_cursor.js"]
-
-["browser_autocomplete_edit_completed.js"]
-
-["browser_autocomplete_enter_race.js"]
-https_first_disabled = true
-
 ["browser_blanking.js"]
 support-files = ["file_blank_but_not_blank.html"]
 
@@ -59,10 +52,6 @@ support-files = [
   "searchSuggestionEngine.sjs",
 ]
 
-["browser_caret_position.js"]
-
-["browser_clipboard.js"]
-
 ["browser_closePanelOnClick.js"]
 skip-if = [
   "os == 'win' && os_version == '11.26200' && asan", # Bug 2019745
@@ -72,28 +61,7 @@ skip-if = [
 
 ["browser_content_opener.js"]
 
-["browser_copy_and_paste_first_result.js"]
-
-["browser_copy_during_load.js"]
-support-files = ["slow-page.sjs"]
-
-["browser_copying.js"]
-https_first_disabled = true
-support-files = [
-  "authenticate.sjs",
-  "file_copying_home.html",
-  "wait-a-bit.sjs",
-]
-
 ["browser_customizeMode.js"]
-
-["browser_cutting.js"]
-
-["browser_decode.js"]
-
-["browser_delete.js"]
-
-["browser_deleteAllText.js"]
 
 ["browser_display_selectedAction_Extensions.js"]
 
@@ -111,6 +79,9 @@ support-files = [
 
 ["browser_enterAfterMouseOver.js"]
 
+["browser_enter_race.js"]
+https_first_disabled = true
+
 ["browser_focusContentDocumentEsc.js"]
 
 ["browser_handleCommand_fallback.js"]
@@ -119,14 +90,10 @@ support-files = [
 
 ["browser_historyInSearchMode.js"]
 
-["browser_ime_composition.js"]
-
 ["browser_keepStateAcrossTabSwitches.js"]
 https_first_disabled = true
 
 ["browser_l10nCache.js"]
-
-["browser_less_common_selection_manipulations.js"]
 
 ["browser_loadRace.js"]
 
@@ -137,8 +104,6 @@ https_first_disabled = true
 
 ["browser_locationchange_urlbar_edit_dos.js"]
 support-files = ["file_urlbar_edit_dos.html"]
-
-["browser_lossless_encode.js"]
 
 ["browser_middleClick.js"]
 fail-if = [
@@ -151,30 +116,17 @@ fail-if = [
 
 ["browser_observers_for_strip_on_share.js"]
 
-["browser_pasteAndGo.js"]
-https_first_disabled = true
-
-["browser_paste_multi_lines.js"]
-
-["browser_paste_then_focus.js"]
-
 ["browser_paste_then_switch_tab.js"]
-
-["browser_percent_encoded.js"]
 
 ["browser_persist_searchMode.js"]
 
 ["browser_populateAfterPushState.js"]
-
-["browser_primary_selection_safe_on_new_tab.js"]
 
 ["browser_privateBrowsingWindowChange.js"]
 
 ["browser_queryContextCache.js"]
 
 ["browser_raceWithTabs.js"]
-
-["browser_readOnly.js"]
 
 ["browser_redirect_error.js"]
 support-files = ["redirect_error.sjs"]
@@ -184,19 +136,11 @@ https_first_disabled = true
 
 ["browser_remotetab.js"]
 
-["browser_removeUnsafeProtocolsFromURLBarPaste.js"]
-
-["browser_restoreEmptyInput.js"]
-
 ["browser_restrict_keywords.js"]
 
 ["browser_restrict_keywords_autofill.js"]
 
 ["browser_restrict_keywords_autofill_locales.js"]
-
-["browser_revert.js"]
-
-["browser_selectionKeyNavigation.js"]
 
 ["browser_speculative_connect_not_with_client_cert.js"]
 
@@ -241,8 +185,6 @@ support-files = ["moz.png"]
 
 ["browser_tabMatchesInAwesomebar_perwindowpb.js"]
 
-["browser_text_dont_shift_on_mousedown.js"]
-
 ["browser_textruns.js"]
 
 ["browser_tokenAlias.js"]
@@ -271,8 +213,6 @@ https_first_disabled = true
 ["browser_trust_panel_security_view.js"]
 https_first_disabled = true
 
-["browser_typed_value.js"]
-
 ["browser_updateForDomainCompletion.js"]
 https_first_disabled = true
 
@@ -283,19 +223,7 @@ https_first_disabled = true
 https_first_disabled = true
 support-files = ["redirect_to.sjs"]
 
-["browser_urlbar_contextmenu.js"]
-
 ["browser_urlbar_modifiedClick.js"]
-
-["browser_urlbar_selection.js"]
-skip-if = [
-  "os == 'mac' && os_version == '10.15' && arch == 'x86_64'", # bug 1570474
-  "os == 'mac' && os_version == '14.70' && arch == 'x86_64'", # bug 1869788
-  "os == 'mac' && os_version == '15.30' && arch == 'aarch64'", # bug 1570474
-]
-
-["browser_userTypedValue.js"]
-support-files = ["file_userTypedValue.html"]
 
 ["browser_valueOnTabSwitch.js"]
 
