@@ -319,6 +319,10 @@ constexpr uint64_t IsValidUserModePointer(uint64_t bits) {
 
 #endif /* JS_PUNBOX64 */
 
+constexpr bool ValueTypeIsGCThing(JSValueType type) {
+  return ValueTypeToTag(type) >= ValueLowerInclGCThingTag;
+}
+
 }  // namespace detail
 }  // namespace JS
 
