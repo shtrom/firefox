@@ -51,6 +51,8 @@ export class ThemePickerChild extends JSWindowActorChild {
     const win = target.documentGlobal;
     target.dispatchEvent(
       new win.CustomEvent(eventName, {
+        bubbles: true,
+        composed: true,
         detail: Cu.cloneInto(detail, win),
       })
     );

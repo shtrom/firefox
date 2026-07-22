@@ -1065,8 +1065,9 @@ class SelectableProfileServiceClass extends EventEmitter {
 
     let theme = isDark && !!data.darkTheme ? data.darkTheme : data.theme;
 
-    let themeFg = theme.toolbar_text || theme.textcolor;
-    let themeBg = theme.toolbarColor || theme.accentcolor;
+    let themeFg =
+      theme.icon_attention_color || theme.toolbar_text || theme.textcolor;
+    let themeBg = theme.accentcolor || theme.toolbarColor;
 
     if (theme.id === DEFAULT_THEME_ID || !themeFg || !themeBg) {
       window.addEventListener(

@@ -3,6 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 :host(:not([hidden])) {
+  --theme-picker-gap-column: var(--space-xlarge);
+
   display: flex;
   flex-direction: column;
   gap: var(--space-large);
@@ -13,7 +15,7 @@ moz-segmented-control {
 }
 
 moz-visual-picker::part(fieldset) {
-  --fieldset-gap-column: var(--space-xlarge);
+  --fieldset-gap-column: var(--theme-picker-gap-column);
 }
 
 moz-visual-picker-item {

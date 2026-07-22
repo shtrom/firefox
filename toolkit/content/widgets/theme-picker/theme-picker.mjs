@@ -7,6 +7,11 @@ window.MozXULElement?.insertFTLIfNeeded("locales-preview/theme-picker.ftl");
 import { html, styleMap } from "../vendor/lit.all.mjs";
 import { MozLitElement } from "../lit-utils.mjs";
 import { ThemePickerStorybookController } from "chrome://global/content/elements/theme-picker-storybook-controller.mjs";
+import { ThemePickerRemoteController } from "chrome://global/content/elements/theme-picker-remote-controller.mjs";
+
+/**
+ * @import { ThemePickerDirectController } from "chrome://global/content/elements/theme-picker-direct-controller.mjs"
+ */
 
 const THEME_L10N_IDS = {
   "default-theme@mozilla.org": "theme-picker-default",
@@ -23,17 +28,23 @@ const THEME_L10N_IDS = {
   "nova-smoke@mozilla.org": "theme-picker-smoke",
 };
 
-const XPCOMUtils = ChromeUtils.importESModule(
-  "resource://gre/modules/XPCOMUtils.sys.mjs"
-).XPCOMUtils;
-
-const lazy = XPCOMUtils.declareLazy({
-  ThemePickerDirectController: () =>
-    ChromeUtils.importESModule(
-      "chrome://global/content/elements/theme-picker-direct-controller.mjs",
-      { global: "current" }
-    ).ThemePickerDirectController,
-});
+/** @type {typeof ThemePickerDirectController | null} */
+let ThemePickerDirectControllerClass = null;
+function getThemePickerController() {
+  if (window.IS_STORYBOOK) {
+    return ThemePickerStorybookController;
+  }
+  if (typeof ChromeUtils !== "undefined") {
+    if (!ThemePickerDirectControllerClass) {
+      ThemePickerDirectControllerClass = ChromeUtils.importESModule(
+        "chrome://global/content/elements/theme-picker-direct-controller.mjs",
+        { global: "current" }
+      ).ThemePickerDirectController;
+    }
+    return ThemePickerDirectControllerClass;
+  }
+  return ThemePickerRemoteController;
+}
 
 const DEFAULT_THEME_ID = "default-theme@mozilla.org";
 
@@ -101,6 +112,7 @@ export class ThemePicker extends MozLitElement {
   /**
    * Builds the ReactiveController backing this picker: the lightweight
    * storybook controller when platform APIs are unavailable (e.g. Storybook),
+   * the remote controller for unprivileged contexts (e.g. about:editprofile),
    * and otherwise the direct controller that talks to AddonManager and prefs.
    * Overridable so tests can exercise a specific controller.
    *
@@ -108,9 +120,7 @@ export class ThemePicker extends MozLitElement {
    * @returns {ReactiveController}
    */
   static createController(host) {
-    return typeof Services === "undefined"
-      ? new ThemePickerStorybookController(host)
-      : new lazy.ThemePickerDirectController(host);
+    return new (getThemePickerController())(host);
   }
 
   /**
