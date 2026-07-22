@@ -22,6 +22,29 @@ CUSTOM_CAR_DIR=$PWD
 
 # Setup depot_tools
 git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+
+# vpython resolves its deps through mozilla's no-index pip.conf mirror which lacks
+# some pinned revisions. Bypass it with VPYTHON_BYPASS and directly grab them from
+# chrome's artifact registry and temporarily override the pip.conf.
+if [[ $(uname -s) == "Darwin" ]]; then
+  # uv installs an arm64 native CPython 3.11 standalone (required version)
+  if [[ -d "${MOZ_FETCHES_DIR}/uv" ]]; then
+    export PATH="${MOZ_FETCHES_DIR}/uv:$PATH"
+    export UV_PYTHON_INSTALL_DIR="${MOZ_FETCHES_DIR}/uv-python"
+    uv venv --seed --python-preference only-managed --python 3.11 "${MOZ_FETCHES_DIR}/uv-venv"
+    export VIRTUAL_ENV="${MOZ_FETCHES_DIR}/uv-venv"
+    export PATH="${MOZ_FETCHES_DIR}/uv-venv/bin:$PATH"
+  fi
+  export VPYTHON_BYPASS="manually managed python not supported by chrome operations"
+  PIP_CONFIG_FILE=/dev/null python3 -m pip install --quiet \
+    --index-url https://us-python.pkg.dev/chrome-python-ar/chrome-python-ar/simple/ \
+    "httplib2[socks]==0.13.1" "six==1.10.0" "requests==2.31.0" \
+    "charset-normalizer==2.0.4" "urllib3==1.26.6" "idna==2.8" "brotli==1.0.9" \
+    "tzdata==2023.4" "python-dateutil==2.7.3" "certifi==2021.5.30" \
+    "zstandard==0.16.0"
+  # Force cipd to mac-arm64 otherwise it may grab x64 rollup libs and the arm64 rollup native module goes missing.
+  export ARCH_MAC_OVERRIDE=arm64
+fi
 export PATH="$PATH:$CUSTOM_CAR_DIR/depot_tools"
 # Bug 1901936 changes to config upstream for depot tools path
 if [[ $(uname -s) == "Linux" ]]; then
@@ -31,6 +54,7 @@ fi
 # Log the current revision of depot tools for easier tracking in the future
 DEPOT_TOOLS_REV=$(cd depot_tools && git rev-parse HEAD && cd ..)
 echo "Current depot_tools revision: $DEPOT_TOOLS_REV"
+
 
 # Set up some env variables depending on the target OS
 # Linux is the default case, with minor adjustments for
@@ -150,8 +174,8 @@ if [[ $(uname -s) == "Linux" ]] || [[ $(uname -s) == "Darwin" ]]; then
   cipd_bin_setup
 fi
 
-# Sync again for android, after cipd bin setup
-if [ "$IS_ANDROID" = true ]; then
+# fetch --nohooks skips CIPD deps. re-sync on macOS & Android to pull them.
+if [ "$IS_ANDROID" = true ] || [[ $(uname -s) == "Darwin" ]]; then
   gclient sync
 fi
 
