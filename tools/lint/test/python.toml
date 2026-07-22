@@ -36,6 +36,8 @@ skip-if = ["os == 'win'"]
 
 ["test_fluent_lint.py"]
 
+["test_forbid_moduleloaderbase_include.py"]
+
 ["test_gecko_trace.py"]
 
 ["test_glean_parser.py"]
