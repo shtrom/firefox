@@ -721,7 +721,7 @@ add_task(async function loadingPageInBlank() {
   gURLBar.focus();
   window.goDoCommand("cmd_selectAll");
   await SimpleTest.promiseClipboardChange(
-    "https://example.com/browser/browser/components/urlbar/tests/browser/wait-a-bit.sjs",
+    "https://example.com/browser/browser/components/urlbar/tests/browser-editing/wait-a-bit.sjs",
     () => goDoCommand("cmd_copy")
   );
   Assert.ok(true, "Expected value is copied");
