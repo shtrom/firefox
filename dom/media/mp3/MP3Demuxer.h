@@ -8,6 +8,7 @@
 #include "MP3FrameParser.h"
 #include "MediaDataDemuxer.h"
 #include "MediaResource.h"
+#include "gtest/MozGtestFriend.h"
 
 namespace mozilla {
 
@@ -85,6 +86,8 @@ class MP3TrackDemuxer : public MediaTrackDemuxer,
  private:
   // Destructor.
   ~MP3TrackDemuxer() = default;
+
+  FRIEND_TEST(MP3DemuxerTest, SeekOffsetSurvivesFrameLengthOverflow);
 
   // Fast approximate seeking to given time.
   media::TimeUnit FastSeek(const media::TimeUnit& aTime);
