@@ -1463,6 +1463,13 @@ MacOSWebAuthnService::AddVirtualAuthenticator(
 }
 
 NS_IMETHODIMP
+MacOSWebAuthnService::HasVirtualAuthenticator(
+    const nsACString& aAuthenticatorId, bool* aRetval) {
+  MOZ_ASSERT(NS_IsMainThread());
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
 MacOSWebAuthnService::RemoveVirtualAuthenticator(
     const nsACString& aAuthenticatorId) {
   MOZ_ASSERT(NS_IsMainThread());

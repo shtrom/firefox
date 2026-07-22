@@ -480,6 +480,13 @@ WebAuthnService::AddVirtualAuthenticator(
 }
 
 NS_IMETHODIMP
+WebAuthnService::HasVirtualAuthenticator(const nsACString& aAuthenticatorId,
+                                         bool* aRetval) {
+  MOZ_ASSERT(NS_IsMainThread());
+  return AuthrsService()->HasVirtualAuthenticator(aAuthenticatorId, aRetval);
+}
+
+NS_IMETHODIMP
 WebAuthnService::RemoveVirtualAuthenticator(
     const nsACString& aAuthenticatorId) {
   MOZ_ASSERT(NS_IsMainThread());
