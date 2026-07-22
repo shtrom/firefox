@@ -93,6 +93,7 @@ UNIFIED_SOURCES += [
     "nsColorPicker.cpp",
     "nsDragService.cpp",
     "nsDragServiceGtk.cpp",
+    "nsDragSessionSource.cpp",
     "nsFilePicker.cpp",
     "nsGtkHtmlUtils.cpp",
     "nsGtkKeyUtils.cpp",
