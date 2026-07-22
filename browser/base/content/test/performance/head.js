@@ -1015,8 +1015,9 @@ async function runUrlbarTest(
   URLBar.focus();
   URLBar.value = SEARCH_TERM;
 
+  let BACKGROUND_LEFT, BACKGROUND_RIGHT;
   let SHADOW_OVERFLOW_LEFT, SHADOW_OVERFLOW_RIGHT, SHADOW_OVERFLOW_TOP;
-  let INLINE_MARGIN, VERTICAL_OFFSET;
+  let VERTICAL_OFFSET;
 
   let testFn = async function () {
     let popup = URLBar.view;
@@ -1068,11 +1069,28 @@ async function runUrlbarTest(
       await waitExtra();
     }
 
+    await UrlbarTestUtils.promisePopupClose(win);
+    URLBar.value = "";
+  };
+
+  // Measure geometry once, outside of withPerfObserver, so the forced layout
+  // and style reads below aren't counted as unexpected reflows during the
+  // observed openings. This opens the panel, measures, then closes it.
+  let measureGeometry = async function () {
+    if (keyed) {
+      EventUtils.synthesizeKey("ows-10"[0], {}, win);
+    } else {
+      await UrlbarTestUtils.promiseAutocompleteResultPopup({
+        window: win,
+        waitForFocus: SimpleTest.waitForFocus,
+        value: URLBar.value,
+      });
+    }
+    await UrlbarTestUtils.promiseSearchComplete(win);
+
     let shadowElem = win.document.querySelector("#urlbar > .urlbar-background");
     let shadow = getComputedStyle(shadowElem).boxShadow;
-
-    let inlineElem = win.document.querySelector("#urlbar");
-    let inlineMargin = getComputedStyle(inlineElem).marginInlineStart;
+    let backgroundRect = shadowElem.getBoundingClientRect();
 
     let offsetElem = win.document.querySelector("#urlbar-container");
     let verticalOffset = getComputedStyle(offsetElem).paddingTop;
@@ -1111,23 +1129,24 @@ async function runUrlbarTest(
     SHADOW_OVERFLOW_RIGHT = overflow.right + FUZZ_FACTOR;
     SHADOW_OVERFLOW_TOP = overflow.top + FUZZ_FACTOR;
 
-    // Margin applied to the breakout-extend urlbar
-    INLINE_MARGIN = -extractPixelValue(inlineMargin); // Flip symbol since this CSS value is negative.
     // The popover positioning requires this offset
     VERTICAL_OFFSET = -extractPixelValue(verticalOffset); // Flip symbol since this CSS value is positive.
 
+    BACKGROUND_LEFT = Math.floor(backgroundRect.left);
+    BACKGROUND_RIGHT = Math.ceil(backgroundRect.right);
+
     await UrlbarTestUtils.promisePopupClose(win);
-    URLBar.value = "";
+    URLBar.value = SEARCH_TERM;
   };
 
   let urlbarRect = URLBar.getBoundingClientRect();
+  await measureGeometry();
   await testFn();
   let expectedRects = {
     filter: rects => {
       const referenceRect = {
-        x1: Math.floor(urlbarRect.left) - INLINE_MARGIN - SHADOW_OVERFLOW_LEFT,
-        x2:
-          Math.floor(urlbarRect.right) + INLINE_MARGIN + SHADOW_OVERFLOW_RIGHT,
+        x1: BACKGROUND_LEFT - SHADOW_OVERFLOW_LEFT,
+        x2: BACKGROUND_RIGHT + SHADOW_OVERFLOW_RIGHT,
         y1: Math.floor(urlbarRect.top) + VERTICAL_OFFSET - SHADOW_OVERFLOW_TOP,
       };
 
