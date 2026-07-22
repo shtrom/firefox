@@ -334,6 +334,7 @@ function makeGroupTabsToolHandler(rawLabel) {
       const label = await getLabel(gathered);
       const result = await lazy.ToolUI.createTabGroup({
         tabs: gathered.tabs,
+        tokenToKey: gathered.tabKeyByToken,
         window: gathered.topAIWin,
         label,
       });

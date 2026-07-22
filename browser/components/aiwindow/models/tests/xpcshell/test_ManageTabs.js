@@ -4,7 +4,7 @@
 
 do_get_profile();
 
-const { manageTabsAction, CLOSE_TABS } = ChromeUtils.importESModule(
+const { manageTabsAction, CLOSE_TABS, GROUP_TABS } = ChromeUtils.importESModule(
   "moz-src:///browser/components/aiwindow/models/ManageTabs.sys.mjs"
 );
 
@@ -244,6 +244,90 @@ add_task(async function test_manageTabsAction_direct_close_path() {
         },
       ],
       "toolResult selectedTabs annotates each tab as closed"
+    );
+  } finally {
+    sb.restore();
+  }
+});
+
+// Regression: the ask_confirmation=false group_tabs path must forward
+// `tabKeyByToken` to `createTabGroup`, otherwise `#verifyAndCollectTabs`
+// bails on the missing map and the tool returns "group_tabs action failed".
+add_task(async function test_manageTabsAction_direct_group_path() {
+  const sb = sinon.createSandbox();
+  try {
+    const url1 = "https://example.com/a";
+    const url2 = "https://example.com/b";
+    const targetTab1 = createFakeTab(url1, "Example A", {
+      linkedPanel: "panel-1",
+    });
+    const targetTab2 = createFakeTab(url2, "Example B", {
+      linkedPanel: "panel-2",
+    });
+    const otherTab = createFakeTab("https://example.com/c", "Other");
+    // Selected tab is unrelated so no override triggers a confirmation.
+    setupBrowserWindowTracker(
+      sb,
+      createFakeWindow([targetTab1, targetTab2, otherTab], {
+        selectedTab: otherTab,
+      })
+    );
+
+    const createTabGroup = sb.stub(ToolUI, "createTabGroup").resolves({
+      operationId: "op-1",
+      failedTabs: [],
+      group: { id: "op-1", label: "Bears", color: "blue", tabCount: 2 },
+    });
+
+    const { toolResult: result, uiData } = await manageTabsAction(
+      {
+        action: GROUP_TABS,
+        validUrls: new Set([url1, url2]),
+        ask_confirmation: false,
+        label: "Bears",
+      },
+      makeConversation()
+    );
+
+    Assert.ok(
+      createTabGroup.calledOnce,
+      "createTabGroup is invoked in the direct-execute path"
+    );
+    const args = createTabGroup.firstCall.args[0];
+    Assert.ok(
+      args.tokenToKey?.size,
+      "tokenToKey is forwarded so #verifyAndCollectTabs can resolve tokens"
+    );
+    Assert.equal(args.tokenToKey.size, 2, "One entry per matched tab");
+    for (const t of args.tabs) {
+      Assert.equal(
+        args.tokenToKey.get(t.token),
+        t.url === url1 ? targetTab1.permanentKey : targetTab2.permanentKey,
+        `Token for ${t.url} maps to the matching tab's permanentKey`
+      );
+    }
+    Assert.equal(args.label, "Bears", "Model-supplied label is passed through");
+
+    Assert.equal(
+      uiData.uiType,
+      "ai-action-result",
+      "uiData uiType is ai-action-result"
+    );
+    Assert.equal(
+      uiData.properties.confirmedData.operationId,
+      "op-1",
+      "operationId is propagated from ToolUI"
+    );
+    Assert.equal(
+      uiData.properties.confirmedData.actionType,
+      GROUP_TABS,
+      "actionType is group_tabs"
+    );
+
+    Assert.deepEqual(
+      result.selectedTabs.map(t => t.grouped),
+      [true, true],
+      "Every matched tab is marked grouped when nothing failed"
     );
   } finally {
     sb.restore();
