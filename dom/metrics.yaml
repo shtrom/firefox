@@ -637,10 +637,13 @@ security:
     type: event
     description: >
       When running with Fission, we received an unexpected principal from
-      the content process.
+      the content process. Expected values for this telemetry event are
+      the method names in ContentParent that received the unexpected
+      principal.
+      This event was generated to correspond to the Legacy Telemetry event
+      security.fissionPrincipals#contentParent.
     bugs:
       - https://bugzil.la/1687891
-      - https://bugzil.la/1983119
     data_reviews:
       - https://bugzil.la/1687891
     notification_emails:
@@ -650,7 +653,8 @@ security:
     extra_keys:
       value:
         description: >
-          Method Name in ContentParent that received the unexpected principal
+          The `value` of the event. Mirrors to the Legacy Telemetry
+          event's `value` parameter.
         type: string
       principalType:
         description: >
@@ -660,11 +664,13 @@ security:
             ExpandedPrincipal
             ContentPrincipal
             Unknown
+
         type: string
       scheme:
         description: >
           If the principal is a ContentPrincipal, we also collect the scheme
         type: string
+    telemetry_mirror: Security_Fissionprincipals_Contentparent
 
   shadowed_html_document_property_access:
     type: event
