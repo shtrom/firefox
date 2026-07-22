@@ -339,7 +339,7 @@
   #trust-icon-container {
     padding-inline: var(--urlbar-icon-padding);
     border-radius: var(--urlbar-inner-border-radius);
-    -moz-context-properties: fill, fill-opacity;
+    -moz-context-properties: fill, fill-opacity, stroke;
 
     /* The urlbar will show insecure or secure icon by default depending
        on the state of the connection, the further clauses may override that. */
@@ -347,6 +347,7 @@
       list-style-image: url(chrome://browser/skin/trust-icon-insecure.svg);
       background-color: var(--urlbar-box-background-color);
       color: var(--urlbar-box-text-color);
+      stroke: var(--icon-color-critical);
     }
 
     &.secure {

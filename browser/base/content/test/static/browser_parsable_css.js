@@ -261,6 +261,10 @@ let propNameAllowlist = [
   { sourceName: /\/design-system\/tokens-.*\.css$/, isFromDevTools: true },
   { sourceName: /\/in-content\/common-shared\.css/, isFromDevTools: true },
 
+  // `--icon-stroke` is defined in commonDialog.css and used in stringified CSS
+  // within adjustableTitle.js. The latter isn't statically parsed.
+  { propName: "--icon-stroke", isFromDevTools: false },
+
   // Ignore token properties that follow the patterns --color-[name], --color-[name]-[number], or --color-[name]-alpha-[number]
   // This enables us to provide our full color palette for developers.
   { propName: /--color-[a-z]+(-alpha)?(-\d+)?/, isFromDevTools: false },

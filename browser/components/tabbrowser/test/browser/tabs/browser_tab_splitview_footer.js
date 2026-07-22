@@ -132,11 +132,11 @@ add_task(async function test_security_warning() {
     TEST_PATH + "file_withicon.html"
   );
   await promiseLoaded;
-  if (!BrowserTestUtils.isVisible(footer.iconElement)) {
-    await BrowserTestUtils.waitForEvent(footer.iconElement, "load");
+  if (!BrowserTestUtils.isVisible(footer.tabImageIconElement)) {
+    await BrowserTestUtils.waitForEvent(footer.tabImageIconElement, "load");
   }
   Assert.ok(
-    BrowserTestUtils.isVisible(footer.iconElement),
+    BrowserTestUtils.isVisible(footer.tabImageIconElement),
     "Show favicon for secure sites."
   );
 
@@ -152,10 +152,13 @@ add_task(async function test_security_warning() {
     "Security warning for HTTP."
   );
   Assert.ok(
-    footer.iconElement.hidden,
+    footer.tabImageIconElement.hidden,
     "Icon is deliberately hidden for insecure sites."
   );
-  Assert.ok(!footer.iconElement.src, "Icon has no src for insecure sites.");
+  Assert.ok(
+    !footer.tabImageIconElement.src,
+    "Icon has no src for insecure sites."
+  );
 
   info("Load a local site.");
   promiseLoaded = BrowserTestUtils.browserLoaded(tab2.linkedBrowser);
