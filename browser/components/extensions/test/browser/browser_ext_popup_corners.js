@@ -1,5 +1,13 @@
 "use strict";
 
+// Nova being enabled changes some of the styling that is being tested here.
+const novaEnabled = Services.prefs.getBoolPref(
+  "browser.nova.enabled",
+  true // If the pref isn't set to false assume Nova styles are enabled by default.
+);
+
+info(`Run with Nova browser styles ${novaEnabled ? "enabled" : "disabled"}`);
+
 add_task(async function testPopupBorderRadius() {
   let extension = ExtensionTestUtils.loadExtension({
     background() {
@@ -33,10 +41,13 @@ add_task(async function testPopupBorderRadius() {
   await extension.startup();
 
   let widget = getBrowserActionWidget(extension);
+
+  let defaultRadius = novaEnabled ? "24px" : "8px";
+
   // If the panel doesn't allows embedding in subview then
   // radius will be 0, otherwise 8.  In practice we always
   // disallow subview.
-  let expectedRadius = widget.disallowSubView ? "8px" : "0px";
+  let expectedRadius = widget.disallowSubView ? defaultRadius : "0px";
 
   async function testPanel(browser, standAlone = true) {
     let panel = getPanelForNode(browser);
