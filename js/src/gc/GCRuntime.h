@@ -1178,7 +1178,7 @@ class GCRuntime {
   HelperThreadLockData<GCParallelTaskList> queuedParallelTasks;
 
   // State used for managing atom reference bitmaps in each zone.
-  AtomMarkingRuntime atomMarking;
+  AtomRefRuntime atomReferences;
   MainThreadOrGCTaskData<UniquePtr<DenseBitmap>> atomsUsedByUncollectedZones;
 
   /*

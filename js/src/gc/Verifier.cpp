@@ -1233,13 +1233,14 @@ bool js::gc::CheckWeakMapEntryMarking(const WeakMapBase* map, Cell* key,
     }
   }
 
-  // Symbols key must be marked in the atom marking bitmap for the zone.
+  // References to symbol keys must be recorded in the zone.
   if (key->is<JS::Symbol>()) {
     GCRuntime* gc = &mapRuntime->gc;
     CellColor bitmapColor =
-        gc->atomMarking.getAtomMarkColor(zone, key->as<JS::Symbol>());
+        gc->atomReferences.getRefColor(zone, key->as<JS::Symbol>());
     if (bitmapColor < keyColor) {
-      fprintf(stderr, "Atom marking bitmap is less marked than symbol key %p\n",
+      fprintf(stderr,
+              "Color of zone reference to symbol is less than symbol key %p\n",
               key);
       fprintf(stderr, "(key %p is %s, bitmap is %s)\n", key,
               CellColorName(keyColor), CellColorName(bitmapColor));
