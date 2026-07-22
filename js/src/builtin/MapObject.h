@@ -123,11 +123,11 @@ class MapObject : public OrderedHashMapObject {
 
   friend class OrderedHashTableRef<MapObject>;
 
-  enum {
-    NurseryKeysSlot = Table::SlotCount,
-    RegisteredNurseryIteratorsSlot,
-    SlotCount
-  };
+  static constexpr auto NURSERY_KEYS_SLOT =
+      TypedSlot<ValueType::Double>(Table::SlotCount + 0);
+  static constexpr auto REGISTERED_NURSERY_ITERATORS_SLOT =
+      TypedSlot<ValueType::Boolean>(Table::SlotCount + 1);
+  static constexpr uint32_t SLOT_COUNT = Table::SlotCount + 2;
 
   using IteratorKind = TableIteratorObject::Kind;
 
@@ -257,11 +257,11 @@ class SetObject : public OrderedHashSetObject {
 
   friend class OrderedHashTableRef<SetObject>;
 
-  enum {
-    NurseryKeysSlot = Table::SlotCount,
-    RegisteredNurseryIteratorsSlot,
-    SlotCount
-  };
+  static constexpr auto NURSERY_KEYS_SLOT =
+      TypedSlot<ValueType::Double>(Table::SlotCount + 0);
+  static constexpr auto REGISTERED_NURSERY_ITERATORS_SLOT =
+      TypedSlot<ValueType::Boolean>(Table::SlotCount + 1);
+  static constexpr uint32_t SLOT_COUNT = Table::SlotCount + 2;
 
   using IteratorKind = TableIteratorObject::Kind;
 

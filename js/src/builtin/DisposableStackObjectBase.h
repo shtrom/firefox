@@ -47,8 +47,9 @@ class DisposableStackObjectBase : public NativeObject {
  public:
   enum DisposableState : uint8_t { Pending, Disposed };
 
-  static constexpr uint32_t DISPOSABLE_RESOURCE_STACK_SLOT = 0;
-  static constexpr uint32_t STATE_SLOT = 1;
+  static constexpr auto DISPOSABLE_RESOURCE_STACK_SLOT =
+      TypedSlot<ValueType::Object, ValueType::Undefined>(0);
+  static constexpr auto STATE_SLOT = TypedSlot<ValueType::Int32>(1);
   static constexpr uint32_t RESERVED_SLOTS = 2;
 
  protected:
