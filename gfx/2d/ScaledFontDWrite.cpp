@@ -80,7 +80,7 @@ ScaledFontDWrite::ScaledFontDWrite(IDWriteFontFace* aFontFace,
       mGDIForced(aGDIForced) {
   if (aStyle) {
     mStyle = SkFontStyle(aStyle->weight.ToIntRounded(),
-                         DWriteFontStretchFromWidth(aStyle->width),
+                         DWriteFontStretchFromStretch(aStyle->stretch),
                          // FIXME(jwatt): also use kOblique_Slant
                          aStyle->style == FontSlantStyle::NORMAL
                              ? SkFontStyle::kUpright_Slant

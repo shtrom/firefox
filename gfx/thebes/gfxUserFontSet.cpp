@@ -53,7 +53,7 @@ gfxUserFontEntry::gfxUserFontEntry(nsTArray<gfxFontFaceSrc>&& aFontFaceSrcList,
   mSrcList = std::move(aFontFaceSrcList);
   mCurrentSrcIndex = 0;
   mWeightRange = aAttr.mWeight;
-  mWidthRange = aAttr.mWidth;
+  mStretchRange = aAttr.mStretch;
   mStyleRange = aAttr.mStyle;
   mFeatureSettings = std::move(aAttr.mFeatureSettings);
   mVariationSettings = std::move(aAttr.mVariationSettings);
@@ -76,7 +76,7 @@ void gfxUserFontEntry::UpdateAttributes(gfxUserFontAttributes&& aAttr) {
 
   mFontDisplay = aAttr.mFontDisplay;
   mWeightRange = aAttr.mWeight;
-  mWidthRange = aAttr.mWidth;
+  mStretchRange = aAttr.mStretch;
   mStyleRange = aAttr.mStyle;
   mFeatureSettings = std::move(aAttr.mFeatureSettings);
   mVariationSettings = std::move(aAttr.mVariationSettings);
@@ -102,7 +102,7 @@ gfxUserFontEntry::~gfxUserFontEntry() {
 
 bool gfxUserFontEntry::Matches(const nsTArray<gfxFontFaceSrc>& aFontFaceSrcList,
                                const gfxUserFontAttributes& aAttr) {
-  return mWeightRange == aAttr.mWeight && mWidthRange == aAttr.mWidth &&
+  return mWeightRange == aAttr.mWeight && mStretchRange == aAttr.mStretch &&
          mStyleRange == aAttr.mStyle &&
          mFeatureSettings == aAttr.mFeatureSettings &&
          mVariationSettings == aAttr.mVariationSettings &&
@@ -466,7 +466,7 @@ void gfxUserFontEntry::DoLoadNextSrc(bool aIsContinue) {
       if (!pfl->IsFontFamilyWhitelistActive()) {
         fe = gfxPlatform::GetPlatform()->LookupLocalFont(
             fontSet->GetFontVisibilityProvider(), currSrc.mLocalName, Weight(),
-            Width(), SlantStyle());
+            Stretch(), SlantStyle());
         // Note that we've attempted a local lookup, even if it failed,
         // as this means we are dependent on any updates to the font list.
         mSeenLocalSource = true;
@@ -772,7 +772,7 @@ bool gfxUserFontEntry::LoadPlatformFont(uint32_t aSrcIndex,
     // Here ownership of aSanitizedFontData is passed to the platform,
     // which will delete it when no longer required
     fe = gfxPlatform::GetPlatform()->MakePlatformFont(
-        mName, Weight(), Width(), SlantStyle(), aSanitizedFontData,
+        mName, Weight(), Stretch(), SlantStyle(), aSanitizedFontData,
         aSanitizedLength);
     if (!fe) {
       fontSet->LogMessage(this, aSrcIndex, "not usable by platform");
@@ -1044,7 +1044,7 @@ void gfxUserFontSet::AddUserFontEntry(const nsCString& aFamilyName,
     nsAutoCString weightString;
     aUserFontEntry->Weight().ToString(weightString);
     nsAutoCString stretchString;
-    aUserFontEntry->Width().ToString(stretchString);
+    aUserFontEntry->Stretch().ToString(stretchString);
     LOG(
         ("userfonts (%p) added to \"%s\" (%p) style: %s weight: %s "
          "stretch: %s display: %d",
@@ -1217,7 +1217,7 @@ bool gfxUserFontSet::UserFontCache::Entry::KeyEquals(
 
   if (mFontEntry->SlantStyle() != fe->SlantStyle() ||
       mFontEntry->Weight() != fe->Weight() ||
-      mFontEntry->Width() != fe->Width() ||
+      mFontEntry->Stretch() != fe->Stretch() ||
       mFontEntry->AutoRangeFlags() != fe->AutoRangeFlags() ||
       mFontEntry->mFeatureSettings != fe->mFeatureSettings ||
       mFontEntry->mVariationSettings != fe->mVariationSettings ||

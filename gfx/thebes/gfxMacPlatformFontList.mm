@@ -401,9 +401,10 @@ void gfxMacPlatformFontList::LookupSystemFont(LookAndFeel::FontID aSystemFontID,
                                                   : FontSlantStyle::NORMAL;
   aFontStyle.weight =
       (traits & NSFontBoldTrait) ? FontWeight::BOLD : FontWeight::NORMAL;
-  aFontStyle.width = (traits & NSFontExpandedTrait)    ? FontWidth::EXPANDED
-                     : (traits & NSFontCondensedTrait) ? FontWidth::CONDENSED
-                                                       : FontWidth::NORMAL;
+  aFontStyle.stretch = (traits & NSFontExpandedTrait) ? FontStretch::EXPANDED
+                       : (traits & NSFontCondensedTrait)
+                           ? FontStretch::CONDENSED
+                           : FontStretch::NORMAL;
   aFontStyle.size = font.pointSize;
   aFontStyle.systemFont = true;
 }

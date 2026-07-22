@@ -43,7 +43,7 @@ struct StyleFontFamilyList;
 struct StyleFontFaceSourceTechFlags;
 enum class StyleFontFaceSourceFormatKeyword : uint8_t;
 class WeightRange;
-class WidthRange;
+class StretchRange;
 class SlantStyleRange;
 class LogModule;
 class VsyncDispatcher;
@@ -166,7 +166,7 @@ class gfxPlatform : public mozilla::layers::MemoryPressureListener {
 
  public:
   using WeightRange = mozilla::WeightRange;
-  using WidthRange = mozilla::WidthRange;
+  using StretchRange = mozilla::StretchRange;
   using SlantStyleRange = mozilla::SlantStyleRange;
   typedef mozilla::gfx::sRGBColor sRGBColor;
   typedef mozilla::gfx::DeviceColor DeviceColor;
@@ -398,7 +398,8 @@ class gfxPlatform : public mozilla::layers::MemoryPressureListener {
   already_AddRefed<gfxFontEntry> LookupLocalFont(
       FontVisibilityProvider* aFontVisibilityProvider,
       const nsACString& aFontName, const WeightRange& aWeightForEntry,
-      const WidthRange& aWidthForEntry, const SlantStyleRange& aStyleForEntry);
+      const StretchRange& aStretchForEntry,
+      const SlantStyleRange& aStyleForEntry);
 
   /**
    * Activate a platform font.  (Needed to support @font-face src url().)
@@ -409,8 +410,9 @@ class gfxPlatform : public mozilla::layers::MemoryPressureListener {
    */
   already_AddRefed<gfxFontEntry> MakePlatformFont(
       const nsACString& aFontName, const WeightRange& aWeightForEntry,
-      const WidthRange& aWidthForEntry, const SlantStyleRange& aStyleForEntry,
-      const uint8_t* aFontData, uint32_t aLength);
+      const StretchRange& aStretchForEntry,
+      const SlantStyleRange& aStyleForEntry, const uint8_t* aFontData,
+      uint32_t aLength);
 
   /**
    * Whether to allow downloadable fonts via @font-face rules

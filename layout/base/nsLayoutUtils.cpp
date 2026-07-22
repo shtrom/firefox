@@ -9873,7 +9873,7 @@ void nsLayoutUtils::ComputeSystemFont(nsFont* aSystemFont,
   aSystemFont->style = fontStyle.style;
   aSystemFont->family.is_system_font = fontStyle.systemFont;
   aSystemFont->weight = fontStyle.weight;
-  aSystemFont->width = fontStyle.width;
+  aSystemFont->stretch = fontStyle.stretch;
   aSystemFont->size = Length::FromPixels(fontStyle.size);
 
   // aSystemFont->langGroup = fontStyle.langGroup;

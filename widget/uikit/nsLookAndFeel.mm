@@ -329,7 +329,7 @@ bool nsLookAndFeel::NativeGetFont(FontID aID, nsString& aFontName,
   if (aID == FontID::Caption || aID == FontID::Menu) {
     aFontStyle.style = FontSlantStyle::NORMAL;
     aFontStyle.weight = FontWeight::NORMAL;
-    aFontStyle.width = FontWidth::NORMAL;
+    aFontStyle.stretch = FontStretch::NORMAL;
     aFontStyle.size = 14;
     aFontStyle.systemFont = true;
 

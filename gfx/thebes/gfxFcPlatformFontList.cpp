@@ -235,36 +235,37 @@ static FontWeight MapFcWeight(int aFcWeight) {
 }
 
 // TODO(emilio, jfkthame): I think this can now be more fine-grained.
-static FontWidth MapFcWidth(int aFcWidth) {
+static FontStretch MapFcWidth(int aFcWidth) {
   if (aFcWidth <= (FC_WIDTH_ULTRACONDENSED + FC_WIDTH_EXTRACONDENSED) / 2) {
-    return FontWidth::ULTRA_CONDENSED;
+    return FontStretch::ULTRA_CONDENSED;
   }
   if (aFcWidth <= (FC_WIDTH_EXTRACONDENSED + FC_WIDTH_CONDENSED) / 2) {
-    return FontWidth::EXTRA_CONDENSED;
+    return FontStretch::EXTRA_CONDENSED;
   }
   if (aFcWidth <= (FC_WIDTH_CONDENSED + FC_WIDTH_SEMICONDENSED) / 2) {
-    return FontWidth::CONDENSED;
+    return FontStretch::CONDENSED;
   }
   if (aFcWidth <= (FC_WIDTH_SEMICONDENSED + FC_WIDTH_NORMAL) / 2) {
-    return FontWidth::SEMI_CONDENSED;
+    return FontStretch::SEMI_CONDENSED;
   }
   if (aFcWidth <= (FC_WIDTH_NORMAL + FC_WIDTH_SEMIEXPANDED) / 2) {
-    return FontWidth::NORMAL;
+    return FontStretch::NORMAL;
   }
   if (aFcWidth <= (FC_WIDTH_SEMIEXPANDED + FC_WIDTH_EXPANDED) / 2) {
-    return FontWidth::SEMI_EXPANDED;
+    return FontStretch::SEMI_EXPANDED;
   }
   if (aFcWidth <= (FC_WIDTH_EXPANDED + FC_WIDTH_EXTRAEXPANDED) / 2) {
-    return FontWidth::EXPANDED;
+    return FontStretch::EXPANDED;
   }
   if (aFcWidth <= (FC_WIDTH_EXTRAEXPANDED + FC_WIDTH_ULTRAEXPANDED) / 2) {
-    return FontWidth::EXTRA_EXPANDED;
+    return FontStretch::EXTRA_EXPANDED;
   }
-  return FontWidth::ULTRA_EXPANDED;
+  return FontStretch::ULTRA_EXPANDED;
 }
 
 static void GetFontProperties(FcPattern* aFontPattern, WeightRange* aWeight,
-                              WidthRange* aWidth, SlantStyleRange* aSlantStyle,
+                              StretchRange* aStretch,
+                              SlantStyleRange* aSlantStyle,
                               uint16_t* aSize = nullptr) {
   // weight
   int weight;
@@ -279,7 +280,7 @@ static void GetFontProperties(FcPattern* aFontPattern, WeightRange* aWeight,
   if (FcPatternGetInteger(aFontPattern, FC_WIDTH, 0, &width) != FcResultMatch) {
     width = FC_WIDTH_NORMAL;
   }
-  *aWidth = WidthRange(MapFcWidth(width));
+  *aStretch = StretchRange(MapFcWidth(width));
 
   // italic
   int slant;
@@ -333,7 +334,7 @@ gfxFontconfigFontEntry::gfxFontconfigFontEntry(const nsACString& aFaceName,
       mFontPattern(aFontPattern),
       mFTFaceInitialized(false),
       mIgnoreFcCharmap(aIgnoreFcCharmap) {
-  GetFontProperties(aFontPattern, &mWeightRange, &mWidthRange, &mStyleRange);
+  GetFontProperties(aFontPattern, &mWeightRange, &mStretchRange, &mStyleRange);
   GetUserFontFeatures(mFontPattern);
 }
 
@@ -384,7 +385,7 @@ static already_AddRefed<SharedFTFace> CreateFaceForPattern(
 
 gfxFontconfigFontEntry::gfxFontconfigFontEntry(const nsACString& aFaceName,
                                                WeightRange aWeight,
-                                               WidthRange aWidth,
+                                               StretchRange aStretch,
                                                SlantStyleRange aStyle,
                                                RefPtr<SharedFTFace>&& aFace)
     : gfxFT2FontEntryBase(aFaceName),
@@ -394,21 +395,21 @@ gfxFontconfigFontEntry::gfxFontconfigFontEntry(const nsACString& aFaceName,
       mIgnoreFcCharmap(true) {
   mWeightRange = aWeight;
   mStyleRange = aStyle;
-  mWidthRange = aWidth;
+  mStretchRange = aStretch;
   mIsDataUserFont = true;
 }
 
 gfxFontconfigFontEntry::gfxFontconfigFontEntry(const nsACString& aFaceName,
                                                FcPattern* aFontPattern,
                                                WeightRange aWeight,
-                                               WidthRange aWidth,
+                                               StretchRange aStretch,
                                                SlantStyleRange aStyle)
     : gfxFT2FontEntryBase(aFaceName),
       mFontPattern(aFontPattern),
       mFTFaceInitialized(false) {
   mWeightRange = aWeight;
   mStyleRange = aStyle;
-  mWidthRange = aWidth;
+  mStretchRange = aStretch;
   mIsLocalUserFont = true;
 
   // The proper setting of mIgnoreFcCharmap is tricky for fonts loaded
@@ -1226,16 +1227,17 @@ void gfxFontconfigFontFamily::FindStyleVariationsLocked(
     if (LOG_FONTLIST_ENABLED()) {
       nsAutoCString weightString;
       fontEntry->Weight().ToString(weightString);
-      nsAutoCString widthString;
-      fontEntry->Width().ToString(widthString);
+      nsAutoCString stretchString;
+      fontEntry->Stretch().ToString(stretchString);
       nsAutoCString styleString;
       fontEntry->SlantStyle().ToString(styleString);
-      LOG_FONTLIST((
-          "(fontlist) added (%s) to family (%s)"
-          " with style: %s weight: %s width: %s"
-          " psname: %s fullname: %s",
-          fontEntry->Name().get(), Name().get(), styleString.get(),
-          weightString.get(), widthString.get(), psname.get(), fullname.get()));
+      LOG_FONTLIST(
+          ("(fontlist) added (%s) to family (%s)"
+           " with style: %s weight: %s stretch: %s"
+           " psname: %s fullname: %s",
+           fontEntry->Name().get(), Name().get(), styleString.get(),
+           weightString.get(), stretchString.get(), psname.get(),
+           fullname.get()));
     }
   }
 
@@ -1334,7 +1336,7 @@ void gfxFontconfigFontFamily::FindAllFontsForStyle(
         SizeDistance(entry, aFontStyle, mForceScalable || aIgnoreSizeTolerance);
     // If the entry is scalable or has a style that does not match
     // the group of unscalable fonts, then start a new group.
-    if (dist < 0.0 || !bestEntry || bestEntry->Width() != entry->Width() ||
+    if (dist < 0.0 || !bestEntry || bestEntry->Stretch() != entry->Stretch() ||
         bestEntry->Weight() != entry->Weight() ||
         bestEntry->SlantStyle() != entry->SlantStyle()) {
       // If the best entry in this group is still outside the tolerance,
@@ -1930,13 +1932,13 @@ void gfxFcPlatformFontList::InitSharedFontListForPlatform() {
     }
 
     WeightRange weight(FontWeight::NORMAL);
-    WidthRange width(FontWidth::NORMAL);
+    StretchRange stretch(FontStretch::NORMAL);
     SlantStyleRange style(FontSlantStyle::NORMAL);
     uint16_t size;
-    GetFontProperties(aPattern, &weight, &width, &style, &size);
+    GetFontProperties(aPattern, &weight, &stretch, &style, &size);
 
-    auto initData = fontlist::Face::InitData{descriptor, 0,     size, false,
-                                             weight,     width, style};
+    auto initData = fontlist::Face::InitData{descriptor, 0,       size, false,
+                                             weight,     stretch, style};
 
     // Add entries for any other localized family names. (Most fonts only have
     // a single family name, so the first call to GetString will usually fail).
@@ -2326,7 +2328,7 @@ FontFamily gfxFcPlatformFontList::GetDefaultFontForPlatform(
 already_AddRefed<gfxFontEntry> gfxFcPlatformFontList::LookupLocalFont(
     FontVisibilityProvider* aFontVisibilityProvider,
     const nsACString& aFontName, WeightRange aWeightForEntry,
-    WidthRange aWidthForEntry, SlantStyleRange aStyleForEntry) {
+    StretchRange aStretchForEntry, SlantStyleRange aStyleForEntry) {
   AutoLock lock(mLock);
 
   nsAutoCString keyName(aFontName);
@@ -2334,7 +2336,7 @@ already_AddRefed<gfxFontEntry> gfxFcPlatformFontList::LookupLocalFont(
 
   if (SharedFontList()) {
     return LookupInSharedFaceNameList(aFontVisibilityProvider, aFontName,
-                                      aWeightForEntry, aWidthForEntry,
+                                      aWeightForEntry, aStretchForEntry,
                                       aStyleForEntry);
   }
 
@@ -2345,12 +2347,13 @@ already_AddRefed<gfxFontEntry> gfxFcPlatformFontList::LookupLocalFont(
   }
 
   return MakeAndAddRef<gfxFontconfigFontEntry>(
-      aFontName, *fontPattern, aWeightForEntry, aWidthForEntry, aStyleForEntry);
+      aFontName, *fontPattern, aWeightForEntry, aStretchForEntry,
+      aStyleForEntry);
 }
 
 already_AddRefed<gfxFontEntry> gfxFcPlatformFontList::MakePlatformFont(
     const nsACString& aFontName, WeightRange aWeightForEntry,
-    WidthRange aWidthForEntry, SlantStyleRange aStyleForEntry,
+    StretchRange aStretchForEntry, SlantStyleRange aStyleForEntry,
     const uint8_t* aFontData, uint32_t aLength) {
   RefPtr<FTUserFontData> ufd = new FTUserFontData(aFontData, aLength);
   RefPtr<SharedFTFace> face = ufd->CloneFace();
@@ -2358,7 +2361,7 @@ already_AddRefed<gfxFontEntry> gfxFcPlatformFontList::MakePlatformFont(
     return nullptr;
   }
   return MakeAndAddRef<gfxFontconfigFontEntry>(aFontName, aWeightForEntry,
-                                               aWidthForEntry, aStyleForEntry,
+                                               aStretchForEntry, aStyleForEntry,
                                                std::move(face));
 }
 

@@ -91,13 +91,13 @@ typedef struct _cairo_scaled_font cairo_scaled_font_t;
 #endif
 
 struct gfxFontStyle {
-  using FontWidth = mozilla::FontWidth;
+  using FontStretch = mozilla::FontStretch;
   using FontSlantStyle = mozilla::FontSlantStyle;
   using FontWeight = mozilla::FontWeight;
   using FontSizeAdjust = mozilla::StyleFontSizeAdjust;
 
   gfxFontStyle();
-  gfxFontStyle(FontSlantStyle aStyle, FontWeight aWeight, FontWidth aWidth,
+  gfxFontStyle(FontSlantStyle aStyle, FontWeight aWeight, FontStretch aStretch,
                gfxFloat aSize, const FontSizeAdjust& aSizeAdjust,
                bool aSystemFont, bool aPrinterFont,
 #ifdef XP_WIN
@@ -154,20 +154,20 @@ struct gfxFontStyle {
   // in order to get correct glyph shapes.)
   mozilla::StyleFontLanguageOverride languageOverride;
 
-  // The Font{Weight,Width,SlantStyle} fields are each a 16-bit type.
+  // The Font{Weight,Stretch,SlantStyle} fields are each a 16-bit type.
 
   // The weight of the font: 100, 200, ... 900.
   FontWeight weight;
 
-  // The width of the font
-  FontWidth width;
+  // The stretch of the font
+  FontStretch stretch;
 
   // The style of font
   FontSlantStyle style;
 
-  // Whether face-selection properties weight/style/width are all 'normal'
+  // Whether face-selection properties weight/style/stretch are all 'normal'
   bool IsNormalStyle() const {
-    return weight.IsNormal() && style.IsNormal() && width.IsNormal();
+    return weight.IsNormal() && style.IsNormal() && stretch.IsNormal();
   }
 
   // We pack these three small-integer fields into a single byte to avoid
@@ -242,7 +242,7 @@ struct gfxFontStyle {
   bool Equals(const gfxFontStyle& other) const {
     return mozilla::NumbersAreBitwiseIdentical(size, other.size) &&
            (style == other.style) && (weight == other.weight) &&
-           (width == other.width) && (variantCaps == other.variantCaps) &&
+           (stretch == other.stretch) && (variantCaps == other.variantCaps) &&
            (variantSubSuper == other.variantSubSuper) &&
            (allowSyntheticWeight == other.allowSyntheticWeight) &&
            (synthesisStyle == other.synthesisStyle) &&

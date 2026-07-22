@@ -32,8 +32,8 @@ var gCSSFontFaceDescriptors = {
       "Times ! important",
     ],
   },
-  "font-width": {
-    domProp: "fontWidth",
+  "font-stretch": {
+    domProp: "fontStretch",
     values: [
       "normal",
       "ultra-condensed",

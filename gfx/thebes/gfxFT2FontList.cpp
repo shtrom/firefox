@@ -182,7 +182,7 @@ gfxFontEntry* FT2FontEntry::Clone() const {
   fe->mFilename = mFilename;
   fe->mFTFontIndex = mFTFontIndex;
   fe->mWeightRange = mWeightRange;
-  fe->mWidthRange = mWidthRange;
+  fe->mStretchRange = mStretchRange;
   fe->mStyleRange = mStyleRange;
   return fe;
 }
@@ -243,7 +243,7 @@ gfxFont* FT2FontEntry::CreateFontInstance(const gfxFontStyle* aStyle) {
 
 /* static */
 already_AddRefed<FT2FontEntry> FT2FontEntry::CreateFontEntry(
-    const nsACString& aFontName, WeightRange aWeight, WidthRange aWidth,
+    const nsACString& aFontName, WeightRange aWeight, StretchRange aStretch,
     SlantStyleRange aStyle, const uint8_t* aFontData, uint32_t aLength) {
   // Ownership of aFontData is passed in here; the fontEntry must
   // retain it as long as the FT_Face needs it, and ensure it is
@@ -261,7 +261,7 @@ already_AddRefed<FT2FontEntry> FT2FontEntry::CreateFontEntry(
     fe->mFTFace = face.forget().take();  // mFTFace takes ownership.
     fe->mStyleRange = aStyle;
     fe->mWeightRange = aWeight;
-    fe->mWidthRange = aWidth;
+    fe->mStretchRange = aStretch;
     fe->mIsDataUserFont = true;
   }
   return fe.forget();
@@ -273,7 +273,7 @@ FT2FontEntry* FT2FontEntry::CreateFontEntry(const FontListEntry& aFLE) {
   fe->mFilename = aFLE.filepath();
   fe->mFTFontIndex = aFLE.index();
   fe->mWeightRange = WeightRange::FromScalar(aFLE.weightRange());
-  fe->mWidthRange = WidthRange::FromScalar(aFLE.widthRange());
+  fe->mStretchRange = StretchRange::FromScalar(aFLE.stretchRange());
   fe->mStyleRange = SlantStyleRange::FromScalar(aFLE.styleRange());
   return fe;
 }
@@ -281,9 +281,9 @@ FT2FontEntry* FT2FontEntry::CreateFontEntry(const FontListEntry& aFLE) {
 // Extract font entry properties from an hb_face_t
 static void SetPropertiesFromFace(gfxFontEntry* aFontEntry,
                                   const hb_face_t* aFace) {
-  // OS2 width class to CSS 'width' mapping from
+  // OS2 width class to CSS 'stretch' mapping from
   // https://docs.microsoft.com/en-gb/typography/opentype/spec/os2#uswidthclass
-  const float kOS2WidthToWidth[] = {
+  const float kOS2WidthToStretch[] = {
       100,    // (invalid, treat as normal)
       50,     // Ultra-condensed
       62.5,   // Extra-condensed
@@ -312,22 +312,22 @@ static void SetPropertiesFromFace(gfxFontEntry* aFontEntry,
       hb_face_reference_table(aFace, HB_TAG('O', 'S', '/', '2')));
   data = hb_blob_get_data(os2blob, &len);
   uint16_t os2weight = 400;
-  float width = 100.0;
+  float stretch = 100.0;
   if (len >= offsetof(OS2Table, fsType)) {
     const OS2Table* os2 = reinterpret_cast<const OS2Table*>(data);
     os2weight = os2->usWeightClass;
     uint16_t os2width = os2->usWidthClass;
-    if (os2width < std::size(kOS2WidthToWidth)) {
-      width = kOS2WidthToWidth[os2width];
+    if (os2width < std::size(kOS2WidthToStretch)) {
+      stretch = kOS2WidthToStretch[os2width];
     }
   }
 
   aFontEntry->mStyleRange = SlantStyleRange(
       (style & 2) ? FontSlantStyle::ITALIC : FontSlantStyle::NORMAL);
   aFontEntry->mWeightRange = WeightRange(FontWeight::FromInt(int(os2weight)));
-  aFontEntry->mWidthRange = WidthRange(FontWidth::FromFloat(width));
+  aFontEntry->mStretchRange = StretchRange(FontStretch::FromFloat(stretch));
 
-  // For variable fonts, update the style/weight/width attributes if the
+  // For variable fonts, update the style/weight/stretch attributes if the
   // corresponding variation axes are present.
   aFontEntry->SetupVariationRanges();
 }
@@ -352,7 +352,7 @@ FT2FontEntry* FT2FontEntry::CreateFontEntry(const nsACString& aName,
     // these attributes anyway. We just set defaults here to be safe.
     fe->mStyleRange = SlantStyleRange(FontSlantStyle::NORMAL);
     fe->mWeightRange = WeightRange(FontWeight::NORMAL);
-    fe->mWidthRange = WidthRange(FontWidth::NORMAL);
+    fe->mStretchRange = StretchRange(FontStretch::NORMAL);
   }
 
   return fe;
@@ -691,7 +691,7 @@ void FT2FontFamily::AddFacesToFontList(nsTArray<FontListEntry>* aFontList) {
 
     aFontList->AppendElement(FontListEntry(
         Name(), fe->Name(), fe->mFilename, fe->Weight().AsScalar(),
-        fe->Width().AsScalar(), fe->SlantStyle().AsScalar(), fe->mFTFontIndex,
+        fe->Stretch().AsScalar(), fe->SlantStyle().AsScalar(), fe->mFTFontIndex,
         Visibility()));
   }
 }
@@ -725,7 +725,7 @@ void gfxFT2FontList::CollectInitData(const FontListEntry& aFLE,
       ->AppendElement(fontlist::Face::InitData{
           aFLE.filepath(), aFLE.index(), false,
           WeightRange::FromScalar(aFLE.weightRange()),
-          WidthRange::FromScalar(aFLE.widthRange()),
+          StretchRange::FromScalar(aFLE.stretchRange()),
           SlantStyleRange::FromScalar(aFLE.styleRange())});
   nsAutoCString psname(aPSName), fullname(aFullName);
   if (!psname.IsEmpty()) {
@@ -1047,8 +1047,8 @@ bool gfxFT2FontList::AppendFacesFromCachedFaceList(CollectFunc aCollectFace,
       break;
     }
 
-    int32_t minWidth, maxWidth;
-    readIntPair(minWidth, maxWidth);
+    int32_t minStretch, maxStretch;
+    readIntPair(minStretch, maxStretch);
 
     if (!nextField(start, end)) {
       break;
@@ -1065,17 +1065,17 @@ bool gfxFT2FontList::AppendFacesFromCachedFaceList(CollectFunc aCollectFace,
     }
     FontVisibility visibility = FontVisibility(strtoul(start, nullptr, 10));
 
-    FontListEntry fle(
-        familyName, faceName, aFileName,
-        WeightRange(FontWeight::FromRaw(minWeight),
-                    FontWeight::FromRaw(maxWeight))
-            .AsScalar(),
-        WidthRange(FontWidth::FromRaw(minWidth), FontWidth::FromRaw(maxWidth))
-            .AsScalar(),
-        SlantStyleRange(FontSlantStyle::FromRaw(minStyle),
-                        FontSlantStyle::FromRaw(maxStyle))
-            .AsScalar(),
-        index, visibility);
+    FontListEntry fle(familyName, faceName, aFileName,
+                      WeightRange(FontWeight::FromRaw(minWeight),
+                                  FontWeight::FromRaw(maxWeight))
+                          .AsScalar(),
+                      StretchRange(FontStretch::FromRaw(minStretch),
+                                   FontStretch::FromRaw(maxStretch))
+                          .AsScalar(),
+                      SlantStyleRange(FontSlantStyle::FromRaw(minStyle),
+                                      FontSlantStyle::FromRaw(maxStyle))
+                          .AsScalar(),
+                      index, visibility);
 
     aCollectFace(fle, psname, fullname, aStdFile);
     count++;
@@ -1105,9 +1105,9 @@ void FT2FontEntry::AppendToFaceList(nsCString& aFaceList,
   aFaceList.Append(FontNameCache::kRangeSep);
   aFaceList.AppendInt(Weight().Max().Raw());
   aFaceList.Append(FontNameCache::kFieldSep);
-  aFaceList.AppendInt(Width().Min().Raw());
+  aFaceList.AppendInt(Stretch().Min().Raw());
   aFaceList.Append(FontNameCache::kRangeSep);
-  aFaceList.AppendInt(Width().Max().Raw());
+  aFaceList.AppendInt(Stretch().Max().Raw());
   aFaceList.Append(FontNameCache::kFieldSep);
   aFaceList.Append(aPSName);
   aFaceList.Append(FontNameCache::kFieldSep);
@@ -1429,7 +1429,7 @@ void gfxFT2FontList::AddFaceToList(const nsCString& aEntryName, uint32_t aIndex,
 
     if (SharedFontList()) {
       FontListEntry fle(familyName, fe->Name(), fe->mFilename,
-                        fe->Weight().AsScalar(), fe->Width().AsScalar(),
+                        fe->Weight().AsScalar(), fe->Stretch().AsScalar(),
                         fe->SlantStyle().AsScalar(), fe->mFTFontIndex,
                         visibility);
       CollectInitData(fle, psname, fullname, aStdFile);
@@ -1453,14 +1453,14 @@ void gfxFT2FontList::AddFaceToList(const nsCString& aEntryName, uint32_t aIndex,
     if (LOG_ENABLED()) {
       nsAutoCString weightString;
       fe->Weight().ToString(weightString);
-      nsAutoCString widthString;
-      fe->Width().ToString(widthString);
+      nsAutoCString stretchString;
+      fe->Stretch().ToString(stretchString);
       LOG(
           ("(fontinit) added (%s) to family (%s)"
-           " with style: %s weight: %s width: %s",
+           " with style: %s weight: %s stretch: %s",
            fe->Name().get(), familyName.get(),
            fe->IsItalic() ? "italic" : "normal", weightString.get(),
-           widthString.get()));
+           stretchString.get()));
     }
   }
 }
@@ -1845,12 +1845,12 @@ already_AddRefed<gfxFontEntry> gfxFT2FontList::CreateFontEntry(
 already_AddRefed<gfxFontEntry> gfxFT2FontList::LookupLocalFont(
     FontVisibilityProvider* aFontVisibilityProvider,
     const nsACString& aFontName, WeightRange aWeightForEntry,
-    WidthRange aWidthForEntry, SlantStyleRange aStyleForEntry) {
+    StretchRange aStretchForEntry, SlantStyleRange aStyleForEntry) {
   AutoLock lock(mLock);
 
   if (SharedFontList()) {
     return LookupInSharedFaceNameList(aFontVisibilityProvider, aFontName,
-                                      aWeightForEntry, aWidthForEntry,
+                                      aWeightForEntry, aStretchForEntry,
                                       aStyleForEntry);
   }
 
@@ -1905,7 +1905,7 @@ searchDone:
   if (fe) {
     fe->mStyleRange = aStyleForEntry;
     fe->mWeightRange = aWeightForEntry;
-    fe->mWidthRange = aWidthForEntry;
+    fe->mStretchRange = aStretchForEntry;
     fe->mIsLocalUserFont = true;
   }
 
@@ -1928,13 +1928,13 @@ FontFamily gfxFT2FontList::GetDefaultFontForPlatform(
 
 already_AddRefed<gfxFontEntry> gfxFT2FontList::MakePlatformFont(
     const nsACString& aFontName, WeightRange aWeightForEntry,
-    WidthRange aWidthForEntry, SlantStyleRange aStyleForEntry,
+    StretchRange aStretchForEntry, SlantStyleRange aStyleForEntry,
     const uint8_t* aFontData, uint32_t aLength) {
   // The FT2 font needs the font data to persist, so we do NOT free it here
   // but instead pass ownership to the font entry.
   // Deallocation will happen later, when the font face is destroyed.
   return FT2FontEntry::CreateFontEntry(aFontName, aWeightForEntry,
-                                       aWidthForEntry, aStyleForEntry,
+                                       aStretchForEntry, aStyleForEntry,
                                        aFontData, aLength);
 }
 
