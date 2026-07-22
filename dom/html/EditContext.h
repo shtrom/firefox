@@ -145,6 +145,9 @@ class EditContext final : public DOMEventTargetHelper {
 
   bool IsFiringTextUpdate() const { return mIsFiringTextUpdate; }
 
+  static MOZ_CAN_RUN_SCRIPT void NotifyActiveEditContextChanged(
+      Document& aDocument);
+
  private:
   EditContext(nsIGlobalObject* aGlobalObject, const EditContextInit& aInit,
               ErrorResult& aRv);

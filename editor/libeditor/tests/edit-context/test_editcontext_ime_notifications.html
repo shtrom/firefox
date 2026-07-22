@@ -44,12 +44,12 @@ let notifications = [];
 async function doTest(func, expectation, description) {
   host.focus();
   notifications = [];
-  func();
+  await func();
   await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   for (const notification in expectation) {
     is(notifications.includes(notification),
        expectation[notification],
-      `Should ${expectation[notification] ? "not " : ""}notify of ${notification} when ${description}`);
+      `Should ${expectation[notification] ? "" : "not "}notify of ${notification} when ${description}`);
   }
 }
 
@@ -100,6 +100,31 @@ add_task(async () => {
     'notify-text-change': false,
     'notify-selection-change': false,
   }, 'DOM selection is changed.');
+
+  await doTest(async () => {
+    host.contentEditable = true;
+    host.editContext = null;
+    // If we immediately change the content, IMEContentObserver won't send
+    // a text change due to also notifying of focus. So we wait a bit first.
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    // IMEContentObserver should be observing for DOM changes.
+    host.append('hello');
+  }, {
+    'notify-focus': true,
+    'notify-text-change': true,
+  }, 'EditContext is detached from focused contenteditable element and the DOM text is changed.');
+
+  await doTest(async () => {
+    host.editContext = editContext;
+    // If we immediately change the content, IMEContentObserver won't send
+    // a text change due to also notifying of focus. So we wait a bit first.
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    // IMEContentObserver should not be observing for DOM changes.
+    host.append('hello');
+  }, {
+    'notify-focus': true,
+    'notify-text-change': false,
+  }, 'EditContext is attached to focused contenteditable element and the DOM text is changed.');
 });
 </script>
 </body>

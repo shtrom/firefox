@@ -23,6 +23,7 @@
 #include "mozilla/dom/TextUpdateEvent.h"
 #include "mozilla/intl/Segmenter.h"
 #include "nsDOMCSSDeclaration.h"
+#include "nsFocusManager.h"
 #include "nsGenericHTMLElement.h"
 #include "nsLayoutUtils.h"
 #include "nsTextNode.h"
@@ -703,6 +704,32 @@ LayoutDeviceIntRect EditContext::FallbackBounds() const {
   nsPresContext* presContext =
       mAssociatedElement->GetPrimaryFrame()->PresContext();
   return ToRootRelativeDeviceRect(*presContext, *appUnitsRect);
+}
+
+// static
+void EditContext::NotifyActiveEditContextChanged(Document& aDocument) {
+  RefPtr<HTMLEditor> editor = aDocument.GetHTMLEditor();
+  if (!editor) {
+    return;
+  }
+
+  RefPtr<Element> focusedElement = editor->GetFocusedElement();
+  if (!focusedElement ||
+      focusedElement != IMEStateManager::GetFocusedElement()) {
+    // We will handle this in IMEStateManager::OnChangeFocus.
+    // Calling UpdateIMEState() here is only needed when the editor
+    // changes between EditContext an non-EditContext without the
+    // focused element changing.
+    return;
+  }
+  auto newStateOrError = editor->GetPreferredIMEState();
+  // Currently, HTMLEditor::GetPreferredIMEState cannot fail.
+  MOZ_ASSERT(newStateOrError.isOk(),
+             "HTMLEditor::GetPreferredIMEState() failed");
+  const widget::IMEState defaultState(widget::IMEEnabled::Disabled);
+  IMEStateManager::UpdateIMEState(newStateOrError.unwrapOr(defaultState),
+                                  focusedElement, *editor);
+  // (Note that window may have been destroyed by UpdateIMEState.)
 }
 
 }  // namespace mozilla::dom

@@ -6879,14 +6879,12 @@ void Document::UpdateTextEditContext() {
   if (oldActiveEditContext) {
     oldActiveEditContext->Deactivate();
   }
-  // 4. If newActiveEditContext is not null, then:
-  if (newActiveEditContext) {
-    // 1. Update the Text Edit Context's text state to match the values in
-    //    newActiveEditContext's text state.
-    // TODO
-  }
   // 5. Set the document's active EditContext to newActiveEditContext.
   mActiveEditContext = newActiveEditContext;
+  // 4. If newActiveEditContext is not null, then:
+  //   1. Update the Text Edit Context's text state to match the values in
+  //      newActiveEditContext's text state.
+  EditContext::NotifyActiveEditContextChanged(*this);
 }
 
 void Document::MaybeDispatchCheckKeyPressEventModelEvent() {
