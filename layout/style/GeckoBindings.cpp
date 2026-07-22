@@ -909,18 +909,13 @@ bool Gecko_AttrEquals(const nsAttrValue* aValue, const nsAtom* aStr,
   return aValue->Equals(aStr, aIgnoreCase ? eIgnoreCase : eCaseMatters);
 }
 
-#define WITH_COMPARATOR(ignore_case_, c_, expr_)                    \
-  auto c_ = (ignore_case_) ? nsASCIICaseInsensitiveStringComparator \
-                           : nsTDefaultStringComparator<char16_t>;  \
-  return expr_;
-
 bool Gecko_AttrDashEquals(const nsAttrValue* aValue, const nsAtom* aStr,
                           bool aIgnoreCase) {
   nsAutoString str;
   aValue->ToString(str);
-  WITH_COMPARATOR(
-      aIgnoreCase, c,
-      nsStyleUtil::DashMatchCompare(str, nsDependentAtomString(aStr), c))
+  return nsStyleUtil::DashMatchCompare(
+      str, nsDependentAtomString(aStr),
+      aIgnoreCase ? eIgnoreCase : eCaseMatters);
 }
 
 bool Gecko_AttrIncludes(const nsAttrValue* aValue, const nsAtom* aStr,
@@ -930,9 +925,8 @@ bool Gecko_AttrIncludes(const nsAttrValue* aValue, const nsAtom* aStr,
   }
   nsAutoString str;
   aValue->ToString(str);
-  WITH_COMPARATOR(
-      aIgnoreCase, c,
-      nsStyleUtil::ValueIncludes(str, nsDependentAtomString(aStr), c))
+  return nsStyleUtil::ValueIncludes(str, nsDependentAtomString(aStr),
+                                    aIgnoreCase ? eIgnoreCase : eCaseMatters);
 }
 
 bool Gecko_AttrHasSubstring(const nsAttrValue* aValue, const nsAtom* aStr,

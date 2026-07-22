@@ -38,6 +38,7 @@
 #include "mozilla/dom/XULPopupElement.h"
 #include "mozilla/widget/NativeMenuSupport.h"
 #include "mozilla/widget/nsAutoRollup.h"
+#include "nsCRT.h"
 #include "nsCSSFrameConstructor.h"
 #include "nsCaret.h"
 #include "nsContentUtils.h"

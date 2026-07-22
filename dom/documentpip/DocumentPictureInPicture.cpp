@@ -11,6 +11,7 @@
 #include "mozilla/dom/DocumentPictureInPictureEvent.h"
 #include "mozilla/dom/WindowContext.h"
 #include "mozilla/widget/Screen.h"
+#include "nsCRT.h"
 #include "nsContentUtils.h"
 #include "nsDocShell.h"
 #include "nsDocShellLoadState.h"

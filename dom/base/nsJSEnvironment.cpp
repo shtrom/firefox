@@ -8,6 +8,7 @@
 #include "mozilla/HoldDropJSObjects.h"
 #include "nsAtom.h"
 #include "nsCOMPtr.h"
+#include "nsCRT.h"
 #include "nsContentUtils.h"
 #include "nsCycleCollector.h"
 #include "nsDOMCID.h"
