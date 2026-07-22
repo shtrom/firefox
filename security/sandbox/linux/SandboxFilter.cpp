@@ -1978,6 +1978,11 @@ class RDDSandboxPolicy final : public SandboxPolicyCommon {
   explicit RDDSandboxPolicy(SandboxBrokerClient* aBroker) {
     mBroker = aBroker;
     mMayCreateShmem = true;
+#ifdef MOZ_ENABLE_VULKAN_VIDEO
+    if (aBroker) {
+      mBrokeredConnect = true;
+    }
+#endif
   }
 
 #ifndef ANDROID
@@ -2040,6 +2045,15 @@ class RDDSandboxPolicy final : public SandboxPolicyCommon {
         //
         // We also see attempts to connect to an X server on desktop
         // Linux sometimes (bug 1882598).
+#ifdef MOZ_ENABLE_VULKAN_VIDEO
+        // Vulkan video decode requires EGL to successfully connect to the
+        // display server for EGL_MESA_image_dma_buf_export (bug 2021722).
+        // With a broker, route through FakeSocketTrap so connect() is
+        // restricted to the MAY_CONNECT paths in the broker policy.
+        if (mBrokeredConnect) {
+          return SandboxPolicyCommon::EvaluateSocketCall(aCall, aHasArgs);
+        }
+#endif
         return Some(Error(EACCES));
 
       default:
@@ -2177,6 +2191,13 @@ class RDDSandboxPolicy final : public SandboxPolicyCommon {
             .Case(F_ADD_SEALS, Allow())
             .Default(SandboxPolicyCommon::EvaluateSyscall(sysno));
       }
+      // EGL snapshot GL context needs socket creation and display server
+      // connection for EGL_MESA_image_dma_buf_export (bug 2021722).
+      // With a broker, these are brokered: socket() via FakeSocketTrap
+      // (AF_UNIX only), connect() via ConnectTrap (MAY_CONNECT paths only).
+      case __NR_socket:
+      case __NR_connect:
+        return SandboxPolicyCommon::EvaluateSyscall(sysno);
 #endif
         // Pass through the common policy for other syscalls
       default:
