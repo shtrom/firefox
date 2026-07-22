@@ -14,7 +14,7 @@ namespace js {
 class GlobalObject;
 
 class BigIntObject : public NativeObject {
-  static const unsigned PRIMITIVE_VALUE_SLOT = 0;
+  static constexpr auto PRIMITIVE_VALUE_SLOT = TypedSlot<ValueType::BigInt>(0);
   static const unsigned RESERVED_SLOTS = 1;
 
  public:
