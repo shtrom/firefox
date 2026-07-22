@@ -240,9 +240,7 @@ BrowserGlue.prototype = {
         lazy.PlacesBrowserStartup.backendInitComplete();
         break;
       case "browser-glue-test": // used by tests
-        if (data == "force-ui-migration") {
-          this._migrateUI();
-        } else if (data == "places-browser-init-complete") {
+        if (data == "places-browser-init-complete") {
           lazy.PlacesBrowserStartup.notifyIfInitializationComplete();
         } else if (data == "add-breaches-sync-handler") {
           this._addBreachesSyncHandler();
