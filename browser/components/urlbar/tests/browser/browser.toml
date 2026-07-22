@@ -32,8 +32,6 @@ skip-if = [
   "tsan", # Intermittently times out, see 1622698 (frequent on TSan).
 ]
 
-["browser_action_tabgroups.js"]
-
 ["browser_autoOpen.js"]
 
 ["browser_blanking.js"]
@@ -90,9 +88,6 @@ https_first_disabled = true
 
 ["browser_historyInSearchMode.js"]
 
-["browser_keepStateAcrossTabSwitches.js"]
-https_first_disabled = true
-
 ["browser_l10nCache.js"]
 
 ["browser_loadRace.js"]
@@ -110,13 +105,7 @@ fail-if = [
   "a11y_checks", # Bug 1854660 clicked element may not be focusable and/or labeled
 ]
 
-["browser_move_tab_to_new_window.js"]
-
-["browser_new_tab_urlbar_reset.js"]
-
 ["browser_observers_for_strip_on_share.js"]
-
-["browser_paste_then_switch_tab.js"]
 
 ["browser_persist_searchMode.js"]
 
@@ -126,15 +115,11 @@ fail-if = [
 
 ["browser_queryContextCache.js"]
 
-["browser_raceWithTabs.js"]
-
 ["browser_redirect_error.js"]
 support-files = ["redirect_error.sjs"]
 
 ["browser_remoteness_switch.js"]
 https_first_disabled = true
-
-["browser_remotetab.js"]
 
 ["browser_restrict_keywords.js"]
 
@@ -165,25 +150,10 @@ skip-if = [
   "os == 'mac' && os_version == '15.30' && arch == 'aarch64'", # Bug 2019466
 ]
 
-["browser_switchToTabHavingURI_aOpenParams.js"]
-
-["browser_switchToTab_chiclet.js"]
-
-["browser_switchToTab_closed_tab.js"]
-
-["browser_switchToTab_closes_newtab.js"]
-
-["browser_switchToTab_fullUrl_repeatedKeydown.js"]
-
 ["browser_tabKeyBehavior.js"]
 skip-if = [
   "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && tsan", # Bug 1813675
 ]
-
-["browser_tabMatchesInAwesomebar.js"]
-support-files = ["moz.png"]
-
-["browser_tabMatchesInAwesomebar_perwindowpb.js"]
 
 ["browser_textruns.js"]
 
@@ -224,8 +194,6 @@ https_first_disabled = true
 support-files = ["redirect_to.sjs"]
 
 ["browser_urlbar_modifiedClick.js"]
-
-["browser_valueOnTabSwitch.js"]
 
 ["browser_waitForLoadStartOrTimeout.js"]
 https_first_disabled = true
