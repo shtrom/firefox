@@ -25,18 +25,19 @@ class InstantObject : public NativeObject {
   static const JSClass class_;
   static const JSClass& protoClass_;
 
-  static constexpr uint32_t SECONDS_SLOT = 0;
-  static constexpr uint32_t NANOSECONDS_SLOT = 1;
+  static constexpr auto SECONDS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Int32>(0);
+  static constexpr auto NANOSECONDS_SLOT = TypedSlot<ValueType::Int32>(1);
   static constexpr uint32_t SLOT_COUNT = 2;
 
   /**
    * Extract the epoch nanoseconds fields from this ZonedDateTime object.
    */
   EpochNanoseconds epochNanoseconds() const {
-    double seconds = getFixedSlot(SECONDS_SLOT).toNumber();
+    double seconds = getFixedSlotTyped(SECONDS_SLOT).toNumber();
     MOZ_ASSERT(-8'640'000'000'000 <= seconds && seconds <= 8'640'000'000'000);
 
-    int32_t nanoseconds = getFixedSlot(NANOSECONDS_SLOT).toInt32();
+    int32_t nanoseconds = getFixedSlotTyped(NANOSECONDS_SLOT).toInt32();
     MOZ_ASSERT(0 <= nanoseconds && nanoseconds <= 999'999'999);
 
     return {{int64_t(seconds), nanoseconds}};

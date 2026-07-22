@@ -26,33 +26,43 @@ class DurationObject : public NativeObject {
   static const JSClass class_;
   static const JSClass& protoClass_;
 
-  static constexpr uint32_t YEARS_SLOT = 0;
-  static constexpr uint32_t MONTHS_SLOT = 1;
-  static constexpr uint32_t WEEKS_SLOT = 2;
-  static constexpr uint32_t DAYS_SLOT = 3;
-  static constexpr uint32_t HOURS_SLOT = 4;
-  static constexpr uint32_t MINUTES_SLOT = 5;
-  static constexpr uint32_t SECONDS_SLOT = 6;
-  static constexpr uint32_t MILLISECONDS_SLOT = 7;
-  static constexpr uint32_t MICROSECONDS_SLOT = 8;
-  static constexpr uint32_t NANOSECONDS_SLOT = 9;
+  static constexpr auto YEARS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Int32>(0);
+  static constexpr auto MONTHS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Int32>(1);
+  static constexpr auto WEEKS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Int32>(2);
+  static constexpr auto DAYS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Int32>(3);
+  static constexpr auto HOURS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Int32>(4);
+  static constexpr auto MINUTES_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Int32>(5);
+  static constexpr auto SECONDS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Int32>(6);
+  static constexpr auto MILLISECONDS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Int32>(7);
+  static constexpr auto MICROSECONDS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Int32>(8);
+  static constexpr auto NANOSECONDS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Int32>(9);
   static constexpr uint32_t SLOT_COUNT = 10;
 
-  double years() const { return getFixedSlot(YEARS_SLOT).toNumber(); }
-  double months() const { return getFixedSlot(MONTHS_SLOT).toNumber(); }
-  double weeks() const { return getFixedSlot(WEEKS_SLOT).toNumber(); }
-  double days() const { return getFixedSlot(DAYS_SLOT).toNumber(); }
-  double hours() const { return getFixedSlot(HOURS_SLOT).toNumber(); }
-  double minutes() const { return getFixedSlot(MINUTES_SLOT).toNumber(); }
-  double seconds() const { return getFixedSlot(SECONDS_SLOT).toNumber(); }
+  double years() const { return getFixedSlotTyped(YEARS_SLOT).toNumber(); }
+  double months() const { return getFixedSlotTyped(MONTHS_SLOT).toNumber(); }
+  double weeks() const { return getFixedSlotTyped(WEEKS_SLOT).toNumber(); }
+  double days() const { return getFixedSlotTyped(DAYS_SLOT).toNumber(); }
+  double hours() const { return getFixedSlotTyped(HOURS_SLOT).toNumber(); }
+  double minutes() const { return getFixedSlotTyped(MINUTES_SLOT).toNumber(); }
+  double seconds() const { return getFixedSlotTyped(SECONDS_SLOT).toNumber(); }
   double milliseconds() const {
-    return getFixedSlot(MILLISECONDS_SLOT).toNumber();
+    return getFixedSlotTyped(MILLISECONDS_SLOT).toNumber();
   }
   double microseconds() const {
-    return getFixedSlot(MICROSECONDS_SLOT).toNumber();
+    return getFixedSlotTyped(MICROSECONDS_SLOT).toNumber();
   }
   double nanoseconds() const {
-    return getFixedSlot(NANOSECONDS_SLOT).toNumber();
+    return getFixedSlotTyped(NANOSECONDS_SLOT).toNumber();
   }
 
  private:
