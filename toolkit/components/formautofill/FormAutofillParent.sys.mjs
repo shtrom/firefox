@@ -922,7 +922,8 @@ export class FormAutofillParent extends JSWindowActorParent {
     }
 
     return async () => {
-      await lazy.FormAutofillPrompter.promptToSaveAddress(
+      await lazy.FormAutofillPrompter.promptToSave(
+        AutofillDataTypes.ADDRESS,
         browser,
         storage,
         address.flowId,
@@ -960,7 +961,8 @@ export class FormAutofillParent extends JSWindowActorParent {
       (await storage.getDuplicateRecords(creditCard.record).next()).value ?? {};
 
     return async () => {
-      await lazy.FormAutofillPrompter.promptToSaveCreditCard(
+      await lazy.FormAutofillPrompter.promptToSave(
+        AutofillDataTypes.CREDIT_CARD,
         browser,
         storage,
         creditCard.flowId,
@@ -999,7 +1001,8 @@ export class FormAutofillParent extends JSWindowActorParent {
     }
 
     return async () => {
-      await lazy.FormAutofillPrompter.promptToSavePassport(
+      await lazy.FormAutofillPrompter.promptToSave(
+        AutofillDataTypes.PASSPORT,
         browser,
         storage,
         passport.flowId,

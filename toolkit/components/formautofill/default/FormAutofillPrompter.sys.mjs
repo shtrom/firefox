@@ -35,8 +35,6 @@ const l10n = new Localization(
   true
 );
 
-const { ENABLED_AUTOFILL_CREDITCARDS_PREF } = FormAutofill;
-
 let CONTENT = {};
 
 /**
@@ -1539,109 +1537,113 @@ CONTENT = {
   },
 };
 
-export let FormAutofillPrompter = {
-  async promptToSaveCreditCard(
-    browser,
-    storage,
-    flowId,
-    { oldRecord, newRecord }
-  ) {
-    if (!browser) {
-      return;
-    }
-
-    const showUpdateDoorhanger = !!Object.keys(oldRecord).length;
-
-    lazy.log.debug(
-      `Show the ${
-        showUpdateDoorhanger ? "update" : "save"
-      } credit card doorhanger`
-    );
-
-    const { documentGlobal: win } = browser;
-    win.MozXULElement.insertFTLIfNeeded(
-      "toolkit/formautofill/formAutofill.ftl"
-    );
-
-    let action;
-    const doorhanger = showUpdateDoorhanger
-      ? new CreditCardUpdateDoorhanger(browser, oldRecord, newRecord, flowId)
-      : new CreditCardSaveDoorhanger(browser, oldRecord, newRecord, flowId);
-    action = await doorhanger.show();
-
-    lazy.log.debug(`Doorhanger action is ${action}`);
-
-    if (action == "cancel") {
-      return;
-    } else if (action == "disable") {
-      Services.prefs.setBoolPref(ENABLED_AUTOFILL_CREDITCARDS_PREF, false);
-      return;
-    }
-
-    if (!(await lazy.OSKeyStore.ensureLoggedIn(false)).authenticated) {
-      lazy.log.warn("User canceled encryption login");
-      return;
-    }
-
-    this._updateStorageAfterInteractWithPrompt(
-      browser,
-      storage,
-      "credit-card",
-      action == "update" ? oldRecord : null,
-      doorhanger.recordToSave()
-    );
+/**
+ * Per-data-type configuration driving {@link FormAutofillPrompter.promptToSave}.
+ * Keyed by `AutofillDataTypes` id. Each entry describes how to build and behave
+ * for that type's save/update doorhanger so a new data type only needs a new
+ * entry here.
+ *
+ * @typedef {object} SavePromptConfig
+ * @property {typeof AutofillDoorhanger} saveDoorhanger Doorhanger shown when saving a new record
+ * @property {typeof AutofillDoorhanger} [updateDoorhanger] Doorhanger shown when merging into an existing record
+ * @property {typeof AutofillDoorhanger} [editDoorhanger] Doorhanger shown when the user edits before saving
+ * @property {string[]} ftls Fluent files to load before showing the doorhanger
+ * @property {boolean} [requiresAuth] Whether OS key store authentication is required before saving
+ * @property {object} confirmationHint Confirmation hint l10n ids, keyed by "created" and "updated"
+ */
+const SAVE_PROMPT_CONFIG = {
+  [AutofillDataTypes.ADDRESS]: {
+    saveDoorhanger: AddressSaveDoorhanger,
+    updateDoorhanger: AddressUpdateDoorhanger,
+    editDoorhanger: AddressEditDoorhanger,
+    ftls: [
+      "toolkit/formautofill/formAutofill.ftl",
+      // address-autofill-* are defined in browser/preferences now
+      "browser/preferences/formAutofill.ftl",
+    ],
+    confirmationHint: {
+      created: "confirmation-hint-address-created",
+      updated: "confirmation-hint-address-updated",
+    },
   },
+  [AutofillDataTypes.CREDIT_CARD]: {
+    saveDoorhanger: CreditCardSaveDoorhanger,
+    updateDoorhanger: CreditCardUpdateDoorhanger,
+    ftls: ["toolkit/formautofill/formAutofill.ftl"],
+    requiresAuth: true,
+    confirmationHint: {
+      created: "confirmation-hint-credit-card-created",
+      updated: "confirmation-hint-credit-card-updated",
+    },
+  },
+  [AutofillDataTypes.PASSPORT]: {
+    saveDoorhanger: PassportSaveDoorhanger,
+    ftls: [
+      "toolkit/formautofill/formAutofill.ftl",
+      // passport-capture-* and autofill-passport-* are defined in
+      // browser/preferences, matching the address doorhanger.
+      "browser/preferences/formAutofill.ftl",
+    ],
+    confirmationHint: {
+      created: "confirmation-hint-passport-created",
+      updated: "confirmation-hint-passport-updated",
+    },
+  },
+};
 
+export let FormAutofillPrompter = {
   /**
-   * Show save or update address doorhanger
+   * Show the save or update doorhanger for a given autofill data type, then
+   * persist the record the user chose to keep.
    *
-   * @param {Element<browser>} browser  Browser to show the save/update address prompt
-   * @param {object} storage Address storage
+   * @param {string} type One of the `AutofillDataTypes` ids (address, creditCard, passport)
+   * @param {Element<browser>} browser Browser to show the prompt in
+   * @param {object} storage Storage collection for the given type
    * @param {string} flowId Unique GUID to record a series of the same user action
    * @param {object} options
-   * @param {object} [options.oldRecord] Record to be merged
-   * @param {object} [options.newRecord] Record with more information
+   * @param {object} [options.oldRecord] Existing record to merge into; empty when saving a new record
+   * @param {object} options.newRecord Record captured from the submitted form
    */
-  async promptToSaveAddress(
+  async promptToSave(
+    type,
     browser,
     storage,
     flowId,
-    { oldRecord, newRecord }
+    { oldRecord = {}, newRecord }
   ) {
     if (!browser) {
       return;
     }
 
+    const config = SAVE_PROMPT_CONFIG[type];
     const showUpdateDoorhanger = !!Object.keys(oldRecord).length;
 
     lazy.log.debug(
-      `Show the ${showUpdateDoorhanger ? "update" : "save"} address doorhanger`
+      `Show the ${showUpdateDoorhanger ? "update" : "save"} ${type} doorhanger`
     );
 
     const { documentGlobal: win } = browser;
-    win.MozXULElement.insertFTLIfNeeded(
-      "toolkit/formautofill/formAutofill.ftl"
-    );
-    // address-autofill-* are defined in browser/preferences now
-    win.MozXULElement.insertFTLIfNeeded("browser/preferences/formAutofill.ftl");
+    for (const ftl of config.ftls) {
+      win.MozXULElement.insertFTLIfNeeded(ftl);
+    }
 
     let doorhanger;
     let action;
     while (true) {
       doorhanger = showUpdateDoorhanger
-        ? new AddressUpdateDoorhanger(browser, oldRecord, newRecord, flowId)
-        : new AddressSaveDoorhanger(browser, oldRecord, newRecord, flowId);
+        ? new config.updateDoorhanger(browser, oldRecord, newRecord, flowId)
+        : new config.saveDoorhanger(browser, oldRecord, newRecord, flowId);
       action = await doorhanger.show();
 
-      if (action == "edit-address") {
-        doorhanger = new AddressEditDoorhanger(
+      if (config.editDoorhanger && action == "edit-address") {
+        doorhanger = new config.editDoorhanger(
           browser,
           { ...oldRecord, ...newRecord },
           flowId
         );
         action = await doorhanger.show();
 
-        // If users cancel the edit address doorhanger, show the save/update
+        // If users cancel the edit doorhanger, show the save/update
         // doorhanger again.
         if (action == "cancel") {
           continue;
@@ -1657,60 +1659,32 @@ export let FormAutofillPrompter = {
       return;
     }
 
-    this._updateStorageAfterInteractWithPrompt(
-      browser,
-      storage,
-      "address",
-      showUpdateDoorhanger ? oldRecord : null,
-      doorhanger.recordToSave()
-    );
-  },
-
-  /**
-   * Show the passport capture doorhanger.
-   *
-   * @param {Element<browser>} browser  Browser to show the save passport prompt
-   * @param {object} storage Passport storage
-   * @param {string} flowId Unique GUID to record a series of the same user action
-   * @param {object} options
-   * @param {object} options.newRecord Record submitted by the user
-   */
-  async promptToSavePassport(browser, storage, flowId, { newRecord }) {
-    if (!browser) {
-      return;
-    }
-
-    lazy.log.debug("Show the save passport doorhanger");
-
-    const { documentGlobal: win } = browser;
-    win.MozXULElement.insertFTLIfNeeded("toolkit/formautofill/formAutofill.ftl");
-    win.MozXULElement.insertFTLIfNeeded("browser/preferences/formAutofill.ftl");
-
-    const doorhanger = new PassportSaveDoorhanger(
-      browser,
-      null,
-      newRecord,
-      flowId
-    );
-    const action = await doorhanger.show();
-
-    lazy.log.debug(`Doorhanger action is ${action}`);
-
-    if (action == "cancel") {
-      return;
-    } else if (action == "disable") {
+    if (action == "disable") {
       Services.prefs.setBoolPref(
-        AutofillDataTypes.get(AutofillDataTypes.PASSPORT).enabledPref,
+        AutofillDataTypes.get(type).enabledPref,
         false
       );
       return;
     }
 
+    if (
+      config.requiresAuth &&
+      !(await lazy.OSKeyStore.ensureLoggedIn(false)).authenticated
+    ) {
+      lazy.log.warn("User canceled encryption login");
+      return;
+    }
+
+    // Update the existing record only when we started in update mode and the
+    // user didn't pick "save as new" (which reports "create" even in update
+    // mode); otherwise add a new record.
+    const isUpdate = showUpdateDoorhanger && action != "create";
+
     this._updateStorageAfterInteractWithPrompt(
       browser,
       storage,
-      "passport",
-      null,
+      config.confirmationHint,
+      isUpdate ? oldRecord : null,
       doorhanger.recordToSave()
     );
   },
@@ -1719,7 +1693,7 @@ export let FormAutofillPrompter = {
   async _updateStorageAfterInteractWithPrompt(
     browser,
     storage,
-    type,
+    confirmationHint,
     oldRecord,
     newRecord
   ) {
@@ -1732,23 +1706,9 @@ export let FormAutofillPrompter = {
     }
     storage.notifyUsed(changedGUID);
 
-    const messageIdMap = {
-      "credit-card": {
-        created: "confirmation-hint-credit-card-created",
-        updated: "confirmation-hint-credit-card-updated",
-      },
-      address: {
-        created: "confirmation-hint-address-created",
-        updated: "confirmation-hint-address-updated",
-      },
-      passport: {
-        created: "confirmation-hint-passport-created",
-        updated: "confirmation-hint-passport-updated",
-      },
-    };
     showConfirmation(
       browser,
-      messageIdMap[type][oldRecord ? "updated" : "created"]
+      confirmationHint[oldRecord ? "updated" : "created"]
     );
   },
 };
