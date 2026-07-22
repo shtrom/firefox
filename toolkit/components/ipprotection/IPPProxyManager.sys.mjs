@@ -721,10 +721,7 @@ class IPPProxyManagerSingleton extends EventTarget {
         return;
       }
       lazy.logConsole.debug(`Starting scheduled ProxyPass rotation`);
-      let newPass = await this.rotateProxyPass();
-      if (newPass) {
-        this.#schedulePassRotation(newPass);
-      }
+      await this.rotateProxyPass();
     }, msUntilRotation);
   }
 
@@ -794,6 +791,9 @@ class IPPProxyManagerSingleton extends EventTarget {
     }
     lazy.logConsole.debug("Successfully rotated token!");
     this.#pass = pass;
+    // The freshly rotated token supersedes any pending scheduled rotation;
+    // cancel it and schedule the next one for this pass.
+    this.#schedulePassRotation(pass);
     resolve(pass);
     return promise;
   }
