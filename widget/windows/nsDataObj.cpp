@@ -819,7 +819,7 @@ STDMETHODIMP nsDataObj::QueryGetData(LPFORMATETC pFE) {
       return S_OK;
     }
   }
-  return E_FAIL;
+  return DV_E_FORMATETC;
 }
 
 //-----------------------------------------------------
