@@ -1174,6 +1174,49 @@ void BaselinePerfSpewer::saveProfile(JSContext* cx, JSScript* script,
   PerfSpewer::saveJSProfile(code, desc, script);
 }
 
+JitCodeSourceInfoVector PerfSpewer::extractSourceInfo() const {
+  JitCodeSourceInfoVector result;
+  if (debugInfo_.empty()) {
+    // The profiler wasn't enabled at the compile time.
+    return result;
+  }
+
+  // The result array length could be the same or less (due to deduplication
+  // below).
+  if (!result.reserve(debugInfo_.length())) {
+    return JitCodeSourceInfoVector();
+  }
+
+  // Dedup consecutive entries with identical (line, column). Multiple ops
+  // on the same source line are common. This allows us to keep table smaller
+  // with no change on the lookup results.
+#ifdef DEBUG
+  uint32_t lastOffset = 0;
+#endif
+  uint32_t lastLine = 0;
+  uint32_t lastColumn = 0;
+  for (const DebugEntry& entry : debugInfo_) {
+    // The resulting table must stay sorted by nativeOffset. BaselineEntry's
+    // sampler lookup binary-searches it. That holds because recordInstruction
+    // appends in code-emission order.
+    MOZ_ASSERT(entry.offset >= lastOffset,
+               "debugInfo_ must be sorted by offset");
+#ifdef DEBUG
+    lastOffset = entry.offset;
+#endif
+    if (entry.line == lastLine && entry.column == lastColumn) {
+      continue;
+    }
+    result.infallibleEmplaceBack(
+        JitCodeSourceInfo{entry.offset, entry.line,
+                          JS::LimitedColumnNumberOneOrigin::fromUnlimited(
+                              entry.column == 0 ? 1 : entry.column)});
+    lastLine = entry.line;
+    lastColumn = entry.column;
+  }
+  return result;
+}
+
 void BaselineInterpreterPerfSpewer::saveProfile(JitCode* code) {
   if (!PerfEnabled()) {
     return;

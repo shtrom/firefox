@@ -397,7 +397,8 @@ bool BaselineCompiler::finishCompile(JSContext* cx) {
             script->filename(), script->lineno(),
             script->column().oneOriginValue(), baselineScript.get());
 
-    if (!AddBaselineJitcodeGlobalEntry(cx, script, code)) {
+    if (!AddBaselineJitcodeGlobalEntry(cx, script, code,
+                                       perfSpewer_.extractSourceInfo())) {
       return false;
     }
   }

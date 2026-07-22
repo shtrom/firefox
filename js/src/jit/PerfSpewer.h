@@ -10,6 +10,7 @@
 #ifdef JS_ION_PERF
 #  include <stdio.h>
 #endif
+#include "jit/JitCodeSourceInfo.h"  // JitCodeSourceInfo, JitCodeSourceInfoVector
 #include "js/AllocPolicy.h"
 #include "js/ColumnNumber.h"
 #include "js/JitCodeAPI.h"
@@ -153,6 +154,13 @@ class PerfSpewer {
     debugInfo_.clearAndFree();
     irFileName_ = JS::UniqueChars();
   }
+
+  // Build a (nativeOffset, line, column) table from the per-op recordings
+  // accumulated in debugInfo_ during compilation. It dedupes consecutive
+  // entries that share the same (line, column). Returns an empty vector
+  // when nothing was recorded (e.g. the profiler was off at compile time)
+  // or on allocation failure.
+  JitCodeSourceInfoVector extractSourceInfo() const;
 };
 
 void CollectPerfSpewerJitCodeProfile(JitCode* code, const char* msg);
