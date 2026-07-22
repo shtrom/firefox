@@ -145,6 +145,10 @@ class MediaTransportHandlerSTS : public MediaTransportHandler,
     // OnConnectionStateChange, and cumulative across the transport's lifetime.
     uint32_t mSelectedCandidatePairChanges = 0;
     std::pair<std::string, std::string> mLastSelectedCandidatePair;
+    // The most recent ICE transport state observed in OnConnectionStateChange.
+    // GetIceStats reports this rather than deriving from
+    // NrIceMediaStream::state(), which has no "new" state.
+    dom::RTCIceTransportState mIceState = dom::RTCIceTransportState::New;
   };
 
   using MediaTransportHandler::OnAlpnNegotiated;
@@ -1148,23 +1152,17 @@ RefPtr<dom::RTCStatsPromise> MediaTransportHandlerSTS::GetIceStats(
                 transport.mIceLocalUsernameFragment.Construct(
                     NS_ConvertASCIItoUTF16(ufrag.c_str()));
               }
-              switch (stream->state()) {
-                case NrIceMediaStream::ICE_CONNECTING:
-                  transport.mIceState.Construct(
-                      dom::RTCIceTransportState::Checking);
-                  break;
-                case NrIceMediaStream::ICE_OPEN:
-                  transport.mIceState.Construct(
-                      dom::RTCIceTransportState::Connected);
-                  break;
-                case NrIceMediaStream::ICE_CLOSED:
-                  transport.mIceState.Construct(
-                      dom::RTCIceTransportState::Closed);
-                  break;
-              }
+              auto transportIt = mTransports.find(stream->GetId());
+              // Report the ICE transport state captured from connection-state
+              // changes, which distinguishes "new" (no connectivity checks yet)
+              // from "checking"; NrIceMediaStream::state() has no "new" state.
+              // This also keeps the stat consistent with RTCIceTransport.state.
+              transport.mIceState.Construct(
+                  transportIt != mTransports.end()
+                      ? transportIt->second.mIceState
+                      : dom::RTCIceTransportState::New);
               // XXX(Bug 1225723) Determine if dtlsState should be `required`.
               transport.mDtlsState = dom::RTCDtlsTransportState::New;
-              auto transportIt = mTransports.find(stream->GetId());
               // The DTLS role is not known until it has been negotiated (via
               // a=setup) and a DTLS transport exists. Until then, report
               // "unknown" rather than leaving the member unset. This is
@@ -1657,6 +1655,7 @@ void MediaTransportHandlerSTS::OnConnectionStateChange(
   }
   if (auto it = mTransports.find(aIceStream->GetId());
       it != mTransports.end()) {
+    it->second.mIceState = toDomIceTransportState(aState);
     auto newPair = std::make_pair(localAttr, remoteAttr);
     if (newPair != it->second.mLastSelectedCandidatePair) {
       it->second.mSelectedCandidatePairChanges += 1;
