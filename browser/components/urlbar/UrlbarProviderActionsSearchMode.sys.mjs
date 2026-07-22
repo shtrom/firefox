@@ -53,10 +53,6 @@ export class UrlbarProviderActionsSearchMode extends UrlbarProvider {
       includesExactMatch: true,
     });
     results.forEach(resultKey => {
-      let action = lazy.ActionsProviderQuickActions.getAction(resultKey);
-      if (action.isUnsupported?.()) {
-        return;
-      }
       let result = new lazy.UrlbarResult({
         type: lazy.UrlbarShared.RESULT_TYPE.DYNAMIC,
         source: lazy.UrlbarShared.RESULT_SOURCE.ACTIONS,
@@ -71,16 +67,18 @@ export class UrlbarProviderActionsSearchMode extends UrlbarProvider {
   }
 
   /**
-   * Whether an action's button is shown disabled. Shared by the view template
-   * and the engagement handler so both agree without the latter reading the
-   * picked DOM element. Unsupported actions are filtered out in `startQuery`,
-   * so only inactive actions reach here.
+   * Whether an action's button is shown disabled (inactive or hidden). Shared
+   * by the view template and the engagement handler so both agree without the
+   * latter reading the picked DOM element.
    *
    * @param {object} action The quick action, from `getAction`.
    * @returns {boolean} Whether the action is inactive.
    */
   #isActionInactive(action) {
-    return !!action.isInactive?.();
+    return (
+      ("isActive" in action && !action.isActive()) ||
+      !(action.isVisible?.() ?? true)
+    );
   }
 
   onEngagement(queryContext, controller, details) {
@@ -99,6 +97,7 @@ export class UrlbarProviderActionsSearchMode extends UrlbarProvider {
 
   getViewTemplate(result) {
     let action = lazy.ActionsProviderQuickActions.getAction(result.payload.key);
+    let inActive = this.#isActionInactive(action);
     return {
       children: [
         {
@@ -108,7 +107,7 @@ export class UrlbarProviderActionsSearchMode extends UrlbarProvider {
             "data-action": result.payload.key,
             "data-input-length": result.payload.inputLength,
             role: "button",
-            disabled: this.#isActionInactive(action),
+            disabled: inActive,
           },
           children: [
             {
