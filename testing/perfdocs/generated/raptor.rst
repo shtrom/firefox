@@ -4035,6 +4035,47 @@ Standard benchmarks are third-party tests (i.e. Speedometer) that we have integr
    * **unit**: score
    * **Test Task**:
 
+   .. list-table:: **test-android-em-14-arm64-shippable/opt**
+      :widths: 30 15 15 15 15
+      :header-rows: 1
+
+      * - **Test Name**
+        - mozilla-central
+        - autoland
+        - mozilla-release
+        - mozilla-beta
+      * - **browsertime-benchmark-speedometer3-mobile-chrome-m-nofis**
+        - ❌
+        - ❌
+        - ❌
+        - ❌
+      * - **browsertime-benchmark-speedometer3-mobile-cstm-car-m-nofis**
+        - ❌
+        - ❌
+        - ❌
+        - ❌
+      * - **browsertime-benchmark-speedometer3-mobile-fenix**
+        - ❌
+        - ✅
+        - ❌
+        - ❌
+      * - **browsertime-benchmark-speedometer3-mobile-fenix-nofis**
+        - ❌
+        - ✅
+        - ❌
+        - ❌
+      * - **browsertime-benchmark-speedometer3-mobile-geckoview**
+        - ❌
+        - ❌
+        - ❌
+        - ❌
+      * - **browsertime-benchmark-speedometer3-mobile-geckoview-nofis**
+        - ❌
+        - ❌
+        - ❌
+        - ❌
+
+
    .. list-table:: **test-android-hw-a55-14-0-aarch64-shippable/opt**
       :widths: 30 15 15 15 15
       :header-rows: 1
@@ -4564,6 +4605,47 @@ Standard benchmarks are third-party tests (i.e. Speedometer) that we have integr
    * **type**: benchmark
    * **unit**: score
    * **Test Task**:
+
+   .. list-table:: **test-android-em-14-arm64-shippable/opt**
+      :widths: 30 15 15 15 15
+      :header-rows: 1
+
+      * - **Test Name**
+        - mozilla-central
+        - autoland
+        - mozilla-release
+        - mozilla-beta
+      * - **browsertime-benchmark-speedometer3-mobile-chrome-m-nofis**
+        - ❌
+        - ❌
+        - ❌
+        - ❌
+      * - **browsertime-benchmark-speedometer3-mobile-cstm-car-m-nofis**
+        - ❌
+        - ❌
+        - ❌
+        - ❌
+      * - **browsertime-benchmark-speedometer3-mobile-fenix**
+        - ❌
+        - ✅
+        - ❌
+        - ❌
+      * - **browsertime-benchmark-speedometer3-mobile-fenix-nofis**
+        - ❌
+        - ✅
+        - ❌
+        - ❌
+      * - **browsertime-benchmark-speedometer3-mobile-geckoview**
+        - ❌
+        - ❌
+        - ❌
+        - ❌
+      * - **browsertime-benchmark-speedometer3-mobile-geckoview-nofis**
+        - ❌
+        - ❌
+        - ❌
+        - ❌
+
 
    .. list-table:: **test-android-hw-a55-14-0-aarch64-shippable/opt**
       :widths: 30 15 15 15 15
