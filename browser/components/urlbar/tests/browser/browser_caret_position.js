@@ -502,7 +502,7 @@ add_task(async function word_break_binding_in_mac() {
 });
 
 async function checkCaretMoves(key, pos, msg, win) {
-  checkIfKeyStartsQuery(key, false, win);
+  await checkIfKeyStartsQuery(key, false, win);
   Assert.equal(
     UrlbarTestUtils.isPopupOpen(win),
     false,
@@ -520,9 +520,9 @@ async function checkPopupOpens(key, win) {
   // Store current selection and check it doesn't change.
   let selectionStart = win.gURLBar.selectionStart;
   let selectionEnd = win.gURLBar.selectionEnd;
-  await UrlbarTestUtils.promisePopupOpen(win, () => {
-    checkIfKeyStartsQuery(key, true, win);
-  });
+  await UrlbarTestUtils.promisePopupOpen(win, () =>
+    checkIfKeyStartsQuery(key, true, win)
+  );
   Assert.equal(
     UrlbarTestUtils.getSelectedRowIndex(win),
     0,
@@ -541,16 +541,23 @@ async function checkPopupOpens(key, win) {
   await UrlbarTestUtils.promisePopupClose(win);
 }
 
-function checkIfKeyStartsQuery(key, shouldStartQuery, win) {
+async function checkIfKeyStartsQuery(key, shouldStartQuery, win) {
   let queryStarted = false;
+  let { promise: queryStartedPromise, resolve } = Promise.withResolvers();
   let queryListener = {
     onQueryStarted() {
       queryStarted = true;
+      resolve();
     },
   };
   win.gURLBar.controller.addListener(queryListener);
   EventUtils.synthesizeKey(key, {}, win);
   win.gURLBar.eventBufferer.replayDeferredEvents(false);
+  if (shouldStartQuery) {
+    // On the message path the onQueryStarted notification round-trips from the
+    // parent, so wait for it before asserting.
+    await queryStartedPromise;
+  }
   win.gURLBar.controller.removeListener(queryListener);
   Assert.equal(
     queryStarted,
