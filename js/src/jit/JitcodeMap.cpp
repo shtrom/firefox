@@ -13,7 +13,6 @@
 #include "jit/InlineScriptTree.h"
 #include "jit/JitRuntime.h"
 #include "jit/JitSpewer.h"
-#include "js/JitCodeAPI.h"
 #include "js/Prefs.h"  // JS::Prefs
 #include "js/ProfilingFrameIterator.h"
 #include "js/Vector.h"
