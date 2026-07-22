@@ -26,6 +26,7 @@ task-defaults:
         substitution-fields:
             - routes
             - scopes
+            - extra.notify
     fetches:
         toolchain:
             - android-sdk-linux
@@ -68,123 +69,123 @@ task-defaults:
         notify:
             by-level:
                 '3':
-                    slackText: 'https://firefox-ci-tc.services.mozilla.com/tasks/${status.taskId} | ${task.metadata.name} | ${task.metadata.source}'
+                    slackText: 'https://firefox-ci-tc.services.mozilla.com/tasks/${{status.taskId}} | ${{task.metadata.name}} | ${{task.metadata.source}}'
                     slackBlocks: |
                         [
-                          {
+                          {{
                             "type": "header",
-                            "text": {
+                            "text": {{
                               "type": "plain_text",
-                              "text": "firefox-android :firefox: ${task.metadata.name} :x:\n "
-                            }
-                          },
-                          {
+                              "text": "firefox-android :firefox: ${{task.metadata.name}} :x:\n "
+                            }}
+                          }},
+                          {{
                             "type": "table",
                             "rows": [
                               [
-                                {
+                                {{
                                   "type": "rich_text",
                                   "elements": [
-                                    {
+                                    {{
                                       "type": "rich_text_section",
                                       "elements": [
-                                        {
+                                        {{
                                           "type": "text",
                                           "text": "Task",
-                                          "style": { "bold": true }
-                                        }
+                                          "style": {{ "bold": true }}
+                                        }}
                                       ]
-                                    }
+                                    }}
                                   ]
-                                },
-                                {
+                                }},
+                                {{
                                   "type": "rich_text",
                                   "elements": [
-                                    {
+                                    {{
                                       "type": "rich_text_section",
                                       "elements": [
-                                        {
+                                        {{
                                           "type": "link",
-                                          "url": "https://firefox-ci-tc.services.mozilla.com/tasks/${status.taskId}",
+                                          "url": "https://firefox-ci-tc.services.mozilla.com/tasks/${{status.taskId}}",
                                           "text": "Taskcluster"
-                                        }
+                                        }}
                                       ]
-                                    }
+                                    }}
                                   ]
-                                }
+                                }}
                               ],
                               [
-                                {
+                                {{
                                   "type": "rich_text",
                                   "elements": [
-                                    {
+                                    {{
                                       "type": "rich_text_section",
                                       "elements": [
-                                        {
+                                        {{
                                           "type": "text",
                                           "text": "Owner",
-                                          "style": { "bold": true }
-                                        }
+                                          "style": {{ "bold": true }}
+                                        }}
                                       ]
-                                    }
+                                    }}
                                   ]
-                                },
-                                {
+                                }},
+                                {{
                                   "type": "raw_text",
-                                  "text": "${task.metadata.owner}"
-                                }
+                                  "text": "${{task.metadata.owner}}"
+                                }}
                               ],
                               [
-                                {
+                                {{
                                   "type": "rich_text",
                                   "elements": [
-                                    {
+                                    {{
                                       "type": "rich_text_section",
                                       "elements": [
-                                        {
+                                        {{
                                           "type": "text",
                                           "text": "Source",
-                                          "style": { "bold": true }
-                                        }
+                                          "style": {{ "bold": true }}
+                                        }}
                                       ]
-                                    }
+                                    }}
                                   ]
-                                },
-                                {
+                                }},
+                                {{
                                   "type": "rich_text",
                                   "elements": [
-                                    {
+                                    {{
                                       "type": "rich_text_section",
                                       "elements": [
-                                        {
+                                        {{
                                           "type": "link",
-                                          "url": "${task.payload.env.GECKO_BASE_REPOSITORY}/rev/${task.payload.env.GECKO_HEAD_REV}",
+                                          "url": "${{task.payload.env.GECKO_BASE_REPOSITORY}}/rev/${{task.payload.env.GECKO_HEAD_REV}}",
                                           "text": "Commit"
-                                        },
-                                        {
+                                        }},
+                                        {{
                                           "type": "text",
                                           "text": " "
-                                        },
-                                        {
+                                        }},
+                                        {{
                                           "type": "emoji",
                                           "name": "hg"
-                                        }
+                                        }}
                                       ]
-                                    }
+                                    }}
                                   ]
-                                }
+                                }}
                               ]
                             ]
-                          },
-                          {
+                          }},
+                          {{
                             "type": "context",
                             "elements": [
-                              {
+                              {{
                                 "type": "mrkdwn",
                                 "text": ":android: Refer to https://mozilla-hub.atlassian.net/wiki/x/SwCjZw for more information on baseline profiles."
-                              }
+                              }}
                             ]
-                          }
+                          }}
                         ]
                 'default': {}
 
