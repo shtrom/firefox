@@ -128,19 +128,12 @@ class TestInitializeVerticalTabs(MarionetteTestCase):
 
         self.check_tabs_toolbar_visibilities("horizontal")
 
-        # Make sure we ended up with sensible defaults. The flexible space is a
-        # special widget whose resolved id (customizableui-special-springN) isn't
-        # deterministic, so normalize it back to "spring" before comparing.
-        normalized_ids = [
-            "spring" if wid.startswith("customizableui-special-spring") else wid
-            for wid in horiz_tab_ids
-        ]
+        # Make sure we ended up with sensible defaults
         self.assertEqual(
-            normalized_ids,
+            horiz_tab_ids,
             [
                 "tabbrowser-tabs",
                 "new-tab-button",
-                "spring",
                 "alltabs-button",
                 "ai-window-toggle",
             ],
