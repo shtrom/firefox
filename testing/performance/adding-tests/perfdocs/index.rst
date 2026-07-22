@@ -74,7 +74,7 @@ For most new tests, **MozPerftest** is the recommended choice.
 Pick the flavor (xpcshell, mochitest, browsertime) that matches
 the level at which your code operates. For the full reference of
 ``perfMetadata`` fields, ``options``, and supported flavors, see the
-mozperftest `writing guide <writing.html>`_.
+MozPerftest `writing guide <writing.html>`_.
 
 
 MozPerftest: XPCShell Example
@@ -312,7 +312,7 @@ just lists the test files:
 
 By convention, browsertime perftest files are prefixed with ``perftest_``.
 
-For full documentation on the browsertime scripting API, see the
+For full documentation on the Browsertime scripting API, see the
 `sitespeed.io scripting docs <https://www.sitespeed.io/documentation/sitespeed.io/scripting/>`_.
 
 
@@ -344,10 +344,10 @@ In-tree examples:
     echo Running...
 
     # ${BROWSER_BINARY} is the package name on Android, or the path to the
-    # browser binary on desktop. Mozperftest verifies that it exists.
+    # browser binary on desktop. MozPerftest verifies that it exists.
     echo Binary: ${BROWSER_BINARY}
 
-    # The single perfMetrics line is what mozperftest parses for results.
+    # The single perfMetrics line is what MozPerftest parses for results.
     # Curly braces in the JSON must be doubled.
     echo 'perfMetrics: [{{"name": "metric1", "shouldAlert": false, "lowerIsBetter": false, "unit": "speed", "values": [1, 2, 3, 4]}}]'
 
@@ -468,7 +468,7 @@ In-tree examples (under
     );
 
 The wiring (manifest entry, taskcluster kind, alert thresholds, etc.) is
-larger than for mozperftest tests -- see the
+larger than for MozPerftest tests -- see the
 `contributing guide <contributing.html>`_ for adding new Raptor tests, then
 `Raptor documentation <raptor.html>`_ for the full reference.
 
@@ -574,14 +574,14 @@ Running Tests in CI
 To run your test in CI you need to add a task definition under the
 appropriate taskcluster ``kinds/`` directory:
 
-- mozperftest: `taskcluster/kinds/perftest/ <https://searchfox.org/mozilla-central/source/taskcluster/kinds/perftest>`_
+- MozPerftest: `taskcluster/kinds/perftest/ <https://searchfox.org/mozilla-central/source/taskcluster/kinds/perftest>`_
 - Raptor and browsertime: `taskcluster/kinds/browsertime/ <https://searchfox.org/mozilla-central/source/taskcluster/kinds/browsertime>`_
 
 This is what determines which platforms and configurations your test runs on.
 If you're not sure where your task belongs, see the `Getting Help`_ section
 below -- the perf team can help.
 
-For xpcshell and mochitest mozperftest tests, you may also need to update the
+For xpcshell and mochitest MozPerftest tests, you may also need to update the
 ``_TRY_MAPPING`` variable in
 `mozperftest/utils.py <https://searchfox.org/mozilla-central/search?q=_TRY_MAPPING&path=mozperftest>`_
 so CI can locate your test file.

@@ -316,7 +316,7 @@ What is coalescing?
 
 Coalescing is a term we use for when we schedule jobs to run on a given machine. When the load is high these jobs are placed in a queue and the longer the queue we skip over some of the jobs. This allows us to get results on more recent changesets faster.
 
-This affects talos numbers as we see regressions which show up over >1 changeset that is pushed. We have to manually fill in the coalesced jobs (including builds sometimes) to ensure we have the right changeset to blame for the regression.
+This affects Talos numbers as we see regressions which show up over >1 changeset that is pushed. We have to manually fill in the coalesced jobs (including builds sometimes) to ensure we have the right changeset to blame for the regression.
 
 Some things to be aware of:
 

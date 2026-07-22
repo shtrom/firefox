@@ -132,7 +132,7 @@ Performance Comparisons
 
 Comparing performance metrics across multiple try runs is an important step in the performance testing process. It's used to ensure that changes don't regress our metrics, to determine if a performance improvement is produced from a patch, and among other things, used to verify that a fix resolves a performance alert.
 
-We currently use PerfCompare for comparing performance numbers. Landing on PerfCompare, two search comparison workflows are available: Compare with a base or Compare over time. Compare with a base allows up to three new revisions to compare against a base revision. Although talos is set at the default, any other testing framework or harness can also be selected before clicking the Compare button. :ref:`You can find more information about using PerfCompare here <PerfCompare>`.
+We currently use PerfCompare for comparing performance numbers. Landing on PerfCompare, two search comparison workflows are available: Compare with a base or Compare over time. Compare with a base allows up to three new revisions to compare against a base revision. Although Talos is set at the default, any other testing framework or harness can also be selected before clicking the Compare button. :ref:`You can find more information about using PerfCompare here <PerfCompare>`.
 
  .. image:: ./perfcomparehomescreen.png
    :alt: PerfCompare Selection Interface for Revisions/Pushes to Compare

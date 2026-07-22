@@ -78,17 +78,17 @@ For **benchmark type tests** (i.e. speedometer, motionmark, etc.) Raptor doesn't
 
 Note, `Bug 1470450 <https://bugzilla.mozilla.org/show_bug.cgi?id=1470450>`_ is on file to add a debug mode to Raptor that will automatically grab the web extension console output and dump it to the terminal (if possible) that will make debugging much easier.
 
-Debugging TP6 and Killing the Mitmproxy Server
+Debugging TP6 and Killing the mitmproxy Server
 ----------------------------------------------
 
-Regarding debugging Raptor pageload tests that use Mitmproxy (i.e. tp6, gdocs). If Raptor doesn't finish naturally and doesn't stop the Mitmproxy tool, the next time you attempt to run Raptor it might fail out with this error:
+Regarding debugging Raptor pageload tests that use mitmproxy (i.e. tp6, gdocs). If Raptor doesn't finish naturally and doesn't stop the mitmproxy tool, the next time you attempt to run Raptor it might fail out with this error:
 
 ::
 
     INFO -  Error starting proxy server: OSError(48, 'Address already in use')
     NFO -  raptor-mitmproxy Aborting: mitmproxy playback process failed to start, poll returned: 1
 
-This means the Mitmproxy server was already running before, so it could not start up. In this case, you need to kill the Mitmproxy server processes, i.e:
+This means the mitmproxy server was already running before, so it could not start up. In this case, you need to kill the mitmproxy server processes, i.e:
 
 ::
 
@@ -103,7 +103,7 @@ Then just kill the first mitm process in the list and that's sufficient:
 
     mozilla-unified rwood$ kill 5439
 
-Now when you run Raptor again, the Mitmproxy server will be able to start.
+Now when you run Raptor again, the mitmproxy server will be able to start.
 
 Manual Debugging on Firefox Android
 -----------------------------------

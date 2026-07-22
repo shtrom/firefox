@@ -23,7 +23,7 @@ Performance Testing
 
 Performance tests are designed to catch performance regressions before they reach our
 end users. At this time, there is no unified approach for these types of tests,
-but `mozperftest </testing/perfdocs/mozperftest.html>`_ aims to provide this in the future.
+but `MozPerftest </testing/perfdocs/mozperftest.html>`_ aims to provide this in the future.
 
 For more detailed information about each test suite and project, see their documentation:
 
@@ -63,11 +63,11 @@ Here are the active PerfTest components/modules and their respective owners:
         - Owner: Sparky
         - Co-owners: Kash, Andrej
         - Description: All things involving: TaskCluster, Youtube Playback, Bitbar, Mobile Configs, etc...
-    * Mozperftest
+    * MozPerftest
         - Owner: Sparky
         - Co-owners: Kash, Andrej
         - Description: Testing framework used to run performance tests
-    * Mozperftest Tools
+    * MozPerftest Tools
         - Owner: Sparky
         - Co-owner: Kash, Andrej
         - Description: Various tools used by performance testing team
@@ -98,7 +98,7 @@ Here are the active PerfTest components/modules and their respective owners:
     * WebPageTest
         - Owner: Andrej
         - Co-owner: Sparky
-        - Description: A test running in the mozperftest framework used as a third party performance benchmark
+        - Description: A test running in the MozPerftest framework used as a third party performance benchmark
 
 You can additionally reach out to our team on
 the `#perftest <https://matrix.to/#/#perftest:mozilla.org>`_ channel on matrix

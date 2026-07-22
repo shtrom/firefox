@@ -54,7 +54,7 @@ Scenario Tests
 
 This test type runs browser tests that use idle pages for a specified amount of time to gather resource usage information such as power usage. The pages used for testing do not need to be recorded with mitmproxy.
 
-When creating a new scenario test, ensure that the `page-timeout` is greater than the `scenario-time` to make sure raptor doesn't exit the test before the scenario timer ends.
+When creating a new scenario test, ensure that the `page-timeout` is greater than the `scenario-time` to make sure Raptor doesn't exit the test before the scenario timer ends.
 
 This test type can also be used for specialized tests that require communication with the control-server to do things like sending the browser to the background for X minutes.
 

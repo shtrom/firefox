@@ -228,7 +228,7 @@ To run the selected tests with one or more web extensions installed in the test 
 
     ./mach try perf -q "'tp6" --extension uBlock0@raymondhill.net --extension {addon-guid}
 
-Each addon is resolved to its current ``.xpi`` on `addons.mozilla.org <https://addons.mozilla.org>`_ at submit time (so the exact version is pinned for the push), and downloaded into the test profile when the task runs. This works for any browsertime/raptor test (tp6, Speedometer 3, etc.) as well as mozperftest tests. The same option is available on local runs via ``./mach raptor --install-extension`` and ``./mach perftest --install-extension``, which additionally accept a direct ``.xpi`` URL or local path.
+Each addon is resolved to its current ``.xpi`` on `addons.mozilla.org <https://addons.mozilla.org>`_ at submit time (so the exact version is pinned for the push), and downloaded into the test profile when the task runs. This works for any Browsertime/Raptor test (tp6, Speedometer 3, etc.) as well as MozPerftest tests. The same option is available on local runs via ``./mach raptor --install-extension`` and ``./mach perftest --install-extension``, which additionally accept a direct ``.xpi`` URL or local path.
 
 
 .. _Running Alert Tests:
@@ -247,7 +247,7 @@ To run all the tests that triggered a given alert, use ``./mach try perf --alert
 Running Tasks of a Specific Test
 --------------------------------
 
-Using the ``--tests`` option, you can run all tasks that run a specific test. This is based on the test name that is used in the command that runs in the task. For raptor, this is the test specified by ``--test``. For talos, it can either be a specific test in a suite like ``tp5n`` from ``xperf``, or the suite ``xperf`` can be specified. For AWSY though, there are no specific tests that can be selected so the only option to select AWSY tests is to specify ``AWSY`` as the test.
+Using the ``--tests`` option, you can run all tasks that run a specific test. This is based on the test name that is used in the command that runs in the task. For Raptor, this is the test specified by ``--test``. For Talos, it can either be a specific test in a suite like ``tp5n`` from ``xperf``, or the suite ``xperf`` can be specified. For AWSY though, there are no specific tests that can be selected so the only option to select AWSY tests is to specify ``AWSY`` as the test.
 
 If it's used with ``--alert <NUM>``, only the tasks that run the specific test will be run on try. If it's used with ``--show-all`` or ``--full``, you will only see the tasks that run the specific test in the fuzzy interface. Finally, if it's used without either of those, then categories of the tests that were specified will be displayed in the fuzzy interface. For example, if ``--tests amazon`` is used, then categories like ``amazon linux firefox`` or ``amazon desktop`` will be displayed.
 

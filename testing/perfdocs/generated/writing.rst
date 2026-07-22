@@ -96,14 +96,14 @@ Here's an example of a call that will produce metrics::
     let speed = 12345;
     info("perfMetrics", JSON.stringify({ speed }));
 
-Existing Mochitest unit tests can be modified with these to be compatible with mozperftest, but note that some issues exist when doing this:
+Existing Mochitest unit tests can be modified with these to be compatible with MozPerftest, but note that some issues exist when doing this:
 
 - unittest issues with mochitest tests running on hardware
 - multiple configurations of a test running in a single manifest
 
 At the top of this document, you can find some information about the recommended approach for adding a new manifest dedicated to running performance tests.
 
-Locally, mozperftest uses ``./mach test`` to run your test. Always ensure that your test works in ``./mach test`` before attempting to run it through ``./mach perftest``. In CI, we use a custom "remote" run that runs Mochitest directly, skipping ``./mach test``.
+Locally, MozPerftest uses ``./mach test`` to run your test. Always ensure that your test works in ``./mach test`` before attempting to run it through ``./mach perftest``. In CI, we use a custom "remote" run that runs Mochitest directly, skipping ``./mach test``.
 
 If everything is setup correctly, running a performance test locally will be as simple as this::
 
@@ -140,7 +140,7 @@ For Mochitest Android tests in CI, everything that applies to desktop tests also
   toolchain:
       - linux64-hostutils
 
-Ensure that the ``runner.py`` script is also running from ``MOZ_FETCHES_DIR`` instead of the ``GECKO_PATH`` like other android MozPerftest tests. Everything else is the same as other android mozperftest tests. Note that ``--android-install-apk`` needs to be specified to point to the ``geckoview_example.apk`` that was obtained from the build task. Fenix is not currently supported in CI for Mochitest (see `bug 1902535 <https://bugzilla.mozilla.org/show_bug.cgi?id=1902535>`_).
+Ensure that the ``runner.py`` script is also running from ``MOZ_FETCHES_DIR`` instead of the ``GECKO_PATH`` like other android MozPerftest tests. Everything else is the same as other android MozPerftest tests. Note that ``--android-install-apk`` needs to be specified to point to the ``geckoview_example.apk`` that was obtained from the build task. Fenix is not currently supported in CI for Mochitest (see `bug 1902535 <https://bugzilla.mozilla.org/show_bug.cgi?id=1902535>`_).
 
 Custom Script
 -------------

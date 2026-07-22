@@ -4,7 +4,7 @@ Talos
 
 Talos is a cross-platform Python performance testing framework that is specifically for
 Firefox on desktop. New performance tests should be added to the newer framework
-`mozperftest </testing/perfdocs/mozperftest.html>`_ unless there are limitations
+`MozPerftest </testing/perfdocs/mozperftest.html>`_ unless there are limitations
 there (highly unlikely) that make it absolutely necessary to add them to Talos. Talos is
 named after the `bronze automaton from Greek myth <https://en.wikipedia.org/wiki/Talos>`_.
 
@@ -195,7 +195,7 @@ data. Tests that currently are startup tests are:
 Page load
 =========
 
-Many of the talos tests use the page loader to load a manifest of pages.
+Many of the Talos tests use the page loader to load a manifest of pages.
 These are tests that load a specific page and measure the time it takes
 to load the page, scroll the page, draw the page etc. In order to run a
 page load test, you need a manifest of pages to run. The manifest is
@@ -356,13 +356,13 @@ tp5pages
 ========
 
 Some tests make use of a set of 50 "real world" pages, known as the tp5n
-set. These pages are not part of the talos repository, but without them
+set. These pages are not part of the Talos repository, but without them
 the tests which use them won't run.
 
 -  To add these pages to your local setup, download the latest tp5n zip
    from `tooltool <https://mozilla-releng.net/tooltool/>`__, and extract
    it such that ``tp5n`` ends up as ``testing/talos/talos/tests/tp5n``.
-   You can also obtain it by running a talos test locally to get the zip
+   You can also obtain it by running a Talos test locally to get the zip
    into ``testing/talos/talos/tests/``, i.e ``./mach talos-test --suite damp``
 -  see also `tp5o <#tp5o>`_.
 

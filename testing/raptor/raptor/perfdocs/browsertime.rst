@@ -36,13 +36,13 @@ For example, here's a test on ``https://www.sitespeed.io`` using this custom tes
 
   ./mach raptor -t browsertime --browsertime-arg test_script=pageload --browsertime-arg browsertime.url=https://www.sitespeed.io --browsertime-arg iterations=3
 
-That test will perform 3 iterations of the given url. Note also that we can use simplified names to make use of test scripts that are built into raptor. You can use ``pageload``, ``interactive``, or provide a path to another test script.
+That test will perform 3 iterations of the given url. Note also that we can use simplified names to make use of test scripts that are built into Raptor. You can use ``pageload``, ``interactive``, or provide a path to another test script.
 
 This custom test is only available locally.
 
 Page-load tests
 ---------------
-There are two ways to run performance tests through browsertime listed below.
+There are two ways to run performance tests through Browsertime listed below.
 
 **Note that** ``./mach browsertime`` **should not be used when debugging performance issues with profiles as it does not do symbolication.**
 
@@ -102,7 +102,7 @@ Running Power Usage tests on Mobile
 -----------------------------------
 To gather power usage tests on mobile, you can pass ``--power-test`` to ``./mach raptor``. This will only work if the phone is hooked up to a `supported USB power meter <https://github.com/fqueze/usb-power-profiling/tree/5a6fc823ea4dd0553f810f29a04c43a3c9c49147?tab=readme-ov-file#supported-devices>`_.
 
-The data output is originally in picoWattHours, but are converted to microWattHours for the Perfherder Data JSON. The power usage is from the start of the pageload until the pageComplete check in browsertime completes.
+The data output is originally in picoWattHours, but are converted to microWattHours for the Perfherder Data JSON. The power usage is from the start of the pageload until the pageComplete check in Browsertime completes.
 
 Running on Google Chrome
 ------------------------
@@ -135,7 +135,7 @@ Or for Raptor-Browsertime (use ``chrome`` for desktop, and ``chrome-m`` for mobi
 Running on Safari Technology Preview
 ------------------------------------
 
-Safari Technology Preview comes bundled with an appropriate ``safaridriver`` binary, and browsertime (via selenium) automatically launches this.
+Safari Technology Preview comes bundled with an appropriate ``safaridriver`` binary, and Browsertime (via selenium) automatically launches this.
 
 You will need to have installed the most up-to-date application version either by updating an existing installation on your MacOS or downloading it from https://developer.apple.com/safari/resources/ and ensure you download the one appropriate to your MacOS version
 
@@ -159,7 +159,7 @@ third party extensions installed (similarly to talos-realworld-webextensions, wh
 party extensions installed).
 
 Any of the page-load tests can be executed locally with the preselected set of third party extensions installed by just
-adding to the base raptor command the additional ``--conditioned-profile settled-webext`` command line option.
+adding to the base Raptor command the additional ``--conditioned-profile settled-webext`` command line option.
 
 Launch amazon tp6 page-load test on Firefox Desktop:
 
@@ -241,7 +241,7 @@ Other methods for adding additional arguments are:
 Running Browsertime on Try
 --------------------------
 
-You can run all of our browsertime pageload tests through ``./mach try perf`` by selecting the ``Pageload`` category. We use chimera mode in these tests which means that both cold and warm pageload variants are running at the same time. There are a lot of other tests/categories available as well. Documentation about this tool can be found in :ref:`Mach Try Perf`.
+You can run all of our Browsertime pageload tests through ``./mach try perf`` by selecting the ``Pageload`` category. We use chimera mode in these tests which means that both cold and warm pageload variants are running at the same time. There are a lot of other tests/categories available as well. Documentation about this tool can be found in :ref:`Mach Try Perf`.
 
 For example, the following will select all ``Pageload`` categories to run on desktop:
 
@@ -283,7 +283,7 @@ Equivalent functionality to the ``--gecko-profile`` flag, i.e. something like ``
 Custom profiling with Raptor-Browsertime
 ----------------------------------------
 
-With browsertime you can now use the exposed start/stop commands of the gecko profiler **and** chrome trace. First, one needs to define the ``expose_browser_profiler`` and ``apps`` variables appropriately in the :searchfox:`test's configuration file <mozilla-central/rev/11d085b63cf74b35737d9c036be80434883dd3f6:testing/raptor/raptor/tests/benchmarks/speedometer-desktop.ini#9,12>`
+With Browsertime you can now use the exposed start/stop commands of the gecko profiler **and** chrome trace. First, one needs to define the ``expose_browser_profiler`` and ``apps`` variables appropriately in the :searchfox:`test's configuration file <mozilla-central/rev/11d085b63cf74b35737d9c036be80434883dd3f6:testing/raptor/raptor/tests/benchmarks/speedometer-desktop.ini#9,12>`
 
 If you want to run the test in CI then you will want to ensure you set the ``--extra-profiler-run`` flag in the mozharness extra options for where your test is defined in the :searchfox:`browsertime-desktop yaml file <mozilla-central/rev/2e06f92ba068e32a9a7213ee726e8171f91605c7:taskcluster/ci/test/browsertime-desktop.yml#404-406>`. Otherwise you can just pass the ``--extra-profiler-run`` flag locally in your command line.
 
@@ -342,7 +342,7 @@ The Simpleperf commands are implemented with Simpleperf's `app_profiler.py <http
 Upgrading Browsertime In-Tree
 -----------------------------
 
-To upgrade the browsertime version used in-tree you can run, then commit the changes made to ``package.json`` and ``package-lock.json``:
+To upgrade the Browsertime version used in-tree you can run, then commit the changes made to ``package.json`` and ``package-lock.json``:
 
 ::
 
@@ -350,7 +350,7 @@ To upgrade the browsertime version used in-tree you can run, then commit the cha
 
 Here is a sample URL that we can update to: https://github.com/sitespeedio/browsertime/tarball/89771a1d6be54114db190427dbc281582cba3d47
 
-To test the upgrade, run a raptor test locally (with and without visual-metrics ``--browsertime-visualmetrics`` if possible) and test it on try with at least one test on desktop and mobile.
+To test the upgrade, run a Raptor test locally (with and without visual-metrics ``--browsertime-visualmetrics`` if possible) and test it on try with at least one test on desktop and mobile.
 
 Updating Benchmark Tests
 ------------------------
@@ -370,7 +370,7 @@ If you're looking for the latest geckodriver being used there are two ways:
 
 If you're trying to test Browsertime with a new geckodriver, you can do either of the following:
 * Request a new geckodriver build in your try run (i.e. through ``./mach try perf --show-all``).
-* Trigger a new geckodriver in a try push, then trigger the browsertime tests which will then use the newly built version in the try push.
+* Trigger a new geckodriver in a try push, then trigger the Browsertime tests which will then use the newly built version in the try push.
 
 Comparing Before/After Browsertime Videos
 -----------------------------------------

@@ -1,10 +1,10 @@
-Developing in mozperftest
+Developing in MozPerftest
 =========================
 
 Architecture overview
 ---------------------
 
-`mozperftest` implements a mach command that is a thin wrapper on the
+`MozPerftest` implements a mach command that is a thin wrapper on the
 top of `runner.py`, which allows us to run the tool without having to go through
 a mach call. Command arguments are prepared in `argparser.py` and then made
 available for the runner.
@@ -101,7 +101,7 @@ In our example, adding the `EmailSender` layer will add two new options:
 Important layers
 ----------------
 
-**mozperftest** can be used to run performance tests against browsers using the
+**MozPerftest** can be used to run performance tests against browsers using the
 **browsertime** test layer. It leverages the `browsertime.js
 <https://www.sitespeed.io/documentation/browsertime/>`_ framework and provides
 a full integration into Mozilla's build and CI systems.
@@ -130,7 +130,7 @@ Landing patches
    It is mandatory for each patch to have a test. Any change without a test
    will be rejected.
 
-Before landing a patch for mozperftest, make sure you run `perftest-test`::
+Before landing a patch for MozPerftest, make sure you run `perftest-test`::
 
     % ./mach perftest-test
     => black [OK]

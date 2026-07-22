@@ -30,7 +30,7 @@ suites:
                 - description:
                       | This is the `JetStream <http://browserbench.org/JetStream/in-depth.html>`__
                         javascript benchmark taken verbatim and slightly modified to fit into
-                        our pageloader extension and talos harness.
+                        our pageloader extension and Talos harness.
             a11yr: >
                 - contact: :jamie and accessibility team
                 - source: `a11y.manifest <https://dxr.mozilla.org/mozilla-central/source/testing/talos/talos/tests/a11y>`__
@@ -565,7 +565,7 @@ suites:
                 - description:
                       | This is the `Kraken <https://wiki.mozilla.org/Kraken>`__ javascript
                         benchmark taken verbatim and slightly modified to fit into our
-                        pageloader extension and talos harness.
+                        pageloader extension and Talos harness.
                 - **Example Data**
                     * 0;ai-astar;100;95;98;102;101;99;97;98;98;102
                     * 1;audio-beat-detection;147;147;191;173;145;139;186;143;183;140
@@ -630,7 +630,7 @@ suites:
                         specifically on innertext-1.html, and possibly others in the future).
 
                       Style system performance test suite. The perf-reftest suite is a unique
-                      talos suite where each subtest loads two different test pages: a 'base'
+                      Talos suite where each subtest loads two different test pages: a 'base'
                       page (i.e. bloom_basic) and a 'reference' page (i.e. bloom_basic_ref),
                       and then compares each of the page load times against eachother to
                       determine the variance.
@@ -645,7 +645,7 @@ suites:
                       If you wish to see the individual 'base' and 'reference' page results
                       instead of just the reported difference, the 'base_replicates' and
                       'ref_replicates' can be found in the PERFHERDER_DATA log file output,
-                      and in the 'local.json' talos output file when running talos locally. In
+                      and in the 'local.json' Talos output file when running Talos locally. In
                       production, both of the page replicates are also archived in the
                       perfherder-data.json file. The perfherder-data.json file is archived
                       after each run in production, and can be found on the Treeherder Job
@@ -1288,6 +1288,6 @@ suites:
             v8_7: >
                 - description:
                       | This is the V8 (version 7) javascript benchmark taken verbatim and slightly modified
-                        to fit into our pageloader extension and talos harness. The previous version of this
+                        to fit into our pageloader extension and Talos harness. The previous version of this
                         test is V8 version 5 which was run on selective branches and operating systems.
                 - contact: No longer being maintained by any team/individual

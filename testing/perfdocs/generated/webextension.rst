@@ -13,7 +13,7 @@ WebExtension Page-Load Tests
 
 Page-load tests involve loading a specific web page and measuring the load performance (i.e. `time-to-first-non-blank-paint <https://wiki.mozilla.org/TestEngineering/Performance/Glossary#First_Non-Blank_Paint_.28fnbpaint.29>`_, first-contentful-paint, `dom-content-flushed <https://wiki.mozilla.org/TestEngineering/Performance/Glossary#DOM_Content_Flushed_.28dcf.29>`_).
 
-For page-load tests by default, instead of using live web pages for performance testing, Raptor uses a tool called `Mitmproxy <https://wiki.mozilla.org/TestEngineering/Performance/Raptor/Mitmproxy>`_. Mitmproxy allows us to record and playback test pages via a local Firefox proxy. The Mitmproxy recordings are stored on `tooltool <https://github.com/mozilla/build-tooltool>`_ and are automatically downloaded by Raptor when they are required for a test. Raptor uses mitmproxy via the :searchfox:`mozproxy <testing/mozbase/mozproxy>` package.
+For page-load tests by default, instead of using live web pages for performance testing, Raptor uses a tool called `mitmproxy <https://wiki.mozilla.org/TestEngineering/Performance/Raptor/Mitmproxy>`_. mitmproxy allows us to record and playback test pages via a local Firefox proxy. The mitmproxy recordings are stored on `tooltool <https://github.com/mozilla/build-tooltool>`_ and are automatically downloaded by Raptor when they are required for a test. Raptor uses mitmproxy via the :searchfox:`mozproxy <testing/mozbase/mozproxy>` package.
 
 There are two different types of Raptor page-load tests: warm page-load and cold page-load.
 
@@ -393,7 +393,7 @@ To use live pages instead of page recordings, just edit the :searchfox:`Raptor t
 
   use_live_pages = true
 
-With that setting, Raptor will not start the playback tool (i.e. Mitmproxy) and will not turn on the corresponding browser proxy, therefore forcing the test page to load live.
+With that setting, Raptor will not start the playback tool (i.e. mitmproxy) and will not turn on the corresponding browser proxy, therefore forcing the test page to load live.
 
 Running Raptor on Try
 ---------------------
@@ -500,7 +500,7 @@ When the Raptor jobs are finished, to view the gecko profiles:
 Recording Pages for Raptor Pageload Tests
 -----------------------------------------
 
-Raptor pageload tests ('tp6' and 'tp6m' suites) use the `Mitmproxy <https://mitmproxy.org/>`__ tool to record and play back page archives. For more information on creating new page playback archives, please see `Raptor and Mitmproxy <https://wiki.mozilla.org/TestEngineering/Performance/Raptor/Mitmproxy>`__.
+Raptor pageload tests ('tp6' and 'tp6m' suites) use the `mitmproxy <https://mitmproxy.org/>`__ tool to record and play back page archives. For more information on creating new page playback archives, please see `Raptor and mitmproxy <https://wiki.mozilla.org/TestEngineering/Performance/Raptor/Mitmproxy>`__.
 
 Performance Tuning for Android devices
 --------------------------------------

@@ -13,7 +13,7 @@ This document contains information about the metrics gathered in Browsertime tes
 Pageload Tests
 --------------
 
-For browsertime pageload tests, there is a limited set of metrics that we collect (which can easily be expanded). Currently we divide these into two sets of metrics: (i) visual metrics, and (ii) technical metrics. These are gathered through two types of tests called warm and cold pageload tests. We have combined these two into a single "Chimera" mode which you'll find in the Treeherder tasks.
+For Browsertime pageload tests, there is a limited set of metrics that we collect (which can easily be expanded). Currently we divide these into two sets of metrics: (i) visual metrics, and (ii) technical metrics. These are gathered through two types of tests called warm and cold pageload tests. We have combined these two into a single "Chimera" mode which you'll find in the Treeherder tasks.
 
 Below, you can find the process of how we run Warm, Cold, and Chimera pageload tests.
 

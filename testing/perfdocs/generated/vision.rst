@@ -1,7 +1,7 @@
 Vision
 ======
 
-The `mozperftest` project was created with the intention to replace all
+The `MozPerftest` project was created with the intention to replace all
 existing performance testing frameworks that exist in the mozilla central
 source tree with a single one, and make performance tests a standardized, first-class
 citizen, alongside mochitests and xpcshell tests.
@@ -13,13 +13,13 @@ their component, both locally and in the CI, exactly like how they would do with
 Historically, we have `Talos`, which  provided a lot of different tests, from
 micro-benchmarks to page load tests. From there we had `Raptor`, that was a
 fork of Talos, focusing on page loads only. Then, `mach browsertime` was added,
-which was a wrapper around the `browsertime` tool.
+which was a wrapper around the `Browsertime` tool.
 
 All those frameworks besides `mach browsertime` were mainly focusing on working
 well in the CI, and were hard to use locally. `mach browsertime` worked locally but
 not on all platforms and was specific to the Browsertime framework.
 
-`mozperftest` currently provides the `mach perftest` command, that will scan
+`MozPerftest` currently provides the `mach perftest` command, that will scan
 for all tests that are declared in ini files such as
 :searchfox:`netwerk/test/perf/perftest.toml` and
 registered under **PERFTESTS_MANIFESTS** in `moz.build` files such as
@@ -51,7 +51,7 @@ Next steps
 
 We want to rewrite all Talos and Raptor tests into perftest. For Raptor, we need
 to have the ability to use proxy records, which is a work in progress. From there,
-running a **raptor** test will be a simple, one-liner Browsertime script.
+running a **Raptor** test will be a simple, one-liner Browsertime script.
 
 For Talos, we'll need to refactor the existing micro-benchmarks into xpcshell tests,
 and if that does not suffice, create a new runner.

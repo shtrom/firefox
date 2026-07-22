@@ -1,8 +1,8 @@
 ===========
-Mozperftest
+MozPerftest
 ===========
 
-**Mozperftest** can be used to run performance tests.
+**MozPerftest** can be used to run performance tests.
 
 
 .. toctree::
@@ -13,7 +13,7 @@ Mozperftest
    developing
    vision
 
-The following documents all testing we have for mozperftest.
+The following documents all testing we have for MozPerftest.
 If the owner does not specify the Usage and Description, it's marked N/A.
 
 accessible/tests/browser/performance
