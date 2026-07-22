@@ -104,6 +104,15 @@ let AVAILABLE_PIP_OVERRIDES;
       },
     },
 
+    ceskatelevize: {
+      "https://ct24.ceskatelevize.cz/*": {
+        showHiddenTextTracks: true,
+      },
+      "https://player.ceskatelevize.cz/*": {
+        showHiddenTextTracks: true,
+      },
+    },
+
     cnbc: {
       "https://*.cnbc.com/*": {
         videoWrapperScriptPath: "video-wrappers/jwplayerWrapper.js",
