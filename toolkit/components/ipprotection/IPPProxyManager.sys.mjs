@@ -9,8 +9,6 @@ const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   IPPChannelFilter:
     "moz-src:///toolkit/components/ipprotection/IPPChannelFilter.sys.mjs",
-  IPPLifecycleHelper:
-    "moz-src:///toolkit/components/ipprotection/IPPLifecycleHelper.sys.mjs",
   IPPNetworkUtils:
     "moz-src:///toolkit/components/ipprotection/IPPNetworkUtils.sys.mjs",
   IPPNetworkErrorObserver:
@@ -52,13 +50,6 @@ XPCOMUtils.defineLazyPreferenceGetter(
   "retryAfter",
   "browser.ipProtection.guardian.retryAfter",
   500
-);
-
-XPCOMUtils.defineLazyPreferenceGetter(
-  lazy,
-  "attemptTimeout",
-  "browser.ipProtection.guardian.attemptTimeout",
-  Temporal.Duration.from({ seconds: 10 }).total("milliseconds")
 );
 
 export const ERRORS = Object.freeze({
@@ -652,29 +643,15 @@ class IPPProxyManagerSingleton extends EventTarget {
     let delay = lazy.retryAfter;
     while (!abortSignal.aborted) {
       let result;
-      const attemptController = new AbortController();
-      const attemptTimer = lazy.setTimeout(
-        () => attemptController.abort(ERRORS.TIMEOUT),
-        lazy.attemptTimeout
-      );
-      const attemptSignal = AbortSignal.any([
-        abortSignal,
-        attemptController.signal,
-      ]);
       try {
-        result = await this.#getPassAndUsage(attemptSignal);
+        result = await this.#getPassAndUsage(abortSignal);
       } catch (e) {
         if (abortSignal.aborted) {
           return null;
         }
-        // A per-attempt timeout (attemptSignal aborted) or an offline error is
-        // transient: back off and retry within the overall budget instead of
-        // failing the whole rotation.
-        if (!attemptSignal.aborted && !lazy.IPPNetworkUtils.isOffline) {
+        if (!lazy.IPPNetworkUtils.isOffline) {
           throw e;
         }
-      } finally {
-        lazy.clearTimeout(attemptTimer);
       }
       if (result && !(result.status >= 500 && result.status <= 599)) {
         return result;
@@ -716,12 +693,11 @@ class IPPProxyManagerSingleton extends EventTarget {
       if (!this.#connection?.active) {
         return;
       }
-      if (lazy.IPPLifecycleHelper.isSuspended) {
-        // Asleep/backgrounded: the wake handler will rotate once network is back.
-        return;
-      }
       lazy.logConsole.debug(`Starting scheduled ProxyPass rotation`);
-      await this.rotateProxyPass();
+      let newPass = await this.rotateProxyPass();
+      if (newPass) {
+        this.#schedulePassRotation(newPass);
+      }
     }, msUntilRotation);
   }
 
@@ -791,9 +767,6 @@ class IPPProxyManagerSingleton extends EventTarget {
     }
     lazy.logConsole.debug("Successfully rotated token!");
     this.#pass = pass;
-    // The freshly rotated token supersedes any pending scheduled rotation;
-    // cancel it and schedule the next one for this pass.
-    this.#schedulePassRotation(pass);
     resolve(pass);
     return promise;
   }
