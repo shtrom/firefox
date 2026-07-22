@@ -28,7 +28,7 @@
 }
 
 /* Hide all conditional elements by default. */
-:is([when-connection], [when-customroot], [when-mixedcontent], [when-ciphers], [when-httpsonlystatus]) {
+:is([when-connection], [when-customroot], [when-tlskeylogging], [when-mixedcontent], [when-ciphers], [when-httpsonlystatus]) {
   display: none;
 }
 
@@ -63,6 +63,7 @@
 
 /* Show the right elements for the right connection states. */
 .site-information-popup[customroot] [when-customroot],
+.site-information-popup[tlskeylogging] [when-tlskeylogging],
 .site-information-popup[connection=not-secure] [when-connection~=not-secure],
 .site-information-popup[connection=secure-cert-user-overridden] [when-connection~=secure-cert-user-overridden],
 .site-information-popup[connection=secure-ev] [when-connection~=secure-ev],
@@ -265,7 +266,7 @@
   list-style-image: url(chrome://global/skin/icons/security.svg);
 }
 
-.site-information-popup[connection^="secure"][customroot] .identity-popup-security-connection {
+.site-information-popup[connection^="secure"]:is([customroot], [tlskeylogging]) .identity-popup-security-connection {
   list-style-image: url(chrome://global/skin/icons/security-custom-root.svg);
 }
 
@@ -1076,7 +1077,7 @@
     list-style-image: url(chrome://global/skin/icons/security.svg);
   }
 
-  #trustpanel-popup[connection^="secure"][customroot] & {
+  #trustpanel-popup[connection^="secure"]:is([customroot], [tlskeylogging]) & {
     list-style-image: url(chrome://global/skin/icons/security-custom-root.svg);
   }
 

@@ -520,6 +520,7 @@ class TrustPanel {
   async #updatePopup() {
     this.#popup.setAttribute("connection", this.#connectionState());
     this.#popup.toggleAttribute("customroot", this.#hasCustomRoot());
+    this.#popup.toggleAttribute("tlskeylogging", this.#tlsKeyLoggingEnabled());
     this.#popup.setAttribute(
       "tracking-protection",
       this.#trackingProtectionStatus()
@@ -828,6 +829,7 @@ class TrustPanel {
       this.#updateAttribute(element, "mixedcontent", mixedcontent);
       this.#updateAttribute(element, "isbroken", this.#isBrokenConnection);
       element.toggleAttribute("customroot", this.#hasCustomRoot());
+      element.toggleAttribute("tlskeylogging", this.#tlsKeyLoggingEnabled());
       this.#updateAttribute(element, "httpsonlystatus", httpsOnlyStatus);
     }
 
@@ -1118,6 +1120,20 @@ class TrustPanel {
       !this.#isCertUserOverridden &&
       this.#secInfo &&
       !this.#secInfo.isBuiltCertChainRootBuiltInRoot
+    );
+  }
+
+  /**
+   * Returns true if TLS key logging has been enabled via the environment
+   * variable "SSLKEYLOGFILE".
+   * Can only be true for secure connections and where there isn't a
+   * user-added error override.
+   */
+  #tlsKeyLoggingEnabled() {
+    return (
+      Services.env.exists("SSLKEYLOGFILE") &&
+      this.#isSecureConnection &&
+      !this.#isCertUserOverridden
     );
   }
 

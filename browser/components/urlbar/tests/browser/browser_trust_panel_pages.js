@@ -5,6 +5,10 @@
  * and verifies that the shield is only shown when content blocking can deal
  * with the specific variant. */
 
+ChromeUtils.defineESModuleGetters(this, {
+  AppConstants: "resource://gre/modules/AppConstants.sys.mjs",
+});
+
 const ICONS = {
   active: "chrome://browser/skin/trust-icon-active.svg",
   insecure: "chrome://browser/skin/trust-icon-insecure.svg",
@@ -25,6 +29,8 @@ const TESTS = [
   {
     url: "https://example.com",
     icon: ICONS.active,
+    // TODO(bug 2019135): this should be ICONS.secure (when TLS key logging is
+    // not enabled)
     connectionIcon: ICONS.secureCustomRoot,
     descriptionSection: "trustpanel-header-enabled",
   },
@@ -77,49 +83,67 @@ add_task(async function () {
   });
 
   for (let testData of TESTS) {
-    info(`Testing state of for ${testData.url}`);
-
-    let pageLoaded;
-    let tab = await BrowserTestUtils.openNewForegroundTab(
-      gBrowser,
-      () => {
-        gBrowser.selectedTab = BrowserTestUtils.addTab(gBrowser, testData.url);
-        let browser = gBrowser.selectedBrowser;
-        if (testData.isErrorPage) {
-          pageLoaded = BrowserTestUtils.waitForErrorPage(browser);
-        } else {
-          pageLoaded = BrowserTestUtils.browserLoaded(browser);
-        }
-      },
-      false
-    );
-    await pageLoaded;
-
-    Assert.equal(
-      fetchIconUrl(tab.ownerDocument, "trust-icon"),
-      testData.icon,
-      `Trustpanel urlbar icon is correct for ${testData.url}`
-    );
-
-    await UrlbarTestUtils.openTrustPanel(window);
-    Assert.equal(
-      fetchIconUrl(tab.ownerDocument, "trustpanel-connection-icon"),
-      testData.connectionIcon,
-      `Trustpanel connection icon is correct for ${testData.url}`
-    );
-
-    Assert.ok(
-      BrowserTestUtils.isVisible(
-        tab.ownerDocument.querySelector(
-          `label[data-l10n-id=${testData.descriptionSection}]`
-        )
-      ),
-      "Expected description section is visible"
-    );
-    await UrlbarTestUtils.closeTrustPanel(window);
-
-    BrowserTestUtils.removeTab(tab);
+    await runTestCase(testData, true);
+    await runTestCase(testData, false);
   }
 
   await extension.unload();
 });
+
+async function runTestCase(testData, withTLSKeyLogging) {
+  info(
+    `Testing state of for ${testData.url} (${withTLSKeyLogging ? "with" : "without"} TLS key logging environment variable)`
+  );
+
+  if (withTLSKeyLogging) {
+    // Setting the environment variable at this point should not actually
+    // enable TLS key logging, because NSS has already been initialized. This
+    // just makes the front-end think it has.
+    Services.env.set("SSLKEYLOGFILE", "nonexistent");
+  }
+
+  let pageLoaded;
+  let tab = await BrowserTestUtils.openNewForegroundTab(
+    gBrowser,
+    () => {
+      gBrowser.selectedTab = BrowserTestUtils.addTab(gBrowser, testData.url);
+      let browser = gBrowser.selectedBrowser;
+      if (testData.isErrorPage) {
+        pageLoaded = BrowserTestUtils.waitForErrorPage(browser);
+      } else {
+        pageLoaded = BrowserTestUtils.browserLoaded(browser);
+      }
+    },
+    false
+  );
+  await pageLoaded;
+
+  Assert.equal(
+    fetchIconUrl(tab.ownerDocument, "trust-icon"),
+    testData.icon,
+    `Trustpanel urlbar icon is correct for ${testData.url}`
+  );
+
+  await UrlbarTestUtils.openTrustPanel(window);
+  Assert.equal(
+    fetchIconUrl(tab.ownerDocument, "trustpanel-connection-icon"),
+    testData.connectionIcon,
+    `Trustpanel connection icon is correct for ${testData.url}`
+  );
+
+  Assert.ok(
+    BrowserTestUtils.isVisible(
+      tab.ownerDocument.querySelector(
+        `label[data-l10n-id=${testData.descriptionSection}]`
+      )
+    ),
+    "Expected description section is visible"
+  );
+  await UrlbarTestUtils.closeTrustPanel(window);
+
+  BrowserTestUtils.removeTab(tab);
+
+  if (withTLSKeyLogging) {
+    Services.env.set("SSLKEYLOGFILE", "");
+  }
+}
