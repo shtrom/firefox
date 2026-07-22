@@ -21,6 +21,7 @@ transforms:
 
 tasks-from:
     - android.yml
+    - android-emulator.yml
     - linux.yml
     - macosx.yml
     - windows11-24h2.yml
