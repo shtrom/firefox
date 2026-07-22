@@ -249,7 +249,7 @@ static vpx_codec_err_t validate_config(vpx_codec_alg_priv_t *ctx,
 
   if (cfg->ts_number_layers > 1) {
     unsigned int i;
-    RANGE_CHECK_HI(cfg, ts_periodicity, 16);
+    RANGE_CHECK(cfg, ts_periodicity, 1, 16);
 
     for (i = 1; i < cfg->ts_number_layers; ++i) {
       if (cfg->ts_target_bitrate[i] <= cfg->ts_target_bitrate[i - 1] &&
@@ -263,7 +263,9 @@ static vpx_codec_err_t validate_config(vpx_codec_alg_priv_t *ctx,
         ERROR("ts_rate_decimator factors are not powers of 2");
     }
 
-    RANGE_CHECK_HI(cfg, ts_layer_id[i], cfg->ts_number_layers - 1);
+    for (i = 0; i < cfg->ts_periodicity; ++i) {
+      RANGE_CHECK_HI(cfg, ts_layer_id[i], cfg->ts_number_layers - 1);
+    }
   }
 
 #if (CONFIG_REALTIME_ONLY & CONFIG_ONTHEFLY_BITPACKING)
@@ -1045,19 +1047,10 @@ static vpx_codec_err_t vp8e_encode(vpx_codec_alg_priv_t *ctx,
 
       res = image2yuvconfig(img, &sd);
 
-      if (sd.y_width != ctx->cfg.g_w || sd.y_height != ctx->cfg.g_h) {
-        /* from vpx_encoder.h for g_w/g_h:
-           "Note that the frames passed as input to the encoder must have this
-           resolution"
-        */
-        ctx->base.err_detail = "Invalid input frame resolution";
-        res = VPX_CODEC_INVALID_PARAM;
-      } else {
-        if (vp8_receive_raw_frame(ctx->cpi, ctx->next_frame_flag | lib_flags,
-                                  &sd, dst_time_stamp, dst_end_time_stamp)) {
-          VP8_COMP *cpi = (VP8_COMP *)ctx->cpi;
-          res = update_error_state(ctx, &cpi->common.error);
-        }
+      if (vp8_receive_raw_frame(ctx->cpi, ctx->next_frame_flag | lib_flags, &sd,
+                                dst_time_stamp, dst_end_time_stamp)) {
+        VP8_COMP *cpi = (VP8_COMP *)ctx->cpi;
+        res = update_error_state(ctx, &cpi->common.error);
       }
 
       /* reset for next frame */
@@ -1185,7 +1178,9 @@ static vpx_codec_err_t vp8e_set_reference(vpx_codec_alg_priv_t *ctx,
     YV12_BUFFER_CONFIG sd;
 
     image2yuvconfig(&frame->img, &sd);
-    vp8_set_reference(ctx->cpi, frame->frame_type, &sd);
+    if (vp8_set_reference(ctx->cpi, frame->frame_type, &sd)) {
+      return VPX_CODEC_INVALID_PARAM;
+    }
     return VPX_CODEC_OK;
   } else {
     return VPX_CODEC_INVALID_PARAM;
@@ -1201,7 +1196,9 @@ static vpx_codec_err_t vp8e_get_reference(vpx_codec_alg_priv_t *ctx,
     YV12_BUFFER_CONFIG sd;
 
     image2yuvconfig(&frame->img, &sd);
-    vp8_get_reference(ctx->cpi, frame->frame_type, &sd);
+    if (vp8_get_reference(ctx->cpi, frame->frame_type, &sd)) {
+      return VPX_CODEC_INVALID_PARAM;
+    }
     return VPX_CODEC_OK;
   } else {
     return VPX_CODEC_INVALID_PARAM;
