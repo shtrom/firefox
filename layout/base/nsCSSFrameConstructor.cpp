@@ -6716,6 +6716,10 @@ static bool CanRemoveWrapperPseudoForChildRemoval(nsIFrame* aFrame,
   if (!IsOnlyMeaningfulChildOfWrapperPseudo(aFrame, aParent)) {
     return false;
   }
+  if (aParent->GetPrevContinuation() || aParent->GetNextContinuation()) {
+    // If our parent is fragmented we're not really the only meaningful child.
+    return false;
+  }
   if (aParent->IsRubyBaseContainerFrame()) {
     // We can't remove the first ruby base container of a ruby frame unless
     // it has no siblings. See CreateNeededPseudoSiblings.
