@@ -4053,6 +4053,11 @@ pref("extensions.formautofill.creditCards.heuristics.fathom.confidenceThreshold"
 // This is Only for testing! Set the confidence value (> 0 && <= 1) after a field is identified by fathom
 pref("extensions.formautofill.creditCards.heuristics.fathom.testConfidence", "0");
 
+// Passport autofill is still under development; keep it off by default. See
+// extensions.formautofill.addresses.supported above for the "supported" values.
+pref("extensions.formautofill.passports.supported", "off");
+pref("extensions.formautofill.passports.enabled", false);
+
 pref("extensions.formautofill.loglevel", "Warn");
 
 // Temporary prefs that we will be removed if the telemetry data (added in Fx123) does not show any problems with the new heuristics.

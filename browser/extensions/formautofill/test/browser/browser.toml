@@ -150,6 +150,11 @@ skip-if = [
   "os == 'win' && os_version == '11.26200' && arch == 'x86_64'", # Bug 1924248
 ]
 
+["browser_passport_capture_doorhanger.js"]
+skip-if = [
+  "true", # Bug 2056496: enables passports, which opens the Application Services autofill store and crashes at LateWriteChecks on shutdown until the store's shutdown() lands
+]
+
 ["browser_previewFormFields.js"]
 
 ["browser_privacyPreferences.js"]

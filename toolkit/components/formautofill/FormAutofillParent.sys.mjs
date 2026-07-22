@@ -43,6 +43,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   FormAutofillPreferences:
     "resource://autofill/FormAutofillPreferences.sys.mjs",
   FormAutofillPrompter: "resource://autofill/FormAutofillPrompter.sys.mjs",
+  PassportRecord: "resource://gre/modules/shared/PassportRecord.sys.mjs",
   FirefoxRelay: "resource://gre/modules/FirefoxRelay.sys.mjs",
   LoginHelper: "resource://gre/modules/LoginHelper.sys.mjs",
 });
@@ -968,8 +969,43 @@ export class FormAutofillParent extends JSWindowActorParent {
     };
   }
 
-  async _onPassportSubmit() {
-    return false;
+  async _onPassportSubmit(passport, browser) {
+    if (!FormAutofill.isAutofillTypeEnabled(AutofillDataTypes.PASSPORT)) {
+      return false;
+    }
+
+    // Normalize the captured record to the shape the doorhanger expects. A form
+    // may capture the name as split parts (given/additional/family) instead of
+    // a combined `passport-name`, so merge them for the single name field.
+    // Conversely, a date may be captured as a single combined field instead of
+    // separate month/day/year parts, so split it for the per-part date inputs.
+    try {
+      lazy.PassportRecord.mergeNameComponents(passport.record);
+      lazy.PassportRecord.splitDateComponents(passport.record);
+    } catch (e) {
+      lazy.log.warn("Failed to normalize the captured passport record: ", e);
+      return false;
+    }
+
+    const storage = lazy.gFormAutofillStorage.passports;
+
+    // If the passport already exists in storage, don't bother showing the
+    // prompt. Passports are deduped by passport number.
+    const matchRecord = (await storage.getMatchRecords(passport.record).next())
+      .value;
+    if (matchRecord) {
+      storage.notifyUsed(matchRecord.guid);
+      return false;
+    }
+
+    return async () => {
+      await lazy.FormAutofillPrompter.promptToSavePassport(
+        browser,
+        storage,
+        passport.flowId,
+        { newRecord: passport.record }
+      );
+    };
   }
 
   _shouldShowSaveAddressPrompt(record) {
