@@ -290,6 +290,10 @@ add_task(async function test_update() {
 
   const sandbox = sinon.createSandbox();
   try {
+    // Updates are disabled for testing, so pretend this build can update.
+    sandbox
+      .stub(UpdateService.prototype, "canUsuallyCheckForUpdates")
+      .get(() => true);
     sandbox
       .stub(UpdateService.prototype, "currentState")
       .get(() => Ci.nsIApplicationUpdateService.STATE_IDLE);
@@ -317,6 +321,10 @@ add_task(async function test_update_in_actions_mode() {
   const sandbox = sinon.createSandbox();
   let currentState = Ci.nsIApplicationUpdateService.STATE_IDLE;
   sandbox.stub(UpdateService.prototype, "currentState").get(() => currentState);
+  // Updates are disabled for testing, so pretend this build can update.
+  sandbox
+    .stub(UpdateService.prototype, "canUsuallyCheckForUpdates")
+    .get(() => true);
 
   try {
     await enterActionsMode();
@@ -450,6 +458,68 @@ add_task(async function test_searchMode() {
 
   BrowserTestUtils.removeTab(tab);
   BrowserTestUtils.removeTab(viewSourceTab);
+});
+
+add_task(async function test_searchMode_unsupported_action() {
+  ActionsProviderQuickActions.addAction("unsupportedsearchaction", {
+    commands: ["unsupportedsearch"],
+    label: "quickactions-downloads2",
+    isUnsupported: () => true,
+    onPick: () => {},
+  });
+  ActionsProviderQuickActions.addAction("supportedsearchaction", {
+    commands: ["unsupportedsearchsupported"],
+    label: "quickactions-downloads2",
+    onPick: () => {},
+  });
+
+  await enterActionsMode();
+
+  await UrlbarTestUtils.promiseAutocompleteResultPopup({
+    window,
+    value: "unsupportedsearch",
+  });
+
+  await assertAction("supportedsearchaction");
+  Assert.ok(
+    !window.document.querySelector(
+      `.urlbarView-action-btn[data-action=unsupportedsearchaction]`
+    ),
+    "Unsupported action is not shown in the actions search mode list"
+  );
+
+  await exitActionsMode();
+
+  ActionsProviderQuickActions.removeAction("unsupportedsearchaction");
+  ActionsProviderQuickActions.removeAction("supportedsearchaction");
+});
+
+add_task(async function test_searchMode_inactive_action() {
+  ActionsProviderQuickActions.addAction("inactivesearchaction", {
+    commands: ["inactivesearch"],
+    label: "quickactions-downloads2",
+    isInactive: () => true,
+    onPick: () => {},
+  });
+
+  await enterActionsMode();
+
+  await UrlbarTestUtils.promiseAutocompleteResultPopup({
+    window,
+    value: "inactivesearch",
+  });
+
+  await assertAction("inactivesearchaction");
+  Assert.ok(
+    window.document
+      .querySelector(`.urlbarView-action-btn[data-action=inactivesearchaction]`)
+      .hasAttribute("disabled"),
+    "Inactive action is shown but disabled in the actions search mode list"
+  );
+
+  await exitActionsMode();
+
+  ActionsProviderQuickActions.removeAction("inactivesearchaction");
 });
 
 let showAction = async testFun => {
