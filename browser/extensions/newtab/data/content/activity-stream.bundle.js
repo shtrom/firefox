@@ -7480,6 +7480,7 @@ const INITIAL_STATE = {
   },
   SectionsLayout: {
     configs: {},
+    orderings: {},
   },
   Weather: {
     initialized: false,
@@ -8405,7 +8406,11 @@ function Wallpapers(prevState = INITIAL_STATE.Wallpapers, action) {
 function SectionsLayout(prevState = INITIAL_STATE.SectionsLayout, action) {
   switch (action.type) {
     case actionTypes.SECTIONS_LAYOUT_UPDATE:
-      return { ...prevState, configs: action.data.configs };
+      return {
+        ...prevState,
+        configs: action.data.configs,
+        orderings: action.data.orderings ?? prevState.orderings,
+      };
     default:
       return prevState;
   }

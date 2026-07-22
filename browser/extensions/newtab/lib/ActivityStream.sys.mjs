@@ -990,10 +990,10 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
-    "discoverystream.sections.layout",
+    "discoverystream.sections.ordering",
     {
-      title: "CSV string of section layouts configs",
-      value: "7-double-row-2-ad",
+      title: "Name of the sections ordering to render from Remote Settings",
+      value: "",
     },
   ],
   [

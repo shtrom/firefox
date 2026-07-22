@@ -7,6 +7,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   AdsClient: "resource://newtab/lib/AdsClient.sys.mjs",
   ContextId: "moz-src:///browser/modules/ContextId.sys.mjs",
   SectionsLayoutManager: "resource://newtab/lib/SectionsLayoutFeed.sys.mjs",
+  maskLayoutAds: "resource://newtab/lib/SectionsLayoutFeed.sys.mjs",
   NimbusFeatures: "resource://nimbus/ExperimentAPI.sys.mjs",
   NewTabUtils: "resource://gre/modules/NewTabUtils.sys.mjs",
   ObliviousHTTP: "resource://gre/modules/ObliviousHTTP.sys.mjs",
@@ -122,6 +123,9 @@ const PREF_PRIVATE_PING_ENABLED = "telemetry.privatePing.enabled";
 const PREF_SURFACE_ID = "telemetry.surfaceId";
 const PREF_CLIENT_LAYOUT_ENABLED =
   "discoverystream.sections.clientLayout.enabled";
+// Selection key for the RS sections-ordering: "" = off (use Merino), otherwise
+// the name of the sections-ordering record to render.
+const PREF_SECTIONS_ORDERING = "discoverystream.sections.ordering";
 
 let getHardcodedLayout;
 
@@ -273,13 +277,90 @@ export class DiscoveryStreamFeed {
     );
   }
 
-  get sectionLayoutConfig() {
+  // The selected sections-ordering key. "" means the RS ordering is off and
+  // Merino supplies the layout.
+  get sectionsOrderingKey() {
     const prefs = this.store.getState().Prefs.values;
-    const trainhopConfig = prefs?.trainhopConfig || {};
-    const sectionlayoutPrefs = prefs?.["discoverystream.sections.layout"];
-    const layoutString =
-      trainhopConfig?.clientLayout?.layoutConfig || sectionlayoutPrefs;
-    return layoutString.split(",").map(s => s.trim());
+    return (
+      prefs.trainhopConfig?.sections?.ordering ??
+      prefs[PREF_SECTIONS_ORDERING] ??
+      ""
+    );
+  }
+
+  /**
+   * Choose the layout to apply across the whole page, or null to fall back to
+   * Merino. The clientLayout override is applied first if enabled; else a usable
+   * Remote Settings ordering; else the hard-coded default if Merino has a gap.
+   *
+   * @param {object[]} sections The page's sections.
+   * @returns {object[]|null} Layout records to apply across sections, else null.
+   */
+  _resolveLayoutOverride(sections) {
+    const prefs = this.store.getState().Prefs.values;
+    const { configs = {}, orderings = {} } =
+      this.store.getState().SectionsLayout || {};
+
+    const forceClientLayout =
+      prefs.trainhopConfig?.clientLayout?.enabled ||
+      prefs[PREF_CLIENT_LAYOUT_ENABLED];
+    if (forceClientLayout) {
+      return lazy.SectionsLayoutManager.DEFAULT_SECTION_LAYOUT;
+    }
+
+    const key = this.sectionsOrderingKey;
+    const names = key ? orderings[key] : null;
+    if (names?.length && names.every(name => configs[name])) {
+      return names.map(name => configs[name]);
+    }
+
+    // If even one section from Merino is missing a layout, replace the whole
+    // page with the hard-coded default rather than filling only the gaps: mixing
+    // default and Merino layouts is an uncontrolled combination that could look
+    // broken, so we fall back to a complete layout.
+    if (sections.some(section => !section.layout)) {
+      return lazy.SectionsLayoutManager.DEFAULT_SECTION_LAYOUT;
+    }
+
+    return null;
+  }
+
+  /**
+   * Assign each section its layout and apply the ad mask. The first section gets
+   * the override's first layout; later sections cycle through the rest. Leaves
+   * Merino's layouts untouched when no override applies.
+   *
+   * @param {object[]} sections Sections to lay out; mutated in place.
+   */
+  _applySectionLayouts(sections) {
+    if (!sections.length) {
+      return;
+    }
+
+    const override = this._resolveLayoutOverride(sections);
+    if (!override) {
+      return;
+    }
+
+    const [topLayout] = override;
+    // A single-entry override applies to the top section while the default cycle
+    // fills the rest, so a top-section experiment doesn't restate the defaults.
+    const cycleLayouts =
+      override.length === 1
+        ? lazy.SectionsLayoutManager.DEFAULT_SECTION_LAYOUT.slice(1)
+        : override.slice(1);
+
+    sections.sort((a, b) => a.receivedRank - b.receivedRank);
+    // Pin the first layout to the top section and exclude it from the cycle: it's
+    // typically a distinct, larger "headline" layout, so repeating it partway
+    // down the page would look out of place. The rest cycle through cycleLayouts.
+    sections.forEach((section, index) => {
+      const layout =
+        index === 0
+          ? topLayout
+          : cycleLayouts[(index - 1) % cycleLayouts.length];
+      section.layout = lazy.maskLayoutAds(layout, section);
+    });
   }
 
   setupConfig(isStartup = false) {
@@ -1747,9 +1828,6 @@ export class DiscoveryStreamFeed {
         }));
 
         if (sectionsEnabled) {
-          const useClientLayout =
-            prefs.trainhopConfig?.clientLayout?.enabled ||
-            prefs[PREF_CLIENT_LAYOUT_ENABLED];
           const dailyBriefEnabled =
             prefs.trainhopConfig?.dailyBriefing?.enabled ||
             this.store.getState().Prefs.values[
@@ -1813,29 +1891,7 @@ export class DiscoveryStreamFeed {
             }
           }
 
-          if (useClientLayout || sections.some(s => !s.layout)) {
-            sections.sort((a, b) => a.receivedRank - b.receivedRank);
-
-            const rsConfigs =
-              this.store.getState().SectionsLayout?.configs || {};
-
-            sections.forEach((section, index) => {
-              if (useClientLayout || !section.layout) {
-                // is there a config that exists in remote settings for the selected index,
-                // otherwise we rotate through default layouts
-                const sectionLayoutName = this.sectionLayoutConfig[index] || "";
-                if (sectionLayoutName && rsConfigs[sectionLayoutName]) {
-                  section.layout = rsConfigs[sectionLayoutName];
-                } else {
-                  section.layout =
-                    lazy.SectionsLayoutManager.DEFAULT_SECTION_LAYOUT[
-                      index %
-                        lazy.SectionsLayoutManager.DEFAULT_SECTION_LAYOUT.length
-                    ];
-                }
-              }
-            });
-          }
+          this._applySectionLayouts(sections);
         }
 
         const { data: scoredItems, personalized } =
