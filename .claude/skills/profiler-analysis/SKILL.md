@@ -28,7 +28,7 @@ If the URL is a `profiler.firefox.com/from-file/...` or `profiler.firefox.com/fr
 
 Do not print commands for the user to run, execute them and interpret the results.
 
-Before giving the user a result or summary, always run `profiler-cli stop` to shut down the background daemon process (it persists beyond individual commands and must be explicitly stopped to free the port and memory), then present the findings.
+Once there is no more useful information left in the profile to look at, run `profiler-cli stop` to shut down the background daemon process (it persists beyond individual commands and must be explicitly stopped to free the port and memory), then present the findings.
 
 # Accuracy: Never Present Guesses as Facts
 
