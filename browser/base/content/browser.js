@@ -3193,10 +3193,21 @@ var gUIDensity = {
   uiDensityPref: "browser.uidensity",
   autoTouchModePref: "browser.touchmode.auto",
   autoCompactThresholdPref: "browser.compactmode.auto.threshold",
+  // Prefs that turn on RFP window-size protections. When any is set the content
+  // area must stay a fixed, deterministic size, so auto-compact must bail (see
+  // _shouldAutoCompact and bug 2054792).
+  rfpWindowSizingPrefs: [
+    "privacy.resistFingerprinting",
+    "privacy.resistFingerprinting.pbmode",
+    "privacy.resistFingerprinting.letterboxing",
+  ],
   knownPrefs: new Set([
     "browser.uidensity",
     "browser.touchmode.auto",
     "browser.compactmode.auto.threshold",
+    "privacy.resistFingerprinting",
+    "privacy.resistFingerprinting.pbmode",
+    "privacy.resistFingerprinting.letterboxing",
   ]),
 
   // Natural (non-compact) tabstrip height in CSS pixels. Used as the
@@ -3217,6 +3228,9 @@ var gUIDensity = {
     Services.prefs.addObserver(this.uiDensityPref, this);
     Services.prefs.addObserver(this.autoTouchModePref, this);
     Services.prefs.addObserver(this.autoCompactThresholdPref, this);
+    for (let pref of this.rfpWindowSizingPrefs) {
+      Services.prefs.addObserver(pref, this);
+    }
     window.addEventListener("resize", this);
 
     this._sidebarShownHandler = () => this.update();
@@ -3240,6 +3254,9 @@ var gUIDensity = {
     Services.prefs.removeObserver(this.uiDensityPref, this);
     Services.prefs.removeObserver(this.autoTouchModePref, this);
     Services.prefs.removeObserver(this.autoCompactThresholdPref, this);
+    for (let pref of this.rfpWindowSizingPrefs) {
+      Services.prefs.removeObserver(pref, this);
+    }
     window.removeEventListener("resize", this);
     if (this._sidebarShownHandler) {
       window.removeEventListener("SidebarShown", this._sidebarShownHandler);
@@ -3293,6 +3310,19 @@ var gUIDensity = {
     // mid-flight as the window gets resized during opening, which throws off
     // the content area sizing, inflating it past the requested dimensions (bug 2050255).
     if (!window.toolbar.visible) {
+      return false;
+    }
+    // RFP window-size protections (letterboxing, and the maxInner* rounding
+    // enabled by resistFingerprinting) quantize the content area to a fixed
+    // size that must be deterministic regardless of the chrome. Auto-compact
+    // reclaims chrome space in response to resizes, which shifts the content
+    // area by a few pixels mid-flight and races with those size updates (bug
+    // 2054792). Bail so the two don't fight.
+    if (
+      this.rfpWindowSizingPrefs.some(pref =>
+        Services.prefs.getBoolPref(pref, false)
+      )
+    ) {
       return false;
     }
     const threshold = parseFloat(
