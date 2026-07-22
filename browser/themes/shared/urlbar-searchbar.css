@@ -360,6 +360,9 @@ toolbar[inactive="true"] .urlbar,
 }
 
 #urlbar-input {
+  /* Make the editable line box span the field's full height so clicking anywhere in the
+     field inserts the caret at that position. */
+  line-height: var(--urlbar-min-height);
   mask-repeat: no-repeat;
   unicode-bidi: plaintext;
   text-align: match-parent;
