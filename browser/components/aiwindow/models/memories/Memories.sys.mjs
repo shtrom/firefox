@@ -53,6 +53,12 @@ import {
   MEMORY_FRECENCY_DAY_HALFLIFE,
 } from "./MemoriesConstants.sys.mjs";
 
+import {
+  INITIAL_MEMORIES_SCHEMA,
+  MEMORIES_QUALITY_AND_SENSITIVITY_FILTER_SCHEMA,
+  MEMORIES_DEDUPLICATION_SCHEMA,
+} from "moz-src:///browser/components/aiwindow/models/memories/MemoriesSchemas.sys.mjs";
+
 // Pipeline input key for unified session bundles.
 const SESSIONS = "sessions";
 
@@ -512,6 +518,7 @@ export async function generateInitialMemoriesList(conversation, sources) {
   conversation.setSystemMessage(systemPrompt);
   conversation.addUserMessage(userPrompt);
   const response = await conversation.run({
+    responseFormat: { type: "json_schema", schema: INITIAL_MEMORIES_SCHEMA },
     fxAccountToken: await openAIEngine.getFxAccountToken(),
   });
 
@@ -588,6 +595,10 @@ export async function deduplicateMemories(
   conversation.setSystemMessage(systemPrompt);
   conversation.addUserMessage(userPrompt);
   const response = await conversation.run({
+    responseFormat: {
+      type: "json_schema",
+      schema: MEMORIES_DEDUPLICATION_SCHEMA,
+    },
     fxAccountToken: await openAIEngine.getFxAccountToken(),
   });
 
@@ -637,6 +648,10 @@ export async function applyQualityAndSensitivityFilter(
   conversation.setSystemMessage(systemPrompt);
   conversation.addUserMessage(userPrompt);
   const response = await conversation.run({
+    responseFormat: {
+      type: "json_schema",
+      schema: MEMORIES_QUALITY_AND_SENSITIVITY_FILTER_SCHEMA,
+    },
     fxAccountToken: await openAIEngine.getFxAccountToken(),
   });
 

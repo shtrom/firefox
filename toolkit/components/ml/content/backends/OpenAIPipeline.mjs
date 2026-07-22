@@ -378,7 +378,6 @@ export class OpenAIPipeline {
       const tools = request.tools || [];
 
       const completionParams = {
-        ...request.inferenceParams,
         model: modelId,
         messages: request.args,
         stream,

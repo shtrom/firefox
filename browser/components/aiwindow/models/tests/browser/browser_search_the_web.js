@@ -205,6 +205,16 @@ add_task(async function test_search_the_web_end_to_end() {
       [],
       "No tools are offered during final generation"
     );
+    Assert.deepEqual(
+      answerTurn.request.inferenceParams,
+      {
+        response_format: {
+          type: "json_schema",
+          json_schema: SEARCH_ANSWER_SCHEMA,
+        },
+      },
+      "The final generation requests the search answer schema"
+    );
     const expectedAnswer = {
       answer: "The widget is nine dollars.",
       could_answer: true,
