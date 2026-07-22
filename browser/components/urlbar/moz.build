@@ -112,6 +112,8 @@ BROWSER_CHROME_MANIFESTS += [
     "tests/browser-tips/browser.toml",
     "tests/browser-tips/browserNova.toml",
     "tests/browser-tips/suppress-tips/browser.toml",
+    "tests/browser-trustPanel/browser.toml",
+    "tests/browser-trustPanel/browserNova.toml",
     "tests/browser-updateResults/browser.toml",
     "tests/browser-updateResults/browserNova.toml",
     "tests/browser-UrlbarInput/browser.toml",
