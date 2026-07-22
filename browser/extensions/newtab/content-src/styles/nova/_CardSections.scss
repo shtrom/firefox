@@ -19,6 +19,10 @@
   }
 }
 
+.nova-enabled .ds-section-wrapper .ds-section {
+  padding-block-end: 0;
+}
+
 .nova-enabled .ds-section .section-follow,
 .nova-enabled .ds-section .section-context-menu {
   @include wallpaper-contrast-fix;

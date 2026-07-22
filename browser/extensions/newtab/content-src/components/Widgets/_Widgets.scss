@@ -67,7 +67,9 @@
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    gap: var(--space-medium);
+    // Combines with the grid's --space-medium row gap for --space-large spacing
+    // below the header, matching the sections header.
+    margin-block: var(--space-small) var(--space-xsmall);
 
     // Helper class around the <h1> element to position the FeatureHighlight message
     .widgets-title-container-text {
@@ -80,6 +82,10 @@
       display: flex;
       align-items: center;
       gap: var(--space-medium);
+
+      @include at-content-cols(12) {
+        gap: var(--space-large);
+      }
     }
 
     .widgets-title-actions {
@@ -99,6 +105,7 @@
       font-size: var(--font-size-heading-large);
       font-weight: var(--font-weight-heading);
       color: var(--newtab-contextual-text-primary-color);
+      margin-block: 0;
 
       @include at-content-cols(12) {
         font-size: var(--font-size-heading-xlarge);

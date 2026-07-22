@@ -4672,7 +4672,7 @@ button.arrow-button:dir(rtl) {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: var(--space-medium);
+  margin-block: var(--space-small) var(--space-xsmall);
 }
 .nova-enabled .widgets-section-container .widgets-title-container {
   grid-column: 1/-1;
@@ -4686,6 +4686,11 @@ button.arrow-button:dir(rtl) {
   display: flex;
   align-items: center;
   gap: var(--space-medium);
+}
+@container content-grid (inline-size >= calc(12 * 75px + 11 * 0.75rem)) {
+  .widgets-section-container .widgets-title-container .widgets-title-heading {
+    gap: var(--space-large);
+  }
 }
 .widgets-section-container .widgets-title-container .widgets-title-actions {
   display: flex;
@@ -4701,6 +4706,7 @@ button.arrow-button:dir(rtl) {
   font-size: var(--font-size-heading-large);
   font-weight: var(--font-weight-heading);
   color: var(--newtab-contextual-text-primary-color);
+  margin-block: 0;
 }
 @container content-grid (inline-size >= calc(12 * 75px + 11 * 0.75rem)) {
   .nova-enabled .widgets-section-container h1 {
@@ -9965,7 +9971,7 @@ button.arrow-button:dir(rtl) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-block: var(--space-small) var(--space-medium);
+  margin-block: var(--space-small) var(--space-large);
 }
 .ds-section-wrapper .ds-section .section-title {
   font-weight: var(--font-weight-heading);
@@ -15793,6 +15799,10 @@ hr {
 }
 .nova-enabled .section-title-wrapper .section-subtitle {
   flex-basis: 100%;
+}
+
+.nova-enabled .ds-section-wrapper .ds-section {
+  padding-block-end: 0;
 }
 
 .lightWallpaper .nova-enabled .ds-section .section-follow,
