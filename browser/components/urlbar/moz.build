@@ -97,6 +97,8 @@ BROWSER_CHROME_MANIFESTS += [
     "tests/browser-engagementTelemetry/browserNova.toml",
     "tests/browser-quickactions/browser.toml",
     "tests/browser-quickactions/browserNova.toml",
+    "tests/browser-search/browser.toml",
+    "tests/browser-search/browserNova.toml",
     "tests/browser-searchMode/browser.toml",
     "tests/browser-searchMode/browserNova.toml",
     "tests/browser-switchTab/browser.toml",
