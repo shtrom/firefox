@@ -28,19 +28,23 @@ class RelativeTimeFormatObject : public NativeObject {
   static const JSClass class_;
   static const JSClass& protoClass_;
 
-  static constexpr uint32_t LOCALE = 0;
-  static constexpr uint32_t NUMBERING_SYSTEM = 1;
-  static constexpr uint32_t OPTIONS = 2;
-  static constexpr uint32_t URELATIVE_TIME_FORMAT_SLOT = 3;
+  static constexpr auto LOCALE =
+      TypedSlot<ValueType::Object, ValueType::String, ValueType::Undefined>(0);
+  static constexpr auto NUMBERING_SYSTEM =
+      TypedSlot<ValueType::String, ValueType::Undefined>(1);
+  static constexpr auto OPTIONS =
+      TypedSlot<ValueType::Int32, ValueType::Undefined>(2);
+  static constexpr auto URELATIVE_TIME_FORMAT_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(3);
   static constexpr uint32_t SLOT_COUNT = 4;
 
   // Estimated memory use for URelativeDateTimeFormatter (see IcuMemoryUsage).
   static constexpr size_t EstimatedMemoryUse = 8188;
 
-  bool isLocaleResolved() const { return getFixedSlot(LOCALE).isString(); }
+  bool isLocaleResolved() const { return getFixedSlotTyped(LOCALE).isString(); }
 
   JSObject* getRequestedLocales() const {
-    const auto& slot = getFixedSlot(LOCALE);
+    const auto& slot = getFixedSlotTyped(LOCALE);
     if (slot.isUndefined()) {
       return nullptr;
     }
@@ -48,11 +52,11 @@ class RelativeTimeFormatObject : public NativeObject {
   }
 
   void setRequestedLocales(JSObject* requestedLocales) {
-    setFixedSlot(LOCALE, ObjectValue(*requestedLocales));
+    setFixedSlotTyped(LOCALE, ObjectValue(*requestedLocales));
   }
 
   JSLinearString* getLocale() const {
-    const auto& slot = getFixedSlot(LOCALE);
+    const auto& slot = getFixedSlotTyped(LOCALE);
     if (slot.isUndefined()) {
       return nullptr;
     }
@@ -60,11 +64,11 @@ class RelativeTimeFormatObject : public NativeObject {
   }
 
   void setLocale(JSLinearString* locale) {
-    setFixedSlot(LOCALE, StringValue(locale));
+    setFixedSlotTyped(LOCALE, StringValue(locale));
   }
 
   JSLinearString* getNumberingSystem() const {
-    const auto& slot = getFixedSlot(NUMBERING_SYSTEM);
+    const auto& slot = getFixedSlotTyped(NUMBERING_SYSTEM);
     if (slot.isUndefined()) {
       return nullptr;
     }
@@ -72,7 +76,7 @@ class RelativeTimeFormatObject : public NativeObject {
   }
 
   void setNumberingSystem(JSLinearString* numberingSystem) {
-    setFixedSlot(NUMBERING_SYSTEM, StringValue(numberingSystem));
+    setFixedSlotTyped(NUMBERING_SYSTEM, StringValue(numberingSystem));
   }
 
   RelativeTimeFormatOptions getOptions() const;
@@ -80,7 +84,7 @@ class RelativeTimeFormatObject : public NativeObject {
   void setOptions(const RelativeTimeFormatOptions& options);
 
   mozilla::intl::RelativeTimeFormat* getRelativeTimeFormatter() const {
-    const auto& slot = getFixedSlot(URELATIVE_TIME_FORMAT_SLOT);
+    const auto& slot = getFixedSlotTyped(URELATIVE_TIME_FORMAT_SLOT);
     if (slot.isUndefined()) {
       return nullptr;
     }
@@ -88,7 +92,7 @@ class RelativeTimeFormatObject : public NativeObject {
   }
 
   void setRelativeTimeFormatter(mozilla::intl::RelativeTimeFormat* rtf) {
-    setFixedSlot(URELATIVE_TIME_FORMAT_SLOT, PrivateValue(rtf));
+    setFixedSlotTyped(URELATIVE_TIME_FORMAT_SLOT, PrivateValue(rtf));
   }
 
  private:

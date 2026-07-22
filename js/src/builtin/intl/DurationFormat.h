@@ -29,41 +29,58 @@ class DurationFormatObject : public NativeObject {
   static const JSClass class_;
   static const JSClass& protoClass_;
 
-  static constexpr uint32_t LOCALE_SLOT = 0;
-  static constexpr uint32_t NUMBERING_SYSTEM = 1;
-  static constexpr uint32_t NUMBER_FORMAT_YEARS_SLOT = 2;
-  static constexpr uint32_t NUMBER_FORMAT_MONTHS_SLOT = 3;
-  static constexpr uint32_t NUMBER_FORMAT_WEEKS_SLOT = 4;
-  static constexpr uint32_t NUMBER_FORMAT_DAYS_SLOT = 5;
-  static constexpr uint32_t NUMBER_FORMAT_HOURS_SLOT = 6;
-  static constexpr uint32_t NUMBER_FORMAT_MINUTES_SLOT = 7;
-  static constexpr uint32_t NUMBER_FORMAT_SECONDS_SLOT = 8;
-  static constexpr uint32_t NUMBER_FORMAT_MILLISECONDS_SLOT = 9;
-  static constexpr uint32_t NUMBER_FORMAT_MICROSECONDS_SLOT = 10;
-  static constexpr uint32_t NUMBER_FORMAT_NANOSECONDS_SLOT = 11;
-  static constexpr uint32_t LIST_FORMAT_SLOT = 12;
-  static constexpr uint32_t OPTIONS_SLOT = 13;
-  static constexpr uint32_t TIME_SEPARATOR_SLOT = 14;
+  static constexpr auto LOCALE_SLOT =
+      TypedSlot<ValueType::Object, ValueType::String, ValueType::Undefined>(0);
+  static constexpr auto NUMBERING_SYSTEM =
+      TypedSlot<ValueType::String, ValueType::Undefined>(1);
+  static constexpr auto NUMBER_FORMAT_YEARS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(2);
+  static constexpr auto NUMBER_FORMAT_MONTHS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(3);
+  static constexpr auto NUMBER_FORMAT_WEEKS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(4);
+  static constexpr auto NUMBER_FORMAT_DAYS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(5);
+  static constexpr auto NUMBER_FORMAT_HOURS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(6);
+  static constexpr auto NUMBER_FORMAT_MINUTES_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(7);
+  static constexpr auto NUMBER_FORMAT_SECONDS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(8);
+  static constexpr auto NUMBER_FORMAT_MILLISECONDS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(9);
+  static constexpr auto NUMBER_FORMAT_MICROSECONDS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(10);
+  static constexpr auto NUMBER_FORMAT_NANOSECONDS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(11);
+  static constexpr auto LIST_FORMAT_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(12);
+  static constexpr auto OPTIONS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(13);
+  static constexpr auto TIME_SEPARATOR_SLOT =
+      TypedSlot<ValueType::String, ValueType::Undefined>(14);
   static constexpr uint32_t SLOT_COUNT = 15;
 
  private:
-  static constexpr uint32_t numberFormatSlot(temporal::TemporalUnit unit) {
+  static constexpr auto numberFormatSlot(temporal::TemporalUnit unit) {
     MOZ_ASSERT(temporal::TemporalUnit::Year <= unit &&
                unit <= temporal::TemporalUnit::Nanosecond);
 
     static_assert(uint32_t(temporal::TemporalUnit::Year) ==
-                  NUMBER_FORMAT_YEARS_SLOT);
+                  NUMBER_FORMAT_YEARS_SLOT.index());
     static_assert(uint32_t(temporal::TemporalUnit::Nanosecond) ==
-                  NUMBER_FORMAT_NANOSECONDS_SLOT);
+                  NUMBER_FORMAT_NANOSECONDS_SLOT.index());
 
-    return uint32_t(unit);
+    return TypedSlot<ValueType::Double, ValueType::Undefined>(uint32_t(unit));
   }
 
  public:
-  bool isLocaleResolved() const { return getFixedSlot(LOCALE_SLOT).isString(); }
+  bool isLocaleResolved() const {
+    return getFixedSlotTyped(LOCALE_SLOT).isString();
+  }
 
   JSObject* getRequestedLocales() const {
-    const auto& slot = getFixedSlot(LOCALE_SLOT);
+    const auto& slot = getFixedSlotTyped(LOCALE_SLOT);
     if (slot.isUndefined()) {
       return nullptr;
     }
@@ -71,11 +88,11 @@ class DurationFormatObject : public NativeObject {
   }
 
   void setRequestedLocales(JSObject* requestedLocales) {
-    setFixedSlot(LOCALE_SLOT, JS::ObjectValue(*requestedLocales));
+    setFixedSlotTyped(LOCALE_SLOT, JS::ObjectValue(*requestedLocales));
   }
 
   JSLinearString* getLocale() const {
-    const auto& slot = getFixedSlot(LOCALE_SLOT);
+    const auto& slot = getFixedSlotTyped(LOCALE_SLOT);
     if (slot.isUndefined()) {
       return nullptr;
     }
@@ -83,11 +100,11 @@ class DurationFormatObject : public NativeObject {
   }
 
   void setLocale(JSLinearString* locale) {
-    setFixedSlot(LOCALE_SLOT, JS::StringValue(locale));
+    setFixedSlotTyped(LOCALE_SLOT, JS::StringValue(locale));
   }
 
   JSLinearString* getNumberingSystem() const {
-    const auto& slot = getFixedSlot(NUMBERING_SYSTEM);
+    const auto& slot = getFixedSlotTyped(NUMBERING_SYSTEM);
     if (slot.isUndefined()) {
       return nullptr;
     }
@@ -95,7 +112,7 @@ class DurationFormatObject : public NativeObject {
   }
 
   void setNumberingSystem(JSLinearString* numberingSystem) {
-    setFixedSlot(NUMBERING_SYSTEM, JS::StringValue(numberingSystem));
+    setFixedSlotTyped(NUMBERING_SYSTEM, JS::StringValue(numberingSystem));
   }
 
   DurationFormatOptions getOptions() const;
@@ -104,7 +121,7 @@ class DurationFormatObject : public NativeObject {
 
   mozilla::intl::NumberFormat* getNumberFormat(
       temporal::TemporalUnit unit) const {
-    const auto& slot = getFixedSlot(numberFormatSlot(unit));
+    const auto& slot = getFixedSlotTyped(numberFormatSlot(unit));
     if (slot.isUndefined()) {
       return nullptr;
     }
@@ -113,11 +130,11 @@ class DurationFormatObject : public NativeObject {
 
   void setNumberFormat(temporal::TemporalUnit unit,
                        mozilla::intl::NumberFormat* numberFormat) {
-    setFixedSlot(numberFormatSlot(unit), JS::PrivateValue(numberFormat));
+    setFixedSlotTyped(numberFormatSlot(unit), JS::PrivateValue(numberFormat));
   }
 
   mozilla::intl::ListFormat* getListFormat() const {
-    const auto& slot = getFixedSlot(LIST_FORMAT_SLOT);
+    const auto& slot = getFixedSlotTyped(LIST_FORMAT_SLOT);
     if (slot.isUndefined()) {
       return nullptr;
     }
@@ -125,11 +142,11 @@ class DurationFormatObject : public NativeObject {
   }
 
   void setListFormat(mozilla::intl::ListFormat* listFormat) {
-    setFixedSlot(LIST_FORMAT_SLOT, JS::PrivateValue(listFormat));
+    setFixedSlotTyped(LIST_FORMAT_SLOT, JS::PrivateValue(listFormat));
   }
 
   JSString* getTimeSeparator() const {
-    const auto& slot = getFixedSlot(TIME_SEPARATOR_SLOT);
+    const auto& slot = getFixedSlotTyped(TIME_SEPARATOR_SLOT);
     if (slot.isUndefined()) {
       return nullptr;
     }
@@ -137,7 +154,7 @@ class DurationFormatObject : public NativeObject {
   }
 
   void setTimeSeparator(JSString* timeSeparator) {
-    setFixedSlot(TIME_SEPARATOR_SLOT, JS::StringValue(timeSeparator));
+    setFixedSlotTyped(TIME_SEPARATOR_SLOT, JS::StringValue(timeSeparator));
   }
 
  private:

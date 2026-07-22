@@ -18,19 +18,21 @@ class LocaleObject : public NativeObject {
   static const JSClass class_;
   static const JSClass protoClass_;
 
-  static constexpr uint32_t LANGUAGE_TAG_SLOT = 0;
-  static constexpr uint32_t BASENAME_SLOT = 1;
-  static constexpr uint32_t UNICODE_EXTENSION_SLOT = 2;
+  static constexpr auto LANGUAGE_TAG_SLOT = TypedSlot<ValueType::String>(0);
+  static constexpr auto BASENAME_SLOT = TypedSlot<ValueType::String>(1);
+  static constexpr auto UNICODE_EXTENSION_SLOT =
+      TypedSlot<ValueType::String, ValueType::Undefined>(2);
   static constexpr uint32_t SLOT_COUNT = 3;
 
   void initialize(JSLinearString* languageTag, JSLinearString* baseName,
                   JSLinearString* unicodeExtension) {
-    initFixedSlot(LANGUAGE_TAG_SLOT, JS::StringValue(languageTag));
-    initFixedSlot(BASENAME_SLOT, JS::StringValue(baseName));
+    initFixedSlotTyped(LANGUAGE_TAG_SLOT, JS::StringValue(languageTag));
+    initFixedSlotTyped(BASENAME_SLOT, JS::StringValue(baseName));
     if (unicodeExtension) {
-      initFixedSlot(UNICODE_EXTENSION_SLOT, JS::StringValue(unicodeExtension));
+      initFixedSlotTyped(UNICODE_EXTENSION_SLOT,
+                         JS::StringValue(unicodeExtension));
     } else {
-      MOZ_ASSERT(getFixedSlot(UNICODE_EXTENSION_SLOT).isUndefined());
+      MOZ_ASSERT(getFixedSlotTyped(UNICODE_EXTENSION_SLOT).isUndefined());
     }
   }
 
@@ -39,7 +41,7 @@ class LocaleObject : public NativeObject {
    * subtags.
    */
   JSLinearString* getLanguageTag() const {
-    return &getFixedSlot(LANGUAGE_TAG_SLOT).toString()->asLinear();
+    return &getFixedSlotTyped(LANGUAGE_TAG_SLOT).toString()->asLinear();
   }
 
   /**
@@ -47,7 +49,7 @@ class LocaleObject : public NativeObject {
    * subtags.
    */
   JSLinearString* getBaseName() const {
-    return &getFixedSlot(BASENAME_SLOT).toString()->asLinear();
+    return &getFixedSlotTyped(BASENAME_SLOT).toString()->asLinear();
   }
 
   /**
@@ -55,7 +57,7 @@ class LocaleObject : public NativeObject {
    * extension sequence is present.
    */
   JSLinearString* getUnicodeExtension() const {
-    const auto& slot = getFixedSlot(UNICODE_EXTENSION_SLOT);
+    const auto& slot = getFixedSlotTyped(UNICODE_EXTENSION_SLOT);
     if (slot.isUndefined()) {
       return nullptr;
     }

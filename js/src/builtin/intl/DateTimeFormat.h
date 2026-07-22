@@ -38,17 +38,28 @@ class DateTimeFormatObject : public NativeObject {
   static const JSClass class_;
   static const JSClass& protoClass_;
 
-  static constexpr uint32_t LOCALE_SLOT = 0;
-  static constexpr uint32_t NUMBERING_SYSTEM_SLOT = 1;
-  static constexpr uint32_t CALENDAR_SLOT = 2;
-  static constexpr uint32_t TIMEZONE_SLOT = 3;
-  static constexpr uint32_t OPTIONS_SLOT = 4;
-  static constexpr uint32_t PATTERN_SLOT = 5;
-  static constexpr uint32_t CALENDAR_VALUE_SLOT = 6;
-  static constexpr uint32_t DATE_FORMAT_SLOT = 7;
-  static constexpr uint32_t DATE_INTERVAL_FORMAT_SLOT = 8;
-  static constexpr uint32_t DATE_TIME_VALUE_KIND_SLOT = 9;
-  static constexpr uint32_t BOUND_FORMAT_SLOT = 10;
+  static constexpr auto LOCALE_SLOT =
+      TypedSlot<ValueType::Object, ValueType::String, ValueType::Undefined>(0);
+  static constexpr auto NUMBERING_SYSTEM_SLOT =
+      TypedSlot<ValueType::String, ValueType::Undefined>(1);
+  static constexpr auto CALENDAR_SLOT =
+      TypedSlot<ValueType::String, ValueType::Undefined>(2);
+  static constexpr auto TIMEZONE_SLOT =
+      TypedSlot<ValueType::String, ValueType::Undefined>(3);
+  static constexpr auto OPTIONS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(4);
+  static constexpr auto PATTERN_SLOT =
+      TypedSlot<ValueType::String, ValueType::Undefined>(5);
+  static constexpr auto CALENDAR_VALUE_SLOT =
+      TypedSlot<ValueType::Int32, ValueType::Undefined>(6);
+  static constexpr auto DATE_FORMAT_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(7);
+  static constexpr auto DATE_INTERVAL_FORMAT_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(8);
+  static constexpr auto DATE_TIME_VALUE_KIND_SLOT =
+      TypedSlot<ValueType::Int32, ValueType::Undefined>(9);
+  static constexpr auto BOUND_FORMAT_SLOT =
+      TypedSlot<ValueType::Object, ValueType::Undefined>(10);
   static constexpr uint32_t SLOT_COUNT = 11;
 
   // Estimated memory use for UDateFormat (see IcuMemoryUsage).
@@ -57,10 +68,12 @@ class DateTimeFormatObject : public NativeObject {
   // Estimated memory use for UDateIntervalFormat (see IcuMemoryUsage).
   static constexpr size_t UDateIntervalFormatEstimatedMemoryUse = 175646;
 
-  bool isLocaleResolved() const { return getFixedSlot(LOCALE_SLOT).isString(); }
+  bool isLocaleResolved() const {
+    return getFixedSlotTyped(LOCALE_SLOT).isString();
+  }
 
   JSObject* getRequestedLocales() const {
-    const auto& slot = getFixedSlot(LOCALE_SLOT);
+    const auto& slot = getFixedSlotTyped(LOCALE_SLOT);
     if (slot.isUndefined()) {
       return nullptr;
     }
@@ -68,11 +81,11 @@ class DateTimeFormatObject : public NativeObject {
   }
 
   void setRequestedLocales(JSObject* requestedLocales) {
-    setFixedSlot(LOCALE_SLOT, JS::ObjectValue(*requestedLocales));
+    setFixedSlotTyped(LOCALE_SLOT, JS::ObjectValue(*requestedLocales));
   }
 
   JSLinearString* getLocale() const {
-    const auto& slot = getFixedSlot(LOCALE_SLOT);
+    const auto& slot = getFixedSlotTyped(LOCALE_SLOT);
     if (slot.isUndefined()) {
       return nullptr;
     }
@@ -80,11 +93,11 @@ class DateTimeFormatObject : public NativeObject {
   }
 
   void setLocale(JSLinearString* locale) {
-    setFixedSlot(LOCALE_SLOT, JS::StringValue(locale));
+    setFixedSlotTyped(LOCALE_SLOT, JS::StringValue(locale));
   }
 
   JSLinearString* getNumberingSystem() const {
-    const auto& slot = getFixedSlot(NUMBERING_SYSTEM_SLOT);
+    const auto& slot = getFixedSlotTyped(NUMBERING_SYSTEM_SLOT);
     if (slot.isUndefined()) {
       return nullptr;
     }
@@ -92,11 +105,11 @@ class DateTimeFormatObject : public NativeObject {
   }
 
   void setNumberingSystem(JSLinearString* numberingSystem) {
-    setFixedSlot(NUMBERING_SYSTEM_SLOT, JS::StringValue(numberingSystem));
+    setFixedSlotTyped(NUMBERING_SYSTEM_SLOT, JS::StringValue(numberingSystem));
   }
 
   JSLinearString* getCalendar() const {
-    const auto& slot = getFixedSlot(CALENDAR_SLOT);
+    const auto& slot = getFixedSlotTyped(CALENDAR_SLOT);
     if (slot.isUndefined()) {
       return nullptr;
     }
@@ -104,11 +117,11 @@ class DateTimeFormatObject : public NativeObject {
   }
 
   void setCalendar(JSLinearString* calendar) {
-    setFixedSlot(CALENDAR_SLOT, JS::StringValue(calendar));
+    setFixedSlotTyped(CALENDAR_SLOT, JS::StringValue(calendar));
   }
 
   JSLinearString* getTimeZone() const {
-    const auto& slot = getFixedSlot(TIMEZONE_SLOT);
+    const auto& slot = getFixedSlotTyped(TIMEZONE_SLOT);
     if (slot.isUndefined()) {
       return nullptr;
     }
@@ -116,7 +129,7 @@ class DateTimeFormatObject : public NativeObject {
   }
 
   void setTimeZone(JSLinearString* timeZone) {
-    setFixedSlot(TIMEZONE_SLOT, JS::StringValue(timeZone));
+    setFixedSlotTyped(TIMEZONE_SLOT, JS::StringValue(timeZone));
   }
 
   DateTimeFormatOptions getOptions() const;
@@ -124,7 +137,7 @@ class DateTimeFormatObject : public NativeObject {
   void setOptions(const DateTimeFormatOptions& options);
 
   JSString* getPattern() const {
-    const auto& slot = getFixedSlot(PATTERN_SLOT);
+    const auto& slot = getFixedSlotTyped(PATTERN_SLOT);
     if (slot.isUndefined()) {
       return nullptr;
     }
@@ -132,11 +145,11 @@ class DateTimeFormatObject : public NativeObject {
   }
 
   void setPattern(JSString* pattern) {
-    setFixedSlot(PATTERN_SLOT, JS::StringValue(pattern));
+    setFixedSlotTyped(PATTERN_SLOT, JS::StringValue(pattern));
   }
 
   temporal::CalendarValue getCalendarValue() const {
-    const auto& slot = getFixedSlot(CALENDAR_VALUE_SLOT);
+    const auto& slot = getFixedSlotTyped(CALENDAR_VALUE_SLOT);
     if (slot.isUndefined()) {
       return temporal::CalendarValue();
     }
@@ -144,11 +157,11 @@ class DateTimeFormatObject : public NativeObject {
   }
 
   void setCalendarValue(const temporal::CalendarValue& calendar) {
-    setFixedSlot(CALENDAR_VALUE_SLOT, calendar.toSlotValue());
+    setFixedSlotTyped(CALENDAR_VALUE_SLOT, calendar.toSlotValue());
   }
 
   mozilla::intl::DateTimeFormat* getDateFormat() const {
-    const auto& slot = getFixedSlot(DATE_FORMAT_SLOT);
+    const auto& slot = getFixedSlotTyped(DATE_FORMAT_SLOT);
     if (slot.isUndefined()) {
       return nullptr;
     }
@@ -156,11 +169,11 @@ class DateTimeFormatObject : public NativeObject {
   }
 
   void setDateFormat(mozilla::intl::DateTimeFormat* dateFormat) {
-    setFixedSlot(DATE_FORMAT_SLOT, JS::PrivateValue(dateFormat));
+    setFixedSlotTyped(DATE_FORMAT_SLOT, JS::PrivateValue(dateFormat));
   }
 
   mozilla::intl::DateIntervalFormat* getDateIntervalFormat() const {
-    const auto& slot = getFixedSlot(DATE_INTERVAL_FORMAT_SLOT);
+    const auto& slot = getFixedSlotTyped(DATE_INTERVAL_FORMAT_SLOT);
     if (slot.isUndefined()) {
       return nullptr;
     }
@@ -169,12 +182,12 @@ class DateTimeFormatObject : public NativeObject {
 
   void setDateIntervalFormat(
       mozilla::intl::DateIntervalFormat* dateIntervalFormat) {
-    setFixedSlot(DATE_INTERVAL_FORMAT_SLOT,
-                 JS::PrivateValue(dateIntervalFormat));
+    setFixedSlotTyped(DATE_INTERVAL_FORMAT_SLOT,
+                      JS::PrivateValue(dateIntervalFormat));
   }
 
   DateTimeValueKind getDateTimeValueKind() const {
-    const auto& slot = getFixedSlot(DATE_TIME_VALUE_KIND_SLOT);
+    const auto& slot = getFixedSlotTyped(DATE_TIME_VALUE_KIND_SLOT);
     if (slot.isUndefined()) {
       return DateTimeValueKind::Number;
     }
@@ -182,12 +195,12 @@ class DateTimeFormatObject : public NativeObject {
   }
 
   void setDateTimeValueKind(DateTimeValueKind kind) {
-    setFixedSlot(DATE_TIME_VALUE_KIND_SLOT,
-                 JS::Int32Value(static_cast<int32_t>(kind)));
+    setFixedSlotTyped(DATE_TIME_VALUE_KIND_SLOT,
+                      JS::Int32Value(static_cast<int32_t>(kind)));
   }
 
   JSObject* getBoundFormat() const {
-    const auto& slot = getFixedSlot(BOUND_FORMAT_SLOT);
+    const auto& slot = getFixedSlotTyped(BOUND_FORMAT_SLOT);
     if (slot.isUndefined()) {
       return nullptr;
     }
@@ -195,7 +208,7 @@ class DateTimeFormatObject : public NativeObject {
   }
 
   void setBoundFormat(JSObject* boundFormat) {
-    setFixedSlot(BOUND_FORMAT_SLOT, JS::ObjectValue(*boundFormat));
+    setFixedSlotTyped(BOUND_FORMAT_SLOT, JS::ObjectValue(*boundFormat));
   }
 
   void maybeClearCache(DateTimeValueKind kind);
