@@ -43,7 +43,6 @@ import {
   getFormattedMemoryAttributeList,
   runSessionMemoryPipeline,
 } from "moz-src:///browser/components/aiwindow/models/memories/Memories.sys.mjs";
-import { MEMORIES_MESSAGE_CLASSIFY_SCHEMA } from "moz-src:///browser/components/aiwindow/models/memories/MemoriesSchemas.sys.mjs";
 import { AIWindow } from "moz-src:///browser/components/aiwindow/ui/modules/AIWindow.sys.mjs";
 import { EveryWindow } from "resource:///modules/EveryWindow.sys.mjs";
 import { AIWindowAccountAuth } from "moz-src:///browser/components/aiwindow/ui/modules/AIWindowAccountAuth.sys.mjs";
@@ -478,10 +477,6 @@ export class MemoriesManager {
     conversation.setSystemMessage(systemPrompt);
     conversation.addUserMessage(userPrompt);
     const response = await conversation.run({
-      responseFormat: {
-        type: "json_schema",
-        schema: MEMORIES_MESSAGE_CLASSIFY_SCHEMA,
-      },
       fxAccountToken: await openAIEngine.getFxAccountToken(),
     });
 

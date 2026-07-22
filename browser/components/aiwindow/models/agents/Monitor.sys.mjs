@@ -7,6 +7,7 @@ import {
   MODEL_FEATURES,
   openAIEngine,
   renderPrompt,
+  makeJSONSchemaBlob,
 } from "moz-src:///browser/components/aiwindow/models/Utils.sys.mjs";
 import { Schedule } from "moz-src:///browser/components/aiwindow/models/agents/Schedule.sys.mjs";
 
@@ -304,7 +305,12 @@ export class Monitor {
           openAIEngine.getFxAccountToken(),
           signal
         ),
-        responseFormat: { type: "json_schema", schema: MONITOR_RESULT_SCHEMA },
+        inferenceParams: {
+          response_format: makeJSONSchemaBlob(
+            "MonitorResult",
+            MONITOR_RESULT_SCHEMA
+          ),
+        },
         tools: [],
       }),
       signal

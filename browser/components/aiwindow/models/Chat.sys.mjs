@@ -328,9 +328,9 @@ Object.assign(Chat, {
         streamOptions: { enabled: true },
         fxAccountToken,
         chatId: conversation.id,
-        tool_choice: "auto",
         tools: chatToolsConfig,
         args: snapshot,
+        inferenceParams: { tool_choice: "auto" },
         signal,
       });
     };
