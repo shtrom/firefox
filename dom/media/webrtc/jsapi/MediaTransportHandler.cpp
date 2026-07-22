@@ -139,6 +139,12 @@ class MediaTransportHandlerSTS : public MediaTransportHandler,
     uint64_t mBytesReceived = 0;
     uint64_t mPacketsSent = 0;
     uint64_t mPacketsReceived = 0;
+    // Number of times the selected candidate pair has changed (spec:
+    // RTCTransportStats.selectedCandidatePairChanges), plus the last selected
+    // pair we observed used to detect changes. Maintained in
+    // OnConnectionStateChange, and cumulative across the transport's lifetime.
+    uint32_t mSelectedCandidatePairChanges = 0;
+    std::pair<std::string, std::string> mLastSelectedCandidatePair;
   };
 
   using MediaTransportHandler::OnAlpnNegotiated;
@@ -1261,6 +1267,10 @@ RefPtr<dom::RTCStatsPromise> MediaTransportHandlerSTS::GetIceStats(
                 transport.mPacketsReceived.Construct(
                     transportIt->second.mPacketsReceived);
               }
+              transport.mSelectedCandidatePairChanges.Construct(
+                  transportIt != mTransports.end()
+                      ? transportIt->second.mSelectedCandidatePairChanges
+                      : 0);
               // XXX(Bug 2037532) Fill missing fields on the transport.
               GetIceStats(*stream, aNow, stats.get(), transport);
 
@@ -1644,6 +1654,14 @@ void MediaTransportHandlerSTS::OnConnectionStateChange(
           aIceStream->GetActivePairAsAttributes(1, &localAttr, &remoteAttr))) {
     selectedPair = Some(dom::IceCandidateAttributePair(nsCString(localAttr),
                                                        nsCString(remoteAttr)));
+  }
+  if (auto it = mTransports.find(aIceStream->GetId());
+      it != mTransports.end()) {
+    auto newPair = std::make_pair(localAttr, remoteAttr);
+    if (newPair != it->second.mLastSelectedCandidatePair) {
+      it->second.mSelectedCandidatePairChanges += 1;
+      it->second.mLastSelectedCandidatePair = std::move(newPair);
+    }
   }
   OnConnectionStateChange(aIceStream->GetId(), toDomIceTransportState(aState),
                           selectedPair);
