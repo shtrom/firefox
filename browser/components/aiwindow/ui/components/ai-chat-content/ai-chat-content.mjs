@@ -1068,6 +1068,7 @@ export class AIChatContent extends MozLitElement {
         .labelL10nId=${summary?.l10nId}
         .labelL10nArgs=${summary?.l10nArgs}
         .rows=${this.#buildGroupedActionLogRows(toolMsgs)}
+        .isLoading=${!isComplete}
         .isExpanded=${this.#actionResultExpandState.get(key) ?? false}
         @action-result-toggle=${e =>
           this.#actionResultExpandState.set(key, !!e.detail?.isExpanded)}
@@ -1413,8 +1414,12 @@ export class AIChatContent extends MozLitElement {
     ></smartwindow-prompts>`;
   }
 
-  #renderLoader() {
-    if (!this.assistantIsLoading) {
+  #renderLoader(suppress) {
+    // The spinner is suppressed while an action log is processing (its animated
+    // label already communicates progress) and once the reply is streaming (its
+    // text is already visible). It only shows while waiting with nothing else on
+    // screen yet.
+    if (!this.assistantIsLoading || suppress) {
       return nothing;
     }
     return html`<chat-assistant-loader
@@ -1521,9 +1526,12 @@ export class AIChatContent extends MozLitElement {
       });
     }
 
-    // Commit anything still pending at end of loop. The in-flight turn is
-    // complete once assistantIsLoading set false
-    appendPendingAssistantTurn(!this.assistantIsLoading);
+    // Commit anything still pending at end of loop. The action log is finished
+    // once the turn's reply starts streaming (its tools are done by then) or the
+    // whole turn completes, so it doesn't keep shimmering through response
+    // generation.
+    const replyStarted = !!pendingAssistantMessage?.body;
+    appendPendingAssistantTurn(!this.assistantIsLoading || replyStarted);
 
     return items;
   }
@@ -1538,8 +1546,8 @@ export class AIChatContent extends MozLitElement {
     return toolMsgs.map(msg => msg.row).filter(Boolean);
   }
 
-  #renderMessages() {
-    return this.#buildTurnRenderItems().map((item, i) => {
+  #renderMessages(items) {
+    return items.map((item, i) => {
       const { type, msgs, msg, isComplete, contextPageUrl } = item;
       if (type === "action-log") {
         return this.#renderActionLogGroup(msgs, isComplete, i);
@@ -1551,6 +1559,18 @@ export class AIChatContent extends MozLitElement {
   }
 
   render() {
+    const renderItems = this.#buildTurnRenderItems();
+    const actionLogInProgress = renderItems.some(
+      item => item.type === "action-log" && item.isComplete === false
+    );
+    // Once the reply is streaming, its text is already visible, so the spinner
+    // isn't needed (and shouldn't reappear now that the action log completes as
+    // soon as the reply starts).
+    const lastItem = renderItems.at(-1);
+    const replyStreaming =
+      lastItem?.type === "message" &&
+      lastItem.msg?.role === "assistant" &&
+      !!lastItem.msg?.body;
     return html`
       <link
         rel="stylesheet"
@@ -1558,8 +1578,10 @@ export class AIChatContent extends MozLitElement {
       />
       <div class="chat-content-wrapper" tabindex="-1">
         <div class="chat-inner-wrapper">
-          ${this.#renderMessages()} ${this.#renderFollowUpSuggestions()}
-          ${this.#renderLoader()} ${this.#renderError()}
+          ${this.#renderMessages(renderItems)}
+          ${this.#renderFollowUpSuggestions()}
+          ${this.#renderLoader(actionLogInProgress || replyStreaming)}
+          ${this.#renderError()}
         </div>
       </div>
       <kit-mention variant="sidebar"></kit-mention>
