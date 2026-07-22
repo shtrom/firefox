@@ -57,7 +57,6 @@ class nsAppShell : public nsBaseAppShell {
   static void DBusConnectionCheck();
   static void SetSessionDBus(GDBusConnection* aDBusConnectionSession);
   static void SetSystemDBus(GDBusConnection* aDBusConnectionSystem);
-  static bool IsNotificationDaemonRunning();
 #endif
 
   static void InstallTermSignalHandler();
@@ -88,7 +87,6 @@ class nsAppShell : public nsBaseAppShell {
   RefPtr<GDBusConnection> mDBusConnectionSystem;
   RefPtr<GCancellable> mDBusGetCancellableSession;
   RefPtr<GCancellable> mDBusGetCancellableSystem;
-  guint mNotificationDaemonWatchId = 0;
 #endif
 };
 

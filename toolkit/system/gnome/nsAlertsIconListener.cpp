@@ -17,7 +17,6 @@
 #include "mozilla/GRefPtr.h"
 #include "mozilla/GUniquePtr.h"
 
-#include "nsAppShell.h"
 #include "nsGTKToolkit.h"
 
 #include <dlfcn.h>
@@ -324,9 +323,7 @@ nsresult nsAlertsIconListener::Close() {
 
 nsresult nsAlertsIconListener::InitAlert(nsIAlertNotification* aAlert,
                                          nsIObserver* aAlertListener) {
-  if (!libNotifyHandle || !nsAppShell::IsNotificationDaemonRunning()) {
-    return NS_ERROR_FAILURE;
-  }
+  if (!libNotifyHandle) return NS_ERROR_FAILURE;
 
   if (!notify_is_initted()) {
     // Give the name of this application to libnotify
