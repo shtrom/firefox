@@ -97,6 +97,10 @@ export class ThemePicker extends MozLitElement {
     showLabels: { type: Boolean },
   };
 
+  static queries = {
+    pickerEl: "moz-visual-picker",
+  };
+
   constructor() {
     super();
     this.appearance = "device";

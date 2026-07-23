@@ -108,6 +108,9 @@ export class EditProfileCard extends MozLitElement {
   clearSavedMessageTimer = null;
 
   get themeCards() {
+    if (this.novaEnabled) {
+      return this.themesPicker.pickerEl.childElements;
+    }
     return this.themesPicker.childElements;
   }
 
@@ -470,7 +473,10 @@ export class EditProfileCard extends MozLitElement {
     if (!this.novaEnabled) {
       return this.legacyThemesTemplate();
     }
-    return html`<theme-picker installsource="profiles"></theme-picker>`;
+    return html`<theme-picker
+      id="themes"
+      installsource="profiles"
+    ></theme-picker>`;
   }
 
   legacyThemesTemplate() {
