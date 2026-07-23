@@ -1798,9 +1798,10 @@ UniquePtr<sandbox::bpf_dsl::Policy> GetContentSandboxPolicy(
   return MakeUnique<ContentSandboxPolicy>(aMaybeBroker, std::move(aParams));
 }
 
-// Unlike for content, the GeckoMediaPlugin seccomp-bpf policy needs
-// to be an effective sandbox by itself, because we allow GMP on Linux
-// systems where that's the only sandboxing mechanism we can use.
+// The GeckoMediaPlugin seccomp-bpf policy is more delicate than the others,
+// because this process loads a closed-source binary and we've told users
+// that we prohibit it from fingerprinting them; see:
+// https://hacks.mozilla.org/2014/05/reconciling-mozillas-mission-and-w3c-eme/
 //
 // Be especially careful about what this policy allows.
 class GMPSandboxPolicy : public SandboxPolicyCommon {
@@ -1867,20 +1868,6 @@ class GMPSandboxPolicy : public SandboxPolicyCommon {
     return 0;
   }
 
-  static intptr_t FcntlTrap(const arch_seccomp_data& aArgs, void* aux) {
-    const auto cmd = static_cast<int>(aArgs.args[1]);
-    switch (cmd) {
-        // This process can't exec, so the actual close-on-exec flag
-        // doesn't matter; have it always read as true and ignore writes.
-      case F_GETFD:
-        return O_CLOEXEC;
-      case F_SETFD:
-        return 0;
-      default:
-        return -ENOSYS;
-    }
-  }
-
   const SandboxOpenedFiles* mFiles;
 
  public:
@@ -1926,8 +1913,6 @@ class GMPSandboxPolicy : public SandboxPolicyCommon {
       // Bug 1372428
       case __NR_uname:
         return Trap(UnameTrap, nullptr);
-      CASES_FOR_fcntl:
-        return Trap(FcntlTrap, nullptr);
 
       // Allow the same advice values as the default policy, but return
       // Error(ENOSYS) for other values. Because the Widevine CDM may probe
