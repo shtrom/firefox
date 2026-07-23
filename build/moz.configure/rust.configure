@@ -278,9 +278,7 @@ def rust_supported_targets(rustc):
     return data
 
 
-def detect_rustc_target(
-    host_or_target, compiler_info, arm_target, rust_supported_targets
-):
+def detect_rustc_target(host_or_target, arm_target, rust_supported_targets):
     # Rust's --target options are similar to, but not exactly the same
     # as, the autoconf-derived targets we use.  An example would be that
     # Rust uses distinct target triples for targetting the GNU C++ ABI
@@ -302,17 +300,12 @@ def detect_rustc_target(
 
         # We have multiple candidates. There are two cases where we can try to
         # narrow further down using extra information from the build system.
-        # - For windows targets, correlate with the C compiler type
+        # - For windows targets, correlate with the ABI
         if host_or_target.kernel == "WINNT":
-            if host_or_target.abi:
-                if host_or_target.abi == "msvc":
-                    suffix = "windows-msvc"
-                elif host_or_target.abi == "mingw":
-                    suffix = "windows-gnu"
-            elif compiler_info.type in ("gcc", "clang"):
-                suffix = "windows-gnu"
-            else:
+            if host_or_target.abi == "msvc":
                 suffix = "windows-msvc"
+            elif host_or_target.abi == "mingw":
+                suffix = "windows-gnu"
             narrowed = [
                 c for c in candidates if c.rust_target.endswith("-{}".format(suffix))
             ]
@@ -477,7 +470,6 @@ def assert_rust_compile(host_or_target, rustc_target, rustc):
 @depends(
     rustc,
     host,
-    host_c_compiler,
     rustc_info.host,
     rust_supported_targets,
     arm_target,
@@ -485,12 +477,8 @@ def assert_rust_compile(host_or_target, rustc_target, rustc):
 )
 @checking("for rust host triplet")
 @imports(_from="textwrap", _import="dedent")
-def rust_host_triple(
-    rustc, host, compiler_info, rustc_host, rust_supported_targets, arm_target
-):
-    rustc_target = detect_rustc_target(
-        host, compiler_info, arm_target, rust_supported_targets
-    )
+def rust_host_triple(rustc, host, rustc_host, rust_supported_targets, arm_target):
+    rustc_target = detect_rustc_target(host, arm_target, rust_supported_targets)
     if rustc_target != rustc_host:
         if host.alias == rustc_target:
             configure_host = host.alias
@@ -516,16 +504,10 @@ def rust_host_triple(
     return rustc_target
 
 
-@depends(
-    rustc, target, c_compiler, rust_supported_targets, arm_target, when=rust_compiler
-)
+@depends(rustc, target, rust_supported_targets, arm_target, when=rust_compiler)
 @checking("for rust target triplet")
-def rust_target_triple(
-    rustc, target, compiler_info, rust_supported_targets, arm_target
-):
-    rustc_target = detect_rustc_target(
-        target, compiler_info, arm_target, rust_supported_targets
-    )
+def rust_target_triple(rustc, target, rust_supported_targets, arm_target):
+    rustc_target = detect_rustc_target(target, arm_target, rust_supported_targets)
     assert_rust_compile(target, rustc_target, rustc)
     return rustc_target
 
