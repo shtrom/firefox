@@ -524,8 +524,16 @@ class Assembler : public AssemblerShared,
       sext_h(rd, rs);
       return;
     }
-    slli(rd, rs, xlen - 16);
-    srai(rd, rd, xlen - 16);
+    slli(rd, rs, 48);
+    srai(rd, rd, 48);
+  }
+  void ZeroExtendShort(Register rd, Register rs) {
+    if (HasZbbExtension()) {
+      zext_h(rd, rs);
+      return;
+    }
+    slli(rd, rs, 48);
+    srli(rd, rd, 48);
   }
 
   void SignExtendWord(Register rd, Register rs) { sext_w(rd, rs); }

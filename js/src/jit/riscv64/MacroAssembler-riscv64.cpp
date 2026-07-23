@@ -2911,7 +2911,7 @@ static void AtomicExchange(MacroAssembler& masm,
       masm.ZeroExtendByte(valueTemp, value);
       break;
     case 2:
-      masm.ma_and(valueTemp, value, Imm32(0xffff));
+      masm.ZeroExtendShort(valueTemp, value);
       break;
   }
   masm.sllw(valueTemp, valueTemp, offsetTemp);
@@ -3182,7 +3182,7 @@ static void AtomicEffectOp(MacroAssembler& masm,
       masm.ZeroExtendByte(valueTemp, valueTemp);
       break;
     case 2:
-      masm.ma_and(valueTemp, valueTemp, Imm32(0xffff));
+      masm.ZeroExtendShort(valueTemp, valueTemp);
       break;
   }
 
@@ -3324,7 +3324,7 @@ static void AtomicFetchOp(MacroAssembler& masm,
       masm.ZeroExtendByte(valueTemp, valueTemp);
       break;
     case 2:
-      masm.ma_and(valueTemp, valueTemp, Imm32(0xffff));
+      masm.ZeroExtendShort(valueTemp, valueTemp);
       break;
   }
 
@@ -3354,7 +3354,7 @@ static void AtomicFetchOp(MacroAssembler& masm,
       if (signExtend) {
         masm.SignExtendShort(output, output);
       } else {
-        masm.ma_and(output, output, Imm32(0xffff));
+        masm.ZeroExtendShort(output, output);
       }
       break;
   }
@@ -4776,11 +4776,16 @@ static void CompareExchange(MacroAssembler& masm,
         masm.SignExtendShort(valueTemp, oldval);
         masm.SignExtendShort(output, output);
       } else {
-        UseScratchRegisterScope temps(&masm);
-        Register mask = temps.Acquire();
-        masm.ma_li(mask, Imm32(0xffff));
-        masm.and_(valueTemp, oldval, mask);
-        masm.and_(output, output, mask);
+        if (Assembler::HasZbbExtension()) {
+          masm.ZeroExtendShort(valueTemp, oldval);
+          masm.ZeroExtendShort(output, output);
+        } else {
+          UseScratchRegisterScope temps(&masm);
+          Register mask = temps.Acquire();
+          masm.ma_li(mask, Imm32(0xffff));
+          masm.and_(valueTemp, oldval, mask);
+          masm.and_(output, output, mask);
+        }
       }
       break;
   }
@@ -4792,8 +4797,7 @@ static void CompareExchange(MacroAssembler& masm,
       masm.ZeroExtendByte(valueTemp, newval);
       break;
     case 2:
-      masm.slli(valueTemp, newval, 48);
-      masm.srli(valueTemp, valueTemp, 48);
+      masm.ZeroExtendShort(valueTemp, newval);
       break;
   }
 
