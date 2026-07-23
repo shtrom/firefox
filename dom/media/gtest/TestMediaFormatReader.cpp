@@ -390,6 +390,8 @@ class RecreateOnNthDecodeDecoder final : public MockVideoDataDecoder {
 
 class VideoRateTest : public TestMediaFormatReader {
  protected:
+  enum class SampleType { Keyframe, DeltaFrame };
+
   static constexpr uint32_t kFirstStreamID = 1;
   static constexpr uint32_t kSecondStreamID = 2;
 
@@ -408,12 +410,17 @@ class VideoRateTest : public TestMediaFormatReader {
     TimeUnit mTime;
     TimeUnit mDuration;
     Maybe<uint32_t> mStreamID;
+    SampleType mType;
   };
 
   void SetUp() override {
     TestMediaFormatReader::SetUp();
     mTrackInfo = mTrackDemuxer->GetInfo();
     ASSERT_TRUE(mTrackInfo);
+    ON_CALL(*mDataDemuxer, IsSeekable).WillByDefault(Return(true));
+    ON_CALL(*mTrackDemuxer, Seek).WillByDefault([](const TimeUnit& aTime) {
+      return SeekPromise::CreateAndResolve(aTime, __func__);
+    });
   }
 
   void TearDown() override { ShutdownReader(); }
@@ -427,13 +434,15 @@ class VideoRateTest : public TestMediaFormatReader {
     mReader = nullptr;
   }
 
-  void AddSample(const TimeUnit& aDuration, uint32_t aStreamID) {
-    AddSampleAt(mNextSampleTime, aDuration, Some(aStreamID));
+  void AddSample(const TimeUnit& aDuration, uint32_t aStreamID,
+                 SampleType aType = SampleType::Keyframe) {
+    AddSampleAt(mNextSampleTime, aDuration, Some(aStreamID), aType);
   }
 
   void AddSampleAt(const TimeUnit& aTime, const TimeUnit& aDuration,
-                   Maybe<uint32_t> aStreamID) {
-    mSamples.AppendElement(SampleSpec{aTime, aDuration, aStreamID});
+                   Maybe<uint32_t> aStreamID,
+                   SampleType aType = SampleType::Keyframe) {
+    mSamples.AppendElement(SampleSpec{aTime, aDuration, aStreamID, aType});
     mNextSampleTime = aTime + aDuration;
   }
 
@@ -473,7 +482,7 @@ class VideoRateTest : public TestMediaFormatReader {
           }
           const SampleSpec& spec = mSamples[mNextSample++];
           RefPtr sample = new MediaRawData;
-          sample->mKeyframe = true;
+          sample->mKeyframe = spec.mType == SampleType::Keyframe;
           sample->mTime = spec.mTime;
           sample->mTimecode = TimeUnit::Zero();
           sample->mDuration = spec.mDuration;
@@ -677,5 +686,29 @@ TEST_F(VideoRateTest, DecodeErrorRecreationUsesCurrentRate) {
   EXPECT_FLOAT_EQ(mDecoderRates[0], static_cast<float>(initialRate));
   EXPECT_FLOAT_EQ(mDecoderRates[1], static_cast<float>(recreatedRate));
   EXPECT_DOUBLE_EQ(VideoRate(), finalRate);
+  ShutdownReader();
+}
+
+TEST_F(VideoRateTest, NonKeyframeStreamChangeCountsDemuxedSample) {
+  PDMFactory::AutoForcePDM autoForcePDM(mPdm);
+  const auto firstStreamDuration = TimeUnit(40, 1000);
+  const auto nonKeyframeDuration = TimeUnit(100, 1000);
+  const auto keyframeDuration = TimeUnit(20, 1000);
+  AddSample(firstStreamDuration, kFirstStreamID);
+  AddSample(nonKeyframeDuration, kSecondStreamID, SampleType::DeltaFrame);
+  AddSample(keyframeDuration, kSecondStreamID);
+  EXPECT_CALL(*mTrackDemuxer, Seek).WillOnce([](const TimeUnit& aTime) {
+    return SeekPromise::CreateAndResolve(aTime, __func__);
+  });
+  InitReader();
+  ReadToEnd();
+
+  const double firstRate = ExpectedRate({firstStreamDuration});
+  const double secondRate =
+      ExpectedRate({nonKeyframeDuration, keyframeDuration});
+  ASSERT_EQ(mDecoderRates.Length(), 2U);
+  EXPECT_FLOAT_EQ(mDecoderRates[0], static_cast<float>(firstRate));
+  EXPECT_FLOAT_EQ(mDecoderRates[1], static_cast<float>(secondRate));
+  EXPECT_DOUBLE_EQ(VideoRate(), secondRate);
   ShutdownReader();
 }
