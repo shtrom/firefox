@@ -67,7 +67,7 @@ const kSubviewEvents = ["ViewShowing", "ViewHiding"];
  * The current version. We can use this to auto-add new default widgets as necessary.
  * (would be const but isn't because of testing purposes)
  */
-var kVersion = 25;
+var kVersion = 26;
 
 /**
  * Buttons removed from built-ins by version they were removed. kVersion must be
@@ -403,6 +403,7 @@ var CustomizableUIInternal = {
         defaultPlacements: [
           "tabbrowser-tabs",
           "new-tab-button",
+          "spring",
           "alltabs-button",
           "ai-window-toggle",
         ],
@@ -873,6 +874,37 @@ var CustomizableUIInternal = {
         if (!shouldKeepFirefoxView) {
           firefoxViewArea.splice(defaultIndex, 1);
         }
+      }
+    }
+
+    // Add the flexible space that replaced the post-tabs titlebar-spacer to the
+    // left of the alltabs-button. Only the horizontal tab strip layout is
+    // touched, to match the defaults (a fresh vertical-tabs profile doesn't get
+    // this space). For users currently in vertical tabs, that layout lives in
+    // the horizontal snapshot rather than the live tabstrip placements.
+    if (currentVersion < 26) {
+      let insertBeforeAllTabs = placements => {
+        if (!placements) {
+          return placements;
+        }
+        let alltabsIndex = placements.indexOf("alltabs-button");
+        if (
+          alltabsIndex > 0 &&
+          !placements[alltabsIndex - 1].startsWith(kSpecialWidgetPfx + "spring")
+        ) {
+          placements.splice(alltabsIndex, 0, "spring");
+        }
+        return placements;
+      };
+
+      insertBeforeAllTabs(gSavedState.placements[CustomizableUI.AREA_TABSTRIP]);
+
+      let horizontalSnapshot =
+        CustomizableUIInternal.getSavedHorizontalSnapshotState();
+      if (horizontalSnapshot.length) {
+        CustomizableUIInternal.saveHorizontalTabStripState(
+          insertBeforeAllTabs(horizontalSnapshot)
+        );
       }
     }
   },
