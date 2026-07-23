@@ -224,21 +224,20 @@ class MacroAssemblerLOONG64 : public Assembler {
   void ma_cmp_set(Register dst, Address address, Imm32 imm, Condition c);
   void ma_cmp_set(Register dst, Address address, ImmWord imm, Condition c);
 
+  void ma_cselz(Register rd, Register rs1, Register rs2, Register rc,
+                Register rtmp);
+  void ma_cselnz(Register rd, Register rs1, Register rs2, Register rc,
+                 Register rtmp);
+
   void moveIfZero(Register dst, Register src, Register cond) {
     UseScratchRegisterScope temps(*this);
     Register scratch = temps.Acquire();
-    MOZ_ASSERT(dst != scratch && cond != scratch);
-    as_masknez(scratch, src, cond);
-    as_maskeqz(dst, dst, cond);
-    as_or(dst, dst, scratch);
+    ma_cselz(dst, src, dst, cond, scratch);
   }
   void moveIfNotZero(Register dst, Register src, Register cond) {
     UseScratchRegisterScope temps(*this);
     Register scratch = temps.Acquire();
-    MOZ_ASSERT(dst != scratch && cond != scratch);
-    as_maskeqz(scratch, src, cond);
-    as_masknez(dst, dst, cond);
-    as_or(dst, dst, scratch);
+    ma_cselnz(dst, src, dst, cond, scratch);
   }
 
   // These functions abstract the access to high part of the double precision
