@@ -369,6 +369,7 @@ TEST_F(TestMediaFormatReader, VideoSkipDoesNotReenterAcrossErrorRecovery) {
 class VideoRateTest : public TestMediaFormatReader {
  protected:
   static constexpr uint32_t kFirstStreamID = 1;
+  static constexpr uint32_t kSecondStreamID = 2;
 
   static double ExpectedRate(std::initializer_list<TimeUnit> aDurations) {
     MOZ_ASSERT(aDurations.size() > 0);
@@ -412,6 +413,10 @@ class VideoRateTest : public TestMediaFormatReader {
                    Maybe<uint32_t> aStreamID) {
     mSamples.AppendElement(SampleSpec{aTime, aDuration, aStreamID});
     mNextSampleTime = aTime + aDuration;
+  }
+
+  void AddSampleWithoutTrackInfo(const TimeUnit& aDuration) {
+    AddSampleAt(mNextSampleTime, aDuration, Nothing());
   }
 
   void InitReader() {
@@ -494,5 +499,29 @@ TEST_F(VideoRateTest, InitialDecoderAndFinalDiagnosticShareEstimator) {
   ASSERT_EQ(mDecoderRates.Length(), 1U);
   EXPECT_FLOAT_EQ(mDecoderRates[0], static_cast<float>(initialRate));
   EXPECT_DOUBLE_EQ(VideoRate(), finalRate);
+  ShutdownReader();
+}
+
+TEST_F(VideoRateTest, StreamChangeResetsRateAndRecreatesDecoder) {
+  PDMFactory::AutoForcePDM autoForcePDM(mPdm);
+  const auto firstDuration = TimeUnit(10, 1000);
+  const auto firstSparseDuration = TimeUnit(90, 1000);
+  const auto secondDuration = TimeUnit(100, 1000);
+  const auto secondSparseDuration = TimeUnit(200, 1000);
+  AddSample(firstDuration, kFirstStreamID);
+  AddSampleWithoutTrackInfo(firstSparseDuration);
+  AddSample(secondDuration, kSecondStreamID);
+  AddSampleWithoutTrackInfo(secondSparseDuration);
+  InitReader();
+  ReadToEnd();
+
+  const double firstRate = ExpectedRate({firstDuration});
+  const double secondInitialRate = ExpectedRate({secondDuration});
+  const double secondFinalRate =
+      ExpectedRate({secondDuration, secondSparseDuration});
+  ASSERT_EQ(mDecoderRates.Length(), 2U);
+  EXPECT_FLOAT_EQ(mDecoderRates[0], static_cast<float>(firstRate));
+  EXPECT_FLOAT_EQ(mDecoderRates[1], static_cast<float>(secondInitialRate));
+  EXPECT_DOUBLE_EQ(VideoRate(), secondFinalRate);
   ShutdownReader();
 }
