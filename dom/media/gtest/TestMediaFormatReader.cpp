@@ -366,6 +366,28 @@ TEST_F(TestMediaFormatReader, VideoSkipDoesNotReenterAcrossErrorRecovery) {
   WaitForResolve(mProxy->Shutdown());
 }
 
+class RecreateOnNthDecodeDecoder final : public MockVideoDataDecoder {
+ public:
+  RecreateOnNthDecodeDecoder(const CreateDecoderParams& aParams,
+                             uint32_t aDecodeNumber)
+      : MockVideoDataDecoder(aParams), mDecodeNumber(aDecodeNumber) {
+    MOZ_ASSERT(aDecodeNumber > 0);
+  }
+
+  RefPtr<DecodePromise> Decode(MediaRawData* aSample) override {
+    if (++mDecodeCount == mDecodeNumber) {
+      return DecodePromise::CreateAndReject(NS_ERROR_DOM_MEDIA_NEED_NEW_DECODER,
+                                            __func__);
+    }
+    return DummyMediaDataDecoder::Decode(aSample);
+  }
+
+ private:
+  ~RecreateOnNthDecodeDecoder() override = default;
+  const uint32_t mDecodeNumber;
+  uint32_t mDecodeCount = 0;
+};
+
 class VideoRateTest : public TestMediaFormatReader {
  protected:
   static constexpr uint32_t kFirstStreamID = 1;
@@ -419,12 +441,24 @@ class VideoRateTest : public TestMediaFormatReader {
     AddSampleAt(mNextSampleTime, aDuration, Nothing());
   }
 
+  void RecreateFirstDecoderOnDecode(uint32_t aDecodeNumber) {
+    MOZ_ASSERT(aDecodeNumber > 0);
+    mFirstDecoderFailureAtDecode = Some(aDecodeNumber);
+  }
+
   void InitReader() {
     EXPECT_CALL(*mPdm, CreateVideoDecoder)
         .Times(testing::AnyNumber())
         .WillRepeatedly([this](const CreateDecoderParams& aParams) {
           mDecoderRates.AppendElement(aParams.mRate.mValue);
-          RefPtr decoder = new MockVideoDataDecoder(aParams);
+          RefPtr<MockVideoDataDecoder> decoder;
+          if (mFirstDecoderFailureAtDecode.isSome() &&
+              mDecoderRates.Length() == 1) {
+            decoder = new RecreateOnNthDecodeDecoder(
+                aParams, mFirstDecoderFailureAtDecode.ref());
+          } else {
+            decoder = new MockVideoDataDecoder(aParams);
+          }
           EXPECT_CALL(*decoder, Drain).Times(testing::AnyNumber());
           EXPECT_CALL(*decoder, IsHardwareAccelerated)
               .Times(testing::AnyNumber());
@@ -490,6 +524,7 @@ class VideoRateTest : public TestMediaFormatReader {
   nsTArray<float> mDecoderRates;
   TimeUnit mNextSampleTime = TimeUnit::Zero();
   size_t mNextSample = 0;
+  Maybe<uint32_t> mFirstDecoderFailureAtDecode;
 };
 
 TEST_F(VideoRateTest, InitialDecoderAndFinalDiagnosticShareEstimator) {
@@ -606,5 +641,41 @@ TEST_F(VideoRateTest, SameStreamDecoderRecreationUsesCurrentRate) {
   EXPECT_FLOAT_EQ(mDecoderRates[0], static_cast<float>(initialRate));
   EXPECT_FLOAT_EQ(mDecoderRates[1], static_cast<float>(recreatedRate));
   EXPECT_DOUBLE_EQ(VideoRate(), recreatedRate);
+  ShutdownReader();
+}
+
+TEST_F(VideoRateTest, DecodeErrorRecreationUsesCurrentRate) {
+  PDMFactory::AutoForcePDM autoForcePDM(mPdm);
+  const auto firstDuration = TimeUnit(10, 1000);
+  const auto secondDuration = TimeUnit(90, 1000);
+  const auto thirdDuration = TimeUnit(100, 1000);
+  const auto fourthDuration = TimeUnit(200, 1000);
+  AddSample(firstDuration, kFirstStreamID);
+  AddSample(secondDuration, kFirstStreamID);
+  AddSample(thirdDuration, kFirstStreamID);
+  AddSample(fourthDuration, kFirstStreamID);
+  RecreateFirstDecoderOnDecode(2);
+  ON_CALL(*mTrackDemuxer, GetNextRandomAccessPoint)
+      .WillByDefault([](TimeUnit* aTime) {
+        *aTime = TimeUnit(100, 1000);
+        return NS_OK;
+      });
+  EXPECT_CALL(*mTrackDemuxer, SkipToNextRandomAccessPoint)
+      .WillOnce([](const TimeUnit&) {
+        return MediaTrackDemuxer::SkipAccessPointPromise::CreateAndResolve(
+            0, __func__);
+      });
+  InitReader();
+  ReadToEnd();
+
+  const double initialRate = ExpectedRate({firstDuration});
+  const double recreatedRate =
+      ExpectedRate({firstDuration, secondDuration, thirdDuration});
+  const double finalRate = ExpectedRate(
+      {firstDuration, secondDuration, thirdDuration, fourthDuration});
+  ASSERT_EQ(mDecoderRates.Length(), 2U);
+  EXPECT_FLOAT_EQ(mDecoderRates[0], static_cast<float>(initialRate));
+  EXPECT_FLOAT_EQ(mDecoderRates[1], static_cast<float>(recreatedRate));
+  EXPECT_DOUBLE_EQ(VideoRate(), finalRate);
   ShutdownReader();
 }
