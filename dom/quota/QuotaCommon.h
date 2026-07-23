@@ -1378,6 +1378,8 @@ nsDependentCSubstring GetSourceTreeBase();
 // initialized in our exported header; no argument should ever be provided to
 // this method. GetSourceTreeBase handles identifying the root of the source
 // tree.
+// The _sp suffix on path literals ensures separators match __FILE__ on the
+// current platform (e.g. backslashes on clang-cl Windows).
 nsDependentCSubstring GetObjdirDistIncludeTreeBase(
     const nsLiteralCString& aQuotaCommonHPath = nsLiteralCString(__FILE__));
 
