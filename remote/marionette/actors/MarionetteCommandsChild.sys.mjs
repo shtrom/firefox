@@ -91,8 +91,8 @@ export class MarionetteCommandsChild extends JSWindowActorChild {
             win
           );
           break;
-        case "synthesizeMultiTouch":
-          lazy.event.synthesizeMultiTouch(details.eventData, win);
+        case "synthesizeTouchAtPoint":
+          await lazy.event.synthesizeTouchAtPoint(details.eventData, win);
           break;
         case "synthesizeWheelAtPoint":
           await lazy.event.synthesizeWheelAtPoint(

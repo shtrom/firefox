@@ -236,8 +236,8 @@ class InputModule extends WindowGlobalBiDiModule {
             this.messageHandler.window
           );
           break;
-        case "synthesizeMultiTouch":
-          lazy.event.synthesizeMultiTouch(
+        case "synthesizeTouchAtPoint":
+          await lazy.event.synthesizeTouchAtPoint(
             details.eventData,
             this.messageHandler.window
           );
