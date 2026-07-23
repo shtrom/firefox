@@ -2281,7 +2281,8 @@ void Document::AccumulatePageLoadTelemetry() {
         nsICacheInfoChannel::kCacheUnknown;
     if (NS_SUCCEEDED(cacheInfoChannel->GetCacheDisposition(&disposition))) {
       mPageloadEventData.set_cacheDisposition(disposition);
-      isCacheHit = disposition == nsICacheInfoChannel::kCacheHit;
+      isCacheHit = disposition == nsICacheInfoChannel::kCacheHit ||
+                   disposition == nsICacheInfoChannel::kCacheHitViaReval;
     }
   }
 
