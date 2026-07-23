@@ -188,6 +188,8 @@ export class _CustomizeMenu extends React.PureComponent {
                 showSectionsMgmtPanel={this.props.showSectionsMgmtPanel}
                 novaEnabled={novaEnabled}
                 browserNovaEnabled={browserNovaEnabled}
+                toggleThemesPanel={this.props.toggleThemesPanel}
+                showThemesPanel={this.props.showThemesPanel}
                 toggleWidgetsManagementPanel={
                   this.props.toggleWidgetsManagementPanel
                 }

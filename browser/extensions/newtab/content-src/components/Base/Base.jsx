@@ -133,6 +133,7 @@ export class BaseContent extends React.PureComponent {
     this.toggleSectionsMgmtPanel = this.toggleSectionsMgmtPanel.bind(this);
     this.toggleWidgetsManagementPanel =
       this.toggleWidgetsManagementPanel.bind(this);
+    this.toggleThemesPanel = this.toggleThemesPanel.bind(this);
     this.openWidgetsPanel = this.openWidgetsPanel.bind(this);
     this.attachSearchSentinel = this.attachSearchSentinel.bind(this);
     this.onSearchSentinelIntersect = this.onSearchSentinelIntersect.bind(this);
@@ -147,6 +148,7 @@ export class BaseContent extends React.PureComponent {
       visible: false,
       showSectionsMgmtPanel: false,
       showWidgetsManagementPanel: false,
+      showThemesPanel: false,
     };
     this.spocPlaceholderStartTime = null;
   }
@@ -767,6 +769,12 @@ export class BaseContent extends React.PureComponent {
     }));
   }
 
+  toggleThemesPanel() {
+    this.setState(prevState => ({
+      showThemesPanel: !prevState.showThemesPanel,
+    }));
+  }
+
   openWidgetsPanel() {
     this.openCustomizationMenu();
     if (!this.state.showWidgetsManagementPanel) {
@@ -1207,6 +1215,8 @@ export class BaseContent extends React.PureComponent {
                   this.state.showWidgetsManagementPanel
                 }
                 toggleWidgetsManagementPanel={this.toggleWidgetsManagementPanel}
+                toggleThemesPanel={this.toggleThemesPanel}
+                showThemesPanel={this.state.showThemesPanel}
                 widgetsEnabled={prefs["widgets.enabled"]}
                 dispatch={this.props.dispatch}
               />
@@ -1379,6 +1389,8 @@ export class BaseContent extends React.PureComponent {
               showing={customizeMenuVisible}
               toggleSectionsMgmtPanel={this.toggleSectionsMgmtPanel}
               showSectionsMgmtPanel={this.state.showSectionsMgmtPanel}
+              toggleThemesPanel={this.toggleThemesPanel}
+              showThemesPanel={this.state.showThemesPanel}
             />
             {shouldShowOMCHighlight(
               this.props.Messages,
