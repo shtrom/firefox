@@ -64,7 +64,7 @@ void MacroAssemblerRiscv64::ma_cmp_set(Register dst, Address address,
   UseScratchRegisterScope temps(this);
   Register scratch2 = temps.Acquire();
   ma_load(scratch2, address, SizeDouble);
-  ma_cmp_set(dst, Register(scratch2), rhs, c);
+  ma_cmp_set(dst, scratch2, rhs, c);
 }
 
 void MacroAssemblerRiscv64::ma_cmp_set(Register dst, Address address, Imm32 imm,
@@ -73,7 +73,7 @@ void MacroAssemblerRiscv64::ma_cmp_set(Register dst, Address address, Imm32 imm,
   UseScratchRegisterScope temps(this);
   Register scratch2 = temps.Acquire();
   ma_load(scratch2, address, SizeWord);
-  ma_cmp_set(dst, Register(scratch2), imm, c);
+  ma_cmp_set(dst, scratch2, imm, c);
 }
 
 void MacroAssemblerRiscv64::ma_cmp_set(Register dst, Address address,
@@ -81,7 +81,7 @@ void MacroAssemblerRiscv64::ma_cmp_set(Register dst, Address address,
   UseScratchRegisterScope temps(this);
   Register scratch2 = temps.Acquire();
   ma_load(scratch2, address, SizeDouble);
-  ma_cmp_set(dst, Register(scratch2), imm, c);
+  ma_cmp_set(dst, scratch2, imm, c);
 }
 
 void MacroAssemblerRiscv64::ma_cmp_set(Register dst, Register lhs, Imm32 imm,
@@ -2887,8 +2887,7 @@ static void AtomicExchange(MacroAssembler& masm,
     masm.lr_w(true, true, output, scratch);
     masm.or_(scratch2, value, zero);
     masm.sc_w(true, true, scratch2, scratch, scratch2);
-    masm.ma_b(scratch2, Register(scratch2), &again, Assembler::NonZero,
-              ShortJump);
+    masm.ma_b(scratch2, scratch2, &again, Assembler::NonZero, ShortJump);
 
     masm.memoryBarrierAfter(sync);
 
@@ -2946,8 +2945,7 @@ static void AtomicExchange(MacroAssembler& masm,
 
   masm.sc_w(true, true, scratch2, scratch, scratch2);
 
-  masm.ma_b(scratch2, Register(scratch2), &again, Assembler::NonZero,
-            ShortJump);
+  masm.ma_b(scratch2, scratch2, &again, Assembler::NonZero, ShortJump);
 
   masm.srlw(output, output, offsetTemp);
 
@@ -3127,8 +3125,7 @@ static void AtomicEffectOp(MacroAssembler& masm,
     }
 
     masm.sc_w(true, true, scratch2, scratch, scratch2);
-    masm.ma_b(scratch2, Register(scratch2), &again, Assembler::NonZero,
-              ShortJump);
+    masm.ma_b(scratch2, scratch2, &again, Assembler::NonZero, ShortJump);
 
     masm.memoryBarrierAfter(sync);
 
@@ -3201,8 +3198,7 @@ static void AtomicEffectOp(MacroAssembler& masm,
 
   masm.sc_w(true, true, scratch2, scratch, scratch2);
 
-  masm.ma_b(scratch2, Register(scratch2), &again, Assembler::NonZero,
-            ShortJump);
+  masm.ma_b(scratch2, scratch2, &again, Assembler::NonZero, ShortJump);
 
   masm.memoryBarrierAfter(sync);
 }
@@ -3271,8 +3267,7 @@ static void AtomicFetchOp(MacroAssembler& masm,
     }
 
     masm.sc_w(true, true, scratch2, scratch, scratch2);
-    masm.ma_b(scratch2, Register(scratch2), &again, Assembler::NonZero,
-              ShortJump);
+    masm.ma_b(scratch2, scratch2, &again, Assembler::NonZero, ShortJump);
 
     masm.memoryBarrierAfter(sync);
 
@@ -3345,8 +3340,7 @@ static void AtomicFetchOp(MacroAssembler& masm,
 
   masm.sc_w(true, true, scratch2, scratch, scratch2);
 
-  masm.ma_b(scratch2, Register(scratch2), &again, Assembler::NonZero,
-            ShortJump);
+  masm.ma_b(scratch2, scratch2, &again, Assembler::NonZero, ShortJump);
 
   switch (nbytes) {
     case 1:
@@ -3777,8 +3771,7 @@ static void CompareExchange64(MacroAssembler& masm,
   masm.ma_b(output.reg, expect.reg, &exit, Assembler::NotEqual, ShortJump);
   masm.movePtr(replace.reg, scratch2);
   masm.sc_d(true, true, scratch2, scratch, scratch2);
-  masm.ma_b(scratch2, Register(scratch2), &tryAgain, Assembler::NonZero,
-            ShortJump);
+  masm.ma_b(scratch2, scratch2, &tryAgain, Assembler::NonZero, ShortJump);
 
   masm.memoryBarrierAfter(sync);
 
@@ -4652,7 +4645,7 @@ void MacroAssembler::wasmBoundsCheck32(Condition cond, Register index,
   UseScratchRegisterScope temps(this);
   Register scratch2 = temps.Acquire();
   load32(boundsCheckLimit, scratch2);
-  ma_b(index, Register(scratch2), label, cond, ShortJump);
+  ma_b(index, scratch2, label, cond, ShortJump);
 }
 
 void MacroAssembler::wasmBoundsCheck64(Condition cond, Register64 index,
@@ -5188,7 +5181,7 @@ void MacroAssemblerRiscv64::ma_mulPtrTestOverflow(Register rd, Register rj,
   mul(rd, rj, rk);
   mulh(scratch, rj, rk);
   srai(scratch2, rd, 63);
-  ma_b(scratch, Register(scratch2), overflow, Assembler::NotEqual, ShortJump);
+  ma_b(scratch, scratch2, overflow, Assembler::NotEqual, ShortJump);
 }
 
 bool MacroAssemblerRiscv64::UseShortBranch(
@@ -5974,7 +5967,7 @@ void MacroAssemblerRiscv64::ma_sub32TestOverflow(Register rd, Register rj,
   Register scratch = temps.Acquire();
   sub(scratch, rj, rk);
   subw(rd, rj, rk);
-  ma_b(rd, Register(scratch), overflow, Assembler::NotEqual, ShortJump);
+  ma_b(rd, scratch, overflow, Assembler::NotEqual, ShortJump);
 }
 
 void MacroAssemblerRiscv64::ma_sub32TestOverflow(Register rd, Register rj,
@@ -5996,7 +5989,7 @@ void MacroAssemblerRiscv64::ma_add32TestOverflow(Register rd, Register rj,
   Register scratch = temps.Acquire();
   add(scratch, rj, rk);
   addw(rd, rj, rk);
-  ma_b(rd, Register(scratch), overflow, Assembler::NotEqual, ShortJump);
+  ma_b(rd, scratch, overflow, Assembler::NotEqual, ShortJump);
 }
 
 void MacroAssemblerRiscv64::ma_add32TestOverflow(Register rd, Register rj,
@@ -6093,7 +6086,7 @@ void MacroAssemblerRiscv64::ma_addPtrTestOverflow(Register rd, Register rj,
     add(rd, rj, rk);
     slti(scratch, rj, 0);
     slt(scratch2, rd, rk);
-    ma_b(scratch, Register(scratch2), overflow, Assembler::NotEqual, ShortJump);
+    ma_b(scratch, scratch2, overflow, Assembler::NotEqual, ShortJump);
   }
 }
 
@@ -6159,7 +6152,7 @@ void MacroAssemblerRiscv64::ma_add32TestCarry(Condition cond, Register rd,
   Register scratch = temps.Acquire();
   addw(rd, rj, rk);
   sltu(scratch, rd, rd == rj ? rk : rj);
-  ma_b(Register(scratch), Register(scratch), overflow,
+  ma_b(scratch, scratch, overflow,
        cond == Assembler::CarrySet ? Assembler::NonZero : Assembler::Zero,
        ShortJump);
 }
@@ -6190,7 +6183,7 @@ void MacroAssemblerRiscv64::ma_addPtrTestCarry(Condition cond, Register rd,
   MOZ_ASSERT(rd != scratch);
   add(rd, rj, rk);
   sltu(scratch, rd, rk);
-  ma_b(scratch, Register(scratch), overflow,
+  ma_b(scratch, scratch, overflow,
        cond == Assembler::CarrySet ? Assembler::NonZero : Assembler::Zero,
        ShortJump);
 }
