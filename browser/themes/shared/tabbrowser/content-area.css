@@ -774,6 +774,7 @@ split-view-footer {
   &.spotlightBox {
     max-width: none;
     max-height: none;
+    border-radius: inherit;
   }
 
   /* For window-modal dialogs, we allow overlapping the urlbar if the window is
@@ -839,6 +840,7 @@ split-view-footer {
 .dialogOverlay[topmost="true"],
 #window-modal-dialog::backdrop {
   background-color: var(--background-color-overlay);
+  border-radius: var(--chrome-block-radius);
 }
 
 .dialogOverlay[hideContent="true"][topmost="true"] {

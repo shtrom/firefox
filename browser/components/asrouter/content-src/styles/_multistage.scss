@@ -466,7 +466,6 @@ html {
     &[pos='center'] {
       background-color: var(--background-color-overlay);
       min-width: $main-section-width;
-      border-radius: var(--border-radius-xlarge, 16px);
 
       &.with-noodles {
         // Adjust for noodles partially extending out from the square modal

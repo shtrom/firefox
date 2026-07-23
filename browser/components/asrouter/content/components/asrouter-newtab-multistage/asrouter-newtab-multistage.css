@@ -1564,7 +1564,6 @@ html {
 .onboardingContainer .screen[pos=center] {
   background-color: var(--background-color-overlay);
   min-width: 504px;
-  border-radius: var(--border-radius-xlarge, 16px);
 }
 .onboardingContainer .screen[pos=center].with-noodles {
   min-width: 610px;
