@@ -19,6 +19,14 @@ import { sanitizeUntrustedContent } from "moz-src:///browser/components/aiwindow
 
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
+  HISTORY:
+    "moz-src:///browser/components/aiwindow/models/memories/MemoriesConstants.sys.mjs",
+  MEMORY_FILTER_COMPARATOR:
+    "moz-src:///browser/components/aiwindow/services/MemoryStoreConstants.sys.mjs",
+  MEMORY_SENSITIVITY_CATEGORY_NOT_SENSITIVE:
+    "moz-src:///browser/components/aiwindow/models/memories/MemoriesConstants.sys.mjs",
+  SESSION:
+    "moz-src:///browser/components/aiwindow/models/memories/MemoriesConstants.sys.mjs",
   buildConversation:
     "moz-src:///browser/components/aiwindow/models/PromptLoader.sys.mjs",
   loadPrompt:
@@ -27,6 +35,11 @@ ChromeUtils.defineESModuleGetters(lazy, {
 
 // Max number of memories to include in prompts
 const MAX_NUM_MEMORIES = 8;
+
+// Max number of memories to surface as "Pick up where you left off" pills.
+// The New Tab UI maintains a fixed pill count regardless; this only bounds how
+// many memory-backed candidates the models layer returns.
+const MAX_NUM_MEMORIES_FOR_RESUME_ACTIVITY = 3;
 
 /**
  * Helper to trim conversation history to recent messages, dropping empty messages, tool calls and responses
@@ -404,3 +417,50 @@ export const MemoriesGetterForSuggestionPrompts = {
     return memorySummaries;
   },
 };
+
+/**
+ * Gets memories suitable for "Pick up where you left off" suggestions.
+ * Selects memories that are not sensitive and have associated browsing history.
+ * Sorted by frecency and updated_at, returning the most frecent/recently updated memories.
+ *
+ * @param {number} count - Maximum number of memories to return
+ * @returns {Promise<Array<object>>}
+ */
+export async function getMemoriesForResumeActivityConversationStarter(
+  count = MAX_NUM_MEMORIES_FOR_RESUME_ACTIVITY
+) {
+  let attributeFilters = [
+    {
+      field: "sensitivity_category",
+      comparator: lazy.MEMORY_FILTER_COMPARATOR.EQUAL_TO,
+      value: lazy.MEMORY_SENSITIVITY_CATEGORY_NOT_SENSITIVE,
+    },
+    {
+      field: "sources",
+      comparator: lazy.MEMORY_FILTER_COMPARATOR.SOME,
+      value: [lazy.HISTORY, lazy.SESSION],
+    },
+  ];
+  let memories = await MemoriesManager.getMemoriesByAttribute(attributeFilters);
+
+  // Filter out memories that don't have any associated history.
+  // The case of HISTORY as a source, but no history_source_ids,
+  // come from v1 memories, before lineage was tracked.
+  memories = memories.filter(memory => {
+    const sourceIds = memory?.source_ids ?? {};
+    const hasHistory =
+      Array.isArray(sourceIds.history_source_ids) &&
+      !!sourceIds.history_source_ids.length;
+    return hasHistory;
+  });
+
+  // Re-sort by frecency (decreasing) and updated_at (most recent first)
+  memories.sort(
+    (a, b) =>
+      (b.frecency ?? 0) - (a.frecency ?? 0) ||
+      (b.updated_at ?? 0) - (a.updated_at ?? 0)
+  );
+
+  // Slice to requested count
+  return memories.slice(0, count);
+}
