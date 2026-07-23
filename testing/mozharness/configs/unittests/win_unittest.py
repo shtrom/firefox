@@ -176,10 +176,6 @@ config = {
             "--flavor=browser",
             "--subsuite=translations",
         ],
-        "mochitest-browser-chrome-ml-models": [
-            "--flavor=browser",
-            "--subsuite=ml-models",
-        ],
         "mochitest-a11y": ["--flavor=a11y", "--disable-e10s"],
         "mochitest-remote": ["--flavor=browser", "--subsuite=remote"],
     },
