@@ -6,12 +6,12 @@ import datetime
 import os
 import shutil
 import stat
-import subprocess
 import sys
 import tarfile
 
 import dateutil
 import requests
+from run_operations import run_git
 
 THIRDPARTY_USED_IN_FIREFOX = [
     "crc32c",
@@ -245,17 +245,18 @@ def fetch(target, url):
         )
 
 
+def reset_local_repo(path, commit):
+    # Reset the local working tree to an exact copy of commit, discarding any
+    # local modifications and removing untracked/ignored files.  This lets the
+    # working tree be consumed directly as the vendoring source (and restored
+    # afterward) instead of paying for a git-archive/tar round trip.  Note that
+    # 'git restore' does not move HEAD.
+    run_git(f"git restore --source {commit} --staged --worktree -- .", path)
+    run_git("git clean -xffd", path)
+
+
 def fetch_local(target, path, commit):
-    target_archive = target + ".tar.gz"
-    cp = subprocess.run(
-        ["git", "archive", "-o", target_archive, commit], cwd=path, check=False
-    )
-    if cp.returncode != 0:
-        print(
-            f"Hit return code {cp.returncode} fetching commit. Aborting.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+    reset_local_repo(path, commit)
 
     with open(os.path.join(LIBWEBRTC_DIR, "README.mozilla.last-vendor"), "w") as f:
         # write the the command line used
@@ -263,7 +264,6 @@ def fetch_local(target, path, commit):
         f.write(
             f"{target} updated from {path} commit {commit} on {datetime.datetime.now(dateutil.tz.tzutc()).isoformat()}.\n"
         )
-    shutil.move(os.path.join(path, target_archive), target_archive)
 
 
 def validate_tar_member(member, path):
@@ -305,20 +305,34 @@ def safe_extract(tar, path=".", *, numeric_owner=False):
     )
 
 
-def unpack(target):
+def source_listdir(target_path, from_local):
+    # When consuming a local git working tree as the source, its '.git'
+    # directory is not part of the vendored content (and is absent from a
+    # 'git archive' tarball), so exclude it from top level listings.
+    entries = os.listdir(target_path)
+    if from_local:
+        entries = [e for e in entries if e != ".git"]
+    return entries
+
+
+def unpack(target, from_local=None, commit=None):
     target_archive = target + ".tar.gz"
-    target_path = "tmp-" + target
-    try:
-        shutil.rmtree(target_path)
-    except FileNotFoundError:
-        pass
-    with tarfile.open(target_archive) as t:
-        safe_extract(t, path=target_path)
+    if from_local:
+        # Consume the local repo working tree directly, avoiding tar/untar.
+        target_path = from_local
+    else:
+        target_path = "tmp-" + target
+        try:
+            shutil.rmtree(target_path)
+        except FileNotFoundError:
+            pass
+        with tarfile.open(target_archive) as t:
+            safe_extract(t, path=target_path)
 
     if target == "libwebrtc":
         # use the top level directories from the tarfile and
         # delete those directories in LIBWEBRTC_DIR
-        libwebrtc_used_in_firefox = os.listdir(target_path)
+        libwebrtc_used_in_firefox = source_listdir(target_path, from_local)
         for path in libwebrtc_used_in_firefox:
             try:
                 shutil.rmtree(os.path.join(LIBWEBRTC_DIR, path))
@@ -344,17 +358,24 @@ def unpack(target):
                 os.remove(os.path.join(target_path, path))
 
         # move remaining top level entries from the tarfile to LIBWEBRTC_DIR
-        for path in os.listdir(target_path):
+        for path in source_listdir(target_path, from_local):
             shutil.move(
                 os.path.join(target_path, path), os.path.join(LIBWEBRTC_DIR, path)
             )
 
-        # An easy, but inefficient way to accomplish including specific
-        # files from directories otherwise removed.  Re-extract the tar
-        # file, and only copy over the exact files requested.
-        shutil.rmtree(target_path)
-        with tarfile.open(target_archive) as t:
-            safe_extract(t, path=target_path)
+        if from_local:
+            # The force included files were removed above along with their
+            # parent (excluded) directories.  Restore the full working tree so
+            # those files can be moved into place below; any leftover files are
+            # reset when the local repo is restored after unpacking.
+            run_git(f"git restore --source {commit} --worktree -- .", target_path)
+        else:
+            # An easy, but inefficient way to accomplish including specific
+            # files from directories otherwise removed.  Re-extract the tar
+            # file, and only copy over the exact files requested.
+            shutil.rmtree(target_path)
+            with tarfile.open(target_archive) as t:
+                safe_extract(t, path=target_path)
 
         # Copy the force included files.  Note: the instinctual action
         # is to do this prior to removing the excluded paths to avoid
@@ -375,7 +396,7 @@ def unpack(target):
             # GitHub packs everything inside a separate directory
             target_path = os.path.join(target_path, os.listdir(target_path)[0])
 
-        build_used_in_firefox = os.listdir(target_path)
+        build_used_in_firefox = source_listdir(target_path, from_local)
         for path in build_used_in_firefox:
             try:
                 shutil.rmtree(os.path.join(LIBWEBRTC_DIR, path))
@@ -384,7 +405,7 @@ def unpack(target):
             except NotADirectoryError:
                 pass
 
-        for path in os.listdir(target_path):
+        for path in source_listdir(target_path, from_local):
             shutil.move(
                 os.path.join(target_path, path),
                 os.path.join(LIBWEBRTC_DIR, path),
@@ -473,6 +494,11 @@ if __name__ == "__main__":
             fetch(args.target, make_googlesource_url(args.target, args.commit))
         elif args.from_local:
             fetch_local(args.target, args.from_local, args.commit)
-    unpack(args.target)
-    if not args.skip_cleanup:
+    unpack(args.target, from_local=args.from_local, commit=args.commit)
+    if args.from_local:
+        # Moving files out of the local working tree above leaves it in a
+        # partially gutted state, so always restore it (independent of
+        # --skip-cleanup, which only concerns temporary tar artifacts).
+        reset_local_repo(args.from_local, args.commit)
+    elif not args.skip_cleanup:
         cleanup(args.target)
