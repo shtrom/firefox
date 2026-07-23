@@ -1632,6 +1632,9 @@ void MediaFormatReader::OnVideoDemuxCompleted(
   mVideo.mDemuxRequest.Complete();
   MOZ_ASSERT(mVideo.mQueuedSamples.IsEmpty());
   mVideo.mQueuedSamples = aSamples->GetMovableSamples();
+  for (const auto& sample : mVideo.mQueuedSamples) {
+    mVideo.mFrameRateEstimator.Observe(*sample);
+  }
   ScheduleUpdate(TrackInfo::kVideoTrack);
 }
 
@@ -2225,8 +2228,6 @@ void MediaFormatReader::HandleDemuxedSamples(
       mWorkingInfoChanged = true;
     }
 
-    decoder.mFrameRateEstimator.Reset();
-
     if (sample->mKeyframe) {
       if (samples.Length()) {
         decoder.mQueuedSamples = std::move(samples);
@@ -2241,10 +2242,6 @@ void MediaFormatReader::HandleDemuxedSamples(
       return;
     }
   }
-
-  // Calculate the average frame rate. The first frame will be accounted
-  // for twice.
-  decoder.mFrameRateEstimator.Observe(sample->mDuration);
 
   if (!decoder.mDecoder) {
     // In Clear Lead situation, the `mInfo` could change from unencrypted to
