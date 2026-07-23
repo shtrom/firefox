@@ -223,18 +223,20 @@ void WebTransport::Init(const GlobalObject& aGlobal, const nsAString& aURL,
       return;
     }
     for (const auto& hash : aOptions.mServerCertificateHashes.Value()) {
-      if (hash.mAlgorithm != u"sha-256") {
+      if (!hash.mAlgorithm.WasPassed() || !hash.mValue.WasPassed()) continue;
+
+      if (hash.mAlgorithm.Value() != u"sha-256") {
         LOG(("Algorithms other than SHA-256 are not supported"));
         continue;
       }
 
       nsTArray<uint8_t> data;
-      if (!AppendTypedArrayDataTo(hash.mValue, data)) {
+      if (!AppendTypedArrayDataTo(hash.mValue.Value(), data)) {
         aError.Throw(NS_ERROR_OUT_OF_MEMORY);
         return;
       }
 
-      nsCString alg = NS_ConvertUTF16toUTF8(hash.mAlgorithm);
+      nsCString alg = NS_ConvertUTF16toUTF8(hash.mAlgorithm.Value());
       aServerCertHashes.EmplaceBack(alg, data);
     }
   }

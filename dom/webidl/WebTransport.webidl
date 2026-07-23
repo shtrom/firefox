@@ -7,8 +7,8 @@
 /* https://w3c.github.io/webtransport/#web-transport-configuration */
 
 dictionary WebTransportHash {
-  required DOMString algorithm;
-  required BufferSource value;
+  DOMString algorithm;
+  BufferSource value;
 };
 
 dictionary WebTransportOptions {
