@@ -19,8 +19,6 @@ THIRDPARTY_USED_IN_FIREFOX = [
     "rnnoise",
 ]
 
-LIBWEBRTC_DIR = os.path.normpath("third_party/libwebrtc")
-
 
 # Files in this list are excluded.
 def get_excluded_files():
@@ -225,7 +223,7 @@ def make_googlesource_url(target, commit):
         )
 
 
-def fetch(target, url):
+def fetch(target, url, destination_dir):
     print(f"Fetching commit from {url}")
     req = requests.get(url)
     if req.status_code == 200:
@@ -237,7 +235,7 @@ def fetch(target, url):
             file=sys.stderr,
         )
         sys.exit(1)
-    with open(os.path.join(LIBWEBRTC_DIR, "README.mozilla.last-vendor"), "w") as f:
+    with open(os.path.join(destination_dir, "README.mozilla.last-vendor"), "w") as f:
         # write the the command line used
         f.write(f"# ./mach python {' '.join(sys.argv[0:])}\n")
         f.write(
@@ -255,10 +253,10 @@ def reset_local_repo(path, commit):
     run_git("git clean -xffd", path)
 
 
-def fetch_local(target, path, commit):
+def fetch_local(target, path, commit, destination_dir):
     reset_local_repo(path, commit)
 
-    with open(os.path.join(LIBWEBRTC_DIR, "README.mozilla.last-vendor"), "w") as f:
+    with open(os.path.join(destination_dir, "README.mozilla.last-vendor"), "w") as f:
         # write the the command line used
         f.write(f"# ./mach python {' '.join(sys.argv[0:])}\n")
         f.write(
@@ -315,7 +313,7 @@ def source_listdir(target_path, from_local):
     return entries
 
 
-def unpack(target, from_local=None, commit=None):
+def unpack(target, destination_dir, from_local=None, commit=None):
     target_archive = target + ".tar.gz"
     if from_local:
         # Consume the local repo working tree directly, avoiding tar/untar.
@@ -331,11 +329,11 @@ def unpack(target, from_local=None, commit=None):
 
     if target == "libwebrtc":
         # use the top level directories from the tarfile and
-        # delete those directories in LIBWEBRTC_DIR
+        # delete those directories in destination_dir
         libwebrtc_used_in_firefox = source_listdir(target_path, from_local)
         for path in libwebrtc_used_in_firefox:
             try:
-                shutil.rmtree(os.path.join(LIBWEBRTC_DIR, path))
+                shutil.rmtree(os.path.join(destination_dir, path))
             except FileNotFoundError:
                 pass
             except NotADirectoryError:
@@ -357,10 +355,10 @@ def unpack(target, from_local=None, commit=None):
             else:
                 os.remove(os.path.join(target_path, path))
 
-        # move remaining top level entries from the tarfile to LIBWEBRTC_DIR
+        # move remaining top level entries from the tarfile to destination_dir
         for path in source_listdir(target_path, from_local):
             shutil.move(
-                os.path.join(target_path, path), os.path.join(LIBWEBRTC_DIR, path)
+                os.path.join(target_path, path), os.path.join(destination_dir, path)
             )
 
         if from_local:
@@ -384,7 +382,7 @@ def unpack(target, from_local=None, commit=None):
         # tar file in the "move all the top level entries from the
         # tarfile" phase above.
         for path in forced_used_in_firefox:
-            dest_path = os.path.join(LIBWEBRTC_DIR, path)
+            dest_path = os.path.join(destination_dir, path)
             dir_path = os.path.dirname(dest_path)
             if not os.path.exists(dir_path):
                 os.makedirs(dir_path)
@@ -399,7 +397,7 @@ def unpack(target, from_local=None, commit=None):
         build_used_in_firefox = source_listdir(target_path, from_local)
         for path in build_used_in_firefox:
             try:
-                shutil.rmtree(os.path.join(LIBWEBRTC_DIR, path))
+                shutil.rmtree(os.path.join(destination_dir, path))
             except FileNotFoundError:
                 pass
             except NotADirectoryError:
@@ -408,16 +406,16 @@ def unpack(target, from_local=None, commit=None):
         for path in source_listdir(target_path, from_local):
             shutil.move(
                 os.path.join(target_path, path),
-                os.path.join(LIBWEBRTC_DIR, path),
+                os.path.join(destination_dir, path),
             )
 
     elif target == "third_party":
         # Only delete the THIRDPARTY_USED_IN_FIREFOX paths from
-        # LIBWEBRTC_DIR/third_party to avoid deleting directories that
+        # destination_dir/third_party to avoid deleting directories that
         # we use to trampoline to libraries already in mozilla's tree.
         for path in THIRDPARTY_USED_IN_FIREFOX:
             try:
-                shutil.rmtree(os.path.join(LIBWEBRTC_DIR, path))
+                shutil.rmtree(os.path.join(destination_dir, path))
             except FileNotFoundError:
                 pass
             except NotADirectoryError:
@@ -431,7 +429,7 @@ def unpack(target, from_local=None, commit=None):
         for path in THIRDPARTY_USED_IN_FIREFOX:
             shutil.move(
                 os.path.join(target_path, path),
-                os.path.join(LIBWEBRTC_DIR, path),
+                os.path.join(destination_dir, path),
             )
 
     elif target == "abseil-cpp":
@@ -445,7 +443,7 @@ def unpack(target, from_local=None, commit=None):
         abseil_used_in_firefox = os.listdir(abseil_path)
         for path in abseil_used_in_firefox:
             try:
-                shutil.rmtree(os.path.join(LIBWEBRTC_DIR, path))
+                shutil.rmtree(os.path.join(destination_dir, path))
             except FileNotFoundError:
                 pass
             except NotADirectoryError:
@@ -454,7 +452,7 @@ def unpack(target, from_local=None, commit=None):
         for path in os.listdir(abseil_path):
             shutil.move(
                 os.path.join(target_path, target, path),
-                os.path.join(LIBWEBRTC_DIR, path),
+                os.path.join(destination_dir, path),
             )
 
 
@@ -477,24 +475,42 @@ if __name__ == "__main__":
     parser.add_argument("--skip-cleanup", action="store_true", default=False)
     args = parser.parse_args()
 
-    # the default for LIBWEBRTC_DIR is set for target libwebrtc
+    # The destination directory within the tree depends on which target is
+    # being vendored.
     if args.target == "build":
-        LIBWEBRTC_DIR = os.path.normpath("third_party/chromium/build")
+        destination_dir = os.path.normpath("third_party/chromium/build")
     elif args.target == "third_party":
-        LIBWEBRTC_DIR = os.path.join(LIBWEBRTC_DIR, "third_party")
+        destination_dir = os.path.join(
+            os.path.normpath("third_party/libwebrtc"), "third_party"
+        )
     elif args.target == "abseil-cpp":
-        LIBWEBRTC_DIR = os.path.normpath("third_party/abseil-cpp")
+        destination_dir = os.path.normpath("third_party/abseil-cpp")
+    else:
+        destination_dir = os.path.normpath("third_party/libwebrtc")
 
-    os.makedirs(LIBWEBRTC_DIR, exist_ok=True)
+    os.makedirs(destination_dir, exist_ok=True)
 
     if not args.skip_fetch:
         if args.from_github:
-            fetch(args.target, make_github_url(args.from_github, args.commit))
+            fetch(
+                args.target,
+                make_github_url(args.from_github, args.commit),
+                destination_dir,
+            )
         elif args.from_googlesource:
-            fetch(args.target, make_googlesource_url(args.target, args.commit))
+            fetch(
+                args.target,
+                make_googlesource_url(args.target, args.commit),
+                destination_dir,
+            )
         elif args.from_local:
-            fetch_local(args.target, args.from_local, args.commit)
-    unpack(args.target, from_local=args.from_local, commit=args.commit)
+            fetch_local(args.target, args.from_local, args.commit, destination_dir)
+    unpack(
+        args.target,
+        destination_dir,
+        from_local=args.from_local,
+        commit=args.commit,
+    )
     if args.from_local:
         # Moving files out of the local working tree above leaves it in a
         # partially gutted state, so always restore it (independent of
