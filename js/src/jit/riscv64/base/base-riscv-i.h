@@ -160,6 +160,7 @@ class AssemblerRISCVI : public AssemblerRiscvBase {
   void sraw(Register rd, Register rs1, Register rs2);
   void negw(Register rd, Register rs) { subw(rd, zero_reg, rs); }
   void sext_w(Register rd, Register rs) { addiw(rd, rs, 0); }
+  void zext_b(Register rd, Register rs) { andi(rd, rs, 255); }
 };
 
 }  // namespace jit

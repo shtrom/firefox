@@ -514,9 +514,10 @@ class Assembler : public AssemblerShared,
       sext_b(rd, rs);
       return;
     }
-    slli(rd, rs, xlen - 8);
-    srai(rd, rd, xlen - 8);
+    slli(rd, rs, 56);
+    srai(rd, rd, 56);
   }
+  void ZeroExtendByte(Register rd, Register rs) { zext_b(rd, rs); }
 
   void SignExtendShort(Register rd, Register rs) {
     if (HasZbbExtension()) {

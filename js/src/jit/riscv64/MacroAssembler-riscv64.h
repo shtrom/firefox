@@ -567,9 +567,7 @@ class MacroAssemblerRiscv64Compat : public MacroAssemblerRiscv64 {
 
   MacroAssemblerRiscv64Compat() {}
 
-  void convertBoolToInt32(Register src, Register dest) {
-    andi(dest, src, 0xff);
-  };
+  void convertBoolToInt32(Register src, Register dest) { zext_b(dest, src); };
   void convertInt32ToDouble(Register src, FloatRegister dest) {
     fcvt_d_w(dest, src);
   };

@@ -2908,7 +2908,7 @@ static void AtomicExchange(MacroAssembler& masm,
 
   switch (nbytes) {
     case 1:
-      masm.andi(valueTemp, value, 0xff);
+      masm.ZeroExtendByte(valueTemp, value);
       break;
     case 2:
       masm.ma_and(valueTemp, value, Imm32(0xffff));
@@ -2954,7 +2954,7 @@ static void AtomicExchange(MacroAssembler& masm,
       if (signExtend) {
         masm.SignExtendByte(output, output);
       } else {
-        masm.andi(output, output, 0xff);
+        masm.ZeroExtendByte(output, output);
       }
       break;
     case 2:
@@ -3179,7 +3179,7 @@ static void AtomicEffectOp(MacroAssembler& masm,
 
   switch (nbytes) {
     case 1:
-      masm.andi(valueTemp, valueTemp, 0xff);
+      masm.ZeroExtendByte(valueTemp, valueTemp);
       break;
     case 2:
       masm.ma_and(valueTemp, valueTemp, Imm32(0xffff));
@@ -3321,7 +3321,7 @@ static void AtomicFetchOp(MacroAssembler& masm,
 
   switch (nbytes) {
     case 1:
-      masm.andi(valueTemp, valueTemp, 0xff);
+      masm.ZeroExtendByte(valueTemp, valueTemp);
       break;
     case 2:
       masm.ma_and(valueTemp, valueTemp, Imm32(0xffff));
@@ -3347,7 +3347,7 @@ static void AtomicFetchOp(MacroAssembler& masm,
       if (signExtend) {
         masm.SignExtendByte(output, output);
       } else {
-        masm.andi(output, output, 0xff);
+        masm.ZeroExtendByte(output, output);
       }
       break;
     case 2:
@@ -4767,8 +4767,8 @@ static void CompareExchange(MacroAssembler& masm,
         masm.SignExtendByte(valueTemp, oldval);
         masm.SignExtendByte(output, output);
       } else {
-        masm.andi(valueTemp, oldval, 0xff);
-        masm.andi(output, output, 0xff);
+        masm.ZeroExtendByte(valueTemp, oldval);
+        masm.ZeroExtendByte(output, output);
       }
       break;
     case 2:
@@ -4789,7 +4789,7 @@ static void CompareExchange(MacroAssembler& masm,
 
   switch (nbytes) {
     case 1:
-      masm.andi(valueTemp, newval, 0xff);
+      masm.ZeroExtendByte(valueTemp, newval);
       break;
     case 2:
       masm.slli(valueTemp, newval, 48);

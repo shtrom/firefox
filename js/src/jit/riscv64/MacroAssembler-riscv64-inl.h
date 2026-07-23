@@ -1692,7 +1692,7 @@ void MacroAssembler::move64To32(Register64 src, Register dest) {
 }
 
 void MacroAssembler::move8ZeroExtend(Register src, Register dest) {
-  andi(dest, src, 0xFF);
+  ZeroExtendByte(dest, src);
 }
 
 void MacroAssembler::move8SignExtend(Register src, Register dest) {
