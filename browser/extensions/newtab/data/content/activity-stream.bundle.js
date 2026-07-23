@@ -17207,6 +17207,25 @@ const Weather_USER_ACTION_TYPES = {
   OPT_IN_ACCEPTED: "opt_in_accepted",
   PROVIDER_LINK_CLICK: "provider_link_click"
 };
+const WEATHER_PROVIDER = "AccuWeather®";
+function SponsoredText({
+  size
+}) {
+  if (size === "small") {
+    return /*#__PURE__*/external_React_default().createElement("span", {
+      className: "sponsored-text",
+      "aria-hidden": "true"
+    }, WEATHER_PROVIDER);
+  }
+  return /*#__PURE__*/external_React_default().createElement("span", {
+    className: "sponsored-text",
+    "aria-hidden": "true",
+    "data-l10n-id": "newtab-weather-sponsored",
+    "data-l10n-args": JSON.stringify({
+      provider: WEATHER_PROVIDER
+    })
+  });
+}
 function Weather_Weather({
   dispatch,
   size,
@@ -17535,7 +17554,9 @@ function Weather_Weather({
     className: "weather-conditions-view"
   }, /*#__PURE__*/external_React_default().createElement("a", {
     "data-l10n-id": "newtab-weather-see-forecast-description",
-    "data-l10n-args": "{\"provider\": \"AccuWeather\xAE\"}",
+    "data-l10n-args": JSON.stringify({
+      provider: WEATHER_PROVIDER
+    }),
     "data-l10n-attrs": "aria-description",
     href: WEATHER_SUGGESTION.forecast.url,
     className: "weather-info-link",
@@ -17564,7 +17585,9 @@ function Weather_Weather({
     "data-l10n-id": "newtab-weather-low"
   }), WEATHER_SUGGESTION.forecast.low[prefs["weather.temperatureUnits"]], "\xB0"))), /*#__PURE__*/external_React_default().createElement("div", {
     className: "weather-info-description"
-  }, WEATHER_SUGGESTION.current_conditions.summary)))), !hasError && showForecast && /*#__PURE__*/external_React_default().createElement("div", {
+  }, WEATHER_SUGGESTION.current_conditions.summary))), size === "medium" && /*#__PURE__*/external_React_default().createElement(SponsoredText, {
+    size: size
+  })), !hasError && showForecast && /*#__PURE__*/external_React_default().createElement("div", {
     className: "forecast-row"
   }, /*#__PURE__*/external_React_default().createElement("p", {
     className: "today-forecast",
@@ -17581,13 +17604,10 @@ function Weather_Weather({
     const date = new Date(slot.date_time);
     const hours = date.getHours() % 12 || 12;
     return `${hours}:${String(date.getMinutes()).padStart(2, "0")}`;
-  })())))))), !hasError && /*#__PURE__*/external_React_default().createElement("div", {
+  })())))))), !hasError && size !== "medium" && /*#__PURE__*/external_React_default().createElement("div", {
     className: "forecast-footer"
-  }, /*#__PURE__*/external_React_default().createElement("span", {
-    className: "sponsored-text",
-    "aria-hidden": "true",
-    "data-l10n-id": "newtab-weather-sponsored",
-    "data-l10n-args": "{\"provider\": \"AccuWeather\xAE\"}"
+  }, /*#__PURE__*/external_React_default().createElement(SponsoredText, {
+    size: size
   }), showForecast && /*#__PURE__*/external_React_default().createElement("a", {
     className: "full-forecast",
     href: HOURLY_FORECASTS[0]?.url || "#",

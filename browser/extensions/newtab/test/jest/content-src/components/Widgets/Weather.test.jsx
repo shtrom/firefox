@@ -883,14 +883,14 @@ describe("<Weather> (Widgets/Weather)", () => {
     });
 
     it("renders a.full-forecast with hourly forecast URL", () => {
-      const { container } = renderWeather("medium");
+      const { container } = renderWeather("large");
       const link = container.querySelector("a.full-forecast");
       expect(link).toBeInTheDocument();
       expect(link.getAttribute("href")).toBe(hourlyForecasts[0].url);
     });
 
     it("dispatches WIDGETS_USER_EVENT when full-forecast is clicked", () => {
-      const { container, dispatch } = renderWeather("medium");
+      const { container, dispatch } = renderWeather("large");
       fireEvent.click(container.querySelector("a.full-forecast"));
 
       expect(dispatch).toHaveBeenCalledTimes(1);
@@ -1146,6 +1146,13 @@ describe("<Weather> (Widgets/Weather)", () => {
       expect(container.querySelector(".forecast-footer")).toBeInTheDocument();
       expect(container.querySelector(".full-forecast")).not.toBeInTheDocument();
     });
+
+    it("does not render the forecast footer for size=medium", () => {
+      const { container } = renderWeather("medium");
+      expect(
+        container.querySelector(".forecast-footer")
+      ).not.toBeInTheDocument();
+    });
   });
 
   describe("search UI", () => {
@@ -1202,6 +1209,56 @@ describe("<Weather> (Widgets/Weather)", () => {
       const { container } = renderWeather("medium", state);
       expect(
         container.querySelector(".weather-context-menu-wrapper")
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Sponsored text rendering", () => {
+    it("renders localized sponsored text in the conditions view for size=medium", () => {
+      const { container } = renderWeather("medium");
+      expect(
+        container.querySelector(
+          ".weather-conditions-view .sponsored-text[data-l10n-id='newtab-weather-sponsored']"
+        )
+      ).toBeInTheDocument();
+      expect(
+        container.querySelector(".forecast-footer .sponsored-text")
+      ).not.toBeInTheDocument();
+    });
+
+    it("renders localized sponsored text in the footer for size=large", () => {
+      const { container } = renderWeather("large");
+      expect(
+        container.querySelector(
+          ".forecast-footer .sponsored-text[data-l10n-id='newtab-weather-sponsored']"
+        )
+      ).toBeInTheDocument();
+      expect(
+        container.querySelector(".weather-conditions-view .sponsored-text")
+      ).not.toBeInTheDocument();
+    });
+
+    it("renders provider name as plain text in the footer for size=small", () => {
+      const { container } = renderWeather("small");
+      const sponsored = container.querySelector(
+        ".forecast-footer .sponsored-text"
+      );
+      expect(sponsored).toBeInTheDocument();
+      expect(sponsored.hasAttribute("data-l10n-id")).toBe(false);
+      expect(sponsored.textContent).toBe("AccuWeather®");
+      expect(
+        container.querySelector(".weather-conditions-view .sponsored-text")
+      ).not.toBeInTheDocument();
+    });
+
+    it("does not render sponsored text on error", () => {
+      const state = {
+        ...mockState,
+        Weather: { ...mockState.Weather, suggestions: [{}] },
+      };
+      const { container } = renderWeather("medium", state);
+      expect(
+        container.querySelector(".sponsored-text")
       ).not.toBeInTheDocument();
     });
   });

@@ -8597,15 +8597,14 @@ dialog:dir(rtl)::after {
   position: relative;
   z-index: 1;
 }
-.nova-enabled .weather-widget .forecast-footer {
-  position: absolute;
-  inset-block-end: calc(var(--space-xlarge) * -1);
-  inset-inline-end: 0;
-  font-size: var(--newtab-font-size-xsmall);
-}
-.nova-enabled .weather-widget .forecast-footer .sponsored-text {
+.nova-enabled .weather-widget .sponsored-text {
   visibility: hidden;
   text-wrap-mode: nowrap;
+  font-size: var(--newtab-font-size-xsmall);
+  color: var(--text-color-deemphasized);
+}
+.nova-enabled .weather-widget .forecast-footer {
+  margin-block-start: var(--space-small);
 }
 .nova-enabled .weather-widget .forecast-footer .full-forecast {
   display: none;
@@ -8620,7 +8619,7 @@ dialog:dir(rtl)::after {
   background-image: url("chrome://global/skin/icons/arrow-left.svg");
   background-position: left center;
 }
-.nova-enabled .weather-widget:hover .forecast-footer .sponsored-text, .nova-enabled .weather-widget:focus-within .forecast-footer .sponsored-text {
+.nova-enabled .weather-widget:hover .sponsored-text, .nova-enabled .weather-widget:focus-within .sponsored-text {
   visibility: visible;
 }
 .nova-enabled .weather-widget:hover .full-forecast, .nova-enabled .weather-widget:focus-within .full-forecast {
@@ -8753,12 +8752,17 @@ dialog:dir(rtl)::after {
   grid-row: span 2;
 }
 .nova-enabled .weather-widget.medium-widget .weather-container {
-  align-items: center;
+  align-items: stretch;
   justify-content: space-between;
   gap: var(--space-medium);
 }
 .nova-enabled .weather-widget.medium-widget .weather-conditions-view {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.nova-enabled .weather-widget.medium-widget .weather-conditions-view .sponsored-text {
+  margin-block-start: auto;
 }
 .nova-enabled .weather-widget.medium-widget .weather-info-link {
   width: 100%;
@@ -8784,10 +8788,6 @@ dialog:dir(rtl)::after {
 }
 .nova-enabled .weather-widget.medium-widget .forecast-row-items li:nth-child(n+3) {
   display: none;
-}
-.nova-enabled .weather-widget.medium-widget .forecast-footer {
-  inset-inline-end: auto;
-  inset-inline-start: 0;
 }
 .nova-enabled .weather-widget.large-widget .weather-container {
   flex: 1;
@@ -8827,9 +8827,8 @@ dialog:dir(rtl)::after {
   color: var(--text-color-deemphasized);
 }
 .nova-enabled .weather-widget.large-widget .forecast-footer {
+  margin-block-start: 0;
   padding-block-start: var(--space-large);
-  position: relative;
-  inset: unset;
   display: flex;
   justify-content: space-between;
 }

@@ -21,6 +21,26 @@ const USER_ACTION_TYPES = {
   PROVIDER_LINK_CLICK: "provider_link_click",
 };
 
+const WEATHER_PROVIDER = "AccuWeather®";
+
+function SponsoredText({ size }) {
+  if (size === "small") {
+    return (
+      <span className="sponsored-text" aria-hidden="true">
+        {WEATHER_PROVIDER}
+      </span>
+    );
+  }
+  return (
+    <span
+      className="sponsored-text"
+      aria-hidden="true"
+      data-l10n-id="newtab-weather-sponsored"
+      data-l10n-args={JSON.stringify({ provider: WEATHER_PROVIDER })}
+    />
+  );
+}
+
 function Weather({ dispatch, size, widgetEnabledMap }) {
   const prefs = useSelector(state => state.Prefs.values);
   const weatherData = useSelector(state => state.Weather);
@@ -466,7 +486,9 @@ function Weather({ dispatch, size, widgetEnabledMap }) {
               <div className="weather-conditions-view">
                 <a
                   data-l10n-id="newtab-weather-see-forecast-description"
-                  data-l10n-args='{"provider": "AccuWeather®"}'
+                  data-l10n-args={JSON.stringify({
+                    provider: WEATHER_PROVIDER,
+                  })}
                   data-l10n-attrs="aria-description"
                   href={WEATHER_SUGGESTION.forecast.url}
                   className="weather-info-link"
@@ -520,6 +542,7 @@ function Weather({ dispatch, size, widgetEnabledMap }) {
                     </div>
                   </div>
                 </a>
+                {size === "medium" && <SponsoredText size={size} />}
               </div>
             )}
             {!hasError && showForecast && (
@@ -553,14 +576,9 @@ function Weather({ dispatch, size, widgetEnabledMap }) {
               </div>
             )}
           </div>
-          {!hasError && (
+          {!hasError && size !== "medium" && (
             <div className="forecast-footer">
-              <span
-                className="sponsored-text"
-                aria-hidden="true"
-                data-l10n-id="newtab-weather-sponsored"
-                data-l10n-args='{"provider": "AccuWeather®"}'
-              ></span>
+              <SponsoredText size={size} />
               {showForecast && (
                 <a
                   className="full-forecast"
