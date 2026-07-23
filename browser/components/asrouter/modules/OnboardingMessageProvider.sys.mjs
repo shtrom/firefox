@@ -69,6 +69,7 @@ const BASE_MESSAGES = () => [
     id: "LOGIN_STATUS_ADVISORY",
     template: "feature_callout",
     groups: ["cfr"],
+    skip_in_tests: "don't show in tests",
     content: {
       id: "LOGIN_STATUS_ADVISORY",
       template: "multistage",
