@@ -2406,7 +2406,8 @@ export class AIWindow extends MozLitElement {
           newMessage.content?.name,
           cfg.label,
           newMessage.content?.body,
-          newMessage.content?.args
+          newMessage.content?.args,
+          cfg.link
         ),
       };
     }

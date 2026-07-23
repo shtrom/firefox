@@ -97,6 +97,18 @@
   font-size: var(--font-size-small);
 }
 
+/* Embedded link: inherits the label color, underlined. */
+.action-result-label-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--ai-action-text-color);
+
+  &:focus-visible {
+    outline: var(--focus-outline);
+    outline-offset: var(--focus-outline-offset);
+  }
+}
+
 /* While an action is in progress (or finishing its last sweep), paint the
    gradient on the text (no spinner is shown here). */
 :host([shimmering]) .action-result-label,
