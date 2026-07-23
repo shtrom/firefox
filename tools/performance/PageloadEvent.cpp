@@ -304,6 +304,7 @@ void PageloadEventData::SendAsPageLoadDomainEvent() {
 
   mozilla::glean::perf::PageLoadDomainExtra extra;
   extra.domain = this->mDomain;
+  extra.isFirstDailyLoad = mozilla::Some(this->mIsFirstDailyLoad);
   extra.httpVer = this->httpVer;
   extra.sameOriginNav = this->sameOriginNav;
   extra.documentFeatures = this->documentFeatures;

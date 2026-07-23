@@ -220,6 +220,7 @@
 #include "nsILocalStorageManager.h"
 #include "nsIMemoryInfoDumper.h"
 #include "nsIMemoryReporter.h"
+#include "nsINavHistoryService.h"
 #include "nsINetworkLinkService.h"
 #include "nsIObserverService.h"
 #include "nsIParentChannel.h"
@@ -254,12 +255,14 @@
 #include "nsStyleSheetService.h"
 #include "nsThread.h"
 #include "nsThreadUtils.h"
+#include "nsToolkitCompsCID.h"
 #include "nsURLHelper.h"
 #include "nsWidgetsCID.h"
 #include "nsWindowWatcher.h"
 #include "prenv.h"
 #include "prio.h"
 #include "private/pprio.h"
+#include "prtime.h"
 #include "xpcpublic.h"
 
 #ifdef MOZ_WEBRTC
@@ -6304,6 +6307,68 @@ static bool WebdriverRunning() {
   return false;
 }
 
+// Whether aDomain (an ETLD+1) was unvisited today, until aNavigationStartTime,
+// per browsing history. Returns false when history is unavailable.
+static bool IsFirstDailyLoad(const nsACString& aDomain,
+                             const TimeStamp& aNavigationStartTime) {
+  if (aNavigationStartTime.IsNull()) {
+    return false;
+  }
+
+  nsCOMPtr<nsINavHistoryService> history =
+      do_GetService(NS_NAVHISTORYSERVICE_CONTRACTID);
+  bool historyDisabled = true;
+  if (!history || NS_FAILED(history->GetHistoryDisabled(&historyDisabled)) ||
+      historyDisabled) {
+    return false;
+  }
+
+  nsCOMPtr<nsINavHistoryQuery> query;
+  nsCOMPtr<nsINavHistoryQueryOptions> options;
+  if (NS_FAILED(history->GetNewQuery(getter_AddRefs(query))) ||
+      NS_FAILED(history->GetNewQueryOptions(getter_AddRefs(options)))) {
+    return false;
+  }
+
+  // Convert the monotonic navigation start to Places' wall-clock visit_date.
+  PRTime navigationStart =
+      PR_Now() -
+      static_cast<PRTime>(
+          (TimeStamp::Now() - aNavigationStartTime).ToMicroseconds());
+
+  if (NS_FAILED(query->SetDomain(aDomain)) ||
+      NS_FAILED(query->SetDomainIsHost(false)) ||
+      NS_FAILED(query->SetBeginTimeReference(
+          nsINavHistoryQuery::TIME_RELATIVE_TODAY)) ||
+      NS_FAILED(query->SetBeginTime(0)) ||
+      NS_FAILED(query->SetEndTime(navigationStart)) ||
+      NS_FAILED(options->SetResultType(
+          nsINavHistoryQueryOptions::RESULTS_AS_VISIT)) ||
+      NS_FAILED(options->SetMaxResults(1)) ||
+      NS_FAILED(options->SetQueryType(
+          nsINavHistoryQueryOptions::QUERY_TYPE_HISTORY))) {
+    return false;
+  }
+
+  nsCOMPtr<nsINavHistoryResult> result;
+  if (NS_FAILED(
+          history->ExecuteQuery(query, options, getter_AddRefs(result)))) {
+    return false;
+  }
+
+  nsCOMPtr<nsINavHistoryContainerResultNode> root;
+  if (NS_FAILED(result->GetRoot(getter_AddRefs(root))) ||
+      NS_FAILED(root->SetContainerOpen(true))) {
+    return false;
+  }
+
+  uint32_t visitCount = 0;
+  nsresult rv = root->GetChildCount(&visitCount);
+  root->SetContainerOpen(false);
+
+  return NS_SUCCEEDED(rv) && visitCount == 0;
+}
+
 #ifdef ANDROID
 void ContentParent::RecordAndroidAppLinkTelemetry(
     mozilla::performance::pageload_event::PageloadEventData* aPageloadData,
@@ -6412,6 +6477,8 @@ mozilla::ipc::IPCResult ContentParent::RecvRecordPageLoadEvent(
   // that can be used to fingerprint the client.  Otherwise, use the regular
   // pageload event ping.
   if (aPageloadEventData.HasDomain()) {
+    aPageloadEventData.SetIsFirstDailyLoad(
+        IsFirstDailyLoad(aPageloadEventData.GetDomain(), aNavigationStartTime));
     aPageloadEventData.SendAsPageLoadDomainEvent();
   } else {
     aPageloadEventData.SendAsPageLoadEvent();
