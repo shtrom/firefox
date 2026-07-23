@@ -2700,7 +2700,6 @@ void CodeGenerator::visitAtomicTypedArrayElementBinop64(
 
   Register elements = ToRegister(ins->elements());
   Register64 value = ToRegister64(ins->value());
-  Register64 temp = ToRegister64(ins->temp0());
   Register64 out = ToOutRegister64(ins);
 
   Scalar::Type arrayType = ins->mir()->arrayType();
@@ -2709,8 +2708,8 @@ void CodeGenerator::visitAtomicTypedArrayElementBinop64(
   auto dest = ToAddressOrBaseIndex(elements, ins->index(), arrayType);
 
   dest.match([&](const auto& dest) {
-    masm.atomicFetchOp64(Synchronization::Full(), atomicOp, value, dest, temp,
-                         out);
+    masm.atomicFetchOp64(Synchronization::Full(), atomicOp, value, dest,
+                         Register64::Invalid(), out);
   });
 }
 
@@ -2720,7 +2719,6 @@ void CodeGenerator::visitAtomicTypedArrayElementBinopForEffect64(
 
   Register elements = ToRegister(ins->elements());
   Register64 value = ToRegister64(ins->value());
-  Register64 temp = ToRegister64(ins->temp0());
 
   Scalar::Type arrayType = ins->mir()->arrayType();
   AtomicOp atomicOp = ins->mir()->operation();
@@ -2728,7 +2726,8 @@ void CodeGenerator::visitAtomicTypedArrayElementBinopForEffect64(
   auto dest = ToAddressOrBaseIndex(elements, ins->index(), arrayType);
 
   dest.match([&](const auto& dest) {
-    masm.atomicEffectOp64(Synchronization::Full(), atomicOp, value, dest, temp);
+    masm.atomicEffectOp64(Synchronization::Full(), atomicOp, value, dest,
+                          Register64::Invalid());
   });
 }
 
@@ -2789,13 +2788,12 @@ void CodeGenerator::visitWasmAtomicBinopI64(LWasmAtomicBinopI64* ins) {
   Register ptr = ToRegister(ins->ptr());
   Register64 value = ToRegister64(ins->value());
   Register64 output = ToOutRegister64(ins);
-  Register64 temp = ToRegister64(ins->temp0());
   uint32_t offset = ins->mir()->access().offset32();
 
   BaseIndex addr(memoryBase, ptr, TimesOne, offset);
 
   masm.wasmAtomicFetchOp64(ins->mir()->access(), ins->mir()->operation(), value,
-                           addr, temp, output);
+                           addr, Register64::Invalid(), output);
 }
 
 void CodeGenerator::visitSimd128(LSimd128* ins) { MOZ_CRASH("No SIMD"); }

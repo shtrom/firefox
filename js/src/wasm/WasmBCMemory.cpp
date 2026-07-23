@@ -1527,8 +1527,8 @@ static void Deallocate(BaseCompiler* bc, AtomicOp op, RegI64 rv, RegI64 temp) {
 static void PopAndAllocate(BaseCompiler* bc, AtomicOp op, RegI64* rd,
                            RegI64* rv, RegI64* temp) {
   *rv = bc->popI64();
-  *temp = bc->needI64();
   *rd = bc->needI64();
+  // temp not used for riscv64.
 }
 
 static void Perform(BaseCompiler* bc, const MemoryAccessDesc& access,
@@ -1539,7 +1539,7 @@ static void Perform(BaseCompiler* bc, const MemoryAccessDesc& access,
 
 static void Deallocate(BaseCompiler* bc, AtomicOp op, RegI64 rv, RegI64 temp) {
   bc->freeI64(rv);
-  bc->freeI64(temp);
+  MOZ_ASSERT(temp.isInvalid());
 }
 
 #elif defined(JS_CODEGEN_NONE) || defined(JS_CODEGEN_WASM32)

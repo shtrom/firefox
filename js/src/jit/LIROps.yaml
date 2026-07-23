@@ -2297,7 +2297,7 @@
     elements: WordSized
     index: WordSized
     value: Int64
-#ifndef JS_CODEGEN_X86
+#if !defined(JS_CODEGEN_X86) && !defined(JS_CODEGEN_RISCV64)
   num_temps64: 1
 #endif
   mir_op: AtomicTypedArrayElementBinop
@@ -2308,7 +2308,7 @@
     elements: WordSized
     index: WordSized
     value: Int64
-#ifndef JS_CODEGEN_X64
+#if !defined(JS_CODEGEN_X64) && !defined(JS_CODEGEN_RISCV64)
   num_temps64: 1
 #endif
   mir_op: AtomicTypedArrayElementBinop
@@ -4625,7 +4625,6 @@
     ptr: WordSized
     value: Int64
     memoryBase: WordSized
-  num_temps64: 1
   mir_op: WasmAtomicBinopHeap
 
 - name: WasmAtomicExchangeI64
