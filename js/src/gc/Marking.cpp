@@ -2811,7 +2811,7 @@ bool GCMarker::enterWeakMarkingMode() {
 // Ensure: if a WeakMap in this Zone is alive, and it has an entry with a live
 // key, then that key's value is marked.
 IncrementalProgress JS::Zone::enterWeakMarkingMode(GCMarker* marker,
-                                                  SliceBudget& budget) {
+                                                   SliceBudget& budget) {
   MOZ_ASSERT(isGCMarking());
   MOZ_ASSERT(marker->isWeakMarking());
 
