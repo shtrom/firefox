@@ -42,15 +42,7 @@
 #include "nsCocoaUtils.h"
 #include "nsMenuBarX.h"
 #include "mozilla/NeverDestroyed.h"
-
-class AutoAutoreleasePool {
- public:
-  AutoAutoreleasePool() { mLocalPool = [[NSAutoreleasePool alloc] init]; }
-  ~AutoAutoreleasePool() { [mLocalPool release]; }
-
- private:
-  NSAutoreleasePool* mLocalPool;
-};
+#include "MacAutoreleasePool.h"
 
 @interface MacApplicationDelegate : NSObject <NSApplicationDelegate> {
 }
@@ -118,7 +110,7 @@ void SetupMacApplicationDelegate(bool* gRestartedByOS) {
 
   // this is called during startup, outside an event loop, and therefore
   // needs an autorelease pool to avoid cocoa object leakage (bug 559075)
-  AutoAutoreleasePool pool;
+  mozilla::MacAutoreleasePool pool;
 
   // Ensure that InitializeMacApp() doesn't regress bug 377166.
   [GeckoNSApplication sharedApplication];
