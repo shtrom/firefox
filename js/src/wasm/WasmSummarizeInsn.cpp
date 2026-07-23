@@ -1657,6 +1657,19 @@ SummarizeResult SummarizeTrapInstruction(const InstructionBytes& insn) {
     }
   }
 
+  if (INSN(6, 0) == AMO) {
+    switch (INSN(31, 27)) {
+      case 0b00001:  // AMOSWAP.W/D
+      case 0b00000:  // AMOADD.W/D
+      case 0b00100:  // AMOXOR.W/D
+      case 0b01100:  // AMOAND.W/D
+      case 0b01000:  // AMOOR.W/D
+        return SummarizeResult(TrapMachineInsn::Atomic, 4);
+      default:
+        break;
+    }
+  }
+
 #  undef INSN
 
   return SummarizeResult();

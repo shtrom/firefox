@@ -2836,6 +2836,96 @@ uint32_t MacroAssembler::pushFakeReturnAddress(Register scratch) {
 //===============================
 // AtomicOp
 
+static void AtomicOffset(MacroAssembler& masm, Register address,
+                         Register offsetTemp) {
+  // Compute the offset shift amount.
+  //
+  // NB: Always used for 32-bit shifts, i.e. sllw and srlw, which implicitly
+  //     bit-and the shift amount with 31. This ensures any high bits will be
+  //     ignored and we don't need to perform `andi(offsetTemp, offsetTemp, 3)`.
+  masm.slliw(offsetTemp, address, 3);
+
+  // Align the address for a 32-bit word load.
+  masm.andi(address, address, ~3);
+}
+
+static void AtomicMask(MacroAssembler& masm, unsigned nbytes,
+                       Register offsetTemp, Register maskTemp) {
+  MOZ_ASSERT(nbytes == 1 || nbytes == 2);
+
+  // Load 0xff (nbytes=1) or 0xffff (nbytes=2) into |maskTemp|.
+  masm.ma_li(maskTemp, Imm32(UINT32_MAX >> ((4 - nbytes) * 8)));
+
+  // Move |maskTemp| into position to select the bytes from the input.
+  masm.sllw(maskTemp, maskTemp, offsetTemp);
+}
+
+template <typename... RegisterPairs>
+static void AtomicShiftToOffset(MacroAssembler& masm, unsigned nbytes,
+                                Register offsetTemp, Register maskTemp,
+                                RegisterPairs... registers) {
+  MOZ_ASSERT(nbytes == 1 || nbytes == 2);
+
+  // Prefer single instruction ZeroExtendByte/Short if possible to reduce data
+  // dependencies on |offsetTemp| and |maskTemp|.
+  if (nbytes == 1) {
+    // Mask off other bits in the register.
+    (masm.ZeroExtendByte(std::get<1>(registers), std::get<0>(registers)), ...);
+
+    // Shift to the offset in a 32-bit word.
+    (masm.sllw(std::get<1>(registers), std::get<1>(registers), offsetTemp),
+     ...);
+  } else {
+    MOZ_ASSERT(nbytes == 2);
+
+    if (Assembler::HasZbbExtension()) {
+      // Mask off other bits in the register.
+      (masm.ZeroExtendShort(std::get<1>(registers), std::get<0>(registers)),
+       ...);
+
+      // Shift to the offset in a 32-bit word.
+      (masm.sllw(std::get<1>(registers), std::get<1>(registers), offsetTemp),
+       ...);
+    } else {
+      // No single instruction available to zero other bits in the input
+      // registers. Fallback to first shift and then mask.
+      (masm.sllw(std::get<1>(registers), std::get<1>(registers), offsetTemp),
+       ...);
+      (masm.and_(std::get<1>(registers), std::get<1>(registers), maskTemp),
+       ...);
+    }
+  }
+}
+
+// Sign- or zero-extend the result of a byte or halfword atomic operation.
+static void AtomicExtendResult(MacroAssembler& masm, Scalar::Type type,
+                               Register output, Register offsetTemp) {
+  bool signExtend = Scalar::isSignedIntType(type);
+  unsigned nbytes = Scalar::byteSize(type);
+  MOZ_ASSERT(nbytes == 1 || nbytes == 2);
+
+  // Shift |output| into its correct position.
+  masm.srlw(output, output, offsetTemp);
+
+  // Sign- or zero-extend to the format of |type|.
+  switch (nbytes) {
+    case 1:
+      if (signExtend) {
+        masm.SignExtendByte(output, output);
+      } else {
+        masm.ZeroExtendByte(output, output);
+      }
+      break;
+    case 2:
+      if (signExtend) {
+        masm.SignExtendShort(output, output);
+      } else {
+        masm.ZeroExtendShort(output, output);
+      }
+      break;
+  }
+}
+
 template <typename T>
 static void AtomicExchange(MacroAssembler& masm,
                            const wasm::MemoryAccessDesc* access,
@@ -2843,7 +2933,6 @@ static void AtomicExchange(MacroAssembler& masm,
                            const T& mem, Register value, Register valueTemp,
                            Register offsetTemp, Register maskTemp,
                            Register output) {
-  bool signExtend = Scalar::isSignedIntType(type);
   unsigned nbytes = Scalar::byteSize(type);
 
   UseScratchRegisterScope temps(&masm);
@@ -2861,112 +2950,80 @@ static void AtomicExchange(MacroAssembler& masm,
       MOZ_CRASH();
   }
 
-  Label again;
-
   Register scratch = temps.Acquire();
   masm.computeEffectiveAddress(mem, scratch);
 
-  Register scratch2 = temps.Acquire();
-
   if (nbytes == 4) {
-    masm.memoryBarrierBefore(sync);
-    masm.bind(&again);
-
-    // Forbid pools to ensure all atomic instructions are placed next to each
-    // other. This is also needed to ensure |masm.currentOffset()| returns the
-    // correct offset for the "lr.w" instruction.
-    //
-    // TODO: It's unclear why the initial memoryBarrierBefore is excluded.
-    AutoForbidPoolsAndNops afp(&masm, /* 1 + 1 + 1 + 4 + 1 = */ 8, 1);
-
     if (access) {
+      AutoForbidPoolsAndNops afp(&masm, /* number of insns = */ 1);
       masm.append(*access, wasm::TrapMachineInsn::Atomic,
                   FaultingCodeOffset(masm.currentOffset()));
     }
 
-    masm.lr_w(true, true, output, scratch);
-    masm.or_(scratch2, value, zero);
-    masm.sc_w(true, true, scratch2, scratch, scratch2);
-    masm.ma_b(scratch2, scratch2, &again, Assembler::NonZero, ShortJump);
-
-    masm.memoryBarrierAfter(sync);
+    masm.amoswap_w(true, true, output, scratch, value);
 
     return;
   }
 
-  masm.andi(offsetTemp, scratch, 3);
-  masm.subPtr(offsetTemp, scratch);
-  masm.slliw(offsetTemp, offsetTemp, 3);
-  masm.ma_li(maskTemp, Imm32(UINT32_MAX >> ((4 - nbytes) * 8)));
-  masm.sllw(maskTemp, maskTemp, offsetTemp);
-  if (masm.HasZbbExtension()) {
-    // This is handled by the andn below.
-    ;
-  } else {
-    masm.not_(maskTemp, maskTemp);
-  }
+  // Align the address for a 32-bit word load and compute the shift offset.
+  AtomicOffset(masm, scratch, offsetTemp);
 
-  switch (nbytes) {
-    case 1:
-      masm.ZeroExtendByte(valueTemp, value);
-      break;
-    case 2:
-      masm.ZeroExtendShort(valueTemp, value);
-      break;
-  }
-  masm.sllw(valueTemp, valueTemp, offsetTemp);
+  // Compute the mask to select the input bytes in a 32-bit word.
+  AtomicMask(masm, nbytes, offsetTemp, maskTemp);
+
+  // Shift |value| into its position in a 32-bit word.
+  AtomicShiftToOffset(masm, nbytes, offsetTemp, maskTemp,
+                      std::pair{value, valueTemp});
+
+  // Negate mask to select all bits except the input bits.
+  masm.not_(maskTemp, maskTemp);
 
   masm.memoryBarrierBefore(sync);
 
-  masm.bind(&again);
+  {
+    // All instructions within this scope must be restricted to fulfill the
+    // requirements for "constrained LR/SC loop" [1].
+    //
+    // 1. The instructions are limited to the I or E base instruction set.
+    // 2. The total number of instructions is limited to 16.
+    //
+    // [1] https://riscv.github.io/riscv-isa-manual/snapshot/spec/#sec:lrscseq
 
-  // Forbid pools to ensure all atomic instructions are placed next to each
-  // other. This is also needed to ensure |masm.currentOffset()| returns the
-  // correct offset for the "lr.w" instruction.
-  //
-  // TODO: It's unclear why the initial memoryBarrierBefore is excluded.
-  AutoForbidPoolsAndNops afp(&masm, /* 1 + 1 + 1 + 1 + 4 + 1 + 2 + 1 = */ 12,
-                             1);
+    // Forbid pools to ensure all instructions are placed next to each other
+    // and the total number of instructions doesn't exceed 16.
+    //
+    // Five instructions (lr.w, and, or, sc.w, bnez).
+    AutoForbidPoolsAndNops afp(&masm, /* number of insns = */ 5);
 
-  if (access) {
-    masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                FaultingCodeOffset(masm.currentOffset()));
-  }
+    Register scratch2 = temps.Acquire();
 
-  masm.lr_w(true, true, output, scratch);
-  if (masm.HasZbbExtension()) {
-    masm.andn(scratch2, output, maskTemp);
-  } else {
-    // Inverted by not_ above.
+    // LR/SC loop.
+    Label again;
+    masm.bind(&again);
+
+    if (access) {
+      // Track offset of the "lr.w" instruction.
+      masm.append(*access, wasm::TrapMachineInsn::Atomic,
+                  FaultingCodeOffset(masm.currentOffset()));
+    }
+
+    // Load the current value into |output|.
+    masm.lr_w(true, true, output, scratch);
+
+    // Combine the loaded value with |valueTemp|.
     masm.and_(scratch2, output, maskTemp);
-  }
+    masm.or_(scratch2, scratch2, valueTemp);
 
-  masm.or_(scratch2, scratch2, valueTemp);
+    // Try to store back to memory.
+    masm.sc_w(true, true, scratch2, scratch, scratch2);
 
-  masm.sc_w(true, true, scratch2, scratch, scratch2);
-
-  masm.ma_b(scratch2, scratch2, &again, Assembler::NonZero, ShortJump);
-
-  masm.srlw(output, output, offsetTemp);
-
-  switch (nbytes) {
-    case 1:
-      if (signExtend) {
-        masm.SignExtendByte(output, output);
-      } else {
-        masm.ZeroExtendByte(output, output);
-      }
-      break;
-    case 2:
-      if (signExtend) {
-        masm.SignExtendShort(output, output);
-      } else {
-        masm.ma_and(output, output, Imm32(0xffff));
-      }
-      break;
+    // Store was successful iff |scratch2| is zero.
+    masm.ma_b(scratch2, scratch2, &again, Assembler::NonZero, ShortJump);
   }
 
   masm.memoryBarrierAfter(sync);
+
+  AtomicExtendResult(masm, type, output, offsetTemp);
 }
 
 template <typename T>
@@ -2974,36 +3031,18 @@ static void AtomicExchange64(MacroAssembler& masm,
                              const wasm::MemoryAccessDesc* access,
                              Synchronization sync, const T& mem,
                              Register64 value, Register64 output) {
-  MOZ_ASSERT(value != output);
   UseScratchRegisterScope temps(&masm);
+
   Register scratch = temps.Acquire();
-  Register scratch2 = temps.Acquire();
-  masm.computeEffectiveAddress(mem, scratch2);
+  masm.computeEffectiveAddress(mem, scratch);
 
-  Label tryAgain;
-
-  masm.memoryBarrierBefore(sync);
-
-  masm.bind(&tryAgain);
-
-  // Forbid pools to ensure all atomic instructions are placed next to each
-  // other. This is also needed to ensure |masm.currentOffset()| returns the
-  // correct offset for the "lr.d" instruction.
-  //
-  // TODO: It's unclear why the initial memoryBarrierBefore is excluded.
-  AutoForbidPoolsAndNops afp(&masm,
-                             /* 1 + 1 + 1 + 4 + 1 = */ 8, 1);
   if (access) {
-    masm.append(*access, js::wasm::TrapMachineInsn::Load64,
+    AutoForbidPoolsAndNops afp(&masm, /* number of insns = */ 1);
+    masm.append(*access, js::wasm::TrapMachineInsn::Atomic,
                 FaultingCodeOffset(masm.currentOffset()));
   }
 
-  masm.lr_d(true, true, output.reg, scratch2);
-  masm.movePtr(value.reg, scratch);
-  masm.sc_d(true, true, scratch, scratch2, scratch);
-  masm.ma_b(scratch, scratch, &tryAgain, Assembler::NonZero, ShortJump);
-
-  masm.memoryBarrierAfter(sync);
+  masm.amoswap_d(true, true, output.reg, scratch, value.reg);
 }
 
 template <typename T>
