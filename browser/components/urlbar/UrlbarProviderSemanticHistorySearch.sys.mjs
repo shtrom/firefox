@@ -187,11 +187,10 @@ export class UrlbarProviderSemanticHistorySearch extends UrlbarProvider {
       return false;
     }
 
-    let userContextId =
-      lazy.UrlbarProviderOpenTabs.getUserContextIdForOpenPagesTable(
-        queryContext.userContextId,
-        queryContext.isPrivate
-      );
+    let userContextId = lazy.UrlbarShared.getUserContextIdForOpenPagesTable(
+      queryContext.userContextId,
+      queryContext.isPrivate
+    );
 
     let added = false;
     for (let [tabUserContextId, tabGroupId] of openTabs) {

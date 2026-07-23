@@ -38,8 +38,6 @@ const lazy = XPCOMUtils.declareLazy({
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
   UrlbarProviderInterventions:
     "moz-src:///browser/components/urlbar/UrlbarProviderInterventions.sys.mjs",
-  UrlbarProviderOpenTabs:
-    "moz-src:///browser/components/urlbar/UrlbarProviderOpenTabs.sys.mjs",
   UrlbarProviderSearchTips:
     "moz-src:///browser/components/urlbar/UrlbarProviderSearchTips.sys.mjs",
   UrlbarResult: "chrome://browser/content/urlbar/UrlbarResult.mjs",
@@ -2878,11 +2876,10 @@ export class UrlbarQueryContext {
     this.trimmedSearchString = this.searchString.trim();
     this.lowerCaseSearchString = this.searchString.toLowerCase();
     this.trimmedLowerCaseSearchString = this.trimmedSearchString.toLowerCase();
-    this.userContextId =
-      lazy.UrlbarProviderOpenTabs.getUserContextIdForOpenPagesTable(
-        options.userContextId,
-        this.isPrivate
-      ) || Ci.nsIScriptSecurityManager.DEFAULT_USER_CONTEXT_ID;
+    this.userContextId = UrlbarShared.normalizedUserContextId(
+      options.userContextId,
+      this.isPrivate
+    );
     this.tabGroup = options.tabGroup || null;
 
     // Used to store glean timing distribution timer ids.

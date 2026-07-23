@@ -2470,9 +2470,7 @@ ${
           Services.io.newURI(url),
           true,
           loadOpts,
-          lazy.UrlbarProviderOpenTabs.isNonPrivateUserContextId(
-            result.payload.userContextId
-          )
+          UrlbarShared.isNonPrivateUserContextId(result.payload.userContextId)
             ? result.payload.userContextId
             : null
         );

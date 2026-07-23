@@ -17,8 +17,6 @@ ChromeUtils.defineESModuleGetters(lazy, {
   QuickSuggest: "moz-src:///browser/components/urlbar/QuickSuggest.sys.mjs",
   SearchService: "moz-src:///toolkit/components/search/SearchService.sys.mjs",
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
-  UrlbarProviderOpenTabs:
-    "moz-src:///browser/components/urlbar/UrlbarProviderOpenTabs.sys.mjs",
   UrlbarProviderQuickSuggest:
     "moz-src:///browser/components/urlbar/UrlbarProviderQuickSuggest.sys.mjs",
   UrlbarSearchUtils:
@@ -44,9 +42,7 @@ function makeMapKeyForTabResult(result) {
   return UrlbarUtils.tupleString(
     result.payload.url,
     result.type == lazy.UrlbarShared.RESULT_TYPE.TAB_SWITCH &&
-      lazy.UrlbarProviderOpenTabs.isNonPrivateUserContextId(
-        result.payload.userContextId
-      )
+      lazy.UrlbarShared.isNonPrivateUserContextId(result.payload.userContextId)
       ? result.payload.userContextId
       : undefined
   );
