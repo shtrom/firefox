@@ -23097,7 +23097,7 @@ const PictureOfTheDay_PictureOfTheDay = ({
   const [imageFailed, setImageFailed] = (0,external_React_namespaceObject.useState)(false);
   (0,external_React_namespaceObject.useEffect)(() => {
     setImageFailed(false);
-  }, [pictureData.imageUrl]);
+  }, [pictureData.thumbnailUrl]);
 
   // Dismissal is keyed to the picture's date so a new day's picture shows again
   // automatically (Bug 2050972). Edge case: Merino may omit published_date, and
@@ -23112,7 +23112,7 @@ const PictureOfTheDay_PictureOfTheDay = ({
   // on. Toggling wallpapers off in the Content section keeps the picture selected
   // but hidden, so the checkmark hides while off and returns when toggled back on.
   const isSetAsWallpaper = Boolean(prefs["newtabWallpapers.user.enabled"]) && pictureDate === prefs["widgets.pictureOfTheDay.wallpaperActive"];
-  const hasPicture = Boolean(pictureData.imageUrl) && !dismissed && !imageFailed;
+  const hasPicture = Boolean(pictureData.thumbnailUrl) && !dismissed && !imageFailed;
 
   // Show the "New" badge until the user first interacts with the widget;
   // handleInteraction flips widgets.pictureOfTheDay.interaction on any action,
@@ -23345,7 +23345,7 @@ const PictureOfTheDay_PictureOfTheDay = ({
   };
   const pictureImage = /*#__PURE__*/external_React_default().createElement("img", {
     className: "picture-of-the-day-image",
-    src: pictureData.imageUrl,
+    src: pictureData.thumbnailUrl,
     alt: imageAlt,
     onError: () => setImageFailed(true)
   });
