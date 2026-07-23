@@ -691,6 +691,16 @@ static mozilla::Maybe<uint64_t> ToAbsoluteAddress(
   return mozilla::Nothing();
 }
 
+template <class Inst>
+static wasm::ZeroExtendIndex ToZeroExtendIndex(const Inst* ins) {
+  // ptr is a GPR and is either a 32-bit value zero-extended to 64-bit, or a
+  // true 64-bit value.
+  if (ins->mir()->base()->type() == MIRType::Int32) {
+    return wasm::ZeroExtendIndex::Yes;
+  }
+  return wasm::ZeroExtendIndex::No;
+}
+
 void CodeGenerator::visitWasmLoadI64(LWasmLoadI64* ins) {
   const MWasmLoad* mir = ins->mir();
   const auto& access = mir->access();
@@ -701,18 +711,10 @@ void CodeGenerator::visitWasmLoadI64(LWasmLoadI64* ins) {
   if (auto address = ToAbsoluteAddress(ins->ptr(), access)) {
     masm.wasmLoadAbsoluteI64(access, memoryBase, address.value(), output);
   } else {
-    UseScratchRegisterScope temps(&masm);
     Register ptr = ToRegister(ins->ptr());
+    auto zeroExtend = ToZeroExtendIndex(ins);
 
-    // See comment in visitWasmLoad re the type of 'base'.
-    if (mir->base()->type() == MIRType::Int32) {
-      Register scratch = temps.Acquire();
-
-      masm.move32ZeroExtendToPtr(ptr, scratch);
-      ptr = scratch;
-    }
-
-    masm.wasmLoadI64(access, memoryBase, ptr, output);
+    masm.wasmLoadI64(access, memoryBase, ptr, output, zeroExtend);
   }
 }
 
@@ -732,18 +734,10 @@ void CodeGenerator::visitWasmStoreI64(LWasmStoreI64* ins) {
   if (auto address = ToAbsoluteAddress(ins->ptr(), access)) {
     masm.wasmStoreAbsoluteI64(access, value, memoryBase, address.value());
   } else {
-    UseScratchRegisterScope temps(&masm);
     Register ptr = ToRegister(ins->ptr());
+    auto zeroExtend = ToZeroExtendIndex(ins);
 
-    // See comment in visitWasmLoad re the type of 'base'.
-    if (mir->base()->type() == MIRType::Int32) {
-      Register scratch = temps.Acquire();
-
-      masm.move32ZeroExtendToPtr(ptr, scratch);
-      ptr = scratch;
-    }
-
-    masm.wasmStoreI64(access, value, memoryBase, ptr);
+    masm.wasmStoreI64(access, value, memoryBase, ptr, zeroExtend);
   }
 }
 
@@ -2067,19 +2061,10 @@ void CodeGenerator::visitWasmLoad(LWasmLoad* ins) {
   if (auto address = ToAbsoluteAddress(ins->ptr(), access)) {
     masm.wasmLoadAbsolute(access, memoryBase, address.value(), output);
   } else {
-    UseScratchRegisterScope temps(&masm);
     Register ptr = ToRegister(ins->ptr());
+    auto zeroExtend = ToZeroExtendIndex(ins);
 
-    // ptr is a GPR and is either a 32-bit value zero-extended to 64-bit, or a
-    // true 64-bit value.
-    if (mir->base()->type() == MIRType::Int32) {
-      Register scratch = temps.Acquire();
-
-      masm.move32ZeroExtendToPtr(ptr, scratch);
-      ptr = scratch;
-    }
-
-    masm.wasmLoad(access, memoryBase, ptr, output);
+    masm.wasmLoad(access, memoryBase, ptr, output, zeroExtend);
   }
 }
 
@@ -2099,19 +2084,10 @@ void CodeGenerator::visitWasmStore(LWasmStore* ins) {
   if (auto address = ToAbsoluteAddress(ins->ptr(), access)) {
     masm.wasmStoreAbsolute(access, value, memoryBase, address.value());
   } else {
-    UseScratchRegisterScope temps(&masm);
     Register ptr = ToRegister(ins->ptr());
+    auto zeroExtend = ToZeroExtendIndex(ins);
 
-    // ptr is a GPR and is either a 32-bit value zero-extended to 64-bit, or a
-    // true 64-bit value.
-    if (mir->base()->type() == MIRType::Int32) {
-      Register scratch = temps.Acquire();
-
-      masm.move32ZeroExtendToPtr(ptr, scratch);
-      ptr = scratch;
-    }
-
-    masm.wasmStore(access, value, memoryBase, ptr);
+    masm.wasmStore(access, value, memoryBase, ptr, zeroExtend);
   }
 }
 

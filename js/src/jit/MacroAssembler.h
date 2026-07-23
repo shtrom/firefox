@@ -3819,14 +3819,28 @@ class MacroAssembler : public MacroAssemblerSpecific {
   // register for the offset if the offset is large, and instructions to set it
   // up.
   void wasmLoad(const wasm::MemoryAccessDesc& access, Register memoryBase,
-                Register ptr, AnyRegister output) DEFINED_ON(arm64, riscv64);
+                Register ptr, AnyRegister output) DEFINED_ON(arm64);
   void wasmLoadI64(const wasm::MemoryAccessDesc& access, Register memoryBase,
-                   Register ptr, Register64 output) DEFINED_ON(arm64, riscv64);
+                   Register ptr, Register64 output) DEFINED_ON(arm64);
   void wasmStore(const wasm::MemoryAccessDesc& access, AnyRegister value,
-                 Register memoryBase, Register ptr) DEFINED_ON(arm64, riscv64);
+                 Register memoryBase, Register ptr) DEFINED_ON(arm64);
   void wasmStoreI64(const wasm::MemoryAccessDesc& access, Register64 value,
-                    Register memoryBase, Register ptr)
-      DEFINED_ON(arm64, riscv64);
+                    Register memoryBase, Register ptr) DEFINED_ON(arm64);
+
+  // RISCV64 additionally supports ZeroExtendIndex. The other parameters are the
+  // same as for ARM64.
+  void wasmLoad(const wasm::MemoryAccessDesc& access, Register memoryBase,
+                Register ptr, AnyRegister output,
+                wasm::ZeroExtendIndex zeroExtend) DEFINED_ON(riscv64);
+  void wasmLoadI64(const wasm::MemoryAccessDesc& access, Register memoryBase,
+                   Register ptr, Register64 output,
+                   wasm::ZeroExtendIndex zeroExtend) DEFINED_ON(riscv64);
+  void wasmStore(const wasm::MemoryAccessDesc& access, AnyRegister value,
+                 Register memoryBase, Register ptr,
+                 wasm::ZeroExtendIndex zeroExtend) DEFINED_ON(riscv64);
+  void wasmStoreI64(const wasm::MemoryAccessDesc& access, Register64 value,
+                    Register memoryBase, Register ptr,
+                    wasm::ZeroExtendIndex zeroExtend) DEFINED_ON(riscv64);
 
   // `ptr` will always be updated.
   void wasmUnalignedLoad(const wasm::MemoryAccessDesc& access,

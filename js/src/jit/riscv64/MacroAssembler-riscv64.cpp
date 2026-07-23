@@ -1620,7 +1620,8 @@ FaultingCodeOffset MacroAssemblerRiscv64::ma_storeFloat16(
 }
 
 Address MacroAssemblerRiscv64::computeScaledAddress(
-    const BaseIndex& address, UseScratchRegisterScope& temps) {
+    const BaseIndex& address, UseScratchRegisterScope& temps,
+    wasm::ZeroExtendIndex zeroExtend) {
   if (address.index == zero) {
     return Address(address.base, address.offset);
   }
@@ -1629,7 +1630,7 @@ Address MacroAssemblerRiscv64::computeScaledAddress(
   MOZ_ASSERT(scratch != address.base);
   MOZ_ASSERT(scratch != address.index);
 
-  computeScaledAddress(address, scratch);
+  computeScaledAddress(address, scratch, zeroExtend);
 
   int32_t offset = address.offset;
   if (is_int12(offset)) {
@@ -1655,42 +1656,84 @@ Address MacroAssemblerRiscv64::computeScaledAddress(
   return Address(scratch, offset);
 }
 
-void MacroAssemblerRiscv64::computeScaledAddress(const BaseIndex& address,
-                                                 Register dest) {
+void MacroAssemblerRiscv64::computeScaledAddress(
+    const BaseIndex& address, Register dest, wasm::ZeroExtendIndex zeroExtend) {
   Register base = address.base;
   Register index = address.index;
   int32_t shift = Imm32::ShiftOf(address.scale).value;
-  MOZ_ASSERT(shift <= 4);
+  MOZ_ASSERT(shift <= 3);
 
   if (index == zero) {
     if (dest != base) {
       mv(dest, base);
     }
   } else if (shift && base == zero) {
-    slli(dest, index, shift);
+    if (zeroExtend == wasm::ZeroExtendIndex::No) {
+      slli(dest, index, shift);
+    } else {
+      if (HasZbaExtension()) {
+        slli_uw(dest, index, shift);
+      } else {
+        slli(dest, index, 32);
+        srli(dest, dest, 32 - shift);
+      }
+    }
   } else if (shift) {
     if (HasZbaExtension()) {
-      switch (shift) {
-        case 1:
-          sh1add(dest, index, base);
-          return;
-        case 2:
-          sh2add(dest, index, base);
-          return;
-        case 3:
-          sh3add(dest, index, base);
-          return;
-        default:
-          break;
+      if (zeroExtend == wasm::ZeroExtendIndex::No) {
+        switch (shift) {
+          case 1:
+            sh1add(dest, index, base);
+            return;
+          case 2:
+            sh2add(dest, index, base);
+            return;
+          case 3:
+            sh3add(dest, index, base);
+            return;
+          default:
+            MOZ_CRASH("invalid shift");
+        }
+      } else {
+        switch (shift) {
+          case 1:
+            sh1add_uw(dest, index, base);
+            return;
+          case 2:
+            sh2add_uw(dest, index, base);
+            return;
+          case 3:
+            sh3add_uw(dest, index, base);
+            return;
+          default:
+            MOZ_CRASH("invalid shift");
+        }
       }
     }
 
     UseScratchRegisterScope temps(this);
     Register tmp = dest == base ? temps.Acquire() : dest;
-    slli(tmp, index, shift);
+    if (zeroExtend == wasm::ZeroExtendIndex::No) {
+      slli(tmp, index, shift);
+    } else {
+      slli(tmp, index, 32);
+      srli(tmp, tmp, 32 - shift);
+    }
     add(dest, base, tmp);
   } else {
-    add(dest, base, index);
+    if (zeroExtend == wasm::ZeroExtendIndex::No) {
+      add(dest, base, index);
+    } else {
+      if (HasZbaExtension()) {
+        add_uw(dest, index, base);
+      } else {
+        UseScratchRegisterScope temps(this);
+        Register tmp = dest == base ? temps.Acquire() : dest;
+
+        ZeroExtendWord(tmp, index);
+        add(dest, base, tmp);
+      }
+    }
   }
 }
 
@@ -4848,26 +4891,29 @@ void MacroAssembler::wasmCompareExchange(
 
 void MacroAssembler::wasmLoad(const wasm::MemoryAccessDesc& access,
                               Register memoryBase, Register ptr,
-                              AnyRegister output) {
-  wasmLoadImpl(access, memoryBase, ptr, output);
+                              AnyRegister output,
+                              wasm::ZeroExtendIndex zeroExtend) {
+  wasmLoadImpl(access, memoryBase, ptr, output, zeroExtend);
 }
 
 void MacroAssembler::wasmLoadI64(const wasm::MemoryAccessDesc& access,
                                  Register memoryBase, Register ptr,
-                                 Register64 output) {
-  wasmLoadImpl(access, memoryBase, ptr, AnyRegister(output.reg));
+                                 Register64 output,
+                                 wasm::ZeroExtendIndex zeroExtend) {
+  wasmLoadImpl(access, memoryBase, ptr, AnyRegister(output.reg), zeroExtend);
 }
 
 void MacroAssembler::wasmStore(const wasm::MemoryAccessDesc& access,
                                AnyRegister value, Register memoryBase,
-                               Register ptr) {
-  wasmStoreImpl(access, value, memoryBase, ptr);
+                               Register ptr, wasm::ZeroExtendIndex zeroExtend) {
+  wasmStoreImpl(access, value, memoryBase, ptr, zeroExtend);
 }
 
 void MacroAssembler::wasmStoreI64(const wasm::MemoryAccessDesc& access,
                                   Register64 value, Register memoryBase,
-                                  Register ptr) {
-  wasmStoreImpl(access, AnyRegister(value.reg), memoryBase, ptr);
+                                  Register ptr,
+                                  wasm::ZeroExtendIndex zeroExtend) {
+  wasmStoreImpl(access, AnyRegister(value.reg), memoryBase, ptr, zeroExtend);
 }
 
 void MacroAssemblerRiscv64::Clear_if_nan_d(Register rd, FPURegister fs) {
@@ -6923,46 +6969,51 @@ void MacroAssemblerRiscv64::Dror(Register rd, Register rs, Register rt) {
 
 void MacroAssemblerRiscv64::wasmLoadImpl(const wasm::MemoryAccessDesc& access,
                                          Register memoryBase, Register ptr,
-                                         AnyRegister output) {
+                                         AnyRegister output,
+                                         wasm::ZeroExtendIndex zeroExtend) {
   BaseIndex address(memoryBase, ptr, TimesOne, access.offset32());
-  wasmLoadImpl(access, address, output);
+  wasmLoadImpl(access, address, output, zeroExtend);
 }
 
 void MacroAssemblerRiscv64::wasmLoadImpl(const wasm::MemoryAccessDesc& access,
                                          const BaseIndex& address,
-                                         AnyRegister output) {
+                                         AnyRegister output,
+                                         wasm::ZeroExtendIndex zeroExtend) {
   access.assertOffsetInGuardPages();
+
+  UseScratchRegisterScope temps(this);
+  Address addr = computeScaledAddress(address, temps, zeroExtend);
 
   asMasm().memoryBarrierBefore(access.sync());
 
   FaultingCodeOffset fco;
   switch (access.type()) {
     case Scalar::Int8:
-      fco = ma_load(output.gpr(), address, SizeByte, SignExtend);
+      fco = ma_load(output.gpr(), addr, SizeByte, SignExtend);
       break;
     case Scalar::Uint8:
-      fco = ma_load(output.gpr(), address, SizeByte, ZeroExtend);
+      fco = ma_load(output.gpr(), addr, SizeByte, ZeroExtend);
       break;
     case Scalar::Int16:
-      fco = ma_load(output.gpr(), address, SizeHalfWord, SignExtend);
+      fco = ma_load(output.gpr(), addr, SizeHalfWord, SignExtend);
       break;
     case Scalar::Uint16:
-      fco = ma_load(output.gpr(), address, SizeHalfWord, ZeroExtend);
+      fco = ma_load(output.gpr(), addr, SizeHalfWord, ZeroExtend);
       break;
     case Scalar::Int32:
-      fco = ma_load(output.gpr(), address, SizeWord, SignExtend);
+      fco = ma_load(output.gpr(), addr, SizeWord, SignExtend);
       break;
     case Scalar::Uint32:
-      fco = ma_load(output.gpr(), address, SizeWord, ZeroExtend);
+      fco = ma_load(output.gpr(), addr, SizeWord, ZeroExtend);
       break;
     case Scalar::Int64:
-      fco = ma_load(output.gpr(), address, SizeDouble, SignExtend);
+      fco = ma_load(output.gpr(), addr, SizeDouble, SignExtend);
       break;
     case Scalar::Float32:
-      fco = ma_loadFloat(output.fpu(), address);
+      fco = ma_loadFloat(output.fpu(), addr);
       break;
     case Scalar::Float64:
-      fco = ma_loadDouble(output.fpu(), address);
+      fco = ma_loadDouble(output.fpu(), addr);
       break;
     default:
       MOZ_CRASH("unexpected array type");
@@ -6974,46 +7025,51 @@ void MacroAssemblerRiscv64::wasmLoadImpl(const wasm::MemoryAccessDesc& access,
 
 void MacroAssemblerRiscv64::wasmStoreImpl(const wasm::MemoryAccessDesc& access,
                                           AnyRegister value,
-                                          Register memoryBase, Register ptr) {
+                                          Register memoryBase, Register ptr,
+                                          wasm::ZeroExtendIndex zeroExtend) {
   BaseIndex address(memoryBase, ptr, TimesOne, access.offset32());
-  wasmStoreImpl(access, value, address);
+  wasmStoreImpl(access, value, address, zeroExtend);
 }
 
 void MacroAssemblerRiscv64::wasmStoreImpl(const wasm::MemoryAccessDesc& access,
                                           AnyRegister value,
-                                          const BaseIndex& address) {
+                                          const BaseIndex& address,
+                                          wasm::ZeroExtendIndex zeroExtend) {
   access.assertOffsetInGuardPages();
+
+  UseScratchRegisterScope temps(this);
+  Address addr = computeScaledAddress(address, temps, zeroExtend);
 
   asMasm().memoryBarrierBefore(access.sync());
 
   FaultingCodeOffset fco;
   switch (access.type()) {
     case Scalar::Int8:
-      fco = ma_store(value.gpr(), address, SizeByte, SignExtend);
+      fco = ma_store(value.gpr(), addr, SizeByte, SignExtend);
       break;
     case Scalar::Uint8:
-      fco = ma_store(value.gpr(), address, SizeByte, ZeroExtend);
+      fco = ma_store(value.gpr(), addr, SizeByte, ZeroExtend);
       break;
     case Scalar::Int16:
-      fco = ma_store(value.gpr(), address, SizeHalfWord, SignExtend);
+      fco = ma_store(value.gpr(), addr, SizeHalfWord, SignExtend);
       break;
     case Scalar::Uint16:
-      fco = ma_store(value.gpr(), address, SizeHalfWord, ZeroExtend);
+      fco = ma_store(value.gpr(), addr, SizeHalfWord, ZeroExtend);
       break;
     case Scalar::Int32:
-      fco = ma_store(value.gpr(), address, SizeWord, SignExtend);
+      fco = ma_store(value.gpr(), addr, SizeWord, SignExtend);
       break;
     case Scalar::Uint32:
-      fco = ma_store(value.gpr(), address, SizeWord, ZeroExtend);
+      fco = ma_store(value.gpr(), addr, SizeWord, ZeroExtend);
       break;
     case Scalar::Int64:
-      fco = ma_store(value.gpr(), address, SizeDouble, SignExtend);
+      fco = ma_store(value.gpr(), addr, SizeDouble, SignExtend);
       break;
     case Scalar::Float32:
-      fco = ma_storeFloat(value.fpu(), address);
+      fco = ma_storeFloat(value.fpu(), addr);
       break;
     case Scalar::Float64:
-      fco = ma_storeDouble(value.fpu(), address);
+      fco = ma_storeDouble(value.fpu(), addr);
       break;
     default:
       MOZ_CRASH("unexpected array type");
@@ -7045,7 +7101,7 @@ void MacroAssemblerRiscv64::wasmLoadAbsoluteImpl(
     AnyRegister output) {
   UseScratchRegisterScope temps(this);
   BaseIndex address = toBaseIndex(memoryBase, offset, temps);
-  wasmLoadImpl(access, address, output);
+  wasmLoadImpl(access, address, output, wasm::ZeroExtendIndex::No);
 }
 
 void MacroAssemblerRiscv64::wasmStoreAbsoluteImpl(
@@ -7053,7 +7109,7 @@ void MacroAssemblerRiscv64::wasmStoreAbsoluteImpl(
     Register memoryBase, uint64_t offset) {
   UseScratchRegisterScope temps(this);
   BaseIndex address = toBaseIndex(memoryBase, offset, temps);
-  wasmStoreImpl(access, value, address);
+  wasmStoreImpl(access, value, address, wasm::ZeroExtendIndex::No);
 }
 
 void MacroAssemblerRiscv64::ma_fmv_d(FloatRegister src, ValueOperand dest) {

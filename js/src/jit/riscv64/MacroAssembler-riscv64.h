@@ -337,11 +337,14 @@ class MacroAssemblerRiscv64 : public Assembler {
   void ma_cselnz(Register rd, Register rs1, Register rs2, Register rc,
                  Register rtmp);
 
-  void computeScaledAddress(const BaseIndex& address, Register dest);
+  void computeScaledAddress(
+      const BaseIndex& address, Register dest,
+      wasm::ZeroExtendIndex zeroExtend = wasm::ZeroExtendIndex::No);
   void computeScaledAddress32(const BaseIndex& address, Register dest);
 
-  Address computeScaledAddress(const BaseIndex& address,
-                               UseScratchRegisterScope& temps);
+  Address computeScaledAddress(
+      const BaseIndex& address, UseScratchRegisterScope& temps,
+      wasm::ZeroExtendIndex zeroExtend = wasm::ZeroExtendIndex::No);
 
  private:
   bool UseShortBranch(Label* L, JumpKind jumpKind, OffsetSize bits,
@@ -551,14 +554,18 @@ class MacroAssemblerRiscv64 : public Assembler {
                              uint64_t offset);
 
   void wasmLoadImpl(const wasm::MemoryAccessDesc& access, Register memoryBase,
-                    Register ptr, AnyRegister output);
+                    Register ptr, AnyRegister output,
+                    wasm::ZeroExtendIndex zeroExtend);
   void wasmStoreImpl(const wasm::MemoryAccessDesc& access, AnyRegister value,
-                     Register memoryBase, Register ptr);
+                     Register memoryBase, Register ptr,
+                     wasm::ZeroExtendIndex zeroExtend);
 
   void wasmLoadImpl(const wasm::MemoryAccessDesc& access,
-                    const BaseIndex& address, AnyRegister output);
+                    const BaseIndex& address, AnyRegister output,
+                    wasm::ZeroExtendIndex zeroExtend);
   void wasmStoreImpl(const wasm::MemoryAccessDesc& access, AnyRegister value,
-                     const BaseIndex& address);
+                     const BaseIndex& address,
+                     wasm::ZeroExtendIndex zeroExtend);
 };
 
 class MacroAssemblerRiscv64Compat : public MacroAssemblerRiscv64 {
