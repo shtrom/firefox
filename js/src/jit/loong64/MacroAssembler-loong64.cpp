@@ -2077,11 +2077,25 @@ void MacroAssemblerLOONG64::ma_cmp_set_double(Register dest, FloatRegister lhs,
   as_movcf2gr(dest, FCC0);
 }
 
+void MacroAssemblerLOONG64::ma_cmp_set_double(FPConditionBit fcc,
+                                              FloatRegister lhs,
+                                              FloatRegister rhs,
+                                              DoubleCondition c) {
+  compareFloatingPoint(DoubleFloat, lhs, rhs, c, fcc);
+}
+
 void MacroAssemblerLOONG64::ma_cmp_set_float32(Register dest, FloatRegister lhs,
                                                FloatRegister rhs,
                                                DoubleCondition c) {
   compareFloatingPoint(SingleFloat, lhs, rhs, c);
   as_movcf2gr(dest, FCC0);
+}
+
+void MacroAssemblerLOONG64::ma_cmp_set_float32(FPConditionBit fcc,
+                                               FloatRegister lhs,
+                                               FloatRegister rhs,
+                                               DoubleCondition c) {
+  compareFloatingPoint(SingleFloat, lhs, rhs, c, fcc);
 }
 
 void MacroAssemblerLOONG64::ma_cmp_set(Register rd, Register rj, Imm32 imm,

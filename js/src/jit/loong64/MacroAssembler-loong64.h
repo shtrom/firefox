@@ -342,8 +342,12 @@ class MacroAssemblerLOONG64 : public Assembler {
   void ma_cmp_set(Register dst, Register lhs, Imm32 imm, Condition c);
   void ma_cmp_set_double(Register dst, FloatRegister lhs, FloatRegister rhs,
                          DoubleCondition c);
+  void ma_cmp_set_double(FPConditionBit fcc, FloatRegister lhs,
+                         FloatRegister rhs, DoubleCondition c);
   void ma_cmp_set_float32(Register dst, FloatRegister lhs, FloatRegister rhs,
                           DoubleCondition c);
+  void ma_cmp_set_float32(FPConditionBit fcc, FloatRegister lhs,
+                          FloatRegister rhs, DoubleCondition c);
 
   void moveToFloat32(Register src, FloatRegister dest) {
     as_movgr2fr_w(dest, src);
