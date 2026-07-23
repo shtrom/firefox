@@ -250,6 +250,7 @@ var SidebarController = {
           revampL10nId: "sidebar-menu-open-tabs-label",
           iconUrl: "chrome://browser/content/firefoxview/view-opentabs.svg",
           gleanClickEvent: Glean.sidebar.openTabsIconClick,
+          contextMenuId: "sidebar-opentabs-context-menu",
         }
       );
     }

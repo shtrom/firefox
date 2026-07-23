@@ -59,6 +59,7 @@ export class SidebarOpenTabs extends SidebarPage {
       this
     );
     this.addSidebarFocusedListeners();
+    this.addContextMenuListeners();
     this.openTabsTarget.readyWindowsPromise.finally(() => {
       this.initialWindowsReady = true;
       this.#updateWindowList();
@@ -74,6 +75,7 @@ export class SidebarOpenTabs extends SidebarPage {
       this
     );
     this.removeSidebarFocusedListeners();
+    this.removeContextMenuListeners();
   }
 
   shouldUpdate(changedProperties) {
@@ -94,6 +96,31 @@ export class SidebarOpenTabs extends SidebarPage {
         break;
       default:
         super.handleEvent(e);
+        break;
+    }
+  }
+
+  handleContextMenuEvent(e) {
+    this.triggerNode = this.findTriggerNode(e, "sidebar-tab-row");
+    if (!this.triggerNode) {
+      e.preventDefault();
+      return;
+    }
+    const privateWindowItem = this._contextMenu.querySelector(
+      "#sidebar-opentabs-context-open-in-private-window"
+    );
+    privateWindowItem.hidden = !lazy.PrivateBrowsingUtils.enabled;
+  }
+
+  handleCommandEvent(e) {
+    switch (e.target.id) {
+      case "sidebar-opentabs-context-close-tab": {
+        const { tabElement } = this.triggerNode;
+        tabElement?.documentGlobal.gBrowser.removeTabs([tabElement]);
+        break;
+      }
+      default:
+        super.handleCommandEvent(e);
         break;
     }
   }
