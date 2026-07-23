@@ -402,9 +402,7 @@ void MediaFormatReader::DecoderFactory::DoCreateDecoder(Data& aData) {
            CreateDecoderParams::UseNullDecoder(ownerData.mIsNullDecode),
            TrackType::kVideoTrack, std::move(onWaitingForKeyEvent),
            CreateDecoderParams::VideoFrameRate(
-               ownerData.mMeanRate.empty()
-                   ? 0.0f
-                   : static_cast<float>(ownerData.mMeanRate.mean())),
+               static_cast<float>(ownerData.mFrameRateEstimator.Rate())),
            OptionSet(ownerData.mHardwareDecodingDisabled
                          ? Option::HardwareDecoderNotAllowed
                          : Option::Default,
@@ -2227,7 +2225,7 @@ void MediaFormatReader::HandleDemuxedSamples(
       mWorkingInfoChanged = true;
     }
 
-    decoder.mMeanRate.reset();
+    decoder.mFrameRateEstimator.Reset();
 
     if (sample->mKeyframe) {
       if (samples.Length()) {
@@ -2246,9 +2244,7 @@ void MediaFormatReader::HandleDemuxedSamples(
 
   // Calculate the average frame rate. The first frame will be accounted
   // for twice.
-  if (sample->mDuration != media::TimeUnit::Zero()) {
-    decoder.mMeanRate.insert(1.0 / sample->mDuration.ToSeconds());
-  }
+  decoder.mFrameRateEstimator.Observe(sample->mDuration);
 
   if (!decoder.mDecoder) {
     // In Clear Lead situation, the `mInfo` could change from unencrypted to
@@ -3511,7 +3507,7 @@ void MediaFormatReader::GetDebugInfo(dom::MediaFormatReaderDebugInfo& aInfo) {
       videoInfo.mDisplay.width < 0 ? 0 : videoInfo.mDisplay.width;
   aInfo.mVideoHeight =
       videoInfo.mDisplay.height < 0 ? 0 : videoInfo.mDisplay.height;
-  aInfo.mVideoRate = mVideo.mMeanRate.empty() ? 0.0 : mVideo.mMeanRate.mean();
+  aInfo.mVideoRate = mVideo.mFrameRateEstimator.Rate();
   aInfo.mVideoHardwareAccelerated = VideoIsHardwareAccelerated();
   aInfo.mVideoNumSamplesOutputTotal = mVideo.mNumSamplesOutputTotal;
   aInfo.mVideoNumSamplesSkippedTotal = mVideo.mNumSamplesSkippedTotal;

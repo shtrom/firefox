@@ -692,7 +692,27 @@ class MediaFormatReader final
     // on reader's task queue,
     bool mHasReportedVideoHardwareSupportTelemtry = false;
 
-    CumulativeAverage<double> mMeanRate;
+    // Running frame-rate estimate over valid sample durations.
+    class FrameRateEstimator {
+     public:
+      double Rate() const {
+        MOZ_ASSERT_IF(!mMeanDuration.empty(), mMeanDuration.mean() > 0.0);
+        return mMeanDuration.empty() ? 0.0 : 1.0 / mMeanDuration.mean();
+      }
+
+      void Observe(const media::TimeUnit& aDuration) {
+        if (!aDuration.IsValid() || !aDuration.IsPositive() ||
+            aDuration.IsInfinite()) {
+          return;
+        }
+        mMeanDuration.insert(aDuration.ToSeconds());
+      }
+
+      void Reset() { mMeanDuration.reset(); }
+
+     private:
+      CumulativeAverage<double> mMeanDuration;
+    } mFrameRateEstimator;
   };
 
   template <typename Type>
