@@ -13568,6 +13568,7 @@ nsContentUtils::GetSubresourceCacheValidationInfo(nsIRequest* aRequest,
       return false;
     }
     if (aURI->SchemeIs("data") || aURI->SchemeIs("moz-page-thumb") ||
+        aURI->SchemeIs("moz-newtab-wallpaper") ||
         aURI->SchemeIs("moz-extension")) {
       return true;
     }
