@@ -188,6 +188,27 @@ export const FEATURE_MAJOR_VERSIONS = Object.freeze({
 });
 
 /**
+ * Inference parameters Firefox may pass to the model endpoint. This mirrors the
+ * set the MLPA ChatRequest (mlpa/core/classes.py) will respect — the server
+ * drops anything not in that set. This list should mirror the parameter list in
+ * the MLPA pydantic object - as any parameter listed here can be passed through
+ * RS parameters for inference.
+ *
+ * @typedef {object} InferenceParams
+ * @property {number} [temperature] - model temperature param
+ * @property {number} [top_p] - model top_p param
+ * @property {number} [max_completion_tokens] - model param
+ * @property {object} [response_format] - model param
+ * @property {number} [presence_penalty] - model param
+ * @property {number} [frequency_penalty] - model param
+ * @property {object} [logit_bias] - model param
+ * @property {boolean} [parallel_tool_calls] - model param
+ * @property {boolean} [logprobs] - model param
+ * @property {number} [top_logprobs] - model param
+ * @property {string|object} [tool_choice] - model param
+ */
+
+/**
  * Remote Settings configuration record structure
  *
  * @typedef {object} RemoteSettingsConfig
@@ -196,7 +217,7 @@ export const FEATURE_MAJOR_VERSIONS = Object.freeze({
  * @property {string} prompts - Prompt template content
  * @property {string} version - Version string in "v{major}.{minor}" format
  * @property {boolean} [is_default] - Whether this is the default config for the feature
- * @property {object} [parameters] - Optional inference parameters (e.g., temperature)
+ * @property {InferenceParams} [parameters] - Optional inference parameters (e.g., temperature)
  * @property {string[]} [additional_components] - Optional list of dependent feature configs
  */
 
@@ -642,4 +663,28 @@ export function parseAndExtractJSON(response, fallback) {
       `Unexpected error parsing JSON from LLM response: ${e.message}`
     );
   }
+}
+
+/**
+ * Builds an OpenAI-style `response_format` object for JSON-schema output,
+ * suitable for passing through `inferenceParams` to the LLM.
+ *
+ * @param {string} name - Identifier for the schema (required by the API even
+ *   when not enforced); use a short PascalCase label, e.g. "InitialMemories".
+ * @param {object} schema - JSON Schema describing the desired output shape.
+ * @param {boolean} [strict=false] - When true, requests guaranteed conformance
+ *   (Structured Outputs); the schema must be strict-valid (object root, every
+ *   property listed in `required`, `additionalProperties: false`). When false,
+ *   the schema is a best-effort hint only and is not enforced.
+ * @returns {{type: string, json_schema: {name: string, strict: boolean, schema: object}}}
+ */
+export function makeJSONSchemaBlob(name, schema, strict = false) {
+  return {
+    type: "json_schema",
+    json_schema: {
+      name,
+      strict,
+      schema,
+    },
+  };
 }

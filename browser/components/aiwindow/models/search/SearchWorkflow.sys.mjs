@@ -359,12 +359,6 @@ async function generateAnswer({
     throw new DOMException("Aborted", "AbortError");
   }
   const response = await conversation.run({
-    inferenceParams: {
-      response_format: {
-        type: "json_schema",
-        json_schema: SEARCH_ANSWER_SCHEMA,
-      },
-    },
     tool_choice: "none",
     tools: [],
     fxAccountToken,

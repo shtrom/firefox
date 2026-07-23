@@ -25,6 +25,10 @@ import {
 import { openAIEngine } from "moz-src:///browser/components/aiwindow/models/openAIEngine.sys.mjs";
 import { Conversation } from "moz-src:///browser/components/aiwindow/models/Conversation.sys.mjs";
 
+/**
+ * @typedef {import("moz-src:///browser/components/aiwindow/models/Utils.sys.mjs").InferenceParams} InferenceParams
+ */
+
 const CUSTOM_PROMPTS_PREF = "browser.smartwindow.customPrompts";
 const MODEL_CHOICE_PREF = "browser.smartwindow.firstrun.modelChoice";
 
@@ -408,7 +412,7 @@ async function selectFeatureConfig(feature, opts = {}) {
  *
  * @param {string} feature
  * @param {object} [opts]
- * @returns {Promise<{engine: openAIEngine, parameters: object}>}
+ * @returns {Promise<{engine: openAIEngine, parameters: inferenceParams}>}
  */
 export async function buildEngineForFeature(feature, opts = {}) {
   const mainConfig = await selectFeatureConfig(feature, opts);
