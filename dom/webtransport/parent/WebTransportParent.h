@@ -45,6 +45,10 @@ class WebTransportParent : public PWebTransportParent,
 
   IPCResult RecvSetSendOrder(uint64_t aStreamId, Maybe<int64_t> aSendOrder);
 
+  IPCResult RecvExportKeyingMaterial(nsTArray<uint8_t>&& aLabel,
+                                     Maybe<nsTArray<uint8_t>>&& aContext,
+                                     ExportKeyingMaterialResolver&& aResolver);
+
   IPCResult RecvCreateUnidirectionalStream(
       Maybe<int64_t> aSendOrder,
       CreateUnidirectionalStreamResolver&& aResolver);

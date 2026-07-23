@@ -83,6 +83,12 @@ async protocol PWebTransport
   */
   async SetSendOrder(uint64_t streamId, int64_t? sendOrder);
 
+  /**
+  * Export keying material for the WebTransport session
+  */
+  async ExportKeyingMaterial(uint8_t[] label, uint8_t[]? context)
+    returns(uint8_t[] keyingMaterial);
+
  child:
 
   async IncomingUnidirectionalStream(uint64_t streamId, nullable DataPipeReceiver receive);

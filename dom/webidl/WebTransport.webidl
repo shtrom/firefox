@@ -71,6 +71,9 @@ interface WebTransport {
 
   [NewObject]
   Promise<WebTransportStats> getStats();
+  [NewObject]
+  Promise<Uint8Array> exportKeyingMaterial(BufferSource label,
+                                            optional BufferSource context);
   readonly attribute Promise<undefined> ready;
   readonly attribute WebTransportReliabilityMode reliability;
   readonly attribute WebTransportCongestionControl congestionControl;
