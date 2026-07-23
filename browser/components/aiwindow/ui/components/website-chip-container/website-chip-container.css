@@ -25,11 +25,7 @@
 
 /* when the chip container is part of the smartbar */
 :host(.smartbar-context-chips-header) .chip-container {
-  padding-inline-start: var(--space-medium);
-  /* This padding aligns with border-width to maintain consistent spacing that creates the visual that the chips are coming to the edge. */
-  /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
-  padding-inline-end: var(--border-width);
-  padding-block-start: var(--space-large);
+  padding-block: var(--space-large) var(--space-xsmall);
 
   .chip-container-scroller {
     align-items: center;
@@ -38,6 +34,13 @@
     overflow-y: hidden;
     scrollbar-width: none;
     min-width: 0;
+    /* Fade the inline-end edge so the last chip dissolves into the frame's rounded
+     corner instead of colliding with its border, and to hint that the row scrolls. */
+    mask-image: linear-gradient(to right, transparent, var(--color-black) var(--space-large), var(--color-black) calc(100% - var(--space-large)), transparent);
+
+    & > *:first-child {
+      margin-inline-start: var(--space-large);
+    }
 
     > slot {
       display: contents;

@@ -37,7 +37,7 @@
   max-height: var(--multiline-editor-max-height, none);
   overflow-y: auto;
   scrollbar-width: var(--multiline-editor-scrollbar-width, auto);
-  padding: var(--space-small) var(--space-medium);
+  padding: var(--space-medium);
 }
 
 .multiline-editor:focus-within {
