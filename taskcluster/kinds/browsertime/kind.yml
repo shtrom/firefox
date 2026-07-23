@@ -22,7 +22,7 @@ task-defaults:
     run-on-repo-type: [hg]
     attributes:
         retrigger: true
-    use-python: system
+    use-python: default
     use-uv: true
     require-signed-extensions:
         by-release-type:
