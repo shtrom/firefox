@@ -153,13 +153,13 @@ void TrapSitesForKind::checkInvariants(const uint8_t* codeBase) const {
   // The required instruction kind depends on the trapsite kind.
   //
   // NOTE: this functionality used to be optional (DEBUG-only), but that is no
-  // longer the case.  SummarizeTrapInstruction now need to be able to compute
+  // longer the case.  SummarizeTrapInstruction now needs to be able to compute
   // the length of all trapping instructions on all targets, even for release
   // builds.  Without it, the trap-handling machinery will not work correctly.
   //
   // Currently, SummarizeTrapInstruction works as required on x86_{32,64},
-  // arm{32,64} and riscv64.  It still needs to be extended to work properly on
-  // loongson64 and mips64.
+  // arm{32,64}, loong64, and mips64.  It still needs to be extended to work
+  // properly on riscv64.
   //
   for (uint32_t i = 0; i < length(); i++) {
     uint32_t pcOffset = pcOffsets_[i];
@@ -177,11 +177,9 @@ void TrapSitesForKind::checkInvariants(const uint8_t* codeBase) const {
     //           "pcOffset=%-5u  addr= %p\n",
     //           ToString(trap), ToString(expected),
     //           pcOffset, insnAddr);
-    //   if (actual.isSome()) {
-    //     fprintf(stderr, "FAIL: identified as %s\n",
-    //             actual.isSome() ? ToString(actual.value())
-    //                             : "(insn not identified)");
-    //   }
+    //   fprintf(stderr, "FAIL: identified as %s\n",
+    //           actual.identified() ? ToString(actual.kind())
+    //                               : "(insn not identified)");
     // }
     MOZ_ASSERT(valid, "wasm trapsite does not reference a valid insn");
   }

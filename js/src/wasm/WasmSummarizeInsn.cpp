@@ -17,10 +17,6 @@
 
 using namespace js::jit;
 
-using mozilla::Maybe;
-using mozilla::Nothing;
-using mozilla::Some;
-
 namespace js {
 namespace wasm {
 
