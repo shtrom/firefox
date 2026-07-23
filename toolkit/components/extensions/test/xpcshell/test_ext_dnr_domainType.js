@@ -3,9 +3,9 @@
 
 "use strict";
 
-Services.scriptloader.loadSubScriptWithOptions(
+Services.scriptloader.loadSubScript(
   Services.io.newFileURI(do_get_file("head_dnr.js")).spec,
-  { target: this, allowUnsafeURL: true }
+  this
 );
 
 const server = createHttpServer({

@@ -11,13 +11,13 @@ ChromeUtils.defineESModuleGetters(this, {
 AddonTestUtils.init(this);
 AddonTestUtils.overrideCertDB();
 
-Services.scriptloader.loadSubScriptWithOptions(
+Services.scriptloader.loadSubScript(
   Services.io.newFileURI(do_get_file("head_dnr.js")).spec,
-  { target: this, allowUnsafeURL: true }
+  this
 );
-Services.scriptloader.loadSubScriptWithOptions(
+Services.scriptloader.loadSubScript(
   Services.io.newFileURI(do_get_file("head_dnr_static_rules.js")).spec,
-  { target: this, allowUnsafeURL: true }
+  this
 );
 
 const server = createHttpServer({ hosts: ["example.com"] });

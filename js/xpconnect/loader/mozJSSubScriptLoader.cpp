@@ -48,19 +48,20 @@ class MOZ_STACK_CLASS LoadSubScriptOptions : public OptionsBase {
  public:
   explicit LoadSubScriptOptions(JSContext* cx = xpc_GetSafeJSContext(),
                                 JSObject* options = nullptr)
-      : OptionsBase(cx, options), target(cx) {}
+      : OptionsBase(cx, options),
+        target(cx),
+        ignoreCache(false),
+        wantReturnValue(false) {}
 
   virtual bool Parse() override {
     return ParseObject("target", &target) &&
            ParseBoolean("ignoreCache", &ignoreCache) &&
-           ParseBoolean("wantReturnValue", &wantReturnValue) &&
-           ParseBoolean("allowUnsafeURL", &allowUnsafeURL);
+           ParseBoolean("wantReturnValue", &wantReturnValue);
   }
 
   RootedObject target;
-  bool ignoreCache = false;
-  bool wantReturnValue = false;
-  bool allowUnsafeURL = false;
+  bool ignoreCache;
+  bool wantReturnValue;
 };
 
 /* load() error msgs, XXX localize? */
@@ -315,23 +316,22 @@ mozJSSubScriptLoader::LoadSubScriptWithOptions(const nsAString& url,
   return DoLoadSubScriptWithOptions(url, options, cx, retval);
 }
 
-static bool CheckAllowedURI(JSContext* aCx, bool aAllowUnsafe, nsIURI* aURI) {
+static bool CheckAllowedURI(JSContext* aCx, nsIURI* aURI) {
   // Trusted schemes like moz-src: are always ok.
   if (nsContentSecurityUtils::IsTrustedScheme(aURI)) {
     return true;
   }
 
-  if (aAllowUnsafe) {
-    // TODO(Bug 1976115) experiment_apis scripts are run from jar:file: URL
-    // instead of moz-extension:-URL
-    if (aURI->SchemeIs("file") || aURI->SchemeIs("jar")) {
-      return true;
-    }
+  // TODO(Bug 1974213) Block file: and jar: schemes.
+  // TODO(Bug 1976115) experiment_apis scripts are run from jar:file: URL
+  // instead of moz-extension:-URL
+  if (aURI->SchemeIs("file") || aURI->SchemeIs("jar")) {
+    return true;
+  }
 
-    // TODO(Bug 1974691) Don't load subscripts from un-privileged moz-extension:
-    if (aURI->SchemeIs("moz-extension")) {
-      return true;
-    }
+  // TODO(Bug 1974691) Don't load subscripts from un-privileged moz-extension:
+  if (aURI->SchemeIs("moz-extension")) {
+    return true;
   }
 
   ReportError(aCx, "Trying to load untrusted URI.", aURI);
@@ -410,7 +410,7 @@ nsresult mozJSSubScriptLoader::DoLoadSubScriptWithOptions(
     return NS_OK;
   }
 
-  if (!CheckAllowedURI(cx, options.allowUnsafeURL, uri)) {
+  if (!CheckAllowedURI(cx, uri)) {
     return NS_OK;
   }
 

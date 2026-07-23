@@ -3051,10 +3051,7 @@ class PictureInPictureChildVideoWrapper {
     });
 
     try {
-      Services.scriptloader.loadSubScriptWithOptions(wrapperScriptUrl, {
-        target: sandbox,
-        allowUnsafeURL: true,
-      });
+      Services.scriptloader.loadSubScript(wrapperScriptUrl, sandbox);
     } catch (e) {
       Cu.nukeSandbox(sandbox);
       lazy.logConsole.error(
