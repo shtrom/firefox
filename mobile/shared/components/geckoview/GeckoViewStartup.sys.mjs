@@ -241,6 +241,21 @@ export class GeckoViewStartup {
             "GeckoView:StorageDelegate:Attached",
             "GeckoView:CrashPullController.Delegate:Attached",
           ]);
+
+          // We don't register this using the LazyGetter because it needs to be
+          // ready before the first call to the listener is received. The global
+          // EventDispatcher instance is only available in the parent process, so
+          // this must stay within the parent-process guard.
+          lazy.EventDispatcher.instance.registerListener(
+            lazy.GeckoViewPreferences,
+            [
+              "GeckoView:Preferences:GetPref",
+              "GeckoView:Preferences:SetPref",
+              "GeckoView:Preferences:ClearPref",
+              "GeckoView:Preferences:RegisterObserver",
+              "GeckoView:Preferences:UnregisterObserver",
+            ]
+          );
         }
 
         GeckoViewUtils.addLazyGetter(this, "GeckoViewAIFeatures", {
@@ -278,19 +293,6 @@ export class GeckoViewStartup {
           module: "resource://gre/modules/GeckoViewAutofill.sys.mjs",
           ged: ["GeckoView:Autofill:GetAddressStructure"],
         });
-
-        // We don't register this using the LazyGetter because it needs to be ready before
-        // the first call to the listener is received.
-        lazy.EventDispatcher.instance.registerListener(
-          lazy.GeckoViewPreferences,
-          [
-            "GeckoView:Preferences:GetPref",
-            "GeckoView:Preferences:SetPref",
-            "GeckoView:Preferences:ClearPref",
-            "GeckoView:Preferences:RegisterObserver",
-            "GeckoView:Preferences:UnregisterObserver",
-          ]
-        );
 
         break;
       }
