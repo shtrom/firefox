@@ -14,6 +14,7 @@ browser.jar:
         content/browser/urlbar/UrlbarInput.mjs             (content/UrlbarInput.mjs)
         content/browser/urlbar/UrlbarView.mjs              (content/UrlbarView.mjs)
         content/browser/urlbar/UrlbarResult.mjs            (content/UrlbarResult.mjs)
-        content/browser/urlbar/UrlbarShared.mjs         (content/UrlbarShared.mjs)
+        content/browser/urlbar/UrlbarShared.mjs            (content/UrlbarShared.mjs)
         content/browser/urlbar/UrlbarTelemetryUtils.mjs    (content/UrlbarTelemetryUtils.mjs)
+        content/browser/urlbar/SearchEngineStore.mjs       (content/SearchEngineStore.mjs)
         content/browser/urlbar/SearchModeSwitcher.mjs      (content/SearchModeSwitcher.mjs)

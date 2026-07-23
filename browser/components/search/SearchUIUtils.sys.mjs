@@ -105,33 +105,36 @@ export var SearchUIUtils = {
       allowFromInactiveWorkspace: true,
     });
 
-    let buttons = [
-      {
-        "l10n-id": "remove-search-engine-button",
-        primary: true,
-        callback() {
-          const notificationBox = win.gNotificationBox.getNotificationWithValue(
-            "search-engine-removal"
-          );
-          win.gNotificationBox.removeNotification(notificationBox);
+    if (win) {
+      let buttons = [
+        {
+          "l10n-id": "remove-search-engine-button",
+          primary: true,
+          callback() {
+            const notificationBox =
+              win.gNotificationBox.getNotificationWithValue(
+                "search-engine-removal"
+              );
+            win.gNotificationBox.removeNotification(notificationBox);
+          },
         },
-      },
-      {
-        supportPage: "search-engine-removal",
-      },
-    ];
+        {
+          supportPage: "search-engine-removal",
+        },
+      ];
 
-    await win.gNotificationBox.appendNotification(
-      "search-engine-removal",
-      {
-        label: {
-          "l10n-id": "removed-search-engine-message2",
-          "l10n-args": { oldEngine, newEngine },
+      await win.gNotificationBox.appendNotification(
+        "search-engine-removal",
+        {
+          label: {
+            "l10n-id": "removed-search-engine-message2",
+            "l10n-args": { oldEngine, newEngine },
+          },
+          priority: win.gNotificationBox.PRIORITY_SYSTEM,
         },
-        priority: win.gNotificationBox.PRIORITY_SYSTEM,
-      },
-      buttons
-    );
+        buttons
+      );
+    }
 
     // _updatePlaceholderFromDefaultEngine only updates the pref if the search service
     // hasn't finished initializing, so we explicitly update it here to be sure.

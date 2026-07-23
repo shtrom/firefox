@@ -373,6 +373,9 @@
       "chrome://browser/content/urlbar/L10nCache.mjs": [
         "../../../browser/components/urlbar/content/L10nCache.mjs"
       ],
+      "chrome://browser/content/urlbar/SearchEngineStore.mjs": [
+        "../../../browser/components/urlbar/content/SearchEngineStore.mjs"
+      ],
       "chrome://browser/content/urlbar/SearchModeSwitcher.mjs": [
         "../../../browser/components/urlbar/content/SearchModeSwitcher.mjs"
       ],

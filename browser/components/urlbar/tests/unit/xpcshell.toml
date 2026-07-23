@@ -227,6 +227,8 @@ skip-if = [
 
 ["test_richsuggestions_order.js"]
 
+["test_searchEngineStore.js"]
+
 ["test_search_engine_restyle.js"]
 
 ["test_search_suggestions.js"]

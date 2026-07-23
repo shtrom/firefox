@@ -26,6 +26,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
  * @import {SmartbarInput} from "moz-src:///browser/components/urlbar/content/SmartbarInput.mjs"
  */
 
+import { SearchEngineStore } from "chrome://browser/content/urlbar/SearchEngineStore.mjs";
+
 /**
  * The in-process face of the address bar controller. Lives next to the
  * `<moz-urlbar>` custom element and forwards work that has to happen in
@@ -102,6 +104,8 @@ export class UrlbarChildController {
         )
       : new lazy.UrlbarParentController({ sapName, isPrivate, actor });
     this.#parent.setChild(this);
+
+    this.engineStore = new SearchEngineStore(this);
   }
 
   get input() {
@@ -669,5 +673,13 @@ export class UrlbarChildController {
       },
       { once: true }
     );
+  }
+
+  initEngineStore() {
+    this.#parent.initEngineStore();
+  }
+
+  maybeInitEngineStore() {
+    this.#parent.maybeInitEngineStore();
   }
 }

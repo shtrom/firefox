@@ -7,14 +7,20 @@ import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
 /**
  * @import {BrowserSearchTelemetry} from "moz-src:///browser/components/search/BrowserSearchTelemetry.sys.mjs"
  * @import {ProvidersManager} from "moz-src:///browser/components/urlbar/UrlbarProvidersManager.sys.mjs"
+ * @import {SearchEngine} from "moz-src:///toolkit/components/search/SearchEngine.sys.mjs"
  * @import {SapLocation, SmartbarInput} from "moz-src:///browser/components/urlbar/content/SmartbarInput.mjs"
  * @import {UrlbarView} from "chrome://browser/content/urlbar/UrlbarView.mjs"
  * @import {WindowMode} from "moz-src:///browser/components/urlbar/content/UrlbarInput.mjs"
+ * @import {SearchEngineInfo} from "chrome://browser/content/urlbar/SearchEngineStore.mjs"
  */
 
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
+  AppProvidedConfigEngine:
+    "moz-src:///toolkit/components/search/ConfigSearchEngine.sys.mjs",
+  ConfigSearchEngine:
+    "moz-src:///toolkit/components/search/ConfigSearchEngine.sys.mjs",
   ExtensionUtils: "resource://gre/modules/ExtensionUtils.sys.mjs",
   Interactions: "moz-src:///browser/components/places/Interactions.sys.mjs",
   ProvidersManager:
@@ -32,6 +38,27 @@ ChromeUtils.defineESModuleGetters(lazy, {
 ChromeUtils.defineLazyGetter(lazy, "logger", () =>
   lazy.UrlbarShared.getLogger({ prefix: "Controller" })
 );
+
+/**
+ * Serializes a search engine into a plain SearchEngineInfo object.
+ *
+ * @param {SearchEngine} engine
+ *   The engine to serialize.
+ * @returns {SearchEngineInfo}
+ *   The serializable engine data.
+ */
+function engineToEngineInfo(engine) {
+  return {
+    name: engine.name,
+    id: engine.id,
+    isGeneralPurposeEngine: engine.isGeneralPurposeEngine,
+    isConfigEngine: engine instanceof lazy.ConfigSearchEngine,
+    isAppProvided: engine instanceof lazy.AppProvidedConfigEngine,
+    isNewUntil: engine.isNew() ? engine.isNewUntil : "",
+    hideOneOffButton: engine.hideOneOffButton,
+    aliases: [...engine.aliases],
+  };
+}
 
 /**
  * The address bar controller handles queries from the address bar, obtains
@@ -505,6 +532,104 @@ export class UrlbarParentController {
   notify(name, ...params) {
     this.#child.notify(name, ...params);
   }
+
+  #engineStoreInitStarted = false;
+
+  /**
+   * Initializes the engine store if the search service
+   * is already loaded and initialized.
+   *
+   * @returns {boolean}
+   *   Whether the search service was initialized successfully.
+   */
+  maybeInitEngineStore() {
+    if (
+      Cu.isESModuleLoaded(
+        "moz-src:///toolkit/components/search/SearchService.sys.mjs"
+      ) &&
+      lazy.SearchService.isInitialized
+    ) {
+      this.initEngineStore();
+      return true;
+    }
+    return false;
+  }
+
+  async initEngineStore() {
+    if (this.#engineStoreInitStarted) {
+      return;
+    }
+    this.#engineStoreInitStarted = true;
+    if (!lazy.SearchService.hasSuccessfullyInitialized) {
+      try {
+        await lazy.SearchService.init();
+      } catch {
+        this.#child.engineStore.receive("error");
+        return;
+      }
+    }
+    let engines = lazy.SearchService.visibleEngines;
+    let engineInfos = engines.map(engineToEngineInfo);
+    let defaultEngine = this.#child.engineStore.isPrivate
+      ? lazy.SearchService.defaultPrivateEngine
+      : lazy.SearchService.defaultEngine;
+    let defaultIndex = engines.findIndex(e => e == defaultEngine);
+    if (!defaultEngine || defaultIndex == -1) {
+      // Something went very wrong.
+      this.#child.engineStore.receive("error");
+      return;
+    }
+    this.#child.engineStore.receive("init", engineInfos, defaultIndex);
+    Services.obs.addObserver(this, "browser-search-engine-modified", true);
+  }
+
+  QueryInterface = ChromeUtils.generateQI([
+    "nsIObserver",
+    "nsISupportsWeakReference",
+  ]);
+
+  /**
+   * @param {{wrappedJSObject: SearchEngine}} subject
+   * @param {"browser-search-engine-modified"} _topic
+   * @param {string} data
+   */
+  observe = (subject, _topic, data) => {
+    let engine = subject.wrappedJSObject;
+    let sortedEngines = lazy.SearchService.visibleEngines;
+    let index = sortedEngines.findIndex(e => e == engine);
+    let engineInfo = engineToEngineInfo(engine);
+
+    switch (data) {
+      case "engine-icon-changed":
+        if (index == -1) {
+          // Engines that were already removed may still send notify updates.
+          // Ignore to avoid re-adding them.
+          break;
+        }
+      // fall-through
+      case "engine-added":
+      case "engine-changed":
+        if (!engine.hidden) {
+          this.#child.engineStore.receive("changed", engineInfo, index);
+        } else {
+          this.#child.engineStore.receive("removed", engineInfo, index);
+        }
+        break;
+      case "engine-removed":
+        this.#child.engineStore.receive("removed", engineInfo, index);
+        break;
+      case "engine-default":
+        if (!this.#child.engineStore.isPrivate) {
+          this.#child.engineStore.receive("default", engineInfo, index);
+        }
+        break;
+      case "engine-default-private":
+        if (this.#child.engineStore.isPrivate) {
+          this.#child.engineStore.receive("default", engineInfo, index);
+        }
+        break;
+    }
+  };
 }
 
 /**
