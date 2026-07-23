@@ -522,6 +522,11 @@ class VideoRateTest : public TestMediaFormatReader {
     mReader->OwnerThread()->AwaitIdle();
   }
 
+  void SeekToStart() {
+    (void)WaitForResolve(mProxy->Seek(SeekTarget(
+        TimeUnit::Zero(), SeekTarget::Accurate, SeekTarget::Track::VideoOnly)));
+  }
+
   double VideoRate() {
     dom::MediaFormatReaderDebugInfo info;
     (void)WaitForResolve(mReader->RequestDebugInfo(info));
@@ -728,6 +733,32 @@ TEST_F(VideoRateTest, ZeroDurationSamplesAreIgnored) {
       ExpectedRate({firstValidDuration, secondValidDuration});
   ASSERT_EQ(mDecoderRates.Length(), 1U);
   EXPECT_EQ(mDecoderRates[0], 0.0f);
+  EXPECT_DOUBLE_EQ(VideoRate(), finalRate);
+  ShutdownReader();
+}
+
+TEST_F(VideoRateTest, SeekReplayCountsAsAnotherDemuxObservation) {
+  PDMFactory::AutoForcePDM autoForcePDM(mPdm);
+  const auto firstDuration = TimeUnit(10, 1000);
+  const auto replayedDuration = TimeUnit(10, 1000);
+  const auto finalDuration = TimeUnit(90, 1000);
+  AddSample(firstDuration, kFirstStreamID);
+  AddSampleAt(TimeUnit::Zero(), replayedDuration, Some(kFirstStreamID));
+  AddSample(finalDuration, kFirstStreamID);
+  EXPECT_CALL(*mTrackDemuxer, Seek).WillOnce([](const TimeUnit& aTime) {
+    return SeekPromise::CreateAndResolve(aTime, __func__);
+  });
+  InitReader();
+
+  ReadFrame();
+  SeekToStart();
+  ReadToEnd();
+
+  const double initialRate = ExpectedRate({firstDuration});
+  const double finalRate =
+      ExpectedRate({firstDuration, replayedDuration, finalDuration});
+  ASSERT_EQ(mDecoderRates.Length(), 1U);
+  EXPECT_FLOAT_EQ(mDecoderRates[0], static_cast<float>(initialRate));
   EXPECT_DOUBLE_EQ(VideoRate(), finalRate);
   ShutdownReader();
 }
