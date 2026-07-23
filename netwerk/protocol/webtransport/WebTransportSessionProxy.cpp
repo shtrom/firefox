@@ -227,7 +227,8 @@ NS_IMETHODIMP
 WebTransportSessionProxy::ExportKeyingMaterial(
     const nsTArray<uint8_t>& aLabel, const nsTArray<uint8_t>& aContext,
     nsTArray<uint8_t>& aKeyingMaterial) {
-  MOZ_ASSERT(OnSocketThread(), "ExportKeyingMaterial must be called on socket thread");
+  MOZ_ASSERT(OnSocketThread(),
+             "ExportKeyingMaterial must be called on socket thread");
 
   RefPtr<WebTransportSessionBase> session;
   {
@@ -241,7 +242,6 @@ WebTransportSessionProxy::ExportKeyingMaterial(
 
   return session->ExportKeyingMaterial(aLabel, aContext, aKeyingMaterial);
 }
-
 
 NS_IMETHODIMP
 WebTransportSessionProxy::CloseSession(uint32_t status,

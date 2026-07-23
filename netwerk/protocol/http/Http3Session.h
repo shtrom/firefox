@@ -155,7 +155,8 @@ class Http3SessionBase {
   virtual uint64_t MaxDatagramSize(uint64_t aSessionId) = 0;
   virtual nsresult ExportWebTransportKeyingMaterial(
       uint64_t aSessionId, const nsTArray<uint8_t>& aLabel,
-      const nsTArray<uint8_t>& aContext, nsTArray<uint8_t>& aKeyingMaterial) = 0;
+      const nsTArray<uint8_t>& aContext,
+      nsTArray<uint8_t>& aKeyingMaterial) = 0;
   virtual nsresult TryActivatingWebTransportStream(
       uint64_t* aStreamId, Http3StreamBase* aStream) = 0;
   virtual void ResetWebTransportStream(Http3WebTransportStream* aStream,
