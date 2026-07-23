@@ -20,9 +20,8 @@ void AssemblerRISCVI::auipc(Register rd, int32_t imm20) {
 
 // Jumps
 
-CodeOffset AssemblerRISCVI::jal(Register rd, int32_t imm21, LabelDoc doc) {
-  GenInstrJ(JAL, rd, imm21, doc);
-  return CodeOffset(currentOffset());
+BufferOffset AssemblerRISCVI::jal(Register rd, int32_t imm21, LabelDoc doc) {
+  return GenInstrJ(JAL, rd, imm21, doc);
 }
 
 BufferOffset AssemblerRISCVI::jalr(Register rd, Register rs1, int16_t imm12,
@@ -32,34 +31,34 @@ BufferOffset AssemblerRISCVI::jalr(Register rd, Register rs1, int16_t imm12,
 
 // Branches
 
-void AssemblerRISCVI::beq(Register rs1, Register rs2, int16_t imm13,
-                          LabelDoc doc) {
-  GenInstrBranchCC_rri(0b000, rs1, rs2, imm13, doc);
+BufferOffset AssemblerRISCVI::beq(Register rs1, Register rs2, int16_t imm13,
+                                  LabelDoc doc) {
+  return GenInstrBranchCC_rri(0b000, rs1, rs2, imm13, doc);
 }
 
-void AssemblerRISCVI::bne(Register rs1, Register rs2, int16_t imm13,
-                          LabelDoc doc) {
-  GenInstrBranchCC_rri(0b001, rs1, rs2, imm13, doc);
+BufferOffset AssemblerRISCVI::bne(Register rs1, Register rs2, int16_t imm13,
+                                  LabelDoc doc) {
+  return GenInstrBranchCC_rri(0b001, rs1, rs2, imm13, doc);
 }
 
-void AssemblerRISCVI::blt(Register rs1, Register rs2, int16_t imm13,
-                          LabelDoc doc) {
-  GenInstrBranchCC_rri(0b100, rs1, rs2, imm13, doc);
+BufferOffset AssemblerRISCVI::blt(Register rs1, Register rs2, int16_t imm13,
+                                  LabelDoc doc) {
+  return GenInstrBranchCC_rri(0b100, rs1, rs2, imm13, doc);
 }
 
-void AssemblerRISCVI::bge(Register rs1, Register rs2, int16_t imm13,
-                          LabelDoc doc) {
-  GenInstrBranchCC_rri(0b101, rs1, rs2, imm13, doc);
+BufferOffset AssemblerRISCVI::bge(Register rs1, Register rs2, int16_t imm13,
+                                  LabelDoc doc) {
+  return GenInstrBranchCC_rri(0b101, rs1, rs2, imm13, doc);
 }
 
-void AssemblerRISCVI::bltu(Register rs1, Register rs2, int16_t imm13,
-                           LabelDoc doc) {
-  GenInstrBranchCC_rri(0b110, rs1, rs2, imm13, doc);
+BufferOffset AssemblerRISCVI::bltu(Register rs1, Register rs2, int16_t imm13,
+                                   LabelDoc doc) {
+  return GenInstrBranchCC_rri(0b110, rs1, rs2, imm13, doc);
 }
 
-void AssemblerRISCVI::bgeu(Register rs1, Register rs2, int16_t imm13,
-                           LabelDoc doc) {
-  GenInstrBranchCC_rri(0b111, rs1, rs2, imm13, doc);
+BufferOffset AssemblerRISCVI::bgeu(Register rs1, Register rs2, int16_t imm13,
+                                   LabelDoc doc) {
+  return GenInstrBranchCC_rri(0b111, rs1, rs2, imm13, doc);
 }
 
 // Loads
