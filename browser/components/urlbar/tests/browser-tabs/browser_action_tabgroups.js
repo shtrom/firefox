@@ -49,10 +49,12 @@ async function simple_tabgroup_search_test(label, searchString) {
     window: win,
     value: searchString,
   });
+  let engaged = UrlbarTestUtils.promiseProviderEngagement(win);
   await UrlbarTestUtils.promisePopupClose(win, () => {
     EventUtils.synthesizeKey("KEY_Tab", {}, win);
     EventUtils.synthesizeKey("KEY_Enter", {}, win);
   });
+  await engaged;
 
   Assert.ok(
     !tabGroup.collapsed,
@@ -105,10 +107,12 @@ add_task(async function test_active_group() {
     window: win,
     value: "group",
   });
+  let engaged = UrlbarTestUtils.promiseProviderEngagement(win);
   await UrlbarTestUtils.promisePopupClose(win, () => {
     EventUtils.synthesizeKey("KEY_Tab", {}, win);
     EventUtils.synthesizeKey("KEY_Enter", {}, win);
   });
+  await engaged;
 
   Assert.equal(
     win.gBrowser.selectedTab,
@@ -143,10 +147,12 @@ add_task(async function test_last_accessed_order() {
     window: win,
     value: "group",
   });
+  let engaged = UrlbarTestUtils.promiseProviderEngagement(win);
   await UrlbarTestUtils.promisePopupClose(win, () => {
     EventUtils.synthesizeKey("KEY_Tab", {}, win);
     EventUtils.synthesizeKey("KEY_Enter", {}, win);
   });
+  await engaged;
 
   Assert.ok(
     !tabGroup2.collapsed,
@@ -165,10 +171,12 @@ add_task(async function test_last_accessed_order() {
     window: win,
     value: "group",
   });
+  engaged = UrlbarTestUtils.promiseProviderEngagement(win);
   await UrlbarTestUtils.promisePopupClose(win, () => {
     EventUtils.synthesizeKey("KEY_Tab", {}, win);
     EventUtils.synthesizeKey("KEY_Enter", {}, win);
   });
+  await engaged;
 
   Assert.ok(
     !tabGroup1.collapsed,

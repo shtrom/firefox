@@ -36,10 +36,9 @@ ChromeUtils.defineESModuleGetters(lazy, {
 });
 
 export const UrlbarShared = {
-  // The query-lifecycle notifications the controller dispatches to its
-  // listeners. Defined here so both the parent controller and the content-side
-  // child controller name them identically without the child reaching into the
-  // parent module.
+  // The notifications the controller dispatches to its listeners. Defined here
+  // so both the parent controller and the content-side child controller name
+  // them identically without the child reaching into the parent module.
   NOTIFICATIONS: Object.freeze({
     QUERY_STARTED: "onQueryStarted",
     QUERY_RESULTS: "onQueryResults",
@@ -48,6 +47,11 @@ export const UrlbarShared = {
     QUERY_FINISHED: "onQueryFinished",
     VIEW_OPEN: "onViewOpen",
     VIEW_CLOSE: "onViewClose",
+    // Fires after the picked result's provider handled the engagement (its
+    // `onEngagement` hook ran), letting content-side listeners await a
+    // provider's parent-side engagement side effect, which lands after an actor
+    // round-trip on the message path.
+    PROVIDER_ENGAGEMENT: "onProviderEngagement",
   }),
 
   TOKEN_TYPE: Object.freeze({
