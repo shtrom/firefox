@@ -411,6 +411,7 @@ class VideoRateTest : public TestMediaFormatReader {
     TimeUnit mDuration;
     Maybe<uint32_t> mStreamID;
     SampleType mType;
+    Maybe<gfx::IntSize> mVideoSize;
   };
 
   void SetUp() override {
@@ -439,10 +440,19 @@ class VideoRateTest : public TestMediaFormatReader {
     AddSampleAt(mNextSampleTime, aDuration, Some(aStreamID), aType);
   }
 
+  void AddSample(const TimeUnit& aDuration, uint32_t aStreamID,
+                 const gfx::IntSize& aVideoSize,
+                 SampleType aType = SampleType::Keyframe) {
+    AddSampleAt(mNextSampleTime, aDuration, Some(aStreamID), aType,
+                Some(aVideoSize));
+  }
+
   void AddSampleAt(const TimeUnit& aTime, const TimeUnit& aDuration,
                    Maybe<uint32_t> aStreamID,
-                   SampleType aType = SampleType::Keyframe) {
-    mSamples.AppendElement(SampleSpec{aTime, aDuration, aStreamID, aType});
+                   SampleType aType = SampleType::Keyframe,
+                   Maybe<gfx::IntSize> aVideoSize = Nothing()) {
+    mSamples.AppendElement(
+        SampleSpec{aTime, aDuration, aStreamID, aType, aVideoSize});
     mNextSampleTime = aTime + aDuration;
   }
 
@@ -460,6 +470,7 @@ class VideoRateTest : public TestMediaFormatReader {
         .Times(testing::AnyNumber())
         .WillRepeatedly([this](const CreateDecoderParams& aParams) {
           mDecoderRates.AppendElement(aParams.mRate.mValue);
+          mDecoderConfigs.AppendElement(aParams.VideoConfig());
           RefPtr<MockVideoDataDecoder> decoder;
           if (mFirstDecoderFailureAtDecode.isSome() &&
               mDecoderRates.Length() == 1) {
@@ -487,8 +498,15 @@ class VideoRateTest : public TestMediaFormatReader {
           sample->mTimecode = TimeUnit::Zero();
           sample->mDuration = spec.mDuration;
           if (spec.mStreamID.isSome()) {
-            sample->mTrackInfo =
-                new TrackInfoSharedPtr(*mTrackInfo, spec.mStreamID.ref());
+            if (spec.mVideoSize.isSome()) {
+              VideoInfo info(*mTrackInfo->GetAsVideoInfo());
+              info.mDisplay = info.mImage = spec.mVideoSize.ref();
+              sample->mTrackInfo =
+                  new TrackInfoSharedPtr(info, spec.mStreamID.ref());
+            } else {
+              sample->mTrackInfo =
+                  new TrackInfoSharedPtr(*mTrackInfo, spec.mStreamID.ref());
+            }
           }
           RefPtr<SamplesHolder> samples = new SamplesHolder;
           samples->AppendSample(std::move(sample));
@@ -536,6 +554,7 @@ class VideoRateTest : public TestMediaFormatReader {
   UniquePtr<TrackInfo> mTrackInfo;
   nsTArray<SampleSpec> mSamples;
   nsTArray<float> mDecoderRates;
+  nsTArray<VideoInfo> mDecoderConfigs;
   TimeUnit mNextSampleTime = TimeUnit::Zero();
   size_t mNextSample = 0;
   Maybe<uint32_t> mFirstDecoderFailureAtDecode;
@@ -760,5 +779,38 @@ TEST_F(VideoRateTest, SeekReplayCountsAsAnotherDemuxObservation) {
   ASSERT_EQ(mDecoderRates.Length(), 1U);
   EXPECT_FLOAT_EQ(mDecoderRates[0], static_cast<float>(initialRate));
   EXPECT_DOUBLE_EQ(VideoRate(), finalRate);
+  ShutdownReader();
+}
+
+TEST_F(VideoRateTest, StreamAndConfigChangeUseNewRateAndConfig) {
+  PDMFactory::AutoForcePDM autoForcePDM(mPdm);
+  const auto* initialInfo = mTrackInfo->GetAsVideoInfo();
+  ASSERT_TRUE(initialInfo);
+  const auto initialSize = initialInfo->mDisplay;
+  const gfx::IntSize newSize{320, 180};
+  ASSERT_NE(initialSize, newSize);
+  const auto firstDuration = TimeUnit(10, 1000);
+  const auto firstSparseDuration = TimeUnit(90, 1000);
+  const auto secondDuration = TimeUnit(100, 1000);
+  const auto secondSparseDuration = TimeUnit(200, 1000);
+  AddSample(firstDuration, kFirstStreamID);
+  AddSample(firstSparseDuration, kFirstStreamID);
+  AddSample(secondDuration, kSecondStreamID, newSize);
+  AddSample(secondSparseDuration, kSecondStreamID, newSize);
+  InitReader();
+  ReadToEnd();
+
+  const double firstRate = ExpectedRate({firstDuration});
+  const double secondInitialRate = ExpectedRate({secondDuration});
+  const double secondFinalRate =
+      ExpectedRate({secondDuration, secondSparseDuration});
+  ASSERT_EQ(mDecoderRates.Length(), 2U);
+  ASSERT_EQ(mDecoderConfigs.Length(), 2U);
+  EXPECT_EQ(mDecoderConfigs[0].mDisplay, initialSize);
+  EXPECT_EQ(mDecoderConfigs[1].mDisplay, newSize);
+  EXPECT_EQ(mDecoderConfigs[1].mImage, newSize);
+  EXPECT_FLOAT_EQ(mDecoderRates[0], static_cast<float>(firstRate));
+  EXPECT_FLOAT_EQ(mDecoderRates[1], static_cast<float>(secondInitialRate));
+  EXPECT_DOUBLE_EQ(VideoRate(), secondFinalRate);
   ShutdownReader();
 }
