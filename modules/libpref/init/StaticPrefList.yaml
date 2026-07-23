@@ -8833,7 +8833,7 @@
 # member round-robin at creation time.
 - name: gfx.webrender.render-backend-thread-count
   type: uint32_t
-  value: 0
+  value: 2
   mirror: once
 
 # Enable dithering in hardware WebRender
