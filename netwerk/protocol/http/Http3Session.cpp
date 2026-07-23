@@ -3133,6 +3133,13 @@ uint64_t Http3Session::MaxDatagramSize(uint64_t aSessionId) {
   return size;
 }
 
+nsresult Http3Session::ExportWebTransportKeyingMaterial(
+    uint64_t aSessionId, const nsTArray<uint8_t>& aLabel,
+    const nsTArray<uint8_t>& aContext, nsTArray<uint8_t>& aKeyingMaterial) {
+  return mHttp3Connection->ExportWebTransportKeyingMaterial(
+      aSessionId, aLabel, aContext, aKeyingMaterial);
+}
+
 void Http3Session::SendHTTPDatagram(uint64_t aStreamId,
                                     nsTArray<uint8_t>& aData,
                                     uint64_t aTrackingId) {

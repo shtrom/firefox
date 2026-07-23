@@ -74,6 +74,15 @@ uint64_t Http2WebTransportSessionImpl::GetStreamId() const { return mStreamId; }
 
 void Http2WebTransportSessionImpl::GetMaxDatagramSize() {}
 
+nsresult Http2WebTransportSessionImpl::ExportKeyingMaterial(
+    const nsTArray<uint8_t>& aLabel, const nsTArray<uint8_t>& aContext,
+    nsTArray<uint8_t>& aKeyingMaterial) {
+  // TODO: Implement exportKeyingMaterial for HTTP/2 WebTransport
+  // HTTP/2 WebTransport over TLS should support this via the underlying TLS
+  // connection, but the implementation is not yet available.
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 void Http2WebTransportSessionImpl::SendDatagram(nsTArray<uint8_t>&& aData,
                                                 uint64_t aTrackingId) {
   LOG(("Http2WebTransportSession::SendDatagram %p", this));
