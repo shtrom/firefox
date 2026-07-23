@@ -456,6 +456,10 @@ class VideoRateTest : public TestMediaFormatReader {
     (void)WaitForResolve(mProxy->ReadMetadata());
   }
 
+  void ReadFrame() {
+    (void)WaitForResolve(mProxy->RequestVideoData(TimeUnit(), false));
+  }
+
   void ReadToEnd() {
     bool reachedEndOfStream = false;
     for (size_t i = 0; i < mSamples.Length() + 10; ++i) {
@@ -468,6 +472,11 @@ class VideoRateTest : public TestMediaFormatReader {
     }
     EXPECT_TRUE(reachedEndOfStream);
     EXPECT_EQ(mNextSample, mSamples.Length());
+  }
+
+  void SetNullDecode(bool aEnabled) {
+    mProxy->SetVideoBlankDecode(aEnabled);
+    mReader->OwnerThread()->AwaitIdle();
   }
 
   double VideoRate() {
@@ -563,5 +572,39 @@ TEST_F(VideoRateTest, FirstExplicitStreamIDResetsAnonymousRate) {
   EXPECT_FLOAT_EQ(mDecoderRates[0], static_cast<float>(anonymousRate));
   EXPECT_FLOAT_EQ(mDecoderRates[1], static_cast<float>(explicitInitialRate));
   EXPECT_DOUBLE_EQ(VideoRate(), explicitFinalRate);
+  ShutdownReader();
+}
+
+TEST_F(VideoRateTest, SameStreamDecoderRecreationUsesCurrentRate) {
+  PDMFactory::AutoForcePDM autoForcePDM(mPdm);
+  const auto firstDuration = TimeUnit(10, 1000);
+  const auto secondDuration = TimeUnit(90, 1000);
+  const auto thirdDuration = TimeUnit(100, 1000);
+  const auto fourthDuration = TimeUnit(200, 1000);
+  AddSample(firstDuration, kFirstStreamID);
+  AddSample(secondDuration, kFirstStreamID);
+  AddSample(thirdDuration, kFirstStreamID);
+  AddSample(fourthDuration, kFirstStreamID);
+  InitReader();
+
+  // Decode two frames with the initial decoder, then consume the third through
+  // a null decoder to force recreation without changing the stream ID.
+  ReadFrame();
+  ReadFrame();
+  SetNullDecode(true);
+  ReadFrame();
+  // Resume real decoding on the fourth frame so the recreated decoder receives
+  // the current rate accumulated for the same stream.
+  SetNullDecode(false);
+  ReadFrame();
+  ReadToEnd();
+
+  const double initialRate = ExpectedRate({firstDuration});
+  const double recreatedRate = ExpectedRate(
+      {firstDuration, secondDuration, thirdDuration, fourthDuration});
+  ASSERT_EQ(mDecoderRates.Length(), 2U);
+  EXPECT_FLOAT_EQ(mDecoderRates[0], static_cast<float>(initialRate));
+  EXPECT_FLOAT_EQ(mDecoderRates[1], static_cast<float>(recreatedRate));
+  EXPECT_DOUBLE_EQ(VideoRate(), recreatedRate);
   ShutdownReader();
 }
