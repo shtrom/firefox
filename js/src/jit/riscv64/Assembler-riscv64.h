@@ -339,20 +339,22 @@ class Assembler : public AssemblerShared,
   static void disassembleInstr(Instruction* instr) {}
 #endif
 
+ private:
   BufferOffset jumpChainGetNextLink(BufferOffset pos);
 
   void jumpChainPutTargetAt(BufferOffset pos, BufferOffset target_pos);
 
- private:
+ public:
+  // Branch offset for short or long branches.
   int32_t branchOffset(Label* L, OffsetSize bits,
                        BufferOffset next_instr_offset);
 
- public:
-  // Branch offset for short branches (jal, branch, etc.).
-  int32_t branchOffset(Label* L, OffsetSize bits);
-
   // Branch offset for long branches (auipc + jalr).
   int32_t branchOffset(Label* L);
+
+  // Register branch deadline for forward branches.
+  void registerBranchDeadline(Label* L, OffsetSize bits,
+                              BufferOffset next_instr_offset);
 
   void nopAlign(int m) { m_buffer.align(m); }
 

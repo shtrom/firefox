@@ -994,18 +994,6 @@ int32_t Assembler::branchOffset(Label* L, OffsetSize bits,
     return offset;
   }
 
-  // Keep track of short-range branches targeting unbound labels. We may need
-  // to insert veneers in PatchShortRangeBranchToVeneer() below.
-  if (bits < OffsetSize::kOffset32) {
-    // This is the last possible branch target.
-    BufferOffset deadline(next_instr_offset.getOffset() +
-                          ImmBranchMaxForwardOffset(bits));
-    DEBUG_PRINTF("\tregisterBranchDeadline %d type %d\n", deadline.getOffset(),
-                 OffsetSizeToImmBranchRangeType(bits));
-    m_buffer.registerBranchDeadline(OffsetSizeToImmBranchRangeType(bits),
-                                    deadline);
-  }
-
   // The label is unbound and previously unused: Store the offset in the label
   // itself for patching by bind().
   if (!L->used()) {
@@ -1064,12 +1052,21 @@ int32_t Assembler::branchOffset(Label* L) {
   return branchOffset(L, OffsetSize::kOffset32, next_instr_offset);
 }
 
-int32_t Assembler::branchOffset(Label* L, OffsetSize bits) {
+void Assembler::registerBranchDeadline(Label* L, OffsetSize bits,
+                                       BufferOffset next_instr_offset) {
   MOZ_ASSERT(bits < OffsetSize::kOffset32);
 
-  // One instruction (jal, branch, etc), possibly one new deadline.
-  BufferOffset next_instr_offset = nextInstrOffset(1, 1);
-  return branchOffset(L, bits, next_instr_offset);
+  // Keep track of short-range branches targeting unbound labels. We may need
+  // to insert veneers in PatchShortRangeBranchToVeneer() below.
+  if (!L->bound()) {
+    // This is the last possible branch target.
+    BufferOffset deadline(next_instr_offset.getOffset() +
+                          ImmBranchMaxForwardOffset(bits));
+    DEBUG_PRINTF("\tregisterBranchDeadline %d type %d\n", deadline.getOffset(),
+                 OffsetSizeToImmBranchRangeType(bits));
+    m_buffer.registerBranchDeadline(OffsetSizeToImmBranchRangeType(bits),
+                                    deadline);
+  }
 }
 
 Assembler::Condition Assembler::InvertCondition(Condition cond) {
