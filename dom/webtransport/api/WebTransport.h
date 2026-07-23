@@ -5,6 +5,7 @@
 #ifndef DOM_WEBTRANSPORT_API_WEBTRANSPORT_H_
 #define DOM_WEBTRANSPORT_API_WEBTRANSPORT_H_
 
+#include "mozilla/dom/BufferSourceBindingFwd.h"
 #include "mozilla/dom/Promise.h"
 #include "mozilla/dom/WebTransportBinding.h"
 #include "mozilla/dom/WebTransportChild.h"
@@ -99,6 +100,9 @@ class WebTransport final : public nsISupports, public nsWrapperCache {
       const WebTransportOptions& aOptions, ErrorResult& aError);
 
   already_AddRefed<Promise> GetStats(ErrorResult& aError);
+  already_AddRefed<Promise> ExportKeyingMaterial(
+      const BufferSource& aLabel, const Optional<BufferSource>& aContext,
+      ErrorResult& aError);
 
   already_AddRefed<Promise> Ready() { return do_AddRef(mReady); }
   WebTransportReliabilityMode Reliability();
