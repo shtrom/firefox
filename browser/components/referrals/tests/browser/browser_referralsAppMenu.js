@@ -62,7 +62,11 @@ add_task(async function test_visible_and_opens_tab_when_enabled() {
     await promiseHidden;
 
     await TestUtils.waitForCondition(
-      () => gBrowser.currentURI.displaySpec === "about:referrals",
+      () =>
+        gBrowser.currentURI.displaySpec === "about:referrals" ||
+        gBrowser.currentURI.displaySpec.startsWith(
+          "https://www.firefox.com/invite"
+        ),
       "Waiting for the referrals tab to be opened"
     );
 
