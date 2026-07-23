@@ -26628,6 +26628,7 @@ class ContentSection extends (external_React_default()).PureComponent {
       showSectionsMgmtPanel,
       // @nova-cleanup(remove-conditional): Remove novaEnabled
       novaEnabled,
+      browserNovaEnabled,
       wallpapersEnabled,
       toggleWidgetsManagementPanel,
       showWidgetsManagementPanel,
@@ -26663,7 +26664,17 @@ class ContentSection extends (external_React_default()).PureComponent {
     // @nova-cleanup(remove-conditional): This conditional adds the toggle for wallpaper visibility.
     return /*#__PURE__*/external_React_default().createElement((external_React_default()).Fragment, null, /*#__PURE__*/external_React_default().createElement("div", {
       className: "home-section"
-    }, wallpapersEnabled && /*#__PURE__*/external_React_default().createElement((external_React_default()).Fragment, null, /*#__PURE__*/external_React_default().createElement("div", {
+    }, browserNovaEnabled && /*#__PURE__*/external_React_default().createElement("div", {
+      className: "appearance-section section"
+    }, /*#__PURE__*/external_React_default().createElement("h2", {
+      "data-l10n-id": "newtab-custom-appearance-section-title"
+    }), /*#__PURE__*/external_React_default().createElement("theme-picker", {
+      layout: "compact",
+      installsource: "about:newtab",
+      showLabels: false
+    }), /*#__PURE__*/external_React_default().createElement("moz-box-button", {
+      "data-l10n-id": "newtab-appearance-more-themes-button"
+    })), wallpapersEnabled && /*#__PURE__*/external_React_default().createElement((external_React_default()).Fragment, null, /*#__PURE__*/external_React_default().createElement("div", {
       className: "wallpapers-section"
     }, novaEnabled && /*#__PURE__*/external_React_default().createElement("moz-toggle", {
       id: "wallpapers-toggle",
@@ -26998,6 +27009,10 @@ class _CustomizeMenu extends (external_React_default()).PureComponent {
     const activationWindowClass = activationWindowVariant ? `activation-window-variant-${activationWindowVariant}` : "";
     // @nova-cleanup(remove-pref): remove nova pref
     const novaEnabled = this.props.Prefs.values[CustomizeMenu_PREF_NOVA_ENABLED];
+    // Browser-wide Nova gate for the theme picker (distinct from novaEnabled).
+    const {
+      browserNovaEnabled
+    } = this.props.Prefs.values;
     return /*#__PURE__*/external_React_default().createElement("span", null, /*#__PURE__*/external_React_default().createElement(external_ReactTransitionGroup_namespaceObject.CSSTransition, {
       nodeRef: this.personalizeButtonRef,
       timeout: 300,
@@ -27083,6 +27098,7 @@ class _CustomizeMenu extends (external_React_default()).PureComponent {
       toggleSectionsMgmtPanel: this.props.toggleSectionsMgmtPanel,
       showSectionsMgmtPanel: this.props.showSectionsMgmtPanel,
       novaEnabled: novaEnabled,
+      browserNovaEnabled: browserNovaEnabled,
       toggleWidgetsManagementPanel: this.props.toggleWidgetsManagementPanel,
       showWidgetsManagementPanel: this.props.showWidgetsManagementPanel,
       widgetsEnabled: this.props.widgetsEnabled

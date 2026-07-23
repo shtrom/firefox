@@ -36,6 +36,7 @@ const DEFAULT_PROPS = {
   toggleSectionsMgmtPanel: jest.fn(),
   showSectionsMgmtPanel: false,
   novaEnabled: false,
+  browserNovaEnabled: false,
   toggleWidgetsManagementPanel: jest.fn(),
   showWidgetsManagementPanel: false,
 };
@@ -44,6 +45,27 @@ describe("<ContentSection>", () => {
   it("should render", () => {
     const { container } = render(<ContentSection {...DEFAULT_PROPS} />);
     expect(container.querySelector(".home-section")).toBeInTheDocument();
+  });
+
+  it("does not render the theme-picker when browserNovaEnabled is false (novaEnabled does not gate it)", () => {
+    const { container } = render(
+      <ContentSection
+        {...DEFAULT_PROPS}
+        novaEnabled={true}
+        browserNovaEnabled={false}
+      />
+    );
+    expect(container.querySelector("theme-picker")).not.toBeInTheDocument();
+  });
+
+  it("renders the compact theme-picker when browser Nova is enabled", () => {
+    const { container } = render(
+      <ContentSection {...DEFAULT_PROPS} browserNovaEnabled={true} />
+    );
+    const picker = container.querySelector("theme-picker");
+    expect(picker).toBeInTheDocument();
+    expect(picker).toHaveAttribute("layout", "compact");
+    expect(picker).toHaveAttribute("installsource", "about:newtab");
   });
 
   describe("inputUserEvent telemetry", () => {
