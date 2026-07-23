@@ -604,8 +604,8 @@ bool HTMLEditor::UpdateMetaCharsetWithTransaction(
     nsAutoString currentValue;
     metaElement->GetAttr(nsGkAtoms::httpEquiv, currentValue);
 
-    if (!FindInReadable(u"content-type"_ns, currentValue,
-                        nsCaseInsensitiveStringComparator)) {
+    // XXX: Should this use AsciiCaseInsensitive?
+    if (!CaseInsensitiveFindInReadable(u"content-type"_ns, currentValue)) {
       continue;
     }
 
@@ -615,8 +615,7 @@ bool HTMLEditor::UpdateMetaCharsetWithTransaction(
     nsAString::const_iterator originalStart, start, end;
     originalStart = currentValue.BeginReading(start);
     currentValue.EndReading(end);
-    if (!FindInReadable(charsetEquals, start, end,
-                        nsCaseInsensitiveStringComparator)) {
+    if (!CaseInsensitiveFindInReadable(charsetEquals, start, end)) {
       continue;
     }
 

@@ -1200,8 +1200,8 @@ struct HasSubstringFn {
       return std::search(aAttrValue, end, aSearchValue.BeginReading(),
                          aSearchValue.EndReading()) != end;
     }
-    return FindInReadable(aSearchValue, nsDependentString(aAttrValue, aAttrLen),
-                          nsASCIICaseInsensitiveStringComparator);
+    return AsciiCaseInsensitiveFindInReadable(
+        aSearchValue, nsDependentString(aAttrValue, aAttrLen));
   }
 };
 
