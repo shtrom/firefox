@@ -74,7 +74,6 @@ category browser-window-delayed-startup chrome://browser/content/browser.js#Brow
 category browser-window-delayed-startup chrome://browser/content/tabbrowser/browser-fullZoom.js FullZoom.init
 category browser-window-delayed-startup chrome://browser/content/customizableui/panelUI.js PanelUI.init
 category browser-window-delayed-startup chrome://browser/content/browser-places.js#BookmarkingUI BookmarkingUI.init
-category browser-window-delayed-startup chrome://browser/content/browser.js#gURLBar gURLBar.delayedStartupInit
 category browser-window-delayed-startup chrome://browser/content/browser-siteProtections.js gProtectionsHandler.init
 category browser-window-delayed-startup chrome://browser/content/browser-trustPanel.js gTrustPanelHandler.init
 category browser-window-delayed-startup chrome://browser/content/browser-places.js#PlacesToolbarHelper PlacesToolbarHelper.init

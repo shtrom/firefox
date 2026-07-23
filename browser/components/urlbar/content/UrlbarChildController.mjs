@@ -680,6 +680,16 @@ export class UrlbarChildController {
   }
 
   maybeInitEngineStore() {
-    this.#parent.maybeInitEngineStore();
+    return this.#parent.maybeInitEngineStore();
+  }
+
+  /** @type {typeof UrlbarParentController.prototype.openSERP} */
+  openSERP(engineId, searchTerms, where, inBackground) {
+    this.#parent.openSERP(engineId, searchTerms, where, inBackground);
+  }
+
+  /** @type {typeof UrlbarParentController.prototype.openSearchForm} */
+  openSearchForm(engineId, where, inBackground) {
+    this.#parent.openSearchForm(engineId, where, inBackground);
   }
 }

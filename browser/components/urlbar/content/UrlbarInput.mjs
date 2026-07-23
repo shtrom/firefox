@@ -20,6 +20,7 @@ import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
  * @import { UrlbarSearchOneOffs } from "moz-src:///browser/components/urlbar/UrlbarSearchOneOffs.sys.mjs"
  * @import { SearchEngine } from "moz-src:///toolkit/components/search/SearchEngine.sys.mjs"
  * @import { SuggestBackendMerino } from "moz-src:///browser/components/urlbar/private/SuggestBackendMerino.sys.mjs"
+ * @import { PartialSearchEngine } from "chrome://browser/content/urlbar/SearchEngineStore.mjs"
  */
 
 /**
@@ -49,14 +50,10 @@ const lazy = XPCOMUtils.declareLazy({
   AIWindow:
     "moz-src:///browser/components/aiwindow/ui/modules/AIWindow.sys.mjs",
   ASRouter: "resource:///modules/asrouter/ASRouter.sys.mjs",
-  AppProvidedConfigEngine:
-    "moz-src:///toolkit/components/search/ConfigSearchEngine.sys.mjs",
   BrowserSearchTelemetry:
     "moz-src:///browser/components/search/BrowserSearchTelemetry.sys.mjs",
   BrowserUIUtils: "resource:///modules/BrowserUIUtils.sys.mjs",
   BrowserUtils: "resource://gre/modules/BrowserUtils.sys.mjs",
-  ConfigSearchEngine:
-    "moz-src:///toolkit/components/search/ConfigSearchEngine.sys.mjs",
   CustomizableUI:
     "moz-src:///browser/components/customizableui/CustomizableUI.sys.mjs",
   ExtensionSearchHandler:
@@ -67,10 +64,8 @@ const lazy = XPCOMUtils.declareLazy({
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
   QuickSuggest: "moz-src:///browser/components/urlbar/QuickSuggest.sys.mjs",
   ReaderMode: "moz-src:///toolkit/components/reader/ReaderMode.sys.mjs",
-  SearchService: "moz-src:///toolkit/components/search/SearchService.sys.mjs",
   SharingUtils: "resource:///modules/SharingUtils.sys.mjs",
   SearchUIUtils: "moz-src:///browser/components/search/SearchUIUtils.sys.mjs",
-  SearchUtils: "moz-src:///toolkit/components/search/SearchUtils.sys.mjs",
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
   UrlbarQueryContext:
     "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
@@ -78,8 +73,6 @@ const lazy = XPCOMUtils.declareLazy({
     "moz-src:///browser/components/urlbar/UrlbarProviderOpenTabs.sys.mjs",
   UrlbarTokenizer:
     "moz-src:///browser/components/urlbar/UrlbarTokenizer.sys.mjs",
-  UrlbarSearchUtils:
-    "moz-src:///browser/components/urlbar/UrlbarSearchUtils.sys.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
   UrlbarValueFormatter:
     "moz-src:///browser/components/urlbar/UrlbarValueFormatter.sys.mjs",
@@ -409,11 +402,21 @@ ${
       });
     }
 
-    this.controller.maybeInitEngineStore();
-
     // The engine name is not known yet, but update placeholder anyway to
     // reflect value of keyword.enabled or set the searchbar placeholder.
     this._setPlaceholder(null);
+
+    if (this.controller.maybeInitEngineStore()) {
+      // Engine store is initialized now and placeholder with
+      // engine name will be set in #connectedCallback.
+    } else {
+      // This happens on browser startup. We wait a bit before
+      // initializing the search service to improve startup times.
+      this.#initEngineStoreAfterPaint().then(
+        () => this.#deferUpdatePlaceholder(),
+        () => {} // Do nothing if search service failed.
+      );
+    }
   }
 
   attributeChangedCallback(attribute, _oldValue, _newValue) {
@@ -510,16 +513,13 @@ ${
       this.addGBrowserListeners();
     }
 
-    // If gBrowser or the search service is not initialized yet,
-    // the placeholder and icon will be updated in delayedStartupInit.
-    if (
-      Cu.isESModuleLoaded(
-        "moz-src:///toolkit/components/search/SearchService.sys.mjs"
-      ) &&
-      lazy.SearchService.isInitialized
-    ) {
+    // If the engine store is not initialized yet, the placeholder
+    // and icon will be updated in deferUpdatePlaceholder.
+    if (this.controller.engineStore.initialized) {
       this.searchModeSwitcher.updateSearchIcon();
-      this._updatePlaceholderFromDefaultEngine();
+      this.updatePlaceholder();
+    } else {
+      this.#initPlaceholderFromPref();
     }
 
     this.#allowBreakout =
@@ -748,10 +748,7 @@ ${
   onPrefChanged(pref) {
     switch (pref) {
       case "keyword.enabled":
-        this._updatePlaceholderFromDefaultEngine().catch(e =>
-          // This can happen if the search service failed.
-          console.warn("Falied to update urlbar placeholder:", e)
-        );
+        this.updatePlaceholder();
         break;
       case "browser.search.widget.new": {
         if (this.getAttribute("sap-name") == "searchbar" && this.isConnected) {
@@ -1282,7 +1279,7 @@ ${
           "TabOpen",
           tabEvent =>
             this._recordSearch(
-              oneOffParams.engine,
+              oneOffParams.engine.id,
               event,
               {},
               tabEvent.target.linkedBrowser
@@ -1290,7 +1287,7 @@ ${
           { once: true }
         );
       } else {
-        this._recordSearch(oneOffParams.engine, event);
+        this._recordSearch(oneOffParams.engine.id, event);
       }
 
       lazy.UrlbarUtils.addToFormHistory(
@@ -1309,13 +1306,11 @@ ${
       if (this.sapName == "searchbar") {
         let searchEngine;
         if (this.searchMode) {
-          searchEngine = lazy.UrlbarSearchUtils.getEngineByName(
+          searchEngine = this.controller.engineStore.getEngineByName(
             this.searchMode.engineName
           );
         } else {
-          searchEngine = lazy.UrlbarSearchUtils.getDefaultEngine(
-            this.isPrivate
-          );
+          searchEngine = this.controller.engineStore.default;
         }
 
         this.openSearchEnginePage("", {
@@ -1850,7 +1845,7 @@ ${
           isFormHistory: result.source == UrlbarShared.RESULT_SOURCE.HISTORY,
           alias: result.payload.keyword,
         };
-        const engine = lazy.SearchService.getEngineByName(
+        let engine = this.controller.engineStore.getEngineByName(
           result.payload.engine
         );
 
@@ -1861,7 +1856,7 @@ ${
             "TabOpen",
             tabEvent =>
               this._recordSearch(
-                engine,
+                engine.id,
                 event,
                 actionDetails,
                 tabEvent.target.linkedBrowser
@@ -1869,7 +1864,7 @@ ${
             { once: true }
           );
         } else {
-          this._recordSearch(engine, event, actionDetails);
+          this._recordSearch(engine.id, event, actionDetails);
         }
 
         if (
@@ -1877,8 +1872,8 @@ ${
           !actionDetails.isFormHistory &&
           !result.payload.inPrivateWindow &&
           !this.isPrivate &&
-          engine instanceof lazy.AppProvidedConfigEngine &&
-          engine.id == lazy.SearchService.defaultEngine.id
+          engine.isAppProvided &&
+          engine == this.controller.engineStore.default
         ) {
           let merinoBackend = /** @type {?SuggestBackendMerino} */ (
             lazy.QuickSuggest.getFeature("SuggestBackendMerino")
@@ -2482,7 +2477,7 @@ ${
    *   use it as its query.
    * @param {object} [options]
    *   Object options
-   * @param {SearchEngine} [options.searchEngine]
+   * @param {PartialSearchEngine} [options.searchEngine]
    *   Search engine to use when the search is using a known alias.
    * @param {UrlbarShared.SEARCH_MODE_ENTRY} [options.searchModeEntry]
    *   If provided, we will record this parameter as the search mode entry point
@@ -2568,8 +2563,7 @@ ${
   searchModeForToken(token) {
     if (token == UrlbarShared.RESTRICT_TOKENS.SEARCH) {
       return {
-        engineName: lazy.UrlbarSearchUtils.getDefaultEngine(this.isPrivate)
-          ?.name,
+        engineName: this.controller.engineStore.default?.name,
       };
     }
 
@@ -2591,7 +2585,7 @@ ${
    * @param {string} value
    *   The search term or empty string to open homepage.
    * @param {object} options
-   * @param {SearchEngine} options.searchEngine
+   * @param {PartialSearchEngine} options.searchEngine
    * @param {Event} options.event
    * @param {string} options.where
    * @param {boolean} [options.inBackground]
@@ -2606,12 +2600,8 @@ ${
     }
 
     let trimmedValue = value.trim();
-    let url, postData;
+    this._lastSearchString = trimmedValue;
     if (trimmedValue) {
-      [url, postData] = lazy.UrlbarUtils.getSearchQueryUrl(
-        searchEngine,
-        trimmedValue
-      );
       if (where.startsWith("tab")) {
         // The TabOpen event is fired synchronously so tabEvent.target
         // is guaranteed to be our new search tab.
@@ -2619,7 +2609,7 @@ ${
           "TabOpen",
           tabEvent =>
             this._recordSearch(
-              searchEngine,
+              searchEngine.id,
               event,
               {},
               tabEvent.target.linkedBrowser
@@ -2627,7 +2617,7 @@ ${
           { once: true }
         );
       } else {
-        this._recordSearch(searchEngine, event);
+        this._recordSearch(searchEngine.id, event);
       }
 
       if (where == "current") {
@@ -2648,17 +2638,16 @@ ${
           this.window.gBrowser.selectedBrowser
         );
       }
+      this.controller.openSERP(
+        searchEngine.id,
+        trimmedValue,
+        where,
+        inBackground
+      );
     } else {
-      url = searchEngine.searchForm;
-      lazy.BrowserSearchTelemetry.recordSearchForm(searchEngine, this.#sapName);
-      if (this.#isAddressbar && where == "current") {
-        this.inputField.value = url;
-        this.selectionStart = -1;
-      }
+      // Telemetry is handled by the function.
+      this.controller.openSearchForm(searchEngine.id, where, inBackground);
     }
-    this._lastSearchString = trimmedValue;
-
-    this.window.openTrustedLinkIn(url, where, { inBackground, postData });
   }
 
   /**
@@ -2754,11 +2743,13 @@ ${
     // Exit search mode if the passed-in engine is invalid or hidden.
     let engine;
     if (searchMode?.engineName) {
-      if (!lazy.SearchService.isInitialized) {
-        await lazy.SearchService.init();
+      if (!this.controller.engineStore.initialized) {
+        await this.controller.engineStore.init();
       }
-      engine = lazy.SearchService.getEngineByName(searchMode.engineName);
-      if (!engine || engine.hidden) {
+      engine = this.controller.engineStore.getEngineByName(
+        searchMode.engineName
+      );
+      if (!engine) {
         searchMode = null;
       }
     }
@@ -2898,7 +2889,7 @@ ${
     // shortcut to honor historical behaviour.
     this.searchMode = {
       source: UrlbarShared.RESULT_SOURCE.SEARCH,
-      engineName: lazy.UrlbarSearchUtils.getDefaultEngine(this.isPrivate)?.name,
+      engineName: this.controller.engineStore.default?.name,
       entry: "shortcut",
     };
     // The searchMode setter clears the input if pageproxystate is valid, so
@@ -2978,6 +2969,10 @@ ${
 
   set searchMode(searchMode) {
     this.setSearchMode(searchMode, this.window.gBrowser.selectedBrowser);
+
+    this.controller.engineStore
+      .getEngineByName(this.searchMode?.engineName)
+      ?.markAsUsed();
   }
 
   getBrowserState(browser) {
@@ -3168,53 +3163,43 @@ ${
   }
 
   /**
-   * @param {{wrappedJSObject: SearchEngine} | Window} subject
-   * @param {"browser-search-engine-modified"|"ai-window-state-changed"} topic
+   * @param {Window} subject
+   * @param {"ai-window-state-changed"} _topic
    * @param {string} data
    */
-  observe(subject, topic, data) {
-    switch (topic) {
-      // nav-bar-visible event is unique to Smart Window and emits when the urlbar is shown on new tab.
-      // This ensures consistent height and padding around the urlbar
-      case "ai-window-state-changed":
-        if (
-          subject == this.window &&
-          (data == "classic" || data == "nav-bar-visible")
-        ) {
-          this.#updateLayoutBreakout();
-        }
-        break;
-      case lazy.SearchUtils.TOPIC_ENGINE_MODIFIED: {
-        let engine = subject.wrappedJSObject;
-        switch (data) {
-          case lazy.SearchUtils.MODIFIED_TYPE.CHANGED:
-          case lazy.SearchUtils.MODIFIED_TYPE.REMOVED: {
-            let searchMode = this.searchMode;
-            if (searchMode?.engineName == engine.name) {
-              // Exit search mode if the current search mode engine was removed.
-              this.searchMode = searchMode;
-            }
-            break;
-          }
-          case lazy.SearchUtils.MODIFIED_TYPE.DEFAULT:
-            if (!this.isPrivate) {
-              this._updatePlaceholder(engine.name);
-              // The cached result might use the old default engine.
-              this._resultForCurrentValue = null;
-            }
-            break;
-          case lazy.SearchUtils.MODIFIED_TYPE.DEFAULT_PRIVATE:
-            if (this.isPrivate) {
-              this._updatePlaceholder(engine.name);
-              // The cached result might use the old default private engine.
-              this._resultForCurrentValue = null;
-            }
-            break;
+  observe = (subject, _topic, data) => {
+    // nav-bar-visible event is unique to Smart Window and emits when the urlbar is shown on new tab.
+    // This ensures consistent height and padding around the urlbar
+    if (
+      subject == this.window &&
+      (data == "classic" || data == "nav-bar-visible")
+    ) {
+      this.#updateLayoutBreakout();
+    }
+  };
+
+  /**
+   * @param {"removed"|"changed"|"default"} modifiedType
+   * @param {PartialSearchEngine} engine
+   */
+  onSearchEngineUpdate = (modifiedType, engine) => {
+    switch (modifiedType) {
+      case "removed":
+      case "changed": {
+        let searchMode = this.searchMode;
+        if (searchMode?.engineName == engine.name) {
+          // Exit search mode if the current search mode engine was removed.
+          this.searchMode = searchMode;
         }
         break;
       }
+      case "default":
+        this.updatePlaceholder();
+        // The cached result might use the old default engine.
+        this._resultForCurrentValue = null;
+        break;
     }
-  }
+  };
 
   /**
    * Get search source for telemetry.
@@ -3279,30 +3264,27 @@ ${
     return result.payload.providesSearchMode;
   }
 
+  _observer = {
+    observe: this.observe,
+    QueryInterface: ChromeUtils.generateQI([
+      "nsIObserver",
+      "nsISupportsWeakReference",
+    ]),
+  };
+
   _addObservers() {
-    this._observer ??= {
-      observe: this.observe.bind(this),
-      QueryInterface: ChromeUtils.generateQI([
-        "nsIObserver",
-        "nsISupportsWeakReference",
-      ]),
-    };
-    Services.obs.addObserver(
-      this._observer,
-      lazy.SearchUtils.TOPIC_ENGINE_MODIFIED,
-      true
-    );
-    Services.obs.addObserver(this._observer, "ai-window-state-changed", true);
+    if (!this._observersAdded) {
+      Services.obs.addObserver(this._observer, "ai-window-state-changed", true);
+      this.controller.engineStore.addObserver(this.onSearchEngineUpdate);
+      this._observersAdded = true;
+    }
   }
 
   _removeObservers() {
-    if (this._observer) {
-      Services.obs.removeObserver(
-        this._observer,
-        lazy.SearchUtils.TOPIC_ENGINE_MODIFIED
-      );
+    if (this._observersAdded) {
       Services.obs.removeObserver(this._observer, "ai-window-state-changed");
-      this._observer = null;
+      this.controller.engineStore.removeObserver(this.onSearchEngineUpdate);
+      this._observersAdded = false;
     }
   }
 
@@ -3917,7 +3899,7 @@ ${
    * updates an incremental total number of searches in a pref,
    * and informs ASRouter that a search has occurred via a trigger send
    *
-   * @param {SearchEngine} engine
+   * @param {string} engineId
    *   The engine to generate the query for.
    * @param {Event} event
    *   The event that triggered this query.
@@ -3936,7 +3918,7 @@ ${
    *   Defaults to the window's selected browser.
    */
   _recordSearch(
-    engine,
+    engineId,
     event,
     searchActionDetails = {},
     browser = this.window.gBrowser.selectedBrowser
@@ -3978,7 +3960,7 @@ ${
       },
     });
 
-    lazy.BrowserSearchTelemetry.recordSearch(browser, engine, searchSource, {
+    lazy.BrowserSearchTelemetry.recordSearch(browser, engineId, searchSource, {
       ...searchActionDetails,
       isOneOff,
       newtabSessionId: this._handoffSession,
@@ -4953,10 +4935,7 @@ ${
     let { engineName, source, isGeneralPurposeEngine } = searchMode || {};
 
     // As an optimization, bail if the given search mode is null but search mode
-    // is already inactive. Otherwise, browser_preferences_usage.js fails due to
-    // accessing the browser.urlbar.placeholderName pref (via the call to
-    // initPlaceHolder below) too many times. That test does not enter search mode,
-    // but it triggers many calls to this method with a null search mode, via setURI.
+    // is already inactive.
     if (!engineName && !source && !this.hasAttribute("searchmode")) {
       return;
     }
@@ -4968,7 +4947,7 @@ ${
 
     if (!engineName && !source) {
       this.removeAttribute("searchmode");
-      this.initPlaceHolder(true);
+      this.updatePlaceholder();
       return;
     }
 
@@ -5110,44 +5089,61 @@ ${
    * Initializes the urlbar placeholder to the pre-saved engine name. We do this
    * via a preference, to avoid needing to synchronously init the search service.
    *
-   * This should be called around the time of DOMContentLoaded, so that it is
-   * initialized quickly before the user sees anything.
-   *
    * Note: If the preference doesn't exist, we don't do anything as the default
-   * placeholder is a string which doesn't have the engine name; however, this
-   * can be overridden using the `force` parameter.
-   *
-   * @param {boolean} force If true and the preference doesn't exist, the
-   *                        placeholder will be set to the default version
-   *                        without an engine name ("Search or enter address").
+   * placeholder is a string which doesn't have the engine name.
    */
-  initPlaceHolder(force = false) {
-    if (!this.#isAddressbar) {
+  #initPlaceholderFromPref() {
+    if (!this.#isAddressbar || this.controller.engineStore.failed) {
       return;
     }
 
     let prefName =
       "browser.urlbar.placeholderName" + (this.isPrivate ? ".private" : "");
     let engineName = Services.prefs.getStringPref(prefName, "");
-    if (engineName || force) {
-      // We can do this directly, since we know we're at DOMContentLoaded.
-      this._setPlaceholder(engineName || null);
+    if (engineName) {
+      this._setPlaceholder(engineName);
     }
   }
 
   /**
-   * Asynchronously changes the urlbar placeholder to the name of the default
-   * engine according to the search service when it is initialized.
+   * Schedules initialization of the search engine store after first paint.
    *
-   * This should be called around the time of MozAfterPaint. Since the
-   * placeholder was already initialized to the pre-saved engine name by
-   * initPlaceHolder when this is called, the update is delayed to avoid
-   * confusing the user.
+   * On browser startup, engine store init will trigger initialization of
+   * the search service. We don't want the search service to initialize too
+   * early because of performance reasons, so we wait until after first paint.
+   *
+   * @returns {Promise<void>}
+   *   Resolves when the search engine store has initialized successfully.
+   *   Rejects if the search service (and hence the engine store) failed.
    */
-  async delayedStartupInit() {
-    // Only delay if requested, and we're not displaying text in the URL bar
-    // currently.
+  async #initEngineStoreAfterPaint() {
+    if (document.readyState == "loading") {
+      await new Promise(r =>
+        document.addEventListener("DOMContentLoaded", r, { once: true })
+      );
+      await new Promise(r => this.window.requestIdleCallback(r));
+    }
+
+    await this.controller.engineStore.init();
+  }
+
+  /**
+   * Asynchronously changes the urlbar placeholder and search mode switcher icon
+   * to the name of the default engine according to the search engine store when
+   * finished initializing.
+   *
+   * Since the placeholder was already initialized to the pre-saved engine
+   * name by #initPlaceholderFromPref when this is called, the update is
+   * delayed to avoid confusing the user.
+   */
+  async #deferUpdatePlaceholder() {
+    if (this.sapName == "smartbar") {
+      return;
+    }
+
     if (!this.value) {
+      // Only delay if requested, and we're not displaying text in the URL bar
+      // currently.
       // Delays changing the URL Bar placeholder and Unified Search Button icon
       // until the user is not going to be seeing it, e.g. when there is a value
       // entered in the bar, or if there is a tab switch to a tab which has a url
@@ -5159,8 +5155,8 @@ ${
           // again, so we need to call this function again but with the
           // new engine name.
           // No need to await for this to finish, we're in a listener here anyway.
-          this.searchModeSwitcher.updateSearchIcon();
-          this._updatePlaceholderFromDefaultEngine();
+          this.searchModeSwitcher.updateSearchIcon().catch(console.error);
+          this.updatePlaceholder();
           this.inputField.removeEventListener("input", updateListener);
           this.window.gBrowser.tabContainer.removeEventListener(
             "TabSelect",
@@ -5175,16 +5171,7 @@ ${
         updateListener
       );
     } else {
-      await this._updatePlaceholderFromDefaultEngine();
-    }
-
-    // If we haven't finished initializing, ensure the placeholder
-    // preference is set for the next startup.
-    if (this.#isAddressbar) {
-      lazy.SearchUIUtils.updatePlaceholderNamePreference(
-        await this._getDefaultSearchEngine(),
-        this.isPrivate
-      );
+      this.updatePlaceholder();
     }
   }
 
@@ -5208,46 +5195,19 @@ ${
   }
 
   /**
-   * Returns a Promise that resolves with default search engine.
-   *
-   * @returns {Promise<SearchEngine>}
+   * Updates the urlbar placeholder based on the default engine.
    */
-  _getDefaultSearchEngine() {
-    return this.isPrivate
-      ? lazy.SearchService.getDefaultPrivate()
-      : lazy.SearchService.getDefault();
-  }
-
-  /**
-   * This is a wrapper around '_updatePlaceholder' that uses the appropriate
-   * default engine to get the engine name.
-   */
-  async _updatePlaceholderFromDefaultEngine() {
-    const defaultEngine = await this._getDefaultSearchEngine();
-    this._updatePlaceholder(defaultEngine.name);
-  }
-
-  /**
-   * Updates the URLBar placeholder for the specified engine, delaying the
-   * update if required.
-   *
-   * Note: The engine name will only be displayed for application-provided
-   * engines, as we know they should have short names.
-   *
-   * @param {string}  engineName     The search engine name to use for the update.
-   */
-  _updatePlaceholder(engineName) {
-    if (!engineName) {
-      throw new Error("Expected an engineName to be specified");
-    }
-
+  updatePlaceholder() {
     if (this.searchMode || !this.#isAddressbar) {
       return;
     }
 
-    let engine = lazy.SearchService.getEngineByName(engineName);
-    if (engine instanceof lazy.ConfigSearchEngine) {
-      this._setPlaceholder(engineName);
+    let defaultEngine = this.controller.engineStore.default;
+    // If the search engine store is not initialized (default is null),
+    // we use the default placeholder. We only display the engine name
+    // for config engines as we know they have short names.
+    if (defaultEngine?.isConfigEngine) {
+      this._setPlaceholder(defaultEngine.name);
     } else {
       // Display the default placeholder string.
       this._setPlaceholder(null);

@@ -21,6 +21,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "moz-src:///toolkit/components/search/ConfigSearchEngine.sys.mjs",
   ConfigSearchEngine:
     "moz-src:///toolkit/components/search/ConfigSearchEngine.sys.mjs",
+  BrowserSearchTelemetry:
+    "moz-src:///browser/components/search/BrowserSearchTelemetry.sys.mjs",
   ExtensionUtils: "resource://gre/modules/ExtensionUtils.sys.mjs",
   Interactions: "moz-src:///browser/components/places/Interactions.sys.mjs",
   ProvidersManager:
@@ -392,6 +394,51 @@ export class UrlbarParentController {
    */
   setChild(child) {
     this.#child = child;
+  }
+
+  /**
+   * Opens a search engine result page (SERP) for the specified
+   * search engine and search query.
+   *
+   * Does not record telemetry, so it should be recorded by the caller.
+   *
+   * @param {string} engineId
+   * @param {string} searchTerms
+   * @param {string} where
+   * @param {boolean} [inBackground]
+   */
+  openSERP(engineId, searchTerms, where, inBackground = false) {
+    let searchEngine = lazy.SearchService.getEngineById(engineId);
+
+    let [url, postData] = lazy.UrlbarUtils.getSearchQueryUrl(
+      searchEngine,
+      searchTerms
+    );
+
+    this.input.window.openTrustedLinkIn(url, where, {
+      inBackground,
+      postData,
+    });
+  }
+
+  /**
+   * Opens the homepage (also known as searchForm) of the
+   * specified search engine and records telemetry.
+   *
+   * @param {string} engineId
+   * @param {string} where
+   * @param {boolean} [inBackground]
+   */
+  openSearchForm(engineId, where, inBackground = false) {
+    let searchEngine = lazy.SearchService.getEngineById(engineId);
+    lazy.BrowserSearchTelemetry.recordSearchForm(
+      searchEngine,
+      this.input.sapName
+    );
+    let url = searchEngine.searchForm;
+    this.input.window.openTrustedLinkIn(url, where, {
+      inBackground,
+    });
   }
 
   /**

@@ -148,12 +148,17 @@ async function doDelayedUpdatePlaceholderTest({ defaultEngine }) {
     SearchService.CHANGE_REASON.UNKNOWN
   );
 
+  // Let default change handlers run before messing
+  // with the search service init status.
+  await TestUtils.waitForTick();
+
   info("Clear placeholder cache");
   Services.prefs.clearUserPref("browser.urlbar.placeholderName");
 
   info("Pretend we're on startup and the search service hasn't started yet.");
-  let stub = sinon.stub(SearchService, "isInitialized");
-  stub.get(() => false);
+  let { promise, resolve } = Promise.withResolvers();
+  let stub = sinon.stub(SearchService, "promiseInitialized").get(() => promise);
+  SearchService.forceInitializationStatusForTests("started");
 
   info("Open a new window");
   let newWin = await BrowserTestUtils.openNewBrowserWindow();
@@ -171,6 +176,8 @@ async function doDelayedUpdatePlaceholderTest({ defaultEngine }) {
 
   info("Pretend the search service has finished initializing.");
   stub.restore();
+  resolve();
+  SearchService.forceInitializationStatusForTests("success");
 
   info("Simulate user interaction");
   let urlTab = BrowserTestUtils.addTab(newWin.gBrowser, "about:mozilla");

@@ -779,13 +779,12 @@ add_task(async function test_readonly() {
 });
 
 add_task(async function test_search_service_fail() {
-  let newWin = await BrowserTestUtils.openNewBrowserWindow();
-
-  const stub = sinon
-    .stub(UrlbarSearchUtils, "init")
-    .rejects(new Error("Initialization failed"));
-
+  let stub = sinon
+    .stub(SearchService, "promiseInitialized")
+    .get(() => Promise.reject(new Error("Initialization failed")));
   SearchService.forceInitializationStatusForTests("failed");
+
+  let newWin = await BrowserTestUtils.openNewBrowserWindow();
 
   // Force updateSearchIcon to be triggered
   await SpecialPowers.pushPrefEnv({
@@ -818,10 +817,7 @@ add_task(async function test_search_service_fail() {
   await popupHidden;
 
   stub.restore();
-
   SearchService.forceInitializationStatusForTests("success");
-  UrlbarSearchUtils.resetInitPromiseForTests();
-  await UrlbarSearchUtils.init();
 
   await BrowserTestUtils.closeWindow(newWin);
   await SpecialPowers.popPrefEnv();
