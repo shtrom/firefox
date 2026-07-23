@@ -632,10 +632,21 @@ struct JS_PUBLIC_API JSContext : public JS::RootingContext,
   mozilla::Atomic<bool, mozilla::SequentiallyConsistent>
       suppressProfilerSampling;
 
+  // While sampling is suppressed, whether the sampler may still read tenured
+  // script data (e.g. line/column) via ProfilingStackFrame::script(). Most
+  // suppression sites leave this false because the script pointers may be
+  // unsafe, notably during the compacting phase of GC where scripts are being
+  // relocated. Minor GC sets it because it does not move scripts. Read from
+  // the sampler thread, written from the main thread, hence atomic.
+  mozilla::Atomic<bool, mozilla::SequentiallyConsistent>
+      allowProfilerScriptAccess_;
+
  public:
   bool isProfilerSamplingEnabled() const { return !suppressProfilerSampling; }
   void disableProfilerSampling() { suppressProfilerSampling = true; }
   void enableProfilerSampling() { suppressProfilerSampling = false; }
+  bool allowProfilerScriptAccess() const { return allowProfilerScriptAccess_; }
+  void setAllowProfilerScriptAccess(bool b) { allowProfilerScriptAccess_ = b; }
 
  private:
   js::wasm::Context wasm_;
