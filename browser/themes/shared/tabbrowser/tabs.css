@@ -2180,6 +2180,44 @@ tab-group {
   --panel-width: 22em;
   font: menu;
 
+  @media -moz-pref("browser.nova.enabled") {
+    > .panel-header {
+      justify-content: start;
+      text-align: start;
+    }
+
+    /* Clip the header in the edit modal for a11y. */
+    &:not(.tab-group-editor-mode-create) > .panel-header {
+      position: absolute;
+      overflow: hidden;
+      clip-path: inset(50%);
+      width: 0;
+      height: 0;
+      min-height: 0;
+      pointer-events: none;
+    }
+
+    /* Hide all toolbarseperators except the tab group suggestions one.
+     * Remove this rule and the toolbarseparators post-Nova (Bug 2056954). */
+    toolbarseparator:not(#tab-group-suggestions-separator) {
+      display: none;
+    }
+
+    &.tab-group-editor-mode-create .tab-group-editor-swatches {
+      padding-top: 0;
+    }
+
+    /* Clip the name label in the edit modal for a11y. */
+    &:not(.tab-group-editor-mode-create) > .tab-group-editor-name > label {
+      position: absolute;
+      overflow: hidden;
+      clip-path: inset(50%);
+      width: 0;
+      height: 0;
+      pointer-events: none;
+    }
+  }
+
   &.tab-group-editor-panel-expanded {
     --panel-width: 25em;
   }
@@ -2193,7 +2231,10 @@ tab-group {
     display: flex;
     flex-direction: column;
     margin: var(--panel-menuitem-margin);
-    padding-top: var(--panel-menuitem-padding-block);
+
+    @media not -moz-pref("browser.nova.enabled") {
+      padding-top: var(--panel-menuitem-padding-block);
+    }
 
     > label {
       margin-inline: 0;
@@ -2233,7 +2274,10 @@ tab-group {
     background-clip: content-box;
     background-color: light-dark(var(--tabgroup-swatch-color), var(--tabgroup-swatch-color-invert));
     @media -moz-pref("browser.nova.enabled") {
+      width: 20px;
+      height: 20px;
       background-color: var(--tabgroup-swatch-color);
+      border-radius: var(--border-radius-circle);
     }
 
     input:checked + & {
