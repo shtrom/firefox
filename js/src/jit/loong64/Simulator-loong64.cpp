@@ -4446,8 +4446,7 @@ void Simulator::decodeTypeOp22(SimInstruction* instr) {
       UNIMPLEMENTED();
       break;
     case op_movgr2cf:
-      printf("Sim UNIMPLEMENTED: MOVGR2CF\n");
-      UNIMPLEMENTED();
+      setCFRegister(cd_reg(instr), rj_u(instr) & 1);
       break;
     case op_clo_w:
       printf("Sim UNIMPLEMENTED: FCO_W\n");
@@ -4480,8 +4479,6 @@ void Simulator::decodeTypeOp24(SimInstruction* instr) {
       break;
     case op_movcf2gr:
       setRegister(rd_reg(instr), getCFRegister(cj_reg(instr)));
-      break;
-      UNIMPLEMENTED();
       break;
     default:
       UNREACHABLE();
