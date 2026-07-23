@@ -1643,7 +1643,8 @@ const DisplayItemClipChain* nsDisplayListBuilder::CreateClipChainIntersection(
       if (clip2 && clip2->mASR == asr) {
         DisplayItemClip intersection = clip1->mClip;
         intersection.IntersectWith(clip2->mClip);
-        intersectedClips.AppendElement(ClipChainItem{intersection, asr});
+        intersectedClips.AppendElement(
+            ClipChainItem{std::move(intersection), asr});
         clip2 = clip2->mParent;
       } else {
         intersectedClips.AppendElement(ClipChainItem{clip1->mClip, asr});
