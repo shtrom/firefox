@@ -114,6 +114,11 @@ class Http3WebTransportSession final : public WebTransportSessionBase,
 
   void GetMaxDatagramSize() override;
 
+  nsresult ExportKeyingMaterial(const nsTArray<uint8_t>& aLabel,
+                                const nsTArray<uint8_t>& aContext,
+                                nsTArray<uint8_t>& aKeyingMaterial) override;
+
+ 
   void OnOutgoingDatagramOutCome(
       uint64_t aId, WebTransportSessionEventListener::DatagramOutcome aOutCome);
 

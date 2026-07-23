@@ -84,6 +84,13 @@ class Http3SessionStub final : public Http3SessionBase {
 
   uint64_t MaxDatagramSize(uint64_t aSessionId) override { return 0; }
 
+  nsresult ExportWebTransportKeyingMaterial(
+      uint64_t aSessionId, const nsTArray<uint8_t>& aLabel,
+      const nsTArray<uint8_t>& aContext,
+      nsTArray<uint8_t>& aKeyingMaterial) override {
+    return NS_OK;
+  }
+
   nsresult TryActivatingWebTransportStream(uint64_t* aStreamId,
                                            Http3StreamBase* aStream) override {
     *aStreamId = 0;

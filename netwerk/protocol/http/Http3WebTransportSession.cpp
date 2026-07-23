@@ -506,6 +506,17 @@ void Http3WebTransportSession::GetMaxDatagramSize() {
   listener->OnMaxDatagramSize(size);
 }
 
+nsresult Http3WebTransportSession::ExportKeyingMaterial(
+    const nsTArray<uint8_t>& aLabel, const nsTArray<uint8_t>& aContext,
+    nsTArray<uint8_t>& aKeyingMaterial) {
+  MOZ_ASSERT(OnSocketThread(), "not on socket thread");
+  if (mRecvState != ACTIVE) {
+    return NS_ERROR_NOT_CONNECTED;
+  }
+  return mSession->ExportWebTransportKeyingMaterial(mStreamId, aLabel, aContext,
+                                                    aKeyingMaterial);
+}
+
 void Http3WebTransportSession::OnOutgoingDatagramOutCome(
     uint64_t aId, WebTransportSessionEventListener::DatagramOutcome aOutCome) {
   MOZ_ASSERT(OnSocketThread(), "not on socket thread");

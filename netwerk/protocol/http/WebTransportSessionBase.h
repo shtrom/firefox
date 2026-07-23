@@ -29,6 +29,9 @@ class WebTransportSessionBase {
   virtual uint64_t GetStreamId() const = 0;
   virtual void CloseSession(uint32_t aStatus, const nsACString& aReason) = 0;
   virtual void GetMaxDatagramSize() = 0;
+  virtual nsresult ExportKeyingMaterial(const nsTArray<uint8_t>& aLabel,
+                                        const nsTArray<uint8_t>& aContext,
+                                        nsTArray<uint8_t>& aKeyingMaterial) = 0;
   virtual void SendDatagram(nsTArray<uint8_t>&& aData,
                             uint64_t aTrackingId) = 0;
   virtual void CreateOutgoingBidirectionalStream(

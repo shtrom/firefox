@@ -223,6 +223,25 @@ WebTransportSessionProxy::RetargetTo(nsIEventTarget* aTarget) {
 
 NS_IMETHODIMP
 WebTransportSessionProxy::GetStats() { return NS_ERROR_NOT_IMPLEMENTED; }
+NS_IMETHODIMP
+WebTransportSessionProxy::ExportKeyingMaterial(
+    const nsTArray<uint8_t>& aLabel, const nsTArray<uint8_t>& aContext,
+    nsTArray<uint8_t>& aKeyingMaterial) {
+  MOZ_ASSERT(OnSocketThread(), "ExportKeyingMaterial must be called on socket thread");
+
+  RefPtr<WebTransportSessionBase> session;
+  {
+    MutexAutoLock lock(mMutex);
+    if (mState != WebTransportSessionProxyState::ACTIVE ||
+        !mWebTransportSession) {
+      return NS_ERROR_NOT_CONNECTED;
+    }
+    session = mWebTransportSession;
+  }
+
+  return session->ExportKeyingMaterial(aLabel, aContext, aKeyingMaterial);
+}
+
 
 NS_IMETHODIMP
 WebTransportSessionProxy::CloseSession(uint32_t status,
