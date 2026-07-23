@@ -155,7 +155,6 @@ preprocessed_intervention_files = [
     "bug2016030-prodamus.ru-fix_hidden_content.css",
     "bug2018892-museumofpragueai.com-hide_mic_icon.css",
     "bug2018892-museumofpragueai.com.js",
-    "bug2019231-setmore.com.js",
     "bug2020285-Eurocontrol_Network_Operations_Portal.js",
     "bug2021019-rudder.taleez.com-fix_overlapping_content.css",
     "bug2025249-infyspringboard.onwingspan.com-hide_browser_notice.css",
