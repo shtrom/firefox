@@ -203,7 +203,7 @@ namespace exceptions {
 
 class JSStackFrame final : public nsIStackFrame, public xpc::JSStackFrameBase {
  public:
-  NS_DECL_CYCLE_COLLECTING_ISUPPORTS
+  NS_DECL_CYCLE_COLLECTING_ISUPPORTS_FINAL
   NS_DECL_CYCLE_COLLECTION_SCRIPT_HOLDER_CLASS(JSStackFrame)
   NS_DECL_NSISTACKFRAME
 

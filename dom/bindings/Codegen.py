@@ -20688,11 +20688,17 @@ class CGExampleClass(CGBindingImplClass):
                 )
             )
         else:
+            isFinal = not descriptor.interface.hasChildInterfaces()
+            isupportsVariant = (
+                "NS_DECL_CYCLE_COLLECTING_ISUPPORTS_FINAL"
+                if isFinal
+                else "NS_DECL_CYCLE_COLLECTING_ISUPPORTS"
+            )
             extradeclarations = (
                 "public:\n"
-                "  NS_DECL_CYCLE_COLLECTING_ISUPPORTS\n"
+                "  %s\n"
                 "  NS_DECL_CYCLE_COLLECTION_WRAPPERCACHE_CLASS(%s)\n"
-                "\n" % self.nativeLeafName(descriptor)
+                "\n" % (isupportsVariant, self.nativeLeafName(descriptor))
             )
 
         if descriptor.interface.hasChildInterfaces():
@@ -21141,7 +21147,12 @@ class CGJSImplClass(CGBindingImplClass):
                 ClassBase("nsSupportsWeakReference"),
                 ClassBase("nsWrapperCache"),
             ]
-            isupportsDecl = "NS_DECL_CYCLE_COLLECTING_ISUPPORTS\n"
+            isFinal = not descriptor.interface.hasChildInterfaces()
+            isupportsDecl = (
+                "NS_DECL_CYCLE_COLLECTING_ISUPPORTS_FINAL\n"
+                if isFinal
+                else "NS_DECL_CYCLE_COLLECTING_ISUPPORTS\n"
+            )
             ccDecl = (
                 "NS_DECL_CYCLE_COLLECTION_WRAPPERCACHE_CLASS(%s)\n" % descriptor.name
             )
