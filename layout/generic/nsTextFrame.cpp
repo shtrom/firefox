@@ -7208,30 +7208,8 @@ bool nsTextFrame::PaintTextWithSelectionColors(
                                    *aParams.textPaintStyle, rangeStyles[index]);
         if (colors.mHasBackground) {
           if (textDrawer) {
-            nsRectCornerRadii radii;
-            bool hasRadii = false;
-            if (PresContext()->Document()->ChromeRulesEnabled()) {
-              if (auto* style =
-                      aParams.textPaintStyle->GetSelectionPseudoStyle()) {
-                nsSize size = LayoutDeviceRect::ToAppUnits(selectionRect,
-                                                           appUnitsPerDevPixel)
-                                  .Size();
-
-                const auto& borderRadius = style->StyleBorder()->mBorderRadius;
-                const auto& cornerShape = style->StyleBorder()->mCornerShape;
-                hasRadii = nsIFrame::ComputeBorderRadii(
-                    borderRadius, cornerShape, size, size, {}, radii);
-              }
-            }
-
-            if (hasRadii) {
-              textDrawer->AppendSelectionRoundRect(
-                  selectionRect, ToDeviceColor(colors.mBackground), radii,
-                  appUnitsPerDevPixel);
-            } else {
-              textDrawer->AppendSelectionRect(
-                  selectionRect, ToDeviceColor(colors.mBackground));
-            }
+            textDrawer->AppendSelectionRect(selectionRect,
+                                            ToDeviceColor(colors.mBackground));
           } else {
             PaintSelectionBackground(*aParams.context->GetDrawTarget(),
                                      colors.mBackground, aParams.dirtyRect,
