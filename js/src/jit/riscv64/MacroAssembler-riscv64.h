@@ -633,8 +633,10 @@ class MacroAssemblerRiscv64Compat : public MacroAssemblerRiscv64 {
     ma_add64(dest, address.base, Imm32(address.offset));
   }
 
-  void computeEffectiveAddress(const BaseIndex& address, Register dest) {
-    computeScaledAddress(address, dest);
+  void computeEffectiveAddress(
+      const BaseIndex& address, Register dest,
+      wasm::ZeroExtendIndex zeroExtend = wasm::ZeroExtendIndex::No) {
+    computeScaledAddress(address, dest, zeroExtend);
     if (address.offset) {
       ma_add64(dest, dest, Imm32(address.offset));
     }

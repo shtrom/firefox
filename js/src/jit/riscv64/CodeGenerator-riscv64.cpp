@@ -2097,6 +2097,7 @@ void CodeGenerator::visitWasmCompareExchangeHeap(
   Register memoryBase = ToRegister(ins->memoryBase());
   Register ptrReg = ToRegister(ins->ptr());
   BaseIndex srcAddr(memoryBase, ptrReg, TimesOne, mir->access().offset32());
+  auto zeroExtend = ToZeroExtendIndex(ins);
 
   Register oldval = ToRegister(ins->oldValue());
   Register newval = ToRegister(ins->newValue());
@@ -2105,7 +2106,8 @@ void CodeGenerator::visitWasmCompareExchangeHeap(
   Register maskTemp = ToTempRegisterOrInvalid(ins->temp2());
 
   masm.wasmCompareExchange(mir->access(), srcAddr, oldval, newval, valueTemp,
-                           offsetTemp, maskTemp, ToRegister(ins->output()));
+                           offsetTemp, maskTemp, ToRegister(ins->output()),
+                           zeroExtend);
 }
 
 void CodeGenerator::visitWasmAtomicExchangeHeap(LWasmAtomicExchangeHeap* ins) {
@@ -2114,13 +2116,14 @@ void CodeGenerator::visitWasmAtomicExchangeHeap(LWasmAtomicExchangeHeap* ins) {
   Register ptrReg = ToRegister(ins->ptr());
   Register value = ToRegister(ins->value());
   BaseIndex srcAddr(memoryBase, ptrReg, TimesOne, mir->access().offset32());
+  auto zeroExtend = ToZeroExtendIndex(ins);
 
   Register valueTemp = ToTempRegisterOrInvalid(ins->temp0());
   Register offsetTemp = ToTempRegisterOrInvalid(ins->temp1());
   Register maskTemp = ToTempRegisterOrInvalid(ins->temp2());
 
   masm.wasmAtomicExchange(mir->access(), srcAddr, value, valueTemp, offsetTemp,
-                          maskTemp, ToRegister(ins->output()));
+                          maskTemp, ToRegister(ins->output()), zeroExtend);
 }
 
 void CodeGenerator::visitWasmAtomicBinopHeap(LWasmAtomicBinopHeap* ins) {
@@ -2134,10 +2137,11 @@ void CodeGenerator::visitWasmAtomicBinopHeap(LWasmAtomicBinopHeap* ins) {
   Register maskTemp = ToTempRegisterOrInvalid(ins->temp2());
 
   BaseIndex srcAddr(memoryBase, ptrReg, TimesOne, mir->access().offset32());
+  auto zeroExtend = ToZeroExtendIndex(ins);
 
-  masm.wasmAtomicFetchOp(mir->access(), mir->operation(),
-                         ToRegister(ins->value()), srcAddr, valueTemp,
-                         offsetTemp, maskTemp, ToRegister(ins->output()));
+  masm.wasmAtomicFetchOp(
+      mir->access(), mir->operation(), ToRegister(ins->value()), srcAddr,
+      valueTemp, offsetTemp, maskTemp, ToRegister(ins->output()), zeroExtend);
 }
 
 void CodeGenerator::visitWasmAtomicBinopHeapForEffect(
@@ -2152,9 +2156,11 @@ void CodeGenerator::visitWasmAtomicBinopHeapForEffect(
   Register maskTemp = ToTempRegisterOrInvalid(ins->temp2());
 
   BaseIndex srcAddr(memoryBase, ptrReg, TimesOne, mir->access().offset32());
+  auto zeroExtend = ToZeroExtendIndex(ins);
+
   masm.wasmAtomicEffectOp(mir->access(), mir->operation(),
                           ToRegister(ins->value()), srcAddr, valueTemp,
-                          offsetTemp, maskTemp);
+                          offsetTemp, maskTemp, zeroExtend);
 }
 
 void CodeGenerator::visitWasmStackArg(LWasmStackArg* ins) {
@@ -2744,8 +2750,10 @@ void CodeGenerator::visitWasmCompareExchangeI64(LWasmCompareExchangeI64* ins) {
   uint32_t offset = ins->mir()->access().offset32();
 
   BaseIndex addr(memoryBase, ptr, TimesOne, offset);
+  auto zeroExtend = ToZeroExtendIndex(ins);
+
   masm.wasmCompareExchange64(ins->mir()->access(), addr, oldValue, newValue,
-                             output);
+                             output, zeroExtend);
 }
 
 void CodeGenerator::visitWasmAtomicExchangeI64(LWasmAtomicExchangeI64* ins) {
@@ -2756,7 +2764,10 @@ void CodeGenerator::visitWasmAtomicExchangeI64(LWasmAtomicExchangeI64* ins) {
   uint32_t offset = ins->mir()->access().offset32();
 
   BaseIndex addr(memoryBase, ptr, TimesOne, offset);
-  masm.wasmAtomicExchange64(ins->mir()->access(), addr, value, output);
+  auto zeroExtend = ToZeroExtendIndex(ins);
+
+  masm.wasmAtomicExchange64(ins->mir()->access(), addr, value, output,
+                            zeroExtend);
 }
 
 void CodeGenerator::visitWasmAtomicBinopI64(LWasmAtomicBinopI64* ins) {
@@ -2767,9 +2778,10 @@ void CodeGenerator::visitWasmAtomicBinopI64(LWasmAtomicBinopI64* ins) {
   uint32_t offset = ins->mir()->access().offset32();
 
   BaseIndex addr(memoryBase, ptr, TimesOne, offset);
+  auto zeroExtend = ToZeroExtendIndex(ins);
 
   masm.wasmAtomicFetchOp64(ins->mir()->access(), ins->mir()->operation(), value,
-                           addr, Register64::Invalid(), output);
+                           addr, Register64::Invalid(), output, zeroExtend);
 }
 
 void CodeGenerator::visitSimd128(LSimd128* ins) { MOZ_CRASH("No SIMD"); }
