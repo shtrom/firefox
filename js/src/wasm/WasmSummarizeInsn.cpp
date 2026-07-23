@@ -1670,23 +1670,23 @@ SummarizeResult SummarizeTrapInstruction(const InstructionBytes& insn) {
 
 #elif defined(JS_CODEGEN_LOONG64)
 
-Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
+SummarizeResult SummarizeTrapInstruction(const InstructionBytes& insn) {
   // Check instruction alignment.
-  MOZ_ASSERT(0 == (uintptr_t(insnAddr) & 3));
+  MOZ_ASSERT(insn.isU32aligned());
 
-  const uint32_t insn = *(uint32_t*)insnAddr;
+  const uint32_t insnBits = insn.getU32LittleEndian(0);
 
 #  define INSN(_maxIx, _minIx) \
-    ((insn >> (_minIx)) & ((uint32_t(1) << ((_maxIx) - (_minIx) + 1)) - 1))
+    ((insnBits >> (_minIx)) & ((uint32_t(1) << ((_maxIx) - (_minIx) + 1)) - 1))
 
   // LoongArch instructions encoding document:
   // https://loongson.github.io/LoongArch-Documentation/LoongArch-Vol1-EN#table-of-instruction-encoding
 
   // MacroAssembler::wasmTrapInstruction uses this to create SIGILL.
   // break 0x6
-  if (insn == 0x002A0006) {
+  if (insnBits == 0x002A0006) {
     static_assert(WasmTrapInstructionLength == 4);
-    return Some(TrapMachineInsn::OfficialUD);
+    return SummarizeResult(TrapMachineInsn::OfficialUD, 4);
   }
 
   // Loads/stores with reg + offset (si12).
@@ -1694,52 +1694,52 @@ Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
     switch (INSN(25, 22)) {
       // ld.b  rd, rj, si12
       case 0b0000:
-        return Some(TrapMachineInsn::Load8);
+        return SummarizeResult(TrapMachineInsn::Load8, 4);
       // ld.h  rd, rj, si12
       case 0b0001:
-        return Some(TrapMachineInsn::Load16);
+        return SummarizeResult(TrapMachineInsn::Load16, 4);
       // ld.w  rd, rj, si12
       case 0b0010:
-        return Some(TrapMachineInsn::Load32);
+        return SummarizeResult(TrapMachineInsn::Load32, 4);
       // ld.d  rd, rj, si12
       case 0b0011:
-        return Some(TrapMachineInsn::Load64);
+        return SummarizeResult(TrapMachineInsn::Load64, 4);
       // st.b  rd, rj, si12
       case 0b0100:
-        return Some(TrapMachineInsn::Store8);
+        return SummarizeResult(TrapMachineInsn::Store8, 4);
       // st.h  rd, rj, si12
       case 0b0101:
-        return Some(TrapMachineInsn::Store16);
+        return SummarizeResult(TrapMachineInsn::Store16, 4);
       // st.w  rd, rj, si12
       case 0b0110:
-        return Some(TrapMachineInsn::Store32);
+        return SummarizeResult(TrapMachineInsn::Store32, 4);
       // st.d  rd, rj, si12
       case 0b0111:
-        return Some(TrapMachineInsn::Store64);
+        return SummarizeResult(TrapMachineInsn::Store64, 4);
       // ld.bu  rd, rj, si12
       case 0b1000:
-        return Some(TrapMachineInsn::Load8);
+        return SummarizeResult(TrapMachineInsn::Load8, 4);
       // ld.hu  rd, rj, si12
       case 0b1001:
-        return Some(TrapMachineInsn::Load16);
+        return SummarizeResult(TrapMachineInsn::Load16, 4);
       // ld.wu  rd, rj, si12
       case 0b1010:
-        return Some(TrapMachineInsn::Load32);
+        return SummarizeResult(TrapMachineInsn::Load32, 4);
       // preld  hint, rj, si12
       case 0b1011:
         break;
       // fld.s  fd, rj, si12
       case 0b1100:
-        return Some(TrapMachineInsn::Load32);
+        return SummarizeResult(TrapMachineInsn::Load32, 4);
       // fst.s  fd, rj, si12
       case 0b1101:
-        return Some(TrapMachineInsn::Store32);
+        return SummarizeResult(TrapMachineInsn::Store32, 4);
       // fld.d  fd, rj, si12
       case 0b1110:
-        return Some(TrapMachineInsn::Load64);
+        return SummarizeResult(TrapMachineInsn::Load64, 4);
       // fst.s  fd, rj, si12
       case 0b1111:
-        return Some(TrapMachineInsn::Store64);
+        return SummarizeResult(TrapMachineInsn::Store64, 4);
       default:
         break;
     }
@@ -1750,52 +1750,52 @@ Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
     switch (INSN(21, 18)) {
       // ldx.b  rd, rj, rk
       case 0b0000:
-        return Some(TrapMachineInsn::Load8);
+        return SummarizeResult(TrapMachineInsn::Load8, 4);
       // ldx.h  rd, rj, rk
       case 0b0001:
-        return Some(TrapMachineInsn::Load16);
+        return SummarizeResult(TrapMachineInsn::Load16, 4);
       // ldx.w  rd, rj, rk
       case 0b0010:
-        return Some(TrapMachineInsn::Load32);
+        return SummarizeResult(TrapMachineInsn::Load32, 4);
       // ldx.d  rd, rj, rk
       case 0b0011:
-        return Some(TrapMachineInsn::Load64);
+        return SummarizeResult(TrapMachineInsn::Load64, 4);
       // stx.b  rd, rj, rk
       case 0b0100:
-        return Some(TrapMachineInsn::Store8);
+        return SummarizeResult(TrapMachineInsn::Store8, 4);
       // stx.h  rd, rj, rk
       case 0b0101:
-        return Some(TrapMachineInsn::Store16);
+        return SummarizeResult(TrapMachineInsn::Store16, 4);
       // stx.w  rd, rj, rk
       case 0b0110:
-        return Some(TrapMachineInsn::Store32);
+        return SummarizeResult(TrapMachineInsn::Store32, 4);
       // stx.d  rd, rj, rk
       case 0b0111:
-        return Some(TrapMachineInsn::Store64);
+        return SummarizeResult(TrapMachineInsn::Store64, 4);
       // ldx.bu  rd, rj, rk
       case 0b1000:
-        return Some(TrapMachineInsn::Load8);
+        return SummarizeResult(TrapMachineInsn::Load8, 4);
       // ldx.hu  rd, rj, rk
       case 0b1001:
-        return Some(TrapMachineInsn::Load16);
+        return SummarizeResult(TrapMachineInsn::Load16, 4);
       // ldx.wu  rd, rj, rk
       case 0b1010:
-        return Some(TrapMachineInsn::Load32);
+        return SummarizeResult(TrapMachineInsn::Load32, 4);
       // preldx  hint, rj, rk
       case 0b1011:
         break;
       // fldx.s  fd, rj, rk
       case 0b1100:
-        return Some(TrapMachineInsn::Load32);
+        return SummarizeResult(TrapMachineInsn::Load32, 4);
       // fldx.d  fd, rj, rk
       case 0b1101:
-        return Some(TrapMachineInsn::Load64);
+        return SummarizeResult(TrapMachineInsn::Load64, 4);
       // fstx.s  fd, rj, rk
       case 0b1110:
-        return Some(TrapMachineInsn::Store32);
+        return SummarizeResult(TrapMachineInsn::Store32, 4);
       // fstx.d  fd, rj, rk
       case 0b1111:
-        return Some(TrapMachineInsn::Store64);
+        return SummarizeResult(TrapMachineInsn::Store64, 4);
       default:
         break;
     }
@@ -1808,22 +1808,22 @@ Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
     switch (INSN(26, 24)) {
       // ll.w  rd, rj, si14
       case 0b000:
-        return Some(TrapMachineInsn::Load32);
+        return SummarizeResult(TrapMachineInsn::Load32, 4);
       // ll.d  rd, rj, si14
       case 0b010:
-        return Some(TrapMachineInsn::Load64);
+        return SummarizeResult(TrapMachineInsn::Load64, 4);
       // ldptr.w  rd, rj, si14
       case 0b100:
-        return Some(TrapMachineInsn::Load32);
+        return SummarizeResult(TrapMachineInsn::Load32, 4);
       // stptr.w  rd, rj, si14
       case 0b101:
-        return Some(TrapMachineInsn::Store32);
+        return SummarizeResult(TrapMachineInsn::Store32, 4);
       // ldptr.d  rd, rj, si14
       case 0b110:
-        return Some(TrapMachineInsn::Load64);
+        return SummarizeResult(TrapMachineInsn::Load64, 4);
       // stptr.d  rd, rj, si14
       case 0b111:
-        return Some(TrapMachineInsn::Store64);
+        return SummarizeResult(TrapMachineInsn::Store64, 4);
       default:
         break;
         // We are never asked to examine store-exclusive instructions, because
@@ -1836,7 +1836,7 @@ Maybe<TrapMachineInsn> SummarizeTrapInstruction(const uint8_t* insnAddr) {
 
 #  undef INSN
 
-  return Nothing();
+  return SummarizeResult();
 }
 
 // ================================================================ mips64 ====
