@@ -45,8 +45,6 @@
 #include "jit/shared/Disassembler-shared.h"
 #include "jit/shared/IonAssemblerBuffer.h"
 
-#define xlen (uint8_t(sizeof(void*) * 8))
-
 namespace js {
 namespace jit {
 
