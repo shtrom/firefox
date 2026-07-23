@@ -3178,6 +3178,9 @@ toolbar:not(#TabsToolbar) #firefox-view-button {
   color: var(--color-accent-primary);
   width: auto;
   padding: 0;
+  @media -moz-pref("browser.nova.enabled") {
+    padding-block-start: var(--space-medium);
+  }
 
   &:hover {
     --button-border-color-ghost-hover: var(--border-color-selected);
