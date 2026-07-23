@@ -84,6 +84,13 @@ class nsJXLDecoder final : public Decoder {
   // mTransform are read here); for animated images the caller must also
   // have observed frame_ready so that AnimationParams is available.
   nsresult EnsureSurfacePipe();
+  // Create the qcms input profile from the output color space's CICP code
+  // points, or null if it isn't a CICP-representable RGB space (or is PQ/HLG,
+  // which we keep on the ICC path for its baked-in tone mapping).
+  qcms_profile* MaybeCreateInputProfileFromCICP();
+  // Create the qcms input profile from the ICC profile jxl-rs provides, or null
+  // if none is available or it fails to parse.
+  qcms_profile* MaybeCreateInputProfileFromICC();
   void BuildCMSTransform();
   nsresult FinishFrame();
   void FlushPartialFrame();
