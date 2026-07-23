@@ -266,7 +266,7 @@ def mozharness_on_generic_worker(config, job, taskdesc):
         system_python_dir = ""
         gecko_path = "$GECKO_PATH"
 
-    if run.get("use-python", "system") == "system":
+    if job.get("use-python", "system") == "system":
         python_bindir = system_python_dir
     else:
         # $MOZ_PYTHON_HOME is going to be substituted in run-task, when we
