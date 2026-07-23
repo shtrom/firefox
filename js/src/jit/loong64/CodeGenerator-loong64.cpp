@@ -2265,10 +2265,12 @@ void CodeGenerator::visitWasmSelect(LWasmSelect* ins) {
   }
 }
 
-// We expect to handle the cases: compare is {{U,}Int32, {U,}Int64}, Float32,
-// Double}, and select is {{U,}Int32, {U,}Int64}}.
+// We expect to handle these cases (as in "compare x select"):
+// {{U,}Int32, {U,}Int64}, Float32, Double}
+// x
+// {{U,}Int32, {U,}Int64}, Float32, Double}
 void CodeGenerator::visitWasmCompareAndSelect(LWasmCompareAndSelect* ins) {
-  MCompare::CompareType compTy = ins->compareType();
+  const MCompare::CompareType compTy = ins->compareType();
   MOZ_RELEASE_ASSERT(
       compTy == MCompare::Compare_Int32 || compTy == MCompare::Compare_UInt32 ||
           compTy == MCompare::Compare_Int64 ||
@@ -2276,24 +2278,33 @@ void CodeGenerator::visitWasmCompareAndSelect(LWasmCompareAndSelect* ins) {
           compTy == MCompare::Compare_Float32 ||
           compTy == MCompare::Compare_Double,
       "CodeGenerator::visitWasmCompareAndSelect: unexpected compare type");
+  const bool compTyIsFloat =
+      compTy == MCompare::Compare_Float32 || compTy == MCompare::Compare_Double;
+
+  const MIRType insTy = ins->mir()->type();
   MOZ_RELEASE_ASSERT(
-      ins->mir()->type() == MIRType::Int32 ||
-          ins->mir()->type() == MIRType::Int64,
+      insTy == MIRType::Int32 || insTy == MIRType::Int64 ||
+          insTy == MIRType::Float32 || insTy == MIRType::Double,
       "CodeGenerator::visitWasmCompareAndSelect: unexpected select type");
+  const bool insTyIsFloat =
+      insTy == MIRType::Float32 || insTy == MIRType::Double;
 
   UseScratchRegisterScope temps(masm);
   Register scratch = temps.Acquire();
 
-  if (compTy == MCompare::Compare_Float32 ||
-      compTy == MCompare::Compare_Double) {
+  if (compTyIsFloat) {
     FloatRegister lhs = ToFloatRegister(ins->leftExpr());
     FloatRegister rhs = ToFloatRegister(ins->rightExpr());
     Assembler::DoubleCondition cond = JSOpToDoubleCondition(ins->jsop());
 
     if (compTy == MCompare::Compare_Float32) {
-      masm.ma_cmp_set_float32(scratch, lhs, rhs, cond);
+      masm.ma_cmp_set_float32(Assembler::FCC0, lhs, rhs, cond);
     } else {
-      masm.ma_cmp_set_double(scratch, lhs, rhs, cond);
+      masm.ma_cmp_set_double(Assembler::FCC0, lhs, rhs, cond);
+    }
+    if (!insTyIsFloat) {
+      // For later use in mask{eq,ne}z.
+      masm.as_movcf2gr(scratch, Assembler::FCC0);
     }
   } else {
     Register lhs = ToRegister(ins->leftExpr());
@@ -2301,13 +2312,25 @@ void CodeGenerator::visitWasmCompareAndSelect(LWasmCompareAndSelect* ins) {
     Assembler::Condition cond = JSOpToCondition(compTy, ins->jsop());
 
     masm.ma_cmp_set(scratch, lhs, rhs, cond);
+    if (insTyIsFloat) {
+      // For later use in fsel.
+      masm.as_movgr2cf(Assembler::FCC0, scratch);
+    }
   }
 
-  Register trueExpr = ToRegister(ins->ifTrueExpr());
-  Register falseExpr = ToRegister(ins->ifFalseExpr());
-  Register output = ToRegister(ins->output());
+  if (insTyIsFloat) {
+    FloatRegister trueExpr = ToFloatRegister(ins->ifTrueExpr());
+    FloatRegister falseExpr = ToFloatRegister(ins->ifFalseExpr());
+    FloatRegister output = ToFloatRegister(ins->output());
 
-  masm.ma_cselnz(output, trueExpr, falseExpr, scratch, scratch);
+    masm.as_fsel(output, falseExpr, trueExpr, Assembler::FCC0);
+  } else {
+    Register trueExpr = ToRegister(ins->ifTrueExpr());
+    Register falseExpr = ToRegister(ins->ifFalseExpr());
+    Register output = ToRegister(ins->output());
+
+    masm.ma_cselnz(output, trueExpr, falseExpr, scratch, scratch);
+  }
 }
 
 void CodeGenerator::visitUDivConstant(LUDivConstant* ins) {

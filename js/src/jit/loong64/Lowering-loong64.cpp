@@ -498,11 +498,14 @@ void LIRGeneratorLOONG64::lowerWasmSelectI64(MWasmSelect* select) {
   defineInt64(lir, select);
 }
 
-// On loong64 we specialize the cases: compare is {{U,}Int32, {U,}Int64},
-// Float32, Double}, and select is {{U,}Int32, {U,}Int64}}.
+// On loong64 we specialize for these cases (as in "compare x select"):
+// {{U,}Int32, {U,}Int64}, Float32, Double}
+// x
+// {{U,}Int32, {U,}Int64}, Float32, Double}
 bool LIRGeneratorShared::canSpecializeWasmCompareAndSelect(
     MCompare::CompareType compTy, MIRType insTy) {
-  return (insTy == MIRType::Int32 || insTy == MIRType::Int64) &&
+  return (insTy == MIRType::Int32 || insTy == MIRType::Int64 ||
+          insTy == MIRType::Float32 || insTy == MIRType::Double) &&
          (compTy == MCompare::Compare_Int32 ||
           compTy == MCompare::Compare_UInt32 ||
           compTy == MCompare::Compare_Int64 ||
