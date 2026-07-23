@@ -211,6 +211,7 @@ def handle_keyed_by(config, tests):
         "raptor.network-conditions",
         "limit-platforms",
         "fetches.fetch",
+        "fetches.toolchain",
         "max-run-time",
         "run-on-projects",
         "target",
@@ -651,11 +652,10 @@ def add_simpleperf(config, tests):
             "linux64-android-simpleperf-linux-repack",
             "linux64-samply",
         ]
-        by_app = fetches.setdefault("toolchain", {}).setdefault("by-app", {})
-        default_toolchains = by_app.setdefault("default", [])
+        toolchain_fetches = fetches.setdefault("toolchain", [])
         for toolchain in toolchains:
-            if toolchain not in default_toolchains:
-                default_toolchains.append(toolchain)
+            if toolchain not in toolchain_fetches:
+                toolchain_fetches.append(toolchain)
 
     for test in tests:
         app = test.get("app")
@@ -725,19 +725,10 @@ def add_etw_profile(config, tests):
 
         fetches = test.setdefault("fetches", {})
 
-        by_apps = fetches.setdefault("toolchain", {}).setdefault("by-app", {})
-        for by_app in by_apps.values():
-            test_platforms = by_app.get("by-test-platform")
-
-            if not test_platforms:
-                continue
-
-            for test_platform, test_platform_config in test_platforms.items():
-                if "win" in test_platform:
-                    if "win64-samply" not in test_platform_config:
-                        test_platform_config.append("win64-samply")
-                    if "profiler-node-tools" not in test_platform_config:
-                        test_platform_config.append("profiler-node-tools")
+        toolchain_fetches = fetches.setdefault("toolchain", [])
+        for toolchain in ("win64-samply", "profiler-node-tools"):
+            if toolchain not in toolchain_fetches:
+                toolchain_fetches.append(toolchain)
 
         if not is_external_browser(test["app"]):
             fetches.setdefault("build", []).append({
