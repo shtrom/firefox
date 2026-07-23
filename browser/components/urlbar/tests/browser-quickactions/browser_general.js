@@ -115,12 +115,15 @@ add_task(async function basic() {
   await assertAction("testaction");
 
   info("The callback of the action is fired when selected");
-  let engaged = UrlbarTestUtils.promiseProviderEngagement(window);
   EventUtils.synthesizeKey("KEY_Tab", {}, window);
   assertAccessibilityWhenSelected("testaction");
   EventUtils.synthesizeKey("KEY_Enter", {}, window);
-  await engaged;
-  Assert.equal(testActionCalled, 1, "Test action was called");
+  // The action's onPick runs parent-side, so on the actor message path it fires
+  // asynchronously after the pick rather than synchronously.
+  await TestUtils.waitForCondition(
+    () => testActionCalled == 1,
+    "Test action was called"
+  );
 });
 
 add_task(async function match_in_phrase() {
@@ -204,12 +207,13 @@ add_task(async function testAfterTabSwitch() {
 
   await BrowserTestUtils.switchTab(gBrowser, tab1);
   info("Testing if quick action in tab 1 still works.");
-  let engaged = UrlbarTestUtils.promiseProviderEngagement(window);
   EventUtils.synthesizeKey("KEY_Tab", {}, window);
   assertAccessibilityWhenSelected("testaction");
   EventUtils.synthesizeKey("KEY_Enter", {}, window);
-  await engaged;
-  Assert.equal(testActionCalled, 2, "Test action was called");
+  await TestUtils.waitForCondition(
+    () => testActionCalled == 2,
+    "Test action was called"
+  );
 
   BrowserTestUtils.removeTab(tab2);
 });

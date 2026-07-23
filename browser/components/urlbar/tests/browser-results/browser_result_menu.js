@@ -254,11 +254,9 @@ add_task(async function firefoxSuggest() {
   gBrowser.removeCurrentTab();
 
   await openResults();
-  let engaged = UrlbarTestUtils.promiseProviderEngagement(window);
   await UrlbarTestUtils.openResultMenuAndPressAccesskey(window, "D", {
     resultIndex: 0,
   });
-  await engaged;
 
   Assert.greater(
     onEngagementCallCount,

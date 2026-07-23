@@ -645,7 +645,6 @@ export class ProvidersManager {
     for (const provider of engagementProviders) {
       if (details.result.providerName == provider.name) {
         provider.tryMethod("onEngagement", queryContext, controller, details);
-        controller.notify(lazy.UrlbarShared.NOTIFICATIONS.PROVIDER_ENGAGEMENT);
         break;
       }
     }

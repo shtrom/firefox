@@ -55,10 +55,8 @@ add_task(async function test_quickaction() {
   );
 
   info("The callback of the action is fired when selected");
-  let engaged = UrlbarTestUtils.promiseProviderEngagement(window);
   EventUtils.synthesizeKey("KEY_Tab", {}, window);
   EventUtils.synthesizeKey("KEY_Enter", {}, window);
-  await engaged;
   Assert.equal(testActionCalled, 1, "Test action was called");
 });
 

@@ -26,13 +26,11 @@ add_task(async function test_selectByMouse() {
   const row = await doUnitConversion(win);
 
   info("Check if the result is copied to clipboard when selecting by mouse");
-  let engaged = UrlbarTestUtils.promiseProviderEngagement(win);
   EventUtils.synthesizeMouseAtCenter(
     row.querySelector(".urlbarView-no-wrap"),
     {},
     win
   );
-  await engaged;
   assertClipboard();
 
   await UrlbarTestUtils.promisePopupClose(win);
@@ -52,10 +50,8 @@ add_task(async function test_selectByKey() {
   win.gURLBar.focus();
 
   info("Check if the result is copied to clipboard when selecting by key");
-  let engaged = UrlbarTestUtils.promiseProviderEngagement(win);
   EventUtils.synthesizeKey("KEY_ArrowDown", {}, win);
   EventUtils.synthesizeKey("KEY_Enter", {}, win);
-  await engaged;
   assertClipboard();
 
   await UrlbarTestUtils.promisePopupClose(win);
