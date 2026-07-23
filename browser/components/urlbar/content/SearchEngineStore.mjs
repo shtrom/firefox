@@ -135,7 +135,7 @@ export class SearchEngineStore {
   /** @type {PartialSearchEngine[]} */
   #store = [];
   /** @type {?PartialSearchEngine} */
-  #default = null;
+  #defaultEngine = null;
   #controller;
   /** @type {((modifiedType: "removed"|"changed"|"default", engine: PartialSearchEngine) => void)[]} */
   #observers = [];
@@ -170,7 +170,7 @@ export class SearchEngineStore {
    * @returns {?PartialSearchEngine}
    */
   get default() {
-    return this.#default;
+    return this.#defaultEngine;
   }
 
   /**
@@ -261,7 +261,7 @@ export class SearchEngineStore {
     for (let engineInfo of engineInfos) {
       this.#store.push(new PartialSearchEngine(engineInfo));
     }
-    this.#default = this.#store[defaultIndex];
+    this.#defaultEngine = this.#store[defaultIndex];
 
     this.initialized = true;
     this.#initPromiseWithResolvers.resolve();
@@ -341,8 +341,8 @@ export class SearchEngineStore {
           );
           return;
         }
-        this.#default = this.#store[currentIndex];
-        this.#notifyObservers(modifiedType, this.#default);
+        this.#defaultEngine = this.#store[currentIndex];
+        this.#notifyObservers(modifiedType, this.#defaultEngine);
         break;
       }
     }
