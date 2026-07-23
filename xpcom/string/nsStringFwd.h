@@ -49,7 +49,7 @@ class nsTSubstringSplitter;
 template <typename T>
 using nsTStringComparator = int (*)(const T*, const T*, size_t, size_t);
 
-// The default string comparator (case-sensitive comparison)
+// The default string comparator (case-sensitive comparision)
 template <typename T>
 int nsTDefaultStringComparator(const T*, const T*, size_t, size_t);
 

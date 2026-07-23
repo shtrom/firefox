@@ -352,10 +352,6 @@ class nsTStringRepr {
                 reinterpret_cast<uintptr_t>(mData));
   }
 
-  bool Contains(const string_view& aString) const {
-    return Find(aString) != kNotFound;
-  }
-
   /**
    * Search for the given substring within this string.
    *

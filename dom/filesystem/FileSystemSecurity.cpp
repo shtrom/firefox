@@ -118,7 +118,7 @@ bool FileSystemSecurity::ContentProcessHasAccessTo(ContentParentId aId,
     return false;
   }
 #endif
-  if (StringBeginsWith(aPath, u"../"_ns) || aPath.Contains(u"/../"_ns) ||
+  if (StringBeginsWith(aPath, u"../"_ns) || FindInReadable(u"/../"_ns, aPath) ||
       StringEndsWith(aPath, u"/.."_ns) || aPath.EqualsLiteral("..")) {
     return false;
   }
