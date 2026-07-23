@@ -5,11 +5,11 @@
 //! Glue for using Fontations in Gecko.
 
 extern crate skrifa;
+use skrifa::prelude::*;
 use std::slice;
 
 /// Type used to represent a Skrifa FontRef in C++ as an opaque struct.
 #[derive(Clone)]
-#[allow(unused)]
 pub struct SkrifaFontRef<'a>(skrifa::FontRef<'a>);
 
 /// Create a SkrifaFontRef object for the given font data; returns null on failure.
@@ -44,4 +44,11 @@ pub extern "C" fn skrifa_font_delete<'a>(font: *mut SkrifaFontRef) {
     if !font.is_null() {
         unsafe { drop(Box::from_raw(font)) };
     }
+}
+
+/// Map the given unicode codepoint to a glyph ID; returns 0 for unsupported codepoints.
+#[no_mangle]
+pub extern "C" fn skrifa_font_map_char_to_glyph(font: &SkrifaFontRef, unicode: u32) -> u32 {
+    let charmap = font.0.charmap();
+    charmap.map(unicode).unwrap_or(GlyphId::NOTDEF).into()
 }
