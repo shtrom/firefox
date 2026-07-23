@@ -6,7 +6,6 @@ preprocessed_intervention_files = [
     "bug1081239-cmbchina.com.js",
     "bug1280834-bankofamerica.com.js",
     "bug1448747-FastClick_breakage.js",
-    "bug1457335-histography.io.js",
     "bug1575000-apply.lloydsbank.co.uk-fix_misaligned_radio_buttons.css",
     "bug1579159-m.tailieu.vn.js",
     "bug1610046-diverse.direct-fix_image_flickering.css",
