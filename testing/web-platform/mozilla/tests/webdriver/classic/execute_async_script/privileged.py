@@ -1,8 +1,17 @@
+from copy import deepcopy
+
 import pytest
 from support.context import using_context
-from tests.classic.execute_script import execute_script
-from tests.support.classic.asserts import assert_success
+from tests.classic.execute_async_script import execute_async_script
+from tests.support.classic.asserts import assert_error, assert_success
 from webdriver.client import WebFrame, WebWindow
+
+pytestmark = pytest.mark.asyncio
+
+
+async def test_execute_async_script_parent_process_context(parent_process_session):
+    response = execute_async_script(parent_process_session, "arguments[0](1 + 1)")
+    assert_error(response, "unsupported operation")
 
 
 @pytest.mark.geckodriver(allow_system_access=True)
@@ -14,7 +23,7 @@ from webdriver.client import WebFrame, WebWindow
     ],
     ids=["frame", "window"],
 )
-def test_web_reference(
+def test_web_reference_chrome_context(
     session, expression, default_chrome_handler, new_chrome_window, expected_type
 ):
     chrome_url = f"{default_chrome_handler}test.xhtml"
@@ -24,7 +33,7 @@ def test_web_reference(
         session.window_handle = new_window.id
         assert session.url == chrome_url
 
-        result = execute_script(session, f"return {expression}")
+        result = execute_async_script(session, f"arguments[0]({expression})")
         reference = assert_success(result)
 
         assert isinstance(reference, expected_type)
@@ -33,3 +42,11 @@ def test_web_reference(
             assert reference.id in session.handles
         else:
             assert reference.id not in session.handles
+
+
+@pytest.mark.geckodriver(allow_system_access=True)
+def test_execute_async_script_parent_process_context_with_system_access(session):
+    session.url = "about:about"
+
+    response = execute_async_script(session, "arguments[0](1 + 1)")
+    assert_success(response, 2)
