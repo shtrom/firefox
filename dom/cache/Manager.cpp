@@ -127,6 +127,10 @@ class SetupAction final : public SyncDBAction {
       QM_TRY_INSPECT(const auto& orphanedCacheIdList,
                      db::FindOrphanedCacheIds(*aConn));
 
+      const ScopedLogExtraInfo orphanCleanupScope{
+          ScopedLogExtraInfo::kTagContextTainted,
+          "CacheSetupAction::OrphanCleanupFailed"_ns};
+
       QM_TRY_INSPECT(
           const CheckedInt64& overallDeletedPaddingSize,
           Reduce(
