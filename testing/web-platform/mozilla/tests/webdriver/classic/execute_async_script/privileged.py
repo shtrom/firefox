@@ -1,10 +1,11 @@
+import tempfile
 from copy import deepcopy
+from pathlib import Path
 
 import pytest
 from support.context import using_context
 from tests.classic.execute_async_script import execute_async_script
 from tests.support.classic.asserts import assert_error, assert_success
-from webdriver.client import WebFrame, WebWindow
 
 pytestmark = pytest.mark.asyncio
 
@@ -14,39 +15,68 @@ async def test_execute_async_script_parent_process_context(parent_process_sessio
     assert_error(response, "unsupported operation")
 
 
+async def test_execute_async_script_privilegedabout_context(configuration, geckodriver):
+    # Runs in a "privilegedabout" process with a content principal.
+    url = "about:certificate"
+
+    config = deepcopy(configuration)
+    config["capabilities"]["moz:firefoxOptions"]["args"].append(url)
+    config["capabilities"]["moz:firefoxOptions"]["androidIntentArguments"] = [
+        "-d",
+        url,
+    ]
+
+    driver = geckodriver(config=config, force_new=True)
+    driver.new_session()
+
+    assert driver.session.url == url
+
+    response = execute_async_script(driver.session, "arguments[0](1 + 1)")
+    assert_error(response, "unsupported operation")
+
+
+def test_execute_async_script_file_url_context(session):
+    # Bug 2040913: Reduce page load timeout to prevent hangs on Android
+    session.timeouts.page_load = 3
+
+    with tempfile.NamedTemporaryFile(suffix=".html", delete=False) as f:
+        f.write(b"<p>test</p>")
+        file_url = Path(f.name).as_uri()
+
+    session.url = file_url
+
+    response = execute_async_script(session, "arguments[0](1 + 1)")
+    assert_success(response, 2)
+
+
 @pytest.mark.geckodriver(allow_system_access=True)
 @pytest.mark.parametrize(
-    "expression, expected_type",
+    "expression, expected_value",
     [
-        ("window.frames[0]", WebFrame),
-        ("window", WebWindow),
+        ("ChromeUtils.getClassName(document.defaultView)", "Window"),
+        ("Ci.nsICookie.SAMESITE_STRICT", 2),
     ],
-    ids=["frame", "window"],
+    ids=["chrome-utils", "interface"],
 )
-def test_web_reference_chrome_context(
-    session, expression, default_chrome_handler, new_chrome_window, expected_type
+def test_execute_async_script_chrome_context_with_system_access(
+    session, expression, expected_value
 ):
-    chrome_url = f"{default_chrome_handler}test.xhtml"
-    new_window = new_chrome_window(chrome_url)
-
     with using_context(session, "chrome"):
-        session.window_handle = new_window.id
-        assert session.url == chrome_url
-
-        result = execute_async_script(session, f"arguments[0]({expression})")
-        reference = assert_success(result)
-
-        assert isinstance(reference, expected_type)
-
-        if isinstance(reference, WebWindow):
-            assert reference.id in session.handles
-        else:
-            assert reference.id not in session.handles
+        response = execute_async_script(session, f"arguments[0]({expression})")
+        assert_success(response, expected_value)
 
 
 @pytest.mark.geckodriver(allow_system_access=True)
 def test_execute_async_script_parent_process_context_with_system_access(session):
     session.url = "about:about"
+
+    response = execute_async_script(session, "arguments[0](1 + 1)")
+    assert_success(response, 2)
+
+
+@pytest.mark.geckodriver(allow_system_access=True)
+def test_execute_async_script_privilegedabout_context_with_system_access(session):
+    session.url = "about:certificate"
 
     response = execute_async_script(session, "arguments[0](1 + 1)")
     assert_success(response, 2)

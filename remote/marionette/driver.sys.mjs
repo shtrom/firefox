@@ -22,7 +22,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   error: "chrome://remote/content/shared/webdriver/Errors.sys.mjs",
   getMarionetteCommandsActorProxy:
     "chrome://remote/content/marionette/actors/MarionetteCommandsParent.sys.mjs",
-  isParentProcess:
+  isPrivilegedContext:
     "chrome://remote/content/shared/BrowsingContextUtils.sys.mjs",
   isWebdriverSafeNavigationURL:
     "chrome://remote/content/shared/BrowsingContextUtils.sys.mjs",
@@ -4195,12 +4195,15 @@ export class GeckoDriver {
       async,
     };
 
-    // Script evaluation against parent process contexts should only be allowed
+    // Script evaluation against privileged contexts should only be allowed
     // if allowSystemAccess is true.
     const context = this.getBrowsingContext();
-    if (!lazy.RemoteAgent.allowSystemAccess && lazy.isParentProcess(context)) {
+    if (
+      !lazy.RemoteAgent.allowSystemAccess &&
+      lazy.isPrivilegedContext(context)
+    ) {
       throw new lazy.error.UnsupportedOperationError(
-        `ExecuteScript and ExecuteAsyncScript are not supported for parent process browsing contexts: ${context.id}`
+        `ExecuteScript and ExecuteAsyncScript are not supported for privileged browsing contexts: ${context.id}`
       );
     }
 
