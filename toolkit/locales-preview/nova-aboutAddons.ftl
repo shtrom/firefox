@@ -47,14 +47,17 @@ aboutaddons-themes-picker-disable-button =
 aboutaddons-themes-picker-install-button =
     .label = Install
 
-## Theme names shown in the Firefox Themes picker in about:addons and theme add-on card.
+## Theme names shown in the Firefox Themes picker in about:addons and theme add-on card,
+## and new default-theme description for the theme add-on card.
 ##
 ## TODO(Bug 2052034): promote these out of locales-preview and into
 ## browser/locales/en-US/browser/appExtensionFields.ftl.
 ##
 ## TODO(Bug 2052034): all the inline comments for localizers that follows should be
 ## moved to appExtensionFields.ftl along with the related strings.
-##
+
+extension-default-theme-description2 = A balanced, familiar grey-purple for a classic { -brand-product-name } look.
+
 ## Theme labels
 ## These are short, evocative names for color themes in Firefox. Each name
 ## suggests a color through nature or fire imagery rather than naming the color

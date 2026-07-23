@@ -2,43 +2,111 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Maps add-on descriptors to updated Fluent IDs. Keep it in sync
-// with the list in XPIDatabase.sys.mjs.
-const updatedAddonFluentIds = new Map([
-  ["extension-default-theme-name", "extension-default-theme-name-auto"],
-]);
+const { getL10nIdForThemeProp } = ChromeUtils.importESModule(
+  "resource://gre/modules/addons/ThemesBundledLocalization.sys.mjs"
+);
 
-add_task(async function test_ensure_bundled_addons_are_localized() {
-  const l10n = new Localization(["browser/appExtensionFields.ftl"], true);
-  let l10nReg = L10nRegistry.getInstance();
-  let bundles = l10nReg.generateBundlesSync(
-    ["en-US"],
-    ["browser/appExtensionFields.ftl"]
-  );
+const PREF_NOVA_ENABLED = "browser.nova.enabled";
+const DEFAULT_THEME_ID = "default-theme@mozilla.org";
+
+add_task(async function test_ensure_builtin_themes_are_localized() {
   let addons = await AddonManager.getAllAddons();
   let standardBuiltInThemes = addons.filter(
     addon => addon.isBuiltin && addon.type === "theme"
   );
-  let bundle = bundles.next().value;
-
   ok(!!standardBuiltInThemes.length, "Standard built-in themes should exist");
 
-  for (let standardTheme of standardBuiltInThemes) {
-    let l10nId = standardTheme.id.replace("@mozilla.org", "");
-    for (let prop of ["name", "description"]) {
-      let defaultFluentId = `extension-${l10nId}-${prop}`;
-      let fluentId =
-        updatedAddonFluentIds.get(defaultFluentId) || defaultFluentId;
-      ok(
-        bundle.hasMessage(fluentId),
-        `l10n id for ${standardTheme.id} \"${prop}\" attribute should exist`
+  const l10n = new Localization(
+    ["browser/appExtensionFields.ftl", "branding/brand.ftl"],
+    true
+  );
+
+  const getExpectedL10nString = (themeId, prop, isNovaEnabled) => {
+    const id = getL10nIdForThemeProp(themeId, prop);
+    let message;
+
+    // TODO(Bug 2052034): simplify along with moving new fluent strings out
+    // of locales-preview.
+    if (
+      themeId === DEFAULT_THEME_ID &&
+      isNovaEnabled &&
+      ["name", "description"].includes(prop)
+    ) {
+      const novaPreviewL10n = new Localization(
+        ["locales-preview/nova-aboutAddons.ftl", "branding/brand.ftl"],
+        true
       );
-      const [expected] = l10n.formatMessagesSync([{ id: fluentId }]);
-      Assert.equal(
-        standardTheme[prop],
-        expected.value,
-        `Expect AddonWrapper ${prop} value to match the associated localized string`
-      );
+      [message] = novaPreviewL10n.formatMessagesSync([{ id }]);
+      ok(message, `Found a preview localized message for fluent id ${id}`);
+    } else {
+      [message] = l10n.formatMessagesSync([{ id }]);
+      ok(message, `Found a localized message for fluent id ${id}`);
     }
+
+    return message.value;
+  };
+
+  function testLocalizedThemeWrapperProperty(theme, isNovaEnabled) {
+    Assert.equal(
+      theme.name,
+      getExpectedL10nString(theme.id, "name", isNovaEnabled),
+      `Got the expected localized name for ${theme.id}`
+    );
+    Assert.equal(
+      theme.description,
+      getExpectedL10nString(theme.id, "description", isNovaEnabled),
+      `Got the expected localized description for ${theme.id}`
+    );
+  }
+
+  for (let novaEnabled of [true, false]) {
+    info(`Run with Nova ${novaEnabled ? "enabled" : "disabled"}`);
+    await SpecialPowers.pushPrefEnv({
+      set: [[PREF_NOVA_ENABLED, novaEnabled]],
+    });
+    for (let standardTheme of standardBuiltInThemes) {
+      testLocalizedThemeWrapperProperty(standardTheme, novaEnabled);
+    }
+    await SpecialPowers.popPrefEnv();
+  }
+});
+
+// Verifies every curated AMO-hosted theme names' fluent localizations are
+// bundled in the build as expected (description are not expected to be
+// bundled because they are currently only needed when the curated
+// AMO-hosted themes are installed, and so the AMO-provided localized
+// description is expected to be used instead).
+add_task(async function test_ensure_curated_theme_ids_are_localized() {
+  if (AppConstants.MOZ_APP_NAME === "thunderbird") {
+    todo(
+      false,
+      "Skip on curated AMO-hosted localized themes on Thunderbird builds"
+    );
+    return;
+  }
+
+  const { getThemesList } = ChromeUtils.importESModule(
+    "moz-src:///browser/themes/ThemesList.sys.mjs"
+  );
+  const themesListManager = await getThemesList({
+    installSource: "about:addons",
+  });
+  const THEME_IDS = themesListManager
+    .getThemesInfo()
+    .map(themeInfo => themeInfo.id)
+    .filter(themeId => themeId !== DEFAULT_THEME_ID);
+
+  // TODO(Bug 2052034): update ftl file path along with moving new fluent strings out
+  // of locales-preview.
+  const l10n = new Localization(["locales-preview/nova-aboutAddons.ftl"], true);
+
+  for (let themeId of THEME_IDS) {
+    let fluentId = getL10nIdForThemeProp(themeId, "name");
+    ok(fluentId, `Got a fluent id for theme ${themeId} localized name`);
+    const [message] = l10n.formatMessagesSync([{ id: fluentId }]);
+    ok(
+      message,
+      `l10n id "${fluentId}" for curated theme ${themeId} localized name should exist`
+    );
   }
 });

@@ -13,6 +13,10 @@ const { getThemesList } = ChromeUtils.importESModule(
   "moz-src:///browser/themes/ThemesList.sys.mjs"
 );
 
+const { getL10nIdForThemeProp, themeIdPrefix } = ChromeUtils.importESModule(
+  "resource://gre/modules/addons/ThemesBundledLocalization.sys.mjs"
+);
+
 AddonTestUtils.initMochitest(this);
 
 const PREF_NOVA_ENABLED = "browser.nova.enabled";
@@ -30,16 +34,8 @@ const DEFAULT_THEME_PREVIEW_NOVA_URL =
   "chrome://mozapps/content/extensions/default-theme/preview-nova.svg";
 
 let ALL_THEME_IDS;
-let themeIdPrefix;
-let THEMES_L10N_MAP;
 
 add_setup(async function () {
-  const pickerModule =
-    await import("chrome://mozapps/content/extensions/components/aboutaddons-themes-picker.mjs");
-
-  themeIdPrefix = pickerModule.themeIdPrefix;
-  THEMES_L10N_MAP = pickerModule.THEMES_L10N_MAP;
-
   const themesListManager = await getThemesList({
     installSource: "about:addons",
   });
@@ -216,7 +212,7 @@ add_task(async function test_picker_renders_all_known_themes() {
     Assert.ok(card, `theme card for "${idPrefix}" is rendered`);
     Assert.equal(
       card.querySelector(".theme-name").getAttribute("data-l10n-id"),
-      THEMES_L10N_MAP.get(themeId),
+      getL10nIdForThemeProp(themeId, "name"),
       `"${idPrefix}" card has the expected name l10n-id`
     );
 
