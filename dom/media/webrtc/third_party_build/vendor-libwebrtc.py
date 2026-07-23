@@ -461,7 +461,49 @@ def cleanup(target):
     shutil.rmtree("tmp-" + target)
 
 
-if __name__ == "__main__":
+# The destination directory within the tree depends on which target is being
+# vendored.
+def get_destination_dir(target):
+    if target == "build":
+        return os.path.normpath("third_party/chromium/build")
+    elif target == "third_party":
+        return os.path.join(os.path.normpath("third_party/libwebrtc"), "third_party")
+    elif target == "abseil-cpp":
+        return os.path.normpath("third_party/abseil-cpp")
+    return os.path.normpath("third_party/libwebrtc")
+
+
+def vendor(
+    target,
+    from_github=None,
+    from_googlesource=False,
+    from_local=None,
+    commit="master",
+    skip_fetch=False,
+    skip_cleanup=False,
+):
+    destination_dir = get_destination_dir(target)
+
+    os.makedirs(destination_dir, exist_ok=True)
+
+    if not skip_fetch:
+        if from_github:
+            fetch(target, make_github_url(from_github, commit), destination_dir)
+        elif from_googlesource:
+            fetch(target, make_googlesource_url(target, commit), destination_dir)
+        elif from_local:
+            fetch_local(target, from_local, commit, destination_dir)
+    unpack(target, destination_dir, from_local=from_local, commit=commit)
+    if from_local:
+        # Moving files out of the local working tree above leaves it in a
+        # partially gutted state, so always restore it (independent of
+        # skip_cleanup, which only concerns temporary tar artifacts).
+        reset_local_repo(from_local, commit)
+    elif not skip_cleanup:
+        cleanup(target)
+
+
+def main(argv=None):
     parser = argparse.ArgumentParser(description="Update libwebrtc")
     parser.add_argument(
         "target", choices=("libwebrtc", "build", "third_party", "abseil-cpp")
@@ -473,48 +515,17 @@ if __name__ == "__main__":
     parser.add_argument("--commit", type=str, default="master")
     parser.add_argument("--skip-fetch", action="store_true", default=False)
     parser.add_argument("--skip-cleanup", action="store_true", default=False)
-    args = parser.parse_args()
-
-    # The destination directory within the tree depends on which target is
-    # being vendored.
-    if args.target == "build":
-        destination_dir = os.path.normpath("third_party/chromium/build")
-    elif args.target == "third_party":
-        destination_dir = os.path.join(
-            os.path.normpath("third_party/libwebrtc"), "third_party"
-        )
-    elif args.target == "abseil-cpp":
-        destination_dir = os.path.normpath("third_party/abseil-cpp")
-    else:
-        destination_dir = os.path.normpath("third_party/libwebrtc")
-
-    os.makedirs(destination_dir, exist_ok=True)
-
-    if not args.skip_fetch:
-        if args.from_github:
-            fetch(
-                args.target,
-                make_github_url(args.from_github, args.commit),
-                destination_dir,
-            )
-        elif args.from_googlesource:
-            fetch(
-                args.target,
-                make_googlesource_url(args.target, args.commit),
-                destination_dir,
-            )
-        elif args.from_local:
-            fetch_local(args.target, args.from_local, args.commit, destination_dir)
-    unpack(
+    args = parser.parse_args(argv)
+    vendor(
         args.target,
-        destination_dir,
+        from_github=args.from_github,
+        from_googlesource=args.from_googlesource,
         from_local=args.from_local,
         commit=args.commit,
+        skip_fetch=args.skip_fetch,
+        skip_cleanup=args.skip_cleanup,
     )
-    if args.from_local:
-        # Moving files out of the local working tree above leaves it in a
-        # partially gutted state, so always restore it (independent of
-        # --skip-cleanup, which only concerns temporary tar artifacts).
-        reset_local_repo(args.from_local, args.commit)
-    elif not args.skip_cleanup:
-        cleanup(args.target)
+
+
+if __name__ == "__main__":
+    main()
