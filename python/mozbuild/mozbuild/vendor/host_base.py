@@ -17,6 +17,10 @@ class HttpError(Exception):
     pass
 
 
+class TagNotFound(Exception):
+    """No matching tag was found in the upstream repository."""
+
+
 class BaseHost:
     MAX_RETRIES_DEFAULT = urllib3.util.Retry(
         total=5, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504]
@@ -63,9 +67,9 @@ class BaseHost:
                 ).stdout.splitlines()[-1]
             except IndexError:  # 0 lines of output, the tag does not exist
                 if revision:
-                    raise Exception(f"Requested tag {revision} not found in source.")
+                    raise TagNotFound(f"Requested tag {revision} not found in source.")
                 else:
-                    raise Exception("No tags found in source.")
+                    raise TagNotFound("No tags found in source.")
 
             tag_timestamp = subprocess.run(
                 [
