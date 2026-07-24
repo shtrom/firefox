@@ -24,7 +24,6 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <string.h>
-#include <gdk/gdk.h>
 
 #ifdef MOZ_X11
 #  include "X11/Xlib.h"
