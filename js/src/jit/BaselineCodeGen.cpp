@@ -295,7 +295,7 @@ bool BaselineCompiler::compileImpl() {
 
   AutoCreatedBy acb(masm, "BaselineCompiler::compile");
 
-  perfSpewer_.startRecording();
+  perfSpewer_.startRecording(runtime);
   perfSpewer_.recordOffset(masm, "Prologue");
   if (!emitPrologue()) {
     return false;
@@ -7074,7 +7074,7 @@ bool BaselineCompiler::emitBody() {
       return false;
     }
 
-    if (PerfEnabled()) {
+    if (perfSpewer_.perfEnabled()) {
       perfSpewer_.recordInstruction(masm, handler.pc(), handler.line(),
                                     handler.column(), frame);
     }

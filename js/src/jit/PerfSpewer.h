@@ -31,6 +31,7 @@ struct CodeMetadata;
 
 namespace jit {
 
+class CompileRuntime;
 class JitCode;
 class BacktrackingAllocator;
 class CompilerFrameInfo;
@@ -40,13 +41,14 @@ class MIRGraph;
 class LInstruction;
 enum class CacheOp : uint16_t;
 
-void ResetPerfSpewer(bool enabled);
-
 struct AutoLockPerfSpewer {
   AutoLockPerfSpewer();
   ~AutoLockPerfSpewer();
 };
 
+// True iff a process-wide perf output mode (linux `perf` jitdump / Windows ETW)
+// is enabled. Excludes per-runtime gecko state. Use PerfSpewer::perfEnabled()
+// for that.
 bool PerfEnabled();
 
 class PerfSpewer {
@@ -68,6 +70,10 @@ class PerfSpewer {
 
   // The start offset that debugInfo_ is relative to.
   uint32_t startOffset_ = 0;
+
+  // Whether the runtime being compiled for had the gecko profiler enabled at
+  // startRecording time. False for runtime-less (wasm) compiles.
+  bool runtimeProfilingEnabled_ = false;
 
   // The generated IR file that we write into for IONPERF=ir. The move
   // constructors assert that this file has been closed/finished.
@@ -115,8 +121,18 @@ class PerfSpewer {
   // Mark the start code offset that this perf spewer is relative to.
   void markStartOffset(uint32_t offset) { startOffset_ = offset; }
 
+  // True iff this instance should record for any consumer: a process-wide perf
+  // mode or the captured runtime's gecko profiler.
+  bool perfEnabled() const;
+
+  // perfEnabled() restricted to per-instruction source data (excludes IR
+  // modes).
+  bool perfSrcEnabled() const;
+
   // Start recording. This may create a temp file if we're recording IR.
-  virtual void startRecording(const wasm::CodeMetadata* wasmCodeMeta = nullptr);
+  // `runtime` gates the per-runtime recording path; pass nullptr for wasm.
+  virtual void startRecording(CompileRuntime* runtime = nullptr,
+                              const wasm::CodeMetadata* wasmCodeMeta = nullptr);
 
   // Finish recording and get ready for saving to jitdump, but do not yet
   // write the debug info.
@@ -132,13 +148,15 @@ class PerfSpewer {
                                  void* code_addr, uint64_t code_size,
                                  AutoLockPerfSpewer& lock);
 
-  // Explicitly free heap memory allocated using the system allocator. This must
-  // be called when the PerfSpewer is allocated in a LifoAlloc, since the
+  // Tear down recording state: free heap memory allocated using the system
+  // allocator and clear the captured profiling state so recording stops. This
+  // must be called when the PerfSpewer is allocated in a LifoAlloc, since the
   // destructor won't be called when the LifoAlloc is freed.
   void reset() {
     endRecording();
     debugInfo_.clearAndFree();
     irFileName_ = JS::UniqueChars();
+    runtimeProfilingEnabled_ = false;
   }
 
   // Build a (nativeOffset, line, column) table from the per-op recordings
@@ -173,6 +191,7 @@ class IonPerfSpewer : public PerfSpewer {
   IonPerfSpewer& operator=(IonPerfSpewer&&) = default;
 
   void startRecording(
+      CompileRuntime* runtime,
       const wasm::CodeMetadata* wasmCodeMeta = nullptr) override;
   void endRecording() override;
 

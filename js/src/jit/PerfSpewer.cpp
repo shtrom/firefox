@@ -63,6 +63,7 @@ pid_t gettid_pthread() {
 
 #include "jit/BaselineFrameInfo.h"
 #include "jit/CacheIR.h"
+#include "jit/CompileWrappers.h"
 #include "jit/Jitdump.h"
 #include "jit/JitSpewer.h"
 #include "jit/LIR.h"
@@ -100,7 +101,6 @@ using namespace js::jit;
 
 enum class PerfModeType { None, Function, Source, IR, IROperands, IRGraph };
 
-static std::atomic<bool> geckoProfiling = false;
 static std::atomic<PerfModeType> PerfMode = PerfModeType::None;
 
 // Mutex to guard access to the profiler vectors and jitdump file if perf
@@ -110,7 +110,6 @@ MOZ_RUNINIT static js::Mutex PerfMutex(mutexid::PerfSpewer);
 static PersistentRooted<GCVector<JitCode*, 0, js::SystemAllocPolicy>>
     jitCodeVector;
 
-static bool IsGeckoProfiling() { return geckoProfiling; }
 #ifdef JS_ION_PERF
 constinit static UniqueChars spew_dir;
 static FILE* JitDumpFilePtr = nullptr;
@@ -362,23 +361,13 @@ void PerfSpewer::Init() {
 #endif
 }
 
-static void ResetPerfSpewer(AutoLockPerfSpewer& lock, bool enabled) {
-  jitCodeVector.clear();
-  geckoProfiling = enabled;
-}
-
-void js::jit::ResetPerfSpewer(bool enabled) {
-  AutoLockPerfSpewer lock;
-  ::ResetPerfSpewer(lock, enabled);
-}
-
 static void DisablePerfSpewer(AutoLockPerfSpewer& lock) {
   fprintf(stderr, "Warning: Disabling PerfSpewer.\n");
 
 #ifdef XP_WIN
   etwCollection = false;
 #endif
-  ResetPerfSpewer(lock, false);
+  jitCodeVector.clear();
   if (PerfMode == PerfModeType::None) {
     return;
   }
@@ -398,9 +387,7 @@ static void DisablePerfSpewer() {
   DisablePerfSpewer(lock);
 }
 
-static bool PerfSrcEnabled() {
-  return PerfMode == PerfModeType::Source || IsGeckoProfiling();
-}
+static bool PerfSrcEnabled() { return PerfMode == PerfModeType::Source; }
 
 #ifdef JS_JITSPEW
 static bool PerfIROpsEnabled() { return PerfMode == PerfModeType::IROperands; }
@@ -413,8 +400,14 @@ static bool PerfIREnabled() {
          (PerfMode == PerfModeType::IR);
 }
 
-bool js::jit::PerfEnabled() {
-  return PerfMode != PerfModeType::None || IsGeckoProfiling();
+bool js::jit::PerfEnabled() { return PerfMode != PerfModeType::None; }
+
+bool PerfSpewer::perfEnabled() const {
+  return PerfEnabled() || runtimeProfilingEnabled_;
+}
+
+bool PerfSpewer::perfSrcEnabled() const {
+  return PerfSrcEnabled() || runtimeProfilingEnabled_;
 }
 
 void InlineCachePerfSpewer::recordInstruction(MacroAssembler& masm,
@@ -443,8 +436,9 @@ void IonPerfSpewer::disable() {
   PerfSpewer::disable();
 }
 
-void IonPerfSpewer::startRecording(const wasm::CodeMetadata* wasmCodeMeta) {
-  PerfSpewer::startRecording();
+void IonPerfSpewer::startRecording(CompileRuntime* runtime,
+                                   const wasm::CodeMetadata* wasmCodeMeta) {
+  PerfSpewer::startRecording(runtime);
 #ifdef JS_JITSPEW
   if (PerfIRGraphEnabled()) {
     graphPrinter_.init(irFile_);
@@ -482,7 +476,7 @@ void IonPerfSpewer::recordPass(const char* pass, MIRGraph* graph,
 void IonPerfSpewer::recordInstruction(MacroAssembler& masm, LInstruction* ins) {
   uint32_t offset = masm.currentOffset() - startOffset_;
 
-  if (PerfSrcEnabled()) {
+  if (perfSrcEnabled()) {
     uint32_t line = 0;
     uint32_t column = 0;
     if (MDefinition* mir = ins->mirRaw()) {
@@ -615,7 +609,7 @@ void BaselinePerfSpewer::recordInstruction(
     MacroAssembler& masm, jsbytecode* pc, unsigned line,
     JS::LimitedColumnNumberOneOrigin column, CompilerFrameInfo& frame) {
   uint32_t offset = masm.currentOffset() - startOffset_;
-  if (PerfSrcEnabled()) {
+  if (perfSrcEnabled()) {
     if (!debugInfo_.emplaceBack(offset, line, column.oneOriginValue())) {
       disable();
     }
@@ -708,8 +702,9 @@ const char* InlineCachePerfSpewer::CodeName(uint32_t op) {
 
 void PerfSpewer::CollectJitCodeInfo(UniqueChars& function_name, JitCode* code,
                                     AutoLockPerfSpewer& lock) {
-  // Hold the JitCode objects here so they are not GC'd during profiling.
-  if (IsGeckoProfiling()) {
+  // Hold the JitCode objects here so they are not GC'd while a perf / ETW
+  // profiling session is active.
+  if (PerfMode != PerfModeType::None) {
     if (!jitCodeVector.append(code)) {
       DisablePerfSpewer(lock);
       return;
@@ -948,8 +943,13 @@ void PerfSpewer::disable() {
   disable(lock);
 }
 
-void PerfSpewer::startRecording(const wasm::CodeMetadata* wasmCodeMeta) {
+void PerfSpewer::startRecording(CompileRuntime* runtime,
+                                const wasm::CodeMetadata* wasmCodeMeta) {
   MOZ_ASSERT(!irFile_ && !irFileName_);
+
+  // Snapshot the runtime's gecko-profiler state so it's stable for this
+  // compile.
+  runtimeProfilingEnabled_ = runtime && runtime->geckoProfiler().enabled();
 
 #ifdef JS_ION_PERF
   static uint32_t filenameCounter = 0;
@@ -993,6 +993,7 @@ PerfSpewer::PerfSpewer(PerfSpewer&& other) {
   debugInfo_ = std::move(other.debugInfo_);
   irFileName_ = std::move(other.irFileName_);
   startOffset_ = other.startOffset_;
+  runtimeProfilingEnabled_ = other.runtimeProfilingEnabled_;
 }
 
 PerfSpewer& PerfSpewer::operator=(PerfSpewer&& other) {
@@ -1001,6 +1002,7 @@ PerfSpewer& PerfSpewer::operator=(PerfSpewer&& other) {
   debugInfo_ = std::move(other.debugInfo_);
   irFileName_ = std::move(other.irFileName_);
   startOffset_ = other.startOffset_;
+  runtimeProfilingEnabled_ = other.runtimeProfilingEnabled_;
   return *this;
 }
 
