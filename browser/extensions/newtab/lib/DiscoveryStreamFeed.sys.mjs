@@ -126,6 +126,9 @@ const PREF_CLIENT_LAYOUT_ENABLED =
 // Selection key for the RS sections-ordering: "" = off (use Merino), otherwise
 // the name of the sections-ordering record to render.
 const PREF_SECTIONS_ORDERING = "discoverystream.sections.ordering";
+// Comma-separated section ranks that may carry an ad; "" uses the hard-coded set.
+const PREF_SECTIONS_AD_ALLOWED_RANKS =
+  "discoverystream.sections.adAllowedRanks";
 
 let getHardcodedLayout;
 
@@ -288,6 +291,22 @@ export class DiscoveryStreamFeed {
     );
   }
 
+  // Section ranks that may carry an ad. Precedence: trainhop (an array), then
+  // the pref (comma-separated), then the hard-coded default set.
+  get sectionsAdAllowedRanks() {
+    const prefs = this.store.getState().Prefs.values;
+    let ranks = prefs.trainhopConfig?.sections?.adAllowedRanks;
+    if (!Array.isArray(ranks)) {
+      const pref = prefs[PREF_SECTIONS_AD_ALLOWED_RANKS];
+      ranks = pref ? pref.split(",").map(Number) : undefined;
+    }
+    // Fall back to the hard-coded set for an empty or malformed override.
+    if (!ranks?.length || ranks.some(rank => !Number.isInteger(rank))) {
+      return lazy.SectionsLayoutManager.AD_ALLOWED_RANKS;
+    }
+    return new Set(ranks);
+  }
+
   /**
    * Choose the layout to apply across the whole page, or null to fall back to
    * Merino. The clientLayout override is applied first if enabled; else a usable
@@ -350,6 +369,7 @@ export class DiscoveryStreamFeed {
         ? lazy.SectionsLayoutManager.DEFAULT_SECTION_LAYOUT.slice(1)
         : override.slice(1);
 
+    const allowedRanks = this.sectionsAdAllowedRanks;
     sections.sort((a, b) => a.receivedRank - b.receivedRank);
     // Pin the first layout to the top section and exclude it from the cycle: it's
     // typically a distinct, larger "headline" layout, so repeating it partway
@@ -359,7 +379,7 @@ export class DiscoveryStreamFeed {
         index === 0
           ? topLayout
           : cycleLayouts[(index - 1) % cycleLayouts.length];
-      section.layout = lazy.maskLayoutAds(layout, section);
+      section.layout = lazy.maskLayoutAds(layout, section, allowedRanks);
     });
   }
 

@@ -997,6 +997,13 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
+    "discoverystream.sections.adAllowedRanks",
+    {
+      title: "An ordered, comma-separated list of section ranks that allow ads",
+      value: "",
+    },
+  ],
+  [
     "discoverystream.shortcuts.personalization.enabled",
     {
       title: "Boolean flag to enable shortcuts personalization",

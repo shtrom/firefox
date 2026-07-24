@@ -366,6 +366,8 @@ add_task(async function test_onSync_refetches() {
   sandbox.restore();
 });
 
+const ALLOWED_RANKS = new Set([0, 1, 2]);
+
 function makeAdLayout() {
   return {
     name: "layout",
@@ -386,7 +388,7 @@ add_task(async function test_maskLayoutAds_keeps_ads_for_allowed_rank() {
 
   const layout = makeAdLayout();
   Assert.strictEqual(
-    maskLayoutAds(layout, { receivedRank: 0, allowAds: true }),
+    maskLayoutAds(layout, { receivedRank: 0, allowAds: true }, ALLOWED_RANKS),
     layout,
     "The layout is returned unchanged"
   );
@@ -396,7 +398,11 @@ add_task(async function test_maskLayoutAds_masks_disallowed_rank() {
   info("maskLayoutAds should return a masked copy when the rank disallows ads");
 
   const layout = makeAdLayout();
-  const result = maskLayoutAds(layout, { receivedRank: 3, allowAds: true });
+  const result = maskLayoutAds(
+    layout,
+    { receivedRank: 3, allowAds: true },
+    ALLOWED_RANKS
+  );
 
   Assert.notStrictEqual(result, layout, "A copy is returned");
   Assert.equal(
@@ -416,10 +422,11 @@ add_task(async function test_maskLayoutAds_masks_when_allowAds_false() {
     "maskLayoutAds should mask ads when allowAds is false on an allowed rank"
   );
 
-  const result = maskLayoutAds(makeAdLayout(), {
-    receivedRank: 0,
-    allowAds: false,
-  });
+  const result = maskLayoutAds(
+    makeAdLayout(),
+    { receivedRank: 0, allowAds: false },
+    ALLOWED_RANKS
+  );
 
   Assert.equal(
     result.responsiveLayouts[0].tiles[0].hasAd,

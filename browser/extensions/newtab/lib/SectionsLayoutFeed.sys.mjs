@@ -626,6 +626,7 @@ const DEFAULT_SECTION_LAYOUT = [
 
 export const SectionsLayoutManager = {
   DEFAULT_SECTION_LAYOUT,
+  AD_ALLOWED_RANKS,
 };
 
 function isValidLayout(record) {
@@ -650,16 +651,21 @@ function isValidOrdering(record) {
 
 /**
  * Clear `hasAd` on every tile when a section may not carry an ad: ads are kept
- * only when the section's rank is in AD_ALLOWED_RANKS and its `allowAds` is not
+ * only when the section's rank is in `allowedRanks` and its `allowAds` is not
  * false. When clearing, returns a copy so shared layout records (reused across
  * sections via rotation) are left untouched.
  *
  * @param {object} layout A section-layout record.
  * @param {object} section The section, providing `receivedRank` and `allowAds`.
+ * @param {Set<number>} allowedRanks Section ranks that may carry an ad.
  * @returns {object} The layout, ad-masked when required.
  */
-export function maskLayoutAds(layout, { receivedRank, allowAds }) {
-  const adsAllowed = allowAds !== false && AD_ALLOWED_RANKS.has(receivedRank);
+export function maskLayoutAds(
+  layout,
+  { receivedRank, allowAds },
+  allowedRanks
+) {
+  const adsAllowed = allowAds !== false && allowedRanks.has(receivedRank);
   if (adsAllowed) {
     return layout;
   }
