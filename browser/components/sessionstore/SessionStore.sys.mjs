@@ -5557,6 +5557,9 @@ var SessionStoreInternal = {
     if (startupPref == 1) {
       homePages = homePages.concat(lazy.HomePage.get(aWindow).split("|"));
     }
+    if (lazy.AIWindow.isAIWindowActiveAndEnabled(aWindow)) {
+      homePages.push(lazy.AIWindow.initialStartupURL);
+    }
 
     for (let i = tabbrowser.pinnedTabCount; i < tabbrowser.tabs.length; i++) {
       let tab = tabbrowser.tabs[i];
