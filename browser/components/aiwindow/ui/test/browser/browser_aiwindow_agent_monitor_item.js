@@ -240,9 +240,17 @@ add_task(async function test_pause_button_toggles_label_and_detail() {
           shadow.querySelectorAll(".monitor-card-actions moz-button")
         ).find(b => b.textContent.includes(label));
 
+      const clickWhenLaidOut = async button => {
+        await ContentTaskUtils.waitForCondition(() => {
+          const rect = button.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        }, "button is laid out before clicking");
+        button.click();
+      };
+
       const pauseButton = findButton("Pause");
       Assert.ok(pauseButton, "Watching monitor shows a Pause button");
-      pauseButton.click();
+      await clickWhenLaidOut(pauseButton);
       await el.updateComplete;
       Assert.deepEqual(
         pauseDetails.at(-1),
@@ -255,7 +263,7 @@ add_task(async function test_pause_button_toggles_label_and_detail() {
 
       const resumeButton = findButton("Resume");
       Assert.ok(resumeButton, "Paused monitor shows a Resume button");
-      resumeButton.click();
+      await clickWhenLaidOut(resumeButton);
       await el.updateComplete;
       Assert.deepEqual(
         pauseDetails.at(-1),
@@ -280,9 +288,15 @@ add_task(async function test_check_now_dispatches_detail() {
         e => (checkDetail = e.detail)
       );
 
-      Array.from(shadow.querySelectorAll("moz-button"))
-        .find(b => b.textContent.includes("Check now"))
-        .click();
+      const checkNowButton = Array.from(
+        shadow.querySelectorAll("moz-button")
+      ).find(b => b.textContent.includes("Check now"));
+
+      await ContentTaskUtils.waitForCondition(() => {
+        const rect = checkNowButton.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      }, "Check now button is laid out before clicking");
+      checkNowButton.click();
       await el.updateComplete;
 
       Assert.deepEqual(
@@ -516,7 +530,13 @@ add_task(async function test_add_and_remove_page_pills() {
         "Add button adds the typed URL as a pill"
       );
 
-      shadow.querySelector(".page-pill .page-pill-remove").click();
+      const removeButton = shadow.querySelector(".page-pill .page-pill-remove");
+
+      await ContentTaskUtils.waitForCondition(() => {
+        const rect = removeButton.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      }, "Remove button is laid out before clicking");
+      removeButton.click();
       await el.updateComplete;
       Assert.equal(
         shadow.querySelectorAll(".page-pill").length,
