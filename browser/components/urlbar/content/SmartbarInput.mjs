@@ -53,7 +53,6 @@ const lazy = XPCOMUtils.declareLazy({
   BrowserSearchTelemetry:
     "moz-src:///browser/components/search/BrowserSearchTelemetry.sys.mjs",
   BrowserUIUtils: "resource:///modules/BrowserUIUtils.sys.mjs",
-  BrowserUtils: "resource://gre/modules/BrowserUtils.sys.mjs",
   ExtensionSearchHandler:
     "resource://gre/modules/ExtensionSearchHandler.sys.mjs",
   ExtensionUtils: "resource://gre/modules/ExtensionUtils.sys.mjs",
@@ -1783,7 +1782,11 @@ ${
       windowMode: this.windowMode,
     });
     this.#dispatchSmartbarCommitEvent(event, value);
-    this.controller.openSERP(engine.id, value, this._whereToOpen(event));
+    this.controller.openSERP(
+      engine.id,
+      value,
+      this.controller.whereToOpen(event)
+    );
     this._recordSearch(engine.id, event);
   }
 
@@ -1811,7 +1814,7 @@ ${
     this._loadURL(
       fixupInfo.preferredURI.spec,
       event,
-      this._whereToOpen(event),
+      this.controller.whereToOpen(event),
       {
         allowInheritPrincipal: false,
       }
@@ -2060,7 +2063,7 @@ ${
         searchModeEngine,
         typedValue,
         event,
-        this._whereToOpen(event),
+        this.controller.whereToOpen(event),
         openParams
       );
     } else {
@@ -2085,7 +2088,7 @@ ${
       return;
     }
 
-    let where = oneOffParams?.openWhere || this._whereToOpen(event);
+    let where = oneOffParams?.openWhere || this.controller.whereToOpen(event);
     if (selectedPrivateResult) {
       where = "window";
       openParams.private = true;
@@ -2347,7 +2350,7 @@ ${
       element,
       urlOverride: resultUrl,
     });
-    let where = this._whereToOpen(event);
+    let where = this.controller.whereToOpen(event);
     let openParams = {
       allowInheritPrincipal: false,
       globalHistoryOptions: {
@@ -4826,27 +4829,6 @@ ${
   }
 
   /**
-   * Returns whether the passed-in event may represents a canonization request.
-   *
-   * @param {Event} event
-   *   An Event to examine.
-   * @returns {boolean}
-   *   Whether the event is a KeyboardEvent that triggers canonization.
-   */
-  #isCanonizeKeyboardEvent(event) {
-    if (this.sapName == "searchbar") {
-      return false;
-    }
-    return (
-      KeyboardEvent.isInstance(event) &&
-      event.keyCode == KeyEvent.DOM_VK_RETURN &&
-      (AppConstants.platform == "macosx" ? event.metaKey : event.ctrlKey) &&
-      !event._disableCanonization &&
-      lazy.UrlbarPrefs.get("ctrlCanonizesURLs")
-    );
-  }
-
-  /**
    * If appropriate, this prefixes a search string with 'www.' and suffixes it
    * with Services.locale.urlFixupSuffix prior to navigating.
    *
@@ -4861,7 +4843,7 @@ ${
     // Only add the suffix when the URL bar value isn't already "URL-like",
     // and only if we get a keyboard event, to match user expectations.
     if (
-      !this.#isCanonizeKeyboardEvent(event) ||
+      !this.controller.isCanonizeKeyboardEvent(event) ||
       !/^\s*[^.:\/\s]+(?:\/.*|\s*)$/i.test(value)
     ) {
       return null;
@@ -4998,7 +4980,7 @@ ${
       return;
     }
 
-    let where = this._whereToOpen(event);
+    let where = this.controller.whereToOpen(event);
     if (element.dataset.command == "help" && where == "current") {
       // Open help links in a new tab.
       where = "tab";
@@ -5142,48 +5124,6 @@ ${
     // If we show the focus border after closing the view, it would appear
     // to flash since this._on_blur would remove it immediately after.
     this.view.close({ showFocusBorder: false });
-  }
-
-  /**
-   * Determines where a URL/page should be opened.
-   *
-   * @param {Event} event the event triggering the opening.
-   * @returns {"current" | "tabshifted" | "tab" | "save" | "window"}
-   */
-  _whereToOpen(event) {
-    let isKeyboardEvent = KeyboardEvent.isInstance(event);
-    let reuseEmpty = isKeyboardEvent;
-    let where = undefined;
-    if (
-      isKeyboardEvent &&
-      (event.altKey || event.getModifierState("AltGraph"))
-    ) {
-      // We support using 'alt' to open in a tab, because ctrl/shift
-      // might be used for canonizing URLs:
-      where = event.shiftKey ? "tabshifted" : "tab";
-    } else if (this.#isCanonizeKeyboardEvent(event)) {
-      // If we're allowing canonization, and this is a canonization key event,
-      // open in current tab to avoid handling as new tab modifier.
-      where = "current";
-    } else {
-      where = lazy.BrowserUtils.whereToOpenLink(event, false, false);
-    }
-    if (lazy.UrlbarPrefs.get("openintab")) {
-      if (where == "current") {
-        where = "tab";
-      } else if (where == "tab") {
-        where = "current";
-      }
-      reuseEmpty = true;
-    }
-    if (
-      where == "tab" &&
-      reuseEmpty &&
-      this.window.gBrowser.selectedTab.isEmpty
-    ) {
-      where = "current";
-    }
-    return where;
   }
 
   _initCopyCutController() {
