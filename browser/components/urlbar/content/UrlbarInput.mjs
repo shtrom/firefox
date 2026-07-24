@@ -148,6 +148,7 @@ ${
           <!-- In the addressbar, there will be an input with id="urlbar-scheme" here. -->
           <html:input class="urlbar-input textbox-input"
                       role="combobox"
+                      dir="auto"
                       aria-autocomplete="both"
                       inputmode="mozAwesomebar"
                       data-l10n-id="urlbar-placeholder"/>
