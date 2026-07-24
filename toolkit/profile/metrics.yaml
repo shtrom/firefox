@@ -105,7 +105,7 @@ startup:
       - dtownsend@mozilla.com
       - jhirsch@mozilla.com
       - kbryant@mozilla.com
-    expires: 156
+    expires: 176
     telemetry_mirror: STARTUP_PROFILE_DATABASE_VERSION
 
   profiles_ini_status:
@@ -162,7 +162,7 @@ startup:
       - dtownsend@mozilla.com
       - jhirsch@mozilla.com
       - kbryant@mozilla.com
-    expires: 156
+    expires: 176
     unit: profiles
     telemetry_mirror: STARTUP_PROFILE_COUNT
 
