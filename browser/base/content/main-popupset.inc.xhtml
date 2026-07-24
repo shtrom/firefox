@@ -993,4 +993,27 @@
     <menuitem id="select-translations-panel-about-translations-menuitem"
               data-l10n-id="translations-panel-settings-about2"/>
   </menupopup>
+
+  <panel id="private-browsing-info-panel"
+         class="private-browsing-info-panel"
+         type="arrow"
+         orient="vertical"
+         role="dialog"
+         aria-labelledby="private-browsing-info-title"
+         position="bottomright topright">
+    <vbox class="private-browsing-info-body">
+      <hbox class="private-browsing-info-header" align="center">
+        <image class="private-browsing-info-icon"/>
+        <label id="private-browsing-info-title"
+               class="private-browsing-info-title"
+               data-l10n-id="private-browsing-info-panel-title"/>
+      </hbox>
+      <description class="private-browsing-info-description"
+                   data-l10n-id="private-browsing-info-panel-description">
+        <html:a is="moz-support-link"
+                data-l10n-name="learn-more"
+                support-page="private-browsing-myths"/>
+      </description>
+    </vbox>
+  </panel>
 </popupset>
