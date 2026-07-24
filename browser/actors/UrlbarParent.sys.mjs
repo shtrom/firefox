@@ -124,6 +124,8 @@ export class UrlbarParent extends JSWindowActorParent {
         break;
       case "LoadURL":
         return controller.loadURL(message.data.loadData);
+      case "FocusBrowser":
+        return controller.focusBrowser(message.data.browserId);
       case "RemoveResult":
         controller.removeResult(
           lazy.UrlbarResult.fromWire(message.data.result),

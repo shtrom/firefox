@@ -655,6 +655,14 @@ export class UrlbarChildController {
   }
 
   /**
+   * @param {number} [browserId] The browser the load resolved to, as returned by `loadURL`.
+   * @returns {Promise<{focused: boolean}> | {focused: boolean}} Whether the browser was focused.
+   */
+  focusBrowser(browserId) {
+    return this.#parentController.focusBrowser(browserId);
+  }
+
+  /**
    * Returns whether the passed-in event represents a canonization request.
    *
    * @param {Event} event

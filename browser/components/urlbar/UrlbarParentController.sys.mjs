@@ -628,9 +628,13 @@ export class UrlbarParentController {
    *   The target browser's id; defaults to the selected browser.
    * @param {string} [loadData.userTypedValue]
    *   The value to record as the browser's typed value, for a `current` load.
-   * @returns {{reverted: boolean}}
-   *   Whether the load threw without showing an error page, so the input
-   *   should revert.
+   * @returns {{reverted: boolean, browserId: number}}
+   *   Whether the load threw without showing an error page, so the input should
+   *   revert, and the id of the browser the load resolved to. The latter is not
+   *   an echo of the optional `browserId` param: a default `current` load omits
+   *   it and the target is resolved here, so this is how the child learns which
+   *   browser to hand `focusBrowser` on the deferred-Enter keyup -- a
+   *   content-process input can't resolve the selected browser itself.
    */
   loadURL({ url, where, params, browserId, userTypedValue }) {
     let browser =
@@ -666,9 +670,35 @@ export class UrlbarParentController {
     } catch (ex) {
       // This load can throw in certain cases; unless an error page was shown,
       // the input should revert to the loaded URL.
-      return { reverted: ex.result != Cr.NS_ERROR_LOAD_SHOWED_ERRORPAGE };
+      return {
+        reverted: ex.result != Cr.NS_ERROR_LOAD_SHOWED_ERRORPAGE,
+        browserId: browser.browserId,
+      };
     }
-    return { reverted: false };
+    return { reverted: false, browserId: browser.browserId };
+  }
+
+  /**
+   * Focuses the browser a deferred-Enter load targeted, once the load's keyup
+   * fires, but only if it is still the selected browser. Reaching the browser
+   * element and comparing it against the selection is parent-only work.
+   *
+   * @param {number} [browserId]
+   *   The browser the load resolved to, as returned by `loadURL`.
+   * @returns {{focused: boolean}}
+   *   Whether the browser was focused, so the child can keep the domain name
+   *   visible.
+   */
+  focusBrowser(browserId) {
+    let browser =
+      browserId &&
+      BrowsingContext.getCurrentTopByBrowserId(browserId)?.embedderElement;
+    let { selectedBrowser } = this.browserWindow.gBrowser;
+    if (browser && browser == selectedBrowser) {
+      selectedBrowser.focus();
+      return { focused: true };
+    }
+    return { focused: false };
   }
 
   /**

@@ -250,6 +250,20 @@ export class UrlbarParentControllerProxy {
   }
 
   /**
+   * Focuses the browser a deferred-Enter load targeted, resolved parent-side
+   * from `browserId`.
+   *
+   * @param {number} [browserId] The browser the load resolved to, as returned by `loadURL`.
+   * @returns {Promise<{focused: boolean}>} Whether the browser was focused.
+   */
+  focusBrowser(browserId) {
+    return this.#actor.sendQuery("FocusBrowser", {
+      instanceId: this.#instanceId,
+      browserId,
+    });
+  }
+
+  /**
    * @param {UrlbarResult} result The result to remove.
    * @param {object} [options] Options forwarded to the parent controller's
    *   removeResult.
