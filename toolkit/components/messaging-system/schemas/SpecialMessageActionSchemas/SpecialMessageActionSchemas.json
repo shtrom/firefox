@@ -1040,6 +1040,28 @@
           "required": ["data", "type"],
           "additionalProperties": false,
           "description": "Changes the browser icon using CustomIconManager. Windows only, and not supported on MSIX (packaged) builds."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["GET_REFERRAL_CODE"]
+            },
+            "data": {
+              "entrypoint": {
+                "type": "string",
+                "description": "An entrypoint name to add to the params of the created URL"
+              },
+              "where": {
+                "type": "string",
+                "description": "where to open the created URL, defaults to tab"
+              }
+            }
+          },
+          "required": ["type"],
+          "additionalProperties": false,
+          "description": "Gets the user's referral code or generates one if it doesn't exist, and opens about:referrals with the code as a param"
         }
       ]
     }

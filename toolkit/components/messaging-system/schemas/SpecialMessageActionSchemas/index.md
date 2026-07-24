@@ -648,3 +648,7 @@ Changes the browser icon to the one identified by `id` using `CustomIconManager`
   id: string;  // The id of the icon to switch to, as listed in the CustomIconManager ICON_CATALOG
 }
 ```
+
+### `GET_REFERRAL_CODE`
+
+Gets the user's referral code (or generates one if it doesn't exist), and opens about:referrals with the code as a param. Throws an error if referrals are not enabled.
