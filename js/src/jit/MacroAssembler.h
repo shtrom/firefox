@@ -5820,6 +5820,13 @@ class MacroAssembler : public MacroAssemblerSpecific {
   void compareStrings(JSOp op, Register left, Register right, Register result,
                       Label* fail);
 
+  // Compares two strings for equality based on the JSOP.
+  // This checks for identical pointers, atoms, and length. If |str| is short
+  // enough for inline comparison (cf. |canCompareStringCharsInline|),
+  // string characters are compared directly, otherwise jumps to |fail|.
+  void equalStrings(JSOp op, Register input, const JSOffThreadAtom* str,
+                    Register result, Label* fail);
+
   // Result of the typeof operation. Falls back to slow-path for proxies.
   void typeOfObject(Register objReg, Register scratch, Label* slow,
                     Label* isObject, Label* isCallable, Label* isUndefined);
