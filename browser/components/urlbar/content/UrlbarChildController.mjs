@@ -5,6 +5,7 @@
 import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
 import { UrlbarChildTelemetry } from "chrome://browser/content/urlbar/UrlbarChildTelemetry.mjs";
 import { UrlbarParentControllerProxy } from "chrome://browser/content/urlbar/UrlbarParentControllerProxy.mjs";
+import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs";
 
 const { AppConstants } = ChromeUtils.importESModule(
   "resource://gre/modules/AppConstants.sys.mjs"
@@ -15,7 +16,6 @@ const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   UrlbarParentController:
     "moz-src:///browser/components/urlbar/UrlbarParentController.sys.mjs",
-  UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
 });
 
 /**
@@ -311,7 +311,7 @@ export class UrlbarChildController {
       }
 
       let handled = false;
-      if (lazy.UrlbarPrefs.get("scotchBonnet.enableOverride")) {
+      if (UrlbarPrefs.get("scotchBonnet.enableOverride")) {
         handled = this.input.searchModeSwitcher.handleKeyDown(event);
       } else if (this.view.isOpen && this._lastQueryContextWrapper) {
         let { queryContext } = this._lastQueryContextWrapper;
@@ -337,7 +337,7 @@ export class UrlbarChildController {
             // chrome moz-urlbar; a content-process one already has focus in
             // content. Only a browser window has `gBrowser`.
             this.window.gBrowser &&
-            lazy.UrlbarPrefs.get("focusContentDocumentOnEsc") &&
+            UrlbarPrefs.get("focusContentDocumentOnEsc") &&
             !this.input.searchMode &&
             (this.input.sapName == "searchbar"
               ? this.input.value == ""
@@ -412,7 +412,7 @@ export class UrlbarChildController {
 
         // Change the tab behavior when urlbar view is open.
         if (
-          lazy.UrlbarPrefs.get("scotchBonnet.enableOverride") &&
+          UrlbarPrefs.get("scotchBonnet.enableOverride") &&
           this.view.isOpen &&
           !event.ctrlKey &&
           !event.altKey

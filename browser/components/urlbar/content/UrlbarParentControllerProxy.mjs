@@ -2,12 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-const lazy = {};
-
-ChromeUtils.defineESModuleGetters(lazy, {
-  UrlbarQueryContext: "chrome://browser/content/urlbar/UrlbarQueryContext.mjs",
-  UrlbarResult: "chrome://browser/content/urlbar/UrlbarResult.mjs",
-});
+import { UrlbarQueryContext } from "chrome://browser/content/urlbar/UrlbarQueryContext.mjs";
+import { UrlbarResult } from "chrome://browser/content/urlbar/UrlbarResult.mjs";
 
 /**
  * @import {UrlbarChild} from "../../../actors/UrlbarChild.sys.mjs"
@@ -182,7 +178,7 @@ export class UrlbarParentControllerProxy {
         queryContext: queryContext.toWire(),
       })
       .then(
-        wire => lazy.UrlbarQueryContext.fromWire(wire),
+        wire => UrlbarQueryContext.fromWire(wire),
         error => {
           if (error?.name == "AbortError") {
             // The actor was destroyed before the query finished (the window or
@@ -208,7 +204,7 @@ export class UrlbarParentControllerProxy {
       instanceId: this.#instanceId,
       queryContext: queryContext.toWire(),
     });
-    return wire ? lazy.UrlbarResult.fromWire(wire) : null;
+    return wire ? UrlbarResult.fromWire(wire) : null;
   }
 
   cancelQuery() {
