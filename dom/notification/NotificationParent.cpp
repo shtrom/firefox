@@ -9,10 +9,13 @@
 #include "mozilla/AlertNotification.h"
 #include "mozilla/StaticPrefs_dom.h"
 #include "mozilla/dom/ServiceWorkerManager.h"
+#include "mozilla/glean/DomNotificationMetrics.h"
+#include "mozilla/glean/bindings/Event.h"
 #include "mozilla/ipc/Endpoint.h"
 #include "nsComponentManagerUtils.h"
 #include "nsIAlertsService.h"
 #include "nsIServiceWorkerManager.h"
+#include "nsISiteCategory.h"
 #include "nsIURIClassifier.h"
 #include "nsNetCID.h"
 #include "nsThreadUtils.h"
@@ -31,13 +34,29 @@ class NotificationObserver final : public nsIAlertCallbacks {
       : mScope(aScope),
         mPrincipal(aPrincipal),
         mNotification(std::move(aNotification)),
-        mActor(&aParent) {}
+        mActor(&aParent) {
+    if (nsCOMPtr<nsISiteCategory> siteCategory =
+            do_GetService("@mozilla.org/site-category;1")) {
+      nsCString category;
+      if (NS_SUCCEEDED(siteCategory->GetCategory(mPrincipal, category))) {
+        mCategory = Some(category);
+      }
+    }
+  }
 
   NS_IMETHODIMP OnAlertDisable() override {
+    glean::web_notification::clicked.Record(
+        Some(glean::web_notification::ClickedExtra{.action = Some("disable"_ns),
+                                                   .siteCategory = mCategory}));
     return RemovePermission(mPrincipal);
   }
 
-  NS_IMETHODIMP OnAlertSettings() override { return OpenSettings(mPrincipal); }
+  NS_IMETHODIMP OnAlertSettings() override {
+    glean::web_notification::clicked.Record(
+        Some(glean::web_notification::ClickedExtra{
+            .action = Some("settings"_ns), .siteCategory = mCategory}));
+    return OpenSettings(mPrincipal);
+  }
 
   /**
    * @returns True if the actor ran and no further action is needed, false
@@ -54,6 +73,10 @@ class NotificationObserver final : public nsIAlertCallbacks {
   }
 
   NS_IMETHODIMP OnAlertShow() override {
+    mShown = true;
+    glean::web_notification::shown.Record(
+        Some(glean::web_notification::ShownExtra{.siteCategory = mCategory}));
+
     if (RunActor([](auto* actor) { actor->OnAlertShow(); })) {
       return NS_OK;
     }
@@ -68,6 +91,12 @@ class NotificationObserver final : public nsIAlertCallbacks {
   }
 
   NS_IMETHODIMP OnAlertClick(nsIAlertAction* aAction) override {
+    mClicked = true;
+    glean::web_notification::clicked.Record(
+        Some(glean::web_notification::ClickedExtra{
+            .action = Some(aAction ? "action-button"_ns : "body"_ns),
+            .siteCategory = mCategory}));
+
     if (RunActor([](auto* actor) { actor->FireClickEvent(); })) {
       return NS_OK;
     } else if (mScope.IsEmpty()) {
@@ -82,9 +111,17 @@ class NotificationObserver final : public nsIAlertCallbacks {
     return RespondOnClick(mPrincipal, mScope, mNotification, actionName);
   }
 
-  NS_IMETHODIMP OnAlertDismissedFromForeground() override { return NS_OK; }
+  NS_IMETHODIMP OnAlertDismissedFromForeground() override {
+    glean::web_notification::ignored.Record(
+        Some(glean::web_notification::IgnoredExtra{.siteCategory = mCategory}));
+    return NS_OK;
+  }
 
   NS_IMETHODIMP OnAlertClosed() override {
+    if (mShown && !mClicked) {
+      glean::web_notification::dismissed.Record(Some(
+          glean::web_notification::DismissedExtra{.siteCategory = mCategory}));
+    }
     if (RunActor([](auto* actor) { actor->OnAlertFinished(true); })) {
       return NS_OK;
     }
@@ -92,6 +129,10 @@ class NotificationObserver final : public nsIAlertCallbacks {
   }
 
   NS_IMETHODIMP OnAlertFinished() override {
+    if (mShown && !mClicked) {
+      glean::web_notification::dismissed.Record(Some(
+          glean::web_notification::DismissedExtra{.siteCategory = mCategory}));
+    }
     if (RunActor([](auto* actor) { actor->OnAlertFinished(false); })) {
       return NS_OK;
     }
@@ -124,6 +165,10 @@ class NotificationObserver final : public nsIAlertCallbacks {
   nsCOMPtr<nsIPrincipal> mPrincipal;
   IPCNotification mNotification;
   WeakPtr<NotificationParent> mActor;
+
+  Maybe<nsCString> mCategory;
+  bool mShown = false;
+  bool mClicked = false;
 };
 
 NS_IMPL_ISUPPORTS(NotificationObserver, nsIAlertCallbacks)
