@@ -5034,6 +5034,7 @@ ${
       params.allowPopups = url.startsWith("javascript:");
     }
 
+    let keyDownEnterDeferred;
     if (
       this._keyDownEnterDeferred &&
       event?.keyCode === KeyEvent.DOM_VK_RETURN &&
@@ -5044,11 +5045,11 @@ ${
       // To do it, send avoidBrowserFocus flag to openTrustedLinkIn() to avoid
       // focusing on the browser in the function. And also, set loadedContent
       // flag that whether the content is loaded in the current tab by this enter
-      // key. _keyDownEnterDeferred promise is processed at key up the enter,
-      // focus on the browser passed by _keyDownEnterDeferred.resolve().
+      // key. The load resolves the deferred with the loaded browser's id, which
+      // key up hands to the parent to focus.
       params.avoidBrowserFocus = true;
       this._keyDownEnterDeferred.loadedContent = true;
-      this._keyDownEnterDeferred.resolve(browser);
+      keyDownEnterDeferred = this._keyDownEnterDeferred;
     }
 
     // Ensure the window gets the `private` feature if the current window
@@ -5082,6 +5083,9 @@ ${
     if (loadStatus.then) {
       loadStatus = await loadStatus;
     }
+    // Hand the loaded browser's id to the deferred-Enter key up handler so it
+    // can focus it parent-side.
+    keyDownEnterDeferred?.resolve(loadStatus.browserId);
     // The load can throw parent-side; unless an error page was shown we
     // replace the URL with the loaded one.
     if (loadStatus.reverted) {
@@ -6828,10 +6832,11 @@ ${
     if (this._keyDownEnterDeferred) {
       if (this._keyDownEnterDeferred.loadedContent) {
         try {
-          const loadingBrowser = await this._keyDownEnterDeferred.promise;
-          // Ensure the selected browser didn't change in the meanwhile.
-          if (this.window.gBrowser.selectedBrowser === loadingBrowser) {
-            loadingBrowser.focus();
+          const browserId = await this._keyDownEnterDeferred.promise;
+          // The parent focuses the loading browser if it's still selected,
+          // since only it can reach the browser element and the chrome window.
+          let { focused } = await this.controller.focusBrowser(browserId);
+          if (focused) {
             // Make sure the domain name stays visible for spoof protection and usability.
             this.setSelectionRange(0, 0);
           }
