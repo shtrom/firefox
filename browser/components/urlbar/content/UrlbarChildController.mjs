@@ -62,6 +62,9 @@ export class UrlbarChildController {
 
   #input;
 
+  /** @type {UrlbarChild} */
+  #actor;
+
   /** @type {UrlbarView} */
   #view = null;
 
@@ -91,6 +94,7 @@ export class UrlbarChildController {
         options.input.window.windowGlobalChild.getActor("Urlbar")
       )
     );
+    this.#actor = actor;
     let { sapName, isPrivate } = options.input;
     // The message path builds a proxy that trades actor messages with the
     // parent-side controller; the direct path builds the real controller in
@@ -640,6 +644,80 @@ export class UrlbarChildController {
 
   loadURL(loadData) {
     return this.#parent.loadURL(loadData);
+  }
+
+  /**
+   * Returns whether the passed-in event represents a canonization request.
+   *
+   * @param {Event} event
+   *   An Event to examine.
+   * @returns {boolean}
+   *   Whether the event is a KeyboardEvent that triggers canonization.
+   */
+  isCanonizeKeyboardEvent(event) {
+    if (this.#input.sapName == "searchbar") {
+      return false;
+    }
+    return (
+      KeyboardEvent.isInstance(event) &&
+      event.keyCode == KeyEvent.DOM_VK_RETURN &&
+      (AppConstants.platform == "macosx" ? event.metaKey : event.ctrlKey) &&
+      !(/** @type {any} */ (event)._disableCanonization) &&
+      lazy.UrlbarPrefs.get("ctrlCanonizesURLs")
+    );
+  }
+
+  /**
+   * Determines where a URL/page picked in `<moz-urlbar>` should be opened. Only
+   * the `BrowserUtils.whereToOpenLink` call is routed through the actor (a system
+   * module the content-web scope can't import); everything else, including the
+   * guarded empty-tab read, is content-safe and stays here.
+   *
+   * @param {KeyboardEvent | MouseEvent} event
+   *   The event that triggered the opening.
+   * @returns {"current" | "tabshifted" | "tab" | "save" | "window"}
+   */
+  whereToOpen(event) {
+    let isKeyboardEvent = KeyboardEvent.isInstance(event);
+    let reuseEmpty = isKeyboardEvent;
+    /** @type {"current" | "tabshifted" | "tab" | "save" | "window"} */
+    let where;
+    if (
+      isKeyboardEvent &&
+      (event.altKey || event.getModifierState("AltGraph"))
+    ) {
+      // We support using 'alt' to open in a tab, because ctrl/shift
+      // might be used for canonizing URLs:
+      where = event.shiftKey ? "tabshifted" : "tab";
+    } else if (this.isCanonizeKeyboardEvent(event)) {
+      // If we're allowing canonization, and this is a canonization key event,
+      // open in current tab to avoid handling as new tab modifier.
+      where = "current";
+    } else {
+      where = this.#actor.whereToOpenLink(event);
+    }
+    let openInTabPref =
+      this.#input.sapName == "searchbar"
+        ? lazy.UrlbarPrefs.get("browser.search.openintab")
+        : lazy.UrlbarPrefs.get("openintab");
+    if (openInTabPref) {
+      if (where == "current") {
+        where = "tab";
+      } else if (where == "tab") {
+        where = "current";
+      }
+      reuseEmpty = true;
+    }
+    // The browser window exists only in chrome; a content-process input has no
+    // tab to reuse, so `gBrowser` is absent and the reuse is skipped.
+    if (
+      where == "tab" &&
+      reuseEmpty &&
+      this.window.gBrowser?.selectedTab.isEmpty
+    ) {
+      where = "current";
+    }
+    return where;
   }
 
   focusOnUnifiedSearchButton() {

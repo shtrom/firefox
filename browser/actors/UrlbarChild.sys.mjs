@@ -5,6 +5,7 @@
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
+  BrowserUtils: "resource://gre/modules/BrowserUtils.sys.mjs",
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
   UrlbarQueryContext: "chrome://browser/content/urlbar/UrlbarQueryContext.mjs",
 });
@@ -111,6 +112,20 @@ export class UrlbarChild extends JSWindowActorChild {
    */
   registerChildController(instanceId, child) {
     this.#childControllers.set(instanceId, new WeakRef(child));
+  }
+
+  /**
+   * Forwards to `BrowserUtils.whereToOpenLink`. `UrlbarChildController.whereToOpen`
+   * computes the destination itself but can't import `BrowserUtils` (a system
+   * module) from its content-web scope, so it routes this one call through the
+   * actor, which is privileged and runs in the input's own process.
+   *
+   * @param {Event} event
+   *   The event that triggered the opening.
+   * @returns {"current" | "tabshifted" | "tab" | "save" | "window"}
+   */
+  whereToOpenLink(event) {
+    return lazy.BrowserUtils.whereToOpenLink(event, false, false);
   }
 
   receiveMessage(message) {
