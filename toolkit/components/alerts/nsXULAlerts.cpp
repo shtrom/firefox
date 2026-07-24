@@ -48,6 +48,10 @@ NS_IMETHODIMP nsXULAlertCallbacks::OnAlertClick(nsIAlertAction* aAction) {
   return mCallbacks->OnAlertClick(aAction);
 }
 
+NS_IMETHODIMP nsXULAlertCallbacks::OnAlertDismissedFromForeground() {
+  return NS_OK;
+}
+
 NS_IMETHODIMP nsXULAlertCallbacks::OnAlertClosed() {
   if (!mCallbacks) {
     return NS_OK;

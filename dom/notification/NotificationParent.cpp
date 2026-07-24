@@ -47,6 +47,8 @@ class NotificationObserver final : public nsIAlertCallbacks {
     return Observe(aAction, AlertTopic::Click);
   }
 
+  NS_IMETHODIMP OnAlertDismissedFromForeground() override { return NS_OK; }
+
   NS_IMETHODIMP OnAlertClosed() override {
     return Observe(nullptr, AlertTopic::Closed);
   }
