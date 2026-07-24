@@ -5,7 +5,6 @@
 #include "sdp/SdpHelper.h"
 
 #include <charconv>
-#include <cstddef>
 #include <cstdint>
 #include <set>
 
@@ -759,11 +758,11 @@ static bool IsValidIceToken(const std::string& aToken) {
   return true;
 }
 
-Maybe<dom::PCError> SdpHelper::ValidateTransportAttributes(const Sdp& aSdp,
-                                                           sdp::SdpType aType) {
+nsresult SdpHelper::ValidateTransportAttributes(const Sdp& aSdp,
+                                                const sdp::SdpType aType) {
   BundledMids bundledMids;
   nsresult rv = GetBundledMids(aSdp, &bundledMids);
-  NS_ENSURE_SUCCESS(rv, Some(dom::PCError::InvalidAccessError));
+  NS_ENSURE_SUCCESS(rv, rv);
 
   for (size_t level = 0; level < aSdp.GetMediaSectionCount(); ++level) {
     const auto& msection = aSdp.GetMediaSection(level);
@@ -772,22 +771,19 @@ Maybe<dom::PCError> SdpHelper::ValidateTransportAttributes(const Sdp& aSdp,
       if (mediaAttrs.GetIceUfrag().empty()) {
         SDP_SET_ERROR("Invalid description, no ice-ufrag attribute at level "
                       << level);
-        return Some(dom::PCError::InvalidAccessError);
+        return NS_ERROR_INVALID_ARG;
       }
 
       if (mediaAttrs.GetIceUfrag().size() < kMinIceUfragLength) {
         SDP_SET_ERROR("Invalid description, ice-ufrag is too short at level "
                       << level);
-        // Bug 2036111 - Syntax Errors Should Be Parser Generated
-        return Some(dom::PCError::SyntaxError);
+        return NS_ERROR_INVALID_ARG;
       }
 
       if (mediaAttrs.GetIceUfrag().size() > kMaxIceUfragLength) {
         SDP_SET_ERROR("Invalid description, ice-ufrag is too long at level "
                       << level);
-        // Bug 2027782 - need a WPT for this
-        // Bug 2036111 - Syntax Errors Should Be Parser Generated
-        return Some(dom::PCError::SyntaxError);
+        return NS_ERROR_INVALID_ARG;
       }
 
       if (!IsValidIceToken(mediaAttrs.GetIceUfrag())) {
@@ -795,28 +791,25 @@ Maybe<dom::PCError> SdpHelper::ValidateTransportAttributes(const Sdp& aSdp,
             "Invalid description, ice-ufrag contains invalid characters at "
             "level "
             << level);
-        // Bug 2036111 - Syntax Errors Should Be Parser Generated
-        return Some(dom::PCError::SyntaxError);
+        return NS_ERROR_INVALID_ARG;
       }
 
       if (mediaAttrs.GetIcePwd().empty()) {
         SDP_SET_ERROR("Invalid description, no ice-pwd attribute at level "
                       << level);
-        return Some(dom::PCError::InvalidAccessError);
+        return NS_ERROR_INVALID_ARG;
       }
 
       if (mediaAttrs.GetIcePwd().size() < kMinIcePwdLength) {
         SDP_SET_ERROR("Invalid description, ice-pwd is too short at level "
                       << level);
-        // Bug 2036111 - Syntax Errors Should Be Parser Generated
-        return Some(dom::PCError::SyntaxError);
+        return NS_ERROR_INVALID_ARG;
       }
 
       if (mediaAttrs.GetIcePwd().size() > kMaxIcePwdLength) {
         SDP_SET_ERROR("Invalid description, ice-pwd is too long at level "
                       << level);
-        // Bug 2036111 - Syntax Errors Should Be Parser Generated
-        return Some(dom::PCError::SyntaxError);
+        return NS_ERROR_INVALID_ARG;
       }
 
       if (!IsValidIceToken(mediaAttrs.GetIcePwd())) {
@@ -824,14 +817,13 @@ Maybe<dom::PCError> SdpHelper::ValidateTransportAttributes(const Sdp& aSdp,
             "Invalid description, ice-pwd contains invalid characters at "
             "level "
             << level);
-        // Bug 2056743 - ice-ufrag/pwd WPTs expect wrong error types
-        return Some(dom::PCError::SyntaxError);
+        return NS_ERROR_INVALID_ARG;
       }
 
       if (!mediaAttrs.HasAttribute(SdpAttribute::kFingerprintAttribute)) {
         SDP_SET_ERROR("Invalid description, no fingerprint attribute at level "
                       << level);
-        return Some(dom::PCError::InvalidAccessError);
+        return NS_ERROR_INVALID_ARG;
       }
 
       const SdpFingerprintAttributeList& fingerprints(
@@ -841,7 +833,7 @@ Maybe<dom::PCError> SdpHelper::ValidateTransportAttributes(const Sdp& aSdp,
             "Invalid description, no supported fingerprint algorithms present "
             "at level "
             << level);
-        return Some(dom::PCError::InvalidAccessError);
+        return NS_ERROR_INVALID_ARG;
       }
 
       if (mediaAttrs.HasAttribute(SdpAttribute::kSetupAttribute, true)) {
@@ -850,7 +842,7 @@ Maybe<dom::PCError> SdpHelper::ValidateTransportAttributes(const Sdp& aSdp,
               "Invalid description, illegal setup attribute \"holdconn\" "
               "at level "
               << level);
-          return Some(dom::PCError::InvalidAccessError);
+          return NS_ERROR_INVALID_ARG;
         }
 
         if (aType == sdp::kAnswer &&
@@ -858,15 +850,15 @@ Maybe<dom::PCError> SdpHelper::ValidateTransportAttributes(const Sdp& aSdp,
           SDP_SET_ERROR(
               "Invalid answer, illegal setup attribute \"actpass\" at level "
               << level);
-          return Some(dom::PCError::InvalidAccessError);
+          return NS_ERROR_INVALID_ARG;
         }
       } else if (aType == sdp::kOffer) {
         SDP_SET_ERROR("Invalid offer, no setup attribute at level " << level);
-        return Some(dom::PCError::InvalidAccessError);
+        return NS_ERROR_INVALID_ARG;
       }
     }
   }
-  return Nothing();
+  return NS_OK;
 }
 
 }  // namespace mozilla
