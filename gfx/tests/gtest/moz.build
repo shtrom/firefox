@@ -60,6 +60,7 @@ UNIFIED_SOURCES += [
 # notice embedded in the profiles should be reviewed to ensure there are
 # no known restrictions on distribution.
 TEST_HARNESS_FILES.gtest += [
+    "../../qcms/profiles/displaycal-lut-stripped.icc",
     "../../qcms/profiles/lcms_samsung_syncmaster.icc",
     "../../qcms/profiles/lcms_thinkpad_w540.icc",
 ]
