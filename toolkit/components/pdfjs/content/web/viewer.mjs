@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.2.36
- * pdfjsBuild = 0c8f67059
+ * pdfjsVersion = 6.2.44
+ * pdfjsBuild = 63329559d
  */
 
 ;// ./web/ui_utils.js
@@ -990,7 +990,7 @@ const {
 } = globalThis.pdfjsLib;
 
 ;// ./web/internal_evt.js
-const INTERNAL_EVT = "64a17414-44d4-46cc-a3a6-a737a0be8334";
+const INTERNAL_EVT = "b7d01d27-78bd-45ea-be53-33e575f2e35b";
 const internalOpt = Object.freeze({
   internal: INTERNAL_EVT
 });
@@ -2165,7 +2165,8 @@ class SignatureVerifier {
         errorCode: "SUBFILTER_NOT_SUPPORTED",
         message: signature.subFilter,
         certificate: null,
-        documentModifiedAfterSigning: !signature.coversWholeDocument
+        documentModifiedAfterSigning: !signature.coversWholeDocument,
+        modificationsAfterSignature: signature.modificationsAfterSignature
       };
     }
     let response;
@@ -2181,7 +2182,8 @@ class SignatureVerifier {
         errorCode: "BRIDGE_ERROR",
         message: ex?.message ?? null,
         certificate: null,
-        documentModifiedAfterSigning: !signature.coversWholeDocument
+        documentModifiedAfterSigning: !signature.coversWholeDocument,
+        modificationsAfterSignature: signature.modificationsAfterSignature
       };
     }
     if (!response || response.error) {
@@ -2190,7 +2192,8 @@ class SignatureVerifier {
         errorCode: response?.error ?? "EMPTY_RESPONSE",
         message: null,
         certificate: null,
-        documentModifiedAfterSigning: !signature.coversWholeDocument
+        documentModifiedAfterSigning: !signature.coversWholeDocument,
+        modificationsAfterSignature: signature.modificationsAfterSignature
       };
     }
     const entry = Array.isArray(response) ? response[0] : response;
@@ -2200,7 +2203,8 @@ class SignatureVerifier {
         errorCode: "EMPTY_RESPONSE",
         message: null,
         certificate: null,
-        documentModifiedAfterSigning: !signature.coversWholeDocument
+        documentModifiedAfterSigning: !signature.coversWholeDocument,
+        modificationsAfterSignature: signature.modificationsAfterSignature
       };
     }
     const {
@@ -2212,7 +2216,8 @@ class SignatureVerifier {
       errorCode,
       message: entry.message ?? null,
       certificate: entry.certificate ?? null,
-      documentModifiedAfterSigning: !signature.coversWholeDocument
+      documentModifiedAfterSigning: !signature.coversWholeDocument,
+      modificationsAfterSignature: signature.modificationsAfterSignature
     };
   }
   async viewCertificate(certificate) {
@@ -13225,7 +13230,7 @@ class PDFViewer {
   #savedPageViews = null;
   #deletedPageNumbers = null;
   constructor(options) {
-    const viewerVersion = "6.2.36";
+    const viewerVersion = "6.2.44";
     if (version !== viewerVersion) {
       throw new Error(`The API version "${version}" does not match the Viewer version "${viewerVersion}".`);
     }
@@ -16276,7 +16281,8 @@ class SignaturePropertiesManager {
         errorCode: null,
         message: null,
         certificate: null,
-        documentModifiedAfterSigning: !sig.coversWholeDocument
+        documentModifiedAfterSigning: !sig.coversWholeDocument,
+        modificationsAfterSignature: sig.modificationsAfterSignature
       });
     }
     this.#render();
@@ -16577,7 +16583,8 @@ class SignaturePropertiesManager {
         errorCode: "BRIDGE_ERROR",
         message: ex?.message ?? null,
         certificate: null,
-        documentModifiedAfterSigning: !signature.coversWholeDocument
+        documentModifiedAfterSigning: !signature.coversWholeDocument,
+        modificationsAfterSignature: signature.modificationsAfterSignature
       };
     }
     this.#pendingVerify.delete(signature.id);
@@ -18240,7 +18247,7 @@ const PDFViewerApplication = {
         this._initializePdfHistory({
           fingerprint: pdfDocument.fingerprints[0],
           viewOnLoad,
-          initialDest: openAction?.dest
+          initialDest: openAction?.get("dest")
         });
         const initialBookmark = this.initialBookmark;
         const zoom = AppOptions.get("defaultZoomValue");
@@ -18384,7 +18391,7 @@ const PDFViewerApplication = {
     if (pdfDocument !== this.pdfDocument) {
       return;
     }
-    let triggerAutoPrint = openAction?.action === "Print";
+    let triggerAutoPrint = openAction?.get("action") === "Print";
     if (jsActions) {
       console.warn("Warning: JavaScript support is not enabled");
       for (const name in jsActions) {

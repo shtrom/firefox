@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.2.36
- * pdfjsBuild = 0c8f67059
+ * pdfjsVersion = 6.2.44
+ * pdfjsBuild = 63329559d
  */
 
 ;// ./src/shared/util.js
@@ -2007,7 +2007,7 @@ class FloatingToolbar {
 }
 
 ;// ./src/shared/internal_evt.js
-const INTERNAL_EVT = "64a17414-44d4-46cc-a3a6-a737a0be8334";
+const INTERNAL_EVT = "b7d01d27-78bd-45ea-be53-33e575f2e35b";
 const internalOpt = Object.freeze({
   internal: INTERNAL_EVT
 });
@@ -14224,7 +14224,7 @@ function getDocument(src = {}) {
   }
   const docParams = {
     docId,
-    apiVersion: "6.2.36",
+    apiVersion: "6.2.44",
     data,
     password,
     disableAutoFetch,
@@ -15885,8 +15885,8 @@ class InternalRenderTask {
     }
   }
 }
-const version = "6.2.36";
-const build = "0c8f67059";
+const version = "6.2.44";
+const build = "63329559d";
 
 ;// ./src/display/editor/color_picker.js
 
@@ -26867,9 +26867,9 @@ globalThis.pdfjsLib = {
   updateUrlHash: updateUrlHash,
   Util: Util,
   VerbosityLevel: VerbosityLevel,
-  version: (/* inlined export .version */"6.2.36"),
+  version: (/* inlined export .version */"6.2.44"),
   XfaLayer: XfaLayer
 };
 
-const __webpack_exports__version = (/* inlined export .version */"6.2.36");
+const __webpack_exports__version = (/* inlined export .version */"6.2.44");
 export { AbortException, AnnotationEditorLayer, AnnotationEditorParamsType, AnnotationEditorType, AnnotationEditorUIManager, AnnotationLayer, AnnotationMode, AnnotationType, CSSConstants, ColorPicker, DOMSVGFactory, DrawLayer, FeatureTest, GlobalWorkerOptions, ImageKind, InvalidPDFException, MathClamp, OPS, OutputScale, PDFDataRangeTransport, PDFDateString, PDFWorker, PasswordException, PasswordResponses, PermissionFlag, PixelsPerInch, RenderingCancelledException, ResponseException, SignatureExtractor, SupportedImageMimeTypes, TextLayer, TextLayerImages, TouchManager, Util, VerbosityLevel, XfaLayer, applyOpacity, build, createValidAbsoluteUrl, fetchData, findContrastColor, getDocument, getFilenameFromUrl, getPdfFilenameFromUrl, getRGB, getRGBA, getUuid, isDataScheme, isPdfFile, isValidExplicitDest, makeArr, makeMap, makeObj, makeSet, noContextMenu, normalizeUnicode, renderRichText, setLayerDimensions, shadow, stopEvent, updateUrlHash, __webpack_exports__version as version };
