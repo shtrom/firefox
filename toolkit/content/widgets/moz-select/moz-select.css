@@ -72,7 +72,7 @@ panel-item[icon]::part(button) {
   background-image: var(--select-item-icon-url);
 }
 
-panel-item[selected] {
+panel-item[selected]::part(button) {
   background-color: var(--button-background-color-selected);
   border-color: var(--button-border-color-selected);
   color: var(--button-text-color-selected);
