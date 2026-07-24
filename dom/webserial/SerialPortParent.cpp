@@ -105,6 +105,7 @@ mozilla::ipc::IPCResult SerialPortParent::RecvOpen(
 
   mIsOpen = true;
   mPipeCapacity = std::max(aOptions.bufferSize(), kMinSerialPortPumpSize);
+  mDetectParityErrors = aOptions.parity() != ParityType::None;
 
   aResolver(NS_OK);
   return IPC_OK();
@@ -198,8 +199,9 @@ void SerialPortParent::StartReadPump(
 
   if (!mPlatformInputStream) {
     uint32_t bufferSize = std::max(mPipeCapacity, kMinSerialPortPumpSize);
-    nsresult rv = service->GetReadStream(mPortId, bufferSize,
-                                         getter_AddRefs(mPlatformInputStream));
+    nsresult rv =
+        service->GetReadStream(mPortId, bufferSize, mDetectParityErrors,
+                               getter_AddRefs(mPlatformInputStream));
     if (NS_FAILED(rv) || !mPlatformInputStream) {
       MOZ_LOG(gWebSerialLog, LogLevel::Error,
               ("SerialPortParent[%p]::StartReadPump GetReadStream failed for "
