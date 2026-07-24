@@ -2326,7 +2326,7 @@ pref("browser.smartwindow.firstrun.hasCompleted", false);
 pref("browser.smartwindow.showThemesNotice", true);
 pref("browser.smartwindow.sidebar.openByDefault", true);
 pref("browser.smartwindow.isDefaultWindow", false);
-pref("browser.smartwindow.firstrun.explainerURL", "https://www.firefox.com/en-US/smart-window/?v=product");
+pref("browser.smartwindow.firstrun.explainerURL", "https://www.firefox.com/smart-window/?v=product");
 pref("places.semanticHistory.smartwindow.featureGate", false);
 // TODO Bug 2053495: remove with mistral release pref
 pref("browser.smartwindow.mistralRelease", false);
