@@ -96,6 +96,9 @@ export class UrlbarParentController {
   // for it.
   #actor = null;
 
+  // Whether the controller serves the address bar.
+  #isAddressbar = false;
+
   /**
    * Initialises the controller from standalone data; the live input/view are
    * reached at runtime through the paired `UrlbarChildController`.
@@ -119,6 +122,7 @@ export class UrlbarParentController {
     }
 
     this.sapName = sapName;
+    this.#isAddressbar = sapName == "urlbar";
     this.isPrivate = isPrivate;
     this.#actor = actor;
 
@@ -530,15 +534,27 @@ export class UrlbarParentController {
    *   The serializable `openTrustedLinkIn` params.
    * @param {number} [loadData.browserId]
    *   The target browser's id; defaults to the selected browser.
+   * @param {string} [loadData.userTypedValue]
+   *   The value to record as the browser's typed value, for a `current` load.
    * @returns {{reverted: boolean}}
    *   Whether the load threw without showing an error page, so the input
    *   should revert.
    */
-  loadURL({ url, where, params, browserId }) {
+  loadURL({ url, where, params, browserId, userTypedValue }) {
     let browser =
       (browserId &&
         BrowsingContext.getCurrentTopByBrowserId(browserId)?.embedderElement) ||
       this.browserWindow.gBrowser.selectedBrowser;
+
+    if (this.#isAddressbar) {
+      this.#prepareAddressbarLoad({
+        browser,
+        url,
+        where,
+        params,
+        userTypedValue,
+      });
+    }
 
     if (where == "current") {
       params.targetBrowser = browser;
@@ -561,6 +577,66 @@ export class UrlbarParentController {
       return { reverted: ex.result != Cr.NS_ERROR_LOAD_SHOWED_ERRORPAGE };
     }
     return { reverted: false };
+  }
+
+  /**
+   * Records the address bar bookkeeping on the target browser before the load,
+   * touching state that only exists on the chrome window.
+   *
+   * @param {object} loadData
+   * @param {object} loadData.browser
+   *   The target XUL browser.
+   * @param {string} loadData.url
+   *   The URL being loaded.
+   * @param {string} loadData.where
+   *   Where to open, per `openTrustedLinkIn`.
+   * @param {object} loadData.params
+   *   The `openTrustedLinkIn` params, extended here with `initiatedByURLBar`.
+   * @param {string} [loadData.userTypedValue]
+   *   The value to record as the browser's typed value, for a `current` load.
+   */
+  #prepareAddressbarLoad({ browser, url, where, params, userTypedValue }) {
+    if (where == "current") {
+      browser.userTypedValue = userTypedValue;
+    }
+
+    // No point in setting this if we are loading in a new window.
+    if (where != "window" && this.browserWindow.gInitialPages.includes(url)) {
+      browser.initialPageLoadedFromUserAction = url;
+    }
+
+    try {
+      lazy.UrlbarUtils.addToUrlbarHistory(url, this.browserWindow);
+    } catch (ex) {
+      // Things may go wrong when adding url to session history,
+      // but don't let that interfere with the loading of the url.
+      console.error(ex);
+    }
+
+    // TODO: When bug 1498553 is resolved, we should be able to
+    // remove the !triggeringPrincipal condition here.
+    if (
+      !params.triggeringPrincipal ||
+      params.triggeringPrincipal.isSystemPrincipal
+    ) {
+      // Reset DOS mitigations for the basic auth prompt.
+      delete browser.authPromptAbuseCounter;
+
+      // Reset temporary permissions on the current tab if the user reloads
+      // the tab via the urlbar.
+      if (
+        where == "current" &&
+        browser.currentURI &&
+        url === browser.currentURI.spec
+      ) {
+        this.browserWindow.SitePermissions.clearTemporaryBlockPermissions(
+          browser
+        );
+      }
+    }
+
+    // Specifies that the URL load was initiated by the URL bar.
+    params.initiatedByURLBar = true;
   }
 
   /**

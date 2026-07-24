@@ -5026,94 +5026,6 @@ ${
    *
    * @param {string} url
    *   The URL to open.
-   * @param {string} openUILinkWhere
-   *   Where we expect the result to be opened.
-   * @param {object} params
-   *   The parameters related to how and where the result will be opened.
-   *   Further supported paramters are listed in _loadURL.
-   * @param {object} [params.triggeringPrincipal]
-   *   The principal that the action was triggered from.
-   * @param {object} [resultDetails]
-   *   Details of the selected result, if any.
-   *   Further supported details are listed in _loadURL.
-   * @param {string} [resultDetails.searchTerm]
-   *   Search term of the result source, if any.
-   * @param {object} browser the browser to use for the load.
-   */
-  #prepareAddressbarLoad(
-    url,
-    openUILinkWhere,
-    params,
-    resultDetails = null,
-    browser
-  ) {
-    if (!this.#isAddressbar) {
-      throw new Error(
-        "Can't prepare addressbar load when this isn't an addressbar input"
-      );
-    }
-
-    // No point in setting these because we'll handleRevert() a few rows below.
-    if (openUILinkWhere == "current") {
-      // Make sure URL is formatted properly (don't show punycode).
-      let formattedURL = url;
-      try {
-        formattedURL = losslessDecodeURI(new URL(url).URI);
-      } catch {}
-
-      this.value =
-        lazy.UrlbarPrefs.isPersistedSearchTermsEnabled() &&
-        resultDetails?.searchTerm
-          ? resultDetails.searchTerm
-          : formattedURL;
-      browser.userTypedValue = this.value;
-    }
-
-    // No point in setting this if we are loading in a new window.
-    if (
-      openUILinkWhere != "window" &&
-      this.window.gInitialPages.includes(url)
-    ) {
-      browser.initialPageLoadedFromUserAction = url;
-    }
-
-    try {
-      lazy.UrlbarUtils.addToUrlbarHistory(url, this.window);
-    } catch (ex) {
-      // Things may go wrong when adding url to session history,
-      // but don't let that interfere with the loading of the url.
-      console.error(ex);
-    }
-
-    // TODO: When bug 1498553 is resolved, we should be able to
-    // remove the !triggeringPrincipal condition here.
-    if (
-      !params.triggeringPrincipal ||
-      params.triggeringPrincipal.isSystemPrincipal
-    ) {
-      // Reset DOS mitigations for the basic auth prompt.
-      delete browser.authPromptAbuseCounter;
-
-      // Reset temporary permissions on the current tab if the user reloads
-      // the tab via the urlbar.
-      if (
-        openUILinkWhere == "current" &&
-        browser.currentURI &&
-        url === browser.currentURI.spec
-      ) {
-        this.window.SitePermissions.clearTemporaryBlockPermissions(browser);
-      }
-    }
-
-    // Specifies that the URL load was initiated by the URL bar.
-    params.initiatedByURLBar = true;
-  }
-
-  /**
-   * Loads the url in the appropriate place.
-   *
-   * @param {string} url
-   *   The URL to open.
    * @param {Event} event
    *   The event that triggered to load the url.
    * @param {string} openUILinkWhere
@@ -5149,14 +5061,20 @@ ${
   ) {
     browser ??= this.window.gBrowser?.selectedBrowser ?? null;
 
-    if (this.#isAddressbar) {
-      this.#prepareAddressbarLoad(
-        url,
-        openUILinkWhere,
-        params,
-        resultDetails,
-        browser
-      );
+    let userTypedValue;
+    if (this.#isAddressbar && openUILinkWhere == "current") {
+      // Make sure URL is formatted properly (don't show punycode).
+      let formattedURL = url;
+      try {
+        formattedURL = losslessDecodeURI(new URL(url).URI);
+      } catch {}
+
+      this.value =
+        lazy.UrlbarPrefs.isPersistedSearchTermsEnabled() &&
+        resultDetails?.searchTerm
+          ? resultDetails.searchTerm
+          : formattedURL;
+      userTypedValue = this.value;
     }
 
     params.allowThirdPartyFixup = true;
@@ -5209,6 +5127,7 @@ ${
       where: openUILinkWhere,
       params,
       browserId: browser?.browserId ?? null,
+      userTypedValue,
     });
     // In the message-passing path, loadURL returns a promise.
     if (loadStatus.then) {
