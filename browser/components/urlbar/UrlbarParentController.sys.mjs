@@ -19,7 +19,6 @@ const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   AppProvidedConfigEngine:
     "moz-src:///toolkit/components/search/ConfigSearchEngine.sys.mjs",
-  ASRouter: "resource:///modules/asrouter/ASRouter.sys.mjs",
   ConfigSearchEngine:
     "moz-src:///toolkit/components/search/ConfigSearchEngine.sys.mjs",
   BrowserSearchTelemetry:
@@ -329,97 +328,6 @@ export class UrlbarParentController {
   }
 
   /**
-   * Records entry into a search mode. The parent-side counterpart to the
-   * content-side `BrowserSearchTelemetry.recordSearchMode()` call.
-   *
-   * @param {object} searchMode
-   *   The search mode being entered. See `UrlbarInput.setSearchMode`.
-   */
-  recordSearchMode(searchMode) {
-    try {
-      lazy.BrowserSearchTelemetry.recordSearchMode(searchMode);
-    } catch (ex) {
-      console.error(ex);
-    }
-  }
-
-  /**
-   * Records a visit to an engine's search form. The parent-side counterpart to
-   * the content-side `BrowserSearchTelemetry.recordSearchForm()` call; the
-   * engine is shipped by id and resolved here, and the source is this
-   * controller's SAP.
-   *
-   * @param {string} engineId
-   *   The id of the engine whose search form was visited.
-   */
-  recordSearchForm(engineId) {
-    let engine = lazy.SearchService.getEngineById(engineId);
-    lazy.BrowserSearchTelemetry.recordSearchForm(engine, this.sapName);
-  }
-
-  /**
-   * Records that a search is being loaded: bumps the search-count prefs,
-   * informs ASRouter, and records search telemetry. The parent-side
-   * counterpart to the content-side `_recordSearch()`.
-   *
-   * @param {object} options
-   * @param {string} options.engineId
-   *   The id of the engine handling the search.
-   * @param {string} options.searchSource
-   *   Where the search originated from.
-   * @param {object} options.details
-   *   The search action details, per `BrowserSearchTelemetry.recordSearch()`.
-   * @param {number} [options.browserId]
-   *   The id of the browser where the search is being opened; defaults to the
-   *   selected browser.
-   */
-  recordSearch({ engineId, searchSource, details, browserId }) {
-    let browser =
-      (browserId &&
-        BrowsingContext.getCurrentTopByBrowserId(browserId)?.embedderElement) ||
-      this.browserWindow.gBrowser.selectedBrowser;
-
-    // Record when the user uses the search bar to be used for message
-    // targeting. This is arbitrarily capped at 100, only to prevent the number
-    // from growing infinitely.
-    const totalSearches = Services.prefs.getIntPref(
-      "browser.search.totalSearches"
-    );
-    if (totalSearches < 100) {
-      Services.prefs.setIntPref(
-        "browser.search.totalSearches",
-        totalSearches + 1
-      );
-    }
-
-    // Record when the user uses the search bar so SearchWidgetTracker can
-    // remove the search bar when it hasn't been used in a long time.
-    if (this.sapName == "searchbar") {
-      Services.prefs.setStringPref(
-        "browser.search.widget.lastUsed",
-        new Date().toISOString()
-      );
-    }
-
-    lazy.ASRouter.sendTriggerMessage({
-      browser,
-      id: "onSearch",
-      context: {
-        isSuggestion: details.isSuggestion || false,
-        searchSource,
-        isOneOff: details.isOneOff,
-      },
-    });
-
-    lazy.BrowserSearchTelemetry.recordSearch(
-      browser,
-      engineId,
-      searchSource,
-      details
-    );
-  }
-
-  /**
    * Cancels an in-progress query. Note, queries may continue running if they
    * can't be cancelled.
    */
@@ -628,13 +536,9 @@ export class UrlbarParentController {
    *   The target browser's id; defaults to the selected browser.
    * @param {string} [loadData.userTypedValue]
    *   The value to record as the browser's typed value, for a `current` load.
-   * @returns {{reverted: boolean, browserId: number}}
-   *   Whether the load threw without showing an error page, so the input should
-   *   revert, and the id of the browser the load resolved to. The latter is not
-   *   an echo of the optional `browserId` param: a default `current` load omits
-   *   it and the target is resolved here, so this is how the child learns which
-   *   browser to hand `focusBrowser` on the deferred-Enter keyup -- a
-   *   content-process input can't resolve the selected browser itself.
+   * @returns {{reverted: boolean}}
+   *   Whether the load threw without showing an error page, so the input
+   *   should revert.
    */
   loadURL({ url, where, params, browserId, userTypedValue }) {
     let browser =
@@ -670,35 +574,9 @@ export class UrlbarParentController {
     } catch (ex) {
       // This load can throw in certain cases; unless an error page was shown,
       // the input should revert to the loaded URL.
-      return {
-        reverted: ex.result != Cr.NS_ERROR_LOAD_SHOWED_ERRORPAGE,
-        browserId: browser.browserId,
-      };
+      return { reverted: ex.result != Cr.NS_ERROR_LOAD_SHOWED_ERRORPAGE };
     }
-    return { reverted: false, browserId: browser.browserId };
-  }
-
-  /**
-   * Focuses the browser a deferred-Enter load targeted, once the load's keyup
-   * fires, but only if it is still the selected browser. Reaching the browser
-   * element and comparing it against the selection is parent-only work.
-   *
-   * @param {number} [browserId]
-   *   The browser the load resolved to, as returned by `loadURL`.
-   * @returns {{focused: boolean}}
-   *   Whether the browser was focused, so the child can keep the domain name
-   *   visible.
-   */
-  focusBrowser(browserId) {
-    let browser =
-      browserId &&
-      BrowsingContext.getCurrentTopByBrowserId(browserId)?.embedderElement;
-    let { selectedBrowser } = this.browserWindow.gBrowser;
-    if (browser && browser == selectedBrowser) {
-      selectedBrowser.focus();
-      return { focused: true };
-    }
-    return { focused: false };
+    return { reverted: false };
   }
 
   /**

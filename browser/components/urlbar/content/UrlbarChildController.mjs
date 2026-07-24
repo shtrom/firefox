@@ -55,13 +55,12 @@ export class UrlbarChildController {
     return UrlbarChildController.#logger;
   }
 
+  // TODO: rename to `#parentController` to mirror the public getter and avoid
+  // confusion with the `UrlbarParent` actor.
   /** @type {UrlbarParentController} */
-  #parentController;
+  #parent;
 
   #input;
-
-  /** @type {UrlbarChild} */
-  #actor;
 
   /** @type {UrlbarView} */
   #view = null;
@@ -92,20 +91,19 @@ export class UrlbarChildController {
         options.input.window.windowGlobalChild.getActor("Urlbar")
       )
     );
-    this.#actor = actor;
     let { sapName, isPrivate } = options.input;
     // The message path builds a proxy that trades actor messages with the
     // parent-side controller; the direct path builds the real controller in
     // place (both live in the same process, and it only needs the actor to
     // resolve the chrome window). Either way the child owns construction.
-    this.#parentController = actor.usesMessagePath
+    this.#parent = actor.usesMessagePath
       ? new UrlbarParentControllerProxy(
           actor,
           actor.registerMessagePathInput(options.input),
           { sapName, isPrivate }
         )
       : new lazy.UrlbarParentController({ sapName, isPrivate, actor });
-    this.#parentController.setChild(this);
+    this.#parent.setChild(this);
 
     this.engineStore = new SearchEngineStore(this);
   }
@@ -128,14 +126,14 @@ export class UrlbarChildController {
    * @type {UrlbarParentController}
    */
   get parentController() {
-    return this.#parentController;
+    return this.#parent;
   }
   get engagementEvent() {
     // Direct path: the real parent controller's recorder. Message path: the
     // parent stand-in has none, so use a content-side collector that ships
     // engagements to the parent recorder.
     return (
-      this.#parentController.engagementEvent ??
+      this.#parent.engagementEvent ??
       (this.#childTelemetry ??= new UrlbarChildTelemetry(this))
     );
   }
@@ -162,23 +160,23 @@ export class UrlbarChildController {
     this.#userSelectionBehavior = behavior;
   }
   get _lastQueryContextWrapper() {
-    return this.#parentController._lastQueryContextWrapper;
+    return this.#parent._lastQueryContextWrapper;
   }
 
   setView(view) {
     this.#view = view;
   }
   getViewUpdate(result, idsByName) {
-    return this.#parentController.getViewUpdate(result, idsByName);
+    return this.#parent.getViewUpdate(result, idsByName);
   }
   onBeforeSelection(result, element) {
-    return this.#parentController.onBeforeSelection(result, element);
+    return this.#parent.onBeforeSelection(result, element);
   }
   onSelection(result, element) {
-    return this.#parentController.onSelection(result, element);
+    return this.#parent.onSelection(result, element);
   }
   getHeuristicResult(queryContext) {
-    return this.#parentController.getHeuristicResult(queryContext);
+    return this.#parent.getHeuristicResult(queryContext);
   }
   addListener(listener) {
     if (!listener || typeof listener != "object") {
@@ -212,25 +210,16 @@ export class UrlbarChildController {
     }
   }
   recordEngagement(wire) {
-    return this.#parentController.recordEngagement(wire);
+    return this.#parent.recordEngagement(wire);
   }
   resetEngagement() {
-    return this.#parentController.resetEngagement();
+    return this.#parent.resetEngagement();
   }
   handleBounceTrigger(payload) {
-    return this.#parentController.handleBounceTrigger(payload);
+    return this.#parent.handleBounceTrigger(payload);
   }
   trackBounceBrowser(browserId) {
-    return this.#parentController.trackBounceBrowser(browserId);
-  }
-  recordSearchMode(searchMode) {
-    return this.#parentController.recordSearchMode(searchMode);
-  }
-  recordSearchForm(engineName) {
-    return this.#parentController.recordSearchForm(engineName);
-  }
-  recordSearch(options) {
-    return this.#parentController.recordSearch(options);
+    return this.#parent.trackBounceBrowser(browserId);
   }
   /**
    * Starts a query and returns the parent controller's promise so callers (the
@@ -240,7 +229,7 @@ export class UrlbarChildController {
    * @returns {Promise<UrlbarQueryContext>} Resolves with the finished context.
    */
   startQuery(queryContext) {
-    let queryContextPromise = this.#parentController.startQuery(queryContext);
+    let queryContextPromise = this.#parent.startQuery(queryContext);
     // Arm the event bufferer as the query starts so a just-typed Enter is
     // deferred until results arrive; it can't wait for the QUERY_STARTED
     // notification, which arrives a round-trip late over the message path, after
@@ -250,19 +239,19 @@ export class UrlbarChildController {
     return queryContextPromise;
   }
   cancelQuery() {
-    return this.#parentController.cancelQuery();
+    return this.#parent.cancelQuery();
   }
   receiveResults(queryContext) {
-    return this.#parentController.receiveResults(queryContext);
+    return this.#parent.receiveResults(queryContext);
   }
   removeResult(result, options) {
-    return this.#parentController.removeResult(result, options);
+    return this.#parent.removeResult(result, options);
   }
   setLastQueryContextCache(queryContext) {
-    return this.#parentController.setLastQueryContextCache(queryContext);
+    return this.#parent.setLastQueryContextCache(queryContext);
   }
   clearLastQueryContextCache() {
-    return this.#parentController.clearLastQueryContextCache();
+    return this.#parent.clearLastQueryContextCache();
   }
   /**
    * Receives keyboard events from the input and handles those that should
@@ -646,93 +635,11 @@ export class UrlbarChildController {
   }
 
   speculativeConnect(result, context, reason) {
-    return this.#parentController.speculativeConnect(result, context, reason);
+    return this.#parent.speculativeConnect(result, context, reason);
   }
 
   loadURL(loadData) {
-    return this.#parentController.loadURL(loadData);
-  }
-
-  /**
-   * @param {number} [browserId] The browser the load resolved to, as returned by `loadURL`.
-   * @returns {Promise<{focused: boolean}> | {focused: boolean}} Whether the browser was focused.
-   */
-  focusBrowser(browserId) {
-    return this.#parentController.focusBrowser(browserId);
-  }
-
-  /**
-   * Returns whether the passed-in event represents a canonization request.
-   *
-   * @param {Event} event
-   *   An Event to examine.
-   * @returns {boolean}
-   *   Whether the event is a KeyboardEvent that triggers canonization.
-   */
-  isCanonizeKeyboardEvent(event) {
-    if (this.#input.sapName == "searchbar") {
-      return false;
-    }
-    return (
-      KeyboardEvent.isInstance(event) &&
-      event.keyCode == KeyEvent.DOM_VK_RETURN &&
-      (AppConstants.platform == "macosx" ? event.metaKey : event.ctrlKey) &&
-      !(/** @type {any} */ (event)._disableCanonization) &&
-      lazy.UrlbarPrefs.get("ctrlCanonizesURLs")
-    );
-  }
-
-  /**
-   * Determines where a URL/page picked in `<moz-urlbar>` should be opened. Only
-   * the `BrowserUtils.whereToOpenLink` call is routed through the actor (a system
-   * module the content-web scope can't import); everything else, including the
-   * guarded empty-tab read, is content-safe and stays here.
-   *
-   * @param {KeyboardEvent | MouseEvent} event
-   *   The event that triggered the opening.
-   * @returns {"current" | "tabshifted" | "tab" | "save" | "window"}
-   */
-  whereToOpen(event) {
-    let isKeyboardEvent = KeyboardEvent.isInstance(event);
-    let reuseEmpty = isKeyboardEvent;
-    /** @type {"current" | "tabshifted" | "tab" | "save" | "window"} */
-    let where;
-    if (
-      isKeyboardEvent &&
-      (event.altKey || event.getModifierState("AltGraph"))
-    ) {
-      // We support using 'alt' to open in a tab, because ctrl/shift
-      // might be used for canonizing URLs:
-      where = event.shiftKey ? "tabshifted" : "tab";
-    } else if (this.isCanonizeKeyboardEvent(event)) {
-      // If we're allowing canonization, and this is a canonization key event,
-      // open in current tab to avoid handling as new tab modifier.
-      where = "current";
-    } else {
-      where = this.#actor.whereToOpenLink(event);
-    }
-    let openInTabPref =
-      this.#input.sapName == "searchbar"
-        ? lazy.UrlbarPrefs.get("browser.search.openintab")
-        : lazy.UrlbarPrefs.get("openintab");
-    if (openInTabPref) {
-      if (where == "current") {
-        where = "tab";
-      } else if (where == "tab") {
-        where = "current";
-      }
-      reuseEmpty = true;
-    }
-    // The browser window exists only in chrome; a content-process input has no
-    // tab to reuse, so `gBrowser` is absent and the reuse is skipped.
-    if (
-      where == "tab" &&
-      reuseEmpty &&
-      this.window.gBrowser?.selectedTab.isEmpty
-    ) {
-      where = "current";
-    }
-    return where;
+    return this.#parent.loadURL(loadData);
   }
 
   focusOnUnifiedSearchButton() {
@@ -774,20 +681,20 @@ export class UrlbarChildController {
   }
 
   initEngineStore() {
-    this.#parentController.initEngineStore();
+    this.#parent.initEngineStore();
   }
 
   maybeInitEngineStore() {
-    return this.#parentController.maybeInitEngineStore();
+    return this.#parent.maybeInitEngineStore();
   }
 
   /** @type {typeof UrlbarParentController.prototype.openSERP} */
   openSERP(engineId, searchTerms, where, inBackground) {
-    this.#parentController.openSERP(engineId, searchTerms, where, inBackground);
+    this.#parent.openSERP(engineId, searchTerms, where, inBackground);
   }
 
   /** @type {typeof UrlbarParentController.prototype.openSearchForm} */
   openSearchForm(engineId, where, inBackground) {
-    this.#parentController.openSearchForm(engineId, where, inBackground);
+    this.#parent.openSearchForm(engineId, where, inBackground);
   }
 }

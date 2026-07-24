@@ -21,7 +21,6 @@ import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
  * @import { SearchEngine } from "moz-src:///toolkit/components/search/SearchEngine.sys.mjs"
  * @import { SuggestBackendMerino } from "moz-src:///browser/components/urlbar/private/SuggestBackendMerino.sys.mjs"
  * @import { PartialSearchEngine } from "chrome://browser/content/urlbar/SearchEngineStore.mjs"
- * @import { BrowserSearchTelemetry } from "moz-src:///browser/components/search/BrowserSearchTelemetry.sys.mjs"
  */
 
 /**
@@ -50,6 +49,9 @@ import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
 const lazy = XPCOMUtils.declareLazy({
   AIWindow:
     "moz-src:///browser/components/aiwindow/ui/modules/AIWindow.sys.mjs",
+  ASRouter: "resource:///modules/asrouter/ASRouter.sys.mjs",
+  BrowserSearchTelemetry:
+    "moz-src:///browser/components/search/BrowserSearchTelemetry.sys.mjs",
   BrowserUIUtils: "resource:///modules/BrowserUIUtils.sys.mjs",
   BrowserUtils: "resource://gre/modules/BrowserUtils.sys.mjs",
   CustomizableUI:
@@ -1385,7 +1387,7 @@ ${
         searchModeEngine,
         typedValue,
         event,
-        this.controller.whereToOpen(event),
+        this._whereToOpen(event),
         openParams
       );
     } else {
@@ -1409,7 +1411,7 @@ ${
         this.openSearchEnginePage("", {
           searchEngine,
           event,
-          where: this.controller.whereToOpen(event),
+          where: this._whereToOpen(event),
         });
       }
       return;
@@ -1426,7 +1428,7 @@ ${
       return;
     }
 
-    let where = oneOffParams?.openWhere || this.controller.whereToOpen(event);
+    let where = oneOffParams?.openWhere || this._whereToOpen(event);
     if (selectedPrivateResult) {
       where = "window";
       openParams.private = true;
@@ -1732,7 +1734,7 @@ ${
 
       openParams.forceForeground = false;
     } else {
-      where = this.controller.whereToOpen(event);
+      where = this._whereToOpen(event);
       if (resultUrl && where == "current") {
         // Open help links in a new tab.
         where = "tab";
@@ -2913,7 +2915,11 @@ ${
         this.userTypedValue = this.untrimmedValue;
         this.valueIsTyped = true;
         if (!searchMode.isPreview && !areSearchModesSame) {
-          this.controller.recordSearchMode(searchMode);
+          try {
+            lazy.BrowserSearchTelemetry.recordSearchMode(searchMode);
+          } catch (ex) {
+            console.error(ex);
+          }
         }
       }
     }
@@ -3294,7 +3300,7 @@ ${
    * @param {Event} [event]
    *   The event that triggered this query.
    *   This is not needed for urlbar.* telemetry.
-   * @returns {keyof typeof BrowserSearchTelemetry.KNOWN_SEARCH_SOURCES}
+   * @returns {keyof typeof lazy.BrowserSearchTelemetry.KNOWN_SEARCH_SOURCES}
    *   The source name.
    */
   getSearchSource(event) {
@@ -3982,7 +3988,9 @@ ${
   }
 
   /**
-   * Hands a loading search to the parent controller, which records it.
+   * Records in telemetry that a search is being loaded,
+   * updates an incremental total number of searches in a pref,
+   * and informs ASRouter that a search has occurred via a trigger send
    *
    * @param {string} engineId
    *   The engine to generate the query for.
@@ -3999,22 +4007,56 @@ ${
    * @param {string} [searchActionDetails.url]
    *   The url this query was triggered with.
    * @param {MozBrowser} [browser]
-   *   The browser where the search is being opened. When omitted, the parent
-   *   controller records against its selected browser.
+   *   The browser where the search is being opened.
+   *   Defaults to the window's selected browser.
    */
-  _recordSearch(engineId, event, searchActionDetails = {}, browser = null) {
+  _recordSearch(
+    engineId,
+    event,
+    searchActionDetails = {},
+    browser = this.window.gBrowser.selectedBrowser
+  ) {
     const isOneOff = this.view.oneOffSearchButtons?.eventTargetIsAOneOff(event);
     const searchSource = this.getSearchSource(event);
 
-    this.controller.recordSearch({
-      engineId,
-      searchSource,
-      details: {
-        ...searchActionDetails,
+    // Record when the user uses the search bar to be
+    // used for message targeting. This is arbitrarily capped
+    // at 100, only to prevent the number from growing ifinitely.
+    const totalSearches = Services.prefs.getIntPref(
+      "browser.search.totalSearches"
+    );
+    const totalSearchesCap = 100;
+    if (totalSearches < totalSearchesCap) {
+      Services.prefs.setIntPref(
+        "browser.search.totalSearches",
+        totalSearches + 1
+      );
+    }
+
+    // Record when the user uses the search bar so SearchWidgetTracker can
+    // remove the search bar when it hasn't been used in a long time.
+    if (this.#sapName == "searchbar") {
+      Services.prefs.setStringPref(
+        "browser.search.widget.lastUsed",
+        new Date().toISOString()
+      );
+    }
+
+    // Sending a trigger to ASRouter when a search happens
+    lazy.ASRouter.sendTriggerMessage({
+      browser,
+      id: "onSearch",
+      context: {
+        isSuggestion: searchActionDetails.isSuggestion || false,
+        searchSource,
         isOneOff,
-        newtabSessionId: this._handoffSession,
       },
-      browserId: browser?.browsingContext?.browserId,
+    });
+
+    lazy.BrowserSearchTelemetry.recordSearch(browser, engineId, searchSource, {
+      ...searchActionDetails,
+      isOneOff,
+      newtabSessionId: this._handoffSession,
     });
   }
 
@@ -4042,6 +4084,27 @@ ${
   }
 
   /**
+   * Returns whether the passed-in event may represents a canonization request.
+   *
+   * @param {Event} event
+   *   An Event to examine.
+   * @returns {boolean}
+   *   Whether the event is a KeyboardEvent that triggers canonization.
+   */
+  #isCanonizeKeyboardEvent(event) {
+    if (this.sapName == "searchbar") {
+      return false;
+    }
+    return (
+      KeyboardEvent.isInstance(event) &&
+      event.keyCode == KeyEvent.DOM_VK_RETURN &&
+      (AppConstants.platform == "macosx" ? event.metaKey : event.ctrlKey) &&
+      !event._disableCanonization &&
+      lazy.UrlbarPrefs.get("ctrlCanonizesURLs")
+    );
+  }
+
+  /**
    * If appropriate, this prefixes a search string with 'www.' and suffixes it
    * with Services.locale.urlFixupSuffix prior to navigating.
    *
@@ -4056,7 +4119,7 @@ ${
     // Only add the suffix when the URL bar value isn't already "URL-like",
     // and only if we get a keyboard event, to match user expectations.
     if (
-      !this.controller.isCanonizeKeyboardEvent(event) ||
+      !this.#isCanonizeKeyboardEvent(event) ||
       !/^\s*[^.:\/\s]+(?:\/.*|\s*)$/i.test(value)
     ) {
       return null;
@@ -4159,7 +4222,7 @@ ${
       return;
     }
 
-    let where = this.controller.whereToOpen(event);
+    let where = this._whereToOpen(event);
     if (element.dataset.command == "help" && where == "current") {
       // Open help links in a new tab.
       where = "tab";
@@ -4252,7 +4315,6 @@ ${
       params.allowPopups = url.startsWith("javascript:");
     }
 
-    let keyDownEnterDeferred;
     if (
       this._keyDownEnterDeferred &&
       event?.keyCode === KeyEvent.DOM_VK_RETURN &&
@@ -4263,11 +4325,11 @@ ${
       // To do it, send avoidBrowserFocus flag to openTrustedLinkIn() to avoid
       // focusing on the browser in the function. And also, set loadedContent
       // flag that whether the content is loaded in the current tab by this enter
-      // key. The load resolves the deferred with the loaded browser's id, which
-      // key up hands to the parent to focus.
+      // key. _keyDownEnterDeferred promise is processed at key up the enter,
+      // focus on the browser passed by _keyDownEnterDeferred.resolve().
       params.avoidBrowserFocus = true;
       this._keyDownEnterDeferred.loadedContent = true;
-      keyDownEnterDeferred = this._keyDownEnterDeferred;
+      this._keyDownEnterDeferred.resolve(browser);
     }
 
     // Ensure the window gets the `private` feature if the current window
@@ -4301,9 +4363,6 @@ ${
     if (loadStatus.then) {
       loadStatus = await loadStatus;
     }
-    // Hand the loaded browser's id to the deferred-Enter key up handler so it
-    // can focus it parent-side.
-    keyDownEnterDeferred?.resolve(loadStatus.browserId);
     // The load can throw parent-side; unless an error page was shown we
     // replace the URL with the loaded one.
     if (loadStatus.reverted) {
@@ -4314,6 +4373,52 @@ ${
       // to flash since this._on_blur would remove it immediately after.
       this.view.close({ showFocusBorder: false });
     }
+  }
+
+  /**
+   * Determines where a URL/page should be opened.
+   *
+   * @param {Event} event the event triggering the opening.
+   * @returns {"current" | "tabshifted" | "tab" | "save" | "window"}
+   */
+  _whereToOpen(event) {
+    let isKeyboardEvent = KeyboardEvent.isInstance(event);
+    let reuseEmpty = isKeyboardEvent;
+    let where = undefined;
+    if (
+      isKeyboardEvent &&
+      (event.altKey || event.getModifierState("AltGraph"))
+    ) {
+      // We support using 'alt' to open in a tab, because ctrl/shift
+      // might be used for canonizing URLs:
+      where = event.shiftKey ? "tabshifted" : "tab";
+    } else if (this.#isCanonizeKeyboardEvent(event)) {
+      // If we're allowing canonization, and this is a canonization key event,
+      // open in current tab to avoid handling as new tab modifier.
+      where = "current";
+    } else {
+      where = lazy.BrowserUtils.whereToOpenLink(event, false, false);
+    }
+    let openInTabPref =
+      this.#sapName == "searchbar"
+        ? lazy.UrlbarPrefs.get("browser.search.openintab")
+        : lazy.UrlbarPrefs.get("openintab");
+    if (openInTabPref) {
+      if (where == "current") {
+        where = "tab";
+      } else if (where == "tab") {
+        where = "current";
+      }
+      reuseEmpty = true;
+    }
+    if (
+      where == "tab" &&
+      reuseEmpty &&
+      this.window.gBrowser.selectedTab.isEmpty
+    ) {
+      where = "current";
+    }
+    return where;
   }
 
   _initCopyCutController() {
@@ -5924,11 +6029,10 @@ ${
     if (this._keyDownEnterDeferred) {
       if (this._keyDownEnterDeferred.loadedContent) {
         try {
-          const browserId = await this._keyDownEnterDeferred.promise;
-          // The parent focuses the loading browser if it's still selected,
-          // since only it can reach the browser element and the chrome window.
-          let { focused } = await this.controller.focusBrowser(browserId);
-          if (focused) {
+          const loadingBrowser = await this._keyDownEnterDeferred.promise;
+          // Ensure the selected browser didn't change in the meanwhile.
+          if (this.window.gBrowser.selectedBrowser === loadingBrowser) {
+            loadingBrowser.focus();
             // Make sure the domain name stays visible for spoof protection and usability.
             this.inputField.setSelectionRange(0, 0);
           }
