@@ -39,67 +39,66 @@ class NotificationObserver final : public nsIAlertCallbacks {
 
   NS_IMETHODIMP OnAlertSettings() override { return OpenSettings(mPrincipal); }
 
+  /**
+   * @returns True if the actor ran and no further action is needed, false
+   * otherwise.
+   */
+  template <typename T>
+  bool RunActor(T aFunc) {
+    RefPtr<NotificationParent> actor(mActor);
+    if (actor && actor->CanSend()) {
+      aFunc(actor.get());
+      return mScope.IsEmpty();
+    }
+    return false;
+  }
+
   NS_IMETHODIMP OnAlertShow() override {
-    return Observe(nullptr, AlertTopic::Show);
+    if (RunActor([](auto* actor) { actor->OnAlertShow(); })) {
+      return NS_OK;
+    }
+
+    (void)NS_WARN_IF(NS_FAILED(
+        AdjustPushQuota(mPrincipal, NotificationStatusChange::Shown)));
+    nsresult rv = PersistNotification(mPrincipal, mNotification, mScope);
+    if (NS_FAILED(rv)) {
+      NS_WARNING("Could not persist Notification");
+    }
+    return NS_OK;
   }
 
   NS_IMETHODIMP OnAlertClick(nsIAlertAction* aAction) override {
-    return Observe(aAction, AlertTopic::Click);
+    if (RunActor([](auto* actor) { actor->FireClickEvent(); })) {
+      return NS_OK;
+    } else if (mScope.IsEmpty()) {
+      // No actor there, we need to open up a window ourselves
+      return OpenWindowFor(mPrincipal);
+    }
+
+    nsAutoString actionName;
+    if (aAction) {
+      MOZ_TRY(aAction->GetAction(actionName));
+    }
+    return RespondOnClick(mPrincipal, mScope, mNotification, actionName);
   }
 
   NS_IMETHODIMP OnAlertDismissedFromForeground() override { return NS_OK; }
 
   NS_IMETHODIMP OnAlertClosed() override {
-    return Observe(nullptr, AlertTopic::Closed);
+    if (RunActor([](auto* actor) { actor->OnAlertFinished(true); })) {
+      return NS_OK;
+    }
+    return OnAlertFinishedCommon();
   }
 
   NS_IMETHODIMP OnAlertFinished() override {
-    return Observe(nullptr, AlertTopic::Finished);
+    if (RunActor([](auto* actor) { actor->OnAlertFinished(false); })) {
+      return NS_OK;
+    }
+    return OnAlertFinishedCommon();
   }
 
-  nsresult Observe(nsIAlertAction* aAction, AlertTopic aTopic) {
-    RefPtr<NotificationParent> actor(mActor);
-
-    if (actor && actor->CanSend()) {
-      // The actor is alive, call it to ping the content process and/or to make
-      // it clean up itself
-      actor->HandleAlertTopic(aTopic);
-      if (mScope.IsEmpty()) {
-        // The actor covered everything we need.
-        return NS_OK;
-      }
-    } else if (mScope.IsEmpty()) {
-      if (aTopic == AlertTopic::Click) {
-        // No actor there, we need to open up a window ourselves
-        return OpenWindowFor(mPrincipal);
-      }
-      // Nothing to do
-      return NS_OK;
-    }
-
-    // We have a Service Worker to call
-    MOZ_ASSERT(!mScope.IsEmpty());
-    if (aTopic == AlertTopic::Show) {
-      (void)NS_WARN_IF(NS_FAILED(
-          AdjustPushQuota(mPrincipal, NotificationStatusChange::Shown)));
-      nsresult rv = PersistNotification(mPrincipal, mNotification, mScope);
-      if (NS_FAILED(rv)) {
-        NS_WARNING("Could not persist Notification");
-      }
-      return NS_OK;
-    }
-
-    MOZ_ASSERT(aTopic == AlertTopic::Click || aTopic == AlertTopic::Finished ||
-               aTopic == AlertTopic::Closed);
-
-    if (aTopic == AlertTopic::Click) {
-      nsAutoString actionName;
-      if (aAction) {
-        MOZ_TRY(aAction->GetAction(actionName));
-      }
-      return RespondOnClick(mPrincipal, mScope, mNotification, actionName);
-    }
-
+  nsresult OnAlertFinishedCommon() {
     RefPtr<ServiceWorkerManager> swm = ServiceWorkerManager::GetInstance();
     if (!swm) {
       return NS_ERROR_FAILURE;
@@ -108,7 +107,6 @@ class NotificationObserver final : public nsIAlertCallbacks {
     nsAutoCString originSuffix;
     MOZ_TRY(mPrincipal->GetOriginSuffix(originSuffix));
 
-    MOZ_ASSERT(aTopic == AlertTopic::Finished || aTopic == AlertTopic::Closed);
     (void)NS_WARN_IF(NS_FAILED(
         AdjustPushQuota(mPrincipal, NotificationStatusChange::Closed)));
     (void)NS_WARN_IF(
@@ -120,34 +118,6 @@ class NotificationObserver final : public nsIAlertCallbacks {
 
  private:
   virtual ~NotificationObserver() = default;
-
-  static AlertTopic ToAlertTopic(const char* aTopic, const char16_t* aData) {
-    if (!strcmp("alertdisablecallback", aTopic)) {
-      return AlertTopic::Disable;
-    }
-    if (!strcmp("alertsettingscallback", aTopic)) {
-      return AlertTopic::Settings;
-    }
-    if (!strcmp("alertclickcallback", aTopic)) {
-      return AlertTopic::Click;
-    }
-    if (!strcmp("alertshow", aTopic)) {
-      return AlertTopic::Show;
-    }
-    if (!strcmp("alertfinished", aTopic)) {
-      if (aData && nsDependentString(aData) == u"close"_ns) {
-        // Backends with asynchronous system API may hint that they are
-        // intentionally closing the notification, to disambiguate from an early
-        // alertfinished which is recognized as an error.
-        // (Not introducing alertclose for compatibility with existing browser
-        // script callers.)
-        return AlertTopic::Closed;
-      }
-      return AlertTopic::Finished;
-    }
-    MOZ_ASSERT_UNREACHABLE("Unknown alert topic");
-    return AlertTopic::Finished;
-  }
 
   // May want to replace with SWR ID, see bug 1881812
   nsString mScope;
@@ -192,37 +162,35 @@ class SafeBrowsingClassificationCallback final
 
 NS_IMPL_ISUPPORTS(SafeBrowsingClassificationCallback, nsIURIClassifierCallback)
 
-nsresult NotificationParent::HandleAlertTopic(AlertTopic aTopic) {
-  if (aTopic == AlertTopic::Click) {
-    return FireClickEvent();
-  }
-  if (aTopic == AlertTopic::Show) {
-    if (!mResolver) {
+nsresult NotificationParent::OnAlertShow() {
+  if (!mResolver) {
 #ifdef ANDROID
-      // XXX: This can happen as alertshow happens asynchronously on Android as
-      // we go through GeckoView.
-      //
-      // For example, if two same-tagged notifications are requested at the same
-      // time, the first one will be canceled but can still fire alertshow,
-      // while the second one will also fire one, and the handler for the second
-      // one would get both.
-      //
-      // We may want to reintroduce UUID for such asynchronous case, but for now
-      // it's very edge case and can be ignored.
-      return NS_OK;
-#else
-      MOZ_ASSERT_UNREACHABLE("Are we getting double show events?");
-      return NS_ERROR_FAILURE;
-#endif
-    }
-    mResolver.take().value()(CopyableErrorResult());
+    // XXX: This can happen as alertshow happens asynchronously on Android as
+    // we go through GeckoView.
+    //
+    // For example, if two same-tagged notifications are requested at the same
+    // time, the first one will be canceled but can still fire alertshow,
+    // while the second one will also fire one, and the handler for the second
+    // one would get both.
+    //
+    // We may want to reintroduce UUID for such asynchronous case, but for now
+    // it's very edge case and can be ignored.
     return NS_OK;
+#else
+    MOZ_ASSERT_UNREACHABLE("Are we getting double show events?");
+    return NS_ERROR_FAILURE;
+#endif
   }
+  mResolver.take().value()(CopyableErrorResult());
+  return NS_OK;
+}
+
+nsresult NotificationParent::OnAlertFinished(bool aIsClosed) {
   if (mResolver) {
-    if (aTopic == AlertTopic::Closed) {
+    if (aIsClosed) {
       // Closing without ever being shown, but intentionally by the backend
       mResolver.take().value()(CopyableErrorResult());
-    } else if (aTopic == AlertTopic::Finished) {
+    } else {
       // alertshow happens first before alertfinished, and it should have
       // nullified mResolver. If not it means it failed to show and is bailing
       // out.
@@ -237,15 +205,9 @@ nsresult NotificationParent::HandleAlertTopic(AlertTopic aTopic) {
     }
   }
 
-  if (aTopic == AlertTopic::Finished || aTopic == AlertTopic::Closed) {
-    // Unpersisted already and being unregistered already by nsIAlertsService
-    mDangling = true;
-    Close();
-
-    return NS_OK;
-  }
-
-  MOZ_ASSERT_UNREACHABLE("Unknown notification topic");
+  // Unpersisted already and being unregistered already by nsIAlertsService
+  mDangling = true;
+  Close();
 
   return NS_OK;
 }
