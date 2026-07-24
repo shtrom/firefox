@@ -165,6 +165,7 @@ already_AddRefed<Exception> CreateException(nsresult aRv,
     case NS_ERROR_MODULE_DOM_ANIM:
     case NS_ERROR_MODULE_DOM_PUSH:
     case NS_ERROR_MODULE_DOM_MEDIA:
+    case NS_ERROR_MODULE_DOM_SERIAL:
       if (aMessage.IsEmpty()) {
         return DOMException::Create(aRv);
       }
