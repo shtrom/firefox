@@ -667,7 +667,7 @@ export class UrlbarView {
     // implicitly unselected.
     if (this.input.searchMode?.isPreview) {
       this.input.searchMode = null;
-      this.chromeWindow.gBrowser.userTypedValue = null;
+      this.input.userTypedValue = null;
     }
 
     this.resultMenu.hide?.();
