@@ -6,20 +6,9 @@ import React from "react";
 import { batch } from "react-redux";
 import { actionCreators as ac, actionTypes as at } from "common/Actions.mjs";
 import { SectionsMgmtPanel } from "../SectionsMgmtPanel/SectionsMgmtPanel";
-import { ThemesManagementPanel } from "../ThemesManagementPanel/ThemesManagementPanel";
 import { WallpaperCategories } from "../../WallpaperCategories/WallpaperCategories";
 // @nova-cleanup(move-directory): Update import path after WidgetsManagementPanel moves to components/CustomizeMenu/
 import { WidgetsManagementPanel } from "content-src/components/Nova/CustomizeMenu/WidgetsManagementPanel/WidgetsManagementPanel";
-
-// `theme-picker` is imported lazily, so it may still be an undefined custom element
-// when React renders it. In that state React sets props as attributes, and the lit
-// `showLabels` boolean (default true) can't be turned off via an attribute — so set the
-// property directly via a ref; lit preserves it across element upgrade.
-function hideThemePickerLabels(el) {
-  if (el) {
-    el.showLabels = false;
-  }
-}
 
 export class ContentSection extends React.PureComponent {
   constructor(props) {
@@ -215,9 +204,6 @@ export class ContentSection extends React.PureComponent {
       showSectionsMgmtPanel,
       // @nova-cleanup(remove-conditional): Remove novaEnabled
       novaEnabled,
-      browserNovaEnabled,
-      toggleThemesPanel,
-      showThemesPanel,
       wallpapersEnabled,
       toggleWidgetsManagementPanel,
       showWidgetsManagementPanel,
@@ -254,21 +240,6 @@ export class ContentSection extends React.PureComponent {
     return (
       <>
         <div className="home-section">
-          {browserNovaEnabled && (
-            <div className="appearance-section section">
-              <h2 data-l10n-id="newtab-custom-appearance-section-title"></h2>
-              <theme-picker
-                ref={hideThemePickerLabels}
-                layout="compact"
-                installsource="about:newtab"
-              ></theme-picker>
-              <ThemesManagementPanel
-                onSubpanelToggle={onSubpanelToggle}
-                togglePanel={toggleThemesPanel}
-                showPanel={showThemesPanel}
-              />
-            </div>
-          )}
           {wallpapersEnabled && (
             <>
               <div className="wallpapers-section">
