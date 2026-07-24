@@ -13,8 +13,12 @@ const { ChatConversation } = ChromeUtils.importESModule(
 const { tabManagementService } = ChromeUtils.importESModule(
   "moz-src:///browser/components/aiwindow/ui/modules/TabManagementService.sys.mjs"
 );
+const { BrowserWindowTracker } = ChromeUtils.importESModule(
+  "resource:///modules/BrowserWindowTracker.sys.mjs"
+);
 
 let gPermanentKeySeq = 0;
+let gMockWindows = [];
 
 // Build a mock tab with a unique permanentKey (the identity the resolver uses).
 function makeTab(url, { userContextId = 0, label = "Tab" } = {}) {
@@ -29,8 +33,39 @@ function makeTab(url, { userContextId = 0, label = "Tab" } = {}) {
 }
 
 function makeWindow(tabs, selectedTab = null) {
-  return { closed: false, gBrowser: { tabs, selectedTab } };
+  const win = {
+    closed: false,
+    gBrowser: { tabs, selectedTab },
+    // AIWindow.isAIWindowActive() checks for the ai-window attribute.
+    document: {
+      documentElement: { hasAttribute: name => name === "ai-window" },
+    },
+  };
+  gMockWindows.push(win);
+  return win;
 }
+
+// Reset mock windows before each task.
+const _addTask = add_task;
+add_task = (task, fn = task) =>
+  _addTask(task, async (...args) => {
+    gMockWindows = [];
+    return fn(...args);
+  });
+
+add_setup(function () {
+  const descriptor = Object.getOwnPropertyDescriptor(
+    BrowserWindowTracker,
+    "orderedWindows"
+  );
+  Object.defineProperty(BrowserWindowTracker, "orderedWindows", {
+    configurable: true,
+    get: () => gMockWindows,
+  });
+  registerCleanupFunction(() => {
+    Object.defineProperty(BrowserWindowTracker, "orderedWindows", descriptor);
+  });
+});
 
 // Build a token-bearing selection for the given mock tabs and register the
 // token -> permanentKey map under toolCallId
@@ -194,7 +229,11 @@ add_task(async function test_handleUpdate_confirmation_success() {
   // Mock the tabManagementService for this test
   const originalCloseTabs = tabManagementService.closeTabs;
   tabManagementService.closeTabs = async function () {
-    return { operationId: "mock-operation-123" };
+    return {
+      operationId: "mock-operation-123",
+      requestedCount: 1,
+      failedTabs: [],
+    };
   };
 
   // Create a mock tab and register its token -> permanentKey selection.
@@ -276,7 +315,11 @@ add_task(async function test_handleUpdate_confirmation_resolves_tool_action() {
 
   const originalCloseTabs = tabManagementService.closeTabs;
   tabManagementService.closeTabs = async function () {
-    return { operationId: "mock-operation-789" };
+    return {
+      operationId: "mock-operation-789",
+      requestedCount: 1,
+      failedTabs: [],
+    };
   };
 
   const mockTab = makeTab("https://example.com", { label: "Test Tab" });
@@ -587,7 +630,11 @@ add_task(async function test_closeSelectedTabs_partial_match() {
   let closedTabs = null;
   tabManagementService.closeTabs = async function ({ tabs }) {
     closedTabs = tabs;
-    return { operationId: "mock-operation-123" };
+    return {
+      operationId: "mock-operation-123",
+      requestedCount: tabs.length,
+      failedTabs: [],
+    };
   };
 
   // One selection resolves to a live tab
@@ -663,7 +710,11 @@ add_task(async function test_closeSelectedTabs_unloaded_tabs() {
   let closedTabs = null;
   tabManagementService.closeTabs = async function ({ tabs }) {
     closedTabs = tabs;
-    return { operationId: "mock-operation-123" };
+    return {
+      operationId: "mock-operation-123",
+      requestedCount: tabs.length,
+      failedTabs: [],
+    };
   };
 
   // Unloaded/lazy tabs still retain a linkedBrowser with a permanentKey.
@@ -720,7 +771,11 @@ add_task(async function test_closeSelectedTabs_duplicate_unloaded_tabs() {
   let closedTabs = null;
   tabManagementService.closeTabs = async function ({ tabs }) {
     closedTabs = tabs;
-    return { operationId: "mock-operation-123" };
+    return {
+      operationId: "mock-operation-123",
+      requestedCount: tabs.length,
+      failedTabs: [],
+    };
   };
 
   // Two tabs at the same URL and container, distinguished only by permanentKey.
@@ -778,7 +833,11 @@ add_task(
     let closedTabs = null;
     tabManagementService.closeTabs = async function ({ tabs }) {
       closedTabs = tabs;
-      return { operationId: "mock-operation-123" };
+      return {
+        operationId: "mock-operation-123",
+        requestedCount: tabs.length,
+        failedTabs: [],
+      };
     };
 
     // Two tabs share the same URL.
@@ -836,7 +895,11 @@ add_task(async function test_closeSelectedTabs_no_matches() {
   let closeTabsCalled = false;
   tabManagementService.closeTabs = async function () {
     closeTabsCalled = true;
-    return { operationId: "mock-operation-123" };
+    return {
+      operationId: "mock-operation-123",
+      requestedCount: 1,
+      failedTabs: [],
+    };
   };
 
   const mockWindow = {
@@ -946,6 +1009,7 @@ add_task(async function test_closeSelectedTabs_public_method() {
     return {
       operationId: "test-operation-456",
       closedTabs: tabs,
+      requestedCount: tabs.length,
       failedTabs: [],
     };
   };
@@ -1620,7 +1684,7 @@ add_task(async function test_isRestored_flag_preserved() {
 add_task(async function test_closeSelectedTabs_tags_active_tab_source() {
   const originalCloseTabs = tabManagementService.closeTabs;
   tabManagementService.closeTabs = async function () {
-    return { operationId: "op-active" };
+    return { operationId: "op-active", requestedCount: 2, failedTabs: [] };
   };
 
   const activeTab = makeTab("https://example.com", { label: "Active" });
@@ -1647,5 +1711,115 @@ add_task(async function test_closeSelectedTabs_tags_active_tab_source() {
     otherTab.smartWindowActionSource,
     undefined,
     "Non-active tabs are not tagged"
+  );
+});
+
+/**
+ * Test a selection spanning multiple windows closing each tab in the owning window.
+ */
+add_task(async function test_closeSelectedTabs_spans_multiple_windows() {
+  const tabA = makeTab("https://example.com", { label: "Example" });
+  const windowA = makeWindow([tabA]);
+  const tabB = makeTab("https://mozilla.org", { label: "Mozilla" });
+  const windowB = makeWindow([tabB]);
+  const tabC = makeTab("https://example.org", { label: "Example Org" });
+  const windowC = makeWindow([tabC]);
+
+  // Record each closeTabs call so we can assert per-window dispatches
+  const originalCloseTabs = tabManagementService.closeTabs;
+  const closeCalls = [];
+  tabManagementService.closeTabs = async function ({ tabs, window }) {
+    closeCalls.push({ tabs, window });
+    return {
+      operationId: `op-${closeCalls.length}`,
+      requestedCount: tabs.length,
+      failedTabs: [],
+    };
+  };
+
+  const { selectedTabs, tokenToKey } = registerSelection("multiple-tabs", [
+    tabA,
+    tabB,
+    tabC,
+  ]);
+
+  let result;
+  try {
+    result = await ToolUI.closeSelectedTabs(selectedTabs, tokenToKey, windowA);
+  } finally {
+    tabManagementService.closeTabs = originalCloseTabs;
+  }
+
+  Assert.ok(result, "Should return a result for a cross-window selection");
+  Assert.equal(result.requestedCount, 3, "Should account for all three tabs");
+  Assert.equal(closeCalls.length, 3, "Should issue one close call per window");
+
+  const byWindow = new Map(closeCalls.map(call => [call.window, call.tabs]));
+  for (const [window, tab] of [
+    [windowA, tabA],
+    [windowB, tabB],
+    [windowC, tabC],
+  ]) {
+    Assert.deepEqual(
+      byWindow.get(window),
+      [tab],
+      `${tab.label} close call receives its own tab in its owning window`
+    );
+  }
+});
+
+/**
+ * When the interacting window holds none of the selected tabs, createTabGroup
+ * targets the window owning the most of them.
+ */
+add_task(async function test_createTabGroup_selects_owning_window() {
+  const interactingWindow = makeWindow([]);
+  const tabA = makeTab("https://example.com", { label: "Example" });
+  const tabB = makeTab("https://mozilla.org", { label: "Mozilla" });
+  const ownerWindow = makeWindow([tabA, tabB]);
+  const tabC = makeTab("https://example.org", { label: "Example Org" });
+  // A competing window owns a selected tab
+  makeWindow([tabC]);
+
+  const originalCreateTabGroup = tabManagementService.createTabGroup;
+  let createCall = null;
+  tabManagementService.createTabGroup = async function ({ tabs, window }) {
+    createCall = { tabs, window };
+    return { success: true, group: { id: "group-1" }, failedTabs: [] };
+  };
+
+  const { selectedTabs, tokenToKey } = registerSelection("group-tabs", [
+    tabA,
+    tabB,
+    tabC,
+  ]);
+
+  let result;
+  try {
+    result = await ToolUI.createTabGroup({
+      tabs: selectedTabs,
+      tokenToKey,
+      window: interactingWindow,
+      label: "My group",
+    });
+  } finally {
+    tabManagementService.createTabGroup = originalCreateTabGroup;
+  }
+
+  Assert.ok(result?.success, "Should create a group across windows");
+  Assert.equal(
+    createCall.window,
+    ownerWindow,
+    "Should target the window owning the most selected tabs"
+  );
+  Assert.deepEqual(
+    createCall.tabs,
+    [tabA, tabB],
+    "Should only group the owning window's tabs"
+  );
+  Assert.deepEqual(
+    result.failedTabs,
+    [{ tab: tabC, reason: "other-window" }],
+    "Tabs in other windows are reported as failed"
   );
 });

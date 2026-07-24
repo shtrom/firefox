@@ -35,6 +35,9 @@
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
+  AIWindow:
+    "moz-src:///browser/components/aiwindow/ui/modules/AIWindow.sys.mjs",
+  BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.sys.mjs",
   tabManagementService:
     "moz-src:///browser/components/aiwindow/ui/modules/TabManagementService.sys.mjs",
   ToolUITelemetry:
@@ -130,13 +133,14 @@ export class ToolUI {
   }
 
   /**
-   * Resolve selected tabs to live tab objects in the given window by
-   * permanentKey
+   * Resolve selected tabs to live tab objects across all active Smart Windows
+   * by permanentKey
    *
    * @param {Array<TabSelectionData>} selectedTabs - Selected tabs
    * @param {Map<string, object>} tokenToKey - token -> permanentKey for this operation
    * @param {ChromeWindow} win - The browser window object
-   * @returns {Array<Tab>|null} Verified tab objects or null if none valid
+   * @returns {Map<ChromeWindow, Array<Tab>>|null} Verified tabs grouped by their
+   *   owning window, or null if none valid
    * @private
    */
   static #verifyAndCollectTabs(selectedTabs = [], tokenToKey = null, win) {
@@ -149,35 +153,51 @@ export class ToolUI {
       return null;
     }
 
+    const candidateWindows = lazy.BrowserWindowTracker.orderedWindows.filter(
+      candidateWin => lazy.AIWindow.isAIWindowActive(candidateWin)
+    );
     const claimedTabs = new Set();
-    const verifiedTabObjects = [];
+    const tabsByWindow = new Map();
+    let verifiedCount = 0;
 
     for (const selectedTab of selectedTabs) {
       const permanentKey =
         selectedTab.token && tokenToKey.get(selectedTab.token);
-      const tab =
-        permanentKey &&
-        win.gBrowser.tabs.find(
-          t => !claimedTabs.has(t) && t.permanentKey === permanentKey
-        );
 
-      if (!tab) {
+      let match = null;
+      if (permanentKey) {
+        for (const candidateWindow of candidateWindows) {
+          const tab = candidateWindow.gBrowser.tabs.find(
+            t => !claimedTabs.has(t) && t.permanentKey === permanentKey
+          );
+          if (tab) {
+            match = { tab, window: candidateWindow };
+            break;
+          }
+        }
+      }
+
+      if (!match) {
         lazy.console.warn(
           `No live tab for selection ${selectedTab.url} (token ${selectedTab.token})`
         );
         continue;
       }
 
-      claimedTabs.add(tab);
-      verifiedTabObjects.push(tab);
+      claimedTabs.add(match.tab);
+      if (!tabsByWindow.has(match.window)) {
+        tabsByWindow.set(match.window, []);
+      }
+      tabsByWindow.get(match.window).push(match.tab);
+      verifiedCount++;
     }
 
-    if (verifiedTabObjects.length === 0) {
+    if (verifiedCount === 0) {
       lazy.console.warn("No valid tabs after verification");
       return null;
     }
 
-    return verifiedTabObjects;
+    return tabsByWindow;
   }
 
   /**
@@ -185,32 +205,47 @@ export class ToolUI {
    *
    * @param {Array<TabSelectionData>} selectedTabs - Selected tabs
    * @param {Map<string, object>} tokenToKey - token -> permanentKey for this operation
-   * @param {ChromeWindow} win - The browser window object
-   * @returns {Promise<{operationId: string, closedTabs: Array, failedTabs: Array}|null>}
+   * @param {ChromeWindow} win - The interacting browser window object
+   * @returns {Promise<{operationId: string, requestedCount: number, failedTabs: Array}|null>}
    */
   static async closeSelectedTabs(selectedTabs = [], tokenToKey, win) {
-    const verifiedTabObjects = this.#verifyAndCollectTabs(
+    const tabsByWindow = this.#verifyAndCollectTabs(
       selectedTabs,
       tokenToKey,
       win
     );
-    if (!verifiedTabObjects) {
+    if (!tabsByWindow) {
       return null;
     }
 
-    const activeTab = verifiedTabObjects.find(
-      tab => tab === win.gBrowser.selectedTab
-    );
-    if (activeTab) {
-      activeTab.smartWindowActionSource = "close_current_tab";
+    let operationId = null;
+    let requestedCount = 0;
+    const failedTabs = [];
+
+    for (const [ownerWindow, tabs] of tabsByWindow) {
+      const activeTab = tabs.find(
+        tab => tab === ownerWindow.gBrowser.selectedTab
+      );
+      if (activeTab) {
+        activeTab.smartWindowActionSource = "close_current_tab";
+      }
+
+      const result = await lazy.tabManagementService.closeTabs({
+        tabs,
+        window: ownerWindow,
+      });
+      requestedCount += result.requestedCount;
+      if (result.failedTabs.length) {
+        failedTabs.push(...result.failedTabs);
+      }
+      // Undo only supports one operationId. Tabs closed in other windows stay
+      // closed and can be reopened through “Recently Closed Tabs”.
+      if (!operationId && result.operationId) {
+        operationId = result.operationId;
+      }
     }
 
-    const result = await lazy.tabManagementService.closeTabs({
-      tabs: verifiedTabObjects,
-      window: win,
-    });
-
-    return result;
+    return { operationId, requestedCount, failedTabs };
   }
 
   /* ========================================================================
@@ -654,20 +689,39 @@ export class ToolUI {
     window: win,
     label,
   }) {
-    const verifiedTabObjects = this.#verifyAndCollectTabs(
-      tabs,
-      tokenToKey,
-      win
-    );
-    if (!verifiedTabObjects) {
+    const tabsByWindow = this.#verifyAndCollectTabs(tabs, tokenToKey, win);
+    if (!tabsByWindow) {
       return null;
     }
 
+    // Tabs in tab groups only span a single window
+    let groupWindow = tabsByWindow.has(win) ? win : null;
+    if (!groupWindow) {
+      for (const [ownerWindow, ownerTabs] of tabsByWindow) {
+        if (
+          !groupWindow ||
+          ownerTabs.length > tabsByWindow.get(groupWindow).length
+        ) {
+          groupWindow = ownerWindow;
+        }
+      }
+    }
+
     const result = await lazy.tabManagementService.createTabGroup({
-      tabs: verifiedTabObjects,
-      window: win,
+      tabs: tabsByWindow.get(groupWindow),
+      window: groupWindow,
       label,
     });
+
+    // Report tabs from other windows that were not included
+    for (const [ownerWindow, ownerTabs] of tabsByWindow) {
+      if (ownerWindow === groupWindow) {
+        continue;
+      }
+      for (const tab of ownerTabs) {
+        result.failedTabs.push({ tab, reason: "other-window" });
+      }
+    }
 
     return result;
   }
