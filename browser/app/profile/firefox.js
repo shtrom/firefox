@@ -2644,7 +2644,7 @@ pref("browser.promo.pin.enabled", true);
 
 // Default to enabling cookie banner reduction promos to be shown where allowed.
 // Set to true for Fx113 (see bug 1808611)
-pref("browser.promo.cookiebanners.enabled", true);
+pref("browser.promo.cookiebanners.enabled", false);
 
 pref("browser.contentblocking.report.hide_vpn_banner", false);
 pref("browser.contentblocking.report.vpn_sub_id", "sub_HrfCZF7VPHzZkA");
