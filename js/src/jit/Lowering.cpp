@@ -1575,6 +1575,14 @@ void LIRGenerator::visitStrictConstantCompareString(
   assignSafepoint(lir, ins);
 }
 
+void LIRGenerator::visitStrictConstantCompareObject(
+    MStrictConstantCompareObject* ins) {
+  MDefinition* value = ins->value();
+
+  auto* lir = new (alloc()) LStrictConstantCompareObject(useBox(value));
+  define(lir, ins);
+}
+
 void LIRGenerator::visitSameValueDouble(MSameValueDouble* ins) {
   MDefinition* lhs = ins->lhs();
   MDefinition* rhs = ins->rhs();

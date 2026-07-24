@@ -12996,6 +12996,19 @@ void CodeGenerator::visitStrictConstantCompareString(
   masm.bind(ool->rejoin());
 }
 
+void CodeGenerator::visitStrictConstantCompareObject(
+    LStrictConstantCompareObject* lir) {
+  ValueOperand value = ToValue(lir->value());
+  Register output = ToRegister(lir->output());
+
+  JSObject* obj = lir->mir()->constant();
+  JSOp op = lir->mir()->jsop();
+  MOZ_ASSERT(IsStrictEqualityOp(op));
+
+  masm.testValueSet(JSOpToCondition(MCompare::Compare_Object, op), value,
+                    JS::ObjectValue(*obj), output);
+}
+
 void CodeGenerator::visitCompareBigInt(LCompareBigInt* lir) {
   JSOp op = lir->mir()->jsop();
   Register left = ToRegister(lir->left());

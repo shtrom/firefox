@@ -566,6 +566,17 @@
   generate_lir: true
   lir_temps: 1
 
+- name: StrictConstantCompareObject
+  operands:
+    value: Value
+  arguments:
+    constant: JSObject*
+    jsop: JSOp
+  movable: true
+  alias_set: none
+  result_type: Boolean
+  generate_lir: true
+
 - name: SameValueDouble
   operands:
     left: Double
