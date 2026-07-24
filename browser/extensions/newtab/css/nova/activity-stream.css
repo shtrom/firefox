@@ -2991,8 +2991,7 @@ main.newtab-main section {
 }
 
 .sections-mgmt-panel,
-.widgets-mgmt-panel,
-.themes-mgmt-panel {
+.widgets-mgmt-panel {
   height: 100%;
   inset-inline-start: var(--space-xlarge);
   position: absolute;
@@ -3006,8 +3005,7 @@ main.newtab-main section {
   overflow-y: auto;
 }
 .nova-enabled .sections-mgmt-panel,
-.nova-enabled .widgets-mgmt-panel,
-.nova-enabled .themes-mgmt-panel {
+.nova-enabled .widgets-mgmt-panel {
   height: 100vh;
   inset-inline-start: 0;
   position: fixed;
@@ -3015,19 +3013,16 @@ main.newtab-main section {
   margin-block: 0;
 }
 .sections-mgmt-panel:dir(rtl),
-.widgets-mgmt-panel:dir(rtl),
-.themes-mgmt-panel:dir(rtl) {
+.widgets-mgmt-panel:dir(rtl) {
   transform: translateX(-100%);
 }
 .sections-mgmt-panel h3,
-.widgets-mgmt-panel h3,
-.themes-mgmt-panel h3 {
+.widgets-mgmt-panel h3 {
   font-size: inherit;
   margin-block: 0 var(--space-small);
 }
 .sections-mgmt-panel button.arrow-button,
-.widgets-mgmt-panel button.arrow-button,
-.themes-mgmt-panel button.arrow-button {
+.widgets-mgmt-panel button.arrow-button {
   background: url("chrome://global/skin/icons/arrow-left.svg") no-repeat left center;
   border: none;
   cursor: pointer;
@@ -3040,43 +3035,37 @@ main.newtab-main section {
   margin-block-start: var(--space-xsmall);
 }
 .sections-mgmt-panel button.arrow-button:dir(rtl),
-.widgets-mgmt-panel button.arrow-button:dir(rtl),
-.themes-mgmt-panel button.arrow-button:dir(rtl) {
+.widgets-mgmt-panel button.arrow-button:dir(rtl) {
   background: url("chrome://global/skin/icons/arrow-right.svg") no-repeat right center;
 }
 .sections-mgmt-panel button.arrow-button h1,
-.widgets-mgmt-panel button.arrow-button h1,
-.themes-mgmt-panel button.arrow-button h1 {
+.widgets-mgmt-panel button.arrow-button h1 {
   font-size: var(--font-size-root);
   margin-block: 0;
   font-weight: var(--button-font-weight);
 }
 .nova-enabled .sections-mgmt-panel .panel-content,
-.nova-enabled .widgets-mgmt-panel .panel-content,
-.nova-enabled .themes-mgmt-panel .panel-content {
+.nova-enabled .widgets-mgmt-panel .panel-content {
   padding: var(--space-xlarge);
 }
 .nova-enabled .sections-mgmt-panel .arrow-wrapper,
-.nova-enabled .widgets-mgmt-panel .arrow-wrapper,
-.nova-enabled .themes-mgmt-panel .arrow-wrapper {
+.nova-enabled .widgets-mgmt-panel .arrow-wrapper {
   display: flex;
   align-items: center;
   margin-block-end: var(--space-xlarge);
 }
 .nova-enabled .sections-mgmt-panel .arrow-wrapper .arrow-button,
-.nova-enabled .widgets-mgmt-panel .arrow-wrapper .arrow-button,
-.nova-enabled .themes-mgmt-panel .arrow-wrapper .arrow-button {
+.nova-enabled .widgets-mgmt-panel .arrow-wrapper .arrow-button {
   margin-inline-end: var(--space-small);
 }
 .nova-enabled .sections-mgmt-panel .arrow-wrapper h2,
-.nova-enabled .widgets-mgmt-panel .arrow-wrapper h2,
-.nova-enabled .themes-mgmt-panel .arrow-wrapper h2 {
+.nova-enabled .widgets-mgmt-panel .arrow-wrapper h2 {
   font-size: var(--font-size-heading-medium);
   margin-block: 0;
   font-weight: var(--button-font-weight);
 }
 @media (prefers-reduced-motion: no-preference) {
-  .sections-mgmt-panel.sections-mgmt-panel-enter, .sections-mgmt-panel.sections-mgmt-panel-exit, .sections-mgmt-panel.sections-mgmt-panel-enter-done, .sections-mgmt-panel.sections-mgmt-panel-exit-done, .sections-mgmt-panel.widgets-mgmt-panel-enter, .sections-mgmt-panel.widgets-mgmt-panel-exit, .sections-mgmt-panel.widgets-mgmt-panel-enter-done, .sections-mgmt-panel.widgets-mgmt-panel-exit-done, .sections-mgmt-panel.themes-mgmt-panel-enter, .sections-mgmt-panel.themes-mgmt-panel-exit, .sections-mgmt-panel.themes-mgmt-panel-enter-done, .sections-mgmt-panel.themes-mgmt-panel-exit-done,
+  .sections-mgmt-panel.sections-mgmt-panel-enter, .sections-mgmt-panel.sections-mgmt-panel-exit, .sections-mgmt-panel.sections-mgmt-panel-enter-done, .sections-mgmt-panel.sections-mgmt-panel-exit-done, .sections-mgmt-panel.widgets-mgmt-panel-enter, .sections-mgmt-panel.widgets-mgmt-panel-exit, .sections-mgmt-panel.widgets-mgmt-panel-enter-done, .sections-mgmt-panel.widgets-mgmt-panel-exit-done,
 .widgets-mgmt-panel.sections-mgmt-panel-enter,
 .widgets-mgmt-panel.sections-mgmt-panel-exit,
 .widgets-mgmt-panel.sections-mgmt-panel-enter-done,
@@ -3084,39 +3073,15 @@ main.newtab-main section {
 .widgets-mgmt-panel.widgets-mgmt-panel-enter,
 .widgets-mgmt-panel.widgets-mgmt-panel-exit,
 .widgets-mgmt-panel.widgets-mgmt-panel-enter-done,
-.widgets-mgmt-panel.widgets-mgmt-panel-exit-done,
-.widgets-mgmt-panel.themes-mgmt-panel-enter,
-.widgets-mgmt-panel.themes-mgmt-panel-exit,
-.widgets-mgmt-panel.themes-mgmt-panel-enter-done,
-.widgets-mgmt-panel.themes-mgmt-panel-exit-done,
-.themes-mgmt-panel.sections-mgmt-panel-enter,
-.themes-mgmt-panel.sections-mgmt-panel-exit,
-.themes-mgmt-panel.sections-mgmt-panel-enter-done,
-.themes-mgmt-panel.sections-mgmt-panel-exit-done,
-.themes-mgmt-panel.widgets-mgmt-panel-enter,
-.themes-mgmt-panel.widgets-mgmt-panel-exit,
-.themes-mgmt-panel.widgets-mgmt-panel-enter-done,
-.themes-mgmt-panel.widgets-mgmt-panel-exit-done,
-.themes-mgmt-panel.themes-mgmt-panel-enter,
-.themes-mgmt-panel.themes-mgmt-panel-exit,
-.themes-mgmt-panel.themes-mgmt-panel-enter-done,
-.themes-mgmt-panel.themes-mgmt-panel-exit-done {
+.widgets-mgmt-panel.widgets-mgmt-panel-exit-done {
     transition: transform 300ms;
   }
 }
-.sections-mgmt-panel.sections-mgmt-panel-enter-done, .sections-mgmt-panel.sections-mgmt-panel-enter-active, .sections-mgmt-panel.widgets-mgmt-panel-enter-done, .sections-mgmt-panel.widgets-mgmt-panel-enter-active, .sections-mgmt-panel.themes-mgmt-panel-enter-done, .sections-mgmt-panel.themes-mgmt-panel-enter-active,
+.sections-mgmt-panel.sections-mgmt-panel-enter-done, .sections-mgmt-panel.sections-mgmt-panel-enter-active, .sections-mgmt-panel.widgets-mgmt-panel-enter-done, .sections-mgmt-panel.widgets-mgmt-panel-enter-active,
 .widgets-mgmt-panel.sections-mgmt-panel-enter-done,
 .widgets-mgmt-panel.sections-mgmt-panel-enter-active,
 .widgets-mgmt-panel.widgets-mgmt-panel-enter-done,
-.widgets-mgmt-panel.widgets-mgmt-panel-enter-active,
-.widgets-mgmt-panel.themes-mgmt-panel-enter-done,
-.widgets-mgmt-panel.themes-mgmt-panel-enter-active,
-.themes-mgmt-panel.sections-mgmt-panel-enter-done,
-.themes-mgmt-panel.sections-mgmt-panel-enter-active,
-.themes-mgmt-panel.widgets-mgmt-panel-enter-done,
-.themes-mgmt-panel.widgets-mgmt-panel-enter-active,
-.themes-mgmt-panel.themes-mgmt-panel-enter-done,
-.themes-mgmt-panel.themes-mgmt-panel-enter-active {
+.widgets-mgmt-panel.widgets-mgmt-panel-enter-active {
   transform: translateX(0);
 }
 
@@ -3198,11 +3163,6 @@ main.newtab-main section {
 
 .widgets-mgmt-panel-container {
   padding-block: var(--space-medium);
-}
-
-.themes-mgmt-panel .external-link {
-  margin-block-start: var(--space-large);
-  background-image: url("chrome://mozapps/skin/extensions/category-themes.svg");
 }
 
 .nova-enabled #wallpapers-section,

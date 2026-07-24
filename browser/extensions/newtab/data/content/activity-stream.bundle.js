@@ -189,7 +189,6 @@ for (const type of [
   "NEW_TAB_STATE_REQUEST_STARTUPCACHE",
   "NEW_TAB_STATE_REQUEST_WITHOUT_STARTUPCACHE",
   "NEW_TAB_UNLOAD",
-  "OPEN_ABOUT_ADDONS_THEMES",
   "OPEN_DOWNLOAD_FILE",
   "OPEN_LINK",
   "OPEN_NEW_WINDOW",
@@ -25408,85 +25407,6 @@ function SectionsMgmtPanel({
   })), panelBody))));
 }
 
-;// CONCATENATED MODULE: ./content-src/components/CustomizeMenu/ThemesManagementPanel/ThemesManagementPanel.jsx
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
-
-
-
-
-// eslint-disable-next-line no-shadow
-
-
-// Full browser theme selection sub-panel. The compact `theme-picker` lives in
-// the customize panel row; the "See more themes" box-button opens this sliding
-// panel, which shows the full `theme-picker` (appearance chooser + all themes)
-// and a link out to the about:addons themes list.
-function ThemesManagementPanel({
-  onSubpanelToggle,
-  togglePanel,
-  showPanel
-}) {
-  const arrowButtonRef = (0,external_React_namespaceObject.useRef)(null);
-  const panelRef = (0,external_React_namespaceObject.useRef)(null);
-  const dispatch = (0,external_ReactRedux_namespaceObject.useDispatch)();
-
-  // Notify parent menu when subpanel opens/closes
-  (0,external_React_namespaceObject.useEffect)(() => {
-    if (onSubpanelToggle) {
-      onSubpanelToggle(showPanel);
-    }
-  }, [showPanel, onSubpanelToggle]);
-  const handlePanelEntered = () => {
-    arrowButtonRef.current?.focus();
-  };
-  const openAboutAddonsThemes = () => {
-    dispatch(actionCreators.OnlyToMain({
-      type: actionTypes.OPEN_ABOUT_ADDONS_THEMES
-    }));
-  };
-  const isRTL = typeof document !== "undefined" && document.dir === "rtl";
-  const arrowIconSrc = `chrome://global/skin/icons/shaft-arrow-${isRTL ? "right" : "left"}.svg`;
-  return /*#__PURE__*/external_React_default().createElement("div", {
-    id: "themes-management-panel",
-    className: "themes-mgmt-panel-container"
-  }, /*#__PURE__*/external_React_default().createElement("moz-box-button", {
-    onClick: togglePanel,
-    "data-l10n-id": "newtab-appearance-more-themes-button"
-  }), /*#__PURE__*/external_React_default().createElement(external_ReactTransitionGroup_namespaceObject.CSSTransition, {
-    nodeRef: panelRef,
-    in: showPanel,
-    timeout: 300,
-    classNames: "themes-mgmt-panel",
-    unmountOnExit: true,
-    onEntered: handlePanelEntered
-  }, /*#__PURE__*/external_React_default().createElement("div", {
-    ref: panelRef,
-    className: "themes-mgmt-panel"
-  }, /*#__PURE__*/external_React_default().createElement("div", {
-    className: "panel-content"
-  }, /*#__PURE__*/external_React_default().createElement("div", {
-    className: "arrow-wrapper"
-  }, /*#__PURE__*/external_React_default().createElement("moz-button", {
-    ref: arrowButtonRef,
-    type: "ghost",
-    className: "arrow-button",
-    iconSrc: arrowIconSrc,
-    onClick: togglePanel
-  }), /*#__PURE__*/external_React_default().createElement("h2", {
-    "data-l10n-id": "newtab-appearance-manage-title"
-  })), /*#__PURE__*/external_React_default().createElement("theme-picker", {
-    layout: "full",
-    showLabels: false,
-    installsource: "about:newtab"
-  }), /*#__PURE__*/external_React_default().createElement("button", {
-    className: "external-link",
-    onClick: openAboutAddonsThemes,
-    "data-l10n-id": "newtab-appearance-explore-more-themes-button"
-  })))));
-}
-
 ;// CONCATENATED MODULE: ./lib/Wallpapers/WallpaperThemeUtils.mjs
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -26558,7 +26478,6 @@ function ContentSection_extends() { return ContentSection_extends = Object.assig
 
 
 
-
 // @nova-cleanup(move-directory): Update import path after WidgetsManagementPanel moves to components/CustomizeMenu/
 
 class ContentSection extends (external_React_default()).PureComponent {
@@ -26730,8 +26649,6 @@ class ContentSection extends (external_React_default()).PureComponent {
       // @nova-cleanup(remove-conditional): Remove novaEnabled
       novaEnabled,
       browserNovaEnabled,
-      toggleThemesPanel,
-      showThemesPanel,
       wallpapersEnabled,
       toggleWidgetsManagementPanel,
       showWidgetsManagementPanel,
@@ -26775,10 +26692,8 @@ class ContentSection extends (external_React_default()).PureComponent {
       layout: "compact",
       installsource: "about:newtab",
       showLabels: false
-    }), /*#__PURE__*/external_React_default().createElement(ThemesManagementPanel, {
-      onSubpanelToggle: onSubpanelToggle,
-      togglePanel: toggleThemesPanel,
-      showPanel: showThemesPanel
+    }), /*#__PURE__*/external_React_default().createElement("moz-box-button", {
+      "data-l10n-id": "newtab-appearance-more-themes-button"
     })), wallpapersEnabled && /*#__PURE__*/external_React_default().createElement((external_React_default()).Fragment, null, /*#__PURE__*/external_React_default().createElement("div", {
       className: "wallpapers-section"
     }, novaEnabled && /*#__PURE__*/external_React_default().createElement("moz-toggle", {
@@ -27204,8 +27119,6 @@ class _CustomizeMenu extends (external_React_default()).PureComponent {
       showSectionsMgmtPanel: this.props.showSectionsMgmtPanel,
       novaEnabled: novaEnabled,
       browserNovaEnabled: browserNovaEnabled,
-      toggleThemesPanel: this.props.toggleThemesPanel,
-      showThemesPanel: this.props.showThemesPanel,
       toggleWidgetsManagementPanel: this.props.toggleWidgetsManagementPanel,
       showWidgetsManagementPanel: this.props.showWidgetsManagementPanel,
       widgetsEnabled: this.props.widgetsEnabled
@@ -28854,7 +28767,6 @@ class BaseContent extends (external_React_default()).PureComponent {
     this.applyBodyClasses = this.applyBodyClasses.bind(this);
     this.toggleSectionsMgmtPanel = this.toggleSectionsMgmtPanel.bind(this);
     this.toggleWidgetsManagementPanel = this.toggleWidgetsManagementPanel.bind(this);
-    this.toggleThemesPanel = this.toggleThemesPanel.bind(this);
     this.openWidgetsPanel = this.openWidgetsPanel.bind(this);
     this.attachSearchSentinel = this.attachSearchSentinel.bind(this);
     this.onSearchSentinelIntersect = this.onSearchSentinelIntersect.bind(this);
@@ -28868,8 +28780,7 @@ class BaseContent extends (external_React_default()).PureComponent {
       showDownloadHighlightOverride: null,
       visible: false,
       showSectionsMgmtPanel: false,
-      showWidgetsManagementPanel: false,
-      showThemesPanel: false
+      showWidgetsManagementPanel: false
     };
     this.spocPlaceholderStartTime = null;
   }
@@ -29392,11 +29303,6 @@ class BaseContent extends (external_React_default()).PureComponent {
       showWidgetsManagementPanel: !prevState.showWidgetsManagementPanel
     }));
   }
-  toggleThemesPanel() {
-    this.setState(prevState => ({
-      showThemesPanel: !prevState.showThemesPanel
-    }));
-  }
   openWidgetsPanel() {
     this.openCustomizationMenu();
     if (!this.state.showWidgetsManagementPanel) {
@@ -29648,8 +29554,6 @@ class BaseContent extends (external_React_default()).PureComponent {
         showSectionsMgmtPanel: this.state.showSectionsMgmtPanel,
         showWidgetsManagementPanel: this.state.showWidgetsManagementPanel,
         toggleWidgetsManagementPanel: this.toggleWidgetsManagementPanel,
-        toggleThemesPanel: this.toggleThemesPanel,
-        showThemesPanel: this.state.showThemesPanel,
         widgetsEnabled: prefs["widgets.enabled"],
         dispatch: this.props.dispatch
       }), (shouldShowOMCHighlight(this.props.Messages, "CustomWallpaperHighlight") || shouldShowOMCHighlight(this.props.Messages, "WorldCupWallpaperHighlight") || shouldShowOMCHighlight(this.props.Messages, "WorldCupSemiFinalWallpaperHighlight")) && /*#__PURE__*/external_React_default().createElement(MessageWrapper, {
@@ -29741,9 +29645,7 @@ class BaseContent extends (external_React_default()).PureComponent {
       weatherDisplay: prefs["weather.display"],
       showing: customizeMenuVisible,
       toggleSectionsMgmtPanel: this.toggleSectionsMgmtPanel,
-      showSectionsMgmtPanel: this.state.showSectionsMgmtPanel,
-      toggleThemesPanel: this.toggleThemesPanel,
-      showThemesPanel: this.state.showThemesPanel
+      showSectionsMgmtPanel: this.state.showSectionsMgmtPanel
     }), shouldShowOMCHighlight(this.props.Messages, "CustomWallpaperHighlight") && /*#__PURE__*/external_React_default().createElement(MessageWrapper, {
       dispatch: this.props.dispatch
     }, /*#__PURE__*/external_React_default().createElement(WallpaperFeatureHighlight, {

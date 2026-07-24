@@ -1,7 +1,6 @@
 import { render } from "@testing-library/react";
 import { actionTypes as at } from "common/Actions.mjs";
 import { ContentSection } from "content-src/components/CustomizeMenu/ContentSection/ContentSection";
-import { WrapWithProvider } from "test/jest/test-utils";
 
 const DEFAULT_PROPS = {
   dispatch: jest.fn(),
@@ -59,19 +58,14 @@ describe("<ContentSection>", () => {
     expect(container.querySelector("theme-picker")).not.toBeInTheDocument();
   });
 
-  it("renders the compact theme-picker and themes panel when browser Nova is enabled", () => {
+  it("renders the compact theme-picker when browser Nova is enabled", () => {
     const { container } = render(
-      <WrapWithProvider>
-        <ContentSection {...DEFAULT_PROPS} browserNovaEnabled={true} />
-      </WrapWithProvider>
+      <ContentSection {...DEFAULT_PROPS} browserNovaEnabled={true} />
     );
     const picker = container.querySelector("theme-picker");
     expect(picker).toBeInTheDocument();
     expect(picker).toHaveAttribute("layout", "compact");
     expect(picker).toHaveAttribute("installsource", "about:newtab");
-    expect(
-      container.querySelector(".themes-mgmt-panel-container")
-    ).toBeInTheDocument();
   });
 
   describe("inputUserEvent telemetry", () => {

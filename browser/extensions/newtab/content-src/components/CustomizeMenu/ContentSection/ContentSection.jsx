@@ -6,7 +6,6 @@ import React from "react";
 import { batch } from "react-redux";
 import { actionCreators as ac, actionTypes as at } from "common/Actions.mjs";
 import { SectionsMgmtPanel } from "../SectionsMgmtPanel/SectionsMgmtPanel";
-import { ThemesManagementPanel } from "../ThemesManagementPanel/ThemesManagementPanel";
 import { WallpaperCategories } from "../../WallpaperCategories/WallpaperCategories";
 // @nova-cleanup(move-directory): Update import path after WidgetsManagementPanel moves to components/CustomizeMenu/
 import { WidgetsManagementPanel } from "content-src/components/Nova/CustomizeMenu/WidgetsManagementPanel/WidgetsManagementPanel";
@@ -206,8 +205,6 @@ export class ContentSection extends React.PureComponent {
       // @nova-cleanup(remove-conditional): Remove novaEnabled
       novaEnabled,
       browserNovaEnabled,
-      toggleThemesPanel,
-      showThemesPanel,
       wallpapersEnabled,
       toggleWidgetsManagementPanel,
       showWidgetsManagementPanel,
@@ -252,11 +249,8 @@ export class ContentSection extends React.PureComponent {
                 installsource="about:newtab"
                 showLabels={false}
               ></theme-picker>
-              <ThemesManagementPanel
-                onSubpanelToggle={onSubpanelToggle}
-                togglePanel={toggleThemesPanel}
-                showPanel={showThemesPanel}
-              />
+              {/* TODO(Bug 2056304): open the full theme selection sub-panel */}
+              <moz-box-button data-l10n-id="newtab-appearance-more-themes-button"></moz-box-button>
             </div>
           )}
           {wallpapersEnabled && (
