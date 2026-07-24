@@ -432,13 +432,6 @@ void FFmpegVideoDecoder<LIBAV_VER>::FFmpegVulkanVideoDecoder::InitDrmModifiers(
     FFMPEGV_LOG("[VULKAN] No suitable modifiers found, using LINEAR");
   }
 
-  // NVIDIA: query may not expose tiled modifiers, add known-working one if RDD
-  // and GPU share the same device (only when we had a real compositor list).
-  if (aCompositorMods && mNegotiatedCompositorDecoderVendorID == 0x10de &&
-      mDecoderMatchesCompositor && mDrmModifiers[0] == DRM_FORMAT_MOD_LINEAR) {
-    mDrmModifiers[0] = DRM_FORMAT_MOD_NVIDIA_BLOCK_LINEAR_2D(0, 1, 2, 6, 4);
-  }
-
   FFMPEGV_LOG("[VULKAN] Using {} modifiers, first=0x{:x}", mDrmModifiers.size(),
               (unsigned long long)mDrmModifiers[0]);
 }
