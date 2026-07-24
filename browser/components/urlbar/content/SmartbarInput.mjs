@@ -6752,15 +6752,16 @@ ${
       ),
     };
 
-    // Only add gBrowser-dependent properties if gBrowser exists.
+    // Only add gBrowser-dependent properties if we're in a browser window.
     if (this.window.gBrowser) {
       options.userContextId = parseInt(
         this.window.gBrowser.selectedBrowser?.getAttribute("usercontextid") ?? 0
       );
       options.tabGroup = this.window.gBrowser.selectedTab.group?.id ?? null;
       const currentPageSpec = this.window.gBrowser.currentURI?.spec;
-      // currentURI can be transiently null during a docshell swap (tab drag);
-      // omit currentPage rather than passing "" which fails UrlbarQueryContext validation.
+      // currentURI is transiently null during a tab-drag docshell swap
+      // (Bug 2025776); omit currentPage rather than passing "" which fails
+      // UrlbarQueryContext validation.
       if (currentPageSpec) {
         options.currentPage = currentPageSpec;
       }
