@@ -167,4 +167,5 @@ preprocessed_intervention_files = [
     "bug2046741-mylabmastering.pearson.com-hide_unsupported_modal.css",
     "bug2051501-community.acer.com-fix_clipped_tables.css",
     "bug2051291-customers.extend-hide_preloader.css",
+    "bug2053077-jobs.abbott-restore_otp_inputs.css",
 ]
