@@ -565,8 +565,8 @@ export class ChatConversation extends Conversation {
         continue;
       }
 
-      const operationId = td.properties?.confirmedData?.operationId;
-      if (!operationId) {
+      const confirmedData = td.properties?.confirmedData;
+      if (!confirmedData?.operationIds?.length) {
         continue;
       }
 

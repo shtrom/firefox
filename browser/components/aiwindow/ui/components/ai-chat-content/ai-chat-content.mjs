@@ -1270,7 +1270,8 @@ export class AIChatContent extends MozLitElement {
       wasRestored
     );
 
-    let canUndo = !wasRestored && !!confirmedData.operationId;
+    const undoOperationIds = confirmedData.operationIds ?? [];
+    let canUndo = !wasRestored && !!undoOperationIds.length;
     // Override can undo if explicitly dismissed
     if (toolUIData.properties?.undoDismissed) {
       canUndo = false;
@@ -1286,7 +1287,7 @@ export class AIChatContent extends MozLitElement {
               toolCallId: toolUIData.toolCallId,
               updateType: undoUpdateType,
               updateData: {
-                operationId: confirmedData.operationId,
+                operationIds: undoOperationIds,
                 selectedTabs: confirmedData.selectedTabs || [],
                 actionTimestamp: confirmedData.actionTimestamp,
               },

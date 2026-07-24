@@ -65,7 +65,8 @@ export class TabManagementService {
    *     // Operation metadata
    *     operationTimestamp: number    // When this close operation occurred
    *   }>,
-   *   timestamp: number               // When operation was stored
+   *   timestamp: number,              // When operation was stored
+   *   windowRef: WeakRef<Window>|null // WeakRef to the window tabs closed in
    * }>
    *
    * Note: This only stores lightweight metadata for matching tabs in SessionStore.
@@ -89,14 +90,9 @@ export class TabManagementService {
    *
    * @param {object} options
    * @param {string} options.operationId - ID returned from closeTabs()
-   * @param {Window} options.window - Browser window to restore tabs in
    * @returns {Promise<object>} Restore summary
    */
-  async restoreTabs({ operationId, window }) {
-    if (!window?.gBrowser) {
-      throw new Error("Invalid browser window provided");
-    }
-
+  async restoreTabs({ operationId }) {
     const operation = this.#recentCloseOperations.get(operationId);
 
     if (!operation) {
@@ -107,6 +103,23 @@ export class TabManagementService {
         restoredCount: 0,
         requestedCount: 0,
         failedTabs: [],
+      };
+    }
+
+    // Resolve the owning window from the record
+    const window = operation.windowRef?.get();
+    if (!window?.gBrowser) {
+      lazy.console.warn(
+        `The owning window is not available for tab-close operation: ${operationId}`
+      );
+      return {
+        restoredTabs: [],
+        restoredCount: 0,
+        requestedCount: operation.closedTabs.length,
+        failedTabs: operation.closedTabs.map(tab => ({
+          tab,
+          reason: "owning-window-closed",
+        })),
       };
     }
 
@@ -133,7 +146,8 @@ export class TabManagementService {
 
         const restoredTab = this.#sessionStore.undoCloseTab(
           window,
-          closedTabIndex
+          closedTabIndex,
+          window
         );
 
         if (restoredTab) {
@@ -186,9 +200,10 @@ export class TabManagementService {
    *
    * @param {object} options
    * @param {Array<object>} options.closedTabs
+   * @param {Window} [options.window] - Window the tabs were closed in
    * @returns {string|null}
    */
-  storeClosedTabsForUndo({ closedTabs }) {
+  storeClosedTabsForUndo({ closedTabs, window }) {
     if (!closedTabs?.length) {
       return null;
     }
@@ -204,6 +219,7 @@ export class TabManagementService {
     this.#recentCloseOperations.set(operationId, {
       closedTabs,
       timestamp: Date.now(),
+      windowRef: window ? Cu.getWeakReference(window) : null,
     });
 
     return operationId;
@@ -506,7 +522,7 @@ export class TabManagementService {
 
     let operationId = null;
     if (closedTabs.length) {
-      operationId = this.storeClosedTabsForUndo({ closedTabs });
+      operationId = this.storeClosedTabsForUndo({ closedTabs, window });
     }
 
     if (error) {
@@ -583,7 +599,10 @@ export class TabManagementService {
           operationTimestamp,
         });
 
-        window.gBrowser.removeTab(browserTab);
+        // Keep the window open when closing its last tab
+        window.gBrowser.removeTab(browserTab, {
+          closeWindowWithLastTab: false,
+        });
       }
     } catch (err) {
       error = err;

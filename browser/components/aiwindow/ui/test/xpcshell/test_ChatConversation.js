@@ -1693,15 +1693,15 @@ add_task(async function test_addUserMessage_dismisses_prior_undo() {
   assistant.toolUIData = {
     toolCallId: "t1",
     uiType: "ai-action-result",
-    properties: { confirmedData: { operationId: "op-1" } },
+    properties: { confirmedData: { operationIds: ["op-1"] } },
   };
 
   // User sends a new message
   conversation.addUserMessage("show my history", "https://example.com/", 0);
 
-  Assert.equal(
-    assistant.toolUIData.properties.confirmedData.operationId,
-    "op-1",
+  Assert.deepEqual(
+    assistant.toolUIData.properties.confirmedData.operationIds,
+    ["op-1"],
     "Dismissal preserves other property keys"
   );
   Assert.strictEqual(
@@ -1745,12 +1745,12 @@ add_task(async function test_dismissPendingUndos_only_dismisses_most_recent() {
   olderAssistant.toolUIData = {
     toolCallId: "t1",
     uiType: "ai-action-result",
-    properties: { confirmedData: { operationId: "op-older" } },
+    properties: { confirmedData: { operationIds: ["op-older"] } },
   };
   newerAssistant.toolUIData = {
     toolCallId: "t2",
     uiType: "ai-action-result",
-    properties: { confirmedData: { operationId: "op-newer" } },
+    properties: { confirmedData: { operationIds: ["op-newer"] } },
   };
 
   conversation.addUserMessage("show my history", "https://example.com/", 0);

@@ -501,12 +501,12 @@ add_task(async function test_timestamp_disambiguation() {
         operationTimestamp: aiOperationTime,
       },
     ],
+    window: mockWindow,
   });
 
   // Restore should pick the older tab (closest to operationTimestamp)
   const restoreResult = await tabManagementService.restoreTabs({
     operationId,
-    window: mockWindow,
   });
 
   Assert.equal(restoreResult.restoredCount, 1, "Should restore 1 tab");
@@ -652,6 +652,7 @@ add_task(async function test_restoreTabs_in_background() {
       },
     ],
     timestamp: Date.now(),
+    window: mockWindow,
   });
 
   // Track which tabs were selected during restoration
@@ -1031,5 +1032,84 @@ add_task(async function test_create_tab_group_invalid_window() {
     result2.error,
     "Invalid browser window provided",
     "Should return correct error message for window without gBrowser"
+  );
+});
+
+/**
+ * Test restoreTabs resolves the owning window from the stored operation.
+ */
+add_task(async function test_restoreTabs_resolves_owning_window() {
+  mockSessionStore.reset();
+  const owningWindow = createMockWindow();
+
+  const tab = createMockTab("https://example.com", "Example");
+  tab.documentGlobal = owningWindow;
+  owningWindow.gBrowser.tabs = [tab];
+
+  const closeResult = await tabManagementService.closeTabs({
+    tabs: [tab],
+    window: owningWindow,
+  });
+  Assert.ok(closeResult.operationId, "Close should return an operation ID");
+
+  const restoreResult = await tabManagementService.restoreTabs({
+    operationId: closeResult.operationId,
+  });
+
+  Assert.equal(
+    restoreResult.restoredCount,
+    1,
+    "Should restore the tab in its owning window without a window argument"
+  );
+  Assert.equal(
+    restoreResult.failedTabs.length,
+    0,
+    "Should have no failed tabs"
+  );
+});
+
+/**
+ * Test restoreTabs fails gracefully when the owning window is closed after the
+ * tabs were closed before undo.
+ */
+add_task(async function test_restoreTabs_owning_window_closed() {
+  mockSessionStore.reset();
+  const owningWindow = createMockWindow();
+
+  const tab = createMockTab("https://example.com", "Example");
+  tab.documentGlobal = owningWindow;
+  owningWindow.gBrowser.tabs = [tab];
+
+  const closeResult = await tabManagementService.closeTabs({
+    tabs: [tab],
+    window: owningWindow,
+  });
+  Assert.ok(closeResult.operationId, "Close should return an operation ID");
+
+  // Simulate the owning window closing
+  owningWindow.gBrowser = null;
+
+  const restoreResult = await tabManagementService.restoreTabs({
+    operationId: closeResult.operationId,
+  });
+
+  Assert.equal(
+    restoreResult.restoredCount,
+    0,
+    "Should restore nothing when the owning window is closed"
+  );
+  Assert.equal(
+    restoreResult.requestedCount,
+    1,
+    "Should report the requested count from the stored operation"
+  );
+  Assert.equal(
+    restoreResult.failedTabs[0]?.reason,
+    "owning-window-closed",
+    "Should flag the failure reason"
+  );
+  Assert.ok(
+    tabManagementService.getStoredTabsForUndo(closeResult.operationId),
+    "Should keep the operation for a later retry"
   );
 });

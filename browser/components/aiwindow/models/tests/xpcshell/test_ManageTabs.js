@@ -192,7 +192,7 @@ add_task(async function test_manageTabsAction_direct_close_path() {
     );
 
     sb.stub(ToolUI, "closeSelectedTabs").resolves({
-      operationId: "op-1",
+      operationIds: ["op-1"],
       closedTabs: [],
       failedTabs: [],
     });
@@ -214,7 +214,7 @@ add_task(async function test_manageTabsAction_direct_close_path() {
       "uiData uiType is ai-action-result"
     );
 
-    const { selectedTabs: uiTabs, operationId } =
+    const { selectedTabs: uiTabs, operationIds } =
       uiData.properties.confirmedData;
     Assert.equal(uiTabs.length, 1, "1 tab is returned to the UI");
     Assert.ok(uiTabs[0].token, "UI tab carries a resolution token");
@@ -232,7 +232,11 @@ add_task(async function test_manageTabsAction_direct_close_path() {
       },
       "single UI tab should be correct"
     );
-    Assert.equal(operationId, "op-1", "operationId is propagated from ToolUI");
+    Assert.deepEqual(
+      operationIds,
+      ["op-1"],
+      "operationIds are propagated from ToolUI"
+    );
 
     Assert.deepEqual(
       result.selectedTabs,
@@ -313,10 +317,10 @@ add_task(async function test_manageTabsAction_direct_group_path() {
       "ai-action-result",
       "uiData uiType is ai-action-result"
     );
-    Assert.equal(
-      uiData.properties.confirmedData.operationId,
-      "op-1",
-      "operationId is propagated from ToolUI"
+    Assert.deepEqual(
+      uiData.properties.confirmedData.operationIds,
+      ["op-1"],
+      "operationIds are propagated from ToolUI"
     );
     Assert.equal(
       uiData.properties.confirmedData.actionType,
@@ -350,7 +354,7 @@ add_task(async function test_manageTabsAction_marks_failed_tabs() {
     );
 
     sb.stub(ToolUI, "closeSelectedTabs").resolves({
-      operationId: "op-1",
+      operationIds: ["op-1"],
       closedTabs: [],
       failedTabs: [{ tab: failedTab, reason: "already-closing" }],
     });

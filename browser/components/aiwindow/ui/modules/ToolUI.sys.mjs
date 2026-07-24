@@ -16,7 +16,7 @@
 /**
  * @typedef {object} ToolUpdateData
  * @property {Array<TabSelectionData>} [selectedTabs] - Array of selected tabs
- * @property {string} [operationId] - Operation ID for undo operations
+ * @property {Array<string>} [operationIds] - Undo handles for the action
  * @property {boolean} [wasRestored] - Flag indicating tabs were restored
  * @property {number} [restoredCount] - Number of tabs restored
  * @property {Array<TabSelectionData>} [originalClosedTabs] - Original tabs that were closed
@@ -206,7 +206,7 @@ export class ToolUI {
    * @param {Array<TabSelectionData>} selectedTabs - Selected tabs
    * @param {Map<string, object>} tokenToKey - token -> permanentKey for this operation
    * @param {ChromeWindow} win - The interacting browser window object
-   * @returns {Promise<{operationId: string, requestedCount: number, failedTabs: Array}|null>}
+   * @returns {Promise<{operationIds: string[], requestedCount: number, failedTabs: Array}|null>}
    */
   static async closeSelectedTabs(selectedTabs = [], tokenToKey, win) {
     const tabsByWindow = this.#verifyAndCollectTabs(
@@ -218,7 +218,7 @@ export class ToolUI {
       return null;
     }
 
-    let operationId = null;
+    const operationIds = [];
     let requestedCount = 0;
     const failedTabs = [];
 
@@ -238,14 +238,12 @@ export class ToolUI {
       if (result.failedTabs.length) {
         failedTabs.push(...result.failedTabs);
       }
-      // Undo only supports one operationId. Tabs closed in other windows stay
-      // closed and can be reopened through “Recently Closed Tabs”.
-      if (!operationId && result.operationId) {
-        operationId = result.operationId;
+      if (result.operationId) {
+        operationIds.push(result.operationId);
       }
     }
 
-    return { operationId, requestedCount, failedTabs };
+    return { operationIds, requestedCount, failedTabs };
   }
 
   /* ========================================================================
@@ -294,12 +292,12 @@ export class ToolUI {
       reason: "user_action",
     });
 
-    // Include the operationId in the update data for potential undo
+    // Include the operationIds in the update data for potential undo
     const enhancedData = {
       ...originalData,
       updateData: {
         ...updateData,
-        operationId: result.operationId,
+        operationIds: result.operationIds,
         actionTimestamp: Date.now(),
         actionType: "close_tabs",
       },
@@ -419,7 +417,7 @@ export class ToolUI {
       ...originalData,
       updateData: {
         ...updateData,
-        operationId: result.group?.id,
+        operationIds: result.group?.id ? [result.group.id] : [],
         actionTimestamp: Date.now(),
         actionType: "group_tabs",
         group: result.group,
@@ -455,43 +453,44 @@ export class ToolUI {
   static async #handleUndoTabGroup(context) {
     const { updateData, message, conversation, window, originalData, mode } =
       context;
-    const { operationId, actionTimestamp } = updateData ?? {};
+    const { operationIds = [], actionTimestamp } = updateData ?? {};
     const undoStartTime = Date.now();
 
-    if (!operationId) {
-      lazy.console.error("ToolUI: No operation ID provided for undo tab group");
+    if (!operationIds.length) {
+      lazy.console.error("ToolUI: No operationIds provided for undo tab group");
       return false;
     }
 
-    // The operationId is the group ID for tab groups
-    const groupId = operationId;
-
-    // Attempt to ungroup the tabs
-    const result = await lazy.tabManagementService.ungroupTabs({
-      groupId,
-      window,
-    });
-
-    if (!result?.success) {
-      lazy.console.error(
-        "ToolUI: Failed to undo tab group:",
-        result?.error || "Unknown error"
-      );
-
-      const timeDelta = actionTimestamp ? undoStartTime - actionTimestamp : 0;
-
-      lazy.ToolUITelemetry.recordBrowserActionUndo({
-        location: mode,
-        chat_id: conversation?.id || "",
-        message_seq: conversation?.messages?.length || 0,
-        action_type: "group_tabs",
-        tabs_restored: 0,
-        time_delta: Math.max(0, timeDelta),
-        result: "error",
-        error: result?.error || "ungroup_failed",
+    const ungroupedTabs = [];
+    for (const groupId of operationIds) {
+      const result = await lazy.tabManagementService.ungroupTabs({
+        groupId,
+        window,
       });
 
-      return false;
+      if (!result?.success) {
+        lazy.console.error(
+          "ToolUI: Failed to undo tab group:",
+          result?.error || "Unknown error"
+        );
+
+        const timeDelta = actionTimestamp ? undoStartTime - actionTimestamp : 0;
+
+        lazy.ToolUITelemetry.recordBrowserActionUndo({
+          location: mode,
+          chat_id: conversation?.id || "",
+          message_seq: conversation?.messages?.length || 0,
+          action_type: "group_tabs",
+          tabs_restored: result?.ungroupedTabs?.length ?? 0,
+          time_delta: Math.max(0, timeDelta),
+          result: "error",
+          error: result?.error || "ungroup_failed",
+        });
+
+        return false;
+      }
+
+      ungroupedTabs.push(...result.ungroupedTabs);
     }
 
     // Calculate time delta from when action completed to when undo was clicked
@@ -503,7 +502,7 @@ export class ToolUI {
       chat_id: conversation?.id || "",
       message_seq: conversation?.messages?.length || 0,
       action_type: "group_tabs",
-      tabs_restored: result.ungroupedTabs.length,
+      tabs_restored: ungroupedTabs.length,
       time_delta: Math.max(0, timeDelta),
       result: "success",
       error: "",
@@ -515,7 +514,7 @@ export class ToolUI {
       updateData: {
         ...updateData,
         wasRestored: true,
-        originalGroupedTabs: result.ungroupedTabs,
+        originalGroupedTabs: ungroupedTabs,
         actionType: "group_tabs", // Preserve the action type
       },
     };
@@ -533,31 +532,33 @@ export class ToolUI {
    * @private
    */
   static async #handleUndoTabClose(context) {
-    const { updateData, message, conversation, window, originalData, mode } =
-      context;
+    const { updateData, message, conversation, originalData, mode } = context;
     const {
-      operationId,
+      operationIds = [],
       selectedTabs = [],
       actionTimestamp,
     } = updateData ?? {};
     const undoStartTime = Date.now();
 
-    if (!operationId) {
-      lazy.console.error("ToolUI: No operationId provided for undo");
-      return false;
-    }
-
-    if (!window) {
-      lazy.console.error("ToolUI: No window provided for undo");
+    if (!operationIds.length) {
+      lazy.console.error("ToolUI: No operationIds provided for undo");
       return false;
     }
 
     try {
-      const { restoredCount, requestedCount, failedTabs } =
-        await lazy.tabManagementService.restoreTabs({
-          operationId,
-          window,
+      let restoredCount = 0;
+      let requestedCount = 0;
+      const failedTabs = [];
+      for (const id of operationIds) {
+        const result = await lazy.tabManagementService.restoreTabs({
+          operationId: id,
         });
+        restoredCount += result.restoredCount;
+        requestedCount += result.requestedCount;
+        if (result.failedTabs.length) {
+          failedTabs.push(...result.failedTabs);
+        }
+      }
 
       lazy.console.log(`Restored ${restoredCount} of ${requestedCount} tabs`);
 
@@ -567,7 +568,7 @@ export class ToolUI {
       let undoResult = "success";
       let errorCode = "";
 
-      if (failedTabs && failedTabs > 0) {
+      if (failedTabs.length) {
         errorCode = "one_or_more_tabs_failed_to_restore";
         undoResult = restoredCount > 0 ? "partial_success" : "error";
       }

@@ -16,6 +16,9 @@ const { tabManagementService } = ChromeUtils.importESModule(
 const { BrowserWindowTracker } = ChromeUtils.importESModule(
   "resource:///modules/BrowserWindowTracker.sys.mjs"
 );
+const { ToolUITelemetry } = ChromeUtils.importESModule(
+  "moz-src:///browser/components/aiwindow/ui/modules/ToolUITelemetry.sys.mjs"
+);
 
 let gPermanentKeySeq = 0;
 let gMockWindows = [];
@@ -268,13 +271,13 @@ add_task(async function test_handleUpdate_confirmation_success() {
   Assert.deepEqual(
     {
       selectedTabs: confirmedData.selectedTabs,
-      operationId: confirmedData.operationId,
+      operationIds: confirmedData.operationIds,
     },
     {
       ...updateData,
-      operationId: "mock-operation-123",
+      operationIds: ["mock-operation-123"],
     },
-    "Should add confirmedData to properties with operationId"
+    "Should add confirmedData to properties with operationIds"
   );
   Assert.ok(
     typeof confirmedData.actionTimestamp === "number" &&
@@ -475,7 +478,7 @@ add_task(async function test_handleUpdate_undo_tab_close_success() {
             title: "Test Tab",
           },
         ],
-        operationId: "test-operation-123",
+        operationIds: ["test-operation-123"],
       },
     },
   };
@@ -486,6 +489,7 @@ add_task(async function test_handleUpdate_undo_tab_close_success() {
     return {
       restoredCount: 1,
       requestedCount: 1,
+      failedTabs: [],
     };
   };
 
@@ -502,7 +506,7 @@ add_task(async function test_handleUpdate_undo_tab_close_success() {
       toolCallId: "test-tool-123",
       updateType: "undo-tab-close",
       updateData: {
-        operationId: "test-operation-123",
+        operationIds: ["test-operation-123"],
         selectedTabs: [
           {
             linkedPanel: "panel-1",
@@ -959,7 +963,7 @@ add_task(async function test_undo_with_failed_restoration() {
     properties: {
       confirmedData: {
         selectedTabs: [],
-        operationId: "test-operation-123",
+        operationIds: ["test-operation-123"],
       },
     },
   };
@@ -982,7 +986,7 @@ add_task(async function test_undo_with_failed_restoration() {
       toolCallId: "test-tool-123",
       updateType: "undo-tab-close",
       updateData: {
-        operationId: "test-operation-123",
+        operationIds: ["test-operation-123"],
         selectedTabs: [],
       },
     },
@@ -1037,10 +1041,10 @@ add_task(async function test_closeSelectedTabs_public_method() {
 
   // Verify the method returns the tabManagementService result
   Assert.ok(result, "Should return a result object");
-  Assert.equal(
-    result.operationId,
-    "test-operation-456",
-    "Should return correct operationId"
+  Assert.deepEqual(
+    result.operationIds,
+    ["test-operation-456"],
+    "Should return the operationIds from each closed window"
   );
   // Verify that only resolved tabs were passed to the service
   Assert.equal(
@@ -1123,7 +1127,7 @@ add_task(async function test_undo_updates_ui_correctly() {
     properties: {
       confirmedData: {
         selectedTabs: originalSelectedTabs,
-        operationId: "test-operation-123",
+        operationIds: ["test-operation-123"],
       },
     },
   };
@@ -1133,6 +1137,7 @@ add_task(async function test_undo_updates_ui_correctly() {
     return {
       restoredCount: 2,
       requestedCount: 2,
+      failedTabs: [],
     };
   };
 
@@ -1149,7 +1154,7 @@ add_task(async function test_undo_updates_ui_correctly() {
       toolCallId: "test-tool-123",
       updateType: "undo-tab-close",
       updateData: {
-        operationId: "test-operation-123",
+        operationIds: ["test-operation-123"],
         selectedTabs: originalSelectedTabs,
       },
     },
@@ -1821,5 +1826,232 @@ add_task(async function test_createTabGroup_selects_owning_window() {
     result.failedTabs,
     [{ tab: tabC, reason: "other-window" }],
     "Tabs in other windows are reported as failed"
+  );
+});
+
+/**
+ * Undo restores each operationId per window and aggregates the results into
+ * a telemetry record.
+ */
+add_task(async function test_undo_tab_close_multiple_operation_ids() {
+  const conversation = new ChatConversation({});
+  conversation.addUserMessage("Test prompt", {});
+  const assistantMessage = conversation.addAssistantMessage(
+    "text",
+    "Test response"
+  );
+  assistantMessage.toolUIData = {
+    toolCallId: "multi-undo",
+    uiType: "ai-action-result",
+    properties: {
+      confirmedData: {
+        selectedTabs: [],
+        operationIds: ["op-1", "op-2"],
+        actionType: "close_tabs",
+      },
+    },
+  };
+
+  const originalRestoreTabs = tabManagementService.restoreTabs;
+  const restoredIds = [];
+  tabManagementService.restoreTabs = async function ({ operationId }) {
+    restoredIds.push(operationId);
+    return { restoredCount: 1, requestedCount: 1, failedTabs: [] };
+  };
+
+  const result = await ToolUI.handleUpdate(
+    {
+      messageId: assistantMessage.id,
+      toolCallId: "multi-undo",
+      updateType: "undo-tab-close",
+      updateData: { operationIds: ["op-1", "op-2"], selectedTabs: [] },
+    },
+    conversation,
+    makeWindow([])
+  );
+
+  tabManagementService.restoreTabs = originalRestoreTabs;
+
+  Assert.equal(result, true, "Should return true on multi-window undo");
+  Assert.deepEqual(
+    restoredIds,
+    ["op-1", "op-2"],
+    "Should restore each operation"
+  );
+  Assert.equal(
+    assistantMessage.toolUIData.properties.confirmedData.restoredCount,
+    2,
+    "Should aggregate restoredCount across operations"
+  );
+});
+
+/**
+ * Test close tab undo where one operation restores and another fails.
+ */
+add_task(async function test_undo_tab_close_partial_success() {
+  const operationIds = ["op-ok", "op-fail"];
+  const message = {
+    id: "msg-1",
+    toolUIData: {
+      toolCallId: "undo",
+      uiType: "ai-action-result",
+      properties: { confirmedData: { operationIds } },
+    },
+  };
+  const conversation = {
+    id: "chat-1",
+    messages: [message],
+    updateToolUI: (m, data) => (m.toolUIData = data),
+  };
+
+  const originalRestoreTabs = tabManagementService.restoreTabs;
+  const originalRecordUndo = ToolUITelemetry.recordBrowserActionUndo;
+  tabManagementService.restoreTabs = async ({ operationId }) =>
+    operationId === "op-ok"
+      ? { restoredCount: 1, requestedCount: 1, failedTabs: [] }
+      : { restoredCount: 0, requestedCount: 1, failedTabs: [{ tab: {} }] };
+  let undo;
+  ToolUITelemetry.recordBrowserActionUndo = data => (undo = data);
+
+  const result = await ToolUI.handleUpdate(
+    {
+      messageId: message.id,
+      toolCallId: "undo",
+      updateType: "undo-tab-close",
+      updateData: { operationIds },
+    },
+    conversation,
+    makeWindow([])
+  );
+
+  tabManagementService.restoreTabs = originalRestoreTabs;
+  ToolUITelemetry.recordBrowserActionUndo = originalRecordUndo;
+
+  Assert.equal(result, true, "Should return true when some tabs restored");
+  Assert.equal(undo.result, "partial_success", "Reports partial success");
+  Assert.equal(undo.tabs_restored, 1, "Aggregates the restored count");
+  Assert.equal(
+    undo.error,
+    "one_or_more_tabs_failed_to_restore",
+    "Flags that some tabs failed to restore"
+  );
+});
+
+/**
+ * Undo for group_tabs ungroups each operationId and marks the card as restored.
+ */
+add_task(async function test_undo_tab_group_uses_operation_ids() {
+  const conversation = new ChatConversation({});
+  conversation.addUserMessage("Group my tabs", {});
+  const assistantMessage = conversation.addAssistantMessage(
+    "text",
+    "Grouped tabs"
+  );
+  assistantMessage.toolUIData = {
+    toolCallId: "group-undo",
+    uiType: "ai-action-result",
+    properties: {
+      confirmedData: {
+        selectedTabs: [],
+        operationIds: ["group-1"],
+        actionType: "group_tabs",
+      },
+    },
+  };
+
+  const originalUngroupTabs = tabManagementService.ungroupTabs;
+  const ungroupedIds = [];
+  tabManagementService.ungroupTabs = async function ({ groupId }) {
+    ungroupedIds.push(groupId);
+    return { success: true, ungroupedTabs: [{ url: "https://example.com" }] };
+  };
+
+  const result = await ToolUI.handleUpdate(
+    {
+      messageId: assistantMessage.id,
+      toolCallId: "group-undo",
+      updateType: "undo-tab-group",
+      updateData: { operationIds: ["group-1"] },
+    },
+    conversation,
+    makeWindow([])
+  );
+
+  tabManagementService.ungroupTabs = originalUngroupTabs;
+
+  Assert.equal(result, true, "Should return true on group undo");
+  Assert.deepEqual(
+    ungroupedIds,
+    ["group-1"],
+    "Should ungroup each operationId"
+  );
+  Assert.equal(
+    assistantMessage.toolUIData.properties.confirmedData.wasRestored,
+    true,
+    "Should mark the group card as restored"
+  );
+});
+
+/**
+ * Test failed ungroup records error telemetry.
+ */
+add_task(async function test_undo_tab_group_error_telemetry() {
+  const operationIds = ["group-1", "group-2"];
+  const message = {
+    id: "msg-1",
+    toolUIData: {
+      toolCallId: "undo",
+      uiType: "ai-action-result",
+      properties: { confirmedData: { operationIds } },
+    },
+  };
+  const conversation = {
+    id: "chat-1",
+    messages: [message],
+    updateToolUI: (m, data) => (m.toolUIData = data),
+  };
+
+  const originalUngroupTabs = tabManagementService.ungroupTabs;
+  const originalRecordUndo = ToolUITelemetry.recordBrowserActionUndo;
+  tabManagementService.ungroupTabs = async ({ groupId }) =>
+    groupId === "group-1"
+      ? { success: true, ungroupedTabs: [{}, {}, {}] }
+      : { success: false, error: "group_not_found" };
+  let undo;
+  ToolUITelemetry.recordBrowserActionUndo = data => (undo = data);
+
+  const result = await ToolUI.handleUpdate(
+    {
+      messageId: message.id,
+      toolCallId: "undo",
+      updateType: "undo-tab-group",
+      updateData: { operationIds, actionTimestamp: 1 },
+    },
+    conversation,
+    makeWindow([])
+  );
+
+  tabManagementService.ungroupTabs = originalUngroupTabs;
+  ToolUITelemetry.recordBrowserActionUndo = originalRecordUndo;
+
+  Assert.equal(result, false, "Should return false when an operation fails");
+  Assert.equal(undo.action_type, "group_tabs", "Records the group action type");
+  Assert.equal(undo.result, "error", "Records an error result");
+  Assert.equal(undo.error, "group_not_found", "Propagates the failure reason");
+  Assert.equal(
+    undo.tabs_restored,
+    0,
+    "Does not count tabs from earlier successful operations"
+  );
+  Assert.equal(undo.chat_id, conversation.id, "Records the conversation id");
+  Assert.equal(
+    undo.message_seq,
+    conversation.messages.length,
+    "Records the message sequence"
+  );
+  Assert.greaterOrEqual(
+    undo.time_delta,
+    0,
+    "Records a non-negative time delta"
   );
 });
