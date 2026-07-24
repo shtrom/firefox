@@ -255,8 +255,13 @@ select::picker-icon {
   vertical-align: top;
 }
 
+/* NOTE(emilio): The :not(:-moz-select-list-box) is needed, for now, because
+ * this rule otherwise would be less specific than the [popover] rules.
+ * We should probably find a better solution than this (probably ::picker()
+ * should be more specific? Or we could use cascade layers). See also
+ * https://github.com/w3c/csswg-drafts/issues/13108 */
 /* stylelint-disable-next-line selector-pseudo-element-no-unknown */
-select::picker(select) {
+select:not(:-moz-select-list-box)::picker(select) {
   box-sizing: border-box;
   border: 1px solid;
   padding: 0;
@@ -1017,7 +1022,7 @@ textarea:autofill {
     }
 
     /* stylelint-disable-next-line selector-pseudo-element-no-unknown */
-    select::picker(select) {
+    select:not(:-moz-select-list-box)::picker(select) {
       color: CanvasText;
       background-color: Canvas;
     }
