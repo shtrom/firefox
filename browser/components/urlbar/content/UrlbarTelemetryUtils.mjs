@@ -2,12 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs";
-
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
   UrlUtils: "resource://gre/modules/UrlUtils.sys.mjs",
+  UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
   UrlbarResult: "chrome://browser/content/urlbar/UrlbarResult.mjs",
   UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
@@ -265,7 +264,7 @@ export class UrlbarTelemetryUtils {
     let resultType = lazy.UrlbarUtils.searchEngagementTelemetryType(result);
     let keyword =
       !queryContext.isPrivate &&
-      UrlbarPrefs.get("keywordExposureResults").has(resultType)
+      lazy.UrlbarPrefs.get("keywordExposureResults").has(resultType)
         ? queryContext.trimmedLowerCaseSearchString
         : null;
     return { resultType, keyword };
@@ -497,7 +496,7 @@ export class UrlbarTelemetryUtils {
     let next = previousSearchWords;
     if (
       (method === "engagement" &&
-        lazy.UrlbarUtils.isPersistedSearchTermsEnabled()) ||
+        lazy.UrlbarPrefs.isPersistedSearchTermsEnabled()) ||
       method === "abandonment"
     ) {
       next = new Set(searchWords);
@@ -713,7 +712,7 @@ export class UrlbarTelemetryUtils {
               selType === "help" || selType === "dismiss" ? selType : action,
             results,
             view_time: viewTime.toString(),
-            threshold: UrlbarPrefs.get(
+            threshold: lazy.UrlbarPrefs.get(
               "events.bounce.maxSecondsFromLastSearch"
             ),
             window_mode: windowMode,

@@ -10,7 +10,6 @@
  * @import { PanelItem, PanelList } from "chrome://global/content/elements/panel-list.mjs"
  */
 
-import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs";
 import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
 
 const lazy = {};
@@ -20,6 +19,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   OpenSearchManager:
     "moz-src:///browser/components/search/OpenSearchManager.sys.mjs",
   SearchUIUtils: "moz-src:///browser/components/search/SearchUIUtils.sys.mjs",
+  UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
 });
 
@@ -84,7 +84,7 @@ export class SearchModeSwitcher {
       "nsISupportsWeakReference",
     ]);
 
-    UrlbarPrefs.addObserver(this);
+    lazy.UrlbarPrefs.addObserver(this);
 
     this.#panelList = input.querySelector(".searchmode-switcher-panel-list");
     this.#button = input.querySelector(".searchmode-switcher");
@@ -113,7 +113,7 @@ export class SearchModeSwitcher {
 
   #isEnabled() {
     return (
-      UrlbarPrefs.get("scotchBonnet.enableOverride") ||
+      lazy.UrlbarPrefs.get("scotchBonnet.enableOverride") ||
       this.#input.sapName == "searchbar"
     );
   }
@@ -355,7 +355,7 @@ export class SearchModeSwitcher {
 
     switch (pref) {
       case "scotchBonnet.enableOverride": {
-        if (UrlbarPrefs.get("scotchBonnet.enableOverride")) {
+        if (lazy.UrlbarPrefs.get("scotchBonnet.enableOverride")) {
           this.#enableObservers();
           this.updateSearchIcon();
         } else {
@@ -364,7 +364,7 @@ export class SearchModeSwitcher {
         break;
       }
       case "keyword.enabled": {
-        if (UrlbarPrefs.get("scotchBonnet.enableOverride")) {
+        if (lazy.UrlbarPrefs.get("scotchBonnet.enableOverride")) {
           this.updateSearchIcon();
         }
         break;
@@ -449,7 +449,8 @@ export class SearchModeSwitcher {
       // all local search modes regardless of the prefs.
       this.#engines = searchEngines.concat(
         UrlbarShared.LOCAL_SEARCH_MODES.filter(
-          engine => lazy.settingsRedesignEnabled || UrlbarPrefs.get(engine.pref)
+          engine =>
+            lazy.settingsRedesignEnabled || lazy.UrlbarPrefs.get(engine.pref)
         )
       );
     }
@@ -492,7 +493,7 @@ export class SearchModeSwitcher {
     }
 
     if (
-      !UrlbarPrefs.get("keyword.enabled") &&
+      !lazy.UrlbarPrefs.get("keyword.enabled") &&
       this.#input.sapName != "searchbar"
     ) {
       this.#input.document.l10n.setAttributes(
@@ -513,7 +514,7 @@ export class SearchModeSwitcher {
 
     if (
       this.#input.sapName != "searchbar" &&
-      !UrlbarPrefs.get("keyword.enabled") &&
+      !lazy.UrlbarPrefs.get("keyword.enabled") &&
       !searchMode
     ) {
       return { icon: SearchModeSwitcher.ICON_GLOBE };
@@ -531,7 +532,7 @@ export class SearchModeSwitcher {
     }
 
     if (
-      UrlbarPrefs.get("unifiedSearchButton.always") &&
+      lazy.UrlbarPrefs.get("unifiedSearchButton.always") &&
       !this.#lastInputValue &&
       this.#input.focused &&
       this.#input.value.length

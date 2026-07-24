@@ -8,9 +8,14 @@
  * use content-only globals like `window`.
  */
 
-import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs";
 import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
 import { UrlbarResult } from "chrome://browser/content/urlbar/UrlbarResult.mjs";
+
+const lazy = {};
+
+ChromeUtils.defineESModuleGetters(lazy, {
+  UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
+});
 
 /**
  * @import {UrlbarSearchStringTokenData} from "moz-src:///browser/components/urlbar/UrlbarTokenizer.sys.mjs"
@@ -258,7 +263,7 @@ export class UrlbarQueryContext {
    * @returns {boolean}
    */
   restrictInSearchMode() {
-    if (UrlbarPrefs.get("unifiedSearchButton.historyInSearchMode")) {
+    if (lazy.UrlbarPrefs.get("unifiedSearchButton.historyInSearchMode")) {
       // We still want to restrict local searchModes even if the pref is on.
       return !!this.searchMode && !this.searchMode.engineName;
     }

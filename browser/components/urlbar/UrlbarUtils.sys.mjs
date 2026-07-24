@@ -14,6 +14,7 @@
  */
 
 import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
+import { UrlbarQueryContext } from "chrome://browser/content/urlbar/UrlbarQueryContext.mjs";
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 
 const lazy = XPCOMUtils.declareLazy({
@@ -22,8 +23,6 @@ const lazy = XPCOMUtils.declareLazy({
   BrowserUIUtils: "resource:///modules/BrowserUIUtils.sys.mjs",
   ContextualIdentityService:
     "moz-src:///toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs",
-  CustomizableUI:
-    "moz-src:///browser/components/customizableui/CustomizableUI.sys.mjs",
   DEFAULT_FORM_HISTORY_PARAM:
     "moz-src:///toolkit/components/search/SearchSuggestionController.sys.mjs",
   FaviconUtils: "moz-src:///toolkit/modules/FaviconUtils.sys.mjs",
@@ -41,7 +40,6 @@ const lazy = XPCOMUtils.declareLazy({
     "moz-src:///browser/components/urlbar/UrlbarProviderInterventions.sys.mjs",
   UrlbarProviderSearchTips:
     "moz-src:///browser/components/urlbar/UrlbarProviderSearchTips.sys.mjs",
-  UrlbarQueryContext: "chrome://browser/content/urlbar/UrlbarQueryContext.mjs",
   UrlbarSearchUtils:
     "moz-src:///browser/components/urlbar/UrlbarSearchUtils.sys.mjs",
   UrlUtils: "resource://gre/modules/UrlUtils.sys.mjs",
@@ -1273,19 +1271,6 @@ export var UrlbarUtils = {
   },
 
   /**
-   * Return whether or not persisted search terms is enabled.
-   *
-   * @returns {boolean} true: if enabled.
-   */
-  isPersistedSearchTermsEnabled() {
-    return (
-      lazy.UrlbarPrefs.getScotchBonnetPref("showSearchTerms.featureGate") &&
-      lazy.UrlbarPrefs.get("showSearchTerms.enabled") &&
-      !lazy.CustomizableUI.getPlacementOfWidget("search-container")
-    );
-  },
-
-  /**
    * Returns the portion of a string starting at the index where another string
    * begins.
    *
@@ -1387,7 +1372,7 @@ export var UrlbarUtils = {
         options.sources = [searchMode.source];
       }
     }
-    let context = new lazy.UrlbarQueryContext(options);
+    let context = new UrlbarQueryContext(options);
     let heuristicResult =
       await urlbarInput.controller.getHeuristicResult(context);
     if (!heuristicResult) {
