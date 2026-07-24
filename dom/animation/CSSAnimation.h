@@ -12,24 +12,6 @@
 #include "mozilla/dom/MutationObservers.h"
 
 namespace mozilla {
-// Properties of CSS Animations that can be overridden by the Web Animations API
-// in a manner that means we should ignore subsequent changes to markup for that
-// property.
-enum class CSSAnimationProperties {
-  None = 0,
-  Keyframes = 1 << 0,
-  Duration = 1 << 1,
-  IterationCount = 1 << 2,
-  Direction = 1 << 3,
-  Delay = 1 << 4,
-  FillMode = 1 << 5,
-  Composition = 1 << 6,
-  Effect = Keyframes | Duration | IterationCount | Direction | Delay |
-           FillMode | Composition,
-  PlayState = 1 << 7,
-  Timeline = 1 << 8,
-};
-MOZ_MAKE_ENUM_CLASS_BITWISE_OPERATORS(CSSAnimationProperties)
 
 namespace dom {
 
@@ -140,20 +122,11 @@ class CSSAnimation final : public Animation {
     QueueEvents(aActiveTime);
   }
 
-  CSSAnimationProperties GetOverriddenProperties() const {
-    return mOverriddenProperties;
-  }
-  void AddOverriddenProperties(CSSAnimationProperties aProperties) {
+  void PropertiesWillSetFromJS(CSSAnimationProperties aProperties) override {
     mOverriddenProperties |= aProperties;
   }
-
-  void TimelineWillSetFromJS() override {
-    AddOverriddenProperties(CSSAnimationProperties::Timeline);
-  }
-
-  bool TimelineOverridenByJS() const override {
-    return static_cast<bool>(GetOverriddenProperties() &
-                             CSSAnimationProperties::Timeline);
+  CSSAnimationProperties PropertiesOverridenByJS() const override {
+    return mOverriddenProperties;
   }
 
  protected:

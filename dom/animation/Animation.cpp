@@ -300,7 +300,7 @@ void Animation::RemovedNamedTimelineReferenceFromJS(const nsAtom* aName) {
 }
 
 void Animation::SetTimelineFromJS(AnimationTimeline* aTimeline) {
-  TimelineWillSetFromJS();
+  PropertiesWillSetFromJS(CSSAnimationProperties::Timeline);
   // Can't refer to timeline by name from JS side.
   const auto prevTimelineName = GetTimelineName();
   SetTimeline(aTimeline, {}, FromJS::Yes);
@@ -321,7 +321,8 @@ bool Animation::SetTimeline(AnimationTimeline* aTimeline,
 bool Animation::SetTimelineNoUpdate(AnimationTimeline* aTimeline,
                                     const ScopedTimelineName& aTimelineName,
                                     FromJS aFromJS) {
-  if (aFromJS == FromJS::No && TimelineOverridenByJS()) {
+  if (aFromJS == FromJS::No &&
+      (PropertiesOverridenByJS() & CSSAnimationProperties::Timeline)) {
     return false;
   }
   // 1. Let old timeline be the current timeline of animation, if any.
@@ -460,12 +461,13 @@ bool Animation::SetTimelineNoUpdate(AnimationTimeline* aTimeline,
   return true;
 }
 
-void Animation::SetTimelineRange(AnimationRange&& aRange) {
-  SetTimelineRangeNoUpdate(std::move(aRange));
+void Animation::SetTimelineRange(AnimationRange&& aRange, FromJS aFromJS) {
+  SetTimelineRangeNoUpdate(std::move(aRange), aFromJS);
   PostUpdate();
 }
 
-void Animation::SetTimelineRangeNoUpdate(AnimationRange&& aRange) {
+void Animation::SetTimelineRangeNoUpdate(AnimationRange&& aRange,
+                                         FromJS aFromJS) {
   if (mTimelineRange == aRange) {
     return;
   }
@@ -476,7 +478,23 @@ void Animation::SetTimelineRangeNoUpdate(AnimationRange&& aRange) {
   //
   // For now, this is not exposed and is set during initialization of the CSS
   // Animations.
-  mTimelineRange = std::move(aRange);
+  const auto overridden = PropertiesOverridenByJS();
+  const auto startOverridden =
+      aFromJS == FromJS::No &&
+      (overridden & CSSAnimationProperties::AnimationRangeStart);
+  const auto endOverridden =
+      aFromJS == FromJS::No &&
+      (overridden & CSSAnimationProperties::AnimationRangeEnd);
+  if (startOverridden && endOverridden) {
+    return;
+  }
+
+  if (!startOverridden) {
+    mTimelineRange.mStart = std::move(aRange.mStart);
+  }
+  if (!endOverridden) {
+    mTimelineRange.mEnd = std::move(aRange.mEnd);
+  }
 
   if (mEffect) {
     mEffect->UpdateNormalizedTiming();
@@ -1208,7 +1226,8 @@ void Animation::SetRangeStart(JSContext* aCx, JS::Handle<JS::Value> aValue,
   if (!AnimationUtils::SetAnimationRangeStart(value, range, aRv)) {
     return;
   }
-  SetTimelineRange(std::move(range));
+  PropertiesWillSetFromJS(CSSAnimationProperties::AnimationRangeStart);
+  SetTimelineRange(std::move(range), FromJS::Yes);
 }
 
 void Animation::SetRangeEnd(JSContext* aCx, JS::Handle<JS::Value> aValue,
@@ -1222,7 +1241,8 @@ void Animation::SetRangeEnd(JSContext* aCx, JS::Handle<JS::Value> aValue,
   if (!AnimationUtils::SetAnimationRangeEnd(value, range, aRv)) {
     return;
   }
-  SetTimelineRange(std::move(range));
+  PropertiesWillSetFromJS(CSSAnimationProperties::AnimationRangeEnd);
+  SetTimelineRange(std::move(range), FromJS::Yes);
 }
 
 // ---------------------------------------------------------------------------

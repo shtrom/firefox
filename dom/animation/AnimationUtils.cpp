@@ -344,7 +344,7 @@ bool AnimationUtils::ApplyKeyframeAnimationRange(
     return false;
   }
 
-  aAnimation->SetTimelineRange(std::move(range));
+  aAnimation->SetTimelineRange(std::move(range), Animation::FromJS::Yes);
   return true;
 }
 

@@ -22,7 +22,7 @@ JSObject* CSSAnimation::WrapObject(JSContext* aCx,
 void CSSAnimation::SetEffect(AnimationEffect* aEffect) {
   Animation::SetEffect(aEffect);
 
-  AddOverriddenProperties(CSSAnimationProperties::Effect);
+  PropertiesWillSetFromJS(CSSAnimationProperties::Effect);
 }
 
 void CSSAnimation::SetStartTime(const Nullable<CSSNumberish>& aStartTime,
@@ -40,7 +40,7 @@ void CSSAnimation::SetStartTime(const Nullable<CSSNumberish>& aStartTime,
   bool isPaused = PlayState() == AnimationPlayState::Paused;
 
   if (wasPaused != isPaused) {
-    AddOverriddenProperties(CSSAnimationProperties::PlayState);
+    PropertiesWillSetFromJS(CSSAnimationProperties::PlayState);
   }
 }
 
@@ -62,7 +62,7 @@ void CSSAnimation::Reverse(ErrorResult& aRv) {
   bool isPaused = PlayState() == AnimationPlayState::Paused;
 
   if (wasPaused != isPaused) {
-    AddOverriddenProperties(CSSAnimationProperties::PlayState);
+    PropertiesWillSetFromJS(CSSAnimationProperties::PlayState);
   }
 }
 
@@ -89,7 +89,7 @@ void CSSAnimation::PlayFromJS(ErrorResult& aRv) {
     return;
   }
 
-  AddOverriddenProperties(CSSAnimationProperties::PlayState);
+  PropertiesWillSetFromJS(CSSAnimationProperties::PlayState);
 }
 
 void CSSAnimation::PauseFromJS(ErrorResult& aRv) {
@@ -98,7 +98,7 @@ void CSSAnimation::PauseFromJS(ErrorResult& aRv) {
     return;
   }
 
-  AddOverriddenProperties(CSSAnimationProperties::PlayState);
+  PropertiesWillSetFromJS(CSSAnimationProperties::PlayState);
 }
 
 void CSSAnimation::PlayFromStyle() {
@@ -335,7 +335,7 @@ void CSSAnimationKeyframeEffect::UpdateTiming(
       updatedProperties |= CSSAnimationProperties::FillMode;
     }
 
-    cssAnimation->AddOverriddenProperties(updatedProperties);
+    cssAnimation->PropertiesWillSetFromJS(updatedProperties);
   }
 }
 
@@ -349,7 +349,7 @@ void CSSAnimationKeyframeEffect::SetKeyframes(JSContext* aContext,
   }
 
   if (CSSAnimation* cssAnimation = GetOwningCSSAnimation()) {
-    cssAnimation->AddOverriddenProperties(CSSAnimationProperties::Keyframes);
+    cssAnimation->PropertiesWillSetFromJS(CSSAnimationProperties::Keyframes);
   }
 }
 
@@ -358,7 +358,7 @@ void CSSAnimationKeyframeEffect::SetComposite(
   KeyframeEffect::SetComposite(aComposite);
 
   if (CSSAnimation* cssAnimation = GetOwningCSSAnimation()) {
-    cssAnimation->AddOverriddenProperties(CSSAnimationProperties::Composition);
+    cssAnimation->PropertiesWillSetFromJS(CSSAnimationProperties::Composition);
   }
 }
 
