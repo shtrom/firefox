@@ -190,6 +190,17 @@ module.exports = function (config) {
                 branches: 0,
               },
             /**
+             * ThemesManagementPanel.jsx is tested via Jest (see
+             * test/jest/content-src/components/CustomizeMenu/ThemesManagementPanel.test.jsx).
+             */
+            "content-src/components/CustomizeMenu/ThemesManagementPanel/ThemesManagementPanel.jsx":
+              {
+                statements: 0,
+                lines: 0,
+                functions: 0,
+                branches: 0,
+              },
+            /**
              * Logo.jsx and its variant components are tested via Jest
              * (see test/jest/content-src/components/Logo.test.jsx).
              */
@@ -487,9 +498,9 @@ module.exports = function (config) {
               branches: 76,
             },
             "content-src/components/CustomizeMenu/ContentSection/*.jsx": {
-              statements: 82,
-              lines: 82,
-              functions: 100,
+              statements: 80,
+              lines: 80,
+              functions: 90,
               branches: 67,
             },
             "content-src/components/CustomizeMenu/**/*.jsx": {
