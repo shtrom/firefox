@@ -218,21 +218,28 @@
   border-color: var(--border-color-interactive);
 }
 
-/* ===== Monitor Display Section (Temporary) ===== */
+/* ===== Success Message ===== */
 
-.monitors-section {
-  padding: var(--space-large);
+.success-message-wrapper {
+  position: fixed;
+  top: var(--space-large);
+  right: var(--space-large);
+  z-index: 999;
+  animation: slideInRight 0.3s ease-out;
 }
 
-.monitors-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-medium);
+.success-message {
+  min-width: var(--size-layout-small);
+  max-width: var(--size-layout-medium);
 }
 
-.monitor-card {
-  padding: var(--space-medium);
-  border: 1px solid var(--border-color-deemphasized);
-  border-radius: var(--border-radius-medium);
-  background-color: var(--background-color-box);
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }

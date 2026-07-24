@@ -11,14 +11,19 @@ import "chrome://global/content/elements/moz-input-text.mjs";
 // eslint-disable-next-line import/no-unassigned-import
 import "chrome://global/content/elements/moz-input-url.mjs";
 // eslint-disable-next-line import/no-unassigned-import
+import "chrome://browser/content/aiwindow/components/monitors-display.mjs";
+// eslint-disable-next-line import/no-unassigned-import
 import "chrome://global/content/elements/moz-select.mjs";
 // eslint-disable-next-line import/no-unassigned-import
 import "chrome://global/content/elements/moz-textarea.mjs";
 // eslint-disable-next-line import/no-unassigned-import
 import "chrome://global/content/elements/panel-list.mjs";
+// eslint-disable-next-line import/no-unassigned-import
+import "chrome://global/content/elements/moz-message-bar.mjs";
 
 // Default constants - will be overridden by values from the actor
 const DEFAULT_CONSTANTS = {
+  TOTAL_NUM_MONITORS: 5,
   TOTAL_NUM_URLS_IN_MONITOR: 5,
   SCHEDULE_TYPES: {
     DAILY: "daily",
@@ -34,6 +39,7 @@ const MONITOR_ACTIONS = {
   REQUEST_DELETE_MONITOR: "RequestDeleteMonitor",
   REQUEST_UPDATE_MONITOR: "RequestUpdateMonitor",
   REQUEST_RUN_MONITOR: "RequestRunMonitor",
+  REQUEST_PAUSE_MONITOR: "RequestPauseMonitor",
 };
 
 // TODO - come back with better select or update CSP to allow inline CSS for icons
@@ -67,6 +73,8 @@ export class AITasks extends MozLitElement {
     monitors: { type: Array },
     pendingUrl: { type: String },
     pendingUrlError: { type: String },
+    successMessage: { type: String },
+    showSuccessMessage: { type: Boolean },
   };
 
   constructor() {
@@ -83,6 +91,9 @@ export class AITasks extends MozLitElement {
     this.monitors = [];
     this.pendingUrl = "";
     this.pendingUrlError = "";
+    this.successMessage = "";
+    this.showSuccessMessage = false;
+    this._successTimer = null;
   }
 
   // ===== Lifecycle Methods =====
@@ -97,6 +108,30 @@ export class AITasks extends MozLitElement {
     this.loadMonitors().catch(error => {
       console.warn("Failed to load monitors (expected in tests):", error);
     });
+
+    // Bind event handlers for agent-monitor-item events
+    this.boundHandleMonitorDelete = this.handleMonitorDelete.bind(this);
+    this.boundHandleMonitorPause = this.handleMonitorPause.bind(this);
+    this.boundHandleMonitorCheckNow = this.handleMonitorCheckNow.bind(this);
+    this.boundHandleMonitorSubmit = this.handleMonitorSubmit.bind(this);
+
+    // Listen for events bubbling up from monitors-display > agent-monitor-item
+    this.addEventListener(
+      "agent-monitor-item:delete",
+      this.boundHandleMonitorDelete
+    );
+    this.addEventListener(
+      "agent-monitor-item:pause",
+      this.boundHandleMonitorPause
+    );
+    this.addEventListener(
+      "agent-monitor-item:check-now",
+      this.boundHandleMonitorCheckNow
+    );
+    this.addEventListener(
+      "agent-monitor-item:submit",
+      this.boundHandleMonitorSubmit
+    );
   }
 
   /**
@@ -165,6 +200,28 @@ export class AITasks extends MozLitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
+
+    // Clear any pending success message timer
+    clearTimeout(this._successTimer);
+    this._successTimer = null;
+
+    // Remove event listeners
+    this.removeEventListener(
+      "agent-monitor-item:delete",
+      this.boundHandleMonitorDelete
+    );
+    this.removeEventListener(
+      "agent-monitor-item:pause",
+      this.boundHandleMonitorPause
+    );
+    this.removeEventListener(
+      "agent-monitor-item:check-now",
+      this.boundHandleMonitorCheckNow
+    );
+    this.removeEventListener(
+      "agent-monitor-item:submit",
+      this.boundHandleMonitorSubmit
+    );
   }
 
   // ===== Getters =====
@@ -181,8 +238,47 @@ export class AITasks extends MozLitElement {
     return hasDescription && hasValidUrl && hasNoPendingError;
   }
 
+  /**
+   * Checks if the maximum number of monitors has been reached.
+   *
+   * @returns {boolean} True if max monitors reached, false otherwise
+   */
+  get isMaxMonitorsReached() {
+    return this.monitors.length >= this._constants.TOTAL_NUM_MONITORS;
+  }
+
   get #dialog() {
     return this.shadowRoot.querySelector("dialog");
+  }
+
+  // ===== Success Message Management =====
+
+  /**
+   * Shows a success message that auto-dismisses after 5 seconds.
+   *
+   * @param {string} message - The success message to display
+   */
+  showSuccess(message) {
+    this.successMessage = message;
+    this.showSuccessMessage = true;
+
+    // Clear any existing timer to prevent overlapping dismissals
+    clearTimeout(this._successTimer);
+
+    // Auto-dismiss after 5 seconds
+    this._successTimer = setTimeout(() => {
+      this.showSuccessMessage = false;
+      this._successTimer = null;
+    }, 5000);
+  }
+
+  /**
+   * Dismisses the success message immediately.
+   */
+  dismissSuccessMessage() {
+    this.showSuccessMessage = false;
+    clearTimeout(this._successTimer);
+    this._successTimer = null;
   }
 
   // ===== Dialog Management =====
@@ -212,6 +308,128 @@ export class AITasks extends MozLitElement {
   }
 
   // ===== Monitor Management =====
+
+  /**
+   * Handles delete monitor event from agent-monitor-item.
+   *
+   * @param {CustomEvent} event - Event containing monitor id
+   */
+  async handleMonitorDelete(event) {
+    const { id } = event.detail;
+    try {
+      const result = await this.#dispatchMonitorAction(
+        MONITOR_ACTIONS.REQUEST_DELETE_MONITOR,
+        { id }
+      );
+      if (result?.success) {
+        await this.loadMonitors(); // Refresh the list
+        /* TODO: Localize */
+        this.showSuccess("Monitor deleted successfully");
+      } else {
+        console.error("Failed to delete monitor:", result?.error);
+      }
+    } catch (error) {
+      console.error("Failed to delete monitor:", error);
+    }
+  }
+
+  /**
+   * Handles pause/unpause monitor event from agent-monitor-item.
+   *
+   * @param {CustomEvent} event - Event containing monitor id and paused state
+   */
+  async handleMonitorPause(event) {
+    const { id, paused } = event.detail;
+    try {
+      const result = await this.#dispatchMonitorAction(
+        MONITOR_ACTIONS.REQUEST_PAUSE_MONITOR,
+        { id, pause: paused }
+      );
+      if (result?.success) {
+        await this.loadMonitors(); // Refresh the list
+        /* TODO: Localize */
+        this.showSuccess(paused ? "Monitor paused" : "Monitor resumed");
+      } else {
+        console.error("Failed to pause monitor:", result?.error);
+      }
+    } catch (error) {
+      console.error("Failed to pause monitor:", error);
+    }
+  }
+
+  /**
+   * Handles check now event from agent-monitor-item.
+   *
+   * @param {CustomEvent} event - Event containing monitor id
+   */
+  async handleMonitorCheckNow(event) {
+    const { id } = event.detail;
+
+    // Show in-progress message immediately
+    /* TODO: Localize */
+    this.showSuccess("Checking monitor...");
+
+    try {
+      const result = await this.#dispatchMonitorAction(
+        MONITOR_ACTIONS.REQUEST_RUN_MONITOR,
+        { id }
+      );
+      if (result?.success) {
+        await this.loadMonitors(); // Refresh the list
+        // Show completion message
+        /* TODO: Localize */
+        this.showSuccess("Monitor check completed");
+      } else {
+        console.error("Failed to run monitor check:", result?.error);
+      }
+    } catch (error) {
+      console.error("Failed to run monitor check:", error);
+    }
+  }
+
+  /**
+   * Handles submit/update event from agent-monitor-item edit mode.
+   *
+   * @param {CustomEvent} event - Event containing monitor data
+   */
+  async handleMonitorSubmit(event) {
+    const { id, monitorName, condition, watchUrls, schedule } = event.detail;
+    try {
+      // Convert schedule format from agent-monitor-item to MonitorAgent format
+      const monitorSchedule = schedule
+        ? {
+            type: schedule.frequency,
+            hour: parseInt(schedule.time.split(":")[0], 10),
+            minute: parseInt(schedule.time.split(":")[1], 10),
+            ...(schedule.weekday != null && {
+              weekday: parseInt(schedule.weekday, 10),
+            }),
+          }
+        : null;
+
+      const result = await this.#dispatchMonitorAction(
+        MONITOR_ACTIONS.REQUEST_UPDATE_MONITOR,
+        {
+          id,
+          updates: {
+            title: monitorName,
+            monitorPrompt: condition,
+            watchUrls,
+            schedule: monitorSchedule,
+          },
+        }
+      );
+      if (result?.success) {
+        await this.loadMonitors(); // Refresh the list
+        /* TODO: Localize */
+        this.showSuccess("Monitor updated successfully");
+      } else {
+        console.error("Failed to update monitor:", result?.error);
+      }
+    } catch (error) {
+      console.error("Failed to update monitor:", error);
+    }
+  }
 
   /**
    * Loads all existing monitors from the MonitorAgent.
@@ -482,7 +700,6 @@ export class AITasks extends MozLitElement {
                 placeholder="Describe what to watch"
                 @input=${e => this.handleAlertInput(e)}
                 .value=${this.alertDescription}
-                maxlength="500"
               ></moz-textarea>
             </div>
 
@@ -634,83 +851,37 @@ export class AITasks extends MozLitElement {
             <h2>Tools</h2>
             <moz-button
               class="add-task-button"
-              label="Add Monitor"
+              label=${this.isMaxMonitorsReached
+                ? "Max Monitors Created"
+                : "Add Monitor"}
+              ?disabled=${this.isMaxMonitorsReached}
               @click=${() => this.openDialog()}
             ></moz-button>
           </div>
-        </div>
-
-        <!--This is place holder display for monitors to test saving and loading
-        monitors. The actual UI will be implemented later.-->
-        <div class="monitors-section">
-          <h3>Monitors (${this.monitors.length})</h3>
-          ${this.monitors.length
-            ? html`
-                <div class="monitors-list">
-                  ${this.monitors.map(
-                    monitor => html`
-                      <div class="monitor-card">
-                        <h4>${monitor.title || "Untitled Monitor"}</h4>
-                        <p><strong>Title:</strong> ${monitor.title || "N/A"}</p>
-                        <p><strong>Prompt:</strong> ${monitor.monitorPrompt}</p>
-                        <p><strong>URLs:</strong></p>
-                        <ul>
-                          ${monitor.watchUrls.map(url => html`<li>${url}</li>`)}
-                        </ul>
-                        <p>
-                          <strong>Schedule:</strong> ${monitor.schedule.type}
-                          ${monitor.schedule.type ===
-                          this._constants.SCHEDULE_TYPES.DAILY
-                            ? html`at
-                              ${monitor.schedule.hour
-                                .toString()
-                                .padStart(2, "0")}:${monitor.schedule.minute
-                                .toString()
-                                .padStart(2, "0")}`
-                            : ""}
-                          ${monitor.schedule.type ===
-                          this._constants.SCHEDULE_TYPES.WEEKLY
-                            ? html`on
-                              ${[
-                                "Sunday",
-                                "Monday",
-                                "Tuesday",
-                                "Wednesday",
-                                "Thursday",
-                                "Friday",
-                                "Saturday",
-                              ][monitor.schedule.weekday]}
-                              at
-                              ${monitor.schedule.hour
-                                .toString()
-                                .padStart(2, "0")}:${monitor.schedule.minute
-                                .toString()
-                                .padStart(2, "0")}`
-                            : ""}
-                        </p>
-                        <p>
-                          <strong>Enabled:</strong> ${monitor.enabled
-                            ? "Yes"
-                            : "No"}
-                        </p>
-                        <p>
-                          <strong>Next Run:</strong> ${monitor.nextRunTime
-                            ? new Date(monitor.nextRunTime).toLocaleString()
-                            : "Not scheduled"}
-                        </p>
-                        <p>
-                          <strong>Last Run:</strong> ${monitor.lastRunTime
-                            ? new Date(monitor.lastRunTime).toLocaleString()
-                            : "Never"}
-                        </p>
-                      </div>
-                    `
-                  )}
-                </div>
-              `
-            : html`<p>No monitors created yet.</p>`}
+          <!-- Monitors display component -->
+          <monitors-display
+            .monitors=${this.monitors}
+            .scheduleTypes=${this._constants.SCHEDULE_TYPES}
+            .weekdays=${WEEKDAYS}
+          ></monitors-display>
         </div>
       </div>
+
+      ${this.showSuccessMessage
+        ? html`
+            <div class="success-message-wrapper">
+              <moz-message-bar
+                class="success-message"
+                type="success"
+                dismissable
+                @message-bar:user-dismissed=${() =>
+                  this.dismissSuccessMessage()}
+              >
+                <span slot="message">${this.successMessage}</span>
+              </moz-message-bar>
+            </div>
+          `
+        : ""}
     `;
   }
 }

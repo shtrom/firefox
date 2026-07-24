@@ -308,14 +308,14 @@ export class AgentMonitorItem extends MozLitElement {
     return html`
       <div class="field">
         <span class="field-label">Alert me when</span>
-        <moz-input-text
+        <moz-textarea
           class="monitor-condition-input"
           placeholder="e.g. the price drops below $270"
           .value=${this.alertDescription}
           @input=${this.#onConditionInput}
           @change=${this.#onConditionInput}
           aria-label="Alert condition"
-        ></moz-input-text>
+        ></moz-textarea>
         ${presets.length
           ? html`<div class="chip-row">
               ${presets.map(

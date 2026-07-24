@@ -6,6 +6,8 @@ const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   MonitorAgent:
     "moz-src:///browser/components/aiwindow/models/agents/MonitorAgent.sys.mjs",
+  TOTAL_NUM_MONITORS:
+    "moz-src:///browser/components/aiwindow/models/agents/Monitor.sys.mjs",
   TOTAL_NUM_URLS_IN_MONITOR:
     "moz-src:///browser/components/aiwindow/models/agents/Monitor.sys.mjs",
   SCHEDULE_TYPES:
@@ -22,6 +24,7 @@ export class SmartWindowTasksParent extends JSWindowActorParent {
     ["SmartWindowTasks:DeleteMonitor", this.#handleDeleteMonitor.bind(this)],
     ["SmartWindowTasks:UpdateMonitor", this.#handleUpdateMonitor.bind(this)],
     ["SmartWindowTasks:RunMonitor", this.#handleRunMonitor.bind(this)],
+    ["SmartWindowTasks:PauseMonitor", this.#handlePauseMonitor.bind(this)],
     ["SmartWindowTasks:GetConstants", this.#handleGetConstants.bind(this)],
   ]);
 
@@ -81,10 +84,20 @@ export class SmartWindowTasksParent extends JSWindowActorParent {
 
   async #handleRunMonitor(data) {
     try {
-      const result = await lazy.MonitorAgent.runMonitor(data.id);
+      const result = await lazy.MonitorAgent.runNow(data.id);
       return { success: true, result };
     } catch (error) {
       console.error("Failed to run monitor:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async #handlePauseMonitor(data) {
+    try {
+      await lazy.MonitorAgent.pauseMonitor(data.id, data.pause);
+      return { success: true };
+    } catch (error) {
+      console.error("Failed to pause monitor:", error);
       return { success: false, error: error.message };
     }
   }
@@ -93,6 +106,7 @@ export class SmartWindowTasksParent extends JSWindowActorParent {
     return {
       success: true,
       constants: {
+        TOTAL_NUM_MONITORS: lazy.TOTAL_NUM_MONITORS,
         TOTAL_NUM_URLS_IN_MONITOR: lazy.TOTAL_NUM_URLS_IN_MONITOR,
         SCHEDULE_TYPES: lazy.SCHEDULE_TYPES,
       },

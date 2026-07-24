@@ -286,6 +286,7 @@ let JSWINDOWACTORS = {
         "SmartWindowTasks:RequestDeleteMonitor": { wantUntrusted: true },
         "SmartWindowTasks:RequestUpdateMonitor": { wantUntrusted: true },
         "SmartWindowTasks:RequestRunMonitor": { wantUntrusted: true },
+        "SmartWindowTasks:RequestPauseMonitor": { wantUntrusted: true },
         "SmartWindowTasks:RequestConstants": { wantUntrusted: true },
       },
     },

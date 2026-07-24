@@ -12,6 +12,7 @@ export class SmartWindowTasksChild extends JSWindowActorChild {
     "SmartWindowTasks:RequestDeleteMonitor",
     "SmartWindowTasks:RequestUpdateMonitor",
     "SmartWindowTasks:RequestRunMonitor",
+    "SmartWindowTasks:RequestPauseMonitor",
     "SmartWindowTasks:RequestConstants",
   ]);
 
@@ -21,6 +22,7 @@ export class SmartWindowTasksChild extends JSWindowActorChild {
     ["SmartWindowTasks:RequestDeleteMonitor", "SmartWindowTasks:DeleteMonitor"],
     ["SmartWindowTasks:RequestUpdateMonitor", "SmartWindowTasks:UpdateMonitor"],
     ["SmartWindowTasks:RequestRunMonitor", "SmartWindowTasks:RunMonitor"],
+    ["SmartWindowTasks:RequestPauseMonitor", "SmartWindowTasks:PauseMonitor"],
     ["SmartWindowTasks:RequestConstants", "SmartWindowTasks:GetConstants"],
   ]);
 

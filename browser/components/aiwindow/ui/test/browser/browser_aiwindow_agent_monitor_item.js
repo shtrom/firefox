@@ -127,7 +127,7 @@ add_task(async function test_edit_toggle_expands_and_shows_field() {
         "Opening edit while collapsed also expands the card"
       );
       Assert.ok(
-        shadow.querySelector("moz-input-text.monitor-condition-input"),
+        shadow.querySelector("moz-textarea.monitor-condition-input"),
         "Editable condition field is shown while editing"
       );
       Assert.deepEqual(events, [true], "edit-toggle event fires with editing");
@@ -153,7 +153,7 @@ add_task(async function test_preset_updates_condition() {
       await el.updateComplete;
 
       Assert.equal(
-        shadow.querySelector("moz-input-text.monitor-condition-input").value,
+        shadow.querySelector("moz-textarea.monitor-condition-input").value,
         "Below $250",
         "Selecting a preset chip updates the condition field"
       );
@@ -384,7 +384,7 @@ add_task(async function test_create_mode_renders_form() {
         "Create mode is not the collapsible chat card"
       );
       Assert.ok(
-        shadow.querySelector("moz-input-text.monitor-condition-input"),
+        shadow.querySelector("moz-textarea.monitor-condition-input"),
         "Create mode shows the condition field"
       );
 
@@ -449,7 +449,7 @@ add_task(async function test_create_mode_empty_state_inputs() {
 
       setValue(nameInput, "Sony Headphone");
       setValue(
-        shadow.querySelector("moz-input-text.monitor-condition-input"),
+        shadow.querySelector("moz-textarea.monitor-condition-input"),
         "the price drops"
       );
 
