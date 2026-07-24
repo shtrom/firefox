@@ -16,18 +16,11 @@ let alertsService = Cc["@mozilla.org/alerts-service;1"].getService(
 let mockAlertsService = {
   history: [],
 
-  showAlertWithCallbacks(alert, alertCallbacks) {
-    alertsService.showAlertWithCallbacks(
-      alert,
-      new Proxy(alertCallbacks, {
-        get: (target, prop) => {
-          if (prop.startsWith("onAlert")) {
-            this.history.push({ prop });
-          }
-          return target[prop];
-        },
-      })
-    );
+  showAlert(alert, alertListener) {
+    alertsService.showAlert(alert, (subject, topic, data) => {
+      this.history.push({ subject, topic, data });
+      return alertListener.observe(subject, topic, data);
+    });
   },
 
   QueryInterface: ChromeUtils.generateQI(["nsIAlertsService"]),
@@ -99,7 +92,7 @@ add_task(async function no_tag_collision_between_containers() {
 
   is(mockAlertsService.history.length, 2, "Should observe two alert topics");
   for (const entry of mockAlertsService.history) {
-    is(entry.prop, "onAlertShow", "Should only observe alertshow");
+    is(entry.topic, "alertshow", "Should only observe alertshow");
   }
 
   BrowserTestUtils.removeTab(tab1);

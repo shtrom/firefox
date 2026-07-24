@@ -256,24 +256,25 @@ nsresult nsAlertsIconListener::ShowAlert(imgIContainer* aImage) {
     return NS_ERROR_FAILURE;
   }
 
-  if (mAlertCallbacks) {
-    mAlertCallbacks->OnAlertShow();
+  if (mAlertListener) {
+    mAlertListener->Observe(nullptr, "alertshow", mAlertCookie.get());
   }
 
   return NS_OK;
 }
 
 void nsAlertsIconListener::SendCallback() {
-  if (mAlertCallbacks) {
-    mAlertCallbacks->OnAlertClick(nullptr);
+  if (mAlertListener) {
+    mAlertListener->Observe(nullptr, "alertclickcallback", mAlertCookie.get());
   }
 }
 
 void nsAlertsIconListener::SendActionCallback(const nsAString& aActionName) {
-  if (mAlertCallbacks) {
+  if (mAlertListener) {
     nsCOMPtr<nsIAlertAction> alertAction;
     mAlertNotification->GetAction(aActionName, getter_AddRefs(alertAction));
-    mAlertCallbacks->OnAlertClick(alertAction);
+    mAlertListener->Observe(alertAction, "alertclickcallback",
+                            mAlertCookie.get());
   }
 }
 
@@ -321,7 +322,7 @@ nsresult nsAlertsIconListener::Close() {
 }
 
 nsresult nsAlertsIconListener::InitAlert(nsIAlertNotification* aAlert,
-                                         nsIAlertCallbacks* aAlertCallbacks) {
+                                         nsIObserver* aAlertListener) {
   if (!libNotifyHandle) return NS_ERROR_FAILURE;
 
   if (!notify_is_initted()) {
@@ -418,7 +419,10 @@ nsresult nsAlertsIconListener::InitAlert(nsIAlertNotification* aAlert,
         NS_ERROR_FAILURE);
   }
 
-  mAlertCallbacks = aAlertCallbacks;
+  mAlertListener = aAlertListener;
+
+  rv = aAlert->GetCookie(mAlertCookie);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<imgIContainer> image;
   MOZ_TRY(aAlert->GetImage(getter_AddRefs(image)));
@@ -427,7 +431,7 @@ nsresult nsAlertsIconListener::InitAlert(nsIAlertNotification* aAlert,
 }
 
 void nsAlertsIconListener::NotifyFinished() {
-  if (nsCOMPtr<nsIAlertCallbacks> alertCallbacks = mAlertCallbacks.forget()) {
-    alertCallbacks->OnAlertFinished();
+  if (nsCOMPtr<nsIObserver> alertListener = mAlertListener.forget()) {
+    alertListener->Observe(nullptr, "alertfinished", mAlertCookie.get());
   }
 }

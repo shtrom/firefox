@@ -294,7 +294,7 @@ void UnregisterNotification(nsIPrincipal* aPrincipal, const nsString& aId) {
 }
 
 nsresult ShowAlertWithCleanup(nsIAlertNotification* aAlert,
-                              nsIAlertCallbacks* aAlertCallbacks) {
+                              nsIObserver* aAlertListener) {
   nsCOMPtr<nsIAlertsService> alertService = components::Alerts::Service();
   if (!gTriedStorageCleanup ||
       StaticPrefs::
@@ -315,7 +315,7 @@ nsresult ShowAlertWithCleanup(nsIAlertNotification* aAlert,
     UnpersistAllNotificationsExcept(history);
   }
 
-  MOZ_TRY(alertService->ShowAlertWithCallbacks(aAlert, aAlertCallbacks));
+  MOZ_TRY(alertService->ShowAlert(aAlert, aAlertListener));
   return NS_OK;
 }
 

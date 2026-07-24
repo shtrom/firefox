@@ -12,15 +12,15 @@ const ALERTS_SERVICE_CONTRACT_ID = "@mozilla.org/alerts-service;1";
 const USER_CONTEXT_ID = 3;
 
 let mockAlertsService = {
-  showAlertWithCallbacks(alert, alertCallbacks) {
+  showAlert(alert, alertListener) {
     ok(true, "Showing alert");
     // eslint-disable-next-line mozilla/no-arbitrary-setTimeout
     setTimeout(function () {
-      alertCallbacks.onAlertShow();
+      alertListener.observe(null, "alertshow", alert.cookie);
     }, 100);
     // eslint-disable-next-line mozilla/no-arbitrary-setTimeout
     setTimeout(function () {
-      alertCallbacks.onAlertClick();
+      alertListener.observe(null, "alertclickcallback", alert.cookie);
     }, 100);
   },
 

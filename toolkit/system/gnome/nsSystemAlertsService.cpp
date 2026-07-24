@@ -23,11 +23,6 @@ nsresult nsSystemAlertsService::Init() { return NS_OK; }
 
 NS_IMETHODIMP nsSystemAlertsService::ShowAlert(nsIAlertNotification* aAlert,
                                                nsIObserver* aAlertListener) {
-  return NS_ERROR_NOT_IMPLEMENTED;  // Implemented in nsAlertsService
-}
-
-NS_IMETHODIMP nsSystemAlertsService::ShowAlertWithCallbacks(
-    nsIAlertNotification* aAlert, nsIAlertCallbacks* aAlertCallbacks) {
   NS_ENSURE_ARG(aAlert);
 
   nsAutoString alertName;
@@ -44,7 +39,7 @@ NS_IMETHODIMP nsSystemAlertsService::ShowAlertWithCallbacks(
   }
 
   AddListener(alertName, alertListener);
-  return alertListener->InitAlert(aAlert, aAlertCallbacks);
+  return alertListener->InitAlert(aAlert, aAlertListener);
 }
 
 NS_IMETHODIMP nsSystemAlertsService::CloseAlert(const nsAString& aAlertName,

@@ -27,8 +27,7 @@ class nsAlertsIconListener : public nsISupports {
                        nsIAlertNotification* aAlertNotification,
                        const nsAString& aAlertName);
 
-  nsresult InitAlert(nsIAlertNotification* aAlert,
-                     nsIAlertCallbacks* aAlertCallbacks);
+  nsresult InitAlert(nsIAlertNotification* aAlert, nsIObserver* aAlertListener);
   nsresult Close();
 
   void SendCallback();
@@ -73,7 +72,8 @@ class nsAlertsIconListener : public nsISupports {
   nsCString mAlertTitle;
   nsCString mAlertText;
 
-  nsCOMPtr<nsIAlertCallbacks> mAlertCallbacks;
+  nsCOMPtr<nsIObserver> mAlertListener;
+  nsString mAlertCookie;
   nsString mAlertName;
 
   RefPtr<nsSystemAlertsService> mBackend;

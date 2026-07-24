@@ -26,23 +26,23 @@ function mockServicesChromeScript() {
   let history = [];
 
   const mockAlertsService = {
-    showAlertWithCallbacks(alert, callbacks) {
+    showAlert(alert, listener) {
       activeNotifications[alert.name] = {
-        callbacks,
+        listener,
         cookie: alert.cookie,
         title: alert.title,
         image: alert.image,
       };
 
       // fake async alert show event
-      if (callbacks) {
+      if (listener) {
         setTimeout(() => {
           if (this.mockFailure) {
-            callbacks.onAlertFinished();
+            listener.observe(null, "alertfinished", alert.cookie);
             return;
           }
 
-          callbacks.onAlertShow();
+          listener.observe(null, "alertshow", alert.cookie);
           if (this.autoClick) {
             let subject;
             if (typeof this.autoClick === "string") {
@@ -50,7 +50,7 @@ function mockServicesChromeScript() {
                 ac => ac.action === this.autoClick
               )[0];
             }
-            callbacks.onAlertClick(subject);
+            listener.observe(subject, "alertclickcallback", alert.cookie);
           }
         }, 100);
       }
@@ -59,8 +59,12 @@ function mockServicesChromeScript() {
     closeAlert(name) {
       let alertNotification = activeNotifications[name];
       if (alertNotification) {
-        if (alertNotification.callbacks) {
-          alertNotification.callbacks.onAlertFinished();
+        if (alertNotification.listener) {
+          alertNotification.listener.observe(
+            null,
+            "alertfinished",
+            alertNotification.cookie
+          );
         }
         delete activeNotifications[name];
       }
@@ -96,8 +100,8 @@ function mockServicesChromeScript() {
   function clickNotifications(doClose) {
     // Until we need to close a specific notification, just click them all.
     for (let [name, notification] of Object.entries(activeNotifications)) {
-      let { callbacks } = notification;
-      callbacks.onAlertClick();
+      let { listener, cookie } = notification;
+      listener.observe(null, "alertclickcallback", cookie);
       if (doClose) {
         mockAlertsService.closeAlert(name);
       }

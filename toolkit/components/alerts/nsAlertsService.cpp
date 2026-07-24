@@ -2,8 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "nsIAlertsService.h"
-
 #include "nsIObserverService.h"
 #include "xpcpublic.h"
 #include "mozilla/AppShutdown.h"
@@ -83,50 +81,6 @@ bool nsAlertsService::ShouldShowAlert() {
   return result;
 }
 
-class AlertObserverToCallbacks : public nsIAlertCallbacks {
- public:
-  NS_DECL_ISUPPORTS
-
-  AlertObserverToCallbacks(nsIObserver* aObserver, const nsAString& aCookie)
-      : mObserver(aObserver), mCookie(aCookie) {
-    MOZ_ASSERT(aObserver);
-  }
-
-  NS_IMETHOD OnAlertShow() override {
-    return mObserver->Observe(nullptr, "alertshow", mCookie.get());
-  }
-
-  NS_IMETHOD OnAlertClick(nsIAlertAction* aAction) override {
-    return mObserver->Observe(aAction, "alertclickcallback", mCookie.get());
-  }
-
-  NS_IMETHOD OnAlertDismissedFromForeground() override { return NS_OK; }
-
-  NS_IMETHOD OnAlertClosed() override {
-    return mObserver->Observe(nullptr, "alertfinished", u"close");
-  }
-
-  NS_IMETHOD OnAlertFinished() override {
-    return mObserver->Observe(nullptr, "alertfinished", mCookie.get());
-  }
-
-  NS_IMETHOD OnAlertSettings() override {
-    return mObserver->Observe(nullptr, "alertsettingscallback", mCookie.get());
-  }
-
-  NS_IMETHOD OnAlertDisable() override {
-    return mObserver->Observe(nullptr, "alertdisablecallback", mCookie.get());
-  }
-
- private:
-  virtual ~AlertObserverToCallbacks() = default;
-
-  nsCOMPtr<nsIObserver> mObserver;
-  nsString mCookie;
-};
-
-NS_IMPL_ISUPPORTS(AlertObserverToCallbacks, nsIAlertCallbacks)
-
 NS_IMETHODIMP nsAlertsService::ShowAlert(nsIAlertNotification* aAlert,
                                          nsIObserver* aAlertListener) {
   NS_ENSURE_ARG(aAlert);
@@ -134,17 +88,6 @@ NS_IMETHODIMP nsAlertsService::ShowAlert(nsIAlertNotification* aAlert,
   nsAutoString cookie;
   nsresult rv = aAlert->GetCookie(cookie);
   NS_ENSURE_SUCCESS(rv, rv);
-
-  RefPtr<nsIAlertCallbacks> callbacks;
-  if (aAlertListener) {
-    callbacks = new AlertObserverToCallbacks(aAlertListener, cookie);
-  }
-  return ShowAlertWithCallbacks(aAlert, callbacks);
-}
-
-NS_IMETHODIMP nsAlertsService::ShowAlertWithCallbacks(
-    nsIAlertNotification* aAlert, nsIAlertCallbacks* aAlertCallbacks) {
-  NS_ENSURE_ARG(aAlert);
 
   if (AppShutdown::IsInOrBeyond(ShutdownPhase::AppShutdownConfirmed)) {
     // Bailing out without calling alertfinished, because we do not want to
@@ -158,13 +101,13 @@ NS_IMETHODIMP nsAlertsService::ShowAlertWithCallbacks(
     if (!mBackend) {
       return NS_ERROR_NOT_AVAILABLE;
     }
-    return mBackend->ShowAlertWithCallbacks(aAlert, aAlertCallbacks);
+    return mBackend->ShowAlert(aAlert, aAlertListener);
   }
 
   if (!ShouldShowAlert()) {
     // Do not display the alert. Instead call alertfinished and get out.
-    if (aAlertCallbacks) {
-      aAlertCallbacks->OnAlertFinished();
+    if (aAlertListener) {
+      aAlertListener->Observe(nullptr, "alertfinished", cookie.get());
     }
     return NS_OK;
   }
@@ -172,7 +115,7 @@ NS_IMETHODIMP nsAlertsService::ShowAlertWithCallbacks(
   // Use XUL notifications as a fallback if above methods have failed.
   nsCOMPtr<nsIAlertsService> xulBackend(nsXULAlerts::GetInstance());
   NS_ENSURE_TRUE(xulBackend, NS_ERROR_FAILURE);
-  return xulBackend->ShowAlertWithCallbacks(aAlert, aAlertCallbacks);
+  return xulBackend->ShowAlert(aAlert, aAlertListener);
 }
 
 NS_IMETHODIMP nsAlertsService::CloseAlert(const nsAString& aAlertName,

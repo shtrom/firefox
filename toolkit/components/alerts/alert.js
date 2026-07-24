@@ -17,7 +17,7 @@ const WINDOW_SHADOW_SPREAD = AppConstants.platform == "win" ? 10 : 0;
 
 var gOrigin = 0; // Default value: alert from bottom right.
 var gReplacedWindow = null;
-var gAlertCallbacks = null;
+var gAlertListener = null;
 var gAlertTextClickable = false;
 var gAlertCookie = "";
 var gIsActive = false;
@@ -87,7 +87,7 @@ function prefillAlertInfo() {
     }
     // fall through
     case 11:
-      gAlertCallbacks = window.arguments[10];
+      gAlertListener = window.arguments[10];
     // fall through
     case 10:
       gReplacedWindow = window.arguments[9];
@@ -258,8 +258,8 @@ function onAlertLoad() {
   let ev = new CustomEvent("AlertActive", { bubbles: true, cancelable: true });
   document.documentElement.dispatchEvent(ev);
 
-  if (gAlertCallbacks) {
-    gAlertCallbacks.onAlertShow();
+  if (gAlertListener) {
+    gAlertListener.observe(null, "alertshow", gAlertCookie);
   }
 }
 
@@ -353,14 +353,14 @@ function onAlertBeforeUnload() {
     }
   }
 
-  if (gAlertCallbacks) {
-    gAlertCallbacks.onAlertFinished();
+  if (gAlertListener) {
+    gAlertListener.observe(null, "alertfinished", gAlertCookie);
   }
 }
 
 function onAlertClick() {
-  if (gAlertCallbacks && gAlertTextClickable) {
-    gAlertCallbacks.onAlertClick();
+  if (gAlertListener && gAlertTextClickable) {
+    gAlertListener.observe(null, "alertclickcallback", gAlertCookie);
   }
 
   let alertBox = document.getElementById("alertBox");
@@ -381,7 +381,7 @@ function doNotDisturb() {
 }
 
 function disableForOrigin() {
-  gAlertCallbacks.onAlertDisable();
+  gAlertListener.observe(null, "alertdisablecallback", gAlertCookie);
   onAlertClose();
 }
 
@@ -398,7 +398,7 @@ function onAlertSettingsClick(event) {
 }
 
 function openSettings() {
-  gAlertCallbacks.onAlertSettings();
+  gAlertListener.observe(null, "alertsettingscallback", gAlertCookie);
   onAlertClose();
 }
 
