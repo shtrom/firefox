@@ -799,6 +799,10 @@ static void UpdateGeneratedContentTextIfNeeded(
   if (!aFrame->IsGeneratedContentFrame()) {
     return;
   }
+  // Update once per element, not per continuation.
+  if (aFrame->GetPrevContinuation()) {
+    return;
+  }
   nsIContent* content = aFrame->GetContent();
   if (!content || !content->IsRootOfNativeAnonymousSubtree()) {
     return;
@@ -838,10 +842,6 @@ static void UpdateGeneratedContentTextIfNeeded(
 }
 
 void nsIFrame::HandlePrimaryFrameStyleChange(ComputedStyle* aOldStyle) {
-  if (aOldStyle) {
-    UpdateGeneratedContentTextIfNeeded(this, aOldStyle);
-  }
-
   const nsStyleDisplay* disp = StyleDisplay();
   const nsStyleDisplay* oldDisp =
       aOldStyle ? aOldStyle->StyleDisplay() : nullptr;
@@ -1312,17 +1312,18 @@ void nsIFrame::MarkNeedsDisplayItemRebuild() {
 // Subclass hook for style post processing
 /* virtual */
 void nsIFrame::DidSetComputedStyle(ComputedStyle* aOldComputedStyle) {
-#ifdef ACCESSIBILITY
-  // Don't notify for reconstructed frames here, since the frame is still being
-  // constructed at this point and so LocalAccessible::GetFrame() will return
-  // null. Style changes for reconstructed frames are handled in
-  // DocAccessible::PruneOrInsertSubtree.
   if (aOldComputedStyle) {
+#ifdef ACCESSIBILITY
+    // Don't notify for reconstructed frames here, since the frame is still
+    // being constructed at this point and so LocalAccessible::GetFrame() will
+    // return null. Style changes for reconstructed frames are handled in
+    // DocAccessible::PruneOrInsertSubtree.
     if (nsAccessibilityService* accService = GetAccService()) {
       accService->NotifyOfComputedStyleChange(PresShell(), mContent);
     }
-  }
 #endif
+    UpdateGeneratedContentTextIfNeeded(this, aOldComputedStyle);
+  }
 
   MaybeScheduleReflowSVGNonDisplayText(this);
 

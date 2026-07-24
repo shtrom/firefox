@@ -15,6 +15,7 @@ https://bugzilla.mozilla.org/show_bug.cgi?id=1986640
     #classSwap::before { content: "a"; }
     #classSwap.swapped::before { content: "b"; }
     #leadingEmpty::before { content: "" attr(data-x); }
+    #table::before { content: attr(data-x); display: table; }
   </style>
 </head>
 <body>
@@ -24,6 +25,7 @@ https://bugzilla.mozilla.org/show_bug.cgi?id=1986640
   <div id="multi" data-x="one"></div>
   <div id="classSwap"></div>
   <div id="leadingEmpty" data-x="one"></div>
+  <div id="table" data-x="one"></div>
 </div>
 <pre id="test">
 <script>
@@ -93,6 +95,14 @@ const gTestcases = [
   // while updating text items in place (no reframe).
   {
     id: "leadingEmpty",
+    setup: e => e.setAttribute("data-x", "one"),
+    mutate: e => e.setAttribute("data-x", "two"),
+    expectConstruction: false,
+    expectReflow: true,
+  },
+  // A display:table pseudo should still update in place, not reframe.
+  {
+    id: "table",
     setup: e => e.setAttribute("data-x", "one"),
     mutate: e => e.setAttribute("data-x", "two"),
     expectConstruction: false,
