@@ -240,6 +240,22 @@ interface nsIAlertNotification : nsISupports
   nsIAlertAction getAction(in AString aName);
 };
 
+[scriptable, uuid(4b7c7108-0052-4117-881a-eab196d6bf8f)]
+interface nsIAlertCallbacks : nsISupports
+{
+  void onAlertShow();
+
+  void onAlertClick([optional] in nsIAlertAction aAction);
+
+  void onAlertClosed();
+
+  void onAlertFinished();
+
+  void onAlertSettings();
+
+  void onAlertDisable();
+};
+
 [scriptable, uuid(f7a36392-d98b-4141-a7d7-4e46642684e3)]
 interface nsIAlertsService : nsISupports
 {
@@ -271,6 +287,9 @@ interface nsIAlertsService : nsISupports
    */
   void showAlert(in nsIAlertNotification aAlert,
                  [optional] in nsIObserver aAlertListener);
+
+  void showAlertWithCallbacks(in nsIAlertNotification aAlert,
+                              in nsIAlertCallbacks aAlertCallbacks);
 
   /**
    * Close alerts created by the service.

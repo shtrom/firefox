@@ -794,16 +794,16 @@ bool ToastNotificationHandler::CreateWindowsNotificationFromXml(
   hr = mNotifier->Show(mNotification.Get());
   NS_ENSURE_TRUE(SUCCEEDED(hr), false);
 
-  if (mAlertListener) {
-    mAlertListener->Observe(nullptr, "alertshow", mCookie.get());
+  if (mAlertCallbacks) {
+    mAlertCallbacks->OnAlertShow();
   }
 
   return true;
 }
 
 void ToastNotificationHandler::SendFinished() {
-  if (!mSentFinished && mAlertListener) {
-    mAlertListener->Observe(nullptr, "alertfinished", mCookie.get());
+  if (!mSentFinished && mAlertCallbacks) {
+    mAlertCallbacks->OnAlertFinished();
   }
 
   mSentFinished = true;
@@ -820,7 +820,7 @@ ToastNotificationHandler::OnActivate(
     const ComPtr<IInspectable>& inspectable) {
   MOZ_LOG(sWASLog, LogLevel::Info, ("OnActivate"));
 
-  if (mAlertListener) {
+  if (mAlertCallbacks) {
     // Extract the `action` value from the argument string.
     nsAutoString argumentsString;
     nsAutoString actionString;
@@ -885,9 +885,9 @@ ToastNotificationHandler::OnActivate(
       // don't need to compare with a parsed result.
       SendFinished();
     } else if (actionValue && *actionValue == kAlertActionSettings) {
-      mAlertListener->Observe(nullptr, "alertsettingscallback", mCookie.get());
+      mAlertCallbacks->OnAlertSettings();
     } else if (actionValue && *actionValue == kAlertActionDisable) {
-      mAlertListener->Observe(nullptr, "alertdisablecallback", mCookie.get());
+      mAlertCallbacks->OnAlertDisable();
     } else if (mClickable) {
       // When clicking toast, focus moves to another process, but we want to set
       // focus on Firefox process.
@@ -914,7 +914,7 @@ ToastNotificationHandler::OnActivate(
 
       // Null subject for the default action or an action object for extra
       // actions
-      mAlertListener->Observe(alertAction, "alertclickcallback", mCookie.get());
+      mAlertCallbacks->OnAlertClick(alertAction);
     }
   }
   HandleCloseFromSystem();

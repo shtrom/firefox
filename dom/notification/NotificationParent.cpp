@@ -11,6 +11,7 @@
 #include "mozilla/dom/ServiceWorkerManager.h"
 #include "mozilla/ipc/Endpoint.h"
 #include "nsComponentManagerUtils.h"
+#include "nsIAlertsService.h"
 #include "nsIServiceWorkerManager.h"
 #include "nsIURIClassifier.h"
 #include "nsNetCID.h"
@@ -20,10 +21,7 @@ namespace mozilla::dom::notification {
 
 NS_IMPL_ISUPPORTS0(NotificationParent)
 
-// TODO(krosylight): Would be nice to replace nsIObserver with something like:
-//
-// nsINotificationManager.NotifyClick(notification.id [, notification.action])
-class NotificationObserver final : public nsIObserver {
+class NotificationObserver final : public nsIAlertCallbacks {
  public:
   NS_DECL_ISUPPORTS
 
@@ -35,30 +33,41 @@ class NotificationObserver final : public nsIObserver {
         mNotification(std::move(aNotification)),
         mActor(&aParent) {}
 
-  NS_IMETHODIMP Observe(nsISupports* aSubject, const char* aTopic,
-                        const char16_t* aData) override {
-    AlertTopic topic = ToAlertTopic(aTopic, aData);
+  NS_IMETHODIMP OnAlertDisable() override {
+    return RemovePermission(mPrincipal);
+  }
 
-    // These two never fire any content event directly
-    if (topic == AlertTopic::Disable) {
-      return RemovePermission(mPrincipal);
-    }
-    if (topic == AlertTopic::Settings) {
-      return OpenSettings(mPrincipal);
-    }
+  NS_IMETHODIMP OnAlertSettings() override { return OpenSettings(mPrincipal); }
 
+  NS_IMETHODIMP OnAlertShow() override {
+    return Observe(nullptr, AlertTopic::Show);
+  }
+
+  NS_IMETHODIMP OnAlertClick(nsIAlertAction* aAction) override {
+    return Observe(aAction, AlertTopic::Click);
+  }
+
+  NS_IMETHODIMP OnAlertClosed() override {
+    return Observe(nullptr, AlertTopic::Closed);
+  }
+
+  NS_IMETHODIMP OnAlertFinished() override {
+    return Observe(nullptr, AlertTopic::Finished);
+  }
+
+  nsresult Observe(nsIAlertAction* aAction, AlertTopic aTopic) {
     RefPtr<NotificationParent> actor(mActor);
 
     if (actor && actor->CanSend()) {
       // The actor is alive, call it to ping the content process and/or to make
       // it clean up itself
-      actor->HandleAlertTopic(topic);
+      actor->HandleAlertTopic(aTopic);
       if (mScope.IsEmpty()) {
         // The actor covered everything we need.
         return NS_OK;
       }
     } else if (mScope.IsEmpty()) {
-      if (topic == AlertTopic::Click) {
+      if (aTopic == AlertTopic::Click) {
         // No actor there, we need to open up a window ourselves
         return OpenWindowFor(mPrincipal);
       }
@@ -68,7 +77,7 @@ class NotificationObserver final : public nsIObserver {
 
     // We have a Service Worker to call
     MOZ_ASSERT(!mScope.IsEmpty());
-    if (topic == AlertTopic::Show) {
+    if (aTopic == AlertTopic::Show) {
       (void)NS_WARN_IF(NS_FAILED(
           AdjustPushQuota(mPrincipal, NotificationStatusChange::Shown)));
       nsresult rv = PersistNotification(mPrincipal, mNotification, mScope);
@@ -78,14 +87,13 @@ class NotificationObserver final : public nsIObserver {
       return NS_OK;
     }
 
-    MOZ_ASSERT(topic == AlertTopic::Click || topic == AlertTopic::Finished ||
-               topic == AlertTopic::Closed);
+    MOZ_ASSERT(aTopic == AlertTopic::Click || aTopic == AlertTopic::Finished ||
+               aTopic == AlertTopic::Closed);
 
-    if (topic == AlertTopic::Click) {
-      nsCOMPtr<nsIAlertAction> action = do_QueryInterface(aSubject);
+    if (aTopic == AlertTopic::Click) {
       nsAutoString actionName;
-      if (action) {
-        MOZ_TRY(action->GetAction(actionName));
+      if (aAction) {
+        MOZ_TRY(aAction->GetAction(actionName));
       }
       return RespondOnClick(mPrincipal, mScope, mNotification, actionName);
     }
@@ -98,7 +106,7 @@ class NotificationObserver final : public nsIObserver {
     nsAutoCString originSuffix;
     MOZ_TRY(mPrincipal->GetOriginSuffix(originSuffix));
 
-    MOZ_ASSERT(topic == AlertTopic::Finished || topic == AlertTopic::Closed);
+    MOZ_ASSERT(aTopic == AlertTopic::Finished || aTopic == AlertTopic::Closed);
     (void)NS_WARN_IF(NS_FAILED(
         AdjustPushQuota(mPrincipal, NotificationStatusChange::Closed)));
     (void)NS_WARN_IF(
@@ -146,7 +154,7 @@ class NotificationObserver final : public nsIObserver {
   WeakPtr<NotificationParent> mActor;
 };
 
-NS_IMPL_ISUPPORTS(NotificationObserver, nsIObserver)
+NS_IMPL_ISUPPORTS(NotificationObserver, nsIAlertCallbacks)
 
 using SafeBrowsingPromise = MozPromise<bool, nsresult, false>;
 
