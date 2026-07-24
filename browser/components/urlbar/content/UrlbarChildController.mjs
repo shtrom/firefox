@@ -224,6 +224,15 @@ export class UrlbarChildController {
   trackBounceBrowser(browserId) {
     return this.#parentController.trackBounceBrowser(browserId);
   }
+  recordSearchMode(searchMode) {
+    return this.#parentController.recordSearchMode(searchMode);
+  }
+  recordSearchForm(engineName) {
+    return this.#parentController.recordSearchForm(engineName);
+  }
+  recordSearch(options) {
+    return this.#parentController.recordSearch(options);
+  }
   /**
    * Starts a query and returns the parent controller's promise so callers (the
    * input's `lastQueryContextPromise`, which tests await) can track completion.

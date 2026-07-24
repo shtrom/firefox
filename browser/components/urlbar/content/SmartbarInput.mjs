@@ -37,6 +37,7 @@ const { AppConstants } = ChromeUtils.importESModule(
  * @import { UrlbarSearchOneOffs } from "moz-src:///browser/components/urlbar/UrlbarSearchOneOffs.sys.mjs"
  * @import { SearchEngine } from "moz-src:///toolkit/components/search/SearchEngine.sys.mjs"
  * @import { PartialSearchEngine } from "chrome://browser/content/urlbar/SearchEngineStore.mjs"
+ * @import { BrowserSearchTelemetry } from "moz-src:///browser/components/search/BrowserSearchTelemetry.sys.mjs"
  * @import { SmartbarAction } from "moz-src:///browser/components/aiwindow/ui/components/input-cta/input-cta.mjs"
  * @import { WebsiteChipContainer } from "chrome://browser/content/aiwindow/components/website-chip-container.mjs"
  * @import { AIWindow } from "moz-src:///browser/components/aiwindow/ui/components/ai-window/ai-window.mjs"
@@ -49,9 +50,6 @@ const { AppConstants } = ChromeUtils.importESModule(
  */
 
 const lazy = XPCOMUtils.declareLazy({
-  ASRouter: "resource:///modules/asrouter/ASRouter.sys.mjs",
-  BrowserSearchTelemetry:
-    "moz-src:///browser/components/search/BrowserSearchTelemetry.sys.mjs",
   BrowserUIUtils: "resource:///modules/BrowserUIUtils.sys.mjs",
   ExtensionSearchHandler:
     "resource://gre/modules/ExtensionSearchHandler.sys.mjs",
@@ -3550,11 +3548,7 @@ ${
         this.userTypedValue = this.untrimmedValue;
         this.valueIsTyped = true;
         if (!searchMode.isPreview && !areSearchModesSame) {
-          try {
-            lazy.BrowserSearchTelemetry.recordSearchMode(searchMode);
-          } catch (ex) {
-            console.error(ex);
-          }
+          this.controller.recordSearchMode(searchMode);
         }
       }
     }
@@ -4069,7 +4063,7 @@ ${
    *
    * @param {Event} event
    *   The event that triggered this query.
-   * @returns {keyof typeof lazy.BrowserSearchTelemetry.KNOWN_SEARCH_SOURCES}
+   * @returns {keyof typeof BrowserSearchTelemetry.KNOWN_SEARCH_SOURCES}
    *   The source name.
    */
   getSearchSource(event) {
@@ -4742,9 +4736,7 @@ ${
   }
 
   /**
-   * Records in telemetry that a search is being loaded,
-   * updates an incremental total number of searches in a pref,
-   * and informs ASRouter that a search has occurred via a trigger send
+   * Hands a loading search to the parent controller, which records it.
    *
    * @param {string} engineId
    *   The engine to generate the query for.
@@ -4761,47 +4753,22 @@ ${
    * @param {string} [searchActionDetails.url]
    *   The url this query was triggered with.
    * @param {MozBrowser} [browser]
-   *   The browser where the search is being opened.
-   *   Defaults to the window's selected browser.
+   *   The browser where the search is being opened. When omitted, the parent
+   *   controller records against its selected browser.
    */
-  _recordSearch(
-    engineId,
-    event,
-    searchActionDetails = {},
-    browser = this.window.gBrowser.selectedBrowser
-  ) {
+  _recordSearch(engineId, event, searchActionDetails = {}, browser = null) {
     const isOneOff = this.view.oneOffSearchButtons?.eventTargetIsAOneOff(event);
     const searchSource = this.getSearchSource(event);
 
-    // Record when the user uses the search bar to be
-    // used for message targeting. This is arbitrarily capped
-    // at 100, only to prevent the number from growing ifinitely.
-    const totalSearches = Services.prefs.getIntPref(
-      "browser.search.totalSearches"
-    );
-    const totalSearchesCap = 100;
-    if (totalSearches < totalSearchesCap) {
-      Services.prefs.setIntPref(
-        "browser.search.totalSearches",
-        totalSearches + 1
-      );
-    }
-
-    // Sending a trigger to ASRouter when a search happens
-    lazy.ASRouter.sendTriggerMessage({
-      browser,
-      id: "onSearch",
-      context: {
-        isSuggestion: searchActionDetails.isSuggestion || false,
-        searchSource,
+    this.controller.recordSearch({
+      engineId,
+      searchSource,
+      details: {
+        ...searchActionDetails,
         isOneOff,
+        newtabSessionId: this._handoffSession,
       },
-    });
-
-    lazy.BrowserSearchTelemetry.recordSearch(browser, engineId, searchSource, {
-      ...searchActionDetails,
-      isOneOff,
-      newtabSessionId: this._handoffSession,
+      browserId: browser?.browsingContext?.browserId,
     });
   }
 
