@@ -1150,6 +1150,8 @@ pref("browser.tabs.hoverPreview.showThumbnails", true);
 pref("browser.tabs.groups.enabled", true);
 pref("browser.tabs.groups.hoverPreview.enabled", true);
 pref("browser.tabs.groups.alternateMenu", false);
+// Bug 2052293: temporarily disabled while tab groups move away from the list all tabs menu.
+pref("browser.tabs.groups.onboardingCallouts.enabled", false);
 
 pref("browser.tabs.groups.smart.enabled", true);
 
