@@ -7902,6 +7902,8 @@ MDefinition* MTimeClip::foldsTo(TempAllocator& alloc) {
   return MConstant::NewDouble(alloc, JS::CanonicalizeNaN(clipped.toDouble()));
 }
 
+JSOp MBinaryCache::jsop() const { return JSOp(*resumePoint()->pc()); }
+
 // Returns `false` if it can be proven that (1) both `mtyA` and `mtyB` are
 // struct types and (2) they are not related by inheritance.  Returns `true` in
 // all other cases.  `true` is the safe-but-possibly-suboptimal return value.

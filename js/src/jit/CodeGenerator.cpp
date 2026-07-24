@@ -3747,7 +3747,7 @@ void CodeGenerator::visitBinaryValueCache(LBinaryValueCache* lir) {
   TypedOrValueRegister rhs = TypedOrValueRegister(ToValue(lir->rhs()));
   ValueOperand output = ToOutValue(lir);
 
-  JSOp jsop = JSOp(*lir->mirRaw()->toInstruction()->resumePoint()->pc());
+  JSOp jsop = lir->mir()->jsop();
 
   switch (jsop) {
     case JSOp::Add:
@@ -3777,7 +3777,7 @@ void CodeGenerator::visitBinaryBoolCache(LBinaryBoolCache* lir) {
   TypedOrValueRegister rhs = TypedOrValueRegister(ToValue(lir->rhs()));
   Register output = ToRegister(lir->output());
 
-  JSOp jsop = JSOp(*lir->mirRaw()->toInstruction()->resumePoint()->pc());
+  JSOp jsop = lir->mir()->jsop();
 
   switch (jsop) {
     case JSOp::Lt:
@@ -21638,7 +21638,7 @@ void CodeGenerator::visitNewTarget(LNewTarget* ins) {
 
   Label useNFormals;
 
-  size_t numFormalArgs = ins->mirRaw()->block()->info().nargs();
+  size_t numFormalArgs = ins->mir()->block()->info().nargs();
   masm.branchPtr(Assembler::Below, argvLen, Imm32(numFormalArgs), &useNFormals);
 
   size_t argsOffset = JitFrameLayout::offsetOfActualArgs();
