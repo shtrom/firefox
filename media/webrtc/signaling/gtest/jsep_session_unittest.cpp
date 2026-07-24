@@ -4870,7 +4870,7 @@ TEST_F(JsepSessionTest, TestExtmapDuplicateId) {
       "a=extmap:2 "
       "http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time\r\n";
   auto result = mSessionAns->SetRemoteDescription(kJsepSdpOffer, sdp);
-  ASSERT_TRUE(result.mError == Some(dom::PCError::InvalidAccessError));
+  ASSERT_TRUE(result.mError == Some(dom::PCError::OperationError));
   ASSERT_EQ("Description contains duplicate extension id 2 on level 0",
             mSessionAns->GetLastError());
 }

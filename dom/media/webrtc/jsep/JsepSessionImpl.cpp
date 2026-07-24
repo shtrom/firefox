@@ -810,30 +810,40 @@ JsepSession::Result JsepSessionImpl::SetLocalDescription(
   }
 
   UniquePtr<Sdp> parsed;
-  JsepSession::Result parse_result = ParseSdp(sdp, &parsed);
-  if (parse_result.mError.isSome()) {
-    return parse_result;
+  switch (const auto res = ParseSdp(sdp, &parsed); res) {
+    case JsepParseTimeExceptionType::Operation: {
+      Maybe<size_t> lineNumber;
+      if (!mLastSdpParsingErrors.empty()) {
+        lineNumber = Some(mLastSdpParsingErrors[0].first);
+      }
+      return Result(dom::PCError::OperationError, "sdp-syntax-error",
+                    lineNumber);
+    }
+    case JsepParseTimeExceptionType::InvalidAccess: {
+      NS_ENSURE_SUCCESS(NS_ERROR_INVALID_ARG, dom::PCError::InvalidAccessError);
+      break;
+    }
+    case JsepParseTimeExceptionType::None: {
+      break;
+    }
   }
 
   // Check that content hasn't done anything unsupported with the SDP
-  Result result = ValidateLocalDescription(*parsed, type);
-  if (result.mError.isSome()) {
-    return result;
-  }
+  nsresult rv = ValidateLocalDescription(*parsed, type);
+  NS_ENSURE_SUCCESS(rv, dom::PCError::InvalidModificationError);
+
   switch (type) {
     case kJsepSdpOffer:
-      result = ValidateOffer(*parsed);
+      rv = ValidateOffer(*parsed);
       break;
     case kJsepSdpAnswer:
     case kJsepSdpPranswer:
-      result = ValidateAnswer(*mPendingRemoteDescription, *parsed);
+      rv = ValidateAnswer(*mPendingRemoteDescription, *parsed);
       break;
     case kJsepSdpRollback:
       MOZ_CRASH();  // Handled above
   }
-  if (result.mError.isSome()) {
-    return result;
-  }
+  NS_ENSURE_SUCCESS(rv, dom::PCError::InvalidAccessError);
 
   if (type == kJsepSdpOffer) {
     // Save in case we need to rollback
@@ -841,14 +851,14 @@ JsepSession::Result JsepSessionImpl::SetLocalDescription(
   }
 
   SdpHelper::BundledMids bundledMids;
-  nsresult ns_rv = mSdpHelper.GetBundledMids(*parsed, &bundledMids);
-  NS_ENSURE_SUCCESS(ns_rv, dom::PCError::OperationError);
+  rv = mSdpHelper.GetBundledMids(*parsed, &bundledMids);
+  NS_ENSURE_SUCCESS(rv, dom::PCError::OperationError);
 
   SdpHelper::BundledMids remoteBundledMids;
   if (type != kJsepSdpOffer) {
-    ns_rv = mSdpHelper.GetBundledMids(*mPendingRemoteDescription,
-                                      &remoteBundledMids);
-    NS_ENSURE_SUCCESS(ns_rv, dom::PCError::OperationError);
+    rv = mSdpHelper.GetBundledMids(*mPendingRemoteDescription,
+                                   &remoteBundledMids);
+    NS_ENSURE_SUCCESS(rv, dom::PCError::OperationError);
   }
 
   for (size_t i = 0; i < parsed->GetMediaSectionCount(); ++i) {
@@ -911,17 +921,17 @@ JsepSession::Result JsepSessionImpl::SetLocalDescription(
 
   switch (type) {
     case kJsepSdpOffer:
-      ns_rv = SetLocalDescriptionOffer(std::move(parsed));
+      rv = SetLocalDescriptionOffer(std::move(parsed));
       break;
     case kJsepSdpAnswer:
     case kJsepSdpPranswer:
-      ns_rv = SetLocalDescriptionAnswer(type, std::move(parsed));
+      rv = SetLocalDescriptionAnswer(type, std::move(parsed));
       break;
     case kJsepSdpRollback:
       MOZ_CRASH();  // Handled above
   }
 
-  NS_ENSURE_SUCCESS(ns_rv, dom::PCError::OperationError);
+  NS_ENSURE_SUCCESS(rv, dom::PCError::OperationError);
   return Result();
 }
 
@@ -1017,30 +1027,39 @@ JsepSession::Result JsepSessionImpl::SetRemoteDescription(
 
   // Parse.
   UniquePtr<Sdp> parsed;
-  JsepSession::Result parse_result = ParseSdp(sdp, &parsed);
-  if (parse_result.mError.isSome()) {
-    return parse_result;
+  switch (const auto res = ParseSdp(sdp, &parsed); res) {
+    case JsepParseTimeExceptionType::Operation: {
+      Maybe<size_t> lineNumber;
+      if (!mLastSdpParsingErrors.empty()) {
+        lineNumber = Some(mLastSdpParsingErrors[0].first);
+      }
+      return Result(dom::PCError::OperationError, "sdp-syntax-error",
+                    lineNumber);
+    }
+    case JsepParseTimeExceptionType::InvalidAccess: {
+      NS_ENSURE_SUCCESS(NS_ERROR_INVALID_ARG, dom::PCError::InvalidAccessError);
+      break;
+    }
+    case JsepParseTimeExceptionType::None: {
+      break;
+    }
   }
 
-  Result result = ValidateRemoteDescription(*parsed);
-  if (result.mError.isSome()) {
-    return result;
-  }
+  nsresult rv = ValidateRemoteDescription(*parsed);
+  NS_ENSURE_SUCCESS(rv, dom::PCError::InvalidAccessError);
 
   switch (type) {
     case kJsepSdpOffer:
-      result = ValidateOffer(*parsed);
+      rv = ValidateOffer(*parsed);
       break;
     case kJsepSdpAnswer:
     case kJsepSdpPranswer:
-      result = ValidateAnswer(*mPendingLocalDescription, *parsed);
+      rv = ValidateAnswer(*mPendingLocalDescription, *parsed);
       break;
     case kJsepSdpRollback:
       MOZ_CRASH();  // Handled above
   }
-  if (result.mError.isSome()) {
-    return result;
-  }
+  NS_ENSURE_SUCCESS(rv, dom::PCError::InvalidAccessError);
 
   bool iceLite =
       parsed->GetAttributeList().HasAttribute(SdpAttribute::kIceLiteAttribute);
@@ -1085,8 +1104,8 @@ JsepSession::Result JsepSessionImpl::SetRemoteDescription(
 
   // TODO(bug 1095780): Note that we create remote tracks even when
   // They contain only codecs we can't negotiate or other craziness.
-  nsresult ns_rv = UpdateTransceiversFromRemoteDescription(*parsed);
-  NS_ENSURE_SUCCESS(ns_rv, dom::PCError::OperationError);
+  rv = UpdateTransceiversFromRemoteDescription(*parsed);
+  NS_ENSURE_SUCCESS(rv, dom::PCError::OperationError);
 
   for (size_t i = 0; i < parsed->GetMediaSectionCount(); ++i) {
     MOZ_ASSERT(GetTransceiverForLevel(i));
@@ -1094,17 +1113,17 @@ JsepSession::Result JsepSessionImpl::SetRemoteDescription(
 
   switch (type) {
     case kJsepSdpOffer:
-      ns_rv = SetRemoteDescriptionOffer(std::move(parsed));
+      rv = SetRemoteDescriptionOffer(std::move(parsed));
       break;
     case kJsepSdpAnswer:
     case kJsepSdpPranswer:
-      ns_rv = SetRemoteDescriptionAnswer(type, std::move(parsed));
+      rv = SetRemoteDescriptionAnswer(type, std::move(parsed));
       break;
     case kJsepSdpRollback:
       MOZ_CRASH();  // Handled above
   }
 
-  NS_ENSURE_SUCCESS(ns_rv, dom::PCError::OperationError);
+  NS_ENSURE_SUCCESS(rv, dom::PCError::OperationError);
 
   mRemoteIsIceLite = iceLite;
   mIceOptions = std::move(iceOptions);
@@ -1469,20 +1488,17 @@ nsresult JsepSessionImpl::CopyPreviousTransportParams(
   return NS_OK;
 }
 
-JsepSession::Result JsepSessionImpl::ParseSdp(const std::string& sdp,
-                                              UniquePtr<Sdp>* parsedp) {
+JsepParseTimeExceptionType JsepSessionImpl::ParseSdp(const std::string& sdp,
+                                                     UniquePtr<Sdp>* parsedp) {
+  using Except = JsepParseTimeExceptionType;
   auto results = mParser->Parse(sdp);
   auto parsed = std::move(results->Sdp());
   mLastSdpParsingErrors = results->Errors();
   if (!parsed) {
     std::string error = results->ParserName() + " Failed to parse SDP: ";
     mSdpHelper.AppendSdpParseErrors(mLastSdpParsingErrors, &error);
-    Maybe<size_t> lineNumber;
-    if (!mLastSdpParsingErrors.empty()) {
-      lineNumber = Some(mLastSdpParsingErrors[0].first);
-    }
     JSEP_SET_ERROR(error);
-    return Result(dom::PCError::SyntaxError, "sdp-parse-error", lineNumber);
+    return Except::Operation;
   }
   // Verify that the JSEP rules for all SDP are followed
   for (size_t i = 0; i < parsed->GetMediaSectionCount(); ++i) {
@@ -1500,7 +1516,7 @@ JsepSession::Result JsepSessionImpl::ParseSdp(const std::string& sdp,
           "Invalid description, mid length greater than 16 "
           "unsupported until 2-byte rtp header extensions are "
           "supported in webrtc.org");
-      return Result(dom::PCError::OperationError);
+      return Except::Operation;
     }
 
     if (mediaAttrs.HasAttribute(SdpAttribute::kExtmapAttribute)) {
@@ -1513,13 +1529,13 @@ JsepSession::Result JsepSessionImpl::ParseSdp(const std::string& sdp,
                          << id << " on level " << i
                          << " which is unsupported until 2-byte rtp"
                             " header extensions are supported in webrtc.org");
-          return Result(dom::PCError::OperationError);
+          return Except::Operation;
         }
 
         if (extIds.find(id) != extIds.end()) {
           JSEP_SET_ERROR("Description contains duplicate extension id "
                          << id << " on level " << i);
-          return Result(dom::PCError::InvalidAccessError);
+          return Except::Operation;
         }
         extIds.insert(id);
       }
@@ -1536,12 +1552,12 @@ JsepSession::Result JsepSessionImpl::ParseSdp(const std::string& sdp,
           JSEP_SET_ERROR("Payload type \""
                          << fmt << "\" is not a 16-bit unsigned int at level "
                          << i);
-          return Result(dom::PCError::InvalidAccessError);
+          return Except::Operation;
         }
         if (payloadType > 127) {
           JSEP_SET_ERROR("audio/video payload type \""
                          << fmt << "\" is too large at level " << i);
-          return Result(dom::PCError::InvalidAccessError);
+          return Except::Operation;
         }
         // PT is well-formed, but it may be reserved
         switch (payloadType) {
@@ -1552,7 +1568,7 @@ JsepSession::Result JsepSessionImpl::ParseSdp(const std::string& sdp,
             JSEP_SET_ERROR("Audio/video payload type \""
                            << fmt << "\" at level " << i
                            << " is using reserved payload type number");
-            return Result(dom::PCError::InvalidAccessError);
+            return Except::InvalidAccess;
           default:
             break;
         }
@@ -1562,14 +1578,14 @@ JsepSession::Result JsepSessionImpl::ParseSdp(const std::string& sdp,
               << fmt << "\" at level " << i
               << " is using payload type number in the range 64 to 95 which"
                  " is reserved while rtcp-mux is in use");
-          return Result(dom::PCError::InvalidAccessError);
+          return Except::InvalidAccess;
         }
       }
     }
   }
 
   *parsedp = std::move(parsed);
-  return Result();
+  return Except::None;
 }
 
 nsresult JsepSessionImpl::SetRemoteDescriptionOffer(UniquePtr<Sdp> offer) {
@@ -1850,8 +1866,8 @@ void JsepSessionImpl::RollbackRemoteOffer() {
   mTransceivers = std::move(mOldTransceivers);
 }
 
-JsepSession::Result JsepSessionImpl::ValidateLocalDescription(
-    const Sdp& description, JsepSdpType type) {
+nsresult JsepSessionImpl::ValidateLocalDescription(const Sdp& description,
+                                                   JsepSdpType type) {
   Sdp* generated = nullptr;
   // TODO(bug 1095226): Better checking.
   if (type == kJsepSdpOffer) {
@@ -1863,14 +1879,13 @@ JsepSession::Result JsepSessionImpl::ValidateLocalDescription(
   if (!generated) {
     JSEP_SET_ERROR(
         "Calling SetLocal without first calling CreateOffer/Answer"
-        " is not supported. This operation should have been rejected"
-        " before even getting here.");
-    return Result(dom::PCError::OperationError);
+        " is not supported.");
+    return NS_ERROR_UNEXPECTED;
   }
 
   if (description.GetMediaSectionCount() != generated->GetMediaSectionCount()) {
     JSEP_SET_ERROR("Changing the number of m-sections is not allowed");
-    return Result(dom::PCError::InvalidAccessError);
+    return NS_ERROR_INVALID_ARG;
   }
 
   for (size_t i = 0; i < description.GetMediaSectionCount(); ++i) {
@@ -1878,23 +1893,21 @@ JsepSession::Result JsepSessionImpl::ValidateLocalDescription(
     auto& finalMsection = description.GetMediaSection(i);
     if (origMsection.GetMediaType() != finalMsection.GetMediaType()) {
       JSEP_SET_ERROR("Changing the media-type of m-sections is not allowed");
-      return Result(dom::PCError::InvalidAccessError);
+      return NS_ERROR_INVALID_ARG;
     }
 
     // These will be present in reoffer
     if (!mCurrentLocalDescription) {
       if (finalMsection.GetAttributeList().HasAttribute(
               SdpAttribute::kCandidateAttribute)) {
-        JSEP_SET_ERROR(
-            "Adding your own candidate attributes is not allowed,"
-            "and SDP munging in general is not allowed either.");
-        return Result(dom::PCError::InvalidModificationError);
+        JSEP_SET_ERROR("Adding your own candidate attributes is not supported");
+        return NS_ERROR_INVALID_ARG;
       }
 
       if (finalMsection.GetAttributeList().HasAttribute(
               SdpAttribute::kEndOfCandidatesAttribute)) {
         JSEP_SET_ERROR("Why are you trying to set a=end-of-candidates?");
-        return Result(dom::PCError::InvalidAccessError);
+        return NS_ERROR_INVALID_ARG;
       }
     }
 
@@ -1905,13 +1918,13 @@ JsepSession::Result JsepSessionImpl::ValidateLocalDescription(
     if (!finalMsection.GetAttributeList().HasAttribute(
             SdpAttribute::kMidAttribute)) {
       JSEP_SET_ERROR("Local descriptions must have a=mid attributes.");
-      return Result(dom::PCError::InvalidModificationError);
+      return NS_ERROR_INVALID_ARG;
     }
 
     if (finalMsection.GetAttributeList().GetMid() !=
         origMsection.GetAttributeList().GetMid()) {
       JSEP_SET_ERROR("Changing the mid of m-sections is not allowed.");
-      return Result(dom::PCError::InvalidAccessError);
+      return NS_ERROR_INVALID_ARG;
     }
 
     // TODO(bug 1095218): Check msid
@@ -1925,17 +1938,16 @@ JsepSession::Result JsepSessionImpl::ValidateLocalDescription(
   if (description.GetAttributeList().HasAttribute(
           SdpAttribute::kIceLiteAttribute)) {
     JSEP_SET_ERROR("Running ICE in lite mode is unsupported");
-    return Result(dom::PCError::InvalidModificationError);
+    return NS_ERROR_INVALID_ARG;
   }
 
-  return Result();
+  return NS_OK;
 }
 
-JsepSession::Result JsepSessionImpl::ValidateRemoteDescription(
-    const Sdp& description) {
+nsresult JsepSessionImpl::ValidateRemoteDescription(const Sdp& description) {
   if (!mCurrentLocalDescription) {
     // Initial offer; nothing to validate besides the stuff in ParseSdp
-    return Result();
+    return NS_OK;
   }
 
   if (mCurrentLocalDescription->GetMediaSectionCount() >
@@ -1943,7 +1955,7 @@ JsepSession::Result JsepSessionImpl::ValidateRemoteDescription(
     JSEP_SET_ERROR(
         "New remote description has fewer m-sections than the "
         "previous remote description.");
-    return Result(dom::PCError::InvalidAccessError);
+    return NS_ERROR_INVALID_ARG;
   }
 
   for (size_t i = 0; i < description.GetMediaSectionCount(); ++i) {
@@ -1959,7 +1971,7 @@ JsepSession::Result JsepSessionImpl::ValidateRemoteDescription(
               << ext.entry << " from "
               << mExtmapEntriesEverNegotiated[ext.entry] << " to "
               << ext.extensionname);
-          return Result(dom::PCError::InvalidAccessError);
+          return NS_ERROR_INVALID_ARG;
         }
       }
     }
@@ -1967,17 +1979,17 @@ JsepSession::Result JsepSessionImpl::ValidateRemoteDescription(
 
   if (!mCurrentRemoteDescription) {
     // No further checking for initial answers
-    return Result();
+    return NS_OK;
   }
 
   // These are solely to check that bundle is valid
   SdpHelper::BundledMids bundledMids;
-  nsresult ns_rv = GetNegotiatedBundledMids(&bundledMids);
-  NS_ENSURE_SUCCESS(ns_rv, dom::PCError::InvalidAccessError);
+  nsresult rv = GetNegotiatedBundledMids(&bundledMids);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   SdpHelper::BundledMids newBundledMids;
-  ns_rv = mSdpHelper.GetBundledMids(description, &newBundledMids);
-  NS_ENSURE_SUCCESS(ns_rv, dom::PCError::InvalidAccessError);
+  rv = mSdpHelper.GetBundledMids(description, &newBundledMids);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   // check for partial ice restart, which is not supported
   Maybe<bool> iceCredsDiffer;
@@ -1997,7 +2009,7 @@ JsepSession::Result JsepSessionImpl::ValidateRemoteDescription(
                        << i
                        << " to or from application, which is not"
                           " permitted");
-        return Result(dom::PCError::InvalidAccessError);
+        return NS_ERROR_INVALID_ARG;
       }
       continue;
     }
@@ -2007,7 +2019,7 @@ JsepSession::Result JsepSessionImpl::ValidateRemoteDescription(
                      << i
                      << "; media type changes are only permitted when the "
                         "m-section was previously disabled");
-      return Result(dom::PCError::InvalidAccessError);
+      return NS_ERROR_INVALID_ARG;
     }
 
     if (mSdpHelper.MsectionIsDisabled(newMsection)) {
@@ -2023,7 +2035,7 @@ JsepSession::Result JsepSessionImpl::ValidateRemoteDescription(
           "Remote description indicates ICE restart but offer did not "
           "request ICE restart (new remote description changes either "
           "the ice-ufrag or ice-pwd)");
-      return Result(dom::PCError::InvalidAccessError);
+      return NS_ERROR_INVALID_ARG;
     }
 
     // Detect whether all the creds are the same or all are different
@@ -2036,16 +2048,16 @@ JsepSession::Result JsepSessionImpl::ValidateRemoteDescription(
           "Partial ICE restart is unsupported at this time "
           "(new remote description changes either the ice-ufrag "
           "or ice-pwd on fewer than all msections)");
-      return Result(dom::PCError::OperationError);
+      return NS_ERROR_INVALID_ARG;
     }
   }
 
-  return Result();
+  return NS_OK;
 }
 
-JsepSession::Result JsepSessionImpl::CheckRtcpMux(const Sdp& description) {
+nsresult JsepSessionImpl::CheckRtcpMux(const Sdp& description) {
   if (mRtcpMuxPolicy != kRtcpMuxRequire) {
-    return Result();
+    return NS_OK;
   }
   for (size_t i = 0; i < description.GetMediaSectionCount(); ++i) {
     const SdpMediaSection& msection = description.GetMediaSection(i);
@@ -2060,56 +2072,31 @@ JsepSession::Result JsepSessionImpl::CheckRtcpMux(const Sdp& description) {
       JSEP_SET_ERROR(
           "m-section at level "
           << i << " is missing a=rtcp-mux, which is required by rtcpMuxPolicy");
-      return Result(dom::PCError::InvalidAccessError);
+      return NS_ERROR_INVALID_ARG;
     }
   }
-  return Result();
+  return NS_OK;
 }
 
-// Bug 2036111 - Syntax Errors Should Be Parser Generated
-// All uses of this function should be eliminated when implement Bug 2036111.
-inline static JsepSession::Result MkContextlessSdpResult(
-    Maybe<dom::PCError> aErr) {
-  constexpr const size_t BOGUS_LINE_NUMBER = 0;
-  if (aErr) {
-    const auto err = aErr.extract();
-    if (err == dom::PCError::SyntaxError) {
-      return JsepSession::Result(err, "sdp-syntax-error",
-                                 Some(BOGUS_LINE_NUMBER));
-    }
-    return JsepSession::Result(err);
-  }
-  return JsepSession::Result();
+nsresult JsepSessionImpl::ValidateOffer(const Sdp& offer) {
+  nsresult rv = CheckRtcpMux(offer);
+  NS_ENSURE_SUCCESS(rv, rv);
+  return mSdpHelper.ValidateTransportAttributes(offer, sdp::kOffer);
 }
 
-JsepSession::Result JsepSessionImpl::ValidateOffer(const Sdp& offer) {
-  Result result = CheckRtcpMux(offer);
-  if (result.mError.isSome()) {
-    return result;
-  }
-  return MkContextlessSdpResult(
-      mSdpHelper.ValidateTransportAttributes(offer, sdp::kOffer));
-}
-
-JsepSession::Result JsepSessionImpl::ValidateAnswer(const Sdp& offer,
-                                                    const Sdp& answer) {
+nsresult JsepSessionImpl::ValidateAnswer(const Sdp& offer, const Sdp& answer) {
   if (offer.GetMediaSectionCount() != answer.GetMediaSectionCount()) {
     JSEP_SET_ERROR("Offer and answer have different number of m-lines "
                    << "(" << offer.GetMediaSectionCount() << " vs "
                    << answer.GetMediaSectionCount() << ")");
-    return Result(dom::PCError::InvalidAccessError);
+    return NS_ERROR_INVALID_ARG;
   }
 
-  Result result = CheckRtcpMux(answer);
-  if (result.mError.isSome()) {
-    return result;
-  }
+  nsresult rv = CheckRtcpMux(answer);
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  Maybe validation_err =
-      mSdpHelper.ValidateTransportAttributes(answer, sdp::kAnswer);
-  if (validation_err.isSome()) {
-    return MkContextlessSdpResult(validation_err);
-  }
+  rv = mSdpHelper.ValidateTransportAttributes(answer, sdp::kAnswer);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   for (size_t i = 0; i < offer.GetMediaSectionCount(); ++i) {
     const SdpMediaSection& offerMsection = offer.GetMediaSection(i);
@@ -2118,7 +2105,7 @@ JsepSession::Result JsepSessionImpl::ValidateAnswer(const Sdp& offer,
     if (offerMsection.GetMediaType() != answerMsection.GetMediaType()) {
       JSEP_SET_ERROR("Answer and offer have different media types at m-line "
                      << i);
-      return Result(dom::PCError::InvalidAccessError);
+      return NS_ERROR_INVALID_ARG;
     }
 
     if (mSdpHelper.MsectionIsDisabled(answerMsection)) {
@@ -2128,17 +2115,17 @@ JsepSession::Result JsepSessionImpl::ValidateAnswer(const Sdp& offer,
     if (mSdpHelper.MsectionIsDisabled(offerMsection)) {
       JSEP_SET_ERROR(
           "Answer tried to enable an m-section that was disabled in the offer");
-      return Result(dom::PCError::InvalidAccessError);
+      return NS_ERROR_INVALID_ARG;
     }
 
     if (!offerMsection.IsSending() && answerMsection.IsReceiving()) {
       JSEP_SET_ERROR("Answer tried to set recv when offer did not set send");
-      return Result(dom::PCError::InvalidAccessError);
+      return NS_ERROR_INVALID_ARG;
     }
 
     if (!offerMsection.IsReceiving() && answerMsection.IsSending()) {
       JSEP_SET_ERROR("Answer tried to set send when offer did not set recv");
-      return Result(dom::PCError::InvalidAccessError);
+      return NS_ERROR_INVALID_ARG;
     }
 
     const SdpAttributeList& answerAttrs(answerMsection.GetAttributeList());
@@ -2150,14 +2137,14 @@ JsepSession::Result JsepSessionImpl::ValidateAnswer(const Sdp& offer,
                      << offerMsection.GetAttributeList().GetMid()
                      << "\', now \'"
                      << answerMsection.GetAttributeList().GetMid() << "\'");
-      return Result(dom::PCError::InvalidAccessError);
+      return NS_ERROR_INVALID_ARG;
     }
 
     // Sanity check extmap
     if (answerAttrs.HasAttribute(SdpAttribute::kExtmapAttribute)) {
       if (!offerAttrs.HasAttribute(SdpAttribute::kExtmapAttribute)) {
         JSEP_SET_ERROR("Answer adds extmap attributes to level " << i);
-        return Result(dom::PCError::InvalidAccessError);
+        return NS_ERROR_INVALID_ARG;
       }
 
       for (const auto& ansExt : answerAttrs.GetExtmap().mExtmaps) {
@@ -2183,7 +2170,7 @@ JsepSession::Result JsepSessionImpl::ValidateAnswer(const Sdp& offer,
               JSEP_SET_ERROR("Answer changed id for extmap attribute at level "
                              << i << " (" << offExt.extensionname << ") from "
                              << offExt.entry << " to " << ansExt.entry << ".");
-              return Result(dom::PCError::InvalidAccessError);
+              return NS_ERROR_INVALID_ARG;
             }
 
             if (ansExt.entry >= 4096) {
@@ -2191,7 +2178,7 @@ JsepSession::Result JsepSessionImpl::ValidateAnswer(const Sdp& offer,
                              << ansExt.entry
                              << ") for extmap attribute at level " << i << " ("
                              << ansExt.extensionname << ").");
-              return Result(dom::PCError::InvalidAccessError);
+              return NS_ERROR_INVALID_ARG;
             }
 
             found = true;
@@ -2205,13 +2192,13 @@ JsepSession::Result JsepSessionImpl::ValidateAnswer(const Sdp& offer,
                          << " at "
                             "level "
                          << i << " that was not present in offer.");
-          return Result(dom::PCError::InvalidAccessError);
+          return NS_ERROR_INVALID_ARG;
         }
       }
     }
   }
 
-  return Result();
+  return NS_OK;
 }
 
 nsresult JsepSessionImpl::CreateGenericSDP(UniquePtr<Sdp>* sdpp) {
