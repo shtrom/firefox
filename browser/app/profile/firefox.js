@@ -1236,6 +1236,10 @@ pref("browser.tabs.contextmenu.altstructure.enabled", false);
 
 pref("browser.ctrlTab.sortByRecentlyUsed", false);
 
+// How many tab thumbnails to show in the ctrl-tab panel, clamped to [4, 49].
+// Only relevant when browser.ctrlTab.sortByRecentlyUsed is true.
+pref("browser.ctrlTab.maxPreviews", 7);
+
 // By default, do not export HTML at shutdown.
 // If true, at shutdown the bookmarks in your menu and toolbar will
 // be exported as HTML to the bookmarks.html file.

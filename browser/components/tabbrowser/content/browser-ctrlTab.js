@@ -197,7 +197,7 @@ var tabPreviewPanelHelper = {
  * Ctrl-Tab panel
  */
 var ctrlTab = {
-  maxTabPreviews: 7,
+  previewsPerRow: 7,
   get panel() {
     delete this.panel;
     return (this.panel = document.getElementById("ctrlTab-panel"));
@@ -216,14 +216,7 @@ var ctrlTab = {
   },
   get previews() {
     delete this.previews;
-    this.previews = [];
-    let previewsContainer = document.getElementById("ctrlTab-previews");
-    for (let i = 0; i < this.maxTabPreviews; i++) {
-      let preview = this._makePreview();
-      previewsContainer.appendChild(preview);
-      this.previews.push(preview);
-    }
-    this.previews.push(this.showAllButton);
+    this._buildPreviews();
     return this.previews;
   },
   get keys() {
@@ -304,11 +297,22 @@ var ctrlTab = {
     this.readPref();
   },
 
+  _buildPreviews() {
+    let previewsContainer = document.getElementById("ctrlTab-previews");
+    previewsContainer.replaceChildren();
+    this.previews = [];
+    for (let i = 0; i < this.maxTabPreviews; i++) {
+      let preview = this._makePreview();
+      previewsContainer.appendChild(preview);
+      this.previews.push(preview);
+    }
+    this.previews.push(this.showAllButton);
+  },
+
   _makePreview() {
     let preview = document.createXULElement("button");
     preview.className = "ctrlTab-preview";
     preview.setAttribute("pack", "center");
-    preview.setAttribute("flex", "1");
     preview.addEventListener("mouseover", this);
     preview.addEventListener("command", this);
     preview.addEventListener("click", this);
@@ -501,8 +505,11 @@ var ctrlTab = {
       return;
     }
 
+    if (this.previews.length != this.maxTabPreviews + 1) {
+      this._buildPreviews();
+    }
     this.canvasWidth = Math.ceil(
-      (screen.availWidth * 0.85) / this.maxTabPreviews
+      (screen.availWidth * 0.85) / this.previewsPerRow
     );
     this.canvasHeight = Math.round(this.canvasWidth * tabPreviews.aspectRatio);
     this.updatePreviews();
@@ -522,10 +529,13 @@ var ctrlTab = {
 
     let width = Math.min(
       screen.availWidth * 0.99,
-      this.canvasWidth * 1.25 * this.tabPreviewCount
+      this.canvasWidth *
+        1.25 *
+        Math.min(this.tabPreviewCount, this.previewsPerRow)
     );
     this.panel.style.width = width + "px";
-    var estimateHeight = this.canvasHeight * 1.25 + 75;
+    let previewRows = Math.ceil(this.tabPreviewCount / this.previewsPerRow);
+    var estimateHeight = this.canvasHeight * 1.25 * previewRows + 75;
     this.panel.openPopupAtScreen(
       screen.availLeft + (screen.availWidth - width) / 2,
       screen.availTop + (screen.availHeight - estimateHeight) / 2,
@@ -831,3 +841,12 @@ var ctrlTab = {
 ChromeUtils.defineESModuleGetters(ctrlTab, {
   KeyboardLockUtils: "resource://gre/modules/KeyboardLockUtils.sys.mjs",
 });
+
+XPCOMUtils.defineLazyPreferenceGetter(
+  ctrlTab,
+  "maxTabPreviews",
+  "browser.ctrlTab.maxPreviews",
+  7,
+  null,
+  value => Math.max(4, Math.min(49, value))
+);
