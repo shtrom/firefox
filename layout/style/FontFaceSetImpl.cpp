@@ -143,7 +143,7 @@ void FontFaceSetImpl::Destroy() {
 
 void FontFaceSetImpl::ParseFontShorthandForMatching(
     const nsACString& aFont, StyleFontFamilyList& aFamilyList,
-    FontWeight& aWeight, FontWidth& aWidth, FontSlantStyle& aStyle,
+    FontWeight& aWeight, FontStretch& aStretch, FontSlantStyle& aStyle,
     ErrorResult& aRv) {
   RefPtr<URLExtraData> url = GetURLExtraData();
   if (!url) {
@@ -151,8 +151,8 @@ void FontFaceSetImpl::ParseFontShorthandForMatching(
     return;
   }
 
-  if (!ServoCSSParser::ParseFontShorthandForMatching(aFont, url, aFamilyList,
-                                                     aStyle, aWidth, aWeight)) {
+  if (!ServoCSSParser::ParseFontShorthandForMatching(
+          aFont, url, aFamilyList, aStyle, aStretch, aWeight)) {
     aRv.ThrowSyntaxError("Invalid font shorthand");
     return;
   }
@@ -180,9 +180,9 @@ void FontFaceSetImpl::FindMatchingFontFaces(const nsACString& aFont,
 
   StyleFontFamilyList familyList;
   FontWeight weight;
-  FontWidth width;
+  FontStretch stretch;
   FontSlantStyle italicStyle;
-  ParseFontShorthandForMatching(aFont, familyList, weight, width, italicStyle,
+  ParseFontShorthandForMatching(aFont, familyList, weight, stretch, italicStyle,
                                 aRv);
   if (aRv.Failed()) {
     return;
@@ -191,7 +191,7 @@ void FontFaceSetImpl::FindMatchingFontFaces(const nsACString& aFont,
   gfxFontStyle style;
   style.style = italicStyle;
   style.weight = weight;
-  style.width = width;
+  style.stretch = stretch;
 
   // Set of FontFaces that we want to return.
   nsTHashSet<FontFace*> matchingFaces;
@@ -592,14 +592,14 @@ nsresult FontFaceSetImpl::LogMessage(gfxUserFontEntry* aUserFontEntry,
 
   nsAutoCString weightString;
   aUserFontEntry->Weight().ToString(weightString);
-  nsAutoCString widthString;
-  aUserFontEntry->Width().ToString(widthString);
+  nsAutoCString stretchString;
+  aUserFontEntry->Stretch().ToString(stretchString);
   nsPrintfCString message(
       "downloadable font: %s "
-      "(font-family: \"%s\" style:%s weight:%s width:%s src index:%d)",
+      "(font-family: \"%s\" style:%s weight:%s stretch:%s src index:%d)",
       aMessage, familyName.get(),
       aUserFontEntry->IsItalic() ? "italic" : "normal",  // XXX todo: oblique?
-      weightString.get(), widthString.get(), aSrcIndex);
+      weightString.get(), stretchString.get(), aSrcIndex);
 
   if (NS_FAILED(aStatus)) {
     message.AppendLiteral(": ");

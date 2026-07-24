@@ -1056,7 +1056,7 @@ gfxFontEntry* gfxPlatformFontList::LookupInFaceNameLists(
 already_AddRefed<gfxFontEntry> gfxPlatformFontList::LookupInSharedFaceNameList(
     FontVisibilityProvider* aFontVisibilityProvider,
     const nsACString& aFaceName, WeightRange aWeightForEntry,
-    WidthRange aWidthForEntry, SlantStyleRange aStyleForEntry) {
+    StretchRange aStretchForEntry, SlantStyleRange aStyleForEntry) {
   nsAutoCString keyName(aFaceName);
   ToLowerCase(keyName);
   fontlist::FontList* list = SharedFontList();
@@ -1090,7 +1090,7 @@ already_AddRefed<gfxFontEntry> gfxPlatformFontList::LookupInSharedFaceNameList(
   if (fe) {
     fe->mIsLocalUserFont = true;
     fe->mWeightRange = aWeightForEntry;
-    fe->mWidthRange = aWidthForEntry;
+    fe->mStretchRange = aStretchForEntry;
     fe->mStyleRange = aStyleForEntry;
   }
   return fe.forget();

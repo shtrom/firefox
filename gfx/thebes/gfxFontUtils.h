@@ -23,10 +23,10 @@ namespace mozilla {
 class Encoding;
 class ServoStyleSet;
 class SlantStyleRange;
-class WidthRange;
+class StretchRange;
 class WeightRange;
 struct StyleFontStyle;
-struct StyleFontWidth;
+struct StyleFontStretch;
 struct StyleFontWeight;
 }  // namespace mozilla
 
@@ -721,11 +721,11 @@ class gfxFontUtils {
 
 // Factors used to weight the distances between the available and target font
 // properties during font-matching. These ensure that we respect the CSS-fonts
-// requirement that font-width >> font-style >> font-weight; and in addition,
+// requirement that font-stretch >> font-style >> font-weight; and in addition,
 // a mismatch between the desired and actual glyph presentation (emoji vs text)
 // will take precedence over any of the style attributes.
 constexpr double kPresentationMismatch = 1.0e12;
-constexpr double kWidthFactor = 1.0e8;
+constexpr double kStretchFactor = 1.0e8;
 constexpr double kStyleFactor = 1.0e4;
 constexpr double kWeightFactor = 1.0e0;
 
@@ -736,9 +736,9 @@ double StyleDistance(const mozilla::SlantStyleRange& aRange,
                      const mozilla::StyleFontStyle& aTargetStyle,
                      bool aItalicToObliqueFallback);
 
-// width distance ==> [0,2000]
-double WidthDistance(const mozilla::WidthRange& aRange,
-                     const mozilla::StyleFontWidth& aTargetWidth);
+// stretch distance ==> [0,2000]
+double StretchDistance(const mozilla::StretchRange& aRange,
+                       const mozilla::StyleFontStretch& aTargetStretch);
 
 // weight distance ==> [0,1600]
 double WeightDistance(const mozilla::WeightRange& aRange,

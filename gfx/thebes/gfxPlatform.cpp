@@ -1924,18 +1924,19 @@ bool gfxPlatform::IsKnownIconFontFamily(const nsAtom* aFamilyName) const {
 already_AddRefed<gfxFontEntry> gfxPlatform::LookupLocalFont(
     FontVisibilityProvider* aFontVisibilityProvider,
     const nsACString& aFontName, const WeightRange& aWeightForEntry,
-    const WidthRange& aWidthForEntry, const SlantStyleRange& aStyleForEntry) {
+    const StretchRange& aStretchForEntry,
+    const SlantStyleRange& aStyleForEntry) {
   return gfxPlatformFontList::PlatformFontList()->LookupLocalFont(
-      aFontVisibilityProvider, aFontName, aWeightForEntry, aWidthForEntry,
+      aFontVisibilityProvider, aFontName, aWeightForEntry, aStretchForEntry,
       aStyleForEntry);
 }
 
 already_AddRefed<gfxFontEntry> gfxPlatform::MakePlatformFont(
     const nsACString& aFontName, const WeightRange& aWeightForEntry,
-    const WidthRange& aWidthForEntry, const SlantStyleRange& aStyleForEntry,
+    const StretchRange& aStretchForEntry, const SlantStyleRange& aStyleForEntry,
     const uint8_t* aFontData, uint32_t aLength) {
   return gfxPlatformFontList::PlatformFontList()->MakePlatformFont(
-      aFontName, aWeightForEntry, aWidthForEntry, aStyleForEntry, aFontData,
+      aFontName, aWeightForEntry, aStretchForEntry, aStyleForEntry, aFontData,
       aLength);
 }
 

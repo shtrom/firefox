@@ -40,7 +40,7 @@ class FT2FontEntry final : public gfxFT2FontEntryBase {
 
   // create a font entry for a downloaded font
   static already_AddRefed<FT2FontEntry> CreateFontEntry(
-      const nsACString& aFontName, WeightRange aWeight, WidthRange aWidth,
+      const nsACString& aFontName, WeightRange aWeight, StretchRange aStretch,
       SlantStyleRange aStyle, const uint8_t* aFontData, uint32_t aLength);
 
   // create a font entry representing an installed font, identified by
@@ -170,11 +170,11 @@ class gfxFT2FontList final : public gfxPlatformFontList {
   already_AddRefed<gfxFontEntry> LookupLocalFont(
       FontVisibilityProvider* aFontVisibilityProvider,
       const nsACString& aFontName, WeightRange aWeightForEntry,
-      WidthRange aWidthForEntry, SlantStyleRange aStyleForEntry) override;
+      StretchRange aStretchForEntry, SlantStyleRange aStyleForEntry) override;
 
   already_AddRefed<gfxFontEntry> MakePlatformFont(
       const nsACString& aFontName, WeightRange aWeightForEntry,
-      WidthRange aWidthForEntry, SlantStyleRange aStyleForEntry,
+      StretchRange aStretchForEntry, SlantStyleRange aStyleForEntry,
       const uint8_t* aFontData, uint32_t aLength) override;
 
   void WriteCache();

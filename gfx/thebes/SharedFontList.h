@@ -176,7 +176,7 @@ struct Face {
 #endif
     bool mFixedPitch;                  // is the face fixed-pitch (monospaced)?
     mozilla::WeightRange mWeight;      // CSS font-weight value
-    mozilla::WidthRange mWidth;        // CSS font-width value
+    mozilla::StretchRange mStretch;    // CSS font-stretch value
     mozilla::SlantStyleRange mStyle;   // CSS font-style value
     RefPtr<gfxCharacterMap> mCharMap;  // character map, or null if not loaded
   };
@@ -191,7 +191,7 @@ struct Face {
 #endif
         mFixedPitch(aData.mFixedPitch),
         mWeight(aData.mWeight),
-        mWidth(aData.mWidth),
+        mStretch(aData.mStretch),
         mStyle(aData.mStyle),
         mCharacterMap(Pointer::Null()) {
   }
@@ -210,7 +210,7 @@ struct Face {
 #endif
   bool mFixedPitch;
   mozilla::WeightRange mWeight;
-  mozilla::WidthRange mWidth;
+  mozilla::StretchRange mStretch;
   mozilla::SlantStyleRange mStyle;
   Pointer mCharacterMap;
 };
