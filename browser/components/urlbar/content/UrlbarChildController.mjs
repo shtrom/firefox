@@ -55,10 +55,7 @@ export class UrlbarChildController {
     return UrlbarChildController.#logger;
   }
 
-  // TODO: rename to `#parentController` to mirror the public getter and avoid
-  // confusion with the `UrlbarParent` actor.
-  /** @type {UrlbarParentController} */
-  #parent;
+  #parentController;
 
   #input;
 
@@ -100,14 +97,16 @@ export class UrlbarChildController {
     // parent-side controller; the direct path builds the real controller in
     // place (both live in the same process, and it only needs the actor to
     // resolve the chrome window). Either way the child owns construction.
-    this.#parent = actor.usesMessagePath
-      ? new UrlbarParentControllerProxy(
-          actor,
-          actor.registerMessagePathInput(options.input),
-          { sapName, isPrivate }
-        )
-      : new lazy.UrlbarParentController({ sapName, isPrivate, actor });
-    this.#parent.setChild(this);
+    this.#parentController = /** @type {UrlbarParentController} */ (
+      actor.usesMessagePath
+        ? new UrlbarParentControllerProxy(
+            actor,
+            actor.registerMessagePathInput(options.input),
+            { sapName, isPrivate }
+          )
+        : new lazy.UrlbarParentController({ sapName, isPrivate, actor })
+    );
+    this.#parentController.setChild(this);
 
     this.engineStore = new SearchEngineStore(this);
   }
@@ -130,14 +129,14 @@ export class UrlbarChildController {
    * @type {UrlbarParentController}
    */
   get parentController() {
-    return this.#parent;
+    return this.#parentController;
   }
   get engagementEvent() {
     // Direct path: the real parent controller's recorder. Message path: the
     // parent stand-in has none, so use a content-side collector that ships
     // engagements to the parent recorder.
     return (
-      this.#parent.engagementEvent ??
+      this.#parentController.engagementEvent ??
       (this.#childTelemetry ??= new UrlbarChildTelemetry(this))
     );
   }
@@ -164,23 +163,23 @@ export class UrlbarChildController {
     this.#userSelectionBehavior = behavior;
   }
   get _lastQueryContextWrapper() {
-    return this.#parent._lastQueryContextWrapper;
+    return this.#parentController._lastQueryContextWrapper;
   }
 
   setView(view) {
     this.#view = view;
   }
   getViewUpdate(result, idsByName) {
-    return this.#parent.getViewUpdate(result, idsByName);
+    return this.#parentController.getViewUpdate(result, idsByName);
   }
   onBeforeSelection(result, element) {
-    return this.#parent.onBeforeSelection(result, element);
+    return this.#parentController.onBeforeSelection(result, element);
   }
   onSelection(result, element) {
-    return this.#parent.onSelection(result, element);
+    return this.#parentController.onSelection(result, element);
   }
   getHeuristicResult(queryContext) {
-    return this.#parent.getHeuristicResult(queryContext);
+    return this.#parentController.getHeuristicResult(queryContext);
   }
   addListener(listener) {
     if (!listener || typeof listener != "object") {
@@ -214,16 +213,16 @@ export class UrlbarChildController {
     }
   }
   recordEngagement(wire) {
-    return this.#parent.recordEngagement(wire);
+    return this.#parentController.recordEngagement(wire);
   }
   resetEngagement() {
-    return this.#parent.resetEngagement();
+    return this.#parentController.resetEngagement();
   }
   handleBounceTrigger(payload) {
-    return this.#parent.handleBounceTrigger(payload);
+    return this.#parentController.handleBounceTrigger(payload);
   }
   trackBounceBrowser(browserId) {
-    return this.#parent.trackBounceBrowser(browserId);
+    return this.#parentController.trackBounceBrowser(browserId);
   }
   /**
    * Starts a query and returns the parent controller's promise so callers (the
@@ -233,7 +232,7 @@ export class UrlbarChildController {
    * @returns {Promise<UrlbarQueryContext>} Resolves with the finished context.
    */
   startQuery(queryContext) {
-    let queryContextPromise = this.#parent.startQuery(queryContext);
+    let queryContextPromise = this.#parentController.startQuery(queryContext);
     // Arm the event bufferer as the query starts so a just-typed Enter is
     // deferred until results arrive; it can't wait for the QUERY_STARTED
     // notification, which arrives a round-trip late over the message path, after
@@ -243,19 +242,19 @@ export class UrlbarChildController {
     return queryContextPromise;
   }
   cancelQuery() {
-    return this.#parent.cancelQuery();
+    return this.#parentController.cancelQuery();
   }
   receiveResults(queryContext) {
-    return this.#parent.receiveResults(queryContext);
+    return this.#parentController.receiveResults(queryContext);
   }
   removeResult(result, options) {
-    return this.#parent.removeResult(result, options);
+    return this.#parentController.removeResult(result, options);
   }
   setLastQueryContextCache(queryContext) {
-    return this.#parent.setLastQueryContextCache(queryContext);
+    return this.#parentController.setLastQueryContextCache(queryContext);
   }
   clearLastQueryContextCache() {
-    return this.#parent.clearLastQueryContextCache();
+    return this.#parentController.clearLastQueryContextCache();
   }
   /**
    * Receives keyboard events from the input and handles those that should
@@ -639,11 +638,11 @@ export class UrlbarChildController {
   }
 
   speculativeConnect(result, context, reason) {
-    return this.#parent.speculativeConnect(result, context, reason);
+    return this.#parentController.speculativeConnect(result, context, reason);
   }
 
   loadURL(loadData) {
-    return this.#parent.loadURL(loadData);
+    return this.#parentController.loadURL(loadData);
   }
 
   /**
@@ -759,20 +758,20 @@ export class UrlbarChildController {
   }
 
   initEngineStore() {
-    this.#parent.initEngineStore();
+    this.#parentController.initEngineStore();
   }
 
   maybeInitEngineStore() {
-    return this.#parent.maybeInitEngineStore();
+    return this.#parentController.maybeInitEngineStore();
   }
 
   /** @type {typeof UrlbarParentController.prototype.openSERP} */
   openSERP(engineId, searchTerms, where, inBackground) {
-    this.#parent.openSERP(engineId, searchTerms, where, inBackground);
+    this.#parentController.openSERP(engineId, searchTerms, where, inBackground);
   }
 
   /** @type {typeof UrlbarParentController.prototype.openSearchForm} */
   openSearchForm(engineId, where, inBackground) {
-    this.#parent.openSearchForm(engineId, where, inBackground);
+    this.#parentController.openSearchForm(engineId, where, inBackground);
   }
 }
