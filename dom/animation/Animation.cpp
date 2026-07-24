@@ -13,9 +13,12 @@
 #include "mozilla/DeclarationBlock.h"
 #include "mozilla/Likely.h"
 #include "mozilla/Maybe.h"  // For Maybe
+#include "mozilla/ServoBindings.h"  // For Servo_SerializeTimelineRangeName, Servo_LengthPercentage_ToCss
 #include "mozilla/StaticPrefs_dom.h"
 #include "mozilla/StaticPrefs_layout.h"
+#include "mozilla/dom/AnimatableBinding.h"  // For the rangeStart/rangeEnd union
 #include "mozilla/dom/AnimationBinding.h"
+#include "mozilla/dom/CSSNumericValue.h"  // For CSSNumericValue::Parse
 #include "mozilla/dom/CSSNumericValueBinding.h"
 #include "mozilla/dom/CSSTransition.h"
 #include "mozilla/dom/Document.h"
@@ -1136,6 +1139,90 @@ void Animation::SetCurrentTime(const Nullable<CSSNumberish>& aCurrentTime,
       aCurrentTime.Value(), progressBased);
   MOZ_ASSERT(!seekTime.IsNull());
   SetCurrentTime(seekTime.Value());
+}
+
+// https://drafts.csswg.org/web-animations-2/#dom-animation-rangestart
+static void RangeBoundaryToTimelineRangeValue(
+    StyleTimelineRangeName aName, const StyleLengthPercentage& aOffset,
+    nsIGlobalObject* aParent,
+    OwningTimelineRangeOffsetOrCSSNumericValueOrCSSKeywordValueOrUTF8String&
+        aRetVal) {
+  if (aName == StyleTimelineRangeName::Normal) {
+    aRetVal.SetAsUTF8String().AssignLiteral("normal");
+    return;
+  }
+
+  TimelineRangeOffset& result = aRetVal.SetAsTimelineRangeOffset();
+  if (aName != StyleTimelineRangeName::None) {
+    nsAutoCString rangeName;
+    Servo_SerializeTimelineRangeName(aName, &rangeName);
+    result.mRangeName.Construct(std::move(rangeName));
+  }
+  // else: a bare <length-percentage>, so rangeName is left null.
+
+  // Serialize the computed offset and re-parse it into a CSSNumericValue so
+  // percentages, absolute lengths and calc() (including length/percentage
+  // mixes) all round-trip. The text came from the style system, so parsing it
+  // back should not fail; if it somehow does, leave the offset unset.
+  nsAutoCString offsetCss;
+  Servo_LengthPercentage_ToCss(&aOffset, &offsetCss);
+  if (RefPtr<CSSNumericValue> offset =
+          CSSNumericValue::Parse(aParent, offsetCss, IgnoreErrors())) {
+    MOZ_ASSERT(offset);
+    result.mOffset.Construct(offset.forget());
+  }
+}
+
+void Animation::GetRangeStart(JSContext* aCx,
+                              JS::MutableHandle<JS::Value> aRetVal,
+                              ErrorResult& aRv) {
+  OwningTimelineRangeOffsetOrCSSNumericValueOrCSSKeywordValueOrUTF8String value;
+  RangeBoundaryToTimelineRangeValue(mTimelineRange.mStart.name,
+                                    mTimelineRange.mStart.lp, GetParentObject(),
+                                    value);
+  if (!value.ToJSVal(aCx, nullptr, aRetVal)) {
+    aRv.NoteJSContextException(aCx);
+  }
+}
+
+void Animation::GetRangeEnd(JSContext* aCx,
+                            JS::MutableHandle<JS::Value> aRetVal,
+                            ErrorResult& aRv) {
+  OwningTimelineRangeOffsetOrCSSNumericValueOrCSSKeywordValueOrUTF8String value;
+  RangeBoundaryToTimelineRangeValue(mTimelineRange.mEnd.name,
+                                    mTimelineRange.mEnd.lp, GetParentObject(),
+                                    value);
+  if (!value.ToJSVal(aCx, nullptr, aRetVal)) {
+    aRv.NoteJSContextException(aCx);
+  }
+}
+
+void Animation::SetRangeStart(JSContext* aCx, JS::Handle<JS::Value> aValue,
+                              ErrorResult& aRv) {
+  OwningTimelineRangeOffsetOrCSSNumericValueOrCSSKeywordValueOrUTF8String value;
+  if (!value.Init(aCx, aValue, "Animation.rangeStart")) {
+    aRv.NoteJSContextException(aCx);
+    return;
+  }
+  AnimationRange range = mTimelineRange;
+  if (!AnimationUtils::SetAnimationRangeStart(value, range, aRv)) {
+    return;
+  }
+  SetTimelineRange(std::move(range));
+}
+
+void Animation::SetRangeEnd(JSContext* aCx, JS::Handle<JS::Value> aValue,
+                            ErrorResult& aRv) {
+  OwningTimelineRangeOffsetOrCSSNumericValueOrCSSKeywordValueOrUTF8String value;
+  if (!value.Init(aCx, aValue, "Animation.rangeEnd")) {
+    aRv.NoteJSContextException(aCx);
+    return;
+  }
+  AnimationRange range = mTimelineRange;
+  if (!AnimationUtils::SetAnimationRangeEnd(value, range, aRv)) {
+    return;
+  }
+  SetTimelineRange(std::move(range));
 }
 
 // ---------------------------------------------------------------------------

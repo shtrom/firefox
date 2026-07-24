@@ -250,6 +250,12 @@ void CSSNumericValue::Type(CSSNumericType& aRetVal) {
 // static
 already_AddRefed<CSSNumericValue> CSSNumericValue::Parse(
     const GlobalObject& aGlobal, const nsACString& aCssText, ErrorResult& aRv) {
+  return Parse(aGlobal.GetAsSupports(), aCssText, aRv);
+}
+
+// static
+already_AddRefed<CSSNumericValue> CSSNumericValue::Parse(
+    nsISupports* aParent, const nsACString& aCssText, ErrorResult& aRv) {
   // Step 1 & 2 & 3.
   auto declaration = WrapUnique(Servo_NumericDeclaration_Parse(&aCssText));
   if (!declaration) {
@@ -265,8 +271,7 @@ already_AddRefed<CSSNumericValue> CSSNumericValue::Parse(
     return nullptr;
   }
 
-  RefPtr<CSSNumericValue> numericValue =
-      Create(aGlobal.GetAsSupports(), result.AsNumeric());
+  RefPtr<CSSNumericValue> numericValue = Create(aParent, result.AsNumeric());
   return numericValue.forget();
 }
 

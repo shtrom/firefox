@@ -101,6 +101,11 @@ class CSSNumericValue : public CSSStyleValue {
   static already_AddRefed<CSSNumericValue> Parse(const GlobalObject& aGlobal,
                                                  const nsACString& aCssText,
                                                  ErrorResult& aRv);
+  // As above, but taking the parent directly so callers outside binding entry
+  // points can reuse the parsing.
+  static already_AddRefed<CSSNumericValue> Parse(nsISupports* aParent,
+                                                 const nsACString& aCssText,
+                                                 ErrorResult& aRv);
 
   // end of CSSNumbericValue Web IDL declarations
 

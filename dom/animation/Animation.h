@@ -162,6 +162,16 @@ class Animation : public DOMEventTargetHelper,
   void SetCurrentTime(const Nullable<CSSNumberish>& aCurrentTime,
                       ErrorResult& aRv);
 
+  // Web IDL binding for the rangeStart/rangeEnd attributes.
+  void GetRangeStart(JSContext* aCx, JS::MutableHandle<JS::Value> aRetVal,
+                     ErrorResult& aRv);
+  void GetRangeEnd(JSContext* aCx, JS::MutableHandle<JS::Value> aRetVal,
+                   ErrorResult& aRv);
+  void SetRangeStart(JSContext* aCx, JS::Handle<JS::Value> aValue,
+                     ErrorResult& aRv);
+  void SetRangeEnd(JSContext* aCx, JS::Handle<JS::Value> aValue,
+                   ErrorResult& aRv);
+
   Nullable<TimeDuration> GetCurrentTimeAsDuration() const {
     return GetCurrentTimeForHoldTime(mHoldTime);
   }
