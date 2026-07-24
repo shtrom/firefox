@@ -637,6 +637,11 @@ export class UrlbarChildController {
   speculativeConnect(result, context, reason) {
     return this.#parent.speculativeConnect(result, context, reason);
   }
+
+  loadURL(loadData) {
+    return this.#parent.loadURL(loadData);
+  }
+
   focusOnUnifiedSearchButton() {
     this.input.setUnifiedSearchButtonAvailability(true);
 

@@ -113,6 +113,8 @@ export class UrlbarParent extends JSWindowActorParent {
           message.data.reason
         );
         break;
+      case "LoadURL":
+        return controller.loadURL(message.data.loadData);
       case "RemoveResult":
         controller.removeResult(
           lazy.UrlbarResult.fromWire(message.data.result),

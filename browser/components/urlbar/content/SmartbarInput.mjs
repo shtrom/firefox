@@ -5139,14 +5139,16 @@ ${
    *   Details of the result source, if any.
    * @param {object} browser [optional] the browser to use for the load.
    */
-  _loadURL(
+  async _loadURL(
     url,
     event,
     openUILinkWhere,
     params,
     resultDetails = null,
-    browser = this.window.gBrowser.selectedBrowser
+    browser
   ) {
+    browser ??= this.window.gBrowser?.selectedBrowser ?? null;
+
     if (this.#isAddressbar) {
       this.#prepareAddressbarLoad(
         url,
@@ -5160,12 +5162,9 @@ ${
     params.allowThirdPartyFixup = true;
 
     if (openUILinkWhere == "current") {
-      params.targetBrowser = browser;
       params.indicateErrorPageLoad = true;
       params.allowPinnedTabHostChange = true;
       params.allowPopups = url.startsWith("javascript:");
-    } else {
-      params.initiatingDoc = this.window.document;
     }
 
     if (
@@ -5191,12 +5190,10 @@ ${
       params.private = true;
     }
 
-    // Focus the content area before triggering loads, since if the load
-    // occurs in a new tab, we want focus to be restored to the content
-    // area when the current tab is re-selected.
+    // Make sure the domain name stays visible for spoof protection and
+    // usability. The browser itself is focused parent-side, where the load
+    // runs against the chrome window.
     if (!params.avoidBrowserFocus) {
-      browser.focus();
-      // Make sure the domain name stays visible for spoof protection and usability.
       this.setSelectionRange(0, 0);
     }
 
@@ -5207,18 +5204,23 @@ ${
     // Notify about the start of navigation.
     this.#notifyStartNavigation(resultDetails);
 
-    try {
-      this.window.openTrustedLinkIn(url, openUILinkWhere, params);
-    } catch (ex) {
-      // This load can throw an exception in certain cases, which means
-      // we'll want to replace the URL with the loaded URL:
-      if (ex.result != Cr.NS_ERROR_LOAD_SHOWED_ERRORPAGE) {
-        this.handleRevert();
-      }
+    let loadStatus = this.controller.loadURL({
+      url,
+      where: openUILinkWhere,
+      params,
+      browserId: browser?.browserId ?? null,
+    });
+    // In the message-passing path, loadURL returns a promise.
+    if (loadStatus.then) {
+      loadStatus = await loadStatus;
     }
-
-    // If we show the focus border after closing the view, it would appear to
-    // flash since this._on_blur would remove it immediately after.
+    // The load can throw parent-side; unless an error page was shown we
+    // replace the URL with the loaded one.
+    if (loadStatus.reverted) {
+      this.handleRevert();
+    }
+    // If we show the focus border after closing the view, it would appear
+    // to flash since this._on_blur would remove it immediately after.
     this.view.close({ showFocusBorder: false });
   }
 
