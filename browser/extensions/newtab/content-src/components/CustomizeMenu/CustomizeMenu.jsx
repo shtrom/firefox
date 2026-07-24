@@ -79,8 +79,6 @@ export class _CustomizeMenu extends React.PureComponent {
       : "";
     // @nova-cleanup(remove-pref): remove nova pref
     const novaEnabled = this.props.Prefs.values[PREF_NOVA_ENABLED];
-    // Browser-wide Nova gate for the theme picker (distinct from novaEnabled).
-    const { browserNovaEnabled } = this.props.Prefs.values;
 
     return (
       <span>
@@ -187,7 +185,6 @@ export class _CustomizeMenu extends React.PureComponent {
                 toggleSectionsMgmtPanel={this.props.toggleSectionsMgmtPanel}
                 showSectionsMgmtPanel={this.props.showSectionsMgmtPanel}
                 novaEnabled={novaEnabled}
-                browserNovaEnabled={browserNovaEnabled}
                 toggleWidgetsManagementPanel={
                   this.props.toggleWidgetsManagementPanel
                 }

@@ -204,7 +204,6 @@ export class ContentSection extends React.PureComponent {
       showSectionsMgmtPanel,
       // @nova-cleanup(remove-conditional): Remove novaEnabled
       novaEnabled,
-      browserNovaEnabled,
       wallpapersEnabled,
       toggleWidgetsManagementPanel,
       showWidgetsManagementPanel,
@@ -241,18 +240,6 @@ export class ContentSection extends React.PureComponent {
     return (
       <>
         <div className="home-section">
-          {browserNovaEnabled && (
-            <div className="appearance-section section">
-              <h2 data-l10n-id="newtab-custom-appearance-section-title"></h2>
-              <theme-picker
-                layout="compact"
-                installsource="about:newtab"
-                showLabels={false}
-              ></theme-picker>
-              {/* TODO(Bug 2056304): open the full theme selection sub-panel */}
-              <moz-box-button data-l10n-id="newtab-appearance-more-themes-button"></moz-box-button>
-            </div>
-          )}
           {wallpapersEnabled && (
             <>
               <div className="wallpapers-section">
