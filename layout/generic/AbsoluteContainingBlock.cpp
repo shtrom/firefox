@@ -151,7 +151,7 @@ static LogicalSize* GetUnfragmentedSize(const ReflowInput& aCBReflowInput,
 // fragment we encountered during the walk). Or return nullptr if no such
 // continuation in the previous fragmentainer or no previous fragmentainer.
 static nsIFrame* GetFirstInlineContinuationInPrevFragmentainer(
-    nsIFrame* aInlineFrame) {
+    const nsIFrame* aInlineFrame) {
   MOZ_ASSERT(aInlineFrame->IsInlineFrameOrSubclass());
   // An inline always has a block ancestor, and that block is continued per
   // fragmentainer, so two continuations share a fragmentainer iff their nearest
@@ -191,7 +191,7 @@ static nsIFrame* GetFirstInlineContinuationInPrevFragmentainer(
 // near the start-most edges of the next fragmentainer. Or return nullptr if no
 // such fragment in the next fragmentainer or no next fragmentainer.
 static nsIFrame* GetFirstInlineContinuationInNextFragmentainer(
-    nsIFrame* aInlineFrame) {
+    const nsIFrame* aInlineFrame) {
   MOZ_ASSERT(aInlineFrame->IsInlineFrameOrSubclass());
   const nsBlockFrame* myBlock =
       nsLayoutUtils::FindNearestBlockAncestor(aInlineFrame);
@@ -214,7 +214,8 @@ static nsIFrame* GetFirstInlineContinuationInNextFragmentainer(
 // CB, multiple fragments can live in a fragmentainer, but only the first
 // fragment in each fragmentainer owns and reflows the abspos children, so we
 // walk back to that first fragment rather than the immediate prev-in-flow.
-static nsIFrame* GetFirstContinuationInPrevFragmentainer(nsIFrame* aFrame) {
+static nsIFrame* GetFirstContinuationInPrevFragmentainer(
+    const nsIFrame* aFrame) {
   return StaticPrefs::layout_abspos_fragment_aware_inline_cb_enabled() &&
                  aFrame->IsInlineFrameOrSubclass()
              ? GetFirstInlineContinuationInPrevFragmentainer(aFrame)
@@ -222,7 +223,8 @@ static nsIFrame* GetFirstContinuationInPrevFragmentainer(nsIFrame* aFrame) {
 }
 
 // See the comment in GetFirstContinuationInPrevFragmentainer().
-static nsIFrame* GetFirstContinuationInNextFragmentainer(nsIFrame* aFrame) {
+static nsIFrame* GetFirstContinuationInNextFragmentainer(
+    const nsIFrame* aFrame) {
   return StaticPrefs::layout_abspos_fragment_aware_inline_cb_enabled() &&
                  aFrame->IsInlineFrameOrSubclass()
              ? GetFirstInlineContinuationInNextFragmentainer(aFrame)

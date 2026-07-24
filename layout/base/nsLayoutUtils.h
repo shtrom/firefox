@@ -1459,7 +1459,7 @@ class nsLayoutUtils {
   /**
    * Find the nearest ancestor that's a block
    */
-  static nsBlockFrame* FindNearestBlockAncestor(nsIFrame* aFrame);
+  static nsBlockFrame* FindNearestBlockAncestor(const nsIFrame* aFrame);
 
   /*
    * Whether the frame is an nsBlockFrame which is not a wrapper block.
