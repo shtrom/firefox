@@ -2816,10 +2816,9 @@ static uint64_t HashClassesForBloom(const nsAttrValue* aValue) {
 
   if (aValue->Type() == nsAttrValue::eAtomArray) {
     const mozilla::AttrAtomArray* array = aValue->GetAtomArrayValue();
-    if (array) {
-      for (const RefPtr<nsAtom>& className : array->mArray) {
-        filter |= AttrArray::HashForBloomFilter(className);
-      }
+    MOZ_ASSERT(array);
+    for (const RefPtr<nsAtom>& className : array->Array()) {
+      filter |= AttrArray::HashForBloomFilter(className);
     }
   } else if (aValue->Type() == nsAttrValue::eAtom) {
     filter |= AttrArray::HashForBloomFilter(aValue->GetAtomValue());
