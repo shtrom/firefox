@@ -42,6 +42,9 @@ elif (CONFIG["OS_TARGET"] == "Darwin" and CONFIG["TARGET_OS"] != "iOS") or CONFI
         CXXFLAGS += CONFIG["GLIB_CFLAGS"]
 
 UNIFIED_SOURCES += [
+    # Build this on all platforms so we can run the gtest
+    # everywhere. In product this is only used on POSIX.
+    "PosixSerialParityDecodeStream.cpp",
     "Serial.cpp",
     "SerialManagerChild.cpp",
     "SerialManagerParent.cpp",
@@ -53,6 +56,10 @@ UNIFIED_SOURCES += [
     "SerialPortPumps.cpp",
     "SerialPortStreamAlgorithms.cpp",
     "TestSerialPlatformService.cpp",
+]
+
+TEST_DIRS += [
+    "tests/gtest",
 ]
 
 IPDL_SOURCES += [

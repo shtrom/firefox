@@ -12,6 +12,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+#include "PosixSerialParityDecodeStream.h"
 #include "SerialLogging.h"
 #include "mozilla/AsyncPlatformPipes.h"
 #include "mozilla/Maybe.h"
@@ -542,18 +543,18 @@ nsresult PosixSerialPlatformService::ConfigurePort(
     case ParityType::None:
       tty.c_cflag &= ~PARENB;
       tty.c_iflag |= IGNPAR;
-      tty.c_iflag &= ~INPCK;
+      tty.c_iflag &= ~(INPCK | PARMRK);
       break;
     case ParityType::Even:
       tty.c_cflag |= PARENB;
       tty.c_cflag &= ~PARODD;
       tty.c_iflag &= ~IGNPAR;
-      tty.c_iflag |= INPCK;
+      tty.c_iflag |= (INPCK | PARMRK);
       break;
     case ParityType::Odd:
       tty.c_cflag |= (PARENB | PARODD);
       tty.c_iflag &= ~IGNPAR;
-      tty.c_iflag |= INPCK;
+      tty.c_iflag |= (INPCK | PARMRK);
       break;
   }
 
@@ -571,7 +572,6 @@ nsresult PosixSerialPlatformService::ConfigurePort(
   tty.c_oflag &= ~OPOST;
   tty.c_iflag &= ~(IGNBRK | BRKINT | ISTRIP | INLCR | IGNCR | ICRNL | IXON |
                    IXOFF | IXANY);
-  tty.c_iflag &= ~PARMRK;
 
   // VMIN=1: the terminal driver requires at least 1 byte before completing
   // a read.  VMIN=0 also works on Linux, because O_NONBLOCK takes precedence
@@ -1075,7 +1075,7 @@ nsresult PosixSerialPlatformService::GetSignalsImpl(
 }
 
 nsresult PosixSerialPlatformService::GetReadStreamImpl(
-    const nsString& aPortId, uint32_t aBufferSize,
+    const nsString& aPortId, uint32_t aBufferSize, bool aDetectParityErrors,
     nsIAsyncInputStream** aStream) {
   AssertIsOnIOThread();
   int fd = FindPortFd(aPortId);
@@ -1095,7 +1095,14 @@ nsresult PosixSerialPlatformService::GetReadStreamImpl(
   }
   RefPtr<PlatformPipeReader> reader =
       MakeRefPtr<PlatformPipeReader>(std::move(readHandle), aBufferSize);
-  reader.forget(aStream);
+  if (aDetectParityErrors) {
+    // PARMRK is enabled (see ConfigurePort): wrap the reader to decode the
+    // marker bytes and surface parity errors.
+    RefPtr decoder = MakeRefPtr<PosixSerialParityDecodeStream>(reader);
+    decoder.forget(aStream);
+  } else {
+    reader.forget(aStream);
+  }
   return NS_OK;
 }
 
