@@ -67,8 +67,7 @@ const lazy = XPCOMUtils.declareLazy({
   SharingUtils: "resource:///modules/SharingUtils.sys.mjs",
   SearchUIUtils: "moz-src:///browser/components/search/SearchUIUtils.sys.mjs",
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
-  UrlbarQueryContext:
-    "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
+  UrlbarQueryContext: "chrome://browser/content/urlbar/UrlbarQueryContext.mjs",
   UrlbarProviderOpenTabs:
     "moz-src:///browser/components/urlbar/UrlbarProviderOpenTabs.sys.mjs",
   UrlbarTokenizer:

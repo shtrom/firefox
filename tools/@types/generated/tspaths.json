@@ -403,6 +403,9 @@
       "chrome://browser/content/urlbar/UrlbarParentControllerProxy.mjs": [
         "../../../browser/components/urlbar/content/UrlbarParentControllerProxy.mjs"
       ],
+      "chrome://browser/content/urlbar/UrlbarQueryContext.mjs": [
+        "../../../browser/components/urlbar/content/UrlbarQueryContext.mjs"
+      ],
       "chrome://browser/content/urlbar/UrlbarResult.mjs": [
         "../../../browser/components/urlbar/content/UrlbarResult.mjs"
       ],
@@ -6471,6 +6474,9 @@
       ],
       "resource://gre/modules/RemoteSettingsCrashPull.sys.mjs": [
         "../../../toolkit/components/crashes/RemoteSettingsCrashPull.sys.mjs"
+      ],
+      "resource://gre/modules/RemoteWebNavigation.sys.mjs": [
+        "../../../toolkit/components/remotebrowserutils/RemoteWebNavigation.sys.mjs"
       ],
       "resource://gre/modules/ResetProfile.sys.mjs": [
         "../../../toolkit/modules/ResetProfile.sys.mjs"

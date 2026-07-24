@@ -8,10 +8,12 @@ const { AppConstants } = ChromeUtils.importESModule(
   "resource://gre/modules/AppConstants.sys.mjs"
 );
 
-var { UrlbarMuxer, UrlbarProvider, UrlbarQueryContext, UrlbarUtils } =
-  ChromeUtils.importESModule(
-    "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs"
-  );
+var { UrlbarMuxer, UrlbarProvider, UrlbarUtils } = ChromeUtils.importESModule(
+  "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs"
+);
+var { UrlbarQueryContext } = ChromeUtils.importESModule(
+  "chrome://browser/content/urlbar/UrlbarQueryContext.mjs"
+);
 
 ChromeUtils.defineESModuleGetters(this, {
   HttpServer: "resource://testing-common/httpd.sys.mjs",

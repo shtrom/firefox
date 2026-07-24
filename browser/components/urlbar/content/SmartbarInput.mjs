@@ -65,8 +65,7 @@ const lazy = XPCOMUtils.declareLazy({
   SmartbarInputController:
     "chrome://browser/content/urlbar/SmartbarInputController.mjs",
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
-  UrlbarQueryContext:
-    "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
+  UrlbarQueryContext: "chrome://browser/content/urlbar/UrlbarQueryContext.mjs",
   UrlbarProviderHeuristicFallback:
     "moz-src:///browser/components/urlbar/UrlbarProviderHeuristicFallback.sys.mjs",
   UrlbarProviderOpenTabs:

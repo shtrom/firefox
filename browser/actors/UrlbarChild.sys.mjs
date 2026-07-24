@@ -6,8 +6,7 @@ const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
-  UrlbarQueryContext:
-    "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
+  UrlbarQueryContext: "chrome://browser/content/urlbar/UrlbarQueryContext.mjs",
 });
 
 // The content-side input/view methods a parent-side provider hook may invoke

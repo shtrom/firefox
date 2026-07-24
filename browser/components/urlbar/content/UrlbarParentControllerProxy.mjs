@@ -5,8 +5,7 @@
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
-  UrlbarQueryContext:
-    "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
+  UrlbarQueryContext: "chrome://browser/content/urlbar/UrlbarQueryContext.mjs",
   UrlbarResult: "chrome://browser/content/urlbar/UrlbarResult.mjs",
 });
 
