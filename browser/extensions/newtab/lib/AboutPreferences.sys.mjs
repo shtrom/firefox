@@ -275,6 +275,12 @@ export class AboutPreferences {
           `addons://detail/${encodeURIComponent(action.data)}`
         );
         break;
+      // Open the about:addons themes list (from the New Tab theme picker).
+      case at.OPEN_ABOUT_ADDONS_THEMES:
+        action._target.window.BrowserAddonUI.openAddonsMgr(
+          "addons://list/theme"
+        );
+        break;
     }
   }
 
