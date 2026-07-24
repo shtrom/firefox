@@ -12,6 +12,7 @@ DESKTOP_DEFAULT(JSMathFdlibm)
 DESKTOP_DEFAULT(ScreenAvailToResolution)
 DESKTOP_DEFAULT(NavigatorHWConcurrencyTiered)
 DESKTOP_DEFAULT(MaxTouchPointsCollapse)
+DESKTOP_DEFAULT(IMEStyle)
 
 #ifdef NIGHTLY_BUILD
 // All WebGL Vendor targets are included; however
@@ -34,3 +35,4 @@ ANDROID_DEFAULT(JSMathFdlibm)
 ANDROID_DEFAULT(ScreenAvailToResolution)
 ANDROID_DEFAULT(NavigatorHWConcurrencyTiered)
 ANDROID_DEFAULT(MaxTouchPointsCollapse)
+ANDROID_DEFAULT(IMEStyle)
