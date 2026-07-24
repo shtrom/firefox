@@ -7620,7 +7620,7 @@ void nsCocoaWindow::LockNativePointer(
 }
 
 void nsCocoaWindow::UnlockNativePointer() {
-  if (NS_WARN_IF(!GetNativePointerLockedMode())) {
+  if (!GetNativePointerLockedMode()) {
     MOZ_ASSERT(!sNativeLockedWindow);
     MOZ_ASSERT(sNativeLockedPoint == LayoutDeviceIntPoint(0, 0));
     return;
