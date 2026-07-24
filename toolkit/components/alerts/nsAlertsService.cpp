@@ -100,6 +100,8 @@ class AlertObserverToCallbacks : public nsIAlertCallbacks {
     return mObserver->Observe(aAction, "alertclickcallback", mCookie.get());
   }
 
+  NS_IMETHOD OnAlertDismissedFromForeground() override { return NS_OK; }
+
   NS_IMETHOD OnAlertClosed() override {
     return mObserver->Observe(nullptr, "alertfinished", u"close");
   }
