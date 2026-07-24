@@ -116,7 +116,8 @@ export class ThemePicker extends MozLitElement {
   /**
    * Builds the ReactiveController backing this picker: the lightweight
    * storybook controller when platform APIs are unavailable (e.g. Storybook),
-   * the remote controller for unprivileged contexts (e.g. about:editprofile),
+   * the remote controller for unprivileged contexts (e.g. about:editprofile,
+   * about:welcome),
    * and otherwise the direct controller that talks to AddonManager and prefs.
    * Overridable so tests can exercise a specific controller.
    *

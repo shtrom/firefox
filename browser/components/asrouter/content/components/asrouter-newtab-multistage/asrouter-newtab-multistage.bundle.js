@@ -1768,6 +1768,15 @@ const EmbeddedMigrationWizard = ({
     "subheader-margin-block": options?.subheader_margin_block || ""
   });
 };
+;// ./content-src/components/EmbeddedThemePicker.jsx
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+const EmbeddedThemePicker = () => {
+  return /*#__PURE__*/external_React_default().createElement("theme-picker", null);
+};
 ;// ./content-src/components/EmbeddedFxBackupOptIn.jsx
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -2363,6 +2372,7 @@ function _extends() { return _extends = Object.assign ? Object.assign.bind() : f
 
 
 
+
 const HEADER_STYLES = ["backgroundColor", "border", "padding", "margin", "width", "height"];
 const ContentTiles_TILE_STYLES = ["border", "borderRadius", "marginBlock", "marginInline", "paddingBlock", "paddingInline"];
 const CONTAINER_STYLES = ["padding", "margin", "marginBlock", "marginInline", "paddingBlock", "paddingInline", "flexDirection", "flexWrap", "flexFlow", "flexGrow", "flexShrink", "justifyContent", "alignItems", "gap"];
@@ -2606,6 +2616,8 @@ const ContentTiles = props => {
       content: {
         tiles: tile
       }
+    }), tile.type === "theme-picker" && /*#__PURE__*/external_React_default().createElement(EmbeddedThemePicker, {
+      handleAction: props.handleAction
     }), tile.type === "action_checklist" && tile.data && /*#__PURE__*/external_React_default().createElement(ActionChecklist, {
       content: content,
       message_id: props.messageId,

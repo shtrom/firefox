@@ -10,6 +10,7 @@ import { MobileDownloads } from "./MobileDownloads";
 import { MultiSelect } from "./MultiSelect";
 import { TextAreaTile } from "./TextAreaTile";
 import { EmbeddedMigrationWizard } from "./EmbeddedMigrationWizard";
+import { EmbeddedThemePicker } from "./EmbeddedThemePicker";
 import { EmbeddedFxBackupOptIn } from "./EmbeddedFxBackupOptIn";
 import { ActionChecklist } from "./ActionChecklist";
 import { EmbeddedBrowser } from "./EmbeddedBrowser";
@@ -354,6 +355,9 @@ export const ContentTiles = props => {
                 handleAction={props.handleAction}
                 content={{ tiles: tile }}
               />
+            )}
+            {tile.type === "theme-picker" && (
+              <EmbeddedThemePicker handleAction={props.handleAction} />
             )}
             {tile.type === "action_checklist" && tile.data && (
               <ActionChecklist

@@ -103,6 +103,13 @@ html {
   }
 }
 
+.onboardingContainer:has(theme-picker) {
+  .content-tile {
+    max-width: 450px;
+    padding-bottom: var(--space-large);
+  }
+}
+
 .onboardingContainer:has(.pinnable-sites-list) {
   .screen[pos='split'] {
     .section-main {
@@ -1537,6 +1544,16 @@ html {
         [narrow] & {
           @include narrow-split-fullscreen;
         }
+
+        &:has(theme-picker) {
+          // Theme picker breaks early here to avoid the two theme rows
+          // breaking into more than two, and to stay consistent with design
+          @media only screen and (width <= 1338px) {
+            height: 100%;
+
+            @include narrow-split-fullscreen;
+          }
+        }
       }
 
       @mixin narrow-split {
@@ -1785,6 +1802,12 @@ html {
 
       [narrow] & {
         @include narrow-split;
+      }
+
+      &:has(theme-picker) {
+        @media only screen and (width <= 1338px) {
+          @include narrow-split;
+        }
       }
 
       &:where(:not([fullscreen])) {
@@ -3238,6 +3261,7 @@ html {
     .link-paragraph,
     .multi-select-container,
     migration-wizard,
+    theme-picker,
     turn-on-scheduled-backups::part(form) {
       transition-delay: 0.9s;
     }
@@ -3258,7 +3282,8 @@ html {
     .tiles-single-select-section,
     .inline-image,
     .link-paragraph,
-    .multi-select-container
+    .multi-select-container,
+    theme-picker
      {
       transition-delay: 0.2s;
     }
@@ -3358,6 +3383,7 @@ html {
       .cta-link,
       .legal-paragraph,
       migration-wizard,
+      theme-picker,
       turn-on-scheduled-backups::part(form),
       .tile-title-container,
       .steps[above-button]:not(.progress-bar) {
@@ -3494,6 +3520,7 @@ html {
       .inline-image,
       .link-paragraph,
       migration-wizard,
+      theme-picker,
       turn-on-scheduled-backups::part(form) {
         opacity: 0;
         translate: 0 var(--translate);
@@ -3536,7 +3563,8 @@ html {
   }
 
   .inline-image,
-  .link-paragraph {
+  .link-paragraph,
+  theme-picker {
     transition: var(--transition);
   }
 
