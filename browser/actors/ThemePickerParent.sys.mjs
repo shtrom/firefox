@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
+
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
@@ -47,12 +49,14 @@ export class ThemePickerParent extends JSWindowActorParent {
     );
     const nativeTheme = Services.prefs.getBoolPref(PREF_NATIVE_THEME, false);
     const appearance = this.getAppearanceFromPref();
+    const showNativeThemeOption = AppConstants.platform === "linux";
 
     return {
       themes,
       activeThemeId,
       nativeTheme,
       appearance,
+      showNativeThemeOption,
     };
   }
 

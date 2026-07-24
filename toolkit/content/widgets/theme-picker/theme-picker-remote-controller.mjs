@@ -75,6 +75,7 @@ export class ThemePickerRemoteController {
         this.host.activeThemeId = event.detail.activeThemeId;
         this.host.nativeTheme = event.detail.nativeTheme;
         this.host.appearance = event.detail.appearance;
+        this.host.showNativeThemeOption = event.detail.showNativeThemeOption;
         break;
       case "ThemePickerThemeUpdated":
         this.host.activeThemeId = event.detail.activeThemeId;

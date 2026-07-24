@@ -84,6 +84,8 @@ const DEFAULT_THEME_ID = "default-theme@mozilla.org";
  * @property {boolean} showLabels
  *   Whether to show visible text labels outside the theme swatches. When false,
  *   aria-labels are provided for accessibility.
+ * @property {boolean} showNativeThemeOption
+ *   Whether to show the native theme checkbox. Only applies on Linux.
  * @fires themechange - Fired when appearance, theme, or nativeTheme changes.
  * Detail contains {property, value}
  */
@@ -95,6 +97,7 @@ export class ThemePicker extends MozLitElement {
     themes: { type: Array },
     layout: { type: String },
     showLabels: { type: Boolean },
+    showNativeThemeOption: { type: Boolean },
   };
 
   static queries = {
@@ -111,6 +114,7 @@ export class ThemePicker extends MozLitElement {
     this.showLabels = true;
     this.controller = ThemePicker.createController(this);
     this.layout = "full";
+    this.showNativeThemeOption = false;
   }
 
   /**
@@ -212,7 +216,7 @@ export class ThemePicker extends MozLitElement {
   }
 
   defaultThemeTemplate() {
-    if (this.layout == "compact") {
+    if (this.layout == "compact" || !this.showNativeThemeOption) {
       return "";
     }
     return html`<moz-checkbox

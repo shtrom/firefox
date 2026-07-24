@@ -5,6 +5,9 @@
 const { XPCOMUtils } = ChromeUtils.importESModule(
   "resource://gre/modules/XPCOMUtils.sys.mjs"
 );
+const { AppConstants } = ChromeUtils.importESModule(
+  "resource://gre/modules/AppConstants.sys.mjs"
+);
 const lazy = XPCOMUtils.declareLazy({
   // eslint-disable-next-line mozilla/no-browser-refs-in-toolkit
   getThemesList: "moz-src:///browser/themes/ThemesList.sys.mjs",
@@ -110,5 +113,6 @@ export class ThemePickerDirectController {
     } else {
       this.host.appearance = "device";
     }
+    this.host.showNativeThemeOption = AppConstants.platform === "linux";
   }
 }
