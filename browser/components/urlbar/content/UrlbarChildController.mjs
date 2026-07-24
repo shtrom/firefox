@@ -678,7 +678,7 @@ export class UrlbarChildController {
       event.keyCode == KeyEvent.DOM_VK_RETURN &&
       (AppConstants.platform == "macosx" ? event.metaKey : event.ctrlKey) &&
       !(/** @type {any} */ (event)._disableCanonization) &&
-      lazy.UrlbarPrefs.get("ctrlCanonizesURLs")
+      UrlbarPrefs.get("ctrlCanonizesURLs")
     );
   }
 
@@ -713,8 +713,8 @@ export class UrlbarChildController {
     }
     let openInTabPref =
       this.#input.sapName == "searchbar"
-        ? lazy.UrlbarPrefs.get("browser.search.openintab")
-        : lazy.UrlbarPrefs.get("openintab");
+        ? UrlbarPrefs.get("browser.search.openintab")
+        : UrlbarPrefs.get("openintab");
     if (openInTabPref) {
       if (where == "current") {
         where = "tab";
