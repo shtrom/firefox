@@ -3,7 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 with Files("**"):
-    BUG_COMPONENT = ("Core", "DOM: Device Interfaces")
+    BUG_COMPONENT = ("Core", "DOM: Web Serial")
 
 EXPORTS.mozilla.dom += [
     "Serial.h",
