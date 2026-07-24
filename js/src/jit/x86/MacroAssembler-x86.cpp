@@ -1102,6 +1102,25 @@ void MacroAssembler::branchTestNaNValue(Condition cond, const ValueOperand& val,
   }
 }
 
+void MacroAssembler::testValueSet(Condition cond, const ValueOperand& lhs,
+                                  const Value& rhs, Register dest) {
+  MOZ_ASSERT(cond == Equal || cond == NotEqual);
+  MOZ_ASSERT(!rhs.isNaN());
+  MOZ_ASSERT(!lhs.aliases(dest));
+
+  if (rhs.isGCThing()) {
+    cmpPtrSet(cond, lhs.payloadReg(), ImmGCPtr(rhs.toGCThing()), dest);
+  } else {
+    cmpPtrSet(cond, lhs.payloadReg(), ImmWord(rhs.toNunboxPayload()), dest);
+  }
+
+  // cmpPtrSet doesn't preserve flags, so we have test against |dest|.
+  Label done;
+  branchTest32(cond, dest, dest, &done);
+  cmp32Set(cond, lhs.typeReg(), Imm32(rhs.toNunboxTag()), dest);
+  bind(&done);
+}
+
 // ========================================================================
 // Memory access primitives.
 template <typename T>
