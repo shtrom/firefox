@@ -1566,7 +1566,7 @@
     "forcedColors": "{Theme$color/accent/primary/active}"
   },
   "toggle/border/color": {
-    "light": "{Theme$border/color/interactive}",
+    "light": "{Colors$color/gray/70}",
     "dark": "{Theme$border/color/interactive}",
     "forcedColors": "{Theme$border/color/interactive}"
   },

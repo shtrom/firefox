@@ -689,6 +689,11 @@
     "dark": "{Theme$button/background/color/primary/active}",
     "forcedColors": "{Theme$button/background/color/primary/active}"
   },
+  "toggle/border/color": {
+    "light": "{Theme$border/color/interactive}",
+    "dark": "{Theme$border/color/interactive}",
+    "forcedColors": "{Theme$border/color/interactive}"
+  },
   "toggle/border/color/hover": {
     "light": "{Theme$border/color/interactive/hover}",
     "dark": "{Theme$border/color/interactive/hover}",

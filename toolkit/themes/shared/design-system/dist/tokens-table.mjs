@@ -1322,7 +1322,16 @@ export const tokensTable = {
       value: "var(--button-border-color-disabled)",
       name: "--select-border-color-disabled",
     },
-    { value: "var(--border-color-interactive)", name: "--toggle-border-color" },
+    {
+      value: {
+        light: "var(--color-gray-70)",
+        dark: "var(--border-color-interactive)",
+        forcedColors: "var(--border-color-interactive)",
+        default:
+          "light-dark(var(--color-gray-70), var(--border-color-interactive))",
+      },
+      name: "--toggle-border-color",
+    },
     {
       value: {
         default: "var(--toggle-border-color)",
@@ -5129,7 +5138,13 @@ export const variableLookupTable = {
   "toggle-background-color-pressed-hover": "var(--color-accent-primary-hover)",
   "toggle-background-color-pressed-active":
     "var(--color-accent-primary-active)",
-  "toggle-border-color": "var(--border-color-interactive)",
+  "toggle-border-color": {
+    light: "var(--color-gray-70)",
+    dark: "var(--border-color-interactive)",
+    forcedColors: "var(--border-color-interactive)",
+    default:
+      "light-dark(var(--color-gray-70), var(--border-color-interactive))",
+  },
   "toggle-border-color-hover": {
     default: "var(--toggle-border-color)",
     forcedColors: "var(--border-color-interactive-hover)",
