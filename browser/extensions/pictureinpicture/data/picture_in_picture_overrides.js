@@ -67,6 +67,12 @@ let AVAILABLE_PIP_OVERRIDES;
       },
     },
 
+    ardmediathek: {
+      "https://www.ardmediathek.de/video/*": {
+        videoWrapperScriptPath: "video-wrappers/ardmediathek.js",
+      },
+    },
+
     arte: {
       "https://*.arte.tv/*": {
         videoWrapperScriptPath: "video-wrappers/videojsWrapper.js",
