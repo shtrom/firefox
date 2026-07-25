@@ -538,6 +538,9 @@
       "chrome://global/content/elements/moz-promo.mjs": [
         "../../../toolkit/content/widgets/moz-promo/moz-promo.mjs"
       ],
+      "chrome://global/content/elements/moz-segmented-control.mjs": [
+        "../../../toolkit/content/widgets/moz-segmented-control/moz-segmented-control.mjs"
+      ],
       "chrome://global/content/elements/moz-support-link.mjs": [
         "../../../toolkit/content/widgets/moz-support-link/moz-support-link.mjs"
       ],
@@ -1375,6 +1378,9 @@
       "resource:///actors/LinkPreviewChild.sys.mjs": [
         "../../../browser/components/genai/LinkPreviewChild.sys.mjs"
       ],
+      "resource:///actors/MigrationWizardChild.sys.mjs": [
+        "../../../browser/components/migration/MigrationWizardChild.sys.mjs"
+      ],
       "resource:///actors/PluginParent.sys.mjs": [
         "../../../browser/actors/PluginParent.sys.mjs"
       ],
@@ -1678,6 +1684,9 @@
       "resource:///modules/asrouter/MessagingExperimentConstants.sys.mjs": [
         "../../../browser/components/asrouter/modules/MessagingExperimentConstants.sys.mjs"
       ],
+      "resource:///modules/asrouter/MessagingTargetingConstants.sys.mjs": [
+        "../../../browser/components/asrouter/modules/MessagingTargetingConstants.sys.mjs"
+      ],
       "resource:///modules/asrouter/MomentsPageHub.sys.mjs": [
         "../../../browser/components/asrouter/modules/MomentsPageHub.sys.mjs"
       ],
@@ -1689,6 +1698,9 @@
       ],
       "resource:///modules/asrouter/PanelTestProvider.sys.mjs": [
         "../../../browser/components/asrouter/modules/PanelTestProvider.sys.mjs"
+      ],
+      "resource:///modules/asrouter/PreonboardingSplash.sys.mjs": [
+        "../../../browser/components/asrouter/modules/PreonboardingSplash.sys.mjs"
       ],
       "resource:///modules/asrouter/RemoteL10n.sys.mjs": [
         "../../../browser/components/asrouter/modules/RemoteL10n.sys.mjs"
@@ -1792,6 +1804,9 @@
       "resource:///modules/profiles/SelectableProfileService.sys.mjs": [
         "../../../browser/components/profiles/SelectableProfileService.sys.mjs"
       ],
+      "resource:///modules/referrals/Referrals.sys.mjs": [
+        "../../../browser/components/referrals/Referrals.sys.mjs"
+      ],
       "resource:///modules/sessionstore/GlobalState.sys.mjs": [
         "../../../browser/components/sessionstore/GlobalState.sys.mjs"
       ],
@@ -1848,30 +1863,6 @@
       ],
       "resource:///modules/sessionstore/TabStateFlusher.sys.mjs": [
         "../../../browser/components/sessionstore/TabStateFlusher.sys.mjs"
-      ],
-      "resource:///modules/syncedtabs/EventEmitter.sys.mjs": [
-        "../../../browser/components/syncedtabs/EventEmitter.sys.mjs"
-      ],
-      "resource:///modules/syncedtabs/SyncedTabsDeckComponent.sys.mjs": [
-        "../../../browser/components/syncedtabs/SyncedTabsDeckComponent.sys.mjs"
-      ],
-      "resource:///modules/syncedtabs/SyncedTabsDeckStore.sys.mjs": [
-        "../../../browser/components/syncedtabs/SyncedTabsDeckStore.sys.mjs"
-      ],
-      "resource:///modules/syncedtabs/SyncedTabsDeckView.sys.mjs": [
-        "../../../browser/components/syncedtabs/SyncedTabsDeckView.sys.mjs"
-      ],
-      "resource:///modules/syncedtabs/SyncedTabsListStore.sys.mjs": [
-        "../../../browser/components/syncedtabs/SyncedTabsListStore.sys.mjs"
-      ],
-      "resource:///modules/syncedtabs/TabListComponent.sys.mjs": [
-        "../../../browser/components/syncedtabs/TabListComponent.sys.mjs"
-      ],
-      "resource:///modules/syncedtabs/TabListView.sys.mjs": [
-        "../../../browser/components/syncedtabs/TabListView.sys.mjs"
-      ],
-      "resource:///modules/syncedtabs/util.sys.mjs": [
-        "../../../browser/components/syncedtabs/util.sys.mjs"
       ],
       "resource:///modules/taskbartabs/TaskbarTabs.sys.mjs": [
         "../../../browser/components/taskbartabs/TaskbarTabs.sys.mjs"
@@ -5863,9 +5854,6 @@
       "resource://gre/modules/ContentRelevancyManager.sys.mjs": [
         "../../../toolkit/components/contentrelevancy/ContentRelevancyManager.sys.mjs"
       ],
-      "resource://gre/modules/ContextualIdentityService.sys.mjs": [
-        "../../../toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs"
-      ],
       "resource://gre/modules/CoveragePing.sys.mjs": [
         "../../../toolkit/components/telemetry/pings/CoveragePing.sys.mjs"
       ],
@@ -5874,9 +5862,6 @@
       ],
       "resource://gre/modules/CrashService.sys.mjs": [
         "../../../toolkit/components/crashes/CrashService.sys.mjs"
-      ],
-      "resource://gre/modules/CrashSubmit.sys.mjs": [
-        "../../../toolkit/crashreporter/CrashSubmit.sys.mjs"
       ],
       "resource://gre/modules/Credentials.sys.mjs": [
         "../../../services/fxaccounts/Credentials.sys.mjs"
