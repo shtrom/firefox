@@ -748,9 +748,13 @@ export class UrlbarParentController {
    *   content-process input can't resolve the selected browser itself.
    */
   loadURL({ url, where, params, browserId, userTypedValue }) {
+    // Prefer the browser the child pinned at commit; otherwise a content-process
+    // moz-urlbar loads its own tab (identified by the actor's browsing context),
+    // falling back to the chrome window's selected tab.
     let browser =
       (browserId &&
         BrowsingContext.getCurrentTopByBrowserId(browserId)?.embedderElement) ||
+      this.#actor?.browsingContext?.top?.embedderElement ||
       this.browserWindow.gBrowser.selectedBrowser;
 
     if (this.#isAddressbar) {

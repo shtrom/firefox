@@ -2140,18 +2140,20 @@ ${
     // a content urlbar can't read; the parent controller owns all of it and
     // hands back either a heuristic result to pick or a fixup URL to load.
     // The load resolves asynchronously, so capture the target tab now, at the
-    // commit: a tab opened before it resolves must not steal the load.
-    let browser = this.window.gBrowser.selectedBrowser;
+    // commit: a tab opened before it resolves must not steal the load. The chrome
+    // address bar reads its selected tab here; a content-process moz-urlbar has
+    // no gBrowser and leaves the target to the parent (its own tab).
+    let browserId = this.window.gBrowser?.selectedBrowser?.browserId ?? null;
     this.controller
       .resolveFallbackNavigation({
         searchString: url,
         where,
         searchMode: this.searchMode,
-        browserId: browser.browserId,
+        browserId,
       })
       .then(({ heuristicResult, fixup }) => {
         if (heuristicResult) {
-          this.pickResult(heuristicResult, event, null, browser);
+          this.pickResult(heuristicResult, event, null, browserId);
         } else if (fixup) {
           openParams.postData = fixup.postData;
           if (!fixup.keywordAsSent) {
@@ -2162,7 +2164,7 @@ ${
               this.untrimmedValue
             );
           }
-          this._loadURL(fixup.url, event, where, openParams, null, browser);
+          this._loadURL(fixup.url, event, where, openParams, null, browserId);
         }
       })
       .catch(console.error);
@@ -2246,22 +2248,20 @@ ${
    * @param {UrlbarResult} result The result that was picked.
    * @param {Event} event The event that picked the result.
    * @param {HTMLElement} element the picked view element, if available.
-   * @param {object} browser The browser to use for the load.
+   * @param {number} [browserId]
+   *   The id of the browser to load into, for a load that resolves
+   *   asynchronously and must target the tab selected when it was committed.
+   *   Defaults to the parent resolving the selected browser at load time.
    */
   // eslint-disable-next-line complexity
-  pickResult(
-    result,
-    event,
-    element = null,
-    browser = this.window.gBrowser.selectedBrowser
-  ) {
+  pickResult(result, event, element = null, browserId = null) {
     if (element?.classList.contains("urlbarView-button-menu")) {
       this.view.openResultMenu(result, element);
       return;
     }
 
     if (element?.dataset.command) {
-      this.#pickMenuResult(result, event, element, browser);
+      this.#pickMenuResult(result, event, element);
       return;
     }
 
@@ -2355,7 +2355,14 @@ ${
         searchString: this._lastSearchString,
         windowMode: this.windowMode,
       });
-      this._loadURL(this._untrimmedValue, event, where, openParams, browser);
+      this._loadURL(
+        this._untrimmedValue,
+        event,
+        where,
+        openParams,
+        null,
+        browserId
+      );
       return;
     }
 
@@ -2465,6 +2472,7 @@ ${
         }
 
         if (
+          this.#isAddressbar &&
           !this.searchMode &&
           result.heuristic &&
           // If we asked the DNS earlier, avoid the post-facto check.
@@ -2652,17 +2660,26 @@ ${
       }
     }
 
-    this.controller.engagementEvent
-      .startTrackingBounceEvent(browser.browserId, event, {
-        result,
-        element,
-        location: this.sapLocation,
-        searchString: this._lastSearchString,
-        selType: this.view.telemetryTypeFromElement(result, element),
-        searchSource: this.getSearchSource(event),
-        windowMode: this.windowMode,
-      })
-      .catch(e => lazy.logger.error(e));
+    // Bounce tracking starts on the selected tab and triggers on chrome tab
+    // events (navigation, tab close), so it only runs in a browser window. TBD
+    // if and how this should work for a moz-urlbar living in a content process.
+    if (this.window.gBrowser) {
+      this.controller.engagementEvent
+        .startTrackingBounceEvent(
+          this.window.gBrowser.selectedBrowser.browserId,
+          event,
+          {
+            result,
+            element,
+            location: this.sapLocation,
+            searchString: this._lastSearchString,
+            selType: this.view.telemetryTypeFromElement(result, element),
+            searchSource: this.getSearchSource(event),
+            windowMode: this.windowMode,
+          }
+        )
+        .catch(e => lazy.logger.error(e));
+    }
 
     this.controller.engagementEvent.record(event, {
       result,
@@ -2718,7 +2735,7 @@ ${
         type: result.type,
         searchTerm: result.payload.suggestion ?? result.payload.query,
       },
-      browser
+      browserId
     );
   }
 
@@ -4863,9 +4880,8 @@ ${
    * @param {UrlbarResult} result The result that was picked.
    * @param {Event} event The event that picked the result.
    * @param {HTMLElement} element the picked view element, if available.
-   * @param {object} browser The browser to use for the load.
    */
-  #pickMenuResult(result, event, element, browser) {
+  #pickMenuResult(result, event, element) {
     this.controller.engagementEvent.record(event, {
       result,
       element,
@@ -4910,8 +4926,7 @@ ${
       {
         source: result.source,
         type: result.type,
-      },
-      browser
+      }
     );
   }
 
@@ -4943,7 +4958,10 @@ ${
    *   Search term of the result source, if any.
    * @param {Values<typeof UrlbarShared.RESULT_SOURCE>} [resultDetails.source]
    *   Details of the result source, if any.
-   * @param {object} browser [optional] the browser to use for the load.
+   * @param {number} [browserId]
+   *   The id of the browser to load into. Defaults to the parent resolving the
+   *   selected browser at load time; pass it to pin an asynchronously-resolved
+   *   load to the tab selected when it was committed.
    */
   async _loadURL(
     url,
@@ -4951,10 +4969,8 @@ ${
     openUILinkWhere,
     params,
     resultDetails = null,
-    browser
+    browserId = null
   ) {
-    browser ??= this.window.gBrowser?.selectedBrowser ?? null;
-
     let userTypedValue;
     if (this.#isAddressbar && openUILinkWhere == "current") {
       // Make sure URL is formatted properly (don't show punycode).
@@ -5021,7 +5037,7 @@ ${
       url,
       where: openUILinkWhere,
       params,
-      browserId: browser?.browserId ?? null,
+      browserId,
       userTypedValue,
     });
     // In the message-passing path, loadURL returns a promise.
