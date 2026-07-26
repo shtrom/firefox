@@ -11165,7 +11165,7 @@
 # https://drafts.csswg.org/css-values-5/#progress
 - name: layout.css.progress-function.enabled
   type: RelaxedAtomicBool
-  value: @IS_NIGHTLY_BUILD@
+  value: true
   mirror: always
   rust: true
 
