@@ -242,6 +242,9 @@ ${
   #compositionState = UrlbarShared.COMPOSITION.NONE;
   #compositionClosedPopup = false;
   #compositionHadText = false;
+  // Bumped on each input-driven search; a deferred-Enter snapshots it so its
+  // async keyup can tell whether a fresh search has started since.
+  #inputEpoch = 0;
 
   valueIsTyped = false;
 
@@ -5414,6 +5417,9 @@ ${
   }
 
   _on_input(event) {
+    // A new input starts a fresh search; bump the epoch so a pending
+    // deferred-Enter's async keyup won't reset this search's caret.
+    this.#inputEpoch++;
     if (
       this._autofillPlaceholder &&
       this.value === this.userTypedValue &&
@@ -5779,6 +5785,7 @@ ${
           this._keyDownEnterDeferred.reject();
         }
         this._keyDownEnterDeferred = Promise.withResolvers();
+        this._keyDownEnterDeferred.inputEpoch = this.#inputEpoch;
         event._disableCanonization =
           AppConstants.platform == "macosx"
             ? this._isKeyDownWithMeta
@@ -5849,14 +5856,18 @@ ${
     // Enter key before releasing Meta key, the keyup event is not fired.
     // Therefore, if Enter keydown is detecting, continue the post processing
     // for Enter key when any keyup event is detected.
-    if (this._keyDownEnterDeferred) {
-      if (this._keyDownEnterDeferred.loadedContent) {
+    let keyDownEnterDeferred = this._keyDownEnterDeferred;
+    if (keyDownEnterDeferred) {
+      if (keyDownEnterDeferred.loadedContent) {
         try {
-          const browserId = await this._keyDownEnterDeferred.promise;
+          const browserId = await keyDownEnterDeferred.promise;
           // The parent focuses the loading browser if it's still selected,
           // since only it can reach the browser element and the chrome window.
           let { focused } = await this.controller.focusBrowser(browserId);
-          if (focused) {
+          // focusBrowser resolves asynchronously; if the user began a fresh
+          // search since this Enter (a later input bumped the epoch), its
+          // caret must be left alone -- only keep the domain visible for our load.
+          if (focused && keyDownEnterDeferred.inputEpoch === this.#inputEpoch) {
             // Make sure the domain name stays visible for spoof protection and usability.
             this.inputField.setSelectionRange(0, 0);
           }
@@ -5868,7 +5879,7 @@ ${
         }
       } else {
         // Discard the _keyDownEnterDeferred promise to receive any key inputs immediately.
-        this._keyDownEnterDeferred.resolve();
+        keyDownEnterDeferred.resolve();
       }
 
       this._keyDownEnterDeferred = null;
