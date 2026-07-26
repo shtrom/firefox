@@ -662,6 +662,10 @@ export class UrlbarChildController {
     return this.#parentController.focusBrowser(browserId);
   }
 
+  switchToTab(loadData) {
+    return this.#parentController.switchToTab(loadData);
+  }
+
   /**
    * Returns whether the passed-in event represents a canonization request.
    *

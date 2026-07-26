@@ -65,8 +65,6 @@ const lazy = XPCOMUtils.declareLazy({
   UrlbarQueryContext: "chrome://browser/content/urlbar/UrlbarQueryContext.mjs",
   UrlbarProviderHeuristicFallback:
     "moz-src:///browser/components/urlbar/UrlbarProviderHeuristicFallback.sys.mjs",
-  UrlbarProviderOpenTabs:
-    "moz-src:///browser/components/urlbar/UrlbarProviderOpenTabs.sys.mjs",
   UrlbarSearchUtils:
     "moz-src:///browser/components/urlbar/UrlbarSearchUtils.sys.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
@@ -2447,12 +2445,6 @@ ${
         // Keep the searchMode for telemetry since handleRevert sets it to null.
         const searchMode = this.searchMode;
         this.handleRevert();
-        let prevTab = this.window.gBrowser.selectedTab;
-        let loadOpts = {
-          adoptIntoActiveWindow: lazy.UrlbarPrefs.get(
-            "switchTabs.adoptIntoActiveWindow"
-          ),
-        };
 
         // We cache the search string because switching tab may clear it.
         let searchString = this._lastSearchString;
@@ -2467,38 +2459,13 @@ ${
           windowMode: this.windowMode,
         });
 
-        let switched = this.window.switchToTabHavingURI(
-          Services.io.newURI(url),
-          true,
-          loadOpts,
-          UrlbarShared.isNonPrivateUserContextId(result.payload.userContextId)
-            ? result.payload.userContextId
-            : null
-        );
-        if (switched && prevTab.isEmpty) {
-          this.window.gBrowser.removeTab(prevTab);
-        }
-
-        if (switched && !this.isPrivate && !result.heuristic) {
-          // We don't await for this, because a rejection should not interrupt
-          // the load. Just reportError it.
-          lazy.UrlbarUtils.addToInputHistory(url, searchString).catch(
-            console.error
-          );
-        }
-
-        // TODO (Bug 1865757): We should not show a "switchtotab" result for
-        // tabs that are not currently open. Find out why tabs are not being
-        // properly unregistered when they are being closed.
-        if (!switched) {
-          console.error(`Tried to switch to non-existent tab: ${url}`);
-          lazy.UrlbarProviderOpenTabs.unregisterOpenTab(
-            url,
-            result.payload.userContextId,
-            result.payload.tabGroup,
-            this.isPrivate
-          );
-        }
+        this.controller.switchToTab({
+          url,
+          searchString,
+          userContextId: result.payload.userContextId,
+          tabGroup: result.payload.tabGroup,
+          heuristic: result.heuristic,
+        });
 
         return;
       }

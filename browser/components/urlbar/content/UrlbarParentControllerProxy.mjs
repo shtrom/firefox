@@ -264,6 +264,19 @@ export class UrlbarParentControllerProxy {
   }
 
   /**
+   * Switches to a tab already showing the URL (or opens it), resolved
+   * parent-side, along with the follow-up history/open-tab writes.
+   *
+   * @param {object} loadData The serializable switch parameters.
+   */
+  switchToTab(loadData) {
+    this.#actor.sendAsyncMessage("SwitchToTab", {
+      instanceId: this.#instanceId,
+      loadData,
+    });
+  }
+
+  /**
    * @param {UrlbarResult} result The result to remove.
    * @param {object} [options] Options forwarded to the parent controller's
    *   removeResult.
