@@ -1255,23 +1255,7 @@ ${
       triggeringSource: this.#sapName,
       triggeringSearchEngine: engine.name,
     };
-    if (openWhere == "tab") {
-      // The TabOpen event is fired synchronously so tabEvent.target is our new
-      // search tab.
-      this.window.gBrowser.tabContainer.addEventListener(
-        "TabOpen",
-        tabEvent =>
-          this._recordSearch(
-            engine.id,
-            event,
-            {},
-            tabEvent.target.linkedBrowser
-          ),
-        { once: true }
-      );
-    } else {
-      this._recordSearch(engine.id, event);
-    }
+    this._recordSearch(engine.id, event, {}, openWhere == "tab");
     lazy.UrlbarUtils.addToFormHistory(this, searchString, engine.name).catch(
       console.error
     );
@@ -1905,23 +1889,7 @@ ${
           result.payload.engine
         );
 
-        if (where == "tab") {
-          // The TabOpen event is fired synchronously so tabEvent.target
-          // is guaranteed to be our new search tab.
-          this.window.gBrowser.tabContainer.addEventListener(
-            "TabOpen",
-            tabEvent =>
-              this._recordSearch(
-                engine.id,
-                event,
-                actionDetails,
-                tabEvent.target.linkedBrowser
-              ),
-            { once: true }
-          );
-        } else {
-          this._recordSearch(engine.id, event, actionDetails);
-        }
+        this._recordSearch(engine.id, event, actionDetails, where == "tab");
 
         if (
           this.#isAddressbar &&
@@ -2667,23 +2635,7 @@ ${
     let trimmedValue = value.trim();
     this._lastSearchString = trimmedValue;
     if (trimmedValue) {
-      if (where.startsWith("tab")) {
-        // The TabOpen event is fired synchronously so tabEvent.target
-        // is guaranteed to be our new search tab.
-        this.window.gBrowser.tabContainer.addEventListener(
-          "TabOpen",
-          tabEvent =>
-            this._recordSearch(
-              searchEngine.id,
-              event,
-              {},
-              tabEvent.target.linkedBrowser
-            ),
-          { once: true }
-        );
-      } else {
-        this._recordSearch(searchEngine.id, event);
-      }
+      this._recordSearch(searchEngine.id, event, {}, where.startsWith("tab"));
 
       if (where == "current") {
         // Enter search mode so:
@@ -3972,15 +3924,16 @@ ${
    *   True if this query was initiated from a form history result.
    * @param {string} [searchActionDetails.url]
    *   The url this query was triggered with.
-   * @param {MozBrowser} [browser]
-   *   The browser where the search is being opened. When omitted, the parent
-   *   controller records against its selected browser.
+   * @param {boolean} [inNewTab]
+   *   Whether the search opens in a new tab, in which case it is recorded
+   *   against that tab's browser once the load opens it (parent-side); otherwise
+   *   against the selected browser.
    */
-  _recordSearch(engineId, event, searchActionDetails = {}, browser = null) {
+  _recordSearch(engineId, event, searchActionDetails = {}, inNewTab = false) {
     const isOneOff = this.view.oneOffSearchButtons?.eventTargetIsAOneOff(event);
     const searchSource = this.getSearchSource(event);
 
-    this.controller.recordSearch({
+    let searchData = {
       engineId,
       searchSource,
       details: {
@@ -3988,8 +3941,12 @@ ${
         isOneOff,
         newtabSessionId: this._handoffSession,
       },
-      browserId: browser?.browsingContext?.browserId,
-    });
+    };
+    if (inNewTab) {
+      this.controller.recordSearchInOpenedTab(searchData);
+    } else {
+      this.controller.recordSearch(searchData);
+    }
   }
 
   /**

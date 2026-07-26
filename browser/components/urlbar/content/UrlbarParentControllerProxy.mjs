@@ -11,6 +11,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
 
 /**
  * @import {UrlbarChild} from "../../../actors/UrlbarChild.sys.mjs"
+ * @import {UrlbarParentController} from "moz-src:///browser/components/urlbar/UrlbarParentController.sys.mjs"
  */
 
 /**
@@ -156,6 +157,20 @@ export class UrlbarParentControllerProxy {
     this.#actor.sendAsyncMessage("RecordSearch", {
       instanceId: this.#instanceId,
       ...options,
+    });
+  }
+
+  /**
+   * Records a search opening in a new tab, against that tab's browser resolved
+   * parent-side. The counterpart to the controller's `recordSearchInOpenedTab()`.
+   *
+   * @param {Parameters<UrlbarParentController["recordSearch"]>[0]} searchData
+   *   The data for `recordSearch`.
+   */
+  recordSearchInOpenedTab(searchData) {
+    this.#actor.sendAsyncMessage("RecordSearchInOpenedTab", {
+      instanceId: this.#instanceId,
+      searchData,
     });
   }
 

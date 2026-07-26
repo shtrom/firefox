@@ -236,6 +236,9 @@ export class UrlbarChildController {
   recordSearch(options) {
     return this.#parentController.recordSearch(options);
   }
+  recordSearchInOpenedTab(searchData) {
+    return this.#parentController.recordSearchInOpenedTab(searchData);
+  }
   /**
    * Starts a query and returns the parent controller's promise so callers (the
    * input's `lastQueryContextPromise`, which tests await) can track completion.
