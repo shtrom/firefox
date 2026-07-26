@@ -22,6 +22,8 @@ const lazy = XPCOMUtils.declareLazy({
   BrowserUIUtils: "resource:///modules/BrowserUIUtils.sys.mjs",
   ContextualIdentityService:
     "moz-src:///toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs",
+  CustomizableUI:
+    "moz-src:///browser/components/customizableui/CustomizableUI.sys.mjs",
   DEFAULT_FORM_HISTORY_PARAM:
     "moz-src:///toolkit/components/search/SearchSuggestionController.sys.mjs",
   FaviconUtils: "moz-src:///toolkit/modules/FaviconUtils.sys.mjs",
@@ -1266,6 +1268,19 @@ export var UrlbarUtils = {
       event.inputType &&
       (event.inputType.startsWith("insertFromPaste") ||
         event.inputType == "insertFromYank")
+    );
+  },
+
+  /**
+   * Return whether or not persisted search terms is enabled.
+   *
+   * @returns {boolean} true: if enabled.
+   */
+  isPersistedSearchTermsEnabled() {
+    return (
+      lazy.UrlbarPrefs.getScotchBonnetPref("showSearchTerms.featureGate") &&
+      lazy.UrlbarPrefs.get("showSearchTerms.enabled") &&
+      !lazy.CustomizableUI.getPlacementOfWidget("search-container")
     );
   },
 

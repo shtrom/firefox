@@ -4940,7 +4940,7 @@ ${
       } catch {}
 
       this.value =
-        lazy.UrlbarPrefs.isPersistedSearchTermsEnabled() &&
+        lazy.UrlbarUtils.isPersistedSearchTermsEnabled() &&
         resultDetails?.searchTerm
           ? resultDetails.searchTerm
           : formattedURL;
@@ -5663,7 +5663,7 @@ ${
     if (!this.#isAddressbar) {
       return false;
     }
-    if (!lazy.UrlbarPrefs.isPersistedSearchTermsEnabled()) {
+    if (!lazy.UrlbarUtils.isPersistedSearchTermsEnabled()) {
       if (state.persist) {
         this.removeAttribute("persistsearchterms");
         delete state.persist;
