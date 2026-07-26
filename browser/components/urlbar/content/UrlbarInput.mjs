@@ -1110,7 +1110,9 @@ ${
     // Using browser navigation buttons should potentially trigger a bounce
     // telemetry event.
     if (webProgress.loadType & Ci.nsIDocShell.LOAD_CMD_HISTORY) {
-      this.controller.engagementEvent.handleBounceEventTrigger(browser);
+      this.controller.engagementEvent.handleBounceEventTrigger(
+        browser.browserId
+      );
     }
   }
 
@@ -2123,7 +2125,7 @@ ${
     }
 
     this.controller.engagementEvent
-      .startTrackingBounceEvent(browser, event, {
+      .startTrackingBounceEvent(browser.browserId, event, {
         result,
         element,
         searchString: this._lastSearchString,
@@ -5742,7 +5744,7 @@ ${
 
   _on_TabClose(event) {
     this.controller.engagementEvent.handleBounceEventTrigger(
-      event.target.linkedBrowser
+      event.target.linkedBrowser.browserId
     );
 
     if (this.view.isOpen) {

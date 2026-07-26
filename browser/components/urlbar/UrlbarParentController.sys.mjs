@@ -2023,28 +2023,38 @@ export class TelemetryEvent {
     return ChromeUtils.now();
   }
 
+  // Bounces still being tracked on the direct path, keyed by the tab's stable
+  // browser id. The browser element is captured while alive so a tab-close
+  // trigger can still reach Interactions for it after the tab is gone.
+  #directBounces = new Map();
+
   /**
    * Start tracking a potential bounce event after the user has engaged
    * with a URL bar result.
    *
-   * @param {MozBrowser} browser
-   *   The chrome <browser> for the tab the engagement happened in.
+   * @param {number} browserId
+   *   The stable browser id of the tab the engagement happened in.
    * @param {event} event
    *   A DOM event.
    * @param {ActionDetails} details
    *   An object describing interaction details.
    */
-  async startTrackingBounceEvent(browser, event, details) {
-    let state = this._controller.input.getBrowserState(browser);
+  async startTrackingBounceEvent(browserId, event, details) {
     let startEventInfo = this._startEventInfo;
 
     // If we are already tracking a bounce, then another engagement
     // could possibly lead to a bounce.
-    if (state.bounceEventTracking) {
-      await this.handleBounceEventTrigger(browser);
+    if (this.#directBounces.has(browserId)) {
+      await this.handleBounceEventTrigger(browserId);
     }
 
-    state.bounceEventTracking = {
+    let browser =
+      BrowsingContext.getCurrentTopByBrowserId(browserId)?.embedderElement;
+    if (!browser) {
+      return;
+    }
+
+    this.#directBounces.set(browserId, {
       startTime: Date.now(),
       snapshot: lazy.UrlbarTelemetryUtils.collectBounceSnapshot(
         event,
@@ -2052,7 +2062,8 @@ export class TelemetryEvent {
         startEventInfo,
         this.#engagementData.visibleResults
       ),
-    };
+      browser,
+    });
   }
 
   /**
@@ -2061,58 +2072,60 @@ export class TelemetryEvent {
    * browser chrome (this includes clicking on history or bookmark entries,
    * and engaging with the URL bar).
    *
-   * @param {MozBrowser} browser
-   *   The chrome <browser> for the tab the trigger happened in.
+   * @param {number} browserId
+   *   The stable browser id of the tab the trigger happened in.
    */
-  async handleBounceEventTrigger(browser) {
-    let state = this._controller.input.getBrowserState(browser);
-    if (state.bounceEventTracking) {
-      const interactions =
-        (await lazy.Interactions.getRecentInteractionsForBrowser(browser)) ??
-        [];
-
-      // handleBounceEventTrigger() can run concurrently, so we bail out
-      // if a prior async invocation has already cleared bounceEventTracking.
-      if (!state.bounceEventTracking) {
-        return;
-      }
-
-      let totalViewTime = 0;
-      for (let interaction of interactions) {
-        if (interaction.created_at >= state.bounceEventTracking.startTime) {
-          totalViewTime += interaction.totalViewTime || 0;
-        }
-      }
-
-      // If the total view time when the user navigates away after a
-      // URL bar interaction is less than the threshold of
-      // events.bounce.maxSecondsFromLastSearch, we record a bounce event.
-      // If totalViewTime is 0, that means the page didn't load yet, so
-      // we wouldn't record a bounce event.
-      if (
-        totalViewTime != 0 &&
-        totalViewTime <
-          lazy.UrlbarPrefs.get("events.bounce.maxSecondsFromLastSearch") * 1000
-      ) {
-        this.recordBounceEvent(browser, totalViewTime);
-      }
-
-      state.bounceEventTracking = null;
+  async handleBounceEventTrigger(browserId) {
+    let tracking = this.#directBounces.get(browserId);
+    if (!tracking) {
+      return;
     }
+
+    const interactions =
+      (await lazy.Interactions.getRecentInteractionsForBrowser(
+        tracking.browser
+      )) ?? [];
+
+    // handleBounceEventTrigger() can run concurrently, so we bail out
+    // if a prior async invocation has already cleared the tracking.
+    if (!this.#directBounces.has(browserId)) {
+      return;
+    }
+
+    let totalViewTime = 0;
+    for (let interaction of interactions) {
+      if (interaction.created_at >= tracking.startTime) {
+        totalViewTime += interaction.totalViewTime || 0;
+      }
+    }
+
+    // If the total view time when the user navigates away after a
+    // URL bar interaction is less than the threshold of
+    // events.bounce.maxSecondsFromLastSearch, we record a bounce event.
+    // If totalViewTime is 0, that means the page didn't load yet, so
+    // we wouldn't record a bounce event.
+    if (
+      totalViewTime != 0 &&
+      totalViewTime <
+        lazy.UrlbarPrefs.get("events.bounce.maxSecondsFromLastSearch") * 1000
+    ) {
+      this.recordBounceEvent(browserId, totalViewTime);
+    }
+
+    this.#directBounces.delete(browserId);
   }
 
   /**
    * Record a bounce event
    *
-   * @param {MozBrowser} browser
-   *   The chrome <browser> for the tab the engagement happened in.
+   * @param {number} browserId
+   *   The stable browser id of the tab the engagement happened in.
    * @param {number} viewTime
    *  The time spent on a tab after a URL bar engagement before
    *  navigating away via browser chrome or closing the tab.
    */
-  recordBounceEvent(browser, viewTime) {
-    let { snapshot } =
-      this._controller.input.getBrowserState(browser).bounceEventTracking;
+  recordBounceEvent(browserId, viewTime) {
+    let { snapshot } = this.#directBounces.get(browserId);
     this.#recordBounce(snapshot, viewTime);
   }
 
