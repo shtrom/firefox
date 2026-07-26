@@ -158,6 +158,9 @@ export class UrlbarChild extends JSWindowActorChild {
       case "InvokeContentAction":
         this.#invokeContentAction(message.data);
         break;
+      case "UpdateEngineStore":
+        this.#updateEngineStore(message.data);
+        break;
     }
   }
 
@@ -217,5 +220,15 @@ export class UrlbarChild extends JSWindowActorChild {
       return;
     }
     child[target]?.[method](...args);
+  }
+
+  #updateEngineStore({ instanceId, args }) {
+    let child = this.#childControllers.get(instanceId)?.deref();
+    if (!child) {
+      this.#childControllers.delete(instanceId);
+      return;
+    }
+
+    child.updateEngineStore(...args);
   }
 }

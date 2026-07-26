@@ -378,4 +378,31 @@ export class UrlbarParentControllerProxy {
       idsByName,
     });
   }
+
+  /**
+   * {@link UrlbarParentController#initEngineStore}
+   */
+  initEngineStore() {
+    return this.#actor.sendAsyncMessage("InitEngineStore", {
+      instanceId: this.#instanceId,
+    });
+  }
+
+  /**
+   * @type {UrlbarParentController["getEngineIconURL"]}
+   */
+  getEngineIconURL(engineId) {
+    return this.#actor.sendQuery("GetEngineIconURL", {
+      instanceId: this.#instanceId,
+      engineId,
+    });
+  }
+
+  /** @type {UrlbarParentController["markEngineAsUsed"]} */
+  markEngineAsUsed(engineId) {
+    this.#actor.sendAsyncMessage("MarkEngineAsUsed", {
+      instanceId: this.#instanceId,
+      engineId,
+    });
+  }
 }

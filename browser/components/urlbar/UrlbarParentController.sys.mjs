@@ -88,10 +88,14 @@ function engineToEngineInfo(engine) {
  * - onViewClose()
  */
 export class UrlbarParentController {
-  // The paired UrlbarChildController, which registers itself via setChild().
-  // Listener registration and notification dispatch live on it, keeping
-  // dispatch on the side where the listeners (the view, the event bufferer)
-  // live. The child is always set before any query runs.
+  /**
+   * The paired UrlbarChildController, which registers itself via setChild().
+   * Listener registration and notification dispatch live on it, keeping
+   * dispatch on the side where the listeners (the view, the event bufferer)
+   * live. The child is always set before any query runs.
+   *
+   * @type {UrlbarChildController}
+   */
   #child = null;
 
   // The owning JSWindowActor, used to resolve the chrome window parent-side
@@ -670,6 +674,39 @@ export class UrlbarParentController {
   }
 
   /**
+   * Returns the icon URL of the engine with the given id.
+   *
+   * @param {string} engineId
+   * @returns {Promise<?string>}
+   *   The icon URL, or null if the engine or its icon could not be found.
+   */
+  async getEngineIconURL(engineId) {
+    let engine = lazy.SearchService.getEngineById(engineId);
+    if (!engine) {
+      lazy.logger.warn(`No engine found for id ${engineId}`);
+      return null;
+    }
+    return (await engine.getIconURL()) ?? null;
+  }
+
+  /**
+   * Marks the engine with the given id as used if it's a config engine that
+   * hasn't been used already.
+   *
+   * @param {string} engineId
+   */
+  markEngineAsUsed(engineId) {
+    let engine = lazy.SearchService.getEngineById(engineId);
+    if (!engine) {
+      lazy.logger.warn(`No engine found for id ${engineId}`);
+      return;
+    }
+    if (engine instanceof lazy.ConfigSearchEngine && !engine.hasBeenUsed) {
+      engine.markAsUsed();
+    }
+  }
+
+  /**
    * Tries to initialize a speculative connection on a result.
    * Speculative connections are only supported for a subset of all the results.
    *
@@ -1036,11 +1073,14 @@ export class UrlbarParentController {
   #engineStoreInitStarted = false;
 
   /**
-   * Initializes the engine store if the search service
+   * Initializes the engine store synchronously if the search service
    * is already loaded and initialized.
    *
+   * Since this is only useful if  it can be called synchronously,
+   * it's intentionally not exposed in UrlbarParentControllerProxy.
+   *
    * @returns {boolean}
-   *   Whether the search service was initialized successfully.
+   *   Whether the engine store was initialized successfully.
    */
   maybeInitEngineStore() {
     if (
@@ -1064,22 +1104,22 @@ export class UrlbarParentController {
       try {
         await lazy.SearchService.init();
       } catch {
-        this.#child.engineStore.receive("error");
+        this.#child.updateEngineStore("error");
         return;
       }
     }
     let engines = lazy.SearchService.visibleEngines;
     let engineInfos = engines.map(engineToEngineInfo);
-    let defaultEngine = this.#child.engineStore.isPrivate
+    let defaultEngine = this.isPrivate
       ? lazy.SearchService.defaultPrivateEngine
       : lazy.SearchService.defaultEngine;
     let defaultIndex = engines.findIndex(e => e == defaultEngine);
     if (!defaultEngine || defaultIndex == -1) {
       // Something went very wrong.
-      this.#child.engineStore.receive("error");
+      this.#child.updateEngineStore("error");
       return;
     }
-    this.#child.engineStore.receive("init", engineInfos, defaultIndex);
+    this.#child.updateEngineStore("init", engineInfos, defaultIndex);
     Services.obs.addObserver(this, "browser-search-engine-modified", true);
   }
 
@@ -1110,22 +1150,22 @@ export class UrlbarParentController {
       case "engine-added":
       case "engine-changed":
         if (!engine.hidden) {
-          this.#child.engineStore.receive("changed", engineInfo, index);
+          this.#child.updateEngineStore("changed", engineInfo, index);
         } else {
-          this.#child.engineStore.receive("removed", engineInfo, index);
+          this.#child.updateEngineStore("removed", engineInfo, index);
         }
         break;
       case "engine-removed":
-        this.#child.engineStore.receive("removed", engineInfo, index);
+        this.#child.updateEngineStore("removed", engineInfo, index);
         break;
       case "engine-default":
-        if (!this.#child.engineStore.isPrivate) {
-          this.#child.engineStore.receive("default", engineInfo, index);
+        if (!this.isPrivate) {
+          this.#child.updateEngineStore("default", engineInfo, index);
         }
         break;
       case "engine-default-private":
-        if (this.#child.engineStore.isPrivate) {
-          this.#child.engineStore.receive("default", engineInfo, index);
+        if (this.isPrivate) {
+          this.#child.updateEngineStore("default", engineInfo, index);
         }
         break;
     }

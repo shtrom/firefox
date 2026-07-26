@@ -111,6 +111,13 @@ export class UrlbarChildController {
     this.engineStore = new SearchEngineStore(this);
   }
 
+  /**
+   * @type {typeof SearchEngineStore.prototype.receive}
+   */
+  updateEngineStore(...args) {
+    this.engineStore.receive(...args);
+  }
+
   get input() {
     return this.#input;
   }
@@ -784,12 +791,18 @@ export class UrlbarChildController {
     );
   }
 
+  /** @type {typeof UrlbarParentController.prototype.initEngineStore} */
   initEngineStore() {
-    this.#parentController.initEngineStore();
+    return this.#parentController.initEngineStore();
   }
 
+  /** @type {typeof UrlbarParentController.prototype.maybeInitEngineStore} */
   maybeInitEngineStore() {
-    return this.#parentController.maybeInitEngineStore();
+    if (this.#parentController.maybeInitEngineStore) {
+      return this.#parentController.maybeInitEngineStore();
+    }
+    // Synchronous initialization isn't supported in the message path.
+    return false;
   }
 
   /** @type {typeof UrlbarParentController.prototype.openSERP} */
@@ -800,5 +813,15 @@ export class UrlbarChildController {
   /** @type {typeof UrlbarParentController.prototype.openSearchForm} */
   openSearchForm(engineId, where, inBackground) {
     this.#parentController.openSearchForm(engineId, where, inBackground);
+  }
+
+  /** @type {typeof UrlbarParentController.prototype.getEngineIconURL} */
+  getEngineIconURL(engineId) {
+    return this.#parentController.getEngineIconURL(engineId);
+  }
+
+  /** @type {typeof UrlbarParentController.prototype.markEngineAsUsed} */
+  markEngineAsUsed(engineId) {
+    this.#parentController.markEngineAsUsed(engineId);
   }
 }

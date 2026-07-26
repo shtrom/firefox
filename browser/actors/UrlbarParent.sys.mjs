@@ -13,6 +13,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
 
 /**
  * @import {UrlbarParentController} from "moz-src:///browser/components/urlbar/UrlbarParentController.sys.mjs"
+ * @import {SearchEngineStore} from "chrome://browser/content/urlbar/SearchEngineStore.mjs"
  */
 
 /**
@@ -167,6 +168,14 @@ export class UrlbarParent extends JSWindowActorParent {
       case "OnSelection":
         controller.onSelection(lazy.UrlbarResult.fromWire(message.data.result));
         break;
+      case "InitEngineStore":
+        controller.initEngineStore();
+        break;
+      case "GetEngineIconURL":
+        return controller.getEngineIconURL(message.data.engineId);
+      case "MarkEngineAsUsed":
+        controller.markEngineAsUsed(message.data.engineId);
+        break;
     }
     return undefined;
   }
@@ -200,6 +209,16 @@ class UrlbarChildControllerProxy {
           ? { serializedQueryContext: param.toWire() }
           : param
       ),
+    });
+  }
+
+  /**
+   * @type {typeof SearchEngineStore.prototype.receive}
+   */
+  updateEngineStore(...args) {
+    this.#actor.sendAsyncMessage("UpdateEngineStore", {
+      instanceId: this.#instanceId,
+      args,
     });
   }
 
