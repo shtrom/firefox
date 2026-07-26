@@ -211,6 +211,23 @@ export class UrlbarParentControllerProxy {
     return wire ? lazy.UrlbarResult.fromWire(wire) : null;
   }
 
+  /**
+   * Resolves an Enter with no result available to pick parent-side, returning
+   * either a heuristic result to pick or a fixup URL to load.
+   *
+   * @param {object} details The serializable resolve parameters.
+   * @returns {Promise<object>} `{ heuristicResult }`, `{ fixup }`, or `{}`.
+   */
+  async resolveFallbackNavigation(details) {
+    let outcome = await this.#actor.sendQuery("ResolveFallbackNavigation", {
+      instanceId: this.#instanceId,
+      details,
+    });
+    return outcome.heuristicResult
+      ? { heuristicResult: lazy.UrlbarResult.fromWire(outcome.heuristicResult) }
+      : outcome;
+  }
+
   cancelQuery() {
     this.#actor.sendAsyncMessage("CancelQuery", {
       instanceId: this.#instanceId,

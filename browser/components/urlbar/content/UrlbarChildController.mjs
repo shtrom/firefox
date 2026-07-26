@@ -181,6 +181,9 @@ export class UrlbarChildController {
   getHeuristicResult(queryContext) {
     return this.#parentController.getHeuristicResult(queryContext);
   }
+  resolveFallbackNavigation(details) {
+    return this.#parentController.resolveFallbackNavigation(details);
+  }
   addListener(listener) {
     if (!listener || typeof listener != "object") {
       throw new TypeError("Expected listener to be an object");

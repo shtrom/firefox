@@ -1469,63 +1469,39 @@ ${
     // docshell wouldn't know about our engine restriction.
     // Also remember to invoke this._recordSearch, after replacing url with
     // the appropriate engine submission url.
+    //
+    // The heuristic fetch and its uriFixup fallback are parent-only, and they
+    // depend on the current browser's per-tab data and navigation epoch, which
+    // a content urlbar can't read; the parent controller owns all of it and
+    // hands back either a heuristic result to pick or a fixup URL to load.
+    // The load resolves asynchronously, so capture the target tab now, at the
+    // commit: a tab opened before it resolves must not steal the load.
     let browser = this.window.gBrowser.selectedBrowser;
-    let lastLocationChange = browser.lastLocationChange;
-
-    // Increment rate denominator measuring how often Address Bar handleCommand fallback path is hit.
-    Glean.urlbar.heuristicResultMissing.addToDenominator(1);
-
-    lazy.UrlbarUtils.getHeuristicResultFor(url, this)
-      .then(newResult => {
-        // Because this happens asynchronously, we must verify that the browser
-        // location did not change in the meanwhile.
-        if (
-          where != "current" ||
-          browser.lastLocationChange == lastLocationChange
-        ) {
-          this.pickResult(newResult, event, null, browser);
+    this.controller
+      .resolveFallbackNavigation({
+        searchString: url,
+        where,
+        searchMode: this.searchMode,
+        browserId: browser.browserId,
+      })
+      .then(({ heuristicResult, fixup }) => {
+        if (heuristicResult) {
+          this.pickResult(heuristicResult, event, null, browser);
+        } else if (fixup) {
+          openParams.postData = fixup.postData;
+          if (!fixup.keywordAsSent) {
+            // `fixup.url` is not a search engine url, so we annotate if the
+            // untrimmed value contained a scheme, to potentially be later
+            // upgraded by schemeless HTTPS-First.
+            openParams.schemelessInput = this.#getSchemelessInput(
+              this.untrimmedValue
+            );
+          }
+          this._loadURL(fixup.url, event, where, openParams, null, browser);
         }
       })
-      .catch(() => {
-        if (url) {
-          // Something went wrong, we should always have a heuristic result,
-          // otherwise it means we're not able to search at all, maybe because
-          // some parts of the profile are corrupt.
-          // The urlbar should still allow to search or visit the typed string,
-          // so that the user can look for help to resolve the problem.
-
-          // Increment rate numerator measuring how often Address Bar handleCommand fallback path is hit.
-          Glean.urlbar.heuristicResultMissing.addToNumerator(1);
-
-          let flags =
-            Ci.nsIURIFixup.FIXUP_FLAG_FIX_SCHEME_TYPOS |
-            Ci.nsIURIFixup.FIXUP_FLAG_ALLOW_KEYWORD_LOOKUP;
-          if (this.isPrivate) {
-            flags |= Ci.nsIURIFixup.FIXUP_FLAG_PRIVATE_CONTEXT;
-          }
-          let {
-            preferredURI: uri,
-            postData,
-            keywordAsSent,
-          } = Services.uriFixup.getFixupURIInfo(url, flags);
-          if (
-            where != "current" ||
-            browser.lastLocationChange == lastLocationChange
-          ) {
-            openParams.postData = postData;
-            if (!keywordAsSent) {
-              // `uri` is not a search engine url, so we annotate if the untrimmed
-              // value contained a scheme, to potentially be later upgraded by
-              // schemeless HTTPS-First.
-              openParams.schemelessInput = this.#getSchemelessInput(
-                this.untrimmedValue
-              );
-            }
-            this._loadURL(uri.spec, event, where, openParams, null, browser);
-          }
-        }
-      });
-    // Don't add further handling here, the catch above is our last resort.
+      .catch(console.error);
+    // resolveFallbackNavigation is the last resort; nothing more to handle here.
   }
 
   handleRevert() {

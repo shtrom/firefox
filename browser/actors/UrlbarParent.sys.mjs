@@ -82,6 +82,14 @@ export class UrlbarParent extends JSWindowActorParent {
             lazy.UrlbarQueryContext.fromWire(message.data.queryContext)
           )
           .then(result => result?.toWire() ?? null);
+      case "ResolveFallbackNavigation":
+        return controller
+          .resolveFallbackNavigation(message.data.details)
+          .then(outcome =>
+            outcome.heuristicResult
+              ? { heuristicResult: outcome.heuristicResult.toWire() }
+              : outcome
+          );
       case "RecordEngagement":
         controller.recordEngagement(message.data.wire);
         break;
