@@ -37,6 +37,10 @@ class nsITransfer;
 class nsIPrincipal;
 class MaybeCloseWindowHelper;
 
+namespace mozilla::dom {
+class WindowContext;
+}  // namespace mozilla::dom
+
 #define EXTERNAL_APP_HANDLER_IID \
   {0x50eb7479, 0x71ff, 0x4ef8, {0xb3, 0x1e, 0x3b, 0x59, 0xc8, 0xab, 0xb9, 0x24}}
 /**
@@ -134,6 +138,29 @@ class nsExternalHelperAppService : public nsIExternalHelperAppService,
   static bool ExternalProtocolIsBlockedBySandbox(
       mozilla::dom::BrowsingContext* aBrowsingContext,
       const bool aHasValidUserGestureActivation);
+
+  /**
+   * Whether navigating to `aScheme` requires transient user activation to be
+   * launched without first showing the external protocol prompt. This is true
+   * when the `network.protocol-handler.prompt-without-user-activation` pref is
+   * enabled and the scheme would otherwise take the silent-launch shortcut
+   * (i.e. `network.protocol-handler.external.<scheme>` is set). Currently this
+   * is only mailto. See bug 299116.
+   */
+  static bool SchemeRequiresUserActivationToLaunch(const nsACString& aScheme);
+
+  /**
+   * Consume the transient user gesture activation on `aWindowContext` when
+   * navigating to `aScheme` is gated by
+   * SchemeRequiresUserActivationToLaunch(). This ensures a single user gesture
+   * can launch at most one such external protocol (the silent-launch shortcut),
+   * preventing one gesture from chaining multiple launches. Must be called in
+   * the content process that hosts `aWindowContext`. A no-op for non-gated
+   * schemes, a null window context, or when there is no activation to consume.
+   * See bug 299116.
+   */
+  static void MaybeConsumeUserActivationForExternalScheme(
+      mozilla::dom::WindowContext* aWindowContext, const nsACString& aScheme);
 
   /**
    * Logging Module. Usage: set MOZ_LOG=HelperAppService:level, where level
