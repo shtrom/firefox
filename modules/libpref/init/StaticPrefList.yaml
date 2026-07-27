@@ -18861,11 +18861,7 @@
 # 2: Enforce CT.
 - name: security.pki.certificate_transparency.mode
   type: RelaxedAtomicUint32
-#if defined(ANDROID) && !defined(EARLY_BETA_OR_EARLIER)
-  value: 0
-#else
   value: 2
-#endif
   mirror: always
 
 # A comma-separated list of host names to not enforce certificate transparency
