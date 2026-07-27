@@ -266,7 +266,11 @@ pref("browser.uitour.surveyDuration", 7200);
 sticky_pref("browser.uidensity", 0);
 // Whether Firefox will automatically override the uidensity to "touch"
 // while the user is in a touch environment (such as Windows tablet mode).
-pref("browser.touchmode.auto", true);
+// The effective default is derived at startup from browser.nova.enabled (see
+// CustomizableUI._setAutoTouchModeDefault). Sticky so that an explicit user
+// value is preserved even when it matches the default in effect before that
+// runtime code runs.
+sticky_pref("browser.touchmode.auto", false);
 // Threshold (under nova) at which the uidensity is automatically overridden
 // to "compact" in small windows, expressed as a ratio of chrome size to
 // window inner size. The trigger fires when either:
