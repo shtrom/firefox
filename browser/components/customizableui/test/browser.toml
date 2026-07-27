@@ -473,8 +473,6 @@ skip-if = [
   "nova", # Bug 2058125
 ]
 
-["browser_uidensity_auto_touch.js"]
-
 ["browser_unified_extensions_reset.js"]
 
 ["browser_vertical_tabs_customize_navbar.js"]

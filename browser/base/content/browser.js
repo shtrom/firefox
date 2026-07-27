@@ -3376,31 +3376,13 @@ var gUIDensity = {
     return Boolean(state && state.launcherVisible && !state.launcherExpanded);
   },
 
-  // Whether the device is currently in a tablet mode that should influence the
-  // UI density. Only Windows (Win10 or Win11) exposes such a signal.
-  _inTabletMode() {
-    if (AppConstants.platform != "win") {
-      return false;
-    }
-    return WindowsUIUtils.inWin10TabletMode || WindowsUIUtils.inWin11TabletMode;
-  },
-
   getCurrentDensity() {
-    // Automatically override the uidensity to touch in tablet mode. This
-    // happens when the density is automatic (the nova "Automatic" option, i.e.
-    // no explicit uidensity value) regardless of the browser.touchmode.auto
-    // pref, or when browser.touchmode.auto is set and the configured density is
-    // normal. The pref is the standard density's "use touch spacing for tablet
-    // mode" checkbox, so it must not override an explicit compact or touch
-    // choice.
-    if (this._inTabletMode()) {
-      const isAutomatic =
-        this.novaEnabled &&
-        !Services.prefs.prefHasUserValue(this.uiDensityPref);
-      const normalWithAutoTouch =
-        Services.prefs.getIntPref(this.uiDensityPref) == this.MODE_NORMAL &&
-        Services.prefs.getBoolPref(this.autoTouchModePref);
-      if (isAutomatic || normalWithAutoTouch) {
+    // Automatically override the uidensity to touch in Windows tablet mode
+    // (either Win10 or Win11).
+    if (AppConstants.platform == "win") {
+      const inTablet =
+        WindowsUIUtils.inWin10TabletMode || WindowsUIUtils.inWin11TabletMode;
+      if (inTablet && Services.prefs.getBoolPref(this.autoTouchModePref)) {
         return { mode: this.MODE_TOUCH, overridden: true };
       }
     }
@@ -3417,6 +3399,26 @@ var gUIDensity = {
       mode: Services.prefs.getIntPref(this.uiDensityPref),
       overridden: false,
     };
+  },
+
+  /**
+   * Sets the configured UI density to an explicit mode. If the density is
+   * currently overridden (e.g. forced to touch by tablet mode via the
+   * auto-touch-mode pref), the override is cleared so the explicit choice
+   * takes effect.
+   *
+   * @param {number} mode
+   *   One of the density mode constants - MODE_NORMAL, MODE_COMPACT or
+   *   MODE_TOUCH.
+   */
+  setUIDensity(mode) {
+    let overridden = this.getCurrentDensity().overridden;
+    Services.prefs.setIntPref(this.uiDensityPref, mode);
+    // If the user is choosing a UI density mode while the mode is overridden,
+    // remove the override so their explicit choice isn't ignored.
+    if (overridden) {
+      Services.prefs.setBoolPref(this.autoTouchModePref, false);
+    }
   },
 
   update(mode) {

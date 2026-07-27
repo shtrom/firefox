@@ -154,14 +154,11 @@ Preferences.addSetting({
 
 // The "Use touch spacing" checkbox nested under the Standard option, controlling
 // whether the browser automatically switches to the touch density in tablet
-// mode. Only shown while the Standard option is selected, and only where touch
-// density can be applied automatically (see isAutoTouchModeAvailable).
+// mode.
 Preferences.addSetting({
   id: "uiDensityAutoTouchMode",
   pref: "browser.touchmode.auto",
-  deps: ["uiDensity"],
-  visible: ({ uiDensity }) =>
-    isAutoTouchModeAvailable() && uiDensity.value === "standard",
+  visible: () => isAutoTouchModeAvailable(),
 });
 
 Preferences.addSetting({
@@ -192,18 +189,21 @@ Preferences.addSetting({
   set(val, { uiDensityPref }) {
     let { id } = uiDensityPref.pref;
     let gUIDensity = getUIDensity();
+    // For an explicit choice, go through gUIDensity.setUIDensity so that any
+    // active density override (e.g. touch forced by tablet mode) is cleared,
+    // matching the Customize panel.
     switch (val) {
       case "auto":
         Services.prefs.clearUserPref(id);
         break;
       case "compact":
-        Services.prefs.setIntPref(id, gUIDensity.MODE_COMPACT);
+        gUIDensity.setUIDensity(gUIDensity.MODE_COMPACT);
         break;
       case "touch":
-        Services.prefs.setIntPref(id, gUIDensity.MODE_TOUCH);
+        gUIDensity.setUIDensity(gUIDensity.MODE_TOUCH);
         break;
       default:
-        Services.prefs.setIntPref(id, gUIDensity.MODE_NORMAL);
+        gUIDensity.setUIDensity(gUIDensity.MODE_NORMAL);
         break;
     }
   },
