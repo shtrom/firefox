@@ -16,7 +16,7 @@ class Speedometer3Support(BasePythonSupport):
     def setup_test(self, test, args):
         super().setup_test(test, args)
 
-        if args.extra_prefs.get("browser.nova.enabled", False):
+        if args.extra_prefs.get("browser.nova.enabled", True):
             self.nova = True
 
         if args.etw_profile:
