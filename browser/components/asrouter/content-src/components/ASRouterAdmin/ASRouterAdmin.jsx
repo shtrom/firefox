@@ -491,24 +491,10 @@ export class ASRouterAdminInner extends React.PureComponent {
       : 0;
     const isCollapsed = this.state.collapsedMessages.includes(messageIndex);
     const isModified = this.state.modifiedMessages.includes(messageIndex);
-    const previewWarnings = [];
-    if (this.messageRequiresAnchor(msg)) {
-      previewWarnings.push(
-        "This message may not render as it anchors to a browser UI element that may not be " +
-          "currently visible."
-      );
-    }
-    if (msg.template === "toast_notification") {
-      previewWarnings.push(
-        "Toast notifications are shown and limited to native Windows OS notifications via the system alerts service. "
-      );
-    }
-    if (msg.template === "menu_message") {
-      previewWarnings.push(
-        'To preview this message, add "testingTriggerContext" to the JSON set to either ' +
-          '"app_menu" or "pxi_menu" to select which menu it renders in.'
-      );
-    }
+    const requiresAnchor = this.messageRequiresAnchor(msg);
+    const anchorWarning =
+      "This message may not render as it anchors to a browser UI element that may not be " +
+      "currently visible.";
     const aboutMessagePreviewSupported = [
       "infobar",
       "spotlight",
@@ -548,15 +534,14 @@ export class ASRouterAdminInner extends React.PureComponent {
           toggleJSON={this.toggleJSON}
           isCollapsed={isCollapsed}
         >
-          {previewWarnings.map(warning => (
+          {requiresAnchor ? (
             <span
-              key={warning}
               className="icon icon-warning preview-warning"
               role="img"
-              aria-label={warning}
-              title={warning}
+              aria-label={anchorWarning}
+              title={anchorWarning}
             />
-          ))}
+          ) : null}
           <span className="message-id monospace">{msg.id}</span>{" "}
           <span className="message-stats small-text">{messageStatsString}</span>
         </ToggleMessageJSON>
