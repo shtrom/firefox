@@ -2176,11 +2176,7 @@ pref("browser.aboutwelcome.experimentsGate.minDisplayMs", 3000);
 pref("browser.aboutwelcome.experimentsGate.maxDisplayMs", 8000);
 
 // Global Nova enabled pref
-#ifdef NIGHTLY_BUILD
-  pref("browser.nova.enabled", true);
-#else 
-  pref("browser.nova.enabled", false);
-#endif
+pref("browser.nova.enabled", false);
 
 // Disable singleProfile messaging mitigation (Bug 1963213) for multiProfile feature users
 pref("messaging-system.profile.singleProfileMessaging.disable", true);
