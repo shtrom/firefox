@@ -379,6 +379,9 @@ tags = "fullscreen"
 ["browser_panelUINotifications_novaUpdateBanner.js"]
 
 ["browser_panel_keyboard_navigation.js"]
+skip-if = [
+  "nova", # Bug 2058027
+]
 
 ["browser_panel_locationSpecific.js"]
 
