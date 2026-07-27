@@ -13,17 +13,6 @@ const TEST_PATH = getRootDirectory(gTestPath).replace(
 const CONTENT_HANDLING_URL =
   "chrome://mozapps/content/handling/appChooser.xhtml";
 
-const PERMISSION_DIALOG_URL =
-  "chrome://mozapps/content/handling/permissionDialog.xhtml";
-
-// Some tests below drive the mailto navigation via scripted frame.src /
-// location.href / window.open, which lack user activation. Under bug 299116
-// mailto then shows the permission dialog instead of the app chooser. These
-// tests only assert dialog *placement*, so accept whichever dialog opens.
-function isProtocolDialog(url) {
-  return url == CONTENT_HANDLING_URL || url == PERMISSION_DIALOG_URL;
-}
-
 add_setup(async function () {
   await SpecialPowers.pushPrefEnv({
     set: [["test.wait300msAfterTabSwitch", true]],
@@ -238,7 +227,10 @@ add_task(async function invisible_iframes() {
   );
 
   // Ensure we notice the dialog opening:
-  let dialogWindowPromise = waitForProtocolDialog(tab.linkedBrowser, true);
+  let dialogWindowPromise = waitForProtocolAppChooserDialog(
+    tab.linkedBrowser,
+    true
+  );
   await SpecialPowers.spawn(tab.linkedBrowser, [], function () {
     let frame = content.document.createElement("iframe");
     frame.style.display = "none";
@@ -247,12 +239,16 @@ add_task(async function invisible_iframes() {
   });
   let dialog = await dialogWindowPromise;
 
-  ok(
-    isProtocolDialog(dialog._frame.contentDocument.location.href),
+  is(
+    dialog._frame.contentDocument.location.href,
+    CONTENT_HANDLING_URL,
     "Dialog opens as expected for invisible iframe"
   );
   // Close the dialog:
-  let dialogClosedPromise = waitForProtocolDialog(tab.linkedBrowser, false);
+  let dialogClosedPromise = waitForProtocolAppChooserDialog(
+    tab.linkedBrowser,
+    false
+  );
   dialog.close();
   await dialogClosedPromise;
   gBrowser.removeTab(tab);
@@ -268,7 +264,10 @@ add_task(async function nested_iframes() {
   );
 
   // Ensure we notice the dialog opening:
-  let dialogWindowPromise = waitForProtocolDialog(tab.linkedBrowser, true);
+  let dialogWindowPromise = waitForProtocolAppChooserDialog(
+    tab.linkedBrowser,
+    true
+  );
   let innerLoaded = BrowserTestUtils.browserLoaded(
     tab.linkedBrowser,
     true,
@@ -308,12 +307,16 @@ add_task(async function nested_iframes() {
 
   let dialog = await dialogWindowPromise;
 
-  ok(
-    isProtocolDialog(dialog._frame.contentDocument.location.href),
+  is(
+    dialog._frame.contentDocument.location.href,
+    CONTENT_HANDLING_URL,
     "Dialog opens as expected for deeply nested cross-origin iframe"
   );
   // Close the dialog:
-  let dialogClosedPromise = waitForProtocolDialog(tab.linkedBrowser, false);
+  let dialogClosedPromise = waitForProtocolAppChooserDialog(
+    tab.linkedBrowser,
+    false
+  );
   dialog.close();
   await dialogClosedPromise;
   gBrowser.removeTab(tab);
@@ -383,9 +386,10 @@ add_task(async function iframe_background_tab() {
     "https://example.net/"
   );
 
-  // Wait for the dialog to open in the background tab. It should not open in
-  // the foreground tab which is unrelated to the external protocol navigation.
-  let dialogWindowPromise = waitForProtocolDialog(gBrowser, true);
+  // Wait for the chooser dialog to open in the background tab. It should not
+  // open in the foreground tab which is unrelated to the external protocol
+  // navigation.
+  let dialogWindowPromise = waitForProtocolAppChooserDialog(gBrowser, true);
 
   info("Navigating to external proto from frame in background tab");
   let parentBC = tab.linkedBrowser.browsingContext;
@@ -402,13 +406,14 @@ add_task(async function iframe_background_tab() {
     "Dialog opened in the background tab"
   );
 
-  ok(
-    isProtocolDialog(dialog._frame.contentDocument.location.href),
-    "Opened dialog is a protocol dialog."
+  is(
+    dialog._frame.contentDocument.location.href,
+    CONTENT_HANDLING_URL,
+    "Opened dialog is appChooser dialog."
   );
 
   // Close the dialog:
-  let dialogClosedPromise = waitForProtocolDialog(gBrowser, false);
+  let dialogClosedPromise = waitForProtocolAppChooserDialog(gBrowser, false);
   dialog.close();
   await dialogClosedPromise;
 
@@ -426,9 +431,10 @@ add_task(async function iframe_popup_tab() {
     "https://example.com/"
   );
 
-  // Wait for the dialog to open in the background tab. It should not open in
-  // the foreground tab which is unrelated to the external protocol navigation.
-  let dialogWindowPromise = waitForProtocolDialog(gBrowser, true);
+  // Wait for the chooser dialog to open in the background tab. It should not
+  // open in the foreground tab which is unrelated to the external protocol
+  // navigation.
+  let dialogWindowPromise = waitForProtocolAppChooserDialog(gBrowser, true);
 
   // Wait for the new tab to appear. The URI in this tab will never change from
   // `about:blank` as we're going to just end up opening a dialog, so we can't
@@ -463,13 +469,14 @@ add_task(async function iframe_popup_tab() {
     "Dialog opened in the background tab"
   );
 
-  ok(
-    isProtocolDialog(dialog._frame.contentDocument.location.href),
-    "Opened dialog is a protocol dialog."
+  is(
+    dialog._frame.contentDocument.location.href,
+    CONTENT_HANDLING_URL,
+    "Opened dialog is appChooser dialog."
   );
 
   // Close the dialog:
-  let dialogClosedPromise = waitForProtocolDialog(gBrowser, false);
+  let dialogClosedPromise = waitForProtocolAppChooserDialog(gBrowser, false);
   dialog.close();
   await dialogClosedPromise;
 
@@ -487,9 +494,10 @@ add_task(async function redirect_popup_tab() {
     "https://example.com/"
   );
 
-  // Wait for the dialog to open in the background tab. It should not open in
-  // the foreground tab which is unrelated to the external protocol navigation.
-  let dialogWindowPromise = waitForProtocolDialog(gBrowser, true);
+  // Wait for the chooser dialog to open in the background tab. It should not
+  // open in the foreground tab which is unrelated to the external protocol
+  // navigation.
+  let dialogWindowPromise = waitForProtocolAppChooserDialog(gBrowser, true);
 
   // Wait for the new tab to appear. The URI in this tab will never change from
   // `about:blank` as we're going to just end up opening a dialog, so we can't
@@ -526,13 +534,14 @@ add_task(async function redirect_popup_tab() {
     "Dialog opened in the background tab"
   );
 
-  ok(
-    isProtocolDialog(dialog._frame.contentDocument.location.href),
-    "Opened dialog is a protocol dialog."
+  is(
+    dialog._frame.contentDocument.location.href,
+    CONTENT_HANDLING_URL,
+    "Opened dialog is appChooser dialog."
   );
 
   // Close the dialog:
-  let dialogClosedPromise = waitForProtocolDialog(gBrowser, false);
+  let dialogClosedPromise = waitForProtocolAppChooserDialog(gBrowser, false);
   dialog.close();
   await dialogClosedPromise;
 

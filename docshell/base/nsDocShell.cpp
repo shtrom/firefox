@@ -124,7 +124,6 @@
 #include "nsIDOMWindow.h"
 #include "nsIEditingSession.h"
 #include "nsIEffectiveTLDService.h"
-#include "nsExternalHelperAppService.h"
 #include "nsIExternalProtocolService.h"
 #include "nsIFormPOSTActionChannel.h"
 #include "nsIFrame.h"
@@ -12250,19 +12249,6 @@ nsresult nsDocShell::OnLinkClick(
   const bool hasValidUserGestureActivation =
       ownerDoc->HasValidTransientUserGestureActivation();
   loadState->SetHasValidUserGestureActivation(hasValidUserGestureActivation);
-
-  // For protocols that would launch without a prompt (e.g. mailto), consume the
-  // transient user gesture activation so a single gesture can't chain multiple
-  // launches. Do this here, at the same point the activation value is captured
-  // on the load state, rather than later in OnLinkClickSync: that runs
-  // asynchronously, and consuming there would be inconsistent with the scripted
-  // navigation path (see BrowsingContext::LoadURI). The pre-consume value is
-  // already recorded on the load state above. See bug 299116.
-  if (nsAutoCString scheme; NS_SUCCEEDED(aURI->GetScheme(scheme))) {
-    nsExternalHelperAppService::MaybeConsumeUserActivationForExternalScheme(
-        ownerDoc->GetWindowContext(), scheme);
-  }
-
   loadState->SetTextDirectiveUserActivation(
       ownerDoc->ConsumeTextDirectiveUserActivation() ||
       hasValidUserGestureActivation);
@@ -12376,19 +12362,13 @@ nsresult nsDocShell::OnLinkClickSync(nsIContent* aContent,
         nsresult rv =
             extProtService->IsExposedProtocol(scheme.get(), &isExposed);
         if (NS_SUCCEEDED(rv) && !isExposed) {
-          // Use the activation captured on the load state at click/submit time
-          // (OnLinkClick, HTMLFormElement::SubmitSubmission), rather than
-          // re-reading from the document here: this runs asynchronously, by
-          // which point the transient activation may have expired. Consumption
-          // of the activation (for gated schemes like mailto) also happens at
-          // that capture point. See bug 299116.
-          bool hasValidUserGestureActivation =
-              aLoadState->HasValidUserGestureActivation();
-          return extProtService->LoadURI(aLoadState->URI(), triggeringPrincipal,
-                                         nullptr, mBrowsingContext,
-                                         /* aTriggeredExternally */
-                                         false, hasValidUserGestureActivation,
-                                         /* aNewWindowTarget */ false);
+          return extProtService->LoadURI(
+              aLoadState->URI(), triggeringPrincipal, nullptr, mBrowsingContext,
+              /* aTriggeredExternally */
+              false,
+              /* aHasValidUserGestureActivation */
+              aContent->OwnerDoc()->HasValidTransientUserGestureActivation(),
+              /* aNewWindowTarget */ false);
         }
       }
     }

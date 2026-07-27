@@ -21,10 +21,7 @@ add_task(async function test_open_without_user_interaction() {
 
   let tab = await BrowserTestUtils.openNewForegroundTab(gBrowser);
 
-  // Without user activation, mailto no longer takes the silent-launch shortcut
-  // and instead falls back to the external protocol permission dialog. See
-  // bug 299116.
-  let dialogWindowPromise = waitForProtocolPermissionDialog(
+  let dialogWindowPromise = waitForProtocolAppChooserDialog(
     tab.linkedBrowser,
     true
   );
@@ -37,7 +34,7 @@ add_task(async function test_open_without_user_interaction() {
   let dialog = await dialogWindowPromise;
   ok(dialog, "Should show the dialog even without user interaction");
 
-  let dialogClosedPromise = waitForProtocolPermissionDialog(
+  let dialogClosedPromise = waitForProtocolAppChooserDialog(
     tab.linkedBrowser,
     false
   );

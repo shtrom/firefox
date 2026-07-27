@@ -30,12 +30,6 @@ XPCOMUtils.defineLazyPreferenceGetter(
   "network.protocol-handler.prompt-from-external",
   true
 );
-XPCOMUtils.defineLazyPreferenceGetter(
-  gPrefs,
-  "promptWithoutUserActivation",
-  "network.protocol-handler.prompt-without-user-activation",
-  true
-);
 
 const PROTOCOL_HANDLER_OPEN_PERM_KEY = "open-protocol-handler";
 const PERMISSION_KEY_DELIMITER = "^";
@@ -54,16 +48,13 @@ export class nsContentDispatchChooser {
    * @param {BrowsingContext} [aBrowsingContext] - Context of the load.
    * @param {bool} [aTriggeredExternally] - Whether the load came from outside
    * this application.
-   * @param {bool} [aHasValidUserGestureActivation] - Whether the navigation
-   * that triggered this load had transient user gesture activation.
    */
   async handleURI(
     aHandler,
     aURI,
     aPrincipal,
     aBrowsingContext,
-    aTriggeredExternally = false,
-    aHasValidUserGestureActivation = false
+    aTriggeredExternally = false
   ) {
     const isStandardProtocol = E10SUtils.STANDARD_SAFE_PROTOCOLS.includes(
       aURI.scheme
@@ -72,8 +63,7 @@ export class nsContentDispatchChooser {
       aHandler,
       aPrincipal,
       aTriggeredExternally,
-      isStandardProtocol,
-      aHasValidUserGestureActivation
+      isStandardProtocol
     );
 
     // Force showing the dialog for links passed from outside the application.
@@ -452,28 +442,17 @@ export class nsContentDispatchChooser {
    * Test if a given principal has the open-protocol-handler permission for a
    * specific protocol.
    *
-   * @param {nsIHandlerInfo} aHandler - Info about protocol and handlers.
+   * @param {string} scheme - Scheme of the protocol.
    * @param {nsIPrincipal} aPrincipal - Principal to test for permission.
-   * @param {boolean} aTriggeredExternally - Whether the load came from outside
-   * this application.
-   * @param {boolean} isStandardProtocol - Whether the scheme is a standard safe
-   * protocol.
-   * @param {boolean} aHasValidUserGestureActivation - Whether the triggering
-   * navigation had transient user gesture activation.
    * @returns {boolean} - true if permission is set, false otherwise.
    */
   _hasProtocolHandlerPermission(
     aHandler,
     aPrincipal,
     aTriggeredExternally,
-    isStandardProtocol,
-    aHasValidUserGestureActivation
+    isStandardProtocol
   ) {
-    // If a handler is set to open externally by default we skip the dialog,
-    // but only when the navigation had user activation. Without activation we
-    // fall through to the prompt, so that scripted navigations (e.g.
-    // window.location = "mailto:...") can't silently launch the handler. See
-    // bug 299116.
+    // If a handler is set to open externally by default we skip the dialog.
     const { type, hasDefaultHandler, preferredApplicationHandler } = aHandler;
 
     if (
@@ -482,13 +461,7 @@ export class nsContentDispatchChooser {
         false
       )
     ) {
-      if (
-        !gPrefs.promptWithoutUserActivation ||
-        aHasValidUserGestureActivation ||
-        aTriggeredExternally
-      ) {
-        return true;
-      }
+      return true;
     }
 
     if (
