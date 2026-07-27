@@ -88,7 +88,7 @@ async function backspaces(
   // The input handler fires recordAutofillBackspace() without awaiting it.
   // Wait for the most recent invocation's DB write to settle so callers can
   // read block state without racing.
-  await UrlbarUtils._lastRecordAutofillBackspacePromise;
+  await UrlbarShared._lastRecordAutofillBackspacePromise;
 }
 
 async function adaptiveAutofillSetup() {

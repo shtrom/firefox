@@ -20,7 +20,6 @@ ChromeUtils.defineESModuleGetters(lazy, {
   OpenSearchManager:
     "moz-src:///browser/components/search/OpenSearchManager.sys.mjs",
   SearchUIUtils: "moz-src:///browser/components/search/SearchUIUtils.sys.mjs",
-  UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
 });
 
 ChromeUtils.defineLazyGetter(lazy, "SearchModeSwitcherL10n", () => {
@@ -729,7 +728,7 @@ export class SearchModeSwitcher {
    * @returns {Promise<PanelItem>}
    */
   async #buildLocalSearchButton(mode) {
-    let sourceName = lazy.UrlbarUtils.getResultSourceName(mode.source);
+    let sourceName = UrlbarShared.getResultSourceName(mode.source);
     let { icon } = await this.#getDisplayedEngineDetails(mode);
     let menuitem = this.#createButton(icon);
     menuitem.classList.add(

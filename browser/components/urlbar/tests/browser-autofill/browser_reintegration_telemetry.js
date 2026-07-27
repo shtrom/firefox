@@ -53,7 +53,7 @@ async function backspaces(n, input) {
     });
     EventUtils.synthesizeKey("KEY_Backspace");
   }
-  await UrlbarUtils._lastRecordAutofillBackspacePromise;
+  await UrlbarShared._lastRecordAutofillBackspacePromise;
 }
 
 async function pickHistoryResult(url) {

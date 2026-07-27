@@ -129,6 +129,7 @@ export class UrlbarChildController {
   get view() {
     return this.#view;
   }
+
   /**
    * The paired parent controller -- the real `UrlbarParentController` on the
    * direct path, or the `UrlbarParentControllerProxy` on the message path.
