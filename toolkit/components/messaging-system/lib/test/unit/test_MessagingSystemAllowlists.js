@@ -46,8 +46,10 @@ add_task(async function test_loads_records() {
     makeFakeClient([
       { id: "a", list: "actionOnly", value: "FOO_ACTION" },
       { id: "b", list: "actionOnly", value: "BAR_ACTION" },
+      { id: "c", list: "setPref", value: "foo.pref" },
       { id: "d", list: "unknown", value: "ignored" },
       { id: "e", list: "actionOnly", value: 123 },
+      { id: "f", list: "setPref", value: 123 },
     ])
   );
 
@@ -58,6 +60,11 @@ add_task(async function test_loads_records() {
     ["BAR_ACTION", "FOO_ACTION"],
     "actionOnly records are collected while unknown list and non-string values are ignored"
   );
+  Assert.deepEqual(
+    MessagingSystemAllowlists.getAllowedPrefs(),
+    ["foo.pref"],
+    "setPref records are collected while non-string values are ignored"
+  );
 });
 
 add_task(async function test_empty_collection_results_in_empty_lists() {
@@ -66,6 +73,7 @@ add_task(async function test_empty_collection_results_in_empty_lists() {
   await MessagingSystemAllowlists.ensureInit();
 
   Assert.deepEqual(MessagingSystemAllowlists.getActionOnlyActions(), []);
+  Assert.deepEqual(MessagingSystemAllowlists.getAllowedPrefs(), []);
 });
 
 add_task(async function test_get_error_results_in_empty_lists() {
@@ -80,6 +88,7 @@ add_task(async function test_get_error_results_in_empty_lists() {
   await MessagingSystemAllowlists.ensureInit();
 
   Assert.deepEqual(MessagingSystemAllowlists.getActionOnlyActions(), []);
+  Assert.deepEqual(MessagingSystemAllowlists.getAllowedPrefs(), []);
 });
 
 add_task(async function test_sync_updates_cache() {
@@ -88,12 +97,17 @@ add_task(async function test_sync_updates_cache() {
 
   await MessagingSystemAllowlists.ensureInit();
   Assert.deepEqual(MessagingSystemAllowlists.getActionOnlyActions(), []);
+  Assert.deepEqual(MessagingSystemAllowlists.getAllowedPrefs(), []);
 
-  client.fireSync([{ id: "a", list: "actionOnly", value: "FOO_ACTION" }]);
+  client.fireSync([
+    { id: "a", list: "actionOnly", value: "FOO_ACTION" },
+    { id: "b", list: "setPref", value: "foo.pref" },
+  ]);
 
   Assert.deepEqual(MessagingSystemAllowlists.getActionOnlyActions(), [
     "FOO_ACTION",
   ]);
+  Assert.deepEqual(MessagingSystemAllowlists.getAllowedPrefs(), ["foo.pref"]);
 });
 
 add_task(async function test_ensure_init_is_idempotent() {

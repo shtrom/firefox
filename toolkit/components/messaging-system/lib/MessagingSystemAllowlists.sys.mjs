@@ -11,6 +11,7 @@
  * Records in the `ms-action-allowlists` collection are discriminated by a
  * `list` field:
  *   { id, list: "actionOnly", value: "<SpecialMessageAction type>" }
+ *   { id, list: "setPref", value: "<pref name>" }
  */
 
 const lazy = {};
@@ -20,23 +21,28 @@ ChromeUtils.defineESModuleGetters(lazy, {
 });
 
 const COLLECTION_ID = "ms-action-allowlists";
-// Cache of Remote Settings supplied entries, keyed by the record's `list`
+// Caches of Remote Settings supplied entries, keyed by the record's `list`
 // discriminator. Empty until the first successful load.
 let gActionOnly = new Set();
+let gSetPref = new Set();
 let gClient = null;
 let gInitPromise = null;
 
 function update(records) {
   const actionOnly = new Set();
+  const setPref = new Set();
   for (const record of records ?? []) {
     if (typeof record?.value !== "string") {
       continue;
     }
     if (record.list === "actionOnly") {
       actionOnly.add(record.value);
+    } else if (record.list === "setPref") {
+      setPref.add(record.value);
     }
   }
   gActionOnly = actionOnly;
+  gSetPref = setPref;
 }
 
 function onSync({ data: { current } }) {
@@ -85,9 +91,20 @@ export const MessagingSystemAllowlists = {
     return [...gActionOnly];
   },
 
+  /**
+   * Remote Settings supplied pref names allowed for the SET_PREF special
+   * message action.
+   *
+   * @returns {string[]}
+   */
+  getAllowedPrefs() {
+    return [...gSetPref];
+  },
+
   // TEST-ONLY: seed the cache directly without Remote Settings.
-  _setForTest({ actionOnly = [] } = {}) {
+  _setForTest({ actionOnly = [], setPref = [] } = {}) {
     gActionOnly = new Set(actionOnly);
+    gSetPref = new Set(setPref);
   },
 
   // TEST-ONLY: reset all cached state and the Remote Settings client.
@@ -96,6 +113,7 @@ export const MessagingSystemAllowlists = {
       gClient.off("sync", onSync);
     }
     gActionOnly = new Set();
+    gSetPref = new Set();
     gClient = null;
     gInitPromise = null;
   },
