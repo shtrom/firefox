@@ -1770,6 +1770,7 @@
         Services.prefs.removeObserver("privacy.userContext", this.boundObserve);
       }
       CustomizableUI.removeListener(this);
+      this.previewPanel?.forceReset();
     }
 
     updateTabSoundLabel(tab) {

@@ -31,12 +31,14 @@ const TAB_PREVIEW_PANEL_ID = "tab-preview-panel";
 const TAB_GROUP_PREVIEW_PANEL_ID = "tabgroup-preview-panel";
 
 async function openTabPreview(tab, win = window) {
-  const previewShown = BrowserTestUtils.waitForPopupEvent(
-    win.document.getElementById(TAB_PREVIEW_PANEL_ID),
-    "shown"
+  const panel = win.document.getElementById(TAB_PREVIEW_PANEL_ID);
+  const previewShown = BrowserTestUtils.waitForPopupEvent(panel, "shown");
+  const previewUpdated = BrowserTestUtils.waitForEvent(
+    panel,
+    "TabPreviewUpdated"
   );
   EventUtils.synthesizeMouse(tab, 1, 1, { type: "mouseover" }, win);
-  return previewShown;
+  await Promise.all([previewShown, previewUpdated]);
 }
 
 async function closeTabPreviews(win = window) {
@@ -68,12 +70,16 @@ async function openGroupPreview(group, win = window) {
     previewElement,
     "shown"
   );
+  const previewUpdated = BrowserTestUtils.waitForEvent(
+    previewElement,
+    "TabGroupPreviewUpdated"
+  );
   EventUtils.synthesizeMouseAtCenter(
     group.labelElement,
     { type: "mouseover" },
     win
   );
-  return previewShown;
+  await Promise.all([previewShown, previewUpdated]);
 }
 
 async function closeGroupPreviews(win = window) {
@@ -150,6 +156,8 @@ async function resetState() {
   EventUtils.synthesizeMouseAtCenter(document.documentElement, {
     type: "mouseover",
   });
+
+  gBrowser.tabContainer.previewPanel?.forceReset();
 
   for (let panel of getOpenPanels()) {
     let hiddenEvent = BrowserTestUtils.waitForPopupEvent(panel, "hidden");
@@ -429,7 +437,7 @@ add_task(async function tabThumbnailTests() {
 
   let thumbnailUpdated = BrowserTestUtils.waitForEvent(
     previewPanel,
-    "previewThumbnailUpdated",
+    "TabPreviewThumbnailUpdated",
     false,
     evt => evt.detail.thumbnail
   );
@@ -445,7 +453,7 @@ add_task(async function tabThumbnailTests() {
   await closeTabPreviews();
   thumbnailUpdated = BrowserTestUtils.waitForEvent(
     previewPanel,
-    "previewThumbnailUpdated"
+    "TabPreviewThumbnailUpdated"
   );
   await openTabPreview(tab2);
   await thumbnailUpdated;
@@ -500,7 +508,7 @@ add_task(async function tabWireframeTests() {
 
   let thumbnailUpdated = BrowserTestUtils.waitForEvent(
     previewPanel,
-    "previewThumbnailUpdated",
+    "TabPreviewThumbnailUpdated",
     false,
     evt => evt.detail.thumbnail
   );
@@ -631,6 +639,10 @@ add_task(async function tabContentChangeTests() {
   );
 
   let tabRenameEvent = BrowserTestUtils.waitForEvent(tab, "TabAttrModified");
+  let previewUpdated = BrowserTestUtils.waitForEvent(
+    previewPanel,
+    "TabPreviewUpdated"
+  );
   await SpecialPowers.spawn(
     tab.linkedBrowser,
     [newTitle],
@@ -638,7 +650,7 @@ add_task(async function tabContentChangeTests() {
       content.document.title = newTitleInContentProcess;
     }
   );
-  await tabRenameEvent;
+  await Promise.all([tabRenameEvent, previewUpdated]);
 
   Assert.equal(
     previewPanel.querySelector(".tab-preview-title").innerText,
@@ -1499,7 +1511,7 @@ add_task(async function delayTests() {
 add_task(async function zeroDelayTests() {
   await SpecialPowers.pushPrefEnv({
     set: [
-      ["ui.tooltip.delay_ms", 1000],
+      ["ui.tooltip.delay_ms", 100],
       ["ui.prefersReducedMotion", 1],
     ],
   });
@@ -1507,19 +1519,31 @@ add_task(async function zeroDelayTests() {
   const tabUrl =
     "data:text/html,<html><head><title>First New Tab</title></head><body>Hello</body></html>";
   const tab = await BrowserTestUtils.openNewForegroundTab(gBrowser, tabUrl);
+  const previewComponent = gBrowser.tabContainer.previewPanel;
 
   await openTabPreview(tab);
   await closeTabPreviews();
 
-  let resolved = false;
-  let openPreviewPromise = openTabPreview(tab).then(() => {
-    resolved = true;
-  });
-  // eslint-disable-next-line mozilla/no-arbitrary-setTimeout
-  let timeoutPromise = new Promise(resolve => setTimeout(resolve, 900));
-  await Promise.race([openPreviewPromise, timeoutPromise]);
+  Assert.ok(
+    previewComponent.panelOpener.zeroDelayActive,
+    "Zero delay is active immediately after the preview is dismissed"
+  );
 
-  Assert.ok(resolved, "Panel was opened the second time without a delay");
+  // Inlined rather than using openTabPreview() so we can assert the zero-delay
+  // window is still active at the moment the open is scheduled
+  const panel = document.getElementById(TAB_PREVIEW_PANEL_ID);
+  const previewShown = BrowserTestUtils.waitForPopupEvent(panel, "shown");
+  const previewUpdated = BrowserTestUtils.waitForEvent(
+    panel,
+    "TabPreviewUpdated"
+  );
+  EventUtils.synthesizeMouse(tab, 1, 1, { type: "mouseover" });
+  Assert.ok(
+    previewComponent.panelOpener.zeroDelayActive,
+    "Second hover is scheduled while still in the zero-delay window"
+  );
+  await Promise.all([previewShown, previewUpdated]);
+  Assert.equal(panel.state, "open", "Panel opened on the second hover");
 
   await closeTabPreviews();
 
@@ -1994,6 +2018,7 @@ add_task(async function verticalTabsPositioningTests() {
     set: [
       ["sidebar.revamp", true],
       ["sidebar.verticalTabs", true],
+      ["ui.prefersReducedMotion", 1],
     ],
   });
 
