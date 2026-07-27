@@ -469,6 +469,9 @@ skip-if = [
 ]
 
 ["browser_uidensity_auto_compact.js"]
+skip-if = [
+  "nova", # Bug 2058125
+]
 
 ["browser_unified_extensions_reset.js"]
 
