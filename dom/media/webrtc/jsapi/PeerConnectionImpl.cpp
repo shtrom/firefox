@@ -3019,12 +3019,19 @@ void PeerConnectionImpl::DoSetDescriptionSuccessPostProcessing(
         if (aSdpType == dom::RTCSdpType::Rollback) {
           // - step 4.5.10, type is rollback
           RestoreStateForRollback();
-        } else if (!(aRemote && aSdpType == dom::RTCSdpType::Offer)) {
-          // - step 4.5.9 type is not rollback
+        } else {
+          // The RTCSctpTransport is created as soon as the data section is
+          // set in any SDP, which can be in have-remote-offer, before any
+          // RTCDtlsTransport exists. Its transport member is filled in by
+          // UpdateRTCDtlsTransports below once we have a local description.
+          UpdateRTCSctpTransport();
           // - step 4.5.9.1 when remote is false
           // - step 4.5.9.2.13 when remote is true, type answer or pranswer
-          // More simply: not rollback, and not for remote offers.
-          UpdateRTCDtlsTransports();
+          // RTCDtlsTransports are created when a local description is applied,
+          // i.e. not for remote offers.
+          if (!(aRemote && aSdpType == dom::RTCSdpType::Offer)) {
+            UpdateRTCDtlsTransports();
+          }
         }
 
         // Did we just apply a local description?
@@ -4316,53 +4323,63 @@ void PeerConnectionImpl::EnsureTransports(const JsepSession& aSession) {
 }
 
 void PeerConnectionImpl::UpdateRTCDtlsTransports() {
-  // We use mDataConnection below, make sure it is initted if necessary
+  mJsepSession->ForEachTransceiver([this,
+                                    self = RefPtr<PeerConnectionImpl>(this)](
+                                       const JsepTransceiver& jsepTransceiver) {
+    std::string transportId = jsepTransceiver.mTransport.mTransportId;
+    RefPtr<dom::RTCDtlsTransport> dtlsTransport;
+    if (!transportId.empty()) {
+      nsCString key(transportId.data(), transportId.size());
+      dtlsTransport =
+          mTransportIdToRTCDtlsTransport.GetOrInsertNew(key, GetParentObject());
+    }
+
+    if (jsepTransceiver.GetMediaType() == SdpMediaSection::kApplication) {
+      if (mSctpTransport) {
+        mSctpTransport->SetTransport(dtlsTransport.get());
+      }
+    } else {
+      RefPtr<dom::RTCRtpTransceiver> domTransceiver =
+          GetTransceiver(jsepTransceiver.GetUuid());
+      if (domTransceiver) {
+        domTransceiver->SetDtlsTransport(dtlsTransport);
+      }
+    }
+  });
+}
+
+void PeerConnectionImpl::UpdateRTCSctpTransport() {
+  // mDataConnection is only initialized once negotiation completes (see
+  // GetDatachannelParameters).
   MaybeInitializeDataChannel();
 
-  // Make sure that the SCTP transport is unset if we do not see a DataChannel.
-  // We'll restore this if we do see a DataChannel.
-  RefPtr<dom::RTCSctpTransport> oldSctp = mSctpTransport.forget();
+  // The RTCSctpTransport is not a control surface, so it does not need the
+  // DataConnection (or an RTCDtlsTransport) to exist. We create it as soon as
+  // a data (application) m-section has appeared in an SDP, which can be as
+  // early as have-remote-offer, and fill in negotiated details later.
+  mJsepSession->ForEachTransceiver([&](const JsepTransceiver& jsepTransceiver) {
+    if (jsepTransceiver.GetMediaType() == SdpMediaSection::kApplication) {
+      // Spec says to update maxMessageSize when negotiation completes, even if
+      // a remote offer has already specified it. Spec does not say anything
+      // about unsetting RTCPeerConnection.sctp if a datachannel m-section is
+      // rejected, and once there is a datachannel m-section it will always be
+      // there.
+      Nullable<double> maxMessageSize;
+      if (mDataConnection) {
+        maxMessageSize.SetValue(mDataConnection->GetMaxMessageSize());
+      }
 
-  mJsepSession->ForEachTransceiver(
-      [this, self = RefPtr<PeerConnectionImpl>(this),
-       oldSctp](const JsepTransceiver& jsepTransceiver) {
-        std::string transportId = jsepTransceiver.mTransport.mTransportId;
-        RefPtr<dom::RTCDtlsTransport> dtlsTransport;
-        if (!transportId.empty()) {
-          nsCString key(transportId.data(), transportId.size());
-          dtlsTransport = mTransportIdToRTCDtlsTransport.GetOrInsertNew(
-              key, GetParentObject());
-        }
-
-        if (jsepTransceiver.GetMediaType() == SdpMediaSection::kApplication) {
-          // Spec says we only update the RTCSctpTransport when negotiation
-          // completes. This is probably a spec bug.
-          // https://github.com/w3c/webrtc-pc/issues/2898
-          if (!dtlsTransport || !mDataConnection) {
-            return;
-          }
-
-          double maxMessageSize = mDataConnection->GetMaxMessageSize();
-          Nullable<uint16_t> maxChannels;
-
-          if (!oldSctp) {
-            mSctpTransport = MakeRefPtr<RTCSctpTransport>(
-                GetParentObject(), *dtlsTransport, maxMessageSize, maxChannels);
-          } else {
-            // Restore the SCTP transport we had before this function was called
-            oldSctp->SetTransport(*dtlsTransport);
-            oldSctp->SetMaxMessageSize(maxMessageSize);
-            oldSctp->SetMaxChannels(maxChannels);
-            mSctpTransport = oldSctp;
-          }
-        } else {
-          RefPtr<dom::RTCRtpTransceiver> domTransceiver =
-              GetTransceiver(jsepTransceiver.GetUuid());
-          if (domTransceiver) {
-            domTransceiver->SetDtlsTransport(dtlsTransport);
-          }
-        }
-      });
+      // Preserve the existing object (and its transport) across renegotiation.
+      if (!mSctpTransport) {
+        // Note: We don't set maxChannels yet
+        Nullable<uint16_t> maxChannels;
+        mSctpTransport = MakeRefPtr<RTCSctpTransport>(
+            GetParentObject(), maxMessageSize, maxChannels);
+      } else {
+        mSctpTransport->SetMaxMessageSize(maxMessageSize);
+      }
+    }
+  });
 }
 
 void PeerConnectionImpl::SaveStateForRollback() {
@@ -4372,7 +4389,7 @@ void PeerConnectionImpl::SaveStateForRollback() {
     // We have to save both of these things, because the DTLS transport could
     // change without the SCTP transport changing.
     mLastStableSctpTransport = mSctpTransport;
-    mLastStableSctpDtlsTransport = mSctpTransport->Transport();
+    mLastStableSctpDtlsTransport = mSctpTransport->GetTransport();
   } else {
     mLastStableSctpTransport = nullptr;
     mLastStableSctpDtlsTransport = nullptr;
@@ -4390,7 +4407,9 @@ void PeerConnectionImpl::RestoreStateForRollback() {
 
   mSctpTransport = mLastStableSctpTransport;
   if (mSctpTransport) {
-    mSctpTransport->SetTransport(*mLastStableSctpDtlsTransport);
+    // The stable DTLS transport may be null (e.g. rolling back to
+    // have-remote-offer, where the RTCDtlsTransport did not yet exist).
+    mSctpTransport->SetTransport(mLastStableSctpDtlsTransport.get());
   }
 }
 
@@ -4403,8 +4422,8 @@ PeerConnectionImpl::GetActiveTransports() const {
     }
   }
 
-  if (mSctpTransport && mSctpTransport->Transport()) {
-    result.insert(mSctpTransport->Transport());
+  if (mSctpTransport && mSctpTransport->GetTransport()) {
+    result.insert(mSctpTransport->GetTransport());
   }
   return result;
 }
