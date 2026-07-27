@@ -1004,6 +1004,11 @@ export var UrlbarUtils = {
    */
   _backspaceBlocks: new Map(),
 
+  // Resolves with the most recent recordAutofillBackspace() call's DB write
+  // (if any). Tests can await this to sequence on the block before reading
+  // from the database.
+  _lastRecordAutofillBackspacePromise: Promise.resolve(),
+
   // Maximum age of a tracked block, in hours.
   _BACKSPACE_BLOCK_MAX_AGE_HOURS: 24,
 
@@ -1054,9 +1059,16 @@ export var UrlbarUtils = {
    *   Resolves after the threshold-triggered blockAutofill DB write completes.
    *   Resolves immediately when the URL is unparseable or the count is still
    *   below threshold (no DB write in either case). Tests can await this to
-   *   sequence on the block.
+   *   sequence on the block, or await `_lastRecordAutofillBackspacePromise`
+   *   when they can't reach the return value.
    */
-  async recordAutofillBackspace(url) {
+  recordAutofillBackspace(url) {
+    this._lastRecordAutofillBackspacePromise =
+      this._doRecordAutofillBackspace(url);
+    return this._lastRecordAutofillBackspacePromise;
+  },
+
+  async _doRecordAutofillBackspace(url) {
     let key = this._backspaceBlockKey(url);
     if (!key) {
       return;

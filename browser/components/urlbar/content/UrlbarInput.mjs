@@ -5436,10 +5436,9 @@ ${
       this.value === this.userTypedValue &&
       this._resultForCurrentValue?.payload?.url
     ) {
-      UrlbarShared._lastRecordAutofillBackspacePromise =
-        lazy.UrlbarUtils.recordAutofillBackspace(
-          this._resultForCurrentValue.payload.url
-        );
+      this.controller.recordAutofillBackspace(
+        this._resultForCurrentValue.payload.url
+      );
     }
 
     let value = this.value;

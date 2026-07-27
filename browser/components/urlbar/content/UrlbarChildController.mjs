@@ -235,6 +235,9 @@ export class UrlbarChildController {
   trackBounceBrowser(browserId) {
     return this.#parentController.trackBounceBrowser(browserId);
   }
+  recordAutofillBackspace(url) {
+    return this.#parentController.recordAutofillBackspace(url);
+  }
   recordSearchMode(searchMode) {
     return this.#parentController.recordSearchMode(searchMode);
   }

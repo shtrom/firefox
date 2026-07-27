@@ -353,11 +353,6 @@ export const UrlbarShared = {
 
   PRIVATE_USER_CONTEXT_ID,
 
-  // Resolves with the most recent recordAutofillBackspace() call's DB write
-  // (if any). Tests can await this to sequence on the block before reading
-  // from the database.
-  _lastRecordAutofillBackspacePromise: Promise.resolve(),
-
   /**
    * Return userContextId that is used in the moz_openpages_temp table and
    * returned as part of the payload. It differs only for private windows.
