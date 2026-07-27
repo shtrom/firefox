@@ -130,15 +130,6 @@ export class SearchModeSwitcher {
   }
 
   /**
-   * The unified search button that opens the search mode switcher panel.
-   *
-   * @type {MozButton}
-   */
-  get button() {
-    return this.#button;
-  }
-
-  /**
    * Close the SearchSwitcher popup.
    */
   closePanel() {
