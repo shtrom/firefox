@@ -147,6 +147,12 @@ class _OpenSearchManager {
         win.gBrowser.selectedBrowser,
         engines || []
       );
+      if (urlbar.sapName == "searchbar") {
+        urlbar.searchModeSwitcher.button.toggleAttribute(
+          "addengines",
+          !!engines?.length
+        );
+      }
     }
 
     let searchBar = win.document.getElementById("searchbar");
