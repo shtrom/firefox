@@ -204,7 +204,7 @@ class PeerConnectionImpl final
 
   void NotifyDataChannelClosed(DataChannel*) override;
 
-  void NotifySctpConnected() override;
+  void NotifySctpConnected(Maybe<uint16_t> aMaxChannels) override;
 
   void NotifySctpClosed() override;
 

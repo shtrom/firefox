@@ -1385,12 +1385,28 @@ void PeerConnectionImpl::NotifyDataChannelClosed(DataChannel*) {
   mDataChannelsClosed++;
 }
 
-void PeerConnectionImpl::NotifySctpConnected() {
+void PeerConnectionImpl::NotifySctpConnected(Maybe<uint16_t> aMaxChannels) {
   if (!mSctpTransport) {
     MOZ_ASSERT(false);
     return;
   }
 
+  // Set [[MaxChannels]] to the minimum of the negotiated amount of incoming
+  // and outgoing SCTP streams.
+  if (aMaxChannels.isSome()) {
+    mSctpTransport->SetMaxChannels(Nullable<uint16_t>(*aMaxChannels));
+  }
+
+  // Strictly speaking, the step for updating the RTCDataChannel objects is
+  // supposed to go here, but that is handled over in the DataChannelConnection
+  // code. The current spec step for this is busted because "Let channel be the
+  // RTCDataChannel object." cannot even be done with worker datachannels here.
+  // The timing ought to work out fine though, since those RTCDataChannel
+  // updates are speced to happen in queued tasks, and DataChannelConnection
+  // does that. It should not matter whether maxChannels is updated before or
+  // after those tasks are queued.
+
+  // Fire an event named statechange at transport.
   mSctpTransport->UpdateState(RTCSctpTransportState::Connected);
 }
 
@@ -4371,7 +4387,8 @@ void PeerConnectionImpl::UpdateRTCSctpTransport() {
 
       // Preserve the existing object (and its transport) across renegotiation.
       if (!mSctpTransport) {
-        // Note: We don't set maxChannels yet
+        // maxChannels stays null until the SCTP association connects; it is
+        // populated in NotifySctpConnected().
         Nullable<uint16_t> maxChannels;
         mSctpTransport = MakeRefPtr<RTCSctpTransport>(
             GetParentObject(), maxMessageSize, maxChannels);
