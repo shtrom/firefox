@@ -16,4 +16,3 @@ support-files = [
   "helper_test_select_popup_position_transformed_in_parent.html",
   "helper_test_select_popup_position_zoomed.html"
 ]
-
