@@ -377,8 +377,7 @@ static inline int32_t GetStrideGap(int32_t aWidth, SurfaceFormat aFormat,
 bool PremultiplyData(const uint8_t* aSrc, int32_t aSrcStride,
                      SurfaceFormat aSrcFormat, uint8_t* aDst,
                      int32_t aDstStride, SurfaceFormat aDstFormat,
-                     const IntSize& aSize,
-                     SwizzleArch aArch /* = SwizzleArch::eAny */) {
+                     const IntSize& aSize) {
   if (aSize.IsEmpty()) {
     return true;
   }
@@ -394,8 +393,7 @@ bool PremultiplyData(const uint8_t* aSrc, int32_t aSrcStride,
 #define FORMAT_CASE_CALL(...) __VA_ARGS__(aSrc, srcGap, aDst, dstGap, size)
 
 #ifdef USE_SSE2
-  if (aArch & SwizzleArch::eSSE2 && mozilla::supports_sse2())
-    switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
+  if (mozilla::supports_sse2()) switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
       PREMULTIPLY_SSE2(SurfaceFormat::B8G8R8A8, SurfaceFormat::B8G8R8A8)
       PREMULTIPLY_SSE2(SurfaceFormat::B8G8R8A8, SurfaceFormat::B8G8R8X8)
       PREMULTIPLY_SSE2(SurfaceFormat::B8G8R8A8, SurfaceFormat::R8G8B8A8)
@@ -410,8 +408,7 @@ bool PremultiplyData(const uint8_t* aSrc, int32_t aSrcStride,
 #endif
 
 #ifdef USE_NEON
-  if (aArch & SwizzleArch::eNEON && mozilla::supports_neon())
-    switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
+  if (mozilla::supports_neon()) switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
       PREMULTIPLY_NEON(SurfaceFormat::B8G8R8A8, SurfaceFormat::B8G8R8A8)
       PREMULTIPLY_NEON(SurfaceFormat::B8G8R8A8, SurfaceFormat::B8G8R8X8)
       PREMULTIPLY_NEON(SurfaceFormat::B8G8R8A8, SurfaceFormat::R8G8B8A8)
@@ -425,10 +422,6 @@ bool PremultiplyData(const uint8_t* aSrc, int32_t aSrcStride,
     }
 #endif
 
-  if (!(aArch & SwizzleArch::eFallback)) {
-    return false;
-  }
-
   switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
     PREMULTIPLY_FALLBACK(SurfaceFormat::B8G8R8A8)
     PREMULTIPLY_FALLBACK(SurfaceFormat::R8G8B8A8)
@@ -439,15 +432,14 @@ bool PremultiplyData(const uint8_t* aSrc, int32_t aSrcStride,
 
 #undef FORMAT_CASE_CALL
 
-  MOZ_ASSERT_UNREACHABLE("Unsupported premultiply formats");
+  MOZ_ASSERT(false, "Unsupported premultiply formats");
   return false;
 }
 
-SwizzleRowFn PremultiplyRow(SurfaceFormat aSrcFormat, SurfaceFormat aDstFormat,
-                            SwizzleArch aArch /* = SwizzleArch::eAny */) {
+SwizzleRowFn PremultiplyRow(SurfaceFormat aSrcFormat,
+                            SurfaceFormat aDstFormat) {
 #ifdef USE_SSE2
-  if (aArch & SwizzleArch::eSSE2 && mozilla::supports_sse2())
-    switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
+  if (mozilla::supports_sse2()) switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
       PREMULTIPLY_ROW_SSE2(SurfaceFormat::B8G8R8A8, SurfaceFormat::B8G8R8A8)
       PREMULTIPLY_ROW_SSE2(SurfaceFormat::B8G8R8A8, SurfaceFormat::B8G8R8X8)
       PREMULTIPLY_ROW_SSE2(SurfaceFormat::B8G8R8A8, SurfaceFormat::R8G8B8A8)
@@ -462,8 +454,7 @@ SwizzleRowFn PremultiplyRow(SurfaceFormat aSrcFormat, SurfaceFormat aDstFormat,
 #endif
 
 #ifdef USE_NEON
-  if (aArch & SwizzleArch::eNEON && mozilla::supports_neon())
-    switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
+  if (mozilla::supports_neon()) switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
       PREMULTIPLY_ROW_NEON(SurfaceFormat::B8G8R8A8, SurfaceFormat::B8G8R8A8)
       PREMULTIPLY_ROW_NEON(SurfaceFormat::B8G8R8A8, SurfaceFormat::B8G8R8X8)
       PREMULTIPLY_ROW_NEON(SurfaceFormat::B8G8R8A8, SurfaceFormat::R8G8B8A8)
@@ -476,10 +467,6 @@ SwizzleRowFn PremultiplyRow(SurfaceFormat aSrcFormat, SurfaceFormat aDstFormat,
         break;
     }
 #endif
-
-  if (!(aArch & SwizzleArch::eFallback)) {
-    return nullptr;
-  }
 
   switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
     PREMULTIPLY_ROW_FALLBACK(SurfaceFormat::B8G8R8A8)
@@ -597,8 +584,7 @@ static void UnpremultiplyFallback(const uint8_t* aSrc, int32_t aSrcGap,
 bool UnpremultiplyData(const uint8_t* aSrc, int32_t aSrcStride,
                        SurfaceFormat aSrcFormat, uint8_t* aDst,
                        int32_t aDstStride, SurfaceFormat aDstFormat,
-                       const IntSize& aSize,
-                       SwizzleArch aArch /* = SwizzleArch::eAny */) {
+                       const IntSize& aSize) {
   if (aSize.IsEmpty()) {
     return true;
   }
@@ -614,8 +600,7 @@ bool UnpremultiplyData(const uint8_t* aSrc, int32_t aSrcStride,
 #define FORMAT_CASE_CALL(...) __VA_ARGS__(aSrc, srcGap, aDst, dstGap, size)
 
 #ifdef USE_SSE2
-  if (aArch & SwizzleArch::eSSE2 && mozilla::supports_sse2())
-    switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
+  if (mozilla::supports_sse2()) switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
       UNPREMULTIPLY_SSE2(SurfaceFormat::B8G8R8A8, SurfaceFormat::B8G8R8A8)
       UNPREMULTIPLY_SSE2(SurfaceFormat::B8G8R8A8, SurfaceFormat::R8G8B8A8)
       UNPREMULTIPLY_SSE2(SurfaceFormat::R8G8B8A8, SurfaceFormat::R8G8B8A8)
@@ -626,8 +611,7 @@ bool UnpremultiplyData(const uint8_t* aSrc, int32_t aSrcStride,
 #endif
 
 #ifdef USE_NEON
-  if (aArch & SwizzleArch::eNEON && mozilla::supports_neon())
-    switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
+  if (mozilla::supports_neon()) switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
       UNPREMULTIPLY_NEON(SurfaceFormat::B8G8R8A8, SurfaceFormat::B8G8R8A8)
       UNPREMULTIPLY_NEON(SurfaceFormat::B8G8R8A8, SurfaceFormat::R8G8B8A8)
       UNPREMULTIPLY_NEON(SurfaceFormat::R8G8B8A8, SurfaceFormat::R8G8B8A8)
@@ -636,10 +620,6 @@ bool UnpremultiplyData(const uint8_t* aSrc, int32_t aSrcStride,
         break;
     }
 #endif
-
-  if (!(aArch & SwizzleArch::eFallback)) {
-    return false;
-  }
 
   switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
     UNPREMULTIPLY_FALLBACK(SurfaceFormat::B8G8R8A8)
@@ -651,16 +631,14 @@ bool UnpremultiplyData(const uint8_t* aSrc, int32_t aSrcStride,
 
 #undef FORMAT_CASE_CALL
 
-  MOZ_ASSERT_UNREACHABLE("Unsupported unpremultiply formats");
+  MOZ_ASSERT(false, "Unsupported unpremultiply formats");
   return false;
 }
 
 SwizzleRowFn UnpremultiplyRow(SurfaceFormat aSrcFormat,
-                              SurfaceFormat aDstFormat,
-                              SwizzleArch aArch /* = SwizzleArch::eAny */) {
+                              SurfaceFormat aDstFormat) {
 #ifdef USE_SSE2
-  if (aArch & SwizzleArch::eSSE2 && mozilla::supports_sse2())
-    switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
+  if (mozilla::supports_sse2()) switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
       UNPREMULTIPLY_ROW_SSE2(SurfaceFormat::B8G8R8A8, SurfaceFormat::B8G8R8A8)
       UNPREMULTIPLY_ROW_SSE2(SurfaceFormat::B8G8R8A8, SurfaceFormat::R8G8B8A8)
       UNPREMULTIPLY_ROW_SSE2(SurfaceFormat::R8G8B8A8, SurfaceFormat::R8G8B8A8)
@@ -671,8 +649,7 @@ SwizzleRowFn UnpremultiplyRow(SurfaceFormat aSrcFormat,
 #endif
 
 #ifdef USE_NEON
-  if (aArch & SwizzleArch::eNEON && mozilla::supports_neon())
-    switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
+  if (mozilla::supports_neon()) switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
       UNPREMULTIPLY_ROW_NEON(SurfaceFormat::B8G8R8A8, SurfaceFormat::B8G8R8A8)
       UNPREMULTIPLY_ROW_NEON(SurfaceFormat::B8G8R8A8, SurfaceFormat::R8G8B8A8)
       UNPREMULTIPLY_ROW_NEON(SurfaceFormat::R8G8B8A8, SurfaceFormat::R8G8B8A8)
@@ -681,10 +658,6 @@ SwizzleRowFn UnpremultiplyRow(SurfaceFormat aSrcFormat,
         break;
     }
 #endif
-
-  if (!(aArch & SwizzleArch::eFallback)) {
-    return nullptr;
-  }
 
   switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
     UNPREMULTIPLY_ROW_FALLBACK(SurfaceFormat::B8G8R8A8)
@@ -1114,8 +1087,7 @@ static void UnpackRowRGB24_To_ARGB(const uint8_t* aSrc, uint8_t* aDst,
 
 bool SwizzleData(const uint8_t* aSrc, int32_t aSrcStride,
                  SurfaceFormat aSrcFormat, uint8_t* aDst, int32_t aDstStride,
-                 SurfaceFormat aDstFormat, const IntSize& aSize,
-                 SwizzleArch aArch /* = SwizzleArch::eAny */) {
+                 SurfaceFormat aDstFormat, const IntSize& aSize) {
   if (aSize.IsEmpty()) {
     return true;
   }
@@ -1131,8 +1103,7 @@ bool SwizzleData(const uint8_t* aSrc, int32_t aSrcStride,
 #define FORMAT_CASE_CALL(...) __VA_ARGS__(aSrc, srcGap, aDst, dstGap, size)
 
 #ifdef USE_SSE2
-  if (aArch & SwizzleArch::eSSE2 && mozilla::supports_sse2())
-    switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
+  if (mozilla::supports_sse2()) switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
       SWIZZLE_SSE2(SurfaceFormat::B8G8R8A8, SurfaceFormat::R8G8B8A8)
       SWIZZLE_SSE2(SurfaceFormat::B8G8R8X8, SurfaceFormat::R8G8B8X8)
       SWIZZLE_SSE2(SurfaceFormat::B8G8R8A8, SurfaceFormat::R8G8B8X8)
@@ -1147,8 +1118,7 @@ bool SwizzleData(const uint8_t* aSrc, int32_t aSrcStride,
 #endif
 
 #ifdef USE_NEON
-  if (aArch & SwizzleArch::eNEON && mozilla::supports_neon())
-    switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
+  if (mozilla::supports_neon()) switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
       SWIZZLE_NEON(SurfaceFormat::B8G8R8A8, SurfaceFormat::R8G8B8A8)
       SWIZZLE_NEON(SurfaceFormat::B8G8R8X8, SurfaceFormat::R8G8B8X8)
       SWIZZLE_NEON(SurfaceFormat::B8G8R8A8, SurfaceFormat::R8G8B8X8)
@@ -1161,10 +1131,6 @@ bool SwizzleData(const uint8_t* aSrc, int32_t aSrcStride,
         break;
     }
 #endif
-
-  if (!(aArch & SwizzleArch::eFallback)) {
-    return false;
-  }
 
   switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
     SWIZZLE_FALLBACK(SurfaceFormat::B8G8R8A8, SurfaceFormat::R8G8B8A8)
@@ -1220,7 +1186,7 @@ bool SwizzleData(const uint8_t* aSrc, int32_t aSrcStride,
 
 #undef FORMAT_CASE_CALL
 
-  MOZ_ASSERT_UNREACHABLE("Unsupported swizzle formats");
+  MOZ_ASSERT(false, "Unsupported swizzle formats");
   return false;
 }
 
@@ -1295,28 +1261,24 @@ static bool SwizzleYFlipDataInternal(const uint8_t* aSrc, int32_t aSrcStride,
 bool SwizzleYFlipData(const uint8_t* aSrc, int32_t aSrcStride,
                       SurfaceFormat aSrcFormat, uint8_t* aDst,
                       int32_t aDstStride, SurfaceFormat aDstFormat,
-                      const IntSize& aSize,
-                      SwizzleArch aArch /* = SwizzleArch::eAny */) {
+                      const IntSize& aSize) {
   return SwizzleYFlipDataInternal(aSrc, aSrcStride, aSrcFormat, aDst,
                                   aDstStride, aDstFormat, aSize,
-                                  SwizzleRow(aSrcFormat, aDstFormat, aArch));
+                                  SwizzleRow(aSrcFormat, aDstFormat));
 }
 
 bool PremultiplyYFlipData(const uint8_t* aSrc, int32_t aSrcStride,
                           SurfaceFormat aSrcFormat, uint8_t* aDst,
                           int32_t aDstStride, SurfaceFormat aDstFormat,
-                          const IntSize& aSize,
-                          SwizzleArch aArch /* = SwizzleArch::eAny */) {
-  return SwizzleYFlipDataInternal(
-      aSrc, aSrcStride, aSrcFormat, aDst, aDstStride, aDstFormat, aSize,
-      PremultiplyRow(aSrcFormat, aDstFormat, aArch));
+                          const IntSize& aSize) {
+  return SwizzleYFlipDataInternal(aSrc, aSrcStride, aSrcFormat, aDst,
+                                  aDstStride, aDstFormat, aSize,
+                                  PremultiplyRow(aSrcFormat, aDstFormat));
 }
 
-SwizzleRowFn SwizzleRow(SurfaceFormat aSrcFormat, SurfaceFormat aDstFormat,
-                        SwizzleArch aArch /* = SwizzleArch::eAny */) {
+SwizzleRowFn SwizzleRow(SurfaceFormat aSrcFormat, SurfaceFormat aDstFormat) {
 #ifdef USE_SSE2
-  if (aArch & SwizzleArch::eAVX2 && mozilla::supports_avx2())
-    switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
+  if (mozilla::supports_avx2()) switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
       UNPACK_ROW_RGB_AVX2(SurfaceFormat::R8G8B8X8)
       UNPACK_ROW_RGB_AVX2(SurfaceFormat::R8G8B8A8)
       UNPACK_ROW_RGB_AVX2(SurfaceFormat::B8G8R8X8)
@@ -1325,8 +1287,7 @@ SwizzleRowFn SwizzleRow(SurfaceFormat aSrcFormat, SurfaceFormat aDstFormat,
         break;
     }
 
-  if (aArch & SwizzleArch::eSSSE3 && mozilla::supports_ssse3())
-    switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
+  if (mozilla::supports_ssse3()) switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
       UNPACK_ROW_RGB_SSSE3(SurfaceFormat::R8G8B8X8)
       UNPACK_ROW_RGB_SSSE3(SurfaceFormat::R8G8B8A8)
       UNPACK_ROW_RGB_SSSE3(SurfaceFormat::B8G8R8X8)
@@ -1335,8 +1296,7 @@ SwizzleRowFn SwizzleRow(SurfaceFormat aSrcFormat, SurfaceFormat aDstFormat,
         break;
     }
 
-  if (aArch & SwizzleArch::eSSE2 && mozilla::supports_sse2())
-    switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
+  if (mozilla::supports_sse2()) switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
       SWIZZLE_ROW_SSE2(SurfaceFormat::B8G8R8A8, SurfaceFormat::R8G8B8A8)
       SWIZZLE_ROW_SSE2(SurfaceFormat::B8G8R8X8, SurfaceFormat::R8G8B8X8)
       SWIZZLE_ROW_SSE2(SurfaceFormat::B8G8R8A8, SurfaceFormat::R8G8B8X8)
@@ -1351,8 +1311,7 @@ SwizzleRowFn SwizzleRow(SurfaceFormat aSrcFormat, SurfaceFormat aDstFormat,
 #endif
 
 #ifdef USE_NEON
-  if (aArch & SwizzleArch::eNEON && mozilla::supports_neon())
-    switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
+  if (mozilla::supports_neon()) switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
       UNPACK_ROW_RGB_NEON(SurfaceFormat::R8G8B8X8)
       UNPACK_ROW_RGB_NEON(SurfaceFormat::R8G8B8A8)
       UNPACK_ROW_RGB_NEON(SurfaceFormat::B8G8R8X8)
@@ -1369,10 +1328,6 @@ SwizzleRowFn SwizzleRow(SurfaceFormat aSrcFormat, SurfaceFormat aDstFormat,
         break;
     }
 #endif
-
-  if (!(aArch & SwizzleArch::eFallback)) {
-    return nullptr;
-  }
 
   switch (FORMAT_KEY(aSrcFormat, aDstFormat)) {
     SWIZZLE_ROW_FALLBACK(SurfaceFormat::B8G8R8A8, SurfaceFormat::R8G8B8A8)

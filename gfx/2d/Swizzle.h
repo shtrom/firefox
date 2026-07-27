@@ -7,7 +7,6 @@
 
 #include "Point.h"
 #include "Rect.h"
-#include "mozilla/TypedEnumBits.h"
 
 namespace mozilla {
 namespace image {
@@ -15,17 +14,6 @@ struct Orientation;
 }
 
 namespace gfx {
-
-enum class SwizzleArch : uint8_t {
-  eFallback = 1 << 0,
-  eNEON = 1 << 1,
-  eSSE2 = 1 << 2,
-  eSSSE3 = 1 << 3,
-  eAVX2 = 1 << 4,
-  eAny = eFallback | eNEON | eSSE2 | eSSSE3 | eAVX2,
-};
-
-MOZ_MAKE_ENUM_CLASS_BITWISE_OPERATORS(SwizzleArch)
 
 /**
  * Premultiplies source and writes it to destination. Source and destination may
@@ -35,8 +23,7 @@ MOZ_MAKE_ENUM_CLASS_BITWISE_OPERATORS(SwizzleArch)
 GFX2D_API bool PremultiplyData(const uint8_t* aSrc, int32_t aSrcStride,
                                SurfaceFormat aSrcFormat, uint8_t* aDst,
                                int32_t aDstStride, SurfaceFormat aDstFormat,
-                               const IntSize& aSize,
-                               SwizzleArch aArch = SwizzleArch::eAny);
+                               const IntSize& aSize);
 
 /**
  * Unpremultiplies source and writes it to destination. Source and destination
@@ -46,8 +33,7 @@ GFX2D_API bool PremultiplyData(const uint8_t* aSrc, int32_t aSrcStride,
 GFX2D_API bool UnpremultiplyData(const uint8_t* aSrc, int32_t aSrcStride,
                                  SurfaceFormat aSrcFormat, uint8_t* aDst,
                                  int32_t aDstStride, SurfaceFormat aDstFormat,
-                                 const IntSize& aSize,
-                                 SwizzleArch aArch = SwizzleArch::eAny);
+                                 const IntSize& aSize);
 
 /**
  * Swizzles source and writes it to destination. Source and destination may be
@@ -56,8 +42,7 @@ GFX2D_API bool UnpremultiplyData(const uint8_t* aSrc, int32_t aSrcStride,
 GFX2D_API bool SwizzleData(const uint8_t* aSrc, int32_t aSrcStride,
                            SurfaceFormat aSrcFormat, uint8_t* aDst,
                            int32_t aDstStride, SurfaceFormat aDstFormat,
-                           const IntSize& aSize,
-                           SwizzleArch aArch = SwizzleArch::eAny);
+                           const IntSize& aSize);
 
 /**
  * Flips rows of source and swizzles it to destination. Source and destination
@@ -67,8 +52,7 @@ GFX2D_API bool SwizzleData(const uint8_t* aSrc, int32_t aSrcStride,
 GFX2D_API bool SwizzleYFlipData(const uint8_t* aSrc, int32_t aSrcStride,
                                 SurfaceFormat aSrcFormat, uint8_t* aDst,
                                 int32_t aDstStride, SurfaceFormat aDstFormat,
-                                const IntSize& aSize,
-                                SwizzleArch aArch = SwizzleArch::eAny);
+                                const IntSize& aSize);
 
 /**
  * Flips rows of source and premultiplies/swizzles it to destination. Source and
@@ -79,8 +63,7 @@ GFX2D_API bool PremultiplyYFlipData(const uint8_t* aSrc, int32_t aSrcStride,
                                     SurfaceFormat aSrcFormat, uint8_t* aDst,
                                     int32_t aDstStride,
                                     SurfaceFormat aDstFormat,
-                                    const IntSize& aSize,
-                                    SwizzleArch aArch = SwizzleArch::eAny);
+                                    const IntSize& aSize);
 
 /**
  * Swizzles source and writes it to destination. Source and destination may be
@@ -93,22 +76,19 @@ typedef void (*SwizzleRowFn)(const uint8_t* aSrc, uint8_t* aDst,
  * Get a function pointer to perform premultiplication between two formats.
  */
 GFX2D_API SwizzleRowFn PremultiplyRow(SurfaceFormat aSrcFormat,
-                                      SurfaceFormat aDstFormat,
-                                      SwizzleArch aArch = SwizzleArch::eAny);
+                                      SurfaceFormat aDstFormat);
 
 /**
  * Get a function pointer to perform unpremultiplication between two formats.
  */
 GFX2D_API SwizzleRowFn UnpremultiplyRow(SurfaceFormat aSrcFormat,
-                                        SurfaceFormat aDstFormat,
-                                        SwizzleArch aArch = SwizzleArch::eAny);
+                                        SurfaceFormat aDstFormat);
 
 /**
  * Get a function pointer to perform swizzling between two formats.
  */
 GFX2D_API SwizzleRowFn SwizzleRow(SurfaceFormat aSrcFormat,
-                                  SurfaceFormat aDstFormat,
-                                  SwizzleArch aArch = SwizzleArch::eAny);
+                                  SurfaceFormat aDstFormat);
 
 /**
  * Reorients source and writes it to destination. Returns the dirty rect of
