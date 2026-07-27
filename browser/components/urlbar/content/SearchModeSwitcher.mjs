@@ -456,6 +456,16 @@ export class SearchModeSwitcher {
   }
 
   /**
+   * Badges the unified search button to indicate that the current page offers
+   * engines that can be added.
+   *
+   * @param {boolean} show
+   */
+  toggleAddEnginesBadge(show) {
+    this.#button.toggleAttribute("addengines", show);
+  }
+
+  /**
    * Update the icon shown in the urlbar.
    *
    * @param {object} [options]
