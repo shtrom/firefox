@@ -36,8 +36,7 @@ skip-if = [
 
 ["browser_privatebrowsing_about_cookie_banners_promo.js"]
 skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && opt && nova", # Bug 2057929
-  "os == 'win' && os_version == '11.26200' && arch == 'x86_64' && opt && nova", # Bug 2057929
+  "nova", # Bug 2057929
 ]
 
 ["browser_privatebrowsing_about_default_pin_promo.js"]
@@ -53,8 +52,7 @@ skip-if = [
 
 ["browser_privatebrowsing_about_default_promo.js"]
 skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && opt && nova", # Bug 2057937
-  "os == 'win' && nova", # Bug 2057937
+  "nova", # Bug 2057937
 ]
 
 ["browser_privatebrowsing_about_nimbus_dismiss.js"]
