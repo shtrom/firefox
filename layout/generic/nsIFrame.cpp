@@ -1688,7 +1688,8 @@ nsIFrame::Sides nsIFrame::GetSkipSides() const {
 
   if (logicalSkip.IStart()) {
     if (writingMode.IsVertical()) {
-      skip |= SideBits::eTop;
+      skip |=
+          writingMode.IsInlineReversed() ? SideBits::eBottom : SideBits::eTop;
     } else {
       skip |= writingMode.IsBidiLTR() ? SideBits::eLeft : SideBits::eRight;
     }
@@ -1696,7 +1697,8 @@ nsIFrame::Sides nsIFrame::GetSkipSides() const {
 
   if (logicalSkip.IEnd()) {
     if (writingMode.IsVertical()) {
-      skip |= SideBits::eBottom;
+      skip |=
+          writingMode.IsInlineReversed() ? SideBits::eTop : SideBits::eBottom;
     } else {
       skip |= writingMode.IsBidiLTR() ? SideBits::eRight : SideBits::eLeft;
     }
