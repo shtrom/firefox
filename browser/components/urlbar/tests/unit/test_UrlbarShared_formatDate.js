@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Tests `UrlbarUtils.formatDate()` and `parseDate()`.
+// Tests `UrlbarShared.formatDate()` and `parseDate()`.
 
 "use strict";
 
@@ -21,7 +21,7 @@ add_setup(async function init() {
   );
 });
 
-// Main test for `UrlbarUtils.formatDate()`.
+// Main test for `UrlbarShared.formatDate()`.
 add_task(async function formatDate() {
   // For each test, we'll set `now`, call `formatDate` with `date` and
   // `options`, and check the return value against `expected`.
@@ -36,7 +36,7 @@ add_task(async function formatDate() {
             formattedDate: "May 11, 2013",
             formattedTime: undefined,
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
       ],
@@ -52,7 +52,7 @@ add_task(async function formatDate() {
             formattedDate: "Oct 31, 2024",
             formattedTime: undefined,
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
       ],
@@ -68,7 +68,7 @@ add_task(async function formatDate() {
             formattedDate: "11 months ago",
             formattedTime: undefined,
             isRelative: true,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.DAYS_WEEKS_MONTHS_AGO,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.DAYS_WEEKS_MONTHS_AGO,
           },
         },
 
@@ -80,7 +80,7 @@ add_task(async function formatDate() {
             formattedDate: "Nov 1, 2024",
             formattedTime: undefined,
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
       ],
@@ -96,7 +96,7 @@ add_task(async function formatDate() {
             formattedDate: "1 month ago",
             formattedTime: undefined,
             isRelative: true,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.DAYS_WEEKS_MONTHS_AGO,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.DAYS_WEEKS_MONTHS_AGO,
           },
         },
         {
@@ -107,7 +107,7 @@ add_task(async function formatDate() {
             formattedDate: "Sep 13",
             formattedTime: undefined,
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
       ],
@@ -123,7 +123,7 @@ add_task(async function formatDate() {
             formattedDate: "4 weeks ago",
             formattedTime: undefined,
             isRelative: true,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.DAYS_WEEKS_MONTHS_AGO,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.DAYS_WEEKS_MONTHS_AGO,
           },
         },
         {
@@ -134,7 +134,7 @@ add_task(async function formatDate() {
             formattedDate: "Sep 14",
             formattedTime: undefined,
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
       ],
@@ -150,7 +150,7 @@ add_task(async function formatDate() {
             formattedDate: "1 week ago",
             formattedTime: undefined,
             isRelative: true,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.DAYS_WEEKS_MONTHS_AGO,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.DAYS_WEEKS_MONTHS_AGO,
           },
         },
         {
@@ -161,7 +161,7 @@ add_task(async function formatDate() {
             formattedDate: "Oct 8",
             formattedTime: undefined,
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
       ],
@@ -177,7 +177,7 @@ add_task(async function formatDate() {
             formattedDate: "6 days ago",
             formattedTime: undefined,
             isRelative: true,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.DAYS_WEEKS_MONTHS_AGO,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.DAYS_WEEKS_MONTHS_AGO,
           },
         },
         {
@@ -188,7 +188,7 @@ add_task(async function formatDate() {
             formattedDate: "Oct 9",
             formattedTime: undefined,
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
       ],
@@ -204,7 +204,7 @@ add_task(async function formatDate() {
             formattedDate: "2 days ago",
             formattedTime: undefined,
             isRelative: true,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.DAYS_WEEKS_MONTHS_AGO,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.DAYS_WEEKS_MONTHS_AGO,
           },
         },
         {
@@ -215,7 +215,7 @@ add_task(async function formatDate() {
             formattedDate: "Oct 13",
             formattedTime: undefined,
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
       ],
@@ -232,7 +232,7 @@ add_task(async function formatDate() {
             formattedTime: undefined,
             isRelative: true,
             dateFormatType:
-              UrlbarUtils.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW,
+              UrlbarShared.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW,
           },
         },
         {
@@ -244,7 +244,7 @@ add_task(async function formatDate() {
             formattedTime: undefined,
             isRelative: true,
             dateFormatType:
-              UrlbarUtils.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW,
+              UrlbarShared.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW,
           },
         },
         {
@@ -255,7 +255,7 @@ add_task(async function formatDate() {
             formattedDate: "Oct 14",
             formattedTime: undefined,
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
       ],
@@ -272,7 +272,7 @@ add_task(async function formatDate() {
             formattedTime: undefined,
             isRelative: true,
             dateFormatType:
-              UrlbarUtils.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW,
+              UrlbarShared.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW,
           },
         },
         {
@@ -284,7 +284,7 @@ add_task(async function formatDate() {
             formattedTime: undefined,
             isRelative: true,
             dateFormatType:
-              UrlbarUtils.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW,
+              UrlbarShared.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW,
           },
         },
         {
@@ -295,7 +295,7 @@ add_task(async function formatDate() {
             formattedDate: "Oct 15",
             formattedTime: undefined,
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
       ],
@@ -312,7 +312,7 @@ add_task(async function formatDate() {
             formattedTime: undefined,
             isRelative: true,
             dateFormatType:
-              UrlbarUtils.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW,
+              UrlbarShared.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW,
           },
         },
         {
@@ -324,7 +324,7 @@ add_task(async function formatDate() {
             formattedTime: undefined,
             isRelative: true,
             dateFormatType:
-              UrlbarUtils.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW,
+              UrlbarShared.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW,
           },
         },
         {
@@ -335,7 +335,7 @@ add_task(async function formatDate() {
             formattedDate: "Oct 15",
             formattedTime: undefined,
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
       ],
@@ -352,7 +352,7 @@ add_task(async function formatDate() {
             formattedTime: "8:00 PM",
             isRelative: true,
             dateFormatType:
-              UrlbarUtils.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW,
+              UrlbarShared.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW,
           },
         },
         {
@@ -365,7 +365,7 @@ add_task(async function formatDate() {
             formattedTime: "8:00 PM GMT-7",
             isRelative: true,
             dateFormatType:
-              UrlbarUtils.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW,
+              UrlbarShared.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW,
           },
         },
         {
@@ -376,7 +376,7 @@ add_task(async function formatDate() {
             formattedDate: "Oct 15",
             formattedTime: "8:00 PM",
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
       ],
@@ -393,7 +393,7 @@ add_task(async function formatDate() {
             formattedTime: "12:00 AM",
             isRelative: true,
             dateFormatType:
-              UrlbarUtils.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW,
+              UrlbarShared.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW,
           },
         },
         {
@@ -406,7 +406,7 @@ add_task(async function formatDate() {
             formattedTime: "12:00 AM GMT-7",
             isRelative: true,
             dateFormatType:
-              UrlbarUtils.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW,
+              UrlbarShared.DATE_FORMAT_TYPE.YESTERDAY_TODAY_TOMORROW,
           },
         },
         {
@@ -417,7 +417,7 @@ add_task(async function formatDate() {
             formattedDate: "Thu",
             formattedTime: "12:00 AM",
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
         {
@@ -429,7 +429,7 @@ add_task(async function formatDate() {
             formattedDate: "Oct 16",
             formattedTime: "12:00 AM",
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
       ],
@@ -445,7 +445,7 @@ add_task(async function formatDate() {
             formattedDate: "Tue",
             formattedTime: "12:00 AM",
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
         {
@@ -456,7 +456,7 @@ add_task(async function formatDate() {
             formattedDate: "Tue",
             formattedTime: "12:00 AM GMT-7",
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
         {
@@ -467,7 +467,7 @@ add_task(async function formatDate() {
             formattedDate: "Tue",
             formattedTime: "12:00 AM",
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
         {
@@ -478,7 +478,7 @@ add_task(async function formatDate() {
             formattedDate: "Oct 21",
             formattedTime: "12:00 AM",
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
       ],
@@ -494,7 +494,7 @@ add_task(async function formatDate() {
             formattedDate: "Oct 22",
             formattedTime: "12:00 AM",
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
         {
@@ -505,7 +505,7 @@ add_task(async function formatDate() {
             formattedDate: "Oct 22",
             formattedTime: "12:00 AM GMT-7",
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
       ],
@@ -521,7 +521,7 @@ add_task(async function formatDate() {
             formattedDate: "Dec 31",
             formattedTime: "12:00 AM",
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
         {
@@ -532,7 +532,7 @@ add_task(async function formatDate() {
             formattedDate: "Dec 31",
             formattedTime: "12:00 AM GMT-7",
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
       ],
@@ -548,7 +548,7 @@ add_task(async function formatDate() {
             formattedDate: "Jan 1, 2026",
             formattedTime: "12:00 AM",
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
         {
@@ -559,7 +559,7 @@ add_task(async function formatDate() {
             formattedDate: "Jan 1, 2026",
             formattedTime: "12:00 AM GMT-7",
             isRelative: false,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.ABSOLUTE,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.ABSOLUTE,
           },
         },
       ],
@@ -575,7 +575,7 @@ add_task(async function formatDate() {
             formattedDate: "5 weeks ago",
             formattedTime: undefined,
             isRelative: true,
-            dateFormatType: UrlbarUtils.DATE_FORMAT_TYPE.DAYS_WEEKS_MONTHS_AGO,
+            dateFormatType: UrlbarShared.DATE_FORMAT_TYPE.DAYS_WEEKS_MONTHS_AGO,
           },
         },
       ],
@@ -585,7 +585,7 @@ add_task(async function formatDate() {
   for (let { desc, now, date, cases } of tests) {
     UrlbarTestUtils.stubNowZonedDateTime(now);
     for (let { options, expected } of cases) {
-      let actual = UrlbarUtils.formatDate(new Date(date), options);
+      let actual = UrlbarShared.formatDate(new Date(date), options);
 
       // There's another task that tests `parseDate()`, so just check that the
       // `parseDateResult` is present rather than its properties.
@@ -601,7 +601,7 @@ add_task(async function formatDate() {
   }
 });
 
-// Main test for `UrlbarUtils.parseDate()`.
+// Main test for `UrlbarShared.parseDate()`.
 add_task(async function parseDate_main() {
   // For each test, we'll set `now`, call `parseDate` with `date`, and check the
   // return value against `expected`.
@@ -974,7 +974,7 @@ add_task(async function parseDate_main() {
   ]);
 });
 
-// `UrlbarUtils.parseDate()` test where "now" is the first day in a week.
+// `UrlbarShared.parseDate()` test where "now" is the first day in a week.
 add_task(async function parseDate_nowIsFirstDayInWeek() {
   let now = "2025-10-12T12:00:00-07:00[-07:00]";
   doParseDateTests([
@@ -1076,7 +1076,7 @@ add_task(async function parseDate_nowIsFirstDayInWeek() {
   ]);
 });
 
-// `UrlbarUtils.parseDate()` test where "now" is the last day in a week.
+// `UrlbarShared.parseDate()` test where "now" is the last day in a week.
 add_task(async function parseDate_nowIsLastDayInWeek() {
   let now = "2025-10-18T12:00:00-07:00[-07:00]";
   doParseDateTests([
@@ -1178,7 +1178,7 @@ add_task(async function parseDate_nowIsLastDayInWeek() {
   ]);
 });
 
-// `UrlbarUtils.parseDate()` test where "now" is the first day in a month.
+// `UrlbarShared.parseDate()` test where "now" is the first day in a month.
 add_task(async function parseDate_nowIsFirstDayInMonth() {
   let now = "2025-10-01T12:00:00-07:00[-07:00]";
   doParseDateTests([
@@ -1280,7 +1280,7 @@ add_task(async function parseDate_nowIsFirstDayInMonth() {
   ]);
 });
 
-// `UrlbarUtils.parseDate()` test where "now" is the last day in a month.
+// `UrlbarShared.parseDate()` test where "now" is the last day in a month.
 add_task(async function parseDate_nowDayInMonth_last() {
   let now = "2025-10-31T12:00:00-07:00[-07:00]";
   doParseDateTests([
@@ -1382,7 +1382,7 @@ add_task(async function parseDate_nowDayInMonth_last() {
   ]);
 });
 
-// `UrlbarUtils.parseDate()` test where the first day of the week is not Sunday
+// `UrlbarShared.parseDate()` test where the first day of the week is not Sunday
 // as it is in en-US.
 add_task(async function parseDate_firstDayOfWeek() {
   doParseDateTests([
@@ -1466,7 +1466,7 @@ add_task(async function parseDate_firstDayOfWeek() {
   ]);
 });
 
-// Tests `UrlbarUtils.parseDate()` with dates across time zone changes.
+// Tests `UrlbarShaared.parseDate()` with dates across time zone changes.
 add_task(function parseDate_timeZoneTransition() {
   // This task is based around 2025-11-02, when Daylight Saving Time ends in the
   // U.S. On 2025-11-02 at 2:00 am, the time changes to 1:00 am Standard Time.
@@ -1646,7 +1646,7 @@ function doParseDateTests(tests) {
       let zonedNow = UrlbarTestUtils.stubNowZonedDateTime(n);
       for (let d of dates) {
         Assert.deepEqual(
-          UrlbarUtils.parseDate(new Date(d)),
+          UrlbarShared.parseDate(new Date(d)),
           {
             ...expected,
             zonedNow,

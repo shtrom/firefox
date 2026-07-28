@@ -82,8 +82,7 @@ skip-if = [
 
 ["browser_ext_themes_sidebars.js"]
 skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && opt && nova", # Bug 2057933
-  "os == 'win' && os_version == '11.26200' && arch == 'x86_64' && opt && nova", # Bug 2057933
+  "nova", # Bug 2057933
 ]
 
 ["browser_ext_themes_static_onUpdated.js"]
@@ -102,8 +101,7 @@ skip-if = [
 
 ["browser_ext_themes_toolbar_fields_focus.js"]
 skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && opt && nova", # Bug 2057938
-  "os == 'win' && os_version == '11.26200' && arch == 'x86_64' && opt && nova", # Bug 2057938
+  "nova", # Bug 2057938
 ]
 
 ["browser_ext_themes_toolbarbutton_colors.js"]

@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use api::{BorderRadius, ClipMode, ColorF, units::*};
-use euclid::{Scale, point2};
+use euclid::{Scale, SideOffsets2D, Size2D, point2};
 
 use crate::ItemUid;
 use crate::border::NinePatchDescriptorExt;
@@ -1188,7 +1188,7 @@ fn prepare_tiles(
                 let rect = transform.map_rect(&clip_instance.clip_rect);
                 scratch.retained.quad_tile_classifier.add_clip_rect(rect, mode, applied_as_local_clip);
             }
-            ClipItemKind::RoundedRectangle { mode: ClipMode::Clip, ref radius } => {
+            ClipItemKind::RoundedRectangle { mode: ClipMode::Clip, ref radius, ref inset } => {
                 // For rounded-rects with Clip mode, we need a mask for each corner,
                 // and to add the clip rect itself (to cull tiles outside that rect)
 
@@ -1203,31 +1203,54 @@ fn prepare_tiles(
                 let r_br = transform.map_size(&radius.bottom_right).abs();
                 let r_bl = transform.map_size(&radius.bottom_left).abs();
 
+                let inset: SideOffsets2D<f32, DevicePixel> = transform.map_side_offsets(&inset);
+
+                let i_tl = if radius.shape_top_left < 1.0 {
+                    Size2D::new(inset.top, inset.left)
+                } else {
+                    Size2D::zero()
+                };
+                let i_tr = if radius.shape_top_right < 1.0 {
+                    Size2D::new(inset.top, inset.right)
+                } else {
+                    Size2D::zero()
+                };
+                let i_br = if radius.shape_bottom_right < 1.0 {
+                    Size2D::new(inset.bottom, inset.right)
+                } else {
+                    Size2D::zero()
+                };
+                let i_bl = if radius.shape_bottom_left < 1.0 {
+                    Size2D::new(inset.bottom, inset.left)
+                } else {
+                    Size2D::zero()
+                };
+
                 // Construct the mask regions for each corner
                 let c_tl = DeviceRect::from_origin_and_size(
                     clip_device_rect.min,
-                    r_tl,
+                    r_tl + i_tl,
                 );
                 let c_tr = DeviceRect::from_origin_and_size(
                     DevicePoint::new(
                         clip_device_rect.max.x - r_tr.width,
                         clip_device_rect.min.y,
                     ),
-                    r_tr,
+                    r_tr + i_tr,
                 );
                 let c_br = DeviceRect::from_origin_and_size(
                     DevicePoint::new(
                         clip_device_rect.max.x - r_br.width,
                         clip_device_rect.max.y - r_br.height,
                     ),
-                    r_br,
+                    r_br + i_br,
                 );
                 let c_bl = DeviceRect::from_origin_and_size(
                     DevicePoint::new(
                         clip_device_rect.min.x,
                         clip_device_rect.max.y - r_bl.height,
                     ),
-                    r_bl,
+                    r_bl + i_bl,
                 );
 
                 scratch.retained.quad_tile_classifier.add_clip_rect(clip_device_rect, ClipMode::Clip, applied_as_local_clip);
@@ -1236,11 +1259,11 @@ fn prepare_tiles(
                 scratch.retained.quad_tile_classifier.add_mask_region(c_br);
                 scratch.retained.quad_tile_classifier.add_mask_region(c_bl);
             }
-            ClipItemKind::RoundedRectangle { mode: ClipMode::ClipOut, ref radius } => {
+            ClipItemKind::RoundedRectangle { mode: ClipMode::ClipOut, ref radius , ref inset } => {
                 let radius = clamped_radius(radius, clip_instance.clip_rect.size());
                 // Try to find an inner rect within the clip-out rounded rect that we can
                 // use to cull inner tiles. If we can't, the entire rect needs to be masked
-                match extract_inner_rect_k(&clip_instance.clip_rect, &radius, 0.5) {
+                match extract_inner_rect_k(&clip_instance.clip_rect, &radius, &inset, 0.5) {
                     Some(ref inner_rect) => {
                         let rect = transform.map_rect(inner_rect);
                         scratch.retained.quad_tile_classifier.add_clip_rect(rect, ClipMode::ClipOut, false);
@@ -1400,7 +1423,7 @@ fn get_prim_render_strategy(
         let clip_instance = clip_store.get_instance_from_range(&clip_chain.clips_range, 0);
         let clip_node = &interned_clips[clip_instance.handle];
 
-        if let ClipItemKind::RoundedRectangle { ref radius, mode: ClipMode::Clip, .. } = clip_node.item.kind {
+        if let ClipItemKind::RoundedRectangle { ref radius, ref inset, mode: ClipMode::Clip } = clip_node.item.kind {
             let size = clip_instance.clip_rect.size();
             let radius = clamped_radius(radius, size);
             let max_corner_width = radius.top_left.width
@@ -1411,9 +1434,28 @@ fn get_prim_render_strategy(
                                         .max(radius.bottom_left.height)
                                         .max(radius.top_right.height)
                                         .max(radius.bottom_right.height);
+            
+            let mut max_inset_width = 0.0f32;
+            let mut max_inset_height = 0.0f32;
+            if radius.shape_top_left < 1.0 {
+                max_inset_width = max_inset_width.max(inset.top);
+                max_inset_height = max_inset_height.max(inset.left);
+            }
+            if radius.shape_top_right < 1.0 {
+                max_inset_width = max_inset_width.max(inset.top);
+                max_inset_height = max_inset_height.max(inset.right);
+            }
+            if radius.shape_bottom_right < 1.0 {
+                max_inset_width = max_inset_width.max(inset.bottom);
+                max_inset_height = max_inset_height.max(inset.right);
+            }
+            if radius.shape_bottom_left < 1.0 {
+                max_inset_width = max_inset_width.max(inset.bottom);
+                max_inset_height = max_inset_height.max(inset.left);
+            }
 
-            if max_corner_width <= 0.5 * size.width &&
-                max_corner_height <= 0.5 * size.height {
+            if (max_corner_width + max_inset_width) <= 0.5 * size.width &&
+                (max_corner_height + max_inset_height) <= 0.5 * size.height {
 
                 let clip_prim_coords_match = spatial_tree.is_matching_coord_system(
                     prim_spatial_node_index,
@@ -1430,7 +1472,7 @@ fn get_prim_render_strategy(
 
                     if let Some(clip_rect) = map_clip_to_prim.map(&clip_instance.clip_rect) {
                         let radius = map_clip_to_prim.map_vector(
-                            LayoutVector2D::new(max_corner_width, max_corner_height)
+                            LayoutVector2D::new(max_corner_width + max_inset_width, max_corner_height + max_inset_height)
                         );
                         return QuadRenderStrategy::NinePatch {
                             radius,
@@ -1757,6 +1799,7 @@ pub fn write_rounded_rect_clip_blocks(
     gpu_buffer: &mut GpuBufferBuilderF,
     clip_rect: LayoutRect,
     radius: &BorderRadius,
+    inset: LayoutSideOffsets,
     mode: ClipMode,
 ) -> (GpuBufferAddress, bool) {
     let radius = clamped_radius(radius, clip_rect.size());
@@ -1774,7 +1817,7 @@ pub fn write_rounded_rect_clip_blocks(
 
         (writer.finish(), true)
     } else {
-        let mut writer = gpu_buffer.write_blocks(5);
+        let mut writer = gpu_buffer.write_blocks(6);
         writer.push_one(clip_rect);
         writer.push_one([
             radius.top_left.width,
@@ -1795,6 +1838,7 @@ pub fn write_rounded_rect_clip_blocks(
             radius.shape_bottom_right,
             radius.shape_bottom_left,
         ]);
+        writer.push_one(inset);
 
         (writer.finish(), false)
     }
@@ -1816,11 +1860,12 @@ pub fn prepare_clip_task(
     sub_tasks: &mut SubTaskRange,
 ) {
     let (clip_address, fast_path) = match clip_item.kind {
-        ClipItemKind::RoundedRectangle { radius, mode } => {
+        ClipItemKind::RoundedRectangle { radius, inset, mode } => {
             write_rounded_rect_clip_blocks(
                 gpu_buffer,
                 clip_instance.clip_rect,
                 &radius,
+                inset,
                 mode,
             )
         }
