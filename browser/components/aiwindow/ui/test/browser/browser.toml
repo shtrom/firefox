@@ -21,6 +21,8 @@ support-files = [
   "test_memories_icon_button.mjs",
   "test_grouped_chips_page.html",
   "test_grouped_chips.mjs",
+  "test_smartwindow_prompts_page.html",
+  "test_smartwindow_prompts.mjs",
   "test_smartwindow_panel_list_page.html",
   "test_smartwindow_panel_list.mjs",
   "test_website_chip_page.html",
