@@ -39,6 +39,8 @@ async function reformatExpectedWebCompatInfo(tab, overrides) {
   const experiments = overrides.experiments || [];
   const atOverrides = overrides.antitracking;
   const blockList = atOverrides?.blockList ?? antitracking.blockList;
+  const blockedOrigins =
+    atOverrides?.blockedOrigins ?? antitracking.blockedOrigins ?? [];
   const hasMixedActiveContentBlocked =
     atOverrides?.hasMixedActiveContentBlocked ??
     antitracking.hasMixedActiveContentBlocked;
@@ -112,6 +114,7 @@ async function reformatExpectedWebCompatInfo(tab, overrides) {
         tabInfo: {
           antitracking: {
             blockList,
+            blockedOrigins,
             btpHasPurgedSite,
             etpCategory,
             hasMixedActiveContentBlocked,
@@ -143,13 +146,6 @@ async function reformatExpectedWebCompatInfo(tab, overrides) {
     utm_campaign: "report-broken-site",
     utm_source: "desktop-reporter",
   };
-
-  const blockedOrigins =
-    atOverrides?.blockedOrigins ?? antitracking.blockedOrigins;
-  if (blockedOrigins) {
-    reformatted.details.additionalData.tabInfo.antitracking.blockedOrigins =
-      blockedOrigins;
-  }
 
   // We only care about this pref on Linux right now on webcompat.com.
   if (AppConstants.platform != "linux") {
@@ -209,19 +205,8 @@ async function testSendMoreInfo(tab, menu, expectedOverrides = {}) {
   if (expectedOverrides?.screenshotOptOut) {
     const { screenshotToggle } = rbs;
     await isVisible(screenshotToggle);
-    if (screenshotToggle.pressed) {
-      screenshotToggle.click();
-    }
+    screenshotToggle.pressed = false;
     await isNotPressed(screenshotToggle);
-  }
-
-  if (expectedOverrides?.antitracking?.blockedOrigins) {
-    const { blockedTrackersToggle } = rbs;
-    await isVisible(blockedTrackersToggle);
-    if (!blockedTrackersToggle.pressed) {
-      blockedTrackersToggle.click();
-    }
-    await isPressed(blockedTrackersToggle);
   }
 
   const receivedData = await rbs.clickSendMoreInfo();

@@ -2,8 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { ReportBrokenSiteHelpers as Helpers } from "./ReportBrokenSiteHelpers.mjs";
-
 function RunScriptInFrame(win, script) {
   const contentPrincipal = win.document.nodePrincipal;
   const sandbox = Cu.Sandbox([contentPrincipal], {
@@ -377,9 +375,6 @@ export class ReportBrokenSiteChild extends JSWindowActorChild {
         if (win.location.href == expectedEndpoint) {
           // Ensure that the tab has fully loaded and is waiting for messages
           const onLoad = () => {
-            if (msg.data.webcompatInfo) {
-              Helpers.filterReportData(msg.data.webcompatInfo, msg.data);
-            }
             const payload = this.#formatReportDataForWebcompatCom(msg.data);
             const json = this.#stripNonASCIIChars(JSON.stringify(payload));
             const expectedOrigin = JSON.stringify(
