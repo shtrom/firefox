@@ -11,6 +11,7 @@ UNIFIED_SOURCES += [
     "TestBSPTree.cpp",
     "TestBufferRotation.cpp",
     "TestConfigManager.cpp",
+    "TestConvolutionFilter.cpp",
     "TestCoord.cpp",
     "TestCopyPlane.cpp",
     "TestFontFallback.cpp",
