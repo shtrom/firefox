@@ -6,9 +6,7 @@
 #define DOM_MEDIA_WEBRTC_RTCDATACHANNEL_H_
 
 #include "mozilla/DOMEventTargetHelper.h"
-#include "mozilla/Maybe.h"
 #include "mozilla/dom/Nullable.h"
-#include "mozilla/dom/PMediaTransport.h"
 #include "mozilla/dom/RTCDataChannelBinding.h"
 #include "mozilla/dom/RTCStatsReportBinding.h"
 #include "mozilla/dom/TypedArray.h"
@@ -108,7 +106,7 @@ class RTCDataChannel final : public DOMEventTargetHelper {
   void SetReadyState(const RTCDataChannelState aState);
 
   void AnnounceOpen();
-  void AnnounceClosed(Maybe<RTCErrorParams> aError);
+  void AnnounceClosed();
   void GracefulClose();
 
   void DecrementBufferedAmount(size_t aSize);

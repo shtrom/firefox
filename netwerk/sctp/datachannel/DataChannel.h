@@ -19,7 +19,6 @@
 #include "mozilla/StopGapEventTarget.h"
 #include "mozilla/WeakPtr.h"
 #include "mozilla/dom/Blob.h"
-#include "mozilla/dom/PMediaTransport.h"
 #include "mozilla/dom/RTCStatsReportBinding.h"
 #include "mozilla/net/NeckoTargetHolder.h"
 #include "nsCOMPtr.h"
@@ -39,6 +38,7 @@ class MediaTransportHandler;
 namespace dom {
 class RTCDataChannel;
 struct RTCStatsCollection;
+class RTCErrorParams;
 };  // namespace dom
 
 enum class DataChannelConnectionState { Connecting, Open, Closed };
@@ -233,10 +233,9 @@ class DataChannelConnection : public net::NeckoTargetHolder {
       bool aExternalNegotiated, uint16_t aStream);
 
   void EndOfStream(const RefPtr<DataChannel>& aChannel);
-  void FinishClose_s(const RefPtr<DataChannel>& aChannel,
-                     Maybe<dom::RTCErrorParams> aError = Nothing());
+  void FinishClose_s(const RefPtr<DataChannel>& aChannel);
   void CloseAll();
-  void CloseAll_s(Maybe<dom::RTCErrorParams> aError = Nothing());
+  void CloseAll_s();
   void MarkStreamAvailable(uint16_t aStream);
 
   nsISerialEventTarget* GetIOThread();
@@ -425,7 +424,7 @@ class DataChannel {
 
   void DecrementBufferedAmount(size_t aSize);
   void AnnounceOpen();
-  void AnnounceClosed(Maybe<dom::RTCErrorParams> aError);
+  void AnnounceClosed();
   void GracefulClose();
 
   Maybe<uint16_t> GetStream() const {
