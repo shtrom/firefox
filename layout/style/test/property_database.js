@@ -11937,8 +11937,7 @@ var gCSSProperties = {
   "-webkit-line-clamp": {
     domProp: "webkitLineClamp",
     inherited: false,
-    type: CSS_TYPE_LEGACY_SHORTHAND,
-    subproperties: ["line-clamp"],
+    type: CSS_TYPE_LONGHAND,
     initial_values: ["none"],
     other_values: ["1", "2"],
     invalid_values: ["auto", "0", "-1"],
@@ -12096,26 +12095,6 @@ var gCSSProperties = {
   },
 }; // end of gCSSProperties
 
-if (IsCSSPropertyPrefEnabled("layout.css.line-clamp.enabled")) {
-  gCSSProperties["line-clamp"] = {
-    domProp: "lineClamp",
-    inherited: false,
-    type: CSS_TYPE_LONGHAND,
-    initial_values: ["none"],
-    other_values: [
-      "1",
-      "2",
-      "auto 3",
-      "3 auto",
-      "3 no-ellipsis",
-      "3 -webkit-legacy",
-    ],
-    invalid_values: ["0", "-1", "auto", "no-ellipsis", "-webkit-legacy"],
-  };
-} else {
-  gCSSProperties["-webkit-line-clamp"].subproperties = [];
-}
-
 // Get the computed value for a property.  For shorthands, return the
 // computed values of all the subproperties, delimited by " ; ".
 function get_computed_value(cs, property) {
@@ -12127,7 +12106,8 @@ function get_computed_value(cs, property) {
       (property == "text-decoration" || property == "mask"))
   ) {
     var results = [];
-    for (var subprop of info.subproperties) {
+    for (var idx in info.subproperties) {
+      var subprop = info.subproperties[idx];
       results.push(get_computed_value(cs, subprop));
     }
     return results.join(" ; ");
