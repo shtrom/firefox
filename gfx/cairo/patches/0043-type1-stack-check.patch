@@ -6,9 +6,9 @@
 # Parent  32f715efe1aa84d483a03d4e96e1f80604a8dccb
 Bug 2049399 - Check type1 stack size.
 
-diff --git a/gfx/cairo/cairo/src/cairo-type1-subset.c b/gfx/cairo/cairo/src/cairo-type1-subset.c
---- a/gfx/cairo/cairo/src/cairo-type1-subset.c
-+++ b/gfx/cairo/cairo/src/cairo-type1-subset.c
+diff --git a/src/cairo-type1-subset.c b/src/cairo-type1-subset.c
+--- a/src/cairo-type1-subset.c
++++ b/src/cairo-type1-subset.c
 @@ -946,7 +946,7 @@ cairo_type1_font_subset_parse_charstring
                      break;
  

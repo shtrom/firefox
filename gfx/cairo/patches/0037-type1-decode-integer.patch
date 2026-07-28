@@ -6,9 +6,9 @@
 # Parent  e3ade567c5856015183569f9161a9381c43b3834
 Bug 2050368 - Check for end of charstring.
 
-diff --git a/gfx/cairo/cairo/src/cairo-type1-subset.c b/gfx/cairo/cairo/src/cairo-type1-subset.c
---- a/gfx/cairo/cairo/src/cairo-type1-subset.c
-+++ b/gfx/cairo/cairo/src/cairo-type1-subset.c
+diff --git a/src/cairo-type1-subset.c b/src/cairo-type1-subset.c
+--- a/src/cairo-type1-subset.c
++++ b/src/cairo-type1-subset.c
 @@ -722,23 +722,27 @@ cairo_type1_font_subset_decrypt_charstri
      }
  }

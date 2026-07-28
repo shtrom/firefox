@@ -9,10 +9,10 @@ Differential Revision: https://phabricator.services.mozilla.com/D307892
  gfx/cairo/cairo/src/cairoint.h | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/gfx/cairo/cairo/src/cairoint.h b/gfx/cairo/cairo/src/cairoint.h
+diff --git a/src/cairoint.h b/src/cairoint.h
 index 2be5c0e9f101..94aaddffa709 100644
---- a/gfx/cairo/cairo/src/cairoint.h
-+++ b/gfx/cairo/cairo/src/cairoint.h
+--- a/src/cairoint.h
++++ b/src/cairoint.h
 @@ -753,7 +753,7 @@ typedef struct _cairo_stroke_face {
  static inline double cairo_const
  _cairo_restrict_value (double value, double min, double max)

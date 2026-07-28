@@ -6,9 +6,9 @@
 # Parent  c01a5e2713306294194ba48fafd5f9378cfee3bc
 Bug 2049398 - Range-check glyph ID.
 
-diff --git a/gfx/cairo/cairo/src/cairo-cff-subset.c b/gfx/cairo/cairo/src/cairo-cff-subset.c
---- a/gfx/cairo/cairo/src/cairo-cff-subset.c
-+++ b/gfx/cairo/cairo/src/cairo-cff-subset.c
+diff --git a/src/cairo-cff-subset.c b/src/cairo-cff-subset.c
+--- a/src/cairo-cff-subset.c
++++ b/src/cairo-cff-subset.c
 @@ -1832,6 +1832,8 @@ cairo_cff_font_subset_charstrings_and_su
  	} else {
  	    glyph = font->scaled_font_subset->glyphs[i];
@@ -29,9 +29,9 @@ diff --git a/gfx/cairo/cairo/src/cairo-cff-subset.c b/gfx/cairo/cairo/src/cairo-
  
          fd = font->fdselect[gid];
          if (fd < 0 || (unsigned int) fd >= font->num_fontdicts) {
-diff --git a/gfx/cairo/cairo/src/cairo-scaled-font-subsets.c b/gfx/cairo/cairo/src/cairo-scaled-font-subsets.c
---- a/gfx/cairo/cairo/src/cairo-scaled-font-subsets.c
-+++ b/gfx/cairo/cairo/src/cairo-scaled-font-subsets.c
+diff --git a/src/cairo-scaled-font-subsets.c b/src/cairo-scaled-font-subsets.c
+--- a/src/cairo-scaled-font-subsets.c
++++ b/src/cairo-scaled-font-subsets.c
 @@ -839,6 +839,11 @@ _cairo_scaled_font_subsets_map_glyph (ca
      cairo_bool_t has_color;
      cairo_bool_t is_user;

@@ -8,9 +8,9 @@ Bug 2053327 - Check allocations in _cairo_win32_printing_surface_paint_linear_pa
 
 Differential Revision: https://phabricator.services.mozilla.com/D311550
 
-diff --git a/gfx/cairo/cairo/src/win32/cairo-win32-printing-surface.c b/gfx/cairo/cairo/src/win32/cairo-win32-printing-surface.c
---- a/gfx/cairo/cairo/src/win32/cairo-win32-printing-surface.c
-+++ b/gfx/cairo/cairo/src/win32/cairo-win32-printing-surface.c
+diff --git a/src/win32/cairo-win32-printing-surface.c b/src/win32/cairo-win32-printing-surface.c
+--- a/src/win32/cairo-win32-printing-surface.c
++++ b/src/win32/cairo-win32-printing-surface.c
 @@ -963,8 +963,8 @@ static cairo_int_status_t
  _cairo_win32_printing_surface_paint_linear_pattern (cairo_win32_printing_surface_t *surface,
                                                      cairo_linear_pattern_t *pattern)

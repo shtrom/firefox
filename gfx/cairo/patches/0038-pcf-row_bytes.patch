@@ -1,7 +1,7 @@
-diff --git a/gfx/cairo/cairo/src/cairo-ft-font.c b/gfx/cairo/cairo/src/cairo-ft-font.c
+diff --git a/src/cairo-ft-font.c b/src/cairo-ft-font.c
 index 02481e8b06..e9bb193c90 100644
---- a/gfx/cairo/cairo/src/cairo-ft-font.c
-+++ b/gfx/cairo/cairo/src/cairo-ft-font.c
+--- a/src/cairo-ft-font.c
++++ b/src/cairo-ft-font.c
 @@ -1330,12 +1330,21 @@ _get_bitmap_surface (FT_Bitmap		     *bitmap,
  	    } else {
  		int i;

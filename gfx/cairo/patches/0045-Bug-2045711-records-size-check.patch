@@ -1,6 +1,6 @@
-diff --git a/gfx/cairo/cairo/src/cairo-truetype-subset.c b/gfx/cairo/cairo/src/cairo-truetype-subset.c
---- a/gfx/cairo/cairo/src/cairo-truetype-subset.c
-+++ b/gfx/cairo/cairo/src/cairo-truetype-subset.c
+diff --git a/src/cairo-truetype-subset.c b/src/cairo-truetype-subset.c
+--- a/src/cairo-truetype-subset.c
++++ b/src/cairo-truetype-subset.c
 @@ -1446,23 +1446,32 @@ cleanup:
   */
  #define MAX_FONT_NAME_LENGTH 127

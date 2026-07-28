@@ -4,10 +4,10 @@ Date:   Wed May 6 13:21:19 2026 +0100
 
     Bug 2037290 - Check more offsets during cairo CFF subsetting.
 
-diff --git a/gfx/cairo/cairo/src/cairo-cff-subset.c b/gfx/cairo/cairo/src/cairo-cff-subset.c
+diff --git a/src/cairo-cff-subset.c b/src/cairo-cff-subset.c
 index 6c01ed4ef876..6e3a4340c4ec 100644
---- a/gfx/cairo/cairo/src/cairo-cff-subset.c
-+++ b/gfx/cairo/cairo/src/cairo-cff-subset.c
+--- a/src/cairo-cff-subset.c
++++ b/src/cairo-cff-subset.c
 @@ -1086,6 +1086,10 @@ cairo_cff_font_read_cid_fontdict (cairo_cff_font_t *font, unsigned char *ptr)
          }
          operand = decode_integer (operand, &size);

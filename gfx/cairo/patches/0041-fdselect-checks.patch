@@ -6,9 +6,9 @@
 # Parent  1d143cb49e2179675d69ecc03e2eb4b8dfd7412c
 Bug 2048801 - Validate fdselect entries before use.
 
-diff --git a/gfx/cairo/cairo/src/cairo-cff-subset.c b/gfx/cairo/cairo/src/cairo-cff-subset.c
---- a/gfx/cairo/cairo/src/cairo-cff-subset.c
-+++ b/gfx/cairo/cairo/src/cairo-cff-subset.c
+diff --git a/src/cairo-cff-subset.c b/src/cairo-cff-subset.c
+--- a/src/cairo-cff-subset.c
++++ b/src/cairo-cff-subset.c
 @@ -1631,6 +1631,8 @@ cairo_cff_parse_charstring (cairo_cff_fo
  
              if (font->is_cid) {
