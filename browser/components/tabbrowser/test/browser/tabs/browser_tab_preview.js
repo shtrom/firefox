@@ -1110,6 +1110,9 @@ add_task(async function moveBetweenTabGroupsTests() {
 });
 
 add_task(async function tabGroupPanelHorizontalOffsetOptions() {
+  // The vertical-tabs variant enables sidebar.verticalTabs for the whole run.
+  await SpecialPowers.pushPrefEnv({ set: [["sidebar.verticalTabs", false]] });
+
   const testCases = [
     {
       prefs: [["browser.nova.enabled", false]],
@@ -1137,10 +1140,18 @@ add_task(async function tabGroupPanelHorizontalOffsetOptions() {
       await assertPopupOptions(groupPanel, instance);
     }
   });
+
+  await SpecialPowers.popPrefEnv();
 });
 
 add_task(async function tabGroupPanelHorizontalOpensWithOffset() {
-  await SpecialPowers.pushPrefEnv({ set: [["browser.nova.enabled", true]] });
+  // The vertical-tabs variant enables sidebar.verticalTabs for the whole run.
+  await SpecialPowers.pushPrefEnv({
+    set: [
+      ["sidebar.verticalTabs", false],
+      ["browser.nova.enabled", true],
+    ],
+  });
 
   await withGroupPanel(async (groupPanel, group) => {
     const openPopupSpy = sinon.spy(groupPanel.panelElement, "openPopup");
