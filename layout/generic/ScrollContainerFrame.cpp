@@ -7551,7 +7551,20 @@ nsRect ScrollContainerFrame::GetScrollRangeForUserInputEvents() const {
 ScrollDirections
 ScrollContainerFrame::GetAvailableScrollingDirectionsForUserInputEvents()
     const {
+  Sides sides = SidesToScrollForUserInputEvents();
+  ScrollDirections directions;
+  if (sides.Intersects(SideBits::eLeft | SideBits::eRight)) {
+    directions += ScrollDirection::eHorizontal;
+  }
+  if (sides.Intersects(SideBits::eTop | SideBits::eBottom)) {
+    directions += ScrollDirection::eVertical;
+  }
+  return directions;
+}
+
+Sides ScrollContainerFrame::SidesToScrollForUserInputEvents() const {
   nsRect scrollRange = GetScrollRangeForUserInputEvents();
+  nsPoint scrollPos = GetScrollPosition();
 
   // We check if there is at least one half of a screen pixel of scroll range to
   // roughly match what apz does when it checks if the change in scroll position
@@ -7562,14 +7575,21 @@ ScrollContainerFrame::GetAvailableScrollingDirectionsForUserInputEvents()
   float halfScreenPixel =
       GetScrolledFrame()->PresContext()->AppUnitsPerDevPixel() /
       (PresShell()->GetCumulativeResolution() * 2.f);
-  ScrollDirections directions;
-  if (scrollRange.width >= halfScreenPixel) {
-    directions += ScrollDirection::eHorizontal;
+
+  Sides ret;
+  if (scrollPos.y - scrollRange.y >= halfScreenPixel) {
+    ret |= SideBits::eTop;
   }
-  if (scrollRange.height >= halfScreenPixel) {
-    directions += ScrollDirection::eVertical;
+  if (scrollRange.YMost() - scrollPos.y >= halfScreenPixel) {
+    ret |= SideBits::eBottom;
   }
-  return directions;
+  if (scrollPos.x - scrollRange.x >= halfScreenPixel) {
+    ret |= SideBits::eLeft;
+  }
+  if (scrollRange.XMost() - scrollPos.x >= halfScreenPixel) {
+    ret |= SideBits::eRight;
+  }
+  return ret;
 }
 
 /**
