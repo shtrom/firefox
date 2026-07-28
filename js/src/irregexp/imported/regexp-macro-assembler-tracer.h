@@ -16,7 +16,7 @@ namespace regexp {
 class RegExpMacroAssemblerTracer : public RegExpMacroAssembler {
  public:
   explicit RegExpMacroAssemblerTracer(
-      js::UniquePtr<RegExpMacroAssembler>&& assembler);
+      std::unique_ptr<RegExpMacroAssembler>&& assembler);
   ~RegExpMacroAssemblerTracer() override;
   void AbortedCodeGeneration() override;
   void AdvanceCurrentPosition(int by) override;    // Signed cp change.
@@ -55,23 +55,26 @@ class RegExpMacroAssemblerTracer : public RegExpMacroAssembler {
   bool SkipUntilBitInTableUseSimd(int advance_by) override {
     return assembler_->SkipUntilBitInTableUseSimd(advance_by);
   }
+  bool SkipUntilCharAndUseSimd(int advance_by) override {
+    return assembler_->SkipUntilCharAndUseSimd(advance_by);
+  }
   void SkipUntilBitInTable(int cp_offset, Handle<ByteArray> table,
                            Handle<ByteArray> nibble_table, int advance_by,
-                           Label* on_match, Label* on_no_match) override;
+                           int bounds_check_offset, Label* on_match,
+                           Label* on_no_match) override;
   void SkipUntilCharAnd(int cp_offset, int advance_by, unsigned character,
-                        unsigned mask, int eats_at_least, Label* on_match,
+                        unsigned mask, int bounds_check_offset, Label* on_match,
                         Label* on_no_match) override;
   void SkipUntilChar(int cp_offset, int advance_by, unsigned character,
-                     Label* on_match, Label* on_no_match) override;
-  void SkipUntilCharPosChecked(int cp_offset, int advance_by,
-                               unsigned character, int eats_at_least,
-                               Label* on_match, Label* on_no_match) override;
+                     int bounds_check_offset, Label* on_match,
+                     Label* on_no_match) override;
   void SkipUntilCharOrChar(int cp_offset, int advance_by, unsigned char1,
-                           unsigned char2, Label* on_match,
-                           Label* on_no_match) override;
+                           unsigned char2, int bounds_check_offset,
+                           Label* on_match, Label* on_no_match) override;
   void SkipUntilGtOrNotBitInTable(int cp_offset, int advance_by,
                                   unsigned character, Handle<ByteArray> table,
-                                  Label* on_match, Label* on_no_match) override;
+                                  int bounds_check_offset, Label* on_match,
+                                  Label* on_no_match) override;
   void SkipUntilOneOfMasked(int cp_offset, int advance_by, unsigned both_chars,
                             unsigned both_mask, int max_offset, unsigned chars1,
                             unsigned mask1, unsigned chars2, unsigned mask2,
@@ -95,7 +98,7 @@ class RegExpMacroAssemblerTracer : public RegExpMacroAssembler {
   IrregexpImplementation Implementation() override;
   void LoadCurrentCharacterImpl(int cp_offset, Label* on_end_of_input,
                                 bool check_bounds, int characters,
-                                int eats_at_least) override;
+                                int bounds_check_offset) override;
   void PopCurrentPosition() override;
   void PopRegister(int register_index) override;
   void PushBacktrack(Label* label) override;
@@ -121,7 +124,7 @@ class RegExpMacroAssemblerTracer : public RegExpMacroAssembler {
   void set_can_fallback(bool val) override;
 
  private:
-  js::UniquePtr<RegExpMacroAssembler> assembler_;
+  std::unique_ptr<RegExpMacroAssembler> assembler_;
 };
 
 }  // namespace regexp
