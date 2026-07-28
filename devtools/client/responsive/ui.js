@@ -262,8 +262,17 @@ class ResponsiveUI extends EventEmitter {
       DYNAMIC_TOOLBAR_MAX_HEIGHT + "px"
     );
 
-    // Prepend the RDM iframe inside of the current tab's browser container.
-    this.browserContainerEl.prepend(rdmFrame);
+    // In split view, notifications are placed inside the browser container. If there are
+    // some notifications displayed, we want the RDM toolbar to be placed after them
+    const notificationBox = this.browserContainerEl.querySelector(
+      ".notificationbox-stack"
+    );
+    if (notificationBox) {
+      notificationBox.after(rdmFrame);
+    } else {
+      // Otherwise, prepend the RDM iframe inside of the current tab's browser container.
+      this.browserContainerEl.prepend(rdmFrame);
+    }
 
     // Put .rdm-screen-box inside the browser stack, as a sibling to the browser.
     this.browserStackEl.append(this.screenBox);

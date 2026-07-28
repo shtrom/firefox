@@ -88,6 +88,12 @@ body,
   grid-template-columns: auto min-content;
   width: 100%;
   user-select: none;
+
+  /* Add some inline padding in Nova so the close icon isn't clipped by
+     the browser  container border radius */
+  @media -moz-pref("browser.nova.enabled") {
+    padding-inline: 8px;
+  }
 }
 
 #toolbar :is(select, button):focus-visible {
