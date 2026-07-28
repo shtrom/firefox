@@ -15,14 +15,6 @@ namespace mozilla {
 
 class IceServerParser {
  public:
-  // Known acceptable ports for webrtc. These are allowed for outgoing
-  // connections even when they appear on Necko's generic port block list.
-  static constexpr uint16_t kGoodWebrtcPortList[] = {
-      53,    // Some deployments use DNS port to punch through overzealous NATs
-      3478,  // stun or turn
-      5349,  // stuns or turns
-  };
-
   enum class StunTurnScheme : uint8_t {
     Stun,
     Stuns,
@@ -73,11 +65,6 @@ class IceServerParser {
   static Result<nsTArray<ParsedIceServer>, ErrorResult> Parse(
       const nsTArray<dom::RTCIceServer>& aIceServers);
 };
-
-// Returns true if aPort may be used as an outgoing webrtc destination: either
-// it is one of IceServerParser::kGoodWebrtcPortList or it is not on Necko's
-// generic outgoing port block list.
-bool IsWebrtcPortAllowed(uint16_t aPort);
 
 }  // namespace mozilla
 

@@ -237,8 +237,15 @@ IceServerParser::ParseStunTurnUri(const nsACString& aUri) {
   return result;
 }
 
-bool IsWebrtcPortAllowed(uint16_t aPort) {
-  for (const auto port : IceServerParser::kGoodWebrtcPortList) {
+// Known acceptable ports for webrtc
+constexpr uint16_t gGoodWebrtcPortList[] = {
+    53,    // Some deployments use DNS port to punch through overzealous NATs
+    3478,  // stun or turn
+    5349,  // stuns or turns
+};
+
+static bool IsPortAllowed(uint16_t aPort) {
+  for (const auto port : gGoodWebrtcPortList) {
     if (aPort == port) {
       return true;
     }
@@ -284,7 +291,7 @@ IceServerParser::Parse(const nsTArray<dom::RTCIceServer>& aIceServers) {
       StunTurnUri uri = parseResult.unwrap();
 
       // This isn't in the spec. Maybe it should be.
-      if (!IsWebrtcPortAllowed(uri.mPort)) {
+      if (!IsPortAllowed(uri.mPort)) {
         ErrorResult rv;
         rv.ThrowSyntaxError(
             nsFmtCString("'{}' uses a port that is blocked", utf8Url));

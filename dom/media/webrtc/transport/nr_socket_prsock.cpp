@@ -88,7 +88,6 @@ nrappkit copyright:
 #include <string.h>
 #include <sys/types.h>
 
-#include "mozilla/IceServerParser.h"
 #include "mozilla/ProfilerBandwidthCounter.h"
 #include "mozilla/SyncRunnable.h"
 #include "mozilla/net/DNS.h"
@@ -744,17 +743,6 @@ int NrSocket::sendto(const void* msg, size_t len, int flags,
     ABORT(R_WOULDBLOCK);
   }
 
-  // Block outgoing packets to ports that are not allowed for webrtc. This runs
-  // in whatever process opened the socket -- the socket process (socket-process
-  // mtransport) or the parent process -- never the content process, which uses
-  // NrUdpSocketIpc/NrTcpSocket (gated in NrUdpSocketIpc::sendto and enforced by
-  // STUNUDPSocketFilter in the parent process).
-  if (IsForbiddenAddress(to)) {
-    // Drop the packet, but report success so the caller does not retry.
-    _status = 0;
-    goto abort;
-  }
-
   // TODO: Convert flags?
   status = PR_SendTo(fd_, msg, len, flags, &naddr, PR_INTERVAL_NO_WAIT);
   if (status < 0 || (size_t)status != len) {
@@ -819,12 +807,6 @@ int NrSocket::connect(const nr_transport_addr* addr) {
   if ((r = nr_transport_addr_to_praddr(addr, &naddr))) ABORT(r);
 
   if (!fd_) ABORT(R_EOD);
-
-  // Block connections to ports that are not allowed for webrtc. See the note
-  // in NrSocket::sendto; this runs only in the socket/parent process.
-  if (IsForbiddenAddress(addr)) {
-    ABORT(R_WOULDBLOCK);
-  }
 
   // Note: this just means we tried to connect, not that we
   // are actually live.
@@ -1282,15 +1264,6 @@ int NrUdpSocketIpc::sendto(const void* msg, size_t len, int flags,
     return R_INTERNAL;
   }
 
-  // Block outgoing packets to ports that are not allowed for webrtc, the same
-  // way NrSocket::sendto does for sockets we own. This is the content process,
-  // so it is not a trust boundary; STUNUDPSocketFilter enforces the same
-  // restriction in the parent process. Drop the packet, but report success so
-  // the caller does not retry.
-  if (IsForbiddenAddress(to)) {
-    return 0;
-  }
-
   int r;
   net::NetAddr addr;
   if ((r = nr_transport_addr_to_netaddr(to, &addr))) {
@@ -1626,7 +1599,7 @@ abort:
 }
 
 // static
-bool NrSocketBase::IsForbiddenAddress(const nr_transport_addr* addr) {
+bool NrSocketBase::IsForbiddenAddress(nr_transport_addr* addr) {
   uint16_t port;
   int r;
 
@@ -1636,20 +1609,15 @@ bool NrSocketBase::IsForbiddenAddress(const nr_transport_addr* addr) {
   }
 
   // allow auto assigned ports
-  if (port == 0) {
-    return false;
-  }
-
-  // First check the known good ports for webrtc.
-  for (const auto good : IceServerParser::kGoodWebrtcPortList) {
-    if (port == good) {
-      return false;
+  if (port != 0) {
+    // Don't need to check an override scheme
+    nsresult rv = NS_CheckPortSafety(port, nullptr);
+    if (NS_FAILED(rv)) {
+      return true;
     }
   }
 
-  // Otherwise fall back to Necko's generic outgoing port block list. Don't
-  // need to check an override scheme.
-  return NS_FAILED(NS_CheckPortSafety(port, nullptr));
+  return false;
 }
 
 static int nr_socket_local_destroy(void** objp) {
