@@ -2881,7 +2881,7 @@
       stack.className = "browserStack";
       stack.appendChild(b);
 
-      let browserContainer = document.createXULElement("box");
+      let browserContainer = document.createXULElement("vbox");
       browserContainer.className = "browserContainer";
       browserContainer.appendChild(stack);
 

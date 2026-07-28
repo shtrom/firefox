@@ -344,11 +344,10 @@
     }
 
     handleEvent(e) {
-      const validBrowserTargetSelector =
-        "browser:not(.devtools-toolbox-iframe)";
-      const browser = e.currentTarget.matches(validBrowserTargetSelector)
-        ? e.currentTarget
-        : e.currentTarget.querySelector(validBrowserTargetSelector);
+      const browser =
+        e.currentTarget.tagName === "browser"
+          ? e.currentTarget
+          : e.currentTarget.querySelector("browser");
       let elToFocus = null;
       switch (e.type) {
         case "click":
@@ -506,9 +505,7 @@
         const panelEl = document.getElementById(panel);
         panelEl?.classList.add("split-view-panel");
         panelEl?.setAttribute("column", i);
-        const browser = panelEl?.querySelector(
-          "browser:not(.devtools-toolbox-iframe)"
-        );
+        const browser = panelEl?.querySelector("browser");
         const browserContainer = panelEl?.querySelector(".browserContainer");
         for (const eventType of MozTabpanels.#SPLIT_VIEW_PANEL_EVENTS) {
           browserContainer?.addEventListener(eventType, this);
@@ -535,9 +532,7 @@
         panelEl?.classList.remove("split-view-panel");
         panelEl?.classList.remove("split-view-panel-active");
         panelEl?.removeAttribute("column");
-        const browser = panelEl?.querySelector(
-          "browser:not(.devtools-toolbox-iframe)"
-        );
+        const browser = panelEl?.querySelector("browser");
         const browserContainer = panelEl?.querySelector(".browserContainer");
 
         for (const eventType of MozTabpanels.#SPLIT_VIEW_PANEL_EVENTS) {

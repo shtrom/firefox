@@ -31,20 +31,12 @@ add_task(async function () {
   );
 
   let iframe = panel.querySelector(".devtools-toolbox-iframe.bottom-host");
-  const minContentSize = parseFloat(
-    panel.documentGlobal
-      .getComputedStyle(panel)
-      .getPropertyValue("--content-area-min-size")
-  );
   is(
     iframe.clientHeight,
-    panelHeight - minContentSize,
+    panelHeight - 25,
     "The iframe fits within the available space"
   );
 
-  // The max-height is set in a ResizeObserver callback, so we need to wait for the style
-  // to be set before manually setting the height
-  await waitFor(() => iframe.style.maxHeight);
   iframe.style.height = "10000px"; // Set height to something unreasonably large.
   Assert.less(
     iframe.clientHeight,
@@ -57,13 +49,10 @@ add_task(async function () {
   iframe.style.minWidth = "1px"; // Disable the min width set in css
   is(
     iframe.clientWidth,
-    panelWidth - minContentSize,
+    panelWidth - 25,
     "The iframe fits within the available space"
   );
 
-  // The max-width is set in a ResizeObserver callback, so we need to wait for the style
-  // to be set before manually setting the width
-  await waitFor(() => iframe.style.maxWidth);
   const oldWidth = iframe.style.width;
   iframe.style.width = "10000px"; // Set width to something unreasonably large.
   Assert.less(

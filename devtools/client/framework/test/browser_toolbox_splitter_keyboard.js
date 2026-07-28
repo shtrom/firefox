@@ -45,9 +45,6 @@ add_task(async function () {
     "The horizontal splitter's aria-controls attribute points to the toolbox"
   );
 
-  // Wait for the initial calls that sets the aria-valuemax attribute
-  await waitFor(() => horzSplitter.ariaValueMax);
-
   info("Move focus to the content page");
   Services.focus.setFocus(gBrowser.selectedBrowser, Services.focus.FLAG_BYKEY);
 
