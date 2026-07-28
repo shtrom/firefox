@@ -25,9 +25,7 @@ function getTestDataFile(aFilename) {
 
 function loadHelperScript(aScriptFile) {
   let scriptSpec = Services.io.newFileURI(aScriptFile).spec;
-  Services.scriptloader.loadSubScriptWithOptions(scriptSpec, {
-    allowUnsafeURL: true,
-  });
+  Services.scriptloader.loadSubScript(scriptSpec, this);
 }
 
 var scriptFile = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);

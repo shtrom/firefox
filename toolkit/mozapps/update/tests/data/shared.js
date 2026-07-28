@@ -127,13 +127,7 @@ var gChannel;
 var gDebugTest = false;
 
 /* import-globals-from sharedUpdateXML.js */
-Services.scriptloader.loadSubScriptWithOptions(
-  DATA_URI_SPEC + "sharedUpdateXML.js",
-  {
-    target: this,
-    allowUnsafeURL: true,
-  }
-);
+Services.scriptloader.loadSubScript(DATA_URI_SPEC + "sharedUpdateXML.js", this);
 
 const PERMS_FILE = FileUtils.PERMS_FILE;
 const PERMS_DIRECTORY = FileUtils.PERMS_DIRECTORY;

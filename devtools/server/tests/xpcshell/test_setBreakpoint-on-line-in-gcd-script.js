@@ -9,7 +9,6 @@ add_task(
       loadSubScriptWithOptions(SOURCE_URL, {
         target: debuggee,
         ignoreCache: true,
-        allowUnsafeURL: true,
       });
       Cu.forceGC();
       Cu.forceGC();
@@ -25,7 +24,6 @@ add_task(
           loadSubScriptWithOptions(SOURCE_URL, {
             target: debuggee,
             ignoreCache: true,
-            allowUnsafeURL: true,
           });
         });
       }, threadFront);

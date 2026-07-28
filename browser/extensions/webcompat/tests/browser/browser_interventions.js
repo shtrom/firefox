@@ -193,13 +193,13 @@ add_task(async function test_json_data() {
     await WebCompatExtension.getCheckableGlobalPrefs();
 
   const exports = {};
-  Services.scriptloader.loadSubScriptWithOptions(
+  Services.scriptloader.loadSubScript(
     addonURI.resolve("lib/intervention_helpers.js"),
-    { target: exports, allowUnsafeURL: true }
+    exports
   );
-  Services.scriptloader.loadSubScriptWithOptions(
+  Services.scriptloader.loadSubScript(
     addonURI.resolve("lib/custom_functions.js"),
-    { target: exports, allowUnsafeURL: true }
+    exports
   );
   const helpers = exports.InterventionHelpers;
   const custom_fns = exports.CUSTOM_FUNCTIONS;

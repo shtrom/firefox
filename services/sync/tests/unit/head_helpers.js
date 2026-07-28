@@ -97,10 +97,7 @@ function loadWebExtensionTestFunctions() {
   const path = webExtensionsTestPath("/head_sync.js");
   let file = do_get_file(path);
   let uri = Services.io.newFileURI(file);
-  Services.scriptloader.loadSubScriptWithOptions(uri.spec, {
-    target: gGlobalScope,
-    allowUnsafeURL: true,
-  });
+  Services.scriptloader.loadSubScript(uri.spec, gGlobalScope);
 }
 
 /**
