@@ -41,8 +41,6 @@
 #include "vm/BigIntType.h"
 #include "vm/BytecodeUtil.h"  // JSDVG_SEARCH_STACK
 #include "vm/ConstantCompareOperand.h"
-
-#include "vm/Interpreter-inl.h"
 #include "vm/EqualityOperations.h"  // js::StrictlyEqual
 #include "vm/ErrorObject.h"
 #include "vm/GeneratorObject.h"
@@ -60,6 +58,7 @@
 #include "vm/ThrowMsgKind.h"     // ThrowMsgKind
 #include "vm/TypeofEqOperand.h"  // TypeofEqOperand
 #include "vm/UsingHint.h"
+
 #include "builtin/Boolean-inl.h"
 #include "debugger/DebugAPI-inl.h"
 #include "gc/WeakMap-inl.h"
@@ -67,6 +66,7 @@
 #include "vm/DisposableRecord-inl.h"
 #include "vm/EnvironmentObject-inl.h"
 #include "vm/GeckoProfiler-inl.h"
+#include "vm/Interpreter-inl.h"
 #include "vm/JSScript-inl.h"
 #include "vm/NativeObject-inl.h"
 #include "vm/ObjectOperations-inl.h"

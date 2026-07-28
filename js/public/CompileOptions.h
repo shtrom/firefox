@@ -118,8 +118,7 @@ class JS_PUBLIC_API PrefableCompileOptions {
  public:
   PrefableCompileOptions()
       : sourcePragmas_(true),
-        sourcePhaseImports_(JS::Prefs::experimental_source_phase_imports()) {
-  }
+        sourcePhaseImports_(JS::Prefs::experimental_source_phase_imports()) {}
 
   bool sourcePhaseImports() const { return sourcePhaseImports_; }
   PrefableCompileOptions& setSourcePhaseImports(bool enabled) {
