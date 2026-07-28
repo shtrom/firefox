@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "SwizzleGeneric.h"
+
 #include "SwizzleHelpers.h"
 
 namespace mozilla::gfx {
