@@ -151,6 +151,9 @@ class EditContext final : public DOMEventTargetHelper, public SupportsWeakPtr {
 
   void LastRelease() override { UnsuppressNotifyingIME(); }
 
+  // Returns true if this is a canvas-based EditContext.
+  bool IsCanvas() const;
+
  private:
   EditContext(nsIGlobalObject* aGlobalObject, const EditContextInit& aInit,
               ErrorResult& aRv);

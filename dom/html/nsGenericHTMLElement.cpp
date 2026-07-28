@@ -448,13 +448,17 @@ void nsGenericHTMLElement::SetEditContext(mozilla::dom::EditContext* aContext,
   }
   EditContext::SetForElement(*this, aContext);
 
+  // Update the active EditContext since it might have changed.
+  // It's important to do this before ChangeEditableState, since
+  // we want the active EditContext to be up-to-date for
+  // HTMLEditor::NotifyEditingHostMaybeChanged.
+  RefPtr doc = OwnerDoc();
+  doc->UpdateTextEditContext();
+
   int32_t delta = (aContext != nullptr) - (oldEditContext != nullptr);
   if (delta) {
     ChangeEditableState(delta);
   }
-  // Update the active EditContext since it might have changed.
-  RefPtr doc = OwnerDoc();
-  doc->UpdateTextEditContext();
 }
 
 bool nsGenericHTMLElement::InNavQuirksMode(Document* aDoc) {
