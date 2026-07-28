@@ -86,7 +86,8 @@ bugzilla:
     # ===========================================================================================
     def test_boolean(self):
         def build_input(input):
-            return b"""
+            return (
+                b"""
 ---
 schema: 1
 origin:
@@ -111,7 +112,9 @@ updatebot:
   tasks:
     - type: commit-alert
       enabled: %s
-            """ .strip() % input
+            """.strip()
+                % input
+            )
 
         def build_expected(expected):
             return {
@@ -133,22 +136,17 @@ updatebot:
                     "maintainer-phab": "tjr",
                     "maintainer-bz": "a@example.com",
                     "fuzzy-query": "!linux64",
-                    "tasks": [
-                        {
-                            "type": "commit-alert",
-                            "enabled": expected
-                        }
-                    ],
+                    "tasks": [{"type": "commit-alert", "enabled": expected}],
                 },
             }
 
-        true_values = [b'1', b'true', b'yes', b'on', b'enable']
-        false_values = [b'0', b'false', b'no', b'off', b'disable']
-        malformed_values = [b'existential dread', b'', b'2', b'!@#$%^']
+        true_values = [b"1", b"true", b"yes", b"on", b"enable"]
+        false_values = [b"0", b"false", b"no", b"off", b"disable"]
+        malformed_values = [b"existential dread", b"", b"2", b"!@#$%^"]
         test_vectors = (
-            [(build_expected(True), build_input(v)) for v in true_values] +
-            [(build_expected(False), build_input(v)) for v in false_values] +
-            [("exception", build_input(v)) for v in malformed_values]
+            [(build_expected(True), build_input(v)) for v in true_values]
+            + [(build_expected(False), build_input(v)) for v in false_values]
+            + [("exception", build_input(v)) for v in malformed_values]
         )
 
         self.process_test_vectors(test_vectors)
