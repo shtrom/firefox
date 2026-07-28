@@ -3916,13 +3916,6 @@ pref("services.common.log.logger.tokenserverclient", "Debug");
   // Enable retrying to execute commands in the child process in case the
   // JSWindowActor gets destroyed.
   pref("remote.retry-on-abort", true);
-
-  // Debugging aid: capture WebDriver/Marionette screenshots by reading back the
-  // actual WebRender composited framebuffer (real on-screen pixels) instead of
-  // re-rendering the document through the software drawSnapshot path. This makes
-  // captured screenshots reflect WebRender-specific rendering, at the cost of
-  // every capture degrading to the composited viewport of the foreground tab.
-  pref("remote.screenshot.use_readback", false);
 #endif
 
 // Enable the JSON View tool (an inspector for application/json documents).
