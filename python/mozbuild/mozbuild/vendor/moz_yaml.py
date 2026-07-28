@@ -219,6 +219,7 @@ def _schema_1():
             "release-artifact": All(str, Length(min=1)),
             "flavor": Match(r"^(regular|rust|individual-files)$"),
             "skip-vendoring-steps": Unique([str]),
+            "tolerate-git-fsck-errors": Boolean(),
             "vendor-directory": All(str, Length(min=1)),
             "patches": Unique([str]),
             "keep": Unique([str]),

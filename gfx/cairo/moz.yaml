@@ -11,7 +11,7 @@ origin:
 
   url: https://www.cairographics.org
 
-  release: 1.18.4 (2025-03-08T13:23:25.000+00:00).
+  release: 1.18.4 (2025-03-08T13:23:25Z).
   revision: 1.18.4
 
   license: 'MPL-1.1'
@@ -22,6 +22,14 @@ vendoring:
   source-hosting: gitlab
   tracking: tag
   vendor-directory: gfx/cairo/cairo
+
+  # Upstream's history contains a malformed commit object
+  # (e5b831b107ad18e78ec9ea5e6da68eb30bf71126) that predates git's fsck
+  # validation and fails it (missing space before the author/committer
+  # date). It has nothing to do with any revision we actually vendor;
+  # it's just unreachable history that a clone would otherwise refuse
+  # to transfer.
+  tolerate-git-fsck-errors: true
 
   exclude:
     - boilerplate
