@@ -60,7 +60,7 @@ splitter.devtools-toolbox-splitter,
 
   box-sizing: border-box;
 
-  z-index: var(--browser-stack-z-index-devtools-splitter, 1);
+  z-index: 1;
 
   /* opt-out of forced colors because the transparent borders are turned into
      opaque ones in High Contrast Mode. --devtools-splitter-color has specific value
@@ -104,6 +104,10 @@ splitter.devtools-toolbox-splitter.for-bottom-host {
 }
 
 /* Specific style for content page|devtools toolbox splitters */
-splitter.devtools-toolbox-splitter:focus-visible {
-  outline: auto;
+.devtools-toolbox-splitter {
+  z-index: var(--browser-container-z-index-devtools-splitter);
+
+  &:focus-visible {
+    outline: auto;
+  }
 }
