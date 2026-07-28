@@ -122,7 +122,6 @@ class SourceSurface;
 namespace layers {
 class LayerManager;
 struct LayersId;
-struct KeyboardScrollAction;
 enum class ScrollOffsetUpdateType : uint8_t;
 }  // namespace layers
 
@@ -509,17 +508,6 @@ class PresShell final : public nsStubDocumentObserver,
    */
   ScrollContainerFrame* GetScrollContainerFrameToScroll(
       layers::ScrollDirections aDirections);
-
-  /**
-   * Like GetScrollContainerFrameToScroll, but for keyboard scrolling. It
-   * returns the nearest scroll container from the current focused content or
-   * DOM selection that can still scroll toward aAction's direction.
-   *
-   * @return the scroll container frame to scroll, or nullptr if there is
-   *         nothing to scroll locally.
-   */
-  ScrollContainerFrame* GetScrollContainerFrameForKeyboardScroll(
-      const layers::KeyboardScrollAction& aAction);
 
   /**
    * Returns the page sequence frame associated with the frame hierarchy.
