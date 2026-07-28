@@ -218,18 +218,6 @@ export default class TabHoverPanelSet {
     }
   }
 
-  forceReset() {
-    for (let panel of [this.tabPanel, this.tabGroupPanel, this.tabNotePanel]) {
-      this.#clearDeactivateTimer(panel);
-      panel.onBeforeHide();
-      panel.panelElement.hidePopup();
-    }
-    // Reset last: TabNotePanel.onBeforeHide re-arms the zero-delay timer, so the
-    // opener must be cleared after all panels have been hidden.
-    this.panelOpener.reset();
-    this.#activePanel = null;
-  }
-
   shouldActivate() {
     return (
       // All other popups are closed.
@@ -691,7 +679,7 @@ class TabPanel extends HoverPanel {
         thumbnailContainer.appendChild(this.#thumbnailElement);
       }
       this.panelElement.dispatchEvent(
-        new CustomEvent("TabPreviewThumbnailUpdated", {
+        new CustomEvent("previewThumbnailUpdated", {
           detail: {
             thumbnail: this.#thumbnailElement,
           },
@@ -700,10 +688,6 @@ class TabPanel extends HoverPanel {
     }
 
     this.#movePanel();
-
-    this.panelElement.dispatchEvent(
-      new CustomEvent("TabPreviewUpdated", { bubbles: true })
-    );
   }
 
   #movePanel() {
@@ -840,10 +824,6 @@ class TabGroupPanel extends HoverPanel {
       fragment.appendChild(tabbutton);
     }
     this.panelContent.replaceChildren(fragment);
-
-    this.panelElement.dispatchEvent(
-      new CustomEvent("TabGroupPreviewUpdated", { bubbles: true })
-    );
   }
 
   handleEvent(event) {
@@ -1115,10 +1095,6 @@ class TabNotePanel extends HoverPanel {
     );
 
     this.#movePanel();
-
-    this.panelElement.dispatchEvent(
-      new CustomEvent("TabNotePreviewUpdated", { bubbles: true })
-    );
   }
 
   #movePanel() {
@@ -1282,22 +1258,5 @@ class TabPreviewPanelTimedFunction {
 
   get delayActive() {
     return this.#timer !== null;
-  }
-
-  get zeroDelayActive() {
-    return !!this.#useZeroDelay;
-  }
-
-  reset() {
-    if (this.#timer) {
-      this.#win.clearTimeout(this.#timer);
-      this.#timer = null;
-    }
-    if (this.#useZeroDelay) {
-      this.#win.clearTimeout(this.#useZeroDelay);
-      this.#useZeroDelay = null;
-    }
-    this.#target = null;
-    this.#from = null;
   }
 }
