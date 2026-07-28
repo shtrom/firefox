@@ -117,8 +117,8 @@ class FunctionBox;
   F(ContinueStmt, ContinueStatement)                                      \
   F(VarStmt, DeclarationListNode)                                         \
   F(ConstDecl, DeclarationListNode)                                       \
-  IF_EXPLICIT_RESOURCE_MANAGEMENT(F(UsingDecl, DeclarationListNode))      \
-  IF_EXPLICIT_RESOURCE_MANAGEMENT(F(AwaitUsingDecl, DeclarationListNode)) \
+  F(UsingDecl, DeclarationListNode)                                       \
+  F(AwaitUsingDecl, DeclarationListNode)                                  \
   F(WithStmt, BinaryNode)                                                 \
   F(ReturnStmt, UnaryNode)                                                \
   F(NewExpr, CallNode)                                                    \
@@ -1533,10 +1533,8 @@ class DeclarationListNode : public ListNode {
   static bool test(const ParseNode& node) {
     bool match = node.isKind(ParseNodeKind::VarStmt) ||
                  node.isKind(ParseNodeKind::LetDecl) ||
-#ifdef ENABLE_EXPLICIT_RESOURCE_MANAGEMENT
                  node.isKind(ParseNodeKind::UsingDecl) ||
                  node.isKind(ParseNodeKind::AwaitUsingDecl) ||
-#endif
                  node.isKind(ParseNodeKind::ConstDecl);
     MOZ_ASSERT_IF(match, node.is<ListNode>());
     return match;

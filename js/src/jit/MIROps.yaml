@@ -5003,7 +5003,6 @@
   gen_boilerplate: false
 #endif
 
-#ifdef ENABLE_EXPLICIT_RESOURCE_MANAGEMENT
 - name: AddDisposableResource
   operands:
     environment: Object
@@ -5020,4 +5019,3 @@
     environment: Object
   result_type: Value
   generate_lir: true
-#endif

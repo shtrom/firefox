@@ -2668,18 +2668,15 @@ static bool PromiseReactionJob(JSContext* cx, HandleObject reactionObjIn) {
       // Step 1.d.ii.2. Let handlerResult be ThrowCompletion(argument).
       resolutionMode = RejectMode;
       handlerResult = argument;
-    }
-#ifdef ENABLE_EXPLICIT_RESOURCE_MANAGEMENT
-    else if (handlerNum == PromiseHandler::AsyncIteratorDisposeAwaitFulfilled) {
+    } else if (handlerNum ==
+               PromiseHandler::AsyncIteratorDisposeAwaitFulfilled) {
       // Explicit Resource Management Proposal
       // 27.1.3.1 %AsyncIteratorPrototype% [ @@asyncDispose ] ( )
       // https://arai-a.github.io/ecma262-compare/?pr=3000&id=sec-%25asynciteratorprototype%25-%40%40asyncdispose
       //
       // Step 6.e.i. Return undefined.
       handlerResult = JS::UndefinedValue();
-    }
-#endif
-    else if (handlerNum == PromiseHandler::AsyncFromSyncIteratorClose) {
+    } else if (handlerNum == PromiseHandler::AsyncFromSyncIteratorClose) {
       MOZ_ASSERT(reaction->isAsyncFromSyncIterator());
 
       // 27.1.6.4 AsyncFromSyncIteratorContinuation
@@ -6937,7 +6934,6 @@ template <typename T>
   return PerformPromiseThenWithReaction(cx, unwrappedPromise, reaction);
 }
 
-#ifdef ENABLE_EXPLICIT_RESOURCE_MANAGEMENT
 // Explicit Resource Management Proposal
 // 27.1.3.1 %AsyncIteratorPrototype% [ @@asyncDispose ] ( )
 // Steps 6.c-g
@@ -6954,7 +6950,6 @@ template <typename T>
                        PromiseHandler::AsyncIteratorDisposeAwaitFulfilled,
                        PromiseHandler::Thrower, extra);
 }
-#endif
 
 [[nodiscard]] bool js::InternalAsyncGeneratorAwait(
     JSContext* cx, JS::Handle<AsyncGeneratorObject*> generator,

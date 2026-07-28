@@ -8990,7 +8990,6 @@ void LIRGenerator::visitWasmMulI64WideHI64(MWasmMulI64WideHI64* ins) {
 #endif
 }
 
-#ifdef ENABLE_EXPLICIT_RESOURCE_MANAGEMENT
 void LIRGenerator::visitAddDisposableResource(MAddDisposableResource* ins) {
   MDefinition* env = ins->environment();
 
@@ -9015,7 +9014,6 @@ void LIRGenerator::visitTakeDisposeCapability(MTakeDisposeCapability* ins) {
   defineBox(lir, ins);
   assignSafepoint(lir, ins);
 }
-#endif
 
 #ifdef FUZZING_JS_FUZZILLI
 void LIRGenerator::visitFuzzilliHash(MFuzzilliHash* ins) {

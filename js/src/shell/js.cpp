@@ -13321,10 +13321,6 @@ bool InitOptionParser(OptionParser& op) {
       !op.addBoolOption('\0', "enable-joint-iteration",
                         "Enable Joint Iteration") ||
       !op.addBoolOption('\0', "enable-atomics-pause", "Enable Atomics pause") ||
-      !op.addBoolOption('\0', "enable-explicit-resource-management",
-                        "Enable Explicit Resource Management") ||
-      !op.addBoolOption('\0', "disable-explicit-resource-management",
-                        "Disable Explicit Resource Management") ||
       !op.addBoolOption('\0', "enable-temporal", "Enable Temporal") ||
       !op.addBoolOption('\0', "enable-import-bytes", "Enable import bytes") ||
       !op.addBoolOption('\0', "enable-import-text", "Enable import text") ||
@@ -13464,14 +13460,6 @@ bool SetGlobalOptionsPreJSInit(const OptionParser& op) {
         setAtStartup_experimental_source_phase_imports_test262_module_source(
             true);
   }
-#ifdef ENABLE_EXPLICIT_RESOURCE_MANAGEMENT
-  if (op.getBoolOption("enable-explicit-resource-management")) {
-    JS::Prefs::set_experimental_explicit_resource_management(true);
-  }
-  if (op.getBoolOption("disable-explicit-resource-management")) {
-    JS::Prefs::set_experimental_explicit_resource_management(false);
-  }
-#endif
 #ifdef JS_HAS_INTL_API
   if (op.getBoolOption("enable-temporal")) {
     JS::Prefs::setAtStartup_experimental_temporal(true);

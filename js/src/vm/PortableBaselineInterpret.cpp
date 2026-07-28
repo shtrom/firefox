@@ -8871,7 +8871,6 @@ PBIResult PortableBaselineInterpret(
         frame->popOffEnvironmentChain<WithEnvironmentObject>();
         END_OP(LeaveWith);
       }
-#ifdef ENABLE_EXPLICIT_RESOURCE_MANAGEMENT
       CASE(AddDisposable) {
         {
           ReservedRooted<JSObject*> env(&state.obj0, frame->environmentChain());
@@ -8924,7 +8923,6 @@ PBIResult PortableBaselineInterpret(
         VIRTPUSH(StackVal(ObjectValue(*errorObj)));
         END_OP(CreateSuppressedError);
       }
-#endif
       CASE(BindVar) {
         JSObject* varObj;
         {

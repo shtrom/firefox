@@ -13,11 +13,9 @@
 
 #include "vm/BuiltinObjectKind.h"
 #include "vm/CheckIsObjectKind.h"  // CheckIsObjectKind
-#ifdef ENABLE_EXPLICIT_RESOURCE_MANAGEMENT
-#  include "vm/ErrorObject.h"
-#  include "vm/UsingHint.h"
-#endif
+#include "vm/ErrorObject.h"
 #include "vm/Stack.h"
+#include "vm/UsingHint.h"
 
 namespace js {
 
@@ -645,7 +643,6 @@ bool OptimizeSpreadCall(JSContext* cx, HandleValue arg,
 
 bool OptimizeGetIterator(Value arg, JSContext* cx);
 
-#ifdef ENABLE_EXPLICIT_RESOURCE_MANAGEMENT
 enum class SyncDisposalClosureSlots : uint8_t {
   Method,
 };
@@ -658,7 +655,6 @@ bool AddDisposableResourceToCapability(JSContext* cx, JS::Handle<JSObject*> env,
                                        JS::Handle<JS::Value> val,
                                        JS::Handle<JS::Value> method,
                                        bool needsClosure, UsingHint hint);
-#endif
 
 ArrayObject* ArrayFromArgumentsObject(JSContext* cx,
                                       Handle<ArgumentsObject*> args);
