@@ -423,28 +423,16 @@ var gSearchResultsPane = {
           }
           let paneMatched = anyGroupMatched;
           if (!paneMatched) {
-            let additionalSearchTargets = [
-              child.pageHeaderEl,
-              child.querySelector(".firefoxLabs-description"),
-            ].filter(el => el);
-            if (additionalSearchTargets.length) {
-              paneMatched = (
-                await Promise.all(
-                  additionalSearchTargets.map(target =>
-                    this.searchWithinNode(target, this.query)
-                  )
-                )
-              ).some(matched => matched);
-              if (signal.aborted) {
-                return;
-              }
-              if (paneMatched) {
-                // Header or non-group content matched but no specific group
-                // did. Re-query with the base selector to make sure
-                // previously .visually-hidden groups get shown.
-                for (let group of child.querySelectorAll(BASE_SELECTOR)) {
-                  group.classList.remove("visually-hidden");
-                }
+            paneMatched = await this.searchWithinNode(child, this.query);
+            if (signal.aborted) {
+              return;
+            }
+            if (paneMatched) {
+              // Pane title or pane-level content matched but no specific group
+              // did. Re-query with the base selector to make sure previously
+              // .visually-hidden groups get shown.
+              for (let group of child.querySelectorAll(BASE_SELECTOR)) {
+                group.classList.remove("visually-hidden");
               }
             }
           }
