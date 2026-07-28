@@ -130,7 +130,7 @@ export class IPProtectionPanel {
    *  The location country code
    * @property {Array<{code: string, available: boolean}>} locationsList
    *  Countries available as egress locations, from IPProtectionServerlist.
-   * @property {"generic-error" | "network-error" | ""} error
+   * @property {"generic-error" | "network-error" | "vpn-unavailable" | ""} error
    *  The error type as a string if an error occurred, or empty string if there are no errors.
    * @property {boolean} hasUpgraded
    *  True if a Mozilla VPN subscription is linked to the user's Mozilla account.
@@ -526,15 +526,19 @@ export class IPProtectionPanel {
       country
     );
     if (error && error !== lazy.ERRORS.CANCELED) {
-      const errorMessage =
-        error == lazy.ERRORS.NETWORK
-          ? lazy.ERRORS.NETWORK
-          : lazy.ERRORS.GENERIC;
+      const errorMessage = this.#errorMessage(error);
       this.setState({
         error: errorMessage,
       });
       this.toolbarButton?.updateState(null, { error: errorMessage });
     }
+  }
+
+  #errorMessage(error) {
+    if ([lazy.ERRORS.NETWORK, lazy.ERRORS.VPN_UNAVAILABLE].includes(error)) {
+      return error;
+    }
+    return lazy.ERRORS.GENERIC;
   }
 
   async #stopProxy() {
