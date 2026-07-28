@@ -16,18 +16,22 @@ add_task(async function () {
 
   const tab = await addTab(URL);
   const panel = gBrowser.getPanel();
-  const { clientHeight: panelHeight, clientWidth: panelWidth } = panel;
+  const browserContainer = panel.querySelector(".browserContainer");
+  const {
+    clientHeight: browserContainerHeight,
+    clientWidth: browserContainerWidth,
+  } = browserContainer;
   const toolbox = await gDevTools.showToolboxForTab(tab);
 
   is(
-    panel.clientHeight,
-    panelHeight,
-    "Opening the toolbox hasn't changed the height of the panel"
+    browserContainer.clientHeight,
+    browserContainerHeight,
+    "Opening the toolbox hasn't changed the height of the browserContainer"
   );
   is(
-    panel.clientWidth,
-    panelWidth,
-    "Opening the toolbox hasn't changed the width of the panel"
+    browserContainer.clientWidth,
+    browserContainerWidth,
+    "Opening the toolbox hasn't changed the width of the browserContainer"
   );
 
   let iframe = panel.querySelector(".devtools-toolbox-iframe.bottom-host");
@@ -37,8 +41,8 @@ add_task(async function () {
       .getPropertyValue("--content-area-min-size")
   );
   is(
-    iframe.clientHeight,
-    panelHeight - minContentSize,
+    iframe.getBoundingClientRect().height,
+    browserContainerHeight - minContentSize,
     "The iframe fits within the available space"
   );
 
@@ -47,17 +51,17 @@ add_task(async function () {
   await waitFor(() => iframe.style.maxHeight);
   iframe.style.height = "10000px"; // Set height to something unreasonably large.
   Assert.less(
-    iframe.clientHeight,
-    panelHeight,
-    `The iframe fits within the available space (${iframe.clientHeight} < ${panelHeight})`
+    iframe.getBoundingClientRect().height,
+    browserContainerHeight,
+    `The iframe fits within the available space (${iframe.getBoundingClientRect().height} < ${browserContainerHeight})`
   );
 
   await toolbox.switchHost(Toolbox.HostType.RIGHT);
   iframe = panel.querySelector(".devtools-toolbox-iframe.side-host");
   iframe.style.minWidth = "1px"; // Disable the min width set in css
   is(
-    iframe.clientWidth,
-    panelWidth - minContentSize,
+    iframe.getBoundingClientRect().width,
+    browserContainerWidth - minContentSize,
     "The iframe fits within the available space"
   );
 
@@ -67,14 +71,14 @@ add_task(async function () {
   const oldWidth = iframe.style.width;
   iframe.style.width = "10000px"; // Set width to something unreasonably large.
   Assert.less(
-    iframe.clientWidth,
-    panelWidth,
-    `The iframe fits within the available space (${iframe.clientWidth} < ${panelWidth})`
+    iframe.getBoundingClientRect().width,
+    browserContainerWidth,
+    `The iframe fits within the available space (${iframe.getBoundingClientRect().width} < ${browserContainerWidth})`
   );
   iframe.style.width = oldWidth;
 
   // on shutdown, the sidebar width will be set to the clientWidth of the iframe
-  const expectedWidth = iframe.clientWidth;
+  const expectedWidth = iframe.getBoundingClientRect().width;
 
   info("waiting for cleanup");
   await cleanup(toolbox);
@@ -112,24 +116,40 @@ add_task(async function () {
   );
 
   let iframe = panel.querySelector(".devtools-toolbox-iframe.bottom-host");
-  is(iframe.clientHeight, 100, "The iframe is resized properly");
+  is(
+    iframe.getBoundingClientRect().height,
+    100,
+    "The iframe is resized properly"
+  );
   const horzSplitter = panel.querySelector(
     ".devtools-toolbox-splitter.for-bottom-host"
   );
   dragElement(horzSplitter, { startX: 1, startY: 1, deltaX: 0, deltaY: -50 });
-  is(iframe.clientHeight, 150, "The iframe was resized by the splitter");
+  is(
+    iframe.getBoundingClientRect().height,
+    150,
+    "The iframe was resized by the splitter"
+  );
 
   await toolbox.switchHost(Toolbox.HostType.RIGHT);
   iframe = panel.querySelector(".devtools-toolbox-iframe.side-host");
   iframe.style.minWidth = "1px"; // Disable the min width set in css
-  is(iframe.clientWidth, 100, "The iframe is resized properly");
+  is(
+    iframe.getBoundingClientRect().width,
+    100,
+    "The iframe is resized properly"
+  );
 
   info("Resize the toolbox manually by 50 pixels");
   const sideSplitter = panel.querySelector(
     ".devtools-toolbox-splitter.for-side-host"
   );
   dragElement(sideSplitter, { startX: 1, startY: 1, deltaX: -50, deltaY: 0 });
-  is(iframe.clientWidth, 150, "The iframe was resized by the splitter");
+  is(
+    iframe.getBoundingClientRect().width,
+    150,
+    "The iframe was resized by the splitter"
+  );
 
   await cleanup(toolbox);
 });
