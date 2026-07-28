@@ -635,6 +635,11 @@ pub extern "C" fn wr_renderer_update(renderer: &mut Renderer) {
 }
 
 #[no_mangle]
+pub extern "C" fn wr_renderer_trim_transient_resources(renderer: &mut Renderer, trim_upload_buffers: bool) {
+    renderer.trim_transient_resources(trim_upload_buffers);
+}
+
+#[no_mangle]
 pub extern "C" fn wr_renderer_set_target_frame_publish_id(renderer: &mut Renderer, publish_id: FramePublishId) {
     renderer.set_target_frame_publish_id(publish_id);
 }

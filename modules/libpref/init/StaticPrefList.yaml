@@ -8164,6 +8164,14 @@
   value: false
   mirror: once
 
+# Experimental paused-window memory trimming. 0 disables trimming, 1 releases
+# inactive WebRender render targets, and 2 also releases transient upload
+# buffers when a renderer is paused.
+- name: gfx.webrender.trim-paused-renderers.mode
+  type: RelaxedAtomicUint32
+  value: 0
+  mirror: always
+
 - name: gfx.webrender.enable-angle
   type: bool
 #if defined(XP_WIN)
