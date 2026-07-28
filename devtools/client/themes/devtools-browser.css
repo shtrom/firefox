@@ -12,3 +12,7 @@
 .devtools-toolbox-iframe.bottom-host {
   min-height: 29px;
 }
+
+.devtools-toolbox-iframe {
+  z-index: var(--browser-container-z-index-devtools-toolbox);
+}
