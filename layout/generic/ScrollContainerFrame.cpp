@@ -5886,19 +5886,6 @@ void ScrollContainerFrame::DidSetComputedStyle(
 
   const bool disableOverlayScrollbars =
       [&](const RefPtr<ComputedStyle>& style) {
-        if (mIsRoot) {
-#ifdef MOZ_WIDGET_ANDROID
-          const bool isOnMobileOrRDMPane = true;
-#else
-          const bool isOnMobileOrRDMPane = PresShell()->InRDMPane();
-#endif
-          // On mobile overlay scrollbars on the top level root scroll
-          // container are never disabled, that's what Chrome does.
-          if (isOnMobileOrRDMPane &&
-              PresContext()->IsRootContentDocumentCrossProcess()) {
-            return false;
-          }
-        }
         // If there's any ::webkit-scrollbar for this container, then check
         // whether there exits non-zero width or height value.
         if (!style) {
