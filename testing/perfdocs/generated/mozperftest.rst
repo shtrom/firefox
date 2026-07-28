@@ -689,13 +689,13 @@ browser_ml_autofill_perf.js
 ::
 
  --perfherder
- --perfherder-metrics name:AUTOFILL-pipeline-ready-latency,unit:ms,shouldAlert:False, name:AUTOFILL-initialization-latency,unit:ms,shouldAlert:False, name:AUTOFILL-model-run-latency,unit:ms,shouldAlert:False, name:AUTOFILL-total-memory-usage,unit:MiB,shouldAlert:False, name:tokenSpeed,unit:tokens/s,shouldAlert:False,lowerIsBetter:False, name:charactersSpeed,unit:chars/s,shouldAlert:False,lowerIsBetter:False
+ --perfherder-metrics name:AUTOFILL-pipeline-ready-latency,unit:ms,shouldAlert:False, name:AUTOFILL-initialization-latency,unit:ms,shouldAlert:False, name:AUTOFILL-model-run-latency,unit:ms,shouldAlert:False, name:AUTOFILL-total-memory-usage,unit:MiB,shouldAlert:False, name:tokenSpeed,unit:tokens/s,shouldAlert:False,lowerIsBetter:False, name:charactersSpeed,unit:chars/s,shouldAlert:False,lowerIsBetter:False, name:AUTOFILL-concurrent-init-latency,unit:ms,shouldAlert:False, name:AUTOFILL-two-engine-e2e-run-latency,unit:ms,shouldAlert:False, name:AUTOFILL-two-engine-total-memory-usage,unit:MiB,shouldAlert:False, name:AUTOFILL-encoder-pipeline-ready-latency,unit:ms,shouldAlert:False, name:AUTOFILL-encoder-initialization-latency,unit:ms,shouldAlert:False, name:AUTOFILL-encoder-model-run-latency,unit:ms,shouldAlert:False, name:AUTOFILL-head-pipeline-ready-latency,unit:ms,shouldAlert:False, name:AUTOFILL-head-initialization-latency,unit:ms,shouldAlert:False, name:AUTOFILL-head-model-run-latency,unit:ms,shouldAlert:False
  --verbose
  --manifest perftest.toml
  --manifest-flavor browser-chrome
  --try-platform linux, mac, win
 
-**Template test for latency for ML Autofill model**
+**Latency for the ML Autofill model (legacy single-model and new two-engine)**
 
 browser_ml_engine_multi_perf.js
 ===============================
