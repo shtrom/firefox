@@ -218,7 +218,7 @@ bool ModuleLoaderBase::HostLoadImportedModule(
     // scripts.
     //
     // See https://html.spec.whatwg.org/#resolve-a-module-specifier
-    loader->AddToResolvedModuleSet(std::move(record), fetchInfo, aHostDefined);
+    loader->AddToResolvedModuleSet(std::move(record), aHostDefined);
   }
 
   ModuleType moduleType = GetModuleRequestType(aCx, aModuleRequest);
@@ -1166,25 +1166,21 @@ static ModuleLoadRequest* GetPreloadRootModuleRequest(
 
 void ModuleLoaderBase::AddToResolvedModuleSet(
     UniquePtr<SpecifierResolutionRecord> aRecord,
-    ScriptFetchInfo* aFetchInfo /* = nullptr */,
     Handle<Value> aHostDefined /* = UndefinedHandleValue */) {
   // 2. If global does not implement Window, then return.
   if (!mLoader->IsImportMapSupported()) {
     return;
   }
 
-  bool isPreloadModule = aFetchInfo && aFetchInfo->IsForModuleScript() &&
-                         aFetchInfo->IsForModulePreload();
-
-  // aHostDefined is undefined only for dynamic imports. The preload flag is
-  // flipped to false once a preloaded request is reused, so by the time a
-  // dynamic import runs its fetch info no longer reports a preload. A module
-  // that still reports a preload here therefore cannot be a dynamic import.
-  MOZ_ASSERT_IF(isPreloadModule, !aHostDefined.isUndefined());
-  if (isPreloadModule) {
+  // aHostDefined is undefined only for dynamic imports, which are never part of
+  // a preload. Otherwise it is for static imports, whose root request tracks
+  // whether the graph is still being preloaded.
+  if (!aHostDefined.isUndefined()) {
     RefPtr<ModuleLoadRequest> root = GetPreloadRootModuleRequest(aHostDefined);
-    AddToPreloadedResolvedSet(root, std::move(aRecord));
-    return;
+    if (root->mLoadContext->IsPreload()) {
+      AddToPreloadedResolvedSet(root, std::move(aRecord));
+      return;
+    }
   }
 
   // release the mResult from the record as it is not needed.
