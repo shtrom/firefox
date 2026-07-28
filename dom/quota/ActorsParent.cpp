@@ -4195,7 +4195,8 @@ Result<Ok, nsresult> QuotaManager::InitializeOriginDirectory(
                 QM_OR_ELSE_WARN_IF(
                     // Expression
                     LoadFullOriginMetadataWithRestore(aChildDirectory)
-                        .map([](auto&& metadata) -> Maybe<FullOriginMetadata> {
+                        .map([](FullOriginMetadata&& metadata)
+                                 -> Maybe<FullOriginMetadata> {
                           return Some(std::move(metadata));
                         }),
                     // Predicate.
