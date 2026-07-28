@@ -2370,6 +2370,9 @@ bool LookupSpecialPropertyValueName(const char* name,
                                          !negate, result, nullptr, flags, zone)
         .success;
   } else {
+    if constexpr (mode == ParseMode::kVerifySyntax) {
+      return mozilla_properties_glue_has_property(name);
+    }
     return mozilla_properties_glue_add_property_ranges(
         static_cast<void*>(result), static_cast<void*>(zone), name, negate,
         IsUnicodeSets(flags) && IsIgnoreCase(flags));
