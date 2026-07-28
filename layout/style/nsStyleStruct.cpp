@@ -2316,7 +2316,6 @@ nsStyleDisplay::nsStyleDisplay()
       mWebkitLineClamp{
           {StyleOptional<StyleInteger>::None(), StyleMaxLinesKeyword::None},
           StyleBlockEllipsis::Ellipsis(),
-          false,
           false},
       mShapeMargin(LengthPercentage::Zero()),
       mShapeOutside(StyleShapeOutside::None()) {
