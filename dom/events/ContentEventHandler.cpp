@@ -2495,6 +2495,20 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
       MOZ_ASSERT(aEvent->Succeeded());
       return NS_OK;
     }
+    if (aEvent->mInput.mIsFirstCharFallbackRect) {
+      MOZ_ASSERT(start == 0 && end == 1);
+      // This is requesting the first character rectangle for fallback purposes.
+      // We don't want to fire a characterboundsupdate for this purpose, instead
+      // use the correct bound if it's available, otherwise use fallback bounds.
+      if (Maybe<LayoutDeviceIntRect> rect =
+              editContext->GetCharacterBound(start)) {
+        aEvent->mReply->mRect = *rect;
+      } else {
+        aEvent->mReply->mRect = editContext->FallbackBounds();
+      }
+      MOZ_ASSERT(aEvent->Succeeded());
+      return NS_OK;
+    }
     rv = editContext->FireCharacterBoundsUpdateIfNeededAndGetRects(start, end,
                                                                    rects);
     // rects will be empty if start >= TextLength()
