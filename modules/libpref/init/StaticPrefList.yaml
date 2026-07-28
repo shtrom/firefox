@@ -8169,7 +8169,7 @@
 # buffers when a renderer is paused.
 - name: gfx.webrender.trim-paused-renderers.mode
   type: RelaxedAtomicUint32
-  value: 0
+  value: 2
   mirror: always
 
 - name: gfx.webrender.enable-angle
