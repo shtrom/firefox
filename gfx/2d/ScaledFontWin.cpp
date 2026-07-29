@@ -4,8 +4,6 @@
 
 #include "ScaledFontWin.h"
 
-#include <algorithm>
-
 #include "AutoHelpersWin.h"
 #include "HelpersWinFonts.h"
 #include "Logging.h"
@@ -74,29 +72,14 @@ bool UnscaledFontGDI::GetFontDescriptor(FontDescriptorOutput aCb,
   return false;
 }
 
-const LOGFONT* UnscaledFontGDI::ValidLOGFONT(const uint8_t* aData,
-                                             size_t aDataLength) {
-  if (!aData || aDataLength < sizeof(LOGFONT)) {
-    gfxWarning() << "LOGFONT data is truncated.";
-    return nullptr;
-  }
-  const LOGFONT* logFont = reinterpret_cast<const LONGFONT*>(aData);
-  const auto* name = logFont.lfFaceName;
-  const auto* nameEnd = &name[LF_FACESIZE];
-  const auto* result = std::find(name, nameEnd, 0);
-  if (result == nameEnd) {
-    gfxWarning() << "LOGFONT name is invalid.";
-    return nullptr;
-  }
-  return logFont;
-}
-
 already_AddRefed<UnscaledFont> UnscaledFontGDI::CreateFromFontDescriptor(
     const uint8_t* aData, uint32_t aDataLength, uint32_t aIndex) {
-  const LOGFONT* logFont = ValidLOGFONT(aData, aDataLength);
-  if (!logFont) {
+  if (aDataLength < sizeof(LOGFONT)) {
+    gfxWarning() << "GDI font descriptor is truncated.";
     return nullptr;
   }
+
+  const LOGFONT* logFont = reinterpret_cast<const LOGFONT*>(aData);
   RefPtr unscaledFont = MakeRefPtr<UnscaledFontGDI>(*logFont);
   return unscaledFont.forget();
 }
@@ -105,11 +88,12 @@ already_AddRefed<ScaledFont> UnscaledFontGDI::CreateScaledFont(
     Float aGlyphSize, const uint8_t* aInstanceData,
     uint32_t aInstanceDataLength, const FontVariation* aVariations,
     uint32_t aNumVariations) {
-  const LOGFONT* logFont = ValidLOGFONT(aInstanceData, aInstanceDataLength);
-  if (!logFont) {
+  if (aInstanceDataLength < sizeof(LOGFONT)) {
+    gfxWarning() << "GDI unscaled font instance data is truncated.";
     return nullptr;
   }
-  return MakeAndAddRef<ScaledFontWin>(logFont, this, aGlyphSize);
+  return MakeAndAddRef<ScaledFontWin>(
+      reinterpret_cast<const LOGFONT*>(aInstanceData), this, aGlyphSize);
 }
 
 AntialiasMode ScaledFontWin::GetDefaultAAMode() {

@@ -36,11 +36,12 @@ NativeFontResourceGDI::~NativeFontResourceGDI() {
 already_AddRefed<UnscaledFont> NativeFontResourceGDI::CreateUnscaledFont(
     uint32_t aIndex, const uint8_t* aInstanceData,
     uint32_t aInstanceDataLength) {
-  const LOGFONT* logFont =
-      UnscaledFontGDI::ValidLOGFONT(aInstanceData, aInstanceDataLength);
-  if (!logFont) {
+  if (aInstanceDataLength < sizeof(LOGFONT)) {
+    gfxWarning() << "GDI unscaled font instance data is truncated.";
     return nullptr;
   }
+
+  const LOGFONT* logFont = reinterpret_cast<const LOGFONT*>(aInstanceData);
   RefPtr unscaledFont = MakeRefPtr<UnscaledFontGDI>(*logFont);
   return unscaledFont.forget();
 }

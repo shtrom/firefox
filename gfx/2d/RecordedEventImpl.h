@@ -4224,8 +4224,9 @@ inline bool RecordedFontDescriptor::PlayEvent(Translator* aTranslator) const {
   RefPtr<UnscaledFont> font = Factory::CreateUnscaledFontFromFontDescriptor(
       mType, mData.data(), mData.size(), mIndex);
   if (!font) {
-    gfxCriticalNote << "Failed creating UnscaledFont of type " << int(mType)
-                    << " from font descriptor";
+    gfxDevCrash(LogReason::InvalidFont)
+        << "Failed creating UnscaledFont of type " << int(mType)
+        << " from font descriptor";
     return false;
   }
 
