@@ -249,6 +249,16 @@ void WebTransport::Init(const GlobalObject& aGlobal, const nsAString& aURL,
       WebTransportCongestionControl::Default;  // aOptions.mCongestionControl;
   // Set this to 'default' until we add congestion control setting
 
+  // Step 11.5: Let protocols be options's protocols if it exists, and null
+  // otherwise.
+  // XXX Protocol negotiation is not yet implemented. For now, we accept the
+  // protocols option but don't pass it through to the network layer or perform
+  // negotiation. mProtocol will remain empty until full implementation.
+  // XXX Bug 2007150
+  if (aOptions.mProtocols.Length() != 0) {
+    // Future: pass protocols to CreateWebTransportParent and handle negotiation
+  }
+
   // Setup up WebTransportDatagramDuplexStream
   // Step 12: Let incomingDatagrams be a new ReadableStream.
   // Step 13: Let outgoingDatagrams be a new WritableStream.
@@ -647,6 +657,8 @@ WebTransportCongestionControl WebTransport::CongestionControl() {
   // XXX not implemented
   return WebTransportCongestionControl::Default;
 }
+
+void WebTransport::GetProtocol(nsAString& aProtocol) { aProtocol = mProtocol; }
 
 void WebTransport::RemoteClosed(bool aCleanly, const uint32_t& aCode,
                                 const nsACString& aReason) {

@@ -16,6 +16,7 @@ dictionary WebTransportOptions {
   boolean requireUnreliable = false;
   sequence<WebTransportHash> serverCertificateHashes;
   WebTransportCongestionControl congestionControl = "default";
+  sequence<DOMString> protocols = [];
 };
 
 enum WebTransportCongestionControl {
@@ -77,6 +78,7 @@ interface WebTransport {
   readonly attribute Promise<undefined> ready;
   readonly attribute WebTransportReliabilityMode reliability;
   readonly attribute WebTransportCongestionControl congestionControl;
+  readonly attribute DOMString protocol;
   readonly attribute Promise<WebTransportCloseInfo> closed;
   [Throws] undefined close(optional WebTransportCloseInfo closeInfo = {});
 
