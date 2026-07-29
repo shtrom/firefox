@@ -2092,6 +2092,10 @@ class RDDSandboxPolicy final : public SandboxPolicyCommon {
 #ifdef MOZ_ENABLE_VULKAN_VIDEO
         static constexpr unsigned long kNvidiaRmType =
             static_cast<unsigned long>('m') << _IOC_TYPESHIFT;
+        // UDMABUF_CREATE(_LIST) on /dev/udmabuf for NVIDIA Wayland DMA-BUF
+        // export.
+        static constexpr unsigned long kUdmabufType =
+            static_cast<unsigned long>('u') << _IOC_TYPESHIFT;
 #endif
         // nvidia non-tegra uses some ioctls from this range (but not actual
         // fbdev ioctls; nvidia uses values >= 200 for the NR field
@@ -2113,6 +2117,7 @@ class RDDSandboxPolicy final : public SandboxPolicyCommon {
             .ElseIf(shifted_type == kDmaBufType, Allow())
 #ifdef MOZ_ENABLE_VULKAN_VIDEO
             .ElseIf(shifted_type == kNvidiaRmType, Allow())
+            .ElseIf(shifted_type == kUdmabufType, Allow())
 #endif
 #ifdef MOZ_ENABLE_V4L2
             .ElseIf(shifted_type == kVideoType, Allow())
@@ -2189,8 +2194,11 @@ class RDDSandboxPolicy final : public SandboxPolicyCommon {
         return Allow();
       CASES_FOR_fcntl: {
         Arg<int> cmd(1);
+        // udmabuf requires the backing memfd to be sealed, and the driver may
+        // check the seals it applied.
         return Switch(cmd)
             .Case(F_ADD_SEALS, Allow())
+            .Case(F_GET_SEALS, Allow())
             .Default(SandboxPolicyCommon::EvaluateSyscall(sysno));
       }
       // EGL snapshot GL context needs socket creation and display server
