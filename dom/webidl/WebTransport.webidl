@@ -32,9 +32,14 @@ dictionary WebTransportCloseInfo {
   UTF8String reason = "";
 };
 
+/* https://w3c.github.io/webtransport/#send-options */
+dictionary WebTransportSendOptions {
+  WebTransportSendGroup? sendGroup = null;
+  long long sendOrder = 0;
+};
+
 /* https://w3c.github.io/webtransport/#uni-stream-options */
-dictionary WebTransportSendStreamOptions {
-  long long? sendOrder = null;
+dictionary WebTransportSendStreamOptions : WebTransportSendOptions {
 };
 
 /* https://w3c.github.io/webtransport/#web-transport-stats */

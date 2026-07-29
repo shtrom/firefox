@@ -53,9 +53,9 @@ async protocol PWebTransport
    * TODO: documentation
    */
   async Close(uint32_t code, nsCString reason);
-  async CreateUnidirectionalStream(int64_t? sendOrder)
+  async CreateUnidirectionalStream(int64_t sendOrder, uint64_t? sendGroupId)
       returns(UnidirectionalStreamResponse response);
-  async CreateBidirectionalStream(int64_t? sendOrder)
+  async CreateBidirectionalStream(int64_t sendOrder, uint64_t? sendGroupId)
       returns(BidirectionalStreamResponse response);
 
   /**
@@ -86,7 +86,14 @@ async protocol PWebTransport
   /**
   * Set the sendOrder for an existing stream
   */
-  async SetSendOrder(uint64_t streamId, int64_t? sendOrder);
+  async SetSendOrder(uint64_t streamId, int64_t sendOrder);
+
+  /**
+  * Set the sendGroup for an existing stream
+  * @param streamId the stream to update
+  * @param groupId the send group ID to assign; 0 means no group (null sendGroup)
+  */
+  async SetSendGroup(uint64_t streamId, uint64_t groupId);
 
   /**
   * Export keying material for the WebTransport session

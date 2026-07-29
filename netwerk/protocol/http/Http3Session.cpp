@@ -3174,12 +3174,21 @@ void Http3Session::SendHTTPDatagram(uint64_t aStreamId,
   (void)mHttp3Connection->ConnectUdpSendDatagram(aStreamId, aData, aTrackingId);
 }
 
-void Http3Session::SetSendOrder(Http3StreamBase* aStream,
-                                Maybe<int64_t> aSendOrder) {
+void Http3Session::SetSendOrder(Http3StreamBase* aStream, int64_t aSendOrder) {
   if (!IsClosing()) {
     nsresult rv = mHttp3Connection->WebTransportSetSendOrder(
         aStream->StreamId(), aSendOrder);
     MOZ_ASSERT(NS_SUCCEEDED(rv));
+    (void)rv;
+  }
+}
+
+void Http3Session::SetSendGroup(Http3StreamBase* aStream,
+                                uint64_t aSendGroupId) {
+  if (!IsClosing()) {
+    nsresult rv = mHttp3Connection->WebTransportSetSendGroup(
+        aStream->StreamId(), aSendGroupId);
+    NS_WARNING_ASSERTION(NS_SUCCEEDED(rv), "WebTransportSetSendGroup failed");
     (void)rv;
   }
 }

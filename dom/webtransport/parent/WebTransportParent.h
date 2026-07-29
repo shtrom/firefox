@@ -44,7 +44,9 @@ class WebTransportParent : public PWebTransportParent,
 
   IPCResult RecvClose(const uint32_t& aCode, const nsACString& aReason);
 
-  IPCResult RecvSetSendOrder(uint64_t aStreamId, Maybe<int64_t> aSendOrder);
+  IPCResult RecvSetSendOrder(uint64_t aStreamId, int64_t aSendOrder);
+
+  IPCResult RecvSetSendGroup(uint64_t aStreamId, uint64_t aGroupId);
 
   IPCResult RecvCreateSendGroup(uint64_t aGroupId);
 
@@ -53,10 +55,11 @@ class WebTransportParent : public PWebTransportParent,
                                      ExportKeyingMaterialResolver&& aResolver);
 
   IPCResult RecvCreateUnidirectionalStream(
-      Maybe<int64_t> aSendOrder,
+      int64_t aSendOrder, Maybe<uint64_t> aSendGroupId,
       CreateUnidirectionalStreamResolver&& aResolver);
   IPCResult RecvCreateBidirectionalStream(
-      Maybe<int64_t> aSendOrder, CreateBidirectionalStreamResolver&& aResolver);
+      int64_t aSendOrder, Maybe<uint64_t> aSendGroupId,
+      CreateBidirectionalStreamResolver&& aResolver);
 
   ::mozilla::ipc::IPCResult RecvOutgoingDatagram(
       nsTArray<uint8_t>&& aData, const TimeStamp& aExpirationTime,

@@ -130,7 +130,8 @@ class WebTransport final : public nsISupports, public nsWrapperCache {
 
   already_AddRefed<WebTransportSendGroup> CreateSendGroup(ErrorResult& aRv);
 
-  void SendSetSendOrder(uint64_t aStreamId, Maybe<int64_t> aSendOrder);
+  void SendSetSendOrder(uint64_t aStreamId, int64_t aSendOrder);
+  void SendSetSendGroup(uint64_t aStreamId, uint64_t aGroupId);
 
   void Shutdown() {}
 
@@ -140,6 +141,14 @@ class WebTransport final : public nsISupports, public nsWrapperCache {
   template <typename Stream>
   MOZ_CAN_RUN_SCRIPT_BOUNDARY void PropagateError(Stream* aStream,
                                                   WebTransportError* aError);
+
+  // Internal helpers for creating streams with sendGroup and sendOrder
+  already_AddRefed<Promise> CreateBidirectionalStreamInternal(
+      const WebTransportSendStreamOptions& aOptions,
+      WebTransportSendGroup* aSendGroup, int64_t aSendOrder, ErrorResult& aRv);
+  already_AddRefed<Promise> CreateUnidirectionalStreamInternal(
+      const WebTransportSendStreamOptions& aOptions,
+      WebTransportSendGroup* aSendGroup, int64_t aSendOrder, ErrorResult& aRv);
 
   nsCOMPtr<nsIGlobalObject> mGlobal;
   // We are the owner of WebTransportChild.  We must call Shutdown() on it

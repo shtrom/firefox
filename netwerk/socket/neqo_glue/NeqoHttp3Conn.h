@@ -199,11 +199,17 @@ class NeqoHttp3Conn final {
                                                          aResult);
   }
 
-  nsresult WebTransportSetSendOrder(uint64_t aSessionId,
-                                    Maybe<int64_t> aSendOrder) {
+  nsresult WebTransportSetSendOrder(uint64_t aSessionId, int64_t aSendOrder) {
     return neqo_http3conn_webtransport_set_sendorder(this, aSessionId,
-                                                     aSendOrder.ptrOr(nullptr));
+                                                     &aSendOrder);
   }
+
+  nsresult WebTransportSetSendGroup(uint64_t aSessionId,
+                                    uint64_t aSendGroupId) {
+    return neqo_http3conn_webtransport_set_sendgroup(this, aSessionId,
+                                                     aSendGroupId);
+  }
+
   nsresult RegisterWebTransportSendGroup(uint64_t aSessionId,
                                          uint64_t aGroupId) {
     return neqo_http3conn_webtransport_register_send_group(this, aSessionId,
