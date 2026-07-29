@@ -17,6 +17,9 @@
 
 namespace mozilla::dom {
 
+class WebTransportDatagramsWritable;
+struct WebTransportSendOptions;
+
 class IncomingDatagramStreamAlgorithms
     : public UnderlyingSourceAlgorithmsWrapper {
  public:
@@ -150,6 +153,9 @@ class WebTransportDatagramDuplexStream final : public nsISupports,
     return mOutgoingHighWaterMark;
   }
   void SetOutgoingHighWaterMark(double aWaterMark, ErrorResult& aRv);
+
+  already_AddRefed<WebTransportDatagramsWritable> CreateWritable(
+      const WebTransportSendOptions& aOptions, ErrorResult& aRv);
 
  private:
   ~WebTransportDatagramDuplexStream() = default;
