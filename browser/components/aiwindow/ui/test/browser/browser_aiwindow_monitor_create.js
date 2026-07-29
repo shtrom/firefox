@@ -88,7 +88,7 @@ add_task(async function test_dialog_opens() {
       const title = dialog.querySelector(".modal-title");
       Assert.equal(
         title.textContent,
-        "Create alert",
+        "Create Monitor",
         "Dialog has correct title"
       );
 
@@ -96,18 +96,16 @@ add_task(async function test_dialog_opens() {
       const nameInput = dialog.querySelector("moz-input-text");
       const alertTextarea = dialog.querySelector("moz-textarea");
       const pageInput = dialog.querySelector("moz-input-url");
-      const cancelButton = dialog.querySelector(
-        'moz-button[data-l10n-id="ai-tasks-alert-cancel-button"]'
-      );
+      const cancelButton = dialog.querySelector('moz-button[label="Cancel"]');
       const startButton = dialog.querySelector(
-        'moz-button[data-l10n-id="ai-tasks-alert-create-button"]'
+        'moz-button[label="Start monitoring"]'
       );
 
       Assert.ok(nameInput, "Name input exists");
       Assert.ok(alertTextarea, "Alert textarea exists");
       Assert.ok(pageInput, "Page URL input exists");
       Assert.ok(cancelButton, "Cancel button exists");
-      Assert.ok(startButton, "Create alert button exists");
+      Assert.ok(startButton, "Start monitoring button exists");
 
       // Check that start button is initially disabled
       Assert.ok(
@@ -163,7 +161,7 @@ add_task(async function test_form_validation() {
       const pageInput = dialog.querySelector("moz-input-url");
       const addPageButton = dialog.querySelector(".add-page-btn");
       const startButton = dialog.querySelector(
-        'moz-button[data-l10n-id="ai-tasks-alert-create-button"]'
+        'moz-button[label="Start monitoring"]'
       );
 
       // Start button should be disabled initially
@@ -247,9 +245,7 @@ add_task(async function test_form_validation() {
       );
 
       // Close dialog
-      const cancelButton = dialog.querySelector(
-        'moz-button[data-l10n-id="ai-tasks-alert-cancel-button"]'
-      );
+      const cancelButton = dialog.querySelector('moz-button[label="Cancel"]');
       cancelButton.click();
       await new Promise(resolve => content.setTimeout(resolve, 100));
     });
@@ -308,7 +304,7 @@ add_task(async function test_monitor_creation() {
         const alertTextarea = dialog.querySelector("moz-textarea");
         const pageInput = dialog.querySelector("moz-input-url");
         const startButton = dialog.querySelector(
-          'moz-button[data-l10n-id="ai-tasks-alert-create-button"]'
+          'moz-button[label="Start monitoring"]'
         );
 
         // Fill in the form using both DOM and component properties

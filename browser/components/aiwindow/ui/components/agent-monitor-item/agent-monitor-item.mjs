@@ -9,8 +9,6 @@ import "chrome://global/content/elements/moz-input-text.mjs";
 // eslint-disable-next-line import/no-unassigned-import
 import "chrome://global/content/elements/moz-input-url.mjs";
 // eslint-disable-next-line import/no-unassigned-import
-import "chrome://global/content/elements/moz-textarea.mjs";
-// eslint-disable-next-line import/no-unassigned-import
 import "chrome://global/content/elements/moz-select.mjs";
 // eslint-disable-next-line import/no-unassigned-import
 import "chrome://global/content/elements/moz-button.mjs";
@@ -38,13 +36,13 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
 
 // Indexed by the weekday values used by the scheduler (0 = Sunday)
 const WEEKDAYS = [
-  { value: 0, ftlId: "ai-tasks-alert-weekday-sunday" },
-  { value: 1, ftlId: "ai-tasks-alert-weekday-monday" },
-  { value: 2, ftlId: "ai-tasks-alert-weekday-tuesday" },
-  { value: 3, ftlId: "ai-tasks-alert-weekday-wednesday" },
-  { value: 4, ftlId: "ai-tasks-alert-weekday-thursday" },
-  { value: 5, ftlId: "ai-tasks-alert-weekday-friday" },
-  { value: 6, ftlId: "ai-tasks-alert-weekday-saturday" },
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
 ];
 
 /**
@@ -98,7 +96,7 @@ export class AgentMonitorItem extends MozLitElement {
     editing: { type: Boolean, reflect: true },
     checkFrequency: { type: String, state: true },
     scheduleTime: { type: String, state: true },
-    scheduleWeekday: { type: Number, state: true },
+    scheduleWeekday: { type: String, state: true },
     alertDescription: { type: String, state: true },
     pageUrls: { type: Array, state: true },
     pendingUrl: { type: String, state: true },
@@ -113,7 +111,7 @@ export class AgentMonitorItem extends MozLitElement {
     this.editing = false;
     this.checkFrequency = SCHEDULE_TYPES.DAILY;
     this.scheduleTime = "09:00";
-    this.scheduleWeekday = 1;
+    this.scheduleWeekday = "1";
     this.alertDescription = "";
     this.pageUrls = [];
     this.pendingUrl = "";
@@ -145,9 +143,7 @@ export class AgentMonitorItem extends MozLitElement {
       if (schedule) {
         this.checkFrequency = schedule.frequency ?? this.checkFrequency;
         this.scheduleTime = schedule.time ?? this.scheduleTime;
-        this.scheduleWeekday = schedule.weekday
-          ? Number(schedule.weekday)
-          : this.scheduleWeekday;
+        this.scheduleWeekday = schedule.weekday ?? this.scheduleWeekday;
       }
     }
   }
@@ -202,7 +198,7 @@ export class AgentMonitorItem extends MozLitElement {
   }
 
   // TODO: Bug 2054529 - share this URL validation with about:tools' create form
-  async #validateUrl(url) {
+  #validateUrl(url) {
     const value = url.trim();
     if (!value) {
       return { valid: true, error: "" };
@@ -210,47 +206,36 @@ export class AgentMonitorItem extends MozLitElement {
     try {
       const { protocol } = new URL(value);
       if (protocol !== "http:" && protocol !== "https:") {
-        const error = await document.l10n.formatValue(
-          "ai-tasks-alert-error-http-only"
-        );
-        return { valid: false, error };
+        return { valid: false, error: "Only HTTP and HTTPS URLs are allowed" };
       }
       return { valid: true, error: "" };
     } catch {
-      const error = await document.l10n.formatValue(
-        "ai-tasks-alert-error-invalid-url"
-      );
-      return { valid: false, error };
+      return { valid: false, error: "Please enter a valid URL" };
     }
   }
 
-  async #validatePendingUrl() {
+  #validatePendingUrl() {
     this.pendingUrlError = this.pendingUrl.trim()
-      ? (await this.#validateUrl(this.pendingUrl)).error
+      ? this.#validateUrl(this.pendingUrl).error
       : "";
   }
 
-  async #addUrl() {
+  #addUrl() {
     const url = this.pendingUrl.trim();
     if (!url) {
       return;
     }
-    const { valid, error } = await this.#validateUrl(url);
+    const { valid, error } = this.#validateUrl(url);
     if (!valid) {
       this.pendingUrlError = error;
       return;
     }
     if (this.pageUrls.includes(url)) {
-      this.pendingUrlError = await document.l10n.formatValue(
-        "ai-tasks-alert-error-duplicate-url"
-      );
+      this.pendingUrlError = "This URL has already been added";
       return;
     }
     if (this.pageUrls.length >= MAX_WATCH_URLS) {
-      this.pendingUrlError = await document.l10n.formatValue(
-        "ai-tasks-alert-error-max-urls",
-        { count: MAX_WATCH_URLS }
-      );
+      this.pendingUrlError = `Maximum of ${MAX_WATCH_URLS} URLs allowed`;
       return;
     }
     this.pageUrls = [...this.pageUrls, url];
@@ -303,36 +288,33 @@ export class AgentMonitorItem extends MozLitElement {
 
   #renderStatusChip() {
     const statusInfo = this.agent?.status;
-    if (!statusInfo?.kind) {
+    if (!statusInfo?.label) {
       return nothing;
     }
-    const l10nId =
-      statusInfo.kind === "watching"
-        ? "ai-tasks-alert-status-watching"
-        : "ai-tasks-alert-status-paused";
-
     return html`<span
       class="status-chip ${statusInfo.kind}"
-      data-kind=${statusInfo.kind}
-      data-l10n-id=${l10nId}
+      data-kind=${statusInfo.kind ?? "watching"}
     >
       ${statusInfo.kind === "watching"
         ? html`<span class="pulse-dot"></span>`
         : nothing}
+      ${statusInfo.label}
     </span>`;
   }
 
   #renderConditionField() {
     const presets = this.agent?.conditionPresets ?? [];
+    /* TODO: Bug 2054529 - Add localize strings */
     return html`
       <div class="field">
+        <span class="field-label">Alert me when</span>
         <moz-textarea
           class="monitor-condition-input"
-          data-l10n-id="ai-tasks-alert-alert"
-          data-l10n-attrs="placeholder,label"
+          placeholder="e.g. the price drops below $270"
           .value=${this.alertDescription}
           @input=${this.#onConditionInput}
           @change=${this.#onConditionInput}
+          aria-label="Alert condition"
         ></moz-textarea>
         ${presets.length
           ? html`<div class="chip-row">
@@ -353,38 +335,11 @@ export class AgentMonitorItem extends MozLitElement {
   }
 
   #renderPagesField() {
+    /* TODO: Bug 2054529 - Add localize strings */
     return html`
       <div class="field">
+        <span class="field-label">Pages</span>
         <div class="pages-container">
-          <div class="page-input-row">
-            <moz-input-url
-              class="form-input page-url-input ${this.pendingUrlError
-                ? "error"
-                : ""}"
-              data-l10n-id="ai-tasks-alert-pages"
-              data-l10n-attrs="placeholder,label,description"
-              data-l10n-args=${JSON.stringify({
-                maxPages: MAX_WATCH_URLS,
-              })}
-              .value=${this.pendingUrl}
-              @input=${this.#onPendingUrlInput}
-              @keydown=${this.#onPendingUrlKeydown}
-              @blur=${() => this.#validatePendingUrl()}
-            ></moz-input-url>
-            <moz-button
-              size="small"
-              type="icon ghost"
-              class="add-page-btn"
-              iconsrc="chrome://global/skin/icons/plus.svg"
-              data-l10n-id="ai-tasks-alert-add-url"
-              data-l10n-attrs="aria-label"
-              ?disabled=${this.pageUrls.length >= MAX_WATCH_URLS}
-              @click=${() => this.#addUrl()}
-            ></moz-button>
-          </div>
-          ${this.pendingUrlError
-            ? html`<div class="error-message">${this.pendingUrlError}</div>`
-            : nothing}
           ${this.pageUrls.length
             ? html`<div class="page-pills-row">
                 ${this.pageUrls.map(
@@ -396,13 +351,37 @@ export class AgentMonitorItem extends MozLitElement {
                       <button
                         type="button"
                         class="page-pill-remove"
-                        data-l10n-id="ai-tasks-alert-remove-page-label"
-                        data-l10n-attrs="aria-label"
+                        aria-label="Remove page"
                         @click=${() => this.#removeUrl(url)}
                       ></button>
                     </span>`
                 )}
               </div>`
+            : nothing}
+          <div class="page-input-row">
+            <moz-input-url
+              class="form-input page-url-input ${this.pendingUrlError
+                ? "error"
+                : ""}"
+              placeholder="Enter URL"
+              .value=${this.pendingUrl}
+              @input=${this.#onPendingUrlInput}
+              @keydown=${this.#onPendingUrlKeydown}
+              @blur=${() => this.#validatePendingUrl()}
+              aria-label="Add a page URL"
+            ></moz-input-url>
+            <moz-button
+              size="small"
+              type="icon ghost"
+              class="add-page-btn"
+              iconsrc="chrome://global/skin/icons/plus.svg"
+              aria-label="Add URL"
+              ?disabled=${this.pageUrls.length >= MAX_WATCH_URLS}
+              @click=${() => this.#addUrl()}
+            ></moz-button>
+          </div>
+          ${this.pendingUrlError
+            ? html`<div class="error-message">${this.pendingUrlError}</div>`
             : nothing}
         </div>
       </div>
@@ -414,11 +393,9 @@ export class AgentMonitorItem extends MozLitElement {
     if (!historyItems.length) {
       return nothing;
     }
+    /* TODO: Bug 2054529 - Add localize strings */
     return html`
-      <div
-        class="section-toggle"
-        data-l10n-id="ai-tasks-alert-change-history"
-      ></div>
+      <div class="section-toggle">Change history</div>
       <div class="history">
         ${historyItems.map(
           item =>
@@ -452,66 +429,33 @@ export class AgentMonitorItem extends MozLitElement {
   }
 
   #onWeekdayChange(event) {
-    this.scheduleWeekday = Number(event.target.value);
+    this.scheduleWeekday = event.target.value;
   }
 
-  #renderScheduleSummary() {
+  #scheduleSummary() {
     const schedule = this.agent?.schedule;
     if (!schedule) {
-      return nothing;
+      return this.agent?.cadence ?? "";
     }
-
-    // Convert HH:MM string to a Date object for Fluent formatting
-    // Use a fixed date to ensure consistent formatting
-    const [hours, minutes] = schedule.time.split(":").map(Number);
-    const timeDate = new Date();
-    timeDate.setHours(hours, minutes, 0, 0);
-
+    const time =
+      TIME_OPTIONS.find(opt => opt.value === schedule.time)?.label ??
+      schedule.time;
+    /* TODO: Bug 2054529 - Add localize strings */
     if (schedule.frequency === SCHEDULE_TYPES.WEEKLY) {
-      // Map weekday index to the specific Fluent string ID
-      const weekdayFluent = [
-        "ai-tasks-alert-schedule-weekly-sunday",
-        "ai-tasks-alert-schedule-weekly-monday",
-        "ai-tasks-alert-schedule-weekly-tuesday",
-        "ai-tasks-alert-schedule-weekly-wednesday",
-        "ai-tasks-alert-schedule-weekly-thursday",
-        "ai-tasks-alert-schedule-weekly-friday",
-        "ai-tasks-alert-schedule-weekly-saturday",
-      ];
-
-      const fluentId = weekdayFluent[schedule.weekday];
-      if (fluentId) {
-        return html`<div class="monitor-row">
-          <span
-            class="val"
-            data-l10n-id=${fluentId}
-            data-l10n-args=${JSON.stringify({
-              time: timeDate.getTime(),
-            })}
-          ></span>
-        </div>`;
-      }
+      const day = WEEKDAYS[Number(schedule.weekday)] ?? "";
+      return `Weekly on ${day} at ${time}`;
     }
-
-    return html`<div class="monitor-row">
-      <span
-        class="val"
-        data-l10n-id="ai-tasks-alert-schedule-daily-at"
-        data-l10n-args=${JSON.stringify({ time: timeDate.getTime() })}
-      ></span>
-    </div>`;
+    return `Daily at ${time}`;
   }
 
   #renderTimeField() {
     return html`<div class="form-section-half">
-      <label
-        class="form-label"
-        data-l10n-id="ai-tasks-alert-time-label"
-      ></label>
+      <label class="form-label">Time</label>
       <moz-select
         class="form-select"
         .value=${this.scheduleTime}
         @change=${this.#onScheduleTimeChange}
+        aria-label="Check time"
       >
         ${TIME_OPTIONS.map(
           opt =>
@@ -530,43 +474,39 @@ export class AgentMonitorItem extends MozLitElement {
       <div class="form-row">
         <div class="schedule-container">
           <div class="form-section-half">
-            <label
-              class="form-label"
-              data-l10n-id="ai-tasks-alert-check-label"
-            ></label>
+            <label class="form-label">Check</label>
             <moz-select
               class="form-select"
               .value=${this.checkFrequency}
               @change=${this.#onFrequencyChange}
+              aria-label="Check frequency"
             >
               <moz-option
                 value=${SCHEDULE_TYPES.DAILY}
-                data-l10n-id="ai-tasks-alert-schedule-daily"
+                label="Daily"
                 iconsrc=${SCHEDULE_ICON}
               ></moz-option>
               <moz-option
                 value=${SCHEDULE_TYPES.WEEKLY}
-                data-l10n-id="ai-tasks-alert-schedule-weekly"
+                label="Weekly"
                 iconsrc=${SCHEDULE_ICON}
               ></moz-option>
             </moz-select>
           </div>
           ${this.checkFrequency === SCHEDULE_TYPES.WEEKLY
             ? html`<div class="form-section-half">
-                <label
-                  class="form-label"
-                  data-l10n-id="ai-tasks-alert-day-label"
-                ></label>
+                <label class="form-label">Day</label>
                 <moz-select
                   class="form-select"
-                  value=${this.scheduleWeekday}
+                  .value=${this.scheduleWeekday}
                   @change=${this.#onWeekdayChange}
+                  aria-label="Check day"
                 >
                   ${WEEKDAYS.map(
-                    day =>
+                    (day, index) =>
                       html`<moz-option
-                        value=${day.value}
-                        data-l10n-id=${day.ftlId}
+                        value=${String(index)}
+                        label=${day}
                         iconsrc=${SCHEDULE_ICON}
                       ></moz-option>`
                   )}
@@ -581,20 +521,18 @@ export class AgentMonitorItem extends MozLitElement {
 
   #renderCreate() {
     const agent = this.agent ?? {};
+    /* TODO: Bug 2054529 - Add localize strings */
     return html`
       <div class="monitor-card">
-        <h2
-          class="monitor-card-state-title"
-          data-l10n-id="ai-tasks-alert-modal-title"
-        ></h2>
         <div class="monitor-card-head">
           <div class="monitor-name-field">
+            <span class="field-label">Monitor Name</span>
             <moz-input-text
               class="monitor-name-input"
-              data-l10n-id="ai-tasks-alert-name"
-              data-l10n-attrs="placeholder,label"
+              placeholder="Name this monitor"
               .value=${this.#monitorName}
               @change=${this.#onNameInput}
+              aria-label="Monitor name"
             ></moz-input-text>
           </div>
         </div>
@@ -613,14 +551,12 @@ export class AgentMonitorItem extends MozLitElement {
           <span class="spacer"></span>
           <moz-button
             type="default"
-            data-l10n-id="ai-tasks-alert-cancel-button"
-            data-l10n-attrs="label"
+            label="Cancel"
             @click=${() => this.#dispatch("agent-monitor-item:cancel", {})}
           ></moz-button>
           <moz-button
             type="primary"
-            data-l10n-id="ai-tasks-alert-create-button"
-            data-l10n-attrs="label"
+            label="Start monitoring"
             @click=${this.#onSubmit}
           ></moz-button>
         </div>
@@ -630,6 +566,7 @@ export class AgentMonitorItem extends MozLitElement {
 
   #renderDisplay() {
     const agent = this.agent ?? {};
+    /* TODO: Bug 2054529 - Add localize strings */
     return html`
       <div class="monitor-card chatcard live" @click=${this.#onCardClick}>
         <div class="monitor-card-head">
@@ -641,8 +578,8 @@ export class AgentMonitorItem extends MozLitElement {
           <button
             type="button"
             class="page-action edit"
-            data-l10n-id="ai-tasks-alert-edit-button"
-            data-l10n-attrs="title,aria-label"
+            title="Edit monitor"
+            aria-label="Edit monitor"
             aria-pressed=${this.editing}
             @click=${this.#onEditToggle}
           ></button>
@@ -650,8 +587,7 @@ export class AgentMonitorItem extends MozLitElement {
             type="button"
             class="chev"
             aria-expanded=${this.expanded}
-            data-l10n-id="ai-tasks-alert-show-details"
-            data-l10n-attrs="aria-label"
+            aria-label="Show monitor details"
             @click=${this.#onToggle}
           ></button>
         </div>
@@ -662,6 +598,7 @@ export class AgentMonitorItem extends MozLitElement {
 
   #renderExpand() {
     const agent = this.agent ?? {};
+    /* TODO: Bug 2054529 - Add localize strings */
     return html`
       <div class="watch-expand" @click=${e => e.stopPropagation()}>
         ${agent.value
@@ -676,27 +613,35 @@ export class AgentMonitorItem extends MozLitElement {
           ? html`${this.#renderConditionField()} ${this.#renderPagesField()}
             ${this.#renderScheduler()}`
           : html`<div class="monitor-row">
+                <span class="label">Alert me when</span>
                 <span class="val">${agent.condition}</span>
               </div>
-              ${this.#renderScheduleSummary()}
               ${agent.watchUrls?.length
                 ? html`<div class="monitor-row">
-                    <span
-                      class="val"
-                      data-l10n-id="ai-tasks-alert-watching-pages"
-                      data-l10n-args=${JSON.stringify({
-                        count: agent.watchUrls.length,
-                      })}
-                    ></span>
+                    <span class="label">Pages</span>
+                    <div class="page-url-list">
+                      ${agent.watchUrls.map(
+                        url =>
+                          html`<span class="page-url-item"
+                            >${this.#displayUrl(url)}</span
+                          >`
+                      )}
+                    </div>
                   </div>`
-                : nothing} `}
+                : nothing}
+              ${this.#scheduleSummary()
+                ? html`<div class="monitor-row">
+                    <span class="label">Check</span
+                    ><span class="val">${this.#scheduleSummary()}</span>
+                  </div>`
+                : nothing}`}
         ${this.#renderHistory()}
         <div class="monitor-card-actions">
           <button
             type="button"
             class="page-action danger delete"
-            data-l10n-id="ai-tasks-alert-delete-button"
-            data-l10n-attrs="title,aria-label"
+            title="Delete monitor"
+            aria-label="Delete monitor"
             @click=${() =>
               this.#dispatch("agent-monitor-item:delete", { id: agent.id })}
           ></button>
@@ -707,28 +652,23 @@ export class AgentMonitorItem extends MozLitElement {
                 id: agent.id,
                 paused: agent.status?.kind !== "paused",
               })}
-            data-l10n-id=${agent.status?.kind === "paused"
-              ? "ai-tasks-alert-resume-button"
-              : "ai-tasks-alert-pause-button"}
-            data-l10n-attrs="label"
-          ></moz-button>
+          >
+            ${agent.status?.kind === "paused" ? "Resume" : "Pause"}
+          </moz-button>
           <span class="spacer"></span>
           ${this.editing
-            ? html`<moz-button
-                type="primary"
-                @click=${this.#onSubmit}
-                data-l10n-id="ai-tasks-alert-save-button"
-                data-l10n-attrs="label"
-              ></moz-button>`
+            ? html`<moz-button type="primary" @click=${this.#onSubmit}>
+                Save
+              </moz-button>`
             : html`<moz-button
                 type="default"
                 @click=${() =>
                   this.#dispatch("agent-monitor-item:check-now", {
                     id: agent.id,
                   })}
-                data-l10n-id="ai-tasks-alert-check-now-button"
-                data-l10n-attrs="label"
-              ></moz-button>`}
+              >
+                Check now
+              </moz-button>`}
         </div>
       </div>
     `;

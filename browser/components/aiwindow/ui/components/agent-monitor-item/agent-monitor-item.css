@@ -30,12 +30,6 @@
   flex: 1;
 }
 
-.monitor-card-state-title {
-  font-size: var(--font-size-large);
-  margin-top: 0;
-  margin-bottom: 0;
-}
-
 .monitor-card-title {
   flex: 1;
   min-width: 0;
@@ -142,9 +136,6 @@
   min-width: 0;
 }
 
-moz-input-url::part(label),
-moz-textarea::part(label),
-moz-input-text::part(label),
 .form-label {
   font-size: var(--font-size-small);
   font-weight: var(--font-weight-semibold);
@@ -234,7 +225,7 @@ moz-input-text::part(label),
 
 .page-input-row {
   display: flex;
-  align-items: end;
+  align-items: center;
   gap: var(--space-small);
 }
 
