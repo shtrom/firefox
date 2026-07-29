@@ -580,3 +580,13 @@ webrender-perf:
         - "'tp5"
         - "'talos-webgl"
         - "'motionmark-animometer"
+
+webrender-wrench:
+    selector: fuzzy
+    description: >-
+        Runs WebRender wrench tests on Linux, macOS, Windows and Android emulator.
+    query:
+        - "'webrender-linux64-debug"
+        - "'webrender-macos-release"
+        - "'webrender-windows"
+        - "'webrender-android-emulator-release"
