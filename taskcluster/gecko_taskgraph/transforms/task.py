@@ -2059,6 +2059,13 @@ def validate_shipping_product(config, product):
 
 @transforms.add
 def validate(config, tasks):
+    # Schema validation is a no-op in fast mode (see validate_schema), so skip
+    # this whole transform, including the costly per-task worker schema
+    # construction whose result would only be discarded.
+    if taskgraph.fast:
+        yield from tasks
+        return
+
     for task in tasks:
         validate_schema(
             TaskDescriptionSchema,
