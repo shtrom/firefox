@@ -3980,7 +3980,13 @@ void DebugAPI::traceWasmContFrame(JSTracer* tracer, JSObject* src,
   for (Realm::DebuggerVectorEntry& entry :
        instance->realm()->getDebuggers(nogc)) {
     Debugger* dbg = entry.dbg.unbarrieredGet();
-    auto p = dbg->frames.lookup(fp);
+    // readonlyThreadsafeLookup returns the same result as lookup(); it only
+    // omits lookup()'s single-threaded ReentrancyGuard. We need that here
+    // because parallel marking threads may run this concurrently, which is
+    // safe: nothing mutates `frames` during marking. Every mutator runs on the
+    // main thread, which is paused for parallel marking, and the sole GC-phase
+    // mutator (DebugAPI::sweepAll) runs only after marking.
+    auto p = dbg->frames.readonlyThreadsafeLookup(fp);
     if (!p) {
       continue;
     }
