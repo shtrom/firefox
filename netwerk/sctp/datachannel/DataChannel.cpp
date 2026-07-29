@@ -281,7 +281,7 @@ bool DataChannelConnection::ConnectToTransport(const std::string& aTransportId,
         // We don't support firing errors right now, and we probabaly want the
         // closed check anyway, and we don't really have something equivalent
         // to the [[DataChannels]] slot, so just use AnnounceClosed for now.
-        channel->AnnounceClosed(Nothing());
+        channel->AnnounceClosed();
       }
     }
 
@@ -1154,8 +1154,7 @@ RefPtr<dom::RTCDataChannel> DataChannel::GetDomDataChannel() const {
   return mWorkerDomDataChannel;
 }
 
-void DataChannelConnection::FinishClose_s(const RefPtr<DataChannel>& aChannel,
-                                          Maybe<dom::RTCErrorParams> aError) {
+void DataChannelConnection::FinishClose_s(const RefPtr<DataChannel>& aChannel) {
   MOZ_ASSERT(mSTS->IsOnCurrentThread());
 
   // We're removing this from all containers, make sure the passed pointer
@@ -1168,10 +1167,10 @@ void DataChannelConnection::FinishClose_s(const RefPtr<DataChannel>& aChannel,
 
   // Close the channel's data transport by following the associated
   // procedure.
-  aChannel->AnnounceClosed(std::move(aError));
+  aChannel->AnnounceClosed();
 }
 
-void DataChannelConnection::CloseAll_s(Maybe<dom::RTCErrorParams> aError) {
+void DataChannelConnection::CloseAll_s() {
   // Make sure no more channels will be opened
   SetState(DataChannelConnectionState::Closed);
 
@@ -1189,7 +1188,7 @@ void DataChannelConnection::CloseAll_s(Maybe<dom::RTCErrorParams> aError) {
     }
     // We do not wait for the reset to finish in this case; we won't be around
     // to see the response.
-    FinishClose_s(channel, aError);
+    FinishClose_s(channel);
   }
 
   // Clean up any pending opens for channels
@@ -1454,7 +1453,7 @@ void DataChannel::AnnounceOpen() {
       NS_DISPATCH_FALLIBLE);
 }
 
-void DataChannel::AnnounceClosed(Maybe<dom::RTCErrorParams> aError) {
+void DataChannel::AnnounceClosed() {
   // When an RTCDataChannel object's underlying data transport has been closed,
   // the user agent MUST queue a task to run the following steps:
   DC_INFO(
@@ -1465,8 +1464,7 @@ void DataChannel::AnnounceClosed(Maybe<dom::RTCErrorParams> aError) {
   GetMainThreadSerialEventTarget()->Dispatch(
       NS_NewCancelableRunnableFunction(
           "DataChannel::AnnounceClosed",
-          [this, self = RefPtr<DataChannel>(this), connection = mConnection,
-           aError = std::move(aError)]() mutable {
+          [this, self = RefPtr<DataChannel>(this), connection = mConnection]() {
             if (mAnnouncedClosed) {
               return;
             }
@@ -1487,14 +1485,13 @@ void DataChannel::AnnounceClosed(Maybe<dom::RTCErrorParams> aError) {
             mDomEventTarget->Dispatch(
                 NS_NewCancelableRunnableFunction(
                     "DataChannel::AnnounceClosed",
-                    [this, self = RefPtr<DataChannel>(this),
-                     aError = std::move(aError)] {
+                    [this, self = RefPtr<DataChannel>(this)] {
                       DC_INFO(("%p: Attempting to call AnnounceClosed.", this));
                       if (GetDomDataChannel()) {
                         DC_INFO(
                             ("%p: Calling AnnounceClosed on RTCDataChannel.",
                              this));
-                        GetDomDataChannel()->AnnounceClosed(std::move(aError));
+                        GetDomDataChannel()->AnnounceClosed();
                       }
                     }),
                 NS_DISPATCH_FALLIBLE);
