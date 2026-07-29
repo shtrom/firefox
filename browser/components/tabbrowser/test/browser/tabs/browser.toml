@@ -518,9 +518,6 @@ skip-if = [
 
 ["browser_tabContextMenu_altStructure.js"]
 tags = "vertical-tabs"
-skip-if = [
-  "nova", # Bug 2055481
-]
 
 ["browser_tabContextMenu_keyboard.js"]
 tags = "vertical-tabs"
