@@ -10,6 +10,7 @@
 #include "mozilla/TimeStamp.h"
 #include "mozilla/dom/PPrefetchRecordParent.h"
 #include "mozilla/dom/PrefetchTypes.h"
+#include "mozilla/dom/ReferrerPolicyBinding.h"
 #include "nsCOMPtr.h"
 #include "nsIChannel.h"
 #include "nsIChannelEventSink.h"
@@ -78,6 +79,8 @@ class PrefetchRecordParent final : public PPrefetchRecordParent,
   bool PrefetchIPAnonymizationPolicyRequiresAnonymity(nsIURI* aURI) const;
   void AppendRedirectChainEntry(nsIURI* aURI);
   void FillResponseOnLastEntry(nsIChannel* aChannel);
+  nsString ComputePartitionKeyForChannel(nsIChannel* aChannel) const;
+  bool IsReferrerPolicySufficientlyStrict() const;
 
   // Prefetch record fields:
   // https://wicg.github.io/nav-speculation/prefetch.html#prefetch-record
