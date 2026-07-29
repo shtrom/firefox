@@ -20,23 +20,19 @@ class Speedometer3Support(BasePythonSupport):
         if args.extra_prefs.get("browser.nova.enabled", True) is False:
             self.no_nova = True
 
-        if args.etw_profile:
-            test["etw_profile"] = True
-            if args.browser_cycles is None:
-                test["browser_cycles"] = 20
-            test["browsertime_args"] = (
-                f"{test.get('browsertime_args', '')} --browsertime.post_startup_delay=2000".strip()
-            )
-            self.profiling = True
-
-        if args.samply_profile:
-            test["samply_profile"] = True
-            if args.browser_cycles is None:
-                test["browser_cycles"] = 20
-            test["browsertime_args"] = (
-                f"{test.get('browsertime_args', '')} --browsertime.post_startup_delay=2000".strip()
-            )
-            self.profiling = True
+        for profile_type, profile_enabled in [
+            ("etw_profile", args.etw_profile),
+            ("samply_profile", args.samply_profile),
+            ("perf_profile", args.perf_profile),
+        ]:
+            if profile_enabled:
+                test[profile_type] = True
+                if args.browser_cycles is None:
+                    test["browser_cycles"] = 20
+                test["browsertime_args"] = (
+                    f"{test.get('browsertime_args', '')} --browsertime.post_startup_delay=2000".strip()
+                )
+                self.profiling = True
 
         if args.simpleperf:
             # Each test suite runs in its own browser cycle.
