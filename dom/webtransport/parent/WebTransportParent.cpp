@@ -549,27 +549,31 @@ WebTransportParent::OnSessionReady(uint64_t aSessionId) {
             (void)self->SendNegotiatedProtocol(subprotocol);
           }
         }
-      }));
 
-  mOwningEventTarget->Dispatch(NS_NewRunnableFunction(
-      "WebTransportParent::OnSessionReady", [self = RefPtr{this}] {
-        MutexAutoLock lock(self->mMutex);
-        if (!self->mClosed && self->mResolver) {
-          self->mResolver(ResolveType(
-              NS_OK, static_cast<uint8_t>(
-                         WebTransportReliabilityMode::Supports_unreliable)));
-          self->mResolver = nullptr;
-          if (self->mExecuteAfterResolverCallback) {
-            self->mExecuteAfterResolverCallback();
-            self->mExecuteAfterResolverCallback = nullptr;
-          }
-        } else {
-          if (self->mClosed) {
-            LOG(("Session already closed at OnSessionReady %p", self.get()));
-          } else {
-            LOG(("No resolver at OnSessionReady %p", self.get()));
-          }
-        }
+        // Resolve ready promise AFTER sending the negotiated protocol
+        // to ensure protocol is available when ready resolves
+        self->mOwningEventTarget->Dispatch(NS_NewRunnableFunction(
+            "WebTransportParent::OnSessionReady", [self]() {
+              MutexAutoLock lock(self->mMutex);
+              if (!self->mClosed && self->mResolver) {
+                self->mResolver(ResolveType(
+                    NS_OK,
+                    static_cast<uint8_t>(
+                        WebTransportReliabilityMode::Supports_unreliable)));
+                self->mResolver = nullptr;
+                if (self->mExecuteAfterResolverCallback) {
+                  self->mExecuteAfterResolverCallback();
+                  self->mExecuteAfterResolverCallback = nullptr;
+                }
+              } else {
+                if (self->mClosed) {
+                  LOG(("Session already closed at OnSessionReady %p",
+                       self.get()));
+                } else {
+                  LOG(("No resolver at OnSessionReady %p", self.get()));
+                }
+              }
+            }));
       }));
 
   return NS_OK;
