@@ -1921,8 +1921,8 @@ void IMContextWrapper::OnCommitCompositionCallback(GtkIMContext* aContext,
 void IMContextWrapper::OnCommitCompositionNative(GtkIMContext* aContext,
                                                  const gchar* aUTF8Char) {
   const gchar emptyStr = 0;
-  const gchar* commitString = aUTF8Char ? aUTF8Char : &emptyStr;
-  NS_ConvertUTF8toUTF16 utf16CommitString(commitString);
+  const gchar* utf8CommitString = aUTF8Char ? aUTF8Char : &emptyStr;
+  const NS_ConvertUTF8toUTF16 utf16CommitString(utf8CommitString);
 
   // IME may synthesize composition asynchronously after filtering a
   // GDK_KEY_PRESS event.  In that case, we should handle composition with
@@ -1938,13 +1938,23 @@ void IMContextWrapper::OnCommitCompositionNative(GtkIMContext* aContext,
       mProcessingKeyEvent = mPostingKeyEvents.GetFirstEvent();
     }
   }
+  const bool editorMayTreatKeyPressAsTypingText =
+      mProcessingKeyEvent && mProcessingKeyEvent->type == GDK_KEY_PRESS &&
+      KeymapWrapper::EditorMayHandleKeyPressEventAsTextInput(
+          mProcessingKeyEvent->state);
 
-  MOZ_LOG(gIMELog, LogLevel::Info,
-          ("0x%p OnCommitCompositionNative(aContext=0x%p), "
-           "current context=0x%p, active context=0x%p, commitString=\"%s\", "
-           "mProcessingKeyEvent=0x%p, IsComposingOn(aContext)=%s",
-           this, aContext, GetCurrentContext(), GetActiveContext(),
-           commitString, mProcessingKeyEvent, ToChar(IsComposingOn(aContext))));
+  MOZ_LOG_FMT(
+      gIMELog, LogLevel::Info,
+      "{} OnCommitCompositionNative(aContext={}), "
+      "current context={}, active context={}, utf8CommitString=\"{}\", "
+      "mProcessingKeyEvent={}, mPostingKeyEvents.Length()={}, "
+      "IsComposingOn(aContext)={}, editorMayTreatKeyPressAsTypingText={}",
+      static_cast<void*>(this), static_cast<void*>(aContext),
+      static_cast<void*>(GetCurrentContext()),
+      static_cast<void*>(GetActiveContext()), utf8CommitString,
+      static_cast<void*>(mProcessingKeyEvent), mPostingKeyEvents.Length(),
+      TrueOrFalse(IsComposingOn(aContext)),
+      TrueOrFalse(editorMayTreatKeyPressAsTypingText));
 
   // See bug 472635, we should do nothing if IM context doesn't match.
   if (!IsValidContext(aContext)) {
@@ -1955,89 +1965,84 @@ void IMContextWrapper::OnCommitCompositionNative(GtkIMContext* aContext,
     return;
   }
 
-  // If we are not in composition and committing with empty string,
-  // we need to do nothing because if we continued to handle this
-  // signal, we would dispatch compositionstart, text, compositionend
-  // events with empty string.  Of course, they are unnecessary events
-  // for Web applications and our editor.
-  if (!IsComposingOn(aContext) && utf16CommitString.IsEmpty()) {
-    MOZ_LOG(gIMELog, LogLevel::Warning,
-            ("0x%p   OnCommitCompositionNative(), Warning, does nothing "
-             "because has not started composition and commit string is empty",
-             this));
-    return;
-  }
-
-  // If IME doesn't change their keyevent that generated this commit,
-  // we should treat that IME didn't handle the key event because
-  // web applications want to receive "keydown" and "keypress" event
-  // in such case.
-  // NOTE: While a key event is being handled, this might be caused on
-  // current context.  Otherwise, this may be caused on active context.
-  if (!IsComposingOn(aContext) && mProcessingKeyEvent &&
-      mProcessingKeyEvent->type == GDK_KEY_PRESS &&
-      aContext == GetCurrentContext()) {
-    char keyval_utf8[8]; /* should have at least 6 bytes of space */
-    gint keyval_utf8_len;
-    guint32 keyval_unicode;
-
-    keyval_unicode = gdk_keyval_to_unicode(mProcessingKeyEvent->keyval);
-    keyval_utf8_len = g_unichar_to_utf8(keyval_unicode, keyval_utf8);
-    keyval_utf8[keyval_utf8_len] = '\0';
-
-    // If committing string is exactly same as a character which is
-    // produced by the key, eKeyDown and eKeyPress event should be
-    // dispatched by the caller of OnKeyEvent() normally.
-    if (!strcmp(commitString, keyval_utf8)) {
-      MOZ_LOG(gIMELog, LogLevel::Info,
-              ("0x%p   OnCommitCompositionNative(), "
-               "we'll send normal key event",
+  if (!IsComposingOn(aContext)) {
+    // If we are not in composition and committing with empty string,
+    // we need to do nothing because if we continued to handle this
+    // signal, we would dispatch compositionstart, text, compositionend
+    // events with empty string.  Of course, they are unnecessary events
+    // for Web applications and our editor.
+    if (utf16CommitString.IsEmpty()) {
+      MOZ_LOG(gIMELog, LogLevel::Warning,
+              ("0x%p   OnCommitCompositionNative(), Warning, does nothing "
+               "because has not started composition and commit string is empty",
                this));
-      mFallbackToKeyEvent = true;
       return;
     }
 
-    // If we're in a dead key sequence, commit string is a character in
-    // the BMP and mProcessingKeyEvent produces some characters but it's
-    // not same as committing string, we should dispatch key events.
-    if (mMaybeInDeadKeySequence && utf16CommitString.Length() == 1) {
-      WidgetKeyboardEvent keyEvent(true, eKeyDown, mLastFocusedWindow);
-      KeymapWrapper::InitKeyEvent(keyEvent, mProcessingKeyEvent, false);
-      if (keyEvent.mKeyNameIndex == KEY_NAME_INDEX_USE_STRING) {
-        mMaybeInDeadKeySequence = false;
-        keyEvent.mKeyValue = utf16CommitString;
-        if (DispatchKeyEventsForCommittedCharacter(keyEvent, false)) {
+    if (KeymapWrapper::StringHasOnlyOneGraphemeCluster(utf16CommitString) &&
+        aContext == GetCurrentContext()) {
+      if (editorMayTreatKeyPressAsTypingText) {
+        // If we're not in a composition and synthesizing a key press events for
+        // a grapheme cluster will be handled by the editor as a text input, we
+        // should dispatch eKeyPress events rather than content text insert
+        // command event because the content command is compatible with
+        // Chromium, but the behavior may lead a bug of some web apps like
+        // Microsoft Office. NOTE: Some keyboard layouts may not change the
+        // keyval mapping but they may try to input different character via IME.
+        // So, we should not compare whether the commit string is the same as
+        // the keyval.
+        if (maybeRestoreProcessingKeyEvent.isNothing()) {
+          MOZ_LOG(gIMELog, LogLevel::Info,
+                  ("0x%p   OnCommitCompositionNative(), "
+                   "we'll send normal key event",
+                   this));
+          mFallbackToKeyEvent = true;
           return;
         }
+
+        // If we're in a dead key sequence, commit string is a character in
+        // the BMP and mProcessingKeyEvent produces some characters but it's
+        // not same as committing string, we should dispatch key events.
+        if (mMaybeInDeadKeySequence) {
+          WidgetKeyboardEvent keyEvent(true, eKeyDown, mLastFocusedWindow);
+          KeymapWrapper::InitKeyEvent(keyEvent, mProcessingKeyEvent, false);
+          if (keyEvent.mKeyNameIndex == KEY_NAME_INDEX_USE_STRING) {
+            mMaybeInDeadKeySequence = false;
+            keyEvent.mKeyValue = utf16CommitString;
+            if (DispatchKeyEventsForCommittedCharacter(keyEvent, false)) {
+              return;
+            }
+          }
+        }
+      } else if (!mProcessingKeyEvent) {
+        // Wayland text-input protocol without GDK key event (bug 2010538).
+        // When we receive a grapheme cluster commit without a key event,
+        // dispatch synthesized keydown/keypress/keyup events.
+        if (mIsKeySnooped) {
+          WidgetKeyboardEvent keyEvent(true, eKeyDown, mLastFocusedWindow);
+          KeymapWrapper::InitKeyEventFromCommitString(keyEvent,
+                                                      utf16CommitString);
+          if (keyEvent.mKeyCode) {
+            MOZ_LOG(
+                gIMELog, LogLevel::Info,
+                ("0x%p   OnCommitCompositionNative(), "
+                 "dispatching synthesized key events for Wayland text-input "
+                 "character='%c' (keyCode=0x%02X)",
+                 this, static_cast<char>(utf16CommitString.CharAt(0)),
+                 keyEvent.mKeyCode));
+
+            // Dispatch keydown/keypress/keyup (keyup needed since no GDK event)
+            if (DispatchKeyEventsForCommittedCharacter(keyEvent, true)) {
+              return;
+            }
+          }
+        }
       }
-    }
-  }
+    }  // KeymapWrapper::StringHasOnlyOneGraphemeCluster(utf16CommitString) &&
+       // aContext == GetCurrentContext()
+  }  // !IsComposingOn(aContext)
 
-  // Wayland text-input protocol without GDK key event (bug 2010538).
-  // When we receive a simple character commit without a key event, dispatch
-  // synthesized keydown/keypress/keyup events.
-  if (!IsComposingOn(aContext) && mIsKeySnooped && !mProcessingKeyEvent &&
-      utf16CommitString.Length() == 1 && aContext == GetCurrentContext()) {
-    WidgetKeyboardEvent keyEvent(true, eKeyDown, mLastFocusedWindow);
-    KeymapWrapper::InitKeyEventFromCommitString(keyEvent, utf16CommitString);
-    if (keyEvent.mKeyCode) {
-      MOZ_LOG(gIMELog, LogLevel::Info,
-              ("0x%p   OnCommitCompositionNative(), "
-               "dispatching synthesized key events for Wayland text-input "
-               "character='%c' (keyCode=0x%02X)",
-               this, static_cast<char>(utf16CommitString.CharAt(0)),
-               keyEvent.mKeyCode));
-
-      // Dispatch keydown/keypress/keyup (keyup needed since no GDK event)
-      if (DispatchKeyEventsForCommittedCharacter(keyEvent, true)) {
-        return;
-      }
-    }
-  }
-
-  NS_ConvertUTF8toUTF16 str(commitString);
-  // Be aware, widget can be gone
-  DispatchCompositionCommitEvent(aContext, &str);
+  DispatchCompositionCommitEvent(aContext, &utf16CommitString);
 }
 
 void IMContextWrapper::GetCompositionString(GtkIMContext* aContext,

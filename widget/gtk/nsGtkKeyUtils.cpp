@@ -25,6 +25,7 @@
 #include "mozilla/TextEventDispatcher.h"
 #include "mozilla/TextEvents.h"
 #include "mozilla/Utf16.h"
+#include "mozilla/intl/Segmenter.h"
 #include "nsCRT.h"
 #include "nsContentUtils.h"
 #include "nsIBidiKeyboard.h"
@@ -323,6 +324,18 @@ KeymapWrapper::ModifierKey* KeymapWrapper::GetModifierKey(
     }
   }
   return nullptr;
+}
+
+/* static */
+bool KeymapWrapper::StringHasOnlyOneGraphemeCluster(const nsAString& aString) {
+  if (aString.IsEmpty()) {
+    return false;
+  }
+  if (aString.Length() == 1u) {
+    return true;
+  }
+  // Return true if there is no another grapheme cluster after the first one.
+  return intl::GraphemeClusterBreakIteratorUtf16(aString).Next().isNothing();
 }
 
 /* static */
@@ -1107,6 +1120,13 @@ uint32_t KeymapWrapper::ComputeKeyModifiers(guint aGdkModifierState) {
 }
 
 /* static */
+bool KeymapWrapper::EditorMayHandleKeyPressEventAsTextInput(
+    guint aGdkModifierState) {
+  const Modifiers modifiers = ComputeKeyModifiers(aGdkModifierState);
+  return !(modifiers & (MODIFIER_CONTROL | MODIFIER_ALT | MODIFIER_META));
+}
+
+/* static */
 guint KeymapWrapper::ConvertWidgetModifierToGdkState(
     nsIWidget::NativeModifiers aNativeModifiers) {
   if (aNativeModifiers == nsIWidget::NativeModifiers::NO_MODIFIERS) {
@@ -1739,16 +1759,17 @@ void KeymapWrapper::HandleKeyPressEvent(nsWindow* aWindow,
     return;
   }
 
-  // If the character code is in the BMP, send the key press event.
-  // Otherwise, send a compositionchange event with the equivalent UTF-16
-  // string.
-  // TODO: Investigate other browser's behavior in this case because
-  //       this hack is odd for UI Events.
+  // If the user typing a grapheme character including combined emoji, etc, we
+  // should dispatch eKeyPress events for avoiding web compat issues caused by
+  // dispatching only content insert text command event.
+  // Otherwise, send a set of composition events to emulate it's typed as an IME
+  // composition because a key press shouldn't cause typing multiple characters
+  // in theory. So, the behavior could be unexpected by web apps.
   WidgetKeyboardEvent keypressEvent(true, eKeyPress, aWindow);
   KeymapWrapper::InitKeyEvent(keypressEvent, aGdkKeyEvent, false);
   nsEventStatus status = nsEventStatus_eIgnore;
   if (keypressEvent.mKeyNameIndex != KEY_NAME_INDEX_USE_STRING ||
-      keypressEvent.mKeyValue.Length() == 1) {
+      KeymapWrapper::StringHasOnlyOneGraphemeCluster(keypressEvent.mKeyValue)) {
     if (textEventDispatcher->MaybeDispatchKeypressEvents(keypressEvent, status,
                                                          aGdkKeyEvent)) {
       MOZ_LOG(gKeyLog, LogLevel::Info,

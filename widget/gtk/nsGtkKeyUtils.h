@@ -62,6 +62,13 @@ namespace widget {
 class KeymapWrapper {
  public:
   /**
+   * Return the string is not empty and has only one grapheme cluster (meaning
+   * the string does not have 2 or more grapheme clusters. E.g., if the string
+   * has a part of a grapheme cluster, returns true).
+   */
+  [[nodiscard]] static bool StringHasOnlyOneGraphemeCluster(const nsAString&);
+
+  /**
    * Compute an our DOM keycode from a GDK keyval.
    */
   static uint32_t ComputeDOMKeyCode(const GdkEventKey* aGdkKeyEvent);
@@ -125,6 +132,12 @@ class KeymapWrapper {
    * of WidgetInputEvent
    */
   static uint32_t ComputeKeyModifiers(guint aGdkModifierState);
+
+  /**
+   * Return true if our editor may handle the modifier state as text input.
+   */
+  [[nodiscard]] static bool EditorMayHandleKeyPressEventAsTextInput(
+      guint aGdkModifierState);
 
   /**
    * Convert native modifiers for `nsIWidget::SynthesizeNative*()` to
