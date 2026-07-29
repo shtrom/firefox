@@ -437,6 +437,13 @@ class KeymapWrapper {
   uint32_t GetUnmodifiedCharCodeFor(const GdkEventKey* aGdkKeyEvent);
 
   /**
+   * Return the char code for aGdkKeyEvent and if it's 0, return the unmodified
+   * char code instead.
+   */
+  static uint32_t GetCharCodeOrUnmodifiedCharCodeFor(
+      const GdkEventKey* aGdkKeyEvent);
+
+  /**
    * GetKeyLevel() returns level of the aGdkKeyEvent in mGdkKeymap.
    *
    * @param aGdkKeyEvent      Native key event, must not be nullptr.

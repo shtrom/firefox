@@ -1441,7 +1441,13 @@ KeyNameIndex KeymapWrapper::ComputeDOMKeyNameIndex(
       break;
   }
 
-  return KEY_NAME_INDEX_Unidentified;
+  // We don't map each GDK keyval to KEY_NAME_INDEX_USE_STRING because they
+  // define keyval for each character in the world. Therefore, compute the char
+  // code and it's non-zero, the keyval should be mapped to
+  // KEY_NAME_INDEX_USE_STRING.
+  return GetCharCodeOrUnmodifiedCharCodeFor(aGdkKeyEvent)
+             ? KEY_NAME_INDEX_USE_STRING
+             : KEY_NAME_INDEX_Unidentified;
 }
 
 /* static */
@@ -1901,17 +1907,12 @@ void KeymapWrapper::InitKeyEvent(WidgetKeyboardEvent& aKeyEvent,
   aKeyEvent.mKeyNameIndex =
       aIsProcessedByIME ? KEY_NAME_INDEX_Process
                         : keymapWrapper->ComputeDOMKeyNameIndex(aGdkKeyEvent);
-  if (aKeyEvent.mKeyNameIndex == KEY_NAME_INDEX_Unidentified) {
-    uint32_t charCode = GetCharCodeFor(aGdkKeyEvent);
-    if (!charCode) {
-      charCode = keymapWrapper->GetUnmodifiedCharCodeFor(aGdkKeyEvent);
-    }
-    if (charCode) {
-      aKeyEvent.mKeyNameIndex = KEY_NAME_INDEX_USE_STRING;
-      MOZ_ASSERT(aKeyEvent.mKeyValue.IsEmpty(),
-                 "Uninitialized mKeyValue must be empty");
-      AppendUCS4ToUTF16(charCode, aKeyEvent.mKeyValue);
-    }
+  if (aKeyEvent.mKeyNameIndex == KEY_NAME_INDEX_USE_STRING) {
+    uint32_t charCode = GetCharCodeOrUnmodifiedCharCodeFor(aGdkKeyEvent);
+    MOZ_ASSERT(charCode);
+    MOZ_ASSERT(aKeyEvent.mKeyValue.IsEmpty(),
+               "Uninitialized mKeyValue must be empty");
+    AppendUCS4ToUTF16(charCode, aKeyEvent.mKeyValue);
   }
 
   if (aIsProcessedByIME) {
@@ -2142,6 +2143,14 @@ uint32_t KeymapWrapper::GetUnmodifiedCharCodeFor(
   }
   return GetCharCodeFor(aGdkKeyEvent, GdkModifierType(stateWithoutAltGraph),
                         aGdkKeyEvent->group);
+}
+
+/* static */
+uint32_t KeymapWrapper::GetCharCodeOrUnmodifiedCharCodeFor(
+    const GdkEventKey* aGdkKeyEvent) {
+  uint32_t charCode = GetCharCodeFor(aGdkKeyEvent);
+  return charCode ? charCode
+                  : GetInstance()->GetUnmodifiedCharCodeFor(aGdkKeyEvent);
 }
 
 gint KeymapWrapper::GetKeyLevel(GdkEventKey* aGdkKeyEvent) {
