@@ -8,7 +8,9 @@
 Telemetry Alerting was recently (April 2026) released in an **open beta** state, and we are actively looking for feedback and criticism of the system. If you hit any issues, have suggestions, or need to report something, please feel free to file bugs in the [Testing :: Performance component on Bugzilla](https://bugzilla.mozilla.org/enter_bug.cgi?product=Testing&component=Performance&status_whiteboard=[fxp]). You can find links to [additional help] below.
 :::
 
-This document provides information regarding telemetry alerting, and monitoring. The change detection aspect of the project exists in [mozdetect](https://github.com/gmierz/mozdetect), and the alerting/monitoring aspect exists within [Treeherder](https://github.com/mozilla/treeherder/blob/b04b64185e189a2d9e4c088b4be98d898c658e00/treeherder/perf/auto_perf_sheriffing/sherlock.py). Note that the alerting/monitoring may move out of Treeherder in the future.
+This document provides information regarding telemetry alerting, and monitoring. The change detection aspect of the project exists in [mozdetect](https://github.com/mozilla/mozdetect), and the alerting/monitoring aspect exists within [Treeherder](https://github.com/mozilla/treeherder/blob/b04b64185e189a2d9e4c088b4be98d898c658e00/treeherder/perf/auto_perf_sheriffing/sherlock.py). Note that the alerting/monitoring may move out of Treeherder in the future.
+
+All detected changes can be viewed on the [telemetry alert dashboard](https://perf-labs.netlify.app/#telemetry-alert-dashboard/). See the [Monitoring Alerts](#monitoring-alerts) section below for more details.
 
 Follow [bug 1998556](https://bugzilla.mozilla.org/show_bug.cgi?id=1998556) to monitor upcoming improvements on this project.
 
@@ -64,7 +66,7 @@ By default, only the `Windows`, `Linux`, and `Darwin` platforms are looked at. I
 
 ## Monitoring Alerts
 
-The primary ways of monitoring all alerts are either through [this dashboard](https://gmierz.github.io/telemetry-alert-dashboard), and this [bugzilla query](https://bugzilla.mozilla.org/buglist.cgi?v1=telemetry-alert&f1=keywords&o1=allwords&query_format=advanced&bug_status=UNCONFIRMED&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED&bug_status=RESOLVED&bug_status=VERIFIED&bug_status=CLOSED&list_id=17623601). It's possible that new views will be added to help with monitoring these alerts.
+The primary ways of monitoring all alerts are either through [this dashboard](https://perf-labs.netlify.app/#telemetry-alert-dashboard/), and this [bugzilla query](https://bugzilla.mozilla.org/buglist.cgi?v1=telemetry-alert&f1=keywords&o1=allwords&query_format=advanced&bug_status=UNCONFIRMED&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED&bug_status=RESOLVED&bug_status=VERIFIED&bug_status=CLOSED&list_id=17623601). It's possible that new views will be added to help with monitoring these alerts.
 
 ### Understanding Alerts and Emails
 
@@ -157,7 +159,7 @@ After probe owners are notified of the alerts, the Treeherder tooling ends and r
 
 ### Adding Change Detection Techniques
 
-If you're interested in adding new change detection techniques, or testing out existing ones. Head over to the [mozdetect repository](https://github.com/gmierz/mozdetect#adding-new-techniques) for information about how to do this. The process involves creating a new technique in that repo, and then updating the module in Treeherder to make it available.
+If you're interested in adding new change detection techniques, or testing out existing ones. Head over to the [mozdetect repository](https://github.com/mozilla/mozdetect#adding-new-techniques) for information about how to do this. The process involves creating a new technique in that repo, and then updating the module in Treeherder to make it available.
 
 ## Additional Help
 
