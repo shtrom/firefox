@@ -434,7 +434,18 @@ int FFmpegVideoDecoder<LIBAV_VER>::ChooseVulkanPixelFormatFromContext(
           (mVulkanDecoder.mDrmModifiers[0] == DRM_FORMAT_MOD_LINEAR) &&
           (mVulkanDecoder.mDrmModifiers.size() == 1);
     }
-    if (VulkanDirectDecodeExportEnabled() && !drmModsAreLinearOrEmpty) {
+    // Forced BL means ImageFormatProperties2 rejected YCbCr tiled modifiers, so
+    // the decode image cannot reliably use DRM-modifier tiling. Keep BL only
+    // for the copy-path export buffers; skip direct export (avoids GL import
+    // hangs and a useless LINEAR decode path that would double-copy).
+    if (VulkanDirectDecodeExportEnabled() &&
+        mVulkanDecoder.mForcedNvidiaBlockLinear) {
+      FFMPEGV_LOG(
+          "[VULKAN] Direct export disabled: forced NVIDIA BL after "
+          "ImageFormatProperties2 left only LINEAR");
+    }
+    if (VulkanDirectDecodeExportEnabled() &&
+        !mVulkanDecoder.mForcedNvidiaBlockLinear && !drmModsAreLinearOrEmpty) {
       AVVulkanFramesContext* hwfc = (AVVulkanFramesContext*)frames_ctx->hwctx;
       void* const originalCreatePnext = hwfc->create_pnext;
       int formatCount = 0;
