@@ -2251,6 +2251,7 @@ static void UpdateRegExpStatics(MacroAssembler& masm, Register regexp,
     masm.store8(Imm32(1), invalidatedAddress);
     masm.jump(&done);
     masm.bind(&legacyFeaturesEnabled);
+    masm.store8(Imm32(0), invalidatedAddress);
   }
 
   masm.guardedCallPreBarrier(pendingInputAddress, MIRType::String);
