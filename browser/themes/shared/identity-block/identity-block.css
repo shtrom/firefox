@@ -354,9 +354,29 @@
       list-style-image: url(chrome://browser/skin/trust-icon-active.svg);
     }
 
+    /* Shield shown during the blocker check. Sets no color so it inherits the
+       same fill as .secure. */
+    &.scanning {
+      list-style-image: url(chrome://browser/skin/tracking-protection.svg);
+    }
+
     &.has-blocked-trackers {
       background-color: var(--urlbar-box-background-color);
-      color: var(--urlbar-box-text-color);
+
+      /* Only the count text takes the box color, so the shield keeps its fill. */
+      #trust-icon-tracker-count-longform,
+      #trust-icon-tracker-count-shortform {
+        color: var(--urlbar-box-text-color);
+      }
+
+      #trust-icon-tracker-count-shortform {
+        margin-inline-start: var(--space-xxsmall);
+      }
+    }
+
+    /* Tighter padding for the collapsed count; the expanded pill keeps normal. */
+    &.has-blocked-trackers:not(.first-visit) {
+      padding-inline-end: var(--space-xsmall);
     }
 
     &:not(.has-blocked-trackers) {
@@ -408,6 +428,17 @@
           #trust-icon-tracker-count-shortform {
             min-width: 0;
           }
+        }
+      }
+      /* Same-site navigation: show the count in its final state, no animation. */
+      &:not(.first-visit).same-site-nav {
+        #trust-icon-tracker-count-shortform-wrapper {
+          animation-name: none;
+          grid-template-columns: 1fr;
+          opacity: 1;
+          padding-block: var(--space-xxsmall);
+          padding-inline: var(--space-xsmall);
+          visibility: visible;
         }
       }
       /* On a site's first visit, we first show "x trackers blocked" (the long form) for a few seconds,
@@ -587,24 +618,24 @@
 @keyframes scale-secure-shield-down {
   from {
     scale: 1;
-    list-style-image: url(chrome://browser/skin/tracking-protection-active.svg);
+    list-style-image: url(chrome://browser/skin/tracking-protection.svg);
   }
 
   to {
     scale: 0.75;
-    list-style-image: url(chrome://browser/skin/tracking-protection-active.svg);
+    list-style-image: url(chrome://browser/skin/tracking-protection.svg);
   }
 }
 
 @keyframes scale-secure-shield-up {
   from {
     scale: 0.75;
-    list-style-image: url(chrome://browser/skin/tracking-protection-active.svg);
+    list-style-image: url(chrome://browser/skin/tracking-protection.svg);
   }
 
   99% {
     scale: 1;
-    list-style-image: url(chrome://browser/skin/tracking-protection-active.svg);
+    list-style-image: url(chrome://browser/skin/tracking-protection.svg);
   }
 
   to {

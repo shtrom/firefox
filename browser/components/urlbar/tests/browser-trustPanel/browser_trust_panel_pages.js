@@ -118,9 +118,10 @@ async function runTestCase(testData, withTLSKeyLogging) {
   );
   await pageLoaded;
 
-  Assert.equal(
-    fetchIconUrl(tab.ownerDocument, "trust-icon"),
-    testData.icon,
+  // Secure web pages briefly show the neutral "scanning" shield before
+  // resolving, so wait for the expected icon rather than reading it eagerly.
+  await TestUtils.waitForCondition(
+    () => fetchIconUrl(tab.ownerDocument, "trust-icon") === testData.icon,
     `Trustpanel urlbar icon is correct for ${testData.url}`
   );
 
