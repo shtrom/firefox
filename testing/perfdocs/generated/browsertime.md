@@ -282,13 +282,15 @@ Raptor can also support profiling Browsertime tests with the following native (O
 
 - Simpleperf (Android)
 - Xperf (Windows)
+- Samply (macOS)
 
 To use native profiling in CI, run `./mach try` with the `--full` flag and select any test with the `-native-profiling` suffix. Currently, the following tests support native profiling:
 
-| Test          | App              | Profiler   |
-| ------------- | ---------------- | ---------- |
-| Speedometer 3 | Fenix, Geckoview | Simpleperf |
-| Speedometer 3 | Firefox, Chromium as Release | Xperf |
+| Test          | App                           | Profiler   | Platform |
+| ------------- | ----------------------------- | ---------- | -------- |
+| Speedometer 3 | Fenix, Geckoview              | Simpleperf | Android  |
+| Speedometer 3 | Firefox, Chromium as Release  | Xperf      | Windows  |
+| Speedometer 3 | Firefox                       | Samply     | macOS    |
 
 To configure a Browsertime script with Simpleperf profiling, wrap the test script to profile with Browsertime's `commands.simpleperf.start()` and `commands.simpleperf.stop()`. For example:
 
