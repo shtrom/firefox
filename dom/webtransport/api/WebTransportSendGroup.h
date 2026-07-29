@@ -33,11 +33,15 @@ class WebTransportSendGroup final : public nsISupports, public nsWrapperCache {
 
   already_AddRefed<Promise> GetStats(ErrorResult& aRv);
 
+  void SetGroupId(uint64_t aGroupId) { mGroupId = aGroupId; }
+  uint64_t GroupId() const { return mGroupId; }
+
  private:
   ~WebTransportSendGroup();
 
   nsCOMPtr<nsIGlobalObject> mGlobal;
   RefPtr<WebTransport> mWebTransport;
+  uint64_t mGroupId = 0;
 };
 
 }  // namespace mozilla::dom

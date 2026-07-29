@@ -59,6 +59,11 @@ async protocol PWebTransport
       returns(BidirectionalStreamResponse response);
 
   /**
+  * Register a send group with a caller-provided ID
+  */
+  async CreateSendGroup(uint64_t groupId);
+
+  /**
   * IPC for sending webtransport datagrams
   * @param expirationTime time at which the datagram expires
   * @param data represents the datagram to be transferred

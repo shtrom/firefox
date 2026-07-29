@@ -157,6 +157,8 @@ class Http3SessionBase {
       uint64_t aSessionId, const nsTArray<uint8_t>& aLabel,
       const nsTArray<uint8_t>& aContext,
       nsTArray<uint8_t>& aKeyingMaterial) = 0;
+  virtual nsresult RegisterWebTransportSendGroup(uint64_t aSessionId,
+                                                 uint64_t aGroupId) = 0;
   virtual nsresult TryActivatingWebTransportStream(
       uint64_t* aStreamId, Http3StreamBase* aStream) = 0;
   virtual void ResetWebTransportStream(Http3WebTransportStream* aStream,
@@ -295,6 +297,8 @@ class Http3Session final : public Http3SessionBase,
       uint64_t aSessionId, const nsTArray<uint8_t>& aLabel,
       const nsTArray<uint8_t>& aContext,
       nsTArray<uint8_t>& aKeyingMaterial) override;
+  nsresult RegisterWebTransportSendGroup(uint64_t aSessionId,
+                                         uint64_t aGroupId) override;
 
   void SetSendOrder(Http3StreamBase* aStream,
                     Maybe<int64_t> aSendOrder) override;

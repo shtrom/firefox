@@ -163,6 +163,7 @@ class WebTransport final : public nsISupports, public nsWrapperCache {
   uint64_t mInnerWindowID = 0;
   uint64_t mHttpChannelID = 0;
   uint64_t mBrowsingContextID = 0;
+  uint64_t mNextSendGroupId = 1;
   RefPtr<mozilla::net::WebTransportEventService> mService;
   // XXX may not need to be a RefPtr, since we own it through the Streams
   RefPtr<WebTransportIncomingStreamsAlgorithms> mIncomingBidirectionalAlgorithm;
