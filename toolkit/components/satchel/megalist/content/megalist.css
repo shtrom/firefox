@@ -4,9 +4,16 @@
 
 /* Bug 1869845 - Styles in this file are still experimental!  */
 
+/* Use the system font like the other sidebar panels, so rem-based spacing
+ * matches theirs (overriding common.css). Content size is kept via `body`. */
+:root:not(.system-font-size) {
+  font: menu;
+}
+
 body {
   overflow: hidden;
   background-color: var(--toolbar-background-color);
+  font-size: var(--font-size-root);
 }
 
 .container {
