@@ -48,6 +48,10 @@ class WebTransport final : public nsISupports, public nsWrapperCache {
   // For mSendStreams/mReceiveStreams
   friend class WebTransportSendStream;
   friend class WebTransportReceiveStream;
+  // For mState access in CreateWritable
+  friend class WebTransportDatagramDuplexStream;
+  // For mWebTransport access in CreateWritable
+  friend class WebTransportSendGroup;
 
  public:
   explicit WebTransport(nsIGlobalObject* aGlobal);

@@ -13,6 +13,8 @@ namespace mozilla::dom {
 
 class WebTransport;
 class WebTransportSendGroup;
+class WebTransportDatagramDuplexStream;
+class OutgoingDatagramStreamAlgorithms;
 
 class WebTransportDatagramsWritable final : public WritableStream {
  public:
@@ -27,7 +29,7 @@ class WebTransportDatagramsWritable final : public WritableStream {
 
   static already_AddRefed<WebTransportDatagramsWritable> Create(
       JSContext* aCx, nsIGlobalObject* aGlobal, WebTransport* aTransport,
-      UnderlyingSinkAlgorithmsWrapper& aAlgorithms, double aHighWaterMark,
+      WebTransportDatagramDuplexStream* aDatagrams, double aHighWaterMark,
       WebTransportSendGroup* aSendGroup, int64_t aSendOrder, ErrorResult& aRv);
 
   JSObject* WrapObject(JSContext* aCx,
@@ -45,6 +47,10 @@ class WebTransportDatagramsWritable final : public WritableStream {
   RefPtr<WebTransport> mTransport;
   RefPtr<WebTransportSendGroup> mSendGroup;
   int64_t mSendOrder;
+
+  // The algorithm instance for this writable stream. This allows each
+  // WebTransportDatagramsWritable to have its own sendGroup/sendOrder.
+  RefPtr<OutgoingDatagramStreamAlgorithms> mAlgorithms;
 };
 
 }  // namespace mozilla::dom

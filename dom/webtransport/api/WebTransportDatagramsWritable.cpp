@@ -7,6 +7,7 @@
 #include "WebTransportDatagramsWritable.h"
 
 #include "mozilla/dom/WebTransport.h"
+#include "mozilla/dom/WebTransportDatagramDuplexStream.h"
 #include "mozilla/dom/WebTransportDatagramsWritableBinding.h"
 #include "mozilla/dom/WebTransportLog.h"
 #include "mozilla/dom/WebTransportSendGroup.h"
@@ -14,7 +15,8 @@
 namespace mozilla::dom {
 
 NS_IMPL_CYCLE_COLLECTION_INHERITED(WebTransportDatagramsWritable,
-                                   WritableStream, mTransport, mSendGroup)
+                                   WritableStream, mTransport, mSendGroup,
+                                   mAlgorithms)
 NS_IMPL_ADDREF_INHERITED(WebTransportDatagramsWritable, WritableStream)
 NS_IMPL_RELEASE_INHERITED(WebTransportDatagramsWritable, WritableStream)
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(WebTransportDatagramsWritable)
@@ -41,7 +43,7 @@ WebTransportDatagramsWritable::~WebTransportDatagramsWritable() {
 already_AddRefed<WebTransportDatagramsWritable>
 WebTransportDatagramsWritable::Create(
     JSContext* aCx, nsIGlobalObject* aGlobal, WebTransport* aTransport,
-    UnderlyingSinkAlgorithmsWrapper& aAlgorithms, double aHighWaterMark,
+    WebTransportDatagramDuplexStream* aDatagrams, double aHighWaterMark,
     WebTransportSendGroup* aSendGroup, int64_t aSendOrder, ErrorResult& aRv) {
   // https://w3c.github.io/webtransport/#webtransportdatagramswritable-create
   // Step 1: Let stream be a new WebTransportDatagramsWritable with
@@ -51,9 +53,24 @@ WebTransportDatagramsWritable::Create(
       aGlobal, aTransport, aSendGroup, aSendOrder);
 
   // Step 2: Let writeDatagramsAlgorithm be an action that runs writeDatagrams
-  // with transport and stream. (provided by caller as aAlgorithms)
+  // with transport and stream.
   // Step 3: Set up stream with writeAlgorithm set to writeDatagramsAlgorithm.
-  datagramsWritable->SetUpNative(aCx, aAlgorithms, Some(aHighWaterMark),
+  // Create a new OutgoingDatagramStreamAlgorithms instance with the specified
+  // sendGroup and sendOrder. This allows this writable to have its own
+  // prioritization parameters.
+  RefPtr<OutgoingDatagramStreamAlgorithms> algorithms =
+      new OutgoingDatagramStreamAlgorithms(aDatagrams, aSendGroup, aSendOrder);
+
+  // Copy the child from the default algorithms so this stream can send
+  // datagrams
+  if (aDatagrams->mOutgoingAlgorithms) {
+    algorithms->SetChild(aDatagrams->mOutgoingAlgorithms->GetChild());
+  }
+
+  datagramsWritable->mAlgorithms = algorithms;
+
+  // Set up the WritableStream with our custom algorithms
+  datagramsWritable->SetUpNative(aCx, *algorithms, Some(aHighWaterMark),
                                  nullptr, aRv);
   if (aRv.Failed()) {
     return nullptr;
@@ -81,13 +98,17 @@ void WebTransportDatagramsWritable::SetSendGroup(
        aSendGroup));
   // Step 2: Set this.[[SendGroup]] to value.
   mSendGroup = aSendGroup;
-  // XXX: Protocol-level send group association not yet implemented
+  if (mAlgorithms) {
+    mAlgorithms->SetSendGroup(aSendGroup);
+  }
 }
 
 void WebTransportDatagramsWritable::SetSendOrder(int64_t aSendOrder) {
-  LOG(("WebTransportDatagramsWritable::SetSendOrder"));
+  LOG(("WebTransportDatagramsWritable::SetSendOrder %" PRId64, aSendOrder));
   mSendOrder = aSendOrder;
-  // XXX: Protocol-level send order not yet implemented
+  if (mAlgorithms) {
+    mAlgorithms->SetSendOrder(aSendOrder);
+  }
 }
 
 }  // namespace mozilla::dom
