@@ -9216,12 +9216,6 @@ nsIPrincipal* nsDocShell::GetInheritedPrincipal(
     referrerInfo->GetOriginalReferrer(getter_AddRefs(referrer));
   }
   if (httpChannelInternal) {
-    if (aLoadState->HasInternalLoadFlags(
-            INTERNAL_LOAD_FLAGS_FORCE_ALLOW_COOKIES)) {
-      aRv = httpChannelInternal->SetThirdPartyFlags(
-          nsIHttpChannelInternal::THIRD_PARTY_FORCE_ALLOW);
-      MOZ_ASSERT(NS_SUCCEEDED(aRv));
-    }
     if (aLoadState->FirstParty()) {
       aRv = httpChannelInternal->SetDocumentURI(aLoadState->URI());
       MOZ_ASSERT(NS_SUCCEEDED(aRv));
