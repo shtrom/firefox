@@ -785,7 +785,7 @@ impl NeqoHttp3Conn {
         let cwnd_that_grew = stats.cc.cwnd.filter(|&c| c > MAX_INITIAL_CWND);
         let growth_label = match (
             cwnd_that_grew,
-            stats.cc.slow_start_exit.as_ref().map(|s| s.exit_cwnd),
+            stats.cc.slow_start_exit.as_ref().map(|e| e.exit_cwnd),
         ) {
             (Some(_), Some(exit_cwnd)) if exit_cwnd < MAX_INITIAL_CWND => {
                 "no_growth_then_exit_then_growth"
