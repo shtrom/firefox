@@ -17,9 +17,16 @@ levelling-up
 how_to_submit_a_patch
 data-collection
 data-review
-jujutsu
 searchfox
 ai-coding
+```
+
+```{toctree}
+:caption: Version control
+:maxdepth: 1
+
+jujutsu
+git-tricks
 ```
 
 ```{toctree}
