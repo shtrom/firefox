@@ -511,6 +511,23 @@ class PresShell final : public nsStubDocumentObserver,
       layers::ScrollDirections aDirections);
 
   /**
+   * Perform a main-thread keyboard scroll for aAction, searching for the scroll
+   * container to scroll starting from the current focused content or DOM
+   * selection.
+   */
+  void ScrollByKeyboard(const layers::KeyboardScrollAction& aAction);
+
+  /**
+   * Perform a main-thread keyboard scroll for aAction, searching for the scroll
+   * container to scroll starting from aStartFrame and walking outward toward
+   * aAction's direction. Used by the cross-process keyboard scroll handoff,
+   * which seeds the search from this document's frame for the embedded
+   * subframe.
+   */
+  void ScrollByKeyboard(const layers::KeyboardScrollAction& aAction,
+                        nsIFrame* aStartFrame);
+
+  /**
    * Like GetScrollContainerFrameToScroll, but for keyboard scrolling. It
    * returns the nearest scroll container from the current focused content or
    * DOM selection that can still scroll toward aAction's direction.
@@ -519,7 +536,7 @@ class PresShell final : public nsStubDocumentObserver,
    *         nothing to scroll locally.
    */
   ScrollContainerFrame* GetScrollContainerFrameForKeyboardScroll(
-      const layers::KeyboardScrollAction& aAction);
+      nsIFrame* aStartFrame, const layers::KeyboardScrollAction& aAction);
 
   /**
    * Returns the page sequence frame associated with the frame hierarchy.

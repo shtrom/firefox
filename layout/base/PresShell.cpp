@@ -2378,71 +2378,29 @@ PresShell::PageMove(bool aForward, bool aExtend) {
 
 NS_IMETHODIMP
 PresShell::ScrollPage(bool aForward) {
-  ScrollContainerFrame* scrollContainerFrame =
-      GetScrollContainerFrameForKeyboardScroll(
-          KeyboardScrollAction(KeyboardScrollAction::eScrollPage, aForward));
-  ScrollMode scrollMode = apz::GetScrollModeForOrigin(ScrollOrigin::Pages);
-  if (scrollContainerFrame) {
-    scrollContainerFrame->ScrollBy(nsIntPoint(0, aForward ? 1 : -1),
-                                   ScrollUnit::PAGES, scrollMode, nullptr,
-                                   mozilla::ScrollOrigin::NotSpecified,
-                                   ScrollContainerFrame::NOT_MOMENTUM,
-                                   ScrollSnapFlags::IntendedDirection |
-                                       ScrollSnapFlags::IntendedEndPosition);
-  }
+  ScrollByKeyboard(
+      KeyboardScrollAction(KeyboardScrollAction::eScrollPage, aForward));
   return NS_OK;
 }
 
 NS_IMETHODIMP
 PresShell::ScrollLine(bool aForward) {
-  ScrollContainerFrame* scrollContainerFrame =
-      GetScrollContainerFrameForKeyboardScroll(
-          KeyboardScrollAction(KeyboardScrollAction::eScrollLine, aForward));
-  ScrollMode scrollMode = apz::GetScrollModeForOrigin(ScrollOrigin::Lines);
-  if (scrollContainerFrame) {
-    nsRect scrollPort = scrollContainerFrame->GetScrollPortRect();
-    nsSize lineSize = scrollContainerFrame->GetLineScrollAmount();
-    int32_t lineCount = StaticPrefs::toolkit_scrollbox_verticalScrollDistance();
-    if (lineCount * lineSize.height > scrollPort.Height()) {
-      return ScrollPage(aForward);
-    }
-    scrollContainerFrame->ScrollBy(
-        nsIntPoint(0, aForward ? lineCount : -lineCount), ScrollUnit::LINES,
-        scrollMode, nullptr, mozilla::ScrollOrigin::NotSpecified,
-        ScrollContainerFrame::NOT_MOMENTUM, ScrollSnapFlags::IntendedDirection);
-  }
+  ScrollByKeyboard(
+      KeyboardScrollAction(KeyboardScrollAction::eScrollLine, aForward));
   return NS_OK;
 }
 
 NS_IMETHODIMP
 PresShell::ScrollCharacter(bool aRight) {
-  ScrollContainerFrame* scrollContainerFrame =
-      GetScrollContainerFrameForKeyboardScroll(
-          KeyboardScrollAction(KeyboardScrollAction::eScrollCharacter, aRight));
-  ScrollMode scrollMode = apz::GetScrollModeForOrigin(ScrollOrigin::Lines);
-  if (scrollContainerFrame) {
-    int32_t h = StaticPrefs::toolkit_scrollbox_horizontalScrollDistance();
-    scrollContainerFrame->ScrollBy(
-        nsIntPoint(aRight ? h : -h, 0), ScrollUnit::LINES, scrollMode, nullptr,
-        mozilla::ScrollOrigin::NotSpecified, ScrollContainerFrame::NOT_MOMENTUM,
-        ScrollSnapFlags::IntendedDirection);
-  }
+  ScrollByKeyboard(
+      KeyboardScrollAction(KeyboardScrollAction::eScrollCharacter, aRight));
   return NS_OK;
 }
 
 NS_IMETHODIMP
 PresShell::CompleteScroll(bool aForward) {
-  ScrollContainerFrame* scrollContainerFrame =
-      GetScrollContainerFrameForKeyboardScroll(KeyboardScrollAction(
-          KeyboardScrollAction::eScrollComplete, aForward));
-  ScrollMode scrollMode = apz::GetScrollModeForOrigin(ScrollOrigin::Other);
-  if (scrollContainerFrame) {
-    scrollContainerFrame->ScrollBy(nsIntPoint(0, aForward ? 1 : -1),
-                                   ScrollUnit::WHOLE, scrollMode, nullptr,
-                                   mozilla::ScrollOrigin::NotSpecified,
-                                   ScrollContainerFrame::NOT_MOMENTUM,
-                                   ScrollSnapFlags::IntendedEndPosition);
-  }
+  ScrollByKeyboard(
+      KeyboardScrollAction(KeyboardScrollAction::eScrollComplete, aForward));
   return NS_OK;
 }
 
@@ -2904,7 +2862,20 @@ static SideBits KeyboardScrollActionToSide(
 }
 
 ScrollContainerFrame* PresShell::GetScrollContainerFrameForKeyboardScroll(
-    const KeyboardScrollAction& aAction) {
+    nsIFrame* aStartFrame, const KeyboardScrollAction& aAction) {
+  if (aStartFrame) {
+    if (ScrollContainerFrame* scrollContainerFrame =
+            nsLayoutUtils::GetNearestScrollContainerFrameToScrollTowards(
+                aStartFrame, KeyboardScrollActionToSide(aAction))) {
+      return scrollContainerFrame;
+    }
+  }
+  return nullptr;
+}
+
+void PresShell::ScrollByKeyboard(const KeyboardScrollAction& aAction) {
+  // Seed the scroll-container search from the focused or selected content, or
+  // from the viewport when there is none.
   nsCOMPtr<nsIContent> content = GetContentForScrolling();
   nsIFrame* startFrame = content ? content->GetPrimaryFrame() : nullptr;
   if (startFrame) {
@@ -2913,19 +2884,75 @@ ScrollContainerFrame* PresShell::GetScrollContainerFrameForKeyboardScroll(
     }
   } else if (ScrollContainerFrame* rootScrollContainerFrame =
                  GetRootScrollContainerFrame()) {
-    // With no focused or selected content to anchor on, scroll the viewport.
     startFrame = rootScrollContainerFrame->GetScrolledFrame();
   }
+  ScrollByKeyboard(aAction, startFrame);
+}
 
-  if (startFrame) {
-    if (ScrollContainerFrame* scrollContainerFrame =
-            nsLayoutUtils::GetNearestScrollContainerFrameToScrollTowards(
-                startFrame, KeyboardScrollActionToSide(aAction))) {
-      return scrollContainerFrame;
-    }
+void PresShell::ScrollByKeyboard(const KeyboardScrollAction& aAction,
+                                 nsIFrame* aStartFrame) {
+  ScrollContainerFrame* scrollContainerFrame =
+      GetScrollContainerFrameForKeyboardScroll(aStartFrame, aAction);
+  if (!scrollContainerFrame) {
+    // Either there is nothing to scroll, or scrolling was handed off to the
+    // embedder process.
+    return;
   }
 
-  return nullptr;
+  switch (aAction.mType) {
+    case KeyboardScrollAction::eScrollCharacter: {
+      int32_t h = StaticPrefs::toolkit_scrollbox_horizontalScrollDistance();
+      scrollContainerFrame->ScrollBy(
+          nsIntPoint(aAction.mForward ? h : -h, 0), ScrollUnit::LINES,
+          apz::GetScrollModeForOrigin(ScrollOrigin::Lines), nullptr,
+          mozilla::ScrollOrigin::NotSpecified,
+          ScrollContainerFrame::NOT_MOMENTUM,
+          ScrollSnapFlags::IntendedDirection);
+      break;
+    }
+    case KeyboardScrollAction::eScrollLine: {
+      nsRect scrollPort = scrollContainerFrame->GetScrollPortRect();
+      nsSize lineSize = scrollContainerFrame->GetLineScrollAmount();
+      int32_t lineCount =
+          StaticPrefs::toolkit_scrollbox_verticalScrollDistance();
+      if (lineCount * lineSize.height > scrollPort.Height()) {
+        // A line scroll would cover more than a page, so do a page scroll on
+        // the same container instead.
+        scrollContainerFrame->ScrollBy(
+            nsIntPoint(0, aAction.mForward ? 1 : -1), ScrollUnit::PAGES,
+            apz::GetScrollModeForOrigin(ScrollOrigin::Pages), nullptr,
+            mozilla::ScrollOrigin::NotSpecified,
+            ScrollContainerFrame::NOT_MOMENTUM,
+            ScrollSnapFlags::IntendedDirection |
+                ScrollSnapFlags::IntendedEndPosition);
+        break;
+      }
+      scrollContainerFrame->ScrollBy(
+          nsIntPoint(0, aAction.mForward ? lineCount : -lineCount),
+          ScrollUnit::LINES, apz::GetScrollModeForOrigin(ScrollOrigin::Lines),
+          nullptr, mozilla::ScrollOrigin::NotSpecified,
+          ScrollContainerFrame::NOT_MOMENTUM,
+          ScrollSnapFlags::IntendedDirection);
+      break;
+    }
+    case KeyboardScrollAction::eScrollPage:
+      scrollContainerFrame->ScrollBy(
+          nsIntPoint(0, aAction.mForward ? 1 : -1), ScrollUnit::PAGES,
+          apz::GetScrollModeForOrigin(ScrollOrigin::Pages), nullptr,
+          mozilla::ScrollOrigin::NotSpecified,
+          ScrollContainerFrame::NOT_MOMENTUM,
+          ScrollSnapFlags::IntendedDirection |
+              ScrollSnapFlags::IntendedEndPosition);
+      break;
+    case KeyboardScrollAction::eScrollComplete:
+      scrollContainerFrame->ScrollBy(
+          nsIntPoint(0, aAction.mForward ? 1 : -1), ScrollUnit::WHOLE,
+          apz::GetScrollModeForOrigin(ScrollOrigin::Other), nullptr,
+          mozilla::ScrollOrigin::NotSpecified,
+          ScrollContainerFrame::NOT_MOMENTUM,
+          ScrollSnapFlags::IntendedEndPosition);
+      break;
+  }
 }
 
 void PresShell::CancelAllPendingReflows() { mDirtyRoots.Clear(); }
