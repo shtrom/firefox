@@ -181,6 +181,10 @@ export class GeckoViewMediaControl extends GeckoViewModule {
       "GeckoView:MediaSession:AudioSessionType",
       { type }
     );
+
+    // Record the type actually forwarded to the embedder. The WebIDL enum uses
+    // hyphens; the Glean labels use underscores.
+    Glean.mediaAudioFocus.platformFocusType[type.replace(/-/g, "_")].add(1);
   }
 
   handleActivated() {
