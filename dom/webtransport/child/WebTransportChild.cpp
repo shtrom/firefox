@@ -67,6 +67,14 @@ void WebTransportChild::CloseAll() {
   return IPC_OK();
 }
 
+::mozilla::ipc::IPCResult WebTransportChild::RecvDraining() {
+  if (mTransport) {
+    RefPtr<WebTransport> self(mTransport);
+    self->ResolveDraining();
+  }
+  return IPC_OK();
+}
+
 ::mozilla::ipc::IPCResult WebTransportChild::RecvOnStreamResetOrStopSending(
     const uint64_t& aStreamId, const StreamResetOrStopSendingError& aError) {
   if (mTransport) {

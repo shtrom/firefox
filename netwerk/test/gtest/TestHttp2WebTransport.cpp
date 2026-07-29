@@ -254,6 +254,9 @@ MockWebTransportSessionEventListener::OnSessionClosed(
   return NS_OK;
 }
 
+NS_IMETHODIMP
+MockWebTransportSessionEventListener::OnDraining() { return NS_OK; }
+
 NS_IMETHODIMP MockWebTransportSessionEventListener::OnDatagramReceivedInternal(
     nsTArray<uint8_t>&& aData) {
   mReceivedDatagrams = std::move(aData);
