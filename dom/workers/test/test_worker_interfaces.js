@@ -685,6 +685,8 @@ let interfaceNamesInGlobalScope = [
   // IMPORTANT: Do not change this list without review from a DOM peer!
   { name: "WebTransportReceiveStream", insecureContext: false },
   // IMPORTANT: Do not change this list without review from a DOM peer!
+  { name: "WebTransportSendGroup", insecureContext: false },
+  // IMPORTANT: Do not change this list without review from a DOM peer!
   { name: "WebTransportSendStream", insecureContext: false },
   // IMPORTANT: Do not change this list without review from a DOM peer!
   { name: "Worker", insecureContext: true },
