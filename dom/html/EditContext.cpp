@@ -301,8 +301,12 @@ void EditContext::UpdateCharacterBounds(
     mCodepointRects.AppendElement(ToRect(rect));
   }
 
-  mCodepointRectsTextChanged = false;
-  mControlBoundsAtLastUpdateCharacterBounds = GetControlBoundsOrClientRect();
+  // Reset last requested character bounds.
+  // If we request the bounds for some range A, and then later
+  // the web app provides bounds for range B which we didn't request,
+  // then we want the character bounds for range A again, we should fire
+  // another characterboundsupdate event.
+  mLastRequestedCharacterBoundsRange = {};
 
   if (!mExpectingCharacterBounds && IsActive()) {
     // Web app sent new character bounds of its own accord, without
@@ -553,7 +557,7 @@ void EditContext::FireTextFormatUpdate(const TextRangeArray* aRanges,
   eventOptions.mBubbles = false;
   eventOptions.mCancelable = true;
   if (aRanges) {
-    for (const TextRange& range : *aRanges) {
+    for (const mozilla::TextRange& range : *aRanges) {
       if (range.Length() == 0) {
         // Empty ranges probably aren't useful?
         continue;
@@ -618,6 +622,29 @@ void EditContext::UnsuppressNotifyingIME() {
   }
 }
 
+bool EditContext::ShouldFireNewCharacterBoundsUpdateForRange(
+    TextRange aRange) const {
+  if (mCodepointRectsTextChanged) {
+    // Text at or before existing rects has changed, so we should fire again.
+    return true;
+  }
+  if (mControlBoundsAtLastCharacterBoundsUpdate !=
+      GetControlBoundsOrClientRect()) {
+    // Control bounds changed, so we should fire again.
+    return true;
+  }
+  if (aRange.IsContainedIn(mCodepointRectsStartIndex,
+                           CodepointRectsEndIndex())) {
+    // We already have these character bounds.
+    return false;
+  }
+  if (aRange.IsContainedIn(mLastRequestedCharacterBoundsRange)) {
+    // We already requested these character bounds.
+    return false;
+  }
+  return true;
+}
+
 nsresult EditContext::FireCharacterBoundsUpdateIfNeeded(
     uint32_t aStart, uint32_t aEnd,
     AutoSuppressIMENotifications* aSuppressIMENotifications) {
@@ -673,15 +700,20 @@ nsresult EditContext::FireCharacterBoundsUpdateIfNeeded(
     }
   }
 
-  // If we already have the requested character bounds and nothing relevant has
-  // changed, don't fire characterboundsupdate again.
-  if (!(mCodepointRectsTextChanged ||
-        mControlBoundsAtLastUpdateCharacterBounds !=
-            GetControlBoundsOrClientRect() ||
-        aStart < mCodepointRectsStartIndex ||
-        aEnd > CodepointRectsEndIndex())) {
+  // If we already have the requested character bounds or we already
+  // requested them, and nothing relevant has changed, don't fire
+  // characterboundsupdate again.
+  const TextRange requestRange(startExtendedToGraphemeCluster,
+                               endExtendedToGraphemeCluster);
+  if (!ShouldFireNewCharacterBoundsUpdateForRange(requestRange)) {
     return NS_OK;
   }
+  // We set all this stuff here instead of in updateCharacterBounds(),
+  // since we don't want to fire characterupdatebounds repeatedly even
+  // if the web app never calls updateCharacterBounds().
+  mControlBoundsAtLastCharacterBoundsUpdate = GetControlBoundsOrClientRect();
+  mLastRequestedCharacterBoundsRange = requestRange;
+  mCodepointRectsTextChanged = false;
 
   if (aSuppressIMENotifications) {
     // We want to suppress notifying the IME of

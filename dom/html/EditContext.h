@@ -201,6 +201,22 @@ class EditContext final : public DOMEventTargetHelper, public SupportsWeakPtr {
 
   friend std::ostream& operator<<(std::ostream& aStream,
                                   const EditContext& aEditContext);
+  struct TextRange {
+    uint32_t mStart = 0;
+    uint32_t mEnd = 0;
+    bool operator==(const TextRange&) const = default;
+    [[nodiscard]] bool IsContainedIn(uint32_t aStart, uint32_t aEnd) const {
+      return mStart >= aStart && mEnd <= aEnd;
+    }
+    [[nodiscard]] bool IsContainedIn(const TextRange& aOther) const {
+      return IsContainedIn(aOther.mStart, aOther.mEnd);
+    }
+  };
+
+  // Returns true if we should fire a new characterboundsupdate event for
+  // querying the character rectangles in aRange, or false if the existing
+  // bounds can be used.
+  bool ShouldFireNewCharacterBoundsUpdateForRange(TextRange aRange) const;
 
   RefPtr<nsGenericHTMLElement> mAssociatedElement;
   RefPtr<nsGenericHTMLElement> mTextContainer;
@@ -212,14 +228,15 @@ class EditContext final : public DOMEventTargetHelper, public SupportsWeakPtr {
   Maybe<Rect> mControlBounds;
   Maybe<Rect> mSelectionBounds;
   // Control bounds or client rect of associated element when
-  // updateCharacterBounds() was most recently called. If this has changed, we
+  // characterboundsupdate was most recently fired. If this has changed, we
   // want to fire characterboundsupdate again the next time character bounds are
   // requested.
-  Maybe<nsRect> mControlBoundsAtLastUpdateCharacterBounds;
+  Maybe<nsRect> mControlBoundsAtLastCharacterBoundsUpdate;
   RefPtr<nsTextNode> mText;
   uint32_t mSelectionStart = 0;
   uint32_t mSelectionEnd = 0;
   uint32_t mCodepointRectsStartIndex = 0;
+  TextRange mLastRequestedCharacterBoundsRange;
   bool mIsComposing = false;
   bool mTextNextToCaretChangedByTextUpdateHandler = false;
   bool mExpectingCharacterBounds = false;
