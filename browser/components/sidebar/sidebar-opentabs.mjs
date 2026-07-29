@@ -185,7 +185,6 @@ export class SidebarOpenTabs extends SidebarPage {
     } else {
       lazy.SidebarCollapsedWindows.expandWindowById(windowId);
     }
-    this.dispatchEvent(new CustomEvent("folder-toggle"));
   }
 
   #pinnedTabsTemplate(pinnedTabItems, isCurrent) {
@@ -239,7 +238,6 @@ export class SidebarOpenTabs extends SidebarPage {
         data-l10n-id=${headerL10nId}
         data-l10n-args=${JSON.stringify({ winID })}
         @toggle=${this.#onCardToggle}
-        @keydown=${this.keydownHandler}
       >
         ${when(pinnedTabItems.length, () =>
           this.#pinnedTabsTemplate(pinnedTabItems, isCurrent)
@@ -325,7 +323,6 @@ export class SidebarOpenTabs extends SidebarPage {
 
   onSearchQuery(e) {
     this.searchQuery = e.detail.query;
-    this.treeView.resetActiveNode();
   }
 
   render() {

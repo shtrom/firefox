@@ -33,7 +33,6 @@ import { MozLitElement } from "chrome://global/content/lit-utils.mjs";
  *  expanded or not. Can be used to expand the content section of the
  *  accordion card on initial render.
  * @property {string} role - (optional) Role of the article element in the card.
- * @property {number} summaryTabIndex - (optional) tabindex for the accordion summary.
  * @slot content - The content to show inside of the card.
  */
 export default class MozCard extends MozLitElement {
@@ -53,7 +52,6 @@ export default class MozCard extends MozLitElement {
     spacing: { type: String, reflect: true },
     expanded: { type: Boolean },
     role: { type: String, mapped: true },
-    summaryTabIndex: { type: Number },
   };
 
   constructor() {

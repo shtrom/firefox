@@ -127,13 +127,18 @@ export class SidebarBookmarkList extends SidebarTabList {
   };
 
   itemTemplate = (tabItem, i) => {
-    const tabIndex = this.treeView?.isActiveNode(this, tabItem.guid) ? 0 : -1;
+    let tabIndex = -1;
+    if ((this.searchQuery || this.sortOption == "lastvisited") && i == 0) {
+      tabIndex = 0;
+    } else if (!this.searchQuery) {
+      tabIndex = 0;
+    }
     if (!tabItem.url && !tabItem.children) {
       return html`<div
         class="bookmark-separator"
         draggable="true"
         role="separator"
-        tabindex=${tabIndex}
+        tabindex="0"
         data-guid=${tabItem.guid}
         .guid=${tabItem.guid}
       ></div>`;
@@ -153,7 +158,7 @@ export class SidebarBookmarkList extends SidebarTabList {
           role="listitem"
           aria-label=${tabItem.title}
           data-folder-kind=${ifDefined(folderKind)}
-          tabindex=${tabIndex}
+          tabindex="0"
           draggable="true"
           data-guid=${tabItem.guid}
           @auxclick=${e => this.#onFolderAuxClick(e, tabItem.guid)}
@@ -173,7 +178,6 @@ export class SidebarBookmarkList extends SidebarTabList {
           <summary
             draggable="true"
             part="summary"
-            tabindex=${tabIndex}
             data-guid=${tabItem.guid}
             @auxclick=${e => this.#onFolderAuxClick(e, tabItem.guid)}
             @mouseenter=${e => this.#updateFolderTooltip(e, tabItem.title)}
@@ -268,7 +272,7 @@ export class SidebarBookmarkList extends SidebarTabList {
 
   #onFolderToggle(e, guid) {
     this.dispatchEvent(
-      new CustomEvent("folder-toggle", {
+      new CustomEvent("bookmark-folder-toggle", {
         bubbles: true,
         composed: true,
         detail: { guid, open: e.target.open },
