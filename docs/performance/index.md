@@ -12,7 +12,7 @@ explains how to use the Gecko profiler.
 :glob:
 
 *
-memory/*
+memory/index
 ```
 
 ## General Performance references
