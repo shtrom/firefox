@@ -2721,6 +2721,24 @@ pub unsafe extern "C" fn neqo_http3conn_webtransport_set_sendorder(
         Err(_) => NS_ERROR_UNEXPECTED,
     }
 }
+#[no_mangle]
+pub extern "C" fn neqo_http3conn_webtransport_create_send_group(
+    conn: &mut NeqoHttp3Conn,
+    session_id: u64,
+    group_id: &mut u64,
+) -> nsresult {
+    match conn
+        .conn
+        .webtransport_create_send_group(StreamId::from(session_id))
+    {
+        Ok(id) => {
+            *group_id = id.as_u64();
+            NS_OK
+        }
+        Err(_) => NS_ERROR_UNEXPECTED,
+    }
+}
+
 
 /// Export keying material per RFC 5705/8446.
 ///
