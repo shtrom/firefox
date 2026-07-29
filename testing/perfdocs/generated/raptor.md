@@ -4587,6 +4587,16 @@ Standard benchmarks are third-party tests (i.e. Speedometer) that we have integr
   - ✅
   - ❌
   - ❌
+* - **browsertime-benchmark-firefox-speedometer3-native-profiling**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+* - **browsertime-benchmark-firefox-speedometer3-native-profiling-no-nv**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
 * - **browsertime-benchmark-firefox-speedometer3-no-nv**
   - ✅
   - ✅
@@ -4614,6 +4624,16 @@ Standard benchmarks are third-party tests (i.e. Speedometer) that we have integr
   - ✅
   - ❌
   - ❌
+* - **browsertime-benchmark-firefox-speedometer3-native-profiling**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+* - **browsertime-benchmark-firefox-speedometer3-native-profiling-no-nv**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
 * - **browsertime-benchmark-firefox-speedometer3-no-nv**
   - ✅
   - ✅
@@ -4632,6 +4652,16 @@ Standard benchmarks are third-party tests (i.e. Speedometer) that we have integr
   - mozilla-release
   - mozilla-beta
 * - **browsertime-benchmark-firefox-speedometer3**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+* - **browsertime-benchmark-firefox-speedometer3-native-profiling**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+* - **browsertime-benchmark-firefox-speedometer3-native-profiling-no-nv**
   - ❌
   - ❌
   - ❌
@@ -4655,6 +4685,16 @@ Standard benchmarks are third-party tests (i.e. Speedometer) that we have integr
   - mozilla-beta
 * - **browsertime-benchmark-firefox-speedometer3**
   - ✅
+  - ✅
+  - ❌
+  - ❌
+* - **browsertime-benchmark-firefox-speedometer3-native-profiling**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+* - **browsertime-benchmark-firefox-speedometer3-native-profiling-no-nv**
+  - ❌
   - ✅
   - ❌
   - ❌
@@ -4687,6 +4727,16 @@ Standard benchmarks are third-party tests (i.e. Speedometer) that we have integr
   - ❌
 * - **browsertime-benchmark-firefox-speedometer3**
   - ✅
+  - ✅
+  - ❌
+  - ❌
+* - **browsertime-benchmark-firefox-speedometer3-native-profiling**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+* - **browsertime-benchmark-firefox-speedometer3-native-profiling-no-nv**
+  - ❌
   - ✅
   - ❌
   - ❌
@@ -5297,6 +5347,16 @@ Standard benchmarks are third-party tests (i.e. Speedometer) that we have integr
   - ✅
   - ❌
   - ❌
+* - **browsertime-benchmark-firefox-speedometer3-native-profiling**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+* - **browsertime-benchmark-firefox-speedometer3-native-profiling-no-nv**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
 * - **browsertime-benchmark-firefox-speedometer3-no-nv**
   - ✅
   - ✅
@@ -5324,6 +5384,16 @@ Standard benchmarks are third-party tests (i.e. Speedometer) that we have integr
   - ✅
   - ❌
   - ❌
+* - **browsertime-benchmark-firefox-speedometer3-native-profiling**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+* - **browsertime-benchmark-firefox-speedometer3-native-profiling-no-nv**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
 * - **browsertime-benchmark-firefox-speedometer3-no-nv**
   - ✅
   - ✅
@@ -5342,6 +5412,16 @@ Standard benchmarks are third-party tests (i.e. Speedometer) that we have integr
   - mozilla-release
   - mozilla-beta
 * - **browsertime-benchmark-firefox-speedometer3**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+* - **browsertime-benchmark-firefox-speedometer3-native-profiling**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+* - **browsertime-benchmark-firefox-speedometer3-native-profiling-no-nv**
   - ❌
   - ❌
   - ❌
@@ -5365,6 +5445,16 @@ Standard benchmarks are third-party tests (i.e. Speedometer) that we have integr
   - mozilla-beta
 * - **browsertime-benchmark-firefox-speedometer3**
   - ✅
+  - ✅
+  - ❌
+  - ❌
+* - **browsertime-benchmark-firefox-speedometer3-native-profiling**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+* - **browsertime-benchmark-firefox-speedometer3-native-profiling-no-nv**
+  - ❌
   - ✅
   - ❌
   - ❌
@@ -5397,6 +5487,16 @@ Standard benchmarks are third-party tests (i.e. Speedometer) that we have integr
   - ❌
 * - **browsertime-benchmark-firefox-speedometer3**
   - ✅
+  - ✅
+  - ❌
+  - ❌
+* - **browsertime-benchmark-firefox-speedometer3-native-profiling**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+* - **browsertime-benchmark-firefox-speedometer3-native-profiling-no-nv**
+  - ❌
   - ✅
   - ❌
   - ❌

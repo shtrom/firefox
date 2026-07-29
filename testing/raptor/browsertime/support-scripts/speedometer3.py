@@ -29,6 +29,15 @@ class Speedometer3Support(BasePythonSupport):
             )
             self.profiling = True
 
+        if args.samply_profile:
+            test["samply_profile"] = True
+            if args.browser_cycles is None:
+                test["browser_cycles"] = 20
+            test["browsertime_args"] = (
+                f"{test.get('browsertime_args', '')} --browsertime.post_startup_delay=2000".strip()
+            )
+            self.profiling = True
+
         if args.simpleperf:
             # Each test suite runs in its own browser cycle.
             # There's 20 test suites, so 20 cycles are needed.
