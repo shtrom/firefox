@@ -980,6 +980,23 @@ already_AddRefed<ReadableStream> WebTransport::IncomingUnidirectionalStreams() {
   return do_AddRef(mIncomingUnidirectionalStreams);
 }
 
+already_AddRefed<WebTransportSendGroup> WebTransport::CreateSendGroup(
+    ErrorResult& aRv) {
+  LOG(("WebTransport::CreateSendGroup() called"));
+  // https://w3c.github.io/webtransport/#dom-webtransport-createsendgroup
+  // Step 1: If this.[[State]] is "closed" or "failed", throw an
+  // InvalidStateError.
+  if (mState == WebTransportState::CLOSED ||
+      mState == WebTransportState::FAILED || !mChild) {
+    aRv.ThrowInvalidStateError("WebTransport closed or failed");
+    return nullptr;
+  }
+  // Step 2: Return the result of creating a WebTransportSendGroup with this.
+  RefPtr<WebTransportSendGroup> group =
+      new WebTransportSendGroup(mGlobal, this);
+  return group.forget();
+}
+
 // Can be invoked with "error", "error, error, and true/false", or "error and
 // closeInfo", but reason and abruptly are never used, and it does use closeinfo
 void WebTransport::Cleanup(WebTransportError* aError,

@@ -97,6 +97,9 @@ interface WebTransport {
     optional WebTransportSendStreamOptions options = {});
   /* a ReadableStream of WebTransportReceiveStream objects */
   readonly attribute ReadableStream incomingUnidirectionalStreams;
+
+  [NewObject, Throws]
+  WebTransportSendGroup createSendGroup();
 };
 
 enum WebTransportReliabilityMode {

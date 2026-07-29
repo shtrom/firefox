@@ -8,6 +8,7 @@ EXPORTS.mozilla.dom += [
     "WebTransportDatagramDuplexStream.h",
     "WebTransportError.h",
     "WebTransportReceiveStream.h",
+    "WebTransportSendGroup.h",
     "WebTransportSendStream.h",
     "WebTransportStreams.h",
 ]
@@ -18,6 +19,7 @@ UNIFIED_SOURCES += [
     "WebTransportDatagramDuplexStream.cpp",
     "WebTransportError.cpp",
     "WebTransportReceiveStream.cpp",
+    "WebTransportSendGroup.cpp",
     "WebTransportSendStream.cpp",
     "WebTransportStreams.cpp",
 ]

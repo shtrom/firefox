@@ -10,6 +10,7 @@
 #include "mozilla/dom/WebTransportBinding.h"
 #include "mozilla/dom/WebTransportChild.h"
 #include "mozilla/dom/WebTransportReceiveStream.h"
+#include "mozilla/dom/WebTransportSendGroup.h"
 #include "mozilla/dom/WebTransportSendStream.h"
 #include "mozilla/dom/WebTransportStreams.h"
 #include "mozilla/ipc/DataPipe.h"
@@ -26,6 +27,7 @@ namespace mozilla::dom {
 class WebTransportError;
 class WebTransportDatagramDuplexStream;
 class WebTransportIncomingStreamsAlgorithms;
+class WebTransportSendGroup;
 class ReadableStream;
 class WritableStream;
 using BidirectionalPair = std::pair<RefPtr<mozilla::ipc::DataPipeReceiver>,
@@ -123,6 +125,8 @@ class WebTransport final : public nsISupports, public nsWrapperCache {
   IncomingBidirectionalStreams();
   MOZ_CAN_RUN_SCRIPT_BOUNDARY already_AddRefed<ReadableStream>
   IncomingUnidirectionalStreams();
+
+  already_AddRefed<WebTransportSendGroup> CreateSendGroup(ErrorResult& aRv);
 
   void SendSetSendOrder(uint64_t aStreamId, Maybe<int64_t> aSendOrder);
 
