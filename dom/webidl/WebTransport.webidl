@@ -7,8 +7,8 @@
 /* https://w3c.github.io/webtransport/#web-transport-configuration */
 
 dictionary WebTransportHash {
-  required DOMString algorithm;
-  required BufferSource value;
+  DOMString algorithm;
+  BufferSource value;
 };
 
 dictionary WebTransportOptions {
@@ -16,7 +16,6 @@ dictionary WebTransportOptions {
   boolean requireUnreliable = false;
   sequence<WebTransportHash> serverCertificateHashes;
   WebTransportCongestionControl congestionControl = "default";
-  sequence<DOMString> protocols = [];
 };
 
 enum WebTransportCongestionControl {
@@ -32,14 +31,9 @@ dictionary WebTransportCloseInfo {
   UTF8String reason = "";
 };
 
-/* https://w3c.github.io/webtransport/#send-options */
-dictionary WebTransportSendOptions {
-  WebTransportSendGroup? sendGroup = null;
-  long long sendOrder = 0;
-};
-
 /* https://w3c.github.io/webtransport/#uni-stream-options */
-dictionary WebTransportSendStreamOptions : WebTransportSendOptions {
+dictionary WebTransportSendStreamOptions {
+  long long? sendOrder = null;
 };
 
 /* https://w3c.github.io/webtransport/#web-transport-stats */
@@ -83,9 +77,7 @@ interface WebTransport {
   readonly attribute Promise<undefined> ready;
   readonly attribute WebTransportReliabilityMode reliability;
   readonly attribute WebTransportCongestionControl congestionControl;
-  readonly attribute DOMString protocol;
   readonly attribute Promise<WebTransportCloseInfo> closed;
-  readonly attribute Promise<undefined> draining;
   [Throws] undefined close(optional WebTransportCloseInfo closeInfo = {});
 
   [Throws] readonly attribute WebTransportDatagramDuplexStream datagrams;
@@ -102,9 +94,6 @@ interface WebTransport {
     optional WebTransportSendStreamOptions options = {});
   /* a ReadableStream of WebTransportReceiveStream objects */
   readonly attribute ReadableStream incomingUnidirectionalStreams;
-
-  [NewObject, Throws]
-  WebTransportSendGroup createSendGroup();
 };
 
 enum WebTransportReliabilityMode {

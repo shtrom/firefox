@@ -27,8 +27,6 @@
 #include "nsIURL.h"
 #include "nsIWebTransportStream.h"
 #include "nsPIDOMWindowInlines.h"
-#include "nsTHashSet.h"
-#include "nsThreadUtils.h"
 #include "nsUTF8Utils.h"
 
 using namespace mozilla::ipc;
@@ -44,7 +42,6 @@ NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN(WebTransport)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mIncomingBidirectionalAlgorithm)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mDatagrams)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mReady)
-  NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mDraining)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mClosed)
   for (const auto& hashEntry : tmp->mSendStreams.Values()) {
     NS_CYCLE_COLLECTION_NOTE_EDGE_NAME(cb, "mSendStreams entry item");
@@ -68,7 +65,6 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN(WebTransport)
   NS_IMPL_CYCLE_COLLECTION_UNLINK(mIncomingBidirectionalAlgorithm)
   NS_IMPL_CYCLE_COLLECTION_UNLINK(mDatagrams)
   NS_IMPL_CYCLE_COLLECTION_UNLINK(mReady)
-  NS_IMPL_CYCLE_COLLECTION_UNLINK(mDraining)
   NS_IMPL_CYCLE_COLLECTION_UNLINK(mClosed)
   if (tmp->mChild) {
     tmp->mChild->Shutdown(false);
@@ -227,18 +223,20 @@ void WebTransport::Init(const GlobalObject& aGlobal, const nsAString& aURL,
       return;
     }
     for (const auto& hash : aOptions.mServerCertificateHashes.Value()) {
-      if (hash.mAlgorithm != u"sha-256") {
+      if (!hash.mAlgorithm.WasPassed() || !hash.mValue.WasPassed()) continue;
+
+      if (hash.mAlgorithm.Value() != u"sha-256") {
         LOG(("Algorithms other than SHA-256 are not supported"));
         continue;
       }
 
       nsTArray<uint8_t> data;
-      if (!AppendTypedArrayDataTo(hash.mValue, data)) {
+      if (!AppendTypedArrayDataTo(hash.mValue.Value(), data)) {
         aError.Throw(NS_ERROR_OUT_OF_MEMORY);
         return;
       }
 
-      nsCString alg = NS_ConvertUTF16toUTF8(hash.mAlgorithm);
+      nsCString alg = NS_ConvertUTF16toUTF8(hash.mAlgorithm.Value());
       aServerCertHashes.EmplaceBack(alg, data);
     }
   }
@@ -252,50 +250,6 @@ void WebTransport::Init(const GlobalObject& aGlobal, const nsAString& aURL,
   WebTransportCongestionControl congestionControl =
       WebTransportCongestionControl::Default;  // aOptions.mCongestionControl;
   // Set this to 'default' until we add congestion control setting
-
-  // Step 11.5: Let protocols be options's protocols if it exists, and null
-  // otherwise.
-  nsTArray<nsString> protocols;
-  if (aOptions.mProtocols.Length() != 0) {
-    const auto& protocolSeq = aOptions.mProtocols;
-    protocols.SetCapacity(protocolSeq.Length());
-
-    // Validate protocols per spec
-    nsTHashSet<nsString> seen;
-    for (const auto& protocol : protocolSeq) {
-      // Check for empty string
-      if (protocol.IsEmpty()) {
-        aError.ThrowSyntaxError("Protocol cannot be empty string");
-        return;
-      }
-
-      // Protocol strings are serialized as SF strings (RFC 8941), which only
-      // allow printable ASCII (0x20-0x7E). Reject anything outside that range.
-      for (size_t i = 0; i < protocol.Length(); i++) {
-        char16_t c = protocol[i];
-        if (c < 0x20 || c > 0x7E) {
-          aError.ThrowSyntaxError(
-              "Protocol contains characters not allowed in HTTP header fields");
-          return;
-        }
-      }
-
-      // Check for maximum length (512 bytes)
-      if (protocol.Length() > 512) {
-        aError.ThrowSyntaxError("Protocol name too long (max 512 bytes)");
-        return;
-      }
-
-      // Check for duplicates
-      if (seen.Contains(protocol)) {
-        aError.ThrowSyntaxError("Duplicate protocol in list");
-        return;
-      }
-      seen.Insert(protocol);
-
-      protocols.AppendElement(protocol);
-    }
-  }
 
   // Setup up WebTransportDatagramDuplexStream
   // Step 12: Let incomingDatagrams be a new ReadableStream.
@@ -315,14 +269,13 @@ void WebTransport::Init(const GlobalObject& aGlobal, const nsAString& aURL,
                                workerPrivate->IsServiceWorker())
                  ? nullptr
                  : net::WebTransportEventService::GetOrCreate();
+  // XXX TODO
+
   // Step 15 Let transport be a newly constructed WebTransport object, with:
   // SendStreams: empty ordered set
   // ReceiveStreams: empty ordered set
   // Ready: new promise
   mReady = Promise::CreateInfallible(mGlobal);
-
-  // Draining: new promise
-  mDraining = Promise::CreateInfallible(mGlobal);
 
   // Closed: new promise
   mClosed = Promise::CreateInfallible(mGlobal);
@@ -425,7 +378,7 @@ void WebTransport::Init(const GlobalObject& aGlobal, const nsAString& aURL,
   backgroundChild
       ->SendCreateWebTransportParent(
           aURL, principal, mBrowsingContextID, ipcClientInfo, dedicated,
-          requireUnreliable, (uint32_t)congestionControl, protocols,
+          requireUnreliable, (uint32_t)congestionControl,
           std::move(aServerCertHashes), std::move(parentEndpoint))
       ->Then(GetCurrentSerialEventTarget(), __func__,
              [self = RefPtr{this}](
@@ -470,7 +423,7 @@ void WebTransport::ResolveWaitingConnection(
   // Step 17.2: Set transport.[[State]] to "connected".
   mState = WebTransportState::CONNECTED;
   // Step 17.3: Set transport.[[Session]] to session.
-  // Step 17.4: Set transport's [[Reliability]] to "supports-unreliable".
+  // Step 17.4: Set transport’s [[Reliability]] to "supports-unreliable".
   mReliability = aReliability;
   if (NS_IsMainThread()) {
     nsPIDOMWindowInner* innerWindow = GetParentObject()->GetAsInnerWindow();
@@ -697,18 +650,6 @@ WebTransportCongestionControl WebTransport::CongestionControl() {
   return WebTransportCongestionControl::Default;
 }
 
-void WebTransport::GetProtocol(nsAString& aProtocol) { aProtocol = mProtocol; }
-
-void WebTransport::ResolveDraining() {
-  LOG(("ResolveDraining() called"));
-  mDraining->MaybeResolveWithUndefined();
-}
-
-void WebTransport::SetNegotiatedProtocol(const nsACString& aProtocol) {
-  LOG(("SetNegotiatedProtocol: %s", PromiseFlatCString(aProtocol).get()));
-  CopyUTF8toUTF16(aProtocol, mProtocol);
-}
-
 void WebTransport::RemoteClosed(bool aCleanly, const uint32_t& aCode,
                                 const nsACString& aReason) {
   LOG(("Server closed: cleanly: %d, code %u, reason %s", aCleanly, aCode,
@@ -866,14 +807,7 @@ already_AddRefed<WebTransportDatagramDuplexStream> WebTransport::GetDatagrams(
 
 already_AddRefed<Promise> WebTransport::CreateBidirectionalStream(
     const WebTransportSendStreamOptions& aOptions, ErrorResult& aRv) {
-  return CreateBidirectionalStreamInternal(aOptions, aOptions.mSendGroup,
-                                           aOptions.mSendOrder, aRv);
-}
-
-already_AddRefed<Promise> WebTransport::CreateBidirectionalStreamInternal(
-    const WebTransportSendStreamOptions& aOptions,
-    WebTransportSendGroup* aSendGroup, int64_t aSendOrder, ErrorResult& aRv) {
-  LOG(("CreateBidirectionalStreamInternal() called"));
+  LOG(("CreateBidirectionalStream() called"));
   // https://w3c.github.io/webtransport/#dom-webtransport-createbidirectionalstream
   RefPtr<Promise> promise = Promise::CreateInfallible(GetParentObject());
 
@@ -885,31 +819,21 @@ already_AddRefed<Promise> WebTransport::CreateBidirectionalStreamInternal(
     return nullptr;
   }
 
-  // Step 2.5: Let sendGroup be options's sendGroup. If sendGroup is not null,
-  // and sendGroup.[[Transport]] is not this.[[Transport]], throw an
-  // InvalidStateError.
-  if (aSendGroup && aSendGroup->GetTransport() != this) {
-    aRv.ThrowInvalidStateError("sendGroup belongs to a different WebTransport");
-    return nullptr;
+  // Step 3: Let sendOrder be options's sendOrder.
+  Maybe<int64_t> sendOrder;
+  if (!aOptions.mSendOrder.IsNull()) {
+    sendOrder = Some(aOptions.mSendOrder.Value());
   }
-
-  // Step 3: Let sendOrder be options's sendOrder
-  RefPtr<WebTransportSendGroup> sendGroup = aSendGroup;
-  int64_t sendOrder = aSendOrder;
   // Step 4: Let p be a new promise.
   // Step 5: Run the following steps in parallel, but abort them whenever
-  // transport's [[State]] becomes "closed" or "failed", and instead queue
+  // transport’s [[State]] becomes "closed" or "failed", and instead queue
   // a network task with transport to reject p with an InvalidStateError.
 
   // Ask the parent to create the stream and send us the DataPipeSender/Receiver
   // pair
-  Maybe<uint64_t> sendGroupId;
-  if (sendGroup) {
-    sendGroupId = Some(sendGroup->GetGroupId());
-  }
   mChild->SendCreateBidirectionalStream(
-      sendOrder, sendGroupId,
-      [self = RefPtr{this}, sendOrder, sendGroup, promise](
+      sendOrder,
+      [self = RefPtr{this}, sendOrder, promise](
           BidirectionalStreamResponse&& aPipes) MOZ_CAN_RUN_SCRIPT_BOUNDARY {
         LOG(("CreateBidirectionalStream response"));
         if (BidirectionalStreamResponse::Tnsresult == aPipes.type()) {
@@ -935,8 +859,7 @@ already_AddRefed<Promise> WebTransport::CreateBidirectionalStreamInternal(
             WebTransportBidirectionalStream::Create(
                 self, self->mGlobal, id,
                 aPipes.get_BidirectionalStream().inStream(),
-                aPipes.get_BidirectionalStream().outStream(), sendOrder,
-                sendGroup, error);
+                aPipes.get_BidirectionalStream().outStream(), sendOrder, error);
         LOG(("Returning a bidirectionalStream"));
         promise->MaybeResolve(newStream);
       },
@@ -956,16 +879,9 @@ already_AddRefed<ReadableStream> WebTransport::IncomingBidirectionalStreams() {
 
 already_AddRefed<Promise> WebTransport::CreateUnidirectionalStream(
     const WebTransportSendStreamOptions& aOptions, ErrorResult& aRv) {
-  return CreateUnidirectionalStreamInternal(aOptions, aOptions.mSendGroup,
-                                            aOptions.mSendOrder, aRv);
-}
-
-already_AddRefed<Promise> WebTransport::CreateUnidirectionalStreamInternal(
-    const WebTransportSendStreamOptions& aOptions,
-    WebTransportSendGroup* aSendGroup, int64_t aSendOrder, ErrorResult& aRv) {
-  LOG(("CreateUnidirectionalStreamInternal() called"));
+  LOG(("CreateUnidirectionalStream() called"));
   // https://w3c.github.io/webtransport/#dom-webtransport-createunidirectionalstream
-  // Step 1: If transport.[[State]] is "closed" or "failed", return a new
+  // Step 2: If transport.[[State]] is "closed" or "failed", return a new
   // rejected promise with an InvalidStateError.
   if (mState == WebTransportState::CLOSED ||
       mState == WebTransportState::FAILED || !mChild) {
@@ -973,33 +889,22 @@ already_AddRefed<Promise> WebTransport::CreateUnidirectionalStreamInternal(
     return nullptr;
   }
 
-  // Step 2: Let sendGroup be options's sendGroup.
-  // Step 3: If sendGroup is not null, and sendGroup.[[Transport]] is not
-  // this.[[Transport]], throw an InvalidStateError.
-  if (aSendGroup && aSendGroup->GetTransport() != this) {
-    aRv.ThrowInvalidStateError("sendGroup belongs to a different WebTransport");
-    return nullptr;
+  // Step 3: Let sendOrder be options's sendOrder.
+  Maybe<int64_t> sendOrder;
+  if (!aOptions.mSendOrder.IsNull()) {
+    sendOrder = Some(aOptions.mSendOrder.Value());
   }
-
-  // Step 4: Let sendOrder be options's sendOrder
-  RefPtr<WebTransportSendGroup> sendGroup = aSendGroup;
-  int64_t sendOrder = aSendOrder;
-
   // Step 4: Let p be a new promise.
   RefPtr<Promise> promise = Promise::CreateInfallible(GetParentObject());
 
   // Step 5: Run the following steps in parallel, but abort them whenever
-  // transport's[[State]] becomes "closed" or "failed", and instead queue
+  // transport’s [[State]] becomes "closed" or "failed", and instead queue
   // a network task with transport to reject p with an InvalidStateError.
 
   // Ask the parent to create the stream and send us the DataPipeSender
-  Maybe<uint64_t> sendGroupId;
-  if (sendGroup) {
-    sendGroupId = Some(sendGroup->GetGroupId());
-  }
   mChild->SendCreateUnidirectionalStream(
-      sendOrder, sendGroupId,
-      [self = RefPtr{this}, sendOrder, sendGroup,
+      sendOrder,
+      [self = RefPtr{this}, sendOrder,
        promise](UnidirectionalStreamResponse&& aResponse)
           MOZ_CAN_RUN_SCRIPT_BOUNDARY {
             LOG(("CreateUnidirectionalStream response"));
@@ -1032,7 +937,7 @@ already_AddRefed<Promise> WebTransport::CreateUnidirectionalStreamInternal(
                 WebTransportSendStream::Create(
                     self, self->mGlobal, id,
                     aResponse.get_UnidirectionalStream().outStream(), sendOrder,
-                    sendGroup, error);
+                    error);
             if (!writableStream) {
               promise->MaybeReject(std::move(error));
               return;
@@ -1053,31 +958,6 @@ already_AddRefed<Promise> WebTransport::CreateUnidirectionalStreamInternal(
 
 already_AddRefed<ReadableStream> WebTransport::IncomingUnidirectionalStreams() {
   return do_AddRef(mIncomingUnidirectionalStreams);
-}
-
-already_AddRefed<WebTransportSendGroup> WebTransport::CreateSendGroup(
-    ErrorResult& aRv) {
-  LOG(("WebTransport::CreateSendGroup() called"));
-  // https://w3c.github.io/webtransport/#dom-webtransport-createsendgroup
-  // Step 1: If this.[[State]] is "closed" or "failed", throw an
-  // InvalidStateError.
-  if (mState == WebTransportState::CLOSED ||
-      mState == WebTransportState::FAILED || !mChild) {
-    aRv.ThrowInvalidStateError("WebTransport closed or failed");
-    return nullptr;
-  }
-  // Step 2: Return the result of creating a WebTransportSendGroup with this.
-  RefPtr<WebTransportSendGroup> group =
-      new WebTransportSendGroup(mGlobal, this);
-
-  // Assign a unique group ID locally so the group is immediately usable,
-  // then notify the parent process to register it in the network stack.
-  uint64_t groupId = mNextSendGroupId++;
-  group->SetGroupId(groupId);
-  LOG(("CreateSendGroup assigned ID: %" PRIu64, groupId));
-  mChild->SendCreateSendGroup(groupId);
-
-  return group.forget();
 }
 
 // Can be invoked with "error", "error, error, and true/false", or "error and
@@ -1170,18 +1050,12 @@ void WebTransport::Cleanup(WebTransportError* aError,
   NotifyToWindow(false);
 }
 
-void WebTransport::SendSetSendOrder(uint64_t aStreamId, int64_t aSendOrder) {
+void WebTransport::SendSetSendOrder(uint64_t aStreamId,
+                                    Maybe<int64_t> aSendOrder) {
   if (!mChild || !mChild->CanSend()) {
     return;
   }
   mChild->SendSetSendOrder(aStreamId, aSendOrder);
-}
-
-void WebTransport::SendSetSendGroup(uint64_t aStreamId, uint64_t aGroupId) {
-  if (!mChild || !mChild->CanSend()) {
-    return;
-  }
-  mChild->SendSetSendGroup(aStreamId, aGroupId);
 }
 
 void WebTransport::NotifyBFCacheOnMainThread(nsPIDOMWindowInner* aInner,
