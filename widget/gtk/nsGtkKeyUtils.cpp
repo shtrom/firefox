@@ -1490,10 +1490,10 @@ CodeNameIndex KeymapWrapper::ComputeDOMCodeNameIndex(
 }
 
 /* static */
-bool KeymapWrapper::DispatchKeyDownOrKeyUpEvent(nsWindow* aWindow,
-                                                GdkEventKey* aGdkKeyEvent,
-                                                bool aIsProcessedByIME,
-                                                bool* aIsCancelled) {
+bool KeymapWrapper::DispatchKeyDownOrKeyUpEvent(
+    nsWindow* aWindow, GdkEventKey* aGdkKeyEvent,
+    const nsAString& aStringReceivedByIMContext, bool aIsProcessedByIME,
+    bool* aIsCancelled) {
   MOZ_ASSERT(aIsCancelled, "aIsCancelled must not be nullptr");
 
   *aIsCancelled = false;
@@ -1509,7 +1509,8 @@ bool KeymapWrapper::DispatchKeyDownOrKeyUpEvent(nsWindow* aWindow,
   EventMessage message =
       aGdkKeyEvent->type == GDK_KEY_PRESS ? eKeyDown : eKeyUp;
   WidgetKeyboardEvent keyEvent(true, message, aWindow);
-  KeymapWrapper::InitKeyEvent(keyEvent, aGdkKeyEvent, aIsProcessedByIME);
+  KeymapWrapper::InitKeyEvent(keyEvent, aGdkKeyEvent,
+                              aStringReceivedByIMContext, aIsProcessedByIME);
   return DispatchKeyDownOrKeyUpEvent(aWindow, keyEvent, aIsCancelled);
 }
 
@@ -1636,8 +1637,10 @@ void KeymapWrapper::HandleKeyPressEvent(nsWindow* aWindow,
 
   bool isKeyDownCancelled = false;
   if (handlingState == KeyHandlingState::eNotHandled) {
-    if (DispatchKeyDownOrKeyUpEvent(aWindow, aGdkKeyEvent, false,
-                                    &isKeyDownCancelled) &&
+    if (DispatchKeyDownOrKeyUpEvent(
+            aWindow, aGdkKeyEvent,
+            imContext ? imContext->GetCommittedGraphemeCluster() : VoidString(),
+            false, &isKeyDownCancelled) &&
         (MOZ_UNLIKELY(aWindow->IsDestroyed()) || isKeyDownCancelled)) {
       MOZ_LOG(gKeyLog, LogLevel::Info,
               ("  HandleKeyPressEvent(), dispatched eKeyDown event and "
@@ -1766,7 +1769,10 @@ void KeymapWrapper::HandleKeyPressEvent(nsWindow* aWindow,
   // composition because a key press shouldn't cause typing multiple characters
   // in theory. So, the behavior could be unexpected by web apps.
   WidgetKeyboardEvent keypressEvent(true, eKeyPress, aWindow);
-  KeymapWrapper::InitKeyEvent(keypressEvent, aGdkKeyEvent, false);
+  KeymapWrapper::InitKeyEvent(
+      keypressEvent, aGdkKeyEvent,
+      imContext ? imContext->GetCommittedGraphemeCluster() : VoidString(),
+      false);
   nsEventStatus status = nsEventStatus_eIgnore;
   if (keypressEvent.mKeyNameIndex != KEY_NAME_INDEX_USE_STRING ||
       KeymapWrapper::StringHasOnlyOneGraphemeCluster(keypressEvent.mKeyValue)) {
@@ -1819,8 +1825,14 @@ bool KeymapWrapper::HandleKeyReleaseEvent(nsWindow* aWindow,
   }
 
   bool isCancelled = false;
-  if (NS_WARN_IF(!DispatchKeyDownOrKeyUpEvent(aWindow, aGdkKeyEvent, false,
-                                              &isCancelled))) {
+  if (NS_WARN_IF(!DispatchKeyDownOrKeyUpEvent(
+          aWindow, aGdkKeyEvent,
+          // FIXME: If the preceding eKeyDown commits a grapheme cluster
+          // different from the char introduced without the IM, we dispatch the
+          // eKeyUp with the different .key value. We probably need to store the
+          // last commit string in IMContextWrapper.
+          imContext ? imContext->GetCommittedGraphemeCluster() : VoidString(),
+          false, &isCancelled))) {
     MOZ_LOG(gKeyLog, LogLevel::Error,
             ("  HandleKeyReleaseEvent(), didn't dispatch eKeyUp event"));
     return false;
@@ -1914,9 +1926,9 @@ guint KeymapWrapper::GetModifierState(GdkEventKey* aGdkKeyEvent,
 }
 
 /* static */
-void KeymapWrapper::InitKeyEvent(WidgetKeyboardEvent& aKeyEvent,
-                                 GdkEventKey* aGdkKeyEvent,
-                                 bool aIsProcessedByIME) {
+void KeymapWrapper::InitKeyEvent(
+    WidgetKeyboardEvent& aKeyEvent, GdkEventKey* aGdkKeyEvent,
+    const nsAString& aCommitCharReceivedByIMContext, bool aIsProcessedByIME) {
   MOZ_ASSERT(
       !aIsProcessedByIME || aKeyEvent.mMessage != eKeyPress,
       "If the key event is handled by IME, keypress event shouldn't be fired");
@@ -1929,11 +1941,15 @@ void KeymapWrapper::InitKeyEvent(WidgetKeyboardEvent& aKeyEvent,
       aIsProcessedByIME ? KEY_NAME_INDEX_Process
                         : keymapWrapper->ComputeDOMKeyNameIndex(aGdkKeyEvent);
   if (aKeyEvent.mKeyNameIndex == KEY_NAME_INDEX_USE_STRING) {
-    uint32_t charCode = GetCharCodeOrUnmodifiedCharCodeFor(aGdkKeyEvent);
-    MOZ_ASSERT(charCode);
-    MOZ_ASSERT(aKeyEvent.mKeyValue.IsEmpty(),
-               "Uninitialized mKeyValue must be empty");
-    AppendUCS4ToUTF16(charCode, aKeyEvent.mKeyValue);
+    if (aCommitCharReceivedByIMContext.IsVoid()) {
+      uint32_t charCode = GetCharCodeOrUnmodifiedCharCodeFor(aGdkKeyEvent);
+      MOZ_ASSERT(charCode);
+      MOZ_ASSERT(aKeyEvent.mKeyValue.IsEmpty(),
+                 "Uninitialized mKeyValue must be empty");
+      AppendUCS4ToUTF16(charCode, aKeyEvent.mKeyValue);
+    } else {
+      aKeyEvent.mKeyValue = aCommitCharReceivedByIMContext;
+    }
   }
 
   if (aIsProcessedByIME) {

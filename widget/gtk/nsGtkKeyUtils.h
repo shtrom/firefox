@@ -159,10 +159,15 @@ class KeymapWrapper {
    * @param aKeyEvent         It's an WidgetKeyboardEvent which needs to be
    *                          initialized.
    * @param aGdkKeyEvent      A native GDK key event.
+   * @param aCommitCharReceivedByIMContext
+   *                          Set to non-void string if the IMContext received
+   *                          commit string for aGdkKeyEvent.
    * @param aIsProcessedByIME true if aGdkKeyEvent is handled by IME.
    */
   static void InitKeyEvent(WidgetKeyboardEvent& aKeyEvent,
-                           GdkEventKey* aGdkKeyEvent, bool aIsProcessedByIME);
+                           GdkEventKey* aGdkKeyEvent,
+                           const nsAString& aCommitCharReceivedByIMContext,
+                           bool aIsProcessedByIME);
 
   /**
    * InitKeyEventFromCommitString() initializes aKeyEvent for a character
@@ -181,15 +186,18 @@ class KeymapWrapper {
    * @param aWindow           The window to dispatch a keyboard event.
    * @param aGdkKeyEvent      A native GDK_KEY_PRESS or GDK_KEY_RELEASE
    *                          event.
+   * @param aStringReceivedByIMContext
+   *                          Set to non-void if IMContext received commit
+   *                          string for aGdkKeyEvent.
    * @param aIsProcessedByIME true if the event is handled by IME.
    * @param aIsCancelled      [Out] true if the default is prevented.
    * @return                  true if eKeyDown event is actually dispatched.
    *                          Otherwise, false.
    */
-  static bool DispatchKeyDownOrKeyUpEvent(nsWindow* aWindow,
-                                          GdkEventKey* aGdkKeyEvent,
-                                          bool aIsProcessedByIME,
-                                          bool* aIsCancelled);
+  static bool DispatchKeyDownOrKeyUpEvent(
+      nsWindow* aWindow, GdkEventKey* aGdkKeyEvent,
+      const nsAString& aStringReceivedByIMContext, bool aIsProcessedByIME,
+      bool* aIsCancelled);
 
   /**
    * DispatchKeyDownOrKeyUpEvent() dispatches eKeyDown or eKeyUp event.
