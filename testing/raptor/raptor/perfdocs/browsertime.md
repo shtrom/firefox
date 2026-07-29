@@ -291,6 +291,7 @@ To use native profiling in CI, run `./mach try` with the `--full` flag and selec
 | Speedometer 3 | Fenix, Geckoview              | Simpleperf | Android  |
 | Speedometer 3 | Firefox, Chromium as Release  | Xperf      | Windows  |
 | Speedometer 3 | Firefox                       | Samply     | macOS    |
+| Speedometer 3 | Firefox                       | Perf       | Linux    |
 
 To configure a Browsertime script with Simpleperf profiling, wrap the test script to profile with Browsertime's `commands.simpleperf.start()` and `commands.simpleperf.stop()`. For example:
 
