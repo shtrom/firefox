@@ -79,8 +79,6 @@ export class Monitor {
    * @param {string[]} options.watchUrls - URLs of the pages being monitored.
    * @param {Schedule} options.schedule - Schedule config.
    * @param {boolean} [options.enabled] - Whether the monitor should run.
-   * @param {boolean} [options.notificationsMuted] - Whether desktop
-   *   notifications are suppressed while the monitor keeps running.
    * @param {string} [options.createdAt] - Creation timestamp.
    * @param {string} [options.updatedAt] - Last update timestamp.
    * @param {string} [options.lastRunTime] - Last run timestamp.
@@ -94,7 +92,6 @@ export class Monitor {
     watchUrls,
     schedule,
     enabled = true,
-    notificationsMuted = false,
     createdAt,
     updatedAt,
     lastRunTime,
@@ -117,7 +114,6 @@ export class Monitor {
     this.watchUrls = trimAndFilterWatchUrls(watchUrls);
     this.schedule = schedule;
     this.enabled = enabled;
-    this.notificationsMuted = !!notificationsMuted;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
     this.lastRunTime = lastRunTime;
@@ -147,7 +143,6 @@ export class Monitor {
       watchUrls: savedMonitor.watchUrls,
       schedule: Schedule.fromJSON(savedMonitor.schedule),
       enabled: savedMonitor.enabled,
-      notificationsMuted: savedMonitor.notificationsMuted,
       createdAt: savedMonitor.createdAt,
       updatedAt: savedMonitor.updatedAt,
       lastRunTime: savedMonitor.lastRunTime,
@@ -410,7 +405,6 @@ export class Monitor {
       watchUrls: this.watchUrls.slice(),
       schedule: { ...this.schedule },
       enabled: this.enabled,
-      notificationsMuted: this.notificationsMuted,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
       lastRunTime: this.lastRunTime,
