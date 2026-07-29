@@ -69,6 +69,8 @@ SIMPLEPERF_APPS = (FENIX, GECKOVIEW)
 
 SAMPLY_PROFILE_APPS = (FIREFOX,)
 
+PERF_PROFILE_APPS = (FIREFOX,)
+
 APP_BINARIES = {
     "fenix": "org.mozilla.fenix",
     "focus": "org.mozilla.focus",
@@ -254,6 +256,13 @@ def create_parser(mach_interface=False):
         dest="samply_profile",
         default=False,
         help="Enable system-wide profiling via Samply (macOS only).",
+    )
+    add_arg(
+        "--perf-profile",
+        action="store_true",
+        dest="perf_profile",
+        default=False,
+        help="Enable system-wide profiling via perf (Linux only).",
     )
     add_arg(
         "--symbolsPath",

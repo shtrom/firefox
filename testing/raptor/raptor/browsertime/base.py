@@ -852,20 +852,13 @@ class Browsertime(Perftest, metaclass=ABCMeta):
                     )
         bt_timeout = bt_timeout * iterations
 
-        # if geckoProfile enabled, give browser more time for profiling
-        if self.config["gecko_profile"] is True:
-            bt_timeout += 5 * 60
-
-        # if etw profiling enabled and instantiated, give browser more time for profiling
-        if self.config.get("etw_profile") and self.etw_profiler:
-            bt_timeout += 5 * 60
-
-        # if samply profiling enabled and instantiated, give browser more time for profiling
-        if self.config.get("samply_profile") and self.samply_profiler:
-            bt_timeout += 5 * 60
-
-        # if simpleperf enabled, give browser more time for profiling
-        if self.config["simpleperf"] is True:
+        if any([
+            self.config.get("gecko_profile"),
+            self.config.get("etw_profile") and self.etw_profiler,
+            self.config.get("samply_profile") and self.samply_profiler,
+            self.config.get("perf_profile") and self.perf_profiler,
+            self.config.get("simpleperf"),
+        ]):
             bt_timeout += 5 * 60
 
         return bt_timeout
@@ -1012,6 +1005,9 @@ class Browsertime(Perftest, metaclass=ABCMeta):
         if self.config.get("simpleperf"):
             self._init_simpleperf_profiling(test)
 
+        if self.config.get("perf_profile"):
+            self._init_perf_profiling(test)
+
         # timeout is a single page-load timeout value (ms) from the test INI
         # this will be used for btime --timeouts.pageLoad
         cmd = self._compose_cmd(test, timeout)
@@ -1092,6 +1088,14 @@ class Browsertime(Perftest, metaclass=ABCMeta):
             except Exception as e:
                 LOG.warning(f"Failed to start ETW profiling: {e}")
                 self.etw_profiler = None  # Disable profiler to skip stop() later
+
+        perf_started = False
+        if self.config.get("perf_profile") and self.perf_profiler:
+            try:
+                perf_started = self.perf_profiler.start()
+            except Exception as e:
+                LOG.warning(f"Failed to start perf profiling: {e}")
+                self.perf_profiler = None
 
         browsertime_test_failed = False
         try:
@@ -1303,6 +1307,20 @@ class Browsertime(Perftest, metaclass=ABCMeta):
                     LOG.info("Samply profiling has completed successfully")
                 except Exception as e:
                     LOG.error(f"Failed to finalize Samply profiling: {e}")
+
+            if perf_started and self.perf_profiler:
+                try:
+                    self.perf_profiler.stop()
+                    self.perf_profiler.symbolicate()
+                    processed_profiles = self.perf_profiler.post_process_profiles()
+                    if is_local:
+                        profile_to_view = self.perf_profiler.archive(processed_profiles)
+                    LOG.info("Perf profiling has completed successfully")
+                except Exception as e:
+                    LOG.error(f"Failed to stop perf profiling: {e}")
+                finally:
+                    self.perf_profiler.clean()
+                    perf_started = False
 
             if is_local and profile_to_view and profile_to_view.exists():
                 # Enable profile viewing (view_gecko_profile_from_raptor())
