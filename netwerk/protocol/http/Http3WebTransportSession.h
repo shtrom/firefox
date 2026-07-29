@@ -94,6 +94,7 @@ class Http3WebTransportSession final : public WebTransportSessionBase,
   void CloseSession(uint32_t aStatus, const nsACString& aReason) override;
   void OnSessionClosed(bool aCleanly, uint32_t aStatus,
                        const nsACString& aReason);
+  void OnSessionDraining();
 
   uint64_t GetStreamId() const override;
 

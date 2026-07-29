@@ -1003,15 +1003,28 @@ nsresult Http3Session::ProcessEvents() {
 
             wt->OnDatagramReceived(std::move(data));
           } break;
-          case WebTransportEventExternal::Tag::Draining:
-            LOG((
-                "Http3Session::ProcessEvents - "
-                "WebTransportEventExternal::Tag::Draining sessionId=0x%" PRIx64,
-                event.web_transport._0.draining.session_id));
-            // TODO: Implement draining promise resolution
-            // The WebTransport session should resolve its draining promise
-            // when this event is received
-            break;
+          case WebTransportEventExternal::Tag::Draining: {
+            uint64_t sessionId = event.web_transport._0.draining.session_id;
+            LOG(
+                ("Http3Session::ProcessEvents - WebTransport Draining "
+                 "sessionId=0x%" PRIx64,
+                 sessionId));
+            RefPtr<Http3StreamBase> stream = mStreamIdHash.Get(sessionId);
+            if (!stream) {
+              LOG(
+                  ("Http3Session::ProcessEvents - WebTransport Draining - "
+                   "session not found "
+                   "sessionId=0x%" PRIx64 " [this=%p].",
+                   sessionId, this));
+              break;
+            }
+
+            RefPtr<Http3WebTransportSession> wt =
+                stream->GetHttp3WebTransportSession();
+            if (wt) {
+              wt->OnSessionDraining();
+            }
+          } break;
         }
       } break;
       case Http3Event::Tag::ConnectUdp: {
