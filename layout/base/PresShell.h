@@ -531,11 +531,16 @@ class PresShell final : public nsStubDocumentObserver,
    * Like GetScrollContainerFrameToScroll, but for keyboard scrolling. It
    * returns the nearest scroll container from the current focused content or
    * DOM selection that can still scroll toward aAction's direction.
+   * If none can in this process and we are a subframe embedded in another
+   * process, keyboard scrolling is handed off to the embedder document and
+   * nullptr is returned.
    *
    * @return the scroll container frame to scroll, or nullptr if there is
-   *         nothing to scroll locally.
+   *         nothing to scroll locally (scrolling may have been handed off to
+   *         the embedder process).
+   *
    */
-  ScrollContainerFrame* GetScrollContainerFrameForKeyboardScroll(
+  ScrollContainerFrame* FindScrollContainerFrameForKeyboardScrollOrHandoff(
       nsIFrame* aStartFrame, const layers::KeyboardScrollAction& aAction);
 
   /**

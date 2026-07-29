@@ -2861,13 +2861,32 @@ static SideBits KeyboardScrollActionToSide(
   return SideBits::eBottom;
 }
 
-ScrollContainerFrame* PresShell::GetScrollContainerFrameForKeyboardScroll(
+ScrollContainerFrame*
+PresShell::FindScrollContainerFrameForKeyboardScrollOrHandoff(
     nsIFrame* aStartFrame, const KeyboardScrollAction& aAction) {
   if (aStartFrame) {
     if (ScrollContainerFrame* scrollContainerFrame =
             nsLayoutUtils::GetNearestScrollContainerFrameToScrollTowards(
                 aStartFrame, KeyboardScrollActionToSide(aAction))) {
       return scrollContainerFrame;
+    }
+  }
+
+  // Nothing in this process can scroll toward aAction's direction. If this
+  // process is rendering an out-of-process subframe (its in-process root is
+  // embedded in another process), hand keyboard scrolling off to the embedder
+  // document rather than doing nothing. The in-process walk above already
+  // covered same-process ancestor documents up to that root.
+  // NOTE: We don't hand off to the browser chome.
+  nsPresContext* inProcessRoot =
+      mPresContext->GetInProcessRootContentDocumentPresContext();
+  if (inProcessRoot && !inProcessRoot->IsRootContentDocumentCrossProcess()) {
+    // GetFrom() reads the BrowserChild off the docshell, which only the
+    // in-process root document carries, so ask from that root's pres shell.
+    if (PresShell* rootPresShell = inProcessRoot->GetPresShell()) {
+      if (BrowserChild* browserChild = BrowserChild::GetFrom(rootPresShell)) {
+        browserChild->SendScrollForKeyboard(aAction);
+      }
     }
   }
   return nullptr;
@@ -2892,7 +2911,7 @@ void PresShell::ScrollByKeyboard(const KeyboardScrollAction& aAction) {
 void PresShell::ScrollByKeyboard(const KeyboardScrollAction& aAction,
                                  nsIFrame* aStartFrame) {
   ScrollContainerFrame* scrollContainerFrame =
-      GetScrollContainerFrameForKeyboardScroll(aStartFrame, aAction);
+      FindScrollContainerFrameForKeyboardScrollOrHandoff(aStartFrame, aAction);
   if (!scrollContainerFrame) {
     // Either there is nothing to scroll, or scrolling was handed off to the
     // embedder process.
