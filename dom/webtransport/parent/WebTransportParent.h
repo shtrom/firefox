@@ -92,6 +92,7 @@ class WebTransportParent : public PWebTransportParent,
   using ResolveType = std::tuple<const nsresult&, const uint8_t&>;
   nsCOMPtr<nsISerialEventTarget> mSocketThread;
   Atomic<bool> mSessionReady{false};
+  uint64_t mSessionId{0};
 
   mozilla::Mutex mMutex{"WebTransportParent::mMutex"};
   std::function<void(ResolveType)> mResolver MOZ_GUARDED_BY(mMutex);

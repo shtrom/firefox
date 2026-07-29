@@ -518,6 +518,7 @@ WebTransportParent::OnSessionReady(uint64_t aSessionId) {
        aSessionId, this));
 
   mSessionReady = true;
+  mSessionId = aSessionId;
 
   // Retarget to socket thread. After this, WebTransportParent and
   // |mWebTransport| should be only accessed on the socket thread.
