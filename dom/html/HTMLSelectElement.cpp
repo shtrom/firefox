@@ -1985,15 +1985,43 @@ HTMLOptionElement* HTMLSelectElement::GetListBoxOptionFromEvent(
   return option;
 }
 
+static HTMLOptionElement* AdjacentOption(const HTMLSelectElement& aSelect,
+                                         HTMLOptionElement& aFrom,
+                                         bool aForward) {
+  auto Step = [&](const nsINode* aNode) {
+    return aForward ? aNode->GetNextNode(&aSelect)
+                    : aNode->GetPrevNode(&aSelect);
+  };
+  for (nsIContent* cur = Step(&aFrom); cur; cur = Step(cur)) {
+    if (auto* opt = HTMLOptionElement::FromNode(cur)) {
+      if (HTMLOptionsCollection::IsValidOption(*opt, aSelect)) {
+        return opt;
+      }
+    }
+  }
+  return nullptr;
+}
+
 void HTMLSelectElement::RemoveOptionFromListBoxSelection(
     HTMLOptionElement& aOption) {
   NS_ASSERTION(!!mListBoxSelection.mStart == !!mListBoxSelection.mEnd, "");
 
-  if (mListBoxSelection.mStart == &aOption || mListBoxSelection.mEnd == &aOption) {
+  bool startIsLow = mListBoxSelection.mStartIsLow;
+  if (mListBoxSelection.mStart == &aOption &&
+      mListBoxSelection.mEnd == &aOption) {
     mListBoxSelection.Clear();
-    if (nsListControlFrame* lf = GetListBoxFrame()) {
-      lf->InvalidateFocus();
-    }
+  } else if (mListBoxSelection.mStart == &aOption) {
+    mListBoxSelection.mStart =
+        AdjacentOption(*this, aOption, /* aForward = */ startIsLow);
+  } else if (mListBoxSelection.mEnd == &aOption) {
+    mListBoxSelection.mEnd =
+        AdjacentOption(*this, aOption, /* aForward = */ !startIsLow);
+  } else {
+    return;
+  }
+
+  if (nsListControlFrame* lf = GetListBoxFrame()) {
+    lf->InvalidateFocus();
   }
 }
 
@@ -2032,30 +2060,32 @@ void HTMLSelectElement::InitListBoxSelectionRange(int32_t aClickedIndex) {
   //
   // This makes it so that shift click works properly when you first click
   // in a multiple select.
-  int32_t selectedIndex = SelectedIndex();
-  if (selectedIndex >= 0) {
+  int32_t firstSelectedIndex = SelectedIndex();
+  if (firstSelectedIndex >= 0) {
     // Get the end of the contiguous selection
     RefPtr<HTMLOptionsCollection> options = Options();
     NS_ASSERTION(options, "Collection of options is null!");
     uint32_t numOptions = options->Length();
     // Push i to one past the last selected index in the group.
     uint32_t i;
-    for (i = selectedIndex + 1; i < numOptions; i++) {
+    for (i = firstSelectedIndex + 1; i < numOptions; i++) {
       if (!options->ItemAsOption(i)->Selected()) {
         break;
       }
     }
 
-    if (aClickedIndex < selectedIndex) {
+    if (aClickedIndex < firstSelectedIndex) {
       // User clicked before selection, so start selection at end of
       // contiguous selection
       mListBoxSelection.mStart = Item(i - 1);
-      mListBoxSelection.mEnd = Item(selectedIndex);
+      mListBoxSelection.mEnd = Item(firstSelectedIndex);
+      mListBoxSelection.mStartIsLow = false;
     } else {
       // User clicked after selection, so start selection at start of
       // contiguous selection
-      mListBoxSelection.mStart = Item(selectedIndex);
+      mListBoxSelection.mStart = Item(firstSelectedIndex);
       mListBoxSelection.mEnd = Item(i - 1);
+      mListBoxSelection.mStartIsLow = true;
     }
   }
 }
@@ -2130,6 +2160,8 @@ bool HTMLSelectElement::PerformListBoxSelection(int32_t aClickedIndex,
     nsCOMPtr<nsIContent> prevOption = GetCurrentOption();
 #endif
     mListBoxSelection.mEnd = Item(aClickedIndex);
+    mListBoxSelection.mStartIsLow =
+        mListBoxSelection.mStart->Index() <= aClickedIndex;
     if (nsListControlFrame* listBox = GetListBoxFrame()) {
       listBox->InvalidateFocus();
     }
