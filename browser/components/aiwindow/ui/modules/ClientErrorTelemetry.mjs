@@ -14,6 +14,13 @@
  * both sides describe a failure the same way, whichever route it takes.
  */
 
+const CLIENT_ERROR_EVENT = "AIChatContent:ClientError";
+
+// Error objects already reported, so a single failure that is both explicitly
+// captured (e.g. a markdown render error) and rethrown into the window
+// "error"/"unhandledrejection" listeners is only emitted once.
+const reportedErrors = new WeakSet();
+
 /**
  * Reporting surfaces a failure can be attributed to. Each one is a place the
  * Smart Window UI installs a report hook: Lit's update cycle (recognised from
@@ -192,4 +199,45 @@ export function installClientErrorListeners(target, report) {
     target.removeEventListener("error", onError);
     target.removeEventListener("unhandledrejection", onUnhandledRejection);
   };
+}
+
+/**
+ * Build the detail payload sent up the AIChatContent:ClientError event chain.
+ *
+ * @param {unknown} error
+ * @param {string} source
+ *   A member of CLIENT_ERROR_SOURCES.
+ * @param {string} [messageKey]
+ *   A member of CLIENT_ERROR_MESSAGES, when the reporter knows what the
+ *   failure means and does not want the parent to derive a key from the
+ *   source or the message text.
+ * @returns {{source: string, messageKey: string, name: string, message: string, filename: string, lineno: number}}
+ */
+export function serializeClientErrorDetail(error, source, messageKey = "") {
+  return { source, messageKey, ...extractClientErrorFields(error) };
+}
+
+/**
+ * Dispatch a client-error event from a target inside the AI Chat Content
+ * document. Bubbles + composes through shadow roots so the actor's top-level
+ * listener catches it.
+ *
+ * @param {EventTarget} target
+ * @param {unknown} error
+ * @param {string} source
+ */
+export function dispatchClientError(target, error, source) {
+  if (error && typeof error === "object") {
+    if (reportedErrors.has(error)) {
+      return;
+    }
+    reportedErrors.add(error);
+  }
+  target.dispatchEvent(
+    new CustomEvent(CLIENT_ERROR_EVENT, {
+      bubbles: true,
+      composed: true,
+      detail: serializeClientErrorDetail(error, source),
+    })
+  );
 }
