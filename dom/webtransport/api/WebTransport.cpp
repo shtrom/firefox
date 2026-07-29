@@ -315,8 +315,6 @@ void WebTransport::Init(const GlobalObject& aGlobal, const nsAString& aURL,
                                workerPrivate->IsServiceWorker())
                  ? nullptr
                  : net::WebTransportEventService::GetOrCreate();
-  // XXX TODO
-
   // Step 15 Let transport be a newly constructed WebTransport object, with:
   // SendStreams: empty ordered set
   // ReceiveStreams: empty ordered set
