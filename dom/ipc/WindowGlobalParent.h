@@ -421,6 +421,10 @@ class WindowGlobalParent final : public WindowContext,
   already_AddRefed<dom::PDigitalCredentialParent>
   AllocPDigitalCredentialParent();
 
+  // Spec: https://wicg.github.io/nav-speculation/prefetch.html#prefetch-record
+  already_AddRefed<dom::PPrefetchRecordParent> AllocPPrefetchRecordParent(
+      const dom::SpeculativePrefetchArgs& aArgs);
+
   void UpdateFullscreenKeyboardLockStatus(FullscreenKeyboardLock aStatus);
 
  private:
