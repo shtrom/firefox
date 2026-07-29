@@ -653,6 +653,8 @@ let interfaceNamesInGlobalScope = [
   // IMPORTANT: Do not change this list without review from a DOM peer!
   "WebTransportDatagramDuplexStream",
   // IMPORTANT: Do not change this list without review from a DOM peer!
+  "WebTransportDatagramsWritable",
+  // IMPORTANT: Do not change this list without review from a DOM peer!
   "WebTransportError",
   // IMPORTANT: Do not change this list without review from a DOM peer!
   "WebTransportReceiveStream",
