@@ -120,6 +120,8 @@ class Http3WebTransportSession final : public WebTransportSessionBase,
                                 nsTArray<uint8_t>& aKeyingMaterial) override;
 
   nsresult RegisterSendGroup(uint64_t aGroupId) override;
+
+  void GetNegotiatedProtocol(nsACString& aProtocol) override;
   void OnOutgoingDatagramOutCome(
       uint64_t aId, WebTransportSessionEventListener::DatagramOutcome aOutCome);
 

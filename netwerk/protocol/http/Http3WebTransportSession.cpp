@@ -525,6 +525,15 @@ nsresult Http3WebTransportSession::ExportKeyingMaterial(
                                                     aKeyingMaterial);
 }
 
+void Http3WebTransportSession::GetNegotiatedProtocol(nsACString& aProtocol) {
+  MOZ_ASSERT(OnSocketThread(), "not on socket thread");
+  aProtocol.Truncate();
+  if (mRecvState != ACTIVE) {
+    return;
+  }
+  mSession->GetWebTransportSessionProtocol(mStreamId, aProtocol);
+}
+
 nsresult Http3WebTransportSession::RegisterSendGroup(uint64_t aGroupId) {
   MOZ_ASSERT(OnSocketThread(), "not on socket thread");
   if (mRecvState != ACTIVE) {

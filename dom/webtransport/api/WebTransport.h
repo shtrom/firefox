@@ -89,6 +89,8 @@ class WebTransport final : public nsISupports, public nsWrapperCache {
   void RemoteClosed(bool aCleanly, const uint32_t& aCode,
                     const nsACString& aReason);
 
+  void SetNegotiatedProtocol(const nsACString& aProtocol);
+
   void OnStreamResetOrStopSending(uint64_t aStreamId,
                                   const StreamResetOrStopSendingError& aError);
   // WebIDL Boilerplate

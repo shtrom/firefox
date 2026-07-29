@@ -3161,6 +3161,11 @@ nsresult Http3Session::RegisterWebTransportSendGroup(uint64_t aSessionId,
   return mHttp3Connection->RegisterWebTransportSendGroup(aSessionId, aGroupId);
 }
 
+nsresult Http3Session::GetWebTransportSessionProtocol(uint64_t aSessionId,
+                                                      nsACString& aProtocol) {
+  return mHttp3Connection->GetWebTransportSessionProtocol(aSessionId,
+                                                          aProtocol);
+}
 void Http3Session::SendHTTPDatagram(uint64_t aStreamId,
                                     nsTArray<uint8_t>& aData,
                                     uint64_t aTrackingId) {

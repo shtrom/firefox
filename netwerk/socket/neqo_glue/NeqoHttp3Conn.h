@@ -209,6 +209,11 @@ class NeqoHttp3Conn final {
     return neqo_http3conn_webtransport_register_send_group(this, aSessionId,
                                                            aGroupId);
   }
+  nsresult GetWebTransportSessionProtocol(uint64_t aSessionId,
+                                          nsACString& aProtocol) {
+    return neqo_http3conn_webtransport_session_protocol(this, aSessionId,
+                                                        &aProtocol);
+  }
 
   nsresult ExportWebTransportKeyingMaterial(
       uint64_t aSessionId, const nsTArray<uint8_t>& aLabel,

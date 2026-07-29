@@ -36,6 +36,7 @@ class WebTransportParent : public PWebTransportParent,
               const IPCClientInfo& aClientInfo, const bool& aDedicated,
               const bool& aRequireUnreliable,
               const uint32_t& aCongestionControl,
+              nsTArray<nsString>&& aProtocols,
               nsTArray<WebTransportHash>&& aServerCertHashes,
               Endpoint<PWebTransportParent>&& aParentEndpoint,
               std::function<void(std::tuple<const nsresult&, const uint8_t&>)>&&

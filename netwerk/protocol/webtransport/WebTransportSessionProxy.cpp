@@ -14,6 +14,7 @@
 #include "mozilla/Logging.h"
 #include "mozilla/ScopeExit.h"
 #include "mozilla/StaticPrefs_network.h"
+#include "mozilla/net/SFVService.h"
 #include "nsIAsyncVerifyRedirectCallback.h"
 #include "nsIHttpChannel.h"
 #include "nsIHttpChannelInternal.h"
@@ -73,9 +74,11 @@ nsresult WebTransportSessionProxy::AsyncConnect(
     nsIPrincipal* aPrincipal, uint32_t aSecurityFlags,
     WebTransportSessionEventListener* aListener,
     nsIWebTransport::HTTPVersion aVersion) {
+  nsTArray<nsString> emptyProtocols;
   return AsyncConnectWithClient(aURI, aDedicated, std::move(aServerCertHashes),
                                 aPrincipal, 0, aSecurityFlags, aListener,
-                                Maybe<dom::ClientInfo>(), aVersion);
+                                Maybe<dom::ClientInfo>(), emptyProtocols,
+                                aVersion);
 }
 
 nsresult WebTransportSessionProxy::AsyncConnectWithClient(
@@ -84,6 +87,7 @@ nsresult WebTransportSessionProxy::AsyncConnectWithClient(
     nsIPrincipal* aPrincipal, uint64_t aBrowsingContextID,
     uint32_t aSecurityFlags, WebTransportSessionEventListener* aListener,
     const Maybe<dom::ClientInfo>& aClientInfo,
+    const nsTArray<nsString>& aProtocols,
     nsIWebTransport::HTTPVersion aVersion) {
   MOZ_ASSERT(NS_IsMainThread());
 
@@ -169,6 +173,67 @@ nsresult WebTransportSessionProxy::AsyncConnectWithClient(
   rv = httpChannel->SetRequestHeader("Origin"_ns, serializedOrigin, false);
   if (NS_FAILED(rv)) {
     return rv;
+  }
+
+  // Set wt-available-protocols header if protocols were provided
+  // Format: "protocol1", "protocol2", "protocol3"
+  if (!aProtocols.IsEmpty()) {
+    // Store offered protocols for later validation
+    {
+      MutexAutoLock lock(mMutex);
+      mOfferedProtocols = aProtocols.Clone();
+    }
+
+    // wt-available-protocols is an SF List of SF Strings (RFC 8941); build it
+    // with the SFV service so the quoting/escaping matches the spec exactly.
+    nsCOMPtr<nsISFVService> sfv = mozilla::net::GetSFVService();
+    if (!sfv) {
+      return NS_ERROR_FAILURE;
+    }
+    nsTArray<RefPtr<nsISFVItemOrInnerList>> members;
+    for (const auto& p : aProtocols) {
+      NS_ConvertUTF16toUTF8 protocol(p);
+      // SF strings only allow printable ASCII (0x20-0x7E); reject any protocol
+      // containing characters outside that range to prevent a compromised
+      // content process from injecting malformed header values.
+      for (size_t j = 0; j < protocol.Length(); j++) {
+        unsigned char c = static_cast<unsigned char>(protocol[j]);
+        if (c < 0x20 || c > 0x7E) {
+          return NS_ERROR_INVALID_ARG;
+        }
+      }
+      nsCOMPtr<nsISFVString> str;
+      rv = sfv->NewString(protocol, getter_AddRefs(str));
+      if (NS_FAILED(rv)) {
+        return rv;
+      }
+      nsCOMPtr<nsISFVParams> params;
+      rv = sfv->NewParameters(getter_AddRefs(params));
+      if (NS_FAILED(rv)) {
+        return rv;
+      }
+      nsCOMPtr<nsISFVItem> item;
+      rv = sfv->NewItem(str, params, getter_AddRefs(item));
+      if (NS_FAILED(rv)) {
+        return rv;
+      }
+      members.AppendElement(item);
+    }
+    nsCOMPtr<nsISFVList> list;
+    rv = sfv->NewList(members, getter_AddRefs(list));
+    if (NS_FAILED(rv)) {
+      return rv;
+    }
+    nsAutoCString protocolsHeader;
+    rv = list->Serialize(protocolsHeader);
+    if (NS_FAILED(rv)) {
+      return rv;
+    }
+    rv = httpChannel->SetRequestHeader("wt-available-protocols"_ns,
+                                       protocolsHeader, false);
+    if (NS_FAILED(rv)) {
+      return rv;
+    }
   }
 
   nsCOMPtr<nsIHttpChannelInternal> internalChannel =
@@ -261,6 +326,12 @@ WebTransportSessionProxy::ExportKeyingMaterial(
   return session->ExportKeyingMaterial(aLabel, aContext, aKeyingMaterial);
 }
 
+NS_IMETHODIMP
+WebTransportSessionProxy::GetNegotiatedProtocol(nsACString& aProtocol) {
+  MutexAutoLock lock(mMutex);
+  aProtocol = mProtocol;
+  return NS_OK;
+}
 NS_IMETHODIMP
 WebTransportSessionProxy::CloseSession(uint32_t status,
                                        const nsACString& reason) {
@@ -913,6 +984,32 @@ WebTransportSessionProxy::OnSessionReadyInternal(
     case WebTransportSessionProxyState::NEGOTIATING:
       mWebTransportSession = aSession;
       mSessionId = aSession->GetStreamId();
+      aSession->GetNegotiatedProtocol(mProtocol);
+      // Validate the negotiated protocol against offered protocols
+      // Note: mOfferedProtocols is only set if protocols were offered (not
+      // null) If a protocol is returned but either:
+      // - No protocols were offered (empty list was passed), or
+      // - The returned protocol isn't in the offered list
+      // then we must reject it per spec
+      if (!mProtocol.IsEmpty()) {
+        bool shouldAccept = false;
+        // Only accept if we offered protocols AND the returned one is in the
+        // list
+        if (!mOfferedProtocols.IsEmpty()) {
+          for (const auto& offered : mOfferedProtocols) {
+            if (mProtocol.Equals(NS_ConvertUTF16toUTF8(offered))) {
+              shouldAccept = true;
+              break;
+            }
+          }
+        }
+        // If we shouldn't accept it, clear the protocol
+        if (!shouldAccept) {
+          LOG(("Negotiated protocol '%s' not valid (offered=%zu), rejecting",
+               mProtocol.get(), mOfferedProtocols.Length()));
+          mProtocol.Truncate();
+        }
+      }
       ChangeState(WebTransportSessionProxyState::NEGOTIATING_SUCCEEDED);
       mWebTransportSession->StartReading();
       break;

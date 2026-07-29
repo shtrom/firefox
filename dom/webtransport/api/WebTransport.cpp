@@ -253,14 +253,9 @@ void WebTransport::Init(const GlobalObject& aGlobal, const nsAString& aURL,
   // Set this to 'default' until we add congestion control setting
 
   // Step 11.5: Let protocols be options's protocols if it exists, and null
-  // otherwise.
-  // XXX Protocol negotiation is not yet implemented. For now, we accept the
-  // protocols option but don't pass it through to the network layer or perform
-  // negotiation. mProtocol will remain empty until full implementation.
-  // XXX Bug 2007150
-  if (aOptions.mProtocols.Length() != 0) {
-    // Future: pass protocols to CreateWebTransportParent and handle negotiation
-  }
+  // otherwise. The list is plumbed through to the network layer; validation
+  // and population happen in a later step.
+  nsTArray<nsString> protocols;
 
   // Setup up WebTransportDatagramDuplexStream
   // Step 12: Let incomingDatagrams be a new ReadableStream.
@@ -392,7 +387,7 @@ void WebTransport::Init(const GlobalObject& aGlobal, const nsAString& aURL,
   backgroundChild
       ->SendCreateWebTransportParent(
           aURL, principal, mBrowsingContextID, ipcClientInfo, dedicated,
-          requireUnreliable, (uint32_t)congestionControl,
+          requireUnreliable, (uint32_t)congestionControl, protocols,
           std::move(aServerCertHashes), std::move(parentEndpoint))
       ->Then(GetCurrentSerialEventTarget(), __func__,
              [self = RefPtr{this}](
@@ -669,6 +664,11 @@ void WebTransport::GetProtocol(nsAString& aProtocol) { aProtocol = mProtocol; }
 void WebTransport::ResolveDraining() {
   LOG(("ResolveDraining() called"));
   mDraining->MaybeResolveWithUndefined();
+}
+
+void WebTransport::SetNegotiatedProtocol(const nsACString& aProtocol) {
+  LOG(("SetNegotiatedProtocol: %s", PromiseFlatCString(aProtocol).get()));
+  CopyUTF8toUTF16(aProtocol, mProtocol);
 }
 
 void WebTransport::RemoteClosed(bool aCleanly, const uint32_t& aCode,
