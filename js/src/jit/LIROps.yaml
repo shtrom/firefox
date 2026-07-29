@@ -1310,7 +1310,7 @@
   operands:
     lhs: WordSized
     rhs: WordSized
-  call_instruction: true
+  num_temps: 2
   mir_op: Mod
 
 - name: ModPowTwoD

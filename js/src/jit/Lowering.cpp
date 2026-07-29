@@ -2594,9 +2594,13 @@ void LIRGenerator::visitMod(MMod* ins) {
       }
     }
 
+
     LModD* lir = new (alloc())
-        LModD(useRegisterAtStart(ins->lhs()), useRegisterAtStart(ins->rhs()));
-    defineReturn(lir, ins);
+        LModD(useRegister(ins->lhs()), useRegister(ins->rhs()),
+              temp(), temp());
+
+    assignSafepoint(lir, ins);
+    define(lir, ins);
     return;
   }
 
