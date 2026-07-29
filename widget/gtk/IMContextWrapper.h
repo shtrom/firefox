@@ -282,13 +282,23 @@ class IMContextWrapper final : public TextEventDispatcherListener {
     }
 
     /**
-     * FirstEvent() returns oldest event in the queue.
+     * Return the oldest event in the queue.
      */
     GdkEventKey* GetFirstEvent() const {
       if (mEvents.IsEmpty()) {
         return nullptr;
       }
       return mEvents[0].get();
+    }
+
+    /**
+     * Return the latest event in the queue.
+     */
+    GdkEventKey* GetLatestEvent() const {
+      if (mEvents.IsEmpty()) {
+        return nullptr;
+      }
+      return mEvents.LastElement().get();
     }
 
     bool IsEmpty() const { return mEvents.IsEmpty(); }
