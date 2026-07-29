@@ -12,7 +12,6 @@ const RESPONSE_EVENTS = [
   "ThemePickerThemeUpdated",
   "ThemePickerAppearanceUpdated",
   "ThemePickerNativeThemeUpdated",
-  "ThemePickerDeviceAppearanceUpdated",
 ];
 
 /**
@@ -44,23 +43,7 @@ export class ThemePickerRemoteController {
       /** @param {ThemechangeEvent} e */
       e => this.onThemechange(e.detail)
     );
-
-    window.addEventListener(
-      "ThemePickerDeviceAppearanceUpdated",
-      this.deviceAppearanceHandler
-    );
   }
-
-  hostDisconnected() {
-    window.removeEventListener(
-      "ThemePickerDeviceAppearanceUpdated",
-      this.deviceAppearanceHandler
-    );
-  }
-
-  deviceAppearanceHandler = e => {
-    this.host.deviceAppearance = e.detail.deviceAppearance;
-  };
 
   hostConnected() {
     this.dispatchActorEvent("ThemePickerGetInitialState", {
@@ -93,7 +76,6 @@ export class ThemePickerRemoteController {
         this.host.nativeTheme = event.detail.nativeTheme;
         this.host.appearance = event.detail.appearance;
         this.host.showNativeThemeOption = event.detail.showNativeThemeOption;
-        this.host.deviceAppearance = event.detail.deviceAppearance;
         break;
       case "ThemePickerThemeUpdated":
         this.host.activeThemeId = event.detail.activeThemeId;
@@ -103,9 +85,6 @@ export class ThemePickerRemoteController {
         break;
       case "ThemePickerNativeThemeUpdated":
         this.host.nativeTheme = event.detail.nativeTheme;
-        break;
-      case "ThemePickerDeviceAppearanceUpdated":
-        this.host.deviceAppearance = event.detail.deviceAppearance;
         break;
     }
   }

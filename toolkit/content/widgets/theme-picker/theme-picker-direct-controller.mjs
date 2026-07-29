@@ -69,12 +69,7 @@ export class ThemePickerDirectController {
   }
 
   hostConnected() {
-    Services.obs.addObserver(this.updateHost, "look-and-feel-changed");
     this.updateHost();
-  }
-
-  hostDisconnected() {
-    Services.obs.removeObserver(this.updateHost, "look-and-feel-changed");
   }
 
   /**
@@ -108,7 +103,7 @@ export class ThemePickerDirectController {
     await this.themesManager.updateThemeState(themeId, true);
   }
 
-  updateHost = () => {
+  updateHost() {
     this.host.activeThemeId = this.lazy.activeThemeId;
     this.host.nativeTheme = this.lazy.nativeTheme;
     if (this.lazy.systemUsesDark == 0) {
@@ -119,9 +114,5 @@ export class ThemePickerDirectController {
       this.host.appearance = "device";
     }
     this.host.showNativeThemeOption = AppConstants.platform === "linux";
-    this.host.deviceAppearance = Services.appinfo
-      .contentThemeDerivedColorSchemeIsDark
-      ? "dark"
-      : "light";
-  };
+  }
 }

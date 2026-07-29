@@ -50,10 +50,6 @@ export class ThemePickerParent extends JSWindowActorParent {
     const nativeTheme = Services.prefs.getBoolPref(PREF_NATIVE_THEME, false);
     const appearance = this.getAppearanceFromPref();
     const showNativeThemeOption = AppConstants.platform === "linux";
-    const deviceAppearance = Services.appinfo
-      .contentThemeDerivedColorSchemeIsDark
-      ? "dark"
-      : "light";
 
     return {
       themes,
@@ -61,7 +57,6 @@ export class ThemePickerParent extends JSWindowActorParent {
       nativeTheme,
       appearance,
       showNativeThemeOption,
-      deviceAppearance,
     };
   }
 
@@ -86,9 +81,7 @@ export class ThemePickerParent extends JSWindowActorParent {
       );
     }
 
-    return {
-      appearance: this.getAppearanceFromPref(),
-    };
+    return { appearance: this.getAppearanceFromPref() };
   }
 
   async updateNativeTheme({ nativeTheme }) {
