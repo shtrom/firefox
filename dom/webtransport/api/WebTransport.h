@@ -63,6 +63,7 @@ class WebTransport final : public nsISupports, public nsWrapperCache {
             const WebTransportOptions& aOptions, ErrorResult& aError);
   void ResolveWaitingConnection(WebTransportReliabilityMode aReliability);
   void RejectWaitingConnection(nsresult aRv);
+  void ResolveDraining();
   bool ParseURL(const nsAString& aURL) const;
   // this calls CloseNative(), which doesn't actually run script.   See bug
   // 1810942
@@ -108,6 +109,7 @@ class WebTransport final : public nsISupports, public nsWrapperCache {
   WebTransportReliabilityMode Reliability();
   WebTransportCongestionControl CongestionControl();
   void GetProtocol(nsAString& aProtocol);
+  already_AddRefed<Promise> Draining() { return do_AddRef(mDraining); }
   already_AddRefed<Promise> Closed() { return do_AddRef(mClosed); }
   MOZ_CAN_RUN_SCRIPT void Close(const WebTransportCloseInfo& aOptions,
                                 ErrorResult& aRv);
@@ -153,6 +155,7 @@ class WebTransport final : public nsISupports, public nsWrapperCache {
 
   WebTransportState mState;
   RefPtr<Promise> mReady;
+  RefPtr<Promise> mDraining;
   uint64_t mInnerWindowID = 0;
   uint64_t mHttpChannelID = 0;
   uint64_t mBrowsingContextID = 0;

@@ -1031,6 +1031,29 @@ WebTransportSessionProxy::OnSessionClosed(bool aCleanly, uint32_t aStatus,
   return NS_OK;
 }
 
+NS_IMETHODIMP
+WebTransportSessionProxy::OnDraining() {
+  MOZ_ASSERT(OnSocketThread(), "not on socket thread");
+  MutexAutoLock lock(mMutex);
+  LOG(("WebTransportSessionProxy::OnDraining %p", this));
+
+  if (!mTarget->IsOnCurrentThread()) {
+    nsCOMPtr<WebTransportSessionEventListener> listener = mListener;
+    mTarget->Dispatch(NS_NewRunnableFunction(
+        "WebTransportSessionProxy::OnDraining", [listener]() {
+          if (listener) {
+            listener->OnDraining();
+          }
+        }));
+    return NS_OK;
+  }
+
+  if (mListener) {
+    mListener->OnDraining();
+  }
+  return NS_OK;
+}
+
 void WebTransportSessionProxy::CallOnSessionClosedLocked() {
   MutexAutoLock lock(mMutex);
   CallOnSessionClosed();

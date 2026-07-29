@@ -98,6 +98,7 @@ interface WebTransportSessionEventListener : nsISupports {
   void onSessionClosed(in boolean aCleanly,
                        in uint32_t aErrorCode,
                        in ACString aReason);
+  void onDraining();
 
   // When a new stream has been received.
   void onIncomingBidirectionalStreamAvailable(in nsIWebTransportBidirectionalStream aStream);

@@ -80,6 +80,7 @@ interface WebTransport {
   readonly attribute WebTransportCongestionControl congestionControl;
   readonly attribute DOMString protocol;
   readonly attribute Promise<WebTransportCloseInfo> closed;
+  readonly attribute Promise<undefined> draining;
   [Throws] undefined close(optional WebTransportCloseInfo closeInfo = {});
 
   [Throws] readonly attribute WebTransportDatagramDuplexStream datagrams;

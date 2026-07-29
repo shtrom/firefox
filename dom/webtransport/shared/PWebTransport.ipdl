@@ -101,6 +101,8 @@ async protocol PWebTransport
   */
   async IncomingDatagram(uint8_t[] data, TimeStamp receivedTime);
 
+  async Draining();
+
   async RemoteClosed(bool cleanly, uint32_t code, nsCString reason);
 
   async OnStreamResetOrStopSending(uint64_t streamId,

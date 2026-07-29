@@ -604,6 +604,16 @@ WebTransportParent::OnSessionClosed(const bool aCleanly,
   return NS_OK;
 }
 
+NS_IMETHODIMP WebTransportParent::OnDraining() {
+  MOZ_ASSERT(mSocketThread->IsOnCurrentThread());
+
+  LOG(("WebTransportParent::OnDraining %p", this));
+
+  (void)SendDraining();
+
+  return NS_OK;
+}
+
 NS_IMETHODIMP WebTransportParent::OnStopSending(uint64_t aStreamId,
                                                 nsresult aError) {
   MOZ_ASSERT(mSocketThread->IsOnCurrentThread());
@@ -616,9 +626,7 @@ NS_IMETHODIMP WebTransportParent::OnStopSending(uint64_t aStreamId,
     entry->mCallback.OnResetOrStopSending(aError);
     mBidiStreamCallbackMap.Remove(aStreamId);
   }
-  if (CanSend()) {
-    (void)SendOnStreamResetOrStopSending(aStreamId, StopSendingError(aError));
-  }
+  (void)SendOnStreamResetOrStopSending(aStreamId, StopSendingError(aError));
   return NS_OK;
 }
 
@@ -634,9 +642,7 @@ NS_IMETHODIMP WebTransportParent::OnResetReceived(uint64_t aStreamId,
     entry->mCallback.OnResetOrStopSending(aError);
     mBidiStreamCallbackMap.Remove(aStreamId);
   }
-  if (CanSend()) {
-    (void)SendOnStreamResetOrStopSending(aStreamId, ResetError(aError));
-  }
+  (void)SendOnStreamResetOrStopSending(aStreamId, ResetError(aError));
   return NS_OK;
 }
 
