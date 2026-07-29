@@ -75,6 +75,10 @@ class PrefetchRecordParent final : public PPrefetchRecordParent,
   // https://wicg.github.io/nav-speculation/prefetch.html#trigger-a-prefetch-status-updated-event
   void FirePrefetchStatusUpdated(bool aSuccess);
 
+  // Cancels the fetch and marks state=Canceled. Idempotent.
+  // Called by RecvCancel and WindowGlobalParent::DedupePrefetchRecords.
+  void MarkCanceled();
+
   void ActorDestroy(ActorDestroyReason aReason) override;
 
  private:

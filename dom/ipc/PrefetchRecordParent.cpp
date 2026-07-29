@@ -274,13 +274,42 @@ PrefetchRecordParent::OnDataAvailable(nsIRequest* aRequest,
 
 NS_IMETHODIMP
 PrefetchRecordParent::OnStopRequest(nsIRequest* aRequest, nsresult aStatus) {
-  LOG_SPECRULES(
-      ("PrefetchRecordParent::OnStopRequest: this=%p status=0x%" PRIx32, this,
-       static_cast<uint32_t>(aStatus)));
+  mChannel = nullptr;
+
   if (NS_FAILED(aStatus)) {
-    mState = PrefetchState::Canceled;
-    mChannel = nullptr;
+    LOG_SPECRULES_WARN(
+        ("PrefetchRecordParent::OnStopRequest: this=%p failed 0x%" PRIx32, this,
+         static_cast<uint32_t>(aStatus)));
+    MarkCanceled();
+    return NS_OK;
   }
+
+  auto* wgp = static_cast<WindowGlobalParent*>(Manager());
+
+  // Implements "complete a prefetch record".
+  // Spec:
+  // https://wicg.github.io/nav-speculation/prefetch.html#prefetch-record-complete
+  // Step 1: assert document is fully active.
+  if (!wgp || wgp->IsClosed()) {
+    return NS_OK;
+  }
+
+  // Steps 2-3: compute expiry time (currentTime + 5 min per spec; pref allows
+  // shorter values in tests).
+  mExpiryTime = TimeStamp::Now() +
+                TimeDuration::FromMilliseconds(
+                    StaticPrefs::dom_speculation_rules_record_expiry_ms());
+
+  // Step 4: remove prior completed records with the same URL.
+  wgp->DedupePrefetchRecords(this);
+  // Step 5: set state to "completed".
+  mState = PrefetchState::Completed;
+  // Step 6: trigger a prefetch status updated event ("ready").
+  FirePrefetchStatusUpdated(true);
+  wgp->NotifyPrefetchStateChanged(this);
+
+  LOG_SPECRULES(
+      ("PrefetchRecordParent::OnStopRequest: this=%p completed", this));
   return NS_OK;
 }
 
@@ -341,34 +370,40 @@ void PrefetchRecordParent::FirePrefetchStatusUpdated(bool aSuccess) {
   // https://wicg.github.io/nav-speculation/prefetch.html#trigger-a-prefetch-status-updated-event
 }
 
-// IPC
-
-mozilla::ipc::IPCResult PrefetchRecordParent::RecvCancel() {
-  // (https://wicg.github.io/nav-speculation/prefetch.html#prefetch-record-cancel-and-discard).
+void PrefetchRecordParent::MarkCanceled() {
+  // Implements "cancel and discard a prefetch record".
+  // Spec:
+  // https://wicg.github.io/nav-speculation/prefetch.html#prefetch-record-cancel-and-discard
+  // Step 2: assert state is not "canceled" (enforced as an idempotent guard).
   if (mState == PrefetchState::Canceled) {
-    // Step 2 - Assert: prefetchRecord’s state is not "canceled".
-    return IPC_OK();
+    return;
   }
 
-  LOG_SPECRULES(("PrefetchRecordParent::RecvCancel: this=%p", this));
+  LOG_SPECRULES(("PrefetchRecordParent::MarkCanceled: this=%p", this));
 
-  // Step 3 - Set prefetchRecord’s state to "canceled".
-  mState = PrefetchState::Canceled;
-  if (mChannel) {
-    // Step 4 - Abort prefetchRecord’s fetch controller.
+  mState = PrefetchState::Canceled;  // Step 3: set state to "canceled"
+
+  if (mChannel) {  // Step 4: abort the fetch controller
     mChannel->Cancel(NS_BINDING_ABORTED);
     mChannel = nullptr;
   }
+
   // Step 5: destroy prerendering traversable — deferred (no prerender in M1).
-  // Step 6: remove from document's prefetch records — handled by DOM's
-  // subsequent Send__delete__.
-  //
-  // Step 7: fire a prefetch status updated event
-  FirePrefetchStatusUpdated(false);  //
+  FirePrefetchStatusUpdated(false);  // Step 7: trigger "failure" status event
 
   if (auto* wgp = static_cast<WindowGlobalParent*>(Manager())) {
     wgp->NotifyPrefetchStateChanged(this);
   }
+}
+
+// IPC
+
+mozilla::ipc::IPCResult PrefetchRecordParent::RecvCancel() {
+  LOG_SPECRULES(("PrefetchRecordParent::RecvCancel: this=%p", this));
+  MarkCanceled();
+  // https://wicg.github.io/nav-speculation/prefetch.html#prefetch-record-cancel-and-discard
+  // Step 6: remove from document's prefetch records — handled by DOM's
+  // subsequent Send__delete__.
   return IPC_OK();
 }
 
