@@ -70,6 +70,11 @@ class PrefetchRecordParent final : public PPrefetchRecordParent,
   // (https://wicg.github.io/nav-speculation/prefetch.html#prefetch-record-cancel-and-discard).
   mozilla::ipc::IPCResult RecvCancel();
 
+  // Implements "trigger a prefetch status updated event".
+  // Spec:
+  // https://wicg.github.io/nav-speculation/prefetch.html#trigger-a-prefetch-status-updated-event
+  void FirePrefetchStatusUpdated(bool aSuccess);
+
   void ActorDestroy(ActorDestroyReason aReason) override;
 
  private:
