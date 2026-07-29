@@ -28,13 +28,13 @@ class WebTransportSendGroup final : public nsISupports, public nsWrapperCache {
 
   nsIGlobalObject* GetParentObject() const { return mGlobal; }
 
+  void SetGroupId(uint64_t aGroupId) { mGroupId = aGroupId; }
+  uint64_t GetGroupId() const { return mGroupId; }
+
   JSObject* WrapObject(JSContext* aCx,
                        JS::Handle<JSObject*> aGivenProto) override;
 
   already_AddRefed<Promise> GetStats(ErrorResult& aRv);
-
-  void SetGroupId(uint64_t aGroupId) { mGroupId = aGroupId; }
-  uint64_t GroupId() const { return mGroupId; }
 
  private:
   ~WebTransportSendGroup();

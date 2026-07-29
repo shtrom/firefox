@@ -59,8 +59,8 @@ async protocol PWebTransport
       returns(BidirectionalStreamResponse response);
 
   /**
-  * Register a send group with a caller-provided ID
-  */
+   * Register a send group with a caller-provided ID
+   */
   async CreateSendGroup(uint64_t groupId);
 
   /**

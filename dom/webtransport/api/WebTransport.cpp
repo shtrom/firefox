@@ -27,6 +27,7 @@
 #include "nsIURL.h"
 #include "nsIWebTransportStream.h"
 #include "nsPIDOMWindowInlines.h"
+#include "nsThreadUtils.h"
 #include "nsUTF8Utils.h"
 
 using namespace mozilla::ipc;
@@ -994,12 +995,14 @@ already_AddRefed<WebTransportSendGroup> WebTransport::CreateSendGroup(
   // Step 2: Return the result of creating a WebTransportSendGroup with this.
   RefPtr<WebTransportSendGroup> group =
       new WebTransportSendGroup(mGlobal, this);
+
   // Assign a unique group ID locally so the group is immediately usable,
   // then notify the parent process to register it in the network stack.
   uint64_t groupId = mNextSendGroupId++;
   group->SetGroupId(groupId);
   LOG(("CreateSendGroup assigned ID: %" PRIu64, groupId));
   mChild->SendCreateSendGroup(groupId);
+
   return group.forget();
 }
 
