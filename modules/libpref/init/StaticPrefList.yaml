@@ -18875,7 +18875,7 @@
 # Whether or not to enable the test trust anchor list when verifying PDF signatures
 - name: security.pdf_signature_verification.enable_test_trust_anchors
   type: RelaxedAtomicBool
-  value: false
+  value: @IS_NIGHTLY_BUILD@
   mirror: always
   rust: true
 
