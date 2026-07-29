@@ -6082,7 +6082,7 @@ void nsHttpChannel::CloseCacheEntry(bool doomOnFailure) {
       nsHttpAtom secPurposeAtom = nsHttp::ResolveAtom("Sec-Purpose"_ns);
       if (secPurposeAtom &&
           NS_SUCCEEDED(mRequestHead.GetHeader(secPurposeAtom, secPurpose)) &&
-          secPurpose.EqualsLiteral("prefetch") &&
+          StringBeginsWith(secPurpose, "prefetch"_ns) &&
           !mResponseHead->MustValidate()) {
         nsAutoCString expires;
         (void)mResponseHead->GetHeader(nsHttp::Expires, expires);
