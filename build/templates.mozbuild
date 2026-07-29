@@ -295,8 +295,8 @@ def MacOSBundle(output, **kwargs):
     entries that belong in ``MacOS`` (kept as symlinks) and
     ``macos_copy_files`` those that must be deep-copied there instead.
 
-    ``move_to_frameworks`` lists names moved from ``Contents/Resources`` into
-    ``Contents/Frameworks``.
+    ``moves`` lists ``(name, dest)`` pairs, each moving ``Contents/Resources/name``
+    to ``Contents/dest``.
 
     ``pkginfo``, if set, is written verbatim to ``Contents/PkgInfo``.
 
@@ -311,7 +311,7 @@ def MacOSBundle(output, **kwargs):
     stage = kwargs.pop("stage", None)
     macos_files = kwargs.pop("macos_files", None)
     macos_copy_files = kwargs.pop("macos_copy_files", None)
-    move_to_frameworks = kwargs.pop("move_to_frameworks", [])
+    moves = kwargs.pop("moves", [])
     pkginfo = kwargs.pop("pkginfo", None)
     copies = kwargs.pop("copies", [])
     if kwargs:
@@ -329,7 +329,7 @@ def MacOSBundle(output, **kwargs):
             "stage": stage,
             "macos_files": macos_files,
             "macos_copy_files": macos_copy_files,
-            "move_to_frameworks": move_to_frameworks,
+            "moves": moves,
             "pkginfo": pkginfo,
             "copies": copies,
         }

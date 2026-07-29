@@ -1960,7 +1960,7 @@ class RecursiveMakeBackend(MakeBackend):
             "lproj": spec["lproj"],
             "binaries": [],
             "extra_files": [],
-            "move_to_frameworks": list(spec["move_to_frameworks"]),
+            "moves": [list(m) for m in spec["moves"]],
             "pkginfo": spec["pkginfo"],
             "copies": [Path(context, c).full_path for c in spec["copies"]],
         }

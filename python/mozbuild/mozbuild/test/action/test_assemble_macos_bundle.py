@@ -43,7 +43,7 @@ class TestAssembleMacOSBundle(unittest.TestCase):
             "stage": None,
             "macos_files": None,
             "macos_copy_files": None,
-            "move_to_frameworks": [],
+            "moves": [],
             "pkginfo": None,
             "copies": [],
         }
@@ -136,7 +136,7 @@ class TestAssembleMacOSBundle(unittest.TestCase):
             lproj="en.lproj",
             binaries=[[binary, "firefox"]],
             extra_files=[[icon, "Resources/firefox.icns"]],
-            move_to_frameworks=["ChannelPrefs.framework"],
+            moves=[("ChannelPrefs.framework", "Frameworks/ChannelPrefs.framework")],
             pkginfo="APPLMOZB",
         )
         spec_path = self._write("spec.json", json.dumps(spec))

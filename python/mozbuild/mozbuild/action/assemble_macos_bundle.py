@@ -82,12 +82,11 @@ def main(argv):
         os.makedirs(os.path.dirname(dest), exist_ok=True)
         _rsync(source, dest, "-L")
 
-    for name in spec.get("move_to_frameworks", []):
-        frameworks = os.path.join(contents, "Frameworks")
-        os.makedirs(frameworks, exist_ok=True)
-        source = os.path.join(resources, name)
-        dest = os.path.join(frameworks, name)
+    for src_name, dest_rel in spec.get("moves", []):
+        source = os.path.join(resources, src_name)
+        dest = os.path.join(contents, dest_rel)
         if os.path.lexists(source):
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
             if os.path.lexists(dest):
                 _remove(dest)
             shutil.move(source, dest)

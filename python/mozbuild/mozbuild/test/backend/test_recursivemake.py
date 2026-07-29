@@ -441,7 +441,10 @@ class TestRecursiveMakeBackend(BackendTester):
         self.assertTrue(staged["stage"].endswith("dist/bin"))
         self.assertTrue(staged["macos_files"].endswith("macos-files.txt"))
         self.assertTrue(staged["macos_copy_files"].endswith("macos-copy.in"))
-        self.assertEqual(staged["move_to_frameworks"], ["ChannelPrefs.framework"])
+        self.assertEqual(
+            staged["moves"],
+            [["ChannelPrefs.framework", "Frameworks/ChannelPrefs.framework"]],
+        )
         self.assertEqual(staged["pkginfo"], "APPLMOZB")
 
         # A bundle that shares a basename with another in the same directory
