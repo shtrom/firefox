@@ -80,7 +80,8 @@ class Http3SessionStub final : public Http3SessionBase {
   }
 
   void SendDatagram(Http3WebTransportSession* aSession,
-                    nsTArray<uint8_t>& aData, uint64_t aTrackingId) override {}
+                    nsTArray<uint8_t>& aData, uint64_t aTrackingId,
+                    uint64_t aSendGroupId, int64_t aSendOrder) override {}
 
   uint64_t MaxDatagramSize(uint64_t aSessionId) override { return 0; }
 

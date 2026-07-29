@@ -639,15 +639,18 @@ WebTransportSessionProxy::CreateOutgoingBidirectionalStream(
 
 void WebTransportSessionProxy::SendDatagramInternal(
     const RefPtr<WebTransportSessionBase>& aSession, nsTArray<uint8_t>&& aData,
-    uint64_t aTrackingId) {
+    uint64_t aTrackingId, uint64_t aSendGroupId, int64_t aSendOrder) {
   MOZ_ASSERT(OnSocketThread());
 
-  aSession->SendDatagram(std::move(aData), aTrackingId);
+  aSession->SendDatagram(std::move(aData), aTrackingId, aSendGroupId,
+                         aSendOrder);
 }
 
 NS_IMETHODIMP
 WebTransportSessionProxy::SendDatagram(const nsTArray<uint8_t>& aData,
-                                       uint64_t aTrackingId) {
+                                       uint64_t aTrackingId,
+                                       uint64_t aSendGroupId,
+                                       int64_t aSendOrder) {
   RefPtr<WebTransportSessionBase> session;
   {
     MutexAutoLock lock(mMutex);
@@ -664,12 +667,15 @@ WebTransportSessionProxy::SendDatagram(const nsTArray<uint8_t>& aData,
     return gSocketTransportService->Dispatch(NS_NewRunnableFunction(
         "WebTransportSessionProxy::SendDatagramInternal",
         [self = RefPtr{this}, session{std::move(session)},
-         data{std::move(copied)}, trackingId(aTrackingId)]() mutable {
-          self->SendDatagramInternal(session, std::move(data), trackingId);
+         data{std::move(copied)}, trackingId(aTrackingId),
+         sendGroupId(aSendGroupId), sendOrder(aSendOrder)]() mutable {
+          self->SendDatagramInternal(session, std::move(data), trackingId,
+                                     sendGroupId, sendOrder);
         }));
   }
 
-  SendDatagramInternal(session, std::move(copied), aTrackingId);
+  SendDatagramInternal(session, std::move(copied), aTrackingId, aSendGroupId,
+                       aSendOrder);
   return NS_OK;
 }
 

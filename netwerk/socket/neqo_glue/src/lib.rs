@@ -2606,7 +2606,7 @@ pub extern "C" fn neqo_http3conn_webtransport_close_session(
         message_tmp,
         Instant::now(),
     ) {
-        Ok(()) => NS_OK,
+        Ok(_) => NS_OK,
         Err(_) => NS_ERROR_INVALID_ARG,
     }
 }
@@ -2627,7 +2627,7 @@ pub extern "C" fn neqo_http3conn_connect_udp_close_session(
         message_tmp,
         Instant::now(),
     ) {
-        Ok(()) => NS_OK,
+        Ok(_) => NS_OK,
         Err(_) => NS_ERROR_INVALID_ARG,
     }
 }
@@ -2658,17 +2658,25 @@ pub extern "C" fn neqo_http3conn_webtransport_send_datagram(
     session_id: u64,
     data: &mut ThinVec<u8>,
     tracking_id: u64,
+    send_group_id: u64,
+    send_order: i64,
 ) -> nsresult {
     let id = if tracking_id == 0 {
         None
     } else {
         Some(tracking_id)
     };
-    match conn
-        .conn
-        .webtransport_send_datagram(StreamId::from(session_id), data, id, Instant::now())
-    {
-        Ok(()) => NS_OK,
+    // The local neqo2 vendor doesn't yet support per-datagram send group/order
+    // prioritization; accept the params from the C++ side but don't forward
+    // them until neqo grows the corresponding API.
+    let _ = (send_group_id, send_order);
+    match conn.conn.webtransport_send_datagram(
+        StreamId::from(session_id),
+        data,
+        id,
+        Instant::now(),
+    ) {
+        Ok(_) => NS_OK,
         Err(Http3Error::Transport(TransportError::TooMuchData)) => NS_ERROR_NOT_AVAILABLE,
         Err(_) => NS_ERROR_UNEXPECTED,
     }
@@ -2679,17 +2687,25 @@ pub extern "C" fn neqo_http3conn_connect_udp_send_datagram(
     session_id: u64,
     data: &mut ThinVec<u8>,
     tracking_id: u64,
+    send_group_id: u64,
+    send_order: i64,
 ) -> nsresult {
     let id = if tracking_id == 0 {
         None
     } else {
         Some(tracking_id)
     };
-    match conn
-        .conn
-        .connect_udp_send_datagram(StreamId::from(session_id), data, id, Instant::now())
-    {
-        Ok(()) => NS_OK,
+    // The local neqo2 vendor doesn't yet support per-datagram send group/order
+    // prioritization; accept the params from the C++ side but don't forward
+    // them until neqo grows the corresponding API.
+    let _ = (send_group_id, send_order);
+    match conn.conn.connect_udp_send_datagram(
+        StreamId::from(session_id),
+        data,
+        id,
+        Instant::now(),
+    ) {
+        Ok(_) => NS_OK,
         Err(Http3Error::Transport(TransportError::TooMuchData)) => NS_ERROR_NOT_AVAILABLE,
         Err(_) => NS_ERROR_UNEXPECTED,
     }

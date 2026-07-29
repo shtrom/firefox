@@ -63,6 +63,7 @@ class WebTransportParent : public PWebTransportParent,
 
   ::mozilla::ipc::IPCResult RecvOutgoingDatagram(
       nsTArray<uint8_t>&& aData, const TimeStamp& aExpirationTime,
+      const uint64_t& aSendGroupId, const int64_t& aSendOrder,
       OutgoingDatagramResolver&& aResolver);
 
   ::mozilla::ipc::IPCResult RecvGetMaxDatagramSize(

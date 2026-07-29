@@ -61,10 +61,19 @@ class OutgoingDatagramStreamAlgorithms final
                                            UnderlyingSinkAlgorithmsWrapper)
 
   explicit OutgoingDatagramStreamAlgorithms(
-      WebTransportDatagramDuplexStream* aDatagrams)
-      : mDatagrams(aDatagrams) {}
+      WebTransportDatagramDuplexStream* aDatagrams,
+      WebTransportSendGroup* aSendGroup = nullptr, int64_t aSendOrder = 0)
+      : mDatagrams(aDatagrams),
+        mSendGroup(aSendGroup),
+        mSendOrder(aSendOrder) {}
 
   void SetChild(WebTransportChild* aChild);
+  WebTransportChild* GetChild() const { return mChild; }
+
+  void SetSendGroup(WebTransportSendGroup* aSendGroup) {
+    mSendGroup = aSendGroup;
+  }
+  void SetSendOrder(int64_t aSendOrder) { mSendOrder = aSendOrder; }
 
   // Streams algorithms
 
@@ -81,12 +90,17 @@ class OutgoingDatagramStreamAlgorithms final
   // only used for datagrams sent before Ready
   UniquePtr<DatagramEntry> mWaitConnect;
   RefPtr<Promise> mWaitConnectPromise;
+
+  // Send group and order for this writable stream (null/0 for default)
+  RefPtr<WebTransportSendGroup> mSendGroup;
+  int64_t mSendOrder;
 };
 
 class WebTransportDatagramDuplexStream final : public nsISupports,
                                                public nsWrapperCache {
   friend class IncomingDatagramStreamAlgorithms;
   friend class OutgoingDatagramStreamAlgorithms;
+  friend class WebTransportDatagramsWritable;
 
  public:
   WebTransportDatagramDuplexStream(nsIGlobalObject* aGlobal,
