@@ -522,7 +522,6 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
       ReportBrokenSite.REGISTER_CUSTOM_ELEMENTS_SCRIPT,
       {
         target: window,
-        async: true,
       }
     );
     ReportBrokenSite.#hasCustomElements.add(window);

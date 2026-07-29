@@ -116,7 +116,6 @@ export class IPProtectionPanel {
       IPProtectionPanel.CUSTOM_ELEMENTS_SCRIPT,
       {
         target: window,
-        async: true,
       }
     );
     hasCustomElements.add(window);
