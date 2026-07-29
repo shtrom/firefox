@@ -183,10 +183,12 @@ class BidiReceiveStream : public nsIWebTransportStreamCallback {
       std::function<
           void(uint64_t, WebTransportParent::OnResetOrStopSendingCallback&&,
                nsIWebTransportBidirectionalStream* aStream)>&& aStreamCallback,
-      Maybe<int64_t> aSendOrder, nsCOMPtr<nsISerialEventTarget>& aSocketThread)
+      int64_t aSendOrder, Maybe<uint64_t> aSendGroupId,
+      nsCOMPtr<nsISerialEventTarget>& aSocketThread)
       : mResolver(std::move(aResolver)),
         mStreamCallback(std::move(aStreamCallback)),
         mSendOrder(aSendOrder),
+        mSendGroupId(aSendGroupId),
         mSocketThread(aSocketThread) {}
 
  private:
@@ -196,7 +198,8 @@ class BidiReceiveStream : public nsIWebTransportStreamCallback {
                      WebTransportParent::OnResetOrStopSendingCallback&&,
                      nsIWebTransportBidirectionalStream* aStream)>
       mStreamCallback;
-  Maybe<int64_t> mSendOrder;
+  int64_t mSendOrder;
+  Maybe<uint64_t> mSendGroupId;
   nsCOMPtr<nsISerialEventTarget> mSocketThread;
 };
 
@@ -210,10 +213,12 @@ class UniReceiveStream : public nsIWebTransportStreamCallback {
       std::function<void(uint64_t,
                          WebTransportParent::OnResetOrStopSendingCallback&&,
                          nsIWebTransportSendStream* aStream)>&& aStreamCallback,
-      Maybe<int64_t> aSendOrder, nsCOMPtr<nsISerialEventTarget>& aSocketThread)
+      int64_t aSendOrder, Maybe<uint64_t> aSendGroupId,
+      nsCOMPtr<nsISerialEventTarget>& aSocketThread)
       : mResolver(std::move(aResolver)),
         mStreamCallback(std::move(aStreamCallback)),
         mSendOrder(aSendOrder),
+        mSendGroupId(aSendGroupId),
         mSocketThread(aSocketThread) {}
 
  private:
@@ -223,7 +228,8 @@ class UniReceiveStream : public nsIWebTransportStreamCallback {
                      WebTransportParent::OnResetOrStopSendingCallback&&,
                      nsIWebTransportSendStream* aStream)>
       mStreamCallback;
-  Maybe<int64_t> mSendOrder;
+  int64_t mSendOrder;
+  Maybe<uint64_t> mSendGroupId;
   nsCOMPtr<nsISerialEventTarget> mSocketThread;
 };
 
@@ -237,6 +243,9 @@ NS_IMETHODIMP BidiReceiveStream::OnBidirectionalStreamReady(
   MOZ_ASSERT(mSocketThread->IsOnCurrentThread());
 
   aStream->SetSendOrder(mSendOrder);
+  if (mSendGroupId.isSome() && mSendGroupId.value() != 0) {
+    aStream->SetSendGroup(mSendGroupId.value());
+  }
 
   RefPtr<mozilla::ipc::DataPipeSender> inputsender;
   RefPtr<mozilla::ipc::DataPipeReceiver> inputreceiver;
@@ -323,6 +332,9 @@ UniReceiveStream::OnUnidirectionalStreamReady(
   MOZ_ASSERT(mSocketThread->IsOnCurrentThread());
 
   aStream->SetSendOrder(mSendOrder);
+  if (mSendGroupId.isSome() && mSendGroupId.value() != 0) {
+    aStream->SetSendGroup(mSendGroupId.value());
+  }
 
   RefPtr<::mozilla::ipc::DataPipeSender> sender;
   RefPtr<::mozilla::ipc::DataPipeReceiver> receiver;
@@ -394,17 +406,24 @@ JS_HAZ_CAN_RUN_SCRIPT NS_IMETHODIMP BidiReceiveStream::OnError(uint8_t aError) {
 }
 
 IPCResult WebTransportParent::RecvSetSendOrder(uint64_t aStreamId,
-                                               Maybe<int64_t> aSendOrder) {
-  if (aSendOrder) {
-    LOG(("Set sendOrder=%" PRIi64 " for streamId %" PRIu64, aSendOrder.value(),
-         aStreamId));
-  } else {
-    LOG(("Set sendOrder=null for streamId %" PRIu64, aStreamId));
-  }
+                                               int64_t aSendOrder) {
+  LOG(("Set sendOrder=%" PRIi64 " for streamId %" PRIu64, aSendOrder,
+       aStreamId));
   if (auto entry = mUniStreamCallbackMap.Lookup(aStreamId)) {
     entry->mStream->SetSendOrder(aSendOrder);
   } else if (auto entry = mBidiStreamCallbackMap.Lookup(aStreamId)) {
     entry->mStream->SetSendOrder(aSendOrder);
+  }
+  return IPC_OK();
+}
+
+IPCResult WebTransportParent::RecvSetSendGroup(uint64_t aStreamId,
+                                               uint64_t aGroupId) {
+  LOG(("Set sendGroup=%" PRIu64 " for streamId %" PRIu64, aGroupId, aStreamId));
+  if (auto entry = mUniStreamCallbackMap.Lookup(aStreamId)) {
+    entry->mStream->SetSendGroup(aGroupId);
+  } else if (auto entry = mBidiStreamCallbackMap.Lookup(aStreamId)) {
+    entry->mStream->SetSendGroup(aGroupId);
   }
   return IPC_OK();
 }
@@ -458,10 +477,11 @@ IPCResult WebTransportParent::RecvCreateSendGroup(uint64_t aGroupId) {
 }
 
 IPCResult WebTransportParent::RecvCreateUnidirectionalStream(
-    Maybe<int64_t> aSendOrder, CreateUnidirectionalStreamResolver&& aResolver) {
-  LOG(("%s for %p received, useSendOrder=%d, sendOrder=%" PRIi64, __func__,
-       this, aSendOrder.isSome(),
-       aSendOrder.isSome() ? aSendOrder.value() : 0));
+    int64_t aSendOrder, Maybe<uint64_t> aSendGroupId,
+    CreateUnidirectionalStreamResolver&& aResolver) {
+  LOG(("%s for %p received, sendOrder=%" PRIi64 ", sendGroupId=%" PRIu64,
+       __func__, this, aSendOrder,
+       aSendGroupId.isSome() ? aSendGroupId.value() : 0));
 
   auto streamCb =
       [self = RefPtr{this}](
@@ -472,8 +492,9 @@ IPCResult WebTransportParent::RecvCreateUnidirectionalStream(
             aStreamId, StreamHash<nsIWebTransportSendStream>{
                            std::move(aCallback), aStream});
       };
-  RefPtr<UniReceiveStream> callback = new UniReceiveStream(
-      std::move(aResolver), std::move(streamCb), aSendOrder, mSocketThread);
+  RefPtr<UniReceiveStream> callback =
+      new UniReceiveStream(std::move(aResolver), std::move(streamCb),
+                           aSendOrder, aSendGroupId, mSocketThread);
   nsresult rv;
   rv = mWebTransport->CreateOutgoingUnidirectionalStream(callback);
   if (NS_FAILED(rv)) {
@@ -483,10 +504,11 @@ IPCResult WebTransportParent::RecvCreateUnidirectionalStream(
 }
 
 IPCResult WebTransportParent::RecvCreateBidirectionalStream(
-    Maybe<int64_t> aSendOrder, CreateBidirectionalStreamResolver&& aResolver) {
-  LOG(("%s for %p received, useSendOrder=%d, sendOrder=%" PRIi64, __func__,
-       this, aSendOrder.isSome(),
-       aSendOrder.isSome() ? aSendOrder.value() : 0));
+    int64_t aSendOrder, Maybe<uint64_t> aSendGroupId,
+    CreateBidirectionalStreamResolver&& aResolver) {
+  LOG(("%s for %p received, sendOrder=%" PRIi64 ", sendGroupId=%" PRIu64,
+       __func__, this, aSendOrder,
+       aSendGroupId.isSome() ? aSendGroupId.value() : 0));
 
   auto streamCb =
       [self = RefPtr{this}](
@@ -497,8 +519,9 @@ IPCResult WebTransportParent::RecvCreateBidirectionalStream(
             aStreamId, StreamHash<nsIWebTransportBidirectionalStream>{
                            std::move(aCallback), aStream});
       };
-  RefPtr<BidiReceiveStream> callback = new BidiReceiveStream(
-      std::move(aResolver), std::move(streamCb), aSendOrder, mSocketThread);
+  RefPtr<BidiReceiveStream> callback =
+      new BidiReceiveStream(std::move(aResolver), std::move(streamCb),
+                            aSendOrder, aSendGroupId, mSocketThread);
   nsresult rv;
   rv = mWebTransport->CreateOutgoingBidirectionalStream(callback);
   if (NS_FAILED(rv)) {

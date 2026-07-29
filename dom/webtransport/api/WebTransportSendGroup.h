@@ -28,6 +28,8 @@ class WebTransportSendGroup final : public nsISupports, public nsWrapperCache {
 
   nsIGlobalObject* GetParentObject() const { return mGlobal; }
 
+  WebTransport* GetTransport() const { return mWebTransport; }
+
   void SetGroupId(uint64_t aGroupId) { mGroupId = aGroupId; }
   uint64_t GetGroupId() const { return mGroupId; }
 
