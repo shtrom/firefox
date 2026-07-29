@@ -30,6 +30,7 @@
 #include "mozilla/dom/ContentProcessManager.h"
 #include "mozilla/dom/Element.h"
 #include "mozilla/dom/ParentProcessChannelHandle.h"
+#include "mozilla/dom/PrefetchLog.h"
 #include "mozilla/dom/ProcessIsolation.h"
 #include "mozilla/dom/ReferrerInfo.h"
 #include "mozilla/dom/RemoteWebProgressRequest.h"
@@ -42,6 +43,7 @@
 #include "mozilla/net/ChannelClassifierUtils.h"
 #include "mozilla/net/CookieJarSettings.h"
 #include "mozilla/net/HttpChannelParent.h"
+#include "mozilla/net/PrefetchCookieCopier.h"
 #include "mozilla/net/RedirectChannelRegistrar.h"
 #include "nsContentSecurityManager.h"
 #include "nsContentSecurityUtils.h"
@@ -54,6 +56,7 @@
 #include "nsExternalHelperAppService.h"
 #include "nsHttpChannel.h"
 #include "nsIBrowser.h"
+#include "nsICachingChannel.h"
 #include "nsIClassifiedChannel.h"
 #include "nsIHttpChannelInternal.h"
 #include "nsINetworkInterceptController.h"
@@ -568,6 +571,69 @@ WindowGlobalParent* DocumentLoadListener::GetParentWindowContext() const {
   return mParentWindowContext;
 }
 
+void DocumentLoadListener::TryActivateFromPrefetch(nsIURI* aURI) {
+  // Approximates "create navigation params from a prefetch record" by
+  // reusing the prefetch's HTTP cache entry instead of literally
+  // reconstructing navigation params from record's stored response (the
+  // spec's redirect-chain/COOP/policy-container bookkeeping is left to the
+  // normal channel machinery, since M1 only supports same-origin prefetch).
+  // Spec:
+  // https://wicg.github.io/nav-speculation/prefetch.html#create-navigation-params-from-a-prefetch-record
+  MOZ_ASSERT(mIsDocumentLoad);
+
+  // Open() is the only place a navigation channel gets created (OpenDocument,
+  // OpenObject, and OpenInParent, including LoadInParent and
+  // SpeculativeLoadInParent, all funnel into it), so this is the only call
+  // site TryActivateFromPrefetch needs.
+  auto* documentContext = GetDocumentBrowsingContext();
+  if (!documentContext) {
+    return;
+  }
+
+  // source WGP = the document that currently occupies the BC being navigated.
+  // For browser-initiated navigation (address bar), this is null.
+  auto* sourceWGP = documentContext->GetCurrentWindowGlobal();
+  if (!sourceWGP) {
+    return;
+  }
+
+  dom::PrefetchRecordParent* rec = sourceWGP->FindMatchingPrefetchRecord(aURI);
+  if (!rec) {
+    return;
+  }
+
+  LOG_SPECRULES(
+      ("DocumentLoadListener::TryActivateFromPrefetch: [%p] found rec=%p "
+       "for url=%s",
+       this, rec, aURI->GetSpecOrDefault().get()));
+
+  // "Copy prefetch cookies": copy cookies from the isolated partition to the
+  // destination partition.
+  // Spec:
+  // https://wicg.github.io/nav-speculation/prefetch.html#copy-prefetch-cookies
+  // No-op for same-origin (M1): isolated key == document partition.
+  net::CopyPrefetchCookies(
+      rec->IsolatedPartitionKey(),
+      sourceWGP->DocumentPrincipal()->OriginAttributesRef());
+
+  // Force the channel to read from the prefetch cache entry instead of
+  // hitting the network again. For M1 same-origin, the channel's URL and
+  // partition match the prefetch entry, so LOAD_ONLY_FROM_CACHE will find it
+  // without replacement.
+  //
+  // Known gap (bug 2054892): if the cache entry is missing or has been
+  // evicted by the time this channel opens, LOAD_ONLY_FROM_CACHE makes the
+  // channel fail with NS_ERROR_DOCUMENT_NOT_CACHED instead of falling back
+  // to a normal network fetch, so the whole document load fails. Follow-up
+  // fix: on that error, mark rec canceled and restart the navigation, the
+  // same way MaybeHandleLoadErrorWithURIFixup() does for URI fixup.
+  nsLoadFlags loadFlags = 0;
+  mChannel->GetLoadFlags(&loadFlags);
+  DebugOnly<nsresult> rv = mChannel->SetLoadFlags(
+      loadFlags | nsICachingChannel::LOAD_ONLY_FROM_CACHE);
+  MOZ_ASSERT(NS_SUCCEEDED(rv));
+}
+
 bool CheckRecursiveLoad(CanonicalBrowsingContext* aLoadingContext,
                         nsDocShellLoadState* aLoadState, bool aIsDocumentLoad) {
   if (!aLoadState->ShouldCheckForRecursion()) {
@@ -978,6 +1044,17 @@ auto DocumentLoadListener::Open(nsDocShellLoadState* aLoadState,
                                         loadingContext, aLoadState->TypeHint(),
                                         mIsDocumentLoad);
   openInfo->Prepare();
+
+  // Check for a matching completed speculation rules prefetch; see
+  // TryActivateFromPrefetch. Only for document (navigational) loads; skipped
+  // for <object>/<embed>. Runs on all platforms before AsyncOpen.
+  if (mIsDocumentLoad) {
+    nsCOMPtr<nsIURI> channelURI;
+    if (NS_SUCCEEDED(mChannel->GetURI(getter_AddRefs(channelURI))) &&
+        channelURI) {
+      TryActivateFromPrefetch(channelURI);
+    }
+  }
 
 #ifdef ANDROID
   RefPtr<MozPromise<bool, bool, false>> promise;
