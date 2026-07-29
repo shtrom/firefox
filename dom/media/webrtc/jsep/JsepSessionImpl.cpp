@@ -1497,10 +1497,7 @@ JsepSession::Result JsepSessionImpl::ParseSdp(const std::string& sdp,
 
     if (mediaAttrs.HasAttribute(SdpAttribute::kMidAttribute) &&
         mediaAttrs.GetMid().length() > 16) {
-      JSEP_SET_ERROR(
-          "Invalid description, mid length greater than 16 "
-          "unsupported until 2-byte rtp header extensions are "
-          "supported in webrtc.org");
+      JSEP_SET_ERROR("Invalid description, mid length greater than 16");
       return Result(dom::PCError::OperationError);
     }
 
@@ -1509,11 +1506,10 @@ JsepSession::Result JsepSessionImpl::ParseSdp(const std::string& sdp,
       for (const auto& ext : mediaAttrs.GetExtmap().mExtmaps) {
         uint16_t id = ext.entry;
 
-        if (id < 1 || id > 14) {
+        if (id < 1 || id > 255) {
           JSEP_SET_ERROR("Description contains invalid extension id "
                          << id << " on level " << i
-                         << " which is unsupported until 2-byte rtp"
-                            " header extensions are supported in webrtc.org");
+                         << " (valid range is 1-255)");
           return Result(dom::PCError::OperationError);
         }
 
