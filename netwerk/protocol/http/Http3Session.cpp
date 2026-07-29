@@ -3156,6 +3156,11 @@ nsresult Http3Session::ExportWebTransportKeyingMaterial(
       aSessionId, aLabel, aContext, aKeyingMaterial);
 }
 
+nsresult Http3Session::RegisterWebTransportSendGroup(uint64_t aSessionId,
+                                                     uint64_t aGroupId) {
+  return mHttp3Connection->RegisterWebTransportSendGroup(aSessionId, aGroupId);
+}
+
 void Http3Session::SendHTTPDatagram(uint64_t aStreamId,
                                     nsTArray<uint8_t>& aData,
                                     uint64_t aTrackingId) {

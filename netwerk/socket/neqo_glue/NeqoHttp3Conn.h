@@ -204,6 +204,11 @@ class NeqoHttp3Conn final {
     return neqo_http3conn_webtransport_set_sendorder(this, aSessionId,
                                                      aSendOrder.ptrOr(nullptr));
   }
+  nsresult RegisterWebTransportSendGroup(uint64_t aSessionId,
+                                         uint64_t aGroupId) {
+    return neqo_http3conn_webtransport_register_send_group(this, aSessionId,
+                                                           aGroupId);
+  }
 
   nsresult ExportWebTransportKeyingMaterial(
       uint64_t aSessionId, const nsTArray<uint8_t>& aLabel,

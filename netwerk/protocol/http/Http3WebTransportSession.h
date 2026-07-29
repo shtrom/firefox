@@ -119,6 +119,7 @@ class Http3WebTransportSession final : public WebTransportSessionBase,
                                 const nsTArray<uint8_t>& aContext,
                                 nsTArray<uint8_t>& aKeyingMaterial) override;
 
+  nsresult RegisterSendGroup(uint64_t aGroupId) override;
   void OnOutgoingDatagramOutCome(
       uint64_t aId, WebTransportSessionEventListener::DatagramOutcome aOutCome);
 

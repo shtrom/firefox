@@ -441,6 +441,21 @@ IPCResult WebTransportParent::RecvExportKeyingMaterial(
   return IPC_OK();
 }
 
+IPCResult WebTransportParent::RecvCreateSendGroup(uint64_t aGroupId) {
+  LOG(("%s for %p received, groupId=%" PRIu64, __func__, this, aGroupId));
+  MOZ_ASSERT(mSocketThread->IsOnCurrentThread());
+
+  if (mWebTransport) {
+    nsresult rv = mWebTransport->RegisterSendGroup(aGroupId);
+    if (NS_FAILED(rv)) {
+      LOG(("RegisterSendGroup failed: %x", static_cast<uint32_t>(rv)));
+    }
+  } else {
+    LOG(("CreateSendGroup called with null mWebTransport"));
+  }
+  return IPC_OK();
+}
+
 IPCResult WebTransportParent::RecvCreateUnidirectionalStream(
     Maybe<int64_t> aSendOrder, CreateUnidirectionalStreamResolver&& aResolver) {
   LOG(("%s for %p received, useSendOrder=%d, sendOrder=%" PRIi64, __func__,

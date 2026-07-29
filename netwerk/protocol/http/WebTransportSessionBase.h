@@ -34,6 +34,7 @@ class WebTransportSessionBase {
                                         nsTArray<uint8_t>& aKeyingMaterial) = 0;
   virtual void SendDatagram(nsTArray<uint8_t>&& aData,
                             uint64_t aTrackingId) = 0;
+  virtual nsresult RegisterSendGroup(uint64_t aGroupId) = 0;
   virtual void CreateOutgoingBidirectionalStream(
       std::function<void(Result<RefPtr<WebTransportStreamBase>, nsresult>&&)>&&
           aCallback) = 0;

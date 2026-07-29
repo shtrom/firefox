@@ -222,6 +222,24 @@ WebTransportSessionProxy::RetargetTo(nsIEventTarget* aTarget) {
 }
 
 NS_IMETHODIMP
+WebTransportSessionProxy::RegisterSendGroup(uint64_t aGroupId) {
+  MOZ_ASSERT(OnSocketThread(), "not on socket thread");
+
+  RefPtr<WebTransportSessionBase> session;
+  {
+    MutexAutoLock lock(mMutex);
+    session = mWebTransportSession;
+  }
+
+  if (!session) {
+    return NS_ERROR_NOT_AVAILABLE;
+  }
+
+  LOG(("RegisterSendGroup with ID: %" PRIu64, aGroupId));
+  return session->RegisterSendGroup(aGroupId);
+}
+
+NS_IMETHODIMP
 WebTransportSessionProxy::GetStats() { return NS_ERROR_NOT_IMPLEMENTED; }
 NS_IMETHODIMP
 WebTransportSessionProxy::ExportKeyingMaterial(

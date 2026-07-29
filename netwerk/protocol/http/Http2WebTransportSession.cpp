@@ -83,6 +83,11 @@ nsresult Http2WebTransportSessionImpl::ExportKeyingMaterial(
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+nsresult Http2WebTransportSessionImpl::RegisterSendGroup(uint64_t aGroupId) {
+  // HTTP/2 WebTransport doesn't support send group scheduling.
+  return NS_OK;
+}
+
 void Http2WebTransportSessionImpl::SendDatagram(nsTArray<uint8_t>&& aData,
                                                 uint64_t aTrackingId) {
   LOG(("Http2WebTransportSession::SendDatagram %p", this));

@@ -525,6 +525,14 @@ nsresult Http3WebTransportSession::ExportKeyingMaterial(
                                                     aKeyingMaterial);
 }
 
+nsresult Http3WebTransportSession::RegisterSendGroup(uint64_t aGroupId) {
+  MOZ_ASSERT(OnSocketThread(), "not on socket thread");
+  if (mRecvState != ACTIVE) {
+    return NS_ERROR_NOT_AVAILABLE;
+  }
+  return mSession->RegisterWebTransportSendGroup(mStreamId, aGroupId);
+}
+
 void Http3WebTransportSession::OnOutgoingDatagramOutCome(
     uint64_t aId, WebTransportSessionEventListener::DatagramOutcome aOutCome) {
   MOZ_ASSERT(OnSocketThread(), "not on socket thread");

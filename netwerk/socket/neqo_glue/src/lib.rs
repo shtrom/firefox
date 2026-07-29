@@ -10,6 +10,7 @@ use std::{
     borrow::Cow,
     cell::RefCell,
     cmp::min,
+    collections::HashMap,
     ffi::c_void,
     io,
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
@@ -38,9 +39,9 @@ use neqo_http3::{
     Http3ClientEvent, Http3Parameters, Http3State, Priority, WebTransportEvent,
 };
 use neqo_transport::{
-    stream_id::StreamType, CongestionControl, Connection, ConnectionParameters,
-    Error as TransportError, HyStartCssBaseline, Output, OutputBatch, RandomConnectionIdGenerator,
-    SlowStart, StreamId, Version,
+    stream_id::StreamType, streams::SendGroupId, CongestionControl, Connection,
+    ConnectionParameters, Error as TransportError, HyStartCssBaseline, Output, OutputBatch,
+    RandomConnectionIdGenerator, SlowStart, StreamId, Version,
 };
 use nserror::{
     nsresult, NS_BASE_STREAM_WOULD_BLOCK, NS_ERROR_CONNECTION_REFUSED,
@@ -138,6 +139,9 @@ pub struct NeqoHttp3Conn {
     datagram_segments_sent: LocalCustomDistribution<'static>,
     datagram_segments_received: LocalCustomDistribution<'static>,
     would_block_counter: WouldBlockCounter,
+    /// Maps the child-minted WebTransport send-group id (assigned synchronously in the
+    /// content process) to the neqo-minted [`SendGroupId`].
+    webtransport_send_groups: HashMap<u64, SendGroupId>,
 }
 
 impl Drop for NeqoHttp3Conn {
@@ -609,6 +613,7 @@ impl NeqoHttp3Conn {
                 .start_buffer(),
             buffered_outbound_datagram: None,
             would_block_counter: WouldBlockCounter::new(),
+            webtransport_send_groups: HashMap::new(),
         }));
         unsafe { RefPtr::from_raw(conn).ok_or(NS_ERROR_NOT_CONNECTED) }
     }
@@ -2722,17 +2727,18 @@ pub unsafe extern "C" fn neqo_http3conn_webtransport_set_sendorder(
     }
 }
 #[no_mangle]
-pub extern "C" fn neqo_http3conn_webtransport_create_send_group(
+pub extern "C" fn neqo_http3conn_webtransport_register_send_group(
     conn: &mut NeqoHttp3Conn,
     session_id: u64,
-    group_id: &mut u64,
+    group_id: u64,
 ) -> nsresult {
+    // neqo allocates the send-group id; map the child's provisional id to it.
     match conn
         .conn
         .webtransport_create_send_group(StreamId::from(session_id))
     {
-        Ok(id) => {
-            *group_id = id.as_u64();
+        Ok(neqo_id) => {
+            conn.webtransport_send_groups.insert(group_id, neqo_id);
             NS_OK
         }
         Err(_) => NS_ERROR_UNEXPECTED,

@@ -83,6 +83,9 @@ interface nsIWebTransport : nsISupports {
 
   uint64_t getHttpChannelID();
 
+  // Register a send group with a caller-provided ID.
+  void registerSendGroup(in uint64_t groupId);
+
   // This can be only called after onSessionReady().
   // After this point, we can retarget the underlying WebTransportSessionProxy
   // object off main thread.
