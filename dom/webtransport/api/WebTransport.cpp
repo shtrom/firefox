@@ -887,12 +887,20 @@ already_AddRefed<Promise> WebTransport::CreateBidirectionalStreamInternal(
     return nullptr;
   }
 
+  // Step 2.5: Let sendGroup be options's sendGroup. If sendGroup is not null,
+  // and sendGroup.[[Transport]] is not this.[[Transport]], throw an
+  // InvalidStateError.
+  if (aSendGroup && aSendGroup->GetTransport() != this) {
+    aRv.ThrowInvalidStateError("sendGroup belongs to a different WebTransport");
+    return nullptr;
+  }
+
   // Step 3: Let sendOrder be options's sendOrder
   RefPtr<WebTransportSendGroup> sendGroup = aSendGroup;
   int64_t sendOrder = aSendOrder;
   // Step 4: Let p be a new promise.
   // Step 5: Run the following steps in parallel, but abort them whenever
-  // transport’s [[State]] becomes "closed" or "failed", and instead queue
+  // transport's [[State]] becomes "closed" or "failed", and instead queue
   // a network task with transport to reject p with an InvalidStateError.
 
   // Ask the parent to create the stream and send us the DataPipeSender/Receiver
@@ -959,7 +967,7 @@ already_AddRefed<Promise> WebTransport::CreateUnidirectionalStreamInternal(
     WebTransportSendGroup* aSendGroup, int64_t aSendOrder, ErrorResult& aRv) {
   LOG(("CreateUnidirectionalStreamInternal() called"));
   // https://w3c.github.io/webtransport/#dom-webtransport-createunidirectionalstream
-  // Step 2: If transport.[[State]] is "closed" or "failed", return a new
+  // Step 1: If transport.[[State]] is "closed" or "failed", return a new
   // rejected promise with an InvalidStateError.
   if (mState == WebTransportState::CLOSED ||
       mState == WebTransportState::FAILED || !mChild) {
@@ -967,7 +975,15 @@ already_AddRefed<Promise> WebTransport::CreateUnidirectionalStreamInternal(
     return nullptr;
   }
 
-  // Step 3: Let sendOrder be options's sendOrder
+  // Step 2: Let sendGroup be options's sendGroup.
+  // Step 3: If sendGroup is not null, and sendGroup.[[Transport]] is not
+  // this.[[Transport]], throw an InvalidStateError.
+  if (aSendGroup && aSendGroup->GetTransport() != this) {
+    aRv.ThrowInvalidStateError("sendGroup belongs to a different WebTransport");
+    return nullptr;
+  }
+
+  // Step 4: Let sendOrder be options's sendOrder
   RefPtr<WebTransportSendGroup> sendGroup = aSendGroup;
   int64_t sendOrder = aSendOrder;
 
@@ -975,7 +991,7 @@ already_AddRefed<Promise> WebTransport::CreateUnidirectionalStreamInternal(
   RefPtr<Promise> promise = Promise::CreateInfallible(GetParentObject());
 
   // Step 5: Run the following steps in parallel, but abort them whenever
-  // transport’s [[State]] becomes "closed" or "failed", and instead queue
+  // transport's[[State]] becomes "closed" or "failed", and instead queue
   // a network task with transport to reject p with an InvalidStateError.
 
   // Ask the parent to create the stream and send us the DataPipeSender
