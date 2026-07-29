@@ -473,6 +473,7 @@ dependencies = [
  "lazy_static",
  "libsqlite3-sys",
  "nss-as",
+ "parking_lot",
  "rusqlite 0.37.0",
  "serde",
  "serde_derive",
