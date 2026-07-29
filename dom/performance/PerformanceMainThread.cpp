@@ -597,10 +597,6 @@ void PerformanceMainThread::CreateNavigationTimingEntry() {
   }
 
   mDocEntry = new PerformanceNavigationTiming(std::move(timing), this, name);
-
-  if (mDOMTiming && mDOMTiming->WasActivatedFromNavigationalPrefetch()) {
-    mDocEntry->SetDeliveryType(u"navigational-prefetch"_ns);
-  }
 }
 
 void PerformanceMainThread::UpdateNavigationTimingEntry() {

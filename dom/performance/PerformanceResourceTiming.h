@@ -174,13 +174,6 @@ class PerformanceResourceTiming : public PerformanceEntry {
     return 0;
   }
 
-  void GetDeliveryType(nsAString& aDeliveryType) const {
-    aDeliveryType = mDeliveryType;
-  }
-  void SetDeliveryType(const nsAString& aDeliveryType) {
-    mDeliveryType = aDeliveryType;
-  }
-
   void GetContentType(nsAString& aContentType,
                       nsIPrincipal& aSubjectPrincipal) const {
     if (BodyInfoAccessAllowedForCaller(aSubjectPrincipal) ==
@@ -214,7 +207,6 @@ class PerformanceResourceTiming : public PerformanceEntry {
                                bool aEnsureSameOriginAndIgnoreTAO) const;
 
   nsString mInitiatorType;
-  nsString mDeliveryType;
   const UniquePtr<PerformanceTimingData> mTimingData;  // always non-null
   RefPtr<Performance> mPerformance;
 
