@@ -249,7 +249,7 @@ void IncomingDatagramStreamAlgorithms::NotifyDatagramAvailable() {
 
 NS_IMPL_CYCLE_COLLECTION_INHERITED(OutgoingDatagramStreamAlgorithms,
                                    UnderlyingSinkAlgorithmsWrapper, mDatagrams,
-                                   mWaitConnectPromise)
+                                   mSendGroup, mWaitConnectPromise)
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(OutgoingDatagramStreamAlgorithms)
 NS_INTERFACE_MAP_END_INHERITING(UnderlyingSinkAlgorithmsWrapper)
@@ -297,8 +297,9 @@ already_AddRefed<Promise> OutgoingDatagramStreamAlgorithms::WriteCallbackImpl(
     // The OutgoingDatagramsQueue lives there, and steps 6-9 generally are
     // implemented there
     LOG(("Sending Datagram, size = %zu", data.Length()));
+    uint64_t sendGroupId = mSendGroup ? mSendGroup->GetGroupId() : 0;
     mChild->SendOutgoingDatagram(
-        std::move(data), now,
+        std::move(data), now, sendGroupId, mSendOrder,
         [promise](nsresult&&) {
           // XXX result
           LOG(("Datagram was sent"));
@@ -330,9 +331,13 @@ void OutgoingDatagramStreamAlgorithms::SetChild(WebTransportChild* aChild) {
   LOG(("Setting child in datagrams"));
   mChild = aChild;
   if (mWaitConnect) {
-    LOG(("Sending queued datagram"));
+    uint64_t sendGroupId = mSendGroup ? mSendGroup->GetGroupId() : 0;
+    LOG(("Sending queued datagram sendGroup = %" PRIu64
+         ", sendOrder = %" PRId64,
+         sendGroupId, mSendOrder));
     mChild->SendOutgoingDatagram(
-        mWaitConnect->mBuffer, mWaitConnect->mTimeStamp,
+        mWaitConnect->mBuffer, mWaitConnect->mTimeStamp, sendGroupId,
+        mSendOrder,
         [promise = mWaitConnectPromise](nsresult&&) {
           LOG_VERBOSE(("Early Datagram was sent"));
           promise->MaybeResolveWithUndefined();

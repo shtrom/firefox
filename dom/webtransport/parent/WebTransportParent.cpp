@@ -838,8 +838,11 @@ WebTransportParent::OnIncomingBidirectionalStreamAvailable(
 // WebTransportSessionProxy::SendDatagram
 ::mozilla::ipc::IPCResult WebTransportParent::RecvOutgoingDatagram(
     nsTArray<uint8_t>&& aData, const TimeStamp& aExpirationTime,
+    const uint64_t& aSendGroupId, const int64_t& aSendOrder,
     OutgoingDatagramResolver&& aResolver) {
-  LOG(("WebTransportParent sending datagram"));
+  LOG(("WebTransportParent sending datagram, sendGroup=%" PRIu64
+       ", sendOrder=%" PRId64,
+       aSendGroupId, aSendOrder));
   MOZ_ASSERT(mSocketThread->IsOnCurrentThread());
   MOZ_ASSERT(mWebTransport);
 
@@ -858,7 +861,8 @@ WebTransportParent::OnIncomingBidirectionalStreamAvailable(
   static uint64_t sDatagramId = 1;
   LOG_VERBOSE(("Sending datagram %" PRIu64 ", length %zu", sDatagramId,
                aData.Length()));
-  (void)mWebTransport->SendDatagram(aData, sDatagramId++);
+  (void)mWebTransport->SendDatagram(aData, sDatagramId++, aSendGroupId,
+                                    aSendOrder);
 
   return IPC_OK();
 }

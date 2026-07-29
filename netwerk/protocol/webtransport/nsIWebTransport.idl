@@ -78,7 +78,8 @@ interface nsIWebTransport : nsISupports {
   void createOutgoingBidirectionalStream(in nsIWebTransportStreamCallback aListener);
   void createOutgoingUnidirectionalStream(in nsIWebTransportStreamCallback aListener);
 
-  void sendDatagram(in Array<uint8_t> aData, in uint64_t aTrackingId);
+  void sendDatagram(in Array<uint8_t> aData, in uint64_t aTrackingId,
+                    in uint64_t aSendGroupId, in int64_t aSendOrder);
 
   void getMaxDatagramSize();
 

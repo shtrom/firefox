@@ -109,7 +109,8 @@ class Http3WebTransportSession final : public WebTransportSessionBase,
   already_AddRefed<Http3WebTransportStream> OnIncomingWebTransportStream(
       WebTransportStreamType aType, uint64_t aId);
 
-  void SendDatagram(nsTArray<uint8_t>&& aData, uint64_t aTrackingId) override;
+  void SendDatagram(nsTArray<uint8_t>&& aData, uint64_t aTrackingId,
+                    uint64_t aSendGroupId, int64_t aSendOrder) override;
 
   void OnDatagramReceived(nsTArray<uint8_t>&& aData) override;
 

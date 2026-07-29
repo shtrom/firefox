@@ -3115,10 +3115,10 @@ nsresult Http3Session::CreateWebTransportStream(
 }
 
 void Http3Session::SendDatagram(Http3WebTransportSession* aSession,
-                                nsTArray<uint8_t>& aData,
-                                uint64_t aTrackingId) {
-  nsresult rv = mHttp3Connection->WebTransportSendDatagram(aSession->StreamId(),
-                                                           aData, aTrackingId);
+                                nsTArray<uint8_t>& aData, uint64_t aTrackingId,
+                                uint64_t aSendGroupId, int64_t aSendOrder) {
+  nsresult rv = mHttp3Connection->WebTransportSendDatagram(
+      aSession->StreamId(), aData, aTrackingId, aSendGroupId, aSendOrder);
   LOG(("Http3Session::SendDatagram %p res=%" PRIx32, this,
        static_cast<uint32_t>(rv)));
   if (!aTrackingId) {
@@ -3171,7 +3171,10 @@ void Http3Session::SendHTTPDatagram(uint64_t aStreamId,
                                     uint64_t aTrackingId) {
   LOG(("Http3Session::SendHTTPDatagram %p length=%zu aTrackingId=%" PRIx64,
        this, aData.Length(), aTrackingId));
-  (void)mHttp3Connection->ConnectUdpSendDatagram(aStreamId, aData, aTrackingId);
+  // Connect-UDP (MASQUE) doesn't use WebTransport send groups or send order,
+  // so pass 0 for both (0 = null sendGroup, 0 = default sendOrder).
+  (void)mHttp3Connection->ConnectUdpSendDatagram(aStreamId, aData, aTrackingId,
+                                                 0, 0);
 }
 
 void Http3Session::SetSendOrder(Http3StreamBase* aStream, int64_t aSendOrder) {

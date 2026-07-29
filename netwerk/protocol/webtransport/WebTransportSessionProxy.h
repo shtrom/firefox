@@ -171,7 +171,8 @@ class WebTransportSessionProxy final
   void DoCreateStream(WebTransportStreamCallbackWrapper* aCallback,
                       WebTransportSessionBase* aSession, bool aBidi);
   void SendDatagramInternal(const RefPtr<WebTransportSessionBase>& aSession,
-                            nsTArray<uint8_t>&& aData, uint64_t aTrackingId);
+                            nsTArray<uint8_t>&& aData, uint64_t aTrackingId,
+                            uint64_t aSendGroupId, int64_t aSendOrder);
   void NotifyDatagramReceived(nsTArray<uint8_t>&& aData);
   void GetMaxDatagramSizeInternal(
       const RefPtr<WebTransportSessionBase>& aSession);

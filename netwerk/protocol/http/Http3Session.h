@@ -151,7 +151,8 @@ class Http3SessionBase {
   virtual nsresult CloseWebTransport(uint64_t aSessionId, uint32_t aError,
                                      const nsACString& aMessage) = 0;
   virtual void SendDatagram(Http3WebTransportSession* aSession,
-                            nsTArray<uint8_t>& aData, uint64_t aTrackingId) = 0;
+                            nsTArray<uint8_t>& aData, uint64_t aTrackingId,
+                            uint64_t aSendGroupId, int64_t aSendOrder) = 0;
   virtual uint64_t MaxDatagramSize(uint64_t aSessionId) = 0;
   virtual nsresult ExportWebTransportKeyingMaterial(
       uint64_t aSessionId, const nsTArray<uint8_t>& aLabel,
@@ -291,7 +292,8 @@ class Http3Session final : public Http3SessionBase,
                          uint8_t aErrorCode) override;
 
   void SendDatagram(Http3WebTransportSession* aSession,
-                    nsTArray<uint8_t>& aData, uint64_t aTrackingId) override;
+                    nsTArray<uint8_t>& aData, uint64_t aTrackingId,
+                    uint64_t aSendGroupId, int64_t aSendOrder) override;
   void SendHTTPDatagram(uint64_t aStreamId, nsTArray<uint8_t>& aData,
                         uint64_t aTrackingId) override;
 
