@@ -27,6 +27,7 @@
 #include "nsIURL.h"
 #include "nsIWebTransportStream.h"
 #include "nsPIDOMWindowInlines.h"
+#include "nsTHashSet.h"
 #include "nsThreadUtils.h"
 #include "nsUTF8Utils.h"
 
@@ -253,9 +254,48 @@ void WebTransport::Init(const GlobalObject& aGlobal, const nsAString& aURL,
   // Set this to 'default' until we add congestion control setting
 
   // Step 11.5: Let protocols be options's protocols if it exists, and null
-  // otherwise. The list is plumbed through to the network layer; validation
-  // and population happen in a later step.
+  // otherwise.
   nsTArray<nsString> protocols;
+  if (aOptions.mProtocols.Length() != 0) {
+    const auto& protocolSeq = aOptions.mProtocols;
+    protocols.SetCapacity(protocolSeq.Length());
+
+    // Validate protocols per spec
+    nsTHashSet<nsString> seen;
+    for (const auto& protocol : protocolSeq) {
+      // Check for empty string
+      if (protocol.IsEmpty()) {
+        aError.ThrowSyntaxError("Protocol cannot be empty string");
+        return;
+      }
+
+      // Protocol strings are serialized as SF strings (RFC 8941), which only
+      // allow printable ASCII (0x20-0x7E). Reject anything outside that range.
+      for (size_t i = 0; i < protocol.Length(); i++) {
+        char16_t c = protocol[i];
+        if (c < 0x20 || c > 0x7E) {
+          aError.ThrowSyntaxError(
+              "Protocol contains characters not allowed in HTTP header fields");
+          return;
+        }
+      }
+
+      // Check for maximum length (512 bytes)
+      if (protocol.Length() > 512) {
+        aError.ThrowSyntaxError("Protocol name too long (max 512 bytes)");
+        return;
+      }
+
+      // Check for duplicates
+      if (seen.Contains(protocol)) {
+        aError.ThrowSyntaxError("Duplicate protocol in list");
+        return;
+      }
+      seen.Insert(protocol);
+
+      protocols.AppendElement(protocol);
+    }
+  }
 
   // Setup up WebTransportDatagramDuplexStream
   // Step 12: Let incomingDatagrams be a new ReadableStream.
@@ -432,7 +472,7 @@ void WebTransport::ResolveWaitingConnection(
   // Step 17.2: Set transport.[[State]] to "connected".
   mState = WebTransportState::CONNECTED;
   // Step 17.3: Set transport.[[Session]] to session.
-  // Step 17.4: Set transport’s [[Reliability]] to "supports-unreliable".
+  // Step 17.4: Set transport's [[Reliability]] to "supports-unreliable".
   mReliability = aReliability;
   if (NS_IsMainThread()) {
     nsPIDOMWindowInner* innerWindow = GetParentObject()->GetAsInnerWindow();
