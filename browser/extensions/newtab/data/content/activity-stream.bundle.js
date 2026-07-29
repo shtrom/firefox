@@ -27097,7 +27097,7 @@ const CustomizeMenu_PREF_NOVA_ENABLED = "nova.enabled";
 // eslint-disable-next-line no-shadow
 
 const THEME_PICKER_ELEMENTS = ["chrome://global/content/elements/moz-visual-picker.mjs", "chrome://global/content/elements/moz-segmented-control.mjs", "chrome://global/content/elements/theme-picker.mjs"];
-const THEME_PICKER_FTL = "locales-preview/theme-picker.ftl";
+const THEME_PICKER_FTL = "toolkit/global/theme-picker.ftl";
 let themePickerElementsLoaded = false;
 
 /**
