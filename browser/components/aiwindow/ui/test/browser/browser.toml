@@ -70,6 +70,8 @@ skip-if = [
 
 ["browser_aiwindow_agent_monitor_item.js"]
 
+["browser_aiwindow_agentui_command.js"]
+
 ["browser_aiwindow_ai_action_result.js"]
 
 ["browser_aiwindow_aifeature_contract.js"]
