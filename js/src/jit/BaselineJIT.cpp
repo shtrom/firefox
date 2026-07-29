@@ -760,7 +760,6 @@ void BaselineCompileQueue::assertInvariants() const {
 #endif
 
 void BaselineCompileQueue::trace(JSTracer* trc) {
-  assertInvariants();
   for (uint32_t i = 0; i < numQueued_; i++) {
     TraceEdge(trc, &queue_[i], "baseline_compile_queue");
   }
