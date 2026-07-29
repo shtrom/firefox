@@ -4858,7 +4858,10 @@ pub extern "C" fn Servo_ComputedValues_SpecifiesAnimationsOrTransitions(
     values: &ComputedValues,
 ) -> bool {
     let ui = values.get_ui();
-    ui.specifies_animations() || ui.specifies_transitions()
+    ui.specifies_animations()
+        || ui.specifies_transitions()
+        || ui.specifies_scroll_timelines()
+        || ui.specifies_view_timelines()
 }
 
 #[repr(u8)]
