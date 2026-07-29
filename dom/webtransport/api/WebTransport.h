@@ -107,6 +107,7 @@ class WebTransport final : public nsISupports, public nsWrapperCache {
   already_AddRefed<Promise> Ready() { return do_AddRef(mReady); }
   WebTransportReliabilityMode Reliability();
   WebTransportCongestionControl CongestionControl();
+  void GetProtocol(nsAString& aProtocol);
   already_AddRefed<Promise> Closed() { return do_AddRef(mClosed); }
   MOZ_CAN_RUN_SCRIPT void Close(const WebTransportCloseInfo& aOptions,
                                 ErrorResult& aRv);
@@ -161,6 +162,7 @@ class WebTransport final : public nsISupports, public nsWrapperCache {
   RefPtr<WebTransportIncomingStreamsAlgorithms>
       mIncomingUnidirectionalAlgorithm;
   WebTransportReliabilityMode mReliability;
+  nsString mProtocol;
   // Incoming streams get queued here.  Use a TArray though it's working as
   // a FIFO - rarely will there be more than one entry in these arrays, so
   // the overhead of mozilla::Queue is unneeded
