@@ -38,7 +38,9 @@ targeting, use separate messages instead.
 ## Available trigger actions
 
 - [`openArticleURL`](#openarticleurl)
+- [`bookmarkAdded`](#bookmarkadded)
 - [`openBookmarkedURL`](#openbookmarkedurl)
+- [`visitBookmarkedURL`](#visitbookmarkedurl)
 - [`userBookmarkFolderActivity`](#userbookmarkfolderactivity)
 - [`frequentVisits`](#frequentvisits)
 - [`openURL`](#openurl)
@@ -115,11 +117,27 @@ let regexPatterns: string[];
 }
 ```
 
+### `bookmarkAdded`
+
+Fires when the user adds a bookmark through any UI path, including the URL bar
+star icon, the Bookmarks menu, the keyboard shortcut, the "Bookmark Link" and
+"Bookmark All Tabs" commands, and the Library window.
+
+Bulk and non-interactive sources (import, restore, sync) and tag operations are
+ignored, so mass operations such as an add-on importing or syncing bookmarks do
+not fire the trigger. It fires at most once per operation and does not fire in
+private windows.
+
 ### `openBookmarkedURL`
 
 Happens when the user bookmarks or navigates to a bookmarked URL.
 
 Does not filter by host or patterns.
+
+### `visitBookmarkedURL`
+
+Fires when the user navigates to a URL that is already bookmarked. This does not fire when the user creates a bookmark, only when they open one. Does not
+fire in private windows.
 
 ### `userBookmarkFolderActivity`
 
