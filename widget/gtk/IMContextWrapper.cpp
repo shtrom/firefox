@@ -327,23 +327,29 @@ IMContextWrapper::IMContextWrapper(nsWindow* aOwnerWindow)
   Init();
 }
 
-static bool IsIBusInSyncMode() {
+static uint8_t GetIBusSyncMode() {
   // See ibus_im_context_class_init() in client/gtk2/ibusimcontext.c
   // https://github.com/ibus/ibus/blob/86963f2f94d1e4fc213b01c2bc2ba9dcf4b22219/client/gtk2/ibusimcontext.c#L610
   const char* env = PR_GetEnv("IBUS_ENABLE_SYNC_MODE");
 
-  // See _get_boolean_env() in client/gtk2/ibusimcontext.c
-  // https://github.com/ibus/ibus/blob/86963f2f94d1e4fc213b01c2bc2ba9dcf4b22219/client/gtk2/ibusimcontext.c#L520-L537
+  // See _get_char_env() in client/gtk2/ibusimcontext.c
+  // https://github.com/ibus/ibus/blob/81ac95ed70b2fe02d41c7735c6788a4c6ab47bcc/client/gtk2/ibusimcontext.c#L856
+
   if (!env) {
-    return false;
+    // Let's assume the ibus is built within the same GTK version.
+    // https://github.com/ibus/ibus/blob/81ac95ed70b2fe02d41c7735c6788a4c6ab47bcc/client/gtk2/ibusimcontext.c#L959
+    // https://github.com/ibus/ibus/blob/81ac95ed70b2fe02d41c7735c6788a4c6ab47bcc/client/gtk2/ibusimcontext.c#L1008
+    // https://github.com/ibus/ibus/blob/81ac95ed70b2fe02d41c7735c6788a4c6ab47bcc/client/gtk2/ibusimcontext.c#L1012
+    return !gtk_check_version(3, 98, 4) ? 1 : 0;
   }
   nsDependentCString envStr(env);
+
   if (envStr.IsEmpty() || envStr.EqualsLiteral("0") ||
       envStr.EqualsLiteral("false") || envStr.EqualsLiteral("False") ||
       envStr.EqualsLiteral("FALSE")) {
-    return false;
+    return 0;
   }
-  return true;
+  return envStr.EqualsLiteral("2") ? 2 : 1;
 }
 
 static bool GetFcitxBoolEnv(const char* aEnv) {
@@ -440,9 +446,11 @@ void IMContextWrapper::Init() {
                    G_CALLBACK(IMContextWrapper::OnEndCompositionCallback),
                    this);
   nsDependentCSubstring im = GetIMName();
+  Maybe<uint8_t> ibusSyncMode;
   if (im.EqualsLiteral("ibus")) {
     mIMContextID = IMContextID::IBus;
-    mIsIMInAsyncKeyHandlingMode = !IsIBusInSyncMode();
+    ibusSyncMode.emplace(GetIBusSyncMode());
+    mIsIMInAsyncKeyHandlingMode = ibusSyncMode.value() != 1;
     // Although ibus has key snooper mode, it's forcibly disabled on Firefox
     // in default settings by its whitelist since we always send key events
     // to IME before handling shortcut keys.  The whitelist can be
@@ -517,17 +525,25 @@ void IMContextWrapper::Init() {
   mDummyContext = gtk_im_multicontext_new();
   gtk_im_context_set_client_window(mDummyContext, gdkWindow);
 
-  MOZ_LOG(gIMELog, LogLevel::Info,
-          ("0x%p Init(), mOwnerWindow=%p, mContext=%p (im=\"%s\"), "
-           "mIsIMInAsyncKeyHandlingMode=%s, mIsKeySnooped=%s, "
-           "mSimpleContext=%p, mDummyContext=%p, "
-           "gtk_im_multicontext_get_context_id()=\"%s\", "
-           "PR_GetEnv(\"XMODIFIERS\")=\"%s\"",
-           this, mOwnerWindow, mContext, nsAutoCString(im).get(),
-           ToChar(mIsIMInAsyncKeyHandlingMode), ToChar(mIsKeySnooped),
-           mSimpleContext, mDummyContext,
-           gtk_im_multicontext_get_context_id(GTK_IM_MULTICONTEXT(mContext)),
-           PR_GetEnv("XMODIFIERS")));
+  MOZ_LOG_FMT(
+      gIMELog, LogLevel::Info,
+      "{} Init(), GTK version={}.{}.{}, mOwnerWindow={}, "
+      "mContext={} (im=\"{}\"), mIsIMInAsyncKeyHandlingMode={}, "
+      "mIsKeySnooped={}, mSimpleContext={}, mDummyContext={}, "
+      "gtk_im_multicontext_get_context_id()=\"{}\", "
+      "PR_GetEnv(\"XMODIFIERS\")=\"{}\"",
+      static_cast<void*>(this), gtk_get_major_version(),
+      gtk_get_minor_version(), gtk_get_micro_version(),
+      static_cast<void*>(mOwnerWindow), static_cast<void*>(mContext),
+      nsAutoCString(im).get(),
+      ibusSyncMode
+          ? fmt::format("{} (mode={})",
+                        TrueOrFalse(mIsIMInAsyncKeyHandlingMode), *ibusSyncMode)
+          : TrueOrFalse(mIsIMInAsyncKeyHandlingMode),
+      TrueOrFalse(mIsKeySnooped), static_cast<void*>(mSimpleContext),
+      static_cast<void*>(mDummyContext),
+      gtk_im_multicontext_get_context_id(GTK_IM_MULTICONTEXT(mContext)),
+      PR_GetEnv("XMODIFIERS"));
 }
 
 /* static */
