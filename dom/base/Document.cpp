@@ -10368,6 +10368,13 @@ SMILAnimationController* Document::GetAnimationController() {
   return mAnimationController;
 }
 
+SpeculationRulesManager* Document::EnsureSpeculationRulesManager() {
+  if (!mSpeculationRulesManager) {
+    mSpeculationRulesManager = MakeUnique<SpeculationRulesManager>();
+  }
+  return mSpeculationRulesManager.get();
+}
+
 /**
  * Retrieve the "direction" property of the document.
  *
