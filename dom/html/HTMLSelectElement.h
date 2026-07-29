@@ -436,10 +436,10 @@ class HTMLSelectElement final : public nsGenericHTMLFormControlElementWithState,
   MOZ_CAN_RUN_SCRIPT nsresult HandleMouseUp(EventChainPostVisitor&);
   MOZ_CAN_RUN_SCRIPT nsresult HandleMouseMove(EventChainPostVisitor&);
 
-  // Returns the index of the option targeted by aEvent, using the
-  // listbox frame for the necessary hit-testing geometry. Returns a failure
-  // code if the event doesn't target a selectable option.
-  Maybe<int32_t> GetListBoxIndexFromEvent(const WidgetMouseEvent&);
+  // Returns the option targeted by aEvent, using the listbox frame
+  // for the necessary hit-testing geometry.
+  HTMLOptionElement* GetListBoxOptionFromEvent(const WidgetMouseEvent&);
+
   // Grabs/releases mouse capture for listbox drag-selection.
   void CaptureMouseEvents(bool aGrabMouseEvents);
 
@@ -462,7 +462,7 @@ class HTMLSelectElement final : public nsGenericHTMLFormControlElementWithState,
   void UpdateListBoxSelectionAfterKeyEvent(int32_t aNewIndex,
                                            uint32_t aCharCode, bool aIsShift,
                                            bool aIsControlOrMeta);
-  void RemoveOptionFromListBoxSelection(int32_t aIndex);
+  void RemoveOptionFromListBoxSelection(HTMLOptionElement& aOption);
   void ScrollToOption(int32_t aIndex);
   MOZ_CAN_RUN_SCRIPT void DoScrollToOption(int32_t aIndex);
   void AdjustIndexForDisabledOpt(int32_t aStartIndex, int32_t& aNewIndex,
@@ -538,17 +538,24 @@ class HTMLSelectElement final : public nsGenericHTMLFormControlElementWithState,
    * The current displayed preview text.
    */
   nsString mPreviewValue;
+
+  static constexpr int32_t kNothingSelected = -1;
+
   /**
    * Listbox selection range, only meaningful while a listbox frame exists.
-   * Both default to kNothingSelected (-1); mEndSelectionIndex is the option
-   * focused for keyboard navigation.
+   * mEnd is the option focused for keyboard navigation.
    */
-  static constexpr int32_t kNothingSelected = -1;
   struct {
-    int32_t mStart = -1;
-    int32_t mEnd = -1;
+    RefPtr<HTMLOptionElement> mStart;
+    RefPtr<HTMLOptionElement> mEnd;
 
-    void SetTo(int32_t aIndex) { mStart = mEnd = aIndex; }
+    void SetTo(HTMLOptionElement* aOption) {
+      mStart = mEnd = aOption;
+    }
+
+    void Clear() {
+      mStart = mEnd = nullptr;
+    }
   } mListBoxSelection;
 
  private:
