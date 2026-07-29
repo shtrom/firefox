@@ -8316,12 +8316,15 @@ pub extern "C" fn Servo_StyleSet_MightHaveAttributeDependencyInContainer(
 ) -> ContainerAttributeDependencyKind {
     let data = raw_data.borrow();
     let element = GeckoElement(element);
-
-    ContainerAttributeDependencyKind::element_container_dependency_kind(
-        element,
-        local_name,
-        &data.stylist,
-    )
+    unsafe {
+        AtomIdent::with(local_name, |local_name| {
+            ContainerAttributeDependencyKind::element_container_dependency_kind(
+                element,
+                local_name,
+                &data.stylist,
+            )
+        })
+    }
 }
 
 #[no_mangle]
