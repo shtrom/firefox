@@ -35,7 +35,7 @@ void WebTransportParent::Create(
     const nsAString& aURL, nsIPrincipal* aPrincipal,
     const uint64_t& aBrowsingContextID, const IPCClientInfo& aClientInfo,
     const bool& aDedicated, const bool& aRequireUnreliable,
-    const uint32_t& aCongestionControl,
+    const uint32_t& aCongestionControl, nsTArray<nsString>&& aProtocols,
     nsTArray<WebTransportHash>&& aServerCertHashes,
     Endpoint<PWebTransportParent>&& aParentEndpoint,
     std::function<void(std::tuple<const nsresult&, const uint8_t&>)>&&
@@ -93,11 +93,12 @@ void WebTransportParent::Create(
        nsServerCertHashes = std::move(nsServerCertHashes),
        principal = RefPtr{aPrincipal}, browsingContextID = aBrowsingContextID,
        flags = nsILoadInfo::SEC_ALLOW_CROSS_ORIGIN_SEC_CONTEXT_IS_NULL,
-       clientInfo = ClientInfo{aClientInfo}] {
+       clientInfo = ClientInfo{aClientInfo},
+       protocols = std::move(aProtocols)] {
         LOG(("WebTransport %p AsyncConnect", self.get()));
         if (NS_FAILED(self->mWebTransport->AsyncConnectWithClient(
                 uri, dedicated, std::move(nsServerCertHashes), principal,
-                browsingContextID, flags, self, Some(clientInfo),
+                browsingContextID, flags, self, Some(clientInfo), protocols,
                 nsIWebTransport::HTTPVersion::h3))) {
           LOG(("AsyncConnect failure; we should get OnSessionClosed"));
         }
@@ -537,6 +538,18 @@ WebTransportParent::OnSessionReady(uint64_t aSessionId) {
         }));
     return NS_OK;
   }
+
+  mSocketThread->Dispatch(NS_NewRunnableFunction(
+      "WebTransportParent::QueryNegotiatedProtocol", [self = RefPtr{this}] {
+        nsAutoCString subprotocol;
+        if (self->mWebTransport) {
+          self->mWebTransport->GetNegotiatedProtocol(subprotocol);
+          LOG(("Negotiated protocol: %s", subprotocol.get()));
+          if (self->CanSend()) {
+            (void)self->SendNegotiatedProtocol(subprotocol);
+          }
+        }
+      }));
 
   mOwningEventTarget->Dispatch(NS_NewRunnableFunction(
       "WebTransportParent::OnSessionReady", [self = RefPtr{this}] {

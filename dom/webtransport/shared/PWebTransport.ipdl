@@ -106,6 +106,11 @@ async protocol PWebTransport
   */
   async IncomingDatagram(uint8_t[] data, TimeStamp receivedTime);
 
+  /**
+  * Notify child of the negotiated protocol
+  */
+  async NegotiatedProtocol(nsCString subprotocol);
+
   async Draining();
 
   async RemoteClosed(bool cleanly, uint32_t code, nsCString reason);

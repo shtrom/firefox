@@ -58,6 +58,7 @@ interface nsIWebTransport : nsISupports {
                     in unsigned long aSecurityFlags,
                     in WebTransportSessionEventListener aListener,
                     in const_MaybeClientInfoRef aClientInfo,
+                    in Array<AString> aProtocols,
                     in nsIWebTransport_HTTPVersion aVersion);
 
   // Asynchronously get stats.
@@ -82,6 +83,10 @@ interface nsIWebTransport : nsISupports {
   void getMaxDatagramSize();
 
   uint64_t getHttpChannelID();
+
+  // Get the negotiated protocol (subprotocol) for the session.
+  // Returns empty string if no protocol was negotiated.
+  ACString getNegotiatedProtocol();
 
   // Register a send group with a caller-provided ID.
   void registerSendGroup(in uint64_t groupId);

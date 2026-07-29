@@ -88,6 +88,12 @@ nsresult Http2WebTransportSessionImpl::RegisterSendGroup(uint64_t aGroupId) {
   return NS_OK;
 }
 
+void Http2WebTransportSessionImpl::GetNegotiatedProtocol(
+    nsACString& aProtocol) {
+  // TODO: Implement protocol negotiation for HTTP/2 WebTransport
+  aProtocol.Truncate();
+}
+
 void Http2WebTransportSessionImpl::SendDatagram(nsTArray<uint8_t>&& aData,
                                                 uint64_t aTrackingId) {
   LOG(("Http2WebTransportSession::SendDatagram %p", this));

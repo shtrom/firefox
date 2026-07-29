@@ -96,6 +96,11 @@ class Http3SessionStub final : public Http3SessionBase {
     return NS_OK;
   }
 
+  nsresult GetWebTransportSessionProtocol(uint64_t aSessionId,
+                                          nsACString& aProtocol) override {
+    return NS_OK;
+  }
+
   nsresult TryActivatingWebTransportStream(uint64_t* aStreamId,
                                            Http3StreamBase* aStream) override {
     *aStreamId = 0;
