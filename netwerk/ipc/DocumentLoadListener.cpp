@@ -616,26 +616,14 @@ void DocumentLoadListener::TryActivateFromPrefetch(nsIURI* aURI) {
       rec->IsolatedPartitionKey(),
       sourceWGP->DocumentPrincipal()->OriginAttributesRef());
 
-  // Force the channel to read from the prefetch cache entry instead of
-  // hitting the network again. For M1 same-origin, the channel's URL and
-  // partition match the prefetch entry, so LOAD_ONLY_FROM_CACHE will find it
-  // without replacement.
-  //
-  // Known gap (bug 2054892): if the cache entry is missing or has been
-  // evicted by the time this channel opens, LOAD_ONLY_FROM_CACHE makes the
-  // channel fail with NS_ERROR_DOCUMENT_NOT_CACHED instead of falling back
-  // to a normal network fetch, so the whole document load fails. Follow-up
-  // fix: on that error, mark rec canceled and restart the navigation, the
-  // same way MaybeHandleLoadErrorWithURIFixup() does for URI fixup.
   if (mTiming) {
     mTiming->SetWasActivatedFromNavigationalPrefetch();
   }
 
-  nsLoadFlags loadFlags = 0;
-  mChannel->GetLoadFlags(&loadFlags);
-  DebugOnly<nsresult> rv = mChannel->SetLoadFlags(
-      loadFlags | nsICachingChannel::LOAD_ONLY_FROM_CACHE);
-  MOZ_ASSERT(NS_SUCCEEDED(rv));
+  LOG_SPECRULES(
+      ("DocumentLoadListener::TryActivateFromPrefetch: [%p] activated from "
+       "prefetch cache for rec=%p",
+       this, rec));
 }
 
 bool CheckRecursiveLoad(CanonicalBrowsingContext* aLoadingContext,

@@ -5053,7 +5053,6 @@ nsresult nsHttpChannel::OpenCacheEntryInternal(bool isHttps) {
   if (!info) {
     return NS_ERROR_FAILURE;
   }
-
   uint32_t cacheEntryOpenFlags;
   bool offline = gIOService->IsOffline();
 
