@@ -1723,16 +1723,6 @@ class MainBumpConfig(Schema):
     end_tag: Optional[str] = None
 
 
-class EarlyToLateBetaConfig(Schema):
-    to_branch: str
-    # technically not used, but passing it keeps landoscript
-    # code cleaner, so we may as well require a real value
-    # for it.
-    fetch_version_from: str
-    to_revision: str = ""
-    replacements: Optional[list[list[str]]] = None
-
-
 class UpliftConfig(Schema):
     fetch_version_from: str
     version_files: list[VersionFile]
@@ -1770,7 +1760,6 @@ class LandoAction(Schema, forbid_unknown_fields=False, kw_only=True):
     version_bump: Optional[VersionBumpConfig] = None
     esr_bump: Optional[EsrBumpConfig] = None
     main_bump: Optional[MainBumpConfig] = None
-    early_to_late_beta: Optional[EarlyToLateBetaConfig] = None
     uplift: Optional[UpliftConfig] = None
     merge_day: Optional[MergeDayConfig] = None
 
@@ -1873,10 +1862,6 @@ def build_lando_payload(config, task, task_def):
                 dash_to_underscore(vf) for vf in info["version-files"]
             ]
             task_def["payload"]["merge_info"] = merge_info
-            actions.append("merge_day")
-
-        if info := action.get("early-to-late-beta"):
-            task_def["payload"]["merge_info"] = dash_to_underscore(info)
             actions.append("merge_day")
 
         if info := action.get("uplift"):
