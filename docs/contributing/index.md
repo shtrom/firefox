@@ -32,10 +32,9 @@ reviewer_checklist
 
 ```{toctree}
 :caption: Debugging
-:glob: true
 :maxdepth: 1
 
-debugging/*
+debugging/index
 ```
 
 ```{toctree}
