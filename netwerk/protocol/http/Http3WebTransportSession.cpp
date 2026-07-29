@@ -371,6 +371,14 @@ void Http3WebTransportSession::OnSessionClosed(bool aCleanly, uint32_t aStatus,
   mSession->CloseWebTransportConn();
 }
 
+void Http3WebTransportSession::OnSessionDraining() {
+  LOG(("Http3WebTransportSession::OnSessionDraining [this=%p]", this));
+  RefPtr<WebTransportSessionEventListener> listener = GetListener();
+  if (listener) {
+    listener->OnDraining();
+  }
+}
+
 void Http3WebTransportSession::CloseSession(uint32_t aStatus,
                                             const nsACString& aReason) {
   if ((mRecvState != CLOSE_PENDING) && (mRecvState != RECV_DONE)) {
