@@ -2440,11 +2440,11 @@ def set_task_and_artifact_expiry(config, jobs):
         yield job
 
 
-def group_name_variant(group_names, groupSymbol):
-    # iterate through variants, allow for Base-[variant_list]
+@functools.cache
+def _variant_symbols():
     # sorting longest->shortest allows for finding variants when
     # other variants have a suffix that is a subset
-    variant_symbols = sorted(
+    return sorted(
         [
             (
                 v,
@@ -2457,6 +2457,11 @@ def group_name_variant(group_names, groupSymbol):
         key=lambda tup: len(tup[1]),
         reverse=True,
     )
+
+
+def group_name_variant(group_names, groupSymbol):
+    # iterate through variants, allow for Base-[variant_list]
+    variant_symbols = _variant_symbols()
 
     # strip known variants
     # build a list of known variants
