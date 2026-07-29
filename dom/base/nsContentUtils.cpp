@@ -12310,8 +12310,7 @@ nsresult nsContentUtils::NewXULOrHTMLElement(
         }
         (*aResult)->SetDefined(false);
         // Set the fallback element's registry even on failure.
-        if (StaticPrefs::dom_scoped_custom_element_registries_enabled() &&
-            *aResult) {
+        if (StaticPrefs::dom_scoped_custom_element_registries_enabled()) {
           if (aCustomElementRegistry.isSome()) {
             if (CustomElementRegistry* registry =
                     aCustomElementRegistry.ref()) {
