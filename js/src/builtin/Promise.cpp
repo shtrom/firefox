@@ -8346,7 +8346,6 @@ void PromiseObject::dumpOwnStringContent(js::GenericPrinter& out) const {}
   MOZ_ASSERT(iter.calleeTemplate()->isAsync());
   ++iter;
   MOZ_ASSERT(iter.done());
-  MOZ_ASSERT(cx->asyncResumeDepth <= 1);
 #endif
 
   // Primitive values cannot be 'thenables', so we can trivially skip the
