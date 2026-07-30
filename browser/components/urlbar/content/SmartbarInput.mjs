@@ -4330,7 +4330,7 @@ ${
     // use the unmodified url instead. Otherwise, if the user edits the url
     // and confirms the new value, we may transform the url into a search.
     let trimmedUrl = UrlbarShared.stripPrefixAndTrim(url, { stripHttp })[0];
-    let isSearch = !!this._getURIFixupInfo(trimmedUrl)?.keywordAsSent;
+    let isSearch = !!this.controller.getFixupInfo(trimmedUrl)?.keywordAsSent;
     if (isSearch) {
       // Although https-first might not respect the shown protocol, converting
       // the result to a search would be more disruptive.
@@ -6051,22 +6051,24 @@ ${
     // value would execute a search instead of visiting the typed url.
     if (this._protocolIsTrimmed) {
       let untrim = false;
-      let fixedURI = this._getURIFixupInfo(this.value)?.preferredURI;
-      if (fixedURI) {
-        try {
-          let expectedURI = Services.io.newURI(this._untrimmedValue);
-          if (
-            lazy.UrlbarPrefs.getScotchBonnetPref("trimHttps") &&
-            this._untrimmedValue.startsWith("https://")
-          ) {
-            untrim =
-              fixedURI.displaySpec.replace("http://", "https://") !=
-              expectedURI.displaySpec; // FIXME bug 1847723: Figure out a way to do this without manually messing with the fixed up URI.
-          } else {
-            untrim = fixedURI.displaySpec != expectedURI.displaySpec;
-          }
-        } catch (ex) {
+      let fixedDisplaySpec = this.controller.getFixupInfo(
+        this.value
+      )?.preferredURIDisplaySpec;
+      if (fixedDisplaySpec) {
+        let expectedDisplaySpec = this.controller.getDisplaySpec(
+          this._untrimmedValue
+        );
+        if (expectedDisplaySpec == null) {
           untrim = true;
+        } else if (
+          lazy.UrlbarPrefs.getScotchBonnetPref("trimHttps") &&
+          this._untrimmedValue.startsWith("https://")
+        ) {
+          untrim =
+            fixedDisplaySpec.replace("http://", "https://") !=
+            expectedDisplaySpec; // FIXME bug 1847723: Figure out a way to do this without manually messing with the fixed up URI.
+        } else {
+          untrim = fixedDisplaySpec != expectedDisplaySpec;
         }
       }
       if (untrim) {

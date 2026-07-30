@@ -8,6 +8,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   BrowserUtils: "resource://gre/modules/BrowserUtils.sys.mjs",
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
   UrlbarQueryContext: "chrome://browser/content/urlbar/UrlbarQueryContext.mjs",
+  UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
 });
 
 // The content-side input/view methods a parent-side provider hook may invoke
@@ -148,6 +149,45 @@ export class UrlbarChild extends JSWindowActorChild {
    */
   whereToOpenLink(event) {
     return lazy.BrowserUtils.whereToOpenLink(event, false, false);
+  }
+
+  /**
+   * Runs URI fixup for a string on behalf of the content-web input, which can't
+   * reach `Services.uriFixup`. Returns only the primitives the callers need, so
+   * the input never holds an `nsIURIFixupInfo`.
+   *
+   * @param {string} searchString
+   *   The string to fix up.
+   * @param {boolean} isPrivate
+   *   Whether the fixup runs for a private context.
+   * @returns {?{keywordAsSent: boolean, preferredURIDisplaySpec: ?string}}
+   *   The fixup primitives, or null if fixup threw.
+   */
+  getFixupInfo(searchString, isPrivate) {
+    let info = lazy.UrlbarUtils.getURIFixupInfo(searchString, isPrivate);
+    return info
+      ? {
+          keywordAsSent: info.keywordAsSent,
+          preferredURIDisplaySpec: info.preferredURI?.displaySpec ?? null,
+        }
+      : null;
+  }
+
+  /**
+   * Returns a URL's display spec, or null if it can't be parsed. Lets the
+   * content-web input normalize a URL without reaching `Services.io`.
+   *
+   * @param {string} url
+   *   The URL to parse.
+   * @returns {?string}
+   *   The display spec, or null if parsing threw.
+   */
+  getDisplaySpec(url) {
+    try {
+      return Services.io.newURI(url).displaySpec;
+    } catch (ex) {
+      return null;
+    }
   }
 
   receiveMessage(message) {
