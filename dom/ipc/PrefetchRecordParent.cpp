@@ -13,13 +13,14 @@ namespace mozilla::dom {
 LazyLogModule gSpeculationRulesLog("SpeculationRules");
 
 mozilla::ipc::IPCResult PrefetchRecordParent::RecvCancel() {
-  // TODO: implement "Cancel and discard a prefetch record"
   // (https://wicg.github.io/nav-speculation/prefetch.html#prefetch-record-cancel-and-discard).
+  LOG_SPECRULES(("PrefetchRecordParent::RecvCancel: this=%p", this));
   return IPC_OK();
 }
 
 void PrefetchRecordParent::ActorDestroy(ActorDestroyReason aReason) {
-  // TODO: cancel the channel on actor destroy.
+  LOG_SPECRULES(("PrefetchRecordParent::ActorDestroy: this=%p, reason=%d", this,
+                 static_cast<int>(aReason)));
 }
 
 }  // namespace mozilla::dom

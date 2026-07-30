@@ -6,6 +6,7 @@
 #include "mozilla/dom/PrefetchRecordChild.h"
 
 #include "mozilla/dom/Document.h"
+#include "mozilla/dom/PrefetchLog.h"
 #include "mozilla/dom/SpeculationRulesManager.h"
 #include "mozilla/dom/WindowGlobalChild.h"
 #include "nsGlobalWindowInner.h"
@@ -14,7 +15,16 @@ namespace mozilla::dom {
 
 PrefetchRecordChild::PrefetchRecordChild(nsIURI* aURL,
                                          PrefetchAnonymizationPolicy aPolicy)
-    : mURL(aURL), mAnonPolicy(aPolicy) {}
+    : mURL(aURL), mAnonPolicy(aPolicy) {
+  if (LOG_SPECRULES_ENABLED()) {
+    nsAutoCString spec;
+    if (mURL) {
+      mURL->GetSpec(spec);
+    }
+    LOG_SPECRULES(("PrefetchRecordChild ctor: this=%p, url=%s, anon=%d", this,
+                   spec.get(), static_cast<int>(mAnonPolicy)));
+  }
+}
 
 void PrefetchRecordChild::ActorDestroy(ActorDestroyReason aReason) {
   // Remove this handle from SpeculationRulesManager::mPrefetchRecords on the
