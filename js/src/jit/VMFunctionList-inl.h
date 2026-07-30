@@ -222,7 +222,6 @@ namespace jit {
   _(InitRestParameter, js::jit::InitRestParameter)                             \
   _(Int32ToString, js::Int32ToString<js::CanGC>)                               \
   _(Int32ToStringWithBase, js::Int32ToStringWithBase<js::CanGC>)               \
-  _(InterpretResume, js::jit::InterpretResume)                                 \
   _(InterruptCheck, js::jit::InterruptCheck)                                   \
   _(InvokeFunction, js::jit::InvokeFunction)                                   \
   _(IonBinaryArithICUpdate, js::jit::IonBinaryArithIC::update)                 \

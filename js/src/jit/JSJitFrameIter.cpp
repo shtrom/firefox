@@ -180,6 +180,11 @@ static uint32_t ComputeBaselineFrameSize(const JSJitFrameIter& frame) {
   }
 
   if (frame.isExitFrame()) {
+    // A CalledFromJit exit frame (lazy-link stub or interpreter stub) wraps a
+    // full JitFrameLayout for the callee it was about to enter.
+    if (frame.isExitFrameLayout<CalledFromJitExitFrameLayout>()) {
+      return frameSize - JitFrameLayout::Size();
+    }
     frameSize -= ExitFrameLayout::Size();
     if (frame.exitFrame()->isWrapperExit()) {
       VMFunctionId id = frame.exitFrame()->footer()->functionId();

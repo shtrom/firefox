@@ -6568,18 +6568,10 @@ bool BaselineCodeGen<Handler>::emit_Resume() {
   Register callerStackPtr = regs.takeAny();
   masm.computeEffectiveAddress(frame.addressOfStackValue(-1), callerStackPtr);
 
-  // Branch to |interpret| to resume the generator in the C++ interpreter if the
-  // script does not have a JitScript.
-  Label interpret;
-  Register scratch1 = regs.takeAny();
-  masm.loadPrivate(Address(callee, JSFunction::offsetOfJitInfoOrScript()),
-                   scratch1);
-  masm.branchIfScriptHasNoJitScript(scratch1, &interpret);
-
   // The pushed argument Values are the formals (all |undefined|) and the resume
   // args stored after the formals.
-  Register scratch2 = regs.takeAny();
-  masm.loadFunctionArgCount(callee, scratch2);
+  Register scratch1 = regs.takeAny();
+  masm.loadFunctionArgCount(callee, scratch1);
 
   static_assert(sizeof(Value) == 8);
 #ifndef JS_CODEGEN_NONE
@@ -6591,7 +6583,7 @@ bool BaselineCodeGen<Handler>::emit_Resume() {
   if (JitStackValueAlignment > 1) {
     Register alignment = regs.takeAny();
     masm.moveStackPtrTo(alignment);
-    masm.alignJitStackBasedOnNArgs(scratch2, /* countIncludesThis = */ false,
+    masm.alignJitStackBasedOnNArgs(scratch1, /* countIncludesThis = */ false,
                                    /* extraArgs = */ ResumeFrameArgs::NumSlots);
 
     // Compute alignment adjustment.
@@ -6629,11 +6621,11 @@ bool BaselineCodeGen<Handler>::emit_Resume() {
 
   // Push |undefined| for the formals.
   Label loop, loopDone;
-  masm.branchTest32(Assembler::Zero, scratch2, scratch2, &loopDone);
+  masm.branchTest32(Assembler::Zero, scratch1, scratch1, &loopDone);
   masm.bind(&loop);
   {
     masm.pushValue(UndefinedValue());
-    masm.branchSub32(Assembler::NonZero, Imm32(1), scratch2, &loop);
+    masm.branchSub32(Assembler::NonZero, Imm32(1), scratch1, &loop);
   }
   masm.bind(&loopDone);
 
@@ -6642,9 +6634,9 @@ bool BaselineCodeGen<Handler>::emit_Resume() {
 
 #ifdef DEBUG
   // Update BaselineFrame debugFrameSize field.
-  masm.mov(FramePointer, scratch2);
-  masm.subStackPtrFrom(scratch2);
-  masm.store32(scratch2, frame.addressOfDebugFrameSize());
+  masm.mov(FramePointer, scratch1);
+  masm.subStackPtrFrom(scratch1);
+  masm.store32(scratch1, frame.addressOfDebugFrameSize());
 #endif
 
   masm.PushCalleeToken(callee, /* constructing = */ false);
@@ -6656,24 +6648,12 @@ bool BaselineCodeGen<Handler>::emit_Resume() {
   MOZ_ASSERT(masm.framePushed() == sizeof(uintptr_t));
   masm.setFramePushed(0);
 
-  // Load the callee's Baseline JIT or Baseline Interpreter code.
+  // Load the code to call. We can't use jitCodeRaw unconditionally because it
+  // may point to Ion code and the Ion prologue doesn't support resuming a
+  // generator.
   Register code = regs.takeAny();
-  masm.loadJitScript(scratch1, code);
-  masm.loadPtr(Address(code, JitScript::offsetOfBaselineScript()), code);
-  Label noBaselineScript, gotEntry;
-  masm.branchPtr(Assembler::BelowOrEqual, code,
-                 ImmPtr(BaselineCompilingScriptPtr), &noBaselineScript);
-  masm.loadPtr(Address(code, BaselineScript::offsetOfMethod()), code);
-  masm.loadPtr(Address(code, JitCode::offsetOfCode()), code);
-  masm.jump(&gotEntry);
-  masm.bind(&noBaselineScript);
-  masm.loadPtr(Address(scratch1, BaseScript::offsetOfJitCodeRaw()), code);
-  masm.bind(&gotEntry);
-  regs.add(scratch1);
-
+  masm.loadJitCodeRawNoIon(callee, code, scratch1);
   regs.add(callee);
-
-  Label returnTarget;
 
   masm.switchToObjectRealm(genObj, scratch1);
 
@@ -6685,24 +6665,6 @@ bool BaselineCodeGen<Handler>::emit_Resume() {
   if (!handler.recordCallRetAddr(RetAddrEntry::Kind::IC, callOffset)) {
     return false;
   }
-
-  masm.jump(&returnTarget);
-
-  // Call into the VM to resume the generator in the C++ interpreter if there's
-  // no JitScript.
-  masm.bind(&interpret);
-
-  prepareVMCall();
-
-  pushArg(callerStackPtr);
-  pushArg(genObj);
-
-  using Fn = bool (*)(JSContext*, HandleObject, Value*, MutableHandleValue);
-  if (!callVM<Fn, jit::InterpretResume>()) {
-    return false;
-  }
-
-  masm.bind(&returnTarget);
 
   // Restore Stack pointer
   masm.computeEffectiveAddress(frame.addressOfStackValue(-1),

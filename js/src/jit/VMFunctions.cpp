@@ -576,16 +576,40 @@ bool InvokeFromInterpreterStub(JSContext* cx,
 
   Value* argv = jsFrame->thisAndActualArgs();
   uint32_t numActualArgs = jsFrame->numActualArgs();
-  bool constructing = CalleeTokenIsConstructing(token);
   RootedFunction fun(cx, CalleeTokenToFunction(token));
+  RootedValue rval(cx);
+
+  if (jsFrame->descriptor().isResumingGenerator()) {
+    // Resuming a suspended generator. The ResumeFrameArgs are stored after the
+    // formals with numActualArgs == 0.
+
+    MOZ_RELEASE_ASSERT(fun->isGenerator());
+    MOZ_ASSERT(numActualArgs == 0);
+
+    Value* resumeArgs = &argv[1 + fun->nargs()];
+    Rooted<AbstractGeneratorObject*> genObj(
+        cx, &resumeArgs[ResumeFrameArgs::GeneratorSlot]
+                 .toObject()
+                 .as<AbstractGeneratorObject>());
+    RootedValue resumeValue(cx, resumeArgs[ResumeFrameArgs::ResumeValueSlot]);
+    GeneratorResumeKind resumeKind =
+        IntToResumeKind(resumeArgs[ResumeFrameArgs::ResumeKindSlot].toInt32());
+
+    AutoRealm ar(cx, genObj);
+    if (!js::ResumeGenerator(cx, genObj, resumeValue, resumeKind, &rval)) {
+      return false;
+    }
+    argv[0] = rval;
+    return true;
+  }
 
   // Ensure new.target immediately follows the actual arguments (the JIT
   // ABI passes `undefined` for missing formals).
+  bool constructing = CalleeTokenIsConstructing(token);
   if (constructing && numActualArgs < fun->nargs()) {
     argv[1 + numActualArgs] = argv[1 + fun->nargs()];
   }
 
-  RootedValue rval(cx);
   if (!InvokeFunction(cx, fun, constructing,
                       /* ignoresReturnValue = */ false, numActualArgs, argv,
                       &rval)) {
@@ -1172,25 +1196,6 @@ bool FinalSuspend(JSContext* cx, HandleObject obj, const jsbytecode* pc) {
   MOZ_ASSERT(JSOp(*pc) == JSOp::FinalYieldRval);
   AbstractGeneratorObject::finalSuspend(cx, obj);
   return true;
-}
-
-bool InterpretResume(JSContext* cx, HandleObject obj, Value* stackValues,
-                     MutableHandleValue rval) {
-  MOZ_ASSERT(obj->is<AbstractGeneratorObject>());
-
-  // The |stackValues| argument points to the JSOp::Resume operands on the
-  // native stack. Because the stack grows down, these values are:
-  //
-  //   [resumeKind, argument, generator, ..]
-
-  MOZ_ASSERT(stackValues[2].toObject() == *obj);
-
-  Handle<AbstractGeneratorObject*> genObj = obj.as<AbstractGeneratorObject>();
-  GeneratorResumeKind resumeKind = IntToResumeKind(stackValues[0].toInt32());
-  Rooted<Value> arg(cx, stackValues[1]);
-
-  AutoRealm ar(cx, genObj);
-  return js::ResumeGenerator(cx, genObj, arg, resumeKind, rval);
 }
 
 bool DebugAfterYield(JSContext* cx, BaselineFrame* frame) {
