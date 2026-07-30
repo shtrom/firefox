@@ -15,10 +15,6 @@ TESTING_JS_MODULES += [
     "test/NormandyTestUtils.sys.mjs",
 ]
 
-XPCOM_MANIFESTS += [
-    "components.conf",
-]
-
 SPHINX_TREES["normandy"] = "docs"
 
 TEST_DIRS += ["test/browser"]
