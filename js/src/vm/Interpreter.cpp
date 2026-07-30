@@ -4266,6 +4266,24 @@ bool MOZ_NEVER_INLINE JS_HAZ_JSNATIVE_CALLER js::Interpret(JSContext* cx,
         ReservedRooted<Value> val(&rootValue0, REGS.sp[-2]);
         GeneratorResumeKind resumeKind = IntToResumeKind(REGS.sp[-1].toInt32());
 
+        // If the generator has JIT code, try to resume into it.
+        {
+          MutableHandle<Value> rval = REGS.stackHandleAt(-3);
+          GeneratorResumeState state(cx, gen, val, resumeKind, rval);
+          AutoRealm ar(cx, gen);
+          jit::EnterJitStatus status = jit::MaybeEnterJit(cx, state);
+          switch (status) {
+            case jit::EnterJitStatus::Error:
+              goto error;
+            case jit::EnterJitStatus::Ok:
+              REGS.sp -= 2;
+              interpReturnOK = true;
+              goto jit_return;
+            case jit::EnterJitStatus::NotEntered:
+              break;
+          }
+        }
+
         // popInlineFrame expects there to be an additional value on the stack
         // to pop off, so leave "gen" on the stack.
         REGS.sp -= 1;
