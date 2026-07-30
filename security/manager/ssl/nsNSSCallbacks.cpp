@@ -896,7 +896,8 @@ static void PreliminaryHandshakeDone(PRFileDesc* fd) {
     } else {
       socketControl->SetNegotiatedNPN(nullptr, 0);
     }
-    mozilla::glean::ssl::npn_type.AccumulateSingleSample(state);
+    glean::tls::npn_type.EnumGet(static_cast<glean::tls::NpnTypeLabel>(state))
+        .Add();
   } else {
     socketControl->SetNegotiatedNPN(nullptr, 0);
   }
