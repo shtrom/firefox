@@ -338,15 +338,20 @@ GeneratorResumeState::GeneratorResumeState(
     JSContext* cx, Handle<AbstractGeneratorObject*> genObj,
     HandleValue resumeValue, GeneratorResumeKind resumeKind,
     MutableHandleValue result)
-    : RunState(cx, GeneratorResume, genObj->callee().nonLazyScript()),
+    : RunState(cx, GeneratorResume, genObj->script()),
       genObj_(genObj),
       resumeValue_(resumeValue),
       resumeKind_(resumeKind),
       result_(result) {}
 
 InterpreterFrame* GeneratorResumeState::pushInterpreterFrame(JSContext* cx) {
-  RootedFunction callee(cx, &genObj_->callee());
   RootedObject envChain(cx, &genObj_->environmentChain());
+  if (genObj_->isModuleGenerator()) {
+    RootedScript script(cx, genObj_->module().script());
+    return cx->interpreterStack().pushExecuteFrame(
+        cx, script, envChain, NullFramePtr(), /* reserveResumeArgs = */ true);
+  }
+  RootedFunction callee(cx, &genObj_->callee());
   return cx->interpreterStack().pushGeneratorResumeFrame(cx, callee, envChain);
 }
 

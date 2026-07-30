@@ -2427,7 +2427,7 @@ bool WarpBuilder::build_FinalYieldRval(BytecodeLocation loc) {
   };
 
   // Close the generator
-  setSlotNull(AbstractGeneratorObject::calleeSlot());
+  setSlotNull(AbstractGeneratorObject::calleeOrModuleSlot());
   setSlotNull(AbstractGeneratorObject::envChainSlot());
   setSlotNull(AbstractGeneratorObject::argsObjectSlot());
   setSlotNull(AbstractGeneratorObject::stackStorageSlot());

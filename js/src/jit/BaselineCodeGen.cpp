@@ -6406,10 +6406,11 @@ bool BaselineCodeGen<Handler>::emit_Resume() {
   Register genObj = regs.takeAny();
   masm.unboxObject(frame.addressOfStackValue(-3), genObj);
 
-  // Load callee.
+  // Load callee. Note that JSOp::Resume is never used for modules.
   Register callee = regs.takeAny();
   masm.unboxObject(
-      Address(genObj, AbstractGeneratorObject::offsetOfCalleeSlot()), callee);
+      Address(genObj, AbstractGeneratorObject::offsetOfCalleeOrModuleSlot()),
+      callee);
 
   // Save a pointer to the JSOp::Resume operand stack Values.
   Register callerStackPtr = regs.takeAny();
@@ -6588,7 +6589,8 @@ bool BaselineCodeGen<Handler>::emit_Resume() {
 
   // Load script in scratch1.
   masm.unboxObject(
-      Address(genObj, AbstractGeneratorObject::offsetOfCalleeSlot()), scratch1);
+      Address(genObj, AbstractGeneratorObject::offsetOfCalleeOrModuleSlot()),
+      scratch1);
   masm.loadPrivate(Address(scratch1, JSFunction::offsetOfJitInfoOrScript()),
                    scratch1);
 

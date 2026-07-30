@@ -99,20 +99,7 @@ JSObject* AbstractGeneratorObject::createModuleGenerator(
     return nullptr;
   }
 
-  // Create a handler function to wrap the module's script. This way
-  // we can access it later and restore the state.
-  Handle<PropertyName*> funName = cx->names().empty_;
-  RootedFunction handlerFun(
-      cx, NewFunctionWithProto(cx, nullptr, 0,
-                               FunctionFlags::INTERPRETED_GENERATOR_OR_ASYNC,
-                               nullptr, funName, nullptr,
-                               gc::AllocKind::FUNCTION, GenericObject));
-  if (!handlerFun) {
-    return nullptr;
-  }
-  handlerFun->initScript(module->script());
-
-  genObj->setCallee(*handlerFun);
+  genObj->setModule(*module);
   genObj->setEnvironmentChain(*frame.environmentChain());
 
   ArrayObject* stack =
@@ -142,8 +129,8 @@ bool AbstractGeneratorObject::suspend(JSContext* cx, HandleObject obj,
 
   auto genObj = obj.as<AbstractGeneratorObject>();
   MOZ_ASSERT(!genObj->hasStackStorage() || genObj->isStackStorageEmpty());
-  MOZ_ASSERT_IF(JSOp(*pc) == JSOp::Await, genObj->callee().isAsync());
-  MOZ_ASSERT_IF(JSOp(*pc) == JSOp::Yield, genObj->callee().isGenerator());
+  MOZ_ASSERT_IF(JSOp(*pc) == JSOp::Await, genObj->script()->isAsync());
+  MOZ_ASSERT_IF(JSOp(*pc) == JSOp::Yield, genObj->script()->isGenerator());
 
   if (nvalues > 0) {
     ArrayObject* stack = nullptr;
@@ -163,7 +150,13 @@ bool AbstractGeneratorObject::suspend(JSContext* cx, HandleObject obj,
 #ifdef DEBUG
 void AbstractGeneratorObject::dump() const {
   fprintf(stderr, "(AbstractGeneratorObject*) %p {\n", (void*)this);
-  fprintf(stderr, "  callee: (JSFunction*) %p,\n", (void*)&callee());
+  if (isModuleGenerator()) {
+    fprintf(stderr, "  module: (ModuleObject*) %p,\n", (void*)&module());
+  } else if (isClosed()) {
+    fprintf(stderr, "  callee: <closed>,\n");
+  } else {
+    fprintf(stderr, "  callee: (JSFunction*) %p,\n", (void*)&callee());
+  }
   fprintf(stderr, "  environmentChain: (JSObject*) %p,\n",
           (void*)&environmentChain());
   if (hasArgsObj()) {
@@ -279,16 +272,13 @@ void AbstractGeneratorObject::resume(JSContext* cx,
   InterpreterFrame* fp = activation.regs().fp();
   fp->setResumingGenerator();
 
-  // Initialize the resume args (ResumeFrameArgs) stored after the formals.
-  // TODO: module-frame support comes in a later patch in this stack.
-  if (fp->isFunctionFrame()) {
-    MOZ_ASSERT(fp->numActualArgs() == 0);
-    Value* resumeArgs = fp->resumeArgs();
-    resumeArgs[ResumeFrameArgs::ResumeValueSlot] = arg;
-    resumeArgs[ResumeFrameArgs::GeneratorSlot] = ObjectValue(*genObj);
-    resumeArgs[ResumeFrameArgs::ResumeKindSlot] =
-        Int32Value(int32_t(resumeKind));
-  }
+  // Initialize the resume args (ResumeFrameArgs) stored after the formals (for
+  // function frames) or immediately before the frame (for module frames).
+  MOZ_ASSERT_IF(fp->isFunctionFrame(), fp->numActualArgs() == 0);
+  Value* resumeArgs = fp->resumeArgs();
+  resumeArgs[ResumeFrameArgs::ResumeValueSlot] = arg;
+  resumeArgs[ResumeFrameArgs::GeneratorSlot] = ObjectValue(*genObj);
+  resumeArgs[ResumeFrameArgs::ResumeKindSlot] = Int32Value(int32_t(resumeKind));
 
   if (genObj->hasArgsObj()) {
     fp->initArgsObj(genObj->argsObj());
@@ -320,7 +310,7 @@ bool js::ResumeGenerator(JSContext* cx, Handle<AbstractGeneratorObject*> genObj,
                          HandleValue value, GeneratorResumeKind kind,
                          MutableHandleValue result) {
   MOZ_ASSERT(genObj->isSuspended());
-  MOZ_ASSERT(cx->realm() == genObj->callee().nonLazyScript()->realm());
+  MOZ_ASSERT(cx->realm() == genObj->script()->realm());
 
   GeneratorResumeState state(cx, genObj, value, kind, result);
   return RunScript(cx, state);
@@ -451,7 +441,7 @@ const JSClass js::GeneratorFunctionClass = {
 const Value& AbstractGeneratorObject::getUnaliasedLocal(uint32_t slot) const {
   MOZ_ASSERT(isSuspended());
   MOZ_ASSERT(hasStackStorage());
-  MOZ_ASSERT(slot < callee().nonLazyScript()->nfixed());
+  MOZ_ASSERT(slot < script()->nfixed());
   return stackStorage().getDenseElement(slot);
 }
 
@@ -459,12 +449,12 @@ void AbstractGeneratorObject::setUnaliasedLocal(uint32_t slot,
                                                 const Value& value) {
   MOZ_ASSERT(isSuspended());
   MOZ_ASSERT(hasStackStorage());
-  MOZ_ASSERT(slot < callee().nonLazyScript()->nfixed());
+  MOZ_ASSERT(slot < script()->nfixed());
   return stackStorage().setDenseElement(slot, value);
 }
 
 void AbstractGeneratorObject::setClosed(JSContext* cx) {
-  setFixedSlot(CALLEE_SLOT, NullValue());
+  setFixedSlot(CALLEE_OR_MODULE_SLOT, NullValue());
   setFixedSlot(ENV_CHAIN_SLOT, NullValue());
   setFixedSlot(ARGS_OBJ_SLOT, NullValue());
   setFixedSlot(STACK_STORAGE_SLOT, NullValue());
@@ -486,7 +476,7 @@ bool AbstractGeneratorObject::isAfterYieldOrAwait(JSOp op) {
     return false;
   }
 
-  JSScript* script = callee().nonLazyScript();
+  JSScript* script = this->script();
   jsbytecode* code = script->code();
   uint32_t nextOffset = script->resumeOffsets()[resumeIndex()];
   if (JSOp(code[nextOffset]) != JSOp::AfterYield) {
