@@ -14,6 +14,10 @@ import "chrome://global/content/elements/moz-button.mjs";
 const DEFAULT_CSS =
   "chrome://newtab/content/data/content/external-components/asrouter-newtab-message/asrouter-newtab-message.css";
 
+// Polling cadence for re-evaluating the message's declarative `content.states`
+// targeting while the message is visible.
+const POLL_INTERVAL_MS = 3000;
+
 // Action types that, when present on a button's `action`, are dispatched
 // directly into New Tab's Redux store via the injected `dispatch` instead
 // of being forwarded to SpecialMessageActions in the parent process. This
@@ -44,7 +48,149 @@ export default class ASRouterNewTabMessage extends MozLitElement {
      * dispatch instead of going through SpecialMessageActions.
      */
     dispatch: { type: Function },
+
+    /**
+     * Internal reactive state holding the content overlay from the first
+     * `content.states` entry whose `targeting` currently matches, or null when
+     * none match (base content). Re-evaluated when the message scrolls into
+     * view, when the tab becomes visible, and on a recurring poll.
+     */
+    _matchedContent: { state: true },
   };
+
+  #pollTimer = null;
+  #onVisibilityChange = null;
+  #reachedFinalState = false;
+
+  connectedCallback() {
+    super.connectedCallback();
+    if (!this.messageData?.content?.states?.length) {
+      return;
+    }
+
+    this.#onVisibilityChange = () => this.#evaluateStates();
+    this.ownerDocument.addEventListener(
+      "visibilitychange",
+      this.#onVisibilityChange
+    );
+    this.#startPolling();
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.#teardownTriggers();
+  }
+
+  /**
+   * isIntersecting is set by the newtab MessageWrapper after its
+   * IntersectionObserver fires, which can land after connectedCallback, so
+   * evaluating here - rather than eagerly in connectedCallback - makes the
+   * first evaluation deterministic instead of racing that prop.
+   *
+   * @param {Map} changedProperties
+   */
+  updated(changedProperties) {
+    if (changedProperties.has("isIntersecting") && this.isIntersecting) {
+      this.#evaluateStates();
+    }
+  }
+
+  #teardownTriggers() {
+    this.#stopPolling();
+    if (this.#onVisibilityChange) {
+      this.ownerDocument.removeEventListener(
+        "visibilitychange",
+        this.#onVisibilityChange
+      );
+      this.#onVisibilityChange = null;
+    }
+  }
+
+  #startPolling() {
+    if (this.#pollTimer) {
+      return;
+    }
+    this.#pollTimer = globalThis.setInterval(
+      () => this.#evaluateStates(),
+      POLL_INTERVAL_MS
+    );
+  }
+
+  #stopPolling() {
+    if (this.#pollTimer) {
+      globalThis.clearInterval(this.#pollTimer);
+      this.#pollTimer = null;
+    }
+  }
+
+  /**
+   * Ask the parent to evaluate every `content.states` entry's `targeting` (in
+   * one round-trip) and swap in the first matching entry's content overlay.
+   * States are evaluated in order, so list them most- to least-specific.
+   * Skipped until the message has scrolled into view, while the tab is
+   * backgrounded, and once a `final` state has been reached. The result is
+   * applied asynchronously via setMatchedState().
+   */
+  #evaluateStates() {
+    if (this.#reachedFinalState) {
+      return;
+    }
+    const states = this.messageData?.content?.states;
+    if (!states?.length) {
+      return;
+    }
+    if (
+      this.ownerDocument.visibilityState !== "visible" ||
+      !this.isIntersecting
+    ) {
+      return;
+    }
+    this.dispatchEvent(
+      new CustomEvent("ASRouterNewTabMessage:EvaluateTargeting", {
+        bubbles: true,
+        detail: { targetings: states.map(state => state.targeting) },
+      })
+    );
+  }
+
+  /**
+   * Called by ASRouterNewTabMessageChild with the index of the first
+   * `content.states` entry whose targeting matched (or -1 for none), selecting
+   * the content overlay applied by #currentContent().
+   *
+   * @param {number} index
+   */
+  setMatchedState(index) {
+    if (this.#reachedFinalState) {
+      return;
+    }
+
+    const states = this.messageData?.content?.states ?? [];
+    const matched = index >= 0 ? states[index] : null;
+    this._matchedContent = matched?.content ?? null;
+    // A state can opt out of all further re-evaluation once reached (e.g. a
+    // terminal "completed" state), so a finished message stops polling and
+    // stops reacting to visibility changes rather than being able to bounce
+    // back out of the final state.
+    if (matched?.final) {
+      this.#reachedFinalState = true;
+      this.#teardownTriggers();
+    }
+  }
+
+  /**
+   * Returns the effective content, overlaying the matched state's content (see
+   * #evaluateStates / setMatchedState). Used by both render() and the button
+   * handlers so the displayed UI and the action it triggers stay in sync.
+   *
+   * @returns {object} The (possibly overlaid) content.
+   */
+  #currentContent() {
+    const content = this.messageData?.content ?? {};
+    return this._matchedContent
+      ? { ...content, ...this._matchedContent }
+      : content;
+  }
 
   /**
    * Executes a SpecialMessageAction by dispatching an event that will be caught
@@ -90,7 +236,7 @@ export default class ASRouterNewTabMessage extends MozLitElement {
   }
 
   #handlePrimaryButton() {
-    const { primaryButton } = this.messageData?.content ?? {};
+    const { primaryButton } = this.#currentContent();
     this.handleClick?.("primary-button");
     if (primaryButton?.action?.type) {
       this.specialMessageAction(primaryButton.action);
@@ -101,7 +247,7 @@ export default class ASRouterNewTabMessage extends MozLitElement {
   }
 
   #handleSecondaryButton() {
-    const { secondaryButton } = this.messageData?.content ?? {};
+    const { secondaryButton } = this.#currentContent();
     this.handleClick?.("secondary-button");
     if (secondaryButton?.action?.type) {
       this.specialMessageAction(secondaryButton.action);
@@ -185,7 +331,7 @@ export default class ASRouterNewTabMessage extends MozLitElement {
   }
 
   render() {
-    const { content } = this.messageData ?? {};
+    const content = this.#currentContent();
     const CSS_HREF = this.cssOverride || DEFAULT_CSS;
     return html`
       <link rel="stylesheet" href=${CSS_HREF} />
