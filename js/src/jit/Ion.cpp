@@ -167,9 +167,13 @@ bool JitRuntime::generateTrampolines(JSContext* cx) {
   generateInvalidator(masm, &bailoutTail);
   rangeRecorder.recordOffset("Trampoline: Invalidator");
 
-  JitSpew(JitSpew_Codegen, "# Emitting EnterJIT sequence");
-  generateEnterJIT(cx, masm);
-  rangeRecorder.recordOffset("Trampoline: EnterJIT");
+  JitSpew(JitSpew_Codegen, "# Emitting EnterJIT [Normal] trampoline");
+  generateEnterJIT(cx, masm, EnterJitMode::Normal);
+  rangeRecorder.recordOffset("Trampoline: EnterJIT [Normal]");
+
+  JitSpew(JitSpew_Codegen, "# Emitting EnterJIT [GeneratorResume] trampoline");
+  generateEnterJIT(cx, masm, EnterJitMode::GeneratorResume);
+  rangeRecorder.recordOffset("Trampoline: EnterJIT [GeneratorResume]");
 
   JitSpew(JitSpew_Codegen, "# Emitting Pre Barrier for Value");
   valuePreBarrierOffset_ = generatePreBarrier(cx, masm, MIRType::Value);

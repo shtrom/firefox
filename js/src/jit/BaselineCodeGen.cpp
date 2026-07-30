@@ -6619,18 +6619,14 @@ bool BaselineCodeGen<Handler>::emit_Resume() {
   masm.pushValue(JSVAL_TYPE_OBJECT, genObj);
   masm.pushValue(Address(callerStackPtr, sizeof(Value)));
 
-  // Push |undefined| for the formals.
-  Label loop, loopDone;
-  masm.branchTest32(Assembler::Zero, scratch1, scratch1, &loopDone);
+  // Push |undefined| for the formals and for |this|. Because |this| is also
+  // pushed, we count down to -1 so we always push at least one Value.
+  Label loop;
   masm.bind(&loop);
   {
     masm.pushValue(UndefinedValue());
-    masm.branchSub32(Assembler::NonZero, Imm32(1), scratch1, &loop);
+    masm.branchSub32(Assembler::NotSigned, Imm32(1), scratch1, &loop);
   }
-  masm.bind(&loopDone);
-
-  // Push |undefined| for |this|.
-  masm.pushValue(UndefinedValue());
 
 #ifdef DEBUG
   // Update BaselineFrame debugFrameSize field.

@@ -6230,6 +6230,10 @@ class MacroAssembler : public MacroAssemblerSpecific {
                                  uint32_t extraArgs = 0);
   void alignJitStackBasedOnNArgs(uint32_t argc, bool countIncludesThis);
 
+  // As above, but |numValues| is the total number of Values pushed above the
+  // JitFrameLayout.
+  void alignJitStackBasedOnNumValues(uint32_t numValues);
+
   inline void assertStackAlignment(uint32_t alignment, int32_t offset = 0);
 
   void touchFrameValues(Register numStackValues, Register scratch1,

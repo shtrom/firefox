@@ -17,6 +17,7 @@
 #include "js/TypeDecls.h"
 #include "js/ValueArray.h"
 #include "vm/ArgumentsObject.h"
+#include "vm/GeneratorResumeKind.h"
 #include "vm/JSFunction.h"
 #include "vm/JSScript.h"
 #include "wasm/WasmDebugFrame.h"  // js::wasm::DebugFrame
@@ -293,6 +294,13 @@ struct ResumeFrameArgs {
   }
   static constexpr size_t offsetOfResumeKind() {
     return offsetOfSlot(ResumeKindSlot);
+  }
+
+  static void init(Value* slots, Value resumeValue, Value generator,
+                   GeneratorResumeKind resumeKind) {
+    slots[ResumeValueSlot] = resumeValue;
+    slots[GeneratorSlot] = generator;
+    slots[ResumeKindSlot] = Int32Value(int32_t(resumeKind));
   }
 };
 
