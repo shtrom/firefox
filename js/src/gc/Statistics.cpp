@@ -1331,7 +1331,7 @@ void Statistics::sendSliceTelemetry(const SliceData& slice) {
   runtime->metrics().GC_SLICE_MS(sliceTime);
 
   if (slice.budget.isTimeBudget()) {
-    TimeDuration budgetDuration = slice.budget.timeBudgetDuration();
+    TimeDuration budgetDuration = slice.budget.timeBudget();
     runtime->metrics().GC_BUDGET_MS_2(budgetDuration);
 
     if (IsCurrentlyAnimating(runtime->gc.lastAnimationTime(), slice.end)) {
@@ -1814,8 +1814,8 @@ const char* Statistics::formatBudget(const SliceData& slice) {
     return formatBuffer_;
   }
 
-  DebugOnly<int> r =
-      SprintfLiteral(formatBuffer_, "%6" PRIi64, slice.budget.timeBudget());
+  double millis = slice.budget.timeBudget().ToMilliseconds();
+  DebugOnly<int> r = SprintfLiteral(formatBuffer_, "%3.1f", millis);
   MOZ_ASSERT(r > 0 && r < FormatBufferLength);
   return formatBuffer_;
 }

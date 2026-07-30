@@ -2067,8 +2067,9 @@ int SliceBudget::describe(char* buffer, size_t maxlen) const {
   if (idle) {
     extra = extended ? " (started idle but extended)" : " (idle)";
   }
-  return snprintf(buffer, maxlen, "%s%s%" PRId64 "ms%s", nonstop, interruptStr,
-                  timeBudget(), extra);
+  double millis = timeBudget().ToMilliseconds();
+  return snprintf(buffer, maxlen, "%s%s%3.1fms%s", nonstop, interruptStr,
+                  millis, extra);
 }
 
 bool SliceBudget::checkOverBudget() {
@@ -4370,7 +4371,8 @@ std::tuple<JS::SliceBudget, JS::SliceBudget> GCRuntime::budgetConcurrentMarking(
     TimeDuration remaining = requestedBudget.deadline() - TimeStamp::Now();
     millis = std::min(millis, remaining.ToMilliseconds());
     if (millis > 0.0) {
-      return {SliceBudget(TimeBudget(millis), mainThreadInterrupt),
+      return {SliceBudget(TimeDuration::FromMilliseconds(millis),
+                          mainThreadInterrupt),
               SliceBudget(JS::UnlimitedBudget(), helperThreadInterrupt)};
     }
   }
@@ -4827,12 +4829,13 @@ bool GCRuntime::maybeIncreaseSliceBudget(SliceBudget& budget,
 // Return true if the budget is actually extended after rounding.
 static bool ExtendBudget(SliceBudget& budget, double newDuration) {
   long millis = lround(newDuration);
-  if (millis <= budget.timeBudget()) {
+  if (millis <= budget.timeBudget().ToMilliseconds()) {
     return false;
   }
 
   bool idleTriggered = budget.idle;
-  budget = SliceBudget(TimeBudget(millis), nullptr);  // Uninterruptible.
+  // The new budget is uninterruptible.
+  budget = SliceBudget(TimeDuration::FromMilliseconds(millis), nullptr);
   budget.idle = idleTriggered;
   budget.extended = true;
   return true;
@@ -5337,7 +5340,7 @@ SliceBudget GCRuntime::defaultBudget(JS::GCReason reason, int64_t millis) {
     return SliceBudget::unlimited();
   }
 
-  return SliceBudget(TimeBudget(millis));
+  return SliceBudget(TimeDuration::FromMilliseconds(millis));
 }
 
 void GCRuntime::gc(JS::GCOptions options, JS::GCReason reason) {
