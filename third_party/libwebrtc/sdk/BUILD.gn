@@ -476,7 +476,6 @@ if (is_ios || is_mac) {
           "../api/video:video_frame",
           "../api/video:video_rtp_headers",
           "../common_video",
-          "../media:rtc_media_base",
           "../rtc_base:checks",
           "../rtc_base:logging",
         ]
@@ -583,7 +582,6 @@ if (is_ios || is_mac) {
         "../api/video:video_frame",
         "../api/video:video_rtp_headers",
         "../common_video",
-        "../media:rtc_media_base",
         "../pc:video_track_source_proxy",
         "../rtc_base:checks",
         "../rtc_base:threading",
@@ -759,7 +757,6 @@ if (is_ios || is_mac) {
         "../api/video_codecs:video_codecs_api",
         "../common_video",
         "../media:media_constants",
-        "../media:rtc_media_base",
         "../modules/video_coding:video_codec_interface",
         "../rtc_base:checks",
       ]
@@ -810,7 +807,6 @@ if (is_ios || is_mac) {
       deps = [
         ":base_objc",
         "../media:media_constants",
-        "../media:rtc_media_base",
       ]
     }
 
@@ -870,7 +866,6 @@ if (is_ios || is_mac) {
         ":base_objc",
         ":wrapped_native_codec_objc",
         "../api/video_codecs:video_codecs_api",
-        "../media:rtc_media_base",
         "../modules/video_coding/codecs/av1:dav1d_decoder",
       ]
     }
@@ -1174,7 +1169,6 @@ if (is_ios || is_mac) {
         "../api/video_codecs:video_codecs_api",
         "../common_video",
         "../media:media_constants",
-        "../media:rtc_media_base",
         "../modules/video_coding:video_codec_interface",
         "../pc:peer_connection_factory",
         "../pc:webrtc_sdp",
@@ -1279,7 +1273,6 @@ if (is_ios || is_mac) {
             "../api/video_codecs:video_codecs_api",
             "../common_video",
             "../media:codec",
-            "../media:rtc_media_base",
             "../media:rtc_media_tests_utils",
             "../modules/video_coding:video_codec_interface",
             "../rtc_base:refcount",
@@ -1780,7 +1773,6 @@ if (is_ios || is_mac) {
         "../common_video",
         "../media:codec",
         "../media:rtc_audio_video",
-        "../media:rtc_media_base",
         "../modules/video_coding:video_codec_interface",
         "../rtc_base:checks",
         "../rtc_base:logging",

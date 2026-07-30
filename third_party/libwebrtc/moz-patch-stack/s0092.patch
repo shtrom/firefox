@@ -48,10 +48,10 @@ index 11c8285abe..70466453f4 100644
      }
    }
 diff --git a/modules/video_capture/BUILD.gn b/modules/video_capture/BUILD.gn
-index 9f1551a4a9..71001ed063 100644
+index 83dc72ba53..dbcc162510 100644
 --- a/modules/video_capture/BUILD.gn
 +++ b/modules/video_capture/BUILD.gn
-@@ -118,7 +118,7 @@ if (!build_with_chromium || is_linux || is_chromeos) {
+@@ -114,7 +114,7 @@ if (!build_with_chromium || is_linux || is_chromeos) {
          ]
          if (build_with_mozilla) {
            configs -= [ "../portal:pipewire_base" ]
@@ -61,10 +61,10 @@ index 9f1551a4a9..71001ed063 100644
        }
      }
 diff --git a/sdk/BUILD.gn b/sdk/BUILD.gn
-index e13f3e0637..5856a35f8b 100644
+index 5bdfd6d15b..d7ba2505ca 100644
 --- a/sdk/BUILD.gn
 +++ b/sdk/BUILD.gn
-@@ -626,6 +626,20 @@ if (is_ios || is_mac) {
+@@ -624,6 +624,20 @@ if (is_ios || is_mac) {
          "CoreGraphics.framework",
          "CoreVideo.framework",
        ]

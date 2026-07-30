@@ -11,10 +11,10 @@ Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/b0658888969395dca
  2 files changed, 10 insertions(+)
 
 diff --git a/BUILD.gn b/BUILD.gn
-index 835851942d..917bbf13e8 100644
+index d398706b58..a8ace74752 100644
 --- a/BUILD.gn
 +++ b/BUILD.gn
-@@ -636,6 +636,10 @@ if (!build_with_chromium) {
+@@ -637,6 +637,10 @@ if (!build_with_chromium) {
        ]
      }
  
@@ -26,10 +26,10 @@ index 835851942d..917bbf13e8 100644
        deps += [ "logging:rtc_event_log_proto" ]
      }
 diff --git a/sdk/BUILD.gn b/sdk/BUILD.gn
-index b7f8a41bf5..e13f3e0637 100644
+index 73663ef797..5bdfd6d15b 100644
 --- a/sdk/BUILD.gn
 +++ b/sdk/BUILD.gn
-@@ -566,6 +566,7 @@ if (is_ios || is_mac) {
+@@ -565,6 +565,7 @@ if (is_ios || is_mac) {
        }
      }
  
@@ -37,7 +37,7 @@ index b7f8a41bf5..e13f3e0637 100644
      rtc_library("videosource_objc") {
        sources = [
          "objc/api/peerconnection/RTCVideoSource+Private.h",
-@@ -594,6 +595,7 @@ if (is_ios || is_mac) {
+@@ -592,6 +593,7 @@ if (is_ios || is_mac) {
          ":used_from_extension",
        ]
      }
@@ -45,7 +45,7 @@ index b7f8a41bf5..e13f3e0637 100644
  
      rtc_library("videoframebuffer_objc") {
        visibility = [ "*" ]
-@@ -626,6 +628,7 @@ if (is_ios || is_mac) {
+@@ -624,6 +626,7 @@ if (is_ios || is_mac) {
        ]
      }
  
@@ -53,7 +53,7 @@ index b7f8a41bf5..e13f3e0637 100644
      rtc_library("metal_objc") {
        visibility = [ "*" ]
        allow_poison = [
-@@ -688,6 +691,7 @@ if (is_ios || is_mac) {
+@@ -686,6 +689,7 @@ if (is_ios || is_mac) {
          ":videoframebuffer_objc",
        ]
      }
@@ -61,7 +61,7 @@ index b7f8a41bf5..e13f3e0637 100644
  
      rtc_library("videocapture_objc") {
        visibility = [ "*" ]
-@@ -716,6 +720,7 @@ if (is_ios || is_mac) {
+@@ -714,6 +718,7 @@ if (is_ios || is_mac) {
        ]
      }
  
@@ -69,7 +69,7 @@ index b7f8a41bf5..e13f3e0637 100644
      rtc_library("videocodec_objc") {
        visibility = [ "*" ]
        configs += [ "..:no_global_constructors" ]
-@@ -1840,5 +1845,6 @@ if (is_ios || is_mac) {
+@@ -1832,5 +1837,6 @@ if (is_ios || is_mac) {
          "VideoToolbox.framework",
        ]
      }

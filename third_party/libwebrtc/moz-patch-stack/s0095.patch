@@ -74,7 +74,7 @@ index 44447d3a34..a034bc9814 100644
  # The python interpreter to use by default. On Windows, this will look
  # for python3.exe and python3.bat.
 diff --git a/BUILD.gn b/BUILD.gn
-index a6539373e4..20ddec7f06 100644
+index ff367d776f..4b8801df62 100644
 --- a/BUILD.gn
 +++ b/BUILD.gn
 @@ -21,8 +21,8 @@
@@ -108,7 +108,7 @@ index a6539373e4..20ddec7f06 100644
      defines = []
  
      deps = [
-@@ -851,7 +851,7 @@ rtc_static_library("dcsctp") {
+@@ -852,7 +852,7 @@ rtc_static_library("dcsctp") {
    visibility = [ "//:default" ]
    sources = []
    complete_static_lib = true
@@ -117,7 +117,7 @@ index a6539373e4..20ddec7f06 100644
    defines = []
    deps = [
      "net/dcsctp/public:factory",
-@@ -889,7 +889,7 @@ group("poison_default_neural_residual_echo_estimator") {
+@@ -890,7 +890,7 @@ group("poison_default_neural_residual_echo_estimator") {
  if (!build_with_chromium) {
    # Write debug logs to gn_logs.txt.
    # This is also required for Siso builds.
@@ -428,7 +428,7 @@ index 880d6bbfd8..6db3c29f03 100644
  
  group("logging") {
 diff --git a/media/BUILD.gn b/media/BUILD.gn
-index 61d46cebde..ec7ec96ce7 100644
+index 0b695751ff..b648193d82 100644
 --- a/media/BUILD.gn
 +++ b/media/BUILD.gn
 @@ -6,7 +6,7 @@
@@ -576,7 +576,7 @@ index 70466453f4..0a463c7619 100644
  import("../../webrtc.gni")
  
 diff --git a/modules/video_coding/BUILD.gn b/modules/video_coding/BUILD.gn
-index 1dab555764..cf6283d3e1 100644
+index 739e0ebe98..761e5f30ca 100644
 --- a/modules/video_coding/BUILD.gn
 +++ b/modules/video_coding/BUILD.gn
 @@ -6,7 +6,7 @@
@@ -589,7 +589,7 @@ index 1dab555764..cf6283d3e1 100644
  import("../../webrtc.gni")
  
 diff --git a/pc/BUILD.gn b/pc/BUILD.gn
-index 32d97ed5af..375943ab1b 100644
+index 4018fa4813..dcafeb0aa2 100644
 --- a/pc/BUILD.gn
 +++ b/pc/BUILD.gn
 @@ -29,8 +29,8 @@
@@ -679,7 +679,7 @@ index 24417d7abc..8d156a0d2a 100644
      output_extension = "so"
  
 diff --git a/sdk/BUILD.gn b/sdk/BUILD.gn
-index 5856a35f8b..69b1ac8611 100644
+index d7ba2505ca..427a6adf6c 100644
 --- a/sdk/BUILD.gn
 +++ b/sdk/BUILD.gn
 @@ -9,12 +9,12 @@
@@ -708,7 +708,7 @@ index 5856a35f8b..69b1ac8611 100644
      }
    }
  
-@@ -1298,7 +1298,7 @@ if (is_ios || is_mac) {
+@@ -1291,7 +1291,7 @@ if (is_ios || is_mac) {
            }
  
            public_deps = [
