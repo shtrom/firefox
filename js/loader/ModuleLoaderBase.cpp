@@ -586,8 +586,10 @@ nsresult ModuleLoaderBase::StartOrRestartModuleLoad(ModuleLoadRequest* aRequest,
     return rv;
   }
 
-  // Check whether the module has been fetched or is currently being fetched,
-  // and if so wait for it rather than starting a new fetch.
+  // https://html.spec.whatwg.org/#fetch-a-single-module-script
+  // Steps 5-6. If the entry already exists (a module script or null, or a list
+  // of waiting callbacks), WaitForModuleFetch runs or appends onComplete as
+  // appropriate rather than starting a new fetch.
   if (aRestart == RestartRequest::No &&
       ModuleMapContainsURL(
           ModuleMapKey(aRequest->URI(), aRequest->mModuleType))) {
@@ -646,6 +648,9 @@ void ModuleLoaderBase::SetModuleFetchStarted(ModuleLoadRequest* aRequest) {
   MOZ_ASSERT(aRequest->IsFetching());
   MOZ_ASSERT(!ModuleMapContainsURL(moduleMapKey));
 
+  // Step 7. Set moduleMap[(url, moduleType)] to « onComplete ».
+  //
+  // The list of waiting callbacks is the LoadingRequest's mWaiting.
   RefPtr<LoadingRequest> loadingRequest = new LoadingRequest();
   loadingRequest->mRequest = aRequest;
   mFetchingModules.InsertOrUpdate(moduleMapKey, loadingRequest);
@@ -699,7 +704,9 @@ ModuleLoaderBase::SetModuleFetchFinishedAndGetWaitingRequests(
   RefPtr<ModuleScript> moduleScript(aRequest->mModuleScript);
   MOZ_ASSERT(NS_FAILED(aResult) == !moduleScript);
 
-  mFetchedModules.InsertOrUpdate(moduleMapKey, RefPtr{moduleScript});
+  if (moduleScript) {
+    mFetchedModules.InsertOrUpdate(moduleMapKey, RefPtr{moduleScript});
+  }
 
   return loadingRequest.forget();
 }
@@ -728,16 +735,24 @@ void ModuleLoaderBase::WaitForModuleFetch(ModuleLoadRequest* aRequest) {
   ModuleMapKey moduleMapKey(aRequest->URI(), aRequest->mModuleType);
   MOZ_ASSERT(ModuleMapContainsURL(moduleMapKey));
 
+  // Step 6. If moduleMap[(url, moduleType)] is a list, append onComplete to
+  // moduleMap[(url, moduleType)], and return.
   if (auto entry = mFetchingModules.Lookup(moduleMapKey)) {
-    RefPtr<LoadingRequest> loadingRequest = entry.Data();
+    const RefPtr<LoadingRequest>& loadingRequest = entry.Data();
     loadingRequest->mWaiting.AppendElement(aRequest);
     return;
   }
 
+  // Step 5. If moduleMap[(url, moduleType)] is a module script or null, run
+  // onComplete given moduleMap[(url, moduleType)], and return.
+  //
+  // Failed fetches are no longer cached, so the entry is always a module
+  // script, never null.
   RefPtr<ModuleScript> ms;
   MOZ_ALWAYS_TRUE(mFetchedModules.Get(moduleMapKey, getter_AddRefs(ms)));
+  MOZ_ASSERT(ms);
 
-  ResumeWaitingRequest(aRequest, bool(ms));
+  ResumeWaitingRequest(aRequest, true);
 }
 
 ModuleScript* ModuleLoaderBase::GetFetchedModule(
@@ -1909,9 +1924,6 @@ void ModuleLoaderBase::CopyModulesTo(ModuleLoaderBase* aDest) {
 
   for (const auto& entry : mFetchedModules) {
     RefPtr<ModuleScript> moduleScript = entry.GetData();
-
-    // NOTE: moduleScript can be nullptr for modules that fails to import.
-    //       Copy them too, so that we don't import them again.
     aDest->mFetchedModules.InsertOrUpdate(entry, moduleScript);
   }
 }
