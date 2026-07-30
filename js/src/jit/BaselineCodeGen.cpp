@@ -5606,6 +5606,12 @@ bool BaselineCodeGen<Handler>::emit_ToAsyncIter() {
 template <typename Handler>
 bool BaselineCodeGen<Handler>::emit_CanSkipAwait() {
   frame.syncStack(0);
+
+  // The await can only be skipped when this is the first frame of its
+  // activation. See js::CanSkipAwait.
+  Label notEntryFrame, done;
+  masm.branchIfNotActivationEntryFrame(R1.scratchReg(), &notEntryFrame);
+
   masm.loadValue(frame.addressOfStackValue(-1), R0);
 
   prepareVMCall();
@@ -5615,7 +5621,12 @@ bool BaselineCodeGen<Handler>::emit_CanSkipAwait() {
   if (!callVM<Fn, js::CanSkipAwait>()) {
     return false;
   }
+  masm.jump(&done);
 
+  masm.bind(&notEntryFrame);
+  masm.move32(Imm32(0), ReturnReg);
+
+  masm.bind(&done);
   masm.tagValue(JSVAL_TYPE_BOOLEAN, ReturnReg, R0);
   frame.push(R0, JSVAL_TYPE_BOOLEAN);
   return true;

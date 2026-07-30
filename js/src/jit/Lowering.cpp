@@ -7665,7 +7665,8 @@ void LIRGenerator::visitAsyncAwait(MAsyncAwait* ins) {
 }
 
 void LIRGenerator::visitCanSkipAwait(MCanSkipAwait* ins) {
-  auto* lir = new (alloc()) LCanSkipAwait(useBoxAtStart(ins->value()));
+  auto* lir = new (alloc())
+      LCanSkipAwait(useBoxAtStart(ins->value()), tempFixed(CallTempReg0));
   defineReturn(lir, ins);
   assignSafepoint(lir, ins);
 }

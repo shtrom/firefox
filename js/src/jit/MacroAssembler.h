@@ -905,6 +905,11 @@ class MacroAssembler : public MacroAssemblerSpecific {
                                             Register dest,
                                             bool hasInlineICScript = false);
 
+  // Branch to |notEntryFrame| if the current frame is not the first frame of
+  // its activation.
+  inline void branchIfNotActivationEntryFrame(Register scratch,
+                                              Label* notEntryFrame);
+
   // Load the number of actual arguments from the frame's JitFrameLayout.
   inline void loadNumActualArgs(Register framePtr, Register dest);
 

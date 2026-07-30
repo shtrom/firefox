@@ -21789,11 +21789,23 @@ void CodeGenerator::visitAsyncAwait(LAsyncAwait* lir) {
 
 void CodeGenerator::visitCanSkipAwait(LCanSkipAwait* lir) {
   ValueOperand value = ToValue(lir->value());
+  Register scratch = ToRegister(lir->temp0());
+
+  // The await can only be skipped when this is the first frame of its
+  // activation. See js::CanSkipAwait.
+  Label notEntryFrame, done;
+  masm.branchIfNotActivationEntryFrame(scratch, &notEntryFrame);
 
   pushArg(value);
 
   using Fn = bool (*)(JSContext*, HandleValue, bool* canSkip);
   callVM<Fn, js::CanSkipAwait>(lir);
+  masm.jump(&done);
+
+  masm.bind(&notEntryFrame);
+  masm.move32(Imm32(0), ReturnReg);
+
+  masm.bind(&done);
 }
 
 void CodeGenerator::visitMaybeExtractAwaitValue(LMaybeExtractAwaitValue* lir) {

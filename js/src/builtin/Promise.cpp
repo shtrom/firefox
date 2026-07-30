@@ -8313,42 +8313,16 @@ void PromiseObject::dumpOwnStringContent(js::GenericPrinter& out) const {}
 // This guarantees that any new job enqueued in the current turn will be
 // executed immediately after the current job.
 //
-// Currently we only support skipping jobs when the async function is resumed
-// at least once.
-[[nodiscard]] static bool IsTopMostAsyncFunctionCall(JSContext* cx) {
-  // If there are two async resumes on the stack we can exit early
-  // without doing any further frame inspection.
-  if (cx->asyncResumeDepth > 1) {
-    return false;
-  }
-
-  FrameIter iter(cx);
-
-  // The current frame should be the async function.
-  if (iter.done()) {
-    return false;
-  }
-
-  MOZ_ASSERT(iter.isFunctionFrame(), "CanSkipAwait is only used for functions");
-  MOZ_ASSERT(iter.calleeTemplate()->isAsync());
-
-  // We only skip the await when the async function/generator has been resumed
-  // at least once. The initial synchronous call enters its activation normally.
-  if (!cx->activation()->enteredForGeneratorResume()) {
-    return false;
-  }
-
-  ++iter;
-
-  // There should be no more frames.
-  if (iter.done()) {
-    MOZ_ASSERT(cx->asyncResumeDepth <= 1);
-    return true;
-  }
-
-  return false;
-}
-
+// The predicate is split across the JSOp::CanSkipAwait op and this function:
+//
+//  - The op calls js::CanSkipAwait iff the stack frame is the first frame of
+//    its activation. Checking this in JIT code is much cheaper than checking it
+//    here in C++.
+//
+//  - js::CanSkipAwait then requires the activation to have been entered to
+//    resume a suspended async function and to be the context's only activation.
+//
+// This lets us avoid an expensive frame iteration in non-debug builds.
 [[nodiscard]] bool js::CanSkipAwait(JSContext* cx, HandleValue val,
                                     bool* canSkip) {
   if (!cx->canSkipEnqueuingJobs) {
@@ -8356,10 +8330,24 @@ void PromiseObject::dumpOwnStringContent(js::GenericPrinter& out) const {}
     return true;
   }
 
-  if (!IsTopMostAsyncFunctionCall(cx)) {
+  // The op already established the stack frame is the first frame of its
+  // activation. Ensure the activation is a resume and the sole activation.
+  Activation* act = cx->activation();
+  if (!act->enteredForGeneratorResume() || act->prev()) {
     *canSkip = false;
     return true;
   }
+
+  // In debug builds, assert our JS caller is the only frame on the stack.
+#ifdef DEBUG
+  FrameIter iter(cx);
+  MOZ_ASSERT(!iter.done());
+  MOZ_ASSERT(iter.isFunctionFrame(), "CanSkipAwait is only used for functions");
+  MOZ_ASSERT(iter.calleeTemplate()->isAsync());
+  ++iter;
+  MOZ_ASSERT(iter.done());
+  MOZ_ASSERT(cx->asyncResumeDepth <= 1);
+#endif
 
   // Primitive values cannot be 'thenables', so we can trivially skip the
   // await operation.
