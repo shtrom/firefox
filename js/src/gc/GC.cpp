@@ -4298,8 +4298,6 @@ bool GCRuntime::finishAnyConcurrentMarking(JS::SliceBudget& budget) {
 
   if (concurrentMarker().isMarkStackEmpty()) {
     concurrentMarkingFinishedCount++;
-  } else {
-    concurrentMarkingFinishedCount = 0;
   }
 
   // Perform as much main-thread-only marking as we can within the budget.
@@ -4360,10 +4358,9 @@ std::tuple<JS::SliceBudget, JS::SliceBudget> GCRuntime::budgetConcurrentMarking(
   // thread has run out of work more than a couple of times, start performing an
   // increasing amount of marking on the main thread.
 
-  const size_t MarkOnMainThreadAfterFinishedSlices = 2;
+  const size_t MarkOnMainThreadAfterFinishedSlices = 1;
   const double MainThreadMarkTimePerSlice = 0.5;
-  if (sliceReason == JS::GCReason::BG_TASK_FINISHED &&
-      requestedBudget.isTimeBudget() &&
+  if (requestedBudget.isTimeBudget() &&
       concurrentMarkingFinishedCount >= MarkOnMainThreadAfterFinishedSlices) {
     double millis =
         MainThreadMarkTimePerSlice *
