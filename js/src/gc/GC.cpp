@@ -3562,7 +3562,7 @@ bool GCRuntime::initMultiThreadedMarkers() {
   return true;
 }
 
-inline IncrementalProgress ToIncrementalProgress(bool finished) {
+static inline IncrementalProgress ToIncrementalProgress(bool finished) {
   return finished ? Finished : NotFinished;
 }
 
@@ -3571,18 +3571,24 @@ IncrementalProgress GCRuntime::markPhase(SliceBudget& budget) {
 
   markSliceCount++;
 
-  finishAnyConcurrentMarking(budget);
+  bool finishedMainThreadOnlyMarking = finishAnyConcurrentMarking(budget);
 
   auto [mainThreadBudget, helperThreadBudget] = budgetConcurrentMarking(budget);
 
-  markSynchronously(mainThreadBudget, useParallelMarking);
+  IncrementalProgress result =
+      markSynchronously(mainThreadBudget, useParallelMarking);
 
-  if (hasMarkingWork()) {
+  if (!marker().isMarkStackEmpty()) {
+    MOZ_ASSERT(result == NotFinished);
     maybeStartConcurrentMarking(helperThreadBudget);
     return NotFinished;
   }
 
-  return Finished;
+  if (!finishedMainThreadOnlyMarking) {
+    return NotFinished;
+  }
+
+  return result;
 }
 
 IncrementalProgress GCRuntime::markSynchronously(
@@ -3618,11 +3624,7 @@ IncrementalProgress GCRuntime::markSynchronously(
     MOZ_ASSERT(reportTime);
     MOZ_ASSERT(!isBackgroundMarking());
 
-    if (!ParallelMarker::mark(this, sliceBudget)) {
-      return NotFinished;
-    }
-
-    return Finished;
+    return ToIncrementalProgress(ParallelMarker::mark(this, sliceBudget));
   }
 
   return ToIncrementalProgress(
@@ -3636,11 +3638,7 @@ bool GCRuntime::hasMarkingWork() const {
     }
   }
 
-  if (hasDelayedMarking()) {
-    return true;
-  }
-
-  return false;
+  return hasDelayedMarking();
 }
 
 void GCRuntime::drainMarkStack() {
@@ -4288,11 +4286,11 @@ void GCRuntime::maybeStartConcurrentMarking(SliceBudget& budget) {
 #endif
 }
 
-void GCRuntime::finishAnyConcurrentMarking(JS::SliceBudget& budget) {
+bool GCRuntime::finishAnyConcurrentMarking(JS::SliceBudget& budget) {
 #ifdef JS_GC_CONCURRENT_MARKING
   if (!useConcurrentMarking) {
     MOZ_ASSERT(!isBackgroundMarking());
-    return;
+    return true;
   }
 
   pauseBackgroundMarking();
@@ -4304,13 +4302,20 @@ void GCRuntime::finishAnyConcurrentMarking(JS::SliceBudget& budget) {
   }
 
   // Perform as much main-thread-only marking as we can within the budget.
-  concurrentMarker().processMainThreadBuffers(budget);
+  bool result = concurrentMarker().processMainThreadBuffers(budget);
 
   GCMarker::moveAllWork(&marker(), &concurrentMarker());
 
   if (!canMarkConcurrently()) {
+    // Abort concurrent marking. Ensure main thread buffers are traced first.
+    SliceBudget unlimitedBudget = SliceBudget::unlimited();
+    concurrentMarker().processMainThreadBuffers(unlimitedBudget);
     useConcurrentMarking = NoConcurrentMarking;
   }
+
+  return result;
+#else
+  return true;
 #endif
 }
 
