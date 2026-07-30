@@ -50,6 +50,14 @@ If `content.position` is not defined, it defaults to the `ABOVE_WIDGETS` behavio
 
 This is an optional square image that can be displayed at the start of the message surface. If `imageSrc` is not defined, the image element is not rendered.
 
+### `content.primaryButton` / `content.secondaryButton` (Object)
+
+The optional call-to-action buttons rendered at the bottom of the message. Each button object supports:
+
+- `label` (string, or `{ string_id }` for a localized string): the button text.
+- `action` (object): the `SpecialMessageAction` to run on click (see [`specialMessageAction`](#specialmessageactionaction)). May also carry `dismiss: true` to dismiss the message after acting.
+- `type` (string, optional): overrides the underlying `moz-button` visual style. It defaults to `"primary"` for the primary button and `"default"` for the secondary button. Set both to `"default"` when neither button should be visually emphasized (for example, a step-style message that asks the user to complete two equally-weighted actions).
+
 ### Handler Functions
 
 The following functions are injected by the newtab `MessageWrapper` component and provide message lifecycle management:

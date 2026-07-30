@@ -138,14 +138,18 @@ export default class ASRouterNewTabMessage extends MozLitElement {
     if (!secondaryButton) {
       return nothing;
     }
+    // Each button's moz-button `type` can be overridden from content (e.g. so a
+    // step-style message can render both buttons non-primary); defaults keep
+    // the primary/secondary styling.
+    const type = secondaryButton.type ?? "default";
     return typeof secondaryButton.label === "string"
       ? html`<moz-button
-          type="default"
+          type=${type}
           @click=${this.#handleSecondaryButton.bind(this)}
           >${secondaryButton.label}</moz-button
         >`
       : html`<moz-button
-          type="default"
+          type=${type}
           @click=${this.#handleSecondaryButton.bind(this)}
           data-l10n-id=${secondaryButton.label.string_id}
         ></moz-button>`;
@@ -155,15 +159,16 @@ export default class ASRouterNewTabMessage extends MozLitElement {
     if (!primaryButton) {
       return nothing;
     }
+    const type = primaryButton.type ?? "primary";
     if (typeof primaryButton.label === "string") {
       return html`<moz-button
-        type="primary"
+        type=${type}
         @click=${this.#handlePrimaryButton.bind(this)}
         >${primaryButton.label}</moz-button
       >`;
     }
     return html`<moz-button
-      type="primary"
+      type=${type}
       @click=${this.#handlePrimaryButton.bind(this)}
       data-l10n-id=${primaryButton.label.string_id}
     ></moz-button>`;
