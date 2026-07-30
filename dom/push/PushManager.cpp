@@ -227,7 +227,8 @@ class GetSubscriptionRunnable final : public Runnable {
         return NS_OK;
       }
       principal = mProxy->GetWorkerPrivate()->GetPrincipal();
-      effectiveStoragePrincipal = mProxy->GetWorkerPrivate()->GetEffectiveStoragePrincipal();
+      effectiveStoragePrincipal =
+          mProxy->GetWorkerPrivate()->GetEffectiveStoragePrincipal();
     }
 
     MOZ_ASSERT(principal);
@@ -237,7 +238,8 @@ class GetSubscriptionRunnable final : public Runnable {
 
     PermissionState state = PermissionState::Denied;
 
-    if (effectiveStoragePrincipal->OriginAttributesRef().mPartitionKey.IsEmpty()) {
+    if (effectiveStoragePrincipal->OriginAttributesRef()
+            .mPartitionKey.IsEmpty()) {
       if (NS_FAILED(GetPermissionState(principal, state))) {
         callback->OnPushSubscriptionError(NS_ERROR_FAILURE);
         return NS_OK;
