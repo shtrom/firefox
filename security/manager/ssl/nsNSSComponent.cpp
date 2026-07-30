@@ -1552,6 +1552,10 @@ nsresult nsNSSComponent::InitializeNSS() {
     return rv;
   }
 
+  bool isFIPS = PK11_IsFIPS();
+  mozilla::glean::pkcs11::fips_enabled.Set(isFIPS);
+  MOZ_LOG(gPIPNSSLog, LogLevel::Debug, ("FIPS mode: %u", isFIPS));
+
   PK11_SetPasswordFunc(PK11PasswordPrompt);
 
   // Register an observer so we can inform NSS when these prefs change
