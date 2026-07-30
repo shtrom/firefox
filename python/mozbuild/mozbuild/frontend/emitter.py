@@ -393,6 +393,7 @@ class TreeMetadataEmitter(LoggingMixin):
                     HostLibrary,
                     HostSharedLibrary,
                     BaseRustProgram,
+                    BaseRustLibrary,
                     RustTests,
                 ),
             )
