@@ -435,4 +435,25 @@ export class UrlbarParentControllerProxy {
       engineId,
     });
   }
+
+  /** @type {UrlbarParentController["openSERP"]} */
+  openSERP(engineId, searchTerms, where, inBackground) {
+    this.#actor.sendAsyncMessage("OpenSERP", {
+      instanceId: this.#instanceId,
+      engineId,
+      searchTerms,
+      where,
+      inBackground,
+    });
+  }
+
+  /** @type {UrlbarParentController["openSearchForm"]} */
+  openSearchForm(engineId, where, inBackground) {
+    this.#actor.sendAsyncMessage("OpenSearchForm", {
+      instanceId: this.#instanceId,
+      engineId,
+      where,
+      inBackground,
+    });
+  }
 }

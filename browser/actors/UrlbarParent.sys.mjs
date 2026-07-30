@@ -188,6 +188,21 @@ export class UrlbarParent extends JSWindowActorParent {
       case "MarkEngineAsUsed":
         controller.markEngineAsUsed(message.data.engineId);
         break;
+      case "OpenSERP":
+        controller.openSERP(
+          message.data.engineId,
+          message.data.searchTerms,
+          message.data.where,
+          message.data.inBackground
+        );
+        break;
+      case "OpenSearchForm":
+        controller.openSearchForm(
+          message.data.engineId,
+          message.data.where,
+          message.data.inBackground
+        );
+        break;
     }
     return undefined;
   }
