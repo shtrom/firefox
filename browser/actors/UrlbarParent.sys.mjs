@@ -46,7 +46,13 @@ export class UrlbarParent extends JSWindowActorParent {
    *   The actor message, with `name` and `data`.
    */
   receiveMessage(message) {
-    let { instanceId } = message.data;
+    // The sender may be a content process (about:newtab), so treat the payload
+    // as untrusted: every message carries a numeric instanceId, and only known
+    // names and live controllers are acted on below.
+    let { instanceId } = message.data ?? {};
+    if (typeof instanceId != "number") {
+      return undefined;
+    }
 
     if (message.name == "Init") {
       let { sapName, isPrivate } = message.data;

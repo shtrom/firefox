@@ -86,19 +86,30 @@ export class UrlbarChildController {
       throw new Error("Missing options: input");
     }
     this.#input = options.input;
-    let actor = /** @type {UrlbarChild} */ (
-      /** @type {unknown} */ (
-        options.input.window.windowGlobalChild.getActor("Urlbar")
-      )
-    );
+    // A privileged (parent-process/chrome) input reaches the actor directly. A
+    // content-realm input can't: `windowGlobalChild.getActor` is `[ChromeOnly]`
+    // and the actor is a system-principal object it can't hold, so it uses the
+    // stand-in the actor exposes on the window (see `UrlbarChild.exposePort`).
+    // `ChromeUtils` is the same discriminator `UrlbarContentPrefs.mjs` uses:
+    // defined in a privileged realm, absent in content.
+    let inChromeRealm = typeof ChromeUtils != "undefined";
+    let actor = inChromeRealm
+      ? /** @type {UrlbarChild} */ (
+          /** @type {unknown} */ (
+            options.input.window.windowGlobalChild.getActor("Urlbar")
+          )
+        )
+      : /** @type {UrlbarChild} */ (options.input.window.UrlbarActorPort);
     this.#actor = actor;
     let { sapName, isPrivate } = options.input;
-    // The message path builds a proxy that trades actor messages with the
-    // parent-side controller; the direct path builds the real controller in
-    // place (both live in the same process, and it only needs the actor to
-    // resolve the chrome window). Either way the child owns construction.
+    // A content-realm input has no in-process parent, so it always takes the
+    // message path; a privileged one asks the actor (it honors the
+    // chrome-message-passing pref). The message path builds a proxy that trades
+    // actor messages with the parent-side controller; the direct path builds
+    // the real controller in place.
+    let usesMessagePath = !inChromeRealm || actor.usesMessagePath;
     this.#parentController = /** @type {UrlbarParentController} */ (
-      actor.usesMessagePath
+      usesMessagePath
         ? new UrlbarParentControllerProxy(
             actor,
             actor.registerMessagePathInput(options.input),

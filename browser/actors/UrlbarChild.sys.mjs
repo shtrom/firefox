@@ -87,25 +87,79 @@ export class UrlbarChild extends JSWindowActorChild {
   }
 
   /**
-   * Expose UrlbarPrefs on the window for UrlbarPrefs.mjs.
-   * This is only needed in child processes. In the parent process,
-   * it can be imported directly from the system global.
+   * Converts a privileged promise into one the content realm can consume: the
+   * resolution is cloned in, and a rejection is re-created as a content-realm
+   * `Error` carrying only its message, so neither a system-principal object nor
+   * a chrome stack crosses the boundary.
+   *
+   * @param {Promise} promise
+   *   The privileged promise to convert.
+   * @param {Window} win
+   *   The waived content window to build the content-realm promise in.
+   * @returns {Promise}
    */
-  exposeUrlbarPrefs() {
-    let xrayedWin = Cu.waiveXrays(this.contentWindow);
-    xrayedWin.UrlbarPrefs = Cu.cloneInto(
+  #wrapPromise(promise, win) {
+    return new win.Promise((resolve, reject) =>
+      promise.then(
+        result => resolve(Cu.cloneInto(result, win)),
+        ex => {
+          try {
+            reject(new win.Error(ex?.message ?? String(ex)));
+          } catch {
+            // The content window went away, so there's no realm left to build
+            // an error in.
+            reject();
+          }
+        }
+      )
+    );
+  }
+
+  /**
+   * Exposes the actor's content-facing surface on the window for a content-realm
+   * `<moz-urlbar>`, which can't reach the `[ChromeOnly]`
+   * `windowGlobalChild.getActor` nor hold the system-principal actor. Such an
+   * input reads `window.UrlbarActorPort` and calls it in the actor's place (see
+   * `UrlbarChildController`), and `UrlbarContentPrefs` reads the pref methods
+   * from it. Only meaningful in a child process; in the parent both reach their
+   * privileged side directly.
+   *
+   * This is the single surface the content realm gets, so to give content
+   * another capability, add it here.
+   *
+   * Object returns are `cloneInto`'d so content can read them; `sendQuery`
+   * returns a content-realm promise (see `#wrapPromise`).
+   */
+  exposePort() {
+    let win = Cu.waiveXrays(this.contentWindow);
+    win.UrlbarActorPort = Cu.cloneInto(
       {
-        get: name => Cu.cloneInto(lazy.UrlbarPrefs.get(name), xrayedWin),
-        addObserver: observer => lazy.UrlbarPrefs.addObserver(observer),
-        removeObserver: observer => lazy.UrlbarPrefs.removeObserver(observer),
+        sendAsyncMessage: (name, data) => this.sendAsyncMessage(name, data),
+        sendQuery: (name, data) =>
+          this.#wrapPromise(this.sendQuery(name, data), win),
+        registerMessagePathInput: input => this.registerMessagePathInput(input),
+        registerChildController: (instanceId, child) =>
+          this.registerChildController(instanceId, child),
+        whereToOpenLink: event => this.whereToOpenLink(event),
+        getFixupInfo: (searchString, isPrivate) =>
+          Cu.cloneInto(this.getFixupInfo(searchString, isPrivate), win),
+        getDisplaySpec: url => this.getDisplaySpec(url),
+        getPref: name => Cu.cloneInto(lazy.UrlbarPrefs.get(name), win),
+        addPrefObserver: observer => lazy.UrlbarPrefs.addObserver(observer),
+        removePrefObserver: observer =>
+          lazy.UrlbarPrefs.removeObserver(observer),
       },
-      xrayedWin,
+      win,
       { cloneFunctions: true }
     );
   }
 
   actorCreated() {
-    this.exposeUrlbarPrefs();
+    // Only a content realm reads the port; chrome holds the actor and imports
+    // UrlbarPrefs directly, so don't publish it on every chrome window.
+    if (!this.manager.parentActor) {
+      this.exposePort();
+    }
   }
 
   /**
@@ -218,6 +272,11 @@ export class UrlbarChild extends JSWindowActorChild {
       this.#childControllers.delete(instanceId);
       return;
     }
+    // In a content process the child controller is a content object; waive
+    // Xrays so its methods (and `input`/`view`) are callable from here.
+    if (!this.manager.parentActor) {
+      child = Cu.waiveXrays(child);
+    }
     let deserialized = params.map(param =>
       param?.serializedQueryContext
         ? lazy.UrlbarQueryContext.fromWire(param.serializedQueryContext)
@@ -259,6 +318,11 @@ export class UrlbarChild extends JSWindowActorChild {
       console.error(`Urlbar: disallowed content action ${target}.${method}`);
       return;
     }
+    // In a content process `child.input`/`child.view` are content objects;
+    // waive Xrays so their methods are callable from here.
+    if (!this.manager.parentActor) {
+      child = Cu.waiveXrays(child);
+    }
     child[target]?.[method](...args);
   }
 
@@ -268,7 +332,11 @@ export class UrlbarChild extends JSWindowActorChild {
       this.#childControllers.delete(instanceId);
       return;
     }
-
+    // In a content process the child controller is a content object; waive
+    // Xrays so its methods are callable from here.
+    if (!this.manager.parentActor) {
+      child = Cu.waiveXrays(child);
+    }
     child.updateEngineStore(...args);
   }
 }
