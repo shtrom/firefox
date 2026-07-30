@@ -1189,8 +1189,10 @@ void HandshakeCallback(PRFileDesc* fd, void* client_data) {
           .Add();
     }
 
-    glean::ssl::auth_algorithm_full.AccumulateSingleSample(
-        channelInfo.authType);
+    glean::tls::auth_algorithm
+        .EnumGet(
+            static_cast<glean::tls::AuthAlgorithmLabel>(channelInfo.authType))
+        .Add();
 
     // RSA key exchange doesn't use a signature for auth.
     if (channelInfo.keaType != ssl_kea_rsa &&
