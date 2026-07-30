@@ -1416,13 +1416,20 @@ ${
       windowMode: this.windowMode,
     });
 
+    // The load resolves asynchronously, since the parent controller owns the
+    // navigation, so capture the target tab now, at the commit: a tab opened
+    // before it resolves must not steal the load. The chrome address bar reads
+    // its selected tab here; a content-process moz-urlbar has no gBrowser and
+    // leaves the target to the parent (its own tab).
+    let browserId = this.window.gBrowser?.selectedBrowser?.browserId ?? null;
+
     if (this.#isAddressbar && URL.canParse(url)) {
       // Annotate if the untrimmed value contained a scheme, to later potentially
       // be upgraded by schemeless HTTPS-First.
       openParams.schemelessInput = this.#getSchemelessInput(
         this.untrimmedValue
       );
-      this.#loadURL({ url, event, where, params: openParams });
+      this.#loadURL({ url, event, where, params: openParams, browserId });
       return;
     }
 
@@ -1448,11 +1455,6 @@ ${
     // depend on the current browser's per-tab data and navigation epoch, which
     // a content urlbar can't read; the parent controller owns all of it and
     // hands back either a heuristic result to pick or a fixup URL to load.
-    // The load resolves asynchronously, so capture the target tab now, at the
-    // commit: a tab opened before it resolves must not steal the load. The chrome
-    // address bar reads its selected tab here; a content-process moz-urlbar has
-    // no gBrowser and leaves the target to the parent (its own tab).
-    let browserId = this.window.gBrowser?.selectedBrowser?.browserId ?? null;
     this.controller
       .resolveFallbackNavigation({
         searchString: url,
