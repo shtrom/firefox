@@ -8890,7 +8890,7 @@ static const char* ObserveMarkColor(const Value& value) {
   }
 
   gc::Cell* cell = value.toGCThing();
-  Zone* zone = cell->zone();
+  Zone* zone = cell->zoneFromAnyThread();
   if (zone->isGCPreparing()) {
     // The mark bits are not valid during unmarking.
     return "unmarked";
