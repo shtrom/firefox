@@ -21796,6 +21796,183 @@ Browsertime tests that use a custom pageload test script. These use the pageload
 * **type**: pageload
 * **unit**: ms
 * **use live sites**: true
+* **Test Task**:
+
+:::{list-table} **test-linux2404-64-nightlyasrelease/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-conservative**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-linux2404-64-shippable/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-chrome-prefetch-list-conservative**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+* - **browsertime-speculation-rules-firefox-prefetch-list-conservative**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-linux2404-64/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-conservative**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-macosx1470-64-nightlyasrelease/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-conservative**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-macosx1470-64-shippable/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-conservative**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-macosx1470-64/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-conservative**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-macosx1500-aarch64-nightlyasrelease/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-conservative**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-windows11-64-24h2-nightlyasrelease/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-conservative**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-windows11-64-24h2-shippable/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-conservative**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-windows11-64-24h2/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-conservative**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
 ::::
 
 (prefetch-list-eager-c)=
@@ -21831,6 +22008,183 @@ Browsertime tests that use a custom pageload test script. These use the pageload
 * **type**: pageload
 * **unit**: ms
 * **use live sites**: true
+* **Test Task**:
+
+:::{list-table} **test-linux2404-64-nightlyasrelease/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-eager**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-linux2404-64-shippable/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-chrome-prefetch-list-eager**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+* - **browsertime-speculation-rules-firefox-prefetch-list-eager**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-linux2404-64/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-eager**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-macosx1470-64-nightlyasrelease/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-eager**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-macosx1470-64-shippable/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-eager**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-macosx1470-64/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-eager**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-macosx1500-aarch64-nightlyasrelease/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-eager**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-windows11-64-24h2-nightlyasrelease/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-eager**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-windows11-64-24h2-shippable/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-eager**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-windows11-64-24h2/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-eager**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
 ::::
 
 (prefetch-list-immediate-c)=
@@ -21866,6 +22220,183 @@ Browsertime tests that use a custom pageload test script. These use the pageload
 * **type**: pageload
 * **unit**: ms
 * **use live sites**: true
+* **Test Task**:
+
+:::{list-table} **test-linux2404-64-nightlyasrelease/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-immediate**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-linux2404-64-shippable/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-chrome-prefetch-list-immediate**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+* - **browsertime-speculation-rules-firefox-prefetch-list-immediate**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-linux2404-64/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-immediate**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-macosx1470-64-nightlyasrelease/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-immediate**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-macosx1470-64-shippable/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-immediate**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-macosx1470-64/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-immediate**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-macosx1500-aarch64-nightlyasrelease/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-immediate**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-windows11-64-24h2-nightlyasrelease/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-immediate**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-windows11-64-24h2-shippable/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-immediate**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-windows11-64-24h2/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-immediate**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
 ::::
 
 (prefetch-list-moderate-c)=
@@ -21901,6 +22432,183 @@ Browsertime tests that use a custom pageload test script. These use the pageload
 * **type**: pageload
 * **unit**: ms
 * **use live sites**: true
+* **Test Task**:
+
+:::{list-table} **test-linux2404-64-nightlyasrelease/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-moderate**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-linux2404-64-shippable/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-chrome-prefetch-list-moderate**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+* - **browsertime-speculation-rules-firefox-prefetch-list-moderate**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-linux2404-64/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-moderate**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-macosx1470-64-nightlyasrelease/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-moderate**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-macosx1470-64-shippable/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-moderate**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-macosx1470-64/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-moderate**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-macosx1500-aarch64-nightlyasrelease/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-moderate**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-windows11-64-24h2-nightlyasrelease/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-moderate**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-windows11-64-24h2-shippable/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-moderate**
+  - ❌
+  - ✅
+  - ❌
+  - ❌
+:::
+
+
+:::{list-table} **test-windows11-64-24h2/opt**
+:widths: 30 15 15 15 15
+:header-rows: 1
+
+* - **Test Name**
+  - mozilla-central
+  - autoland
+  - mozilla-release
+  - mozilla-beta
+* - **browsertime-speculation-rules-firefox-prefetch-list-moderate**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+:::
+
+
 ::::
 
 (prefetch-moderate-c)=
