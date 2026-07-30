@@ -127,7 +127,7 @@ index 8f1a2c51bd..1baefad4a1 100644
              "Generated during 'gn gen' by //BUILD.gn.",
              "",
 diff --git a/api/BUILD.gn b/api/BUILD.gn
-index daac75ac5c..2a007ce09e 100644
+index a41cda2be9..7d3190ba34 100644
 --- a/api/BUILD.gn
 +++ b/api/BUILD.gn
 @@ -8,8 +8,8 @@
