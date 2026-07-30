@@ -1617,7 +1617,7 @@ ${
       // suppressed branch of startQuery() intentionally leaves it untouched
       // during typing, so set it here for the committed value only.
       this._lastSearchString = this.value;
-      this.pickResult(this._resultForCurrentValue, event);
+      this.pickResult({ result: this._resultForCurrentValue, event });
       return;
     }
     this.submitChat(event, this.untrimmedValue);
@@ -1811,14 +1811,14 @@ ${
       windowMode: this.windowMode,
     });
     this.#dispatchSmartbarCommitEvent(event, value);
-    this._loadURL(
-      fixupInfo.preferredURI.spec,
+    this.#loadURL({
+      url: fixupInfo.preferredURI.spec,
       event,
-      this.controller.whereToOpen(event),
-      {
+      where: this.controller.whereToOpen(event),
+      params: {
         allowInheritPrincipal: false,
-      }
-    );
+      },
+    });
   }
 
   /**
@@ -2012,7 +2012,7 @@ ${
       !searchModeEngine &&
       this._resultForCurrentValue?.heuristic
     ) {
-      this.pickResult(this._resultForCurrentValue, event);
+      this.pickResult({ result: this._resultForCurrentValue, event });
       return;
     }
 
@@ -2021,7 +2021,7 @@ ${
     if (!result && this.value.startsWith("@")) {
       let tokenAliasResult = this.view.getResultAtIndex(0);
       if (tokenAliasResult?.autofill && tokenAliasResult?.payload.keyword) {
-        this.pickResult(tokenAliasResult, event);
+        this.pickResult({ result: tokenAliasResult, event });
         return;
       }
     }
@@ -2100,7 +2100,7 @@ ${
       if (this.#isSmartbarMode) {
         this.#dispatchSmartbarCommitEvent(event, this.untrimmedValue);
       }
-      this._loadURL(url, event, where, openParams);
+      this.#loadURL({ url, event, where, params: openParams });
       return;
     }
 
@@ -2111,7 +2111,7 @@ ${
 
     // If we have a result for the current value, we can just use it.
     if (!isComposing && this._resultForCurrentValue) {
-      this.pickResult(this._resultForCurrentValue, event);
+      this.pickResult({ result: this._resultForCurrentValue, event });
       return;
     }
 
@@ -2139,7 +2139,7 @@ ${
       })
       .then(({ heuristicResult, fixup }) => {
         if (heuristicResult) {
-          this.pickResult(heuristicResult, event, null, browserId);
+          this.pickResult({ result: heuristicResult, event, browserId });
         } else if (fixup) {
           openParams.postData = fixup.postData;
           if (!fixup.keywordAsSent) {
@@ -2150,7 +2150,13 @@ ${
               this.untrimmedValue
             );
           }
-          this._loadURL(fixup.url, event, where, openParams, null, browserId);
+          this.#loadURL({
+            url: fixup.url,
+            event,
+            where,
+            params: openParams,
+            browserId,
+          });
         }
       })
       .catch(console.error);
@@ -2225,22 +2231,23 @@ ${
     if (!result) {
       return;
     }
-    this.pickResult(result, event, element);
+    this.pickResult({ result, event, element });
   }
 
   /**
    * Called when a result is picked.
    *
-   * @param {UrlbarResult} result The result that was picked.
-   * @param {Event} event The event that picked the result.
-   * @param {HTMLElement} element the picked view element, if available.
-   * @param {number} [browserId]
+   * @param {object} options
+   * @param {UrlbarResult} options.result The result that was picked.
+   * @param {Event} options.event The event that picked the result.
+   * @param {HTMLElement} [options.element] The picked view element, if available.
+   * @param {number} [options.browserId]
    *   The id of the browser to load into, for a load that resolves
    *   asynchronously and must target the tab selected when it was committed.
    *   Defaults to the parent resolving the selected browser at load time.
    */
   // eslint-disable-next-line complexity
-  pickResult(result, event, element = null, browserId = null) {
+  pickResult({ result, event, element = null, browserId = null }) {
     if (element?.classList.contains("urlbarView-button-menu")) {
       this.view.openResultMenu(result, element);
       return;
@@ -2341,14 +2348,13 @@ ${
         searchString: this._lastSearchString,
         windowMode: this.windowMode,
       });
-      this._loadURL(
-        this._untrimmedValue,
+      this.#loadURL({
+        url: this._untrimmedValue,
         event,
         where,
-        openParams,
-        null,
-        browserId
-      );
+        params: openParams,
+        browserId,
+      });
       return;
     }
 
@@ -2373,7 +2379,7 @@ ${
           // would involve sharing the docshell logic with the provider, along
           // with the dns lookup.
           // For now, in this specific case, we'll override the result's url
-          // with the input value, and let it pass through to _loadURL(), and
+          // with the input value, and let it pass through to #loadURL(), and
           // finally to the docshell.
           // This also means that in some cases the heuristic result will show a
           // Visit entry, but the docshell will instead execute a search. It's a
@@ -2692,18 +2698,18 @@ ${
       }
       this.#dispatchSmartbarCommitEvent(event, this.untrimmedValue, action);
     }
-    this._loadURL(
+    this.#loadURL({
       url,
       event,
       where,
-      openParams,
-      {
+      params: openParams,
+      resultDetails: {
         source: result.source,
         type: result.type,
         searchTerm: result.payload.suggestion ?? result.payload.query,
       },
-      browserId
-    );
+      browserId,
+    });
   }
 
   clearSmartbarInput() {
@@ -4853,64 +4859,77 @@ ${
 
     this.view.close({ elementPicked: true });
 
-    this._loadURL(
+    this.#loadURL({
       url,
       event,
       where,
-      {
+      params: {
         allowInheritPrincipal: false,
         private: this.isPrivate,
       },
-      {
+      resultDetails: {
         source: result.source,
         type: result.type,
-      }
-    );
+      },
+    });
   }
+
+  /**
+   * @typedef {object} LoadURLParams
+   *   The parameters related to how and where the result will be opened.
+   *   Further supported parameters are listed in utilityOverlay.js#openUILinkIn.
+   *
+   * @property {object} [triggeringPrincipal]
+   *   The principal that the action was triggered from.
+   * @property {nsIInputStream} [postData]
+   *   The POST data associated with a search submission.
+   * @property {boolean} [allowInheritPrincipal]
+   *   Whether the principal can be inherited.
+   * @property {nsILoadInfo.SchemelessInputType} [schemelessInput]
+   *   Whether the search/URL term was without an explicit scheme.
+   */
+
+  /**
+   * @typedef {object} LoadURLResultDetails
+   *   Details of the selected result, if any.
+   *
+   * @property {Values<typeof UrlbarShared.RESULT_TYPE>} [type]
+   *   Details of the result type, if any.
+   * @property {string} [searchTerm]
+   *   Search term of the result source, if any.
+   * @property {Values<typeof UrlbarShared.RESULT_SOURCE>} [source]
+   *   Details of the result source, if any.
+   */
 
   /**
    * Loads the url in the appropriate place.
    *
-   * @param {string} url
+   * @param {object} options
+   * @param {string} options.url
    *   The URL to open.
-   * @param {Event} event
+   * @param {Event} options.event
    *   The event that triggered to load the url.
-   * @param {string} openUILinkWhere
+   * @param {string} options.where
    *   Where we expect the result to be opened.
-   * @param {object} params
+   * @param {LoadURLParams} options.params
    *   The parameters related to how and where the result will be opened.
-   *   Further supported parameters are listed in utilityOverlay.js#openUILinkIn.
-   * @param {object} [params.triggeringPrincipal]
-   *   The principal that the action was triggered from.
-   * @param {nsIInputStream} [params.postData]
-   *   The POST data associated with a search submission.
-   * @param {boolean} [params.allowInheritPrincipal]
-   *   Whether the principal can be inherited.
-   * @param {nsILoadInfo.SchemelessInputType} [params.schemelessInput]
-   *   Whether the search/URL term was without an explicit scheme.
-   * @param {object} [resultDetails]
+   * @param {LoadURLResultDetails} [options.resultDetails]
    *   Details of the selected result, if any.
-   * @param {Values<typeof UrlbarShared.RESULT_TYPE>} [resultDetails.type]
-   *   Details of the result type, if any.
-   * @param {string} [resultDetails.searchTerm]
-   *   Search term of the result source, if any.
-   * @param {Values<typeof UrlbarShared.RESULT_SOURCE>} [resultDetails.source]
-   *   Details of the result source, if any.
-   * @param {number} [browserId]
+   * @param {number} [options.browserId]
    *   The id of the browser to load into. Defaults to the parent resolving the
    *   selected browser at load time; pass it to pin an asynchronously-resolved
    *   load to the tab selected when it was committed.
    */
-  async _loadURL(
+  async #loadURL({
     url,
     event,
-    openUILinkWhere,
+    where,
     params,
     resultDetails = null,
-    browserId = null
-  ) {
+    browserId = null,
+  }) {
     let userTypedValue;
-    if (this.#isAddressbar && openUILinkWhere == "current") {
+    if (this.#isAddressbar && where == "current") {
       // Make sure URL is formatted properly (don't show punycode).
       let formattedURL = url;
       try {
@@ -4927,7 +4946,7 @@ ${
 
     params.allowThirdPartyFixup = true;
 
-    if (openUILinkWhere == "current") {
+    if (where == "current") {
       params.indicateErrorPageLoad = true;
       params.allowPinnedTabHostChange = true;
       params.allowPopups = url.startsWith("javascript:");
@@ -4937,7 +4956,7 @@ ${
     if (
       this._keyDownEnterDeferred &&
       event?.keyCode === KeyEvent.DOM_VK_RETURN &&
-      openUILinkWhere === "current"
+      where === "current"
     ) {
       // In this case, we move the focus to the browser that loads the content
       // upon key up the enter key.
@@ -4964,7 +4983,7 @@ ${
       this.setSelectionRange(0, 0);
     }
 
-    if (openUILinkWhere != "current") {
+    if (where != "current") {
       this.handleRevert();
     }
 
@@ -4973,7 +4992,7 @@ ${
 
     let loadStatus = this.controller.loadURL({
       url,
-      where: openUILinkWhere,
+      where,
       params,
       browserId,
       userTypedValue,
