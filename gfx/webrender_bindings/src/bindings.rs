@@ -3713,8 +3713,11 @@ pub extern "C" fn wr_dp_push_image(
     color: ColorF,
     prefer_compositor_surface: bool,
     supports_external_compositing: bool,
+    sub_rect: *const DeviceIntRect,
 ) {
     debug_assert!(unsafe { is_in_main_thread() || is_in_compositor_thread() });
+
+    let sub_rect = unsafe { sub_rect.as_ref().cloned() };
 
     let space_and_clip = parent.to_webrender(state.pipeline_id);
 
@@ -3744,7 +3747,15 @@ pub extern "C" fn wr_dp_push_image(
     state
         .frame_builder
         .dl_builder
-        .push_image(&prim_info, bounds, image_rendering, alpha_type, key, color);
+        .push_image(
+            &prim_info,
+            bounds,
+            image_rendering,
+            alpha_type,
+            key,
+            color,
+            sub_rect,
+        );
 }
 
 #[no_mangle]
