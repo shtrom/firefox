@@ -3305,21 +3305,7 @@ ${
   }
 
   _getURIFixupInfo(searchString) {
-    let flags =
-      Ci.nsIURIFixup.FIXUP_FLAG_FIX_SCHEME_TYPOS |
-      Ci.nsIURIFixup.FIXUP_FLAG_ALLOW_KEYWORD_LOOKUP;
-    if (this.isPrivate) {
-      flags |= Ci.nsIURIFixup.FIXUP_FLAG_PRIVATE_CONTEXT;
-    }
-    try {
-      return Services.uriFixup.getFixupURIInfo(searchString, flags);
-    } catch (ex) {
-      console.error(
-        `An error occured while trying to fixup "${searchString}"`,
-        ex
-      );
-    }
-    return null;
+    return lazy.UrlbarUtils.getURIFixupInfo(searchString, this.isPrivate);
   }
 
   _afterTabSelectAndFocusChange() {
