@@ -250,6 +250,10 @@ export class UrlbarChildController {
   recordSearchInOpenedTab(searchData) {
     return this.#parentController.recordSearchInOpenedTab(searchData);
   }
+
+  checkKeywordURIFixup(searchString, browserId) {
+    return this.#parentController.checkKeywordURIFixup(searchString, browserId);
+  }
   /**
    * Starts a query and returns the parent controller's promise so callers (the
    * input's `lastQueryContextPromise`, which tests await) can track completion.

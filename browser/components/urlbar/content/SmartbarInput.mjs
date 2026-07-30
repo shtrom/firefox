@@ -2457,6 +2457,7 @@ ${
           return;
         }
 
+        // TODO (bug 2058937): Consider removing this check.
         if (
           this.#isAddressbar &&
           !this.searchMode &&
@@ -2466,7 +2467,6 @@ ${
           // TODO (bug 1642623): for now there is no smart heuristic to skip the
           // DNS lookup, so any value above 0 will run it.
           lazy.UrlbarPrefs.get("dnsResolveSingleWordsAfterSearch") > 0 &&
-          this.window.gKeywordURIFixup &&
           UrlbarShared.looksLikeSingleWordHost(originalUntrimmedValue)
         ) {
           // When fixing a single word to a search, the docShell would also
@@ -2475,14 +2475,11 @@ ${
           // to the list that we use to make decisions.
           // Because we are directly asking for a search here, bypassing the
           // docShell, we need to do the same ourselves.
-          // See also URIFixupChild.sys.mjs and keyword-uri-fixup.
-          let fixupInfo = this._getURIFixupInfo(originalUntrimmedValue.trim());
-          if (fixupInfo) {
-            this.window.gKeywordURIFixup.check(
-              this.window.gBrowser.selectedBrowser,
-              fixupInfo
-            );
-          }
+          // See also keyword-uri-fixup.
+          this.controller.checkKeywordURIFixup(
+            originalUntrimmedValue.trim(),
+            browserId
+          );
         }
 
         if (result.payload.inPrivateWindow) {
@@ -4047,10 +4044,6 @@ ${
       this.controller.engineStore.removeObserver(this.onSearchEngineUpdate);
       this._observersAdded = false;
     }
-  }
-
-  _getURIFixupInfo(searchString) {
-    return lazy.UrlbarUtils.getURIFixupInfo(searchString, this.isPrivate);
   }
 
   _afterTabSelectAndFocusChange() {

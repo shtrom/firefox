@@ -118,6 +118,12 @@ export class UrlbarParent extends JSWindowActorParent {
       case "RecordSearchInOpenedTab":
         controller.recordSearchInOpenedTab(message.data.searchData);
         break;
+      case "CheckKeywordURIFixup":
+        controller.checkKeywordURIFixup(
+          message.data.searchString,
+          message.data.browserId
+        );
+        break;
       case "StartQuery":
         // Round-trips so the proxy's startQuery resolves at true completion with
         // the finished context. The context's results keep their data in private
