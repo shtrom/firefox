@@ -1103,6 +1103,42 @@ static void AccumulateCipherSuite(const SSLChannelInfo& channelInfo) {
   glean::tls::cipher_suite.AccumulateSingleSample(value);
 }
 
+const nsLiteralCString KeyExchangeAlgorithmNameFromType(SSLKEAType keaType) {
+  switch (keaType) {
+    case ssl_kea_rsa:
+      return "rsa"_ns;
+      break;
+    case ssl_kea_dh:
+      return "dh"_ns;
+      break;
+    case ssl_kea_dh_psk:
+      return "dh_psk"_ns;
+      break;
+    case ssl_kea_ecdh:
+      return "ecdh"_ns;
+      break;
+    case ssl_kea_ecdh_psk:
+      return "ecdh_psk"_ns;
+      break;
+    case ssl_kea_ecdh_hybrid:
+      return "ecdh_hybrid"_ns;
+      break;
+    case ssl_kea_ecdh_hybrid_psk:
+      return "ecdh_hybrid_psk"_ns;
+      break;
+    case ssl_kea_kem:
+      return "kem"_ns;
+      break;
+    case ssl_kea_kem_psk:
+      return "kem_psk"_ns;
+      break;
+    default:
+      MOZ_ASSERT_UNREACHABLE("unhandled key exchange algorithm");
+      return "__other__"_ns;
+      break;
+  }
+}
+
 void HandshakeCallback(PRFileDesc* fd, void* client_data) {
   // Do the bookkeeping that needs to be done after the
   // server's ServerHello...ServerHelloDone have been processed, but that
@@ -1143,14 +1179,11 @@ void HandshakeCallback(PRFileDesc* fd, void* client_data) {
   if (rv != SECSuccess) {
     return;
   }
-  // keyExchange null=0, rsa=1, dh=2, fortezza=3, ecdh=4, ecdh_hybrid=8
-  if (infoObject->IsFullHandshake()) {
-    glean::ssl::key_exchange_algorithm_full.AccumulateSingleSample(
-        channelInfo.keaType);
-  } else {
-    glean::ssl::key_exchange_algorithm_resumed.AccumulateSingleSample(
-        channelInfo.keaType);
-  }
+
+  glean::tls::key_exchange_algorithm
+      .Get(infoObject->IsFullHandshake() ? "full"_ns : "resumed"_ns,
+           KeyExchangeAlgorithmNameFromType(channelInfo.keaType))
+      .Add();
 
   if (infoObject->IsFullHandshake()) {
     switch (channelInfo.keaType) {
