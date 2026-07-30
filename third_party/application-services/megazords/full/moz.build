@@ -14,10 +14,7 @@ UNIFIED_SOURCES += [
 ]
 
 # This is the name of the .a file created.
-if CONFIG["MOZ_WIDGET_TOOLKIT"] == "android":
-    RustLibrary("megazord")
-else:
-    RustLibrary("megazord", output_category="uniffi-target")
+RustLibrary("megazord")
 
 # XXX - this doesn't really work - the tests fail due to missing `nss3`?
 RUST_TESTS = [

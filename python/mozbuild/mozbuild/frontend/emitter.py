@@ -23,7 +23,6 @@ from mozbuild.util import HierarchicalStringList
 from ..testing import REFTEST_FLAVORS, TEST_MANIFESTS, SupportFilesConverter
 from .context import Context, ObjDirPath, Path, SourcePath, SubContext
 from .data import (
-    BaseRustLibrary,
     BaseRustProgram,
     ChromeManifestEntry,
     ComputedFlags,
@@ -263,12 +262,12 @@ class TreeMetadataEmitter(LoggingMixin):
         # Check that all static libraries refering shared libraries in
         # USE_LIBS are linked into a shared library or program.
         for lib in self._static_linking_shared:
-            # Rust libraries and tests can declare shared libraries in
-            # USE_LIBS for build-order purposes; actual linking is handled
-            # by Cargo. The dead-staticlib check is too strict for this
-            # case because it expects a moz.build-level consumer of the
-            # static library, which Rust-to-Rust linkage doesn't provide.
-            if isinstance(lib, (BaseRustLibrary, RustTests)):
+            # Rust tests can declare shared libraries in USE_LIBS for
+            # build-order purposes; actual linking is handled by Cargo. The
+            # dead-staticlib check is too strict for this case because it
+            # expects a moz.build-level consumer of the static library,
+            # which Rust-to-Rust linkage doesn't provide.
+            if isinstance(lib, RustTests):
                 continue
             if all(isinstance(o, StaticLibrary) for o in recurse_refs(lib)):
                 shared_libs = sorted(
@@ -636,13 +635,11 @@ class TreeMetadataEmitter(LoggingMixin):
                 "Can't determine a crate-type for %s from Cargo.toml" % libname, context
             )
 
-        if "staticlib" not in crate_type:
+        crate_type = crate_type[0]
+        if crate_type != "staticlib":
             raise SandboxValidationError(
-                f"crate-type {crate_type} for {libname} must include 'staticlib'",
-                context,
+                "crate-type %s is not permitted for %s" % (crate_type, libname), context
             )
-
-        crate_type = "staticlib"
 
         dependencies = set(config.get("dependencies", {}).keys())
 

@@ -651,8 +651,7 @@ class RecursiveMakeBackend(MakeBackend):
         elif isinstance(obj, SharedLibrary):
             self._process_shared_library(obj, backend_file)
             self._process_linked_libraries(obj, backend_file)
-            if not obj.output_category:
-                self._no_skip["syms"].add(backend_file.relobjdir)
+            self._no_skip["syms"].add(backend_file.relobjdir)
 
         elif isinstance(obj, StaticLibrary):
             self._process_static_library(obj, backend_file)
@@ -1499,29 +1498,8 @@ class RecursiveMakeBackend(MakeBackend):
             )
 
     def _process_non_default_target(self, libdef, target_name, backend_file):
-        backend_file.write(f"{libdef.output_category}:: {target_name}\n")
-        backend_file.write(f"MOZBUILD_NON_DEFAULT_TARGETS += {target_name}\n")
-        # A category member's USE_LIBS dependencies normally get built when
-        # something (libxul or another consumer) links the member. When the
-        # category is built on its own (e.g. via `./mach uniffi generate`),
-        # nothing links it, so wire each dependency into the tier directly.
-        if isinstance(libdef, StaticLibrary):
-            for dep in libdef.linked_libraries:
-                # External libraries are prebuilt, so there is nothing to build.
-                if isinstance(dep, ExternalLibrary):
-                    continue
-                # Depend on each dependency's built artifact: a shared
-                # library's output file, or the archive a static or rust
-                # library produces.
-                dep_path = (
-                    dep.output_path
-                    if isinstance(dep, SharedLibrary)
-                    else dep.import_path
-                )
-                backend_file.write(
-                    f"{libdef.output_category}:: "
-                    f"{self._pretty_path(dep_path, backend_file)}\n"
-                )
+        backend_file.write("%s:: %s\n" % (libdef.output_category, target_name))
+        backend_file.write("MOZBUILD_NON_DEFAULT_TARGETS += %s\n" % target_name)
 
     def _process_shared_library(self, libdef, backend_file):
         backend_file.write_once("LIBRARY_NAME := %s\n" % libdef.basename)
@@ -1541,11 +1519,6 @@ class RecursiveMakeBackend(MakeBackend):
             backend_file.write("LIB_IS_C_ONLY := 1\n")
         if libdef.output_category:
             self._process_non_default_target(libdef, shared_lib, backend_file)
-        if self.environment.substs.get("OS_ARCH") == "WINNT" and libdef.installed:
-            backend_file.write("IMPORT_LIB_FILES := $(IMPORT_LIBRARY)\n")
-            backend_file.write("IMPORT_LIB_DEST := $(DIST)/lib\n")
-            backend_file.write("IMPORT_LIB_TARGET := target\n")
-            backend_file.write("INSTALL_TARGETS += IMPORT_LIB\n")
 
     def _process_static_library(self, libdef, backend_file):
         backend_file.write_once("LIBRARY_NAME := %s\n" % libdef.basename)
@@ -1553,11 +1526,6 @@ class RecursiveMakeBackend(MakeBackend):
         backend_file.write("REAL_LIBRARY := %s\n" % libdef.lib_name)
         if libdef.no_expand_lib:
             backend_file.write("NO_EXPAND_LIBS := 1\n")
-        if libdef.no_expand_lib and libdef._context.get("DIST_INSTALL"):
-            backend_file.write("STATIC_LIB_FILES := $(REAL_LIBRARY)\n")
-            backend_file.write("STATIC_LIB_DEST := $(DIST)/lib\n")
-            backend_file.write("STATIC_LIB_TARGET := target\n")
-            backend_file.write("INSTALL_TARGETS += STATIC_LIB\n")
 
     def _process_sandboxed_wasm_library(self, libdef, backend_file):
         backend_file.write("WASM_ARCHIVE := %s\n" % libdef.basename)

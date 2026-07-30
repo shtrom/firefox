@@ -1723,7 +1723,7 @@ class TestEmitterBasic(unittest.TestCase):
         """Test that a RustLibrary Cargo.toml has a permitted crate-type."""
         reader = self.reader("rust-library-invalid-crate-type")
         with self.assertRaisesRegex(
-            SandboxValidationError, "crate-type.* must include 'staticlib'"
+            SandboxValidationError, "crate-type.* is not permitted"
         ):
             self.read_topsrcdir(reader)
 
