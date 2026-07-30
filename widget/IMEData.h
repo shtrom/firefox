@@ -43,9 +43,6 @@ class MOZ_STACK_CLASS PrintStringDetail : public nsAutoCString {
   explicit PrintStringDetail(const Maybe<StringType>& aMaybeString,
                              uint32_t aMaxLength = UINT32_MAX);
 
-  friend std::string format_as(const PrintStringDetail&);
-  friend std::ostream& operator<<(std::ostream&, const PrintStringDetail&);
-
  private:
   static nsCString PrintCharData(char32_t aChar);
 };

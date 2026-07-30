@@ -30,10 +30,6 @@ PrintStringDetail::PrintStringDetail(const Maybe<StringType>& aMaybeString,
 
 PrintStringDetail::PrintStringDetail(const nsAString& aString,
                                      uint32_t aMaxLength /* = UINT32_MAX */) {
-  if (aString.IsVoid()) {
-    Assign("<void>");
-    return;
-  }
   Assign("\"");
   const uint32_t kFirstHalf =
       aString.Length() <= aMaxLength ? UINT32_MAX : (aMaxLength + 1) / 2;
@@ -179,15 +175,6 @@ nsCString PrintStringDetail::PrintCharData(char32_t aChar) {
                                    aChar);
     }
   }
-}
-
-std::string format_as(const PrintStringDetail& aDetails) {
-  return std::string(aDetails.get());
-}
-
-std::ostream& operator<<(std::ostream& aStream,
-                         const PrintStringDetail& aDetails) {
-  return aStream << format_as(aDetails);
 }
 
 namespace widget {
