@@ -2103,6 +2103,12 @@ var XULBrowserWindow = {
       ) {
         this.busyUI = true;
 
+        // Drop the trust icon to "scanning" at load start. The destination URI
+        // lets a same-site navigation preserve the icon instead of re-scanning.
+        gTrustPanelHandler.resetIconForNavigation(
+          aRequest instanceof Ci.nsIChannel ? aRequest.URI : null
+        );
+
         if (this.spinCursorWhileBusy) {
           window.setCursor("progress");
         }
@@ -2174,6 +2180,9 @@ var XULBrowserWindow = {
       if (this.busyUI && aWebProgress.isTopLevel) {
         this.busyUI = false;
 
+        // Top-level load finished: resolve the icon if it's still scanning.
+        gTrustPanelHandler.onNavigationComplete();
+
         if (this.spinCursorWhileBusy) {
           window.setCursor("auto");
         }
@@ -2226,6 +2235,11 @@ var XULBrowserWindow = {
 
     let isSameDocument =
       aFlags & Ci.nsIWebProgressListener.LOCATION_CHANGE_SAME_DOCUMENT;
+
+    // Also reset on location change, in case STATE_START didn't fire.
+    if (!isSameDocument) {
+      gTrustPanelHandler.resetIconForNavigation(aLocationURI);
+    }
     if (
       (location == "about:blank" &&
         BrowserUIUtils.checkEmptyPageOrigin(gBrowser.selectedBrowser)) ||
