@@ -61,7 +61,6 @@ selfhosted_inputs = [
     "Utilities.js",
     "Array.js",
     "AsyncDisposableStack.js",
-    "AsyncFunction.js",
     "AsyncIteration.js",
     "DisposableStack.js",
     "Error.js",

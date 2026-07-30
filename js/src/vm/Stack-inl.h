@@ -315,9 +315,12 @@ InterpreterStack::createGeneratorResumeFrame(
   // (Async) generators and async functions are not constructors.
   MOZ_ASSERT(!callee->isConstructor());
 
-  // Include callee, |this|, and maybe |new.target|
+  // Include callee, |this|, the formals, and the resume args (ResumeFrameArgs,
+  // appended after the formals and filled in by
+  // AbstractGeneratorObject::resumeInto). numActualArgs stays 0 so the resume
+  // args are never counted as arguments.
   unsigned nformal = callee->nargs();
-  unsigned nvals = 2 + nformal + script->nslots();
+  unsigned nvals = 2 + nformal + ResumeFrameArgs::NumSlots + script->nslots();
 
   uint8_t* buffer =
       allocateFrame(cx, sizeof(InterpreterFrame) + nvals * sizeof(Value));
@@ -328,9 +331,10 @@ InterpreterStack::createGeneratorResumeFrame(
   Value* argv = reinterpret_cast<Value*>(buffer) + 2;
   argv[-2] = ObjectValue(*callee);
   argv[-1] = UndefinedValue();
-  SetValueRangeToUndefined(argv, nformal);
+  SetValueRangeToUndefined(argv, nformal + ResumeFrameArgs::NumSlots);
 
-  InterpreterFrame* fp = reinterpret_cast<InterpreterFrame*>(argv + nformal);
+  InterpreterFrame* fp = reinterpret_cast<InterpreterFrame*>(
+      argv + nformal + ResumeFrameArgs::NumSlots);
   fp->mark_ = mark;
   fp->initCallFrame(prev, prevpc, prevsp, *callee, script, argv, 0,
                     NO_CONSTRUCT);

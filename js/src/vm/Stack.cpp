@@ -337,6 +337,13 @@ void InterpreterFrame::trace(JSTracer* trc, Value* sp, jsbytecode* pc) {
     // Trace arguments.
     unsigned argc = std::max(numActualArgs(), numFormalArgs());
     TraceRootRange(trc, argc + isConstructing(), argv_, "fp argv");
+
+    // A resumed generator/async frame stores the resume args (ResumeFrameArgs)
+    // after the formals.
+    if (isResumingGenerator()) {
+      TraceRootRange(trc, ResumeFrameArgs::NumSlots, argv_ + numFormalArgs(),
+                     "fp resume-args");
+    }
   }
 
   JSScript* script = this->script();

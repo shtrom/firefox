@@ -171,6 +171,12 @@ EnterJitStatus js::jit::MaybeEnterJit(JSContext* cx, RunState& state) {
     return EnterJitStatus::NotEntered;
   }
 
+  // Resuming a generator via GeneratorResumeState is currently only implemented
+  // in the C++ interpreter.
+  if (state.isGeneratorResume()) {
+    return EnterJitStatus::NotEntered;
+  }
+
   JSScript* script = state.script();
 
   uint8_t* code = script->jitCodeRaw();

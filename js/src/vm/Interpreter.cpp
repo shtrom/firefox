@@ -1961,6 +1961,7 @@ bool MOZ_NEVER_INLINE JS_HAZ_JSNATIVE_CALLER js::Interpret(JSContext* cx,
 
   if (state.isGeneratorResume()) {
     const GeneratorResumeState& genState = *state.asGeneratorResume();
+    activation.setEnteredForGeneratorResume();
     AbstractGeneratorObject::resume(cx, activation, genState.generator(),
                                     genState.resumeValue(),
                                     genState.resumeKind());
@@ -4302,6 +4303,11 @@ bool MOZ_NEVER_INLINE JS_HAZ_JSNATIVE_CALLER js::Interpret(JSContext* cx,
       // AbstractGeneratorObject::resume takes care of setting the frame's
       // debuggee flag.
       MOZ_ASSERT_IF(REGS.fp()->script()->isDebuggee(), REGS.fp()->isDebuggee());
+
+      // Clear the isResumingGenerator flag so the frame is treated as an
+      // ordinary running frame from now on.
+      REGS.fp()->clearResumingGenerator();
+
       INIT_COVERAGE();
       COUNT_COVERAGE();
     }

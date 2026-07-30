@@ -46,12 +46,7 @@
   MACRO_(Async, "Async")                                                       \
   MACRO_(async, "async")                                                       \
   MACRO_(Async_from_Sync_Iterator_, "Async-from-Sync Iterator")                \
-  MACRO_(AsyncFunctionNext, "AsyncFunctionNext")                               \
-  MACRO_(AsyncFunctionThrow, "AsyncFunctionThrow")                             \
   MACRO_(AsyncGenerator, "AsyncGenerator")                                     \
-  MACRO_(AsyncGeneratorNext, "AsyncGeneratorNext")                             \
-  MACRO_(AsyncGeneratorReturn, "AsyncGeneratorReturn")                         \
-  MACRO_(AsyncGeneratorThrow, "AsyncGeneratorThrow")                           \
   MACRO2(at, "at")                                                             \
   MACRO_(await, "await")                                                       \
   MACRO_(bound, "bound")                                                       \

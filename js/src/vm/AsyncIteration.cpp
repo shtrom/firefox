@@ -1262,15 +1262,19 @@ bool js::AsyncGeneratorThrow(JSContext* cx, unsigned argc, Value* vp) {
     //       to be handled with the genContext.
     //       when the execution continues, we resume the generator with
     //       the corresponding completion value.
-    Handle<PropertyName*> funName = completionKind == CompletionKind::Normal
-                                        ? cx->names().AsyncGeneratorNext
-                                    : completionKind == CompletionKind::Throw
-                                        ? cx->names().AsyncGeneratorThrow
-                                        : cx->names().AsyncGeneratorReturn;
-    FixedInvokeArgs<1> args(cx);
-    args[0].set(resumeArgument);
+    GeneratorResumeKind resumeKind =
+        completionKind == CompletionKind::Normal  ? GeneratorResumeKind::Next
+        : completionKind == CompletionKind::Throw ? GeneratorResumeKind::Throw
+                                                  : GeneratorResumeKind::Return;
     RootedValue thisOrRval(cx, ObjectValue(*generator));
-    if (!CallSelfHostedFunction(cx, funName, thisOrRval, args, &thisOrRval)) {
+
+    bool resumeOk;
+    {
+      AutoRealm ar(cx, generator);
+      resumeOk = ResumeGenerator(cx, generator, resumeArgument, resumeKind,
+                                 &thisOrRval);
+    }
+    if (!resumeOk) {
       if (!generator->isClosed()) {
         generator->setClosed(cx);
       }

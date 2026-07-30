@@ -212,6 +212,16 @@ bool GeneratorThrowOrReturn(JSContext* cx, AbstractFramePtr frame,
                             HandleValue val, GeneratorResumeKind resumeKind);
 
 /**
+ * Resume a suspended generator, async function, async generator, or async
+ * module.
+ *
+ * |cx| must already be in the generator's realm.
+ */
+bool ResumeGenerator(JSContext* cx, Handle<AbstractGeneratorObject*> genObj,
+                     HandleValue value, GeneratorResumeKind kind,
+                     MutableHandleValue result);
+
+/**
  * Return the generator object associated with the given frame. The frame must
  * be a call frame for a generator.
  *

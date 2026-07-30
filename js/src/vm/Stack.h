@@ -263,11 +263,38 @@ enum MaybeConstruct { NO_CONSTRUCT = false, CONSTRUCT = true };
 
 /*****************************************************************************/
 
+// Layout of the "resume args": the extra Value slots passed by the caller when
+// resuming a generator or async function/module. For function frames, these
+// Values are passed after the formal arguments (numActualArgs is always 0 in
+// this case).
+//
+// Their presence is signaled by the frame's resuming-generator flag
+// (InterpreterFrame::RESUMING_GENERATOR for the C++ interpreter and
+// FrameDescriptor::IsResumingGenerator for the JITs). This flag is cleared by
+// JSOp::AfterYield and these slots must no longer be accessed after that point.
+struct ResumeFrameArgs {
+  enum Slot : uint32_t {
+    ResumeValueSlot = 0,
+    GeneratorSlot,
+    ResumeKindSlot,
+    NumSlots
+  };
+
+  static constexpr size_t offsetOfSlot(uint32_t slot) {
+    MOZ_ASSERT(slot < NumSlots);
+    return slot * sizeof(Value);
+  }
+};
+
 class InterpreterFrame {
   enum Flags : uint32_t {
     CONSTRUCTING = 0x1, /* frame is for a constructor invocation */
 
-    // (0x2 is unused)
+    /*
+     * Frame is currently resuming a suspended generator/async function. Set at
+     * the resume entry, cleared at the resume point (JSOp::AfterYield).
+     */
+    RESUMING_GENERATOR = 0x2,
 
     /* Function prologue state */
     HAS_INITIAL_ENV =
@@ -473,6 +500,14 @@ class InterpreterFrame {
     return argv_;
   }
 
+  // Base of the resume args (see ResumeFrameArgs) for a resumed generator/async
+  // frame.
+  Value* resumeArgs() const {
+    MOZ_ASSERT(isResumingGenerator());
+    MOZ_ASSERT(isFunctionFrame());
+    return argv() + numFormalArgs();
+  }
+
   /*
    * Arguments object
    *
@@ -661,6 +696,16 @@ class InterpreterFrame {
    */
 
   bool isConstructing() const { return !!(flags_ & CONSTRUCTING); }
+
+  void setResumingGenerator() {
+    MOZ_ASSERT(!isResumingGenerator());
+    flags_ |= RESUMING_GENERATOR;
+  }
+  void clearResumingGenerator() {
+    MOZ_ASSERT(isResumingGenerator());
+    flags_ &= ~RESUMING_GENERATOR;
+  }
+  bool isResumingGenerator() const { return !!(flags_ & RESUMING_GENERATOR); }
 
   /*
    * These two queries should not be used in general: the presence/absence of

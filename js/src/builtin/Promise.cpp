@@ -8338,42 +8338,9 @@ void PromiseObject::dumpOwnStringContent(js::GenericPrinter& out) const {}
 
   MOZ_ASSERT(iter.calleeTemplate()->isAsync());
 
-#ifdef DEBUG
-  bool isGenerator = iter.calleeTemplate()->isGenerator();
-#endif
-
-  ++iter;
-
-  // The parent frame should be the `next` function of the generator that is
-  // internally called in AsyncFunctionResume resp. AsyncGeneratorResume.
-  if (iter.done()) {
-    return false;
-  }
-  // The initial call into an async function can happen from top-level code, so
-  // the parent frame isn't required to be a function frame. Contrary to that,
-  // the parent frame for an async generator function is always a function
-  // frame, because async generators can't directly fall through to an `await`
-  // expression from their initial call.
-  if (!iter.isFunctionFrame()) {
-    MOZ_ASSERT(!isGenerator);
-    return false;
-  }
-
-  // Always skip InterpretGeneratorResume if present.
-  JSFunction* fun = iter.calleeTemplate();
-  if (IsSelfHostedFunctionWithName(fun, cx->names().InterpretGeneratorResume)) {
-    ++iter;
-
-    if (iter.done()) {
-      return false;
-    }
-
-    MOZ_ASSERT(iter.isFunctionFrame());
-    fun = iter.calleeTemplate();
-  }
-
-  if (!IsSelfHostedFunctionWithName(fun, cx->names().AsyncFunctionNext) &&
-      !IsSelfHostedFunctionWithName(fun, cx->names().AsyncGeneratorNext)) {
+  // We only skip the await when the async function/generator has been resumed
+  // at least once. The initial synchronous call enters its activation normally.
+  if (!cx->activation()->enteredForGeneratorResume()) {
     return false;
   }
 

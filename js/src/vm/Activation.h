@@ -406,6 +406,11 @@ class MOZ_STACK_CLASS Activation {
   // callFunctionWithAsyncStack.
   bool asyncCallIsExplicit_;
 
+  // True if this activation was entered to resume a suspended generator or
+  // async function/module. Used by js::CanSkipAwait to permit the await fast
+  // path only for a resumed async frame.
+  bool enteredForGeneratorResume_ = false;
+
   enum Kind : bool { Interpreter, Jit };
   Kind kind_;
 
@@ -450,6 +455,9 @@ class MOZ_STACK_CLASS Activation {
   const char* asyncCause() const { return asyncCause_; }
 
   bool asyncCallIsExplicit() const { return asyncCallIsExplicit_; }
+
+  bool enteredForGeneratorResume() const { return enteredForGeneratorResume_; }
+  void setEnteredForGeneratorResume() { enteredForGeneratorResume_ = true; }
 
   inline LiveSavedFrameCache* getLiveSavedFrameCache(JSContext* cx);
   void clearLiveSavedFrameCache() { frameCache_.clear(); }
