@@ -48,6 +48,14 @@ function normalizeProfilePaths(string) {
   );
 }
 
+// The authority of a URL, followed by the port httpd.js or one of the other test
+// servers was given at runtime. An IPv6 host keeps its brackets ("http://[::1]").
+// "localhost" is also matched without a scheme, for the URLs devtools serializes
+// into its error messages. Only these forms are matched because a position in a
+// stack frame ("Front.js:335:14") would otherwise look like a host and a port.
+const PORT_REGEXP =
+  /(:\/\/(?:\[[^\]\s]*\]|[^\s/:'"`\\]+)|(?<![\w./])localhost):\d{2,5}(?![\w.])/g;
+
 // A path quoted in a message, eg. the file of a stack frame or the file a failed
 // operation was on. Only the paths normalizeSourcePath can shorten are matched:
 // those below a build or test worker directory, and those in the profile.
@@ -67,19 +75,48 @@ function normalizeMarkerMessage(message) {
       // platform it comes from.
       ?.replace(QUOTED_PATH_REGEXP, normalizeSourcePath)
       .replace(UUID_REGEXP, "<uuid>")
+      // Devtools actor ids (e.g. "server0.conn0.watcher2.process1234//layout29"),
+      // where every number counts up from the start of the connection. This runs
+      // before the process id rule, which would otherwise leave a "<pid>" in the
+      // middle of the path and stop the numbers after it from being matched.
+      .replace(/\bserver\d+\.conn\d+[\w./]*/g, actor =>
+        actor.replace(/\d+/g, "<n>")
+      )
       // Pointer addresses (e.g. "0x2296ffc8100").
       .replace(/0x[0-9a-fA-F]+/g, "0x...")
       // Sub-second timings (e.g. "0.000075s").
       .replace(/\b\d+\.\d+\s*(ms|s|µs|us|ns)\b/g, "X$1")
-      // Process ids (e.g. "Process 9770 may be hanging at shutdown",
-      // "Invalid process ID: 1"). They are only 4 or 5 digits long, so they have
-      // to be recognized from the words around them; the shutdown warnings alone
-      // would otherwise contribute hundreds of messages a day.
-      .replace(/\b(process(?:\s+id)?\s*:?\s*)\d+\b/gi, "$1<pid>")
+      // Process ids (e.g. "Process 9770 may be hanging at shutdown", "Invalid
+      // process ID: 1", "processId 1628", "pid = 10164"). They are only 4 or 5
+      // digits long, so they have to be recognized from the words around them;
+      // the shutdown warnings alone would otherwise contribute hundreds of
+      // messages a day.
+      .replace(/\b(process(?:[\s_-]*id)?\s*[:=]?\s*)\d+\b/gi, "$1<pid>")
+      .replace(/\b(pid\s*[:=]\s*)\d+\b/gi, "$1<pid>")
+      // Ids of a content process, a window, a browsing context or a tab, which
+      // count up from the start of the job, so they are only a couple of digits
+      // long in a short job and the rule for large decimal ids never sees them.
+      .replace(
+        /\b(childID|ContentParent: id|innerWindowId|outerWindowId|browsingContextId|windowId|tab ID)(\s*[:=]\s*)\d+/gi,
+        "$1$2<id>"
+      )
+      // A query parameter whose value is generated at runtime: the tokens and
+      // challenges of an OAuth flow, and the ids some tests put in a URL.
+      .replace(
+        /([?&](?:state|code|code_challenge|keys_jwk|token)=)[A-Za-z0-9_%+-]{8,}/g,
+        "$1<random>"
+      )
+      .replace(PORT_REGEXP, "$1:<port>")
       // Large decimal ids (e.g. "innerWindowId:23622320129").
       .replace(/\b\d{8,}\b/g, "<num>")
-      // Bare hex addresses (e.g. "100b71300", hex peer IDs).
-      .replace(/\b[0-9a-fA-F]{8,}\b/g, "<addr>")
+      // Bare hex addresses (e.g. "100b71300", hex peer IDs, and the pointers the
+      // media logs print without a "0x" prefix, e.g. "Decoder=4d26600").
+      // Requiring both a hex letter and a digit keeps a word ("facade") and a
+      // decimal number (a bug number) from being read as an address.
+      .replace(
+        /\b(?=[0-9a-fA-F]*[a-fA-F])(?=[0-9a-fA-F]*\d)[0-9a-fA-F]{7,}\b/g,
+        "<addr>"
+      )
   );
 }
 
@@ -112,7 +149,14 @@ function normalizeSourcePath(file) {
   // The profile specific directory name of an extension page URL
   // ("moz-extension://<uuid>/"), then the profile directory itself, for the files
   // that are read from it (its extensions, and the data the test wrote there).
-  return normalizeProfilePaths(normalized.replace(UUID_REGEXP, "<uuid>"));
+  normalized = normalizeProfilePaths(normalized.replace(UUID_REGEXP, "<uuid>"));
+
+  // The port a test server listens on, then the timestamp some tests append to a
+  // URL to bypass the cache. Only a query string is matched for the timestamp: a
+  // long number in the path of a file is part of its name.
+  return normalized
+    .replace(PORT_REGEXP, "$1:<port>")
+    .replace(/([?&](?:[\w.-]+=)?(?:0\.)?)\d{8,}\b/g, "$1<num>");
 }
 
 // mozlog test ids of tests in a dupe manifest are prefixed with the manifest
