@@ -48,6 +48,7 @@
 #include "mozilla/dom/NavigatorLogin.h"
 #include "mozilla/dom/PBackgroundSessionStorageCache.h"
 #include "mozilla/dom/ParentProcessChannelHandle.h"
+#include "mozilla/dom/PrefetchRecordParent.h"
 #include "mozilla/dom/SerialManagerParent.h"
 #include "mozilla/dom/UseCounterMetrics.h"
 #include "mozilla/dom/WebAuthnTransactionParent.h"
@@ -2201,6 +2202,15 @@ WindowGlobalParent::AllocPWebIdentityParent() {
 already_AddRefed<PDigitalCredentialParent>
 WindowGlobalParent::AllocPDigitalCredentialParent() {
   return MakeAndAddRef<DigitalCredentialParent>();
+}
+
+already_AddRefed<PPrefetchRecordParent>
+WindowGlobalParent::AllocPPrefetchRecordParent(
+    const SpeculativePrefetchArgs& aArgs) {
+  // Spec: https://wicg.github.io/nav-speculation/prefetch.html#prefetch-record
+  // TODO: implement "Start a referrer-initiated navigational prefetch"
+  // (https://wicg.github.io/nav-speculation/prefetch.html#start-a-referrer-initiated-navigational-prefetch).
+  return MakeAndAddRef<PrefetchRecordParent>();
 }
 
 NS_IMPL_CYCLE_COLLECTION_CLASS(WindowGlobalParent)
