@@ -277,6 +277,7 @@ class ShadowRoot;
 class SimpleContentList;
 class SpeculationRules;
 class SpeculationRuleSet;
+class SpeculationRulesManager;
 class SVGDocument;
 class SVGElement;
 class SVGSVGElement;
@@ -3058,6 +3059,14 @@ class Document : public nsINode,
 
   bool IsDNSPrefetchAllowed() const { return mAllowDNSPrefetch; }
 
+  // Returns the SpeculationRulesManager if one has been created for this
+  // document; nullptr otherwise. Construction is lazy and happens elsewhere
+  // (Chunk 6 will add EnsureSpeculationRulesManager when rule parsing is
+  // wired up).
+  SpeculationRulesManager* GetSpeculationRulesManager() const {
+    return mSpeculationRulesManager.get();
+  }
+
   /**
    * Returns true if this document is allowed to contain XUL element and
    * use non-builtin XBL bindings.
@@ -4841,6 +4850,9 @@ class Document : public nsINode,
 
   // Lazy-initialization to have mDocGroup initialized in prior to the
   UniquePtr<ServoStyleSet> mStyleSet;
+
+  // Lazy: created on first speculation rule encountered (Chunk 6 wires this).
+  UniquePtr<SpeculationRulesManager> mSpeculationRulesManager;
 
  protected:
   // Never ever call this. Only call GetWindow!

@@ -249,6 +249,7 @@
 #include "mozilla/dom/ShadowRoot.h"
 #include "mozilla/dom/SpeculationRuleSet.h"
 #include "mozilla/dom/SpeculationRules.h"
+#include "mozilla/dom/SpeculationRulesManager.h"
 #include "mozilla/dom/StyleSheetApplicableStateChangeEvent.h"
 #include "mozilla/dom/StyleSheetApplicableStateChangeEventBinding.h"
 #include "mozilla/dom/StyleSheetList.h"
