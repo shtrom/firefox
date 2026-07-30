@@ -267,7 +267,7 @@ class InterpreterFrame {
   enum Flags : uint32_t {
     CONSTRUCTING = 0x1, /* frame is for a constructor invocation */
 
-    RESUMED_GENERATOR = 0x2, /* frame is for a resumed generator invocation */
+    // (0x2 is unused)
 
     /* Function prologue state */
     HAS_INITIAL_ENV =
@@ -662,9 +662,6 @@ class InterpreterFrame {
 
   bool isConstructing() const { return !!(flags_ & CONSTRUCTING); }
 
-  void setResumedGenerator() { flags_ |= RESUMED_GENERATOR; }
-  bool isResumedGenerator() const { return !!(flags_ & RESUMED_GENERATOR); }
-
   /*
    * These two queries should not be used in general: the presence/absence of
    * the call/args object is determined by the static(ish) properties of the
@@ -753,8 +750,7 @@ class InterpreterRegs {
 
   void popInlineFrame() {
     pc = fp_->prevpc();
-    unsigned spForNewTarget =
-        fp_->isResumedGenerator() ? 0 : fp_->isConstructing();
+    unsigned spForNewTarget = fp_->isConstructing();
     // This code is called when resuming from async and generator code.
     // In the case of modules, we don't have arguments, so we can't use
     // numActualArgs, which asserts 'hasArgs'.

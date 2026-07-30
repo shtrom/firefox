@@ -279,7 +279,6 @@ bool AbstractGeneratorObject::resume(JSContext* cx,
   if (!activation.resumeGeneratorFrame(callee, envChain)) {
     return false;
   }
-  activation.regs().fp()->setResumedGenerator();
 
   if (genObj->hasArgsObj()) {
     activation.regs().fp()->initArgsObj(genObj->argsObj());
