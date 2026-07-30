@@ -102,14 +102,9 @@ add_task(async function basic_test() {
     waitForLoad: true,
   });
 
-  // The icon starts in the neutral "scanning" state and resolves to the trusted
-  // icon once the settle window elapses, so wait for that rather than the first
-  // non-empty icon.
-  await TestUtils.waitForCondition(
-    () => urlbarIcon(window) == ETP_ACTIVE_ICON,
-    "Showing trusted icon"
-  );
+  await TestUtils.waitForCondition(() => urlbarIcon(window) != "none");
 
+  Assert.equal(urlbarIcon(window), ETP_ACTIVE_ICON, "Showing trusted icon");
   Assert.equal(
     window.document
       .getElementById("trust-icon-container")
@@ -124,16 +119,14 @@ add_task(async function basic_test() {
   );
 
   await toggleETP(tab);
-  await TestUtils.waitForCondition(
-    () => urlbarIcon(window) == ETP_DISABLED_ICON,
+  Assert.equal(
+    urlbarIcon(window),
+    ETP_DISABLED_ICON,
     "Showing ETP disabled icon"
   );
 
   await toggleETP(tab);
-  await TestUtils.waitForCondition(
-    () => urlbarIcon(window) == ETP_ACTIVE_ICON,
-    "Showing trusted icon"
-  );
+  Assert.equal(urlbarIcon(window), ETP_ACTIVE_ICON, "Showing trusted icon");
 
   await BrowserTestUtils.removeTab(tab);
 });
