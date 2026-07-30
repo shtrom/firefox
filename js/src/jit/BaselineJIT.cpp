@@ -253,7 +253,10 @@ static bool DispatchOffThreadBaselineCompile(JSContext* cx,
   BaselineCompileTask* task = alloc->new_<BaselineCompileTask>(
       realm, alloc.get(), std::move(snapshots));
   if (!task) {
-    snapshots.clear();
+    // The allocation failed, so the constructor never ran and the snapshot is
+    // still linked into |snapshots|. Unlink it to satisfy the LinkedList
+    // destructor's "list must be empty" assertion.
+    snapshotCopy->remove();
     ReportOutOfMemory(cx);
     return false;
   }
