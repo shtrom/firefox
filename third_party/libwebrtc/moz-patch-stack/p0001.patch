@@ -1,60 +1,65 @@
-From: Danil Chapovalov <danilchap@webrtc.org>
-Date: Thu, 23 Jul 2026 15:35:55 +0200
-Subject: Bug 2053579 - cherry-pick upstream libwebrtc bf6f744d19
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+From: Michael Froman <mjfroman@mac.com>
+Date: Thu, 30 Jul 2026 16:27:11 -0500
+Subject: (tmp-cherry-pick) Revert "Use GetTimestamp in encoded frame clone
+ functions." (c125d002da)
 
-Check RTP sequence number order when assembling H264 frame in PacketBuffer
+This reverts commit 8acefd4f5076e0c371f9b891e4bfcf477af13929.
 
-PacketBuffer::buffer_ slots can be re-used by packets with with
-different sequence numbers when their difference is multiple of
-buffer_.size()
+Reason for revert: Upstream fixed.
 
-Non-H264 code path validates RTP sequence numbers continuity in
-`PotentialNewFrame` helper, H264 code path missed such check as the new
-test demonstrate.
+Original change's description:
+> Use GetTimestamp in encoded frame clone functions.
+>
+> Mock frames in Chromium tests do not overload the new
+> GetRtpTimestampInfo() and fail.
+>
+> Bug: chromium:524901718
+> Change-Id: I67ce2478b1b096ed82e22d72c88d0bdd41848c5a
+> Reviewed-on: https://webrtc-review.googlesource.com/c/src/+/486860
+> Commit-Queue: Guido Urdaneta <guidou@webrtc.org>
+> Commit-Queue: Leonardo Evi <evil@chromium.org>
+> Reviewed-by: Fredrik Solenberg <solenberg@webrtc.org>
+> Reviewed-by: Guido Urdaneta <guidou@webrtc.org>
+> Cr-Commit-Position: refs/heads/main@{#48122}
 
-Bug: chromium:537233963
-Change-Id: I6af0f52bfcb3a4437450dffcece85bee7ce172cd
-Reviewed-on: https://webrtc-review.googlesource.com/c/src/+/490840
-Reviewed-by: Åsa Persson <asapersson@webrtc.org>
-Commit-Queue: Danil Chapovalov <danilchap@webrtc.org>
-Cr-Commit-Position: refs/heads/main@{#48222}
+Bug: chromium:524901718
+Change-Id: I0940d955c1078b3fb97f3f0e9769c93a4402a7f8
+Reviewed-on: https://webrtc-review.googlesource.com/c/src/+/487360
+Bot-Commit: rubber-stamper@appspot.gserviceaccount.com <rubber-stamper@appspot.gserviceaccount.com>
+Reviewed-by: Guido Urdaneta <guidou@webrtc.org>
+Reviewed-by: Fredrik Solenberg <solenberg@webrtc.org>
+Commit-Queue: Leonardo Evi <evil@chromium.org>
+Cr-Commit-Position: refs/heads/main@{#48146}
 ---
- modules/video_coding/packet_buffer.cc          | 2 ++
- modules/video_coding/packet_buffer_unittest.cc | 8 ++++++++
- 2 files changed, 10 insertions(+)
+ audio/channel_send_frame_transformer_delegate.cc              | 2 +-
+ .../source/rtp_sender_video_frame_transformer_delegate.cc     | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
 
-diff --git a/modules/video_coding/packet_buffer.cc b/modules/video_coding/packet_buffer.cc
-index 961b41e66f..0efaa8749a 100644
---- a/modules/video_coding/packet_buffer.cc
-+++ b/modules/video_coding/packet_buffer.cc
-@@ -339,6 +339,8 @@ std::vector<std::unique_ptr<PacketBuffer::Packet>> PacketBuffer::FindFrames(
-         // See: https://bugs.chromium.org/p/webrtc/issues/detail?id=7106
-         if (is_h264_descriptor &&
-             (buffer_[start_index] == nullptr ||
-+             buffer_[start_index]->seq_num() !=
-+                 static_cast<uint16_t>(start_seq_num - 1) ||
-              buffer_[start_index]->timestamp != frame_timestamp)) {
-           break;
-         }
-diff --git a/modules/video_coding/packet_buffer_unittest.cc b/modules/video_coding/packet_buffer_unittest.cc
-index 29f13e4f3e..45b09e6aca 100644
---- a/modules/video_coding/packet_buffer_unittest.cc
-+++ b/modules/video_coding/packet_buffer_unittest.cc
-@@ -709,6 +709,14 @@ TEST_P(PacketBufferH264ParameterizedTest, InsertTooOldPackets) {
-   InsertH264(4662, kKeyFrame, kFirst, kLast, 1000);
+diff --git a/audio/channel_send_frame_transformer_delegate.cc b/audio/channel_send_frame_transformer_delegate.cc
+index d57640394a..670d9969d7 100644
+--- a/audio/channel_send_frame_transformer_delegate.cc
++++ b/audio/channel_send_frame_transformer_delegate.cc
+@@ -297,7 +297,7 @@ std::unique_ptr<TransformableAudioFrameInterface> CloneSenderAudioFrame(
+                original->GetContributingSources().end());
+   return std::make_unique<TransformableOutgoingAudioFrame>(
+       InterfaceFrameTypeToInternalFrameType(original->Type()),
+-      original->GetPayloadType(), original->GetTimestamp(),
++      original->GetPayloadType(), original->GetRtpTimestampInfo(),
+       original->GetData().data(), original->GetData().size(),
+       original->AbsoluteCaptureTimestamp(), original->GetSsrc(),
+       std::move(csrcs), original->GetMimeType(), original->SequenceNumber(),
+diff --git a/modules/rtp_rtcp/source/rtp_sender_video_frame_transformer_delegate.cc b/modules/rtp_rtcp/source/rtp_sender_video_frame_transformer_delegate.cc
+index 56a32199d1..106003fc22 100644
+--- a/modules/rtp_rtcp/source/rtp_sender_video_frame_transformer_delegate.cc
++++ b/modules/rtp_rtcp/source/rtp_sender_video_frame_transformer_delegate.cc
+@@ -313,8 +313,8 @@ std::unique_ptr<TransformableVideoFrameInterface> CloneSenderVideoFrame(
+       original->GetRtpTimestampInfo()));
+   return std::make_unique<TransformableVideoSenderFrame>(
+       encoded_image, new_header, original->GetPayloadType(), new_header.codec,
+-      original->GetTimestamp(), kDefaultRetransmissionsTime,
+-      original->GetSsrc(), metadata.GetCsrcs(),
++      std::get<RtpTimestampWithOffset>(original->GetRtpTimestampInfo()),
++      kDefaultRetransmissionsTime, original->GetSsrc(), metadata.GetCsrcs(),
+       original->Rid().value_or(std::string()));
  }
  
-+TEST_P(PacketBufferH264ParameterizedTest, InsertMisOrderedPackets) {
-+  InsertH264(4660, kKeyFrame, kFirst, kNotLast, 1000);
-+  // packet (4661 + kStartSize) can use the same buffer slot as packet 4661,
-+  // PacketBuffer need to be careful to detect they are not the same packet.
-+  InsertH264(4661 + kStartSize, kDeltaFrame, kFirst, kNotLast, 1000);
-+  InsertH264(4662, kKeyFrame, kFirst, kLast, 1000);
-+}
-+
- TEST_P(PacketBufferH264ParameterizedTest, ClearMissingPacketsOnKeyframe) {
-   InsertH264(0, kKeyFrame, kFirst, kLast, 1000);
-   InsertH264(2, kKeyFrame, kFirst, kLast, 3000);
