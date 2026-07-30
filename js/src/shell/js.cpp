@@ -10552,12 +10552,6 @@ JS_FN_HELP("createUserArrayBuffer", CreateUserArrayBuffer, 1, 0,
 "            below it (false). If omitted, this is treated as 'true'."),
 
 #ifndef __wasi__
-    JS_FN_HELP("wasmCompileInSeparateProcess", WasmCompileInSeparateProcess, 1, 0,
-"wasmCompileInSeparateProcess(buffer)",
-"  Compile the given buffer in a separate process, serialize the resulting\n"
-"  wasm::Module into bytes, and deserialize those bytes in the current\n"
-"  process, returning the resulting WebAssembly.Module."),
-
     JS_FN_HELP("wasmTextToBinary", WasmTextToBinary, 1, 0,
 "wasmTextToBinary(str)",
 "  Translates the given text wasm module into its binary encoding."),
@@ -10622,6 +10616,17 @@ static const JSFunctionSpecWithHelp diff_testing_unsafe_functions[] = {
 
 // clang-format off
 static const JSFunctionSpecWithHelp fuzzing_unsafe_functions[] = {
+#ifndef __wasi__
+    // Not fuzzing-safe: this spawns a child process to do the compile and
+    // serialize, and a fuzzing harness can interpose on that child to feed a
+    // tampered serialized module back for deserialization (bug 2043047).
+    JS_FN_HELP("wasmCompileInSeparateProcess", WasmCompileInSeparateProcess, 1, 0,
+"wasmCompileInSeparateProcess(buffer)",
+"  Compile the given buffer in a separate process, serialize the resulting\n"
+"  wasm::Module into bytes, and deserialize those bytes in the current\n"
+"  process, returning the resulting WebAssembly.Module."),
+#endif // __wasi__
+
     JS_FN_HELP("getSelfHostedValue", GetSelfHostedValue, 1, 0,
 "getSelfHostedValue()",
 "  Get a self-hosted value by its name. Note that these values don't get \n"
