@@ -188,7 +188,7 @@ index 75fc4fda46..ff730fa780 100644
      }
      reference_finder_->ClearTo(seq_num, rtp_timestamp);
 diff --git a/video/video_stream_buffer_controller.cc b/video/video_stream_buffer_controller.cc
-index 3986cceaa7..bf03366136 100644
+index c4b76293b1..3b4fdc20c3 100644
 --- a/video/video_stream_buffer_controller.cc
 +++ b/video/video_stream_buffer_controller.cc
 @@ -34,6 +34,7 @@
