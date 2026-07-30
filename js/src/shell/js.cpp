@@ -13342,6 +13342,8 @@ bool InitOptionParser(OptionParser& op) {
           "Support <module source> specifier for test262 tests") ||
       !op.addBoolOption('\0', "enable-legacy-regexp",
                         "Enable Legacy RegExp features") ||
+      !op.addBoolOption('\0', "enable-regexp-buffer-boundaries",
+                        "Enable RegExp Buffer Boundaries") ||
       !op.addBoolOption('\0', "enable-wasm-esm-integration",
                         "Enable wasm/esm integration")) {
     return false;
@@ -13450,6 +13452,9 @@ bool SetGlobalOptionsPreJSInit(const OptionParser& op) {
   }
   if (op.getBoolOption("enable-wasm-esm-integration")) {
     JS::Prefs::set_experimental_wasm_esm_integration(true);
+  }
+  if (op.getBoolOption("enable-regexp-buffer-boundaries")) {
+    JS::Prefs::setAtStartup_experimental_regexp_buffer_boundaries(true);
   }
 #endif
   if (op.getBoolOption("enable-source-phase-imports")) {
@@ -14209,6 +14214,12 @@ bool SetContextJITOptions(JSContext* cx, const OptionParser& op) {
   if (op.getBoolOption("trace-regexp-peephole")) {
     jit::JitOptions.trace_regexp_peephole_optimization = true;
   }
+
+#ifdef NIGHTLY_BUILD
+  if (op.getBoolOption("enable-regexp-buffer-boundaries")) {
+    jit::JitOptions.js_regexp_buffer_boundaries = true;
+  }
+#endif
 
   if (op.getBoolOption("less-debug-code")) {
     jit::JitOptions.lessDebugCode = true;
