@@ -4232,16 +4232,18 @@ bool MOZ_NEVER_INLINE JS_HAZ_JSNATIVE_CALLER js::Interpret(JSContext* cx,
         Rooted<AbstractGeneratorObject*> gen(
             cx, &REGS.sp[-3].toObject().as<AbstractGeneratorObject>());
         ReservedRooted<Value> val(&rootValue0, REGS.sp[-2]);
-        ReservedRooted<Value> resumeKindVal(&rootValue1, REGS.sp[-1]);
+        GeneratorResumeKind resumeKind = IntToResumeKind(REGS.sp[-1].toInt32());
 
         // popInlineFrame expects there to be an additional value on the stack
         // to pop off, so leave "gen" on the stack.
         REGS.sp -= 1;
 
-        if (!AbstractGeneratorObject::resume(cx, activation, gen, val,
-                                             resumeKindVal)) {
+        RootedFunction callee(cx, &gen->callee());
+        RootedObject envChain(cx, &gen->environmentChain());
+        if (!activation.pushInlineGeneratorResumeFrame(callee, envChain)) {
           goto error;
         }
+        AbstractGeneratorObject::resume(cx, activation, gen, val, resumeKind);
 
         JSScript* generatorScript = REGS.fp()->script();
         if (cx->realm() != generatorScript->realm()) {

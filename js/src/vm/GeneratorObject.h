@@ -62,9 +62,9 @@ class AbstractGeneratorObject : public NativeObject {
                                          HandleObject environmentChain,
                                          Handle<ArgumentsObject*> argsObject);
 
-  static bool resume(JSContext* cx, InterpreterActivation& activation,
+  static void resume(JSContext* cx, InterpreterActivation& activation,
                      Handle<AbstractGeneratorObject*> genObj, HandleValue arg,
-                     HandleValue resumeKind);
+                     GeneratorResumeKind resumeKind);
 
   static bool suspend(JSContext* cx, HandleObject obj, AbstractFramePtr frame,
                       const jsbytecode* pc, unsigned nvalues);

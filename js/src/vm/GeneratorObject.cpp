@@ -268,32 +268,28 @@ bool js::GeneratorThrowOrReturn(JSContext* cx, AbstractFramePtr frame,
   return false;
 }
 
-bool AbstractGeneratorObject::resume(JSContext* cx,
+void AbstractGeneratorObject::resume(JSContext* cx,
                                      InterpreterActivation& activation,
                                      Handle<AbstractGeneratorObject*> genObj,
-                                     HandleValue arg, HandleValue resumeKind) {
+                                     HandleValue arg,
+                                     GeneratorResumeKind resumeKind) {
   MOZ_ASSERT(genObj->isSuspended());
 
-  RootedFunction callee(cx, &genObj->callee());
-  RootedObject envChain(cx, &genObj->environmentChain());
-  if (!activation.pushInlineGeneratorResumeFrame(callee, envChain)) {
-    return false;
-  }
+  InterpreterFrame* fp = activation.regs().fp();
 
   if (genObj->hasArgsObj()) {
-    activation.regs().fp()->initArgsObj(genObj->argsObj());
+    fp->initArgsObj(genObj->argsObj());
   }
 
+  JSScript* script = fp->script();
   if (genObj->hasStackStorage() && !genObj->isStackStorageEmpty()) {
-    JSScript* script = activation.regs().fp()->script();
     ArrayObject* storage = &genObj->stackStorage();
     uint32_t len = storage->getDenseInitializedLength();
-    activation.regs().fp()->restoreGeneratorSlots(storage);
+    fp->restoreGeneratorSlots(storage);
     activation.regs().sp += len - script->nfixed();
     storage->setDenseInitializedLength(0);
   }
 
-  JSScript* script = callee->nonLazyScript();
   uint32_t offset = script->resumeOffsets()[genObj->resumeIndex()];
   activation.regs().pc = script->offsetToPC(offset);
 
@@ -302,10 +298,9 @@ bool AbstractGeneratorObject::resume(JSContext* cx,
   MOZ_ASSERT(activation.regs().spForStackDepth(activation.regs().stackDepth()));
   activation.regs().sp[-3] = arg;
   activation.regs().sp[-2] = ObjectValue(*genObj);
-  activation.regs().sp[-1] = resumeKind;
+  activation.regs().sp[-1] = Int32Value(int32_t(resumeKind));
 
   genObj->setRunning();
-  return true;
 }
 
 GeneratorObject* GeneratorObject::create(JSContext* cx, HandleFunction fun) {
