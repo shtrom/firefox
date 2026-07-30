@@ -1194,12 +1194,10 @@ bool InterpretResume(JSContext* cx, HandleObject obj, Value* stackValues,
 }
 
 bool DebugAfterYield(JSContext* cx, BaselineFrame* frame) {
-  // The BaselineFrame has just been constructed by JSOp::Resume in the
-  // caller. We need to set its debuggee flag as necessary.
-  //
-  // If a breakpoint is set on JSOp::AfterYield, or stepping is enabled,
-  // we may already have done this work. Don't fire onEnterFrame again.
-  if (frame->script()->isDebuggee() && !frame->isDebuggee()) {
+  // The BaselineFrame has just been constructed. We need to set its debuggee
+  // flag as necessary.
+  MOZ_ASSERT(!frame->isDebuggee());
+  if (frame->script()->isDebuggee()) {
     frame->setIsDebuggee();
     return DebugAPI::onResumeFrame(cx, frame);
   }
@@ -1296,20 +1294,11 @@ bool HandleDebugTrap(JSContext* cx, BaselineFrame* frame,
   }
 
   if (JSOp(*pc) == JSOp::AfterYield) {
-    // JSOp::AfterYield will set the frame's debuggee flag and call the
-    // onEnterFrame handler, but if we set a breakpoint there we have to do
-    // it now.
+    // JSOp::AfterYield will set the frame's debuggee flag, call the
+    // onEnterFrame handler, and handle breakpoint/stepping at that op (in
+    // DebugAPI::slowPathOnResumeFrame).
     MOZ_ASSERT(!frame->isDebuggee());
-
-    if (!DebugAfterYield(cx, frame)) {
-      return false;
-    }
-
-    // If the frame is not a debuggee we're done. This can happen, for instance,
-    // if the onEnterFrame hook called removeDebuggee.
-    if (!frame->isDebuggee()) {
-      return true;
-    }
+    return true;
   }
 
   MOZ_ASSERT(frame->isDebuggee());

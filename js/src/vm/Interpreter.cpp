@@ -1973,11 +1973,6 @@ bool MOZ_NEVER_INLINE JS_HAZ_JSNATIVE_CALLER js::Interpret(JSContext* cx,
     if (!probes::EnterScript(cx, script, script->function(), entryFrame)) {
       goto error;
     }
-    if (!DebugAPI::onResumeFrame(cx, entryFrame)) {
-      MOZ_ASSERT_IF(cx->isPropagatingForcedReturn(),
-                    genState.generator()->isClosed());
-      goto error;
-    }
   } else {
     if (!entryFrame->prologue(cx)) {
       goto prologue_error;
@@ -2007,8 +2002,11 @@ bool MOZ_NEVER_INLINE JS_HAZ_JSNATIVE_CALLER js::Interpret(JSContext* cx,
       }
 
       if (script->isDebuggee()) {
+        // Suppress breakpoints/stepping until after the JSOp::AfterYield op.
+        bool suppressTrap = REGS.fp()->isResumingGenerator();
+
         if (DebugAPI::stepModeEnabled(script)) {
-          if (!DebugAPI::onSingleStep(cx)) {
+          if (!suppressTrap && !DebugAPI::onSingleStep(cx)) {
             goto error;
           }
           moreInterrupts = true;
@@ -2019,7 +2017,7 @@ bool MOZ_NEVER_INLINE JS_HAZ_JSNATIVE_CALLER js::Interpret(JSContext* cx,
         }
 
         if (DebugAPI::hasBreakpointsAt(script, REGS.pc)) {
-          if (!DebugAPI::onTrap(cx)) {
+          if (!suppressTrap && !DebugAPI::onTrap(cx)) {
             goto error;
           }
         }
@@ -4289,11 +4287,6 @@ bool MOZ_NEVER_INLINE JS_HAZ_JSNATIVE_CALLER js::Interpret(JSContext* cx,
                                  generatorScript->function(), REGS.fp())) {
           goto error;
         }
-
-        if (!DebugAPI::onResumeFrame(cx, REGS.fp())) {
-          MOZ_ASSERT_IF(cx->isPropagatingForcedReturn(), gen->isClosed());
-          goto error;
-        }
       }
       ADVANCE_AND_DISPATCH(0);
     }
@@ -4309,6 +4302,15 @@ bool MOZ_NEVER_INLINE JS_HAZ_JSNATIVE_CALLER js::Interpret(JSContext* cx,
 
       INIT_COVERAGE();
       COUNT_COVERAGE();
+
+      if (MOZ_UNLIKELY(script->isDebuggee())) {
+        if (!DebugAPI::onResumeFrame(cx, REGS.fp())) {
+          MOZ_ASSERT_IF(
+              cx->isPropagatingForcedReturn(),
+              REGS.sp[-2].toObject().as<AbstractGeneratorObject>().isClosed());
+          goto error;
+        }
+      }
     }
     END_CASE(AfterYield)
 
