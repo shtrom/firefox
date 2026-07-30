@@ -990,30 +990,6 @@ SECStatus CanFalseStartCallback(PRFileDesc* fd, void* client_data,
   return SECSuccess;
 }
 
-static unsigned int NonECCKeySize(uint32_t bits) {
-  return bits < 512      ? 1
-         : bits == 512   ? 2
-         : bits < 768    ? 3
-         : bits == 768   ? 4
-         : bits < 1024   ? 5
-         : bits == 1024  ? 6
-         : bits < 1280   ? 7
-         : bits == 1280  ? 8
-         : bits < 1536   ? 9
-         : bits == 1536  ? 10
-         : bits < 2048   ? 11
-         : bits == 2048  ? 12
-         : bits < 3072   ? 13
-         : bits == 3072  ? 14
-         : bits < 4096   ? 15
-         : bits == 4096  ? 16
-         : bits < 8192   ? 17
-         : bits == 8192  ? 18
-         : bits < 16384  ? 19
-         : bits == 16384 ? 20
-                         : 0;
-}
-
 // XXX: This attempts to map a bit count to an ECC named curve identifier. In
 // the vast majority of situations, we only have the Suite B curves available.
 // In that case, this mapping works fine. If we were to have more curves
@@ -1188,46 +1164,19 @@ void HandshakeCallback(PRFileDesc* fd, void* client_data) {
       .Add();
 
   if (infoObject->IsFullHandshake()) {
-    switch (channelInfo.keaType) {
-      case ssl_kea_rsa:
-        glean::ssl::kea_rsa_key_size_full.AccumulateSingleSample(
-            NonECCKeySize(channelInfo.keaKeyBits));
-        break;
-      case ssl_kea_dh:
-        glean::ssl::kea_dhe_key_size_full.AccumulateSingleSample(
-            NonECCKeySize(channelInfo.keaKeyBits));
-        break;
-      case ssl_kea_ecdh:
-        glean::ssl::kea_ecdhe_curve_full.AccumulateSingleSample(
-            ECCCurve(channelInfo.keaKeyBits));
-        break;
-      case ssl_kea_ecdh_hybrid:
-      case ssl_kea_kem:
-        break;
-      default:
-        MOZ_CRASH("impossible KEA");
-        break;
+    if (channelInfo.keaType == ssl_kea_ecdh) {
+      glean::ssl::kea_ecdhe_curve_full.AccumulateSingleSample(
+          ECCCurve(channelInfo.keaKeyBits));
     }
 
     glean::ssl::auth_algorithm_full.AccumulateSingleSample(
         channelInfo.authType);
 
     // RSA key exchange doesn't use a signature for auth.
-    if (channelInfo.keaType != ssl_kea_rsa) {
-      switch (channelInfo.authType) {
-        case ssl_auth_rsa:
-        case ssl_auth_rsa_sign:
-          glean::ssl::auth_rsa_key_size_full.AccumulateSingleSample(
-              NonECCKeySize(channelInfo.authKeyBits));
-          break;
-        case ssl_auth_ecdsa:
-          glean::ssl::auth_ecdsa_curve_full.AccumulateSingleSample(
-              ECCCurve(channelInfo.authKeyBits));
-          break;
-        default:
-          MOZ_CRASH("impossible auth algorithm");
-          break;
-      }
+    if (channelInfo.keaType != ssl_kea_rsa &&
+        channelInfo.authType == ssl_auth_ecdsa) {
+      glean::ssl::auth_ecdsa_curve_full.AccumulateSingleSample(
+          ECCCurve(channelInfo.authKeyBits));
     }
   }
 
