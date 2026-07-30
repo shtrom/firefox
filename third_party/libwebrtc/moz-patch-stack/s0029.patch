@@ -27,7 +27,7 @@ index 11b62eb43a..0bb63dd59e 100644
    stats.header_and_padding_bytes_sent =
        channel_stats.header_and_padding_bytes_sent;
 diff --git a/audio/channel_send.cc b/audio/channel_send.cc
-index 324a1881ca..c5d7896847 100644
+index 9753d409a0..4fb30b2f14 100644
 --- a/audio/channel_send.cc
 +++ b/audio/channel_send.cc
 @@ -85,6 +85,32 @@ constexpr TimeDelta kMinRetransmissionWindow = TimeDelta::Millis(30);
