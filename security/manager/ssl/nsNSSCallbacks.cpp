@@ -990,20 +990,6 @@ SECStatus CanFalseStartCallback(PRFileDesc* fd, void* client_data,
   return SECSuccess;
 }
 
-// XXX: This attempts to map a bit count to an ECC named curve identifier. In
-// the vast majority of situations, we only have the Suite B curves available.
-// In that case, this mapping works fine. If we were to have more curves
-// available, the mapping would be ambiguous since there could be multiple
-// named curves for a given size (e.g. secp256k1 vs. secp256r1). We punt on
-// that for now. See also NSS bug 323674.
-static unsigned int ECCCurve(uint32_t bits) {
-  return bits == 255   ? 29  // Curve25519
-         : bits == 256 ? 23  // P-256
-         : bits == 384 ? 24  // P-384
-         : bits == 521 ? 25  // P-521
-                       : 0;  // Unknown
-}
-
 static void AccumulateCipherSuite(const SSLChannelInfo& channelInfo) {
   uint32_t value;
   // Note: this list must include every cipher suite it is possible to enable
@@ -1117,6 +1103,39 @@ const nsLiteralCString KeyExchangeAlgorithmNameFromType(SSLKEAType keaType) {
   }
 }
 
+const nsLiteralCString ECNameFromNamedGroup(SSLNamedGroup namedGroup) {
+  switch (namedGroup) {
+    case ssl_grp_ec_secp256r1:
+      return "p256"_ns;
+    case ssl_grp_ec_secp384r1:
+      return "p384"_ns;
+    case ssl_grp_ec_secp521r1:
+      return "p521"_ns;
+    case ssl_grp_ec_curve25519:
+      return "curve25519"_ns;
+    default:
+      MOZ_ASSERT_UNREACHABLE("unhandled or invalid group");
+      return "__other__"_ns;
+  }
+}
+
+const nsLiteralCString ECNameFromSignatureScheme(
+    SSLSignatureScheme signatureScheme) {
+  switch (signatureScheme) {
+    case ssl_sig_ecdsa_secp256r1_sha256:
+      return "p256"_ns;
+    case ssl_sig_ecdsa_secp384r1_sha384:
+      return "p384"_ns;
+    case ssl_sig_ecdsa_secp521r1_sha512:
+      return "p521"_ns;
+    case ssl_sig_ed25519:
+      return "curve25519"_ns;
+    default:
+      MOZ_ASSERT_UNREACHABLE("unhandled or invalid signature scheme");
+      return "__other__"_ns;
+  }
+}
+
 void HandshakeCallback(PRFileDesc* fd, void* client_data) {
   // Do the bookkeeping that needs to be done after the
   // server's ServerHello...ServerHelloDone have been processed, but that
@@ -1165,8 +1184,9 @@ void HandshakeCallback(PRFileDesc* fd, void* client_data) {
 
   if (infoObject->IsFullHandshake()) {
     if (channelInfo.keaType == ssl_kea_ecdh) {
-      glean::ssl::kea_ecdhe_curve_full.AccumulateSingleSample(
-          ECCCurve(channelInfo.keaKeyBits));
+      glean::tls::kea_ecdhe_curve
+          .Get(ECNameFromNamedGroup(channelInfo.keaGroup))
+          .Add();
     }
 
     glean::ssl::auth_algorithm_full.AccumulateSingleSample(
@@ -1175,8 +1195,9 @@ void HandshakeCallback(PRFileDesc* fd, void* client_data) {
     // RSA key exchange doesn't use a signature for auth.
     if (channelInfo.keaType != ssl_kea_rsa &&
         channelInfo.authType == ssl_auth_ecdsa) {
-      glean::ssl::auth_ecdsa_curve_full.AccumulateSingleSample(
-          ECCCurve(channelInfo.authKeyBits));
+      glean::tls::auth_ecdsa_curve
+          .Get(ECNameFromSignatureScheme(channelInfo.signatureScheme))
+          .Add();
     }
   }
 
