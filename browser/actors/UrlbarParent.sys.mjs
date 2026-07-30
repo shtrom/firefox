@@ -22,11 +22,13 @@ ChromeUtils.defineESModuleGetters(lazy, {
  * chrome with `browser.urlbar.ipc.chromeMessagePassing`) holds a
  * `UrlbarParentControllerProxy` and trades actor messages with us: we build the
  * `UrlbarParentController` from the `Init` payload and retain it in a `Map` keyed
- * by the child-assigned `instanceId`, routing subsequent messages to it. The
- * controller's notifications go back to the child as `Notify` messages
- * (dispatched through a parent-side `UrlbarChildControllerProxy` stand-in). The
- * controller is dropped on the `Destroy` message the child sends when its input
- * is collected (via a `FinalizationRegistry`).
+ * by the child-assigned `instanceId`, routing subsequent messages to it. There is
+ * one actor per window global, so that `Map` holds a controller for each
+ * message-path input in that global. The controller's notifications go back to
+ * the child as `Notify` messages (dispatched through a parent-side
+ * `UrlbarChildControllerProxy` stand-in). The controller is torn down on the
+ * `Destroy` message the child sends when its input is collected (via a
+ * `FinalizationRegistry`), and in `didDestroy` for a global that goes away whole.
  *
  * The direct path (in-process chrome `<moz-urlbar>`) doesn't go through this
  * actor at all: `UrlbarChildController` builds its `UrlbarParentController` in
@@ -62,6 +64,7 @@ export class UrlbarParent extends JSWindowActorParent {
     }
 
     if (message.name == "Destroy") {
+      this.#messageControllers.get(instanceId)?.destroy();
       this.#messageControllers.delete(instanceId);
       return undefined;
     }
@@ -188,6 +191,38 @@ export class UrlbarParent extends JSWindowActorParent {
     }
     return undefined;
   }
+
+  didDestroy() {
+    // Every controller here belongs to an input in this window global, and the
+    // child sends `Destroy` per input from a FinalizationRegistry that never
+    // runs when the whole global goes away. So tear them all down.
+    for (let controller of this.#messageControllers.values()) {
+      controller.destroy();
+    }
+    this.#messageControllers.clear();
+  }
+}
+
+/**
+ * Sends a message-path proxy's message to the child, dropping it if the child's
+ * window global is gone.
+ *
+ * A controller can still be called after its window global has closed: work it
+ * started -- a query, a provider's engagement hook -- resolves independently of
+ * teardown, and sending on a closed global throws.
+ *
+ * @param {UrlbarParent} actor
+ *   The actor to send through.
+ * @param {string} name
+ *   The message name.
+ * @param {object} data
+ *   The message payload.
+ */
+function sendToChild(actor, name, data) {
+  if (!actor.manager || actor.manager.isClosed) {
+    return;
+  }
+  actor.sendAsyncMessage(name, data);
 }
 
 /**
@@ -210,7 +245,7 @@ class UrlbarChildControllerProxy {
   }
 
   notify(name, ...params) {
-    this.#actor.sendAsyncMessage("Notify", {
+    sendToChild(this.#actor, "Notify", {
       instanceId: this.#instanceId,
       name,
       params: params.map(param =>
@@ -225,7 +260,7 @@ class UrlbarChildControllerProxy {
    * @type {typeof SearchEngineStore.prototype.receive}
    */
   updateEngineStore(...args) {
-    this.#actor.sendAsyncMessage("UpdateEngineStore", {
+    sendToChild(this.#actor, "UpdateEngineStore", {
       instanceId: this.#instanceId,
       args,
     });
@@ -259,7 +294,7 @@ class ViewProxy {
   }
 
   #invoke(method, args) {
-    this.#actor.sendAsyncMessage("InvokeContentAction", {
+    sendToChild(this.#actor, "InvokeContentAction", {
       instanceId: this.#instanceId,
       target: "view",
       method,
@@ -302,7 +337,7 @@ class InputProxy {
   }
 
   #invoke(method, args) {
-    this.#actor.sendAsyncMessage("InvokeContentAction", {
+    sendToChild(this.#actor, "InvokeContentAction", {
       instanceId: this.#instanceId,
       target: "input",
       method,

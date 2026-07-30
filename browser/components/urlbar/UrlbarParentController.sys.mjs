@@ -1111,6 +1111,19 @@ export class UrlbarParentController {
 
   #engineStoreInitStarted = false;
 
+  #engineObserverRegistered = false;
+
+  /**
+   * Tears down the controller's process-wide registrations, so nothing reaches
+   * it once the input it serves is gone.
+   */
+  destroy() {
+    if (this.#engineObserverRegistered) {
+      Services.obs.removeObserver(this, "browser-search-engine-modified");
+      this.#engineObserverRegistered = false;
+    }
+  }
+
   /**
    * Initializes the engine store synchronously if the search service
    * is already loaded and initialized.
@@ -1160,6 +1173,7 @@ export class UrlbarParentController {
     }
     this.#child.updateEngineStore("init", engineInfos, defaultIndex);
     Services.obs.addObserver(this, "browser-search-engine-modified", true);
+    this.#engineObserverRegistered = true;
   }
 
   QueryInterface = ChromeUtils.generateQI([
