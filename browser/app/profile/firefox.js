@@ -2283,6 +2283,7 @@ pref("sidebar.updatedBookmarks.enabled", false);
 #endif
 pref("sidebar.openTabsPanel.enabled", false);
 pref("sidebar.openTabsPanel.collapsedWindows", "{}");
+pref("sidebar.openTabsPanel.sortOption", "tabStripOrder");
 
 pref("sidebar.notification.badge.aichat", false);
 
