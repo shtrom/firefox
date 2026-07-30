@@ -1032,9 +1032,8 @@ void HTMLSelectElement::AfterSetAttr(int32_t aNameSpaceID, nsAtom* aName,
 }
 
 // https://html.spec.whatwg.org/#selectedness-setting-algorithm
-// NOTE: PR https://github.com/whatwg/html/pull/12263 rewrites this algorithm.
 void HTMLSelectElement::RunSelectednessSettingAlgorithm(
-    bool aNotify, bool aInsertionOrRemovalSteps, IgnoredOptionList aIgnored) {
+    bool aNotify, bool aSkipSelectedcontentUpdate, IgnoredOptionList aIgnored) {
   // 1. If element has the multiple attribute, then return.
   if (Multiple()) {
     UpdateValueMissingValidityState(aIgnored);
@@ -1048,7 +1047,7 @@ void HTMLSelectElement::RunSelectednessSettingAlgorithm(
   // 4. Let lastSelectedOption be null.
   RefPtr<HTMLOptionElement> lastSelectedOption;
 
-  // 5. For each option in element's list of options:
+  // 5. For each option of element's list of options:
   const uint32_t count = Length();
   for (uint32_t i = 0; i < count; i++) {
     RefPtr<HTMLOptionElement> option = Item(i);
@@ -1089,13 +1088,13 @@ void HTMLSelectElement::RunSelectednessSettingAlgorithm(
   UpdateValueMissingValidityState(aIgnored);
   UpdateValidityElementStates(aNotify);
 
-  // 7. If updateSelectedcontent is true and insertionOrRemovalSteps is false,
-  //    then run update a select's descendant selectedcontent elements given
-  //    element.
-  // NOTE: When called from insertion/removal steps (aInsertionOrRemovalSteps),
-  // the update is handled separately: post-connection steps (for insertion) or
-  // a queued microtask (for removal)
-  if (updateSelectedcontent && !aInsertionOrRemovalSteps) {
+  // 7. If updateSelectedcontent is true and skipSelectedcontentUpdate is
+  //    false, then update a select's descendant selectedcontent elements
+  //    given element.
+  // NOTE: Callers pass true from insertion/removal steps, where the update is
+  // handled separately (post-connection steps for insertion, a queued
+  // microtask for removal).
+  if (updateSelectedcontent && !aSkipSelectedcontentUpdate) {
     ScheduleSelectedContentUpdate();
   }
 }
@@ -1644,7 +1643,8 @@ void HTMLSelectElement::ContentWillBeRemoved(nsIContent* aChild,
   }
   if (anySelected) {
     RunSelectednessSettingAlgorithm(/*aNotify=*/true,
-                                    /*aInsertionOrRemovalSteps=*/true, options);
+                                    /*aSkipSelectedcontentUpdate=*/true,
+                                    options);
   }
   if (IsInComposedDoc() && IsCombobox()) {
     OptionValueMightHaveChanged(aChild);
@@ -1728,7 +1728,7 @@ void HTMLSelectElement::ContentAppendedOrInserted(nsIContent* aFirstNewContent,
   if (!options.IsEmpty() &&
       (anySelected || (IsCombobox() && SelectedIndex() < 0))) {
     RunSelectednessSettingAlgorithm(/*aNotify=*/true,
-                                    /*aInsertionOrRemovalSteps=*/true);
+                                    /*aSkipSelectedcontentUpdate=*/true);
   }
 
   if (!anySelected && IsCombobox() && IsInComposedDoc()) {
@@ -2674,7 +2674,7 @@ class SelectedContentUpdateMicrotask final : public MicroTaskRunnable {
   explicit SelectedContentUpdateMicrotask(HTMLSelectElement* aSelect)
       : mSelect(aSelect) {}
   MOZ_CAN_RUN_SCRIPT void Run(AutoSlowOperation& aAso) override {
-    MOZ_KnownLive(mSelect)->UpdateDescendantSelectedContentElements();
+    MOZ_KnownLive(mSelect)->RunPendingSelectedContentUpdate();
   }
 
  private:
@@ -2710,13 +2710,21 @@ void HTMLSelectElement::ScheduleSelectedContentUpdateScriptRunner(
   }
   mSelectedContentUpdatePending = true;
   nsContentUtils::AddScriptRunner(NewRunnableMethod(
-      "HTMLSelectElement::UpdateDescendantSelectedContentElements", this,
-      &HTMLSelectElement::UpdateDescendantSelectedContentElements));
+      "HTMLSelectElement::RunPendingSelectedContentUpdate", this,
+      &HTMLSelectElement::RunPendingSelectedContentUpdate));
+}
+
+void HTMLSelectElement::RunPendingSelectedContentUpdate() {
+  // Multiple schedulers (a synchronous script runner and a coalesced microtask)
+  // can target the same update. Whichever runs first clears the pending flag in
+  // UpdateDescendantSelectedContentElements; the rest become no-ops here so the
+  // clone runs exactly once.
+  if (mSelectedContentUpdatePending) {
+    UpdateDescendantSelectedContentElements();
+  }
 }
 
 // https://html.spec.whatwg.org/#update-a-select's-descendant-selectedcontent-elements
-// NOTE: PR https://github.com/whatwg/html/pull/12263 renames and modifies this
-// to iterate all non-disabled descendant selectedcontent elements.
 void HTMLSelectElement::UpdateDescendantSelectedContentElements() {
   // All schedulers bail while we're updating, so this must never be re-entrant.
   MOZ_ASSERT(!mIsUpdatingSelectedContent);
@@ -2729,8 +2737,8 @@ void HTMLSelectElement::UpdateDescendantSelectedContentElements() {
     return;
   }
 
-  // 2. Let descendantSelectedcontents be select's non-disabled descendant
-  //    selectedcontent elements, in tree order.
+  // 2. Let descendantSelectedcontents be select's descendant selectedcontent
+  //    elements which are not disabled, in tree order.
   AutoTArray<RefPtr<HTMLSelectedContentElement>, 1> elements;
   for (nsIContent* node = GetFirstChild(); node;
        node = node->GetNextNode(this)) {
@@ -2741,7 +2749,7 @@ void HTMLSelectElement::UpdateDescendantSelectedContentElements() {
     }
   }
 
-  // 3. For each selectedcontent in descendantSelectedcontents:
+  // 3. For each selectedcontent of descendantSelectedcontents:
   // Guard against re-entrant scheduling from mutation observer callbacks
   // triggered by our own DOM cloning into selectedcontent elements.
   mIsUpdatingSelectedContent = true;
@@ -2757,19 +2765,18 @@ void HTMLSelectElement::UpdateSelectedContentElement(
     HTMLSelectedContentElement* aSelectedContent) {
   MOZ_ASSERT(aSelectedContent);
   // 1. Let option be the first option in select's list of options whose
-  //    selectedness is true, if any such option exists, otherwise null.
+  //    selectedness is true, if any such option exists; otherwise null.
   const int32_t selectedIndex = SelectedIndex();
   RefPtr<HTMLOptionElement> option =
       selectedIndex >= 0 ? Item(static_cast<uint32_t>(selectedIndex)) : nullptr;
 
-  // 2. If option is null, then run clear a selectedcontent given
-  //    selectedcontent.
+  // 2. If option is null, then clear a selectedcontent given selectedcontent.
   if (!option) {
     aSelectedContent->ClearContent();
     return;
   }
 
-  // 3. Otherwise, run clone an option into a selectedcontent given option and
+  // 3. Otherwise, clone an option into a selectedcontent given option and
   //    selectedcontent.
   CloneOptionIntoSelectedContent(option, aSelectedContent);
 }
@@ -2779,7 +2786,7 @@ void HTMLSelectElement::CloneOptionIntoSelectedContent(
     HTMLOptionElement* aOption, HTMLSelectedContentElement* aSelectedContent) {
   MOZ_ASSERT(aOption);
   MOZ_ASSERT(aSelectedContent);
-  // 1. If selectedcontent is disabled, then return.
+  // 1. If selectedcontent's disabled is true, then return.
   if (aSelectedContent->IsDisabled()) {
     return;
   }

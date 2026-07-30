@@ -105,7 +105,18 @@ void HTMLOptionElement::SetSelected(bool aValue) {
     }
 
     // This should end up calling SetSelectedInternal
-    select->SetOptionsSelectedByIndex(index, index, mask);
+    if (select->SetOptionsSelectedByIndex(index, index, mask)) {
+      // https://html.spec.whatwg.org/#dom-option-selected
+      // On setting, ... then ask for a reset given this, which runs the
+      // selectedness setting algorithm on the cached nearest ancestor select
+      // with skipSelectedcontentUpdate set to false. SetOptionsSelectedByIndex
+      // does not always call RunSelectednessSettingAlgorithm (e.g. when only
+      // selection, not deselection, occurs), so the selectedcontent update may
+      // be missed; schedule it explicitly here. Synchronous, matching
+      // select.value/select.selectedIndex.
+      select->ScheduleSelectedContentUpdateScriptRunner(
+          /* aForceUpdate = */ true);
+    }
   } else {
     SetSelectedInternal(aValue, true);
   }
@@ -181,7 +192,13 @@ void HTMLOptionElement::BeforeSetAttr(int32_t aNamespaceID, nsAtom* aName,
   // change, which we will allow to take effect so that parts of
   // SetOptionsSelectedByIndex that might depend on it working don't get
   // confused.
-  select->SetOptionsSelectedByIndex(index, index, mask);
+  if (select->SetOptionsSelectedByIndex(index, index, mask)) {
+    // https://html.spec.whatwg.org/#ask-for-a-reset
+    // Same "ask for a reset" step as SetSelected above, triggered here by the
+    // selected content attribute instead of the selected IDL attribute.
+    select->ScheduleSelectedContentUpdateScriptRunner(
+        /* aForceUpdate = */ true);
+  }
 
   // the selected state might have been changed by SetOptionsSelectedByIndex,
   // possibly more than once; make sure our mSelectedChanged state is set back

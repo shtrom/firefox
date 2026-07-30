@@ -313,11 +313,10 @@ class HTMLSelectElement final : public nsGenericHTMLFormControlElementWithState,
                                            IgnoredOptionList = {});
 
   // https://html.spec.whatwg.org/#selectedness-setting-algorithm
-  // NOTE: PR https://github.com/whatwg/html/pull/12263 rewrites this algorithm
   // aIgnored: options to skip (for pre-removal handling where options are still
   // in the list but about to be unbound).
   void RunSelectednessSettingAlgorithm(bool aNotify = true,
-                                       bool aInsertionOrRemovalSteps = false,
+                                       bool aSkipSelectedcontentUpdate = false,
                                        IgnoredOptionList aIgnored = {});
 
   // Queues a microtask to update all descendant selectedcontent elements.
@@ -334,6 +333,10 @@ class HTMLSelectElement final : public nsGenericHTMLFormControlElementWithState,
 
   // https://html.spec.whatwg.org/#update-a-select's-descendant-selectedcontent-elements
   MOZ_CAN_RUN_SCRIPT void UpdateDescendantSelectedContentElements();
+  // Runs UpdateDescendantSelectedContentElements only if an update is still
+  // pending. Entry point for the microtask and script-runner schedulers so they
+  // coalesce into a single update.
+  MOZ_CAN_RUN_SCRIPT void RunPendingSelectedContentUpdate();
   // https://html.spec.whatwg.org/#update-a-selectedcontent
   MOZ_CAN_RUN_SCRIPT void UpdateSelectedContentElement(
       HTMLSelectedContentElement* aSelectedContent);
