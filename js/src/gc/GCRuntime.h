@@ -891,6 +891,8 @@ class GCRuntime {
                         bool budgetWasIncreased);
 
   bool shouldYieldAtEndOfMarkPhase() const;
+  bool shouldYieldBeforeSweep(const JS::SliceBudget& budget) const;
+
   void collectNurseryFromMajorGC(JS::GCReason reason);
   void collectNursery(JS::GCOptions options, JS::GCReason reason,
                       gcstats::PhaseKind phase);
