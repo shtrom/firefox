@@ -48,7 +48,21 @@ If `content.position` is not defined, it defaults to the `ABOVE_WIDGETS` behavio
 
 ### `content.imageSrc` (String)
 
-This is an optional square image that can be displayed at the start of the message surface. If `imageSrc` is not defined, the image element is not rendered.
+This is an optional image displayed at the start of the message surface. If `imageSrc` is not defined, the image element is not rendered. On its own, `imageSrc` renders as a fixed-size inset thumbnail.
+
+#### Image variants
+
+`imageSrc` may be accompanied by optional variants that let the image adapt to color scheme and viewport width. Supplying any of the narrow/responsive variants opts the message into a "flush" image treatment that bleeds to the card edges, with three layout tiers:
+
+- **Below 724px** (vertical layout): a full-width banner, using `imageSrcResponsive` (and `imageSrcDarkResponsive` in dark mode).
+- **724px–1072px** (horizontal layout): a full-height flush column, using `imageSrcNarrow` (and `imageSrcDarkNarrow` in dark mode). The 1072px breakpoint matches the newtab discovery-stream section switch.
+- **At/above 1072px** (horizontal layout): a full-height flush column, using `imageSrc` (and `imageSrcDark` in dark mode).
+
+Any variant that is not provided falls back to `imageSrc`. Dark-mode variants are selected via `prefers-color-scheme`. Each tier's art is chosen to match that tier's column proportions to minimize cropping.
+
+### `content.primaryButton` / `content.secondaryButton` (Object)
+
+Optional buttons rendered below the body. Each has a `label` (string or `{ string_id }` for a Fluent id) and an `action` (a SpecialMessageAction; see [`specialMessageAction`](#specialmessageactionaction)). The primary button additionally accepts an optional `iconSrc` (String) — a chrome:// URL to an icon shown before the label.
 
 ### `content.primaryButton` / `content.secondaryButton` (Object)
 

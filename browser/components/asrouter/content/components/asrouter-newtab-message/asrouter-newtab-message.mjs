@@ -309,15 +309,98 @@ export default class ASRouterNewTabMessage extends MozLitElement {
     if (typeof primaryButton.label === "string") {
       return html`<moz-button
         type=${type}
+        iconSrc=${primaryButton.iconSrc || nothing}
         @click=${this.#handlePrimaryButton.bind(this)}
         >${primaryButton.label}</moz-button
       >`;
     }
     return html`<moz-button
       type=${type}
+      iconSrc=${primaryButton.iconSrc || nothing}
       @click=${this.#handlePrimaryButton.bind(this)}
       data-l10n-id=${primaryButton.label.string_id}
     ></moz-button>`;
+  }
+
+  /**
+   * Whether the message supplies alternate image variants (narrow and/or
+   * responsive). This opts the message into the flush image treatment: a
+   * full-bleed banner in the narrow (vertical) layout and a full-height,
+   * flush image column in the medium and wide layouts.
+   *
+   * @param {object} content - The message content object.
+   * @returns {boolean}
+   */
+  #hasResponsiveImage(content) {
+    return Boolean(
+      content?.imageSrcResponsive ||
+      content?.imageSrcDarkResponsive ||
+      content?.imageSrcNarrow ||
+      content?.imageSrcDarkNarrow
+    );
+  }
+
+  /**
+   * Renders the message image. When only `imageSrc` is provided it renders a
+   * single light-mode image sized as a fixed thumbnail. When alternate variants
+   * are supplied, it renders a <picture> that swaps the source based on color
+   * scheme and viewport width across three tiers, matching the layout
+   * breakpoints in the stylesheet:
+   *   - responsive banner below 724px,
+   *   - narrow (portrait) column between 724px and 1072px,
+   *   - base image column at/above 1072px (also the <img> fallback).
+   * Dark-scheme sources are listed before the scheme-agnostic light sources so
+   * the first matching <source> wins correctly in either color scheme. The
+   * flush treatment is driven by the `has-responsive-image` class on the host
+   * <aside> (see `#hasResponsiveImage`).
+   *
+   * @param {object} content - The message content object.
+   */
+  #renderImage(content) {
+    const imageSrc = content?.imageSrc;
+    if (!imageSrc) {
+      return nothing;
+    }
+    const {
+      imageSrcDark,
+      imageSrcNarrow,
+      imageSrcDarkNarrow,
+      imageSrcResponsive,
+      imageSrcDarkResponsive,
+    } = content;
+    return html`<picture class="message-image">
+      ${imageSrcDark
+        ? html`<source
+            srcset=${imageSrcDark}
+            media="(min-width: 1072px) and (prefers-color-scheme: dark)"
+          />`
+        : nothing}
+      ${imageSrcDarkNarrow
+        ? html`<source
+            srcset=${imageSrcDarkNarrow}
+            media="(min-width: 724px) and (max-width: 1071.98px) and (prefers-color-scheme: dark)"
+          />`
+        : nothing}
+      ${imageSrcDarkResponsive
+        ? html`<source
+            srcset=${imageSrcDarkResponsive}
+            media="(max-width: 723.98px) and (prefers-color-scheme: dark)"
+          />`
+        : nothing}
+      ${imageSrcNarrow
+        ? html`<source
+            srcset=${imageSrcNarrow}
+            media="(min-width: 724px) and (max-width: 1071.98px)"
+          />`
+        : nothing}
+      ${imageSrcResponsive
+        ? html`<source
+            srcset=${imageSrcResponsive}
+            media="(max-width: 723.98px)"
+          />`
+        : nothing}
+      <img src=${imageSrc} alt="" />
+    </picture>`;
   }
 
   #renderPrimaryButton(primaryButton, secondaryButton) {
@@ -336,7 +419,13 @@ export default class ASRouterNewTabMessage extends MozLitElement {
     return html`
       <link rel="stylesheet" href=${CSS_HREF} />
       <aside
-        class=${`asrouter-newtab-message${content?.hideDismissButton ? " no-dismiss" : ""}`}
+        class=${[
+          "asrouter-newtab-message",
+          content?.hideDismissButton ? "no-dismiss" : "",
+          this.#hasResponsiveImage(content) ? "has-responsive-image" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         aria-labelledby=${content?.heading
           ? "asrouter-newtab-message-heading"
           : nothing}
@@ -353,9 +442,7 @@ export default class ASRouterNewTabMessage extends MozLitElement {
               ></moz-button>
             </div>`}
         <div class="message-inner">
-          ${content?.imageSrc
-            ? html`<img src=${content.imageSrc} alt="" />`
-            : nothing}
+          ${this.#renderImage(content)}
           <div class="message-content">
             ${this.#renderHeading(content?.heading)}
             ${this.#renderBody(content?.body)}
