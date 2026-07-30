@@ -800,6 +800,10 @@ class InterpreterStack {
                                         MaybeConstruct constructing,
                                         Value** pargv);
 
+  inline InterpreterFrame* createGeneratorResumeFrame(
+      JSContext* cx, HandleFunction callee, HandleObject envChain,
+      InterpreterFrame* prev, jsbytecode* prevpc, Value* prevsp);
+
   void releaseFrame(InterpreterFrame* fp) {
     frameCount_--;
     allocator_.release(fp->mark_);
@@ -828,8 +832,9 @@ class InterpreterStack {
 
   void popInlineFrame(InterpreterRegs& regs);
 
-  bool resumeGeneratorCallFrame(JSContext* cx, InterpreterRegs& regs,
-                                HandleFunction callee, HandleObject envChain);
+  bool pushInlineGeneratorResumeFrame(JSContext* cx, InterpreterRegs& regs,
+                                      HandleFunction callee,
+                                      HandleObject envChain);
 
   inline void purge(JSRuntime* rt);
 

@@ -495,8 +495,8 @@ class InterpreterActivation : public Activation {
                               MaybeConstruct constructing);
   inline void popInlineFrame(InterpreterFrame* frame);
 
-  inline bool resumeGeneratorFrame(JS::Handle<JSFunction*> callee,
-                                   JS::Handle<JSObject*> envChain);
+  inline bool pushInlineGeneratorResumeFrame(JS::Handle<JSFunction*> callee,
+                                             JS::Handle<JSObject*> envChain);
 
   InterpreterFrame* current() const { return regs_.fp(); }
   InterpreterRegs& regs() { return regs_; }

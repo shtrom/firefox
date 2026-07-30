@@ -10959,9 +10959,9 @@ GeneralParser<ParseHandler, Unit>::memberPropertyAccess(
   if (handler_.isArgumentsName(lhs) && handler_.isLengthName(name)) {
     MOZ_ASSERT(pc_->numberOfArgumentsNames > 0);
     pc_->numberOfArgumentsNames--;
-    // Currently when resuming Generators don't get their argument length set
-    // in the interpreter frame (see InterpreterStack::resumeGeneratorCallFrame,
-    // and its call to initCallFrame).
+    // Resumed generators and async functions have numActualArgs == 0.
+    // See e.g. InterpreterStack::createGeneratorResumeFrame and its call to
+    // initCallFrame.
     if (pc_->isGeneratorOrAsync()) {
       pc_->sc()->setIneligibleForArgumentsLength();
     }

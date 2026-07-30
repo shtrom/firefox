@@ -276,7 +276,7 @@ bool AbstractGeneratorObject::resume(JSContext* cx,
 
   RootedFunction callee(cx, &genObj->callee());
   RootedObject envChain(cx, &genObj->environmentChain());
-  if (!activation.resumeGeneratorFrame(callee, envChain)) {
+  if (!activation.pushInlineGeneratorResumeFrame(callee, envChain)) {
     return false;
   }
 

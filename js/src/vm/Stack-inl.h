@@ -303,15 +303,12 @@ MOZ_ALWAYS_INLINE bool InterpreterStack::pushInlineFrame(
   return true;
 }
 
-MOZ_ALWAYS_INLINE bool InterpreterStack::resumeGeneratorCallFrame(
-    JSContext* cx, InterpreterRegs& regs, HandleFunction callee,
-    HandleObject envChain) {
+MOZ_ALWAYS_INLINE InterpreterFrame*
+InterpreterStack::createGeneratorResumeFrame(
+    JSContext* cx, HandleFunction callee, HandleObject envChain,
+    InterpreterFrame* prev, jsbytecode* prevpc, Value* prevsp) {
   MOZ_ASSERT(callee->isGenerator() || callee->isAsync());
   RootedScript script(cx, callee->nonLazyScript());
-  InterpreterFrame* prev = regs.fp();
-  jsbytecode* prevpc = regs.pc;
-  Value* prevsp = regs.sp;
-  MOZ_ASSERT(prev);
 
   LifoAlloc::Mark mark = allocator_.mark();
 
@@ -325,7 +322,7 @@ MOZ_ALWAYS_INLINE bool InterpreterStack::resumeGeneratorCallFrame(
   uint8_t* buffer =
       allocateFrame(cx, sizeof(InterpreterFrame) + nvals * sizeof(Value));
   if (!buffer) {
-    return false;
+    return nullptr;
   }
 
   Value* argv = reinterpret_cast<Value*>(buffer) + 2;
@@ -338,8 +335,20 @@ MOZ_ALWAYS_INLINE bool InterpreterStack::resumeGeneratorCallFrame(
   fp->initCallFrame(prev, prevpc, prevsp, *callee, script, argv, 0,
                     NO_CONSTRUCT);
   fp->resumeGeneratorFrame(envChain);
+  return fp;
+}
 
-  regs.prepareToRun(*fp, script);
+MOZ_ALWAYS_INLINE bool InterpreterStack::pushInlineGeneratorResumeFrame(
+    JSContext* cx, InterpreterRegs& regs, HandleFunction callee,
+    HandleObject envChain) {
+  MOZ_ASSERT(regs.fp());
+  InterpreterFrame* fp = createGeneratorResumeFrame(
+      cx, callee, envChain, regs.fp(), regs.pc, regs.sp);
+  if (!fp) {
+    return false;
+  }
+
+  regs.prepareToRun(*fp, fp->script());
   return true;
 }
 
@@ -847,10 +856,10 @@ inline void InterpreterActivation::popInlineFrame(InterpreterFrame* frame) {
   cx_->interpreterStack().popInlineFrame(regs_);
 }
 
-inline bool InterpreterActivation::resumeGeneratorFrame(HandleFunction callee,
-                                                        HandleObject envChain) {
+inline bool InterpreterActivation::pushInlineGeneratorResumeFrame(
+    HandleFunction callee, HandleObject envChain) {
   InterpreterStack& stack = cx_->interpreterStack();
-  if (!stack.resumeGeneratorCallFrame(cx_, regs_, callee, envChain)) {
+  if (!stack.pushInlineGeneratorResumeFrame(cx_, regs_, callee, envChain)) {
     return false;
   }
 
