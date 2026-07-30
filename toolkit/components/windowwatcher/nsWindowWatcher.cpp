@@ -2076,6 +2076,9 @@ uint32_t nsWindowWatcher::CalculateChromeFlagsForSystem(
   if (aFeatures.GetBoolWithDefault("suppressanimation", false)) {
     chromeFlags |= nsIWebBrowserChrome::CHROME_SUPPRESS_ANIMATION;
   }
+  if (aFeatures.GetBoolWithDefault("suppressinitialfullscreen", false)) {
+    chromeFlags |= nsIWebBrowserChrome::CHROME_SUPPRESS_INITIAL_FULLSCREEN;
+  }
   if (aFeatures.GetBoolWithDefault("alwaysontop", false)) {
     chromeFlags |= nsIWebBrowserChrome::CHROME_ALWAYS_ON_TOP;
   }
