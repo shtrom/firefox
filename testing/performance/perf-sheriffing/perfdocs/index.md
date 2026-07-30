@@ -142,14 +142,16 @@ The following is the general process that needs to be taken for the alerts in th
 >    - **If the patch has had a response from the regressor author:**
 >
 >      ```
->      Hello, could you provide an update on this performance regression or close it if it makes sense to (with a follow-up bug if needed)? <PERFORMANCE-ALERT-BUG-LINK>
+>      Hello, could you provide an update on this performance regression or close it if it makes sense to (with a follow-up bug if needed)? [Bug ID](PERFORMANCE-ALERT-BUG-LINK)
 >      ```
 >
 >    - **If the patch has never had a response from the regressor author:**
 >
 >      ```
->      Hello, could you provide an update on this performance regression or close it if it makes sense to (with a follow-up bug if needed)? In accordance with our `regression policy <https://www.mozilla.org/en-US/about/governance/policies/regressions/>`_, we're considering backing out your patch due to a lack of comments/activity: <PERFORMANCE-ALERT-BUG-LINK>
+>      Hello, could you provide an update on this performance regression or close it if it makes sense to (with a follow-up bug if needed)? In accordance with our [regression policy](https://www.mozilla.org/en-US/about/governance/policies/regressions/), we're considering backing out your patch due to a lack of comments/activity: [Bug ID](PERFORMANCE-ALERT-BUG-LINK)
 >      ```
+>
+>    When reaching out, if there are multiple inactive bugs from the same regressor author, send a single message to that author that includes all of the relevant bugs, instead of sending a separate message (ping) for each bug.
 
 ### 3.2 Handling Responses
 
