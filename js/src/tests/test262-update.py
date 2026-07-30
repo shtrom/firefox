@@ -40,6 +40,7 @@ FEATURE_CHECK_NEEDED = {
 RELEASE_OR_BETA = set([
     "legacy-regexp",
     "import-bytes",
+    "regexp-buffer-boundaries",
 ])
 SHELL_OPTIONS = {
     "symbols-as-weakmap-keys": "--enable-symbols-as-weakmap-keys",
@@ -54,6 +55,7 @@ SHELL_OPTIONS = {
     "source-phase-imports": "--enable-source-phase-imports",
     "source-phase-imports-module-source": "--enable-source-phase-imports-test262-module-source",
     "Intl.Locale-info": "--enable-intl-locale-info",
+    "regexp-buffer-boundaries": "--enable-regexp-buffer-boundaries",
 }
 
 INCLUDE_FEATURE_DETECTED_OPTIONAL_SHELL_OPTIONS = {}
