@@ -234,9 +234,10 @@ class ScriptLoadRequest : public nsISupports,
   // Convert a CheckingCache ScriptLoadRequest into a Fetching one, by creating
   // a new LoadedScript which is matching the ScriptKind provided when
   // constructing this ScriptLoadRequest.
-  void NoCacheEntryFound(mozilla::dom::ReferrerPolicy aReferrerPolicy,
-                         ScriptFetchOptions* aFetchOptions, nsIURI* aURI,
-                         const mozilla::Encoding* aClassicScriptFallbackEncoding = nullptr);
+  void NoCacheEntryFound(
+      mozilla::dom::ReferrerPolicy aReferrerPolicy,
+      ScriptFetchOptions* aFetchOptions, nsIURI* aURI,
+      const mozilla::Encoding* aClassicScriptFallbackEncoding = nullptr);
 
  private:
   void SetCacheEntry(LoadedScript* aLoadedScript,
