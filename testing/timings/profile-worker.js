@@ -451,23 +451,18 @@ async function processJob(job) {
 // Main worker function
 async function main() {
   try {
-    const results = [];
-
     // Signal worker is ready for jobs
     parentPort.postMessage({ type: "ready" });
 
-    // Listen for job assignments
+    // Listen for job assignments. Each result is sent to the main thread as it
+    // completes and the worker keeps nothing: the main thread collects the
+    // results from the jobComplete messages.
     parentPort.on("message", async message => {
       if (message.type === "job") {
         const result = await processJob(message.job);
-        if (result) {
-          results.push(result);
-        }
-        // Request next job
         parentPort.postMessage({ type: "jobComplete", result });
       } else if (message.type === "shutdown") {
-        // Send final results and exit
-        parentPort.postMessage({ type: "finished", results });
+        parentPort.postMessage({ type: "finished" });
       }
     });
   } catch (error) {
