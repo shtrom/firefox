@@ -3582,16 +3582,6 @@
      */ \
     MACRO(NopDestructuring, nop_destructuring, NULL, 1, 0, 0, JOF_BYTE) \
     /*
-     * No-op instruction only emitted in some self-hosted functions. Not
-     * handled by the JITs or Baseline Interpreter so the script always runs in
-     * the C++ interpreter.
-     *
-     *   Category: Other
-     *   Operands:
-     *   Stack: =>
-     */ \
-    MACRO(ForceInterpreter, force_interpreter, NULL, 1, 0, 0, JOF_BYTE) \
-    /*
      * Examine the top stack value, asserting that it's either a self-hosted
      * function or a self-hosted intrinsic. This does nothing in a non-debug
      * build.
@@ -3625,6 +3615,7 @@
  */
 
 #define FOR_EACH_TRAILING_UNUSED_OPCODE(MACRO) \
+  MACRO(241)                                   \
   MACRO(242)                                   \
   MACRO(243)                                   \
   MACRO(244)                                   \

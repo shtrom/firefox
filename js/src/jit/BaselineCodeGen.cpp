@@ -6909,18 +6909,6 @@ bool BaselineCodeGen<Handler>::emit_DynamicImport() {
   return true;
 }
 
-template <>
-bool BaselineCompilerCodeGen::emit_ForceInterpreter() {
-  // Caller is responsible for checking script->hasForceInterpreterOp().
-  MOZ_CRASH("JSOp::ForceInterpreter in baseline");
-}
-
-template <>
-bool BaselineInterpreterCodeGen::emit_ForceInterpreter() {
-  masm.assumeUnreachable("JSOp::ForceInterpreter");
-  return true;
-}
-
 template <typename Handler>
 bool BaselineCodeGen<Handler>::emitPrologue() {
   AutoCreatedBy acb(masm, "BaselineCodeGen<Handler>::emitPrologue");

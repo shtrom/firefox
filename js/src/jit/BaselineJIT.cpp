@@ -548,10 +548,6 @@ static MethodStatus CanEnterBaselineJIT(JSContext* cx, HandleScript script,
 bool jit::CanBaselineInterpretScript(JSScript* script) {
   MOZ_ASSERT(IsBaselineInterpreterEnabled());
 
-  if (script->hasForceInterpreterOp()) {
-    return false;
-  }
-
   if (script->nslots() > BaselineMaxScriptSlots) {
     // Avoid overrecursion exceptions when the script has a ton of stack slots
     // by forcing such scripts to run in the C++ interpreter with heap-allocated

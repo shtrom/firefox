@@ -1185,17 +1185,12 @@ bool InterpretResume(JSContext* cx, HandleObject obj, Value* stackValues,
 
   MOZ_ASSERT(stackValues[2].toObject() == *obj);
 
+  Handle<AbstractGeneratorObject*> genObj = obj.as<AbstractGeneratorObject>();
   GeneratorResumeKind resumeKind = IntToResumeKind(stackValues[0].toInt32());
-  JSAtom* kind = ResumeKindToAtom(cx, resumeKind);
+  Rooted<Value> arg(cx, stackValues[1]);
 
-  FixedInvokeArgs<3> args(cx);
-
-  args[0].setObject(*obj);
-  args[1].set(stackValues[1]);
-  args[2].setString(kind);
-
-  return CallSelfHostedFunction(cx, cx->names().InterpretGeneratorResume,
-                                UndefinedHandleValue, args, rval);
+  AutoRealm ar(cx, genObj);
+  return js::ResumeGenerator(cx, genObj, arg, resumeKind, rval);
 }
 
 bool DebugAfterYield(JSContext* cx, BaselineFrame* frame) {

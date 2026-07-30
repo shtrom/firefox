@@ -176,7 +176,6 @@
   MACRO_(flatMap, "flatMap")                                                   \
   MACRO_(for_, "for")                                                          \
   MACRO_(formatMatcher, "formatMatcher")                                       \
-  MACRO_(forceInterpreter, "forceInterpreter")                                 \
   MACRO_(forEach, "forEach")                                                   \
   MACRO_(fraction, "fraction")                                                 \
   MACRO_(fractionalDigits, "fractionalDigits")                                 \
@@ -250,7 +249,6 @@
   MACRO_(instanceof, "instanceof")                                             \
   MACRO_(integer, "integer")                                                   \
   MACRO_(interface, "interface")                                               \
-  MACRO_(InterpretGeneratorResume, "InterpretGeneratorResume")                 \
   MACRO_(IntlLegacyConstructedSymbol, "IntlLegacyConstructedSymbol")           \
   MACRO_(Invalid_Date_, "Invalid Date")                                        \
   MACRO_(isBreakpoint, "isBreakpoint")                                         \

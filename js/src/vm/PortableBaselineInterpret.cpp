@@ -9060,7 +9060,6 @@ PBIResult PortableBaselineInterpret(
       }
       CASE(Lineno) { END_OP(Lineno); }
       CASE(NopDestructuring) { END_OP(NopDestructuring); }
-      CASE(ForceInterpreter) { END_OP(ForceInterpreter); }
       CASE(Debugger) {
         {
           PUSH_EXIT_FRAME();
@@ -9329,9 +9328,6 @@ MethodStatus CanEnterPortableBaselineInterpreter(JSContext* cx,
   }
   if (state.script()->hasJitScript()) {
     return MethodStatus::Method_Compiled;
-  }
-  if (state.script()->hasForceInterpreterOp()) {
-    return MethodStatus::Method_CantCompile;
   }
   if (state.script()->isAsync() || state.script()->isGenerator()) {
     return MethodStatus::Method_CantCompile;

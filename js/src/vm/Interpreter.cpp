@@ -2092,12 +2092,6 @@ bool MOZ_NEVER_INLINE JS_HAZ_JSNATIVE_CALLER js::Interpret(JSContext* cx,
     CASE(Lineno)
     END_CASE(Lineno)
 
-    CASE(ForceInterpreter) {
-      // Ensure pattern matching still works.
-      MOZ_ASSERT(script->hasForceInterpreterOp());
-    }
-    END_CASE(ForceInterpreter)
-
     CASE(Undefined) { PUSH_UNDEFINED(); }
     END_CASE(Undefined)
 

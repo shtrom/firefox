@@ -1708,7 +1708,6 @@ static bool BytecodeIsEffectful(JSScript* script, size_t offset) {
     case JSOp::Finally:
     case JSOp::GetRval:
     case JSOp::ThrowMsg:
-    case JSOp::ForceInterpreter:
       return false;
 
     case JSOp::InitAliasedLexical: {
