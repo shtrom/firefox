@@ -2007,6 +2007,7 @@ export class TelemetryEvent {
    */
   reset() {
     this.#previousSearchWordsSet = null;
+    this._lastSearchDetailsForDisableSuggestTracking = null;
   }
 
   /**
