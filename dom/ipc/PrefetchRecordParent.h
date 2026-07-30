@@ -6,12 +6,18 @@
 #ifndef mozilla_dom_PrefetchRecordParent_h
 #define mozilla_dom_PrefetchRecordParent_h
 
+#include "mozilla/OriginAttributes.h"
 #include "mozilla/TimeStamp.h"
 #include "mozilla/dom/PPrefetchRecordParent.h"
 #include "mozilla/dom/PrefetchTypes.h"
 #include "nsCOMPtr.h"
 #include "nsIChannel.h"
+#include "nsIChannelEventSink.h"
+#include "nsIInputStream.h"
+#include "nsIInterfaceRequestor.h"
 #include "nsIReferrerInfo.h"
+#include "nsIRequestObserver.h"
+#include "nsIStreamListener.h"
 #include "nsIURI.h"
 #include "nsString.h"
 #include "nsTArray.h"
@@ -24,16 +30,26 @@ namespace mozilla::dom {
 //
 // Spec:
 // https://wicg.github.io/nav-speculation/prefetch.html#prefetch-record
-class PrefetchRecordParent final : public PPrefetchRecordParent {
+class PrefetchRecordParent final : public PPrefetchRecordParent,
+                                   public nsIStreamListener,
+                                   public nsIInterfaceRequestor,
+                                   public nsIChannelEventSink {
  public:
-  NS_INLINE_DECL_REFCOUNTING(PrefetchRecordParent, override)
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIREQUESTOBSERVER
+  NS_DECL_NSISTREAMLISTENER
+  NS_DECL_NSIINTERFACEREQUESTOR
+  NS_DECL_NSICHANNELEVENTSINK
 
-  PrefetchRecordParent() = default;
+  // Called from WindowGlobalParent::AllocPPrefetchRecordParent.
+  // Implements "start a referrer-initiated navigational prefetch".
+  // Spec:
+  // https://wicg.github.io/nav-speculation/prefetch.html#start-a-referrer-initiated-navigational-prefetch
+  void Init(const SpeculativePrefetchArgs& aArgs);
 
   // Accessors for prefetch record fields
   // (https://wicg.github.io/nav-speculation/prefetch.html#prefetch-record) used
-  // by Find / Wait / Activation algorithms. Field population is a TODO (Init
-  // patch).
+  // by Find / Wait / Activation algorithms.
   nsIURI* URL() const { return mURL; }
   PrefetchAnonymizationPolicy AnonymizationPolicy() const {
     return mAnonPolicy;
@@ -50,15 +66,18 @@ class PrefetchRecordParent final : public PPrefetchRecordParent {
   const nsTArray<Maybe<nsString>>& Tags() const { return mTags; }
   const nsString& NoVarySearchHint() const { return mNoVarySearchHint; }
 
-  // TODO: implement "Cancel and discard a prefetch record"
   // (https://wicg.github.io/nav-speculation/prefetch.html#prefetch-record-cancel-and-discard).
   mozilla::ipc::IPCResult RecvCancel();
 
-  // TODO: cancel the channel on actor destroy.
   void ActorDestroy(ActorDestroyReason aReason) override;
 
  private:
-  ~PrefetchRecordParent() = default;
+  bool IsCrossOriginToDocument(nsIURI* aURI) const;
+  void PopulateIsolatedPartitionKey(mozilla::OriginAttributes& aAttrs);
+  void ConfigureSecPurpose(nsIChannel* aChannel);
+  bool PrefetchIPAnonymizationPolicyRequiresAnonymity(nsIURI* aURI) const;
+  void AppendRedirectChainEntry(nsIURI* aURI);
+  void FillResponseOnLastEntry(nsIChannel* aChannel);
 
   // Prefetch record fields:
   // https://wicg.github.io/nav-speculation/prefetch.html#prefetch-record
@@ -76,6 +95,12 @@ class PrefetchRecordParent final : public PPrefetchRecordParent {
   nsString mSourcePartitionKey;
   nsString mIsolatedPartitionKey;
   bool mHadConflictingCredentials = false;
+
+  // Tracks incoming body bytes for the body cap.
+  uint64_t mBytesReceived = 0;
+
+ protected:
+  ~PrefetchRecordParent() = default;
 };
 
 }  // namespace mozilla::dom

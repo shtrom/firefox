@@ -2208,20 +2208,9 @@ WindowGlobalParent::AllocPDigitalCredentialParent() {
 already_AddRefed<PPrefetchRecordParent>
 WindowGlobalParent::AllocPPrefetchRecordParent(
     const SpeculativePrefetchArgs& aArgs) {
-  if (LOG_SPECRULES_ENABLED()) {
-    nsAutoCString spec;
-    aArgs.uri()->GetSpec(spec);
-    LOG_SPECRULES(
-        ("WindowGlobalParent::AllocPPrefetchRecordParent: url=%s, anon=%d, "
-         "nvsHint='%s', tags=%zu",
-         spec.get(), static_cast<int>(aArgs.anonymizeClientIP()),
-         NS_ConvertUTF16toUTF8(aArgs.noVarySearchHint()).get(),
-         aArgs.tags().Length()));
-  }
-  // Spec: https://wicg.github.io/nav-speculation/prefetch.html#prefetch-record
-  // TODO: implement "Start a referrer-initiated navigational prefetch"
-  // (https://wicg.github.io/nav-speculation/prefetch.html#start-a-referrer-initiated-navigational-prefetch).
-  return MakeAndAddRef<PrefetchRecordParent>();
+  RefPtr<PrefetchRecordParent> actor = MakeRefPtr<PrefetchRecordParent>();
+  actor->Init(aArgs);
+  return actor.forget();
 }
 
 NS_IMPL_CYCLE_COLLECTION_CLASS(WindowGlobalParent)
