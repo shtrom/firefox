@@ -411,9 +411,8 @@ class DocumentLoadListener : public nsIInterfaceRequestor,
   dom::WindowGlobalParent* GetParentWindowContext() const;
 
   // Checks for a completed speculation rules prefetch record matching aURI.
-  // If found, sets LOAD_ONLY_FROM_CACHE on mChannel so it reuses the HTTP
-  // cache entry the prefetch's own request already populated, instead of
-  // making a second network request for the same resource.
+  // If found, copies the prefetch's cookies into the destination partition
+  // and marks the navigation timing as activated from a prefetch.
   // Only called for document (navigational) loads.
   // Spec:
   // https://wicg.github.io/nav-speculation/prefetch.html#create-navigation-params-from-a-prefetch-record

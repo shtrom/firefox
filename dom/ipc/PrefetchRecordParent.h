@@ -6,6 +6,7 @@
 #ifndef mozilla_dom_PrefetchRecordParent_h
 #define mozilla_dom_PrefetchRecordParent_h
 
+#include "mozilla/Maybe.h"
 #include "mozilla/OriginAttributes.h"
 #include "mozilla/TimeStamp.h"
 #include "mozilla/dom/PPrefetchRecordParent.h"
@@ -25,6 +26,8 @@
 
 namespace mozilla::dom {
 
+class WindowGlobalParent;
+
 // Parent-side actor for a speculation rules prefetch record.
 // Authoritative: holds the prefetch record fields, opens the HTTP channel,
 // and serves cache-key lookup at navigation activation.
@@ -43,10 +46,11 @@ class PrefetchRecordParent final : public PPrefetchRecordParent,
   NS_DECL_NSICHANNELEVENTSINK
 
   // Called from WindowGlobalParent::AllocPPrefetchRecordParent.
+  // aWGP is passed explicitly because Manager() is not yet set at alloc time.
   // Implements "start a referrer-initiated navigational prefetch".
   // Spec:
   // https://wicg.github.io/nav-speculation/prefetch.html#start-a-referrer-initiated-navigational-prefetch
-  void Init(const SpeculativePrefetchArgs& aArgs);
+  void Init(WindowGlobalParent* aWGP, const SpeculativePrefetchArgs& aArgs);
 
   // Accessors for prefetch record fields
   // (https://wicg.github.io/nav-speculation/prefetch.html#prefetch-record) used

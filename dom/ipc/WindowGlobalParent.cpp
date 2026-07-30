@@ -2210,7 +2210,7 @@ already_AddRefed<PPrefetchRecordParent>
 WindowGlobalParent::AllocPPrefetchRecordParent(
     const SpeculativePrefetchArgs& aArgs) {
   RefPtr<PrefetchRecordParent> actor = MakeRefPtr<PrefetchRecordParent>();
-  actor->Init(aArgs);
+  actor->Init(this, aArgs);
   return actor.forget();
 }
 
@@ -2324,11 +2324,12 @@ PrefetchRecordParent* WindowGlobalParent::FindMatchingPrefetchRecord(
   // Spec:
   // https://wicg.github.io/nav-speculation/prefetch.html#find-a-matching-complete-prefetch-record
   // Steps 1-2: "Let exactRecord be null. Let inexactRecord be null."
+  nsTArray<PPrefetchRecordParent*> managed;
+  ManagedPPrefetchRecordParent(managed);
+
   PrefetchRecordParent* exact = nullptr;
   PrefetchRecordParent* inexact = nullptr;
 
-  nsTArray<PPrefetchRecordParent*> managed;
-  ManagedPPrefetchRecordParent(managed);
   // Step 3: "For each record of sourceSnapshotParams's prefetch records:"
   for (auto* p : managed) {
     auto* rec = static_cast<PrefetchRecordParent*>(p);
@@ -2361,7 +2362,7 @@ PrefetchRecordParent* WindowGlobalParent::FindMatchingPrefetchRecord(
   // Step 6: "Return null." (reached when recordToUse is null, so step 5's
   // "If recordToUse is not null" guard doesn't apply.)
   if (!toUse) {
-    return nullptr;
+    return nullptr;  // Step 6: no match
   }
 
   // Step 5b: "If recordToUse's expiry time is less than currentTime: Trigger
