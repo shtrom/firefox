@@ -405,126 +405,232 @@ function shouldIncludeMessage(status) {
   return status === "SKIP" || status.startsWith("FAIL");
 }
 
-// Create string tables and store raw data efficiently
-function createDataTables(jobResults) {
-  const tables = {
-    jobNames: [],
-    testPaths: [],
-    testNames: [],
-    repositories: [],
-    statuses: [],
-    taskIds: [],
-    messages: [],
-    crashSignatures: [],
-    components: [],
-    commitIds: [],
-  };
+// Create the building blocks of our columnar JSON formats: the string tables and
+// the interning primitive that keeps them deduplicated, plus the taskInfo and
+// testInfo side tables describing the tasks and tests the file refers to.
+// `extraTableNames` are the string tables specific to one format.
+function createColumnarTables(extraTableNames) {
+  const tables = {};
+  const stringMaps = {};
+  for (const tableName of [
+    "jobNames",
+    "testPaths",
+    "testNames",
+    "repositories",
+    "taskIds",
+    "components",
+    "commitIds",
+    ...extraTableNames,
+  ]) {
+    tables[tableName] = [];
+    stringMaps[tableName] = new Map();
+  }
 
-  // Maps for O(1) string lookups
-  const stringMaps = {
-    jobNames: new Map(),
-    testPaths: new Map(),
-    testNames: new Map(),
-    repositories: new Map(),
-    statuses: new Map(),
-    taskIds: new Map(),
-    messages: new Map(),
-    crashSignatures: new Map(),
-    components: new Map(),
-    commitIds: new Map(),
-  };
+  // Intern a string into one of the tables, returning its index, or null for a
+  // null/undefined value. Empty strings are interned like any other value.
+  function internString(tableName, value) {
+    if (value === null || value === undefined) {
+      return null;
+    }
+    const map = stringMaps[tableName];
+    let index = map.get(value);
+    if (index === undefined) {
+      index = tables[tableName].length;
+      tables[tableName].push(value);
+      map.set(value, index);
+    }
+    return index;
+  }
 
-  // Task info maps task ID index to repository and job name indexes
+  function componentIdForPath(filePath) {
+    const componentString = getComponentString(findComponentForPath(filePath));
+    return componentString ? internString("components", componentString) : null;
+  }
+
+  // Parallel arrays indexed by taskIdId.
   const taskInfo = {
     repositoryIds: [],
     jobNameIds: [],
     commitIds: [],
   };
 
-  // Test info maps test ID index to test path and name indexes
+  // Intern the task a job result comes from, recording the task's repository,
+  // job name and commit the first time we see it.
+  function getTaskIdId(result) {
+    const taskIdId = internString(
+      "taskIds",
+      `${result.taskId}.${result.retryId}`
+    );
+    if (taskInfo.repositoryIds[taskIdId] === undefined) {
+      taskInfo.repositoryIds[taskIdId] = internString(
+        "repositories",
+        result.repository
+      );
+      taskInfo.jobNameIds[taskIdId] = internString("jobNames", result.jobName);
+      taskInfo.commitIds[taskIdId] = internString("commitIds", result.commitId);
+    }
+    return taskIdId;
+  }
+
+  // Parallel arrays indexed by testId.
   const testInfo = {
     testPathIds: [],
     testNameIds: [],
     componentIds: [],
   };
+  const testIds = new Map();
 
-  // Map for fast testId lookup: fullPath -> testId
-  const testIdMap = new Map();
+  // Intern a test by its full path, split into a directory and a file name, and
+  // look up its Bugzilla component.
+  function getTestId(fullPath) {
+    let testId = testIds.get(fullPath);
+    if (testId !== undefined) {
+      return testId;
+    }
+
+    const lastSlashIndex = fullPath.lastIndexOf("/");
+    let testPath, testName;
+    if (lastSlashIndex === -1) {
+      testPath = "";
+      testName = fullPath;
+    } else {
+      testPath = fullPath.substring(0, lastSlashIndex);
+      testName = fullPath.substring(lastSlashIndex + 1);
+    }
+
+    testId = testInfo.testPathIds.length;
+    testInfo.testPathIds.push(internString("testPaths", testPath));
+    testInfo.testNameIds.push(internString("testNames", testName));
+    testInfo.componentIds.push(componentIdForPath(fullPath));
+    testIds.set(fullPath, testId);
+    return testId;
+  }
+
+  return {
+    tables,
+    internString,
+    componentIdForPath,
+    taskInfo,
+    getTaskIdId,
+    testInfo,
+    getTestId,
+  };
+}
+
+// Zeroed reference counts for each string table, for the caller to fill in
+// before calling sortTablesByFrequency.
+function createFrequencyCounts(tables) {
+  const frequencyCounts = {};
+  for (const [tableName, table] of Object.entries(tables)) {
+    frequencyCounts[tableName] = new Array(table.length).fill(0);
+  }
+  return frequencyCounts;
+}
+
+// Sort each string table by how often its entries are referenced and drop the
+// unreferenced ones, so that the most frequent strings get the smallest indices
+// and the file compresses better. Returns the sorted tables and, for each table,
+// a map from old to new index.
+function sortTablesByFrequency(tables, frequencyCounts) {
+  const sortedTables = {};
+  const indexMaps = {};
+
+  for (const [tableName, table] of Object.entries(tables)) {
+    const counts = frequencyCounts[tableName];
+    const sorted = table
+      .map((value, oldIndex) => ({ value, oldIndex, count: counts[oldIndex] }))
+      .filter(item => item.count > 0)
+      .sort((a, b) => {
+        if (b.count !== a.count) {
+          return b.count - a.count;
+        }
+        // Codepoint order rather than localeCompare, which would sort with the
+        // host's default locale and make the output machine dependent.
+        return a.value < b.value ? -1 : 1;
+      });
+
+    sortedTables[tableName] = sorted.map(item => item.value);
+    indexMaps[tableName] = new Map(
+      sorted.map((item, newIndex) => [item.oldIndex, newIndex])
+    );
+  }
+
+  return { sortedTables, indexMaps };
+}
+
+// taskInfo's arrays are indexed by taskIdId, so remapping the taskIds table
+// means rebuilding them at the new indices.
+function remapTaskInfo(taskInfo, indexMaps) {
+  const sortedTaskInfo = {
+    repositoryIds: [],
+    jobNameIds: [],
+    commitIds: [],
+  };
+  const hasChunks = !!taskInfo.chunks;
+  if (hasChunks) {
+    sortedTaskInfo.chunks = [];
+  }
+
+  for (
+    let oldTaskIdId = 0;
+    oldTaskIdId < taskInfo.repositoryIds.length;
+    oldTaskIdId++
+  ) {
+    const newTaskIdId = indexMaps.taskIds.get(oldTaskIdId);
+    if (newTaskIdId === undefined) {
+      continue;
+    }
+    sortedTaskInfo.repositoryIds[newTaskIdId] = indexMaps.repositories.get(
+      taskInfo.repositoryIds[oldTaskIdId]
+    );
+    sortedTaskInfo.jobNameIds[newTaskIdId] = indexMaps.jobNames.get(
+      taskInfo.jobNameIds[oldTaskIdId]
+    );
+    sortedTaskInfo.commitIds[newTaskIdId] =
+      taskInfo.commitIds[oldTaskIdId] === null
+        ? null
+        : indexMaps.commitIds.get(taskInfo.commitIds[oldTaskIdId]);
+    if (hasChunks) {
+      sortedTaskInfo.chunks[newTaskIdId] = taskInfo.chunks[oldTaskIdId] ?? null;
+    }
+  }
+
+  return sortedTaskInfo;
+}
+
+function remapTestInfo(testInfo, indexMaps) {
+  return {
+    testPathIds: testInfo.testPathIds.map(oldId =>
+      indexMaps.testPaths.get(oldId)
+    ),
+    testNameIds: testInfo.testNameIds.map(oldId =>
+      indexMaps.testNames.get(oldId)
+    ),
+    componentIds: testInfo.componentIds.map(oldId =>
+      oldId === null ? null : indexMaps.components.get(oldId)
+    ),
+  };
+}
+
+// Create string tables and store raw data efficiently
+function createDataTables(jobResults) {
+  const { tables, internString, taskInfo, getTaskIdId, testInfo, getTestId } =
+    createColumnarTables(["statuses", "messages", "crashSignatures"]);
 
   // Test runs grouped by test ID, then by status ID
   // testRuns[testId] = array of status groups for that test
   const testRuns = [];
-
-  function findStringIndex(tableName, string) {
-    const table = tables[tableName];
-    const map = stringMaps[tableName];
-
-    let index = map.get(string);
-    if (index === undefined) {
-      index = table.length;
-      table.push(string);
-      map.set(string, index);
-    }
-    return index;
-  }
 
   for (const result of jobResults) {
     if (!result || !result.timings) {
       continue;
     }
 
-    const jobNameId = findStringIndex("jobNames", result.jobName);
-    const repositoryId = findStringIndex("repositories", result.repository);
-    const commitId = result.commitId
-      ? findStringIndex("commitIds", result.commitId)
-      : null;
+    const taskIdId = getTaskIdId(result);
 
     for (const timing of result.timings) {
-      const fullPath = timing.path;
-
-      // Check if we already have this test
-      let testId = testIdMap.get(fullPath);
-      if (testId === undefined) {
-        // New test - need to process path/name split and create entry
-        const lastSlashIndex = fullPath.lastIndexOf("/");
-
-        let testPath, testName;
-        if (lastSlashIndex === -1) {
-          // No directory, just the filename
-          testPath = "";
-          testName = fullPath;
-        } else {
-          testPath = fullPath.substring(0, lastSlashIndex);
-          testName = fullPath.substring(lastSlashIndex + 1);
-        }
-
-        const testPathId = findStringIndex("testPaths", testPath);
-        const testNameId = findStringIndex("testNames", testName);
-
-        // Look up the component for this test
-        const componentIdRaw = findComponentForPath(fullPath);
-        const componentString = getComponentString(componentIdRaw);
-        const componentId = componentString
-          ? findStringIndex("components", componentString)
-          : null;
-
-        testId = testInfo.testPathIds.length;
-        testInfo.testPathIds.push(testPathId);
-        testInfo.testNameIds.push(testNameId);
-        testInfo.componentIds.push(componentId);
-        testIdMap.set(fullPath, testId);
-      }
-
-      const statusId = findStringIndex("statuses", timing.status || "UNKNOWN");
-      const taskIdString = `${result.taskId}.${result.retryId}`;
-      const taskIdId = findStringIndex("taskIds", taskIdString);
-
-      // Store task info only once per unique task ID
-      if (taskInfo.repositoryIds[taskIdId] === undefined) {
-        taskInfo.repositoryIds[taskIdId] = repositoryId;
-        taskInfo.jobNameIds[taskIdId] = jobNameId;
-        taskInfo.commitIds[taskIdId] = commitId;
-      }
+      const testId = getTestId(timing.path);
+      const statusId = internString("statuses", timing.status || "UNKNOWN");
 
       // Initialize test group if it doesn't exist
       if (!testRuns[testId]) {
@@ -558,18 +664,16 @@ function createDataTables(jobResults) {
 
       // Store message ID for statuses that should include messages (or null if no message)
       if (shouldIncludeMessage(timing.status)) {
-        const messageId = timing.message
-          ? findStringIndex("messages", timing.message)
-          : null;
-        statusGroup.messageIds.push(messageId);
+        statusGroup.messageIds.push(
+          internString("messages", timing.message || null)
+        );
       }
 
       // Store crash data for CRASH status (or null if not available)
       if (timing.status === "CRASH") {
-        const crashSignatureId = timing.crashSignature
-          ? findStringIndex("crashSignatures", timing.crashSignature)
-          : null;
-        statusGroup.crashSignatureIds.push(crashSignatureId);
+        statusGroup.crashSignatureIds.push(
+          internString("crashSignatures", timing.crashSignature || null)
+        );
         statusGroup.minidumps.push(timing.minidump || null);
       }
     }
@@ -588,18 +692,7 @@ function sortStringTablesByFrequency(dataStructure) {
   const { tables, taskInfo, testInfo, testRuns } = dataStructure;
 
   // Count frequency of each index for each table
-  const frequencyCounts = {
-    jobNames: new Array(tables.jobNames.length).fill(0),
-    testPaths: new Array(tables.testPaths.length).fill(0),
-    testNames: new Array(tables.testNames.length).fill(0),
-    repositories: new Array(tables.repositories.length).fill(0),
-    statuses: new Array(tables.statuses.length).fill(0),
-    taskIds: new Array(tables.taskIds.length).fill(0),
-    messages: new Array(tables.messages.length).fill(0),
-    crashSignatures: new Array(tables.crashSignatures.length).fill(0),
-    components: new Array(tables.components.length).fill(0),
-    commitIds: new Array(tables.commitIds.length).fill(0),
-  };
+  const frequencyCounts = createFrequencyCounts(tables);
 
   // Count taskInfo references
   for (const jobNameId of taskInfo.jobNameIds) {
@@ -713,87 +806,12 @@ function sortStringTablesByFrequency(dataStructure) {
     });
   }
 
-  // Create sorted tables and index mappings (sorted by frequency descending)
-  const sortedTables = {};
-  const indexMaps = {};
-
-  for (const [tableName, table] of Object.entries(tables)) {
-    const counts = frequencyCounts[tableName];
-
-    // Create array with value, oldIndex, and count
-    const indexed = table.map((value, oldIndex) => ({
-      value,
-      oldIndex,
-      count: counts[oldIndex],
-    }));
-
-    // Filter out unused entries and sort by count descending,
-    // then by value for deterministic order when counts are equal
-    const sorted = indexed
-      .filter(item => item.count > 0)
-      .sort((a, b) => {
-        if (b.count !== a.count) {
-          return b.count - a.count;
-        }
-        return a.value.localeCompare(b.value);
-      });
-
-    // Extract sorted values and create mapping
-    sortedTables[tableName] = sorted.map(item => item.value);
-    indexMaps[tableName] = new Map(
-      sorted.map((item, newIndex) => [item.oldIndex, newIndex])
-    );
-  }
-
-  // Remap taskInfo indices
-  // taskInfo arrays are indexed by taskIdId, and when taskIds get remapped,
-  // we need to rebuild the arrays at the new indices
-  const sortedTaskInfo = {
-    repositoryIds: [],
-    jobNameIds: [],
-    commitIds: [],
-  };
-  const hasChunks = !!taskInfo.chunks;
-  if (hasChunks) {
-    sortedTaskInfo.chunks = [];
-  }
-
-  for (
-    let oldTaskIdId = 0;
-    oldTaskIdId < taskInfo.repositoryIds.length;
-    oldTaskIdId++
-  ) {
-    const newTaskIdId = indexMaps.taskIds.get(oldTaskIdId);
-    if (newTaskIdId === undefined) {
-      continue;
-    }
-    sortedTaskInfo.repositoryIds[newTaskIdId] = indexMaps.repositories.get(
-      taskInfo.repositoryIds[oldTaskIdId]
-    );
-    sortedTaskInfo.jobNameIds[newTaskIdId] = indexMaps.jobNames.get(
-      taskInfo.jobNameIds[oldTaskIdId]
-    );
-    sortedTaskInfo.commitIds[newTaskIdId] =
-      taskInfo.commitIds[oldTaskIdId] === null
-        ? null
-        : indexMaps.commitIds.get(taskInfo.commitIds[oldTaskIdId]);
-    if (hasChunks) {
-      sortedTaskInfo.chunks[newTaskIdId] = taskInfo.chunks[oldTaskIdId] ?? null;
-    }
-  }
-
-  // Remap testInfo indices
-  const sortedTestInfo = {
-    testPathIds: testInfo.testPathIds.map(oldId =>
-      indexMaps.testPaths.get(oldId)
-    ),
-    testNameIds: testInfo.testNameIds.map(oldId =>
-      indexMaps.testNames.get(oldId)
-    ),
-    componentIds: testInfo.componentIds.map(oldId =>
-      oldId === null ? null : indexMaps.components.get(oldId)
-    ),
-  };
+  const { sortedTables, indexMaps } = sortTablesByFrequency(
+    tables,
+    frequencyCounts
+  );
+  const sortedTaskInfo = remapTaskInfo(taskInfo, indexMaps);
+  const sortedTestInfo = remapTestInfo(testInfo, indexMaps);
 
   // Remap testRuns indices
   const sortedTestRuns = testRuns.map(testGroup => {
