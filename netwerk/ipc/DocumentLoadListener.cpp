@@ -627,6 +627,10 @@ void DocumentLoadListener::TryActivateFromPrefetch(nsIURI* aURI) {
   // to a normal network fetch, so the whole document load fails. Follow-up
   // fix: on that error, mark rec canceled and restart the navigation, the
   // same way MaybeHandleLoadErrorWithURIFixup() does for URI fixup.
+  if (mTiming) {
+    mTiming->SetWasActivatedFromNavigationalPrefetch();
+  }
+
   nsLoadFlags loadFlags = 0;
   mChannel->GetLoadFlags(&loadFlags);
   DebugOnly<nsresult> rv = mChannel->SetLoadFlags(
