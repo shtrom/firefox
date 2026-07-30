@@ -5,7 +5,12 @@
 
 #include "mozilla/dom/PrefetchRecordParent.h"
 
+#include "mozilla/dom/PrefetchLog.h"
+
 namespace mozilla::dom {
+
+// Spec: https://wicg.github.io/nav-speculation/prefetch.html
+LazyLogModule gSpeculationRulesLog("SpeculationRules");
 
 mozilla::ipc::IPCResult PrefetchRecordParent::RecvCancel() {
   // TODO: implement "Cancel and discard a prefetch record"

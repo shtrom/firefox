@@ -74,6 +74,7 @@ EXPORTS.mozilla.dom += [
     "ParentProcessChannelHandle.h",
     "PermissionMessageUtils.h",
     "PolicyContainerMessageUtils.h",
+    "PrefetchLog.h",
     "PrefetchRecordChild.h",
     "PrefetchRecordParent.h",
     "PrefetchTypes.h",
