@@ -696,10 +696,10 @@ index cb74a2710e..b1c02c5025 100644
      : content_hint(VideoTrackInterface::ContentHint::kNone) {}
  VideoOptions::~VideoOptions() = default;
 diff --git a/modules/audio_coding/BUILD.gn b/modules/audio_coding/BUILD.gn
-index bb05e11a20..bacaae8a19 100644
+index d82313b9d2..25af59bc27 100644
 --- a/modules/audio_coding/BUILD.gn
 +++ b/modules/audio_coding/BUILD.gn
-@@ -338,7 +338,7 @@ rtc_library("webrtc_opus_wrapper") {
+@@ -339,7 +339,7 @@ rtc_library("webrtc_opus_wrapper") {
      deps += [ rtc_opus_dir ]
      public_configs = [ "//third_party/opus:opus_config" ]
    } else if (build_with_mozilla) {
@@ -1172,7 +1172,7 @@ index c0fb04ac82..af412f6890 100644
      deps += [
        "..:logging",
 diff --git a/test/BUILD.gn b/test/BUILD.gn
-index ec4bbb8cde..079d0dd1a0 100644
+index 3d2c5201ae..1c2a8dfec5 100644
 --- a/test/BUILD.gn
 +++ b/test/BUILD.gn
 @@ -279,6 +279,7 @@ rtc_library("audio_test_common") {
@@ -1214,7 +1214,7 @@ index ec4bbb8cde..079d0dd1a0 100644
      sources += [ "testsupport/jpeg_frame_writer.cc" ]
    } else {
      sources += [ "testsupport/jpeg_frame_writer_ios.cc" ]
-@@ -1786,6 +1794,7 @@ if (!build_with_chromium) {
+@@ -1787,6 +1795,7 @@ if (!build_with_chromium) {
    }
  }
  
@@ -1222,7 +1222,7 @@ index ec4bbb8cde..079d0dd1a0 100644
  if (!build_with_chromium && is_android) {
    rtc_android_library("native_test_java") {
      testonly = true
-@@ -1828,6 +1837,7 @@ if (!build_with_chromium && is_android) {
+@@ -1829,6 +1838,7 @@ if (!build_with_chromium && is_android) {
      sources = [ "android/org/webrtc/native_test/NativeTestWebrtc.java" ]
    }
  }

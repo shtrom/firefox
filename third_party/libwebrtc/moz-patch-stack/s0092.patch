@@ -16,10 +16,10 @@ Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/bbec1b95ddb5e0096
  5 files changed, 26 insertions(+), 6 deletions(-)
 
 diff --git a/modules/audio_coding/BUILD.gn b/modules/audio_coding/BUILD.gn
-index bacaae8a19..abfa36d4dc 100644
+index 25af59bc27..85df3f2c80 100644
 --- a/modules/audio_coding/BUILD.gn
 +++ b/modules/audio_coding/BUILD.gn
-@@ -338,7 +338,7 @@ rtc_library("webrtc_opus_wrapper") {
+@@ -339,7 +339,7 @@ rtc_library("webrtc_opus_wrapper") {
      deps += [ rtc_opus_dir ]
      public_configs = [ "//third_party/opus:opus_config" ]
    } else if (build_with_mozilla) {
@@ -86,7 +86,7 @@ index 5bdfd6d15b..d7ba2505ca 100644
  
      if (!build_with_mozilla) {
 diff --git a/test/BUILD.gn b/test/BUILD.gn
-index 079d0dd1a0..d83ecc6bc4 100644
+index 1c2a8dfec5..eb6e4f4979 100644
 --- a/test/BUILD.gn
 +++ b/test/BUILD.gn
 @@ -480,6 +480,12 @@ rtc_source_set("test_support") {
