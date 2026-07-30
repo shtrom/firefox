@@ -92,7 +92,7 @@ RenderedFrameId RenderCompositorNative::EndFrame(
 
   DoSwap();
 
-  MOZ_ASSERT(mPendingGpuFeces.empty());
+  MOZ_ASSERT(mPendingGpuFences.empty());
 
   if (mNativeLayerForEntireWindow) {
     mNativeLayerForEntireWindow->NotifySurfaceReady();
@@ -478,7 +478,7 @@ void RenderCompositorNative::AddSurface(
     if (surface.mIsExternal) {
       RefPtr<layers::GpuFence> fence = layer->GetGpuFence();
       if (fence && BackendType() == layers::WebRenderBackend::HARDWARE) {
-        mPendingGpuFeces.emplace_back(fence);
+        mPendingGpuFences.emplace_back(fence);
       }
     }
 
@@ -602,7 +602,7 @@ void RenderCompositorNativeOGL::InsertFrameDoneSync() {
     mGL->fDeleteSync(mThisFrameDoneFences->mSync);
   }
   mThisFrameDoneFences =
-      MakeUnique<BackPressureFences>(std::move(mPendingGpuFeces));
+      MakeUnique<BackPressureFences>(std::move(mPendingGpuFences));
   mThisFrameDoneFences->mSync =
       mGL->fFenceSync(LOCAL_GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 #endif
@@ -613,7 +613,7 @@ bool RenderCompositorNativeOGL::WaitForGPU() {
     bool complete = false;
     while (!complete) {
       complete = true;
-      for (const auto& fence : mPreviousFrameDoneFences->mGpuFeces) {
+      for (const auto& fence : mPreviousFrameDoneFences->mGpuFences) {
         if (!fence->HasCompleted()) {
           complete = false;
           break;
