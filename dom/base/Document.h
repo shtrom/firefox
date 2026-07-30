@@ -3059,10 +3059,12 @@ class Document : public nsINode,
 
   bool IsDNSPrefetchAllowed() const { return mAllowDNSPrefetch; }
 
-  // Returns the SpeculationRulesManager if one has been created for this
-  // document; nullptr otherwise. Construction is lazy and happens elsewhere
-  // (Chunk 6 will add EnsureSpeculationRulesManager when rule parsing is
-  // wired up).
+  // Returns the SpeculationRulesManager for this document, creating it
+  // lazily on first call.
+  SpeculationRulesManager* EnsureSpeculationRulesManager();
+
+  // Returns the SpeculationRulesManager if one has been created; nullptr
+  // otherwise.
   SpeculationRulesManager* GetSpeculationRulesManager() const {
     return mSpeculationRulesManager.get();
   }

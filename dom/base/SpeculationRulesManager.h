@@ -11,16 +11,14 @@
 
 namespace mozilla::dom {
 
+class Document;
+struct PrefetchCandidate;
+
 // DOM-side (content process) orchestrator for Speculation Rules prefetch.
 // Owned by Document via UniquePtr (lazy). Holds the canonical content-side
-// list of active PrefetchRecordChild handles and (Part 6) the parsed
-// rule sets.
+// list of active PrefetchRecordChild handles.
 //
 // Spec: https://wicg.github.io/nav-speculation/prefetch.html
-//
-// Skeleton in this chunk: only RemoveRecord is implemented (called from
-// PrefetchRecordChild::ActorDestroy in Part 1.3). StartPrefetch /
-// CancelPrefetch / GarbageCollect + rule parsing land in Part 6.
 class SpeculationRulesManager final {
  public:
   SpeculationRulesManager() = default;
@@ -28,6 +26,16 @@ class SpeculationRulesManager final {
 
   // Drop a record handle. Called from PrefetchRecordChild::ActorDestroy.
   void RemoveRecord(PrefetchRecordChild* aRecord);
+
+  // Create a PPrefetchRecord actor pair for aCandidate
+  void StartPrefetch(Document* aDocument, const PrefetchCandidate& aCandidate);
+
+  // Cancel and discard any tracked record whose URL is not present in
+  // aStillSpeculated. Called from SpeculationRules::InnerConsiderLoads Step 4.
+  // Spec:
+  // https://wicg.github.io/nav-speculation/prefetch.html#prefetch-record-still-being-speculated
+  void CancelStalePrefetches(
+      const nsTArray<PrefetchCandidate>& aStillSpeculated);
 
  private:
   // Active content-side prefetch handles for this document.
