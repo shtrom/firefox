@@ -4633,6 +4633,12 @@ bool GCRuntime::shouldYieldAtEndOfMarkPhase() const {
     return useZeal && hasZealMode(ZealMode::YieldBeforeSweeping);
   }
 
+  // Don't yield if we're using concurrent marking as mark slices are short with
+  // most of the work happening off-thread.
+  if (useConcurrentMarking) {
+    return false;
+  }
+
   // If we have already had more than one marking slice we yield with the aim of
   // starting the sweep in the next slice, since the first slice of sweeping can
   // be expensive.
