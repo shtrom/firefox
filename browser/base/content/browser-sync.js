@@ -1296,14 +1296,6 @@ var gSync = {
     fxaPanelView.addEventListener("command", this);
     PanelMultiView.getViewNode(
       document,
-      "PanelUI-fxa-menu-sign-in-promo-button"
-    ).addEventListener("click", this);
-    PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-signed-out-sign-in-button"
-    ).addEventListener("click", this);
-    PanelMultiView.getViewNode(
-      document,
       "PanelUI-fxa-menu-sendtab-sign-in-button"
     ).addEventListener("click", this);
     PanelMultiView.getViewNode(
@@ -1614,12 +1606,8 @@ var gSync = {
         this.openPrefsFromFxaMenu("sync_settings", button);
         break;
 
-      case "PanelUI-fxa-menu-signed-out-sign-in-button":
-      case "PanelUI-fxa-menu-manage-account-button":
+      case "fxa-manage-account-button":
         this.clickFxAMenuHeaderButton(button);
-        break;
-      case "PanelUI-fxa-menu-sign-in-promo-button":
-        this.openFxAEmailFirstPageFromFxaMenu(button);
         break;
       case "PanelUI-fxa-menu-account-signout-button":
         this.disconnect();
@@ -1856,17 +1844,9 @@ var gSync = {
       document,
       "fxa-menu-header-description"
     );
-    const manageAccountButtonEl = PanelMultiView.getViewNode(
+    const fxaMenuAccountButtonEl = PanelMultiView.getViewNode(
       document,
-      "PanelUI-fxa-menu-manage-account-button"
-    );
-    const signInPromoEl = PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-sign-in-promo"
-    );
-    const signedOutCardEl = PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-signed-out-card"
+      "fxa-manage-account-button"
     );
     const signedInContainer = PanelMultiView.getViewNode(
       document,
@@ -1875,6 +1855,10 @@ var gSync = {
     const signOutSeparator = PanelMultiView.getViewNode(
       document,
       "PanelUI-sign-out-separator"
+    );
+    const profilesHeaderSeparator = PanelMultiView.getViewNode(
+      document,
+      "PanelUI-fxa-menu-profiles-header-separator"
     );
     const profilesHeaderLabel = PanelMultiView.getViewNode(
       document,
@@ -1915,9 +1899,8 @@ var gSync = {
     signedInContainer.prepend(syncStatusBtn);
     syncSetupEl.setAttribute("hidden", "true");
     signedInContainer.hidden = false;
-    manageAccountButtonEl.hidden = true;
-    signInPromoEl.hidden = true;
-    signedOutCardEl.hidden = true;
+    fxaMenuAccountButtonEl.classList.remove("subviewbutton-nav");
+    fxaMenuAccountButtonEl.removeAttribute("closemenu");
     menuHeaderDescriptionEl.hidden = false;
 
     // Expanded sign in copy experiment is only for signed out users
@@ -1960,14 +1943,6 @@ var gSync = {
       case UIState.STATUS_NOT_CONFIGURED:
         signOutSeparator.hidden = true;
         mainWindowEl.style.removeProperty("--avatar-image-url");
-
-        // When signed out, show the sign-in promo. A previous account may be
-        // remembered as a hashed UID, but the email can't be recovered from it,
-        // so the promo is shown regardless. The signed-out card (with the
-        // remembered email) is only used for the login-failed and not-verified
-        // states.
-        signInPromoEl.hidden = false;
-
         headerTitleL10nId = this.FXA_CTA_MENU_ENABLED
           ? "synced-tabs-fxa-sign-in"
           : "appmenuitem-sign-in-account";
@@ -1985,6 +1960,7 @@ var gSync = {
         }
 
         // Reposition profiles elements
+        profilesHeaderSeparator.remove();
         profilesHeaderLabel.remove();
         profileButtonsContainer.remove();
         profilesSeparator.remove();
@@ -1997,6 +1973,7 @@ var gSync = {
         signedInContainer.after(profilesSeparator);
         signedInContainer.after(profileButtonsContainer);
         signedInContainer.after(profilesHeaderLabel);
+        signedInContainer.after(profilesHeaderSeparator);
 
         secureSyncHeader.after(syncStatusBtn);
 
@@ -2008,7 +1985,6 @@ var gSync = {
         headerTitleL10nId = "account-disconnected2";
         headerDescription = state.displayName || state.email;
         mainWindowEl.style.removeProperty("--avatar-image-url");
-        this._showFxASignedOutCard(signedOutCardEl, state);
         break;
 
       case UIState.STATUS_NOT_VERIFIED:
@@ -2016,7 +1992,6 @@ var gSync = {
         stateValue = "unverified";
         headerTitleL10nId = "account-finish-account-setup";
         headerDescription = state.displayName || state.email;
-        this._showFxASignedOutCard(signedOutCardEl, state);
         break;
 
       case UIState.STATUS_SIGNED_IN:
@@ -2028,18 +2003,12 @@ var gSync = {
           state.avatarURL,
           state.avatarIsDefault
         );
-        // Show the signed-in account button with the avatar, the account email
-        // and a "Manage account" affordance.
-        PanelMultiView.getViewNode(
-          document,
-          "PanelUI-fxa-menu-manage-account-email"
-        ).value = state.displayName || state.email;
-        manageAccountButtonEl.hidden = false;
         signOutSeparator.hidden = false;
         signedInContainer.hidden = false;
         syncSetupSeparator.setAttribute("hidden", "true");
 
         // Reposition profiles elements
+        profilesHeaderSeparator.remove();
         profilesHeaderLabel.remove();
         profileButtonsContainer.remove();
         profilesSeparator.remove();
@@ -2048,16 +2017,15 @@ var gSync = {
         profilesSeparator.hidden = false;
         secureSyncHeader.hidden = false;
 
-        manageAccountButtonEl.after(secureSyncHeader);
-        manageAccountButtonEl.after(profilesSeparator);
-        manageAccountButtonEl.after(profileButtonsContainer);
-        manageAccountButtonEl.after(profilesHeaderLabel);
+        fxaMenuAccountButtonEl.after(secureSyncHeader);
+        fxaMenuAccountButtonEl.after(profilesSeparator);
+        fxaMenuAccountButtonEl.after(profileButtonsContainer);
+        fxaMenuAccountButtonEl.after(profilesHeaderLabel);
+        fxaMenuAccountButtonEl.after(profilesHeaderSeparator);
 
         break;
 
       default:
-        // Unknown/empty state: fall back to the signed-out promo.
-        signInPromoEl.hidden = false;
         headerTitleL10nId = this.FXA_CTA_MENU_ENABLED
           ? "synced-tabs-fxa-sign-in"
           : "appmenuitem-sign-in-account";
@@ -2081,29 +2049,6 @@ var gSync = {
     // around in the DOM.
     menuHeaderTitleEl.removeAttribute("data-l10n-id");
     menuHeaderDescriptionEl.removeAttribute("data-l10n-id");
-  },
-
-  // Shows a card with the remembered account's email, a status-specific reason,
-  // and a button to sign back in.
-  _showFxASignedOutCard(cardEl, state) {
-    const emailEl = PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-signed-out-email"
-    );
-    const messageEl = PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-signed-out-message"
-    );
-
-    emailEl.value = state.email ?? "";
-    document.l10n.setAttributes(
-      messageEl,
-      state.status === UIState.STATUS_NOT_VERIFIED
-        ? "fxa-menu-signed-out-message-unverified"
-        : "fxa-menu-signed-out-message-login-failed"
-    );
-
-    cardEl.hidden = false;
   },
 
   updateAvatarURL(mainWindowEl, avatarURL, avatarIsDefault) {

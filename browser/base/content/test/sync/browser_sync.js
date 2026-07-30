@@ -224,7 +224,12 @@ add_task(async function test_ui_state_signedin() {
 
   checkMenuBarItem("sync-syncnowitem");
   checkPanelHeader();
-  checkManageAccountButton(state.displayName || state.email);
+  ok(
+    BrowserTestUtils.isVisible(
+      document.getElementById("fxa-menu-header-title")
+    ),
+    "expected toolbar to be visible after opening"
+  );
   checkFxaToolbarButtonPanel({
     headerTitle: "Manage account",
     headerDescription: state.displayName,
@@ -238,7 +243,7 @@ add_task(async function test_ui_state_signedin() {
   });
 
   await checkProfilesButtons(
-    document.getElementById("PanelUI-fxa-menu-manage-account-button"),
+    document.getElementById("fxa-manage-account-button"),
     true
   );
 
@@ -262,9 +267,7 @@ add_task(async function test_ui_state_signedin() {
   await BrowserTestUtils.waitForEvent(fxaView, "ViewShown");
 
   // Verify the manage button is shown, just as a basic check.
-  let manageButton = fxaView.querySelector(
-    "#PanelUI-fxa-menu-manage-account-button"
-  );
+  let manageButton = fxaView.querySelector("#fxa-manage-account-button");
   ok(
     BrowserTestUtils.isVisible(manageButton),
     "expected manage button to be visible after opening"
@@ -549,10 +552,6 @@ add_task(async function test_ui_state_unverified() {
     visibleItems: [],
   });
   checkFxAAvatar("unverified");
-  await checkSignedOutCard(
-    state.email,
-    "fxa-menu-signed-out-message-unverified"
-  );
   await closeFxaPanel();
   await openMainPanel();
 
@@ -597,10 +596,6 @@ add_task(async function test_ui_state_loginFailed() {
     visibleItems: [],
   });
   checkFxAAvatar("login-failed");
-  await checkSignedOutCard(
-    state.email,
-    "fxa-menu-signed-out-message-login-failed"
-  );
   await closeFxaPanel();
   await openMainPanel();
 
@@ -992,39 +987,6 @@ add_task(async function test_bookmarks_menu_remote_tabs_promo() {
   await openBookmarksMenu();
   Assert.ok(promo.hidden, "Promo hidden when other devices are available");
   await closeBookmarksMenu();
-});
-
-// When signed out, the sign-in promo replaces the account header button. The
-// email of a remembered account can't be recovered from the stored hashed UID,
-// so the promo is shown whether or not a previous account is remembered.
-add_task(async function test_signed_out_sign_in_promo() {
-  const LAST_USER_PREF = "identity.fxaccounts.lastSignedInUserIdHash";
-  const promo = PanelMultiView.getViewNode(
-    document,
-    "PanelUI-fxa-menu-sign-in-promo"
-  );
-
-  const sandbox = sinon.createSandbox();
-  sandbox.stub(UIState, "get").returns({
-    status: UIState.STATUS_NOT_CONFIGURED,
-  });
-
-  for (const cachedUser of [false, true]) {
-    if (cachedUser) {
-      Services.prefs.setStringPref(LAST_USER_PREF, "cached-uid-hash");
-    } else {
-      Services.prefs.clearUserPref(LAST_USER_PREF);
-    }
-    gSync.updateAllUI(UIState.get());
-    await openFxaPanel();
-    ok(
-      BrowserTestUtils.isVisible(promo),
-      `Sign-in promo is visible when signed out (cachedUser=${cachedUser})`
-    );
-    await closeFxaPanel();
-  }
-
-  Services.prefs.clearUserPref(LAST_USER_PREF);
   sandbox.restore();
 });
 
@@ -1116,7 +1078,12 @@ add_task(async function test_experiment_ui_state_signedin() {
 
   checkMenuBarItem("sync-syncnowitem");
   checkPanelHeader();
-  checkManageAccountButton(state.displayName || state.email);
+  ok(
+    BrowserTestUtils.isVisible(
+      document.getElementById("fxa-menu-header-title")
+    ),
+    "expected toolbar to be visible after opening"
+  );
   checkFxaToolbarButtonPanel({
     headerTitle: "Manage account",
     headerDescription: state.displayName,
@@ -1224,7 +1191,12 @@ add_task(async function test_ui_my_services_signedin() {
 
   checkMenuBarItem("sync-syncnowitem");
   checkPanelHeader();
-  checkManageAccountButton(state.displayName || state.email);
+  ok(
+    BrowserTestUtils.isVisible(
+      document.getElementById("fxa-menu-header-title")
+    ),
+    "expected toolbar to be visible after opening"
+  );
   checkFxaToolbarButtonPanel({
     headerTitle: "Manage account",
     headerDescription: state.displayName,
@@ -1386,51 +1358,6 @@ function checkMenuBarItem(expectedShownItemId) {
   );
 }
 
-async function checkSignedOutCard(email, messageL10nId) {
-  const card = PanelMultiView.getViewNode(
-    document,
-    "PanelUI-fxa-menu-signed-out-card"
-  );
-
-  ok(
-    BrowserTestUtils.isVisible(card),
-    "Signed-out card is visible when a remembered account needs to sign in"
-  );
-  is(
-    PanelMultiView.getViewNode(document, "PanelUI-fxa-menu-signed-out-email")
-      .value,
-    email,
-    "Signed-out card shows the remembered account email"
-  );
-  is(
-    PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-signed-out-message"
-    ).getAttribute("data-l10n-id"),
-    messageL10nId,
-    "Signed-out card shows the status-specific reason"
-  );
-}
-
-function checkManageAccountButton(email) {
-  const manageButton = PanelMultiView.getViewNode(
-    document,
-    "PanelUI-fxa-menu-manage-account-button"
-  );
-  ok(
-    BrowserTestUtils.isVisible(manageButton),
-    "Manage account button is visible when signed in"
-  );
-  is(
-    PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-manage-account-email"
-    ).value,
-    email,
-    "Manage account button shows the account email"
-  );
-}
-
 function checkPanelHeader() {
   let fxaPanelView = PanelMultiView.getViewNode(document, "PanelUI-fxa");
   is(
@@ -1535,9 +1462,9 @@ async function checkProfilesButtons(
   previousElementSibling,
   separatorVisible = false
 ) {
-  const profilesHeaderLabel = PanelMultiView.getViewNode(
+  const profilesHeaderSeparator = PanelMultiView.getViewNode(
     document,
-    "PanelUI-fxa-menu-profiles-header-label"
+    "PanelUI-fxa-menu-profiles-header-separator"
   );
   const profilesSeparator = PanelMultiView.getViewNode(
     document,
@@ -1552,7 +1479,7 @@ async function checkProfilesButtons(
 
   is(
     previousElementSibling,
-    profilesHeaderLabel.previousElementSibling,
+    profilesHeaderSeparator.previousElementSibling,
     "The profiles section starts after " + previousElementSibling.id
   );
 }

@@ -29,6 +29,10 @@ var gProfiles = {
       document,
       "PanelUI-fxa-menu-profile-buttons"
     );
+    this.fxaMenuProfilesHeaderSeparator = PanelMultiView.getViewNode(
+      document,
+      "PanelUI-fxa-menu-profiles-header-separator"
+    );
     this.fxaMenuProfilesHeaderLabel = PanelMultiView.getViewNode(
       document,
       "PanelUI-fxa-menu-profiles-header-label"
@@ -128,10 +132,12 @@ var gProfiles = {
 
   async _onFxaMenuPanelShowing() {
     const container = this.fxaMenuProfileButtonsContainer;
+    const headerSeparator = this.fxaMenuProfilesHeaderSeparator;
     const headerLabel = this.fxaMenuProfilesHeaderLabel;
 
     const hideProfilesSection = () => {
       container.hidden = true;
+      headerSeparator.hidden = true;
       headerLabel.hidden = true;
     };
 
@@ -163,6 +169,7 @@ var gProfiles = {
       container.appendChild(createBtn);
 
       container.hidden = false;
+      headerSeparator.hidden = false;
       headerLabel.hidden = false;
       return;
     }
@@ -209,6 +216,7 @@ var gProfiles = {
     }
 
     container.hidden = false;
+    headerSeparator.hidden = false;
     headerLabel.hidden = false;
   },
 

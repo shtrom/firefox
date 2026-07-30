@@ -222,9 +222,9 @@ async function assertMessageInMenuSource(source, message, win = window) {
   } else if (source === MenuMessage.SOURCES.PXI_MENU) {
     Assert.ok(
       BrowserTestUtils.isHidden(
-        win.document.querySelector("#PanelUI-fxa-menu-sign-in-promo")
+        win.document.querySelector("#fxa-manage-account-button")
       ),
-      "Default FxA sign-in promo in the PXI panel is hidden."
+      "Default FxA sign-in button in the PXI panel is hidden."
     );
   }
 
@@ -274,9 +274,9 @@ function assertNoMessageInMenuSource(source, win = window) {
   } else if (source === MenuMessage.SOURCES.PXI_MENU) {
     Assert.ok(
       BrowserTestUtils.isVisible(
-        win.document.querySelector("#PanelUI-fxa-menu-sign-in-promo")
+        win.document.querySelector("#fxa-manage-account-button")
       ),
-      "Default FxA sign-in promo in the PXI panel is visible."
+      "Default FxA sign-in button in the PXI panel is visible."
     );
   }
 }
