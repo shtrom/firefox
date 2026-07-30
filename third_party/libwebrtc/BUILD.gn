@@ -582,7 +582,6 @@ if (!build_with_chromium) {
       "pc:peer_connection_factory",
       "pc:rtc_pc",
       "pc:webrtc_sdp",
-      "stats",
       "video",
     ]
     if (build_with_mozilla) {
@@ -610,7 +609,6 @@ if (!build_with_chromium) {
         "pc:peer_connection_factory",
         "pc:rtc_pc",
         "pc:webrtc_sdp",
-        "stats",
       ]
     }
 
