@@ -145,6 +145,7 @@ async function llama_crash() {
       },
     ];
     info("Calling runWithGenerator");
+    let sawCrash = false;
     try {
       for await (const val of engine.runWithGenerator({
         prompt,
@@ -152,7 +153,8 @@ async function llama_crash() {
         info(val.text);
       }
     } catch (err) {
-      Assert.ok(true, `failed with error ${err.message}`);
+      sawCrash = true;
+      info(`failed with error ${err.message}`);
 
       let [subject, data] = await contentShutdown;
 
@@ -186,6 +188,7 @@ async function llama_crash() {
         info(`cleaning up ${subject} ${data}`);
       }
     }
+    Assert.ok(sawCrash, "the crash model must crash the serving process");
   } finally {
     await EngineProcess.destroyMLEngine();
     await cleanup();
