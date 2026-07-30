@@ -189,7 +189,11 @@ static Maybe<unsigned> HaveMemfd() {
 }
 
 static bool MemfdCanSeal(Maybe<unsigned> aMaybeFlags) {
+#ifdef USE_MEMFD_CREATE
   return aMaybeFlags && (*aMaybeFlags & MFD_ALLOW_SEALING);
+#else
+  return false;
+#endif
 }
 
 bool AppendPosixShmPrefix(std::string* aStr, pid_t aPid) {
