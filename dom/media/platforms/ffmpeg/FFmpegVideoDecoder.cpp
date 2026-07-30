@@ -638,6 +638,15 @@ MediaResult FFmpegVideoDecoder<LIBAV_VER>::InitVulkanDecoder() {
   }
 #    endif
 
+#    if LIBAVCODEC_VERSION_MAJOR < 62
+  if (mCodecID == AV_CODEC_ID_VP9) {
+    FFMPEG_LOG(
+        "Vulkan VP9 decoding requires libavcodec 62 or newer; trying another "
+        "hardware decoder");
+    return NS_ERROR_NOT_AVAILABLE;
+  }
+#    endif
+
   FFMPEG_LOG("Initialising Vulkan FFmpeg decoder");
 
   StaticMutexAutoLock mon(sMutex);
