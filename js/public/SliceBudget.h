@@ -16,7 +16,10 @@
 
 namespace js {
 class GCMarker;
-};
+namespace gcstats {
+struct Statistics;
+}  // namespace gcstats
+}  // namespace js
 
 namespace JS {
 
@@ -76,6 +79,7 @@ class JS_PUBLIC_API SliceBudget {
   // This SliceBudget is considered interrupted from the time isOverBudget()
   // finds the interrupt flag set.
   bool interrupted = false;
+  friend struct js::gcstats::Statistics;
 
  public:
   // Whether this slice is running in (predicted to be) idle time.
