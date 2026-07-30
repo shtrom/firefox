@@ -57,11 +57,20 @@ function renderClocks(
   dispatch = jest.fn(),
   handleUserInteraction = jest.fn()
 ) {
+  const stateWithSize = {
+    ...state,
+    Prefs: {
+      ...state.Prefs,
+      values: {
+        ...state.Prefs.values,
+        "widgets.clocks.size": size,
+      },
+    },
+  };
   const { container, unmount, rerender } = render(
-    <WrapWithProvider state={state}>
+    <WrapWithProvider state={stateWithSize}>
       <Clocks
         dispatch={dispatch}
-        size={size}
         handleUserInteraction={handleUserInteraction}
       />
     </WrapWithProvider>
@@ -2036,7 +2045,7 @@ describe("<Clocks> (Widgets/Clocks)", () => {
         handleUserInteraction
       );
       const hideItem = container.querySelector(
-        "panel-item[data-l10n-id='newtab-clock-widget-menu-hide']"
+        "panel-item[data-l10n-id='newtab-widget-menu-hide']"
       );
       fireEvent.click(hideItem);
       expect(handleUserInteraction).not.toHaveBeenCalled();
