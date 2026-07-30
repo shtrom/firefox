@@ -2910,12 +2910,21 @@ ${
   /**
    * Enters search mode with the default engine.
    */
-  searchModeShortcut() {
+  async searchModeShortcut() {
+    if (!this.controller.engineStore.initialized) {
+      try {
+        await this.controller.engineStore.init();
+      } catch {
+        // Search service failed, so there's no engine to search with.
+        return;
+      }
+    }
+
     // We restrict to search results when entering search mode from this
     // shortcut to honor historical behaviour.
     this.searchMode = {
       source: UrlbarShared.RESULT_SOURCE.SEARCH,
-      engineName: this.controller.engineStore.default?.name,
+      engineName: this.controller.engineStore.default.name,
       entry: "shortcut",
     };
     // The searchMode setter clears the input if pageproxystate is valid, so
