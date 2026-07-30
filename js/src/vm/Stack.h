@@ -824,6 +824,12 @@ class InterpreterStack {
   InterpreterFrame* pushInvokeFrame(JSContext* cx, const CallArgs& args,
                                     MaybeConstruct constructing);
 
+  // Push an entry frame for resuming a suspended generator or async
+  // function/module.
+  InterpreterFrame* pushGeneratorResumeFrame(JSContext* cx,
+                                             HandleFunction callee,
+                                             HandleObject envChain);
+
   // The interpreter can push light-weight, "inline" frames without entering a
   // new InterpreterActivation or recursively calling Interpret.
   bool pushInlineFrame(JSContext* cx, InterpreterRegs& regs,

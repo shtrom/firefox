@@ -334,11 +334,30 @@ InterpreterFrame* ExecuteState::pushInterpreterFrame(JSContext* cx) {
                                                  evalInFrame_);
 }
 
+GeneratorResumeState::GeneratorResumeState(
+    JSContext* cx, Handle<AbstractGeneratorObject*> genObj,
+    HandleValue resumeValue, GeneratorResumeKind resumeKind,
+    MutableHandleValue result)
+    : RunState(cx, GeneratorResume, genObj->callee().nonLazyScript()),
+      genObj_(genObj),
+      resumeValue_(resumeValue),
+      resumeKind_(resumeKind),
+      result_(result) {}
+
+InterpreterFrame* GeneratorResumeState::pushInterpreterFrame(JSContext* cx) {
+  RootedFunction callee(cx, &genObj_->callee());
+  RootedObject envChain(cx, &genObj_->environmentChain());
+  return cx->interpreterStack().pushGeneratorResumeFrame(cx, callee, envChain);
+}
+
 InterpreterFrame* RunState::pushInterpreterFrame(JSContext* cx) {
   if (isInvoke()) {
     return asInvoke()->pushInterpreterFrame(cx);
   }
-  return asExecute()->pushInterpreterFrame(cx);
+  if (isExecute()) {
+    return asExecute()->pushInterpreterFrame(cx);
+  }
+  return asGeneratorResume()->pushInterpreterFrame(cx);
 }
 
 static MOZ_ALWAYS_INLINE bool MaybeEnterInterpreterTrampoline(JSContext* cx,
@@ -1940,12 +1959,26 @@ bool MOZ_NEVER_INLINE JS_HAZ_JSNATIVE_CALLER js::Interpret(JSContext* cx,
   bool interpReturnOK;
   bool frameHalfInitialized;
 
-  if (!activation.entryFrame()->prologue(cx)) {
-    goto prologue_error;
-  }
-
-  if (!DebugAPI::onEnterFrame(cx, activation.entryFrame())) {
-    goto error;
+  if (state.isGeneratorResume()) {
+    const GeneratorResumeState& genState = *state.asGeneratorResume();
+    AbstractGeneratorObject::resume(cx, activation, genState.generator(),
+                                    genState.resumeValue(),
+                                    genState.resumeKind());
+    if (!probes::EnterScript(cx, script, script->function(), entryFrame)) {
+      goto error;
+    }
+    if (!DebugAPI::onResumeFrame(cx, entryFrame)) {
+      MOZ_ASSERT_IF(cx->isPropagatingForcedReturn(),
+                    genState.generator()->isClosed());
+      goto error;
+    }
+  } else {
+    if (!entryFrame->prologue(cx)) {
+      goto prologue_error;
+    }
+    if (!DebugAPI::onEnterFrame(cx, entryFrame)) {
+      goto error;
+    }
   }
 
   // Increment the coverage for the main entry point.
@@ -2215,9 +2248,10 @@ bool MOZ_NEVER_INLINE JS_HAZ_JSNATIVE_CALLER js::Interpret(JSContext* cx,
 
         goto error;
       } else {
-        // Stack should be empty for the outer frame, unless we executed the
-        // first |await| expression in an async function.
-        MOZ_ASSERT(REGS.stackDepth() == 0 || JSOp(*REGS.pc) == JSOp::Await);
+        // Stack should be empty for the activation's entry frame, unless we
+        // suspended at a yield or await.
+        MOZ_ASSERT(REGS.stackDepth() == 0 || JSOp(*REGS.pc) == JSOp::Await ||
+                   JSOp(*REGS.pc) == JSOp::Yield);
       }
       goto exit;
     }

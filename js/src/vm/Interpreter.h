@@ -14,6 +14,7 @@
 #include "vm/BuiltinObjectKind.h"
 #include "vm/CheckIsObjectKind.h"  // CheckIsObjectKind
 #include "vm/ErrorObject.h"
+#include "vm/GeneratorResumeKind.h"  // GeneratorResumeKind
 #include "vm/Stack.h"
 #include "vm/UsingHint.h"
 
@@ -22,6 +23,7 @@ namespace js {
 class WithScope;
 class EnvironmentIter;
 class PlainObject;
+class AbstractGeneratorObject;
 
 /*
  * Convert null/undefined |thisv| into the global lexical's |this| object, and
@@ -219,13 +221,14 @@ extern bool Execute(JSContext* cx, HandleScript script, HandleObject envChain,
 
 class ExecuteState;
 class InvokeState;
+class GeneratorResumeState;
 
 // RunState is passed to RunScript and RunScript then either passes it to the
 // interpreter or to the JITs. RunState contains all information we need to
 // construct an interpreter or JIT frame.
 class MOZ_RAII RunState {
  protected:
-  enum Kind { Execute, Invoke };
+  enum Kind { Execute, Invoke, GeneratorResume };
   Kind kind_;
 
   RootedScript script_;
@@ -236,6 +239,7 @@ class MOZ_RAII RunState {
  public:
   bool isExecute() const { return kind_ == Execute; }
   bool isInvoke() const { return kind_ == Invoke; }
+  bool isGeneratorResume() const { return kind_ == GeneratorResume; }
 
   ExecuteState* asExecute() const {
     MOZ_ASSERT(isExecute());
@@ -244,6 +248,10 @@ class MOZ_RAII RunState {
   InvokeState* asInvoke() const {
     MOZ_ASSERT(isInvoke());
     return (InvokeState*)this;
+  }
+  GeneratorResumeState* asGeneratorResume() const {
+    MOZ_ASSERT(isGeneratorResume());
+    return (GeneratorResumeState*)this;
   }
 
   JS::HandleScript script() const { return script_; }
@@ -299,11 +307,34 @@ class MOZ_RAII InvokeState final : public RunState {
   void setReturnValue(const Value& v) { args_.rval().set(v); }
 };
 
+// Used to resume a suspended generator or async function/module.
+class MOZ_RAII GeneratorResumeState final : public RunState {
+  Handle<AbstractGeneratorObject*> genObj_;
+  HandleValue resumeValue_;
+  GeneratorResumeKind resumeKind_;
+  MutableHandleValue result_;
+
+ public:
+  GeneratorResumeState(JSContext* cx, Handle<AbstractGeneratorObject*> genObj,
+                       HandleValue resumeValue, GeneratorResumeKind resumeKind,
+                       MutableHandleValue result);
+
+  Handle<AbstractGeneratorObject*> generator() const { return genObj_; }
+  HandleValue resumeValue() const { return resumeValue_; }
+  GeneratorResumeKind resumeKind() const { return resumeKind_; }
+
+  InterpreterFrame* pushInterpreterFrame(JSContext* cx);
+
+  void setReturnValue(const Value& v) { result_.set(v); }
+};
+
 inline void RunState::setReturnValue(const Value& v) {
   if (isInvoke()) {
     asInvoke()->setReturnValue(v);
-  } else {
+  } else if (isExecute()) {
     asExecute()->setReturnValue(v);
+  } else {
+    asGeneratorResume()->setReturnValue(v);
   }
 }
 

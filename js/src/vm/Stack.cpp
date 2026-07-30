@@ -434,6 +434,14 @@ InterpreterFrame* InterpreterStack::pushExecuteFrame(
   return fp;
 }
 
+InterpreterFrame* InterpreterStack::pushGeneratorResumeFrame(
+    JSContext* cx, HandleFunction callee, HandleObject envChain) {
+  // Entry frame: no caller frame or pc/sp.
+  return createGeneratorResumeFrame(cx, callee, envChain, /* prev = */ nullptr,
+                                    /* prevpc = */ nullptr,
+                                    /* prevsp = */ nullptr);
+}
+
 /*****************************************************************************/
 
 InterpreterFrameIterator& InterpreterFrameIterator::operator++() {
