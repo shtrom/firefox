@@ -850,17 +850,22 @@ if (sg?.durations) {
 ## Error/Warning Marker Data Format
 
 These files capture the diagnostic markers emitted into the resource usage
-profiles by `mozsystemmonitor` while tests run. Six marker names are collected:
+profiles by `mozsystemmonitor` while tests run. Seven marker names are collected:
 
 - `C++ warning`, `C++ assertion` (have `message`, `file`, `line`)
 - `JavaScript error`, `JavaScript warning` (have `message`, `file`, `line`)
 - `console.error`, `console.warn` (have `message`; no `file`/`line`)
+- `TSan Error` (has none of them: the message is synthesized as `{kind}: {label}`
+  from the kind of the report and the label of the stack the error was reported
+  for, and the `file`/`line` are those of the first repository frame of that
+  stack, skipping the crash and runtime machinery at its leaves)
 
 Only the fields listed above are kept. In particular the `process` and `pid` of
-C++ markers and the marker stacks are dropped, as they are per-occurrence data
-that would dominate the file size. Markers are collected from the same jobs as
-the test timings, so jobs whose profile yielded no test timings at all (a job
-that died before running tests) contribute none.
+C++ markers are dropped, and so are the marker stacks (except for the one frame a
+TSan error is attributed to), as they are per-occurrence data that would dominate
+the file size. Markers are collected from the same jobs as the test timings, so
+jobs whose profile yielded no test timings at all (a job that died before running
+tests) contribute none.
 
 The format is fully **columnar** - parallel arrays of integers - with two levels
 of interning:

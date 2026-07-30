@@ -426,14 +426,51 @@ const ERROR_MARKER_NAMES = new Set([
   "console.warn",
   "JavaScript error",
   "JavaScript warning",
+  "TSan Error",
 ]);
 
+// The repo relative path of the file of a stack frame, or null when the frame is
+// not in a repository file. mozsystemmonitor gives frame files the profiler
+// source view form, "hg:<host>/<repo>:<path>:<rev>" (see its _clean_frame_file);
+// anything else (a sysroot header, a generated file) has no repo path.
+function repoPathForFrameFile(file) {
+  if (!file?.startsWith("hg:")) {
+    return null;
+  }
+
+  const parts = file.split(":");
+  return parts.length >= 4 ? parts.slice(2, -1).join(":") : null;
+}
+
+// Resolve a marker's stack, given as an index into the thread's stackTable, to
+// the { file, line } of its first repository frame. The stack is walked from the
+// leaf towards the root, skipping the frames that are in no repository file: the
+// leaves are crash and runtime machinery (MOZ_Crash, the TSan runtime, libc)
+// which no Bugzilla component owns.
+function resolveStackRepoFrame(thread, stackIndex) {
+  const { stackTable, frameTable, funcTable, stringArray } = thread;
+
+  for (let s = stackIndex; s != null; s = stackTable.prefix[s]) {
+    const frameIndex = stackTable.frame[s];
+    const fileId = funcTable.fileName[frameTable.func[frameIndex]];
+    const file = repoPathForFrameFile(
+      fileId != null ? stringArray[fileId] : null
+    );
+    if (file) {
+      return { file, line: frameTable.line[frameIndex] };
+    }
+  }
+
+  return null;
+}
+
 // Extract error/warning markers (C++ warnings/assertions, console.error/warn,
-// JavaScript errors/warnings) from a resource usage profile. Only called after
-// extractTestTimings succeeded on the same profile, so the marker table and the
-// string array are known to be there.
+// JavaScript errors/warnings, TSan errors) from a resource usage profile. Only
+// called after extractTestTimings succeeded on the same profile, so the marker
+// table and the string array are known to be there.
 function extractErrorMarkers(profile) {
-  const { markers, stringArray } = profile.threads[0];
+  const thread = profile.threads[0];
+  const { markers, stringArray } = thread;
 
   // Map the string-table indices of the marker names we care about to the name.
   const nameIdToName = new Map();
@@ -454,15 +491,30 @@ function extractErrorMarkers(profile) {
       continue;
     }
 
-    // These markers always carry a payload with a message; file and line are
-    // absent for console.* (see mozsystemmonitor's _parse_process_output).
+    // These markers always carry a payload. console.* markers have no file and
+    // line, and TSan errors have no message either (see mozsystemmonitor's
+    // _parse_process_output and its tsan_error handler).
     const data = markers.data[i];
+    let { message, file, line } = data;
+
+    // A TSan error is described by the kind of report it belongs to and by the
+    // label of the stack it was reported for. Take its file and line from the
+    // first repository frame of that stack, so that it can be attributed to a
+    // Bugzilla component like the other markers.
+    if (name === "TSan Error") {
+      message = data.label ? `${data.kind}: ${data.label}` : data.kind;
+      const frame = resolveStackRepoFrame(thread, data.cause?.stack);
+      if (frame) {
+        ({ file, line } = frame);
+      }
+    }
+
     result.push({
       name,
-      message: normalizeMarkerMessage(data.message) || null,
+      message: normalizeMarkerMessage(message) || null,
       test: normalizeTestId(data.test) || null,
-      file: normalizeSourcePath(data.file) || null,
-      line: data.line ?? null,
+      file: normalizeSourcePath(file) || null,
+      line: line ?? null,
     });
   }
 
