@@ -2213,6 +2213,12 @@ WindowGlobalParent::AllocPPrefetchRecordParent(
   return actor.forget();
 }
 
+void WindowGlobalParent::NotifyPrefetchStateChanged(
+    PrefetchRecordParent* aRec) {
+  // Wakes PrefetchMatchWaiters registered via WaitForMatchingPrefetchRecord.
+  // Waiter list and resolution logic added in Part 4.2.
+}
+
 NS_IMPL_CYCLE_COLLECTION_CLASS(WindowGlobalParent)
 
 NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(WindowGlobalParent,
