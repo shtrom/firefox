@@ -686,9 +686,13 @@ export class UrlbarParentController {
       searchTerms
     );
 
-    this.input.window.openTrustedLinkIn(url, where, {
+    this.browserWindow.openTrustedLinkIn(url, where, {
       inBackground,
       postData,
+      globalHistoryOptions: {
+        triggeringSource: this.sapName,
+        triggeringSearchEngine: searchEngine.name,
+      },
     });
   }
 
@@ -702,12 +706,9 @@ export class UrlbarParentController {
    */
   openSearchForm(engineId, where, inBackground = false) {
     let searchEngine = lazy.SearchService.getEngineById(engineId);
-    lazy.BrowserSearchTelemetry.recordSearchForm(
-      searchEngine,
-      this.input.sapName
-    );
+    lazy.BrowserSearchTelemetry.recordSearchForm(searchEngine, this.sapName);
     let url = searchEngine.searchForm;
-    this.input.window.openTrustedLinkIn(url, where, {
+    this.browserWindow.openTrustedLinkIn(url, where, {
       inBackground,
     });
   }

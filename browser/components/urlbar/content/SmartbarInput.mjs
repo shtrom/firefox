@@ -65,8 +65,6 @@ const lazy = XPCOMUtils.declareLazy({
   UrlbarQueryContext: "chrome://browser/content/urlbar/UrlbarQueryContext.mjs",
   UrlbarProviderHeuristicFallback:
     "moz-src:///browser/components/urlbar/UrlbarProviderHeuristicFallback.sys.mjs",
-  UrlbarSearchUtils:
-    "moz-src:///browser/components/urlbar/UrlbarSearchUtils.sys.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
   UrlbarValueFormatter:
     "moz-src:///browser/components/urlbar/UrlbarValueFormatter.sys.mjs",
@@ -1855,7 +1853,7 @@ ${
    * @param {?UrlbarResult} result The result Enter would act on.
    * @param {boolean} isComposing Whether IME composition is active.
    * @param {?HandleNavigationOneOffParams} oneOffParams The one-off params, if any.
-   * @returns {?SearchEngine} The engine, or null.
+   * @returns {?PartialSearchEngine} The engine, or null.
    */
   #searchModeEngineForEnterKey(result, isComposing, oneOffParams) {
     if (
@@ -1872,7 +1870,9 @@ ${
     ) {
       return null;
     }
-    return lazy.UrlbarSearchUtils.getEngineByName(this.searchMode.engineName);
+    return this.controller.engineStore.getEngineByName(
+      this.searchMode.engineName
+    );
   }
 
   /**
@@ -1890,39 +1890,48 @@ ${
   }
 
   /**
-   * Records a search against an engine, annotates the load with the engine so
-   * Places records the visit source as a search, and returns its submission URL
-   * and POST data for the caller to open. Shared by the one-off and search-mode
-   * Enter paths, which open the engine's search URL directly rather than
-   * through a result.
+   * Records the engagement and a search against an engine, adds it to form
+   * history, and opens its SERP through the parent controller, which builds the
+   * submission URL and annotates the load as a search visit. Shared by the
+   * one-off and search-mode Enter paths, which return once it's done. The engine
+   * only needs to carry an id and name -- the parent resolves the full engine
+   * from the id -- so this stays content-safe for a message-path `<moz-urlbar>`.
    *
-   * @param {SearchEngine} engine The engine to search.
+   * @param {PartialSearchEngine} engine The engine to search.
    * @param {string} searchString The string to search for.
-   * @param {?Event} event The triggering event.
-   * @param {string} openWhere Where the result will open, used to attribute the
-   *   search to the newly opened tab when applicable.
-   * @param {object} openParams The load's params, annotated in place with the
-   *   engine via globalHistoryOptions.
-   * @returns {[string, ?object]} The submission URL and POST data.
+   * @param {string} where Where the SERP will open.
+   * @param {object} details
+   * @param {?Event} details.event The triggering event.
+   * @param {?Element} details.element The picked view element, if any.
+   * @param {string} details.selType The engagement's selection type.
+   * @param {string} details.typedValue The value the engagement records.
+   * @param {?UrlbarResult} details.result The result Enter acted on, if any.
+   * @param {boolean} [details.inBackground] Whether to open in a background tab.
    */
-  #recordAndBuildEngineSearch(
+  #openEngineSearch(
     engine,
     searchString,
-    event,
-    openWhere,
-    openParams
+    where,
+    { event, element, selType, typedValue, result, inBackground }
   ) {
-    let submission = lazy.UrlbarUtils.getSearchQueryUrl(engine, searchString);
-    openParams.globalHistoryOptions = {
-      ...openParams.globalHistoryOptions,
-      triggeringSource: this.#sapName,
-      triggeringSearchEngine: engine.name,
-    };
-    this._recordSearch(engine.id, event, {}, openWhere == "tab");
+    this.controller.engagementEvent.record(event, {
+      element,
+      location: this.sapLocation,
+      selType,
+      searchSource: this.getSearchSource(event),
+      searchString: typedValue,
+      result:
+        result ||
+        this.view.selectedResult ||
+        this._resultForCurrentValue ||
+        null,
+      windowMode: this.windowMode,
+    });
+    this._recordSearch(engine.id, event, {}, where == "tab");
     lazy.UrlbarUtils.addToFormHistory(this, searchString, engine.name).catch(
       console.error
     );
-    return submission;
+    this.controller.openSERP(engine.id, searchString, where, inBackground);
   }
 
   /**
@@ -2026,36 +2035,39 @@ ${
       }
     }
 
-    let url;
     let selType = this.view.telemetryTypeFromElement(result, element);
     let typedValue = this.value;
     if (oneOffParams?.engine) {
-      selType = "oneoff";
-      typedValue = this._lastSearchString;
-      // If there's a selected one-off button then load a search using
-      // the button's engine.
       result = this._resultForCurrentValue;
-      [url, openParams.postData] = this.#recordAndBuildEngineSearch(
+      this.#openEngineSearch(
         oneOffParams.engine,
         this.#engineSearchStringForResult(result),
-        event,
         oneOffParams.openWhere,
-        openParams
+        {
+          event,
+          element,
+          selType: "oneoff",
+          typedValue: this._lastSearchString,
+          result,
+          inBackground: openParams.inBackground,
+        }
       );
-    } else if (searchModeEngine) {
-      [url, openParams.postData] = this.#recordAndBuildEngineSearch(
+      return;
+    }
+    if (searchModeEngine) {
+      this.#openEngineSearch(
         searchModeEngine,
         typedValue,
-        event,
         this.controller.whereToOpen(event),
-        openParams
+        { event, element, selType, typedValue, result }
       );
-    } else {
-      // Use the current value if we don't have a UrlbarResult e.g. because the
-      // view is closed.
-      url = this.untrimmedValue;
-      openParams.postData = null;
+      return;
     }
+
+    // Use the current value if we don't have a UrlbarResult e.g. because the
+    // view is closed.
+    let url = this.untrimmedValue;
+    openParams.postData = null;
 
     if (!url) {
       return;
