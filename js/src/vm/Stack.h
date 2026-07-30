@@ -284,6 +284,16 @@ struct ResumeFrameArgs {
     MOZ_ASSERT(slot < NumSlots);
     return slot * sizeof(Value);
   }
+
+  static constexpr size_t offsetOfResumeValue() {
+    return offsetOfSlot(ResumeValueSlot);
+  }
+  static constexpr size_t offsetOfGenerator() {
+    return offsetOfSlot(GeneratorSlot);
+  }
+  static constexpr size_t offsetOfResumeKind() {
+    return offsetOfSlot(ResumeKindSlot);
+  }
 };
 
 class InterpreterFrame {

@@ -1293,7 +1293,7 @@ bool HandleDebugTrap(JSContext* cx, BaselineFrame* frame,
                DebugAPI::hasBreakpointsAt(script, pc));
   }
 
-  if (JSOp(*pc) == JSOp::AfterYield) {
+  if (frame->isResumingGenerator()) {
     // JSOp::AfterYield will set the frame's debuggee flag, call the
     // onEnterFrame handler, and handle breakpoint/stepping at that op (in
     // DebugAPI::slowPathOnResumeFrame).

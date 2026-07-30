@@ -4676,7 +4676,8 @@ void MacroAssembler::linkProfilerCallSites(JitCode* code) {
 }
 
 void MacroAssembler::alignJitStackBasedOnNArgs(Register nargs,
-                                               bool countIncludesThis) {
+                                               bool countIncludesThis,
+                                               uint32_t extraArgs) {
   // The stack should already be aligned to the size of a value.
   assertStackAlignment(sizeof(Value), 0);
 
@@ -4703,11 +4704,13 @@ void MacroAssembler::alignJitStackBasedOnNArgs(Register nargs,
   // This implies that |argN| must be aligned if N is even,
   // and offset by |sizeof(Value)| if N is odd.
 
-  // Depending on the context of the caller, it may be easier to pass in a
-  // register that has already been modified to include |this|. If that is the
-  // case, we want to flip the direction of the test.
+  // Only the parity of the total number of pushed Values matters. |staticArgs|
+  // is the number of Values pushed in addition to |nargs| and is known at
+  // compile time, so the total is odd iff |nargs| and |staticArgs| have a
+  // different parity. Branch to |alignmentIsOffset| in that case.
+  uint32_t staticArgs = extraArgs + !countIncludesThis;
   Assembler::Condition condition =
-      countIncludesThis ? Assembler::NonZero : Assembler::Zero;
+      (staticArgs % 2) == 0 ? Assembler::NonZero : Assembler::Zero;
 
   Label alignmentIsOffset, end;
   branchTestPtr(condition, nargs, Imm32(1), &alignmentIsOffset);

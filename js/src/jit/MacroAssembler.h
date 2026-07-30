@@ -6224,8 +6224,10 @@ class MacroAssembler : public MacroAssemblerSpecific {
 
   // Align the stack pointer based on the number of arguments which are pushed
   // on the stack, such that the JitFrameLayout would be correctly aligned on
-  // the JitStackAlignment.
-  void alignJitStackBasedOnNArgs(Register nargs, bool countIncludesThis);
+  // the JitStackAlignment. |extraArgs| is the number of additional arguments,
+  // known at compile time, that are pushed on top of |nargs|.
+  void alignJitStackBasedOnNArgs(Register nargs, bool countIncludesThis,
+                                 uint32_t extraArgs = 0);
   void alignJitStackBasedOnNArgs(uint32_t argc, bool countIncludesThis);
 
   inline void assertStackAlignment(uint32_t alignment, int32_t offset = 0);
