@@ -201,6 +201,12 @@ EnterJitStatus js::jit::MaybeEnterJit(JSContext* cx, RunState& state) {
   }
 
   if (state.isGeneratorResume()) {
+    if (IsPortableBaselineInterpreterEnabled()) {
+      // The Portable Baseline Interpreter does not support resuming a suspended
+      // generator.
+      return EnterJitStatus::NotEntered;
+    }
+
     JSScript* script = state.script();
     if (!script->hasJitScript()) {
       // No JitScript yet: resume in the C++ interpreter.

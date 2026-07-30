@@ -66,6 +66,7 @@
 #include "vm/Interpreter-inl.h"
 #include "vm/JSScript-inl.h"
 #include "vm/PlainObject-inl.h"
+#include "vm/Realm-inl.h"
 
 namespace js {
 namespace pbl {
@@ -8161,7 +8162,9 @@ PBIResult PortableBaselineInterpret(
       CASE(CanSkipAwait) {
         // value => value, can_skip
         bool result = false;
-        {
+        // The await can only be skipped when this is the first frame of its
+        // activation. See js::CanSkipAwait.
+        if (frame->framePrefix()->prevType() == FrameType::CppToJSJit) {
           ReservedRooted<Value> value0(&state.value0, VIRTSP(0).asValue());
           PUSH_EXIT_FRAME();
           if (!CanSkipAwait(cx, value0, &result)) {
@@ -8218,21 +8221,26 @@ PBIResult PortableBaselineInterpret(
       }
 
       CASE(Resume) {
-        SYNCSP();
-        Value gen = VIRTSP(2).asValue();
-        Value* callerSP = reinterpret_cast<Value*>(sp);
+        // rval, gen, resumeKind => rval
         {
-          ReservedRooted<Value> value0(&state.value0);
-          ReservedRooted<JSObject*> obj0(&state.obj0, &gen.toObject());
+          GeneratorResumeKind resumeKind =
+              IntToResumeKind(VIRTSP(0).asValue().toInt32());
+          ReservedRooted<Value> value0(&state.value0, VIRTSP(1).asValue());
+          ReservedRooted<JSObject*> obj0(&state.obj0,
+                                         &VIRTSP(2).asValue().toObject());
+          ReservedRooted<Value> value1(&state.value1);
           {
             PUSH_EXIT_FRAME();
             TRACE_PRINTF("Going to C++ interp for Resume\n");
-            if (!InterpretResume(cx, obj0, callerSP, &value0)) {
+            Handle<AbstractGeneratorObject*> genObj =
+                obj0.as<AbstractGeneratorObject>();
+            AutoRealm ar(cx, genObj);
+            if (!ResumeGenerator(cx, genObj, value0, resumeKind, &value1)) {
               GOTO_ERROR();
             }
           }
           VIRTPOPN(2);
-          VIRTSPWRITE(0, StackVal(value0));
+          VIRTSPWRITE(0, StackVal(value1));
         }
         END_OP(Resume);
       }
@@ -8263,12 +8271,6 @@ PBIResult PortableBaselineInterpret(
         if (frame->script()->isDebuggee()) {
           TRACE_PRINTF("doing DebugAfterYield\n");
           PUSH_EXIT_FRAME();
-          ReservedRooted<JSScript*> script0(&state.script0, frame->script());
-          if (DebugAPI::hasAnyBreakpointsOrStepMode(script0) &&
-              !HandleDebugTrap(cx, frame, pc)) {
-            TRACE_PRINTF("HandleDebugTrap returned error\n");
-            GOTO_ERROR();
-          }
           if (!DebugAfterYield(cx, frame)) {
             TRACE_PRINTF("DebugAfterYield returned error\n");
             GOTO_ERROR();
@@ -9323,6 +9325,9 @@ bool PortableBaselineTrampoline(JSContext* cx, size_t argc, Value* argv,
 
 MethodStatus CanEnterPortableBaselineInterpreter(JSContext* cx,
                                                  RunState& state) {
+  // Resuming a suspended generator or async function/module is not supported.
+  MOZ_ASSERT(!state.isGeneratorResume());
+
   if (!JitOptions.portableBaselineInterpreter) {
     return MethodStatus::Method_CantCompile;
   }
