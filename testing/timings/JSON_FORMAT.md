@@ -417,7 +417,12 @@ The `{harness}-stats.json` file provides aggregate statistics for each date:
   "processedJobCount": [3472, 3465, 3481, ...],
   "failedJobs": [178, 142, 156, ...],
   "invalidJobs": [25, 18, 23, ...],
-  "ignoredJobs": [43, 47, 45, ...]
+  "ignoredJobs": [43, 47, 45, ...],
+  "markerCounts": {                  // Occurrences of each error/warning marker
+    "C++ warning": [8137, 8004, ...],
+    "console.error": [12, 9, ...],
+    ...
+  }
 }
 ```
 
@@ -432,6 +437,7 @@ All arrays are parallel - the value at index `i` corresponds to the date at `dat
 - **failedJobs**: Number of jobs with state='failed' (from the Firefox-CI ETL database query)
 - **invalidJobs**: Number of jobs that didn't upload a valid resource usage profile
 - **ignoredJobs**: Number of jobs filtered out by the ignore list (annotated jobs - failures that sheriffs marked as due to patches that were later reverted or fixed)
+- **markerCounts**: For each error/warning marker name, the number of occurrences of that marker during the day, as in the `markerCounts` of the errors file's metadata. Only present once at least one day has an errors file, and 0 for the days that don't (they predate that file, or building it failed).
 
 ### Job Counts Relationship
 
@@ -889,7 +895,11 @@ placeholders so they deduplicate into one entry (and group on dashboards).
     "jobCount": 3481,
     "processedJobCount": 3472,
     "invalidJobCount": 9,
-    "markerCount": 12453        // total marker occurrences (sum of all markers.counts entries)
+    "markerCounts": {            // occurrences of each marker name
+      "C++ warning": 8137,       // (their sum is the total of all markers.counts
+      "console.error": 12,       //  entries)
+      ...
+    }
   },
   "tables": {                    // string tables (sorted by frequency)
     "jobNames": [...],

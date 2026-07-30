@@ -1361,32 +1361,38 @@ function sortMarkerStringTables(dataStructure) {
   };
 }
 
-// Sum every per-task count across all groups (markers.counts is an array of
-// per-group sub-arrays) to get the total marker occurrence count.
-function totalMarkerOccurrences(markers) {
-  let total = 0;
-  for (const groupCounts of markers.counts) {
-    for (const count of groupCounts) {
-      total += count;
+// Total the occurrences of each marker name (markers.counts holds one array of
+// per-task counts per group), eg. { "C++ warning": 8137, "console.error": 12 }.
+function markerOccurrencesByName({ tables, messages, markers }) {
+  const occurrences = {};
+  for (let g = 0; g < markers.messageIds.length; g++) {
+    const nameId = messages.markerNameIds[markers.messageIds[g]];
+    const name = tables.markerNames[nameId];
+    for (const count of markers.counts[g]) {
+      occurrences[name] = (occurrences[name] || 0) + count;
     }
   }
-  return total;
+  return occurrences;
 }
 
-// Save the error/warning marker file, if we managed to build it. This is the
-// largest of our outputs and the least critical one, and JSON.stringify has a
-// string length limit, so a failure here is logged and otherwise ignored rather
-// than costing us the day's timings and stats.
+// Save the error/warning marker file, if we managed to build it, and report
+// whether we now have that file. This is the largest of our outputs and the least
+// critical one, and JSON.stringify has a string length limit that a mochitest day
+// can reach, so a failure here is logged and otherwise ignored rather than costing
+// us the day's timings and stats.
 function saveMarkerData(markerData, filePath) {
   if (!markerData) {
-    return;
+    return false;
   }
 
   try {
     saveJsonFile(markerData, filePath);
   } catch (error) {
     console.error(`Error saving ${filePath}:`, error);
+    return false;
   }
+
+  return true;
 }
 
 // Helper to save a JSON file and log its size
@@ -1567,7 +1573,7 @@ async function processJobsAndCreateData(
           jobCount: jobs.length,
           processedJobCount: jobResults.length,
           invalidJobCount,
-          markerCount: totalMarkerOccurrences(markerStructure.markers),
+          markerCounts: markerOccurrencesByName(markerStructure),
         },
         tables: markerStructure.tables,
         messages: markerStructure.messages,
@@ -1751,6 +1757,14 @@ async function fetchPreviousRunData() {
             };
           }
         }
+        if (previousStats.markerCounts) {
+          entry.markerCounts = {};
+          for (const [name, counts] of Object.entries(
+            previousStats.markerCounts
+          )) {
+            entry.markerCounts[name] = counts[i];
+          }
+        }
         dailyStatsMap.set(date, entry);
       }
     }
@@ -1868,9 +1882,7 @@ async function processDateData(
           saveJsonFile(timings, timingsPath);
           saveJsonFile(resources, resourcesPath);
           // Missing for the days generated before we started producing it.
-          if (errors) {
-            saveJsonFile(errors, errorsPath);
-          }
+          const savedErrors = saveMarkerData(errors, errorsPath);
 
           calculateStatsFromData(
             timings,
@@ -1879,6 +1891,9 @@ async function processDateData(
             failedJobsCount,
             flavorJobCounts
           );
+          if (savedErrors) {
+            recordMarkerCounts(targetDate, errors);
+          }
           return;
         }
       } else {
@@ -1925,7 +1940,10 @@ async function processDateData(
       flavorJobCounts
     );
 
-    saveMarkerData(output.markerData, errorsPath);
+    // Only report the counts if we have a file the dashboard can drill into.
+    if (saveMarkerData(output.markerData, errorsPath)) {
+      recordMarkerCounts(targetDate, output.markerData);
+    }
   } catch (error) {
     console.error(`Error processing ${targetDate}:`, error);
   }
@@ -2665,6 +2683,9 @@ function calculateStatsFromData(
     failedJobs: failedJobsCount,
     invalidJobs: testData.metadata.invalidJobCount || 0,
     ignoredJobs: ignoredJobsCount,
+    // The marker counts don't depend on the timing data the rest of the stats is
+    // computed from, so keep the ones a previous run or computation found.
+    markerCounts: dailyStatsMap.get(targetDate)?.markerCounts,
   };
 
   const trackFlavors = HARNESS === "mochitest";
@@ -2762,6 +2783,14 @@ function calculateStatsFromData(
   return stats;
 }
 
+// Record in a day's stats how many occurrences of each error and warning marker
+// its errors file holds, so that the dashboard can show which days are noisy, and
+// for which markers, without downloading the errors files.
+function recordMarkerCounts(targetDate, markerData) {
+  dailyStatsMap.get(targetDate).markerCounts =
+    markerData?.metadata.markerCounts;
+}
+
 async function saveStatsFile() {
   console.log(`\n=== Generating statistics summary file ===`);
 
@@ -2811,6 +2840,24 @@ async function saveStatsFile() {
     }
   }
 
+  // Same for the marker names, which only the days that have an errors file have.
+  const allMarkerNames = new Set();
+  for (const date of allDates) {
+    const { markerCounts } = dailyStatsMap.get(date);
+    if (markerCounts) {
+      for (const name of Object.keys(markerCounts)) {
+        allMarkerNames.add(name);
+      }
+    }
+  }
+
+  if (allMarkerNames.size > 0) {
+    output.markerCounts = {};
+    for (const name of [...allMarkerNames].sort()) {
+      output.markerCounts[name] = [];
+    }
+  }
+
   for (const date of allDates) {
     const stats = dailyStatsMap.get(date);
     output.totalTestRuns.push(stats.totalTestRuns);
@@ -2837,6 +2884,14 @@ async function saveStatsFile() {
         );
         output.flavors[flavor].failedJobs.push(fStats?.failedJobs || 0);
         output.flavors[flavor].ignoredJobs.push(fStats?.ignoredJobs || 0);
+      }
+    }
+
+    // A day that has no errors file (it predates them, or building it failed) and
+    // a marker that fired on no job of the day both fall back to 0.
+    if (output.markerCounts) {
+      for (const name of Object.keys(output.markerCounts)) {
+        output.markerCounts[name].push(stats.markerCounts?.[name] || 0);
       }
     }
   }
