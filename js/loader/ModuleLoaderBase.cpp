@@ -715,6 +715,7 @@ void ModuleLoaderBase::ResumeWaitingRequests(LoadingRequest* aLoadingRequest,
                                              bool aSuccess) {
   for (ModuleLoadRequest* request : aLoadingRequest->mWaiting) {
     ResumeWaitingRequest(request, aSuccess);
+    request->NotifyModuleWaitFinished();
   }
 }
 
@@ -1558,6 +1559,7 @@ void ModuleLoaderBase::CancelFetchingModules() {
 
     for (const auto& request : loadingRequest->mWaiting) {
       request->Cancel();
+      request->NotifyModuleWaitFinished();
     }
   }
 
@@ -1887,6 +1889,7 @@ void ModuleLoaderBase::RegisterImportMap(UniquePtr<ImportMap> aImportMap,
     for (const auto& request : loadingRequest->mWaiting) {
       MOZ_DIAGNOSTIC_ASSERT(request->mLoadContext->IsPreload());
       request->Cancel();
+      request->NotifyModuleWaitFinished();
     }
     return true;
   });
