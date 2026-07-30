@@ -374,17 +374,12 @@ nsresult CTFontEntry::ReadCMAP(FontInfoData* aFontInfoData) {
 }
 
 gfxFont* CTFontEntry::CreateFontInstance(const gfxFontStyle* aFontStyle) {
-  RefPtr<UnscaledFontMac> unscaledFont;
-  {
-    AutoReadLock lock(mLock);
-    unscaledFont = RefPtr<UnscaledFontMac>(mUnscaledFont);
-  }
+  RefPtr<UnscaledFontMac> unscaledFont(mUnscaledFont);
   if (!unscaledFont) {
     CGFontRef baseFont = GetFontRef();
     if (!baseFont) {
       return nullptr;
     }
-    AutoWriteLock lock(mLock);
     unscaledFont = new UnscaledFontMac(baseFont, mIsDataUserFont);
     mUnscaledFont = unscaledFont;
   }
