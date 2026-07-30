@@ -536,19 +536,8 @@ void RenderCompositorLayerNativeOGL::InsertFrameDoneSync() {
 
 bool RenderCompositorLayerNativeOGL::WaitForGPU() {
   if (mPreviousFrameDoneFences) {
-    bool complete = false;
-    while (!complete) {
-      complete = true;
-      for (const auto& fence : mPreviousFrameDoneFences->mGpuFences) {
-        if (!fence->HasCompleted()) {
-          complete = false;
-          break;
-        }
-      }
-
-      if (!complete) {
-        PR_Sleep(PR_MillisecondsToInterval(1));
-      }
+    for (const auto& fence : mPreviousFrameDoneFences->mGpuFences) {
+      fence->ClientWait(TimeDuration::Forever());
     }
 
     if (mPreviousFrameDoneFences->mSync) {
