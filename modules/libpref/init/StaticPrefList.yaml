@@ -2687,13 +2687,15 @@
 # https://w3c.github.io/audio-session/
 - name: dom.audio_session.enabled
   type: RelaxedAtomicBool
-  value: false
+  value: @IS_NIGHTLY_BUILD@
   mirror: always
 
-# Audio Session API: enables the state changes for Audio Session.
+# Audio Session API: enables the state changes for Audio Session. Separate from
+# the pref above so the state surface can be turned off on its own, without
+# withdrawing the whole API.
 - name: dom.audio_session.state_enabled
   type: RelaxedAtomicBool
-  value: false
+  value: @IS_NIGHTLY_BUILD@
   mirror: always
 
 # While the platform has interrupted the tab's audio (an audio-focus loss that
@@ -2701,7 +2703,7 @@
 # (media element, Web Audio, Web Speech) on its own until the interrupt ends.
 - name: dom.audio_session.block_start_during_interrupt.enabled
   type: RelaxedAtomicBool
-  value: false
+  value: @IS_NIGHTLY_BUILD@
   mirror: always
 
 # Checks if offscreen animation throttling is enabled.
@@ -14019,7 +14021,7 @@
  # media-playback focus regardless of the type, preserving existing behaviour.
 - name: media.geckoview.audio_session_type.enabled
   type: RelaxedAtomicBool
-  value: false
+  value: @IS_NIGHTLY_BUILD@
   mirror: always
 
 - name: media.mediacontrol.testingevents.enabled
