@@ -23,4 +23,3 @@
 # don't change CLOBBER for WebIDL changes any more.
 
 Renamed .cpp file to .mm, leaving stale build dependencies - Bug 2058990 - Make GpuFenceMTLSharedEvent call Metal APIs directly rather than via wgpu
-Bug 2025793 - newtab CSS/JS bundles are now generated into the objdir (prevents stale dist/xpi-stage symlinks to the deleted srcdir copies)
