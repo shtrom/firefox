@@ -186,10 +186,14 @@ void PrefetchRecordParent::AppendRedirectChainEntry(nsIURI* aURI) {
 }
 
 void PrefetchRecordParent::FillResponseOnLastEntry(nsIChannel* aChannel) {
-  if (mRedirectChain.IsEmpty()) return;
+  if (mRedirectChain.IsEmpty()) {
+    return;
+  }
   ExchangeRecord& last = mRedirectChain.LastElement();
   nsCOMPtr<nsIHttpChannel> http = do_QueryInterface(aChannel);
-  if (!http) return;
+  if (!http) {
+    return;
+  }
   uint32_t status = 0;
   DebugOnly<nsresult> rvStatus = http->GetResponseStatus(&status);
   last.mResponseStatus = status;
@@ -197,6 +201,36 @@ void PrefetchRecordParent::FillResponseOnLastEntry(nsIChannel* aChannel) {
   // GetResponseHeader may fail if header is absent; that is expected.
   if (NS_SUCCEEDED(http->GetResponseHeader("No-Vary-Search"_ns, nvsHeader))) {
     last.mNoVarySearchHeader = nvsHeader;
+  }
+}
+
+nsString PrefetchRecordParent::ComputePartitionKeyForChannel(
+    nsIChannel* aChannel) const {
+  nsCOMPtr<nsIURI> uri;
+  aChannel->GetURI(getter_AddRefs(uri));
+  if (!uri) {
+    return nsString{};
+  }
+  OriginAttributes attrs;
+  attrs.SetPartitionKey(uri, false);
+  return attrs.mPartitionKey;
+}
+
+bool PrefetchRecordParent::IsReferrerPolicySufficientlyStrict() const {
+  // Spec:
+  // https://wicg.github.io/nav-speculation/prefetch.html#list-of-sufficiently-strict-speculative-navigation-referrer-policies
+  using dom::ReferrerPolicy;
+
+  MOZ_ASSERT(mReferrerInfo);
+  switch (mReferrerInfo->ReferrerPolicy()) {
+    case ReferrerPolicy::_empty:
+    case ReferrerPolicy::Strict_origin_when_cross_origin:
+    case ReferrerPolicy::Strict_origin:
+    case ReferrerPolicy::Same_origin:
+    case ReferrerPolicy::No_referrer:
+      return true;
+    default:
+      return false;
   }
 }
 
@@ -270,6 +304,24 @@ PrefetchRecordParent::AsyncOnChannelRedirect(
       ("PrefetchRecordParent::AsyncOnChannelRedirect: this=%p flags=%u", this,
        aFlags));
   FillResponseOnLastEntry(aOldChannel);
+
+  // Validate the partition key on a cross-site redirect. Per "create
+  // navigation params by fetching"
+  // https://wicg.github.io/nav-speculation/prefetch.html#create-navigation-params-by-fetching,
+  // a redirect whose partition key differs from the prefetch record's source
+  // partition key is only allowed when the referrer policy is sufficiently
+  // strict.
+  nsString proposedKey = ComputePartitionKeyForChannel(aNewChannel);
+  if (proposedKey != mSourcePartitionKey &&
+      !IsReferrerPolicySufficientlyStrict()) {
+    LOG_SPECRULES_WARN(
+        ("PrefetchRecordParent::AsyncOnChannelRedirect: this=%p cross-site "
+         "redirect rejected (referrer policy not strict enough)",
+         this));
+    aCb->OnRedirectVerifyCallback(NS_BINDING_ABORTED);
+    return NS_OK;
+  }
+
   nsCOMPtr<nsIURI> newURI;
   aNewChannel->GetURI(getter_AddRefs(newURI));
   AppendRedirectChainEntry(newURI);
