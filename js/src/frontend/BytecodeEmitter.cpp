@@ -6640,20 +6640,26 @@ bool BytecodeEmitter::emitAwaitInInnermostScope(UnaryNode* awaitNode) {
 }
 
 bool BytecodeEmitter::emitAwaitInScope(EmitterScope& currentScope) {
-  if (!emit1(JSOp::CanSkipAwait)) {
-    //              [stack] VALUE CANSKIP
-    return false;
-  }
+  // Emit the CanSkipAwait fast path if this is a function script. The await
+  // can't be skipped for modules: during InnerModuleEvaluation, we must yield
+  // execution so other modules in the same module graph can run.
+  mozilla::Maybe<InternalIfEmitter> ifCanSkip;
+  if (sc->isFunctionBox()) {
+    if (!emit1(JSOp::CanSkipAwait)) {
+      //            [stack] VALUE CANSKIP
+      return false;
+    }
 
-  if (!emit1(JSOp::MaybeExtractAwaitValue)) {
-    //              [stack] VALUE_OR_RESOLVED CANSKIP
-    return false;
-  }
+    if (!emit1(JSOp::MaybeExtractAwaitValue)) {
+      //            [stack] VALUE_OR_RESOLVED CANSKIP
+      return false;
+    }
 
-  InternalIfEmitter ifCanSkip(this);
-  if (!ifCanSkip.emitThen(IfEmitter::ConditionKind::Negative)) {
-    //              [stack] VALUE_OR_RESOLVED
-    return false;
+    ifCanSkip.emplace(this);
+    if (!ifCanSkip->emitThen(IfEmitter::ConditionKind::Negative)) {
+      //            [stack] VALUE_OR_RESOLVED
+      return false;
+    }
   }
 
   if (sc->asSuspendableContext()->needsPromiseResult()) {
@@ -6680,11 +6686,12 @@ bool BytecodeEmitter::emitAwaitInScope(EmitterScope& currentScope) {
     return false;
   }
 
-  if (!ifCanSkip.emitEnd()) {
-    return false;
+  if (ifCanSkip.isSome()) {
+    if (!ifCanSkip->emitEnd()) {
+      return false;
+    }
+    MOZ_ASSERT(ifCanSkip->popped() == 0);
   }
-
-  MOZ_ASSERT(ifCanSkip.popped() == 0);
 
   return true;
 }

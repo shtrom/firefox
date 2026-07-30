@@ -8329,13 +8329,7 @@ void PromiseObject::dumpOwnStringContent(js::GenericPrinter& out) const {}
     return false;
   }
 
-  if (!iter.isFunctionFrame() && iter.isModuleFrame()) {
-    // The iterator is not a function frame, it is a module frame.
-    // The await cannot be skipped for modules. During InnerModuleEvaluation, it
-    // must yield execution so other modules in the same module graph can run.
-    return false;
-  }
-
+  MOZ_ASSERT(iter.isFunctionFrame(), "CanSkipAwait is only used for functions");
   MOZ_ASSERT(iter.calleeTemplate()->isAsync());
 
   // We only skip the await when the async function/generator has been resumed
