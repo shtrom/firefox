@@ -114,7 +114,8 @@ void HTMLOptionElement::SetSelected(bool aValue) {
       // selection, not deselection, occurs), so the selectedcontent update may
       // be missed; schedule it explicitly here. Synchronous, matching
       // select.value/select.selectedIndex.
-      select->ScheduleSelectedContentUpdateScriptRunner(
+      select->ScheduleSelectedContentUpdate(
+          SelectedContentUpdateMode::ScriptRunner,
           /* aForceUpdate = */ true);
     }
   } else {
@@ -196,7 +197,8 @@ void HTMLOptionElement::BeforeSetAttr(int32_t aNamespaceID, nsAtom* aName,
     // https://html.spec.whatwg.org/#ask-for-a-reset
     // Same "ask for a reset" step as SetSelected above, triggered here by the
     // selected content attribute instead of the selected IDL attribute.
-    select->ScheduleSelectedContentUpdateScriptRunner(
+    select->ScheduleSelectedContentUpdate(
+        SelectedContentUpdateMode::ScriptRunner,
         /* aForceUpdate = */ true);
   }
 
@@ -280,7 +282,8 @@ nsresult HTMLOptionElement::BindToTree(BindContext& aContext,
   // NOTE: Post-connection steps only run when connecting to a composed doc,
   // unlike insertion steps above which run for any tree insertion.
   if (aContext.InComposedDoc() && mCachedNearestAncestorSelect && Selected()) {
-    mCachedNearestAncestorSelect->ScheduleSelectedContentUpdateScriptRunner();
+    mCachedNearestAncestorSelect->ScheduleSelectedContentUpdate(
+        SelectedContentUpdateMode::ScriptRunner);
   }
 
   return NS_OK;

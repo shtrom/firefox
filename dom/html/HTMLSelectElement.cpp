@@ -606,7 +606,8 @@ void HTMLSelectElement::SetSelectedIndex(int32_t aIdx) {
   SetSelectedIndexInternal(aIdx, true);
   // https://html.spec.whatwg.org/#dom-select-selectedindex
   // Step 4: Run update a select's descendant selectedcontent elements.
-  ScheduleSelectedContentUpdateScriptRunner(/* aForceUpdate = */ true);
+  ScheduleSelectedContentUpdate(SelectedContentUpdateMode::ScriptRunner,
+                                /* aForceUpdate = */ true);
 }
 
 void HTMLSelectElement::ScrollToOption(int32_t aIndex) {
@@ -911,7 +912,8 @@ void HTMLSelectElement::SetValue(const nsAString& aValue) {
   SetSelectedIndexInternal(matchIndex, true);
   // https://html.spec.whatwg.org/#dom-select-value
   // Step 4: Run update a select's descendant selectedcontent elements.
-  ScheduleSelectedContentUpdateScriptRunner(/* aForceUpdate = */ true);
+  ScheduleSelectedContentUpdate(SelectedContentUpdateMode::ScriptRunner,
+                                /* aForceUpdate = */ true);
 }
 
 int32_t HTMLSelectElement::TabIndexDefault() { return 0; }
@@ -1745,7 +1747,7 @@ void HTMLSelectElement::ContentAppendedOrInserted(nsIContent* aFirstNewContent,
   // clone; whether that is the right behavior is tracked in
   // https://github.com/whatwg/html/issues/12509.
   if (!options.IsEmpty() && !mIsUpdatingSelectedContent) {
-    ScheduleSelectedContentUpdateScriptRunner();
+    ScheduleSelectedContentUpdate(SelectedContentUpdateMode::ScriptRunner);
   }
 }
 
@@ -2681,27 +2683,8 @@ class SelectedContentUpdateMicrotask final : public MicroTaskRunnable {
   const RefPtr<HTMLSelectElement> mSelect;
 };
 
-void HTMLSelectElement::ScheduleSelectedContentUpdate() {
-  if (!StaticPrefs::dom_select_customizable_select_enabled()) {
-    return;
-  }
-  if (!IsInComposedDoc()) {
-    return;
-  }
-  if (mSelectedContentUpdatePending) {
-    return;
-  }
-  CycleCollectedJSContext* ccjsc = CycleCollectedJSContext::Get();
-  if (!ccjsc) {
-    return;
-  }
-  mSelectedContentUpdatePending = true;
-  RefPtr<MicroTaskRunnable> task = new SelectedContentUpdateMicrotask(this);
-  ccjsc->DispatchToMicroTask(task.forget());
-}
-
-void HTMLSelectElement::ScheduleSelectedContentUpdateScriptRunner(
-    bool aForceUpdate) {
+void HTMLSelectElement::ScheduleSelectedContentUpdate(
+    SelectedContentUpdateMode aMode, bool aForceUpdate) {
   if (!StaticPrefs::dom_select_customizable_select_enabled()) {
     return;
   }
@@ -2709,9 +2692,18 @@ void HTMLSelectElement::ScheduleSelectedContentUpdateScriptRunner(
     return;
   }
   mSelectedContentUpdatePending = true;
-  nsContentUtils::AddScriptRunner(NewRunnableMethod(
-      "HTMLSelectElement::RunPendingSelectedContentUpdate", this,
-      &HTMLSelectElement::RunPendingSelectedContentUpdate));
+  if (aMode == SelectedContentUpdateMode::ScriptRunner) {
+    nsContentUtils::AddScriptRunner(NewRunnableMethod(
+        "HTMLSelectElement::RunPendingSelectedContentUpdate", this,
+        &HTMLSelectElement::RunPendingSelectedContentUpdate));
+    return;
+  }
+  CycleCollectedJSContext* ccjsc = CycleCollectedJSContext::Get();
+  if (!ccjsc) {
+    return;
+  }
+  RefPtr<MicroTaskRunnable> task = new SelectedContentUpdateMicrotask(this);
+  ccjsc->DispatchToMicroTask(task.forget());
 }
 
 void HTMLSelectElement::RunPendingSelectedContentUpdate() {

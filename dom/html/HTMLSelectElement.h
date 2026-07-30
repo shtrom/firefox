@@ -38,6 +38,8 @@ class HTMLOptionElementOrHTMLOptGroupElement;
 class HTMLSelectElement;
 class HTMLSelectedContentElement;
 
+enum class SelectedContentUpdateMode : uint8_t { MicroTask, ScriptRunner };
+
 /**
  * Implementation of &lt;select&gt;
  */
@@ -319,17 +321,15 @@ class HTMLSelectElement final : public nsGenericHTMLFormControlElementWithState,
                                        bool aSkipSelectedcontentUpdate = false,
                                        IgnoredOptionList aIgnored = {});
 
-  // Queues a microtask to update all descendant selectedcontent elements.
+  // Schedules an update of all descendant selectedcontent elements.
   // Multiple calls coalesce into a single update.
-  void ScheduleSelectedContentUpdate();
-  // Like ScheduleSelectedContentUpdate but uses AddScriptRunner instead of a
-  // microtask, so it fires in FIFO order with post-connection script runners.
   // aForceUpdate: skips IsInComposedDoc and mSelectedContentUpdatePending
   // guards. Used by spec algorithms (select.value, select.selectedIndex) that
   // must update selectedcontent even on disconnected selects and must not be
-  // coalesced with deferred mutation-driven updates. Safe from re-entrance
-  // because JS setters cannot be called during UpdateDescendantSelectedContent.
-  void ScheduleSelectedContentUpdateScriptRunner(bool aForceUpdate = false);
+  // coalesced with deferred mutation-driven updates.
+  void ScheduleSelectedContentUpdate(
+      SelectedContentUpdateMode aMode = SelectedContentUpdateMode::MicroTask,
+      bool aForceUpdate = false);
 
   // https://html.spec.whatwg.org/#update-a-select's-descendant-selectedcontent-elements
   MOZ_CAN_RUN_SCRIPT void UpdateDescendantSelectedContentElements();
