@@ -17429,19 +17429,20 @@ void Document::ScheduleViewTransitionUpdateCallback(ViewTransition* aVt) {
 }
 
 // https://drafts.csswg.org/css-view-transitions-1/#flush-the-update-callback-queue
-void Document::FlushViewTransitionUpdateCallbackQueue() {
+bool Document::FlushViewTransitionUpdateCallbackQueue() {
   // 1. For each transition in document’s update callback queue, call the update
   // callback given transition.
   // Note: we move mViewTransitionUpdateCallbacks into a temporary array to make
   // sure no one updates the array when iterating.
-  auto callbacks = std::move(mViewTransitionUpdateCallbacks);
+  const auto callbacks = std::move(mViewTransitionUpdateCallbacks);
   MOZ_ASSERT(mViewTransitionUpdateCallbacks.IsEmpty());
-  for (RefPtr<ViewTransition>& vt : callbacks) {
+  for (const RefPtr<ViewTransition>& vt : callbacks) {
     MOZ_KnownLive(vt)->CallUpdateCallback(IgnoreErrors());
   }
 
   // 2. Set document’s update callback queue to an empty list.
   // mViewTransitionUpdateCallbacks is empty after the 1st step.
+  return !callbacks.IsEmpty();
 }
 
 // https://html.spec.whatwg.org/#update-the-visibility-state
