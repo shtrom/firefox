@@ -3684,6 +3684,14 @@ pref("browser.ml.overridePipelineOptions", "{}");
 // How long the PageExtractor waits for a headless page load, in ms.
 pref("browser.ml.pageExtractor.headlessTimeoutMs", 15000);
 
+// Extract video metadata and the transcript from YouTube watch pages during
+// page extraction.
+pref("browser.pageextractor.youtube.enabled", false);
+
+// How long, in milliseconds, to wait for the YouTube transcript panel to render
+// after it is opened before giving up and returning metadata alone.
+pref("browser.pageextractor.youtube.timeoutMs", 3000);
+
 // When a user cancels this number of authentication dialogs coming from
 // a single web page in a row, all following authentication dialogs will
 // be blocked (automatically canceled) for that page. The counter resets

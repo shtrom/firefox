@@ -29,7 +29,15 @@ const lazy = XPCOMUtils.declareLazy({
   ReaderMode: "moz-src:///toolkit/components/reader/ReaderMode.sys.mjs",
   extractTextFromDOM:
     "moz-src:///toolkit/components/pageextractor/DOMExtractor.sys.mjs",
+  shouldExtractYouTube:
+    "moz-src:///toolkit/components/pageextractor/YouTubeExtraction.sys.mjs",
+  getYouTubeContent:
+    "moz-src:///toolkit/components/pageextractor/YouTubeExtraction.sys.mjs",
   isProbablyReaderable: "resource://gre/modules/Readerable.sys.mjs",
+  youtubeTimeoutMs: {
+    pref: "browser.pageextractor.youtube.timeoutMs",
+    default: 3000,
+  },
 });
 
 /**
@@ -226,6 +234,23 @@ export class PageExtractorChild extends JSWindowActorChild {
     /** @type {HTMLElement} */
     let rootNode;
 
+    // YouTube extraction is a best-effort enhancement: any failure is logged
+    // and degrades to an empty string so the generic page extraction is used.
+    let youtubeContentPromise = null;
+    const sourceUrl = URL.parse(options.sourceUrl);
+    if (lazy.shouldExtractYouTube(sourceUrl)) {
+      youtubeContentPromise = lazy
+        .getYouTubeContent(document, {
+          timeoutMs: lazy.youtubeTimeoutMs,
+          sufficientLength: options.sufficientLength,
+          currentVideoId: sourceUrl.searchParams.get("v"),
+        })
+        .catch(error => {
+          lazy.console.warn?.("Failed to extract YouTube content", error);
+          return { text: "", replacesContent: false };
+        });
+    }
+
     if (this.isAboutReader()) {
       // If about:reader is loaded, find the proper rootNode so that we just get the
       // content and not any of the UI. This will get passed to DOMExtractor so that
@@ -303,10 +328,22 @@ export class PageExtractorChild extends JSWindowActorChild {
       canvasSnapshots = await this.#captureCanvases(canvases, options);
     }
 
-    lazy.console.log("GetText", options);
-    lazy.console.debug({ text, links, canvasSnapshots });
+    // On YouTube a transcript block replaces the generic walk. Without
+    // a transcript the generic walk is kept (so comments and other page content
+    // survive) and the clean metadata block (header fields + description), which
+    // that walk only captures noisily and truncated, is prepended to it.
+    const youtube = youtubeContentPromise ? await youtubeContentPromise : null;
+    let finalText = text;
+    if (youtube?.text) {
+      finalText = youtube.replacesContent
+        ? youtube.text
+        : [youtube.text, text].filter(Boolean).join("\n\n");
+    }
 
-    return { text, links, canvasSnapshots };
+    lazy.console.log("GetText", options);
+    lazy.console.debug({ text: finalText, links, canvasSnapshots });
+
+    return { text: finalText, links, canvasSnapshots };
   }
 
   /**
