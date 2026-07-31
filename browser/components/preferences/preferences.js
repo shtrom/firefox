@@ -455,7 +455,6 @@ const CONFIG_PANES = Object.freeze({
       "importBrowserData",
       "profiles",
       "backup",
-      "referrals",
     ],
     module: "chrome://browser/content/preferences/config/account-sync.mjs",
     replaces: "sync",
