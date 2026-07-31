@@ -14,6 +14,7 @@ const { AddonTestUtils } = ChromeUtils.importESModule(
 
 const NOVA_SUN_ID = "nova-sun@mozilla.org";
 const NOVA_SPARK_ID = "nova-spark@mozilla.org";
+const DEFAULT_THEME_ID = "default-theme@mozilla.org";
 
 const NOVA_THEMES = {
   [NOVA_SUN_ID]: {
@@ -493,4 +494,9 @@ add_task(async function test_avatar_colors_update_with_theme() {
 
   await uninstallTheme();
   await SpecialPowers.popPrefEnv();
+
+  await TestUtils.waitForCondition(
+    () =>
+      SelectableProfileService.currentProfile.theme.themeId === DEFAULT_THEME_ID
+  );
 });
