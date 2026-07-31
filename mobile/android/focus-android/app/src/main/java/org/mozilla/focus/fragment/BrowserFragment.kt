@@ -923,7 +923,7 @@ class BrowserFragment :
         tabsPopup?.dismiss()
         trackingProtectionPanel?.hide()
         siteNotSupportedSnackBarScope?.cancel()
-        requireComponents.sessionUseCases.exitFullscreen()
+        requireComponents.sessionUseCases.exitFullscreen(tabId)
     }
 
     override fun onHomePressed() = pictureInPictureFeature?.onHomePressed() ?: false
