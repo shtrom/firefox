@@ -38,15 +38,19 @@ static mozilla::LazyLogModule sAudioSessionLog("AudioSession");
           (__VA_ARGS__))
 
 /*
- * The AudioSession is most visible as the controller for the Firefox entries
- * in the Windows volume mixer in Windows 10.  This class wraps
+ * The WinAudioSession is most visible as the controller for the Firefox
+ * entries in the Windows volume mixer in Windows 10.  This class wraps
  * IAudioSessionControl and implements IAudioSessionEvents for callbacks from
  * Windows -- we only need OnSessionDisconnected, which happens when the audio
  * device changes.  This should be used on background (MTA) threads only.
  * This may be used concurrently by MSCOM as IAudioSessionEvents, so
  * methods must be threadsafe and public methods cannot use MOZ_REQUIRES.
+ *
+ * The name must not collide with dom::AudioSession: the refcount leak-logging
+ * table is keyed on the bare class name, and two same-named refcounted classes
+ * of different sizes trip an assertion in debug builds.
  */
-class AudioSession final : public IAudioSessionEvents {
+class WinAudioSession final : public IAudioSessionEvents {
  public:
   static void Create(nsString&& aDisplayName, nsString&& aIconPath,
                      nsID&& aSessionGroupingParameter) {
@@ -67,8 +71,8 @@ class AudioSession final : public IAudioSessionEvents {
     // path's UnregisterAudioSessionNotification cannot drop the refcount
     // to zero before sService takes ownership.
     RefPtr session =
-        new AudioSession(std::move(aDisplayName), std::move(aIconPath),
-                         std::move(aSessionGroupingParameter));
+        new WinAudioSession(std::move(aDisplayName), std::move(aIconPath),
+                            std::move(aSessionGroupingParameter));
     session->Start();
     sService = std::move(session);
     LOGD("Created AudioSession.");
@@ -144,12 +148,12 @@ class AudioSession final : public IAudioSessionEvents {
   }
 
  private:
-  AudioSession(nsString&& aDisplayName, nsString&& aIconPath,
-               nsID&& aSessionGroupingParameter) MOZ_REQUIRES(sMutex)
+  WinAudioSession(nsString&& aDisplayName, nsString&& aIconPath,
+                  nsID&& aSessionGroupingParameter) MOZ_REQUIRES(sMutex)
       : mDisplayName(aDisplayName),
         mIconPath(aIconPath),
         mSessionGroupingParameter(aSessionGroupingParameter) {}
-  ~AudioSession() {
+  ~WinAudioSession() {
     // Must have stopped and not restarted.
     MOZ_ASSERT(!mAudioSessionControl);
     LOGD("AudioSession object was destroyed.");
@@ -170,11 +174,11 @@ class AudioSession final : public IAudioSessionEvents {
 
   // Background (MTA) threads only.  The object itself may be used
   // concurrently but the sService variable is synchronized.
-  static StaticRefPtr<AudioSession> sService MOZ_GUARDED_BY(sMutex);
+  static StaticRefPtr<WinAudioSession> sService MOZ_GUARDED_BY(sMutex);
 };
 
-/* static */ StaticMutex AudioSession::sMutex;
-/* static */ StaticRefPtr<AudioSession> AudioSession::sService;
+/* static */ StaticMutex WinAudioSession::sMutex;
+/* static */ StaticRefPtr<WinAudioSession> WinAudioSession::sService;
 
 void CreateAudioSession() {
   MOZ_ASSERT(XRE_IsParentProcess());
@@ -223,8 +227,9 @@ void CreateAudioSession() {
                                    iconPath = std::move(iconPath),
                                    sessionGroupingParameter = std::move(
                                        sessionGroupingParameter)]() mutable {
-              AudioSession::Create(std::move(displayName), std::move(iconPath),
-                                   std::move(sessionGroupingParameter));
+              WinAudioSession::Create(std::move(displayName),
+                                      std::move(iconPath),
+                                      std::move(sessionGroupingParameter));
             }));
       }));
 }
@@ -241,14 +246,14 @@ void DestroyAudioSession() {
 
   LOGD("DestroyAudioSession");
   MOZ_ASSERT(AppShutdown::IsShutdownImpending());
-  AudioSession::Destroy();
+  WinAudioSession::Destroy();
 }
 
-NS_IMPL_ADDREF(AudioSession)
-NS_IMPL_RELEASE(AudioSession)
+NS_IMPL_ADDREF(WinAudioSession)
+NS_IMPL_RELEASE(WinAudioSession)
 
 STDMETHODIMP
-AudioSession::QueryInterface(REFIID iid, void** ppv) {
+WinAudioSession::QueryInterface(REFIID iid, void** ppv) {
   const IID IID_IAudioSessionEvents = __uuidof(IAudioSessionEvents);
   if ((IID_IUnknown == iid) || (IID_IAudioSessionEvents == iid)) {
     *ppv = static_cast<IAudioSessionEvents*>(this);
@@ -259,7 +264,7 @@ AudioSession::QueryInterface(REFIID iid, void** ppv) {
   return E_NOINTERFACE;
 }
 
-void AudioSession::Start() {
+void WinAudioSession::Start() {
   MOZ_ASSERT(mscom::IsCurrentThreadMTA());
 
   const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
@@ -334,7 +339,7 @@ void AudioSession::Start() {
   scopeExit.release();
 }
 
-void AudioSession::Stop(bool aShouldRestart) {
+void WinAudioSession::Stop(bool aShouldRestart) {
   // We usually use this on MTA threads but we shut down after
   // xpcom-shutdown-threads, so we don't have any easily available.
   // An MTA object is thread-safe by definition and is therefore considered
@@ -374,7 +379,7 @@ void AudioSession::Stop(bool aShouldRestart) {
         // IAudioSessionControl, then restart (i.e. create a new one).
         agileAsc = nullptr;
         NS_DispatchBackgroundTask(NS_NewCancelableRunnableFunction(
-            "RestartAudioSession", [] { AudioSession::MaybeRestart(); }));
+            "RestartAudioSession", [] { WinAudioSession::MaybeRestart(); }));
       }));
 }
 
