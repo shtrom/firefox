@@ -125,6 +125,7 @@ enum class EGLExtension {
   ANGLE_iosurface_client_buffer,
   ANGLE_metal_commands_scheduled_sync,
   ANGLE_metal_shared_event_sync,
+  ANGLE_wait_until_work_scheduled,
   Max
 };
 
@@ -231,6 +232,12 @@ class GLLibraryEGL final {
   const auto ret = mSymbols.X; \
   AFTER_CALL                   \
   return ret
+
+#define WRAP_VOID(X) \
+  PROFILE_CALL       \
+  BEFORE_CALL        \
+  mSymbols.X;        \
+  AFTER_CALL
 
  public:
   EGLDisplay fGetDisplay(void* display_id) const {
@@ -581,9 +588,12 @@ class GLLibraryEGL final {
     WRAP(fCopyMetalSharedEventANGLE(dpy, sync));
   }
 
-#undef WRAP
+  void fWaitUntilWorkScheduledANGLE(EGLDisplay dpy) const {
+    WRAP_VOID(fWaitUntilWorkScheduledANGLE(dpy));
+  }
 
 #undef WRAP
+#undef WRAP_VOID
 #undef PROFILE_CALL
 #undef BEFORE_CALL
 #undef AFTER_CALL
@@ -742,6 +752,8 @@ class GLLibraryEGL final {
 
     // EGL_ANGLE_metal_shared_event_sync
     void*(GLAPIENTRY* fCopyMetalSharedEventANGLE)(EGLDisplay dpy, EGLSync sync);
+
+    void(GLAPIENTRY* fWaitUntilWorkScheduledANGLE)(EGLDisplay dpy);
   } mSymbols = {};
 };
 
@@ -1040,6 +1052,10 @@ class EglDisplay final {
     MOZ_ASSERT(
         IsExtensionSupported(EGLExtension::ANGLE_metal_shared_event_sync));
     return mLib->fCopyMetalSharedEventANGLE(mDisplay, sync);
+  }
+
+  void fWaitUntilWorkScheduledANGLE() const {
+    return mLib->fWaitUntilWorkScheduledANGLE(mDisplay);
   }
 };
 
