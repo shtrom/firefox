@@ -82,7 +82,7 @@ if (typeof Mozilla == "undefined") {
   Mozilla.UITour.CONFIGNAME_AVAILABLETARGETS = "availableTargets";
 
   /**
-   * @typedef {string} UITourTarget
+   * @typedef {string} Mozilla.UITour.Target
    *
    * @summary Not all targets are available at all times because they may not be visible
    * or UITour doesn't not how to automatically make them visible. Use the
@@ -180,7 +180,7 @@ if (typeof Mozilla == "undefined") {
   };
 
   /**
-   * @typedef {string} UITourHighlightEffect
+   * @typedef {string} Mozilla.UITour.HighlightEffect
    *
    * Specifies the effect/animation to use when highlighting UI elements.
    * @description Valid values:
@@ -205,8 +205,8 @@ if (typeof Mozilla == "undefined") {
    * @see Mozilla.UITour.hideHighlight
    * @example Mozilla.UITour.showHighlight('appMenu', 'wobble');
    *
-   * @param {UITourTarget} target - Identifier of the UI widget to show a highlight on.
-   * @param {UITourHighlightEffect} [effect="none"] - Name of the effect to use when highlighting.
+   * @param {Mozilla.UITour.Target} target - Identifier of the UI widget to show a highlight on.
+   * @param {Mozilla.UITour.HighlightEffect} [effect="none"] - Name of the effect to use when highlighting.
    */
   Mozilla.UITour.showHighlight = function (target, effect) {
     _sendEvent("showHighlight", {
@@ -229,7 +229,7 @@ if (typeof Mozilla == "undefined") {
    *
    * @see Mozilla.UITour.hideInfo
    *
-   * @param {UITourTarget} target - Identifier of the UI widget to anchor the panel at.
+   * @param {Mozilla.UITour.Target} target - Identifier of the UI widget to anchor the panel at.
    * @param {string} title - Title text to be shown as the heading of the panel.
    * @param {string} text - Body text of the panel.
    * @param {string} [icon=null] - URL of a 48x48px (96px @ 2dppx) image (which will be resolved
@@ -313,7 +313,7 @@ if (typeof Mozilla == "undefined") {
   };
 
   /**
-   * @typedef {string} UITourMenuName
+   * @typedef {string} Mozilla.UITour.MenuName
    * Valid values:
    *
    * - appMenu
@@ -329,7 +329,7 @@ if (typeof Mozilla == "undefined") {
    *
    * @see Mozilla.UITour.hideMenu
    *
-   * @param {UITourMenuName} name - Menu name
+   * @param {Mozilla.UITour.MenuName} name - Menu name
    * @param {Function} [callback] - Callback to be called with no arguments when
    *                                the menu opens.
    *
@@ -355,7 +355,7 @@ if (typeof Mozilla == "undefined") {
    *
    * @see Mozilla.UITour.showMenu
    *
-   * @param {UITourMenuName} name - Menu name
+   * @param {Mozilla.UITour.MenuName} name - Menu name
    */
   Mozilla.UITour.hideMenu = function (name) {
     _sendEvent("hideMenu", {
@@ -382,29 +382,29 @@ if (typeof Mozilla == "undefined") {
   };
 
   /**
-   * @typedef UITourConfigurationName
+   * @typedef Mozilla.UITour.ConfigurationName
    * @description Valid values:
    *
-   * - :js:func:`appinfo <UITourConfigurationAppInfo>`
-   * - :js:func:`canReset <UITourConfigurationCanReset>`
-   * - :js:func:`availableTargets <UITourConfigurationAvailableTargets>`
-   * - :js:func:`search <UITourConfigurationSearch>`
-   * - :js:func:`selectedSearchEngine <UITourConfigurationSearch>`
+   * - :js:func:`appinfo <Mozilla.UITour.Configuration.AppInfo>`
+   * - :js:func:`canReset <Mozilla.UITour.Configuration.CanReset>`
+   * - :js:func:`availableTargets <Mozilla.UITour.Configuration.AvailableTargets>`
+   * - :js:func:`search <Mozilla.UITour.Configuration.Search>`
+   * - :js:func:`selectedSearchEngine <Mozilla.UITour.Configuration.Search>`
    *   DEPRECATED, use 'search'
-   * - :js:func:`sync <UITourConfigurationSync>`
+   * - :js:func:`sync <Mozilla.UITour.Configuration.Sync>`
    *   DEPRECATED, use 'fxa'
-   * - :js:func:`fxa <UITourConfigurationFxA>`
-   * - :js:func:`fxaConnections <UITourConfigurationFxAConnections>`
+   * - :js:func:`fxa <Mozilla.UITour.Configuration.FxA>`
+   * - :js:func:`fxaConnections <Mozilla.UITour.Configuration.FxAConnections>`
    */
 
   /**
    * @namespace Mozilla.UITour.Configuration
    * @see Mozilla.UITour.getConfiguration
-   * @see UITourConfigurationName
+   * @see Mozilla.UITour.ConfigurationName
    */
 
   /**
-   * @typedef {boolean} UITourConfigurationCanReset
+   * @typedef {boolean} Mozilla.UITour.Configuration.CanReset
    *
    * @description Indicate whether a user can refresh their Firefox profile via :js:func:`Mozilla.UITour.resetFirefox`.
    *
@@ -413,7 +413,7 @@ if (typeof Mozilla == "undefined") {
    */
 
   /**
-   * @typedef {object} UITourConfigurationAppInfo
+   * @typedef {object} Mozilla.UITour.Configuration.AppInfo
    * @property {boolean} canSetDefaultBrowserInBackground - Whether the application can be set as
    *                                                        the default browser in the background
    *                                                        without user interaction.
@@ -443,7 +443,7 @@ if (typeof Mozilla == "undefined") {
    * @description From version 34 through 42 inclusive, a string was returned for the 'selectedSearchEngine'
    * configuration instead of the object like 'search'.
    *
-   * @typedef {string | object} UITourConfigurationSearch
+   * @typedef {string | object} Mozilla.UITour.Configuration.Search
    * @property {string} searchEngineIdentifier - The default engine's identifier
    * @property {string[]} engines - Identifiers of visible engines
    * @since 43
@@ -452,7 +452,7 @@ if (typeof Mozilla == "undefined") {
   /**
    * Sync status and device counts.
    *
-   * @typedef {object} UITourConfigurationSync
+   * @typedef {object} Mozilla.UITour.Configuration.Sync
    * @property {boolean} setup - Whether sync is setup
    * @property {number} desktopDevices - Number of desktop devices
    * @property {number} mobileDevices - Number of mobile devices
@@ -464,14 +464,14 @@ if (typeof Mozilla == "undefined") {
    * FxA local status, including whether FxA is connected and the general
    * account state.
    *
-   * @typedef {object} UITourConfigurationFxA
+   * @typedef {object} Mozilla.UITour.Configuration.FxA
    * @property {boolean} setup - Whether FxA is setup on this device. If false,
    *    no other properties will exist.
    * @property {boolean} accountStateOK - Whether the FxA account state is OK.
    *    If false, it probably means the account is unverified or the user has
    *    changed their password on another device and needs to update it here.
    *    In that case many other properties will not exist.
-   * @property {UITourConfigurationBrowserServices} [browserServices] -
+   * @property {Mozilla.UITour.Configuration.BrowserServices} [browserServices] -
    *    Information about account services attached to this browser, and with
    *    special support implemented by this browser. You should not expect
    *    every accountService connected in this browser to get a special entry
@@ -486,7 +486,7 @@ if (typeof Mozilla == "undefined") {
    * requesting this information is likely to be high-latency and may return
    * incomplete data if there is a network or server error.
    *
-   * @typedef {object} UITourConfigurationFxAConnections
+   * @typedef {object} Mozilla.UITour.Configuration.FxAConnections
    * @property {boolean} setup - Whether FxA is setup on this device. If false,
    *    no other properties will exist.
    * @property {number} [numOtherDevices] - Number of devices connected to this
@@ -495,7 +495,7 @@ if (typeof Mozilla == "undefined") {
    *    connected to the account by device 'type'. Valid values for type are
    *    defined by the FxA server but roughly correspond to form-factor with
    *    values like 'desktop', 'mobile', 'vr', etc.
-   * @property {UITourConfigurationAccountServices} [accountServices] -
+   * @property {Mozilla.UITour.Configuration.AccountServices} [accountServices] -
    *    Information about services attached to this account. These services
    *    may be enabled on devices or applications external to this
    *    browser and should not be confused with devices. For example, if the user
@@ -509,16 +509,16 @@ if (typeof Mozilla == "undefined") {
    * An object. The key is a string ID of the attached service. A list of attached
    * service IDs can be found
    * `on our telemetry documentation site <https://docs.telemetry.mozilla.org/datasets/fxa_metrics/attribution.html#service-attribution>`_.
-   * The value is a :js:func:`UITourConfigurationAccountService`
+   * The value is a :js:func:`Mozilla.UITour.Configuration.AccountService`
    *
-   * @typedef {Record<string, UITourConfigurationAccountService>} UITourConfigurationAccountServices
+   * @typedef {Record<string, Mozilla.UITour.Configuration.AccountService>} Mozilla.UITour.Configuration.AccountServices
    * @since 71
    */
 
   /**
    * Information about an account service
    *
-   * @typedef {object} UITourConfigurationAccountService
+   * @typedef {object} Mozilla.UITour.Configuration.AccountService
    * @property {string} id - The service ID. A list of attached
    * service IDs can be found
    * `on our telemetry documentation site <https://docs.telemetry.mozilla.org/datasets/fxa_metrics/attribution.html#service-attribution>`_.
@@ -531,21 +531,21 @@ if (typeof Mozilla == "undefined") {
    * Information about a services attached to the browser. All properties are
    * optional and only exist if the service is enabled.
    *
-   * @typedef {object} UITourConfigurationBrowserServices
-   * @property {UITourConfigurationSync} sync - If sync is configured
+   * @typedef {object} Mozilla.UITour.Configuration.BrowserServices
+   * @property {Mozilla.UITour.Configuration.Sync} sync - If sync is configured
    * @since 71
    */
 
   /**
-   * Array of UI :js:func:`Targets <UITourTarget>` currently available to be annotated.
+   * Array of UI :js:func:`Targets <Mozilla.UITour.Target>` currently available to be annotated.
    *
-   * @typedef {UITourTarget[]} UITourConfigurationAvailableTargets
+   * @typedef {Mozilla.UITour.Target[]} Mozilla.UITour.Configuration.AvailableTargets
    */
 
   /**
    * Retrieve some information about the application/profile.
    *
-   * @param {UITourConfigurationName} configName - Name of configuration to retrieve
+   * @param {Mozilla.UITour.ConfigurationName} configName - Name of configuration to retrieve
    * @param {Function} callback - Called with one argument containing the value of the configuration.
    */
   Mozilla.UITour.getConfiguration = function (configName, callback) {
@@ -680,7 +680,7 @@ if (typeof Mozilla == "undefined") {
    * Refresh/Reset is possible for the user's build/profile.
    *
    * @since 48
-   * @see UITourConfigurationCanReset
+   * @see Mozilla.UITour.Configuration.CanReset
    */
   Mozilla.UITour.resetFirefox = function () {
     _sendEvent("resetFirefox");
@@ -689,7 +689,7 @@ if (typeof Mozilla == "undefined") {
   /**
    * Add the specified customizable widget to the navigation toolbar.
    *
-   * @param {UITourTarget} name - Identifier of the customizable widget.
+   * @param {Mozilla.UITour.Target} name - Identifier of the customizable widget.
    * @param {Function} callback - Called with no arguments once the icon was successfully added to
    *                              the toolbar. Not called if it doesn't succeed.
    * @since 33.1
@@ -711,7 +711,7 @@ if (typeof Mozilla == "undefined") {
    * See https://searchfox.org/mozilla-release/source/browser/locales/search/list.json
    *
    * @param {string} identifier - Identifier of the engine (e.g. 'yahoo').
-   * @see UITourConfigurationSearch
+   * @see Mozilla.UITour.Configuration.Search
    * @since 34
    */
   Mozilla.UITour.setDefaultSearchEngine = function (identifier) {
