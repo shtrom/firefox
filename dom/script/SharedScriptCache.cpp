@@ -235,7 +235,7 @@ Maybe<ScriptHashKey> ScriptHashKey::FromStringsForLookup(
     encoding = nullptr;
   } else {
     encoding = Encoding::ForLabel(
-      Substring(aKey, EncodingStartPos, sep - EncodingStartPos));
+        Substring(aKey, EncodingStartPos, sep - EncodingStartPos));
     if (!encoding) {
       return Nothing();
     }
