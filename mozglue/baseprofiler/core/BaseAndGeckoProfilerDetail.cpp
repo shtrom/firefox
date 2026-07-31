@@ -4,6 +4,8 @@
 
 #include "mozilla/BaseAndGeckoProfilerDetail.h"
 
+#include "mozilla/ProfileChunkedBuffer.h"
+
 #include <limits>
 #include <string_view>
 
@@ -85,6 +87,27 @@ static baseprofiler::BaseProfilerProcessId StringToPid(const char* aString) {
   }
   // Our pid was not in a list of only pids, so it's excluded.
   return true;
+}
+
+[[nodiscard]] MFBT_API UniquePtr<ProfileChunkedBuffer> CopyToRightSizedBuffer(
+    const ProfileChunkedBuffer& aSource) {
+  const ProfileChunkedBuffer::State state = aSource.GetState();
+  const auto usedBytes = static_cast<ProfileBufferChunk::Length>(
+      state.mRangeEnd - state.mRangeStart);
+  if (usedBytes == 0) {
+    return nullptr;
+  }
+
+  // Blocks are copied one by one and keep their size, so a chunk holding
+  // `usedBytes` of blocks is enough to hold all of them again.
+  auto buffer = MakeUnique<ProfileChunkedBuffer>(
+      ProfileChunkedBuffer::ThreadSafety::WithoutMutex,
+      MakeUnique<ProfileBufferChunkManagerSingle>(usedBytes));
+  if (!buffer->AppendContents(aSource)) {
+    return nullptr;
+  }
+
+  return buffer;
 }
 
 }  // namespace mozilla::profiler::detail
