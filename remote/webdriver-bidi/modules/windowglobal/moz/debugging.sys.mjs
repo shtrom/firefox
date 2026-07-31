@@ -137,6 +137,33 @@ class DebuggingModule extends WindowGlobalBiDiModule {
     return callFrames;
   }
 
+  /**
+   * Recursively collect the provided script and all of its descendant scripts.
+   * A breakpoint line often belongs to an inner function, which is a distinct
+   * child script only reachable by walking the tree.
+   *
+   * @param {Debugger.Script} script
+   *     The root script to start the traversal from.
+   * @returns {Array<Debugger.Script>}
+   *     The script and all of its transitive child scripts.
+   */
+  #collectScriptTree(script) {
+    const scripts = [];
+    const stack = [script];
+    while (stack.length) {
+      const current = stack.pop();
+      scripts.push(current);
+      if (current.format === "js") {
+        try {
+          stack.push(...current.getChildScripts());
+        } catch (e) {
+          // Accessing child scripts can throw for optimized-out scripts.
+        }
+      }
+    }
+    return scripts;
+  }
+
   #createDebugger() {
     if (this.#dbg) {
       return;
@@ -328,9 +355,12 @@ class DebuggingModule extends WindowGlobalBiDiModule {
    * for signature and return value.
    */
   #onNewScript = script => {
+    // onNewScript only delivers top-level scripts, expand the tree to reach
+    // inner function scripts.
+    const scripts = this.#collectScriptTree(script);
     for (const breakpointLocation of this.#breakpointLocationMap.values()) {
       if (breakpointLocation.url === script.url) {
-        this.#setBreakpointOnScript(script, breakpointLocation);
+        this.#setBreakpointOnScripts(scripts, breakpointLocation);
       }
     }
   };
@@ -423,46 +453,83 @@ class DebuggingModule extends WindowGlobalBiDiModule {
   }
 
   /**
-   * Set a live breakpoint on the provided script for the provided BreakpointLocation.
+   * Set a live breakpoint for the provided BreakpointLocation on whichever of
+   * the provided candidate scripts owns the breakpoint line.
    *
-   * @param {Debugger.Script} script
-   *     The script where the breakpoint should be added.
+   * @param {Array<Debugger.Script>} scripts
+   *     The candidate scripts to consider for the breakpoint.
    * @param {BreakpointLocation} breakpointLocation
    *     The breakpoint location describing where (line, column) the breakpoint
    *     should be added.
    */
-  #setBreakpointOnScript(script, breakpointLocation) {
+  #setBreakpointOnScripts(scripts, breakpointLocation) {
     const { column, line, url } = breakpointLocation;
 
-    const offsets = script
-      .getPossibleBreakpoints()
-      .filter(offsetMetadata => offsetMetadata.lineNumber === line);
+    const lineMatches = [];
+    for (const candidate of scripts) {
+      let offsets;
+      try {
+        offsets = candidate.getPossibleBreakpoints({ line });
+      } catch (e) {
+        // Accessing breakpoints of an optimized-out script can throw.
+        continue;
+      }
+      for (const offsetMetadata of offsets) {
+        lineMatches.push({ script: candidate, offsetMetadata });
+      }
+    }
 
-    if (offsets.length === 0) {
+    if (lineMatches.length === 0) {
       lazy.logger.warn(
         `Unable to set a breakpoint for url: ${url} at line: ${line}`
       );
       return;
     }
 
-    let offsetMetadata = offsets[0];
+    let matches;
     if (column !== undefined) {
-      const columnOffset = offsets.find(o => o.columnNumber === column);
-      if (columnOffset) {
-        offsetMetadata = columnOffset;
-      } else {
+      matches = lineMatches.filter(
+        ({ offsetMetadata }) => offsetMetadata.columnNumber === column
+      );
+      if (matches.length === 0) {
         lazy.logger.warn(
           `Unable to set a column breakpoint for url: ${url}, line: ${line} and column: ${column}.`
         );
         return;
       }
+    } else {
+      // Use the first breakpoint position on the line, keeping all scripts
+      // which match that column (a source can have several scripts at the same
+      // position after multiple evaluations).
+      const firstColumn = Math.min(
+        ...lineMatches.map(({ offsetMetadata }) => offsetMetadata.columnNumber)
+      );
+      matches = lineMatches.filter(
+        ({ offsetMetadata }) => offsetMetadata.columnNumber === firstColumn
+      );
     }
 
-    script.setBreakpoint(offsetMetadata.offset, this.#breakpointHandler);
-    breakpointLocation.liveBreakpoints.add({
-      script,
-      offset: offsetMetadata.offset,
-    });
+    for (const { script: matchingScript, offsetMetadata } of matches) {
+      const { offset } = offsetMetadata;
+
+      // Avoid registering a breakpoint twice on the same script and offset.
+      let alreadySet = false;
+      for (const bp of breakpointLocation.liveBreakpoints) {
+        if (bp.script === matchingScript && bp.offset === offset) {
+          alreadySet = true;
+          break;
+        }
+      }
+      if (alreadySet) {
+        continue;
+      }
+
+      matchingScript.setBreakpoint(offset, this.#breakpointHandler);
+      breakpointLocation.liveBreakpoints.add({
+        script: matchingScript,
+        offset,
+      });
+    }
   }
 
   #toRawObject(maybeDebuggerObject) {
@@ -512,9 +579,7 @@ class DebuggingModule extends WindowGlobalBiDiModule {
           const scripts = this.#dbg.findScripts({
             url: breakpointLocation.url,
           });
-          for (const script of scripts) {
-            this.#setBreakpointOnScript(script, breakpointLocation);
-          }
+          this.#setBreakpointOnScripts(scripts, breakpointLocation);
         }
       } else if (!shouldEnable && isEnabled) {
         // Destroy the current debugger. This will clear live breakpoints and
@@ -540,9 +605,7 @@ class DebuggingModule extends WindowGlobalBiDiModule {
 
           if (this.#dbg) {
             const scripts = this.#dbg.findScripts({ url });
-            for (const script of scripts) {
-              this.#setBreakpointOnScript(script, breakpointLocation);
-            }
+            this.#setBreakpointOnScripts(scripts, breakpointLocation);
           }
         }
       }
