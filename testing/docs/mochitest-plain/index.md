@@ -287,8 +287,8 @@ directory for your test. For example, in `gfx/layers/moz.build`, we add
 these two manifest files:
 
 ```python
-MOCHITEST_MANIFESTS += ['apz/test/mochitest.toml']
-MOCHITEST_CHROME_MANIFESTS += ['apz/test/chrome.toml']
+MOCHITEST_MANIFESTS += ["apz/test/mochitest.toml"]
+MOCHITEST_CHROME_MANIFESTS += ["apz/test/chrome.toml"]
 ```
 
 <!--  TODO: This might be outdated.*
