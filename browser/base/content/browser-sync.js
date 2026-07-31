@@ -1627,7 +1627,6 @@ var gSync = {
       case "PanelUI-fxa-menu-monitor-button":
         this.openMonitorLink(button);
         break;
-      case "PanelUI-services-menu-relay-button":
       case "PanelUI-fxa-menu-relay-button":
         this.openRelayLink(button);
         break;
@@ -3574,7 +3573,15 @@ var gSync = {
       "identity.fxaccounts.toolbar.pxiToolbarEnabled.monitorEnabled",
       false
     );
-    monitorPanelEl.hidden = !monitorEnabled;
+    let monitorInUse =
+      this.isSignedIn && this.hasClientForId(FX_MONITOR_OAUTH_CLIENT_ID);
+    monitorPanelEl.hidden = !(monitorEnabled || monitorInUse);
+    this.updateCTAButtonStrings(monitorPanelEl, {
+      inUse: monitorInUse,
+      titleId: "appmenuitem-monitor-title2",
+      inUseTitleId: "appmenuitem-monitor-title-signed-in",
+      descriptionId: "appmenuitem-monitor-description2",
+    });
 
     // Relay checks
     let relayPanelEl = PanelMultiView.getViewNode(
@@ -3587,26 +3594,15 @@ var gSync = {
         "identity.fxaccounts.toolbar.pxiToolbarEnabled.relayEnabled",
         false
       );
-    let myServicesRelayPanelEl = PanelMultiView.getViewNode(
-      document,
-      "PanelUI-services-menu-relay-button"
-    );
-    let servicesContainerEl = PanelMultiView.getViewNode(
-      document,
-      "PanelUI-fxa-menu-services"
-    );
-    if (this.isSignedIn) {
-      const hasRelayClient = this.hasClientForId(FX_RELAY_OAUTH_CLIENT_ID);
-      relayPanelEl.hidden = hasRelayClient;
-      // Right now only relay is under "my services" so if we don't have, we turn it off
-      myServicesRelayPanelEl.hidden = !hasRelayClient;
-      servicesContainerEl.hidden = !hasRelayClient;
-    } else {
-      relayPanelEl.hidden = !relayEnabled;
-      // We'll never show my services when signed out
-      myServicesRelayPanelEl.hidden = true;
-      servicesContainerEl.hidden = true;
-    }
+    let relayInUse =
+      this.isSignedIn && this.hasClientForId(FX_RELAY_OAUTH_CLIENT_ID);
+    relayPanelEl.hidden = !(relayEnabled || relayInUse);
+    this.updateCTAButtonStrings(relayPanelEl, {
+      inUse: relayInUse,
+      titleId: "appmenuitem-relay-title2",
+      inUseTitleId: "appmenuitem-relay-title-signed-in",
+      descriptionId: "appmenuitem-relay-description2",
+    });
 
     // VPN checks
     let VpnPanelEl = PanelMultiView.getViewNode(
@@ -3619,7 +3615,14 @@ var gSync = {
         "identity.fxaccounts.toolbar.pxiToolbarEnabled.vpnEnabled",
         false
       );
-    VpnPanelEl.hidden = !vpnEnabled;
+    let vpnInUse = this.isSignedIn && this.hasClientForId(VPN_OAUTH_CLIENT_ID);
+    VpnPanelEl.hidden = !(vpnEnabled || vpnInUse);
+    this.updateCTAButtonStrings(VpnPanelEl, {
+      inUse: vpnInUse,
+      titleId: "appmenuitem-vpn-title2",
+      inUseTitleId: "appmenuitem-vpn-title-signed-in",
+      descriptionId: "appmenuitem-vpn-description4",
+    });
 
     // Share Firefox checks
     let shareFirefoxPanelEl = PanelMultiView.getViewNode(
@@ -3631,16 +3634,44 @@ var gSync = {
       false
     );
 
-    // The services section carries its own leading separator, so only show the
-    // privacy tools separator when that section is hidden (e.g. when signed
-    // out) to keep the header visually separated from the section above.
     let privacyToolsSeparatorEl = PanelMultiView.getViewNode(
       document,
       "PanelUI-fxa-menu-privacy-tools-separator"
     );
-    privacyToolsSeparatorEl.hidden = !servicesContainerEl.hidden;
+    privacyToolsSeparatorEl.hidden = false;
 
     mainPanelEl.hidden = false;
+  },
+
+  /**
+   * Updates the title and description of a privacy tools CTA button depending
+   * on whether the associated tool is already in use by the signed-in account.
+   * When the tool is in use we swap in a shorter, action-oriented title and
+   * hide the description.
+   *
+   * @param {Element} buttonEl
+   *   The CTA toolbarbutton to update.
+   * @param {object} options
+   * @param {boolean} options.inUse
+   *   Whether the account has already signed up for this tool.
+   * @param {string} options.titleId
+   *   Fluent id for the default (promo) title.
+   * @param {string} options.inUseTitleId
+   *   Fluent id for the title shown when the tool is in use.
+   * @param {string} options.descriptionId
+   *   Fluent id for the default (promo) description.
+   */
+  updateCTAButtonStrings(
+    buttonEl,
+    { inUse, titleId, inUseTitleId, descriptionId }
+  ) {
+    let titleEl = buttonEl.querySelector(".cta-menu-title");
+    let descriptionEl = buttonEl.querySelector(".cta-menu-description");
+    document.l10n.setAttributes(titleEl, inUse ? inUseTitleId : titleId);
+    descriptionEl.hidden = inUse;
+    if (!inUse) {
+      document.l10n.setAttributes(descriptionEl, descriptionId);
+    }
   },
 
   async openMonitorLink(sourceElement) {

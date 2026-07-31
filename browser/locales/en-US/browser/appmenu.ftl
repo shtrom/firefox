@@ -393,14 +393,17 @@ appmenuitem-sign-in-account = Sign in to your account
 
 appmenuitem-monitor-title2 = Stay Ahead of Identity Theft
 appmenuitem-monitor-description2 = Get alerts about data breaches
-appmenuitem-relay-title = { -relay-brand-short-name }
+# Shown in place of appmenuitem-monitor-title2 when the user has signed up for Monitor.
+appmenuitem-monitor-title-signed-in = { -monitor-brand-short-name } Data Breach Alerts
 appmenuitem-relay-title2 = Keep Your Email Private
 appmenuitem-relay-description2 = Helps prevent spam in your inbox
-appmenuitem-services-relay-description = Launch email masks dashboard
+# Shown in place of appmenuitem-relay-title2 when the user has signed up for Relay.
+appmenuitem-relay-title-signed-in = View Email Masks
 appmenuitem-vpn-title2 = Hide Your Location with { -mozilla-vpn-brand-name }
-appmenuitem-vpn-description3 = Make your browsing harder to trace
+appmenuitem-vpn-description4 = Get extra protection across apps and devices
+# Shown in place of appmenuitem-vpn-title2 when the user has signed up for VPN.
+appmenuitem-vpn-title-signed-in = Open { -mozilla-vpn-brand-name }
 
-appmenu-services-header = My services
 # "Mozilla" is intentionally hardcoded to prevent forks from replacing it
 # with their own vendor name, since these tools are created and maintained by
 # Mozilla.

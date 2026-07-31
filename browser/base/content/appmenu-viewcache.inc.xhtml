@@ -737,23 +737,6 @@
       <vbox id="PanelUI-fxa-menu-profile-buttons" hidden="true"/>
       <toolbarseparator id="PanelUI-fxa-menu-profiles-separator" hidden="true"/>
       <label id="PanelUI-fxa-menu-secure-sync-header" crop="end" class="subview-subheader" data-l10n-id="appmenu-secure-sync-header" hidden="true"/>
-      <!-- My Services panel - visible if the user has any of the listed services below set up on their account-->
-      <vbox id="PanelUI-fxa-menu-services" hidden="true">
-        <toolbarseparator />
-          <label crop="end" class="subview-subheader" data-l10n-id="appmenu-services-header" />
-        <!-- Relay -->
-          <vbox>
-            <toolbarbutton id="PanelUI-services-menu-relay-button" class="fxa-cta-button subviewbutton subviewbutton-iconic">
-              <vbox flex="1">
-                <hbox align="center">
-                  <image class="PanelUI-fxa-menu-relay-button ctaMenuLogo" role="presentation" />
-                  <label id="fxa-menu-header-title" crop="end" data-l10n-id="appmenuitem-relay-title" />
-                </hbox>
-                <label id="cta-menu-header-description" crop="end" data-l10n-id="appmenuitem-services-relay-description" />
-              </vbox>
-            </toolbarbutton>
-          </vbox>
-      </vbox>
       <!-- updateCTAPanel will control if we show this panel -->
       <vbox id="PanelUI-fxa-cta-menu" hidden="true">
         <toolbarseparator id="PanelUI-fxa-menu-privacy-tools-separator" hidden="true"/>
@@ -762,8 +745,8 @@
           <hbox align="center">
             <image class="PanelUI-fxa-menu-monitor-button ctaMenuLogo" role="presentation" />
             <vbox flex="1">
-              <label id="fxa-menu-header-title" crop="end" data-l10n-id="appmenuitem-monitor-title2" />
-              <label id="cta-menu-header-description" crop="end" data-l10n-id="appmenuitem-monitor-description2" />
+              <label id="fxa-menu-header-title" class="cta-menu-title" crop="end" data-l10n-id="appmenuitem-monitor-title2" />
+              <label id="cta-menu-header-description" class="cta-menu-description" crop="end" data-l10n-id="appmenuitem-monitor-description2" />
             </vbox>
           </hbox>
         </toolbarbutton>
@@ -771,8 +754,8 @@
           <hbox align="center">
             <image class="PanelUI-fxa-menu-relay-button ctaMenuLogo" role="presentation" />
             <vbox flex="1">
-              <label id="fxa-menu-header-title" crop="end" data-l10n-id="appmenuitem-relay-title2" />
-              <label id="cta-menu-header-description" crop="end" data-l10n-id="appmenuitem-relay-description2" />
+              <label id="fxa-menu-header-title" class="cta-menu-title" crop="end" data-l10n-id="appmenuitem-relay-title2" />
+              <label id="cta-menu-header-description" class="cta-menu-description" crop="end" data-l10n-id="appmenuitem-relay-description2" />
             </vbox>
           </hbox>
         </toolbarbutton>
@@ -780,8 +763,8 @@
           <hbox align="center">
             <image class="PanelUI-fxa-menu-vpn-button ctaMenuLogo" role="presentation" />
             <vbox flex="1">
-              <label id="fxa-menu-header-title" crop="end" data-l10n-id="appmenuitem-vpn-title2" />
-              <label id="cta-menu-header-description" crop="end" data-l10n-id="appmenuitem-vpn-description3" />
+              <label id="fxa-menu-header-title" class="cta-menu-title" crop="end" data-l10n-id="appmenuitem-vpn-title2" />
+              <label id="cta-menu-header-description" class="cta-menu-description" crop="end" data-l10n-id="appmenuitem-vpn-description4" />
             </vbox>
           </hbox>
         </toolbarbutton>

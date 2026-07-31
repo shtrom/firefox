@@ -966,8 +966,7 @@ toolbarbutton[constrain-size="true"][cui-areatype="panel"] > .toolbarbutton-badg
   min-height: 0 !important;
 }
 
-#PanelUI-fxa-cta-menu,
-#PanelUI-fxa-menu-services {
+#PanelUI-fxa-cta-menu {
   .fxa-cta-button label {
     margin: 0;
   }
@@ -1269,8 +1268,7 @@ toolbarbutton[constrain-size="true"][cui-areatype="panel"] > .toolbarbutton-badg
   list-style-image: url(chrome://browser/skin/fxa/monitor.svg);
 }
 
-#PanelUI-fxa-menu-relay-button,
-#PanelUI-services-menu-relay-button {
+#PanelUI-fxa-menu-relay-button {
   list-style-image: url(chrome://browser/content/logos/relay-monochrome.svg);
 }
 

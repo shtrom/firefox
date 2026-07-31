@@ -12,7 +12,11 @@ Services.scriptloader.loadSubScript(
   this
 );
 
-const { FX_RELAY_OAUTH_CLIENT_ID } = ChromeUtils.importESModule(
+const {
+  FX_MONITOR_OAUTH_CLIENT_ID,
+  FX_RELAY_OAUTH_CLIENT_ID,
+  VPN_OAUTH_CLIENT_ID,
+} = ChromeUtils.importESModule(
   "resource://gre/modules/FxAccountsCommon.sys.mjs"
 );
 const { SyncedTabs, SyncedTabsManagement } = ChromeUtils.importESModule(
@@ -1187,9 +1191,16 @@ add_task(async function test_new_sync_setup_ui() {
   await closeFxaPanel();
 });
 
-// Ensure we can see the new "My services" section if the user has enabled relay on their account
-add_task(async function test_ui_my_services_signedin() {
+// When a privacy tool is already in use by the account, it stays under the
+// "Privacy tools" header (there is no longer a separate "My services" section)
+// but shows an action-oriented title and no description.
+add_task(async function test_ui_privacy_tools_in_use_signedin() {
   await BrowserTestUtils.openNewForegroundTab(gBrowser, "https://example.com/");
+
+  Services.prefs.setBoolPref(
+    "identity.fxaccounts.toolbar.pxiToolbarEnabled",
+    true
+  );
 
   const relativeDateAnchor = new Date();
   let state = {
@@ -1212,9 +1223,16 @@ add_task(async function test_ui_my_services_signedin() {
     },
   };
 
+  const sandbox = sinon.createSandbox();
+  // isSignedIn reads from UIState.get(), so stub it to reflect a signed-in
+  // account, and stub the network fetch so our injected client list is not
+  // clobbered.
+  sandbox.stub(UIState, "get").returns(state);
+  sandbox.stub(gSync, "fetchListOfOAuthClients").resolves(true);
+
   gSync.updateAllUI(state);
 
-  // pretend that the user has relay enabled
+  // Pretend the user has signed up for Relay.
   gSync._attachedClients = [
     {
       id: FX_RELAY_OAUTH_CLIENT_ID,
@@ -1234,17 +1252,46 @@ add_task(async function test_ui_my_services_signedin() {
       "PanelUI-fxa-menu-account-signout-button",
       "PanelUI-fxa-cta-menu",
       "PanelUI-fxa-menu-monitor-button",
+      "PanelUI-fxa-menu-relay-button",
       "PanelUI-fxa-menu-vpn-button",
     ],
     disabledItems: [],
-    hiddenItems: [
-      "PanelUI-fxa-menu-setup-sync-container",
-      "PanelUI-fxa-menu-relay-button", // the relay button in the "other protections" side should be hidden
+    hiddenItems: ["PanelUI-fxa-menu-setup-sync-container"],
+    visibleItems: [
+      // The in-use tool stays visible under "Privacy tools".
+      "PanelUI-fxa-menu-relay-button",
     ],
-    visibleItems: [],
   });
+
+  const relayButton = document.getElementById("PanelUI-fxa-menu-relay-button");
+  is(
+    relayButton.querySelector(".cta-menu-title").getAttribute("data-l10n-id"),
+    "appmenuitem-relay-title-signed-in",
+    "in-use Relay button shows the signed-in title"
+  );
+  ok(
+    relayButton.querySelector(".cta-menu-description").hidden,
+    "in-use Relay button hides its description"
+  );
+
+  // Tools that are not in use keep their promo title and description.
+  const monitorButton = document.getElementById(
+    "PanelUI-fxa-menu-monitor-button"
+  );
+  is(
+    monitorButton.querySelector(".cta-menu-title").getAttribute("data-l10n-id"),
+    "appmenuitem-monitor-title2",
+    "unused Monitor button shows the promo title"
+  );
+  ok(
+    !monitorButton.querySelector(".cta-menu-description").hidden,
+    "unused Monitor button shows its description"
+  );
+
   checkFxAAvatar("signedin");
   gSync.relativeTimeFormat = origRelativeTimeFormat;
+  gSync._attachedClients = [];
+  sandbox.restore();
   await closeFxaPanel();
 
   await openMainPanel();
@@ -1261,6 +1308,111 @@ add_task(async function test_ui_my_services_signedin() {
     false
   );
   await closeTabAndMainPanel();
+});
+
+// When the account has signed up for every privacy tool, each one stays under
+// the "Privacy tools" header with its action-oriented title and no description.
+add_task(async function test_ui_privacy_tools_all_in_use_signedin() {
+  await BrowserTestUtils.openNewForegroundTab(gBrowser, "https://example.com/");
+
+  Services.prefs.setBoolPref(
+    "identity.fxaccounts.toolbar.pxiToolbarEnabled",
+    true
+  );
+
+  const relativeDateAnchor = new Date();
+  let state = {
+    status: UIState.STATUS_SIGNED_IN,
+    syncEnabled: true,
+    hasSyncKeys: true,
+    email: "foo@bar.com",
+    displayName: "Foo Bar",
+    avatarURL: "https://foo.bar",
+    lastSync: new Date(),
+    syncing: false,
+  };
+
+  const origRelativeTimeFormat = gSync.relativeTimeFormat;
+  gSync.relativeTimeFormat = {
+    formatBestUnit(date) {
+      return origRelativeTimeFormat.formatBestUnit(date, {
+        now: relativeDateAnchor,
+      });
+    },
+  };
+
+  const sandbox = sinon.createSandbox();
+  sandbox.stub(UIState, "get").returns(state);
+  sandbox.stub(gSync, "fetchListOfOAuthClients").resolves(true);
+
+  gSync.updateAllUI(state);
+
+  // Pretend the user has signed up for Monitor, Relay and VPN.
+  gSync._attachedClients = [
+    { id: FX_MONITOR_OAUTH_CLIENT_ID },
+    { id: FX_RELAY_OAUTH_CLIENT_ID },
+    { id: VPN_OAUTH_CLIENT_ID },
+  ];
+
+  await openFxaPanel();
+
+  checkFxaToolbarButtonPanel({
+    headerTitle: "Manage account",
+    headerDescription: state.displayName,
+    enabledItems: [
+      "PanelUI-fxa-cta-menu",
+      "PanelUI-fxa-menu-monitor-button",
+      "PanelUI-fxa-menu-relay-button",
+      "PanelUI-fxa-menu-vpn-button",
+    ],
+    disabledItems: [],
+    hiddenItems: [],
+    visibleItems: [
+      "PanelUI-fxa-menu-monitor-button",
+      "PanelUI-fxa-menu-relay-button",
+      "PanelUI-fxa-menu-vpn-button",
+    ],
+  });
+
+  const inUseTools = [
+    {
+      buttonId: "PanelUI-fxa-menu-monitor-button",
+      titleId: "appmenuitem-monitor-title-signed-in",
+    },
+    {
+      buttonId: "PanelUI-fxa-menu-relay-button",
+      titleId: "appmenuitem-relay-title-signed-in",
+    },
+    {
+      buttonId: "PanelUI-fxa-menu-vpn-button",
+      titleId: "appmenuitem-vpn-title-signed-in",
+    },
+  ];
+
+  for (const { buttonId, titleId } of inUseTools) {
+    const button = document.getElementById(buttonId);
+    is(
+      button.querySelector(".cta-menu-title").getAttribute("data-l10n-id"),
+      titleId,
+      `${buttonId} shows the signed-in title`
+    );
+    ok(
+      button.querySelector(".cta-menu-description").hidden,
+      `${buttonId} hides its description`
+    );
+  }
+
+  gSync.relativeTimeFormat = origRelativeTimeFormat;
+  gSync._attachedClients = [];
+  sandbox.restore();
+  await closeFxaPanel();
+
+  // Revert the pref at the end of the test
+  Services.prefs.setBoolPref(
+    "identity.fxaccounts.toolbar.pxiToolbarEnabled",
+    false
+  );
+  BrowserTestUtils.removeTab(gBrowser.selectedTab);
 });
 
 add_task(async function test_experiment_signin_button_signed_out() {
