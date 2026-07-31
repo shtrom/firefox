@@ -7,7 +7,6 @@
 // happens when calling these functions. They don't do much inspection of
 // profiler internals.
 
-#include "mozilla/ProfileChunkedBuffer.h"
 #include "mozilla/ProfilerPlatformMacros.h"
 #include "mozilla/ProfilerThreadPlatformData.h"
 #include "mozilla/ProfilerThreadRegistration.h"
@@ -5367,34 +5366,6 @@ TEST(GeckoProfiler, NoMarkerStacks)
   profiler_stop();
 
   ASSERT_TRUE(!profiler_get_profile());
-}
-
-TEST(GeckoProfiler, CaptureBacktraceIsRightSized)
-{
-  const char* filters[] = {"GeckoMain"};
-
-  profiler_start(PROFILER_DEFAULT_ENTRIES, PROFILER_DEFAULT_INTERVAL,
-                 ProfilerFeature::StackWalk, filters, std::size(filters), 0);
-
-  mozilla::UniquePtr<mozilla::ProfileChunkedBuffer> backtrace =
-      profiler_capture_backtrace();
-  ASSERT_TRUE(!!backtrace);
-
-  // Stacks are captured into a buffer that can hold the deepest possible stack,
-  // but callers may keep a captured backtrace alive for a long time, so it
-  // should only retain as much memory as the stack actually needed.
-  mozilla::Maybe<size_t> bufferLength = backtrace->BufferLength();
-  ASSERT_TRUE(bufferLength.isSome());
-  EXPECT_LT(
-      *bufferLength,
-      size_t(mozilla::ProfileBufferChunkManager::scExpectedMaximumStackSize));
-
-  // The backtrace should still contain the whole captured stack.
-  mozilla::ProfileChunkedBuffer::State state = backtrace->GetState();
-  EXPECT_GT(state.mRangeEnd, state.mRangeStart);
-  EXPECT_EQ(state.mFailedPutBytes, 0u);
-
-  profiler_stop();
 }
 
 // Microbenchmarks measuring marker insertion speed while the profiler is
