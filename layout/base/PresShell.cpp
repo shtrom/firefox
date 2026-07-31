@@ -11647,7 +11647,10 @@ void PresShell::AddAnchorPosAnchorImpl(const nsAtom* aName, nsIFrame* aFrame,
     nsIFrame* mFrame;
 
     int32_t operator()(nsIFrame* aOther) const {
-      return nsLayoutUtils::CompareTreePosition(mFrame, aOther, nullptr);
+      return nsLayoutUtils::CompareTreePosition(
+          mFrame, aOther, nullptr,
+          nsLayoutUtils::CompareTreePositionFlags::
+              FramesMayBeInDifferentOrIncompleteTrees);
     }
   };
 
