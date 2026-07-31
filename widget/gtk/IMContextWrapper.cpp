@@ -38,7 +38,7 @@ static inline const char* ToChar(bool aBool) {
   return aBool ? "true" : "false";
 }
 
-static const char* GetEventType(GdkEventKey* aKeyEvent) {
+static const char* GetEventType(const GdkEventKey* aKeyEvent) {
   switch (aKeyEvent->type) {
     case GDK_KEY_PRESS:
       return "GDK_KEY_PRESS";
@@ -180,6 +180,17 @@ class GetTextRangeStyleText final : public nsAutoCString {
   }
   virtual ~GetTextRangeStyleText() = default;
 };
+
+auto ToStr(const GdkEventKey* aEvent,
+           IMContextWrapper::IMContextID aIMContextID) {
+  return fmt::format(
+      "{{ type={}, keyval={}, unicode={:X}, state={}, "
+      "time={}, hardware_keycode={}, group={} }}",
+      GetEventType(aEvent), gdk_keyval_name(aEvent->keyval),
+      gdk_keyval_to_unicode(aEvent->keyval),
+      GetEventStateName(aEvent->state, aIMContextID).get(), aEvent->time,
+      aEvent->hardware_keycode, aEvent->group);
+}
 
 const static bool kUseSimpleContextDefault = false;
 
@@ -766,32 +777,29 @@ KeyHandlingState IMContextWrapper::OnKeyEvent(
     return KeyHandlingState::eNotHandled;
   }
 
-  MOZ_LOG(gIMELog, LogLevel::Info, (">>>>>>>>>>>>>>>>"));
-  MOZ_LOG(
-      gIMELog, LogLevel::Info,
-      ("0x%p OnKeyEvent(aCaller=0x%p, "
-       "aEvent(0x%p): { type=%s, keyval=%s, unicode=0x%X, state=%s, "
-       "time=%u, hardware_keycode=%u, group=%u }, "
-       "aKeyboardEventWasDispatched=%s)",
-       this, aCaller, aEvent, GetEventType(aEvent),
-       gdk_keyval_name(aEvent->keyval), gdk_keyval_to_unicode(aEvent->keyval),
-       GetEventStateName(aEvent->state, mIMContextID).get(), aEvent->time,
-       aEvent->hardware_keycode, aEvent->group,
-       ToChar(aKeyboardEventWasDispatched)));
-  MOZ_LOG(
-      gIMELog, LogLevel::Info,
-      ("0x%p   OnKeyEvent(), mMaybeInDeadKeySequence=%s, "
-       "mCompositionState=%s, current context=%p, active context=%p, "
-       "mIMContextID=%s, mIsIMInAsyncKeyHandlingMode=%s",
-       this, ToChar(mMaybeInDeadKeySequence), GetCompositionStateName(),
-       GetCurrentContext(), GetActiveContext(), ToString(mIMContextID).c_str(),
-       ToChar(mIsIMInAsyncKeyHandlingMode)));
+  MOZ_LOG_FMT(gIMELog, LogLevel::Info, (">>>>>>>>>>>>>>>>"));
+  MOZ_LOG_FMT(gIMELog, LogLevel::Info,
+              "{} OnKeyEvent(aCaller={}, aEvent({}): {}, "
+              "aKeyboardEventWasDispatched={})",
+              static_cast<void*>(this), static_cast<void*>(aCaller),
+              static_cast<void*>(aEvent), ToStr(aEvent, mIMContextID),
+              TrueOrFalse(aKeyboardEventWasDispatched));
+  MOZ_LOG_FMT(gIMELog, LogLevel::Info,
+              "{}   OnKeyEvent(), mMaybeInDeadKeySequence={}, "
+              "mCompositionState={}, current context={}, active context={}, "
+              "mIMContextID={}, mIsIMInAsyncKeyHandlingMode={}",
+              static_cast<void*>(this), TrueOrFalse(mMaybeInDeadKeySequence),
+              GetCompositionStateName(),
+              static_cast<void*>(GetCurrentContext()),
+              static_cast<void*>(GetActiveContext()), ToString(mIMContextID),
+              TrueOrFalse(mIsIMInAsyncKeyHandlingMode));
 
   if (aCaller != mLastFocusedWindow) {
-    MOZ_LOG(gIMELog, LogLevel::Error,
-            ("0x%p   OnKeyEvent(), FAILED, the caller isn't focused "
-             "window, mLastFocusedWindow=0x%p",
-             this, mLastFocusedWindow));
+    MOZ_LOG_FMT(gIMELog, LogLevel::Error,
+                "{}   OnKeyEvent(), FAILED, the caller isn't focused window, "
+                "mLastFocusedWindow={}",
+                static_cast<void*>(this),
+                static_cast<void*>(mLastFocusedWindow));
     return KeyHandlingState::eNotHandled;
   }
 
@@ -799,8 +807,9 @@ KeyHandlingState IMContextWrapper::OnKeyEvent(
   // current context since the user expects so.
   GtkIMContext* currentContext = GetCurrentContext();
   if (MOZ_UNLIKELY(!currentContext)) {
-    MOZ_LOG(gIMELog, LogLevel::Error,
-            ("0x%p   OnKeyEvent(), FAILED, there are no context", this));
+    MOZ_LOG_FMT(gIMELog, LogLevel::Error,
+                "{}   OnKeyEvent(), FAILED, there are no context",
+                static_cast<void*>(this));
     return KeyHandlingState::eNotHandled;
   }
 
@@ -854,15 +863,15 @@ KeyHandlingState IMContextWrapper::OnKeyEvent(
           // Therefore, we need to check whether there is same timestamp event
           // in the queue.  This redundant cost should be low because in most
           // causes, key events in the queue should be 2 or 4.
-          isHandlingAsyncEvent =
-              mPostingKeyEvents.IndexOf(aEvent) != GdkEventKeyQueue::NoIndex();
+          const auto index = mPostingKeyEvents.IndexOf(aEvent);
+          isHandlingAsyncEvent = index != GdkEventKeyQueue::NoIndex();
           if (isHandlingAsyncEvent) {
-            MOZ_LOG(gIMELog, LogLevel::Info,
-                    ("0x%p   OnKeyEvent(), aEvent->state does not have "
-                     "IBUS_IGNORED_MASK but "
-                     "same event in the queue.  So, assuming it's a "
-                     "synthesized event",
-                     this));
+            MOZ_LOG_FMT(gIMELog, LogLevel::Info,
+                        "{}   OnKeyEvent(), aEvent->state does not have "
+                        "IBUS_IGNORED_MASK but same event in the queue ({}th "
+                        "of {}).  So, assuming it's a synthesized event",
+                        static_cast<void*>(this), index,
+                        mPostingKeyEvents.Length());
           }
         }
 
@@ -870,13 +879,12 @@ KeyHandlingState IMContextWrapper::OnKeyEvent(
         // event queue first.  Otherwise the following blocks cannot use
         // `break`.
         if (isHandlingAsyncEvent) {
-          MOZ_LOG(gIMELog, LogLevel::Info,
-                  ("0x%p   OnKeyEvent(), aEvent->state has IBUS_IGNORED_MASK "
-                   "or aEvent is in the "
-                   "posting event queue, so, it won't be handled "
-                   "asynchronously anymore. Removing "
-                   "the posted events from the queue",
-                   this));
+          MOZ_LOG_FMT(gIMELog, LogLevel::Info,
+                      "{}   OnKeyEvent(), aEvent->state has IBUS_IGNORED_MASK "
+                      "or aEvent is in the posting event queue, so, it won't "
+                      "be handled asynchronously anymore. Removing the posted "
+                      "events from the queue",
+                      static_cast<void*>(this));
           probablyHandledAsynchronously = false;
           mPostingKeyEvents.RemoveEvent(aEvent);
         }
@@ -926,15 +934,15 @@ KeyHandlingState IMContextWrapper::OnKeyEvent(
           // there is same timestamp event in the queue.  This redundant cost
           // should be low because in most causes, key events in the queue
           // should be 2 or 4.
-          isHandlingAsyncEvent =
-              mPostingKeyEvents.IndexOf(aEvent) != GdkEventKeyQueue::NoIndex();
+          const auto index = mPostingKeyEvents.IndexOf(aEvent);
+          isHandlingAsyncEvent = index != GdkEventKeyQueue::NoIndex();
           if (isHandlingAsyncEvent) {
-            MOZ_LOG(gIMELog, LogLevel::Info,
-                    ("0x%p   OnKeyEvent(), aEvent->state does not have "
-                     "FcitxKeyState_IgnoredMask "
-                     "but same event in the queue.  So, assuming it's a "
-                     "synthesized event",
-                     this));
+            MOZ_LOG_FMT(
+                gIMELog, LogLevel::Info,
+                "{}   OnKeyEvent(), aEvent->state does not have "
+                "FcitxKeyState_IgnoredMask but same event in the queue ({}th "
+                "of {}).  So, assuming it's a synthesized event",
+                static_cast<void*>(this), index, mPostingKeyEvents.Length());
           }
         }
 
@@ -960,13 +968,12 @@ KeyHandlingState IMContextWrapper::OnKeyEvent(
         // editor cannot use IME actually.
 
         if (isHandlingAsyncEvent) {
-          MOZ_LOG(gIMELog, LogLevel::Info,
-                  ("0x%p   OnKeyEvent(), aEvent->state has "
-                   "FcitxKeyState_IgnoredMask or aEvent is in "
-                   "the posting event queue, so, it won't be handled "
-                   "asynchronously anymore. "
-                   "Removing the posted events from the queue",
-                   this));
+          MOZ_LOG_FMT(gIMELog, LogLevel::Info,
+                      "{}   OnKeyEvent(), aEvent->state has "
+                      "FcitxKeyState_IgnoredMask or aEvent is in the posting "
+                      "event queue, so, it won't be handled asynchronously "
+                      "anymore. Removing the posted events from the queue",
+                      static_cast<void*>(this));
           probablyHandledAsynchronously = false;
           mPostingKeyEvents.RemoveEvent(aEvent);
           break;
@@ -975,9 +982,8 @@ KeyHandlingState IMContextWrapper::OnKeyEvent(
       }
       default:
         MOZ_ASSERT_UNREACHABLE(
-            "IME may handle key event "
-            "asyncrhonously, but not yet confirmed if it comes agian "
-            "actually");
+            "IME may handle key event asynchronously, but not yet confirmed if "
+            "it comes again actually");
     }
   }
 
@@ -1050,9 +1056,12 @@ KeyHandlingState IMContextWrapper::OnKeyEvent(
     // need to use information of this key event to dispatch an KeyDown
     // or eKeyUp event later.
     else {
-      MOZ_LOG(gIMELog, LogLevel::Info,
-              ("0x%p   OnKeyEvent(), putting aEvent into the queue...", this));
       mPostingKeyEvents.PutEvent(aEvent);
+      MOZ_LOG_FMT(gIMELog, LogLevel::Info,
+                  "{}   OnKeyEvent(), putting aEvent into the queue (stored "
+                  "data: {})...",
+                  static_cast<void*>(this),
+                  ToStr(mPostingKeyEvents.GetLatestEvent(), mIMContextID));
     }
   }
 
@@ -1070,28 +1079,30 @@ KeyHandlingState IMContextWrapper::OnKeyEvent(
   if (aEvent->type == GDK_KEY_RELEASE) {
     if (const GdkEventKey* pendingKeyPressEvent =
             mPostingKeyEvents.GetCorrespondingKeyPressEvent(aEvent)) {
-      MOZ_LOG(gIMELog, LogLevel::Warning,
-              ("0x%p   OnKeyEvent(), forgetting a pending GDK_KEY_PRESS event "
-               "because GDK_KEY_RELEASE for the event is handled",
-               this));
+      MOZ_LOG_FMT(gIMELog, LogLevel::Warning,
+                  "{}   OnKeyEvent(), forgetting a pending GDK_KEY_PRESS event "
+                  "because GDK_KEY_RELEASE for the event is handled",
+                  static_cast<void*>(this));
       mPostingKeyEvents.RemoveEvent(pendingKeyPressEvent);
     }
   }
 
-  MOZ_LOG(
+  MOZ_LOG_FMT(
       gIMELog, LogLevel::Debug,
-      ("0x%p   OnKeyEvent(), succeeded, filterThisEvent=%s "
-       "(isFiltered=%s, mFallbackToKeyEvent=%s, "
-       "probablyHandledAsynchronously=%s, maybeHandledAsynchronously=%s), "
-       "mPostingKeyEvents.Length()=%zu, mCompositionState=%s, "
-       "mMaybeInDeadKeySequence=%s, mKeyboardEventWasDispatched=%s, "
-       "mKeyboardEventWasConsumed=%s",
-       this, ToChar(filterThisEvent), ToChar(isFiltered),
-       ToChar(mFallbackToKeyEvent), ToChar(probablyHandledAsynchronously),
-       ToChar(maybeHandledAsynchronously), mPostingKeyEvents.Length(),
-       GetCompositionStateName(), ToChar(mMaybeInDeadKeySequence),
-       ToChar(mKeyboardEventWasDispatched), ToChar(mKeyboardEventWasConsumed)));
-  MOZ_LOG(gIMELog, LogLevel::Info, ("<<<<<<<<<<<<<<<<\n\n"));
+      "{}   OnKeyEvent(), succeeded, filterThisEvent={} "
+      "(isFiltered={}, mFallbackToKeyEvent={}, "
+      "probablyHandledAsynchronously={}, maybeHandledAsynchronously={}), "
+      "mPostingKeyEvents.Length()={}, mCompositionState={}, "
+      "mMaybeInDeadKeySequence={}, mKeyboardEventWasDispatched={}, "
+      "mKeyboardEventWasConsumed={}",
+      static_cast<void*>(this), TrueOrFalse(filterThisEvent),
+      TrueOrFalse(isFiltered), TrueOrFalse(mFallbackToKeyEvent),
+      TrueOrFalse(probablyHandledAsynchronously),
+      TrueOrFalse(maybeHandledAsynchronously), mPostingKeyEvents.Length(),
+      GetCompositionStateName(), TrueOrFalse(mMaybeInDeadKeySequence),
+      TrueOrFalse(mKeyboardEventWasDispatched),
+      TrueOrFalse(mKeyboardEventWasConsumed));
+  MOZ_LOG_FMT(gIMELog, LogLevel::Info, ("<<<<<<<<<<<<<<<<\n\n"));
 
   if (filterThisEvent) {
     return KeyHandlingState::eHandled;

@@ -1997,24 +1997,25 @@ void KeymapWrapper::InitKeyEvent(WidgetKeyboardEvent& aKeyEvent,
       sRepeatState == REPEATING &&
       aGdkKeyEvent->hardware_keycode == sLastRepeatableHardwareKeyCode;
 
-  MOZ_LOG(
+  MOZ_LOG_FMT(
       gKeyLog, LogLevel::Info,
-      ("%p InitKeyEvent, modifierState=0x%08X "
-       "aKeyEvent={ mMessage=%s, isShift=%s, isControl=%s, "
-       "isAlt=%s, isMeta=%s, isAltGraph=%s mKeyCode=0x%02X, mCharCode=%s, "
-       "mKeyNameIndex=%s, mKeyValue=%s, mCodeNameIndex=%s, mCodeValue=%s, "
-       "mLocation=%s, mIsRepeat=%s }",
-       keymapWrapper, modifierState, ToChar(aKeyEvent.mMessage),
-       TrueOrFalse(aKeyEvent.IsShift()), TrueOrFalse(aKeyEvent.IsControl()),
-       TrueOrFalse(aKeyEvent.IsAlt()), TrueOrFalse(aKeyEvent.IsMeta()),
-       TrueOrFalse(aKeyEvent.IsAltGraph()), aKeyEvent.mKeyCode,
-       GetCharacterCodeName(static_cast<char16_t>(aKeyEvent.mCharCode)).get(),
-       ToString(aKeyEvent.mKeyNameIndex).get(),
-       GetCharacterCodeNames(aKeyEvent.mKeyValue).get(),
-       ToString(aKeyEvent.mCodeNameIndex).get(),
-       GetCharacterCodeNames(aKeyEvent.mCodeValue).get(),
-       GetKeyLocationName(aKeyEvent.mLocation).get(),
-       TrueOrFalse(aKeyEvent.mIsRepeat)));
+      "{} InitKeyEvent, modifierState={:#08X} "
+      "aKeyEvent={{ mMessage={}, isShift={}, isControl={}, "
+      "isAlt={}, isMeta={}, isAltGraph={} mKeyCode={:#02X}, mCharCode={}, "
+      "mKeyNameIndex={}, mKeyValue={}, mCodeNameIndex={}, mCodeValue={}, "
+      "mLocation={}, mIsRepeat={} }}",
+      static_cast<void*>(GetInstance()), modifierState,
+      ToChar(aKeyEvent.mMessage), TrueOrFalse(aKeyEvent.IsShift()),
+      TrueOrFalse(aKeyEvent.IsControl()), TrueOrFalse(aKeyEvent.IsAlt()),
+      TrueOrFalse(aKeyEvent.IsMeta()), TrueOrFalse(aKeyEvent.IsAltGraph()),
+      aKeyEvent.mKeyCode,
+      GetCharacterCodeName(static_cast<char16_t>(aKeyEvent.mCharCode)),
+      ToString(aKeyEvent.mKeyNameIndex),
+      GetCharacterCodeNames(aKeyEvent.mKeyValue),
+      ToString(aKeyEvent.mCodeNameIndex),
+      GetCharacterCodeNames(aKeyEvent.mCodeValue),
+      GetKeyLocationName(aKeyEvent.mLocation),
+      TrueOrFalse(aKeyEvent.mIsRepeat));
 }
 
 /* static */
