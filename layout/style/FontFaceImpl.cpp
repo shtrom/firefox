@@ -512,9 +512,8 @@ bool FontFaceImpl::SetDescriptors(const nsACString& aFamily,
                aDescriptors.mUnicodeRange) ||
       !setDesc(FontFaceDescriptorId::FontFeatureSettings,
                aDescriptors.mFeatureSettings) ||
-      (StaticPrefs::layout_css_font_variations_enabled() &&
-       !setDesc(FontFaceDescriptorId::FontVariationSettings,
-                aDescriptors.mVariationSettings)) ||
+      !setDesc(FontFaceDescriptorId::FontVariationSettings,
+               aDescriptors.mVariationSettings) ||
       !setDesc(FontFaceDescriptorId::FontDisplay, aDescriptors.mDisplay) ||
       ((!setDesc(FontFaceDescriptorId::AscentOverride,
                  aDescriptors.mAscentOverride) ||
