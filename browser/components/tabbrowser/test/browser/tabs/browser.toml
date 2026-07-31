@@ -358,11 +358,9 @@ https_first_disabled = true
 support-files = ["file_observe_height_changes.html"]
 tags = "vertical-tabs"
 skip-if = [
-  "os == 'linux' && os_version == '24.04' && nova", # Bug 2057866
   "os == 'mac' && os_version == '10.15' && arch == 'x86_64'", # Bug 1872477
   "os == 'mac' && os_version == '14.70' && arch == 'x86_64'", # Bug 1929417
   "os == 'mac' && os_version == '15.30' && arch == 'aarch64'", # Bug 1872477
-  "os == 'win' && nova", # Bug 2057866
   "vertical_tab", # Bug 1936170
 ]
 
@@ -698,10 +696,7 @@ support-files = ["file_withicon.html"]
 ["browser_tab_tooltips.js"]
 tags = "vertical-tabs"
 skip-if = [
-  "nova", # Bug 2058117
   "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && tsan", # Bug 1775653
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && opt && nova", # Bug 2055033
-  "os == 'win' && os_version == '11.26200' && arch == 'x86_64' && opt && nova", # Bug 2055033
   "vertical_tab", # Bug 1976110, fails in the "vertical-tabs" variant
 ]
 
