@@ -21,6 +21,7 @@ WPT_SUBSUITE_PATHS = {
         "media-source/mse-for-webcodecs",
     ],
     "eme": ["encrypted-media"],
+    "webrtc": ["webrtc"],
 }
 # Must stay in sync with WPT_SUBSUITES in taskcluster/gecko_taskgraph/util/chunking.py.
 

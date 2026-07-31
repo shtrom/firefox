@@ -52,6 +52,7 @@ WPT_SUBSUITES = {
         "media-source/mse-for-webcodecs",
     ],
     "eme": ["encrypted-media"],
+    "webrtc": ["webrtc"],
 }
 
 
@@ -145,12 +146,13 @@ def guess_mozinfo_from_task(task, repo="", app_version="", test_tags=[]):
 
         info[tag] = value
 
-    # wpt has canvas and webgpu as tags, lets find those
-    for tag in WPT_SUBSUITES.keys():
-        if tag in task["test-name"]:
-            info[tag] = True
-        else:
-            info[tag] = False
+    # wpt has canvas, webgpu, and webrtc as tags, lets find those
+    if "web-platform-tests" in task["test-name"]:
+        for tag in WPT_SUBSUITES.keys():
+            if tag in task["test-name"]:
+                info[tag] = True
+            else:
+                info[tag] = False
 
     # NOTE: as we are using an array here, frozenset() cannot work with a 'list'
     # this is cast to a string
