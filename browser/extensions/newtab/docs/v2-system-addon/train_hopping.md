@@ -181,20 +181,29 @@ Similar to `FeatureManifest.yaml`, these metric and ping definitions are often p
 
 This means it is possible to land new metrics and pings for New Tab, but to maintain backwards compatibility, and use those metrics and pings on the Beta and Release channel before the `metrics.yaml` or `pings.yaml` files have reached those channels.
 
-This is done via:
+This is handled automatically at build time. The `GENERATED_FILES` rules in `browser/extensions/newtab/webext-glue/moz.build` run `metrics/gen_runtime_metrics.py` to diff Nightly's metrics and pings against a given channel. The result is written to a `runtime-metrics-N.json` file, where `N` is the channel's major version (e.g. `runtime-metrics-142.json`). These files go into the objdir and are packaged into the XPI; they are **not** checked into the source tree, and no manual step is required before a train-hop. Stale versions are handled automatically, since only the currently relevant channel versions are ever generated.
+
+Generating the diff requires the current Beta and Release `metrics.yaml`/`pings.yaml`, which are fetched over the network. Whether that fetch runs depends on the build:
+
+- **Shipped XPI builds and CI builds** set `MOZ_BROWSER_NEWTAB_METRICS_FETCH=1`. For shipped XPIs this is configured in the [xpi-manifest](https://github.com/mozilla-extensions/xpi-manifest) repo; for CI it is set on the `build-extensions` task in `taskcluster/kinds/build-extensions/kind.yml`. This fetches the current Beta and Release definitions over the network, and a fetch failure fails the build, so these builds never contain stale or empty runtime metrics.
+- **Every other build** leaves the flag unset and writes an empty payload, so ordinary local and try builds have no network dependency. This is safe because runtime metrics are only consumed once the XPI is train-hopped onto Beta or Release.
+
+If you are building an XPI locally that you intend to install, for example to test a train-hop, set the flag for that build as well:
+
+```
+MOZ_BROWSER_NEWTAB_METRICS_FETCH=1 ./mach build
+```
+
+Run this as a clean build, for example after `./mach clobber`, if you have previously built without the flag.
+
+The same diff can still be produced on demand for inspection with:
 
 ```
 $ ./mach newtab channel-metrics-diff --channel beta
 $ ./mach newtab channel-metrics-diff --channel release
 ```
 
-What this does is produce two JSON files that describe any difference between the `metrics.yaml` and `pings.yaml` files from Nightly, and those same files from the Beta and Release channels. Those JSON files are named something like `runtime-metrics-142.json` where `142` refers to the major version number of the Firefox instance that the difference applies to.
-
-Those JSON files are written to `browser/extensions/newtab/webext-glue/metrics`. In advance of a train-hop, a New Tab developer should:
-
-1. Run the two `channel-metrics-diff` commands to produce those JSON files.
-2. Delete any pre-existing `runtime-metrics-N.json` files for major versions that are no longer supported on the release channel for train-hopping.
-3. Post for review and land those changes in the Nightly repository in advance of the train-hop.
+which fetches the channel definitions and writes the JSON to `browser/extensions/newtab/webext-glue/metrics`. This command is also the escape hatch if build-time generation ever needs to be disabled: revert the `GENERATED_FILES` block in `webext-glue/moz.build` to restore the static `metrics/**` packaging, then run these commands and land the resulting files as before.
 
 ## Region compatibility
 
