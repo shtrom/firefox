@@ -1905,9 +1905,6 @@ bool gfxPlatform::IsFontFormatSupported(
   if (!StaticPrefs::gfx_font_rendering_colr_v1_enabled()) {
     unsupportedTechnologies |= StyleFontFaceSourceTechFlags::COLOR_COLRV1;
   }
-  if (!StaticPrefs::layout_css_font_palette_enabled()) {
-    unsupportedTechnologies |= StyleFontFaceSourceTechFlags::PALETTES;
-  }
   if (!StaticPrefs::layout_css_font_variations_enabled()) {
     unsupportedTechnologies |= StyleFontFaceSourceTechFlags::VARIATIONS;
   }
