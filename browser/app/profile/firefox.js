@@ -3697,9 +3697,8 @@ pref("browser.contentsharing.enabled", false);
 
 // Preferences for the Firefox Referral program #2051647).
 pref("browser.referrals.enabled", false);
-// "browser.referrals.code": Per-profile referral code, locked at runtime once
-// generated. The pref can't be defined here because locking the pref resets
-// the value to the default value and we need the default value to the genereated code.
+// Per-profile referral code, locked at runtime once generated.
+pref("browser.referrals.code", "");
 
 // When enabled, Firefox ignores the distribution.ini file if global.id is MozillaOnline.
 pref("distribution.mozillaonline.ignore", true);

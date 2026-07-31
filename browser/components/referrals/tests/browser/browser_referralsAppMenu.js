@@ -20,11 +20,6 @@ async function withReferralsPref(enabled, task) {
   }
 }
 
-registerCleanupFunction(() => {
-  Services.prefs.unlockPref("browser.referrals.code");
-  Services.prefs.clearUserPref("browser.referrals.code");
-});
-
 add_task(async function test_hidden_when_disabled() {
   await withReferralsPref(false, async () => {
     await gCUITestUtils.openMainMenu();
