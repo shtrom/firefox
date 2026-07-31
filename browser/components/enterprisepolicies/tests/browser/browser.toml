@@ -61,6 +61,11 @@ https_first_disabled = true
 
 ["browser_policy_disable_fxaccounts.js"]
 
+["browser_policy_disable_launch_on_login.js"]
+run-if = [
+  "os == 'win'",
+]
+
 ["browser_policy_disable_masterpassword.js"]
 
 ["browser_policy_disable_password_reveal.js"]

@@ -29,6 +29,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   SearchService: "moz-src:///toolkit/components/search/SearchService.sys.mjs",
   QuickSuggest: "moz-src:///browser/components/urlbar/QuickSuggest.sys.mjs",
   WebsiteFilter: "resource:///modules/policies/WebsiteFilter.sys.mjs",
+  WindowsLaunchOnLogin: "resource://gre/modules/WindowsLaunchOnLogin.sys.mjs",
 
   PoliciesUtils: "resource://gre/modules/PoliciesHelpers.sys.mjs",
   addAllowDenyPermissions: "resource://gre/modules/PoliciesHelpers.sys.mjs",
@@ -1217,6 +1218,20 @@ export var Policies = {
       if (param) {
         lazy.PoliciesUtils.setAndLockPref("browser.formfill.enable", false);
       }
+    },
+  },
+
+  DisableLaunchOnLogin: {
+    onBeforeAddons(manager, param) {
+      if (!param || AppConstants.platform !== "win") {
+        return;
+      }
+      manager.disallowFeature("launchOnLogin");
+      lazy.PoliciesUtils.setAndLockPref(
+        "browser.startup.windowsLaunchOnLogin.enabled",
+        false
+      );
+      lazy.WindowsLaunchOnLogin.removeLaunchOnLogin();
     },
   },
 
