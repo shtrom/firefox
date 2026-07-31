@@ -2340,7 +2340,7 @@ pref("browser.smartwindow.isDefaultWindow", false);
 pref("browser.smartwindow.firstrun.explainerURL", "https://www.firefox.com/smart-window/?v=product");
 pref("places.semanticHistory.smartwindow.featureGate", false);
 // TODO Bug 2053495: remove with mistral release pref
-pref("browser.smartwindow.mistralRelease", false);
+pref("browser.smartwindow.mistralRelease", true);
 
 // Smart Window: Auto Tab Grouping (bug 2054500).
 pref("browser.smartwindow.autoTabGrouping.enabled", false);
