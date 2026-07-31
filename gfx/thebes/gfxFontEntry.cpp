@@ -1045,7 +1045,8 @@ gfxFloat gfxFontEntry::TrackingForCSSPx(gfxFloat aSize) const {
 void gfxFontEntry::SetupVariationRanges() {
   // No locking because this is done during initialization before any other
   // thread has access to the entry.
-  if (!gfxPlatform::HasVariationFontSupport() || !HasVariations() ||
+  if (!gfxPlatform::HasVariationFontSupport() ||
+      !StaticPrefs::layout_css_font_variations_enabled() || !HasVariations() ||
       IsUserFont()) {
     return;
   }
@@ -1175,7 +1176,12 @@ bool gfxFontEntry::HasOpticalSize() {
 
 void gfxFontEntry::GetVariationsForStyle(nsTArray<gfxFontVariation>& aResult,
                                          const gfxFontStyle& aStyle) {
-  if (!gfxPlatform::HasVariationFontSupport() || !HasVariations()) {
+  if (!gfxPlatform::HasVariationFontSupport() ||
+      !StaticPrefs::layout_css_font_variations_enabled()) {
+    return;
+  }
+
+  if (!HasVariations()) {
     return;
   }
 

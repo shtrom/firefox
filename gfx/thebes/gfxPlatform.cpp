@@ -402,6 +402,8 @@ void CrashStatsLogForwarder::CrashAction(LogReason aReason) {
 #  define GFX_PREF_CORETEXT_SHAPING "gfx.font_rendering.coretext.enabled"
 #endif
 
+#define FONT_VARIATIONS_PREF "layout.css.font-variations.enabled"
+
 static const char* kObservedPrefs[] = {"gfx.downloadable_fonts.",
                                        "gfx.font_rendering.", nullptr};
 
@@ -1048,6 +1050,16 @@ void gfxPlatform::Init() {
 
   InitNullMetadata();
   InitOpenGLConfig();
+
+  if (XRE_IsParentProcess()) {
+    Preferences::Unlock(FONT_VARIATIONS_PREF);
+    if (!gfxPlatform::HasVariationFontSupport()) {
+      // Ensure variation fonts are disabled and the pref is locked.
+      Preferences::SetBool(FONT_VARIATIONS_PREF, false, PrefValueKind::Default);
+      Preferences::SetBool(FONT_VARIATIONS_PREF, false);
+      Preferences::Lock(FONT_VARIATIONS_PREF);
+    }
+  }
 
   if (XRE_IsParentProcess()) {
     ReportTelemetry();
@@ -1889,6 +1901,15 @@ bool gfxPlatform::IsFontFormatSupported(
       StyleFontFaceSourceTechFlags::COLOR_SBIX;
   if (!StaticPrefs::gfx_downloadable_fonts_keep_color_bitmaps()) {
     unsupportedTechnologies |= StyleFontFaceSourceTechFlags::COLOR_CBDT;
+  }
+  if (!StaticPrefs::gfx_font_rendering_colr_v1_enabled()) {
+    unsupportedTechnologies |= StyleFontFaceSourceTechFlags::COLOR_COLRV1;
+  }
+  if (!StaticPrefs::layout_css_font_palette_enabled()) {
+    unsupportedTechnologies |= StyleFontFaceSourceTechFlags::PALETTES;
+  }
+  if (!StaticPrefs::layout_css_font_variations_enabled()) {
+    unsupportedTechnologies |= StyleFontFaceSourceTechFlags::VARIATIONS;
   }
   if (aTechFlags & unsupportedTechnologies) {
     return false;

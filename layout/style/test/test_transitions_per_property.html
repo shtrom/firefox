@@ -363,7 +363,10 @@ if (IsCSSPropertyPrefEnabled("layout.css.backdrop-filter.enabled")) {
   supported_properties["backdrop-filter"] = [ test_filter_transition ];
 }
 
-supported_properties["font-variation-settings"] = [ test_font_variations_transition ];
+if (IsCSSPropertyPrefEnabled("layout.css.font-variations.enabled")) {
+  supported_properties["font-variation-settings"] = [ test_font_variations_transition ];
+}
+
 supported_properties["contain-intrinsic-width"] = [ test_length_transition, test_auto_with_length_transition ];
 supported_properties["contain-intrinsic-height"] = supported_properties["contain-intrinsic-width"];
 supported_properties["content-visibility"] = [test_content_visibility_transition];

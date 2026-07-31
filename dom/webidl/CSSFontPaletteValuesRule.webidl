@@ -6,7 +6,7 @@
  * https://drafts.csswg.org/css-fonts/#om-fontpalettevalues
  */
 
-[Exposed=Window]
+[Exposed=Window, Pref="layout.css.font-palette.enabled"]
 interface CSSFontPaletteValuesRule : CSSRule {
   readonly attribute UTF8String name;
   readonly attribute UTF8String fontFamily;

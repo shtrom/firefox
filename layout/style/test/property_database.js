@@ -5654,15 +5654,12 @@ var gCSSProperties = {
       "font-feature-settings",
       "font-language-override",
       "font-kerning",
-      "font-optical-sizing",
       "font-variant-alternates",
       "font-variant-caps",
       "font-variant-east-asian",
-      "font-variant-emoji",
       "font-variant-ligatures",
       "font-variant-numeric",
       "font-variant-position",
-      "font-variation-settings",
     ],
     initial_values: [
       gInitialFontFamilyIsSansSerif ? "medium sans-serif" : "medium serif",
@@ -5801,31 +5798,6 @@ var gCSSProperties = {
     initial_values: ["normal"],
     other_values: ["'ENG'", "'TRK'", '"TRK"', "'N\\'Ko'"],
     invalid_values: ["TRK", "ja"],
-  },
-  "font-optical-sizing": {
-    domProp: "fontOpticalSizing",
-    inherited: true,
-    type: CSS_TYPE_LONGHAND,
-    applies_to_first_letter: true,
-    applies_to_first_line: true,
-    applies_to_placeholder: true,
-    applies_to_marker: true,
-    applies_to_cue: true,
-    initial_values: ["auto"],
-    other_values: ["none"],
-    invalid_values: ["on"],
-  },
-  "font-palette": {
-    domProp: "fontPalette",
-    inherited: true,
-    type: CSS_TYPE_LONGHAND,
-    applies_to_first_letter: true,
-    applies_to_first_line: true,
-    applies_to_marker: true,
-    applies_to_placeholder: true,
-    initial_values: ["normal"],
-    other_values: ["light", "dark", "--custom"],
-    invalid_values: ["custom"],
   },
   "font-size": {
     domProp: "fontSize",
@@ -6071,7 +6043,6 @@ var gCSSProperties = {
       "font-variant-alternates",
       "font-variant-caps",
       "font-variant-east-asian",
-      "font-variant-emoji",
       "font-variant-ligatures",
       "font-variant-numeric",
       "font-variant-position",
@@ -6191,25 +6162,6 @@ var gCSSProperties = {
       "full-width proportional-width",
       "ruby simplified ruby",
       "jis78 ruby simplified",
-    ],
-  },
-  "font-variant-emoji": {
-    domProp: "fontVariantEmoji",
-    inherited: true,
-    type: CSS_TYPE_LONGHAND,
-    applies_to_first_letter: true,
-    applies_to_first_line: true,
-    applies_to_marker: true,
-    applies_to_placeholder: true,
-    applies_to_cue: true,
-    initial_values: ["normal"],
-    other_values: ["text", "emoji", "unicode"],
-    invalid_values: [
-      "none",
-      "auto",
-      "text emoji",
-      "auto text",
-      "normal, unicode",
     ],
   },
   "font-variant-ligatures": {
@@ -6333,44 +6285,6 @@ var gCSSProperties = {
       "1000",
     ],
     invalid_values: ["0", "1001", "calc(10%)"],
-  },
-  "font-variation-settings": {
-    domProp: "fontVariationSettings",
-    inherited: true,
-    type: CSS_TYPE_LONGHAND,
-    applies_to_first_letter: true,
-    applies_to_first_line: true,
-    applies_to_placeholder: true,
-    applies_to_marker: true,
-    applies_to_cue: true,
-    initial_values: ["normal"],
-    other_values: [
-      "'wdth' 0",
-      "'wdth' -.1",
-      '"wdth" 1',
-      "'wdth' 2, 'wght' 3",
-      '"XXXX" 0',
-      "'vert' calc(2.5)",
-    ],
-    invalid_values: [
-      "wdth",
-      "wdth 1", // unquoted tags
-      "'wdth'",
-      "'wdth' 'wght'",
-      "'wdth', 'wght'", // missing values
-      "'' 1",
-      "'wid' 1",
-      "'width' 1", // incorrect tag lengths
-      "'wd\th' 1", // non-graphic character in tag
-      "'wdth' 1 'wght' 2", // missing comma between pairs
-      "'wdth' 1,", // trailing comma
-      "'wdth' 1 , , 'wght' 2", // extra comma
-      "'wdth', 1", // comma within pair
-    ],
-    unbalanced_values: [
-      "'wdth\" 1",
-      "\"wdth' 1", // mismatched quotes
-    ],
   },
   height: {
     domProp: "height",
@@ -12484,6 +12398,103 @@ gCSSProperties["text-justify"] = {
   other_values: ["none", "inter-word", "inter-character", "distribute"],
   invalid_values: [],
 };
+
+if (IsCSSPropertyPrefEnabled("layout.css.font-variations.enabled")) {
+  gCSSProperties["font-variation-settings"] = {
+    domProp: "fontVariationSettings",
+    inherited: true,
+    type: CSS_TYPE_LONGHAND,
+    applies_to_first_letter: true,
+    applies_to_first_line: true,
+    applies_to_placeholder: true,
+    applies_to_marker: true,
+    applies_to_cue: true,
+    initial_values: ["normal"],
+    other_values: [
+      "'wdth' 0",
+      "'wdth' -.1",
+      '"wdth" 1',
+      "'wdth' 2, 'wght' 3",
+      '"XXXX" 0',
+    ],
+    invalid_values: [
+      "wdth",
+      "wdth 1", // unquoted tags
+      "'wdth'",
+      "'wdth' 'wght'",
+      "'wdth', 'wght'", // missing values
+      "'' 1",
+      "'wid' 1",
+      "'width' 1", // incorrect tag lengths
+      "'wd\th' 1", // non-graphic character in tag
+      "'wdth' 1 'wght' 2", // missing comma between pairs
+      "'wdth' 1,", // trailing comma
+      "'wdth' 1 , , 'wght' 2", // extra comma
+      "'wdth', 1", // comma within pair
+    ],
+    unbalanced_values: [
+      "'wdth\" 1",
+      "\"wdth' 1", // mismatched quotes
+    ],
+  };
+  gCSSProperties["font"].subproperties.push("font-variation-settings");
+  gCSSProperties["font-optical-sizing"] = {
+    domProp: "fontOpticalSizing",
+    inherited: true,
+    type: CSS_TYPE_LONGHAND,
+    applies_to_first_letter: true,
+    applies_to_first_line: true,
+    applies_to_placeholder: true,
+    applies_to_marker: true,
+    applies_to_cue: true,
+    initial_values: ["auto"],
+    other_values: ["none"],
+    invalid_values: ["on"],
+  };
+  gCSSProperties["font"].subproperties.push("font-optical-sizing");
+  gCSSProperties["font-variation-settings"].other_values.push(
+    "'vert' calc(2.5)"
+  );
+}
+
+if (IsCSSPropertyPrefEnabled("layout.css.font-palette.enabled")) {
+  gCSSProperties["font-palette"] = {
+    domProp: "fontPalette",
+    inherited: true,
+    type: CSS_TYPE_LONGHAND,
+    applies_to_first_letter: true,
+    applies_to_first_line: true,
+    applies_to_marker: true,
+    applies_to_placeholder: true,
+    initial_values: ["normal"],
+    other_values: ["light", "dark", "--custom"],
+    invalid_values: ["custom"],
+  };
+}
+
+if (IsCSSPropertyPrefEnabled("layout.css.font-variant-emoji.enabled")) {
+  gCSSProperties["font"].subproperties.push("font-variant-emoji");
+  gCSSProperties["font-variant"].subproperties.push("font-variant-emoji");
+  gCSSProperties["font-variant-emoji"] = {
+    domProp: "fontVariantEmoji",
+    inherited: true,
+    type: CSS_TYPE_LONGHAND,
+    applies_to_first_letter: true,
+    applies_to_first_line: true,
+    applies_to_marker: true,
+    applies_to_placeholder: true,
+    applies_to_cue: true,
+    initial_values: ["normal"],
+    other_values: ["text", "emoji", "unicode"],
+    invalid_values: [
+      "none",
+      "auto",
+      "text emoji",
+      "auto text",
+      "normal, unicode",
+    ],
+  };
+}
 
 var isGridTemplateMasonryValueEnabled = IsCSSPropertyPrefEnabled(
   "layout.css.grid-template-masonry-value.enabled"

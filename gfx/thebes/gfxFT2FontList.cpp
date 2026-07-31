@@ -1583,6 +1583,15 @@ void gfxFT2FontList::FindFonts() {
       // Font API doesn't seem to work. Use legacy way.
       useSystemFontAPI = false;
     }
+
+    if (!StaticPrefs::gfx_font_rendering_colr_v1_enabled()) {
+      // We turn off COLRv1 fonts support. Newer android versions have
+      // COLRv1 emoji font, and a legacy and hidden CBDT font we understand,
+      // so try to find NotoColorEmojiLegacy.ttf explicitly for now.
+      nsAutoCString legacyEmojiFont(androidFontsRoot);
+      legacyEmojiFont.Append("/NotoColorEmojiLegacy.ttf");
+      AppendFacesFromFontFile(legacyEmojiFont, mFontNameCache.get(), kStandard);
+    }
   }
 
   if (!useSystemFontAPI)
