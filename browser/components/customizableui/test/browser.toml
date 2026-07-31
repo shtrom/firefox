@@ -74,9 +74,6 @@ skip-if = [
 
 ["browser_884402_customize_from_overflow.js"]
 tags = "overflowable-toolbar"
-skip-if = [
-  "nova", # Bug 2057841
-]
 
 ["browser_885052_customize_mode_observers_disabed.js"]
 tags = "fullscreen"

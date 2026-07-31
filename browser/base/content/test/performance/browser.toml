@@ -74,7 +74,6 @@ run-if = [
   "nightly_build", # Requires StartupRecorder.sys.mjs, which isn't shipped everywhere by default
 ]
 skip-if = [
-  "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && nova", # Bug 2057516
   "os == 'mac' && os_version == '15.30' && arch == 'aarch64' && opt", # Bug 1889278
 ]
 
