@@ -3540,12 +3540,6 @@ pref("cookiebanners.ui.desktop.showCallout", false);
 
 pref("ui.new-webcompat-reporter.enabled", true);
 
-#if defined(EARLY_BETA_OR_EARLIER)
-pref("ui.new-webcompat-reporter.send-more-info-link", true);
-#else
-pref("ui.new-webcompat-reporter.send-more-info-link", false);
-#endif
-
 # 0 = disabled, 1 = reason optional, 2 = reason required.
 pref("ui.new-webcompat-reporter.reason-dropdown", 2);
 
