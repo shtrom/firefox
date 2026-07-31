@@ -1302,11 +1302,23 @@ class UrlbarInputTestUtils {
       searchMode.entry = "oneoff";
     }
 
-    let oneOff = buttons.find(o =>
-      searchMode.engineName
-        ? o.engine.name == searchMode.engineName
-        : o.source == searchMode.source
-    );
+    // A rebuild replaces the one-off buttons, so one found before it runs is
+    // detached by the time it would be clicked. Resolve the button after the
+    // rebuild settles and confirm it is still in the document.
+    let oneOff;
+    await lazy.TestUtils.waitForCondition(() => {
+      if (oneOffs._rebuilding) {
+        return false;
+      }
+      oneOff = oneOffs
+        .getSelectableButtons(true)
+        .find(o =>
+          searchMode.engineName
+            ? o.engine.name == searchMode.engineName
+            : o.source == searchMode.source
+        );
+      return oneOff?.isConnected;
+    }, "Waiting for a connected one-off button for the search mode");
     this.Assert.ok(oneOff, "Found one-off button for search mode");
     this.EventUtils.synthesizeMouseAtCenter(oneOff, {}, window);
     await this.promiseSearchComplete(window);
