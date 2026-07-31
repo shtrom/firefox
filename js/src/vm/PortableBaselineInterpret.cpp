@@ -1348,10 +1348,12 @@ uint64_t ICInterpretOps(uint64_t arg0, uint64_t arg1, ICStub* stub,
         ObjOperandId objId = cacheIRReader.objOperandId();
         JSObject* obj = reinterpret_cast<JSObject*>(READ_REG(objId.id()));
         const JSClass* clasp = obj->getClass();
+        // This should match MacroAssembler::branchIfIsArrayBufferMaybeShared
         if (clasp == &FixedLengthArrayBufferObject::class_ ||
             clasp == &FixedLengthSharedArrayBufferObject::class_ ||
             clasp == &ResizableArrayBufferObject::class_ ||
-            clasp == &GrowableSharedArrayBufferObject::class_) {
+            clasp == &GrowableSharedArrayBufferObject::class_ ||
+            clasp == &ImmutableArrayBufferObject::class_) {
           FAIL_IC();
         }
         DISPATCH_CACHEOP();
