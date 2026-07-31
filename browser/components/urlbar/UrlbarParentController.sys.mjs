@@ -174,6 +174,27 @@ export class UrlbarParentController {
   }
 
   /**
+   * Resolves the `<browser>` a `browserId` refers to. A content sender always
+   * targets its own tab, so its `browserId` is ignored; only a chrome sender
+   * resolves a pinned id globally.
+   *
+   * @param {?number} browserId
+   *   The browser id a chrome sender pinned, if any.
+   * @returns {?MozBrowser}
+   *   The target `<browser>`, or null if there's nothing to resolve.
+   */
+  resolveTargetBrowser(browserId) {
+    let browsingContext = this.#actor?.browsingContext;
+    if (browsingContext?.isContent) {
+      return browsingContext.top.embedderElement;
+    }
+    let target = /** @type {?CanonicalBrowsingContext} */ (
+      browserId ? BrowsingContext.getCurrentTopByBrowserId(browserId) : null
+    );
+    return target?.embedderElement ?? null;
+  }
+
+  /**
    * The view.
    *
    * @type {UrlbarView}
@@ -279,9 +300,7 @@ export class UrlbarParentController {
 
     let { gBrowser } = this.browserWindow;
     let browser =
-      (browserId &&
-        BrowsingContext.getCurrentTopByBrowserId(browserId)?.embedderElement) ||
-      gBrowser.selectedBrowser;
+      this.resolveTargetBrowser(browserId) || gBrowser.selectedBrowser;
     // Capture the location change counter before awaiting, to verify below that
     // the browser didn't navigate in the meanwhile.
     let lastLocationChange =
@@ -502,8 +521,7 @@ export class UrlbarParentController {
    */
   recordSearch({ engineId, searchSource, details, browserId }) {
     let browser =
-      (browserId &&
-        BrowsingContext.getCurrentTopByBrowserId(browserId)?.embedderElement) ||
+      this.resolveTargetBrowser(browserId) ||
       this.browserWindow.gBrowser.selectedBrowser;
 
     // Record when the user uses the search bar to be used for message
@@ -582,8 +600,7 @@ export class UrlbarParentController {
    */
   checkKeywordURIFixup(searchString, browserId) {
     let browser =
-      (browserId &&
-        BrowsingContext.getCurrentTopByBrowserId(browserId)?.embedderElement) ||
+      this.resolveTargetBrowser(browserId) ||
       this.browserWindow.gBrowser.selectedBrowser;
     let fixupInfo = lazy.UrlbarUtils.getURIFixupInfo(
       searchString,
@@ -846,13 +863,8 @@ export class UrlbarParentController {
    *   content-process input can't resolve the selected browser itself.
    */
   loadURL({ url, where, params, browserId, userTypedValue }) {
-    // Prefer the browser the child pinned at commit; otherwise a content-process
-    // moz-urlbar loads its own tab (identified by the actor's browsing context),
-    // falling back to the chrome window's selected tab.
     let browser =
-      (browserId &&
-        BrowsingContext.getCurrentTopByBrowserId(browserId)?.embedderElement) ||
-      this.#actor?.browsingContext?.top?.embedderElement ||
+      this.resolveTargetBrowser(browserId) ||
       this.browserWindow.gBrowser.selectedBrowser;
 
     if (this.#isAddressbar) {
@@ -903,9 +915,7 @@ export class UrlbarParentController {
    *   visible.
    */
   focusBrowser(browserId) {
-    let browser =
-      browserId &&
-      BrowsingContext.getCurrentTopByBrowserId(browserId)?.embedderElement;
+    let browser = this.resolveTargetBrowser(browserId);
     let { selectedBrowser } = this.browserWindow.gBrowser;
     if (browser && browser == selectedBrowser) {
       selectedBrowser.focus();
@@ -2168,8 +2178,7 @@ export class TelemetryEvent {
       await this.handleBounceEventTrigger(browserId);
     }
 
-    let browser =
-      BrowsingContext.getCurrentTopByBrowserId(browserId)?.embedderElement;
+    let browser = this._controller.resolveTargetBrowser(browserId);
     if (!browser) {
       return;
     }
@@ -2300,8 +2309,7 @@ export class TelemetryEvent {
    *   The bounce browser's stable browser id.
    */
   trackBounceBrowser(browserId) {
-    let browser =
-      BrowsingContext.getCurrentTopByBrowserId(browserId)?.embedderElement;
+    let browser = this._controller.resolveTargetBrowser(browserId);
     if (browser) {
       this.#bounceBrowsers.set(browserId, browser);
     }
@@ -2323,7 +2331,7 @@ export class TelemetryEvent {
     let { built, searchSource, startTime, browserId } = payload;
     let browser =
       this.#bounceBrowsers.get(browserId) ??
-      BrowsingContext.getCurrentTopByBrowserId(browserId)?.embedderElement;
+      this._controller.resolveTargetBrowser(browserId);
     this.#bounceBrowsers.delete(browserId);
     if (!browser || !built) {
       return;
