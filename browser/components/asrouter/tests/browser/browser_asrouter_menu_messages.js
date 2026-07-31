@@ -258,34 +258,19 @@ function assertNoMessageInMenuSource(source, win = window) {
   Assert.ok(!messageEl, "Should not have found an menu-message");
 
   if (source === MenuMessage.SOURCES.APP_MENU) {
-    // The zap gradient should be visible.
+    // The zap gradient and the default sign-in button should be visible.
     Assert.ok(
       BrowserTestUtils.isVisible(
         win.PanelUI.mainView.querySelector("#appMenu-fxa-separator")
       ),
       "Zap gradient separator is visible."
     );
-    // When signed out, the default sign-in affordance is shown: the richer
-    // promo when nothing else occupies the top of the menu, or the compact
-    // sign-in row when an update banner is present.
-    const updateBanner = win.PanelUI.mainView.querySelector(
-      "#appMenu-update-banner"
+    Assert.ok(
+      BrowserTestUtils.isVisible(
+        win.PanelUI.mainView.querySelector("#appMenu-fxa-status2")
+      ),
+      "Default FxA sign-in button is visible."
     );
-    if (updateBanner && BrowserTestUtils.isVisible(updateBanner)) {
-      Assert.ok(
-        BrowserTestUtils.isVisible(
-          win.PanelUI.mainView.querySelector("#appMenu-fxa-status2")
-        ),
-        "Compact FxA sign-in row is visible when an update banner is present."
-      );
-    } else {
-      Assert.ok(
-        BrowserTestUtils.isVisible(
-          win.PanelUI.mainView.querySelector("#appMenu-fxa-sign-in-promo")
-        ),
-        "Default FxA sign-in promo is visible."
-      );
-    }
   } else if (source === MenuMessage.SOURCES.PXI_MENU) {
     Assert.ok(
       BrowserTestUtils.isVisible(

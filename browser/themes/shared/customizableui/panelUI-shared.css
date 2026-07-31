@@ -804,32 +804,13 @@ toolbarbutton[constrain-size="true"][cui-areatype="panel"] > .toolbarbutton-badg
   }
 }
 
-/* When signed out with no menu message or update banner taking up the top of
-   the app menu, show the richer sign-in promo in place of the compact
-   "Sync and Save Data" sign-in row. */
-#appMenu-fxa-sign-in-promo {
-  display: none;
-}
-
-:root[fxastatus="not_configured"]
-  #appMenu-mainView:not([showing-fxa-menu-message], [showing-default-cta-menu-message]):not(:has(#appMenu-update-banner:not([hidden]))) {
-  & #appMenu-fxa-status2 {
-    display: none;
-  }
-
-  & #appMenu-fxa-sign-in-promo {
-    display: flex;
-  }
-}
-
 #PanelUI-fxa[showing-fxa-menu-message] #PanelUI-fxa-menu-manage-account-button,
 #PanelUI-fxa[showing-fxa-menu-message] #PanelUI-fxa-menu-sign-in-promo,
 #PanelUI-fxa[showing-fxa-menu-message] #PanelUI-fxa-menu-signed-out-card {
   display: none;
 }
 
-#PanelUI-fxa-menu-sign-in-promo,
-#appMenu-fxa-sign-in-promo {
+#PanelUI-fxa-menu-sign-in-promo {
   background-color: var(--promo-background-color-vibrant);
   border-radius: var(--promo-border-radius);
   color: var(--promo-message-text-color-vibrant);
@@ -838,7 +819,7 @@ toolbarbutton[constrain-size="true"][cui-areatype="panel"] > .toolbarbutton-badg
   /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
   gap: var(--dimension-8);
   overflow: hidden;
-  margin: 0 var(--space-medium) var(--space-medium);
+  margin: var(--panel-padding-block);
 
   & .fxa-menu-sign-in-promo-image {
     width: var(--icon-size-xlarge);

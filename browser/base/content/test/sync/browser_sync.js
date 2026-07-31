@@ -416,22 +416,17 @@ add_task(async function test_ui_state_unconfigured() {
 
   checkFxAAvatar("not_configured");
 
+  let signedOffLabel = gSync.fluentStrings.formatValueSync(
+    "appmenu-fxa-signed-in-label"
+  );
+
   await openMainPanel();
 
-  // With no menu message or update banner present, the app menu shows the
-  // sign-in promo in place of the compact "Sync and Save Data" sign-in row.
-  ok(
-    BrowserTestUtils.isVisible(
-      PanelMultiView.getViewNode(document, "appMenu-fxa-sign-in-promo")
-    ),
-    "sign-in promo is visible in the app menu when signed out"
-  );
-  ok(
-    BrowserTestUtils.isHidden(
-      PanelMultiView.getViewNode(document, "appMenu-fxa-status2")
-    ),
-    "compact sign-in row is hidden when the promo is shown"
-  );
+  checkPanelUIStatusBar({
+    description: signedOffLabel,
+    titleHidden: true,
+    hideFxAText: false,
+  });
   await closeTabAndMainPanel();
 
   await openFxaPanel();
@@ -1570,7 +1565,7 @@ async function checkSignedOutCard(email, messageL10nId) {
   );
 }
 
-function checkManageAccountButton(expectedLabel) {
+function checkManageAccountButton(email) {
   const manageButton = PanelMultiView.getViewNode(
     document,
     "PanelUI-fxa-menu-manage-account-button"
@@ -1584,8 +1579,8 @@ function checkManageAccountButton(expectedLabel) {
       document,
       "PanelUI-fxa-menu-manage-account-email"
     ).value,
-    expectedLabel,
-    "Manage account button shows the account display name or email"
+    email,
+    "Manage account button shows the account email"
   );
 }
 
