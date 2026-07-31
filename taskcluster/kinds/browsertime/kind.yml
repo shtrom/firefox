@@ -23,7 +23,7 @@ task-defaults:
     attributes:
         retrigger: true
     use-python: system
-    use-uv: true
+    use-uv: false
     require-signed-extensions:
         by-release-type:
             release|esr.*: true
