@@ -27,6 +27,9 @@ void nsSplittableFrame::Init(nsIContent* aContent, nsContainerFrame* aParent,
     // Hook the frame into the flow
     SetPrevInFlow(aPrevInFlow);
     aPrevInFlow->SetNextInFlow(this);
+  } else {
+    mFirstContinuation = this;
+    mFirstInFlow = this;
   }
   nsIFrame::Init(aContent, aParent, aPrevInFlow);
 }
@@ -227,11 +230,12 @@ void nsSplittableFrame::UpdateFirstContinuationAndFirstInFlowCache() {
       // next-continuations here, but that would result in overall O(n^2)
       // behavior when a frame list is destroyed from the front. To avoid that
       // pathological behavior, we simply purge the cached values.
-      for (nsSplittableFrame* f = this; f;
+      for (auto* f = static_cast<nsSplittableFrame*>(GetNextContinuation()); f;
            f = static_cast<nsSplittableFrame*>(f->GetNextContinuation())) {
         f->mFirstContinuation = nullptr;
       }
     }
+    mFirstContinuation = this;
   }
 
   nsIFrame* oldCachedFirstInFlow = mFirstInFlow;
@@ -263,11 +267,12 @@ void nsSplittableFrame::UpdateFirstContinuationAndFirstInFlowCache() {
         // next-in-flows here, but that would result in overall O(n^2)
         // behavior when a frame list is destroyed from the front. To avoid that
         // pathological behavior, we simply purge the cached values.
-        for (nsSplittableFrame* f = this; f;
+        for (auto* f = static_cast<nsSplittableFrame*>(GetNextInFlow()); f;
              f = static_cast<nsSplittableFrame*>(f->GetNextInFlow())) {
           f->mFirstInFlow = nullptr;
         }
       }
+      mFirstInFlow = this;
     }
 
     DebugOnly<nsSplittableFrame*> nextInFlow =
