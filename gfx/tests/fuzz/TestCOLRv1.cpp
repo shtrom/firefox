@@ -74,7 +74,6 @@ static int FuzzingRunCOLRv1(const uint8_t* data, size_t size) {
 }
 
 int FuzzingInitCOLRv1(int* argc, char*** argv) {
-  Preferences::SetBool("gfx.font_rendering.colr_v1.enabled", true);
   return 0;
 }
 

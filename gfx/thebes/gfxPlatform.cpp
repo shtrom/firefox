@@ -1890,9 +1890,6 @@ bool gfxPlatform::IsFontFormatSupported(
   if (!StaticPrefs::gfx_downloadable_fonts_keep_color_bitmaps()) {
     unsupportedTechnologies |= StyleFontFaceSourceTechFlags::COLOR_CBDT;
   }
-  if (!StaticPrefs::gfx_font_rendering_colr_v1_enabled()) {
-    unsupportedTechnologies |= StyleFontFaceSourceTechFlags::COLOR_COLRV1;
-  }
   if (aTechFlags & unsupportedTechnologies) {
     return false;
   }
