@@ -531,7 +531,7 @@ class IMContextWrapper final : public TextEventDispatcherListener {
   gboolean OnRetrieveSurroundingNative(GtkIMContext* aContext);
   gboolean OnDeleteSurroundingNative(GtkIMContext* aContext, gint aOffset,
                                      gint aNChars);
-  void OnCommitCompositionNative(GtkIMContext* aContext, const gchar* aString);
+  void OnCommitCompositionNative(GtkIMContext*, const gchar*);
   void OnChangeCompositionNative(GtkIMContext* aContext);
   void OnStartCompositionNative(GtkIMContext* aContext);
   void OnEndCompositionNative(GtkIMContext* aContext);
