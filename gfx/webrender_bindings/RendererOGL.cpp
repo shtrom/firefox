@@ -552,7 +552,7 @@ void RendererOGL::MaybeCaptureScreenPixels() {
                          LOCAL_GL_LINEAR);
 
   if (EGLSync sync =
-          egl->fCreateSync(LOCAL_EGL_SYNC_NATIVE_FENCE_ANDROID, nullptr)) {
+          egl->fCreateSyncKHR(LOCAL_EGL_SYNC_NATIVE_FENCE_ANDROID, nullptr)) {
     auto fence = UniqueFileHandle(egl->fDupNativeFenceFDANDROID(sync));
     if (fence) {
       request.mHardwareBuffer->SetAcquireFence(std::move(fence));

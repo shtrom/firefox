@@ -727,9 +727,15 @@ bool GLLibraryEGL::Init(nsACString* const out_failureId) {
     (void)fnLoadSymbols(symbols);
   }
   {
+    // EGL_KHR_fence_sync
     const SymLoadStruct symbols[] = {
         SYMBOL(CreateSyncKHR), SYMBOL(DestroySyncKHR),
         SYMBOL(ClientWaitSyncKHR), SYMBOL(GetSyncAttribKHR), END_OF_SYMBOLS};
+    (void)fnLoadSymbols(symbols);
+  }
+  {
+    // Core EGL 1.5 version
+    const SymLoadStruct symbols[]{SYMBOL(CreateSync), END_OF_SYMBOLS};
     (void)fnLoadSymbols(symbols);
   }
   {
