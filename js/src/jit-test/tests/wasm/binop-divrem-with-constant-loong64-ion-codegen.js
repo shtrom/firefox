@@ -16,41 +16,33 @@ const i32_div_s = [
   // Power of two divisor
   {
     divisor: 1,
-    expected: `slli\\.w      \\$a3, \\$a0, 0x0
-               slli\\.w      \\$a1, \\$a3, 0x0
-               slli\\.w      \\$a0, \\$a1, 0x0`,
+    expected: `slli\\.w      \\$a0, \\$a0, 0x0`,
   },
   {
     divisor: 2,
-    expected: `slli\\.w      \\$a3, \\$a0, 0x0
-               slli\\.w      \\$a1, \\$a3, 0x0
-               srli\\.w      \\$a2, \\$a1, 0x1f
-               add\\.w       \\$a2, \\$a2, \\$a1
-               srai\\.w      \\$a0, \\$a2, 0x1`,
+    expected: `srli\\.w      \\$a1, \\$a0, 0x1f
+               add\\.w       \\$a1, \\$a1, \\$a0
+               srai\\.w      \\$a0, \\$a1, 0x1`,
   },
   {
     divisor: 4,
-    expected: `slli\\.w      \\$a3, \\$a0, 0x0
-               slli\\.w      \\$a1, \\$a3, 0x0
-               srai\\.w      \\$a2, \\$a1, 0x1f
-               srli\\.w      \\$a2, \\$a2, 0x1e
-               add\\.w       \\$a2, \\$a2, \\$a1
-               srai\\.w      \\$a0, \\$a2, 0x2`,
+    expected: `srai\\.w      \\$a1, \\$a0, 0x1f
+               srli\\.w      \\$a1, \\$a1, 0x1e
+               add\\.w       \\$a1, \\$a1, \\$a0
+               srai\\.w      \\$a0, \\$a1, 0x2`,
   },
 
   // Division by -1 needs an overflow check.
   {
     divisor: -1,
-    expected: `slli\\.w      \\$a3, \\$a0, 0x0
-               slli\\.w      \\$a1, \\$a3, 0x0
-               lu12i\\.w     \\$t6, -524288
-               bne           \\$a1, \\$t6, 24 -> ${HEX}+
+    expected: `lu12i\\.w     \\$t6, -524288
+               bne           \\$a0, \\$t6, 24 -> ${HEX}+
                ${NopIns}
                bge           \\$zero, \\$zero, 12 -> ${HEX}+
                ${NopIns}
                ${NopIns}
                ${WasmTrapIns}
-               sub\\.w       \\$a0, \\$zero, \\$a1`,
+               sub\\.w       \\$a0, \\$zero, \\$a0`,
   },
 
   // Other divisors.
@@ -131,21 +123,15 @@ const i32_div_u = [
   // Power of two divisor
   {
     divisor: 1,
-    expected: `slli\\.w      \\$a3, \\$a0, 0x0
-               slli\\.w      \\$a1, \\$a3, 0x0
-               slli\\.w      \\$a0, \\$a1, 0x0`,
+    expected: `slli\\.w      \\$a0, \\$a0, 0x0`,
   },
   {
     divisor: 2,
-    expected: `slli\\.w      \\$a3, \\$a0, 0x0
-               slli\\.w      \\$a1, \\$a3, 0x0
-               srli\\.w      \\$a0, \\$a1, 0x1`,
+    expected: `srli\\.w      \\$a0, \\$a0, 0x1`,
   },
   {
     divisor: 4,
-    expected: `slli\\.w      \\$a3, \\$a0, 0x0
-               slli\\.w      \\$a1, \\$a3, 0x0
-               srli\\.w      \\$a0, \\$a1, 0x2`,
+    expected: `srli\\.w      \\$a0, \\$a0, 0x2`,
   },
 
   // Other divisors.
@@ -452,14 +438,12 @@ for (let {divisor, expected} of i64_div_u) {
 //////////////
 
 function i32RemPowTwoExpected(msb) {
-  return `slli\\.w      \\$a2, \\$a0, 0x0
-          slli\\.w      \\$a1, \\$a2, 0x0
-          blt           \\$a1, \\$zero, 20 -> ${HEX}+
+  return `blt           \\$a0, \\$zero, 20 -> ${HEX}+
           ${NopIns}
-          bstrpick\\.w  \\$a0, \\$a1, ${msb}, 0x0
+          bstrpick\\.w  \\$a0, \\$a0, ${msb}, 0x0
           beq           \\$zero, \\$zero, 20 -> ${HEX}+
           ${NopIns}
-          sub\\.w       \\$a0, \\$zero, \\$a1
+          sub\\.w       \\$a0, \\$zero, \\$a0
           bstrpick\\.w  \\$a0, \\$a0, ${msb}, 0x0
           sub\\.w       \\$a0, \\$zero, \\$a0`;
 }
@@ -478,9 +462,7 @@ const i32_rem_s = [
   // Power of two divisor
   {
     divisor: 1,
-    expected: `slli\\.w      \\$a2, \\$a0, 0x0
-               slli\\.w      \\$a1, \\$a2, 0x0
-               addi\\.w      \\$a0, \\$zero, 0`,
+    expected: `addi\\.w      \\$a0, \\$zero, 0`,
   },
   {
     divisor: 2,
@@ -534,39 +516,27 @@ const i32_rem_u = [
   // Power of two divisor
   {
     divisor: 1,
-    expected: `slli\\.w      \\$a2, \\$a0, 0x0
-               slli\\.w      \\$a1, \\$a2, 0x0
-               addi\\.w      \\$a0, \\$zero, 0`,
+    expected: `addi\\.w      \\$a0, \\$zero, 0`,
   },
   {
     divisor: 2,
-    expected: `slli\\.w      \\$a2, \\$a0, 0x0
-               slli\\.w      \\$a1, \\$a2, 0x0
-               bstrpick\\.w  \\$a0, \\$a1, 0x0, 0x0`,
+    expected: `bstrpick\\.w  \\$a0, \\$a0, 0x0, 0x0`,
   },
   {
     divisor: 4,
-    expected: `slli\\.w      \\$a2, \\$a0, 0x0
-               slli\\.w      \\$a1, \\$a2, 0x0
-               bstrpick\\.w  \\$a0, \\$a1, 0x1, 0x0`,
+    expected: `bstrpick\\.w  \\$a0, \\$a0, 0x1, 0x0`,
   },
   {
     divisor: 0x100,
-    expected: `slli\\.w      \\$a2, \\$a0, 0x0
-               slli\\.w      \\$a1, \\$a2, 0x0
-               bstrpick\\.w  \\$a0, \\$a1, 0x7, 0x0`,
+    expected: `bstrpick\\.w  \\$a0, \\$a0, 0x7, 0x0`,
   },
   {
     divisor: 0x10000,
-    expected: `slli\\.w      \\$a2, \\$a0, 0x0
-               slli\\.w      \\$a1, \\$a2, 0x0
-               bstrpick\\.w  \\$a0, \\$a1, 0xf, 0x0`,
+    expected: `bstrpick\\.w  \\$a0, \\$a0, 0xf, 0x0`,
   },
   {
     divisor: 0x8000_0000,
-    expected: `slli\\.w      \\$a2, \\$a0, 0x0
-               slli\\.w      \\$a1, \\$a2, 0x0
-               bstrpick\\.w  \\$a0, \\$a1, 0x1e, 0x0`,
+    expected: `bstrpick\\.w  \\$a0, \\$a0, 0x1e, 0x0`,
   },
 ];
 
