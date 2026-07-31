@@ -10,6 +10,8 @@ https_first_disabled = true
 ["browser_cancel_caret_browsing_in_content.js"]
 support-files = ["file_empty.html"]
 
+["browser_gfxDebugShortcuts.js"]
+
 ["browser_popup_keyNav.js"]
 https_first_disabled = true
 support-files = ["focusableContent.html"]
