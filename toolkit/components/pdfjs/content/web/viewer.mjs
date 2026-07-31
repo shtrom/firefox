@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.2.112
- * pdfjsBuild = 61acf9317
+ * pdfjsVersion = 6.2.120
+ * pdfjsBuild = a80897dc9
  */
 
 ;// ./web/ui_utils.js
@@ -904,7 +904,7 @@ const {
 } = globalThis.pdfjsLib;
 
 ;// ./web/internal_evt.js
-const INTERNAL_EVT = "d8d6a7ab-aa83-4502-b985-04847eff1b66";
+const INTERNAL_EVT = "f7beaeee-f03b-4812-81b0-4664e332e817";
 const internalOpt = Object.freeze({
   internal: INTERNAL_EVT
 });
@@ -12774,13 +12774,17 @@ class PDFPageView extends BasePDFPageView {
     if (this.structTreeLayer && !this.textLayer) {
       this.structTreeLayer = null;
     }
-    if (this.annotationEditorLayer && (!keepAnnotationEditorLayer || !this.annotationEditorLayer.div)) {
+    if (this.annotationEditorLayer && (!keepAnnotationEditorLayer || !this.annotationEditorLayer.div || !this.textLayer)) {
       if (this.drawLayer) {
         this.drawLayer.cancel();
         this.drawLayer = null;
       }
       this.annotationEditorLayer.cancel();
       this.annotationEditorLayer = null;
+    }
+    if (this.drawLayer && !this.textLayer) {
+      this.drawLayer.cancel();
+      this.drawLayer = null;
     }
     if (this.xfaLayer && (!keepXfaLayer || !this.xfaLayer.div)) {
       this.xfaLayer.cancel();
@@ -13162,7 +13166,7 @@ class PDFViewer {
   #savedPageViews = null;
   #deletedPageNumbers = null;
   constructor(options) {
-    const viewerVersion = "6.2.112";
+    const viewerVersion = "6.2.120";
     if (version !== viewerVersion) {
       throw new Error(`The API version "${version}" does not match the Viewer version "${viewerVersion}".`);
     }

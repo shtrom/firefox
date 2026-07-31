@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.2.112
- * pdfjsBuild = 61acf9317
+ * pdfjsVersion = 6.2.120
+ * pdfjsBuild = a80897dc9
  */
 
 ;// ./src/shared/util.js
@@ -52439,13 +52439,11 @@ class Builder {
     if (hasNamespace) {
       this._currentNamespace = this._namespaceStack.pop();
     }
-    if (prefixes) {
-      prefixes.forEach(({
-        prefix
-      }) => {
-        this._namespacePrefixes.get(prefix).pop();
-      });
-    }
+    prefixes?.forEach(({
+      prefix
+    }) => {
+      this._namespacePrefixes.get(prefix).pop();
+    });
     if (nsAgnostic) {
       this._nsAgnosticLevel--;
     }
@@ -61633,6 +61631,7 @@ class PDFEditor {
     if (obj instanceof Ref) {
       const {
         currentDocument: {
+          fieldToParent,
           oldRefMapping
         }
       } = this;
@@ -61642,6 +61641,10 @@ class PDFEditor {
       }
       const oldRef = obj;
       obj = await xref.fetchAsync(oldRef);
+      const mappedRef = oldRefMapping.get(oldRef);
+      if (mappedRef) {
+        return mappedRef;
+      }
       if (typeof obj === "number") {
         return obj;
       }
@@ -61650,7 +61653,13 @@ class PDFEditor {
       }
       const newRef = this.newRef;
       oldRefMapping.put(oldRef, newRef);
-      this.xref[newRef.num] = await this.#collectDependencies(obj, true, xref, resourceStreamPath);
+      let cloneSource = true;
+      if (fieldToParent.has(oldRef) && obj instanceof Dict) {
+        obj = this.cloneDict(obj);
+        obj.delete("Parent");
+        cloneSource = false;
+      }
+      this.xref[newRef.num] = await this.#collectDependencies(obj, cloneSource, xref, resourceStreamPath);
       return newRef;
     }
     const promises = [];
@@ -62314,7 +62323,6 @@ class PDFEditor {
               key: "FT"
             }), "Sig");
             const parentRef = annotationDict.getRaw("Parent") || null;
-            annotationDict.delete("Parent");
             fieldToParent.put(annotationRef, parentRef);
           }
           newAnnotations[newAnnotationIndex] = annotationRef;
@@ -64109,7 +64117,7 @@ class WorkerMessageHandler {
       docId,
       apiVersion
     } = docParams;
-    const workerVersion = "6.2.112";
+    const workerVersion = "6.2.120";
     if (apiVersion !== workerVersion) {
       throw new Error(`The API version "${apiVersion}" does not match ` + `the Worker version "${workerVersion}".`);
     }

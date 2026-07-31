@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.2.112
- * pdfjsBuild = 61acf9317
+ * pdfjsVersion = 6.2.120
+ * pdfjsBuild = a80897dc9
  */
 
 ;// ./src/scripting_api/constants.js
@@ -3251,11 +3251,9 @@ class ProxyHandler {
     return undefined;
   }
   set(obj, prop, value) {
-    if (obj._kidIds) {
-      obj._kidIds.forEach(id => {
-        obj._appObjects[id].wrapped[prop] = value;
-      });
-    }
+    obj._kidIds?.forEach(id => {
+      obj._appObjects[id].wrapped[prop] = value;
+    });
     if (typeof prop === "string" && !prop.startsWith("_") && prop in obj) {
       const old = obj[prop];
       obj[prop] = value;
