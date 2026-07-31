@@ -6,7 +6,7 @@
 #define js_loader_LoadedScript_h
 
 #include "mozilla/dom/SRIMetadata.h"  // mozilla::dom::SRIMetadata
-#include "mozilla/Encoding.h" // mozilla::Encoding
+#include "mozilla/Encoding.h"         // mozilla::Encoding
 #include "mozilla/Maybe.h"
 #include "mozilla/MaybeOneOf.h"
 #include "mozilla/MemoryReporting.h"
@@ -699,7 +699,9 @@ class LoadedScriptDelegate {
   }
 
   const mozilla::Encoding* MaybeClassicScriptFallbackEncoding() const {
-    return GetLoadedScript()->IsModuleScript() ? nullptr : GetLoadedScript()->ClassicScriptFallbackEncoding();
+    return GetLoadedScript()->IsModuleScript()
+               ? nullptr
+               : GetLoadedScript()->ClassicScriptFallbackEncoding();
   }
 };
 
