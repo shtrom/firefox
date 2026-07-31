@@ -19,7 +19,7 @@ class SpeculationRuleSet;
 """
 
 [export]
-include = ["ReferrerPolicy", "FfiPrefetchCandidate"]
+include = ["ReferrerPolicy", "FfiPrefetchCandidate", "SpeculationRulesUsage"]
 item_types = ["functions", "enums", "structs"]
 
 [export.rename]

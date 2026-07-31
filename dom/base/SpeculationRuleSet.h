@@ -19,6 +19,7 @@ class ErrorResult;
 
 namespace mozilla::dom {
 
+class Document;
 class PrefetchCandidates;
 enum class SpeculationRuleParseError;
 
@@ -38,6 +39,8 @@ class SpeculationRuleSet final {
                                SpeculationRuleParseError aError);
 
   void ConsiderLoads(PrefetchCandidates* aCandidates);
+
+  void SetUseCounters(Document& aDocument) const;
 };
 
 }  // namespace mozilla::dom

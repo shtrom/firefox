@@ -58,6 +58,7 @@ SpeculationRules::SpeculationRules(Document* aDocument)
 // https://html.spec.whatwg.org/#register-speculation-rules
 void SpeculationRules::RegisterFromScript(
     nsIScriptElement* aScriptElement, UniquePtr<SpeculationRuleSet> aRuleSet) {
+  aRuleSet->SetUseCounters(*mDocument);
   // Step 2.
   mRuleSetsFromScript.InsertOrUpdate(aScriptElement, std::move(aRuleSet));
   // Step 3.
