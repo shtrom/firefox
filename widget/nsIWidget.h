@@ -2307,11 +2307,11 @@ class nsIWidget : public nsSupportsWeakReference {
   }
 
   /**
-   * NotifyCompositorScrollUpdate notify widget about an update to the
+   * NotifyCompositorScrollUpdates notify widget about an update to the
    * composited scroll offset and zoom
    */
-  virtual void NotifyCompositorScrollUpdate(
-      const mozilla::layers::CompositorScrollUpdate& aUpdate) {}
+  virtual void NotifyCompositorScrollUpdates(
+      const nsTArray<mozilla::layers::CompositorScrollUpdate>& aUpdates) {}
 
 #if defined(MOZ_WIDGET_ANDROID)
   /**

@@ -6,6 +6,7 @@
 
 #include <stack>
 #include <unordered_set>
+#include <utility>
 
 #include "AsyncPanZoomController.h"
 #include "Compositor.h"             // for Compositor
@@ -929,9 +930,13 @@ void APZCTreeManager::SampleForWebRender(const Maybe<VsyncId>& aVsyncId,
       if (RefPtr<UiCompositorControllerParent> uiController =
               UiCompositorControllerParent::GetFromRootLayerTreeId(
                   mRootLayersId)) {
+        nsTArray<CompositorScrollUpdate> updates;
+
         for (const auto& update : apzc->GetCompositorScrollUpdates()) {
-          uiController->NotifyCompositorScrollUpdate(update);
+          updates.AppendElement(update);
         }
+
+        uiController->NotifyCompositorScrollUpdates(std::move(updates));
       }
     }
   }
