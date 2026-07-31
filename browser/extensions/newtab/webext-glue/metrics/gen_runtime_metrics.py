@@ -57,6 +57,12 @@ def _fetch_channel_yaml(channel, yaml_name):
 
 
 def get_new_metrics(main_yaml, compare_yaml):
+    """Return categories/metrics present in main_yaml but not compare_yaml.
+
+    main_yaml is New Tab's local (Nightly) definitions; compare_yaml is the
+    target channel's (Beta/Release). The result is what needs runtime
+    registration on that channel.
+    """
     new_metrics_yaml = {}
     for category in main_yaml:
         if category.startswith("$"):
@@ -75,6 +81,7 @@ def get_new_metrics(main_yaml, compare_yaml):
 
 
 def get_new_pings(main_yaml, compare_yaml):
+    """Return pings present in main_yaml but not compare_yaml (see get_new_metrics)."""
     new_pings_yaml = {}
     for ping in main_yaml:
         if ping.startswith("$"):
