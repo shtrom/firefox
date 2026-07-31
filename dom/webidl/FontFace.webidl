@@ -18,7 +18,7 @@ dictionary FontFaceDescriptors {
   UTF8String unicodeRange = "U+0-10FFFF";
   UTF8String variant = "normal";
   UTF8String featureSettings = "normal";
-  [Pref="layout.css.font-variations.enabled"] UTF8String variationSettings = "normal";
+  UTF8String variationSettings = "normal";
   UTF8String display = "auto";
   UTF8String ascentOverride = "normal";
   UTF8String descentOverride = "normal";
@@ -42,7 +42,7 @@ interface FontFace {
   [SetterThrows] attribute UTF8String unicodeRange;
   [SetterThrows] attribute UTF8String variant;
   [SetterThrows] attribute UTF8String featureSettings;
-  [SetterThrows, Pref="layout.css.font-variations.enabled"] attribute UTF8String variationSettings;
+  [SetterThrows] attribute UTF8String variationSettings;
   [SetterThrows] attribute UTF8String display;
   [SetterThrows] attribute UTF8String ascentOverride;
   [SetterThrows] attribute UTF8String descentOverride;
