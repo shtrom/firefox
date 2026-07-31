@@ -1589,6 +1589,22 @@ inline int32_t StyleNumericType::Exponent(
   return exponents[static_cast<size_t>(aBaseType)];
 }
 
+inline bool StyleNumericType::MatchesLength() const {
+  return Servo_NumericType_MatchesLength(this);
+}
+
+inline bool StyleNumericType::MatchesAngle() const {
+  return Servo_NumericType_MatchesAngle(this);
+}
+
+inline bool StyleNumericType::MatchesLengthPercentage() const {
+  return Servo_NumericType_MatchesLengthPercentage(this);
+}
+
+inline bool StyleNumericType::MatchesNumber() const {
+  return Servo_NumericType_MatchesNumber(this);
+}
+
 inline bool StyleNumericType::operator==(const StyleNumericType& aOther) const {
   return ArrayEqual(exponents, aOther.exponents) &&
          percent_hint == aOther.percent_hint;
