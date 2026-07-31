@@ -619,7 +619,7 @@ export class SearchModeSwitcher {
     this.#buildSettingsButton();
 
     // Add engines that can be installed.
-    let openSearchEngines = lazy.OpenSearchManager.getEngines(
+    let openSearchEngines = lazy.OpenSearchManager.getInstallableEngines(
       browser.selectedBrowser
     );
     openSearchEngines = openSearchEngines.slice(
