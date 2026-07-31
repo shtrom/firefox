@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs";
+import { UrlbarResult } from "chrome://browser/content/urlbar/UrlbarResult.mjs";
 import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
 import { L10nCache } from "chrome://browser/content/urlbar/L10nCache.mjs";
 
@@ -13,7 +14,6 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "moz-src:///toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs",
   UrlbarProviderTopSites:
     "moz-src:///browser/components/urlbar/UrlbarProviderTopSites.sys.mjs",
-  UrlbarResult: "chrome://browser/content/urlbar/UrlbarResult.mjs",
   UrlbarSearchOneOffs:
     "moz-src:///browser/components/urlbar/UrlbarSearchOneOffs.sys.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
@@ -596,7 +596,7 @@ export class UrlbarView {
     this.#setRowSelectable(row, false);
 
     // Replace the row with a dismissal acknowledgment tip.
-    let tip = new lazy.UrlbarResult({
+    let tip = new UrlbarResult({
       type: UrlbarShared.RESULT_TYPE.TIP,
       source: UrlbarShared.RESULT_SOURCE.OTHER_LOCAL,
       payload: {

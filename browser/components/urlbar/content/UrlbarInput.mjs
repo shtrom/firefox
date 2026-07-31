@@ -14,6 +14,7 @@ import { SearchModeSwitcher } from "chrome://browser/content/urlbar/SearchModeSw
 import { UrlbarChildController } from "chrome://browser/content/urlbar/UrlbarChildController.mjs";
 import { UrlbarEventBufferer } from "chrome://browser/content/urlbar/UrlbarEventBufferer.mjs";
 import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs";
+import { UrlbarQueryContext } from "chrome://browser/content/urlbar/UrlbarQueryContext.mjs";
 import { UrlbarView } from "chrome://browser/content/urlbar/UrlbarView.mjs";
 import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
 
@@ -65,7 +66,6 @@ const lazy = XPCOMUtils.declareLazy({
   ReaderMode: "moz-src:///toolkit/components/reader/ReaderMode.sys.mjs",
   SharingUtils: "resource:///modules/SharingUtils.sys.mjs",
   SearchUIUtils: "moz-src:///browser/components/search/SearchUIUtils.sys.mjs",
-  UrlbarQueryContext: "chrome://browser/content/urlbar/UrlbarQueryContext.mjs",
   UrlbarTokenizer:
     "moz-src:///browser/components/urlbar/UrlbarTokenizer.sys.mjs",
   UrlbarSearchUtils:
@@ -5731,7 +5731,7 @@ ${
       }
     }
 
-    return new lazy.UrlbarQueryContext(options);
+    return new UrlbarQueryContext(options);
   }
 
   _on_scrollend() {

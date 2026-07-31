@@ -3,13 +3,13 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs";
+import { UrlbarResult } from "chrome://browser/content/urlbar/UrlbarResult.mjs";
+import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
 
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
   UrlUtils: "resource://gre/modules/UrlUtils.sys.mjs",
-  UrlbarResult: "chrome://browser/content/urlbar/UrlbarResult.mjs",
-  UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
 });
 
@@ -91,7 +91,7 @@ export class UrlbarTelemetryUtils {
   static parseSearchString(searchString) {
     let numChars = searchString.length.toString();
     let searchWords = searchString
-      .substring(0, lazy.UrlbarShared.MAX_TEXT_LENGTH)
+      .substring(0, UrlbarShared.MAX_TEXT_LENGTH)
       .trim()
       .split(lazy.UrlUtils.REGEXP_SPACES)
       .filter(t => t);
@@ -117,7 +117,7 @@ export class UrlbarTelemetryUtils {
    */
   static startInteractionType(event, searchString) {
     if (event.type == "input") {
-      return lazy.UrlbarShared.isPasteEvent(event) ? "pasted" : "typed";
+      return UrlbarShared.isPasteEvent(event) ? "pasted" : "typed";
     } else if (event.type == "drop") {
       return "dropped";
     } else if (event.type == "paste") {
@@ -335,13 +335,13 @@ export class UrlbarTelemetryUtils {
     return {
       ...wire,
       visibleResults:
-        wire.visibleResults?.map(r => lazy.UrlbarResult.fromWire(r)) ?? [],
+        wire.visibleResults?.map(r => UrlbarResult.fromWire(r)) ?? [],
       internalDetails: {
         ...wire.internalDetails,
         event: null,
         element: null,
         result: wire.internalDetails.result
-          ? lazy.UrlbarResult.fromWire(wire.internalDetails.result)
+          ? UrlbarResult.fromWire(wire.internalDetails.result)
           : null,
       },
     };
@@ -422,7 +422,7 @@ export class UrlbarTelemetryUtils {
     if (searchMode.engineName) {
       return "search_engine";
     }
-    const source = lazy.UrlbarShared.LOCAL_SEARCH_MODES.find(
+    const source = UrlbarShared.LOCAL_SEARCH_MODES.find(
       m => m.source == searchMode.source
     )?.telemetryLabel;
     return source ?? "unknown";
