@@ -155,16 +155,26 @@ export class WallpaperFeed {
     }
 
     // retrieving all records in collection
-    const records = await this.wallpaperClient.get();
-    if (!records?.length) {
-      return;
+    let records;
+    try {
+      records = await this.wallpaperClient.get();
+    } catch (error) {
+      // Fall through so the custom-wallpaper upload entry is still surfaced.
+      console.error(
+        "Error fetching wallpaper records from remote settings",
+        error
+      );
+      records = [];
     }
 
     const customWallpaperEnabled = Services.prefs.getBoolPref(
       PREF_WALLPAPERS_CUSTOM_WALLPAPER_ENABLED
     );
 
-    const baseAttachmentURL = await lazy.Utils.baseAttachmentsURL();
+    let baseAttachmentURL = "";
+    if (records.length) {
+      baseAttachmentURL = await lazy.Utils.baseAttachmentsURL();
+    }
 
     const wallpapers = [
       ...records.map(record => {
