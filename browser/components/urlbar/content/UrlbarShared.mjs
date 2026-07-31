@@ -497,7 +497,7 @@ export const UrlbarShared = {
    * Returns the name of a result source.  The name is the lowercase name of the
    * corresponding property in the RESULT_SOURCE object.
    *
-   * @param {Values<typeof UrlbarShared.RESULT_SOURCE>} source
+   * @param {Values<typeof this.RESULT_SOURCE>} source
    *   A UrlbarShared.RESULT_SOURCE value.
    * @returns {string}
    *   The token's name, a lowercased name in the RESULT_SOURCE object.
