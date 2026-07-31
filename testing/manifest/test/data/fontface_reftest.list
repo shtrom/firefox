@@ -163,9 +163,6 @@ fuzzy-if(cocoaWidget,198-198,172-172) == color-1b.html color-1-ref.html
 # COLRv1 (enhanced color font) format
 # Comparing COLRv1 glyph rendering to CSS backgrounds we can expect "fuzz" in lots of gradients
 # and along antialiased diagonals, etc., but the differences are barely perceptible to the eye.
-# These are skipped on Win7 because lack of font-variation support means the COLR table
-# in the test font CAhem.ttf will be dropped.
-defaults pref(gfx.font_rendering.colr_v1.enabled,true)
 fuzzy(0-64,0-200) == colrv1-01.html#A colrv1-01-ref.html#A
 fuzzy(0-32,0-200) == colrv1-01.html#B colrv1-01-ref.html#B
 fuzzy(0-8,0-10100) == colrv1-01.html#C colrv1-01-ref.html#C
@@ -194,11 +191,6 @@ fuzzy(0-1,0-291) == colrv1-06.html colrv1-06-ref.html
 fuzzy(0-128,0-264) == colrv1-07.html colrv1-07-ref.html
 == colrv1-08.html colrv1-08-ref.html
 == colrv1-09.html colrv1-09-ref.html
-defaults
-
-# Check that the tech(color-COLRv1) function responds to whether COLRv1 support is enabled.
-pref(gfx.font_rendering.colr_v1.enabled,true) == colrv1-02.html colrv1-02a-ref.html
-pref(gfx.font_rendering.colr_v1.enabled,false) == colrv1-02.html colrv1-02b-ref.html
 
 == woff2-1.html woff2-1-ref.html
 == woff2-totalsfntsize.html woff2-totalsfntsize-ref.html
