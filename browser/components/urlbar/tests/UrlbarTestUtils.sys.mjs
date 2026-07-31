@@ -1052,6 +1052,16 @@ class UrlbarInputTestUtils {
    *   The expected search mode object.
    */
   async assertSearchMode(window, expectedSearchMode) {
+    // Entering and exiting search mode resolves the engine through the engine
+    // store, which is asynchronous on the message path, so let the mode settle
+    // before asserting.
+    await lazy.TestUtils.waitForCondition(
+      () => !!this.#urlbar(window).searchMode == !!expectedSearchMode
+    ).catch(() => {
+      // waitForCondition rejects once it stops polling. The mode never reached
+      // the expected state, which the assertions below report precisely.
+    });
+
     this.Assert.equal(
       !!this.#urlbar(window).searchMode,
       this.#urlbar(window).hasAttribute("searchmode"),
