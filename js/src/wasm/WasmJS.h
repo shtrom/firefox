@@ -168,8 +168,9 @@ class WasmComponentObject : public NativeObject {
 // same.
 
 class WasmGlobalObject : public NativeObject {
-  static const unsigned MUTABLE_SLOT = 0;
-  static const unsigned VAL_SLOT = 1;
+  static constexpr auto MUTABLE_SLOT = TypedSlot<ValueType::Boolean>(0);
+  static constexpr auto VAL_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(1);
 
   static const JSClassOps classOps_;
   static const ClassSpec classSpec_;
@@ -197,7 +198,7 @@ class WasmGlobalObject : public NativeObject {
 
   static WasmGlobalObject* create(JSContext* cx, wasm::HandleVal value,
                                   bool isMutable, HandleObject proto);
-  bool isNewborn() { return getReservedSlot(VAL_SLOT).isUndefined(); }
+  bool isNewborn() { return getReservedSlotTyped(VAL_SLOT).isUndefined(); }
 
   bool isMutable() const;
   wasm::ValType type() const;
@@ -210,11 +211,14 @@ class WasmGlobalObject : public NativeObject {
 // wasm::Instance. These objects are used as content-facing JS objects.
 
 class WasmInstanceObject : public NativeObject {
-  static const unsigned INSTANCE_SLOT = 0;
-  static const unsigned EXPORTS_OBJ_SLOT = 1;
-  static const unsigned SCOPES_SLOT = 2;
-  static const unsigned INSTANCE_SCOPE_SLOT = 3;
-  static const unsigned GLOBALS_SLOT = 4;
+  static constexpr auto INSTANCE_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(0);
+  static constexpr auto EXPORTS_OBJ_SLOT =
+      TypedSlot<ValueType::Object, ValueType::Undefined>(1);
+  static constexpr auto SCOPES_SLOT = TypedSlot<ValueType::Double>(2);
+  static constexpr auto INSTANCE_SCOPE_SLOT =
+      TypedSlot<ValueType::PrivateGCThing, ValueType::Undefined>(3);
+  static constexpr auto GLOBALS_SLOT = TypedSlot<ValueType::Double>(4);
 
   static const JSClassOps classOps_;
   static const ClassSpec classSpec_;
@@ -273,9 +277,10 @@ class WasmInstanceObject : public NativeObject {
 // or SharedArrayBuffer object which owns the actual memory.
 
 class WasmMemoryObject : public NativeObject {
-  static const unsigned BUFFER_SLOT = 0;
-  static const unsigned OBSERVERS_SLOT = 1;
-  static const unsigned ISHUGE_SLOT = 2;
+  static constexpr auto BUFFER_SLOT = TypedSlot<ValueType::Object>(0);
+  static constexpr auto OBSERVERS_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(1);
+  static constexpr auto ISHUGE_SLOT = TypedSlot<ValueType::Boolean>(2);
   static const JSClassOps classOps_;
   static const ClassSpec classSpec_;
   static void finalize(JS::GCContext* gcx, JSObject* obj);
@@ -366,7 +371,8 @@ class WasmMemoryObject : public NativeObject {
 // (eventually between multiple threads).
 
 class WasmTableObject : public NativeObject {
-  static const unsigned TABLE_SLOT = 0;
+  static constexpr auto TABLE_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(0);
   static const JSClassOps classOps_;
   static const ClassSpec classSpec_;
   bool isNewborn() const;
@@ -410,7 +416,7 @@ class WasmTableObject : public NativeObject {
 // types for exports and imports.
 
 class WasmTagObject : public NativeObject {
-  static const unsigned TYPE_SLOT = 0;
+  static constexpr auto TYPE_SLOT = TypedSlot<ValueType::Double>(0);
 
   static const JSClassOps classOps_;
   static const ClassSpec classSpec_;
@@ -440,10 +446,12 @@ class WasmTagObject : public NativeObject {
 // the internal representation for exceptions in Wasm)
 
 class WasmExceptionObject : public NativeObject {
-  static const unsigned TAG_SLOT = 0;
-  static const unsigned TYPE_SLOT = 1;
-  static const unsigned DATA_SLOT = 2;
-  static const unsigned STACK_SLOT = 3;
+  static constexpr auto TAG_SLOT = TypedSlot<ValueType::Object>(0);
+  static constexpr auto TYPE_SLOT = TypedSlot<ValueType::Double>(1);
+  static constexpr auto DATA_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(2);
+  static constexpr auto STACK_SLOT =
+      TypedSlot<ValueType::Object, ValueType::Null>(3);
 
   static const JSClassOps classOps_;
   static const ClassSpec classSpec_;
@@ -497,7 +505,7 @@ class WasmExceptionObject : public NativeObject {
   }
 
   static size_t offsetOfData() {
-    return NativeObject::getFixedSlotOffset(DATA_SLOT);
+    return NativeObject::getFixedSlotOffsetTyped(DATA_SLOT);
   }
 };
 
@@ -506,28 +514,30 @@ class WasmExceptionObject : public NativeObject {
 class WasmNamespaceObject : public NativeObject {
  public:
   static const JSClass class_;
-  static const unsigned JS_VALUE_TAG_SLOT = 0;
+  static constexpr auto JS_VALUE_TAG_SLOT =
+      TypedSlot<ValueType::Object, ValueType::Null, ValueType::Undefined>(0);
 #ifdef ENABLE_WASM_JSPI
-  static const unsigned JS_PROMISE_TAG_SLOT = 1;
+  static constexpr auto JS_PROMISE_TAG_SLOT =
+      TypedSlot<ValueType::Object, ValueType::Null, ValueType::Undefined>(1);
 #endif
-  static const unsigned RESERVED_SLOTS = 2;
+  static constexpr uint32_t RESERVED_SLOTS = 2;
 
   WasmTagObject* wrappedJSValueTag() const {
-    return &getReservedSlot(JS_VALUE_TAG_SLOT)
+    return &getReservedSlotTyped(JS_VALUE_TAG_SLOT)
                 .toObjectOrNull()
                 ->as<WasmTagObject>();
   }
   void setWrappedJSValueTag(WasmTagObject* tag) {
-    return setReservedSlot(JS_VALUE_TAG_SLOT, ObjectValue(*tag));
+    return setReservedSlotTyped(JS_VALUE_TAG_SLOT, ObjectValue(*tag));
   }
 #ifdef ENABLE_WASM_JSPI
   WasmTagObject* jsPromiseTag() const {
-    return &getReservedSlot(JS_PROMISE_TAG_SLOT)
+    return &getReservedSlotTyped(JS_PROMISE_TAG_SLOT)
                 .toObjectOrNull()
                 ->as<WasmTagObject>();
   }
   void setJSPromiseTag(WasmTagObject* tag) {
-    return setReservedSlot(JS_PROMISE_TAG_SLOT, ObjectValue(*tag));
+    return setReservedSlotTyped(JS_PROMISE_TAG_SLOT, ObjectValue(*tag));
   }
 #endif
 
@@ -548,15 +558,16 @@ class WasmSuspendingObject : public NativeObject {
   static const ClassSpec classSpec_;
   static const JSClass class_;
   static const JSClass& protoClass_;
-  static const unsigned WRAPPED_FN_SLOT = 0;
+  static constexpr auto WRAPPED_FN_SLOT =
+      TypedSlot<ValueType::Object, ValueType::Null>(0);
   static const unsigned RESERVED_SLOTS = 1;
   static bool construct(JSContext*, unsigned, Value*);
 
   JSObject* wrappedFunction() const {
-    return getReservedSlot(WRAPPED_FN_SLOT).toObjectOrNull();
+    return getReservedSlotTyped(WRAPPED_FN_SLOT).toObjectOrNull();
   }
-  void setWrappedFunction(HandleObject fn) {
-    return setReservedSlot(WRAPPED_FN_SLOT, ObjectValue(*fn));
+  void initWrappedFunction(HandleObject fn) {
+    return initReservedSlotTyped(WRAPPED_FN_SLOT, ObjectValue(*fn));
   }
 };
 
@@ -568,7 +579,8 @@ JSObject* MaybeUnwrapSuspendingObject(JSObject* wrapper);
 // owns a wasm::ComponentInstance. These objects are used as content-facing JS
 // objects.
 class WasmComponentInstanceObject : public NativeObject {
-  static const unsigned INSTANCE_SLOT = 0;
+  static constexpr auto INSTANCE_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(0);
 
   static const JSClassOps classOps_;
   static const ClassSpec classSpec_;
