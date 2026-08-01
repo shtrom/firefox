@@ -51,8 +51,8 @@ class ServoStyleSet;
 
 /**
  * Some invariants:
- * -- The overflow out-of-flows list contains the out-of-
- * flow frames whose placeholders are in the overflow list.
+ * -- The overflow floats list contains the float frames
+ * whose placeholders are in the overflow list.
  * -- A given piece of content has at most one placeholder
  * frame in a block's normal child list.
  * -- While a block is being reflowed, and from then until
@@ -1054,13 +1054,13 @@ class nsBlockFrame : public nsContainerFrame {
     nsFrameList mList;
 
     explicit nsAutoOOFFrameList(nsBlockFrame* aBlock)
-        : mPropValue(aBlock->GetOverflowOutOfFlows()), mBlock(aBlock) {
+        : mPropValue(aBlock->GetOverflowFloats()), mBlock(aBlock) {
       if (mPropValue) {
         mList = std::move(*mPropValue);
       }
     }
     ~nsAutoOOFFrameList() {
-      mBlock->SetOverflowOutOfFlows(std::move(mList), mPropValue);
+      mBlock->SetOverflowFloats(std::move(mList), mPropValue);
     }
 
    protected:
@@ -1069,10 +1069,10 @@ class nsBlockFrame : public nsContainerFrame {
   };
   friend struct nsAutoOOFFrameList;
 
-  nsFrameList* GetOverflowOutOfFlows() const;
+  nsFrameList* GetOverflowFloats() const;
 
   // This takes ownership of the frames in aList.
-  void SetOverflowOutOfFlows(nsFrameList&& aList, nsFrameList* aPropValue);
+  void SetOverflowFloats(nsFrameList&& aList, nsFrameList* aPropValue);
 
   // Return the ::marker frame or nullptr if we don't have one.
   nsIFrame* GetMarker() const {

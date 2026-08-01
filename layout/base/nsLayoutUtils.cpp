@@ -5956,7 +5956,7 @@ nscoord nsLayoutUtils::CalculateContentBEnd(WritingMode aWM, nsIFrame* aFrame) {
     FrameChildListIDs skip = {FrameChildListID::PushedAbsolute,
                               FrameChildListID::Overflow,
                               FrameChildListID::ExcessOverflowContainers,
-                              FrameChildListID::OverflowOutOfFlow};
+                              FrameChildListID::OverflowFloats};
     nsBlockFrame* blockFrame = do_QueryFrame(aFrame);
     if (blockFrame) {
       contentBEnd =
