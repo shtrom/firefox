@@ -1009,7 +1009,7 @@ class ScriptSource {
     explicit DataReader(ScriptSource* source) : source_(source) {
       auto guard_ = source_->sourceDataState_.lock();
       getConstWithLock()->getSourceProperties(&hasSourceText_, &retrievable_,
-                                      &isTwoByteString_);
+                                              &isTwoByteString_);
       if (hasSourceText_) {
         guard_->addReader();
       }
