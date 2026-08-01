@@ -43,7 +43,7 @@ use windows::{
 };
 
 use super::PinResult;
-use crate::util::thread::MainThreadGuard;
+use crate::util::thread_guard::MainThreadGuard;
 
 pub(super) enum PinOp {
     Pin,
