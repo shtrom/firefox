@@ -9,7 +9,7 @@ use nsstring::{nsAString, nsString};
 use xpcom::{Promise, RefPtr, interfaces::nsIWritableVariant};
 
 use super::{com, pin_app, winrt};
-use crate::util::thread_guard;
+use crate::util::thread_guard::{self, ThreadGuard};
 
 /// FFI accessible interface to check if taskbar pinning APIs are available.
 ///
@@ -18,9 +18,9 @@ use crate::util::thread_guard;
 /// No safety considerations, marked unsafe to satisfy FFI requirements.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn shell_windows_taskbar_can_pin_to_taskbar() -> nsresult {
-    let main_guard = match thread_guard::get_main_thread_guard() {
-        Some(m) => m,
-        None => {
+    let main_guard = match thread_guard::get_thread_guard() {
+        ThreadGuard::Main(guard) => guard,
+        _ => {
             log::error!("Must be called on main thread to check for pinning APIs.");
             return NS_ERROR_NOT_SAME_THREAD;
         }
@@ -46,9 +46,9 @@ pub unsafe extern "C" fn shell_windows_taskbar_pin_app_to_taskbar(
     fire_and_forget: bool,
     promise: &Promise,
 ) -> nsresult {
-    let main_guard = match thread_guard::get_main_thread_guard() {
-        Some(m) => m,
-        None => {
+    let main_guard = match thread_guard::get_thread_guard() {
+        ThreadGuard::Main(guard) => guard,
+        _ => {
             log::error!("Pinning must be called from main thread to resolve DOM promise.");
             return NS_ERROR_NOT_SAME_THREAD;
         }
@@ -84,9 +84,9 @@ pub unsafe extern "C" fn shell_windows_taskbar_pin_app_to_taskbar(
 pub unsafe extern "C" fn shell_windows_taskbar_unpin_shortcut_from_taskbar(
     shortcut_path: &nsAString,
 ) -> nsresult {
-    let main_guard = match thread_guard::get_main_thread_guard() {
-        Some(m) => m,
-        None => {
+    let main_guard = match thread_guard::get_thread_guard() {
+        ThreadGuard::Main(guard) => guard,
+        _ => {
             log::error!(
                 "Unpinning must be called from the main thread to ensure the underlying COM API is run from an STA thread."
             );
