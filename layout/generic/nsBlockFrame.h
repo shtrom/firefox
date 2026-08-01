@@ -1046,21 +1046,20 @@ class nsBlockFrame : public nsContainerFrame {
   void DestroyOverflowLines();
 
   /**
-   * This class is useful for efficiently modifying the out of flow
-   * overflow list. It gives the client direct writable access to
-   * the frame list temporarily but ensures that property is only
-   * written back if absolutely necessary.
+   * This class is useful for efficiently modifying the overflow floats list. It
+   * gives the client direct writable access to the frame list temporarily but
+   * ensures that property is only written back if absolutely necessary.
    */
-  struct nsAutoOOFFrameList {
+  struct AutoOverflowFloatsList {
     nsFrameList mList;
 
-    explicit nsAutoOOFFrameList(nsBlockFrame* aBlock)
+    explicit AutoOverflowFloatsList(nsBlockFrame* aBlock)
         : mPropValue(aBlock->GetOverflowFloats()), mBlock(aBlock) {
       if (mPropValue) {
         mList = std::move(*mPropValue);
       }
     }
-    ~nsAutoOOFFrameList() {
+    ~AutoOverflowFloatsList() {
       mBlock->SetOverflowFloats(std::move(mList), mPropValue);
     }
 
@@ -1068,7 +1067,7 @@ class nsBlockFrame : public nsContainerFrame {
     nsFrameList* const mPropValue;
     nsBlockFrame* const mBlock;
   };
-  friend struct nsAutoOOFFrameList;
+  friend struct AutoOverflowFloatsList;
 
   // Return true if this frame has overflow floats.
   bool HasOverflowFloats() const;

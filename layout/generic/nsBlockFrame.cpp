@@ -6122,7 +6122,7 @@ void nsBlockFrame::PushLines(BlockReflowState& aState,
       }
 #endif
       // Push the floats onto the front of the overflow floats list
-      nsAutoOOFFrameList oofs(this);
+      AutoOverflowFloatsList oofs(this);
       oofs.mList.InsertFrames(nullptr, nullptr, std::move(floats));
     }
 
@@ -6239,7 +6239,7 @@ bool nsBlockFrame::DrainOverflowLines() {
       }
 
       // Make the overflow floats mine too.
-      nsAutoOOFFrameList oofs(prevBlock);
+      AutoOverflowFloatsList oofs(prevBlock);
       if (oofs.mList.NotEmpty()) {
         // In case we own any next-in-flows of any of the drained frames, then
         // move those to the PushedFloat list.
@@ -6291,7 +6291,7 @@ bool nsBlockFrame::DrainSelfOverflowList() {
   // already ours. But we should put overflow floats back in our floats list.
   // (explicit scope to remove the OOF list before VerifyOverflowSituation)
   {
-    nsAutoOOFFrameList oofs(this);
+    AutoOverflowFloatsList oofs(this);
     if (oofs.mList.NotEmpty()) {
 #ifdef DEBUG
       for (nsIFrame* f : oofs.mList) {
@@ -6985,7 +6985,7 @@ void nsBlockFrame::RemoveFloat(nsIFrame* aFloat) {
   }
 
   {
-    nsAutoOOFFrameList oofs(this);
+    AutoOverflowFloatsList oofs(this);
     if (didStartRemovingFloat ? oofs.mList.ContinueRemoveFrame(aFloat)
                               : oofs.mList.StartRemoveFrame(aFloat)) {
       return;
