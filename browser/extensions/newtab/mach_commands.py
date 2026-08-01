@@ -773,8 +773,8 @@ def check_existing_metrics(main_yaml, compare_yaml):
     "newtab",
     "trainhop-recipe",
     description="""Generates the appropriate trainhop recipe for the Nimbus
-newtabTrainhopAddon feature, given a Taskcluster shipping task group URL from
-ship-it""",
+newtabTrainhopAddonDeployment feature, given a Taskcluster shipping task group
+URL from ship-it""",
 )
 @CommandArgument(
     "taskcluster_group_url", help="The shipping Taskcluster task group URL from ship-it"
