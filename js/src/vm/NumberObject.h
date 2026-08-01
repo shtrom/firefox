@@ -11,7 +11,8 @@ namespace js {
 
 class NumberObject : public NativeObject {
   /* Stores this Number object's [[PrimitiveValue]]. */
-  static const unsigned PRIMITIVE_VALUE_SLOT = 0;
+  static constexpr auto PRIMITIVE_VALUE_SLOT =
+      TypedSlot<ValueType::Int32, ValueType::Double>(0);
 
   static const ClassSpec classSpec_;
 
@@ -27,13 +28,15 @@ class NumberObject : public NativeObject {
   static inline NumberObject* create(JSContext* cx, double d,
                                      HandleObject proto = nullptr);
 
-  double unbox() const { return getFixedSlot(PRIMITIVE_VALUE_SLOT).toNumber(); }
+  double unbox() const {
+    return getFixedSlotTyped(PRIMITIVE_VALUE_SLOT).toNumber();
+  }
 
  private:
   static JSObject* createPrototype(JSContext* cx, JSProtoKey key);
 
-  inline void setPrimitiveValue(double d) {
-    setFixedSlot(PRIMITIVE_VALUE_SLOT, NumberValue(d));
+  inline void initPrimitiveValue(double d) {
+    initFixedSlotTyped(PRIMITIVE_VALUE_SLOT, NumberValue(d));
   }
 };
 
