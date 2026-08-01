@@ -452,11 +452,11 @@ void AbstractGeneratorObject::setUnaliasedLocal(uint32_t slot,
 }
 
 void AbstractGeneratorObject::setClosed(JSContext* cx) {
-  setFixedSlot(CALLEE_OR_MODULE_SLOT, NullValue());
-  setFixedSlot(ENV_CHAIN_SLOT, NullValue());
-  setFixedSlot(ARGS_OBJ_SLOT, NullValue());
-  setFixedSlot(STACK_STORAGE_SLOT, NullValue());
-  setFixedSlot(RESUME_INDEX_SLOT, NullValue());
+  setFixedSlotTyped(CALLEE_OR_MODULE_SLOT, NullValue());
+  setFixedSlotTyped(ENV_CHAIN_SLOT, NullValue());
+  setFixedSlotTyped(ARGS_OBJ_SLOT, NullValue());
+  setFixedSlotTyped(STACK_STORAGE_SLOT, NullValue());
+  setFixedSlotTyped(RESUME_INDEX_SLOT, NullValue());
 
   DebugAPI::onGeneratorClosed(cx, this);
 }
