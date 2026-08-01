@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.2.120
- * pdfjsBuild = a80897dc9
+ * pdfjsVersion = 6.2.134
+ * pdfjsBuild = 7fc7072f9
  */
 
 ;// ./src/shared/util.js
@@ -1178,10 +1178,7 @@ function isAscii(str) {
   return typeof str === "string" && (!str || /^[\x00-\x7F]*$/.test(str));
 }
 function stringToAsciiOrUTF16BE(str) {
-  if (str === null || str === undefined) {
-    return str;
-  }
-  return isAscii(str) ? str : stringToUTF16String(str, true);
+  return str === null || str === undefined || isAscii(str) ? str : stringToUTF16String(str, true);
 }
 function stringToUTF16HexString(str) {
   const buf = [];
@@ -1513,7 +1510,7 @@ function _collectJS(entry, xref, list, parents) {
   }
 }
 function collectActions(xref, dict, eventType) {
-  const actions = Object.create(null);
+  const actions = new Map();
   const additionalActionsDicts = getInheritableProperty({
     dict,
     key: "AA",
@@ -1534,7 +1531,7 @@ function collectActions(xref, dict, eventType) {
         const list = [];
         _collectJS(rawActionDict, xref, list, parents);
         if (list.length > 0) {
-          actions[action] = list;
+          actions.set(action, list);
         }
       }
     }
@@ -1545,10 +1542,10 @@ function collectActions(xref, dict, eventType) {
     const list = [];
     _collectJS(actionDict, xref, list, parents);
     if (list.length > 0) {
-      actions.Action = list;
+      actions.set("Action", list);
     }
   }
-  return Object.keys(actions).length ? actions : null;
+  return actions.size ? actions : null;
 }
 const XMLEntities = {
   0x3c: "&lt;",
@@ -2831,10 +2828,7 @@ class Stream extends BaseStream {
     return this.length === 0;
   }
   getByte() {
-    if (this.pos >= this.end) {
-      return -1;
-    }
-    return this.bytes[this.pos++];
+    return this.pos >= this.end ? -1 : this.bytes[this.pos++];
   }
   getBytes(length) {
     const pos = this.pos;
@@ -3034,10 +3028,7 @@ class ChunkedStream extends Stream {
     };
     Object.defineProperty(ChunkedStreamSubstream.prototype, "isDataLoaded", {
       get() {
-        if (this.numChunksLoaded === this.numChunks) {
-          return true;
-        }
-        return this.getMissingChunks().length === 0;
+        return this.numChunksLoaded === this.numChunks || this.getMissingChunks().length === 0;
       },
       configurable: true
     });
@@ -3827,10 +3818,7 @@ class DecodeStream extends BaseStream {
   }
   async getImageData(length, decoderOptions) {
     if (!this.canAsyncDecodeImageFromBuffer) {
-      if (this.isAsyncDecoder) {
-        return this.decodeImage(null, length, decoderOptions);
-      }
-      return this.getBytes(length, decoderOptions);
+      return this.isAsyncDecoder ? this.decodeImage(null, length, decoderOptions) : this.getBytes(length, decoderOptions);
     }
     const data = await this.stream.asyncGetBytes();
     return this.decodeImage(data, length, decoderOptions);
@@ -11324,10 +11312,7 @@ class Parser {
       return buf1;
     }
     if (typeof buf1 === "string") {
-      if (cipherTransform) {
-        return cipherTransform.decryptString(buf1);
-      }
-      return buf1;
+      return cipherTransform ? cipherTransform.decryptString(buf1) : buf1;
     }
     return buf1;
   }
@@ -18808,10 +18793,7 @@ class CFFFDSelect {
     this.fdSelect = fdSelect;
   }
   getFDIndex(glyphIndex) {
-    if (glyphIndex < 0 || glyphIndex >= this.fdSelect.length) {
-      return -1;
-    }
-    return this.fdSelect[glyphIndex];
+    return glyphIndex < 0 || glyphIndex >= this.fdSelect.length ? -1 : this.fdSelect[glyphIndex];
   }
 }
 class CFFOffsetTracker {
@@ -20848,10 +20830,7 @@ class IdentityToUnicodeMap {
     return this.firstChar <= i && i <= this.lastChar;
   }
   get(i) {
-    if (this.firstChar <= i && i <= this.lastChar) {
-      return String.fromCharCode(i);
-    }
-    return undefined;
+    return this.firstChar <= i && i <= this.lastChar ? String.fromCharCode(i) : undefined;
   }
   charCodeOf(v) {
     return Number.isInteger(v) && v >= this.firstChar && v <= this.lastChar ? v : -1;
@@ -39035,10 +39014,7 @@ class SimpleDOMNode {
     return childNodes[index + 1];
   }
   get textContent() {
-    if (!this.childNodes) {
-      return this.nodeValue || "";
-    }
-    return this.childNodes.map(child => child.textContent).join("");
+    return !this.childNodes ? this.nodeValue || "" : this.childNodes.map(child => child.textContent).join("");
   }
   get children() {
     return this.childNodes || [];
@@ -41171,9 +41147,9 @@ class Catalog {
     const javaScript = this.#collectJavaScript();
     let actions = collectActions(this.xref, this.#catDict, DocumentActionEventType);
     if (javaScript) {
-      actions ??= Object.create(null);
+      actions ??= new Map();
       for (const [key, val] of javaScript) {
-        (actions[key] ??= []).push(val);
+        actions.getOrInsertComputed(key, makeArr).push(val);
       }
     }
     return shadow(this, "jsActions", actions);
@@ -42534,10 +42510,7 @@ class FontFinder {
 }
 function selectFont(xfaFont, typeface) {
   if (xfaFont.posture === "italic") {
-    if (xfaFont.weight === "bold") {
-      return typeface.bolditalic;
-    }
-    return typeface.italic;
+    return xfaFont.weight === "bold" ? typeface.bolditalic : typeface.italic;
   } else if (xfaFont.weight === "bold") {
     return typeface.bold;
   }
@@ -43166,10 +43139,7 @@ class XFAObject {
     return "";
   }
   [$text]() {
-    if (this[_children].length === 0) {
-      return this[$content];
-    }
-    return this[_children].map(c => c[$text]()).join("");
+    return this[_children].length === 0 ? this[$content] : this[_children].map(c => c[$text]()).join("");
   }
   get [_attributeNames]() {
     const proto = Object.getPrototypeOf(this);
@@ -43201,10 +43171,7 @@ class XFAObject {
     return this[$getParent]();
   }
   [$getChildren](name = null) {
-    if (!name) {
-      return this[_children];
-    }
-    return this[name];
+    return !name ? this[_children] : this[name];
   }
   [$dump]() {
     const dumped = Object.create(null);
@@ -43464,10 +43431,7 @@ class XFAObject {
     return clone;
   }
   [$getChildren](name = null) {
-    if (!name) {
-      return this[_children];
-    }
-    return this[_children].filter(c => c[$nodeName] === name);
+    return !name ? this[_children] : this[_children].filter(c => c[$nodeName] === name);
   }
   [$getChildrenByClass](name) {
     return this[name];
@@ -43655,10 +43619,7 @@ class XmlObject extends XFAObject {
     return HTMLResult.EMPTY;
   }
   [$getChildren](name = null) {
-    if (!name) {
-      return this[_children];
-    }
-    return this[_children].filter(c => c[$nodeName] === name);
+    return !name ? this[_children] : this[_children].filter(c => c[$nodeName] === name);
   }
   [$getAttributes]() {
     return this[_attributes];
@@ -49032,10 +48993,7 @@ class Value extends XFAObject {
   }
   [$text]() {
     if (this.exData) {
-      if (typeof this.exData[$content] === "string") {
-        return this.exData[$content].trim();
-      }
-      return this.exData[$content][$text]().trim();
+      return typeof this.exData[$content] === "string" ? this.exData[$content].trim() : this.exData[$content][$text]().trim();
     }
     for (const name of Object.getOwnPropertyNames(this)) {
       if (name === "image") {
@@ -54439,28 +54397,28 @@ class TextWidgetAnnotation extends WidgetAnnotation {
     this.data.comb = this.hasFieldFlag(AnnotationFieldFlag.COMB) && !this.data.multiLine && !this.data.password && !this.hasFieldFlag(AnnotationFieldFlag.FILESELECT) && this.data.maxLen !== 0;
     this.data.doNotScroll = this.hasFieldFlag(AnnotationFieldFlag.DONOTSCROLL);
     const {
-      data: {
-        actions
-      }
-    } = this;
+      actions
+    } = this.data;
     if (!actions) {
       return;
     }
     const AFDateTime = /^AF(Date|Time)_(?:Keystroke|Format)(?:Ex)?\(['"]?([^'"]+)['"]?\);$/;
     let canUseHTMLDateTime = false;
-    if (actions.Format?.length === 1 && actions.Keystroke?.length === 1 && AFDateTime.test(actions.Format[0]) && AFDateTime.test(actions.Keystroke[0]) || actions.Format?.length === 0 && actions.Keystroke?.length === 1 && AFDateTime.test(actions.Keystroke[0]) || actions.Keystroke?.length === 0 && actions.Format?.length === 1 && AFDateTime.test(actions.Format[0])) {
+    const aFormat = actions.get("Format"),
+      aKeystroke = actions.get("Keystroke");
+    if (aFormat?.length === 1 && aKeystroke?.length === 1 && AFDateTime.test(aFormat[0]) && AFDateTime.test(aKeystroke[0]) || aFormat?.length === 0 && aKeystroke?.length === 1 && AFDateTime.test(aKeystroke[0]) || aKeystroke?.length === 0 && aFormat?.length === 1 && AFDateTime.test(aFormat[0])) {
       canUseHTMLDateTime = true;
     }
     const actionsToVisit = [];
-    if (actions.Format) {
-      actionsToVisit.push(...actions.Format);
+    if (aFormat) {
+      actionsToVisit.push(...aFormat);
     }
-    if (actions.Keystroke) {
-      actionsToVisit.push(...actions.Keystroke);
+    if (aKeystroke) {
+      actionsToVisit.push(...aKeystroke);
     }
     if (canUseHTMLDateTime) {
-      delete actions.Keystroke;
-      actions.Format = actionsToVisit;
+      actions.delete("Keystroke");
+      actions.set("Format", actionsToVisit);
     }
     for (const formatAction of actionsToVisit) {
       const m = formatAction.match(AFDateTime);
@@ -64117,7 +64075,7 @@ class WorkerMessageHandler {
       docId,
       apiVersion
     } = docParams;
-    const workerVersion = "6.2.120";
+    const workerVersion = "6.2.134";
     if (apiVersion !== workerVersion) {
       throw new Error(`The API version "${apiVersion}" does not match ` + `the Worker version "${workerVersion}".`);
     }

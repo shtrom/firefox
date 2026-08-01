@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.2.120
- * pdfjsBuild = a80897dc9
+ * pdfjsVersion = 6.2.134
+ * pdfjsBuild = 7fc7072f9
  */
 
 ;// ./web/ui_utils.js
@@ -623,6 +623,9 @@ const defaultOptions = new Map([["allowedGlobalEvents", {
 }], ["enableNewBadge", {
   value: true,
   kind: OptionKind.VIEWER + OptionKind.PREFERENCE
+}], ["enableNova", {
+  value: true,
+  kind: OptionKind.VIEWER + OptionKind.PREFERENCE
 }], ["enableOptimizedPartialRendering", {
   value: false,
   kind: OptionKind.VIEWER + OptionKind.PREFERENCE
@@ -904,7 +907,7 @@ const {
 } = globalThis.pdfjsLib;
 
 ;// ./web/internal_evt.js
-const INTERNAL_EVT = "f7beaeee-f03b-4812-81b0-4664e332e817";
+const INTERNAL_EVT = "ad0c7b4d-f56d-48d8-8253-7a6d96eff435";
 const internalOpt = Object.freeze({
   internal: INTERNAL_EVT
 });
@@ -1253,6 +1256,7 @@ class SimpleLinkService extends PDFLinkService {
 
 ;// ./web/event_utils.js
 
+
 const WaitOnType = {
   EVENT: "event",
   TIMEOUT: "timeout"
@@ -1287,7 +1291,7 @@ async function waitOnEventOrTimeout({
   return promise;
 }
 class EventBus {
-  #listeners = Object.create(null);
+  #listeners = new Map();
   on(eventName, listener, options = null) {
     let rmAbort = null;
     if (options?.signal instanceof AbortSignal) {
@@ -1302,8 +1306,7 @@ class EventBus {
       rmAbort = () => signal.removeEventListener("abort", onAbort);
       signal.addEventListener("abort", onAbort);
     }
-    const eventListeners = this.#listeners[eventName] ??= [];
-    eventListeners.push({
+    this.#listeners.getOrInsertComputed(eventName, makeSet).add({
       listener,
       internal: options?.internal === INTERNAL_EVT,
       once: options?.once === true,
@@ -1311,22 +1314,16 @@ class EventBus {
     });
   }
   off(eventName, listener, options = null) {
-    const eventListeners = this.#listeners[eventName];
-    if (!eventListeners) {
-      return;
-    }
-    for (let i = 0, ii = eventListeners.length; i < ii; i++) {
-      const evt = eventListeners[i];
-      if (evt.listener === listener) {
-        evt.rmAbort?.();
-        eventListeners.splice(i, 1);
-        return;
-      }
+    const eventListeners = this.#listeners.get(eventName);
+    const evt = eventListeners?.keys().find(e => e.listener === listener);
+    if (evt) {
+      evt.rmAbort?.();
+      eventListeners.delete(evt);
     }
   }
   dispatch(eventName, data) {
-    const eventListeners = this.#listeners[eventName];
-    if (!eventListeners?.length) {
+    const eventListeners = this.#listeners.get(eventName);
+    if (!eventListeners?.size) {
       return;
     }
     let extListeners;
@@ -1334,7 +1331,7 @@ class EventBus {
       listener,
       internal,
       once
-    } of eventListeners.slice(0)) {
+    } of new Set(eventListeners)) {
       if (once) {
         this.off(eventName, listener);
       }
@@ -13166,7 +13163,7 @@ class PDFViewer {
   #savedPageViews = null;
   #deletedPageNumbers = null;
   constructor(options) {
-    const viewerVersion = "6.2.120";
+    const viewerVersion = "6.2.134";
     if (version !== viewerVersion) {
       throw new Error(`The API version "${version}" does not match the Viewer version "${viewerVersion}".`);
     }
@@ -14062,10 +14059,7 @@ class PDFViewer {
     }
   }
   get #pageWidthScaleFactor() {
-    if (this._spreadMode !== SpreadMode.NONE && this._scrollMode !== ScrollMode.HORIZONTAL) {
-      return 2;
-    }
-    return 1;
+    return this._spreadMode !== SpreadMode.NONE && this._scrollMode !== ScrollMode.HORIZONTAL ? 2 : 1;
   }
   #setScale(value, options) {
     let scale = parseFloat(value);
@@ -14245,17 +14239,16 @@ class PDFViewer {
     const currentPageView = this._pages[pageNumber - 1];
     const container = this.container;
     const topLeft = currentPageView.getPagePoint(container.scrollLeft - firstPage.x, container.scrollTop - firstPage.y);
-    const intLeft = Math.round(topLeft[0]);
-    const intTop = Math.round(topLeft[1]);
+    const [left, top] = topLeft;
     let pdfOpenParams = `#page=${pageNumber}`;
     if (!this.isInPresentationMode) {
-      pdfOpenParams += `&zoom=${normalizedScaleValue},${intLeft},${intTop}`;
+      pdfOpenParams += `&zoom=${normalizedScaleValue},` + `${Math.round(left)},${Math.round(top)}`;
     }
     this._location = {
       pageNumber,
       scale: normalizedScaleValue,
-      top: intTop,
-      left: intLeft,
+      top,
+      left,
       rotation: this._pagesRotation,
       pdfOpenParams
     };
