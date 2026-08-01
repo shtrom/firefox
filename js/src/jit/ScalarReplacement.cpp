@@ -1965,7 +1965,7 @@ bool ArgumentsReplacer::escapes(MInstruction* ins, bool guardedForMapped) {
         MLoadFixedSlot* load = def->toLoadFixedSlot();
 
         // We can replace arguments.callee.
-        if (load->slot() == ArgumentsObject::CALLEE_SLOT) {
+        if (load->slot() == ArgumentsObject::CALLEE_SLOT.index()) {
           MOZ_ASSERT(guardedForMapped);
           continue;
         }
@@ -2615,7 +2615,7 @@ void ArgumentsReplacer::visitLoadFixedSlot(MLoadFixedSlot* ins) {
     return;
   }
 
-  MOZ_ASSERT(ins->slot() == ArgumentsObject::CALLEE_SLOT);
+  MOZ_ASSERT(ins->slot() == ArgumentsObject::CALLEE_SLOT.index());
 
   MDefinition* replacement;
   if (isInlinedArguments()) {
