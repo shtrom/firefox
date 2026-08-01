@@ -2286,7 +2286,7 @@ static void UpdateRegExpStatics(MacroAssembler& masm, Register regexp,
       Imm32(1),
       Address(staticsReg, RegExpStatics::offsetOfPendingLazyEvaluation()));
 
-  masm.unboxNonDouble(Address(regexp, NativeObject::getFixedSlotOffset(
+  masm.unboxNonDouble(Address(regexp, NativeObject::getFixedSlotOffsetTyped(
                                           RegExpObject::SHARED_SLOT)),
                       temp1, JSVAL_TYPE_PRIVATE_GCTHING);
   masm.loadPtr(Address(temp1, RegExpShared::offsetOfSource()), temp2);
@@ -2431,7 +2431,7 @@ static bool PrepareAndExecuteRegExp(MacroAssembler& masm, Register regexp,
   // Load the RegExpShared.
   Register regexpReg = temp1;
   Address sharedSlot = Address(
-      regexp, NativeObject::getFixedSlotOffset(RegExpObject::SHARED_SLOT));
+      regexp, NativeObject::getFixedSlotOffsetTyped(RegExpObject::SHARED_SLOT));
   masm.branchTestUndefined(Assembler::Equal, sharedSlot, failure);
   masm.unboxNonDouble(sharedSlot, regexpReg, JSVAL_TYPE_PRIVATE_GCTHING);
 
@@ -2949,7 +2949,7 @@ static JitCode* GenerateRegExpMatchStubShared(JSContext* cx,
   // If a regexp has named captures, fall back to the OOL stub, which
   // will end up calling CreateRegExpMatchResults.
   Register shared = temp2;
-  masm.unboxNonDouble(Address(regexp, NativeObject::getFixedSlotOffset(
+  masm.unboxNonDouble(Address(regexp, NativeObject::getFixedSlotOffsetTyped(
                                           RegExpObject::SHARED_SLOT)),
                       shared, JSVAL_TYPE_PRIVATE_GCTHING);
   masm.branchPtr(Assembler::NotEqual,
