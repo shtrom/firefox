@@ -715,7 +715,8 @@ class nsBlockFrame : public nsContainerFrame {
    * @return false iff this block does not have a float on any child list.
    * This function is O(1).
    */
-  bool MaybeHasFloats() const;
+  bool HasAnyFloats() const;
+
   /**
    * This indicates that exactly one line in this block has the
    * LineClampEllipsis flag set, and that such a line must be found
@@ -834,7 +835,7 @@ class nsBlockFrame : public nsContainerFrame {
 
   void CollectFloats(nsIFrame* aFrame, nsFrameList& aList,
                      bool aCollectFromSiblings) {
-    if (MaybeHasFloats()) {
+    if (HasAnyFloats()) {
       DoCollectFloats(aFrame, aList, aCollectFromSiblings);
     }
   }
@@ -1068,6 +1069,9 @@ class nsBlockFrame : public nsContainerFrame {
     nsBlockFrame* const mBlock;
   };
   friend struct nsAutoOOFFrameList;
+
+  // Return true if this frame has overflow floats.
+  bool HasOverflowFloats() const;
 
   nsFrameList* GetOverflowFloats() const;
 

@@ -1180,16 +1180,8 @@ nsBlockFrame* nsBlockFrame::GetLineClampRoot() const {
   return nullptr;
 }
 
-bool nsBlockFrame::MaybeHasFloats() const {
-  if (HasFloats()) {
-    return true;
-  }
-  if (HasPushedFloats()) {
-    return true;
-  }
-  // For the OverflowFloatsProperty I think we do enforce that, but it's
-  // a mix of out-of-flow frames, so that's why the method name has "Maybe".
-  return HasAnyStateBits(NS_BLOCK_HAS_OVERFLOW_FLOATS);
+bool nsBlockFrame::HasAnyFloats() const {
+  return HasFloats() || HasPushedFloats() || HasOverflowFloats();
 }
 
 /**
@@ -6469,6 +6461,14 @@ void nsBlockFrame::SetOverflowLines(FrameLines* aOverflowLines) {
   AddStateBits(NS_BLOCK_HAS_OVERFLOW_LINES);
 }
 
+bool nsBlockFrame::HasOverflowFloats() const {
+  const bool isStateBitSet = HasAnyStateBits(NS_BLOCK_HAS_OVERFLOW_FLOATS);
+  MOZ_ASSERT(
+      isStateBitSet == HasProperty(OverflowFloatsProperty()),
+      "State bit should accurately reflect presence/absence of the property!");
+  return isStateBitSet;
+}
+
 nsFrameList* nsBlockFrame::GetOverflowFloats() const {
   if (!HasAnyStateBits(NS_BLOCK_HAS_OVERFLOW_FLOATS)) {
     return nullptr;
@@ -7154,7 +7154,7 @@ void nsBlockFrame::DidSetComputedStyle(ComputedStyle* aOldStyle) {
 
   const bool isBFC = EstablishesBFC(this);
   if (HasAnyStateBits(NS_BLOCK_BFC) != isBFC) {
-    if (MaybeHasFloats()) {
+    if (HasAnyFloats()) {
       // If the frame contains floats, this update may change their float
       // manager. Be safe by dirtying all descendant lines of the nearest
       // ancestor's float manager.
