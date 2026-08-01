@@ -304,11 +304,10 @@ JSObject* AsyncFunctionReject(JSContext* cx,
 
 class AsyncFunctionGeneratorObject : public AbstractGeneratorObject {
  public:
-  enum {
-    PROMISE_SLOT = AbstractGeneratorObject::RESERVED_SLOTS,
-
-    RESERVED_SLOTS
-  };
+  static constexpr auto PROMISE_SLOT =
+      TypedSlot<ValueType::Object>(AbstractGeneratorObject::RESERVED_SLOTS);
+  static constexpr uint32_t RESERVED_SLOTS =
+      AbstractGeneratorObject::RESERVED_SLOTS + 1;
 
   static const JSClass class_;
   static const JSClassOps classOps_;
@@ -320,7 +319,7 @@ class AsyncFunctionGeneratorObject : public AbstractGeneratorObject {
                                               Handle<ModuleObject*> module);
 
   PromiseObject* promise() {
-    return &getFixedSlot(PROMISE_SLOT).toObject().as<PromiseObject>();
+    return &getFixedSlotTyped(PROMISE_SLOT).toObject().as<PromiseObject>();
   }
 };
 

@@ -1453,7 +1453,7 @@ const JSClassOps PropertyIteratorObject::classOps_ = {
 
 const JSClass PropertyIteratorObject::class_ = {
     "Iterator",
-    JSCLASS_HAS_RESERVED_SLOTS(SlotCount) | JSCLASS_BACKGROUND_FINALIZE,
+    JSCLASS_HAS_RESERVED_SLOTS(SLOT_COUNT) | JSCLASS_BACKGROUND_FINALIZE,
     &PropertyIteratorObject::classOps_,
 };
 

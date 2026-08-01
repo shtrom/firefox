@@ -1589,6 +1589,12 @@ class NativeObject : public JSObject {
     return v.isUndefined() ? nullptr : static_cast<T*>(v.toPrivate());
   }
 
+  template <typename T, TypedSlotConcept TypedSlot>
+  T* maybePtrFromReservedSlotTyped(TypedSlot slot) const {
+    Value v = getReservedSlotTyped(slot);
+    return v.isUndefined() ? nullptr : static_cast<T*>(v.toPrivate());
+  }
+
   // Returns the address of a reserved fixed slot that stores a T* as
   // PrivateValue. Be very careful when using this because the object might be
   // moved in memory!
