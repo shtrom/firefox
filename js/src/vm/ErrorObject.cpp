@@ -565,7 +565,7 @@ bool js::ErrorObject::init(JSContext* cx, Handle<ErrorObject*> obj,
   cx->check(obj, stack);
 
   // Null out early in case of error, for exn_finalize's sake.
-  obj->initReservedSlot(ERROR_REPORT_SLOT, PrivateValue(nullptr));
+  obj->initReservedSlotTyped(ERROR_REPORT_SLOT, PrivateValue(nullptr));
 
   if (!SharedShape::ensureInitialCustomShape<ErrorObject>(cx, obj)) {
     return false;
@@ -610,8 +610,8 @@ bool js::ErrorObject::init(JSContext* cx, Handle<ErrorObject*> obj,
       obj->lookupPure(NameToId(cx->names().cause))->slot() == CAUSE_SLOT);
 
   JSErrorReport* report = errorReport.release();
-  obj->initReservedSlot(STACK_SLOT, ObjectOrNullValue(stack));
-  obj->setReservedSlot(ERROR_REPORT_SLOT, PrivateValue(report));
+  obj->initReservedSlotTyped(STACK_SLOT, ObjectOrNullValue(stack));
+  obj->setReservedSlotTyped(ERROR_REPORT_SLOT, PrivateValue(report));
   obj->initReservedSlot(FILENAME_SLOT, StringValue(fileName));
   obj->initReservedSlot(LINENUMBER_SLOT, Int32Value(lineNumber));
   obj->initReservedSlot(COLUMNNUMBER_SLOT,
@@ -624,10 +624,11 @@ bool js::ErrorObject::init(JSContext* cx, Handle<ErrorObject*> obj,
   } else {
     obj->initReservedSlot(CAUSE_SLOT, MagicValue(JS_ERROR_WITHOUT_CAUSE));
   }
-  obj->initReservedSlot(SOURCEID_SLOT, Int32Value(sourceId));
+  obj->initReservedSlotTyped(SOURCEID_SLOT, Int32Value(sourceId));
   if (obj->mightBeWasmTrap()) {
-    MOZ_ASSERT(JSCLASS_RESERVED_SLOTS(obj->getClass()) > WASM_TRAP_SLOT);
-    obj->initReservedSlot(WASM_TRAP_SLOT, BooleanValue(false));
+    MOZ_ASSERT(JSCLASS_RESERVED_SLOTS(obj->getClass()) >
+               WASM_TRAP_SLOT.index());
+    obj->initReservedSlotTyped(WASM_TRAP_SLOT, BooleanValue(false));
   }
 
   return true;
@@ -716,7 +717,7 @@ JSErrorReport* js::ErrorObject::getOrCreateErrorReport(JSContext* cx) {
   if (!copy) {
     return nullptr;
   }
-  setReservedSlot(ERROR_REPORT_SLOT, PrivateValue(copy.get()));
+  setReservedSlotTyped(ERROR_REPORT_SLOT, PrivateValue(copy.get()));
   return copy.release();
 }
 
@@ -795,8 +796,8 @@ bool js::ErrorObject::setStack_impl(JSContext* cx, const CallArgs& args) {
 
 void js::ErrorObject::setFromWasmTrap() {
   MOZ_ASSERT(mightBeWasmTrap());
-  MOZ_ASSERT(JSCLASS_RESERVED_SLOTS(getClass()) > WASM_TRAP_SLOT);
-  setReservedSlot(WASM_TRAP_SLOT, BooleanValue(true));
+  MOZ_ASSERT(JSCLASS_RESERVED_SLOTS(getClass()) > WASM_TRAP_SLOT.index());
+  setReservedSlotTyped(WASM_TRAP_SLOT, BooleanValue(true));
 }
 
 JSString* js::ErrorToSource(JSContext* cx, HandleObject obj) {

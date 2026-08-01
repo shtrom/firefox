@@ -43,20 +43,26 @@ class ErrorObject : public NativeObject {
   static const JSClass protoClasses[JSEXN_ERROR_LIMIT];
 
  protected:
-  static const uint32_t STACK_SLOT = 0;
-  static const uint32_t ERROR_REPORT_SLOT = STACK_SLOT + 1;
-  static const uint32_t FILENAME_SLOT = ERROR_REPORT_SLOT + 1;
+  static constexpr auto STACK_SLOT =
+      TypedSlot<ValueType::Object, ValueType::Null>(0);
+  static constexpr auto ERROR_REPORT_SLOT =
+      TypedSlot<ValueType::Double, ValueType::Undefined>(STACK_SLOT.index() +
+                                                         1);
+  static const uint32_t FILENAME_SLOT = ERROR_REPORT_SLOT.index() + 1;
   static const uint32_t LINENUMBER_SLOT = FILENAME_SLOT + 1;
   static const uint32_t COLUMNNUMBER_SLOT = LINENUMBER_SLOT + 1;
   static const uint32_t MESSAGE_SLOT = COLUMNNUMBER_SLOT + 1;
   static const uint32_t CAUSE_SLOT = MESSAGE_SLOT + 1;
-  static const uint32_t SOURCEID_SLOT = CAUSE_SLOT + 1;
+  static constexpr auto SOURCEID_SLOT =
+      TypedSlot<ValueType::Int32>(CAUSE_SLOT + 1);
 
-  static const uint32_t RESERVED_SLOTS = SOURCEID_SLOT + 1;
+  static const uint32_t RESERVED_SLOTS = SOURCEID_SLOT.index() + 1;
 
   // This slot is only used for errors that could be Wasm traps.
-  static const uint32_t WASM_TRAP_SLOT = SOURCEID_SLOT + 1;
-  static const uint32_t RESERVED_SLOTS_MAYBE_WASM_TRAP = WASM_TRAP_SLOT + 1;
+  static constexpr auto WASM_TRAP_SLOT =
+      TypedSlot<ValueType::Boolean>(SOURCEID_SLOT.index() + 1);
+  static const uint32_t RESERVED_SLOTS_MAYBE_WASM_TRAP =
+      WASM_TRAP_SLOT.index() + 1;
 
  public:
   static const JSClass classes[JSEXN_ERROR_LIMIT];
@@ -97,7 +103,7 @@ class ErrorObject : public NativeObject {
   }
 
   JSErrorReport* getErrorReport() const {
-    const Value& slot = getReservedSlot(ERROR_REPORT_SLOT);
+    const Value& slot = getReservedSlotTyped(ERROR_REPORT_SLOT);
     if (slot.isUndefined()) {
       return nullptr;
     }
@@ -137,7 +143,7 @@ class ErrorObject : public NativeObject {
 
   void setStackSlot(const Value& stack) {
     MOZ_ASSERT(stack.isObjectOrNull());
-    setReservedSlot(STACK_SLOT, stack);
+    setReservedSlotTyped(STACK_SLOT, stack);
   }
 
   void setCauseSlot(const Value& cause) {
@@ -160,8 +166,8 @@ class ErrorObject : public NativeObject {
     if (!mightBeWasmTrap()) {
       return false;
     } else {
-      MOZ_ASSERT(JSCLASS_RESERVED_SLOTS(getClass()) > WASM_TRAP_SLOT);
-      return getReservedSlot(WASM_TRAP_SLOT).toBoolean();
+      MOZ_ASSERT(JSCLASS_RESERVED_SLOTS(getClass()) > WASM_TRAP_SLOT.index());
+      return getReservedSlotTyped(WASM_TRAP_SLOT).toBoolean();
     }
   }
   void setFromWasmTrap();
