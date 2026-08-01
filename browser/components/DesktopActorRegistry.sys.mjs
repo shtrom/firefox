@@ -3,7 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { ActorManagerParent } from "resource://gre/modules/ActorManagerParent.sys.mjs";
-import { Region } from "resource://gre/modules/Region.sys.mjs";
 
 const lazy = {};
 
@@ -883,57 +882,6 @@ let JSWINDOWACTORS = {
     },
     matches: ["about:studies*"],
     safeForUntrustedWebProcess: true,
-  },
-
-  SmartFormFill: {
-    parent: {
-      esModuleURI:
-        "moz-src:///browser/components/aiwindow/ui/actors/SmartFormFillParent.sys.mjs",
-    },
-    child: {
-      esModuleURI:
-        "moz-src:///browser/components/aiwindow/ui/actors/SmartFormFillChild.sys.mjs",
-      events: {
-        DOMContentLoaded: {},
-      },
-    },
-    safeForUntrustedWebProcess: true,
-
-    // SmartFormFill should only work on HTTPS urls
-    matches: ["https://*/*"],
-    messageManagerGroups: ["browsers"],
-
-    onAddActor(register, unregister) {
-      let isRegistered = false;
-
-      const maybeRegister = () => {
-        if (
-          Services.prefs.getBoolPref("browser.smartwindow.enabled") &&
-          Services.prefs.getBoolPref(
-            "browser.smartwindow.smartformfill.enabled",
-            false
-          ) &&
-          Region.home &&
-          Region.home !== "FR"
-        ) {
-          if (!isRegistered) {
-            register();
-            isRegistered = true;
-          }
-        } else if (isRegistered) {
-          unregister();
-          isRegistered = false;
-        }
-      };
-
-      Services.prefs.addObserver("browser.smartwindow.enabled", maybeRegister);
-      Services.prefs.addObserver(
-        "browser.smartwindow.smartformfill.enabled",
-        maybeRegister
-      );
-      Services.obs.addObserver(maybeRegister, Region.REGION_TOPIC);
-      maybeRegister();
-    },
   },
 
   SpeechDispatcher: {
