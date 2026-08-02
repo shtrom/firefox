@@ -36,8 +36,8 @@ use moz2d_renderer::Moz2dBlobImageHandler;
 use nsstring::nsAString;
 use program_cache::{remove_disk_cache, WrProgramCache};
 use tracy_rs::register_thread_with_profiler;
-use webrender::render_backend_pool::{PoolMemberSetup, RenderBackendPool};
 use webrender::sw_compositor::SwCompositor;
+use webrender::render_backend_pool::{PoolMemberSetup, RenderBackendPool};
 use webrender::{
     api::units::*, api::*, create_webrender_instance, render_api::*, set_profiler_hooks, AsyncPropertySampler,
     AsyncScreenshotHandle, ClipRadius, Compositor, CompositorCapabilities, CompositorConfig, CompositorInputConfig,
@@ -2864,8 +2864,7 @@ pub unsafe extern "C" fn wr_transaction_clear_display_list(
     pipeline_id: WrPipelineId,
 ) {
     let mut frame_builder = WebRenderFrameBuilder::new(pipeline_id);
-    // An empty display list: it holds no coordinates, so the grid is irrelevant.
-    frame_builder.dl_builder.begin(60.0);
+    frame_builder.dl_builder.begin();
 
     txn.set_display_list(epoch, frame_builder.dl_builder.end());
 }
@@ -4603,8 +4602,8 @@ pub extern "C" fn wr_dump_serialized_display_list(state: &mut WrState) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn wr_api_begin_builder(state: &mut WrState, au_per_dev_px: i32) {
-    state.frame_builder.dl_builder.begin(au_per_dev_px as f32);
+pub unsafe extern "C" fn wr_api_begin_builder(state: &mut WrState) {
+    state.frame_builder.dl_builder.begin();
 }
 
 #[no_mangle]

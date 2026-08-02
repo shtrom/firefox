@@ -351,15 +351,7 @@ void WebRenderLayerManager::EndTransactionWithoutLayer(
     diplayListBuilder = offscreenBuilder.get();
   }
 
-  // The grid this display list's coordinates are authored on. It comes from the
-  // document being painted, not the widget, because full zoom applies to
-  // content but not chrome, so the two differ within one WebRender document.
-  const int32_t appUnitsPerDevPixel =
-      aDisplayListBuilder ? aDisplayListBuilder->RootReferenceFrame()
-                                ->PresContext()
-                                ->AppUnitsPerDevPixel()
-                          : AppUnitsPerCSSPixel();
-  diplayListBuilder->Begin(appUnitsPerDevPixel);
+  diplayListBuilder->Begin();
 
   wr::IpcResourceUpdateQueue resourceUpdates(WrBridge());
   wr::usize builderDumpIndex = 0;

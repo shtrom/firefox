@@ -1229,9 +1229,8 @@ void DisplayListBuilder::DumpSerializedDisplayList() {
   wr_dump_serialized_display_list(mWrState);
 }
 
-void DisplayListBuilder::Begin(int32_t aAppUnitsPerDevPixel) {
-  MOZ_ASSERT(aAppUnitsPerDevPixel > 0);
-  wr_api_begin_builder(mWrState, aAppUnitsPerDevPixel);
+void DisplayListBuilder::Begin() {
+  wr_api_begin_builder(mWrState);
 
   mASRToSpatialIdMap.clear();
   mCurrentSpaceAndClipChain = wr::RootScrollNodeWithChain();
