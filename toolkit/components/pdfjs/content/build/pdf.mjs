@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.2.134
- * pdfjsBuild = 7fc7072f9
+ * pdfjsVersion = 6.2.146
+ * pdfjsBuild = d0779c411
  */
 
 ;// ./src/shared/util.js
@@ -1326,10 +1326,23 @@ function getPdfFilenameFromUrl(url, defaultFilename = "document.pdf") {
     }
   }
   if (newURL.hash) {
-    const reFilename = /[^/?#=]+\.pdf\b(?!.*\.pdf\b)/i;
-    const hashFilename = reFilename.exec(newURL.hash);
-    if (hashFilename) {
-      return decode(hashFilename[0]);
+    const {
+      hash
+    } = newURL;
+    let extensionStart = -1;
+    for (const {
+      index
+    } of hash.matchAll(/\.pdf\b/gi)) {
+      extensionStart = index;
+    }
+    if (extensionStart > 0) {
+      let filenameStart = extensionStart;
+      while (filenameStart > 0 && !"/?#=".includes(hash[filenameStart - 1])) {
+        filenameStart--;
+      }
+      if (filenameStart < extensionStart) {
+        return decode(hash.slice(filenameStart, extensionStart + 4));
+      }
     }
   }
   return defaultFilename;
@@ -2049,7 +2062,7 @@ class FloatingToolbar {
 }
 
 ;// ./src/shared/internal_evt.js
-const INTERNAL_EVT = "ad0c7b4d-f56d-48d8-8253-7a6d96eff435";
+const INTERNAL_EVT = "0cfa3b5c-9264-44bd-b79f-bc41f430e8ef";
 const internalOpt = Object.freeze({
   internal: INTERNAL_EVT
 });
@@ -14265,7 +14278,7 @@ function getDocument(src = {}) {
   }
   const docParams = {
     docId,
-    apiVersion: "6.2.134",
+    apiVersion: "6.2.146",
     data,
     password,
     disableAutoFetch,
@@ -15926,8 +15939,8 @@ class InternalRenderTask {
     }
   }
 }
-const version = "6.2.134";
-const build = "7fc7072f9";
+const version = "6.2.146";
+const build = "d0779c411";
 
 ;// ./src/display/editor/color_picker.js
 
@@ -17803,9 +17816,12 @@ class TextWidgetAnnotationElement extends WidgetAnnotationElement {
             switch (event.inputType) {
               case "deleteWordBackward":
                 {
-                  const match = value.substring(0, selectionStart).match(/\w*\W*$/);
-                  if (match) {
-                    selStart -= match[0].length;
+                  const wordCharPattern = /\w/;
+                  while (selStart > 0 && !wordCharPattern.test(value[selStart - 1])) {
+                    selStart--;
+                  }
+                  while (selStart > 0 && wordCharPattern.test(value[selStart - 1])) {
+                    selStart--;
                   }
                   break;
                 }
