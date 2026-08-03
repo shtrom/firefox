@@ -2688,8 +2688,7 @@ int32_t nsWindowWatcher::GetWindowOpenLocation(
       uiChromeFlags &= ~(nsIWebBrowserChrome::CHROME_REMOTE_WINDOW |
                          nsIWebBrowserChrome::CHROME_FISSION_WINDOW |
                          nsIWebBrowserChrome::CHROME_PRIVATE_WINDOW |
-                         nsIWebBrowserChrome::CHROME_NON_PRIVATE_WINDOW |
-                         nsIWebBrowserChrome::CHROME_PRIVATE_LIFETIME);
+                         nsIWebBrowserChrome::CHROME_NON_PRIVATE_WINDOW);
       if (uiChromeFlags != nsIWebBrowserChrome::CHROME_ALL) {
         return nsIBrowserDOMWindow::OPEN_NEWWINDOW;
       }
