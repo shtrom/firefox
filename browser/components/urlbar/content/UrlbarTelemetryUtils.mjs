@@ -117,7 +117,11 @@ export class UrlbarTelemetryUtils {
    */
   static startInteractionType(event, searchString) {
     if (event.type == "input") {
-      return UrlbarShared.isPasteEvent(event) ? "pasted" : "typed";
+      // We can't use `InputEvent.isInstance(event)` here because that doesn't
+      // work in the newtab context.
+      return UrlbarShared.isPasteEvent(/** @type {InputEvent} */ (event))
+        ? "pasted"
+        : "typed";
     } else if (event.type == "drop") {
       return "dropped";
     } else if (event.type == "paste") {
