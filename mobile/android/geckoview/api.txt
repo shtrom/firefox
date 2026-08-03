@@ -1499,6 +1499,7 @@ package org.mozilla.geckoview {
 
   public static interface GeckoSession.HistoryDelegate {
     method @Nullable @UiThread default public GeckoResult<boolean[]> getVisited(@NonNull GeckoSession, @NonNull String[]);
+    method @Nullable @UiThread default public GeckoResult<Boolean> hasVisitedHostSince(@NonNull GeckoSession, @NonNull String, long, long);
     method @UiThread default public void onHistoryStateChange(@NonNull GeckoSession, @NonNull GeckoSession.HistoryDelegate.HistoryList);
     method @Nullable @UiThread default public GeckoResult<Boolean> onVisited(@NonNull GeckoSession, @NonNull String, @Nullable String, int);
     field public static final int VISIT_REDIRECT_PERMANENT = 4;
