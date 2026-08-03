@@ -570,10 +570,11 @@ function getBindingElementAndPseudo(node) {
   if (implementedPseudoElement) {
     // we only want to explicitly handle the elements we're displaying in the markup view
     if (
-      implementedPseudoElement === "::marker" ||
-      implementedPseudoElement === "::before" ||
       implementedPseudoElement === "::after" ||
       implementedPseudoElement === "::backdrop" ||
+      implementedPseudoElement === "::before" ||
+      implementedPseudoElement === "::checkmark" ||
+      implementedPseudoElement === "::marker" ||
       implementedPseudoElement === "::picker-icon"
     ) {
       pseudo = getNodeDisplayName(node);
