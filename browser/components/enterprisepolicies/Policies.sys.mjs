@@ -49,6 +49,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
 const PREF_LOGLEVEL = "browser.policies.loglevel";
 const BROWSER_DOCUMENT_URL = AppConstants.BROWSER_CHROME_URL;
 
+const isXpcshell = Services.env.exists("XPCSHELL_TEST_PROFILE_DIR");
+
 ChromeUtils.defineLazyGetter(lazy, "log", () => {
   let { ConsoleAPI } = ChromeUtils.importESModule(
     "resource://gre/modules/Console.sys.mjs"
@@ -93,7 +95,7 @@ export var Policies = {
   // Use the same timing that you used for setting up the policy.
   _cleanup: {
     onBeforeAddons() {
-      if (Cu.isInAutomation) {
+      if (Cu.isInAutomation || isXpcshell) {
         lazy.clearBlockedAboutPages();
       }
       Services.obs.notifyObservers(
