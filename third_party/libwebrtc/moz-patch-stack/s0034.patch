@@ -171,7 +171,7 @@ index ac862c65a8..e66ed2796e 100644
    } else {
      sources += [ "spl_sqrt_floor.c" ]
 diff --git a/modules/audio_processing/aec3/BUILD.gn b/modules/audio_processing/aec3/BUILD.gn
-index 669c410077..97a7c7eefa 100644
+index cb6f6e4a4e..540af562a2 100644
 --- a/modules/audio_processing/aec3/BUILD.gn
 +++ b/modules/audio_processing/aec3/BUILD.gn
 @@ -125,7 +125,7 @@ rtc_library("aec3") {
@@ -228,7 +228,7 @@ index 5465a0e26c..7bc30c90fc 100644
      cflags = [ "-mfpu=neon" ]
    }
 diff --git a/modules/audio_processing/ns/BUILD.gn b/modules/audio_processing/ns/BUILD.gn
-index 6324ed2bb7..55b7da56a5 100644
+index 3b8c3960d5..d0b66cd592 100644
 --- a/modules/audio_processing/ns/BUILD.gn
 +++ b/modules/audio_processing/ns/BUILD.gn
 @@ -43,7 +43,7 @@ rtc_static_library("ns") {
