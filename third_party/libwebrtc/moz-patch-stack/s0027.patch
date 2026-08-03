@@ -1172,7 +1172,7 @@ index c0fb04ac82..af412f6890 100644
      deps += [
        "..:logging",
 diff --git a/test/BUILD.gn b/test/BUILD.gn
-index 3d2c5201ae..1c2a8dfec5 100644
+index 2290c35e74..bd9db45b15 100644
 --- a/test/BUILD.gn
 +++ b/test/BUILD.gn
 @@ -279,6 +279,7 @@ rtc_library("audio_test_common") {
@@ -1204,7 +1204,7 @@ index 3d2c5201ae..1c2a8dfec5 100644
  
    deps = [
      "../api:rtp_parameters",
-@@ -513,7 +519,9 @@ rtc_library("video_frame_writer") {
+@@ -531,7 +537,9 @@ rtc_library("video_frame_writer") {
    ]
  
    if (!is_ios) {
@@ -1214,7 +1214,7 @@ index 3d2c5201ae..1c2a8dfec5 100644
      sources += [ "testsupport/jpeg_frame_writer.cc" ]
    } else {
      sources += [ "testsupport/jpeg_frame_writer_ios.cc" ]
-@@ -1787,6 +1795,7 @@ if (!build_with_chromium) {
+@@ -1805,6 +1813,7 @@ if (!build_with_chromium) {
    }
  }
  
@@ -1222,7 +1222,7 @@ index 3d2c5201ae..1c2a8dfec5 100644
  if (!build_with_chromium && is_android) {
    rtc_android_library("native_test_java") {
      testonly = true
-@@ -1829,6 +1838,7 @@ if (!build_with_chromium && is_android) {
+@@ -1847,6 +1856,7 @@ if (!build_with_chromium && is_android) {
      sources = [ "android/org/webrtc/native_test/NativeTestWebrtc.java" ]
    }
  }
@@ -1253,7 +1253,7 @@ index 58dc21e34b..c7820bfbd8 100644
      "../api:sequence_checker",
      "../api/adaptation:resource_adaptation_api",
 diff --git a/webrtc.gni b/webrtc.gni
-index b827f10b6b..34b2c0e4d6 100644
+index 71df7a7206..130a25742c 100644
 --- a/webrtc.gni
 +++ b/webrtc.gni
 @@ -39,6 +39,11 @@ if (is_mac) {
@@ -1353,7 +1353,7 @@ index b827f10b6b..34b2c0e4d6 100644
  # Make it possible to provide custom locations for some libraries (move these
  # up into declare_args should we need to actually use them for the GN build).
  rtc_libvpx_dir = "//third_party/libvpx"
-@@ -1259,7 +1269,7 @@ if (is_mac || is_ios) {
+@@ -1262,7 +1272,7 @@ if (is_mac || is_ios) {
    }
  }
  

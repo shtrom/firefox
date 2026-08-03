@@ -327,7 +327,7 @@ index 589142b014..2ee80ded55 100644
      }
    }
 diff --git a/examples/BUILD.gn b/examples/BUILD.gn
-index e1c281e561..33ddee7399 100644
+index 9c922f8b93..48eb2d09f0 100644
 --- a/examples/BUILD.gn
 +++ b/examples/BUILD.gn
 @@ -9,15 +9,15 @@
@@ -360,7 +360,7 @@ index e1c281e561..33ddee7399 100644
            "//third_party/ocmock",
          ]
        }
-@@ -732,7 +732,7 @@ if (is_linux || is_chromeos || is_win) {
+@@ -730,7 +730,7 @@ if (is_linux || is_chromeos || is_win) {
          "peerconnection/client/main_wnd.cc",
          "peerconnection/client/main_wnd.h",
        ]
@@ -679,7 +679,7 @@ index 1a9be46904..3520196b3b 100644
      output_extension = "so"
  
 diff --git a/sdk/BUILD.gn b/sdk/BUILD.gn
-index ba8ed53ee0..9c3626814c 100644
+index b35159f190..7993092921 100644
 --- a/sdk/BUILD.gn
 +++ b/sdk/BUILD.gn
 @@ -9,12 +9,12 @@
@@ -733,7 +733,7 @@ index f730c86d6a..7bd95b1630 100644
  import("../webrtc.gni")
  
 diff --git a/test/BUILD.gn b/test/BUILD.gn
-index eb6e4f4979..2be57820f3 100644
+index 9f1d062f3b..ed5274735b 100644
 --- a/test/BUILD.gn
 +++ b/test/BUILD.gn
 @@ -6,10 +6,10 @@
@@ -749,7 +749,7 @@ index eb6e4f4979..2be57820f3 100644
    import("//third_party/jni_zero/jni_zero.gni")
  }
  
-@@ -430,7 +430,7 @@ if (is_ios && !build_with_chromium) {
+@@ -448,7 +448,7 @@ if (is_ios && !build_with_chromium) {
      testonly = true
      visibility = [ "*" ]
      sources = [ "ios/google_test_runner.mm" ]
@@ -781,7 +781,7 @@ index a90fb214c9..9129bb0a77 100644
    }
  }
 diff --git a/webrtc.gni b/webrtc.gni
-index d518e01efb..1eed46ab6b 100644
+index e78b0c355f..e0dee59d8f 100644
 --- a/webrtc.gni
 +++ b/webrtc.gni
 @@ -5,12 +5,12 @@
