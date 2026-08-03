@@ -19370,12 +19370,6 @@
   value: @IS_NIGHTLY_BUILD@
   mirror: always
 
-# Whether SVGAElement.text is enabled.
-- name: svg.SVGAElement.text.enabled
-  type: bool
-  value: false
-  mirror: always
-
 # Whether SVGImageElement loading is forced to be sync.
 - name: svg.image-element.force-sync-load
   type: bool
