@@ -96,7 +96,6 @@ static sslOptions ssl_defaults = {
     .enableTls13GreaseEch = PR_FALSE,
     .enableTls13BackendEch = PR_FALSE,
     .callExtensionWriterOnEchInner = PR_FALSE,
-    .enableEchXtnCompression = PR_TRUE,
     .enableGrease = PR_FALSE,
     .enableChXtnPermutation = PR_FALSE,
     .dbLoadCertChain = PR_TRUE,

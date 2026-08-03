@@ -1171,6 +1171,10 @@ CERTNameConstraint *CERT_GetPrevNameConstraint(CERTNameConstraint *current);
 
 void CERT_DestroyUserNotice(CERTUserNotice *userNotice);
 
+typedef char *(*CERTPolicyStringCallback)(char *org, unsigned long noticeNumber,
+                                          void *arg);
+void CERT_SetCAPolicyStringCallback(CERTPolicyStringCallback cb, void *cbarg);
+
 char *CERT_GetCertCommentString(CERTCertificate *cert);
 
 PRBool CERT_GovtApprovedBitSet(CERTCertificate *cert);

@@ -4,13 +4,13 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """
-Generate NSS release documentation (Markdown file) based on version number.
+Generate NSS release documentation (RST file) based on version number.
 
 Usage: python3 generate_release_doc.py <version> [output_file]
 
 Example:
   python3 generate_release_doc.py 3.118
-  python3 generate_release_doc.py 3.118.1 doc/src/releases/nss_3_118_1.md
+  python3 generate_release_doc.py 3.118.1 doc/rst/releases/nss_3_118_1.rst
 """
 
 import os
@@ -29,44 +29,48 @@ from release_utils import (
 )
 
 
-def generate_md_content(version, nspr_version, bug_lines, release_date):
-    """Generate the MyST Markdown content for the release notes."""
+def generate_rst_content(version, nspr_version, bug_lines, release_date):
+    """Generate the RST content for the release notes."""
     version_underscore = version_string_to_underscore(version)
-    version_dash = version.replace(".", "-")
-    changes_text = "\n".join([f"- {line}" for line in bug_lines])
+    changes_text = "\n".join([f"   - {line}" for line in bug_lines])
 
-    md_content = f"""(mozilla-projects-nss-nss-{version_dash}-release-notes)=
+    rst_content = f""".. _mozilla_projects_nss_nss_{version_underscore}_release_notes:
 
-# NSS {version} release notes
+NSS {version} release notes
+{"=" * len(f"NSS {version} release notes")}
 
-## [Introduction](#introduction)
+`Introduction <#introduction>`__
+--------------------------------
 
-:::{{container}}
-Network Security Services (NSS) {version} was released on *{release_date}*.
-:::
+.. container::
 
-## [Distribution Information](#distribution_information)
+   Network Security Services (NSS) {version} was released on *{release_date}*.
 
-:::{{container}}
-The HG tag is NSS_{version_underscore}_RTM. NSS {version} requires NSPR {nspr_version} or newer.
+`Distribution Information <#distribution_information>`__
+--------------------------------------------------------
 
-NSS {version} source distributions are available on ftp.mozilla.org for secure HTTPS download:
+.. container::
 
-- Source tarballs:
-  <https://ftp.mozilla.org/pub/mozilla.org/security/nss/releases/NSS_{version_underscore}_RTM/src/>
+   The HG tag is NSS_{version_underscore}_RTM. NSS {version} requires NSPR {nspr_version} or newer.
 
-Other releases are available {{ref}}`mozilla_projects_nss_releases`.
-:::
+   NSS {version} source distributions are available on ftp.mozilla.org for secure HTTPS download:
 
-(changes-in-nss-{version_dash})=
+   -  Source tarballs:
+      https://ftp.mozilla.org/pub/mozilla.org/security/nss/releases/NSS_{version_underscore}_RTM/src/
 
-## [Changes in NSS {version}](#changes_in_nss_{version})
+   Other releases are available :ref:`mozilla_projects_nss_releases`.
 
-:::{{container}}
+.. _changes_in_nss_{version}:
+
+`Changes in NSS {version} <#changes_in_nss_{version}>`__
+------------------------------------------------------------------
+
+.. container::
+
 {changes_text}
-:::
+
 """
-    return md_content
+    return rst_content
 
 
 def main():
@@ -81,7 +85,7 @@ def main():
         output_file = sys.argv[2].strip()
     else:
         version_underscore = version_string_to_underscore(version)
-        output_file = f"doc/src/releases/nss_{version_underscore}.md"
+        output_file = f"doc/rst/releases/nss_{version_underscore}.rst"
 
     rtm_tag = version_string_to_RTM_tag(version)
     rtm_date = get_rtm_tag_date(rtm_tag)
@@ -101,13 +105,13 @@ def main():
     print(f"Found {len(bug_lines)} bug entries")
     print()
 
-    # Generate Markdown content
-    md_content = generate_md_content(version, nspr_version, bug_lines, current_date)
+    # Generate RST content
+    rst_content = generate_rst_content(version, nspr_version, bug_lines, current_date)
 
     # Write to file
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     with open(output_file, "w") as f:
-        f.write(md_content)
+        f.write(rst_content)
 
     print(f"Release documentation written to: {output_file}")
     print()
@@ -119,7 +123,7 @@ def main():
     print("=" * 70)
     print("Preview:")
     print("=" * 70)
-    print(md_content)
+    print(rst_content)
 
 
 if __name__ == "__main__":

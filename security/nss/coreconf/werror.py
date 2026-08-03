@@ -69,9 +69,7 @@ def main():
                   'unreachable-code-return',
                   'duplicated-cond',
                   'logical-op',
-                  'implicit-function-declaration',
-                  'unused-but-set-variable',
-                  'unused-but-set-global'
+                  'implicit-function-declaration'
                   ]:
             set_warning(w,'')
         print('-Qunused-arguments')
