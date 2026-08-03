@@ -168,14 +168,14 @@
       "type": "boolean",
       "x-category": "Browser UI",
       "description": "Enable or disable file selection dialogs.",
-      "examples": [true, false]
+      "examples": [false]
     },
 
     "AppAutoUpdate": {
       "type": "boolean",
       "x-category": "Device update settings",
       "description": "Enable or disable automatic application update.",
-      "examples": [true, false]
+      "examples": [false]
     },
 
     "AppUpdatePin": {
@@ -269,14 +269,14 @@
       "type": "boolean",
       "x-category": "Password manager",
       "description": "Enables or disables autofill for addresses.",
-      "examples": [true, false]
+      "examples": [false]
     },
 
     "AutofillCreditCardEnabled": {
       "type": "boolean",
       "x-category": "Password manager",
       "description": "Enables or disables autofill for payment methods.",
-      "examples": [true, false]
+      "examples": [false]
     },
 
     "AutoLaunchProtocolsFromOrigins": {
@@ -311,35 +311,35 @@
       "type": "boolean",
       "x-category": "Device update settings",
       "description": "Enable or disable automatic application update in the background, when the application is not running.",
-      "examples": [true, false]
+      "examples": [false]
     },
 
     "BlockAboutAddons": {
       "type": "boolean",
       "x-category": "Extensions",
       "description": "Block access to the Add-ons Manager ('about:addons').",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "BlockAboutConfig": {
       "type": "boolean",
       "x-category": "Security",
       "description": "Block access to 'about:config'.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "BlockAboutProfiles": {
       "type": "boolean",
       "x-category": "Security",
       "description": "Block access to About Profiles ('about:profiles').",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "BlockAboutSupport": {
       "type": "boolean",
       "x-category": "Security",
       "description": "Block access to Troubleshooting Information ('about:support').",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "Bookmarks": {
@@ -405,7 +405,7 @@
       "type": "boolean",
       "x-category": "Network security",
       "description": "Enable or disable the detection of captive portals.",
-      "examples": [true, false]
+      "examples": [false]
     },
 
     "Certificates": {
@@ -435,7 +435,7 @@
       "type": "boolean",
       "x-category": "Network security",
       "description": "Enable the CNSA 2.0 ML-KEM-1024 key agreement for TLS.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "Containers": {
@@ -741,21 +741,21 @@
       "type": "boolean",
       "x-category": "Miscellaneous",
       "description": "Disable account-based services, including sync.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisableAppUpdate": {
       "type": "boolean",
       "x-category": "Device update settings",
       "description": "Turn off application updates within Firefox.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisableBuiltinPDFViewer": {
       "type": "boolean",
       "x-category": "Printing",
       "description": "Disable the built in PDF viewer.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisabledCiphers": {
@@ -838,63 +838,63 @@
       "type": "boolean",
       "x-category": "Miscellaneous",
       "description": "Prevent the default browser agent from taking any actions.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisableDeveloperTools": {
       "type": "boolean",
       "x-category": "Security",
       "description": "Remove access to all developer tools.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisableEncryptedClientHello": {
       "type": "boolean",
       "x-category": "Network security",
       "description": "Disable the TLS Feature for Encrypted Client Hello.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisableFeedbackCommands": {
       "type": "boolean",
       "x-category": "Browser UI",
       "description": "Disable the menus for reporting sites (Submit Feedback, Report Deceptive Site).",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisableFirefoxAccounts": {
       "type": "boolean",
       "x-category": "Miscellaneous",
       "description": "Disable Firefox Accounts integration (Sync).",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisableFirefoxScreenshots": {
       "type": "boolean",
       "x-category": "Miscellaneous",
       "description": "Remove access to Firefox Screenshots.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisableFirefoxStudies": {
       "type": "boolean",
       "x-category": "Miscellaneous",
       "description": "Disable Firefox studies (Shield).",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisableForgetButton": {
       "type": "boolean",
       "x-category": "Miscellaneous",
       "description": "Disable the \"Forget\" button.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisableFormHistory": {
       "type": "boolean",
       "x-category": "Local data storage",
       "description": "Turn off saving information on web forms and the search bar.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisableLaunchOnLogin": {
@@ -908,63 +908,63 @@
       "type": "boolean",
       "x-category": "Password manager",
       "description": "Remove the master password functionality.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisablePasswordReveal": {
       "type": "boolean",
       "x-category": "Password manager",
       "description": "Do not allow passwords to be shown in saved logins.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisablePocket": {
       "type": "boolean",
       "x-category": "Miscellaneous",
       "description": "Remove Pocket in the Firefox UI.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisablePrivateBrowsing": {
       "type": "boolean",
       "x-category": "Browsing restrictions",
       "description": "Remove access to private browsing.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisableProfileImport": {
       "type": "boolean",
       "x-category": "Bookmarks",
       "description": "Remove the ability to import data from other browsers.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisableProfileRefresh": {
       "type": "boolean",
       "x-category": "Miscellaneous",
       "description": "Disable the Refresh Firefox button on 'about:support' and 'support.mozilla.org', as well as the prompt that displays offering to refresh Firefox when you haven't used it in a while.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisableRemoteImprovements": {
       "type": "boolean",
       "x-category": "Miscellaneous",
       "description": "Prevent Firefox from applying performance, stability, and feature changes between updates.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisableRemoteSettingsAndAcceptSecurityConsequences": {
       "type": "boolean",
       "x-category": "Network security",
       "description": "Disable Remote Settings updates, stopping Firefox from receiving updated data such as blocklists, and accept the resulting security consequences.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisableSafeMode": {
       "type": "boolean",
       "x-category": "Security",
       "description": "Disable safe mode (Troubleshoot Mode) within the browser.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisableSecurityBypass": {
@@ -992,28 +992,28 @@
       "type": "boolean",
       "x-category": "Browser UI",
       "description": "Remove the \"Set As Desktop Background...\" menuitem when right clicking on an image.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisableSystemAddonUpdate": {
       "type": "boolean",
       "x-category": "Device update settings",
       "description": "Prevent system add-ons from being installed or updated.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisableTelemetry": {
       "type": "boolean",
       "x-category": "Miscellaneous",
       "description": "Prevent the upload of telemetry data.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisableThirdPartyModuleBlocking": {
       "type": "boolean",
       "x-category": "Security",
       "description": "Do not allow blocking third-party modules from the 'about:third-party' page.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DisplayBookmarksToolbar": {
@@ -1076,7 +1076,7 @@
       "type": "boolean",
       "x-category": "Startup",
       "description": "Don't check if Firefox is the default browser at startup.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "DownloadDirectory": {
@@ -1382,7 +1382,7 @@
       "type": "boolean",
       "x-category": "Extensions",
       "description": "Control extension updates.",
-      "examples": [true, false]
+      "examples": [false]
     },
 
     "FirefoxHome": {
@@ -1510,7 +1510,7 @@
       "type": "boolean",
       "x-category": "Network security",
       "description": "Whether to always go through the DNS server before sending a single word search string to a search engine.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "Handlers": {
@@ -1594,7 +1594,7 @@
       "type": "boolean",
       "x-category": "Miscellaneous",
       "description": "Control hardware acceleration.",
-      "examples": [true, false]
+      "examples": [false]
     },
 
     "Homepage": {
@@ -1669,21 +1669,21 @@
       "type": "boolean",
       "x-category": "Network security",
       "description": "Control whether Firefox's built-in IP Protection (VPN) is available to users. When disabled, the feature is turned off and cannot be used.",
-      "examples": [true, false]
+      "examples": [false]
     },
 
     "LegacyProfiles": {
       "type": "boolean",
       "x-category": "Miscellaneous",
       "description": "Disable the feature enforcing a separate profile for each installation.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "LegacySameSiteCookieBehaviorEnabled": {
       "type": "boolean",
       "x-category": "Network security",
       "description": "Enable default legacy SameSite cookie behavior setting.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "LegacySameSiteCookieBehaviorEnabledForDomainList": {
@@ -1816,49 +1816,49 @@
       "type": "boolean",
       "x-category": "Device update settings",
       "description": "Switch to manual updates only.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "MicrosoftEntraSSO": {
       "type": "boolean",
       "x-category": "Authentication",
       "description": "Allow single sign-on for Microsoft Entra accounts on macOS.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "NetworkPrediction": {
       "type": "boolean",
       "x-category": "Network security",
       "description": "Enable or disable network prediction (DNS prefetching).",
-      "examples": [true, false]
+      "examples": [false]
     },
 
     "NewTabPage": {
       "type": "boolean",
       "x-category": "Startup",
       "description": "Enable or disable the New Tab page.",
-      "examples": [true, false]
+      "examples": [false]
     },
 
     "NoDefaultBookmarks": {
       "type": "boolean",
       "x-category": "Bookmarks",
       "description": "Disable the creation of default bookmarks.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "OfferToSaveLogins": {
       "type": "boolean",
       "x-category": "Password manager",
       "description": "Control whether or not Firefox offers to save passwords.",
-      "examples": [true, false]
+      "examples": [false]
     },
 
     "OfferToSaveLoginsDefault": {
       "type": "boolean",
       "x-category": "Password manager",
       "description": "Sets the default value of 'signon.rememberSignons' without locking it.",
-      "examples": [true, false]
+      "examples": [false]
     },
 
     "OverrideFirstRunPage": {
@@ -1879,7 +1879,7 @@
       "type": "boolean",
       "x-category": "Password manager",
       "description": "Remove access to the password manager via preferences and blocks about:logins on Firefox 70.",
-      "examples": [true, false]
+      "examples": [false]
     },
 
     "PasswordManagerExceptions": {
@@ -2176,7 +2176,7 @@
       "type": "boolean",
       "x-category": "Network security",
       "description": "Enable post-quantum key agreement for TLS.",
-      "examples": [true, false]
+      "examples": [false]
     },
 
     "Preferences": {
@@ -2225,14 +2225,14 @@
       "type": "boolean",
       "x-category": "Password manager",
       "description": "Require or prevent using a primary (formerly master) password.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "PrintingEnabled": {
       "type": "boolean",
       "x-category": "Printing",
       "description": "Enable or disable printing.",
-      "examples": [true, false]
+      "examples": [false]
     },
 
     "PrivateBrowsingModeAvailability": {
@@ -2247,7 +2247,7 @@
       "type": "boolean",
       "x-category": "Downloads",
       "description": "Ask where to save each file before downloading.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "Proxy": {
@@ -2505,7 +2505,7 @@
       "type": "boolean",
       "x-category": "Search",
       "description": "Enable search suggestions.",
-      "examples": [true, false]
+      "examples": [false]
     },
 
     "SecurityDevices": {
@@ -2549,7 +2549,7 @@
       "type": "boolean",
       "x-category": "Startup",
       "description": "Show the home button on the toolbar.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "SitePolicies": {
@@ -2606,7 +2606,7 @@
       "type": "boolean",
       "x-category": "Startup",
       "description": "Configure display settings for the Firefox Terms of Use and Privacy Notice on startup.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "SSLVersionMax": {
@@ -2629,7 +2629,7 @@
       "type": "boolean",
       "x-category": "Downloads",
       "description": "Force downloads to start off in a local, temporary location rather than the default download directory.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "SupportMenu": {
@@ -2658,7 +2658,7 @@
       "type": "boolean",
       "x-category": "Content settings",
       "description": "Enable or disable webpage translation.",
-      "examples": [true, false]
+      "examples": [false]
     },
 
     "UserMessaging": {
@@ -2708,14 +2708,14 @@
       "type": "boolean",
       "x-category": "Printing",
       "description": "Use the system print dialog instead of the print preview window.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "VisualSearchEnabled": {
       "type": "boolean",
       "x-category": "Search",
       "description": "Enable or disable visual search.",
-      "examples": [true, false]
+      "examples": [false]
     },
 
     "WebsiteFilter": {
@@ -2750,14 +2750,14 @@
       "type": "boolean",
       "x-category": "Authentication",
       "description": "Allow Windows single sign-on for Microsoft, work, and school accounts.",
-      "examples": [true, false]
+      "examples": [true]
     },
 
     "XSLTEnabled": {
       "type": "boolean",
       "x-category": "Content settings",
       "description": "Enable or disable support for the XSLTProcessor JavaScript API and the XSLT processing instruction.",
-      "examples": [true, false]
+      "examples": [false]
     }
   }
 }
