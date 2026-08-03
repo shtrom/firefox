@@ -1715,7 +1715,7 @@
           "Enabled": true,
           "BlockTrackers": true,
           "EnablePrompting": true,
-          "SkipDomains": ["https://example.org/"],
+          "SkipDomains": ["example.org", "*.example.com"],
           "Locked": true
         }
       ],
