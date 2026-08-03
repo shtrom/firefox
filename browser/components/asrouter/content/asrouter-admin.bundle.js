@@ -155,6 +155,7 @@ const MESSAGE_TYPE_LIST = [
   "MENU_MESSAGE_TELEMETRY",
   "NEWTAB_MESSAGE_TELEMETRY",
   "SMART_WINDOW_PROMO_TELEMETRY",
+  "SIDEBAR_CHATBOT_PROMO_TELEMETRY",
   "ACTION_ONLY_TELEMETRY",
   "AS_ROUTER_TELEMETRY_USER_EVENT",
 
@@ -961,7 +962,7 @@ class ASRouterAdminInner extends (react__WEBPACK_IMPORTED_MODULE_1___default().P
     const isModified = this.state.modifiedMessages.includes(messageIndex);
     const requiresAnchor = this.messageRequiresAnchor(msg);
     const anchorWarning = "This message may not render as it anchors to a browser UI element that may not be " + "currently visible.";
-    const aboutMessagePreviewSupported = ["infobar", "spotlight", "cfr_doorhanger", "feature_callout", "pb_newtab"].includes(msg.template);
+    const aboutMessagePreviewSupported = ["infobar", "spotlight", "cfr_doorhanger", "feature_callout", "pb_newtab", "sidebar_chatbot_promo"].includes(msg.template);
     let itemClassName = "message-item";
     if (isBlocked) {
       itemClassName += " blocked";
