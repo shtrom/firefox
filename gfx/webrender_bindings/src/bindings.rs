@@ -1287,10 +1287,6 @@ pub unsafe extern "C" fn wr_render_backend_pool_new(
     if size == 0 {
         return std::ptr::null_mut();
     }
-
-    // Ensure the WR profiler callbacks are hooked up to the Gecko profiler.
-    set_profiler_hooks(Some(&PROFILER_HOOKS));
-
     let font_namespace = next_namespace_id();
     let fonts = SharedFontResources::new(font_namespace);
     let pool_fonts = fonts.clone();
