@@ -388,7 +388,7 @@ index 45b09e6aca..86e337783e 100644
      frame_boundary = packet->is_last_packet_in_frame();
    }
 diff --git a/video/rtp_video_stream_receiver2.cc b/video/rtp_video_stream_receiver2.cc
-index f228fc4fee..ac637c87be 100644
+index 20bbc3254e..e26c98ec71 100644
 --- a/video/rtp_video_stream_receiver2.cc
 +++ b/video/rtp_video_stream_receiver2.cc
 @@ -892,13 +892,13 @@ void RtpVideoStreamReceiver2::OnInsertedPacket(
@@ -412,7 +412,7 @@ index f228fc4fee..ac637c87be 100644
            absolute_capture_time_ms.has_value()
                ? *absolute_capture_time_ms
                : ntp_estimator_.Estimate(first_packet->timestamp),  //
-@@ -1177,8 +1177,9 @@ void RtpVideoStreamReceiver2::ReceivePacket(const RtpPacketReceived& packet) {
+@@ -1183,8 +1183,9 @@ void RtpVideoStreamReceiver2::ReceivePacket(const RtpPacketReceived& packet) {
      // Padding or keep-alive packet.
      // TODO(nisse): Could drop empty packets earlier, but need to figure out how
      // they should be counted in stats.
@@ -424,7 +424,7 @@ index f228fc4fee..ac637c87be 100644
      return;
    }
    if (packet.PayloadType() == red_payload_type_) {
-@@ -1250,8 +1251,9 @@ void RtpVideoStreamReceiver2::ParseAndHandleEncapsulatingHeader(
+@@ -1256,8 +1257,9 @@ void RtpVideoStreamReceiver2::ParseAndHandleEncapsulatingHeader(
    if (packet.payload()[0] == ulpfec_receiver_->ulpfec_payload_type()) {
      // Notify video_receiver about received FEC packets to avoid NACKing these
      // packets.
@@ -436,7 +436,7 @@ index f228fc4fee..ac637c87be 100644
    }
    if (ulpfec_receiver_->AddReceivedRedPacket(packet)) {
      ulpfec_receiver_->ProcessReceivedFec();
-@@ -1262,8 +1264,9 @@ void RtpVideoStreamReceiver2::ParseAndHandleEncapsulatingHeader(
+@@ -1268,8 +1270,9 @@ void RtpVideoStreamReceiver2::ParseAndHandleEncapsulatingHeader(
  // RtpFrameReferenceFinder will need to know about padding to
  // correctly calculate frame references.
  void RtpVideoStreamReceiver2::NotifyReceiverOfEmptyPacket(
@@ -447,7 +447,7 @@ index f228fc4fee..ac637c87be 100644
    RTC_DCHECK_RUN_ON(&packet_sequence_checker_);
    RTC_DCHECK_RUN_ON(&worker_task_checker_);
  
-@@ -1272,7 +1275,7 @@ void RtpVideoStreamReceiver2::NotifyReceiverOfEmptyPacket(
+@@ -1278,7 +1281,7 @@ void RtpVideoStreamReceiver2::NotifyReceiverOfEmptyPacket(
    if (h26x_packet_buffer_ && UseH26xPacketBuffer(codec)) {
      OnInsertedPacket(h26x_packet_buffer_->InsertPadding(seq_num));
    } else {
@@ -456,7 +456,7 @@ index f228fc4fee..ac637c87be 100644
    }
    if (nack_module_) {
      nack_module_->OnReceivedPacket(seq_num, /*is_recovered=*/false);
-@@ -1357,7 +1360,7 @@ void RtpVideoStreamReceiver2::FrameDecoded(int64_t picture_id) {
+@@ -1363,7 +1366,7 @@ void RtpVideoStreamReceiver2::FrameDecoded(int64_t picture_id) {
      int64_t unwrapped_rtp_seq_num = rtp_seq_num_unwrapper_.Unwrap(seq_num);
      packet_infos_.erase(packet_infos_.begin(),
                          packet_infos_.upper_bound(unwrapped_rtp_seq_num));
@@ -466,10 +466,10 @@ index f228fc4fee..ac637c87be 100644
    }
  }
 diff --git a/video/rtp_video_stream_receiver2.h b/video/rtp_video_stream_receiver2.h
-index 06e53a6434..8aa6c56bf6 100644
+index d43c0315ee..71fb67af4f 100644
 --- a/video/rtp_video_stream_receiver2.h
 +++ b/video/rtp_video_stream_receiver2.h
-@@ -315,7 +315,7 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
+@@ -317,7 +317,7 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
    // This function assumes that it's being called from only one thread.
    void ParseAndHandleEncapsulatingHeader(const RtpPacketReceived& packet)
        RTC_RUN_ON(packet_sequence_checker_);
