@@ -172,6 +172,8 @@ std::optional<int64_t> VideoStreamBufferController::InsertFrame(
       TRACE_EVENT2("webrtc",
                    "VideoStreamBufferController::InsertFrame Frame Complete",
                    "remote_ssrc", ssrc, "frame_id", frameId);
+      timing_->OnContinuousTemporalUnits(buffer_->NewContinuousTemporalUnits(),
+                                         clock_->CurrentTime());
       stats_proxy_->OnCompleteFrame(metadata.is_keyframe, metadata.size,
                                     metadata.contentType);
       MaybeScheduleFrameForRelease();

@@ -30,10 +30,10 @@ Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/ee566d1bfb654d36e
  12 files changed, 70 insertions(+), 8 deletions(-)
 
 diff --git a/api/video/frame_buffer.cc b/api/video/frame_buffer.cc
-index fcff81f41c..77834e7d1f 100644
+index 0fcf54a76d..754ce00da1 100644
 --- a/api/video/frame_buffer.cc
 +++ b/api/video/frame_buffer.cc
-@@ -150,14 +150,29 @@ void FrameBuffer::DropNextDecodableTemporalUnit() {
+@@ -151,14 +151,29 @@ void FrameBuffer::DropNextDecodableTemporalUnit() {
    }
  
    auto end_it = std::next(next_decodable_temporal_unit_->last_frame);
@@ -66,7 +66,7 @@ index fcff81f41c..77834e7d1f 100644
  std::optional<int64_t> FrameBuffer::LastContinuousFrameId() const {
    return last_continuous_frame_id_;
  }
-@@ -177,6 +192,9 @@ int FrameBuffer::GetTotalNumberOfContinuousTemporalUnits() const {
+@@ -182,6 +197,9 @@ int FrameBuffer::GetTotalNumberOfContinuousTemporalUnits() const {
  int FrameBuffer::GetTotalNumberOfDroppedFrames() const {
    return num_dropped_frames_;
  }
@@ -76,7 +76,7 @@ index fcff81f41c..77834e7d1f 100644
  
  size_t FrameBuffer::CurrentSize() const {
    return frames_.size();
-@@ -280,6 +298,7 @@ void FrameBuffer::FindNextAndLastDecodableTemporalUnit() {
+@@ -286,6 +304,7 @@ void FrameBuffer::FindNextAndLastDecodableTemporalUnit() {
  }
  
  void FrameBuffer::Clear() {
@@ -85,10 +85,10 @@ index fcff81f41c..77834e7d1f 100644
    next_decodable_temporal_unit_.reset();
    decodable_temporal_units_info_.reset();
 diff --git a/api/video/frame_buffer.h b/api/video/frame_buffer.h
-index e607a182c2..5f2c5d0f2a 100644
+index 87974ada5c..d8543e0ba2 100644
 --- a/api/video/frame_buffer.h
 +++ b/api/video/frame_buffer.h
-@@ -67,6 +67,7 @@ class FrameBuffer {
+@@ -73,6 +73,7 @@ class FrameBuffer {
  
    int GetTotalNumberOfContinuousTemporalUnits() const;
    int GetTotalNumberOfDroppedFrames() const;
@@ -96,7 +96,7 @@ index e607a182c2..5f2c5d0f2a 100644
    size_t CurrentSize() const;
  
   private:
-@@ -88,6 +89,8 @@ class FrameBuffer {
+@@ -94,6 +95,8 @@ class FrameBuffer {
    void PropagateContinuity(const FrameIterator& frame_it);
    void FindNextAndLastDecodableTemporalUnit();
    void Clear();
@@ -105,14 +105,14 @@ index e607a182c2..5f2c5d0f2a 100644
  
    const bool legacy_frame_id_jump_behavior_;
    const size_t max_size_;
-@@ -100,6 +103,7 @@ class FrameBuffer {
+@@ -106,6 +109,7 @@ class FrameBuffer {
  
    int num_continuous_temporal_units_ = 0;
    int num_dropped_frames_ = 0;
 +  int num_discarded_packets_ = 0;
- };
  
- }  // namespace webrtc
+   absl::InlinedVector<uint32_t, 4> new_continuous_temporal_units_;
+ };
 diff --git a/call/video_receive_stream.h b/call/video_receive_stream.h
 index deba77c131..466043f008 100644
 --- a/call/video_receive_stream.h
@@ -284,10 +284,10 @@ index fc9fb7ea8e..454c0a9308 100644
                                   std::move(config_.frame_decryptor),
                                   std::move(config_.frame_transformer)),
 diff --git a/video/video_stream_buffer_controller.cc b/video/video_stream_buffer_controller.cc
-index 03287c90f0..73298aa916 100644
+index 033a9c50ec..21681890b9 100644
 --- a/video/video_stream_buffer_controller.cc
 +++ b/video/video_stream_buffer_controller.cc
-@@ -252,6 +252,7 @@ void VideoStreamBufferController::OnFrameReady(
+@@ -254,6 +254,7 @@ void VideoStreamBufferController::OnFrameReady(
  
    // Update stats.
    UpdateDroppedFrames();
@@ -295,7 +295,7 @@ index 03287c90f0..73298aa916 100644
    UpdateFrameBufferTimings(min_receive_time, now);
  
    std::unique_ptr<EncodedFrame> frame =
-@@ -321,6 +322,17 @@ void VideoStreamBufferController::UpdateDroppedFrames()
+@@ -323,6 +324,17 @@ void VideoStreamBufferController::UpdateDroppedFrames()
        buffer_->GetTotalNumberOfDroppedFrames();
  }
  
