@@ -60,6 +60,23 @@ add_task(async function testLineByLineParsing() {
   BrowserTestUtils.removeTab(tab);
 });
 
+add_task(async function testNoPrettyPrintForJsonl() {
+  info("Test 'Pretty Print' button is hidden for JSONL started");
+
+  const jsonl = '{"a":1}\n{"b":2}\n';
+  const TEST_URL = `data:application/jsonl,${encodeURIComponent(jsonl)}`;
+  const tab = await addJsonViewTab(TEST_URL);
+
+  await selectJsonViewContentTab("rawdata");
+  is(
+    await getElementCount(".textPanelBox .toolbar button.prettyprint"),
+    0,
+    "There must be no pretty-print button for JSONL documents"
+  );
+
+  BrowserTestUtils.removeTab(tab);
+});
+
 add_task(async function testSaveAsRestoresJsonlContentType() {
   info("Test JSONL Save As started");
 
