@@ -35,16 +35,11 @@ class AbstractGeneratorObject : public NativeObject {
   // generator state.
   static const int32_t RESUME_INDEX_INITIAL_YIELD = 0;
 
-  static constexpr auto CALLEE_OR_MODULE_SLOT =
-      TypedSlot<ValueType::Object, ValueType::Null, ValueType::Undefined>(0);
-  static constexpr auto ENV_CHAIN_SLOT =
-      TypedSlot<ValueType::Object, ValueType::Null, ValueType::Undefined>(1);
-  static constexpr auto ARGS_OBJ_SLOT =
-      TypedSlot<ValueType::Object, ValueType::Null, ValueType::Undefined>(2);
-  static constexpr auto STACK_STORAGE_SLOT =
-      TypedSlot<ValueType::Object, ValueType::Null, ValueType::Undefined>(3);
-  static constexpr auto RESUME_INDEX_SLOT =
-      TypedSlot<ValueType::Int32, ValueType::Null, ValueType::Undefined>(4);
+  JS_DEFINE_TYPED_SLOT(0, CALLEE_OR_MODULE_SLOT, Object, Null, Undefined);
+  JS_DEFINE_TYPED_SLOT(1, ENV_CHAIN_SLOT, Object, Null, Undefined);
+  JS_DEFINE_TYPED_SLOT(2, ARGS_OBJ_SLOT, Object, Null, Undefined);
+  JS_DEFINE_TYPED_SLOT(3, STACK_STORAGE_SLOT, Object, Null, Undefined);
+  JS_DEFINE_TYPED_SLOT(4, RESUME_INDEX_SLOT, Int32, Null, Undefined);
   static constexpr uint32_t RESERVED_SLOTS = 5;
 
   static_assert(RESUME_INDEX_SLOT.index() == GENERATOR_RESUME_INDEX_SLOT,

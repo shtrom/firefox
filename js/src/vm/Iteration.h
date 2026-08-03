@@ -646,8 +646,7 @@ struct NativeIterator : public NativeIteratorListNode {
 class PropertyIteratorObject : public NativeObject {
   static const JSClassOps classOps_;
 
-  static constexpr auto ITERATOR_SLOT =
-      TypedSlot<ValueType::Double, ValueType::Undefined>(0);
+  JS_DEFINE_TYPED_SLOT(0, ITERATOR_SLOT, Double, Undefined);
   static constexpr uint32_t SLOT_COUNT = 1;
 
  public:

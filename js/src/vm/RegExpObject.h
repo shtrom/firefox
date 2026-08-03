@@ -41,10 +41,8 @@ extern JSObject* CloneRegExpObject(JSContext* cx, Handle<RegExpObject*> regex);
 
 class RegExpObject : public NativeObject {
   static constexpr uint32_t LAST_INDEX_SLOT = 0;
-  static constexpr auto SOURCE_SLOT =
-      TypedSlot<ValueType::String, ValueType::Undefined>(1);
-  static constexpr auto FLAGS_SLOT =
-      TypedSlot<ValueType::Int32, ValueType::Undefined>(2);
+  JS_DEFINE_TYPED_SLOT(1, SOURCE_SLOT, String, Undefined);
+  JS_DEFINE_TYPED_SLOT(2, FLAGS_SLOT, Int32, Undefined);
 
   static_assert(RegExpObject::FLAGS_SLOT.index() == REGEXP_FLAGS_SLOT,
                 "FLAGS_SLOT values should be in sync with self-hosted JS");
@@ -53,8 +51,7 @@ class RegExpObject : public NativeObject {
                               NewObjectKind newKind);
 
  public:
-  static constexpr auto SHARED_SLOT =
-      TypedSlot<ValueType::PrivateGCThing, ValueType::Undefined>(3);
+  JS_DEFINE_TYPED_SLOT(3, SHARED_SLOT, PrivateGCThing, Undefined);
   static const unsigned RESERVED_SLOTS = 4;
 
   // This must match RESERVED_SLOTS. See assertions in CloneRegExpObject.

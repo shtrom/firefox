@@ -304,8 +304,8 @@ JSObject* AsyncFunctionReject(JSContext* cx,
 
 class AsyncFunctionGeneratorObject : public AbstractGeneratorObject {
  public:
-  static constexpr auto PROMISE_SLOT =
-      TypedSlot<ValueType::Object>(AbstractGeneratorObject::RESERVED_SLOTS);
+  JS_DEFINE_TYPED_SLOT(AbstractGeneratorObject::RESERVED_SLOTS, PROMISE_SLOT,
+                       Object);
   static constexpr uint32_t RESERVED_SLOTS =
       AbstractGeneratorObject::RESERVED_SLOTS + 1;
 

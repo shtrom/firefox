@@ -43,24 +43,20 @@ class ErrorObject : public NativeObject {
   static const JSClass protoClasses[JSEXN_ERROR_LIMIT];
 
  protected:
-  static constexpr auto STACK_SLOT =
-      TypedSlot<ValueType::Object, ValueType::Null>(0);
-  static constexpr auto ERROR_REPORT_SLOT =
-      TypedSlot<ValueType::Double, ValueType::Undefined>(STACK_SLOT.index() +
-                                                         1);
+  JS_DEFINE_TYPED_SLOT(0, STACK_SLOT, Object, Null);
+  JS_DEFINE_TYPED_SLOT(STACK_SLOT.index() + 1, ERROR_REPORT_SLOT, Double,
+                       Undefined);
   static const uint32_t FILENAME_SLOT = ERROR_REPORT_SLOT.index() + 1;
   static const uint32_t LINENUMBER_SLOT = FILENAME_SLOT + 1;
   static const uint32_t COLUMNNUMBER_SLOT = LINENUMBER_SLOT + 1;
   static const uint32_t MESSAGE_SLOT = COLUMNNUMBER_SLOT + 1;
   static const uint32_t CAUSE_SLOT = MESSAGE_SLOT + 1;
-  static constexpr auto SOURCEID_SLOT =
-      TypedSlot<ValueType::Int32>(CAUSE_SLOT + 1);
+  JS_DEFINE_TYPED_SLOT(CAUSE_SLOT + 1, SOURCEID_SLOT, Int32);
 
   static const uint32_t RESERVED_SLOTS = SOURCEID_SLOT.index() + 1;
 
   // This slot is only used for errors that could be Wasm traps.
-  static constexpr auto WASM_TRAP_SLOT =
-      TypedSlot<ValueType::Boolean>(SOURCEID_SLOT.index() + 1);
+  JS_DEFINE_TYPED_SLOT(SOURCEID_SLOT.index() + 1, WASM_TRAP_SLOT, Boolean);
   static const uint32_t RESERVED_SLOTS_MAYBE_WASM_TRAP =
       WASM_TRAP_SLOT.index() + 1;
 

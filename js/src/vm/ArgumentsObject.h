@@ -155,11 +155,10 @@ static_assert(JIT_ARGS_LENGTH_MAX <= ARGS_LENGTH_MAX,
  */
 class ArgumentsObject : public NativeObject {
  public:
-  static constexpr auto INITIAL_LENGTH_SLOT = TypedSlot<ValueType::Int32>(0);
-  static constexpr auto DATA_SLOT = TypedSlot<ValueType::Double>(1);
-  static constexpr auto MAYBE_CALL_SLOT =
-      TypedSlot<ValueType::Object, ValueType::Undefined>(2);
-  static constexpr auto CALLEE_SLOT = TypedSlot<ValueType::Object>(3);
+  JS_DEFINE_TYPED_SLOT(0, INITIAL_LENGTH_SLOT, Int32);
+  JS_DEFINE_TYPED_SLOT(1, DATA_SLOT, Double);
+  JS_DEFINE_TYPED_SLOT(2, MAYBE_CALL_SLOT, Object, Undefined);
+  JS_DEFINE_TYPED_SLOT(3, CALLEE_SLOT, Object);
 
   static const uint32_t LENGTH_OVERRIDDEN_BIT = 0x1;
   static const uint32_t ITERATOR_OVERRIDDEN_BIT = 0x2;

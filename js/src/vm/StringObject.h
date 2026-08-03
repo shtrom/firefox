@@ -13,8 +13,8 @@ namespace js {
 class Shape;
 
 class StringObject : public NativeObject {
-  static constexpr auto PRIMITIVE_VALUE_SLOT = TypedSlot<ValueType::String>(0);
-  static constexpr auto LENGTH_SLOT = TypedSlot<ValueType::Int32>(1);
+  JS_DEFINE_TYPED_SLOT(0, PRIMITIVE_VALUE_SLOT, String);
+  JS_DEFINE_TYPED_SLOT(1, LENGTH_SLOT, Int32);
 
   static const ClassSpec classSpec_;
 
