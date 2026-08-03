@@ -393,13 +393,12 @@ void Gecko_EnsureStyleTransitionArrayLength(void* array, size_t len);
 void Gecko_EnsureStyleScrollTimelineArrayLength(void* array, size_t len);
 void Gecko_EnsureStyleViewTimelineArrayLength(void* array, size_t len);
 
-// Searches from the beginning of |keyframes| for a Keyframe object with the
-// specified offset and timing function. If none is found, a new Keyframe object
-// with the specified |offset| and |timingFunction| will be prepended to
-// |keyframes|.
+// Searches from the end of |keyframes| for a Keyframe object with the specified
+// offset and timing function. If none is found, a new Keyframe object with the
+// specified |offset| and |timingFunction| will be appended to |keyframes|.
 //
-// @param keyframes  An array of Keyframe objects, sorted by offset.
-//                   The first Keyframe in the array, if any, MUST have an
+// @param keyframes  An array of Keyframe objects, sorted by descending offset.
+//                   The last Keyframe in the array, if any, MUST have an
 //                   offset greater than or equal to |offset|.
 // @param offset  The offset to search for, or, if no suitable Keyframe is
 //                found, the offset to use for the created Keyframe.
@@ -410,7 +409,7 @@ void Gecko_EnsureStyleViewTimelineArrayLength(void* array, size_t len);
 //                     found, to set on the created Keyframe.
 //
 // @returns  The matching or created Keyframe.
-mozilla::Keyframe* Gecko_GetOrCreateKeyframeAtStart(
+mozilla::Keyframe* Gecko_GetOrCreateKeyframeAtEnd(
     nsTArray<mozilla::Keyframe>* keyframes, float offset,
     const mozilla::StyleComputedTimingFunction* timingFunction,
     const mozilla::dom::CompositeOperationOrAuto composition);
@@ -425,7 +424,7 @@ mozilla::Keyframe* Gecko_GetOrCreateKeyframeWithRangeName(
     const mozilla::dom::CompositeOperationOrAuto aComposition,
     size_t* aMatchedIdx);
 
-// As with Gecko_GetOrCreateKeyframeAtStart except that this method will search
+// As with Gecko_GetOrCreateKeyframeAtEnd except that this method will search
 // from the beginning of |keyframes| for a Keyframe with matching timing
 // function, composition, and an offset of 0.0.
 // Furthermore, if a matching Keyframe is not found, a new Keyframe will be
@@ -435,7 +434,7 @@ mozilla::Keyframe* Gecko_GetOrCreateInitialKeyframe(
     const mozilla::StyleComputedTimingFunction* timingFunction,
     const mozilla::dom::CompositeOperationOrAuto composition);
 
-// As with Gecko_GetOrCreateKeyframeAtStart except that this method will search
+// As with Gecko_GetOrCreateKeyframeAtEnd except that this method will search
 // from the *end* of |keyframes| for a Keyframe with matching timing function,
 // composition, and an offset of 1.0. If a matching Keyframe is not found, a new
 // Keyframe will be appended to the end of |keyframes|.

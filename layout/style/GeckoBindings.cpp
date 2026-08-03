@@ -1081,7 +1081,6 @@ enum class KeyframeSearchDirection {
 };
 
 enum class KeyframeInsertPosition {
-  Prepend,
   LastForOffset,
   Append,
 };
@@ -1122,9 +1121,6 @@ static std::pair<Keyframe*, size_t> GetOrCreateKeyframe(
 
   Keyframe* keyframe = nullptr;
   switch (aInsertPosition) {
-    case KeyframeInsertPosition::Prepend:
-      keyframe = aKeyframes->InsertElementAt(0);
-      break;
     case KeyframeInsertPosition::LastForOffset:
       // FIXME: Bug 2037642. This may be incorrect to insert the final keyframe,
       // or we probably never call this because we generate the initial/final
@@ -1147,18 +1143,18 @@ static std::pair<Keyframe*, size_t> GetOrCreateKeyframe(
   return {keyframe, aKeyframes->Length()};
 }
 
-Keyframe* Gecko_GetOrCreateKeyframeAtStart(
+Keyframe* Gecko_GetOrCreateKeyframeAtEnd(
     nsTArray<Keyframe>* aKeyframes, float aOffset,
     const StyleComputedTimingFunction* aTimingFunction,
     const CompositeOperationOrAuto aComposition) {
   MOZ_ASSERT(aKeyframes->IsEmpty() ||
-                 aKeyframes->ElementAt(0).mOffset->mPercentage >= aOffset,
-             "The percentage offset should be less than or equal to the first "
+                 aKeyframes->LastElement().mOffset->mPercentage >= aOffset,
+             "The percentage offset should be less than or equal to the last "
              "keyframe's offset if there are exisiting keyframes");
   return GetOrCreateKeyframe(aKeyframes, StyleTimelineRangeName::None, aOffset,
                              aTimingFunction, aComposition,
-                             KeyframeSearchDirection::Forwards,
-                             KeyframeInsertPosition::Prepend)
+                             KeyframeSearchDirection::Backwards,
+                             KeyframeInsertPosition::Append)
       .first;
 }
 

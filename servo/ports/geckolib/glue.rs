@@ -7942,9 +7942,9 @@ pub unsafe extern "C" fn Servo_StyleSet_GetKeyframesForName(
         pair
     };
 
-    // Iterate over the keyframe rules backwards so we can drop overridden
-    // properties (since declarations in later rules override those in earlier
-    // ones).
+    // Iterate over the keyframe rules backwards so we can drop overridden properties (since
+    // declarations in later rules override those in earlier ones). We reverse the keyframes array
+    // at the end.
     for step in animation.steps.iter().rev() {
         debug_assert!(step.start_offset.range_name.is_none());
         if step.start_offset.percentage.0 != current_offset {
@@ -7955,9 +7955,9 @@ pub unsafe extern "C" fn Servo_StyleSet_GetKeyframesForName(
             step,
             matches!(step.value, KeyframesStepValue::ComputedValues),
         );
-        // Look for an existing keyframe with the same offset, timing function, and compsition, or
-        // else add a new keyframe at the beginning of the keyframe array.
-        let keyframe = &mut *bindings::Gecko_GetOrCreateKeyframeAtStart(
+        // Look for an existing keyframe with the same offset, timing function, and composition, or
+        // else add a new keyframe at the end of the keyframe array.
+        let keyframe = &mut *bindings::Gecko_GetOrCreateKeyframeAtEnd(
             keyframes,
             step.start_offset.percentage.0 as f32,
             &timing_function,
@@ -8031,6 +8031,10 @@ pub unsafe extern "C" fn Servo_StyleSet_GetKeyframesForName(
             },
         }
     }
+
+    // The loop above appended the keyframes while walking the steps in reverse, so put them back
+    // into ascending offset order.
+    keyframes.reverse();
 
     let mut properties_changed = PropertyDeclarationIdSet::default();
     for property in animation.properties_changed.iter() {
