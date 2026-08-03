@@ -54,7 +54,6 @@ const lazy = XPCOMUtils.declareLazy({
   ExtensionSearchHandler:
     "resource://gre/modules/ExtensionSearchHandler.sys.mjs",
   ExtensionUtils: "resource://gre/modules/ExtensionUtils.sys.mjs",
-  PartnerLinkAttribution: "resource:///modules/PartnerLinkAttribution.sys.mjs",
   PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
   ReaderMode: "moz-src:///toolkit/components/reader/ReaderMode.sys.mjs",
@@ -2677,21 +2676,6 @@ ${
       searchSource: this.getSearchSource(event),
       windowMode: this.windowMode,
     });
-
-    if (result.payload.sendAttributionRequest) {
-      lazy.PartnerLinkAttribution.makeRequest({
-        targetURL: result.payload.url,
-        source: this.#sapName,
-        campaignID: Services.prefs.getStringPref(
-          "browser.partnerlink.campaign.topsites"
-        ),
-      });
-      if (!this.isPrivate && result.providerName === "UrlbarProviderTopSites") {
-        // The position is 1-based for telemetry
-        const position = result.rowIndex + 1;
-        Glean.contextualServicesTopsites.click[`urlbar_${position}`].add(1);
-      }
-    }
 
     if (this.#isSmartbarMode) {
       // Override the CTA action when a non-heuristic result is picked. The
