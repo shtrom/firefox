@@ -85,7 +85,7 @@ Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/b86cb7278bc4e5571
  media/base/media_channel.h                    |  3 --
  media/base/media_channel_impl.cc              |  9 ----
  modules/audio_coding/BUILD.gn                 |  2 +-
- modules/audio_device/BUILD.gn                 | 17 +++++--
+ modules/audio_device/BUILD.gn                 | 14 ++++--
  modules/audio_processing/aec3/BUILD.gn        | 13 ++---
  .../aec3/adaptive_fir_filter_avx2.cc          |  2 +-
  .../audio_processing/agc2/rnn_vad/BUILD.gn    |  2 +-
@@ -98,7 +98,7 @@ Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/b86cb7278bc4e5571
  test/BUILD.gn                                 | 10 ++++
  video/BUILD.gn                                |  4 +-
  webrtc.gni                                    | 32 ++++++++----
- 30 files changed, 293 insertions(+), 91 deletions(-)
+ 30 files changed, 291 insertions(+), 90 deletions(-)
  create mode 100644 api/rtp_sender_setparameters_callback.cc
  create mode 100644 api/rtp_sender_setparameters_callback.h
 
@@ -709,7 +709,7 @@ index d82313b9d2..25af59bc27 100644
  }
  
 diff --git a/modules/audio_device/BUILD.gn b/modules/audio_device/BUILD.gn
-index e62ce13dd8..ceea41532c 100644
+index b2d5d1f6d3..7481db1b85 100644
 --- a/modules/audio_device/BUILD.gn
 +++ b/modules/audio_device/BUILD.gn
 @@ -30,6 +30,7 @@ rtc_source_set("audio_device_default") {
@@ -781,18 +781,14 @@ index e62ce13dd8..ceea41532c 100644
  rtc_source_set("mock_audio_device") {
    visibility = [ "*" ]
    testonly = true
-@@ -434,8 +441,10 @@ rtc_source_set("mock_audio_device") {
+@@ -434,6 +441,7 @@ rtc_source_set("mock_audio_device") {
      "../../test:test_support",
    ]
  }
 +}
  
--if (rtc_include_tests && !build_with_chromium) {
-+# See Bug 1820869 for !build_with_mozilla.
-+if (rtc_include_tests && !build_with_chromium && !build_with_mozilla) {
-   rtc_library("audio_device_unittests") {
-     testonly = true
- 
+ if (rtc_include_tests && !build_with_chromium) {
+   rtc_library("fine_audio_buffer_unittest") {
 diff --git a/modules/audio_processing/aec3/BUILD.gn b/modules/audio_processing/aec3/BUILD.gn
 index 5f7e2ac52f..cb6f6e4a4e 100644
 --- a/modules/audio_processing/aec3/BUILD.gn
@@ -831,7 +827,7 @@ index 327f0fb16d..22000b5946 100644
  #include <algorithm>
  #include <array>
 diff --git a/modules/audio_processing/agc2/rnn_vad/BUILD.gn b/modules/audio_processing/agc2/rnn_vad/BUILD.gn
-index 0f581c6922..5465a0e26c 100644
+index ce937d583f..2eaafdeb6a 100644
 --- a/modules/audio_processing/agc2/rnn_vad/BUILD.gn
 +++ b/modules/audio_processing/agc2/rnn_vad/BUILD.gn
 @@ -114,7 +114,7 @@ rtc_source_set("vector_math") {
