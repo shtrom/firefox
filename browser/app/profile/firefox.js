@@ -2246,7 +2246,6 @@ pref("sidebar.revamp", true);
 #else
 pref("sidebar.revamp", false);
 #endif
-pref("sidebar.revamp.round-content-area", true);
 pref("sidebar.animation.enabled", true);
 pref("sidebar.animation.duration-ms", 200);
 pref("sidebar.animation.expand-on-hover.duration-ms", 400);
