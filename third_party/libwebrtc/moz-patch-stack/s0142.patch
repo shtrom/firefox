@@ -41,7 +41,7 @@ Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/98da8060c3ad5cf8d
  sdk/android/api/org/webrtc/YuvHelper.java     | 177 +++---------------
  .../webrtc/audio/JavaAudioDeviceModule.java   |  33 +---
  .../src/java/org/webrtc/CalledByNative.java   |   1 -
- .../src/java/org/webrtc/EglBase10Impl.java    |   8 +-
+ .../src/java/org/webrtc/EglBase10Impl.java    |  10 +-
  .../src/java/org/webrtc/H264Utils.java        |  11 +-
  .../src/java/org/webrtc/Histogram.java        |   2 -
  .../src/java/org/webrtc/JniCommon.java        |  30 +--
@@ -53,7 +53,7 @@ Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/98da8060c3ad5cf8d
  .../org/webrtc/audio/WebRtcAudioRecord.java   |  21 +--
  .../org/webrtc/audio/WebRtcAudioTrack.java    |  15 +-
  webrtc.gni                                    |  19 +-
- 42 files changed, 240 insertions(+), 719 deletions(-)
+ 42 files changed, 241 insertions(+), 720 deletions(-)
 
 diff --git a/examples/androidnativeapi/BUILD.gn b/examples/androidnativeapi/BUILD.gn
 index fd6a836223..28589325c3 100644
@@ -1482,7 +1482,7 @@ index 666f347608..9b410ceaef 100644
    /*
     *  If present, tells which inner class the method belongs to.
 diff --git a/sdk/android/src/java/org/webrtc/EglBase10Impl.java b/sdk/android/src/java/org/webrtc/EglBase10Impl.java
-index 0aa45d579e..7d534510ba 100644
+index 8b58160644..5f9e27234c 100644
 --- a/sdk/android/src/java/org/webrtc/EglBase10Impl.java
 +++ b/sdk/android/src/java/org/webrtc/EglBase10Impl.java
 @@ -22,7 +22,6 @@ import javax.microedition.khronos.egl.EGLConfig;
@@ -1493,7 +1493,7 @@ index 0aa45d579e..7d534510ba 100644
  
  /**
   * Holds EGL state and utility methods for handling an egl 1.0 EGLContext, an EGLDisplay,
-@@ -72,7 +71,7 @@ class EglBase10Impl implements EglBase10 {
+@@ -73,7 +72,7 @@ class EglBase10Impl implements EglBase10 {
            }
          }
  
@@ -1502,7 +1502,7 @@ index 0aa45d579e..7d534510ba 100644
        } finally {
          if (tempEglSurface != null) {
            egl.eglMakeCurrent(
-@@ -443,8 +442,5 @@ class EglBase10Impl implements EglBase10 {
+@@ -457,8 +456,5 @@ class EglBase10Impl implements EglBase10 {
      return eglContext;
    }
  
@@ -1510,8 +1510,10 @@ index 0aa45d579e..7d534510ba 100644
 -  interface Natives {
 -    long getCurrentNativeEGLContext();
 -  }
+-}
+\ No newline at end of file
 +  private static native long nativeGetCurrentNativeEGLContext();
- }
++}
 diff --git a/sdk/android/src/java/org/webrtc/H264Utils.java b/sdk/android/src/java/org/webrtc/H264Utils.java
 index 069d1f386e..abb79c6582 100644
 --- a/sdk/android/src/java/org/webrtc/H264Utils.java
