@@ -258,13 +258,13 @@ class SharedArrayBufferObject : public ArrayBufferObjectMaybeShared {
  public:
   // RAWBUF_SLOT holds a pointer (as "private" data) to the
   // SharedArrayRawBuffer object, which is manually managed storage.
-  JS_DEFINE_TYPED_SLOT(0, RAWBUF_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(0, RAWBUF_SLOT, Private, Undefined);
 
   // LENGTH_SLOT holds the length of the underlying buffer as it was when this
   // object was created.  For JS use cases this is the same length as the
   // buffer, but for Wasm the buffer can grow, and the buffer's length may be
   // greater than the object's length.
-  JS_DEFINE_TYPED_SLOT(1, LENGTH_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(1, LENGTH_SLOT, Private, Undefined);
 
   static_assert(LENGTH_SLOT.index() == ArrayBufferObject::BYTE_LENGTH_SLOT,
                 "JIT code assumes the same slot is used for the length");

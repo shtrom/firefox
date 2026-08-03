@@ -154,8 +154,8 @@ using FinalizationRecordVector =
 // The JS FinalizationRegistry object itself.
 class FinalizationRegistryObject : public NativeObject {
   JS_DEFINE_TYPED_SLOT(0, QUEUE_SLOT, Object, Undefined);
-  JS_DEFINE_TYPED_SLOT(1, REGISTRATIONS_SLOT, Double, Undefined);
-  JS_DEFINE_TYPED_SLOT(2, RECORDS_WITHOUT_TOKEN_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(1, REGISTRATIONS_SLOT, Private, Undefined);
+  JS_DEFINE_TYPED_SLOT(2, RECORDS_WITHOUT_TOKEN_SLOT, Private, Undefined);
   static constexpr uint32_t SLOT_COUNT = 3;
 
  public:
@@ -202,7 +202,7 @@ class FinalizationQueueObject : public NativeObject {
   JS_DEFINE_TYPED_SLOT(0, CLEANUP_CALLBACK_SLOT, Object, Undefined);
   JS_DEFINE_TYPED_SLOT(1, INCUMBENT_GLOBAL_REPRESENTATIVE_SLOT, Object, Null,
                        Undefined);
-  JS_DEFINE_TYPED_SLOT(2, RECORDS_TO_BE_CLEANED_UP_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(2, RECORDS_TO_BE_CLEANED_UP_SLOT, Private, Undefined);
   JS_DEFINE_TYPED_SLOT(3, IS_QUEUED_FOR_CLEANUP_SLOT, Boolean);
   JS_DEFINE_TYPED_SLOT(4, DO_CLEANUP_FUNCTION_SLOT, Object, Undefined);
   JS_DEFINE_TYPED_SLOT(5, HAS_REGISTRY_SLOT, Boolean);

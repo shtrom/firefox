@@ -29,7 +29,7 @@ class CollatorObject : public NativeObject {
   JS_DEFINE_TYPED_SLOT(0, LOCALE_SLOT, Object, String, Undefined);
   JS_DEFINE_TYPED_SLOT(1, COLLATION_SLOT, String, Undefined);
   JS_DEFINE_TYPED_SLOT(2, OPTIONS_SLOT, Int32, Undefined);
-  JS_DEFINE_TYPED_SLOT(3, INTL_COLLATOR_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(3, INTL_COLLATOR_SLOT, Private, Undefined);
   JS_DEFINE_TYPED_SLOT(4, BOUND_COMPARE_SLOT, Object, Undefined);
   static constexpr uint32_t SLOT_COUNT = 5;
 

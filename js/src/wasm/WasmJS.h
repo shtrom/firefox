@@ -169,7 +169,7 @@ class WasmComponentObject : public NativeObject {
 
 class WasmGlobalObject : public NativeObject {
   JS_DEFINE_TYPED_SLOT(0, MUTABLE_SLOT, Boolean);
-  JS_DEFINE_TYPED_SLOT(1, VAL_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(1, VAL_SLOT, Private, Undefined);
 
   static const JSClassOps classOps_;
   static const ClassSpec classSpec_;
@@ -210,11 +210,11 @@ class WasmGlobalObject : public NativeObject {
 // wasm::Instance. These objects are used as content-facing JS objects.
 
 class WasmInstanceObject : public NativeObject {
-  JS_DEFINE_TYPED_SLOT(0, INSTANCE_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(0, INSTANCE_SLOT, Private, Undefined);
   JS_DEFINE_TYPED_SLOT(1, EXPORTS_OBJ_SLOT, Object, Undefined);
-  JS_DEFINE_TYPED_SLOT(2, SCOPES_SLOT, Double);
+  JS_DEFINE_TYPED_SLOT(2, SCOPES_SLOT, Private);
   JS_DEFINE_TYPED_SLOT(3, INSTANCE_SCOPE_SLOT, PrivateGCThing, Undefined);
-  JS_DEFINE_TYPED_SLOT(4, GLOBALS_SLOT, Double);
+  JS_DEFINE_TYPED_SLOT(4, GLOBALS_SLOT, Private);
 
   static const JSClassOps classOps_;
   static const ClassSpec classSpec_;
@@ -274,7 +274,7 @@ class WasmInstanceObject : public NativeObject {
 
 class WasmMemoryObject : public NativeObject {
   JS_DEFINE_TYPED_SLOT(0, BUFFER_SLOT, Object);
-  JS_DEFINE_TYPED_SLOT(1, OBSERVERS_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(1, OBSERVERS_SLOT, Private, Undefined);
   JS_DEFINE_TYPED_SLOT(2, ISHUGE_SLOT, Boolean);
   static const JSClassOps classOps_;
   static const ClassSpec classSpec_;
@@ -366,7 +366,7 @@ class WasmMemoryObject : public NativeObject {
 // (eventually between multiple threads).
 
 class WasmTableObject : public NativeObject {
-  JS_DEFINE_TYPED_SLOT(0, TABLE_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(0, TABLE_SLOT, Private, Undefined);
   static const JSClassOps classOps_;
   static const ClassSpec classSpec_;
   bool isNewborn() const;
@@ -410,7 +410,7 @@ class WasmTableObject : public NativeObject {
 // types for exports and imports.
 
 class WasmTagObject : public NativeObject {
-  JS_DEFINE_TYPED_SLOT(0, TYPE_SLOT, Double);
+  JS_DEFINE_TYPED_SLOT(0, TYPE_SLOT, Private);
 
   static const JSClassOps classOps_;
   static const ClassSpec classSpec_;
@@ -441,8 +441,8 @@ class WasmTagObject : public NativeObject {
 
 class WasmExceptionObject : public NativeObject {
   JS_DEFINE_TYPED_SLOT(0, TAG_SLOT, Object);
-  JS_DEFINE_TYPED_SLOT(1, TYPE_SLOT, Double);
-  JS_DEFINE_TYPED_SLOT(2, DATA_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(1, TYPE_SLOT, Private);
+  JS_DEFINE_TYPED_SLOT(2, DATA_SLOT, Private, Undefined);
   JS_DEFINE_TYPED_SLOT(3, STACK_SLOT, Object, Null);
 
   static const JSClassOps classOps_;
@@ -568,7 +568,7 @@ JSObject* MaybeUnwrapSuspendingObject(JSObject* wrapper);
 // owns a wasm::ComponentInstance. These objects are used as content-facing JS
 // objects.
 class WasmComponentInstanceObject : public NativeObject {
-  JS_DEFINE_TYPED_SLOT(0, INSTANCE_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(0, INSTANCE_SLOT, Private, Undefined);
 
   static const JSClassOps classOps_;
   static const ClassSpec classSpec_;

@@ -32,7 +32,7 @@ class SegmenterObject : public NativeObject {
 
   JS_DEFINE_TYPED_SLOT(0, LOCALE_SLOT, Object, String, Undefined);
   JS_DEFINE_TYPED_SLOT(1, GRANULARITY_SLOT, Int32, Undefined);
-  JS_DEFINE_TYPED_SLOT(2, SEGMENTER_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(2, SEGMENTER_SLOT, Private, Undefined);
   static constexpr uint32_t SLOT_COUNT = 3;
 
   bool isLocaleResolved() const {
@@ -161,10 +161,10 @@ class SegmentsObject : public NativeObject {
 
   JS_DEFINE_TYPED_SLOT(0, SEGMENTER_SLOT, Object, Undefined);
   JS_DEFINE_TYPED_SLOT(1, STRING_SLOT, String, Undefined);
-  JS_DEFINE_TYPED_SLOT(2, STRING_CHARS_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(2, STRING_CHARS_SLOT, Private, Undefined);
   JS_DEFINE_TYPED_SLOT(3, INDEX_SLOT, Int32, Undefined);
   JS_DEFINE_TYPED_SLOT(4, GRANULARITY_SLOT, Int32, Undefined);
-  JS_DEFINE_TYPED_SLOT(5, BREAK_ITERATOR_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(5, BREAK_ITERATOR_SLOT, Private, Undefined);
   static constexpr uint32_t SLOT_COUNT = 6;
 
   static_assert(STRING_SLOT.index() == INTL_SEGMENTS_STRING_SLOT,
@@ -264,10 +264,10 @@ class SegmentIteratorObject : public NativeObject {
 
   JS_DEFINE_TYPED_SLOT(0, SEGMENTER_SLOT, Object, Null, Undefined);
   JS_DEFINE_TYPED_SLOT(1, STRING_SLOT, String, Undefined);
-  JS_DEFINE_TYPED_SLOT(2, STRING_CHARS_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(2, STRING_CHARS_SLOT, Private, Undefined);
   JS_DEFINE_TYPED_SLOT(3, INDEX_SLOT, Int32, Undefined);
   JS_DEFINE_TYPED_SLOT(4, GRANULARITY_SLOT, Int32, Undefined);
-  JS_DEFINE_TYPED_SLOT(5, BREAK_ITERATOR_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(5, BREAK_ITERATOR_SLOT, Private, Undefined);
   static constexpr uint32_t SLOT_COUNT = 6;
 
   static_assert(STRING_SLOT.index() == INTL_SEGMENT_ITERATOR_STRING_SLOT,

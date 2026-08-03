@@ -156,7 +156,7 @@ static_assert(JIT_ARGS_LENGTH_MAX <= ARGS_LENGTH_MAX,
 class ArgumentsObject : public NativeObject {
  public:
   JS_DEFINE_TYPED_SLOT(0, INITIAL_LENGTH_SLOT, Int32);
-  JS_DEFINE_TYPED_SLOT(1, DATA_SLOT, Double);
+  JS_DEFINE_TYPED_SLOT(1, DATA_SLOT, Private);
   JS_DEFINE_TYPED_SLOT(2, MAYBE_CALL_SLOT, Object, Undefined);
   JS_DEFINE_TYPED_SLOT(3, CALLEE_SLOT, Object);
 

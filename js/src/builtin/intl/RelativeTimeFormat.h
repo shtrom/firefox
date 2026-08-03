@@ -31,7 +31,7 @@ class RelativeTimeFormatObject : public NativeObject {
   JS_DEFINE_TYPED_SLOT(0, LOCALE, Object, String, Undefined);
   JS_DEFINE_TYPED_SLOT(1, NUMBERING_SYSTEM, String, Undefined);
   JS_DEFINE_TYPED_SLOT(2, OPTIONS, Int32, Undefined);
-  JS_DEFINE_TYPED_SLOT(3, URELATIVE_TIME_FORMAT_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(3, URELATIVE_TIME_FORMAT_SLOT, Private, Undefined);
   static constexpr uint32_t SLOT_COUNT = 4;
 
   // Estimated memory use for URelativeDateTimeFormatter (see IcuMemoryUsage).

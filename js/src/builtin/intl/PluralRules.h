@@ -28,7 +28,7 @@ class PluralRulesObject : public NativeObject {
 
   JS_DEFINE_TYPED_SLOT(0, LOCALE_SLOT, Object, String, Undefined);
   JS_DEFINE_TYPED_SLOT(1, OPTIONS_SLOT, Double, Undefined);
-  JS_DEFINE_TYPED_SLOT(2, PLURAL_RULES_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(2, PLURAL_RULES_SLOT, Private, Undefined);
   static constexpr uint32_t SLOT_COUNT = 3;
 
   // Estimated memory use for UPluralRules (see IcuMemoryUsage).

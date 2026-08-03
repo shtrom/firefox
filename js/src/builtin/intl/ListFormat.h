@@ -29,7 +29,7 @@ class ListFormatObject : public NativeObject {
 
   JS_DEFINE_TYPED_SLOT(0, LOCALE, Object, String, Undefined);
   JS_DEFINE_TYPED_SLOT(1, OPTIONS, Int32, Undefined);
-  JS_DEFINE_TYPED_SLOT(2, LIST_FORMAT_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(2, LIST_FORMAT_SLOT, Private, Undefined);
   static constexpr uint32_t SLOT_COUNT = 3;
 
   // Estimated memory use for UListFormatter (see IcuMemoryUsage).

@@ -5792,7 +5792,7 @@ class CompileStreamTask : public PromiseHelperTask, public JS::StreamConsumer {
 // WebAssembly.{compileStreaming,instantiateStreaming} while waiting for
 // the Promise<Response> to resolve to a (hopefully) Promise.
 class ResolveResponseClosure : public NativeObject {
-  JS_DEFINE_TYPED_SLOT(0, COMPILE_ARGS_SLOT, Double);
+  JS_DEFINE_TYPED_SLOT(0, COMPILE_ARGS_SLOT, Private);
   JS_DEFINE_TYPED_SLOT(1, PROMISE_OBJ_SLOT, Object);
   JS_DEFINE_TYPED_SLOT(2, INSTANTIATE_SLOT, Boolean);
   JS_DEFINE_TYPED_SLOT(3, IMPORT_OBJ_SLOT, Object, Null);

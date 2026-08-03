@@ -461,10 +461,10 @@ class ModuleObject : public NativeObject {
                        Object);
   JS_DEFINE_TYPED_SLOT(NamespaceSlotIndex, NAMESPACE_SLOT, Object, Undefined);
   JS_DEFINE_TYPED_SLOT(CyclicModuleFieldsSlotIndex, CYCLIC_MODULE_FIELDS_SLOT,
-                       Double, Undefined);
+                       Private, Undefined);
   // `SyntheticModuleFields` if a synthetic module. Otherwise `undefined`.
   JS_DEFINE_TYPED_SLOT(SyntheticModuleFieldsSlotIndex,
-                       SYNTHETIC_MODULE_FIELDS_SLOT, Double, Undefined);
+                       SYNTHETIC_MODULE_FIELDS_SLOT, Private, Undefined);
 #ifdef DEBUG
   JS_DEFINE_TYPED_SLOT(PreloadSlotIndex, PRELOAD_SLOT, Boolean, Undefined);
 #endif
@@ -622,7 +622,7 @@ struct GraphLoadingStateRecord {
 };
 
 class GraphLoadingStateRecordObject : public NativeObject {
-  JS_DEFINE_TYPED_SLOT(0, STATE_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(0, STATE_SLOT, Private, Undefined);
   JS_DEFINE_TYPED_SLOT(1, PROMISE_SLOT, Object, Undefined);
   JS_DEFINE_TYPED_SLOT(2, IS_LOADING_SLOT, Int32);
   JS_DEFINE_TYPED_SLOT(3, PENDING_MODULES_COUNT_SLOT, Int32);

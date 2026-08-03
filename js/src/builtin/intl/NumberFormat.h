@@ -35,8 +35,8 @@ class NumberFormatObject : public NativeObject {
   JS_DEFINE_TYPED_SLOT(1, NUMBERING_SYSTEM_SLOT, String, Undefined);
   JS_DEFINE_TYPED_SLOT(2, OPTIONS_SLOT, Double, Undefined);
   JS_DEFINE_TYPED_SLOT(3, DIGITS_OPTIONS_SLOT, Double, Undefined);
-  JS_DEFINE_TYPED_SLOT(4, UNUMBER_FORMATTER_SLOT, Double, Undefined);
-  JS_DEFINE_TYPED_SLOT(5, UNUMBER_RANGE_FORMATTER_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(4, UNUMBER_FORMATTER_SLOT, Private, Undefined);
+  JS_DEFINE_TYPED_SLOT(5, UNUMBER_RANGE_FORMATTER_SLOT, Private, Undefined);
   JS_DEFINE_TYPED_SLOT(6, BOUND_FORMAT_SLOT, Object, Undefined);
   static constexpr uint32_t SLOT_COUNT = 7;
 

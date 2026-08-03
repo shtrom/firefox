@@ -44,7 +44,7 @@ class ErrorObject : public NativeObject {
 
  protected:
   JS_DEFINE_TYPED_SLOT(0, STACK_SLOT, Object, Null);
-  JS_DEFINE_TYPED_SLOT(STACK_SLOT.index() + 1, ERROR_REPORT_SLOT, Double,
+  JS_DEFINE_TYPED_SLOT(STACK_SLOT.index() + 1, ERROR_REPORT_SLOT, Private,
                        Undefined);
   static const uint32_t FILENAME_SLOT = ERROR_REPORT_SLOT.index() + 1;
   static const uint32_t LINENUMBER_SLOT = FILENAME_SLOT + 1;

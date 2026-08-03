@@ -123,7 +123,7 @@ class MapObject : public OrderedHashMapObject {
 
   friend class OrderedHashTableRef<MapObject>;
 
-  JS_DEFINE_TYPED_SLOT(Table::SlotCount + 0, NURSERY_KEYS_SLOT, Double);
+  JS_DEFINE_TYPED_SLOT(Table::SlotCount + 0, NURSERY_KEYS_SLOT, Private);
   JS_DEFINE_TYPED_SLOT(Table::SlotCount + 1, REGISTERED_NURSERY_ITERATORS_SLOT,
                        Boolean);
   static constexpr uint32_t SLOT_COUNT = Table::SlotCount + 2;
@@ -256,7 +256,7 @@ class SetObject : public OrderedHashSetObject {
 
   friend class OrderedHashTableRef<SetObject>;
 
-  JS_DEFINE_TYPED_SLOT(Table::SlotCount + 0, NURSERY_KEYS_SLOT, Double);
+  JS_DEFINE_TYPED_SLOT(Table::SlotCount + 0, NURSERY_KEYS_SLOT, Private);
   JS_DEFINE_TYPED_SLOT(Table::SlotCount + 1, REGISTERED_NURSERY_ITERATORS_SLOT,
                        Boolean);
   static constexpr uint32_t SLOT_COUNT = Table::SlotCount + 2;

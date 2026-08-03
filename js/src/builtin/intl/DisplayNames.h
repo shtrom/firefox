@@ -37,7 +37,7 @@ class DisplayNamesObject : public NativeObject {
   JS_DEFINE_TYPED_SLOT(0, LOCALE, Object, String, Undefined);
   JS_DEFINE_TYPED_SLOT(1, CALENDAR, String, Undefined);
   JS_DEFINE_TYPED_SLOT(2, OPTIONS, Int32, Undefined);
-  JS_DEFINE_TYPED_SLOT(3, LOCALE_DISPLAY_NAMES_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(3, LOCALE_DISPLAY_NAMES_SLOT, Private, Undefined);
   static constexpr uint32_t SLOT_COUNT = 4;
 
   // Estimated memory use for ULocaleDisplayNames (see IcuMemoryUsage).

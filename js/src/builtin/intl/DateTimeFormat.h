@@ -45,8 +45,8 @@ class DateTimeFormatObject : public NativeObject {
   JS_DEFINE_TYPED_SLOT(4, OPTIONS_SLOT, Double, Undefined);
   JS_DEFINE_TYPED_SLOT(5, PATTERN_SLOT, String, Undefined);
   JS_DEFINE_TYPED_SLOT(6, CALENDAR_VALUE_SLOT, Int32, Undefined);
-  JS_DEFINE_TYPED_SLOT(7, DATE_FORMAT_SLOT, Double, Undefined);
-  JS_DEFINE_TYPED_SLOT(8, DATE_INTERVAL_FORMAT_SLOT, Double, Undefined);
+  JS_DEFINE_TYPED_SLOT(7, DATE_FORMAT_SLOT, Private, Undefined);
+  JS_DEFINE_TYPED_SLOT(8, DATE_INTERVAL_FORMAT_SLOT, Private, Undefined);
   JS_DEFINE_TYPED_SLOT(9, DATE_TIME_VALUE_KIND_SLOT, Int32, Undefined);
   JS_DEFINE_TYPED_SLOT(10, BOUND_FORMAT_SLOT, Object, Undefined);
   static constexpr uint32_t SLOT_COUNT = 11;
