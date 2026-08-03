@@ -2670,10 +2670,6 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
   // queried range.
   if (firstFrame->IsTextFrame()) {
     rect.SetRect(nsPoint(0, 0), firstFrame->GetRect().Size());
-    rv = ConvertToRootRelativeOffset(firstFrame, rect);
-    if (NS_WARN_IF(NS_FAILED(rv))) {
-      return rv;
-    }
     frameRect = rect;
     // Exclude the rect before start point of the queried range.
     firstFrame->GetPointFromOffset(firstFrame.mOffsetInNode, &ptOffset);
@@ -2683,6 +2679,18 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
     } else {
       rect.x += ptOffset.x;
       rect.width -= ptOffset.x;
+    }
+    // The character offset is relative to the untransformed text frame, so
+    // clip the frame before converting it through CSS transforms.  Mixing a
+    // transformed frame rect with an untransformed offset shifts ranges in
+    // scaled text and gives them the wrong width.
+    rv = ConvertToRootRelativeOffset(firstFrame, rect);
+    if (NS_WARN_IF(NS_FAILED(rv))) {
+      return rv;
+    }
+    rv = ConvertToRootRelativeOffset(firstFrame, frameRect);
+    if (NS_WARN_IF(NS_FAILED(rv))) {
+      return rv;
     }
   }
   // If first frame causes a line breaker but it's not a <br> frame, we cannot
@@ -2810,33 +2818,29 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
     }
   }
 
-  // Get the ending frame rect.
-  // FYI: If first frame and last frame are same, frameRect is already set
-  //      to the rect excluding the text before the query range.
-  if (firstFrame.mFrame != lastFrame.mFrame) {
-    frameRect.SetRect(nsPoint(0, 0), lastFrame->GetRect().Size());
-    rv = ConvertToRootRelativeOffset(lastFrame, frameRect);
-    if (NS_WARN_IF(NS_FAILED(rv))) {
-      return rv;
-    }
-  }
-
   // Shrink the last frame for cutting off the text after the query range.
   if (lastFrame->IsTextFrame()) {
+    nsRect lastFrameRect(nsPoint(0, 0), lastFrame->GetRect().Size());
     lastFrame->GetPointFromOffset(lastFrame.mOffsetInNode, &ptOffset);
     if (lastFrame->GetWritingMode().IsVertical()) {
-      frameRect.height -= lastFrame->GetRect().height - ptOffset.y;
+      lastFrameRect.height -= lastFrame->GetRect().height - ptOffset.y;
     } else {
-      frameRect.width -= lastFrame->GetRect().width - ptOffset.x;
+      lastFrameRect.width -= lastFrame->GetRect().width - ptOffset.x;
     }
     // UnionRect() requires non-empty rect.  So, let's make sure to get
     // non-empty rect from the last frame.
-    EnsureNonEmptyRect(frameRect);
+    EnsureNonEmptyRect(lastFrameRect);
+    // As with the start offset above, apply the end offset in frame-local
+    // coordinates before converting through CSS transforms.
+    rv = ConvertToRootRelativeOffset(lastFrame, lastFrameRect);
+    if (NS_WARN_IF(NS_FAILED(rv))) {
+      return rv;
+    }
 
     if (firstFrame.mFrame == lastFrame.mFrame) {
-      rect.IntersectRect(rect, frameRect);
+      rect.IntersectRect(rect, lastFrameRect);
     } else {
-      rect.UnionRect(rect, frameRect);
+      rect.UnionRect(rect, lastFrameRect);
     }
   }
 
@@ -3073,10 +3077,16 @@ nsresult ContentEventHandler::OnQueryCharacterAtPoint(
     MOZ_ASSERT(aEvent->Succeeded());
     return NS_OK;
   }
-  nsPoint ptInTarget = ptInRoot + rootFrame->GetOffsetToCrossDoc(targetFrame);
-  int32_t rootAPD = rootFrame->PresContext()->AppUnitsPerDevPixel();
-  int32_t targetAPD = targetFrame->PresContext()->AppUnitsPerDevPixel();
-  ptInTarget = ptInTarget.ScaleToOtherAppUnits(rootAPD, targetAPD);
+  // GetFrameForPoint() takes CSS transforms into account when choosing the
+  // target frame. Convert the point through the same transform chain before
+  // asking that frame for a character offset.
+  nsPoint ptInTarget = ptInRoot;
+  if (NS_WARN_IF(nsLayoutUtils::TransformPoint(
+                     RelativeTo{rootFrame}, RelativeTo{targetFrame},
+                     ptInTarget) != nsLayoutUtils::TRANSFORM_SUCCEEDED)) {
+    MOZ_ASSERT(aEvent->Succeeded());
+    return NS_OK;
+  }
 
   nsIFrame::ContentOffsets tentativeCaretOffsets =
       targetFrame->GetContentOffsetsFromPoint(ptInTarget);
