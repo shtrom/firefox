@@ -1,6 +1,6 @@
 import mozunit
 
-LINTER = "rumdl"
+LINTER = "md"
 # `fixed` is updated by the mozlint test harness (see conftest.py): when a
 # linter returns a dict with a "fixed" key, the harness adds that count to
 # this module-level variable. Same pattern as test_ruff_format.py.

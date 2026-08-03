@@ -52,6 +52,8 @@ skip-if = ["os == 'win'"]
 
 ["test_manifest_toml.py"]
 
+["test_md.py"]
+
 ["test_node_licenses.py"]
 
 ["test_node_package_names.py"]
@@ -63,8 +65,6 @@ skip-if = ["os == 'win'"]
 ["test_ruff.py"]
 
 ["test_ruff_format.py"]
-
-["test_rumdl.py"]
 
 ["test_rustfmt.py"]
 
