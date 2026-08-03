@@ -19,10 +19,10 @@ Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/58f47eacaf10d12e2
  10 files changed, 24 insertions(+), 24 deletions(-)
 
 diff --git a/BUILD.gn b/BUILD.gn
-index 041f5ea64f..78d2923afd 100644
+index c52b4deedb..1e1cecdb11 100644
 --- a/BUILD.gn
 +++ b/BUILD.gn
-@@ -449,12 +449,12 @@ config("common_config") {
+@@ -453,12 +453,12 @@ config("common_config") {
      }
    }
  
@@ -37,7 +37,7 @@ index 041f5ea64f..78d2923afd 100644
      defines += [ "WEBRTC_ARCH_ARM" ]
      if (arm_version >= 7) {
        defines += [ "WEBRTC_ARCH_ARM_V7" ]
-@@ -464,7 +464,7 @@ config("common_config") {
+@@ -468,7 +468,7 @@ config("common_config") {
      }
    }
  
@@ -241,7 +241,7 @@ index 6324ed2bb7..55b7da56a5 100644
      cflags = [ "-mfpu=neon" ]
    }
 diff --git a/modules/desktop_capture/BUILD.gn b/modules/desktop_capture/BUILD.gn
-index f742b70627..d080624941 100644
+index 1b11cefa97..e47110da57 100644
 --- a/modules/desktop_capture/BUILD.gn
 +++ b/modules/desktop_capture/BUILD.gn
 @@ -10,7 +10,7 @@ import("//build/config/linux/gtk/gtk.gni")
