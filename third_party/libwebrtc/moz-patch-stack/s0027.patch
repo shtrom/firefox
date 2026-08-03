@@ -986,7 +986,7 @@ index 7198d72179..66e3ad0721 100644
          "/config/external/nspr",
          "/nsprpub/lib/ds",
 diff --git a/rtc_base/BUILD.gn b/rtc_base/BUILD.gn
-index 36b301f6eb..454107f71c 100644
+index 97a19c0ded..4810e5a139 100644
 --- a/rtc_base/BUILD.gn
 +++ b/rtc_base/BUILD.gn
 @@ -428,6 +428,7 @@ rtc_library("sample_counter") {
@@ -1155,9 +1155,9 @@ index 36b301f6eb..454107f71c 100644
  
 -if (is_android) {
 +if (is_android && !build_with_mozilla) {
-   rtc_android_library("base_java") {
-     visibility = [ "*" ]
-     sources = [
+   import("//third_party/jni_zero/jni_zero.gni")
+   generate_jni("base_java_jni") {
+     sources = [ "java/src/org/webrtc/Logging.java" ]
 diff --git a/rtc_base/system/BUILD.gn b/rtc_base/system/BUILD.gn
 index c0fb04ac82..af412f6890 100644
 --- a/rtc_base/system/BUILD.gn

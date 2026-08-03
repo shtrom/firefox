@@ -383,10 +383,10 @@ index b671239bae..e545b2cde3 100644
    android_java_prebuilt("autobanh_java") {
      jar_path = "lib/autobanh.jar"
 diff --git a/examples/androidnativeapi/BUILD.gn b/examples/androidnativeapi/BUILD.gn
-index 183ee020d4..6a2349149b 100644
+index 611f091e75..fd6a836223 100644
 --- a/examples/androidnativeapi/BUILD.gn
 +++ b/examples/androidnativeapi/BUILD.gn
-@@ -41,8 +41,8 @@ if (is_android) {
+@@ -43,8 +43,8 @@ if (is_android) {
        "jni/onload.cc",
      ]
  
@@ -398,10 +398,10 @@ index 183ee020d4..6a2349149b 100644
      deps = [
        ":generated_jni",
 diff --git a/examples/androidvoip/BUILD.gn b/examples/androidvoip/BUILD.gn
-index 7886fe1d7f..8fa3e9c794 100644
+index d2eabafb59..2f2834fb28 100644
 --- a/examples/androidvoip/BUILD.gn
 +++ b/examples/androidvoip/BUILD.gn
-@@ -51,8 +51,8 @@ if (is_android) {
+@@ -53,8 +53,8 @@ if (is_android) {
        "jni/onload.cc",
      ]
  
@@ -604,7 +604,7 @@ index 4018fa4813..dcafeb0aa2 100644
  
  if (rtc_build_libsrtp) {
 diff --git a/rtc_base/BUILD.gn b/rtc_base/BUILD.gn
-index cc861248b5..981b8b291b 100644
+index 227361c36a..d365db3e54 100644
 --- a/rtc_base/BUILD.gn
 +++ b/rtc_base/BUILD.gn
 @@ -9,8 +9,8 @@
@@ -664,11 +664,11 @@ index af412f6890..51a0e6160c 100644
  
  rtc_source_set("arch") {
 diff --git a/rtc_tools/network_tester/BUILD.gn b/rtc_tools/network_tester/BUILD.gn
-index 24417d7abc..8d156a0d2a 100644
+index 1a9be46904..3520196b3b 100644
 --- a/rtc_tools/network_tester/BUILD.gn
 +++ b/rtc_tools/network_tester/BUILD.gn
-@@ -181,8 +181,8 @@ if (is_android) {
-       "../../test:create_test_environment",
+@@ -193,8 +193,8 @@ if (is_android) {
+       "//third_party/jni_zero",
      ]
  
 -    suppressed_configs += [ "//build/config/android:hide_all_but_jni_onload" ]

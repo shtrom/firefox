@@ -56,10 +56,10 @@ Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/98da8060c3ad5cf8d
  42 files changed, 240 insertions(+), 719 deletions(-)
 
 diff --git a/examples/androidnativeapi/BUILD.gn b/examples/androidnativeapi/BUILD.gn
-index 6a2349149b..72e59ef885 100644
+index fd6a836223..28589325c3 100644
 --- a/examples/androidnativeapi/BUILD.gn
 +++ b/examples/androidnativeapi/BUILD.gn
-@@ -78,8 +78,6 @@ if (is_android) {
+@@ -80,8 +80,6 @@ if (is_android) {
        "//sdk/android:native_api_jni",
        "//sdk/android:native_api_video",
      ]
@@ -69,10 +69,10 @@ index 6a2349149b..72e59ef885 100644
  
    android_resources("resources") {
 diff --git a/examples/androidvoip/BUILD.gn b/examples/androidvoip/BUILD.gn
-index 8fa3e9c794..c9b63d576d 100644
+index 2f2834fb28..47557d31ba 100644
 --- a/examples/androidvoip/BUILD.gn
 +++ b/examples/androidvoip/BUILD.gn
-@@ -28,7 +28,6 @@ if (is_android) {
+@@ -29,7 +29,6 @@ if (is_android) {
        "//rtc_base:base_java",
        "//sdk/android:base_java",
        "//sdk/android:java_audio_device_module_java",
@@ -80,7 +80,7 @@ index 8fa3e9c794..c9b63d576d 100644
        "//sdk/android:video_java",
        "//third_party/androidx:androidx_core_core_java",
        "//third_party/androidx:androidx_legacy_legacy_support_v4_java",
-@@ -86,8 +85,6 @@ if (is_android) {
+@@ -88,8 +87,6 @@ if (is_android) {
        "//third_party/abseil-cpp/absl/memory",
        "//third_party/jni_zero",
      ]
@@ -90,10 +90,10 @@ index 8fa3e9c794..c9b63d576d 100644
  
    android_resources("resources") {
 diff --git a/rtc_tools/network_tester/BUILD.gn b/rtc_tools/network_tester/BUILD.gn
-index 8d156a0d2a..e33f674a07 100644
+index 3520196b3b..6b1f515a13 100644
 --- a/rtc_tools/network_tester/BUILD.gn
 +++ b/rtc_tools/network_tester/BUILD.gn
-@@ -185,7 +185,5 @@ if (is_android) {
+@@ -197,7 +197,5 @@ if (is_android) {
      configs += [ "//chromium/build/config/android:hide_all_but_jni" ]
  
      output_extension = "so"
