@@ -4,7 +4,7 @@ This page explains how to optimize the performance of the Firefox code base.
 
 The [test documentation](/testing/perfdocs/index.md)
 explains how to test for performance in Firefox.
-The [profiler documentation](/tools/profiler/index.rst)
+The [profiler documentation](/tools/profiler/index.md)
 explains how to use the Gecko profiler.
 
 ```{toctree}

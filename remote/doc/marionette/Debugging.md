@@ -93,4 +93,4 @@ remote connections.
   Allows a remote debugger to connect, which is necessary for
   debugging chrome code.
 
-[Browser Toolbox]: /devtools-user/browser_toolbox/index.rst
+[Browser Toolbox]: /devtools-user/browser_toolbox/index.md

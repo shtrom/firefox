@@ -172,7 +172,7 @@ The snippets in the following section need to be executed in the [Browser
 Toolbox]. Note that while the toolbox looks like the regular devtools it's a
 special console used to debug Firefox itself rather than websites.
 
-[Browser Toolbox]: /devtools-user/browser_toolbox/index.rst
+[Browser Toolbox]: /devtools-user/browser_toolbox/index.md
 
 ### Print the list of classified bounce trackers
 

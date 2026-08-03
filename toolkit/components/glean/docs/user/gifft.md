@@ -121,7 +121,7 @@ This means the values present in these pings may not agree since they reflect st
 For example, if you are measuring "Number of Monitors" with a
 [`quantity`](https://mozilla.github.io/glean/book/reference/metrics/quantity.html)
 sent by default in the Glean "metrics" ping mirrored to a
-[Scalar of kind: uint](/toolkit/components/telemetry/collection/scalars.rst)
+[Scalar of kind: uint](/toolkit/components/telemetry/obsolete/collection/scalars.md)
 sent by default in the Telemetry "main" ping,
 then if the user plugs in a second monitor between midnight
 (when Telemetry "main" pings with reason "daily" are sent) and 4AM

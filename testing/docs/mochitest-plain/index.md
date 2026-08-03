@@ -3,7 +3,7 @@
 ## DISCLAIMER
 
 If you are testing web platform code, prefer using use a [wpt
-test](/web-platform/index.rst) (preferably upstreamable ones).
+test](/web-platform/index.md) (preferably upstreamable ones).
 
 ## Introduction
 
@@ -56,7 +56,7 @@ The Mochitest flavors are:
 
   * **chrome** - These run in chrome scope and are typically used for testing
     privileged JavaScript APIs. More information can be found
-    [here](../chrome-tests/index.rst).
+    [here](../chrome-tests/index.md).
 
   * **a11y** - These test the accessibility interfaces. They can be found under
     the top `accessible` directory and run in chrome scope. Note that these run
@@ -276,7 +276,7 @@ test on certain platforms:
 skip-if = ["os == 'win'"]
 ```
 
-The [mochitest.toml format](/build/buildsystem/test_manifests.rst), which is
+The [mochitest.toml format](/build/buildsystem/test_manifests.md), which is
 recognized by the parser, defines a long list of metadata.
 
 ### Adding a new mochitest.toml or chrome.toml file
