@@ -4,11 +4,16 @@
 
 //! FFI accessible entry points into the taskbar module.
 
-use nserror::{NS_ERROR_NOT_AVAILABLE, NS_ERROR_NOT_SAME_THREAD, NS_OK, nsresult};
+use nserror::{
+    NS_ERROR_NOT_AVAILABLE, NS_ERROR_NOT_SAME_THREAD, NS_ERROR_UNEXPECTED, NS_OK, nsresult,
+};
 use nsstring::{nsAString, nsString};
-use xpcom::{Promise, RefPtr, interfaces::nsIWritableVariant};
+use xpcom::{
+    Promise, RefPtr,
+    interfaces::{nsIVariant, nsIWritableVariant},
+};
 
-use super::{com, pin_app, winrt};
+use super::{PinResult, can_pin, pin_app, unpin_shortcut};
 use crate::util::thread_guard::{self, ThreadGuard};
 
 /// FFI accessible interface to check if taskbar pinning APIs are available.
@@ -26,7 +31,7 @@ pub unsafe extern "C" fn shell_windows_taskbar_can_pin_to_taskbar() -> nsresult 
         }
     };
 
-    match winrt::is_pinning_allowed() || com::is_pinning_available(main_guard) {
+    match can_pin(main_guard) {
         true => NS_OK,
         false => NS_ERROR_NOT_AVAILABLE,
     }
@@ -59,10 +64,9 @@ pub unsafe extern "C" fn shell_windows_taskbar_pin_app_to_taskbar(
     let promise = RefPtr::new(promise);
 
     moz_task::spawn_local("Pin to Taskbar", async move {
-        let result: Result<RefPtr<nsIWritableVariant>, nsresult> =
-            pin_app(&aumid, &shortcut_path, fire_and_forget, main_guard)
-                .await
-                .and_then(TryInto::try_into);
+        let result = pin_app(&aumid, &shortcut_path, fire_and_forget, main_guard)
+            .await
+            .and_then(pin_result_to_variant);
 
         match result {
             Ok(variant) => promise.resolve_with_variant(&variant),
@@ -94,8 +98,26 @@ pub unsafe extern "C" fn shell_windows_taskbar_unpin_shortcut_from_taskbar(
         }
     };
 
-    match com::modify_taskbar(com::PinOp::UnPin, shortcut_path, main_guard) {
+    match unpin_shortcut(shortcut_path, main_guard) {
         Ok(_) => NS_OK,
         Err(e) => e,
     }
+}
+
+fn create_writable_variant() -> Result<RefPtr<nsIWritableVariant>, nsresult> {
+    xpcom::create_instance::<nsIWritableVariant>(c"@mozilla.org/variant;1").ok_or_else(|| {
+        log::error!("Failed to create writable variant.");
+        NS_ERROR_UNEXPECTED
+    })
+}
+
+fn pin_result_to_variant(result: PinResult) -> Result<RefPtr<nsIVariant>, nsresult> {
+    let variant = create_writable_variant()?;
+
+    // SAFETY: No invariants to uphold as parameter is POD.
+    unsafe { variant.SetAsUint8(result.into()) }
+        .to_result()
+        .inspect_err(|e| log::error!("Failed to set Uint8 on nsIWritableVariant: {e:?}"))?;
+
+    Ok(RefPtr::new(variant.coerce()))
 }
