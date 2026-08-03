@@ -1358,8 +1358,7 @@ void WebGLContext::UniformData(
 
   const auto lengthInType = data.size();
   const auto elemCount = lengthInType / channels;
-  if (elemCount > 1 &&
-      (!validationInfo.isArray || activeInfo.elemCount != elemCount)) {
+  if (elemCount > 1 && !validationInfo.isArray) {
     GenerateError(
         LOCAL_GL_INVALID_OPERATION,
         "(uniform %s) `values` length (%u) must exactly match size of %s.",
