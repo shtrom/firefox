@@ -35,9 +35,6 @@ run-if = [
 ["browser_ext_themes_arrowpanels.js"]
 
 ["browser_ext_themes_autocomplete_popup.js"]
-skip-if = [
-  "nova", # Bug 2057887
-]
 
 ["browser_ext_themes_chromeparity.js"]
 
