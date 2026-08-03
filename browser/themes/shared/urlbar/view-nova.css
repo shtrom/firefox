@@ -1366,10 +1366,12 @@
     /* Inline spacing between multiple items in a row */
     margin-inline-end: var(--space-small);
 
-    /* The block and inline-start padding should match the normal inner inline
-     padding we removed above, in order to keep the first item's image aligned
-     with the text and images in other rows. */
-    padding: var(--urlbarView-row-padding-inline);
+    /* Except in compact mode, the block and inline-start padding should match the
+       normal inner inline padding we removed above, in order to keep the first
+       item's image aligned with the text and images in other rows. */
+    :root:not([uidensity="compact"]) & {
+      padding: var(--urlbarView-row-padding-inline);
+    }
     padding-inline-end: var(--space-large);
 
     .urlbarView-realtime-root:not([selectable]) > &:not([selected]):hover {
