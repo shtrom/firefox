@@ -7,7 +7,7 @@
 //! This implements functionality to pin an app to the taskbar using the
 //! TaskbarManager WinRT API. This was originally exposed to UWP/MSIX apps, and
 //! later extended to unpackaged Win32 apps while locking down the undocumented
-//! [IPinnedList3 COM API][crate::taskbar::com].
+//! [IPinnedList3 COM API][super::com].
 //!
 //! ## Secondary Pinning
 //!
@@ -31,22 +31,25 @@
 //! ## Requirements
 //!
 //! This API requires a shortcut present in the virtual shell:appsfolder
-//! directory, i.e. a shortcut with unique AUMID in either the User or Common
-//! Start Menu folders. Note that there is a delay between files being created
-//! in the Start Menu folders and becoming accessible in shell:appsfolder.
+//! directory. For MSIX installs this requires an <Application> entry in the
+//! AppxManifest.xml, for non-MSIX installs a shortcut with unique AUMID in
+//! either the User or Common Start Menu folders. Note that there is a delay
+//! between files being created in the Start Menu folders and becoming
+//! accessible in shell:appsfolder.
 //!
-//! Additionally the app must be focused when pinning is requested.
+//! The app must be focused when pinning is requested.
 
 use nserror::{NS_ERROR_NOT_AVAILABLE, NS_ERROR_UNEXPECTED, nsresult};
 use nsstring::nsAString;
 use std::sync::LazyLock;
 use windows::{ApplicationModel::Package, UI::Shell::TaskbarManager, core::Error as WinError};
 
-use super::PinResult;
 use crate::{
     limited_access_features::LimitedAccessFeatureService,
     util::{async_timer, thread_guard::MainThreadGuard},
 };
+
+use super::PinResult;
 
 static LAF_LOCK: LazyLock<Result<(), nsresult>> = LazyLock::new(|| {
     let svc = LimitedAccessFeatureService::new();
@@ -280,6 +283,7 @@ pub(super) enum WinRtPinError {
 }
 
 impl WinRtPinError {
+    /// Converts Error into Glean metric strings.
     pub fn to_metric_taskbar_pin_winrt(&self) -> &'static str {
         use WinRtPinError::*;
         match self {
@@ -328,8 +332,10 @@ mod test {
     use windows::core::Error as WinError;
     use xpcom::interfaces::nsIPrefBranch;
 
-    use super::PinResult::{self, *};
-    use super::WinRtPinError::{self, *};
+    use super::{
+        PinResult::{self, *},
+        WinRtPinError::{self, *},
+    };
 
     /// Maps `browser.shell.taskbar.test.pinWinRtStubResult` to the pin Result.
     pub(super) fn pin_result_from_pref() -> Option<Result<PinResult, WinRtPinError>> {
@@ -350,8 +356,7 @@ mod test {
         })
     }
 
-    /// Attempts to retrieve the `browser.shell.taskbar.test.pinWinRtStubResult`
-    /// preference.
+    /// Attempts to retrieve the provided preference.
     fn get_char_pref(name: &std::ffi::CStr) -> Option<nsCString> {
         let mut value = nsCString::new();
         let prefs = xpcom::get_service::<nsIPrefBranch>(c"@mozilla.org/preferences-service;1")?;

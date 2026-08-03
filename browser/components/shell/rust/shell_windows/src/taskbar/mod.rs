@@ -4,8 +4,8 @@
 
 //! # Taskbar Pinning
 //!
-//! This module abstracts over the WinRT and COM APIs to pin a given shortcut
-//! with matching AppUserModelId (AUMID) to the Windows taskbar.
+//! This module abstracts over the WinRT and COM APIs relevant to Windows
+//! Taskbar pinning.
 
 use nserror::{NS_ERROR_FAILURE, NS_ERROR_UNEXPECTED, nsresult};
 use nsstring::{nsAString, nsString};
@@ -19,14 +19,14 @@ mod ffi;
 mod shortcut;
 mod winrt;
 
-// Result from the attempt to pin to taskbar.
+/// Result from the attempt to pin to taskbar.
 enum PinResult {
-    // Pin request affirmed by user.
+    /// Pin request affirmed by user.
     Pinned,
-    // Pin request rejected by user or system.
+    /// Pin request rejected by user or system.
     Rejected,
-    // Either returned before pin request was acted upon, or fell back to an API
-    // where success isn't known.
+    /// Either returned before pin request was acted upon, or fell back to an
+    /// API where success isn't known.
     Unknown,
 }
 
