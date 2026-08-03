@@ -9,7 +9,7 @@ use nsstring::{nsAString, nsString};
 use xpcom::{Promise, RefPtr, interfaces::nsIWritableVariant};
 
 use super::{com, pin_app, winrt};
-use crate::util::thread;
+use crate::util::thread_guard;
 
 /// FFI accessible interface to check if taskbar pinning APIs are available.
 ///
@@ -18,7 +18,7 @@ use crate::util::thread;
 /// No safety considerations, marked unsafe to satisfy FFI requirements.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn shell_windows_taskbar_can_pin_to_taskbar() -> nsresult {
-    let main_guard = match thread::get_main_thread_guard() {
+    let main_guard = match thread_guard::get_main_thread_guard() {
         Some(m) => m,
         None => {
             log::error!("Must be called on main thread to check for pinning APIs.");
@@ -46,7 +46,7 @@ pub unsafe extern "C" fn shell_windows_taskbar_pin_app_to_taskbar(
     fire_and_forget: bool,
     promise: &Promise,
 ) -> nsresult {
-    let main_guard = match thread::get_main_thread_guard() {
+    let main_guard = match thread_guard::get_main_thread_guard() {
         Some(m) => m,
         None => {
             log::error!("Pinning must be called from main thread to resolve DOM promise.");
@@ -84,7 +84,7 @@ pub unsafe extern "C" fn shell_windows_taskbar_pin_app_to_taskbar(
 pub unsafe extern "C" fn shell_windows_taskbar_unpin_shortcut_from_taskbar(
     shortcut_path: &nsAString,
 ) -> nsresult {
-    let main_guard = match thread::get_main_thread_guard() {
+    let main_guard = match thread_guard::get_main_thread_guard() {
         Some(m) => m,
         None => {
             log::error!(

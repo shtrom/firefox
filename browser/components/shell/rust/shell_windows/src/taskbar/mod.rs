@@ -7,7 +7,7 @@
 //! This module abstracts over the WinRT and COM APIs to pin a given shortcut
 //! with matching AppUserModelId (AUMID) to the Windows taskbar.
 
-use crate::util::thread::{self, MainThreadGuard};
+use crate::util::thread_guard::{self, MainThreadGuard};
 use nserror::{
     NS_ERROR_NOT_AVAILABLE, NS_ERROR_NOT_SAME_THREAD, NS_ERROR_UNEXPECTED, NS_OK, nsresult,
 };

@@ -45,7 +45,7 @@ use windows::{ApplicationModel::Package, UI::Shell::TaskbarManager, core::Error 
 use super::PinResult;
 use crate::{
     limited_access_features::LimitedAccessFeatureService,
-    util::{async_timer, thread::MainThreadGuard},
+    util::{async_timer, thread_guard::MainThreadGuard},
 };
 
 static LAF_LOCK: LazyLock<Result<(), nsresult>> = LazyLock::new(|| {
