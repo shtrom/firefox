@@ -552,10 +552,7 @@ nsresult nsAppShellService::JustCreateTopWindow(
              nsIWebBrowserChrome::CHROME_ALL) {
     widgetInitData.mBorderStyle = BorderStyle::All;
   } else {
-    widgetInitData.mBorderStyle = BorderStyle::None;  // assumes none == 0x00
-    if (aChromeMask & nsIWebBrowserChrome::CHROME_WINDOW_BORDERS) {
-      widgetInitData.mBorderStyle |= BorderStyle::Border;
-    }
+    widgetInitData.mBorderStyle = BorderStyle::Border;
     if (aChromeMask & nsIWebBrowserChrome::CHROME_TITLEBAR) {
       widgetInitData.mBorderStyle |= BorderStyle::Title;
     }

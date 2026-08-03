@@ -1967,8 +1967,6 @@ uint32_t nsWindowWatcher::CalculateChromeFlagsForSystem(
       chromeFlags |= nsIWebBrowserChrome::CHROME_OPENAS_DIALOG |
                      nsIWebBrowserChrome::CHROME_OPENAS_CHROME;
     }
-  } else {
-    chromeFlags = nsIWebBrowserChrome::CHROME_WINDOW_BORDERS;
   }
 
   /* This function has become complicated since browser windows and
