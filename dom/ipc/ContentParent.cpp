@@ -5556,8 +5556,8 @@ mozilla::ipc::IPCResult ContentParent::CommonCreateWindow(
   features.Tokenize(aFeatures);
 
   aResult = pwwatch->OpenWindowWithRemoteTab(
-      thisBrowserHost, features, aModifiers, aCalledFromJS, aParent.FullZoom(),
-      openInfo, getter_AddRefs(aNewRemoteTab));
+      thisBrowserHost, features, aCalledFromJS, aParent.FullZoom(), openInfo,
+      getter_AddRefs(aNewRemoteTab));
   if (NS_WARN_IF(NS_FAILED(aResult))) {
     return IPC_OK();
   }
