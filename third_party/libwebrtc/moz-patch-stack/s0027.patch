@@ -116,7 +116,7 @@ index 375e71ac46..c028ef6f70 100644
    # TODO(https://bugs.webrtc.org/14437):  Remove this section if general
    # Chromium fix resolves the problem.
 diff --git a/BUILD.gn b/BUILD.gn
-index ad90f3b601..c52b4deedb 100644
+index 442d5f212f..39d4066e21 100644
 --- a/BUILD.gn
 +++ b/BUILD.gn
 @@ -39,7 +39,7 @@ if (is_android) {
@@ -128,7 +128,7 @@ index ad90f3b601..c52b4deedb 100644
    # This target should (transitively) cause everything to be built; if you run
    # 'ninja default' and then 'ninja all', the second build should do no work.
    group("default") {
-@@ -195,6 +195,10 @@ config("common_inherited_config") {
+@@ -199,6 +199,10 @@ config("common_inherited_config") {
      defines += [ "WEBRTC_ENABLE_OBJC_SYMBOL_EXPORT" ]
    }
  
@@ -139,7 +139,7 @@ index ad90f3b601..c52b4deedb 100644
    if (!rtc_builtin_ssl_root_certificates) {
      defines += [ "WEBRTC_EXCLUDE_BUILT_IN_SSL_ROOT_CERTS" ]
    }
-@@ -510,9 +514,11 @@ config("common_config") {
+@@ -514,9 +518,11 @@ config("common_config") {
    }
  }
  
@@ -151,7 +151,7 @@ index ad90f3b601..c52b4deedb 100644
  
  if (!rtc_build_ssl) {
    config("external_ssl_library") {
-@@ -575,6 +581,33 @@ if (!build_with_chromium) {
+@@ -579,6 +585,33 @@ if (!build_with_chromium) {
        "pc:webrtc_sdp",
        "video",
      ]
@@ -185,7 +185,7 @@ index ad90f3b601..c52b4deedb 100644
  
      if (rtc_include_builtin_audio_codecs) {
        deps += [
-@@ -585,8 +618,23 @@ if (!build_with_chromium) {
+@@ -589,8 +622,23 @@ if (!build_with_chromium) {
  
      if (build_with_mozilla) {
        deps += [
@@ -844,10 +844,10 @@ index 0f581c6922..5465a0e26c 100644
      } else {
        cflags = [
 diff --git a/modules/desktop_capture/BUILD.gn b/modules/desktop_capture/BUILD.gn
-index 4b3e09199b..1b11cefa97 100644
+index 42a8f52540..703fbe17c0 100644
 --- a/modules/desktop_capture/BUILD.gn
 +++ b/modules/desktop_capture/BUILD.gn
-@@ -632,37 +632,12 @@ rtc_library("desktop_capture") {
+@@ -663,37 +663,12 @@ rtc_library("desktop_capture") {
      ]
      deps += [ ":desktop_capture_objc" ]
    }
@@ -885,7 +885,7 @@ index 4b3e09199b..1b11cefa97 100644
    }
  
    if (rtc_use_x11_extensions) {
-@@ -825,9 +800,7 @@ rtc_library("desktop_capture") {
+@@ -856,9 +831,7 @@ rtc_library("desktop_capture") {
      deps += [ "../../rtc_base:sanitizer" ]
    }
  
