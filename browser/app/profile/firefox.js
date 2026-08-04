@@ -3017,6 +3017,9 @@ pref("browser.toolbars.bookmarks.showOtherBookmarks", true);
 // restart to reflect state changes.
 pref("browser.toolbars.share-button.enabled", true);
 
+// Visibility of the share button in the url bar.
+pref("browser.urlbar.share-button.enabled", false);
+
 pref("security.certerrors.felt-privacy-v1", true);
 
 

@@ -6073,6 +6073,18 @@ contentSharing:
         pref: browser.contentsharing.server.url
       description: The URL of the content sharing server.
 
+urlbarShareButton:
+  description: Controls the share button in the url bar.
+  owner: nbaumgardner@mozilla.com
+  hasExposure: false
+  variables:
+    enabled:
+      type: boolean
+      setPref:
+        branch: default
+        pref: browser.urlbar.share-button.enabled
+      description: Whether the share button in the url bar is visible.
+
 referrals:
   description: Controls the Firefox referral program.
   owner: nbarrett@mozilla.com
