@@ -9,7 +9,6 @@ import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
-  UrlUtils: "resource://gre/modules/UrlUtils.sys.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
 });
 
@@ -93,7 +92,7 @@ export class UrlbarTelemetryUtils {
     let searchWords = searchString
       .substring(0, UrlbarShared.MAX_TEXT_LENGTH)
       .trim()
-      .split(lazy.UrlUtils.REGEXP_SPACES)
+      .split(UrlbarShared.REGEXP_SPACES)
       .filter(t => t);
     let numWords = searchWords.length.toString();
 
