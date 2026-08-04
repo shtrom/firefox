@@ -802,11 +802,6 @@ void GCRuntime::setZeal(uint8_t zeal, uint32_t frequency) {
     nursery().enterZealMode();
   }
 
-  if (zealMode == ZealMode::ConcurrentMarking &&
-      !isConcurrentMarkingEnabled()) {
-    return;
-  }
-
   zealModeBits |= 1 << zeal;
   zealFrequency = frequency;
 

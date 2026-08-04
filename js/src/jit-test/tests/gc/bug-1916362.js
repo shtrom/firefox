@@ -1,4 +1,5 @@
-gczeal(0);
+// |jit-test| skip-if: gczeal() !== 0
+
 gcparam("highFrequencyTimeLimit", 1000);
 
 assertEq(gcparam('highFrequencyMode'), 0);
