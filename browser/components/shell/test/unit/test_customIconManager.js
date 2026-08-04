@@ -27,6 +27,13 @@ const {
 } = ChromeUtils.importESModule(
   "moz-src:///browser/components/shell/CustomIconManager.sys.mjs"
 );
+// As with TestUtils above, the browser-test eslint env treats
+// SelectableProfileService as a global, but it isn't one in xpcshell, so the
+// import is required (and must be kept despite the redeclare autofix).
+// eslint-disable-next-line mozilla/no-redeclare-with-import-autofix
+const { SelectableProfileService } = ChromeUtils.importESModule(
+  "resource:///modules/profiles/SelectableProfileService.sys.mjs"
+);
 
 const PREF_ICON_ID = "browser.shell.customIcon.id";
 const TEST_AUMID = "Test.Firefox.AUMID";
@@ -62,6 +69,12 @@ let winTaskbarMock = {
   },
 };
 
+// ensureAppliedOrRevert() awaits SelectableProfileService.init() on the startup
+// path so the shared custom-icon pref can finish loading from the profiles
+// database before it reconciles. We stub it here so these unit tests don't spin up
+// the real profiles machinery.
+let spsInitStub;
+
 // Reset stub history + default behaviour, clear the pref, and drop any recorded
 // Glean values before each task.
 function resetMocks() {
@@ -70,6 +83,8 @@ function resetMocks() {
   shellServiceMock.setShortcutsIcon.reset();
   shellServiceMock.setShortcutsIcon.resolves();
   winTaskbarMock.setAllWindowIcons.reset();
+  spsInitStub.reset();
+  spsInitStub.resolves();
   Services.prefs.clearUserPref(PREF_ICON_ID);
   Services.fog.testResetFOG();
 }
@@ -95,7 +110,10 @@ add_setup(function () {
     winTaskbarMock
   );
 
+  spsInitStub = sinon.stub(SelectableProfileService, "init").resolves();
+
   registerCleanupFunction(() => {
+    spsInitStub.restore();
     MockRegistrar.unregister(taskbarCid);
     MockRegistrar.unregister(shellCid);
     Services.prefs.clearUserPref(PREF_ICON_ID);
@@ -514,6 +532,62 @@ add_task(
     Assert.ok(
       winTaskbarMock.setAllWindowIcons.notCalled,
       "no runtime work when no custom icon is recorded"
+    );
+  }
+);
+
+/**
+ * This test checks that ensureAppliedOrRevert() will run setShortcutsIcon
+ * even if no custom ID is set, but only if it's being called because a remote
+ * profile updated.
+ */
+add_task(
+  skipOnMsix(),
+  async function test_ensureAppliedOrRevert_when_remoteProfileUpdated() {
+    resetMocks();
+
+    await CustomIconManager.ensureAppliedOrRevert(
+      true /* remoteProfileUpdated */
+    );
+
+    Assert.ok(
+      shellServiceMock.setShortcutsIcon.notCalled,
+      "Shortcuts were not modified if a remote profile cleared the icon"
+    );
+    Assert.ok(
+      winTaskbarMock.setAllWindowIcons.calledOnce,
+      "Runtime icon was modified if a remote profile cleared the icon"
+    );
+  }
+);
+
+/**
+ * This test verifies that the startup reconcile (remoteProfileUpdated = false)
+ * awaits SelectableProfileService.init() before reading the pref, so a custom
+ * icon synced late from the selectable-profiles database is still applied
+ * rather than missed. init() stands in for that shared-pref load and only sets
+ * the pref after yielding, so a reconcile that read the pref without awaiting
+ * would see no icon and apply nothing.
+ */
+add_task(
+  skipOnMsix(),
+  async function test_ensureAppliedOrRevert_waits_for_shared_pref_load() {
+    resetMocks();
+
+    spsInitStub.callsFake(async () => {
+      await Promise.resolve();
+      Services.prefs.setStringPref(PREF_ICON_ID, "retro2004");
+    });
+
+    await CustomIconManager.ensureAppliedOrRevert();
+
+    Assert.ok(
+      spsInitStub.calledOnce,
+      "The startup reconcile awaited SelectableProfileService.init()."
+    );
+    Assert.ok(
+      winTaskbarMock.setAllWindowIcons.calledOnceWithExactly(RETRO_RESOURCE_ID),
+      "The icon synced during init() was applied to runtime windows."
     );
   }
 );
