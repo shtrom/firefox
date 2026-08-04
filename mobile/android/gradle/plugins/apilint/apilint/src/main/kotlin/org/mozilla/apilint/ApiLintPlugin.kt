@@ -87,6 +87,8 @@ class ApiLintPlugin : Plugin<Project> {
 
                     task.inputs.file(apiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
                     task.inputs.file(apiMapFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+                    task.declareLintFilterInputs(extension)
+                    task.declareDeprecationInputs(extension)
                     task.outputs.file(jsonResultFileProvider)
 
                     task.doFirst {
@@ -144,6 +146,7 @@ class ApiLintPlugin : Plugin<Project> {
                     task.inputs.file(apiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
                     task.inputs.file(currentApiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
                     task.inputs.file(apiMapFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+                    task.declareDeprecationInputs(extension)
                     task.outputs.file(jsonResultFileProvider)
 
                     task.dependsOn(apiLintSingle)

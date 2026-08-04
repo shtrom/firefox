@@ -60,6 +60,8 @@ tasks.register<Exec>("integrationTestApiLint") {
 }
 
 tasks.named<Test>("test") {
+    useJUnitPlatform()
+
     dependsOn("unittestApiLint")
     dependsOn("testApiLint")
     dependsOn("testChangelogCheck")
@@ -75,6 +77,10 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
 dependencies {
     implementation(gradleApi())
     compileOnly(libs.android.gradle.plugin)
+
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 // Arrange for the doclet jar to be included in Java resources, to be consumed
