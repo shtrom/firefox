@@ -8,7 +8,7 @@
 # documentation and how to modify this file.
 repo: mozilla-central
 created_at: '2021-10-14T12:50:40.073465'
-updated_at: '2026-07-31T13:15:07.835428+00:00'
+updated_at: '2026-08-04T07:28:37.045655+00:00'
 export:
   path: ./docs/mots/index.md
   format: md
@@ -3091,7 +3091,8 @@ modules:
     description: The View Manager is responsible for handling "heavyweight" rendering
       (some clipping, compositing) and event handling tasks.
     includes:
-      - view/**/*
+      - layout/base/**/*
+      - layout/painting/**/*
     meta:
       owners_emeritus:
         - Robert O'Callahan
@@ -4852,5 +4853,5 @@ modules:
         - Ryan Tilder
       group: dev-platform
 hashes:
-  config: 58d5b5efd918ced611d263f73f9d8ec54003f9df
-  export: 649eb4e04264eb3ab5209d4907e787f34dea9b28
+  config: 3a9e022685fa37845705ac59b4ec4617b5161414
+  export: ac3ae31dfd3706942ae36d0df1723805eee193bb
