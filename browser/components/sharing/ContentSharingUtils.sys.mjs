@@ -45,7 +45,7 @@ const BASE_DELAY = Cu.isInAutomation ? 100 : 1000;
 const MAX_REQUEST_ATTEMPTS = 5;
 
 const CONTENT_SHARING_MODAL_URL =
-  "chrome://browser/content/contentsharing/contentSharingModal.xhtml";
+  "chrome://browser/content/sharing/contentSharingModal.xhtml";
 
 const SCHEMA_MAP = new Map();
 async function loadContentSharingSchema() {
@@ -53,8 +53,7 @@ async function loadContentSharingSchema() {
     return SCHEMA_MAP.get("CONTENT_SHARING_SCHEMA");
   }
 
-  const url =
-    "chrome://browser/content/contentsharing/contentsharing.schema.json";
+  const url = "chrome://browser/content/sharing/contentsharing.schema.json";
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to load schema: ${response.statusText}`);

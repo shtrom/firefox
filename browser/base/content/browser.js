@@ -29,7 +29,7 @@ ChromeUtils.defineESModuleGetters(this, {
   ContentAnalysis:
     "moz-src:///browser/components/contentanalysis/content/ContentAnalysis.sys.mjs",
   ContentSharingUtils:
-    "moz-src:///browser/components/contentsharing/ContentSharingUtils.sys.mjs",
+    "moz-src:///browser/components/sharing/ContentSharingUtils.sys.mjs",
   ContextualIdentityService:
     "moz-src:///toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs",
   CustomizableUI:
@@ -90,7 +90,7 @@ ChromeUtils.defineESModuleGetters(this, {
   SessionStartup: "resource:///modules/sessionstore/SessionStartup.sys.mjs",
   SessionStore: "resource:///modules/sessionstore/SessionStore.sys.mjs",
   SessionWindowUI: "resource:///modules/sessionstore/SessionWindowUI.sys.mjs",
-  SharingUtils: "resource:///modules/SharingUtils.sys.mjs",
+  SharingUtils: "moz-src:///browser/components/sharing/SharingUtils.sys.mjs",
   ShortcutUtils: "resource://gre/modules/ShortcutUtils.sys.mjs",
   SiteDataManager: "resource:///modules/SiteDataManager.sys.mjs",
   SitePermissions: "resource:///modules/SitePermissions.sys.mjs",

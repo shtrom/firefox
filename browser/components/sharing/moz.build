@@ -9,6 +9,7 @@ JAR_MANIFESTS += ["jar.mn"]
 
 MOZ_SRC_FILES += [
     "ContentSharingUtils.sys.mjs",
+    "SharingUtils.sys.mjs",
 ]
 
 TESTING_JS_MODULES += [

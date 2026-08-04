@@ -6,7 +6,7 @@ import { MozLitElement } from "chrome://global/content/lit-utils.mjs";
 import { html } from "chrome://global/content/vendor/lit.all.mjs";
 
 const { ERRORS, WARNINGS, MAX_ITEM_COUNT } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/contentsharing/ContentSharingUtils.sys.mjs"
+  "moz-src:///browser/components/sharing/ContentSharingUtils.sys.mjs"
 );
 const { XPCOMUtils } = ChromeUtils.importESModule(
   "resource://gre/modules/XPCOMUtils.sys.mjs"
@@ -308,7 +308,7 @@ export class ContentSharingModal extends MozLitElement {
       return html`<div>
         <img
           class="share-icon"
-          src="chrome://browser/content/contentsharing/content-sharing-icon.svg"
+          src="chrome://browser/content/sharing/content-sharing-icon.svg"
         />
         <span class="share-title">${this.shareResult.share.title}</span>
       </div>`;
@@ -318,7 +318,7 @@ export class ContentSharingModal extends MozLitElement {
       ><span class="share-count"
         ><img
           class="share-icon"
-          src="chrome://browser/content/contentsharing/content-sharing-icon.svg"
+          src="chrome://browser/content/sharing/content-sharing-icon.svg"
         />
         ${this.shareResult.share.links.length}</span
       >`;
@@ -331,7 +331,7 @@ export class ContentSharingModal extends MozLitElement {
 
     return html`<link
         rel="stylesheet"
-        href="chrome://browser/content/contentsharing/content-sharing-modal.css"
+        href="chrome://browser/content/sharing/content-sharing-modal.css"
       />
       <link
         rel="stylesheet"

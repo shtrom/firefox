@@ -28,6 +28,9 @@ Object.defineProperty(lazy, "MacSharingService", {
   },
 });
 
+/**
+ * Class that populates and handles various sharing options
+ */
 class SharingUtilsCls {
   /**
    * Ensures a "Share" submenu exists in a given menu, creating it if necessary.
@@ -72,6 +75,9 @@ class SharingUtilsCls {
   /**
    * Creates and inserts the "Share" <menu> element with a <menupopup> child.
    * All platforms now use a submenu.
+   *
+   * @param {Element} insertAfterEl
+   * @returns {Element} A newly created menu
    */
   #createShareMenu(insertAfterEl) {
     let parentMenu = insertAfterEl.parentNode;
@@ -96,6 +102,10 @@ class SharingUtilsCls {
 
   /**
    * Return a menuitem that copies the link(s) to the clipboard.
+   *
+   * @param {Document} document
+   * @param {number} shareableCount
+   * @returns {Element} A newly created menuitem
    */
   #createCopyLinkMenuItem(document, shareableCount) {
     let item = document.createXULElement("menuitem");
@@ -165,6 +175,9 @@ class SharingUtilsCls {
 
   /**
    * Get the sharing data for the context browser on a DOM node.
+   *
+   * @param {Node} node DOM node
+   * @returns {object} An object containing the url and title to share
    */
   getLinkToShare(node) {
     let browser = node.contextBrowserToShare?.get();
@@ -185,6 +198,7 @@ class SharingUtilsCls {
   /**
    * Get the link data for all browsers stored on a DOM node.
    *
+   * @param {Node} node DOM node
    * @returns {Array<{url: string, title: string}>}
    */
   getLinksToShare(node) {
@@ -217,6 +231,8 @@ class SharingUtilsCls {
 
   /**
    * Populates the share submenu popup with platform-appropriate items.
+   *
+   * @param {Element} menuPopup The share menu element
    */
   populateSharePopup(menuPopup) {
     // Ensure the command listener is registered.

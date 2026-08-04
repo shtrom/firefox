@@ -7,11 +7,8 @@
   position: absolute;
   inset: 0;
   z-index: -2;
-  background: light-dark(
-      url("chrome://browser/content/contentsharing/background-light.svg"),
-      url("chrome://browser/content/contentsharing/background-dark.svg")
-    )
-    center / cover no-repeat;
+  background: light-dark(url("chrome://browser/content/sharing/background-light.svg"), url("chrome://browser/content/sharing/background-dark.svg")) center /
+    cover no-repeat;
 
   background-position: bottom 0 left 0;
   background-size: initial;

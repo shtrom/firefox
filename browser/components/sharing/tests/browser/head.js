@@ -1,12 +1,10 @@
 ChromeUtils.defineESModuleGetters(this, {
   ContentSharingUtils:
-    "moz-src:///browser/components/contentsharing/ContentSharingUtils.sys.mjs",
+    "moz-src:///browser/components/sharing/ContentSharingUtils.sys.mjs",
   makeShareResult:
-    "moz-src:///browser/components/contentsharing/ContentSharingUtils.sys.mjs",
-  ERRORS:
-    "moz-src:///browser/components/contentsharing/ContentSharingUtils.sys.mjs",
-  WARNINGS:
-    "moz-src:///browser/components/contentsharing/ContentSharingUtils.sys.mjs",
+    "moz-src:///browser/components/sharing/ContentSharingUtils.sys.mjs",
+  ERRORS: "moz-src:///browser/components/sharing/ContentSharingUtils.sys.mjs",
+  WARNINGS: "moz-src:///browser/components/sharing/ContentSharingUtils.sys.mjs",
 });
 
 ChromeUtils.defineLazyGetter(this, "ContentSharingMockServer", () => {
