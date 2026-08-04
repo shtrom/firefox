@@ -43,10 +43,7 @@ add_task(async function test_experiment_messaging_system_dismiss() {
 
   let { win: win1, tab: tab1 } = await openTabAndWaitForRender();
 
-  await SpecialPowers.spawn(tab1, [selectors], async function (promo) {
-    content.document.querySelector(promo.dismissButton).click();
-    info("button clicked");
-  });
+  await clickPromoDismissButton(tab1);
 
   let { win: win2, tab: tab2 } = await openTabAndWaitForRender();
 
@@ -100,10 +97,8 @@ add_task(async function test_experiment_messaging_show_default_on_dismiss() {
       content.document.querySelector(promo.container),
       "should render the promo experiment message"
     );
-
-    content.document.querySelector(promo.dismissButton).click();
-    info("button clicked");
   });
+  await clickPromoDismissButton(tab1);
 
   let { win: win2, tab: tab2 } = await openTabAndWaitForRender();
 
