@@ -67,6 +67,7 @@ const TELEMETRY_SUBSESSIONSPLIT_TOPIC =
 const DOMWINDOW_OPENED_TOPIC = "domwindowopened";
 const SESSION_STORE_SAVED_TAB_GROUPS_TOPIC =
   "sessionstore-saved-tab-groups-changed";
+const IDLE_DAILY_TOPIC = "idle-daily";
 
 export const MINIMUM_TAB_COUNT_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes, in ms
 
@@ -533,7 +534,7 @@ export let BrowserUsageTelemetry = {
     this._inited = true;
 
     Services.prefs.addObserver("browser.tabs.inTitlebar", this);
-    Services.prefs.addObserver("idle-daily", this);
+    Services.obs.addObserver(this, IDLE_DAILY_TOPIC, true);
 
     this._recordUITelemetry();
     this._recordInitialPrefValues();
@@ -623,6 +624,7 @@ export let BrowserUsageTelemetry = {
     Services.obs.removeObserver(this, DOMWINDOW_OPENED_TOPIC);
     Services.obs.removeObserver(this, TELEMETRY_SUBSESSIONSPLIT_TOPIC);
     Services.obs.removeObserver(this, SESSION_STORE_SAVED_TAB_GROUPS_TOPIC);
+    Services.obs.removeObserver(this, IDLE_DAILY_TOPIC);
   },
 
   observe(subject, topic, data) {
@@ -636,6 +638,9 @@ export let BrowserUsageTelemetry = {
       case SESSION_STORE_SAVED_TAB_GROUPS_TOPIC:
         this._onSavedTabGroupsChange();
         break;
+      case IDLE_DAILY_TOPIC:
+        this._recordInitialPrefValues();
+        break;
       case "nsPref:changed":
         switch (data) {
           case "browser.tabs.inTitlebar":
@@ -644,9 +649,6 @@ export let BrowserUsageTelemetry = {
               Services.appinfo.drawInTitlebar ? "off" : "on",
               "pref"
             );
-            break;
-          case "idle-daily":
-            this._recordInitialPrefValues();
             break;
         }
         break;
