@@ -95,11 +95,17 @@ class ApiLintPlugin : Plugin<Project> {
                         val apiMapFile = apiMapFileProvider.get().asFile
 
                         task.args(apiFile, "--result-json", jsonResultFile)
-                        if (extension.lintFilters.isPresent) {
-                            task.args("--filter-errors", *extension.lintFilters.get().toTypedArray())
+                        // Gradle gives a ListProperty an empty value rather than no value, so these
+                        // have to be checked for emptiness: `isPresent` is true even when the
+                        // consumer never configured them, and passing either flag with no values
+                        // makes apilint.py restrict the API to nothing.
+                        val lintFilters = extension.lintFilters.get()
+                        if (lintFilters.isNotEmpty()) {
+                            task.args("--filter-errors", *lintFilters.toTypedArray())
                         }
-                        if (extension.allowedPackages.isPresent) {
-                            task.args("--allowed-packages", *extension.allowedPackages.get().toTypedArray())
+                        val allowedPackages = extension.allowedPackages.get()
+                        if (allowedPackages.isNotEmpty()) {
+                            task.args("--allowed-packages", *allowedPackages.toTypedArray())
                         }
                         if (extension.deprecationAnnotation.isPresent) {
                             task.args("--deprecation-annotation", extension.deprecationAnnotation.get())
