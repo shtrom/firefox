@@ -198,9 +198,6 @@ contentblocking:
     type: labeled_counter
     description: >
       Whether a probable font fingerprinting attempt was detected
-
-      This metric was generated to correspond to the Legacy Telemetry boolean
-      histogram FONT_FINGERPRINTING_PER_TAB.
     labels:
       - "false"
       - "true"
@@ -215,7 +212,6 @@ contentblocking:
     notification_emails:
       - seceng-telemetry@mozilla.com
     expires: 160
-    telemetry_mirror: h#FONT_FINGERPRINTING_PER_TAB
 
   storage_access_granted_count:
     type: labeled_counter
