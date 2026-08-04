@@ -16840,6 +16840,11 @@ hr {
 .personalized-card-wrapper .personalized-card-cta-wrapper .personalized-card-link {
   color: var(--link-color);
   font-size: var(--font-size-small);
+  border-radius: var(--border-radius-small);
+}
+.personalized-card-wrapper .personalized-card-cta-wrapper .personalized-card-link:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: var(--link-focus-outline-offset);
 }
 .personalized-card-wrapper:not(.nova-enabled *) {
   flex-direction: column;
