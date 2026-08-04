@@ -21,29 +21,8 @@
 
 using namespace mozilla;
 
-//*****************************************************************************
-// nsChromeTreeOwner string literals
-//*****************************************************************************
-
-const nsLiteralString kPersist(u"persist");
-const nsLiteralString kScreenX(u"screenX");
-const nsLiteralString kScreenY(u"screenY");
-const nsLiteralString kWidth(u"width");
-const nsLiteralString kHeight(u"height");
-const nsLiteralString kSizemode(u"sizemode");
-const nsLiteralString kSpace(u" ");
-
-//*****************************************************************************
-//***    nsChromeTreeOwner: Object Management
-//*****************************************************************************
-
-nsChromeTreeOwner::nsChromeTreeOwner() : mAppWindow(nullptr) {}
-
+nsChromeTreeOwner::nsChromeTreeOwner() = default;
 nsChromeTreeOwner::~nsChromeTreeOwner() = default;
-
-//*****************************************************************************
-// nsChromeTreeOwner::nsISupports
-//*****************************************************************************
 
 NS_IMPL_ADDREF(nsChromeTreeOwner)
 NS_IMPL_RELEASE(nsChromeTreeOwner)
@@ -160,30 +139,6 @@ NS_IMETHODIMP nsChromeTreeOwner::SizeShellTo(nsIDocShellTreeItem* aShellItem,
                                              int32_t aCX, int32_t aCY) {
   NS_ENSURE_STATE(mAppWindow);
   return mAppWindow->SizeShellTo(aShellItem, aCX, aCY);
-}
-
-NS_IMETHODIMP
-nsChromeTreeOwner::GetPersistence(bool* aPersistPosition, bool* aPersistSize,
-                                  bool* aPersistSizeMode) {
-  NS_ENSURE_STATE(mAppWindow);
-  nsCOMPtr<dom::Element> docShellElement = mAppWindow->GetWindowDOMElement();
-  if (!docShellElement) return NS_ERROR_FAILURE;
-
-  nsAutoString persistString;
-  docShellElement->GetAttribute(kPersist, persistString);
-
-  // data structure doesn't quite match the question, but it's close enough
-  // for what we want (since this method is never actually called...)
-  if (aPersistPosition)
-    *aPersistPosition = persistString.Find(kScreenX) > kNotFound ||
-                        persistString.Find(kScreenY) > kNotFound;
-  if (aPersistSize)
-    *aPersistSize = persistString.Find(kWidth) > kNotFound ||
-                    persistString.Find(kHeight) > kNotFound;
-  if (aPersistSizeMode)
-    *aPersistSizeMode = persistString.Find(kSizemode) > kNotFound;
-
-  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -392,16 +347,6 @@ nsChromeTreeOwner::OnContentBlockingEvent(nsIWebProgress* aWebProgress,
   return NS_OK;
 }
 
-//*****************************************************************************
-// nsChromeTreeOwner: Helpers
-//*****************************************************************************
-
-//*****************************************************************************
-// nsChromeTreeOwner: Accessors
-//*****************************************************************************
-
 void nsChromeTreeOwner::AppWindow(mozilla::AppWindow* aAppWindow) {
   mAppWindow = aAppWindow;
 }
-
-mozilla::AppWindow* nsChromeTreeOwner::AppWindow() { return mAppWindow; }
