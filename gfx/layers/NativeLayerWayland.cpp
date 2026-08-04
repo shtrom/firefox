@@ -1326,11 +1326,6 @@ void NativeLayerWaylandRender::ReadBackFrontBuffer(
   if (!copyRegion.IsEmpty()) {
     if (mSurfacePoolHandle->gl()) {
       mSurfacePoolHandle->gl()->MakeCurrent();
-      mSurfacePoolHandle->gl()->fBindFramebuffer(LOCAL_GL_READ_FRAMEBUFFER,
-                                                 sourceFB.value());
-      mSurfacePoolHandle->gl()->fBindFramebuffer(LOCAL_GL_DRAW_FRAMEBUFFER,
-                                                 destFB.value());
-
       for (auto iter = copyRegion.RectIter(); !iter.Done(); iter.Next()) {
         gfx::IntRect r = iter.Get();
         Maybe<GLuint> sourceFB =
@@ -1349,8 +1344,8 @@ void NativeLayerWaylandRender::ReadBackFrontBuffer(
         if (!destFB) {
           return;
         }
-        mSurfacePoolHandle->gl()->BlitHelper()->BlitFramebuffer(
-            r, r, LOCAL_GL_NEAREST);
+        mSurfacePoolHandle->gl()->BlitHelper()->BlitFramebufferToFramebuffer(
+            sourceFB.value(), destFB.value(), r, r, LOCAL_GL_NEAREST);
       }
     } else {
       RefPtr<gfx::DataSourceSurface> dataSourceSurface =
