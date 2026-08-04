@@ -172,7 +172,22 @@ nsAndroidNetworkLinkService::GetNativeResolvers(
 NS_IMETHODIMP
 nsAndroidNetworkLinkService::GetPlatformDNSIndications(
     uint32_t* aPlatformDNSIndications) {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  NS_ENSURE_ARG_POINTER(aPlatformDNSIndications);
+
+  *aPlatformDNSIndications = nsINetworkLinkService::NONE_DETECTED;
+
+  if (!jni::IsAvailable()) {
+    NS_WARNING("GetPlatformDNSIndications is not supported without JNI");
+    return NS_ERROR_NOT_AVAILABLE;
+  }
+
+  // When Android has a private DNS (DNS-over-TLS) provider active, the system
+  // resolver may return split-horizon results, so we should not enable DoH.
+  if (java::GeckoAppShell::IsPrivateDnsActive()) {
+    *aPlatformDNSIndications |= nsINetworkLinkService::PRIVATE_DNS_DETECTED;
+  }
+
+  return NS_OK;
 }
 
 void nsAndroidNetworkLinkService::OnNetworkChanged() {
