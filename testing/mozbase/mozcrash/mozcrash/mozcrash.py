@@ -104,7 +104,7 @@ def check_for_crashes(
             test_name = "unknown"
 
     if not quiet:
-        print("mozcrash checking %s for minidumps..." % dump_directory)
+        print(f"mozcrash checking {dump_directory} for minidumps...")
 
     crash_info = CrashInfo(
         dump_directory,
@@ -125,7 +125,7 @@ def check_for_crashes(
             stackwalk_output.append(f"Process type: {info.process_type}")
             stackwalk_output.append("Process pid: {}".format(info.pid or "unknown"))
             if info.reason:
-                stackwalk_output.append("Mozilla crash reason: %s" % info.reason)
+                stackwalk_output.append(f"Mozilla crash reason: {info.reason}")
             if info.stackwalk_stderr:
                 stackwalk_output.append("stderr from minidump-stackwalk:")
                 stackwalk_output.append(info.stackwalk_stderr)
@@ -291,7 +291,7 @@ class CrashInfo:
         # This updates self.symbols_path so we only download once.
         if mozfile.is_url(self.symbols_path):
             self.remove_symbols = True
-            self.logger.info("Downloading symbols from: %s" % self.symbols_path)
+            self.logger.info(f"Downloading symbols from: {self.symbols_path}")
             # Get the symbols and write them to a temporary zipfile
             data = urlopen(self.symbols_path)
             with tempfile.TemporaryFile() as symbols_file:
@@ -326,8 +326,7 @@ class CrashInfo:
             max_dumps = 10
             if len(self._dump_files) > max_dumps:
                 self.logger.warning(
-                    "Found %d dump files -- limited to %d!"
-                    % (len(self._dump_files), max_dumps)
+                    f"Found {len(self._dump_files)} dump files -- limited to {max_dumps}!"
                 )
                 del self._dump_files[max_dumps:]
 
@@ -442,9 +441,9 @@ class CrashInfo:
             )
         elif self.stackwalk_binary and not os.path.exists(self.stackwalk_binary):
             errors.append(
-                "MINIDUMP_STACKWALK binary not found: %s. Use mach bootstrap "
-                "--no-system-changes to install minidump-stackwalk."
-                % self.stackwalk_binary
+                f"MINIDUMP_STACKWALK binary not found: {self.stackwalk_binary}. "
+                "Use mach bootstrap --no-system-changes to install "
+                "minidump-stackwalk."
             )
         elif not os.access(self.stackwalk_binary, os.X_OK):
             errors.append("This user cannot execute the MINIDUMP_STACKWALK binary.")
@@ -528,7 +527,7 @@ class CrashInfo:
                 if not func:
                     continue
 
-                signature = "@ %s" % func
+                signature = f"@ {func}"
 
                 if not (
                     func in ABORT_SIGNATURES
@@ -748,7 +747,7 @@ if mozinfo.isWin:
 
             status = subprocess.Popen([minidumpwriter, str(pid), file_name]).wait()
             if status:
-                log.error("minidumpwriter exited with status: %d" % status)
+                log.error(f"minidumpwriter exited with status: {status}")
             return
 
         log.info(f"Writing a dump to {file_name} for [{pid}]")
@@ -762,7 +761,7 @@ if mozinfo.isWin:
         proc_handle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, 0, pid)
         if not proc_handle:
             err = kernel32.GetLastError()
-            log.warning("unable to get handle for pid %d: %d" % (pid, err))
+            log.warning(f"unable to get handle for pid {pid}: {err}")
             return
 
         if not isinstance(file_name, str):
@@ -793,11 +792,11 @@ if mozinfo.isWin:
                 None,
             ):
                 err = kernel32.GetLastError()
-                log.warning("unable to dump minidump file for pid %d: %d" % (pid, err))
+                log.warning(f"unable to dump minidump file for pid {pid}: {err}")
             CloseHandle(file_handle)
         else:
             err = kernel32.GetLastError()
-            log.warning("unable to create minidump file for pid %d: %d" % (pid, err))
+            log.warning(f"unable to create minidump file for pid {pid}: {err}")
         CloseHandle(proc_handle)
 
     def kill_pid(pid):
@@ -918,7 +917,7 @@ def cleanup_pending_crash_reports():
     if os.path.exists(location):
         try:
             mozfile.remove(location)
-            logger.info("Removed pending crash reports at '%s'" % location)
+            logger.info(f"Removed pending crash reports at '{location}'")
         except Exception:
             pass
 
