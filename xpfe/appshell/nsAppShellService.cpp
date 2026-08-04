@@ -516,8 +516,7 @@ nsresult nsAppShellService::JustCreateTopWindow(
   uint32_t barMask = nsIWebBrowserChrome::CHROME_MENUBAR |
                      nsIWebBrowserChrome::CHROME_TOOLBAR |
                      nsIWebBrowserChrome::CHROME_LOCATIONBAR |
-                     nsIWebBrowserChrome::CHROME_TITLEBAR |
-                     nsIWebBrowserChrome::CHROME_STATUSBAR;
+                     nsIWebBrowserChrome::CHROME_TITLEBAR;
   if (widgetInitData.mWindowType == widget::WindowType::Dialog &&
       ((aChromeMask & pipMask) == pipMask) && !(aChromeMask & barMask)) {
     widgetInitData.mPiPType = mozilla::widget::PiPType::MediaPiP;

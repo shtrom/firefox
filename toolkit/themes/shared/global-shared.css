@@ -123,7 +123,6 @@ h3 {
    kinds of windows with toolbars (not just browser windows) */
 :root[chromehidden~="menubar"] .chromeclass-menubar,
 :root[chromehidden~="directories"] .chromeclass-directories,
-:root[chromehidden~="status"] .chromeclass-status,
 :root[chromehidden~="extrachrome"] .chromeclass-extrachrome,
 :root[chromehidden~="location"] .chromeclass-location,
 :root[chromehidden~="location"][chromehidden~="toolbar"] .chromeclass-toolbar,

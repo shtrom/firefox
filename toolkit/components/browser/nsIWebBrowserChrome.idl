@@ -43,8 +43,7 @@ interface nsIWebBrowserChrome : nsISupports
     // Whole toolbar including locationbar
     const unsigned long CHROME_LOCATIONBAR            = 1 << 6;
 
-    // XXX This hides .chromeclass-status which doesn't exist anymore
-    const unsigned long CHROME_STATUSBAR              = 1 << 7;
+    // Bit 7 is free here.
 
     // toolbar 'PersonalToolbar' containing bookmarks
     const unsigned long CHROME_PERSONAL_TOOLBAR       = 1 << 8;
@@ -55,9 +54,8 @@ interface nsIWebBrowserChrome : nsISupports
     // Free bits here.
     const unsigned long CHROME_ALL =
         CHROME_WINDOW_CLOSE | CHROME_WINDOW_RESIZE | CHROME_MENUBAR |
-        CHROME_TOOLBAR | CHROME_LOCATIONBAR | CHROME_STATUSBAR |
-        CHROME_PERSONAL_TOOLBAR | CHROME_SCROLLBARS | CHROME_TITLEBAR |
-        CHROME_EXTRA;
+        CHROME_TOOLBAR | CHROME_LOCATIONBAR | CHROME_PERSONAL_TOOLBAR |
+        CHROME_SCROLLBARS | CHROME_TITLEBAR | CHROME_EXTRA;
 
     // Only applies to dialog windows, all others always have a minimize button
     const unsigned long CHROME_WINDOW_MINIMIZE        = 1 << 14;
@@ -114,8 +112,7 @@ interface nsIWebBrowserChrome : nsISupports
 
     const unsigned long CHROME_MINIMAL_POPUP =
       CHROME_WINDOW_CLOSE | CHROME_WINDOW_RESIZE | CHROME_WINDOW_MINIMIZE |
-      CHROME_LOCATIONBAR | CHROME_STATUSBAR | CHROME_SCROLLBARS |
-      CHROME_TITLEBAR;
+      CHROME_LOCATIONBAR | CHROME_SCROLLBARS | CHROME_TITLEBAR;
 
     const unsigned long CHROME_DOCUMENT_PICTURE_IN_PICTURE_FLAGS =
       CHROME_MINIMAL_POPUP | CHROME_ALWAYS_ON_TOP | CHROME_DOCUMENT_PIP;

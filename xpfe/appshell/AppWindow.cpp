@@ -2341,9 +2341,6 @@ void AppWindow::ApplyChromeFlags() {
   if (!(mChromeFlags & nsIWebBrowserChrome::CHROME_PERSONAL_TOOLBAR))
     newvalue.AppendLiteral("directories ");
 
-  if (!(mChromeFlags & nsIWebBrowserChrome::CHROME_STATUSBAR))
-    newvalue.AppendLiteral("status ");
-
   if (!(mChromeFlags & nsIWebBrowserChrome::CHROME_EXTRA))
     newvalue.AppendLiteral("extrachrome ");
 

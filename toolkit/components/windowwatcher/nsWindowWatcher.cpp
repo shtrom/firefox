@@ -1872,7 +1872,7 @@ nsresult nsWindowWatcher::URIfromURL(const nsACString& aURL,
   return NS_NewURI(aURI, aURL, nullptr, baseURI);
 }
 
-// static
+// https://html.spec.whatwg.org/#popup-window-is-requested
 bool nsWindowWatcher::ShouldOpenPopup(const WindowFeatures& aFeatures) {
   if (aFeatures.IsEmpty()) {
     return false;
@@ -1928,19 +1928,9 @@ uint32_t nsWindowWatcher::CalculateChromeFlagsForContent(
       aFeatures.GetBoolWithDefault("pictureinpicture", false)) {
     return nsIWebBrowserChrome::CHROME_DOCUMENT_PICTURE_IN_PICTURE_FLAGS;
   }
-
-  if (aFeatures.IsEmpty() || !ShouldOpenPopup(aFeatures)) {
-    // Open the current/new tab in the current/new window
-    // (depends on browser.link.open_newwindow).
-    return nsIWebBrowserChrome::CHROME_ALL;
-  }
-
-  // The site explicitly requested a popup via features; respect that even
-  // when modifier keys are held on the originating click. Matches the
-  // behavior of other browsers and avoids breaking sites like Gmail that
-  // open a Compose popout via Shift+click.
-  *aIsPopupRequested = true;
-  return nsIWebBrowserChrome::CHROME_MINIMAL_POPUP;
+  *aIsPopupRequested = ShouldOpenPopup(aFeatures);
+  return *aIsPopupRequested ? nsIWebBrowserChrome::CHROME_MINIMAL_POPUP
+                            : nsIWebBrowserChrome::CHROME_ALL;
 }
 
 /**
@@ -1997,9 +1987,6 @@ uint32_t nsWindowWatcher::CalculateChromeFlagsForSystem(
   }
   if (aFeatures.GetBoolWithDefault("personalbar", false, &presenceFlag)) {
     chromeFlags |= nsIWebBrowserChrome::CHROME_PERSONAL_TOOLBAR;
-  }
-  if (aFeatures.GetBoolWithDefault("status", false, &presenceFlag)) {
-    chromeFlags |= nsIWebBrowserChrome::CHROME_STATUSBAR;
   }
   if (aFeatures.GetBoolWithDefault("menubar", false, &presenceFlag)) {
     chromeFlags |= nsIWebBrowserChrome::CHROME_MENUBAR;
