@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.2.146
- * pdfjsBuild = d0779c411
+ * pdfjsVersion = 6.3.38
+ * pdfjsBuild = b4ba666b0
  */
 
 ;// ./web/ui_utils.js
@@ -907,7 +907,7 @@ const {
 } = globalThis.pdfjsLib;
 
 ;// ./web/internal_evt.js
-const INTERNAL_EVT = "0cfa3b5c-9264-44bd-b79f-bc41f430e8ef";
+const INTERNAL_EVT = "d2e23c7c-a899-4c5d-bd43-d557ba4bdcfb";
 const internalOpt = Object.freeze({
   internal: INTERNAL_EVT
 });
@@ -8032,7 +8032,7 @@ class PDFScriptingManager {
     }
     if (objects) {
       this.#objectIds = new Set();
-      for (const fields of Object.values(objects)) {
+      for (const fields of objects.values()) {
         for (const {
           id
         } of fields) {
@@ -10878,7 +10878,7 @@ class Autolinker {
   static #regex;
   static #numericTLDRegex;
   static findLinks(text) {
-    this.#regex ??= /\b(?:https?:\/\/|mailto:|www\.)(?:[\S--[\p{P}<>]]|\/|[\S--[\[\]]]+[\S--[\p{P}<>]])+|(?=\p{L})[\S--[@\p{Ps}\p{Pe}<>]]+@([\S--[[\p{P}--\-]<>]]+(?:\.[\S--[[\p{P}--\-]<>]]+)+)/gv;
+    this.#regex ??= /\b(?:https?:\/\/|mailto:|www\.)(?:[\S--[\p{P}<>]]|\/|[\S--[\[\]]]+[\S--[\p{P}<>]])+|(?=\p{L})[\S--[@\p{Ps}\p{Pe}<>]]{1,64}@([\S--[[\p{P}--\-]<>]]{1,63}(?:\.[\S--[[\p{P}--\-]<>]]{1,63})+)/gv;
     const [normalizedText, diffs] = normalize(text, {
       ignoreDashEOL: true
     });
@@ -13163,7 +13163,7 @@ class PDFViewer {
   #savedPageViews = null;
   #deletedPageNumbers = null;
   constructor(options) {
-    const viewerVersion = "6.2.146";
+    const viewerVersion = "6.3.38";
     if (version !== viewerVersion) {
       throw new Error(`The API version "${version}" does not match the Viewer version "${viewerVersion}".`);
     }

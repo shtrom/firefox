@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.2.146
- * pdfjsBuild = d0779c411
+ * pdfjsVersion = 6.3.38
+ * pdfjsBuild = b4ba666b0
  */
 
 ;// ./src/scripting_api/constants.js
@@ -158,8 +158,8 @@ const FieldType = {
   date: 3,
   time: 4
 };
-function createActionsMap(actions) {
-  return actions instanceof Map ? actions : new Map(actions ? Object.entries(actions) : null);
+function createMap(val) {
+  return val instanceof Map ? val : new Map(val ? Object.entries(val) : null);
 }
 function getFieldType(actions) {
   let format = actions.get("Format");
@@ -181,6 +181,23 @@ function getFieldType(actions) {
   }
   return FieldType.none;
 }
+
+;// ./src/scripting_api/app_utils.js
+const VIEWER_TYPE = "PDF.js";
+const VIEWER_VARIATION = "Full";
+const VIEWER_VERSION = 21.00720099;
+const FORMS_VERSION = 21.00720099;
+const USERACTIVATION_CALLBACKID = 0;
+const USERACTIVATION_MAXTIME_VALIDITY = 5000;
+function serializeError(error) {
+  const value = `${error.toString()}\n${error.stack}`;
+  return {
+    command: "error",
+    value
+  };
+}
+const makeArr = () => [];
+const makeMap = () => new Map();
 
 ;// ./src/shared/math_clamp.js
 function MathClamp(v, min, max) {
@@ -346,23 +363,6 @@ class Color extends PDFObject {
   }
 }
 
-;// ./src/scripting_api/app_utils.js
-const VIEWER_TYPE = "PDF.js";
-const VIEWER_VARIATION = "Full";
-const VIEWER_VERSION = 21.00720099;
-const FORMS_VERSION = 21.00720099;
-const USERACTIVATION_CALLBACKID = 0;
-const USERACTIVATION_MAXTIME_VALIDITY = 5000;
-function serializeError(error) {
-  const value = `${error.toString()}\n${error.stack}`;
-  return {
-    command: "error",
-    value
-  };
-}
-const makeArr = () => [];
-const makeMap = () => new Map();
-
 ;// ./src/scripting_api/field.js
 
 
@@ -413,7 +413,7 @@ class Field extends PDFObject {
     this.textSize = data.textSize;
     this.type = data.type;
     this.userName = data.userName;
-    this._actions = createActionsMap(data.actions);
+    this._actions = createMap(data.actions);
     this._browseForFileToSubmit = data.browseForFileToSubmit || null;
     this._buttonCaption = null;
     this._buttonIcon = null;
@@ -771,10 +771,7 @@ class Field extends PDFObject {
     if (typeof cTrigger !== "string" || typeof cScript !== "string") {
       return;
     }
-    if (!(cTrigger in this._actions)) {
-      this._actions[cTrigger] = [];
-    }
-    this._actions[cTrigger].push(cScript);
+    this._actions.getOrInsertComputed(cTrigger, makeArr).push(cScript);
   }
   setFocus() {
     this._send({
@@ -846,7 +843,7 @@ class RadioButtonField extends Field {
     for (const radioData of otherButtons) {
       this.exportValues.push(radioData.exportValues);
       this._radioIds.push(radioData.id);
-      this._radioActions.push(createActionsMap(radioData.actions));
+      this._radioActions.push(createMap(radioData.actions));
       if (this._value === radioData.exportValues) {
         this._id = radioData.id;
       }
@@ -2414,7 +2411,7 @@ class Doc extends PDFObject {
     }, InfoProxyHandler);
     this._zoomType = ZoomType.none;
     this._zoom = data.zoom || 100;
-    this._actions = createActionsMap(data.actions);
+    this._actions = createMap(data.actions);
     this._globalEval = data.globalEval;
     this._userActivation = false;
     this._disablePrinting = false;
@@ -2475,7 +2472,7 @@ class Doc extends PDFObject {
   _dispatchPageEvent(name, actions, pageNumber) {
     if (name === "PageOpen") {
       this.#pageActions ??= new Map();
-      this.#pageActions.getOrInsertComputed(pageNumber, () => createActionsMap(actions));
+      this.#pageActions.getOrInsertComputed(pageNumber, () => createMap(actions));
       this._pageNum = pageNumber - 1;
     }
     for (const acts of [this.#pageActions, this.#otherPageActions]) {
@@ -3829,6 +3826,7 @@ class Util extends PDFObject {
 
 
 
+
 function initSandbox(params) {
   delete globalThis.pdfjsScripting;
   const externalCall = globalThis.callExternalFunction;
@@ -3861,59 +3859,56 @@ function initSandbox(params) {
     externalCall
   });
   const appObjects = app._objects;
-  if (data.objects) {
+  for (const [name, objs] of createMap(data.objects)) {
     const annotations = [];
-    for (const [name, objs] of Object.entries(data.objects)) {
-      annotations.length = 0;
-      let container = null;
-      for (const obj of objs) {
-        if (obj.type !== "") {
-          annotations.push(obj);
-        } else {
-          container = obj;
+    let container = null;
+    for (const obj of objs) {
+      if (obj.type !== "") {
+        annotations.push(obj);
+      } else {
+        container = obj;
+      }
+    }
+    let obj = container;
+    if (annotations.length > 0) {
+      obj = annotations[0];
+      obj.send = send;
+    }
+    obj.globalEval = globalEval;
+    obj.doc = _document;
+    obj.fieldPath = name;
+    obj.appObjects = appObjects;
+    obj.util = util;
+    const otherFields = annotations.slice(1);
+    let field;
+    switch (obj.type) {
+      case "radiobutton":
+        {
+          field = new RadioButtonField(otherFields, obj);
+          break;
         }
-      }
-      let obj = container;
-      if (annotations.length > 0) {
-        obj = annotations[0];
-        obj.send = send;
-      }
-      obj.globalEval = globalEval;
-      obj.doc = _document;
-      obj.fieldPath = name;
-      obj.appObjects = appObjects;
-      obj.util = util;
-      const otherFields = annotations.slice(1);
-      let field;
-      switch (obj.type) {
-        case "radiobutton":
-          {
-            field = new RadioButtonField(otherFields, obj);
-            break;
-          }
-        case "checkbox":
-          {
-            field = new CheckboxField(otherFields, obj);
-            break;
-          }
-        default:
-          if (otherFields.length > 0) {
-            obj.siblings = otherFields.map(x => x.id);
-          }
-          field = new Field(obj);
-      }
-      const wrapped = new Proxy(field, proxyHandler);
-      const _object = {
-        obj: field,
-        wrapped
-      };
-      doc._addField(name, _object);
-      for (const object of objs) {
-        appObjects[object.id] = _object;
-      }
-      if (container) {
-        appObjects[container.id] = _object;
-      }
+      case "checkbox":
+        {
+          field = new CheckboxField(otherFields, obj);
+          break;
+        }
+      default:
+        if (otherFields.length > 0) {
+          obj.siblings = otherFields.map(x => x.id);
+        }
+        field = new Field(obj);
+    }
+    const wrapped = new Proxy(field, proxyHandler);
+    const _object = {
+      obj: field,
+      wrapped
+    };
+    doc._addField(name, _object);
+    for (const object of objs) {
+      appObjects[object.id] = _object;
+    }
+    if (container) {
+      appObjects[container.id] = _object;
     }
   }
   const color = new Color();

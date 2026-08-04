@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.2.146
- * pdfjsBuild = d0779c411
+ * pdfjsVersion = 6.3.38
+ * pdfjsBuild = b4ba666b0
  */
 
 ;// ./src/shared/util.js
@@ -1172,6 +1172,35 @@ class BaseStream {
   }
 }
 
+;// ./src/shared/css_utils.js
+const CONTROL_CHAR_REGEXP = /\p{Cc}/u;
+function isCSSString(str) {
+  const quote = str[0];
+  if (str.length < 2 || quote !== `"` && quote !== `'` || str.at(-1) !== quote) {
+    return false;
+  }
+  const end = str.length - 1;
+  for (let i = 1; i < end; i++) {
+    const char = str[i];
+    if (char === quote || CONTROL_CHAR_REGEXP.test(char)) {
+      return false;
+    }
+    if (char === "\\") {
+      if (++i >= end || CONTROL_CHAR_REGEXP.test(str[i])) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+function serializeFontFamily(fontFamily) {
+  if (isCSSString(fontFamily)) {
+    return fontFamily;
+  }
+  const escaped = fontFamily.replaceAll(/["\\\p{Cc}]/gu, char => char === `"` || char === "\\" ? `\\${char}` : `\\${char.codePointAt(0).toString(16)} `);
+  return `"${escaped}"`;
+}
+
 ;// ./src/core/string_utils.js
 
 function isAscii(str) {
@@ -1246,6 +1275,7 @@ function stringToPDFString(str, keepEscapeSequence = false) {
 }
 
 ;// ./src/core/core_utils.js
+
 
 
 
@@ -1426,7 +1456,7 @@ function lookupNormalRect(arr, fallback) {
   return isNumberArray(arr, 4) ? Util.normalizeRect(arr) : fallback;
 }
 function parseXFAPath(path) {
-  const positionPattern = /(.+)\[(\d+)\]$/;
+  const positionPattern = /^(.+)\[(\d+)\]$/;
   return path.split(".").map(component => {
     const m = component.match(positionPattern);
     if (m) {
@@ -1603,6 +1633,12 @@ function validateFontName(fontFamily, mustWarn = false) {
     if (re.test(fontFamily.slice(1, -1))) {
       if (mustWarn) {
         warn(`FontFamily contains unescaped ${m[1]}: ${fontFamily}.`);
+      }
+      return false;
+    }
+    if (CONTROL_CHAR_REGEXP.test(fontFamily)) {
+      if (mustWarn) {
+        warn(`FontFamily contains control characters: ${fontFamily}.`);
       }
       return false;
     }
@@ -38786,7 +38822,7 @@ function isWhitespaceString(s) {
 }
 class XMLParserBase {
   static get _entityRegex() {
-    return shadow(this, "_entityRegex", /&(?:#x([^;]+)|#([^;]+)|([^;]+));/g);
+    return shadow(this, "_entityRegex", /&(?:#x([^;&]+)|#([^;&]+)|([^;&]+));/g);
   }
   _resolveEntities(s) {
     return s.replaceAll(XMLParserBase._entityRegex, (all, hex, dec, entity) => {
@@ -43776,6 +43812,7 @@ class Option10 extends IntegerObject {
 
 
 
+
 function measureToString(m) {
   if (typeof m === "string") {
     return "0px";
@@ -44243,14 +44280,14 @@ function setFontFamily(xfaFont, node, fontFinder, style) {
     return;
   }
   const name = stripQuotes(xfaFont.typeface);
-  style.fontFamily = `"${name}"`;
+  style.fontFamily = serializeFontFamily(name);
   const typeface = fontFinder.find(name);
   if (typeface) {
     const {
       fontFamily
     } = typeface.regular.cssFontInfo;
     if (fontFamily !== name) {
-      style.fontFamily = `"${fontFamily}"`;
+      style.fontFamily = serializeFontFamily(fontFamily);
     }
     const para = getCurrentPara(node);
     if (para && para.lineHeight !== "") {
@@ -60238,7 +60275,7 @@ class PDFDocument {
         acroForm
       } = annotationGlobals;
       const visitedRefs = new RefSet();
-      const allFields = Object.create(null);
+      const allFields = new Map();
       const fieldPromises = new Map();
       const orphanFields = new RefSetCache();
       for (const fieldRef of acroForm.get("Fields")) {
@@ -60249,13 +60286,13 @@ class PDFDocument {
         allPromises.push(Promise.all(promises).then(fields => {
           fields = fields.filter(field => !!field);
           if (fields.length > 0) {
-            allFields[name] = fields;
+            allFields.set(name, fields);
           }
         }));
       }
       await Promise.all(allPromises);
       return {
-        allFields: Object.keys(allFields).length ? allFields : null,
+        allFields: allFields.size ? allFields : null,
         orphanFields
       };
     });
@@ -60431,7 +60468,7 @@ class PDFDocument {
       return true;
     }
     if (fieldObjects?.allFields) {
-      return Object.values(fieldObjects.allFields).some(fieldObject => fieldObject.some(object => object.actions !== null));
+      return fieldObjects.allFields.values().some(fieldObj => fieldObj.some(obj => obj.actions !== null));
     }
     return false;
   }
@@ -61114,6 +61151,20 @@ async function writeArray(array, buffer, transform) {
   }
   buffer.push("]");
 }
+function numberToPDFString(value) {
+  if (Number.isInteger(value) && Math.abs(value) >= 1e21) {
+    return BigInt(value).toString();
+  }
+  const str = value.toFixed(10);
+  let end = str.length;
+  while (str[end - 1] === "0") {
+    end--;
+  }
+  if (str[end - 1] === ".") {
+    end--;
+  }
+  return str.slice(0, end);
+}
 async function writeValue(value, buffer, transform) {
   if (value instanceof Name) {
     buffer.push(`/${escapePDFName(value.name)}`);
@@ -61127,7 +61178,7 @@ async function writeValue(value, buffer, transform) {
     }
     buffer.push(`(${escapeString(value)})`);
   } else if (typeof value === "number") {
-    buffer.push(value.toFixed(10).replace(/\.?0+$/, ""));
+    buffer.push(numberToPDFString(value));
   } else if (typeof value === "boolean") {
     buffer.push(value.toString());
   } else if (value instanceof Dict) {
@@ -64075,7 +64126,7 @@ class WorkerMessageHandler {
       docId,
       apiVersion
     } = docParams;
-    const workerVersion = "6.2.146";
+    const workerVersion = "6.3.38";
     if (apiVersion !== workerVersion) {
       throw new Error(`The API version "${apiVersion}" does not match ` + `the Worker version "${workerVersion}".`);
     }
