@@ -2247,10 +2247,11 @@ var XULBrowserWindow = {
     let isSameDocument =
       aFlags & Ci.nsIWebProgressListener.LOCATION_CHANGE_SAME_DOCUMENT;
 
-    // Also reset on location change if STATE_START didn't fire. Skip unless the
-    // trust panel is already loaded (see STATE_START above).
+    // Reset on real location changes if STATE_START didn't fire — but not on
+    // simulated ones (tab switches), which have no load to resolve scanning.
     if (
       !isSameDocument &&
+      !aIsSimulated &&
       !Object.getOwnPropertyDescriptor(window, "gTrustPanelHandler").get
     ) {
       gTrustPanelHandler.resetIconForNavigation(aLocationURI);
