@@ -448,31 +448,6 @@ nsresult nsWindowWatcher::CreateChromeWindow(nsIWebBrowserChrome* aParentChrome,
   return NS_OK;
 }
 
-/**
- * Disable persistence of size/position in popups (determined by
- * determining whether the features parameter specifies width or height
- * in any way). We consider any overriding of the window's size or position
- * in the open call as disabling persistence of those attributes.
- * Popup windows (which should not persist size or position) generally set
- * the size.
- *
- * @param aFeatures
- *        The features that was used to open the window.
- * @param aTreeOwner
- *        The nsIDocShellTreeOwner of the newly opened window. If null,
- *        this function is a no-op.
- */
-static void MaybeDisablePersistence(const SizeSpec& aSizeSpec,
-                                    nsIDocShellTreeOwner* aTreeOwner) {
-  if (!aTreeOwner) {
-    return;
-  }
-
-  if (aSizeSpec.SizeSpecified()) {
-    aTreeOwner->SetPersistence(false, false, false);
-  }
-}
-
 NS_IMETHODIMP
 nsWindowWatcher::OpenWindowWithRemoteTab(nsIRemoteTab* aRemoteTab,
                                          const WindowFeatures& aFeatures,
@@ -602,7 +577,6 @@ nsWindowWatcher::OpenWindowWithRemoteTab(nsIRemoteTab* aRemoteTab,
   // that will also run with out-of-process tabs.
   MOZ_ASSERT(chromeContext->UseRemoteTabs());
 
-  MaybeDisablePersistence(sizeSpec, chromeTreeOwner);
   SizeOpenedWindow(chromeTreeOwner, parentWindowOuter, false, sizeSpec);
 
   nsCOMPtr<nsIRemoteTab> newBrowserParent;
@@ -1235,7 +1209,6 @@ nsresult nsWindowWatcher::OpenWindowInternal(
   if (isNewToplevelWindow) {
     nsCOMPtr<nsIDocShellTreeOwner> newTreeOwner;
     targetDocShell->GetTreeOwner(getter_AddRefs(newTreeOwner));
-    MaybeDisablePersistence(sizeSpec, newTreeOwner);
     SizeOpenedWindow(newTreeOwner, aParent, isCallerChrome, sizeSpec);
   }
 

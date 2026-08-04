@@ -2346,8 +2346,11 @@ void AppWindow::ApplyChromeFlags() {
 
   // Note that if we're not actually changing the value this will be a no-op,
   // so no need to compare to the old value.
-  IgnoredErrorResult rv;
-  root->SetAttribute(u"chromehidden"_ns, newvalue, rv);
+  root->SetAttribute(u"chromehidden"_ns, newvalue, IgnoreErrors());
+
+  if (mChromeFlags & nsIWebBrowserChrome::CHROME_NO_PERSISTENCE) {
+    root->SetAttribute(u"persist"_ns, u""_ns, IgnoreErrors());
+  }
 }
 
 NS_IMETHODIMP
