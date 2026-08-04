@@ -77,38 +77,43 @@ function checkExtraContents(doc, type, opts = {}) {
 
   if (type == "extension") {
     ok(taarNotice, "There is a TAAR notice");
-
-    if (Services.prefs.getBoolPref("browser.nova.enabled")) {
-      is_element_visible(footerPromo, "The promo card is shown");
-      is_element_visible(
-        promoAmoBtn,
-        "The promo card slotted AMO button is shown"
-      );
-    } else {
-      is_element_visible(amoButton, "The AMO button is shown");
-      is_element_hidden(footerPromo, "The promo card is hidden");
-      is_element_hidden(
-        promoAmoBtn,
-        "The promo card slotted AMO button is hidden"
-      );
-    }
     is_element_visible(privacyPolicyLink, "The privacy policy is visible");
   } else if (type == "theme") {
     ok(!taarNotice, "There is no TAAR notice");
-    ok(amoButton, "AMO button is shown");
     ok(!privacyPolicyLink, "There is no privacy policy");
-
-    // This promo is currently only expected to be added to the extensions list
-    // view.
-    ok(
-      !footerPromo,
-      "The promo card should not be found in theme list view footer"
-    );
   } else {
-    throw new Error(`Unknown type ${type}`);
+    throw new Error(`Unexpected type ${type}`);
   }
 
-  if (showThemeRecommendationFooter) {
+  if (Services.prefs.getBoolPref("browser.nova.enabled")) {
+    // An addons-promo element is expected to be shown in both
+    // the extensions and themes list view.
+    is_element_visible(footerPromo, "The promo card is shown");
+    is_element_visible(
+      promoAmoBtn,
+      "The promo card slotted AMO button is shown"
+    );
+    // The legacy AMO button that has been replaced with the addons-promo
+    // should be hidden when Nova is enabled.
+    is_element_hidden(amoButton, "The AMO button is hidden");
+  } else {
+    // With Nova disabled the addons-promo are expected to be hidden
+    // and the previously shown Nova button to be visible.
+    is_element_visible(amoButton, "The AMO button is shown");
+    is_element_hidden(footerPromo, "The promo card is hidden");
+  }
+
+  if (
+    Services.prefs.getBoolPref("browser.nova.enabled") ||
+    !showThemeRecommendationFooter
+  ) {
+    ok(
+      !themeRecommendationFooter ||
+        BrowserTestUtils.isHidden(themeRecommendationFooter),
+      "There's no theme recommendation"
+    );
+  } else {
+    // Additional pre-Nova assertion for the legacy themes list view footer.
     is_element_visible(
       themeRecommendationFooter,
       "There's a theme recommendation footer"
@@ -124,11 +129,6 @@ function checkExtraContents(doc, type, opts = {}) {
       doc.l10n.getAttributes(themeRecommendationFooter).id,
       "recommended-theme-1",
       "The recommendation has the right l10n-id"
-    );
-  } else {
-    ok(
-      !themeRecommendationFooter || themeRecommendationFooter.hidden,
-      "There's no theme recommendation"
     );
   }
 }
@@ -369,14 +369,24 @@ add_task(async function testRecommendationsFooterAmoButtonUtmContent() {
     await closeView(win);
   }
 
-  // Theme list: footer AMO button opens themes path with correct utm_content.
+  // Theme list: footer AMO button opens themes path with correct utm_content,
+  // Nova promo button vs legacy AMO button.
   {
     let win = await loadInitialView("theme");
-    let tabUrl = await clickAndCheckUtm(
-      win,
-      'button[action="open-amo"]',
-      "find-more-link-bottom"
-    );
+    let tabUrl;
+    if (Services.prefs.getBoolPref("browser.nova.enabled")) {
+      tabUrl = await clickAndCheckUtm(
+        win,
+        'footer moz-button[action="open-amo"]',
+        "find-more-promo-bottom"
+      );
+    } else {
+      tabUrl = await clickAndCheckUtm(
+        win,
+        'footer button[action="open-amo"]',
+        "find-more-link-bottom"
+      );
+    }
     ok(
       tabUrl.pathname.includes("/themes"),
       "AMO URL includes the /themes path"

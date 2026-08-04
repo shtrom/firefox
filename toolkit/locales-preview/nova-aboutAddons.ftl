@@ -10,6 +10,15 @@ find-more-addons-promo =
 
 find-more-addons-promo-open-amo-button = Find your favorite extension
 
+# Promo footer shown in the about:addons themes list view when
+# Project Nova styles are enabled.
+# "Find more fresh looks" refers to the user looking for more Firefox themes.
+find-more-themes-promo =
+  .heading = Find more fresh looks
+  .message = Choose a style that makes { -brand-product-name } feel like yours.
+
+find-more-themes-promo-open-amo-button = Explore themes
+
 # Promo shown in about:addons extensions list view when no extension is yet installed
 # and Project Nova is enabled.
 list-empty-get-extensions-promo =
