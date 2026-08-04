@@ -16,6 +16,7 @@
     DeferredTask: "resource://gre/modules/DeferredTask.sys.mjs",
     KeyboardLockUtils: "resource://gre/modules/KeyboardLockUtils.sys.mjs",
     ShortcutUtils: "resource://gre/modules/ShortcutUtils.sys.mjs",
+    XPCOMUtils: "resource://gre/modules/XPCOMUtils.sys.mjs",
   });
 
   const DIRECTION_BACKWARD = -1;
@@ -814,19 +815,43 @@
   const ARIA_FOCUSED_CLASS_NAME = "tablist-keyboard-focus";
 
   class TabsBase extends MozElements.BaseControl {
+    #scrollHandler = event => {
+      if (event.detail > 0) {
+        this.advanceSelectedTab(DIRECTION_FORWARD, false, event);
+      } else {
+        this.advanceSelectedTab(DIRECTION_BACKWARD, false, event);
+      }
+      // Preventing the default action of the legacy event also prevents it for
+      // the wheel event it came from, so the tabs don't scroll as well.
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
     constructor() {
       super();
 
-      this.addEventListener("DOMMouseScroll", event => {
-        if (Services.prefs.getBoolPref("toolkit.tabbox.switchByScrolling")) {
-          if (event.detail > 0) {
-            this.advanceSelectedTab(DIRECTION_FORWARD, false, event);
-          } else {
-            this.advanceSelectedTab(DIRECTION_BACKWARD, false, event);
-          }
-          event.stopPropagation();
-        }
-      });
+      imports.XPCOMUtils.defineLazyPreferenceGetter(
+        this,
+        "switchByScrolling",
+        "toolkit.tabbox.switchByScrolling",
+        false,
+        () => this.updateWheelListeners()
+      );
+      this.updateWheelListeners();
+    }
+
+    /**
+     * Wheel-type listeners are registered only while switching tabs by scrolling
+     * is enabled, because they are APZ-aware: registering them unconditionally
+     * would make APZ wait for the main thread before it can scroll. A subclass
+     * that has wheel-type listeners of its own extends this.
+     */
+    updateWheelListeners() {
+      if (this.switchByScrolling) {
+        this.addEventListener("DOMMouseScroll", this.#scrollHandler);
+      } else {
+        this.removeEventListener("DOMMouseScroll", this.#scrollHandler);
+      }
     }
 
     // to be called from derived class connectedCallback

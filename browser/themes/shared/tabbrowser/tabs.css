@@ -2493,7 +2493,7 @@ tab-group {
   &::part(scrollbox) {
     scrollbar-width: thin;
     scrollbar-color: var(--tab-vertical-scrollbar-color);
-    overflow-y: auto;
+    overscroll-behavior-y: contain;
   }
 }
 
@@ -2583,7 +2583,7 @@ tab-group {
   &::part(scrollbox) {
     scrollbar-width: thin;
     scrollbar-color: var(--tab-vertical-scrollbar-color);
-    overflow-y: auto;
+    overscroll-behavior-y: contain;
   }
 
   .tabbrowser-tab:not(:hover) > .tab-stack > .tab-background:not([selected], [multiselected]) {

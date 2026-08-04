@@ -51,31 +51,36 @@ async function scrolling_works(useVerticalTabs, uiDensity) {
     "First tab should be scrolled into view."
   );
 
-  // Scroll.
-  EventUtils.synthesizeWheel(
-    arrowScrollbox,
-    10,
-    10,
-    {
-      wheel: true,
-      deltaY: 1,
-      deltaMode: WheelEvent.DOM_DELTA_LINE,
-    },
-    win
-  );
+  let startPosition = arrowScrollbox.scrollPosition;
 
-  // Check that some other tab is scrolled into view.
+  // Scroll. A horizontal arrowscrollbox only lets a vertical wheel scroll it
+  // once the last two wheel events were on the same axis, so send several.
+  for (let i = 0; i < 3; i++) {
+    EventUtils.synthesizeWheel(
+      arrowScrollbox,
+      10,
+      10,
+      {
+        wheel: true,
+        deltaY: 1,
+        deltaMode: WheelEvent.DOM_DELTA_LINE,
+      },
+      win
+    );
+  }
+
+  // Check that the tab strip scrolled.
   try {
-    await TestUtils.waitForCondition(() => {
-      return arrowScrollbox._elementFromPoint(firstPoint) != firstScrollableTab;
-    });
+    await TestUtils.waitForCondition(
+      () => arrowScrollbox.scrollPosition > startPosition
+    );
   } catch (ex) {
     Assert.ok(false, `Failed to see scroll, error: ${ex}`);
   }
-  Assert.notEqual(
-    win.gBrowser.tabs.indexOf(arrowScrollbox._elementFromPoint(firstPoint)),
-    win.gBrowser.tabs.indexOf(firstScrollableTab),
-    "First tab should be scrolled out of view."
+  Assert.greater(
+    arrowScrollbox.scrollPosition,
+    startPosition,
+    "Tab strip should have scrolled."
   );
 
   await SpecialPowers.popPrefEnv();
