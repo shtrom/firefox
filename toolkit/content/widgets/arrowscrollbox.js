@@ -20,6 +20,9 @@
       };
     }
 
+    // DisplayPortUtils::MaybeCreateDisplayPortInFirstScrollFrameEncountered
+    // relies on the scrollbox being a direct child here, so that it can give
+    // the chrome tab bar's scroller a displayport without walking the tabs.
     get markup() {
       return `
       <html:link rel="stylesheet" href="chrome://global/skin/toolbarbutton.css"/>
