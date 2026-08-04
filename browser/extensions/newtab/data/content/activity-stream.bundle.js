@@ -24597,7 +24597,8 @@ function Widgets() {
     className: "widgets-add-button-icon"
   }))), novaEnabled && /*#__PURE__*/external_React_default().createElement("moz-button", {
     className: "widgets-row-toggle",
-    type: "default",
+    type: "muted",
+    size: "small",
     "aria-expanded": rowExpanded,
     "aria-controls": "widgets-container",
     onClick: handleToggleRowExpandedClick,
