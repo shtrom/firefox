@@ -78,7 +78,7 @@ function serveResultPages(bodies) {
   server.start(-1);
   const { primaryHost, primaryPort } = server.identity;
   const urls = paths.map(
-    // eslint-disable-next-line @microsoft/sdl/no-insecure-url
+    // eslint-disable-next-line sdl/no-insecure-url
     path => `http://${primaryHost}:${primaryPort}${path}`
   );
   return { urls, requestCounts, server };

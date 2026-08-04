@@ -16,7 +16,7 @@ ChromeUtils.defineESModuleGetters(this, {
 });
 
 const TRACKING_PAGE =
-  // eslint-disable-next-line @microsoft/sdl/no-insecure-url
+  // eslint-disable-next-line sdl/no-insecure-url
   "http://tracking.example.org/browser/browser/base/content/test/protectionsUI/trackingPage.html";
 
 const TEST_BREACH = {
@@ -774,7 +774,7 @@ add_task(async function test_no_first_visit_class_on_return_visit() {
   // Add a visit to the tracking host from more than 20 seconds ago so that
   // #markFirstVisit treats this as a return visit.
   await PlacesTestUtils.addVisits({
-    // eslint-disable-next-line @microsoft/sdl/no-insecure-url
+    // eslint-disable-next-line sdl/no-insecure-url
     uri: "http://tracking.example.org/",
     visitDate: new Date(Date.now() - 60 * 1000),
   });
@@ -814,7 +814,7 @@ add_task(
     // Add a visit older than 20 seconds so #markFirstVisit would treat this as a
     // return visit based on history alone.
     await PlacesTestUtils.addVisits({
-      // eslint-disable-next-line @microsoft/sdl/no-insecure-url
+      // eslint-disable-next-line sdl/no-insecure-url
       uri: "http://tracking.example.org/",
       visitDate: new Date(Date.now() - 60 * 1000),
     });
