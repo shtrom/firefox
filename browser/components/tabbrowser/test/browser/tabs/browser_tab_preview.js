@@ -1702,8 +1702,11 @@ add_task(async function tabPreviewHidesWhenDraggingOverPanel() {
     "dragend"
   );
 
+  const groupLabelRect = group.labelElement.getBoundingClientRect();
   EventUtils.synthesizePlainDragAndDrop({
     srcElement: group.labelElement,
+    srcX: Math.floor(groupLabelRect.width / 2),
+    srcY: Math.floor(groupLabelRect.height / 2),
     destElement: null,
     stepX: 10,
     stepY: 0,
