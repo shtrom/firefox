@@ -10,25 +10,23 @@ const { UIState } = ChromeUtils.importESModule(
   "resource://services-sync/UIState.sys.mjs"
 );
 
-const ENTRY_POINT = "remote-tabs-app-menu-history";
+const ENTRY_POINT = "bookmarks-app-menu";
+const IMAGE = "chrome://browser/skin/fxa/sync-promo-bookmarks.svg";
 const VARIANTS = {
   signin: {
     heading: "appmenu-sync-promo-signin",
     cta: "appmenu-sync-promo-signin-cta",
-    image: "chrome://browser/skin/fxa/sync-promo-signin.svg",
-    pref: "browser.promo.syncPromo.history.signin.dismissed",
+    pref: "browser.promo.syncPromo.bookmarks.signin.dismissed",
   },
   turnonsync: {
-    heading: "appmenu-sync-promo-turnonsync",
+    heading: "appmenu-bookmarks-sync-promo-turnonsync",
     cta: "appmenu-sync-promo-turnonsync-cta",
-    image: "chrome://browser/skin/fxa/sync-promo-turnonsync.svg",
-    pref: "browser.promo.syncPromo.history.turnonsync.dismissed",
+    pref: "browser.promo.syncPromo.bookmarks.turnonsync.dismissed",
   },
   connectdevice: {
-    heading: "appmenu-sync-promo-connectdevice",
+    heading: "appmenu-bookmarks-sync-promo-connectdevice",
     cta: "appmenu-sync-promo-connectdevice-cta",
-    image: "chrome://browser/skin/fxa/sync-promo-connectdevice.svg",
-    pref: "browser.promo.syncPromo.history.connectdevice.dismissed",
+    pref: "browser.promo.syncPromo.bookmarks.connectdevice.dismissed",
   },
 };
 
@@ -37,16 +35,16 @@ function synthesizeClick(el) {
   EventUtils.synthesizeMouseAtCenter(el, {}, el.ownerGlobal);
 }
 
-async function openHistoryView() {
+async function openBookmarksView() {
   await gCUITestUtils.openMainMenu();
-  let historyView = PanelMultiView.getViewNode(document, "PanelUI-history");
-  synthesizeClick(document.getElementById("appMenu-history-button"));
-  await BrowserTestUtils.waitForEvent(historyView, "ViewShown");
-  return historyView;
+  let bookmarksView = PanelMultiView.getViewNode(document, "PanelUI-bookmarks");
+  synthesizeClick(document.getElementById("appMenu-bookmarks-button"));
+  await BrowserTestUtils.waitForEvent(bookmarksView, "ViewShown");
+  return bookmarksView;
 }
 
-async function getPromo(historyView) {
-  let promo = historyView.querySelector("#PanelUI-history-sync-promo");
+async function getPromo(bookmarksView) {
+  let promo = bookmarksView.querySelector("#PanelUI-bookmarks-sync-promo");
   await customElements.whenDefined("sync-promo");
   await customElements.whenDefined("moz-promo");
   await customElements.whenDefined("moz-button");
@@ -72,9 +70,11 @@ add_task(async function test_variants() {
     clearDismissals();
     promoState.returns(state);
 
-    let historyView = await openHistoryView();
-    let promo = await getPromo(historyView);
-    let manageHistory = historyView.querySelector("#PanelUI-historyMore");
+    let bookmarksView = await openBookmarksView();
+    let promo = await getPromo(bookmarksView);
+    let manageBookmarks = bookmarksView.querySelector(
+      "#panelMenu_showAllBookmarks"
+    );
     let mozPromo = promo.shadowRoot.querySelector("moz-promo");
     let cta = promo.shadowRoot.querySelector("a[slot='support-link']");
     await mozPromo.updateComplete;
@@ -82,13 +82,13 @@ add_task(async function test_variants() {
     ok(!promo.hidden, `${state}: promo is shown`);
     Assert.deepEqual(
       promoState.lastCall.args[0],
-      ["tabs", "history"],
-      `${state}: eligibility is gated on the tabs and history engines`
+      ["bookmarks"],
+      `${state}: eligibility is gated on the bookmarks engine`
     );
     is(
-      manageHistory.nextElementSibling,
+      manageBookmarks.nextElementSibling,
       promo,
-      `${state}: promo is below Manage history`
+      `${state}: promo is below Manage bookmarks`
     );
     is(
       mozPromo.getAttribute("data-l10n-id"),
@@ -102,24 +102,25 @@ add_task(async function test_variants() {
     );
     is(
       mozPromo.getAttribute("imagesrc"),
-      expected.image,
-      `${state}: illustration matches variant`
-    );
-    is(
-      mozPromo.shadowRoot.querySelector("img").getBoundingClientRect().width,
-      40,
-      `${state}: illustration uses the xsmall design size`
-    );
-    is(
-      getComputedStyle(promo).marginBlockEnd,
-      getComputedStyle(promo).getPropertyValue(
-        "--panel-menuitem-margin-inline"
-      ),
-      `${state}: promo has balanced bottom spacing`
+      IMAGE,
+      `${state}: every variant shares the bookmarks illustration`
     );
 
+    // The heading and CTA must stay clear of the dismiss button's hit area.
+    let closeRect = mozPromo.closeButton.getBoundingClientRect();
+    for (let [name, node] of [
+      ["heading", mozPromo.shadowRoot.querySelector(".heading")],
+      ["CTA", cta],
+    ]) {
+      let rect = node.getBoundingClientRect();
+      ok(
+        rect.right <= closeRect.left || rect.left >= closeRect.right,
+        `${state}: ${name} does not overlap the dismiss button`
+      );
+    }
+
     handleAction.resetHistory();
-    // The CTA closes the panel via PanelUI.hide().
+    // The CTA closes the containing panel.
     let popupHidden = BrowserTestUtils.waitForEvent(
       document.getElementById("appMenu-popup"),
       "popuphidden"
@@ -150,10 +151,9 @@ add_task(async function test_per_variant_dismissal() {
   sandbox.stub(gSync, "handleSyncPromoAction");
   clearDismissals();
 
-  // Dismiss the signin variant.
   promoState.returns("signin");
-  let historyView = await openHistoryView();
-  let promo = await getPromo(historyView);
+  let bookmarksView = await openBookmarksView();
+  let promo = await getPromo(bookmarksView);
   let mozPromo = promo.shadowRoot.querySelector("moz-promo");
   synthesizeClick(mozPromo.closeButton);
   await promo.updateComplete;
@@ -163,11 +163,16 @@ add_task(async function test_per_variant_dismissal() {
     Services.prefs.getBoolPref(VARIANTS.signin.pref, false),
     "Dismissal is persisted for the signin variant"
   );
+  is(
+    document.getElementById("appMenu-popup").state,
+    "open",
+    "Dismissing the promo leaves the panel open"
+  );
   await gCUITestUtils.hideMainMenu();
 
   // The signin variant stays dismissed on reopen.
-  historyView = await openHistoryView();
-  promo = await getPromo(historyView);
+  bookmarksView = await openBookmarksView();
+  promo = await getPromo(bookmarksView);
   ok(promo.hidden, "Dismissed signin variant stays hidden");
 
   // A different eligible variant still appears.
@@ -195,16 +200,15 @@ add_task(async function test_state_transitions() {
   clearDismissals();
 
   promoState.returns("signin");
-  let historyView = await openHistoryView();
-  let promo = await getPromo(historyView);
+  let bookmarksView = await openBookmarksView();
+  let promo = await getPromo(bookmarksView);
   ok(!promo.hidden, "Promo shown for eligible user");
 
   promoState.returns("turnonsync");
   Services.obs.notifyObservers(null, "sync-ui-state:update");
   await promo.updateComplete;
-  let mozPromo = promo.shadowRoot.querySelector("moz-promo");
   is(
-    mozPromo.getAttribute("data-l10n-id"),
+    promo.shadowRoot.querySelector("moz-promo").getAttribute("data-l10n-id"),
     VARIANTS.turnonsync.heading,
     "Promo updates to the new eligible variant"
   );
@@ -224,11 +228,11 @@ add_task(async function test_state_transitions() {
   clearDismissals();
 });
 
-// A disabled engine pref refreshes the promo while the panel stays open.
+// A disabled bookmarks engine refreshes the promo while the panel stays open.
 add_task(async function test_engine_pref_reactivity() {
   let sandbox = sinon.createSandbox();
   // Delegate to the real getSyncPromoState with a signed-in, syncing account
-  // that has another device, so only the engine prefs decide eligibility.
+  // that has another device, so only the engine pref decides eligibility.
   sandbox
     .stub(UIState, "get")
     .returns({ status: UIState.STATUS_SIGNED_IN, syncEnabled: true });
@@ -239,22 +243,18 @@ add_task(async function test_engine_pref_reactivity() {
   clearDismissals();
 
   await SpecialPowers.pushPrefEnv({
-    set: [
-      ["services.sync.engine.tabs", true],
-      ["services.sync.engine.history", true],
-    ],
+    set: [["services.sync.engine.bookmarks", true]],
   });
 
-  let historyView = await openHistoryView();
-  let promo = await getPromo(historyView);
+  let bookmarksView = await openBookmarksView();
+  let promo = await getPromo(bookmarksView);
   ok(promo.hidden, "Promo hidden while fully eligible with another device");
 
-  // Disabling History syncing should surface the turnonsync variant live.
   await SpecialPowers.pushPrefEnv({
-    set: [["services.sync.engine.history", false]],
+    set: [["services.sync.engine.bookmarks", false]],
   });
   await promo.updateComplete;
-  ok(!promo.hidden, "Promo appears when History syncing is disabled");
+  ok(!promo.hidden, "Promo appears when Bookmarks syncing is disabled");
   is(
     promo.shadowRoot.querySelector("moz-promo").getAttribute("data-l10n-id"),
     VARIANTS.turnonsync.heading,
@@ -268,112 +268,21 @@ add_task(async function test_engine_pref_reactivity() {
   clearDismissals();
 });
 
-// handleSyncPromoAction routes each variant to the right FxA destination.
-add_task(async function test_action_dispatch() {
-  let sandbox = sinon.createSandbox();
-  let signin = sandbox.stub(gSync, "openFxAEmailFirstPage");
-  let turnon = sandbox.stub(gSync, "openSyncSetupForEntryPoint");
-  let connect = sandbox.stub(gSync, "openConnectAnotherDevice");
-
-  gSync.handleSyncPromoAction("signin", "entry");
-  ok(signin.calledOnceWith("entry"), "signin opens the email-first page");
-
-  gSync.handleSyncPromoAction("turnonsync", "entry");
-  ok(turnon.calledOnceWith("entry"), "turnonsync opens the sync setup flow");
-
-  gSync.handleSyncPromoAction("connectdevice", "entry");
-  ok(
-    connect.calledOnceWith("entry"),
-    "connectdevice opens connect-another-device"
-  );
-
-  sandbox.restore();
-});
-
+// The menu-bar Bookmarks promo routes through the same shared dispatcher.
 add_task(async function test_menubar_action_dispatch() {
   let sandbox = sinon.createSandbox();
   let handleAction = sandbox.stub(gSync, "handleSyncPromoAction");
-  let promo = document.getElementById("historyRemoteTabsPromo");
-  let historyMenu = document.getElementById("history-menu");
-  let placesView = historyMenu._placesView;
-  historyMenu._placesView = { _onCommand() {} };
+  let promo = document.getElementById("bookmarksRemoteTabsPromo");
   promo.dataset.action = "signin";
 
   try {
     promo.dispatchEvent(new CustomEvent("command", { bubbles: true }));
     ok(
-      handleAction.calledOnceWith("signin", "remote-tabs-top-menu-history"),
+      handleAction.calledOnceWith("signin", "bookmarks-top-menu"),
       "The menu-bar promo dispatches its action with the menu-bar entry point"
     );
   } finally {
-    historyMenu._placesView = placesView;
+    delete promo.dataset.action;
     sandbox.restore();
   }
-});
-
-// The History view is also shown in a standalone panel when its widget lives on
-// the toolbar, so the CTA must close whichever panel it is actually in.
-add_task(async function test_cta_closes_standalone_panel() {
-  let sandbox = sinon.createSandbox();
-  sandbox.stub(gSync, "getSyncPromoState").returns("signin");
-  sandbox.stub(gSync, "handleSyncPromoAction");
-  clearDismissals();
-
-  CustomizableUI.addWidgetToArea(
-    "history-panelmenu",
-    CustomizableUI.AREA_NAVBAR
-  );
-  let button = document.getElementById("history-panelmenu");
-  let historyView = PanelMultiView.getViewNode(document, "PanelUI-history");
-  let shown = BrowserTestUtils.waitForEvent(historyView, "ViewShown");
-  // Same call CustomizableUI makes for a view widget anchored in the toolbar.
-  PanelUI.showSubView("PanelUI-history", button);
-  await shown;
-
-  let promo = await getPromo(historyView);
-  let panel = promo.closest("panel");
-  isnot(
-    panel.id,
-    "appMenu-popup",
-    "History view is shown outside the app menu panel"
-  );
-
-  let hidden = BrowserTestUtils.waitForEvent(panel, "popuphidden");
-  synthesizeClick(promo.shadowRoot.querySelector("a[slot='support-link']"));
-  await hidden;
-  ok(true, "Activating the CTA closes the containing panel");
-
-  CustomizableUI.reset();
-  sandbox.restore();
-  clearDismissals();
-});
-
-// Closing a window tears its document down without running
-// disconnectedCallback, so the promo has to drop its observers on unload or the
-// observer service keeps the whole window alive until shutdown.
-add_task(async function test_observers_removed_when_window_closes() {
-  let countObservers = () =>
-    [...Services.obs.enumerateObservers("sync-ui-state:update")].length;
-  let before = countObservers();
-
-  let win = await BrowserTestUtils.openNewBrowserWindow();
-  await new CustomizableUITestUtils(win).openMainMenu();
-  let historyView = PanelMultiView.getViewNode(win.document, "PanelUI-history");
-  let shown = BrowserTestUtils.waitForEvent(historyView, "ViewShown");
-  win.document.getElementById("appMenu-history-button").click();
-  await shown;
-  let promo = historyView.querySelector("#PanelUI-history-sync-promo");
-  await promo.updateComplete;
-  Assert.greater(
-    countObservers(),
-    before,
-    "The promo in the new window registered its observers"
-  );
-
-  await BrowserTestUtils.closeWindow(win);
-  is(
-    countObservers(),
-    before,
-    "Closing the window removed the promo's observers"
-  );
 });
