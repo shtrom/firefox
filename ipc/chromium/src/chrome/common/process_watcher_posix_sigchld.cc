@@ -17,6 +17,7 @@
 #include "mozilla/DataMutex.h"
 #include "mozilla/StaticPtr.h"
 #include "mozilla/ipc/IOThread.h"
+#include "nsExceptionHandler.h"
 #include "nsITimer.h"
 #include "nsTArray.h"
 #include "nsThreadUtils.h"
@@ -326,6 +327,11 @@ class ProcessCleaner final : public MessageLoopForIO::Watcher,
     auto lock = gPendingChildren.Lock();
     auto& children = lock.ref();
     if (children) {
+      // Give the children we deliberately crash below a uniform signature.
+      // Scoped so a later crash of the parent itself isn't misattributed.
+      CrashReporter::AutoRecordAnnotation autoShutdownHangCrash(
+          CrashReporter::Annotation::CrashSignatureOverrideForTesting,
+          kShutdownHangCrashSignature);
       for (const auto& child : *children) {
         // If the child still has force-termination pending, do that now.
         if (child.mForce) {

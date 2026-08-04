@@ -9,6 +9,8 @@
 #include <synchapi.h>
 #include "base/message_loop.h"
 #include "base/object_watcher.h"
+#include "nsExceptionHandler.h"
+#include "nsString.h"
 #include "prenv.h"
 
 // Maximum amount of time (in milliseconds) to wait for the process to exit.
@@ -56,11 +58,18 @@ class ChildReaper : public mozilla::Runnable,
   virtual void WillDestroyCurrentMessageLoop() {
     MOZ_ASSERT(!force_);
     if (process_) {
-      // Exception for the fake hang tests in ipc/glue/test/browser
-      if (!PR_GetEnv("MOZ_TEST_CHILD_EXIT_HANG")) {
-        CrashProcessIfHanging();
+      {
+        // Give the children we deliberately crash below a uniform signature.
+        // Scoped so a later crash of the parent itself isn't misattributed.
+        CrashReporter::AutoRecordAnnotation autoShutdownHangCrash(
+            CrashReporter::Annotation::CrashSignatureOverrideForTesting,
+            kShutdownHangCrashSignature);
+        // Exception for the fake hang tests in ipc/glue/test/browser
+        if (!PR_GetEnv("MOZ_TEST_CHILD_EXIT_HANG")) {
+          CrashProcessIfHanging();
+        }
+        WaitForSingleObject(process_, INFINITE);
       }
-      WaitForSingleObject(process_, INFINITE);
       base::CloseProcessHandle(process_);
       process_ = 0;
 
