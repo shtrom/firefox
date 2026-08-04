@@ -455,6 +455,9 @@ class CrashInfo:
                 reason = annotations.get("MozCrashReason")
                 java_stack = annotations.get("JavaStackTrace")
                 process_type = annotations.get("ProcessType") or "main"
+                signature = (
+                    annotations.get("CrashSignatureOverrideForTesting") or signature
+                )
 
         if self.dump_save_path:
             self._save_dump_file(path, extra)
