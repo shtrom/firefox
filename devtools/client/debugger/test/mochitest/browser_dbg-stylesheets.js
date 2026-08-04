@@ -88,11 +88,20 @@ add_task(async function () {
     findElement(dbg, "sourceNode", 4).classList.contains("focused"),
     "The second instance of bg.css is focused in the source tree"
   );
+  const secondSelectedStyleSourceId = dbg.selectors.getSelectedSource().id;
 
   isnot(
-    dbg.selectors.getSelectedSource().id,
+    secondSelectedStyleSourceId,
     firstSelectedStyleSourceId,
     "The second source instance of bg.css is different from the first instance of bg.css in the source tree"
+  );
+
+  info("Assert that selected stylesheet is still selected after reload");
+  await reload(dbg);
+  await waitForSelectedSource(dbg, "bg.css");
+  ok(
+    dbg.selectors.getSelectedSource().url.includes("bg.css"),
+    "bg.css is still selected after reload"
   );
 });
 
