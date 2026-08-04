@@ -85,6 +85,8 @@ tags = "os_integration"
 
 ["browser_bookmark_menu_ctrl_click.js"]
 
+["browser_bookmark_open_all_in_tabs.js"]
+
 ["browser_bookmark_popup.js"]
 
 ["browser_bookmark_private_window.js"]
