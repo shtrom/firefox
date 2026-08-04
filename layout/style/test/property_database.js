@@ -14825,10 +14825,10 @@ if (IsCSSPropertyPrefEnabled("layout.css.link-parameters.enabled")) {
         .concat(basicShapeXywhRectValues)
         .concat(basicShapeShapeValues)
         .concat(basicShapeShapeValuesWithFillRule)
-        .map(i => `param(--a, ${i})`)
-        .concat("param(--foo)")
-        .concat("param(--foo), param(--bar)"),
+        .map(i => `param(--a, ${i})`),
       invalid_values: [
+        "param(--foo)",
+        "param(--foo), param(--bar)",
         "param(--foo) param(--bar)", // Needs comma
       ],
     },
