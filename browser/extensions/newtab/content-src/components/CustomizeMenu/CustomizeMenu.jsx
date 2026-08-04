@@ -210,7 +210,6 @@ export class _CustomizeMenu extends React.PureComponent {
                   this.props.mayHaveInferredPersonalization
                 }
                 mayHaveWeather={this.props.mayHaveWeather}
-                mayHaveWebNotifications={this.props.mayHaveWebNotifications}
                 mayHaveWidgets={this.props.mayHaveWidgets}
                 mayHaveWeatherForecast={this.props.mayHaveWeatherForecast}
                 weatherDisplay={this.props.weatherDisplay}

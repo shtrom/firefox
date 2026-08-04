@@ -909,7 +909,6 @@ export class BaseContent extends React.PureComponent {
       showInferredPersonalizationEnabled:
         prefs[PREF_INFERRED_PERSONALIZATION_USER],
       topSitesRowsCount: prefs.topSitesRows,
-      webNotificationsEnabled: prefs.showWebNotifications,
       weatherEnabled: novaEnabled
         ? prefs["widgets.weather.enabled"]
         : prefs.showWeather,
@@ -925,7 +924,6 @@ export class BaseContent extends React.PureComponent {
       prefs["system.showWeather"] ||
       prefs.trainhopConfig?.weather?.enabled ||
       prefs.trainhopConfig?.widgetsSettings?.weatherVisible;
-    const mayHaveWebNotifications = prefs["system.showWebNotifications"];
     const supportUrl = prefs["support.url"];
 
     // Widget toggle visibility is resolved by the shared registry helpers, which
@@ -1235,7 +1233,6 @@ export class BaseContent extends React.PureComponent {
                 mayHaveTopicSections={mayHavePersonalizedTopicSections}
                 mayHaveInferredPersonalization={mayHaveInferredPersonalization}
                 mayHaveWeather={mayHaveWeather}
-                mayHaveWebNotifications={mayHaveWebNotifications}
                 mayHaveWidgets={mayHaveWidgets}
                 mayHaveTimerWidget={mayHaveTimerWidget}
                 mayHaveListsWidget={mayHaveListsWidget}
@@ -1414,7 +1411,6 @@ export class BaseContent extends React.PureComponent {
               mayHaveTopicSections={mayHavePersonalizedTopicSections}
               mayHaveInferredPersonalization={mayHaveInferredPersonalization}
               mayHaveWeather={mayHaveWeather}
-              mayHaveWebNotifications={mayHaveWebNotifications}
               mayHaveWidgets={mayHaveWidgets}
               mayHaveTimerWidget={mayHaveTimerWidget}
               mayHaveListsWidget={mayHaveListsWidget}

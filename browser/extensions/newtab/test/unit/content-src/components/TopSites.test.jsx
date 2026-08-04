@@ -417,9 +417,7 @@ describe("<TopSiteLink>", () => {
   it("should have only the title as the text of the link", () => {
     const wrapper = shallow(<TopSiteLink link={link} title="foobar" />);
 
-    // The tile also holds a decorative, aria-hidden notification badge, so the
-    // link's visible text is the title label rather than the whole <a>.
-    assert.equal(wrapper.find(".title-label").text(), "foobar");
+    assert.equal(wrapper.find("a").text(), "foobar");
   });
   it("should render the pin icon for pinned links", () => {
     link.isPinned = true;

@@ -301,12 +301,7 @@ for (const type of [
   "WEATHER_USER_OPT_IN_LOCATION",
   "WEBEXT_CLICK",
   "WEBEXT_DISMISS",
-  "WEB_NOTIFICATIONS_ADDED",
-  "WEB_NOTIFICATIONS_CLICK",
-  "WEB_NOTIFICATIONS_DISMISS",
-  "WEB_NOTIFICATIONS_DISMISS_ALL",
   "WEB_NOTIFICATIONS_ERROR",
-  "WEB_NOTIFICATIONS_REMOVED",
   "WEB_NOTIFICATIONS_REQUEST",
   "WEB_NOTIFICATIONS_UPDATED",
   "WIDGETS_CONTAINER_ACTION",
@@ -7477,6 +7472,17 @@ const INITIAL_STATE = {
     // For can be a queue in the future, but for now is one item
     toastQueue: [],
   },
+  // Snapshot of the platform NotificationDB (persisted web notifications).
+  // Distinct from `Notifications` above, which is in-newtab toast UI state.
+  // Normalized: `notifications` is the canonical id-keyed table; `byOrigin`
+  // is an id-only index. Fed by WebNotificationsFeed.
+  WebNotifications: {
+    initialized: false,
+    lastUpdated: null,
+    notifications: {},
+    byOrigin: {},
+    error: null,
+  },
   InferredPersonalization: {
     initialized: false,
     lastUpdated: null,
@@ -7504,16 +7510,6 @@ const INITIAL_STATE = {
   SectionsLayout: {
     configs: {},
     orderings: {},
-  },
-  // Web notifications surfaced on newtab. Distinct from `Notifications` above,
-  // which is in-newtab toast UI state. `notifications` is the canonical
-  // id-keyed table; `byOrigin` is an id-only index. Fed by WebNotificationsFeed.
-  WebNotifications: {
-    initialized: false,
-    lastUpdated: null,
-    notifications: {},
-    byOrigin: {},
-    error: null,
   },
   Weather: {
     initialized: false,
@@ -8478,39 +8474,6 @@ function Notifications(prevState = INITIAL_STATE.Notifications, action) {
   }
 }
 
-/** Merges one notification into the id table and origin index. */
-function addWebNotification(prevState, notification) {
-  const { id, origin } = notification;
-  const originIds = prevState.byOrigin[origin] || [];
-  return {
-    ...prevState,
-    initialized: true,
-    notifications: { ...prevState.notifications, [id]: notification },
-    byOrigin: {
-      ...prevState.byOrigin,
-      [origin]: originIds.includes(id) ? originIds : [...originIds, id],
-    },
-  };
-}
-
-/** Drops a list of `{origin, id}` pairs from the id table and origin index. */
-function removeWebNotifications(prevState, removed) {
-  const notifications = { ...prevState.notifications };
-  const byOrigin = { ...prevState.byOrigin };
-  for (const { origin, id } of removed) {
-    delete notifications[id];
-    const remaining = (byOrigin[origin] || []).filter(
-      existing => existing !== id
-    );
-    if (remaining.length) {
-      byOrigin[origin] = remaining;
-    } else {
-      delete byOrigin[origin];
-    }
-  }
-  return { ...prevState, notifications, byOrigin };
-}
-
 function WebNotifications(prevState = INITIAL_STATE.WebNotifications, action) {
   switch (action.type) {
     case actionTypes.WEB_NOTIFICATIONS_UPDATED:
@@ -8522,12 +8485,11 @@ function WebNotifications(prevState = INITIAL_STATE.WebNotifications, action) {
         byOrigin: action.data.byOrigin,
         error: null,
       };
-    case actionTypes.WEB_NOTIFICATIONS_ADDED:
-      return addWebNotification(prevState, action.data.notification);
-    case actionTypes.WEB_NOTIFICATIONS_REMOVED:
-      return removeWebNotifications(prevState, action.data.removed);
     case actionTypes.WEB_NOTIFICATIONS_ERROR:
-      return { ...prevState, error: action.data };
+      return {
+        ...prevState,
+        error: action.data,
+      };
     default:
       return prevState;
   }
@@ -8853,6 +8815,7 @@ const reducers = {
   Sections,
   Messages,
   Notifications,
+  WebNotifications,
   Pocket,
   InferredPersonalization,
   DiscoveryStream,
@@ -8861,7 +8824,6 @@ const reducers = {
   ListsWidget,
   Wallpapers,
   SectionsLayout,
-  WebNotifications,
   Weather,
   Stocks,
   ExternalComponents,
@@ -9052,496 +9014,6 @@ function PinnedAreaOverlay({
     "data-l10n-id": "newtab-shortcuts-pinned-area"
   })))));
 }
-;// CONCATENATED MODULE: ./content-src/lib/web-notification-match.mjs
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
-
-// Some apps serve their app (and register their notification service worker)
-// on a subdomain, but users pin the apex. A tile at the apex would never match
-// the origin its notifications are stored under. These aliases redirect the
-// apex (and www) to that app origin. Kept explicit rather than collapsing to a
-// registrable domain, which would wrongly merge unrelated siblings such as
-// Google's mail/calendar/docs onto a single tile.
-const ORIGIN_ALIASES = new Map([
-  ["https://gmail.com", "https://mail.google.com"],
-  ["https://www.gmail.com", "https://mail.google.com"],
-  ["https://slack.com", "https://app.slack.com"],
-  ["https://www.slack.com", "https://app.slack.com"],
-]);
-
-// Stable reference so selectors don't return a fresh array on every store
-// update for sites with no notifications.
-const EMPTY_IDS = Object.freeze([]);
-
-/**
- * @param {string} url
- * @returns {?string} The http(s) origin, or null for other schemes / bad input.
- */
-function originFromUrl(url) {
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-      return null;
-    }
-    return parsed.origin;
-  } catch (e) {
-    return null;
-  }
-}
-
-/**
- * The origin a tile's notifications are stored under, resolving known apex
- * aliases. Unknown origins pass through unchanged, so the worst case is an
- * exact-match miss, never a wrong-app match.
- *
- * @param {string} url
- * @returns {?string}
- */
-function notificationKeyForUrl(url) {
-  const siteOrigin = originFromUrl(url);
-  if (!siteOrigin) {
-    return null;
-  }
-  return ORIGIN_ALIASES.get(siteOrigin) ?? siteOrigin;
-}
-
-/**
- * The stored notification ids for the site a tile points at.
- *
- * @param {object} state Newtab Redux state.
- * @param {string} url The tile's url.
- * @returns {string[]}
- */
-function getNotificationIdsForUrl(state, url) {
-  const key = notificationKeyForUrl(url);
-  return (key && state.WebNotifications.byOrigin[key]) || EMPTY_IDS;
-}
-
-/**
- * Whether to render any web notifications surface. The feature has to exist for
- * this profile (`system.showWebNotifications`, the gate that also decides
- * whether the customize toggle is offered at all) and the user has to want it
- * (`showWebNotifications`, what that toggle writes).
- *
- * @param {object} state Newtab Redux state.
- * @returns {boolean}
- */
-function isWebNotificationsEnabled(state) {
-  const prefs = state.Prefs.values;
-  return Boolean(
-    prefs["system.showWebNotifications"] && prefs.showWebNotifications
-  );
-}
-
-;// CONCATENATED MODULE: ./content-src/lib/web-notification-icon.mjs
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
-
-// Notification icons are third-party URLs chosen by the notifying site. Loading
-// one directly would tell that site the user's IP and when their New Tab
-// rendered, so icons go through the same image proxy the stories use: the fetch
-// is made by the CDN rather than by the user. Resizing comes along for free.
-const IMAGE_PROXY_ORIGIN = "https://img-getpocket.cdn.mozilla.net";
-
-// Icons render at --size-item-large (32px); request 2x so they stay sharp on
-// HiDPI. `no_upscale()` leaves a smaller source alone rather than blowing it up.
-const ICON_SIZE = 64;
-
-const PROXY_FILTERS =
-  "filters:format(webp):quality(75):no_upscale():strip_exif()";
-
-/**
- * The proxied URL for a notification icon.
- *
- * Returns null for anything that cannot be proxied, and callers then render no
- * icon at all rather than falling back to the origin URL — a fallback would
- * reintroduce the direct third-party load this exists to prevent.
- *
- * @param {string} [url] The icon URL the notification carried.
- * @returns {?string}
- */
-function proxiedIconUrl(url) {
-  if (!url) {
-    return null;
-  }
-  let parsed;
-  try {
-    parsed = new URL(url);
-  } catch (e) {
-    return null;
-  }
-  if (parsed.protocol !== "https:") {
-    return null;
-  }
-  return `${IMAGE_PROXY_ORIGIN}/${ICON_SIZE}x${ICON_SIZE}/${PROXY_FILTERS}/${encodeURIComponent(
-    url
-  )}`;
-}
-
-;// CONCATENATED MODULE: ./content-src/components/TopSitesHoverCard/CardWebNotifications/CardWebNotifications.jsx
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
-
-
-
-
-
-
-
-// Origins whose notification icon just repeats the site's own shortcut icon, so
-// listing it is visual noise. Hand-curated; grown as needed.
-const ICON_SUPPRESS_ORIGINS = new Set(["https://apnews.com"]);
-
-// Biggest units first, so the loop returns the coarsest one that fits.
-// Anything under a minute falls through to the "just now" string.
-const RELATIVE_TIME_UNITS = [["year", 365 * 24 * 60 * 60 * 1000], ["month", 30 * 24 * 60 * 60 * 1000], ["week", 7 * 24 * 60 * 60 * 1000], ["day", 24 * 60 * 60 * 1000], ["hour", 60 * 60 * 1000], ["minute", 60 * 1000]];
-
-/**
- * Picks the largest relative-time unit that fits ("2 hours ago", "5 days ago").
- * Returns null when the delta is under a minute, so the caller can show
- * "just now" instead.
- *
- * @param {number} timestamp ms epoch the notification was posted.
- * @param {string} [locale] BCP-47 locale; falls back to the runtime default.
- * @param {number} now ms epoch to measure against.
- * @returns {?string}
- */
-function formatRelativeTime(timestamp, locale, now) {
-  const delta = timestamp - now;
-  const abs = Math.abs(delta);
-  for (const [unit, ms] of RELATIVE_TIME_UNITS) {
-    if (abs >= ms) {
-      return new Intl.RelativeTimeFormat(locale || undefined, {
-        numeric: "auto"
-      }).format(Math.round(delta / ms), unit);
-    }
-  }
-  return null;
-}
-function NotificationTime({
-  timestamp,
-  locale,
-  now
-}) {
-  if (!timestamp) {
-    return null;
-  }
-  const relative = formatRelativeTime(timestamp, locale, now);
-  const dateTime = new Date(timestamp).toISOString();
-  // A null relative string means it's under a minute, so show "just now".
-  if (relative === null) {
-    return /*#__PURE__*/external_React_default().createElement("time", {
-      className: "top-sites-hover-card-notification-time",
-      dateTime: dateTime,
-      "data-l10n-id": "newtab-topsites-hover-card-just-now"
-    });
-  }
-  return /*#__PURE__*/external_React_default().createElement("time", {
-    className: "top-sites-hover-card-notification-time",
-    dateTime: dateTime
-  }, relative);
-}
-
-/**
- * A notification's icon, proxied. Renders nothing when the icon cannot be
- * proxied or the proxy fails to serve it — there is deliberately no fallback to
- * the origin URL, which is the load the proxy exists to avoid.
- */
-function NotificationIcon({
-  notification
-}) {
-  const [failed, setFailed] = external_React_default().useState(false);
-  if (ICON_SUPPRESS_ORIGINS.has(notification.origin)) {
-    return null;
-  }
-  const src = proxiedIconUrl(notification.icon);
-  if (!src || failed) {
-    return null;
-  }
-  return /*#__PURE__*/external_React_default().createElement("img", {
-    src: src,
-    alt: "",
-    className: "top-sites-hover-card-notification-icon",
-    onError: () => setFailed(true)
-  });
-}
-function NotificationList({
-  notifications,
-  locale,
-  now,
-  onActivate,
-  onDismiss
-}) {
-  return /*#__PURE__*/external_React_default().createElement("ul", {
-    className: "top-sites-hover-card-notifications"
-  }, notifications.map(notification => {
-    return /*#__PURE__*/external_React_default().createElement("li", {
-      className: "top-sites-hover-card-notification",
-      key: notification.id,
-      dir: notification.dir || "auto"
-    }, /*#__PURE__*/external_React_default().createElement("button", {
-      type: "button",
-      className: "top-sites-hover-card-notification-activate",
-      onClick: () => onActivate(notification)
-    }, /*#__PURE__*/external_React_default().createElement(NotificationIcon, {
-      notification: notification
-    }), /*#__PURE__*/external_React_default().createElement("div", {
-      className: "top-sites-hover-card-notification-text"
-    }, /*#__PURE__*/external_React_default().createElement("span", {
-      className: "top-sites-hover-card-notification-title"
-    }, notification.title), notification.body ? /*#__PURE__*/external_React_default().createElement("span", {
-      className: "top-sites-hover-card-notification-body"
-    }, notification.body) : null, /*#__PURE__*/external_React_default().createElement(NotificationTime, {
-      timestamp: notification.timestamp,
-      locale: locale,
-      now: now
-    }))), /*#__PURE__*/external_React_default().createElement("button", {
-      type: "button",
-      className: "top-sites-hover-card-notification-dismiss",
-      "data-l10n-id": "newtab-topsites-hover-card-dismiss",
-      onClick: () => onDismiss(notification)
-    }));
-  }));
-}
-
-/**
- * Web notifications variant of the top-sites hover card. Lists the hovered
- * site's web notifications, most recent first, and renders nothing when the
- * site has no notifications. The list scrolls in place past roughly three
- * entries rather than spilling into a separate surface.
- *
- * This is one discrete content card behind the TopSitesHoverCard shell, which
- * renders exactly one variant per tile (see hover-card-content.jsx). Clicking a
- * service-worker notification fires its origin and dismisses it; the dismiss and
- * mark-all controls remove entries durably via WebNotificationsFeed.
- *
- * @param link The top site link object for the hovered tile.
- */
-function CardWebNotifications({
-  link
-}) {
-  const dispatch = (0,external_ReactRedux_namespaceObject.useDispatch)();
-  const locale = (0,external_ReactRedux_namespaceObject.useSelector)(state => state.App.locale);
-  const byId = (0,external_ReactRedux_namespaceObject.useSelector)(state => state.WebNotifications.notifications);
-  const ids = (0,external_ReactRedux_namespaceObject.useSelector)(state => getNotificationIdsForUrl(state, link?.url));
-  const notifications = ids.map(id => byId[id]).filter(Boolean).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-  if (!notifications.length) {
-    return null;
-  }
-  const site = link?.label || link?.hostname || originFromUrl(link?.url) || "";
-  const now = Date.now();
-  const openSettings = () => {
-    dispatch({
-      type: actionTypes.SHOW_PERSONALIZE
-    });
-    dispatch(actionCreators.UserEvent({
-      event: "SHOW_PERSONALIZE"
-    }));
-  };
-  const activate = notification => dispatch(actionCreators.AlsoToMain({
-    type: actionTypes.WEB_NOTIFICATIONS_CLICK,
-    data: {
-      origin: notification.origin,
-      id: notification.id
-    }
-  }));
-  const dismiss = notification => dispatch(actionCreators.AlsoToMain({
-    type: actionTypes.WEB_NOTIFICATIONS_DISMISS,
-    data: {
-      origin: notification.origin,
-      id: notification.id
-    }
-  }));
-  const dismissAll = () => dispatch(actionCreators.AlsoToMain({
-    type: actionTypes.WEB_NOTIFICATIONS_DISMISS_ALL,
-    data: {
-      origin: notifications[0].origin
-    }
-  }));
-  return /*#__PURE__*/external_React_default().createElement("div", {
-    className: "top-sites-hover-card",
-    role: "group"
-  }, /*#__PURE__*/external_React_default().createElement("div", {
-    className: "top-sites-hover-card-inner"
-  }, /*#__PURE__*/external_React_default().createElement("div", {
-    className: "top-sites-hover-card-header"
-  }, /*#__PURE__*/external_React_default().createElement("span", {
-    className: "top-sites-hover-card-header-title",
-    "data-l10n-id": "newtab-topsites-hover-card-header",
-    "data-l10n-args": JSON.stringify({
-      site
-    })
-  }), /*#__PURE__*/external_React_default().createElement("div", {
-    className: "top-sites-hover-card-header-actions"
-  }, /*#__PURE__*/external_React_default().createElement("button", {
-    type: "button",
-    className: "top-sites-hover-card-mark-read",
-    "data-l10n-id": "newtab-topsites-hover-card-mark-all-read",
-    onClick: dismissAll
-  }), /*#__PURE__*/external_React_default().createElement("button", {
-    type: "button",
-    className: "top-sites-hover-card-settings",
-    "data-l10n-id": "newtab-topsites-hover-card-settings",
-    onClick: openSettings
-  }))), /*#__PURE__*/external_React_default().createElement(NotificationList, {
-    notifications: notifications,
-    locale: locale,
-    now: now,
-    onActivate: activate,
-    onDismiss: dismiss
-  })));
-}
-
-;// CONCATENATED MODULE: ./content-src/components/TopSitesHoverCard/CardAd/CardAd.jsx
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
-
-/**
- * Sponsored-tile variant of the top-sites hover card. A placeholder today: it
- * renders nothing, but its presence in the content registry routes sponsored
- * tiles here (ad-wins precedence) so notifications never appear on an ad tile.
- * A real sponsored hover card can grow in here without touching the shell.
- *
- * @returns {null}
- */
-function CardAd() {
-  return null;
-}
-
-;// CONCATENATED MODULE: ./content-src/components/TopSitesHoverCard/hover-card-content.jsx
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
-
-
-
-
-/**
- * Ordered content registry for the top-sites hover card. The shell renders
- * exactly one variant — the first whose `match` accepts the tile — so content
- * types never mix in a single card. Order is precedence: a sponsored tile
- * matches the ad variant first, keeping notifications off ad tiles.
- *
- * Each variant component takes `{ link }` and is responsible for rendering
- * nothing when it has nothing to show, so an unmatched-but-empty variant never
- * paints an empty card.
- *
- * @type {Array<{key: string, match: (link: object) => boolean, Component: Function}>}
- */
-const HOVER_CARD_CONTENT = [{
-  key: "ad",
-  match: link => Boolean(link?.isSponsored || link?.sponsored_tile_id || link?.show_sponsored_label || link?.sponsored_position),
-  Component: CardAd
-}, {
-  key: "notifications",
-  match: () => true,
-  Component: CardWebNotifications
-}];
-;// CONCATENATED MODULE: ./content-src/components/TopSitesHoverCard/TopSitesHoverCard.jsx
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
-
-
-
-
-
-
-/**
- * Applies the web notifications feature gate, then routes the tile to exactly
- * one content variant from the registry (see hover-card-content.jsx). The
- * chosen variant owns the full card chrome and decides whether it has anything
- * to paint.
- *
- * @param link The top site link object for the hovered tile.
- */
-function HoverCardContent({
-  link
-}) {
-  const enabled = (0,external_ReactRedux_namespaceObject.useSelector)(isWebNotificationsEnabled);
-  if (!enabled) {
-    return null;
-  }
-  const variant = HOVER_CARD_CONTENT.find(entry => entry.match(link));
-  if (!variant) {
-    return null;
-  }
-  const {
-    Component
-  } = variant;
-  return /*#__PURE__*/external_React_default().createElement(Component, {
-    link: link
-  });
-}
-
-/**
- * Floating card shown on hover over a top site tile, rendered as a descendant
- * of the tile's `.top-site-inner`, which owns the positioning context and CSS
- * hover visibility.
- *
- * Every tile renders this, including bare tile mounts in unit tests that have
- * no redux Provider. Bail before any store access in that case; the running
- * app always has a Provider, so the content renders normally there.
- *
- * @param link The top site link object for the hovered tile.
- */
-function TopSitesHoverCard({
-  link
-}) {
-  const store = external_React_default().useContext(external_ReactRedux_namespaceObject.ReactReduxContext);
-  if (!store) {
-    return null;
-  }
-  return /*#__PURE__*/external_React_default().createElement(HoverCardContent, {
-    link: link
-  });
-}
-
-;// CONCATENATED MODULE: ./content-src/components/TopSiteWebNotification/TopSiteWebNotification.jsx
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
-
-
-
-
-function Badge({
-  link
-}) {
-  const enabled = (0,external_ReactRedux_namespaceObject.useSelector)(isWebNotificationsEnabled);
-  const count = (0,external_ReactRedux_namespaceObject.useSelector)(state => getNotificationIdsForUrl(state, link?.url).length);
-  if (!enabled || !count) {
-    return null;
-  }
-  return /*#__PURE__*/external_React_default().createElement("div", {
-    className: "top-site-web-notification"
-  }, count);
-}
-
-/**
- * Count badge on a top site tile for the site's web notifications. Rendered on
- * every tile (including bare tile mounts in tests with no redux Provider), so it
- * bails before any store access when there is no store; the running app always
- * has one.
- *
- * @param link The top site link object for the tile.
- */
-function TopSiteWebNotification({
-  link
-}) {
-  const store = external_React_default().useContext(external_ReactRedux_namespaceObject.ReactReduxContext);
-  if (!store) {
-    return null;
-  }
-  return /*#__PURE__*/external_React_default().createElement(Badge, {
-    link: link
-  });
-}
-
 ;// CONCATENATED MODULE: ./content-src/components/TopSites/TopSiteImpressionWrapper.jsx
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -9670,8 +9142,6 @@ function TopSite_extends() { return TopSite_extends = Object.assign ? Object.ass
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
-
-
 
 
 
@@ -10023,8 +9493,6 @@ class TopSiteLink extends (external_React_default()).PureComponent {
       className: "tile",
       "aria-hidden": true
     }, /*#__PURE__*/external_React_default().createElement("div", {
-      className: "icon-stack"
-    }, /*#__PURE__*/external_React_default().createElement("div", {
       className: selectedColor ? "icon-wrapper letter-fallback" : "icon-wrapper",
       "data-fallback": letterFallback,
       style: selectedColor ? {
@@ -10037,8 +9505,6 @@ class TopSiteLink extends (external_React_default()).PureComponent {
       className: "top-site-icon default-icon",
       "data-fallback": smallFaviconStyle ? "" : letterFallback,
       style: smallFaviconStyle
-    })), /*#__PURE__*/external_React_default().createElement(TopSiteWebNotification, {
-      link: link
     }))), link.isPinned && /*#__PURE__*/external_React_default().createElement("div", {
       className: "icon icon-pin-small"
     }), /*#__PURE__*/external_React_default().createElement("div", {
@@ -10051,9 +9517,7 @@ class TopSiteLink extends (external_React_default()).PureComponent {
     }), title), /*#__PURE__*/external_React_default().createElement("span", {
       className: "sponsored-label",
       "data-l10n-id": "newtab-topsite-sponsored"
-    }))), children, impressionStats, /*#__PURE__*/external_React_default().createElement(TopSitesHoverCard, {
-      link: link
-    })), this.props.addButton);
+    }))), children, impressionStats), this.props.addButton);
   }
 }
 TopSiteLink.defaultProps = {
@@ -27281,7 +26745,6 @@ class ContentSection extends (external_React_default()).PureComponent {
       pocketRegion,
       mayHaveInferredPersonalization,
       mayHaveWeather,
-      mayHaveWebNotifications,
       mayHaveWidgets,
       mayHaveTimerWidget,
       mayHaveListsWidget,
@@ -27317,8 +26780,7 @@ class ContentSection extends (external_React_default()).PureComponent {
       pocketEnabled,
       weatherEnabled,
       showInferredPersonalizationEnabled,
-      topSitesRowsCount,
-      webNotificationsEnabled
+      topSitesRowsCount
     } = enabledSections;
     const {
       timerEnabled,
@@ -27514,15 +26976,7 @@ class ContentSection extends (external_React_default()).PureComponent {
       value: String(num),
       "data-l10n-id": "newtab-custom-row-selector2",
       "data-l10n-args": `{"num": ${num}}`
-    })))), mayHaveWebNotifications && /*#__PURE__*/external_React_default().createElement("div", {
-      className: "more-information"
-    }, /*#__PURE__*/external_React_default().createElement("moz-toggle", {
-      id: "web-notifications-toggle",
-      pressed: webNotificationsEnabled || null,
-      ontoggle: this.onPreferenceSelect,
-      "data-preference": "showWebNotifications",
-      "data-l10n-id": "newtab-custom-web-notifications-toggle"
-    })))))),
+    })))))))),
     // @nova-cleanup(remove-conditional): Remove novaEnabled check, keep divider
     novaEnabled && mayHaveWidgets && /*#__PURE__*/external_React_default().createElement("span", {
       className: "divider",
@@ -27806,7 +27260,6 @@ class _CustomizeMenu extends (external_React_default()).PureComponent {
       mayHaveTopicSections: this.props.mayHaveTopicSections,
       mayHaveInferredPersonalization: this.props.mayHaveInferredPersonalization,
       mayHaveWeather: this.props.mayHaveWeather,
-      mayHaveWebNotifications: this.props.mayHaveWebNotifications,
       mayHaveWidgets: this.props.mayHaveWidgets,
       mayHaveWeatherForecast: this.props.mayHaveWeatherForecast,
       weatherDisplay: this.props.weatherDisplay,
@@ -30121,7 +29574,6 @@ class BaseContent extends (external_React_default()).PureComponent {
       pocketEnabled: prefs["feeds.section.topstories"],
       showInferredPersonalizationEnabled: prefs[Base_PREF_INFERRED_PERSONALIZATION_USER],
       topSitesRowsCount: prefs.topSitesRows,
-      webNotificationsEnabled: prefs.showWebNotifications,
       weatherEnabled: novaEnabled ? prefs["widgets.weather.enabled"] : prefs.showWeather
     };
     const pocketRegion = prefs["feeds.system.topstories"];
@@ -30130,7 +29582,6 @@ class BaseContent extends (external_React_default()).PureComponent {
     // system.showWeather / trainhopConfig.weather), so it keeps its own check
     // plus the additive widgetsSettings.weatherVisible override.
     const mayHaveWeather = prefs["system.showWeather"] || prefs.trainhopConfig?.weather?.enabled || prefs.trainhopConfig?.widgetsSettings?.weatherVisible;
-    const mayHaveWebNotifications = prefs["system.showWebNotifications"];
     const supportUrl = prefs["support.url"];
 
     // Widget toggle visibility is resolved by the shared registry helpers, which
@@ -30286,7 +29737,6 @@ class BaseContent extends (external_React_default()).PureComponent {
         mayHaveTopicSections: mayHavePersonalizedTopicSections,
         mayHaveInferredPersonalization: mayHaveInferredPersonalization,
         mayHaveWeather: mayHaveWeather,
-        mayHaveWebNotifications: mayHaveWebNotifications,
         mayHaveWidgets: mayHaveWidgets,
         mayHaveTimerWidget: mayHaveTimerWidget,
         mayHaveListsWidget: mayHaveListsWidget,
@@ -30383,7 +29833,6 @@ class BaseContent extends (external_React_default()).PureComponent {
       mayHaveTopicSections: mayHavePersonalizedTopicSections,
       mayHaveInferredPersonalization: mayHaveInferredPersonalization,
       mayHaveWeather: mayHaveWeather,
-      mayHaveWebNotifications: mayHaveWebNotifications,
       mayHaveWidgets: mayHaveWidgets,
       mayHaveTimerWidget: mayHaveTimerWidget,
       mayHaveListsWidget: mayHaveListsWidget,
