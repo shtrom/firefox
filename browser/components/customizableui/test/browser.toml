@@ -334,6 +334,8 @@ https_first_disabled = true
 
 ["browser_history_restore_session.js"]
 
+["browser_history_sync_promo.js"]
+
 ["browser_insert_before_moved_node.js"]
 
 ["browser_menubar_visibility.js"]
