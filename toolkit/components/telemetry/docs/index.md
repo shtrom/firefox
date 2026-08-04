@@ -25,4 +25,5 @@ start/index
 concepts/index
 data/index
 internals/index
+obsolete/collection/index
 ```

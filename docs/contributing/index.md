@@ -63,4 +63,5 @@ build/supported
 build/working_with_esr_115
 engineering_show_and_tell
 filing-good-bugs
+helpful-error-messages
 ```

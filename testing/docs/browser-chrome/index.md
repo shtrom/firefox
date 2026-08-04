@@ -106,3 +106,15 @@ Reference material
 - [BrowserTestUtils module](browsertestutils.md)
 - [SimpleTest utilities](../simpletest.md)
 - [EventUtils utilities](../eventutils.md)
+
+```{toctree}
+:hidden:
+:maxdepth: 1
+
+browsertestutils
+writing
+../assert
+../testutils
+../simpletest
+../eventutils
+```

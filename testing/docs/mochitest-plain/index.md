@@ -311,3 +311,10 @@ to generate the requisite symbol files.
 See the [Mochitest FAQ page](faq.md) for other features and such that you may
 want to use, such as SSL-enabled tests, custom http headers, async tests, leak
 debugging, prefs...
+
+```{toctree}
+:hidden:
+:maxdepth: 1
+
+faq
+```

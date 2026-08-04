@@ -13,6 +13,8 @@ explains how to use the Gecko profiler.
 
 *
 memory/index
+build_metrics/build_metrics
+platform_microbenchmarks/platform_microbenchmarks
 ```
 
 ## General Performance references

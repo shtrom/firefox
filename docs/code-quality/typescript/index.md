@@ -91,3 +91,11 @@ The Lint & Formatting channel (#lint:mozilla.org) on Matrix is the best place
   useful in understanding how TypeScript works and how types may be set up.
   * The [JavaScript section starting here](https://www.typescriptlang.org/docs/handbook/intro-to-js-ts.html),
     is especially useful for firefox-main development.
+
+```{toctree}
+:hidden:
+:maxdepth: 1
+
+bestPractices
+updatingTypes
+```

@@ -192,6 +192,7 @@ For test harness issues, file bugs in Developer Infrastructure :: Lint and Forma
 
 eslint-plugin-mozilla
 eslint-plugin-spidermonkey-js
+eslint/enabling-rules
 ```
 
 [difficult for eslint to handle]: https://bugzilla.mozilla.org/show_bug.cgi?id=1379669

@@ -67,6 +67,12 @@ Some failures can be fixed with `./mach lint -l stylelint --fix path/to/file`.
 
 For test harness issues, file bugs in Developer Infrastructure :: Lint and Formatting.
 
+```{toctree}
+:hidden: true
+
+stylelint/enabling-rules
+```
+
 [stylelint's documentation]: https://stylelint.io/user-guide/configure/
 [stylelint.io's rule list]: https://stylelint.io/user-guide/rules/
 [usage guide]: ../usage.html
