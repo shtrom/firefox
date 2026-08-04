@@ -8,7 +8,6 @@ const {
   Pocket,
   DiscoveryStream,
   Search,
-  WebNotifications,
   ExternalComponents,
   SportsWidget,
   PictureOfTheDay,
@@ -1685,46 +1684,80 @@ describe("Reducers", () => {
   });
 
   describe("WebNotifications", () => {
-    it("should return INITIAL_STATE by default", () => {
-      const nextState = WebNotifications(undefined, {
-        type: "some_action",
-      });
-      assert.equal(nextState, INITIAL_STATE.WebNotifications);
-    });
-    it("should set initialized and clear error on WEB_NOTIFICATIONS_UPDATED", () => {
-      const prevState = {
-        ...INITIAL_STATE.WebNotifications,
-        error: { step: "snapshot", message: "boom" },
-      };
-      const data = {
-        lastUpdated: 12345,
-        notifications: { abc: { id: "abc", origin: "https://example.com" } },
-        byOrigin: { "https://example.com": ["abc"] },
-      };
-      const nextState = WebNotifications(prevState, {
+    const notification = {
+      id: "n1",
+      origin: "https://example.com",
+      persistent: true,
+      title: "hi",
+    };
+
+    it("WEB_NOTIFICATIONS_UPDATED replaces the table and index", () => {
+      const action = {
         type: at.WEB_NOTIFICATIONS_UPDATED,
-        data,
-      });
-      assert.propertyVal(nextState, "initialized", true);
-      assert.propertyVal(nextState, "lastUpdated", 12345);
-      assert.deepEqual(nextState.notifications, data.notifications);
-      assert.deepEqual(nextState.byOrigin, data.byOrigin);
-      assert.isNull(nextState.error);
-    });
-    it("should set error and preserve other fields on WEB_NOTIFICATIONS_ERROR", () => {
-      const prevState = {
-        ...INITIAL_STATE.WebNotifications,
-        initialized: true,
-        notifications: { abc: { id: "abc" } },
+        data: {
+          lastUpdated: 42,
+          notifications: { n1: notification },
+          byOrigin: { "https://example.com": ["n1"] },
+        },
       };
-      const errorData = { step: "snapshot", message: "boom" };
-      const nextState = WebNotifications(prevState, {
-        type: at.WEB_NOTIFICATIONS_ERROR,
-        data: errorData,
+      const next = reducers.WebNotifications(undefined, action);
+      assert.isTrue(next.initialized);
+      assert.equal(next.lastUpdated, 42);
+      assert.deepEqual(next.notifications, { n1: notification });
+      assert.isNull(next.error);
+    });
+
+    it("WEB_NOTIFICATIONS_ADDED merges one notification into the index", () => {
+      const action = {
+        type: at.WEB_NOTIFICATIONS_ADDED,
+        data: { notification },
+      };
+      const next = reducers.WebNotifications(undefined, action);
+      assert.equal(next.notifications.n1, notification);
+      assert.deepEqual(next.byOrigin["https://example.com"], ["n1"]);
+    });
+
+    it("WEB_NOTIFICATIONS_ADDED does not duplicate an existing id", () => {
+      const prev = {
+        ...INITIAL_STATE.WebNotifications,
+        notifications: { n1: notification },
+        byOrigin: { "https://example.com": ["n1"] },
+      };
+      const next = reducers.WebNotifications(prev, {
+        type: at.WEB_NOTIFICATIONS_ADDED,
+        data: { notification },
       });
-      assert.deepEqual(nextState.error, errorData);
-      assert.propertyVal(nextState, "initialized", true);
-      assert.deepEqual(nextState.notifications, prevState.notifications);
+      assert.deepEqual(next.byOrigin["https://example.com"], ["n1"]);
+    });
+
+    it("WEB_NOTIFICATIONS_REMOVED drops ids and prunes empty origins", () => {
+      const prev = {
+        ...INITIAL_STATE.WebNotifications,
+        notifications: { n1: notification },
+        byOrigin: { "https://example.com": ["n1"] },
+      };
+      const next = reducers.WebNotifications(prev, {
+        type: at.WEB_NOTIFICATIONS_REMOVED,
+        data: { removed: [{ origin: "https://example.com", id: "n1" }] },
+      });
+      assert.deepEqual(next.notifications, {});
+      assert.isUndefined(next.byOrigin["https://example.com"]);
+    });
+
+    it("WEB_NOTIFICATIONS_ERROR records the error", () => {
+      const next = reducers.WebNotifications(undefined, {
+        type: at.WEB_NOTIFICATIONS_ERROR,
+        data: { message: "nope" },
+      });
+      assert.deepEqual(next.error, { message: "nope" });
+    });
+
+    it("returns previous state for unrelated actions", () => {
+      const prev = INITIAL_STATE.WebNotifications;
+      assert.equal(
+        reducers.WebNotifications(prev, { type: "SOME_OTHER_ACTION" }),
+        prev
+      );
     });
   });
 });
