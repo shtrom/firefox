@@ -315,8 +315,10 @@ profiler-popup-presets-custom-label =
 appmenu-manage-history =
     .label = Manage history
 
-## Sync promo shown at the bottom of the History panel. Its variant depends on
-## the user's account and Sync state.
+## Sync promo shown at the bottom of the History and Bookmarks panels. Its
+## variant depends on the user's account and Sync state. The sign-in heading and
+## all three call-to-action labels are shared by both panels; the remaining
+## headings are specific to the panel they appear in.
 
 appmenu-sync-promo-signin =
     .heading = Stay in sync across devices
@@ -328,6 +330,11 @@ appmenu-sync-promo-turnonsync-cta = Turn on sync
 appmenu-sync-promo-connectdevice =
     .heading = Grab your mobile tabs
 appmenu-sync-promo-connectdevice-cta = Connect a device
+appmenu-bookmarks-sync-promo-turnonsync =
+    .heading = Bring your bookmarks with you
+# This refers to having your bookmarks available on your mobile device via sync
+appmenu-bookmarks-sync-promo-connectdevice =
+    .heading = Take your bookmarks to go
 
 ##
 

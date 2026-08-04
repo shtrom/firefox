@@ -278,6 +278,8 @@ skip-if = [
 
 ["browser_bookmarks_empty_message.js"]
 
+["browser_bookmarks_sync_promo.js"]
+
 ["browser_bookmarks_toolbar_collapsed_restore_default.js"]
 
 ["browser_bookmarks_toolbar_shown_newtab.js"]

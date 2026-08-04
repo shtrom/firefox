@@ -16,7 +16,7 @@ const DEVICE_LIST_UPDATED = "fxaccounts:devicelist_updated";
 // Per-surface promo configuration. Each surface maps the possible promo states
 // returned by gSync.getSyncPromoState() to the heading/CTA strings to show, and
 // declares the FxA entry point and the sync engines whose absence should trigger
-// the "turn on sync" state. New surfaces (e.g. bookmarks) only add an entry here.
+// the "turn on sync" state.
 const PROMO_CONFIG = {
   history: {
     entryPoint: "remote-tabs-app-menu-history",
@@ -36,6 +36,27 @@ const PROMO_CONFIG = {
         heading: "appmenu-sync-promo-connectdevice",
         cta: "appmenu-sync-promo-connectdevice-cta",
         image: "chrome://browser/skin/fxa/sync-promo-connectdevice.svg",
+      },
+    },
+  },
+  bookmarks: {
+    entryPoint: "bookmarks-app-menu",
+    requiredEngines: ["bookmarks"],
+    variants: {
+      signin: {
+        heading: "appmenu-sync-promo-signin",
+        cta: "appmenu-sync-promo-signin-cta",
+        image: "chrome://browser/skin/fxa/sync-promo-bookmarks.svg",
+      },
+      turnonsync: {
+        heading: "appmenu-bookmarks-sync-promo-turnonsync",
+        cta: "appmenu-sync-promo-turnonsync-cta",
+        image: "chrome://browser/skin/fxa/sync-promo-bookmarks.svg",
+      },
+      connectdevice: {
+        heading: "appmenu-bookmarks-sync-promo-connectdevice",
+        cta: "appmenu-sync-promo-connectdevice-cta",
+        image: "chrome://browser/skin/fxa/sync-promo-bookmarks.svg",
       },
     },
   },
