@@ -5,6 +5,7 @@ avoid-blacklist-and-whitelist:
     include: ['.']
     type: external
     payload: mozcheck:lint
+    setup: mozcheck:setup
     check: rejected-words
     check-config:
         regex-pattern: (black|white)[-_]?list
@@ -311,6 +312,7 @@ avoid-gobbledygook:
     include: ['.']
     type: external
     payload: mozcheck:lint
+    setup: mozcheck:setup
     check: rejected-words
     check-config:
         regex-pattern: \b(gobbledy)?-?gook
@@ -338,6 +340,7 @@ forbid-moduleloaderbase-include:
     include: ['.']
     type: external
     payload: mozcheck:lint
+    setup: mozcheck:setup
     check: rejected-words
     check-config:
         regex-pattern: '#\s*include\s+"(js/loader/)?ModuleLoaderBase\.h"'
