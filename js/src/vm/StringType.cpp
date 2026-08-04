@@ -1142,7 +1142,7 @@ JSLinearString* JSRope::flattenInternal(JSRope* root) {
   CharT* pos = wholeChars;
 
   JSRope* parent = nullptr;
-  uint32_t parentFlag = 0;
+  uint32_t parentFlag = StringFlags::FLATTEN_FINISH_NODE;
 
 first_visit_node: {
   MOZ_ASSERT_IF(str != root, parent && parentFlag);
