@@ -3207,9 +3207,21 @@ inline bool SweepingTracer::onEdge(T** thingp, const char* name) {
   //  - atoms
   //  - the jitcode map
   //  - the mark queue
-  bool sweepZone =
+  bool sweepingZone =
       zone->isGCSweeping() || (zone->isAtomsZone() && zone->isGCMarking());
-  return !(sweepZone && !cell->isMarkedAny());
+  if (!sweepingZone) {
+    return true;
+  }
+
+  if constexpr (std::is_same_v<T, JS::Symbol>) {
+    runtime()->gc.maybeMarkWeaklyHeldAtom(thing);
+  } else if constexpr (std::is_same_v<T, JSString>) {
+    if (thing->isAtom()) {
+      runtime()->gc.maybeMarkWeaklyHeldAtom(&thing->asAtom());
+    }
+  }
+
+  return cell->isMarkedAny();
 }
 
 namespace js::gc {
