@@ -79,7 +79,7 @@
 #searchbar {
   --urlbar-background-border: var(--urlbar-input-container-border-width) solid var(--toolbar-field-border-color);
   --urlbar-background-border-breakout: var(--urlbar-input-container-border-width) solid transparent;
-  --urlbar-background-border-focused: var(--urlbar-input-container-border-width-breakout) solid var(--focus-outline-color);
+  --urlbar-background-border-focused: var(--urlbar-input-container-border-width-breakout) solid var(--toolbar-field-border-color-focus);
   --urlbar-background-border-radius: var(--urlbarview-border-radius);
   --urlbar-background-border-top-radius-breakout-compact: min(var(--urlbar-background-border-radius), calc(var(--urlbar-min-height) / 2));
   --urlbar-background-box-shadow-breakout: 0 0 14px 0 var(--chrome-box-shadow);
@@ -89,7 +89,7 @@
   --urlbar-background-outline-focused: none;
   --urlbar-input-container-border: var(--urlbar-input-container-border-width) solid var(--toolbar-field-border-color);
   --urlbar-input-container-outline-breakout: var(--urlbar-input-container-border-width-breakout) solid var(--toolbar-field-border-color);
-  --urlbar-input-container-outline-breakout-focused: var(--urlbar-input-container-border-width-breakout) solid var(--focus-outline-color);
+  --urlbar-input-container-outline-breakout-focused: var(--urlbar-input-container-border-width-breakout) solid var(--toolbar-field-border-color-focus);
   --urlbar-input-container-outline-offset-breakout: calc(-1 * var(--urlbar-input-container-border-width-breakout));
   --urlbar-margin-block-start-breakout: calc((var(--urlbar-container-height) - var(--urlbar-height)) / 2);
   --urlbar-searchmode-switcher-panel-list-min-width: 17em;
@@ -315,7 +315,7 @@ toolbar[inactive="true"] .urlbar,
 
   &:focus-within {
     background-color: var(--urlbar-background-color-focus);
-    outline-color: var(--focus-outline-color);
+    outline-color: var(--toolbar-field-border-color-focus);
     outline-width: var(--urlbar-input-container-border-width-breakout);
     outline-offset: calc(-1 * var(--urlbar-input-container-border-width-breakout));
   }
