@@ -3901,6 +3901,13 @@ pref("services.common.log.logger.tokenserverclient", "Debug");
     pref("remote.experimental.enabled", false);
   #endif
 
+  // Allow Marionette and the Remote Agent to be started dynamically at runtime.
+  #if defined(NIGHTLY_BUILD)
+    pref("remote.experimental.dynamicstart.enabled", true);
+  #else
+    pref("remote.experimental.dynamicstart.enabled", false);
+  #endif
+
   // Defines the verbosity of the internal logger.
   //
   // Available levels are, in descending order of severity, "Trace", "Debug",

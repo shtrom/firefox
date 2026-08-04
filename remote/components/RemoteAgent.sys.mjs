@@ -26,6 +26,8 @@ const ENV_ALLOW_SYSTEM_ACCESS = "MOZ_REMOTE_ALLOW_SYSTEM_ACCESS";
 
 const SHARED_DATA_ACTIVE_KEY = "RemoteAgent:Active";
 
+const PREF_DYNAMIC_START_ENABLED = "remote.experimental.dynamicstart.enabled";
+
 const isRemote =
   Services.appinfo.processType == Services.appinfo.PROCESS_TYPE_CONTENT;
 
@@ -538,6 +540,13 @@ class RemoteAgentParentProcess {
    *     The port on which RemoteAgent started.
    */
   async startAtRuntime() {
+    if (!Services.prefs.getBoolPref(PREF_DYNAMIC_START_ENABLED, false)) {
+      lazy.logger.debug(
+        `Start aborted, ${PREF_DYNAMIC_START_ENABLED} is disabled`
+      );
+      return -1;
+    }
+
     if (this.running) {
       lazy.logger.debug(
         `Start aborted, RemoteAgent already running (running=${this.running})`

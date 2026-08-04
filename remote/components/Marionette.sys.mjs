@@ -24,6 +24,8 @@ ChromeUtils.defineLazyGetter(lazy, "textEncoder", () => new TextEncoder());
 const NOTIFY_LISTENING = "marionette-listening";
 const SHARED_DATA_ACTIVE_KEY = "Marionette:Active";
 
+const PREF_DYNAMIC_START_ENABLED = "remote.experimental.dynamicstart.enabled";
+
 // Complements -marionette flag for starting the Marionette server.
 // We also set this if Marionette is running in order to start the server
 // again after a Firefox restart.
@@ -288,6 +290,13 @@ class MarionetteParentProcess {
    *     The port on which Marionette was started. -1 if it could not be started.
    */
   async startAtRuntime() {
+    if (!Services.prefs.getBoolPref(PREF_DYNAMIC_START_ENABLED, false)) {
+      lazy.logger.debug(
+        `Start aborted, ${PREF_DYNAMIC_START_ENABLED} is disabled`
+      );
+      return -1;
+    }
+
     if (this.running) {
       lazy.logger.debug(
         `Start aborted, Marionette already running (running=${this.running})`
