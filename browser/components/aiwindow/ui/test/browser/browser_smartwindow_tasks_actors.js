@@ -153,6 +153,7 @@ add_task(async function test_smartwindow_tasks_monitor_operations() {
           hour: 9,
           minute: 0,
         },
+        source: "test",
       }
     );
 
@@ -249,6 +250,7 @@ add_task(async function test_smartwindow_tasks_pause_monitor() {
           hour: 9,
           minute: 0,
         },
+        source: "test",
       }
     );
 
@@ -375,6 +377,7 @@ add_task(async function test_smartwindow_tasks_run_monitor() {
           hour: 9,
           minute: 0,
         },
+        source: "test",
       }
     );
 

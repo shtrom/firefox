@@ -548,6 +548,8 @@ export class AgentUI {
       pageTitle:
         updateData?.monitorName || agent.monitorName || agent.pageTitle || "",
       schedule: this.#buildSchedule(updateData?.schedule),
+      // AgentUI is primarily a chat feature, so we can use this as the source for now
+      source: "in_line_chat",
     };
   }
 

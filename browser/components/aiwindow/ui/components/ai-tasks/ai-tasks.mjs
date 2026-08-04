@@ -480,6 +480,7 @@ export class AITasks extends MozLitElement {
           watchUrls: this.pageUrls,
           pageTitle: this.monitorName,
           schedule,
+          source: "about_page",
         }
       );
 
