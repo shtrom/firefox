@@ -162,7 +162,7 @@
         errorLine2="                             ~~~~~">
         <location
             file="src/main/AndroidManifest.xml"
-            line="64"
+            line="65"
             column="30"/>
     </issue>
 
@@ -1267,6 +1267,28 @@
     </issue>
 
     <issue
+        id="UnusedResources"
+        message="The resource `R.style.Mozac_Browser_Menu` appears to be unused"
+        errorLine1="    &lt;style name=&quot;Mozac.Browser.Menu&quot; parent=&quot;&quot;>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/styles.xml"
+            line="142"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.style.Mozac_Browser_Menu_Item_Text` appears to be unused"
+        errorLine1="    &lt;style name=&quot;Mozac.Browser.Menu.Item.Text&quot; parent=&quot;@android:style/TextAppearance.Material.Menu&quot;>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/styles.xml"
+            line="147"
+            column="12"/>
+    </issue>
+
+    <issue
         id="MonochromeLauncherIcon"
         message="The application adaptive icon is missing a monochrome tag"
         errorLine1="&lt;adaptive-icon xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;>"
@@ -1320,13 +1342,12 @@
     <issue
         id="RtlSymmetry"
         message="When you define `paddingStart` you should probably also define `paddingEnd` for right-to-left symmetry"
-        errorLine1="        android:paddingStart=&quot;5dp&quot;"
+        errorLine1="        android:paddingStart=&quot;5dp&quot;/>"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/layout/preference_manual_add_search_engine.xml"
             line="45"
             column="9"/>
     </issue>
-
 
 </issues>
