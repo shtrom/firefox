@@ -17,8 +17,8 @@
 }
 
 .jsonParseError {
-  color: var(--theme-text-color-error);
-  background-color: var(--theme-toolbar-error-background);
+  color: var(--theme-error-color);
+  background-color: var(--theme-error-background);
 }
 
 tr:has(.jsonlLineError) {
