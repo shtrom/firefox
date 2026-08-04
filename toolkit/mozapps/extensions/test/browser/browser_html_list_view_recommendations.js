@@ -61,6 +61,14 @@ add_setup(async function () {
   });
 });
 
+const PROMO_L10N_IDS = {
+  extension: [
+    "find-more-extensions-promo",
+    "find-more-extensions-promo-open-amo-button",
+  ],
+  theme: ["find-more-themes-promo", "find-more-themes-promo-open-amo-button"],
+};
+
 function checkExtraContents(doc, type, opts = {}) {
   let { showThemeRecommendationFooter = type === "theme" } = opts;
   let footer = doc.querySelector("footer");
@@ -96,6 +104,18 @@ function checkExtraContents(doc, type, opts = {}) {
     // The legacy AMO button that has been replaced with the addons-promo
     // should be hidden when Nova is enabled.
     is_element_hidden(amoButton, "The AMO button is hidden");
+
+    let [promoId, promoButtonId] = PROMO_L10N_IDS[type];
+    is(
+      footerPromo.getAttribute("data-l10n-id"),
+      promoId,
+      "The promo card has the expected l10n id"
+    );
+    is(
+      promoAmoBtn.getAttribute("data-l10n-id"),
+      promoButtonId,
+      "The promo card AMO button has the expected l10n id"
+    );
   } else {
     // With Nova disabled the addons-promo are expected to be hidden
     // and the previously shown Nova button to be visible.

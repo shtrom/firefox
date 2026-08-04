@@ -2,13 +2,25 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+# Promo footer shown in the about:addons recommendations view when
+# Project Nova styles are enabled.
+# The heading refers to the user choosing a Firefox theme or extension to
+# install. In the message, "tools" refers to Firefox extensions and
+# "styles" refers to Firefox themes.
+find-more-addons-promo =
+  .heading = Shape { -brand-product-name } your way
+  .message = Add tools and styles to fit your needs and taste.
+
+find-more-addons-promo-open-amo-button = Explore extensions and themes
+
 # Promo footer shown in the about:addons extensions list view when
 # Project Nova styles are enabled.
-find-more-addons-promo =
-  .heading = Explore more Add-ons
-  .message = Explore the world of { -brand-product-name } extensions - Discover popular extensions for inspiration and see how they engage millions!
+# In the message, "tools" refers to Firefox extensions.
+find-more-extensions-promo =
+  .heading = Find your next favorite extension
+  .message = Customize { -brand-product-name } with tools for focus, privacy, shopping, and more.
 
-find-more-addons-promo-open-amo-button = Find your favorite extension
+find-more-extensions-promo-open-amo-button = Explore extensions
 
 # Promo footer shown in the about:addons themes list view when
 # Project Nova styles are enabled.

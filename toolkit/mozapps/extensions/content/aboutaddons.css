@@ -779,6 +779,7 @@ section:not(:empty) ~ :is(#empty-addons-message, #empty-addons-promo) {
 
 @media -moz-pref("browser.nova.enabled") {
   [is="recommended-footer"] > .amo-link-container,
+  [is="recommended-extensions-footer"] > .amo-link-container,
   [is="recommended-themes-footer"] > .amo-link-container,
   [is="recommended-themes-footer"] > .theme-recommendation,
   #empty-addons-message {
