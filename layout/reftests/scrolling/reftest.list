@@ -155,7 +155,7 @@ pref(layout.disable-pixel-alignment,true) fuzzy(0-240,0-1024) skip-if(useDrawSna
 fuzzy-if(Android,54-54,8-29) == xul-scrollbar-iterate.html xul-scrollbar-iterate-ref.html
 == scrollbars-area-in-iframe.html scrollbars-area-in-iframe-ref.html
 
-pref(layout.css.anchor-positioning.enabled,true) pref(image.testing.decode-sync.enabled,false) == anchor-scroll-01.html anchor-scroll-ref.html
+pref(image.testing.decode-sync.enabled,false) == anchor-scroll-01.html anchor-scroll-ref.html
 
 # Test case for @supports selector(::-webkit-scrollbar).
 # We do return true for the @supports

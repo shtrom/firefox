@@ -10702,14 +10702,6 @@
   mirror: always
   rust: true
 
-# Whether to enable CSS Anchor Positioning support.
-# https://drafts.csswg.org/css-anchor-position-1/
-- name: layout.css.anchor-positioning.enabled
-  type: RelaxedAtomicBool
-  value: true
-  mirror: always
-  rust: true
-
 # Whether to enable appearance: base for authors.
 - name: layout.css.appearance-base.enabled
   type: RelaxedAtomicBool

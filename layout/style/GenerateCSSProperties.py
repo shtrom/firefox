@@ -224,8 +224,7 @@ def gen_page_descriptors_webidl(output):
 
 def gen_position_try_descriptors_webidl(output):
     return gen_webidl(output, "position-try", "CSSPositionTryDescriptors",
-                      "CSSPositionTryDescriptor",
-                      "layout.css.anchor-positioning.enabled")
+                      "CSSPositionTryDescriptor")
 
 
 def gen_font_face_descriptors_webidl(output):
