@@ -17,6 +17,7 @@ prefs = [
 ["browser_prompt_loader_build_conversation.js"]
 ["browser_prompt_loader_chat_system_prompt.js"]
 ["browser_prompt_loader_get_skill_prompt.js"]
+["browser_relevant_memories.js"]
 ["browser_schedule.js"]
 ["browser_search_the_web.js"]
 ["browser_title_generation.js"]

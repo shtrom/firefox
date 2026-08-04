@@ -12,6 +12,8 @@ import {
   stripUnresolvedUrlTokens,
 } from "moz-src:///browser/components/aiwindow/models/ChatUtils.sys.mjs";
 
+import { DEFAULT_RELEVANT_MEMORIES_MESSAGE_COUNT } from "moz-src:///browser/components/aiwindow/models/memories/MemoriesConstants.sys.mjs";
+
 import { getRoleLabel } from "./ChatUtils.sys.mjs";
 import {
   CONVERSATION_STATUS,
@@ -783,6 +785,12 @@ export class ChatConversation extends Conversation {
    * Fetch relevant memories, mutate
    * `userMessage.content.userContext.memoriesContext` in place.
    *
+   * Retrieval is keyed on `prompt` alone, but the injected context also lists
+   * the memories retrieved for the preceding user messages, so a semantically
+   * isolated message like "what about the other one?" still has memories relevant
+   * to its immediate context. The memories retrieved for this message are recorded on
+   * `userMessage.content.relevantMemories` to feed the next messages' window.
+   *
    * SECURITY: retrieved memories are private user data, so this raises
    * setPrivateData() whenever memories are returned.
    *
@@ -790,21 +798,56 @@ export class ChatConversation extends Conversation {
    * @param {ChatMessage} userMessage
    * @param {string} prompt
    * @param {Function} [constructMemories]
+   * @param {number} [messageCount] - How many recent user messages, including
+   *   this one, contribute their memories to the injected context
    */
   async injectMemoriesContext(
     userMessage,
     prompt,
-    constructMemories = constructRelevantMemoriesContextMessage
+    constructMemories = constructRelevantMemoriesContextMessage,
+    messageCount = DEFAULT_RELEVANT_MEMORIES_MESSAGE_COUNT
   ) {
-    const memoriesContext = await constructMemories(prompt);
+    const memoriesContext = await constructMemories(
+      prompt,
+      this.#getPreviousRelevantMemories(messageCount)
+    );
     if (memoriesContext == null) {
       return;
     }
     this.securityProperties.setPrivateData();
     if (userMessage?.content) {
       userMessage.content.userContext ??= {};
-      userMessage.content.userContext.memoriesContext = memoriesContext.content;
+      userMessage.content.userContext.memoriesContext =
+        memoriesContext.message.content;
+      userMessage.content.relevantMemories = memoriesContext.relevantMemories;
     }
+  }
+
+  /**
+   * Retrieve memories for the user messages before the one being sent,
+   * ordered newest message first.
+   *
+   * @param {number} [messageCount] - Size of the window the message being sent
+   * @returns {Array<{id: string, memory_summary: string}>}
+   */
+  #getPreviousRelevantMemories(
+    messageCount = DEFAULT_RELEVANT_MEMORIES_MESSAGE_COUNT
+  ) {
+    const userMessages = [];
+
+    for (
+      let i = this.messages.length - 1;
+      i >= 0 && userMessages.length < messageCount;
+      i--
+    ) {
+      if (this.messages[i].role === MESSAGE_ROLE.USER) {
+        userMessages.push(this.messages[i]);
+      }
+    }
+
+    return userMessages
+      .slice(1)
+      .flatMap(message => message.content?.relevantMemories ?? []);
   }
 
   /**

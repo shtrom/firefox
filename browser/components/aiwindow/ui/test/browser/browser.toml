@@ -184,6 +184,8 @@ skip-if = [
 
 ["browser_aiwindowui.js"]
 
+["browser_chat_conversation_memories_context.js"]
+
 ["browser_memories_icon_button.js"]
 
 ["browser_open_aiwindow.js"]
