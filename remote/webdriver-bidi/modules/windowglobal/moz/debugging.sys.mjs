@@ -2,8 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
-
 import { WindowGlobalBiDiModule } from "chrome://remote/content/webdriver-bidi/modules/WindowGlobalBiDiModule.sys.mjs";
 
 const lazy = {};
@@ -21,13 +19,6 @@ ChromeUtils.defineLazyGetter(lazy, "logger", () =>
   lazy.Log.get(lazy.Log.TYPES.WEBDRIVER_BIDI)
 );
 
-XPCOMUtils.defineLazyServiceGetter(
-  lazy,
-  "jsInspector",
-  "@mozilla.org/jsinspector;1",
-  Ci.nsIJSInspector
-);
-
 /**
  * An object that identifies a live breakpoint set on a script.
  *
@@ -43,7 +34,7 @@ class DebuggingModule extends WindowGlobalBiDiModule {
   #breakpointHandler;
   #breakpointLocationMap;
   #dbg;
-  #eventLoopEntered;
+  #paused;
   #previousPauseLocation;
 
   constructor(messageHandler) {
@@ -55,7 +46,7 @@ class DebuggingModule extends WindowGlobalBiDiModule {
     this.#breakpointLocationMap = new Map();
 
     // State flags.
-    this.#eventLoopEntered = false;
+    this.#paused = false;
 
     this.#dbg = null;
     this.#previousPauseLocation = null;
@@ -393,13 +384,12 @@ class DebuggingModule extends WindowGlobalBiDiModule {
     });
 
     try {
-      this.#eventLoopEntered = true;
-      // Bug 2041335: Consider using another approach to avoid conflicts with
-      // devtools debugger.
-      lazy.jsInspector.enterNestedEventLoop(this);
-      this.#eventLoopEntered = false;
+      this.#paused = true;
+      Services.tm.spinEventLoopUntil("webdriver-bidi-debugging", () => {
+        return !this.#paused;
+      });
     } catch (e) {
-      this.#eventLoopEntered = false;
+      this.#paused = false;
     }
 
     // Clear the paused debugger environment when resuming.
@@ -673,7 +663,7 @@ class DebuggingModule extends WindowGlobalBiDiModule {
   }
 
   _resume() {
-    if (this.#eventLoopEntered && lazy.jsInspector.lastNestRequestor === this) {
+    if (this.#paused) {
       const debuggerEnvironment = this.messageHandler.debuggerEnvironment;
       if (debuggerEnvironment) {
         // Clear any stepping hooks
@@ -683,7 +673,7 @@ class DebuggingModule extends WindowGlobalBiDiModule {
 
       this.#dbg.onEnterFrame = undefined;
 
-      lazy.jsInspector.exitNestedEventLoop();
+      this.#paused = false;
       this.emitEvent("moz:debugging.resumed", {
         context: this.messageHandler.context,
       });
@@ -691,7 +681,7 @@ class DebuggingModule extends WindowGlobalBiDiModule {
   }
 
   _stepInto() {
-    if (this.#eventLoopEntered && lazy.jsInspector.lastNestRequestor === this) {
+    if (this.#paused) {
       const debuggerEnvironment = this.messageHandler.debuggerEnvironment;
       if (debuggerEnvironment) {
         const { onEnterFrame, onStep, onPop } = this.#makeSteppingHooks({
@@ -707,12 +697,12 @@ class DebuggingModule extends WindowGlobalBiDiModule {
         debuggerEnvironment.frame.onPop = onPop;
       }
 
-      lazy.jsInspector.exitNestedEventLoop();
+      this.#paused = false;
     }
   }
 
   _stepOut() {
-    if (this.#eventLoopEntered && lazy.jsInspector.lastNestRequestor === this) {
+    if (this.#paused) {
       const debuggerEnvironment = this.messageHandler.debuggerEnvironment;
       if (debuggerEnvironment) {
         const { onPop } = this.#makeSteppingHooks({
@@ -723,12 +713,12 @@ class DebuggingModule extends WindowGlobalBiDiModule {
         debuggerEnvironment.frame.onPop = onPop;
       }
 
-      lazy.jsInspector.exitNestedEventLoop();
+      this.#paused = false;
     }
   }
 
   _stepOver() {
-    if (this.#eventLoopEntered && lazy.jsInspector.lastNestRequestor === this) {
+    if (this.#paused) {
       const debuggerEnvironment = this.messageHandler.debuggerEnvironment;
       if (debuggerEnvironment) {
         const { onStep, onPop } = this.#makeSteppingHooks({
@@ -740,7 +730,7 @@ class DebuggingModule extends WindowGlobalBiDiModule {
         debuggerEnvironment.frame.onPop = onPop;
       }
 
-      lazy.jsInspector.exitNestedEventLoop();
+      this.#paused = false;
     }
   }
 }
