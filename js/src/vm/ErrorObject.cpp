@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <utility>
 
 #include "jspubtd.h"
@@ -1569,6 +1570,69 @@ JSString* JS::ErrorReportBuilder::maybeCreateReportFromDOMException(
   return messageStr;
 }
 
+// Build a side-effect-free preview of a non-Error exception object by listing
+// its own string-keyed property names, e.g. |Object (code, message)|,
+// instead of the unhelpful bare "Object". This runs while reporting an
+// exception without side effects, so it must not execute user code: only own
+// properties are inspected and getters and proxy traps are never invoked.
+// Indexed properties stored as dense elements are not included.
+// Cross-compartment wrappers (including cross-origin objects) are not native
+// and are left opaque. Returns nullptr when there are no such properties, in
+// which case the caller falls back to the bare class name.
+static JSString* DescribeUncaughtObjectNoSideEffects(JSContext* cx,
+                                                     HandleObject exnObject) {
+  if (!exnObject->is<NativeObject>()) {
+    return nullptr;
+  }
+
+  Rooted<NativeObject*> nobj(cx, &exnObject->as<NativeObject>());
+
+  AutoClearPendingException acpe(cx);
+  JSStringBuilder sb(cx);
+
+  const char* className = nobj->getClass()->name;
+  if (!sb.append(className, strlen(className))) {
+    return nullptr;
+  }
+
+  static constexpr uint32_t MaxProps = 10;
+
+  uint32_t written = 0;
+  Rooted<JSString*> key(cx);
+  for (ShapePropertyIter<CanGC> iter(cx, nobj->shape()); !iter.done(); iter++) {
+    if (!iter->key().isString()) {
+      continue;
+    }
+    if (written == MaxProps) {
+      if (!sb.append(", ...")) {
+        return nullptr;
+      }
+      break;
+    }
+    if (written == 0) {
+      if (!sb.append(" (")) {
+        return nullptr;
+      }
+    } else if (!sb.append(", ")) {
+      return nullptr;
+    }
+    key = iter->key().toString();
+    if (!sb.append(key)) {
+      return nullptr;
+    }
+    written++;
+  }
+
+  if (written == 0) {
+    return nullptr;
+  }
+  if (!sb.append(")")) {
+    return nullptr;
+  }
+
+  return sb.finishString();
+}
+
 bool JS::ErrorReportBuilder::init(JSContext* cx,
                                   const JS::ExceptionStack& exnStack,
                                   SniffingBehavior sniffingBehavior) {
@@ -1609,8 +1673,16 @@ bool JS::ErrorReportBuilder::init(JSContext* cx,
     } else {
       str = nullptr;
     }
-  } else if (exnObject && sniffingBehavior == NoSideEffects) {
-    str = cx->names().Object;
+  } else if (exnObject && sniffingBehavior != WithSideEffects) {
+    // Reporting a non-Error object without running user code. For callers that
+    // opted in, show a preview built from its own property names instead of
+    // the bare "Object".
+    if (sniffingBehavior == NoSideEffectsListPropertyNames) {
+      str = DescribeUncaughtObjectNoSideEffects(cx, exnObject);
+    }
+    if (!str) {
+      str = cx->names().Object;
+    }
   } else {
     str = js::ToString<CanGC>(cx, exnStack.exception());
   }
