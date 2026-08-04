@@ -1,4 +1,4 @@
-# no-browser-refs-in-toolkit
+# no-browser-refs-in-toolkit (stylelint)
 
 This rule prevents toolkit code from importing browser-specific CSS or SVG files.
 It is applied to both `@import` statements and CSS property values using the `url` function.

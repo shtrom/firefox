@@ -1,5 +1,3 @@
-(mozinfo)=
-
 # mozinfo
 
 `mozinfo` is a solution for representing a subset of build

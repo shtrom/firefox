@@ -1,5 +1,3 @@
-(region)=
-
 # Region
 
 Firefox monitors the users region in order to show relevant local
