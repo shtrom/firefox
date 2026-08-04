@@ -51,9 +51,7 @@ class ApiLintPlugin : Plugin<Project> {
                 val jsonResultFileProvider =
                     outputDir.flatMap { dir -> extension.jsonResultFileName.map { dir.file(it) } }
                 val currentApiFileProvider = project.layout.projectDirectory.file(extension.currentApiRelativeFilePath)
-                val apiMapFileProvider = outputDir.flatMap { dir ->
-                    extension.apiOutputFileName.map { dir.file("${it}.map") }
-                }
+                val apiMapFileProvider = apiMapFileFor(project.layout, apiFileProvider)
 
                 // sources.java.all covers the static sources plus the AGP-generated BuildConfig/AIDL
                 // sources (replacing the legacy sourceSets/generateBuildConfig/aidlCompile accessors).
@@ -73,6 +71,7 @@ class ApiLintPlugin : Plugin<Project> {
 
                     task.rootDir.set(project.rootDir.absolutePath)
                     task.outputFile.set(apiFileProvider)
+                    task.apiMapFile.set(apiMapFileProvider)
                     task.packageFilter.set(extension.packageFilter)
                     task.skipClassesRegex.set(extension.skipClassesRegex)
                     task.javadocDestinationDir.set(project.layout.buildDirectory.dir("tmp/javadoc/${variantName}"))

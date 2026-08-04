@@ -6,9 +6,12 @@ package org.mozilla.apilint
 
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.ProjectLayout
+import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
@@ -24,6 +27,14 @@ import org.gradle.external.javadoc.StandardJavadocDocletOptions
 abstract class ApiCompatLintTask : Javadoc() {
     @get:OutputFile
     abstract val outputFile: RegularFileProperty
+
+    /**
+     * The doclet writes a source map beside [outputFile] which the lint tasks read, so it has to be
+     * declared: otherwise Gradle treats the task as complete with the map missing. Derive it with
+     * [apiMapFileFor] so the name stays in step with [outputFile].
+     */
+    @get:OutputFile
+    abstract val apiMapFile: RegularFileProperty
 
     @get:Input
     abstract val packageFilter: Property<String>
@@ -67,3 +78,10 @@ abstract class ApiCompatLintTask : Javadoc() {
         super.generate()
     }
 }
+
+/**
+ * The API map that the doclet writes when handed [apiFile]: it appends `.map` to the output name, and
+ * the lint tasks read it back, so both sides derive the path from here rather than repeating it.
+ */
+internal fun apiMapFileFor(layout: ProjectLayout, apiFile: Provider<RegularFile>): Provider<RegularFile> =
+    layout.file(apiFile.map { java.io.File("${it.asFile.path}.map") })
