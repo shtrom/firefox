@@ -1,6 +1,6 @@
 "use strict";
 
-/* eslint-disable sdl/no-insecure-url */
+/* eslint-disable @microsoft/sdl/no-insecure-url */
 
 const { XPCShellContentUtils } = ChromeUtils.importESModule(
   "resource://testing-common/XPCShellContentUtils.sys.mjs"

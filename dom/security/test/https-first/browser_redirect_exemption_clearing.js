@@ -2,7 +2,7 @@
    https://creativecommons.org/publicdomain/zero/1.0/ */
 
 "use strict";
-/* eslint-disable sdl/no-insecure-url */
+/* eslint-disable @microsoft/sdl/no-insecure-url */
 
 // This test does the following:
 // 1. Go to http://example.com/..., which should get upgraded

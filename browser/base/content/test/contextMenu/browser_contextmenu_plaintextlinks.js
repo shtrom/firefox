@@ -5,7 +5,7 @@
 
 // Context menu links prepend `http`, so this is what
 // is being tested for rather than an `https` prefix.
-/* eslint-disable sdl/no-insecure-url */
+/* eslint-disable @microsoft/sdl/no-insecure-url */
 
 function testExpected(expected, msg) {
   is(

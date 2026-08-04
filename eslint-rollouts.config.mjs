@@ -4,7 +4,7 @@
 
 import eslintPluginImport from "eslint-plugin-import";
 import mozilla from "eslint-plugin-mozilla";
-import sdl from "eslint-plugin-sdl";
+import sdl from "@microsoft/eslint-plugin-sdl";
 
 /**
  * This is the current list of rollouts for ESLint rules in mozilla-central. The
@@ -1763,9 +1763,9 @@ export default [
       "uriloader/exthandler/tests/mochitest/head.js",
       "xpfe/appshell/test/test_windowlessBrowser.xhtml",
     ],
-    plugins: { sdl },
+    plugins: { "@microsoft/sdl": sdl },
     rules: {
-      "sdl/no-insecure-url": "off",
+      "@microsoft/sdl/no-insecure-url": "off",
     },
   },
   {

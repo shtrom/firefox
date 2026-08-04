@@ -35,7 +35,7 @@ const TESTS = [
     descriptionSection: "trustpanel-header-enabled",
   },
   {
-    // eslint-disable-next-line sdl/no-insecure-url
+    // eslint-disable-next-line @microsoft/sdl/no-insecure-url
     url: "http://example.com",
     icon: ICONS.insecure,
     connectionIcon: ICONS.broken,

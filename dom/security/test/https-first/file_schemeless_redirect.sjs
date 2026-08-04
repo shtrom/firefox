@@ -3,7 +3,7 @@
 
 "use strict";
 
-/* eslint-disable sdl/no-insecure-url */
+/* eslint-disable @microsoft/sdl/no-insecure-url */
 
 function handleRequest(request, response) {
   if (request.scheme === "https") {
