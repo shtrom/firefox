@@ -14,7 +14,8 @@
 #include "mozilla/DataMutex.h"
 #include "mozilla/DebugOnly.h"
 #include "mozilla/Services.h"
-#include "mozilla/StaticPtr.h"
+#include "mozilla/dom/ContentChild.h"
+#include "mozilla/dom/RemoteType.h"
 #include "mozIStorageBindingParamsArray.h"
 #include "mozIStorageError.h"
 #include "mozIStorageResultSet.h"
@@ -26,7 +27,6 @@
 #include "nsError.h"
 #include "nsINavHistoryService.h"
 #include "nsIObserverService.h"
-#include "nsITimer.h"
 #include "nsIWritablePropertyBag.h"
 #include "nsPlacesMacros.h"
 #include "nsServiceManagerUtils.h"
@@ -37,8 +37,6 @@
 namespace mozilla::places {
 
 namespace {
-
-static const uint32_t kPlacesInitFallbackTimeoutMs = 10 * 1000;
 
 // StaticDataMutex makes GetInstance() safe from any thread. StaticRefPtr
 // avoids a static destructor; the reference is released explicitly in
@@ -105,8 +103,8 @@ NS_IMPL_ISUPPORTS(ConcurrentConnection, nsIObserver, nsISupportsWeakReference,
                   mozIStorageStatementCallback)
 
 ConcurrentConnection::ConcurrentConnection() {
-  MOZ_DIAGNOSTIC_ASSERT(XRE_IsParentProcess(),
-                        "Can only instantiate in the parent process");
+  MOZ_DIAGNOSTIC_ASSERT(IsSupportedProcessType(),
+                        "Can only instantiate in supported processes");
 }
 
 void ConcurrentConnection::Init() {
@@ -147,35 +145,53 @@ void ConcurrentConnection::InitializeOnMainThread() {
     }
   }
 
-  // TOPIC_PLACES_INIT_COMPLETE is fired by the parent-process Places service.
-  nsCOMPtr<nsIObserverService> os = mozilla::services::GetObserverService();
-  if (os) {
-    MOZ_ALWAYS_SUCCEEDS(
-        os->AddObserver(this, TOPIC_PLACES_INIT_COMPLETE, true));
+  // TOPIC_PLACES_INIT_COMPLETE is fired by the parent-process Places service
+  // and will never reach a content process.
+  // Ideally when the content process sends a request, the parent should have
+  // initialized Places already, but if that should become an issue, we may
+  // either retry opening after a while, or find a way to notify the
+  // content processes.
+  if (XRE_IsParentProcess()) {
+    nsCOMPtr<nsIObserverService> os = mozilla::services::GetObserverService();
+    if (os) {
+      MOZ_ALWAYS_SUCCEEDS(
+          os->AddObserver(this, TOPIC_PLACES_INIT_COMPLETE, true));
+    }
   }
 
   mState = AWAITING_DATABASE_READY;
-  // Opening concurrently with EnsureConnection() may cause WAL-mode lock
-  // contention, returning SQLITE_LOCKED or SQLITE_IOERR depending on the
-  // filesystem (busy_timeout does not apply to same-process conflicts).
-  // Defer our open until TOPIC_PLACES_INIT_COMPLETE, which fires only after
-  // EnsureConnection() has succeeded and the main connection is established.
-  // If the connection is already open (CC started after Places initialized),
-  // open immediately. Otherwise, the fallback timer opens if the notification
-  // never arrives.
-  RefPtr<Database> db = Database::GetDatabase();
-  if (db && db->IsConnectionOpen()) {
-    mPlacesIsInitialized = true;
-    TryToOpenConnection();
-  } else {
-    mPlacesInitFallbackTimer = NS_NewTimer();
-    if (mPlacesInitFallbackTimer) {
-      mPlacesInitFallbackTimer->InitWithNamedFuncCallback(
-          PlacesInitFallbackTimerCallback, this, kPlacesInitFallbackTimeoutMs,
-          nsITimer::TYPE_ONE_SHOT,
-          "ConcurrentConnection::PlacesInitFallback"_ns);
+  TryToOpenConnection();
+}
+
+void ConcurrentConnection::MaybeInterrupt() {
+  AssertIsOnMainThread();
+  RefPtr<ConcurrentConnection> instance;
+  {
+    auto lock = sCCInstance.Lock();
+    instance = *lock;
+  }
+  if (instance) {
+    instance->mConnectionReadyMutex.NoteOnMainThread();
+    if (instance->mConn) {
+      (void)instance->mConn->Interrupt();
     }
   }
+}
+
+bool ConcurrentConnection::IsSupportedProcessType() {
+  if (XRE_IsParentProcess()) {
+    return true;
+  }
+  if (!XRE_IsContentProcess()) {
+    return false;
+  }
+  const auto* cc = dom::ContentChild::GetSingleton();
+  if (!cc) {
+    return false;
+  }
+  const nsACString& remoteType = cc->GetRemoteType();
+  return remoteType == PRIVILEGEDABOUT_REMOTE_TYPE ||
+         remoteType == PRIVILEGEDMOZILLA_REMOTE_TYPE;
 }
 
 Maybe<RefPtr<ConcurrentConnection>> ConcurrentConnection::GetInstance() {
@@ -190,7 +206,7 @@ Maybe<RefPtr<ConcurrentConnection>> ConcurrentConnection::GetInstance() {
     if (AppShutdown::IsInOrBeyond(ShutdownPhase::AppShutdownConfirmed)) {
       return Nothing();
     }
-    if (!XRE_IsParentProcess()) {
+    if (!IsSupportedProcessType()) {
       return Nothing();
     }
     *lock = new ConcurrentConnection();
@@ -365,8 +381,8 @@ NS_IMETHODIMP ConcurrentConnection::HandleCompletion(uint16_t aReason) {
       CloseConnection();
     }
   } else if (aReason == mozIStorageStatementCallback::REASON_CANCELED) {
-    // The PRAGMA was interrupted. Close so the connection can be reopened
-    // once Places is ready.
+    // The PRAGMA was interrupted (e.g. via MaybeInterrupt()). Close so the
+    // connection can be reopened once Places is ready.
     CloseConnection();
   }
   return NS_OK;
@@ -481,10 +497,6 @@ ConcurrentConnection::Observe(nsISupports* aSubject, const char* aTopic,
   AssertIsOnMainThread();
   if (strcmp(aTopic, TOPIC_PLACES_INIT_COMPLETE) == 0) {
     mPlacesIsInitialized = true;
-    if (mPlacesInitFallbackTimer) {
-      mPlacesInitFallbackTimer->Cancel();
-      mPlacesInitFallbackTimer = nullptr;
-    }
     TryToOpenConnection();
   }
   return NS_OK;
@@ -633,15 +645,6 @@ void ConcurrentConnection::TryToOpenConnection() {
 #undef SHUTDOWN_AND_RETURN_IF_FALSE
 }
 
-/* static */
-void ConcurrentConnection::PlacesInitFallbackTimerCallback(nsITimer*,
-                                                           void* aClosure) {
-  auto* self = static_cast<ConcurrentConnection*>(aClosure);
-  self->mPlacesInitFallbackTimer = nullptr;
-  self->mPlacesIsInitialized = true;
-  self->TryToOpenConnection();
-}
-
 void ConcurrentConnection::Shutdown() {
   // Keep a strong reference: nulling sCCInstance below drops the singleton's
   // RefPtr, which could be the last one, destroying us mid-method.
@@ -653,11 +656,6 @@ void ConcurrentConnection::Shutdown() {
     MOZ_CRASH("Connection should be closed");
   }
 #endif
-
-  if (mPlacesInitFallbackTimer) {
-    mPlacesInitFallbackTimer->Cancel();
-    mPlacesInitFallbackTimer = nullptr;
-  }
 
   RefPtr<ConcurrentConnection> kungFuDeathGrip = this;
   {
