@@ -45,7 +45,13 @@ StackInfo = namedtuple(
         "reason",
         "java_stack",
         "crashing_thread_stack",
+        "is_intentional",
     ],
+)
+
+INTENTIONAL_CRASH_MESSAGE = (
+    "This crash was deliberately triggered by test automation "
+    "and is not a failure: {minidump_path}"
 )
 
 
@@ -116,6 +122,12 @@ def check_for_crashes(
 
     crash_count = 0
     for info in crash_info:
+        if info.is_intentional:
+            if not quiet:
+                print(
+                    INTENTIONAL_CRASH_MESSAGE.format(minidump_path=info.minidump_path)
+                )
+            continue
         crash_count += 1
         output = None
         if info.java_stack:
@@ -172,9 +184,14 @@ def log_crashes(
         message = f"processing {num_dumps} crash" + ("es" if num_dumps != 1 else "")
         logger.group_start(message)
     for info in crash_info:
-        crash_count += 1
         kwargs = info._asdict()
         kwargs.pop("extra")
+        if kwargs.pop("is_intentional"):
+            logger.info(
+                INTENTIONAL_CRASH_MESSAGE.format(minidump_path=info.minidump_path)
+            )
+            continue
+        crash_count += 1
         kwargs["quiet"] = quiet
         logger.crash(process=process, test=test, **kwargs)
     if num_dumps:
@@ -375,10 +392,12 @@ class CrashInfo:
         retcode = None
         reason = None
         java_stack = None
+        is_intentional = False
         annotations = None
         pid = None
         process_type = "unknown"
         crashing_thread_stack = None
+        json_output = None
         if (
             self.stackwalk_binary
             and os.path.exists(self.stackwalk_binary)
@@ -396,12 +415,7 @@ class CrashInfo:
                 command.append("--symbols-url=https://symbols.mozilla.org/")
 
             crash_id = os.path.basename(path)[:-4]
-            json_dir = (
-                self.dump_save_path
-                if self.dump_save_path and os.path.isdir(self.dump_save_path)
-                else tempfile.gettempdir()
-            )
-            json_output = os.path.join(json_dir, f"{crash_id}.json")
+            json_output = os.path.join(tempfile.gettempdir(), f"{crash_id}.json")
             # Specify the kind of output
             command.append(f"--cyborg={json_output}")
             if self.brief_output:
@@ -459,8 +473,17 @@ class CrashInfo:
                     annotations.get("CrashSignatureOverrideForTesting") or signature
                 )
 
-        if self.dump_save_path:
-            self._save_dump_file(path, extra)
+                # Crashes deliberately triggered by test automation must not be
+                # reported as failures.
+                is_intentional = annotations.get("IntentionalCrashForTesting") == "1"
+
+        # Intentional crashes are not failures, so there is no point in
+        # uploading their dumps to the artifacts (they only waste volume).
+        if self.dump_save_path and not is_intentional:
+            self._save_dump_files(path, extra, json_output)
+
+        if json_output and os.path.exists(json_output):
+            mozfile.remove(json_output)
 
         if os.path.exists(path) and not self.keep:
             mozfile.remove(path)
@@ -483,6 +506,7 @@ class CrashInfo:
             reason,
             java_stack,
             crashing_thread_stack,
+            is_intentional,
         )
 
     def _process_json_output(self, json_path):
@@ -616,7 +640,7 @@ class CrashInfo:
                 self.logger.warning(".extra file does not contain proper json")
                 return None
 
-    def _save_dump_file(self, path, extra):
+    def _save_dump_files(self, *paths):
         if os.path.isfile(self.dump_save_path):
             os.unlink(self.dump_save_path)
         if not os.path.isdir(self.dump_save_path):
@@ -625,15 +649,12 @@ class CrashInfo:
             except OSError:
                 pass
 
-        shutil.copy(path, self.dump_save_path)
-        self.logger.info(
-            f"Saved minidump as {os.path.join(self.dump_save_path, os.path.basename(path))}"
-        )
-
-        if os.path.isfile(extra):
-            shutil.copy(extra, self.dump_save_path)
+        for path in paths:
+            if not path or not os.path.isfile(path):
+                continue
+            shutil.copy(path, self.dump_save_path)
             self.logger.info(
-                f"Saved app info as {os.path.join(self.dump_save_path, os.path.basename(extra))}"
+                f"Saved {os.path.join(self.dump_save_path, os.path.basename(path))}"
             )
 
 
