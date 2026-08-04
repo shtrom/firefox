@@ -22,7 +22,6 @@
 #include "nsTArray.h"
 #include "nsThreadUtils.h"
 #include "nsXULAppAPI.h"
-#include "prenv.h"
 
 #include "chrome/common/process_watcher.h"
 
@@ -346,10 +345,7 @@ class ProcessCleaner final : public MessageLoopForIO::Watcher,
             continue;
           }
         } else {
-          // Exception for the fake hang tests in ipc/glue/test/browser
-          // (See also the comment in `~ProcessChild()`.)
-          if (!PR_GetEnv("MOZ_TEST_CHILD_EXIT_HANG") &&
-              !CrashProcessIfHanging(child.mPid)) {
+          if (!CrashProcessIfHanging(child.mPid)) {
             continue;
           }
         }

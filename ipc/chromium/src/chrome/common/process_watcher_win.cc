@@ -11,7 +11,6 @@
 #include "base/object_watcher.h"
 #include "nsExceptionHandler.h"
 #include "nsString.h"
-#include "prenv.h"
 
 // Maximum amount of time (in milliseconds) to wait for the process to exit.
 static constexpr int kWaitInterval = 2000;
@@ -64,10 +63,7 @@ class ChildReaper : public mozilla::Runnable,
         CrashReporter::AutoRecordAnnotation autoShutdownHangCrash(
             CrashReporter::Annotation::CrashSignatureOverrideForTesting,
             kShutdownHangCrashSignature);
-        // Exception for the fake hang tests in ipc/glue/test/browser
-        if (!PR_GetEnv("MOZ_TEST_CHILD_EXIT_HANG")) {
-          CrashProcessIfHanging();
-        }
+        CrashProcessIfHanging();
         WaitForSingleObject(process_, INFINITE);
       }
       base::CloseProcessHandle(process_);
