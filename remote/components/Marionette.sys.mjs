@@ -5,6 +5,7 @@
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
+  AppInfo: "chrome://remote/content/shared/AppInfo.sys.mjs",
   Deferred: "chrome://remote/content/shared/Sync.sys.mjs",
   EnvironmentPrefs: "chrome://remote/content/marionette/prefs.sys.mjs",
   Log: "chrome://remote/content/shared/Log.sys.mjs",
@@ -79,7 +80,7 @@ class MarionetteParentProcess {
     }
 
     this._enabled = value;
-    lazy.logger.info(`Marionette enabled`);
+    lazy.logger.info(value ? "Marionette enabled" : "Marionette disabled");
   }
 
   get running() {
@@ -174,8 +175,8 @@ class MarionetteParentProcess {
         Services.obs.addObserver(this, "before-cancel-download-prompt");
         Services.obs.addObserver(this, "browser-idle-startup-tasks-finished");
         Services.obs.addObserver(this, "mail-idle-startup-tasks-finished");
-        Services.obs.addObserver(this, "quit-application");
 
+        Services.obs.addObserver(this, "quit-application");
         Services.obs.addObserver(this, "xpcom-shutdown");
         Services.obs.addObserver(this, "xpcom-shutdown-threads");
 
@@ -246,6 +247,8 @@ class MarionetteParentProcess {
       return;
     }
 
+    lazy.logger.debug("Initializing Marionette");
+
     try {
       this.server = new lazy.TCPListener(lazy.MarionettePrefs.port);
       await this.server.start();
@@ -275,6 +278,84 @@ class MarionetteParentProcess {
         `Failed to create ${this._activePortPath} (${e.message})`
       );
     }
+  }
+
+  /**
+   * Start Marionette at runtime, unless it was already enabled via command line
+   * arguments.
+   *
+   * @returns {number}
+   *     The port on which Marionette was started. -1 if it could not be started.
+   */
+  async startAtRuntime() {
+    if (this.running) {
+      lazy.logger.debug(
+        `Start aborted, Marionette already running (running=${this.running})`
+      );
+      return -1;
+    }
+
+    if (!lazy.AppInfo.isFirefox) {
+      throw new Error("Marionette start is only supported for Firefox Desktop");
+    }
+
+    lazy.logger.debug("Starting Marionette");
+
+    // Make sure the application window is ready.
+    const win = Services.wm.getMostRecentBrowserWindow();
+    if (win && win.gBrowserInit.idleTasksFinished) {
+      lazy.logger.debug("Waiting for gBrowserInit.idleTasksFinished");
+
+      await win.gBrowserInit.idleTasksFinished;
+
+      // Explicitly resolve() browserStartupFinished because in most cases the
+      // startup should already be done at this point and we can't monitor the
+      // observer notification.
+      this.#browserStartupFinished.resolve();
+    } else {
+      throw new Error(
+        "Could not start Marionette dynamically with no window available"
+      );
+    }
+
+    if (Services.startup.startingUp) {
+      throw new Error(
+        "Could not start remote agent dynamically, application window still starting up"
+      );
+    }
+
+    // Enable marionette explicitly, the `running` flag is inferred from the
+    // server status.
+    this.enabled = true;
+
+    Services.obs.addObserver(this, "quit-application");
+    Services.obs.addObserver(this, "xpcom-shutdown");
+    Services.obs.addObserver(this, "xpcom-shutdown-threads");
+
+    try {
+      await this.init();
+    } catch (e) {
+      throw Error(`Unable to start Marionette: ${e}`);
+    }
+
+    return this.server.port;
+  }
+
+  /**
+   * Stop Marionette during runtime. This entry point is only meant to be
+   * called if Marionette was started via startAtRuntime.
+   */
+  async stopAtRuntime() {
+    await this.uninit();
+
+    Services.obs.removeObserver(this, "quit-application");
+    Services.obs.removeObserver(this, "xpcom-shutdown");
+    Services.obs.removeObserver(this, "xpcom-shutdown-threads");
+
+    // Note: directly flip the private _enabled property here, as set enabled()
+    // prevents flipping the flag back to false and changing this breaks tests
+    // relying on in-app restarts.
+    this._enabled = false;
   }
 
   async uninit() {
