@@ -993,7 +993,7 @@ add_task(async function test_tracker_count_shown_glean_event_return_visit() {
   // Add a past visit so that #markFirstVisit treats this as a return visit
   // (it only counts visits older than 20 seconds).
   await PlacesTestUtils.addVisits({
-    // eslint-disable-next-line @microsoft/sdl/no-insecure-url
+    // eslint-disable-next-line sdl/no-insecure-url
     uri: "http://tracking.example.org/",
     visitDate: new Date(Date.now() - 60 * 1000),
   });
