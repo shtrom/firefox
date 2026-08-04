@@ -33,7 +33,7 @@
   --urlbarView-rich-search-suggestion-icon-border-radius: var(--border-radius-small);
   --urlbarView-top-pick-icon-size: 58px;
   --urlbarView-top-pick-icon-border-radius: calc(
-    var(--urlbarView-row-border-radius) - min(var(--urlbarView-row-padding-block), var(--urlbarView-row-padding-inline))
+    var(--urlbarView-row-border-radius) - min(var(--urlbarview-row-padding-block), var(--urlbarView-row-padding-inline))
   );
 
   /* Icon margin-end not taking into account the size of the icon */
