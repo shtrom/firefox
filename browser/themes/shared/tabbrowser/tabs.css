@@ -2506,6 +2506,15 @@ tab-group {
   padding: 0 calc(var(--tab-inline-padding) - var(--tab-inner-inline-margin));
   width: var(--tab-collapsed-background-width);
   margin-inline: var(--tab-inner-inline-margin);
+  position: relative;
+
+  /* Extend the click target across the inline margins (Fitts's law) */
+  &::before {
+    content: "";
+    position: absolute;
+    block-size: 100%;
+    inset-inline: calc(-1 * var(--tab-inner-inline-margin));
+  }
 
   #tabbrowser-tabs[orient="vertical"]:not([expanded]) & > .toolbarbutton-text {
     display: none;
