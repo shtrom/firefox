@@ -86,9 +86,6 @@ tags = "os_integration"
 ["browser_bookmark_menu_ctrl_click.js"]
 
 ["browser_bookmark_popup.js"]
-skip-if = [
-  "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && opt && nova", # Bug 2057847
-]
 
 ["browser_bookmark_private_window.js"]
 skip-if = [
