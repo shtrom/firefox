@@ -628,13 +628,6 @@ customElements.setElementCreationCallback("webrtc-preview", () => {
   );
 });
 
-customElements.setElementCreationCallback("sync-promo", () => {
-  ChromeUtils.importESModule(
-    "chrome://browser/content/customizableui/sync-promo.mjs",
-    { global: "current" }
-  );
-});
-
 customElements.setElementCreationCallback(
   "login-doorhanger-username-field",
   () => {

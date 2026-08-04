@@ -132,8 +132,8 @@ add_task(async function test_remove_promo_from_prerendered_tab_if_blocked() {
   win.openTrustedLinkIn(win.BROWSER_NEW_TAB_URL, "tabshifted");
 
   // Block the promo in tab 1
-  await clickPromoDismissButton(tab1);
   await SpecialPowers.spawn(tab1, [selectors], async function (promo) {
+    content.document.querySelector(promo.dismissButton).click();
     await ContentTaskUtils.waitForCondition(() => {
       return !content.document.querySelector(promo.container);
     }, "The promo container is removed.");

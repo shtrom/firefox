@@ -5,11 +5,6 @@
 import { html } from "../vendor/lit.all.mjs";
 import { MozLitElement } from "../lit-utils.mjs";
 
-// eslint-disable-next-line import/no-unassigned-import
-import "chrome://global/content/elements/moz-button.mjs";
-
-window.MozXULElement?.insertFTLIfNeeded("toolkit/global/mozPromo.ftl");
-
 /**
  * A promotional callout element.
  *
@@ -23,16 +18,12 @@ window.MozXULElement?.insertFTLIfNeeded("toolkit/global/mozPromo.ftl");
  * @property {string} imageAlignment - How the image should be aligned. Can be "start", "end", "center".
  * @property {string} imageWidth - How big the image is sized. Can be "default", "small" or "large".
  * @property {string} imageDisplay - Whether the image touches the edge of the promo or has a little bit of padding around it. Can be "cover" or "padded".
- * @property {boolean} dismissable - Whether the promo can be dismissed.
- * @fires promo:user-dismissed
- *  Custom event indicating that the promo was dismissed by the user.
  */
 export default class MozPromo extends MozLitElement {
   static queries = {
     actionsSlot: "slot[name=actions]",
     supportLinkSlot: "slot[name=support-link]",
     actionsSupportWrapper: ".actions-and-support-link-wrapper",
-    closeButton: "moz-button.close",
   };
 
   static properties = {
@@ -43,7 +34,6 @@ export default class MozPromo extends MozLitElement {
     imageWidth: { type: String, reflect: true },
     imageAlignment: { type: String, reflect: true },
     imageDisplay: { type: String, reflect: true },
-    dismissable: { type: Boolean, reflect: true },
   };
 
   constructor() {
@@ -52,7 +42,6 @@ export default class MozPromo extends MozLitElement {
     this.imageAlignment = "start";
     this.imageWidth = "small";
     this.imageDisplay = "padded";
-    this.dismissable = false;
   }
 
   handleSlotChange() {
@@ -78,22 +67,6 @@ export default class MozPromo extends MozLitElement {
     }
     return "";
   }
-
-  closeButtonTemplate() {
-    if (this.dismissable) {
-      return html`
-        <moz-button
-          class="close"
-          type="icon ghost"
-          iconsrc="chrome://global/skin/icons/close.svg"
-          data-l10n-id="moz-promo-close-button"
-          @click=${this.dismiss}
-        ></moz-button>
-      `;
-    }
-    return "";
-  }
-
   render() {
     let imageStartAligned = this.imageAlignment == "start";
     return html` <link
@@ -115,23 +88,7 @@ export default class MozPromo extends MozLitElement {
           </p>
         </div>
         ${!imageStartAligned ? this.imageTemplate() : ""}
-        ${this.closeButtonTemplate()}
       </div>`;
-  }
-
-  dismiss() {
-    let event = new CustomEvent("promo:user-dismissed", {
-      bubbles: true,
-      cancelable: true,
-    });
-    this.dispatchEvent(event);
-    if (!event.defaultPrevented) {
-      this.close();
-    }
-  }
-
-  close() {
-    this.remove();
   }
 }
 customElements.define("moz-promo", MozPromo);

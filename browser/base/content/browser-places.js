@@ -874,7 +874,17 @@ var BookmarksEventHandler = {
         }
       }
     } else if (eventAction) {
-      gSync.handleSyncPromoAction(eventAction, "bookmarks-top-menu");
+      switch (eventAction) {
+        case "signin":
+          gSync.openFxAEmailFirstPage("bookmarks-top-menu");
+          break;
+        case "turnonsync":
+          gSync.openSyncSetupForEntryPoint("bookmarks-top-menu");
+          break;
+        case "connectdevice":
+          gSync.openConnectAnotherDevice("bookmarks-top-menu");
+          break;
+      }
     }
   },
 

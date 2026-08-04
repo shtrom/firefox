@@ -55,6 +55,12 @@ async function renderPromo({
     return false;
   }
 
+  // The dismiss handler and link click/telemetry/action dispatch are shared
+  // across both layouts; only the elements they bind to differ.
+  const dismissBtn = container.querySelector(
+    ".promo-dismiss, #nova-dismiss-btn"
+  );
+
   const onLinkClick = async event => {
     event.preventDefault();
 
@@ -72,7 +78,7 @@ async function renderPromo({
     await RPMSendQuery("SpecialMessageActionDispatch", promoButton.action);
   };
 
-  const onDismiss = () => {
+  const onDismissBtnClick = () => {
     window.ASRouterMessage({
       type: "BLOCK_MESSAGE_BY_ID",
       data: { id: messageId },
@@ -81,10 +87,8 @@ async function renderPromo({
     container.remove();
   };
 
-  if (!novaEnabled && messageId) {
-    container
-      .querySelector(".promo-dismiss")
-      ?.addEventListener("click", onDismiss, { once: true });
+  if (dismissBtn && messageId) {
+    dismissBtn.addEventListener("click", onDismissBtnClick, { once: true });
   }
 
   // Without an action the promo link does nothing, so don't show the promo.
@@ -103,8 +107,6 @@ async function renderPromo({
       promoHeader,
       promoImageLarge,
       onLinkClick,
-      onDismiss,
-      dismissable: !!messageId,
     });
   } else {
     renderLegacyPromo({
@@ -172,8 +174,6 @@ async function renderNovaPromo({
   promoHeader,
   promoImageLarge,
   onLinkClick,
-  onDismiss,
-  dismissable,
 }) {
   const promoEl = container.querySelector("#nova-promo");
   const linkEl = container.querySelector("#nova-promo-link");
@@ -183,18 +183,6 @@ async function renderNovaPromo({
   // it may not be upgraded yet. Wait for it before setting reactive properties.
   await customElements.whenDefined("moz-promo");
   await customElements.whenDefined("moz-button");
-
-  promoEl.dismissable = dismissable;
-  if (dismissable) {
-    promoEl.addEventListener(
-      "promo:user-dismissed",
-      event => {
-        event.preventDefault();
-        onDismiss();
-      },
-      { once: true }
-    );
-  }
 
   if (promoHeader) {
     promoEl.heading = await resolvePromoText(promoHeader);

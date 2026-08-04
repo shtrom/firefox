@@ -43,10 +43,17 @@ document.addEventListener(
           gSync.openSyncedTabsPanel();
           break;
         case "historyRemoteTabsPromo":
-          gSync.handleSyncPromoAction(
-            event.target.dataset.action,
-            "remote-tabs-top-menu-history"
-          );
+          switch (event.target.dataset.action) {
+            case "signin":
+              gSync.openFxAEmailFirstPage("remote-tabs-top-menu-history");
+              break;
+            case "turnonsync":
+              gSync.openSyncSetupForEntryPoint("remote-tabs-top-menu-history");
+              break;
+            case "connectdevice":
+              gSync.openConnectAnotherDevice("remote-tabs-top-menu-history");
+              break;
+          }
           break;
         case "hiddenTabsMenu":
           gTabsPanel.showHiddenTabsPanel(event, "hidden-tabs-menuitem");
