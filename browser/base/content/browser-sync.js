@@ -1290,6 +1290,12 @@ var gSync = {
 
     EnsureFxAccountsWebChannel();
 
+    // Sign-in promo shown in the app menu (main view) when signed out.
+    PanelMultiView.getViewNode(
+      document,
+      "appMenu-fxa-sign-in-promo-button"
+    ).addEventListener("click", this);
+
     let fxaPanelView = PanelMultiView.getViewNode(document, "PanelUI-fxa");
     fxaPanelView.addEventListener("ViewShowing", this);
     fxaPanelView.addEventListener("ViewHiding", this);
@@ -1620,6 +1626,11 @@ var gSync = {
         break;
       case "PanelUI-fxa-menu-sign-in-promo-button":
         this.openFxAEmailFirstPageFromFxaMenu(button);
+        break;
+      case "appMenu-fxa-sign-in-promo-button":
+        // Sign-in promo in the app menu: go to the sign-in page, close the menu.
+        this.openFxAEmailFirstPageFromFxaMenu(button);
+        PanelUI.hide();
         break;
       case "PanelUI-fxa-menu-account-signout-button":
         this.disconnect();
