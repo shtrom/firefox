@@ -2,9 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-const { getL10nIdForThemeProp } = ChromeUtils.importESModule(
-  "resource://gre/modules/addons/ThemesBundledLocalization.sys.mjs"
-);
+const { getL10nIdForThemeProp, getL10nThemeString } =
+  ChromeUtils.importESModule(
+    "resource://gre/modules/addons/ThemesBundledLocalization.sys.mjs"
+  );
 
 const PREF_NOVA_ENABLED = "browser.nova.enabled";
 const DEFAULT_THEME_ID = "default-theme@mozilla.org";
@@ -47,15 +48,33 @@ add_task(async function test_ensure_builtin_themes_are_localized() {
   };
 
   function testLocalizedThemeWrapperProperty(theme, isNovaEnabled) {
+    const expectedName = getExpectedL10nString(theme.id, "name", isNovaEnabled);
+    const expectedDescription = getExpectedL10nString(
+      theme.id,
+      "description",
+      isNovaEnabled
+    );
+
+    Assert.equal(
+      getL10nThemeString(theme.id, "name"),
+      expectedName,
+      `Got the expected bundled localized name for ${theme.id}`
+    );
+    Assert.equal(
+      getL10nThemeString(theme.id, "description"),
+      expectedDescription,
+      `Got the expected bundled localized description for ${theme.id}`
+    );
+
     Assert.equal(
       theme.name,
-      getExpectedL10nString(theme.id, "name", isNovaEnabled),
-      `Got the expected localized name for ${theme.id}`
+      expectedName,
+      `Got the expected AddonWrapper localized name for ${theme.id}`
     );
     Assert.equal(
       theme.description,
-      getExpectedL10nString(theme.id, "description", isNovaEnabled),
-      `Got the expected localized description for ${theme.id}`
+      expectedDescription,
+      `Got the expected AddonWrapper localized description for ${theme.id}`
     );
   }
 

@@ -152,12 +152,12 @@ export function getL10nIdForThemeProp(addonId, prop) {
  * AddonWrapper.
  */
 export function getL10nThemeString(addonId, prop) {
-  // TODO: Agree with Thunderbird engineering how we should allow thunderbird to
+  // TODO (Bug 2059562): Agree with Thunderbird engineering how we should allow thunderbird to
   // override or extend the mapping table for their own built-in themes localization
   // in the longer term, see their appExtensionFields.ftl file here:
   // https://searchfox.org/comm-central/rev/72b8ba0761/mail/locales/en-US/browser/appExtensionFields.ftl
   const fluentId =
-    AppConstants.MOZ_APP_NAME === "thunderbird"
+    AppConstants.MOZ_APP_NAME === "thunderbird" && addonId !== DEFAULT_THEME_ID
       ? `extension-${themeIdPrefix(addonId)}-${prop}`
       : getL10nIdForThemeProp(addonId, prop);
 
