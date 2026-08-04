@@ -597,6 +597,7 @@ class TrustPanel {
     if (this.#isAboutNetErrorPage || this.#isCertUserOverridden) {
       targetClasses.add("warning");
     }
+    const browser = gBrowser.selectedBrowser;
     if (this.#isFirstVisit) {
       targetClasses.add("first-visit");
     }
@@ -632,7 +633,6 @@ class TrustPanel {
 
     // Handle the breach animation guard (restart only on fresh URI).
     if (targetClasses.has("breached")) {
-      let browser = gBrowser.selectedBrowser;
       if (browser.lastAnimatedBreachURI !== this.#uri?.spec) {
         // This is a fresh visit: trigger the animation.
         targetClasses.add("breach-animating");
@@ -646,6 +646,18 @@ class TrustPanel {
     // the target set — keeping targetClasses the single source of truth with no
     // separate member to maintain. (chickletShown is re-toggled below.)
     let appliedIconClasses = [...icon.classList];
+
+    if (
+      !icon.classList.contains("has-blocked-trackers") &&
+      targetClasses.has("has-blocked-trackers") &&
+      browser.lastTrackerCountShownURI !== this.#uri?.spec
+    ) {
+      browser.lastTrackerCountShownURI = this.#uri?.spec;
+      Glean.trustpanel.trackerCountShown.record({
+        first_visit: targetClasses.has("first-visit"),
+      });
+    }
+
     for (let cls of appliedIconClasses) {
       if (!targetClasses.has(cls)) {
         icon.classList.remove(cls);
@@ -822,8 +834,13 @@ class TrustPanel {
     }
     // Also treat as a first visit if the tracker count has never been shown,
     // so the user gets the long-form UI even on a return visit.
+    const browser = gBrowser.selectedBrowser;
     this.#isFirstVisit =
-      rows.length === 0 || !UrlbarPrefs.get("trackerCountShown");
+      (rows.length === 0 || !UrlbarPrefs.get("trackerCountShown")) &&
+      browser.lastFirstVisitURI !== uri.spec;
+    if (this.#isFirstVisit) {
+      browser.lastFirstVisitURI = uri.spec;
+    }
     this.#updateUrlbarIcon();
   }
 
