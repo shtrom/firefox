@@ -225,6 +225,14 @@ addon-list addon-card > .addon.card {
   user-select: none;
 }
 
+.native-theme-checkbox-list {
+  margin-top: var(--space-small);
+}
+
+.native-theme-checkbox-detail {
+  margin-bottom: var(--space-small);
+}
+
 .addon-card-message,
 .update-postponed-bar {
   border-top-left-radius: 0;

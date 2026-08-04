@@ -53,6 +53,12 @@ aboutaddons-themes-picker-install-button =
 aboutaddons-themes-picker-error-message =
     .message = Couldn’t update your theme. Check your connection and try again.
 
+# Checkbox shown inside the enabled default theme's addon-card, on Linux
+# only, to opt-in/opt-out matching the GTK/system theme colors instead of
+# the built-in default theme colors.
+aboutaddons-linux-theme-colors-checkbox-label =
+    .label = Use Linux system theme
+
 ## Theme names shown in the Firefox Themes picker in about:addons and theme add-on card,
 ## and new default-theme description for the theme add-on card.
 ##
