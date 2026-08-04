@@ -120,8 +120,6 @@ class ModuleLoadRequest final : public ScriptLoadRequest {
     mErroredLoadingImports = true;
   }
 
-  bool IsErroredLoadingImports() const { return mErroredLoadingImports; }
-
   void UpdateReferrerPolicy(mozilla::dom::ReferrerPolicy aReferrerPolicy) {
     FetchInfo()->UpdateReferrerPolicy(aReferrerPolicy);
   }
