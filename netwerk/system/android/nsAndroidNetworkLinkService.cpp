@@ -10,6 +10,7 @@
 #include "mozilla/Services.h"
 #include "mozilla/StaticPrefs_network.h"
 #include "mozilla/java/GeckoAppShellWrappers.h"
+#include "mozilla/java/GeckoNetworkManagerWrappers.h"
 #include "mozilla/jni/Utils.h"
 #include "nsIObserverService.h"
 #include "nsServiceManagerUtils.h"
@@ -183,7 +184,8 @@ nsAndroidNetworkLinkService::GetPlatformDNSIndications(
 
   // When Android has a private DNS (DNS-over-TLS) provider active, the system
   // resolver may return split-horizon results, so we should not enable DoH.
-  if (java::GeckoAppShell::IsPrivateDnsActive()) {
+  // GeckoNetworkManager keeps this value up to date via a network callback.
+  if (java::GeckoNetworkManager::IsPrivateDnsActive()) {
     *aPlatformDNSIndications |= nsINetworkLinkService::PRIVATE_DNS_DETECTED;
   }
 
