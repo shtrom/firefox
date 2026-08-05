@@ -14,8 +14,6 @@ ChromeUtils.defineESModuleGetters(lazy, {
   Subprocess: "resource://gre/modules/Subprocess.sys.mjs",
   WindowsSetDefaultRedirect:
     "moz-src:///browser/components/shell/WindowsSetDefaultRedirect.sys.mjs",
-  WindowsVersionInfo:
-    "resource://gre/modules/components-utils/WindowsVersionInfo.sys.mjs",
 });
 
 XPCOMUtils.defineLazyServiceGetter(
@@ -429,10 +427,13 @@ let ShellServiceInternal = {
     Glean.browser.setDefaultError[setAsDefaultError ? "true" : "false"].add();
   },
 
+  /**
+   * Returns whether the current operating system is Windows 11.
+   *
+   * This is used so it can be mocked out in tests.
+   */
   _isWindows11() {
-    return (
-      lazy.WindowsVersionInfo.get({ throwOnError: false }).buildNumber >= 22000
-    );
+    return Services.sysinfo.isWindows10BuildOrLater(22000);
   },
 
   /**
