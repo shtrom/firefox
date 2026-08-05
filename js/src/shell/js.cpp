@@ -6125,6 +6125,51 @@ static bool ModuleLoadRequestedModules(JSContext* cx, unsigned argc,
   return JS_WrapValue(cx, args.rval());
 }
 
+static bool ModuleLoadResolved(JSContext* cx, HandleValue hostDefined) {
+  RootedObject module(cx, &hostDefined.toObject());
+  return JS::ModuleLink(cx, module);
+}
+
+static bool ModuleLoadRejected(JSContext* cx, HandleValue hostDefined,
+                               HandleValue error) {
+  JS_SetPendingException(cx, error);
+  return false;
+}
+
+static bool ModuleLoadAndLink(JSContext* cx, unsigned argc, Value* vp) {
+  CallArgs args = CallArgsFromVp(argc, vp);
+
+  if (args.length() != 1 || !args[0].isObject()) {
+    JS_ReportErrorNumberASCII(cx, GetErrorMessage, nullptr, JSMSG_INVALID_ARGS,
+                              "moduleLoadAndLink");
+    return false;
+  }
+
+  RootedObject object(cx, UncheckedUnwrap(&args[0].toObject()));
+  if (!object->is<ShellModuleObjectWrapper>()) {
+    JS_ReportErrorNumberASCII(cx, GetErrorMessage, nullptr, JSMSG_INVALID_ARGS,
+                              "moduleLoadAndLink");
+    return false;
+  }
+
+  if (!CheckModuleFunctionAllowed(cx)) {
+    return false;
+  }
+
+  AutoRealm ar(cx, object);
+
+  Rooted<ModuleObject*> module(cx,
+                               object->as<ShellModuleObjectWrapper>().get());
+  RootedValue hostDefined(cx, ObjectValue(*module));
+  if (!JS::LoadRequestedModules(cx, module, hostDefined, ModuleLoadResolved,
+                                ModuleLoadRejected)) {
+    return false;
+  }
+
+  args.rval().setUndefined();
+  return true;
+}
+
 static bool ModuleEvaluate(JSContext* cx, unsigned argc, Value* vp) {
   CallArgs args = CallArgsFromVp(argc, vp);
 
@@ -10194,6 +10239,12 @@ static const JSFunctionSpecWithHelp shell_functions[] = {
 "loadRequestedModules(moduleOjbect)",
 "  Load a module graph, performing the spec's LoadRequestedModules method, and\n"
 "  return its promise."),
+
+    JS_FN_HELP("moduleLoadAndLink", ModuleLoadAndLink, 1, 0,
+"moduleLoadAndLink(moduleOjbect)",
+"  Load a module graph and link it, performing the spec's LoadRequestedModules\n"
+"  method followed by Link.  The shell's module loader is synchronous, so this\n"
+"  reports loading failures by throwing rather than by returning a promise."),
 
     JS_FN_HELP("moduleEvaluate", ModuleEvaluate, 1, 0,
 "moduleEvaluate(moduleOjbect)",
