@@ -1261,15 +1261,17 @@ void MacroAssembler::spectreZeroRegister(Condition cond, Register scratch,
 // Memory access primitives.
 FaultingCodeRange MacroAssembler::storeDouble(FloatRegister src,
                                               const Address& dest) {
-  FaultingCodeRange fcr = FaultingCodeRange(currentOffset());
+  auto before = currentOffset();
   vmovsd(src, dest);
-  return fcr;
+  auto after = currentOffset();
+  return FaultingCodeRange(before, after);
 }
 FaultingCodeRange MacroAssembler::storeDouble(FloatRegister src,
                                               const BaseIndex& dest) {
-  FaultingCodeRange fcr = FaultingCodeRange(currentOffset());
+  auto before = currentOffset();
   vmovsd(src, dest);
-  return fcr;
+  auto after = currentOffset();
+  return FaultingCodeRange(before, after);
 }
 FaultingCodeRange MacroAssembler::storeDouble(FloatRegister src,
                                               const Operand& dest) {
@@ -1285,15 +1287,17 @@ FaultingCodeRange MacroAssembler::storeDouble(FloatRegister src,
 
 FaultingCodeRange MacroAssembler::storeFloat32(FloatRegister src,
                                                const Address& dest) {
-  FaultingCodeRange fcr = FaultingCodeRange(currentOffset());
+  auto before = currentOffset();
   vmovss(src, dest);
-  return fcr;
+  auto after = currentOffset();
+  return FaultingCodeRange(before, after);
 }
 FaultingCodeRange MacroAssembler::storeFloat32(FloatRegister src,
                                                const BaseIndex& dest) {
-  FaultingCodeRange fcr = FaultingCodeRange(currentOffset());
+  auto before = currentOffset();
   vmovss(src, dest);
-  return fcr;
+  auto after = currentOffset();
+  return FaultingCodeRange(before, after);
 }
 FaultingCodeRange MacroAssembler::storeFloat32(FloatRegister src,
                                                const Operand& dest) {
@@ -1312,18 +1316,20 @@ FaultingCodeRange MacroAssembler::storeFloat16(FloatRegister src,
                                                Register scratch) {
   vmovd(src, scratch);
 
-  FaultingCodeRange fcr = FaultingCodeRange(currentOffset());
+  auto before = currentOffset();
   movw(scratch, Operand(dest));
-  return fcr;
+  auto after = currentOffset();
+  return FaultingCodeRange(before, after);
 }
 FaultingCodeRange MacroAssembler::storeFloat16(FloatRegister src,
                                                const BaseIndex& dest,
                                                Register scratch) {
   vmovd(src, scratch);
 
-  FaultingCodeRange fcr = FaultingCodeRange(currentOffset());
+  auto before = currentOffset();
   movw(scratch, Operand(dest));
-  return fcr;
+  auto after = currentOffset();
+  return FaultingCodeRange(before, after);
 }
 
 void MacroAssembler::memoryBarrier(MemoryBarrier barrier) {

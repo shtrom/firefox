@@ -635,15 +635,17 @@ class MacroAssemblerX86 : public MacroAssemblerX86Shared {
   void movePtr(wasm::SymbolicAddress imm, Register dest) { mov(imm, dest); }
   void movePtr(ImmGCPtr imm, Register dest) { movl(imm, dest); }
   FaultingCodeRange loadPtr(const Address& address, Register dest) {
-    FaultingCodeRange fcr = FaultingCodeRange(currentOffset());
+    auto before = currentOffset();
     movl(Operand(address), dest);
-    return fcr;
+    auto after = currentOffset();
+    return FaultingCodeRange(before, after);
   }
   void loadPtr(const Operand& src, Register dest) { movl(src, dest); }
   FaultingCodeRange loadPtr(const BaseIndex& src, Register dest) {
-    FaultingCodeRange fcr = FaultingCodeRange(currentOffset());
+    auto before = currentOffset();
     movl(Operand(src), dest);
-    return fcr;
+    auto after = currentOffset();
+    return FaultingCodeRange(before, after);
   }
   void loadPtr(AbsoluteAddress address, Register dest) {
     movl(Operand(address), dest);
@@ -655,19 +657,22 @@ class MacroAssemblerX86 : public MacroAssemblerX86Shared {
     movl(Operand(address), dest);
   }
   FaultingCodeRangePair load64(const Address& address, Register64 dest) {
-    FaultingCodeRange fcr1, fcr2;
     bool highBeforeLow = address.base == dest.low;
+    auto before = currentOffset();
+    auto mid = before;
     if (highBeforeLow) {
-      fcr1 = FaultingCodeRange(currentOffset());
       movl(Operand(HighWord(address)), dest.high);
-      fcr2 = FaultingCodeRange(currentOffset());
+      mid = currentOffset();
       movl(Operand(LowWord(address)), dest.low);
     } else {
-      fcr1 = FaultingCodeRange(currentOffset());
       movl(Operand(LowWord(address)), dest.low);
-      fcr2 = FaultingCodeRange(currentOffset());
+      mid = currentOffset();
       movl(Operand(HighWord(address)), dest.high);
     }
+    auto after = currentOffset();
+    MOZ_ASSERT(before < mid);
+    FaultingCodeRange fcr1 = FaultingCodeRange(before, mid);
+    FaultingCodeRange fcr2 = FaultingCodeRange(mid, after);
     return FaultingCodeRangePair(fcr1, fcr2);
   }
   FaultingCodeRangePair load64(const BaseIndex& address, Register64 dest) {
@@ -675,19 +680,22 @@ class MacroAssemblerX86 : public MacroAssemblerX86Shared {
     MOZ_RELEASE_ASSERT(
         !((address.base == dest.low || address.base == dest.high) &&
           (address.index == dest.low || address.index == dest.high)));
-    FaultingCodeRange fcr1, fcr2;
     bool highBeforeLow = address.base == dest.low || address.index == dest.low;
+    auto before = currentOffset();
+    auto mid = before;
     if (highBeforeLow) {
-      fcr1 = FaultingCodeRange(currentOffset());
       movl(Operand(HighWord(address)), dest.high);
-      fcr2 = FaultingCodeRange(currentOffset());
+      mid = currentOffset();
       movl(Operand(LowWord(address)), dest.low);
     } else {
-      fcr1 = FaultingCodeRange(currentOffset());
       movl(Operand(LowWord(address)), dest.low);
-      fcr2 = FaultingCodeRange(currentOffset());
+      mid = currentOffset();
       movl(Operand(HighWord(address)), dest.high);
     }
+    auto after = currentOffset();
+    MOZ_ASSERT(before < mid);
+    FaultingCodeRange fcr1 = FaultingCodeRange(before, mid);
+    FaultingCodeRange fcr2 = FaultingCodeRange(mid, after);
     return FaultingCodeRangePair(fcr1, fcr2);
   }
   template <typename T>
@@ -696,9 +704,10 @@ class MacroAssemblerX86 : public MacroAssemblerX86Shared {
   }
   template <typename T>
   FaultingCodeRange storePtr(ImmWord imm, T address) {
-    FaultingCodeRange fcr = FaultingCodeRange(currentOffset());
+    auto before = currentOffset();
     movl(Imm32(imm.value), Operand(address));
-    return fcr;
+    auto after = currentOffset();
+    return FaultingCodeRange(before, after);
   }
   template <typename T>
   void storePtr(ImmPtr imm, T address) {
@@ -709,14 +718,16 @@ class MacroAssemblerX86 : public MacroAssemblerX86Shared {
     movl(imm, Operand(address));
   }
   FaultingCodeRange storePtr(Register src, const Address& address) {
-    FaultingCodeRange fcr = FaultingCodeRange(currentOffset());
+    auto before = currentOffset();
     movl(src, Operand(address));
-    return fcr;
+    auto after = currentOffset();
+    return FaultingCodeRange(before, after);
   }
   FaultingCodeRange storePtr(Register src, const BaseIndex& address) {
-    FaultingCodeRange fcr = FaultingCodeRange(currentOffset());
+    auto before = currentOffset();
     movl(src, Operand(address));
-    return fcr;
+    auto after = currentOffset();
+    return FaultingCodeRange(before, after);
   }
   void storePtr(Register src, const Operand& dest) { movl(src, dest); }
   void storePtr(Register src, AbsoluteAddress address) {
@@ -730,10 +741,13 @@ class MacroAssemblerX86 : public MacroAssemblerX86Shared {
   }
   template <typename T>
   FaultingCodeRangePair store64(Register64 src, const T& address) {
-    FaultingCodeRange fcr1 = FaultingCodeRange(currentOffset());
+    auto before = currentOffset();
     movl(src.low, Operand(LowWord(address)));
-    FaultingCodeRange fcr2 = FaultingCodeRange(currentOffset());
+    auto mid = currentOffset();
     movl(src.high, Operand(HighWord(address)));
+    auto after = currentOffset();
+    FaultingCodeRange fcr1 = FaultingCodeRange(before, mid);
+    FaultingCodeRange fcr2 = FaultingCodeRange(mid, after);
     return FaultingCodeRangePair(fcr1, fcr2);
   }
   void store64(Imm64 imm, Address address) {
