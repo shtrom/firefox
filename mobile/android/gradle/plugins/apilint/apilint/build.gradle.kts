@@ -5,10 +5,8 @@
 import org.gradle.api.tasks.testing.Test
 
 plugins {
-    id("com.gradle.plugin-publish") version "1.3.1"
     `java-gradle-plugin`
     kotlin("jvm") version embeddedKotlinVersion
-    `maven-publish`
 }
 
 sourceSets {
@@ -23,14 +21,10 @@ sourceSets {
 }
 
 gradlePlugin {
-    website = "https://github.com/mozilla-mobile/gradle-apilint"
-    vcsUrl = "https://github.com/mozilla-mobile/gradle-apilint"
-
     plugins.register("apilintPlugin") {
         id = "org.mozilla.apilint"
         displayName = "API Lint plugin"
         description = "Tracks the API of an Android library and helps maintain backward compatibility."
-        tags.set(listOf("api", "lint", "mozilla", "compatibility"))
         implementationClass = "org.mozilla.apilint.ApiLintPlugin"
     }
 }

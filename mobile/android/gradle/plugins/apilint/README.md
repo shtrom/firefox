@@ -17,19 +17,11 @@ the local state of the project
 every time the api.txt file changes.
 
 ## Usage
+The plugin is built from this directory as an included build, so it needs no
+repository or classpath declaration. Apply it by id:
+
 ##### build.gradle
 ```gradle
-buildscript {
-    repositories {
-        maven {
-            url "https://plugins.gradle.org/m2/"
-        }
-    }
-    dependencies {
-        classpath 'org.mozilla.apilint:apilint:$apilintVersion'
-    }
-}
-
 apply plugin: 'org.mozilla.apilint'
 apiLint.packageFilter = 'org.your.package.api'
 ```
