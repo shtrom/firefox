@@ -1317,11 +1317,8 @@ void Assembler::retarget(Label* label, Label* target) {
 }
 
 bool Assembler::appendRawCode(const uint8_t* code, size_t numBytes) {
-  if (m_buffer.oom()) {
-    return false;
-  }
-  m_buffer.putBytes(numBytes, code);
-  return !m_buffer.oom();
+  flush();
+  return m_buffer.appendRawCode(code, numBytes);
 }
 
 void Assembler::ToggleCall(CodeLocationLabel inst_, bool enabled) {

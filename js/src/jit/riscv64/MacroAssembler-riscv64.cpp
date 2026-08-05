@@ -4046,7 +4046,8 @@ void MacroAssembler::floorFloat32ToInt32(FloatRegister src, Register dest,
   }
 }
 
-void MacroAssembler::flush() {}
+void MacroAssembler::flush() { Assembler::flush(); }
+
 void MacroAssembler::loadStoreBuffer(Register ptr, Register buffer) {
   ma_and(buffer, ptr, Imm32(int32_t(~gc::ChunkMask)));
   loadPtr(Address(buffer, gc::ChunkStoreBufferOffset), buffer);

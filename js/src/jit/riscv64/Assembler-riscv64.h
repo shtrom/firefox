@@ -223,9 +223,11 @@ class Assembler : public AssemblerShared,
 
   void finish() {
     MOZ_ASSERT(!isFinished);
+    flush();
     isFinished = true;
   }
 
+  void flush() { m_buffer.flushPool(); }
   void flushBuffer() { m_buffer.flushPool(); }
 
   void enterNoPool(size_t maxInst, size_t maxNewDeadlines = 0) {
