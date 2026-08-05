@@ -8,8 +8,6 @@ const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   MozAdsClientBuilder:
     "moz-src:///toolkit/components/uniffi-bindgen-gecko-js/components/generated/RustAdsClient.sys.mjs",
-  MozAdsContextIdProvider:
-    "moz-src:///toolkit/components/uniffi-bindgen-gecko-js/components/generated/RustAdsClient.sys.mjs",
   MozAdsEnvironment:
     "moz-src:///toolkit/components/uniffi-bindgen-gecko-js/components/generated/RustAdsClient.sys.mjs",
   MozAdsRequestOptions:
@@ -40,9 +38,6 @@ const PREF_OHTTP_CONFIG_URL =
  */
 export class _AdsClient {
   #client;
-
-  // Bug 2059281: remove once the ads-client owns context_id directly.
-  #contextId = "";
 
   /**
    * @param {object} prefValues The New Tab store's Prefs.values.
@@ -79,16 +74,6 @@ export class _AdsClient {
       flags: new Map(Object.entries(prefValues?.adsBackendConfig || {})),
       ohttp: this.#configureOhttp(),
     });
-  }
-
-  /**
-   * Refresh the cached context id the provider returns synchronously.
-   * Fed by AdsFeed from ContextId.request().
-   *
-   * @param {string} contextId
-   */
-  updateContextId(contextId) {
-    this.#contextId = contextId;
   }
 
   /**
@@ -161,19 +146,9 @@ export class _AdsClient {
         }
       }
 
-      // Bug 2059281: remove this provider once the ads-client owns context_id directly.
-      // contextId() is a Sync foreign-callback returning the cached context id which AdsFeed refreshes.
-      const getContextId = () => this.#contextId;
-      class HntContextIdProvider extends lazy.MozAdsContextIdProvider {
-        contextId() {
-          return getContextId();
-        }
-      }
-
       return lazy.MozAdsClientBuilder.init()
         .environment(lazy.MozAdsEnvironment.PROD)
         .telemetry(new LoggerTelemetry())
-        .contextIdProvider(new HntContextIdProvider())
         .build();
     } catch (error) {
       console.error("MozAdsClient failed to initialize", error);
