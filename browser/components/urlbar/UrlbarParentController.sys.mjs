@@ -1661,6 +1661,34 @@ export class TelemetryEvent {
     }
     lazy.logger.info(`${metric} event:`, eventInfo);
     Glean.urlbar[metric].record(eventInfo);
+
+    if (metric === "engagement" && eventInfo.search_mode) {
+      this.#maybeRecordSearchModeUrlLikeQuery();
+    }
+  }
+
+  /**
+   * Records the `urlbar.searchmode.url_like_query` rate for a search-mode
+   * engagement. The denominator counts engagements whose heuristic result is a
+   * search result -- the only case where changing the behavior to navigate
+   * instead of search could take effect -- and the numerator counts those whose
+   * typed string parses as a URL per URIFixup. Local search modes have no search
+   * heuristic result and are therefore excluded.
+   */
+  #maybeRecordSearchModeUrlLikeQuery() {
+    let { queryContext } = this._controller._lastQueryContextWrapper || {};
+    let heuristicResult = queryContext?.heuristicResult;
+    if (
+      !heuristicResult?.heuristic ||
+      heuristicResult.type !== lazy.UrlbarShared.RESULT_TYPE.SEARCH
+    ) {
+      return;
+    }
+    Glean.urlbarSearchmode.urlLikeQuery.addToDenominator(1);
+    let { fixupInfo } = queryContext;
+    if (fixupInfo?.href && !fixupInfo.isSearch) {
+      Glean.urlbarSearchmode.urlLikeQuery.addToNumerator(1);
+    }
   }
 
   /**

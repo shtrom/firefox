@@ -1226,6 +1226,7 @@ interface GleanImpl {
     topsitesUrlbar: Record<string, GleanCounter>;
     touchbar: Record<string, GleanCounter>;
     typed: Record<string, GleanCounter>;
+    urlLikeQuery: GleanRate;
   }
 
   sessionRestore: {
