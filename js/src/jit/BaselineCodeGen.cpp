@@ -941,9 +941,11 @@ static void EmitCallFrameIsDebuggeeCheck(MacroAssembler& masm) {
 }
 
 template <>
-bool BaselineCompilerCodeGen::emitIsDebuggeeCheck() {
+template <typename F>
+bool BaselineCompilerCodeGen::emitIsDebuggeeCheck(const F& emitAfterCall) {
   if (handler.compileDebugInstrumentation()) {
     EmitCallFrameIsDebuggeeCheck(masm);
+    emitAfterCall();
   }
   return true;
 }
@@ -966,7 +968,8 @@ class AutoForbidNopsForToggledJump {
 };
 
 template <>
-bool BaselineInterpreterCodeGen::emitIsDebuggeeCheck() {
+template <typename F>
+bool BaselineInterpreterCodeGen::emitIsDebuggeeCheck(const F& emitAfterCall) {
   // Use a toggled jump to call FrameIsDebuggeeCheck only if the debugger is
   // enabled.
   //
@@ -981,6 +984,7 @@ bool BaselineInterpreterCodeGen::emitIsDebuggeeCheck() {
     saveInterpreterPCReg();
     EmitCallFrameIsDebuggeeCheck(masm);
     restoreInterpreterPCReg();
+    emitAfterCall();
   }
   masm.bind(&skipCheck);
   return handler.addDebugInstrumentationOffset(toggleOffset);
@@ -6996,7 +7000,7 @@ bool BaselineCodeGen<Handler>::emitPrologue() {
 
   // When compiling with Debugger instrumentation, set the debuggeeness of
   // the frame before any operation that can call into the VM.
-  if (!emitIsDebuggeeCheck()) {
+  if (!emitIsDebuggeeCheck([]() {})) {
     return false;
   }
 

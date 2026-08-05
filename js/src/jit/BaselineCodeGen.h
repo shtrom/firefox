@@ -281,7 +281,11 @@ class BaselineCodeGen {
   void emitGeneratorResumePrologueBody();
 
   void emitInitFrameFields(Register nonFunctionEnv);
-  [[nodiscard]] bool emitIsDebuggeeCheck();
+  // Sets the frame's DEBUGGEE flag if the script is a debuggee script. This
+  // clobbers volatile registers, so emitAfterCall is called on the path that
+  // actually calls into C++ to let the caller restore registers.
+  template <typename F>
+  [[nodiscard]] bool emitIsDebuggeeCheck(const F& emitAfterCall);
   void emitInitializeLocals();
 
   void emitProfilerEnterFrame();
