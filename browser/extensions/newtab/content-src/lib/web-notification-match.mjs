@@ -62,3 +62,19 @@ export function getNotificationIdsForUrl(state, url) {
   const key = notificationKeyForUrl(url);
   return (key && state.WebNotifications.byOrigin[key]) || EMPTY_IDS;
 }
+
+/**
+ * Whether to render any web notifications surface. The feature has to exist for
+ * this profile (`system.showWebNotifications`, the gate that also decides
+ * whether the customize toggle is offered at all) and the user has to want it
+ * (`showWebNotifications`, what that toggle writes).
+ *
+ * @param {object} state Newtab Redux state.
+ * @returns {boolean}
+ */
+export function isWebNotificationsEnabled(state) {
+  const prefs = state.Prefs.values;
+  return Boolean(
+    prefs["system.showWebNotifications"] && prefs.showWebNotifications
+  );
+}

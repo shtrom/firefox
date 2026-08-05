@@ -15,6 +15,7 @@ import {
   TOP_SITES_SOURCE,
 } from "./TopSitesConstants";
 import { PinnedAreaOverlay } from "./PinnedAreaOverlay.jsx";
+import { TopSitesHoverCard } from "content-src/components/TopSitesHoverCard/TopSitesHoverCard";
 import { LinkMenu } from "content-src/components/LinkMenu/LinkMenu";
 import { ImpressionStats } from "../DiscoveryStreamImpressionStats/ImpressionStats";
 import React from "react";
@@ -435,6 +436,7 @@ export class TopSiteLink extends React.PureComponent {
           </a>
           {children}
           {impressionStats}
+          <TopSitesHoverCard link={link} />
         </div>
         {this.props.addButton}
       </li>
