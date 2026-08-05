@@ -54,4 +54,4 @@ ac_add_options --enable-artifact-builds
 [remote/ in central]: https://searchfox.org/firefox-main/source/remote
 [mozconfig]: /build/buildsystem/mozconfigs.md
 [artifact builds]: /contributing/build/artifact_builds.md
-[Marionette]: /testing/marionette/index.md
+[Marionette]: /remote/marionette/index.md

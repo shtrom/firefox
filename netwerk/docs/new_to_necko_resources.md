@@ -60,7 +60,7 @@ should get familiar with.
 [idl]: /xpcom/xpidl.html
 [ipc]: /ipc/index.html
 [ipdl]: /ipc/ipdl.html
-[marionette]: /testing/marionette/index.html
+[marionette]: /remote/marionette/index.md
 [mochitest]: /testing/mochitest-plain/index.html
 [nspr]: https://firefox-source-docs.mozilla.org/nspr/about_nspr.html?highlight=nspr
 [nss]: https://firefox-source-docs.mozilla.org/security/nss/legacy/faq/index.html

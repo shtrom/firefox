@@ -69,7 +69,6 @@ categories:
         - testing/ci-configs
         - testing/browser-chrome
         - testing/chrome-tests
-        - testing/marionette
         - testing/geckodriver
         - testing/test-verification
         - testing/webrender
@@ -126,7 +125,8 @@ redirects:
     setup/getting_set_up.html: contributing/contributing_to_mozilla.html
     taskcluster/taskcluster: taskcluster
     testing/geckodriver/geckodriver: testing/geckodriver
-    testing/marionette/marionette: testing/marionette
+    testing/marionette/marionette: remote/marionette
+    testing/marionette: remote/marionette
     toolkit/components/telemetry/telemetry: toolkit/components/telemetry
     tools/compare-locales/index.html: build/buildsystem/locales.html
     tools/docs/index.html: tools/moztreedocs/index.html

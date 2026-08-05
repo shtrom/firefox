@@ -227,7 +227,7 @@ we use the `telemetry-tests-client` suite in
 For more information on this suite, look to
 [Firefox Telemetry's Test Documentation](https://firefox-source-docs.mozilla.org/toolkit/components/telemetry/internals/tests.html#integration-tests-telemetry-tests-client-and-telemetry-integration-tests)
 and
-[Marionette's Documentation](/testing/marionette/Testing.md).
+[Marionette's Documentation](/remote/marionette/Testing.md).
 
 To run these integration tests, run:
 `./mach telemetry-tests-client toolkit/components/telemetry/tests/marionette/tests/client/`
