@@ -7,6 +7,8 @@ const PREF_NAME = "browser.link.open_newwindow.override.external";
 const PREF_VALUE_FEATURE_ON = Ci.nsIBrowserDOMWindow.OPEN_NEWTAB_AFTER_CURRENT;
 const PREF_VALUE_FEATURE_OFF = Ci.nsIBrowserDOMWindow.OPEN_NEWTAB_BACKGROUND;
 
+const NOVA_PREF = "browser.nova.enabled";
+
 // Bookkeeping prefs written by other idle-daily observers, reset below so this
 // test doesn't leak state into the rest of its chunk.
 const COLLATERAL_PREFS = [
@@ -14,15 +16,18 @@ const COLLATERAL_PREFS = [
   "privacy.purge_trackers.date_in_cookie_database",
 ];
 
-add_setup(async function () {
+async function resetTelemetry() {
   await Services.fog.testFlushAllChildren();
   Services.fog.testResetFOG();
+}
+
+add_setup(async function () {
+  await resetTelemetry();
   registerCleanupFunction(async () => {
     for (let pref of COLLATERAL_PREFS) {
       Services.prefs.clearUserPref(pref);
     }
-    await Services.fog.testFlushAllChildren();
-    Services.fog.testResetFOG();
+    await resetTelemetry();
   });
 });
 
@@ -77,4 +82,37 @@ add_task(async function test_idleDailyRerecordsPrefValues() {
   );
 
   await SpecialPowers.popPrefEnv();
+});
+
+/**
+ * browser.nova.enabled is reported on the same schedule, so that we can tell
+ * how many people turn the Nova redesign off once it is enabled by default.
+ */
+add_task(async function test_idleDailyRecordsNovaEnabled() {
+  // The task above already fired idle-daily, so clear that value: otherwise the
+  // first iteration below could pass without anything having been recorded.
+  await resetTelemetry();
+  Assert.equal(
+    Glean.nova.enabled.testGetValue(),
+    null,
+    "the metric should start out unset"
+  );
+
+  for (let novaEnabled of [true, false]) {
+    await SpecialPowers.pushPrefEnv({ set: [[NOVA_PREF, novaEnabled]] });
+
+    Services.obs.notifyObservers(null, "idle-daily");
+
+    await TestUtils.waitForCondition(
+      () => Glean.nova.enabled.testGetValue() === novaEnabled,
+      `wait for idle-daily to record browser.nova.enabled=${novaEnabled}`
+    );
+    Assert.equal(
+      Glean.nova.enabled.testGetValue(),
+      novaEnabled,
+      `idle-daily should have recorded browser.nova.enabled=${novaEnabled}`
+    );
+
+    await SpecialPowers.popPrefEnv();
+  }
 });

@@ -537,7 +537,7 @@ export let BrowserUsageTelemetry = {
     Services.obs.addObserver(this, IDLE_DAILY_TOPIC, true);
 
     this._recordUITelemetry();
-    this._recordInitialPrefValues();
+    this._recordPrefValues();
     this.recordPinnedTabsCount();
 
     this._onTabsOpenedTask = new lazy.DeferredTask(
@@ -639,7 +639,7 @@ export let BrowserUsageTelemetry = {
         this._onSavedTabGroupsChange();
         break;
       case IDLE_DAILY_TOPIC:
-        this._recordInitialPrefValues();
+        this._recordPrefValues();
         break;
       case "nsPref:changed":
         switch (data) {
@@ -1276,11 +1276,13 @@ export let BrowserUsageTelemetry = {
   },
 
   /**
-   * Records the startup values of prefs that govern important browser behavior
-   * options.
+   * Records the current values of prefs that govern important browser behavior
+   * options. Runs at startup and again on each daily idle, so mid-session
+   * changes are picked up.
    */
-  _recordInitialPrefValues() {
+  _recordPrefValues() {
     this._recordOpenNextToActiveTabSettingValue();
+    this._recordNovaEnabledValue();
   },
 
   /**
@@ -1299,6 +1301,12 @@ export let BrowserUsageTelemetry = {
   _recordOpenNextToActiveTabSettingValue() {
     Glean.linkHandling.openNextToActiveTabSettingsEnabled.set(
       this._isOpenNextToActiveTabSettingEnabled()
+    );
+  },
+
+  _recordNovaEnabledValue() {
+    Glean.nova.enabled.set(
+      Services.prefs.getBoolPref("browser.nova.enabled", false)
     );
   },
 
