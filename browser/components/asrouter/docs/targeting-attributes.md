@@ -553,7 +553,7 @@ Information about the browser's top 25 frecent sites.
 
 #### Examples
 * Is any of a broad set of shopping-related domains in the user's top frecent sites with a last visit date greater than April 4th, 2018 (UNIX Epoch timestamp 1522843725924)?
-```java
+```js
 (["amazon.com", "ebay.com", "etsy.com", "walmart.com", "target.com",
   "bestbuy.com", "newegg.com", "costco.com", "homedepot.com", "wayfair.com"
   ] intersect topFrecentSites[.lastVisitDate > 1522843725924]|mapToProperty('host'))|length > 1
