@@ -11,6 +11,15 @@ const isOSX = Services.appinfo.OS === "Darwin";
 const overflowButton = document.getElementById("nav-bar-overflow-button");
 const overflowPanel = document.getElementById("widget-overflow");
 
+function promiseSizemodeChange(expectedSizemode) {
+  return BrowserTestUtils.waitForEvent(
+    window,
+    "sizemodechange",
+    false,
+    () => document.documentElement.getAttribute("sizemode") == expectedSizemode
+  );
+}
+
 // Right-click on the stop/reload button should
 // show a context menu with options to move it.
 add_task(async function home_button_context() {
@@ -134,6 +143,22 @@ add_task(async function titlebar_spacer_context() {
     return;
   }
 
+  // The pre-tabs titlebar spacer is only shown in a restored window (see
+  // browser-shared.css), but the window may start out maximized on CI
+  // machines with a small screen. Force a restored window for this check,
+  // and put the window back the way we found it afterwards.
+  let oldSizemode = document.documentElement.getAttribute("sizemode");
+  if (oldSizemode != "normal") {
+    Assert.equal(
+      oldSizemode,
+      "maximized",
+      "Should have normal or maximized window."
+    );
+    let sizemodePromise = promiseSizemodeChange("normal");
+    window.restore();
+    await sizemodePromise;
+  }
+
   let contextMenu = document.getElementById("toolbar-context-menu");
   let shownPromise = popupShown(contextMenu);
   let spacer = document.querySelector(
@@ -163,6 +188,12 @@ add_task(async function titlebar_spacer_context() {
   let hiddenPromise = popupHidden(contextMenu);
   contextMenu.hidePopup();
   await hiddenPromise;
+
+  if (oldSizemode != "normal") {
+    let sizemodePromise = promiseSizemodeChange(oldSizemode);
+    window.maximize();
+    await sizemodePromise;
+  }
 });
 
 // Right-click on an empty bit of extra toolbar should

@@ -295,9 +295,6 @@ skip-if = [
 ["browser_currentset_post_reset.js"]
 
 ["browser_customization_context_menus.js"]
-skip-if = [
-  "os == 'win' && standalone", # Bug 2028648
-]
 
 ["browser_customizemode_contextmenu_menubuttonstate.js"]
 
