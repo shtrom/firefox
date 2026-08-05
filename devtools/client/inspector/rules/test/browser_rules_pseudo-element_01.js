@@ -510,6 +510,11 @@ async function testCustomizableSelect(inspector, view) {
       header: "Pseudo-elements",
     },
     {
+      selector: `#customizable-select::picker(select)`,
+      ancestorRulesData: null,
+      declarations: [{ name: "border", value: "1px solid purple" }],
+    },
+    {
       selector: `#customizable-select::picker-icon`,
       ancestorRulesData: null,
       declarations: [{ name: "color", value: "purple" }],
