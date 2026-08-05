@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.3.38
- * pdfjsBuild = b4ba666b0
+ * pdfjsVersion = 6.3.66
+ * pdfjsBuild = 5f181fd8b
  */
 
 ;// ./src/shared/util.js
@@ -29303,7 +29303,7 @@ class lexer_Lexer {
     this.data = data;
     this.pos = 0;
     this.len = data.length;
-    this._numberPattern = /[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?/iy;
+    this._numberPattern = /[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?/iy;
     this._identifierPattern = /[a-z]+/y;
   }
   _skipComment() {
@@ -61512,6 +61512,7 @@ class PageData {
     this.documentData = documentData;
     this.annotations = null;
     this.pointingNamedDestinations = null;
+    this.copyLevel = 0;
     documentData.pagesMap.put(page.ref, this);
   }
 }
@@ -62231,9 +62232,19 @@ class PDFEditor {
       }
     }
     await Promise.all(promises);
+    const copyCounts = new Map();
     for (let i = 0, ii = this.oldPages.length; i < ii; i++) {
-      if (this.oldPages[i] === undefined) {
+      const pageData = this.oldPages[i];
+      if (pageData === undefined) {
         throw new Error("extractPages: sparse pageIndices.");
+      }
+      if (pageData) {
+        const {
+          page
+        } = pageData;
+        const copyLevel = copyCounts.get(page) ?? 0;
+        copyCounts.set(page, copyLevel + 1);
+        pageData.copyLevel = copyLevel;
       }
     }
     promises.length = 0;
@@ -63060,8 +63071,19 @@ class PDFEditor {
       }
       let parent = parentRef;
       let lastNonNullParent = parentRef;
+      const visited = new RefSet();
       while (true) {
-        parent = xref.fetchIfRef(parent)?.getRaw("Parent") || null;
+        if (parent instanceof Ref) {
+          if (visited.has(parent)) {
+            break;
+          }
+          visited.put(parent);
+        }
+        const parentDict = xref.fetchIfRef(parent);
+        if (!(parentDict instanceof Dict)) {
+          break;
+        }
+        parent = parentDict.getRaw("Parent") || null;
         if (!parent) {
           break;
         }
@@ -63131,6 +63153,9 @@ class PDFEditor {
       }
       processed.put(oldKidRef);
       const kid = xref.fetchIfRef(oldKidRef);
+      if (!(kid instanceof Dict)) {
+        continue;
+      }
       if (kid.has("Kids")) {
         const kidsArray = kid.get("Kids");
         if (!Array.isArray(kidsArray)) {
@@ -63291,7 +63316,8 @@ class PDFEditor {
       page,
       documentData,
       annotations,
-      pointingNamedDestinations
+      pointingNamedDestinations,
+      copyLevel
     } = this.oldPages[pageIndex];
     this.currentDocument = documentData;
     const {
@@ -63341,8 +63367,10 @@ class PDFEditor {
         newAnnots = newAnnotations;
       }
     }
-    const newAnnotations = documentData.document === this.#primaryDocument ? this.#newAnnotationsParams?.newAnnotationsByPage?.get(page.pageIndex) : null;
-    if (newAnnotations) {
+    const newAnnotations = documentData.document === this.#primaryDocument ? this.#newAnnotationsParams?.newAnnotationsByPage?.get(page.pageIndex)?.filter(({
+      copyLevel: level
+    }) => (level ?? 0) === copyLevel) : null;
+    if (newAnnotations?.length) {
       const {
         handler,
         task,
@@ -64126,7 +64154,7 @@ class WorkerMessageHandler {
       docId,
       apiVersion
     } = docParams;
-    const workerVersion = "6.3.38";
+    const workerVersion = "6.3.66";
     if (apiVersion !== workerVersion) {
       throw new Error(`The API version "${apiVersion}" does not match ` + `the Worker version "${workerVersion}".`);
     }

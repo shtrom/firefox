@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.3.38
- * pdfjsBuild = b4ba666b0
+ * pdfjsVersion = 6.3.66
+ * pdfjsBuild = 5f181fd8b
  */
 
 ;// ./web/ui_utils.js
@@ -907,7 +907,7 @@ const {
 } = globalThis.pdfjsLib;
 
 ;// ./web/internal_evt.js
-const INTERNAL_EVT = "d2e23c7c-a899-4c5d-bd43-d557ba4bdcfb";
+const INTERNAL_EVT = "c45ce53b-200d-49e5-8bc4-f55665784f6f";
 const internalOpt = Object.freeze({
   internal: INTERNAL_EVT
 });
@@ -8410,14 +8410,7 @@ class Menu {
   constructor(menuContainer, triggeringButton, menuItems) {
     this.#menu = menuContainer;
     this.#triggeringButton = triggeringButton;
-    if (Array.isArray(menuItems)) {
-      this.#menuItems = menuItems;
-    } else {
-      this.#menuItems = [];
-      for (const button of this.#menu.querySelectorAll("button")) {
-        this.#menuItems.push(button);
-      }
-    }
+    this.#menuItems = Array.isArray(menuItems) ? menuItems : [...this.#menu.querySelectorAll("button")];
     this.#setUpMenu();
   }
   #closeMenu() {
@@ -8496,11 +8489,11 @@ class Menu {
           stopEvent(e);
           break;
         case "Home":
-          this.#menuItems.find(item => !item.disabled && !item.classList.contains("hidden"))?.focus();
+          this.#goToFirstLast(false);
           stopEvent(e);
           break;
         case "End":
-          this.#menuItems.findLast(item => !item.disabled && !item.classList.contains("hidden"))?.focus();
+          this.#goToFirstLast(true);
           stopEvent(e);
           break;
         default:
@@ -8536,7 +8529,7 @@ class Menu {
           if (!this.#openMenuAC) {
             this.#openMenu();
           }
-          this.#menuItems.find(item => !item.disabled && !item.classList.contains("hidden"))?.focus();
+          this.#goToFirstLast(false);
           break;
         case "ArrowUp":
         case "End":
@@ -8544,7 +8537,7 @@ class Menu {
           if (!this.#openMenuAC) {
             this.#openMenu();
           }
-          this.#menuItems.findLast(item => !item.disabled && !item.classList.contains("hidden"))?.focus();
+          this.#goToFirstLast(true);
           break;
         case "Escape":
           this.#closeMenu();
@@ -8566,6 +8559,13 @@ class Menu {
         this.#lastIndex = i;
         break;
       }
+    }
+  }
+  #goToFirstLast(last = false) {
+    const i = this.#menuItems[last ? "findLastIndex" : "findIndex"](item => !item.disabled && !item.classList.contains("hidden"));
+    if (i >= 0) {
+      this.#menuItems[i].focus();
+      this.#lastIndex = i;
     }
   }
   destroy() {
@@ -9206,10 +9206,13 @@ class PDFThumbnailViewer {
       return;
     }
     const pagesCount = this.#pagesMapper.pagesNumber;
-    const data = this.hasStructuralChanges() ? this.getStructuralChanges() : [{
-      document: null
-    }];
-    data.push(...entries);
+    const data = this.hasStructuralChanges() ? this.getStructuralChanges() : {
+      pageInfos: [{
+        document: null
+      }],
+      copyLevels: null
+    };
+    data.pageInfos.push(...entries);
     this.eventBus.on("pagesloaded", () => {
       this.#selectedPages = null;
       this.#updateMenuEntries();
@@ -13163,7 +13166,7 @@ class PDFViewer {
   #savedPageViews = null;
   #deletedPageNumbers = null;
   constructor(options) {
-    const viewerVersion = "6.3.38";
+    const viewerVersion = "6.3.66";
     if (version !== viewerVersion) {
       throw new Error(`The API version "${version}" does not match the Viewer version "${viewerVersion}".`);
     }
@@ -18826,7 +18829,10 @@ const PDFViewerApplication = {
     this.pdfViewer.onPagesEdited(data);
   },
   async onSavePages({
-    data: extractParams
+    data: {
+      pageInfos,
+      copyLevels
+    }
   }) {
     if (!this.downloadManager) {
       return;
@@ -18834,7 +18840,7 @@ const PDFViewerApplication = {
     if (!this.pdfDocument) {
       return;
     }
-    const modifiedPdfBytes = await this.pdfDocument.extractPages(extractParams);
+    const modifiedPdfBytes = await this.pdfDocument.extractPages(pageInfos, copyLevels);
     if (!modifiedPdfBytes) {
       console.error("Something wrong happened when saving the edited PDF.\nPlease file a bug.");
       return;
@@ -18842,12 +18848,15 @@ const PDFViewerApplication = {
     this.downloadManager.download(modifiedPdfBytes, this._downloadUrl, this._docFilename);
   },
   async onSaveAndLoad({
-    data: extractParams
+    data: {
+      pageInfos,
+      copyLevels
+    }
   }) {
     if (!this.pdfDocument) {
       return;
     }
-    const modifiedPdfBytes = await this.pdfDocument.extractPages(extractParams);
+    const modifiedPdfBytes = await this.pdfDocument.extractPages(pageInfos, copyLevels);
     if (!modifiedPdfBytes) {
       console.error("Something wrong happened when saving the edited PDF.\nPlease file a bug.");
       return;

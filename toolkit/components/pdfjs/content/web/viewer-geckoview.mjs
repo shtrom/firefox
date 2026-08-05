@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.3.38
- * pdfjsBuild = b4ba666b0
+ * pdfjsVersion = 6.3.66
+ * pdfjsBuild = 5f181fd8b
  */
 
 ;// ./web/ui_utils.js
@@ -904,7 +904,7 @@ const {
 } = globalThis.pdfjsLib;
 
 ;// ./web/internal_evt.js
-const INTERNAL_EVT = "d2e23c7c-a899-4c5d-bd43-d557ba4bdcfb";
+const INTERNAL_EVT = "c45ce53b-200d-49e5-8bc4-f55665784f6f";
 const internalOpt = Object.freeze({
   internal: INTERNAL_EVT
 });
@@ -8643,7 +8643,7 @@ class PDFViewer {
   #savedPageViews = null;
   #deletedPageNumbers = null;
   constructor(options) {
-    const viewerVersion = "6.3.38";
+    const viewerVersion = "6.3.66";
     if (version !== viewerVersion) {
       throw new Error(`The API version "${version}" does not match the Viewer version "${viewerVersion}".`);
     }
@@ -11913,7 +11913,10 @@ const PDFViewerApplication = {
     this.pdfViewer.onPagesEdited(data);
   },
   async onSavePages({
-    data: extractParams
+    data: {
+      pageInfos,
+      copyLevels
+    }
   }) {
     if (!this.downloadManager) {
       return;
@@ -11921,7 +11924,7 @@ const PDFViewerApplication = {
     if (!this.pdfDocument) {
       return;
     }
-    const modifiedPdfBytes = await this.pdfDocument.extractPages(extractParams);
+    const modifiedPdfBytes = await this.pdfDocument.extractPages(pageInfos, copyLevels);
     if (!modifiedPdfBytes) {
       console.error("Something wrong happened when saving the edited PDF.\nPlease file a bug.");
       return;
@@ -11929,12 +11932,15 @@ const PDFViewerApplication = {
     this.downloadManager.download(modifiedPdfBytes, this._downloadUrl, this._docFilename);
   },
   async onSaveAndLoad({
-    data: extractParams
+    data: {
+      pageInfos,
+      copyLevels
+    }
   }) {
     if (!this.pdfDocument) {
       return;
     }
-    const modifiedPdfBytes = await this.pdfDocument.extractPages(extractParams);
+    const modifiedPdfBytes = await this.pdfDocument.extractPages(pageInfos, copyLevels);
     if (!modifiedPdfBytes) {
       console.error("Something wrong happened when saving the edited PDF.\nPlease file a bug.");
       return;

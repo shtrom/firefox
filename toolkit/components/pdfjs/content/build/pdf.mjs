@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.3.38
- * pdfjsBuild = b4ba666b0
+ * pdfjsVersion = 6.3.66
+ * pdfjsBuild = 5f181fd8b
  */
 
 ;// ./src/shared/util.js
@@ -2062,7 +2062,7 @@ class FloatingToolbar {
 }
 
 ;// ./src/shared/internal_evt.js
-const INTERNAL_EVT = "d2e23c7c-a899-4c5d-bd43-d557ba4bdcfb";
+const INTERNAL_EVT = "c45ce53b-200d-49e5-8bc4-f55665784f6f";
 const internalOpt = Object.freeze({
   internal: INTERNAL_EVT
 });
@@ -2542,6 +2542,7 @@ class AnnotationEditorUIManager {
   #allEditors = new Map();
   #allLayers = new Map();
   #savedAllLayers = null;
+  #savedEditorsByPage = null;
   #altTextManager = null;
   #annotationStorage = null;
   #changedExistingAnnotations = null;
@@ -3414,7 +3415,7 @@ class AnnotationEditorUIManager {
     }
   }
   updatePageIndex(oldPageIndex, newPageIndex) {
-    for (const editor of this.getEditors(oldPageIndex)) {
+    for (const editor of this.#savedEditorsByPage.get(oldPageIndex) || []) {
       editor.pageIndex = newPageIndex;
     }
     const layer = this.#savedAllLayers.get(oldPageIndex);
@@ -3431,9 +3432,22 @@ class AnnotationEditorUIManager {
   startUpdatePages() {
     this.#savedAllLayers = new Map(this.#allLayers);
     this.#allLayers.clear();
+    const savedEditorsByPage = this.#savedEditorsByPage = new Map();
+    const saveEditor = editor => {
+      savedEditorsByPage.getOrInsertComputed(editor.pageIndex, makeArr).push(editor);
+    };
+    for (const editor of this.#allEditors.values()) {
+      saveEditor(editor);
+    }
+    for (const [id, editor] of this.#annotationStorage) {
+      if (id.startsWith(AnnotationEditorPrefix) && !this.#allEditors.has(id) && Number.isInteger(editor?.pageIndex)) {
+        saveEditor(editor);
+      }
+    }
   }
   endUpdatePages() {
     this.#savedAllLayers = null;
+    this.#savedEditorsByPage = null;
   }
   clonePage(pageIndex, newPageIndex) {
     for (const editor of this.getEditors(pageIndex)) {
@@ -13322,7 +13336,6 @@ class PagesMapper {
   movePages(selectedPages, pagesToMove, index) {
     this.#ensureInit();
     const pageNumberToId = this.#pageNumberToId;
-    const prevIdToPageNumber = this.#buildIdToPageNumber();
     const movedCount = pagesToMove.length;
     const mappedPagesToMove = new Uint32Array(movedCount);
     let removedBeforeTarget = 0;
@@ -13335,15 +13348,19 @@ class PagesMapper {
     }
     const pagesNumber = this.#pagesNumber;
     const remainingLen = pagesNumber - movedCount;
+    const prevPageNumbers = new Int32Array(pagesNumber);
     const adjustedTarget = MathClamp(index - removedBeforeTarget, 0, remainingLen);
     for (let i = 0, r = 0; i < pagesNumber; i++) {
       if (!selectedPages.has(i + 1)) {
-        pageNumberToId[r++] = pageNumberToId[i];
+        pageNumberToId[r] = pageNumberToId[i];
+        prevPageNumbers[r++] = i + 1;
       }
     }
     pageNumberToId.copyWithin(adjustedTarget + movedCount, adjustedTarget, remainingLen);
     pageNumberToId.set(mappedPagesToMove, adjustedTarget);
-    this.#updatePrevPageNumbers(prevIdToPageNumber);
+    prevPageNumbers.copyWithin(adjustedTarget + movedCount, adjustedTarget, remainingLen);
+    prevPageNumbers.set(pagesToMove, adjustedTarget);
+    this.#prevPageNumbers = prevPageNumbers;
     if (pageNumberToId.every((id, i) => id === i + 1)) {
       this.#pageNumberToId = null;
     }
@@ -13440,7 +13457,30 @@ class PagesMapper {
   hasBeenAltered() {
     return this.#pageNumberToId !== null;
   }
-  getPageMappingForSaving(idToPageNumber = null) {
+  #buildCopyLevels(extractedPageNumbers = null) {
+    if (!this.#pageNumberToId) {
+      return null;
+    }
+    const copyLevels = new Int32Array(this.#pagesNumber).fill(-1);
+    const counts = new Map();
+    if (extractedPageNumbers) {
+      for (const pageNumber of extractedPageNumbers) {
+        const id = this.getPageId(pageNumber);
+        const level = counts.get(id) ?? 0;
+        counts.set(id, level + 1);
+        copyLevels[pageNumber - 1] = level;
+      }
+    } else {
+      for (let i = 0, ii = this.#pagesNumber; i < ii; i++) {
+        const id = this.#pageNumberToId[i];
+        const level = counts.get(id) ?? 0;
+        counts.set(id, level + 1);
+        copyLevels[i] = level;
+      }
+    }
+    return copyLevels;
+  }
+  getPageMappingForSaving(idToPageNumber = null, copyLevels = this.#buildCopyLevels()) {
     idToPageNumber ??= this.#buildIdToPageNumber();
     let nCopy = 0;
     for (const pageNumbers of idToPageNumber.values()) {
@@ -13469,7 +13509,10 @@ class PagesMapper {
         includePages[i] = includePages[i][0];
       }
     }
-    return extractParams;
+    return {
+      pageInfos: extractParams,
+      copyLevels
+    };
   }
   extractPages(extractedPageNumbers) {
     extractedPageNumbers = Array.from(extractedPageNumbers).sort((a, b) => a - b);
@@ -13479,7 +13522,7 @@ class PagesMapper {
       const usedPageNumbers = usedIds.getOrInsertComputed(id, makeArr);
       usedPageNumbers.push(i + 1);
     }
-    return this.getPageMappingForSaving(usedIds);
+    return this.getPageMappingForSaving(usedIds, this.#buildCopyLevels(extractedPageNumbers));
   }
   getPrevPageNumber(pageNumber) {
     return this.#prevPageNumbers?.[pageNumber - 1] ?? 0;
@@ -14309,7 +14352,7 @@ function getDocument(src = {}) {
   }
   const docParams = {
     docId,
-    apiVersion: "6.3.38",
+    apiVersion: "6.3.66",
     data,
     password,
     disableAutoFetch,
@@ -14548,8 +14591,8 @@ class PDFDocumentProxy {
   saveDocument() {
     return this._transport.saveDocument();
   }
-  extractPages(pageInfos) {
-    return this._transport.extractPages(pageInfos);
+  extractPages(pageInfos, copyLevels = null) {
+    return this._transport.extractPages(pageInfos, copyLevels);
   }
   getDownloadInfo() {
     return this._transport.downloadInfoCapability.promise;
@@ -15565,7 +15608,7 @@ class WorkerTransport {
       this.annotationStorage.resetModified();
     });
   }
-  extractPages(pageInfos) {
+  extractPages(pageInfos, copyLevels = null) {
     const params = {
       pageInfos
     };
@@ -15596,11 +15639,13 @@ class WorkerTransport {
         const remapped = new Map();
         for (const [k, v] of map) {
           if (v?.pageIndex !== undefined && v.pageIndex >= 0 && v.pageIndex < mapping.length) {
+            const copyLevel = copyLevels?.[v.pageIndex] ?? 0;
             const sourceIdx = mapping[v.pageIndex] - 1;
-            if (sourceIdx !== v.pageIndex) {
+            if (sourceIdx !== v.pageIndex || copyLevel !== 0) {
               remapped.set(k, {
                 ...v,
-                pageIndex: sourceIdx
+                pageIndex: sourceIdx,
+                copyLevel
               });
               continue;
             }
@@ -15970,8 +16015,8 @@ class InternalRenderTask {
     }
   }
 }
-const version = "6.3.38";
-const build = "b4ba666b0";
+const version = "6.3.66";
+const build = "5f181fd8b";
 
 ;// ./src/display/editor/color_picker.js
 
@@ -26951,9 +26996,9 @@ globalThis.pdfjsLib = {
   updateUrlHash: updateUrlHash,
   Util: Util,
   VerbosityLevel: VerbosityLevel,
-  version: (/* inlined export .version */"6.3.38"),
+  version: (/* inlined export .version */"6.3.66"),
   XfaLayer: XfaLayer
 };
 
-const __webpack_exports__version = (/* inlined export .version */"6.3.38");
+const __webpack_exports__version = (/* inlined export .version */"6.3.66");
 export { AbortException, AnnotationEditorLayer, AnnotationEditorParamsType, AnnotationEditorType, AnnotationEditorUIManager, AnnotationLayer, AnnotationMode, AnnotationType, CSSConstants, ColorPicker, DOMSVGFactory, DrawLayer, FeatureTest, GlobalWorkerOptions, ImageKind, InvalidPDFException, MathClamp, OPS, OutputScale, PDFDataRangeTransport, PDFDateString, PDFWorker, PasswordException, PasswordResponses, PermissionFlag, PixelsPerInch, RenderingCancelledException, ResponseException, SignatureExtractor, SupportedImageMimeTypes, TextLayer, TextLayerImages, TouchManager, Util, VerbosityLevel, XfaLayer, applyOpacity, build, createValidAbsoluteUrl, fetchData, findContrastColor, getDocument, getFilenameFromUrl, getPdfFilenameFromUrl, getRGB, getRGBA, getUuid, isDataScheme, isPdfFile, isValidExplicitDest, makeArr, makeMap, makeObj, makeSet, noContextMenu, normalizeUnicode, renderRichText, setLayerDimensions, shadow, stopEvent, updateUrlHash, __webpack_exports__version as version };
