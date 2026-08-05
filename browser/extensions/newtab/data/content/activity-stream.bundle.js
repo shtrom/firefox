@@ -9501,6 +9501,47 @@ function TopSitesHoverCard({
   });
 }
 
+;// CONCATENATED MODULE: ./content-src/components/TopSiteWebNotification/TopSiteWebNotification.jsx
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+
+
+function Badge({
+  link
+}) {
+  const enabled = (0,external_ReactRedux_namespaceObject.useSelector)(isWebNotificationsEnabled);
+  const count = (0,external_ReactRedux_namespaceObject.useSelector)(state => getNotificationIdsForUrl(state, link?.url).length);
+  if (!enabled || !count) {
+    return null;
+  }
+  return /*#__PURE__*/external_React_default().createElement("div", {
+    className: "top-site-web-notification"
+  }, count);
+}
+
+/**
+ * Count badge on a top site tile for the site's web notifications. Rendered on
+ * every tile (including bare tile mounts in tests with no redux Provider), so it
+ * bails before any store access when there is no store; the running app always
+ * has one.
+ *
+ * @param link The top site link object for the tile.
+ */
+function TopSiteWebNotification({
+  link
+}) {
+  const store = external_React_default().useContext(external_ReactRedux_namespaceObject.ReactReduxContext);
+  if (!store) {
+    return null;
+  }
+  return /*#__PURE__*/external_React_default().createElement(Badge, {
+    link: link
+  });
+}
+
 ;// CONCATENATED MODULE: ./content-src/components/TopSites/TopSiteImpressionWrapper.jsx
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -9629,6 +9670,7 @@ function TopSite_extends() { return TopSite_extends = Object.assign ? Object.ass
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 
 
 
@@ -9981,6 +10023,8 @@ class TopSiteLink extends (external_React_default()).PureComponent {
       className: "tile",
       "aria-hidden": true
     }, /*#__PURE__*/external_React_default().createElement("div", {
+      className: "icon-stack"
+    }, /*#__PURE__*/external_React_default().createElement("div", {
       className: selectedColor ? "icon-wrapper letter-fallback" : "icon-wrapper",
       "data-fallback": letterFallback,
       style: selectedColor ? {
@@ -9993,6 +10037,8 @@ class TopSiteLink extends (external_React_default()).PureComponent {
       className: "top-site-icon default-icon",
       "data-fallback": smallFaviconStyle ? "" : letterFallback,
       style: smallFaviconStyle
+    })), /*#__PURE__*/external_React_default().createElement(TopSiteWebNotification, {
+      link: link
     }))), link.isPinned && /*#__PURE__*/external_React_default().createElement("div", {
       className: "icon icon-pin-small"
     }), /*#__PURE__*/external_React_default().createElement("div", {
@@ -27197,6 +27243,7 @@ class ContentSection extends (external_React_default()).PureComponent {
       pocketRegion,
       mayHaveInferredPersonalization,
       mayHaveWeather,
+      mayHaveWebNotifications,
       mayHaveWidgets,
       mayHaveTimerWidget,
       mayHaveListsWidget,
@@ -27232,7 +27279,8 @@ class ContentSection extends (external_React_default()).PureComponent {
       pocketEnabled,
       weatherEnabled,
       showInferredPersonalizationEnabled,
-      topSitesRowsCount
+      topSitesRowsCount,
+      webNotificationsEnabled
     } = enabledSections;
     const {
       timerEnabled,
@@ -27428,7 +27476,15 @@ class ContentSection extends (external_React_default()).PureComponent {
       value: String(num),
       "data-l10n-id": "newtab-custom-row-selector2",
       "data-l10n-args": `{"num": ${num}}`
-    })))))))),
+    })))), mayHaveWebNotifications && /*#__PURE__*/external_React_default().createElement("div", {
+      className: "more-information"
+    }, /*#__PURE__*/external_React_default().createElement("moz-toggle", {
+      id: "web-notifications-toggle",
+      pressed: webNotificationsEnabled || null,
+      ontoggle: this.onPreferenceSelect,
+      "data-preference": "showWebNotifications",
+      "data-l10n-id": "newtab-custom-web-notifications-toggle"
+    })))))),
     // @nova-cleanup(remove-conditional): Remove novaEnabled check, keep divider
     novaEnabled && mayHaveWidgets && /*#__PURE__*/external_React_default().createElement("span", {
       className: "divider",
@@ -27712,6 +27768,7 @@ class _CustomizeMenu extends (external_React_default()).PureComponent {
       mayHaveTopicSections: this.props.mayHaveTopicSections,
       mayHaveInferredPersonalization: this.props.mayHaveInferredPersonalization,
       mayHaveWeather: this.props.mayHaveWeather,
+      mayHaveWebNotifications: this.props.mayHaveWebNotifications,
       mayHaveWidgets: this.props.mayHaveWidgets,
       mayHaveWeatherForecast: this.props.mayHaveWeatherForecast,
       weatherDisplay: this.props.weatherDisplay,
@@ -30026,6 +30083,7 @@ class BaseContent extends (external_React_default()).PureComponent {
       pocketEnabled: prefs["feeds.section.topstories"],
       showInferredPersonalizationEnabled: prefs[Base_PREF_INFERRED_PERSONALIZATION_USER],
       topSitesRowsCount: prefs.topSitesRows,
+      webNotificationsEnabled: prefs.showWebNotifications,
       weatherEnabled: novaEnabled ? prefs["widgets.weather.enabled"] : prefs.showWeather
     };
     const pocketRegion = prefs["feeds.system.topstories"];
@@ -30034,6 +30092,7 @@ class BaseContent extends (external_React_default()).PureComponent {
     // system.showWeather / trainhopConfig.weather), so it keeps its own check
     // plus the additive widgetsSettings.weatherVisible override.
     const mayHaveWeather = prefs["system.showWeather"] || prefs.trainhopConfig?.weather?.enabled || prefs.trainhopConfig?.widgetsSettings?.weatherVisible;
+    const mayHaveWebNotifications = prefs["system.showWebNotifications"];
     const supportUrl = prefs["support.url"];
 
     // Widget toggle visibility is resolved by the shared registry helpers, which
@@ -30189,6 +30248,7 @@ class BaseContent extends (external_React_default()).PureComponent {
         mayHaveTopicSections: mayHavePersonalizedTopicSections,
         mayHaveInferredPersonalization: mayHaveInferredPersonalization,
         mayHaveWeather: mayHaveWeather,
+        mayHaveWebNotifications: mayHaveWebNotifications,
         mayHaveWidgets: mayHaveWidgets,
         mayHaveTimerWidget: mayHaveTimerWidget,
         mayHaveListsWidget: mayHaveListsWidget,
@@ -30285,6 +30345,7 @@ class BaseContent extends (external_React_default()).PureComponent {
       mayHaveTopicSections: mayHavePersonalizedTopicSections,
       mayHaveInferredPersonalization: mayHaveInferredPersonalization,
       mayHaveWeather: mayHaveWeather,
+      mayHaveWebNotifications: mayHaveWebNotifications,
       mayHaveWidgets: mayHaveWidgets,
       mayHaveTimerWidget: mayHaveTimerWidget,
       mayHaveListsWidget: mayHaveListsWidget,
