@@ -16,4 +16,6 @@ skip-if = [
 
 ["browser_drop_link_splitview_unselected.js"]
 
+["browser_drop_link_user_interaction.js"]
+
 ["browser_move_unpinned_not_overflowing.js"]
