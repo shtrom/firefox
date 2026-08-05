@@ -11,6 +11,7 @@
 #include "mozilla/dom/SpeculationRuleSet.h"
 #include "mozilla/dom/SpeculationRulesManager.h"
 #include "mozilla/dom/speculationrules_ffi_generated.h"
+#include "nsContentUtils.h"
 #include "nsCycleCollectionParticipant.h"
 #include "nsIFrame.h"
 #include "nsIScriptElement.h"
@@ -38,6 +39,31 @@ STATIC_ASSERT_REFERRER_POLICY_EQ(Strict_origin_when_cross_origin,
                                  StrictOriginWhenCrossOrigin);
 
 #undef STATIC_ASSERT_REFERRER_POLICY_EQ
+
+extern "C" {
+
+bool Gecko_Element_GetHrefURI(const Element* aElement, nsACString* aSpec) {
+  nsCOMPtr<nsIURI> uri = aElement->GetHrefURI();
+  if (!uri) {
+    return false;
+  }
+  if (NS_FAILED(uri->GetSpec(*aSpec))) {
+    return false;
+  }
+  return true;
+}
+
+SpeculationRulesReferrerPolicy Gecko_Element_GetReferrerPolicy(
+    const Element* aElement) {
+  // https://html.spec.whatwg.org/#hyperlink-referrer-policy
+  if (nsContentUtils::HasRelNoReferrer(*aElement)) {
+    return SpeculationRulesReferrerPolicy::NoReferrer;
+  }
+  return static_cast<SpeculationRulesReferrerPolicy>(
+      aElement->GetReferrerPolicyAsEnum());
+}
+
+}  // extern "C"
 
 NS_IMPL_CYCLE_COLLECTION_CLASS(SpeculationRules)
 
@@ -119,12 +145,18 @@ void SpeculationRules::InnerConsiderLoads() {
     return;
   }
 
+  // https://html.spec.whatwg.org/#find-matching-links
+  // The result doesn't depend on any particular rule set, so it's computed
+  // once here and shared across every rule set's ConsiderLoads call below.
+  nsTArray<const Element*> links;
+  FindMatchingLinks(links);
+
   // Step 2.
   UniquePtr<PrefetchCandidates> prefetchCandidates =
       PrefetchCandidates::Create();
   // Step 3.
   for (auto& entry : mRuleSetsFromScript) {
-    entry.GetData()->ConsiderLoads(prefetchCandidates.get());
+    entry.GetData()->ConsiderLoads(prefetchCandidates.get(), links);
   }
 
   // Step 4.
@@ -147,7 +179,7 @@ void SpeculationRules::InnerConsiderLoads() {
 }
 
 // https://html.spec.whatwg.org/#find-matching-links
-void SpeculationRules::FindMatchingLinks(nsTArray<Element*>& aLinks) {
+void SpeculationRules::FindMatchingLinks(nsTArray<const Element*>& aLinks) {
   // Step 2.
   // Rather than walking the tree, we iterate the set of <a>/<area> elements
   // with an href that are connected to the document. The iteration order is

@@ -413,6 +413,7 @@
 #include "nsURLHelper.h"
 #include "nsUnicodeProperties.h"
 #include "nsVariant.h"
+#include "nsWhitespaceTokenizer.h"
 #include "nsWidgetsCID.h"
 #include "nsXPCOM.h"
 #include "nsXPCOMCID.h"
@@ -10876,6 +10877,29 @@ ReferrerPolicy nsContentUtils::GetReferrerPolicyFromChannel(
 
   return ReferrerInfo::ReferrerPolicyFromHeaderString(
       NS_ConvertUTF8toUTF16(headerValue));
+}
+
+// static
+bool nsContentUtils::HasRelNoReferrer(const Element& aElement) {
+  // rel=noreferrer is only supported in <a>, <area>, and <form>
+  if (!aElement.IsAnyOfHTMLElements(nsGkAtoms::a, nsGkAtoms::area,
+                                    nsGkAtoms::form) &&
+      !aElement.IsSVGElement(nsGkAtoms::a)) {
+    return false;
+  }
+
+  nsAutoString rel;
+  aElement.GetAttr(nsGkAtoms::rel, rel);
+  nsWhitespaceTokenizerTemplate<nsContentUtils::IsHTMLWhitespace> tok(rel);
+
+  while (tok.hasMoreTokens()) {
+    const nsAString& token = tok.nextToken();
+    if (token.LowerCaseEqualsLiteral("noreferrer")) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 // static

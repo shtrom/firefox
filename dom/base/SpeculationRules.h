@@ -37,7 +37,7 @@ class SpeculationRules final {
   void AddLink(Element* aElement) { mLinks.Insert(aElement); }
   void RemoveLink(Element* aElement) { mLinks.Remove(aElement); }
 
-  void FindMatchingLinks(nsTArray<Element*>& aLinks);
+  void FindMatchingLinks(nsTArray<const Element*>& aLinks);
 
  private:
   virtual ~SpeculationRules() = default;
