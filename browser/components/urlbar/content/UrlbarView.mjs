@@ -107,6 +107,34 @@ export class UrlbarView {
   }
 
   /**
+   * @returns {?string}
+   *   The URL of the currently selected tab, as recorded in the `currentPage`
+   *   property of query contexts. Not set outside of browser windows, and
+   *   while `currentURI` is transiently null during a tab-drag docshell swap
+   *   (Bug 2025776).
+   */
+  get #currentPage() {
+    return this.chromeWindow.gBrowser?.currentURI?.spec;
+  }
+
+  /**
+   * Whether the results of a query can still be shown, that is whether they
+   * were fetched for the current search string and the currently selected tab.
+   * Results depend on the page the user is on, so results fetched for another
+   * page must not be reused.
+   *
+   * @param {UrlbarQueryContext} queryContext
+   *   The context of the query the results belong to.
+   * @returns {boolean}
+   */
+  #canReuseResults(queryContext) {
+    return (
+      queryContext.searchString == this.input.value &&
+      queryContext.currentPage == this.#currentPage
+    );
+  }
+
+  /**
    * Whether the panel is open.
    *
    * @returns {boolean}
@@ -823,15 +851,16 @@ export class UrlbarView {
       return false;
     }
 
-    // We can reuse the current rows as they are if the input value and width
-    // haven't changed since the view was closed. The width check is related to
-    // row overflow: If we reuse the current rows, overflow and underflow events
-    // won't fire even if the view's width has changed and there are rows that
-    // do actually overflow or underflow. That means previously overflowed rows
-    // may unnecessarily show the overflow gradient, for example.
+    // We can reuse the current rows as they are if the search string, the page
+    // and the width haven't changed since the view was closed. The width check
+    // is related to row overflow: If we reuse the current rows, overflow and
+    // underflow events won't fire even if the view's width has changed and
+    // there are rows that do actually overflow or underflow. That means
+    // previously overflowed rows may unnecessarily show the overflow gradient,
+    // for example.
     if (
       this.#rows.firstElementChild &&
-      this.#queryContext.searchString == this.input.value &&
+      this.#canReuseResults(this.#queryContext) &&
       this.#containerWidthOnLastClose ==
         getBoundsWithoutFlushing(this.input.parentElement).width
     ) {
@@ -842,7 +871,10 @@ export class UrlbarView {
       // overflow problem is addressed in this case because `onQueryResults()`
       // starts the regular view-update process, during which the overflow state
       // is reset on all rows.
-      let cachedQueryContext = this.queryContextCache.get(this.input.value);
+      let cachedQueryContext = this.queryContextCache.get(
+        this.input.value,
+        this.#currentPage
+      );
       if (cachedQueryContext) {
         this.onQueryResults(cachedQueryContext);
       }
@@ -865,13 +897,12 @@ export class UrlbarView {
     queryOptions.interactionType = "returned";
 
     // Opening the panel now will show the rows from the previous query, so to
-    // avoid flicker, open it only if the search string hasn't changed. Also
-    // check for a tip to avoid search tip flicker (bug 1812261). If we don't
-    // open the panel here, we'll open it when the view receives results from
-    // the new query.
+    // avoid flicker, open it only if those results still apply. Also check for a
+    // tip to avoid search tip flicker (bug 1812261). If we don't open the panel
+    // here, we'll open it when the view receives results from the new query.
     if (
       this.#queryContext?.results?.length &&
-      this.#queryContext.searchString == this.input.value &&
+      this.#canReuseResults(this.#queryContext) &&
       this.#queryContext.results[0].type != UrlbarShared.RESULT_TYPE.TIP
     ) {
       this.#openPanel();
@@ -4422,7 +4453,9 @@ export class UrlbarView {
 
 /**
  * Implements a QueryContext cache, working as a circular buffer, when a new
- * entry is added at the top, the last item is remove from the bottom.
+ * entry is added at the top, the last item is remove from the bottom. Entries
+ * are keyed by both search string and page, since results depend on the page
+ * the user is on.
  */
 class QueryContextCache {
   #cache;
@@ -4495,7 +4528,11 @@ class QueryContextCache {
       return;
     }
 
-    let index = this.#cache.findIndex(e => e.searchString == searchString);
+    let index = this.#cache.findIndex(
+      e =>
+        e.searchString == searchString &&
+        e.currentPage == queryContext.currentPage
+    );
     if (index != -1) {
       if (this.#cache[index] == queryContext) {
         return;
@@ -4507,7 +4544,17 @@ class QueryContextCache {
     }
   }
 
-  get(searchString) {
-    return this.#cache.find(e => e.searchString == searchString);
+  /**
+   * @param {string} searchString
+   *   The search string the context was created for.
+   * @param {string} [currentPage]
+   *   The URL of the page the context was created for.
+   * @returns {?UrlbarQueryContext}
+   *   The cached context, if any.
+   */
+  get(searchString, currentPage) {
+    return this.#cache.find(
+      e => e.searchString == searchString && e.currentPage == currentPage
+    );
   }
 }
