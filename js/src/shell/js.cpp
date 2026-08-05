@@ -13495,9 +13495,6 @@ bool SetGlobalOptionsPreJSInit(const OptionParser& op) {
     JS::Prefs::setAtStartup_experimental_joint_iteration(true);
   }
 
-  if (op.getBoolOption("enable-legacy-regexp")) {
-    JS::Prefs::set_experimental_legacy_regexp(true);
-  }
   if (op.getBoolOption("enable-import-text")) {
     JS::Prefs::set_experimental_import_text(true);
   }
@@ -13540,6 +13537,9 @@ bool SetGlobalOptionsPreJSInit(const OptionParser& op) {
   }
   if (op.getBoolOption("enable-regexp-buffer-boundaries")) {
     JS::Prefs::setAtStartup_experimental_regexp_buffer_boundaries(true);
+  }
+  if (op.getBoolOption("enable-legacy-regexp")) {
+    JS::Prefs::setAtStartup_experimental_legacy_regexp(true);
   }
 #endif
   if (op.getBoolOption("enable-source-phase-imports")) {
