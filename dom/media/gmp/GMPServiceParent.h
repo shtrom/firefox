@@ -266,7 +266,8 @@ bool MatchBaseDomain(nsIFile* aPath, const nsACString& aBaseDomain);
  */
 class GMPServiceParent final : public PGMPServiceParent {
  public:
-  explicit GMPServiceParent(GeckoMediaPluginServiceParent* aService);
+  GMPServiceParent(GeckoMediaPluginServiceParent* aService,
+                   const nsACString& aRemoteType);
 
   // Our refcounting is thread safe, and when our refcount drops to zero
   // we dispatch an event to the main thread to delete the GMPServiceParent.
@@ -279,7 +280,20 @@ class GMPServiceParent final : public PGMPServiceParent {
   NS_INLINE_DECL_THREADSAFE_REFCOUNTING_WITH_DELETE_ON_MAIN_THREAD(
       GMPServiceParent, final);
 
-  static bool Create(Endpoint<PGMPServiceParent>&& aGMPService);
+  static bool Create(Endpoint<PGMPServiceParent>&& aGMPService,
+                     const nsACString& aRemoteType);
+
+  // True if a content process of aRemoteType may act for aOrigin. Must be
+  // called on the main thread. Empty/"null" origins (the anonymous node-id
+  // path) and the parent remote type are allowed.
+  static bool OriginAllowedForRemoteType(const nsACString& aRemoteType,
+                                         const nsAString& aOrigin);
+
+  // True only if aRemoteType may act for both node-id origins. Main thread
+  // only.
+  static bool NodeIdPartsAllowedForRemoteType(const nsACString& aRemoteType,
+                                              const nsAString& aOrigin,
+                                              const nsAString& aTopLevelOrigin);
 
   ipc::IPCResult RecvLaunchGMP(const NodeIdVariant& aNodeIdVariant,
                                const nsACString& aAPI,
@@ -297,7 +311,18 @@ class GMPServiceParent final : public PGMPServiceParent {
  private:
   ~GMPServiceParent();
 
+  // Continues a GMP launch on the GMP thread, after any origin validation has
+  // run. Resolves aResolve with the launch result.
+  void CompleteLaunchGMP(const NodeIdVariant& aNodeIdVariant,
+                         const nsACString& aAPI, nsTArray<nsCString>&& aTags,
+                         nsTArray<ProcessId>&& aAlreadyBridgedTo,
+                         LaunchGMPResolver&& aResolve);
+
   const RefPtr<GeckoMediaPluginServiceParent> mService;
+
+  // Remote type of the content process that owns this actor. Used to validate
+  // node-id origins against that process; empty for the parent process.
+  const nsCString mContentProcessRemoteType;
 
   // Ticket that holds a blocker on the profile-before-change barrier.
   // Released when this actor is destroyed, or proactively from BeginShutdown()

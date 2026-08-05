@@ -1263,7 +1263,7 @@ mozilla::ipc::IPCResult ContentParent::RecvCreateGMPService() {
     return IPC_FAIL(this, "CreateEndpoints failed");
   }
 
-  if (!GMPServiceParent::Create(std::move(parent))) {
+  if (!GMPServiceParent::Create(std::move(parent), GetRemoteType())) {
     return IPC_FAIL(this, "GMPServiceParent::Create failed");
   }
 
