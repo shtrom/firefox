@@ -11322,6 +11322,13 @@
   mirror: always
   rust: true
 
+# Is the at-rule() function in @supports enabled?
+- name: layout.css.supports.at-rule.enabled
+  type: RelaxedAtomicBool
+  value: @IS_NIGHTLY_BUILD@
+  mirror: always
+  rust: true
+
 # Are counters for implemented CSS properties enabled?
 - name: layout.css.use-counters.enabled
   type: bool
