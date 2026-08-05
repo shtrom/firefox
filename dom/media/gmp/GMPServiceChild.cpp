@@ -342,41 +342,6 @@ GeckoMediaPluginServiceChild::FindPluginDirectoryForAPI(
 }
 
 NS_IMETHODIMP
-GeckoMediaPluginServiceChild::GetNodeId(
-    const nsAString& aOrigin, const nsAString& aTopLevelOrigin,
-    const nsAString& aGMPName, UniquePtr<GetNodeIdCallback>&& aCallback) {
-  AssertOnGMPThread();
-
-  GetNodeIdCallback* rawCallback = aCallback.release();
-  nsCOMPtr<nsISerialEventTarget> thread(GetGMPThread());
-  nsString origin(aOrigin);
-  nsString topLevelOrigin(aTopLevelOrigin);
-  nsString gmpName(aGMPName);
-  GetServiceChild()->Then(
-      thread, __func__,
-      [rawCallback, origin = std::move(origin),
-       topLevelOrigin = std::move(topLevelOrigin),
-       gmpName = std::move(gmpName)](GMPServiceChild* child) {
-        child->SendGetGMPNodeId(
-            origin, topLevelOrigin, gmpName,
-            [rawCallback](nsCString&& aId) {
-              UniquePtr<GetNodeIdCallback> callback(rawCallback);
-              callback->Done(NS_OK, aId);
-            },
-            [rawCallback](const ipc::ResponseRejectReason&) {
-              UniquePtr<GetNodeIdCallback> callback(rawCallback);
-              callback->Done(NS_ERROR_FAILURE, ""_ns);
-            });
-      },
-      [rawCallback](nsresult rv) {
-        UniquePtr<GetNodeIdCallback> callback(rawCallback);
-        callback->Done(NS_ERROR_FAILURE, ""_ns);
-      });
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP
 GeckoMediaPluginServiceChild::Observe(nsISupports* aSubject, const char* aTopic,
                                       const char16_t* aSomeData) {
   MOZ_ASSERT(NS_IsMainThread());

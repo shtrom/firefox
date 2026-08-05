@@ -204,21 +204,6 @@ static void SimulatePBModeExit() {
       "ClearedPBContext"_ns, thread, NS_NewRunnableFunction(__func__, [] {}));
 }
 
-class TestGetNodeIdCallback : public GetNodeIdCallback {
- public:
-  TestGetNodeIdCallback(nsCString& aNodeId, nsresult& aResult)
-      : mNodeId(aNodeId), mResult(aResult) {}
-
-  void Done(nsresult aResult, const nsACString& aNodeId) {
-    mResult = aResult;
-    mNodeId = aNodeId;
-  }
-
- private:
-  nsCString& mNodeId;
-  nsresult& mResult;
-};
-
 static NodeIdParts GetNodeIdParts(const nsAString& aOrigin,
                                   const nsAString& aTopLevelOrigin,
                                   const nsAString& aGmpName, bool aInPBMode) {
@@ -236,38 +221,6 @@ static NodeIdParts GetNodeIdParts(const nsAString& aOrigin,
   topLevelOrigin.Assign(aTopLevelOrigin);
   topLevelOrigin.Append(NS_ConvertUTF8toUTF16(suffix));
   return NodeIdParts{origin, topLevelOrigin, nsString(aGmpName)};
-}
-
-static nsCString GetNodeId(const nsAString& aOrigin,
-                           const nsAString& aTopLevelOrigin, bool aInPBMode) {
-  RefPtr<GeckoMediaPluginServiceParent> service =
-      GeckoMediaPluginServiceParent::GetSingleton();
-  EXPECT_TRUE(service);
-  nsCString nodeId;
-  nsresult result;
-  UniquePtr<GetNodeIdCallback> callback(
-      new TestGetNodeIdCallback(nodeId, result));
-
-  OriginAttributes attrs;
-  attrs.mPrivateBrowsingId = aInPBMode ? 1 : 0;
-
-  nsAutoCString suffix;
-  attrs.CreateSuffix(suffix);
-
-  nsAutoString origin;
-  origin.Assign(aOrigin);
-  origin.Append(NS_ConvertUTF8toUTF16(suffix));
-
-  nsAutoString topLevelOrigin;
-  topLevelOrigin.Assign(aTopLevelOrigin);
-  topLevelOrigin.Append(NS_ConvertUTF8toUTF16(suffix));
-
-  // We rely on the fact that the GetNodeId implementation for
-  // GeckoMediaPluginServiceParent is synchronous.
-  nsresult rv = service->GetNodeId(origin, topLevelOrigin, u"gmp-fake"_ns,
-                                   std::move(callback));
-  EXPECT_TRUE(NS_SUCCEEDED(rv) && NS_SUCCEEDED(result));
-  return nodeId;
 }
 
 static bool IsCDMStorageIsEmpty() {
@@ -314,6 +267,34 @@ class CDMStorageTest {
     nsTArray<uint8_t> msg;
     msg.AppendElements(aMessage.get(), aMessage.Length());
     mCDM->UpdateSession("fake-session-id"_ns, 1, msg);
+  }
+
+  static nsCString GetNodeId(const nsAString& aOrigin,
+                             const nsAString& aTopLevelOrigin, bool aInPBMode) {
+    RefPtr<GeckoMediaPluginServiceParent> service =
+        GeckoMediaPluginServiceParent::GetSingleton();
+    EXPECT_TRUE(service);
+    nsCString nodeId;
+
+    OriginAttributes attrs;
+    attrs.mPrivateBrowsingId = aInPBMode ? 1 : 0;
+
+    nsAutoCString suffix;
+    attrs.CreateSuffix(suffix);
+
+    nsAutoString origin;
+    origin.Assign(aOrigin);
+    origin.Append(NS_ConvertUTF8toUTF16(suffix));
+
+    nsAutoString topLevelOrigin;
+    topLevelOrigin.Assign(aTopLevelOrigin);
+    topLevelOrigin.Append(NS_ConvertUTF8toUTF16(suffix));
+
+    // The GeckoMediaPluginServiceParent node-id lookup is synchronous.
+    nsresult rv =
+        service->GetNodeId(origin, topLevelOrigin, u"gmp-fake"_ns, nodeId);
+    EXPECT_TRUE(NS_SUCCEEDED(rv));
+    return nodeId;
   }
 
   void TestGetNodeId() {

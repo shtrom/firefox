@@ -35,11 +35,6 @@ class GeckoMediaPluginServiceChild : public GeckoMediaPluginService {
   NS_IMETHOD FindPluginDirectoryForAPI(const nsACString& aAPI,
                                        const nsTArray<nsCString>& aTags,
                                        nsIFile** aDirectory) override;
-  NS_IMETHOD GetNodeId(const nsAString& aOrigin,
-                       const nsAString& aTopLevelOrigin,
-                       const nsAString& aGMPName,
-                       UniquePtr<GetNodeIdCallback>&& aCallback) override;
-
   NS_DECL_NSIOBSERVER
 
   void SetServiceChild(RefPtr<GMPServiceChild>&& aServiceChild);

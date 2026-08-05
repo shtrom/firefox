@@ -26,6 +26,11 @@ struct already_AddRefed;
 using FlushFOGDataPromise = mozilla::dom::ContentParent::FlushFOGDataPromise;
 using ContentParent = mozilla::dom::ContentParent;
 
+// Defined in dom/media/gtest/TestCDMStorage.cpp; befriended by
+// GeckoMediaPluginServiceParent for test-only access to the private node-id
+// lookup.
+class CDMStorageTest;
+
 namespace mozilla {
 class OriginAttributesPattern;
 
@@ -52,11 +57,6 @@ class GeckoMediaPluginServiceParent final
   NS_IMETHOD FindPluginDirectoryForAPI(const nsACString& aAPI,
                                        const nsTArray<nsCString>& aTags,
                                        nsIFile** aDirectory) override;
-  NS_IMETHOD GetNodeId(const nsAString& aOrigin,
-                       const nsAString& aTopLevelOrigin,
-                       const nsAString& aGMPName,
-                       UniquePtr<GetNodeIdCallback>&& aCallback) override;
-
   NS_DECL_MOZIGECKOMEDIAPLUGINCHROMESERVICE
   NS_DECL_NSIOBSERVER
 
@@ -103,6 +103,8 @@ class GeckoMediaPluginServiceParent final
 
  private:
   friend class GMPServiceParent;
+  // Test-only access to the private synchronous node-id lookup.
+  friend class ::CDMStorageTest;
   class Observer;
 
   virtual ~GeckoMediaPluginServiceParent();
@@ -276,11 +278,6 @@ class GMPServiceParent final : public PGMPServiceParent {
   // implementations in PGMPServiceParent.
   NS_INLINE_DECL_THREADSAFE_REFCOUNTING_WITH_DELETE_ON_MAIN_THREAD(
       GMPServiceParent, final);
-
-  ipc::IPCResult RecvGetGMPNodeId(const nsAString& aOrigin,
-                                  const nsAString& aTopLevelOrigin,
-                                  const nsAString& aGMPName,
-                                  GetGMPNodeIdResolver&& aResolve) override;
 
   static bool Create(Endpoint<PGMPServiceParent>&& aGMPService);
 

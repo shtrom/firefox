@@ -1484,16 +1484,6 @@ nsresult GeckoMediaPluginServiceParent::GetNodeId(
   return NS_OK;
 }
 
-NS_IMETHODIMP
-GeckoMediaPluginServiceParent::GetNodeId(
-    const nsAString& aOrigin, const nsAString& aTopLevelOrigin,
-    const nsAString& aGMPName, UniquePtr<GetNodeIdCallback>&& aCallback) {
-  nsCString nodeId;
-  nsresult rv = GetNodeId(aOrigin, aTopLevelOrigin, aGMPName, nodeId);
-  aCallback->Done(rv, nodeId);
-  return rv;
-}
-
 nsresult GeckoMediaPluginServiceParent::GetNodeId(
     const NodeIdVariant& aNodeIdVariant, nsACString& aOutId) {
   if (aNodeIdVariant.type() == NodeIdVariant::TnsCString) {
@@ -2015,20 +2005,6 @@ mozilla::ipc::IPCResult GMPServiceParent::RecvLaunchGMP(
   result.result() = NS_OK;
   result.endpoint() = std::move(parent);
   aResolve(std::move(result));
-  return IPC_OK();
-}
-
-mozilla::ipc::IPCResult GMPServiceParent::RecvGetGMPNodeId(
-    const nsAString& aOrigin, const nsAString& aTopLevelOrigin,
-    const nsAString& aGMPName, GetGMPNodeIdResolver&& aResolve) {
-  nsCString id;
-  nsresult rv = mService->GetNodeId(aOrigin, aTopLevelOrigin, aGMPName, id);
-  aResolve(id);
-  if (!NS_SUCCEEDED(rv)) {
-    return IPC_FAIL(
-        this,
-        "GMPServiceParent::RecvGetGMPNodeId: mService->GetNodeId failed.");
-  }
   return IPC_OK();
 }
 
