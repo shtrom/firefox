@@ -39,10 +39,10 @@ using mozilla::dom::Animation;
 using mozilla::dom::AnimationPlayState;
 using mozilla::dom::CSSAnimation;
 using mozilla::dom::Element;
-using mozilla::dom::InactiveTimeline;
 using mozilla::dom::KeyframeEffect;
 using mozilla::dom::MutationObservers;
 using mozilla::dom::ScrollTimeline;
+using mozilla::dom::UnresolvedTimeline;
 using mozilla::dom::ViewTimeline;
 
 ////////////////////////// nsAnimationManager ////////////////////////////
@@ -345,7 +345,7 @@ static already_AddRefed<dom::AnimationTimeline> GetNamedProgressTimeline(
       auto* result = scopedTimeline->take();
       if (!result) {
         // https://drafts.csswg.org/scroll-animations-1/#timeline-scoping
-        return MakeAndAddRef<InactiveTimeline>(aDocument);
+        return MakeAndAddRef<UnresolvedTimeline>(aDocument);
       }
       return already_AddRefed{result};
     }
@@ -599,7 +599,7 @@ static void UpdateNamedTimelineAnimation(
     return;
   }
   if (aAnimationsWithDeferredUpdate &&
-      (!newTimeline || newTimeline->IsInactiveTimeline())) {
+      (!newTimeline || newTimeline->IsUnresolvedTimeline())) {
     // We know this animation is looking for a named animation - but it does not
     // exist. One may become available later, so defer setting the new timeline
     // (There may be more incoming changes).

@@ -1304,7 +1304,7 @@ bool Animation::TryTriggerNow() {
   // Note(dshin): Don't try to trigger inactive timelines, since they won't
   // tick in any meaningful way. This has implications on fulfilling the ready
   // promise - See https://github.com/w3c/csswg-drafts/issues/9256
-  if (mTimeline->IsInactiveTimeline()) {
+  if (mTimeline->IsUnresolvedTimeline()) {
     return false;
   }
 
@@ -1796,10 +1796,11 @@ void Animation::PlayNoUpdate(ErrorResult& aRv, LimitBehavior aLimitBehavior) {
     mHoldTime = TimeDuration();
   }
 
-  const bool hasInactiveTimeline = mTimeline && mTimeline->IsInactiveTimeline();
-  if (hasInactiveTimeline && mHoldTime.IsNull()) {
-    // Note(dshin): If we're inactive state and trying to play, hold at zero.
-    // This isn't part of the spec (Spec discusses inactive timelines very
+  const bool hasUnresolvedTimeline =
+      mTimeline && mTimeline->IsUnresolvedTimeline();
+  if (hasUnresolvedTimeline && mHoldTime.IsNull()) {
+    // Note(dshin): If we have unresolved timeline and trying to play, hold at
+    // zero. This isn't part of the spec (Spec discusses inactive timelines very
     // little), but this falls out of inactive timeline behing a finite timeline
     // (See the class definition for why).
     mHoldTime = TimeDuration();

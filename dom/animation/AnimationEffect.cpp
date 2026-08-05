@@ -52,8 +52,9 @@ bool AnimationEffect::IsCurrent() const {
   }
 
   const AnimationTimeline* timeline = mAnimation->GetTimeline();
-  // An inactive timeline does not produce any effect, and so cannot be current.
-  if (timeline && timeline->IsInactiveTimeline()) {
+  // An unresolved timeline does not produce any effect, and so cannot be
+  // current.
+  if (timeline && timeline->IsUnresolvedTimeline()) {
     return false;
   }
   // An animation effect is current if it is associated with an animation not
@@ -85,7 +86,7 @@ bool AnimationEffect::IsInEffect() const {
   const auto* timeline = mAnimation ? mAnimation->GetTimeline() : nullptr;
   // https://github.com/w3c/csswg-drafts/issues/9256
   // Start time is indeterminate, so our progress cannot possibly be resolved.
-  if (timeline && timeline->IsInactiveTimeline()) {
+  if (timeline && timeline->IsUnresolvedTimeline()) {
     return false;
   }
   ComputedTiming computedTiming = GetComputedTiming();
