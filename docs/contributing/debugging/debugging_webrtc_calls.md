@@ -927,14 +927,14 @@ Here is a list of helpful substring selectors for executing specific WebRTC gtes
      - :searchfox:`videoconduit_unittests.cpp <media/webrtc/signaling/gtest/videoconduit_unittests.cpp>`
 ```
 
-For more general information about gtests see the documentation [here](/gtest/index.html).
+For more general information about gtests see the documentation [here](/gtest/index.md).
 
 ### Fuzz Testing
 
 It is not common to need to run fuzz testing as it is run on a semi-continuous
 fashion in CI. It is more likely that one will need to respond to a bug filed
 by a fuzzing bot. If one is interested in fuzzing one should consult the
-excellent documentation available [here](/tools/fuzzing/index.html).
+excellent documentation available [here](/tools/fuzzing/index.md).
 
 (code-atlas)=
 

@@ -26,4 +26,4 @@ $ pandoc -t rst https://github.com/mdn/archived-content/tree/main/files/en-us/mo
 sed -i -e 's/\xc2\xa0/ /g' doc.rst
 ```
 
-[./mach lint -l rst]: /tools/lint/linters/rstlinter.html
+[./mach lint -l rst]: /code-quality/lint/linters/rstlinter.md

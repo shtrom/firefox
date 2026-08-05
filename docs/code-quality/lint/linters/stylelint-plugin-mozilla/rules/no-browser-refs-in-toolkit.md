@@ -8,7 +8,7 @@ where browser code is not necessarily available. Browser code can depend on tool
 code should never depend on browser code, since toolkit code can be used in
 other applications/contexts where browser code may not be available.
 
-See additional documentation for more information on [internal URLs](/toolkit/internal-urls.html).
+See additional documentation for more information on [internal URLs](/toolkit/internal-urls.md).
 
 ## Rule Scope
 
