@@ -783,8 +783,8 @@ uint32_t MacroAssembler::pushFakeReturnAddress(Register scratch) {
 // ===============================================================
 // WebAssembly
 
-FaultingCodeOffset MacroAssembler::wasmTrapInstruction() {
-  return FaultingCodeOffset(ud2().offset());
+FaultingCodeRange MacroAssembler::wasmTrapInstruction() {
+  return FaultingCodeRange(ud2().offset());
 }
 
 void MacroAssembler::wasmBoundsCheck32(Condition cond, Register index,
@@ -1177,7 +1177,7 @@ static void CompareExchange(MacroAssembler& masm,
 
   if (access) {
     masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                FaultingCodeOffset(masm.currentOffset()));
+                FaultingCodeRange(masm.currentOffset()));
   }
 
   // NOTE: the generated code must match the assembly code in gen_cmpxchg in
@@ -1238,7 +1238,7 @@ static void AtomicExchange(MacroAssembler& masm,
 
   if (access) {
     masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                FaultingCodeOffset(masm.currentOffset()));
+                FaultingCodeRange(masm.currentOffset()));
   }
 
   switch (Scalar::byteSize(type)) {
@@ -1438,7 +1438,7 @@ static void AtomicFetchOp(MacroAssembler& masm,
   // Add trap instruction directly before the load.
   if (access) {
     masm.append(*access, WasmTrapMachineInsn(arrayType, op),
-                FaultingCodeOffset(masm.currentOffset()));
+                FaultingCodeRange(masm.currentOffset()));
   }
 
   switch (op) {
@@ -1546,7 +1546,7 @@ static void AtomicEffectOp(MacroAssembler& masm,
                            const T& mem) {
   if (access) {
     masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                FaultingCodeOffset(masm.currentOffset()));
+                FaultingCodeRange(masm.currentOffset()));
   }
 
   switch (Scalar::byteSize(arrayType)) {

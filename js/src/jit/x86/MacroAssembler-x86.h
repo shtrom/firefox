@@ -12,7 +12,7 @@
 #include "wasm/WasmBuiltins.h"
 #include "wasm/WasmCodegenTypes.h"
 
-using js::wasm::FaultingCodeOffsetPair;
+using js::wasm::FaultingCodeRangePair;
 
 namespace js {
 namespace jit {
@@ -634,16 +634,16 @@ class MacroAssemblerX86 : public MacroAssemblerX86Shared {
   void movePtr(ImmPtr imm, Register dest) { movl(imm, dest); }
   void movePtr(wasm::SymbolicAddress imm, Register dest) { mov(imm, dest); }
   void movePtr(ImmGCPtr imm, Register dest) { movl(imm, dest); }
-  FaultingCodeOffset loadPtr(const Address& address, Register dest) {
-    FaultingCodeOffset fco = FaultingCodeOffset(currentOffset());
+  FaultingCodeRange loadPtr(const Address& address, Register dest) {
+    FaultingCodeRange fcr = FaultingCodeRange(currentOffset());
     movl(Operand(address), dest);
-    return fco;
+    return fcr;
   }
   void loadPtr(const Operand& src, Register dest) { movl(src, dest); }
-  FaultingCodeOffset loadPtr(const BaseIndex& src, Register dest) {
-    FaultingCodeOffset fco = FaultingCodeOffset(currentOffset());
+  FaultingCodeRange loadPtr(const BaseIndex& src, Register dest) {
+    FaultingCodeRange fcr = FaultingCodeRange(currentOffset());
     movl(Operand(src), dest);
-    return fco;
+    return fcr;
   }
   void loadPtr(AbsoluteAddress address, Register dest) {
     movl(Operand(address), dest);
@@ -654,51 +654,51 @@ class MacroAssemblerX86 : public MacroAssemblerX86Shared {
   void load32(AbsoluteAddress address, Register dest) {
     movl(Operand(address), dest);
   }
-  FaultingCodeOffsetPair load64(const Address& address, Register64 dest) {
-    FaultingCodeOffset fco1, fco2;
+  FaultingCodeRangePair load64(const Address& address, Register64 dest) {
+    FaultingCodeRange fcr1, fcr2;
     bool highBeforeLow = address.base == dest.low;
     if (highBeforeLow) {
-      fco1 = FaultingCodeOffset(currentOffset());
+      fcr1 = FaultingCodeRange(currentOffset());
       movl(Operand(HighWord(address)), dest.high);
-      fco2 = FaultingCodeOffset(currentOffset());
+      fcr2 = FaultingCodeRange(currentOffset());
       movl(Operand(LowWord(address)), dest.low);
     } else {
-      fco1 = FaultingCodeOffset(currentOffset());
+      fcr1 = FaultingCodeRange(currentOffset());
       movl(Operand(LowWord(address)), dest.low);
-      fco2 = FaultingCodeOffset(currentOffset());
+      fcr2 = FaultingCodeRange(currentOffset());
       movl(Operand(HighWord(address)), dest.high);
     }
-    return FaultingCodeOffsetPair(fco1, fco2);
+    return FaultingCodeRangePair(fcr1, fcr2);
   }
-  FaultingCodeOffsetPair load64(const BaseIndex& address, Register64 dest) {
+  FaultingCodeRangePair load64(const BaseIndex& address, Register64 dest) {
     // If you run into this, relax your register allocation constraints.
     MOZ_RELEASE_ASSERT(
         !((address.base == dest.low || address.base == dest.high) &&
           (address.index == dest.low || address.index == dest.high)));
-    FaultingCodeOffset fco1, fco2;
+    FaultingCodeRange fcr1, fcr2;
     bool highBeforeLow = address.base == dest.low || address.index == dest.low;
     if (highBeforeLow) {
-      fco1 = FaultingCodeOffset(currentOffset());
+      fcr1 = FaultingCodeRange(currentOffset());
       movl(Operand(HighWord(address)), dest.high);
-      fco2 = FaultingCodeOffset(currentOffset());
+      fcr2 = FaultingCodeRange(currentOffset());
       movl(Operand(LowWord(address)), dest.low);
     } else {
-      fco1 = FaultingCodeOffset(currentOffset());
+      fcr1 = FaultingCodeRange(currentOffset());
       movl(Operand(LowWord(address)), dest.low);
-      fco2 = FaultingCodeOffset(currentOffset());
+      fcr2 = FaultingCodeRange(currentOffset());
       movl(Operand(HighWord(address)), dest.high);
     }
-    return FaultingCodeOffsetPair(fco1, fco2);
+    return FaultingCodeRangePair(fcr1, fcr2);
   }
   template <typename T>
   void load64Unaligned(const T& address, Register64 dest) {
     load64(address, dest);
   }
   template <typename T>
-  FaultingCodeOffset storePtr(ImmWord imm, T address) {
-    FaultingCodeOffset fco = FaultingCodeOffset(currentOffset());
+  FaultingCodeRange storePtr(ImmWord imm, T address) {
+    FaultingCodeRange fcr = FaultingCodeRange(currentOffset());
     movl(Imm32(imm.value), Operand(address));
-    return fco;
+    return fcr;
   }
   template <typename T>
   void storePtr(ImmPtr imm, T address) {
@@ -708,15 +708,15 @@ class MacroAssemblerX86 : public MacroAssemblerX86Shared {
   void storePtr(ImmGCPtr imm, T address) {
     movl(imm, Operand(address));
   }
-  FaultingCodeOffset storePtr(Register src, const Address& address) {
-    FaultingCodeOffset fco = FaultingCodeOffset(currentOffset());
+  FaultingCodeRange storePtr(Register src, const Address& address) {
+    FaultingCodeRange fcr = FaultingCodeRange(currentOffset());
     movl(src, Operand(address));
-    return fco;
+    return fcr;
   }
-  FaultingCodeOffset storePtr(Register src, const BaseIndex& address) {
-    FaultingCodeOffset fco = FaultingCodeOffset(currentOffset());
+  FaultingCodeRange storePtr(Register src, const BaseIndex& address) {
+    FaultingCodeRange fcr = FaultingCodeRange(currentOffset());
     movl(src, Operand(address));
-    return fco;
+    return fcr;
   }
   void storePtr(Register src, const Operand& dest) { movl(src, dest); }
   void storePtr(Register src, AbsoluteAddress address) {
@@ -729,12 +729,12 @@ class MacroAssemblerX86 : public MacroAssemblerX86Shared {
     movw(src, Operand(address));
   }
   template <typename T>
-  FaultingCodeOffsetPair store64(Register64 src, const T& address) {
-    FaultingCodeOffset fco1 = FaultingCodeOffset(currentOffset());
+  FaultingCodeRangePair store64(Register64 src, const T& address) {
+    FaultingCodeRange fcr1 = FaultingCodeRange(currentOffset());
     movl(src.low, Operand(LowWord(address)));
-    FaultingCodeOffset fco2 = FaultingCodeOffset(currentOffset());
+    FaultingCodeRange fcr2 = FaultingCodeRange(currentOffset());
     movl(src.high, Operand(HighWord(address)));
-    return FaultingCodeOffsetPair(fco1, fco2);
+    return FaultingCodeRangePair(fcr1, fcr2);
   }
   void store64(Imm64 imm, Address address) {
     movl(imm.low(), Operand(LowWord(address)));

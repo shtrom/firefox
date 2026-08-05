@@ -43,7 +43,7 @@
 #  define JS_CODELABEL_LINKMODE
 #endif
 
-using js::wasm::FaultingCodeOffset;
+using js::wasm::FaultingCodeRange;
 
 namespace js {
 namespace jit {
@@ -728,7 +728,7 @@ class AssemblerShared {
 #endif
   }
   void append(const wasm::MemoryAccessDesc& access, wasm::TrapMachineInsn insn,
-              FaultingCodeOffset pcOffset) {
+              FaultingCodeRange pcOffset) {
     append(wasm::Trap::OutOfBounds, insn, pcOffset.get(), access.trapDesc());
   }
   void append(wasm::SymbolicAccess access) {

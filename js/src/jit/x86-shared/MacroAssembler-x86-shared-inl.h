@@ -1259,20 +1259,20 @@ void MacroAssembler::spectreZeroRegister(Condition cond, Register scratch,
 
 // ========================================================================
 // Memory access primitives.
-FaultingCodeOffset MacroAssembler::storeDouble(FloatRegister src,
-                                               const Address& dest) {
-  FaultingCodeOffset fco = FaultingCodeOffset(currentOffset());
+FaultingCodeRange MacroAssembler::storeDouble(FloatRegister src,
+                                              const Address& dest) {
+  FaultingCodeRange fcr = FaultingCodeRange(currentOffset());
   vmovsd(src, dest);
-  return fco;
+  return fcr;
 }
-FaultingCodeOffset MacroAssembler::storeDouble(FloatRegister src,
-                                               const BaseIndex& dest) {
-  FaultingCodeOffset fco = FaultingCodeOffset(currentOffset());
+FaultingCodeRange MacroAssembler::storeDouble(FloatRegister src,
+                                              const BaseIndex& dest) {
+  FaultingCodeRange fcr = FaultingCodeRange(currentOffset());
   vmovsd(src, dest);
-  return fco;
+  return fcr;
 }
-FaultingCodeOffset MacroAssembler::storeDouble(FloatRegister src,
-                                               const Operand& dest) {
+FaultingCodeRange MacroAssembler::storeDouble(FloatRegister src,
+                                              const Operand& dest) {
   switch (dest.kind()) {
     case Operand::MEM_REG_DISP:
       return storeDouble(src, dest.toAddress());
@@ -1283,20 +1283,20 @@ FaultingCodeOffset MacroAssembler::storeDouble(FloatRegister src,
   }
 }
 
-FaultingCodeOffset MacroAssembler::storeFloat32(FloatRegister src,
-                                                const Address& dest) {
-  FaultingCodeOffset fco = FaultingCodeOffset(currentOffset());
+FaultingCodeRange MacroAssembler::storeFloat32(FloatRegister src,
+                                               const Address& dest) {
+  FaultingCodeRange fcr = FaultingCodeRange(currentOffset());
   vmovss(src, dest);
-  return fco;
+  return fcr;
 }
-FaultingCodeOffset MacroAssembler::storeFloat32(FloatRegister src,
-                                                const BaseIndex& dest) {
-  FaultingCodeOffset fco = FaultingCodeOffset(currentOffset());
+FaultingCodeRange MacroAssembler::storeFloat32(FloatRegister src,
+                                               const BaseIndex& dest) {
+  FaultingCodeRange fcr = FaultingCodeRange(currentOffset());
   vmovss(src, dest);
-  return fco;
+  return fcr;
 }
-FaultingCodeOffset MacroAssembler::storeFloat32(FloatRegister src,
-                                                const Operand& dest) {
+FaultingCodeRange MacroAssembler::storeFloat32(FloatRegister src,
+                                               const Operand& dest) {
   switch (dest.kind()) {
     case Operand::MEM_REG_DISP:
       return storeFloat32(src, dest.toAddress());
@@ -1307,23 +1307,23 @@ FaultingCodeOffset MacroAssembler::storeFloat32(FloatRegister src,
   }
 }
 
-FaultingCodeOffset MacroAssembler::storeFloat16(FloatRegister src,
-                                                const Address& dest,
-                                                Register scratch) {
+FaultingCodeRange MacroAssembler::storeFloat16(FloatRegister src,
+                                               const Address& dest,
+                                               Register scratch) {
   vmovd(src, scratch);
 
-  FaultingCodeOffset fco = FaultingCodeOffset(currentOffset());
+  FaultingCodeRange fcr = FaultingCodeRange(currentOffset());
   movw(scratch, Operand(dest));
-  return fco;
+  return fcr;
 }
-FaultingCodeOffset MacroAssembler::storeFloat16(FloatRegister src,
-                                                const BaseIndex& dest,
-                                                Register scratch) {
+FaultingCodeRange MacroAssembler::storeFloat16(FloatRegister src,
+                                               const BaseIndex& dest,
+                                               Register scratch) {
   vmovd(src, scratch);
 
-  FaultingCodeOffset fco = FaultingCodeOffset(currentOffset());
+  FaultingCodeRange fcr = FaultingCodeRange(currentOffset());
   movw(scratch, Operand(dest));
-  return fco;
+  return fcr;
 }
 
 void MacroAssembler::memoryBarrier(MemoryBarrier barrier) {
@@ -2834,25 +2834,25 @@ void MacroAssembler::loadUnalignedSimd128(const Operand& src,
   loadUnalignedSimd128Int(src, dest);
 }
 
-FaultingCodeOffset MacroAssembler::loadUnalignedSimd128(const Address& src,
-                                                        FloatRegister dest) {
+FaultingCodeRange MacroAssembler::loadUnalignedSimd128(const Address& src,
+                                                       FloatRegister dest) {
   return loadUnalignedSimd128Int(src, dest);
 }
 
-FaultingCodeOffset MacroAssembler::loadUnalignedSimd128(const BaseIndex& src,
-                                                        FloatRegister dest) {
+FaultingCodeRange MacroAssembler::loadUnalignedSimd128(const BaseIndex& src,
+                                                       FloatRegister dest) {
   return loadUnalignedSimd128Int(src, dest);
 }
 
 // Store.  See comments above regarding integer operation.
 
-FaultingCodeOffset MacroAssembler::storeUnalignedSimd128(FloatRegister src,
-                                                         const Address& dest) {
+FaultingCodeRange MacroAssembler::storeUnalignedSimd128(FloatRegister src,
+                                                        const Address& dest) {
   return storeUnalignedSimd128Int(src, dest);
 }
 
-FaultingCodeOffset MacroAssembler::storeUnalignedSimd128(
-    FloatRegister src, const BaseIndex& dest) {
+FaultingCodeRange MacroAssembler::storeUnalignedSimd128(FloatRegister src,
+                                                        const BaseIndex& dest) {
   return storeUnalignedSimd128Int(src, dest);
 }
 

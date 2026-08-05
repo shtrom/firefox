@@ -222,13 +222,13 @@ const char* ToString(TrapMachineInsn tmi);
 // It is wrapped up as a new type only to avoid getting it confused with any
 // other uint32_t or with CodeOffset.
 
-class FaultingCodeOffset {
+class FaultingCodeRange {
   static constexpr uint32_t INVALID = UINT32_MAX;
   uint32_t offset_;
 
  public:
-  FaultingCodeOffset() : offset_(INVALID) {}
-  explicit FaultingCodeOffset(uint32_t offset) : offset_(offset) {
+  FaultingCodeRange() : offset_(INVALID) {}
+  explicit FaultingCodeRange(uint32_t offset) : offset_(offset) {
     MOZ_ASSERT(offset != INVALID);
   }
   bool isValid() const { return offset_ != INVALID; }
@@ -237,13 +237,12 @@ class FaultingCodeOffset {
     return offset_;
   }
 };
-static_assert(sizeof(FaultingCodeOffset) == 4);
+static_assert(sizeof(FaultingCodeRange) == 4);
 
 // And this holds two such offsets.  Needed for 64-bit integer transactions on
 // 32-bit targets.
-using FaultingCodeOffsetPair =
-    std::pair<FaultingCodeOffset, FaultingCodeOffset>;
-static_assert(sizeof(FaultingCodeOffsetPair) == 8);
+using FaultingCodeRangePair = std::pair<FaultingCodeRange, FaultingCodeRange>;
+static_assert(sizeof(FaultingCodeRangePair) == 8);
 
 // The bytecode offsets of all the callers of a function that has been inlined.
 // See CallSiteDesc/TrapSiteDesc for uses of this.

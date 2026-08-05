@@ -998,26 +998,26 @@ void CodeGeneratorX64::wasmStore(const wasm::MemoryAccessDesc& access,
       case Scalar::Int8:
       case Scalar::Uint8:
         masm.append(access, wasm::TrapMachineInsn::Store8,
-                    FaultingCodeOffset(masm.currentOffset()));
+                    FaultingCodeRange(masm.currentOffset()));
         masm.movb(cst, dstAddr);
         break;
       case Scalar::Int16:
       case Scalar::Uint16:
         masm.append(access, wasm::TrapMachineInsn::Store16,
-                    FaultingCodeOffset(masm.currentOffset()));
+                    FaultingCodeRange(masm.currentOffset()));
         masm.movw(cst, dstAddr);
         break;
       case Scalar::Int32:
       case Scalar::Uint32:
         masm.append(access, wasm::TrapMachineInsn::Store32,
-                    FaultingCodeOffset(masm.currentOffset()));
+                    FaultingCodeRange(masm.currentOffset()));
         masm.movl(cst, dstAddr);
         break;
       case Scalar::Int64:
         MOZ_ASSERT_IF(mir->type() == MIRType::Int64,
                       mozilla::CheckedInt32(mir->toInt64()).isValid());
         masm.append(access, wasm::TrapMachineInsn::Store64,
-                    FaultingCodeOffset(masm.currentOffset()));
+                    FaultingCodeRange(masm.currentOffset()));
         masm.movq(cst, dstAddr);
         break;
       case Scalar::Simd128:
