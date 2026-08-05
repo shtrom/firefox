@@ -100,7 +100,7 @@ class PropertyEnumerator {
   bool forObjectKeys_ = false;
 
   bool hasOwnDenseElements_ = false;
-  mozilla::DebugOnly<bool> hasDenseElementsFromProto_ = false;
+  bool hasDenseElementsFromProto_ = false;
 
   enum class IndicesState {
     // Every property that has been enumerated so far can be represented as a
@@ -149,13 +149,7 @@ class PropertyEnumerator {
   void setForObjectKeys(bool value) { forObjectKeys_ = value; }
 
   bool hasOwnDenseElements() const { return hasOwnDenseElements_; }
-  bool hasDenseElementsFromProto() const {
-#ifdef DEBUG
-    return hasDenseElementsFromProto_;
-#else
-    return false;
-#endif
-  }
+  bool hasDenseElementsFromProto() const { return hasDenseElementsFromProto_; }
 
  private:
   template <bool CheckForDuplicates>
@@ -657,12 +651,10 @@ bool PropertyEnumerator::snapshot(JSContext* cx) {
   bool checkForDuplicates = !(flags_ & JSITER_OWNONLY);
 
   do {
-#ifdef DEBUG
     if (enumeratingProtoChain_ &&
         ObjectMayHaveExtraIndexedOwnProperties(obj_)) {
       hasDenseElementsFromProto_ = true;
     }
-#endif
 
     if (obj_->getClass()->getNewEnumerate()) {
       markIndicesUnsupported();
