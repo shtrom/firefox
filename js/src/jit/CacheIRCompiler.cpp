@@ -10408,7 +10408,7 @@ bool CacheIRCompiler::emitConcatStringsResult(StringOperandId lhsId,
   return true;
 }
 
-bool CacheIRCompiler::emitCallIsSuspendedGeneratorResult(ValOperandId valId) {
+bool CacheIRCompiler::emitIsSuspendedGeneratorResult(ValOperandId valId) {
   JitSpew(JitSpew_Codegen, "%s", __FUNCTION__);
   AutoOutputRegister output(*this);
   AutoScratchRegisterMaybeOutput scratch(allocator, masm, output);

@@ -7294,7 +7294,7 @@ AttachDecision InlinableNativeIRGenerator::tryAttachIsSuspendedGenerator() {
   // Check whether the argument is a suspended generator.
   // We don't need guards, because IsSuspendedGenerator returns
   // false for values that are not generator objects.
-  writer.callIsSuspendedGeneratorResult(valId);
+  writer.isSuspendedGeneratorResult(valId);
 
   trackAttached("IsSuspendedGenerator");
   return AttachDecision::Attach;

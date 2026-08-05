@@ -3455,7 +3455,7 @@
     lhs: ValId
     rhs: ValId
 
-- name: CallIsSuspendedGeneratorResult
+- name: IsSuspendedGeneratorResult
   shared: true
   transpile: false
   cost_estimate: 2
