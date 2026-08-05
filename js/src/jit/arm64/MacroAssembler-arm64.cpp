@@ -876,7 +876,8 @@ void MacroAssemblerCompat::wasmLoadImpl(const wasm::MemoryAccessDesc& access,
       MOZ_CRASH("unexpected array type");
   }
 
-  append(access, wasm::TrapMachineInsnForLoad(byteSize(access.type())), fcr);
+  asMasm().appendAndVerify(
+      access, wasm::TrapMachineInsnForLoad(byteSize(access.type())), fcr);
 
   asMasm().memoryBarrierAfter(access.sync());
 }
@@ -980,7 +981,8 @@ void MacroAssemblerCompat::wasmStoreImpl(const wasm::MemoryAccessDesc& access,
       MOZ_CRASH("unexpected array type");
   }
 
-  append(access, wasm::TrapMachineInsnForStore(byteSize(access.type())), fcr);
+  asMasm().appendAndVerify(
+      access, wasm::TrapMachineInsnForStore(byteSize(access.type())), fcr);
 
   asMasm().memoryBarrierAfter(access.sync());
 }
@@ -2615,8 +2617,8 @@ static void LoadExclusive(MacroAssembler& masm,
             &masm,
             /* max number of instructions in scope = */ 1);
         if (access) {
-          masm.append(*access, wasm::TrapMachineInsn::Load8,
-                      FaultingCodeRange(masm.currentOffset()));
+          masm.appendAndVerify(*access, wasm::TrapMachineInsn::Load8,
+                               FaultingCodeRange(masm.currentOffset()));
         }
         masm.Ldxrb(W(dest), ptr);
       }
@@ -2631,8 +2633,8 @@ static void LoadExclusive(MacroAssembler& masm,
             &masm,
             /* max number of instructions in scope = */ 1);
         if (access) {
-          masm.append(*access, wasm::TrapMachineInsn::Load16,
-                      FaultingCodeRange(masm.currentOffset()));
+          masm.appendAndVerify(*access, wasm::TrapMachineInsn::Load16,
+                               FaultingCodeRange(masm.currentOffset()));
         }
         masm.Ldxrh(W(dest), ptr);
       }
@@ -2647,8 +2649,8 @@ static void LoadExclusive(MacroAssembler& masm,
             &masm,
             /* max number of instructions in scope = */ 1);
         if (access) {
-          masm.append(*access, wasm::TrapMachineInsn::Load32,
-                      FaultingCodeRange(masm.currentOffset()));
+          masm.appendAndVerify(*access, wasm::TrapMachineInsn::Load32,
+                               FaultingCodeRange(masm.currentOffset()));
         }
         masm.Ldxr(W(dest), ptr);
       }
@@ -2663,8 +2665,8 @@ static void LoadExclusive(MacroAssembler& masm,
             &masm,
             /* max number of instructions in scope = */ 1);
         if (access) {
-          masm.append(*access, wasm::TrapMachineInsn::Load64,
-                      FaultingCodeRange(masm.currentOffset()));
+          masm.appendAndVerify(*access, wasm::TrapMachineInsn::Load64,
+                               FaultingCodeRange(masm.currentOffset()));
         }
         masm.Ldxr(X(dest), ptr);
       }
@@ -2736,10 +2738,7 @@ static void CompareExchange(MacroAssembler& masm,
     masm.memoryBarrierBefore(sync);
     {
       AutoForbidPoolsAndNops afp(&masm, /* number of insns = */ 1);
-      if (access) {
-        masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                    FaultingCodeRange(masm.currentOffset()));
-      }
+      auto before = masm.currentOffset();
       switch (byteSize(type)) {
         case 1:
           masm.Casalb(R(output, targetWidth), R(newval, targetWidth), ptr);
@@ -2753,6 +2752,10 @@ static void CompareExchange(MacroAssembler& masm,
           break;
         default:
           MOZ_CRASH("CompareExchange unsupported type");
+      }
+      if (access) {
+        masm.appendAndVerify(*access, wasm::TrapMachineInsn::Atomic,
+                             FaultingCodeRange(before));
       }
     }
     masm.memoryBarrierAfter(sync);
@@ -2804,10 +2807,7 @@ static void AtomicExchange(MacroAssembler& masm,
     masm.memoryBarrierBefore(sync);
     {
       AutoForbidPoolsAndNops afp(&masm, /* number of insns = */ 1);
-      if (access) {
-        masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                    FaultingCodeRange(masm.currentOffset()));
-      }
+      auto before = masm.currentOffset();
       switch (byteSize(type)) {
         case 1:
           masm.Swpalb(R(value, targetWidth), R(output, targetWidth), ptr);
@@ -2821,6 +2821,10 @@ static void AtomicExchange(MacroAssembler& masm,
           break;
         default:
           MOZ_CRASH("AtomicExchange unsupported type");
+      }
+      if (access) {
+        masm.appendAndVerify(*access, wasm::TrapMachineInsn::Atomic,
+                             FaultingCodeRange(before));
       }
     }
     masm.memoryBarrierAfter(sync);
@@ -2872,10 +2876,7 @@ static void AtomicFetchOp(MacroAssembler& masm,
 #define FETCH_OP_CASE(op, arg)                                                \
   {                                                                           \
     AutoForbidPoolsAndNops afp(&masm, /* num insns = */ 1);                   \
-    if (access) {                                                             \
-      masm.append(*access, wasm::TrapMachineInsn::Atomic,                     \
-                  FaultingCodeRange(masm.currentOffset()));                   \
-    }                                                                         \
+    auto before = masm.currentOffset();                                       \
     switch (byteSize(type)) {                                                 \
       case 1:                                                                 \
         if (wantResult) {                                                     \
@@ -2901,6 +2902,10 @@ static void AtomicFetchOp(MacroAssembler& masm,
         break;                                                                \
       default:                                                                \
         MOZ_CRASH("AtomicFetchOp unsupported type");                          \
+    }                                                                         \
+    if (access) {                                                             \
+      masm.appendAndVerify(*access, wasm::TrapMachineInsn::Atomic,            \
+                           FaultingCodeRange(before));                        \
     }                                                                         \
   }
 

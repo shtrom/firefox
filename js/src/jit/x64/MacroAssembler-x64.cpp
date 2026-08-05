@@ -1231,8 +1231,8 @@ void MacroAssembler::wasmLoad(const wasm::MemoryAccessDesc& access,
       auto before = currentOffset();
       movsbl(srcAddr, out.gpr());
       auto after = currentOffset();
-      append(access, wasm::TrapMachineInsn::Load8,
-             FaultingCodeRange(before, after));
+      appendAndVerify(access, wasm::TrapMachineInsn::Load8,
+                      FaultingCodeRange(before, after));
       break;
     }
     case Scalar::Uint8: {
@@ -1243,16 +1243,16 @@ void MacroAssembler::wasmLoad(const wasm::MemoryAccessDesc& access,
         movzbl(srcAddr, out.gpr());
       }
       auto after = currentOffset();
-      append(access, wasm::TrapMachineInsn::Load8,
-             FaultingCodeRange(before, after));
+      appendAndVerify(access, wasm::TrapMachineInsn::Load8,
+                      FaultingCodeRange(before, after));
       break;
     }
     case Scalar::Int16: {
       auto before = currentOffset();
       movswl(srcAddr, out.gpr());
       auto after = currentOffset();
-      append(access, wasm::TrapMachineInsn::Load16,
-             FaultingCodeRange(before, after));
+      appendAndVerify(access, wasm::TrapMachineInsn::Load16,
+                      FaultingCodeRange(before, after));
       break;
     }
     case Scalar::Uint16: {
@@ -1263,8 +1263,8 @@ void MacroAssembler::wasmLoad(const wasm::MemoryAccessDesc& access,
         movzwl(srcAddr, out.gpr());
       }
       auto after = currentOffset();
-      append(access, wasm::TrapMachineInsn::Load16,
-             FaultingCodeRange(before, after));
+      appendAndVerify(access, wasm::TrapMachineInsn::Load16,
+                      FaultingCodeRange(before, after));
       break;
     }
     case Scalar::Int32:
@@ -1272,8 +1272,8 @@ void MacroAssembler::wasmLoad(const wasm::MemoryAccessDesc& access,
       auto before = currentOffset();
       movl(srcAddr, out.gpr());
       auto after = currentOffset();
-      append(access, wasm::TrapMachineInsn::Load32,
-             FaultingCodeRange(before, after));
+      appendAndVerify(access, wasm::TrapMachineInsn::Load32,
+                      FaultingCodeRange(before, after));
       break;
     }
     case Scalar::Float32: {
@@ -1285,8 +1285,8 @@ void MacroAssembler::wasmLoad(const wasm::MemoryAccessDesc& access,
         vmovss(srcAddr, out.fpu());
       }
       auto after = currentOffset();
-      append(access, wasm::TrapMachineInsn::Load32,
-             FaultingCodeRange(before, after));
+      appendAndVerify(access, wasm::TrapMachineInsn::Load32,
+                      FaultingCodeRange(before, after));
       break;
     }
     case Scalar::Float64: {
@@ -1321,14 +1321,14 @@ void MacroAssembler::wasmLoad(const wasm::MemoryAccessDesc& access,
         vmovsd(srcAddr, out.fpu());
       }
       auto after = currentOffset();
-      append(access, wasm::TrapMachineInsn::Load64,
-             FaultingCodeRange(before, after));
+      appendAndVerify(access, wasm::TrapMachineInsn::Load64,
+                      FaultingCodeRange(before, after));
       break;
     }
     case Scalar::Simd128: {
       FaultingCodeRange fcr =
           MacroAssemblerX64::loadUnalignedSimd128(srcAddr, out.fpu());
-      append(access, wasm::TrapMachineInsn::Load128, fcr);
+      appendAndVerify(access, wasm::TrapMachineInsn::Load128, fcr);
       break;
     }
     case Scalar::Int64:
@@ -1355,40 +1355,40 @@ void MacroAssembler::wasmLoadI64(const wasm::MemoryAccessDesc& access,
       auto before = currentOffset();
       movsbq(srcAddr, out.reg);
       auto after = currentOffset();
-      append(access, wasm::TrapMachineInsn::Load8,
-             FaultingCodeRange(before, after));
+      appendAndVerify(access, wasm::TrapMachineInsn::Load8,
+                      FaultingCodeRange(before, after));
       break;
     }
     case Scalar::Uint8: {
       auto before = currentOffset();
       movzbq(srcAddr, out.reg);
       auto after = currentOffset();
-      append(access, wasm::TrapMachineInsn::Load8,
-             FaultingCodeRange(before, after));
+      appendAndVerify(access, wasm::TrapMachineInsn::Load8,
+                      FaultingCodeRange(before, after));
       break;
     }
     case Scalar::Int16: {
       auto before = currentOffset();
       movswq(srcAddr, out.reg);
       auto after = currentOffset();
-      append(access, wasm::TrapMachineInsn::Load16,
-             FaultingCodeRange(before, after));
+      appendAndVerify(access, wasm::TrapMachineInsn::Load16,
+                      FaultingCodeRange(before, after));
       break;
     }
     case Scalar::Uint16: {
       auto before = currentOffset();
       movzwq(srcAddr, out.reg);
       auto after = currentOffset();
-      append(access, wasm::TrapMachineInsn::Load16,
-             FaultingCodeRange(before, after));
+      appendAndVerify(access, wasm::TrapMachineInsn::Load16,
+                      FaultingCodeRange(before, after));
       break;
     }
     case Scalar::Int32: {
       auto before = currentOffset();
       movslq(srcAddr, out.reg);
       auto after = currentOffset();
-      append(access, wasm::TrapMachineInsn::Load32,
-             FaultingCodeRange(before, after));
+      appendAndVerify(access, wasm::TrapMachineInsn::Load32,
+                      FaultingCodeRange(before, after));
       break;
     }
     // Int32 to int64 moves zero-extend by default.
@@ -1396,16 +1396,16 @@ void MacroAssembler::wasmLoadI64(const wasm::MemoryAccessDesc& access,
       auto before = currentOffset();
       movl(srcAddr, out.reg);
       auto after = currentOffset();
-      append(access, wasm::TrapMachineInsn::Load32,
-             FaultingCodeRange(before, after));
+      appendAndVerify(access, wasm::TrapMachineInsn::Load32,
+                      FaultingCodeRange(before, after));
       break;
     }
     case Scalar::Int64: {
       auto before = currentOffset();
       movq(srcAddr, out.reg);
       auto after = currentOffset();
-      append(access, wasm::TrapMachineInsn::Load64,
-             FaultingCodeRange(before, after));
+      appendAndVerify(access, wasm::TrapMachineInsn::Load64,
+                      FaultingCodeRange(before, after));
       break;
     }
     case Scalar::Float16:
@@ -1435,8 +1435,8 @@ void MacroAssembler::wasmStore(const wasm::MemoryAccessDesc& access,
       auto before = currentOffset();
       movb(value.gpr(), dstAddr);
       auto after = currentOffset();
-      append(access, wasm::TrapMachineInsn::Store8,
-             FaultingCodeRange(before, after));
+      appendAndVerify(access, wasm::TrapMachineInsn::Store8,
+                      FaultingCodeRange(before, after));
       break;
     }
     case Scalar::Int16:
@@ -1444,8 +1444,8 @@ void MacroAssembler::wasmStore(const wasm::MemoryAccessDesc& access,
       auto before = currentOffset();
       movw(value.gpr(), dstAddr);
       auto after = currentOffset();
-      append(access, wasm::TrapMachineInsn::Store16,
-             FaultingCodeRange(before, after));
+      appendAndVerify(access, wasm::TrapMachineInsn::Store16,
+                      FaultingCodeRange(before, after));
       break;
     }
     case Scalar::Int32:
@@ -1453,32 +1453,32 @@ void MacroAssembler::wasmStore(const wasm::MemoryAccessDesc& access,
       auto before = currentOffset();
       movl(value.gpr(), dstAddr);
       auto after = currentOffset();
-      append(access, wasm::TrapMachineInsn::Store32,
-             FaultingCodeRange(before, after));
+      appendAndVerify(access, wasm::TrapMachineInsn::Store32,
+                      FaultingCodeRange(before, after));
       break;
     }
     case Scalar::Int64: {
       auto before = currentOffset();
       movq(value.gpr(), dstAddr);
       auto after = currentOffset();
-      append(access, wasm::TrapMachineInsn::Store64,
-             FaultingCodeRange(before, after));
+      appendAndVerify(access, wasm::TrapMachineInsn::Store64,
+                      FaultingCodeRange(before, after));
       break;
     }
     case Scalar::Float32: {
       FaultingCodeRange fcr = storeFloat32(value.fpu(), dstAddr);
-      append(access, wasm::TrapMachineInsn::Store32, fcr);
+      appendAndVerify(access, wasm::TrapMachineInsn::Store32, fcr);
       break;
     }
     case Scalar::Float64: {
       FaultingCodeRange fcr = storeDouble(value.fpu(), dstAddr);
-      append(access, wasm::TrapMachineInsn::Store64, fcr);
+      appendAndVerify(access, wasm::TrapMachineInsn::Store64, fcr);
       break;
     }
     case Scalar::Simd128: {
       FaultingCodeRange fcr =
           MacroAssemblerX64::storeUnalignedSimd128(value.fpu(), dstAddr);
-      append(access, wasm::TrapMachineInsn::Store128, fcr);
+      appendAndVerify(access, wasm::TrapMachineInsn::Store128, fcr);
       break;
     }
     case Scalar::Uint8Clamped:
@@ -1700,8 +1700,8 @@ void MacroAssembler::wasmCompareExchange64(const wasm::MemoryAccessDesc& access,
   auto before = currentOffset();
   lock_cmpxchgq(replacement.reg, Operand(mem));
   auto after = currentOffset();
-  append(access, wasm::TrapMachineInsn::Atomic,
-         FaultingCodeRange(before, after));
+  appendAndVerify(access, wasm::TrapMachineInsn::Atomic,
+                  FaultingCodeRange(before, after));
 }
 
 void MacroAssembler::wasmCompareExchange64(const wasm::MemoryAccessDesc& access,
@@ -1716,8 +1716,8 @@ void MacroAssembler::wasmCompareExchange64(const wasm::MemoryAccessDesc& access,
   auto before = currentOffset();
   lock_cmpxchgq(replacement.reg, Operand(mem));
   auto after = currentOffset();
-  append(access, wasm::TrapMachineInsn::Atomic,
-         FaultingCodeRange(before, after));
+  appendAndVerify(access, wasm::TrapMachineInsn::Atomic,
+                  FaultingCodeRange(before, after));
 }
 
 void MacroAssembler::wasmAtomicExchange64(const wasm::MemoryAccessDesc& access,
@@ -1729,8 +1729,8 @@ void MacroAssembler::wasmAtomicExchange64(const wasm::MemoryAccessDesc& access,
   auto before = currentOffset();
   xchgq(output.reg, Operand(mem));
   auto after = currentOffset();
-  append(access, wasm::TrapMachineInsn::Atomic,
-         FaultingCodeRange(before, after));
+  appendAndVerify(access, wasm::TrapMachineInsn::Atomic,
+                  FaultingCodeRange(before, after));
 }
 
 void MacroAssembler::wasmAtomicExchange64(const wasm::MemoryAccessDesc& access,
@@ -1742,8 +1742,8 @@ void MacroAssembler::wasmAtomicExchange64(const wasm::MemoryAccessDesc& access,
   auto before = currentOffset();
   xchgq(output.reg, Operand(mem));
   auto after = currentOffset();
-  append(access, wasm::TrapMachineInsn::Atomic,
-         FaultingCodeRange(before, after));
+  appendAndVerify(access, wasm::TrapMachineInsn::Atomic,
+                  FaultingCodeRange(before, after));
 }
 
 template <typename T>
@@ -1761,8 +1761,8 @@ static void AtomicFetchOp64(MacroAssembler& masm,
     masm.lock_xaddq(output, Operand(mem));
     auto after = masm.currentOffset();
     if (access) {
-      masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                  FaultingCodeRange(before, after));
+      masm.appendAndVerify(*access, wasm::TrapMachineInsn::Atomic,
+                           FaultingCodeRange(before, after));
     }
   } else if (op == AtomicOp::Sub) {
     if (value != output) {
@@ -1773,8 +1773,8 @@ static void AtomicFetchOp64(MacroAssembler& masm,
     masm.lock_xaddq(output, Operand(mem));
     auto after = masm.currentOffset();
     if (access) {
-      masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                  FaultingCodeRange(before, after));
+      masm.appendAndVerify(*access, wasm::TrapMachineInsn::Atomic,
+                           FaultingCodeRange(before, after));
     }
   } else {
     Label again;
@@ -1786,8 +1786,8 @@ static void AtomicFetchOp64(MacroAssembler& masm,
     masm.movq(Operand(mem), rax);
     auto after = masm.currentOffset();
     if (access) {
-      masm.append(*access, wasm::TrapMachineInsn::Load64,
-                  FaultingCodeRange(before, after));
+      masm.appendAndVerify(*access, wasm::TrapMachineInsn::Load64,
+                           FaultingCodeRange(before, after));
     }
     masm.bind(&again);
     masm.movq(rax, temp);
@@ -1849,8 +1849,8 @@ static void AtomicEffectOp64(MacroAssembler& masm,
   }
   auto after = masm.currentOffset();
   if (access) {
-    masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                FaultingCodeRange(before, after));
+    masm.appendAndVerify(*access, wasm::TrapMachineInsn::Atomic,
+                         FaultingCodeRange(before, after));
   }
 }
 

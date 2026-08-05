@@ -2992,8 +2992,8 @@ static void AtomicExchange(MacroAssembler& masm,
   if (nbytes == 4) {
     if (access) {
       AutoForbidPoolsAndNops afp(&masm, /* number of insns = */ 1);
-      masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                  FaultingCodeRange(masm.currentOffset()));
+      masm.appendAndVerify(*access, wasm::TrapMachineInsn::Atomic,
+                           FaultingCodeRange(masm.currentOffset()));
     }
 
     masm.amoswap_w(true, true, output, address, value);
@@ -3040,8 +3040,8 @@ static void AtomicExchange(MacroAssembler& masm,
 
     if (access) {
       // Track offset of the "lr.w" instruction.
-      masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                  FaultingCodeRange(masm.currentOffset()));
+      masm.appendAndVerify(*access, wasm::TrapMachineInsn::Atomic,
+                           FaultingCodeRange(masm.currentOffset()));
     }
 
     // Load the current value into |output|.
@@ -3084,8 +3084,8 @@ static void AtomicExchange64(MacroAssembler& masm,
                              Register64 value, Register64 output) {
   if (access) {
     AutoForbidPoolsAndNops afp(&masm, /* number of insns = */ 1);
-    masm.append(*access, js::wasm::TrapMachineInsn::Atomic,
-                FaultingCodeRange(masm.currentOffset()));
+    masm.appendAndVerify(*access, js::wasm::TrapMachineInsn::Atomic,
+                         FaultingCodeRange(masm.currentOffset()));
   }
 
   masm.amoswap_d(true, true, output.reg, address, value.reg);
@@ -3119,8 +3119,8 @@ static void AtomicFetchOp64(MacroAssembler& masm,
 
   if (access) {
     AutoForbidPoolsAndNops afp(&masm, /* number of insns = */ 1);
-    masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                FaultingCodeRange(masm.currentOffset()));
+    masm.appendAndVerify(*access, wasm::TrapMachineInsn::Atomic,
+                         FaultingCodeRange(masm.currentOffset()));
   }
 
   switch (op) {
@@ -3188,8 +3188,8 @@ static void AtomicFetchOrEffectOp(MacroAssembler& masm,
 
     if (access) {
       AutoForbidPoolsAndNops afp(&masm, /* number of insns = */ 1);
-      masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                  FaultingCodeRange(masm.currentOffset()));
+      masm.appendAndVerify(*access, wasm::TrapMachineInsn::Atomic,
+                           FaultingCodeRange(masm.currentOffset()));
     }
 
     switch (op) {
@@ -3259,8 +3259,8 @@ static void AtomicFetchOrEffectOp(MacroAssembler& masm,
 
     if (access) {
       AutoForbidPoolsAndNops afp(&masm, /* number of insns = */ 1);
-      masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                  FaultingCodeRange(masm.currentOffset()));
+      masm.appendAndVerify(*access, wasm::TrapMachineInsn::Atomic,
+                           FaultingCodeRange(masm.currentOffset()));
     }
 
     switch (op) {
@@ -3313,8 +3313,8 @@ static void AtomicFetchOrEffectOp(MacroAssembler& masm,
 
     if (access) {
       // Track offset of the "lr.w" instruction.
-      masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                  FaultingCodeRange(masm.currentOffset()));
+      masm.appendAndVerify(*access, wasm::TrapMachineInsn::Atomic,
+                           FaultingCodeRange(masm.currentOffset()));
     }
 
     // Load the current value into |current|.
@@ -3829,8 +3829,8 @@ static void CompareExchange64(MacroAssembler& masm,
 
     if (access) {
       // Track offset of the "lr.d" instruction.
-      masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                  FaultingCodeRange(masm.currentOffset()));
+      masm.appendAndVerify(*access, wasm::TrapMachineInsn::Atomic,
+                           FaultingCodeRange(masm.currentOffset()));
     }
 
     // Load the current value into |output|.
@@ -4902,8 +4902,8 @@ static void CompareExchange(MacroAssembler& masm,
 
       if (access) {
         // Track offset of the "lr.w" instruction.
-        masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                    FaultingCodeRange(masm.currentOffset()));
+        masm.appendAndVerify(*access, wasm::TrapMachineInsn::Atomic,
+                             FaultingCodeRange(masm.currentOffset()));
       }
 
       // Load the current value into |output|.
@@ -4967,8 +4967,8 @@ static void CompareExchange(MacroAssembler& masm,
 
     if (access) {
       // Track offset of the "lr.w" instruction.
-      masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                  FaultingCodeRange(masm.currentOffset()));
+      masm.appendAndVerify(*access, wasm::TrapMachineInsn::Atomic,
+                           FaultingCodeRange(masm.currentOffset()));
     }
 
     // Load the current value into |output|.
@@ -7196,7 +7196,8 @@ void MacroAssemblerRiscv64::wasmLoadImpl(const wasm::MemoryAccessDesc& access,
       MOZ_CRASH("unexpected array type");
   }
 
-  append(access, js::wasm::TrapMachineInsnForLoad(access.byteSize()), fcr);
+  asMasm().appendAndVerify(
+      access, js::wasm::TrapMachineInsnForLoad(access.byteSize()), fcr);
   asMasm().memoryBarrierAfter(access.sync());
 }
 
@@ -7253,7 +7254,8 @@ void MacroAssemblerRiscv64::wasmStoreImpl(const wasm::MemoryAccessDesc& access,
   }
 
   // Only the last emitted instruction is a memory access.
-  append(access, js::wasm::TrapMachineInsnForStore(access.byteSize()), fcr);
+  asMasm().appendAndVerify(
+      access, js::wasm::TrapMachineInsnForStore(access.byteSize()), fcr);
   asMasm().memoryBarrierAfter(access.sync());
 }
 

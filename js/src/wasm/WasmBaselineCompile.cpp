@@ -7636,8 +7636,8 @@ void BaseCompiler::SignalNullCheck::emitTrapSite(BaseCompiler* bc,
                                                  FaultingCodeRange fcr,
                                                  TrapMachineInsn tmi) {
   MacroAssembler& masm = bc->masm;
-  masm.append(wasm::Trap::NullPointerDereference, tmi, fcr.get(),
-              bc->trapSiteDesc());
+  masm.appendAndVerify(wasm::Trap::NullPointerDereference, tmi, fcr,
+                       bc->trapSiteDesc());
 }
 
 template <typename NullCheckPolicy>
@@ -9157,8 +9157,9 @@ bool BaseCompiler::emitRefCast(bool nullable) {
       /*onSuccess=*/false, /*signalNullChecks=*/true, regs.superSTV,
       regs.scratch1, regs.scratch2);
   if (fcr.isValid()) {
-    masm.append(wasm::Trap::BadCast, wasm::TrapMachineInsnForLoadWord(),
-                fcr.get(), trapSiteDesc());
+    masm.appendAndVerify(wasm::Trap::BadCast,
+                         wasm::TrapMachineInsnForLoadWord(), fcr,
+                         trapSiteDesc());
   }
   freeRegistersForBranchIfRefSubtype(regs);
 

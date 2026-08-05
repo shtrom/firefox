@@ -3772,7 +3772,17 @@ class MacroAssembler : public MacroAssemblerSpecific {
   // ========================================================================
   // wasm support
 
+  uint8_t getByteAtOffset(size_t offset) const;
+
   FaultingCodeRange wasmTrapInstruction() PER_SHARED_ARCH;
+
+  // Call here to register a trapping instruction in the metadata.
+  void appendAndVerify(wasm::Trap trap, wasm::TrapMachineInsn insn,
+                       FaultingCodeRange fcr, const wasm::TrapSiteDesc& desc);
+
+  // Alternative variant that hardwires the trap kind as Trap::OutOfBounds.
+  void appendAndVerify(const wasm::MemoryAccessDesc& access,
+                       wasm::TrapMachineInsn insn, FaultingCodeRange fcr);
 
   void wasmTrap(wasm::Trap trap, const wasm::TrapSiteDesc& trapSiteDesc);
 

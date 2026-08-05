@@ -10842,8 +10842,8 @@ void EmitSignalNullCheckTrapSite(MacroAssembler& masm,
   if (!ins->maybeTrap()) {
     return;
   }
-  masm.append(wasm::Trap::NullPointerDereference, tmi, fcr.get(),
-              *ins->maybeTrap());
+  masm.appendAndVerify(wasm::Trap::NullPointerDereference, tmi, fcr,
+                       *ins->maybeTrap());
 }
 
 template <typename InstructionWithMaybeTrapSite, class AddressOrBaseIndexT>
@@ -21143,8 +21143,9 @@ void CodeGenerator::visitWasmRefCastAbstract(LWasmRefCastAbstract* ins) {
       /*onSuccess=*/false, /*signalNullChecks=*/true, superSTV, scratch1,
       scratch2);
   if (fcr.isValid()) {
-    masm.append(wasm::Trap::BadCast, wasm::TrapMachineInsnForLoadWord(),
-                fcr.get(), mir->trapSiteDesc());
+    masm.appendAndVerify(wasm::Trap::BadCast,
+                         wasm::TrapMachineInsnForLoadWord(), fcr,
+                         mir->trapSiteDesc());
   }
 }
 
@@ -21168,8 +21169,9 @@ void CodeGenerator::visitWasmRefCastConcrete(LWasmRefCastConcrete* ins) {
       /*onSuccess=*/false, /*signalNullChecks=*/true, superSTV, scratch1,
       scratch2);
   if (fcr.isValid()) {
-    masm.append(wasm::Trap::BadCast, wasm::TrapMachineInsnForLoadWord(),
-                fcr.get(), mir->trapSiteDesc());
+    masm.appendAndVerify(wasm::Trap::BadCast,
+                         wasm::TrapMachineInsnForLoadWord(), fcr,
+                         mir->trapSiteDesc());
   }
 }
 

@@ -52,6 +52,7 @@
 #include "wasm/WasmInstance.h"
 #include "wasm/WasmInstanceData.h"
 #include "wasm/WasmMemory.h"
+#include "wasm/WasmSummarizeInsn.h"
 #include "wasm/WasmTypeDef.h"
 #include "wasm/WasmValidate.h"
 
@@ -6128,13 +6129,87 @@ void MacroAssembler::branchTestObjectNeedsProxyResultValidation(
   bind(&done);
 }
 
+uint8_t MacroAssembler::getByteAtOffset(size_t offset) const {
+  MOZ_ASSERT(offset < readableSize());
+#if defined(JS_CODEGEN_X86) || defined(JS_CODEGEN_X64)
+  return const_cast<X86Encoding::BaseAssemblerSpecific&>(masm).getByteAtOffset(
+      offset);
+#elif defined(JS_CODEGEN_ARM64)
+  // ii points at the first byte of the instruction
+  Instruction* ii = const_cast<MacroAssembler&>(*this).getInstructionAt(
+      BufferOffset(offset & ~size_t(3)));
+  return ((uint8_t*)ii)[offset & 3];
+#elif defined(JS_CODEGEN_ARM)
+  // ii points at the first byte of the instruction
+  Instruction* ii = const_cast<MacroAssembler&>(*this).editSrc(
+      BufferOffset(offset & ~size_t(3)));
+  return ((uint8_t*)ii)[offset & 3];
+#elif defined(JS_CODEGEN_RISCV64)
+  // ii points at the first byte of the instruction
+  Instruction* ii = const_cast<MacroAssembler&>(*this).getInstructionAt(
+      BufferOffset(offset & ~size_t(3)));
+  return ((uint8_t*)ii)[offset & 3];
+#elif defined(JS_CODEGEN_NONE)
+  MOZ_CRASH();
+#else
+#  error "Implement me"
+#endif
+}
+
+// This is an InstructionBytes source that reads bytes from an assembler buffer.
+class InstructionBytesFromMasm : public wasm::InstructionBytes {
+  const MacroAssembler& masm_;
+  uint32_t baseOffset_ = 0;
+
+ public:
+  explicit InstructionBytesFromMasm(const MacroAssembler& masm,
+                                    uint32_t baseOffset)
+      : masm_(masm), baseOffset_(baseOffset) {
+    MOZ_ASSERT(baseOffset < masm.readableSize());
+  }
+  bool isU32aligned() const override { return (baseOffset_ & 3) == 0; }
+  uint8_t get(size_t offset) const override {
+    MOZ_ASSERT(offset < 16);
+    return masm_.getByteAtOffset(baseOffset_ + offset);
+  }
+};
+
+mozilla::Atomic<uint32_t> ctr(0);
+void MacroAssembler::appendAndVerify(wasm::Trap trap,
+                                     wasm::TrapMachineInsn insn,
+                                     FaultingCodeRange fcr,
+                                     const wasm::TrapSiteDesc& desc) {
+#ifdef DEBUG
+  // The trapping instruction is claimed to begin at `fcr.offset()` and have
+  // length `fcr.length()` and kind `insn`.  Ask SummarizeTrapInstruction
+  // to look at it and check it agrees.
+  if (!oom() && fcr.isValid()) {
+    InstructionBytesFromMasm insnSource(*this, fcr.offset());
+    wasm::SummarizeResult summary = SummarizeTrapInstruction(insnSource);
+    // The instruction must be identifiable
+    MOZ_ASSERT(summary.identified());
+    // .. and have the correct kind and length
+    MOZ_ASSERT(summary.kind() == insn);
+    MOZ_ASSERT(summary.length() == fcr.length());
+  }
+#endif
+
+  appendNoVerify(trap, insn, fcr, desc);
+}
+
+void MacroAssembler::appendAndVerify(const wasm::MemoryAccessDesc& access,
+                                     wasm::TrapMachineInsn insn,
+                                     FaultingCodeRange fcr) {
+  appendAndVerify(wasm::Trap::OutOfBounds, insn, fcr, access.trapDesc());
+}
+
 void MacroAssembler::wasmTrap(wasm::Trap trap,
                               const wasm::TrapSiteDesc& trapSiteDesc) {
   FaultingCodeRange fcr = wasmTrapInstruction();
   MOZ_ASSERT_IF(!oom(),
                 currentOffset() - fcr.get() == WasmTrapInstructionLength);
 
-  append(trap, wasm::TrapMachineInsn::OfficialUD, fcr.get(), trapSiteDesc);
+  appendAndVerify(trap, wasm::TrapMachineInsn::OfficialUD, fcr, trapSiteDesc);
 }
 
 uint32_t MacroAssembler::wasmReserveStackChecked(uint32_t amount, Label* fail) {
@@ -6977,8 +7052,9 @@ void MacroAssembler::wasmCallRef(const wasm::CallSiteDesc& desc,
   static_assert(FunctionExtended::WASM_INSTANCE_SLOT < wasm::NullPtrGuardSize);
   FaultingCodeRange fcr =
       loadPtr(Address(calleeFnObj, instanceSlotOffset), newInstanceTemp);
-  append(wasm::Trap::NullPointerDereference, wasm::TrapMachineInsnForLoadWord(),
-         fcr.get(), desc.toTrapSiteDesc());
+  appendAndVerify(wasm::Trap::NullPointerDereference,
+                  wasm::TrapMachineInsnForLoadWord(), fcr,
+                  desc.toTrapSiteDesc());
   branchPtr(Assembler::Equal, InstanceReg, newInstanceTemp, &fastCall);
 
   storePtr(InstanceReg,
@@ -7042,8 +7118,9 @@ void MacroAssembler::wasmReturnCallRef(
   static_assert(FunctionExtended::WASM_INSTANCE_SLOT < wasm::NullPtrGuardSize);
   FaultingCodeRange fcr =
       loadPtr(Address(calleeFnObj, instanceSlotOffset), newInstanceTemp);
-  append(wasm::Trap::NullPointerDereference, wasm::TrapMachineInsnForLoadWord(),
-         fcr.get(), desc.toTrapSiteDesc());
+  appendAndVerify(wasm::Trap::NullPointerDereference,
+                  wasm::TrapMachineInsnForLoadWord(), fcr,
+                  desc.toTrapSiteDesc());
   branchPtr(Assembler::Equal, InstanceReg, newInstanceTemp, &fastCall);
 
   storePtr(InstanceReg,
@@ -8529,8 +8606,8 @@ void MacroAssembler::loadWasmPinnedRegsFromInstance(
   FaultingCodeRange fcr = loadPtr(
       Address(InstanceReg, wasm::Instance::offsetOfMemory0Base()), HeapReg);
   if (trapSiteDesc) {
-    append(wasm::Trap::IndirectCallToNull, wasm::TrapMachineInsnForLoadWord(),
-           fcr.get(), *trapSiteDesc);
+    appendAndVerify(wasm::Trap::IndirectCallToNull,
+                    wasm::TrapMachineInsnForLoadWord(), fcr, *trapSiteDesc);
   }
 #else
   MOZ_ASSERT(!trapSiteDesc);

@@ -38,6 +38,7 @@ class MacroAssemblerNone : public Assembler {
   MoveResolver moveResolver_;
 
   size_t size() const { MOZ_CRASH(); }
+  size_t readableSize() const { MOZ_CRASH(); }
   size_t bytesNeeded() const { MOZ_CRASH(); }
   size_t jumpRelocationTableBytes() const { MOZ_CRASH(); }
   size_t dataRelocationTableBytes() const { MOZ_CRASH(); }

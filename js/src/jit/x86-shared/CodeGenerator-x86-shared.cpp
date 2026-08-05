@@ -3674,8 +3674,8 @@ void CodeGenerator::visitWasmLoadLaneSimd128(LWasmLoadLaneSimd128* ins) {
       masm.vpinsrb(mir->laneIndex(), srcAddr, ToFloatRegister(value),
                    ToFloatRegister(value));
       auto after = masm.currentOffset();
-      masm.append(access, wasm::TrapMachineInsn::Load8,
-                  FaultingCodeRange(before, after));
+      masm.appendAndVerify(access, wasm::TrapMachineInsn::Load8,
+                           FaultingCodeRange(before, after));
       break;
     }
     case 2: {
@@ -3683,8 +3683,8 @@ void CodeGenerator::visitWasmLoadLaneSimd128(LWasmLoadLaneSimd128* ins) {
       masm.vpinsrw(mir->laneIndex(), srcAddr, ToFloatRegister(value),
                    ToFloatRegister(value));
       auto after = masm.currentOffset();
-      masm.append(access, wasm::TrapMachineInsn::Load16,
-                  FaultingCodeRange(before, after));
+      masm.appendAndVerify(access, wasm::TrapMachineInsn::Load16,
+                           FaultingCodeRange(before, after));
       break;
     }
     case 4: {
@@ -3692,8 +3692,8 @@ void CodeGenerator::visitWasmLoadLaneSimd128(LWasmLoadLaneSimd128* ins) {
       masm.vinsertps(mir->laneIndex() << 4, srcAddr, ToFloatRegister(value),
                      ToFloatRegister(value));
       auto after = masm.currentOffset();
-      masm.append(access, wasm::TrapMachineInsn::Load32,
-                  FaultingCodeRange(before, after));
+      masm.appendAndVerify(access, wasm::TrapMachineInsn::Load32,
+                           FaultingCodeRange(before, after));
       break;
     }
     case 8: {
@@ -3704,8 +3704,8 @@ void CodeGenerator::visitWasmLoadLaneSimd128(LWasmLoadLaneSimd128* ins) {
         masm.vmovhps(srcAddr, ToFloatRegister(value), ToFloatRegister(value));
       }
       auto after = masm.currentOffset();
-      masm.append(access, wasm::TrapMachineInsn::Load64,
-                  FaultingCodeRange(before, after));
+      masm.appendAndVerify(access, wasm::TrapMachineInsn::Load64,
+                           FaultingCodeRange(before, after));
       break;
     }
     default:
@@ -3732,16 +3732,16 @@ void CodeGenerator::visitWasmStoreLaneSimd128(LWasmStoreLaneSimd128* ins) {
       auto before = masm.currentOffset();
       masm.vpextrb(mir->laneIndex(), ToFloatRegister(src), destAddr);
       auto after = masm.currentOffset();
-      masm.append(access, wasm::TrapMachineInsn::Store8,
-                  FaultingCodeRange(before, after));
+      masm.appendAndVerify(access, wasm::TrapMachineInsn::Store8,
+                           FaultingCodeRange(before, after));
       break;
     }
     case 2: {
       auto before = masm.currentOffset();
       masm.vpextrw(mir->laneIndex(), ToFloatRegister(src), destAddr);
       auto after = masm.currentOffset();
-      masm.append(access, wasm::TrapMachineInsn::Store16,
-                  FaultingCodeRange(before, after));
+      masm.appendAndVerify(access, wasm::TrapMachineInsn::Store16,
+                           FaultingCodeRange(before, after));
       break;
     }
     case 4: {
@@ -3753,8 +3753,8 @@ void CodeGenerator::visitWasmStoreLaneSimd128(LWasmStoreLaneSimd128* ins) {
         masm.vextractps(lane, ToFloatRegister(src), destAddr);
       }
       auto after = masm.currentOffset();
-      masm.append(access, wasm::TrapMachineInsn::Store32,
-                  FaultingCodeRange(before, after));
+      masm.appendAndVerify(access, wasm::TrapMachineInsn::Store32,
+                           FaultingCodeRange(before, after));
       break;
     }
     case 8: {
@@ -3765,8 +3765,8 @@ void CodeGenerator::visitWasmStoreLaneSimd128(LWasmStoreLaneSimd128* ins) {
         masm.vmovhps(ToFloatRegister(src), destAddr);
       }
       auto after = masm.currentOffset();
-      masm.append(access, wasm::TrapMachineInsn::Store64,
-                  FaultingCodeRange(before, after));
+      masm.appendAndVerify(access, wasm::TrapMachineInsn::Store64,
+                           FaultingCodeRange(before, after));
       break;
     }
     default:

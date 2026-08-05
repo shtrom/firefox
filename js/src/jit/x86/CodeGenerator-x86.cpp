@@ -422,8 +422,8 @@ void CodeGenerator::visitWasmCompareExchangeI64(LWasmCompareExchangeI64* ins) {
   auto before = masm.currentOffset();
   masm.lock_cmpxchg8b(edx, eax, ecx, ebx, srcAddr);
   auto after = masm.currentOffset();
-  masm.append(ins->mir()->access(), wasm::TrapMachineInsn::Atomic,
-              FaultingCodeRange(before, after));
+  masm.appendAndVerify(ins->mir()->access(), wasm::TrapMachineInsn::Atomic,
+                       FaultingCodeRange(before, after));
 }
 
 template <typename T>
@@ -448,8 +448,8 @@ void CodeGeneratorX86::emitWasmStoreOrExchangeAtomicI64(
   auto before = masm.currentOffset();
   masm.lock_cmpxchg8b(edx, eax, ecx, ebx, srcAddr);
   auto after = masm.currentOffset();
-  masm.append(access, wasm::TrapMachineInsn::Atomic,
-              FaultingCodeRange(before, after));
+  masm.appendAndVerify(access, wasm::TrapMachineInsn::Atomic,
+                       FaultingCodeRange(before, after));
 
   masm.j(Assembler::Condition::NonZero, &again);
 }

@@ -1199,8 +1199,8 @@ static void CompareExchange(MacroAssembler& masm,
 
   auto after = masm.currentOffset();
   if (access) {
-    masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                FaultingCodeRange(before, after));
+    masm.appendAndVerify(*access, wasm::TrapMachineInsn::Atomic,
+                         FaultingCodeRange(before, after));
   }
 
   ExtendTo32(masm, type, output);
@@ -1261,8 +1261,8 @@ static void AtomicExchange(MacroAssembler& masm,
 
   auto after = masm.currentOffset();
   if (access) {
-    masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                FaultingCodeRange(before, after));
+    masm.appendAndVerify(*access, wasm::TrapMachineInsn::Atomic,
+                         FaultingCodeRange(before, after));
   }
 
   ExtendTo32(masm, type, output);
@@ -1496,8 +1496,8 @@ static void AtomicFetchOp(MacroAssembler& masm,
   MOZ_ASSERT(before < after);
   // Add trap instruction directly before the load.
   if (access) {
-    masm.append(*access, WasmTrapMachineInsn(arrayType, op),
-                FaultingCodeRange(before, after));
+    masm.appendAndVerify(*access, WasmTrapMachineInsn(arrayType, op),
+                         FaultingCodeRange(before, after));
   }
 }
 
@@ -1633,8 +1633,8 @@ static void AtomicEffectOp(MacroAssembler& masm,
 
   auto after = masm.currentOffset();
   if (access) {
-    masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                FaultingCodeRange(before, after));
+    masm.appendAndVerify(*access, wasm::TrapMachineInsn::Atomic,
+                         FaultingCodeRange(before, after));
   }
 }
 

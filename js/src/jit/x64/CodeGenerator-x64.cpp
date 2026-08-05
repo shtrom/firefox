@@ -1000,8 +1000,8 @@ void CodeGeneratorX64::wasmStore(const wasm::MemoryAccessDesc& access,
         auto before = masm.currentOffset();
         masm.movb(cst, dstAddr);
         auto after = masm.currentOffset();
-        masm.append(access, wasm::TrapMachineInsn::Store8,
-                    FaultingCodeRange(before, after));
+        masm.appendAndVerify(access, wasm::TrapMachineInsn::Store8,
+                             FaultingCodeRange(before, after));
         break;
       }
       case Scalar::Int16:
@@ -1009,8 +1009,8 @@ void CodeGeneratorX64::wasmStore(const wasm::MemoryAccessDesc& access,
         auto before = masm.currentOffset();
         masm.movw(cst, dstAddr);
         auto after = masm.currentOffset();
-        masm.append(access, wasm::TrapMachineInsn::Store16,
-                    FaultingCodeRange(before, after));
+        masm.appendAndVerify(access, wasm::TrapMachineInsn::Store16,
+                             FaultingCodeRange(before, after));
         break;
       }
       case Scalar::Int32:
@@ -1018,8 +1018,8 @@ void CodeGeneratorX64::wasmStore(const wasm::MemoryAccessDesc& access,
         auto before = masm.currentOffset();
         masm.movl(cst, dstAddr);
         auto after = masm.currentOffset();
-        masm.append(access, wasm::TrapMachineInsn::Store32,
-                    FaultingCodeRange(before, after));
+        masm.appendAndVerify(access, wasm::TrapMachineInsn::Store32,
+                             FaultingCodeRange(before, after));
         break;
       }
       case Scalar::Int64: {
@@ -1028,8 +1028,8 @@ void CodeGeneratorX64::wasmStore(const wasm::MemoryAccessDesc& access,
         auto before = masm.currentOffset();
         masm.movq(cst, dstAddr);
         auto after = masm.currentOffset();
-        masm.append(access, wasm::TrapMachineInsn::Store64,
-                    FaultingCodeRange(before, after));
+        masm.appendAndVerify(access, wasm::TrapMachineInsn::Store64,
+                             FaultingCodeRange(before, after));
         break;
       }
       case Scalar::Simd128:

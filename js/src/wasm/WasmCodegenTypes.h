@@ -333,6 +333,11 @@ class FaultingCodeRange {
     return endOffset_;
   }
 
+  // Be careful with these.  If the creating MacroAssembler OOM'd, they will
+  // likely fail `isValid()`.
+  uint32_t offsetUnchecked() const { return startOffset_; }
+  uint32_t resumeOffsetUnchecked() const { return endOffset_; }
+
   // Shim to ease migration from FaultingCodeOffset.  This should be removed
   // eventually.
   uint32_t get() const { return offset(); }
@@ -555,7 +560,7 @@ class TrapSitesForKind {
   }
 
   [[nodiscard]]
-  bool append(TrapMachineInsn insn, uint32_t pcOffset,
+  bool append(TrapMachineInsn insn, FaultingCodeRange fcr,
               const TrapSiteDesc& desc) {
     MOZ_ASSERT(desc.bytecodeOffset.isValid());
 
@@ -583,7 +588,7 @@ class TrapSitesForKind {
 #ifdef DEBUG
     machineInsns_.infallibleAppend(insn);
 #endif
-    pcOffsets_.infallibleAppend(pcOffset);
+    pcOffsets_.infallibleAppend(fcr.offsetUnchecked());
     bytecodeOffsets_.infallibleAppend(desc.bytecodeOffset);
 
     return true;
@@ -721,9 +726,9 @@ class TrapSites {
   }
 
   [[nodiscard]]
-  bool append(Trap trap, TrapMachineInsn insn, uint32_t pcOffset,
+  bool append(Trap trap, TrapMachineInsn insn, FaultingCodeRange fcr,
               const TrapSiteDesc& desc) {
-    return array_[trap].append(insn, pcOffset, desc);
+    return array_[trap].append(insn, fcr, desc);
   }
 
   [[nodiscard]]

@@ -5169,8 +5169,8 @@ static void CompareExchange(MacroAssembler& masm,
       MOZ_CRASH();
   }
   if (access) {
-    masm.append(*access, js::wasm::TrapMachineInsnForLoad(nbytes),
-                FaultingCodeRange(firstAccess.getOffset()));
+    masm.appendAndVerify(*access, js::wasm::TrapMachineInsnForLoad(nbytes),
+                         FaultingCodeRange(firstAccess.getOffset()));
   }
 
   if (nbytes < 4) {
@@ -5274,8 +5274,8 @@ static void AtomicExchange(MacroAssembler& masm,
       MOZ_CRASH();
   }
   if (access) {
-    masm.append(*access, js::wasm::TrapMachineInsnForLoad(nbytes),
-                FaultingCodeRange(firstAccess.getOffset()));
+    masm.appendAndVerify(*access, js::wasm::TrapMachineInsnForLoad(nbytes),
+                         FaultingCodeRange(firstAccess.getOffset()));
   }
 
   masm.as_cmp(scratch, Imm8(1));
@@ -5377,8 +5377,8 @@ static void AtomicFetchOp(MacroAssembler& masm,
       MOZ_CRASH();
   }
   if (access) {
-    masm.append(*access, js::wasm::TrapMachineInsnForLoad(nbytes),
-                FaultingCodeRange(firstAccess.getOffset()));
+    masm.appendAndVerify(*access, js::wasm::TrapMachineInsnForLoad(nbytes),
+                         FaultingCodeRange(firstAccess.getOffset()));
   }
 
   switch (op) {
@@ -5499,8 +5499,8 @@ static void AtomicEffectOp(MacroAssembler& masm,
       MOZ_CRASH();
   }
   if (access) {
-    masm.append(*access, js::wasm::TrapMachineInsnForLoad(nbytes),
-                FaultingCodeRange(firstAccess.getOffset()));
+    masm.appendAndVerify(*access, js::wasm::TrapMachineInsnForLoad(nbytes),
+                         FaultingCodeRange(firstAccess.getOffset()));
   }
 
   switch (op) {
@@ -5571,8 +5571,8 @@ static void AtomicLoad64(MacroAssembler& masm,
 
   BufferOffset load = masm.as_ldrexd(output.low, output.high, ptr);
   if (access) {
-    masm.append(*access, js::wasm::TrapMachineInsn::Load64,
-                FaultingCodeRange(load.getOffset()));
+    masm.appendAndVerify(*access, js::wasm::TrapMachineInsn::Load64,
+                         FaultingCodeRange(load.getOffset()));
   }
   masm.as_clrex();
 
@@ -5627,8 +5627,8 @@ static void CompareExchange64(MacroAssembler& masm,
   masm.bind(&again);
   BufferOffset load = masm.as_ldrexd(output.low, output.high, ptr);
   if (access) {
-    masm.append(*access, js::wasm::TrapMachineInsn::Load64,
-                FaultingCodeRange(load.getOffset()));
+    masm.appendAndVerify(*access, js::wasm::TrapMachineInsn::Load64,
+                         FaultingCodeRange(load.getOffset()));
   }
 
   masm.as_cmp(output.low, O2Reg(expect.low));
@@ -5699,8 +5699,8 @@ static void AtomicExchange64(MacroAssembler& masm,
   masm.bind(&again);
   BufferOffset load = masm.as_ldrexd(output.low, output.high, ptr);
   if (access) {
-    masm.append(*access, js::wasm::TrapMachineInsn::Load64,
-                FaultingCodeRange(load.getOffset()));
+    masm.appendAndVerify(*access, js::wasm::TrapMachineInsn::Load64,
+                         FaultingCodeRange(load.getOffset()));
   }
 
   ScratchRegisterScope scratch(masm);
@@ -5773,8 +5773,8 @@ static void AtomicFetchOp64(MacroAssembler& masm,
   masm.bind(&again);
   BufferOffset load = masm.as_ldrexd(output.low, output.high, ptr);
   if (access) {
-    masm.append(*access, js::wasm::TrapMachineInsn::Load64,
-                FaultingCodeRange(load.getOffset()));
+    masm.appendAndVerify(*access, js::wasm::TrapMachineInsn::Load64,
+                         FaultingCodeRange(load.getOffset()));
   }
   switch (op) {
     case AtomicOp::Add:
@@ -6468,20 +6468,21 @@ void MacroAssemblerARM::wasmLoadImpl(const wasm::MemoryAccessDesc& access,
 
       load = ma_dataTransferN(IsLoad, 32, /* signed = */ false, memoryBase, ptr,
                               out64.low);
-      append(access, js::wasm::TrapMachineInsn::Load32,
-             FaultingCodeRange(load.getOffset()));
+      asMasm().appendAndVerify(access, js::wasm::TrapMachineInsn::Load32,
+                               FaultingCodeRange(load.getOffset()));
 
       as_add(ptr, ptr, Imm8(INT64HIGH_OFFSET));
 
       load =
           ma_dataTransferN(IsLoad, 32, isSigned, memoryBase, ptr, out64.high);
-      append(access, js::wasm::TrapMachineInsn::Load32,
-             FaultingCodeRange(load.getOffset()));
+      asMasm().appendAndVerify(access, js::wasm::TrapMachineInsn::Load32,
+                               FaultingCodeRange(load.getOffset()));
     } else {
       load = ma_dataTransferN(IsLoad, byteSize * 8, isSigned, memoryBase, ptr,
                               out64.low);
-      append(access, js::wasm::TrapMachineInsnForLoad(byteSize),
-             FaultingCodeRange(load.getOffset()));
+      asMasm().appendAndVerify(access,
+                               js::wasm::TrapMachineInsnForLoad(byteSize),
+                               FaultingCodeRange(load.getOffset()));
 
       if (isSigned) {
         ma_asr(Imm32(31), out64.low, out64.high);
@@ -6515,8 +6516,9 @@ void MacroAssemblerARM::wasmLoadImpl(const wasm::MemoryAccessDesc& access,
         } else {
           load = as_vldr_unaligned(dest, scratch);
         }
-        append(access, js::wasm::TrapMachineInsnForLoad(byteSize),
-               FaultingCodeRange(load.getOffset()));
+        asMasm().appendAndVerify(access,
+                                 js::wasm::TrapMachineInsnForLoad(byteSize),
+                                 FaultingCodeRange(load.getOffset()));
       } else {
         // NEON not available: Load to GPR scratch, move to FPR destination.  We
         // don't have adjacent scratches for the f64, so use individual LDRs,
@@ -6527,16 +6529,16 @@ void MacroAssemblerARM::wasmLoadImpl(const wasm::MemoryAccessDesc& access,
                         DTRAddr(scratch, DtrOffImm(0)), Always);
           as_vxfer(scratch2, InvalidReg, VFPRegister(dest), CoreToFloat,
                    Always);
-          append(access, js::wasm::TrapMachineInsn::Load32,
-                 FaultingCodeRange(load.getOffset()));
+          asMasm().appendAndVerify(access, js::wasm::TrapMachineInsn::Load32,
+                                   FaultingCodeRange(load.getOffset()));
         } else {
           // The trap information is associated with the load of the high word,
           // which must be done first.  FIXME sewardj 20230825: is it still
           // safe to skip the low word, now that we support wasm-gc?
           load = as_dtr(IsLoad, 32, Offset, scratch2,
                         DTRAddr(scratch, DtrOffImm(4)), Always);
-          append(access, js::wasm::TrapMachineInsn::Load32,
-                 FaultingCodeRange(load.getOffset()));
+          asMasm().appendAndVerify(access, js::wasm::TrapMachineInsn::Load32,
+                                   FaultingCodeRange(load.getOffset()));
           as_dtr(IsLoad, 32, Offset, scratch, DTRAddr(scratch, DtrOffImm(0)),
                  Always);
           as_vxfer(scratch, scratch2, VFPRegister(dest), CoreToFloat, Always);
@@ -6545,8 +6547,9 @@ void MacroAssemblerARM::wasmLoadImpl(const wasm::MemoryAccessDesc& access,
     } else {
       load = ma_dataTransferN(IsLoad, byteSize * 8, isSigned, memoryBase, ptr,
                               output.gpr());
-      append(access, js::wasm::TrapMachineInsnForLoad(byteSize),
-             FaultingCodeRange(load.getOffset()));
+      asMasm().appendAndVerify(access,
+                               js::wasm::TrapMachineInsnForLoad(byteSize),
+                               FaultingCodeRange(load.getOffset()));
     }
   }
 
@@ -6591,15 +6594,15 @@ void MacroAssemblerARM::wasmStoreImpl(const wasm::MemoryAccessDesc& access,
   if (type == Scalar::Int64) {
     store = ma_dataTransferN(IsStore, 32 /* bits */, /* signed */ false,
                              memoryBase, ptr, val64.high);
-    append(access, js::wasm::TrapMachineInsn::Store32,
-           FaultingCodeRange(store.getOffset()));
+    asMasm().appendAndVerify(access, js::wasm::TrapMachineInsn::Store32,
+                             FaultingCodeRange(store.getOffset()));
 
     as_sub(ptr, ptr, Imm8(INT64HIGH_OFFSET));
 
     store = ma_dataTransferN(IsStore, 32 /* bits */, /* signed */ true,
                              memoryBase, ptr, val64.low);
-    append(access, js::wasm::TrapMachineInsn::Store32,
-           FaultingCodeRange(store.getOffset()));
+    asMasm().appendAndVerify(access, js::wasm::TrapMachineInsn::Store32,
+                             FaultingCodeRange(store.getOffset()));
   } else {
     if (value.isFloat()) {
       ScratchRegisterScope scratch(asMasm());
@@ -6616,8 +6619,9 @@ void MacroAssemblerARM::wasmStoreImpl(const wasm::MemoryAccessDesc& access,
         } else {
           store = as_vstr_unaligned(val, scratch);
         }
-        append(access, js::wasm::TrapMachineInsnForStore(byteSize),
-               FaultingCodeRange(store.getOffset()));
+        asMasm().appendAndVerify(access,
+                                 js::wasm::TrapMachineInsnForStore(byteSize),
+                                 FaultingCodeRange(store.getOffset()));
       } else {
         // NEON not available: Move FPR to GPR scratch, store GPR.  We have only
         // one scratch to hold the value, so for f64 we must do two separate
@@ -6628,8 +6632,8 @@ void MacroAssemblerARM::wasmStoreImpl(const wasm::MemoryAccessDesc& access,
           as_vxfer(scratch2, InvalidReg, VFPRegister(val), FloatToCore, Always);
           store = as_dtr(IsStore, 32, Offset, scratch2,
                          DTRAddr(scratch, DtrOffImm(0)), Always);
-          append(access, js::wasm::TrapMachineInsn::Store32,
-                 FaultingCodeRange(store.getOffset()));
+          asMasm().appendAndVerify(access, js::wasm::TrapMachineInsn::Store32,
+                                   FaultingCodeRange(store.getOffset()));
         } else {
           // The trap information is associated with the store of the high word,
           // which must be done first.  FIXME sewardj 20230825: is it still
@@ -6638,8 +6642,8 @@ void MacroAssemblerARM::wasmStoreImpl(const wasm::MemoryAccessDesc& access,
                    FloatToCore, Always);
           store = as_dtr(IsStore, 32, Offset, scratch2,
                          DTRAddr(scratch, DtrOffImm(4)), Always);
-          append(access, js::wasm::TrapMachineInsn::Store32,
-                 FaultingCodeRange(store.getOffset()));
+          asMasm().appendAndVerify(access, js::wasm::TrapMachineInsn::Store32,
+                                   FaultingCodeRange(store.getOffset()));
           as_vxfer(scratch2, InvalidReg, VFPRegister(val).singleOverlay(0),
                    FloatToCore, Always);
           as_dtr(IsStore, 32, Offset, scratch2, DTRAddr(scratch, DtrOffImm(0)),
@@ -6652,8 +6656,9 @@ void MacroAssemblerARM::wasmStoreImpl(const wasm::MemoryAccessDesc& access,
 
       store = ma_dataTransferN(IsStore, 8 * byteSize /* bits */, isSigned,
                                memoryBase, ptr, val);
-      append(access, js::wasm::TrapMachineInsnForStore(byteSize),
-             FaultingCodeRange(store.getOffset()));
+      asMasm().appendAndVerify(access,
+                               js::wasm::TrapMachineInsnForStore(byteSize),
+                               FaultingCodeRange(store.getOffset()));
     }
   }
 
