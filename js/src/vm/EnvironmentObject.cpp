@@ -1999,8 +1999,8 @@ class DebugEnvironmentProxyHandler : public NurseryAllocableProxyHandler {
       if (action == GET) {
         if (instanceScope->memoriesStart() <= index &&
             index < instanceScope->globalsStart()) {
-          vp.set(ObjectValue(
-              *instance.memory(index - instanceScope->memoriesStart())));
+          vp.setObject(
+              *instance.memory(index - instanceScope->memoriesStart()));
         }
         if (instanceScope->globalsStart() <= index) {
           MOZ_ASSERT(index < instanceScope->namesCount());

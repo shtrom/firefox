@@ -2039,7 +2039,7 @@ const char* js::ValueToSourceForError(JSContext* cx, HandleValue val,
 bool js::GetInternalError(JSContext* cx, unsigned errorNumber,
                           MutableHandleValue error) {
   FixedInvokeArgs<1> args(cx);
-  args[0].set(Int32Value(errorNumber));
+  args[0].setInt32(errorNumber);
   return CallSelfHostedFunction(cx, cx->names().GetInternalError,
                                 NullHandleValue, args, error);
 }
@@ -2047,7 +2047,7 @@ bool js::GetInternalError(JSContext* cx, unsigned errorNumber,
 bool js::GetTypeError(JSContext* cx, unsigned errorNumber,
                       MutableHandleValue error) {
   FixedInvokeArgs<1> args(cx);
-  args[0].set(Int32Value(errorNumber));
+  args[0].setInt32(errorNumber);
   return CallSelfHostedFunction(cx, cx->names().GetTypeError, NullHandleValue,
                                 args, error);
 }
@@ -2055,7 +2055,7 @@ bool js::GetTypeError(JSContext* cx, unsigned errorNumber,
 bool js::GetAggregateError(JSContext* cx, unsigned errorNumber,
                            MutableHandleValue error) {
   FixedInvokeArgs<1> args(cx);
-  args[0].set(Int32Value(errorNumber));
+  args[0].setInt32(errorNumber);
   return CallSelfHostedFunction(cx, cx->names().GetAggregateError,
                                 NullHandleValue, args, error);
 }

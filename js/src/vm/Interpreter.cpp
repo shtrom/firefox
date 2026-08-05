@@ -1682,7 +1682,7 @@ bool js::SyncDisposalClosure(JSContext* cx, unsigned argc, JS::Value* vp) {
   }
 
   // Step 1.b.ii.1.f. Return promiseCapability.[[Promise]].
-  args.rval().set(JS::ObjectValue(*promiseCapability));
+  args.rval().setObject(*promiseCapability);
   return true;
 }
 
@@ -1764,7 +1764,7 @@ bool js::AddDisposableResourceToCapability(JSContext* cx,
     }
     asyncWrapper->initExtendedSlot(uint8_t(SyncDisposalClosureSlots::Method),
                                    method);
-    disposeMethod.set(JS::ObjectValue(*asyncWrapper));
+    disposeMethod.setObject(*asyncWrapper);
   } else {
     disposeMethod.set(method);
   }

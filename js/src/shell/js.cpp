@@ -11548,7 +11548,7 @@ static bool dom_genericGetter(JSContext* cx, unsigned argc, JS::Value* vp) {
 
   RootedObject obj(cx, &args.thisv().toObject());
   if (JS::GetClass(obj) != &dom_class) {
-    args.rval().set(UndefinedValue());
+    args.rval().setUndefined();
     return true;
   }
 
@@ -11570,7 +11570,7 @@ static bool dom_genericSetter(JSContext* cx, unsigned argc, JS::Value* vp) {
 
   RootedObject obj(cx, &args.thisv().toObject());
   if (JS::GetClass(obj) != &dom_class) {
-    args.rval().set(UndefinedValue());
+    args.rval().setUndefined();
     return true;
   }
 
@@ -11582,7 +11582,7 @@ static bool dom_genericSetter(JSContext* cx, unsigned argc, JS::Value* vp) {
   if (!setter(cx, obj, val.toPrivate(), JSJitSetterCallArgs(args))) {
     return false;
   }
-  args.rval().set(UndefinedValue());
+  args.rval().setUndefined();
   return true;
 }
 
@@ -11596,7 +11596,7 @@ static bool dom_genericMethod(JSContext* cx, unsigned argc, JS::Value* vp) {
 
   RootedObject obj(cx, &args.thisv().toObject());
   if (JS::GetClass(obj) != &dom_class) {
-    args.rval().set(UndefinedValue());
+    args.rval().setUndefined();
     return true;
   }
 
