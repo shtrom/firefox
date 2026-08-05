@@ -6055,17 +6055,6 @@ static bool ClearModules(JSContext* cx, unsigned argc, Value* vp) {
   return true;
 }
 
-static bool ModuleLoadResolved(JSContext* cx, HandleValue hostDefined) {
-  RootedObject module(cx, &hostDefined.toObject());
-  return JS::ModuleLink(cx, module);
-}
-
-static bool ModuleLoadRejected(JSContext* cx, HandleValue hostDefined,
-                               HandleValue error) {
-  JS_SetPendingException(cx, error);
-  return false;
-}
-
 static bool ModuleLink(JSContext* cx, unsigned argc, Value* vp) {
   CallArgs args = CallArgsFromVp(argc, vp);
 
@@ -6090,16 +6079,50 @@ static bool ModuleLink(JSContext* cx, unsigned argc, Value* vp) {
 
   Rooted<ModuleObject*> module(cx,
                                object->as<ShellModuleObjectWrapper>().get());
-
-  // TODO: Bug 1968904: Update ModuleLink
-  RootedValue hostDefined(cx, ObjectValue(*module));
-  if (!JS::LoadRequestedModules(cx, module, hostDefined, ModuleLoadResolved,
-                                ModuleLoadRejected)) {
+  if (!JS::ModuleLink(cx, module)) {
     return false;
   }
 
   args.rval().setUndefined();
   return true;
+}
+
+static bool ModuleLoadRequestedModules(JSContext* cx, unsigned argc,
+                                       Value* vp) {
+  CallArgs args = CallArgsFromVp(argc, vp);
+
+  if (args.length() != 1 || !args[0].isObject()) {
+    JS_ReportErrorNumberASCII(cx, GetErrorMessage, nullptr, JSMSG_INVALID_ARGS,
+                              "loadRequestedModules");
+    return false;
+  }
+
+  RootedObject object(cx, UncheckedUnwrap(&args[0].toObject()));
+  if (!object->is<ShellModuleObjectWrapper>()) {
+    JS_ReportErrorNumberASCII(cx, GetErrorMessage, nullptr, JSMSG_INVALID_ARGS,
+                              "loadRequestedModules");
+    return false;
+  }
+
+  if (!CheckModuleFunctionAllowed(cx)) {
+    return false;
+  }
+
+  {
+    AutoRealm ar(cx, object);
+
+    Rooted<ModuleObject*> module(cx,
+                                 object->as<ShellModuleObjectWrapper>().get());
+    RootedValue hostDefined(cx, ObjectValue(*module));
+    RootedObject promise(cx);
+    if (!JS::LoadRequestedModules(cx, module, hostDefined, &promise)) {
+      return false;
+    }
+
+    args.rval().setObject(*promise);
+  }
+
+  return JS_WrapValue(cx, args.rval());
 }
 
 static bool ModuleEvaluate(JSContext* cx, unsigned argc, Value* vp) {
@@ -10164,7 +10187,13 @@ static const JSFunctionSpecWithHelp shell_functions[] = {
 
     JS_FN_HELP("moduleLink", ModuleLink, 1, 0,
 "moduleLink(moduleOjbect)",
-"  Link a module graph, performing the spec's Link method."),
+"  Link a module graph, performing the spec's Link method. The requested\n"
+"  modules must already have been loaded with loadRequestedModules()."),
+
+    JS_FN_HELP("loadRequestedModules", ModuleLoadRequestedModules, 1, 0,
+"loadRequestedModules(moduleOjbect)",
+"  Load a module graph, performing the spec's LoadRequestedModules method, and\n"
+"  return its promise."),
 
     JS_FN_HELP("moduleEvaluate", ModuleEvaluate, 1, 0,
 "moduleEvaluate(moduleOjbect)",
