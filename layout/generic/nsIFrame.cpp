@@ -4319,14 +4319,15 @@ MOZ_NEVER_INLINE
 static void MaybeAddAccId(nsIFrame* aChildOrOutOfFlow,
                           nsDisplayListBuilder* aBuilder,
                           const nsDisplayListSet& aLists) {
-  auto [bcId, accId] = a11y::PdfStructTreeBuilder::GetAccId(aChildOrOutOfFlow);
-  if (!bcId) {
+  auto [innerWindowId, accId] =
+      a11y::PdfStructTreeBuilder::GetAccId(aChildOrOutOfFlow);
+  if (!innerWindowId) {
     return;
   }
   // When generating tagged PDF, associate this content with the correct
   // node in the structure tree.
   auto* item = MakeDisplayItem<nsDisplayAccessibleId>(
-      aBuilder, aChildOrOutOfFlow, bcId, accId);
+      aBuilder, aChildOrOutOfFlow, innerWindowId, accId);
   aLists.Content()->AppendToTop(item);
 }
 #endif

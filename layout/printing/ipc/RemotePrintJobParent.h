@@ -30,7 +30,7 @@ class RemotePrintJobParent final : public PRemotePrintJobParent {
   void ActorDestroy(ActorDestroyReason aWhy) final;
 
   mozilla::ipc::IPCResult RecvInitializePrint(
-      const nsAString& aDocumentTitle, const uint64_t& aBrowsingContextId,
+      const nsAString& aDocumentTitle, const dom::MaybeDiscardedWindowContext&,
       const int32_t& aStartPage, const int32_t& aEndPage) final;
 
   mozilla::ipc::IPCResult RecvProcessPage(const int32_t& aWidthInPoints,
@@ -62,13 +62,13 @@ class RemotePrintJobParent final : public PRemotePrintJobParent {
  private:
   ~RemotePrintJobParent() final;
 
-  void InitializePrint(const nsAString& aDocumentTitle,
+  void InitializePrint(const nsAString& aDocumentTitle, dom::WindowContext*,
                        const int32_t& aStartPage, const int32_t& aEndPage);
 
   void FailInitialization(nsresult);
 
   nsresult InitializePrintDevice(const nsAString& aDocumentTitle,
-                                 const int32_t& aStartPage,
+                                 dom::WindowContext*, const int32_t& aStartPage,
                                  const int32_t& aEndPage);
 
   nsresult PrepareNextPageFD(FileDescriptor* aFd);
@@ -92,13 +92,8 @@ class RemotePrintJobParent final : public PRemotePrintJobParent {
   nsCOMArray<nsIWebProgressListener> mPrintProgressListeners;
   PRFileDescStream mCurrentPageStream;
 
-  // Once initialized, these are the various IDs of the page we're printing.
-  // Note that static documents don't navigate around so the BC vs WC
-  // distinction isn't particularly relevant here.
-  // TODO(emilio): It'd be more consistent to use the WindowGlobal id
-  // consistently, probably, but that percolates into our a11y code.
-  uint64_t mBrowsingContextId{0};
-  uint64_t mWindowContextId{0};
+  // Once initialized, these identify the page we're printing.
+  uint64_t mInnerWindowId{0};
   dom::TabId mTabId{0};
 
   nsresult mStatus = NS_ERROR_UNEXPECTED;

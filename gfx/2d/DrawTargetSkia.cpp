@@ -2259,11 +2259,10 @@ void DrawTargetSkia::MarkChanged() {
   mIsClear = false;
 }
 
-void DrawTargetSkia::AccessibleId(uint64_t aBrowsingContextId,
-                                  uint64_t aAccId) {
+void DrawTargetSkia::AccessibleId(uint64_t aInnerWindowId, uint64_t aAccId) {
 #if defined(ACCESSIBILITY) && defined(MOZ_ENABLE_SKIA_PDF)
   int pdfId =
-      mozilla::a11y::PdfStructTreeBuilder::GetPdfId(aBrowsingContextId, aAccId);
+      mozilla::a11y::PdfStructTreeBuilder::GetPdfId(aInnerWindowId, aAccId);
   SkPDF::SetNodeId(mCanvas, pdfId);
 #endif
 }
