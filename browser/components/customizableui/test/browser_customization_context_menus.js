@@ -17,7 +17,7 @@ add_task(async function home_button_context() {
   let contextMenu = document.getElementById("toolbar-context-menu");
   let shownPromise = popupShown(contextMenu);
   let stopReloadButton = document.getElementById("stop-reload-button");
-  EventUtils.synthesizeMouse(stopReloadButton, 2, 2, {
+  EventUtils.synthesizeMouseAtCenter(stopReloadButton, {
     type: "contextmenu",
     button: 2,
   });
@@ -50,7 +50,7 @@ add_task(async function sidebar_button_context() {
   let shownPromise = popupShown(contextMenu);
   CustomizableUI.addWidgetToArea("sidebar-button", "nav-bar");
   let sidebarButton = document.getElementById("sidebar-button");
-  EventUtils.synthesizeMouse(sidebarButton, 2, 2, {
+  EventUtils.synthesizeMouseAtCenter(sidebarButton, {
     type: "contextmenu",
     button: 2,
   });
@@ -284,7 +284,7 @@ add_task(async function context_within_panel() {
   let shownContextPromise = popupShown(contextMenu);
   let newWindowButton = document.getElementById("new-window-button");
   ok(newWindowButton, "new-window-button was found");
-  EventUtils.synthesizeMouse(newWindowButton, 2, 2, {
+  EventUtils.synthesizeMouseAtCenter(newWindowButton, {
     type: "contextmenu",
     button: 2,
   });
@@ -318,7 +318,7 @@ add_task(async function context_home_button_in_customize_mode() {
   let contextMenu = document.getElementById("toolbar-context-menu");
   let shownPromise = popupShown(contextMenu);
   let stopReloadButton = document.getElementById("wrapper-stop-reload-button");
-  EventUtils.synthesizeMouse(stopReloadButton, 2, 2, {
+  EventUtils.synthesizeMouseAtCenter(stopReloadButton, {
     type: "contextmenu",
     button: 2,
   });
@@ -352,7 +352,7 @@ add_task(async function context_click_in_palette() {
   );
   let shownPromise = popupShown(contextMenu);
   let openFileButton = document.getElementById("wrapper-open-file-button");
-  EventUtils.synthesizeMouse(openFileButton, 2, 2, {
+  EventUtils.synthesizeMouseAtCenter(openFileButton, {
     type: "contextmenu",
     button: 2,
   });
@@ -381,7 +381,7 @@ add_task(async function context_click_in_customize_mode() {
   );
   let shownPromise = popupShown(contextMenu);
   let newWindowButton = document.getElementById("wrapper-new-window-button");
-  EventUtils.synthesizeMouse(newWindowButton, 2, 2, {
+  EventUtils.synthesizeMouseAtCenter(newWindowButton, {
     type: "contextmenu",
     button: 2,
   });
@@ -422,10 +422,8 @@ add_task(async function context_click_customize_mode_panel_not_opened() {
   let newWindowButton = this.otherWin.document.getElementById(
     "wrapper-new-window-button"
   );
-  EventUtils.synthesizeMouse(
+  EventUtils.synthesizeMouseAtCenter(
     newWindowButton,
-    2,
-    2,
     { type: "contextmenu", button: 2 },
     this.otherWin
   );
@@ -534,7 +532,7 @@ add_task(async function context_after_customization_panel() {
   let shownContextPromise = popupShown(contextMenu);
   let newWindowButton = document.getElementById("new-window-button");
   ok(newWindowButton, "new-window-button was found");
-  EventUtils.synthesizeMouse(newWindowButton, 2, 2, {
+  EventUtils.synthesizeMouseAtCenter(newWindowButton, {
     type: "contextmenu",
     button: 2,
   });
@@ -636,7 +634,7 @@ add_task(async function flexible_space_context_menu() {
   ok(lastSpring, "we added a spring");
   let contextMenu = document.getElementById("toolbar-context-menu");
   let shownPromise = popupShown(contextMenu);
-  EventUtils.synthesizeMouse(lastSpring, 2, 2, {
+  EventUtils.synthesizeMouseAtCenter(lastSpring, {
     type: "contextmenu",
     button: 2,
   });
@@ -673,7 +671,7 @@ add_task(async function downloads_button_context() {
   let shownPromise = popupShown(contextMenu);
   CustomizableUI.addWidgetToArea("downloads-button", "nav-bar");
   let downloadsButton = document.getElementById("downloads-button");
-  EventUtils.synthesizeMouse(downloadsButton, 2, 2, {
+  EventUtils.synthesizeMouseAtCenter(downloadsButton, {
     type: "contextmenu",
     button: 2,
   });
@@ -713,7 +711,7 @@ add_task(async function flexible_space_context_menu_customize_mode() {
   ok(lastSpring, "we added a spring");
   let contextMenu = document.getElementById("toolbar-context-menu");
   let shownPromise = popupShown(contextMenu);
-  EventUtils.synthesizeMouse(lastSpring, 2, 2, {
+  EventUtils.synthesizeMouseAtCenter(lastSpring, {
     type: "contextmenu",
     button: 2,
   });

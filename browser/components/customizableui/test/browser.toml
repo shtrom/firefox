@@ -296,7 +296,6 @@ skip-if = [
 
 ["browser_customization_context_menus.js"]
 skip-if = [
-  "nova", # Bug 2057926
   "os == 'win' && standalone", # Bug 2028648
 ]
 
