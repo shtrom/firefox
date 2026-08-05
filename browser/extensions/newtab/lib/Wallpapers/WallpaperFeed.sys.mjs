@@ -368,6 +368,8 @@ export class WallpaperFeed {
           action.data.name === "newtabWallpapers.customColor.enabled" ||
           action.data.name === "newtabWallpapers.customWallpaper.enabled" ||
           action.data.name === "newtabWallpapers.enabled" ||
+          // @nova-cleanup(remove-conditional): Drop this case; the wallpaper
+          // setup no longer depends on the pref.
           action.data.name === "nova.enabled"
         ) {
           this.wallpaperTeardown();

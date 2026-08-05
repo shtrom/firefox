@@ -272,10 +272,13 @@ function getDefaultWidgetSize() {
  * - Forecast enabled + maximized → user had the large forecast widget → "large"
  * - Forecast enabled + not maximized → user had the medium forecast widget → "medium"
  */
-// @nova-cleanup(remove-pref): Replace this function with a _migratePref call
-// that writes the computed size as a user pref for widgets.weather.size, then
-// change widgets.weather.size in PREFS_CONFIG to value: "" (consistent with
-// other widget size prefs; new users fall through to defaultSize in the registry).
+// @nova-cleanup(remove-pref): Do NOT fold this into the pref removal -- it does
+// not read nova.enabled, and changing it is user-data-affecting. Split it to its
+// own bug: replace with a one-time _migratePref that writes the computed size as
+// a user pref, then set widgets.weather.size to value: "" like the other widget
+// size prefs. A user who had classic weather but never picked a size currently
+// gets "small" recomputed each startup and would otherwise silently resize, so
+// it needs QA against an upgraded profile.
 function getWeatherWidgetSize() {
   const forecastSystemEnabled = Services.prefs.getBoolPref(
     "browser.newtabpage.activity-stream.widgets.system.weatherForecast.enabled",
