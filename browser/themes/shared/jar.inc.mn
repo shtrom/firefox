@@ -265,7 +265,7 @@
   skin/classic/browser/sidebar-expanded.svg           (../shared/icons/sidebar-expanded.svg)
   skin/classic/browser/sidebar-expanded-right.svg     (../shared/icons/sidebar-expanded-right.svg)
   skin/classic/browser/smart-window-dot.svg           (../shared/icons/smart-window-dot.svg)
-  skin/classic/browser/smart-window-mono.svg          (../shared/icons/smart-window-mono.svg)
+  skin/classic/browser/smart-window-mono-32.svg          (../shared/icons/smart-window-mono-32.svg)
   skin/classic/browser/smart-window-simplified.svg    (../shared/icons/smart-window-simplified.svg)
   skin/classic/browser/sort.svg                       (../shared/icons/sort.svg)
   skin/classic/browser/split-view-left-16.svg         (../shared/icons/split-view-left-16.svg)
