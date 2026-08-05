@@ -3760,11 +3760,9 @@ GCRuntime::MarkQueueProgress GCRuntime::processTestMarkQueue() {
       bool hadDelayed = delayedMarkingWorkAdded;
       marker().markOneObjectForTest(obj);
       if (!hadDelayed && delayedMarkingWorkAdded) {
-        // If we overflowed the stack here and delayed marking, then we won't
-        // be testing what we think we're testing. Note that
-        // markOneObjectForTest() can't guarantee that *only* that object will
-        // be marked, so it may be a different object's arena on the delayed
-        // marking list.
+        // If we overflowed the stack here and delayed marking, then we won't be
+        // testing what we think we're testing.
+        MOZ_ASSERT(obj->asTenured().arena()->onDelayedMarkingList());
         printf_stderr(
             "Hit mark stack limit while marking test queue; test results may "
             "be invalid");
