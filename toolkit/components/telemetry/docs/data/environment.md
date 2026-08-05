@@ -141,8 +141,6 @@ Structure:
     os: {
         name: <string>, // "Windows_NT" or null on failure
         version: <string>, // e.g. "6.1", null on failure
-        servicePackMajor: <number>, // windows only or null on failure
-        servicePackMinor: <number>, // windows only or null on failure
         windowsBuildNumber: <number>, // windows only or null on failure
         windowsUBR: <number>, // windows 10 only or null on failure
         locale: <string>, // "en" or null on failure
@@ -494,8 +492,6 @@ This object contains operating system information.
 
 - `name`: the name of the OS.
 - `version`: a string representing the OS version.
-- `servicePackMajor`: the Windows only major version number for the installed service pack.
-- `servicePackMinor`: the Windows only minor version number for the installed service pack.
 - `windowsBuildNumber`: the Windows build number.
 - `windowsUBR`: the Windows UBR number, only available for Windows >= 10. This value is incremented by Windows cumulative updates patches.
 - `installYear`: the Windows only integer representing the year the OS was installed.

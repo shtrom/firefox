@@ -82,8 +82,8 @@ export var Policy = {
 var gActiveExperimentStartupBuffer = new Map();
 
 // For Powering arewegleanyet.com (See bug 1944592)
-// Legacy Count: 118
-// Glean Count: 118
+// Legacy Count: 116
+// Glean Count: 116
 
 var gGlobalEnvironment;
 function getGlobal() {
@@ -1678,11 +1678,7 @@ EnvironmentCache.prototype = {
         "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion";
 
       let versionInfo = lazy.WindowsVersionInfo.get({ throwOnError: false });
-      this._osData.servicePackMajor = versionInfo.servicePackMajor;
-      this._osData.servicePackMinor = versionInfo.servicePackMinor;
       this._osData.windowsBuildNumber = versionInfo.buildNumber;
-      Glean.systemOs.servicePackMajor.set(this._osData.servicePackMajor);
-      Glean.systemOs.servicePackMinor.set(this._osData.servicePackMinor);
       Glean.systemOs.windowsBuildNumber.set(this._osData.windowsBuildNumber);
       // We only need the UBR if we're at or above Windows 10.
       if (

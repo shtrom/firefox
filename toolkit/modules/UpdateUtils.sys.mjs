@@ -1085,9 +1085,8 @@ ChromeUtils.defineLazyGetter(UpdateUtils, "OSVersion", function () {
     if (AppConstants.platform == "win") {
       // Add service pack and build number
       try {
-        const { servicePackMajor, servicePackMinor, buildNumber } =
-          lazy.WindowsVersionInfo.get();
-        osVersion += `.${servicePackMajor}.${servicePackMinor}.${buildNumber}`;
+        const { buildNumber } = lazy.WindowsVersionInfo.get();
+        osVersion += `.0.0.${buildNumber}`;
       } catch (err) {
         console.error("Unable to retrieve windows version information: ", err);
         osVersion += ".unknown";
