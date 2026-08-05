@@ -188,7 +188,6 @@ int32_t WebrtcGmpVideoEncoder::InitEncode(
   }
   mEncodeQueue->AssertOnCurrentThread();
 
-  MOZ_ASSERT(HaveGMPFor("encode-video"_ns, {"h264"_ns}));
   if (!mMPS) {
     mMPS = do_GetService("@mozilla.org/gecko-media-plugin-service;1");
   }
@@ -835,7 +834,6 @@ WebrtcGmpVideoDecoder::~WebrtcGmpVideoDecoder() {
 
 bool WebrtcGmpVideoDecoder::Configure(
     const webrtc::VideoDecoder::Settings& settings) {
-  MOZ_ASSERT(HaveGMPFor("decode-video"_ns, {"h264"_ns}));
   if (!mMPS) {
     mMPS = do_GetService("@mozilla.org/gecko-media-plugin-service;1");
   }
