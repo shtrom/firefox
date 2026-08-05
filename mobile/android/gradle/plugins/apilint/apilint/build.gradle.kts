@@ -11,9 +11,6 @@ plugins {
 
 sourceSets {
     main {
-        java {
-            srcDir("../buildSrc")
-        }
         resources {
             output.dir(mapOf("builtBy" to "copyDocletJar"), layout.buildDirectory.dir("docletJar"))
         }
