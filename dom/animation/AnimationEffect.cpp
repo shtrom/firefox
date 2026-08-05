@@ -52,11 +52,6 @@ bool AnimationEffect::IsCurrent() const {
   }
 
   const AnimationTimeline* timeline = mAnimation->GetTimeline();
-  // An unresolved timeline does not produce any effect, and so cannot be
-  // current.
-  if (timeline && timeline->IsUnresolvedTimeline()) {
-    return false;
-  }
   // An animation effect is current if it is associated with an animation not
   // in the idle play state with a non-null associated timeline that is not
   // monotonically increasing.
