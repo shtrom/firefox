@@ -26,8 +26,6 @@ ChromeUtils.defineESModuleGetters(lazy, {
   ProfileAge: "resource://gre/modules/ProfileAge.sys.mjs",
   SearchService: "moz-src:///toolkit/components/search/SearchService.sys.mjs",
   WindowsRegistry: "resource://gre/modules/WindowsRegistry.sys.mjs",
-  WindowsVersionInfo:
-    "resource://gre/modules/components-utils/WindowsVersionInfo.sys.mjs",
 });
 
 ChromeUtils.defineLazyGetter(lazy, "fxAccounts", () => {
@@ -1674,30 +1672,35 @@ EnvironmentCache.prototype = {
       Glean.systemOs.distroVersion.set(this._osData.distroVersion);
     } else if (AppConstants.platform === "win") {
       // The path to the "UBR" key, queried to get additional version details on Windows.
-      const WINDOWS_UBR_KEY_PATH =
+      const CURRENT_VERSION_PATH =
         "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion";
 
-      let versionInfo = lazy.WindowsVersionInfo.get({ throwOnError: false });
-      this._osData.windowsBuildNumber = versionInfo.buildNumber;
-      Glean.systemOs.windowsBuildNumber.set(this._osData.windowsBuildNumber);
-      // We only need the UBR if we're at or above Windows 10.
-      if (
-        typeof this._osData.version === "string" &&
-        Services.vc.compare(this._osData.version, "10") >= 0
-      ) {
-        // Query the UBR key and only add it to the environment if it's available.
-        // |readRegKey| doesn't throw, but rather returns 'undefined' on error.
-        let ubr = lazy.WindowsRegistry.readRegKey(
+      // To make sure the telemetry data is as accurate as possible, use the
+      // build number from the registry. This avoids a future compatibility shim
+      // giving us the wrong value, and we aren't changing behaviour depending
+      // on this so this doesn't circumvent any shim.
+      // See: https://randomascii.wordpress.com/2022/01/06/determinism-bugs-part-two/
+      // Its type is REG_SZ for some reason, so coerce it to a Number.
+      let build = Number(
+        lazy.WindowsRegistry.readRegKey(
           Ci.nsIWindowsRegKey.ROOT_KEY_LOCAL_MACHINE,
-          WINDOWS_UBR_KEY_PATH,
-          "UBR",
+          CURRENT_VERSION_PATH,
+          "CurrentBuild",
           Ci.nsIWindowsRegKey.WOW64_64
-        );
-        if (Number.isInteger(ubr)) {
-          Glean.systemOs.windowsUbr.set(ubr);
-        }
-        this._osData.windowsUBR = ubr !== undefined ? ubr : null;
-      }
+        )
+      );
+      this._osData.windowsBuildNumber = Number.isInteger(build) ? build : null;
+      Glean.systemOs.windowsBuildNumber.set(this._osData.windowsBuildNumber);
+
+      // The UBR value is already a REG_DWORD, so don't coerce it.
+      let ubr = lazy.WindowsRegistry.readRegKey(
+        Ci.nsIWindowsRegKey.ROOT_KEY_LOCAL_MACHINE,
+        CURRENT_VERSION_PATH,
+        "UBR",
+        Ci.nsIWindowsRegKey.WOW64_64
+      );
+      this._osData.windowsUBR = Number.isInteger(ubr) ? ubr : null;
+      Glean.systemOs.windowsUbr.set(ubr);
     }
 
     return this._osData;
