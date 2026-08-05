@@ -1190,7 +1190,11 @@ describe("DiscoveryStreamFeed", () => {
       await feed.loadSpocs(feed.store.dispatch);
 
       assert.calledOnce(AdsClient.requestOptions);
-      assert.calledOnce(ADS_CLIENT.requestSpocAds);
+      assert.calledOnceWithMatch(
+        ADS_CLIENT.requestSpocAds,
+        [sinon.match.any],
+        REQUEST_OPTIONS
+      );
     });
   });
 
