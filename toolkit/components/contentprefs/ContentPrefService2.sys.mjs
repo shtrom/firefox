@@ -1051,10 +1051,14 @@ ContentPrefService2.prototype = {
    *                     nsresult: The error code.
    */
   _execStmts: async function CPS2__execStmts(stmts, callbacks) {
-    let conn = await this.conn;
     let rows;
     let ok = true;
     try {
+      // Awaiting the connection has to happen inside the try: callers such as
+      // removeByName() do not consume the returned promise, so a rejection here
+      // (e.g. the connection was closed while opening) would otherwise surface
+      // as an unhandled rejection instead of reaching onError/onDone.
+      let conn = await this.conn;
       rows = await executeStatementsInTransaction(conn, stmts);
     } catch (e) {
       ok = false;
