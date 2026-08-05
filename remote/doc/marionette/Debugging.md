@@ -1,4 +1,4 @@
-# Debugging
+# Debugging Marionette
 
 ## Redirecting the Gecko output
 

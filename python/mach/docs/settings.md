@@ -1,6 +1,6 @@
 (mach-settings)=
 
-# Settings
+# Mach settings
 
 Mach can read settings in from a set of configuration files. These
 configuration files are either named `machrc` or `.machrc` and

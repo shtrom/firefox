@@ -114,6 +114,7 @@ redirects:
     contributing/linux_build.html: setup/linux_build.html
     contributing/build/linux_build.html: setup/linux_build.html
     contributing/vscode.html: contributing/editors/vscode.html
+    contributing/build/supported.html: build/buildsystem/supported-configurations.html
     dom/dom: dom
     layout/layout: layout
     gfx/gfx: gfx
@@ -141,7 +142,6 @@ redirects:
 allowed_warnings:
     # General warnings that need consideration/fixing.
     - "WARNING: document isn't included in any toctree"
-    - "WARNING: duplicate label"
     - "WARNING: local id not found in doc"
     - "WARNING: 'myst' cross-reference target not found"
     - "WARNING: Lexing literal_block"

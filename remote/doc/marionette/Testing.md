@@ -1,4 +1,4 @@
-# Testing
+# Marionette testing
 
 We verify and test Marionette in a couple of different ways, using
 a combination of unit tests and functional tests.  There are three

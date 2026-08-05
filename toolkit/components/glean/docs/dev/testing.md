@@ -1,4 +1,4 @@
-# Testing
+# Testing Glean
 
 ```{admonition} This documentation is about testing FOG itself
 This document contains information about how FOG tests itself,

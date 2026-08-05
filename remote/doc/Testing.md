@@ -1,4 +1,4 @@
-# Testing
+# Remote protocol testing
 
 The Remote Protocol has unit- and functional tests located under different folders:
 

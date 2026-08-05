@@ -1,4 +1,4 @@
-# How to
+# Debugger how-tos
 
 These articles describe how to use the debugger.
 

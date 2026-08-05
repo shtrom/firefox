@@ -839,7 +839,7 @@ Safari, or Servo if one needs to compare behavior between browsers. This can be
 done directly through {code}`mach`, see [running tests in other browsers](/web-platform/index.html#running-tests-in-other-browsers)
 for more details.
 
-(mochitests)=
+(webrtc-mochitests)=
 
 ### Mochitests
 
