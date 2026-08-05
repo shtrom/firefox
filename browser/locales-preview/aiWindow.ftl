@@ -157,3 +157,45 @@ ai-tasks-alert-schedule-weekly-friday = Check weekly on Friday at { DATETIME($ti
 ai-tasks-alert-schedule-weekly-saturday = Check weekly on Saturday at { DATETIME($time, timeStyle: "short") }
 ai-tasks-alert-status-watching = Active
 ai-tasks-alert-status-paused = Paused
+
+## AI Window Agent chat messages
+## Shown in the chat conversation while the Agent sets up or manages a monitor.
+
+# The <a data-l10n-name="tasks"> element links to the tasks page. Its text is
+# the page address; keep it and the element (with its name) unchanged.
+# Variables:
+#   $count (number) - The maximum number of watch tasks allowed
+smartwindow-agent-monitor-limit-reached = You already have { $count } watch tasks running — that’s the limit for now. Remove one at <a data-l10n-name="tasks">about:smartwindowtasks</a> then type /watch here again.
+
+smartwindow-agent-monitor-setup = I’ve set up a task to watch this page. Tweak anything, then start it.
+
+# Fallback name used for $monitorName when the watched page has no title.
+smartwindow-agent-monitor-default-name = Page Watch
+
+# The <a data-l10n-name="tasks"> element links to the tasks page. Its text is
+# the page address; keep it and the element (with its name) unchanged.
+# Variables:
+#   $monitorName (string) - The name of the page or target being watched
+#   $schedule (string) - Readable check cadence, e.g. "daily at 9:00 AM"
+smartwindow-agent-monitor-watching = I’ll check { $monitorName } { $schedule }. I’ll notify you when I find content matching your task. View or edit this task anytime at <a data-l10n-name="tasks">about:smartwindowtasks</a>.
+
+# Shown in place of the card when the user deletes a task from the chat.
+# Variables:
+#   $monitorName (string) - The name of the page or target that was being watched
+smartwindow-agent-monitor-deleted = I’ve stopped watching { $monitorName } and removed this task.
+
+# Check watch schedule, added { $schedule } in the chat message.
+# Variables:
+#   $time (date) - The scheduled check time
+smartwindow-agent-monitor-schedule-daily = daily at { DATETIME($time, hour: "numeric", minute: "2-digit") }
+
+# Variables:
+#   $time (date) - The scheduled check day and time
+smartwindow-agent-monitor-schedule-weekly = weekly on { DATETIME($time, weekday: "long") } at { DATETIME($time, hour: "numeric", minute: "2-digit") }
+
+# Status chip and change-history rows shown on a monitor card in chat.
+smartwindow-agent-monitor-status-watching = Watching
+smartwindow-agent-monitor-status-paused = Paused
+smartwindow-agent-monitor-history-check-failed = Check failed. Check again later.
+smartwindow-agent-monitor-history-no-match = Checked, didn’t meet your alert. Check again later.
+smartwindow-agent-monitor-checked-just-now = Just now

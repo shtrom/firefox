@@ -18,13 +18,14 @@ function makeConversationStub() {
   const seeded = new Promise(resolve => {
     resolveSeeded = resolve;
   });
+  const assistantMessages = [];
   const conversation = {
     addUserMessage: () => ({}),
     emit: () => {},
-    addAssistantMessage: () => {},
+    addAssistantMessage: (_type, body) => assistantMessages.push(body),
     addUIToolToCurrentMessage: (_id, data) => resolveSeeded(data),
   };
-  return { conversation, seeded };
+  return { conversation, seeded, assistantMessages };
 }
 
 add_task(async function test_monitor_command_prefills_condition() {
@@ -32,7 +33,7 @@ add_task(async function test_monitor_command_prefills_condition() {
   await MonitorAgent._resetForTesting();
 
   try {
-    const { conversation, seeded } = makeConversationStub();
+    const { conversation, seeded, assistantMessages } = makeConversationStub();
     const handled = AgentUI.tryHandleCommand({
       command: "monitor",
       value: "/monitor the price drops below $200",
@@ -46,6 +47,10 @@ add_task(async function test_monitor_command_prefills_condition() {
       properties.agent.condition,
       "the price drops below $200",
       "The monitor card is seeded with the text typed after /monitor"
+    );
+    Assert.ok(
+      assistantMessages.some(body => body?.includes("watch this page")),
+      "The localized monitor-setup message is shown"
     );
   } finally {
     await MonitorAgent._resetForTesting();
@@ -70,6 +75,49 @@ add_task(async function test_bare_monitor_command_seeds_empty_condition() {
       properties.agent.condition,
       "",
       "A bare /monitor command seeds an empty condition"
+    );
+  } finally {
+    await MonitorAgent._resetForTesting();
+    await SpecialPowers.popPrefEnv();
+  }
+});
+
+add_task(async function test_create_monitor_localizes_schedule_summary() {
+  await SpecialPowers.pushPrefEnv({ set: [[PREF_AGENT_ENABLED, true]] });
+  await MonitorAgent._resetForTesting();
+
+  try {
+    const { conversation } = makeConversationStub();
+    const message = { content: {}, toolUIData: { properties: { agent: {} } } };
+    const updateData = {
+      monitorName: "r/Watchexchange",
+      condition: "new posts",
+      watchUrls: ["https://example.com/watches"],
+      schedule: { frequency: "daily", time: "09:00", weekday: "1" },
+    };
+
+    const created = await AgentUI.handleCreateMonitor({
+      message,
+      updateData,
+      conversation,
+    });
+    Assert.ok(created, "The monitor is created");
+
+    Assert.equal(
+      message.content.l10nId,
+      "smartwindow-agent-monitor-watching",
+      "The watching message renders from its l10n id"
+    );
+
+    const { schedule } = message.content.l10nArgs;
+
+    Assert.ok(
+      schedule.startsWith("daily at") && /\d/.test(schedule),
+      `The schedule arg is a localized cadence string, got: "${schedule}"`
+    );
+    Assert.ok(
+      !schedule.includes("DATETIME") && !schedule.includes("[object"),
+      "The schedule arg is fully resolved"
     );
   } finally {
     await MonitorAgent._resetForTesting();

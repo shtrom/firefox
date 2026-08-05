@@ -779,7 +779,11 @@ export class AIChatContent extends MozLitElement {
   }
 
   #isAIResponseValid(content, toolUIData) {
-    return (typeof content?.body === "string" && content.body) || !!toolUIData;
+    return (
+      (typeof content?.body === "string" && content.body) ||
+      !!content?.l10nId ||
+      !!toolUIData
+    );
   }
 
   /**
@@ -830,6 +834,9 @@ export class AIChatContent extends MozLitElement {
       convId,
       messageId,
       body: content.body,
+      messageL10n: content.l10nId
+        ? { id: content.l10nId, args: content.l10nArgs, link: content.link }
+        : null,
       appliedMemories: memoriesApplied ?? [],
       showCallout: showMemoriesCallout ?? false,
       isLastChunk,
@@ -1407,6 +1414,7 @@ export class AIChatContent extends MozLitElement {
           : nothing}
         <ai-chat-message
           .message=${msg.body}
+          .messageL10n=${msg.messageL10n}
           .role=${msg.role}
           .messageId=${msg.messageId}
           .complete=${msg.role === "assistant" && !!msg.isLastChunk}

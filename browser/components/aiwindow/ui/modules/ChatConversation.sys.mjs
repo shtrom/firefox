@@ -460,7 +460,8 @@ export class ChatConversation extends Conversation {
       if (type === "function") {
         return false;
       }
-      if (type === "text" && !body) {
+      // Keep localized messages (rendered from l10n id)
+      if (type === "text" && !body && !content?.l10nId) {
         return false;
       }
       return true;
@@ -608,6 +609,41 @@ export class ChatConversation extends Conversation {
       this.currentTurnIndex(),
       assistantOpts
     );
+  }
+
+  /**
+   * Add a localized assistant message that renders from a Fluent id, optionally
+   * embedding a link via '<a data-l10n-name>' element in the message
+   *
+   * @param {string} l10nId - Fluent id for the message
+   * @param {object} [l10nArgs] - Fluent variables for the message
+   * @param {{ l10nName: string, href: string }} [link] - Link to fill the
+   *   matching '<a data-l10n-name>' element in the message
+   * @param {AssistantRoleOpts} [assistantOpts=new AssistantRoleOpts()]
+   * @returns {ChatMessage} The newly created assistant message
+   */
+  addAssistantWithL10nMessage(
+    l10nId,
+    l10nArgs = null,
+    link = null,
+    assistantOpts = new AssistantRoleOpts()
+  ) {
+    if (assistantOpts.modelId == null) {
+      assistantOpts.modelId = this.engine?.model ?? null;
+    }
+    const content = { type: "text", body: "", l10nId, l10nArgs, link };
+    const message = this.addMessage(
+      MESSAGE_ROLE.ASSISTANT,
+      content,
+      this.currentTurnIndex(),
+      assistantOpts
+    );
+
+    if (message) {
+      this.emit("chat-conversation:message-update", message);
+      this.emit("chat-conversation:message-complete", message);
+    }
+    return message;
   }
 
   /**

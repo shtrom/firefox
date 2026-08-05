@@ -279,6 +279,45 @@ add_task(function test_ChatConversation_addAssistantMessage() {
   });
 });
 
+add_task(function test_ChatConversation_addAssistantWithL10nMessage() {
+  const conversation = new ChatConversation({});
+
+  const events = [];
+  const onUpdate = (_event, m) => events.push(["update", m]);
+  const onComplete = (_event, m) => events.push(["complete", m]);
+  conversation.on("chat-conversation:message-update", onUpdate);
+  conversation.on("chat-conversation:message-complete", onComplete);
+
+  const message = conversation.addAssistantWithL10nMessage(
+    "smartwindow-agent-monitor-limit-reached",
+    { count: 5 },
+    { l10nName: "tasks", href: "about:smartwindowtasks" }
+  );
+
+  conversation.off("chat-conversation:message-update", onUpdate);
+  conversation.off("chat-conversation:message-complete", onComplete);
+
+  Assert.withSoftAssertions(function (soft) {
+    soft.equal(message.role, MESSAGE_ROLE.ASSISTANT);
+    soft.deepEqual(message.content, {
+      type: "text",
+      body: "",
+      l10nId: "smartwindow-agent-monitor-limit-reached",
+      l10nArgs: { count: 5 },
+      link: { l10nName: "tasks", href: "about:smartwindowtasks" },
+    });
+
+    soft.ok(
+      events.some(([type, m]) => type === "update" && m === message),
+      "emits chat-conversation:message-update"
+    );
+    soft.ok(
+      events.some(([type, m]) => type === "complete" && m === message),
+      "emits chat-conversation:message-complete"
+    );
+  });
+});
+
 add_task(function test_opts_ChatConversation_addAssistantMessage() {
   const conversation = new ChatConversation({});
 

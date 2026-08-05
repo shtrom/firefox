@@ -25,18 +25,20 @@ ChromeUtils.defineESModuleGetters(lazy, {
 export class AIChatContentParent extends JSWindowActorParent {
   #settingsURI = Services.io.newURI("about:settings");
   #prefsURI = Services.io.newURI("about:preferences");
+  #tasksURI = Services.io.newURI("about:smartwindowtasks");
 
   /**
-   * Returns true if the URI points to the browser settings page.
-   * Matches both about:preferences and its about:settings alias,
+   * Returns true if the URI points to a trusted internal page.
+   * Matches about:preferences, about:settings, and about:smartwindowtasks
    *
    * @param {nsIURI} uri - A parsed URI object
    * @returns {boolean}
    */
-  isSettingsURI(uri) {
+  isTrustedInternalURI(uri) {
     return (
       uri.equalsExceptRef(this.#settingsURI) ||
-      uri.equalsExceptRef(this.#prefsURI)
+      uri.equalsExceptRef(this.#prefsURI) ||
+      uri.equalsExceptRef(this.#tasksURI)
     );
   }
 
@@ -158,7 +160,7 @@ export class AIChatContentParent extends JSWindowActorParent {
       if (
         uri.scheme !== "http" &&
         uri.scheme !== "https" &&
-        !this.isSettingsURI(uri)
+        !this.isTrustedInternalURI(uri)
       ) {
         return;
       }
@@ -179,7 +181,7 @@ export class AIChatContentParent extends JSWindowActorParent {
         return;
       }
 
-      if (this.isSettingsURI(uri)) {
+      if (this.isTrustedInternalURI(uri)) {
         lazy.URILoadingHelper.switchToTabHavingURI(window, url, true, {});
         return;
       }
