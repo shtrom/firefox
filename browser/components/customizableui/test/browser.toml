@@ -318,9 +318,6 @@ https_first_disabled = true
 ["browser_flexible_space_area.js"]
 
 ["browser_help_panel_cloning.js"]
-skip-if = [
-  "nova", # Bug 2057935
-]
 
 ["browser_hidden_widget_overflow.js"]
 
