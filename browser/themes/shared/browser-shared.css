@@ -532,7 +532,7 @@ body {
     :root[customtitlebar] #navigator-toolbox[tabs-hidden] > & {
       /* urlbar variables will be tokenized, see bug 2017983 */
       /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
-      min-height: calc(var(--urlbar-min-height) + 2 * var(--urlbar-padding-block));
+      min-height: calc(var(--urlbar-height) + 2 * var(--urlbar-padding-block));
     }
 
     &[inactive]:not([customizing]) {
