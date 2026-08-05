@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { blobAsDataURL } from "moz-src:///toolkit/modules/FaviconUtils.sys.mjs";
+
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
@@ -190,7 +192,10 @@ export class UrlbarParent extends JSWindowActorParent {
         controller.initEngineStore();
         break;
       case "GetEngineIconURL":
-        return controller.getEngineIconURL(message.data.engineId);
+        return this.#getSerializableEngineIcon(
+          controller,
+          message.data.engineId
+        );
       case "MarkEngineAsUsed":
         controller.markEngineAsUsed(message.data.engineId);
         break;
@@ -211,6 +216,33 @@ export class UrlbarParent extends JSWindowActorParent {
         break;
     }
     return undefined;
+  }
+
+  /**
+   * Returns an engine's icon URL in a form that resolves in the child's
+   * process.
+   *
+   * @param {UrlbarParentController} controller
+   * @param {string} engineId
+   * @returns {Promise<?string>}
+   *   The icon URL, or null if the engine or its icon could not be found.
+   */
+  async #getSerializableEngineIcon(controller, engineId) {
+    let url = await controller.getEngineIconURL(engineId);
+
+    // A blob URL only resolves in the process that created it, so the icon
+    // travels as a data URL instead.
+    if (!url?.startsWith("blob:")) {
+      return url;
+    }
+
+    try {
+      let response = await fetch(url);
+      return await blobAsDataURL(await response.blob());
+    } catch (ex) {
+      console.error(`Could not read the icon of engine ${engineId}`, ex);
+      return null;
+    }
   }
 
   didDestroy() {

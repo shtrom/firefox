@@ -731,7 +731,9 @@ export class UrlbarParentController {
   }
 
   /**
-   * Returns the icon URL of the engine with the given id.
+   * Returns the icon URL of the engine with the given id. This can be a blob
+   * URL, which only resolves in this process, so UrlbarParent serializes it
+   * before handing it to another process.
    *
    * @param {string} engineId
    * @returns {Promise<?string>}

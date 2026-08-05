@@ -271,11 +271,9 @@ async function setDefaultEngine(name) {
 
 add_task(async function test_icon_new_window() {
   let newWin = await BrowserTestUtils.openNewBrowserWindow();
-  let expectedIcon = await SearchService.defaultEngine.getIconURL();
-
-  Assert.equal(
-    UrlbarTestUtils.getSearchModeSwitcherIcon(newWin),
-    expectedIcon,
+  await UrlbarTestUtils.assertSearchModeSwitcherIcon(
+    newWin,
+    await SearchService.defaultEngine.getIconURL(),
     "The search mode switcher should already have the engine favicon."
   );
 
@@ -309,12 +307,10 @@ add_task(async function test_search_icon_change() {
   popup.querySelector(`panel-item[data-engine-id=${bing.id}]`).click();
   await popupHidden;
 
-  const bingSearchEngineIconUrl = await bing.getIconURL();
-
-  Assert.equal(
-    UrlbarTestUtils.getSearchModeSwitcherIcon(newWin),
-    bingSearchEngineIconUrl,
-    "The search mode switcher should have the bing icon url since we are in \
+  await UrlbarTestUtils.assertSearchModeSwitcherIcon(
+    newWin,
+    await bing.getIconURL(),
+    "The search mode switcher should have the bing icon since we are in \
      search mode"
   );
   await UrlbarTestUtils.assertSearchMode(newWin, {
@@ -895,8 +891,8 @@ add_task(async function test_search_mode_switcher_private_engine_icon() {
     "Default private engine is correct."
   );
 
-  Assert.equal(
-    UrlbarTestUtils.getSearchModeSwitcherIcon(window),
+  await UrlbarTestUtils.assertSearchModeSwitcherIcon(
+    window,
     defaultEngineIcon,
     "Is the icon of the default engine."
   );
@@ -912,8 +908,8 @@ add_task(async function test_search_mode_switcher_private_engine_icon() {
     value: "abc",
   });
 
-  Assert.equal(
-    UrlbarTestUtils.getSearchModeSwitcherIcon(privateWin),
+  await UrlbarTestUtils.assertSearchModeSwitcherIcon(
+    privateWin,
     defaultPrivateEngineIcon,
     "Is the icon of the default private engine."
   );
@@ -925,9 +921,8 @@ add_task(async function test_search_mode_switcher_private_engine_icon() {
   );
 
   info("Waiting for the icon to be updated.");
-  await TestUtils.waitForCondition(
-    () =>
-      UrlbarTestUtils.getSearchModeSwitcherIcon(privateWin) == defaultEngineIcon
+  await TestUtils.waitForCondition(() =>
+    UrlbarTestUtils.searchModeSwitcherIconIs(privateWin, defaultEngineIcon)
   );
   Assert.ok(true, "The icon was updated.");
 
