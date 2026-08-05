@@ -301,7 +301,12 @@ for (const type of [
   "WEATHER_USER_OPT_IN_LOCATION",
   "WEBEXT_CLICK",
   "WEBEXT_DISMISS",
+  "WEB_NOTIFICATIONS_ADDED",
+  "WEB_NOTIFICATIONS_CLICK",
+  "WEB_NOTIFICATIONS_DISMISS",
+  "WEB_NOTIFICATIONS_DISMISS_ALL",
   "WEB_NOTIFICATIONS_ERROR",
+  "WEB_NOTIFICATIONS_REMOVED",
   "WEB_NOTIFICATIONS_REQUEST",
   "WEB_NOTIFICATIONS_UPDATED",
   "WIDGETS_CONTAINER_ACTION",
@@ -7472,17 +7477,6 @@ const INITIAL_STATE = {
     // For can be a queue in the future, but for now is one item
     toastQueue: [],
   },
-  // Snapshot of the platform NotificationDB (persisted web notifications).
-  // Distinct from `Notifications` above, which is in-newtab toast UI state.
-  // Normalized: `notifications` is the canonical id-keyed table; `byOrigin`
-  // is an id-only index. Fed by WebNotificationsFeed.
-  WebNotifications: {
-    initialized: false,
-    lastUpdated: null,
-    notifications: {},
-    byOrigin: {},
-    error: null,
-  },
   InferredPersonalization: {
     initialized: false,
     lastUpdated: null,
@@ -7510,6 +7504,16 @@ const INITIAL_STATE = {
   SectionsLayout: {
     configs: {},
     orderings: {},
+  },
+  // Web notifications surfaced on newtab. Distinct from `Notifications` above,
+  // which is in-newtab toast UI state. `notifications` is the canonical
+  // id-keyed table; `byOrigin` is an id-only index. Fed by WebNotificationsFeed.
+  WebNotifications: {
+    initialized: false,
+    lastUpdated: null,
+    notifications: {},
+    byOrigin: {},
+    error: null,
   },
   Weather: {
     initialized: false,
@@ -8474,6 +8478,39 @@ function Notifications(prevState = INITIAL_STATE.Notifications, action) {
   }
 }
 
+/** Merges one notification into the id table and origin index. */
+function addWebNotification(prevState, notification) {
+  const { id, origin } = notification;
+  const originIds = prevState.byOrigin[origin] || [];
+  return {
+    ...prevState,
+    initialized: true,
+    notifications: { ...prevState.notifications, [id]: notification },
+    byOrigin: {
+      ...prevState.byOrigin,
+      [origin]: originIds.includes(id) ? originIds : [...originIds, id],
+    },
+  };
+}
+
+/** Drops a list of `{origin, id}` pairs from the id table and origin index. */
+function removeWebNotifications(prevState, removed) {
+  const notifications = { ...prevState.notifications };
+  const byOrigin = { ...prevState.byOrigin };
+  for (const { origin, id } of removed) {
+    delete notifications[id];
+    const remaining = (byOrigin[origin] || []).filter(
+      existing => existing !== id
+    );
+    if (remaining.length) {
+      byOrigin[origin] = remaining;
+    } else {
+      delete byOrigin[origin];
+    }
+  }
+  return { ...prevState, notifications, byOrigin };
+}
+
 function WebNotifications(prevState = INITIAL_STATE.WebNotifications, action) {
   switch (action.type) {
     case actionTypes.WEB_NOTIFICATIONS_UPDATED:
@@ -8485,11 +8522,12 @@ function WebNotifications(prevState = INITIAL_STATE.WebNotifications, action) {
         byOrigin: action.data.byOrigin,
         error: null,
       };
+    case actionTypes.WEB_NOTIFICATIONS_ADDED:
+      return addWebNotification(prevState, action.data.notification);
+    case actionTypes.WEB_NOTIFICATIONS_REMOVED:
+      return removeWebNotifications(prevState, action.data.removed);
     case actionTypes.WEB_NOTIFICATIONS_ERROR:
-      return {
-        ...prevState,
-        error: action.data,
-      };
+      return { ...prevState, error: action.data };
     default:
       return prevState;
   }
@@ -8815,7 +8853,6 @@ const reducers = {
   Sections,
   Messages,
   Notifications,
-  WebNotifications,
   Pocket,
   InferredPersonalization,
   DiscoveryStream,
@@ -8824,6 +8861,7 @@ const reducers = {
   ListsWidget,
   Wallpapers,
   SectionsLayout,
+  WebNotifications,
   Weather,
   Stocks,
   ExternalComponents,
