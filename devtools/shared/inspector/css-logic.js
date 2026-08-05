@@ -575,10 +575,13 @@ function getBindingElementAndPseudo(node) {
       implementedPseudoElement === "::before" ||
       implementedPseudoElement === "::checkmark" ||
       implementedPseudoElement === "::marker" ||
+      implementedPseudoElement === "::picker" ||
       implementedPseudoElement === "::picker-icon"
     ) {
       pseudo = getNodeDisplayName(node);
-      bindingElement = node.parentNode;
+      // Use flattenedTreeParentNode instead of parentNode to reach the shadow host from
+      // the shadow dom (needed for some pseudo elements, e.g. `::picker`)
+      bindingElement = node.flattenedTreeParentNode;
     } else if (implementedPseudoElement.startsWith("::view-transition")) {
       pseudo = getNodeDisplayName(node);
       // The binding for all view transition pseudo element is the <html> element, i.e. we

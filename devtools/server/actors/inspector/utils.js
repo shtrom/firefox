@@ -74,7 +74,8 @@ const getNodeDisplayName = function (rawNode) {
   const { implementedPseudoElement } = rawNode;
   if (implementedPseudoElement) {
     if (
-      implementedPseudoElement.startsWith("::view-transition") &&
+      (implementedPseudoElement.startsWith("::view-transition") ||
+        implementedPseudoElement === "::picker") &&
       rawNode.hasAttribute("name")
     ) {
       return `${implementedPseudoElement}(${rawNode.getAttribute("name")})`;
