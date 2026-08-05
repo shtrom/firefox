@@ -12345,15 +12345,19 @@ bool Document::CanSavePresentation(nsIRequest* aNewRequest,
           }
         }
 
-        if (MOZ_UNLIKELY(MOZ_LOG_TEST(gPageCacheLog, LogLevel::Verbose))) {
-          nsAutoCString requestName;
-          request->GetName(requestName);
-          MOZ_LOG(gPageCacheLog, LogLevel::Verbose,
-                  ("Save of %s blocked because document has request %s",
-                   uri.get(), requestName.get()));
-        }
         aBFCacheCombo |= BFCacheStatus::REQUEST;
         ret = false;
+
+        // Further requests can only set the same bit; keep going only to log.
+        if (MOZ_LIKELY(!MOZ_LOG_TEST(gPageCacheLog, LogLevel::Verbose))) {
+          break;
+        }
+
+        nsAutoCString requestName;
+        request->GetName(requestName);
+        MOZ_LOG(gPageCacheLog, LogLevel::Verbose,
+                ("Save of %s blocked because document has request %s",
+                 uri.get(), requestName.get()));
       }
     }
   }
