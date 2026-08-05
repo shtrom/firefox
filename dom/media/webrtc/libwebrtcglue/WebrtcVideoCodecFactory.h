@@ -8,8 +8,6 @@
 #include "MediaCodecsSupport.h"
 #include "MediaEventSource.h"
 #include "PerformanceRecorder.h"
-#include "PlatformDecoderModule.h"
-#include "PlatformEncoderModule.h"
 #include "api/video_codecs/video_codec.h"
 #include "api/video_codecs/video_decoder_factory.h"
 #include "api/video_codecs/video_encoder_factory.h"
@@ -74,10 +72,7 @@ class WebrtcVideoDecoderFactory : public GmpPluginNotifier,
       const webrtc::Environment& env,
       const webrtc::SdpVideoFormat& format) override;
 
-  // Query whether the codec is supported for decoding in SW and/or HW. Waits
-  // for the remote process which would decode the codec to report accurate
-  // support. Used by MediaCapabilities. Must be called off the main thread.
-  static RefPtr<PlatformDecoderModule::SupportsDecoderPromise> SupportsCodec(
+  static media::DecodeSupportSet SupportsCodec(
       const MediaExtendedMIMEType& aMime, const SupportDecoderParams& aParams);
 
  private:
@@ -125,11 +120,7 @@ class WebrtcVideoEncoderFactory : public GmpPluginNotifierInterface,
       const webrtc::Environment& env,
       const webrtc::SdpVideoFormat& format) override;
 
-  // Query whether the codec is supported for encoding in SW and/or HW. Waits
-  // for the remote process which would encode the codec to report accurate
-  // support. Used by MediaCapabilities. Must be called off the main thread.
-  static RefPtr<PlatformEncoderModule::SupportsEncoderPromise> SupportsCodec(
-      const EncoderConfig& aConfig);
+  static media::EncodeSupportSet SupportsCodec(const EncoderConfig& aConfig);
 
   void DisconnectAll() override { mInternalFactory->DisconnectAll(); }
 

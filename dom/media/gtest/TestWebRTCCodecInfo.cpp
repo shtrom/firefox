@@ -10,11 +10,9 @@
 #include "VideoUtils.h"
 #include "gtest/gtest.h"
 #include "mozilla/Preferences.h"
-#include "mozilla/SpinEventLoopUntil.h"
 #include "mozilla/gfx/gfxVars.h"
 #include "mozilla/gtest/ScopedPrefSetter.h"
 #include "mozilla/media/webrtc/CodecInfo.h"
-#include "nsThreadUtils.h"
 
 using namespace mozilla;
 using mozilla::WebrtcCodecInfo;
@@ -83,19 +81,7 @@ class WebRTCCodecInfoTest : public testing::Test {
 
   static media::EncodeSupportSet QueryEncode(
       const MediaExtendedMIMEType& aMime) {
-    media::EncodeSupportSet result;
-    bool done = false;
-    SupportsVideoEncodeForWebrtc(MakeWebrtcEncoderConfig(aMime))
-        ->Then(
-            GetMainThreadSerialEventTarget(), __func__,
-            [&](media::EncodeSupportSet aSupport) {
-              result = aSupport;
-              done = true;
-            },
-            [&](nsresult) { done = true; });
-    SpinEventLoopUntil("TestWebRTCCodecInfo::QueryEncode"_ns,
-                       [&] { return done; });
-    return result;
+    return SupportsVideoEncodeForWebrtc(MakeWebrtcEncoderConfig(aMime));
   }
   static media::DecodeSupportSet QueryDecode(
       const MediaExtendedMIMEType& aMime) {
@@ -105,19 +91,7 @@ class WebRTCCodecInfoTest : public testing::Test {
       return {};
     }
     SupportDecoderParams params(*info);
-    media::DecodeSupportSet result;
-    bool done = false;
-    SupportsVideoDecodeForWebrtc(aMime, params)
-        ->Then(
-            GetMainThreadSerialEventTarget(), __func__,
-            [&](media::DecodeSupportSet aSupport) {
-              result = aSupport;
-              done = true;
-            },
-            [&](nsresult) { done = true; });
-    SpinEventLoopUntil("TestWebRTCCodecInfo::QueryDecode"_ns,
-                       [&] { return done; });
-    return result;
+    return SupportsVideoDecodeForWebrtc(aMime, params);
   }
 
   // Returns false if the MIME string is unparseable or unsupported.
