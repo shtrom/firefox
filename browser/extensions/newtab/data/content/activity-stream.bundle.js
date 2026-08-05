@@ -23466,6 +23466,7 @@ const STOCKS_ENTRY = WIDGET_REGISTRY.find(w => w.id === "stocks");
 const STOCKS_PLACEHOLDER_COUNT = 4;
 function Stocks_Stocks({
   dispatch,
+  handleUserInteraction,
   widgetsMayBeMaximized,
   widgetEnabledMap
 }) {
@@ -23480,6 +23481,10 @@ function Stocks_Stocks({
   const widgetSize = resolveWidgetSize(STOCKS_ENTRY, prefs);
   const showError = error && !tickers.length;
   const impressionFired = (0,external_React_namespaceObject.useRef)(false);
+
+  // Any user action flips widgets.stocks.interaction (idempotent, one-way),
+  // matching the other widgets. Hiding the widget is not an interaction.
+  const handleInteraction = (0,external_React_namespaceObject.useCallback)(() => handleUserInteraction("stocks"), [handleUserInteraction]);
   const handleIntersection = (0,external_React_namespaceObject.useCallback)(() => {
     if (impressionFired.current) {
       return;
@@ -23513,8 +23518,9 @@ function Stocks_Stocks({
           widget_size: size
         }
       }));
+      handleInteraction();
     });
-  }, [dispatch]);
+  }, [dispatch, handleInteraction]);
 
   // Placeholder: a real ticker search will replace this telemetry-only stub in
   // a follow-up.
@@ -23528,6 +23534,7 @@ function Stocks_Stocks({
         widget_size: widgetSize
       }
     }));
+    handleInteraction();
   }
 
   // The shared footer opens the support link; here we only record the click.
@@ -23541,6 +23548,7 @@ function Stocks_Stocks({
         widget_size: widgetSize
       }
     }));
+    handleInteraction();
   }
   return /*#__PURE__*/external_React_default().createElement("article", {
     className: `stocks widget col-4 ${widgetSize}-widget`,

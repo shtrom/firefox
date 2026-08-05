@@ -22,7 +22,12 @@ const USER_ACTION_TYPES = {
 const STOCKS_ENTRY = WIDGET_REGISTRY.find(w => w.id === "stocks");
 const STOCKS_PLACEHOLDER_COUNT = 4;
 
-function Stocks({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
+function Stocks({
+  dispatch,
+  handleUserInteraction,
+  widgetsMayBeMaximized,
+  widgetEnabledMap,
+}) {
   const prefs = useSelector(state => state.Prefs.values);
   const { tickers, error } = useSelector(state => state.Stocks);
 
@@ -31,6 +36,13 @@ function Stocks({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
   const widgetSize = resolveWidgetSize(STOCKS_ENTRY, prefs);
   const showError = error && !tickers.length;
   const impressionFired = useRef(false);
+
+  // Any user action flips widgets.stocks.interaction (idempotent, one-way),
+  // matching the other widgets. Hiding the widget is not an interaction.
+  const handleInteraction = useCallback(
+    () => handleUserInteraction("stocks"),
+    [handleUserInteraction]
+  );
 
   const handleIntersection = useCallback(() => {
     if (impressionFired.current) {
@@ -71,9 +83,10 @@ function Stocks({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
             },
           })
         );
+        handleInteraction();
       });
     },
-    [dispatch]
+    [dispatch, handleInteraction]
   );
 
   // Placeholder: a real ticker search will replace this telemetry-only stub in
@@ -90,6 +103,7 @@ function Stocks({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
         },
       })
     );
+    handleInteraction();
   }
 
   // The shared footer opens the support link; here we only record the click.
@@ -105,6 +119,7 @@ function Stocks({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
         },
       })
     );
+    handleInteraction();
   }
 
   return (
