@@ -894,9 +894,15 @@ class ResourceCommand {
           let target = existingResource;
 
           for (let i = 0; i < path.length - 1; i++) {
+            if (!target.hasOwnProperty(path[i])) {
+              throw new Error("Attribute doesn't exists on path: " + path);
+            }
             target = target[path[i]];
           }
 
+          if (!target.hasOwnProperty(path[path.length - 1])) {
+            throw new Error("Attribute doesn't exists on path: " + path);
+          }
           target[path[path.length - 1]] = value;
         }
       }
