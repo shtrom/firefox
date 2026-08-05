@@ -60,6 +60,8 @@ skip-if = [
 
 ["browser_bookmarkProperties_xulStore.js"]
 
+["browser_bookmarkStar_multipleBookmarks.js"]
+
 ["browser_bookmark_add_tags.js"]
 https_first_disabled = true
 skip-if = [
