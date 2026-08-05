@@ -156,6 +156,22 @@ ContentPrefService2.prototype = {
       return this._connPromise;
     }
 
+    // Register the blocker before opening: a connection that is still opening
+    // when Sqlite.shutdown begins must still be closed before the barrier
+    // completes.
+    try {
+      lazy.Sqlite.shutdown.addBlocker(
+        "Closing ContentPrefService2 connection.",
+        async () => {
+          let conn = await this._connPromise?.catch(() => null);
+          await conn?.close();
+        }
+      );
+    } catch (e) {
+      // Nothing would close the connection, so don't open one.
+      return (this._connPromise = Promise.resolve(null));
+    }
+
     return (this._connPromise = (async () => {
       let conn;
       try {
@@ -1368,21 +1384,6 @@ ContentPrefService2.prototype = {
         incrementalVacuum: true,
         vacuumOnIdle: true,
       });
-      try {
-        lazy.Sqlite.shutdown.addBlocker(
-          "Closing ContentPrefService2 connection.",
-          () => conn.close()
-        );
-      } catch (ex) {
-        // Uh oh, we failed to add a shutdown blocker. Close the connection
-        // anyway, but make sure that doesn't throw.
-        try {
-          await conn?.close();
-        } catch (ex) {
-          console.error(ex);
-        }
-        return null;
-      }
     } catch (e) {
       console.error(e);
       return resetAndRetry(e);
