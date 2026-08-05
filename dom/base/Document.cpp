@@ -21546,4 +21546,8 @@ class SpeculationRules& Document::SpeculationRules() {
   return *mSpeculationRules;
 }
 
+class SpeculationRules* Document::GetSpeculationRules() {
+  return mSpeculationRules;
+}
+
 }  // namespace mozilla::dom

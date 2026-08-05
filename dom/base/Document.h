@@ -5961,6 +5961,7 @@ class Document : public nsINode,
                                               ErrorResult& aError);
 
   class SpeculationRules& SpeculationRules();
+  class SpeculationRules* GetSpeculationRules();
 
   nsIURI* GetTlsCertificateBindingURI() const {
     return mTLSCertificateBindingURI;
