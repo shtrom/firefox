@@ -595,6 +595,13 @@ bool InvokeFromInterpreterStub(JSContext* cx,
     GeneratorResumeKind resumeKind =
         IntToResumeKind(resumeArgs[ResumeFrameArgs::ResumeKindSlot].toInt32());
 
+    // We're restarting the resume from scratch, so restore the generator's
+    // resume index. See ResumeFrameArgs.
+    MOZ_ASSERT(genObj->isRunning());
+    genObj->setResumeIndex(
+        resumeArgs[ResumeFrameArgs::ResumeIndexSlot].toInt32());
+    MOZ_ASSERT(genObj->isSuspended());
+
     AutoRealm ar(cx, genObj);
     if (!js::ResumeGenerator(cx, genObj, resumeValue, resumeKind, &rval)) {
       return false;

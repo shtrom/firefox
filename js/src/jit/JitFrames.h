@@ -127,9 +127,10 @@ struct VMFunctionData;
  *  Resuming a generator:
  *    When resuming a suspended generator or async function/module, the caller
  *    also pushes the resume args (see ResumeFrameArgs): the resume value, the
- *    generator object, and the resume kind. For function callees these are
- *    pushed above the formals and numActualArgs is 0. Module callees have no
- *    ThisV and no arguments, so the resume args occupy those slots instead.
+ *    generator object, the resume kind, and the resume index. For function
+ *    callees these are pushed above the formals and numActualArgs is 0. Module
+ *    callees have no ThisV and no arguments, so the resume args occupy those
+ *    slots instead.
  *    The caller signals their presence with the IsResumingGenerator descriptor
  *    bit, which also tells the callee's prologue to dispatch to the resume
  *    point. JSOp::AfterYield clears the bit, after which these slots must no

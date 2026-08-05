@@ -6404,18 +6404,33 @@ void BaselineCodeGen<Handler>::emitGeneratorResumePrologueBody() {
     regs.take(InterpreterPCReg);
   }
 
-  // Locate the three resume args (value, generator, resumeKind) on the stack.
+  // Locate the resume args on the stack.
   Register argsBase = regs.takeAny();
   loadResumeArgsBase(argsBase);
   Address argValue(argsBase, ResumeFrameArgs::offsetOfResumeValue());
   Address argGen(argsBase, ResumeFrameArgs::offsetOfGenerator());
   Address argResumeKind(argsBase, ResumeFrameArgs::offsetOfResumeKind());
+  Address argResumeIndex(argsBase, ResumeFrameArgs::offsetOfResumeIndex());
 
   Register genObj = regs.takeAny();
   masm.unboxObject(argGen, genObj);
 
   Register scratch1 = regs.takeAny();
   Register scratch2 = regs.takeAny();
+
+#ifdef DEBUG
+  // The generator must be marked as running.
+  Label runningOk, notRunning;
+  Address resumeIndexSlot(genObj,
+                          AbstractGeneratorObject::offsetOfResumeIndexSlot());
+  masm.fallibleUnboxInt32(resumeIndexSlot, scratch1, &notRunning);
+  masm.branch32(Assembler::Equal, scratch1,
+                Imm32(AbstractGeneratorObject::RESUME_INDEX_RUNNING),
+                &runningOk);
+  masm.bind(&notRunning);
+  masm.assumeUnreachable("Expected running generator");
+  masm.bind(&runningOk);
+#endif
 
   // Store flags and env chain.
   uint32_t flags = BaselineFrame::Flags::HAS_INITIAL_ENV;
@@ -6487,13 +6502,6 @@ void BaselineCodeGen<Handler>::emitGeneratorResumePrologueBody() {
   masm.pushValue(argGen);
   masm.pushValue(argResumeKind);
 
-  // Load resume index (scratch2) and mark the generator as running.
-  Address resumeIndexSlot(genObj,
-                          AbstractGeneratorObject::offsetOfResumeIndexSlot());
-  masm.unboxInt32(resumeIndexSlot, scratch2);
-  masm.storeValue(Int32Value(AbstractGeneratorObject::RESUME_INDEX_RUNNING),
-                  resumeIndexSlot);
-
   // Initialize the icScript_ field, and for realm-independent code also
   // interpreterScript_ (which the code below uses to load the script).
   Register scratch3 = regs.getAny();
@@ -6524,6 +6532,7 @@ void BaselineCodeGen<Handler>::emitGeneratorResumePrologueBody() {
   }
 
   // Jump to the resume point.
+  masm.unboxInt32(argResumeIndex, scratch2);
   jumpToResumeEntry(scratch2, scratch1, scratch3);
 }
 
@@ -6622,10 +6631,14 @@ bool BaselineCodeGen<Handler>::emit_Resume() {
   // JSOp::Resume expression stack slots:
   //
   //   [..., generator, value, resumeKind] <= callerStackPtr
-  static_assert(ResumeFrameArgs::NumSlots == 3);
+  static_assert(ResumeFrameArgs::NumSlots == 4);
+  static_assert(ResumeFrameArgs::ResumeIndexSlot == 3);
   static_assert(ResumeFrameArgs::ResumeKindSlot == 2);
   static_assert(ResumeFrameArgs::GeneratorSlot == 1);
   static_assert(ResumeFrameArgs::ResumeValueSlot == 0);
+  Address resumeIndexSlot(genObj,
+                          AbstractGeneratorObject::offsetOfResumeIndexSlot());
+  masm.pushValue(resumeIndexSlot);
   masm.pushValue(Address(callerStackPtr, 0));
   masm.pushValue(JSVAL_TYPE_OBJECT, genObj);
   masm.pushValue(Address(callerStackPtr, sizeof(Value)));
@@ -6663,6 +6676,10 @@ bool BaselineCodeGen<Handler>::emit_Resume() {
   regs.add(callee);
 
   masm.switchToObjectRealm(genObj, scratch1);
+
+  // Mark the generator as running.
+  masm.storeValue(Int32Value(AbstractGeneratorObject::RESUME_INDEX_RUNNING),
+                  resumeIndexSlot);
 
   // Call the callee's Baseline entry. Its prologue sees the descriptor bit and
   // dispatches to the resume point.

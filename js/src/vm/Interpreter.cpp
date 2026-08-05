@@ -4318,6 +4318,12 @@ bool MOZ_NEVER_INLINE JS_HAZ_JSNATIVE_CALLER js::Interpret(JSContext* cx,
       // debuggee flag.
       MOZ_ASSERT_IF(REGS.fp()->script()->isDebuggee(), REGS.fp()->isDebuggee());
 
+#ifdef DEBUG
+      // The generator must be marked as running.
+      auto& genObj = REGS.sp[-2].toObject().as<AbstractGeneratorObject>();
+      MOZ_ASSERT(genObj.isRunning());
+#endif
+
       // Clear the isResumingGenerator flag so the frame is treated as an
       // ordinary running frame from now on.
       REGS.fp()->clearResumingGenerator();
