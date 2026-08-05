@@ -433,23 +433,25 @@ export class UrlbarParentControllerProxy {
   }
 
   /** @type {UrlbarParentController["openSERP"]} */
-  openSERP(engineId, searchTerms, where, inBackground) {
+  openSERP(engineId, searchTerms, where, inBackground, browserId) {
     this.#actor.sendAsyncMessage("OpenSERP", {
       instanceId: this.#instanceId,
       engineId,
       searchTerms,
       where,
       inBackground,
+      browserId,
     });
   }
 
   /** @type {UrlbarParentController["openSearchForm"]} */
-  openSearchForm(engineId, where, inBackground) {
+  openSearchForm(engineId, where, inBackground, browserId) {
     this.#actor.sendAsyncMessage("OpenSearchForm", {
       instanceId: this.#instanceId,
       engineId,
       where,
       inBackground,
+      browserId,
     });
   }
 }

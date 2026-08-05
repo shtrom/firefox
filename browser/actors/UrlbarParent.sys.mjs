@@ -204,14 +204,16 @@ export class UrlbarParent extends JSWindowActorParent {
           message.data.engineId,
           message.data.searchTerms,
           message.data.where,
-          message.data.inBackground
+          message.data.inBackground,
+          message.data.browserId
         );
         break;
       case "OpenSearchForm":
         controller.openSearchForm(
           message.data.engineId,
           message.data.where,
-          message.data.inBackground
+          message.data.inBackground,
+          message.data.browserId
         );
         break;
     }

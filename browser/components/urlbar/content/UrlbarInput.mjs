@@ -1231,6 +1231,15 @@ ${
   }
 
   /**
+   * The selected browser's id, or null in a window without `gBrowser`.
+   *
+   * @type {?number}
+   */
+  get #selectedBrowserId() {
+    return this.window.gBrowser?.selectedBrowser?.browserId ?? null;
+  }
+
+  /**
    * Records the engagement and a search against an engine, adds it to form
    * history, and opens its SERP through the parent controller, which builds the
    * submission URL and annotates the load as a search visit. Shared by the
@@ -1271,7 +1280,13 @@ ${
     lazy.UrlbarUtils.addToFormHistory(this, searchString, engine.name).catch(
       console.error
     );
-    this.controller.openSERP(engine.id, searchString, where, inBackground);
+    this.controller.openSERP(
+      engine.id,
+      searchString,
+      where,
+      inBackground,
+      this.#selectedBrowserId
+    );
   }
 
   /**
@@ -1433,7 +1448,7 @@ ${
     // before it resolves must not steal the load. The chrome address bar reads
     // its selected tab here; a content-process moz-urlbar has no gBrowser and
     // leaves the target to the parent (its own tab).
-    let browserId = this.window.gBrowser?.selectedBrowser?.browserId ?? null;
+    let browserId = this.#selectedBrowserId;
 
     if (this.#isAddressbar && URL.canParse(url)) {
       // Annotate if the untrimmed value contained a scheme, to later potentially
@@ -2656,11 +2671,17 @@ ${
         searchEngine.id,
         trimmedValue,
         where,
-        inBackground
+        inBackground,
+        this.#selectedBrowserId
       );
     } else {
       // Telemetry is handled by the function.
-      this.controller.openSearchForm(searchEngine.id, where, inBackground);
+      this.controller.openSearchForm(
+        searchEngine.id,
+        where,
+        inBackground,
+        this.#selectedBrowserId
+      );
     }
   }
 

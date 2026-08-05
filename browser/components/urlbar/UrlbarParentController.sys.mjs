@@ -694,8 +694,18 @@ export class UrlbarParentController {
    * @param {string} searchTerms
    * @param {string} where
    * @param {boolean} [inBackground]
+   * @param {number} [browserId]
+   *   The target browser's id. Only used if `where == current` and the call
+   *   isn't coming from a content process. If it's not specified and
+   *   `where == current`, the currently selected tab is used.
    */
-  openSERP(engineId, searchTerms, where, inBackground = false) {
+  openSERP(
+    engineId,
+    searchTerms,
+    where,
+    inBackground = false,
+    browserId = null
+  ) {
     let searchEngine = lazy.SearchService.getEngineById(engineId);
 
     let [url, postData] = lazy.UrlbarUtils.getSearchQueryUrl(
@@ -706,6 +716,8 @@ export class UrlbarParentController {
     this.browserWindow.openTrustedLinkIn(url, where, {
       inBackground,
       postData,
+      targetBrowser:
+        where == "current" ? this.resolveTargetBrowser(browserId) : null,
       globalHistoryOptions: {
         triggeringSource: this.sapName,
         triggeringSearchEngine: searchEngine.name,
@@ -720,13 +732,19 @@ export class UrlbarParentController {
    * @param {string} engineId
    * @param {string} where
    * @param {boolean} [inBackground]
+   * @param {number} [browserId]
+   *   The target browser's id. Only used if `where == current` and the call
+   *   isn't coming from a content process. If it's not specified and
+   *   `where == current`, the currently selected tab is used.
    */
-  openSearchForm(engineId, where, inBackground = false) {
+  openSearchForm(engineId, where, inBackground = false, browserId = null) {
     let searchEngine = lazy.SearchService.getEngineById(engineId);
     lazy.BrowserSearchTelemetry.recordSearchForm(searchEngine, this.sapName);
     let url = searchEngine.searchForm;
     this.browserWindow.openTrustedLinkIn(url, where, {
       inBackground,
+      targetBrowser:
+        where == "current" ? this.resolveTargetBrowser(browserId) : null,
     });
   }
 

@@ -850,13 +850,24 @@ export class UrlbarChildController {
   }
 
   /** @type {typeof UrlbarParentController.prototype.openSERP} */
-  openSERP(engineId, searchTerms, where, inBackground) {
-    this.#parentController.openSERP(engineId, searchTerms, where, inBackground);
+  openSERP(engineId, searchTerms, where, inBackground, browserId) {
+    this.#parentController.openSERP(
+      engineId,
+      searchTerms,
+      where,
+      inBackground,
+      browserId
+    );
   }
 
   /** @type {typeof UrlbarParentController.prototype.openSearchForm} */
-  openSearchForm(engineId, where, inBackground) {
-    this.#parentController.openSearchForm(engineId, where, inBackground);
+  openSearchForm(engineId, where, inBackground, browserId) {
+    this.#parentController.openSearchForm(
+      engineId,
+      where,
+      inBackground,
+      browserId
+    );
   }
 
   /** @type {typeof UrlbarParentController.prototype.getEngineIconURL} */
