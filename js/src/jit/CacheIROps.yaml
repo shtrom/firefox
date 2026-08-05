@@ -3460,7 +3460,7 @@
   transpile: false
   cost_estimate: 2
   args:
-    val: ValId
+    obj: ObjId
 
 - name: CompareStringResult
   shared: false

@@ -10408,25 +10408,20 @@ bool CacheIRCompiler::emitConcatStringsResult(StringOperandId lhsId,
   return true;
 }
 
-bool CacheIRCompiler::emitIsSuspendedGeneratorResult(ValOperandId valId) {
+bool CacheIRCompiler::emitIsSuspendedGeneratorResult(ObjOperandId objId) {
   JitSpew(JitSpew_Codegen, "%s", __FUNCTION__);
   AutoOutputRegister output(*this);
   AutoScratchRegisterMaybeOutput scratch(allocator, masm, output);
-  AutoScratchRegister scratch2(allocator, masm);
-  ValueOperand input = allocator.useValueRegister(masm, valId);
-
-  // Test if it's an object.
-  Label returnFalse, done;
-  masm.fallibleUnboxObject(input, scratch, &returnFalse);
+  Register obj = allocator.useRegister(masm, objId);
 
   // Test if it's a GeneratorObject.
-  masm.branchTestObjClass(Assembler::NotEqual, scratch,
-                          &GeneratorObject::class_, scratch2, scratch,
-                          &returnFalse);
+  Label returnFalse, done;
+  masm.branchTestObjClass(Assembler::NotEqual, obj, &GeneratorObject::class_,
+                          scratch, obj, &returnFalse);
 
   // If the resumeIndex slot holds an int32 value < RESUME_INDEX_RUNNING,
   // the generator is suspended.
-  Address addr(scratch, AbstractGeneratorObject::offsetOfResumeIndexSlot());
+  Address addr(obj, AbstractGeneratorObject::offsetOfResumeIndexSlot());
   masm.fallibleUnboxInt32(addr, scratch, &returnFalse);
   masm.branch32(Assembler::AboveOrEqual, scratch,
                 Imm32(AbstractGeneratorObject::RESUME_INDEX_RUNNING),
