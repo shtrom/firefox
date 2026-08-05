@@ -51,6 +51,8 @@ const UI_UPDATE_TYPES = {
   CONFIRMATION_TAB_SELECTION: "confirmation-tab-selection",
   CANCEL_TAB_SELECTION: "cancel-tab-selection",
   CONFIRM_TAB_GROUP_SELECTION: "confirm-tab-group-selection",
+  CONFIRM_OPEN_AND_GROUP_TABS_SELECTION:
+    "confirm-open-and-group-tabs-selection",
   UNDO_TAB_CLOSE: "undo-tab-close",
   UNDO_TAB_GROUP: "undo-tab-group",
   RETRY_PROMPT: "retry-prompt",
@@ -69,10 +71,40 @@ const CONFIRMATION_UI_TYPES = [
 
 /**
  * Map action types to their corresponding undo update types
+ *
+ * open_tabs is deliberately absent - every outcome (opening a tab,
+ * switching to one, or opening+grouping a mix of new and already-open
+ * tabs) is trivially reversible through normal browsing (back button,
+ * switching back, closing/ungrouping), unlike close_tabs where undo
+ * exists to prevent real data loss. canUndo below checks for an entry
+ * here, so its button correctly doesn't render for open_tabs.
  */
 const ACTION_TYPE_TO_UNDO_UPDATE_TYPE = {
   close_tabs: UI_UPDATE_TYPES.UNDO_TAB_CLOSE,
   group_tabs: UI_UPDATE_TYPES.UNDO_TAB_GROUP,
+};
+
+/**
+ * Per-actionType config for the tab-group confirmation card: which l10n
+ * strings the confirm button uses, and which update type submitting it
+ * dispatches. Add a new entry here to support another action type -
+ * #renderTabGroupConfirmation itself shouldn't need to change.
+ */
+const TAB_GROUP_ACTION_CONFIG = {
+  group_tabs: {
+    confirmActionL10n: {
+      disabled: "smart-window-confirm-group-tab",
+      enabled: "smart-window-confirm-group-tabs",
+    },
+    updateType: UI_UPDATE_TYPES.CONFIRM_TAB_GROUP_SELECTION,
+  },
+  open_tabs: {
+    confirmActionL10n: {
+      disabled: "smart-window-confirm-open-tab",
+      enabled: "smart-window-confirm-open-tabs",
+    },
+    updateType: UI_UPDATE_TYPES.CONFIRM_OPEN_AND_GROUP_TABS_SELECTION,
+  },
 };
 
 /**
@@ -109,6 +141,8 @@ export class AIChatContent extends MozLitElement {
   #scrollPositions = new Map();
   #actionResultExpandState = new Map();
   #uiRenderMap = null;
+  // English fallback until connectedCallback()'s l10n lookup resolves.
+  #defaultTabGroupLabel = "Tab Group";
 
   constructor() {
     super();
@@ -162,6 +196,16 @@ export class AIChatContent extends MozLitElement {
       (error, source) => dispatchClientError(this, error, source)
     );
     this.#scrollPositions.clear();
+
+    this.ownerDocument.l10n
+      .formatValue("smart-window-default-tab-group-label")
+      .then(label => {
+        if (label) {
+          this.#defaultTabGroupLabel = label;
+          this.requestUpdate();
+        }
+      })
+      .catch(() => {});
   }
 
   disconnectedCallback() {
@@ -1019,21 +1063,25 @@ export class AIChatContent extends MozLitElement {
     this.dispatchEvent(event);
   }
 
+  #buildTabsRow(labelL10nId, tabs) {
+    return tabs.length
+      ? [
+          {
+            labelL10nId,
+            items: tabs.map(tab => ({ url: tab.url, label: tab.title })),
+          },
+        ]
+      : [];
+  }
+
   #getCloseTabsData(confirmedData) {
     const selectedTabs = confirmedData.selectedTabs || [];
     const tabCount = selectedTabs.length;
 
-    // Format rows to show the closed tabs
-    const rows = [];
-    if (selectedTabs.length) {
-      rows.push({
-        labelL10nId: "smart-window-closed-tabs-row-label",
-        items: selectedTabs.map(tab => ({
-          url: tab.url,
-          label: tab.title,
-        })),
-      });
-    }
+    const rows = this.#buildTabsRow(
+      "smart-window-closed-tabs-row-label",
+      selectedTabs
+    );
 
     return {
       labelL10nId: "smart-window-closed-tabs-label",
@@ -1075,17 +1123,10 @@ export class AIChatContent extends MozLitElement {
     const tabCount = selectedTabs.length;
     const group = confirmedData.group || {};
 
-    // Format rows to show the grouped tabs
-    const rows = [];
-    if (selectedTabs.length) {
-      rows.push({
-        labelL10nId: "smart-window-grouped-tabs-row-label",
-        items: selectedTabs.map(tab => ({
-          url: tab.url,
-          label: tab.title,
-        })),
-      });
-    }
+    const rows = this.#buildTabsRow(
+      "smart-window-grouped-tabs-row-label",
+      selectedTabs
+    );
 
     return {
       labelL10nId: "smart-window-grouped-tabs-label",
@@ -1093,8 +1134,57 @@ export class AIChatContent extends MozLitElement {
       summaryL10nId: "smart-window-grouped-tabs-summary",
       summaryL10nArgs: {
         count: tabCount,
-        label: group.label || "Tab Group",
+        label: group.label || this.#defaultTabGroupLabel,
       },
+      rows,
+    };
+  }
+
+  #getSwitchedTabData(tab) {
+    return {
+      labelL10nId: "smart-window-switched-tab-label",
+      summaryL10nId: "smart-window-switched-tab-summary",
+      summaryL10nArgs: { title: tab?.title || tab?.url || "" },
+      rows: [],
+    };
+  }
+
+  #getOpenTabsData(confirmedData) {
+    // A single already-open tab was switched to, not opened - no group,
+    // no "opened" wording.
+    if (confirmedData.switched) {
+      return this.#getSwitchedTabData(confirmedData.selectedTabs?.[0]);
+    }
+
+    const selectedTabs = confirmedData.selectedTabs || [];
+    const tabCount = selectedTabs.length;
+
+    // Every selected tab was already open - nothing was actually opened,
+    // so this reads the same as a plain group_tabs result.
+    if (tabCount && confirmedData.mergedCount === tabCount) {
+      return this.#getGroupTabsData(confirmedData);
+    }
+
+    const group = confirmedData.group || {};
+    // A tab group is only created for 2+ tabs (see
+    // ToolUI#handleOpenAndGroupTabsSelection) - group.label is only ever
+    // set in that case, never for a single opened tab.
+    const hasGroup = !!group.label;
+
+    const rows = this.#buildTabsRow(
+      "smart-window-opened-tabs-row-label",
+      selectedTabs
+    );
+
+    return {
+      labelL10nId: "smart-window-opened-tabs-label",
+      labelL10nArgs: { count: tabCount },
+      summaryL10nId: hasGroup
+        ? "smart-window-opened-tabs-summary-group"
+        : "smart-window-opened-tabs-summary-single",
+      summaryL10nArgs: hasGroup
+        ? { count: tabCount, label: group.label || this.#defaultTabGroupLabel }
+        : { count: tabCount },
       rows,
     };
   }
@@ -1142,6 +1232,9 @@ export class AIChatContent extends MozLitElement {
       close_tabs: wasRestored
         ? () => this.#getRestoreTabsData(confirmedData.originalClosedTabs || [])
         : () => this.#getCloseTabsData(confirmedData),
+      // No wasRestored branch yet - open_tabs has no undo support (see
+      // ACTION_TYPE_TO_UNDO_UPDATE_TYPE above).
+      open_tabs: () => this.#getOpenTabsData(confirmedData),
     };
 
     const method = methodMap[actionType];
@@ -1290,32 +1383,33 @@ export class AIChatContent extends MozLitElement {
     ></agent-monitor-item>`;
   }
 
-  #handleCreateTabGroupSubmit = (event, messageId, toolCallId) => {
+  #handleTabGroupActionSubmit = (event, messageId, toolCallId, updateType) => {
     this.#dispatchToolUIUpdate({
       messageId,
       toolCallId,
-      updateType: UI_UPDATE_TYPES.CONFIRM_TAB_GROUP_SELECTION,
+      updateType,
       updateData: event.detail,
     });
   };
 
   #renderTabGroupConfirmation(msg) {
     const toolUIData = msg.toolUIData;
+    const actionType = toolUIData.properties?.actionType || "group_tabs";
+    const { confirmActionL10n, updateType } =
+      TAB_GROUP_ACTION_CONFIG[actionType] ?? TAB_GROUP_ACTION_CONFIG.group_tabs;
 
     return html`
       <ai-website-confirmation
         .tabs=${toolUIData.properties?.tabs || []}
         .tabGroupLabel=${toolUIData.properties?.tabGroupLabel}
-        .confirmActionL10n=${{
-          disabled: "smart-window-confirm-group-tab",
-          enabled: "smart-window-confirm-group-tabs",
-        }}
-        .actionType=${"group_tabs"}
+        .confirmActionL10n=${confirmActionL10n}
+        .actionType=${actionType}
         @ai-website-confirmation:submit=${event =>
-          this.#handleCreateTabGroupSubmit(
+          this.#handleTabGroupActionSubmit(
             event,
             msg.messageId,
-            toolUIData.toolCallId
+            toolUIData.toolCallId,
+            updateType
           )}
         @ai-website-confirmation:close=${event =>
           this.#handleConfirmationClose(
@@ -1372,13 +1466,16 @@ export class AIChatContent extends MozLitElement {
     );
 
     const undoOperationIds = confirmedData.operationIds ?? [];
-    let canUndo = !wasRestored && !!undoOperationIds.length;
+    const undoUpdateType = ACTION_TYPE_TO_UNDO_UPDATE_TYPE[actionType];
+
+    // Undo needs both something to undo (recorded operation ids) and a way
+    // to undo it (an update type registered for this action type - e.g.
+    // open_tabs has none, so it's never undoable regardless of ids).
+    let canUndo = !wasRestored && !!undoOperationIds.length && !!undoUpdateType;
     // Override can undo if explicitly dismissed
     if (toolUIData.properties?.undoDismissed) {
       canUndo = false;
     }
-
-    const undoUpdateType = ACTION_TYPE_TO_UNDO_UPDATE_TYPE[actionType];
 
     const onUndo =
       canUndo && undoUpdateType
