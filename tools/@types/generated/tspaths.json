@@ -6715,9 +6715,6 @@
       "resource://gre/modules/components-utils/WindowsInstallsInfo.sys.mjs": [
         "../../../toolkit/components/utils/WindowsInstallsInfo.sys.mjs"
       ],
-      "resource://gre/modules/components-utils/WindowsVersionInfo.sys.mjs": [
-        "../../../toolkit/components/utils/WindowsVersionInfo.sys.mjs"
-      ],
       "resource://gre/modules/components-utils/mozjexl.sys.mjs": [
         "../../../toolkit/components/utils/mozjexl.sys.mjs"
       ],
