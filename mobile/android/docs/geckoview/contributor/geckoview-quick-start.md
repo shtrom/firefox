@@ -204,7 +204,7 @@ The next step will generate a new `api.txt` file, which is a running list of pub
 If the changes look as expected, then it is time to generate `api.txt` by running this command:
 
 ```bash
-./mach gradlew geckoview:apiUpdateFileDebug
+./mach gradle geckoview:apiUpdateFileDebug
 ```
 
 The build should pass this time, and an updated `api.txt` file will be generated for the changes.
