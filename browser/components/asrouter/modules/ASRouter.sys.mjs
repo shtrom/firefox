@@ -2508,7 +2508,6 @@ export class _ASRouter {
     const PromoInfo = {
       VPN: { enabledPref: "browser.vpn_promo.enabled" },
       PIN: { enabledPref: "browser.promo.pin.enabled" },
-      COOKIE_BANNERS: { enabledPref: "browser.promo.cookiebanners.enabled" },
     };
     await this.loadMessagesFromAllProviders();
 

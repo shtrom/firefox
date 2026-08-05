@@ -3916,7 +3916,7 @@ const MESSAGES = () => [
         },
         ". ",
         {
-          string_id: "cookie-banner-blocker-onboarding-learn-more",
+          string_id: "etp-strict-exceptions-infobar-learn-more",
           href: "https://mozilla.org/privacy/firefox/?v=product",
         },
         "!",

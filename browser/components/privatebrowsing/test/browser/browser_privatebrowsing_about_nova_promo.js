@@ -5,7 +5,7 @@
 const PROMO_HEADER = "Nova promo header";
 const PROMO_TITLE = "Nova promo body text";
 const PROMO_LINK_TEXT = "Nova learn more";
-const PROMO_IMAGE = "chrome://browser/content/assets/cookie-banners-begone.svg";
+const PROMO_IMAGE = "chrome://browser/content/assets/private-promo-asset.svg";
 
 function novaPromoMessage(contentOverrides = {}) {
   return {

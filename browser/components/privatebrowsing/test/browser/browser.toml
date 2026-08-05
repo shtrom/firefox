@@ -31,8 +31,6 @@ tags = "trackingprotection"
 
 ["browser_privatebrowsing_aboutSessionRestore.js"]
 
-["browser_privatebrowsing_about_cookie_banners_promo.js"]
-
 ["browser_privatebrowsing_about_default_pin_promo.js"]
 skip-if = [
   "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland'",

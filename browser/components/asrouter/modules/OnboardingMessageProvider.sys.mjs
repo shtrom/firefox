@@ -1798,57 +1798,6 @@ const BASE_MESSAGES = () => [
     targeting: "doesAppNeedPrivatePin",
   },
   {
-    id: "PB_NEWTAB_COOKIE_BANNERS_PROMO",
-    template: "pb_newtab",
-    type: "default",
-    groups: ["pbNewtab"],
-    content: {
-      promoEnabled: true,
-      promoType: "COOKIE_BANNERS",
-      promoHeader: "fluent:about-private-browsing-cookie-banners-promo-heading",
-      promoImageLarge:
-        "chrome://browser/content/assets/cookie-banners-begone.svg",
-      promoLinkText: "fluent:about-private-browsing-learn-more-link",
-      promoLinkType: "link",
-      promoSectionStyle: "below-search",
-      promoTitle: "fluent:about-private-browsing-cookie-banners-promo-body",
-      promoTitleEnabled: true,
-      promoButton: {
-        action: {
-          type: "MULTI_ACTION",
-          data: {
-            actions: [
-              {
-                type: "OPEN_URL",
-                data: {
-                  args: "https://support.mozilla.org/1/firefox/%VERSION%/%OS%/%LOCALE%/cookie-banner-reduction",
-                  where: "tabshifted",
-                },
-              },
-              {
-                type: "BLOCK_MESSAGE",
-                data: {
-                  id: "PB_NEWTAB_COOKIE_BANNERS_PROMO",
-                },
-              },
-            ],
-          },
-        },
-      },
-    },
-    priority: 4,
-    frequency: {
-      custom: [
-        {
-          cap: 3,
-          period: 604800000, // Max 3 per week
-        },
-      ],
-      lifetime: 12,
-    },
-    targeting: `'cookiebanners.service.mode.privateBrowsing'|preferenceValue != 0 || 'cookiebanners.service.mode'|preferenceValue != 0`,
-  },
-  {
     id: "INFOBAR_LAUNCH_ON_LOGIN",
     groups: ["cfr"],
     template: "infobar",
