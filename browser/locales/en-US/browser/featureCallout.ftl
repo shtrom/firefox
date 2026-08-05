@@ -132,7 +132,7 @@ sidebar-genai-survey-productive-question =
 # Split View Onboarding Strings
 
 splitview-onboarding-callout-title-1 = Split view: a better way to multitask
-splitview-onboarding-callout-subtitle-1 = Right click this tab and choose “Add Split View” to see two tabs at once.
+splitview-onboarding-callout-subtitle-1 = Right-click this tab and choose “Add Split View” to see two tabs at once.
 splitview-onboarding-callout-cta-1 = Try it now
 
 splitview-onboarding-callout-title-2 = See two tabs at once with split view
