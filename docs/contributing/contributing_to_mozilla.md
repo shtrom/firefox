@@ -46,7 +46,7 @@ very diverse skills:
   If you know **Rust**, you can also contribute to [sccache](https://github.com/mozilla/sccache/),
   our compiler caching tool used to speed up Firefox builds.
 - If you know **Go** or **JavaScript**, you can contribute to [Taskcluster](https://github.com/taskcluster/taskcluster), our CI infrastructure.
-- If you know **C**, you can contribute to [NSS](/security/nss/index.rst), our cryptography library.
+- If you know **C**, you can contribute to [NSS](/security/nss/index.md), our cryptography library.
 - There are even many ways to contribute to the Mozilla mission without
   programming. If getting involved in design, support, translation,
   testing, or other types of contributions sparks your interest please
