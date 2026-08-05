@@ -1316,6 +1316,7 @@ pub unsafe extern "C" fn wr_render_backend_pool_new(
 #[no_mangle]
 pub unsafe extern "C" fn wr_render_backend_pool_delete(pool: *mut WrRenderBackendPool) {
     if !pool.is_null() {
+        // Dropping the pool shuts its threads down and waits for them to exit.
         mem::drop(Box::from_raw(pool));
     }
 }
