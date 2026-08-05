@@ -255,6 +255,9 @@
     > .urlbarView-row-body-top-no-wrap {
       grid-area: title;
       max-width: 100%;
+      /* The title has dir="auto", so stretching it across the row would push an
+         LTR title to the left edge in an RTL locale. */
+      justify-self: start;
 
       > .urlbarView-title-separator {
         display: none;
