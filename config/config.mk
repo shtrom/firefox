@@ -262,6 +262,10 @@ ifdef SCCACHE_BASEDIRS
 export SCCACHE_BASEDIRS
 endif
 
+ifdef SCCACHE_MAX_FRAME_LENGTH
+export SCCACHE_MAX_FRAME_LENGTH
+endif
+
 ifeq ($(OS_ARCH),WINNT)
 ifneq (,$(filter msvc clang-cl,$(CC_TYPE)))
 WIN32_EXE_LDFLAGS += $(WIN32_EXE_DEFAULT_LDFLAGS)
