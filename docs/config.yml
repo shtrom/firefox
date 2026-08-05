@@ -100,6 +100,14 @@ categories:
         - metrics
 
 redirects:
+    performance/memory/memory.html: devtools-user/memory/index.html
+    performance/memory/basic_operations.html: devtools-user/memory/basic_operations/index.html
+    performance/memory/aggregate_view.html: devtools-user/memory/aggregate_view/index.html
+    performance/memory/tree_map_view.html: devtools-user/memory/tree_map_view/index.html
+    performance/memory/dominators.html: devtools-user/memory/dominators/index.html
+    performance/memory/dominators_view.html: devtools-user/memory/dominators_view/index.html
+    performance/memory/DOM_allocation_example.html: devtools-user/memory/dom_allocation_example/index.html
+    performance/memory/monster_example.html: devtools-user/memory/monster_example/index.html
     browser/browser: browser
     browser/components/newtab/docs/index.html: browser/extensions/newtab/docs/index.html
     contributing/how_to_contribute_firefox.html: contributing/contribution_quickref.html
