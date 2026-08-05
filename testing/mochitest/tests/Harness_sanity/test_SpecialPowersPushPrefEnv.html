@@ -226,12 +226,10 @@ function test13() {
 
 async function test14() {
   {
-    // eslint-disable-next-line no-unused-vars
     await using pref = await SpecialPowers.prefEnv({
       set: [["test.await_using", false]]
     })
     {
-      // eslint-disable-next-line no-unused-vars
       await using pref = await SpecialPowers.prefEnv({
         set: [["test.await_using", true]]
       })
