@@ -248,14 +248,8 @@ TimelineManager::GetNamedTimelineInSubtree(
       aRoot, aName, mViewTimelineNameMap, aTargetShadowRoot);
   if (!scrollCandidate && !viewCandidate) {
     // If we're at the document, we aren't going to find a timeline.
-    // TODO(dshin): This is actually not spec compliant.. See
-    // https://github.com/w3c/csswg-drafts/issues/13955
-    // TODO(dshin): This does not make sense anymore, but causes additional
-    // failures that need investigating.
     // https://drafts.csswg.org/scroll-animations-1/#timeline-scoping
-    return aRoot == aDocument->GetDocumentElement()
-               ? nullptr
-               : MakeAndAddRef<dom::UnresolvedTimeline>(aDocument);
+    return MakeAndAddRef<dom::UnresolvedTimeline>(aDocument);
   }
 
   auto* picked = [&]() -> dom::AnimationTimeline* {

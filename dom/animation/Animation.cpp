@@ -356,6 +356,12 @@ bool Animation::SetTimelineNoUpdate(AnimationTimeline* aTimeline,
                                   ? 0.0
                                   : previousCurrentTime.Value().ToSeconds() /
                                         endTime.ToSeconds());
+  } else if (mTimeline && mTimeline->IsUnresolvedTimeline()) {
+    // If we're switching out of an unresolved timeline into the document
+    // timeline, we want to make sure that we trigger the animation.
+    // This doesn't (& shouldn't) have any impact going into a finite timeline,
+    // as the unresolved timeline does not have a resolved current time.
+    previousProgress.SetValue(0.0);
   }
 
   // We compute the active time for the old timeline because we will use it to
@@ -1796,16 +1802,6 @@ void Animation::PlayNoUpdate(ErrorResult& aRv, LimitBehavior aLimitBehavior) {
   // browsers, especially for a null timeline with the false auto-rewind flag.
   // [1] https://github.com/w3c/csswg-drafts/issues/7145
   if (!hasFiniteTimeline && prevCurrentTime.IsNull() && mHoldTime.IsNull()) {
-    mHoldTime = TimeDuration();
-  }
-
-  const bool hasUnresolvedTimeline =
-      mTimeline && mTimeline->IsUnresolvedTimeline();
-  if (hasUnresolvedTimeline && mHoldTime.IsNull()) {
-    // Note(dshin): If we have unresolved timeline and trying to play, hold at
-    // zero. This isn't part of the spec (Spec discusses inactive timelines very
-    // little), but this falls out of inactive timeline behing a finite timeline
-    // (See the class definition for why).
     mHoldTime = TimeDuration();
   }
 
