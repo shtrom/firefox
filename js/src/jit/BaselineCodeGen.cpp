@@ -6319,54 +6319,6 @@ bool BaselineCodeGen<Handler>::emit_Await() {
   return emitSuspend(JSOp::Await);
 }
 
-template <>
-bool BaselineCompilerCodeGen::emitAfterYieldDebugInstrumentation(Register) {
-  if (handler.compileDebugInstrumentation()) {
-    return emitDebugAfterYield();
-  }
-  return true;
-}
-
-template <>
-bool BaselineInterpreterCodeGen::emitAfterYieldDebugInstrumentation(
-    Register scratch) {
-  // Note that we can't use emitDebugInstrumentation here because the frame's
-  // DEBUGGEE flag hasn't been initialized yet.
-
-  AutoForbidNopsForToggledJump afn(&masm);
-
-  // If the current Realm is not a debuggee we're done.
-  Label done;
-  CodeOffset toggleOffset = masm.toggledJump(&done);
-  if (!handler.addDebugInstrumentationOffset(toggleOffset)) {
-    return false;
-  }
-  masm.loadPtr(AbsoluteAddress(runtime->addressOfRealm()), scratch);
-  masm.branchTest32(Assembler::Zero,
-                    Address(scratch, Realm::offsetOfDebugModeBits()),
-                    Imm32(Realm::debugModeIsDebuggeeBit()), &done);
-
-  if (!emitDebugAfterYield()) {
-    return false;
-  }
-
-  masm.bind(&done);
-  return true;
-}
-
-template <typename Handler>
-bool BaselineCodeGen<Handler>::emitDebugAfterYield() {
-  frame.assertSyncedStack();
-  masm.loadBaselineFramePtr(FramePointer, R0.scratchReg());
-  prepareVMCall();
-  pushArg(R0.scratchReg());
-
-  const RetAddrEntry::Kind kind = RetAddrEntry::Kind::DebugAfterYield;
-
-  using Fn = bool (*)(JSContext*, BaselineFrame*);
-  return callVM<Fn, jit::DebugAfterYield>(kind);
-};
-
 template <typename Handler>
 bool BaselineCodeGen<Handler>::emit_FinalYieldRval() {
   // Store generator in R0.
@@ -6399,7 +6351,7 @@ void BaselineInterpreterCodeGen::emitJumpToInterpretOpLabel() {
 }
 
 template <typename Handler>
-void BaselineCodeGen<Handler>::emitGeneratorResumePrologueBody() {
+bool BaselineCodeGen<Handler>::emitGeneratorResumePrologueBody() {
   JSScript* maybeScript = handler.maybeScript();
 
   AllocatableGeneralRegisterSet regs(GeneralRegisterSet::All());
@@ -6535,16 +6487,23 @@ void BaselineCodeGen<Handler>::emitGeneratorResumePrologueBody() {
                   frame.addressOfICScript());
   }
 
+  // Set the frame's debuggee flag if needed.
+  auto restoreClobbered = [&]() { loadResumeArgsBase(argsBase); };
+  if (!emitIsDebuggeeCheck(restoreClobbered)) {
+    return false;
+  }
+
   // Jump to the resume point.
   masm.unboxInt32(argResumeIndex, scratch2);
   jumpToResumeEntry(scratch2, scratch1, scratch3);
+  return true;
 }
 
 template <>
-void BaselineCompilerCodeGen::emitGeneratorResumePrologue() {
+bool BaselineCompilerCodeGen::emitGeneratorResumePrologue() {
   // No-op for non-generator/async scripts.
   if (!handler.script()->isGenerator() && !handler.script()->isAsync()) {
-    return;
+    return true;
   }
 
   // Keep the resume path as the fall-through and let the initial call take the
@@ -6552,17 +6511,21 @@ void BaselineCompilerCodeGen::emitGeneratorResumePrologue() {
   Label notResume;
   masm.branchTest32(Assembler::Zero, frame.addressOfDescriptor(),
                     Imm32(FrameDescriptor::IsResumingGenerator), &notResume);
-  emitGeneratorResumePrologueBody();
+  if (!emitGeneratorResumePrologueBody()) {
+    return false;
+  }
   masm.bind(&notResume);
+  return true;
 }
 
 template <>
-void BaselineInterpreterCodeGen::emitGeneratorResumePrologue() {
+bool BaselineInterpreterCodeGen::emitGeneratorResumePrologue() {
   // The interpreter's prologue is shared by all scripts, so almost no frame
   // entering here is resuming. Keep the body out of line.
   masm.branchTest32(Assembler::NonZero, frame.addressOfDescriptor(),
                     Imm32(FrameDescriptor::IsResumingGenerator),
                     handler.generatorResumePrologueLabel());
+  return true;
 }
 
 template <typename Handler>
@@ -6837,7 +6800,18 @@ bool BaselineCodeGen<Handler>::emit_AfterYield() {
   masm.andPtr(Imm32(~int32_t(FrameDescriptor::IsResumingGenerator)),
               frame.addressOfDescriptor());
 
-  return emitAfterYieldDebugInstrumentation(R0.scratchReg());
+  auto ifDebuggee = [this]() {
+    frame.assertSyncedStack();
+    masm.loadBaselineFramePtr(FramePointer, R0.scratchReg());
+    prepareVMCall();
+    pushArg(R0.scratchReg());
+
+    const RetAddrEntry::Kind kind = RetAddrEntry::Kind::DebugAfterYield;
+
+    using Fn = bool (*)(JSContext*, BaselineFrame*);
+    return callVM<Fn, jit::DebugAfterYield>(kind);
+  };
+  return emitDebugInstrumentation(ifDebuggee);
 }
 
 template <typename Handler>
@@ -6991,7 +6965,9 @@ bool BaselineCodeGen<Handler>::emitPrologue() {
 
   masm.subFromStackPtr(Imm32(BaselineFrame::Size()));
 
-  emitGeneratorResumePrologue();
+  if (!emitGeneratorResumePrologue()) {
+    return false;
+  }
 
   // Initialize BaselineFrame. Also handles env chain pre-initialization (in
   // case GC gets run during stack check). For global and eval scripts, the env
@@ -7358,14 +7334,14 @@ void BaselineInterpreterGenerator::emitOutOfLineCodeCoverageInstrumentation() {
   masm.ret();
 }
 
-void BaselineInterpreterGenerator::emitOutOfLineGeneratorResumePrologue() {
+bool BaselineInterpreterGenerator::emitOutOfLineGeneratorResumePrologue() {
   // Note: unlike the other out-of-line blocks, this one is jumped to (not
   // called) and never returns: the body ends in a jump to the resume point.
   AutoCreatedBy acb(masm,
                     "BaselineInterpreterGenerator::"
                     "emitOutOfLineGeneratorResumePrologue");
   masm.bind(handler.generatorResumePrologueLabel());
-  emitGeneratorResumePrologueBody();
+  return emitGeneratorResumePrologueBody();
 }
 
 bool BaselineInterpreterGenerator::generate(JSContext* cx,
@@ -7400,7 +7376,10 @@ bool BaselineInterpreterGenerator::generate(JSContext* cx,
   emitOutOfLinePostBarrierSlot();
 
   perfSpewer_.recordOffset(masm, "OOLGeneratorResumePrologue");
-  emitOutOfLineGeneratorResumePrologue();
+  if (!emitOutOfLineGeneratorResumePrologue()) {
+    ReportOutOfMemory(cx);
+    return false;
+  }
 
   perfSpewer_.recordOffset(masm, "OOLCodeCoverageInstrumentation");
   emitOutOfLineCodeCoverageInstrumentation();

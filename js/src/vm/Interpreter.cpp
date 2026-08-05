@@ -4314,8 +4314,8 @@ bool MOZ_NEVER_INLINE JS_HAZ_JSNATIVE_CALLER js::Interpret(JSContext* cx,
     }
 
     CASE(AfterYield) {
-      // AbstractGeneratorObject::resume takes care of setting the frame's
-      // debuggee flag.
+      // InterpreterFrame::initCallFrame (or initExecuteFrame for module
+      // frames) takes care of setting the frame's debuggee flag.
       MOZ_ASSERT_IF(REGS.fp()->script()->isDebuggee(), REGS.fp()->isDebuggee());
 
 #ifdef DEBUG

@@ -169,9 +169,6 @@ class BaselineCodeGen {
 
   bool emitSuspend(JSOp op);
 
-  [[nodiscard]] bool emitAfterYieldDebugInstrumentation(Register scratch);
-  [[nodiscard]] bool emitDebugAfterYield();
-
   // ifSet should be a function emitting code for when the script has |flag|
   // set. ifNotSet emits code for when the flag isn't set.
   template <typename F1, typename F2>
@@ -277,8 +274,8 @@ class BaselineCodeGen {
 
   [[nodiscard]] bool emitHandleCodeCoverageAtPrologue();
 
-  void emitGeneratorResumePrologue();
-  void emitGeneratorResumePrologueBody();
+  [[nodiscard]] bool emitGeneratorResumePrologue();
+  [[nodiscard]] bool emitGeneratorResumePrologueBody();
 
   void emitInitFrameFields(Register nonFunctionEnv);
   // Sets the frame's DEBUGGEE flag if the script is a debuggee script. This
@@ -620,7 +617,7 @@ class BaselineInterpreterGenerator final : private BaselineInterpreterCodeGen {
   [[nodiscard]] bool emitDebugTrap();
 
   void emitOutOfLineCodeCoverageInstrumentation();
-  void emitOutOfLineGeneratorResumePrologue();
+  [[nodiscard]] bool emitOutOfLineGeneratorResumePrologue();
 };
 
 }  // namespace jit

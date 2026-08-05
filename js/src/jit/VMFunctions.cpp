@@ -1206,15 +1206,8 @@ bool FinalSuspend(JSContext* cx, HandleObject obj, const jsbytecode* pc) {
 }
 
 bool DebugAfterYield(JSContext* cx, BaselineFrame* frame) {
-  // The BaselineFrame has just been constructed. We need to set its debuggee
-  // flag as necessary.
-  MOZ_ASSERT(!frame->isDebuggee());
-  if (frame->script()->isDebuggee()) {
-    frame->setIsDebuggee();
-    return DebugAPI::onResumeFrame(cx, frame);
-  }
-
-  return true;
+  MOZ_ASSERT_IF(frame->script()->isDebuggee(), frame->isDebuggee());
+  return DebugAPI::onResumeFrame(cx, frame);
 }
 
 bool GeneratorThrowOrReturn(JSContext* cx, BaselineFrame* frame,
@@ -1286,6 +1279,8 @@ ArrayObject* InitRestParameter(JSContext* cx, uint32_t length, Value* rest,
 
 bool HandleDebugTrap(JSContext* cx, BaselineFrame* frame,
                      const uint8_t* retAddr) {
+  MOZ_ASSERT(frame->isDebuggee());
+
   RootedScript script(cx, frame->script());
   jsbytecode* pc;
   if (frame->runningInInterpreter()) {
@@ -1306,14 +1301,11 @@ bool HandleDebugTrap(JSContext* cx, BaselineFrame* frame,
   }
 
   if (frame->isResumingGenerator()) {
-    // JSOp::AfterYield will set the frame's debuggee flag, call the
-    // onEnterFrame handler, and handle breakpoint/stepping at that op (in
-    // DebugAPI::slowPathOnResumeFrame).
-    MOZ_ASSERT(!frame->isDebuggee());
+    // Suppress breakpoints/stepping until after the JSOp::AfterYield op, which
+    // calls the onEnterFrame handler and handles breakpoint/stepping at that op
+    // (in DebugAPI::slowPathOnResumeFrame).
     return true;
   }
-
-  MOZ_ASSERT(frame->isDebuggee());
 
   if (DebugAPI::stepModeEnabled(script) && !DebugAPI::onSingleStep(cx)) {
     return false;
