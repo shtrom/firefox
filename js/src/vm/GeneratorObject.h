@@ -153,7 +153,7 @@ class AbstractGeneratorObject : public NativeObject {
            Int32Value(RESUME_INDEX_RUNNING);
   }
   bool isSuspended() const {
-    // Note: also update Baseline's IsSuspendedGenerator code if this
+    // Note: also update MacroAssembler::branchIfNotSuspendedGenerator if this
     // changes.
     Value resumeIndex = getFixedSlotTyped(RESUME_INDEX_SLOT);
     return resumeIndex.isInt32() &&

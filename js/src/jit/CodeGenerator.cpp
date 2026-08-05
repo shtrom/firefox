@@ -20598,6 +20598,36 @@ void CodeGenerator::visitIsObject(LIsObject* ins) {
   masm.testObjectSet(Assembler::Equal, value, output);
 }
 
+void CodeGenerator::visitIsSuspendedGenerator(LIsSuspendedGenerator* lir) {
+  Register obj = ToRegister(lir->object());
+  Register output = ToRegister(lir->output());
+  Register scratch = ToRegister(lir->temp0());
+
+  Label returnFalse, done;
+  masm.branchIfNotSuspendedGenerator(obj, scratch, obj, &returnFalse);
+
+  masm.move32(Imm32(1), output);
+  masm.jump(&done);
+
+  masm.bind(&returnFalse);
+  masm.move32(Imm32(0), output);
+
+  masm.bind(&done);
+}
+
+void CodeGenerator::visitIsSuspendedGeneratorAndBranch(
+    LIsSuspendedGeneratorAndBranch* lir) {
+  Register obj = ToRegister(lir->object());
+  Register scratch = ToRegister(lir->temp0());
+
+  MBasicBlock* ifTrue = lir->ifTrue();
+  MBasicBlock* ifFalse = lir->ifFalse();
+
+  masm.branchIfNotSuspendedGenerator(obj, scratch, obj,
+                                     getJumpLabelForBranch(ifFalse));
+  jumpToBlock(ifTrue);
+}
+
 void CodeGenerator::visitIsObjectAndBranch(LIsObjectAndBranch* ins) {
   ValueOperand value = ToValue(ins->input());
 

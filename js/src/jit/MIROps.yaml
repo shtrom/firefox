@@ -3624,6 +3624,17 @@
   alias_set: none
   generate_lir: true
 
+- name: IsSuspendedGenerator
+  operands:
+    object: Object
+  result_type: Boolean
+  alias_set:
+    load:
+      - ObjectFields
+      - FixedSlot
+  generate_lir: true
+  lir_temps: 1
+
 - name: IsNullOrUndefined
   operands:
     value: any

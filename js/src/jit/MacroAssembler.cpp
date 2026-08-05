@@ -40,6 +40,7 @@
 #include "vm/DateTime.h"
 #include "vm/Float16.h"
 #include "vm/FunctionFlags.h"  // js::FunctionFlags
+#include "vm/GeneratorObject.h"
 #include "vm/Iteration.h"
 #include "vm/JSContext.h"
 #include "vm/JSFunction.h"
@@ -6081,6 +6082,22 @@ void MacroAssembler::branchIfObjectNotExtensible(Register obj, Register scratch,
   load32(Address(scratch, Shape::offsetOfObjectFlags()), scratch);
   branchTest32(Assembler::NonZero, scratch,
                Imm32(uint32_t(ObjectFlag::NotExtensible)), label);
+}
+
+void MacroAssembler::branchIfNotSuspendedGenerator(Register obj,
+                                                   Register scratch,
+                                                   Register spectreRegToZero,
+                                                   Label* label) {
+  // Test if it's a GeneratorObject.
+  branchTestObjClass(Assembler::NotEqual, obj, &GeneratorObject::class_,
+                     scratch, spectreRegToZero, label);
+
+  // If the resumeIndex slot holds an int32 value < RESUME_INDEX_RUNNING, the
+  // generator is suspended.
+  Address addr(obj, AbstractGeneratorObject::offsetOfResumeIndexSlot());
+  fallibleUnboxInt32(addr, scratch, label);
+  branch32(Assembler::AboveOrEqual, scratch,
+           Imm32(AbstractGeneratorObject::RESUME_INDEX_RUNNING), label);
 }
 
 void MacroAssembler::branchTestObjectNeedsProxyResultValidation(

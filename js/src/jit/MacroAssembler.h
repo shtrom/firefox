@@ -1919,6 +1919,9 @@ class MacroAssembler : public MacroAssemblerSpecific {
   void branchIfObjectNotExtensible(Register obj, Register scratch,
                                    Label* label);
 
+  void branchIfNotSuspendedGenerator(Register obj, Register scratch,
+                                     Register spectreRegToZero, Label* label);
+
   void branchTestObjectNeedsProxyResultValidation(Condition condition,
                                                   Register obj,
                                                   Register scratch,
