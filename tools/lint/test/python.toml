@@ -60,8 +60,6 @@ skip-if = ["os == 'win'"]
 
 ["test_python_sites.py"]
 
-["test_rst.py"]
-
 ["test_ruff.py"]
 
 ["test_ruff_format.py"]

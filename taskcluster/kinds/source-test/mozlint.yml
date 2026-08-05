@@ -523,17 +523,6 @@ yaml:
             - '**/*.yaml'
             - '**/.ymllint'
 
-rst:
-    description: rst lint run over the gecko codebase
-    treeherder:
-        symbol: doc(rst)
-    run:
-        mach: lint -v -l rst -f treeherder -f json:/builds/worker/mozlint.json .
-    when:
-        files-changed:
-            - '**/*.rst'
-            - 'tools/lint/rst.yml'
-
 md:
     description: Markdown linters run over the gecko codebase
     treeherder:
