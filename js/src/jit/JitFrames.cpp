@@ -592,6 +592,18 @@ static void HandleExceptionBaseline(JSContext* cx, JSJitFrameIter& frame,
   jsbytecode* pc;
   frame.baselineScriptAndPc(nullptr, &pc);
 
+  if (frame.baselineFrame()->isResumingGenerator()) {
+    // We're in the generator-resume prologue and JSOp::AfterYield hasn't run
+    // yet. The only fallible operation in the prologue is the overrecursion
+    // check. The debugger hasn't been told about this resume (that happens at
+    // JSOp::AfterYield) and the environment chain is the suspended generator's
+    // environment, so it must not be unwound here. Just pop the frame.
+    MOZ_ASSERT(pc == frame.baselineFrame()->script()->code());
+    EnsureUnwoundJitExitFrame(cx->activation()->asJit(),
+                              frame.baselineFrame()->framePrefix());
+    return;
+  }
+
   // Ensure the BaselineFrame is an interpreter frame. This is easy to do and
   // simplifies the code below and interaction with DebugModeOSR.
   //

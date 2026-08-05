@@ -122,6 +122,8 @@ class BaselineCodeGen {
   // Compute the base of a resumed frame's resume args into |dest|.
   void loadResumeArgsBase(Register dest);
 
+  void setInterpreterPCToScriptStart(Register script, Register scratch);
+
   // Load the global's lexical environment.
   void loadGlobalLexicalEnvironment(Register dest);
   void pushGlobalLexicalEnvironmentValue(ValueOperand scratch);
@@ -266,7 +268,11 @@ class BaselineCodeGen {
 
   [[nodiscard]] bool emitPrologue();
   [[nodiscard]] bool emitEpilogue();
-  [[nodiscard]] bool emitStackCheck();
+  // |emitAfterCall| is emitted on the VM-call path only, after the call
+  // returns. This can be used to restore registers clobbered by the call.
+  template <typename F>
+  [[nodiscard]] bool emitStackCheck(RetAddrEntry::Kind kind, Register scratch1,
+                                    Register scratch2, const F& emitAfterCall);
   [[nodiscard]] bool emitDebugPrologue();
   [[nodiscard]] bool emitDebugEpilogue();
 

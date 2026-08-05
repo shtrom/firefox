@@ -900,20 +900,33 @@ bool BaselineCodeGen<Handler>::callVM(RetAddrEntry::Kind kind,
 }
 
 template <typename Handler>
-bool BaselineCodeGen<Handler>::emitStackCheck() {
+template <typename F>
+bool BaselineCodeGen<Handler>::emitStackCheck(RetAddrEntry::Kind kind,
+                                              Register scratch1,
+                                              Register scratch2,
+                                              const F& emitAfterCall) {
+  MOZ_ASSERT(kind == RetAddrEntry::Kind::StackCheck ||
+             kind == RetAddrEntry::Kind::ResumeStackCheck);
+
+  // The generator-resume prologue checks the no-interrupt limit: handling an
+  // interrupt there would run arbitrary script while the frame's pc is still
+  // the script start and its locals and expression stack haven't been restored
+  // yet.
+  const void* stackLimitAddr =
+      kind == RetAddrEntry::Kind::ResumeStackCheck
+          ? runtime->addressOfJitStackLimitNoInterrupt()
+          : runtime->addressOfJitStackLimit();
+
   Label skipCall;
   if (handler.mustIncludeSlotsInStackCheck()) {
     // Subtract the size of script->nslots() first.
-    Register scratch = R1.scratchReg();
-    masm.moveStackPtrTo(scratch);
-    subtractScriptSlotsSize(scratch, R2.scratchReg());
-    masm.branchPtr(Assembler::BelowOrEqual,
-                   AbsoluteAddress(runtime->addressOfJitStackLimit()), scratch,
-                   &skipCall);
+    masm.moveStackPtrTo(scratch1);
+    subtractScriptSlotsSize(scratch1, scratch2);
+    masm.branchPtr(Assembler::BelowOrEqual, AbsoluteAddress(stackLimitAddr),
+                   scratch1, &skipCall);
   } else {
     masm.branchStackPtrRhs(Assembler::BelowOrEqual,
-                           AbsoluteAddress(runtime->addressOfJitStackLimit()),
-                           &skipCall);
+                           AbsoluteAddress(stackLimitAddr), &skipCall);
   }
 
   prepareVMCall();
@@ -921,12 +934,13 @@ bool BaselineCodeGen<Handler>::emitStackCheck() {
   pushArg(R1.scratchReg());
 
   const CallVMPhase phase = CallVMPhase::BeforePushingLocals;
-  const RetAddrEntry::Kind kind = RetAddrEntry::Kind::StackCheck;
 
   using Fn = bool (*)(JSContext*, BaselineFrame*);
   if (!callVM<Fn, CheckOverRecursedBaseline>(kind, phase)) {
     return false;
   }
+
+  emitAfterCall();
 
   masm.bind(&skipCall);
   return true;
@@ -6350,6 +6364,22 @@ void BaselineInterpreterCodeGen::emitJumpToInterpretOpLabel() {
   masm.jump(handler.interpretOpLabel());
 }
 
+template <>
+void BaselineCompilerCodeGen::setInterpreterPCToScriptStart(Register,
+                                                            Register) {
+  // Baseline JIT code has no interpreter pc.
+}
+
+template <>
+void BaselineInterpreterCodeGen::setInterpreterPCToScriptStart(
+    Register script, Register scratch) {
+  Register pcReg = HasInterpreterPCReg() ? InterpreterPCReg : scratch;
+  masm.loadPtr(Address(script, JSScript::offsetOfSharedData()), pcReg);
+  masm.loadPtr(Address(pcReg, SharedImmutableScriptData::offsetOfISD()), pcReg);
+  masm.addPtr(Imm32(ImmutableScriptData::offsetOfCode()), pcReg);
+  masm.storePtr(pcReg, frame.addressOfInterpreterPC());
+}
+
 template <typename Handler>
 bool BaselineCodeGen<Handler>::emitGeneratorResumePrologueBody() {
   JSScript* maybeScript = handler.maybeScript();
@@ -6423,6 +6453,54 @@ bool BaselineCodeGen<Handler>::emitGeneratorResumePrologueBody() {
     masm.bind(&noArgsObj);
   }
 
+  // Initialize the icScript_ field, and for realm-independent code also
+  // interpreterScript_ (which the code below uses to load the script).
+  Register scratch3 = regs.getAny();
+  if (handler.realmIndependentJitcode()) {
+    Label moduleScript, scriptDone;
+    masm.loadPtr(frame.addressOfCalleeToken(), scratch1);
+    masm.branchTestPtr(Assembler::NonZero, scratch1,
+                       Imm32(CalleeTokenScriptBit), &moduleScript);
+    {
+      masm.andPtr(Imm32(uint32_t(CalleeTokenMask)), scratch1);
+      masm.loadPrivate(Address(scratch1, JSFunction::offsetOfJitInfoOrScript()),
+                       scratch1);
+      masm.jump(&scriptDone);
+    }
+    masm.bind(&moduleScript);
+    masm.andPtr(Imm32(uint32_t(CalleeTokenMask)), scratch1);
+    masm.bind(&scriptDone);
+
+    masm.loadJitScript(scratch1, scratch3);
+    masm.computeEffectiveAddress(
+        Address(scratch3, JitScript::offsetOfICScript()), scratch3);
+    masm.storePtr(scratch3, Address(FramePointer,
+                                    BaselineFrame::reverseOffsetOfICScript()));
+    masm.storePtr(scratch1, frame.addressOfInterpreterScript());
+    setInterpreterPCToScriptStart(scratch1, scratch3);
+  } else {
+    masm.storePtr(ImmPtr(maybeScript->jitScript()->icScript()),
+                  frame.addressOfICScript());
+  }
+
+  // The calls below clobber volatile registers, so restore the resume args
+  // and the generator.
+  auto restoreClobbered = [&]() {
+    loadResumeArgsBase(argsBase);
+    masm.unboxObject(argGen, genObj);
+  };
+
+  // Set the frame's debuggee flag if needed.
+  if (!emitIsDebuggeeCheck(restoreClobbered)) {
+    return false;
+  }
+
+  // Check for overrecursion before restoring stack slots.
+  if (!emitStackCheck(RetAddrEntry::Kind::ResumeStackCheck, scratch1, scratch2,
+                      restoreClobbered)) {
+    return false;
+  }
+
   // Push locals and expression slots if needed.
   Label noStackStorage;
   Address stackStorageSlot(genObj,
@@ -6457,41 +6535,6 @@ bool BaselineCodeGen<Handler>::emitGeneratorResumePrologueBody() {
   masm.pushValue(argValue);
   masm.pushValue(argGen);
   masm.pushValue(argResumeKind);
-
-  // Initialize the icScript_ field, and for realm-independent code also
-  // interpreterScript_ (which the code below uses to load the script).
-  Register scratch3 = regs.getAny();
-  if (handler.realmIndependentJitcode()) {
-    Label moduleScript, scriptDone;
-    masm.loadPtr(frame.addressOfCalleeToken(), scratch1);
-    masm.branchTestPtr(Assembler::NonZero, scratch1,
-                       Imm32(CalleeTokenScriptBit), &moduleScript);
-    {
-      masm.andPtr(Imm32(uint32_t(CalleeTokenMask)), scratch1);
-      masm.loadPrivate(Address(scratch1, JSFunction::offsetOfJitInfoOrScript()),
-                       scratch1);
-      masm.jump(&scriptDone);
-    }
-    masm.bind(&moduleScript);
-    masm.andPtr(Imm32(uint32_t(CalleeTokenMask)), scratch1);
-    masm.bind(&scriptDone);
-
-    masm.loadJitScript(scratch1, scratch3);
-    masm.computeEffectiveAddress(
-        Address(scratch3, JitScript::offsetOfICScript()), scratch3);
-    masm.storePtr(scratch3, Address(FramePointer,
-                                    BaselineFrame::reverseOffsetOfICScript()));
-    masm.storePtr(scratch1, frame.addressOfInterpreterScript());
-  } else {
-    masm.storePtr(ImmPtr(maybeScript->jitScript()->icScript()),
-                  frame.addressOfICScript());
-  }
-
-  // Set the frame's debuggee flag if needed.
-  auto restoreClobbered = [&]() { loadResumeArgsBase(argsBase); };
-  if (!emitIsDebuggeeCheck(restoreClobbered)) {
-    return false;
-  }
 
   // Jump to the resume point.
   masm.unboxInt32(argResumeIndex, scratch2);
@@ -6987,7 +7030,8 @@ bool BaselineCodeGen<Handler>::emitPrologue() {
   }
 
   // Check for overrecursion before initializing locals.
-  if (!emitStackCheck()) {
+  if (!emitStackCheck(RetAddrEntry::Kind::StackCheck, R1.scratchReg(),
+                      R2.scratchReg(), []() {})) {
     return false;
   }
 

@@ -628,7 +628,8 @@ bool InvokeFromInterpreterStub(JSContext* cx,
   return true;
 }
 
-static bool CheckOverRecursedImpl(JSContext* cx, size_t extra) {
+static bool CheckOverRecursedImpl(JSContext* cx, size_t extra,
+                                  bool isResumingGenerator = false) {
   // We just failed the jitStackLimit check. There are two possible reasons:
   //  1) jitStackLimit was the real stack limit and we're over-recursed
   //  2) jitStackLimit was set to JS::NativeStackLimitMin by
@@ -649,6 +650,13 @@ static bool CheckOverRecursedImpl(JSContext* cx, size_t extra) {
 #endif
 
   // This handles 2).
+  //
+  // Don't check for interrupts if we're in the middle of resuming a generator
+  // and the frame is half-initialized. Interrupt callbacks can run arbitrary JS
+  // and trigger complicated Debugger interactions.
+  if (isResumingGenerator) {
+    return true;
+  }
   gc::MaybeVerifyBarriers(cx);
   return cx->handleInterrupt();
 }
@@ -659,7 +667,7 @@ bool CheckOverRecursedBaseline(JSContext* cx, BaselineFrame* frame) {
   // The stack check in Baseline happens before pushing locals so we have to
   // account for that by including script->nslots() in the C++ recursion check.
   size_t extra = frame->script()->nslots() * sizeof(Value);
-  return CheckOverRecursedImpl(cx, extra);
+  return CheckOverRecursedImpl(cx, extra, frame->isResumingGenerator());
 }
 
 bool MutatePrototype(JSContext* cx, Handle<PlainObject*> obj,

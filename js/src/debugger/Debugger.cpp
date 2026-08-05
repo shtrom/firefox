@@ -653,6 +653,11 @@ bool Debugger::getFrame(JSContext* cx, const FrameIter& iter,
   AbstractFramePtr referent = iter.abstractFramePtr();
   MOZ_ASSERT_IF(referent.hasScript(), !referent.script()->selfHosted());
 
+  // A generator's resume is finished at JSOp::AfterYield. Before that, the
+  // frame's pc is still the script start and its locals and expression stack
+  // haven't been restored.
+  MOZ_ASSERT(!iter.isResumingGenerator());
+
   FrameMap::AddPtr p = frames.lookupForAdd(referent);
   if (!p) {
     Rooted<AbstractGeneratorObject*> genObj(cx);
@@ -2675,6 +2680,11 @@ void DebugAPI::slowPathOnNewWasmInstance(
 /* static */
 bool DebugAPI::onTrap(JSContext* cx) {
   FrameIter iter(cx);
+
+  // Callers must suppress breakpoints while the frame is in the
+  // generator-resume prologue.
+  MOZ_ASSERT(!iter.isResumingGenerator());
+
   JS::AutoSaveExceptionState savedExc(cx);
   Rooted<GlobalObject*> global(cx);
   BreakpointSite* site;
@@ -2782,6 +2792,10 @@ bool DebugAPI::onTrap(JSContext* cx) {
 /* static */
 bool DebugAPI::onSingleStep(JSContext* cx) {
   FrameIter iter(cx);
+
+  // Callers must suppress stepping while the frame is in the generator-resume
+  // prologue.
+  MOZ_ASSERT(!iter.isResumingGenerator());
 
   // We may be stepping over a JSOp::Exception, that pushes the context's
   // pending exception for a 'catch' clause to handle. Don't let the onStep
