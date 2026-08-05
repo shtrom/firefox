@@ -21784,6 +21784,65 @@ void CodeGenerator::visitAsyncAwait(LAsyncAwait* lir) {
   callVM<Fn, js::AsyncFunctionAwait>(lir);
 }
 
+void CodeGenerator::visitGeneratorResume(LGeneratorResume* lir) {
+  Register genObj = ToRegister(lir->generator());
+  ValueOperand value = ToValue(lir->value());
+  int32_t resumeKind = lir->mir()->resumeKind();
+
+  Register callee = ToRegister(lir->temp0());
+  Register scratch = ToRegister(lir->temp1());
+
+  // Load callee. Note that JSOp::Resume is never used for modules.
+  masm.unboxObject(
+      Address(genObj, AbstractGeneratorObject::offsetOfCalleeOrModuleSlot()),
+      callee);
+
+  // The pushed argument Values are the formals (all |undefined|) and the resume
+  // args stored after the formals.
+  masm.loadFunctionArgCount(callee, scratch);
+  masm.alignJitStackBasedOnNArgs(scratch, /* countIncludesThis = */ false,
+                                 /* extraArgs = */ ResumeFrameArgs::NumSlots);
+
+  // Unlike the Baseline version, we don't have to zero the alignment padding
+  // here: Ion frames are traced with the safepoint's slot map, not as a range.
+
+  // Push the resume args and the |undefined| formals.
+  Address resumeIndexSlot(genObj,
+                          AbstractGeneratorObject::offsetOfResumeIndexSlot());
+  masm.pushGeneratorResumeArgsAndFormals(
+      resumeIndexSlot, Int32Value(resumeKind), genObj, value, scratch);
+
+  masm.PushCalleeToken(callee, /* constructing = */ false);
+  masm.push(FrameDescriptor(FrameType::IonJS, /* argc = */ 0,
+                            /* hasInlined = */ false,
+                            /* isResumingGenerator = */ true));
+
+  // Load the code to call. We can't use jitCodeRaw unconditionally because it
+  // may point to Ion code and the Ion prologue doesn't support resuming a
+  // generator.
+  Register code = callee;
+  masm.loadJitCodeRawNoIon(callee, code, scratch);
+
+  masm.switchToObjectRealm(genObj, scratch);
+
+  // Mark the generator as running.
+  masm.storeValue(Int32Value(AbstractGeneratorObject::RESUME_INDEX_RUNNING),
+                  resumeIndexSlot);
+
+  // Call the callee's JIT code. Its prologue sees the descriptor bit and
+  // dispatches to the resume point.
+  ensureOsiSpace();
+  uint32_t callOffset = masm.callJit(code);
+  markSafepointAt(callOffset, lir);
+
+  static_assert(!JSReturnOperand.aliases(ReturnReg),
+                "ReturnReg must not alias return value in JSReturnOperand");
+  masm.switchToRealm(gen->realm->realmPtr(), ReturnReg);
+
+  masm.setFramePushed(frameSize());
+  emitRestoreStackPointerFromFP();
+}
+
 void CodeGenerator::visitCanSkipAwait(LCanSkipAwait* lir) {
   ValueOperand value = ToValue(lir->value());
   Register scratch = ToRegister(lir->temp0());

@@ -2437,6 +2437,23 @@ bool WarpBuilder::build_FinalYieldRval(BytecodeLocation loc) {
   return build_RetRval(loc);
 }
 
+bool WarpBuilder::build_Resume(BytecodeLocation loc) {
+  MDefinition* resumeKind = current->pop();
+  MDefinition* value = current->pop();
+  MDefinition* gen = current->pop();
+
+  // resumeKind is always a constant Int32 emitted by JSOp::ResumeKind right
+  // before the resume.
+  MOZ_RELEASE_ASSERT(resumeKind->isConstant());
+  int32_t resumeKindInt32 = resumeKind->toConstant()->toInt32();
+  resumeKind->setImplicitlyUsedUnchecked();
+
+  auto* resume = MGeneratorResume::New(alloc(), gen, value, resumeKindInt32);
+  current->add(resume);
+  current->push(resume);
+  return resumeAfter(resume, loc);
+}
+
 bool WarpBuilder::build_AsyncResolve(BytecodeLocation loc) {
   MDefinition* generator = current->pop();
   MDefinition* value = current->pop();

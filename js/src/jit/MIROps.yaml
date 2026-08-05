@@ -3721,6 +3721,17 @@
   possibly_calls: true
   generate_lir: true
 
+- name: GeneratorResume
+  operands:
+    generator: Object
+    value: Value
+  arguments:
+    resumeKind: int32_t
+  result_type: Value
+  possibly_calls: true
+  generate_lir: true
+  lir_temps: 2
+
 - name: CheckThisReinit
   operands:
     thisValue: Value

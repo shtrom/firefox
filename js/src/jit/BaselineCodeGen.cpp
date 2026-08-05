@@ -6637,30 +6637,16 @@ bool BaselineCodeGen<Handler>::emit_Resume() {
     regs.add(alignment);
   }
 
-  // Push the ResumeFrameArgs first, high to low. callerStackPtr points to the
-  // JSOp::Resume expression stack slots:
+  // Push the resume args and the |undefined| formals. callerStackPtr points to
+  // the JSOp::Resume expression stack slots:
   //
   //   [..., generator, value, resumeKind] <= callerStackPtr
-  static_assert(ResumeFrameArgs::NumSlots == 4);
-  static_assert(ResumeFrameArgs::ResumeIndexSlot == 3);
-  static_assert(ResumeFrameArgs::ResumeKindSlot == 2);
-  static_assert(ResumeFrameArgs::GeneratorSlot == 1);
-  static_assert(ResumeFrameArgs::ResumeValueSlot == 0);
   Address resumeIndexSlot(genObj,
                           AbstractGeneratorObject::offsetOfResumeIndexSlot());
-  masm.pushValue(resumeIndexSlot);
-  masm.pushValue(Address(callerStackPtr, 0));
-  masm.pushValue(JSVAL_TYPE_OBJECT, genObj);
-  masm.pushValue(Address(callerStackPtr, sizeof(Value)));
-
-  // Push |undefined| for the formals and for |this|. Because |this| is also
-  // pushed, we count down to -1 so we always push at least one Value.
-  Label loop;
-  masm.bind(&loop);
-  {
-    masm.pushValue(UndefinedValue());
-    masm.branchSub32(Assembler::NotSigned, Imm32(1), scratch1, &loop);
-  }
+  Address resumeKindSlot(callerStackPtr, 0);
+  Address resumeValueSlot(callerStackPtr, sizeof(Value));
+  masm.pushGeneratorResumeArgsAndFormals(resumeIndexSlot, resumeKindSlot,
+                                         genObj, resumeValueSlot, scratch1);
 
 #ifdef DEBUG
   // Update BaselineFrame debugFrameSize field.
@@ -6691,7 +6677,7 @@ bool BaselineCodeGen<Handler>::emit_Resume() {
   masm.storeValue(Int32Value(AbstractGeneratorObject::RESUME_INDEX_RUNNING),
                   resumeIndexSlot);
 
-  // Call the callee's Baseline entry. Its prologue sees the descriptor bit and
+  // Call the callee's JIT code. Its prologue sees the descriptor bit and
   // dispatches to the resume point.
   uint32_t callOffset = masm.callJit(code);
 

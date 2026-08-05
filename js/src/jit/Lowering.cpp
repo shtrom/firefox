@@ -7684,6 +7684,17 @@ void LIRGenerator::visitAsyncAwait(MAsyncAwait* ins) {
   assignSafepoint(lir, ins);
 }
 
+void LIRGenerator::visitGeneratorResume(MGeneratorResume* ins) {
+  MOZ_ASSERT(ins->generator()->type() == MIRType::Object);
+
+  auto* lir = new (alloc()) LGeneratorResume(
+      useFixedAtStart(ins->generator(), CallTempReg0),
+      useBoxFixedAtStart(ins->value(), CallTempReg1, CallTempReg2),
+      tempFixed(CallTempReg3), tempFixed(CallTempReg4));
+  defineReturn(lir, ins);
+  assignSafepoint(lir, ins);
+}
+
 void LIRGenerator::visitCanSkipAwait(MCanSkipAwait* ins) {
   auto* lir = new (alloc())
       LCanSkipAwait(useBoxAtStart(ins->value()), tempFixed(CallTempReg0));

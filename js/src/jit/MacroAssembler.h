@@ -919,6 +919,15 @@ class MacroAssembler : public MacroAssemblerSpecific {
   // not.
   inline void PushCalleeToken(Register callee, bool constructing);
 
+  // Push the argument Values for a generator/async resume frame: the
+  // ResumeFrameArgs, then |undefined| for the callee's formals and for |this|.
+  template <typename KindT, typename ValueT>
+  inline void pushGeneratorResumeArgsAndFormals(const Address& resumeIndex,
+                                                const KindT& resumeKind,
+                                                Register generator,
+                                                const ValueT& resumeValue,
+                                                Register nformals);
+
   // Unpack a callee token located at the |token| address, and return the
   // JSFunction pointer in the |dest| register.
   inline void loadFunctionFromCalleeToken(Address token, Register dest);
