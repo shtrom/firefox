@@ -28,7 +28,6 @@ DIRS += [
     "certviewer",
     "cleardata",
     "clearsitedata",
-    "cookiebanners",
     "commandlines",
     "content-classifier",
     "content-classifier/content_classifier_engine",

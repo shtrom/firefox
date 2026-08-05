@@ -4099,40 +4099,6 @@ pref("toolkit.osKeyStore.loglevel", "Warn");
 
 pref("extensions.formautofill.supportRTL", false);
 
-// Controls the log level for CookieBannerListService.sys.mjs.
-pref("cookiebanners.listService.logLevel", "Error");
-
-// Controls the log level for Cookie Banner Auto Clicking.
-pref("cookiebanners.bannerClicking.logLevel", "Error");
-
-// Enables the cookie banner auto clicking. The cookie banner auto clicking
-// depends on the `cookiebanners.service.mode` pref.
-pref("cookiebanners.bannerClicking.enabled", true);
-
-// Whether or not banner auto clicking test mode is enabled.
-pref("cookiebanners.bannerClicking.testing", false);
-
-// The maximum time (ms) after load for detecting banner and button elements for
-// cookie banner auto clicking.
-pref("cookiebanners.bannerClicking.timeoutAfterLoad", 5000);
-
-// Maximum time (ms) after DOMContentLoaded for detecting banners. This is a
-// catchall for cases where a load even never occurs.
-pref("cookiebanners.bannerClicking.timeoutAfterDOMContentLoaded", 20000);
-
-// How often (milliseconds) to run the banner detection query selectors to detect
-// the banner element and/or buttons.
-pref("cookiebanners.bannerClicking.pollingInterval", 500);
-
-// Array of test rules for cookie banner handling as a JSON string. They will be
-// inserted in addition to regular rules and may override them when setting the
-// same domain. Every array item should be a valid CookieBannerRule. See
-// CookieBannerRule.schema.json.
-pref("cookiebanners.listService.testRules", "[]");
-
-// Still fetches rules from RemoteSettings, but discards them. Used in tests.
-pref("cookiebanners.listService.testSkipRemoteSettings", false);
-
 // The domains we will block from installing SitePermsAddons. Comma-separated
 // full domains: any subdomains of the domains listed will also be allowed.
 pref("dom.sitepermsaddon-provider.separatedBlocklistedDomains", "shopee.co.th,shopee.tw,shopee.co.id,shopee.com.my,shopee.vn,shopee.ph,shopee.sg,shopee.com.br,shopee.com,shopee.cn,shopee.io,shopee.pl,shopee.com.mx,shopee.com.co,shopee.cl,shopee.kr,shopee.es,shopee.in,alipay.com,miravia.es");
