@@ -1,10 +1,10 @@
 From: Jim Blandy <jimb@mozilla.com>
 Subject: Round translation distances in 48/16 fixpoint.
 
-diff --git a/gfx/cairo/libpixman/src/pixman-fast-path.c b/gfx/cairo/libpixman/src/pixman-fast-path.c
+diff --git a/pixman/pixman-fast-path.c b/pixman/pixman-fast-path.c
 index d510cacbf803..41f9dca1cbca 100644
---- a/gfx/cairo/libpixman/src/pixman-fast-path.c
-+++ b/gfx/cairo/libpixman/src/pixman-fast-path.c
+--- a/pixman/pixman-fast-path.c
++++ b/pixman/pixman-fast-path.c
 @@ -1772,10 +1772,15 @@ fast_composite_rotate_90_##suffix (pixman_implementation_t *imp,              \
                                                                                \
      PIXMAN_IMAGE_GET_LINE (dest_image, dest_x, dest_y, pix_type,              \

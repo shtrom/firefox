@@ -1,9 +1,9 @@
 From: Jonathan Kew <jkew@mozilla.com>
 Subject: Adjust pixman-arm-asm for Mozilla-specific build needs
 
-diff --git a/gfx/cairo/libpixman/src/pixman-arm-asm.h b/gfx/cairo/libpixman/src/pixman-arm-asm.h
---- a/gfx/cairo/libpixman/src/pixman-arm-asm.h
-+++ b/gfx/cairo/libpixman/src/pixman-arm-asm.h
+diff --git a/pixman/pixman-arm-asm.h b/pixman/pixman-arm-asm.h
+--- a/pixman/pixman-arm-asm.h
++++ b/pixman/pixman-arm-asm.h
 @@ -23,17 +23,19 @@
   *
   * Author:  Jeff Muizelaar (jeff@infidigm.net)

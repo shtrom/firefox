@@ -1,9 +1,9 @@
 From: Jeff Muizelaar <jmuizelaar@mozilla.com>
 Subject: Make bilinear interpolation precision configurable in pixman
 
-diff --git a/gfx/cairo/libpixman/src/pixman-private.h b/gfx/cairo/libpixman/src/pixman-private.h
---- a/gfx/cairo/libpixman/src/pixman-private.h
-+++ b/gfx/cairo/libpixman/src/pixman-private.h
+diff --git a/pixman/pixman-private.h b/pixman/pixman-private.h
+--- a/pixman/pixman-private.h
++++ b/pixman/pixman-private.h
 @@ -1,17 +1,26 @@
  #ifndef PIXMAN_PRIVATE_H
  #define PIXMAN_PRIVATE_H

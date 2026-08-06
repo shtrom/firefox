@@ -1,9 +1,9 @@
 From: Jeff Muizelaar <jmuizelaar@mozilla.com>
 Subject: Adjust pixman export macros for Mozilla build
 
-diff --git a/gfx/cairo/libpixman/src/pixman-compiler.h b/gfx/cairo/libpixman/src/pixman-compiler.h
---- a/gfx/cairo/libpixman/src/pixman-compiler.h
-+++ b/gfx/cairo/libpixman/src/pixman-compiler.h
+diff --git a/pixman/pixman-compiler.h b/pixman/pixman-compiler.h
+--- a/pixman/pixman-compiler.h
++++ b/pixman/pixman-compiler.h
 @@ -84,28 +84,47 @@
  #   ifndef force_inline
  #      define force_inline inline
