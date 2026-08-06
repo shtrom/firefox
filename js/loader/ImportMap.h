@@ -47,16 +47,17 @@ class ReportWarningHelper {
 
 // Specifier map from import maps.
 // https://html.spec.whatwg.org/multipage/webappapis.html#module-specifier-map
-using SpecifierMap = std::map<nsString, nsCOMPtr<nsIURI>, std::greater<>>;
+using SpecifierMap =
+    std::map<nsString, nsCOMPtr<nsIURI>, std::greater<nsString>>;
 
 // Scope map from import maps.
 // https://html.spec.whatwg.org/multipage/webappapis.html#concept-import-map-scopes
-using ScopeMap =
-    std::map<nsCString, mozilla::UniquePtr<SpecifierMap>, std::greater<>>;
+using ScopeMap = std::map<nsCString, mozilla::UniquePtr<SpecifierMap>,
+                          std::greater<nsCString>>;
 
 // Integrity map from import maps.
 // https://html.spec.whatwg.org/multipage/webappapis.html#concept-import-map-integrity
-using IntegrityMap = std::map<nsCString, nsString, std::greater<>>;
+using IntegrityMap = std::map<nsCString, nsString, std::greater<nsCString>>;
 
 /**
  * Implementation of Import maps.
