@@ -134,7 +134,7 @@ export class AIChatContent extends MozLitElement {
   #lastScrollReq = null;
   #overflowObserver = null;
   #scrollHandler = null;
-  #scrollClickHandler = null;
+  #jumpClickHandler = null;
   #scrollRafId = null;
   #removeClientErrorListeners = null;
   #pendingAnnouncementMessageId = null;
@@ -215,6 +215,16 @@ export class AIChatContent extends MozLitElement {
     this.#teardownScrollListener();
     this.#removeClientErrorListeners?.();
     this.#removeClientErrorListeners = null;
+  }
+
+  updated(changedProperties) {
+    super.updated(changedProperties);
+    // When the conversation is replaced (e.g. switching to a tab with an empty
+    // sidebar) no scroll event fires, so recompute the jump-to-bottom button
+    // here to avoid it lingering from the previous conversation.
+    if (changedProperties.has("conversationState")) {
+      this.#updateJumpButtonState();
+    }
   }
 
   #dispatchAction(action, detail) {
@@ -367,6 +377,11 @@ export class AIChatContent extends MozLitElement {
         hasContent &&
           wrapper.scrollHeight > wrapper.clientHeight + thresholdPadding
       );
+
+      // Recompute the jump-to-bottom button after content resizes (e.g.
+      // switching to an empty/short conversation) since no scroll event
+      // fires in that case and the button would otherwise stay visible.
+      this.#updateJumpButtonState();
     });
     this.updateComplete.then(() => {
       this.#overflowObserver.observe(
@@ -389,8 +404,8 @@ export class AIChatContent extends MozLitElement {
         return;
       }
       const wrapper = this.#wrapper;
-      const btn = this.#jumpButton;
-      if (!wrapper || !btn) {
+      const jumpButton = this.#jumpButton;
+      if (!wrapper || !jumpButton) {
         return;
       }
       this.#scrollHandler = () => {
@@ -399,26 +414,35 @@ export class AIChatContent extends MozLitElement {
         }
         this.#scrollRafId = requestAnimationFrame(() => {
           this.#scrollRafId = null;
-          const distanceFromBottom =
-            wrapper.scrollHeight - wrapper.scrollTop - wrapper.clientHeight;
-          const threshold = wrapper.clientHeight * 0.5;
-          const show = distanceFromBottom > threshold;
-          const atBottom = distanceFromBottom < 1;
-          if (btn.hasAttribute("visible") !== show) {
-            btn.toggleAttribute("visible", show);
-            btn.toggleAttribute("disabled", !show);
-          }
-          if (wrapper.hasAttribute("scrolled-to-bottom") !== atBottom) {
-            wrapper.toggleAttribute("scrolled-to-bottom", atBottom);
-          }
+          this.#updateJumpButtonState();
         });
       };
-      this.#scrollClickHandler = () => {
+      this.#jumpClickHandler = () => {
         wrapper.scrollTop = wrapper.scrollHeight;
       };
       wrapper.addEventListener("scroll", this.#scrollHandler);
-      btn.addEventListener("click", this.#scrollClickHandler);
+      jumpButton.addEventListener("click", this.#jumpClickHandler);
     });
+  }
+
+  #updateJumpButtonState() {
+    const wrapper = this.#wrapper;
+    const jumpButton = this.#jumpButton;
+    if (!wrapper || !jumpButton) {
+      return;
+    }
+    const distanceFromBottom =
+      wrapper.scrollHeight - wrapper.scrollTop - wrapper.clientHeight;
+    const threshold = wrapper.clientHeight * 0.5;
+    const show = distanceFromBottom > threshold;
+    const atBottom = distanceFromBottom < 1;
+    if (jumpButton.hasAttribute("visible") !== show) {
+      jumpButton.toggleAttribute("visible", show);
+      jumpButton.toggleAttribute("disabled", !show);
+    }
+    if (wrapper.hasAttribute("scrolled-to-bottom") !== atBottom) {
+      wrapper.toggleAttribute("scrolled-to-bottom", atBottom);
+    }
   }
 
   #teardownScrollListener() {
@@ -430,9 +454,9 @@ export class AIChatContent extends MozLitElement {
       this.#wrapper?.removeEventListener("scroll", this.#scrollHandler);
       this.#scrollHandler = null;
     }
-    if (this.#scrollClickHandler) {
-      this.#jumpButton?.removeEventListener("click", this.#scrollClickHandler);
-      this.#scrollClickHandler = null;
+    if (this.#jumpClickHandler) {
+      this.#jumpButton?.removeEventListener("click", this.#jumpClickHandler);
+      this.#jumpClickHandler = null;
     }
   }
 
