@@ -27,19 +27,16 @@
 #include "mozilla/SpinEventLoopUntil.h"
 #include "mozilla/StaticPrefs_media.h"
 #include "mozilla/SyncRunnable.h"
-#include "mozilla/dom/ProcessIsolation.h"
 #if defined(XP_WIN)
 #  include "mozilla/UntrustedModulesData.h"
 #endif
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsComponentManagerUtils.h"
-#include "nsContentUtils.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsDirectoryServiceUtils.h"
 #include "nsHashKeys.h"
 #include "nsIFile.h"
 #include "nsIObserverService.h"
-#include "nsIScriptSecurityManager.h"
 #include "nsIXULRuntime.h"
 #include "nsNativeCharsetUtils.h"
 #include "nsNetUtil.h"
@@ -1487,6 +1484,16 @@ nsresult GeckoMediaPluginServiceParent::GetNodeId(
   return NS_OK;
 }
 
+NS_IMETHODIMP
+GeckoMediaPluginServiceParent::GetNodeId(
+    const nsAString& aOrigin, const nsAString& aTopLevelOrigin,
+    const nsAString& aGMPName, UniquePtr<GetNodeIdCallback>&& aCallback) {
+  nsCString nodeId;
+  nsresult rv = GetNodeId(aOrigin, aTopLevelOrigin, aGMPName, nodeId);
+  aCallback->Done(rv, nodeId);
+  return rv;
+}
+
 nsresult GeckoMediaPluginServiceParent::GetNodeId(
     const NodeIdVariant& aNodeIdVariant, nsACString& aOutId) {
   if (aNodeIdVariant.type() == NodeIdVariant::TnsCString) {
@@ -1903,11 +1910,8 @@ already_AddRefed<GMPParent> GeckoMediaPluginServiceParent::GetById(
   return nullptr;
 }
 
-GMPServiceParent::GMPServiceParent(GeckoMediaPluginServiceParent* aService,
-                                   const nsACString& aRemoteType)
-    : mService(aService),
-      mContentProcessRemoteType(aRemoteType),
-      mShutdownBlocker([](GMPServiceParent* aThis) {
+GMPServiceParent::GMPServiceParent(GeckoMediaPluginServiceParent* aService)
+    : mService(aService), mShutdownBlocker([](GMPServiceParent* aThis) {
         nsFmtString name(u"GMPServiceParent {}", static_cast<void*>(aThis));
         return media::ShutdownBlockingTicket::Create(
             name, NS_LITERAL_STRING_FROM_CSTRING(__FILE__), __LINE__);
@@ -1928,109 +1932,7 @@ void GMPServiceParent::BeginShutdown() {
   mShutdownBlocker = nullptr;
 }
 
-bool GMPServiceParent::OriginAllowedForRemoteType(const nsACString& aRemoteType,
-                                                  const nsAString& aOrigin) {
-  MOZ_ASSERT(NS_IsMainThread());
-  // The empty and "null" origins are the anonymous node-id path.
-  if (aOrigin.IsEmpty() || aOrigin.EqualsLiteral("null")) {
-    return true;
-  }
-  // aOrigin comes from a possibly-compromised content process, so use the
-  // security manager helper, which rejects system/expanded/null-principal
-  // origins with an error rather than asserting.
-  nsCOMPtr<nsIScriptSecurityManager> ssm = nsContentUtils::GetSecurityManager();
-  if (!ssm) {
-    return false;
-  }
-  nsCOMPtr<nsIPrincipal> principal;
-  nsresult rv = ssm->CreateContentPrincipalFromOrigin(
-      NS_ConvertUTF16toUTF8(aOrigin), getter_AddRefs(principal));
-  if (NS_FAILED(rv) || !principal) {
-    return false;
-  }
-  return dom::ValidatePrincipalCouldPotentiallyBeLoadedBy(principal,
-                                                          aRemoteType, {});
-}
-
-bool GMPServiceParent::NodeIdPartsAllowedForRemoteType(
-    const nsACString& aRemoteType, const nsAString& aOrigin,
-    const nsAString& aTopLevelOrigin) {
-  return OriginAllowedForRemoteType(aRemoteType, aOrigin) &&
-         OriginAllowedForRemoteType(aRemoteType, aTopLevelOrigin);
-}
-
 mozilla::ipc::IPCResult GMPServiceParent::RecvLaunchGMP(
-    const NodeIdVariant& aNodeIdVariant, const nsACString& aAPI,
-    nsTArray<nsCString>&& aTags, nsTArray<ProcessId>&& aAlreadyBridgedTo,
-    LaunchGMPResolver&& aResolve) {
-  if (mService->IsShuttingDown()) {
-    GMPLaunchResult result;
-    result.pluginId() = 0;
-    result.pluginType() = GMPPluginType::Unknown;
-    result.pid() = base::kInvalidProcessId;
-    result.result() = NS_ERROR_ILLEGAL_DURING_SHUTDOWN;
-    result.errorDescription() = "Service is shutting down."_ns;
-    aResolve(std::move(result));
-    return IPC_OK();
-  }
-
-  // The string arm carries no origins to validate; launch directly.
-  if (aNodeIdVariant.type() != NodeIdVariant::TNodeIdParts) {
-    CompleteLaunchGMP(aNodeIdVariant, aAPI, std::move(aTags),
-                      std::move(aAlreadyBridgedTo), std::move(aResolve));
-    return IPC_OK();
-  }
-
-  // Validate the origins against the owning content process on the main thread
-  // (principal APIs are main-thread only), then resume the launch back on the
-  // GMP thread. The launch stays async; the GMP thread is never blocked.
-  nsCString remoteType = mContentProcessRemoteType;
-  RefPtr<GMPServiceParent> self = this;
-  nsCOMPtr<nsISerialEventTarget> gmpThread = GetCurrentSerialEventTarget();
-  NodeIdVariant nodeIdVariant = aNodeIdVariant;
-
-  // A dispatch failure here can only happen during shutdown; the child's
-  // LaunchGMP promise is then rejected by IPC channel teardown.
-  MOZ_ALWAYS_SUCCEEDS(NS_DispatchToMainThread(NS_NewRunnableFunction(
-      "GMPServiceParent::ValidateNodeIdOrigins",
-      [self, remoteType, gmpThread, nodeIdVariant, api = nsCString(aAPI),
-       tags = std::move(aTags), alreadyBridgedTo = std::move(aAlreadyBridgedTo),
-       resolve = std::move(aResolve)]() mutable {
-        const NodeIdParts& parts = nodeIdVariant.get_NodeIdParts();
-        bool allowed = GMPServiceParent::NodeIdPartsAllowedForRemoteType(
-            remoteType, parts.mOrigin(), parts.mTopLevelOrigin());
-        GMP_LOG_DEBUG(
-            "{}::RecvLaunchGMP node-id origin check: remoteType='{}' "
-            "origin='{}' topLevelOrigin='{}' allowed={}",
-            __CLASS__, remoteType.get(),
-            NS_ConvertUTF16toUTF8(parts.mOrigin()).get(),
-            NS_ConvertUTF16toUTF8(parts.mTopLevelOrigin()).get(), allowed);
-        MOZ_ALWAYS_SUCCEEDS(gmpThread->Dispatch(NS_NewRunnableFunction(
-            "GMPServiceParent::ResumeLaunchGMP",
-            [self, allowed, nodeIdVariant, api = std::move(api),
-             tags = std::move(tags),
-             alreadyBridgedTo = std::move(alreadyBridgedTo),
-             resolve = std::move(resolve)]() mutable {
-              if (!allowed) {
-                GMPLaunchResult result;
-                result.pluginId() = 0;
-                result.pluginType() = GMPPluginType::Unknown;
-                result.pid() = base::kInvalidProcessId;
-                result.result() = NS_ERROR_FAILURE;
-                result.errorDescription() =
-                    "Node id origin not allowed for process."_ns;
-                resolve(std::move(result));
-                return;
-              }
-              self->CompleteLaunchGMP(nodeIdVariant, api, std::move(tags),
-                                      std::move(alreadyBridgedTo),
-                                      std::move(resolve));
-            })));
-      })));
-  return IPC_OK();
-}
-
-void GMPServiceParent::CompleteLaunchGMP(
     const NodeIdVariant& aNodeIdVariant, const nsACString& aAPI,
     nsTArray<nsCString>&& aTags, nsTArray<ProcessId>&& aAlreadyBridgedTo,
     LaunchGMPResolver&& aResolve) {
@@ -2043,7 +1945,7 @@ void GMPServiceParent::CompleteLaunchGMP(
     result.result() = NS_ERROR_ILLEGAL_DURING_SHUTDOWN;
     result.errorDescription() = "Service is shutting down."_ns;
     aResolve(std::move(result));
-    return;
+    return IPC_OK();
   }
 
   nsCString nodeIdString;
@@ -2055,7 +1957,7 @@ void GMPServiceParent::CompleteLaunchGMP(
     result.result() = rv;
     result.errorDescription() = "GetNodeId failed."_ns;
     aResolve(std::move(result));
-    return;
+    return IPC_OK();
   }
 
   RefPtr<GMPParent> gmp =
@@ -2070,7 +1972,7 @@ void GMPServiceParent::CompleteLaunchGMP(
     result.result() = NS_ERROR_FAILURE;
     result.errorDescription() = "SelectPluginForAPI returns nullptr."_ns;
     aResolve(std::move(result));
-    return;
+    return IPC_OK();
   }
 
   if (!gmp->EnsureProcessLoaded(&result.pid())) {
@@ -2078,7 +1980,7 @@ void GMPServiceParent::CompleteLaunchGMP(
     result.result() = NS_ERROR_FAILURE;
     result.errorDescription() = "Process has not loaded."_ns;
     aResolve(std::move(result));
-    return;
+    return IPC_OK();
   }
 
   MOZ_ASSERT(result.pid() != base::kInvalidProcessId);
@@ -2088,7 +1990,7 @@ void GMPServiceParent::CompleteLaunchGMP(
   if (aAlreadyBridgedTo.Contains(result.pid())) {
     result.result() = NS_OK;
     aResolve(std::move(result));
-    return;
+    return IPC_OK();
   }
 
   Endpoint<PGMPContentParent> parent;
@@ -2099,14 +2001,13 @@ void GMPServiceParent::CompleteLaunchGMP(
     result.result() = rv;
     result.errorDescription() = "PGMPContent::CreateEndpoints failed."_ns;
     aResolve(std::move(result));
-    return;
+    return IPC_OK();
   }
 
   if (!gmp->SendInitGMPContentChild(std::move(child))) {
     result.result() = NS_ERROR_FAILURE;
     result.errorDescription() = "SendInitGMPContentChild failed."_ns;
-    aResolve(std::move(result));
-    return;
+    return IPC_OK();
   }
 
   gmp->IncrementGMPContentChildCount();
@@ -2114,6 +2015,21 @@ void GMPServiceParent::CompleteLaunchGMP(
   result.result() = NS_OK;
   result.endpoint() = std::move(parent);
   aResolve(std::move(result));
+  return IPC_OK();
+}
+
+mozilla::ipc::IPCResult GMPServiceParent::RecvGetGMPNodeId(
+    const nsAString& aOrigin, const nsAString& aTopLevelOrigin,
+    const nsAString& aGMPName, GetGMPNodeIdResolver&& aResolve) {
+  nsCString id;
+  nsresult rv = mService->GetNodeId(aOrigin, aTopLevelOrigin, aGMPName, id);
+  aResolve(id);
+  if (!NS_SUCCEEDED(rv)) {
+    return IPC_FAIL(
+        this,
+        "GMPServiceParent::RecvGetGMPNodeId: mService->GetNodeId failed.");
+  }
+  return IPC_OK();
 }
 
 class OpenPGMPServiceParent : public mozilla::Runnable {
@@ -2138,8 +2054,7 @@ class OpenPGMPServiceParent : public mozilla::Runnable {
 };
 
 /* static */
-bool GMPServiceParent::Create(Endpoint<PGMPServiceParent>&& aGMPService,
-                              const nsACString& aRemoteType) {
+bool GMPServiceParent::Create(Endpoint<PGMPServiceParent>&& aGMPService) {
   RefPtr<GeckoMediaPluginServiceParent> gmp =
       GeckoMediaPluginServiceParent::GetSingleton();
 
@@ -2154,7 +2069,7 @@ bool GMPServiceParent::Create(Endpoint<PGMPServiceParent>&& aGMPService,
     MutexAutoLock lock(gmp->mMutex);
     nsresult rv = gmp->GetThreadLocked(getter_AddRefs(gmpThread));
     NS_ENSURE_SUCCESS(rv, false);
-    serviceParent = new GMPServiceParent(gmp, aRemoteType);
+    serviceParent = new GMPServiceParent(gmp);
   }
   bool ok;
   nsresult rv = NS_DispatchAndSpinEventLoopUntilComplete(

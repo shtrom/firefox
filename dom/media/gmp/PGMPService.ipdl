@@ -31,6 +31,9 @@ parent:
                   nsCString[] tags,
                   ProcessId[] alreadyBridgedTo)
     returns (GMPLaunchResult aResult);
+
+  async GetGMPNodeId(nsString origin, nsString topLevelOrigin, nsString gmpName)
+    returns (nsCString id);
 child:
   async BeginShutdown();
 };

@@ -26,11 +26,6 @@ struct already_AddRefed;
 using FlushFOGDataPromise = mozilla::dom::ContentParent::FlushFOGDataPromise;
 using ContentParent = mozilla::dom::ContentParent;
 
-// Defined in dom/media/gtest/TestCDMStorage.cpp; befriended by
-// GeckoMediaPluginServiceParent for test-only access to the private node-id
-// lookup.
-class CDMStorageTest;
-
 namespace mozilla {
 class OriginAttributesPattern;
 
@@ -57,6 +52,11 @@ class GeckoMediaPluginServiceParent final
   NS_IMETHOD FindPluginDirectoryForAPI(const nsACString& aAPI,
                                        const nsTArray<nsCString>& aTags,
                                        nsIFile** aDirectory) override;
+  NS_IMETHOD GetNodeId(const nsAString& aOrigin,
+                       const nsAString& aTopLevelOrigin,
+                       const nsAString& aGMPName,
+                       UniquePtr<GetNodeIdCallback>&& aCallback) override;
+
   NS_DECL_MOZIGECKOMEDIAPLUGINCHROMESERVICE
   NS_DECL_NSIOBSERVER
 
@@ -103,8 +103,6 @@ class GeckoMediaPluginServiceParent final
 
  private:
   friend class GMPServiceParent;
-  // Test-only access to the private synchronous node-id lookup.
-  friend class ::CDMStorageTest;
   class Observer;
 
   virtual ~GeckoMediaPluginServiceParent();
@@ -266,8 +264,7 @@ bool MatchBaseDomain(nsIFile* aPath, const nsACString& aBaseDomain);
  */
 class GMPServiceParent final : public PGMPServiceParent {
  public:
-  GMPServiceParent(GeckoMediaPluginServiceParent* aService,
-                   const nsACString& aRemoteType);
+  explicit GMPServiceParent(GeckoMediaPluginServiceParent* aService);
 
   // Our refcounting is thread safe, and when our refcount drops to zero
   // we dispatch an event to the main thread to delete the GMPServiceParent.
@@ -280,20 +277,12 @@ class GMPServiceParent final : public PGMPServiceParent {
   NS_INLINE_DECL_THREADSAFE_REFCOUNTING_WITH_DELETE_ON_MAIN_THREAD(
       GMPServiceParent, final);
 
-  static bool Create(Endpoint<PGMPServiceParent>&& aGMPService,
-                     const nsACString& aRemoteType);
+  ipc::IPCResult RecvGetGMPNodeId(const nsAString& aOrigin,
+                                  const nsAString& aTopLevelOrigin,
+                                  const nsAString& aGMPName,
+                                  GetGMPNodeIdResolver&& aResolve) override;
 
-  // True if a content process of aRemoteType may act for aOrigin. Must be
-  // called on the main thread. Empty/"null" origins (the anonymous node-id
-  // path) and the parent remote type are allowed.
-  static bool OriginAllowedForRemoteType(const nsACString& aRemoteType,
-                                         const nsAString& aOrigin);
-
-  // True only if aRemoteType may act for both node-id origins. Main thread
-  // only.
-  static bool NodeIdPartsAllowedForRemoteType(const nsACString& aRemoteType,
-                                              const nsAString& aOrigin,
-                                              const nsAString& aTopLevelOrigin);
+  static bool Create(Endpoint<PGMPServiceParent>&& aGMPService);
 
   ipc::IPCResult RecvLaunchGMP(const NodeIdVariant& aNodeIdVariant,
                                const nsACString& aAPI,
@@ -311,18 +300,7 @@ class GMPServiceParent final : public PGMPServiceParent {
  private:
   ~GMPServiceParent();
 
-  // Continues a GMP launch on the GMP thread, after any origin validation has
-  // run. Resolves aResolve with the launch result.
-  void CompleteLaunchGMP(const NodeIdVariant& aNodeIdVariant,
-                         const nsACString& aAPI, nsTArray<nsCString>&& aTags,
-                         nsTArray<ProcessId>&& aAlreadyBridgedTo,
-                         LaunchGMPResolver&& aResolve);
-
   const RefPtr<GeckoMediaPluginServiceParent> mService;
-
-  // Remote type of the content process that owns this actor. Used to validate
-  // node-id origins against that process; empty for the parent process.
-  const nsCString mContentProcessRemoteType;
 
   // Ticket that holds a blocker on the profile-before-change barrier.
   // Released when this actor is destroyed, or proactively from BeginShutdown()
