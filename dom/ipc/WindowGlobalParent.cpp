@@ -1256,7 +1256,7 @@ void WindowGlobalParent::PermitUnloadChildNavigables(
 
 already_AddRefed<mozilla::dom::Promise> WindowGlobalParent::DrawSnapshot(
     const DOMRect* aRect, double aScale, const nsACString& aBackgroundColor,
-    const DrawSnapshotOptions& aOptions, mozilla::ErrorResult& aRv) {
+    bool aResetScrollPosition, mozilla::ErrorResult& aRv) {
   nsIGlobalObject* global = GetParentObject();
   RefPtr<Promise> promise = Promise::Create(global, aRv);
   if (NS_WARN_IF(aRv.Failed())) {
@@ -1273,10 +1273,10 @@ already_AddRefed<mozilla::dom::Promise> WindowGlobalParent::DrawSnapshot(
 
   gfx::CrossProcessPaintFlags flags =
       gfx::CrossProcessPaintFlags::UseHighQualityScaling;
-  if (!aRect || aOptions.mDrawView) {
+  if (!aRect) {
     // If no explicit Rect was passed, we want the currently visible viewport.
     flags |= gfx::CrossProcessPaintFlags::DrawView;
-  } else if (aOptions.mResetScrollPosition) {
+  } else if (aResetScrollPosition) {
     flags |= gfx::CrossProcessPaintFlags::ResetScrollPosition;
   }
 

@@ -1058,15 +1058,7 @@ function UpdateCanvasCache(url, canvas) {
 async function DoDrawWindow(ctx, x, y, w, h) {
   if (g.useDrawSnapshot) {
     try {
-      // drawView matches what the DRAWWINDOW_DRAW_VIEW path below draws: the
-      // rect is viewport relative, and the root scrollbars are included.
-      let image =
-        await g.browser.browsingContext.currentWindowGlobal.drawSnapshot(
-          new DOMRect(x, y, w, h),
-          1.0,
-          "#fff",
-          { drawView: true }
-        );
+      let image = await g.browser.drawSnapshot(x, y, w, h, 1.0, "#fff");
       ctx.drawImage(image, x, y);
     } catch (ex) {
       logger.error(g.currentURL + " | drawSnapshot failed: " + ex);

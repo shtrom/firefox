@@ -73,10 +73,6 @@ capture.Format = {
  *     If true, read back a snapshot of the pixel data currently in the
  *     compositor/window. Defaults to false, unless the
  *     `remote.screenshot.use_readback` preference is set.
- * @param {boolean=} options.drawView
- *     If true, the rectangle is relative to the visible viewport rather than to
- *     the page, and view level rendering such as the root scrollbars is
- *     included. Ignored when reading back. Defaults to false.
  *
  * @returns {HTMLCanvasElement}
  *     The canvas on which the selection from the window's framebuffer
@@ -89,14 +85,7 @@ capture.canvas = async function (
   top,
   width,
   height,
-  {
-    canvas = null,
-    flags = null,
-    dX = 0,
-    dY = 0,
-    readback = false,
-    drawView = false,
-  } = {}
+  { canvas = null, flags = null, dX = 0, dY = 0, readback = false } = {}
 ) {
   if (lazy.compositorReadback && !readback) {
     // Readback can only return the content area composited on screen, and its
@@ -160,8 +149,7 @@ capture.canvas = async function (
       let snapshot = await browsingContext.currentWindowGlobal.drawSnapshot(
         rect,
         scale,
-        BG_COLOUR,
-        { drawView }
+        BG_COLOUR
       );
 
       ctx.drawImage(snapshot, 0, 0);

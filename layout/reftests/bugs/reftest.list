@@ -1683,7 +1683,7 @@ fuzzy(0-40,0-875) == 797797-1.html 797797-1-ref.html # 'opacity:N' and rgba(,,,N
 fuzzy(0-2,0-2310) == 797797-2.html 797797-2-ref.html # 'opacity:N' and rgba(,,,N) text don't match precisely
 == 801994-1.html 801994-1-ref.html
 == 804323-1.html 804323-1-ref.html
-fuzzy-if(Android,0-8,0-608) == 811301-1.html 811301-1-ref.html
+fuzzy-if(Android,0-8,0-608) fails-if(useDrawSnapshot) == 811301-1.html 811301-1-ref.html
 == 812824-1.html 812824-1-ref.html
 == 814677.html 814677-ref.html
 == 814952-1.html 814952-1-ref.html

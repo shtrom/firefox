@@ -116,7 +116,7 @@ async function captureScreenshot(args, browsingContext) {
         rect,
         actualRatio,
         "rgb(255,255,255)",
-        { resetScrollPosition: args.fullpage }
+        args.fullpage
       );
 
       const fileScale = args.fileScale || actualRatio;
