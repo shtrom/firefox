@@ -313,6 +313,53 @@ add_task(async function test_events_on_pref_changes() {
   );
 });
 
+add_task(async function test_topsites_change_display_event() {
+  info(
+    "TelemetryFeed.handleSetPref should record a topsites.change_display " +
+      "event when the topSitesRows pref is set from the customize menu"
+  );
+  Services.fog.testResetFOG();
+
+  const PORT_ID = "port123";
+  const ROWS = 3;
+
+  let instance = new TelemetryFeed();
+  let session = instance.addSession(PORT_ID);
+
+  instance.handleSetPref({
+    meta: { fromTarget: PORT_ID },
+    data: { name: "topSitesRows", value: ROWS },
+  });
+
+  let events = Glean.topsites.changeDisplay.testGetValue();
+  Assert.equal(events.length, 1, "One change_display event was recorded");
+  Assert.deepEqual(events[0].extra, {
+    rows: String(ROWS),
+    newtab_visit_id: session.session_id,
+  });
+});
+
+add_task(async function test_topsites_change_display_event_no_session() {
+  info(
+    "TelemetryFeed.handleSetPref should not record a topsites.change_display " +
+      "event when the sending port has no session"
+  );
+  Services.fog.testResetFOG();
+
+  let instance = new TelemetryFeed();
+
+  instance.handleSetPref({
+    meta: { fromTarget: "port-with-no-session" },
+    data: { name: "topSitesRows", value: 2 },
+  });
+
+  Assert.equal(
+    Glean.topsites.changeDisplay.testGetValue(),
+    null,
+    "No change_display event was recorded"
+  );
+});
+
 add_task(async function test_browserOpenNewtabStart() {
   info(
     "TelemetryFeed.browserOpenNewtabStart should call " +

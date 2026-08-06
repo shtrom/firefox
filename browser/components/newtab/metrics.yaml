@@ -1756,6 +1756,32 @@ topsites:
     send_in_pings:
       - newtab
 
+  change_display:
+    type: event
+    description: >
+      Recorded when the user changes the number of topsite rows to display,
+      using the row selector in the newtab customize menu.
+      Corresponds to the receipt of a dispatched `SET_PREF` action for the
+      `topSitesRows` pref by `TelemetryFeed`.
+      Changes made from about:preferences are not recorded here.
+    bugs:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2060323
+    data_reviews:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2060323
+    data_sensitivity: [interaction]
+    notification_emails:
+      - sdowne@mozilla.com
+      - jbrown@mozilla.com
+    expires: never
+    extra_keys:
+      rows:
+        description: >
+          The number of topsite rows the user just selected.
+        type: quantity
+      newtab_visit_id: *newtab_visit_id
+    send_in_pings:
+      - newtab
+
   pref_changed:
     type: event
     description: >
