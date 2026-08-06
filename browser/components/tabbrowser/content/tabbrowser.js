@@ -5990,8 +5990,14 @@
       this._removingTabs.add(aTab);
       this.tabContainer._invalidateCachedTabs();
 
-      // Invalidate hovered tab state tracking for this closing tab.
+      // Invalidate hovered tab state tracking for this closing tab. The pointer
+      // stays put while the tab goes away, so hand the hover over to the tab
+      // moving into its place: no mouseover event is guaranteed to report it.
+      let wasHovered = aTab._hover;
       aTab._mouseleave();
+      if (wasHovered) {
+        this.#tabTakingPlaceOf(aTab)?._mouseenter();
+      }
 
       if (newTab) {
         this.addTrustedTab(BROWSER_NEW_TAB_URL, {
@@ -6077,6 +6083,23 @@
       browser.removeAttribute("primary");
 
       return true;
+    }
+
+    /**
+     * @param {MozTabbrowserTab} closingTab
+     * @returns {MozTabbrowserTab|null}
+     *   The tab moving into `closingTab`'s spot in the tab strip, or null if a
+     *   tab group label takes it or there's nothing after it.
+     */
+    #tabTakingPlaceOf(closingTab) {
+      // Closing tabs are excluded from `ariaFocusableItems`, so the first item
+      // following `closingTab` is the one moving up into its spot.
+      let item = this.tabContainer.ariaFocusableItems.find(
+        candidate =>
+          closingTab.compareDocumentPosition(candidate) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      );
+      return this.isTab(item) ? item : null;
     }
 
     _endRemoveTab(aTab) {
