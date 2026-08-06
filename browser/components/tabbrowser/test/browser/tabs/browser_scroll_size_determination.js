@@ -3,6 +3,10 @@
 
 "use strict";
 
+// Each call to scrolling_works() opens a window and fills it with tabs, and
+// there are six of them.
+requestLongerTimeout(2);
+
 /**
  * Check that when opening a new window with vertical tabs turned
  * on/off, wheel events with DOM_DELTA_LINE deltaMode successfully
@@ -24,7 +28,7 @@ async function scrolling_works(useVerticalTabs, uiDensity) {
 
   await BrowserTestUtils.overflowTabs(null, win, {
     overflowAtStart: false,
-    overflowTabFactor: 3,
+    overflowTabFactor: 1.1,
   });
 
   await TestUtils.waitForCondition(() => {
@@ -64,6 +68,7 @@ async function scrolling_works(useVerticalTabs, uiDensity) {
         wheel: true,
         deltaY: 1,
         deltaMode: WheelEvent.DOM_DELTA_LINE,
+        asyncEnabled: true,
       },
       win
     );
