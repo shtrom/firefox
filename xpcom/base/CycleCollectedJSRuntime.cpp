@@ -1860,12 +1860,21 @@ void CycleCollectedJSRuntime::DeferredFinalize(
     void* aThing) {
   // Tell the analysis that the function pointers will not GC.
   JS::AutoSuppressGCAnalysis suppress;
+
+  if (aFunc == mLastDeferredFinalizeFunction) {
+    // aAppendFunc returns aData unchanged when it is non-null.
+    aAppendFunc(mLastDeferredFinalizeData, aThing);
+    return;
+  }
+
   mDeferredFinalizerTable.WithEntryHandle(aFunc, [&](auto&& entry) {
     if (entry) {
       aAppendFunc(entry.Data(), aThing);
+      mLastDeferredFinalizeData = entry.Data();
     } else {
-      entry.Insert(aAppendFunc(nullptr, aThing));
+      mLastDeferredFinalizeData = entry.Insert(aAppendFunc(nullptr, aThing));
     }
+    mLastDeferredFinalizeFunction = aFunc;
   });
 }
 
@@ -2022,6 +2031,10 @@ void CycleCollectedJSRuntime::FinalizeDeferredThings(
 
   mFinalizeRunnable =
       new IncrementalFinalizeRunnable(this, mDeferredFinalizerTable);
+
+  // The runnable took every entry, so the memoized one is stale.
+  mLastDeferredFinalizeFunction = nullptr;
+  mLastDeferredFinalizeData = nullptr;
 
   // Everything should be gone now.
   MOZ_ASSERT(mDeferredFinalizerTable.Count() == 0);
