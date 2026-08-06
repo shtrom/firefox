@@ -3457,13 +3457,6 @@ pref("first-startup.category-tasks-enabled", true);
   pref("default-browser-agent.enabled", true);
 #endif
 
-// Test Prefs that do nothing for testing
-#if defined(EARLY_BETA_OR_EARLIER)
-  pref("app.normandy.test-prefs.bool", false);
-  pref("app.normandy.test-prefs.integer", 0);
-  pref("app.normandy.test-prefs.string", "");
-#endif
-
 // Shows 'View Image Info' item in the image context menu
 #ifdef MOZ_DEV_EDITION
   pref("browser.menu.showViewImageInfo", true);
