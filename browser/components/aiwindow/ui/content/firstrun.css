@@ -395,15 +395,17 @@
     width: 100%;
 
     /* TODO: Bug 2033070 - remove these media queries after Nova launch */
-    @media not (-moz-pref("browser.nova.enabled")) {
+    @media not -moz-pref("browser.nova.enabled") {
       /* outline color is the button background color, which is a gradient for MVP
       and doesn't work on outline */
+      /* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
       &:has(.input:focus-visible) {
         outline: var(--focus-outline-width) solid var(--focus-outline-color);
         outline-offset: var(--focus-outline-offset);
       }
     }
 
+    /* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
     &:hover:not(:has(.selected)) {
       /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
       background-color: var(--card-bg-hover);
@@ -412,6 +414,7 @@
       box-shadow: var(--box-shadow-level-2);
     }
 
+    /* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
     &:has(.selected) {
       /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
       background:
@@ -483,6 +486,7 @@
     }
 
     /* The recommended card shows the badge in place of the model subtitle. */
+    /* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
     &:has(.flair) .subtitle-text {
       display: none;
     }

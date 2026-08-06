@@ -72,6 +72,8 @@
   label {
     display: block;
 
+    /* Small subtree */
+    /* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
     &:has(+ a[is="moz-support-link"]),
     :host(:not(:state(has-description)):state(has-support-link)) & {
       display: inline;
