@@ -519,7 +519,9 @@ SVGBBox SVGGeometryFrame::GetBBoxContribution(const Matrix& aToBBoxUserspace,
         strokeBBoxExtents = ToRect(SVGUtils::PathExtentsToMaxStrokeExtents(
             ThebesRect(pathBBoxExtents), this, ThebesMatrix(aToBBoxUserspace)));
       }
-      MOZ_ASSERT(strokeBBoxExtents.IsFinite(), "bbox is about to go bad");
+      if (!strokeBBoxExtents.IsFinite()) {
+        return bbox;
+      }
       bbox.UnionEdges(strokeBBoxExtents);
     }
   }
@@ -538,7 +540,9 @@ SVGBBox SVGGeometryFrame::GetBBoxContribution(const Matrix& aToBBoxUserspace,
           if (frame) {
             SVGBBox mbbox = frame->GetMarkBBoxContribution(
                 aToBBoxUserspace, aFlags, this, mark, strokeWidth);
-            MOZ_ASSERT(mbbox.IsFinite(), "bbox is about to go bad");
+            if (!mbbox.IsFinite()) {
+              return bbox;
+            }
             bbox.UnionEdges(mbbox);
           }
         }
