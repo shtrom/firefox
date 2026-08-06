@@ -1435,6 +1435,10 @@ pref("mousewheel.with_meta.action", 1);
 pref("browser.xul.error_pages.expert_bad_cert", false);
 pref("browser.xul.error_pages.show_safe_browsing_details_on_load", false);
 
+// Enable the one-click search call-to-action on the online dnsNotFound error
+// page. Disabled by default; consumers land in later bugs (meta bug 2055374).
+pref("browser.netError.searchCTA.enabled", false);
+
 // Enable captive portal detection.
 pref("network.captive-portal-service.enabled", true);
 
