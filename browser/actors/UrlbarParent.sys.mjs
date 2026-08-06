@@ -160,6 +160,11 @@ export class UrlbarParent extends JSWindowActorParent {
           message.data.reason
         );
         break;
+      case "DismissAutofill":
+        return controller.dismissAutofill(
+          message.data.url,
+          message.data.action
+        );
       case "LoadURL":
         return controller.loadURL(message.data.loadData);
       case "FocusBrowser":

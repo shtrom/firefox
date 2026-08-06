@@ -503,6 +503,29 @@ export class UrlbarParentController {
   }
 
   /**
+   * Dismisses an autofilled URL on the user's behalf, blocking the autofill
+   * pairing or removing the URL from history. Async so callers can await the
+   * write before re-running their query on either transport.
+   *
+   * @param {string} url
+   *   The dismissed autofill result's URL.
+   * @param {"dismiss" | "forget"} action
+   *   "dismiss" blocks the autofill pairing for a period of time.
+   *   "forget" removes the URL from history entirely.
+   */
+  async dismissAutofill(url, action) {
+    if (action != "dismiss" && action != "forget") {
+      throw new Error(`Unknown autofill dismissal action: ${action}`);
+    }
+
+    Glean.urlbarAutofill.inputContextMenuDismissal[action].add(1);
+
+    await lazy.UrlbarUtils.dismissAutofill(url, {
+      removeFromHistory: action == "forget",
+    });
+  }
+
+  /**
    * Clears the backspace bookkeeping for an autofilled URL the user accepted.
    * The bookkeeping is parent state, so the input hands the URL over here.
    *

@@ -142,6 +142,15 @@ export class UrlbarParentControllerProxy {
     });
   }
 
+  /** @type {UrlbarParentController["dismissAutofill"]} */
+  dismissAutofill(url, action) {
+    return this.#actor.sendQuery("DismissAutofill", {
+      instanceId: this.#instanceId,
+      url,
+      action,
+    });
+  }
+
   /**
    * Ships an accepted autofill to the parent, which clears its backspace
    * bookkeeping. The counterpart to the controller's

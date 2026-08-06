@@ -58,7 +58,6 @@ const lazy = XPCOMUtils.declareLazy({
   ExtensionSearchHandler:
     "resource://gre/modules/ExtensionSearchHandler.sys.mjs",
   ExtensionUtils: "resource://gre/modules/ExtensionUtils.sys.mjs",
-  PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
   QuickSuggest: "moz-src:///browser/components/urlbar/QuickSuggest.sys.mjs",
   ReaderMode: "moz-src:///toolkit/components/reader/ReaderMode.sys.mjs",
@@ -4655,20 +4654,9 @@ ${
       return;
     }
 
-    Glean.urlbarAutofill.inputContextMenuDismissal[action].add(1);
-
-    let { url } = result.payload;
-    if (action === "forget") {
-      await lazy.PlacesUtils.history.remove(url).catch(console.error);
-    } else {
-      let blockUntilMs =
-        Date.now() + UrlbarPrefs.get("autoFill.dismissalBlockDurationMs");
-      await lazy.UrlbarUtils.blockAutofill(url, blockUntilMs).catch(
-        console.error
-      );
-    }
-
-    lazy.UrlbarUtils.clearAutofillBackspaceEntryForUrl(url);
+    await this.controller
+      .dismissAutofill(result.payload.url, action)
+      .catch(console.error);
 
     this.setValue(this._lastSearchString);
     this.startQuery({
