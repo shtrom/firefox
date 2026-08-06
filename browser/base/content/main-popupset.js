@@ -226,8 +226,12 @@ document.addEventListener(
           break;
         case "open-tab-group-context-menu_delete":
           {
-            let tabGroupId = getContextTabGroupId(event.target.parentElement);
+            let popup = event.target.parentElement;
+            let tabGroupId = getContextTabGroupId(popup);
             let tabGroup = gBrowser.getTabGroupById(tabGroupId);
+            // Unlike the other actions in this menu, deleting the group
+            // doesn't dismiss the containing panel on its own.
+            popup.triggerNode?.closest("panel")?.hidePopup();
             // Tabs need to be removed by their owning `Tabbrowser` or else
             // there are errors.
             tabGroup.documentGlobal.gBrowser.removeTabGroup(tabGroup, {
@@ -264,7 +268,9 @@ document.addEventListener(
           break;
         case "saved-tab-group-context-menu_delete":
           {
-            let tabGroupId = getContextTabGroupId(event.target.parentElement);
+            let popup = event.target.parentElement;
+            let tabGroupId = getContextTabGroupId(popup);
+            popup.triggerNode?.closest("panel")?.hidePopup();
             SessionStore.forgetSavedTabGroup(tabGroupId);
           }
           break;

@@ -455,10 +455,14 @@ add_task(async function test_contextMenuDeleteFromRowLabel() {
     openContextMenu,
     "hidden"
   );
+  let panelHidden = BrowserTestUtils.waitForPopupEvent(
+    subView.closest("panel"),
+    "hidden"
+  );
   openContextMenu.activateItem(
     document.getElementById("open-tab-group-context-menu_delete")
   );
-  await menuHidden;
+  await Promise.all([menuHidden, panelHidden]);
   await TestUtils.waitForCondition(
     () => !gBrowser.getTabGroupById(openGroup.id),
     "open tab group was deleted"
@@ -467,6 +471,8 @@ add_task(async function test_contextMenuDeleteFromRowLabel() {
     !gBrowser.getTabGroupById(openGroup.id),
     "open tab group was deleted from the context menu"
   );
+
+  subView = await openTabGroupsSubView();
   let savedLabel = subView.querySelector(
     ".tab-group-row[data-saved] .tab-group-row-label"
   );
@@ -481,10 +487,14 @@ add_task(async function test_contextMenuDeleteFromRowLabel() {
   );
   await menuShown;
   menuHidden = BrowserTestUtils.waitForPopupEvent(savedContextMenu, "hidden");
+  panelHidden = BrowserTestUtils.waitForPopupEvent(
+    subView.closest("panel"),
+    "hidden"
+  );
   savedContextMenu.activateItem(
     document.getElementById("saved-tab-group-context-menu_delete")
   );
-  await menuHidden;
+  await Promise.all([menuHidden, panelHidden]);
   await TestUtils.waitForCondition(
     () => !SessionStore.savedGroups.some(group => group.id == savedGroupId),
     "saved tab group was forgotten"
@@ -493,6 +503,6 @@ add_task(async function test_contextMenuDeleteFromRowLabel() {
     !SessionStore.savedGroups.some(group => group.id == savedGroupId),
     "saved tab group was forgotten from the context menu"
   );
-  await closeAppMenu();
+
   TabGroupTestUtils.forgetSavedTabGroups();
 });
