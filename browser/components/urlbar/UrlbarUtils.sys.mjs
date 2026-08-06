@@ -1285,7 +1285,7 @@ export var UrlbarUtils = {
    * Add the search to form history.  This also updates any existing form
    * history for the search.
    *
-   * @param {UrlbarInput} input The UrlbarInput object requesting the addition.
+   * @param {UrlbarInput|SmartbarInput} input The UrlbarInput object requesting the addition.
    * @param {string} value The value to add.
    * @param {string} [source] The source of the addition, usually
    *        the name of the engine the search was made with.

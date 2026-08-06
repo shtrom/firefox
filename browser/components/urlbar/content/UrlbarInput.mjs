@@ -2648,6 +2648,11 @@ ${
     this._lastSearchString = trimmedValue;
     if (trimmedValue) {
       this._recordSearch(searchEngine.id, event, {}, where.startsWith("tab"));
+      lazy.UrlbarUtils.addToFormHistory(
+        this,
+        trimmedValue,
+        searchEngine.name
+      ).catch(console.error);
 
       if (where == "current") {
         // Enter search mode so:
