@@ -312,6 +312,7 @@ ${
   _applyingAutofill = false;
   _resultForCurrentValue = null;
   _untrimmedValue = "";
+  _wwwIsTrimmed = false;
   _enableAutofillPlaceholder = true;
 
   constructor() {
@@ -1187,7 +1188,8 @@ ${
       start: this.value ? this.selectionStart : 0,
       end: this.value ? this.selectionEnd : Number.MAX_SAFE_INTEGER,
       // When restoring a URI from an empty value, we don't want to untrim it.
-      shouldUntrim: this.value && !this._protocolIsTrimmed,
+      shouldUntrim:
+        this.value && !this._protocolIsTrimmed && !this._wwwIsTrimmed,
     };
   }
 
@@ -1318,11 +1320,12 @@ ${
     }
 
     const previousUntrimmedValue = this.untrimmedValue;
-    // When calculating the selection indices we must take into account a
-    // trimmed protocol.
-    let offset = this._protocolIsTrimmed
-      ? lazy.BrowserUIUtils.trimURLProtocol.length
-      : 0;
+    // When calculating the selection indices we must take into account any
+    // trimmed prefix (protocol and potentially "www.").
+    let offset =
+      (this._protocolIsTrimmed
+        ? lazy.BrowserUIUtils.trimURLProtocol.length
+        : 0) + (this._wwwIsTrimmed ? "www.".length : 0);
     const previousSelectionStart = this.selectionStart + offset;
     const previousSelectionEnd = this.selectionEnd + offset;
 
@@ -4272,12 +4275,21 @@ ${
     }
     this._untrimmedValue = untrimmedValue ?? val;
     this._protocolIsTrimmed = false;
+    this._wwwIsTrimmed = false;
     if (allowTrim) {
       let oldVal = val;
       val = this._trimValue(val);
-      this._protocolIsTrimmed =
-        oldVal.startsWith(lazy.BrowserUIUtils.trimURLProtocol) &&
-        !val.startsWith(lazy.BrowserUIUtils.trimURLProtocol);
+      // Derive what was trimmed from the authoritative prefix logic (a "www."
+      // is only ever stripped together with the protocol). _trimValue may
+      // decline to trim (e.g. RTL or mixed-content values), so also confirm the
+      // prefix was actually removed from the displayed value.
+      let trimmedPrefix = lazy.BrowserUIUtils.getTrimmedURLPrefix(oldVal);
+      if (trimmedPrefix && !val.startsWith(trimmedPrefix)) {
+        this._protocolIsTrimmed = trimmedPrefix.startsWith(
+          lazy.BrowserUIUtils.trimURLProtocol
+        );
+        this._wwwIsTrimmed = trimmedPrefix.endsWith("www.");
+      }
     }
 
     this.valueIsTyped = valueIsTyped;
@@ -4584,7 +4596,7 @@ ${
     if (
       this.selectionStart > 0 ||
       selectedVal == "" ||
-      (this.valueIsTyped && !this._protocolIsTrimmed)
+      (this.valueIsTyped && !this._protocolIsTrimmed && !this._wwwIsTrimmed)
     ) {
       return selectedVal;
     }
@@ -4643,13 +4655,11 @@ ${
     // Just the beginning of the URL is selected, or we want a decoded
     // url. First check for a trimmed value.
 
-    if (
-      !selectedVal.startsWith(lazy.BrowserUIUtils.trimURLProtocol) &&
-      // Note _trimValue may also trim a trailing slash, thus we can't just do
-      // a straight string compare to tell if the protocol was trimmed.
-      !displaySpec.startsWith(this._trimValue(displaySpec))
-    ) {
-      selectedVal = lazy.BrowserUIUtils.trimURLProtocol + selectedVal;
+    // _trimValue may also trim a trailing slash, so we can't compare strings
+    // directly to tell what was trimmed; consult the trimmed prefix instead.
+    let trimmedPrefix = lazy.BrowserUIUtils.getTrimmedURLPrefix(displaySpec);
+    if (trimmedPrefix && !selectedVal.startsWith(trimmedPrefix)) {
+      selectedVal = trimmedPrefix + selectedVal;
     }
 
     // If selection starts from the beginning and part or all of the URL
@@ -5209,7 +5219,7 @@ ${
       !lazy.UrlbarPrefs.getScotchBonnetPref(
         "untrimOnUserInteraction.featureGate"
       ) ||
-      !this._protocolIsTrimmed ||
+      (!this._protocolIsTrimmed && !this._wwwIsTrimmed) ||
       !this.focused ||
       (!ignoreSelection && this.#allTextSelected)
     ) {
@@ -5219,8 +5229,12 @@ ${
     let selectionStart = this.selectionStart;
     let selectionEnd = this.selectionEnd;
 
-    // Correct the selection taking the trimmed protocol into account.
-    let offset = lazy.BrowserUIUtils.trimURLProtocol.length;
+    // Correct the selection taking the trimmed prefix (protocol and
+    // leading "www.") into account.
+    let offset =
+      (this._protocolIsTrimmed
+        ? lazy.BrowserUIUtils.trimURLProtocol.length
+        : 0) + (this._wwwIsTrimmed ? "www.".length : 0);
 
     // In case of autofill, we may have to adjust its boundaries.
     if (this._autofillPlaceholder) {
@@ -6141,26 +6155,30 @@ ${
     // This is necessary when a protocol was typed, but the whole url has
     // invalid parts, like the origin, then editing and confirming the trimmed
     // value would execute a search instead of visiting the typed url.
-    if (this._protocolIsTrimmed) {
-      let untrim = false;
-      let fixedDisplaySpec = this.controller.getFixupInfo(
-        this.value
-      )?.preferredURIDisplaySpec;
-      if (fixedDisplaySpec) {
-        let expectedDisplaySpec = this.controller.getDisplaySpec(
-          this._untrimmedValue
-        );
-        if (expectedDisplaySpec == null) {
-          untrim = true;
-        } else if (
-          lazy.UrlbarPrefs.getScotchBonnetPref("trimHttps") &&
-          this._untrimmedValue.startsWith("https://")
-        ) {
-          untrim =
-            fixedDisplaySpec.replace("http://", "https://") !=
-            expectedDisplaySpec; // FIXME bug 1847723: Figure out a way to do this without manually messing with the fixed up URI.
-        } else {
-          untrim = fixedDisplaySpec != expectedDisplaySpec;
+    // When "www." was trimmed we always untrim, so the user sees the full URL
+    // and has to explicitly remove the prefix to load the bare domain.
+    if (this._protocolIsTrimmed || this._wwwIsTrimmed) {
+      let untrim = this._wwwIsTrimmed;
+      if (!untrim) {
+        let fixedDisplaySpec = this.controller.getFixupInfo(
+          this.value
+        )?.preferredURIDisplaySpec;
+        if (fixedDisplaySpec) {
+          let expectedDisplaySpec = this.controller.getDisplaySpec(
+            this._untrimmedValue
+          );
+          if (expectedDisplaySpec == null) {
+            untrim = true;
+          } else if (
+            lazy.UrlbarPrefs.getScotchBonnetPref("trimHttps") &&
+            this._untrimmedValue.startsWith("https://")
+          ) {
+            untrim =
+              fixedDisplaySpec.replace("http://", "https://") !=
+              expectedDisplaySpec; // FIXME bug 1847723: Figure out a way to do this without manually messing with the fixed up URI.
+          } else {
+            untrim = fixedDisplaySpec != expectedDisplaySpec;
+          }
         }
       }
       if (untrim) {
@@ -6310,6 +6328,7 @@ ${
     this.valueIsTyped = true;
     this._untrimmedValue = value;
     this._protocolIsTrimmed = false;
+    this._wwwIsTrimmed = false;
     this._resultForCurrentValue = null;
 
     this.userTypedValue = value;

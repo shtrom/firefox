@@ -667,6 +667,9 @@ const PREF_URLBAR_DEFAULTS = /** @type {PreferenceDefinition[]} */ ([
   // Remove redundant portions from URLs.
   ["trimURLs", true],
 
+  // Remove leading 'www.' from url displayed in the urlbar.
+  ["trimWww", false],
+
   // Enable the updated design combining the privacy and shield icon
   // and panels in the Urlbar.
   ["trustPanel.featureGate", false],

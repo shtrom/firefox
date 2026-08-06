@@ -678,6 +678,7 @@ pref("browser.urlbar.maxCharsForSearchSuggestions", 100);
 
 pref("browser.urlbar.trimURLs", true);
 pref("browser.urlbar.trimHttps", false);
+pref("browser.urlbar.trimWww", false);
 pref("browser.urlbar.untrimOnUserInteraction.featureGate", false);
 
 // If changed to true, copying the entire URL from the location bar will put the
