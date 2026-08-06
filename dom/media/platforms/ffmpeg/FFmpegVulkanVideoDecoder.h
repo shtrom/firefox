@@ -69,10 +69,7 @@ struct FFmpegVulkanVideoDecoder {
   PFN_vkFreeCommandBuffers mFreeCommandBuffers = nullptr;
   PFN_vkBeginCommandBuffer mBeginCommandBuffer = nullptr;
   PFN_vkEndCommandBuffer mEndCommandBuffer = nullptr;
-  // Must use GetDeviceQueue2 with the same flags used at vkCreateDevice
-  // (AVVulkanDeviceContext.queue_flags). GetDeviceQueue is illegal whenever
-  // those flags are non-zero (VUID-vkGetDeviceQueue-flags-01841) — bug 2058347.
-  PFN_vkGetDeviceQueue2 mGetDeviceQueue2 = nullptr;
+  PFN_vkGetDeviceQueue mGetDeviceQueue = nullptr;
   PFN_vkQueueSubmit mQueueSubmit = nullptr;
   PFN_vkCmdPipelineBarrier mCmdPipelineBarrier = nullptr;
   PFN_vkCmdCopyImage mCmdCopyImage = nullptr;
@@ -133,8 +130,7 @@ struct FFmpegVulkanVideoDecoder {
   // a back-pointer into the enclosing FFmpegVideoDecoder object.
   bool InitCtx(VkDevice aDevice, VkPhysicalDevice aPhysDev,
                PFN_vkGetInstanceProcAddr aGetProcAddr, VkInstance aInstance,
-               uint32_t aCopyQueueFamilyIndex,
-               VkDeviceQueueCreateFlags aQueueCreateFlags);
+               uint32_t aCopyQueueFamilyIndex);
   MediaResult InitCopyRingBuffer(uint32_t aWidth, uint32_t aHeight,
                                  AVPixelFormat aSwFormat,
                                  AVBufferRef* aVulkanDevCtx);
