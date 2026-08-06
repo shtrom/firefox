@@ -46,7 +46,7 @@ class ApiLintPlugin : Plugin<Project> {
                 // The generated API files used to live in the variant's javac output directory.
                 // The new variant API does not expose that directory at configuration time, so we
                 // write them to a dedicated, variant-scoped directory instead.
-                val outputDir = project.layout.buildDirectory.dir("apilint/${variantName}")
+                val outputDir = project.layout.buildDirectory.dir("apilint/$variantName")
                 val apiFileProvider = outputDir.flatMap { dir -> extension.apiOutputFileName.map { dir.file(it) } }
                 val jsonResultFileProvider =
                     outputDir.flatMap { dir -> extension.jsonResultFileName.map { dir.file(it) } }
@@ -59,8 +59,8 @@ class ApiLintPlugin : Plugin<Project> {
                 val javaSources = variant.sources.java ?: return@onVariants
                 val sourceDirs = javaSources.all
 
-                val apiGenerate = project.tasks.register("apiGenerate${name}", ApiCompatLintTask::class.java) {
-                    description = "Generates API file for build variant ${name}"
+                val apiGenerate = project.tasks.register("apiGenerate$name", ApiCompatLintTask::class.java) {
+                    description = "Generates API file for build variant $name"
                     dependsOn(copyDocletJarResource)
 
                     setSource(sourceDirs)
@@ -74,13 +74,13 @@ class ApiLintPlugin : Plugin<Project> {
                     apiMapFile.set(apiMapFileProvider)
                     packageFilter.set(extension.packageFilter)
                     skipClassesRegex.set(extension.skipClassesRegex)
-                    javadocDestinationDir.set(project.layout.buildDirectory.dir("tmp/javadoc/${variantName}"))
+                    javadocDestinationDir.set(project.layout.buildDirectory.dir("tmp/javadoc/$variantName"))
                     docletPath.set(docletJarFile)
                 }
                 apiGenerateTasks[variantName] = apiGenerate
 
-                val apiLintSingle = project.tasks.register("apiLintSingle${name}", PythonExec::class.java) {
-                    description = "Runs API lint checks for variant ${name}"
+                val apiLintSingle = project.tasks.register("apiLintSingle$name", PythonExec::class.java) {
+                    description = "Runs API lint checks for variant $name"
                     dependsOn(apiGenerate)
                     scriptPath.set("apilint.py")
 
@@ -118,7 +118,7 @@ class ApiLintPlugin : Plugin<Project> {
                     }
                 }
 
-                val apiDiff = project.tasks.register("apiDiff${name}", PythonExec::class.java) {
+                val apiDiff = project.tasks.register("apiDiff$name", PythonExec::class.java) {
                     description = "Prints the diff between the existing API and the local API."
                     group = "Verification"
                     dependsOn(apiGenerate)
@@ -138,8 +138,8 @@ class ApiLintPlugin : Plugin<Project> {
                     }
                 }
 
-                val apiCompatLint = project.tasks.register("apiCompatLint${name}", PythonExec::class.java) {
-                    description = "Runs API compatibility lint checks for variant ${name}"
+                val apiCompatLint = project.tasks.register("apiCompatLint$name", PythonExec::class.java) {
+                    description = "Runs API compatibility lint checks for variant $name"
                     scriptPath.set("apilint.py")
 
                     inputs.file(apiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
@@ -169,7 +169,7 @@ class ApiLintPlugin : Plugin<Project> {
 
                 val lintDependency = if (extension.changelogFileName.isPresent) {
                     val changelogFileProvider = project.layout.projectDirectory.file(extension.changelogFileName)
-                    project.tasks.register("apiChangelogCheck${name}", PythonExec::class.java) {
+                    project.tasks.register("apiChangelogCheck$name", PythonExec::class.java) {
                         description = "Checks that the API changelog has been updated."
                         group = "Verification"
                         scriptPath.set("changelog-check.py")
@@ -192,8 +192,8 @@ class ApiLintPlugin : Plugin<Project> {
                     apiCompatLint
                 }
 
-                val apiLint = project.tasks.register("apiLint${name}") {
-                    description = "Runs API lint checks for variant ${name}"
+                val apiLint = project.tasks.register("apiLint$name") {
+                    description = "Runs API lint checks for variant $name"
                     group = "Verification"
                     dependsOn(lintDependency)
                 }
@@ -202,8 +202,8 @@ class ApiLintPlugin : Plugin<Project> {
                     dependsOn(apiLint)
                 }
 
-                project.tasks.register("apiUpdateFile${name}", Copy::class.java) {
-                    description = "Updates the API file from the local one for variant ${name}"
+                project.tasks.register("apiUpdateFile$name", Copy::class.java) {
+                    description = "Updates the API file from the local one for variant $name"
                     group = "Verification"
                     dependsOn(apiGenerate)
                     from(apiFileProvider)

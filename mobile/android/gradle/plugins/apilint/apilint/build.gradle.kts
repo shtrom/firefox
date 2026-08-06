@@ -4,6 +4,18 @@
 
 plugins {
     `kotlin-dsl`
+    alias(libs.plugins.spotless)
+}
+
+val mozconfig = gradle.extra["mozconfig"] as Map<*, *>
+val topsrcdir = mozconfig["topsrcdir"] as String
+
+spotless {
+    lineEndings = com.diffplug.spotless.LineEnding.UNIX
+    kotlin {
+        ktlint(libs.versions.ktlint.get())
+            .setEditorConfigPath("$topsrcdir/mobile/android/geckoview/.editorconfig")
+    }
 }
 
 sourceSets {
@@ -50,6 +62,7 @@ tasks.register<Exec>("integrationTestApiLint") {
 tasks.named<Test>("test") {
     useJUnitPlatform()
 
+    dependsOn("spotlessCheck")
     dependsOn("unittestApiLint")
     dependsOn("testApiLint")
     dependsOn("testChangelogCheck")
