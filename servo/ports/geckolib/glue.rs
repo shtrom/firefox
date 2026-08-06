@@ -156,6 +156,7 @@ use style::values::generics::Optional;
 use style::values::resolved;
 use style::values::resolved::ToResolvedValue;
 use style::values::specified::align::AlignFlags;
+use style::values::specified::calc::{CalcNodeParseInPlaceOperations, PercentageContext};
 use style::values::specified::intersection_observer::IntersectionObserverMargin;
 use style::values::specified::position::PositionTryFallbacksItem;
 use style::values::specified::source_size_list::SourceSizeList;
@@ -11512,7 +11513,7 @@ pub unsafe extern "C" fn Servo_GetComputationSteps(
     raw_data: &PerDocumentStyleData,
     out: &mut nsTArray<nsString>,
 ) {
-    use style::values::generics::calc::{CalcUnits, SimplificationResult};
+    use style::values::generics::calc::SimplificationResult;
     use style::values::specified::calc::{CalcNode, CalcParseFlags, Leaf};
 
     let parser_context = ParserContext::new(
@@ -11552,8 +11553,11 @@ pub unsafe extern "C" fn Servo_GetComputationSteps(
         },
     };
 
-    let mut flags = CalcParseFlags::new(CalcUnits::ALL);
-    flags = flags.new_without_in_place_operations();
+    let flags = CalcParseFlags {
+        percentage_context: PercentageContext::allowed(),
+        in_place_operations: CalcNodeParseInPlaceOperations::No,
+        ..Default::default()
+    };
     // Initial parsing
     let mut node = match CalcNode::parse(&parser_context, &mut parser, math_func, flags) {
         Ok(n) => n,
