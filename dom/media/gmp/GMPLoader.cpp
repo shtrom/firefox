@@ -69,7 +69,7 @@ class PassThroughGMPAdapter : public GMPAdapter {
       if (shutdownFunc) {
         shutdownFunc();
       }
-      PR_UnloadLibrary(mLib);
+      // Let process teardown handle the unload.
       mLib = nullptr;
     }
   }
