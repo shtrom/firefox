@@ -23464,6 +23464,10 @@ function Stocks_Stocks({
   // default can apply.
   const widgetSize = resolveWidgetSize(STOCKS_ENTRY, prefs);
   const showError = error && !tickers.length;
+
+  // Show the "New" badge until the user first interacts with the widget;
+  // handleInteraction flips widgets.stocks.interaction, which removes it.
+  const hasInteracted = prefs["widgets.stocks.interaction"];
   const {
     impressionRef,
     recordUserAction,
@@ -23516,10 +23520,15 @@ function Stocks_Stocks({
     ref: impressionRef
   }, /*#__PURE__*/external_React_default().createElement("div", {
     className: "stocks-title-wrapper"
-  }, /*#__PURE__*/external_React_default().createElement("span", {
+  }, /*#__PURE__*/external_React_default().createElement("div", {
+    className: "stocks-badge-title-wrapper"
+  }, !hasInteracted && !!tickers.length && /*#__PURE__*/external_React_default().createElement("moz-badge", {
+    className: "stocks-new-badge",
+    "data-l10n-id": "newtab-widget-lists-label-new"
+  }), /*#__PURE__*/external_React_default().createElement("span", {
     className: "stocks-title",
     "data-l10n-id": "newtab-stocks-widget-title"
-  }), /*#__PURE__*/external_React_default().createElement("div", {
+  })), /*#__PURE__*/external_React_default().createElement("div", {
     className: "stocks-context-menu-wrapper"
   }, /*#__PURE__*/external_React_default().createElement("moz-button", {
     className: "stocks-context-menu-button",

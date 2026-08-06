@@ -30,6 +30,10 @@ function Stocks({
   const widgetSize = resolveWidgetSize(STOCKS_ENTRY, prefs);
   const showError = error && !tickers.length;
 
+  // Show the "New" badge until the user first interacts with the widget;
+  // handleInteraction flips widgets.stocks.interaction, which removes it.
+  const hasInteracted = prefs["widgets.stocks.interaction"];
+
   const { impressionRef, recordUserAction, recordError } = useWidgetTelemetry({
     dispatch,
     widget: STOCKS_ENTRY,
@@ -82,10 +86,18 @@ function Stocks({
       ref={impressionRef}
     >
       <div className="stocks-title-wrapper">
-        <span
-          className="stocks-title"
-          data-l10n-id="newtab-stocks-widget-title"
-        ></span>
+        <div className="stocks-badge-title-wrapper">
+          {!hasInteracted && !!tickers.length && (
+            <moz-badge
+              className="stocks-new-badge"
+              data-l10n-id="newtab-widget-lists-label-new"
+            ></moz-badge>
+          )}
+          <span
+            className="stocks-title"
+            data-l10n-id="newtab-stocks-widget-title"
+          ></span>
+        </div>
         <div className="stocks-context-menu-wrapper">
           <moz-button
             className="stocks-context-menu-button"

@@ -10367,7 +10367,30 @@ dialog:dir(rtl)::after {
   display: flex;
   justify-content: space-between;
 }
+.stocks-title-wrapper .stocks-badge-title-wrapper {
+  align-items: center;
+  display: flex;
+  gap: var(--space-small);
+  min-inline-size: 0;
+}
 
+.stocks-new-badge {
+  flex: none;
+  background-color: var(--badge-background-color-filled);
+  border-radius: var(--badge-border-radius);
+  text-transform: uppercase;
+  --badge-padding-block: 1px;
+  --badge-padding-inline: var(--space-small);
+  --badge-background-color-filled: var(--color-green-40);
+  --badge-text-color: var(--badge-text-color-filled);
+  --badge-border-color: transparent;
+}
+
+@media (forced-colors: active) {
+  .stocks-new-badge {
+    --badge-background-color-filled: AccentColor;
+  }
+}
 .stocks-title {
   color: var(--text-color-deemphasized);
   font-size: var(--font-size-small);

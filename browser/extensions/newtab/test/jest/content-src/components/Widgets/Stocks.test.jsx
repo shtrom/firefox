@@ -552,3 +552,97 @@ describe("Stocks impression telemetry", () => {
     );
   });
 });
+
+describe("Stocks new badge", () => {
+  const SAMPLE_TICKER = [
+    {
+      ticker: "SPY",
+      name: "SPDR S&P 500 ETF Trust",
+      last_price: "$559.44 USD",
+      todays_change_perc: "+0.2",
+    },
+  ];
+
+  function renderStocksBadge({
+    tickers = SAMPLE_TICKER,
+    hasInteracted = false,
+  } = {}) {
+    const state = {
+      ...mockState,
+      Prefs: {
+        ...mockState.Prefs,
+        values: {
+          ...mockState.Prefs.values,
+          "widgets.stocks.interaction": hasInteracted,
+        },
+      },
+      Stocks: { tickers, lastUpdated: 1, error: false },
+    };
+    return render(
+      <WrapWithProvider state={state}>
+        <Stocks
+          dispatch={jest.fn()}
+          handleUserInteraction={jest.fn()}
+          widgetsMayBeMaximized={true}
+          widgetEnabledMap={{}}
+        />
+      </WrapWithProvider>
+    );
+  }
+
+  it("shows the New badge when tickers are present and the user has not interacted", () => {
+    const { container } = renderStocksBadge();
+    const badge = container.querySelector(".stocks-new-badge");
+    expect(badge).toBeTruthy();
+    expect(badge.getAttribute("data-l10n-id")).toBe(
+      "newtab-widget-lists-label-new"
+    );
+  });
+
+  it("hides the New badge once the interaction pref is set", () => {
+    const { container } = renderStocksBadge({ hasInteracted: true });
+    expect(container.querySelector(".stocks-new-badge")).toBeNull();
+  });
+
+  it("hides the New badge while there are no tickers (loading)", () => {
+    const { container } = renderStocksBadge({ tickers: [] });
+    expect(container.querySelector(".stocks-new-badge")).toBeNull();
+  });
+
+  it("hides the New badge in the error state", () => {
+    const state = {
+      Stocks: { tickers: [], lastUpdated: null, error: true },
+      Prefs: { values: { "widgets.stocks.size": "medium" } },
+    };
+    const { container } = render(
+      <WrapWithProvider state={state}>
+        <Stocks
+          dispatch={jest.fn()}
+          handleUserInteraction={jest.fn()}
+          widgetsMayBeMaximized={true}
+          widgetEnabledMap={{}}
+        />
+      </WrapWithProvider>
+    );
+    expect(container.querySelector(".stocks-new-badge")).toBeNull();
+  });
+
+  it("shows the New badge with stale tickers even when error is set", () => {
+    const state = {
+      ...mockState,
+      Stocks: { tickers: SAMPLE_TICKER, lastUpdated: 1, error: true },
+    };
+    const { container } = render(
+      <WrapWithProvider state={state}>
+        <Stocks
+          dispatch={jest.fn()}
+          handleUserInteraction={jest.fn()}
+          widgetsMayBeMaximized={true}
+          widgetEnabledMap={{}}
+        />
+      </WrapWithProvider>
+    );
+    // The badge follows ticker presence, not the error flag.
+    expect(container.querySelector(".stocks-new-badge")).toBeTruthy();
+  });
+});
