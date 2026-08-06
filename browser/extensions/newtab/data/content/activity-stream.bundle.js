@@ -23396,13 +23396,11 @@ function StockTicker({
 
 
 
-
 // The Stocks widget's error box. It only mounts while there's an error, so the
-// intersection observer set up on mount reports WIDGETS_ERROR the first time the
-// message is actually on screen.
+// intersection observer set up on mount reports the load error the first time
+// the message is actually on screen.
 function StocksError({
-  widgetSize,
-  dispatch
+  recordError
 }) {
   const errorFired = (0,external_React_namespaceObject.useRef)(false);
   const handleErrorIntersection = (0,external_React_namespaceObject.useCallback)(() => {
@@ -23410,17 +23408,8 @@ function StocksError({
       return;
     }
     errorFired.current = true;
-    // Fire from content so the event ties to this tab's session, matching the
-    // other widgets' error telemetry.
-    dispatch(actionCreators.AlsoToMain({
-      type: actionTypes.WIDGETS_ERROR,
-      data: {
-        widget_name: "stocks",
-        widget_size: widgetSize,
-        error_type: "load_error"
-      }
-    }));
-  }, [dispatch, widgetSize]);
+    recordError("load_error");
+  }, [recordError]);
   const errorRef = useIntersectionObserver(handleErrorIntersection);
   return (
     /*#__PURE__*/
@@ -23457,11 +23446,6 @@ function StocksError({
 
 
 
-const Stocks_USER_ACTION_TYPES = {
-  CHANGE_SIZE: "change_size",
-  SEARCH_TICKERS: "search_tickers",
-  LEARN_MORE: "learn_more"
-};
 const STOCKS_ENTRY = WIDGET_REGISTRY.find(w => w.id === "stocks");
 const STOCKS_PLACEHOLDER_COUNT = 4;
 function Stocks_Stocks({
@@ -23480,25 +23464,19 @@ function Stocks_Stocks({
   // default can apply.
   const widgetSize = resolveWidgetSize(STOCKS_ENTRY, prefs);
   const showError = error && !tickers.length;
-  const impressionFired = (0,external_React_namespaceObject.useRef)(false);
+  const {
+    impressionRef,
+    recordUserAction,
+    recordError
+  } = useWidgetTelemetry({
+    dispatch,
+    widget: STOCKS_ENTRY,
+    widgetSize
+  });
 
   // Any user action flips widgets.stocks.interaction (idempotent, one-way),
   // matching the other widgets. Hiding the widget is not an interaction.
   const handleInteraction = (0,external_React_namespaceObject.useCallback)(() => handleUserInteraction("stocks"), [handleUserInteraction]);
-  const handleIntersection = (0,external_React_namespaceObject.useCallback)(() => {
-    if (impressionFired.current) {
-      return;
-    }
-    impressionFired.current = true;
-    dispatch(actionCreators.AlsoToMain({
-      type: actionTypes.WIDGETS_IMPRESSION,
-      data: {
-        widget_name: "stocks",
-        widget_size: widgetSize
-      }
-    }));
-  }, [dispatch, widgetSize]);
-  const widgetRef = useIntersectionObserver(handleIntersection);
   const handleChangeSize = (0,external_React_namespaceObject.useCallback)(size => {
     (0,external_ReactRedux_namespaceObject.batch)(() => {
       dispatch(actionCreators.OnlyToMain({
@@ -23508,53 +23486,34 @@ function Stocks_Stocks({
           value: size
         }
       }));
-      dispatch(actionCreators.OnlyToMain({
-        type: actionTypes.WIDGETS_USER_EVENT,
-        data: {
-          widget_name: "stocks",
-          widget_source: "context_menu",
-          user_action: Stocks_USER_ACTION_TYPES.CHANGE_SIZE,
-          action_value: size,
-          widget_size: size
-        }
-      }));
+      recordUserAction("change_size", {
+        source: "context_menu",
+        value: size,
+        size
+      });
       handleInteraction();
     });
-  }, [dispatch, handleInteraction]);
+  }, [dispatch, recordUserAction, handleInteraction]);
 
   // Placeholder: a real ticker search will replace this telemetry-only stub in
   // a follow-up.
   function handleSearchTickers() {
-    dispatch(actionCreators.OnlyToMain({
-      type: actionTypes.WIDGETS_USER_EVENT,
-      data: {
-        widget_name: "stocks",
-        widget_source: "context_menu",
-        user_action: Stocks_USER_ACTION_TYPES.SEARCH_TICKERS,
-        widget_size: widgetSize
-      }
-    }));
+    recordUserAction("search_tickers", {
+      source: "context_menu"
+    });
     handleInteraction();
   }
 
   // The shared footer opens the support link; here we only record the click.
   function handleLearnMore() {
-    dispatch(actionCreators.OnlyToMain({
-      type: actionTypes.WIDGETS_USER_EVENT,
-      data: {
-        widget_name: "stocks",
-        widget_source: "context_menu",
-        user_action: Stocks_USER_ACTION_TYPES.LEARN_MORE,
-        widget_size: widgetSize
-      }
-    }));
+    recordUserAction("learn_more", {
+      source: "context_menu"
+    });
     handleInteraction();
   }
   return /*#__PURE__*/external_React_default().createElement("article", {
     className: `stocks widget col-4 ${widgetSize}-widget`,
-    ref: el => {
-      widgetRef.current = [el];
-    }
+    ref: impressionRef
   }, /*#__PURE__*/external_React_default().createElement("div", {
     className: "stocks-title-wrapper"
   }, /*#__PURE__*/external_React_default().createElement("span", {
@@ -23592,8 +23551,7 @@ function Stocks_Stocks({
   })))), /*#__PURE__*/external_React_default().createElement("div", {
     className: "stocks-body"
   }, showError && /*#__PURE__*/external_React_default().createElement(StocksError, {
-    widgetSize: widgetSize,
-    dispatch: dispatch
+    recordError: recordError
   }), !showError && widgetSize === "medium" && /*#__PURE__*/external_React_default().createElement("ul", {
     className: `stocks-grid${tickers.length ? "" : " stocks-grid--loading"}`
   }, tickers.length ? tickers.map(t => /*#__PURE__*/external_React_default().createElement(StockTicker, {

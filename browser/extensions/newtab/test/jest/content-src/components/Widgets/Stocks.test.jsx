@@ -105,6 +105,35 @@ describe("Stocks widget", () => {
         action.data?.user_action === "search_tickers"
     );
     expect(evt).toBeTruthy();
+    expect(evt[0].data).toMatchObject({
+      widget_name: "stocks",
+      widget_source: "context_menu",
+      widget_size: "medium",
+    });
+    expect(evt[0].data.action_value).toBeUndefined();
+  });
+
+  it("records the change_size user event with the new size", () => {
+    const dispatch = jest.fn();
+    const { container } = renderStocks(dispatch);
+    fireEvent.click(
+      container.querySelector(
+        '#stocks-size-submenu panel-item[data-size="large"]'
+      )
+    );
+    const evt = dispatch.mock.calls.find(
+      ([action]) =>
+        action.type === at.WIDGETS_USER_EVENT &&
+        action.data?.user_action === "change_size"
+    );
+    expect(evt).toBeTruthy();
+    expect(evt[0].data).toMatchObject({
+      widget_name: "stocks",
+      widget_source: "context_menu",
+      user_action: "change_size",
+      action_value: "large",
+      widget_size: "large",
+    });
   });
 
   describe("interaction pref", () => {
@@ -429,5 +458,97 @@ describe("Stocks error telemetry across a size change", () => {
       ([action]) => action.type === at.WIDGETS_ERROR
     );
     expect(errorCalls).toHaveLength(1);
+  });
+
+  it("records the error with the current size after a resize", () => {
+    const dispatch = jest.fn();
+    const store = createStore(combineReducers(reducers), {
+      ...mockState,
+      Stocks: { tickers: [], lastUpdated: null, error: true },
+      Prefs: {
+        ...mockState.Prefs,
+        values: { ...mockState.Prefs.values, "widgets.stocks.size": "medium" },
+      },
+    });
+    render(
+      <Provider store={store}>
+        <Stocks
+          dispatch={dispatch}
+          widgetsMayBeMaximized={true}
+          widgetEnabledMap={{}}
+        />
+      </Provider>
+    );
+
+    // Change to large before the error box is ever seen, so the first
+    // intersection reports the error at the new size.
+    act(() => {
+      store.dispatch({
+        type: at.PREF_CHANGED,
+        data: { name: "widgets.stocks.size", value: "large" },
+      });
+    });
+    fireAllIntersections();
+
+    const errorCalls = dispatch.mock.calls.filter(
+      ([action]) => action.type === at.WIDGETS_ERROR
+    );
+    expect(errorCalls).toHaveLength(1);
+    expect(errorCalls[0][0].data).toMatchObject({
+      widget_name: "stocks",
+      error_type: "load_error",
+      widget_size: "large",
+    });
+    expect(errorCalls[0][0].meta).toEqual(
+      expect.objectContaining({ to: "ActivityStream:Main" })
+    );
+  });
+});
+
+describe("Stocks impression telemetry", () => {
+  let originalIntersectionObserver;
+  let observerInstances;
+
+  beforeEach(() => {
+    observerInstances = [];
+    originalIntersectionObserver = global.IntersectionObserver;
+    global.IntersectionObserver = class MockIntersectionObserver {
+      constructor(callback) {
+        this.callback = callback;
+        this.observed = [];
+        observerInstances.push(this);
+      }
+      observe(el) {
+        this.observed.push(el);
+      }
+      unobserve() {}
+      disconnect() {}
+    };
+  });
+
+  afterEach(() => {
+    global.IntersectionObserver = originalIntersectionObserver;
+  });
+
+  it("fires WIDGETS_IMPRESSION once when the widget is seen", () => {
+    const dispatch = jest.fn();
+    renderStocks(dispatch);
+    const [observer] = observerInstances;
+    const [target] = observer.observed;
+
+    observer.callback([{ isIntersecting: true, target }], observer);
+    observer.callback([{ isIntersecting: true, target }], observer);
+
+    const impressions = dispatch.mock.calls.filter(
+      ([action]) => action?.type === at.WIDGETS_IMPRESSION
+    );
+    expect(impressions).toHaveLength(1);
+    expect(impressions[0][0].data).toMatchObject({
+      widget_name: "stocks",
+      widget_size: "medium",
+    });
+    expect(impressions[0][0].meta).toEqual(
+      expect.objectContaining({ to: "ActivityStream:Main" })
+    );
   });
 });
