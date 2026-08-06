@@ -1,0 +1,23 @@
+Snapshots of Pixman for mozilla usage.
+
+We only include the relevant parts of each release (generally, src/*.[ch]), as
+we have moz.build files used by the Mozilla build system. For documentation and
+similar, please see the official tarballs at http://www.cairographics.org/.
+
+VERSIONS:
+
+  pixman (0.46.4)
+
+==== pixman patches ====
+
+pixman-armasm.patch: add an ifdef guard around pixman-config.h include
+
+pixman-export.patch: make sure pixman symbols are not exported in libxul
+
+pixman-interp.patch: use lower quality interpolation by default on mobile
+
+pixman-rename.patch: include pixman-rename.h for renaming of external symbols
+
+pixman-translation-round-in-wide.patch: Round translation distances in 48/16 fixpoint.
+
+pixman-edge-saturate.patch: Saturate when rounding up trapezoid edges

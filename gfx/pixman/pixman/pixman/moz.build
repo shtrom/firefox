@@ -46,7 +46,7 @@ AllowCompilerWarnings()
 
 FINAL_LIBRARY = 'xul'
 LOCAL_INCLUDES += [
-    '../../cairo/src',
+    '../../../cairo/cairo/src',
 ]
 
 if CONFIG['MOZ_USE_PTHREADS']:
