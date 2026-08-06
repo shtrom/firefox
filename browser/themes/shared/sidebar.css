@@ -349,8 +349,10 @@ sidebar-main,
     }
 
     :root[lwtheme] & {
-      border-radius: unset;
-      border-inline: unset;
+      @media not -moz-pref("browser.nova.enabled") {
+        border-radius: unset;
+        border-inline: unset;
+      }
       color: var(--toolbox-text-color);
       background-color: var(--toolbox-background-color);
 
@@ -370,8 +372,10 @@ sidebar-main,
         --chrome-window-gap: 2px;
         margin-block-start: var(--chrome-window-gap);
       }
+      :root:not([lwtheme]) & {
+        background-color: var(--toolbar-background-color);
+      }
       border-radius: var(--chrome-block-radius);
-      background-color: var(--toolbar-background-color);
       position: absolute;
       inset-block-end: var(--chrome-window-gap);
       inset-inline-start: var(--chrome-window-gap);
@@ -380,7 +384,6 @@ sidebar-main,
       &[sidebar-launcher-expanded],
       &[sidebar-ongoing-animations]:not([sidebar-launcher-expanded]) {
         background-image: none;
-        background-color: var(--toolbar-background-color);
 
         &:not([sidebar-positionend]) {
           border-inline-end: 1px solid var(--chrome-content-separator-color);
