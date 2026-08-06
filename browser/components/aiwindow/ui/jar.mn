@@ -98,6 +98,8 @@ browser.jar:
   content/browser/aiwindow/components/smartwindow-history-menu.css  (components/smartwindow-history-menu/smartwindow-history-menu.css)
   content/browser/aiwindow/components/ai-action-result.mjs          (components/ai-action-result/ai-action-result.mjs)
   content/browser/aiwindow/components/ai-action-result.css          (components/ai-action-result/ai-action-result.css)
+  content/browser/aiwindow/components/ai-action-confirmation.mjs    (components/ai-action-confirmation/ai-action-confirmation.mjs)
+  content/browser/aiwindow/components/ai-action-confirmation.css    (components/ai-action-confirmation/ai-action-confirmation.css)
   content/browser/aiwindow/components/agent-monitor-item.mjs        (components/agent-monitor-item/agent-monitor-item.mjs)
   content/browser/aiwindow/components/agent-monitor-item.css        (components/agent-monitor-item/agent-monitor-item.css)
   content/browser/aiwindow/components/smartwindow-smartbar-glow.mjs (components/smartwindow-smartbar-glow/smartwindow-smartbar-glow.mjs)
