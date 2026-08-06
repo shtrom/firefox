@@ -4,23 +4,15 @@
 
 /*---
 esid: sec-intl.locale.prototype.getCollations
-description: The return value is an Array
+description: >
+    Checks that the return value of Intl.Locale.prototype.getCollations is an Array.
 info: |
   CollationsOfLocale ( loc )
   ...
-  6. Return CreateArrayFromList(_sorted_).
+  5. Return ! CreateArrayFromListAndPreferred( list, preferred ).
 features: [Intl.Locale,Intl.Locale-info]
-locale: [ar, de, en, ja, ko, sv, tr, zh]
 ---*/
 
-var tags = ["ar", "de", "en", "ja", "ko", "sv", "tr", "zh"];
-
-for (var i = 0; i < tags.length; i++) {
-  var tag = tags[i];
-  assert(
-    Array.isArray(new Intl.Locale(tag).getCollations()),
-    "getCollations() for " + tag + " must return an array"
-  );
-}
+assert(Array.isArray(new Intl.Locale('en').getCollations()));
 
 reportCompare(0, 0);

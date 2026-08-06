@@ -7,7 +7,6 @@ description: |
     Collection of assertion functions used throughout test262
 defines:
   - assert
-  - compareArray
   - formatIdentityFreeValue
   - formatSimpleValue
   - isNegativeZero
@@ -191,7 +190,7 @@ assert._toString = formatSimpleValue;
 /*---
 description: |
     Deprecated now that compareArray is defined in assert.js.
-allow_unused: true
+defines: [compareArray]
 ---*/
 
 // file: propertyHelper.js
