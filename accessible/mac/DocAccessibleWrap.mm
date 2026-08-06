@@ -24,7 +24,7 @@ void DocAccessibleWrap::Shutdown() {
   DocAccessible::Shutdown();
 }
 
-DocAccessibleWrap::~DocAccessibleWrap() = default;
+DocAccessibleWrap::~DocAccessibleWrap() {}
 
 void DocAccessibleWrap::AttributeChanged(dom::Element* aElement,
                                          int32_t aNameSpaceID,

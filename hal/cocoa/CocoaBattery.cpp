@@ -111,7 +111,7 @@ struct SingletonDestroyer final : public nsIObserver {
   NS_DECL_NSIOBSERVER
 
  private:
-  ~SingletonDestroyer() = default;
+  ~SingletonDestroyer() {}
 };
 
 NS_IMPL_ISUPPORTS(SingletonDestroyer, nsIObserver)

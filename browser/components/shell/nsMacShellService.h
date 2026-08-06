@@ -15,7 +15,7 @@ class nsMacShellService : public nsIMacShellService,
                           public nsToolkitShellService,
                           public nsIWebProgressListener {
  public:
-  nsMacShellService() = default;
+  nsMacShellService() {};
 
   NS_DECL_ISUPPORTS
   NS_DECL_NSISHELLSERVICE
@@ -23,7 +23,7 @@ class nsMacShellService : public nsIMacShellService,
   NS_DECL_NSIWEBPROGRESSLISTENER
 
  protected:
-  virtual ~nsMacShellService() = default;
+  virtual ~nsMacShellService() {};
 
  private:
   nsCOMPtr<nsIFile> mBackgroundFile;

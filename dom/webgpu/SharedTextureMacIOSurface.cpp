@@ -51,7 +51,7 @@ SharedTextureMacIOSurface::SharedTextureMacIOSurface(
       mDeviceId(aDeviceId),
       mSurface(std::move(aSurface)) {}
 
-SharedTextureMacIOSurface::~SharedTextureMacIOSurface() = default;
+SharedTextureMacIOSurface::~SharedTextureMacIOSurface() {}
 
 uint32_t SharedTextureMacIOSurface::GetIOSurfaceId() {
   return mSurface->GetIOSurfaceID();

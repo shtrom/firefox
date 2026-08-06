@@ -127,11 +127,13 @@ void DisableSensorNotifications(SensorType aSensor) {
   }
   // If all sensors are disabled, cancel the update timer.
   if (sUpdateTimer) {
-    if (std::all_of(std::begin(sActiveSensors), std::end(sActiveSensors),
-                    [](bool v) { return v; })) {
-      sUpdateTimer->Cancel();
-      NS_RELEASE(sUpdateTimer);
+    for (int i = 0; i < NUM_SENSOR_TYPE; i++) {
+      if (sActiveSensors[i]) {
+        return;
+      }
     }
+    sUpdateTimer->Cancel();
+    NS_RELEASE(sUpdateTimer);
   }
 }
 }  // namespace hal_impl

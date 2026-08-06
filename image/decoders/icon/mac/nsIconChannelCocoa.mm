@@ -34,7 +34,7 @@
 using namespace mozilla;
 
 // nsIconChannel methods
-nsIconChannel::nsIconChannel() = default;
+nsIconChannel::nsIconChannel() {}
 
 nsIconChannel::~nsIconChannel() {
   if (mLoadInfo) {
