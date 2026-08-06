@@ -519,6 +519,12 @@ def run(
         if out:
             fh = open(path, "w", encoding="utf-8") if path else sys.stdout
 
+            if not path:
+                import io
+
+                if isinstance(fh, io.TextIOWrapper):
+                    fh.reconfigure(encoding="utf-8", errors="replace")
+
             print(out, file=fh)
 
             if path:
