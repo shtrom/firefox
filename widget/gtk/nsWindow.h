@@ -541,6 +541,9 @@ class nsWindow : public nsIWidget {
   void ConfigureToplevelWindow();
   virtual void ConfigureToplevelWindowNative() {};
 
+  // Native implementation of OnMap() event for X11/Wayland.
+  virtual void OnMapNative() {};
+
   virtual void EnableVSyncSource() {};
   virtual void DisableVSyncSource() {};
 

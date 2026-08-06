@@ -17,6 +17,7 @@
 #include "gfxXlibSurface.h"
 #include "mozilla/PodOperations.h"
 #include "mozilla/gfx/gfxVars.h"
+#include "mozilla/layers/CompositorBridgeChild.h"
 #include "nsWindow.h"
 
 using namespace mozilla;
@@ -166,18 +167,6 @@ void nsWindowX11::CreateNative() {
 #pragma GCC diagnostic pop
 
   mSurfaceProvider.Initialize(GetX11Window());
-}
-
-void nsWindowX11::ConfigureToplevelWindowNative() {
-  // Set window manager hint to keep fullscreen windows composited.
-  //
-  // If the window were to get unredirected, there could be visible
-  // tearing because Gecko does not align its framebuffer updates with
-  // vblank.
-  //
-  // This must be (re-)applied whenever the shell's X window is created,
-  // including after CSD-triggered re-realize in SetCustomTitlebar().
-  SetCompositorHint(GTK_WIDGET_COMPOSITED_ENABLED);
 }
 
 void nsWindowX11::DestroyNative() { UnlockNativePointer(); }
@@ -368,4 +357,29 @@ void nsWindowX11::NativeShow(bool aAction) {
     }
     gtk_widget_hide(mShell);
   }
+}
+
+void nsWindowX11::OnMapNative() {
+  if (mIsDragPopup) {
+    if (GtkWidget* parent = gtk_widget_get_parent(mShell)) {
+      gtk_widget_set_opacity(parent, 0.0);
+    }
+  }
+
+  if (CompositorBridgeChild* remoteRenderer = GetRemoteRenderer()) {
+    remoteRenderer->SendResume();
+    remoteRenderer->SendForcePresent(wr::RenderReasons::WIDGET);
+  }
+
+  // Set window manager hint to keep fullscreen windows composited.
+  //
+  // If the window were to get unredirected, there could be visible
+  // tearing because Gecko does not align its framebuffer updates with
+  // vblank.
+  //
+  // This must be (re-)applied whenever the shell's X window is created,
+  // including after CSD-triggered re-realize in SetCustomTitlebar().
+  SetCompositorHint(GTK_WIDGET_COMPOSITED_ENABLED);
+
+  XFlush(DefaultXDisplay());
 }
