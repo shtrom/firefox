@@ -1347,6 +1347,8 @@ tab-group > tab-split-view-wrapper {
     }
   }
 
+  /* Small-ish subtree, but probably should be removed */
+  /* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
   &:has(tab:is([muted], [soundplaying], [activemedia-blocked])) {
     min-width: 200px;
   }
