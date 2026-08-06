@@ -198,6 +198,10 @@ class CSSAnimationKeyframeEffect : public KeyframeEffect {
       : KeyframeEffect(aDocument, std::move(aTarget), std::move(aTiming),
                        aOptions) {}
 
+  CSSAnimationKeyframeEffect* AsCSSAnimationKeyframeEffect() override {
+    return this;
+  }
+
   void GetTiming(EffectTiming& aRetVal) const override;
   void GetComputedTimingAsDict(ComputedEffectTiming& aRetVal) const override;
   void UpdateTiming(const OptionalEffectTiming& aTiming,
@@ -205,6 +209,13 @@ class CSSAnimationKeyframeEffect : public KeyframeEffect {
   void SetKeyframes(JSContext* aContext, JS::Handle<JSObject*> aKeyframes,
                     ErrorResult& aRv) override;
   void SetComposite(const CompositeOperation& aComposite) override;
+  void SetDefaultTimingFunction(
+      const StyleComputedTimingFunction& aTimingFunction) {
+    mDefaultTimingFunction = aTimingFunction;
+  }
+  void SetDefaultComposite(const CompositeOperation& aComposite) {
+    mDefaultComposite = aComposite;
+  }
 
  private:
   CSSAnimation* GetOwningCSSAnimation() {
@@ -216,6 +227,20 @@ class CSSAnimationKeyframeEffect : public KeyframeEffect {
 
   // Flushes styles if our owning animation is a CSSAnimation
   void MaybeFlushUnanimatedStyle() const;
+
+  // The default timing function is the corresponding computed value of
+  // animation-timing-function on element.
+  // Note: We shouldn't reuse |mTiming.mFunction| because it has other usages,
+  // e.g. it should still be "linear" when calling getTiming() and computing the
+  // progress.
+  // https://drafts.csswg.org/css-animations-2/#keyframe-processing
+  StyleComputedTimingFunction mDefaultTimingFunction =
+      StyleComputedTimingFunction::Keyword(StyleTimingKeyword::Ease);
+  // The default composite is the corresponding computed value of
+  // animation-composition on element.
+  // Note: We cannot reuse |mEffectOptions.mComposite| which may be updated by
+  // Web Animations. We should always use the animation-composition from style.
+  CompositeOperation mDefaultComposite = CompositeOperation::Replace;
 };
 
 }  // namespace dom

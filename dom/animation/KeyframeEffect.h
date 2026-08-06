@@ -102,6 +102,7 @@ struct AnimationProperty {
 namespace dom {
 
 class Animation;
+class CSSAnimationKeyframeEffect;
 class Document;
 
 class KeyframeEffect : public AnimationEffect {
@@ -120,6 +121,9 @@ class KeyframeEffect : public AnimationEffect {
                                JS::Handle<JSObject*> aGivenProto) override;
 
   KeyframeEffect* AsKeyframeEffect() override { return this; }
+  virtual CSSAnimationKeyframeEffect* AsCSSAnimationKeyframeEffect() {
+    return nullptr;
+  }
 
   bool IsValidTransition() const {
     return Properties().Length() == 1 &&

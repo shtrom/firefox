@@ -181,6 +181,7 @@ static void UpdateOldAnimationPropertiesWithNew(
     CSSAnimationProperties aOverriddenProperties,
     ServoCSSAnimationBuilder& aBuilder, dom::AnimationTimeline* aTimeline,
     const dom::ScopedTimelineName& aTimelineName,
+    const StyleComputedTimingFunction& aNewTimingFunction,
     dom::CompositeOperation aNewComposite, dom::AnimationRange&& aTimelineRange,
     nsAnimationManager::TimelineNamesToAnimationMap&
         aTimelineNamesToAnimationMap) {
@@ -224,6 +225,14 @@ static void UpdateOldAnimationPropertiesWithNew(
       if (~aOverriddenProperties & CSSAnimationProperties::Keyframes) {
         aBuilder.SetKeyframes(*oldKeyframeEffect, std::move(aNewKeyframes),
                               aTimeline, aTimelineRange);
+
+        // The default timing function and default composite for CSS Keyframes
+        // processing.
+        if (auto* cssEffect =
+                oldKeyframeEffect->AsCSSAnimationKeyframeEffect()) {
+          cssEffect->SetDefaultTimingFunction(aNewTimingFunction);
+          cssEffect->SetDefaultComposite(aNewComposite);
+        }
       }
 
       if (~aOverriddenProperties & CSSAnimationProperties::Composition) {
@@ -353,11 +362,12 @@ static already_AddRefed<CSSAnimation> BuildAnimation(
   MOZ_ASSERT(aPresContext);
 
   nsAtom* animationName = aStyle.GetAnimationName(animIdx);
+  const StyleComputedTimingFunction& timingFunction =
+      aStyle.GetAnimationTimingFunction(animIdx);
   nsTArray<Keyframe> keyframes;
-  if (!aBuilder.BuildKeyframes(*aTarget.mElement, aPresContext, animationName,
-                               aStyle.GetAnimationTimingFunction(animIdx),
-                               aStyle.GetAnimationComposition(animIdx),
-                               keyframes)) {
+  if (!aBuilder.BuildKeyframes(
+          *aTarget.mElement, aPresContext, animationName, timingFunction,
+          aStyle.GetAnimationComposition(animIdx), keyframes)) {
     return nullptr;
   }
 
@@ -408,7 +418,8 @@ static already_AddRefed<CSSAnimation> BuildAnimation(
     UpdateOldAnimationPropertiesWithNew(
         *oldAnim, std::move(timing), std::move(keyframes), isStylePaused,
         oldAnim->PropertiesOverridenByJS(), aBuilder, timeline, timelineName,
-        composition, std::move(range), aTimelineNamesToAnimationMap);
+        timingFunction, composition, std::move(range),
+        aTimelineNamesToAnimationMap);
     // For now, only name-referenced timeline, or `none`, which is represented
     // as IsTimeline with the empty atom, can result in no timeline.
     MOZ_ASSERT_IF(timelineName.mName && !timeline, styleTimeline.IsTimeline());
@@ -420,6 +431,8 @@ static already_AddRefed<CSSAnimation> BuildAnimation(
       aPresContext->Document(),
       OwningAnimationTarget(aTarget.mElement, aTarget.mPseudoRequest),
       std::move(timing), effectOptions);
+  effect->SetDefaultTimingFunction(timingFunction);
+  effect->SetDefaultComposite(composition);
 
   aBuilder.SetKeyframes(*effect, std::move(keyframes), timeline, range);
 
