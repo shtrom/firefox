@@ -25,10 +25,14 @@ class EditContext final : public DOMEventTargetHelper, public SupportsWeakPtr {
                                                    const EditContextInit& aInit,
                                                    ErrorResult& aRv);
 
-  void UpdateText(uint32_t aRangeStart, uint32_t aRangeEnd,
-                  const nsAString& aText, ErrorResult& aRv);
-  void UpdateSelection(uint32_t aStart, uint32_t aEnd);
-  void UpdateControlBounds(const DOMRect& aControlBounds);
+  MOZ_CAN_RUN_SCRIPT void UpdateText(uint32_t aRangeStart, uint32_t aRangeEnd,
+                                     const nsAString& aText, ErrorResult& aRv) {
+    UpdateTextInternal(aRangeStart, aRangeEnd, aText, aRv);
+    FireCharacterBoundsUpdateIfNeeded();
+  }
+
+  MOZ_CAN_RUN_SCRIPT void UpdateSelection(uint32_t aStart, uint32_t aEnd);
+  MOZ_CAN_RUN_SCRIPT void UpdateControlBounds(const DOMRect& aControlBounds);
   void UpdateSelectionBounds(const DOMRect& aSelectionBounds);
   void UpdateCharacterBounds(
       uint32_t aRangeStart,
@@ -74,6 +78,7 @@ class EditContext final : public DOMEventTargetHelper, public SupportsWeakPtr {
   uint32_t CharacterBoundsRangeStart() const {
     return mCodepointRectsStartIndex;
   }
+  uint32_t CharacterBoundsLength() const { return mCodepointRects.Length(); }
   void CharacterBounds(nsTArray<RefPtr<DOMRect>>& aRetVal) const;
 
   nsGenericHTMLElement* GetAssociatedElement() const {
@@ -124,8 +129,6 @@ class EditContext final : public DOMEventTargetHelper, public SupportsWeakPtr {
 
   MOZ_CAN_RUN_SCRIPT void FireTextFormatUpdate(const TextRangeArray* aRanges,
                                                uint32_t aCompositionOffset);
-  MOZ_CAN_RUN_SCRIPT nsresult FireCharacterBoundsUpdateIfNeededAndGetRects(
-      uint32_t aStart, uint32_t aEnd, nsTArray<LayoutDeviceIntRect>& aRects);
   // Get the control bounds for the EditContext,
   // or Nothing if updateControlBounds has not been called.
   Maybe<LayoutDeviceIntRect> GetControlBounds() const;
@@ -154,14 +157,24 @@ class EditContext final : public DOMEventTargetHelper, public SupportsWeakPtr {
   // Returns true if this is a canvas-based EditContext.
   bool IsCanvas() const;
 
-  // Gets character bound at aOffset, but doesn't fire characterboundsupdate
-  // if it's not available, instead just returns Nothing().
-  Maybe<LayoutDeviceIntRect> GetCharacterBound(uint32_t aOffset) const;
+  // Get character bounds between aStart and aEnd, or as close as possible,
+  // without firing characterboundsupdate.
+  nsresult GetCharacterBounds(uint32_t aStart, uint32_t aEnd,
+                              nsTArray<LayoutDeviceIntRect>& aRects) const;
 
  private:
   EditContext(nsIGlobalObject* aGlobalObject, const EditContextInit& aInit,
               ErrorResult& aRv);
   ~EditContext() = default;
+
+  // Suppress IME notifications until updateCharacterBounds() is called.
+  // (However, we give up and unsuppress after a timeout.)
+  void SuppressNotifyingIME();
+
+  // Fire characterboundsupdate event if new character bounds are requested.
+  // This also suppresses IME notifications until updateCharacterBounds()
+  // is called, or a timeout elapses.
+  MOZ_CAN_RUN_SCRIPT void FireCharacterBoundsUpdateIfNeeded();
 
   using Rect = gfx::RectTyped<CSSPixel, double>;
 
@@ -172,6 +185,10 @@ class EditContext final : public DOMEventTargetHelper, public SupportsWeakPtr {
   // if there is no associated element or it's not framed.
   Maybe<nsRect> GetControlBoundsOrClientRect() const;
 
+  // Update text without firing characterboundsupdate.
+  void UpdateTextInternal(uint32_t aRangeStart, uint32_t aRangeEnd,
+                          const nsAString& aText, ErrorResult& aRv);
+
   // Convert aRect to a LayoutDeviceIntRect that is relative to the
   // top-level viewport (this is what QueryContentEvent is supposed
   // to return).
@@ -181,9 +198,6 @@ class EditContext final : public DOMEventTargetHelper, public SupportsWeakPtr {
       const nsPresContext& aPresContext, const nsRect& aRect);
 
   class AutoSuppressIMENotifications;
-  MOZ_CAN_RUN_SCRIPT nsresult FireCharacterBoundsUpdateIfNeeded(
-      uint32_t aStart, uint32_t aEnd,
-      AutoSuppressIMENotifications* aSuppressIMENotifications);
 
   // Cancel the timer to unsuppress IME notifications, and unsuppress
   // them immediately.
@@ -239,7 +253,7 @@ class EditContext final : public DOMEventTargetHelper, public SupportsWeakPtr {
   TextRange mLastRequestedCharacterBoundsRange;
   bool mIsComposing = false;
   bool mTextNextToCaretChangedByTextUpdateHandler = false;
-  bool mExpectingCharacterBounds = false;
+  bool mIsFiringCharacterBoundsUpdate = false;
   bool mIsFiringTextUpdate = false;
   // Set to true if the text which corresponds to mCodepointRects has changed.
   bool mCodepointRectsTextChanged = false;

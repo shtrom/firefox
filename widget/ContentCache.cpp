@@ -437,14 +437,17 @@ bool ContentCacheInChild::CacheTextRects(nsIWidget* aWidget,
     //      composition immediately, we should cache next character of current
     //      composition too.
     uint32_t length = textComposition->LastData().Length() + 1;
-    mTextRectArray = Some(TextRectArray(mCompositionStart.value()));
+    mTextRectArray.reset();
+    RectArray rects;
     if (NS_WARN_IF(!QueryCharRectArray(aWidget, mTextRectArray->mStart, length,
-                                       mTextRectArray->mRects))) {
+                                       rects))) {
       MOZ_LOG(sContentCacheLog, LogLevel::Error,
               ("0x%p   CacheTextRects(), FAILED, "
                "couldn't retrieve text rect array of the composition string",
                this));
-      mTextRectArray.reset();
+    } else {
+      mTextRectArray = Some(TextRectArray(mCompositionStart.value()));
+      mTextRectArray->mRects = std::move(rects);
     }
   } else {
     mCompositionStart.reset();
@@ -606,6 +609,7 @@ bool ContentCacheInChild::CacheTextRects(nsIWidget* aWidget,
   // or undo the last commit.  Then, IME requires the character rects for
   // positioning their UI.
   if (mLastCommit.isSome()) {
+    RectArray rects;
     mLastCommitStringTextRectArray =
         Some(TextRectArray(mLastCommit->StartOffset()));
     if (mLastCommit->Length() == 1 && mSelection.isSome() &&
@@ -614,15 +618,17 @@ bool ContentCacheInChild::CacheTextRects(nsIWidget* aWidget,
         !mSelection->mAnchorCharRects[ePrevCharRect].IsEmpty()) {
       mLastCommitStringTextRectArray->mRects.AppendElement(
           mSelection->mAnchorCharRects[ePrevCharRect]);
-    } else if (NS_WARN_IF(!QueryCharRectArray(
-                   aWidget, mLastCommit->StartOffset(), mLastCommit->Length(),
-                   mLastCommitStringTextRectArray->mRects))) {
+    } else if (NS_WARN_IF(!QueryCharRectArray(aWidget,
+                                              mLastCommit->StartOffset(),
+                                              mLastCommit->Length(), rects))) {
       MOZ_LOG(sContentCacheLog, LogLevel::Error,
               ("0x%p   CacheTextRects(), FAILED, "
                "couldn't retrieve text rect array of the last commit string",
                this));
       mLastCommitStringTextRectArray.reset();
       mLastCommit.reset();
+    } else {
+      mLastCommitStringTextRectArray->mRects = std::move(rects);
     }
     MOZ_ASSERT((mLastCommitStringTextRectArray.isSome()
                     ? mLastCommitStringTextRectArray->mRects.Length()
