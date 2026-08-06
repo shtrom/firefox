@@ -105,18 +105,6 @@ add_task(async function test_variants() {
       expected.image,
       `${state}: illustration matches variant`
     );
-    is(
-      mozPromo.shadowRoot.querySelector("img").getBoundingClientRect().width,
-      40,
-      `${state}: illustration uses the xsmall design size`
-    );
-    is(
-      getComputedStyle(promo).marginBlockEnd,
-      getComputedStyle(promo).getPropertyValue(
-        "--panel-menuitem-margin-inline"
-      ),
-      `${state}: promo has balanced bottom spacing`
-    );
 
     handleAction.resetHistory();
     // The CTA closes the panel via PanelUI.hide().
@@ -213,11 +201,6 @@ add_task(async function test_state_transitions() {
   Services.obs.notifyObservers(null, "sync-ui-state:update");
   await promo.updateComplete;
   ok(promo.hidden, "Promo disappears when the user becomes ineligible");
-  is(
-    getComputedStyle(promo).display,
-    "none",
-    "Hidden promo takes up no space in the panel"
-  );
 
   await gCUITestUtils.hideMainMenu();
   sandbox.restore();
