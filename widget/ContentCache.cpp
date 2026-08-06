@@ -374,12 +374,13 @@ bool ContentCacheInChild::CacheText(nsIWidget* aWidget,
   return CacheSelection(aWidget, aNotification);
 }
 
-bool ContentCacheInChild::QueryCharRect(nsIWidget* aWidget, uint32_t aOffset,
-                                        LayoutDeviceIntRect& aCharRect) const {
+bool ContentCacheInChild::QueryFirstCharFallbackRect(
+    nsIWidget* aWidget, LayoutDeviceIntRect& aCharRect) const {
   aCharRect.SetEmpty();
 
   WidgetQueryContentEvent queryTextRectEvent(true, eQueryTextRect, aWidget);
-  queryTextRectEvent.InitForQueryTextRect(aOffset, 1);
+  queryTextRectEvent.InitForQueryTextRect(0, 1);
+  queryTextRectEvent.mInput.mIsFirstCharFallbackRect = true;
   aWidget->DispatchEvent(&queryTextRectEvent);
   if (NS_WARN_IF(queryTextRectEvent.Failed())) {
     return false;
@@ -436,17 +437,14 @@ bool ContentCacheInChild::CacheTextRects(nsIWidget* aWidget,
     //      composition immediately, we should cache next character of current
     //      composition too.
     uint32_t length = textComposition->LastData().Length() + 1;
-    mTextRectArray.reset();
-    RectArray rects;
+    mTextRectArray = Some(TextRectArray(mCompositionStart.value()));
     if (NS_WARN_IF(!QueryCharRectArray(aWidget, mTextRectArray->mStart, length,
-                                       rects))) {
+                                       mTextRectArray->mRects))) {
       MOZ_LOG(sContentCacheLog, LogLevel::Error,
               ("0x%p   CacheTextRects(), FAILED, "
                "couldn't retrieve text rect array of the composition string",
                this));
-    } else {
-      mTextRectArray = Some(TextRectArray(mCompositionStart.value()));
-      mTextRectArray->mRects = std::move(rects);
+      mTextRectArray.reset();
     }
   } else {
     mCompositionStart.reset();
@@ -591,7 +589,8 @@ bool ContentCacheInChild::CacheTextRects(nsIWidget* aWidget,
     mFirstCharRect = mTextRectArray->GetRect(0u);
   } else {
     LayoutDeviceIntRect charRect;
-    if (MOZ_UNLIKELY(NS_WARN_IF(!QueryCharRect(aWidget, 0, charRect)))) {
+    if (MOZ_UNLIKELY(
+            NS_WARN_IF(!QueryFirstCharFallbackRect(aWidget, charRect)))) {
       MOZ_LOG(sContentCacheLog, LogLevel::Error,
               ("0x%p   CacheTextRects(), FAILED, "
                "couldn't retrieve first char rect",
@@ -607,7 +606,6 @@ bool ContentCacheInChild::CacheTextRects(nsIWidget* aWidget,
   // or undo the last commit.  Then, IME requires the character rects for
   // positioning their UI.
   if (mLastCommit.isSome()) {
-    RectArray rects;
     mLastCommitStringTextRectArray =
         Some(TextRectArray(mLastCommit->StartOffset()));
     if (mLastCommit->Length() == 1 && mSelection.isSome() &&
@@ -616,17 +614,15 @@ bool ContentCacheInChild::CacheTextRects(nsIWidget* aWidget,
         !mSelection->mAnchorCharRects[ePrevCharRect].IsEmpty()) {
       mLastCommitStringTextRectArray->mRects.AppendElement(
           mSelection->mAnchorCharRects[ePrevCharRect]);
-    } else if (NS_WARN_IF(!QueryCharRectArray(aWidget,
-                                              mLastCommit->StartOffset(),
-                                              mLastCommit->Length(), rects))) {
+    } else if (NS_WARN_IF(!QueryCharRectArray(
+                   aWidget, mLastCommit->StartOffset(), mLastCommit->Length(),
+                   mLastCommitStringTextRectArray->mRects))) {
       MOZ_LOG(sContentCacheLog, LogLevel::Error,
               ("0x%p   CacheTextRects(), FAILED, "
                "couldn't retrieve text rect array of the last commit string",
                this));
       mLastCommitStringTextRectArray.reset();
       mLastCommit.reset();
-    } else {
-      mLastCommitStringTextRectArray->mRects = std::move(rects);
     }
     MOZ_ASSERT((mLastCommitStringTextRectArray.isSome()
                     ? mLastCommitStringTextRectArray->mRects.Length()

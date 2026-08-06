@@ -2024,7 +2024,7 @@ nsresult ContentEventHandler::OnQueryTextRectArray(
   uint32_t offset = aEvent->mInput.mOffset;
   const uint32_t kEndOffset = aEvent->mInput.EndOffset();
   bool wasLineBreaker = false;
-  if (EditContext* editContext = GetEditContext()) {
+  if (RefPtr<EditContext> editContext = GetEditContext()) {
     MOZ_ASSERT(offset <= kEndOffset);
     // Let's not overflow if somehow offset > kEndOffset
     const uint32_t endOffset = std::max(kEndOffset, offset);
@@ -2040,7 +2040,8 @@ nsresult ContentEventHandler::OnQueryTextRectArray(
       MOZ_ASSERT(aEvent->Succeeded());
       return NS_OK;
     }
-    rv = editContext->GetCharacterBounds(offset, endOffset, rects);
+    rv = editContext->FireCharacterBoundsUpdateIfNeededAndGetRects(
+        offset, endOffset, rects);
     if (NS_SUCCEEDED(rv) && !rects.IsEmpty()) {
       LayoutDeviceIntRect lastRect = rects.LastElement();
       // If a range that goes past the end of the text content was requested,
@@ -2474,7 +2475,7 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
   }
 
   MOZ_ASSERT(aEvent->mReply->mOffsetAndData.isNothing());
-  EditContext* editContext = GetEditContext();
+  RefPtr<EditContext> editContext = GetEditContext();
   if (editContext) {
     // Get rectangle using EditContext character bounds
     const uint32_t start = aEvent->mInput.mOffset;
@@ -2494,7 +2495,22 @@ nsresult ContentEventHandler::OnQueryTextRect(WidgetQueryContentEvent* aEvent) {
       MOZ_ASSERT(aEvent->Succeeded());
       return NS_OK;
     }
-    rv = editContext->GetCharacterBounds(start, end, rects);
+    if (aEvent->mInput.mIsFirstCharFallbackRect) {
+      MOZ_ASSERT(start == 0 && end == 1);
+      // This is requesting the first character rectangle for fallback purposes.
+      // We don't want to fire a characterboundsupdate for this purpose, instead
+      // use the correct bound if it's available, otherwise use fallback bounds.
+      if (Maybe<LayoutDeviceIntRect> rect =
+              editContext->GetCharacterBound(start)) {
+        aEvent->mReply->mRect = *rect;
+      } else {
+        aEvent->mReply->mRect = editContext->FallbackBounds();
+      }
+      MOZ_ASSERT(aEvent->Succeeded());
+      return NS_OK;
+    }
+    rv = editContext->FireCharacterBoundsUpdateIfNeededAndGetRects(start, end,
+                                                                   rects);
     // rects will be empty if start >= TextLength()
     if (NS_SUCCEEDED(rv) && !rects.IsEmpty()) {
       // Return union of the character rects.
@@ -2996,14 +3012,15 @@ nsresult ContentEventHandler::OnQueryCharacterAtPoint(
   MOZ_ASSERT(aEvent->mReply->mOffsetAndData.isNothing());
   MOZ_ASSERT(aEvent->mReply->mTentativeCaretOffset.isNothing());
 
-  if (EditContext* editContext = GetEditContext()) {
+  if (RefPtr<EditContext> editContext = GetEditContext()) {
     AutoTArray<LayoutDeviceIntRect, 8> rects;
-    const uint32_t start = editContext->CharacterBoundsRangeStart();
-    const uint32_t count = editContext->CharacterBoundsLength();
-    rv = editContext->GetCharacterBounds(start, count, rects);
+    // XXX: Getting all the rects is not ideal. Maybe do some kind of binary
+    //      search and fallback to this if it fails? (bug 2054998)
+    rv = editContext->FireCharacterBoundsUpdateIfNeededAndGetRects(
+        0, editContext->TextLength(), rects);
     if (NS_SUCCEEDED(rv)) {
-      for (uint32_t i : IntegerRange(start, start + count)) {
-        if (rects[i - start].Contains(aEvent->mRefPoint)) {
+      for (size_t i : IntegerRange(0u, rects.Length())) {
+        if (rects[i].Contains(aEvent->mRefPoint)) {
           nsAutoString string;
           editContext->GetTextSubstring(i, i + 1, string);
           aEvent->mReply->mOffsetAndData.emplace(i, string);
