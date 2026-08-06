@@ -3822,6 +3822,15 @@ ${
     return this._lastSearchString;
   }
 
+  /**
+   * @type {Promise<void>}
+   *
+   * Resolves once the search mode last assigned through the `searchMode`
+   * setter has been applied. Applying it resolves the engine, which may have
+   * to wait for the engine store.
+   */
+  #searchModeApplied = Promise.resolve();
+
   get searchMode() {
     if (this.#isSmartbarMode) {
       return null;
@@ -3835,9 +3844,13 @@ ${
 
   set searchMode(searchMode) {
     if (this.#isSmartbarMode) {
+      this.#searchModeApplied = Promise.resolve();
       return;
     }
-    this.setSearchMode(searchMode, this.window.gBrowser.selectedBrowser);
+    this.#searchModeApplied = this.setSearchMode(
+      searchMode,
+      this.window.gBrowser.selectedBrowser
+    );
 
     this.controller.engineStore
       .getEngineByName(this.searchMode?.engineName)
@@ -4016,13 +4029,25 @@ ${
       return false;
     }
 
+    if (startQuery) {
+      // Closing the view discards a previewed search mode, so the mode has to
+      // be confirmed before the query below gets a chance to run.
+      searchMode.isPreview = false;
+    }
     this.searchMode = searchMode;
 
     let value = result.payload.query?.trimStart() || "";
     this.setValue(value);
 
     if (startQuery) {
-      this.startQuery({ allowAutofill: false });
+      // Search mode stores the value to restore on tab switch. For a confirmed
+      // mode that's the query string, not the keyword that entered it.
+      this.userTypedValue = this.untrimmedValue;
+
+      // The query has to run in the search mode we just entered.
+      this.#searchModeApplied.then(() =>
+        this.startQuery({ allowAutofill: false })
+      );
     }
 
     return true;
