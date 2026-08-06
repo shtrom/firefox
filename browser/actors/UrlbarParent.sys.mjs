@@ -375,10 +375,6 @@ class ViewProxy {
     this.#invoke("acknowledgeFeedback", [result.toWire()]);
   }
 
-  clearTopSitesCache() {
-    this.#invoke("clearTopSitesCache", []);
-  }
-
   close(options) {
     this.#invoke("close", options ? [options] : []);
   }

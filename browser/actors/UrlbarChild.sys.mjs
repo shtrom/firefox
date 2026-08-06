@@ -18,7 +18,6 @@ const INVOKABLE_CONTENT_ACTIONS = {
   input: new Set(["search", "setValue", "startQuery"]),
   view: new Set([
     "acknowledgeFeedback",
-    "clearTopSitesCache",
     "close",
     "updateResultMenuCommands",
     "startTail150",

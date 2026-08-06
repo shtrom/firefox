@@ -34,8 +34,6 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "moz-src:///browser/components/urlbar/UrlbarProviderOpenTabs.sys.mjs",
   UrlbarProviderSemanticHistorySearch:
     "moz-src:///browser/components/urlbar/UrlbarProviderSemanticHistorySearch.sys.mjs",
-  UrlbarProviderTopSites:
-    "moz-src:///browser/components/urlbar/UrlbarProviderTopSites.sys.mjs",
   UrlbarQueryContext: "chrome://browser/content/urlbar/UrlbarQueryContext.mjs",
   UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
   UrlbarTelemetryUtils:
@@ -153,7 +151,6 @@ export class UrlbarParentController {
       manager || lazy.ProvidersManager.getInstanceForSap(this.sapName);
 
     this.engagementEvent = new TelemetryEvent(this);
-    lazy.UrlbarProviderTopSites.addTopSitesListener(this.#topSitesListener);
   }
 
   /**
@@ -1314,10 +1311,6 @@ export class UrlbarParentController {
     Services.obs.addObserver(this, "browser-search-engine-modified", true);
     this.#engineObserverRegistered = true;
   }
-
-  #topSitesListener = () => {
-    this.view.clearTopSitesCache();
-  };
 
   QueryInterface = ChromeUtils.generateQI([
     "nsIObserver",
