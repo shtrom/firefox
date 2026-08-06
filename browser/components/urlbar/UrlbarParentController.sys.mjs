@@ -503,6 +503,17 @@ export class UrlbarParentController {
   }
 
   /**
+   * Clears the backspace bookkeeping for an autofilled URL the user accepted.
+   * The bookkeeping is parent state, so the input hands the URL over here.
+   *
+   * @param {string} url
+   *   The accepted autofill result's URL.
+   */
+  clearAutofillBackspaceEntryForUrl(url) {
+    lazy.UrlbarUtils.clearAutofillBackspaceEntryForUrl(url);
+  }
+
+  /**
    * Re-integrates an autofill URL the user navigated to anyway: clears its
    * autofill block and records how long the block had been in place. Both the
    * block state and Glean are parent-side, so the input only decides when a

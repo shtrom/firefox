@@ -1642,7 +1642,7 @@ ${
       result.payload?.url &&
       !this.isPrivate
     ) {
-      lazy.UrlbarUtils.clearAutofillBackspaceEntryForUrl(result.payload.url);
+      this.controller.clearAutofillBackspaceEntryForUrl(result.payload.url);
     }
 
     if (

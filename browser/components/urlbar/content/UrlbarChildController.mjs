@@ -249,6 +249,9 @@ export class UrlbarChildController {
   recordAutofillBackspace(url) {
     return this.#parentController.recordAutofillBackspace(url);
   }
+  clearAutofillBackspaceEntryForUrl(url) {
+    return this.#parentController.clearAutofillBackspaceEntryForUrl(url);
+  }
   handleAutofillReintegration(url) {
     return this.#parentController.handleAutofillReintegration(url);
   }

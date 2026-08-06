@@ -143,6 +143,20 @@ export class UrlbarParentControllerProxy {
   }
 
   /**
+   * Ships an accepted autofill to the parent, which clears its backspace
+   * bookkeeping. The counterpart to the controller's
+   * `clearAutofillBackspaceEntryForUrl()`.
+   *
+   * @param {string} url The accepted autofill result's URL.
+   */
+  clearAutofillBackspaceEntryForUrl(url) {
+    this.#actor.sendAsyncMessage("ClearAutofillBackspaceEntryForUrl", {
+      instanceId: this.#instanceId,
+      url,
+    });
+  }
+
+  /**
    * Ships an autofill re-integration to the parent. The counterpart to the
    * controller's `handleAutofillReintegration()`.
    *

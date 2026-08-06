@@ -117,6 +117,9 @@ export class UrlbarParent extends JSWindowActorParent {
       case "RecordAutofillBackspace":
         controller.recordAutofillBackspace(message.data.url);
         break;
+      case "ClearAutofillBackspaceEntryForUrl":
+        controller.clearAutofillBackspaceEntryForUrl(message.data.url);
+        break;
       case "HandleAutofillReintegration":
         controller.handleAutofillReintegration(message.data.url);
         break;
