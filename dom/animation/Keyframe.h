@@ -24,13 +24,14 @@ struct PropertyValuePair {
 
   PropertyValuePair(const CSSPropertyId& aProperty,
                     RefPtr<StyleLockedDeclarationBlock>&& aValue)
-      : mProperty(aProperty), mServoDeclarationBlock(std::move(aValue)) {
-    MOZ_ASSERT(mServoDeclarationBlock, "Should be valid property value");
-  }
+      : mProperty(aProperty), mServoDeclarationBlock(std::move(aValue)) {}
 
   CSSPropertyId mProperty;
 
   // The specified value when using the Servo backend.
+  // If it is nullptr, we use the base values, i.e. the value generated for that
+  // property by finding the computed value for that property in the absence of
+  // animations, when composing the animations and getkeyframes().
   RefPtr<StyleLockedDeclarationBlock> mServoDeclarationBlock;
 
 #ifdef DEBUG

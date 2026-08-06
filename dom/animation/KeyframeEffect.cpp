@@ -888,6 +888,14 @@ nsTArray<AnimationProperty> KeyframeEffect::BuildProperties(
   // make a copy of |mKeyframes| first and iterate over that instead.
   auto keyframesCopy(mKeyframes.Clone());
 
+  // We generate the missing 0%/100% keyframes and append the missing
+  // properties to 0%/100% only if the keyframes come from CSS Keyframes rule.
+  // TODO: Call this function in the following patch.
+  /*nsTArray<Keyframe> computedKeyframes;
+  const nsTArray<Keyframe>& keyframes = GetComputedKeyframes(computedKeyframes)
+                                            ? computedKeyframes
+                                            : keyframesCopy;*/
+
   result = KeyframeUtils::GetAnimationPropertiesFromKeyframes(
       keyframesCopy, mTarget.mElement, mTarget.mPseudoRequest, aStyle,
       mEffectOptions.mComposite, aTimeline, mKeyframesOffsetInfo);
@@ -1271,6 +1279,14 @@ void KeyframeEffect::GetKeyframes(JSContext* aCx, nsTArray<JSObject*>& aResult,
 
   const StylePerDocumentStyleData* rawData =
       mDocument->EnsureStyleSet().RawData();
+
+  // We generate the missing 0%/100% keyframes and append the missing
+  // properties to 0%/100% only if the keyframes come from CSS Keyframes rule.
+  // TODO: Call this function in the following patch.
+  /*nsTArray<Keyframe> computedKeyframes;
+  const nsTArray<Keyframe>& keyframes =
+      GetComputedKeyframes(computedKeyframes) ? computedKeyframes :
+  mKeyframes;*/
 
   // If we don't have a timeline or the timeline is not a ViewTimeline, we
   // shouldn't generate the missing keyframes if all keyframes are using

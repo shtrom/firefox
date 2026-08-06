@@ -173,6 +173,9 @@ class KeyframeEffect : public AnimationEffect {
 
   void GetKeyframes(JSContext* aCx, nsTArray<JSObject*>& aResult,
                     ErrorResult& aRv);
+  virtual bool GetComputedKeyframes(nsTArray<Keyframe>& aKeyframes) const {
+    return false;
+  }
   void GetProperties(nsTArray<AnimationPropertyDetails>& aProperties,
                      ErrorResult& aRv) const;
 

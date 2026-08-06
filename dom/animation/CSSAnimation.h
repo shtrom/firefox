@@ -216,6 +216,7 @@ class CSSAnimationKeyframeEffect : public KeyframeEffect {
   void SetDefaultComposite(const CompositeOperation& aComposite) {
     mDefaultComposite = aComposite;
   }
+  bool GetComputedKeyframes(nsTArray<Keyframe>& aKeyframes) const override;
 
  private:
   CSSAnimation* GetOwningCSSAnimation() {
@@ -241,6 +242,12 @@ class CSSAnimationKeyframeEffect : public KeyframeEffect {
   // Note: We cannot reuse |mEffectOptions.mComposite| which may be updated by
   // Web Animations. We should always use the animation-composition from style.
   CompositeOperation mDefaultComposite = CompositeOperation::Replace;
+
+  // True if we should ignore keyframes generation (for 0% and 100%) because the
+  // new keyframes are from JS. It's unfortunate we cannot reuse
+  // |CSSAnimation::mOverriddenProperties| because this keyframe effect may not
+  // be associated with an animation.
+  bool mIgnoreKeyframesGeneration = false;
 };
 
 }  // namespace dom
