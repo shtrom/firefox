@@ -19,14 +19,14 @@ class ApiLintPlugin : Plugin<Project> {
             val docletJarFile = project.layout.buildDirectory.file("docletJar/apidoc-plugin.jar")
             val resourceName = "apidoc-plugin.jar"
 
-            val copyDocletJarResource = project.tasks.register("copyDocletJarResource") { task ->
-                task.inputs.property("resourceName", resourceName)
-                task.outputs.file(docletJarFile)
-                task.doLast {
+            val copyDocletJarResource = project.tasks.register("copyDocletJarResource") {
+                inputs.property("resourceName", resourceName)
+                outputs.file(docletJarFile)
+                doLast {
                     val resourceStream = ApiLintPlugin::class.java.classLoader.getResourceAsStream(resourceName)
                         ?: throw RuntimeException("Java resource not found: $resourceName")
                     resourceStream.use { input ->
-                        task.outputs.files.singleFile.outputStream().use { out ->
+                        outputs.files.singleFile.outputStream().use { out ->
                             input.copyTo(out)
                         }
                     }
@@ -59,156 +59,156 @@ class ApiLintPlugin : Plugin<Project> {
                 val javaSources = variant.sources.java ?: return@onVariants
                 val sourceDirs = javaSources.all
 
-                val apiGenerate = project.tasks.register("apiGenerate${name}", ApiCompatLintTask::class.java) { task ->
-                    task.description = "Generates API file for build variant ${name}"
-                    task.dependsOn(copyDocletJarResource)
+                val apiGenerate = project.tasks.register("apiGenerate${name}", ApiCompatLintTask::class.java) {
+                    description = "Generates API file for build variant ${name}"
+                    dependsOn(copyDocletJarResource)
 
-                    task.setSource(sourceDirs)
-                    task.exclude("**/R.java")
-                    task.include("**/**.java")
+                    setSource(sourceDirs)
+                    exclude("**/R.java")
+                    include("**/**.java")
 
-                    task.sourcePath.from(sourceDirs)
+                    sourcePath.from(sourceDirs)
 
-                    task.rootDir.set(project.rootDir.absolutePath)
-                    task.outputFile.set(apiFileProvider)
-                    task.apiMapFile.set(apiMapFileProvider)
-                    task.packageFilter.set(extension.packageFilter)
-                    task.skipClassesRegex.set(extension.skipClassesRegex)
-                    task.javadocDestinationDir.set(project.layout.buildDirectory.dir("tmp/javadoc/${variantName}"))
-                    task.docletPath.set(docletJarFile)
+                    rootDir.set(project.rootDir.absolutePath)
+                    outputFile.set(apiFileProvider)
+                    apiMapFile.set(apiMapFileProvider)
+                    packageFilter.set(extension.packageFilter)
+                    skipClassesRegex.set(extension.skipClassesRegex)
+                    javadocDestinationDir.set(project.layout.buildDirectory.dir("tmp/javadoc/${variantName}"))
+                    docletPath.set(docletJarFile)
                 }
                 apiGenerateTasks[variantName] = apiGenerate
 
-                val apiLintSingle = project.tasks.register("apiLintSingle${name}", PythonExec::class.java) { task ->
-                    task.description = "Runs API lint checks for variant ${name}"
-                    task.dependsOn(apiGenerate)
-                    task.scriptPath.set("apilint.py")
+                val apiLintSingle = project.tasks.register("apiLintSingle${name}", PythonExec::class.java) {
+                    description = "Runs API lint checks for variant ${name}"
+                    dependsOn(apiGenerate)
+                    scriptPath.set("apilint.py")
 
-                    task.inputs.file(apiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
-                    task.inputs.file(apiMapFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
-                    task.declareLintFilterInputs(extension)
-                    task.declareDeprecationInputs(extension)
-                    task.outputs.file(jsonResultFileProvider)
+                    inputs.file(apiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+                    inputs.file(apiMapFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+                    declareLintFilterInputs(extension)
+                    declareDeprecationInputs(extension)
+                    outputs.file(jsonResultFileProvider)
 
-                    task.doFirst {
+                    doFirst {
                         val apiFile = apiFileProvider.get().asFile
                         val jsonResultFile = jsonResultFileProvider.get().asFile
                         val apiMapFile = apiMapFileProvider.get().asFile
 
-                        task.args(apiFile, "--result-json", jsonResultFile)
+                        args(apiFile, "--result-json", jsonResultFile)
                         // Gradle gives a ListProperty an empty value rather than no value, so these
                         // have to be checked for emptiness: `isPresent` is true even when the
                         // consumer never configured them, and passing either flag with no values
                         // makes apilint.py restrict the API to nothing.
                         val lintFilters = extension.lintFilters.get()
                         if (lintFilters.isNotEmpty()) {
-                            task.args("--filter-errors", *lintFilters.toTypedArray())
+                            args("--filter-errors", *lintFilters.toTypedArray())
                         }
                         val allowedPackages = extension.allowedPackages.get()
                         if (allowedPackages.isNotEmpty()) {
-                            task.args("--allowed-packages", *allowedPackages.toTypedArray())
+                            args("--allowed-packages", *allowedPackages.toTypedArray())
                         }
                         if (extension.deprecationAnnotation.isPresent) {
-                            task.args("--deprecation-annotation", extension.deprecationAnnotation.get())
+                            args("--deprecation-annotation", extension.deprecationAnnotation.get())
                         }
                         if (extension.libraryVersion.isPresent) {
-                            task.args("--library-version", extension.libraryVersion.get())
+                            args("--library-version", extension.libraryVersion.get())
                         }
-                        task.args("--api-map", apiMapFile)
+                        args("--api-map", apiMapFile)
                     }
                 }
 
-                val apiDiff = project.tasks.register("apiDiff${name}", PythonExec::class.java) { task ->
-                    task.description = "Prints the diff between the existing API and the local API."
-                    task.group = "Verification"
-                    task.dependsOn(apiGenerate)
-                    task.scriptPath.set("diff.py")
+                val apiDiff = project.tasks.register("apiDiff${name}", PythonExec::class.java) {
+                    description = "Prints the diff between the existing API and the local API."
+                    group = "Verification"
+                    dependsOn(apiGenerate)
+                    scriptPath.set("diff.py")
 
-                    task.inputs.file(apiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
-                    task.inputs.file(currentApiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+                    inputs.file(apiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+                    inputs.file(currentApiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
 
                     // diff exit value is != 0 if the files are different
-                    task.isIgnoreExitValue = true
+                    isIgnoreExitValue = true
 
-                    task.doFirst {
+                    doFirst {
                         val apiFile = apiFileProvider.get().asFile
                         val currentApiFile = currentApiFileProvider.get().asFile
 
-                        task.args("--existing", currentApiFile, "--local", apiFile, "--command", extension.helpCommand.get()(name))
+                        args("--existing", currentApiFile, "--local", apiFile, "--command", extension.helpCommand.get()(name))
                     }
                 }
 
-                val apiCompatLint = project.tasks.register("apiCompatLint${name}", PythonExec::class.java) { task ->
-                    task.description = "Runs API compatibility lint checks for variant ${name}"
-                    task.scriptPath.set("apilint.py")
+                val apiCompatLint = project.tasks.register("apiCompatLint${name}", PythonExec::class.java) {
+                    description = "Runs API compatibility lint checks for variant ${name}"
+                    scriptPath.set("apilint.py")
 
-                    task.inputs.file(apiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
-                    task.inputs.file(currentApiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
-                    task.inputs.file(apiMapFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
-                    task.declareDeprecationInputs(extension)
-                    task.outputs.file(jsonResultFileProvider)
+                    inputs.file(apiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+                    inputs.file(currentApiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+                    inputs.file(apiMapFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+                    declareDeprecationInputs(extension)
+                    outputs.file(jsonResultFileProvider)
 
-                    task.dependsOn(apiLintSingle)
-                    task.finalizedBy(apiDiff)
+                    dependsOn(apiLintSingle)
+                    finalizedBy(apiDiff)
 
-                    task.doFirst {
+                    doFirst {
                         val apiFile = apiFileProvider.get().asFile
                         val jsonResultFile = jsonResultFileProvider.get().asFile
                         val currentApiFile = currentApiFileProvider.get().asFile
                         val apiMapFile = apiMapFileProvider.get().asFile
 
-                        task.args("--show-noticed", apiFile, currentApiFile, "--result-json", jsonResultFile, "--append-json", "--api-map", apiMapFile)
+                        args("--show-noticed", apiFile, currentApiFile, "--result-json", jsonResultFile, "--append-json", "--api-map", apiMapFile)
                         if (extension.deprecationAnnotation.isPresent) {
-                            task.args("--deprecation-annotation", extension.deprecationAnnotation.get())
+                            args("--deprecation-annotation", extension.deprecationAnnotation.get())
                         }
                         if (extension.libraryVersion.isPresent) {
-                            task.args("--library-version", extension.libraryVersion.get())
+                            args("--library-version", extension.libraryVersion.get())
                         }
                     }
                 }
 
                 val lintDependency = if (extension.changelogFileName.isPresent) {
                     val changelogFileProvider = project.layout.projectDirectory.file(extension.changelogFileName)
-                    project.tasks.register("apiChangelogCheck${name}", PythonExec::class.java) { changelogTask ->
-                        changelogTask.description = "Checks that the API changelog has been updated."
-                        changelogTask.group = "Verification"
-                        changelogTask.scriptPath.set("changelog-check.py")
+                    project.tasks.register("apiChangelogCheck${name}", PythonExec::class.java) {
+                        description = "Checks that the API changelog has been updated."
+                        group = "Verification"
+                        scriptPath.set("changelog-check.py")
 
-                        changelogTask.inputs.file(apiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
-                        changelogTask.inputs.file(changelogFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
-                        changelogTask.outputs.file(jsonResultFileProvider)
+                        inputs.file(apiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+                        inputs.file(changelogFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+                        outputs.file(jsonResultFileProvider)
 
-                        changelogTask.dependsOn(apiCompatLint)
+                        dependsOn(apiCompatLint)
 
-                        changelogTask.doFirst {
+                        doFirst {
                             val apiFile = apiFileProvider.get().asFile
                             val jsonResultFile = jsonResultFileProvider.get().asFile
                             val changelogFile = changelogFileProvider.get().asFile
 
-                            changelogTask.args("--api-file", apiFile, "--changelog-file", changelogFile, "--result-json", jsonResultFile)
+                            args("--api-file", apiFile, "--changelog-file", changelogFile, "--result-json", jsonResultFile)
                         }
                     }
                 } else {
                     apiCompatLint
                 }
 
-                val apiLint = project.tasks.register("apiLint${name}") { task ->
-                    task.description = "Runs API lint checks for variant ${name}"
-                    task.group = "Verification"
-                    task.dependsOn(lintDependency)
+                val apiLint = project.tasks.register("apiLint${name}") {
+                    description = "Runs API lint checks for variant ${name}"
+                    group = "Verification"
+                    dependsOn(lintDependency)
                 }
 
                 project.tasks.named("check") {
-                    it.dependsOn(apiLint)
+                    dependsOn(apiLint)
                 }
 
-                project.tasks.register("apiUpdateFile${name}", Copy::class.java) { task ->
-                    task.description = "Updates the API file from the local one for variant ${name}"
-                    task.group = "Verification"
-                    task.dependsOn(apiGenerate)
-                    task.from(apiFileProvider)
-                    task.into(currentApiFileProvider.map { it.asFile.parentFile })
-                    task.rename { currentApiFileProvider.get().asFile.name }
+                project.tasks.register("apiUpdateFile${name}", Copy::class.java) {
+                    description = "Updates the API file from the local one for variant ${name}"
+                    group = "Verification"
+                    dependsOn(apiGenerate)
+                    from(apiFileProvider)
+                    into(currentApiFileProvider.map { it.asFile.parentFile })
+                    rename { currentApiFileProvider.get().asFile.name }
                 }
             }
 
@@ -217,8 +217,8 @@ class ApiLintPlugin : Plugin<Project> {
             project.afterEvaluate {
                 apiGenerateTasks.forEach { (variantName, apiGenerate) ->
                     val name = variantName.replaceFirstChar { c -> c.titlecase() }
-                    apiGenerate.configure { task ->
-                        task.classpath = project.files(
+                    apiGenerate.configure {
+                        classpath = project.files(
                             project.tasks.named("compile${name}JavaWithJavac", JavaCompile::class.java)
                                 .map { it.classpath },
                         )

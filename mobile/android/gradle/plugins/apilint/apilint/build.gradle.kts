@@ -2,11 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import org.gradle.api.tasks.testing.Test
-
 plugins {
-    `java-gradle-plugin`
-    kotlin("jvm") version embeddedKotlinVersion
+    `kotlin-dsl`
 }
 
 sourceSets {
@@ -65,25 +62,19 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
     }
 }
 
+// Arrange for the doclet jar to be included in Java resources, to be consumed
+// at runtime.
+val docletJar = configurations.create("docletJar")
+
 dependencies {
-    implementation(gradleApi())
     compileOnly(libs.android.gradle.plugin)
+    docletJar(project(path = ":apidoc-plugin", configuration = "docletJar"))
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
-// Arrange for the doclet jar to be included in Java resources, to be consumed
-// at runtime.
-val docletJar = configurations.create("docletJar")
-
-dependencies {
-    docletJar(project(path = ":apidoc-plugin", configuration = "docletJar"))
-}
-
-// It's probably possible to avoid this `Copy` task, but this approach is
-// standard.
 tasks.register<Sync>("copyDocletJar") {
     from(configurations.named("docletJar"))
     into(layout.buildDirectory.dir("docletJar"))
