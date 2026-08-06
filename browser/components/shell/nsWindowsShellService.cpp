@@ -407,6 +407,20 @@ nsWindowsShellService::CheckBrowserUserChoiceHashes(bool* aResult) {
 }
 
 NS_IMETHODIMP
+nsWindowsShellService::IsUserChoiceProtectionDriverRunning(bool* aResult) {
+  *aResult = ::IsUserChoiceProtectionDriverRunning();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsWindowsShellService::CanRenameUserChoiceAssociationKey(
+    const nsAString& aAssociation, bool* aResult) {
+  const nsString& flatAssociation = PromiseFlatString(aAssociation);
+  *aResult = ::CanRenameUserChoiceAssociationKey(flatAssociation.get());
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 nsWindowsShellService::CheckCurrentProcessAUMIDForTesting(
     nsAString& aRetAumid) {
   PWSTR id;
