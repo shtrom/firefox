@@ -4969,8 +4969,9 @@ void nsWindow::SetInputRegion(const InputRegion& aInputRegion) {
     return;
   }
 
-  LOG("nsWindow::SetInputRegion(%d, %d)", aInputRegion.mFullyTransparent,
-      int(aInputRegion.mMargin));
+  int unscaledMargin = GetInputRegionMarginInGdkCoords();
+  LOG("nsWindow::SetInputRegion(%d, %d)", mInputRegion.mFullyTransparent,
+      unscaledMargin);
 
   cairo_rectangle_int_t rect = {0, 0, 0, 0};
   cairo_region_t* region = nullptr;
@@ -4980,11 +4981,11 @@ void nsWindow::SetInputRegion(const InputRegion& aInputRegion) {
     }
   });
 
-  if (aInputRegion.mFullyTransparent) {
+  if (mInputRegion.mFullyTransparent) {
     region = cairo_region_create_rectangle(&rect);
-  } else if (aInputRegion.mMargin != 0) {
+  } else if (unscaledMargin != 0) {
     DesktopIntRect inputRegion(DesktopIntPoint(), mLastSizeRequest);
-    inputRegion.Deflate(aInputRegion.mMargin);
+    inputRegion.Deflate(unscaledMargin);
     rect = {inputRegion.x, inputRegion.y, inputRegion.width,
             inputRegion.height};
     region = cairo_region_create_rectangle(&rect);

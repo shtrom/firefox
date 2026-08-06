@@ -773,6 +773,7 @@ class nsWindow : public nsIWidget {
 
   float mLastMotionPressure = 0.0f;
 
+  // Input region margin is stored in layout (scaled) coordinates.
   InputRegion mInputRegion;
 
   bool DragInProgress(void);
