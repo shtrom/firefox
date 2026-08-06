@@ -3156,14 +3156,19 @@ option(env="AS", nargs=1, help="Path to the assembler")
 @depends(target, c_compiler)
 def as_info(target, c_compiler):
     if c_compiler.type == "clang-cl":
+        if target.cpu == "aarch64":
+            return namespace(type="armasm", names=("armasm64.exe",))
         ml = {
             "x86": "ml.exe",
             "x86_64": "ml64.exe",
-            "aarch64": "armasm64.exe",
         }.get(target.cpu)
         return namespace(type="masm", names=(ml,))
     # When building with anything but clang-cl, we just use the C compiler as the assembler.
     return namespace(type="gcc", names=(c_compiler.compiler,))
+
+
+assembler_is_masm = depends(as_info)(lambda info: info.type == "masm")
+assembler_is_armasm = depends(as_info)(lambda info: info.type == "armasm")
 
 
 # One would expect the assembler to be specified merely as a program.  But in
@@ -3187,7 +3192,7 @@ def as_with_flags(as_info, assembler, provided_assembler, c_compiler):
     if provided_assembler:
         return provided_assembler.wrapper + [assembler] + provided_assembler.flags
 
-    if as_info.type == "masm":
+    if as_info.type in ("masm", "armasm"):
         return assembler
 
     assert as_info.type == "gcc"
@@ -3221,10 +3226,10 @@ def gnu_as(assembler, c_compiler, toolchain_flags):
 set_config("GNU_AS", gnu_as)
 
 
-@depends(as_info, target)
-def as_dash_c_flag(as_info, target):
+@depends(as_info)
+def as_dash_c_flag(as_info):
     # armasm64 doesn't understand -c.
-    if as_info.type == "masm" and target.cpu == "aarch64":
+    if as_info.type == "armasm":
         return ""
     else:
         return "-c"
@@ -3233,10 +3238,10 @@ def as_dash_c_flag(as_info, target):
 set_config("AS_DASH_C_FLAG", as_dash_c_flag)
 
 
-@depends(as_info, target)
-def as_outoption(as_info, target):
+@depends(as_info)
+def as_outoption(as_info):
     # The uses of ASOUTOPTION depend on the spacing for -o/-Fo.
-    if as_info.type == "masm" and target.cpu != "aarch64":
+    if as_info.type == "masm":
         return "-Fo"
 
     return "-o "
