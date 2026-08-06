@@ -335,7 +335,7 @@ exports.ANIMATION_TYPE_FOR_LONGHANDS = [
       "corner-top-right-shape",
       "d",
       "filter",
-      "font-stretch",
+      "font-width",
       "font-variation-settings",
       "font-weight",
       "hyphenate-limit-chars",

@@ -645,15 +645,15 @@ export class DiscoveryStreamFeed {
               content.taxonomy.replace("-", "").replace(".", "_")
             ],
         });
-
-        requests.push(
-          new lazy.MozAdsPlacementRequestWithCount({
-            placementId,
-            count,
-            iabContent,
-          })
-        );
       }
+
+      requests.push(
+        new lazy.MozAdsPlacementRequestWithCount({
+          placementId,
+          count,
+          iabContent,
+        })
+      );
     }
 
     const spocs = await this.adsClient.requestSpocAds(requests, options);

@@ -584,6 +584,11 @@ class CycleCollectedJSRuntime {
   using DeferredFinalizerTable = nsTHashMap<DeferredFinalizeFunction, void*>;
   DeferredFinalizerTable mDeferredFinalizerTable;
 
+  // Memoizes the last mDeferredFinalizerTable lookup. Must be cleared when the
+  // table is drained, which only happens in FinalizeDeferredThings().
+  DeferredFinalizeFunction mLastDeferredFinalizeFunction = nullptr;
+  void* mLastDeferredFinalizeData = nullptr;
+
   RefPtr<IncrementalFinalizeRunnable> mFinalizeRunnable;
 
   OOMState mOutOfMemoryState;

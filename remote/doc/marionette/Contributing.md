@@ -1,4 +1,4 @@
-# Contributing
+# Contributing to Marionette
 
 If you are new to open source or to Mozilla, you might like this
 [tutorial for new Marionette contributors](NewContributors.md).

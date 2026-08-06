@@ -11,8 +11,6 @@ const { AppConstants } = ChromeUtils.importESModule(
 
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
-  WindowsVersionInfo:
-    "resource://gre/modules/components-utils/WindowsVersionInfo.sys.mjs",
   ICON_CATALOG: "moz-src:///browser/components/shell/CustomIconManager.sys.mjs",
   resolvePreview:
     "moz-src:///browser/components/shell/CustomIconManager.sys.mjs",
@@ -39,10 +37,7 @@ function isAutoTouchModeAvailable() {
   if (AppConstants.MOZ_WIDGET_GTK) {
     return true;
   }
-  return (
-    isWindows &&
-    lazy.WindowsVersionInfo.get({ throwOnError: false }).buildNumber < 22000
-  );
+  return isWindows && !Services.sysinfo.isWindows10BuildOrLater(22000);
 }
 
 // The custom browser-icon picker is gated behind a feature pref, is

@@ -123,7 +123,7 @@ class IPProtectionFeature(
                 .collect { state ->
                     when (state.accountState.status) {
                         AccountStatus.AuthFailed,
-                        AccountStatus.Uninitialized,
+                        AccountStatus.NoAccount,
                             -> {
                             handler?.notifyAccountStatus(false)
                         }
@@ -146,8 +146,8 @@ class IPProtectionFeature(
                             handler?.notifyAccountStatus(true)
                         }
 
+                        AccountStatus.Uninitialized,
                         AccountStatus.WarmingUp,
-                        AccountStatus.NoAccount,
                         AccountStatus.NeedsAuthentication,
                         AccountStatus.RequestingAuthentication,
                         AccountStatus.NeedsAuthorization,
@@ -224,7 +224,10 @@ class IPProtectionFeature(
                     }
                 }
                 if (activate) {
-                    handler?.activate(onResult)
+                    handler?.activate(
+                        countryCode = store.state.locationState.selectedLocation.countryCode,
+                        onResult = onResult,
+                    )
                 } else {
                     handler?.deactivate(onResult)
                 }

@@ -33,6 +33,7 @@ function renderStocks(dispatch = jest.fn(), props = {}) {
     <WrapWithProvider state={mockState}>
       <Stocks
         dispatch={dispatch}
+        handleUserInteraction={jest.fn()}
         widgetsMayBeMaximized={true}
         widgetEnabledMap={{}}
         {...props}
@@ -104,6 +105,50 @@ describe("Stocks widget", () => {
         action.data?.user_action === "search_tickers"
     );
     expect(evt).toBeTruthy();
+  });
+
+  describe("interaction pref", () => {
+    function renderWithInteraction() {
+      const handleUserInteraction = jest.fn();
+      const { container } = renderStocks(jest.fn(), { handleUserInteraction });
+      return { container, handleUserInteraction };
+    }
+
+    it("flips the interaction pref on change_size", () => {
+      const { container, handleUserInteraction } = renderWithInteraction();
+      fireEvent.click(
+        container.querySelector(
+          '#stocks-size-submenu panel-item[data-size="large"]'
+        )
+      );
+      expect(handleUserInteraction).toHaveBeenCalledWith("stocks");
+    });
+
+    it("flips the interaction pref on search_tickers", () => {
+      const { container, handleUserInteraction } = renderWithInteraction();
+      fireEvent.click(
+        container.querySelector('[data-l10n-id="newtab-stocks-menu-search"]')
+      );
+      expect(handleUserInteraction).toHaveBeenCalledWith("stocks");
+    });
+
+    it("flips the interaction pref on learn_more", () => {
+      const { container, handleUserInteraction } = renderWithInteraction();
+      fireEvent.click(
+        container.querySelector(
+          '[data-l10n-id="newtab-stocks-menu-learn-more"]'
+        )
+      );
+      expect(handleUserInteraction).toHaveBeenCalledWith("stocks");
+    });
+
+    it("does not flip the interaction pref when hiding the widget", () => {
+      const { container, handleUserInteraction } = renderWithInteraction();
+      fireEvent.click(
+        container.querySelector('[data-l10n-id="newtab-widget-menu-hide"]')
+      );
+      expect(handleUserInteraction).not.toHaveBeenCalled();
+    });
   });
 
   function renderStocksWithTickers(tickers, size = "medium") {

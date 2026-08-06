@@ -16,6 +16,7 @@ MOCHITEST_CHROME_MANIFESTS += [
 
 BROWSER_CHROME_MANIFESTS += [
     "content/test/about/browser.toml",
+    "content/test/about/sslkeylogging/browser.toml",
     "content/test/alerts/browser.toml",
     "content/test/backforward/browser.toml",
     "content/test/caps/browser.toml",

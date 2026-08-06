@@ -66,4 +66,4 @@ flag to geckodriver through WPT:
 [headless mode]: https://developer.mozilla.org/en-US/Firefox/Headless_mode
 [mozconfig]: /setup/configuring_build_options.md
 [trace-level logs]: TraceLogs.md
-[Marionette protocol]: /testing/marionette/Protocol.md
+[Marionette protocol]: /remote/marionette/Protocol.md

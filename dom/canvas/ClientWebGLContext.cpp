@@ -2092,7 +2092,7 @@ void ClientWebGLContext::GetInternalformatParameter(
     JSContext* cx, GLenum target, GLenum internalformat, GLenum pname,
     JS::MutableHandle<JS::Value> retval, ErrorResult& rv) {
   const FuncScope funcScope(*this, "getInternalformatParameter");
-  retval.set(JS::NullValue());
+  retval.setNull();
   RefPtr<webgl::NotLostData> notLost(mNotLost);
   if (!notLost) {
     return;
@@ -2127,7 +2127,7 @@ template <typename T>
 bool ToJSValueOrNull(JSContext* const cx, const RefPtr<T>& ptr,
                      JS::MutableHandle<JS::Value> retval) {
   if (!ptr) {
-    retval.set(JS::NullValue());
+    retval.setNull();
     return true;
   }
   return dom::ToJSValue(cx, ptr, retval);
@@ -2169,7 +2169,7 @@ void ClientWebGLContext::GetParameter(JSContext* cx, GLenum pname,
                                       JS::MutableHandle<JS::Value> retval,
                                       ErrorResult& rv, const bool debug) {
   const FuncScope funcScope(*this, "getParameter");
-  retval.set(JS::NullValue());
+  retval.setNull();
   RefPtr<webgl::NotLostData> notLost(mNotLost);
   if (!notLost) {
     return;
@@ -2259,10 +2259,10 @@ void ClientWebGLContext::GetParameter(JSContext* cx, GLenum pname,
       return;
 
     case dom::WebGLRenderingContext_Binding::UNPACK_FLIP_Y_WEBGL:
-      retval.set(JS::BooleanValue(state.mPixelUnpackState.flipY));
+      retval.setBoolean(state.mPixelUnpackState.flipY);
       return;
     case dom::WebGLRenderingContext_Binding::UNPACK_PREMULTIPLY_ALPHA_WEBGL:
-      retval.set(JS::BooleanValue(state.mPixelUnpackState.premultiplyAlpha));
+      retval.setBoolean(state.mPixelUnpackState.premultiplyAlpha);
       return;
     case dom::WebGLRenderingContext_Binding::UNPACK_COLORSPACE_CONVERSION_WEBGL:
       retval.setNumber(state.mPixelUnpackState.colorspaceConversion);
@@ -2275,7 +2275,7 @@ void ClientWebGLContext::GetParameter(JSContext* cx, GLenum pname,
 
     case LOCAL_GL_DEPTH_CLAMP:
       if (!IsExtensionEnabled(WebGLExtensionID::EXT_depth_clamp)) break;
-      retval.set(JS::BooleanValue(state.mIsEnabledMap[LOCAL_GL_DEPTH_CLAMP]));
+      retval.setBoolean(state.mIsEnabledMap[LOCAL_GL_DEPTH_CLAMP]);
       return;
 
     // -
@@ -2621,7 +2621,7 @@ void ClientWebGLContext::GetParameter(JSContext* cx, GLenum pname,
         case LOCAL_GL_RASTERIZER_DISCARD:
         case LOCAL_GL_TRANSFORM_FEEDBACK_ACTIVE:
         case LOCAL_GL_TRANSFORM_FEEDBACK_PAUSED:
-          retval.set(JS::BooleanValue(*maybe));
+          retval.setBoolean(*maybe);
           return;
 
         // 4 bools
@@ -2658,7 +2658,7 @@ void ClientWebGLContext::GetParameter(JSContext* cx, GLenum pname,
 void ClientWebGLContext::GetBufferParameter(
     JSContext* cx, GLenum target, GLenum pname,
     JS::MutableHandle<JS::Value> retval) const {
-  retval.set(JS::NullValue());
+  retval.setNull();
   RefPtr<webgl::NotLostData> notLost(mNotLost);
   if (!notLost) {
     return;
@@ -2697,7 +2697,7 @@ void ClientWebGLContext::GetFramebufferAttachmentParameter(
     const GLenum pname, JS::MutableHandle<JS::Value> retval,
     ErrorResult& rv) const {
   const FuncScope funcScope(*this, "getFramebufferAttachmentParameter");
-  retval.set(JS::NullValue());
+  retval.setNull();
   RefPtr<webgl::NotLostData> notLost(mNotLost);
   if (!notLost) {
     return;
@@ -2775,7 +2775,7 @@ void ClientWebGLContext::GetRenderbufferParameter(
     JSContext* cx, GLenum target, GLenum pname,
     JS::MutableHandle<JS::Value> retval) const {
   const FuncScope funcScope(*this, "getRenderbufferParameter");
-  retval.set(JS::NullValue());
+  retval.setNull();
   RefPtr<webgl::NotLostData> notLost(mNotLost);
   if (!notLost) {
     return;
@@ -2807,7 +2807,7 @@ void ClientWebGLContext::GetIndexedParameter(
     JSContext* cx, GLenum target, GLuint index,
     JS::MutableHandle<JS::Value> retval, ErrorResult& rv) const {
   const FuncScope funcScope(*this, "getIndexedParameter");
-  retval.set(JS::NullValue());
+  retval.setNull();
   RefPtr<webgl::NotLostData> notLost(mNotLost);
   if (!notLost) {
     return;
@@ -2874,7 +2874,7 @@ void ClientWebGLContext::GetUniform(JSContext* const cx,
                                     const WebGLUniformLocationJS& loc,
                                     JS::MutableHandle<JS::Value> retval) {
   const FuncScope funcScope(*this, "getUniform");
-  retval.set(JS::NullValue());
+  retval.setNull();
   RefPtr<webgl::NotLostData> notLost(mNotLost);
   if (!notLost) {
     return;
@@ -2912,7 +2912,7 @@ void ClientWebGLContext::GetUniform(JSContext* const cx,
 
   switch (res.type) {
     case LOCAL_GL_BOOL:
-      retval.set(JS::BooleanValue(res.data[0]));
+      retval.setBoolean(res.data[0]);
       return;
 
     case LOCAL_GL_FLOAT: {
@@ -4285,7 +4285,7 @@ void ClientWebGLContext::GetTexParameter(
     JSContext* cx, GLenum texTarget, GLenum pname,
     JS::MutableHandle<JS::Value> retval) const {
   const FuncScope funcScope(*this, "getTexParameter");
-  retval.set(JS::NullValue());
+  retval.setNull();
   RefPtr<webgl::NotLostData> notLost(mNotLost);
   if (!notLost) {
     return;
@@ -4319,7 +4319,7 @@ void ClientWebGLContext::GetTexParameter(
   if (maybe) {
     switch (pname) {
       case LOCAL_GL_TEXTURE_IMMUTABLE_FORMAT:
-        retval.set(JS::BooleanValue(*maybe));
+        retval.setBoolean(*maybe);
         break;
 
       default:
@@ -5041,7 +5041,7 @@ void ClientWebGLContext::GetVertexAttrib(JSContext* cx, GLuint index,
                                          JS::MutableHandle<JS::Value> retval,
                                          ErrorResult& rv) {
   const FuncScope funcScope(*this, "getVertexAttrib");
-  retval.set(JS::NullValue());
+  retval.setNull();
   RefPtr<webgl::NotLostData> notLost(mNotLost);
   if (!notLost) {
     return;
@@ -5107,7 +5107,7 @@ void ClientWebGLContext::GetVertexAttrib(JSContext* cx, GLuint index,
       case LOCAL_GL_VERTEX_ATTRIB_ARRAY_ENABLED:
       case LOCAL_GL_VERTEX_ATTRIB_ARRAY_NORMALIZED:
       case LOCAL_GL_VERTEX_ATTRIB_ARRAY_INTEGER:
-        retval.set(JS::BooleanValue(*maybe));
+        retval.setBoolean(*maybe);
         break;
 
       default:
@@ -5730,7 +5730,7 @@ void ClientWebGLContext::GetQuery(JSContext* cx, GLenum specificTarget,
                                   GLenum pname,
                                   JS::MutableHandle<JS::Value> retval) const {
   const FuncScope funcScope(*this, "getQuery");
-  retval.set(JS::NullValue());
+  retval.setNull();
   RefPtr<webgl::NotLostData> notLost(mNotLost);
   if (!notLost) {
     return;
@@ -5780,7 +5780,7 @@ void ClientWebGLContext::GetQueryParameter(
     JSContext*, WebGLQueryJS& query, const GLenum pname,
     JS::MutableHandle<JS::Value> retval) const {
   const FuncScope funcScope(*this, "getQueryParameter");
-  retval.set(JS::NullValue());
+  retval.setNull();
   RefPtr<webgl::NotLostData> notLost(mNotLost);
   if (!notLost) {
     return;
@@ -5810,7 +5810,7 @@ void ClientWebGLContext::GetQueryParameter(
 
   switch (pname) {
     case LOCAL_GL_QUERY_RESULT_AVAILABLE:
-      retval.set(JS::BooleanValue(*maybe));
+      retval.setBoolean(*maybe);
       break;
 
     default:
@@ -5924,7 +5924,7 @@ void ClientWebGLContext::GetSamplerParameter(
     JSContext* cx, const WebGLSamplerJS& sampler, const GLenum pname,
     JS::MutableHandle<JS::Value> retval) const {
   const FuncScope funcScope(*this, "getSamplerParameter");
-  retval.set(JS::NullValue());
+  retval.setNull();
   RefPtr<webgl::NotLostData> notLost(mNotLost);
   if (!notLost) {
     return;
@@ -6004,7 +6004,7 @@ void ClientWebGLContext::GetSyncParameter(
     JSContext* const cx, WebGLSyncJS& sync, const GLenum pname,
     JS::MutableHandle<JS::Value> retval) const {
   const FuncScope funcScope(*this, "getSyncParameter");
-  retval.set(JS::NullValue());
+  retval.setNull();
   RefPtr<webgl::NotLostData> notLost(mNotLost);
   if (!notLost) {
     return;
@@ -6715,7 +6715,7 @@ void ClientWebGLContext::GetActiveUniformBlockParameter(
     JSContext* const cx, const WebGLProgramJS& prog, const GLuint index,
     const GLenum pname, JS::MutableHandle<JS::Value> retval, ErrorResult& rv) {
   const FuncScope funcScope(*this, "getActiveUniformBlockParameter");
-  retval.set(JS::NullValue());
+  retval.setNull();
   RefPtr<webgl::NotLostData> notLost(mNotLost);
   if (!notLost) {
     return;
@@ -6764,7 +6764,7 @@ void ClientWebGLContext::GetActiveUniforms(
     const dom::Sequence<GLuint>& uniformIndices, const GLenum pname,
     JS::MutableHandle<JS::Value> retval) const {
   const FuncScope funcScope(*this, "getActiveUniforms");
-  retval.set(JS::NullValue());
+  retval.setNull();
   RefPtr<webgl::NotLostData> notLost(mNotLost);
   if (!notLost) {
     return;
@@ -7092,7 +7092,7 @@ void ClientWebGLContext::GetProgramParameter(
     JSContext* const js, const WebGLProgramJS& prog, const GLenum pname,
     JS::MutableHandle<JS::Value> retval) const {
   const FuncScope funcScope(*this, "getProgramParameter");
-  retval.set(JS::NullValue());
+  retval.setNull();
   RefPtr<webgl::NotLostData> notLost(mNotLost);
   if (!notLost) {
     return;
@@ -7187,7 +7187,7 @@ void ClientWebGLContext::GetShaderParameter(
     JSContext* const cx, const WebGLShaderJS& shader, const GLenum pname,
     JS::MutableHandle<JS::Value> retval) const {
   const FuncScope funcScope(*this, "getShaderParameter");
-  retval.set(JS::NullValue());
+  retval.setNull();
   RefPtr<webgl::NotLostData> notLost(mNotLost);
   if (!notLost) {
     return;

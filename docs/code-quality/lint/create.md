@@ -282,7 +282,7 @@ aparent (aParent).
 but detects mistakes like mozilla
 """.lstrip()
 
-    path = create_temp_file(contents, "ignore.rst")
+    path = create_temp_file(contents, "ignore.md")
     lint([path], fix=True)
 
     assert fixed == 2

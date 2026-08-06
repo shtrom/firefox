@@ -1,4 +1,4 @@
-# Preferences
+# IP Protection preferences
 
 This document describes preferences affecting Firefox's IP Protection.
 These preferences are normally hidden and should not be used unless you really

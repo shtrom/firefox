@@ -1,4 +1,4 @@
-# Preferences
+# Marionette preferences
 
 There are a couple of [Remote Agent preferences] associated with the Gecko remote
 protocol. Those listed below are additional ones uniquely used for Marionette.

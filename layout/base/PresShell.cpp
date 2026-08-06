@@ -12255,8 +12255,7 @@ void PresShell::MaybeReflowForInflationScreenSizeChange() {
   if (nsCOMPtr<nsIDocShell> docShell = pc->GetDocShell()) {
     nsTArray<nsCOMPtr<nsIDocumentViewer>> array;
     AppendSubtree(docShell, array);
-    for (uint32_t i = 0, iEnd = array.Length(); i < iEnd; ++i) {
-      nsCOMPtr<nsIDocumentViewer> viewer = array[i];
+    for (const auto& viewer : array) {
       if (RefPtr<PresShell> descendantPresShell = viewer->GetPresShell()) {
         nsIFrame* rootFrame = descendantPresShell->GetRootFrame();
         if (rootFrame) {

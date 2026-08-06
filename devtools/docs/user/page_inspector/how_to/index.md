@@ -1,4 +1,4 @@
-# How to
+# Page Inspector how-tos
 
 Links for various HOW TO's can be found here. These links describe in depth the HOW TO techniques.
 

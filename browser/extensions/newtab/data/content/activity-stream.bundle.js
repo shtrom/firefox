@@ -4265,6 +4265,9 @@ const SponsorLabel = ({
   sponsor,
   context,
   newSponsoredLabel,
+  // @nova-cleanup(remove-conditional): Delete this prop and keep only the
+  // source-wrapper branch below; the classic FluentOrText label goes away, along
+  // with the now-unused FluentOrText import and the classList variable.
   novaEnabled
 }) => {
   const classList = `story-sponsored-label ${newSponsoredLabel || ""} clamp`;
@@ -4887,6 +4890,8 @@ class _DSCard extends (external_React_default()).PureComponent {
       readTime: displayReadTime
     } = DiscoveryStream;
     const sectionsEnabled = Prefs.values[DSCard_PREF_SECTIONS_ENABLED];
+    // @nova-cleanup(remove-pref): Delete this read and the two novaEnabled props
+    // passed to DSContextFooter below; that component drops the prop entirely.
     const novaEnabled = Prefs.values["nova.enabled"];
     // We can ignore hideDescriptions if we are in sections.
     const excerpt = !hideDescriptions || sectionsEnabled ? this.props.excerpt : "";
@@ -5646,6 +5651,7 @@ const AdBanner = ({
 
 
 
+// @nova-cleanup(remove-pref): Delete this const; see the showNovaHeader read below.
 const CardGrid_PREF_NOVA_ENABLED = "nova.enabled";
 const PREF_SECTIONS_CARDS_ENABLED = "discoverystream.sections.cards.enabled";
 const CardGrid_PREF_SECTIONS_ENABLED = "discoverystream.sections.enabled";
@@ -5932,6 +5938,9 @@ class _CardGrid extends (external_React_default()).PureComponent {
     // Handle the case where a user has dismissed all recommendations
     const isEmpty = data.recommendations.length === 0;
     const prefs = this.props.Prefs.values;
+    // @nova-cleanup(remove-conditional): Delete novaEnabled and replace
+    // showNovaHeader with `const showHeader = !sectionsEnabled;`, renaming the
+    // two showNovaHeader uses in the JSX below.
     const novaEnabled = prefs[CardGrid_PREF_NOVA_ENABLED];
     const sectionsEnabled = prefs[CardGrid_PREF_SECTIONS_ENABLED];
     const showNovaHeader = novaEnabled && !sectionsEnabled;
@@ -15138,6 +15147,7 @@ const PREF_WIDGETS_LISTS_MAX_LISTITEMS = "widgets.lists.maxListItems";
 const PREF_WIDGETS_LISTS_BADGE_ENABLED = "widgets.lists.badge.enabled";
 const PREF_WIDGETS_LISTS_BADGE_LABEL = "widgets.lists.badge.label";
 const PREF_WIDGETS_LISTS_SIZE = "widgets.lists.size";
+// @nova-cleanup(remove-pref): Delete this const; see getListsWidgetSize below.
 const Lists_PREF_NOVA_ENABLED = "nova.enabled";
 const LISTS_EMPTY_STATE_ILLUSTRATION = "chrome://newtab/content/data/content/assets/lists-empty-state-comet.svg";
 const LISTS_CELEBRATION = {
@@ -15230,6 +15240,11 @@ function Lists({
   const [isCreatingNewList, setIsCreatingNewList] = (0,external_React_namespaceObject.useState)(false);
   const [showCompactCompleted, setShowCompactCompleted] = (0,external_React_namespaceObject.useState)(false);
   const selectedList = (0,external_React_namespaceObject.useMemo)(() => lists[selected], [lists, selected]);
+
+  // @nova-cleanup(remove-pref): Delete novaEnabled and collapse
+  // getListsWidgetSize to just the Nova branch, deleting everything after it
+  // (the PREF_WIDGETS_LISTS_SIZE fallback chain) and the now-unused
+  // PREF_WIDGETS_LISTS_SIZE const.
   const novaEnabled = prefs[Lists_PREF_NOVA_ENABLED];
   const listsWidget = WIDGET_REGISTRY.find(w => w.id === "lists");
   const getListsWidgetSize = () => {
@@ -15715,6 +15730,7 @@ function Lists({
     }));
   }
   return /*#__PURE__*/external_React_default().createElement("article", {
+    // @nova-cleanup(remove-conditional): Always apply col-4.
     className: `lists widget ${novaEnabled ? "col-4" : ""} ${listsSizeClass} ${isMaximized ? "is-maximized" : ""}${showEmptyState ? " is-empty" : ""}${hasVisibleTasks ? " has-visible-tasks" : ""}${isAddingTask ? " is-adding-task" : ""}${isCelebrating ? " is-celebrating" : ""}`,
     ref: el => {
       widgetRef.current = el;
@@ -15804,7 +15820,10 @@ function Lists({
     widgetSize: widgetsMayBeMaximized ? widgetSize : "medium",
     learnMoreL10nId: "newtab-widget-lists-menu-learn-more",
     onLearnMore: handleListInteraction,
-    sizeSubmenu: novaEnabled && widgetsMayBeMaximized && /*#__PURE__*/external_React_default().createElement(SizeSubmenu, {
+    sizeSubmenu:
+    // @nova-cleanup(remove-conditional): Drop the novaEnabled check,
+    // keep widgetsMayBeMaximized.
+    novaEnabled && widgetsMayBeMaximized && /*#__PURE__*/external_React_default().createElement(SizeSubmenu, {
       submenuId: "lists-size-submenu",
       sizes: ["medium", "large"],
       checkedSize: widgetSize,
@@ -16192,7 +16211,7 @@ const isAtMaxLength = currentValue => {
   return currentValue.length >= 2;
 };
 
-// @nova-cleanup(remove): Drop after Nova ships
+// Drop this if the spinbutton is ever replaced with a native control.
 /**
  * Validates whether the next state of the Nova spinbutton is acceptable.
  * Allows up to 2 digits, an optional single colon, and up to 2 more digits.
@@ -16790,7 +16809,8 @@ const FocusTimer = ({
     });
   }, [dispatch]);
 
-  // @nova-cleanup(remove-conditional): Drop the legacy callers and inline this for Nova
+  // @nova-cleanup(remove-conditional): Keep this function. Its only classic
+  // caller is the legacy body removed below; no change needed here.
   const setTimerMinutes = (0,external_React_namespaceObject.useCallback)(nextMinutes => {
     const clamped = Math.max(1, Math.min(99, nextMinutes));
     const totalSeconds = clamped * 60;
@@ -16824,7 +16844,8 @@ const FocusTimer = ({
     handleTimerInteraction();
   }, [dispatch, duration, timerType, widgetSize, handleTimerInteraction]);
 
-  // @nova-cleanup(remove-conditional): Inline this once the Nova spinbutton is the only path
+  // @nova-cleanup(remove-conditional): Keep this function; it drives the Nova
+  // spinbutton. No change needed here.
   const commitSpinbuttonDuration = (0,external_React_namespaceObject.useCallback)(() => {
     const el = activeMinutesRef.current;
     if (!el) {
@@ -16874,7 +16895,7 @@ const FocusTimer = ({
     handleTimerInteraction();
   }, [dispatch, duration, timerType, widgetSize, handleTimerInteraction, timeLeft]);
 
-  // @nova-cleanup(remove-conditional): Remove if the Nova spinbutton is replaced
+  // Drop this if the spinbutton is ever replaced with a native control.
   const handleSpinBeforeInput = e => {
     const input = e.data;
     if (input === null || input === undefined) {
@@ -16889,7 +16910,7 @@ const FocusTimer = ({
     }
   };
 
-  // @nova-cleanup(remove-conditional): Remove if the Nova spinbutton is replaced
+  // Drop this if the spinbutton is ever replaced with a native control.
   const handleSpinKeyDown = e => {
     let next = minutesValue;
     switch (e.key) {
@@ -16923,7 +16944,7 @@ const FocusTimer = ({
     setTimerMinutes(next);
   };
 
-  // @nova-cleanup(remove-conditional): Remove with the Nova radiogroup
+  // Drop this if the Focus/Break radiogroup is ever replaced.
   const handleRadiogroupKeyDown = e => {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") {
       return;
@@ -17213,6 +17234,8 @@ function LocationSearch({
   const [selectedLocation, setSelectedLocation] = (0,external_React_namespaceObject.useState)("");
   const suggestedLocations = (0,external_ReactRedux_namespaceObject.useSelector)(state => state.Weather.suggestedLocations);
   const locationSearchString = (0,external_ReactRedux_namespaceObject.useSelector)(state => state.Weather.locationSearchString);
+  // @nova-cleanup(remove-pref): Delete this read and the novaEnabled guard on
+  // the use-current-location button below; keep showCurrentLocation.
   const novaEnabled = (0,external_ReactRedux_namespaceObject.useSelector)(state => state.Prefs.values["nova.enabled"]);
   const weatherOptIn = (0,external_ReactRedux_namespaceObject.useSelector)(state => state.Prefs.values["system.showWeatherOptIn"]);
   const optInAccepted = (0,external_ReactRedux_namespaceObject.useSelector)(state => state.Prefs.values["weather.optInAccepted"]);
@@ -23443,6 +23466,7 @@ const STOCKS_ENTRY = WIDGET_REGISTRY.find(w => w.id === "stocks");
 const STOCKS_PLACEHOLDER_COUNT = 4;
 function Stocks_Stocks({
   dispatch,
+  handleUserInteraction,
   widgetsMayBeMaximized,
   widgetEnabledMap
 }) {
@@ -23457,6 +23481,10 @@ function Stocks_Stocks({
   const widgetSize = resolveWidgetSize(STOCKS_ENTRY, prefs);
   const showError = error && !tickers.length;
   const impressionFired = (0,external_React_namespaceObject.useRef)(false);
+
+  // Any user action flips widgets.stocks.interaction (idempotent, one-way),
+  // matching the other widgets. Hiding the widget is not an interaction.
+  const handleInteraction = (0,external_React_namespaceObject.useCallback)(() => handleUserInteraction("stocks"), [handleUserInteraction]);
   const handleIntersection = (0,external_React_namespaceObject.useCallback)(() => {
     if (impressionFired.current) {
       return;
@@ -23490,8 +23518,9 @@ function Stocks_Stocks({
           widget_size: size
         }
       }));
+      handleInteraction();
     });
-  }, [dispatch]);
+  }, [dispatch, handleInteraction]);
 
   // Placeholder: a real ticker search will replace this telemetry-only stub in
   // a follow-up.
@@ -23505,6 +23534,7 @@ function Stocks_Stocks({
         widget_size: widgetSize
       }
     }));
+    handleInteraction();
   }
 
   // The shared footer opens the support link; here we only record the click.
@@ -23518,6 +23548,7 @@ function Stocks_Stocks({
         widget_size: widgetSize
       }
     }));
+    handleInteraction();
   }
   return /*#__PURE__*/external_React_default().createElement("article", {
     className: `stocks widget col-4 ${widgetSize}-widget`,

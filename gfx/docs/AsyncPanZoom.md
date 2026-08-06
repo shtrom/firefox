@@ -871,6 +871,6 @@ the global thread/lock ordering. Feel free to add others:
     This will allow us to continue running the deferred tasks on the sampler
     thread rather than having to bounce them to another thread.
 
-[gtest documentation]: /gtest/index.html
-[mochitest documentation]: /testing/mochitest-plain/index.html
-[reftest documentation]: /layout/Reftest.html
+[gtest documentation]: /gtest/index.md
+[mochitest documentation]: /testing/mochitest-plain/index.md
+[reftest documentation]: /layout/Reftest.md

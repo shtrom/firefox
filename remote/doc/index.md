@@ -66,5 +66,5 @@ See [Communication] on [our project wiki].
 [our project wiki]: https://wiki.mozilla.org/Remote
 [remote protocol product]: https://bugzilla.mozilla.org/describecomponents.cgi?product=Remote%20Protocol
 [remote/messagehandler]: messagehandler/index.md
-[testing/marionette]: /testing/marionette
+[testing/marionette]: marionette/index.md
 [webdriver (http) specification]: https://w3c.github.io/webdriver/

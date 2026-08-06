@@ -409,7 +409,7 @@ void Gecko_EnsureStyleViewTimelineArrayLength(void* array, size_t len);
 //                     found, to set on the created Keyframe.
 //
 // @returns  The matching or created Keyframe.
-mozilla::Keyframe* Gecko_GetOrCreateKeyframeAtEnd(
+mozilla::Keyframe* Gecko_GetOrCreateKeyframeForPercentageOffset(
     nsTArray<mozilla::Keyframe>* keyframes, float offset,
     const mozilla::StyleComputedTimingFunction* timingFunction,
     const mozilla::dom::CompositeOperationOrAuto composition);
@@ -417,31 +417,12 @@ mozilla::Keyframe* Gecko_GetOrCreateKeyframeAtEnd(
 // The variant of the above method but this is specialized for the keyframe
 // offset with the timeline range name.
 // @param aRangeName The timeline range name to search for.
-mozilla::Keyframe* Gecko_GetOrCreateKeyframeWithRangeName(
+mozilla::Keyframe* Gecko_GetOrCreateKeyframeForTimelineRangeOffset(
     nsTArray<mozilla::Keyframe>* aKeyframes,
     const mozilla::StyleTimelineRangeName aRangeName, float aOffset,
     const mozilla::StyleComputedTimingFunction* aTimingFunction,
     const mozilla::dom::CompositeOperationOrAuto aComposition,
     size_t* aMatchedIdx);
-
-// As with Gecko_GetOrCreateKeyframeAtEnd except that this method will search
-// from the beginning of |keyframes| for a Keyframe with matching timing
-// function, composition, and an offset of 0.0.
-// Furthermore, if a matching Keyframe is not found, a new Keyframe will be
-// inserted after the *last* Keyframe in |keyframes| with offset 0.0.
-mozilla::Keyframe* Gecko_GetOrCreateInitialKeyframe(
-    nsTArray<mozilla::Keyframe>* keyframes,
-    const mozilla::StyleComputedTimingFunction* timingFunction,
-    const mozilla::dom::CompositeOperationOrAuto composition);
-
-// As with Gecko_GetOrCreateKeyframeAtEnd except that this method will search
-// from the *end* of |keyframes| for a Keyframe with matching timing function,
-// composition, and an offset of 1.0. If a matching Keyframe is not found, a new
-// Keyframe will be appended to the end of |keyframes|.
-mozilla::Keyframe* Gecko_GetOrCreateFinalKeyframe(
-    nsTArray<mozilla::Keyframe>* keyframes,
-    const mozilla::StyleComputedTimingFunction* timingFunction,
-    const mozilla::dom::CompositeOperationOrAuto composition);
 
 void Gecko_ResetFilters(nsStyleEffects* effects, size_t new_len);
 

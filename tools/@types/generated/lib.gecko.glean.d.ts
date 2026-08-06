@@ -7886,8 +7886,6 @@ interface GleanImpl {
     libstdcxxVersion: GleanString;
     locale: GleanString;
     name: GleanString;
-    servicePackMajor: GleanQuantity;
-    servicePackMinor: GleanQuantity;
     version: GleanString;
     windowsBuildNumber: GleanQuantity;
     windowsUbr: GleanQuantity;

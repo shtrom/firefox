@@ -129,10 +129,7 @@ function autoTouchModeAvailable() {
   if (AppConstants.platform != "win") {
     return false;
   }
-  const { WindowsVersionInfo } = ChromeUtils.importESModule(
-    "resource://gre/modules/components-utils/WindowsVersionInfo.sys.mjs"
-  );
-  return WindowsVersionInfo.get({ throwOnError: false }).buildNumber < 22000;
+  return !Services.sysinfo.isWindows10BuildOrLater(22000);
 }
 
 async function withWindowDensityPane(callback) {

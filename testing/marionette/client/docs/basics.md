@@ -184,7 +184,7 @@ set a script timeout using {func}`~Marionette.timeout.script` and handling
 `ScriptTimeoutException`.
 
 [marionette]: https://developer.mozilla.org/en-US/docs/Marionette
-[marionette tests]: https://firefox-source-docs.mozilla.org/testing/marionette/PythonTests.html
+[marionette tests]: https://firefox-source-docs.mozilla.org/remote/marionette/PythonTests.html
 [marionette-enabled instance of firefox]: https://developer.mozilla.org/en-US/docs/Mozilla/QA/Marionette/Builds
 [pip installed]: https://pip.pypa.io/en/latest/installing.html
 [virtualenv]: http://virtualenv.readthedocs.org/en/latest/

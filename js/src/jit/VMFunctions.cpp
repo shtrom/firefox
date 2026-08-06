@@ -956,7 +956,7 @@ bool CreateThisFromIC(JSContext* cx, HandleObject callee,
                                 argv);
 
   // CreateThis expects rval to be this magic value.
-  rval.set(MagicValue(JS_IS_CONSTRUCTING));
+  rval.setMagic(JS_IS_CONSTRUCTING);
 
   if (!js::CreateThis(cx, fun, newTarget, GenericObject, rval)) {
     return false;
@@ -1001,7 +1001,7 @@ bool CreateThisFromICWithAllocSite(JSContext* cx, HandleObject callee,
 bool CreateThisFromIon(JSContext* cx, HandleObject callee,
                        HandleObject newTarget, MutableHandleValue rval) {
   // Return JS_IS_CONSTRUCTING for cases not supported by the inline call path.
-  rval.set(MagicValue(JS_IS_CONSTRUCTING));
+  rval.setMagic(JS_IS_CONSTRUCTING);
 
   if (!callee->is<JSFunction>()) {
     return true;

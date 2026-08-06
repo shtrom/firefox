@@ -4192,10 +4192,6 @@ ${
           "--urlbar-container-height",
           px(getBoundsWithoutFlushing(this.parentNode).height)
         );
-        this.style.setProperty(
-          "--urlbar-height",
-          px(getBoundsWithoutFlushing(this).height)
-        );
 
         if (this.#breakoutBlockerCount) {
           return;

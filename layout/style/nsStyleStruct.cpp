@@ -306,12 +306,11 @@ bool AnchorPosResolutionParams::AutoResolutionOverrideParams::OverriddenToZero(
 static AnchorPosResolutionParams::AutoResolutionOverrideParams
 GetAutoResolutionOverrideParams(const nsIFrame* aFrame,
                                 bool aDefaultAnchorValid) {
-  if (!aFrame) {
+  if (!aFrame || !aDefaultAnchorValid) {
     return {};
   }
   nsIFrame* parent = aFrame->GetParent();
-  if (!parent || !aFrame->HasAnyStateBits(NS_FRAME_OUT_OF_FLOW) ||
-      !aDefaultAnchorValid) {
+  if (!parent || !aFrame->HasAnyStateBits(NS_FRAME_OUT_OF_FLOW)) {
     return {};
   }
 

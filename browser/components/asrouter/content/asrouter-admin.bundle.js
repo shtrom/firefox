@@ -960,8 +960,16 @@ class ASRouterAdminInner extends (react__WEBPACK_IMPORTED_MODULE_1___default().P
     const impressions = this.state.messageImpressions[msg.id] ? this.state.messageImpressions[msg.id].length : 0;
     const isCollapsed = this.state.collapsedMessages.includes(messageIndex);
     const isModified = this.state.modifiedMessages.includes(messageIndex);
-    const requiresAnchor = this.messageRequiresAnchor(msg);
-    const anchorWarning = "This message may not render as it anchors to a browser UI element that may not be " + "currently visible.";
+    const previewWarnings = [];
+    if (this.messageRequiresAnchor(msg)) {
+      previewWarnings.push("This message may not render as it anchors to a browser UI element that may not be " + "currently visible.");
+    }
+    if (msg.template === "toast_notification") {
+      previewWarnings.push("Toast notifications are shown and limited to native Windows OS notifications via the system alerts service. ");
+    }
+    if (msg.template === "menu_message") {
+      previewWarnings.push('To preview this message, add "testingTriggerContext" to the JSON set to either ' + '"app_menu" or "pxi_menu" to select which menu it renders in.');
+    }
     const aboutMessagePreviewSupported = ["infobar", "spotlight", "cfr_doorhanger", "feature_callout", "pb_newtab", "sidebar_chatbot_promo"].includes(msg.template);
     let itemClassName = "message-item";
     if (isBlocked) {
@@ -992,12 +1000,13 @@ class ASRouterAdminInner extends (react__WEBPACK_IMPORTED_MODULE_1___default().P
       msgId: messageIndex,
       toggleJSON: this.toggleJSON,
       isCollapsed: isCollapsed
-    }, requiresAnchor ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("span", {
+    }, previewWarnings.map(warning => /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("span", {
+      key: warning,
       className: "icon icon-warning preview-warning",
       role: "img",
-      "aria-label": anchorWarning,
-      title: anchorWarning
-    }) : null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("span", {
+      "aria-label": warning,
+      title: warning
+    })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("span", {
       className: "message-id monospace"
     }, msg.id), " ", /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_1___default().createElement("span", {
       className: "message-stats small-text"
