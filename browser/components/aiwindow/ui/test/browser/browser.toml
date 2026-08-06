@@ -12,8 +12,6 @@ support-files = [
   "test_agent_monitor_item.mjs",
   "test_ai_action_result_page.html",
   "test_ai_action_result.mjs",
-  "test_ai_action_confirmation_page.html",
-  "test_ai_action_confirmation.mjs",
   "test_assistant_message_footer_page.html",
   "test_applied_memories_page.html",
   "test_chat_assistant_citations_page.html",
@@ -77,8 +75,6 @@ skip-if = [
 ["browser_aiwindow_agent_monitor_item.js"]
 
 ["browser_aiwindow_agentui_command.js"]
-
-["browser_aiwindow_ai_action_confirmation.js"]
 
 ["browser_aiwindow_ai_action_result.js"]
 

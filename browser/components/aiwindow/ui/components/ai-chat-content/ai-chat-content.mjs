@@ -17,8 +17,6 @@ import "chrome://browser/content/aiwindow/components/website-chip-container.mjs"
 // eslint-disable-next-line import/no-unassigned-import
 import "chrome://browser/content/aiwindow/components/ai-website-confirmation.mjs";
 // eslint-disable-next-line import/no-unassigned-import
-import "chrome://browser/content/aiwindow/components/ai-action-confirmation.mjs";
-// eslint-disable-next-line import/no-unassigned-import
 import "chrome://browser/content/aiwindow/components/kit-mention.mjs";
 // eslint-disable-next-line import/no-unassigned-import
 import "chrome://browser/content/aiwindow/components/agent-monitor-item.mjs";
@@ -28,10 +26,6 @@ import {
   dispatchClientError,
   installClientErrorListeners,
 } from "chrome://browser/content/aiwindow/modules/ClientErrorTelemetry.mjs";
-
-/**
- * @typedef {import("chrome://browser/content/aiwindow/components/ai-action-confirmation.mjs").TabSelectionData} TabSelectionData
- */
 
 const FOLLOW_UP_QTY = 2;
 // Stand-in "error" for invalid message data, which has no error object of its
@@ -1521,42 +1515,21 @@ export class AIChatContent extends MozLitElement {
               },
             })
         : undefined;
-    const tabs = this.#getConfirmationTabs(confirmedData, wasRestored);
 
     return html`
-      <ai-action-confirmation
+      <ai-action-result
         .labelL10nId=${actionResultData.labelL10nId}
         .labelL10nArgs=${actionResultData.labelL10nArgs}
-        .tabs=${tabs}
+        .summaryL10nId=${actionResultData.summaryL10nId}
+        .summaryL10nArgs=${actionResultData.summaryL10nArgs}
+        .rows=${actionResultData.rows}
         .canUndo=${canUndo}
         .isExpanded=${this.#actionResultExpandState.get(messageId) ?? false}
-        @action-confirmation-toggle=${e =>
-          this.#actionResultExpandState.set(messageId, e.detail.isExpanded)}
-        @action-confirmation-undo=${onUndo}
-      ></ai-action-confirmation>
+        @action-result-toggle=${e =>
+          this.#actionResultExpandState.set(messageId, !!e.detail?.isExpanded)}
+        @action-result-undo=${onUndo}
+      ></ai-action-result>
     `;
-  }
-
-  /**
-   * Build the list of affected tabs.
-   *
-   * @param {object} confirmedData - The confirmed action data
-   * @param {boolean} wasRestored - Whether the action has been undone
-   * @returns {Array<TabSelectionData>}
-   */
-  #getConfirmationTabs(confirmedData, wasRestored) {
-    let sourceTabs = confirmedData.originalClosedTabs;
-    if (!wasRestored) {
-      sourceTabs = confirmedData.selectedTabs;
-    } else if (confirmedData.actionType === "group_tabs") {
-      sourceTabs = confirmedData.originalGroupedTabs;
-    }
-
-    return (sourceTabs ?? []).map(tab => ({
-      url: tab.url,
-      title: tab.title,
-      iconSrc: tab.iconSrc || (tab.url ? `page-icon:${tab.url}` : ""),
-    }));
   }
 
   #renderCancelledComponent() {
