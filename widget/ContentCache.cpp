@@ -374,13 +374,12 @@ bool ContentCacheInChild::CacheText(nsIWidget* aWidget,
   return CacheSelection(aWidget, aNotification);
 }
 
-bool ContentCacheInChild::QueryFirstCharFallbackRect(
-    nsIWidget* aWidget, LayoutDeviceIntRect& aCharRect) const {
+bool ContentCacheInChild::QueryCharRect(nsIWidget* aWidget, uint32_t aOffset,
+                                        LayoutDeviceIntRect& aCharRect) const {
   aCharRect.SetEmpty();
 
   WidgetQueryContentEvent queryTextRectEvent(true, eQueryTextRect, aWidget);
-  queryTextRectEvent.InitForQueryTextRect(0, 1);
-  queryTextRectEvent.mInput.mIsFirstCharFallbackRect = true;
+  queryTextRectEvent.InitForQueryTextRect(aOffset, 1);
   aWidget->DispatchEvent(&queryTextRectEvent);
   if (NS_WARN_IF(queryTextRectEvent.Failed())) {
     return false;
@@ -592,8 +591,7 @@ bool ContentCacheInChild::CacheTextRects(nsIWidget* aWidget,
     mFirstCharRect = mTextRectArray->GetRect(0u);
   } else {
     LayoutDeviceIntRect charRect;
-    if (MOZ_UNLIKELY(
-            NS_WARN_IF(!QueryFirstCharFallbackRect(aWidget, charRect)))) {
+    if (MOZ_UNLIKELY(NS_WARN_IF(!QueryCharRect(aWidget, 0, charRect)))) {
       MOZ_LOG(sContentCacheLog, LogLevel::Error,
               ("0x%p   CacheTextRects(), FAILED, "
                "couldn't retrieve first char rect",
