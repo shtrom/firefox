@@ -2872,6 +2872,9 @@ var gCSSProperties = {
       "calc(2em / (4 / 3))",
       "calc(4 * (2em / 3))",
 
+      // Type checking of unit math
+      "calc(5em / 5em * 5em)",
+
       "min(5px)",
       "min(5px,2em)",
 
@@ -2924,7 +2927,6 @@ var gCSSProperties = {
       "calc(5 + 5)",
       "calc(5 * 5)",
       "calc(5em * 5em)",
-      "calc(5em / 5em * 5em)",
 
       "calc(4 * 3 / 2em)",
       "calc((4 * 3) / 2em)",
@@ -9364,6 +9366,10 @@ var gCSSProperties = {
       "calc(50%)",
       "calc(50px/2)",
       "calc(50px/(2 - 1))",
+      "calc((3em / 100%) * 3em)",
+      "calc(3em / 100% * 3em)",
+      "calc(3em * (3em / 100%))",
+      "calc(3em * 3em / 100%)",
       "calc(min(5px))",
       "calc(min(5px,2em))",
       "calc(max(5px))",
@@ -9392,16 +9398,6 @@ var gCSSProperties = {
       "-moz-max(5px)",
       "-moz-min(5px,2em)",
       "-moz-max(5px,2em)",
-      /* If we ever support division by values, which is
-       * complicated for the reasons described in
-       * http://lists.w3.org/Archives/Public/www-style/2010Jan/0007.html
-       * , we should support all 4 of these as described in
-       * http://lists.w3.org/Archives/Public/www-style/2009Dec/0296.html
-       */
-      "calc((3em / 100%) * 3em)",
-      "calc(3em / 100% * 3em)",
-      "calc(3em * (3em / 100%))",
-      "calc(3em * 3em / 100%)",
     ],
     quirks_values: { 5: "5px" },
   },
@@ -10710,6 +10706,10 @@ var gCSSProperties = {
       "calc(50%)",
       "calc(50px/2)",
       "calc(50px/(2 - 1))",
+      "calc((3em / 100%) * 3em)",
+      "calc(3em / 100% * 3em)",
+      "calc(3em * (3em / 100%))",
+      "calc(3em * 3em / 100%)",
       "calc(min(5px))",
       "calc(min(5px,2em))",
       "calc(max(5px))",
@@ -10734,15 +10734,6 @@ var gCSSProperties = {
       "-moz-max(5px)",
       "-moz-min(5px,2em)",
       "-moz-max(5px,2em)",
-      // If we ever support division by values, which is
-      // complicated for the reasons described in
-      // http://lists.w3.org/Archives/Public/www-style/2010Jan/0007.html
-      // , we should support all 4 of these as described in
-      // http://lists.w3.org/Archives/Public/www-style/2009Dec/0296.html
-      "calc((3em / 100%) * 3em)",
-      "calc(3em / 100% * 3em)",
-      "calc(3em * (3em / 100%))",
-      "calc(3em * 3em / 100%)",
       "anchor-size()",
       "anchor-size(--a width)",
       "anchor-size(--a width, 10px)",
