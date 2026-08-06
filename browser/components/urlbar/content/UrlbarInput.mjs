@@ -442,6 +442,8 @@ ${
       this.#init();
     }
 
+    this.searchModeSwitcher.connect();
+
     if (this.inOverflowPanel && this.view.isOpen) {
       this.view.close();
     }
@@ -561,6 +563,8 @@ ${
       // but we don't notice because the search service observer is inactive.
       this.searchMode = null;
     }
+
+    this.searchModeSwitcher.disconnect();
 
     if (this._copyCutController) {
       this.inputField.controllers.removeController(this._copyCutController);

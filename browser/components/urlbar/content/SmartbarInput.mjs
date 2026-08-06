@@ -517,6 +517,8 @@ ${
       this.#initOnce();
     }
 
+    this.searchModeSwitcher.connect();
+
     if (this.sapName == "searchbar") {
       this.parentNode.setAttribute("overflows", "false");
     }
@@ -619,6 +621,8 @@ ${
     }
 
     this.controller.removeListener(this);
+
+    this.searchModeSwitcher.disconnect();
 
     if (this._copyCutController) {
       this.inputField.controllers.removeController(this._copyCutController);
