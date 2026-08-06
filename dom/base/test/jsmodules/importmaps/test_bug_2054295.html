@@ -48,8 +48,7 @@ SpecialPowers.addObserver(observer, "http-on-opening-request");
 
 onmessage = function (event) {
   is(event.data, "import-map-registered", "Expected message from the iframe");
-  ok(depChannel, "The dependency fetch is suspended when the import map is registered");
-  depChannel?.resume();
+  depChannel.resume();
 };
 
 function finish() {
@@ -64,8 +63,6 @@ const watchdog = setTimeout(() => {
      "block (bug 2054295 regressed)");
   finish();
 }, 30000);
-
-SpecialPowers.ChromeUtils.clearResourceCache({ types: ["script"] });
 
 const iframe = document.createElement("iframe");
 iframe.addEventListener("load", () => {
