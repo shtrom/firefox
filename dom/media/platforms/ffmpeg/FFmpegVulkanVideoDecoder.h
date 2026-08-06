@@ -101,8 +101,12 @@ struct FFmpegVulkanVideoDecoder {
   std::vector<uint64_t> mDrmModifiers;
   nsTHashMap<uint64_t, bool> mExportRequiresDedicatedByModifier;
 
+  // aGeneration guards against a prior, already-destroyed VkInstance whose
+  // address a new one could in principle reuse (see
+  // VulkanDeviceHolder::Generation()).
   void LoadInstanceFunctions(PFN_vkGetInstanceProcAddr aGetProcAddr,
-                             VkInstance aInst, VkPhysicalDevice aPhysDev);
+                             VkInstance aInst, VkPhysicalDevice aPhysDev,
+                             uint64_t aGeneration);
   void LoadDeviceFunctions(VkDevice aDev);
   bool IsLoaded() const;
   // Populated by LoadInstanceFunctions / LoadDeviceFunctions respectively;
@@ -130,7 +134,7 @@ struct FFmpegVulkanVideoDecoder {
   // a back-pointer into the enclosing FFmpegVideoDecoder object.
   bool InitCtx(VkDevice aDevice, VkPhysicalDevice aPhysDev,
                PFN_vkGetInstanceProcAddr aGetProcAddr, VkInstance aInstance,
-               uint32_t aCopyQueueFamilyIndex);
+               uint64_t aGeneration, uint32_t aCopyQueueFamilyIndex);
   MediaResult InitCopyRingBuffer(uint32_t aWidth, uint32_t aHeight,
                                  AVPixelFormat aSwFormat,
                                  AVBufferRef* aVulkanDevCtx);
