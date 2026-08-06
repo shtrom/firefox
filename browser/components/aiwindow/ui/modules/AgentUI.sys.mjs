@@ -67,16 +67,16 @@ export const AGENT_UI_TYPES = Object.freeze({
  * Kept in sync with the UI_UPDATE_TYPES map in ai-chat-content.mjs
  */
 export const AGENT_UPDATE_TYPES = Object.freeze({
-  CREATE_WATCH: "create-watch",
-  CANCEL_WATCH: "cancel-watch",
-  UPDATE_WATCH: "update-watch",
-  DELETE_WATCH: "delete-watch",
-  PAUSE_WATCH: "pause-watch",
-  CHECK_WATCH: "check-watch",
+  CREATE_MONITOR: "create-monitor",
+  CANCEL_MONITOR: "cancel-monitor",
+  UPDATE_MONITOR: "update-monitor",
+  DELETE_MONITOR: "delete-monitor",
+  PAUSE_MONITOR: "pause-monitor",
+  CHECK_MONITOR: "check-monitor",
 });
 
 export const AGENT_COMMANDS = Object.freeze({
-  WATCH: "watch",
+  MONITOR: "monitor",
 });
 
 // Default cadence for a newly created monitor
@@ -125,13 +125,12 @@ export class AgentUI {
    * @private
    */
   static #UPDATE_TYPE_HANDLERS = {
-    /* TODO: Bug 2060609 - match naming monitor -> watch */
-    [AGENT_UPDATE_TYPES.CREATE_WATCH]: this.handleCreateMonitor.bind(this),
-    [AGENT_UPDATE_TYPES.CANCEL_WATCH]: this.#handleCancelMonitor.bind(this),
-    [AGENT_UPDATE_TYPES.UPDATE_WATCH]: this.#handleUpdateMonitor.bind(this),
-    [AGENT_UPDATE_TYPES.DELETE_WATCH]: this.#handleDeleteMonitor.bind(this),
-    [AGENT_UPDATE_TYPES.PAUSE_WATCH]: this.#handlePauseMonitor.bind(this),
-    [AGENT_UPDATE_TYPES.CHECK_WATCH]: this.#handleCheckMonitor.bind(this),
+    [AGENT_UPDATE_TYPES.CREATE_MONITOR]: this.handleCreateMonitor.bind(this),
+    [AGENT_UPDATE_TYPES.CANCEL_MONITOR]: this.#handleCancelMonitor.bind(this),
+    [AGENT_UPDATE_TYPES.UPDATE_MONITOR]: this.#handleUpdateMonitor.bind(this),
+    [AGENT_UPDATE_TYPES.DELETE_MONITOR]: this.#handleDeleteMonitor.bind(this),
+    [AGENT_UPDATE_TYPES.PAUSE_MONITOR]: this.#handlePauseMonitor.bind(this),
+    [AGENT_UPDATE_TYPES.CHECK_MONITOR]: this.#handleCheckMonitor.bind(this),
   };
 
   /**
@@ -140,7 +139,7 @@ export class AgentUI {
    * @private
    */
   static #COMMAND_HANDLERS = {
-    [AGENT_COMMANDS.WATCH]: this.#handleMonitorCommand.bind(this),
+    [AGENT_COMMANDS.MONITOR]: this.#handleMonitorCommand.bind(this),
   };
 
   /**
