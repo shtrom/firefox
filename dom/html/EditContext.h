@@ -167,14 +167,16 @@ class EditContext final : public DOMEventTargetHelper, public SupportsWeakPtr {
               ErrorResult& aRv);
   ~EditContext() = default;
 
+  enum class IsFromFocus : bool { No, Yes };
   // Suppress IME notifications until updateCharacterBounds() is called.
   // (However, we give up and unsuppress after a timeout.)
-  void SuppressNotifyingIME();
+  void SuppressNotifyingIME(IsFromFocus aIsFromFocus);
 
   // Fire characterboundsupdate event if new character bounds are requested.
   // This also suppresses IME notifications until updateCharacterBounds()
   // is called, or a timeout elapses.
-  MOZ_CAN_RUN_SCRIPT void FireCharacterBoundsUpdateIfNeeded();
+  MOZ_CAN_RUN_SCRIPT void FireCharacterBoundsUpdateIfNeeded(
+      IsFromFocus aIsFromFocus = IsFromFocus::No);
 
   using Rect = gfx::RectTyped<CSSPixel, double>;
 
@@ -252,6 +254,7 @@ class EditContext final : public DOMEventTargetHelper, public SupportsWeakPtr {
   uint32_t mCodepointRectsStartIndex = 0;
   TextRange mLastRequestedCharacterBoundsRange;
   bool mIsComposing = false;
+  bool mIsSuppressingFocusNotification = false;
   bool mTextNextToCaretChangedByTextUpdateHandler = false;
   bool mIsFiringCharacterBoundsUpdate = false;
   bool mIsFiringTextUpdate = false;
