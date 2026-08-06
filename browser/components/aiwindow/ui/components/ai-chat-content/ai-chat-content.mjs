@@ -56,12 +56,12 @@ const UI_UPDATE_TYPES = {
   UNDO_TAB_CLOSE: "undo-tab-close",
   UNDO_TAB_GROUP: "undo-tab-group",
   RETRY_PROMPT: "retry-prompt",
-  CREATE_MONITOR: "create-monitor",
-  CANCEL_MONITOR: "cancel-monitor",
-  UPDATE_MONITOR: "update-monitor",
-  DELETE_MONITOR: "delete-monitor",
-  PAUSE_MONITOR: "pause-monitor",
-  CHECK_MONITOR: "check-monitor",
+  CREATE_WATCH: "create-watch",
+  CANCEL_WATCH: "cancel-watch",
+  UPDATE_WATCH: "update-watch",
+  DELETE_WATCH: "delete-watch",
+  PAUSE_WATCH: "pause-watch",
+  CHECK_WATCH: "check-watch",
 };
 
 const CONFIRMATION_UI_TYPES = [
@@ -1348,8 +1348,8 @@ export class AIChatContent extends MozLitElement {
       messageId,
       toolCallId,
       updateType: isEdit
-        ? UI_UPDATE_TYPES.UPDATE_MONITOR
-        : UI_UPDATE_TYPES.CREATE_MONITOR,
+        ? UI_UPDATE_TYPES.UPDATE_WATCH
+        : UI_UPDATE_TYPES.CREATE_WATCH,
       updateData: event.detail,
     });
   };
@@ -1359,7 +1359,7 @@ export class AIChatContent extends MozLitElement {
     this.#dispatchToolUIUpdate({
       messageId,
       toolCallId,
-      updateType: UI_UPDATE_TYPES.CANCEL_MONITOR,
+      updateType: UI_UPDATE_TYPES.CANCEL_WATCH,
       updateData: event.detail,
     });
   };
@@ -1388,21 +1388,21 @@ export class AIChatContent extends MozLitElement {
           event,
           messageId,
           toolCallId,
-          UI_UPDATE_TYPES.DELETE_MONITOR
+          UI_UPDATE_TYPES.DELETE_WATCH
         )}
       @agent-monitor-item:pause=${event =>
         this.#handleMonitorAction(
           event,
           messageId,
           toolCallId,
-          UI_UPDATE_TYPES.PAUSE_MONITOR
+          UI_UPDATE_TYPES.PAUSE_WATCH
         )}
       @agent-monitor-item:check-now=${event =>
         this.#handleMonitorAction(
           event,
           messageId,
           toolCallId,
-          UI_UPDATE_TYPES.CHECK_MONITOR
+          UI_UPDATE_TYPES.CHECK_WATCH
         )}
     ></agent-monitor-item>`;
   }
