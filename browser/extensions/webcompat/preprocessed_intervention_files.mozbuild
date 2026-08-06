@@ -168,4 +168,5 @@ preprocessed_intervention_files = [
     "bug2051501-community.acer.com-fix_clipped_tables.css",
     "bug2051291-customers.extend-hide_preloader.css",
     "bug2053077-jobs.abbott-restore_otp_inputs.css",
+    "bug2060224-alreadyordered.no.js",
 ]
