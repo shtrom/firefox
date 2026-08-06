@@ -242,17 +242,29 @@ class MOZ_STACK_CLASS EditContext::AutoSuppressIMENotifications {
   RefPtr<IMEContentObserver> mObserver;
 };
 
-void EditContext::SuppressNotifyingIME() {
+void EditContext::SuppressNotifyingIME(IsFromFocus aIsFromFocus) {
   IMEContentObserver* observer = IMEStateManager::GetActiveContentObserver();
   if (!observer) {
     return;
   }
+
+  // We want to avoid suppressing NOTIFY_IME_OF_FOCUS for too long, since
+  // it may cause text input not to be handled by the IME. So we have a shorter
+  // timeout, and don't extend it even if new character bounds are needed.
+  if (aIsFromFocus == IsFromFocus::Yes) {
+    mIsSuppressingFocusNotification = true;
+  } else if (mIsSuppressingFocusNotification) {
+    return;
+  }
+
   // We don't want to suppress forever - if the web app doesn't give
   // us character bounds quickly, we give up and unsuppress notifications.
-  constexpr static auto* kSuppressNotifyingIMETimeoutPref =
-      "dom.editcontext.suppress_notifying_ime_timeout";
+  const char* suppressNotifyingIMETimeoutPref =
+      aIsFromFocus == IsFromFocus::Yes
+          ? "dom.editcontext.suppress_notifying_ime_timeout_focus"
+          : "dom.editcontext.suppress_notifying_ime_timeout";
   const uint32_t timeoutMillis =
-      Preferences::GetUint(kSuppressNotifyingIMETimeoutPref);
+      Preferences::GetUint(suppressNotifyingIMETimeoutPref);
   WeakPtr<EditContext> editContextWeak(this);
   auto unsuppressCallback =
       [editContextWeak]([[maybe_unused]] nsITimer* aTimer) {
@@ -612,6 +624,7 @@ void EditContext::UnsuppressNotifyingIME() {
   if (mSuppressNotifyingIMETimer) {
     mSuppressNotifyingIMETimer->Cancel();
     mSuppressNotifyingIMETimer = nullptr;
+    mIsSuppressingFocusNotification = false;
     if (IMEContentObserver* observer =
             IMEStateManager::GetActiveContentObserver()) {
       observer->UnsuppressNotifyingIME();
@@ -642,7 +655,7 @@ bool EditContext::ShouldFireNewCharacterBoundsUpdateForRange(
   return true;
 }
 
-void EditContext::FireCharacterBoundsUpdateIfNeeded() {
+void EditContext::FireCharacterBoundsUpdateIfNeeded(IsFromFocus aIsFromFocus) {
   // If characterboundsupdate handler changes text or something, don't fire
   // another characterboundsupdate to avoid infinite recursion.
   if (mIsFiringCharacterBoundsUpdate || !IsActive()) {
@@ -725,7 +738,7 @@ void EditContext::FireCharacterBoundsUpdateIfNeeded() {
   // We want to suppress notifying the IME of
   // NOTIFY_IME_OF_COMPOSITION_EVENT_HANDLED, etc. until the character bounds
   // are provided, to avoid the IME user interface moving around too much.
-  SuppressNotifyingIME();
+  SuppressNotifyingIME(aIsFromFocus);
 
   CharacterBoundsUpdateEventInit eventOptions;
   eventOptions.mBubbles = false;
@@ -904,6 +917,10 @@ LayoutDeviceIntRect EditContext::FallbackBounds() const {
 
 // static
 void EditContext::NotifyActiveEditContextChanged(Document& aDocument) {
+  if (RefPtr newEditContext = aDocument.GetActiveEditContext()) {
+    newEditContext->FireCharacterBoundsUpdateIfNeeded(IsFromFocus::Yes);
+  }
+
   RefPtr<HTMLEditor> editor = aDocument.GetHTMLEditor();
   if (!editor) {
     return;

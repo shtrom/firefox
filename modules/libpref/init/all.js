@@ -101,6 +101,9 @@ pref("browser.download.forbid_open_with", false);
 // for updateCharacterBounds() to be called before giving up and unsuppressing
 // IME notifications.
 pref("dom.editcontext.suppress_notifying_ime_timeout", 300);
+// Same as above, but for notifying the IME of focus, which is more important,
+// since it controls whether IME is active or not.
+pref("dom.editcontext.suppress_notifying_ime_timeout_focus", 100);
 
 // Enable indexedDB logging.
 pref("dom.indexedDB.logging.enabled", true);
