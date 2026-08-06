@@ -18,6 +18,7 @@
     --header-text-color: transparent;
     /* TODO: Bug 2033070 - desaturated tokens only exist in Nova, remove after it becomes default */
     --card-text-color: light-dark(var(--color-violet-desaturated-90, #180e30), var(--color-violet-desaturated-0, #f2f0f8));
+    --card-text-color-selected: light-dark(var(--color-violet-desaturated-90, #180e30), var(--color-violet-desaturated-0, #f2f0f8));
     --card-subtitle-text-color: light-dark(var(--color-violet-60), var(--color-violet-20));
     --card-icon-bg: light-dark(var(--color-violet-0), var(--color-white-alpha-10));
     --button-icon-color: var(--card-text-color);
@@ -56,6 +57,7 @@
   @media (forced-colors) {
     --header-text-color: CanvasText;
     --card-text-color: CanvasText;
+    --button-icon-color: CanvasText;
     --card-subtitle-text-color: CanvasText;
     --card-icon-bg: transparent;
     --card-bg: Canvas;
@@ -63,6 +65,7 @@
     --card-border-color: CanvasText;
     --card-border-color-hover: SelectedItem;
     --card-border-color-gradient: SelectedItem;
+    --card-text-color-selected: SelectedItemText;
   }
 
   .main-content,
@@ -423,6 +426,7 @@
       /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
       border: calc(2 * var(--border-width)) solid var(--border-color-transparent);
       box-shadow: var(--box-shadow-level-4);
+      color: var(--card-text-color-selected);
       padding: var(--space-large);
     }
 
@@ -435,8 +439,6 @@
     }
 
     .body-text {
-      /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
-      color: var(--card-text-color);
       font-size: var(--font-size-small);
       grid-area: description;
       line-height: normal;
