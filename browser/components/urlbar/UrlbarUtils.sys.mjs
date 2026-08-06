@@ -1285,13 +1285,14 @@ export var UrlbarUtils = {
    * Add the search to form history.  This also updates any existing form
    * history for the search.
    *
-   * @param {UrlbarInput|SmartbarInput} input The UrlbarInput object requesting the addition.
+   * @param {boolean} isPrivate
+   *   Whether the search is private is in a private window.
    * @param {string} value The value to add.
    * @param {string} [source] The source of the addition, usually
    *        the name of the engine the search was made with.
    * @returns {Promise<void>} resolved once the operation is complete
    */
-  addToFormHistory(input, value, source) {
+  async addToFormHistory(isPrivate, value, source) {
     // If the user types a search engine alias without a search string,
     // we have an empty search string and we can't bump it.
     // We also don't want to add history in private browsing mode.
@@ -1299,13 +1300,13 @@ export var UrlbarUtils = {
     // particularly useful to the user.
     if (
       !value ||
-      input.isPrivate ||
+      isPrivate ||
       value.length >
         lazy.SearchSuggestionController.SEARCH_HISTORY_MAX_VALUE_LENGTH
     ) {
-      return Promise.resolve();
+      return;
     }
-    return lazy.FormHistory.update({
+    await lazy.FormHistory.update({
       op: "bump",
       fieldname: lazy.DEFAULT_FORM_HISTORY_PARAM,
       value,

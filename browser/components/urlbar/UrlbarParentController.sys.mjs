@@ -505,12 +505,14 @@ export class UrlbarParentController {
 
   /**
    * Records that a search is being loaded: bumps the search-count prefs,
-   * informs ASRouter, and records search telemetry. The parent-side
-   * counterpart to the content-side `_recordSearch()`.
+   * informs ASRouter, records search telemetry and adds the search query
+   * to form history. The parent-side counterpart to the content-side
+   * `_recordSearch()`.
    *
    * @param {object} options
    * @param {string} options.engineId
    *   The id of the engine handling the search.
+   * @param {string} options.query
    * @param {string} options.searchSource
    *   Where the search originated from.
    * @param {object} options.details
@@ -518,8 +520,19 @@ export class UrlbarParentController {
    * @param {number} [options.browserId]
    *   The id of the browser where the search is being opened; defaults to the
    *   selected browser.
+   * @param {boolean} [options.opensInPrivateWindow]
+   *   Whether the search opens in a new private window, in which case it's
+   *   not added to form history. If this is false but the current window
+   *   is private, it's not added either.
    */
-  recordSearch({ engineId, searchSource, details, browserId }) {
+  recordSearch({
+    engineId,
+    query,
+    searchSource,
+    details,
+    browserId,
+    opensInPrivateWindow,
+  }) {
     let browser =
       this.resolveTargetBrowser(browserId) ||
       this.browserWindow.gBrowser.selectedBrowser;
@@ -562,6 +575,15 @@ export class UrlbarParentController {
       searchSource,
       details
     );
+
+    let engine = lazy.SearchService.getEngineById(engineId);
+    if (engine) {
+      lazy.UrlbarUtils.addToFormHistory(
+        this.isPrivate || opensInPrivateWindow,
+        query,
+        engine.name
+      ).catch(console.error);
+    }
   }
 
   /**

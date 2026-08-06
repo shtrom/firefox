@@ -1276,10 +1276,12 @@ ${
       searchSource: this.getSearchSource(event),
       windowMode: this.windowMode,
     });
-    this._recordSearch(engine.id, event, {}, where == "tab");
-    lazy.UrlbarUtils.addToFormHistory(this, searchString, engine.name).catch(
-      console.error
-    );
+    this._recordSearch({
+      engine,
+      event,
+      where,
+      query: searchString,
+    });
     this.controller.openSERP(
       engine.id,
       searchString,
@@ -1916,7 +1918,14 @@ ${
           result.payload.engine
         );
 
-        this._recordSearch(engine.id, event, actionDetails, where == "tab");
+        this._recordSearch({
+          engine,
+          event,
+          where,
+          query: result.payload.suggestion || result.payload.query,
+          searchActionDetails: actionDetails,
+          opensInPrivateWindow: result.payload.inPrivateWindow,
+        });
 
         if (
           this.#isAddressbar &&
@@ -1951,14 +1960,6 @@ ${
                 .catch(console.error);
             }
           }
-        }
-
-        if (!result.payload.inPrivateWindow) {
-          lazy.UrlbarUtils.addToFormHistory(
-            this,
-            result.payload.suggestion || result.payload.query,
-            engine.name
-          ).catch(console.error);
         }
         break;
       }
@@ -2647,12 +2648,12 @@ ${
     let trimmedValue = value.trim();
     this._lastSearchString = trimmedValue;
     if (trimmedValue) {
-      this._recordSearch(searchEngine.id, event, {}, where.startsWith("tab"));
-      lazy.UrlbarUtils.addToFormHistory(
-        this,
-        trimmedValue,
-        searchEngine.name
-      ).catch(console.error);
+      this._recordSearch({
+        engine: searchEngine,
+        query: trimmedValue,
+        event,
+        where,
+      });
 
       if (where == "current") {
         // Enter search mode so:
@@ -3918,41 +3919,58 @@ ${
   }
 
   /**
-   * Hands a loading search to the parent controller, which records it.
+   * @typedef {object} SearchActionDetails
    *
-   * @param {string} engineId
-   *   The engine to generate the query for.
-   * @param {Event} event
-   *   The event that triggered this query.
-   * @param {object} [searchActionDetails]
-   *   The details associated with this search query.
-   * @param {boolean} [searchActionDetails.isSuggestion]
+   * @property {boolean} [isSuggestion]
    *   True if this query was initiated from a suggestion from the search engine.
-   * @param {boolean} [searchActionDetails.alias]
-   *   True if this query was initiated via a search alias.
-   * @param {boolean} [searchActionDetails.isFormHistory]
+   * @property {string} [alias]
+   *   The search engine alias this query was initiated with, if any.
+   * @property {boolean} [isFormHistory]
    *   True if this query was initiated from a form history result.
-   * @param {string} [searchActionDetails.url]
+   * @property {string} [url]
    *   The url this query was triggered with.
-   * @param {boolean} [inNewTab]
-   *   Whether the search opens in a new tab, in which case it is recorded
-   *   against that tab's browser once the load opens it (parent-side); otherwise
-   *   against the selected browser.
    */
-  _recordSearch(engineId, event, searchActionDetails = {}, inNewTab = false) {
+
+  /**
+   * Records search telemetry for a search and adds it to form history.
+   *
+   * @param {object} options
+   * @param {PartialSearchEngine} options.engine
+   *   The engine to record the query for.
+   * @param {string} options.query
+   *   The search query.
+   * @param {Event} options.event
+   *   The event that triggered this query.
+   * @param {string} [options.where]
+   *   Where the search opens.
+   * @param {SearchActionDetails} [options.searchActionDetails]
+   *   The details associated with this search query.
+   * @param {boolean} [options.opensInPrivateWindow]
+   *   Whether the search opens in a new private window.
+   */
+  _recordSearch({
+    engine,
+    query,
+    event,
+    where = "current",
+    searchActionDetails = {},
+    opensInPrivateWindow = false,
+  }) {
     const isOneOff = this.view.oneOffSearchButtons?.eventTargetIsAOneOff(event);
     const searchSource = this.getSearchSource(event);
 
     let searchData = {
-      engineId,
+      engineId: engine.id,
       searchSource,
+      query,
+      opensInPrivateWindow,
       details: {
         ...searchActionDetails,
         isOneOff,
         newtabSessionId: this._handoffSession,
       },
     };
-    if (inNewTab) {
+    if (where.startsWith("tab")) {
       this.controller.recordSearchInOpenedTab(searchData);
     } else {
       this.controller.recordSearch(searchData);

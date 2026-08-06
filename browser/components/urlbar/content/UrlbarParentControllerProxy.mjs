@@ -159,8 +159,7 @@ export class UrlbarParentControllerProxy {
    * Ships a search to the parent recorder, which resolves the engine by name
    * and the browser by id. The counterpart to the controller's `recordSearch()`.
    *
-   * @param {object} options
-   *   `{engineName, searchSource, browserId, details}`.
+   * @param {Parameters<UrlbarParentController["recordSearch"]>[0]} options
    */
   recordSearch(options) {
     this.#actor.sendAsyncMessage("RecordSearch", {
