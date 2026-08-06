@@ -185,7 +185,6 @@
   color: var(--theme-contrast-color);
 }
 
-/* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
 .tracer-tab .tree-node:has(.frame-link.onstack) {
   background-color: light-dark(lightblue, var(--theme-body-alternate-emphasized-background));
 }

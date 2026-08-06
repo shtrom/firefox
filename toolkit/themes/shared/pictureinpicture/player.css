@@ -144,8 +144,6 @@ browser {
 
   /* Only reserve a column for the playback speed button when it is shown
    * (it stays hidden unless the playback-speed pref is enabled). */
-  /* Small-ish subtree */
-  /* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
   &:has(#playbackRate:not([hidden])) {
     grid-template-columns: 1fr 2fr 1fr 1fr 1fr;
     grid-template-areas: "audio audio-scrubber playbackrate closedcaption fullscreen";
@@ -742,8 +740,6 @@ input:checked + .slider::before {
     grid-template-columns: repeat(3, 1fr);
     grid-template-areas: "audio closedcaption fullscreen";
 
-    /* Small-ish subtree */
-    /* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
     &:has(#playbackRate:not([hidden])) {
       grid-template-columns: repeat(4, 1fr);
       grid-template-areas: "audio playbackrate closedcaption fullscreen";
@@ -757,8 +753,6 @@ input:checked + .slider::before {
     display: none;
   }
 
-  /* Small-ish subtree */
-  /* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
   .end-controls,
   .end-controls:has(#playbackRate:not([hidden])) {
     grid-template-columns: repeat(2, 1fr);
@@ -772,8 +766,6 @@ input:checked + .slider::before {
     display: none;
   }
 
-  /* Small-ish subtree */
-  /* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
   .end-controls,
   .end-controls:has(#playbackRate:not([hidden])) {
     grid-template-columns: 1fr 2fr 1fr;
@@ -788,8 +780,6 @@ input:checked + .slider::before {
     display: none;
   }
 
-  /* Small-ish subtree */
-  /* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
   .end-controls,
   .end-controls:has(#playbackRate:not([hidden])) {
     grid-template-columns: repeat(2, 1fr);
@@ -809,8 +799,6 @@ input:checked + .slider::before {
     display: none;
   }
 
-  /* Small-ish subtree */
-  /* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
   .end-controls,
   .end-controls:has(#playbackRate:not([hidden])) {
     grid-template-columns: repeat(1, 1fr);

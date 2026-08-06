@@ -1626,8 +1626,6 @@ setting-group[groupid="aiStatesDescription"] {
   margin: 0 0 var(--space-large);
 }
 
-/* Small subtree */
-/* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
 .search-header:has(.section-heading) {
   margin: 0;
 }

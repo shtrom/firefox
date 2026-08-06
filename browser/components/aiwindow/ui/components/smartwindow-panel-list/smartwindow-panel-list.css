@@ -117,7 +117,6 @@ panel-item::part(label) {
 }
 
 /* Style `ai-website-chip` to behave like a `panel-item`. */
-/* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
 panel-list:has(ai-website-chip) {
   padding-block: 0;
 }

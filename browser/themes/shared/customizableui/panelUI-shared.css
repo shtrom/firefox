@@ -811,8 +811,6 @@ toolbarbutton[constrain-size="true"][cui-areatype="panel"] > .toolbarbutton-badg
   display: none;
 }
 
-/* FIXME(bug 2061145): Remove :has() usage, use showing-* selectors instead */
-/* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
 :root[fxastatus="not_configured"]
   #appMenu-mainView:not([showing-fxa-menu-message], [showing-default-cta-menu-message]):not(:has(#appMenu-update-banner:not([hidden]))) {
   & #appMenu-fxa-status2 {
@@ -980,19 +978,17 @@ toolbarbutton[constrain-size="true"][cui-areatype="panel"] > .toolbarbutton-badg
 #PanelUI-fxa-menu-secure-sync-subpanel,
 #PanelUI-fxa-device-recent-tabs {
   height: fit-content;
-  /* FIXME: Why is !important needed here? */
   min-height: 0 !important;
 }
 
-/* FIXME(bug 2061145): We should track visible panel without using :has() */
-/* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
-.panel-viewcontainer:has(#PanelUI-fxa-menu-secure-sync-subpanel[visible], #PanelUI-fxa-device-recent-tabs[visible], #PanelUI-profiles[visible]) {
-  /* FIXME: Why is !important needed here? */
+.panel-viewcontainer:has(#PanelUI-fxa-menu-secure-sync-subpanel[visible], #PanelUI-fxa-device-recent-tabs[visible]) {
   min-height: 0 !important;
 }
 
-#PanelUI-fxa-cta-menu .fxa-cta-button label {
-  margin: 0;
+#PanelUI-fxa-cta-menu {
+  .fxa-cta-button label {
+    margin: 0;
+  }
 }
 
 #appMenu-fxa-status2 {
@@ -2916,6 +2912,10 @@ radiogroup:focus-visible > .subviewradio[focused="true"] {
 
 #PanelUI-profiles {
   height: fit-content;
+  min-height: 0 !important;
+}
+
+.panel-viewcontainer:has(#PanelUI-profiles[visible]) {
   min-height: 0 !important;
 }
 

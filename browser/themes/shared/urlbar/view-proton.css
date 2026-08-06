@@ -1426,8 +1426,7 @@
           display: inline;
         }
 
-        /* Small subtree */
-        /* stylelint-disable-next-line max-nesting-depth, stylelint-plugin-mozilla/no-has-selector */
+        /* stylelint-disable-next-line max-nesting-depth */
         &:has(+ span:empty) {
           display: none;
         }

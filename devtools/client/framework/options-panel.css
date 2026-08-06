@@ -106,7 +106,6 @@
   padding-inline-end: 4px;
 }
 
-/* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
 label:has(.option-secondary-label) {
   display: grid;
   grid-template-areas:
@@ -258,7 +257,6 @@ label:has(.option-secondary-label) {
         display: none;
         margin: 5px 0;
       }
-      /* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
       &:has(input:invalid) .local-mode-origin-error {
         display: block;
       }
