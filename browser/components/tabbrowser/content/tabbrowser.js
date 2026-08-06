@@ -5818,6 +5818,19 @@
     }
 
     /**
+     * Whether closing the window's last tab should close the window rather
+     * than leave a new empty tab behind.
+     *
+     * @returns {boolean}
+     */
+    get #shouldCloseWindowWithLastTab() {
+      return (
+        !window.toolbar.visible ||
+        Services.prefs.getBoolPref("browser.tabs.closeWindowWithLastTab")
+      );
+    }
+
+    /**
      * Returns `true` if `tab` is the last tab in this window. This logic is
      * intended for cases like determining if a window should close due to `tab`
      * being closed, therefore hidden tabs are not considered in this function.
@@ -5916,10 +5929,7 @@
       var newTab = false;
       if (this.#isLastTabInWindow(aTab)) {
         closeWindow =
-          closeWindowWithLastTab != null
-            ? closeWindowWithLastTab
-            : !window.toolbar.visible ||
-              Services.prefs.getBoolPref("browser.tabs.closeWindowWithLastTab");
+          closeWindowWithLastTab ?? this.#shouldCloseWindowWithLastTab;
 
         if (closeWindow) {
           // We've already called beforeunload on all the relevant tabs if we get here,
@@ -8877,7 +8887,7 @@
           browser = event.target.docShell.chromeEventHandler;
         }
 
-        if (this.tabs.length == 1) {
+        if (this.tabs.length == 1 && this.#shouldCloseWindowWithLastTab) {
           // We already did PermitUnload in the content process
           // for this tab (the only one in the window). So we don't
           // need to do it again for any tabs.
