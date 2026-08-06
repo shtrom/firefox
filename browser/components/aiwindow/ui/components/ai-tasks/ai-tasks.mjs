@@ -18,8 +18,6 @@ import "chrome://global/content/elements/moz-select.mjs";
 import "chrome://global/content/elements/moz-textarea.mjs";
 // eslint-disable-next-line import/no-unassigned-import
 import "chrome://global/content/elements/panel-list.mjs";
-// eslint-disable-next-line import/no-unassigned-import
-import "chrome://global/content/elements/moz-message-bar.mjs";
 
 // Default constants - will be overridden by values from the actor
 const DEFAULT_CONSTANTS = {
@@ -42,8 +40,30 @@ const MONITOR_ACTIONS = {
   REQUEST_PAUSE_MONITOR: "RequestPauseMonitor",
 };
 
-// TODO - come back with better select or update CSP to allow inline CSS for icons
-// const SCHEDULE_ICON = "chrome://browser/skin/calendar-24.svg";
+const SCHEDULE_ICON = "chrome://browser/skin/calendar-24.svg";
+const TIME_ICON = "chrome://browser/skin/history-20.svg";
+
+// Time options in 30-minute increments matching agent-monitor-item
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
+  const hour24 = Math.floor(i / 2);
+  const minute = i % 2 ? 30 : 0;
+
+  // Create a date object with the specific time for localization
+  const timeDate = new Date();
+  timeDate.setHours(hour24, minute, 0, 0);
+
+  // Use toLocaleTimeString for locale-appropriate formatting
+  const label = timeDate.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  return {
+    value: `${String(hour24).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
+    label,
+  };
+});
 
 const WEEKDAYS = [
   { value: 0, ftlId: "ai-tasks-alert-weekday-sunday" },
@@ -73,8 +93,6 @@ export class AITasks extends MozLitElement {
     monitors: { type: Array },
     pendingUrl: { type: String },
     pendingUrlError: { type: String },
-    successMessage: { type: String },
-    showSuccessMessage: { type: Boolean },
   };
 
   constructor() {
@@ -91,9 +109,6 @@ export class AITasks extends MozLitElement {
     this.monitors = [];
     this.pendingUrl = "";
     this.pendingUrlError = "";
-    this.successMessage = "";
-    this.showSuccessMessage = false;
-    this._successTimer = null;
   }
 
   // ===== Lifecycle Methods =====
@@ -201,10 +216,6 @@ export class AITasks extends MozLitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
 
-    // Clear any pending success message timer
-    clearTimeout(this._successTimer);
-    this._successTimer = null;
-
     // Remove event listeners
     this.removeEventListener(
       "agent-monitor-item:delete",
@@ -251,36 +262,6 @@ export class AITasks extends MozLitElement {
     return this.shadowRoot.querySelector("dialog");
   }
 
-  // ===== Success Message Management =====
-
-  /**
-   * Shows a success message that auto-dismisses after 5 seconds.
-   *
-   * @param {string} message - The success message to display
-   */
-  showSuccess(message) {
-    this.successMessage = message;
-    this.showSuccessMessage = true;
-
-    // Clear any existing timer to prevent overlapping dismissals
-    clearTimeout(this._successTimer);
-
-    // Auto-dismiss after 5 seconds
-    this._successTimer = setTimeout(() => {
-      this.showSuccessMessage = false;
-      this._successTimer = null;
-    }, 5000);
-  }
-
-  /**
-   * Dismisses the success message immediately.
-   */
-  dismissSuccessMessage() {
-    this.showSuccessMessage = false;
-    clearTimeout(this._successTimer);
-    this._successTimer = null;
-  }
-
   // ===== Dialog Management =====
 
   openDialog() {
@@ -321,15 +302,13 @@ export class AITasks extends MozLitElement {
         MONITOR_ACTIONS.REQUEST_DELETE_MONITOR,
         { id }
       );
-      if (result?.success) {
+      // Only reload monitors if deletion actually occurred (not cancelled)
+      if (result?.success && result?.deleted) {
         await this.loadMonitors(); // Refresh the list
-        const message = await document.l10n.formatValue(
-          "ai-tasks-alert-success-deleted"
-        );
-        this.showSuccess(message);
-      } else {
+      } else if (!result?.success) {
         console.error("Failed to delete monitor:", result?.error);
       }
+      // If cancelled (result.success && result.cancelled), do nothing
     } catch (error) {
       console.error("Failed to delete monitor:", error);
     }
@@ -349,11 +328,6 @@ export class AITasks extends MozLitElement {
       );
       if (result?.success) {
         await this.loadMonitors(); // Refresh the list
-        const messageId = paused
-          ? "ai-tasks-alert-success-paused"
-          : "ai-tasks-alert-success-resumed";
-        const message = await document.l10n.formatValue(messageId);
-        this.showSuccess(message);
       } else {
         console.error("Failed to pause monitor:", result?.error);
       }
@@ -370,12 +344,6 @@ export class AITasks extends MozLitElement {
   async handleMonitorCheckNow(event) {
     const { id } = event.detail;
 
-    // Show in-progress message immediately
-    const checkingMessage = await document.l10n.formatValue(
-      "ai-tasks-alert-success-checking"
-    );
-    this.showSuccess(checkingMessage);
-
     try {
       const result = await this.#dispatchMonitorAction(
         MONITOR_ACTIONS.REQUEST_RUN_MONITOR,
@@ -383,11 +351,6 @@ export class AITasks extends MozLitElement {
       );
       if (result?.success) {
         await this.loadMonitors(); // Refresh the list
-        // Show completion message
-        const completedMessage = await document.l10n.formatValue(
-          "ai-tasks-alert-success-checked"
-        );
-        this.showSuccess(completedMessage);
       } else {
         console.error("Failed to run monitor check:", result?.error);
       }
@@ -430,10 +393,6 @@ export class AITasks extends MozLitElement {
       );
       if (result?.success) {
         await this.loadMonitors(); // Refresh the list
-        const message = await document.l10n.formatValue(
-          "ai-tasks-alert-success-updated"
-        );
-        this.showSuccess(message);
       } else {
         console.error("Failed to update monitor:", result?.error);
       }
@@ -495,12 +454,6 @@ export class AITasks extends MozLitElement {
 
     this.closeDialog();
     await this.loadMonitors();
-
-    // Show success message
-    const message = await document.l10n.formatValue(
-      "ai-tasks-alert-success-created"
-    );
-    this.showSuccess(message);
   }
 
   /**
@@ -805,10 +758,12 @@ export class AITasks extends MozLitElement {
                     <moz-option
                       value=${this._constants.SCHEDULE_TYPES.DAILY}
                       data-l10n-id="ai-tasks-alert-schedule-daily"
+                      iconsrc=${SCHEDULE_ICON}
                     ></moz-option>
                     <moz-option
                       value=${this._constants.SCHEDULE_TYPES.WEEKLY}
                       data-l10n-id="ai-tasks-alert-schedule-weekly"
+                      iconsrc=${SCHEDULE_ICON}
                     ></moz-option>
                   </moz-select>
                 </div>
@@ -820,12 +775,20 @@ export class AITasks extends MozLitElement {
                           class="form-label"
                           data-l10n-id="ai-tasks-alert-time-label"
                         ></label>
-                        <input
-                          type="time"
-                          class="form-input time-input"
+                        <moz-select
+                          class="form-select"
                           .value=${this.scheduleTime}
-                          @input=${e => this.handleTimeChange(e)}
-                        />
+                          @change=${e => this.handleTimeChange(e)}
+                        >
+                          ${TIME_OPTIONS.map(
+                            opt =>
+                              html`<moz-option
+                                value=${opt.value}
+                                label=${opt.label}
+                                iconsrc=${TIME_ICON}
+                              ></moz-option>`
+                          )}
+                        </moz-select>
                       </div>
                     `
                   : ""}
@@ -846,6 +809,7 @@ export class AITasks extends MozLitElement {
                               <moz-option
                                 value=${day.value}
                                 data-l10n-id=${day.ftlId}
+                                iconsrc=${SCHEDULE_ICON}
                               ></moz-option>
                             `
                           )}
@@ -856,12 +820,20 @@ export class AITasks extends MozLitElement {
                           class="form-label"
                           data-l10n-id="ai-tasks-alert-time-label"
                         ></label>
-                        <input
-                          type="time"
-                          class="form-input time-input"
+                        <moz-select
+                          class="form-select"
                           .value=${this.scheduleTime}
-                          @input=${e => this.handleTimeChange(e)}
-                        />
+                          @change=${e => this.handleTimeChange(e)}
+                        >
+                          ${TIME_OPTIONS.map(
+                            opt =>
+                              html`<moz-option
+                                value=${opt.value}
+                                label=${opt.label}
+                                iconsrc=${TIME_ICON}
+                              ></moz-option>`
+                          )}
+                        </moz-select>
                       </div>
                     `
                   : ""}
@@ -904,22 +876,6 @@ export class AITasks extends MozLitElement {
           ></monitors-display>
         </div>
       </div>
-
-      ${this.showSuccessMessage
-        ? html`
-            <div class="success-message-wrapper">
-              <moz-message-bar
-                class="success-message"
-                type="success"
-                dismissable
-                @message-bar:user-dismissed=${() =>
-                  this.dismissSuccessMessage()}
-              >
-                <span slot="message">${this.successMessage}</span>
-              </moz-message-bar>
-            </div>
-          `
-        : ""}
     `;
   }
 }

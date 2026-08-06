@@ -27,6 +27,8 @@ const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   MonitorAgent:
     "moz-src:///browser/components/aiwindow/models/agents/MonitorAgent.sys.mjs",
+  MonitorUIUtils:
+    "moz-src:///browser/components/aiwindow/ui/modules/MonitorUIUtils.sys.mjs",
   IntervalSchedule:
     "moz-src:///browser/components/aiwindow/models/agents/Schedule.sys.mjs",
   DailySchedule:
@@ -234,12 +236,31 @@ export class AgentUI {
           condition: args.prompt,
           status: this.#statusForKind("watching"),
           schedule: updateData?.schedule,
+          expanded: updateData?.autoExpandAndCheck === true, // Auto-expand if requested
         },
       },
     };
     conversation.emit("chat-conversation:message-update", message);
     // Mark the message complete so it renders the assistant footer
     conversation.emit("chat-conversation:message-complete", message);
+
+    // If auto-expand and check was requested, trigger a check-now after a short delay
+    if (updateData?.autoExpandAndCheck) {
+      // Wait for the UI to update
+      Services.tm.dispatchToMainThread(async () => {
+        try {
+          await lazy.MonitorAgent.runNow(monitorId);
+          // The check will trigger a MONITOR_AGENTS_CHANGED_TOPIC notification
+          // which will update the card's history automatically
+        } catch (error) {
+          lazy.console.error(
+            "AgentUI: failed to run initial monitor check",
+            error
+          );
+        }
+      });
+    }
+
     return true;
   }
 
@@ -304,18 +325,40 @@ export class AgentUI {
    * @param {AgentHandlerContext} context
    * @returns {Promise<boolean>}
    */
-  static async #handleDeleteMonitor({ message, updateData, conversation }) {
+  static async #handleDeleteMonitor({
+    message,
+    updateData,
+    conversation,
+    window,
+  }) {
     const id = updateData?.id;
     if (!id) {
       lazy.console.warn("AgentUI: cannot delete a monitor without an id");
       return false;
     }
 
-    try {
-      await lazy.MonitorAgent.deleteMonitor(id);
-    } catch (error) {
-      lazy.console.error("AgentUI: failed to delete monitor", error);
+    // Get the browsing context from the window
+    const browsingContext = window?.gBrowser?.selectedBrowser?.browsingContext;
+    if (!browsingContext) {
+      lazy.console.warn(
+        "AgentUI: cannot get browsing context for confirmation dialog"
+      );
       return false;
+    }
+
+    const result = await lazy.MonitorUIUtils.deleteMonitorWithConfirmation(
+      browsingContext,
+      id
+    );
+
+    if (!result.success) {
+      lazy.console.error("AgentUI: failed to delete monitor", result.error);
+      return false;
+    }
+
+    if (result.cancelled) {
+      // User cancelled, don't remove the card
+      return true;
     }
 
     const agent = message?.toolUIData?.properties?.agent ?? {};
@@ -326,6 +369,8 @@ export class AgentUI {
     message.content.l10nId = "smartwindow-agent-monitor-deleted";
     message.content.l10nArgs = { monitorName };
     message.content.link = null;
+
+    // User confirmed and deletion succeeded, remove the card
     await conversation.updateToolUI(message, null, null);
     return true;
   }
@@ -345,6 +390,7 @@ export class AgentUI {
     }
 
     const paused = !!updateData?.paused;
+
     try {
       await lazy.MonitorAgent.updateMonitor(id, { enabled: !paused });
     } catch (error) {
@@ -482,9 +528,9 @@ export class AgentUI {
         continue;
       }
 
+      // Pass raw history data - let the component handle formatting
       const history = (monitor.history ?? [])
         .filter(entry => entry.status === "success" || entry.status === "error")
-        .map(entry => this.#toHistoryRow(entry))
         .reverse();
 
       if (JSON.stringify(history) === JSON.stringify(agent.history ?? [])) {
@@ -516,61 +562,6 @@ export class AgentUI {
       ),
       kind,
     };
-  }
-
-  /**
-   * Maps a completed monitor run entry to a card history row
-   *
-   * @param {object} entry - A monitor history entry '{ checkedAt, status,
-   *   conditionMet, ... }'
-   * @returns {{ when: string, flag?: string, note?: string, low?: boolean }}
-   * @private
-   */
-  static #toHistoryRow(entry) {
-    const when = this.#formatCheckedAt(entry.checkedAt);
-    if (entry.status === "error") {
-      return {
-        when,
-        note: lazy.l10n.formatValueSync(
-          "smartwindow-agent-monitor-history-check-failed"
-        ),
-        low: true,
-      };
-    }
-    if (entry.conditionMet) {
-      return { when, flag: "notified" };
-    }
-    return {
-      when,
-      note: lazy.l10n.formatValueSync(
-        "smartwindow-agent-monitor-history-no-match"
-      ),
-      low: true,
-    };
-  }
-
-  /**
-   * Formats a run's timestamp
-   *
-   * @param {string} [iso] - ISO timestamp of the run
-   * @returns {string}
-   * @private
-   */
-  static #formatCheckedAt(iso) {
-    const date = iso ? new Date(iso) : new Date();
-    const now = new Date();
-    if (now - date < 60000) {
-      return lazy.l10n.formatValueSync(
-        "smartwindow-agent-monitor-checked-just-now"
-      );
-    }
-    if (date.toDateString() === now.toDateString()) {
-      return date.toLocaleTimeString([], {
-        hour: "numeric",
-        minute: "2-digit",
-      });
-    }
-    return date.toLocaleDateString([], { month: "short", day: "numeric" });
   }
 
   /**

@@ -115,7 +115,11 @@ async function getDisplayCardActionDetail(
         );
 
         if (args.edit) {
-          card.shadowRoot.querySelector(".page-action.edit").click();
+          card.shadowRoot
+            .querySelector(
+              'moz-button[data-l10n-id="ai-tasks-alert-edit-button"]'
+            )
+            .click();
           await ContentTaskUtils.waitForCondition(
             () =>
               card.shadowRoot.querySelector(
@@ -341,7 +345,9 @@ add_task(async function test_display_save_dispatches_update_update() {
 });
 
 add_task(async function test_delete_dispatches_delete_update() {
-  const detail = await getDisplayCardActionDetail(".page-action.delete");
+  const detail = await getDisplayCardActionDetail(
+    'moz-button[data-l10n-id="ai-tasks-alert-delete-button"]'
+  );
   Assert.ok(detail, "ToolUIUpdate fires on delete");
   Assert.equal(
     detail.updateType,

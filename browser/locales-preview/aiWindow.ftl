@@ -69,21 +69,10 @@ ai-tasks-alert-cancel-button = Cancel
 ai-tasks-alert-save-button = Save
 ai-tasks-alert-delete-button =
   .aria-label = Delete alert
-ai-tasks-alert-edit-button =
-  .aria-label = Edit alert
+ai-tasks-alert-edit-button = Edit
 ai-tasks-alert-pause-button = Pause
 ai-tasks-alert-resume-button = Resume
 ai-tasks-alert-check-now-button = Check now
-
-## Status Messages - Success notifications shown to users after alert actions
-
-ai-tasks-alert-success-created = Alert created successfully
-ai-tasks-alert-success-deleted = Alert deleted successfully
-ai-tasks-alert-success-paused = Alert paused
-ai-tasks-alert-success-resumed = Alert resumed
-ai-tasks-alert-success-checking = Checking alert
-ai-tasks-alert-success-checked = Alert check completed
-ai-tasks-alert-success-updated = Alert updated successfully
 
 ## Dialog Headers - Titles for alert dialogs
 
@@ -131,6 +120,8 @@ ai-tasks-alert-add-url = Save
 ## Alert Display - Strings used when displaying alert details
 
 ai-tasks-alert-change-history = Change history
+ai-tasks-alert-on-this-page = On this page
+ai-tasks-alert-the-alert = The Alert
 # Variables:
 #   $time (DateTime) - The time to be formatted based on locale
 ai-tasks-alert-schedule-daily-at = Check daily at { DATETIME($time, timeStyle: "short") }
@@ -198,4 +189,22 @@ smartwindow-agent-monitor-status-watching = Watching
 smartwindow-agent-monitor-status-paused = Paused
 smartwindow-agent-monitor-history-check-failed = Check failed. Check again later.
 smartwindow-agent-monitor-history-no-match = Checked, didn’t meet your alert. Check again later.
-smartwindow-agent-monitor-checked-just-now = Just now
+
+## Alert deletion confirmation
+
+ai-tasks-alert-delete-confirmation-title = Delete this alert?
+
+ai-tasks-alert-delete-confirmation-message =
+    This alert and its history will be permanently deleted.
+
+ai-tasks-alert-delete-confirm-button = Delete
+
+## Used in the header to show the last check result
+
+ai-tasks-alert-last-result-met = Last result: Found
+ai-tasks-alert-last-result-not-met = Last result: No match
+
+## Used in the history table as a simple status badge
+
+ai-tasks-alert-condition-met = Found
+ai-tasks-alert-condition-not-met = No match
