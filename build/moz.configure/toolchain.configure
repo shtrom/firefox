@@ -493,7 +493,7 @@ def try_preprocess(
 @imports(_from="mozbuild.configure.constants", _import="OS_preprocessor_checks")
 @imports(_from="textwrap", _import="dedent")
 @imports(_from="__builtin__", _import="Exception")
-def get_compiler_info(configure_cache, compiler, language):
+def get_compiler_info(configure_cache, compiler, language, wrapper=[]):
     """Returns information about the given `compiler` (command line in the
     form of a list or tuple), in the given `language`.
 
@@ -567,7 +567,9 @@ def get_compiler_info(configure_cache, compiler, language):
     """
     )
 
-    result = try_preprocess(configure_cache, compiler, language, check)
+    result = try_preprocess(
+        configure_cache, compiler, language, check, wrapper=wrapper
+    )
 
     if not result:
         raise FatalCheckError("Unknown compiler or compiler not supported.")
@@ -653,8 +655,10 @@ def same_arch_different_bits():
 
 @imports(_from="mozshellutil", _import="quote")
 @imports(_from="mozbuild.configure.constants", _import="OS_preprocessor_checks")
-def check_compiler(configure_cache, compiler, language, target, android_version):
-    info = get_compiler_info(configure_cache, compiler, language)
+def check_compiler(
+    configure_cache, compiler, language, target, android_version, wrapper=[]
+):
+    info = get_compiler_info(configure_cache, compiler, language, wrapper)
 
     flags = []
 
@@ -1498,10 +1502,11 @@ def compiler(
 
         info = check_compiler(
             configure_cache,
-            wrapper + [compiler] + flags,
+            [compiler] + flags,
             language,
             host_or_target,
             android_version,
+            wrapper=wrapper,
         )
 
         if host_or_target.os == "OSX" and macos_target:
@@ -1532,10 +1537,11 @@ def compiler(
                 flags += info.flags
                 info = check_compiler(
                     configure_cache,
-                    wrapper + [compiler] + flags,
+                    [compiler] + flags,
                     language,
                     host_or_target,
                     android_version,
+                    wrapper=wrapper,
                 )
         except FatalCheckError:
             pass
