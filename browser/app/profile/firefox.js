@@ -3691,6 +3691,9 @@ pref("browser.contentsharing.enabled", false);
 
 // Preferences for the Firefox Referral program #2051647).
 pref("browser.referrals.enabled", false);
+// Set on first run after the referral code has been submitted via the
+// referrals ping.
+pref("browser.referrals.pingSubmitted", false);
 // "browser.referrals.code": Per-profile referral code, locked at runtime once
 // generated. The pref can't be defined here because locking the pref resets
 // the value to the default value and we need the default value to the genereated code.
