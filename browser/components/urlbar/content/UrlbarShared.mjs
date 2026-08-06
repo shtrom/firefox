@@ -472,6 +472,23 @@ export const UrlbarShared = {
   },
 
   /**
+   * Returns whether a URL is an origin URL, i.e. it has no path beyond "/",
+   * no query string, and no hash.
+   *
+   * @param {string} url
+   *   The URL to check.
+   * @returns {boolean}
+   *   True if the URL is an origin URL, false if it has a path, query, hash,
+   *   or is unparseable.
+   */
+  isOriginUrl(url) {
+    let parsed = URL.parse(url);
+    return (
+      !!parsed && parsed.pathname === "/" && !parsed.search && !parsed.hash
+    );
+  },
+
+  /**
    * Gets a default icon for a URL.
    *
    * @param {string|URL} url

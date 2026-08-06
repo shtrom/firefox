@@ -839,7 +839,7 @@ export var UrlbarUtils = {
    *   Epoch timestamp in ms after which the block expires.
    */
   async blockAutofill(url, blockUntilMs) {
-    if (this.isOriginUrl(url)) {
+    if (UrlbarShared.isOriginUrl(url)) {
       await this.blockOriginAutofill(url, blockUntilMs);
     } else {
       await this.blockOriginPageAutofill(url, blockUntilMs);
@@ -1069,7 +1069,7 @@ export var UrlbarUtils = {
     }
     let basehost = origin.host.replace(/^www\./, "");
     let scope = /** @type {"origin" | "page"} */ (
-      this.isOriginUrl(url) ? "origin" : "page"
+      UrlbarShared.isOriginUrl(url) ? "origin" : "page"
     );
     return `${scope}:${basehost}`;
   },
@@ -1169,7 +1169,7 @@ export var UrlbarUtils = {
       return null;
     }
     /** @type {"origin" | "url"} */
-    let level = this.isOriginUrl(url) ? "origin" : "url";
+    let level = UrlbarShared.isOriginUrl(url) ? "origin" : "url";
     return { blockedAt: entry.blockedAt, level };
   },
 
@@ -1184,23 +1184,6 @@ export var UrlbarUtils = {
     if (key) {
       this._backspaceBlocks.delete(key);
     }
-  },
-
-  /**
-   * Returns whether a URL is an origin URL, i.e. it has no path beyond "/",
-   * no query string, and no hash.
-   *
-   * @param {string} url
-   *   The URL to check.
-   * @returns {boolean}
-   *   True if the URL is an origin URL, false if it has a path, query, hash,
-   *   or is unparseable.
-   */
-  isOriginUrl(url) {
-    let parsed = URL.parse(url);
-    return (
-      !!parsed && parsed.pathname === "/" && !parsed.search && !parsed.hash
-    );
   },
 
   /**

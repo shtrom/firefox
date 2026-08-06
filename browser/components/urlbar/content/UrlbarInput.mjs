@@ -2109,7 +2109,7 @@ ${
         (!result.autofill || result.autofill.type == "url") &&
         result.type == UrlbarShared.RESULT_TYPE.URL
       ) {
-        let isOrigin = lazy.UrlbarUtils.isOriginUrl(url);
+        let isOrigin = UrlbarShared.isOriginUrl(url);
         let clear = isOrigin
           ? lazy.UrlbarUtils.clearOriginAutofillBlock(url)
           : lazy.UrlbarUtils.clearOriginPageAutofillBlock(url);
@@ -4664,7 +4664,7 @@ ${
       return hidden;
     }
 
-    let isOrigin = lazy.UrlbarUtils.isOriginUrl(result.payload.url);
+    let isOrigin = UrlbarShared.isOriginUrl(result.payload.url);
     return {
       showDismiss: !this.isPrivate,
       showForget: !isOrigin,

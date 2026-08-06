@@ -40,6 +40,8 @@ support-files = ["data/engine.xml"]
 
 ["test_UrlbarShared_formatDate.js"]
 
+["test_UrlbarShared_isOriginUrl.js"]
+
 ["test_UrlbarTelemetryUtils_wireSerialization.js"]
 
 ["test_UrlbarUtils_addToInputHistoryWhenReady.js"]
@@ -57,8 +59,6 @@ support-files = ["data/engine.xml"]
 ["test_UrlbarUtils_getShortcutOrURIAndPostData.js"]
 
 ["test_UrlbarUtils_getTokenMatches.js"]
-
-["test_UrlbarUtils_isOriginUrl.js"]
 
 ["test_UrlbarUtils_skippableTimer.js"]
 

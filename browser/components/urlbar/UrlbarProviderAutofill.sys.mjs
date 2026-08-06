@@ -556,7 +556,7 @@ export class UrlbarProviderAutofill extends UrlbarProvider {
       result.autofill.type === "adaptive_origin" ||
       result.autofill.type === "origin"
     ) {
-      let isOrigin = UrlbarUtils.isOriginUrl(result.payload.url);
+      let isOrigin = lazy.UrlbarShared.isOriginUrl(result.payload.url);
       let resultArray = [];
 
       if (!isPrivate) {
@@ -971,7 +971,7 @@ export class UrlbarProviderAutofill extends UrlbarProvider {
         adaptiveHistoryInput = row.getResultByName("input");
         fixedURL = row.getResultByName("url_fixed");
         finalCompleteValue = row.getResultByName("url");
-        autofilledType = UrlbarUtils.isOriginUrl(finalCompleteValue)
+        autofilledType = lazy.UrlbarShared.isOriginUrl(finalCompleteValue)
           ? "adaptive_origin"
           : "adaptive_url";
         break;
@@ -1199,7 +1199,7 @@ export class UrlbarProviderAutofill extends UrlbarProvider {
    *   The fallback origin result, or null if no fallback is appropriate.
    */
   async _getFallbackOriginResult(conn, autofillUrl) {
-    if (UrlbarUtils.isOriginUrl(autofillUrl)) {
+    if (lazy.UrlbarShared.isOriginUrl(autofillUrl)) {
       return null;
     }
 

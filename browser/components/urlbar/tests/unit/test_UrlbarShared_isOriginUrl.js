@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Tests for UrlbarUtils.isOriginUrl().
+// Tests for UrlbarShared.isOriginUrl().
 
 "use strict";
 
@@ -30,7 +30,7 @@ add_task(function test_basic_origins() {
 
   for (let url of ORIGIN_URLS) {
     Assert.ok(
-      UrlbarUtils.isOriginUrl(url),
+      UrlbarShared.isOriginUrl(url),
       `${url} should be recognized as an origin URL`
     );
   }
@@ -50,7 +50,7 @@ add_task(function test_urls_with_paths() {
 
   for (let url of DEEP_URLS) {
     Assert.ok(
-      !UrlbarUtils.isOriginUrl(url),
+      !UrlbarShared.isOriginUrl(url),
       `${url} should NOT be recognized as an origin URL`
     );
   }
@@ -66,7 +66,7 @@ add_task(function test_urls_with_query_strings() {
 
   for (let url of QUERY_URLS) {
     Assert.ok(
-      !UrlbarUtils.isOriginUrl(url),
+      !UrlbarShared.isOriginUrl(url),
       `${url} should NOT be an origin (has query string)`
     );
   }
@@ -80,7 +80,7 @@ add_task(function test_urls_with_fragments() {
 
   for (let url of FRAGMENT_URLS) {
     Assert.ok(
-      !UrlbarUtils.isOriginUrl(url),
+      !UrlbarShared.isOriginUrl(url),
       `${url} should NOT be an origin (has fragment)`
     );
   }
@@ -94,7 +94,7 @@ add_task(function test_urls_with_query_and_fragment() {
 
   for (let url of COMBINED_URLS) {
     Assert.ok(
-      !UrlbarUtils.isOriginUrl(url),
+      !UrlbarShared.isOriginUrl(url),
       `${url} should NOT be an origin (has both query and fragment)`
     );
   }
@@ -108,7 +108,7 @@ add_task(function test_deep_urls_with_query_and_fragment() {
   ];
 
   for (let url of DEEP_COMBINED_URLS) {
-    Assert.ok(!UrlbarUtils.isOriginUrl(url), `${url} should NOT be an origin`);
+    Assert.ok(!UrlbarShared.isOriginUrl(url), `${url} should NOT be an origin`);
   }
 });
 
@@ -126,7 +126,7 @@ add_task(function test_invalid_input() {
 
   for (let input of INVALID_INPUTS) {
     Assert.ok(
-      !UrlbarUtils.isOriginUrl(input),
+      !UrlbarShared.isOriginUrl(input),
       `"${input}" should return false (unparseable)`
     );
   }
@@ -134,16 +134,16 @@ add_task(function test_invalid_input() {
 
 add_task(function test_special_schemes() {
   Assert.ok(
-    !UrlbarUtils.isOriginUrl("about:blank"),
+    !UrlbarShared.isOriginUrl("about:blank"),
     "about: URLs should not be treated as origins"
   );
 
   Assert.ok(
-    !UrlbarUtils.isOriginUrl("data:text/html,hello"),
+    !UrlbarShared.isOriginUrl("data:text/html,hello"),
     "data: URLs should not be treated as origins"
   );
   Assert.ok(
-    !UrlbarUtils.isOriginUrl("javascript:void(0)"),
+    !UrlbarShared.isOriginUrl("javascript:void(0)"),
     "javascript: URLs should not be treated as origins"
   );
 });
@@ -151,23 +151,23 @@ add_task(function test_special_schemes() {
 add_task(function test_edge_cases() {
   // Standard port should be normalized away by URL parser.
   Assert.ok(
-    UrlbarUtils.isOriginUrl("https://example.com:443/"),
+    UrlbarShared.isOriginUrl("https://example.com:443/"),
     "https with standard port 443 should be origin-only"
   );
   Assert.ok(
-    UrlbarUtils.isOriginUrl("http://example.com:80/"),
+    UrlbarShared.isOriginUrl("http://example.com:80/"),
     "http with standard port 80 should be origin-only"
   );
 
   // Non-standard port.
   Assert.ok(
-    UrlbarUtils.isOriginUrl("http://example.com:9999/"),
+    UrlbarShared.isOriginUrl("http://example.com:9999/"),
     "Non-standard port should still be origin-only"
   );
 
   // Double slash path is NOT origin-only.
   Assert.ok(
-    !UrlbarUtils.isOriginUrl("https://example.com//"),
+    !UrlbarShared.isOriginUrl("https://example.com//"),
     "Double trailing slash means pathname is '//' not '/'"
   );
 });

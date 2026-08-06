@@ -5492,7 +5492,7 @@ ${
       return hidden;
     }
 
-    let isOrigin = lazy.UrlbarUtils.isOriginUrl(result.payload.url);
+    let isOrigin = UrlbarShared.isOriginUrl(result.payload.url);
     return {
       showDismiss: !this.isPrivate,
       showForget: !isOrigin,
