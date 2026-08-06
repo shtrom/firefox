@@ -143,6 +143,19 @@ export class UrlbarParentControllerProxy {
   }
 
   /**
+   * Ships an autofill re-integration to the parent. The counterpart to the
+   * controller's `handleAutofillReintegration()`.
+   *
+   * @param {string} url The URL being re-integrated.
+   */
+  handleAutofillReintegration(url) {
+    this.#actor.sendAsyncMessage("HandleAutofillReintegration", {
+      instanceId: this.#instanceId,
+      url,
+    });
+  }
+
+  /**
    * Ships a search-form visit to the parent recorder, which resolves the engine
    * by name. The counterpart to the controller's `recordSearchForm()`.
    *

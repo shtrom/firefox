@@ -91,6 +91,16 @@ function engineToEngineInfo(engine) {
  */
 export class UrlbarParentController {
   /**
+   * Resolves with the most recent handleAutofillReintegration() call's work,
+   * including its Glean recording. The input fires re-integration without
+   * awaiting it, so tests await this to sequence on the cleared block and the
+   * recorded telemetry.
+   *
+   * @type {Promise<void>}
+   */
+  static _lastAutofillReintegrationPromise = Promise.resolve();
+
+  /**
    * The paired UrlbarChildController, which registers itself via setChild().
    * Listener registration and notification dispatch live on it, keeping
    * dispatch on the side where the listeners (the view, the event bufferer)
@@ -490,6 +500,38 @@ export class UrlbarParentController {
    */
   recordAutofillBackspace(url) {
     lazy.UrlbarUtils.recordAutofillBackspace(url);
+  }
+
+  /**
+   * Re-integrates an autofill URL the user navigated to anyway: clears its
+   * autofill block and records how long the block had been in place. Both the
+   * block state and Glean are parent-side, so the input only decides when a
+   * navigation counts as a re-integration and hands the URL over here.
+   *
+   * @param {string} url
+   *   The URL being re-integrated.
+   */
+  handleAutofillReintegration(url) {
+    UrlbarParentController._lastAutofillReintegrationPromise =
+      this.#doHandleAutofillReintegration(url).catch(console.error);
+  }
+
+  async #doHandleAutofillReintegration(url) {
+    let { wasBlocked, level, backspaceBlock } =
+      await lazy.UrlbarUtils.reintegrateAutofill(url);
+    if (!wasBlocked) {
+      return;
+    }
+
+    Glean.urlbarAutofill.reintegration[level].add(1);
+
+    // For backspace-induced blocks, record the unblock delay: fast unblocks
+    // suggest the original block was accidental.
+    if (backspaceBlock?.level === level) {
+      Glean.urlbarAutofill.reintegrationAfterBackspace[
+        level
+      ].accumulateSingleSample(Date.now() - backspaceBlock.blockedAt);
+    }
   }
 
   /**

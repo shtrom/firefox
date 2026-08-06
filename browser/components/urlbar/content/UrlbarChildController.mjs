@@ -249,6 +249,9 @@ export class UrlbarChildController {
   recordAutofillBackspace(url) {
     return this.#parentController.recordAutofillBackspace(url);
   }
+  handleAutofillReintegration(url) {
+    return this.#parentController.handleAutofillReintegration(url);
+  }
   recordSearchMode(searchMode) {
     return this.#parentController.recordSearchMode(searchMode);
   }

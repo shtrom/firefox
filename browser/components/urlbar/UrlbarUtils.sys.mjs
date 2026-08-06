@@ -1187,6 +1187,35 @@ export var UrlbarUtils = {
   },
 
   /**
+   * Re-integrates an autofill URL the user navigated to anyway: clears the
+   * URL's autofill block and its backspace bookkeeping, and reports what
+   * happened so the caller can record re-integration telemetry.
+   *
+   * @param {string} url
+   *   The URL being re-integrated.
+   * @returns {Promise<{wasBlocked: boolean, level: "origin" | "url", backspaceBlock: ?{blockedAt: number, level: "origin" | "url"}}>}
+   *   `wasBlocked` is whether a database block was actually cleared, `level`
+   *   the scope it was cleared at, and `backspaceBlock` the consumed backspace
+   *   block, if the URL had one.
+   */
+  async reintegrateAutofill(url) {
+    let isOrigin = UrlbarShared.isOriginUrl(url);
+    let wasBlocked = isOrigin
+      ? await this.clearOriginAutofillBlock(url)
+      : await this.clearOriginPageAutofillBlock(url);
+
+    // getBackspaceBlock reads and removes the {blockedAt} entry for telemetry.
+    // clearAutofillBackspaceEntryForUrl then removes any remaining
+    // sub-threshold {count} entry. Together they always clear the in-memory
+    // counter — visiting the url is a positive signal regardless of whether a
+    // database block existed.
+    let backspaceBlock = this.getBackspaceBlock(url);
+    this.clearAutofillBackspaceEntryForUrl(url);
+
+    return { wasBlocked, level: isOrigin ? "origin" : "url", backspaceBlock };
+  },
+
+  /**
    * Return whether or not persisted search terms is enabled.
    *
    * @returns {boolean} true: if enabled.

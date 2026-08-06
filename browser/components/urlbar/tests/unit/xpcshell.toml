@@ -60,6 +60,8 @@ support-files = ["data/engine.xml"]
 
 ["test_UrlbarUtils_getTokenMatches.js"]
 
+["test_UrlbarUtils_reintegrateAutofill.js"]
+
 ["test_UrlbarUtils_skippableTimer.js"]
 
 ["test_UrlbarUtils_unEscapeURIForUI.js"]
