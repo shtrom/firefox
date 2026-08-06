@@ -9660,7 +9660,7 @@
   type: bool
   value: @IS_NIGHTLY_BUILD@
   mirror: always
-  set_spidermonkey_pref: always
+  set_spidermonkey_pref: startup
 
   # Experimental support for import text in JavaScript.
 - name: javascript.options.experimental.import_text
@@ -9746,6 +9746,7 @@
   value: false
   mirror: always
   set_spidermonkey_pref: startup
+
 #endif  // NIGHTLY_BUILD
 
   # Capture stack traces for OOM

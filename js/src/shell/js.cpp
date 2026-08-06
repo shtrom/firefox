@@ -13494,9 +13494,8 @@ bool SetGlobalOptionsPreJSInit(const OptionParser& op) {
   if (op.getBoolOption("enable-joint-iteration")) {
     JS::Prefs::setAtStartup_experimental_joint_iteration(true);
   }
-
   if (op.getBoolOption("enable-legacy-regexp")) {
-    JS::Prefs::set_experimental_legacy_regexp(true);
+    JS::Prefs::setAtStartup_experimental_legacy_regexp(true);
   }
   if (op.getBoolOption("enable-import-text")) {
     JS::Prefs::set_experimental_import_text(true);
