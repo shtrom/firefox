@@ -4335,8 +4335,7 @@ export class UrlbarView {
       case RESULT_MENU_COMMANDS.HELP:
         menuitem.dataset.url =
           result.payload.helpUrl ||
-          Services.urlFormatter.formatURLPref("app.support.baseURL") +
-            "awesome-bar-result-menu";
+          this.controller.getSupportUrl("awesome-bar-result-menu");
         break;
     }
     this.input.pickResult({ result, event, element: menuitem });

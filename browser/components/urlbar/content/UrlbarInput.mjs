@@ -53,7 +53,6 @@ const lazy = XPCOMUtils.declareLazy({
   AIWindow:
     "moz-src:///browser/components/aiwindow/ui/modules/AIWindow.sys.mjs",
   BrowserUIUtils: "resource:///modules/BrowserUIUtils.sys.mjs",
-  BrowserUtils: "resource://gre/modules/BrowserUtils.sys.mjs",
   CustomizableUI:
     "moz-src:///browser/components/customizableui/CustomizableUI.sys.mjs",
   ExtensionSearchHandler:
@@ -1749,10 +1748,7 @@ ${
       openParams.forceForeground = true;
     }
 
-    let keepViewOpen = lazy.BrowserUtils.willLoadInBackground(
-      where,
-      openParams
-    );
+    let keepViewOpen = this.controller.willLoadInBackground(where, openParams);
     openParams.avoidBrowserFocus = keepViewOpen;
 
     if (!this.#providesSearchMode(result) && !keepViewOpen) {

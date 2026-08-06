@@ -745,6 +745,19 @@ export class UrlbarChildController {
   }
 
   /**
+   * Gets the SUMO URL for a support topic. Runs through the actor since the
+   * content-web input can't reach `Services.urlFormatter` (see
+   * `UrlbarChild.getSupportUrl`).
+   *
+   * @param {string} topic
+   *   The support page slug to append to the SUMO base URL.
+   * @returns {string}
+   */
+  getSupportUrl(topic) {
+    return this.#actor.getSupportUrl(topic);
+  }
+
+  /**
    * Determines where a URL/page picked in `<moz-urlbar>` should be opened. Only
    * the `BrowserUtils.whereToOpenLink` call is routed through the actor (a system
    * module the content-web scope can't import); everything else, including the
@@ -795,6 +808,21 @@ export class UrlbarChildController {
       where = "current";
     }
     return where;
+  }
+
+  /**
+   * Whether a pick opened with the given `where` will load in the background.
+   * Runs through the actor since the content-web input can't import
+   * `BrowserUtils` (see `UrlbarChild.willLoadInBackground`).
+   *
+   * @param {string} where
+   *   Where the pick will open, as returned by `whereToOpen`.
+   * @param {object} params
+   *   The params that will be passed to `openLinkIn`.
+   * @returns {boolean}
+   */
+  willLoadInBackground(where, params) {
+    return this.#actor.willLoadInBackground(where, params);
   }
 
   focusOnUnifiedSearchButton() {
