@@ -446,9 +446,9 @@ class KeyframeEffect : public AnimationEffect {
 
   // The specified keyframes.
   nsTArray<Keyframe> mKeyframes;
-  // The preprocess extra info for |mKeyframes|, to avoid any unnecessary
-  // passes of |mKeyframes|.
-  KeyframesOffsetHasAny mKeyframesOffsetInfo;
+  // The into about whether there are any range-based keyframes in |mKeyframes|,
+  // to avoid any unnecessary passes of |mKeyframes|.
+  KeyframeOffsetsHasRangeOffset mKeyframeOffsetsHasRangeOffset;
 
   // A set of per-property value arrays, derived from |mKeyframes|.
   nsTArray<AnimationProperty> mProperties;
