@@ -47,11 +47,13 @@ async function scrolling_works(useVerticalTabs, uiDensity) {
   // Check we're scrolled so the first scrollable tab is at the top.
   let { arrowScrollbox } = win.gBrowser.tabContainer;
   let side = useVerticalTabs ? "top" : "left";
-  let boxStart = arrowScrollbox.getBoundingClientRect()[side];
+  // Measure from the scrollbox: the arrowscrollbox itself also spans the
+  // scroll buttons, which sit outside the scrolled area.
+  let boxStart = arrowScrollbox.scrollbox.getBoundingClientRect()[side];
   let firstPoint = boxStart + 5;
   Assert.equal(
-    gBrowser.tabs.indexOf(arrowScrollbox._elementFromPoint(firstPoint)),
-    gBrowser.tabs.indexOf(firstScrollableTab),
+    win.gBrowser.tabs.indexOf(arrowScrollbox._elementFromPoint(firstPoint)),
+    win.gBrowser.tabs.indexOf(firstScrollableTab),
     "First tab should be scrolled into view."
   );
 
