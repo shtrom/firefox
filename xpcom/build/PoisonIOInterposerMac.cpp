@@ -313,8 +313,7 @@ void InitPoisonIOInterposer() {
   ReplaceMalloc::InitDebugFd(registry);
 #endif
 
-  for (int i = 0; i < NumFunctions; ++i) {
-    FuncData* d = Functions[i];
+  for (auto d : Functions) {
     if (!d->Function) {
       d->Function = dlsym(RTLD_DEFAULT, d->Name);
     }
