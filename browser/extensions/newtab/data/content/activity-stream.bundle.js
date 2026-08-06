@@ -19819,6 +19819,7 @@ function SportsWidget_extends() { return SportsWidget_extends = Object.assign ? 
 
 
 
+
 const WIDGET_STATES = {
   INTRO: "sports-intro",
   FOLLOW_TEAMS: "sports-follow-state",
