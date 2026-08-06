@@ -503,6 +503,13 @@ export class UrlbarParentController {
   }
 
   /**
+   * Records that the user deleted a whole autofilled value.
+   */
+  recordAutofillDeletion() {
+    Glean.urlbar.autofillDeletion.add(1);
+  }
+
+  /**
    * Dismisses an autofilled URL on the user's behalf, blocking the autofill
    * pairing or removing the URL from history. Async so callers can await the
    * write before re-running their query on either transport.

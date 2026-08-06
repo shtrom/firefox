@@ -142,6 +142,16 @@ export class UrlbarParentControllerProxy {
     });
   }
 
+  /**
+   * Ships an autofill deletion to the parent recorder. The counterpart to the
+   * controller's `recordAutofillDeletion()`.
+   */
+  recordAutofillDeletion() {
+    this.#actor.sendAsyncMessage("RecordAutofillDeletion", {
+      instanceId: this.#instanceId,
+    });
+  }
+
   /** @type {UrlbarParentController["dismissAutofill"]} */
   dismissAutofill(url, action) {
     return this.#actor.sendQuery("DismissAutofill", {

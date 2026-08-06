@@ -255,6 +255,9 @@ export class UrlbarChildController {
   dismissAutofill(url, action) {
     return this.#parentController.dismissAutofill(url, action);
   }
+  recordAutofillDeletion() {
+    return this.#parentController.recordAutofillDeletion();
+  }
   handleAutofillReintegration(url) {
     return this.#parentController.handleAutofillReintegration(url);
   }

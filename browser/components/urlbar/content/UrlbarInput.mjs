@@ -5462,7 +5462,7 @@ ${
         event.inputType === "deleteContentForward")
     ) {
       // Take a telemetry if user deleted whole autofilled value.
-      Glean.urlbar.autofillDeletion.add(1);
+      this.controller.recordAutofillDeletion();
     }
 
     if (
