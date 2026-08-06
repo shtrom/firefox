@@ -904,6 +904,8 @@
 }
 
 .urlbarView-explanation {
+  display: flex;
+  align-items: baseline;
   visibility: collapse;
   margin-inline: calc(var(--urlbarView-row-padding-inline) + var(--urlbarView-icon-margin-start));
   flex: 0 0 auto;
