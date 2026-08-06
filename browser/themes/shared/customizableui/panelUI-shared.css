@@ -178,7 +178,6 @@ panel toolbarseparator {
 }
 
 panelmultiview {
-  align-items: flex-start;
   min-width: 0;
   min-height: 0;
 
