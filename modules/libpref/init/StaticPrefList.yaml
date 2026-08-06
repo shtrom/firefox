@@ -10626,7 +10626,7 @@
 # https://drafts.csswg.org/css-color-5/#relative-alpha
 - name: layout.css.alpha-color-function.enabled
   type: RelaxedAtomicBool
-  value: @IS_NIGHTLY_BUILD@
+  value: true
   mirror: always
   rust: true
 
