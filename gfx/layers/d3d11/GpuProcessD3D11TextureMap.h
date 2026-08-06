@@ -51,7 +51,8 @@ class GpuProcessD3D11TextureMap {
   void Unregister(GpuProcessTextureId aTextureId);
 
   RefPtr<ID3D11Texture2D> GetTexture(GpuProcessTextureId aTextureId);
-  Maybe<HANDLE> GetSharedHandle(GpuProcessTextureId aTextureId);
+  RefPtr<gfx::FileHandleWrapper> GetSharedHandle(
+      GpuProcessTextureId aTextureId);
   void DisableZeroCopyNV12Texture(GpuProcessTextureId aTextureId);
 
   size_t GetWaitingTextureCount() const;
