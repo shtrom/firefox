@@ -1187,6 +1187,33 @@ export var UrlbarUtils = {
   },
 
   /**
+   * Dismisses an autofill result, either by blocking the autofill pairing for
+   * `autoFill.dismissalBlockDurationMs` or by removing the URL from history
+   * entirely, and clears the URL's backspace bookkeeping either way. Failures
+   * are reported and swallowed so a caller can still re-run its query.
+   *
+   * @param {string} url
+   *   The dismissed autofill result's URL.
+   * @param {object} [options]
+   *   Options object.
+   * @param {boolean} [options.removeFromHistory]
+   *   Whether to remove the URL from history instead of blocking autofill
+   *   for it.
+   */
+  async dismissAutofill(url, { removeFromHistory = false } = {}) {
+    if (removeFromHistory) {
+      await lazy.PlacesUtils.history.remove(url).catch(console.error);
+    } else {
+      await this.blockAutofill(
+        url,
+        Date.now() + lazy.UrlbarPrefs.get("autoFill.dismissalBlockDurationMs")
+      ).catch(console.error);
+    }
+
+    this.clearAutofillBackspaceEntryForUrl(url);
+  },
+
+  /**
    * Re-integrates an autofill URL the user navigated to anyway: clears the
    * URL's autofill block and its backspace bookkeeping, and reports what
    * happened so the caller can record re-integration telemetry.

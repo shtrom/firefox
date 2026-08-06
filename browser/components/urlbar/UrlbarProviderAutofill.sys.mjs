@@ -513,27 +513,20 @@ export class UrlbarProviderAutofill extends UrlbarProvider {
 
     switch (details.selType) {
       case RESULT_MENU_COMMANDS.DISMISS: {
-        await lazy.PlacesUtils.history
-          .remove(result.payload.url)
-          .catch(console.error);
+        await UrlbarUtils.dismissAutofill(result.payload.url, {
+          removeFromHistory: true,
+        });
         didRemove = true;
         break;
       }
       case RESULT_MENU_COMMANDS.DISMISS_AUTOFILL: {
-        let blockUntilMs =
-          Date.now() +
-          lazy.UrlbarPrefs.get("autoFill.dismissalBlockDurationMs");
-        await UrlbarUtils.blockAutofill(result.payload.url, blockUntilMs).catch(
-          console.error
-        );
+        await UrlbarUtils.dismissAutofill(result.payload.url);
         didRemove = true;
         break;
       }
     }
 
     if (didRemove) {
-      UrlbarUtils.clearAutofillBackspaceEntryForUrl(result.payload.url);
-
       // Upon removing the autofill, we should do another search.
       controller.input.setValue(queryContext.searchString);
       controller.input.startQuery({
