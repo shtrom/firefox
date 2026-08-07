@@ -5,6 +5,7 @@
 package org.mozilla.apilint
 
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.Input
 import java.io.File
@@ -12,7 +13,14 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
-/** Executes a Python script embedded in the resources. */
+/**
+ * Executes a Python script embedded in the resources.
+ *
+ * `Exec` disables caching by default because it cannot know what an arbitrary command reads or
+ * writes. The tasks built on this one declare their inputs and outputs, and the script itself is
+ * covered by the task's implementation classpath, so the results are safe to cache.
+ */
+@CacheableTask
 abstract class PythonExec : Exec() {
     /** Path to the script to execute. */
     @get:Input

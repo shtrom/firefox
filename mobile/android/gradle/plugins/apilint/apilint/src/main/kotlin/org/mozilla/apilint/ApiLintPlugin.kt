@@ -74,7 +74,7 @@ class ApiLintPlugin : Plugin<Project> {
                     apiMapFile.set(apiMapFileProvider)
                     packageFilter.set(extension.packageFilter)
                     skipClassesRegex.set(extension.skipClassesRegex)
-                    javadocDestinationDir.set(project.layout.buildDirectory.dir("tmp/javadoc/$variantName"))
+                    destinationDir = project.layout.buildDirectory.dir("tmp/javadoc/$variantName").get().asFile
                     docletPath.set(docletJarFile)
                 }
                 apiGenerateTasks[variantName] = apiGenerate
@@ -147,6 +147,11 @@ class ApiLintPlugin : Plugin<Project> {
                     inputs.file(apiMapFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
                     declareDeprecationInputs(extension)
                     outputs.file(jsonResultFileProvider)
+                    // Appends to the result file `apiLintSingle` writes. A cache hit would restore a
+                    // whole copy of that file rather than appending to the current one, so what
+                    // `apiLintSingle` just wrote would be replaced by whatever it held when this
+                    // entry was stored.
+                    outputs.cacheIf { false }
 
                     dependsOn(apiLintSingle)
                     finalizedBy(apiDiff)
@@ -177,6 +182,9 @@ class ApiLintPlugin : Plugin<Project> {
                         inputs.file(apiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
                         inputs.file(changelogFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
                         outputs.file(jsonResultFileProvider)
+                        // Shares the result file with the tasks above, so the same restore hazard
+                        // applies.
+                        outputs.cacheIf { false }
 
                         dependsOn(apiCompatLint)
 
