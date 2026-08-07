@@ -7,6 +7,13 @@ plugins {
     alias(libs.plugins.spotless)
 }
 
+val mozconfig = gradle.extra["mozconfig"] as Map<*, *>
+val topobjdir = mozconfig["topobjdir"] as String
+
+layout.buildDirectory.set(
+    file("$topobjdir/gradle/build/mobile/android/gradle/plugins/apilint/apidoc-plugin"),
+)
+
 val javadocExecutable = "${System.getProperty("java.home")}/bin/javadoc"
 
 // `mach gradle` passes the interpreter it is running under; prefer it over a bare `python3`.

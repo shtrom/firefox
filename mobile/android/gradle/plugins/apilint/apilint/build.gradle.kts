@@ -9,6 +9,9 @@ plugins {
 
 val mozconfig = gradle.extra["mozconfig"] as Map<*, *>
 val topsrcdir = mozconfig["topsrcdir"] as String
+val topobjdir = mozconfig["topobjdir"] as String
+
+layout.buildDirectory.set(file("$topobjdir/gradle/build/mobile/android/gradle/plugins/apilint/apilint"))
 
 spotless {
     lineEndings = com.diffplug.spotless.LineEnding.UNIX
