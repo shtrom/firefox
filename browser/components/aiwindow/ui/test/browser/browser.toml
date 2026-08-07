@@ -137,8 +137,6 @@ skip-if = [
 
 ["browser_aiwindow_smartbar_chat_active_navigate.js"]
 
-["browser_aiwindow_smartbar_command_palette.js"]
-
 ["browser_aiwindow_smartbar_context_chips.js"]
 
 ["browser_aiwindow_smartbar_context_paste.js"]

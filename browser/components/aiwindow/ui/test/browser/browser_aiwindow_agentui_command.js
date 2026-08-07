@@ -37,8 +37,8 @@ add_task(async function test_monitor_command_prefills_condition() {
   try {
     const { conversation, seeded, assistantMessages } = makeConversationStub();
     const handled = AgentUI.tryHandleCommand({
-      command: "watch",
-      value: "/watch the price drops below $200",
+      command: "monitor",
+      value: "/monitor the price drops below $200",
       contextPageUrl: "https://example.com/product",
       conversation,
     });
@@ -67,7 +67,7 @@ add_task(async function test_bare_monitor_command_seeds_empty_condition() {
   try {
     const { conversation, seeded } = makeConversationStub();
     AgentUI.tryHandleCommand({
-      value: "/watch",
+      value: "/monitor",
       contextPageUrl: "https://example.com/product",
       conversation,
     });
@@ -76,7 +76,7 @@ add_task(async function test_bare_monitor_command_seeds_empty_condition() {
     Assert.equal(
       properties.agent.condition,
       "",
-      "A bare /watch command seeds an empty condition"
+      "A bare /monitor command seeds an empty condition"
     );
   } finally {
     await MonitorAgent._resetForTesting();
