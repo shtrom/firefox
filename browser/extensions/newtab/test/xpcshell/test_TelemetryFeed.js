@@ -529,17 +529,34 @@ add_task(async function test_endSession_no_ping_on_no_visibility_event() {
     "TelemetryFeed.endSession shouldn't send session ping if there's " +
       "no visibility_event_rcvd_ts"
   );
+  Services.fog.testResetFOG();
   Services.prefs.setBoolPref(PREF_TELEMETRY, true);
   let instance = new TelemetryFeed();
 
   let sandbox = sinon.createSandbox();
   sandbox.stub(instance, "configureContentPing");
 
+  let submittedReasons = [];
+  GleanPings.newtab.testBeforeNextSubmit(reason => {
+    submittedReasons.push(reason);
+  });
+
   instance.addSession("foo");
 
   Services.telemetry.clearEvents();
-  instance.endSession("foo");
+  await instance.endSession("foo");
   TelemetryTestUtils.assertNumberOfEvents(0);
+
+  Assert.deepEqual(
+    submittedReasons,
+    [],
+    "A newtab that was never shown should not submit a newtab ping."
+  );
+  Assert.equal(
+    Glean.newtab.closed.testGetValue(),
+    null,
+    "A newtab that was never shown should not record newtab.closed."
+  );
 
   info("TelemetryFeed.endSession should remove the session from .sessions");
   Assert.ok(!instance.sessions.has("foo"));
@@ -547,6 +564,43 @@ add_task(async function test_endSession_no_ping_on_no_visibility_event() {
   Services.prefs.clearUserPref(PREF_TELEMETRY);
 
   sandbox.restore();
+  Services.fog.testResetFOG();
+});
+
+add_task(async function test_endSession_never_shown_keeps_buffered_events() {
+  info(
+    "TelemetryFeed.endSession shouldn't drain the shared event buffer for a " +
+      "newtab that was never shown"
+  );
+  Services.fog.testResetFOG();
+  Services.prefs.setBoolPref(PREF_TELEMETRY, true);
+
+  let sandbox = sinon.createSandbox();
+  let instance = new TelemetryFeed();
+  sandbox.stub(instance, "configureContentPing");
+  instance.gleanSessionType = GleanSessionType.NormalGleanSession;
+
+  let recorded = false;
+  instance.recordOrQueueEvent("impression", {}, "other-session", () => {
+    recorded = true;
+  });
+  Assert.ok(!recorded, "The event should be queued rather than recorded.");
+
+  instance.addSession("preloaded");
+  await instance.endSession("preloaded");
+
+  Assert.ok(
+    !recorded,
+    "A newtab that was never shown should leave queued events alone."
+  );
+  Assert.ok(!instance.sessions.has("preloaded"));
+
+  instance.uninit();
+  Assert.ok(recorded, "The queued event should survive until uninit.");
+
+  Services.prefs.clearUserPref(PREF_TELEMETRY);
+  sandbox.restore();
+  Services.fog.testResetFOG();
 });
 
 add_task(async function test_uninit_flushes_buffered_events() {
@@ -2662,6 +2716,46 @@ add_task(async function test_endSession_leaves_other_sessions_events_queued() {
   Assert.ok(
     otherRecorded,
     "The other session's event should be recorded when that session ends."
+  );
+
+  Services.prefs.clearUserPref(PREF_TELEMETRY);
+  sandbox.restore();
+  Services.fog.testResetFOG();
+});
+
+add_task(async function test_endSession_never_shown_discards_own_events() {
+  info(
+    "endSession should discard a never-shown session's queued events without " +
+      "recording them, and leave other sessions' events alone"
+  );
+  Services.prefs.setBoolPref(PREF_TELEMETRY, true);
+
+  let sandbox = sinon.createSandbox();
+  let instance = new TelemetryFeed();
+  instance.gleanSessionType = "normal";
+
+  let neverShown = instance.addSession("preloaded-port");
+  let visible = instance.addSession("visible-port");
+  visible.perf.visibility_event_rcvd_ts = 1000;
+
+  let neverShownRecorded = false;
+  let visibleRecorded = false;
+  instance.recordOrQueueEvent("impression", {}, neverShown.session_id, () => {
+    neverShownRecorded = true;
+  });
+  instance.recordOrQueueEvent("impression", {}, visible.session_id, () => {
+    visibleRecorded = true;
+  });
+
+  await instance.endSession("preloaded-port");
+
+  Assert.ok(
+    !neverShownRecorded,
+    "A never-shown session's own events must not be recorded."
+  );
+  Assert.ok(
+    !visibleRecorded,
+    "A never-shown session must not drain the visible session's events."
   );
 
   Services.prefs.clearUserPref(PREF_TELEMETRY);
