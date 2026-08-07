@@ -75,7 +75,7 @@ const TOP_STORIES_SECTION_NAME = "top_stories_section";
  * Glean session types for OHTTP ping optimization.
  * Determines whether events are queued or sent immediately to OHTTP ping.
  */
-const GleanSessionType = {
+export const GleanSessionType = {
   NormalGleanSession: "normal",
   PrivateGleanSession: "private",
 };
@@ -348,6 +348,28 @@ export class TelemetryFeed {
         this.newtabContentPing.recordEvent(eventName, eventData);
       }
     }
+  }
+
+  /**
+   * Flushes any events still queued at shutdown into the newtab ping.
+   *
+   * Sessions that are still open when the feed goes away never receive a
+   * NEW_TAB_UNLOAD, so they never call endSession and never drain their own
+   * events. Without this, everything they queued is dropped.
+   */
+  #flushBufferedEventsOnUninit() {
+    if (
+      !this.#eventBuffer.length ||
+      !this.telemetryEnabled ||
+      !Services.prefs.getBoolPref(PREF_NEWTAB_PING_ENABLED, true)
+    ) {
+      return;
+    }
+
+    const recordToContentPing =
+      this.gleanSessionType === GleanSessionType.PrivateGleanSession;
+    this.#clearEventBuffer(recordToContentPing);
+    GleanPings.newtab.submit("newtab_session_end");
   }
 
   /**
@@ -2434,6 +2456,8 @@ export class TelemetryFeed {
 
   uninit() {
     this._stopObservingNewtabPingPrefs();
+    // Must run before newtabContentPing.uninit(), which discards its own buffer.
+    this.#flushBufferedEventsOnUninit();
     this.newtabContentPing.uninit();
     if (this._initialized) {
       Services.obs.removeObserver(
@@ -2443,6 +2467,7 @@ export class TelemetryFeed {
       this._initialized = false;
     }
 
-    // TODO: Send any unfinished sessions
+    // TODO: The sessions still in this.sessions are not reported as ended;
+    // only their buffered events are flushed above.
   }
 }

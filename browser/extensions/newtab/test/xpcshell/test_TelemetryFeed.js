@@ -14,6 +14,7 @@ ChromeUtils.defineESModuleGetters(this, {
   actionTypes: "resource://newtab/common/Actions.mjs",
   ExtensionSettingsStore:
     "resource://gre/modules/ExtensionSettingsStore.sys.mjs",
+  GleanSessionType: "resource://newtab/lib/TelemetryFeed.sys.mjs",
   HomePage: "resource:///modules/HomePage.sys.mjs",
   NewTabContentPing: "resource://newtab/lib/NewTabContentPing.sys.mjs",
   NimbusFeatures: "resource://nimbus/ExperimentAPI.sys.mjs",
@@ -546,6 +547,68 @@ add_task(async function test_endSession_no_ping_on_no_visibility_event() {
   Services.prefs.clearUserPref(PREF_TELEMETRY);
 
   sandbox.restore();
+});
+
+add_task(async function test_uninit_flushes_buffered_events() {
+  info(
+    "TelemetryFeed.uninit should flush events queued in a normal Glean " +
+      "session rather than dropping them"
+  );
+  Services.fog.testResetFOG();
+  Services.prefs.setBoolPref(PREF_TELEMETRY, true);
+
+  let sandbox = sinon.createSandbox();
+  let instance = new TelemetryFeed();
+  sandbox.stub(instance, "configureContentPing");
+  instance.gleanSessionType = GleanSessionType.NormalGleanSession;
+
+  let recorded = false;
+  instance.recordOrQueueEvent("impression", {}, "orphaned-session", () => {
+    recorded = true;
+  });
+
+  let pingSubmitted = new Promise(resolve => {
+    GleanPings.newtab.testBeforeNextSubmit(reason => {
+      Assert.equal(reason, "newtab_session_end");
+      resolve();
+    });
+  });
+
+  instance.uninit();
+  await pingSubmitted;
+
+  Assert.ok(recorded, "The queued event should be recorded at uninit.");
+
+  Services.prefs.clearUserPref(PREF_TELEMETRY);
+  sandbox.restore();
+  Services.fog.testResetFOG();
+});
+
+add_task(async function test_uninit_no_ping_when_buffer_empty() {
+  info("TelemetryFeed.uninit shouldn't submit an empty newtab ping");
+  Services.fog.testResetFOG();
+  Services.prefs.setBoolPref(PREF_TELEMETRY, true);
+
+  let sandbox = sinon.createSandbox();
+  let instance = new TelemetryFeed();
+  sandbox.stub(instance, "configureContentPing");
+
+  let submittedReasons = [];
+  GleanPings.newtab.testBeforeNextSubmit(reason => {
+    submittedReasons.push(reason);
+  });
+
+  instance.uninit();
+
+  Assert.deepEqual(
+    submittedReasons,
+    [],
+    "uninit with nothing buffered should not submit a ping."
+  );
+
+  Services.prefs.clearUserPref(PREF_TELEMETRY);
+  sandbox.restore();
+  Services.fog.testResetFOG();
 });
 
 add_task(async function test_endSession_send_ping() {
