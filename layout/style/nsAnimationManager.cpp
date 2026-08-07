@@ -12,6 +12,7 @@
 #include "mozilla/EffectCompositor.h"
 #include "mozilla/ElementAnimationData.h"
 #include "mozilla/ServoStyleSet.h"
+#include "mozilla/StaticPrefs_layout.h"
 #include "mozilla/TimelineCollection.h"
 #include "mozilla/dom/AnimationEffect.h"
 #include "mozilla/dom/Document.h"
@@ -506,13 +507,14 @@ void nsAnimationManager::UpdateAnimations(
              "document tree");
 
   if (!aComputedStyle ||
-      aComputedStyle->StyleDisplay()->mDisplay == StyleDisplay::None) {
+      (!StaticPrefs::layout_css_display_animations_enabled() &&
+       aComputedStyle->StyleDisplay()->mDisplay == StyleDisplay::None)) {
     // If we are in a display:none subtree we will have no computed values.
     // However, if we are on the root of display:none subtree, the computed
     // values might not have been cleared yet.
-    // In either case, since CSS animations should not run in display:none
-    // subtrees we should stop (actually, destroy) any animations on this
-    // element here.
+    // Stop (actually, destroy) any animations here: either there are no
+    // computed values, or display animations are disabled and this is a
+    // display:none root.
     StopAnimationsForElement(aElement, aPseudoRequest);
     return;
   }

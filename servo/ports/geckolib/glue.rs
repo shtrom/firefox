@@ -7582,8 +7582,9 @@ pub extern "C" fn Servo_GetComputedKeyframeValues(
                     debug_assert!(!property.is_logical());
                     debug_assert!(property.is_animatable());
 
-                    // 'display' is only animatable from SMIL
-                    if property == PropertyDeclarationId::Longhand(LonghandId::Display) {
+                    if property == PropertyDeclarationId::Longhand(LonghandId::Display)
+                        && !static_prefs::pref!("layout.css.display-animations.enabled")
+                    {
                         return;
                     }
 
@@ -7892,9 +7893,10 @@ pub unsafe extern "C" fn Servo_StyleSet_GetKeyframesForName(
             (timing_function, composition)
         };
     let is_not_animatable = |id: &PropertyDeclarationId| {
-        // Skip non-animatable properties, including the 'display' property because although it is
-        // animatable from SMIL, it should not be animatable from CSS Animations.
-        !id.is_animatable() || id == &PropertyDeclarationId::Longhand(LonghandId::Display)
+        // Skip non-animatable properties.
+        !id.is_animatable()
+            || (id == &PropertyDeclarationId::Longhand(LonghandId::Display)
+                && !static_prefs::pref!("layout.css.display-animations.enabled"))
     };
     let make_declaration_pair = |declaration: &PropertyDeclaration| {
         let id = declaration.id().to_physical(writing_mode);
