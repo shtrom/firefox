@@ -350,11 +350,7 @@ toolbar[inactive="true"] .urlbar,
   outline: none;
 }
 
-#urlbar-input {
-  mask-repeat: no-repeat;
-  unicode-bidi: plaintext;
-  text-align: match-parent;
-
+.urlbar-input {
   /* Make the editable line box span the field's full inner height so clicking
      anywhere in the field places the caret. The value equals the input's
      available height so it fills the field without growing it. */
@@ -366,6 +362,12 @@ toolbar[inactive="true"] .urlbar,
   @media not -moz-pref("browser.nova.enabled") {
     line-height: calc(var(--urlbar-height) - 2 * var(--urlbar-input-container-border-width));
   }
+}
+
+#urlbar-input {
+  mask-repeat: no-repeat;
+  unicode-bidi: plaintext;
+  text-align: match-parent;
 
   /* Align URLs to the right in RTL mode. */
   &:-moz-locale-dir(rtl) {
