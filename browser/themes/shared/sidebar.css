@@ -510,6 +510,7 @@ sidebar-main,
     color: var(--sidebar-text-color);
     padding-block-end: 0;
     border-inline-start: none;
+    outline: 0.5px solid var(--sidebar-border-color);
   }
 
   #sidebar {
