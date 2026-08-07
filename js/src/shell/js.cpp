@@ -6292,7 +6292,8 @@ static bool GetModuleEnvironmentValue(JSContext* cx, unsigned argc, Value* vp) {
     return false;
   }
 
-  if (module->hadEvaluationError()) {
+  if (module->hadEvaluationError() ||
+      module->status() == ModuleStatus::Unlinked) {
     JS_ReportErrorASCII(cx, "Module environment unavailable");
     return false;
   }
