@@ -2332,7 +2332,7 @@ pref("browser.ml.pageAssist.enabled", false);
 // Smart Window Feature
 pref("browser.smartwindow.enabled", false);
 // Default endpoint for preset models
-pref("browser.smartwindow.endpoint", "https://mlpa-prod-prod-mozilla.global.ssl.fastly.net/v1");
+pref("browser.smartwindow.endpoint", "https://mlpa-prod-prod-mozilla.freetls.fastly.net/v1");
 pref("browser.smartwindow.memories.generateFromHistory", true);
 pref("browser.smartwindow.memories.generateFromConversation", true);
 pref("browser.smartwindow.memories.hasSeenMemories", false);
@@ -2373,7 +2373,7 @@ pref("browser.smartwindow.worldcup.endpointURL", "https://merino.services.mozill
 pref("browser.smartwindow.worldcup.timeoutMs", 2000);
 
 // Smart Window: Exa search endpoint, used by the search_the_web agentic flow (bug 2037948)
-pref("browser.smartwindow.searchQuery.endpointURL", "https://mlpa-prod-prod-mozilla.global.ssl.fastly.net/v1/search");
+pref("browser.smartwindow.searchQuery.endpointURL", "https://mlpa-prod-prod-mozilla.freetls.fastly.net/v1/search");
 pref("browser.smartwindow.searchQuery.apiKey", "");
 
 // Smart Window Logging
