@@ -72,8 +72,6 @@ clang_checkers:
     reliability: high
   - name: performance-trivially-destructible
     reliability: high
-  - name: performance-unnecessary-copy-initialization
-    reliability: high
   - name: modernize-use-nullptr
     reliability: high
 
