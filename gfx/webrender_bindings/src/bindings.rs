@@ -2252,6 +2252,9 @@ pub extern "C" fn wr_window_new(
         false
     };
 
+    let enable_shared_instance_buffer =
+        static_prefs::pref!("gfx.webrender.shared-instance-buffer");
+
     let opts = WebRenderOptions {
         enable_aa: true,
         enable_subpixel_aa,
@@ -2320,6 +2323,7 @@ pub extern "C" fn wr_window_new(
         low_quality_pinch_zoom,
         max_shared_surface_size,
         enable_dithering,
+        enable_shared_instance_buffer,
         ..Default::default()
     };
 
