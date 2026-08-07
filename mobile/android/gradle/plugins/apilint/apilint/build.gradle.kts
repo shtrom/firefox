@@ -35,38 +35,62 @@ gradlePlugin {
     }
 }
 
-tasks.register<Exec>("testApiLint") {
-    workingDir(".")
-    commandLine("python3", "src/test/resources/apilint_test.py",
-        "--build-dir", layout.buildDirectory.get().asFile)
-}
+// Every suite exercises the scripts in `src/main/resources`, driven by the fixtures in
+// `src/test/resources` plus, for the integration suite, one from the sibling apidoc-plugin project.
+// A task with inputs but no outputs is never up to date, so each suite gets a private output
+// directory: whatever it writes goes there, and an empty one is enough for Gradle to snapshot.
+fun pythonTestDir(name: String) = layout.buildDirectory.dir("python-tests/$name")
 
-tasks.register<Exec>("unittestApiLint") {
-    workingDir(".")
-    commandLine("python3", "src/test/resources/apilint_unittest.py")
-}
+fun registerPythonTest(
+    name: String,
+    args: List<Any>,
+    extraInputs: Any = files(),
+    outputDirFlag: String? = null,
+) =
+    tasks.register<Exec>(name) {
+        // The suites import the scripts under test, so Python writes bytecode caches next to them.
+        // Those are ignored build artifacts, and snapshotting them costs an extra re-run of every
+        // suite after any script change.
+        inputs.files(
+            fileTree("src/main/resources") { exclude("**/__pycache__/**") },
+            fileTree("src/test/resources") { exclude("**/__pycache__/**") },
+        ).withPropertyName("scripts").withPathSensitivity(PathSensitivity.RELATIVE)
+        inputs.files(extraInputs)
+            .withPropertyName("extraInputs")
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+        val outputDir = pythonTestDir(name)
+        outputs.dir(outputDir)
 
-tasks.register<Exec>("testChangelogCheck") {
-    workingDir(".")
-    commandLine("python3", "src/test/resources/changelog-check_test.py")
-}
+        workingDir(".")
+        commandLine(listOf("python3") + args)
+        // A suite that writes results is handed the directory declared as its output, so the two
+        // cannot drift apart if the build directory is ever relocated.
+        outputDirFlag?.let { flag -> doFirst { args(flag, outputDir.get().asFile) } }
+    }
 
-// Tests that the expected doclet result is understood by apilint.py
-tasks.register<Exec>("integrationTestApiLint") {
-    workingDir(".")
-    commandLine("python3", "src/main/resources/apilint.py",
-         "../apidoc-plugin/src/test/resources/expected-doclet-output.txt",
-         "../apidoc-plugin/src/test/resources/expected-doclet-output.txt")
-}
+val expectedDocletOutput = "../apidoc-plugin/src/test/resources/expected-doclet-output.txt"
+
+val pythonTests = listOf(
+    registerPythonTest(
+        "testApiLint",
+        listOf("src/test/resources/apilint_test.py"),
+        outputDirFlag = "--build-dir",
+    ),
+    registerPythonTest("unittestApiLint", listOf("src/test/resources/apilint_unittest.py")),
+    registerPythonTest("testChangelogCheck", listOf("src/test/resources/changelog-check_test.py")),
+    // Tests that the expected doclet result is understood by apilint.py
+    registerPythonTest(
+        "integrationTestApiLint",
+        listOf("src/main/resources/apilint.py", expectedDocletOutput, expectedDocletOutput),
+        extraInputs = files(expectedDocletOutput),
+    ),
+)
 
 tasks.named<Test>("test") {
     useJUnitPlatform()
 
     dependsOn("spotlessCheck")
-    dependsOn("unittestApiLint")
-    dependsOn("testApiLint")
-    dependsOn("testChangelogCheck")
-    dependsOn("integrationTestApiLint")
+    dependsOn(pythonTests)
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {

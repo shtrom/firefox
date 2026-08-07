@@ -12,7 +12,20 @@ val javadocExecutable = "${System.getProperty("java.home")}/bin/javadoc"
 val testApiDoclet = tasks.register<Exec>("testApiDoclet") {
     val jarTask = tasks.named<Jar>("jar")
     val docletJar = jarTask.flatMap { it.archiveFile }
+    // The doclet generates the API into this directory for the script to compare against the expected
+    // output, so it is the task's real output rather than scratch space.
+    val outputDir = layout.buildDirectory.dir("python-tests/testApiDoclet")
     dependsOn(jarTask)
+
+    inputs.file(docletJar)
+        .withPropertyName("docletJar")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    // Excluding the bytecode caches keeps an ignored build artifact from invalidating the suite, the
+    // same way the apilint project's suites do.
+    inputs.files(fileTree("src/test") { exclude("**/__pycache__/**") })
+        .withPropertyName("testFixtures")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.dir(outputDir)
 
     workingDir(".")
     commandLine(
@@ -20,7 +33,7 @@ val testApiDoclet = tasks.register<Exec>("testApiDoclet") {
         "--javadoc", javadocExecutable,
         "--doclet-jar", docletJar.get().asFile.absolutePath,
         "--java-root", file("src/test/fake_root"),
-        "--out-dir", layout.buildDirectory.dir("tmp").get().asFile,
+        "--out-dir", outputDir.get().asFile,
         "--expected", file("src/test/resources/expected-doclet-output.txt"),
         "--expected-map", file("src/test/resources/expected-map-output.txt"),
     )
