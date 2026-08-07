@@ -694,7 +694,10 @@ export class AgentUI {
     conversation,
     window,
   }) {
-    if (!Services.prefs.getBoolPref(PREF_AGENT_ENABLED, false)) {
+    if (
+      !lazy.MonitorUIUtils.isMonitorRegionSupported() ||
+      !Services.prefs.getBoolPref(PREF_AGENT_ENABLED, false)
+    ) {
       return false;
     }
 

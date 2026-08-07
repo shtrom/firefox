@@ -27,6 +27,8 @@ const DEFAULT_CONSTANTS = {
     DAILY: "daily",
     WEEKLY: "weekly",
   },
+  isMonitorRegionSupported: true,
+  smartWindowSupportUrl: "https://support.mozilla.org/kb/smart-window",
 };
 
 // Actor action constants - must match the event names in SmartWindowTasksChild
@@ -165,6 +167,9 @@ export class AITasks extends MozLitElement {
         this._constants = Object.freeze(result.constants);
         // Update default frequency with the loaded constant
         this.checkFrequency = this._constants.SCHEDULE_TYPES.DAILY;
+        // _constants is not a reactive property, so request a render to
+        // reflect the actor-provided values (e.g. region support).
+        this.requestUpdate();
       }
     } catch (error) {
       console.error("Failed to initialize SmartWindowTasks actor:", error);
@@ -256,6 +261,15 @@ export class AITasks extends MozLitElement {
    */
   get isMaxMonitorsReached() {
     return this.monitors.length >= this._constants.TOTAL_NUM_MONITORS;
+  }
+
+  /**
+   * Checks whether the current region supports monitors.
+   *
+   * @returns {boolean} True if monitors are supported in this region
+   */
+  get isMonitorRegionSupported() {
+    return this._constants.isMonitorRegionSupported;
   }
 
   get #dialog() {
@@ -857,25 +871,41 @@ export class AITasks extends MozLitElement {
         </div>
       </dialog>
 
-      <div class="page-wrapper">
-        <div class="page-container">
-          <div class="header">
-            <h2 data-l10n-id="ai-tasks-page-title"></h2>
-            <moz-button
-              class="add-task-button"
-              data-l10n-id="ai-tasks-add-alert-button"
-              ?disabled=${this.isMaxMonitorsReached}
-              @click=${() => this.openDialog()}
-            ></moz-button>
-          </div>
-          <!-- Monitors display component -->
-          <monitors-display
-            .monitors=${this.monitors}
-            .scheduleTypes=${this._constants.SCHEDULE_TYPES}
-            .weekdays=${WEEKDAYS}
-          ></monitors-display>
-        </div>
-      </div>
+      ${!this.isMonitorRegionSupported
+        ? html`
+            <div class="unavailable-wrapper">
+              <div class="unavailable-container">
+                <h2 data-l10n-id="ai-tasks-no-monitors-title"></h2>
+                <p data-l10n-id="ai-tasks-no-monitors-message">
+                  <a
+                    href=${this._constants.smartWindowSupportUrl}
+                    data-l10n-name="smart-window-link"
+                    target="_blank"
+                  ></a>
+                </p>
+              </div>
+            </div>
+          `
+        : html`<div class="page-wrapper">
+            <div class="page-container">
+              <div class="header">
+                <h2 data-l10n-id="ai-tasks-page-title"></h2>
+                <moz-button
+                  class="add-task-button"
+                  data-l10n-id="ai-tasks-add-alert-button"
+                  ?disabled=${this.isMaxMonitorsReached}
+                  @click=${() => this.openDialog()}
+                ></moz-button>
+              </div>
+              <!-- Monitors display component -->
+
+              <monitors-display
+                .monitors=${this.monitors}
+                .scheduleTypes=${this._constants.SCHEDULE_TYPES}
+                .weekdays=${WEEKDAYS}
+              ></monitors-display>
+            </div>
+          </div>`}
     `;
   }
 }

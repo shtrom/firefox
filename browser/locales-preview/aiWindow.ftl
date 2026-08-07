@@ -83,6 +83,8 @@ ai-tasks-alert-modal-title = Create alert
 ai-tasks-page-title = Smart Window alerts
 ai-tasks-add-alert-button = Create alert
 ai-task-page-description = Create alerts for price drops, restocks, ticket sales, and more. Choose the pages to watch and Smart Window checks for changes.
+ai-tasks-no-monitors-title = Smart Window tasks aren’t available in your region
+ai-tasks-no-monitors-message = Learn more <a data-l10n-name="smart-window-link">about Smart Window</a>.
 ai-task-page-no-alerts = No alerts created yet.
 # Variables:
 #   $count (number) - The number of alerts currently active

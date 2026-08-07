@@ -247,3 +247,15 @@ moz-input-text::part(label),
     opacity: 1;
   }
 }
+
+/* ===== Feature unavailable section ===== */
+.unavailable-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.unavailable-container {
+  text-align: center;
+}

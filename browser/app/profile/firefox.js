@@ -2184,7 +2184,7 @@ pref("browser.aboutwelcome.experimentsGate.maxDisplayMs", 8000);
 // Global Nova enabled pref
 #ifdef NIGHTLY_BUILD
   pref("browser.nova.enabled", true);
-#else 
+#else
   pref("browser.nova.enabled", false);
 #endif
 
@@ -2366,6 +2366,8 @@ pref("browser.smartwindow.smartformfill.disallowedRegions", "FR");
 
 // Smart Window Agent
 pref("browser.smartwindow.agent.enabled", false);
+pref("browser.smartwindow.agent.supportedRegions", "US,CA");
+
 
 // Smart Window: Merino World Cup Soccer tool call (bug 2038266)
 pref("browser.smartwindow.worldcup.enabled", true);

@@ -6,11 +6,21 @@ const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   MonitorAgent:
     "moz-src:///browser/components/aiwindow/models/agents/MonitorAgent.sys.mjs",
+  Region: "resource://gre/modules/Region.sys.mjs",
 });
 
 const localization = new Localization(
   ["preview/aiWindow.ftl", "branding/brand.ftl"],
   true
+);
+
+import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
+
+XPCOMUtils.defineLazyPreferenceGetter(
+  lazy,
+  "monitorSupportedRegions",
+  "browser.smartwindow.agent.supportedRegions",
+  ""
 );
 
 /**
@@ -92,5 +102,23 @@ export const MonitorUIUtils = {
         error: error.message,
       };
     }
+  },
+
+  /**
+   * Check whether the user's home region is allowed to use monitors.
+   * The allowed regions are read from the
+   * `browser.smartwindow.agent.supportedRegions` pref as a comma-separated
+   * list of region codes.
+   *
+   * @returns {boolean} True if the home region is in the supported list
+   */
+  isMonitorRegionSupported() {
+    const supportedRegions = lazy.monitorSupportedRegions
+      .split(",")
+      .map(region => region.trim().toUpperCase())
+      .filter(Boolean);
+
+    const homeRegion = lazy.Region.home?.toUpperCase();
+    return Boolean(homeRegion && supportedRegions.includes(homeRegion));
   },
 };

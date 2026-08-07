@@ -111,6 +111,11 @@ export class SmartWindowTasksParent extends JSWindowActorParent {
         TOTAL_NUM_MONITORS: lazy.TOTAL_NUM_MONITORS,
         TOTAL_NUM_URLS_IN_MONITOR: lazy.TOTAL_NUM_URLS_IN_MONITOR,
         SCHEDULE_TYPES: lazy.SCHEDULE_TYPES,
+        isMonitorRegionSupported:
+          lazy.MonitorUIUtils.isMonitorRegionSupported(),
+        smartWindowSupportUrl:
+          Services.urlFormatter.formatURLPref("app.support.baseURL") +
+          "smart-window",
       },
     };
   }
