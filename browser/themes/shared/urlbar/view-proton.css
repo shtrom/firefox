@@ -1936,6 +1936,20 @@
   --panel-text-color: var(--toolbar-field-text-color-focus);
   --panel-background-color: var(--toolbar-field-background-color-focus);
   --panel-border-color: inherit;
+
+  > richlistbox > richlistitem {
+    width: 100%;
+
+    &[selected] {
+      border-radius: var(--border-radius-large);
+      background-color: var(--urlbarview-background-color-selected);
+      color: var(--urlbarview-text-color-selected);
+    }
+
+    > autocomplete-row-item {
+      width: 100%;
+    }
+  }
 }
 
 #PopupSearchAutoComplete::part(content) {
