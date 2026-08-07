@@ -58,7 +58,12 @@ class CookiesStorageActor extends BaseStorageActor {
     super.destroy();
   }
 
-  static UNIQUE_KEY_INDEXES = { name: 0, host: 1, path: 2, partitionKey: 3 };
+  static UNIQUE_KEY_INDEXES = {
+    name: 0,
+    host: 1,
+    path: 2,
+    originAttributesSuffix: 3,
+  };
 
   #getCookieUniqueKey(cookie) {
     return (
@@ -68,7 +73,7 @@ class CookiesStorageActor extends BaseStorageActor {
       SEPARATOR_GUID +
       cookie.path +
       SEPARATOR_GUID +
-      cookie.originAttributes.partitionKey
+      ChromeUtils.originAttributesToSuffix(cookie.originAttributes)
     );
   }
 
@@ -519,12 +524,13 @@ class CookiesStorageActor extends BaseStorageActor {
     const origName = field === "name" ? oldValue : data.items.name;
     const origHost = field === "host" ? oldValue : data.items.host;
     const origPath = field === "path" ? oldValue : data.items.path;
-    // We can't use `data.items.partitionKey` as it's the formatted value and we need
-    // to check against the "raw" one. Its value can't be modified, so we don't need to
-    // look into oldValue.
-    const partitionKey =
+    // The cookie's jar is only in the uniqueKey: `data.items.partitionKey` is
+    // the formatted value, not the raw one, and same-named cookies from other
+    // jars can be in the same listing, eg in the Browser Toolbox. The jar
+    // can't be modified, so we don't need to look into oldValue.
+    const originAttributesSuffix =
       data.items.uniqueKey.split(SEPARATOR_GUID)[
-        CookiesStorageActor.UNIQUE_KEY_INDEXES.partitionKey
+        CookiesStorageActor.UNIQUE_KEY_INDEXES.originAttributesSuffix
       ];
     let cookie = null;
 
@@ -534,7 +540,8 @@ class CookiesStorageActor extends BaseStorageActor {
         nsiCookie.name === origName &&
         nsiCookie.host === origHost &&
         nsiCookie.path === origPath &&
-        nsiCookie.originAttributes.partitionKey === partitionKey
+        ChromeUtils.originAttributesToSuffix(nsiCookie.originAttributes) ===
+          originAttributesSuffix
       ) {
         cookie = {
           host: nsiCookie.host,
@@ -655,9 +662,10 @@ class CookiesStorageActor extends BaseStorageActor {
 
       opts.name = uniqueKeyParts[CookiesStorageActor.UNIQUE_KEY_INDEXES.name];
       opts.path = uniqueKeyParts[CookiesStorageActor.UNIQUE_KEY_INDEXES.path];
-      opts.partitionKey =
-        uniqueKeyParts[CookiesStorageActor.UNIQUE_KEY_INDEXES.partitionKey] ||
-        "";
+      opts.originAttributesSuffix =
+        uniqueKeyParts[
+          CookiesStorageActor.UNIQUE_KEY_INDEXES.originAttributesSuffix
+        ] || "";
     }
 
     const cookies = this.getCookiesFromHost(host);
@@ -669,7 +677,8 @@ class CookiesStorageActor extends BaseStorageActor {
         (!opts.path || cookie.path === opts.path) &&
         (!opts.uniqueKey ||
           // make sure to pick the cookie from the correct jar
-          cookie.originAttributes.partitionKey === opts.partitionKey) &&
+          ChromeUtils.originAttributesToSuffix(cookie.originAttributes) ===
+            opts.originAttributesSuffix) &&
         // for session cookie removal
         (!opts.session || (!cookie.expires && !cookie.maxAge))
       ) {

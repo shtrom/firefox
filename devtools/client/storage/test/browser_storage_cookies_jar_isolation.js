@@ -36,8 +36,11 @@ add_task(async function () {
   const { storage: privateStorage } = await openStoragePanel({
     tab: privateTab,
   });
+  const c1PrivateId = getCookieId("c1", MAIN_HOST, "/browser", {
+    privateBrowsingId: 1,
+  });
   is(
-    getCookieValue(privateStorage, c1Id),
+    getCookieValue(privateStorage, c1PrivateId),
     INITIAL_C1_VALUE,
     "c1 is displayed in the private window"
   );
@@ -48,7 +51,7 @@ add_task(async function () {
   await onEdit;
 
   is(
-    getCookieValue(privateStorage, c1Id),
+    getCookieValue(privateStorage, c1PrivateId),
     "private-value",
     "The private panel displays the new value"
   );
@@ -86,8 +89,11 @@ add_task(async function () {
   const { storage: containerStorage } = await openStoragePanel({
     tab: containerTab,
   });
+  const c1ContainerId = getCookieId("c1", MAIN_HOST, "/browser", {
+    userContextId: 1,
+  });
   is(
-    getCookieValue(containerStorage, c1Id),
+    getCookieValue(containerStorage, c1ContainerId),
     INITIAL_C1_VALUE,
     "c1 is displayed in the container tab"
   );
@@ -98,7 +104,7 @@ add_task(async function () {
   await onEdit;
 
   is(
-    getCookieValue(containerStorage, c1Id),
+    getCookieValue(containerStorage, c1ContainerId),
     "container-value",
     "The container panel displays the new value"
   );
@@ -124,7 +130,7 @@ add_task(async function () {
     "The container panel did not receive the normal cookie"
   );
   is(
-    getCookieValue(containerStorage, c1Id),
+    getCookieValue(containerStorage, c1ContainerId),
     "container-value",
     "The container panel still displays its own value for c1"
   );
@@ -149,7 +155,9 @@ add_task(async function () {
   await addIframeCookie(firstTab, "c5", "first-site-value");
   await onEdit;
 
-  const c5Id = getCookieId("c5", MAIN_DOMAIN, "/", "(https,example.com)");
+  const c5Id = getCookieId("c5", MAIN_DOMAIN, "/", {
+    partitionKey: "(https,example.com)",
+  });
   is(
     getCookieValue(firstStorage, c5Id),
     "first-site-value",
