@@ -965,21 +965,7 @@ set_config("SCCACHE_VERBOSE_STATS", sccache_verbose_stats)
 @depends(when=using_sccache)
 def sccache_max_frame_length():
     # Workaround for https://github.com/mozilla/sccache/issues/459#issuecomment-618756635
-    return "500000000"
-
-
-option(
-    env="SCCACHE_CLIENT_SIDE",
-    choices=("true", "false"),
-    default="true",
-    help="Whether to enable sccache client side mode",
-)
-
-
-@depends("SCCACHE_CLIENT_SIDE", using_sccache)
-def sccache_client_side(client_side, using_sccache):
-    if using_sccache:
-        return client_side[0]
+    return "50000000"
 
 
 # The base directories are handled further below, where the sysroot and SDK
@@ -1366,7 +1352,6 @@ def sccache_config(**kwargs):
 
 sccache_environment = sccache_config(
     SCCACHE_BASEDIRS=sccache_basedirs,
-    SCCACHE_CLIENT_SIDE=sccache_client_side,
     SCCACHE_MAX_FRAME_LENGTH=sccache_max_frame_length,
 )
 
