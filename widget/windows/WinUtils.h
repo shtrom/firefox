@@ -585,7 +585,7 @@ class WinUtils {
       nsAString& aPath,
       PathTransformFlags aFlags = PathTransformFlags::Default);
 
-  static const size_t kMaxWhitelistedItems = 3;
+  static const size_t kMaxWhitelistedItems = 4;
   using WhitelistVec =
       Vector<std::pair<nsString, nsDependentString>, kMaxWhitelistedItems>;
 

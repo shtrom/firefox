@@ -1756,10 +1756,13 @@ bool WinUtils::UnexpandEnvVars(nsAString& aPath) {
 WinUtils::WhitelistVec WinUtils::BuildWhitelist() {
   WhitelistVec result;
 
+  // When no substitution is required, set the void flag
   (void)result.emplaceBack(
       std::make_pair(nsString(u"%ProgramFiles%"_ns), nsDependentString()));
+  result.back().second.SetIsVoid(true);
 
-  // When no substitution is required, set the void flag
+  (void)result.emplaceBack(std::make_pair(nsString(u"%ProgramFiles% (x86)"_ns),
+                                          nsDependentString()));
   result.back().second.SetIsVoid(true);
 
   (void)result.emplaceBack(
@@ -1910,7 +1913,9 @@ bool WinUtils::PreparePathForTelemetry(nsAString& aPath,
   for (uint32_t i = 0; i < whitelistedPaths.length(); ++i) {
     const nsString& testPath = whitelistedPaths[i].first;
     const nsDependentString& substitution = whitelistedPaths[i].second;
-    if (StringBeginsWith(aPath, testPath, nsCaseInsensitiveStringComparator)) {
+    if (StringBeginsWith(aPath, testPath, nsCaseInsensitiveStringComparator) &&
+        (aPath.Length() == testPath.Length() ||
+         aPath.CharAt(testPath.Length()) == u'\\')) {
       if (!substitution.IsVoid()) {
         aPath.Replace(0, testPath.Length(), substitution);
       }
