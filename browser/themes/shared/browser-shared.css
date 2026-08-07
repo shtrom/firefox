@@ -408,9 +408,12 @@ body {
     }
   }
 
-  #navigator-toolbox,
-  #sidebar-container {
-    background-color: var(--toolbar-background-color);
+  @media not (-moz-native-theme) {
+    #navigator-toolbox,
+    #sidebar-container {
+      background-color: var(--toolbar-background-color);
+      color: var(--toolbar-text-color);
+    }
   }
 }
 
