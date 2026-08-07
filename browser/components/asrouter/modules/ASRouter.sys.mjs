@@ -1633,6 +1633,9 @@ export class _ASRouter {
       // This pinning action is ONLY to be used in cases where an OS level
       // prompt will ask a user's consent to pin.
       "PIN_FIREFOX_TO_TASKBAR",
+      // This set default action is ONLY to be used in cases where an OS level
+      // prompt or settings panel will obtain a user's consent to set default.
+      "SET_DEFAULT_BROWSER",
     ];
     // The in-tree baseline allowlist can be extended off-train via Remote
     // Settings. If the collection is unavailable the getter returns nothing.
