@@ -33,6 +33,7 @@ class nsWindowX11 final : public nsWindow {
   Window GetX11Window();
 
   void NativeShow(bool aAction) override;
+  bool SendWorkspaceMoveRequest(int32_t workspaceID);
 
   void OnMapNative() override;
 
@@ -53,6 +54,7 @@ class nsWindowX11 final : public nsWindow {
 
   bool mIsNativePointerLocked = false;
   mozilla::Maybe<Barriers> mNativePointerBarriers;
+  mozilla::Maybe<int32_t> mDeferredWorkspaceID;
 };
 
 }  // namespace mozilla::widget
