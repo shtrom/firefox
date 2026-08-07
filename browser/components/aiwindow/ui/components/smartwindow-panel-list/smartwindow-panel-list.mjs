@@ -19,8 +19,8 @@ import "chrome://global/content/elements/panel-list.mjs";
  * This component is agnostic to the data it displays - consumers control
  * all logic including filtering, truncation, and special item handling.
  *
- * @typedef {{id: string, label: string, icon?: string, l10nId?: string}} ListItem
- * @typedef {{items: ListItem[], headerL10nId?: string}} ItemGroup
+ * @typedef {{id: string, label: string, icon?: string, l10nId?: string, description?: string}} ListItem
+ * @typedef {{items: ListItem[], headerL10nId?: string, header?: string}} ItemGroup
  * @property {ItemGroup[]} groups - Grouped list items to display
  * @property {string} placeholderL10nId - Fluent ID for empty state message
  * @property {object} anchor - Positioning anchor {left, top, width, height}
@@ -54,7 +54,9 @@ export class SmartwindowPanelList extends MozLitElement {
   get #hasCustomItems() {
     const itemsHost = this.#panelList ?? this;
     return [...itemsHost.children].some(
-      element => element.localName !== "panel-item"
+      element =>
+        element.localName !== "panel-item" &&
+        !element.classList.contains("panel-item-container")
     );
   }
 
@@ -159,7 +161,9 @@ export class SmartwindowPanelList extends MozLitElement {
   }
 
   handlePanelClick(e) {
-    const panelItem = e.target.closest("panel-item");
+    const panelItem =
+      e.target.closest("panel-item") ??
+      e.target.closest(".panel-item-container")?.querySelector("panel-item");
     if (panelItem && !panelItem.classList.contains("panel-section-header")) {
       const event = new CustomEvent("item-selected", {
         detail: {
@@ -229,6 +233,16 @@ export class SmartwindowPanelList extends MozLitElement {
     ></panel-item>`;
   }
 
+  #renderPlainHeader(header) {
+    return html`<panel-item
+      disabled
+      role="presentation"
+      class="panel-section-header"
+    >
+      ${header}
+    </panel-item>`;
+  }
+
   #computeItemStyles(item) {
     const styles = {};
 
@@ -240,7 +254,7 @@ export class SmartwindowPanelList extends MozLitElement {
   }
 
   #renderItem(item) {
-    return html`<panel-item
+    const panelItem = html`<panel-item
       .itemId=${item.id}
       .itemLabel=${item.label}
       icon=${ifDefined(item.icon ? "true" : undefined)}
@@ -249,6 +263,18 @@ export class SmartwindowPanelList extends MozLitElement {
     >
       ${item.l10nId ? "" : item.label}
     </panel-item>`;
+
+    if (!item.description) {
+      return panelItem;
+    }
+
+    // Wrap the item and its description in panel-item-container
+    return html`<div class="panel-item-container">
+      ${panelItem}
+      <div class="panel-item-description" aria-hidden="true">
+        ${item.description}
+      </div>
+    </div>`;
   }
 
   #renderGroup(group) {
@@ -256,8 +282,15 @@ export class SmartwindowPanelList extends MozLitElement {
       return null;
     }
 
+    let header = null;
+    if (group.headerL10nId) {
+      header = this.#renderGroupHeader(group.headerL10nId);
+    } else if (group.header) {
+      header = this.#renderPlainHeader(group.header);
+    }
+
     return html`
-      ${group.headerL10nId ? this.#renderGroupHeader(group.headerL10nId) : null}
+      ${header}
       ${repeat(
         group.items,
         item => item.id,
