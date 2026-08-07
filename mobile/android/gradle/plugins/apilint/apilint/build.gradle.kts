@@ -35,6 +35,10 @@ gradlePlugin {
     }
 }
 
+// `mach gradle` passes the interpreter it is running under; prefer it over a bare `python3`, which
+// is not necessarily on PATH. Keep the name in step with PythonExec.MACH_PYTHON_ENV_VAR.
+val pythonCommand = providers.environmentVariable("GRADLE_MACH_PYTHON").getOrElse("python3")
+
 // Every suite exercises the scripts in `src/main/resources`, driven by the fixtures in
 // `src/test/resources` plus, for the integration suite, one from the sibling apidoc-plugin project.
 // A task with inputs but no outputs is never up to date, so each suite gets a private output
@@ -62,7 +66,7 @@ fun registerPythonTest(
         outputs.dir(outputDir)
 
         workingDir(".")
-        commandLine(listOf("python3") + args)
+        commandLine(listOf(pythonCommand) + args)
         // A suite that writes results is handed the directory declared as its output, so the two
         // cannot drift apart if the build directory is ever relocated.
         outputDirFlag?.let { flag -> doFirst { args(flag, outputDir.get().asFile) } }

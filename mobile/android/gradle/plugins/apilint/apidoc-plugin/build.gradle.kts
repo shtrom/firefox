@@ -9,6 +9,10 @@ plugins {
 
 val javadocExecutable = "${System.getProperty("java.home")}/bin/javadoc"
 
+// `mach gradle` passes the interpreter it is running under; prefer it over a bare `python3`.
+// Keep the name in step with PythonExec.MACH_PYTHON_ENV_VAR.
+val pythonCommand = providers.environmentVariable("GRADLE_MACH_PYTHON").getOrElse("python3")
+
 val testApiDoclet = tasks.register<Exec>("testApiDoclet") {
     val jarTask = tasks.named<Jar>("jar")
     val docletJar = jarTask.flatMap { it.archiveFile }
@@ -29,7 +33,7 @@ val testApiDoclet = tasks.register<Exec>("testApiDoclet") {
 
     workingDir(".")
     commandLine(
-        "python3", file("src/test/resources/apidoc_test.py"),
+        pythonCommand, file("src/test/resources/apidoc_test.py"),
         "--javadoc", javadocExecutable,
         "--doclet-jar", docletJar.get().asFile.absolutePath,
         "--java-root", file("src/test/fake_root"),

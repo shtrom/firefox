@@ -9,6 +9,7 @@
 
 import os
 import subprocess as sp
+import sys
 import tempfile
 import unittest
 from contextlib import contextmanager
@@ -47,7 +48,7 @@ class DiffTest(unittest.TestCase):
     def run_diff(self, existing, local, command=None):
         with api_files(existing, local) as (existing_path, local_path):
             test = [
-                "python3",
+                sys.executable,
                 SCRIPT,
                 "--existing",
                 existing_path,

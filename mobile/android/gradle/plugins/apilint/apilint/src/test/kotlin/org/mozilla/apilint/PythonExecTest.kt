@@ -14,8 +14,21 @@ class PythonExecTest {
         .tasks.register("pythonExec", PythonExec::class.java).get()
 
     @Test
-    fun `defaults to python3`() {
-        assertEquals("python3", task().pythonCommand.get())
+    fun `prefers the interpreter mach passes over a bare python3`() {
+        // Under `mach gradle` the variable is set, so this asserts the wiring rather than a fixed
+        // value; run outside mach and it exercises the fallback instead.
+        val expected = System.getenv(PythonExec.MACH_PYTHON_ENV_VAR) ?: "python3"
+
+        assertEquals(expected, task().pythonCommand.get())
+    }
+
+    @Test
+    fun `the python command can be overridden`() {
+        val task = task()
+
+        task.pythonCommand.set("/usr/bin/python3.12")
+
+        assertEquals("/usr/bin/python3.12", task.pythonCommand.get())
     }
 
     @Test
