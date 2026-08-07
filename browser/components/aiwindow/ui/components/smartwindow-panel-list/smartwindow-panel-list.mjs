@@ -60,10 +60,18 @@ export class SmartwindowPanelList extends MozLitElement {
     );
   }
 
+  get #isCommandMode() {
+    return this.getAttribute("data-triggered-by") === "inline-command";
+  }
+
   firstUpdated() {
     this.#panelList = this.shadowRoot.querySelector("panel-list");
     this.#panelList.addEventListener("shown", () => {
-      if (this.sidebarMode) {
+      // The command palette sizes/positions to the smartbar and
+      // should recompute as soon as it opens
+      if (this.#isCommandMode) {
+        this.#reposition();
+      } else if (this.sidebarMode) {
         this.#clampToViewport();
       }
     });
@@ -121,6 +129,14 @@ export class SmartwindowPanelList extends MozLitElement {
         );
       } else {
         topOffset = anchorRect.bottom;
+      }
+      // Command mode spans the full width of its anchor (the smartbar) and
+      // left-aligns to it
+      if (this.#isCommandMode) {
+        panelEl.style.width = `${anchorRect.width}px`;
+        panelEl.style.left = `${anchorRect.left + window.scrollX}px`;
+      } else {
+        panelEl.style.width = "";
       }
       panelEl.style.top = `${topOffset + window.scrollY}px`;
       this.#clampToViewport();
@@ -198,7 +214,7 @@ export class SmartwindowPanelList extends MozLitElement {
   }
 
   #renderAnchor() {
-    if (!this.anchor) {
+    if (!this.anchor || this.anchor instanceof Element) {
       return null;
     }
 
@@ -254,25 +270,30 @@ export class SmartwindowPanelList extends MozLitElement {
   }
 
   #renderItem(item) {
+    const hasDescription = !!item.description;
     const panelItem = html`<panel-item
       .itemId=${item.id}
       .itemLabel=${item.label}
-      icon=${ifDefined(item.icon ? "true" : undefined)}
+      icon=${ifDefined(!hasDescription && item.icon ? "true" : undefined)}
       data-l10n-id=${ifDefined(item.l10nId)}
-      style=${styleMap(this.#computeItemStyles(item))}
+      style=${styleMap(hasDescription ? {} : this.#computeItemStyles(item))}
     >
       ${item.l10nId ? "" : item.label}
     </panel-item>`;
 
-    if (!item.description) {
+    if (!hasDescription) {
       return panelItem;
     }
 
-    // Wrap the item and its description in panel-item-container
     return html`<div class="panel-item-container">
-      ${panelItem}
-      <div class="panel-item-description" aria-hidden="true">
-        ${item.description}
+      ${item.icon
+        ? html`<span class="panel-item-icon" aria-hidden="true">
+            <img class="panel-item-icon-image" src=${item.icon} alt="" />
+          </span>`
+        : ""}
+      <div class="panel-item-text">
+        ${panelItem}
+        <div class="panel-item-description">${item.description}</div>
       </div>
     </div>`;
   }

@@ -106,14 +106,14 @@ add_task(async function test_monitor_command_rejects_non_watchable_page() {
       };
 
       const handled = AgentUI.tryHandleCommand({
-        command: "monitor",
-        value: "/monitor the price drops",
+        command: "watch",
+        value: "/watch the price drops",
         contextPageUrl,
         conversation,
       });
       Assert.ok(
         handled,
-        `The /monitor command is recognized for "${contextPageUrl}"`
+        `The /watch command is recognized for "${contextPageUrl}"`
       );
 
       // Give the async handler a chance to run before asserting.
@@ -121,7 +121,7 @@ add_task(async function test_monitor_command_rejects_non_watchable_page() {
 
       Assert.ok(
         !seededCard,
-        `No monitor card is seeded for non-watchable page "${contextPageUrl}"`
+        `No watch card is seeded for non-watchable page "${contextPageUrl}"`
       );
       Assert.deepEqual(
         l10nMessages,
@@ -154,7 +154,7 @@ add_task(async function test_create_monitor_localizes_schedule_summary() {
       updateData,
       conversation,
     });
-    Assert.ok(created, "The monitor is created");
+    Assert.ok(created, "The watch is created");
 
     Assert.equal(
       message.content.l10nId,
