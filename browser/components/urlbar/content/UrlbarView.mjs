@@ -12,8 +12,6 @@ const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   ContextualIdentityService:
     "moz-src:///toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs",
-  UrlbarProviderTopSites:
-    "moz-src:///browser/components/urlbar/UrlbarProviderTopSites.sys.mjs",
   UrlbarSearchOneOffs:
     "moz-src:///browser/components/urlbar/UrlbarSearchOneOffs.sys.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
@@ -4448,6 +4446,10 @@ export class UrlbarView {
       event
     );
   }
+
+  clearTopSitesCache() {
+    this.queryContextCache.clearTopSitesCache();
+  }
 }
 
 /**
@@ -4457,10 +4459,18 @@ export class UrlbarView {
  * the user is on.
  */
 class QueryContextCache {
-  #cache;
   #size;
+
+  /**  @type {UrlbarQueryContext[]} */
+  #cache = [];
+
+  /**
+   * We store the top-sites context separately since it will often be needed
+   * and therefore shouldn't be evicted except when the top sites change.
+   *
+   * @type {?UrlbarQueryContext}
+   */
   #topSitesContext;
-  #topSitesListener;
 
   /**
    * Constructor.
@@ -4469,13 +4479,6 @@ class QueryContextCache {
    */
   constructor(size) {
     this.#size = size;
-    this.#cache = [];
-
-    // We store the top-sites context separately since it will often be needed
-    // and therefore shouldn't be evicted except when the top sites change.
-    this.#topSitesContext = null;
-    this.#topSitesListener = () => (this.#topSitesContext = null);
-    lazy.UrlbarProviderTopSites.addTopSitesListener(this.#topSitesListener);
   }
 
   /**
@@ -4485,11 +4488,13 @@ class QueryContextCache {
     return this.#size;
   }
 
-  /**
-   * @returns {UrlbarQueryContext} The cached top-sites context or null if none.
-   */
+  // The cached top-sites context or null if none.
   get topSitesContext() {
     return this.#topSitesContext;
+  }
+
+  clearTopSitesCache() {
+    this.#topSitesContext = null;
   }
 
   /**
