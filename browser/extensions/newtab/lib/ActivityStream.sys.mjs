@@ -1653,6 +1653,14 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
+    "widgets.privacy.showVpnMessages",
+    {
+      title:
+        "Allow VPN promotional messages in the Privacy widget (off by default; not all users are VPN-eligible)",
+      value: false,
+    },
+  ],
+  [
     "widgets.privacy.messageState",
     {
       // Parent-only scheduler bookkeeping (frequency caps, milestone

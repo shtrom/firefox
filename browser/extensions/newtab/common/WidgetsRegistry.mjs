@@ -118,6 +118,7 @@ export const PREF_WIDGETS_SYSTEM_PRIVACY_ENABLED =
 export const PREF_PRIVACY_MAX_COUNT = "widgets.privacy.maxCount";
 export const PREF_PRIVACY_MAX_DISPLAY_COUNT = "widgets.privacy.maxDisplayCount";
 export const PREF_PRIVACY_BLANK_CHANCE = "widgets.privacy.blankChance";
+export const PREF_PRIVACY_SHOW_VPN_MESSAGES = "widgets.privacy.showVpnMessages";
 export const PREF_PRIVACY_MESSAGE_STATE = "widgets.privacy.messageState";
 export const PREF_WIDGETS_CROSSWORD_ENABLED = "widgets.crossword.enabled";
 export const PREF_CROSSWORD_SIZE = "widgets.crossword.size";
@@ -552,6 +553,24 @@ export function resolvePrivacyBlankChance(prefs) {
     return DEFAULT;
   }
   return raw;
+}
+
+/**
+ * Resolves whether the Privacy widget may show VPN promotional messages. Off by
+ * default: not all users are eligible for the built-in VPN (unsupported region,
+ * enterprise-managed, removed from the toolbar), and promoting an unavailable
+ * feature erodes trust. An experiment can enable them for eligible cohorts — or
+ * force them off. Priority: trainhopConfig > pref > false.
+ *
+ * @param {object} prefs - current pref values from the Redux store
+ * @returns {boolean}
+ */
+export function resolvePrivacyShowVpnMessages(prefs) {
+  const trainhop = prefs.trainhopConfig?.widgets?.privacyShowVpnMessages;
+  if (typeof trainhop === "boolean") {
+    return trainhop;
+  }
+  return !!prefs[PREF_PRIVACY_SHOW_VPN_MESSAGES];
 }
 
 /**

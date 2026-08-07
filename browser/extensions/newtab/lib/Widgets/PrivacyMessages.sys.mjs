@@ -566,6 +566,11 @@ function buildPool(ctx, state, today, now) {
         m.category === CATEGORY.PROMO &&
         m.id !== recent &&
         !isFeatureInUse(m.feature, ctx.features) &&
+        // VPN promos need both gates: showVpnMessages (operator/experiment
+        // opt-in, pref or trainhopConfig) AND vpnEnabled (the per-user VPN
+        // availability signal, browser.ipProtection.enabled). Don't promote a
+        // feature the user can't actually use.
+        (m.feature !== "vpn" || (ctx.showVpnMessages && ctx.vpnEnabled)) &&
         now - (state.messageLastShown[m.id] || 0) >= PROMO_REPEAT_MS
       ) {
         pool.push(m);

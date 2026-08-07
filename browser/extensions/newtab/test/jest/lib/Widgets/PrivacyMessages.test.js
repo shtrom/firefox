@@ -29,6 +29,11 @@ function ctx(over = {}) {
     streakDays: 1,
     maxCount: 100,
     blankChance: 0.4,
+    // Match the shipping default: VPN promos gated off. The fixture models a
+    // VPN-eligible user (vpnEnabled) whose promos are simply not opted in; the
+    // two gates are exercised explicitly in the showVpnMessages tests below.
+    showVpnMessages: false,
+    vpnEnabled: true,
     profileCreatedMs: 0, // old profile -> normal caps
     features: {},
     ...over,
@@ -245,6 +250,52 @@ describe("selectPrivacyMessage", () => {
     if (msg?.category === CATEGORY.PROMO) {
       expect(["vpn", "monitor", "private-window"]).toContain(msg.feature);
     }
+  });
+
+  // Sample the promo pool across the whole rand range (selection is random and
+  // buildPool isn't exported) and collect which promo `feature`s can appear.
+  const sampledPromoFeatures = context => {
+    const base = state({
+      dayStamp: "2026-06-15",
+      lastCelebrationDay: "2026-06-15",
+    });
+    const feats = new Set();
+    for (let i = 0; i < 100; i++) {
+      const r = i / 100;
+      const { decision } = selectPrivacyMessage(
+        context,
+        base,
+        NOW,
+        rand([r, r])
+      );
+      const msg = PRIVACY_MESSAGES.find(m => m.id === decision.messageId);
+      if (msg?.category === CATEGORY.PROMO) {
+        feats.add(msg.feature);
+      }
+    }
+    return feats;
+  };
+
+  it("excludes VPN promos when showVpnMessages is false", () => {
+    const feats = sampledPromoFeatures(ctx({ showVpnMessages: false }));
+    expect(feats.has("vpn")).toBe(false);
+    // other promos still rotate
+    expect(feats.size).toBeGreaterThan(0);
+  });
+
+  it("includes VPN promos when showVpnMessages is true", () => {
+    const feats = sampledPromoFeatures(ctx({ showVpnMessages: true }));
+    expect(feats.has("vpn")).toBe(true);
+  });
+
+  it("excludes VPN promos when the VPN isn't available, even if opted in", () => {
+    // showVpnMessages on but browser.ipProtection.enabled off -> no VPN promos.
+    const feats = sampledPromoFeatures(
+      ctx({ showVpnMessages: true, vpnEnabled: false })
+    );
+    expect(feats.has("vpn")).toBe(false);
+    // other promos still rotate
+    expect(feats.size).toBeGreaterThan(0);
   });
 
   it("limits promos to one per day", () => {

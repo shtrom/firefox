@@ -32,6 +32,7 @@ import {
   isWidgetEnabled,
   resolvePrivacyMaxCount,
   resolvePrivacyBlankChance,
+  resolvePrivacyShowVpnMessages,
   PREF_PRIVACY_MESSAGE_STATE,
 } from "resource://newtab/common/WidgetsRegistry.mjs";
 import {
@@ -310,6 +311,16 @@ export class PrivacyFeed {
       streakDays: totals.streakDays,
       maxCount: resolvePrivacyMaxCount(prefs),
       blankChance: resolvePrivacyBlankChance(prefs),
+      // Operator/experiment gate for VPN promos...
+      showVpnMessages: resolvePrivacyShowVpnMessages(prefs),
+      // ...and the per-user availability gate: only promote the built-in VPN
+      // when it's actually available to this user. Read the platform pref
+      // directly (not via IPProtection.sys.mjs) to stay train-hop-safe;
+      // fails closed if the pref is absent on an older channel.
+      vpnEnabled: Services.prefs.getBoolPref(
+        "browser.ipProtection.enabled",
+        false
+      ),
       profileCreatedMs,
       features,
     };
