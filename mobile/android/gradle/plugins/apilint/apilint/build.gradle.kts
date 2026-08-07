@@ -78,6 +78,7 @@ val pythonTests = listOf(
     ),
     registerPythonTest("unittestApiLint", listOf("src/test/resources/apilint_unittest.py")),
     registerPythonTest("testChangelogCheck", listOf("src/test/resources/changelog-check_test.py")),
+    registerPythonTest("testDiff", listOf("src/test/resources/diff_test.py")),
     // Tests that the expected doclet result is understood by apilint.py
     registerPythonTest(
         "integrationTestApiLint",
