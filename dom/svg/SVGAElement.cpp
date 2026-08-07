@@ -145,13 +145,34 @@ void SVGAElement::UnbindFromTree(UnbindContext& aContext) {
 
 int32_t SVGAElement::TabIndexDefault() { return 0; }
 
-Focusable SVGAElement::IsFocusableWithoutStyle(IsFocusableFlags aFlags) {
+Focusable SVGAElement::IsFocusableWithoutStyle(IsFocusableFlags) {
   Focusable result;
   if (IsSVGFocusable(&result.mFocusable, &result.mTabIndex)) {
     return result;
   }
 
-  return Link::IsLinkFocusableWithoutStyle(aFlags);
+  if (!OwnerDoc()->LinkHandlingEnabled()) {
+    return {};
+  }
+
+  // Links that are in an editable region should never be focusable, even if
+  // they are in a contenteditable="false" region.
+  if (nsContentUtils::IsNodeInEditableRegion(this)) {
+    return {};
+  }
+
+  if (GetTabIndexAttrValue().isNothing()) {
+    // check whether we're actually a link
+    if (!IsLink()) {
+      // Not tabbable or focusable without href (bug 17605), unless
+      // forced to be via presence of nonnegative tabindex attribute
+      return {};
+    }
+  }
+  if (!FocusModel::IsTabFocusable(TabFocusableType::Links)) {
+    result.mTabIndex = -1;
+  }
+  return result;
 }
 
 bool SVGAElement::HasHref() const {
