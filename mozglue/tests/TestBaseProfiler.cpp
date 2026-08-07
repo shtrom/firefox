@@ -4189,8 +4189,7 @@ void TestProfiler() {
     MOZ_RELEASE_ASSERT(profileSV.find("\"display\":[") != svnpos);
     MOZ_RELEASE_ASSERT(profileSV.find("\"marker-chart\"") != svnpos);
     MOZ_RELEASE_ASSERT(profileSV.find("\"marker-table\"") != svnpos);
-    MOZ_RELEASE_ASSERT(profileSV.find("\"format\":\"unique-string\"") !=
-                       svnpos);
+    MOZ_RELEASE_ASSERT(profileSV.find("\"format\":\"string\"") != svnpos);
     // TODO: Add more checks for what's expected in the profile. Some of them
     // are done in gtest's.
 
