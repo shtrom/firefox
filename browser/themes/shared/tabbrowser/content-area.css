@@ -634,6 +634,19 @@ split-view-footer {
 
   -moz-context-properties: fill;
   fill: var(--button-icon-fill);
+
+  /* Remove end|end radius when the content page does not have a border radius because
+     of the DevTools toolbox placement: */
+  :is(
+    /* when the toolbox is docked at the bottom */
+    .browserSidebarContainer[devtools-host-type="bottom"],
+    /* when the toolbox is docked on the right in LTR */
+    :dir(ltr) .browserSidebarContainer[devtools-host-type="right"],
+    /* when the toolbox is docked on the left in RTL */
+    :dir(rtl) .browserSidebarContainer[devtools-host-type="left"]
+  ) & {
+    border-end-end-radius: 0;
+  }
 }
 
 .split-view-icon {
