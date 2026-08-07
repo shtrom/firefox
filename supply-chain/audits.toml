@@ -3207,6 +3207,12 @@ criteria = "safe-to-deploy"
 delta = "0.30.0 -> 0.29.0"
 notes = "No unsafe code, mostly algorithms and parsing. Very unlikely to cause security issues."
 
+[[audits.gl_generator]]
+who = "Jamie Nicol <jnicol@mozilla.com>"
+criteria = "safe-to-deploy"
+delta = "0.14.0 -> 0.14.0@git:71c792dbfe0ec5caeb242fc90937e19098386342"
+importable = false
+
 [[audits.gleam]]
 who = "Jamie Nicol <jnicol@mozilla.com>"
 criteria = "safe-to-deploy"
@@ -3216,6 +3222,12 @@ delta = "0.13.1 -> 0.15.0"
 who = "Jamie Nicol <jnicol@mozilla.com>"
 criteria = "safe-to-deploy"
 delta = "0.15.0 -> 0.15.1"
+
+[[audits.gleam]]
+who = "Jamie Nicol <jnicol@mozilla.com>"
+criteria = "safe-to-deploy"
+delta = "0.15.1 -> 0.15.1@git:68ca4e5cc31135b843af07ff213a94b9ddce64cf"
+importable = false
 
 [[audits.glob]]
 who = "Mike Hommey <mh+mozilla@glandium.org>"
@@ -4170,6 +4182,12 @@ delta = "0.1.4 -> 0.1.6"
 who = "Nicolas Silva <nical@fastmail.com>"
 criteria = "safe-to-deploy"
 delta = "4.1.0 -> 6.0.0"
+
+[[audits.khronos_api]]
+who = "Jamie Nicol <jnicol@mozilla.com>"
+criteria = "safe-to-deploy"
+delta = "3.1.0 -> 3.1.0@git:71c792dbfe0ec5caeb242fc90937e19098386342"
+importable = false
 
 [[audits.lalrpop-util]]
 who = "Ben Dean-Kawamura <bdk@mozilla.com>"
