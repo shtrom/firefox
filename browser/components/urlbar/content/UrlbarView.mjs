@@ -4501,6 +4501,14 @@ class QueryContextCache {
   }
 
   /**
+   * Removes all entries from the cache, including the top-sites context.
+   */
+  clear() {
+    this.#cache = [];
+    this.clearTopSitesCache();
+  }
+
+  /**
    * Adds a new entry to the cache.
    *
    * @param {UrlbarQueryContext} queryContext The UrlbarQueryContext to add.
