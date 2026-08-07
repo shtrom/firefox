@@ -26,11 +26,7 @@ class EditContext final : public DOMEventTargetHelper, public SupportsWeakPtr {
                                                    ErrorResult& aRv);
 
   MOZ_CAN_RUN_SCRIPT void UpdateText(uint32_t aRangeStart, uint32_t aRangeEnd,
-                                     const nsAString& aText, ErrorResult& aRv) {
-    UpdateTextInternal(aRangeStart, aRangeEnd, aText, aRv);
-    FireCharacterBoundsUpdateIfNeeded();
-  }
-
+                                     const nsAString& aText, ErrorResult& aRv);
   MOZ_CAN_RUN_SCRIPT void UpdateSelection(uint32_t aStart, uint32_t aEnd);
   MOZ_CAN_RUN_SCRIPT void UpdateControlBounds(const DOMRect& aControlBounds);
   void UpdateSelectionBounds(const DOMRect& aSelectionBounds);
