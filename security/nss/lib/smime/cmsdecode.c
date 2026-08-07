@@ -462,10 +462,8 @@ nss_cms_after_end_inner(NSSCMSDecoderContext *p7dcx, unsigned int depth)
                                          (const char *)acinfo->rawContent->data,
                                          acinfo->rawContent->len);
                         }
-                        /* the recovered content must be treated as opaque data */
-                        aerv = NSS_CMSContentInfo_SetContent(
-                            p7dcx->cmsg, acinfo, SEC_OID_PKCS7_DATA,
-                            acinfo->rawContent);
+                        /* Also set content pointer for callers using GetContent */
+                        acinfo->content.pointer = acinfo->rawContent;
                     }
                 }
                 if (aerv != SECSuccess) {

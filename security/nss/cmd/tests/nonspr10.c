@@ -45,6 +45,7 @@
 #include "pk11sdr.h"
 #include "pkcs11.h"
 #include "pkcs11t.h"
+#include "pkcs12.h"
 #include "pkcs12t.h"
 #include "pkcs7t.h"
 #include "portreg.h"
