@@ -2632,7 +2632,7 @@ export class UrlbarView {
         });
       this.#updateOverflowTooltip(url, displayedUrl);
 
-      if (lazy.UrlbarUtils.isTextDirectionRTL(displayedUrl, this.window)) {
+      if (this.controller.isTextDirectionRTL(displayedUrl)) {
         // Stripping the url prefix may change the initial text directionality,
         // causing parts of it to jump to the end. To prevent that we insert a
         // LRM character in place of the prefix.
@@ -3574,12 +3574,15 @@ export class UrlbarView {
   /**
    * Offsets all highlight ranges by a given amount.
    *
-   * @param {Array} highlights The highlights which should be offset.
-   * @param {int} startOffset
+   * @param {Array|undefined} highlights The highlights which should be offset.
+   * @param {number} startOffset
    *    The number by which we want to offset the highlights range starts.
-   * @returns {Array} The offset highlights.
+   * @returns {Array|undefined} The offset highlights.
    */
   #offsetHighlights(highlights, startOffset) {
+    if (!highlights) {
+      return highlights;
+    }
     return highlights.map(highlight => [
       highlight[0] + startOffset,
       highlight[1],

@@ -770,6 +770,19 @@ export class UrlbarChildController {
   }
 
   /**
+   * Whether a string reads right-to-left. Runs through the actor since the
+   * content-web input can't reach the chrome-only `windowUtils` (see
+   * `UrlbarChild.isTextDirectionRTL`).
+   *
+   * @param {string} value
+   *   The text to check.
+   * @returns {boolean}
+   */
+  isTextDirectionRTL(value) {
+    return this.#actor.isTextDirectionRTL(value, window);
+  }
+
+  /**
    * Determines where a URL/page picked in `<moz-urlbar>` should be opened. Only
    * the `BrowserUtils.whereToOpenLink` call is routed through the actor (a system
    * module the content-web scope can't import); everything else, including the

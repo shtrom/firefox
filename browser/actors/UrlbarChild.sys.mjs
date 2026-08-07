@@ -148,6 +148,8 @@ export class UrlbarChild extends JSWindowActorChild {
           Cu.cloneInto(this.getFixupInfo(searchString, isPrivate), win),
         getDisplaySpec: url => this.getDisplaySpec(url),
         getSupportUrl: topic => this.getSupportUrl(topic),
+        isTextDirectionRTL: (value, window) =>
+          this.isTextDirectionRTL(value, window),
         getPref: name => Cu.cloneInto(lazy.UrlbarPrefs.get(name), win),
         addPrefObserver: observer => lazy.UrlbarPrefs.addObserver(observer),
         removePrefObserver: observer =>
@@ -254,6 +256,19 @@ export class UrlbarChild extends JSWindowActorChild {
    */
   getSupportUrl(topic) {
     return Services.urlFormatter.formatURLPref("app.support.baseURL") + topic;
+  }
+
+  /**
+   * Checks whether a given text has right-to-left direction or not.
+   *
+   * @param {string} value The text which should be check for RTL direction.
+   * @param {Window} window The window where 'value' is going to be displayed.
+   * @returns {boolean} Returns true if text has right-to-left direction and
+   *                    false otherwise.
+   */
+  isTextDirectionRTL(value, window) {
+    let directionality = window.windowUtils.getDirectionFromText(value);
+    return directionality == window.windowUtils.DIRECTION_RTL;
   }
 
   /**

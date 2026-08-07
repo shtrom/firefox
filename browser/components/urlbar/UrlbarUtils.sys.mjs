@@ -1380,19 +1380,6 @@ export var UrlbarUtils = {
   },
 
   /**
-   * Checks whether a given text has right-to-left direction or not.
-   *
-   * @param {string} value The text which should be check for RTL direction.
-   * @param {Window} window The window where 'value' is going to be displayed.
-   * @returns {boolean} Returns true if text has right-to-left direction and
-   *                    false otherwise.
-   */
-  isTextDirectionRTL(value, window) {
-    let directionality = window.windowUtils.getDirectionFromText(value);
-    return directionality == window.windowUtils.DIRECTION_RTL;
-  },
-
-  /**
    * Unescape, decode punycode, and trim (both protocol and trailing slash)
    * the URL. Use for displaying purposes only!
    *
