@@ -32,8 +32,14 @@ class WindowsUIUtils final : public nsIWindowsUIUtils {
   static RefPtr<SharePromise> Share(nsAutoString aTitle, nsAutoString aText,
                                     nsAutoString aUrl);
 
+  // Why the Win11 tablet-mode state is being recomputed. Receiving an OS-level
+  // ConvertibleSlateMode notification is itself evidence that the device is
+  // tablet-capable, and so overrides a negative result from the capability
+  // heuristic
+  enum class TabletModeUpdateReason : uint8_t { Notification, LazyQuery };
+
   static void UpdateInWin10TabletMode();
-  static void UpdateInWin11TabletMode();
+  static void UpdateInWin11TabletMode(TabletModeUpdateReason);
 
   // Check whether we're in Win10 tablet mode.
   //
@@ -47,6 +53,11 @@ class WindowsUIUtils final : public nsIWindowsUIUtils {
   // mode that there is no single getter to retrieve whether we're in a generic
   // "tablet mode".)
   static bool GetInWin11TabletMode();
+  // Check whether this device can enter tablet mode at all. Unlike the
+  // GetIn*TabletMode() getters, this is a stable property of the device rather
+  // than a momentary state, so it's the right question to ask when deciding
+  // whether to offer tablet-mode-related UI.
+  static bool GetIsTabletCapable();
 
   // Gets the system accent color, or one of the darker / lighter variants
   // (darker = -1/2/3, lighter=+1/2/3, values outside of that range are
