@@ -99,7 +99,7 @@ class CookiesStorageActor extends BaseStorageActor {
     return originAttributes;
   }
 
-  getCookiesFromHost(host) {
+  getOriginAttributesListFromHost(host) {
     // Gather originAttributes list from host
     const hostBrowsingContexts =
       this.storageActor.getBrowsingContextsFromHost(host);
@@ -113,8 +113,7 @@ class CookiesStorageActor extends BaseStorageActor {
       for (const bc of hostBrowsingContexts) {
         const { originAttributes } =
           bc.currentWindowGlobal.documentStoragePrincipal;
-        // The object is small, seems fine to stringify it to compute a unique key
-        const oaKey = JSON.stringify(originAttributes);
+        const oaKey = ChromeUtils.originAttributesToSuffix(originAttributes);
         if (!uniqueOriginAttributes.has(oaKey)) {
           originAttributesList.push(originAttributes);
           uniqueOriginAttributes.add(oaKey);
@@ -133,7 +132,9 @@ class CookiesStorageActor extends BaseStorageActor {
             ...originAttributes,
             partitionKey: bc.currentWindowGlobal.cookieJarSettings.partitionKey,
           };
-          const derivedOaKey = JSON.stringify(derivedOriginAttributes);
+          const derivedOaKey = ChromeUtils.originAttributesToSuffix(
+            derivedOriginAttributes
+          );
           if (!uniqueOriginAttributes.has(derivedOaKey)) {
             originAttributesList.push(derivedOriginAttributes);
             uniqueOriginAttributes.add(derivedOaKey);
@@ -146,6 +147,12 @@ class CookiesStorageActor extends BaseStorageActor {
       // fallback to the top window origin attributes.
       originAttributesList.push(this.getOriginAttributesFromHost(host));
     }
+
+    return originAttributesList;
+  }
+
+  getCookiesFromHost(host) {
+    const originAttributesList = this.getOriginAttributesListFromHost(host);
 
     // Local files have no host.
     if (host.startsWith("file:///")) {
@@ -172,7 +179,10 @@ class CookiesStorageActor extends BaseStorageActor {
 
   /**
    * Given a cookie object, figure out all the matching hosts from the page that
-   * the cookie belong to.
+   * the cookie belong to: the hosts whose cookie listing includes the cookie,
+   * ie the cookie's originAttributes match one of the host's
+   * (getOriginAttributesListFromHost). Cookies in a different jar, e.g. private
+   * browsing, container or other partition ones, are ignored.
    */
   getMatchingHosts(cookies) {
     if (!cookies) {
@@ -183,8 +193,22 @@ class CookiesStorageActor extends BaseStorageActor {
     }
     const hosts = new Set();
     for (const host of this.hosts) {
+      // A host can be backed by several jars at once, eg in the Browser
+      // Toolbox. Compare complete originAttributes via their canonical suffix,
+      // and filter out the undefined entries returned for privileged hosts
+      // which relate to no window.
+      const hostSuffixes = new Set(
+        this.getOriginAttributesListFromHost(host)
+          .filter(oa => oa !== undefined)
+          .map(oa => ChromeUtils.originAttributesToSuffix(oa))
+      );
       for (const cookie of cookies) {
-        if (this.isCookieAtHost(cookie, host)) {
+        if (
+          this.isCookieAtHost(cookie, host) &&
+          hostSuffixes.has(
+            ChromeUtils.originAttributesToSuffix(cookie.originAttributes)
+          )
+        ) {
           hosts.add(host);
         }
       }
