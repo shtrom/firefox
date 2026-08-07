@@ -6,7 +6,10 @@ import { SearchModeSwitcher } from "chrome://browser/content/urlbar/SearchModeSw
 import { UrlbarChildController } from "chrome://browser/content/urlbar/UrlbarChildController.mjs";
 import { UrlbarEventBufferer } from "chrome://browser/content/urlbar/UrlbarEventBufferer.mjs";
 import { UrlbarView } from "chrome://browser/content/urlbar/UrlbarView.mjs";
-import { createEditor } from "chrome://browser/content/urlbar/SmartbarInputUtils.mjs";
+import {
+  createEditor,
+  isAgentCommand,
+} from "chrome://browser/content/urlbar/SmartbarInputUtils.mjs";
 import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
 // eslint-disable-next-line import/no-unassigned-import
 import "chrome://browser/content/aiwindow/components/smartwindow-smartbar-glow.mjs";
@@ -1627,7 +1630,11 @@ ${
   }
 
   get #shouldHandleSuppressedNavigation() {
-    return this._permanentlySuppressStartQuery || this.inputField.hasMention;
+    return (
+      this._permanentlySuppressStartQuery ||
+      this.inputField.hasMention ||
+      this.#isAgentCommand
+    );
   }
 
   /**
@@ -1965,6 +1972,17 @@ ${
   }
 
   /**
+   * Whether the current input is a known Agent command such as
+   * "/watch ...". Such input is submitted to chat so the
+   * agent router can handle it. Sidebar only for now.
+   *
+   * @returns {boolean}
+   */
+  get #isAgentCommand() {
+    return this.#isSidebarMode && isAgentCommand(this.untrimmedValue);
+  }
+
+  /**
    * Handles an event which would cause a URL or text to be opened.
    *
    * @param {object} options
@@ -1980,6 +1998,14 @@ ${
    *   The principal that the action was triggered from.
    */
   handleNavigation({ event, oneOffParams, triggeringPrincipal }) {
+    // A leading "/command" is an agent command.
+    // Submit it to chat so the agent router handles it rather
+    // than loading it as a file path (e.g. "file:///monitor")
+    if (this.#isAgentCommand) {
+      this.submitChat(event, this.untrimmedValue);
+      return;
+    }
+
     // When queries are suppressed (e.g. while a chat is active) or if the
     // smartbar includes inline @mentions, submit directly to chat. Route based
     // on the inferred smartbar action.
@@ -3095,21 +3121,27 @@ ${
     resetSearchState = true,
     event,
   } = {}) {
-    // When mentions panel is open, skip queries triggered by input events and
-    // close the suggestions view. The mentions plugin will handle querying
+    // When mentions/command panel is open, skip queries triggered by input events and
+    // close the suggestions view. The mentions/command plugin will handle querying
     // providers directly.
     const isHandlingMentions = this.inputField.isHandlingMentions;
-    if (isHandlingMentions && event) {
+    if ((isHandlingMentions || this.#isAgentCommand) && event) {
       this.view.close();
+      // no query runs so refresh the CTA state directly
+      this.#updateSmartbarCTAButton();
       return;
     }
 
-    // When mentions panel is open, skip the validation since the value
-    // includes "@" but searchString doesn’t.
+    // When the mentions panel or an agent command is open, skip the validation
+    // since the value includes an "@"/"/" prefix but searchString doesn’t.
     if (!searchString) {
       searchString =
         this.getAttribute("pageproxystate") == "valid" ? "" : this.value;
-    } else if (!isHandlingMentions && !this.value.startsWith(searchString)) {
+    } else if (
+      !isHandlingMentions &&
+      !this.#isAgentCommand &&
+      !this.value.startsWith(searchString)
+    ) {
       throw new Error("The current value doesn't start with the search string");
     }
 
@@ -6363,8 +6395,8 @@ ${
       }
     }
 
-    // Suppress queries when there are inline mentions.
-    if (this.inputField.hasMention) {
+    // Suppress queries when there are inline mentions or command.
+    if (this.inputField.hasMention || this.#isAgentCommand) {
       this.suppressStartQuery();
     } else if (!this._permanentlySuppressStartQuery) {
       this.unsuppressStartQuery();
