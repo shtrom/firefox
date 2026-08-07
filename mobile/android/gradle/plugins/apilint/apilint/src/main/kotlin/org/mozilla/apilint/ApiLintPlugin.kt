@@ -8,8 +8,7 @@ import com.android.build.api.variant.LibraryAndroidComponentsExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Copy
-import org.gradle.api.tasks.TaskProvider
-import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.api.tasks.PathSensitivity
 
 class ApiLintPlugin : Plugin<Project> {
     override fun apply(project: Project) {
@@ -33,19 +32,14 @@ class ApiLintPlugin : Plugin<Project> {
                 }
             }
 
-            // The compile classpath is taken from the variant's javac task, but AGP creates that
-            // task after the onVariants callbacks run, so we defer wiring it until afterEvaluate.
-            val apiGenerateTasks = mutableMapOf<String, TaskProvider<ApiCompatLintTask>>()
-
             val androidComponents =
                 project.extensions.getByType(LibraryAndroidComponentsExtension::class.java)
             androidComponents.onVariants(androidComponents.selector().all()) { variant ->
                 val variantName = variant.name
                 val name = variantName.replaceFirstChar { c -> c.titlecase() }
 
-                // The generated API files used to live in the variant's javac output directory.
-                // The new variant API does not expose that directory at configuration time, so we
-                // write them to a dedicated, variant-scoped directory instead.
+                // A dedicated, variant-scoped directory: the variant API does not hand out the
+                // javac output directory at configuration time.
                 val outputDir = project.layout.buildDirectory.dir("apilint/$variantName")
                 val apiFileProvider = outputDir.flatMap { dir -> extension.apiOutputFileName.map { dir.file(it) } }
                 val jsonResultFileProvider =
@@ -62,6 +56,12 @@ class ApiLintPlugin : Plugin<Project> {
                 val apiGenerate = project.tasks.register("apiGenerate$name", ApiCompatLintTask::class.java) {
                     description = "Generates API file for build variant $name"
                     dependsOn(copyDocletJarResource)
+                    // The variant's compile classpath covers the dependencies but not the
+                    // platform, and javadoc cannot resolve `android.*` without it.
+                    classpath = project.files(
+                        androidComponents.sdkComponents.bootClasspath,
+                        variant.compileClasspath,
+                    )
 
                     setSource(sourceDirs)
                     exclude("**/R.java")
@@ -77,15 +77,14 @@ class ApiLintPlugin : Plugin<Project> {
                     destinationDir = project.layout.buildDirectory.dir("tmp/javadoc/$variantName").get().asFile
                     docletPath.set(docletJarFile)
                 }
-                apiGenerateTasks[variantName] = apiGenerate
 
                 val apiLintSingle = project.tasks.register("apiLintSingle$name", PythonExec::class.java) {
                     description = "Runs API lint checks for variant $name"
                     dependsOn(apiGenerate)
                     scriptPath.set("apilint.py")
 
-                    inputs.file(apiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
-                    inputs.file(apiMapFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+                    inputs.file(apiFileProvider).withPathSensitivity(PathSensitivity.RELATIVE)
+                    inputs.file(apiMapFileProvider).withPathSensitivity(PathSensitivity.RELATIVE)
                     declareLintFilterInputs(extension)
                     declareDeprecationInputs(extension)
                     outputs.file(jsonResultFileProvider)
@@ -124,8 +123,8 @@ class ApiLintPlugin : Plugin<Project> {
                     dependsOn(apiGenerate)
                     scriptPath.set("diff.py")
 
-                    inputs.file(apiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
-                    inputs.file(currentApiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+                    inputs.file(apiFileProvider).withPathSensitivity(PathSensitivity.RELATIVE)
+                    inputs.file(currentApiFileProvider).withPathSensitivity(PathSensitivity.RELATIVE)
 
                     // diff exit value is != 0 if the files are different
                     isIgnoreExitValue = true
@@ -142,9 +141,9 @@ class ApiLintPlugin : Plugin<Project> {
                     description = "Runs API compatibility lint checks for variant $name"
                     scriptPath.set("apilint.py")
 
-                    inputs.file(apiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
-                    inputs.file(currentApiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
-                    inputs.file(apiMapFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+                    inputs.file(apiFileProvider).withPathSensitivity(PathSensitivity.RELATIVE)
+                    inputs.file(currentApiFileProvider).withPathSensitivity(PathSensitivity.RELATIVE)
+                    inputs.file(apiMapFileProvider).withPathSensitivity(PathSensitivity.RELATIVE)
                     declareDeprecationInputs(extension)
                     outputs.file(jsonResultFileProvider)
                     // Appends to the result file `apiLintSingle` writes. A cache hit would restore a
@@ -179,8 +178,8 @@ class ApiLintPlugin : Plugin<Project> {
                         group = "Verification"
                         scriptPath.set("changelog-check.py")
 
-                        inputs.file(apiFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
-                        inputs.file(changelogFileProvider).withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+                        inputs.file(apiFileProvider).withPathSensitivity(PathSensitivity.RELATIVE)
+                        inputs.file(changelogFileProvider).withPathSensitivity(PathSensitivity.RELATIVE)
                         outputs.file(jsonResultFileProvider)
                         // Shares the result file with the tasks above, so the same restore hazard
                         // applies.
@@ -217,20 +216,6 @@ class ApiLintPlugin : Plugin<Project> {
                     from(apiFileProvider)
                     into(currentApiFileProvider.map { it.asFile.parentFile })
                     rename { currentApiFileProvider.get().asFile.name }
-                }
-            }
-
-            // AGP creates the variant javac tasks after onVariants runs, so wire each
-            // apiGenerate task's classpath from the corresponding javac task here.
-            project.afterEvaluate {
-                apiGenerateTasks.forEach { (variantName, apiGenerate) ->
-                    val name = variantName.replaceFirstChar { c -> c.titlecase() }
-                    apiGenerate.configure {
-                        classpath = project.files(
-                            project.tasks.named("compile${name}JavaWithJavac", JavaCompile::class.java)
-                                .map { it.classpath },
-                        )
-                    }
                 }
             }
         }
