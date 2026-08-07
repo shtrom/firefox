@@ -84,9 +84,6 @@ bool ParamTraits<mozilla::ipc::FileDescriptor>::Read(
   }
 
   *aResult = mozilla::ipc::FileDescriptor(std::move(handle));
-  if (!aResult->IsValid()) {
-    printf_stderr("IPDL protocol Error: Received an invalid file descriptor\n");
-  }
   return true;
 }
 
