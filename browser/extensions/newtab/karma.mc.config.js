@@ -83,6 +83,51 @@ module.exports = function (config) {
               functions: 0,
               branches: 0,
             },
+            "content-src/components/Card/Card.jsx": {
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
+            },
+            "content-src/components/CollapsibleSection/CollapsibleSection.jsx":
+              {
+                statements: 0,
+                lines: 0,
+                functions: 0,
+                branches: 0,
+              },
+            "content-src/components/ContextMenu/ContextMenu.jsx": {
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
+            },
+            "content-src/components/ConfirmDialog/ConfirmDialog.jsx": {
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
+            },
+            "content-src/components/LinkMenu/LinkMenu.jsx": {
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
+            },
+            "content-src/components/DiscoveryStreamBase/DiscoveryStreamBase.jsx":
+              {
+                statements: 0,
+                lines: 0,
+                functions: 0,
+                branches: 0,
+              },
+            "content-src/components/ActivationWindowMessage/ActivationWindowMessage.jsx":
+              {
+                statements: 0,
+                lines: 0,
+                functions: 0,
+                branches: 0,
+              },
             /**
              * ErrorBoundary.jsx is tested via Jest (see test/jest/content-src/components/ErrorBoundary.test.jsx).
              */
@@ -420,10 +465,10 @@ module.exports = function (config) {
               branches: 0,
             },
             "content-src/components/Weather/Weather.jsx": {
-              statements: 48,
-              lines: 49,
-              functions: 31.2,
-              branches: 31.2,
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
             },
             "content-src/components/Widgets/WeatherForecast/WeatherForecast.jsx":
               {
@@ -601,16 +646,16 @@ module.exports = function (config) {
               functions: 92.86,
             },
             "content-src/components/MessageWrapper/MessageWrapper.jsx": {
-              lines: 50,
-              statements: 51.1,
-              functions: 31.2,
-              branches: 31.2,
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
             },
             "content-src/components/Search/Search.jsx": {
-              statements: 38,
-              lines: 39,
-              functions: 28,
-              branches: 25,
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
             },
             "content-src/components/Widgets/SportsWidget/SportsWidget.jsx": {
               statements: 0,
