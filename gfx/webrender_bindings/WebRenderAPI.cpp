@@ -1564,15 +1564,13 @@ void DisplayListBuilder::PushImage(
     bool aIsBackfaceVisible, bool aForceAntiAliasing,
     wr::ImageRendering aFilter, wr::ImageKey aImage, bool aPremultipliedAlpha,
     const wr::ColorF& aColor, bool aPreferCompositorSurface,
-    bool aSupportsExternalCompositing,
-    const Maybe<wr::DeviceIntRect>& aSubRect) {
+    bool aSupportsExternalCompositing) {
   WRDL_LOG("PushImage b=%s cl=%s\n", mWrState, ToString(aBounds).c_str(),
            ToString(aClip).c_str());
   wr_dp_push_image(mWrState, aBounds, aClip, aIsBackfaceVisible,
                    aForceAntiAliasing, &mCurrentSpaceAndClipChain, aFilter,
                    aImage, aPremultipliedAlpha, aColor,
-                   aPreferCompositorSurface, aSupportsExternalCompositing,
-                   aSubRect.ptrOr(nullptr));
+                   aPreferCompositorSurface, aSupportsExternalCompositing);
 }
 
 void DisplayListBuilder::PushRepeatingImage(
