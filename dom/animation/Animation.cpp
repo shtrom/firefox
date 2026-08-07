@@ -2416,6 +2416,9 @@ void Animation::AutoAlignStartTime() {
       (effectivePlaybackRate >= 0.0 ? startOffset : endOffset) *
       PROGRESS_TIMELINE_DURATION_MILLISEC));
 
+  // Apply any pending playback rate on animation.
+  ApplyPendingPlaybackRate();
+
   // Clear hold time.
   mHoldTime.SetNull();
 }
