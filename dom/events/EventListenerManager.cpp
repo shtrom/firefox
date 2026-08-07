@@ -836,8 +836,10 @@ void EventListenerManager::RemoveEventListenerInternal(
     uint32_t count = listenerArray.Length();
     for (uint32_t i = 0; i < count; ++i) {
       Listener* listener = &listenerArray.ElementAt(i);
-      if (listener->mListener == aListenerHolder &&
-          listener->mFlags.EqualsForRemoval(aFlags)) {
+      // mListener == aListenerHolder is the last one, since it can be a bit
+      // slow.
+      if (listener->mFlags.EqualsForRemoval(aFlags) &&
+          listener->mListener == aListenerHolder) {
         return Some(i);
       }
     }
