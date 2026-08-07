@@ -23,4 +23,3 @@
 # don't change CLOBBER for WebIDL changes any more.
 
 Stale dist/xpi-stage install manifest pointing at deleted locale files - Bug 2059104 - Remove the in-tree New Tab locale snapshots
-Bug 2025793 - newtab CSS/JS bundles are now generated into the objdir (prevents stale dist/xpi-stage symlinks to the deleted srcdir copies)
