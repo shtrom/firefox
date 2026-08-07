@@ -119,6 +119,7 @@ export const PREF_PRIVACY_MAX_COUNT = "widgets.privacy.maxCount";
 export const PREF_PRIVACY_MAX_DISPLAY_COUNT = "widgets.privacy.maxDisplayCount";
 export const PREF_PRIVACY_BLANK_CHANCE = "widgets.privacy.blankChance";
 export const PREF_PRIVACY_SHOW_VPN_MESSAGES = "widgets.privacy.showVpnMessages";
+export const PREF_PRIVACY_FORCE_MESSAGE_ID = "widgets.privacy.forceMessageId";
 export const PREF_PRIVACY_MESSAGE_STATE = "widgets.privacy.messageState";
 export const PREF_WIDGETS_CROSSWORD_ENABLED = "widgets.crossword.enabled";
 export const PREF_CROSSWORD_SIZE = "widgets.crossword.size";

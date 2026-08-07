@@ -34,6 +34,7 @@ import {
   resolvePrivacyBlankChance,
   resolvePrivacyShowVpnMessages,
   PREF_PRIVACY_MESSAGE_STATE,
+  PREF_PRIVACY_FORCE_MESSAGE_ID,
 } from "resource://newtab/common/WidgetsRegistry.mjs";
 import {
   selectPrivacyMessage,
@@ -321,6 +322,7 @@ export class PrivacyFeed {
         "browser.ipProtection.enabled",
         false
       ),
+      forceMessageId: prefs[PREF_PRIVACY_FORCE_MESSAGE_ID] || null,
       profileCreatedMs,
       features,
     };

@@ -511,6 +511,42 @@ function firstByCategory(category) {
   return PRIVACY_MESSAGES.find(m => m.category === category) || null;
 }
 
+// Layout variant a message renders as (see Privacy.jsx). Empty and streak have
+// their own layouts; everything else is a "tip".
+function variantForCategory(category) {
+  if (category === "empty") {
+    return "empty";
+  }
+  if (category === CATEGORY.STREAK) {
+    return "streak";
+  }
+  return "tip";
+}
+
+// Debug override result for widgets.privacy.forceMessageId: the forced message's
+// decision (bypassing the ladder/caps, no state mutation), or null when unset or
+// the id is unknown (falls through to normal scheduling).
+function forcedResult(ctx, state) {
+  if (!ctx.forceMessageId) {
+    return null;
+  }
+  const forced =
+    ctx.forceMessageId === EMPTY_MESSAGE.id
+      ? EMPTY_MESSAGE
+      : PRIVACY_MESSAGES.find(m => m.id === ctx.forceMessageId);
+  if (!forced) {
+    return null;
+  }
+  return {
+    decision: toDecision(
+      variantForCategory(forced.category),
+      forced,
+      countArgFor(forced, ctx)
+    ),
+    nextState: state,
+  };
+}
+
 function isFeatureInUse(feature, features = {}) {
   switch (feature) {
     case "signin":
@@ -587,7 +623,8 @@ function buildPool(ctx, state, today, now) {
  *
  * @param {object} ctx - trackersToday, sitesToday, weekTotal, monthTotal,
  *   yearTotal, allTimeTotal, streakDays, maxCount, blankChance,
- *   profileCreatedMs, features {signedIn, hasLogins, relayMasks}.
+ *   showVpnMessages, profileCreatedMs, features {signedIn, hasLogins,
+ *   relayMasks}, and optional forceMessageId (debug override).
  * @param {object} prevState - Persisted scheduler state (or null/{}).
  * @param {number} now - Timestamp in ms.
  * @param {function(): number} rand - Returns 0..1 (Math.random in prod).
@@ -597,6 +634,13 @@ export function selectPrivacyMessage(ctx, prevState, now, rand) {
   const state = normalizeState(prevState);
   const today = utcDayKey(now);
   const bounds = periodBounds(now);
+
+  // Debug override (widgets.privacy.forceMessageId): pin the widget to one
+  // catalog message for QA / design review, bypassing the ladder and all caps.
+  const forced = forcedResult(ctx, state);
+  if (forced) {
+    return forced;
+  }
 
   if (state.dayStamp !== today) {
     state.dayStamp = today;

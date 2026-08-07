@@ -1661,6 +1661,14 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
+    "widgets.privacy.forceMessageId",
+    {
+      title:
+        "Debug: pin the Privacy widget to one catalog message id (QA/design; empty = normal scheduling)",
+      value: "",
+    },
+  ],
+  [
     "widgets.privacy.messageState",
     {
       // Parent-only scheduler bookkeeping (frequency caps, milestone

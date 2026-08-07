@@ -31,6 +31,7 @@ const PREF_WIDGETS_ENABLED = "widgets.enabled";
 const PREF_PRIVACY_ENABLED = "widgets.privacy.enabled";
 const PREF_SYSTEM_PRIVACY_ENABLED = "widgets.system.privacy.enabled";
 const PREF_MESSAGE_STATE = "widgets.privacy.messageState";
+const PREF_FORCE_MESSAGE_ID = "widgets.privacy.forceMessageId";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const INSERT_EVENT_SQL =
@@ -212,6 +213,43 @@ add_task(async function test_new_tab_init_runs_scheduler() {
     "Records that first-protection fired"
   );
   Assert.ok("cta" in message.data, "Message carries the cta field");
+
+  sandbox.restore();
+});
+
+add_task(async function test_force_message_id_pins_the_message() {
+  const feed = feedWithPrefs({
+    [PREF_WIDGETS_ENABLED]: true,
+    [PREF_PRIVACY_ENABLED]: true,
+    [PREF_SYSTEM_PRIVACY_ENABLED]: true,
+    [PREF_FORCE_MESSAGE_ID]: "newtab-privacy-message-promo-relay-1",
+  });
+  const sandbox = sinon.createSandbox();
+  sandbox.stub(PrivacyMetricsService, "getTodayStats").resolves({ total: 1 });
+  sandbox
+    .stub(feed, "fetchTodayCounts")
+    .resolves({ trackersToday: 42, sitesToday: 7, lastUpdated: 123 });
+  sandbox.stub(feed, "getPeriodTotals").resolves({
+    weekTotal: 0,
+    monthTotal: 0,
+    yearTotal: 0,
+    allTimeTotal: 0,
+    streakDays: 0,
+  });
+  sandbox
+    .stub(feed, "getFeatureFlags")
+    .resolves({ signedIn: false, hasLogins: false, relayMasks: false });
+  sandbox.stub(feed, "getProfileCreatedMs").resolves(0);
+
+  await feed.onAction({ type: actionTypes.NEW_TAB_INIT });
+
+  const action = broadcastCall(feed);
+  Assert.equal(
+    action.data.messageId,
+    "newtab-privacy-message-promo-relay-1",
+    "forceMessageId pref pins the broadcast message"
+  );
+  Assert.equal(action.data.cta.type, "OPEN_URL", "Carries the message's cta");
 
   sandbox.restore();
 });

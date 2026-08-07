@@ -775,6 +775,7 @@ const PREF_PRIVACY_MAX_COUNT = "widgets.privacy.maxCount";
 const PREF_PRIVACY_MAX_DISPLAY_COUNT = "widgets.privacy.maxDisplayCount";
 const PREF_PRIVACY_BLANK_CHANCE = "widgets.privacy.blankChance";
 const PREF_PRIVACY_SHOW_VPN_MESSAGES = "widgets.privacy.showVpnMessages";
+const PREF_PRIVACY_FORCE_MESSAGE_ID = "widgets.privacy.forceMessageId";
 const PREF_PRIVACY_MESSAGE_STATE = "widgets.privacy.messageState";
 const PREF_WIDGETS_CROSSWORD_ENABLED = "widgets.crossword.enabled";
 const PREF_CROSSWORD_SIZE = "widgets.crossword.size";

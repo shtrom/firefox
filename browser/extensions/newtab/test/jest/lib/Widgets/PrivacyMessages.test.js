@@ -359,4 +359,53 @@ describe("selectPrivacyMessage", () => {
       data: { args: "protections", where: "tab" },
     });
   });
+
+  describe("forceMessageId debug override", () => {
+    it("pins the widget to the requested message, bypassing the ladder", () => {
+      const { decision } = selectPrivacyMessage(
+        ctx({
+          trackersToday: 0, // would otherwise be the empty state
+          forceMessageId: "newtab-privacy-message-promo-relay-1",
+        }),
+        state(),
+        NOW,
+        rand()
+      );
+      expect(decision.messageId).toBe("newtab-privacy-message-promo-relay-1");
+      expect(decision.variant).toBe("tip");
+      expect(decision.cta.type).toBe("OPEN_URL");
+    });
+
+    it("forces the empty message by id", () => {
+      const { decision } = selectPrivacyMessage(
+        ctx({ forceMessageId: "newtab-privacy-empty" }),
+        state(),
+        NOW,
+        rand()
+      );
+      expect(decision.variant).toBe("empty");
+      expect(decision.messageId).toBe("newtab-privacy-empty");
+    });
+
+    it("does not mutate scheduler state", () => {
+      const prev = state({ shownToday: 3, dayStamp: "2026-06-15" });
+      const { nextState } = selectPrivacyMessage(
+        ctx({ forceMessageId: "newtab-privacy-message-info-1" }),
+        prev,
+        NOW,
+        rand()
+      );
+      expect(nextState.shownToday).toBe(3);
+    });
+
+    it("ignores an unknown id and falls through to normal scheduling", () => {
+      const { decision } = selectPrivacyMessage(
+        ctx({ trackersToday: 0, forceMessageId: "does-not-exist" }),
+        state(),
+        NOW,
+        rand()
+      );
+      expect(decision.variant).toBe("empty");
+    });
+  });
 });
