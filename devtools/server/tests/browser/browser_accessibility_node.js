@@ -32,7 +32,7 @@ add_task(async function () {
     childCount: 1,
     domNodeType: 1,
     indexInParent: 1,
-    states: ["focusable", "selectable text", "opaque", "enabled", "sensitive"],
+    states: ["focusable", "opaque", "enabled", "sensitive"],
     actions: ["Press"],
     attributes: {
       "margin-top": "0px",
