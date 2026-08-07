@@ -926,7 +926,8 @@ async function clickDoorhangerButton(buttonType, index = 0) {
     info("expecting notification popup show up");
     await dropdownPromise;
 
-    button = notification.querySelectorAll("menuitem")[index];
+    // Only look in the dropmarker popup; some doorhangers have other menus too.
+    button = notification.menupopup.querySelectorAll("menuitem")[index];
     if (notification.menupopup.isNativeMenu) {
       notification.menupopup.activateItem(button);
     } else {
