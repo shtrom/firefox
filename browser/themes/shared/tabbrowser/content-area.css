@@ -1006,6 +1006,23 @@ split-view-footer {
   .browserSidebarContainer.responsive-mode & {
     border-radius: 0;
   }
+
+  .browserSidebarContainer:not(.responsive-mode)[devtools-host-type="bottom"] > .dialogStack > & {
+    border-end-start-radius: 0;
+    border-end-end-radius: 0;
+  }
+
+  .browserSidebarContainer:not(.responsive-mode)[devtools-host-type="right"] > .dialogStack > & {
+    /* Use physical properties as devtools docking side is physical (left/right), and not logical */
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .browserSidebarContainer:not(.responsive-mode)[devtools-host-type="left"] > .dialogStack > & {
+    /* Use physical properties as devtools docking side is physical (left/right), and not logical */
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
 }
 
 .dialogOverlay[hideContent="true"][topmost="true"] {
