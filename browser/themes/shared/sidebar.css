@@ -523,7 +523,8 @@ sidebar-main,
    * margin-inline absorbs 3px of that gap on each side, leaving 1px of empty
    * space + 4px splitter + 1px of empty space = 6px total. When the closest
    * split-view panel is selected, the content-side margin is widened to 3px
-   * (2px for the panel's outline + 1px clear) — see the :has() rules below. */
+   * (2px for the panel's outline + 1px clear) — see the
+   * [splitview-selected-column] rules below. */
   #sidebar-splitter {
     width: var(--chrome-window-gap);
     border-inline: none;
@@ -552,21 +553,13 @@ sidebar-main,
    * + 1px clear) so the splitter never touches the outline. The "closest"
    * panel is column-0 when the sidebar is on the inline-start side, and
    * column-1 when the sidebar is on the inline-end side. */
-  /* FIXME: Remove this (bug 2054065) */
-  /* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
-  :root:has(#tabbrowser-tabpanels[splitview] .split-view-panel[column="0"].deck-selected) #sidebar-box:not([sidebar-positionend]) + #sidebar-splitter,
-  :root:has(#tabbrowser-tabpanels[splitview] .split-view-panel[column="0"].deck-selected)
-    #sidebar-container:not([sidebar-panel-open]):not([sidebar-positionend])
-    + #sidebar-launcher-splitter {
+  :root[splitview-selected-column="0"] #sidebar-box:not([sidebar-positionend]) + #sidebar-splitter,
+  :root[splitview-selected-column="0"] #sidebar-container:not([sidebar-panel-open]):not([sidebar-positionend]) + #sidebar-launcher-splitter {
     margin-inline-end: calc(-1 * var(--chrome-window-gap) + 3px);
   }
 
-  /* FIXME: Remove this (bug 2054065) */
-  /* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
-  :root:has(#tabbrowser-tabpanels[splitview] .split-view-panel[column="1"].deck-selected) #sidebar-box[sidebar-positionend] + #sidebar-splitter,
-  :root:has(#tabbrowser-tabpanels[splitview] .split-view-panel[column="1"].deck-selected)
-    #sidebar-container[sidebar-positionend]:not([sidebar-panel-open])
-    + #sidebar-launcher-splitter {
+  :root[splitview-selected-column="1"] #sidebar-box[sidebar-positionend] + #sidebar-splitter,
+  :root[splitview-selected-column="1"] #sidebar-container[sidebar-positionend]:not([sidebar-panel-open]) + #sidebar-launcher-splitter {
     margin-inline-start: calc(-1 * var(--chrome-window-gap) + 3px);
   }
 

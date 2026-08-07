@@ -143,7 +143,8 @@
   /* Splitter between split-view panels. The active panel's 2px focus outline
    * extends into the splitter margin on the active panel's side, so we widen
    * that side's margin to 3px (2px outline + 1px clear) and keep the other
-   * side at 1px. See the :has() rules below for the asymmetric overrides. */
+   * side at 1px. See the [splitview-selected-column] rules below for the
+   * asymmetric overrides. */
   #tabbrowser-tabpanels[splitview] .split-view-splitter {
     background-color: transparent;
     border: none;
@@ -165,17 +166,13 @@
 
   /* When column-0 is selected, its right outline extends into the splitter's
    * inline-start margin: widen that side to 3px (2px outline + 1px clear). */
-  /* FIXME: Remove this (bug 2054065) */
-  /* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
-  #tabbrowser-tabpanels[splitview]:has(.split-view-panel[column="0"].deck-selected) .split-view-splitter {
+  :root[splitview-selected-column="0"] #tabbrowser-tabpanels[splitview] .split-view-splitter {
     margin-inline-start: 3px;
   }
 
   /* When column-1 is selected, its left outline extends into the splitter's
    * inline-end margin: widen that side to 3px (2px outline + 1px clear). */
-  /* FIXME: Remove this (bug 2054065) */
-  /* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
-  #tabbrowser-tabpanels[splitview]:has(.split-view-panel[column="1"].deck-selected) .split-view-splitter {
+  :root[splitview-selected-column="1"] #tabbrowser-tabpanels[splitview] .split-view-splitter {
     margin-inline-end: 3px;
   }
 }
