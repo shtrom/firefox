@@ -281,7 +281,13 @@ void EventListenerManager::AddEventListenerInternal(
       aAllEvents ? mListenerMap.GetOrCreateListenersForAllEvents()
                  : mListenerMap.GetOrCreateListenersForType(aTypeAtom);
 
-  for (const Listener& listener : listeners->NonObservingRange()) {
+  // Iterated by raw element rather than by range, because ElementAt()'s
+  // bounds check reloads the array header on every iteration. Nothing in the
+  // loop can mutate the array.
+  const Listener* const elements = listeners->Elements();
+  const size_t length = listeners->Length();
+  for (size_t i = 0; i < length; ++i) {
+    const Listener& listener = elements[i];
     // mListener == aListenerHolder is the last one, since it can be a bit slow.
     if (listener.mListenerIsHandler == aHandler &&
         listener.mFlags.EqualsForAddition(aFlags) &&
