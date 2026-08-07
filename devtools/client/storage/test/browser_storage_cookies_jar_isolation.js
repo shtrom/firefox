@@ -10,6 +10,16 @@
 const TEST_URL = MAIN_URL_SECURED + "storage-updates.html";
 const INITIAL_C1_VALUE = "1.2.3.4.5.6.7";
 
+const IFRAME_URI =
+  "https://example.org/document-builder.sjs?" +
+  new URLSearchParams({ html: `<!DOCTYPE html><h1>Third party iframe</h1>` });
+
+const embedderURI = origin =>
+  `${origin}/document-builder.sjs?` +
+  new URLSearchParams({
+    html: `<!DOCTYPE html><h1>Embedder</h1><iframe src="${IFRAME_URI}"></iframe>`,
+  });
+
 add_task(async function () {
   const { storage: normalStorage } = await openTabAndSetupStorage(TEST_URL);
   const normalTab = gBrowser.selectedTab;
@@ -120,8 +130,57 @@ add_task(async function () {
   );
 });
 
+add_task(async function () {
+  info("Check the isolation between two partitions of the same third party");
+  const { storage: firstStorage } = await openTabAndSetupStorage(
+    embedderURI("https://example.com")
+  );
+  const firstTab = gBrowser.selectedTab;
+
+  await openTab(embedderURI("https://example.net"));
+  const { storage: secondStorage } = await openStoragePanel();
+
+  info("Display the third party host in both panels");
+  await selectHost(firstStorage, ["cookies", "https://example.org"]);
+  await selectHost(secondStorage, ["cookies", "https://example.org"]);
+
+  info("Set a partitioned cookie from the first site's iframe");
+  const onEdit = firstStorage.UI.once("store-objects-edit");
+  await addIframeCookie(firstTab, "c5", "first-site-value");
+  await onEdit;
+
+  const c5Id = getCookieId("c5", MAIN_DOMAIN, "/", "(https,example.com)");
+  is(
+    getCookieValue(firstStorage, c5Id),
+    "first-site-value",
+    "The first site's panel displays the cookie"
+  );
+  ok(
+    !secondStorage.UI.table.items.has(c5Id),
+    "The second site's panel did not receive the cookie of the other partition"
+  );
+});
+
 function getCookieValue(storage, id) {
   return storage.UI.table.items.get(id)?.value;
+}
+
+async function selectHost(storage, ids) {
+  await waitFor(() => storage.UI.tree.exists(ids));
+  const updated = storage.UI.once("store-objects-updated");
+  storage.UI.tree.selectedItem = ids;
+  await updated;
+}
+
+async function addIframeCookie(tab, name, value) {
+  const iframeContext = await SpecialPowers.spawn(
+    tab.linkedBrowser,
+    [],
+    () => content.document.querySelector("iframe").browsingContext
+  );
+  await SpecialPowers.spawn(iframeContext, [[name, value]], ([nam, valu]) => {
+    content.document.cookie = `${nam}=${valu}; Partitioned; Secure; SameSite=None; Path=/`;
+  });
 }
 
 function addCookie(tab, name, value, path) {
