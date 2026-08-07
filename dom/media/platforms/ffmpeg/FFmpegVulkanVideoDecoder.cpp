@@ -260,7 +260,7 @@ void FFmpegVideoDecoder<
   load(mFreeCommandBuffers, "vkFreeCommandBuffers");
   load(mBeginCommandBuffer, "vkBeginCommandBuffer");
   load(mEndCommandBuffer, "vkEndCommandBuffer");
-  load(mGetDeviceQueue, "vkGetDeviceQueue");
+  load(mGetDeviceQueue2, "vkGetDeviceQueue2");
   load(mQueueSubmit, "vkQueueSubmit");
   load(mCmdPipelineBarrier, "vkCmdPipelineBarrier");
   load(mCmdCopyImage, "vkCmdCopyImage");
@@ -700,7 +700,8 @@ bool FFmpegVideoDecoder<LIBAV_VER>::FFmpegVulkanVideoDecoder::
 bool FFmpegVideoDecoder<LIBAV_VER>::FFmpegVulkanVideoDecoder::InitCtx(
     VkDevice aDevice, VkPhysicalDevice aPhysDev,
     PFN_vkGetInstanceProcAddr aGetProcAddr, VkInstance aInstance,
-    uint64_t aGeneration, uint32_t aCopyQueueFamilyIndex) {
+    uint64_t aGeneration, uint32_t aCopyQueueFamilyIndex,
+    VkDeviceQueueCreateFlags aQueueCreateFlags) {
   // Load instance-level functions once
   if (!mGetDeviceProcAddr) {
     LoadInstanceFunctions(aGetProcAddr, aInstance, aPhysDev, aGeneration);
@@ -786,7 +787,19 @@ bool FFmpegVideoDecoder<LIBAV_VER>::FFmpegVulkanVideoDecoder::InitCtx(
         FFMPEGV_LOG("Failed to create Vulkan command pool for queue {}", qi);
         return false;
       }
-      mGetDeviceQueue(aDevice, mQueueFamilyIndex, qi, &mCopyQueue[qi]);
+      VkDeviceQueueInfo2 queueInfo = {};
+      queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2;
+      queueInfo.flags = aQueueCreateFlags;
+      queueInfo.queueFamilyIndex = mQueueFamilyIndex;
+      queueInfo.queueIndex = qi;
+      mGetDeviceQueue2(aDevice, &queueInfo, &mCopyQueue[qi]);
+      if (mCopyQueue[qi] == VK_NULL_HANDLE) {
+        FFMPEGV_LOG(
+            "vkGetDeviceQueue2 returned NULL (family={}, index={}, "
+            "flags=0x{:x})",
+            mQueueFamilyIndex, qi, static_cast<unsigned>(aQueueCreateFlags));
+        return false;
+      }
       VkCommandBufferAllocateInfo cmdAllocInfo = {};
       cmdAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
       cmdAllocInfo.commandPool = mCopyCmdPool[qi];

@@ -411,10 +411,16 @@ bool FFmpegVideoDecoder<LIBAV_VER>::CreateVulkanDeviceContext(
   // Some drivers (e.g. experimental RADV video decode) fail to load Vulkan
   // device functions. Check that up front, so a failure is a normal Init()
   // failure the PDM can fall back from instead of a fatal error later.
-  if (!mVulkanDecoder.InitCtx(vkCtx->act_dev, vkCtx->phys_dev,
-                              vkCtx->get_proc_addr, vkCtx->inst,
-                              mVulkanDeviceHolder->Generation(),
-                              VulkanTransferQueueFamily(vkCtx))) {
+  // Pass queue_flags here (same as CreateImageVulkan): InitCtx only fetches
+  // queues when the device changes, so a first call with flags=0 would stick.
+  VkDeviceQueueCreateFlags queueCreateFlags = 0;
+#    if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(60, 32, 100)
+  queueCreateFlags = vkCtx->queue_flags;
+#    endif
+  if (!mVulkanDecoder.InitCtx(
+          vkCtx->act_dev, vkCtx->phys_dev, vkCtx->get_proc_addr, vkCtx->inst,
+          mVulkanDeviceHolder->Generation(), VulkanTransferQueueFamily(vkCtx),
+          queueCreateFlags)) {
     FFMPEG_LOG("Failed to init Vulkan Context structure");
     return false;
   }
@@ -2212,10 +2218,21 @@ MediaResult FFmpegVideoDecoder<LIBAV_VER>::CreateImageVulkan(
 
   auto* devCtx = (AVHWDeviceContext*)mVulkanDeviceContext->data;
   auto* vkDevCtx = (AVVulkanDeviceContext*)devCtx->hwctx;
-  if (!mVulkanDecoder.InitCtx(vkDevCtx->act_dev, vkDevCtx->phys_dev,
-                              vkDevCtx->get_proc_addr, vkDevCtx->inst,
-                              mVulkanDeviceHolder->Generation(),
-                              VulkanTransferQueueFamily(vkDevCtx))) {
+  // Match FFmpeg's vkCreateDevice queue flags on every driver. Non-zero flags
+  // (e.g. INTERNALLY_SYNCHRONIZED when that extension is enabled) require
+  // GetDeviceQueue2 with the same value; flags=0 is equivalent to the old
+  // GetDeviceQueue path. queue_flags is lavu 60.32.100+ (9fe5758da5); older
+  // public lavu exposes no queue_flags field, so Firefox must use 0 there.
+  // FFmpeg applies this one global value to every created queue family. If
+  // vkGetDeviceQueue2 fails to load, InitCtx fails via IsLoaded().
+  VkDeviceQueueCreateFlags queueCreateFlags = 0;
+#    if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(60, 32, 100)
+  queueCreateFlags = vkDevCtx->queue_flags;
+#    endif
+  if (!mVulkanDecoder.InitCtx(
+          vkDevCtx->act_dev, vkDevCtx->phys_dev, vkDevCtx->get_proc_addr,
+          vkDevCtx->inst, mVulkanDeviceHolder->Generation(),
+          VulkanTransferQueueFamily(vkDevCtx), queueCreateFlags)) {
     return MediaResult(
         NS_ERROR_DOM_MEDIA_FATAL_ERR,
         RESULT_DETAIL("Failed to init Vulkan Context structure"));
