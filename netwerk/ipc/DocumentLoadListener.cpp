@@ -2381,9 +2381,6 @@ DocumentLoadListener::RedirectToRealChannel(
       args.timing() = std::move(mTiming);
     }
 
-    nsCOMPtr<nsILoadInfo> loadInfo = chan->LoadInfo();
-    cp->TransmitBlobDataIfBlobURL(args.uri(), loadInfo->GetOriginAttributes());
-
     if (CanonicalBrowsingContext* bc = GetDocumentBrowsingContext()) {
       if (bc->IsTop() && bc->IsActive()) {
         nsContentUtils::RequestGeckoTaskBurst();
