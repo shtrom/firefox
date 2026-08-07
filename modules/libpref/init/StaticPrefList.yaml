@@ -3719,6 +3719,13 @@
   mirror: always
 #endif
 
+# This is a temporary preference intended to allow relaxing the new
+# LoadedOriginSet checks from bug 2055554 if they start causing issues.
+- name: dom.ipc.validatePrincipal.validateSiteLoaded
+  type: RelaxedAtomicBool
+  value: true
+  mirror: always
+
 # If this is true, any JS actor with safeForUntrustedWebProcess set to false
 # won't be allowed in a process that can hold web content.
 - name: dom.jsipc.check_safeForUntrustedWebProcess
