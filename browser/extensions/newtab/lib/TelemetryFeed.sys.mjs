@@ -321,14 +321,26 @@ export class TelemetryFeed {
    * recording to newtab-content ping.
    *
    * @param {boolean} recordToContentPing - Whether to record events to newtab-content ping
+   * @param {string} [sessionId] - Only drain events queued by this session. Omit
+   *  to drain every session's events, which is only correct when no session is
+   *  going to get the chance to drain its own (private-session transition and
+   *  shutdown).
    */
-  #clearEventBuffer(recordToContentPing) {
+  #clearEventBuffer(recordToContentPing, sessionId) {
     if (!this.#eventBuffer.length) {
       return;
     }
 
-    const events = this.#eventBuffer;
-    this.#eventBuffer = [];
+    let events;
+    if (sessionId === undefined) {
+      events = this.#eventBuffer;
+      this.#eventBuffer = [];
+    } else {
+      events = this.#eventBuffer.filter(event => event.sessionId === sessionId);
+      this.#eventBuffer = this.#eventBuffer.filter(
+        event => event.sessionId !== sessionId
+      );
+    }
 
     for (const { eventName, eventData, callback } of events) {
       callback?.();
@@ -344,13 +356,17 @@ export class TelemetryFeed {
    *
    * @param {string} eventName - Name of the event for newtab-content ping
    * @param {object} eventData - Event data for newtab-content ping
+   * @param {string} sessionId - The session this event belongs to. Used only to
+   *  decide which events a given session drains; it is never recorded, and in
+   *  particular is kept out of eventData, which is the newtab-content payload
+   *  and deliberately carries no visit id.
    * @param {Function} callback - Function to record to non-private newtab ping
    *  Called immediately if in PrivateGleanSession, otherwise its added to eventBuffer
    *  and called when the eventBuffer is cleared. The return value is ignored.
    */
-  recordOrQueueEvent(eventName, eventData, callback) {
+  recordOrQueueEvent(eventName, eventData, sessionId, callback) {
     if (this.gleanSessionType === GleanSessionType.NormalGleanSession) {
-      this.#eventBuffer.push({ eventName, eventData, callback });
+      this.#eventBuffer.push({ eventName, eventData, callback, sessionId });
     } else {
       callback?.();
       if (this.privatePingEnabled) {
@@ -653,7 +669,7 @@ export class TelemetryFeed {
       // clear event buffer based on session type
       const recordToContentPing =
         this.gleanSessionType === GleanSessionType.PrivateGleanSession;
-      this.#clearEventBuffer(recordToContentPing);
+      this.#clearEventBuffer(recordToContentPing, session.session_id);
       GleanPings.newtab.submit("newtab_session_end");
       if (this.privatePingEnabled) {
         this.configureContentPing();
@@ -743,7 +759,11 @@ export class TelemetryFeed {
             frecency_boosted,
             frecency_boosted_has_exposure: this.frecencyBoostedHasExposure(),
           };
-          this.recordOrQueueEvent("topSitesImpression", eventData);
+          this.recordOrQueueEvent(
+            "topSitesImpression",
+            eventData,
+            session.session_id
+          );
         } else {
           Glean.topsites.impression.record({
             advertiser_name,
@@ -770,7 +790,11 @@ export class TelemetryFeed {
             frecency_boosted,
             frecency_boosted_has_exposure: this.frecencyBoostedHasExposure(),
           };
-          this.recordOrQueueEvent("topSitesClick", eventData);
+          this.recordOrQueueEvent(
+            "topSitesClick",
+            eventData,
+            session.session_id
+          );
         } else {
           Glean.topsites.click.record({
             advertiser_name,
@@ -1079,6 +1103,7 @@ export class TelemetryFeed {
           this.recordOrQueueEvent(
             "click",
             this.randomizeOrganicContentEvent(gleanData),
+            session.session_id,
             () => {
               Glean.pocket.click.record({
                 ...this.redactNewTabPing(gleanData, is_sponsored),
@@ -1854,11 +1879,16 @@ export class TelemetryFeed {
                 ? { is_section_followed: !!is_section_followed }
                 : {}),
             };
-            this.recordOrQueueEvent("sectionsImpression", eventData, () => {
-              Glean.newtab.sectionsImpression.record(
-                this.redactNewTabPing(gleanData)
-              );
-            });
+            this.recordOrQueueEvent(
+              "sectionsImpression",
+              eventData,
+              session.session_id,
+              () => {
+                Glean.newtab.sectionsImpression.record(
+                  this.redactNewTabPing(gleanData)
+                );
+              }
+            );
           }
           break;
         case "FOLLOW_SECTION": {
@@ -2117,12 +2147,17 @@ export class TelemetryFeed {
         if (this.trainhopClickOnlyEnabled) {
           this.transitionToPrivateSession();
         }
-        this.recordOrQueueEvent("dismiss", gleanData, () => {
-          Glean.pocket.dismiss.record({
-            ...this.redactNewTabPing(gleanData, gleanData.is_sponsored),
-            newtab_visit_id: session.session_id,
-          });
-        });
+        this.recordOrQueueEvent(
+          "dismiss",
+          gleanData,
+          session.session_id,
+          () => {
+            Glean.pocket.dismiss.record({
+              ...this.redactNewTabPing(gleanData, gleanData.is_sponsored),
+              newtab_visit_id: session.session_id,
+            });
+          }
+        );
         continue;
       }
       // Only log a topsites.dismiss telemetry event if the action came from TopSites section
@@ -2130,12 +2165,16 @@ export class TelemetryFeed {
         const { position, advertiser_name, tile_id, isSponsoredTopSite } =
           datum;
         if (this.sovEnabled() && isSponsoredTopSite) {
-          this.recordOrQueueEvent("topSitesDismiss", {
-            advertiser_name,
-            tile_id,
-            is_sponsored: !!isSponsoredTopSite,
-            position,
-          });
+          this.recordOrQueueEvent(
+            "topSitesDismiss",
+            {
+              advertiser_name,
+              tile_id,
+              is_sponsored: !!isSponsoredTopSite,
+              position,
+            },
+            session.session_id
+          );
         } else {
           Glean.topsites.dismiss.record({
             advertiser_name,
@@ -2222,12 +2261,17 @@ export class TelemetryFeed {
               recommendation_id: tile.recommendation_id,
             }),
       };
-      this.recordOrQueueEvent("impression", gleanData, () => {
-        Glean.pocket.impression.record({
-          ...this.redactNewTabPing(gleanData, is_sponsored),
-          newtab_visit_id: session.session_id,
-        });
-      });
+      this.recordOrQueueEvent(
+        "impression",
+        gleanData,
+        session.session_id,
+        () => {
+          Glean.pocket.impression.record({
+            ...this.redactNewTabPing(gleanData, is_sponsored),
+            newtab_visit_id: session.session_id,
+          });
+        }
+      );
 
       if (tile.shim) {
         if (this.canSendUnifiedAdsSpocCallbacks) {

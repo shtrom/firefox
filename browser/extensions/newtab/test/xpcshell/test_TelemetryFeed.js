@@ -2466,7 +2466,12 @@ add_task(async function test_recordOrQueueEvent_queues_in_normal_session() {
 
   let recordEventStub = sandbox.stub(instance.newtabContentPing, "recordEvent");
 
-  instance.recordOrQueueEvent("testEvent", { test: "data" }, callback);
+  instance.recordOrQueueEvent(
+    "testEvent",
+    { test: "data" },
+    "session1",
+    callback
+  );
 
   Assert.ok(
     !recordEventStub.called,
@@ -2496,7 +2501,7 @@ add_task(async function test_recordOrQueueEvent_immediate_in_private_session() {
   let recordEventStub = sandbox.stub(instance.newtabContentPing, "recordEvent");
 
   const eventData = { test: "data" };
-  instance.recordOrQueueEvent("testEvent", eventData, callback);
+  instance.recordOrQueueEvent("testEvent", eventData, "session1", callback);
 
   Assert.ok(callbackCalled, "callback should be called immediately");
   Assert.ok(
@@ -2533,7 +2538,12 @@ add_task(
       "recordEvent"
     );
 
-    instance.recordOrQueueEvent("testEvent", { test: "data" }, callback);
+    instance.recordOrQueueEvent(
+      "testEvent",
+      { test: "data" },
+      "session1",
+      callback
+    );
 
     Assert.ok(callbackCalled, "callback should still be called");
     Assert.ok(
@@ -2545,6 +2555,56 @@ add_task(
     sandbox.restore();
   }
 );
+
+add_task(async function test_endSession_leaves_other_sessions_events_queued() {
+  info(
+    "endSession should drain only its own session's queued events, leaving " +
+      "events belonging to other open sessions in the buffer"
+  );
+  Services.prefs.setBoolPref(PREF_TELEMETRY, true);
+
+  let sandbox = sinon.createSandbox();
+  let instance = new TelemetryFeed();
+  instance.gleanSessionType = "normal";
+
+  let endingSession = instance.addSession("ending-port");
+  let otherSession = instance.addSession("other-port");
+  endingSession.perf.visibility_event_rcvd_ts = 1000;
+  otherSession.perf.visibility_event_rcvd_ts = 1000;
+
+  let endingRecorded = false;
+  let otherRecorded = false;
+  instance.recordOrQueueEvent(
+    "impression",
+    {},
+    endingSession.session_id,
+    () => {
+      endingRecorded = true;
+    }
+  );
+  instance.recordOrQueueEvent("impression", {}, otherSession.session_id, () => {
+    otherRecorded = true;
+  });
+
+  await instance.endSession("ending-port");
+
+  Assert.ok(endingRecorded, "The ending session's event should be recorded.");
+  Assert.ok(
+    !otherRecorded,
+    "The still-open session's event should stay queued."
+  );
+
+  // The survivor is still drainable by its own session.
+  await instance.endSession("other-port");
+  Assert.ok(
+    otherRecorded,
+    "The other session's event should be recorded when that session ends."
+  );
+
+  Services.prefs.clearUserPref(PREF_TELEMETRY);
+  sandbox.restore();
+  Services.fog.testResetFOG();
+});
 
 add_task(
   async function test_handleTopSitesSponsoredImpressionStats_frecency_boosted_queued() {
