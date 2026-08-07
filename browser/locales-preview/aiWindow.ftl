@@ -160,6 +160,12 @@ smartwindow-agent-monitor-limit-reached = You already have { $count } watch task
 
 smartwindow-agent-monitor-setup = I’ve set up a task to watch this page. Tweak anything, then start it.
 
+# Shown when the user runs the watch command from a page that has no address
+# to watch (for example an internal page or a blank tab).
+smartwindow-agent-monitor-page-not-watchable =
+    I can’t watch this page — watching works on regular web pages, not { -brand-product-name }’s own screens.<br/>
+    Open the page you want checked and type /watch there.
+
 # Fallback name used for $monitorName when the watched page has no title.
 smartwindow-agent-monitor-default-name = Page Watch
 

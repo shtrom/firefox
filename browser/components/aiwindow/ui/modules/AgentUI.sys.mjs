@@ -39,6 +39,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "moz-src:///browser/components/aiwindow/models/agents/Monitor.sys.mjs",
   TOTAL_NUM_MONITORS:
     "moz-src:///browser/components/aiwindow/models/agents/Monitor.sys.mjs",
+  isAllowedWatchUrl:
+    "moz-src:///browser/components/aiwindow/models/agents/Monitor.sys.mjs",
 });
 
 ChromeUtils.defineLazyGetter(lazy, "console", () =>
@@ -159,6 +161,13 @@ export class AgentUI {
     if (raw) {
       const userMessage = conversation.addUserMessage(raw);
       conversation.emit("chat-conversation:message-update", userMessage);
+    }
+
+    if (!lazy.isAllowedWatchUrl(url)) {
+      conversation.addAssistantWithL10nMessage(
+        "smartwindow-agent-monitor-page-not-watchable"
+      );
+      return;
     }
 
     const monitors = await lazy.MonitorAgent.listMonitors();
