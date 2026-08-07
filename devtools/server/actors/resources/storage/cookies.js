@@ -692,16 +692,6 @@ class CookiesStorageActor extends BaseStorageActor {
     }
   }
 
-  removeCookie(host, name, originAttributes) {
-    if (name !== undefined) {
-      this._removeCookies(host, { name, originAttributes });
-    }
-  }
-
-  removeAllCookies(host, domain, originAttributes) {
-    this._removeCookies(host, { domain, originAttributes });
-  }
-
   observe(subject, topic) {
     if (
       !subject ||
