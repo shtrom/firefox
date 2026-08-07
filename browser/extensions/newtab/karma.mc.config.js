@@ -77,6 +77,12 @@ module.exports = function (config) {
           functions: 100,
           branches: 66,
           overrides: {
+            "common/Reducers.sys.mjs": {
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
+            },
             /**
              * ErrorBoundary.jsx is tested via Jest (see test/jest/content-src/components/ErrorBoundary.test.jsx).
              */

@@ -1,4 +1,10 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+
 import { INITIAL_STATE, reducers } from "common/Reducers.sys.mjs";
+import { actionTypes as at } from "common/Actions.mjs";
+
 const {
   TopSites,
   App,
@@ -8,32 +14,28 @@ const {
   Pocket,
   DiscoveryStream,
   Search,
+  WebNotifications,
   ExternalComponents,
   SportsWidget,
   PictureOfTheDay,
 } = reducers;
-import { actionTypes as at } from "common/Actions.mjs";
-
-// Bug 2050900: Add new reducer tests to the Jest suite at
-// test/jest/common/Reducers.test.jsx, not here. This Karma/Enzyme file is being
-// migrated to Jest incrementally; the PrivacyWidget reducer lives there now.
 
 describe("Reducers", () => {
   describe("App", () => {
     it("should return the initial state", () => {
       const nextState = App(undefined, { type: "FOO" });
-      assert.equal(nextState, INITIAL_STATE.App);
+      expect(nextState).toBe(INITIAL_STATE.App);
     });
     it("should set initialized to true on INIT", () => {
       const nextState = App(undefined, { type: "INIT" });
 
-      assert.propertyVal(nextState, "initialized", true);
+      expect(nextState.initialized).toBe(true);
     });
     it("should show the customize panel on SHOW_PERSONALIZE", () => {
       const nextState = App(undefined, { type: at.SHOW_PERSONALIZE });
 
-      assert.propertyVal(nextState, "customizeMenuVisible", true);
-      assert.propertyVal(nextState, "customizePanelWallpaperCategory", null);
+      expect(nextState.customizeMenuVisible).toBe(true);
+      expect(nextState.customizePanelWallpaperCategory).toBeNull();
     });
     it("should store the deep-linked wallpaper category on SHOW_PERSONALIZE", () => {
       const nextState = App(undefined, {
@@ -41,11 +43,7 @@ describe("Reducers", () => {
         data: { wallpaperCategory: "firefox" },
       });
 
-      assert.propertyVal(
-        nextState,
-        "customizePanelWallpaperCategory",
-        "firefox"
-      );
+      expect(nextState.customizePanelWallpaperCategory).toBe("firefox");
     });
     it("should clear customize panel state on HIDE_PERSONALIZE", () => {
       const nextState = App(
@@ -56,14 +54,14 @@ describe("Reducers", () => {
         { type: at.HIDE_PERSONALIZE }
       );
 
-      assert.propertyVal(nextState, "customizeMenuVisible", false);
-      assert.propertyVal(nextState, "customizePanelWallpaperCategory", null);
+      expect(nextState.customizeMenuVisible).toBe(false);
+      expect(nextState.customizePanelWallpaperCategory).toBeNull();
     });
   });
   describe("TopSites", () => {
     it("should return the initial state", () => {
       const nextState = TopSites(undefined, { type: "FOO" });
-      assert.equal(nextState, INITIAL_STATE.TopSites);
+      expect(nextState).toBe(INITIAL_STATE.TopSites);
     });
     it("should add top sites on TOP_SITES_UPDATED", () => {
       const newRows = [{ url: "foo.com" }, { url: "bar.com" }];
@@ -71,11 +69,11 @@ describe("Reducers", () => {
         type: at.TOP_SITES_UPDATED,
         data: { links: newRows },
       });
-      assert.equal(nextState.rows, newRows);
+      expect(nextState.rows).toBe(newRows);
     });
     it("should not update state for empty action.data on TOP_SITES_UPDATED", () => {
       const nextState = TopSites(undefined, { type: at.TOP_SITES_UPDATED });
-      assert.equal(nextState, INITIAL_STATE.TopSites);
+      expect(nextState).toBe(INITIAL_STATE.TopSites);
     });
     it("should initialize prefs on TOP_SITES_UPDATED", () => {
       const nextState = TopSites(undefined, {
@@ -83,7 +81,7 @@ describe("Reducers", () => {
         data: { links: [], pref: "foo" },
       });
 
-      assert.equal(nextState.pref, "foo");
+      expect(nextState.pref).toBe("foo");
     });
     it("should pass prevState.prefs if not present in TOP_SITES_UPDATED", () => {
       const nextState = TopSites(
@@ -91,16 +89,16 @@ describe("Reducers", () => {
         { type: at.TOP_SITES_UPDATED, data: { links: [] } }
       );
 
-      assert.equal(nextState.prefs, "foo");
+      expect(nextState.prefs).toBe("foo");
     });
     it("should set editForm.site to action.data on TOP_SITES_EDIT", () => {
       const data = { index: 7 };
       const nextState = TopSites(undefined, { type: at.TOP_SITES_EDIT, data });
-      assert.equal(nextState.editForm.index, data.index);
+      expect(nextState.editForm.index).toBe(data.index);
     });
     it("should set editForm to null on TOP_SITES_CANCEL_EDIT", () => {
       const nextState = TopSites(undefined, { type: at.TOP_SITES_CANCEL_EDIT });
-      assert.isNull(nextState.editForm);
+      expect(nextState.editForm).toBeNull();
     });
     it("should preserve the editForm.index", () => {
       const actionTypes = [
@@ -112,7 +110,7 @@ describe("Reducers", () => {
         const oldState = { editForm: { index: 0, previewUrl: "foo" } };
         const action = { type, data: { url: "foo" } };
         const nextState = TopSites(oldState, action);
-        assert.equal(nextState.editForm.index, 0);
+        expect(nextState.editForm.index).toBe(0);
       });
     });
     it("should set previewResponse on PREVIEW_RESPONSE", () => {
@@ -122,13 +120,13 @@ describe("Reducers", () => {
         data: { preview: "data:123", url: "url" },
       };
       const nextState = TopSites(oldState, action);
-      assert.propertyVal(nextState.editForm, "previewResponse", "data:123");
+      expect(nextState.editForm.previewResponse).toBe("data:123");
     });
     it("should return previous state if action url does not match expected", () => {
       const oldState = { editForm: { previewUrl: "foo" } };
       const action = { type: at.PREVIEW_RESPONSE, data: { url: "bar" } };
       const nextState = TopSites(oldState, action);
-      assert.equal(nextState, oldState);
+      expect(nextState).toBe(oldState);
     });
     it("should return previous state if editForm is not set", () => {
       const actionTypes = [
@@ -140,20 +138,20 @@ describe("Reducers", () => {
         const oldState = { editForm: null };
         const action = { type, data: { url: "bar" } };
         const nextState = TopSites(oldState, action);
-        assert.equal(nextState, oldState, type);
+        expect(nextState).toBe(oldState);
       });
     });
     it("should set previewResponse to null on PREVIEW_REQUEST", () => {
       const oldState = { editForm: { previewResponse: "foo" } };
       const action = { type: at.PREVIEW_REQUEST, data: {} };
       const nextState = TopSites(oldState, action);
-      assert.propertyVal(nextState.editForm, "previewResponse", null);
+      expect(nextState.editForm.previewResponse).toBeNull();
     });
     it("should set previewUrl on PREVIEW_REQUEST", () => {
       const oldState = { editForm: {} };
       const action = { type: at.PREVIEW_REQUEST, data: { url: "bar" } };
       const nextState = TopSites(oldState, action);
-      assert.propertyVal(nextState.editForm, "previewUrl", "bar");
+      expect(nextState.editForm.previewUrl).toBe("bar");
     });
     it("should add screenshots for SCREENSHOT_UPDATED", () => {
       const oldState = { rows: [{ url: "foo.com" }, { url: "bar.com" }] };
@@ -162,7 +160,7 @@ describe("Reducers", () => {
         data: { url: "bar.com", screenshot: "data:123" },
       };
       const nextState = TopSites(oldState, action);
-      assert.deepEqual(nextState.rows, [
+      expect(nextState.rows).toEqual([
         { url: "foo.com" },
         { url: "bar.com", screenshot: "data:123" },
       ]);
@@ -174,7 +172,7 @@ describe("Reducers", () => {
         data: { url: "baz.com", screenshot: "data:123" },
       };
       const nextState = TopSites(oldState, action);
-      assert.deepEqual(nextState, oldState);
+      expect(nextState).toEqual(oldState);
     });
     it("should bookmark an item on PLACES_BOOKMARK_ADDED", () => {
       const oldState = { rows: [{ url: "foo.com" }, { url: "bar.com" }] };
@@ -190,17 +188,17 @@ describe("Reducers", () => {
       const nextState = TopSites(oldState, action);
       const [, newRow] = nextState.rows;
       // new row has bookmark data
-      assert.equal(newRow.url, action.data.url);
-      assert.equal(newRow.bookmarkGuid, action.data.bookmarkGuid);
-      assert.equal(newRow.bookmarkTitle, action.data.bookmarkTitle);
-      assert.equal(newRow.bookmarkDateCreated, action.data.dateAdded);
+      expect(newRow.url).toBe(action.data.url);
+      expect(newRow.bookmarkGuid).toBe(action.data.bookmarkGuid);
+      expect(newRow.bookmarkTitle).toBe(action.data.bookmarkTitle);
+      expect(newRow.bookmarkDateCreated).toBe(action.data.dateAdded);
 
       // old row is unchanged
-      assert.equal(nextState.rows[0], oldState.rows[0]);
+      expect(nextState.rows[0]).toBe(oldState.rows[0]);
     });
     it("should not update state for empty action.data on PLACES_BOOKMARK_ADDED", () => {
       const nextState = TopSites(undefined, { type: at.PLACES_BOOKMARK_ADDED });
-      assert.equal(nextState, INITIAL_STATE.TopSites);
+      expect(nextState).toBe(INITIAL_STATE.TopSites);
     });
     it("should remove a bookmark on PLACES_BOOKMARKS_REMOVED", () => {
       const oldState = {
@@ -221,19 +219,19 @@ describe("Reducers", () => {
       const nextState = TopSites(oldState, action);
       const [, newRow] = nextState.rows;
       // new row no longer has bookmark data
-      assert.equal(newRow.url, oldState.rows[1].url);
-      assert.isUndefined(newRow.bookmarkGuid);
-      assert.isUndefined(newRow.bookmarkTitle);
-      assert.isUndefined(newRow.bookmarkDateCreated);
+      expect(newRow.url).toBe(oldState.rows[1].url);
+      expect(newRow.bookmarkGuid).toBeUndefined();
+      expect(newRow.bookmarkTitle).toBeUndefined();
+      expect(newRow.bookmarkDateCreated).toBeUndefined();
 
       // old row is unchanged
-      assert.deepEqual(nextState.rows[0], oldState.rows[0]);
+      expect(nextState.rows[0]).toEqual(oldState.rows[0]);
     });
     it("should not update state for empty action.data on PLACES_BOOKMARKS_REMOVED", () => {
       const nextState = TopSites(undefined, {
         type: at.PLACES_BOOKMARKS_REMOVED,
       });
-      assert.equal(nextState, INITIAL_STATE.TopSites);
+      expect(nextState).toBe(INITIAL_STATE.TopSites);
     });
     it("should update prefs on TOP_SITES_PREFS_UPDATED", () => {
       const state = TopSites(
@@ -241,11 +239,11 @@ describe("Reducers", () => {
         { type: at.TOP_SITES_PREFS_UPDATED, data: { pref: "foo" } }
       );
 
-      assert.equal(state.pref, "foo");
+      expect(state.pref).toBe("foo");
     });
     it("should not update state for empty action.data on PLACES_LINKS_DELETED", () => {
       const nextState = TopSites(undefined, { type: at.PLACES_LINKS_DELETED });
-      assert.equal(nextState, INITIAL_STATE.TopSites);
+      expect(nextState).toBe(INITIAL_STATE.TopSites);
     });
     it("should remove the site on PLACES_LINKS_DELETED", () => {
       const oldState = { rows: [{ url: "foo.com" }, { url: "bar.com" }] };
@@ -254,7 +252,7 @@ describe("Reducers", () => {
         data: { urls: ["foo.com"] },
       };
       const nextState = TopSites(oldState, deleteAction);
-      assert.deepEqual(nextState.rows, [{ url: "bar.com" }]);
+      expect(nextState.rows).toEqual([{ url: "bar.com" }]);
     });
     it("should set showSearchShortcutsForm to true on TOP_SITES_OPEN_SEARCH_SHORTCUTS_MODAL", () => {
       const data = { index: 7 };
@@ -262,13 +260,13 @@ describe("Reducers", () => {
         type: at.TOP_SITES_OPEN_SEARCH_SHORTCUTS_MODAL,
         data,
       });
-      assert.isTrue(nextState.showSearchShortcutsForm);
+      expect(nextState.showSearchShortcutsForm).toBe(true);
     });
     it("should set showSearchShortcutsForm to false on TOP_SITES_CLOSE_SEARCH_SHORTCUTS_MODAL", () => {
       const nextState = TopSites(undefined, {
         type: at.TOP_SITES_CLOSE_SEARCH_SHORTCUTS_MODAL,
       });
-      assert.isFalse(nextState.showSearchShortcutsForm);
+      expect(nextState.showSearchShortcutsForm).toBe(false);
     });
     it("should update searchShortcuts on UPDATE_SEARCH_SHORTCUTS", () => {
       const shortcuts = [
@@ -289,7 +287,7 @@ describe("Reducers", () => {
         type: at.UPDATE_SEARCH_SHORTCUTS,
         data: { searchShortcuts: shortcuts },
       });
-      assert.deepEqual(shortcuts, nextState.searchShortcuts);
+      expect(nextState.searchShortcuts).toEqual(shortcuts);
     });
     it("should set sov positions and state", () => {
       const positions = [
@@ -300,8 +298,8 @@ describe("Reducers", () => {
         type: at.SOV_UPDATED,
         data: { ready: true, positions },
       });
-      assert.equal(nextState.sov.ready, true);
-      assert.equal(nextState.sov.positions, positions);
+      expect(nextState.sov.ready).toBe(true);
+      expect(nextState.sov.positions).toBe(positions);
     });
   });
   describe("Prefs", () => {
@@ -310,7 +308,7 @@ describe("Reducers", () => {
     }
     it("should have the correct initial state", () => {
       const state = Prefs(undefined, {});
-      assert.deepEqual(state, INITIAL_STATE.Prefs);
+      expect(state).toEqual(INITIAL_STATE.Prefs);
     });
     describe("PREFS_INITIAL_VALUES", () => {
       it("should return a new object", () => {
@@ -318,18 +316,14 @@ describe("Reducers", () => {
           type: at.PREFS_INITIAL_VALUES,
           data: {},
         });
-        assert.notEqual(
-          INITIAL_STATE.Prefs,
-          state,
-          "should not modify INITIAL_STATE"
-        );
+        expect(state).not.toBe(INITIAL_STATE.Prefs);
       });
       it("should set initalized to true", () => {
         const state = Prefs(undefined, {
           type: at.PREFS_INITIAL_VALUES,
           data: {},
         });
-        assert.isTrue(state.initialized);
+        expect(state.initialized).toBe(true);
       });
       it("should set .values", () => {
         const newValues = { foo: 1, bar: 2 };
@@ -337,7 +331,7 @@ describe("Reducers", () => {
           type: at.PREFS_INITIAL_VALUES,
           data: newValues,
         });
-        assert.equal(state.values, newValues);
+        expect(state.values).toBe(newValues);
       });
     });
     describe("PREF_CHANGED", () => {
@@ -346,18 +340,14 @@ describe("Reducers", () => {
           type: at.PREF_CHANGED,
           data: { name: "foo", value: 2 },
         });
-        assert.notEqual(
-          INITIAL_STATE.Prefs,
-          state,
-          "should not modify INITIAL_STATE"
-        );
+        expect(state).not.toBe(INITIAL_STATE.Prefs);
       });
       it("should set the changed pref", () => {
         const state = Prefs(prevState({ foo: 1 }), {
           type: at.PREF_CHANGED,
           data: { name: "foo", value: 2 },
         });
-        assert.equal(state.values.foo, 2);
+        expect(state.values.foo).toBe(2);
       });
       it("should return a new .pref object instead of mutating", () => {
         const oldState = prevState({ foo: 1 });
@@ -365,7 +355,7 @@ describe("Reducers", () => {
           type: at.PREF_CHANGED,
           data: { name: "foo", value: 2 },
         });
-        assert.notEqual(oldState.values, state.values);
+        expect(state.values).not.toBe(oldState.values);
       });
     });
     describe("MULTIPLE_PREFS_CHANGED", () => {
@@ -375,9 +365,9 @@ describe("Reducers", () => {
           type: at.MULTIPLE_PREFS_CHANGED,
           data: { values: { foo: 3, baz: 4 } },
         });
-        assert.equal(state.values.foo, 3);
-        assert.equal(state.values.bar, 2);
-        assert.equal(state.values.baz, 4);
+        expect(state.values.foo).toBe(3);
+        expect(state.values.bar).toBe(2);
+        expect(state.values.baz).toBe(4);
       });
       it("should return a new .values object instead of mutating", () => {
         const oldState = { ...INITIAL_STATE.Prefs, values: { foo: 1 } };
@@ -385,37 +375,36 @@ describe("Reducers", () => {
           type: at.MULTIPLE_PREFS_CHANGED,
           data: { values: { foo: 2 } },
         });
-        assert.notEqual(oldState.values, state.values);
+        expect(state.values).not.toBe(oldState.values);
       });
     });
   });
   describe("Dialog", () => {
     it("should return INITIAL_STATE by default", () => {
-      assert.equal(
-        INITIAL_STATE.Dialog,
-        Dialog(undefined, { type: "non_existent" })
+      expect(Dialog(undefined, { type: "non_existent" })).toBe(
+        INITIAL_STATE.Dialog
       );
     });
     it("should toggle visible to true on DIALOG_OPEN", () => {
       const action = { type: at.DIALOG_OPEN };
       const nextState = Dialog(INITIAL_STATE.Dialog, action);
-      assert.isTrue(nextState.visible);
+      expect(nextState.visible).toBe(true);
     });
     it("should pass url data on DIALOG_OPEN", () => {
       const action = { type: at.DIALOG_OPEN, data: "some url" };
       const nextState = Dialog(INITIAL_STATE.Dialog, action);
-      assert.equal(nextState.data, action.data);
+      expect(nextState.data).toBe(action.data);
     });
     it("should toggle visible to false on DIALOG_CANCEL", () => {
       const action = { type: at.DIALOG_CANCEL, data: "some url" };
       const nextState = Dialog(INITIAL_STATE.Dialog, action);
-      assert.isFalse(nextState.visible);
+      expect(nextState.visible).toBe(false);
     });
     it("should return inital state on DELETE_HISTORY_URL", () => {
       const action = { type: at.DELETE_HISTORY_URL };
       const nextState = Dialog(INITIAL_STATE.Dialog, action);
 
-      assert.deepEqual(INITIAL_STATE.Dialog, nextState);
+      expect(nextState).toEqual(INITIAL_STATE.Dialog);
     });
   });
   describe("Sections", () => {
@@ -436,9 +425,8 @@ describe("Reducers", () => {
     });
 
     it("should return INITIAL_STATE by default", () => {
-      assert.equal(
-        INITIAL_STATE.Sections,
-        Sections(undefined, { type: "non_existent" })
+      expect(Sections(undefined, { type: "non_existent" })).toBe(
+        INITIAL_STATE.Sections
       );
     });
     it("should remove the correct section on SECTION_DEREGISTER", () => {
@@ -446,9 +434,9 @@ describe("Reducers", () => {
         type: at.SECTION_DEREGISTER,
         data: "foo_bar_2",
       });
-      assert.lengthOf(newState, 4);
+      expect(newState).toHaveLength(4);
       const expectedNewState = oldState.splice(2, 1) && oldState;
-      assert.deepEqual(newState, expectedNewState);
+      expect(newState).toEqual(expectedNewState);
     });
     it("should add a section on SECTION_REGISTER if it doesn't already exist", () => {
       const action = {
@@ -456,11 +444,11 @@ describe("Reducers", () => {
         data: { id: "foo_bar_5", title: "Foo Bar 5" },
       };
       const newState = Sections(oldState, action);
-      assert.lengthOf(newState, 6);
+      expect(newState).toHaveLength(6);
       const insertedSection = newState.find(
         section => section.id === "foo_bar_5"
       );
-      assert.propertyVal(insertedSection, "title", action.data.title);
+      expect(insertedSection.title).toBe(action.data.title);
     });
     it("should set newSection.rows === [] if no rows are provided on SECTION_REGISTER", () => {
       const action = {
@@ -471,7 +459,7 @@ describe("Reducers", () => {
       const insertedSection = newState.find(
         section => section.id === "foo_bar_5"
       );
-      assert.deepEqual(insertedSection.rows, []);
+      expect(insertedSection.rows).toEqual([]);
     });
     it("should update a section on SECTION_REGISTER if it already exists", () => {
       const NEW_TITLE = "New Title";
@@ -480,11 +468,11 @@ describe("Reducers", () => {
         data: { id: "foo_bar_2", title: NEW_TITLE },
       };
       const newState = Sections(oldState, action);
-      assert.lengthOf(newState, 5);
+      expect(newState).toHaveLength(5);
       const updatedSection = newState.find(
         section => section.id === "foo_bar_2"
       );
-      assert.ok(updatedSection && updatedSection.title === NEW_TITLE);
+      expect(updatedSection && updatedSection.title === NEW_TITLE).toBeTruthy();
     });
     it("should set initialized to false on SECTION_REGISTER if there are no rows", () => {
       const NEW_TITLE = "New Title";
@@ -494,7 +482,7 @@ describe("Reducers", () => {
       };
       const newState = Sections(oldState, action);
       const updatedSection = newState.find(section => section.id === "bloop");
-      assert.propertyVal(updatedSection, "initialized", false);
+      expect(updatedSection.initialized).toBe(false);
     });
     it("should set initialized to true on SECTION_REGISTER if there are rows", () => {
       const NEW_TITLE = "New Title";
@@ -504,7 +492,7 @@ describe("Reducers", () => {
       };
       const newState = Sections(oldState, action);
       const updatedSection = newState.find(section => section.id === "bloop");
-      assert.propertyVal(updatedSection, "initialized", true);
+      expect(updatedSection.initialized).toBe(true);
     });
     it("should have no effect on SECTION_UPDATE if the id doesn't exist", () => {
       const action = {
@@ -512,7 +500,7 @@ describe("Reducers", () => {
         data: { id: "fake_id", data: "fake_data" },
       };
       const newState = Sections(oldState, action);
-      assert.deepEqual(oldState, newState);
+      expect(newState).toEqual(oldState);
     });
     it("should update the section with the correct data on SECTION_UPDATE", () => {
       const FAKE_DATA = { rows: ["some", "fake", "data"], foo: "bar" };
@@ -524,7 +512,7 @@ describe("Reducers", () => {
       const updatedSection = newState.find(
         section => section.id === "foo_bar_2"
       );
-      assert.include(updatedSection, FAKE_DATA);
+      expect(updatedSection).toMatchObject(FAKE_DATA);
     });
     it("should set initialized to true on SECTION_UPDATE if rows is defined on action.data", () => {
       const data = { rows: [], id: "foo_bar_2" };
@@ -533,7 +521,7 @@ describe("Reducers", () => {
       const updatedSection = newState.find(
         section => section.id === "foo_bar_2"
       );
-      assert.propertyVal(updatedSection, "initialized", true);
+      expect(updatedSection.initialized).toBe(true);
     });
     it("should retain pinned cards on SECTION_UPDATE", () => {
       const ROW = { id: "row" };
@@ -542,7 +530,7 @@ describe("Reducers", () => {
         data: Object.assign({ rows: [ROW] }, { id: "foo_bar_2" }),
       });
       let updatedSection = newState.find(section => section.id === "foo_bar_2");
-      assert.deepEqual(updatedSection.rows, [ROW]);
+      expect(updatedSection.rows).toEqual([ROW]);
 
       const PINNED_ROW = { id: "pinned", pinned: true, guid: "pinned" };
       newState = Sections(newState, {
@@ -550,7 +538,7 @@ describe("Reducers", () => {
         data: Object.assign({ rows: [PINNED_ROW] }, { id: "foo_bar_2" }),
       });
       updatedSection = newState.find(section => section.id === "foo_bar_2");
-      assert.deepEqual(updatedSection.rows, [PINNED_ROW]);
+      expect(updatedSection.rows).toEqual([PINNED_ROW]);
 
       // Updating the section again should not duplicate pinned cards
       newState = Sections(newState, {
@@ -558,7 +546,7 @@ describe("Reducers", () => {
         data: Object.assign({ rows: [PINNED_ROW] }, { id: "foo_bar_2" }),
       });
       updatedSection = newState.find(section => section.id === "foo_bar_2");
-      assert.deepEqual(updatedSection.rows, [PINNED_ROW]);
+      expect(updatedSection.rows).toEqual([PINNED_ROW]);
 
       // Updating the section should retain pinned card at its index
       newState = Sections(newState, {
@@ -566,7 +554,7 @@ describe("Reducers", () => {
         data: Object.assign({ rows: [ROW] }, { id: "foo_bar_2" }),
       });
       updatedSection = newState.find(section => section.id === "foo_bar_2");
-      assert.deepEqual(updatedSection.rows, [PINNED_ROW, ROW]);
+      expect(updatedSection.rows).toEqual([PINNED_ROW, ROW]);
 
       // Clearing/Resetting the section should clear pinned cards
       newState = Sections(newState, {
@@ -574,7 +562,7 @@ describe("Reducers", () => {
         data: Object.assign({ rows: [] }, { id: "foo_bar_2" }),
       });
       updatedSection = newState.find(section => section.id === "foo_bar_2");
-      assert.deepEqual(updatedSection.rows, []);
+      expect(updatedSection.rows).toEqual([]);
     });
     it("should have no effect on SECTION_UPDATE_CARD if the id or url doesn't exist", () => {
       const noIdAction = {
@@ -595,8 +583,8 @@ describe("Reducers", () => {
         },
       };
       const noUrlState = Sections(oldState, noUrlAction);
-      assert.deepEqual(noIdState, oldState);
-      assert.deepEqual(noUrlState, oldState);
+      expect(noIdState).toEqual(oldState);
+      expect(noUrlState).toEqual(oldState);
     });
     it("should update the card with the correct data on SECTION_UPDATE_CARD", () => {
       const action = {
@@ -614,7 +602,7 @@ describe("Reducers", () => {
       const updatedCard = updatedSection.rows.find(
         card => card.url === "www.other.url"
       );
-      assert.propertyVal(updatedCard, "title", "Fake new title");
+      expect(updatedCard.title).toBe("Fake new title");
     });
     it("should only update the cards belonging to the right section on SECTION_UPDATE_CARD", () => {
       const action = {
@@ -628,7 +616,7 @@ describe("Reducers", () => {
       const newState = Sections(oldState, action);
       newState.forEach((section, i) => {
         if (section.id !== "foo_bar_2") {
-          assert.deepEqual(section, oldState[i]);
+          expect(section).toEqual(oldState[i]);
         }
       });
     });
@@ -639,7 +627,7 @@ describe("Reducers", () => {
       const updatedSection = newState.find(
         section => section.id === "foo_bar_2"
       );
-      assert.propertyVal(updatedSection, "initialized", false);
+      expect(updatedSection.initialized).toBe(false);
     });
     it("should dedupe based on dedupeConfigurations", () => {
       const site = { url: "foo.com" };
@@ -653,8 +641,8 @@ describe("Reducers", () => {
 
       const nextState = Sections(state, action);
 
-      assert.equal(nextState.find(s => s.id === "highlights").rows.length, 1);
-      assert.equal(nextState.find(s => s.id === "topstories").rows.length, 0);
+      expect(nextState.find(s => s.id === "highlights").rows).toHaveLength(1);
+      expect(nextState.find(s => s.id === "topstories").rows).toHaveLength(0);
     });
     it("should remove blocked and deleted urls from all rows in all sections", () => {
       const blockAction = {
@@ -668,20 +656,20 @@ describe("Reducers", () => {
       const newBlockState = Sections(oldState, blockAction);
       const newDeleteState = Sections(oldState, deleteAction);
       newBlockState.concat(newDeleteState).forEach(section => {
-        assert.deepEqual(section.rows, [{ url: "www.other.url" }]);
+        expect(section.rows).toEqual([{ url: "www.other.url" }]);
       });
     });
     it("should not update state for empty action.data on PLACES_LINK_BLOCKED", () => {
       const nextState = Sections(undefined, { type: at.PLACES_LINK_BLOCKED });
-      assert.equal(nextState, INITIAL_STATE.Sections);
+      expect(nextState).toBe(INITIAL_STATE.Sections);
     });
     it("should not update state for empty action.data on PLACES_LINKS_DELETED", () => {
       const nextState = Sections(undefined, { type: at.PLACES_LINKS_DELETED });
-      assert.equal(nextState, INITIAL_STATE.Sections);
+      expect(nextState).toBe(INITIAL_STATE.Sections);
     });
     it("should not update state for empty action.data on PLACES_BOOKMARK_ADDED", () => {
       const nextState = Sections(undefined, { type: at.PLACES_BOOKMARK_ADDED });
-      assert.equal(nextState, INITIAL_STATE.Sections);
+      expect(nextState).toBe(INITIAL_STATE.Sections);
     });
     it("should bookmark an item when PLACES_BOOKMARK_ADDED is received", () => {
       const action = {
@@ -698,20 +686,20 @@ describe("Reducers", () => {
       const [newRow, oldRow] = nextState[0].rows;
 
       // new row has bookmark data
-      assert.equal(newRow.url, action.data.url);
-      assert.equal(newRow.type, "bookmark");
-      assert.equal(newRow.bookmarkGuid, action.data.bookmarkGuid);
-      assert.equal(newRow.bookmarkTitle, action.data.bookmarkTitle);
-      assert.equal(newRow.bookmarkDateCreated, action.data.dateAdded);
+      expect(newRow.url).toBe(action.data.url);
+      expect(newRow.type).toBe("bookmark");
+      expect(newRow.bookmarkGuid).toBe(action.data.bookmarkGuid);
+      expect(newRow.bookmarkTitle).toBe(action.data.bookmarkTitle);
+      expect(newRow.bookmarkDateCreated).toBe(action.data.dateAdded);
 
       // old row is unchanged
-      assert.equal(oldRow, oldState[0].rows[1]);
+      expect(oldRow).toBe(oldState[0].rows[1]);
     });
     it("should not update state for empty action.data on PLACES_BOOKMARKS_REMOVED", () => {
       const nextState = Sections(undefined, {
         type: at.PLACES_BOOKMARKS_REMOVED,
       });
-      assert.equal(nextState, INITIAL_STATE.Sections);
+      expect(nextState).toBe(INITIAL_STATE.Sections);
     });
     it("should remove the bookmark when PLACES_BOOKMARKS_REMOVED is received", () => {
       const action = {
@@ -733,20 +721,19 @@ describe("Reducers", () => {
       const [newRow, oldRow] = nextState[0].rows;
 
       // new row isn't a bookmark
-      assert.equal(newRow.url, action.data.urls[0]);
-      assert.equal(newRow.type, "history");
-      assert.isUndefined(newRow.bookmarkGuid);
-      assert.isUndefined(newRow.bookmarkTitle);
-      assert.isUndefined(newRow.bookmarkDateCreated);
+      expect(newRow.url).toBe(action.data.urls[0]);
+      expect(newRow.type).toBe("history");
+      expect(newRow.bookmarkGuid).toBeUndefined();
+      expect(newRow.bookmarkTitle).toBeUndefined();
+      expect(newRow.bookmarkDateCreated).toBeUndefined();
 
       // old row is unchanged
-      assert.equal(oldRow, oldState[0].rows[1]);
+      expect(oldRow).toBe(oldState[0].rows[1]);
     });
   });
   describe("Pocket", () => {
     it("should return INITIAL_STATE by default", () => {
-      assert.equal(
-        Pocket(undefined, { type: "some_action" }),
+      expect(Pocket(undefined, { type: "some_action" })).toBe(
         INITIAL_STATE.Pocket
       );
     });
@@ -755,7 +742,7 @@ describe("Reducers", () => {
         type: at.POCKET_WAITING_FOR_SPOC,
         data: false,
       });
-      assert.isFalse(state.waitingForSpoc);
+      expect(state.waitingForSpoc).toBe(false);
     });
     it("should set pocketCta with correct object on a POCKET_CTA", () => {
       const data = {
@@ -765,16 +752,15 @@ describe("Reducers", () => {
         use_cta: true,
       };
       const state = Pocket(undefined, { type: at.POCKET_CTA, data });
-      assert.equal(state.pocketCta.ctaButton, data.cta_button);
-      assert.equal(state.pocketCta.ctaText, data.cta_text);
-      assert.equal(state.pocketCta.ctaUrl, data.cta_url);
-      assert.equal(state.pocketCta.useCta, data.use_cta);
+      expect(state.pocketCta.ctaButton).toBe(data.cta_button);
+      expect(state.pocketCta.ctaText).toBe(data.cta_text);
+      expect(state.pocketCta.ctaUrl).toBe(data.cta_url);
+      expect(state.pocketCta.useCta).toBe(data.use_cta);
     });
   });
   describe("DiscoveryStream", () => {
     it("should return INITIAL_STATE by default", () => {
-      assert.equal(
-        DiscoveryStream(undefined, { type: "some_action" }),
+      expect(DiscoveryStream(undefined, { type: "some_action" })).toBe(
         INITIAL_STATE.DiscoveryStream
       );
     });
@@ -783,7 +769,7 @@ describe("Reducers", () => {
         type: at.DISCOVERY_STREAM_LAYOUT_UPDATE,
         data: { layout: ["test"] },
       });
-      assert.equal(state.layout[0], "test");
+      expect(state.layout[0]).toBe("test");
     });
     it("should reset layout data with DISCOVERY_STREAM_LAYOUT_RESET", () => {
       const layoutData = { layout: ["test"], lastUpdated: 123 };
@@ -810,7 +796,7 @@ describe("Reducers", () => {
         type: at.DISCOVERY_STREAM_LAYOUT_RESET,
       });
 
-      assert.deepEqual(state, INITIAL_STATE.DiscoveryStream);
+      expect(state).toEqual(INITIAL_STATE.DiscoveryStream);
     });
     it("should preserve sectionPersonalization with DISCOVERY_STREAM_LAYOUT_RESET", () => {
       const personalization = {
@@ -823,34 +809,34 @@ describe("Reducers", () => {
       state = DiscoveryStream(state, {
         type: at.DISCOVERY_STREAM_LAYOUT_RESET,
       });
-      assert.deepEqual(state.sectionPersonalization, personalization);
+      expect(state.sectionPersonalization).toEqual(personalization);
     });
     it("should set config data with DISCOVERY_STREAM_CONFIG_CHANGE", () => {
       const state = DiscoveryStream(undefined, {
         type: at.DISCOVERY_STREAM_CONFIG_CHANGE,
         data: { enabled: true },
       });
-      assert.deepEqual(state.config, { enabled: true });
+      expect(state.config).toEqual({ enabled: true });
     });
     it("should set feeds as loaded with DISCOVERY_STREAM_FEEDS_UPDATE", () => {
       const state = DiscoveryStream(undefined, {
         type: at.DISCOVERY_STREAM_FEEDS_UPDATE,
       });
-      assert.isTrue(state.feeds.loaded);
+      expect(state.feeds.loaded).toBe(true);
     });
     it("should set spoc_endpoint with DISCOVERY_STREAM_SPOCS_ENDPOINT", () => {
       const state = DiscoveryStream(undefined, {
         type: at.DISCOVERY_STREAM_SPOCS_ENDPOINT,
         data: { url: "foo.com" },
       });
-      assert.equal(state.spocs.spocs_endpoint, "foo.com");
+      expect(state.spocs.spocs_endpoint).toBe("foo.com");
     });
     it("should use initial state with DISCOVERY_STREAM_SPOCS_PLACEMENTS", () => {
       const state = DiscoveryStream(undefined, {
         type: at.DISCOVERY_STREAM_SPOCS_PLACEMENTS,
         data: {},
       });
-      assert.deepEqual(state.spocs.placements, []);
+      expect(state.spocs.placements).toEqual([]);
     });
     it("should set placements with DISCOVERY_STREAM_SPOCS_PLACEMENTS", () => {
       const state = DiscoveryStream(undefined, {
@@ -859,7 +845,7 @@ describe("Reducers", () => {
           placements: [1, 2, 3],
         },
       });
-      assert.deepEqual(state.spocs.placements, [1, 2, 3]);
+      expect(state.spocs.placements).toEqual([1, 2, 3]);
     });
     it("should set spocs with DISCOVERY_STREAM_SPOCS_UPDATE", () => {
       const data = {
@@ -872,7 +858,7 @@ describe("Reducers", () => {
         type: at.DISCOVERY_STREAM_SPOCS_UPDATE,
         data,
       });
-      assert.deepEqual(state.spocs, {
+      expect(state.spocs).toEqual({
         spocs_endpoint: "",
         data: data.spocs,
         lastUpdated: data.lastUpdated,
@@ -913,7 +899,7 @@ describe("Reducers", () => {
 
       const newState = DiscoveryStream(oldState, deleteAction);
 
-      assert.equal(newState.spocs.data.spocs.items.length, 1);
+      expect(newState.spocs.data.spocs.items).toHaveLength(1);
     });
     it("should handle no data from DISCOVERY_STREAM_SPOCS_UPDATE", () => {
       const data = null;
@@ -921,7 +907,7 @@ describe("Reducers", () => {
         type: at.DISCOVERY_STREAM_SPOCS_UPDATE,
         data,
       });
-      assert.deepEqual(state.spocs, INITIAL_STATE.DiscoveryStream.spocs);
+      expect(state.spocs).toEqual(INITIAL_STATE.DiscoveryStream.spocs);
     });
     it("should add blocked spocs to blocked array with DISCOVERY_STREAM_SPOC_BLOCKED", () => {
       const firstState = DiscoveryStream(undefined, {
@@ -932,8 +918,8 @@ describe("Reducers", () => {
         type: at.DISCOVERY_STREAM_SPOC_BLOCKED,
         data: { url: "https://bar.com" },
       });
-      assert.deepEqual(firstState.spocs.blocked, ["https://foo.com"]);
-      assert.deepEqual(secondState.spocs.blocked, [
+      expect(firstState.spocs.blocked).toEqual(["https://foo.com"]);
+      expect(secondState.spocs.blocked).toEqual([
         "https://foo.com",
         "https://bar.com",
       ]);
@@ -942,7 +928,7 @@ describe("Reducers", () => {
       const newState = DiscoveryStream(undefined, {
         type: at.DISCOVERY_STREAM_LINK_BLOCKED,
       });
-      assert.equal(newState, INITIAL_STATE.DiscoveryStream);
+      expect(newState).toBe(INITIAL_STATE.DiscoveryStream);
     });
     it("should not update state if feeds are not loaded", () => {
       const deleteAction = {
@@ -950,7 +936,7 @@ describe("Reducers", () => {
         data: { url: "foo.com" },
       };
       const newState = DiscoveryStream(undefined, deleteAction);
-      assert.equal(newState, INITIAL_STATE.DiscoveryStream);
+      expect(newState).toBe(INITIAL_STATE.DiscoveryStream);
     });
     it("should not update state if spocs and feeds data is undefined", () => {
       const deleteAction = {
@@ -969,7 +955,7 @@ describe("Reducers", () => {
         },
       };
       const newState = DiscoveryStream(oldState, deleteAction);
-      assert.deepEqual(newState, oldState);
+      expect(newState).toEqual(oldState);
     });
     it("should remove the site on DISCOVERY_STREAM_LINK_BLOCKED from spocs if feeds data is empty", () => {
       const deleteAction = {
@@ -992,7 +978,7 @@ describe("Reducers", () => {
         },
       };
       const newState = DiscoveryStream(oldState, deleteAction);
-      assert.deepEqual(newState.spocs.data.spocs.items, [
+      expect(newState.spocs.data.spocs.items).toEqual([
         { url: "test-spoc.com" },
       ]);
     });
@@ -1022,10 +1008,9 @@ describe("Reducers", () => {
         },
       };
       const newState = DiscoveryStream(oldState, deleteAction);
-      assert.deepEqual(
-        newState.feeds.data["https://foo.com/feed1"].data.recommendations,
-        [{ url: "test.com" }]
-      );
+      expect(
+        newState.feeds.data["https://foo.com/feed1"].data.recommendations
+      ).toEqual([{ url: "test.com" }]);
     });
     it("should remove the site on DISCOVERY_STREAM_LINK_BLOCKED from both feeds and spocs", () => {
       const oldState = {
@@ -1057,13 +1042,12 @@ describe("Reducers", () => {
         data: { url: "https://foo.com" },
       };
       const newState = DiscoveryStream(oldState, deleteAction);
-      assert.deepEqual(newState.spocs.data.spocs.items, [
+      expect(newState.spocs.data.spocs.items).toEqual([
         { url: "test-spoc.com" },
       ]);
-      assert.deepEqual(
-        newState.feeds.data["https://foo.com/feed1"].data.recommendations,
-        [{ url: "test.com" }]
-      );
+      expect(
+        newState.feeds.data["https://foo.com/feed1"].data.recommendations
+      ).toEqual([{ url: "test.com" }]);
     });
     it("should add boookmark details on PLACES_BOOKMARK_ADDED in both feeds and spocs", () => {
       const oldState = {
@@ -1102,35 +1086,30 @@ describe("Reducers", () => {
 
       const newState = DiscoveryStream(oldState, bookmarkAction);
 
-      assert.lengthOf(newState.spocs.data.spocs.items, 2);
-      assert.equal(
-        newState.spocs.data.spocs.items[0].bookmarkGuid,
+      expect(newState.spocs.data.spocs.items).toHaveLength(2);
+      expect(newState.spocs.data.spocs.items[0].bookmarkGuid).toBe(
         bookmarkAction.data.bookmarkGuid
       );
-      assert.equal(
-        newState.spocs.data.spocs.items[0].bookmarkTitle,
+      expect(newState.spocs.data.spocs.items[0].bookmarkTitle).toBe(
         bookmarkAction.data.bookmarkTitle
       );
-      assert.isUndefined(newState.spocs.data.spocs.items[1].bookmarkGuid);
+      expect(newState.spocs.data.spocs.items[1].bookmarkGuid).toBeUndefined();
 
-      assert.lengthOf(
-        newState.feeds.data["https://foo.com/feed1"].data.recommendations,
-        2
-      );
-      assert.equal(
+      expect(
+        newState.feeds.data["https://foo.com/feed1"].data.recommendations
+      ).toHaveLength(2);
+      expect(
         newState.feeds.data["https://foo.com/feed1"].data.recommendations[0]
-          .bookmarkGuid,
-        bookmarkAction.data.bookmarkGuid
-      );
-      assert.equal(
+          .bookmarkGuid
+      ).toBe(bookmarkAction.data.bookmarkGuid);
+      expect(
         newState.feeds.data["https://foo.com/feed1"].data.recommendations[0]
-          .bookmarkTitle,
-        bookmarkAction.data.bookmarkTitle
-      );
-      assert.isUndefined(
+          .bookmarkTitle
+      ).toBe(bookmarkAction.data.bookmarkTitle);
+      expect(
         newState.feeds.data["https://foo.com/feed1"].data.recommendations[1]
           .bookmarkGuid
-      );
+      ).toBeUndefined();
     });
 
     it("should remove boookmark details on PLACES_BOOKMARKS_REMOVED in both feeds and spocs", () => {
@@ -1178,48 +1157,46 @@ describe("Reducers", () => {
 
       const newState = DiscoveryStream(oldState, action);
 
-      assert.lengthOf(newState.spocs.data.spocs.items, 2);
-      assert.isUndefined(newState.spocs.data.spocs.items[0].bookmarkGuid);
-      assert.isUndefined(newState.spocs.data.spocs.items[0].bookmarkTitle);
+      expect(newState.spocs.data.spocs.items).toHaveLength(2);
+      expect(newState.spocs.data.spocs.items[0].bookmarkGuid).toBeUndefined();
+      expect(newState.spocs.data.spocs.items[0].bookmarkTitle).toBeUndefined();
 
-      assert.lengthOf(
-        newState.feeds.data["https://foo.com/feed1"].data.recommendations,
-        2
-      );
-      assert.isUndefined(
+      expect(
+        newState.feeds.data["https://foo.com/feed1"].data.recommendations
+      ).toHaveLength(2);
+      expect(
         newState.feeds.data["https://foo.com/feed1"].data.recommendations[0]
           .bookmarkGuid
-      );
-      assert.isUndefined(
+      ).toBeUndefined();
+      expect(
         newState.feeds.data["https://foo.com/feed1"].data.recommendations[0]
           .bookmarkTitle
-      );
+      ).toBeUndefined();
     });
   });
   describe("Search", () => {
     it("should return INITIAL_STATE by default", () => {
-      assert.equal(
-        Search(undefined, { type: "some_action" }),
+      expect(Search(undefined, { type: "some_action" })).toBe(
         INITIAL_STATE.Search
       );
     });
     it("should set disable to true on DISABLE_SEARCH", () => {
       const nextState = Search(undefined, { type: "DISABLE_SEARCH" });
-      assert.propertyVal(nextState, "disable", true);
+      expect(nextState.disable).toBe(true);
     });
     it("should set focus and disable to false on SHOW_SEARCH", () => {
       const nextState = Search(undefined, { type: "SHOW_SEARCH" });
-      assert.propertyVal(nextState, "disable", false);
+      expect(nextState.disable).toBe(false);
     });
   });
   describe("ExternalComponents", () => {
     it("should return INITIAL_STATE by default", () => {
       const nextState = ExternalComponents(undefined, { type: "some_action" });
-      assert.equal(nextState, INITIAL_STATE.ExternalComponents);
+      expect(nextState).toBe(INITIAL_STATE.ExternalComponents);
     });
     it("should return initial state with empty components array", () => {
       const nextState = ExternalComponents(undefined, { type: "some_action" });
-      assert.deepEqual(nextState.components, []);
+      expect(nextState.components).toEqual([]);
     });
     it("should update components on REFRESH_EXTERNAL_COMPONENTS", () => {
       const testComponents = [
@@ -1234,7 +1211,7 @@ describe("Reducers", () => {
         type: at.REFRESH_EXTERNAL_COMPONENTS,
         data: testComponents,
       });
-      assert.deepEqual(nextState.components, testComponents);
+      expect(nextState.components).toEqual(testComponents);
     });
     it("should preserve other state when updating components", () => {
       const testComponents = [
@@ -1250,8 +1227,8 @@ describe("Reducers", () => {
         type: at.REFRESH_EXTERNAL_COMPONENTS,
         data: testComponents,
       });
-      assert.deepEqual(nextState.components, testComponents);
-      assert.propertyVal(nextState, "otherProp", "value");
+      expect(nextState.components).toEqual(testComponents);
+      expect(nextState.otherProp).toBe("value");
     });
     it("should replace existing components on REFRESH_EXTERNAL_COMPONENTS", () => {
       const oldComponents = [
@@ -1275,8 +1252,8 @@ describe("Reducers", () => {
         type: at.REFRESH_EXTERNAL_COMPONENTS,
         data: newComponents,
       });
-      assert.deepEqual(nextState.components, newComponents);
-      assert.notDeepEqual(nextState.components, oldComponents);
+      expect(nextState.components).toEqual(newComponents);
+      expect(nextState.components).not.toEqual(oldComponents);
     });
   });
   describe("PictureOfTheDay", () => {
@@ -1292,10 +1269,10 @@ describe("Reducers", () => {
           lastUpdated: 123,
         },
       });
-      assert.propertyVal(next, "imageUrl", "https://example.com/x.jpg");
-      assert.propertyVal(next, "description", "D");
-      assert.propertyVal(next, "publishedDate", "2026-06-30");
-      assert.propertyVal(next, "initialized", true);
+      expect(next.imageUrl).toBe("https://example.com/x.jpg");
+      expect(next.description).toBe("D");
+      expect(next.publishedDate).toBe("2026-06-30");
+      expect(next.initialized).toBe(true);
     });
 
     it("defaults missing fields and returns prevState for other actions", () => {
@@ -1303,11 +1280,11 @@ describe("Reducers", () => {
         type: at.PICTURE_OF_THE_DAY_UPDATE,
         data: {},
       });
-      assert.propertyVal(updated, "imageUrl", "");
-      assert.propertyVal(updated, "description", "");
+      expect(updated.imageUrl).toBe("");
+      expect(updated.description).toBe("");
 
       const prev = INITIAL_STATE.PictureOfTheDay;
-      assert.equal(PictureOfTheDay(prev, { type: "SOME_OTHER_ACTION" }), prev);
+      expect(PictureOfTheDay(prev, { type: "SOME_OTHER_ACTION" })).toBe(prev);
     });
   });
 
@@ -1334,7 +1311,7 @@ describe("Reducers", () => {
         type: at.WIDGETS_SPORTS_LIVE_UPDATE,
         data: { live: liveEvents, lastLiveUpdated: 12345 },
       });
-      assert.deepEqual(next.data.live, liveEvents);
+      expect(next.data.live).toEqual(liveEvents);
     });
 
     it("WIDGETS_SPORTS_LIVE_UPDATE replaces data.live wholesale on each update", () => {
@@ -1354,7 +1331,7 @@ describe("Reducers", () => {
           lastLiveUpdated: 12345,
         },
       });
-      assert.deepEqual(next.data.live, [{ global_event_id: 2, home_score: 5 }]);
+      expect(next.data.live).toEqual([{ global_event_id: 2, home_score: 5 }]);
     });
 
     it("WIDGETS_SPORTS_LIVE_UPDATE records lastLiveUpdated at SportsWidget root", () => {
@@ -1362,7 +1339,7 @@ describe("Reducers", () => {
         type: at.WIDGETS_SPORTS_LIVE_UPDATE,
         data: { live: [], lastLiveUpdated: 999_000 },
       });
-      assert.equal(next.lastLiveUpdated, 999_000);
+      expect(next.lastLiveUpdated).toBe(999_000);
     });
 
     it("WIDGETS_SPORTS_LIVE_UPDATE lastLiveUpdated survives WIDGETS_SPORTS_WIDGET_SET", () => {
@@ -1376,7 +1353,7 @@ describe("Reducers", () => {
         type: at.WIDGETS_SPORTS_WIDGET_SET,
         data: { teams: [], matches: { previous: [], current: [], next: [] } },
       });
-      assert.equal(afterResync.lastLiveUpdated, 12345);
+      expect(afterResync.lastLiveUpdated).toBe(12345);
     });
 
     it("WIDGETS_SPORTS_LIVE_UPDATE preserves data.matches", () => {
@@ -1387,7 +1364,7 @@ describe("Reducers", () => {
           lastLiveUpdated: 12345,
         },
       });
-      assert.deepEqual(next.data.matches, baseMatches);
+      expect(next.data.matches).toEqual(baseMatches);
     });
 
     it("WIDGETS_SPORTS_LIVE_UPDATE preserves other SportsWidget fields", () => {
@@ -1400,8 +1377,8 @@ describe("Reducers", () => {
         type: at.WIDGETS_SPORTS_LIVE_UPDATE,
         data: { live: [], lastLiveUpdated: 1 },
       });
-      assert.equal(next.widgetState, "sports-intro");
-      assert.deepEqual(next.selectedTeams, ["ENG"]);
+      expect(next.widgetState).toBe("sports-intro");
+      expect(next.selectedTeams).toEqual(["ENG"]);
     });
 
     it("WIDGETS_SPORTS_SET_CELEBRATIONS replaces the celebrations map", () => {
@@ -1413,7 +1390,7 @@ describe("Reducers", () => {
         type: at.WIDGETS_SPORTS_SET_CELEBRATIONS,
         data: celebrations,
       });
-      assert.deepEqual(next.celebrations, celebrations);
+      expect(next.celebrations).toEqual(celebrations);
     });
 
     it("WIDGETS_SPORTS_SET_CELEBRATIONS preserves other SportsWidget fields", () => {
@@ -1426,9 +1403,9 @@ describe("Reducers", () => {
         type: at.WIDGETS_SPORTS_SET_CELEBRATIONS,
         data: { endedAt: {}, celebrated: [1] },
       });
-      assert.equal(next.widgetState, "sports-matches");
-      assert.deepEqual(next.selectedTeams, ["ENG"]);
-      assert.deepEqual(next.data.matches, baseMatches);
+      expect(next.widgetState).toBe("sports-matches");
+      expect(next.selectedTeams).toEqual(["ENG"]);
+      expect(next.data.matches).toEqual(baseMatches);
     });
 
     describe("WIDGETS_SPORTS_WATCH_LIVE", () => {
@@ -1442,7 +1419,7 @@ describe("Reducers", () => {
           type: at.WIDGETS_SPORTS_WATCH_LIVE_SET,
           data: watchLiveData,
         });
-        assert.deepEqual(next.watchLive, {
+        expect(next.watchLive).toEqual({
           loaded: true,
           data: watchLiveData,
         });
@@ -1452,7 +1429,7 @@ describe("Reducers", () => {
         const next = SportsWidget(INITIAL_STATE.SportsWidget, {
           type: at.WIDGETS_SPORTS_WATCH_LIVE_REQUEST,
         });
-        assert.deepEqual(next.watchLive, { loaded: false, data: null });
+        expect(next.watchLive).toEqual({ loaded: false, data: null });
       });
 
       it("WIDGETS_SPORTS_WATCH_LIVE_REQUEST preserves a previously-fetched payload", () => {
@@ -1465,7 +1442,7 @@ describe("Reducers", () => {
         const next = SportsWidget(loaded, {
           type: at.WIDGETS_SPORTS_WATCH_LIVE_REQUEST,
         });
-        assert.deepEqual(next.watchLive, {
+        expect(next.watchLive).toEqual({
           loaded: true,
           data: watchLiveData,
         });
@@ -1491,14 +1468,13 @@ describe("Reducers", () => {
           type: at.WIDGETS_SPORTS_SET_LOAD_MORE,
           data: { direction: "upcoming", loading: true },
         });
-        assert.deepEqual(next.loadMore.upcoming, {
+        expect(next.loadMore.upcoming).toEqual({
           loading: true,
           exhausted: false,
           lastFetchedDate: null,
         });
         // Results slot is unchanged.
-        assert.deepEqual(
-          next.loadMore.results,
+        expect(next.loadMore.results).toEqual(
           INITIAL_STATE.SportsWidget.loadMore.results
         );
       });
@@ -1508,14 +1484,13 @@ describe("Reducers", () => {
           type: at.WIDGETS_SPORTS_SET_LOAD_MORE,
           data: { direction: "results", exhausted: true },
         });
-        assert.deepEqual(next.loadMore.results, {
+        expect(next.loadMore.results).toEqual({
           loading: false,
           exhausted: true,
           lastFetchedDate: null,
         });
         // Upcoming slot is unchanged.
-        assert.deepEqual(
-          next.loadMore.upcoming,
+        expect(next.loadMore.upcoming).toEqual(
           INITIAL_STATE.SportsWidget.loadMore.upcoming
         );
       });
@@ -1531,9 +1506,9 @@ describe("Reducers", () => {
             exhausted: false,
           },
         });
-        assert.deepEqual(next.data.matches.next, [matchA, matchB]);
-        assert.equal(next.loadMore.upcoming.lastFetchedDate, "2026-06-21");
-        assert.equal(next.loadMore.upcoming.loading, false);
+        expect(next.data.matches.next).toEqual([matchA, matchB]);
+        expect(next.loadMore.upcoming.lastFetchedDate).toBe("2026-06-21");
+        expect(next.loadMore.upcoming.loading).toBe(false);
       });
 
       it("appends results matches to data.matches.previous", () => {
@@ -1547,8 +1522,8 @@ describe("Reducers", () => {
             exhausted: false,
           },
         });
-        assert.deepEqual(next.data.matches.previous, [matchA, matchB]);
-        assert.equal(next.loadMore.results.lastFetchedDate, "2026-05-26");
+        expect(next.data.matches.previous).toEqual([matchA, matchB]);
+        expect(next.loadMore.results.lastFetchedDate).toBe("2026-05-26");
       });
 
       it("dedupes upcoming appends against existing next[]", () => {
@@ -1563,7 +1538,7 @@ describe("Reducers", () => {
           type: at.WIDGETS_SPORTS_SET_LOAD_MORE,
           data: { direction: "upcoming", matches: [matchA, matchB] },
         });
-        assert.deepEqual(next.data.matches.next, [matchA, matchB]);
+        expect(next.data.matches.next).toEqual([matchA, matchB]);
       });
 
       it("dedupes results appends against existing previous[]", () => {
@@ -1578,7 +1553,7 @@ describe("Reducers", () => {
           type: at.WIDGETS_SPORTS_SET_LOAD_MORE,
           data: { direction: "results", matches: [matchA, matchB] },
         });
-        assert.deepEqual(next.data.matches.previous, [matchA, matchB]);
+        expect(next.data.matches.previous).toEqual([matchA, matchB]);
       });
 
       it("dedupes by composite key when global_event_id is missing", () => {
@@ -1598,7 +1573,7 @@ describe("Reducers", () => {
           type: at.WIDGETS_SPORTS_SET_LOAD_MORE,
           data: { direction: "upcoming", matches: [tbdMatch, matchA] },
         });
-        assert.deepEqual(next.data.matches.next, [tbdMatch, matchA]);
+        expect(next.data.matches.next).toEqual([tbdMatch, matchA]);
       });
 
       it("leaves existing matches alone when no new matches are provided", () => {
@@ -1606,8 +1581,8 @@ describe("Reducers", () => {
           type: at.WIDGETS_SPORTS_SET_LOAD_MORE,
           data: { direction: "upcoming", loading: false, exhausted: true },
         });
-        assert.deepEqual(next.data.matches, baseMatches);
-        assert.equal(next.loadMore.upcoming.exhausted, true);
+        expect(next.data.matches).toEqual(baseMatches);
+        expect(next.loadMore.upcoming.exhausted).toBe(true);
       });
 
       it("ignores actions with an unknown direction", () => {
@@ -1617,7 +1592,7 @@ describe("Reducers", () => {
           data: { direction: "sideways", loading: true },
         });
         // Unknown directions are a no-op — return the prior state untouched.
-        assert.strictEqual(next, prev);
+        expect(next).toBe(prev);
       });
     });
 
@@ -1641,7 +1616,7 @@ describe("Reducers", () => {
         type: at.WIDGETS_SPORTS_WIDGET_SET,
         data: { teams: [], matches: { previous: [], current: [], next: [] } },
       });
-      assert.deepEqual(next.loadMore, INITIAL_STATE.SportsWidget.loadMore);
+      expect(next.loadMore).toEqual(INITIAL_STATE.SportsWidget.loadMore);
     });
   });
 
@@ -1655,13 +1630,13 @@ describe("Reducers", () => {
         },
       };
       const nextState = reducers.Stocks(undefined, action);
-      assert.deepEqual(nextState.tickers, action.data.tickers);
-      assert.equal(nextState.lastUpdated, 1700000000000);
+      expect(nextState.tickers).toEqual(action.data.tickers);
+      expect(nextState.lastUpdated).toBe(1700000000000);
     });
 
     it("returns previous state for unrelated actions", () => {
       const prev = { tickers: [{ ticker: "DIA" }], lastUpdated: 1 };
-      assert.equal(reducers.Stocks(prev, { type: "SOME_OTHER_ACTION" }), prev);
+      expect(reducers.Stocks(prev, { type: "SOME_OTHER_ACTION" })).toBe(prev);
     });
 
     it("WIDGETS_STOCKS_UPDATE stores the error flag", () => {
@@ -1670,7 +1645,7 @@ describe("Reducers", () => {
         data: { tickers: [], lastUpdated: 1700000000000, error: true },
       };
       const nextState = reducers.Stocks(undefined, action);
-      assert.isTrue(nextState.error);
+      expect(nextState.error).toBe(true);
     });
 
     it("WIDGETS_STOCKS_UPDATE defaults error to false when omitted", () => {
@@ -1679,7 +1654,7 @@ describe("Reducers", () => {
         data: { tickers: [], lastUpdated: 1 },
       };
       const nextState = reducers.Stocks(undefined, action);
-      assert.isFalse(nextState.error);
+      expect(nextState.error).toBe(false);
     });
   });
 
@@ -1690,74 +1665,80 @@ describe("Reducers", () => {
       persistent: true,
       title: "hi",
     };
-
-    it("WEB_NOTIFICATIONS_UPDATED replaces the table and index", () => {
-      const action = {
-        type: at.WEB_NOTIFICATIONS_UPDATED,
-        data: {
-          lastUpdated: 42,
-          notifications: { n1: notification },
-          byOrigin: { "https://example.com": ["n1"] },
-        },
-      };
-      const next = reducers.WebNotifications(undefined, action);
-      assert.isTrue(next.initialized);
-      assert.equal(next.lastUpdated, 42);
-      assert.deepEqual(next.notifications, { n1: notification });
-      assert.isNull(next.error);
+    it("should return INITIAL_STATE by default", () => {
+      const nextState = WebNotifications(undefined, {
+        type: "some_action",
+      });
+      expect(nextState).toBe(INITIAL_STATE.WebNotifications);
     });
-
-    it("WEB_NOTIFICATIONS_ADDED merges one notification into the index", () => {
+    it("should set initialized and clear error on WEB_NOTIFICATIONS_UPDATED", () => {
+      const prevState = {
+        ...INITIAL_STATE.WebNotifications,
+        error: { step: "snapshot", message: "boom" },
+      };
+      const data = {
+        lastUpdated: 12345,
+        notifications: { abc: { id: "abc", origin: "https://example.com" } },
+        byOrigin: { "https://example.com": ["abc"] },
+      };
+      const nextState = WebNotifications(prevState, {
+        type: at.WEB_NOTIFICATIONS_UPDATED,
+        data,
+      });
+      expect(nextState.initialized).toBe(true);
+      expect(nextState.lastUpdated).toBe(12345);
+      expect(nextState.notifications).toEqual(data.notifications);
+      expect(nextState.byOrigin).toEqual(data.byOrigin);
+      expect(nextState.error).toBeNull();
+    });
+    it("should set error and preserve other fields on WEB_NOTIFICATIONS_ERROR", () => {
+      const prevState = {
+        ...INITIAL_STATE.WebNotifications,
+        initialized: true,
+        notifications: { abc: { id: "abc" } },
+      };
+      const errorData = { step: "snapshot", message: "boom" };
+      const nextState = WebNotifications(prevState, {
+        type: at.WEB_NOTIFICATIONS_ERROR,
+        data: errorData,
+      });
+      expect(nextState.error).toEqual(errorData);
+      expect(nextState.initialized).toBe(true);
+      expect(nextState.notifications).toEqual(prevState.notifications);
+    });
+    it("should merge one notification into the index on WEB_NOTIFICATIONS_ADDED", () => {
       const action = {
         type: at.WEB_NOTIFICATIONS_ADDED,
         data: { notification },
       };
-      const next = reducers.WebNotifications(undefined, action);
-      assert.equal(next.notifications.n1, notification);
-      assert.deepEqual(next.byOrigin["https://example.com"], ["n1"]);
+      const nextState = WebNotifications(undefined, action);
+      expect(nextState.notifications.n1).toBe(notification);
+      expect(nextState.byOrigin["https://example.com"]).toEqual(["n1"]);
     });
-
-    it("WEB_NOTIFICATIONS_ADDED does not duplicate an existing id", () => {
-      const prev = {
+    it("should not duplicate an existing id on WEB_NOTIFICATIONS_ADDED", () => {
+      const prevState = {
         ...INITIAL_STATE.WebNotifications,
         notifications: { n1: notification },
         byOrigin: { "https://example.com": ["n1"] },
       };
-      const next = reducers.WebNotifications(prev, {
+      const nextState = WebNotifications(prevState, {
         type: at.WEB_NOTIFICATIONS_ADDED,
         data: { notification },
       });
-      assert.deepEqual(next.byOrigin["https://example.com"], ["n1"]);
+      expect(nextState.byOrigin["https://example.com"]).toEqual(["n1"]);
     });
-
-    it("WEB_NOTIFICATIONS_REMOVED drops ids and prunes empty origins", () => {
-      const prev = {
+    it("should drop ids and prune empty origins on WEB_NOTIFICATIONS_REMOVED", () => {
+      const prevState = {
         ...INITIAL_STATE.WebNotifications,
         notifications: { n1: notification },
         byOrigin: { "https://example.com": ["n1"] },
       };
-      const next = reducers.WebNotifications(prev, {
+      const nextState = WebNotifications(prevState, {
         type: at.WEB_NOTIFICATIONS_REMOVED,
         data: { removed: [{ origin: "https://example.com", id: "n1" }] },
       });
-      assert.deepEqual(next.notifications, {});
-      assert.isUndefined(next.byOrigin["https://example.com"]);
-    });
-
-    it("WEB_NOTIFICATIONS_ERROR records the error", () => {
-      const next = reducers.WebNotifications(undefined, {
-        type: at.WEB_NOTIFICATIONS_ERROR,
-        data: { message: "nope" },
-      });
-      assert.deepEqual(next.error, { message: "nope" });
-    });
-
-    it("returns previous state for unrelated actions", () => {
-      const prev = INITIAL_STATE.WebNotifications;
-      assert.equal(
-        reducers.WebNotifications(prev, { type: "SOME_OTHER_ACTION" }),
-        prev
-      );
+      expect(nextState.notifications).toEqual({});
+      expect(nextState.byOrigin["https://example.com"]).toBeUndefined();
     });
   });
 });
