@@ -310,6 +310,8 @@ bool WarpBuilder::build() {
 }
 
 bool WarpBuilder::buildInline() {
+  MOZ_ASSERT(!script_->isGenerator() && !script_->isAsync());
+
   if (!buildInlinePrologue()) {
     return false;
   }
