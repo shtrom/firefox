@@ -156,7 +156,13 @@ class BufferList : private AllocPolicy {
     return size;
   }
 
+#ifdef DEBUG
+  bool isStorageConsistent() const { return mSegments.isStorageConsistent(); }
+#endif
+
   void Clear() {
+    MOZ_ASSERT(isStorageConsistent());
+
     if (mOwning) {
       for (Segment& segment : mSegments) {
         this->free_(segment.mData, segment.mCapacity);
