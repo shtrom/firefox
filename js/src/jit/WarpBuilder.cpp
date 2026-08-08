@@ -2582,13 +2582,11 @@ bool WarpBuilder::buildSuspend(BytecodeLocation loc, MDefinition* gen,
       current->add(MPostWriteBarrier::New(alloc(), arrayObj, stackElem));
     }
 
-    auto* len = constant(Int32Value(slotsToCopy - 1));
-
     auto* setInitLength =
-        MSetInitializedLength::New(alloc(), stackStorage, len);
+        MSetInitializedLength::New(alloc(), stackStorage, slotsToCopy);
     current->add(setInitLength);
 
-    auto* setLength = MSetArrayLength::New(alloc(), stackStorage, len);
+    auto* setLength = MSetArrayLength::New(alloc(), stackStorage, slotsToCopy);
     current->add(setLength);
   }
 
@@ -3029,7 +3027,7 @@ bool WarpBuilder::build_InitElemArray(BytecodeLocation loc) {
     current->add(store);
   }
 
-  auto* setLength = MSetInitializedLength::New(alloc(), elements, indexConst);
+  auto* setLength = MSetInitializedLength::New(alloc(), elements, index + 1);
   current->add(setLength);
 
   return resumeAfter(setLength, loc);
@@ -3238,13 +3236,12 @@ bool WarpBuilder::build_Rest(BytecodeLocation loc) {
 
     // Unroll the argument copy loop. We don't need to do any bounds or hole
     // checking here.
-    MConstant* index = nullptr;
     for (uint32_t i = numFormals; i < numActuals; i++) {
       if (!alloc().ensureBallast()) {
         return false;
       }
 
-      index = MConstant::NewInt32(alloc(), i - numFormals);
+      MConstant* index = MConstant::NewInt32(alloc(), i - numFormals);
       current->add(index);
 
       MDefinition* arg = inlineCallInfo()->argv()[i];
@@ -3258,7 +3255,7 @@ bool WarpBuilder::build_Rest(BytecodeLocation loc) {
     // Update the initialized length for all the (necessarily non-hole)
     // elements added.
     MSetInitializedLength* initLength =
-        MSetInitializedLength::New(alloc(), elements, index);
+        MSetInitializedLength::New(alloc(), elements, numRest);
     current->add(initLength);
 
     return true;

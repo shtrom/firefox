@@ -4483,12 +4483,7 @@ void LIRGenerator::visitArrayLength(MArrayLength* ins) {
 
 void LIRGenerator::visitSetArrayLength(MSetArrayLength* ins) {
   MOZ_ASSERT(ins->elements()->type() == MIRType::Elements);
-  MOZ_ASSERT(ins->index()->type() == MIRType::Int32);
-
-  MOZ_ASSERT(ins->index()->isConstant());
-  add(new (alloc()) LSetArrayLength(useRegister(ins->elements()),
-                                    useRegisterOrConstant(ins->index())),
-      ins);
+  add(new (alloc()) LSetArrayLength(useRegister(ins->elements())), ins);
 }
 
 void LIRGenerator::visitFunctionLength(MFunctionLength* ins) {
@@ -4706,12 +4701,7 @@ void LIRGenerator::visitInitializedLength(MInitializedLength* ins) {
 
 void LIRGenerator::visitSetInitializedLength(MSetInitializedLength* ins) {
   MOZ_ASSERT(ins->elements()->type() == MIRType::Elements);
-  MOZ_ASSERT(ins->index()->type() == MIRType::Int32);
-
-  MOZ_ASSERT(ins->index()->isConstant());
-  add(new (alloc()) LSetInitializedLength(useRegister(ins->elements()),
-                                          useRegisterOrConstant(ins->index())),
-      ins);
+  add(new (alloc()) LSetInitializedLength(useRegister(ins->elements())), ins);
 }
 
 void LIRGenerator::visitNot(MNot* ins) {

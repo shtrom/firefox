@@ -10138,21 +10138,9 @@ void CodeGenerator::visitArrayLength(LArrayLength* lir) {
   }
 }
 
-static void SetLengthFromIndex(MacroAssembler& masm, const LAllocation* index,
-                               const Address& length) {
-  if (index->isConstant()) {
-    masm.store32(Imm32(ToInt32(index) + 1), length);
-  } else {
-    Register newLength = ToRegister(index);
-    masm.add32(Imm32(1), newLength);
-    masm.store32(newLength, length);
-    masm.sub32(Imm32(1), newLength);
-  }
-}
-
 void CodeGenerator::visitSetArrayLength(LSetArrayLength* lir) {
   Address length(ToRegister(lir->elements()), ObjectElements::offsetOfLength());
-  SetLengthFromIndex(masm, lir->index(), length);
+  masm.store32(Imm32(lir->mir()->length()), length);
 }
 
 void CodeGenerator::visitFunctionLength(LFunctionLength* lir) {
@@ -15528,7 +15516,7 @@ void CodeGenerator::visitInitializedLength(LInitializedLength* lir) {
 void CodeGenerator::visitSetInitializedLength(LSetInitializedLength* lir) {
   Address initLength(ToRegister(lir->elements()),
                      ObjectElements::offsetOfInitializedLength());
-  SetLengthFromIndex(masm, lir->index(), initLength);
+  masm.store32(Imm32(lir->mir()->length()), initLength);
 }
 
 void CodeGenerator::visitNotI(LNotI* lir) {
