@@ -417,8 +417,7 @@ void InferenceSession::Init(const RefPtr<Promise>& aPromise,
       });
   if (status) {
     LOGD("CreateSession error: {}", status.Message());
-    aPromise->MaybeRejectWithUnknownError(nsDependentCString(status.Message()));
-    return;
+    MOZ_CRASH("CreateSession error");
   }
   LOGD("Successfully created ONNX Runtime session.");
   mSession = session;
