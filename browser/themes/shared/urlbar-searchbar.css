@@ -425,14 +425,6 @@ toolbar[inactive="true"] .urlbar,
   color: var(--toolbar-field-text-color-focus);
 }
 
-@media -moz-pref("browser.nova.enabled") {
-  .urlbar:not(moz-smartbar) {
-    &[breakout][breakout-extend] {
-      height: auto;
-    }
-  }
-}
-
 #TabsToolbar #searchbar:not(:focus-within) {
   /* The tabs toolbar is usually a different color than the other toolbars, and
      we can't predict it, to avoid a transparent field we enforce a border. */
@@ -483,7 +475,6 @@ toolbar[inactive="true"] .urlbar,
   }
 
   .urlbar[breakout][breakout-extend] {
-    height: auto;
     margin-left: calc(-1 * var(--urlbar-margin-inline));
     width: calc(var(--urlbar-width) + 2 * var(--urlbar-margin-inline));
 
