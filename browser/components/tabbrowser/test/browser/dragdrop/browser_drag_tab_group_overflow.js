@@ -143,6 +143,14 @@ async function dragTabGroupLabelInOverflowingTabStrip({
     group,
     "TabGroupAnimationComplete"
   );
+  // Dropping synthesizes a mouseup on the label, which the tab group would take
+  // for a click and toggle itself on. Whether that lands on the label or on its
+  // container comes down to how the collapsed label is laid out, so let it hit
+  // either and go nowhere.
+  group.addEventListener("click", event => event.stopPropagation(), {
+    capture: true,
+    once: true,
+  });
   EventUtils.synthesizeDropAfterDragOver(result, dataTransfer, label);
   window.windowUtils.dragSession.endDragSession(true);
   await TestUtils.waitForCondition(
