@@ -990,6 +990,10 @@ void RunJSMicroTask(JSContext* aCx, CycleCollectedJSContext* aCCJS,
       asyncStackSetter.emplace(aCx, allocStack, reason);
     }
 
+    // Inform the profiler about the flow for this microtask.
+    mozilla::Maybe<AutoProfilerTerminatingFlowMarkerFlowOnly> terminatingMarker;
+    MaybeGetFlowMarker(aMicroTask, terminatingMarker);
+
     {
       mozilla::Maybe<AutoHandlingUserInputStatePusher> userInputStateSwitcher;
       // A new scope is used to make sure the UserInputState is reset before
@@ -998,11 +1002,6 @@ void RunJSMicroTask(JSContext* aCx, CycleCollectedJSContext* aCCJS,
         bool propagate = ShouldPropagateUserInputEventHandlingState(aMicroTask);
         userInputStateSwitcher.emplace(propagate);
       }
-
-      // Inform the profiler about the flow for this microtask.
-      mozilla::Maybe<AutoProfilerTerminatingFlowMarkerFlowOnly>
-          terminatingMarker;
-      MaybeGetFlowMarker(aMicroTask, terminatingMarker);
 
       if (incumbentGlobal) {
         // https://wicg.github.io/scheduling-apis/#sec-patches-html-hostcalljobcallback
