@@ -201,6 +201,9 @@ export const FEATURES = {
   chat: {
     engineId: "smart-openai",
   },
+  "smart-form-fill": {
+    engineId: "smart-openai",
+  },
   "title-generation": {
     engineId: "title-generation-engine",
   },
