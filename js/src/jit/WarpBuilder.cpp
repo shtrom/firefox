@@ -2583,7 +2583,8 @@ bool WarpBuilder::buildSuspend(BytecodeLocation loc, MDefinition* gen,
     }
 
     auto* setInitLength =
-        MSetInitializedLength::New(alloc(), stackStorage, slotsToCopy);
+        MSetInitializedLength::New(alloc(), stackStorage, slotsToCopy,
+                                   /* needsPreBarrier = */ false);
     current->add(setInitLength);
 
     auto* setLength = MSetArrayLength::New(alloc(), stackStorage, slotsToCopy);
@@ -3027,7 +3028,8 @@ bool WarpBuilder::build_InitElemArray(BytecodeLocation loc) {
     current->add(store);
   }
 
-  auto* setLength = MSetInitializedLength::New(alloc(), elements, index + 1);
+  auto* setLength = MSetInitializedLength::New(alloc(), elements, index + 1,
+                                               /* needsPreBarrier = */ false);
   current->add(setLength);
 
   return resumeAfter(setLength, loc);
@@ -3255,7 +3257,8 @@ bool WarpBuilder::build_Rest(BytecodeLocation loc) {
     // Update the initialized length for all the (necessarily non-hole)
     // elements added.
     MSetInitializedLength* initLength =
-        MSetInitializedLength::New(alloc(), elements, numRest);
+        MSetInitializedLength::New(alloc(), elements, numRest,
+                                   /* needsPreBarrier = */ false);
     current->add(initLength);
 
     return true;

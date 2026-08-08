@@ -5338,6 +5338,9 @@ class MacroAssembler : public MacroAssemblerSpecific {
  private:
   TrampolinePtr preBarrierTrampoline(MIRType type);
 
+ public:
+  // Call the pre-barrier for |address| without first checking whether the zone
+  // needs a barrier. Callers must have done that check themselves.
   template <typename T>
   void unguardedCallPreBarrier(const T& address, MIRType type) {
     Label done;
@@ -5359,7 +5362,6 @@ class MacroAssembler : public MacroAssemblerSpecific {
     bind(&done);
   }
 
- public:
   template <typename T>
   void guardedCallPreBarrier(const T& address, MIRType type) {
     Label done;

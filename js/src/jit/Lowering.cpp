@@ -4701,7 +4701,10 @@ void LIRGenerator::visitInitializedLength(MInitializedLength* ins) {
 
 void LIRGenerator::visitSetInitializedLength(MSetInitializedLength* ins) {
   MOZ_ASSERT(ins->elements()->type() == MIRType::Elements);
-  add(new (alloc()) LSetInitializedLength(useRegister(ins->elements())), ins);
+  LDefinition temp0 =
+      ins->needsPreBarrier() ? temp() : LDefinition::BogusTemp();
+  add(new (alloc()) LSetInitializedLength(useRegister(ins->elements()), temp0),
+      ins);
 }
 
 void LIRGenerator::visitNot(MNot* ins) {

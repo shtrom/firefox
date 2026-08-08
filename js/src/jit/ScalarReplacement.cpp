@@ -2433,7 +2433,9 @@ MNewArrayObject* ArgumentsReplacer::inlineArgsArray(MInstruction* ins,
       ins->block()->insertBefore(ins, barrier);
     }
 
-    auto* initLength = MSetInitializedLength::New(alloc(), elements, count);
+    auto* initLength =
+        MSetInitializedLength::New(alloc(), elements, count,
+                                   /* needsPreBarrier = */ false);
     ins->block()->insertBefore(ins, initLength);
   }
 

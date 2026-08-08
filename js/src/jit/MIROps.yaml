@@ -1935,11 +1935,13 @@
     elements: Elements
   arguments:
     length: uint32_t
+    needsPreBarrier: bool
   type_policy: none
   alias_set:
     store: ObjectFields
   clone: true
   generate_lir: true
+  lir_temps: 1
 
 # Load the array length from an elements header.
 - name: ArrayLength
