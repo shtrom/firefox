@@ -19290,7 +19290,7 @@ void CodeGenerator::visitLoadElementV(LLoadElementV* load) {
   } else {
 #ifdef DEBUG
     Label ok;
-    masm.branchTestMagic(Assembler::NotEqual, out, &ok);
+    masm.branchTestMagicValue(Assembler::NotEqual, out, JS_ELEMENTS_HOLE, &ok);
     masm.assumeUnreachable("LoadElementV had incorrect needsHoleCheck");
     masm.bind(&ok);
 #endif
