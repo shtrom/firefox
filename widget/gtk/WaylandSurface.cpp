@@ -1556,28 +1556,37 @@ bool WaylandSurface::EnableColorManagementLocked(
           params, WP_COLOR_MANAGER_V1_PRIMARIES_SRGB);
       break;
   }
+
+  uint32_t requiredTF = 0;
   switch (aTransferFunction) {
     case gfx::TransferFunction::PQ:
-      wp_image_description_creator_params_v1_set_tf_named(
-          params, WP_COLOR_MANAGER_V1_TRANSFER_FUNCTION_ST2084_PQ);
+      requiredTF = WP_COLOR_MANAGER_V1_TRANSFER_FUNCTION_ST2084_PQ;
       break;
     case gfx::TransferFunction::HLG:
-      wp_image_description_creator_params_v1_set_tf_named(
-          params, WP_COLOR_MANAGER_V1_TRANSFER_FUNCTION_HLG);
+      requiredTF = WP_COLOR_MANAGER_V1_TRANSFER_FUNCTION_HLG;
       break;
     case gfx::TransferFunction::BT709:
-      wp_image_description_creator_params_v1_set_tf_named(
-          params, WP_COLOR_MANAGER_V1_TRANSFER_FUNCTION_BT1886);
+      requiredTF = WP_COLOR_MANAGER_V1_TRANSFER_FUNCTION_BT1886;
       break;
     case gfx::TransferFunction::SRGB:
-      wp_image_description_creator_params_v1_set_tf_named(
-          params, WP_COLOR_MANAGER_V1_TRANSFER_FUNCTION_SRGB);
+      requiredTF = WP_COLOR_MANAGER_V1_TRANSFER_FUNCTION_SRGB;
       break;
     case gfx::TransferFunction::LINEAR:
-      wp_image_description_creator_params_v1_set_tf_named(
-          params, WP_COLOR_MANAGER_V1_TRANSFER_FUNCTION_EXT_LINEAR);
+      requiredTF = WP_COLOR_MANAGER_V1_TRANSFER_FUNCTION_EXT_LINEAR;
       break;
   }
+
+  if (requiredTF == 0 || !WaylandDisplayGet()->IsTFSupported(requiredTF)) {
+    LOGWAYLAND("Transfer function %u isn't supported.", requiredTF);
+
+    wp_image_description_creator_params_v1_destroy(params);
+    mColorSurface = nullptr;
+
+    return false;
+  }
+
+  wp_image_description_creator_params_v1_set_tf_named(params, requiredTF);
+
   mImageDescription = WUniquePtr<wp_image_description_v1>(
       wp_image_description_creator_params_v1_create(params));
   // wp_image_description_creator_params_v1_create() consumes params
