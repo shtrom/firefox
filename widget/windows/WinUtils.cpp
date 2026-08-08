@@ -944,8 +944,6 @@ NS_IMETHODIMP AsyncDeleteAllFaviconsFromDisk::Run() {
   return NS_OK;
 }
 
-AsyncDeleteAllFaviconsFromDisk::~AsyncDeleteAllFaviconsFromDisk() {}
-
 /*
  * (static) If the data is available, will return the path on disk where
  * the favicon for page aFaviconPageURI is stored.  If the favicon does not

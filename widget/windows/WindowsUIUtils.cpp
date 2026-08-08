@@ -71,9 +71,6 @@ static TabletModeState sInTabletModeState = TabletModeState::Unknown;
 // Meaningful only if `IsWin11OrLater()`.
 static Maybe<bool> sIsTabletCapable = Nothing();
 
-WindowsUIUtils::WindowsUIUtils() = default;
-WindowsUIUtils::~WindowsUIUtils() = default;
-
 NS_IMPL_ISUPPORTS(WindowsUIUtils, nsIWindowsUIUtils)
 
 NS_IMETHODIMP

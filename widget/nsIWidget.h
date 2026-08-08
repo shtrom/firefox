@@ -314,7 +314,7 @@ namespace mozilla::widget {
  * the constraints.
  */
 struct SizeConstraints {
-  SizeConstraints() : mMaxSize(MOZ_WIDGET_MAX_SIZE, MOZ_WIDGET_MAX_SIZE) {}
+  SizeConstraints() = default;
 
   SizeConstraints(mozilla::DesktopIntSize aMinSize,
                   mozilla::DesktopIntSize aMaxSize)
@@ -328,7 +328,7 @@ struct SizeConstraints {
   }
 
   mozilla::DesktopIntSize mMinSize;
-  mozilla::DesktopIntSize mMaxSize;
+  mozilla::DesktopIntSize mMaxSize{MOZ_WIDGET_MAX_SIZE, MOZ_WIDGET_MAX_SIZE};
 };
 
 class MOZ_RAII AutoSynthesizedEventCallbackNotifier final {

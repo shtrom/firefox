@@ -27,7 +27,7 @@ class WindowsUIUtils final : public nsIWindowsUIUtils {
   NS_DECL_ISUPPORTS
   NS_DECL_NSIWINDOWSUIUTILS
 
-  WindowsUIUtils();
+  WindowsUIUtils() = default;
 
   static RefPtr<SharePromise> Share(nsAutoString aTitle, nsAutoString aText,
                                     nsAutoString aUrl);
@@ -73,7 +73,7 @@ class WindowsUIUtils final : public nsIWindowsUIUtils {
   static void SetIsTitlebarCollapsed(HWND aWnd, bool aIsCollapsed);
 
  protected:
-  ~WindowsUIUtils();
+  ~WindowsUIUtils() = default;
 };
 
 #endif  // mozilla_widget_WindowsUIUtils_h_
