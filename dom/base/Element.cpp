@@ -1200,7 +1200,7 @@ already_AddRefed<DOMRect> Element::GetBoundingClientRect() {
   RefPtr<DOMRect> rect = new DOMRect(ToSupports(OwnerDoc()));
 
   nsIFrame* frame = GetPrimaryFrame(FlushType::Layout);
-  if (!frame) {
+  if (!frame || frame->HasAnyStateBits(NS_FRAME_IS_NONDISPLAY)) {
     // display:none, perhaps? Return the empty rect
     return rect.forget();
   }
@@ -1213,7 +1213,7 @@ already_AddRefed<DOMRectList> Element::GetClientRects() {
   RefPtr<DOMRectList> rectList = new DOMRectList(this);
 
   nsIFrame* frame = GetPrimaryFrame(FlushType::Layout);
-  if (!frame) {
+  if (!frame || frame->HasAnyStateBits(NS_FRAME_IS_NONDISPLAY)) {
     // display:none, perhaps? Return an empty list
     return rectList.forget();
   }
