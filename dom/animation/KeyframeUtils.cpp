@@ -62,9 +62,9 @@ enum class ListAllowance { eDisallow, eAllow };
  * mValues.
  */
 struct PropertyValuesPair {
-  PropertyValuesPair() : mProperty(eCSSProperty_UNKNOWN) {}
+  PropertyValuesPair() = default;
 
-  CSSPropertyId mProperty;
+  CSSPropertyId mProperty{eCSSProperty_UNKNOWN};
   nsTArray<nsCString> mValues;
 };
 

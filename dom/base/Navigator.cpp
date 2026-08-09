@@ -1175,7 +1175,7 @@ class BeaconStreamListener final : public nsIStreamListener {
   ~BeaconStreamListener() = default;
 
  public:
-  BeaconStreamListener() : mLoadGroup(nullptr) {}
+  BeaconStreamListener() = default;
 
   void SetLoadGroup(nsILoadGroup* aLoadGroup) { mLoadGroup = aLoadGroup; }
 
@@ -1184,7 +1184,7 @@ class BeaconStreamListener final : public nsIStreamListener {
   NS_DECL_NSIREQUESTOBSERVER
 
  private:
-  nsCOMPtr<nsILoadGroup> mLoadGroup;
+  nsCOMPtr<nsILoadGroup> mLoadGroup{};
 };
 
 NS_IMPL_ISUPPORTS(BeaconStreamListener, nsIStreamListener, nsIRequestObserver)
