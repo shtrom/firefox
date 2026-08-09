@@ -11,15 +11,16 @@
 #include <type_traits>
 
 #include "mozilla/Attributes.h"
-#include "mozilla/fallible.h"
 #include "mozilla/Types.h"
 #include "mozilla/UniquePtr.h"
+#include "mozilla/fallible.h"
 
 #ifdef XP_WIN
 #  include <cstdint>
 #endif
 #if defined(XP_DARWIN)
 #  include <mach/mach.h>
+
 #  include "mozilla/Assertions.h"
 #  include "mozilla/DebugOnly.h"
 #endif

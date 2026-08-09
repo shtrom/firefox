@@ -11,8 +11,8 @@
 #  include <windows.h>
 #else
 #  include <errno.h>
-#  include <unistd.h>
 #  include <fcntl.h>
+#  include <unistd.h>
 #endif
 
 namespace mozilla {

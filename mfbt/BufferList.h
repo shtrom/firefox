@@ -5,14 +5,14 @@
 #ifndef mozilla_BufferList_h
 #define mozilla_BufferList_h
 
-#include "mozilla/Assertions.h"
-#include "mozilla/MemoryReporting.h"
-#include "mozilla/Vector.h"
-
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <utility>
+
+#include "mozilla/Assertions.h"
+#include "mozilla/MemoryReporting.h"
+#include "mozilla/Vector.h"
 #ifdef DEBUG
 #  include <type_traits>
 #endif
