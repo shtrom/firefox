@@ -18,10 +18,10 @@ add_task(async function () {
 
   // Retrieve light and dark scheme buttons.
   const lightButton = inspector.panelDoc.querySelector(
-    "#color-scheme-simulation-light-toggle"
+    "#color-scheme-emulation-light-toggle"
   );
   const darkButton = inspector.panelDoc.querySelector(
-    "#color-scheme-simulation-dark-toggle"
+    "#color-scheme-emulation-dark-toggle"
   );
 
   // Read the color scheme to know if we should click on the light or dark button
@@ -35,7 +35,7 @@ add_task(async function () {
     }
   );
 
-  // Clicks on the simulation button which triggers a color-scheme change.
+  // Clicks on the emulation button which triggers a color-scheme change.
   // If current scheme is light, click on dark and vice-versa.
   function toggleScheme() {
     info(`Switch color scheme to ${isDarkScheme ? "light" : "dark"} mode`);

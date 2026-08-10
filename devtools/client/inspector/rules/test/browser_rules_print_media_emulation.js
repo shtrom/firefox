@@ -3,26 +3,24 @@
 
 "use strict";
 
-// Test print media simulation.
+// Test print media emulation.
 
 // Load the test page under .com TLD, to make the inner .org iframe remote with
 // Fission.
-const TEST_URI = URL_ROOT_COM_SSL + "doc_print_media_simulation.html";
+const TEST_URI = URL_ROOT_COM_SSL + "doc_print_media_emulation.html";
 
 add_task(async function () {
   await addTab(TEST_URI);
   const { inspector, view } = await openRuleView();
 
-  info(
-    "Open emulation panel and check that the print simulation switch exists"
-  );
+  info("Open emulation panel and check that the print emulation switch exists");
   await openEmulationPanel(view);
-  const printSimulationSwitch = inspector.panelDoc.querySelector(
-    "#print-simulation-enabled"
+  const printEmulationSwitch = inspector.panelDoc.querySelector(
+    "#print-emulation-enabled"
   );
-  ok(printSimulationSwitch, "The print simulation switch exists");
+  ok(printEmulationSwitch, "The print emulation switch exists");
 
-  is(printSimulationSwitch.checked, false, "The print switch is not enabled");
+  is(printEmulationSwitch.checked, false, "The print switch is not enabled");
 
   // Helper to retrieve the background-color property of the selected element
   // All the test elements are expected to have a single background-color rule
@@ -30,7 +28,7 @@ add_task(async function () {
   const ruleViewHasColor = async color =>
     (await getPropertiesForRuleIndex(view, 1)).has("background-color:" + color);
 
-  info("Select a div that will change according to print simulation");
+  info("Select a div that will change according to print emulation");
   await selectNode("div", inspector);
   ok(
     await ruleViewHasColor("#f00"),
@@ -43,9 +41,9 @@ add_task(async function () {
   );
 
   info("Click on the switch and wait for print media to be applied");
-  printSimulationSwitch.click();
+  printEmulationSwitch.click();
 
-  await waitFor(() => printSimulationSwitch.checked === true);
+  await waitFor(() => printEmulationSwitch.checked === true);
   ok(true, "The switch is now enabled");
 
   await waitFor(() => ruleViewHasColor("#00f"));
@@ -64,7 +62,7 @@ add_task(async function () {
 
   ok(
     await ruleViewHasColor("#0ff"),
-    "The simulation is also applied on the remote iframe"
+    "The emulation is also applied on the remote iframe"
   );
   is(
     getRuleViewAncestorRulesDataTextByIndex(view, 1),
@@ -75,10 +73,10 @@ add_task(async function () {
   info("Select the top level div again");
   await selectNode("div", inspector);
 
-  info("Click the switch again to disable print simulation");
-  printSimulationSwitch.click();
+  info("Click the switch again to disable print emulation");
+  printEmulationSwitch.click();
 
-  await waitFor(() => printSimulationSwitch.checked === false);
+  await waitFor(() => printEmulationSwitch.checked === false);
   ok(true, "The switch is no longer enabledF");
 
   await waitFor(() => ruleViewHasColor("#f00"));
@@ -92,7 +90,7 @@ add_task(async function () {
   await selectNodeInFrames(["iframe", "html"], inspector);
 
   await waitFor(() => ruleViewHasColor("#ff0"));
-  ok(true, "The simulation stopped on the remote iframe as well");
+  ok(true, "The emulation stopped on the remote iframe as well");
   is(
     getRuleViewAncestorRulesDataElementByIndex(view, 1),
     null,

@@ -3,7 +3,7 @@
 
 "use strict";
 
-// Test color scheme simulation.
+// Test color scheme emulation.
 const TEST_URI = URL_ROOT_SSL + "doc_media_queries.html";
 
 add_task(async function () {
@@ -14,36 +14,36 @@ add_task(async function () {
 
   info("Check that the color scheme emulation buttons exist");
   const lightButton = inspector.panelDoc.querySelector(
-    "#color-scheme-simulation-light-toggle"
+    "#color-scheme-emulation-light-toggle"
   );
   const darkButton = inspector.panelDoc.querySelector(
-    "#color-scheme-simulation-dark-toggle"
+    "#color-scheme-emulation-dark-toggle"
   );
   ok(lightButton, "The light color scheme emulation button exists");
   ok(darkButton, "The dark color scheme emulation button exists");
 
   info(
-    "Open emulation panel and check that the color scheme simulation buttons exist"
+    "Open emulation panel and check that the color scheme emulation buttons exist"
   );
   await openEmulationPanel(view);
   const lightRadioButton = inspector.panelDoc.querySelector(
-    "#color-scheme-simulation-light"
+    "#color-scheme-emulation-light"
   );
   const darkRadioButton = inspector.panelDoc.querySelector(
-    "#color-scheme-simulation-dark"
+    "#color-scheme-emulation-dark"
   );
   const noEmulationRadioButton = inspector.panelDoc.querySelector(
-    "#color-scheme-simulation-none"
+    "#color-scheme-emulation-none"
   );
-  ok(lightRadioButton, "The light color scheme simulation radio button exists");
-  ok(darkRadioButton, "The dark color scheme simulation radio button exists");
-  ok(noEmulationRadioButton, "The no simulation radio button exists");
+  ok(lightRadioButton, "The light color scheme emulation radio button exists");
+  ok(darkRadioButton, "The dark color scheme emulation radio button exists");
+  ok(noEmulationRadioButton, "The no emulation radio button exists");
 
   // Initially, the emulation should be disabled
   checkEmulationButtonsStatus(inspector, "none");
 
   // Define functions checking the rule view against the current OS preference,
-  // and the opposite simulated scheme.
+  // and the opposite emulated scheme.
   const divHasDefaultSchemeStyling = async () =>
     (await getPropertiesForRuleIndex(view, 2)).has(
       defaultPrefersDark
@@ -80,7 +80,7 @@ add_task(async function () {
   const defaultScheme = defaultPrefersDark ? "dark" : "light";
   const oppositeScheme = defaultPrefersDark ? "light" : "dark";
   info(
-    `Click the ${oppositeScheme} button to simulate the opposite color scheme`
+    `Click the ${oppositeScheme} button to emulate the opposite color scheme`
   );
   buttonToEnable.click();
   await waitFor(() => isButtonChecked(buttonToEnable));
@@ -99,7 +99,7 @@ add_task(async function () {
 
   ok(
     await iframeHasOppositeSchemeStyling(),
-    "The simulation is also applied on the remote iframe"
+    "The emulation is also applied on the remote iframe"
   );
   is(
     getRuleViewAncestorRulesDataTextByIndex(view, 1),
@@ -119,7 +119,7 @@ add_task(async function () {
 
   await waitFor(() => divHasDefaultSchemeStyling());
 
-  info(`Click the ${defaultScheme} button again to disable simulation`);
+  info(`Click the ${defaultScheme} button again to disable emulation`);
   buttonToReset.click();
   await waitFor(() => !isButtonChecked(buttonToReset));
 
@@ -131,9 +131,9 @@ add_task(async function () {
   info("Select the node from the remote iframe again");
   await selectNodeInFrames(["iframe", "html"], inspector);
   await waitFor(() => iframeElHasCurrentSchemeStyling());
-  ok(true, "The simulation stopped on the remote iframe as well");
+  ok(true, "The emulation stopped on the remote iframe as well");
 
-  info("Check that reloading keeps the selected simulation");
+  info("Check that reloading keeps the selected emulation");
   await selectNode("div", inspector);
   buttonToEnable.click();
   await waitFor(() => divHasOppositeSchemeStyling());
@@ -146,7 +146,7 @@ add_task(async function () {
   await waitFor(() => getRuleViewRuleEditorAt(view, 1));
   ok(
     await divHasOppositeSchemeStyling(),
-    "The selected opposite color scheme is still simulated after reloading the page"
+    "The selected opposite color scheme is still emulated after reloading the page"
   );
   is(
     getRuleViewAncestorRulesDataTextByIndex(view, 2),
@@ -156,7 +156,7 @@ add_task(async function () {
 
   await selectNodeInFrames(["iframe", "html"], inspector);
   await waitFor(() => iframeHasOppositeSchemeStyling());
-  ok(true, "Simulation is still applied to the iframe after reloading");
+  ok(true, "Emulation is still applied to the iframe after reloading");
   is(
     getRuleViewAncestorRulesDataTextByIndex(view, 1),
     `@media (prefers-color-scheme: ${oppositeScheme}) {`,
@@ -174,7 +174,7 @@ add_task(async function () {
     ? lightRadioButton
     : darkRadioButton;
   info(
-    `Click the ${oppositeScheme} radio button to simulate the opposite color scheme`
+    `Click the ${oppositeScheme} radio button to emulate the opposite color scheme`
   );
   radioButtonToEnable.click();
   await waitFor(() => isButtonChecked(radioButtonToEnable));
@@ -197,7 +197,7 @@ add_task(async function () {
   await waitFor(() => divHasDefaultSchemeStyling());
 
   info(
-    `Click the no emulation radio button to simulate the opposite color scheme`
+    `Click the no emulation radio button to emulate the opposite color scheme`
   );
   noEmulationRadioButton.click();
   await waitFor(() => isButtonChecked(noEmulationRadioButton));
@@ -226,7 +226,7 @@ add_task(async function () {
   is(
     matchesPrefersDarkColorSchemeMedia,
     defaultPrefersDark,
-    "Color scheme simulation is disabled after closing DevTools"
+    "Color scheme emulation is disabled after closing DevTools"
   );
 });
 
@@ -239,19 +239,19 @@ function isButtonChecked(el) {
 
 function checkEmulationButtonsStatus(inspector, expectedEmulation) {
   const lightButton = inspector.panelDoc.querySelector(
-    "#color-scheme-simulation-light-toggle"
+    "#color-scheme-emulation-light-toggle"
   );
   const darkButton = inspector.panelDoc.querySelector(
-    "#color-scheme-simulation-dark-toggle"
+    "#color-scheme-emulation-dark-toggle"
   );
   const lightRadioButton = inspector.panelDoc.querySelector(
-    "#color-scheme-simulation-light"
+    "#color-scheme-emulation-light"
   );
   const darkRadioButton = inspector.panelDoc.querySelector(
-    "#color-scheme-simulation-dark"
+    "#color-scheme-emulation-dark"
   );
   const noEmulationButton = inspector.panelDoc.querySelector(
-    "#color-scheme-simulation-none"
+    "#color-scheme-emulation-none"
   );
 
   const isLightThemeEmulationExpected = expectedEmulation === "light";

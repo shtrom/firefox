@@ -3,7 +3,7 @@
 
 "use strict";
 
-// Test color scheme simulation when RDM is toggled
+// Test color scheme emulation when RDM is toggled
 const TEST_URI = URL_ROOT + "doc_media_queries.html";
 
 add_task(async function () {
@@ -14,21 +14,21 @@ add_task(async function () {
   const { inspector, view } = await openRuleView();
 
   info(
-    "Open emulation panel and check that the color scheme simulation radio buttons exist"
+    "Open emulation panel and check that the color scheme emulation radio buttons exist"
   );
   await openEmulationPanel(view);
   const lightRadioButton = inspector.panelDoc.querySelector(
-    "#color-scheme-simulation-light"
+    "#color-scheme-emulation-light"
   );
   const darkRadioButton = inspector.panelDoc.querySelector(
-    "#color-scheme-simulation-dark"
+    "#color-scheme-emulation-dark"
   );
-  const noSimulationRadioButton = inspector.panelDoc.querySelector(
-    "#color-scheme-simulation-none"
+  const noEmulationRadioButton = inspector.panelDoc.querySelector(
+    "#color-scheme-emulation-none"
   );
-  ok(lightRadioButton, "The light color-scheme simulation radio button exists");
-  ok(darkRadioButton, "The dark color-scheme simulation radio button exists");
-  ok(noSimulationRadioButton, "The no simulation radio button exists");
+  ok(lightRadioButton, "The light color-scheme emulation radio button exists");
+  ok(darkRadioButton, "The dark color-scheme emulation radio button exists");
+  ok(noEmulationRadioButton, "The no emulation radio button exists");
 
   // Define functions checking if the rule view displays the expected property.
   const divHasCurrentSchemeStyling = async () =>
@@ -59,7 +59,7 @@ add_task(async function () {
   const buttonToReset = defaultPrefersDark ? darkRadioButton : lightRadioButton;
 
   info(
-    `Click the ${defaultPrefersDark ? "light" : "dark"} radio button to simulate the opposite color scheme`
+    `Click the ${defaultPrefersDark ? "light" : "dark"} radio button to emulate the opposite color scheme`
   );
   buttonToEnable.click();
   await waitFor(() => isRadioButtonChecked(buttonToEnable));
@@ -76,7 +76,7 @@ add_task(async function () {
   await waitFor(() => divHasOppositeSchemeStyling());
   ok(
     true,
-    "The rules view was updated with the rule view from the simulated color scheme media query"
+    "The rules view was updated with the rule view from the emulated color scheme media query"
   );
 
   info(
@@ -101,38 +101,38 @@ add_task(async function () {
   ok(isRadioButtonChecked(buttonToReset), "Radio button is still checked");
   ok(
     await divHasCurrentSchemeStyling(),
-    "Color-scheme simulation is still enabled"
+    "Color-scheme emulation is still enabled"
   );
 
-  info("Click the no simulation radio button to disable simulation");
-  noSimulationRadioButton.click();
-  await waitFor(() => isRadioButtonChecked(noSimulationRadioButton));
-  ok(true, "The no simulation radio button is checked");
+  info("Click the no emulation radio button to disable emulation");
+  noEmulationRadioButton.click();
+  await waitFor(() => isRadioButtonChecked(noEmulationRadioButton));
+  ok(true, "The no emulation radio button is checked");
   await waitFor(() => divHasCurrentSchemeStyling());
-  ok(true, "We're not simulating color-scheme anymore");
+  ok(true, "We're not emulating color-scheme anymore");
 
   info(
-    "Check that enabling color-scheme simulation before RDM does work as well"
+    "Check that enabling color-scheme emulation before RDM does work as well"
   );
   buttonToEnable.click();
   await waitFor(() => isRadioButtonChecked(buttonToEnable));
   await waitFor(() => divHasOppositeSchemeStyling());
   ok(
     true,
-    "The rules view was updated with the rule view from the simulated color scheme media query"
+    "The rules view was updated with the rule view from the emulated color scheme media query"
   );
 
   info("Open responsive design mode again");
   await openRDM(tab);
 
   info(
-    "Click the no simulation radio button to disable simulation while RDM is still opened"
+    "Click the no emulation radio button to disable emulation while RDM is still opened"
   );
-  noSimulationRadioButton.click();
-  await waitFor(() => isRadioButtonChecked(noSimulationRadioButton));
-  ok(true, "The no simulation radio button is checked");
+  noEmulationRadioButton.click();
+  await waitFor(() => isRadioButtonChecked(noEmulationRadioButton));
+  ok(true, "The no emulation radio button is checked");
   await waitFor(() => divHasCurrentSchemeStyling());
-  ok(true, "We're not simulating color-scheme anymore");
+  ok(true, "We're not emulating color-scheme anymore");
 
   info("Close responsive design mode");
   await closeRDM(tab);

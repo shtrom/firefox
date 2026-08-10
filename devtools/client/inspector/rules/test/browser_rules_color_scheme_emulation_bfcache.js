@@ -3,7 +3,7 @@
 
 "use strict";
 
-// Test color scheme simulation.
+// Test color scheme emulation.
 const TEST_URI = URL_ROOT_SSL + "doc_media_queries.html";
 
 add_task(async function testBfCacheNavigationWithDevTools() {
@@ -14,44 +14,44 @@ add_task(async function testBfCacheNavigationWithDevTools() {
   const { inspector, view, toolbox } = await openRuleView();
 
   is(
-    await isSimulationEnabled(defaultPrefersDark),
+    await isEmulationEnabled(defaultPrefersDark),
     false,
-    "color scheme simulation is disabled"
+    "color scheme emulation is disabled"
   );
 
   await assertEmulationPanelClosed(view);
   await openEmulationPanel(view);
 
   const { lightButton, darkButton, noneButton } =
-    getColorSchemeSimulationButtons(inspector);
+    getColorSchemeEmulationButtons(inspector);
   const buttonToEnable = defaultPrefersDark ? lightButton : darkButton;
-  ok(buttonToEnable, "The opposite color scheme simulation button exists");
+  ok(buttonToEnable, "The opposite color scheme emulation button exists");
   ok(noneButton, "The none button exists");
 
   info(`Click on the ${defaultPrefersDark ? "light" : "dark"} button`);
   buttonToEnable.click();
-  await waitForSimulationEnabled(defaultPrefersDark);
+  await waitForEmulationEnabled(defaultPrefersDark);
   is(
-    await isSimulationEnabled(defaultPrefersDark),
+    await isEmulationEnabled(defaultPrefersDark),
     true,
-    "color scheme simulation is enabled"
+    "color scheme emulation is enabled"
   );
 
-  info("Navigate to a different URL and disable the color simulation");
+  info("Navigate to a different URL and disable the color emulation");
   await navigateTo(TEST_URI + "?someparameter");
 
   const { noneButton: noneButtonAfterNavigation } =
-    getColorSchemeSimulationButtons(inspector);
+    getColorSchemeEmulationButtons(inspector);
   noneButtonAfterNavigation.click();
-  await waitForSimulationDisabled(defaultPrefersDark);
+  await waitForEmulationDisabled(defaultPrefersDark);
   is(
-    await isSimulationEnabled(defaultPrefersDark),
+    await isEmulationEnabled(defaultPrefersDark),
     false,
-    "color scheme simulation is disabled"
+    "color scheme emulation is disabled"
   );
 
   info(
-    "Perform a bfcache navigation and check that the simulation is still disabled"
+    "Perform a bfcache navigation and check that the emulation is still disabled"
   );
   const waitForDevToolsReload = await watchForDevToolsReload(
     gBrowser.selectedBrowser
@@ -59,9 +59,9 @@ add_task(async function testBfCacheNavigationWithDevTools() {
   gBrowser.goBack();
   await waitForDevToolsReload();
   is(
-    await isSimulationEnabled(defaultPrefersDark),
+    await isEmulationEnabled(defaultPrefersDark),
     false,
-    "color scheme simulation is disabled"
+    "color scheme emulation is disabled"
   );
 
   await toolbox.destroy();
@@ -73,23 +73,22 @@ add_task(async function testBfCacheNavigationAfterClosingDevTools() {
   const { inspector, toolbox } = await openRuleView();
 
   is(
-    await isSimulationEnabled(defaultPrefersDark),
+    await isEmulationEnabled(defaultPrefersDark),
     false,
-    "color scheme simulation is disabled"
+    "color scheme emulation is disabled"
   );
 
-  const { lightButton, darkButton } =
-    getColorSchemeSimulationButtons(inspector);
+  const { lightButton, darkButton } = getColorSchemeEmulationButtons(inspector);
   const buttonToEnable = defaultPrefersDark ? lightButton : darkButton;
-  ok(buttonToEnable, "The opposite color scheme simulation button exists");
+  ok(buttonToEnable, "The opposite color scheme emulation button exists");
 
   info(`Click on the ${defaultPrefersDark ? "light" : "dark"} button`);
   buttonToEnable.click();
-  await waitForSimulationEnabled(defaultPrefersDark);
+  await waitForEmulationEnabled(defaultPrefersDark);
   is(
-    await isSimulationEnabled(defaultPrefersDark),
+    await isEmulationEnabled(defaultPrefersDark),
     true,
-    "color scheme simulation is enabled"
+    "color scheme emulation is enabled"
   );
 
   // Wait for the iframe target to be processed before destroying the toolbox,
@@ -107,17 +106,17 @@ add_task(async function testBfCacheNavigationAfterClosingDevTools() {
   info("Wait for the iframe target to be processed by target-command");
   await onIframeProcessed;
 
-  info("Close DevTools to disable the simulation");
+  info("Close DevTools to disable the emulation");
   await toolbox.destroy();
-  await waitForSimulationDisabled(defaultPrefersDark);
+  await waitForEmulationDisabled(defaultPrefersDark);
   is(
-    await isSimulationEnabled(defaultPrefersDark),
+    await isEmulationEnabled(defaultPrefersDark),
     false,
-    "color scheme simulation is disabled"
+    "color scheme emulation is disabled"
   );
 
   info(
-    "Perform a bfcache navigation and check that the simulation is still disabled"
+    "Perform a bfcache navigation and check that the emulation is still disabled"
   );
   const awaitPageShow = BrowserTestUtils.waitForContentEvent(
     gBrowser.selectedBrowser,
@@ -127,32 +126,32 @@ add_task(async function testBfCacheNavigationAfterClosingDevTools() {
   await awaitPageShow;
 
   is(
-    await isSimulationEnabled(defaultPrefersDark),
+    await isEmulationEnabled(defaultPrefersDark),
     false,
-    "color scheme simulation is disabled"
+    "color scheme emulation is disabled"
   );
 });
 
-function getColorSchemeSimulationButtons(inspector) {
+function getColorSchemeEmulationButtons(inspector) {
   const doc = inspector.panelDoc;
   return {
-    lightButton: doc.querySelector("#color-scheme-simulation-light"),
-    darkButton: doc.querySelector("#color-scheme-simulation-dark"),
-    noneButton: doc.querySelector("#color-scheme-simulation-none"),
+    lightButton: doc.querySelector("#color-scheme-emulation-light"),
+    darkButton: doc.querySelector("#color-scheme-emulation-dark"),
+    noneButton: doc.querySelector("#color-scheme-emulation-none"),
   };
 }
 
-async function isSimulationEnabled(defaultPrefersDark) {
+async function isEmulationEnabled(defaultPrefersDark) {
   return (await getCurrentPrefersDark()) !== defaultPrefersDark;
 }
 
-async function waitForSimulationEnabled(defaultPrefersDark) {
+async function waitForEmulationEnabled(defaultPrefersDark) {
   await waitFor(
     async () => (await getCurrentPrefersDark()) !== defaultPrefersDark
   );
 }
 
-async function waitForSimulationDisabled(defaultPrefersDark) {
+async function waitForEmulationDisabled(defaultPrefersDark) {
   await waitFor(
     async () => (await getCurrentPrefersDark()) === defaultPrefersDark
   );
