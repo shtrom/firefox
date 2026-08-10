@@ -540,3 +540,13 @@ jobs:
           - mozilla-release
       when:
           - {hour: 2, minute: 0}
+
+    - name: bhr-aggregate
+      job:
+          type: decision-task
+          treeherder-symbol: bhr
+          target-tasks-method: bhr_aggregate
+      run-on-projects:
+          - mozilla-central
+      when:
+          - {hour: 10, minute: 0}
