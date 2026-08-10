@@ -4294,7 +4294,7 @@ class MacroAssembler : public MacroAssemblerSpecific {
 
   void emitPreBarrierFastPath(MIRType type, Register temp1, Register temp2,
                               Register temp3, Label* noBarrier);
-  void emitWeapMapBarrierFastPath(ValueOperand value, Register cell,
+  void emitWeakMapBarrierFastPath(ValueOperand value, Register cell,
                                   Register temp1, Register temp2,
                                   Register temp3, Register temp4,
                                   Label* barrier);
