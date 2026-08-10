@@ -152,7 +152,19 @@ add_task(function normalization() {
       0,
       `Removal of ${invalid} is a no-op`
     );
+    equal(cis.normalizeSite(invalid), null, `normalizeSite rejects ${invalid}`);
   }
+
+  equal(
+    cis.normalizeSite("EXAMPLE.com"),
+    "example.com",
+    "normalizeSite lowercases a host"
+  );
+  equal(
+    cis.normalizeSite("BÜCHER.example"),
+    "xn--bcher-kva.example",
+    "normalizeSite encodes an IDN host"
+  );
 });
 
 // Associating to an unknown or non-public container is rejected.
