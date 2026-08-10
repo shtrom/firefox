@@ -8986,7 +8986,8 @@ bool nsDocShell::CanLoadInParentProcess(nsIURI* aURI) {
     }
   }
   // Allow about: URIs, execept about:srcdoc, which can include arbitrary code.
-  // And allow moz-extension ones if we're running extension content in the parent process.
+  // And allow moz-extension ones if we're running extension content in the
+  // parent process.
   if (!uri || (uri->SchemeIs("about") && !NS_IsAboutSrcdoc(uri)) ||
       (!StaticPrefs::extensions_webextensions_remote() &&
        uri->SchemeIs("moz-extension"))) {
