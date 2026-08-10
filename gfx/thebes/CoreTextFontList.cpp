@@ -1502,7 +1502,7 @@ already_AddRefed<gfxFontEntry> CoreTextFontList::MakePlatformFont(
   NS_ASSERTION(aFontData, "MakePlatformFont called with null data");
 
   // create the font entry
-  nsAutoString uniqueName;
+  nsAutoCString uniqueName;
 
   nsresult rv = gfxFontUtils::MakeUniqueUserFontName(uniqueName);
   if (NS_FAILED(rv)) {
@@ -1519,9 +1519,9 @@ already_AddRefed<gfxFontEntry> CoreTextFontList::MakePlatformFont(
     return nullptr;
   }
 
-  RefPtr newFontEntry = MakeRefPtr<CTFontEntry>(
-      NS_ConvertUTF16toUTF8(uniqueName), fontRef, aWeightForEntry,
-      aWidthForEntry, aStyleForEntry, true, false);
+  RefPtr newFontEntry =
+      MakeRefPtr<CTFontEntry>(uniqueName, fontRef, aWeightForEntry,
+                              aWidthForEntry, aStyleForEntry, true, false);
 
   // Record size for memory reporting purposes.
   // The *OnAlloc function will also tell DMD about this block, as the

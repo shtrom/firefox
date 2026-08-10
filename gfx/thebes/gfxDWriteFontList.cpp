@@ -1014,7 +1014,7 @@ already_AddRefed<gfxFontEntry> gfxDWriteFontList::MakePlatformFont(
     return nullptr;
   }
 
-  nsAutoString uniqueName;
+  nsAutoCString uniqueName;
   nsresult rv = gfxFontUtils::MakeUniqueUserFontName(uniqueName);
   NS_ASSERTION(NS_SUCCEEDED(rv), "Failed to make unique user font name");
   if (NS_FAILED(rv)) {
@@ -1025,9 +1025,9 @@ already_AddRefed<gfxFontEntry> gfxDWriteFontList::MakePlatformFont(
   DWRITE_FONT_FILE_TYPE fileType;
   UINT32 numFaces;
 
-  RefPtr entry = MakeRefPtr<gfxDWriteFontEntry>(
-      NS_ConvertUTF16toUTF8(uniqueName), fontFile, fontFileStream,
-      aWeightForEntry, aWidthForEntry, aStyleForEntry);
+  RefPtr entry = MakeRefPtr<gfxDWriteFontEntry>(uniqueName, fontFile,
+                                                fontFileStream, aWeightForEntry,
+                                                aWidthForEntry, aStyleForEntry);
 
   hr = fontFile->Analyze(&isSupported, &fileType, &entry->mFaceType, &numFaces);
   NS_ASSERTION(SUCCEEDED(hr), "IDWriteFontFile::Analyze failed");
