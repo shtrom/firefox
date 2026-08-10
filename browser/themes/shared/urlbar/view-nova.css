@@ -735,10 +735,6 @@
   .urlbarView-row:not([has-action], [has-url], [restyled-search]) & {
     display: none;
   }
-
-  #searchbar-new & {
-    display: none;
-  }
 }
 
 /* Action labels */
@@ -779,10 +775,6 @@
        visible even when the chiclet is hidden due to action-override. */
     padding-inline: 0 !important;
     border-inline: 0;
-  }
-
-  #searchbar-new & {
-    display: none;
   }
 }
 
