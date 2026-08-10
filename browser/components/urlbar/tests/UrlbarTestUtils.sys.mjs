@@ -1543,7 +1543,15 @@ class UrlbarInputTestUtils {
       lazy.ProvidersManager.getInstanceForSap = () => parentOptions.manager;
     }
     try {
-      return new lazy.UrlbarChildController({ input: parentOptions.input });
+      let controller = new lazy.UrlbarChildController({
+        input: parentOptions.input,
+      });
+      // A query waits for the engine store, which this fixture never populates:
+      // the stubbed actor has nothing to service the request with. Mark it ready
+      // so the mock dispatches queries the way a real controller does once its
+      // store is up. Tests that need engines populate it themselves.
+      controller.engineStore.initialized = true;
+      return controller;
     } finally {
       lazy.ProvidersManager.getInstanceForSap = originalGetInstanceForSap;
     }

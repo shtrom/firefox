@@ -2516,6 +2516,24 @@ ${
     let trimmedValue = value.trim();
     let end = trimmedValue.search(UrlbarShared.REGEXP_SPACES);
     let firstToken = end == -1 ? trimmedValue : trimmedValue.substring(0, end);
+
+    if (
+      firstToken == UrlbarShared.RESTRICT_TOKENS.SEARCH &&
+      !this.controller.engineStore.initialized &&
+      !this.controller.engineStore.failed
+    ) {
+      // The search restrict token enters search mode with the default engine,
+      // which the store only knows once it's populated, and no query has run
+      // at this point to wait for it. The retry leaves the focus alone, having
+      // focused above. A failed search service leaves no engine to restrict
+      // to, and sets `failed`, so the retry doesn't come back here.
+      this.controller.engineStore
+        .init()
+        .catch(() => {})
+        .then(() => this.search(value, { ...options, focus: false }));
+      return;
+    }
+
     // Enter search mode if the string starts with a restriction token.
     let searchMode = this.searchModeForToken(firstToken);
     let firstTokenIsRestriction = !!searchMode;
