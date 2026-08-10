@@ -107,7 +107,8 @@ export const MODEL_FEATURES = Object.freeze({
     "memories-quality-and-sensitivity-filter-system",
   MEMORIES_QUALITY_AND_SENSITIVITY_FILTER_USER:
     "memories-quality-and-sensitivity-filter-user",
-  MEMORIES_MERGE: "memories-merge",
+  MEMORIES_DEDUPLICATION_SYSTEM: "memories-deduplication-system",
+  MEMORIES_DEDUPLICATION_USER: "memories-deduplication-user",
   // memories usage features
   MEMORIES_MESSAGE_CLASSIFICATION_SYSTEM:
     "memories-message-classification-system",
@@ -171,7 +172,8 @@ export const FEATURE_MAJOR_VERSIONS = Object.freeze({
   // memories generation feature versions
   [MODEL_FEATURES.MEMORIES_INITIAL_GENERATION_SYSTEM]: 3,
   [MODEL_FEATURES.MEMORIES_INITIAL_GENERATION_USER]: 4,
-  [MODEL_FEATURES.MEMORIES_MERGE]: 1,
+  [MODEL_FEATURES.MEMORIES_DEDUPLICATION_SYSTEM]: 1,
+  [MODEL_FEATURES.MEMORIES_DEDUPLICATION_USER]: 1,
   [MODEL_FEATURES.MEMORIES_QUALITY_AND_SENSITIVITY_FILTER_SYSTEM]: 1,
   [MODEL_FEATURES.MEMORIES_QUALITY_AND_SENSITIVITY_FILTER_USER]: 1,
   // memories usage feature versions

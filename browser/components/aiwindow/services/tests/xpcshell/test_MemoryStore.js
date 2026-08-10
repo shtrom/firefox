@@ -1130,8 +1130,7 @@ add_task(
 
 /**
  * Tests that getRelevantMemories properly invalidates cache when memories are updated.
- * Cache should be reused when memories haven't changed, but invalidated when a
- * memory's identity (id or summary) changes.
+ * Cache should be reused when memories haven't changed, but invalidated when updated_at changes.
  */
 add_task(async function test_getRelevantMemories_cache_invalidation() {
   await deleteAllMemories();
@@ -1181,8 +1180,11 @@ add_task(async function test_getRelevantMemories_cache_invalidation() {
     const memories = await MemoryStore.getMemories({
       includeSoftDeleted: true,
     });
+    // Explicitly set a different timestamp to ensure cache invalidation
+    const originalTimestamp = memories[0].updated_at;
     await MemoryStore.updateMemory(memories[0].id, {
       memory_summary: "Loves drinking coffee and tea",
+      updated_at: originalTimestamp + 1000, // Explicitly different timestamp
     });
 
     await MemoryStore.getRelevantMemories("coffee");
