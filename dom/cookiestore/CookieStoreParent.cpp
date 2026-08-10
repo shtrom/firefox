@@ -6,7 +6,6 @@
 
 #include "CookieStoreNotificationWatcher.h"
 #include "CookieStoreSubscriptionService.h"
-#include "mozilla/BasePrincipal.h"
 #include "mozilla/Components.h"
 #include "mozilla/Maybe.h"
 #include "mozilla/ScopeExit.h"
@@ -35,22 +34,8 @@ namespace mozilla::dom {
 
 namespace {
 
-CookieServiceParent* GetCookieServiceParent(ContentParent* aContentParent) {
-  AssertIsOnMainThread();
-
-  PNeckoParent* neckoParent =
-      LoneManagedOrNullAsserts(aContentParent->ManagedPNeckoParent());
-  if (!neckoParent) {
-    return nullptr;
-  }
-
-  return static_cast<CookieServiceParent*>(
-      LoneManagedOrNullAsserts(neckoParent->ManagedPCookieServiceParent()));
-}
-
 bool CheckContentProcessSecurity(ThreadsafeContentParentHandle* aParent,
                                  const nsACString& aDomain,
-                                 const RefPtr<nsIURI> aCookieURI,
                                  const OriginAttributes& aOriginAttributes) {
   AssertIsOnMainThread();
 
@@ -64,28 +49,21 @@ bool CheckContentProcessSecurity(ThreadsafeContentParentHandle* aParent,
     return false;
   }
 
-  if (CookieServiceParent* cs = GetCookieServiceParent(contentParent)) {
-    return cs->ContentProcessHasCookie(aDomain, aOriginAttributes);
+  PNeckoParent* neckoParent =
+      LoneManagedOrNullAsserts(contentParent->ManagedPNeckoParent());
+  if (!neckoParent) {
+    return false;
   }
 
-  // No cookie service, so no key set to consult: a process hosting only a
-  // service worker. Check the principal instead.
-  nsCOMPtr<nsIPrincipal> principal =
-      BasePrincipal::CreateContentPrincipal(aCookieURI, aOriginAttributes);
-  return contentParent->ValidatePrincipal(principal);
-}
-
-// A process with no cookie service never receives cookie-changed, so it must
-// not be asked to wait for it.
-bool ContentProcessCanBeNotified(ThreadsafeContentParentHandle* aParent) {
-  AssertIsOnMainThread();
-
-  if (!aParent) {
-    return true;
+  PCookieServiceParent* csParent =
+      LoneManagedOrNullAsserts(neckoParent->ManagedPCookieServiceParent());
+  if (!csParent) {
+    return false;
   }
 
-  RefPtr<ContentParent> contentParent = aParent->GetContentParent();
-  return contentParent && GetCookieServiceParent(contentParent);
+  auto* cs = static_cast<CookieServiceParent*>(csParent);
+
+  return cs->ContentProcessHasCookie(aDomain, aOriginAttributes);
 }
 
 bool SubscriptionPrincipalMatchesScope(nsIPrincipal* aPrincipal,
@@ -369,8 +347,7 @@ void CookieStoreParent::GetRequestOnMainThread(
     return;
   }
 
-  if (!CheckContentProcessSecurity(aParent, baseDomain, aCookieURI,
-                                   aOriginAttributes)) {
+  if (!CheckContentProcessSecurity(aParent, baseDomain, aOriginAttributes)) {
     return;
   }
 
@@ -500,8 +477,7 @@ CookieStoreParent::SetReturnType CookieStoreParent::SetRequestOnMainThread(
   }
   domainWithDot.Append(domain);
 
-  if (!CheckContentProcessSecurity(aParent, domain, aCookieURI,
-                                   aOriginAttributes)) {
+  if (!CheckContentProcessSecurity(aParent, domain, aOriginAttributes)) {
     return eSilentFailure;
   }
 
@@ -555,7 +531,7 @@ CookieStoreParent::SetReturnType CookieStoreParent::SetRequestOnMainThread(
     return eSilentFailure;
   }
 
-  aWaitForNotification = notified && ContentProcessCanBeNotified(aParent);
+  aWaitForNotification = notified;
   return eSuccess;
 }
 
@@ -587,7 +563,7 @@ bool CookieStoreParent::DeleteRequestOnMainThread(
     cookiesForDomain = NS_ConvertUTF16toUTF8(aDomain);
   }
 
-  if (!CheckContentProcessSecurity(aParent, cookiesForDomain, aCookieURI,
+  if (!CheckContentProcessSecurity(aParent, cookiesForDomain,
                                    aOriginAttributes)) {
     return false;
   }
@@ -654,7 +630,7 @@ bool CookieStoreParent::DeleteRequestOnMainThread(
       return false;
     }
 
-    return notified && ContentProcessCanBeNotified(aParent);
+    return notified;
   }
 
   return false;

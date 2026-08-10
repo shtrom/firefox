@@ -73,12 +73,6 @@ support-files = [
 
 ["browser_serviceworkers.js"]
 
-["browser_siteContainer.js"]
-support-files = [
-  "siteContainer_redirect.sjs",
-  "siteContainer_sw_intercept.js",
-]
-
 ["browser_switchTab_across_user_context.js"]
 
 ["browser_tab_color_update.js"]

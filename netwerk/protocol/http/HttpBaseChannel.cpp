@@ -4609,27 +4609,26 @@ already_AddRefed<nsILoadInfo> HttpBaseChannel::CloneLoadInfoForRedirect(
     // re-compute the origin attributes of the loadInfo if it's top-level load.
     nsCOMPtr<nsILoadContext> loadContext;
     NS_QueryNotificationCallbacks(this, loadContext);
-    OriginAttributes attrs;
+    OriginAttributes docShellAttrs;
     if (loadContext) {
-      loadContext->GetOriginAttributes(attrs);
+      loadContext->GetOriginAttributes(docShellAttrs);
     }
 
-    OriginAttributes channelAttrs = newLoadInfo->GetOriginAttributes();
-
-    // Preserve the container from the channel attributes, as it could
-    // legitimately differ from the loadContext.
-    attrs.mUserContextId = channelAttrs.mUserContextId;
+    OriginAttributes attrs = newLoadInfo->GetOriginAttributes();
 
     MOZ_ASSERT(
-        attrs.mPrivateBrowsingId == channelAttrs.mPrivateBrowsingId,
+        docShellAttrs.mUserContextId == attrs.mUserContextId,
+        "docshell and necko should have the same userContextId attribute.");
+    MOZ_ASSERT(
+        docShellAttrs.mPrivateBrowsingId == attrs.mPrivateBrowsingId,
         "docshell and necko should have the same privateBrowsingId attribute.");
-    MOZ_ASSERT(attrs.mGeckoViewSessionContextId ==
-                   channelAttrs.mGeckoViewSessionContextId,
+    MOZ_ASSERT(docShellAttrs.mGeckoViewSessionContextId ==
+                   attrs.mGeckoViewSessionContextId,
                "docshell and necko should have the same "
                "geckoViewSessionContextId attribute");
 
+    attrs = std::move(docShellAttrs);
     attrs.SetFirstPartyDomain(true, aNewURI);
-
     newLoadInfo->SetOriginAttributes(attrs);
 
     // re-compute the upgrade insecure requests bit for document navigations

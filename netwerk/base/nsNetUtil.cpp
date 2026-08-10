@@ -3282,12 +3282,10 @@ nsresult NS_CompareLoadInfoAndLoadContext(nsIChannel* aChannel) {
        originAttrsLoadContext.mUserContextId,
        originAttrsLoadContext.mPrivateBrowsingId, aChannel));
 
-  MOZ_ASSERT(loadInfo->GetExternalContentPolicyType() ==
-                     ExtContentPolicy::TYPE_DOCUMENT ||
-                 originAttrsLoadInfo.mUserContextId ==
-                     originAttrsLoadContext.mUserContextId,
+  MOZ_ASSERT(originAttrsLoadInfo.mUserContextId ==
+                 originAttrsLoadContext.mUserContextId,
              "The value of mUserContextId in the loadContext and in the "
-             "loadInfo are not the same for a non-document load!");
+             "loadInfo are not the same!");
 
   MOZ_ASSERT(originAttrsLoadInfo.mPrivateBrowsingId ==
                  originAttrsLoadContext.mPrivateBrowsingId,
