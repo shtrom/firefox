@@ -34,6 +34,9 @@ let gListenerId = 0;
 
 const DISABLE_CONTENT_PROCESS_REUSE_PREF = "dom.ipc.disableContentProcessReuse";
 
+// Upper bound on the tabs BrowserTestUtils.overflowTabs opens.
+const MAX_TABS_FOR_OVERFLOW = 200;
+
 const kAboutPageRegistrationContentScript =
   "chrome://mochikit/content/tests/BrowserTestUtils/content-about-page-utils.js";
 
@@ -2025,7 +2028,8 @@ export var BrowserTestUtils = {
    *          Determines whether the new tabs are added at the beginning of the
    *          URL bar or at the end of it.
    *        overflowTabFactor: 3 | 1.1
-   *          Factor that helps in determining the tab count for overflow.
+   *          Factor that helps in determining the tab count for overflow. More
+   *          tabs are opened if that count doesn't overflow the tab strip.
    */
   async overflowTabs(registerCleanupFunction, win, params = {}) {
     if (!params.hasOwnProperty("overflowAtStart")) {
@@ -2043,15 +2047,6 @@ export var BrowserTestUtils = {
     if (arrowScrollbox.hasAttribute("overflowing")) {
       return;
     }
-    let promises = [];
-    promises.push(
-      BrowserTestUtils.waitForEvent(
-        arrowScrollbox,
-        "overflow",
-        false,
-        e => e.target == arrowScrollbox
-      )
-    );
     const originalSmoothScroll = arrowScrollbox.smoothScroll;
     arrowScrollbox.smoothScroll = false;
     if (registerCleanupFunction) {
@@ -2060,22 +2055,48 @@ export var BrowserTestUtils = {
       });
     }
 
+    let addTab = () =>
+      BrowserTestUtils.addTab(gBrowser, "about:blank", {
+        skipAnimation: true,
+        tabIndex,
+      });
+
     let size = ele => ele.getBoundingClientRect()[overflowDirection];
     let tabMinSize = gBrowser.tabContainer.verticalMode
       ? size(gBrowser.selectedTab)
       : parseInt(win.getComputedStyle(gBrowser.selectedTab).minWidth);
-    let tabCountForOverflow = Math.ceil(
-      (size(arrowScrollbox) / tabMinSize) * params.overflowTabFactor
+    let tabCountForOverflow = Math.min(
+      MAX_TABS_FOR_OVERFLOW,
+      Math.ceil((size(arrowScrollbox) / tabMinSize) * params.overflowTabFactor)
     );
     while (gBrowser.tabs.length < tabCountForOverflow) {
-      promises.push(
-        BrowserTestUtils.addTab(gBrowser, "about:blank", {
-          skipAnimation: true,
-          tabIndex,
-        })
-      );
+      addTab();
     }
-    await Promise.all(promises);
+
+    // The tabs share the scrollport with other elements, so the estimate above
+    // can fall short. Top it up until the content really doesn't fit, keeping
+    // a lid on the tab count in case something else stops the strip from
+    // overflowing. A tab only takes up its share of the scrollport once it is
+    // fully open, so measuring before then would badly overshoot.
+    while (gBrowser.tabs.length < MAX_TABS_FOR_OVERFLOW) {
+      await TestUtils.waitForCondition(
+        () => Array.from(gBrowser.tabs).every(tab => tab._fullyOpen),
+        "Tabs are fully open"
+      );
+      let missingSpace =
+        arrowScrollbox.scrollClientSize - arrowScrollbox.scrollSize;
+      if (missingSpace < 0) {
+        break;
+      }
+      for (let i = Math.max(1, Math.ceil(missingSpace / tabMinSize)); i; i--) {
+        addTab();
+      }
+    }
+
+    await TestUtils.waitForCondition(
+      () => arrowScrollbox.hasAttribute("overflowing"),
+      `Tab strip overflows with ${gBrowser.tabs.length} tabs`
+    );
   },
 
   /**
