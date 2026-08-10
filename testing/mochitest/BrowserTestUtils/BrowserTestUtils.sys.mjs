@@ -2030,6 +2030,10 @@ export var BrowserTestUtils = {
    *        overflowTabFactor: 3 | 1.1
    *          Factor that helps in determining the tab count for overflow. More
    *          tabs are opened if that count doesn't overflow the tab strip.
+   *        overflowBy: number
+   *          How far the tab strip's content has to exceed its scrollport, in
+   *          tabs. Use this when the test depends on how much room there is to
+   *          scroll, since the tab count above only approximates it.
    */
   async overflowTabs(registerCleanupFunction, win, params = {}) {
     if (!params.hasOwnProperty("overflowAtStart")) {
@@ -2044,7 +2048,19 @@ export var BrowserTestUtils = {
       : "width";
     let tabIndex = params.overflowAtStart ? 0 : undefined;
     let arrowScrollbox = gBrowser.tabContainer.arrowScrollbox;
-    if (arrowScrollbox.hasAttribute("overflowing")) {
+    let overflowAmount = () =>
+      arrowScrollbox.scrollSize - arrowScrollbox.scrollClientSize;
+
+    let size = ele => ele.getBoundingClientRect()[overflowDirection];
+    let tabMinSize = gBrowser.tabContainer.verticalMode
+      ? size(gBrowser.selectedTab)
+      : parseInt(win.getComputedStyle(gBrowser.selectedTab).minWidth);
+    let overflowTarget = (params.overflowBy ?? 0) * tabMinSize;
+
+    if (
+      arrowScrollbox.hasAttribute("overflowing") &&
+      overflowAmount() > overflowTarget
+    ) {
       return;
     }
     const originalSmoothScroll = arrowScrollbox.smoothScroll;
@@ -2061,10 +2077,6 @@ export var BrowserTestUtils = {
         tabIndex,
       });
 
-    let size = ele => ele.getBoundingClientRect()[overflowDirection];
-    let tabMinSize = gBrowser.tabContainer.verticalMode
-      ? size(gBrowser.selectedTab)
-      : parseInt(win.getComputedStyle(gBrowser.selectedTab).minWidth);
     let tabCountForOverflow = Math.min(
       MAX_TABS_FOR_OVERFLOW,
       Math.ceil((size(arrowScrollbox) / tabMinSize) * params.overflowTabFactor)
@@ -2083,8 +2095,7 @@ export var BrowserTestUtils = {
         () => Array.from(gBrowser.tabs).every(tab => tab._fullyOpen),
         "Tabs are fully open"
       );
-      let missingSpace =
-        arrowScrollbox.scrollClientSize - arrowScrollbox.scrollSize;
+      let missingSpace = overflowTarget - overflowAmount();
       if (missingSpace < 0) {
         break;
       }
