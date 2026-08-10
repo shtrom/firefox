@@ -8,6 +8,7 @@
 #include "imgLoader.h"
 #include "mozilla/AntiTrackingUtils.h"
 #include "mozilla/AppShutdown.h"
+#include "mozilla/AsyncEventDispatcher.h"
 #include "mozilla/Components.h"
 #include "mozilla/DebugOnly.h"
 #include "mozilla/DynamicFpiNavigationHeuristic.h"
@@ -786,6 +787,13 @@ static Maybe<uint32_t> SelectContainerForNavigation(
     return Nothing();
   }
 
+  // Process selection makes the tab created for the switch a remote one, which
+  // a window not using remote tabs cannot hold: its frontend assumes every
+  // browser it owns is in-process.
+  if (!aContext->UseRemoteTabs()) {
+    return Nothing();
+  }
+
   // Containers are not exposed in private browsing windows.
   if (aContext->UsePrivateBrowsing()) {
     return Nothing();
@@ -1389,6 +1397,18 @@ static void SetNavigating(CanonicalBrowsingContext* aBrowsingContext,
   NS_DispatchToMainThread(NS_NewRunnableFunction(
       "DocumentLoadListener::SetNavigating",
       [browser, aNavigating]() { browser->SetIsNavigating(aNavigating); }));
+}
+
+static void NotifyLoadRetargeted(CanonicalBrowsingContext* aBrowsingContext) {
+  RefPtr<Element> element = aBrowsingContext->GetEmbedderElement();
+  if (!element) {
+    return;
+  }
+
+  auto dispatcher = MakeRefPtr<AsyncEventDispatcher>(
+      element, u"BrowserLoadRetargeted"_ns, CanBubble::eYes,
+      ChromeOnlyDispatch::eYes);
+  dispatcher->PostDOMEvent();
 }
 
 /* static */ bool DocumentLoadListener::LoadInParent(
@@ -2235,8 +2255,9 @@ bool DocumentLoadListener::MaybeTriggerProcessSwitch(
     SwitchToNewTab(browsingContext, where, newTabAttrs)
         ->Then(
             GetMainThreadSerialEventTarget(), __func__,
-            [self = RefPtr{this},
-             options](const RefPtr<BrowsingContext>& aBrowsingContext)
+            [self = RefPtr{this}, options, startedIn = browsingContext,
+             switchedContainer = mSwitchedContainer](
+                const RefPtr<BrowsingContext>& aBrowsingContext)
                 MOZ_CAN_RUN_SCRIPT_BOUNDARY_LAMBDA mutable {
                   if (aBrowsingContext->IsDiscarded()) {
                     MOZ_LOG(gProcessIsolationLog, LogLevel::Error,
@@ -2251,6 +2272,10 @@ bool DocumentLoadListener::MaybeTriggerProcessSwitch(
                   self->TriggerProcessSwitch(
                       MOZ_KnownLive(aBrowsingContext->Canonical()), options,
                       /* aIsNewTab */ true);
+
+                  if (switchedContainer) {
+                    NotifyLoadRetargeted(startedIn);
+                  }
                 },
             [self = RefPtr{this}](const CopyableErrorResult&) {
               MOZ_LOG(gProcessIsolationLog, LogLevel::Error,
