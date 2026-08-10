@@ -1,12 +1,10 @@
 # Any copyright is dedicated to the Public Domain.
 # http://creativecommons.org/publicdomain/zero/1.0/
 
-DIRS += ["qux"]
+SOURCES += ["frob1.c"]
 
-Program("MyProgram")
+BUILD_STATIC_LIB_ARCHIVE = True
 
-USE_LIBS += [
-    "bar",
-    "baz",
-    "frob",
-]
+DIST_INSTALL = True
+
+Library("frob")

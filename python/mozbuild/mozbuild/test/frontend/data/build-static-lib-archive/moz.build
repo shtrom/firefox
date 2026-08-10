@@ -1,12 +1,12 @@
 # Any copyright is dedicated to the Public Domain.
 # http://creativecommons.org/publicdomain/zero/1.0/
 
-DIRS += ["qux"]
 
-Program("MyProgram")
+@template
+def Library(name):
+    LIBRARY_NAME = name
 
-USE_LIBS += [
-    "bar",
-    "baz",
-    "frob",
-]
+
+Library("foo")
+
+BUILD_STATIC_LIB_ARCHIVE = True
