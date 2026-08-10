@@ -150,8 +150,8 @@ class Handle;
 #define PROFILE(isolate, event)
 
 #if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__) && \
-  __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-#define V8_TARGET_LITTLE_ENDIAN 1
+    __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#  define V8_TARGET_LITTLE_ENDIAN 1
 #endif
 
 // Origin:
