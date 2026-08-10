@@ -72,7 +72,7 @@
       }
 
       let tab = this._getDragTarget(event, { findClosestTarget: false });
-      if (!tab) {
+      if (!tab?.visible) {
         return;
       }
       if (tab.splitview) {
