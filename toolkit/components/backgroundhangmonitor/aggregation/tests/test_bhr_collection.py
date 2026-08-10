@@ -127,7 +127,7 @@ def test_query_sql_targets_the_glean_hang_report_table():
     sql = bhr_collection.build_query_sql(
         datetime.date(2026, 5, 1), datetime.date(2026, 5, 1), 1
     )
-    assert "moz-fx-data-shared-prod.firefox_desktop_stable.hang_report_v1" in sql
+    assert "mozdata.firefox_desktop.hang_report" in sql
 
 
 def test_query_sql_filters_build_date_in_sql():
