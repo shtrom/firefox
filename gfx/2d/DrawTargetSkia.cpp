@@ -1490,6 +1490,34 @@ void DrawTargetSkia::StrokeGlyphs(ScaledFont* aFont, const GlyphBuffer& aBuffer,
 void DrawTargetSkia::Mask(const Pattern& aSource, const Pattern& aMask,
                           const DrawOptions& aOptions) {
   Maybe<MutexAutoLock> lock;
+
+  // Avoid using clip shaders for common case of a mask applied to solid color.
+  if (aSource.GetType() == PatternType::COLOR &&
+      aMask.GetType() == PatternType::SURFACE) {
+    const SurfacePattern& pat = static_cast<const SurfacePattern&>(aMask);
+    if (pat.mSurface && pat.mSurface->GetFormat() == SurfaceFormat::A8 &&
+        pat.mMatrix.IsTranslation()) {
+      Point maskOffset = pat.mMatrix.GetTranslation() +
+                         Point(pat.mSurface->GetRect().TopLeft());
+      if (sk_sp<SkImage> maskImage =
+              GetSkImageForSurface(pat.mSurface, &lock)) {
+        if (!pat.mSamplingRect.IsEmpty()) {
+          maskImage = ExtractSubset(maskImage, pat.mSamplingRect);
+          maskOffset += Point(pat.mSamplingRect.TopLeft());
+        }
+        if (maskImage) {
+          AutoPaintSetup paint(mCanvas, aOptions, aSource);
+          SkFilterMode filterMode = pat.mSamplingFilter == SamplingFilter::POINT
+                                        ? SkFilterMode::kNearest
+                                        : SkFilterMode::kLinear;
+          mCanvas->drawImage(maskImage, maskOffset.x, maskOffset.y,
+                             SkSamplingOptions(filterMode), &paint.mPaint);
+          return;
+        }
+      }
+    }
+  }
+
   SkPaint maskPaint;
   SetPaintPattern(maskPaint, aMask, lock);
 
@@ -1503,6 +1531,12 @@ void DrawTargetSkia::Mask(const Pattern& aSource, const Pattern& aMask,
       gfxDebug() << "Failed creating Skia clip shader for Mask";
       return;
     }
+  }
+
+  // Don't use clip shaders in PDF output, since SkPdf doesn't handle them.
+  if (maskShader && !IsBackedByPixels(mCanvas)) {
+    gfxDebug() << "Clip shaders only supported on pixel-backed canvas for Mask";
+    return;
   }
 
   MarkChanged();
@@ -1527,11 +1561,29 @@ void DrawTargetSkia::MaskSurface(const Pattern& aSource, SourceSurface* aMask,
     return;
   }
 
-  SkMatrix maskOffset = SkMatrix::Translate(
-      PointToSkPoint(aOffset + Point(aMask->GetRect().TopLeft())));
-  sk_sp<SkShader> maskShader = maskImage->makeShader(
-      SkTileMode::kClamp, SkTileMode::kClamp,
-      SkSamplingOptions(SkFilterMode::kLinear), maskOffset);
+  Point maskOffset = aOffset + Point(aMask->GetRect().TopLeft());
+  // Avoid using clip shaders for common case of a mask applied to solid color.
+  if (aSource.GetType() == PatternType::COLOR &&
+      aMask->GetFormat() == SurfaceFormat::A8) {
+    MOZ_ASSERT(maskImage->isAlphaOnly());
+    MarkChanged();
+    AutoPaintSetup paint(mCanvas, aOptions, aSource);
+    mCanvas->drawImage(maskImage, maskOffset.x, maskOffset.y,
+                       SkSamplingOptions(SkFilterMode::kLinear), &paint.mPaint);
+    return;
+  }
+
+  // Don't use clip shaders in PDF output, since SkPdf doesn't handle them.
+  if (!IsBackedByPixels(mCanvas)) {
+    gfxDebug()
+        << "Clip shaders only supported on pixel-backed canvas for MaskSurface";
+    return;
+  }
+
+  sk_sp<SkShader> maskShader =
+      maskImage->makeShader(SkTileMode::kClamp, SkTileMode::kClamp,
+                            SkSamplingOptions(SkFilterMode::kLinear),
+                            SkMatrix::Translate(maskOffset.x, maskOffset.y));
   if (!maskShader) {
     gfxDebug() << "Failed creating Skia clip shader for MaskSurface";
     return;
