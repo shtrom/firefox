@@ -130,7 +130,7 @@ export class UrlbarInput extends HTMLElement {
         <html:panel-list class="searchmode-switcher-panel-list">
           <html:div class="searchmode-switcher-panel-description" role="heading" />
 ${
-  Services.prefs.getBoolPref("browser.nova.enabled", false)
+  UrlbarPrefs.get("browser.nova.enabled")
     ? '<html:hr class="searchmode-switcher-panel-installed-engine-separator"/><html:hr class="searchmode-switcher-panel-footer-separator"/>'
     : '<html:hr/><html:hr class="searchmode-switcher-panel-installed-engine-separator searchmode-switcher-panel-footer-separator"/>'
 }
@@ -368,8 +368,7 @@ ${
 
     searchModeSwitcherDescription.setAttribute(
       "data-l10n-id",
-      this.#isAddressbar &&
-        !Services.prefs.getBoolPref("browser.nova.enabled", false)
+      this.#isAddressbar && !UrlbarPrefs.get("browser.nova.enabled")
         ? "urlbar-searchmode-popup-one-off-header"
         : "urlbar-searchmode-popup-header"
     );
@@ -4972,9 +4971,9 @@ ${
       return;
     }
 
-    let prefName =
-      "browser.urlbar.placeholderName" + (this.isPrivate ? ".private" : "");
-    let engineName = Services.prefs.getStringPref(prefName, "");
+    let engineName = UrlbarPrefs.get(
+      "placeholderName" + (this.isPrivate ? ".private" : "")
+    );
     if (engineName) {
       this._setPlaceholder(engineName);
     }

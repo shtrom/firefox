@@ -2319,7 +2319,7 @@ export class UrlbarView {
         this.#createRowContentForBottomUrl(item, result);
       } else if (
         result.isRichSuggestion ||
-        Services.prefs.getBoolPref("browser.nova.enabled", false)
+        UrlbarPrefs.get("browser.nova.enabled")
       ) {
         this.#createRowContentForRichSuggestion(item, result);
       } else {
@@ -2615,10 +2615,7 @@ export class UrlbarView {
       };
     }
 
-    if (
-      result.isRichSuggestion ||
-      Services.prefs.getBoolPref("browser.nova.enabled", false)
-    ) {
+    if (result.isRichSuggestion || UrlbarPrefs.get("browser.nova.enabled")) {
       this.#updateRowForRichSuggestion(item, result);
     }
 
@@ -2817,7 +2814,7 @@ export class UrlbarView {
     // The "rich-suggestion" attribute isn't used in Nova.
     item.toggleAttribute(
       "rich-suggestion",
-      !Services.prefs.getBoolPref("browser.nova.enabled", false)
+      !UrlbarPrefs.get("browser.nova.enabled")
     );
 
     this.#setRowSelectable(item, result.type != UrlbarShared.RESULT_TYPE.TIP);
@@ -2880,7 +2877,7 @@ export class UrlbarView {
     // The "rich-suggestion" attribute isn't used in Nova.
     item.toggleAttribute(
       "rich-suggestion",
-      !Services.prefs.getBoolPref("browser.nova.enabled", false)
+      !UrlbarPrefs.get("browser.nova.enabled")
     );
 
     item.setAttribute(
