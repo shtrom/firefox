@@ -1501,9 +1501,6 @@ class UrlbarInputTestUtils {
           get sapName() {
             return sapName;
           },
-          onFirstResult() {
-            return false;
-          },
           getSearchSource() {
             return "dummy-search-source";
           },

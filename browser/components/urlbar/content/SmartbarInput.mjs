@@ -2997,15 +2997,14 @@ ${
   }
 
   /**
-   * Invoked by the controller when the first result is received.
+   * Invoked by the controller when the first result changed.
    *
-   * @param {UrlbarResult} firstResult
-   *   The first result received.
-   * @returns {boolean}
-   *   True if this method canceled the query and started a new one.  False
-   *   otherwise.
+   * @param {UrlbarQueryContext} queryContext
+   *   The context of the query the result belongs to.
    */
-  onFirstResult(firstResult) {
+  onFirstResult(queryContext) {
+    let firstResult = queryContext.results[0];
+
     // If the heuristic result has a keyword but isn't a keyword offer, we may
     // need to enter search mode.
     if (
@@ -3018,7 +3017,9 @@ ${
         checkValue: false,
       })
     ) {
-      return true;
+      // Search mode restarts the query, so these results are obsolete.
+      this.controller.discardResults();
+      return;
     }
 
     // To prevent selection flickering, we apply autofill on input through a
@@ -3035,8 +3036,6 @@ ${
       this._autofillPlaceholder = null;
       this.setValue(this.userTypedValue);
     }
-
-    return false;
   }
 
   /**

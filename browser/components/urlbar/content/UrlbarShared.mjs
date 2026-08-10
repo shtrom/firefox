@@ -47,6 +47,10 @@ export const UrlbarShared = {
   // them identically without the child reaching into the parent module.
   NOTIFICATIONS: Object.freeze({
     QUERY_STARTED: "onQueryStarted",
+    // Fires when the first result changed, before QUERY_RESULTS, so the input
+    // can react to it (enter search mode, apply autofill) before the results
+    // are shown.
+    QUERY_FIRST_RESULT: "onFirstResult",
     QUERY_RESULTS: "onQueryResults",
     QUERY_RESULT_REMOVED: "onQueryResultRemoved",
     QUERY_CANCELLED: "onQueryCancelled",

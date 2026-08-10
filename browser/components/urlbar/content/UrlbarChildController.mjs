@@ -73,6 +73,10 @@ export class UrlbarChildController {
 
   #userSelectionBehavior = /** @type {"arrow"|"tab"|"none"} */ ("none");
 
+  // The id of the query whose results still have a consumer. Notifications
+  // carrying an older id belong to a query nobody is waiting for anymore.
+  #queryId = 0;
+
   // The content-side engagement-telemetry collector, created lazily on the
   // message path (where the parent stand-in has no `engagementEvent`).
   #childTelemetry = null;
@@ -213,10 +217,15 @@ export class UrlbarChildController {
     this.#listeners.delete(listener);
   }
   notify(notification, ...params) {
+    if (
+      (notification === UrlbarShared.NOTIFICATIONS.QUERY_FIRST_RESULT ||
+        notification === UrlbarShared.NOTIFICATIONS.QUERY_RESULTS) &&
+      params[0].id < this.#queryId
+    ) {
+      return;
+    }
     // When the first results arrive, pre-warm a connection to the heuristic
-    // result. This runs content-side on both transports (the input has already
-    // reacted to the first result before we're notified) and reaches the
-    // parent's window the same way a mousedown speculative connect does.
+    // result.
     if (
       notification === UrlbarShared.NOTIFICATIONS.QUERY_RESULTS &&
       params[0].firstResultChanged
@@ -285,6 +294,7 @@ export class UrlbarChildController {
    * @returns {Promise<UrlbarQueryContext>} Resolves with the finished context.
    */
   startQuery(queryContext) {
+    this.#queryId = queryContext.id;
     let queryContextPromise = this.#parentController.startQuery(queryContext);
     // Arm the event bufferer as the query starts so a just-typed Enter is
     // deferred until results arrive; it can't wait for the QUERY_STARTED
@@ -296,6 +306,16 @@ export class UrlbarChildController {
   }
   cancelQuery() {
     return this.#parentController.cancelQuery();
+  }
+  /**
+   * Keeps the running query's results from reaching the listeners. The input
+   * calls this when it takes the query over after the first result -- entering
+   * search mode and restarting it -- since the results are about to be
+   * replaced. The query keeps running until the restart cancels it, which over
+   * the message path takes a round trip.
+   */
+  discardResults() {
+    this.#queryId++;
   }
   receiveResults(queryContext) {
     return this.#parentController.receiveResults(queryContext);
