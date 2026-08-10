@@ -220,9 +220,6 @@ export const FEATURES = {
   "conversation-suggestions-followup": {
     engineId: "smart-openai",
   },
-  "resume-activity-conversation-starter": {
-    engineId: "smart-openai",
-  },
   "memories-initial-generation-system": {
     engineId: "smart-openai-memories-generation",
   },
