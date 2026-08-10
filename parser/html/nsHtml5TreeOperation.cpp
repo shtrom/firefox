@@ -409,6 +409,10 @@ nsresult nsHtml5TreeOperation::AppendChildrenToNewParent(
     aNode->RemoveChildNode(child, true, nullptr, nullptr,
                            MutationEffectOnScript::KeepTrustWorthiness);
 
+    if (MOZ_UNLIKELY(aParent->IsInclusiveDescendantOf(child))) {
+      continue;
+    }
+
     ErrorResult rv;
     aParent->AppendChildTo(child, false, rv);
     if (rv.Failed()) {
