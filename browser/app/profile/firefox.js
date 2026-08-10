@@ -2289,6 +2289,7 @@ pref("sidebar.updatedBookmarks.enabled", false);
 pref("sidebar.openTabsPanel.enabled", false);
 pref("sidebar.openTabsPanel.collapsedWindows", "{}");
 pref("sidebar.openTabsPanel.sortOption", "tabStripOrder");
+pref("sidebar.openTabsPanel.hoverPreview.enabled", true);
 
 pref("sidebar.notification.badge.aichat", false);
 
