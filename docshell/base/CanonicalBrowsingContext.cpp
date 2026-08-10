@@ -1439,7 +1439,9 @@ void CanonicalBrowsingContext::SetActiveSessionHistoryEntry(
   }
   mActiveEntry = MakeRefPtr<SessionHistoryEntry>(aInfo);
   mActiveEntry->SetDocshellID(GetHistoryID());
-  mActiveEntry->AdoptBFCacheEntry(oldActiveEntry);
+  if (oldActiveEntry) {
+    mActiveEntry->AdoptBFCacheEntry(oldActiveEntry);
+  }
   if (aUpdatedCacheKey != 0) {
     mActiveEntry->SharedInfo()->mCacheKey = aUpdatedCacheKey;
   }
