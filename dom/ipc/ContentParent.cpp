@@ -5894,8 +5894,7 @@ mozilla::ipc::IPCResult ContentParent::RecvStoreAndBroadcastBlobURLRegistration(
     return IPC_FAIL(this, "No principal");
   }
 
-  if (!ValidatePrincipal(aPrincipal,
-                         {ValidatePrincipalOptions::AlwaysAllowSystem})) {
+  if (!ValidatePrincipal(aPrincipal)) {
     return PrincipalValidationIpcFail(aPrincipal, this, __func__);
   }
 
