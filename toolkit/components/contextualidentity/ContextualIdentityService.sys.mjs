@@ -520,7 +520,9 @@ _ContextualIdentityService.prototype = {
     return true;
   },
 
-  _normalizeSite(site) {
+  // Returns the normalized host (lower case, IDN-encoded) for `site`, or null
+  // if `site` cannot be associated to a container.
+  normalizeSite(site) {
     try {
       // domainToASCII does not reject "*", but a host never contains one, so a
       // wildcard site could never match a navigation.
@@ -567,7 +569,7 @@ _ContextualIdentityService.prototype = {
       );
     }
 
-    let host = this._normalizeSite(site);
+    let host = this.normalizeSite(site);
     if (!host) {
       throw new Error("Invalid site for container association.");
     }
@@ -584,7 +586,7 @@ _ContextualIdentityService.prototype = {
   removeSiteAssociation(site) {
     this.ensureDataReady();
 
-    let host = this._normalizeSite(site);
+    let host = this.normalizeSite(site);
     if (!host || !this._siteAssociations.has(host)) {
       return;
     }
@@ -597,7 +599,7 @@ _ContextualIdentityService.prototype = {
   getSiteAssociation(site) {
     this.ensureDataReady();
 
-    let host = this._normalizeSite(site);
+    let host = this.normalizeSite(site);
     return (host && this._siteAssociations.get(host)) || 0;
   },
 
