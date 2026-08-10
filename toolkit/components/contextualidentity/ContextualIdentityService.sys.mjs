@@ -166,6 +166,11 @@ function _ContextualIdentityService(path) {
 }
 
 _ContextualIdentityService.prototype = {
+  QueryInterface: ChromeUtils.generateQI([
+    "nsISiteContainerService",
+    "nsIObserver",
+  ]),
+
   LAST_CONTAINERS_JSON_VERSION,
 
   _userIdentities: [
@@ -615,6 +620,20 @@ _ContextualIdentityService.prototype = {
     return result;
   },
 
+  lookup(host) {
+    return this.getSiteAssociation(host);
+  },
+
+  containerForNavigation(uri, baselineUserContextId) {
+    let host;
+    try {
+      host = uri.asciiHost;
+    } catch (e) {
+      return baselineUserContextId;
+    }
+    return this.getSiteAssociation(host) || baselineUserContextId;
+  },
+
   getIdentityObserverOutput(identity) {
     let wrappedJSObject = {
       name: this.getUserContextLabel(identity.userContextId),
@@ -1044,3 +1063,7 @@ let path = PathUtils.join(
   "containers.json"
 );
 export var ContextualIdentityService = new _ContextualIdentityService(path);
+
+export function SiteContainerService() {
+  return ContextualIdentityService;
+}
