@@ -5,7 +5,6 @@
 #include "mozilla/layers/WebRenderScrollData.h"
 
 #include <ostream>
-#include <unordered_set>
 
 #include "UnitTransforms.h"
 #include "Units.h"
@@ -238,17 +237,6 @@ bool WebRenderScrollData::Validate() const {
       return false;
     }
   }
-
-  // A LayersId must not be referenced more than once.
-  std::unordered_set<LayersId, LayersId::HashFn> seenReferents;
-  for (const auto& layer : mLayerScrollData) {
-    if (Maybe<LayersId> referent = layer.GetReferentId()) {
-      if (!seenReferents.insert(*referent).second) {
-        return false;
-      }
-    }
-  }
-
   return true;
 }
 
