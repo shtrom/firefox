@@ -528,7 +528,15 @@ int extract_signature(const char* src, uint32_t sigIndex, const char* dest) {
     signatureLen = ntohl(signatureLen);
 
     /* Get the signature */
+    if (signatureLen > MAX_SIGNATURE_LENGTH) {
+      fprintf(stderr, "ERROR: signature length is too large\n");
+      goto failure;
+    }
     extractedSignature = malloc(signatureLen);
+    if (!extractedSignature) {
+      fprintf(stderr, "ERROR: could not allocate buffer for signature\n");
+      goto failure;
+    }
     if (fread(extractedSignature, signatureLen, 1, fpSrc) != 1) {
       fprintf(stderr, "ERROR: could not read signature\n");
       goto failure;
