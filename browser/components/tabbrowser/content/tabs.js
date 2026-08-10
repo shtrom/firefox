@@ -1037,7 +1037,7 @@
           !(
             (isTab(child) && child.visible) ||
             isTabGroup(child) ||
-            (isSplitViewWrapper(child) && child.visible)
+            isSplitViewWrapper(child)
           )
         ) {
           continue;
