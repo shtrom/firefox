@@ -3295,8 +3295,12 @@ pref("network.trr.builtin-excluded-domains", "localhost,local");
 // Used for progressive rollout of LNA for ETP strict users
 pref("network.lna.etp.enabled", true);
 
-pref("captivedetect.canonicalURL", "http://detectportal.firefox.com/canonical.html");
-pref("captivedetect.canonicalContent", "<meta http-equiv=\"refresh\" content=\"0;url=https://support.mozilla.org/kb/captive-portal\"/>");
+// The canonical endpoint answers with an empty 204 when there is no captive
+// portal, so no content is expected. These two prefs must always be changed
+// together: pointing canonicalURL at an endpoint that answers with a body
+// requires canonicalContent to hold that body.
+pref("captivedetect.canonicalURL", "http://detectportal.firefox.com/generate_204");
+pref("captivedetect.canonicalContent", "");
 pref("captivedetect.maxWaitingTime", 5000);
 pref("captivedetect.pollingTime", 3000);
 pref("captivedetect.maxRetryCount", 5);
