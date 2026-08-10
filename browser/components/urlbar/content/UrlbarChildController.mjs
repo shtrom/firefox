@@ -19,6 +19,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
 });
 
 /**
+ * @import {URIFixupPrimitives} from "chrome://browser/content/urlbar/UrlbarShared.mjs"
  * @import {UrlbarChild} from "../../../actors/UrlbarChild.sys.mjs"
  * @import {UrlbarInput} from "chrome://browser/content/urlbar/UrlbarInput.mjs"
  * @import {UrlbarParentController} from "moz-src:///browser/components/urlbar/UrlbarParentController.sys.mjs"
@@ -754,14 +755,14 @@ export class UrlbarChildController {
   /**
    * Gets URI fixup primitives for a string. Runs through the actor since the
    * content-web input can't reach `Services.uriFixup` (see
-   * `UrlbarChild.getFixupInfo`).
+   * `UrlbarChild.getFixupPrimitives`).
    *
    * @param {string} searchString
    *   The string to fix up.
-   * @returns {?{keywordAsSent: boolean, preferredURIDisplaySpec: ?string}}
+   * @returns {?URIFixupPrimitives}
    */
-  getFixupInfo(searchString) {
-    return this.#actor.getFixupInfo(searchString, this.#input.isPrivate);
+  getFixupPrimitives(searchString) {
+    return this.#actor.getFixupPrimitives(searchString, this.#input.isPrivate);
   }
 
   /**

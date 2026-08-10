@@ -114,6 +114,7 @@ ChromeUtils.defineESModuleGetters(this, {
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
   UrlbarProviderSearchTips:
     "moz-src:///browser/components/urlbar/UrlbarProviderSearchTips.sys.mjs",
+  UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
   UrlbarTokenizer:
     "moz-src:///browser/components/urlbar/UrlbarTokenizer.sys.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
@@ -3692,7 +3693,7 @@ function middleMousePaste(event) {
   // bar's behavior (stripsurroundingwhitespace)
   clipboard = clipboard.replace(/\s*\n\s*/g, "");
 
-  clipboard = UrlbarUtils.stripUnsafeProtocolOnPaste(clipboard);
+  clipboard = UrlbarShared.stripUnsafeProtocolOnPaste(clipboard);
 
   // if it's not the current tab, we don't need to do anything because the
   // browser doesn't exist.

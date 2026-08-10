@@ -3607,7 +3607,8 @@ ${
     // use the unmodified url instead. Otherwise, if the user edits the url
     // and confirms the new value, we may transform the url into a search.
     let trimmedUrl = UrlbarShared.stripPrefixAndTrim(url, { stripHttp })[0];
-    let isSearch = !!this.controller.getFixupInfo(trimmedUrl)?.keywordAsSent;
+    let isSearch =
+      !!this.controller.getFixupPrimitives(trimmedUrl)?.keywordAsSent;
     if (isSearch) {
       // Although https-first might not respect the shown protocol, converting
       // the result to a search would be more disruptive.
@@ -5311,7 +5312,7 @@ ${
     if (this.#isAddressbar && (this._protocolIsTrimmed || this._wwwIsTrimmed)) {
       let untrim = this._wwwIsTrimmed;
       if (!untrim) {
-        let fixedDisplaySpec = this.controller.getFixupInfo(
+        let fixedDisplaySpec = this.controller.getFixupPrimitives(
           this.value
         )?.preferredURIDisplaySpec;
         if (fixedDisplaySpec) {
@@ -5658,8 +5659,10 @@ ${
     }
     let oldEnd = oldValue.substring(this.selectionEnd);
 
-    const pasteData =
-      lazy.UrlbarUtils.sanitizeTextFromClipboard(originalPasteData);
+    const pasteData = UrlbarShared.sanitizeTextFromClipboard(
+      originalPasteData,
+      this.controller.getFixupPrimitives(originalPasteData)
+    );
 
     if (originalPasteData != pasteData) {
       // Unfortunately we're not allowed to set the bits being pasted
@@ -6235,7 +6238,7 @@ function getDroppableData(event) {
   if (links[0]?.url) {
     event.preventDefault();
     let href = links[0].url;
-    if (lazy.UrlbarUtils.stripUnsafeProtocolOnPaste(href) != href) {
+    if (UrlbarShared.stripUnsafeProtocolOnPaste(href) != href) {
       // We may have stripped an unsafe protocol like javascript: and if so
       // there's no point in handling a partial drop.
       event.stopImmediatePropagation();
