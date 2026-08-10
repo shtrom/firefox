@@ -12,7 +12,6 @@
 #include "gfxFontInfoLoader.h"
 #include "gfxFontUtils.h"
 #include "gfxPlatform.h"
-#include "gfxUserFontSet.h"
 #include "mozilla/EnumeratedArray.h"
 #include "mozilla/FontPropertyTypes.h"
 #include "mozilla/MemoryReporting.h"
@@ -507,13 +506,13 @@ class gfxPlatformFontList : public gfxFontInfoLoader {
    * values to be recorded in the new font entry and used for face selection,
    * in place of whatever inherent style attributes the resource may have.
    *
-   * If the entry or the platform font instance wants to make sure the buffer
-   * persists, it should take a strong ref to aFontData.
+   * This method takes ownership of the data block passed in as aFontData,
+   * and must ensure it is free()'d when no longer required.
    */
   virtual already_AddRefed<gfxFontEntry> MakePlatformFont(
       const nsACString& aFontName, WeightRange aWeightForEntry,
       WidthRange aWidthForEntry, SlantStyleRange aStyleForEntry,
-      FontData* aFontData) = 0;
+      const uint8_t* aFontData, uint32_t aLength) = 0;
 
   // get the standard family name on the platform for a given font name
   // (platforms may override, eg Mac)

@@ -8,6 +8,7 @@
 #include <cairo-ft.h>
 
 #include "2D.h"
+#include "mozilla/UniquePtr.h"
 
 namespace mozilla {
 namespace gfx {
@@ -33,7 +34,8 @@ class NativeFontResourceFreeType
   already_AddRefed<SharedFTFace> CloneFace(int aFaceIndex = 0) override;
 
  protected:
-  NativeFontResourceFreeType(const uint8_t*&& aFontData, uint32_t aDataLength,
+  NativeFontResourceFreeType(UniquePtr<uint8_t[]>&& aFontData,
+                             uint32_t aDataLength,
                              FT_Library aFTLibrary = nullptr);
 
   template <class T>
@@ -41,7 +43,8 @@ class NativeFontResourceFreeType
                                             uint32_t aDataLength,
                                             FT_Library aFTLibrary);
 
-  RefPtr<FontData> mFontData;
+  UniquePtr<uint8_t[]> mFontData;
+  uint32_t mDataLength;
   FT_Library mFTLibrary;
 };
 
@@ -62,7 +65,8 @@ class NativeFontResourceFontconfig final : public NativeFontResourceFreeType {
  private:
   friend class NativeFontResourceFreeType;
 
-  NativeFontResourceFontconfig(const uint8_t*&& aFontData, uint32_t aDataLength,
+  NativeFontResourceFontconfig(UniquePtr<uint8_t[]>&& aFontData,
+                               uint32_t aDataLength,
                                FT_Library aFTLibrary = nullptr);
 };
 #endif

@@ -17,8 +17,6 @@
 #include "nsTArray.h"
 #include "nscore.h"
 
-class FontData;
-
 #define GFX_CLEARTYPE_PARAMS "gfx.font_rendering.cleartype_params."
 #define GFX_CLEARTYPE_PARAMS_GAMMA "gfx.font_rendering.cleartype_params.gamma"
 #define GFX_CLEARTYPE_PARAMS_CONTRAST \
@@ -98,14 +96,14 @@ class gfxDWriteFontFileStream final : public IDWriteFontFileStream {
  public:
   /**
    * Used by the FontFileLoader to create a new font stream,
-   * this font stream is created from data in memory.
-   *
-   * The FontData struct is refcounted; the stream will hold a reference
-   * to it as long as needed, to guaranteed the data remains alive.
+   * this font stream is created from data in memory. The memory
+   * passed may be released after object creation, it will be
+   * copied internally.
    *
    * @param aData Font data
    */
-  gfxDWriteFontFileStream(FontData* aData, uint64_t aFontFileKey);
+  gfxDWriteFontFileStream(const uint8_t* aData, uint32_t aLength,
+                          uint64_t aFontFileKey);
   ~gfxDWriteFontFileStream();
 
   // IUnknown interface
@@ -140,9 +138,7 @@ class gfxDWriteFontFileStream final : public IDWriteFontFileStream {
   virtual HRESULT STDMETHODCALLTYPE GetLastWriteTime(OUT UINT64* lastWriteTime);
 
   size_t SizeOfExcludingThis(mozilla::MallocSizeOf mallocSizeOf) const {
-    // We don't report the size of mData, because the original user font entry
-    // will account for that.
-    return 0;
+    return mData.ShallowSizeOfExcludingThis(mallocSizeOf);
   }
 
   size_t SizeOfIncludingThis(mozilla::MallocSizeOf mallocSizeOf) const {
@@ -150,7 +146,7 @@ class gfxDWriteFontFileStream final : public IDWriteFontFileStream {
   }
 
  private:
-  RefPtr<FontData> mData;
+  FallibleTArray<uint8_t> mData;
   mozilla::Atomic<uint32_t> mRefCnt;
   uint64_t mFontFileKey;
 };
@@ -199,16 +195,17 @@ class gfxDWriteFontFileLoader : public IDWriteFontFileLoader {
 
   /**
    * Creates a IDWriteFontFile and IDWriteFontFileStream from aFontData.
-   * The data from aFontData must remain valid as long as the DWrite
-   * font file is alive.
+   * The data from aFontData will be copied internally, so the caller
+   * is free to dispose of it once this method returns.
    *
    * @param aFontData the font data for the custom font file
+   * @param aLength length of the font data
    * @param aFontFile out param for the created font file
    * @param aFontFileStream out param for the corresponding stream
    * @return HRESULT of internal calls
    */
   static HRESULT CreateCustomFontFile(
-      FontData* aFontData, IDWriteFontFile** aFontFile,
+      const uint8_t* aFontData, uint32_t aLength, IDWriteFontFile** aFontFile,
       gfxDWriteFontFileStream** aFontFileStream);
 
   size_t SizeOfIncludingThis(mozilla::MallocSizeOf mallocSizeOf) const;

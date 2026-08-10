@@ -72,6 +72,12 @@ class CTFontEntry final : public gfxFontEntry {
 
   bool SupportsOpenTypeFeature(Script aScript, uint32_t aFeatureTag) override;
 
+  size_t ComputedSizeOfExcludingThis(
+      mozilla::MallocSizeOf aMallocSizeOf) override {
+    return gfxFontEntry::ComputedSizeOfExcludingThis(aMallocSizeOf) +
+           mComputedSizeOfUserFont;
+  }
+
  protected:
   // Protected destructor, to discourage deletion outside of Release():
   virtual ~CTFontEntry() { ::CGFontRelease(mFontRef); }
@@ -111,6 +117,8 @@ class CTFontEntry final : public gfxFontEntry {
   nsTHashtable<nsUint32HashKey> mAvailableTables MOZ_GUARDED_BY(mLock);
 
   mozilla::ThreadSafeWeakPtr<mozilla::gfx::UnscaledFontMac> mUnscaledFont;
+
+  size_t mComputedSizeOfUserFont = 0;
 };
 
 class CTFontFamily : public gfxFontFamily {
@@ -164,7 +172,7 @@ class CoreTextFontList : public gfxPlatformFontList {
   already_AddRefed<gfxFontEntry> MakePlatformFont(
       const nsACString& aFontName, WeightRange aWeightForEntry,
       WidthRange aWidthForEntry, SlantStyleRange aStyleForEntry,
-      FontData* aFontData) override;
+      const uint8_t* aFontData, uint32_t aLength) override;
 
   bool FindAndAddFamiliesLocked(
       FontVisibilityProvider* aFontVisibilityProvider,

@@ -70,7 +70,6 @@ EXPORTS.mozilla.gfx += [
     "D3D11Checks.h",
     "DeviceManagerDx.h",
     "DisplayConfigWindows.h",
-    "FontData.h",
     "FontPaletteCache.h",
     "PrintPromise.h",
     "PrintTarget.h",

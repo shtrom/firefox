@@ -5,13 +5,16 @@
 #include "NativeFontResourceFreeType.h"
 
 #include "UnscaledFontFreeType.h"
+#include "mozilla/UniquePtrExtensions.h"
 
 namespace mozilla::gfx {
 
 NativeFontResourceFreeType::NativeFontResourceFreeType(
-    const uint8_t*&& aFontData, uint32_t aDataLength, FT_Library aFTLibrary)
+    UniquePtr<uint8_t[]>&& aFontData, uint32_t aDataLength,
+    FT_Library aFTLibrary)
     : NativeFontResource(aDataLength),
-      mFontData(MakeRefPtr<FontData>(std::move(aFontData), aDataLength)),
+      mFontData(std::move(aFontData)),
+      mDataLength(aDataLength),
       mFTLibrary(aFTLibrary) {}
 
 NativeFontResourceFreeType::~NativeFontResourceFreeType() = default;
@@ -22,11 +25,11 @@ already_AddRefed<T> NativeFontResourceFreeType::CreateInternal(
   if (!aFontData || !aDataLength) {
     return nullptr;
   }
-  auto* fontData = static_cast<uint8_t*>(malloc(aDataLength));
+  auto fontData = MakeUniqueFallible<uint8_t[]>(aDataLength);
   if (!fontData) {
     return nullptr;
   }
-  memcpy(fontData, aFontData, aDataLength);
+  memcpy(fontData.get(), aFontData, aDataLength);
 
   RefPtr<T> resource = new T(std::move(fontData), aDataLength, aFTLibrary);
   return resource.forget();
@@ -51,8 +54,8 @@ already_AddRefed<UnscaledFont> NativeFontResourceFreeType::CreateUnscaledFont(
 
 already_AddRefed<SharedFTFace> NativeFontResourceFreeType::CloneFace(
     int aFaceIndex) {
-  RefPtr<SharedFTFace> face =
-      Factory::NewSharedFTFaceFromData(mFTLibrary, mFontData, aFaceIndex, this);
+  RefPtr<SharedFTFace> face = Factory::NewSharedFTFaceFromData(
+      mFTLibrary, mFontData.get(), mDataLength, aFaceIndex, this);
   if (!face ||
       (FT_Select_Charmap(face->GetFace(), FT_ENCODING_UNICODE) != FT_Err_Ok &&
        FT_Select_Charmap(face->GetFace(), FT_ENCODING_MS_SYMBOL) !=
@@ -64,7 +67,8 @@ already_AddRefed<SharedFTFace> NativeFontResourceFreeType::CloneFace(
 
 #ifdef MOZ_WIDGET_GTK
 NativeFontResourceFontconfig::NativeFontResourceFontconfig(
-    const uint8_t*&& aFontData, uint32_t aDataLength, FT_Library aFTLibrary)
+    UniquePtr<uint8_t[]>&& aFontData, uint32_t aDataLength,
+    FT_Library aFTLibrary)
     : NativeFontResourceFreeType(std::move(aFontData), aDataLength,
                                  aFTLibrary) {}
 
