@@ -582,7 +582,16 @@ Summarize current page content.
 Opens the Smart Window "Organize Tabs" panel. Unlike `OPEN_PANEL`, the panel is
 built on demand rather than already present in the DOM.
 
-- args: (none)
+- args:
+```ts
+{
+  data?: {
+    // Identifies the surface that opened the panel, recorded as the `source`
+    // extra key on the panel's telemetry. Defaults to "message".
+    source?: string;
+  }
+}
+```
 
 ### `OPEN_PANEL`
 

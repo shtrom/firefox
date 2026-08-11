@@ -37,6 +37,7 @@ add_setup(async function setup() {
 });
 
 add_task(async function test_primary_action_opens_the_panel() {
+  Services.fog.testResetFOG();
   const win = await openAIWindow();
   const url = "https://example.com/";
   const loaded = BrowserTestUtils.browserLoaded(
@@ -48,7 +49,10 @@ add_task(async function test_primary_action_opens_the_panel() {
   await loaded;
 
   await SpecialMessageActions.handleAction(
-    { type: "OPEN_ORGANIZE_TABS_PANEL" },
+    {
+      type: "OPEN_ORGANIZE_TABS_PANEL",
+      data: { source: "callout_click" },
+    },
     win.gBrowser.selectedBrowser
   );
 
@@ -59,6 +63,14 @@ add_task(async function test_primary_action_opens_the_panel() {
   await TestUtils.waitForCondition(
     () => panel.state === "open",
     "The panel finished opening"
+  );
+
+  const opened = Glean.smartWindow.autoTabGroupMenuOpened.testGetValue();
+  Assert.equal(opened?.length, 1, "One 'menu opened' event recorded");
+  Assert.equal(
+    opened[0].extra.source,
+    "callout_click",
+    "The callout is credited with opening the panel"
   );
 
   await BrowserTestUtils.closeWindow(win);

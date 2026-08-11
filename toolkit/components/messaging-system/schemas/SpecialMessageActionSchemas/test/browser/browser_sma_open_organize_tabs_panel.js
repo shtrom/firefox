@@ -12,13 +12,28 @@ add_task(async function test_OPEN_ORGANIZE_TABS_PANEL() {
 
   await SMATestUtils.executeAndValidateAction({
     type: "OPEN_ORGANIZE_TABS_PANEL",
+    data: { source: "callout_click" },
   });
 
-  Assert.ok(stub.calledOnce, "opened the Organize Tabs panel");
   Assert.equal(
     stub.firstCall.args[0],
     window,
-    "opened it in the acting window"
+    "opened the panel in the acting window"
+  );
+  Assert.equal(
+    stub.firstCall.args[1].source,
+    "callout_click",
+    "passed along source"
+  );
+
+  await SMATestUtils.executeAndValidateAction({
+    type: "OPEN_ORGANIZE_TABS_PANEL",
+  });
+
+  Assert.equal(
+    stub.secondCall.args[1].source,
+    "message",
+    "default message source"
   );
 
   stub.restore();
