@@ -34,6 +34,9 @@ class PKCS11ModuleChild final : public PPKCS11ModuleChild {
 
   ipc::IPCResult RecvListModules(ListModulesResolver&& aResolver);
 
+  ipc::IPCResult RecvResetToken(SECMODModuleID aModuleID, CK_SLOT_ID aSlotID,
+                                ResetTokenResolver&& aResolver);
+
  private:
   nsCOMPtr<nsISerialEventTarget> mTaskQueue;
 

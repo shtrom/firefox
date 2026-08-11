@@ -4,6 +4,7 @@
 
 #include "PKCS11Token.h"
 
+#include "PKCS11ModuleDB.h"
 #include "ScopedNSSTypes.h"
 #include "mozilla/Casting.h"
 #include "mozilla/ErrorResult.h"
@@ -372,6 +373,8 @@ PKCS11Token::GetHasPassword(bool* hasPassword) {
 
 #if defined(NIGHTLY_BUILD) && !defined(MOZ_NO_SMART_CARDS)
 nsresult PKCS11Token::GetTokenInfo(TokenInfo& tokenInfo) {
+  tokenInfo.moduleID() = PK11_GetModuleID(mSlot.get());
+  tokenInfo.slotID() = PK11_GetSlotID(mSlot.get());
   nsresult rv = GetTokenName(tokenInfo.name());
   if (NS_FAILED(rv)) {
     return rv;
@@ -459,7 +462,38 @@ RemotePKCS11Token::Logout(JSContext* aCx, Promise** aPromise) {
 
 NS_IMETHODIMP
 RemotePKCS11Token::Reset(JSContext* aCx, Promise** aPromise) {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  MOZ_ASSERT(NS_IsMainThread());
+  if (!NS_IsMainThread()) {
+    return NS_ERROR_NOT_SAME_THREAD;
+  }
+
+  RefPtr<PKCS11ModuleDB> pkcs11ModuleDB(PKCS11ModuleDB::GetSingleton());
+  if (!pkcs11ModuleDB) {
+    return NS_ERROR_FAILURE;
+  }
+
+  ErrorResult result;
+  RefPtr<Promise> promise =
+      Promise::Create(xpc::CurrentNativeGlobal(aCx), result);
+  if (result.Failed()) {
+    return result.StealNSResult();
+  }
+
+  pkcs11ModuleDB->ResetToken(mTokenInfo.moduleID(), mTokenInfo.slotID())
+      ->Then(GetCurrentSerialEventTarget(), __func__,
+             [self = RefPtr{this}, promise](
+                 const PKCS11ModuleDB::TokenInfoPromise::ResolveOrRejectValue&
+                     aValue) {
+               if (aValue.IsResolve()) {
+                 self->mTokenInfo = std::move(aValue.ResolveValue());
+                 promise->MaybeResolveWithUndefined();
+               } else {
+                 promise->MaybeReject(aValue.RejectValue());
+               }
+             });
+
+  promise.forget(aPromise);
+  return NS_OK;
 }
 
 NS_IMETHODIMP

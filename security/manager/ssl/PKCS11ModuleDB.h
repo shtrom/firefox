@@ -54,6 +54,16 @@ class PKCS11ModuleDB : public nsIPKCS11ModuleDB {
   RefPtr<ListModulesPromise> ListRemoteProcessModules();
   static RefPtr<ListModulesPromise> ListRemoteProcessModulesGivenParent(
       const RefPtr<PKCS11ModuleParent>& parent);
+
+ public:
+  typedef MozPromise<mozilla::psm::TokenInfo, nsresult, true> TokenInfoPromise;
+  RefPtr<TokenInfoPromise> ResetToken(SECMODModuleID moduleID,
+                                      CK_SLOT_ID slotID);
+
+ private:
+  static RefPtr<TokenInfoPromise> ResetTokenGivenParent(
+      const RefPtr<PKCS11ModuleParent>& parent, SECMODModuleID moduleID,
+      CK_SLOT_ID slotID);
 #endif  // NIGHTLY_BUILD && !MOZ_NO_SMART_CARDS
 };
 

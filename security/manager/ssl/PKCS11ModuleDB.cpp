@@ -535,6 +535,27 @@ PKCS11ModuleDB::ListRemoteProcessModules() {
         return ListModulesPromise::CreateAndReject(rv, __func__);
       });
 }
+
+RefPtr<PKCS11ModuleDB::TokenInfoPromise> PKCS11ModuleDB::ResetTokenGivenParent(
+    const RefPtr<PKCS11ModuleParent>& parent, SECMODModuleID moduleID,
+    CK_SLOT_ID slotID) {
+  using ReturnType = std::tuple<const nsresult&, TokenInfo&&>;
+  return parent->SendResetToken(moduleID, slotID)
+      ->Then(
+          GetCurrentSerialEventTarget(), __func__,
+          [](ReturnType rv) {
+            if (NS_FAILED(std::get<0>(rv))) {
+              return TokenInfoPromise::CreateAndReject(std::get<0>(rv),
+                                                       __func__);
+            }
+            return TokenInfoPromise::CreateAndResolve(
+                std::move(std::get<1>(rv)), __func__);
+          },
+          [](ipc::ResponseRejectReason reason) {
+            return TokenInfoPromise::CreateAndReject(NS_ERROR_FAILURE,
+                                                     __func__);
+          });
+}
 #endif  // NIGHTLY_BUILD && !MOZ_NO_SMART_CARDS
 
 NS_IMETHODIMP
@@ -627,6 +648,24 @@ void CollectThirdPartyPKCS11ModuleTelemetry(bool aIsInitialization) {
   mozilla::glean::pkcs11::third_party_modules_loaded.Set(
       thirdPartyModulesLoaded);
 }
+
+#if defined(NIGHTLY_BUILD) && !defined(MOZ_NO_SMART_CARDS)
+RefPtr<PKCS11ModuleDB::TokenInfoPromise> PKCS11ModuleDB::ResetToken(
+    SECMODModuleID moduleID, CK_SLOT_ID slotID) {
+  if (!mPKCS11ModuleProcessPromise) {
+    return TokenInfoPromise::CreateAndReject(NS_ERROR_NOT_AVAILABLE, __func__);
+  }
+  return mPKCS11ModuleProcessPromise->Then(
+      GetCurrentSerialEventTarget(), __func__,
+      [moduleID, slotID](const RefPtr<PKCS11ModuleParent>& parent) {
+        MOZ_RELEASE_ASSERT(parent);
+        return ResetTokenGivenParent(parent, moduleID, slotID);
+      },
+      [](nsresult rv) {
+        return TokenInfoPromise::CreateAndReject(rv, __func__);
+      });
+}
+#endif  // NIGHTLY_BUILD && !MOZ_NO_SMART_CARDS
 
 }  // namespace psm
 }  // namespace mozilla

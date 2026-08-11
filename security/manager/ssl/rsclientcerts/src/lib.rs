@@ -646,8 +646,8 @@ macro_rules! declare_unsupported_pkcs11_functions {
             _ulPinLen: CK_ULONG,
             _pLabel: CK_UTF8CHAR_PTR,
         ) -> CK_RV {
-            log_with_thread_id!(error, "C_InitToken: CKR_FUNCTION_NOT_SUPPORTED");
-            CKR_FUNCTION_NOT_SUPPORTED
+            log_with_thread_id!(debug, "C_InitToken: CKR_OK");
+            CKR_OK
         }
 
         extern "C" fn C_GetOperationState(

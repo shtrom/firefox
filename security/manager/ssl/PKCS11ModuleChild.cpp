@@ -10,6 +10,8 @@
 
 #include "NSSCertDBTrustDomain.h"
 #include "PKCS11ModuleDB.h"
+#include "PKCS11Token.h"
+#include "ScopedNSSTypes.h"
 #include "mozilla/ipc/Endpoint.h"
 #include "nsDebugImpl.h"
 
@@ -72,6 +74,30 @@ ipc::IPCResult PKCS11ModuleChild::RecvListModules(
   nsresult rv = PKCS11ModuleDB::DoListModules(modules);
   using Type = std::tuple<const nsresult&, nsTArray<ModuleInfo>&&>;
   aResolver(Type(rv, std::move(modules)));
+  return IPC_OK();
+}
+
+nsresult DoResetToken(SECMODModuleID aModuleID, CK_SLOT_ID aSlotID,
+                      TokenInfo& aTokenInfo) {
+  UniquePK11SlotInfo slot(SECMOD_LookupSlot(aModuleID, aSlotID));
+  if (!slot) {
+    return NS_ERROR_FAILURE;
+  }
+  SECStatus rv = PK11_ResetToken(slot.get(), nullptr);
+  if (rv != SECSuccess) {
+    return MapSECStatus(rv);
+  }
+  RefPtr<PKCS11Token> token(MakeAndAddRef<PKCS11Token>(slot.get()));
+  return token->GetTokenInfo(aTokenInfo);
+}
+
+ipc::IPCResult PKCS11ModuleChild::RecvResetToken(
+    SECMODModuleID aModuleID, CK_SLOT_ID aSlotID,
+    ResetTokenResolver&& aResolver) {
+  TokenInfo tokenInfo;
+  nsresult rv = DoResetToken(aModuleID, aSlotID, tokenInfo);
+  using Type = std::tuple<const nsresult&, TokenInfo&&>;
+  aResolver(Type(rv, std::move(tokenInfo)));
   return IPC_OK();
 }
 
