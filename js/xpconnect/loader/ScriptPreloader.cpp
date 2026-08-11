@@ -379,8 +379,8 @@ nsresult ScriptPreloader::Observe(nsISupports* subject, const char* topic,
     // reclaim these pages under memory pressure without unmapping them.
     if (mCacheData->initialized()) {
       // MADV_COLD may return EINVAL on kernels older than 5.4.
-      (void)madvise(mCacheData->get<uint8_t>().get(), mCacheData->size(),
-                    MADV_COLD);
+      uint8_t* ptr = const_cast<uint8_t*>(mCacheData->get<uint8_t>().get());
+      (void)madvise(ptr, mCacheData->size(), MADV_COLD);
     }
 #endif
 
