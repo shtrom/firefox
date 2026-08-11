@@ -4924,7 +4924,9 @@ void AsyncPanZoomController::RequestContentRepaint(
       request.GetScrollAnimationType() ==
           mLastPaintRequestMetrics.GetScrollAnimationType() &&
       request.GetLastSnapTargetIds() ==
-          mLastPaintRequestMetrics.GetLastSnapTargetIds()) {
+          mLastPaintRequestMetrics.GetLastSnapTargetIds() &&
+      request.IsInScrollingGesture() ==
+          mLastPaintRequestMetrics.IsInScrollingGesture()) {
     return;
   }
 
