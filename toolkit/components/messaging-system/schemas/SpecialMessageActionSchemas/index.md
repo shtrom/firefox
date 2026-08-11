@@ -70,7 +70,13 @@ Example:
 }
 ```
 
-Opens a given about page
+Opens a given about page.
+
+Only pages in the `ALLOWED_ABOUT_PAGES` allowlist are permitted; any other
+page throws an error. As of writing, the allowed pages are: `addons`,
+`profiles`, `translations`, `keyboard`, `logins`, `preferences`,
+`privatebrowsing`, `protections`, `referrals`, `settings`, `welcome`,
+`newtab`, `home`, and `robots`.
 
 Example:
 
@@ -84,12 +90,19 @@ Example:
 ### `OPEN_PREFERENCES_PAGE`
 
 * args:
-```
+```ts
 {
-  args?: string, // (a category accessible via a `#`)
-  entrypoint?: string // URL search param used to referrals
+  // Top-level category, optionally with a "-subcategory" (e.g.
+  // "general-cfrfeatures"). Passed as `category` (preferred) or `args`.
+  category?: string,
+  entrypoint?: string, // URL search param used for referrals
+}
+```
 
 Opens `about:preferences` with an optional category accessible via a `#` in the URL (e.g. `about:preferences#home`).
+
+Only real top-level categories and subcategories that map to a named pane will
+route; unknown values silently fall back to the default pane.
 
 Example:
 
