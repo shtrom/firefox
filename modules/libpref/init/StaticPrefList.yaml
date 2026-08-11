@@ -11769,10 +11769,12 @@
   mirror: always
   rust: true
 
-# Per-domain blocklist for ::-webkit-scrollbar pseudo element
-- name: layout.css.fake-webkit-scrollbar.disabled-domains
+# Per-domain allowlist for ::-webkit-scrollbar pseudo element. The
+# pseudo-element is treated as unsupported on every domain that is not listed,
+# so an empty value disables it everywhere. "*" enables it on every domain.
+- name: layout.css.fake-webkit-scrollbar.enabled-domains
   type: DataMutexString
-  value: "discord.com,shitposter.world,gemini.google.com,content.powerapps.com"
+  value: "mail.google.com"
   mirror: always
   rust: true
 
