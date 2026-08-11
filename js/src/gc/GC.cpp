@@ -6037,6 +6037,22 @@ JS_PUBLIC_API bool js::gc::detail::CellIsMarkedGrayIfKnown(
 
 #ifdef DEBUG
 
+static void DeferGrayMarkingCheck(Zone* zone, const Cell* cell) {
+  // Add the cell to the zone's vector of cells to check. These are checked
+  // after the zone transitions from marking to sweeping in
+  // GCRuntime::beginSweepingSweepGroup.
+
+  auto& cells = zone->cellsToAssertNotGray();
+  if (!cells.empty() && cells.back() == cell) {
+    return;
+  }
+
+  AutoEnterOOMUnsafeRegion oomUnsafe;
+  if (!cells.append(cell)) {
+    oomUnsafe.crash("Can't append to delayed gray checks list");
+  }
+}
+
 JS_PUBLIC_API void js::gc::detail::AssertCellIsNotGray(const Cell* cell) {
   if (!cell->isTenured()) {
     return;
@@ -6068,10 +6084,7 @@ JS_PUBLIC_API void js::gc::detail::AssertCellIsNotGray(const Cell* cell) {
     // non-black cells until we finish gray marking.
 
     if (!tc->isMarkedBlack()) {
-      AutoEnterOOMUnsafeRegion oomUnsafe;
-      if (!zone->cellsToAssertNotGray().append(cell)) {
-        oomUnsafe.crash("Can't append to delayed gray checks list");
-      }
+      DeferGrayMarkingCheck(zone, cell);
     }
     return;
   }

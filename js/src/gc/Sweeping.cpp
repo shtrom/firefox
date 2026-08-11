@@ -1776,8 +1776,7 @@ IncrementalProgress GCRuntime::beginSweepingSweepGroup(JS::GCContext* gcx,
       for (const auto* cell : zone->cellsToAssertNotGray()) {
         if (cell->isMarkedGray()) {
           const char* kind = JS::GCTraceKindToAscii(cell->getTraceKind());
-          printf_stderr("AssertCellIsNotGray: Found gray %s %p\n", kind,
-                        cell);
+          printf_stderr("AssertCellIsNotGray: Found gray %s %p\n", kind, cell);
           foundUnexpectedGrayCells = true;
         }
       }
