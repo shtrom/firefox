@@ -137,7 +137,7 @@ static LOONG64Extensions ComputeLOONG64Extensions() {
   LOONG64Extensions extensions{};
 
 #if defined(JS_SIMULATOR_LOONG64)
-  extensions += LOONG64Extension::LamBh;
+  // TODO: The simulator does not support any extensions yet.
 #elif defined(USE_HWCAP)
   const uint64_t hwcap = getauxval(AT_HWCAP);
   if (hwcap & LOONG64_HWCAP_LAM_BH) {

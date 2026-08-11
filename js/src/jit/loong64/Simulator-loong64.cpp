@@ -505,14 +505,6 @@ SimInstruction::Type SimInstruction::instructionType() const {
       case op_fldx_d:
       case op_fstx_s:
       case op_fstx_d:
-      case op_amswap_b:
-      case op_amswap_h:
-      case op_amadd_b:
-      case op_amadd_h:
-      case op_amswap_db_b:
-      case op_amswap_db_h:
-      case op_amadd_db_b:
-      case op_amadd_db_h:
       case op_amswap_w:
       case op_amswap_d:
       case op_amadd_w:
@@ -3728,14 +3720,6 @@ void Simulator::decodeTypeOp17(SimInstruction* instr) {
       writeD(rj(instr) + rk(instr), getFpuRegisterDouble(fd_reg(instr)), instr);
       break;
     }
-    case op_amswap_b:
-    case op_amswap_db_b:
-      AtomicMemoryHelper(AtomicOperations::exchangeSeqCst<int8_t>, instr);
-      break;
-    case op_amswap_h:
-    case op_amswap_db_h:
-      AtomicMemoryHelper(AtomicOperations::exchangeSeqCst<int16_t>, instr);
-      break;
     case op_amswap_w:
     case op_amswap_db_w:
       AtomicMemoryHelper(AtomicOperations::exchangeSeqCst<int32_t>, instr);
@@ -3743,14 +3727,6 @@ void Simulator::decodeTypeOp17(SimInstruction* instr) {
     case op_amswap_d:
     case op_amswap_db_d:
       AtomicMemoryHelper(AtomicOperations::exchangeSeqCst<int64_t>, instr);
-      break;
-    case op_amadd_b:
-    case op_amadd_db_b:
-      AtomicMemoryHelper(AtomicOperations::fetchAddSeqCst<int8_t>, instr);
-      break;
-    case op_amadd_h:
-    case op_amadd_db_h:
-      AtomicMemoryHelper(AtomicOperations::fetchAddSeqCst<int16_t>, instr);
       break;
     case op_amadd_w:
     case op_amadd_db_w:
