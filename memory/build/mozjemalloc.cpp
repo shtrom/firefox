@@ -1415,7 +1415,7 @@ ArenaPurgeResult arena_t::Purge(
       chunk_is_dying = chunk->mDying;
 
       // The code below will exit returning ReachedThresholdOrBusy if these are
-      // both false, so clear mIsDeferredPurgeNeeded while we still hold the
+      // both false, so clear mIsPurgePending while we still hold the
       // lock.
       if (!continue_purge_chunk && !continue_purge_arena) {
         purge_info.mArena.mIsPurgePending = false;
@@ -2790,7 +2790,7 @@ inline void arena_t::MayDoOrQueuePurge(purge_action_t aAction,
   switch (aAction) {
     case purge_action_t::Queue:
       // Note that this thread committed earlier by setting
-      // mIsDeferredPurgePending to add us to the list. There is a low
+      // mIsPurgePending to add us to the list. There is a low
       // chance that in the meantime another thread ran Purge() and cleared
       // the flag, but that is fine, we'll adjust our bookkeeping when calling
       // ShouldStartPurge() or Purge() next time.
@@ -4181,7 +4181,7 @@ may_purge_now_result_t ArenaCollection::MayPurgeSteps(
       return may_purge_now_result_t::NeedsMore;
     }
 
-    // We need to avoid the invalid state where mIsDeferredPurgePending is set
+    // We need to avoid the invalid state where mIsPurgePending is set
     // but the arena is not in the list or about to be added. So remove the
     // arena from the list before calling Purge().
     mOutstandingPurges.remove(found);
@@ -4197,7 +4197,7 @@ may_purge_now_result_t ArenaCollection::MayPurgeSteps(
 
     // Note that after the above Purge() and taking the lock below there's a
     // chance another thread may be purging the arena and clear
-    // mIsDeferredPurgePending.  Resulting in the state of being in the list
+    // mIsPurgePending.  Resulting in the state of being in the list
     // with that flag clear.  That's okay since the next time a purge occurs
     // (and one will because it's in the list) it'll clear the flag and the
     // state will be consistent again.
