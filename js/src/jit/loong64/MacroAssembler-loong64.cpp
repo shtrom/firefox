@@ -1603,11 +1603,6 @@ FaultingCodeOffset MacroAssemblerLOONG64::ma_store(
 void MacroAssemblerLOONG64::ma_store(Imm32 imm, const BaseIndex& dest,
                                      LoadStoreSize size,
                                      LoadStoreExtension extension) {
-  if (imm.value == 0) {
-    ma_store(zero, dest, size, extension);
-    return;
-  }
-
   UseScratchRegisterScope temps(asMasm());
   Address address = asMasm().computeScaledAddress(dest, temps);
 
@@ -5088,11 +5083,6 @@ void MacroAssemblerLOONG64Compat::loadPrivate(const Address& address,
 }
 
 void MacroAssemblerLOONG64Compat::store8(Imm32 imm, const Address& address) {
-  if (imm.value == 0) {
-    ma_store(zero, address, SizeByte);
-    return;
-  }
-
   UseScratchRegisterScope temps(asMasm());
   Register scratch = temps.Acquire();
   ma_li(scratch, imm);
@@ -5114,11 +5104,6 @@ FaultingCodeOffset MacroAssemblerLOONG64Compat::store8(Register src,
 }
 
 void MacroAssemblerLOONG64Compat::store16(Imm32 imm, const Address& address) {
-  if (imm.value == 0) {
-    ma_store(zero, address, SizeHalfWord);
-    return;
-  }
-
   UseScratchRegisterScope temps(asMasm());
   Register scratch = temps.Acquire();
   ma_li(scratch, imm);
@@ -5153,11 +5138,6 @@ FaultingCodeOffset MacroAssemblerLOONG64Compat::store32(
 }
 
 void MacroAssemblerLOONG64Compat::store32(Imm32 src, const Address& address) {
-  if (src.value == 0) {
-    ma_store(zero, address, SizeWord);
-    return;
-  }
-
   UseScratchRegisterScope temps(asMasm());
   Register scratch = temps.Acquire();
   move32(src, scratch);
@@ -5176,10 +5156,6 @@ FaultingCodeOffset MacroAssemblerLOONG64Compat::store32(Register src,
 template <typename T>
 FaultingCodeOffset MacroAssemblerLOONG64Compat::storePtr(ImmWord imm,
                                                          T address) {
-  if (imm.value == 0) {
-    return ma_store(zero, address, SizeDouble);
-  }
-
   UseScratchRegisterScope temps(asMasm());
   Register scratch = temps.Acquire();
   ma_li(scratch, imm);
