@@ -44,6 +44,76 @@ nsJXLDecoder::~nsJXLDecoder() {
 
 LexerResult nsJXLDecoder::DoDecode(SourceBufferIterator& aIterator,
                                    IResumable* aOnResume) {
+  LexerResult result = DoDecodeInternal(aIterator, aOnResume);
+  if (result.is<TerminalState>()) {
+    RecordDecodeTelemetry(result.as<TerminalState>());
+  }
+  return result;
+}
+
+void nsJXLDecoder::RecordDecodeTelemetry(TerminalState aState) {
+  using Label = glean::jxl::DecodeResultLabel;
+
+  // We want to report failures in metadata decodes because we won't get a
+  // full decode in that case to report the failure.
+  if (WantsFrameCount() ||
+      (IsMetadataDecode() && aState == TerminalState::SUCCESS)) {
+    return;
+  }
+
+  if (aState == TerminalState::FAILURE) {
+    Label label = Label::eDecodeError;
+    switch (mDecodeResult) {
+      case DecodeResult::DecodeError:
+        label = Label::eDecodeError;
+        break;
+      case DecodeResult::SizeOverflow:
+        label = Label::eSizeOverflow;
+        break;
+      case DecodeResult::OutOfMemory:
+        label = Label::eOutOfMemory;
+        break;
+      case DecodeResult::PipeInitError:
+        label = Label::ePipeInitError;
+        break;
+      case DecodeResult::InvalidFrameDuration:
+        label = Label::eInvalidFrameDuration;
+        break;
+      case DecodeResult::WriteError:
+        label = Label::eWriteError;
+        break;
+      case DecodeResult::NoBasicInfo:
+        label = Label::eNoBasicInfo;
+        break;
+    }
+    glean::jxl::decode_result.EnumGet(label).Add();
+    return;
+  }
+
+  Label successLabel = mFrameCompleted         ? Label::eSuccess
+                       : mPartialFrameRendered ? Label::ePartialFrame
+                                               : Label::eNoFrame;
+  glean::jxl::decode_result.EnumGet(successLabel).Add();
+
+  // hdr and animated come from the basic info, which is available on any
+  // successful terminal state (including partial_frame / no_frame), so record
+  // them regardless of how much of the frame was produced.
+  glean::jxl::hdr
+      .EnumGet(jxl_decoder_use_f16(mDecoder.get())
+                   ? glean::jxl::HdrLabel::ePresent
+                   : glean::jxl::HdrLabel::eAbsent)
+      .Add();
+
+  JxlBasicInfo basicInfo = jxl_decoder_get_basic_info(mDecoder.get());
+  glean::jxl::animated
+      .EnumGet(basicInfo.valid && basicInfo.is_animated
+                   ? glean::jxl::AnimatedLabel::ePresent
+                   : glean::jxl::AnimatedLabel::eAbsent)
+      .Add();
+}
+
+LexerResult nsJXLDecoder::DoDecodeInternal(SourceBufferIterator& aIterator,
+                                           IResumable* aOnResume) {
   MOZ_ASSERT(!HasError(), "Shouldn't call DoDecode after error!");
 
   if (WantsFrameCount()) {
@@ -216,6 +286,7 @@ nsJXLDecoder::ProcessResult nsJXLDecoder::ProcessAvailableData(
       MOZ_LOG(sJXLLog, LogLevel::Debug,
               ("[this=%p] nsJXLDecoder::ProcessAvailableData -- decode error",
                this));
+      mDecodeResult = DecodeResult::DecodeError;
       return ProcessResult::Error;
     }
 
@@ -233,6 +304,7 @@ nsJXLDecoder::ProcessResult nsJXLDecoder::ProcessAvailableData(
                   ("[this=%p] nsJXLDecoder::ProcessAvailableData -- dimensions "
                    "%ux%u exceed INT32_MAX, failing",
                    this, basicInfo.width, basicInfo.height));
+          mDecodeResult = DecodeResult::SizeOverflow;
           return ProcessResult::Error;
         }
 
@@ -341,6 +413,7 @@ LexerResult nsJXLDecoder::DrainFrames() {
     switch (status) {
       case JxlDecoderStatus::Ok: {
         if (!HasSize()) {
+          mDecodeResult = DecodeResult::NoBasicInfo;
           return LexerResult(TerminalState::FAILURE);
         }
 
@@ -366,11 +439,13 @@ LexerResult nsJXLDecoder::DrainFrames() {
 
       case JxlDecoderStatus::NeedMoreData:
         if (!HasSize()) {
+          mDecodeResult = DecodeResult::NoBasicInfo;
           return LexerResult(TerminalState::FAILURE);
         }
         return LexerResult(TerminalState::SUCCESS);
 
       case JxlDecoderStatus::Error:
+        mDecodeResult = DecodeResult::DecodeError;
         return LexerResult(TerminalState::FAILURE);
     }
   }
@@ -453,11 +528,13 @@ nsresult nsJXLDecoder::AllocateFrameBuffers() {
             ("[this=%p] nsJXLDecoder::AllocateFrameBuffers -- "
              "failed to allocate pixel buffer\n",
              this));
+    mDecodeResult = DecodeResult::OutOfMemory;
     return NS_ERROR_FAILURE;
   }
 
   if (mPixelFormat.value() == PixelFormat::Cmyk8 &&
       !mKBuffer.resize(size_t(size.width) * size.height)) {
+    mDecodeResult = DecodeResult::OutOfMemory;
     return NS_ERROR_FAILURE;
   }
 
@@ -467,6 +544,7 @@ nsresult nsJXLDecoder::AllocateFrameBuffers() {
   if (mPixelFormat.value() != PixelFormat::Rgba8) {
     CheckedInt<size_t> rowBufSize = CheckedInt<size_t>(size.width) * 4;
     if (!rowBufSize.isValid() || !mU8RowBuf.resize(rowBufSize.value())) {
+      mDecodeResult = DecodeResult::OutOfMemory;
       return NS_ERROR_FAILURE;
     }
   }
@@ -495,6 +573,7 @@ nsresult nsJXLDecoder::EnsureSurfacePipe() {
     JxlFrameInfo frameInfo = jxl_decoder_get_frame_info(mDecoder.get());
     MOZ_ASSERT(frameInfo.frame_duration_valid);
     if (!frameInfo.frame_duration_valid) {
+      mDecodeResult = DecodeResult::InvalidFrameDuration;
       return NS_ERROR_FAILURE;
     }
     animParams.emplace(FullFrame().ToUnknownRect(),
@@ -538,6 +617,7 @@ nsresult nsJXLDecoder::EnsureSurfacePipe() {
       this, size, OutputSize(), FullFrame(), inFormat, outFormat, animParams,
       pipeTransform, pipeFlags);
   if (!mCurrentPipe) {
+    mDecodeResult = DecodeResult::PipeInitError;
     return NS_ERROR_FAILURE;
   }
 
@@ -769,6 +849,7 @@ bool nsJXLDecoder::WritePixelRowsToPipe() {
     }
     if (mCurrentPipe->WriteBuffer(reinterpret_cast<uint32_t*>(pipeInput)) ==
         WriteState::FAILURE) {
+      mDecodeResult = DecodeResult::WriteError;
       return false;
     }
     currentRow += size.width * BytesPerPixel();
@@ -809,6 +890,7 @@ nsresult nsJXLDecoder::FinishFrame() {
   PostFrameStop(hasTransparency ? Opacity::SOME_TRANSPARENCY
                                 : Opacity::FULLY_OPAQUE);
   mCurrentPipe.reset();
+  mFrameCompleted = true;
   return NS_OK;
 }
 
@@ -822,6 +904,7 @@ void nsJXLDecoder::FlushPartialFrame() {
     // Nothing new was rendered.
     return;
   }
+  mPartialFrameRendered = true;
 
   // Lazily create the SurfacePipe now that we have content for it. Doing
   // this before any pixels are ready would expose an opaque-black surface

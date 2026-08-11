@@ -64,6 +64,24 @@ class nsJXLDecoder final : public Decoder {
 
   enum class ProcessResult { NeedMoreData, YieldOutput, Complete, Error };
 
+  // Failure reason recorded to jxl.decode_result. Defaults to DecodeError (the
+  // opaque jxl-rs failure) and is overwritten at more specific failure sites.
+  enum class DecodeResult : uint8_t {
+    DecodeError,
+    SizeOverflow,
+    OutOfMemory,
+    PipeInitError,
+    InvalidFrameDuration,
+    WriteError,
+    NoBasicInfo,
+  };
+
+  // Runs the actual decode; DoDecode wraps this to record decode telemetry
+  // once the decode reaches a terminal state.
+  LexerResult DoDecodeInternal(SourceBufferIterator& aIterator,
+                               IResumable* aOnResume);
+  void RecordDecodeTelemetry(TerminalState aState);
+
   JxlDecoderStatus ProcessInput(const uint8_t** aData, size_t* aLength);
   FrameOutputResult HandleFrameOutput();
   /// @aData and @aLength are in/out: on return they point to and describe the
@@ -154,7 +172,17 @@ class nsJXLDecoder final : public Decoder {
   Vector<uint8_t> mKBuffer;  // K (Black) channel, 1 byte/pixel, for CMYK images
   Maybe<SurfacePipe> mCurrentPipe;
 
-  bool mIteratorComplete = false;
+  bool mIteratorComplete : 1 = false;
+
+  // Used together to pick success / partial_frame / no_frame for
+  // jxl.decode_result on a successful terminal state.
+  // Whether a frame was fully decoded.
+  bool mFrameCompleted : 1 = false;
+  // True once at least a partial frame has been rendered; the rendered pixels
+  // could amount to a complete frame too.
+  bool mPartialFrameRendered : 1 = false;
+
+  DecodeResult mDecodeResult = DecodeResult::DecodeError;
 
 #ifdef DEBUG
   uint32_t mWritePixelRowsCount = 0;
