@@ -8453,7 +8453,7 @@ void MacroAssembler::emitPreBarrierFastPath(MIRType type, Register temp1,
   branchTestPtr(Assembler::NonZero, temp2, temp1, noBarrier);
 }
 
-void MacroAssembler::emitWeapMapBarrierFastPath(ValueOperand value,
+void MacroAssembler::emitWeakMapBarrierFastPath(ValueOperand value,
                                                 Register cell, Register temp1,
                                                 Register temp2, Register temp3,
                                                 Register temp4,

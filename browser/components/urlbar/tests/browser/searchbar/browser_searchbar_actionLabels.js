@@ -52,7 +52,7 @@ add_task(async function test_searchbar() {
       `Action of result at index ${i} is hidden`
     );
     Assert.ok(
-      BrowserTestUtils.isHidden(details.element.separator),
+      !UrlbarTestUtils.isSeparatorVisible(details.element.separator),
       `Title separator of result at index ${i} is hidden`
     );
   }
