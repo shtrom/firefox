@@ -78,6 +78,12 @@ export class UrlbarChildController {
   // carrying an older id belong to a query nobody is waiting for anymore.
   #queryId = 0;
 
+  // Whether the query identified by `#queryId` was cancelled. Only meaningful
+  // while it's held back waiting for the engine store; a cancel can't be taken
+  // as a statement about in-flight results, since the view cancels for reasons
+  // of its own (freezing the list, closing on a stale query's completion).
+  #queryCancelled = false;
+
   // The content-side engagement-telemetry collector, created lazily on the
   // message path (where the parent stand-in has no `engagementEvent`).
   #childTelemetry = null;
@@ -308,6 +314,7 @@ export class UrlbarChildController {
    */
   startQuery(queryContext) {
     this.#queryId = queryContext.id;
+    this.#queryCancelled = false;
 
     if (this.engineStore.initialized || this.engineStore.failed) {
       return this.#dispatchQuery(queryContext);
@@ -320,7 +327,7 @@ export class UrlbarChildController {
     this.#input.eventBufferer.queryStarting(queryContext);
 
     return this.#engineStoreReady().then(() =>
-      this.#queryId == queryContext.id
+      this.#queryId == queryContext.id && !this.#queryCancelled
         ? this.#dispatchQuery(queryContext)
         : queryContext
     );
@@ -361,9 +368,8 @@ export class UrlbarChildController {
     }
   }
   cancelQuery() {
-    // Nobody consumes the query's results anymore, and one still waiting for
-    // the engine store must not be dispatched at all.
-    this.#queryId++;
+    // A query still waiting for the engine store must not be dispatched at all.
+    this.#queryCancelled = true;
     return this.#parentController.cancelQuery();
   }
   /**
