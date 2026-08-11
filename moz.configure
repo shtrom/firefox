@@ -153,15 +153,28 @@ set_config("MOZ_DEBUG", moz_debug)
 set_define("MOZ_DEBUG", moz_debug)
 
 
+confvar(
+    "MOZ_DEV_EDITION",
+    nargs=1,
+    set_as_define=True,
+    help="Whether this a dev edition build",
+)
+
+
+@depends("MOZ_DEV_EDITION")
+def moz_dev_edition(dev_edition):
+    return bool(dev_edition) or None
+
+
 set_config(
     "MOZ_DIAGNOSTIC_ASSERT_ENABLED",
     True,
-    when=moz_debug | milestone.is_early_beta_or_earlier,
+    when=moz_debug | milestone.is_nightly | moz_dev_edition,
 )
 set_define(
     "MOZ_DIAGNOSTIC_ASSERT_ENABLED",
     True,
-    when=moz_debug | milestone.is_early_beta_or_earlier,
+    when=moz_debug | milestone.is_nightly | moz_dev_edition,
 )
 
 option(
