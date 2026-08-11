@@ -3643,6 +3643,7 @@ static void CompareExchange(MacroAssembler& masm,
       masm.append(*access, wasm::TrapMachineInsn::Load32,
                   FaultingCodeOffset(masm.currentOffset()));
     }
+
     masm.as_ll_w(output, scratch, 0);
     masm.as_slli_w(scratch2, oldval, 0);
     masm.ma_b(output, scratch2, &end, Assembler::NotEqual, ShortJump);
@@ -3671,6 +3672,7 @@ static void CompareExchange(MacroAssembler& masm,
     masm.append(*access, wasm::TrapMachineInsn::Load32,
                 FaultingCodeOffset(masm.currentOffset()));
   }
+
   masm.as_ll_w(scratch2, scratch, 0);
 
   masm.as_srl_w(output, scratch2, offsetTemp);
@@ -3736,6 +3738,7 @@ static void CompareExchange64(MacroAssembler& masm,
     masm.append(*access, wasm::TrapMachineInsn::Load64,
                 FaultingCodeOffset(masm.currentOffset()));
   }
+
   masm.as_ll_d(output.reg, scratch, 0);
 
   masm.ma_b(output.reg, expect.reg, &exit, Assembler::NotEqual, ShortJump);
@@ -3773,20 +3776,31 @@ static void AtomicExchange(MacroAssembler& masm,
       MOZ_CRASH();
   }
 
+  Label again;
+
   Register scratch2 = temps.Acquire();
   masm.computeEffectiveAddress(mem, scratch2);
 
+  Register scratch = temps.Acquire();
+
   if (nbytes == 4) {
+    masm.memoryBarrierBefore(sync);
+    masm.bind(&again);
+
     if (access) {
-      masm.append(*access, wasm::TrapMachineInsn::Atomic,
+      masm.append(*access, wasm::TrapMachineInsn::Load32,
                   FaultingCodeOffset(masm.currentOffset()));
     }
-    masm.as_amswap_db_w(output, scratch2, value);
+
+    masm.as_ll_w(output, scratch2, 0);
+    masm.as_or(scratch, value, zero);
+    masm.as_sc_w(scratch, scratch2, 0);
+    masm.ma_b(scratch, Register(scratch), &again, Assembler::Zero, ShortJump);
+
+    masm.memoryBarrierAfter(sync);
+
     return;
   }
-
-  Label again;
-  Register scratch = temps.Acquire();
 
   masm.as_andi(offsetTemp, scratch2, 3);
   masm.subPtr(offsetTemp, scratch2);
@@ -3812,8 +3826,8 @@ static void AtomicExchange(MacroAssembler& masm,
     masm.append(*access, wasm::TrapMachineInsn::Load32,
                 FaultingCodeOffset(masm.currentOffset()));
   }
-  masm.as_ll_w(output, scratch2, 0);
 
+  masm.as_ll_w(output, scratch2, 0);
   masm.as_and(scratch, output, maskTemp);
   masm.as_or(scratch, scratch, valueTemp);
 
@@ -3854,11 +3868,27 @@ static void AtomicExchange64(MacroAssembler& masm,
   Register scratch = temps.Acquire();
   masm.computeEffectiveAddress(mem, scratch);
 
+  Register scratch2 = temps.Acquire();
+
+  Label tryAgain;
+
+  masm.memoryBarrierBefore(sync);
+
+  masm.bind(&tryAgain);
+
   if (access) {
-    masm.append(*access, wasm::TrapMachineInsn::Atomic,
+    masm.append(*access, wasm::TrapMachineInsn::Load64,
                 FaultingCodeOffset(masm.currentOffset()));
   }
-  masm.as_amswap_db_d(output.reg, scratch, value.reg);
+
+  masm.as_ll_d(output.reg, scratch, 0);
+
+  masm.movePtr(value.reg, scratch2);
+  masm.as_sc_d(scratch2, scratch, 0);
+  masm.ma_b(scratch2, Register(scratch2), &tryAgain, Assembler::Zero,
+            ShortJump);
+
+  masm.memoryBarrierAfter(sync);
 }
 
 template <typename T>
@@ -3885,38 +3915,49 @@ static void AtomicFetchOp(MacroAssembler& masm,
       MOZ_CRASH();
   }
 
+  Label again;
+
   Register scratch2 = temps.Acquire();
   masm.computeEffectiveAddress(mem, scratch2);
 
+  Register scratch = temps.Acquire();
+
   if (nbytes == 4) {
-    Register operand = value;
-    if (op == AtomicOp::Sub) {
-      // Subtraction is implemented with AMADD_DB.W and a negated operand.
-      operand = temps.Acquire();
-      masm.as_sub_w(operand, zero, value);
-    }
+    masm.memoryBarrierBefore(sync);
+    masm.bind(&again);
 
     if (access) {
-      masm.append(*access, wasm::TrapMachineInsn::Atomic,
+      masm.append(*access, wasm::TrapMachineInsn::Load32,
                   FaultingCodeOffset(masm.currentOffset()));
     }
+
+    masm.as_ll_w(output, scratch2, 0);
+
     switch (op) {
       case AtomicOp::Add:
+        masm.as_add_w(scratch, output, value);
+        break;
       case AtomicOp::Sub:
-        masm.as_amadd_db_w(output, scratch2, operand);
+        masm.as_sub_w(scratch, output, value);
         break;
       case AtomicOp::And:
-        masm.as_amand_db_w(output, scratch2, operand);
+        masm.as_and(scratch, output, value);
         break;
       case AtomicOp::Or:
-        masm.as_amor_db_w(output, scratch2, operand);
+        masm.as_or(scratch, output, value);
         break;
       case AtomicOp::Xor:
-        masm.as_amxor_db_w(output, scratch2, operand);
+        masm.as_xor(scratch, output, value);
         break;
       default:
         MOZ_CRASH();
     }
+
+    masm.as_sc_w(scratch, scratch2, 0);
+    masm.ma_b(scratch, Register(scratch), &again, Assembler::Zero, ShortJump);
+
+    masm.memoryBarrierAfter(sync);
+
     return;
   }
 
@@ -3927,67 +3968,6 @@ static void AtomicFetchOp(MacroAssembler& masm,
   masm.as_sll_w(maskTemp, maskTemp, offsetTemp);
   masm.as_nor(maskTemp, zero, maskTemp);
 
-  if (op == AtomicOp::And || op == AtomicOp::Or || op == AtomicOp::Xor) {
-    // Shift the input bytes into their position in the containing word.
-    switch (nbytes) {
-      case 1:
-        masm.as_andi(valueTemp, value, 0xff);
-        break;
-      case 2:
-        masm.as_bstrpick_d(valueTemp, value, 15, 0);
-        break;
-    }
-    masm.as_sll_w(valueTemp, valueTemp, offsetTemp);
-
-    if (op == AtomicOp::And) {
-      // Preserve all bits outside the input bytes for AMAND_DB.W.
-      masm.as_or(valueTemp, valueTemp, maskTemp);
-    }
-
-    if (access) {
-      masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                  FaultingCodeOffset(masm.currentOffset()));
-    }
-    switch (op) {
-      case AtomicOp::And:
-        masm.as_amand_db_w(output, scratch2, valueTemp);
-        break;
-      case AtomicOp::Or:
-        masm.as_amor_db_w(output, scratch2, valueTemp);
-        break;
-      case AtomicOp::Xor:
-        masm.as_amxor_db_w(output, scratch2, valueTemp);
-        break;
-      default:
-        MOZ_CRASH();
-    }
-
-    masm.as_srl_w(output, output, offsetTemp);
-
-    switch (nbytes) {
-      case 1:
-        if (signExtend) {
-          masm.as_ext_w_b(output, output);
-        } else {
-          masm.as_andi(output, output, 0xff);
-        }
-        break;
-      case 2:
-        if (signExtend) {
-          masm.as_ext_w_h(output, output);
-        } else {
-          masm.as_bstrpick_d(output, output, 15, 0);
-        }
-        break;
-    }
-
-    return;
-  }
-
-  // Byte and halfword addition and subtraction require an LL/SC loop.
-  Label again;
-  Register scratch = temps.Acquire();
-
   masm.memoryBarrierBefore(sync);
 
   masm.bind(&again);
@@ -3996,8 +3976,8 @@ static void AtomicFetchOp(MacroAssembler& masm,
     masm.append(*access, wasm::TrapMachineInsn::Load32,
                 FaultingCodeOffset(masm.currentOffset()));
   }
-  masm.as_ll_w(scratch, scratch2, 0);
 
+  masm.as_ll_w(scratch, scratch2, 0);
   masm.as_srl_w(output, scratch, offsetTemp);
 
   switch (op) {
@@ -4006,6 +3986,15 @@ static void AtomicFetchOp(MacroAssembler& masm,
       break;
     case AtomicOp::Sub:
       masm.as_sub_w(valueTemp, output, value);
+      break;
+    case AtomicOp::And:
+      masm.as_and(valueTemp, output, value);
+      break;
+    case AtomicOp::Or:
+      masm.as_or(valueTemp, output, value);
+      break;
+    case AtomicOp::Xor:
+      masm.as_xor(valueTemp, output, value);
       break;
     default:
       MOZ_CRASH();
@@ -4027,7 +4016,7 @@ static void AtomicFetchOp(MacroAssembler& masm,
 
   masm.as_sc_w(scratch, scratch2, 0);
 
-  masm.ma_b(scratch, scratch, &again, Assembler::Zero, ShortJump);
+  masm.ma_b(scratch, Register(scratch), &again, Assembler::Zero, ShortJump);
 
   switch (nbytes) {
     case 1:
@@ -4060,33 +4049,43 @@ static void AtomicFetchOp64(MacroAssembler& masm,
   Register scratch = temps.Acquire();
   masm.computeEffectiveAddress(mem, scratch);
 
-  Register operand = value.reg;
-  if (op == AtomicOp::Sub) {
-    operand = temp == output ? temps.Acquire() : temp.reg;
-    masm.as_sub_d(operand, zero, value.reg);
-  }
+  Label tryAgain;
+
+  masm.memoryBarrierBefore(sync);
+
+  masm.bind(&tryAgain);
 
   if (access) {
-    masm.append(*access, wasm::TrapMachineInsn::Atomic,
+    masm.append(*access, wasm::TrapMachineInsn::Load64,
                 FaultingCodeOffset(masm.currentOffset()));
   }
+
+  masm.as_ll_d(output.reg, scratch, 0);
+
   switch (op) {
     case AtomicOp::Add:
+      masm.as_add_d(temp.reg, output.reg, value.reg);
+      break;
     case AtomicOp::Sub:
-      masm.as_amadd_db_d(output.reg, scratch, operand);
+      masm.as_sub_d(temp.reg, output.reg, value.reg);
       break;
     case AtomicOp::And:
-      masm.as_amand_db_d(output.reg, scratch, operand);
+      masm.as_and(temp.reg, output.reg, value.reg);
       break;
     case AtomicOp::Or:
-      masm.as_amor_db_d(output.reg, scratch, operand);
+      masm.as_or(temp.reg, output.reg, value.reg);
       break;
     case AtomicOp::Xor:
-      masm.as_amxor_db_d(output.reg, scratch, operand);
+      masm.as_xor(temp.reg, output.reg, value.reg);
       break;
     default:
       MOZ_CRASH();
   }
+
+  masm.as_sc_d(temp.reg, scratch, 0);
+  masm.ma_b(temp.reg, temp.reg, &tryAgain, Assembler::Zero, ShortJump);
+
+  masm.memoryBarrierAfter(sync);
 }
 
 void MacroAssembler::compareExchange(Scalar::Type type, Synchronization sync,
@@ -4327,39 +4326,49 @@ static void AtomicEffectOp(MacroAssembler& masm,
       MOZ_CRASH();
   }
 
+  Label again;
+
   Register scratch = temps.Acquire();
   masm.computeEffectiveAddress(mem, scratch);
 
+  Register scratch2 = temps.Acquire();
+
   if (nbytes == 4) {
-    MOZ_ASSERT(value != zero);
-    Register operand = value;
-    if (op == AtomicOp::Sub) {
-      // Subtraction is implemented with AMADD_DB.W and a negated operand.
-      operand = temps.Acquire();
-      masm.as_sub_w(operand, zero, value);
-    }
+    masm.memoryBarrierBefore(sync);
+    masm.bind(&again);
 
     if (access) {
-      masm.append(*access, wasm::TrapMachineInsn::Atomic,
+      masm.append(*access, wasm::TrapMachineInsn::Load32,
                   FaultingCodeOffset(masm.currentOffset()));
     }
+
+    masm.as_ll_w(scratch2, scratch, 0);
+
     switch (op) {
       case AtomicOp::Add:
+        masm.as_add_w(scratch2, scratch2, value);
+        break;
       case AtomicOp::Sub:
-        masm.as_amadd_db_w(zero, scratch, operand);
+        masm.as_sub_w(scratch2, scratch2, value);
         break;
       case AtomicOp::And:
-        masm.as_amand_db_w(zero, scratch, operand);
+        masm.as_and(scratch2, scratch2, value);
         break;
       case AtomicOp::Or:
-        masm.as_amor_db_w(zero, scratch, operand);
+        masm.as_or(scratch2, scratch2, value);
         break;
       case AtomicOp::Xor:
-        masm.as_amxor_db_w(zero, scratch, operand);
+        masm.as_xor(scratch2, scratch2, value);
         break;
       default:
         MOZ_CRASH();
     }
+
+    masm.as_sc_w(scratch2, scratch, 0);
+    masm.ma_b(scratch2, Register(scratch2), &again, Assembler::Zero, ShortJump);
+
+    masm.memoryBarrierAfter(sync);
+
     return;
   }
 
@@ -4370,47 +4379,6 @@ static void AtomicEffectOp(MacroAssembler& masm,
   masm.as_sll_w(maskTemp, maskTemp, offsetTemp);
   masm.as_nor(maskTemp, zero, maskTemp);
 
-  if (op == AtomicOp::And || op == AtomicOp::Or || op == AtomicOp::Xor) {
-    // Shift the input bytes into their position in the containing word.
-    switch (nbytes) {
-      case 1:
-        masm.as_andi(valueTemp, value, 0xff);
-        break;
-      case 2:
-        masm.as_bstrpick_d(valueTemp, value, 15, 0);
-        break;
-    }
-    masm.as_sll_w(valueTemp, valueTemp, offsetTemp);
-
-    if (op == AtomicOp::And) {
-      // Preserve all bits outside the input bytes for AMAND_DB.W.
-      masm.as_or(valueTemp, valueTemp, maskTemp);
-    }
-
-    if (access) {
-      masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                  FaultingCodeOffset(masm.currentOffset()));
-    }
-    switch (op) {
-      case AtomicOp::And:
-        masm.as_amand_db_w(zero, scratch, valueTemp);
-        break;
-      case AtomicOp::Or:
-        masm.as_amor_db_w(zero, scratch, valueTemp);
-        break;
-      case AtomicOp::Xor:
-        masm.as_amxor_db_w(zero, scratch, valueTemp);
-        break;
-      default:
-        MOZ_CRASH();
-    }
-    return;
-  }
-
-  // Byte and halfword addition and subtraction require an LL/SC loop.
-  Label again;
-  Register scratch2 = temps.Acquire();
-
   masm.memoryBarrierBefore(sync);
 
   masm.bind(&again);
@@ -4419,8 +4387,8 @@ static void AtomicEffectOp(MacroAssembler& masm,
     masm.append(*access, wasm::TrapMachineInsn::Load32,
                 FaultingCodeOffset(masm.currentOffset()));
   }
-  masm.as_ll_w(scratch2, scratch, 0);
 
+  masm.as_ll_w(scratch2, scratch, 0);
   masm.as_srl_w(valueTemp, scratch2, offsetTemp);
 
   switch (op) {
@@ -4429,6 +4397,15 @@ static void AtomicEffectOp(MacroAssembler& masm,
       break;
     case AtomicOp::Sub:
       masm.as_sub_w(valueTemp, valueTemp, value);
+      break;
+    case AtomicOp::And:
+      masm.as_and(valueTemp, valueTemp, value);
+      break;
+    case AtomicOp::Or:
+      masm.as_or(valueTemp, valueTemp, value);
+      break;
+    case AtomicOp::Xor:
+      masm.as_xor(valueTemp, valueTemp, value);
       break;
     default:
       MOZ_CRASH();
@@ -4450,7 +4427,7 @@ static void AtomicEffectOp(MacroAssembler& masm,
 
   masm.as_sc_w(scratch2, scratch, 0);
 
-  masm.ma_b(scratch2, scratch2, &again, Assembler::Zero, ShortJump);
+  masm.ma_b(scratch2, Register(scratch2), &again, Assembler::Zero, ShortJump);
 
   masm.memoryBarrierAfter(sync);
 }
