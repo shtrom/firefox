@@ -115,7 +115,7 @@ add_task(async function replaceToplevel() {
 
   const discarded = await observeDiscarded([...expected.keys()], async () => {
     await SpecialPowers.spawn(tab.linkedBrowser, [], () => {
-      content.location = "about:blocked";
+      content.location = "about:newtab";
     });
   });
 
