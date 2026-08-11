@@ -687,7 +687,8 @@ class MozPromise : public MozPromiseBase {
                          RefPtr<typename PromiseType::Private>&& aTo) {
     if constexpr (SupportChaining) {
       if (aTo) {
-        MOZ_RELEASE_ASSERT(aFrom,
+        MOZ_RELEASE_ASSERT(
+            aFrom,
             "Can't do promise chaining for a non-promise-returning method.");
         aFrom->ChainTo(aTo.forget(), "<chained completion promise>");
       }
