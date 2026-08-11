@@ -11,7 +11,6 @@
 #include "mozilla/ErrorResult.h"
 #include "mozilla/dom/Promise.h"
 #include "mozilla/dom/Promise-inl.h"
-#include "mozilla/glean/bindings/GleanJSPingsLookup.h"
 #include "nsIClassInfoImpl.h"
 #include "nsTHashMap.h"
 #include "nsString.h"
@@ -22,7 +21,8 @@ namespace mozilla::glean {
 
 namespace impl {
 
-using CallbackMapType = nsTHashMap<nsCStringHashKey, FalliblePingTestCallback>;
+using CallbackMapType =
+    nsTHashMap<NoMemMoveKey<nsUint32HashKey>, FalliblePingTestCallback>;
 using MetricIdToCallbackMutex = StaticDataMutex<UniquePtr<CallbackMapType>>;
 static Maybe<MetricIdToCallbackMutex::AutoLock> GetCallbackMapLock() {
   static MetricIdToCallbackMutex sCallbacks("sCallbacks");
@@ -44,18 +44,15 @@ static Maybe<MetricIdToCallbackMutex::AutoLock> GetCallbackMapLock() {
 }
 
 void Ping::Submit(const nsACString& aReason) const {
-  (void)SubmitInternal(aReason, nsDependentCString(GetPingNameById(mId)));
+  (void)SubmitInternal(aReason);
 }
 
-nsresult Ping::SubmitInternal(const nsACString& aReason,
-                              const nsACString& aPingName) const {
+nsresult Ping::SubmitInternal(const nsACString& aReason) const {
   nsresult rv = NS_OK;
-  if (NS_WARN_IF(!aPingName.Length())) {
-    return NS_ERROR_FAILURE;
-  } else {
+  {
     auto callback = Maybe<FalliblePingTestCallback>();
     GetCallbackMapLock().apply(
-        [&](const auto& lock) { callback = lock.ref()->Extract(aPingName); });
+        [&](const auto& lock) { callback = lock.ref()->Extract(mId); });
     // Calling the callback outside of the lock allows it to register a new
     // callback itself.
     if (callback) {
@@ -75,17 +72,14 @@ void Ping::TestBeforeNextSubmit(PingTestCallback&& aCallback) const {
       [callback = std::move(aCallback)](const nsACString& aReason) -> nsresult {
         callback(aReason);
         return NS_OK;
-      },
-      nsDependentCString(GetPingNameById(mId)));
+      });
 }
 
-void Ping::TestBeforeNextSubmitFallible(FalliblePingTestCallback&& aCallback,
-                                        const nsACString& aPingName) const {
-  MOZ_ASSERT(aPingName.Length());
+void Ping::TestBeforeNextSubmitFallible(
+    FalliblePingTestCallback&& aCallback) const {
   {
-    GetCallbackMapLock().apply([&](const auto& lock) {
-      lock.ref()->InsertOrUpdate(aPingName, aCallback);
-    });
+    GetCallbackMapLock().apply(
+        [&](const auto& lock) { lock.ref()->InsertOrUpdate(mId, aCallback); });
   }
 }
 
@@ -115,7 +109,7 @@ NS_IMPL_ISUPPORTS_CI(GleanPing, nsIGleanPing)
 
 NS_IMETHODIMP
 GleanPing::Submit(const nsACString& aReason) {
-  return mPing.SubmitInternal(aReason, mName);
+  return mPing.SubmitInternal(aReason);
 }
 
 NS_IMETHODIMP
@@ -133,8 +127,7 @@ GleanPing::TestBeforeNextSubmit(nsIGleanPingTestCallback* aCallback) {
   mPing.TestBeforeNextSubmitFallible(
       [callback = nsCOMPtr(aCallback)](const nsACString& aReason) -> nsresult {
         return callback->Call(aReason);
-      },
-      mName);
+      });
   return NS_OK;
 }
 
@@ -157,20 +150,17 @@ GleanPing::TestSubmission(nsIGleanPingTestCallback* aTestCallback,
   }
 
   // Wrap the callback with one that will resolve or reject `submittedPromise`.
-  mPing.TestBeforeNextSubmitFallible(
-      [testCallback = nsCOMPtr{aTestCallback},
-       submittedPromise](const nsACString& aReason) {
-        nsresult rv = testCallback->Call(aReason);
-        if (NS_SUCCEEDED(rv)) {
-          submittedPromise->MaybeResolveWithUndefined();
-        } else {
-          // If the callback threw we need to pass that along as a promise
-          // rejection.
-          submittedPromise->MaybeReject(rv);
-        }
-        return NS_OK;
-      },
-      mName);
+  mPing.TestBeforeNextSubmit([testCallback = nsCOMPtr{aTestCallback},
+                              submittedPromise](const nsACString& aReason) {
+    nsresult rv = testCallback->Call(aReason);
+    if (NS_SUCCEEDED(rv)) {
+      submittedPromise->MaybeResolveWithUndefined();
+    } else {
+      // If the callback threw we need to pass that along as a promise
+      // rejection.
+      submittedPromise->MaybeReject(rv);
+    }
+  });
 
   // Call `aSubmitCallback` to trigger ping submission. This function may or may
   // not be async, but becuase it *can* be, XPConnect will always promise wrap
