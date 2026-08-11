@@ -12486,7 +12486,14 @@
 
 # Specifies whether the PEMFactory can create PEMs for remote audio encoding
 # in the RDD or utility processes.
-- name: media.use-remote-encoder.audio
+- name: media.use-remote-encoder.audio.software
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
+
+# Specifies whether the PEMFactory can create PEMs for remote video encoding
+# for platform implemented codecs in the RDD or GPU process.
+- name: media.use-remote-encoder.video.platform
   type: RelaxedAtomicBool
 #ifdef NIGHTLY_BUILD
   value: @IS_NOT_ANDROID@
@@ -12496,14 +12503,10 @@
   mirror: always
 
 # Specifies whether the PEMFactory can create PEMs for remote video encoding
-# in the RDD or GPU process.
-- name: media.use-remote-encoder.video
+# for pure software codecs in the RDD.
+- name: media.use-remote-encoder.video.software
   type: RelaxedAtomicBool
-#ifdef NIGHTLY_BUILD
-  value: @IS_NOT_ANDROID@
-#else
   value: false
-#endif
   mirror: always
 
 - name: media.gpu-process-decoder
