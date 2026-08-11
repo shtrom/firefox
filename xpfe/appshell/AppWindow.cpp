@@ -1550,11 +1550,6 @@ void AppWindow::SyncAttributesToWidget() {
       windowElement->GetBoolAttr(nsGkAtoms::hidetitlebarseparator));
   NS_ENSURE_TRUE_VOID(mWindow);
 
-  // "toggletoolbar" attribute
-  mWindow->SetShowsToolbarButton(
-      windowElement->HasAttribute(u"toggletoolbar"_ns));
-  NS_ENSURE_TRUE_VOID(mWindow);
-
   // "macnativefullscreen" attribute. Only override the creation-time default
   // when the attribute is actually present; absence means "use the
   // window-creation default" (set in nsCocoaWindow::CreateNativeWindow), not
