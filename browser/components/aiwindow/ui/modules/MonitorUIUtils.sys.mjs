@@ -10,11 +10,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
 });
 
 const localization = new Localization(
-  [
-    "preview/aiWindow.ftl",
-    "branding/brand.ftl",
-    "toolkit/branding/brandings.ftl",
-  ],
+  ["preview/aiWindow.ftl", "branding/brand.ftl"],
   true
 );
 
