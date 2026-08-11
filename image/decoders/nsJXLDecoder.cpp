@@ -11,6 +11,7 @@
 #include "SurfacePipeFactory.h"
 #include "gfxPlatform.h"
 #include "mozilla/CheckedInt.h"
+#include "mozilla/glean/ImageDecodersMetrics.h"
 
 using namespace mozilla::gfx;
 
@@ -21,6 +22,10 @@ static LazyLogModule sJXLLog("JXLDecoder");
 nsJXLDecoder::nsJXLDecoder(RasterImage* aImage) : Decoder(aImage) {
   MOZ_LOG(sJXLLog, LogLevel::Debug,
           ("[this=%p] nsJXLDecoder::nsJXLDecoder", this));
+}
+
+Maybe<glean::impl::MemoryDistributionMetric> nsJXLDecoder::SpeedMetric() const {
+  return Some(glean::image_decode::speed_jxl);
 }
 
 nsresult nsJXLDecoder::InitInternal() {
