@@ -848,10 +848,10 @@ void LIRGenerator::visitWasmLoad(MWasmLoad* ins) {
       ins->hasMemoryBase() ? LAllocation(useRegisterAtStart(ins->memoryBase()))
                            : LGeneralReg(HeapReg);
 
-  LAllocation ptr = useRegisterOrConstantAtStart(base);
+  LAllocation ptr = useRegisterAtStart(base);
 
   LDefinition ptrCopy = LDefinition::BogusTemp();
-  if (ins->access().offset32() && !base->isConstant()) {
+  if (ins->access().offset32()) {
     ptrCopy = tempCopy(base, 0);
   }
 
@@ -875,10 +875,10 @@ void LIRGenerator::visitWasmStore(MWasmStore* ins) {
       ins->hasMemoryBase() ? LAllocation(useRegisterAtStart(ins->memoryBase()))
                            : LGeneralReg(HeapReg);
 
-  LAllocation baseAlloc = useRegisterOrConstantAtStart(base);
+  LAllocation baseAlloc = useRegisterAtStart(base);
 
   LDefinition ptrCopy = LDefinition::BogusTemp();
-  if (ins->access().offset32() && !base->isConstant()) {
+  if (ins->access().offset32()) {
     ptrCopy = tempCopy(base, 0);
   }
 
