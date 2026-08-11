@@ -1357,6 +1357,12 @@ toolbarbutton[constrain-size="true"][cui-areatype="panel"] > .toolbarbutton-badg
   list-style-image: url("chrome://browser/skin/device-phone.svg");
   -moz-context-properties: fill;
   fill: currentColor;
+
+  /* Match the icon-to-text gap of the sync status button above it, whose icon
+     uses margin-inline-end: var(--space-medium). */
+  > .toolbarbutton-text {
+    padding-inline-start: var(--space-medium);
+  }
 }
 
 :root:not([fxastatus="signedin"]) #PanelUI-fxa-menu-connect-device-button {

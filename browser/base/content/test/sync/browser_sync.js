@@ -237,7 +237,11 @@ add_task(async function test_ui_state_signedin() {
       "PanelUI-fxa-menu-account-signout-button",
     ],
     disabledItems: [],
-    hiddenItems: ["PanelUI-fxa-menu-setup-sync-container"],
+    hiddenItems: [
+      "PanelUI-fxa-menu-setup-sync-container",
+      // "Get Firefox for mobile" is only offered while sync is off.
+      "PanelUI-fxa-menu-get-firefox-mobile",
+    ],
     visibleItems: [],
   });
 
@@ -448,6 +452,21 @@ add_task(async function test_ui_state_unconfigured() {
 
   await openFxaPanel();
 
+  // When signed out, "Get Firefox for mobile" is offered directly below the
+  // sync status button ("Sync your data").
+  const mobileButton = document.getElementById(
+    "PanelUI-fxa-menu-get-firefox-mobile"
+  );
+  ok(
+    isElementVisible(mobileButton),
+    "Get Firefox for mobile button is visible when signed out"
+  );
+  is(
+    mobileButton.previousElementSibling,
+    document.getElementById("PanelUI-fxa-menu-sync-status-button"),
+    "Get Firefox for mobile sits directly below the sync status button"
+  );
+
   await checkProfilesButtons(
     document.getElementById("PanelUI-signedin-panel"),
     true
@@ -482,7 +501,7 @@ add_task(async function test_ui_state_signed_in() {
     ],
     disabledItems: [],
     hiddenItems: ["PanelUI-fxa-menu-setup-sync-container"],
-    visibleItems: [],
+    visibleItems: ["PanelUI-fxa-menu-get-firefox-mobile"],
   });
   checkFxAAvatar("signedin");
   await closeFxaPanel();
@@ -523,7 +542,7 @@ add_task(async function test_ui_state_signed_in_no_display_name() {
     ],
     disabledItems: [],
     hiddenItems: ["PanelUI-fxa-menu-setup-sync-container"],
-    visibleItems: [],
+    visibleItems: ["PanelUI-fxa-menu-get-firefox-mobile"],
   });
   checkFxAAvatar("signedin");
   await closeFxaPanel();
@@ -567,7 +586,7 @@ add_task(async function test_ui_state_unverified() {
     ],
     disabledItems: [],
     hiddenItems: ["PanelUI-fxa-menu-setup-sync-container"],
-    visibleItems: [],
+    visibleItems: ["PanelUI-fxa-menu-get-firefox-mobile"],
   });
   checkFxAAvatar("unverified");
   await checkSignedOutCard(
@@ -615,7 +634,7 @@ add_task(async function test_ui_state_loginFailed() {
     ],
     disabledItems: [],
     hiddenItems: ["PanelUI-fxa-menu-setup-sync-container"],
-    visibleItems: [],
+    visibleItems: ["PanelUI-fxa-menu-get-firefox-mobile"],
   });
   checkFxAAvatar("login-failed");
   await checkSignedOutCard(
@@ -1202,7 +1221,7 @@ add_task(async function test_new_sync_setup_ui() {
     ],
     disabledItems: [],
     hiddenItems: ["PanelUI-fxa-menu-setup-sync-container"],
-    visibleItems: [],
+    visibleItems: ["PanelUI-fxa-menu-get-firefox-mobile"],
   });
 
   await closeFxaPanel();

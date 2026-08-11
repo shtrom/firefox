@@ -1544,6 +1544,10 @@ var gSync = {
       document,
       "PanelUI-fxa-menu-sync-status-off-description"
     );
+    const mobileBtn = PanelMultiView.getViewNode(
+      document,
+      "PanelUI-fxa-menu-get-firefox-mobile"
+    );
 
     const syncOn =
       state.status == UIState.STATUS_SIGNED_IN && state.syncEnabled;
@@ -1563,6 +1567,8 @@ var gSync = {
         "value",
         this.fluentStrings.formatValueSync("fxa-menu-sync-off-data-description")
       );
+      offCard.after(mobileBtn);
+      mobileBtn.hidden = false;
       return;
     }
 
@@ -1610,6 +1616,11 @@ var gSync = {
     descEl.hidden = !descEl.hasAttribute("value");
 
     btn.hidden = false;
+
+    // "Get Firefox for mobile" sits directly under the sync status button and
+    // is only offered while sync is off.
+    btn.after(mobileBtn);
+    mobileBtn.hidden = syncOn;
   },
 
   _onSyncStatusButtonClick(anchor, event) {
@@ -3472,9 +3483,13 @@ var gSync = {
   },
 
   openGetFirefoxMobile() {
-    switchToTabHavingURI("https://www.firefox.com/en-US/mobile/", true, {
-      replaceQueryString: true,
-    });
+    switchToTabHavingURI(
+      "https://www.firefox.com/mobile/?utm_medium=firefox-desktop&utm_source=toolbar&utm_campaign=desktop-account-menu",
+      true,
+      {
+        replaceQueryString: true,
+      }
+    );
   },
 
   openSyncedTabsPanel() {
