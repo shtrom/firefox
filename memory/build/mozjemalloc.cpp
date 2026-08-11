@@ -2507,13 +2507,10 @@ class AllocInfo {
     if (mSize <= gMaxLargeClass) {
       return mChunk->mArena;
     }
+
     // Best effort detection that we're not trying to access an already
-    // disposed arena. In the case of a disposed arena, the memory location
-    // pointed by mNode->mArena is either free (but still a valid memory
-    // region, per TypedBaseAlloc<arena_t>), in which case its id was reset,
-    // or has been reallocated for a new region, and its id is very likely
-    // different (per randomness). In both cases, the id is unlikely to
-    // match what it was for the disposed arena.
+    // disposed arena.  arena_t's destructor will clear mId and any other
+    // use of the same memory will usually set it to some other value.
     MOZ_RELEASE_ASSERT(mNode->mArenaId == mNode->mArena->mId);
     return mNode->mArena;
   }
