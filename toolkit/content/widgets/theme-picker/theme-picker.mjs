@@ -193,9 +193,12 @@ export class ThemePicker extends MozLitElement {
       return "";
     }
     const icons = {
-      light: "chrome://global/skin/icons/sun.svg",
-      dark: "chrome://global/skin/icons/moon.svg",
-      device: "chrome://global/skin/icons/local-host.svg",
+      // eslint-disable-next-line mozilla/no-browser-refs-in-toolkit
+      light: "chrome://browser/skin/weather/sunny.svg",
+      // eslint-disable-next-line mozilla/no-browser-refs-in-toolkit
+      dark: "chrome://browser/skin/weather/night-clear.svg",
+      // eslint-disable-next-line mozilla/no-browser-refs-in-toolkit
+      device: "chrome://browser/skin/device-desktop.svg",
     };
     return html`<moz-segmented-control
       .value=${this.appearance}
