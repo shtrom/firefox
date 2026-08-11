@@ -1514,8 +1514,10 @@ var gSync = {
    *    and opens the secure sync subpanel.
    *  - signed in with sync off: "Sync is Off" with an error-colored
    *    "Your data isn't syncing" and opens sync preferences.
-   *  - signed out, or signed in but needing (re-)authentication: "Sync is Off"
-   *    with an error-colored "Sign in to sync" and opens the sign-in page.
+   *  - never signed in: "Sync Your Data" with no description and opens the
+   *    sign-in page.
+   *  - signed in but needing (re-)authentication: "Sync is Off" with an
+   *    error-colored "Sign in to sync" and opens the sign-in page.
    */
   _updateSyncStatusButton(state) {
     const btn = PanelMultiView.getViewNode(
@@ -1564,13 +1566,18 @@ var gSync = {
       return;
     }
 
+    // A user who has never signed in gets a call-to-action title with no
+    // description instead of the "Sync is Off" / "Sign in to sync" copy.
+    const neverSignedIn = state.status == UIState.STATUS_NOT_CONFIGURED;
+
     // The chevron is only meaningful when the button navigates to the secure
     // sync subpanel (sync on).
     btn.classList.toggle("subviewbutton-nav", syncOn);
 
-    let titleId = syncOn
-      ? "fxa-menu-sync-status-on"
+    let neverSignedInId = neverSignedIn
+      ? "fxa-menu-sync-your-data"
       : "fxa-menu-sync-status-off";
+    let titleId = syncOn ? "fxa-menu-sync-status-on" : neverSignedInId;
     titleEl.setAttribute("value", this.fluentStrings.formatValueSync(titleId));
 
     if (syncOn) {
@@ -1586,6 +1593,9 @@ var gSync = {
       } else {
         descEl.removeAttribute("value");
       }
+    } else if (neverSignedIn) {
+      descEl.classList.remove("fxa-menu-sync-status-description-error");
+      descEl.removeAttribute("value");
     } else {
       descEl.classList.add("fxa-menu-sync-status-description-error");
       descEl.setAttribute(
@@ -1595,6 +1605,9 @@ var gSync = {
         )
       );
     }
+
+    // Don't render the description label when there's nothing to show.
+    descEl.hidden = !descEl.hasAttribute("value");
 
     btn.hidden = false;
   },
@@ -1921,6 +1934,10 @@ var gSync = {
       document,
       "PanelUI-fxa-menu-profiles-separator"
     );
+    const manageAccountSeparator = PanelMultiView.getViewNode(
+      document,
+      "PanelUI-fxa-menu-manage-account-separator"
+    );
     const secureSyncHeader = PanelMultiView.getViewNode(
       document,
       "PanelUI-fxa-menu-secure-sync-header"
@@ -1949,6 +1966,7 @@ var gSync = {
     syncSetupEl.setAttribute("hidden", "true");
     signedInContainer.hidden = false;
     manageAccountButtonEl.hidden = true;
+    manageAccountSeparator.hidden = true;
     signInPromoEl.hidden = true;
     signedOutCardEl.hidden = true;
     menuHeaderDescriptionEl.hidden = false;
@@ -1989,6 +2007,10 @@ var gSync = {
     let headerTitleL10nId;
     let headerDescription;
 
+    // The profiles section (header and buttons) is only populated when the
+    // profiles feature is enabled; its surrounding separators follow suit.
+    const profilesShown = !!SelectableProfileService?.isEnabled;
+
     switch (state.status) {
       case UIState.STATUS_NOT_CONFIGURED:
         signOutSeparator.hidden = true;
@@ -2023,6 +2045,9 @@ var gSync = {
         profilesSeparator.remove();
         secureSyncHeader.remove();
 
+        // When signed out this is the single separator below the sign-in promo:
+        // it sits above the secure sync section, with the profiles section (when
+        // shown) slotting in between, so it stays visible regardless of profiles.
         profilesSeparator.hidden = false;
         secureSyncHeader.hidden = false;
 
@@ -2073,18 +2098,26 @@ var gSync = {
         syncSetupSeparator.setAttribute("hidden", "true");
 
         // Reposition profiles elements
+        manageAccountSeparator.remove();
         profilesHeaderLabel.remove();
         profileButtonsContainer.remove();
         profilesSeparator.remove();
         secureSyncHeader.remove();
 
-        profilesSeparator.hidden = false;
+        // Single separator below the manage account button, above whichever
+        // section comes next (profiles when shown, otherwise secure sync).
+        manageAccountSeparator.hidden = false;
+        // Only divide the profiles section from secure sync when profiles show.
+        profilesSeparator.hidden = !profilesShown;
         secureSyncHeader.hidden = false;
 
         manageAccountButtonEl.after(secureSyncHeader);
         manageAccountButtonEl.after(profilesSeparator);
         manageAccountButtonEl.after(profileButtonsContainer);
         manageAccountButtonEl.after(profilesHeaderLabel);
+        // Inserted last so it lands directly below the manage account button,
+        // separating it from the profiles section.
+        manageAccountButtonEl.after(manageAccountSeparator);
 
         break;
 
