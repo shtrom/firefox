@@ -23,6 +23,16 @@ gWindowlessBrowser.docShell.createAboutBlankDocumentViewer(
   gSystemPrincipal
 );
 
+var gPrompt = {
+  QueryInterface: ChromeUtils.generateQI(["nsIPrompt"]),
+
+  promptPassword(_dialogTitle, _text, password, _checkMsg) {
+    // The first token in the test module has a blank password by default.
+    password.value = "";
+    return true;
+  },
+};
+
 // Mock nsIWindowWatcher. The protected-auth path opens
 // chrome://pippki/content/protectedAuth.xhtml via nsNSSDialogHelper, which
 // forwards to nsIWindowWatcher::OpenWindow. We hand out a real Window from
@@ -34,8 +44,7 @@ var gWindowWatcher = {
     return gWindowlessBrowser.document.defaultView;
   },
   getNewPrompter: () => {
-    ok(false, "not expecting getNewPrompter() to be called");
-    return null;
+    return gPrompt;
   },
   openWindow(_parent, url, _name, _features, args) {
     equal(
