@@ -418,8 +418,11 @@ class MacroAssemblerLOONG64Compat : public MacroAssemblerLOONG64 {
   };
   void convertInt32ToDouble(const BaseIndex& src, FloatRegister dest) {
     UseScratchRegisterScope temps(*this);
-    Address address = computeScaledAddress(src, temps);
-    convertInt32ToDouble(address, dest);
+    Register scratch = temps.Acquire();
+    MOZ_ASSERT(scratch != src.base);
+    MOZ_ASSERT(scratch != src.index);
+    computeScaledAddress(src, scratch);
+    convertInt32ToDouble(Address(scratch, src.offset), dest);
   };
   void convertUInt32ToDouble(Register src, FloatRegister dest);
   void convertUInt32ToFloat32(Register src, FloatRegister dest);
@@ -475,9 +478,6 @@ class MacroAssemblerLOONG64Compat : public MacroAssemblerLOONG64 {
       ma_add_w(dest, dest, Imm32(address.offset));
     }
   }
-
-  Address computeScaledAddress(const BaseIndex& address,
-                               UseScratchRegisterScope& temps);
 
   void j(Label* dest) { ma_b(dest); }
 

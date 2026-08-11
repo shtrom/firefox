@@ -1066,16 +1066,6 @@ void MacroAssemblerLOONG64Compat::computeScaledAddress32(
   }
 }
 
-Address MacroAssemblerLOONG64Compat::computeScaledAddress(
-    const BaseIndex& address, UseScratchRegisterScope& temps) {
-  Register scratch = temps.Acquire();
-  MOZ_ASSERT(scratch != address.base);
-  MOZ_ASSERT(scratch != address.index);
-
-  computeScaledAddress(address, scratch);
-  return Address(scratch, address.offset);
-}
-
 void MacroAssemblerLOONG64::ma_pop(Register r) {
   MOZ_ASSERT(r != StackPointer);
   as_ld_d(r, StackPointer, 0);
@@ -1703,27 +1693,34 @@ FaultingCodeOffset MacroAssemblerLOONG64::ma_load(
     Register dest, const BaseIndex& src, LoadStoreSize size,
     LoadStoreExtension extension) {
   UseScratchRegisterScope temps(asMasm());
-  Address address = asMasm().computeScaledAddress(src, temps);
-  return asMasm().ma_load(dest, address, size, extension);
+  Register scratch = temps.Acquire();
+  asMasm().computeScaledAddress(src, scratch);
+  return asMasm().ma_load(dest, Address(scratch, src.offset), size, extension);
 }
 
 FaultingCodeOffset MacroAssemblerLOONG64::ma_store(
     Register data, const BaseIndex& dest, LoadStoreSize size,
     LoadStoreExtension extension) {
   UseScratchRegisterScope temps(asMasm());
-  Address address = asMasm().computeScaledAddress(dest, temps);
-  return asMasm().ma_store(data, address, size, extension);
+  Register scratch = temps.Acquire();
+  asMasm().computeScaledAddress(dest, scratch);
+  ma_add_d(scratch, scratch, Imm32(dest.offset));
+  return asMasm().ma_store(data, Address(scratch, 0), size, extension);
 }
 
 void MacroAssemblerLOONG64::ma_store(Imm32 imm, const BaseIndex& dest,
                                      LoadStoreSize size,
                                      LoadStoreExtension extension) {
   UseScratchRegisterScope temps(asMasm());
-  Address address = asMasm().computeScaledAddress(dest, temps);
+  Register scratch2 = temps.Acquire();
+  // Make sure that scratch2 contains absolute address so that offset is 0.
+  asMasm().computeEffectiveAddress(dest, scratch2);
 
+  // Scrach register is free now, use it for loading imm value
   Register scratch = temps.Acquire();
   ma_li(scratch, imm);
-  asMasm().ma_store(scratch, address, size, extension);
+
+  asMasm().ma_store(scratch, Address(scratch2, 0), size, extension);
 }
 
 // Branches when done from within loongarch-specific code.
@@ -1926,29 +1923,33 @@ void MacroAssemblerLOONG64::ma_lis(FloatRegister dest, float value) {
 FaultingCodeOffset MacroAssemblerLOONG64::ma_fst_d(FloatRegister ft,
                                                    BaseIndex address) {
   UseScratchRegisterScope temps(asMasm());
-  Address addr = asMasm().computeScaledAddress(address, temps);
-  return asMasm().ma_fst_d(ft, addr);
+  Register scratch = temps.Acquire();
+  asMasm().computeScaledAddress(address, scratch);
+  return asMasm().ma_fst_d(ft, Address(scratch, address.offset));
 }
 
 FaultingCodeOffset MacroAssemblerLOONG64::ma_fst_s(FloatRegister ft,
                                                    BaseIndex address) {
   UseScratchRegisterScope temps(asMasm());
-  Address addr = asMasm().computeScaledAddress(address, temps);
-  return asMasm().ma_fst_s(ft, addr);
+  Register scratch = temps.Acquire();
+  asMasm().computeScaledAddress(address, scratch);
+  return asMasm().ma_fst_s(ft, Address(scratch, address.offset));
 }
 
 FaultingCodeOffset MacroAssemblerLOONG64::ma_fld_d(FloatRegister ft,
                                                    const BaseIndex& src) {
   UseScratchRegisterScope temps(asMasm());
-  Address address = asMasm().computeScaledAddress(src, temps);
-  return asMasm().ma_fld_d(ft, address);
+  Register scratch = temps.Acquire();
+  asMasm().computeScaledAddress(src, scratch);
+  return asMasm().ma_fld_d(ft, Address(scratch, src.offset));
 }
 
 FaultingCodeOffset MacroAssemblerLOONG64::ma_fld_s(FloatRegister ft,
                                                    const BaseIndex& src) {
   UseScratchRegisterScope temps(asMasm());
-  Address address = asMasm().computeScaledAddress(src, temps);
-  return asMasm().ma_fld_s(ft, address);
+  Register scratch = temps.Acquire();
+  asMasm().computeScaledAddress(src, scratch);
+  return asMasm().ma_fld_s(ft, Address(scratch, src.offset));
 }
 
 void MacroAssemblerLOONG64::ma_bc_s(FloatRegister lhs, FloatRegister rhs,
@@ -5334,8 +5335,9 @@ void MacroAssemblerLOONG64Compat::unboxInt32(const Address& src,
 void MacroAssemblerLOONG64Compat::unboxInt32(const BaseIndex& src,
                                              Register dest) {
   UseScratchRegisterScope temps(asMasm());
-  Address address = computeScaledAddress(src, temps);
-  load32(address, dest);
+  Register scratch = temps.Acquire();
+  computeScaledAddress(src, scratch);
+  load32(Address(scratch, src.offset), dest);
 }
 
 void MacroAssemblerLOONG64Compat::unboxBoolean(const ValueOperand& operand,
@@ -5355,8 +5357,9 @@ void MacroAssemblerLOONG64Compat::unboxBoolean(const Address& src,
 void MacroAssemblerLOONG64Compat::unboxBoolean(const BaseIndex& src,
                                                Register dest) {
   UseScratchRegisterScope temps(asMasm());
-  Address address = computeScaledAddress(src, temps);
-  ma_ld_w(dest, address);
+  Register scratch = temps.Acquire();
+  computeScaledAddress(src, scratch);
+  ma_ld_w(dest, Address(scratch, src.offset));
 }
 
 void MacroAssemblerLOONG64Compat::unboxDouble(const ValueOperand& operand,
@@ -5615,11 +5618,13 @@ void MacroAssemblerLOONG64Compat::loadInt32OrDouble(const Address& src,
   bind(&end);
 }
 
-void MacroAssemblerLOONG64Compat::loadInt32OrDouble(const BaseIndex& src,
+void MacroAssemblerLOONG64Compat::loadInt32OrDouble(const BaseIndex& addr,
                                                     FloatRegister dest) {
   UseScratchRegisterScope temps(asMasm());
-  Address address = computeScaledAddress(src, temps);
-  loadInt32OrDouble(address, dest);
+  Register scratch = temps.Acquire();
+
+  computeScaledAddress(addr, scratch);
+  loadInt32OrDouble(Address(scratch, addr.offset), dest);
 }
 
 void MacroAssemblerLOONG64Compat::loadConstantDouble(double dp,
@@ -5643,9 +5648,8 @@ Register MacroAssemblerLOONG64Compat::extractTag(const Address& address,
 
 Register MacroAssemblerLOONG64Compat::extractTag(const BaseIndex& address,
                                                  Register scratch) {
-  UseScratchRegisterScope temps(asMasm());
-  Address addr = computeScaledAddress(address, temps);
-  return extractTag(addr, scratch);
+  computeScaledAddress(address, scratch);
+  return extractTag(Address(scratch, address.offset), scratch);
 }
 
 /////////////////////////////////////////////////////////////////
@@ -5658,9 +5662,7 @@ void MacroAssemblerLOONG64Compat::storeValue(ValueOperand val,
 
 void MacroAssemblerLOONG64Compat::storeValue(ValueOperand val,
                                              const BaseIndex& dest) {
-  UseScratchRegisterScope temps(asMasm());
-  Address address = computeScaledAddress(dest, temps);
-  storeValue(val, address);
+  storePtr(val.valueReg(), dest);
 }
 
 void MacroAssemblerLOONG64Compat::storeValue(JSValueType type, Register reg,
@@ -5676,11 +5678,11 @@ void MacroAssemblerLOONG64Compat::storeValue(JSValueType type, Register reg,
 void MacroAssemblerLOONG64Compat::storeValue(JSValueType type, Register reg,
                                              BaseIndex dest) {
   UseScratchRegisterScope temps(asMasm());
-  Address address = computeScaledAddress(dest, temps);
-
   Register scratch = temps.Acquire();
+  MOZ_ASSERT(dest.base != scratch);
+
   boxValue(type, reg, scratch);
-  storeValue(ValueOperand(scratch), address);
+  storePtr(scratch, dest);
 }
 
 void MacroAssemblerLOONG64Compat::storeValue(const Value& val, Address dest) {
@@ -5699,16 +5701,16 @@ void MacroAssemblerLOONG64Compat::storeValue(const Value& val, Address dest) {
 
 void MacroAssemblerLOONG64Compat::storeValue(const Value& val, BaseIndex dest) {
   UseScratchRegisterScope temps(asMasm());
-  Address address = computeScaledAddress(dest, temps);
-
   Register scratch = temps.Acquire();
+  MOZ_ASSERT(dest.base != scratch);
+
   if (val.isGCThing()) {
     writeDataRelocation(val);
     movWithPatch(ImmWord(val.asRawBits()), scratch);
   } else {
     ma_li(scratch, ImmWord(val.asRawBits()));
   }
-  storeValue(ValueOperand(scratch), address);
+  storePtr(scratch, dest);
 }
 
 void MacroAssemblerLOONG64Compat::loadValue(Address src, ValueOperand val) {
@@ -5717,9 +5719,7 @@ void MacroAssemblerLOONG64Compat::loadValue(Address src, ValueOperand val) {
 
 void MacroAssemblerLOONG64Compat::loadValue(const BaseIndex& src,
                                             ValueOperand val) {
-  UseScratchRegisterScope temps(asMasm());
-  Address address = computeScaledAddress(src, temps);
-  loadValue(address, val);
+  loadPtr(src, val.valueReg());
 }
 
 void MacroAssemblerLOONG64Compat::tagValue(JSValueType type, Register payload,
