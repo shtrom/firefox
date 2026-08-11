@@ -37,6 +37,12 @@ class PKCS11ModuleChild final : public PPKCS11ModuleChild {
   ipc::IPCResult RecvResetToken(SECMODModuleID aModuleID, CK_SLOT_ID aSlotID,
                                 ResetTokenResolver&& aResolver);
 
+  ipc::IPCResult RecvChangeTokenPassword(SECMODModuleID aModuleID,
+                                         CK_SLOT_ID aSlotID,
+                                         const nsCString& aOldPassword,
+                                         const nsCString& aNewPassword,
+                                         ResetTokenResolver&& aResolver);
+
  private:
   nsCOMPtr<nsISerialEventTarget> mTaskQueue;
 

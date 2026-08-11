@@ -114,6 +114,28 @@ add_task(async function test_pkcs11_remote_process() {
   // should at least succeed without crashing or raising exceptions.
   await testToken.reset();
 
+  await testToken.changePassword("", "password");
+  ok(
+    testToken.isLoggedIn,
+    "changing password should cause the remote token to be logged in"
+  );
+
+  let threw = false;
+  try {
+    await testToken.changePassword("wrongpassword", "somethingelse");
+  } catch (e) {
+    equal(
+      e.result,
+      getXPCOMStatusFromNSS(SEC_ERROR_BAD_PASSWORD),
+      "should get bad password error"
+    );
+    threw = true;
+  }
+  ok(
+    threw,
+    "attempting to change the password with an incorrect password should throw"
+  );
+
   await moduleDB.deleteModule("PKCS11 Test Module");
   testModule = await findModuleByName(moduleDB, "PKCS11 Test Module");
   equal(

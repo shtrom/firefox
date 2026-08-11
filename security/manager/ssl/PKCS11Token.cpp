@@ -500,7 +500,41 @@ NS_IMETHODIMP
 RemotePKCS11Token::ChangePassword(const nsACString& oldPassword,
                                   const nsACString& newPassword, JSContext* aCx,
                                   Promise** aPromise) {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  MOZ_ASSERT(NS_IsMainThread());
+  if (!NS_IsMainThread()) {
+    return NS_ERROR_NOT_SAME_THREAD;
+  }
+
+  RefPtr<PKCS11ModuleDB> pkcs11ModuleDB(PKCS11ModuleDB::GetSingleton());
+  if (!pkcs11ModuleDB) {
+    return NS_ERROR_FAILURE;
+  }
+
+  ErrorResult result;
+  RefPtr<Promise> promise =
+      Promise::Create(xpc::CurrentNativeGlobal(aCx), result);
+  if (result.Failed()) {
+    return result.StealNSResult();
+  }
+
+  pkcs11ModuleDB
+      ->ChangeTokenPassword(mTokenInfo.moduleID(), mTokenInfo.slotID(),
+                            PromiseFlatCString(oldPassword),
+                            PromiseFlatCString(newPassword))
+      ->Then(GetCurrentSerialEventTarget(), __func__,
+             [self = RefPtr{this}, promise](
+                 const PKCS11ModuleDB::TokenInfoPromise::ResolveOrRejectValue&
+                     aValue) {
+               if (aValue.IsResolve()) {
+                 self->mTokenInfo = std::move(aValue.ResolveValue());
+                 promise->MaybeResolveWithUndefined();
+               } else {
+                 promise->MaybeReject(aValue.RejectValue());
+               }
+             });
+
+  promise.forget(aPromise);
+  return NS_OK;
 }
 
 NS_IMETHODIMP

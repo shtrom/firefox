@@ -556,6 +556,30 @@ RefPtr<PKCS11ModuleDB::TokenInfoPromise> PKCS11ModuleDB::ResetTokenGivenParent(
                                                      __func__);
           });
 }
+
+RefPtr<PKCS11ModuleDB::TokenInfoPromise>
+PKCS11ModuleDB::ChangeTokenPasswordGivenParent(
+    const RefPtr<PKCS11ModuleParent>& parent, SECMODModuleID moduleID,
+    CK_SLOT_ID slotID, const nsCString& oldPassword,
+    const nsCString& newPassword) {
+  using ReturnType = std::tuple<const nsresult&, TokenInfo&&>;
+  return parent
+      ->SendChangeTokenPassword(moduleID, slotID, oldPassword, newPassword)
+      ->Then(
+          GetCurrentSerialEventTarget(), __func__,
+          [](ReturnType rv) {
+            if (NS_FAILED(std::get<0>(rv))) {
+              return TokenInfoPromise::CreateAndReject(std::get<0>(rv),
+                                                       __func__);
+            }
+            return TokenInfoPromise::CreateAndResolve(
+                std::move(std::get<1>(rv)), __func__);
+          },
+          [](ipc::ResponseRejectReason reason) {
+            return TokenInfoPromise::CreateAndReject(NS_ERROR_FAILURE,
+                                                     __func__);
+          });
+}
 #endif  // NIGHTLY_BUILD && !MOZ_NO_SMART_CARDS
 
 NS_IMETHODIMP
@@ -660,6 +684,25 @@ RefPtr<PKCS11ModuleDB::TokenInfoPromise> PKCS11ModuleDB::ResetToken(
       [moduleID, slotID](const RefPtr<PKCS11ModuleParent>& parent) {
         MOZ_RELEASE_ASSERT(parent);
         return ResetTokenGivenParent(parent, moduleID, slotID);
+      },
+      [](nsresult rv) {
+        return TokenInfoPromise::CreateAndReject(rv, __func__);
+      });
+}
+
+RefPtr<PKCS11ModuleDB::TokenInfoPromise> PKCS11ModuleDB::ChangeTokenPassword(
+    SECMODModuleID moduleID, CK_SLOT_ID slotID, const nsCString& oldPassword,
+    const nsCString& newPassword) {
+  if (!mPKCS11ModuleProcessPromise) {
+    return TokenInfoPromise::CreateAndReject(NS_ERROR_NOT_AVAILABLE, __func__);
+  }
+  return mPKCS11ModuleProcessPromise->Then(
+      GetCurrentSerialEventTarget(), __func__,
+      [moduleID, slotID, oldPassword,
+       newPassword](const RefPtr<PKCS11ModuleParent>& parent) {
+        MOZ_RELEASE_ASSERT(parent);
+        return ChangeTokenPasswordGivenParent(parent, moduleID, slotID,
+                                              oldPassword, newPassword);
       },
       [](nsresult rv) {
         return TokenInfoPromise::CreateAndReject(rv, __func__);

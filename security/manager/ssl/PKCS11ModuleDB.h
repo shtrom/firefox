@@ -59,11 +59,20 @@ class PKCS11ModuleDB : public nsIPKCS11ModuleDB {
   typedef MozPromise<mozilla::psm::TokenInfo, nsresult, true> TokenInfoPromise;
   RefPtr<TokenInfoPromise> ResetToken(SECMODModuleID moduleID,
                                       CK_SLOT_ID slotID);
+  RefPtr<TokenInfoPromise> ChangeTokenPassword(SECMODModuleID moduleID,
+                                               CK_SLOT_ID slotID,
+                                               const nsCString& oldPassword,
+                                               const nsCString& newPassword);
 
  private:
   static RefPtr<TokenInfoPromise> ResetTokenGivenParent(
       const RefPtr<PKCS11ModuleParent>& parent, SECMODModuleID moduleID,
       CK_SLOT_ID slotID);
+
+  static RefPtr<TokenInfoPromise> ChangeTokenPasswordGivenParent(
+      const RefPtr<PKCS11ModuleParent>& parent, SECMODModuleID moduleID,
+      CK_SLOT_ID slotID, const nsCString& oldPassword,
+      const nsCString& newPassword);
 #endif  // NIGHTLY_BUILD && !MOZ_NO_SMART_CARDS
 };
 
