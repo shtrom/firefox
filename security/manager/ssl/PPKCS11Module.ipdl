@@ -6,6 +6,18 @@ namespace mozilla {
 
 namespace psm {
 
+struct TokenInfo {
+  nsCString name;
+  nsCString manID;
+  nsCString hwVersion;
+  nsCString fwVersion;
+  nsCString serialNumber;
+
+  bool isLoggedIn;
+  bool canHavePassword;
+  bool hasPassword;
+};
+
 struct SlotInfo {
   nsCString name;
   nsCString desc;
@@ -14,6 +26,7 @@ struct SlotInfo {
   nsCString fwVersion;
   uint32_t status;
   nsCString tokenName;
+  TokenInfo? tokenInfo;
 };
 
 struct ModuleInfo {
