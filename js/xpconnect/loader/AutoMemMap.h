@@ -6,9 +6,9 @@
 #define loader_AutoMemMap_h
 
 #include "mozilla/FileUtils.h"
+#include "mozilla/MemoryMappedFile.h"
 #include "mozilla/RangedPtr.h"
 #include "mozilla/Result.h"
-#include "mozilla/MemoryMappedFile.h"
 
 #include <prio.h>
 
