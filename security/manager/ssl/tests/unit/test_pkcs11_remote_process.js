@@ -29,17 +29,12 @@ var gPrompt = {
   },
 };
 
-const gPromptFactory = {
-  QueryInterface: ChromeUtils.generateQI(["nsIPromptFactory"]),
-  getPrompt: () => gPrompt,
-};
+var gWindowWatcher = installWindowWatcherForProtectedAuth(gPrompt);
 
 // Ensure that the appropriate initialization has happened.
 do_get_profile();
 
 add_task(async function test_pkcs11_remote_process() {
-  MockRegistrar.register("@mozilla.org/prompter;1", gPromptFactory);
-
   let libraryFile = Services.dirsvc.get("CurWorkD", Ci.nsIFile);
   libraryFile.append("pkcs11testmodule");
   libraryFile.append(ctypes.libraryName("pkcs11testmodule"));
@@ -179,6 +174,33 @@ add_task(async function test_pkcs11_remote_process() {
   ok(
     threw,
     "attempting to change the password with an incorrect password should throw"
+  );
+
+  let protectedAuthSlot = findSlotByName(testModule, "Test PKCS11 Slot 二");
+  notEqual(
+    protectedAuthSlot,
+    null,
+    "should be able to find 'Test PKCS11 Slot 二'"
+  );
+  let protectedAuthToken = protectedAuthSlot.getToken();
+  notEqual(
+    protectedAuthToken,
+    null,
+    "should be able to get token from protected auth slot"
+  );
+  ok(
+    !protectedAuthToken.isLoggedIn,
+    "initially, the protected auth token should not be logged in"
+  );
+  await protectedAuthToken.login();
+  ok(
+    protectedAuthToken.isLoggedIn,
+    "logging in should cause the protected auth token to be logged in"
+  );
+  equal(
+    gWindowWatcher.protectedAuthPromptsSeen,
+    1,
+    "should have seen one protected auth prompt"
   );
 
   await moduleDB.deleteModule("PKCS11 Test Module");

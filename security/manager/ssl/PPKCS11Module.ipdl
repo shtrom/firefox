@@ -69,9 +69,14 @@ protocol PPKCS11Module
                               nsCString oldPassword, nsCString newPassword)
         returns (nsresult rv, TokenInfo tokenInfo);
 
+    async CancelProtectedAuth(uint64_t id);
+
   parent:
     async PromptPassword(nsCString aTokenName)
         returns (nsresult rv, nsCString password);
+
+    async ShowProtectedAuthPrompt(nsCString aTokenName, uint64_t id);
+    async DismissProtectedAuthPrompt(uint64_t id);
 };
 
 } // namespace psm

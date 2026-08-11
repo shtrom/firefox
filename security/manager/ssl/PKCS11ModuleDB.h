@@ -17,6 +17,13 @@
 namespace mozilla {
 namespace psm {
 
+// Opens an informational dialog indicating that a protected authentication
+// attempt is in progress if there's an active window to host it. In headless
+// contexts (xpcshell, very early startup) there's no WindowCreator registered
+// and OpenWindow would assert/fail.
+void ShowProtectedAuthDialog(const nsCString& tokenName,
+                             const nsString& promptId);
+
 #define NS_PKCS11MODULEDB_CID \
   {0xff9fbcd7, 0x9517, 0x4334, {0xb9, 0x7a, 0xce, 0xed, 0x78, 0x90, 0x99, 0x74}}
 
