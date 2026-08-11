@@ -1936,6 +1936,34 @@ export class UrlbarView {
     noWrap.appendChild(titleSeparator);
     item._elements.set("titleSeparator", titleSeparator);
 
+    if (Services.prefs.getBoolPref("browser.nova.enabled", false)) {
+      let userContext = this.#createElement("span");
+      userContext.classList.add(
+        "urlbarView-user-context",
+        "urlbarView-switchToTab-accessory"
+      );
+      noWrap.appendChild(userContext);
+      item._elements.set("userContext", userContext);
+
+      let tabGroupContainer = this.#createElement("span");
+      tabGroupContainer.classList.add(
+        "urlbarView-tab-group-container",
+        "urlbarView-switchToTab-accessory"
+      );
+      noWrap.appendChild(tabGroupContainer);
+      item._elements.set("tabGroupContainer", tabGroupContainer);
+
+      let tabGroupLabelFull = this.#createElement("span");
+      tabGroupLabelFull.classList.add("urlbarView-tab-group-label-full");
+      tabGroupContainer.appendChild(tabGroupLabelFull);
+      item._elements.set("tabGroupLabelFull", tabGroupLabelFull);
+
+      let tabGroupLabelShort = this.#createElement("span");
+      tabGroupLabelShort.classList.add("urlbarView-tab-group-label-short");
+      tabGroupContainer.appendChild(tabGroupLabelShort);
+      item._elements.set("tabGroupLabelShort", tabGroupLabelShort);
+    }
+
     let action = this.#createElement("span");
     action.className = "urlbarView-action";
     noWrap.appendChild(action);
@@ -2493,7 +2521,7 @@ export class UrlbarView {
         // Hide chiclet when showing secondaryActions.
         if (!UrlbarPrefs.get("secondaryActions.switchToTab")) {
           actionSetter = () => {
-            this.#setSwitchTabActionChiclet(result, action);
+            this.#setSwitchTabActionChiclet(item, result, action);
           };
         }
         setURL = true;
@@ -2888,6 +2916,7 @@ export class UrlbarView {
 
   #updateRowContentForBottomUrl(item, result) {
     item.classList.add("with-bottom-url");
+    item.toggleAttribute("has-url", true);
 
     // The "rich-suggestion" attribute isn't used in Nova.
     item.toggleAttribute(
@@ -3602,16 +3631,42 @@ export class UrlbarView {
   }
 
   /**
-   * Sets the content of the 'Switch To Tab' chiclet.
+   * Sets the content of the 'Switch To Tab' action chiclet and the related
+   * user-context and tab-group actions.
    *
+   * @param {Element} item
+   *   The result's row element.
    * @param {UrlbarResult} result
    *   The result for which the content is being set.
    * @param {Element} actionNode
-   *   The DOM node for the result's action.
+   *   The DOM node for the result's action (the switch-to-tab chiclet).
    */
-  #setSwitchTabActionChiclet(result, actionNode) {
+  #setSwitchTabActionChiclet(item, result, actionNode) {
     actionNode.classList.add("urlbarView-switchToTab");
 
+    let splitview = this.chromeWindow.gBrowser.selectedTab.splitview;
+    let shouldMoveTabToSplitView =
+      splitview &&
+      !splitview.tabs.some(
+        tab => tab.linkedBrowser.currentURI.spec === result.payload.url
+      );
+    this.#l10nCache.setElementL10n(actionNode, {
+      id: shouldMoveTabToSplitView
+        ? "urlbar-result-action-move-tab-to-split-view"
+        : "urlbar-result-action-switch-tab",
+    });
+
+    if (!Services.prefs.getBoolPref("browser.nova.enabled", false)) {
+      this.#updateOtherActionChicletsProton(result, actionNode);
+      return;
+    }
+
+    this.#updateUserContextAction(item, result);
+    this.#updateTabGroupAction(item, result);
+  }
+
+  // Proton only
+  #updateOtherActionChicletsProton(result, actionNode) {
     let contextualIdentityAction = actionNode.parentNode.querySelector(
       ".action-contextualidentity"
     );
@@ -3656,19 +3711,9 @@ export class UrlbarView {
     } else {
       tabGroupAction?.remove();
     }
-    let splitview = this.chromeWindow.gBrowser.selectedTab.splitview;
-    let shouldMoveTabToSplitView =
-      splitview &&
-      !splitview.tabs.some(
-        tab => tab.linkedBrowser.currentURI.spec === result.payload.url
-      );
-    this.#l10nCache.setElementL10n(actionNode, {
-      id: shouldMoveTabToSplitView
-        ? "urlbar-result-action-move-tab-to-split-view"
-        : "urlbar-result-action-switch-tab",
-    });
   }
 
+  // Proton only
   #addContextualIdentityToSwitchTabChiclet(result, actionNode) {
     let label = lazy.ContextualIdentityService.getUserContextLabel(
       result.payload.userContextId
@@ -3721,6 +3766,7 @@ export class UrlbarView {
     }
   }
 
+  // Proton only
   #addGroupToSwitchTabChiclet(result, actionNode) {
     const group = this.chromeWindow.gBrowser.getTabGroupById(
       result.payload.tabGroup
@@ -3772,6 +3818,128 @@ export class UrlbarView {
       "--tab-group-text-color",
       group.style.getPropertyValue("--tab-group-text-color")
     );
+  }
+
+  #updateUserContextAction(item, result) {
+    let identity;
+    let iconUrl;
+    let label;
+    if (
+      result.type == UrlbarShared.RESULT_TYPE.TAB_SWITCH &&
+      result.payload.userContextId &&
+      UrlbarShared.isContainerUserContextId(result.payload.userContextId)
+    ) {
+      identity = lazy.ContextualIdentityService.getPublicIdentityFromId(
+        result.payload.userContextId
+      );
+      iconUrl = identity?.icon
+        ? lazy.ContextualIdentityService.getContainerIconURL(identity.icon)
+        : null;
+      label = lazy.ContextualIdentityService.getUserContextLabel(
+        result.payload.userContextId
+      ).trim();
+    }
+
+    let contextNode = item._elements.get("userContext");
+
+    if (!iconUrl && !label) {
+      contextNode.toggleAttribute("hidden", true);
+      this.#l10nCache.removeElementL10n(contextNode);
+      return;
+    }
+
+    if (iconUrl) {
+      contextNode.style.setProperty("--user-context-icon", `url(${iconUrl})`);
+    } else {
+      contextNode.textContent = label;
+      contextNode.style.removeProperty("--user-context-icon");
+    }
+
+    for (let n of contextNode.classList) {
+      if (n.startsWith("identity-color-")) {
+        contextNode.classList.remove(n);
+        break;
+      }
+    }
+    if (identity?.color) {
+      contextNode.classList.add("identity-color-" + identity.color);
+    }
+
+    if (label) {
+      contextNode.setAttribute("title", label);
+      contextNode.setAttribute("aria-label", label);
+    } else {
+      contextNode.removeAttribute("title");
+      contextNode.removeAttribute("aria-label");
+    }
+
+    contextNode.toggleAttribute("hidden", false);
+  }
+
+  #updateTabGroupAction(item, result) {
+    let group;
+    if (
+      result.type == UrlbarShared.RESULT_TYPE.TAB_SWITCH &&
+      result.payload.tabGroup
+    ) {
+      group = this.chromeWindow.gBrowser.getTabGroupById(
+        result.payload.tabGroup
+      );
+    }
+
+    let containerNode = item._elements.get("tabGroupContainer");
+    let fullLabelNode = item._elements.get("tabGroupLabelFull");
+    let shortLabelNode = item._elements.get("tabGroupLabelShort");
+
+    if (!group) {
+      containerNode.toggleAttribute("hidden", true);
+      containerNode.removeAttribute("title");
+      containerNode.removeAttribute("aria-label");
+      this.#l10nCache.removeElementL10n(fullLabelNode);
+      this.#l10nCache.removeElementL10n(shortLabelNode);
+      return;
+    }
+
+    let label = group.label.trim();
+    if (label) {
+      this.#l10nCache.removeElementL10n(fullLabelNode);
+      this.#l10nCache.removeElementL10n(shortLabelNode);
+      fullLabelNode.textContent = label;
+      shortLabelNode.textContent = label[0];
+      containerNode.setAttribute("title", label);
+      containerNode.setAttribute("aria-label", label);
+    } else {
+      for (let node of [fullLabelNode, shortLabelNode]) {
+        this.#l10nCache.setElementL10n(node, {
+          id: `urlbar-result-action-tab-group-unnamed`,
+        });
+      }
+      containerNode.removeAttribute("title");
+      containerNode.removeAttribute("aria-label");
+    }
+
+    containerNode.style.setProperty(
+      "--tab-group-color",
+      group.style.getPropertyValue("--tab-group-color")
+    );
+    containerNode.style.setProperty(
+      "--tab-group-color-invert",
+      group.style.getPropertyValue("--tab-group-color-invert")
+    );
+    containerNode.style.setProperty(
+      "--tab-group-color-pale",
+      group.style.getPropertyValue("--tab-group-color-pale")
+    );
+    containerNode.style.setProperty(
+      "--tab-group-background-color",
+      group.style.getPropertyValue("--tab-group-background-color")
+    );
+    containerNode.style.setProperty(
+      "--tab-group-text-color",
+      group.style.getPropertyValue("--tab-group-text-color")
+    );
+
+    containerNode.toggleAttribute("hidden", false);
   }
 
   /**
