@@ -85,18 +85,7 @@
           "properties": {
             "Value": {
               "type": "string",
-              "oneOf": [
-                {
-                  "const": "available",
-                  "title": "Available",
-                  "description": "The feature is on and available to users."
-                },
-                {
-                  "const": "blocked",
-                  "title": "Blocked",
-                  "description": "The feature is off and unavailable to users."
-                }
-              ]
+              "enum": ["available", "blocked"]
             },
             "Locked": {
               "type": "boolean"
@@ -108,18 +97,7 @@
           "properties": {
             "Value": {
               "type": "string",
-              "oneOf": [
-                {
-                  "const": "available",
-                  "title": "Available",
-                  "description": "The feature is on and available to users."
-                },
-                {
-                  "const": "blocked",
-                  "title": "Blocked",
-                  "description": "The feature is off and unavailable to users."
-                }
-              ]
+              "enum": ["available", "blocked"]
             },
             "Locked": {
               "type": "boolean"
@@ -131,18 +109,7 @@
           "properties": {
             "Value": {
               "type": "string",
-              "oneOf": [
-                {
-                  "const": "available",
-                  "title": "Available",
-                  "description": "The feature is on and available to users."
-                },
-                {
-                  "const": "blocked",
-                  "title": "Blocked",
-                  "description": "The feature is off and unavailable to users."
-                }
-              ]
+              "enum": ["available", "blocked"]
             },
             "Locked": {
               "type": "boolean"
@@ -154,18 +121,7 @@
           "properties": {
             "Value": {
               "type": "string",
-              "oneOf": [
-                {
-                  "const": "available",
-                  "title": "Available",
-                  "description": "The feature is on and available to users."
-                },
-                {
-                  "const": "blocked",
-                  "title": "Blocked",
-                  "description": "The feature is off and unavailable to users."
-                }
-              ]
+              "enum": ["available", "blocked"]
             },
             "Locked": {
               "type": "boolean"
@@ -177,18 +133,7 @@
           "properties": {
             "Value": {
               "type": "string",
-              "oneOf": [
-                {
-                  "const": "available",
-                  "title": "Available",
-                  "description": "The feature is on and available to users."
-                },
-                {
-                  "const": "blocked",
-                  "title": "Blocked",
-                  "description": "The feature is off and unavailable to users."
-                }
-              ]
+              "enum": ["available", "blocked"]
             },
             "Locked": {
               "type": "boolean"
@@ -200,18 +145,7 @@
           "properties": {
             "Value": {
               "type": "string",
-              "oneOf": [
-                {
-                  "const": "available",
-                  "title": "Available",
-                  "description": "The feature is on and available to users."
-                },
-                {
-                  "const": "blocked",
-                  "title": "Blocked",
-                  "description": "The feature is off and unavailable to users."
-                }
-              ]
+              "enum": ["available", "blocked"]
             },
             "Locked": {
               "type": "boolean"
@@ -223,18 +157,7 @@
           "properties": {
             "Value": {
               "type": "string",
-              "oneOf": [
-                {
-                  "const": "available",
-                  "title": "Available",
-                  "description": "The feature is on and available to users."
-                },
-                {
-                  "const": "blocked",
-                  "title": "Blocked",
-                  "description": "The feature is off and unavailable to users."
-                }
-              ]
+              "enum": ["available", "blocked"]
             },
             "Locked": {
               "type": "boolean"
@@ -532,18 +455,7 @@
 
           "Placement": {
             "type": "string",
-            "oneOf": [
-              {
-                "const": "toolbar",
-                "title": "Bookmarks toolbar",
-                "description": "Add the bookmark to the bookmarks toolbar."
-              },
-              {
-                "const": "menu",
-                "title": "Bookmarks menu",
-                "description": "Add the bookmark to the bookmarks menu."
-              }
-            ]
+            "enum": ["toolbar", "menu"]
           },
 
           "Folder": {
@@ -662,35 +574,35 @@
               },
               "icon": {
                 "type": "string",
-                "oneOf": [
-                  { "const": "fingerprint", "title": "Fingerprint" },
-                  { "const": "briefcase", "title": "Briefcase" },
-                  { "const": "dollar", "title": "Dollar sign" },
-                  { "const": "cart", "title": "Shopping cart" },
-                  { "const": "vacation", "title": "Vacation" },
-                  { "const": "gift", "title": "Gift" },
-                  { "const": "food", "title": "Food" },
-                  { "const": "fruit", "title": "Fruit" },
-                  { "const": "pet", "title": "Pet" },
-                  { "const": "tree", "title": "Tree" },
-                  { "const": "chill", "title": "Chill" },
-                  { "const": "circle", "title": "Dot" },
-                  { "const": "fence", "title": "Fence" }
+                "enum": [
+                  "fingerprint",
+                  "briefcase",
+                  "dollar",
+                  "cart",
+                  "vacation",
+                  "gift",
+                  "food",
+                  "fruit",
+                  "pet",
+                  "tree",
+                  "chill",
+                  "circle",
+                  "fence"
                 ]
               },
               "color": {
                 "type": "string",
-                "oneOf": [
-                  { "const": "blue", "title": "Blue" },
-                  { "const": "cyan", "title": "Cyan" },
-                  { "const": "green", "title": "Green" },
-                  { "const": "yellow", "title": "Yellow" },
-                  { "const": "orange", "title": "Orange" },
-                  { "const": "red", "title": "Red" },
-                  { "const": "pink", "title": "Pink" },
-                  { "const": "purple", "title": "Purple" },
-                  { "const": "violet", "title": "Violet" },
-                  { "const": "gray", "title": "Gray" }
+                "enum": [
+                  "blue",
+                  "cyan",
+                  "green",
+                  "yellow",
+                  "orange",
+                  "red",
+                  "pink",
+                  "purple",
+                  "violet",
+                  "gray"
                 ]
               }
             },
@@ -880,23 +792,7 @@
 
         "AcceptThirdParty": {
           "type": "string",
-          "oneOf": [
-            {
-              "const": "always",
-              "title": "Always",
-              "description": "Accept all third-party cookies."
-            },
-            {
-              "const": "never",
-              "title": "Never",
-              "description": "Reject all third-party cookies."
-            },
-            {
-              "const": "from-visited",
-              "title": "From visited sites only",
-              "description": "Accept third-party cookies only from sites the user has visited."
-            }
-          ]
+          "enum": ["always", "never", "from-visited"]
         },
 
         "RejectTracker": {
@@ -913,83 +809,27 @@
 
         "Behavior": {
           "type": "string",
-          "oneOf": [
-            {
-              "const": "accept",
-              "title": "Accept all cookies",
-              "description": "Accept cookies from every site, including third parties."
-            },
-            {
-              "const": "reject-foreign",
-              "title": "Reject third-party cookies",
-              "description": "Reject every cookie set by a third party."
-            },
-            {
-              "const": "reject",
-              "title": "Reject all cookies",
-              "description": "Reject cookies from every site."
-            },
-            {
-              "const": "limit-foreign",
-              "title": "Third-party cookies from visited sites only",
-              "description": "Reject third-party cookies except from sites the user has visited."
-            },
-            {
-              "const": "reject-tracker",
-              "title": "Reject known trackers",
-              "description": "Reject cookies set by sites identified as trackers."
-            },
-            {
-              "const": "reject-tracker-and-partition-foreign",
-              "title": "Reject known trackers and partition third-party cookies",
-              "description": "Reject cookies from known trackers and confine the remaining third-party cookies to the site that set them. This is Total Cookie Protection."
-            },
-            {
-              "const": "partition-foreign",
-              "title": "Partition third-party cookies",
-              "description": "Confine third-party cookies to the site that set them."
-            }
+          "enum": [
+            "accept",
+            "reject-foreign",
+            "reject",
+            "limit-foreign",
+            "reject-tracker",
+            "reject-tracker-and-partition-foreign",
+            "partition-foreign"
           ]
         },
 
         "BehaviorPrivateBrowsing": {
           "type": "string",
-          "oneOf": [
-            {
-              "const": "accept",
-              "title": "Accept all cookies",
-              "description": "Accept cookies from every site, including third parties."
-            },
-            {
-              "const": "reject-foreign",
-              "title": "Reject third-party cookies",
-              "description": "Reject every cookie set by a third party."
-            },
-            {
-              "const": "reject",
-              "title": "Reject all cookies",
-              "description": "Reject cookies from every site."
-            },
-            {
-              "const": "limit-foreign",
-              "title": "Third-party cookies from visited sites only",
-              "description": "Reject third-party cookies except from sites the user has visited."
-            },
-            {
-              "const": "reject-tracker",
-              "title": "Reject known trackers",
-              "description": "Reject cookies set by sites identified as trackers."
-            },
-            {
-              "const": "reject-tracker-and-partition-foreign",
-              "title": "Reject known trackers and partition third-party cookies",
-              "description": "Reject cookies from known trackers and confine the remaining third-party cookies to the site that set them. This is Total Cookie Protection."
-            },
-            {
-              "const": "partition-foreign",
-              "title": "Partition third-party cookies",
-              "description": "Confine third-party cookies to the site that set them."
-            }
+          "enum": [
+            "accept",
+            "reject-foreign",
+            "reject",
+            "limit-foreign",
+            "reject-tracker",
+            "reject-tracker-and-partition-foreign",
+            "partition-foreign"
           ]
         }
       }
@@ -1029,18 +869,7 @@
       },
       "description": "Set the default permission for websites requesting access to serial ports through the Web Serial API.",
       "examples": [2, 3],
-      "oneOf": [
-        {
-          "const": 2,
-          "title": "Block serial port access",
-          "description": "No site may access serial ports, and users cannot allow it."
-        },
-        {
-          "const": 3,
-          "title": "Ask when a site requests access",
-          "description": "Sites may request access to a serial port and the user is prompted. Users can turn access off."
-        }
-      ]
+      "enum": [2, 3]
     },
 
     "DisableAccounts": {
@@ -1473,26 +1302,7 @@
       "examples": ["always"],
       "anyOf": [
         { "type": "boolean" },
-        {
-          "type": "string",
-          "oneOf": [
-            {
-              "const": "always",
-              "title": "Always",
-              "description": "Show the bookmarks toolbar on every page."
-            },
-            {
-              "const": "never",
-              "title": "Never",
-              "description": "Hide the bookmarks toolbar."
-            },
-            {
-              "const": "newtab",
-              "title": "New tab only",
-              "description": "Show the bookmarks toolbar only on the New Tab page."
-            }
-          ]
-        }
+        { "type": "string", "enum": ["always", "never", "newtab"] }
       ]
     },
 
@@ -1509,28 +1319,7 @@
         { "type": "boolean" },
         {
           "type": "string",
-          "oneOf": [
-            {
-              "const": "always",
-              "title": "Always shown",
-              "description": "The menu bar is shown and the user cannot hide it."
-            },
-            {
-              "const": "never",
-              "title": "Always hidden",
-              "description": "The menu bar is hidden and the user cannot show it, including by pressing Alt."
-            },
-            {
-              "const": "default-on",
-              "title": "Shown by default",
-              "description": "The menu bar starts visible and the user can hide it."
-            },
-            {
-              "const": "default-off",
-              "title": "Hidden by default",
-              "description": "The menu bar starts hidden and the user can show it."
-            }
-          ]
+          "enum": ["always", "never", "default-on", "default-off"]
         }
       ]
     },
@@ -1645,18 +1434,7 @@
         },
         "Category": {
           "type": "string",
-          "oneOf": [
-            {
-              "const": "standard",
-              "title": "Standard",
-              "description": "Apply the standard Enhanced Tracking Protection level, which balances protection against site breakage."
-            },
-            {
-              "const": "strict",
-              "title": "Strict",
-              "description": "Apply the strict Enhanced Tracking Protection level, which blocks more trackers and may break some sites."
-            }
-          ]
+          "enum": ["standard", "strict"]
         },
         "BaselineExceptions": {
           "type": "boolean"
@@ -1803,49 +1581,18 @@
           "properties": {
             "installation_mode": {
               "type": "string",
-              "oneOf": [
-                {
-                  "const": "allowed",
-                  "title": "Allowed",
-                  "description": "Users can install extensions."
-                },
-                {
-                  "const": "blocked",
-                  "title": "Blocked",
-                  "description": "No extension can be installed. An extension with its own entry in this policy is exempt, whatever that entry says."
-                }
-              ]
+              "enum": ["allowed", "blocked"]
             },
             "allowed_types": {
               "type": "array",
               "items": {
                 "type": "string",
-                "oneOf": [
-                  {
-                    "const": "extension",
-                    "title": "Extension",
-                    "description": "Ordinary browser extensions."
-                  },
-                  {
-                    "const": "dictionary",
-                    "title": "Spelling dictionary",
-                    "description": "Spell-checking dictionaries."
-                  },
-                  {
-                    "const": "locale",
-                    "title": "Language pack",
-                    "description": "Language packs that translate the Firefox interface."
-                  },
-                  {
-                    "const": "theme",
-                    "title": "Theme",
-                    "description": "Themes that change the appearance of Firefox."
-                  },
-                  {
-                    "const": "sitepermission",
-                    "title": "Site permission add-on",
-                    "description": "Add-ons that grant one site access to a restricted capability."
-                  }
+                "enum": [
+                  "extension",
+                  "dictionary",
+                  "locale",
+                  "theme",
+                  "sitepermission"
                 ]
               }
             },
@@ -1900,27 +1647,11 @@
           "properties": {
             "installation_mode": {
               "type": "string",
-              "oneOf": [
-                {
-                  "const": "allowed",
-                  "title": "Allowed",
-                  "description": "The extension may be installed, even when extensions are blocked by default."
-                },
-                {
-                  "const": "blocked",
-                  "title": "Blocked",
-                  "description": "The extension cannot be installed, and is uninstalled if already present."
-                },
-                {
-                  "const": "force_installed",
-                  "title": "Force installed",
-                  "description": "The extension is installed automatically and the user can neither disable nor remove it."
-                },
-                {
-                  "const": "normal_installed",
-                  "title": "Normal installed",
-                  "description": "The extension is installed automatically. The user can disable it but cannot remove it."
-                }
+              "enum": [
+                "allowed",
+                "blocked",
+                "force_installed",
+                "normal_installed"
               ]
             },
             "install_url": {
@@ -1935,18 +1666,7 @@
             "update_url": { "$ref": "#/definitions/url" },
             "default_area": {
               "type": "string",
-              "oneOf": [
-                {
-                  "const": "navbar",
-                  "title": "Toolbar",
-                  "description": "Place the extension's button on the toolbar."
-                },
-                {
-                  "const": "menupanel",
-                  "title": "Extensions panel",
-                  "description": "Place the extension's button in the extensions panel instead of the toolbar."
-                }
-              ]
+              "enum": ["navbar", "menupanel"]
             },
             "runtime_allowed_hosts": {
               "type": "array",
@@ -2196,23 +1916,7 @@
               "properties": {
                 "action": {
                   "type": "string",
-                  "oneOf": [
-                    {
-                      "const": "saveToDisk",
-                      "title": "Save to disk",
-                      "description": "Download the file instead of opening it."
-                    },
-                    {
-                      "const": "useHelperApp",
-                      "title": "Open with a helper application",
-                      "description": "Open the content with an application listed in `handlers`."
-                    },
-                    {
-                      "const": "useSystemDefault",
-                      "title": "Open with the system default application",
-                      "description": "Open the content with the application the operating system associates with that type."
-                    }
-                  ]
+                  "enum": ["saveToDisk", "useHelperApp", "useSystemDefault"]
                 },
                 "ask": {
                   "type": "boolean"
@@ -2281,28 +1985,7 @@
         },
         "StartPage": {
           "type": "string",
-          "oneOf": [
-            {
-              "const": "none",
-              "title": "Blank page",
-              "description": "Start on a blank page."
-            },
-            {
-              "const": "homepage",
-              "title": "Homepage",
-              "description": "Start on the homepage."
-            },
-            {
-              "const": "previous-session",
-              "title": "Previous session",
-              "description": "Restore the windows and tabs open at the end of the previous session."
-            },
-            {
-              "const": "homepage-locked",
-              "title": "Homepage, locked",
-              "description": "Start on the homepage and prevent the user from changing the startup page."
-            }
-          ]
+          "enum": ["none", "homepage", "previous-session", "homepage-locked"]
         },
         "NewTabOnRestore": {
           "type": "boolean"
@@ -2333,28 +2016,7 @@
       },
       "description": "Configure HTTPS-Only Mode.",
       "examples": ["allowed"],
-      "oneOf": [
-        {
-          "const": "allowed",
-          "title": "Available",
-          "description": "HTTPS-Only Mode is off by default and the user can turn it on."
-        },
-        {
-          "const": "disallowed",
-          "title": "Off and locked",
-          "description": "HTTPS-Only Mode is off and the user cannot turn it on."
-        },
-        {
-          "const": "enabled",
-          "title": "On by default",
-          "description": "HTTPS-Only Mode is on by default and the user can turn it off."
-        },
-        {
-          "const": "force_enabled",
-          "title": "On and locked",
-          "description": "HTTPS-Only Mode is on and the user cannot turn it off."
-        }
-      ]
+      "enum": ["allowed", "disallowed", "enabled", "force_enabled"]
     },
 
     "InstallAddonsPermission": {
@@ -2830,23 +2492,7 @@
           "properties": {
             "Default": {
               "type": "string",
-              "oneOf": [
-                {
-                  "const": "allow-audio-video",
-                  "title": "Allow audio and video",
-                  "description": "Sites may autoplay both audio and video."
-                },
-                {
-                  "const": "block-audio",
-                  "title": "Block audio",
-                  "description": "Sites may autoplay video without sound, but not audio."
-                },
-                {
-                  "const": "block-audio-video",
-                  "title": "Block audio and video",
-                  "description": "Sites may not autoplay anything."
-                }
-              ]
+              "enum": ["allow-audio-video", "block-audio", "block-audio-video"]
             },
 
             "Allow": {
@@ -3064,48 +2710,11 @@
             },
             "Status": {
               "type": "string",
-              "oneOf": [
-                {
-                  "const": "default",
-                  "title": "Set the default value",
-                  "description": "Change the preference's default value. A value the user has already set still wins."
-                },
-                {
-                  "const": "locked",
-                  "title": "Set and lock",
-                  "description": "Change the preference's default value and prevent the user from changing it."
-                },
-                {
-                  "const": "user",
-                  "title": "Set as a user value",
-                  "description": "Set the preference as though the user had set it, so the value is written to the profile."
-                },
-                {
-                  "const": "clear",
-                  "title": "Clear the user value",
-                  "description": "Remove any value the user has set, reverting the preference to its default."
-                }
-              ]
+              "enum": ["default", "locked", "user", "clear"]
             },
             "Type": {
               "type": "string",
-              "oneOf": [
-                {
-                  "const": "number",
-                  "title": "Number",
-                  "description": "Store `Value` as an integer. Set this explicitly for 0 and 1, which are otherwise stored as booleans."
-                },
-                {
-                  "const": "boolean",
-                  "title": "Boolean",
-                  "description": "Store `Value` as a boolean."
-                },
-                {
-                  "const": "string",
-                  "title": "String",
-                  "description": "Store `Value` as a string."
-                }
-              ]
+              "enum": ["number", "boolean", "string"]
             }
           }
         }
@@ -3146,23 +2755,7 @@
       },
       "description": "Set availability of private browsing mode.",
       "examples": [0],
-      "oneOf": [
-        {
-          "const": 0,
-          "title": "Available",
-          "description": "The user can open private windows."
-        },
-        {
-          "const": 1,
-          "title": "Disabled",
-          "description": "Private windows and 'about:privatebrowsing' are unavailable."
-        },
-        {
-          "const": 2,
-          "title": "Forced",
-          "description": "Every window is a private window."
-        }
-      ]
+      "enum": [0, 1, 2]
     },
 
     "PromptForDownloadLocation": {
@@ -3205,33 +2798,7 @@
       "properties": {
         "Mode": {
           "type": "string",
-          "oneOf": [
-            {
-              "const": "none",
-              "title": "No proxy",
-              "description": "Connect directly, without a proxy."
-            },
-            {
-              "const": "system",
-              "title": "Use system settings",
-              "description": "Use the proxy configured in the operating system."
-            },
-            {
-              "const": "manual",
-              "title": "Manual configuration",
-              "description": "Use the proxy hosts given in `HTTPProxy`, `SSLProxy`, `FTPProxy`, and `SOCKSProxy`."
-            },
-            {
-              "const": "autoDetect",
-              "title": "Auto-detect (WPAD)",
-              "description": "Discover the proxy settings for this network automatically."
-            },
-            {
-              "const": "autoConfig",
-              "title": "Automatic proxy configuration (PAC)",
-              "description": "Use the proxy auto-configuration file at `AutoConfigURL`."
-            }
-          ]
+          "enum": ["none", "system", "manual", "autoDetect", "autoConfig"]
         },
 
         "Locked": {
@@ -3258,18 +2825,7 @@
 
         "SOCKSVersion": {
           "type": "number",
-          "oneOf": [
-            {
-              "const": 4,
-              "title": "SOCKS v4",
-              "description": "Use version 4 of the SOCKS protocol to reach `SOCKSProxy`."
-            },
-            {
-              "const": 5,
-              "title": "SOCKS v5",
-              "description": "Use version 5 of the SOCKS protocol to reach `SOCKSProxy`."
-            }
-          ]
+          "enum": [4, 5]
         },
 
         "UseHTTPProxyForAllProtocols": {
@@ -3407,18 +2963,7 @@
       },
       "description": "Set whether or not search bar is displayed.",
       "examples": ["unified"],
-      "oneOf": [
-        {
-          "const": "unified",
-          "title": "Address bar only",
-          "description": "Search from the address bar, with no separate search box."
-        },
-        {
-          "const": "separate",
-          "title": "Separate search box",
-          "description": "Add a search box to the toolbar, next to the address bar."
-        }
-      ]
+      "enum": ["unified", "separate"]
     },
 
     "SearchEngines": {
@@ -3474,18 +3019,7 @@
               },
               "Method": {
                 "type": "string",
-                "oneOf": [
-                  {
-                    "const": "GET",
-                    "title": "GET",
-                    "description": "Send the search terms as part of the URL."
-                  },
-                  {
-                    "const": "POST",
-                    "title": "POST",
-                    "description": "Send the search terms in the request body, using `PostData`."
-                  }
-                ]
+                "enum": ["GET", "POST"]
               },
               "URLTemplate": {
                 "type": "string"
@@ -3669,12 +3203,7 @@
       },
       "description": "Set and lock the maximum version of TLS.",
       "examples": ["tls1.3"],
-      "oneOf": [
-        { "const": "tls1", "title": "TLS 1.0" },
-        { "const": "tls1.1", "title": "TLS 1.1" },
-        { "const": "tls1.2", "title": "TLS 1.2" },
-        { "const": "tls1.3", "title": "TLS 1.3" }
-      ]
+      "enum": ["tls1", "tls1.1", "tls1.2", "tls1.3"]
     },
 
     "SSLVersionMin": {
@@ -3687,12 +3216,7 @@
       },
       "description": "Set and lock the minimum version of TLS.",
       "examples": ["tls1.2"],
-      "oneOf": [
-        { "const": "tls1", "title": "TLS 1.0" },
-        { "const": "tls1.1", "title": "TLS 1.1" },
-        { "const": "tls1.2", "title": "TLS 1.2" },
-        { "const": "tls1.3", "title": "TLS 1.3" }
-      ]
+      "enum": ["tls1", "tls1.1", "tls1.2", "tls1.3"]
     },
 
     "StartDownloadsInTempDirectory": {
