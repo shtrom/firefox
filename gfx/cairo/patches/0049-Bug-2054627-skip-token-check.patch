@@ -1,6 +1,6 @@
-diff --git a/gfx/cairo/cairo/src/cairo-type1-subset.c b/gfx/cairo/cairo/src/cairo-type1-subset.c
---- a/gfx/cairo/cairo/src/cairo-type1-subset.c
-+++ b/gfx/cairo/cairo/src/cairo-type1-subset.c
+diff --git a/src/cairo-type1-subset.c b/src/cairo-type1-subset.c
+--- a/src/cairo-type1-subset.c
++++ b/src/cairo-type1-subset.c
 @@ -1063,16 +1063,18 @@ cairo_type1_font_for_each_subr (cairo_ty
       *
       * or alternatively using -| and |- instead of RD and ND.
