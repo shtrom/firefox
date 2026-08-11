@@ -477,6 +477,11 @@ class ArenaCollection {
     {
       MutexAutoLock lock(mLock);
       previous = mIsDeferredPurgeEnabled;
+      if (previous == aEnable) {
+        // There's nothing more to do.
+        return previous;
+      }
+
       mIsDeferredPurgeEnabled = aEnable;
       for (auto* arena : iter()) {
         MaybeMutexAutoLock lock(arena->mLock);
@@ -484,9 +489,8 @@ class ArenaCollection {
       }
     }
 
-    if (previous != aEnable) {
-      MayPurgeAll(PurgeIfThreshold, __func__);
-    }
+    MayPurgeAll(PurgeIfThreshold, __func__);
+
     return previous;
   }
 
