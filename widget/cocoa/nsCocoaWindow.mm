@@ -8841,27 +8841,6 @@ static CGFloat DefaultTitlebarHeight() {
   return YES;
 }
 
-// Dispatch a toolbar pill button clicked message to Gecko.
-- (void)_toolbarPillButtonClicked:(id)sender {
-  NS_OBJC_BEGIN_TRY_IGNORE_BLOCK;
-
-  RollUpPopups();
-
-  if ([self.delegate isKindOfClass:[WindowDelegate class]]) {
-    auto* windowDelegate = static_cast<WindowDelegate*>(self.delegate);
-    nsCocoaWindow* geckoWindow = windowDelegate.geckoWidget;
-    if (!geckoWindow) {
-      return;
-    }
-
-    if (nsIWidgetListener* listener = geckoWindow->GetWidgetListener()) {
-      listener->OSToolbarButtonPressed();
-    }
-  }
-
-  NS_OBJC_END_TRY_IGNORE_BLOCK;
-}
-
 // Retain and release "self" to avoid crashes when our widget (and its native
 // window) is closed as a result of processing a key equivalent (e.g.
 // Command+w or Command+q).  This workaround is only needed for a window
