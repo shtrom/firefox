@@ -32,7 +32,6 @@ struct IPCTypeRecord {
   TypeRecordResultType mData;
   uint32_t mTTL = 0;
   bool mIsTRR = false;
-  bool mFromStaleCache = false;
 };
 
 }  // namespace net
@@ -41,7 +40,7 @@ struct IPCTypeRecord {
 namespace IPC {
 
 DEFINE_IPC_SERIALIZER_WITH_FIELDS(mozilla::net::IPCTypeRecord, mData, mTTL,
-                                  mIsTRR, mFromStaleCache);
+                                  mIsTRR);
 
 DEFINE_IPC_SERIALIZER_WITH_FIELDS(mozilla::net::SVCB, mSvcFieldPriority,
                                   mSvcDomainName, mEchConfig, mODoHConfig,

@@ -57,7 +57,6 @@ class ChildDNSRecord : public nsIDNSAddrRecord {
   nsITRRSkipReason::value mTRRSkipReason = nsITRRSkipReason::TRR_UNSET;
   uint32_t mTTL = 0;
   TimeStamp mLastUpdate = mozilla::TimeStamp::NowLoRes();
-  bool mFromStaleCache = false;
 };
 
 NS_IMPL_ISUPPORTS(ChildDNSRecord, nsIDNSRecord, nsIDNSAddrRecord)
@@ -79,7 +78,6 @@ ChildDNSRecord::ChildDNSRecord(const DNSRecord& reply,
   mAddresses = addrs.Clone();
   mTTL = reply.ttl();
   mLastUpdate = reply.lastUpdate();
-  mFromStaleCache = reply.fromStaleCache();
 }
 
 //-----------------------------------------------------------------------------
@@ -214,12 +212,6 @@ ChildDNSRecord::GetLastUpdate(TimeStamp* aLastUpdate) {
   return NS_OK;
 }
 
-NS_IMETHODIMP
-ChildDNSRecord::GetFromStaleCache(bool* aResult) {
-  *aResult = mFromStaleCache;
-  return NS_OK;
-}
-
 class ChildDNSByTypeRecord : public nsIDNSByTypeRecord,
                              public nsIDNSTXTRecord,
                              public nsIDNSHTTPSSVCRecord,
@@ -233,7 +225,7 @@ class ChildDNSByTypeRecord : public nsIDNSByTypeRecord,
 
   explicit ChildDNSByTypeRecord(const TypeRecordResultType& reply,
                                 const nsACString& aHost, uint32_t aTTL,
-                                bool aIsTRR, bool aFromStaleCache);
+                                bool aIsTRR);
 
  private:
   virtual ~ChildDNSByTypeRecord() = default;
@@ -242,7 +234,6 @@ class ChildDNSByTypeRecord : public nsIDNSByTypeRecord,
   bool mAllRecordsExcluded = false;
   uint32_t mTTL = 0;
   bool mIsTRR = false;
-  bool mFromStaleCache = false;
 };
 
 NS_IMPL_ISUPPORTS(ChildDNSByTypeRecord, nsIDNSByTypeRecord, nsIDNSRecord,
@@ -250,19 +241,11 @@ NS_IMPL_ISUPPORTS(ChildDNSByTypeRecord, nsIDNSByTypeRecord, nsIDNSRecord,
 
 ChildDNSByTypeRecord::ChildDNSByTypeRecord(const TypeRecordResultType& reply,
                                            const nsACString& aHost,
-                                           uint32_t aTTL, bool aIsTRR,
-                                           bool aFromStaleCache)
+                                           uint32_t aTTL, bool aIsTRR)
     : DNSHTTPSSVCRecordBase(aHost) {
   mResults = reply;
   mTTL = aTTL;
   mIsTRR = aIsTRR;
-  mFromStaleCache = aFromStaleCache;
-}
-
-NS_IMETHODIMP
-ChildDNSByTypeRecord::GetFromStaleCache(bool* aResult) {
-  *aResult = mFromStaleCache;
-  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -549,8 +532,7 @@ bool DNSRequestSender::OnRecvLookupCompleted(const DNSRequestResponse& reply) {
       MOZ_ASSERT(mType != nsIDNSService::RESOLVE_TYPE_DEFAULT);
       mResultRecord = new ChildDNSByTypeRecord(
           reply.get_IPCTypeRecord().mData, mHost,
-          reply.get_IPCTypeRecord().mTTL, reply.get_IPCTypeRecord().mIsTRR,
-          reply.get_IPCTypeRecord().mFromStaleCache);
+          reply.get_IPCTypeRecord().mTTL, reply.get_IPCTypeRecord().mIsTRR);
       break;
     }
     default:

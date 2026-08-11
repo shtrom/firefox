@@ -213,7 +213,7 @@ class HappyEyeballsConnectionAttempt final : public ConnectionAttempt,
 
   // DNS lookups
   Result<nsIDNSService::DNSFlags, nsresult> SetupDnsFlags(
-      happy_eyeballs::DnsRecordType aType, bool aAllowStale);
+      happy_eyeballs::DnsRecordType aType);
   void DNSLookup(happy_eyeballs::DnsRecordType aType,
                  Result<nsIDNSService::DNSFlags, nsresult> aFlags, uint64_t aId,
                  const nsACString& aHostname);
