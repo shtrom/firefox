@@ -165,8 +165,11 @@ function enableButtons() {
     unload_toggle = false;
     showModuleInfo();
   } else if (selected_slot) {
-    var selected_token = selected_slot.getToken();
-    if (selected_token != null) {
+    if (
+      selected_slot.status != Ci.nsIPKCS11Slot.SLOT_DISABLED &&
+      selected_slot.status != Ci.nsIPKCS11Slot.SLOT_NOT_PRESENT
+    ) {
+      let selected_token = selected_slot.getToken();
       if (selected_token.canHavePassword) {
         pw_toggle = false;
         if (selected_token.hasPassword) {

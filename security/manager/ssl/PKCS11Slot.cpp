@@ -135,6 +135,9 @@ PKCS11Slot::GetFWVersion(/*out*/ nsACString& fwVersion) {
 NS_IMETHODIMP
 PKCS11Slot::GetToken(nsIPKCS11Token** _retval) {
   NS_ENSURE_ARG_POINTER(_retval);
+  if (!PK11_IsPresent(mSlot.get())) {
+    return NS_ERROR_NOT_AVAILABLE;
+  }
   nsCOMPtr<nsIPKCS11Token> token = new PKCS11Token(mSlot.get());
   token.forget(_retval);
   return NS_OK;
