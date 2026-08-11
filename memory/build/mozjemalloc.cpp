@@ -267,7 +267,6 @@ class ArenaCollection {
     mDefaultArena =
         mLock.Init() ? CreateArena(/* aIsPrivate = */ false, &params) : nullptr;
     mPurgeListLock.Init();
-    mIsDeferredPurgeEnabled = false;
     return bool(mDefaultArena);
   }
 
@@ -472,22 +471,28 @@ class ArenaCollection {
   bool SetDeferredPurge(bool aEnable) {
     MOZ_ASSERT(IsOnMainThreadWeak());
 
-    bool ret = mIsDeferredPurgeEnabled;
+    // We must hold the arena collection lock while updating the status
+    // globally AND on each arena.
+    bool previous;
     {
       MutexAutoLock lock(mLock);
+      previous = mIsDeferredPurgeEnabled;
       mIsDeferredPurgeEnabled = aEnable;
       for (auto* arena : iter()) {
         MaybeMutexAutoLock lock(arena->mLock);
         arena->mIsDeferredPurgeEnabled = aEnable;
       }
     }
-    if (ret != aEnable) {
+
+    if (previous != aEnable) {
       MayPurgeAll(PurgeIfThreshold, __func__);
     }
-    return ret;
+    return previous;
   }
 
-  bool IsDeferredPurgeEnabled() { return mIsDeferredPurgeEnabled; }
+  bool IsDeferredPurgeEnabled() MOZ_REQUIRES(mLock) {
+    return mIsDeferredPurgeEnabled;
+  }
 
   // Set aside a new purge request for aArena.
   void AddToOutstandingPurges(arena_t* aArena) MOZ_EXCLUDES(mPurgeListLock);
@@ -570,9 +575,9 @@ class ArenaCollection {
   // as this would prevent any future purges for this arena (except for during
   // MayPurgeStep or Purge).
   DoublyLinkedList<arena_t> mOutstandingPurges MOZ_GUARDED_BY(mPurgeListLock);
-  // Flag if we should defer purge to later. Only ever set when holding the
-  // collection lock. Read only during arena_t ctor.
-  Atomic<bool> mIsDeferredPurgeEnabled;
+
+  // Flag if we should defer purge to later.
+  bool mIsDeferredPurgeEnabled MOZ_GUARDED_BY(mLock) = false;
 };
 
 constinit static ArenaCollection gArenas;
@@ -2972,7 +2977,6 @@ arena_t::arena_t(arena_params_t* aParams, bool aIsPrivate)
       mMaxDirtyBase((aParams && aParams->mMaxDirty) ? aParams->mMaxDirty
                                                     : (opt_dirty_max / 8)),
       mLastSignificantReuseNS(GetTimestampNS()),
-      mIsDeferredPurgeEnabled(gArenas.IsDeferredPurgeEnabled()),
       mChunkAllocator(&gSystemChunkAllocator) {
   MaybeMutex::DoLock doLock = MaybeMutex::MUST_LOCK;
   if (aParams) {
@@ -3077,6 +3081,8 @@ arena_t::~arena_t() {
 
 arena_t* ArenaCollection::CreateArena(bool aIsPrivate,
                                       arena_params_t* aParams) {
+  // Allocate the memory for the arena before taking any locks, since it
+  // will use the base allocator locks and could run a system call.
   arena_t* ret = new (fallible) arena_t(aParams, aIsPrivate);
   if (!ret) {
     // Only reached if there is an OOM error.
@@ -3091,6 +3097,17 @@ arena_t* ArenaCollection::CreateArena(bool aIsPrivate,
   }
 
   MutexAutoLock lock(mLock);
+
+  // Updating the arena's mIsDeferredPurgeEnabled needs to happen in the
+  // same critical section as enrolling the arena in the collection, which
+  // is why it's set here and not by arena_t's constructor.
+  {
+    // The arena lock here isn't necessary because nothing else has a
+    // pointer to the arena yet, but the alternative is
+    // MOZ_PUSH_IGNORE_THREAD_SAFETY.
+    MaybeMutexAutoLock arena_lock(ret->mLock);
+    ret->mIsDeferredPurgeEnabled = mIsDeferredPurgeEnabled;
+  }
 
   // For public arenas, it's fine to just use incrementing arena id
   if (!aIsPrivate) {

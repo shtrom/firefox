@@ -370,7 +370,7 @@ struct arena_t : public BaseAllocClass {
 
   // A mirror of ArenaCollection::mIsDeferredPurgeEnabled, here only to
   // optimize memory reads in ShouldStartPurge().
-  bool mIsDeferredPurgeEnabled MOZ_GUARDED_BY(mLock);
+  bool mIsDeferredPurgeEnabled MOZ_GUARDED_BY(mLock) = false;
 
   // True if the arena is in the process of being destroyed, and needs to be
   // released after a concurrent purge completes.
