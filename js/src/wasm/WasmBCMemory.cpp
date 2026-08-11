@@ -1307,10 +1307,7 @@ static void PopAndAllocate(BaseCompiler* bc, ValType type,
     // Architecture-specific i64-to-i32.
     bc->masm.move64To32(Register64(*rv), *rv);
   }
-  const bool needsLlScLoop = Scalar::byteSize(viewType) < 4 &&
-                             !(LOONG64Flags::HasLamBhExtension() &&
-                               (op == AtomicOp::Add || op == AtomicOp::Sub));
-  if (needsLlScLoop) {
+  if (Scalar::byteSize(viewType) < 4) {
     temps->t0 = bc->needI32();
     temps->t1 = bc->needI32();
     temps->t2 = bc->needI32();
@@ -1717,9 +1714,7 @@ static void PopAndAllocate(BaseCompiler* bc, ValType type,
     // Architecture-specific i64-to-i32.
     bc->masm.move64To32(Register64(*rv), *rv);
   }
-  const bool needsLlScLoop =
-      Scalar::byteSize(viewType) < 4 && !LOONG64Flags::HasLamBhExtension();
-  if (needsLlScLoop) {
+  if (Scalar::byteSize(viewType) < 4) {
     temps->t0 = bc->needI32();
     temps->t1 = bc->needI32();
     temps->t2 = bc->needI32();

@@ -3760,61 +3760,29 @@ static void AtomicExchange(MacroAssembler& masm,
   bool signExtend = Scalar::isSignedIntType(type);
   unsigned nbytes = Scalar::byteSize(type);
 
-  Register scratch2 = temps.Acquire();
-  masm.computeEffectiveAddress(mem, scratch2);
-
   switch (nbytes) {
     case 1:
-      if (!LOONG64Flags::HasLamBhExtension()) {
-        break;
-      }
-      MOZ_ASSERT(valueTemp == InvalidReg);
-      MOZ_ASSERT(offsetTemp == InvalidReg);
-      MOZ_ASSERT(maskTemp == InvalidReg);
-      if (access) {
-        masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                    FaultingCodeOffset(masm.currentOffset()));
-      }
-      masm.as_amswap_db_b(output, scratch2, value);
-      // > [The instructions] retrieve the old byte/half word value at the
-      // > specified address in memory and write it to the general register
-      // > rd after symbol[sic.] extension, [...]
-      // https://loongson.github.io/LoongArch-Documentation/LoongArch-Vol1-EN.html#_am_swapadd_db_bh
-      //
-      // Thus we only need to zero-extend it when needed.
-      if (!signExtend) {
-        masm.as_andi(output, output, 0xff);
-      }
-      return;
     case 2:
-      if (!LOONG64Flags::HasLamBhExtension()) {
-        break;
-      }
-      MOZ_ASSERT(valueTemp == InvalidReg);
-      MOZ_ASSERT(offsetTemp == InvalidReg);
-      MOZ_ASSERT(maskTemp == InvalidReg);
-      if (access) {
-        masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                    FaultingCodeOffset(masm.currentOffset()));
-      }
-      masm.as_amswap_db_h(output, scratch2, value);
-      if (!signExtend) {
-        // Ditto.
-        masm.as_bstrpick_d(output, output, 15, 0);
-      }
-      return;
+      break;
     case 4:
       MOZ_ASSERT(valueTemp == InvalidReg);
       MOZ_ASSERT(offsetTemp == InvalidReg);
       MOZ_ASSERT(maskTemp == InvalidReg);
-      if (access) {
-        masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                    FaultingCodeOffset(masm.currentOffset()));
-      }
-      masm.as_amswap_db_w(output, scratch2, value);
-      return;
+      break;
     default:
       MOZ_CRASH();
+  }
+
+  Register scratch2 = temps.Acquire();
+  masm.computeEffectiveAddress(mem, scratch2);
+
+  if (nbytes == 4) {
+    if (access) {
+      masm.append(*access, wasm::TrapMachineInsn::Atomic,
+                  FaultingCodeOffset(masm.currentOffset()));
+    }
+    masm.as_amswap_db_w(output, scratch2, value);
+    return;
   }
 
   Label again;
@@ -3904,14 +3872,23 @@ static void AtomicFetchOp(MacroAssembler& masm,
   bool signExtend = Scalar::isSignedIntType(type);
   unsigned nbytes = Scalar::byteSize(type);
 
+  switch (nbytes) {
+    case 1:
+    case 2:
+      break;
+    case 4:
+      MOZ_ASSERT(valueTemp == InvalidReg);
+      MOZ_ASSERT(offsetTemp == InvalidReg);
+      MOZ_ASSERT(maskTemp == InvalidReg);
+      break;
+    default:
+      MOZ_CRASH();
+  }
+
   Register scratch2 = temps.Acquire();
   masm.computeEffectiveAddress(mem, scratch2);
 
   if (nbytes == 4) {
-    MOZ_ASSERT(valueTemp == InvalidReg);
-    MOZ_ASSERT(offsetTemp == InvalidReg);
-    MOZ_ASSERT(maskTemp == InvalidReg);
-
     Register operand = value;
     if (op == AtomicOp::Sub) {
       // Subtraction is implemented with AMADD_DB.W and a negated operand.
@@ -3939,39 +3916,6 @@ static void AtomicFetchOp(MacroAssembler& masm,
         break;
       default:
         MOZ_CRASH();
-    }
-    return;
-  }
-
-  if (LOONG64Flags::HasLamBhExtension() &&
-      (op == AtomicOp::Add || op == AtomicOp::Sub)) {
-    MOZ_ASSERT(valueTemp == InvalidReg);
-    MOZ_ASSERT(offsetTemp == InvalidReg);
-    MOZ_ASSERT(maskTemp == InvalidReg);
-
-    Register operand = value;
-    if (op == AtomicOp::Sub) {
-      // Subtraction is implemented with AMADD_DB.{B/H} and a negated operand.
-      operand = temps.Acquire();
-      masm.as_sub_w(operand, zero, value);
-    }
-
-    if (access) {
-      masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                  FaultingCodeOffset(masm.currentOffset()));
-    }
-    if (nbytes == 1) {
-      masm.as_amadd_db_b(output, scratch2, operand);
-      if (!signExtend) {
-        // Ditto.
-        masm.as_andi(output, output, 0xff);
-      }
-    } else {
-      masm.as_amadd_db_h(output, scratch2, operand);
-      if (!signExtend) {
-        // Ditto.
-        masm.as_bstrpick_d(output, output, 15, 0);
-      }
     }
     return;
   }
@@ -4040,8 +3984,7 @@ static void AtomicFetchOp(MacroAssembler& masm,
     return;
   }
 
-  // Without LAM_BH, byte and halfword addition and subtraction require an LL/SC
-  // loop.
+  // Byte and halfword addition and subtraction require an LL/SC loop.
   Label again;
   Register scratch = temps.Acquire();
 
@@ -4362,14 +4305,23 @@ static void AtomicEffectOp(MacroAssembler& masm,
   UseScratchRegisterScope temps(masm);
   unsigned nbytes = Scalar::byteSize(type);
 
+  switch (nbytes) {
+    case 1:
+    case 2:
+      break;
+    case 4:
+      MOZ_ASSERT(valueTemp == InvalidReg);
+      MOZ_ASSERT(offsetTemp == InvalidReg);
+      MOZ_ASSERT(maskTemp == InvalidReg);
+      break;
+    default:
+      MOZ_CRASH();
+  }
+
   Register scratch = temps.Acquire();
   masm.computeEffectiveAddress(mem, scratch);
 
   if (nbytes == 4) {
-    MOZ_ASSERT(valueTemp == InvalidReg);
-    MOZ_ASSERT(offsetTemp == InvalidReg);
-    MOZ_ASSERT(maskTemp == InvalidReg);
-
     MOZ_ASSERT(value != zero);
     Register operand = value;
     if (op == AtomicOp::Sub) {
@@ -4398,31 +4350,6 @@ static void AtomicEffectOp(MacroAssembler& masm,
         break;
       default:
         MOZ_CRASH();
-    }
-    return;
-  }
-
-  if (LOONG64Flags::HasLamBhExtension() &&
-      (op == AtomicOp::Add || op == AtomicOp::Sub)) {
-    MOZ_ASSERT(valueTemp == InvalidReg);
-    MOZ_ASSERT(offsetTemp == InvalidReg);
-    MOZ_ASSERT(maskTemp == InvalidReg);
-
-    MOZ_ASSERT(value != zero);
-    Register operand = value;
-    if (op == AtomicOp::Sub) {
-      operand = temps.Acquire();
-      masm.as_sub_w(operand, zero, value);
-    }
-
-    if (access) {
-      masm.append(*access, wasm::TrapMachineInsn::Atomic,
-                  FaultingCodeOffset(masm.currentOffset()));
-    }
-    if (nbytes == 1) {
-      masm.as_amadd_db_b(zero, scratch, operand);
-    } else {
-      masm.as_amadd_db_h(zero, scratch, operand);
     }
     return;
   }
@@ -4471,8 +4398,7 @@ static void AtomicEffectOp(MacroAssembler& masm,
     return;
   }
 
-  // Without LAM_BH, byte and halfword addition and subtraction require an LL/SC
-  // loop.
+  // Byte and halfword addition and subtraction require an LL/SC loop.
   Label again;
   Register scratch2 = temps.Acquire();
 

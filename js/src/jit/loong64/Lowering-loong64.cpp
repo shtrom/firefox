@@ -749,10 +749,7 @@ void LIRGenerator::visitAtomicExchangeTypedArrayElement(
     outTemp = temp();
   }
 
-  const bool needsLlScLoop = Scalar::byteSize(ins->arrayType()) < 4 &&
-                             !LOONG64Flags::HasLamBhExtension();
-
-  if (needsLlScLoop) {
+  if (Scalar::byteSize(ins->arrayType()) < 4) {
     valueTemp = temp();
     offsetTemp = temp();
     maskTemp = temp();
@@ -806,12 +803,7 @@ void LIRGenerator::visitAtomicTypedArrayElementBinop(
   LDefinition offsetTemp = LDefinition::BogusTemp();
   LDefinition maskTemp = LDefinition::BogusTemp();
 
-  const bool needsLlScLoop = Scalar::byteSize(ins->arrayType()) < 4 &&
-                             !(LOONG64Flags::HasLamBhExtension() &&
-                               (ins->operation() == AtomicOp::Add ||
-                                ins->operation() == AtomicOp::Sub));
-
-  if (needsLlScLoop) {
+  if (Scalar::byteSize(ins->arrayType()) < 4) {
     valueTemp = temp();
     offsetTemp = temp();
     maskTemp = temp();
@@ -982,10 +974,7 @@ void LIRGenerator::visitWasmAtomicExchangeHeap(MWasmAtomicExchangeHeap* ins) {
   LDefinition offsetTemp = LDefinition::BogusTemp();
   LDefinition maskTemp = LDefinition::BogusTemp();
 
-  const bool needsLlScLoop =
-      ins->access().byteSize() < 4 && !LOONG64Flags::HasLamBhExtension();
-
-  if (needsLlScLoop) {
+  if (ins->access().byteSize() < 4) {
     valueTemp = temp();
     offsetTemp = temp();
     maskTemp = temp();
@@ -1021,12 +1010,7 @@ void LIRGenerator::visitWasmAtomicBinopHeap(MWasmAtomicBinopHeap* ins) {
   LDefinition offsetTemp = LDefinition::BogusTemp();
   LDefinition maskTemp = LDefinition::BogusTemp();
 
-  const bool needsLlScLoop =
-      ins->access().byteSize() < 4 && !(LOONG64Flags::HasLamBhExtension() &&
-                                        (ins->operation() == AtomicOp::Add ||
-                                         ins->operation() == AtomicOp::Sub));
-
-  if (needsLlScLoop) {
+  if (ins->access().byteSize() < 4) {
     valueTemp = temp();
     offsetTemp = temp();
     maskTemp = temp();
