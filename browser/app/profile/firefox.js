@@ -2352,7 +2352,7 @@ pref("browser.smartwindow.mistralRelease", true);
 pref("places.semanticHistory.smartwindow.distanceThreshold", "0.6");
 
 // Smart Window: Auto Tab Grouping (bug 2054500).
-pref("browser.smartwindow.autoTabGrouping.enabled", false);
+pref("browser.smartwindow.autoTabGrouping.enabled", true);
 pref("browser.smartwindow.autoTabGrouping.maxGroups", 3);
 pref("browser.smartwindow.autoTabGrouping.minTabsPerGroup", 2);
 pref("browser.smartwindow.autoTabGrouping.minCandidateTabs", 4);
