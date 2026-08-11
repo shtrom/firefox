@@ -12004,6 +12004,12 @@
 # Prefs starting with "mathml."
 #---------------------------------------------------------------------------
 
+# Enable MathMLAnchorElement dom interface (MathML <a> element).
+- name: mathml.a.element.enabled
+  type: bool
+  value: @IS_NIGHTLY_BUILD@
+  mirror: always
+
 # Enable scale transform for stretchy MathML operators. See bug 414277.
 - name: mathml.scale_stretchy_operators.enabled
   type: bool
