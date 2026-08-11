@@ -2162,7 +2162,7 @@ const FEEDS_DATA = [
         IE: ["en-CA", "en-GB", "en-US"],
         ZA: ["en-CA", "en-GB", "en-US"],
         CH: ["de"],
-        BE: ["de"],
+        BE: ["de", "fr"],
         DE: ["de"],
         AT: ["de"],
         IT: ["it"],
@@ -2170,6 +2170,9 @@ const FEEDS_DATA = [
         ES: ["es-ES"],
         PL: ["pl"],
         JP: ["ja", "ja-JP-mac"],
+        NL: ["nl"],
+        PT: ["pt-PT"],
+        BR: ["pt-BR"],
       }[geo];
 
       const regionBlocked = preffedBlockRegions.includes(geo);
