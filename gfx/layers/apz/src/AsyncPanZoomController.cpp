@@ -3935,7 +3935,7 @@ bool AsyncPanZoomController::AttemptScroll(
           }
         }
         if (displacementIsUserVisible) {
-          block->SetScrolledApzc(this);
+          block->SetScrolledApzc(this, aOverscrollHandoffState);
         }
       }
       // Note that in the case of instant scrolling, the last snap target ids
@@ -5391,6 +5391,17 @@ void AsyncPanZoomController::UnapplyAsyncTestAttributes(
   }
 }
 
+void AsyncPanZoomController::SetScrolledByHandedOffGesture(bool aState) {
+  RecursiveMutexAutoLock lock(mRecursiveMutex);
+  mScrolledByHandedOffGesture = aState;
+}
+
+void AsyncPanZoomController::ClearScrolledByHandedOffGestureOnChain() {
+  if (InputBlockState* block = GetCurrentInputBlock()) {
+    block->GetOverscrollHandoffChain()->ClearScrolledByHandedOffGesture();
+  }
+}
+
 Matrix4x4 AsyncPanZoomController::GetTransformToLastDispatchedPaint(
     const AsyncTransformComponents& aComponents, LayersId aForLayersId) const {
   RecursiveMutexAutoLock lock(mRecursiveMutex);
@@ -6745,7 +6756,19 @@ void AsyncPanZoomController::SetState(PanZoomState aNewState) {
     }
   }
 
+  bool wasInScrollingGesture = IsInScrollingGesture();
   PanZoomState oldState = SetStateNoContentControllerDispatch(aNewState);
+
+  // If this state change ended a scrolling gesture, clear the handed-off
+  // gesture flag along the whole handoff chain so that any ancestor APZC that
+  // was being scrolled by this gesture stops reporting itself as being in a
+  // scrolling gesture.
+  if (wasInScrollingGesture && !IsInScrollingGesture()) {
+    APZThreadUtils::RunOnControllerThread(NewRunnableMethod(
+        "layers::AsyncPanZoomController::"
+        "ClearScrolledByHandedOffGestureOnChain",
+        this, &AsyncPanZoomController::ClearScrolledByHandedOffGestureOnChain));
+  }
 
   DispatchStateChangeNotification(oldState, aNewState);
 }
@@ -6804,7 +6827,19 @@ bool AsyncPanZoomController::IsInPanningState() const {
 
 bool AsyncPanZoomController::IsInScrollingGesture() const {
   return IsPanningState(mState) || mState == SCROLLBAR_DRAG ||
-         mState == TOUCHING || mState == PINCHING;
+         mState == TOUCHING || mState == PINCHING ||
+         mScrolledByHandedOffGesture;
+}
+
+void AsyncPanZoomController::ClearScrolledByHandedOffGesture() {
+  RecursiveMutexAutoLock lock(mRecursiveMutex);
+  if (!mScrolledByHandedOffGesture) {
+    return;
+  }
+  mScrolledByHandedOffGesture = false;
+  // The scroll offset may not change when the gesture ends, so explicitly
+  // request a repaint to deliver the flag change to the main thread.
+  RequestContentRepaint();
 }
 
 bool AsyncPanZoomController::IsDelayedTransformEndSet() {
