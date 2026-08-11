@@ -4080,17 +4080,6 @@
   value: 0
   mirror: always
 
-# Origin trial state for Private Attribution
-# 0: normal, 1: always-enabled, 2: always-disabled
-- name: dom.origin-trials.private-attribution.state
-  type: RelaxedAtomicInt32
-#ifdef ANDROID
-  value: 2
-#else
-  value: 0
-#endif
-  mirror: always
-
 # Origin trial state for MLS
 # 0: normal, 1: always-enabled, 2: always-disabled
 - name: dom.origin-trials.mls.state
@@ -4110,13 +4099,6 @@
 #endif
   mirror: always
   rust: true
-
-# User pref to control whether Private Attribution
-# information should be collected / submitted.
-- name: dom.private-attribution.submission.enabled
-  type: bool
-  value: false
-  mirror: always
 
 # Is support for Window.paintWorklet enabled?
 - name: dom.paintWorklet.enabled
