@@ -577,6 +577,13 @@ Summarize current page content.
 
 * args: optional `string` entry value to identify initiator default "message"
 
+### `OPEN_ORGANIZE_TABS_PANEL`
+
+Opens the Smart Window "Organize Tabs" panel. Unlike `OPEN_PANEL`, the panel is
+built on demand rather than already present in the DOM.
+
+- args: (none)
+
 ### `OPEN_PANEL`
 
 Open a panel associated with a given widget.

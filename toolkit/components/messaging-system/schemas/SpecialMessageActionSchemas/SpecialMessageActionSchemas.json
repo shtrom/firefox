@@ -935,6 +935,18 @@
         {
           "type": "object",
           "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["OPEN_ORGANIZE_TABS_PANEL"]
+            }
+          },
+          "required": ["type"],
+          "additionalProperties": false,
+          "description": "Opens the Smart Window \"Organize Tabs\" panel."
+        },
+        {
+          "type": "object",
+          "properties": {
             "data": {
               "anchor_id": {
                 "type": "string",
