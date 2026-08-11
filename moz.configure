@@ -104,12 +104,11 @@ set_define("ENABLE_TESTS", enable_tests)
 option(
     "--disable-legacy-l10n",
     env="MOZ_USE_LEGACY_L10N",
-    default=True,
     help="Disable the legacy (recursive-make) l10n driver",
 )
 
 
-set_config("MOZ_USE_LEGACY_L10N", True, when="--disable-legacy-l10n")
+set_config("MOZ_USE_LEGACY_L10N", True, when="--enable-legacy-l10n")
 
 
 @depends(enable_tests)
@@ -215,7 +214,7 @@ option(
     help="Enable building modules in non unified context",
 )
 
-set_config("ENABLE_UNIFIED_BUILD", True, when="--disable-unified-build")
+set_config("ENABLE_UNIFIED_BUILD", True, when="--enable-unified-build")
 
 
 include("build/moz.configure/bootstrap.configure")
