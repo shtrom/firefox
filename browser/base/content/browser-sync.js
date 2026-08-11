@@ -1123,8 +1123,8 @@ var gSync = {
 
   // Returns the call to action ("signin", "turnonsync", or "connectdevice") for
   // showing the remote tabs promo, or null when the promo should be hidden.
-  // `requiredEngines` are the sync engines that must be disabled to show the promo ["tabs"]
-  getSyncPromoState(requiredEngines) {
+  // Disabled `requiredEngines` also select "turnonsync" when provided.
+  getSyncPromoState(requiredEngines = []) {
     if (!this.FXA_ENABLED) {
       return null;
     }
