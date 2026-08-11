@@ -59,6 +59,10 @@ class PKCS11ModuleDB : public nsIPKCS11ModuleDB {
   typedef MozPromise<mozilla::psm::TokenInfo, nsresult, true> TokenInfoPromise;
   RefPtr<TokenInfoPromise> ResetToken(SECMODModuleID moduleID,
                                       CK_SLOT_ID slotID);
+  RefPtr<TokenInfoPromise> LoginToken(SECMODModuleID moduleID,
+                                      CK_SLOT_ID slotID);
+  RefPtr<TokenInfoPromise> LogoutToken(SECMODModuleID moduleID,
+                                       CK_SLOT_ID slotID);
   RefPtr<TokenInfoPromise> ChangeTokenPassword(SECMODModuleID moduleID,
                                                CK_SLOT_ID slotID,
                                                const nsCString& oldPassword,
@@ -66,6 +70,12 @@ class PKCS11ModuleDB : public nsIPKCS11ModuleDB {
 
  private:
   static RefPtr<TokenInfoPromise> ResetTokenGivenParent(
+      const RefPtr<PKCS11ModuleParent>& parent, SECMODModuleID moduleID,
+      CK_SLOT_ID slotID);
+  static RefPtr<TokenInfoPromise> LoginTokenGivenParent(
+      const RefPtr<PKCS11ModuleParent>& parent, SECMODModuleID moduleID,
+      CK_SLOT_ID slotID);
+  static RefPtr<TokenInfoPromise> LogoutTokenGivenParent(
       const RefPtr<PKCS11ModuleParent>& parent, SECMODModuleID moduleID,
       CK_SLOT_ID slotID);
 

@@ -2,10 +2,44 @@
 // http://creativecommons.org/publicdomain/zero/1.0/
 "use strict";
 
+var gPrompt = {
+  QueryInterface: ChromeUtils.generateQI(["nsIPrompt"]),
+
+  passwordToTry: "",
+  numPrompts: 0,
+
+  // This intentionally does not use arrow function syntax to avoid an issue
+  // where in the context of the arrow function, |this != gPrompt| due to
+  // how objects get wrapped when going across xpcom boundaries.
+  promptPassword(dialogTitle, text, password, checkMsg) {
+    this.numPrompts++;
+    if (this.numPrompts > 1) {
+      // don't keep retrying a bad password
+      return false;
+    }
+    equal(
+      text,
+      "Please authenticate to the security device (Test PKCS11 Tokeñ Label).",
+      "password prompt text should be as expected"
+    );
+    equal(checkMsg, null, "checkMsg should be null");
+    ok(this.passwordToTry, "passwordToTry should be non-null");
+    password.value = this.passwordToTry;
+    return true;
+  },
+};
+
+const gPromptFactory = {
+  QueryInterface: ChromeUtils.generateQI(["nsIPromptFactory"]),
+  getPrompt: () => gPrompt,
+};
+
 // Ensure that the appropriate initialization has happened.
 do_get_profile();
 
 add_task(async function test_pkcs11_remote_process() {
+  MockRegistrar.register("@mozilla.org/prompter;1", gPromptFactory);
+
   let libraryFile = Services.dirsvc.get("CurWorkD", Ci.nsIFile);
   libraryFile.append("pkcs11testmodule");
   libraryFile.append(ctypes.libraryName("pkcs11testmodule"));
@@ -19,17 +53,17 @@ add_task(async function test_pkcs11_remote_process() {
 
   let testModule = await findModuleByName(moduleDB, "PKCS11 Test Module");
   notEqual(testModule, null, "should be able to find test module");
-  let testSlot = findSlotByName(testModule, "Test PKCS11 Slot 二");
-  notEqual(testSlot, null, "should be able to find 'Test PKCS11 Slot 二'");
+  let testSlot = findSlotByName(testModule, "Test PKCS11 Slot");
+  notEqual(testSlot, null, "should be able to find 'Test PKCS11 Slot'");
 
   equal(
     testSlot.name,
-    "Test PKCS11 Slot 二",
+    "Test PKCS11 Slot",
     "Actual and expected name should match"
   );
   equal(
     testSlot.desc,
-    "Test PKCS11 Slot 二",
+    "Test PKCS11 Slot",
     "Actual and expected description should match"
   );
   equal(
@@ -54,7 +88,7 @@ add_task(async function test_pkcs11_remote_process() {
   );
   equal(
     testSlot.tokenName,
-    "Test PKCS11 Tokeñ 2 Label",
+    "Test PKCS11 Tokeñ Label",
     "Actual and expected token name should match"
   );
 
@@ -66,7 +100,7 @@ add_task(async function test_pkcs11_remote_process() {
   );
   equal(
     testToken.tokenName,
-    "Test PKCS11 Tokeñ 2 Label",
+    "Test PKCS11 Tokeñ Label",
     "remote test token name should be correct"
   );
   equal(
@@ -118,6 +152,17 @@ add_task(async function test_pkcs11_remote_process() {
   ok(
     testToken.isLoggedIn,
     "changing password should cause the remote token to be logged in"
+  );
+  await testToken.logout();
+  ok(
+    !testToken.isLoggedIn,
+    "logging out should cause the remote token to be logged out"
+  );
+  gPrompt.passwordToTry = "password";
+  await testToken.login();
+  ok(
+    testToken.isLoggedIn,
+    "logging in should cause the remote token to be logged in"
   );
 
   let threw = false;

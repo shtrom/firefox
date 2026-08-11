@@ -59,9 +59,19 @@ protocol PPKCS11Module
     async ResetToken(SECMODModuleID moduleID, CK_SLOT_ID slotID)
         returns (nsresult rv, TokenInfo tokenInfo);
 
+    async LoginToken(SECMODModuleID moduleID, CK_SLOT_ID slotID)
+        returns (nsresult rv, TokenInfo tokenInfo);
+
+    async LogoutToken(SECMODModuleID moduleID, CK_SLOT_ID slotID)
+        returns (nsresult rv, TokenInfo tokenInfo);
+
     async ChangeTokenPassword(SECMODModuleID moduleID, CK_SLOT_ID slotID,
                               nsCString oldPassword, nsCString newPassword)
         returns (nsresult rv, TokenInfo tokenInfo);
+
+  parent:
+    async PromptPassword(nsCString aTokenName)
+        returns (nsresult rv, nsCString password);
 };
 
 } // namespace psm

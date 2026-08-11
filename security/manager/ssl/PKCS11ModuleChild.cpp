@@ -17,15 +17,42 @@
 
 namespace mozilla::psm {
 
+char* RemotePKCS11PasswordPrompt(PK11SlotInfo* slot, PRBool _retry, void* ctx) {
+  MOZ_ASSERT(ctx);
+  if (!ctx) {
+    return nullptr;
+  }
+  PKCS11ModuleChild* pkcs11ModuleChild(static_cast<PKCS11ModuleChild*>(ctx));
+  return pkcs11ModuleChild->PromptForPassword(slot);
+}
+
+nsresult ConfigureNSSInPKCS11UtilityProcess(const nsACString& profilePath) {
+  if (InitializeNSS(profilePath, NSSDBConfig::ReadWrite,
+                    PKCS11DBConfig::LoadModules) != SECSuccess) {
+    return NS_ERROR_FAILURE;
+  }
+
+  PK11_SetPasswordFunc(RemotePKCS11PasswordPrompt);
+
+  return NS_OK;
+}
+
 nsresult PKCS11ModuleChild::Start(Endpoint<PPKCS11ModuleChild>&& aEndpoint,
                                   nsCString&& aProfilePath) {
   MOZ_ASSERT(NS_IsMainThread());
   MOZ_ASSERT(!mTaskQueue);
+  MOZ_ASSERT(!mAuthTaskQueue);
 
   nsDebugImpl::SetMultiprocessMode("PKCS11ModuleChild");
 
-  nsresult rv = NS_CreateBackgroundTaskQueue("PKCS11ModuleChild",
+  nsresult rv = NS_CreateBackgroundTaskQueue("PKCS11ModuleChild::IPC",
                                              getter_AddRefs(mTaskQueue));
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
+
+  rv = NS_CreateBackgroundTaskQueue("PKCS11ModuleChild::Auth",
+                                    getter_AddRefs(mAuthTaskQueue));
   if (NS_FAILED(rv)) {
     return rv;
   }
@@ -39,9 +66,7 @@ nsresult PKCS11ModuleChild::Start(Endpoint<PPKCS11ModuleChild>&& aEndpoint,
               "no profile path for utility process: loading PKCS#11 modules "
               "will fail");
         } else {
-          SECStatus srv = InitializeNSS(profilePath, NSSDBConfig::ReadWrite,
-                                        PKCS11DBConfig::LoadModules);
-          if (srv != SECSuccess) {
+          if (NS_FAILED(ConfigureNSSInPKCS11UtilityProcess(profilePath))) {
             NS_WARNING(
                 "could not load NSS in utility process: loading PKCS#11 "
                 "modules will fail");
@@ -77,15 +102,16 @@ ipc::IPCResult PKCS11ModuleChild::RecvListModules(
   return IPC_OK();
 }
 
-nsresult DoResetToken(SECMODModuleID aModuleID, CK_SLOT_ID aSlotID,
-                      TokenInfo& aTokenInfo) {
+template <typename Operation>
+nsresult DoWithToken(SECMODModuleID aModuleID, CK_SLOT_ID aSlotID,
+                     TokenInfo& aTokenInfo, Operation&& operation) {
   UniquePK11SlotInfo slot(SECMOD_LookupSlot(aModuleID, aSlotID));
   if (!slot) {
     return NS_ERROR_FAILURE;
   }
-  SECStatus rv = PK11_ResetToken(slot.get(), nullptr);
-  if (rv != SECSuccess) {
-    return MapSECStatus(rv);
+  nsresult rv = operation(slot.get());
+  if (NS_FAILED(rv)) {
+    return rv;
   }
   RefPtr<PKCS11Token> token(MakeAndAddRef<PKCS11Token>(slot.get()));
   return token->GetTokenInfo(aTokenInfo);
@@ -95,7 +121,55 @@ ipc::IPCResult PKCS11ModuleChild::RecvResetToken(
     SECMODModuleID aModuleID, CK_SLOT_ID aSlotID,
     ResetTokenResolver&& aResolver) {
   TokenInfo tokenInfo;
-  nsresult rv = DoResetToken(aModuleID, aSlotID, tokenInfo);
+  nsresult rv =
+      DoWithToken(aModuleID, aSlotID, tokenInfo, [](PK11SlotInfo* slot) {
+        SECStatus rv = PK11_ResetToken(slot, nullptr);
+        if (rv != SECSuccess) {
+          return MapSECStatus(rv);
+        }
+        return NS_OK;
+      });
+  using Type = std::tuple<const nsresult&, TokenInfo&&>;
+  aResolver(Type(rv, std::move(tokenInfo)));
+  return IPC_OK();
+}
+
+ipc::IPCResult PKCS11ModuleChild::RecvLoginToken(
+    SECMODModuleID aModuleID, CK_SLOT_ID aSlotID,
+    LoginTokenResolver&& aResolver) {
+  mAuthTaskQueue->Dispatch(NS_NewRunnableFunction(
+      __func__, [self = RefPtr{this}, moduleID(aModuleID), slotID(aSlotID),
+                 resolver(std::move(aResolver))] {
+        TokenInfo tokenInfo;
+        nsresult rv = DoWithToken(
+            moduleID, slotID, tokenInfo, [self](PK11SlotInfo* slot) {
+              SECStatus rv = PK11_Authenticate(slot, true, self.get());
+              if (rv != SECSuccess) {
+                return MapSECStatus(rv);
+              }
+              return NS_OK;
+            });
+        self->mTaskQueue->Dispatch(NS_NewRunnableFunction(
+            __func__, [rv, tokenInfo(std::move(tokenInfo)),
+                       resolver(std::move(resolver))] {
+              resolver(std::make_pair(rv, std::move(tokenInfo)));
+            }));
+      }));
+  return IPC_OK();
+}
+
+ipc::IPCResult PKCS11ModuleChild::RecvLogoutToken(
+    SECMODModuleID aModuleID, CK_SLOT_ID aSlotID,
+    LogoutTokenResolver&& aResolver) {
+  TokenInfo tokenInfo;
+  nsresult rv =
+      DoWithToken(aModuleID, aSlotID, tokenInfo, [](PK11SlotInfo* slot) {
+        // PK11_Logout() can fail if the user wasn't logged in beforehand. We
+        // want this method to succeed even in this case, so we ignore the
+        // return value.
+        (void)PK11_Logout(slot);
+        return NS_OK;
+      });
   using Type = std::tuple<const nsresult&, TokenInfo&&>;
   aResolver(Type(rv, std::move(tokenInfo)));
   return IPC_OK();
@@ -126,6 +200,48 @@ ipc::IPCResult PKCS11ModuleChild::RecvChangeTokenPassword(
   using Type = std::tuple<const nsresult&, TokenInfo&&>;
   aResolver(Type(rv, std::move(tokenInfo)));
   return IPC_OK();
+}
+
+char* PKCS11ModuleChild::PromptForPassword(PK11SlotInfo* slot) {
+  MonitorAutoLock authPromptMonitorLock(mAuthPromptMonitor);
+  mMaybePasswordForPrompt.reset();
+
+  MOZ_ASSERT(mAuthTaskQueue->IsOnCurrentThread());
+  if (!mAuthTaskQueue->IsOnCurrentThread()) {
+    return nullptr;
+  }
+
+  nsCString tokenName(PK11_GetTokenName(slot));
+  mTaskQueue->Dispatch(NS_NewRunnableFunction(
+      __func__, [self = RefPtr{this}, tokenName(std::move(tokenName))] {
+        self->SendPromptPassword(tokenName)->Then(
+            GetCurrentSerialEventTarget(), __func__,
+            [self](const PPKCS11ModuleChild::PromptPasswordPromise::
+                       ResolveOrRejectValue& value) {
+              MonitorAutoLock authPromptMonitorLock(self->mAuthPromptMonitor);
+              if (value.IsResolve()) {
+                self->mMaybePasswordForPrompt.emplace(
+                    std::move(value.ResolveValue()));
+              } else {
+                self->mMaybePasswordForPrompt.emplace(
+                    std::make_tuple(NS_ERROR_FAILURE, ""_ns));
+              }
+              authPromptMonitorLock.Notify();
+            });
+      }));
+
+  while (mMaybePasswordForPrompt.isNothing()) {
+    authPromptMonitorLock.Wait();
+  }
+  auto passwordPromptResult(mMaybePasswordForPrompt.take());
+  MOZ_ASSERT(passwordPromptResult.isSome());
+  if (passwordPromptResult.isNothing()) {
+    return nullptr;
+  }
+  if (NS_FAILED(std::get<0>(*passwordPromptResult))) {
+    return nullptr;
+  }
+  return ToNewCString(std::get<1>(*passwordPromptResult));
 }
 
 }  // namespace mozilla::psm

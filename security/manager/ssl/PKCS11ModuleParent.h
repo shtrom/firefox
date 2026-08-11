@@ -26,6 +26,9 @@ class PKCS11ModuleParent final : public PPKCS11ModuleParent {
   nsresult BindToUtilityProcess(
       const RefPtr<ipc::UtilityProcessParent>& aUtilityParent);
 
+  ipc::IPCResult RecvPromptPassword(nsCString&& aTokenName,
+                                    PromptPasswordResolver&& aResolver);
+
  private:
   ~PKCS11ModuleParent() = default;
 };

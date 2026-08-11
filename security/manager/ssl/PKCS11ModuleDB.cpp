@@ -557,6 +557,48 @@ RefPtr<PKCS11ModuleDB::TokenInfoPromise> PKCS11ModuleDB::ResetTokenGivenParent(
           });
 }
 
+RefPtr<PKCS11ModuleDB::TokenInfoPromise> PKCS11ModuleDB::LoginTokenGivenParent(
+    const RefPtr<PKCS11ModuleParent>& parent, SECMODModuleID moduleID,
+    CK_SLOT_ID slotID) {
+  using ReturnType = std::tuple<const nsresult&, TokenInfo&&>;
+  return parent->SendLoginToken(moduleID, slotID)
+      ->Then(
+          GetCurrentSerialEventTarget(), __func__,
+          [](ReturnType rv) {
+            if (NS_FAILED(std::get<0>(rv))) {
+              return TokenInfoPromise::CreateAndReject(std::get<0>(rv),
+                                                       __func__);
+            }
+            return TokenInfoPromise::CreateAndResolve(
+                std::move(std::get<1>(rv)), __func__);
+          },
+          [](ipc::ResponseRejectReason reason) {
+            return TokenInfoPromise::CreateAndReject(NS_ERROR_FAILURE,
+                                                     __func__);
+          });
+}
+
+RefPtr<PKCS11ModuleDB::TokenInfoPromise> PKCS11ModuleDB::LogoutTokenGivenParent(
+    const RefPtr<PKCS11ModuleParent>& parent, SECMODModuleID moduleID,
+    CK_SLOT_ID slotID) {
+  using ReturnType = std::tuple<const nsresult&, TokenInfo&&>;
+  return parent->SendLogoutToken(moduleID, slotID)
+      ->Then(
+          GetCurrentSerialEventTarget(), __func__,
+          [](ReturnType rv) {
+            if (NS_FAILED(std::get<0>(rv))) {
+              return TokenInfoPromise::CreateAndReject(std::get<0>(rv),
+                                                       __func__);
+            }
+            return TokenInfoPromise::CreateAndResolve(
+                std::move(std::get<1>(rv)), __func__);
+          },
+          [](ipc::ResponseRejectReason reason) {
+            return TokenInfoPromise::CreateAndReject(NS_ERROR_FAILURE,
+                                                     __func__);
+          });
+}
+
 RefPtr<PKCS11ModuleDB::TokenInfoPromise>
 PKCS11ModuleDB::ChangeTokenPasswordGivenParent(
     const RefPtr<PKCS11ModuleParent>& parent, SECMODModuleID moduleID,
@@ -684,6 +726,38 @@ RefPtr<PKCS11ModuleDB::TokenInfoPromise> PKCS11ModuleDB::ResetToken(
       [moduleID, slotID](const RefPtr<PKCS11ModuleParent>& parent) {
         MOZ_RELEASE_ASSERT(parent);
         return ResetTokenGivenParent(parent, moduleID, slotID);
+      },
+      [](nsresult rv) {
+        return TokenInfoPromise::CreateAndReject(rv, __func__);
+      });
+}
+
+RefPtr<PKCS11ModuleDB::TokenInfoPromise> PKCS11ModuleDB::LoginToken(
+    SECMODModuleID moduleID, CK_SLOT_ID slotID) {
+  if (!mPKCS11ModuleProcessPromise) {
+    return TokenInfoPromise::CreateAndReject(NS_ERROR_NOT_AVAILABLE, __func__);
+  }
+  return mPKCS11ModuleProcessPromise->Then(
+      GetCurrentSerialEventTarget(), __func__,
+      [moduleID, slotID](const RefPtr<PKCS11ModuleParent>& parent) {
+        MOZ_RELEASE_ASSERT(parent);
+        return LoginTokenGivenParent(parent, moduleID, slotID);
+      },
+      [](nsresult rv) {
+        return TokenInfoPromise::CreateAndReject(rv, __func__);
+      });
+}
+
+RefPtr<PKCS11ModuleDB::TokenInfoPromise> PKCS11ModuleDB::LogoutToken(
+    SECMODModuleID moduleID, CK_SLOT_ID slotID) {
+  if (!mPKCS11ModuleProcessPromise) {
+    return TokenInfoPromise::CreateAndReject(NS_ERROR_NOT_AVAILABLE, __func__);
+  }
+  return mPKCS11ModuleProcessPromise->Then(
+      GetCurrentSerialEventTarget(), __func__,
+      [moduleID, slotID](const RefPtr<PKCS11ModuleParent>& parent) {
+        MOZ_RELEASE_ASSERT(parent);
+        return LogoutTokenGivenParent(parent, moduleID, slotID);
       },
       [](nsresult rv) {
         return TokenInfoPromise::CreateAndReject(rv, __func__);
