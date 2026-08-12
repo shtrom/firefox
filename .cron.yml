@@ -541,7 +541,6 @@ jobs:
       when:
           - {hour: 2, minute: 0}
 
-<<<<<<< HEAD
     - name: bhr-aggregate
       job:
           type: decision-task
@@ -551,7 +550,7 @@ jobs:
           - mozilla-central
       when:
           - {hour: 10, minute: 0}
-=======
+
     - name: devtools-backward-compat
       job:
           type: decision-task
@@ -562,4 +561,3 @@ jobs:
       # Replaces manual smoke tests from the DevTools release checklist.
       when:
           - {hour: 8, minute: 0}
->>>>>>> 5a50c9f57e8d (Bug 2053559 - Add job + cron to run devtools compatibility tests on CI)
