@@ -5,8 +5,8 @@
 """Provisioning session shared by the local and the CI entry points.
 
 Wraps everything the client tests need on the other end of the connection: the
-server Firefox and the JSON configuration file that DEVTOOLS_COMPAT_CONFIG
-points at.
+server Firefox, the control channel, and the JSON configuration file that
+DEVTOOLS_COMPAT_CONFIG points at.
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ import os
 from typing import Iterator, Mapping
 
 from . import downloads
+from .control import ControlServer
 from .logs import log
 from .servers import DesktopServer
 
@@ -65,15 +66,19 @@ def provisioned_server(
         to be merged with the target environment.
     """
     instance = create_server(server, binary, cache_dir, log_dir, headless)
+    control = ControlServer(instance)
 
     log(f"Starting the '{server}' DevTools server")
     instance.start()
 
     try:
+        control.start()
+
         description = instance.describe()
         config = {
             "server": server,
             "host": instance.host,
+            "control": control.url,
             "runtime": description,
         }
         log(
@@ -91,4 +96,5 @@ def provisioned_server(
 
         yield {"DEVTOOLS_COMPAT_CONFIG": config_path}
     finally:
+        control.stop()
         instance.stop()
