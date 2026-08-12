@@ -770,6 +770,55 @@ add_task(async function test_sessionWatermark_readWrite_and_migration() {
 });
 
 /**
+ * Tests the generation-run timestamp that drives the scheduler cooldown:
+ * read/write, and migration seeding from the session watermark for profiles
+ * written before the timestamp was persisted.
+ */
+add_task(async function test_generationRunTimestamp_readWrite_and_migration() {
+  await MemoryStore.updateMeta({
+    last_generation_run_ts: 0,
+    last_session_memory_ts: 0,
+  });
+
+  // Run timestamp set
+  await MemoriesManager.setLastGenerationRunTimestamp(123456);
+  Assert.equal(
+    await MemoriesManager.getLastGenerationRunTimestamp(),
+    123456,
+    "Should read back the persisted generation run timestamp."
+  );
+
+  // An old profile has no run timestamp, so seed from the session watermark.
+  await MemoryStore.updateMeta({
+    last_generation_run_ts: 0,
+    last_session_memory_ts: 500,
+  });
+  Assert.equal(
+    await MemoriesManager.getLastGenerationRunTimestamp(),
+    500,
+    "Should seed from the session watermark when no run timestamp is stored."
+  );
+
+  // A stored run timestamp takes precedence over the watermark outright, rather
+  // than being reconciled with it.
+  await MemoryStore.updateMeta({
+    last_generation_run_ts: 700,
+    last_session_memory_ts: 900,
+  });
+  Assert.equal(
+    await MemoriesManager.getLastGenerationRunTimestamp(),
+    700,
+    "A stored run timestamp should win over the session watermark."
+  );
+
+  // Reset meta so it doesn't leak into later tasks.
+  await MemoryStore.updateMeta({
+    last_generation_run_ts: 0,
+    last_session_memory_ts: 0,
+  });
+});
+
+/**
  * Tests that runMemoryMaintenance hard-deletes soft-deleted memories in its
  * initial pre-pass, leaving live memories intact.
  */
@@ -1277,8 +1326,8 @@ add_task(async function test_generateMemoriesFromSessions_caps_delta_run() {
     // apply the wrong cap and make the count below pass for the wrong reason.
     Assert.equal(
       getRecentHistory.firstCall.args[0].sinceMicros,
-      watermarkMs * 1000,
-      "A set watermark should pull history from the watermark forward."
+      MemoriesManager.getSessionMemoryDeltaStartMs(watermarkMs) * 1000,
+      "A set watermark should pull history from one ms past the watermark."
     );
 
     Assert.equal(

@@ -73,6 +73,7 @@ const DEFAULT_CHAT_FULL_MAX_RESULTS = 50;
 const DEFAULT_CHAT_HALF_LIFE_DAYS_FULL_RESULTS = 7;
 
 const LAST_SESSION_MEMORY_TS_ATTRIBUTE = "last_session_memory_ts";
+const LAST_GENERATION_RUN_TS_ATTRIBUTE = "last_generation_run_ts";
 
 const PREF_FIRSTRUN_HAS_COMPLETED = "browser.smartwindow.firstrun.hasCompleted";
 
@@ -297,12 +298,13 @@ export class MemoriesManager {
 
     const watermarkMs = await this.getLastSessionMemoryTimestamp();
     const isDelta = watermarkMs > 0;
+    const deltaStartMs = this.getSessionMemoryDeltaStartMs(watermarkMs);
 
     let historyRows = [];
     if (historyEnabled) {
       const recentHistoryOpts = isDelta
         ? {
-            sinceMicros: watermarkMs * 1000,
+            sinceMicros: deltaStartMs * 1000,
             maxResults: DEFAULT_HISTORY_DELTA_MAX_RESULTS,
           }
         : {
@@ -315,7 +317,7 @@ export class MemoriesManager {
     let chatMessages = [];
     if (conversationEnabled) {
       chatMessages = await this._getRecentChats(
-        isDelta ? watermarkMs : 0,
+        deltaStartMs,
         DEFAULT_CHAT_FULL_MAX_RESULTS,
         DEFAULT_CHAT_HALF_LIFE_DAYS_FULL_RESULTS
       );
@@ -548,6 +550,18 @@ export class MemoriesManager {
   }
 
   /**
+   * Converts the session-memory watermark into the start of the not-yet-processed
+   * range. The watermark is the last timestamp already processed. The next session
+   * must be +1 milliseconds later to avoid pulling events included in the last session.
+   *
+   * @param {number} watermarkMs   Value from {@link getLastSessionMemoryTimestamp}
+   * @returns {number}             Inclusive start for a delta read, 0 on first run
+   */
+  static getSessionMemoryDeltaStartMs(watermarkMs) {
+    return watermarkMs > 0 ? watermarkMs + 1 : 0;
+  }
+
+  /**
    * Persists the unified session-memory watermark.
    *
    * @param {number} tsMs  Milliseconds since Unix epoch
@@ -555,6 +569,29 @@ export class MemoriesManager {
    */
   static async setLastSessionMemoryTimestamp(tsMs) {
     await MemoryStore.updateMeta({ [LAST_SESSION_MEMORY_TS_ATTRIBUTE]: tsMs });
+  }
+
+  /**
+   * Returns when generation last ran (ms since Unix epoch).
+   *
+   * Profiles written before this was persisted seed from the last session
+   * memory watermark, which is never newer than the run that wrote it.
+   *
+   * @returns {Promise<number>}  Milliseconds since Unix epoch (0 if never run)
+   */
+  static async getLastGenerationRunTimestamp() {
+    const meta = await MemoryStore.getMeta();
+    return meta.last_generation_run_ts || meta.last_session_memory_ts || 0;
+  }
+
+  /**
+   * Persists when generation last ran.
+   *
+   * @param {number} tsMs  Milliseconds since Unix epoch
+   * @returns {Promise<void>}
+   */
+  static async setLastGenerationRunTimestamp(tsMs) {
+    await MemoryStore.updateMeta({ [LAST_GENERATION_RUN_TS_ATTRIBUTE]: tsMs });
   }
 
   /**
