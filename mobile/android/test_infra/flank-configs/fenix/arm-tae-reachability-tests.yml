@@ -21,10 +21,9 @@ gcloud:
     /data/local/tmp/org.mozilla.fenix.debug-geckoview-config.yaml: geckoview-configs/org.mozilla.fenix.debug-geckoview-config.yaml
 
   test-targets:
-    - notPackage org.mozilla.fenix.syncintegration
-    - notPackage org.mozilla.fenix.experimentintegration
-    - notPackage org.mozilla.fenix.ui.efficiency.devtools
-    - package org.mozilla.fenix.ui.efficiency.tests
+    # Runs @Parameterized reachability shards; if the factory yields zero runnable
+    # case this suite reports no tests. See ReachabilityShardData.loadShard.
+    - package org.mozilla.fenix.ui.efficiency.generation.reachability.shards
 
   device:
     - model: MediumPhone.arm
