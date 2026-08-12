@@ -4,22 +4,26 @@
 
 export var UnsupportedLaunchOnLogin = {
   async createLaunchOnLogin() {
-    return await Promise.reject(new Error("unsupported"));
+    return await Promise.resolve(false);
   },
 
   async removeLaunchOnLogin() {
-    return await Promise.reject(new Error("unsupported"));
+    return await Promise.resolve(true);
   },
 
   async getLaunchOnLoginApproved() {
-    return await Promise.reject(new Error("unsupported"));
+    return await Promise.resolve(false);
   },
 
   async getLaunchOnLoginEnabled() {
-    return await Promise.reject(new Error("unsupported"));
+    return await Promise.resolve(false);
   },
 
   async getLaunchOnLoginEnablementDetails() {
-    return await Promise.reject(new Error("unsupported"));
+    return await Promise.resolve({
+      isEnabled: false,
+      isSupported: false,
+      isAllowedByPolicy: false,
+    });
   },
 };

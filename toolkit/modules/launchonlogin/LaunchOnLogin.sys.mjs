@@ -49,6 +49,10 @@ export var LaunchOnLogin = {
    *          Whether LaunchOnLogin was enabled.
    */
   async enable() {
+    if (Services.policies && !Services.policies.isAllowed("launchOnLogin")) {
+      return Promise.resolve(false);
+    }
+
     return await lazy.gImpl.createLaunchOnLogin();
   },
 
@@ -69,6 +73,10 @@ export var LaunchOnLogin = {
    *          Whether LaunchOnLogin is allowed.
    */
   async isAllowed() {
+    if (Services.policies && !Services.policies.isAllowed("launchOnLogin")) {
+      return Promise.resolve(false);
+    }
+
     return await lazy.gImpl.getLaunchOnLoginApproved();
   },
 
@@ -79,6 +87,10 @@ export var LaunchOnLogin = {
    *          Whether LaunchOnLogin is allowed.
    */
   async isEnabled() {
+    if (Services.policies && !Services.policies.isAllowed("launchOnLogin")) {
+      return Promise.resolve(false);
+    }
+
     return await lazy.gImpl.getLaunchOnLoginEnabled();
   },
 
@@ -102,6 +114,9 @@ export var LaunchOnLogin = {
       );
     }
 
+    if (Services.policies && !Services.policies.isAllowed("launchOnLogin")) {
+      details.isAllowedByPolicy = false;
+    }
     return details;
   },
 };
