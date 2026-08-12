@@ -971,6 +971,11 @@ UniqueContentParentKeepAlive ContentParent::GetUsedBrowserProcess(
          PromiseFlatCString(aRemoteType).get(),
          preallocated->IsLaunching() ? " (still launching)" : ""));
 
+    MOZ_LOG(mozilla::ipc::gChildProcessLifecycleLog, LogLevel::Info,
+            ("REMOTETYPE [childID = %" PRIi32 "] [remoteType = %s]",
+             preallocated->Process()->GetChildID(),
+             PromiseFlatCString(aRemoteType).get()));
+
     // This ensures that the preallocator won't shut down the process once
     // it finishes starting
     preallocated->mRemoteType.Assign(aRemoteType);
@@ -2496,6 +2501,10 @@ bool ContentParent::BeginSubprocessLaunch(ProcessPriority aPriority) {
     mSubprocess->SetEnv("MOZ_HEADLESS", "1");
   }
 #endif
+
+  MOZ_LOG(mozilla::ipc::gChildProcessLifecycleLog, LogLevel::Info,
+          ("REMOTETYPE [childID = %" PRIi32 "] [remoteType = %s]",
+           mSubprocess->GetChildID(), mRemoteType.get()));
 
   mLaunchYieldTS = TimeStamp::Now();
   return mSubprocess->AsyncLaunch(std::move(extraArgs));
