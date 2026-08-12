@@ -62,7 +62,21 @@ fn can_pin(main_guard: MainThreadGuard) -> bool {
         Err(e) => log::error!("Error checking if we can pin via WinRT: {e:?}"),
     }
 
-    com::is_pinning_available(main_guard)
+    // COM pinning is nonfunctional on MSIX as we currently implement it.
+    //
+    // Note: This API might work if a to-be-pinned shortcut were created to a
+    // non-virtualized path, including an unvirtualized path within this
+    // package’s AppData directory. This has not been validated, and we cannot
+    // guarantee cleanup of those shortcuts or unpinning from the taskbar on
+    // uninstall; see https://github.com/microsoft/WindowsAppSDK/issues/2779.
+    if Package::Current().is_err() {
+        let present = com::is_pinning_available(main_guard);
+        log::trace!("COM pinning present: {present:?}");
+
+        return present;
+    }
+
+    false
 }
 
 /// Pins the shortcut with matching AUMID to the taskbar.
