@@ -499,7 +499,7 @@ export class GeckoViewStartup {
         InitLater(() => {
           const loginDetection = Cc[
             "@mozilla.org/login-detection-service;1"
-          ].createInstance(Ci.nsILoginDetectionService);
+          ].getService(Ci.nsILoginDetectionService);
           loginDetection.init();
         });
         break;
