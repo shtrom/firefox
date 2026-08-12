@@ -6,8 +6,6 @@ import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
 
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
-  MozAdsCallbackOptions:
-    "moz-src:///toolkit/components/uniffi-bindgen-gecko-js/components/generated/RustAdsClient.sys.mjs",
   MozAdsClientBuilder:
     "moz-src:///toolkit/components/uniffi-bindgen-gecko-js/components/generated/RustAdsClient.sys.mjs",
   MozAdsEnvironment:
@@ -76,7 +74,7 @@ export class _AdsClient {
   }
 
   /**
-   * Options for requestTileAds/requestSpocAds, with the OHTTP channel
+   * Options for requestTileAds/requestSpocAds/record*, with the OHTTP channel
    * configured from prefs, and flags from passed in prefValues.
    *
    * @param {object} prefValues The New Tab store's Prefs.values.
@@ -85,18 +83,6 @@ export class _AdsClient {
   requestOptions(prefValues) {
     return new lazy.MozAdsRequestOptions({
       flags: new Map(Object.entries(prefValues?.adsBackendConfig || {})),
-      ohttp: this.#configureOhttp(),
-    });
-  }
-
-  /**
-   * Options for recordClick/recordImpression/reportAd, with the OHTTP channel
-   * configured from prefs.
-   *
-   * @returns {MozAdsCallbackOptions}
-   */
-  callbackOptions() {
-    return new lazy.MozAdsCallbackOptions({
       ohttp: this.#configureOhttp(),
     });
   }
