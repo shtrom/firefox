@@ -29,7 +29,7 @@ import {
   computeMemoryFrecency,
   computeMemoryStrength,
 } from "moz-src:///browser/components/aiwindow/models/memories/Memories.sys.mjs";
-import { EmbeddingsGenerator } from "chrome://global/content/ml/EmbeddingsGenerator.sys.mjs";
+import { embeddingsGeneratorFactory } from "chrome://global/content/ml/EmbeddingsGenerator.sys.mjs";
 import { cosSim } from "chrome://global/content/ml/NLPUtils.sys.mjs";
 
 /**
@@ -734,7 +734,7 @@ export const MemoryStore = {
 
     // Lazy initialize embeddings generator
     if (!this.embeddingsGenerator) {
-      this.embeddingsGenerator = EmbeddingsGenerator.forGeneral();
+      this.embeddingsGenerator = embeddingsGeneratorFactory.forGeneral();
     }
 
     // Re-embed memories only if cache is invalid
