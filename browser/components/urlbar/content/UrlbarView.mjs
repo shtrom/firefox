@@ -2962,7 +2962,7 @@ export class UrlbarView {
     this.#l10nCache.setElementL10n(bottomLabel, result.payload.bottomTextL10n);
 
     let url = item._elements.get("url");
-    url.textContent = lazy.UrlbarUtils.prepareUrlForDisplay(result.payload.url);
+    url.textContent = UrlbarShared.prepareUrlForDisplay(result.payload.url);
   }
 
   /**

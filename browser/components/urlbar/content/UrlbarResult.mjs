@@ -357,7 +357,7 @@ export class UrlbarResult {
    *   Make highlighting that matches this tokens.
    *   If no specific tokens, this function returns only value.
    * @param {object} [options.isURL]
-   *   If true, the value will be from UrlbarUtils.prepareUrlForDisplay().
+   *   If true, the value will be from UrlbarShared.prepareUrlForDisplay().
    */
   getDisplayableValueAndHighlights(payloadName, options = {}) {
     if (!this.#displayValuesCache) {
@@ -405,7 +405,7 @@ export class UrlbarResult {
     }
 
     if (isURL) {
-      value = lazy.UrlbarUtils.prepareUrlForDisplay(value);
+      value = UrlbarShared.prepareUrlForDisplay(value);
     }
 
     if (typeof value == "string") {
