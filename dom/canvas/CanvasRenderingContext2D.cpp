@@ -1101,8 +1101,7 @@ CanvasRenderingContext2D::ContextState::ContextState(const ContextState& aOther)
       gradientStyles(aOther.gradientStyles),
       patternStyles(aOther.patternStyles),
       colorStyles(aOther.colorStyles),
-      specifiedFont(aOther.specifiedFont),
-      resolvedFont(aOther.resolvedFont),
+      font(aOther.font),
       textAlign(aOther.textAlign),
       textBaseline(aOther.textBaseline),
       textDirection(aOther.textDirection),
@@ -4213,21 +4212,6 @@ static float QuantizeFontSize(float aSize) {
   return d - t;
 }
 
-bool CanvasRenderingContext2D::FontIsUnchanged(const nsACString& aFont,
-                                               gfxUserFontSet* aFontSet) {
-  // Return true if:
-  // - we have an existing fontGroup
-  // - the specified font shorthand is the same as current
-  // - the user font set hasn't been rebuilt
-  // Note that if font-affecting attributes like fontWidth, fontKerning,
-  // fontVariantCaps, or language have changed, their setters will have
-  // cleared the current fontGroup, so we don't need to check them here.
-  const ContextState& state = CurrentState();
-  return state.fontGroup && state.specifiedFont == aFont &&
-         (!aFontSet || aFontSet->GetRebuildGeneration() ==
-                           state.fontGroup->GetRebuildGeneration());
-}
-
 bool CanvasRenderingContext2D::SetFontInternal(const nsACString& aFont,
                                                ErrorResult& aError) {
   RefPtr<PresShell> presShell = GetPresShell();
@@ -4236,14 +4220,6 @@ bool CanvasRenderingContext2D::SetFontInternal(const nsACString& aFont,
   }
 
   nsPresContext* c = presShell->GetPresContext();
-  c->Document()->FlushUserFontSet();
-
-  // Try to short-circuit the case where the exact same font is being re-
-  // specified, and no other relevant properties have changed.
-  if (FontIsUnchanged(aFont, c->GetUserFontSet())) {
-    return true;
-  }
-
   FontStyleCacheKey key{aFont, CurrentState().resolvedFontLang,
                         c->RestyleManager()->GetRestyleGeneration()};
   auto entry = mFontStyleCache.Lookup(key);
@@ -4356,6 +4332,8 @@ bool CanvasRenderingContext2D::SetFontInternal(const nsACString& aFont,
       break;
   }
 
+  c->Document()->FlushUserFontSet();
+
   nsFontMetrics::Params params;
   params.language = CurrentState().resolvedFontLang;
   params.explicitLanguage = CurrentState().explicitLang;
@@ -4369,8 +4347,7 @@ bool CanvasRenderingContext2D::SetFontInternal(const nsACString& aFont,
   gfxFontGroup* newFontGroup = metrics->GetThebesFontGroup();
   CurrentState().fontGroup = newFontGroup;
   NS_ASSERTION(CurrentState().fontGroup, "Could not get font group");
-  CurrentState().specifiedFont = aFont;
-  CurrentState().resolvedFont = data.mUsedFont;
+  CurrentState().font = data.mUsedFont;
   CurrentState().fontFont = fontStyle->mFont;
   CurrentState().fontFont.size = fontStyle->mSize;
   CurrentState().fontComputedStyle = data.mStyle;
@@ -4446,12 +4423,6 @@ bool CanvasRenderingContext2D::SetFontInternalDisconnected(
     fontFaceSetImpl->FlushUserFontSet();
   }
 
-  // Try to short-circuit the case where the exact same font is being re-
-  // specified, and no other relevant properties have changed.
-  if (FontIsUnchanged(aFont, fontFaceSetImpl)) {
-    return true;
-  }
-
   // In the OffscreenCanvas case we don't have the context necessary to call
   // GetFontStyleForServo(), as we do in the main-thread canvas context, so
   // instead we borrow ParseFontShorthandForMatching to parse the attribute.
@@ -4470,8 +4441,7 @@ bool CanvasRenderingContext2D::SetFontInternalDisconnected(
   fontStyle.allowForceGDIClassic = false;
 #endif
 
-  auto& state = CurrentState();
-  switch (state.fontWidth) {
+  switch (CurrentState().fontWidth) {
     case CanvasFontStretch::Normal:
       // Leave whatever the shorthand set.
       break;
@@ -4509,7 +4479,7 @@ bool CanvasRenderingContext2D::SetFontInternalDisconnected(
   // XXX(jfkthame) The interaction between the shorthand and the separate attr
   // here is not clearly spec'd, and we may want to reconsider it (or revise
   // the available values); see https://github.com/whatwg/html/issues/8103.
-  switch (state.fontVariantCaps) {
+  switch (CurrentState().fontVariantCaps) {
     case CanvasFontVariantCaps::Normal:
       fontStyle.variantCaps = smallCaps ? NS_FONT_VARIANT_CAPS_SMALL_CAPS
                                         : NS_FONT_VARIANT_CAPS_NORMAL;
@@ -4542,7 +4512,7 @@ bool CanvasRenderingContext2D::SetFontInternalDisconnected(
 
   // Set the kerning feature, if required by the fontKerning attribute.
   gfxFontFeature setting{TRUETYPE_TAG('k', 'e', 'r', 'n'), 0};
-  switch (state.fontKerning) {
+  switch (CurrentState().fontKerning) {
     case CanvasFontKerning::None:
       setting.mValue = 0;
       fontStyle.featureSettings.AppendElement(setting);
@@ -4556,29 +4526,23 @@ bool CanvasRenderingContext2D::SetFontInternalDisconnected(
       break;
   }
 
-  nsAutoCString newFont;
-  SerializeFontForCanvas(list, fontStyle, newFont);
-  // TODO: Cache fontGroups in the Worker (use an nsFontCache?). For now, we
-  // just try to re-use the current fontGroup if possible.
-  if (!state.fontGroup || state.resolvedFont != newFont ||
-      (fontFaceSetImpl && fontFaceSetImpl->GetRebuildGeneration() !=
-                              state.fontGroup->GetRebuildGeneration())) {
-    state.fontGroup = MakeRefPtr<gfxFontGroup>(
-        mOffscreenCanvas,  // aFontVisibilityProvider
-        list,              // aFontFamilyList
-        &fontStyle,        // aStyle
-        CurrentState().resolvedFontLang, CurrentState().explicitLang,
-        nullptr,          // aTextPerf
-        fontFaceSetImpl,  // aUserFontSet
-        1.0,              // aDevToCssSize
-        StyleFontVariantEmoji::Normal);
-    state.specifiedFont = aFont;
-    state.resolvedFont = newFont;
-    state.fontFont = nsFont(StyleFontFamily{list, false, false},
-                            StyleCSSPixelLength::FromPixels(size));
-    state.fontFont.variantCaps = fontStyle.variantCaps;
-    state.fontComputedStyle = nullptr;
-  }
+  // TODO: Cache fontGroups in the Worker (use an nsFontCache?)
+  gfxFontGroup* fontGroup = new gfxFontGroup(
+      mOffscreenCanvas,  // aFontVisibilityProvider
+      list,              // aFontFamilyList
+      &fontStyle,        // aStyle
+      CurrentState().resolvedFontLang, CurrentState().explicitLang,
+      nullptr,          // aTextPerf
+      fontFaceSetImpl,  // aUserFontSet
+      1.0,              // aDevToCssSize
+      StyleFontVariantEmoji::Normal);
+  auto& state = CurrentState();
+  state.fontGroup = fontGroup;
+  SerializeFontForCanvas(list, fontStyle, state.font);
+  state.fontFont = nsFont(StyleFontFamily{list, false, false},
+                          StyleCSSPixelLength::FromPixels(size));
+  state.fontFont.variantCaps = fontStyle.variantCaps;
+  state.fontComputedStyle = nullptr;
   return true;
 }
 
@@ -5484,10 +5448,10 @@ gfxFontGroup* CanvasRenderingContext2D::GetCurrentFontStyle() {
   // If the font has already been set, we're re-creating the fontGroup
   // and should re-use the existing font attribute; if not, we initialize
   // it to the canvas default.
-  // We make a local copy of CurrentState().resolvedFont because SetFontInternal
+  // We make a local copy of CurrentState().font because SetFontInternal
   // may cause a flush and could invalidate any reference to the string in
   // the CurrentState() record.
-  nsAutoCString currentFont(CurrentState().resolvedFont);
+  nsAutoCString currentFont(CurrentState().font);
   if (currentFont.IsEmpty()) {
     currentFont = kDefaultFontStyle;
   }
@@ -5503,12 +5467,12 @@ gfxFontGroup* CanvasRenderingContext2D::GetCurrentFontStyle() {
     gfxFloat devToCssSize = gfxFloat(perDevPixel) / gfxFloat(perCSSPixel);
     const auto* sans =
         Servo_FontFamily_Generic(StyleGenericFontFamily::SansSerif);
-    CurrentState().fontGroup = MakeRefPtr<gfxFontGroup>(
+    CurrentState().fontGroup = new gfxFontGroup(
         visProvider, sans->families, &style, language, explicitLanguage,
         presContext ? presContext->GetTextPerfMetrics() : nullptr, nullptr,
         devToCssSize, StyleFontVariantEmoji::Normal);
     if (CurrentState().fontGroup) {
-      CurrentState().resolvedFont = kDefaultFontStyle;
+      CurrentState().font = kDefaultFontStyle;
     } else {
       NS_ERROR("Default canvas font is invalid");
     }
