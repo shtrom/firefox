@@ -73,7 +73,27 @@ class SharePageActionClass {
   handleEvent(event) {
     if (event.type === "click") {
       this.togglePanel(event);
+    } else if (event.type === "command") {
+      this.handleCommand(event);
     }
+  }
+
+  handleCommand(event) {
+    switch (event.target.id) {
+      case "share-panel-screenshot": {
+        Services.obs.notifyObservers(
+          event.target.documentGlobal,
+          "menuitem-screenshot",
+          "SharePanel"
+        );
+        break;
+      }
+      default: {
+        return;
+      }
+    }
+
+    lazy.PanelMultiView.hidePopup(event.currentTarget);
   }
 
   togglePanel(event) {
@@ -110,7 +130,10 @@ class SharePageActionClass {
       let template = window.document.getElementById(TEMPLATE_ID);
       panel = template.content.firstElementChild;
       template.replaceWith(template.content);
+
+      panel.addEventListener("command", this);
     }
+
     return panel;
   }
 }
