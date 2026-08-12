@@ -158,14 +158,35 @@ TimerManager.prototype = {
       let [cid, method, timerID, prefInterval, defaultInterval, maxInterval] =
         value.split(",");
 
+      // Do basic validation of the contract ID to prevent anything too weird.
+      if (!cid) {
+        LOG(
+          "TimerManager:notify - update-timer category registered without a contract ID - skipping"
+        );
+        continue;
+      }
+      if (!cid.startsWith("@mozilla.org/")) {
+        LOG(
+          "TimerManager:notify - update-timer category registered with a contract ID " +
+            cid +
+            " that does not start with @mozilla.org/ - skipping"
+        );
+        continue;
+      }
+      if (method != "getService" && method != "createInstance") {
+        LOG(
+          "TimerManager:notify - update-timer category registered for " +
+            cid +
+            " with a method that is neither getService nor createInstance - skipping"
+        );
+        continue;
+      }
       defaultInterval = parseInt(defaultInterval);
-      // cid and method are validated below when calling notify.
       if (!timerID || !defaultInterval || isNaN(defaultInterval)) {
         LOG(
-          "TimerManager:notify - update-timer category registered" +
-            (cid ? " for " + cid : "") +
-            " without required parameters - " +
-            "skipping"
+          "TimerManager:notify - update-timer category registered for " +
+            cid +
+            " without required parameters - skipping"
         );
         continue;
       }
@@ -199,7 +220,11 @@ TimerManager.prototype = {
           ChromeUtils.idleDispatch(() => {
             try {
               let startTime = ChromeUtils.now();
-              Cc[cid][method](Ci.nsITimerCallback).notify(timer);
+              if (method == "getService") {
+                Cc[cid].getService(Ci.nsITimerCallback).notify(timer);
+              } else {
+                Cc[cid].createInstance(Ci.nsITimerCallback).notify(timer);
+              }
               ChromeUtils.addProfilerMarker(
                 "UpdateTimer",
                 { category: "Timer", startTime },
