@@ -813,6 +813,10 @@ export class UrlbarChildController {
     return this.#parentController.switchToTab(loadData);
   }
 
+  addToInputHistory(url, input, options) {
+    return this.#parentController.addToInputHistory(url, input, options);
+  }
+
   /**
    * Returns whether the passed-in event represents a canonization request.
    *
