@@ -37,6 +37,11 @@ import os
 import re
 import uuid
 
+# Sibling module in the aggregation dir. Unions the per-signature HLL sketches
+# the primary job emits, so we can report the share of distinct users a
+# signature affected over each trailing window.
+from client_metrics import HyperLogLog
+
 # Frame and stack separators for the canonical key. Control characters that
 # cannot appear in a symbol or library name, so the join is unambiguous.
 _FIELD_SEP = "\x1f"
@@ -49,6 +54,13 @@ _FRAME_SEP = "\x1e"
 DEFAULT_WINDOW_DAYS = 365
 DEFAULT_TOP_COUNT = 500
 DEFAULT_PER_DAY_TOP_N = 2000
+
+# Trailing sub-windows (in days, ending at the window's last date) over which we
+# report the distinct users a signature affected. Each is a suffix of the full
+# window, so they nest: d7's dates are the last 7 of d28's, which are the last
+# 28 of d365's. Clamped to the days actually available. 28 (four weeks) rather
+# than 30 keeps the mid window aligned to whole weeks.
+AFFECTED_WINDOWS = (("d7", 7), ("d28", 28), ("d365", 365))
 
 _ARTIFACT_RE = re.compile(r"hangs_(?P<tag>.+)_(?P<date>\d{8})\.json$")
 
@@ -91,18 +103,29 @@ def reconstruct_stack(thread, sample_index):
 def aggregate_day(profile, per_day_top_n):
     """Aggregate one daily profile into per-signature (ms, count), top-N by ms.
 
-    Returns {key: {"frames": [...], "ms": float, "count": float}}, mirroring the
-    frontend's pass-1 dedup (fold samples whose stacks are identical, ignoring
-    runnable/annotations/platform).
+    Returns (by_key, total_sketch), where by_key is
+    {key: {"frames": [...], "ms": float, "count": float, "sketch": <sparse>|None}}
+    mirroring the frontend's pass-1 dedup (fold samples whose stacks are
+    identical, ignoring runnable/annotations/platform). `total_sketch` is the
+    day's all-signatures HLL sketch (the affected-users denominator), or None
+    when the artifact carries no client metrics.
+
+    The per-signature sketch is joined from the primary job's `affectedClients`
+    block by the same canonical key used for the ms/count series, so the two
+    stay aligned across days.
     """
     thread = pick_thread(profile)
     if thread is None:
-        return {}
+        return {}, None
 
     day = thread["dates"][0]
     sample_ms = day["sampleHangMs"]
     sample_count = day["sampleHangCount"]
     sample_total = thread["sampleTable"]["length"]
+
+    affected = profile.get("affectedClients") or {}
+    sketch_by_key = affected.get("sketchBySignature") or {}
+    total_sketch = affected.get("totalSketch")
 
     by_key = {}
     for i in range(sample_total):
@@ -113,15 +136,20 @@ def aggregate_day(profile, per_day_top_n):
         key = canonical_key(frames)
         entry = by_key.get(key)
         if entry is None:
-            by_key[key] = {"frames": frames, "ms": ms, "count": sample_count[i] or 0.0}
+            by_key[key] = {
+                "frames": frames,
+                "ms": ms,
+                "count": sample_count[i] or 0.0,
+                "sketch": sketch_by_key.get(key),
+            }
         else:
             entry["ms"] += ms
             entry["count"] += sample_count[i] or 0.0
 
     if len(by_key) <= per_day_top_n:
-        return by_key
+        return by_key, total_sketch
     top = sorted(by_key.items(), key=lambda kv: kv[1]["ms"], reverse=True)
-    return dict(top[:per_day_top_n])
+    return dict(top[:per_day_top_n]), total_sketch
 
 
 def available_artifacts(input_dir, output_tag):
@@ -148,7 +176,58 @@ def load_state(path):
     if path and os.path.exists(path):
         with open(path, encoding="utf-8") as state_file:
             return json.load(state_file)
-    return {"days": {}}
+    return {"days": {}, "totalSketches": {}}
+
+
+def merge_window_counts(sketch_by_date, dates):
+    """Distinct-user count of the sketch union over each AFFECTED_WINDOWS suffix.
+
+    The windows nest (each is a suffix of the next), so we merge once from the
+    most recent day backward and snapshot the running union as we cross each
+    boundary. Returns {label: int} covering every window, or None when no day in
+    `dates` carries a sketch (nothing to count).
+    """
+    running = None
+    counts = {}
+    boundary = {n: label for label, n in AFFECTED_WINDOWS}
+    for position, date in enumerate(reversed(dates), start=1):
+        sparse = sketch_by_date.get(date)
+        if sparse is not None:
+            hll = HyperLogLog.deserialize(sparse)
+            running = hll if running is None else running.merge(hll)
+        if position in boundary:
+            counts[boundary[position]] = running.count() if running is not None else 0
+    if running is None:
+        return None
+    # Windows longer than the available history collapse to the full union.
+    full = running.count()
+    for label, _ in AFFECTED_WINDOWS:
+        counts.setdefault(label, full)
+    return counts
+
+
+def _daily_count(sparse):
+    """Distinct-user count for a single day's sketch."""
+    if sparse is None:
+        return None
+    return HyperLogLog.deserialize(sparse).count()
+
+
+def affected_value(days, date, key, per_day_top_n, sketch):
+    """One day's affected-user count, or None where we do not know it.
+
+    Follows the same rule as the ms and count series, with one extra way to
+    land on None: the signature hung that day but the artifact carried no
+    client metrics, so there is a hang count and no user count.
+    """
+    if sketch is not None:
+        return _daily_count(sketch)
+    day = days.get(date)
+    if day is None:
+        return None
+    if day.get(key) is not None:
+        return None
+    return 0 if day_is_complete(day, per_day_top_n) else None
 
 
 def day_is_complete(day, per_day_top_n):
@@ -184,6 +263,7 @@ def build_published(state, dates, top_count):
     """Derive the slim top-M published artifact from the per-day state."""
     days = state["days"]
     per_day_top_n = state.get("perDayTopN")
+    total_sketches = state.get("totalSketches", {})
 
     totals = {}
     frames_by_key = {}
@@ -199,22 +279,50 @@ def build_published(state, dates, top_count):
 
     top_keys = sorted(totals, key=lambda k: totals[k][0], reverse=True)[:top_count]
 
+    # Distinct users over each trailing window, the shared denominator for the
+    # per-signature percentages. None when no artifact in the window carried
+    # client metrics, in which case the affected-users fields are all omitted.
+    total_users = merge_window_counts(total_sketches, dates)
+
     signatures = []
     for key in top_keys:
         ms_series = []
         count_series = []
+        sig_sketches = {}
         for date in dates:
             ms_series.append(series_value(days, date, key, per_day_top_n, "ms"))
             count_series.append(series_value(days, date, key, per_day_top_n, "count"))
-        signatures.append({
+            entry = days.get(date, {}).get(key)
+            if entry and entry.get("sketch") is not None:
+                sig_sketches[date] = entry["sketch"]
+
+        signature = {
             "frames": frames_by_key[key],
             "totalMs": totals[key][0],
             "totalCount": totals[key][1],
             "ms": ms_series,
             "count": count_series,
-        })
+        }
+        if total_users is not None:
+            affected = merge_window_counts(sig_sketches, dates) or {
+                label: 0 for label, _ in AFFECTED_WINDOWS
+            }
+            signature["affectedUsers"] = affected
+            signature["affectedPct"] = {
+                label: (affected[label] / total_users[label])
+                if total_users[label] > 0
+                else 0.0
+                for label, _ in AFFECTED_WINDOWS
+            }
+            # Per-day distinct users for this signature, parallel to `dates`, so
+            # the frontend can show that single day's affected count on hover.
+            signature["affected"] = [
+                affected_value(days, date, key, per_day_top_n, sig_sketches.get(date))
+                for date in dates
+            ]
+        signatures.append(signature)
 
-    return {
+    published = {
         "uuid": uuid.uuid4().hex,
         "windowStartDate": dates[0],
         "windowEndDate": dates[-1],
@@ -222,6 +330,14 @@ def build_published(state, dates, top_count):
         "dates": dates,
         "signatures": signatures,
     }
+    if total_users is not None:
+        published["totalUsers"] = total_users
+        published["affectedWindows"] = [n for _, n in AFFECTED_WINDOWS]
+        # Per-day distinct users across all signatures, the daily denominator.
+        published["totalAffected"] = [
+            _daily_count(total_sketches.get(date)) for date in dates
+        ]
+    return published
 
 
 def write_file(path, data):
@@ -260,10 +376,12 @@ def build_timeseries(
     state_path = os.path.join(output_dir, f"hangs_timeseries_{output_tag}_state.json")
     state = load_state(state_path)
     days = state["days"]
+    total_sketches = state.setdefault("totalSketches", {})
 
     for date in list(days):
         if date not in in_window:
             del days[date]
+            total_sketches.pop(date, None)
 
     for date in dates:
         if date in days or date not in artifacts:
@@ -271,7 +389,9 @@ def build_timeseries(
         print(f"Filling {date} from {artifacts[date]}", flush=True)
         with open(artifacts[date], encoding="utf-8") as profile_file:
             profile = json.load(profile_file)
-        days[date] = aggregate_day(profile, per_day_top_n)
+        days[date], day_total_sketch = aggregate_day(profile, per_day_top_n)
+        if day_total_sketch is not None:
+            total_sketches[date] = day_total_sketch
 
     state["windowDays"] = window_days
     state["perDayTopN"] = per_day_top_n
