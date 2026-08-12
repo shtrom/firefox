@@ -248,7 +248,7 @@ var SidebarController = {
           keyId: "viewOpenTabsSidebarKb",
           menuL10nId: "menu-view-open-tabs",
           revampL10nId: "sidebar-menu-open-tabs-label",
-          iconUrl: "chrome://browser/content/firefoxview/view-opentabs.svg",
+          iconUrl: "chrome://browser/skin/open-tabs.svg",
           gleanClickEvent: Glean.sidebar.openTabsIconClick,
           contextMenuId: "sidebar-opentabs-context-menu",
         }

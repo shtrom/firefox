@@ -359,7 +359,7 @@ export const UrlbarShared = {
       {
         source: this.RESULT_SOURCE.TABS,
         restrict: this.RESTRICT_TOKENS.OPENPAGE,
-        icon: "chrome://browser/skin/tabs.svg",
+        icon: "chrome://browser/skin/open-tabs.svg",
         pref: "shortcuts.tabs",
         telemetryLabel: "tabs",
         uiLabel: "urlbar-searchmode-tabs3",
@@ -375,7 +375,7 @@ export const UrlbarShared = {
       {
         source: this.RESULT_SOURCE.ACTIONS,
         restrict: this.RESTRICT_TOKENS.ACTION,
-        icon: "chrome://browser/skin/quickactions.svg",
+        icon: "chrome://browser/skin/lightning-bolt.svg",
         pref: "shortcuts.actions",
         telemetryLabel: "actions",
         uiLabel: "urlbar-searchmode-actions3",
