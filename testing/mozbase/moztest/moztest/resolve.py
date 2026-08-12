@@ -524,6 +524,7 @@ _test_subsuites = {
     ("web-platform-tests", "print-reftest"): "web-platform-tests-print-reftest",
     ("web-platform-tests", "reftest"): "web-platform-tests-reftest",
     ("web-platform-tests", "wdspec"): "web-platform-tests-wdspec",
+    ("web-platform-tests", "aamtest"): "web-platform-tests-aam",
 }
 
 
