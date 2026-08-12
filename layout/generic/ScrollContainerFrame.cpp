@@ -5196,15 +5196,22 @@ bool ScrollContainerFrame::ScrollSnap(const nsPoint& aDestination,
 }
 
 nsSize ScrollContainerFrame::GetLineScrollAmount() const {
+  float inflation = nsLayoutUtils::FontSizeInflationFor(this);
   RefPtr<nsFontMetrics> fm =
-      nsLayoutUtils::GetInflatedFontMetricsForFrame(this);
+      nsLayoutUtils::GetFontMetricsForFrame(this, inflation);
   NS_ASSERTION(fm, "FontMetrics is null, assuming fontHeight == 1 appunit");
   int32_t appUnitsPerDevPixel = PresContext()->AppUnitsPerDevPixel();
   nscoord minScrollAmountInAppUnits =
       std::max(1, StaticPrefs::mousewheel_min_line_scroll_amount()) *
       appUnitsPerDevPixel;
   nscoord horizontalAmount = fm ? fm->AveCharWidth() : 0;
-  nscoord verticalAmount = fm ? fm->MaxHeight() : 0;
+  nscoord verticalAmount =
+      StaticPrefs::mousewheel_line_scroll_amount_use_line_height()
+          ? ReflowInput::CalcLineHeight(*Style(), PresContext(), GetContent(),
+                                        inflation)
+          : (fm ? fm->MaxHeight() : 0);
+  // FIXME(emilio): ISTM both the font metrics and CalcLineHeight are logical
+  // (and here we're basically assuming horizontal writing-mode)...
   return nsSize(std::max(horizontalAmount, minScrollAmountInAppUnits),
                 std::max(verticalAmount, minScrollAmountInAppUnits));
 }
