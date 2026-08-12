@@ -3,15 +3,19 @@ https://creativecommons.org/publicdomain/zero/1.0/ */
 
 "use strict";
 
+const { AppConstants } = ChromeUtils.importESModule(
+  "resource://gre/modules/AppConstants.sys.mjs"
+);
 const { StartupTelemetry } = ChromeUtils.importESModule(
   "moz-src:///browser/components/StartupTelemetry.sys.mjs"
 );
 
-let LaunchOnLogin;
-
-({ LaunchOnLogin } = ChromeUtils.importESModule(
-  "resource://gre/modules/LaunchOnLogin.sys.mjs"
-));
+let WindowsLaunchOnLogin;
+if (AppConstants.platform == "win") {
+  ({ WindowsLaunchOnLogin } = ChromeUtils.importESModule(
+    "resource://gre/modules/WindowsLaunchOnLogin.sys.mjs"
+  ));
+}
 
 add_setup(function test_setup() {
   do_get_profile();
@@ -19,7 +23,7 @@ add_setup(function test_setup() {
 });
 
 add_task(async function test_not_supported_on_non_windows() {
-  if (LaunchOnLogin.isSupported()) {
+  if (AppConstants.platform == "win") {
     return;
   }
   Services.fog.testResetFOG();
@@ -34,13 +38,13 @@ add_task(async function test_not_supported_on_non_windows() {
 });
 
 add_task(async function test_enabled() {
-  if (!LaunchOnLogin.isSupported()) {
+  if (AppConstants.platform != "win") {
     return;
   }
   Services.fog.testResetFOG();
 
-  let original = LaunchOnLogin.enablementDetails;
-  LaunchOnLogin.enablementDetails = async () => ({
+  let original = WindowsLaunchOnLogin.getLaunchOnLoginEnablementDetails;
+  WindowsLaunchOnLogin.getLaunchOnLoginEnablementDetails = async () => ({
     isEnabled: true,
     isSupported: true,
     isAllowedByPolicy: true,
@@ -53,17 +57,17 @@ add_task(async function test_enabled() {
     "enabled",
     "Should report enabled when launch on login is active"
   );
-  LaunchOnLogin.enablementDetails = original;
+  WindowsLaunchOnLogin.getLaunchOnLoginEnablementDetails = original;
 });
 
 add_task(async function test_disabled() {
-  if (!LaunchOnLogin.isSupported()) {
+  if (AppConstants.platform != "win") {
     return;
   }
   Services.fog.testResetFOG();
 
-  let original = LaunchOnLogin.enablementDetails;
-  LaunchOnLogin.enablementDetails = async () => ({
+  let original = WindowsLaunchOnLogin.getLaunchOnLoginEnablementDetails;
+  WindowsLaunchOnLogin.getLaunchOnLoginEnablementDetails = async () => ({
     isEnabled: false,
     isSupported: true,
     isAllowedByPolicy: true,
@@ -76,17 +80,17 @@ add_task(async function test_disabled() {
     "disabled",
     "Should report disabled when user has not enabled launch on login"
   );
-  LaunchOnLogin.enablementDetails = original;
+  WindowsLaunchOnLogin.getLaunchOnLoginEnablementDetails = original;
 });
 
 add_task(async function test_disabled_by_settings() {
-  if (!LaunchOnLogin.isSupported()) {
+  if (AppConstants.platform != "win") {
     return;
   }
   Services.fog.testResetFOG();
 
-  let original = LaunchOnLogin.enablementDetails;
-  LaunchOnLogin.enablementDetails = async () => ({
+  let original = WindowsLaunchOnLogin.getLaunchOnLoginEnablementDetails;
+  WindowsLaunchOnLogin.getLaunchOnLoginEnablementDetails = async () => ({
     isEnabled: false,
     isSupported: true,
     isAllowedByPolicy: false,
@@ -99,17 +103,17 @@ add_task(async function test_disabled_by_settings() {
     "disabled_by_settings",
     "Should report disabled_by_settings when OS settings or policy block the feature"
   );
-  LaunchOnLogin.enablementDetails = original;
+  WindowsLaunchOnLogin.getLaunchOnLoginEnablementDetails = original;
 });
 
 add_task(async function test_error_on_exception() {
-  if (!LaunchOnLogin.isSupported()) {
+  if (AppConstants.platform != "win") {
     return;
   }
   Services.fog.testResetFOG();
 
-  let original = LaunchOnLogin.enablementDetails;
-  LaunchOnLogin.enablementDetails = async () => {
+  let original = WindowsLaunchOnLogin.getLaunchOnLoginEnablementDetails;
+  WindowsLaunchOnLogin.getLaunchOnLoginEnablementDetails = async () => {
     throw new Error("simulated enablement details failure");
   };
 
@@ -120,5 +124,5 @@ add_task(async function test_error_on_exception() {
     "error",
     "Should report error when an exception occurs"
   );
-  LaunchOnLogin.enablementDetails = original;
+  WindowsLaunchOnLogin.getLaunchOnLoginEnablementDetails = original;
 });

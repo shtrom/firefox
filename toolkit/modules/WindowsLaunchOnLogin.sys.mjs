@@ -25,7 +25,7 @@ export var WindowsLaunchOnLogin = {
    * Accepts another function as an argument and provides an open Windows
    * launch on login registry key for the passed-in function to manipulate.
    *
-   * @param {func} func
+   * @param func
    *        The function to use.
    */
   async withLaunchOnLoginRegistryKey(func) {
@@ -76,6 +76,9 @@ export var WindowsLaunchOnLogin = {
    * restrictions on writing to the registry in MSIX.
    */
   async createLaunchOnLogin() {
+    if (Services.policies && !Services.policies.isAllowed("launchOnLogin")) {
+      return;
+    }
     if (Services.sysinfo.getProperty("hasWinPackageId")) {
       await this.enableLaunchOnLoginMSIX();
     } else {
@@ -276,7 +279,14 @@ export var WindowsLaunchOnLogin = {
       shortcutExists = !!this.getLaunchOnLoginShortcutList().length;
     }
     let isEnabled = regExists || shortcutExists;
-
+    // Even if a user disables it later on we want the launch on login
+    // infobar to remain disabled as the user is aware of the option.
+    if (isEnabled) {
+      Services.prefs.setBoolPref(
+        "browser.startup.windowsLaunchOnLogin.disableLaunchOnLoginPrompt",
+        true
+      );
+    }
     // Check whether Windows Settings has overridden the user's ability to
     // toggle launch-on-login (the StartupApproved\Run registry key).
     let isAllowedByPolicy = true;
