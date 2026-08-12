@@ -4,6 +4,7 @@
 
 """Tests for the HyperLogLog affected-client counting."""
 
+import json
 import os
 import sys
 
@@ -55,22 +56,41 @@ def test_hll_merge_matches_union():
     assert abs(a.count() - 9000) / 9000 < 0.03
 
 
-def test_sparse_round_trip_preserves_the_sketch():
+def test_round_trip_preserves_the_sketch():
     hll = HyperLogLog(p=14)
     for i in range(4000):
         hll.add(f"c{i}")
-    sparse = hll.to_sparse()
-    # Only nonzero registers are stored, so the map is far smaller than 2**p.
-    assert len(sparse["r"]) < hll.m
-    assert sparse["p"] == 14
+    data = hll.serialize()
+    assert data["p"] == 14
 
-    restored = HyperLogLog.from_sparse(sparse)
+    restored = HyperLogLog.deserialize(data)
     assert restored.registers == hll.registers
     assert restored.count() == hll.count()
 
 
-def test_merged_unions_sparse_sketches():
-    # Same union as test_hll_merge_matches_union, but through the sparse form the
+def test_round_trip_of_an_almost_empty_sketch():
+    # The case sparse encoding used to exist for: nearly every register zero.
+    hll = HyperLogLog(p=11)
+    for i in range(5):
+        hll.add(f"c{i}")
+    restored = HyperLogLog.deserialize(hll.serialize())
+    assert restored.registers == hll.registers
+    assert restored.count() == hll.count()
+
+
+def test_serialized_size_is_fixed_regardless_of_cardinality():
+    # Dense is chosen partly so one popular signature cannot blow up the file.
+    small = HyperLogLog(p=11)
+    for i in range(5):
+        small.add(f"c{i}")
+    big = HyperLogLog(p=11)
+    for i in range(100_000):
+        big.add(f"c{i}")
+    assert len(json.dumps(small.serialize())) == len(json.dumps(big.serialize()))
+
+
+def test_merged_unions_sketches():
+    # Same union as test_hll_merge_matches_union, but through the serialized form
     # roll-up persists: two overlapping day sketches merge to the 9000 union.
     a = HyperLogLog(p=14)
     b = HyperLogLog(p=14)
@@ -78,7 +98,7 @@ def test_merged_unions_sparse_sketches():
         a.add(i)
     for i in range(3000, 9000):
         b.add(i)
-    merged = HyperLogLog.merged([a.to_sparse(), b.to_sparse()])
+    merged = HyperLogLog.merged([a.serialize(), b.serialize()])
     assert abs(merged.count() - 9000) / 9000 < 0.03
 
 
@@ -88,7 +108,7 @@ def test_merged_ignores_none_and_empty():
     hll = HyperLogLog(p=14)
     for i in range(30):
         hll.add(i)
-    merged = HyperLogLog.merged([None, hll.to_sparse(), None])
+    merged = HyperLogLog.merged([None, hll.serialize(), None])
     assert merged.count() == hll.count()
 
 
