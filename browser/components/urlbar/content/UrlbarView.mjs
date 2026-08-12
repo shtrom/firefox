@@ -2460,7 +2460,7 @@ export class UrlbarView {
     } else {
       item.setAttribute(
         "type",
-        lazy.UrlbarUtils.searchEngagementTelemetryType(result)
+        UrlbarShared.searchEngagementTelemetryType(result)
       );
     }
 
@@ -2926,7 +2926,7 @@ export class UrlbarView {
 
     item.setAttribute(
       "type",
-      lazy.UrlbarUtils.searchEngagementTelemetryType(result)
+      UrlbarShared.searchEngagementTelemetryType(result)
     );
     item.toggleAttribute("sponsored", result.payload.isSponsored);
 
