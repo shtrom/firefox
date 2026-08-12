@@ -17,7 +17,6 @@
 #include "mozilla/Maybe.h"
 #include "mozilla/PresShell.h"
 #include "mozilla/RangeUtils.h"
-#include "mozilla/StaticPrefs_dom.h"
 #include "mozilla/ToString.h"
 #include "mozilla/dom/CharacterData.h"
 #include "mozilla/dom/ChildIterator.h"
@@ -1788,28 +1787,17 @@ void nsRange::CutContents(DocumentFragment** aFragment,
     *aFragment = nullptr;
   }
 
-  const bool handleInFlatTree =
-      StaticPrefs::dom_range_cut_contents_use_flat_tree();
-  const AllowRangeCrossShadowBoundary allowRangeCrossShadowBoundary =
-      handleInFlatTree ? AllowRangeCrossShadowBoundary::Yes
-                       : AllowRangeCrossShadowBoundary::No;
-
-  const RangeBoundary startRef =
-      handleInFlatTree ? MayCrossShadowBoundaryStartRef() : StartRef();
-  const RangeBoundary endRef =
-      handleInFlatTree ? MayCrossShadowBoundaryEndRef() : EndRef();
-
-  const RefPtr<Document> doc = startRef.GetContainer()->OwnerDoc();
-
-  nsCOMPtr<nsINode> commonAncestor =
-      GetCommonAncestorContainer(aRv, allowRangeCrossShadowBoundary);
-  if (aRv.Failed()) {
+  if (!CanAccess(*GetMayCrossShadowBoundaryStartContainer()) ||
+      !CanAccess(*GetMayCrossShadowBoundaryEndContainer())) {
+    aRv.Throw(NS_ERROR_DOM_SECURITY_ERR);
     return;
   }
 
-  if (!CanAccess(*startRef.GetContainer()) ||
-      !CanAccess(*endRef.GetContainer())) {
-    aRv.Throw(NS_ERROR_DOM_SECURITY_ERR);
+  nsCOMPtr<Document> doc = mStart.GetContainer()->OwnerDoc();
+
+  nsCOMPtr<nsINode> commonAncestor =
+      GetCommonAncestorContainer(aRv, AllowRangeCrossShadowBoundary::Yes);
+  if (aRv.Failed()) {
     return;
   }
 
@@ -1819,22 +1807,13 @@ void nsRange::CutContents(DocumentFragment** aFragment,
     retval =
         new (doc->NodeInfoManager()) DocumentFragment(doc->NodeInfoManager());
   }
-
-  // Chrome 152 does nothing if the range crosses a shadow DOM boundary.
-  // We should follow it for now.
-  if (!handleInFlatTree && mCrossShadowBoundaryRange &&
-      mCrossShadowBoundaryRange->IsPositioned() &&
-      !mCrossShadowBoundaryRange->IsPositionedInSameRangeRoot()) {
-    if (aFragment) {
-      retval.forget(aFragment);
-    }
-    return;
-  }
-
   nsCOMPtr<nsINode> commonCloneAncestor = retval.get();
 
   // Save the range end points locally to avoid interference
   // of Range gravity during our edits!
+
+  const RangeBoundary startRef = MayCrossShadowBoundaryStartRef();
+  const RangeBoundary endRef = MayCrossShadowBoundaryEndRef();
 
   // `GetCommonAncestorContainer()` above ensures the range is positioned, hence
   // there have to be valid offsets. Fix them in startRef/endRef right now.
@@ -1845,8 +1824,9 @@ void nsRange::CutContents(DocumentFragment** aFragment,
     // For extractContents(), abort early if there's a doctype (bug 719533).
     // This can happen only if the common ancestor is a document, in which case
     // we just need to find its doctype child and check if that's in the range.
-    if (Document* const commonAncestorDocument =
-            Document::FromNode(commonAncestor)) {
+    nsCOMPtr<Document> commonAncestorDocument =
+        do_QueryInterface(commonAncestor);
+    if (commonAncestorDocument) {
       if (const DocumentType* const doctype =
               commonAncestorDocument->GetDoctype()) {
         // `GetCommonAncestorContainer()` above ensured the range is positioned.
@@ -1880,7 +1860,7 @@ void nsRange::CutContents(DocumentFragment** aFragment,
 
   RangeSubtreeIterator iter;
 
-  aRv = iter.Init(this, allowRangeCrossShadowBoundary);
+  aRv = iter.Init(this, AllowRangeCrossShadowBoundary::Yes);
   if (NS_WARN_IF(aRv.Failed())) {
     return;
   }
@@ -1914,10 +1894,7 @@ void nsRange::CutContents(DocumentFragment** aFragment,
 
     iter.Next();
     nsCOMPtr<nsINode> nextNode = iter.GetCurrentNode();
-    while (nextNode &&
-           (handleInFlatTree
-                ? nextNode->IsInclusiveFlatTreeDescendantOf(node)
-                : nextNode->IsShadowIncludingInclusiveDescendantOf(node))) {
+    while (nextNode && nextNode->IsInclusiveFlatTreeDescendantOf(node)) {
       iter.Next();
       nextNode = iter.GetCurrentNode();
     }
@@ -2064,8 +2041,7 @@ void nsRange::CutContents(DocumentFragment** aFragment,
       // https://dom.spec.whatwg.org/#concept-range-extract
       // It uses inclusive ancestor, not shadow inclusive ancestor, nor flat
       // tree. Therefore, if `node` is in a shadow of the tree containing
-      // oldCommonAncestor, this may clone an odd tree. However, now, we don't
-      // use flattened tree by default for the compatibility with Chrome.
+      // oldCommonAncestor, this may clone an odd tree.
       nsCOMPtr<nsINode> closestAncestor, farthestAncestor;
       aRv = CloneParentsBetween(oldCommonAncestor, node,
                                 getter_AddRefs(closestAncestor),
