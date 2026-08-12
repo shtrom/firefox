@@ -50,7 +50,19 @@ fn can_pin(main_guard: MainThreadGuard) -> bool {
         return false;
     }
 
-    winrt::is_pinning_allowed() || com::is_pinning_available(main_guard)
+    use winrt::CanPin::*;
+    match winrt::can_pin() {
+        // Respect the OS assertion that pinning is not allowed when pinning via
+        // WinRT is supported.
+        Ok(Supported { allowed }) => {
+            log::trace!("WinRT pinning supported, allowed = {allowed:?}");
+            return allowed;
+        }
+        Ok(Unsupported) => log::trace!("Win32 pinning via WinRT not supported by this OS."),
+        Err(e) => log::error!("Error checking if we can pin via WinRT: {e:?}"),
+    }
+
+    com::is_pinning_available(main_guard)
 }
 
 /// Pins the shortcut with matching AUMID to the taskbar.
