@@ -213,6 +213,28 @@ describe("Privacy widget", () => {
     );
   });
 
+  it("lets the dedicated widgetPrivacy namespace win over the shared widgets key", () => {
+    const base = stateWithTrackers(75);
+    const state = {
+      ...base,
+      Prefs: {
+        ...base.Prefs,
+        values: {
+          ...base.Prefs.values,
+          "widgets.privacy.maxDisplayCount": 200,
+          trainhopConfig: {
+            widgetPrivacy: { maxDisplayCount: 50 },
+            widgets: { privacyMaxDisplayCount: 100 },
+          },
+        },
+      },
+    };
+    const { container } = renderPrivacy(jest.fn(), {}, state);
+    expect(container.querySelector(".privacy-count-number").textContent).toBe(
+      "50+"
+    );
+  });
+
   it("caps the readout to countCeiling+ on the daily-cap render", () => {
     // The daily-cap decision carries countCeiling (100); the real count is 137
     // but this one render shows "100+".
