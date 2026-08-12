@@ -67,6 +67,10 @@ export const UrlbarShared = {
     QUERY_FIRST_RESULT: "onFirstResult",
     QUERY_RESULTS: "onQueryResults",
     QUERY_RESULT_REMOVED: "onQueryResultRemoved",
+    // Fires when no further results will reach the listeners. The parent
+    // cancels a query when a new one supersedes it and when the view closes or
+    // freezes its rows; the child controller cancels one whose results it
+    // withholds.
     QUERY_CANCELLED: "onQueryCancelled",
     QUERY_FINISHED: "onQueryFinished",
     VIEW_OPEN: "onViewOpen",

@@ -3016,7 +3016,7 @@ ${
       })
     ) {
       // Search mode restarts the query, so these results are obsolete.
-      this.controller.discardResults();
+      this.controller.discardResults(queryContext);
       return;
     }
 
