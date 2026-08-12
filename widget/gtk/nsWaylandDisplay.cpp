@@ -1360,8 +1360,4 @@ bool nsWaylandDisplay::IsTFSupported(int aTF) {
   }
 }
 
-bool nsWaylandDisplay::IsSetMDCVSupported() {
-  return mColorManagerSupportedFeature.mDisplayPrimaries;
-}
-
 }  // namespace mozilla::widget

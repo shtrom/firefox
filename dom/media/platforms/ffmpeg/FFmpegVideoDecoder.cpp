@@ -2044,9 +2044,6 @@ MediaResult FFmpegVideoDecoder<LIBAV_VER>::CreateImage(
         if (mInfo.mTransferFunction) {
           surface->SetTransferFunction(mInfo.mTransferFunction.value());
         }
-        if (mInfo.mHDRMetadata) {
-          surface->SetHDRMetadata(mInfo.mHDRMetadata.value());
-        }
         surface->SetWPChromaLocation(
             AVChromaLocationToWPChromaLocation(mFrame->chroma_location));
         FFMPEG_LOGV(
@@ -2152,9 +2149,6 @@ MediaResult FFmpegVideoDecoder<LIBAV_VER>::CreateImageVAAPI(
   }
   surface->SetWPChromaLocation(
       AVChromaLocationToWPChromaLocation(mFrame->chroma_location));
-  if (mInfo.mHDRMetadata) {
-    surface->SetHDRMetadata(mInfo.mHDRMetadata.value());
-  }
 
   FFMPEG_LOG(
       "VA-API frame pts={} dts={} duration={} color space {}/{} transfer {}",
@@ -2376,9 +2370,6 @@ MediaResult FFmpegVideoDecoder<LIBAV_VER>::CreateImageVulkan(
   }
   surface->SetWPChromaLocation(
       AVChromaLocationToWPChromaLocation(mFrame->chroma_location));
-  if (mInfo.mHDRMetadata) {
-    surface->SetHDRMetadata(mInfo.mHDRMetadata.value());
-  }
 
   RefPtr<VideoData> vp = VideoData::CreateFromImage(
       mInfo.mDisplay, aOffset, TimeUnit::FromMicroseconds(aPts),

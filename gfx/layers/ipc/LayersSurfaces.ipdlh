@@ -102,7 +102,6 @@ namespace layers {
   FileDescriptor[] refCount;
   nullable FileHandleWrapper semaphoreFd;
   bool semaphoreFdIsSyncFd;
-  HDRMetadata hdrMetadata;
 };
 
 [Comparable] struct SurfaceTextureDescriptor {
