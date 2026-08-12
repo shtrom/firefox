@@ -4,9 +4,7 @@
 "use strict";
 
 ChromeUtils.defineESModuleGetters(this, {
-  LaunchOnLogin: "resource://gre/modules/LaunchOnLogin.sys.mjs",
-  WindowsLaunchOnLogin:
-    "resource://gre/modules/launchonlogin/WindowsLaunchOnLogin.sys.mjs",
+  WindowsLaunchOnLogin: "resource://gre/modules/WindowsLaunchOnLogin.sys.mjs",
 });
 
 const { MockRegistry } = ChromeUtils.importESModule(
@@ -49,7 +47,7 @@ async function hasRegistryKey() {
 add_task(async function test_disable_launch_on_login() {
   // Simulate the user having previously enabled launch on login.
   if (!isMSIX) {
-    await LaunchOnLogin.enable();
+    await WindowsLaunchOnLogin.createLaunchOnLogin();
     ok(await hasRegistryKey(), "Registry key exists before the policy applies");
   }
 
@@ -72,10 +70,10 @@ add_task(async function test_disable_launch_on_login() {
       "Waiting for the launch on login registry key to be removed"
     );
 
-    await LaunchOnLogin.enable();
+    await WindowsLaunchOnLogin.createLaunchOnLogin();
     ok(
       !(await hasRegistryKey()),
-      "LaunchOnLogin.enable is blocked while the policy is active"
+      "createLaunchOnLogin is blocked while the policy is active"
     );
   }
 

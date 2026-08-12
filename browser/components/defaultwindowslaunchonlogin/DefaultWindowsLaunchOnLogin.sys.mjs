@@ -4,27 +4,25 @@
 
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 
-// These IDs and preferences contain Windows in their name as legacy
-// and changing them to be OS agnostic would break existing installs.
-export const DEFAULT_LAUNCH_ON_LOGIN_NIMBUS_FEATURE_ID =
+export const DEFAULT_WINDOWS_LAUNCH_ON_LOGIN_NIMBUS_FEATURE_ID =
   "defaultWindowsLaunchOnLogin";
 
-export const DEFAULT_LAUNCH_ON_LOGIN_PREF =
+export const DEFAULT_WINDOWS_LAUNCH_ON_LOGIN_PREF =
   "browser.startup.windowsLaunchOnLogin.defaultEnabled";
-export const DEFAULT_LAUNCH_ON_LOGIN_ALREADY_APPLIED_PREF =
+export const DEFAULT_WINDOWS_LAUNCH_ON_LOGIN_ALREADY_APPLIED_PREF =
   "browser.startup.windowsLaunchOnLogin.alreadyApplied";
 
 const lazy = XPCOMUtils.declareLazy({
   AppConstants: "resource://gre/modules/AppConstants.sys.mjs",
   ExperimentAPI: "resource://nimbus/ExperimentAPI.sys.mjs",
-  LaunchOnLogin: "resource://gre/modules/LaunchOnLogin.sys.mjs",
+  WindowsLaunchOnLogin: "resource://gre/modules/WindowsLaunchOnLogin.sys.mjs",
   profileService: {
     service: "@mozilla.org/toolkit/profile-service;1",
     iid: Ci.nsIToolkitProfileService,
   },
 });
 
-export var DefaultLaunchOnLogin = {
+export var DefaultWindowsLaunchOnLogin = {
   /**
    * `browser-idle-startup` category entry point.
    *
@@ -46,7 +44,7 @@ export var DefaultLaunchOnLogin = {
     let isFirstRun = lazy.profileService.isFirstRun;
     let isOfficialBuild = lazy.AppConstants.MOZILLA_OFFICIAL;
     let alreadyApplied = Services.prefs.getBoolPref(
-      DEFAULT_LAUNCH_ON_LOGIN_ALREADY_APPLIED_PREF,
+      DEFAULT_WINDOWS_LAUNCH_ON_LOGIN_ALREADY_APPLIED_PREF,
       false
     );
 
@@ -57,7 +55,6 @@ export var DefaultLaunchOnLogin = {
     ) {
       isFirstRun = true;
       isOfficialBuild = true;
-      alreadyApplied = false;
     }
 
     await this.enableOnFirstRunIfNeeded(
@@ -82,7 +79,7 @@ export var DefaultLaunchOnLogin = {
    */
   async enableOnFirstRunIfNeeded(isFirstRun, isOfficialBuild, alreadyApplied) {
     if (
-      !lazy.LaunchOnLogin.isSupported() ||
+      lazy.AppConstants.platform !== "win" ||
       !isOfficialBuild ||
       !isFirstRun ||
       alreadyApplied
@@ -94,21 +91,23 @@ export var DefaultLaunchOnLogin = {
     // applied its value before we read the pref below.
     await this.waitForNimbusReady();
 
-    if (!Services.prefs.getBoolPref(DEFAULT_LAUNCH_ON_LOGIN_PREF, false)) {
+    if (
+      !Services.prefs.getBoolPref(DEFAULT_WINDOWS_LAUNCH_ON_LOGIN_PREF, false)
+    ) {
       return;
     }
 
     // Mark the launch on login as applied so we don't do it again
     Services.prefs.setBoolPref(
-      DEFAULT_LAUNCH_ON_LOGIN_ALREADY_APPLIED_PREF,
+      DEFAULT_WINDOWS_LAUNCH_ON_LOGIN_ALREADY_APPLIED_PREF,
       true
     );
 
-    if (!(await lazy.LaunchOnLogin.isAllowed())) {
+    if (!(await lazy.WindowsLaunchOnLogin.getLaunchOnLoginApproved())) {
       return;
     }
 
-    await lazy.LaunchOnLogin.enable();
+    await lazy.WindowsLaunchOnLogin.createLaunchOnLogin();
   },
 
   /**

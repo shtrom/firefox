@@ -3,13 +3,13 @@
 
 "use strict";
 
-const { LaunchOnLogin } = ChromeUtils.importESModule(
-  "resource://gre/modules/LaunchOnLogin.sys.mjs"
+const { WindowsLaunchOnLogin } = ChromeUtils.importESModule(
+  "resource://gre/modules/WindowsLaunchOnLogin.sys.mjs"
 );
 
 add_task(async function test_CONFIRM_LAUNCH_ON_LOGIN() {
   const sandbox = sinon.createSandbox();
-  sandbox.stub(LaunchOnLogin, "enable").resolves();
+  sandbox.stub(WindowsLaunchOnLogin, "createLaunchOnLogin").resolves();
   registerCleanupFunction(() => sandbox.restore());
 
   await SMATestUtils.executeAndValidateAction({
@@ -17,14 +17,14 @@ add_task(async function test_CONFIRM_LAUNCH_ON_LOGIN() {
   });
 
   Assert.ok(
-    LaunchOnLogin.enable.calledOnce,
-    "LaunchOnLogin.enable was called by the action"
+    WindowsLaunchOnLogin.createLaunchOnLogin.calledOnce,
+    "createLaunchOnLogin was called by the action"
   );
 });
 
 add_task(async function test_REMOVE_LAUNCH_ON_LOGIN() {
   const sandbox = sinon.createSandbox();
-  sandbox.stub(LaunchOnLogin, "disable").resolves();
+  sandbox.stub(WindowsLaunchOnLogin, "removeLaunchOnLogin").resolves();
   registerCleanupFunction(() => sandbox.restore());
 
   await SMATestUtils.executeAndValidateAction({
@@ -32,7 +32,7 @@ add_task(async function test_REMOVE_LAUNCH_ON_LOGIN() {
   });
 
   Assert.ok(
-    LaunchOnLogin.disable.calledOnce,
-    "LaunchOnLogin.disable was called by the action"
+    WindowsLaunchOnLogin.removeLaunchOnLogin.calledOnce,
+    "removeLaunchOnLogin was called by the action"
   );
 });

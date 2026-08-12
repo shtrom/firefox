@@ -7,8 +7,7 @@ ChromeUtils.defineESModuleGetters(this, {
   BackgroundUpdate: "resource://gre/modules/BackgroundUpdate.sys.mjs",
   MigrationUtils: "resource:///modules/MigrationUtils.sys.mjs",
   PermissionTestUtils: "resource://testing-common/PermissionTestUtils.sys.mjs",
-  WindowsLaunchOnLogin:
-    "resource://gre/modules/launchonlogin/WindowsLaunchOnLogin.sys.mjs",
+  WindowsLaunchOnLogin: "resource://gre/modules/WindowsLaunchOnLogin.sys.mjs",
 });
 
 const { MockRegistry } = ChromeUtils.importESModule(

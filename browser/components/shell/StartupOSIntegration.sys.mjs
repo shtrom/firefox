@@ -29,7 +29,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "resource:///modules/FirefoxBridgeExtensionUtils.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
   ShellService: "moz-src:///browser/components/shell/ShellService.sys.mjs",
-  LaunchOnLogin: "resource://gre/modules/LaunchOnLogin.sys.mjs",
+  WindowsLaunchOnLogin: "resource://gre/modules/WindowsLaunchOnLogin.sys.mjs",
   WindowsGPOParser: "resource://gre/modules/policies/WindowsGPOParser.sys.mjs",
 });
 
@@ -144,7 +144,8 @@ export let StartupOSIntegration = {
   },
 
   checkForLaunchOnLogin() {
-    if (lazy.LaunchOnLogin.isSupported()) {
+    // We only support launch on login on Windows at the moment.
+    if (AppConstants.platform != "win") {
       return;
     }
     let launchOnLoginPref = "browser.startup.windowsLaunchOnLogin.enabled";
@@ -164,7 +165,7 @@ export let StartupOSIntegration = {
       // delete launch on login shortcuts and registry keys so that
       // users are not presented with the outdated profile selector
       // dialog.
-      lazy.LaunchOnLogin.disable();
+      lazy.WindowsLaunchOnLogin.removeLaunchOnLogin();
     }
   },
 
