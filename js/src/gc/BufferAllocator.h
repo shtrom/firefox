@@ -165,12 +165,12 @@ class MaybeLockBufferAllocator
 // freed. From there they can merged back into one of the main thread lists
 // (since they may no longer contain nursery-owned buffers).
 //
-// Chunks containing tenured-owned buffers are stored in |tenuredChunks| and are
-// moved to |tenuredChunksToSweep| at the start of major GC. They are
+// Chunks containing tenured-owned buffers are stored in |currentTenuredChunks|
+// and are moved to |tenuredChunksToSweep| at the start of major GC. They are
 // unavailable for allocation after this point and will be swept on a background
 // thread and placed in |sweptTenuredChunks| if they are not freed. From there
-// they will be merged back into |tenuredChunks|. This means that allocation
-// during an incremental GC will allocate a new chunk.
+// they will be merged back into |currentTenuredChunks|. This means that
+// allocation during an incremental GC will allocate a new chunk.
 //
 // Merging swept data requires taking a lock and so only happens when
 // necessary. This happens when a new chunk is needed or at various points
@@ -361,23 +361,25 @@ class BufferAllocator : public SlimLinkedListElement<BufferAllocator> {
   // The zone this allocator is associated with.
   MainThreadOrGCTaskData<JS::Zone*> zone;
 
-  // Chunks containing medium and small buffers. They may contain both
-  // nursery-owned and tenured-owned buffers.
-  MainThreadOrGCTaskData<BufferChunkList> mixedChunks;
+  // Chunks containing medium and small buffers that are currently being used
+  // for allocation. They may contain both nursery-owned and tenured-owned
+  // buffers.
+  MainThreadOrGCTaskData<BufferChunkList> currentMixedChunks;
 
-  // Chunks containing only tenured-owned small and medium buffers.
-  MainThreadOrGCTaskData<BufferChunkList> tenuredChunks;
+  // Chunks containing only tenured-owned small and medium buffers that are
+  // currently being used for allocation.
+  MainThreadOrGCTaskData<BufferChunkList> currentTenuredChunks;
 
-  // Free lists for the small and medium buffers in |mixedChunks| and
-  // |tenuredChunks|. Used for allocation.
+  // Free lists for the small and medium buffers in |currentMixedChunks| and
+  // |currentTenuredChunks|. Used for allocation.
   MainThreadOrGCTaskData<FreeLists> freeLists;
 
   // Chunks that may contain nursery-owned buffers waiting to be swept during a
-  // minor GC. Populated from |mixedChunks|.
+  // minor GC. Populated from |currentMixedChunks|.
   MainThreadOrGCTaskData<BufferChunkList> mixedChunksToSweep;
 
   // Chunks that contain only tenured-owned buffers waiting to be swept during a
-  // major GC. Populated from |tenuredChunks|.
+  // major GC. Populated from |currentTenuredChunks|.
   MainThreadOrGCTaskData<BufferChunkList> tenuredChunksToSweep;
 
   // Chunks that have been swept. Populated by a background thread.
