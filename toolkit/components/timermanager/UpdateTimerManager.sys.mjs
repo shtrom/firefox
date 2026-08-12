@@ -71,7 +71,7 @@ TimerManager.prototype = {
   /**
    * See nsIObserver.idl
    */
-  observe: function TM_observe(aSubject, aTopic) {
+  observe(aSubject, aTopic) {
     // Prevent setting the timer interval to a value of less than 30 seconds.
     var minInterval = 30000;
     // Prevent setting the first timer interval to a value of less than 10
@@ -130,7 +130,7 @@ TimerManager.prototype = {
    * @param   timer
    *          The checking timer that fired.
    */
-  notify: function TM_notify(timer) {
+  notify(timer) {
     var nextDelay = null;
     function updateNextDelay(delay) {
       if (nextDelay === null || delay < nextDelay) {
@@ -334,7 +334,7 @@ TimerManager.prototype = {
   /**
    * See nsIUpdateTimerManager.idl
    */
-  registerTimer: function TM_registerTimer(id, callback, interval, skipFirst) {
+  registerTimer(id, callback, interval, skipFirst) {
     let markerText = `timerID: ${id} interval: ${interval}s`;
     if (skipFirst) {
       markerText += " skipFirst";
@@ -383,7 +383,7 @@ TimerManager.prototype = {
     this._ensureTimer(interval * 1000);
   },
 
-  unregisterTimer: function TM_unregisterTimer(id) {
+  unregisterTimer(id) {
     ChromeUtils.addProfilerMarker(
       "UnregisterUpdateTimer",
       { category: "Timer" },
