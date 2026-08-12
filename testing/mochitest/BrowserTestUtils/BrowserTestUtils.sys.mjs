@@ -14,6 +14,7 @@
 
 import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
+import { clearTimeout, setTimeout } from "resource://gre/modules/Timer.sys.mjs";
 import { TestUtils } from "resource://testing-common/TestUtils.sys.mjs";
 
 const lazy = {};
@@ -37,8 +38,31 @@ const DISABLE_CONTENT_PROCESS_REUSE_PREF = "dom.ipc.disableContentProcessReuse";
 // Upper bound on the tabs BrowserTestUtils.overflowTabs opens.
 const MAX_TABS_FOR_OVERFLOW = 200;
 
+// Default bound on BrowserTestUtils.waitForMutationCondition, past the point
+// where a wait is plausibly still going to pass.
+const DEFAULT_MUTATION_TIMEOUT_MS = 10000;
+
 const kAboutPageRegistrationContentScript =
   "chrome://mochikit/content/tests/BrowserTestUtils/content-about-page-utils.js";
+
+/**
+ * Names a mutation wait whose caller passed no message, so that a wait which
+ * fails can still say which one it was.
+ *
+ * @param {function} checkFn  The condition the wait is testing.
+ * @param {nsIStackFrame} frame  The frame that started the wait.
+ * @returns {string}
+ */
+function describeMutationWait(checkFn, frame) {
+  let source = checkFn.toString().replace(/\s+/g, " ");
+  if (source.length > 100) {
+    source = source.slice(0, 100) + "...";
+  }
+  if (!frame) {
+    return source;
+  }
+  return `${frame.filename.replace(/.*\//, "")}:${frame.lineNumber} - ${source}`;
+}
 
 /**
  * Create and register the BrowserTestUtils and ContentEventListener window
@@ -1691,22 +1715,73 @@ export var BrowserTestUtils = {
    * @param {object}  options   The options to pass to MutationObserver.observe();
    * @param {function} checkFn  Function that returns true when it wants the promise to be
    * resolved.
+   * @param {object} [waitOptions]
+   * @param {string} [waitOptions.msg]
+   *        Describes what's being waited for. Used in the rejection message and
+   *        to label the profiler marker. Defaults to the call site and the
+   *        source of `checkFn`.
+   * @param {number} [waitOptions.timeout=DEFAULT_MUTATION_TIMEOUT_MS]
+   *        Milliseconds to wait before rejecting. Pass Infinity to wait
+   *        indefinitely, in which case the wait still rejects if the test
+   *        finishes while it's pending.
    * @returns {Promise<any>}    The value returned by `checkFn`.
    */
-  waitForMutationCondition(target, options, checkFn) {
+  waitForMutationCondition(
+    target,
+    options,
+    checkFn,
+    { msg, timeout = DEFAULT_MUTATION_TIMEOUT_MS } = {}
+  ) {
     let retVal;
     if ((retVal = checkFn())) {
       return Promise.resolve(retVal);
     }
-    return new Promise(resolve => {
-      let win = target.documentGlobal;
-      let obs = new win.MutationObserver(function () {
-        if ((retVal = checkFn())) {
-          obs.disconnect();
-          resolve(retVal);
-        }
-      });
-      obs.observe(target, options);
+    let startTime = ChromeUtils.now();
+    let label = `waitForMutationCondition - ${
+      msg ?? describeMutationWait(checkFn, Components.stack.caller)
+    }`;
+
+    let obs;
+    let timer = 0;
+    let racers = [
+      new Promise(resolve => {
+        obs = new target.documentGlobal.MutationObserver(() => {
+          if ((retVal = checkFn())) {
+            resolve(retVal);
+          }
+        });
+        obs.observe(target, options);
+      }),
+    ];
+
+    if (timeout !== Infinity) {
+      racers.push(
+        new Promise((resolve, reject) => {
+          timer = setTimeout(() => {
+            label += ` - timed out after ${timeout}ms`;
+            reject(label);
+          }, timeout);
+        })
+      );
+    }
+
+    if (TestUtils.promiseTestFinished) {
+      racers.push(
+        TestUtils.promiseTestFinished.then(() => {
+          label += " - still pending at the end of the test";
+          throw label;
+        })
+      );
+    }
+
+    return Promise.race(racers).finally(() => {
+      obs.disconnect();
+      clearTimeout(timer);
+      ChromeUtils.addProfilerMarker(
+        "BrowserTestUtils",
+        { startTime, category: "Test" },
+        label
+      );
     });
   },
 
@@ -2104,9 +2179,11 @@ export var BrowserTestUtils = {
       }
     }
 
-    await TestUtils.waitForCondition(
+    await BrowserTestUtils.waitForMutationCondition(
+      arrowScrollbox,
+      { attributes: true, attributeFilter: ["overflowing"] },
       () => arrowScrollbox.hasAttribute("overflowing"),
-      `Tab strip overflows with ${gBrowser.tabs.length} tabs`
+      { msg: `Tab strip overflows with ${gBrowser.tabs.length} tabs` }
     );
   },
 
