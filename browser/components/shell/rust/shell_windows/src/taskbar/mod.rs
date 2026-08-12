@@ -86,6 +86,15 @@ async fn pin_app(
     fire_and_forget: bool,
     main_guard: MainThreadGuard,
 ) -> Result<PinResult, nsresult> {
+    if Package::Current().is_ok() && !matches_default_aumid(&aumid)? {
+        // Bug 1911343: We should make this API impossible to misuse this way by
+        // consolidating SecondaryTile pinning herein.
+        log::error!(
+            "TaskbarManager pinning only supports apps defined in the package manifest; use SecondaryTiles instead for runtime-defined pin targets"
+        );
+        return Err(NS_ERROR_FAILURE);
+    }
+
     // Attempt to use the documented WinRT pinning API.
     let winrt_pin = winrt::pin_to_taskbar(aumid, fire_and_forget, main_guard).await;
 
@@ -108,8 +117,11 @@ async fn is_pinned(aumid: &nsAString) -> Result<bool, nsresult> {
     match Package::Current() {
         Ok(package) => {
             if !matches_default_aumid(&aumid)? {
-                // Bug 1911343: We only support pinning and checking pin status of the
-                // default app on MSIX.
+                // Bug 1911343: We should make this API impossible to misuse this way by
+                // consolidating SecondaryTile pin checks herein.
+                log::error!(
+                    "TaskbarManager pin checking only supports apps defined in the package manifest; use SecondaryTiles instead for runtime-defined pin targets"
+                );
                 return Err(NS_ERROR_FAILURE);
             }
 
