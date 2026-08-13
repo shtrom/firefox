@@ -505,8 +505,7 @@ mozilla::ipc::IPCResult SocketProcessChild::RecvPDNSRequestConstructor(
     const nsACString& aTrrServer, const int32_t& aPort, const uint16_t& aType,
     const OriginAttributes& aOriginAttributes,
     const nsIDNSService::DNSFlags& aFlags) {
-  RefPtr<DNSRequestChild> actor =
-      mozilla::ipc::ActorCast<DNSRequestChild>(aActor);
+  RefPtr<DNSRequestChild> actor = static_cast<DNSRequestChild*>(aActor);
   RefPtr<DNSRequestHandler> handler =
       actor->GetDNSRequest()->AsDNSRequestHandler();
   handler->DoAsyncResolve(aHost, aTrrServer, aPort, aType, aOriginAttributes,
@@ -556,7 +555,7 @@ already_AddRefed<PTRRServiceChild> SocketProcessChild::AllocPTRRServiceChild(
 mozilla::ipc::IPCResult SocketProcessChild::RecvPTRRServiceConstructor(
     PTRRServiceChild* aActor, const bool& aCaptiveIsPassed,
     const bool& aParentalControlEnabled, nsTArray<nsCString>&& aDNSSuffixList) {
-  mozilla::ipc::ActorCast<TRRServiceChild>(aActor)->Init(
+  static_cast<TRRServiceChild*>(aActor)->Init(
       aCaptiveIsPassed, aParentalControlEnabled, std::move(aDNSSuffixList));
   return IPC_OK();
 }

@@ -259,7 +259,7 @@ PAltDataOutputStreamParent* NeckoParent::AllocPAltDataOutputStreamParent(
                                            getter_AddRefs(stream));
   } else {
     CacheEntryWriteHandleParent* h =
-        mozilla::ipc::ActorCast<CacheEntryWriteHandleParent>(handle->get());
+        static_cast<CacheEntryWriteHandleParent*>(handle->get());
     rv = h->OpenAlternativeOutputStream(type, predictedSize,
                                         getter_AddRefs(stream));
   }
@@ -274,7 +274,7 @@ PAltDataOutputStreamParent* NeckoParent::AllocPAltDataOutputStreamParent(
 bool NeckoParent::DeallocPAltDataOutputStreamParent(
     PAltDataOutputStreamParent* aActor) {
   AltDataOutputStreamParent* parent =
-      mozilla::ipc::ActorCast<AltDataOutputStreamParent>(aActor);
+      static_cast<AltDataOutputStreamParent*>(aActor);
   parent->Release();
   return true;
 }
@@ -291,8 +291,7 @@ mozilla::ipc::IPCResult NeckoParent::RecvPDocumentChannelConstructor(
     PDocumentChannelParent* aActor,
     const dom::MaybeDiscarded<dom::BrowsingContext>& aContext,
     const DocumentChannelCreationArgs& aArgs) {
-  DocumentChannelParent* p =
-      mozilla::ipc::ActorCast<DocumentChannelParent>(aActor);
+  DocumentChannelParent* p = static_cast<DocumentChannelParent*>(aActor);
 
   if (aContext.IsNullOrDiscarded()) {
     (void)p->SendFailedAsyncOpen(NS_ERROR_FAILURE);
@@ -307,8 +306,7 @@ mozilla::ipc::IPCResult NeckoParent::RecvPDocumentChannelConstructor(
 }
 
 PCookieServiceParent* NeckoParent::AllocPCookieServiceParent() {
-  return new CookieServiceParent(
-      mozilla::ipc::ActorCast<ContentParent>(Manager()));
+  return new CookieServiceParent(static_cast<ContentParent*>(Manager()));
 }
 
 bool NeckoParent::DeallocPCookieServiceParent(PCookieServiceParent* cs) {
@@ -332,8 +330,7 @@ PWebSocketParent* NeckoParent::AllocPWebSocketParent(
 }
 
 bool NeckoParent::DeallocPWebSocketParent(PWebSocketParent* actor) {
-  WebSocketChannelParent* p =
-      mozilla::ipc::ActorCast<WebSocketChannelParent>(actor);
+  WebSocketChannelParent* p = static_cast<WebSocketChannelParent*>(actor);
   p->Release();
   return true;
 }
@@ -363,8 +360,8 @@ mozilla::ipc::IPCResult NeckoParent::RecvPWebSocketEventListenerConstructor(
 
 bool NeckoParent::DeallocPWebSocketEventListenerParent(
     PWebSocketEventListenerParent* aActor) {
-  RefPtr<WebSocketEventListenerParent> c = dont_AddRef(
-      mozilla::ipc::ActorCast<WebSocketEventListenerParent>(aActor));
+  RefPtr<WebSocketEventListenerParent> c =
+      dont_AddRef(static_cast<WebSocketEventListenerParent*>(aActor));
   MOZ_ASSERT(c);
   return true;
 }
@@ -496,8 +493,7 @@ mozilla::ipc::IPCResult NeckoParent::RecvPDNSRequestConstructor(
     return IPC_FAIL(this, "Content process should not specify TRR server");
   }
 
-  RefPtr<DNSRequestParent> actor =
-      mozilla::ipc::ActorCast<DNSRequestParent>(aActor);
+  RefPtr<DNSRequestParent> actor = static_cast<DNSRequestParent*>(aActor);
   RefPtr<DNSRequestHandler> handler =
       actor->GetDNSRequest()->AsDNSRequestHandler();
   handler->DoAsyncResolve(aHost, aTrrServer, aPort, aType, aOriginAttributes,
@@ -760,7 +756,7 @@ mozilla::ipc::IPCResult NeckoParent::RecvGetPageThumbStream(
   // ScriptSecurityManager, but if somehow the process has been tricked into
   // sending this message, we send IPC_FAIL in order to crash that
   // likely-compromised content process.
-  if (mozilla::ipc::ActorCast<ContentParent>(Manager())->GetRemoteType() !=
+  if (static_cast<ContentParent*>(Manager())->GetRemoteType() !=
       PRIVILEGEDABOUT_REMOTE_TYPE) {
     return IPC_FAIL(this, "Wrong process type");
   }
@@ -812,7 +808,7 @@ mozilla::ipc::IPCResult NeckoParent::RecvGetMozNewTabWallpaperStream(
   // ScriptSecurityManager, but if somehow the process has been tricked into
   // sending this message, we send IPC_FAIL in order to crash that
   // likely-compromised content process.
-  if (mozilla::ipc::ActorCast<ContentParent>(Manager())->GetRemoteType() !=
+  if (static_cast<ContentParent*>(Manager())->GetRemoteType() !=
       PRIVILEGEDABOUT_REMOTE_TYPE) {
     return IPC_FAIL(this, "Wrong process type");
   }

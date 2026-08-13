@@ -39,7 +39,7 @@ bool DocumentChannelParent::Init(dom::CanonicalBrowsingContext* aContext,
   }
 
   ContentParent* contentParent =
-      mozilla::ipc::ActorCast<ContentParent>(Manager()->Manager());
+      static_cast<ContentParent*>(Manager()->Manager());
 
   RefPtr<DocumentLoadListener::OpenPromise> promise;
   mDocumentLoadListener = loadState->TakeSpeculativeListener();
@@ -137,8 +137,7 @@ DocumentChannelParent::RedirectToRealChannel(
         CreateAndReject(ResponseRejectReason::ChannelClosed, __func__);
   }
 
-  ContentParent* cp =
-      mozilla::ipc::ActorCast<ContentParent>(Manager()->Manager());
+  ContentParent* cp = static_cast<ContentParent*>(Manager()->Manager());
   nsTArray<EarlyHintConnectArgs> earlyHints;
   mDocumentLoadListener->RegisterEarlyHintLinksAndGetConnectArgs(cp->ChildID(),
                                                                  earlyHints);

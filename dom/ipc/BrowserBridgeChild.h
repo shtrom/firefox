@@ -26,8 +26,7 @@ class BrowserBridgeChild : public PBrowserBridgeChild {
 
   BrowserChild* Manager() {
     MOZ_ASSERT(CanSend());
-    return mozilla::ipc::ActorCast<BrowserChild>(
-        PBrowserBridgeChild::Manager());
+    return static_cast<BrowserChild*>(PBrowserBridgeChild::Manager());
   }
 
   TabId GetTabId() { return mId; }

@@ -11,7 +11,7 @@ namespace mozilla::dom::locks {
 
 mozilla::ipc::IPCResult LockRequestParent::Recv__delete__(bool aAborted) {
   RefPtr<LockManagerParent> manager =
-      mozilla::ipc::ActorCast<LockManagerParent>(Manager());
+      static_cast<LockManagerParent*>(Manager());
   ManagedLocks& managed = manager->Locks();
 
   DebugOnly<bool> unheld = managed.mHeldLocks.RemoveElement(this);

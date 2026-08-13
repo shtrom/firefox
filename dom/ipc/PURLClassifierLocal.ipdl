@@ -13,7 +13,7 @@ namespace mozilla {
 namespace dom {
 
 
-[ManualDealloc, ChildImpl="mozilla::dom::URLClassifierLocalChild", ParentImpl="mozilla::dom::URLClassifierLocalParent"]
+[ManualDealloc, ChildImpl="URLClassifierLocalChild", ParentImpl="URLClassifierLocalParent"]
 protocol PURLClassifierLocal
 {
   manager PContent;

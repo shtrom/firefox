@@ -10,7 +10,7 @@ include "GMPTimerChild.h";
 namespace mozilla {
 namespace gmp {
 
-[ChildImpl="mozilla::gmp::GMPTimerChild", ParentImpl="mozilla::gmp::GMPTimerParent"]
+[ChildImpl="GMPTimerChild", ParentImpl="GMPTimerParent"]
 async protocol PGMPTimer
 {
   manager PGMP;

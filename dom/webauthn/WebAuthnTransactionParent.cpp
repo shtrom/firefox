@@ -114,8 +114,7 @@ class RelatedOriginCheckHandler final
     if (!mFetcher) {
       return NS_ERROR_DOM_SECURITY_ERR;
     }
-    auto* manager =
-        mozilla::ipc::ActorCast<WindowGlobalParent>(mParent->Manager());
+    auto* manager = static_cast<WindowGlobalParent*>(mParent->Manager());
     return mFetcher->CheckRelatedOriginRequest(
         manager, aRpId, aOp == WebAuthnOp::Create, aShowPrompt, this);
   }
@@ -234,8 +233,7 @@ mozilla::ipc::IPCResult WebAuthnTransactionParent::RecvRequestRegister(
   uint64_t aTransactionId = NextId();
   mTransactionId = Some(aTransactionId);
 
-  WindowGlobalParent* manager =
-      mozilla::ipc::ActorCast<WindowGlobalParent>(Manager());
+  WindowGlobalParent* manager = static_cast<WindowGlobalParent*>(Manager());
 
   if (!IsWebAuthnAllowedInContext(manager)) {
     aResolver(NS_ERROR_DOM_SECURITY_ERR);
@@ -265,8 +263,7 @@ mozilla::ipc::IPCResult WebAuthnTransactionParent::RecvRequestRegister(
 }
 
 void WebAuthnTransactionParent::RelatedOriginApproved() {
-  WindowGlobalParent* manager =
-      mozilla::ipc::ActorCast<WindowGlobalParent>(Manager());
+  WindowGlobalParent* manager = static_cast<WindowGlobalParent*>(Manager());
   nsAutoCString origin;
   nsresult rv =
       GetWebAuthnClientDataOrigin(manager->DocumentPrincipal(), origin);
@@ -312,8 +309,7 @@ void WebAuthnTransactionParent::ContinueWithRegister(
     RequestRegisterResolver&& aResolver) {
   MOZ_ASSERT(mTransactionId.isSome());
 
-  WindowGlobalParent* manager =
-      mozilla::ipc::ActorCast<WindowGlobalParent>(Manager());
+  WindowGlobalParent* manager = static_cast<WindowGlobalParent*>(Manager());
   nsIPrincipal* principal = manager->DocumentPrincipal();
   uint64_t aTransactionId = mTransactionId.ref();
 
@@ -494,8 +490,7 @@ mozilla::ipc::IPCResult WebAuthnTransactionParent::RecvRequestSign(
   uint64_t transactionId = NextId();
   mTransactionId = Some(transactionId);
 
-  WindowGlobalParent* manager =
-      mozilla::ipc::ActorCast<WindowGlobalParent>(Manager());
+  WindowGlobalParent* manager = static_cast<WindowGlobalParent*>(Manager());
 
   if (!IsWebAuthnAllowedInContext(manager)) {
     aResolver(NS_ERROR_DOM_SECURITY_ERR);
@@ -558,8 +553,7 @@ void WebAuthnTransactionParent::ContinueWithSign(
     RequestSignResolver&& aResolver) {
   MOZ_ASSERT(mTransactionId.isSome());
 
-  WindowGlobalParent* manager =
-      mozilla::ipc::ActorCast<WindowGlobalParent>(Manager());
+  WindowGlobalParent* manager = static_cast<WindowGlobalParent*>(Manager());
   nsIPrincipal* principal = manager->DocumentPrincipal();
   uint64_t transactionId = mTransactionId.ref();
 

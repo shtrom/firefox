@@ -6518,7 +6518,7 @@ mozilla::ipc::IPCResult ContentParent::RecvPURLClassifierConstructor(
   MOZ_ASSERT(aActor);
   *aSuccess = false;
 
-  auto* actor = mozilla::ipc::ActorCast<URLClassifierParent>(aActor);
+  auto* actor = static_cast<URLClassifierParent*>(aActor);
   nsCOMPtr<nsIPrincipal> principal(aPrincipal);
   if (!principal) {
     actor->ClassificationFailed();
@@ -6535,7 +6535,7 @@ bool ContentParent::DeallocPURLClassifierParent(PURLClassifierParent* aActor) {
   MOZ_ASSERT(aActor);
 
   RefPtr<URLClassifierParent> actor =
-      dont_AddRef(mozilla::ipc::ActorCast<URLClassifierParent>(aActor));
+      dont_AddRef(static_cast<URLClassifierParent*>(aActor));
   return true;
 }
 
@@ -6562,7 +6562,7 @@ mozilla::ipc::IPCResult ContentParent::RecvPURLClassifierLocalConstructor(
     return IPC_FAIL(this, "aURI should not be null");
   }
 
-  auto* actor = mozilla::ipc::ActorCast<URLClassifierLocalParent>(aActor);
+  auto* actor = static_cast<URLClassifierLocalParent*>(aActor);
   return actor->StartClassify(aURI, features);
 }
 
@@ -6572,7 +6572,7 @@ bool ContentParent::DeallocPURLClassifierLocalParent(
   MOZ_ASSERT(aActor);
 
   RefPtr<URLClassifierLocalParent> actor =
-      dont_AddRef(mozilla::ipc::ActorCast<URLClassifierLocalParent>(aActor));
+      dont_AddRef(static_cast<URLClassifierLocalParent*>(aActor));
   return true;
 }
 
@@ -6622,7 +6622,7 @@ mozilla::ipc::IPCResult ContentParent::RecvPURLClassifierLocalByNameConstructor(
     ipcFeatures.AppendElement(IPCURLClassifierFeature(name, tables));
   }
 
-  auto* actor = mozilla::ipc::ActorCast<URLClassifierLocalByNameParent>(aActor);
+  auto* actor = static_cast<URLClassifierLocalByNameParent*>(aActor);
   return actor->StartClassify(aURI, ipcFeatures, aListType);
 }
 
@@ -6631,8 +6631,8 @@ bool ContentParent::DeallocPURLClassifierLocalByNameParent(
   MOZ_ASSERT(NS_IsMainThread());
   MOZ_ASSERT(aActor);
 
-  RefPtr<URLClassifierLocalByNameParent> actor = dont_AddRef(
-      mozilla::ipc::ActorCast<URLClassifierLocalByNameParent>(aActor));
+  RefPtr<URLClassifierLocalByNameParent> actor =
+      dont_AddRef(static_cast<URLClassifierLocalByNameParent*>(aActor));
   return true;
 }
 

@@ -1749,25 +1749,30 @@ mozilla::ipc::IPCResult CanvasTranslator::RecvSnapshotExternalCanvas(
   ExternalSnapshot snapshot;
   if (auto* actor = gfx::CanvasManagerParent::GetCanvasActor(
           mContentId, aManagerId, aCanvasId)) {
-    if (dom::WebGLParent* webglActor = ActorDynCast<dom::WebGLParent>(actor)) {
-      if (auto* hostContext = webglActor->GetHostWebGLContext()) {
-        if (auto* webgl = hostContext->GetWebGLContext()) {
-          if (mWebglTextureType != TextureType::Unknown) {
-            snapshot.mSharedSurface = webgl->GetBackBufferSnapshotSharedSurface(
-                mWebglTextureType, true, true, true);
-            if (snapshot.mSharedSurface) {
-              snapshot.mWebgl = webgl;
-              snapshot.mDescriptor =
-                  snapshot.mSharedSurface->ToSurfaceDescriptor();
+    switch (actor->GetProtocolId()) {
+      case ProtocolId::PWebGLMsgStart:
+        if (auto* hostContext =
+                static_cast<dom::WebGLParent*>(actor)->GetHostWebGLContext()) {
+          if (auto* webgl = hostContext->GetWebGLContext()) {
+            if (mWebglTextureType != TextureType::Unknown) {
+              snapshot.mSharedSurface =
+                  webgl->GetBackBufferSnapshotSharedSurface(mWebglTextureType,
+                                                            true, true, true);
+              if (snapshot.mSharedSurface) {
+                snapshot.mWebgl = webgl;
+                snapshot.mDescriptor =
+                    snapshot.mSharedSurface->ToSurfaceDescriptor();
+              }
+            }
+            if (!snapshot.mDescriptor) {
+              snapshot.mData = webgl->GetBackBufferSnapshot(true);
             }
           }
-          if (!snapshot.mDescriptor) {
-            snapshot.mData = webgl->GetBackBufferSnapshot(true);
-          }
         }
-      }
-    } else {
-      MOZ_ASSERT_UNREACHABLE("Unsupported protocol");
+        break;
+      default:
+        MOZ_ASSERT_UNREACHABLE("Unsupported protocol");
+        break;
     }
   }
 

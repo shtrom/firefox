@@ -7,7 +7,7 @@ include protocol PBackground;
 namespace mozilla {
 namespace dom {
 
-[ChildImpl="mozilla::dom::SessionStorageService"]
+[ChildImpl="SessionStorageService"]
 protocol PBackgroundSessionStorageService
 {
   manager PBackground;

@@ -20,7 +20,7 @@ namespace layers {
 /**
  * PCanvas is the IPDL for recorded Canvas drawing.
  */
-[ParentImpl="mozilla::layers::CanvasTranslator"]
+[ParentImpl="CanvasTranslator"]
 async protocol PCanvas {
   manager PCanvasManager;
 

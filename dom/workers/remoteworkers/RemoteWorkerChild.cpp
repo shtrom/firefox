@@ -990,7 +990,7 @@ IPCResult RemoteWorkerChild::RecvPFetchEventOpProxyConstructor(
     const ParentToChildServiceWorkerFetchEventOpArgs& aArgs) {
   MOZ_ASSERT(aActor);
 
-  mozilla::ipc::ActorCast<FetchEventOpProxyChild>(aActor)->Initialize(aArgs);
+  (static_cast<FetchEventOpProxyChild*>(aActor))->Initialize(aArgs);
 
   return IPC_OK();
 }

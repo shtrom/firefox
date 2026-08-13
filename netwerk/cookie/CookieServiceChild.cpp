@@ -67,8 +67,7 @@ CookieServiceChild::CookieServiceChild() { NeckoChild::InitNeckoChild(); }
 CookieServiceChild::~CookieServiceChild() { gCookieChildService = nullptr; }
 
 void CookieServiceChild::Init() {
-  auto* cc = mozilla::ipc::ActorCast<mozilla::dom::ContentChild>(
-      gNeckoChild->Manager());
+  auto* cc = static_cast<mozilla::dom::ContentChild*>(gNeckoChild->Manager());
   if (cc->IsShuttingDown()) {
     return;
   }

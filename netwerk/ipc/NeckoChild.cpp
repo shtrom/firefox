@@ -90,7 +90,7 @@ PAltDataOutputStreamChild* NeckoChild::AllocPAltDataOutputStreamChild(
 bool NeckoChild::DeallocPAltDataOutputStreamChild(
     PAltDataOutputStreamChild* aActor) {
   AltDataOutputStreamChild* child =
-      mozilla::ipc::ActorCast<AltDataOutputStreamChild>(aActor);
+      static_cast<AltDataOutputStreamChild*>(aActor);
   child->ReleaseIPDLReference();
   return true;
 }
@@ -105,7 +105,7 @@ bool NeckoChild::DeallocPCookieServiceChild(PCookieServiceChild* cs) {
   NS_ASSERTION(IsNeckoChild(),
                "DeallocPCookieServiceChild called by non-child!");
 
-  CookieServiceChild* p = mozilla::ipc::ActorCast<CookieServiceChild>(cs);
+  CookieServiceChild* p = static_cast<CookieServiceChild*>(cs);
   p->Release();
   return true;
 }
@@ -118,8 +118,7 @@ PWebSocketChild* NeckoChild::AllocPWebSocketChild(
 }
 
 bool NeckoChild::DeallocPWebSocketChild(PWebSocketChild* child) {
-  WebSocketChannelChild* p =
-      mozilla::ipc::ActorCast<WebSocketChannelChild>(child);
+  WebSocketChannelChild* p = static_cast<WebSocketChannelChild*>(child);
   p->ReleaseIPDLReference();
   return true;
 }
@@ -134,7 +133,7 @@ PWebSocketEventListenerChild* NeckoChild::AllocPWebSocketEventListenerChild(
 bool NeckoChild::DeallocPWebSocketEventListenerChild(
     PWebSocketEventListenerChild* aActor) {
   RefPtr<WebSocketEventListenerChild> c =
-      dont_AddRef(mozilla::ipc::ActorCast<WebSocketEventListenerChild>(aActor));
+      dont_AddRef(static_cast<WebSocketEventListenerChild*>(aActor));
   MOZ_ASSERT(c);
   return true;
 }

@@ -139,8 +139,7 @@ CanonicalBrowsingContext* BrowserBridgeParent::GetBrowsingContext() {
 
 BrowserParent* BrowserBridgeParent::Manager() {
   MOZ_ASSERT(CanSend());
-  return mozilla::ipc::ActorCast<BrowserParent>(
-      PBrowserBridgeParent::Manager());
+  return static_cast<BrowserParent*>(PBrowserBridgeParent::Manager());
 }
 
 void BrowserBridgeParent::Destroy() {

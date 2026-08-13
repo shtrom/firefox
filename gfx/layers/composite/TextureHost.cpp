@@ -1038,8 +1038,9 @@ mozilla::ipc::IPCResult TextureParent::RecvRecycleTexture(
 }
 
 void TextureParent::ActorDestroy(ActorDestroyReason aWhy) {
-  if (VideoBridgeParent* manager = ActorDynCast<VideoBridgeParent>(Manager())) {
-    manager->RemoveTexture(mSerial);
+  auto* manager = Manager();
+  if (manager->GetProtocolId() == ipc::ProtocolId::PVideoBridgeMsgStart) {
+    static_cast<VideoBridgeParent*>(manager)->RemoveTexture(mSerial);
   }
   Destroy();
 }

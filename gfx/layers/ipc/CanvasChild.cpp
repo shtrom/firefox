@@ -203,9 +203,7 @@ class SourceSurfaceCanvasRecording final : public gfx::SourceSurface {
       mRecorder->RecordEvent(RecordedAddExportSurface(mExportID, this));
     }
     aDesc = SurfaceDescriptorCanvasSurface(
-        mozilla::ipc::ActorCast<gfx::CanvasManagerChild>(
-            mCanvasChild->Manager())
-            ->Id(),
+        static_cast<gfx::CanvasManagerChild*>(mCanvasChild->Manager())->Id(),
         mCanvasChild->Id(), uintptr_t(mExportID));
     return true;
   }
@@ -835,8 +833,7 @@ already_AddRefed<gfx::SourceSurface> CanvasChild::SnapshotExternalCanvas(
     return nullptr;
   }
 
-  uint32_t managerId =
-      mozilla::ipc::ActorCast<gfx::CanvasManagerChild>(Manager())->Id();
+  uint32_t managerId = static_cast<gfx::CanvasManagerChild*>(Manager())->Id();
   ActorId canvasId = aActor->Id();
 
   gfx::SurfaceFormat format = aCanvas->GetIsOpaque()
