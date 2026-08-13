@@ -70,13 +70,6 @@ abstract class NimbusPluginExtension {
     abstract val experimenterManifest: Property<String>
 
     /**
-     * The directory to which the generated files should be written.
-     *
-     * This defaults to the generated sources folder in the build directory.
-     */
-    abstract val outputDir: Property<String>
-
-    /**
      * The file(s) containing the version(s)/ref(s)/location(s) for additional repositories.
      *
      * This defaults to an empty list.
@@ -259,7 +252,6 @@ class NimbusPlugin : Plugin<Project> {
                     buildDir.dir("bin/nimbus/$version").file(NimbusAssembleToolsTask.getBinaryName(plat))
                 }
             })
-            cacheRoot.set(File(topsrcdir, ".gradle/caches/nimbus-fml"))
 
             fetch {
                 // Try archive.mozilla.org release first

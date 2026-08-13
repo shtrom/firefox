@@ -83,10 +83,6 @@ abstract class NimbusAssembleToolsTask : DefaultTask() {
     @get:Internal
     abstract val readTimeout: Property<Int>
 
-    /** The cache root directory */
-    @get:Internal
-    abstract val cacheRoot: Property<File>
-
     init {
         platform.convention(detectPlatform(providers))
         connectTimeout.convention(30000)
