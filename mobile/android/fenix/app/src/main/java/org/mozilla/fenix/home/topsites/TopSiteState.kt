@@ -16,12 +16,15 @@ import org.mozilla.fenix.utils.Settings
  * @property colors The color set defined by [TopSiteColors] used to style a top site.
  * @property showAddShortcut Whether to show the "Add shortcut" tile.
  * @property showExpandToggle Whether to show the control that expands and collapses the section.
+ * @property showShortcutsLibraryButton Whether to show the header button that opens the shortcuts
+ * library. Hidden while the expand/collapse experiment is active, as that control supersedes it.
  */
 internal data class TopSiteState(
     val topSites: List<TopSite>,
     val colors: TopSiteColors,
     val showAddShortcut: Boolean = false,
     val showExpandToggle: Boolean = false,
+    val showShortcutsLibraryButton: Boolean = true,
 ) {
 
     companion object {
@@ -48,6 +51,7 @@ internal data class TopSiteState(
                             topSites.size < TOP_SITES_TO_SHOW,
                         showExpandToggle = settings.showMoreShortcuts &&
                             topSites.size > TOP_SITES_TO_SHOW,
+                        showShortcutsLibraryButton = !settings.showMoreShortcuts,
                     )
                 }
         }
