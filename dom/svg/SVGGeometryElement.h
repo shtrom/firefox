@@ -193,6 +193,28 @@ class SVGGeometryElement : public SVGGeometryElementBase {
   virtual already_AddRefed<Path> BuildPath(PathBuilder* aBuilder) = 0;
 
   /**
+   * Returns the bounds of this element's path, mapped into bounds
+   * space or Nothing() if no path could be built.
+   *
+   * aPathInUserSpace must be a Path for this element in its own user space.
+   * aPathTransform is applied to it.
+   */
+  Maybe<Rect> GetBounds(const Matrix& aPathTransform);
+
+  /**
+   * Returns the bounds of this element's stroked path, mapped into bounds
+   * space by aPathToBounds, or Nothing() if no path could be built.
+   *
+   * aPathTransform is applied to the path before stroking (the identity matrix
+   * unless the element has non-scaling-stroke, in which case it is the
+   * transform to the space the stroke is defined in), and aPathToBounds maps
+   * from that space to bounds space.
+   */
+  Maybe<Rect> GetStrokedBounds(const StrokeOptions& aStrokeOptions,
+                               const Matrix& aPathTransform,
+                               const Matrix& aPathToBounds);
+
+  /**
    * Get the distances from the origin of the path segments.
    * For non-path elements that's just 0 and the total length of the shape.
    */
@@ -279,6 +301,8 @@ class SVGGeometryElement : public SVGGeometryElementBase {
 
  private:
   already_AddRefed<Path> GetOrBuildPathForHitTest();
+
+  already_AddRefed<Path> GetTransformedPath(const Matrix& aPathTransform);
 
   float GetTotalLength();
 };

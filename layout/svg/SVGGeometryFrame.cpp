@@ -421,43 +421,8 @@ SVGBBox SVGGeometryFrame::GetBBoxContribution(const Matrix& aToBBoxUserspace,
   if (simpleBounds) {
     bbox = *simpleBounds;
   } else {
-    RefPtr<Path> pathInUserSpace;
-    const FillRule fillRule = SVGUtils::ToFillRule(
-        HasAnyStateBits(NS_STATE_SVG_CLIPPATH_CHILD) ? StyleSVG()->mClipRule
-                                                     : StyleSVG()->mFillRule);
-    if (getFill || getStroke) {
-      // Get the bounds using a Moz2D Path object (more expensive):
-      RefPtr<DrawTarget> tmpDT;
-      tmpDT = gfxPlatform::GetPlatform()->ScreenReferenceDrawTarget();
-
-      pathInUserSpace = element->GetOrBuildPath(tmpDT, fillRule);
-      if (!pathInUserSpace) {
-        return bbox;
-      }
-    }
-    // Transforming the path into bbox space copies the whole path, so do it
-    // lazily: when both fill and stroke bounds are requested, the stroke
-    // bounds below are computed from pathInUserSpace and the transformed
-    // copy is only needed on the rare empty-stroke fallback.
-    auto getBoundsInBBoxSpace = [&]() -> Maybe<Rect> {
-      RefPtr<Path> pathInBBoxSpace;
-      if (aToBBoxUserspace.IsIdentity()) {
-        pathInBBoxSpace = pathInUserSpace;
-      } else {
-        RefPtr<PathBuilder> builder = pathInUserSpace->TransformedCopyToBuilder(
-            aToBBoxUserspace, fillRule);
-        pathInBBoxSpace = builder->Finish();
-        if (!pathInBBoxSpace) {
-          return Nothing();
-        }
-      }
-      Rect rect = pathInBBoxSpace->GetBounds();
-      return rect.IsFinite() ? Some(rect) : Nothing();
-    };
-
-    // Account for fill:
     if (getFill && !getStroke) {
-      Maybe<Rect> pathBBoxExtents = getBoundsInBBoxSpace();
+      Maybe<Rect> pathBBoxExtents = element->GetBounds(aToBBoxUserspace);
       if (!pathBBoxExtents) {
         // This can happen in the case that we only have a move-to command in
         // the path commands, in which case we know nothing gets rendered.
@@ -466,7 +431,6 @@ SVGBBox SVGGeometryFrame::GetBBoxContribution(const Matrix& aToBBoxUserspace,
       bbox = pathBBoxExtents.value();
     }
 
-    // Account for stroke:
     if (getStroke) {
       // Be careful when replacing the following logic to get the fill and
       // stroke extents independently.
@@ -480,45 +444,41 @@ SVGBBox SVGGeometryFrame::GetBBoxContribution(const Matrix& aToBBoxUserspace,
       // # If the stroke is very thin, cairo won't paint any stroke, and so the
       //   stroke bounds that it will return will be empty.
 
-      Rect strokeBBoxExtents;
+      Maybe<Rect> strokeBBoxExtents;
       if (StaticPrefs::svg_Moz2D_strokeBounds_enabled()) {
         if (userToOuterSVG) {
-          Matrix outerSVGToUser = ToMatrix(*userToOuterSVG);
+          Matrix m = ToMatrix(*userToOuterSVG);
+          Matrix outerSVGToUser = m;
           outerSVGToUser.Invert();
           Matrix outerSVGToBBox = aToBBoxUserspace * outerSVGToUser;
-          RefPtr<PathBuilder> builder =
-              pathInUserSpace->TransformedCopyToBuilder(
-                  ToMatrix(*userToOuterSVG));
-          RefPtr<Path> pathInOuterSVGSpace = builder->Finish();
-          if (!pathInOuterSVGSpace) {
-            return bbox;
-          }
-          strokeBBoxExtents = pathInOuterSVGSpace->GetStrokedBounds(
-              strokeOptions, outerSVGToBBox);
+          strokeBBoxExtents =
+              element->GetStrokedBounds(strokeOptions, m, outerSVGToBBox);
         } else {
-          strokeBBoxExtents = pathInUserSpace->GetStrokedBounds(
-              strokeOptions, aToBBoxUserspace);
+          strokeBBoxExtents = element->GetStrokedBounds(strokeOptions, Matrix(),
+                                                        aToBBoxUserspace);
         }
-        if (strokeBBoxExtents.IsEmpty() && getFill) {
-          Maybe<Rect> pathBBoxExtents = getBoundsInBBoxSpace();
-          if (!pathBBoxExtents) {
+        if (!strokeBBoxExtents) {
+          return bbox;
+        }
+        if (strokeBBoxExtents->IsEmpty() && getFill) {
+          strokeBBoxExtents = element->GetBounds(aToBBoxUserspace);
+          if (!strokeBBoxExtents) {
             return bbox;
           }
-          strokeBBoxExtents = pathBBoxExtents.value();
         }
       } else {
-        Maybe<Rect> pathBBoxExtents = getBoundsInBBoxSpace();
+        Maybe<Rect> pathBBoxExtents = element->GetBounds(aToBBoxUserspace);
         if (!pathBBoxExtents) {
           return bbox;
         }
-        strokeBBoxExtents = ToRect(SVGUtils::PathExtentsToMaxStrokeExtents(
+        strokeBBoxExtents = Some(ToRect(SVGUtils::PathExtentsToMaxStrokeExtents(
             ThebesRect(pathBBoxExtents.value()), this,
-            ThebesMatrix(aToBBoxUserspace)));
+            ThebesMatrix(aToBBoxUserspace))));
+        if (!strokeBBoxExtents->IsFinite()) {
+          return bbox;
+        }
       }
-      if (!strokeBBoxExtents.IsFinite()) {
-        return bbox;
-      }
-      bbox.UnionEdges(strokeBBoxExtents);
+      bbox.UnionEdges(*strokeBBoxExtents);
     }
   }
 
