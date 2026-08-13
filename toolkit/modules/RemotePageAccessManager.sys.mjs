@@ -116,6 +116,7 @@ export let RemotePageAccessManager = {
         "Browser:ResetEnterpriseRootsPref",
         "DisplayOfflineSupportPage",
         "OpenTRRPreferences",
+        "SearchCTA:Search",
       ],
       RPMCheckAlternateHostAvailable: ["*"],
       RPMRecordGleanEvent: [
@@ -152,7 +153,7 @@ export let RemotePageAccessManager = {
       RPMSetTRRDisabledLoadFlags: ["*"],
       RPMShowOSXLocalNetworkPermissionWarning: ["*"],
       RPMIsSSLKeyLoggingEnabled: ["*"],
-      RPMSendQuery: ["Browser:AddTRRExcludedDomain"],
+      RPMSendQuery: ["Browser:AddTRRExcludedDomain", "SearchCTA:GetInfo"],
       RPMGetIntPref: ["network.trr.mode", "security.dialog_enable_delay"],
     },
     "about:newtab": {
