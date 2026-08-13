@@ -2034,7 +2034,7 @@ bool nsLayoutUtils::ShouldSnapToGrid(const nsIFrame* aFrame,
 }
 
 Matrix4x4Flagged nsLayoutUtils::GetTransformToAncestor(
-    RelativeTo aFrame, RelativeTo aAncestor, uint32_t aFlags,
+    RelativeTo aFrame, RelativeTo aAncestor, TransformMatrixFlags aFlags,
     nsIFrame** aOutAncestor) {
   nsIFrame* parent;
   Matrix4x4Flagged ctm;
@@ -2051,7 +2051,8 @@ Matrix4x4Flagged nsLayoutUtils::GetTransformToAncestor(
     ctm.ProjectTo2D();
   }
   while (parent && parent != aAncestor.mFrame &&
-         (!(aFlags & nsIFrame::STOP_AT_STACKING_CONTEXT_AND_DISPLAY_PORT) ||
+         (!aFlags.contains(
+              TransformMatrixFlag::StopAtStackingContextAndDisplayPort) ||
           (!parent->IsStackingContext() &&
            !DisplayPortUtils::FrameHasDisplayPort(parent)))) {
     nsIFrame* cur = parent;
@@ -2294,9 +2295,9 @@ static Rect TransformGfxRectToAncestor(
     ctm = aMatrixCache->value();
   } else {
     // Else, compute it
-    uint32_t flags = 0;
+    TransformMatrixFlags flags;
     if (aStopAtStackingContextAndDisplayPortAndOOFFrame) {
-      flags |= nsIFrame::STOP_AT_STACKING_CONTEXT_AND_DISPLAY_PORT;
+      flags += TransformMatrixFlag::StopAtStackingContextAndDisplayPort;
     }
     ctm = nsLayoutUtils::GetTransformToAncestor(aFrame, aAncestor, flags,
                                                 aOutAncestor);

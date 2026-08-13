@@ -561,7 +561,8 @@ static gfx::Matrix GetCTMInternal(SVGElement* aElement, CTMType aCTMType,
   }
   auto transformToAncestor = nsLayoutUtils::GetTransformToAncestor(
       RelativeTo{parentFrame, ViewportType::Layout},
-      RelativeTo{ancestorFrame, ViewportType::Layout}, nsIFrame::IN_CSS_UNITS);
+      RelativeTo{ancestorFrame, ViewportType::Layout},
+      TransformMatrixFlag::InCSSUnits);
   gfx::Matrix result2d;
   if (transformToAncestor.CanDraw2D(&result2d)) {
     tm = tm * result2d;
