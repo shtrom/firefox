@@ -12,7 +12,9 @@
 #include "nsFaviconService.h"
 #include "nsStringStream.h"
 #include "nsStreamUtils.h"
+#include "nsBaseChannel.h"
 #include "nsIChannel.h"
+#include "nsIChannelEventSink.h"
 #include "nsIFaviconService.h"
 #include "nsIIOService.h"
 #include "nsILoadInfo.h"
@@ -47,7 +49,7 @@ static nsresult GetFaviconMetadata(
     return NS_ERROR_NOT_AVAILABLE;
   }
 
-  nsCOMPtr<nsIFavicon> favicon = aResult.ResolveValue();
+  const nsCOMPtr<nsIFavicon>& favicon = aResult.ResolveValue();
   if (!favicon) {
     return NS_ERROR_NOT_AVAILABLE;
   }
@@ -254,13 +256,24 @@ nsresult PageIconProtocolHandler::NewChannelInternal(nsIURI* aURI,
           }
           RecordIconSizeTelemetry(uri, metadata);
         } else {
-          // There are a few reasons why this might fail. For example, one
-          // reason is that the URI might not actually be properly parsable.
-          // In that case, we'll try one last time to stream the default
-          // favicon before giving up.
-          channel->SetContentType(nsLiteralCString(FAVICON_DEFAULT_MIMETYPE));
-          channel->SetContentLength(-1);
-          (void)StreamDefaultFavicon(uri, loadInfo, pipeOut);
+          // Redirect to the default favicon via an internal redirect so that
+          // the image loader sees the chrome:// URI and sets
+          // mChromeRulesEnabled, which is required to evaluate -moz-pref() in
+          // SVGs.
+          nsCOMPtr<nsIChannel> defaultIconChannel;
+          nsresult rv = MakeDefaultFaviconChannel(
+              uri, loadInfo, getter_AddRefs(defaultIconChannel));
+          if (NS_SUCCEEDED(rv)) {
+            auto* baseChannel = static_cast<nsBaseChannel*>(channel.get());
+            rv = baseChannel->Redirect(defaultIconChannel,
+                                       nsIChannelEventSink::REDIRECT_INTERNAL,
+                                       true);
+          }
+          if (NS_FAILED(rv)) {
+            channel->CancelWithReason(NS_BINDING_ABORTED,
+                                      "PageIconProtocolHandler: no favicon"_ns);
+          }
+          // pipeOut is released here, closing the pipe since nobody reads it.
         }
       });
 
