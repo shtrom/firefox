@@ -31,7 +31,6 @@
 #include "mozilla/dom/HTMLImageElement.h"
 #include "mozilla/dom/LargestContentfulPaint.h"
 #include "mozilla/dom/NameSpaceConstants.h"
-#include "mozilla/dom/PerformanceContainerTiming.h"
 #include "mozilla/dom/ReferrerInfo.h"
 #include "mozilla/dom/ResponsiveImageSelector.h"
 #include "mozilla/dom/ViewTransition.h"
@@ -2502,14 +2501,10 @@ bool nsDisplayImage::CreateWebRenderCommands(
                               region, flags, getter_AddRefs(provider));
 
   if (nsCOMPtr<imgIRequest> currentRequest = frame->GetCurrentRequest()) {
-    Element* element = frame->GetContent()->AsElement();
-    nsRect rectRelativeToSelf = destAppUnits - ToReferenceFrame();
-
-    ContainerTimingHelpers::MaybeProcessPaintForContainer(element, frame,
-                                                          rectRelativeToSelf);
     LCPHelpers::FinalizeLCPEntryForImage(
-        element, static_cast<imgRequestProxy*>(currentRequest.get()),
-        rectRelativeToSelf);
+        frame->GetContent()->AsElement(),
+        static_cast<imgRequestProxy*>(currentRequest.get()),
+        destAppUnits - ToReferenceFrame());
   }
 
   // While we got a container, it may not contain a fully decoded surface. If

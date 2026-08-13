@@ -483,7 +483,7 @@ uint64_t nsRegion::Area() const {
   for (const Band& band : mBands) {
     uint32_t height = band.bottom - band.top;
     for (const Strip& strip : band.mStrips) {
-      area += int64_t(strip.right - strip.left) * height;
+      area += (strip.right - strip.left) * height;
     }
   }
 

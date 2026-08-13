@@ -60,7 +60,6 @@
 #include "mozilla/ViewportUtils.h"
 #include "mozilla/dom/BrowserChild.h"
 #include "mozilla/dom/HTMLCanvasElement.h"
-#include "mozilla/dom/PerformanceContainerTiming.h"
 #include "mozilla/dom/PerformanceMainThread.h"
 #include "mozilla/dom/RemoteBrowser.h"
 #include "mozilla/dom/SVGElement.h"
@@ -3574,15 +3573,9 @@ bool nsDisplayBackgroundImage::CreateWebRenderCommands(
     if (imgRequestProxy* requestProxy = mBackgroundStyle->StyleBackground()
                                             ->mImage.mLayers[mLayer]
                                             .mImage.GetImageRequest()) {
-      nsRect rectRelativeToSelf = mBounds - ToReferenceFrame();
-      Element* element = content->AsElement();
-
-      ContainerTimingHelpers::MaybeProcessPaintForContainer(
-          element, StyleFrame(), rectRelativeToSelf);
-
       // LCP don't consider gradient backgrounds.
-      LCPHelpers::FinalizeLCPEntryForImage(element, requestProxy,
-                                           rectRelativeToSelf);
+      LCPHelpers::FinalizeLCPEntryForImage(content->AsElement(), requestProxy,
+                                           mBounds - ToReferenceFrame());
     }
   }
 
@@ -7760,12 +7753,8 @@ void nsDisplayText::Paint(nsDisplayListBuilder* aBuilder, gfxContext* aCtx) {
   RenderToContext(aCtx, aBuilder, GetPaintRect(aBuilder, aCtx));
 
   auto* textFrame = static_cast<nsTextFrame*>(mFrame);
-  nsRect boundsRelativeToSelf = mBounds - ToReferenceFrame();
-
-  ContainerTimingHelpers::MaybeProcessPaintForContainer(
-      textFrame->GetContent(), textFrame, boundsRelativeToSelf);
-
-  LCPTextFrameHelper::MaybeUnionTextFrame(textFrame, boundsRelativeToSelf);
+  LCPTextFrameHelper::MaybeUnionTextFrame(textFrame,
+                                          mBounds - ToReferenceFrame());
 }
 
 bool nsDisplayText::CreateWebRenderCommands(
@@ -7855,12 +7844,7 @@ bool nsDisplayText::CreateWebRenderCommands(
   gfxContext* textDrawer = aBuilder.GetTextContext(aResources, aSc, aManager,
                                                    this, bounds, deviceOffset);
 
-  nsRect boundsRelativeToSelf = bounds - ToReferenceFrame();
-
-  ContainerTimingHelpers::MaybeProcessPaintForContainer(f->GetContent(), f,
-                                                        boundsRelativeToSelf);
-
-  LCPTextFrameHelper::MaybeUnionTextFrame(f, boundsRelativeToSelf);
+  LCPTextFrameHelper::MaybeUnionTextFrame(f, bounds - ToReferenceFrame());
 
   RenderToContext(textDrawer, aDisplayListBuilder, mVisibleRect,
                   aBuilder.GetInheritedOpacity(), true);

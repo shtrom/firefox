@@ -107,7 +107,6 @@
 #include "mozilla/dom/MouseEventBinding.h"
 #include "mozilla/dom/MutationObservers.h"
 #include "mozilla/dom/NodeInfo.h"
-#include "mozilla/dom/PerformanceContainerTiming.h"
 #include "mozilla/dom/PointerEventHandler.h"
 #include "mozilla/dom/PolicyContainer.h"
 #include "mozilla/dom/Promise.h"
@@ -3005,14 +3004,6 @@ nsresult Element::BindToTree(BindContext& aContext, nsINode& aParent) {
     NS_ENSURE_SUCCESS(rv, rv);
   }
 
-  // Cache our container-timing root from our (already-bound) parent before
-  // recursing into kids, so each can read it from us. Only document-tree
-  // content contributes to container timing.
-  if (aContext.OwnerDoc().MayHaveContainerTimingAttributes() &&
-      aContext.InUncomposedDoc()) {
-    UpdateContainerTimingRootFromParent(&aParent);
-  }
-
   // Now recurse into our kids. Ensure this happens after binding the shadow
   // root so that directionality of slots is updated.
   {
@@ -3071,65 +3062,6 @@ nsresult Element::BindToTree(BindContext& aContext, nsINode& aParent) {
   return NS_OK;
 }
 
-Element* Element::GetContainerTimingRoot() const {
-  return static_cast<Element*>(GetProperty(nsGkAtoms::containerTimingRoot));
-}
-
-void Element::UpdateContainerTimingRootFromParent(nsINode* aParent) {
-  // This element is tracked by the nearest strict-ancestor element carrying a
-  // `containertiming` attribute, unless it carries `containertimingignore`,
-  // which stops upward propagation. Because the parent's root is already
-  // cached, this is O(1) per element and the whole subtree is populated
-  // top-down (during BindToTree or a subtree recompute).
-  //
-  // Only an HTMLElement can be a container root or an ignored subtree root.
-  // `containertiming` and `containertimingignore` are rare, so the subtree
-  // bloom filter lets us skip the HasAttr scans.
-  static const uint64_t containerTimingBits =
-      AttrArray::HashForBloomFilter(nsGkAtoms::containertiming);
-  static const uint64_t ignoreBits =
-      AttrArray::HashForBloomFilter(nsGkAtoms::containerTimingIgnore);
-
-  const bool rootsIgnoredSubtree = IsHTMLElement() &&
-                                   mAttrs.BloomMayHave(ignoreBits) &&
-                                   HasAttr(nsGkAtoms::containerTimingIgnore);
-
-  Element* root = nullptr;
-  Element* parent = Element::FromNodeOrNull(aParent);
-  if (parent && !rootsIgnoredSubtree) {
-    if (parent->IsHTMLElement() &&
-        parent->mAttrs.BloomMayHave(containerTimingBits) &&
-        parent->HasAttr(nsGkAtoms::containertiming)) {
-      root = parent;
-    } else {
-      // The parent is not itself a container root, so inherit its cached root.
-      // This is deliberately namespace-agnostic: a non-HTML parent can never be
-      // a root, but it does relay one to the HTML content below it.
-      root = parent->GetContainerTimingRoot();
-    }
-  }
-
-  if (root) {
-    // The stored Element* is raw and non-owning. This is safe because `root` is
-    // a strict ancestor, it cannot be destroyed while this element remains
-    // connected, the property is cleared in UnbindFromTree. So it can never
-    // dangle.
-    SetProperty(nsGkAtoms::containerTimingRoot, root);
-  } else if (HasProperties()) {
-    RemoveProperty(nsGkAtoms::containerTimingRoot);
-  }
-}
-
-void Element::RecomputeContainerTimingRootForSubtree() {
-  UpdateContainerTimingRootFromParent(GetParentNode());
-  for (nsIContent* node = GetNextNode(this); node;
-       node = node->GetNextNode(this)) {
-    if (Element* element = Element::FromNode(node)) {
-      element->UpdateContainerTimingRootFromParent(element->GetParentNode());
-    }
-  }
-}
-
 static bool WillDetachFromShadowOnUnbind(const Element& aElement,
                                          bool aNullParent) {
   // If our parent still is in a shadow tree by now, and we're not removing
@@ -3165,25 +3097,6 @@ void Element::UnbindFromTree(UnbindContext& aContext) {
       if (!parent->HasFlag(ELEMENT_IS_DATALIST_OR_HAS_DATALIST_ANCESTOR)) {
         UnsetFlags(ELEMENT_IS_DATALIST_OR_HAS_DATALIST_ANCESTOR);
       }
-    }
-  }
-
-  if (aContext.OwnerDoc().MayHaveContainerTimingAttributes()) {
-    // Drop the cached container-timing root so it can never dangle: an ancestor
-    // root may be destroyed once we are no longer in its subtree.
-    if (HasProperties()) {
-      RemoveProperty(nsGkAtoms::containerTimingRoot);
-    }
-
-    static const uint64_t containerTimingBits =
-        AttrArray::HashForBloomFilter(nsGkAtoms::containertiming);
-
-    // A full disconnect should ensure a new connection creates a fresh painted
-    // region.
-    if (!aContext.IsMove() && IsHTMLElement() &&
-        mAttrs.BloomMayHave(containerTimingBits) &&
-        HasAttr(nsGkAtoms::containertiming)) {
-      ContainerTimingHelpers::DropRecordForContainerRoot(this);
     }
   }
 

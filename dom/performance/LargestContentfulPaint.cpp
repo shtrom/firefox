@@ -19,6 +19,7 @@
 #include "nsGkAtoms.h"
 #include "nsIContentInlines.h"
 #include "nsLayoutUtils.h"
+#include "nsRFPService.h"
 
 namespace mozilla::dom {
 
@@ -43,6 +44,16 @@ static double GetAreaInDoublePixelsFromAppUnits(const nsSize& aSize) {
 static double GetAreaInDoublePixelsFromAppUnits(const nsRect& aRect) {
   return NSAppUnitsToDoublePixels(aRect.Width(), AppUnitsPerCSSPixel()) *
          NSAppUnitsToDoublePixels(aRect.Height(), AppUnitsPerCSSPixel());
+}
+
+static DOMHighResTimeStamp GetReducedTimePrecisionDOMHighRes(
+    Performance* aPerformance, const TimeStamp& aRawTimeStamp) {
+  MOZ_ASSERT(aPerformance);
+  DOMHighResTimeStamp rawValue =
+      aPerformance->GetDOMTiming()->TimeStampToDOMHighRes(aRawTimeStamp);
+  return nsRFPService::ReduceTimePrecisionAsMSecs(
+      rawValue, aPerformance->GetRandomTimelineSeed(),
+      aPerformance->GetRTPCallerType());
 }
 
 LargestContentfulPaint::LargestContentfulPaint(
@@ -289,7 +300,7 @@ DOMHighResTimeStamp LargestContentfulPaint::RenderTime() const {
   if (!mShouldExposeRenderTime) {
     return 0;
   }
-  return mPerformance->GetReducedTimePrecisionDOMHighRes(mRenderTime);
+  return GetReducedTimePrecisionDOMHighRes(mPerformance, mRenderTime);
 }
 
 DOMHighResTimeStamp LargestContentfulPaint::LoadTime() const {
@@ -297,7 +308,7 @@ DOMHighResTimeStamp LargestContentfulPaint::LoadTime() const {
     return 0;
   }
 
-  return mPerformance->GetReducedTimePrecisionDOMHighRes(mLoadTime.ref());
+  return GetReducedTimePrecisionDOMHighRes(mPerformance, mLoadTime.ref());
 }
 
 DOMHighResTimeStamp LargestContentfulPaint::StartTime() const {
@@ -537,7 +548,7 @@ void LargestContentfulPaint::ReportLCPToNavigationTimings() {
   }
 
   timing->NotifyLargestContentfulRenderForRootContentDocument(
-      mPerformance->GetReducedTimePrecisionDOMHighRes(mRenderTime), elementStr,
+      GetReducedTimePrecisionDOMHighRes(mPerformance, mRenderTime), elementStr,
       imageURL);
 }
 }  // namespace mozilla::dom
