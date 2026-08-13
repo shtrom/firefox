@@ -175,6 +175,10 @@ button:disabled {
   fill: currentColor;
 }
 
+.search-cta-offline {
+  margin-block: 0;
+}
+
 /* Keep the error code and Learn More lines tight together, one above the
    other, at a slightly smaller size (bug 2055637). */
 .search-cta-error-code,

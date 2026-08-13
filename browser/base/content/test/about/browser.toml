@@ -136,6 +136,8 @@ support-files = [
 
 ["browser_aboutNetError_searchCTA.js"]
 
+["browser_aboutNetError_searchCTA_connectivity.js"]
+
 ["browser_aboutNetError_searchCTA_derivation.js"]
 
 ["browser_aboutNetError_searchCTA_pbm.js"]

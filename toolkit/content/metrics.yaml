@@ -521,8 +521,12 @@ security.ui.neterror:
       query; no_path and no_meaningful_keywords fall back to the host;
       host_unusable and search_unavailable show no CTA. engine_not_general means
       a default search engine exists but is special-purpose (e.g. Wikipedia), so
-      the CTA is not shown. connectivity_lost is added in bug 2055712. Records
-      only the reason label, never content.
+      the CTA is not shown. connectivity_unconfirmed means we could not confirm
+      we were online at page load: the captive-portal reading was stale and the
+      authoritative re-check came back offline/captive or timed out, so no CTA
+      was shown. Connectivity dropping *after* the CTA was shown is a different
+      thing and is counted by search_cta_click_aborted, not here. Records only
+      the reason label, never content.
     labels:
       - ok
       - no_path
@@ -530,12 +534,15 @@ security.ui.neterror:
       - host_unusable
       - search_unavailable
       - engine_not_general
+      - connectivity_unconfirmed
     bugs:
       - https://bugzil.la/2055675
       - https://bugzil.la/2055637
+      - https://bugzil.la/2055712
     data_reviews:
       - https://bugzil.la/2055675
       - https://bugzil.la/2055637
+      - https://bugzil.la/2055712
     notification_emails:
       - jbrown@mozilla.com
       - seceng-telemetry@mozilla.com
@@ -568,6 +575,30 @@ security.ui.neterror:
       - https://bugzil.la/2055675
     data_reviews:
       - https://bugzil.la/2055675
+    notification_emails:
+      - jbrown@mozilla.com
+      - seceng-telemetry@mozilla.com
+    expires: never
+    data_sensitivity:
+      - interaction
+
+  search_cta_click_aborted:
+    type: labeled_counter
+    description: >
+      Count of times the user clicked the online dnsNotFound Search CTA button
+      but no search was run. connectivity_lost means the page was online when
+      the CTA was shown, connectivity dropped before the click, and the click
+      was aborted with an offline message shown in the button's place. These
+      clicks are also counted by search_cta_clicked, so searches actually
+      launched = search_cta_clicked minus search_cta_click_aborted. Kept
+      separate from search_cta_reason because that metric describes the
+      page-load decision, one per eligible page load. Content-free.
+    labels:
+      - connectivity_lost
+    bugs:
+      - https://bugzil.la/2055712
+    data_reviews:
+      - https://bugzil.la/2055712
     notification_emails:
       - jbrown@mozilla.com
       - seceng-telemetry@mozilla.com

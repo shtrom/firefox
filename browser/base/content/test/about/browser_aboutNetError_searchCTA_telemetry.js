@@ -5,8 +5,8 @@
 
 // Feature telemetry for the search CTA (bug 2055675): one action + one reason
 // count per decision, a shown count when a CTA is displayed, and a clicked
-// count. All content-free (counters only). connectivity-lost is added by bug
-// 2055712.
+// count. All content-free (counters only). connectivity-unconfirmed and the
+// separate search_cta_click_aborted counter are added by bug 2055712.
 
 const { SearchService } = ChromeUtils.importESModule(
   "moz-src:///toolkit/components/search/SearchService.sys.mjs"
@@ -33,7 +33,14 @@ add_setup(async function () {
     },
     { setAsDefault: true }
   );
-  await SpecialPowers.pushPrefEnv({ set: [[CTA_PREF, true]] });
+  await SpecialPowers.pushPrefEnv({
+    set: [
+      [CTA_PREF, true],
+      // Treat the connectivity reading as always fresh so the bug 2055712
+      // guard is a no-op and this test doesn't depend on captive-portal state.
+      ["browser.netError.searchCTA.connectivityFreshnessMs", 2147483647],
+    ],
+  });
 });
 
 /**

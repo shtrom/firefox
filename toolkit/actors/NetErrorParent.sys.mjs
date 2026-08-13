@@ -17,8 +17,10 @@ ChromeUtils.defineESModuleGetters(lazy, {
   HomePage: "resource:///modules/HomePage.sys.mjs",
   SearchService: "moz-src:///toolkit/components/search/SearchService.sys.mjs",
   SearchUIUtils: "moz-src:///browser/components/search/SearchUIUtils.sys.mjs",
-  analyzeURL: "resource://gre/modules/URLKeywordAnalyzer.sys.mjs",
   SEARCH_CTA_ACTIONS: "resource://gre/modules/URLKeywordAnalyzer.sys.mjs",
+  analyzeURL: "resource://gre/modules/URLKeywordAnalyzer.sys.mjs",
+  clearTimeout: "resource://gre/modules/Timer.sys.mjs",
+  setTimeout: "resource://gre/modules/Timer.sys.mjs",
 });
 
 // Reasons this decision layer adds on top of the ones URLKeywordAnalyzer can
@@ -27,6 +29,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
 const DECISION_REASONS = Object.freeze({
   SEARCH_UNAVAILABLE: "search-unavailable",
   ENGINE_NOT_GENERAL: "engine-not-general",
+  CONNECTIVITY_UNCONFIRMED: "connectivity-unconfirmed",
 });
 
 // The search access point this page reports to search telemetry. The source is
@@ -36,6 +39,10 @@ const DECISION_REASONS = Object.freeze({
 // borrowing an existing source would file these searches under someone else's
 // access point.
 const SEARCH_CTA_SAP_SOURCE = "errorpage";
+
+// Observer topic fired whenever a captive-portal check completes, used to await
+// the search CTA's authoritative connectivity re-check (bug 2055712).
+const NS_CAPTIVE_PORTAL_CONNECTIVITY = "network:captive-portal-connectivity";
 
 class CaptivePortalObserver {
   constructor(actor) {
@@ -269,6 +276,29 @@ export class NetErrorParent extends EscapablePageParent {
       domain = null;
     }
 
+    // Connectivity freshness guard (bug 2055712): a stale "online" reading can
+    // show the CTA while the user is actually offline. When the CTA would
+    // otherwise show, require a recent captive-portal check; if it is stale,
+    // run one authoritative, time-bounded re-check and suppress the CTA unless
+    // we come back affirmatively online.
+    if (
+      action !== lazy.SEARCH_CTA_ACTIONS.NONE &&
+      !(await this.ensureFreshConnectivity())
+    ) {
+      this.recordSearchCTADecision(
+        lazy.SEARCH_CTA_ACTIONS.NONE,
+        DECISION_REASONS.CONNECTIVITY_UNCONFIRMED,
+        false
+      );
+      return {
+        action: lazy.SEARCH_CTA_ACTIONS.NONE,
+        query: "",
+        reason: DECISION_REASONS.CONNECTIVITY_UNCONFIRMED,
+        domain,
+        hasEngine: false,
+      };
+    }
+
     let hasEngine = false;
     let engineUnsupported = false;
     if (AppConstants.MOZ_BUILD_APP == "browser") {
@@ -294,7 +324,8 @@ export class NetErrorParent extends EscapablePageParent {
    * count, and a shown count when a CTA is displayed. The query-derivation
    * module owns keywords/host/none and ok/no-path/no-meaningful-keywords/
    * host-unusable; the decision layer maps a usable host with no engine to
-   * none/search-unavailable (connectivity-lost is added in bug 2055712).
+   * none/search-unavailable, and adds connectivity-unconfirmed. The decision
+   * layer's own reasons live in DECISION_REASONS.
    *
    * @param {string} action The action from the query-derivation module.
    * @param {string} reason The reason from the query-derivation module.
@@ -324,6 +355,123 @@ export class NetErrorParent extends EscapablePageParent {
     if (finalAction !== lazy.SEARCH_CTA_ACTIONS.NONE) {
       Glean.securityUiNeterror.searchCtaShown.add(1);
     }
+  }
+
+  /**
+   * The captive-portal service, split out as a seam so tests can substitute a
+   * fake with a controllable state and lastChecked.
+   *
+   * @returns {nsICaptivePortalService}
+   */
+  getCaptivePortalService() {
+    return Cc["@mozilla.org/network/captive-portal-service;1"].getService(
+      Ci.nsICaptivePortalService
+    );
+  }
+
+  /**
+   * @param {nsICaptivePortalService} cps The captive-portal service.
+   * @returns {boolean} Whether we are online and not behind a captive portal.
+   */
+  isAffirmativelyOnline(cps) {
+    return (
+      cps.state === Ci.nsICaptivePortalService.NOT_CAPTIVE &&
+      Services.io.connectivity
+    );
+  }
+
+  /**
+   * Whether the search CTA may be shown from a connectivity standpoint. Trusts
+   * a fresh captive-portal reading immediately (the content-side gate already
+   * excluded the offline and captive states); on a stale reading, runs one
+   * authoritative, time-bounded re-check and resolves to whether we came back
+   * affirmatively online. (bug 2055712)
+   *
+   * @returns {Promise<boolean>} True when the CTA may be shown, meaning we are
+   *   confident we are online. False only when a stale reading was re-checked
+   *   and the re-check did not come back affirmatively online.
+   */
+  async ensureFreshConnectivity() {
+    // Captive-portal detection off: no reading to be stale about, so trust the
+    // content-side connectivity gate that already ran.
+    if (
+      !Services.prefs.getBoolPref(
+        "network.captive-portal-service.enabled",
+        false
+      )
+    ) {
+      return true;
+    }
+    let cps;
+    try {
+      cps = this.getCaptivePortalService();
+    } catch (e) {
+      // No captive-portal service available: don't block the CTA on it.
+      return true;
+    }
+    const freshnessMs = Services.prefs.getIntPref(
+      "browser.netError.searchCTA.connectivityFreshnessMs",
+      60000
+    );
+    // A recent reading means the content-side gate (which already excluded the
+    // offline and captive-portal states) was based on fresh data; trust it.
+    if (cps.lastChecked <= freshnessMs) {
+      return true;
+    }
+    // Stale reading: re-verify authoritatively before showing the CTA.
+    return this.recheckConnectivity(cps);
+  }
+
+  /**
+   * Trigger an authoritative captive-portal re-check and resolve to whether we
+   * are affirmatively online once it completes, or false if it does not
+   * complete within the bounded timeout so the CTA can never hang.
+   *
+   * @param {nsICaptivePortalService} cps The captive-portal service.
+   * @returns {Promise<boolean>} True when the completed re-check says we are
+   *   online and not behind a captive portal. False if it says otherwise or
+   *   does not complete in time.
+   */
+  recheckConnectivity(cps) {
+    const timeoutMs = Services.prefs.getIntPref(
+      "browser.netError.searchCTA.connectivityRecheckTimeoutMs",
+      3000
+    );
+    return new Promise(resolve => {
+      let settled = false;
+      let timer;
+      const observer = {
+        observe: () => finish(this.isAffirmativelyOnline(cps)),
+      };
+      const finish = result => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        Services.obs.removeObserver(observer, NS_CAPTIVE_PORTAL_CONNECTIVITY);
+        lazy.clearTimeout(timer);
+        resolve(result);
+      };
+      Services.obs.addObserver(observer, NS_CAPTIVE_PORTAL_CONNECTIVITY);
+      timer = lazy.setTimeout(() => finish(false), timeoutMs);
+      try {
+        cps.recheckCaptivePortal();
+      } catch (e) {
+        finish(false);
+      }
+    });
+  }
+
+  /**
+   * Record a CTA click that was aborted because connectivity dropped between
+   * showing the CTA and the click (bug 2055712). This is a click-time outcome,
+   * not a page-load decision, so it gets its own counter rather than a
+   * search_cta_reason label: reasons stay one-per-eligible-page-load and keep
+   * summing to search_cta_action. The click still counts as a click.
+   */
+  recordSearchCTAAbort() {
+    Glean.securityUiNeterror.searchCtaClicked.add(1);
+    Glean.securityUiNeterror.searchCtaClickAborted.connectivity_lost.add(1);
   }
 
   /**
@@ -463,6 +611,9 @@ export class NetErrorParent extends EscapablePageParent {
         return this.getSearchCTAInfo(message.data.url);
       case "SearchCTA:Search":
         this.performSearchCTASearch(message.data.query);
+        break;
+      case "SearchCTA:SearchAborted":
+        this.recordSearchCTAAbort();
         break;
     }
     return undefined;

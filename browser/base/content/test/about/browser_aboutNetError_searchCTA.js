@@ -4,6 +4,13 @@
 "use strict";
 
 const CTA_PREF = "browser.netError.searchCTA.enabled";
+// Treat the connectivity reading as always fresh so the bug 2055712 guard is a
+// no-op here and these tests don't depend on real captive-portal state. The
+// freshness window is an int pref compared against the reading's age in
+// milliseconds, so int32 max is the largest value that can be stored and is
+// effectively "never stale".
+const FRESHNESS_PREF = "browser.netError.searchCTA.connectivityFreshnessMs";
+const ALWAYS_FRESH = 2147483647;
 // A .com host (not a reserved TLD, so it passes host-viability from bug
 // 2055651) with a www subdomain, to verify the query falls back to the
 // registrable domain (the subdomain is dropped).
@@ -35,7 +42,12 @@ add_setup(async function () {
  * @param {Function} taskFn Async callback receiving the error page's browser.
  */
 async function withDnsNotFoundPage(enabled, taskFn) {
-  await SpecialPowers.pushPrefEnv({ set: [[CTA_PREF, enabled]] });
+  await SpecialPowers.pushPrefEnv({
+    set: [
+      [CTA_PREF, enabled],
+      [FRESHNESS_PREF, ALWAYS_FRESH],
+    ],
+  });
   const { tab, browser } = await loadNetErrorPage("dnsNotFound", FAILED_HOST);
   try {
     await taskFn(browser);

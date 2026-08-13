@@ -25,6 +25,9 @@ add_setup(async function () {
       [CTA_PREF, true],
       ["browser.search.separatePrivateDefault.ui.enabled", true],
       ["browser.search.separatePrivateDefault", true],
+      // Treat the connectivity reading as always fresh so the bug 2055712 guard
+      // is a no-op and this test doesn't depend on captive-portal state.
+      ["browser.netError.searchCTA.connectivityFreshnessMs", 2147483647],
     ],
   });
   // Two engines sharing example.com (routed by the mochitest server) but tagged

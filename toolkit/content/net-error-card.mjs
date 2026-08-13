@@ -66,6 +66,7 @@ export class NetErrorCard extends MozLitElement {
     searchCTADomain: { type: String },
     searchCTAQuery: { type: String },
     searchCTAAction: { type: String },
+    searchCTAOfflineAborted: { type: Boolean },
   };
 
   static queries = {
@@ -92,6 +93,7 @@ export class NetErrorCard extends MozLitElement {
     badStsCertExplanation: "#badStsCertExplanation",
     reloadButton: "#reloadButton",
     searchCTAButton: "#searchCTAButton",
+    searchCTAOfflineMessage: "#searchCTAOfflineMessage",
   };
 
   static isSupported() {
@@ -149,6 +151,7 @@ export class NetErrorCard extends MozLitElement {
     this.searchCTADomain = "";
     this.searchCTAQuery = "";
     this.searchCTAAction = "";
+    this.searchCTAOfflineAborted = false;
   }
 
   async getUpdateComplete() {
@@ -363,6 +366,14 @@ export class NetErrorCard extends MozLitElement {
   }
 
   handleSearchCTAClick() {
+    // Connectivity can drop between render and click; re-check before searching
+    // (bug 2055712). RPMHasConnectivity() is updated promptly by link-status
+    // events. On a drop, abort the search and show an offline message instead.
+    if (!RPMHasConnectivity()) {
+      this.searchCTAOfflineAborted = true;
+      RPMSendAsyncMessage("SearchCTA:SearchAborted");
+      return;
+    }
     RPMSendAsyncMessage("SearchCTA:Search", { query: this.searchCTAQuery });
   }
 
@@ -881,6 +892,17 @@ export class NetErrorCard extends MozLitElement {
   }
 
   searchCTAButtonTemplate() {
+    // Connectivity dropped when the button was clicked (bug 2055712): show an
+    // announced offline message where the Search button was; Reload remains.
+    if (this.searchCTAOfflineAborted) {
+      return html`<p
+        id="searchCTAOfflineMessage"
+        class="search-cta-offline"
+        role="alert"
+        data-l10n-id="neterror-search-cta-offline"
+      ></p>`;
+    }
+
     if (!this.searchCTAResolved) {
       // The label is visible rather than screen-reader-only: it is the only
       // text equivalent for the spinner, which is decorative. loading.svg

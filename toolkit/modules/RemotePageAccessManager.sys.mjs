@@ -117,6 +117,7 @@ export let RemotePageAccessManager = {
         "DisplayOfflineSupportPage",
         "OpenTRRPreferences",
         "SearchCTA:Search",
+        "SearchCTA:SearchAborted",
       ],
       RPMCheckAlternateHostAvailable: ["*"],
       RPMRecordGleanEvent: [
