@@ -302,6 +302,7 @@
   /* DevTools docked to the left */
   & > .devtools-toolbox-iframe.docked-left {
     grid-area: devtools-side-start;
+    anchor-name: --devtools-left-host;
 
     /* The grid-area follows logical direction, so in rtl, the layout is mirrored.
        But the DevTools toolbox is placed physically: docking it to the right will put
@@ -334,6 +335,7 @@
   & > .devtools-toolbox-iframe.docked-right {
     grid-area: devtools-side-end;
     min-height: 100%;
+    anchor-name: --devtools-right-host;
 
     &:dir(rtl) {
       grid-area: devtools-side-start;
@@ -348,6 +350,7 @@
   & > .devtools-toolbox-iframe.bottom-host {
     grid-area: devtools-bottom;
     min-width: 100%;
+    anchor-name: --devtools-bottom-host;
   }
 
   @media -moz-pref("sidebar.revamp") {
@@ -842,13 +845,21 @@ split-view-footer {
 .dialogStack {
   z-index: var(--browser-stack-z-index-dialog-stack);
   position: absolute;
-  inset: 0;
+
   /* --browser-with-dialog set on browser[tabDialogShowing], we want to position the overlay
      only on the top of the <browser> element so it doesn't overlap the DevTools toolbox */
-  position-anchor: --browser-with-dialog;
-  position-area: center;
-  width: 100%;
-  height: 100%;
+  top: anchor(--browser-with-dialog top);
+
+  /* For the left, right and bottom property we also need to make sure the dialog doesn't
+     go over DevTools when Responsive Design Mode is enabled, so we use the --devtools-*-host
+     to constrain the element position.
+     The --devtools-*-host anchors are set on .devtools-toolbox-iframe; they won't
+     be defined when DevTools is not visible/docked to a different position so we need
+     to provide meaningful fallback in those cases.
+  */
+  left: max(anchor(--browser-with-dialog left), anchor(--devtools-left-host right, 0));
+  right: max(anchor(--browser-with-dialog right), anchor(--devtools-right-host left, 0));
+  bottom: max(anchor(--browser-with-dialog bottom), anchor(--devtools-bottom-host top, 0));
 
   /* Hide tab-modal dialogs when a window-modal one is up. */
   :root[window-modal-open] .browserStack > &,
