@@ -38,7 +38,7 @@ class PerfProfile(RaptorProfiling):
         self.upload_dir = Path(self.upload_dir)
         self.temp_dir = Path(tempfile.mkdtemp())
         self.profile = (
-            self.upload_dir / f"profile_perf_{self.test_name}_unprocessed.json.gz"
+            self.upload_dir / f"profile_perf_{self.test_name}_unprocessed.jslb.gz"
         )
 
         self.perf_data_path = self.temp_dir / f"perf-{self.test_name}.data"
