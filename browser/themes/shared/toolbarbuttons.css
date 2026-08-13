@@ -9,9 +9,6 @@
   /*** Base toolbarbutton variables are located in toolkit/themes/shared/design-system/src/toolbar.css ***/
   --bookmark-block-padding: 4px;
 
-  /* horizontal padding + actual icon width */
-  --toolbarbutton-icon-size: calc(2 * var(--toolbarbutton-padding-inner) + 16px);
-
   &:where([uidensity="touch"]) {
     --toolbarbutton-padding-inner: var(--toolbarbutton-padding-inner-touch);
     --bookmark-block-padding: 7px;
@@ -203,8 +200,9 @@ toolbar .toolbarbutton-1 {
   }
 
   > .toolbarbutton-icon {
-    width: var(--toolbarbutton-icon-size);
-    height: var(--toolbarbutton-icon-size);
+    /* horizontal padding + actual icon width */
+    width: calc(2 * var(--toolbarbutton-padding-inner) + 16px);
+    height: calc(2 * var(--toolbarbutton-padding-inner) + 16px);
   }
 
   > .toolbarbutton-text {
