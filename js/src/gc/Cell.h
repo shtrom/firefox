@@ -15,6 +15,7 @@
 #include "js/GCAnnotations.h"
 #include "js/shadow/Zone.h"  // JS::shadow::Zone
 #include "js/TypeDecls.h"
+#include "vm/MutexIDs.h"
 
 namespace JS {
 enum class TraceKind;
@@ -994,7 +995,10 @@ inline bool TenuredThingIsMarkedAny<Cell>(Cell* thing) {
   return thing->asTenured().isMarkedAny();
 }
 
-using MarkingLock = LightLock;
+class MarkingLock : public LightLock {
+ public:
+  MarkingLock() : LightLock(js::mutexid::GCMarkingLock) {}
+};
 
 // A lock used to synchronize access to some data structures during concurrent
 // marking. This is only intended for use where lock-free approaches are
