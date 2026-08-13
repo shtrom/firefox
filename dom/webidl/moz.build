@@ -871,7 +871,6 @@ WEBIDL_FILES = [
     "PaymentRequestUpdateEvent.webidl",
     "PaymentResponse.webidl",
     "Performance.webidl",
-    "PerformanceContainerTiming.webidl",
     "PerformanceEntry.webidl",
     "PerformanceEventTiming.webidl",
     "PerformanceLargestContentfulPaint.webidl",

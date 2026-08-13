@@ -19,7 +19,6 @@
 #include "mozilla/SVGUtils.h"
 #include "mozilla/StaticPrefs_image.h"
 #include "mozilla/dom/LargestContentfulPaint.h"
-#include "mozilla/dom/PerformanceContainerTiming.h"
 #include "mozilla/dom/SVGImageElement.h"
 #include "mozilla/image/WebRenderImageProvider.h"
 #include "mozilla/layers/RenderRootStateManager.h"
@@ -383,13 +382,9 @@ void SVGImageFrame::PaintSVG(gfxContext& aContext, const gfxMatrix& aTransform,
                                      devPxSize, appUnitsPerDevPx));
       nsCOMPtr<imgIRequest> currentRequest = GetCurrentRequest();
       if (currentRequest) {
-        Element* element = GetContent()->AsElement();
-
-        ContainerTimingHelpers::MaybeProcessPaintForContainer(element, this,
-                                                              destRect);
         LCPHelpers::FinalizeLCPEntryForImage(
-            element, static_cast<imgRequestProxy*>(currentRequest.get()),
-            destRect);
+            GetContent()->AsElement(),
+            static_cast<imgRequestProxy*>(currentRequest.get()), destRect);
       }
 
       // Note: Can't use DrawSingleUnscaledImage for the TYPE_VECTOR case.
@@ -628,17 +623,11 @@ bool SVGImageFrame::CreateWebRenderCommands(
       region);
 
   if (nsCOMPtr<imgIRequest> currentRequest = GetCurrentRequest()) {
-    Element* element = GetContent()->AsElement();
-    nsRect rectRelativeToSelf =
-        LayoutDeviceRect::ToAppUnits(destRect, appUnitsPerDevPx) -
-        toReferenceFrame;
-
-    ContainerTimingHelpers::MaybeProcessPaintForContainer(element, this,
-                                                          rectRelativeToSelf);
-
     LCPHelpers::FinalizeLCPEntryForImage(
-        element, static_cast<imgRequestProxy*>(currentRequest.get()),
-        rectRelativeToSelf);
+        GetContent()->AsElement(),
+        static_cast<imgRequestProxy*>(currentRequest.get()),
+        LayoutDeviceRect::ToAppUnits(destRect, appUnitsPerDevPx) -
+            toReferenceFrame);
   }
 
   RefPtr<image::WebRenderImageProvider> provider;

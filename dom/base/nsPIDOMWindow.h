@@ -172,10 +172,6 @@ class nsPIDOMWindowInner : public mozIDOMWindow {
 
   mozilla::dom::Performance* GetPerformance();
 
-  mozilla::dom::Performance* GetPerformanceIfExists() const {
-    return mPerformance;
-  }
-
   void QueuePerformanceNavigationTiming();
 
   /**
