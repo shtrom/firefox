@@ -3717,29 +3717,29 @@ void nsGlobalWindowInner::SetName(const nsAString& aName,
   FORWARD_TO_OUTER_OR_THROW(SetNameOuter, (aName, aError), aError, );
 }
 
-double nsGlobalWindowInner::GetInnerWidth(CallerType aCallerType,
-                                          ErrorResult& aError) {
-  FORWARD_TO_OUTER_OR_THROW(GetInnerWidthOuter, (aCallerType, aError), aError,
-                            0);
+double nsGlobalWindowInner::GetInnerWidth(ErrorResult& aError) {
+  FORWARD_TO_OUTER_OR_THROW(GetInnerWidthOuter, (aError), aError, 0);
 }
 
-nsresult nsGlobalWindowInner::GetInnerWidth(CallerType aCallerType,
-                                            double* aWidth) {
+nsresult nsGlobalWindowInner::GetInnerWidth(double* aWidth) {
   ErrorResult rv;
-  *aWidth = GetInnerWidth(aCallerType, rv);
+  // Callee doesn't care about the caller type, but play it safe.
+  *aWidth = GetInnerWidth(rv);
   return rv.StealNSResult();
 }
 
-double nsGlobalWindowInner::GetInnerHeight(CallerType aCallerType,
-                                           ErrorResult& aError) {
-  FORWARD_TO_OUTER_OR_THROW(GetInnerHeightOuter, (aCallerType, aError), aError,
-                            0);
+double nsGlobalWindowInner::GetInnerHeight(ErrorResult& aError) {
+  // We ignore aCallerType; we only have that argument because some other things
+  // called by GetReplaceableWindowCoord need it.  If this ever changes, fix
+  //   nsresult nsGlobalWindowInner::GetInnerHeight(double* aInnerWidth)
+  // to actually take a useful CallerType and pass it in here.
+  FORWARD_TO_OUTER_OR_THROW(GetInnerHeightOuter, (aError), aError, 0);
 }
 
-nsresult nsGlobalWindowInner::GetInnerHeight(CallerType aCallerType,
-                                             double* aHeight) {
+nsresult nsGlobalWindowInner::GetInnerHeight(double* aHeight) {
   ErrorResult rv;
-  *aHeight = GetInnerHeight(aCallerType, rv);
+  // Callee doesn't care about the caller type, but play it safe.
+  *aHeight = GetInnerHeight(rv);
   return rv.StealNSResult();
 }
 

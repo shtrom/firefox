@@ -155,8 +155,8 @@ async function hasRightLabelsContent(highlighterFront, highlighterTestFront) {
         return getWindowDimensions(content);
       }
     );
-    const windowHeight = windowDimensions.height.toFixed(1);
-    const windowWidth = windowDimensions.width.toFixed(1);
+    const windowHeight = Math.round(windowDimensions.height);
+    const windowWidth = Math.round(windowDimensions.width);
     const windowText = `${windowWidth}px \u00D7 ${windowHeight}px`;
 
     const dimensionText =
