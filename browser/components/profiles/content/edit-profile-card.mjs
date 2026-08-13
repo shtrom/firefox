@@ -281,7 +281,14 @@ export class EditProfileCard extends MozLitElement {
         this.updateAvatar(avatar);
         break;
       }
-      case "ThemePickerThemeUpdated":
+      case "ThemePickerThemeUpdated": {
+        RPMSendAsyncMessage(
+          "Profiles:RecordThemeTelemetry",
+          this.profile?.themeId
+        );
+        this.refreshProfile();
+        break;
+      }
       case "ThemePickerDeviceAppearanceUpdated": {
         this.refreshProfile();
         break;

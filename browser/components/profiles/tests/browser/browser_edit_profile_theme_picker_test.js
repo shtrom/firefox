@@ -63,9 +63,6 @@ const installNovaTheme = async themeId => {
 };
 
 const setup = async () => {
-  await SpecialPowers.pushPrefEnv({
-    set: [["browser.nova.enabled", true]],
-  });
   await initGroupDatabase();
   let profile = SelectableProfileService.currentProfile;
   Assert.ok(profile, "Should have a profile now");
@@ -565,6 +562,13 @@ add_task(async function test_device_appearance_changes_theme_swatch_colors() {
         await ContentTaskUtils.waitForCondition(
           () => themePicker.deviceAppearance === "dark",
           "Waiting for device appearance to update to dark"
+        );
+
+        // Wait for the theme preview style to actually update
+        await ContentTaskUtils.waitForCondition(
+          () =>
+            content.getComputedStyle(themePreview).backgroundColor !==
+            initialColor
         );
 
         let darkColor = content.getComputedStyle(themePreview).backgroundColor;

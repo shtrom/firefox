@@ -196,6 +196,7 @@ export let RemotePageAccessManager = {
         "Profiles:CloseProfileTab",
         "Profiles:MoreThemes",
         "Profiles:PageHide",
+        "Profiles:RecordThemeTelemetry",
       ],
     },
     "about:newprofile": {
@@ -203,6 +204,7 @@ export let RemotePageAccessManager = {
         "Profiles:GetNewProfileContent",
         "Profiles:UpdateProfileTheme",
         "Profiles:UpdateProfileAvatar",
+        "Profiles:GetEditProfileContent",
       ],
       RPMSendAsyncMessage: [
         "Profiles:UpdateProfileName",
@@ -210,6 +212,7 @@ export let RemotePageAccessManager = {
         "Profiles:CloseProfileTab",
         "Profiles:MoreThemes",
         "Profiles:PageHide",
+        "Profiles:RecordThemeTelemetry",
       ],
       RPMGetBoolPref: ["browser.profiles.profile-name.updated"],
       RPMGetFormatURLPref: ["app.support.baseURL"],
