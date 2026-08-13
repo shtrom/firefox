@@ -149,6 +149,7 @@ class OnboardingFragment : Fragment() {
     private val defaultBrowserPromptManager by lazy {
         DefaultBrowserPromptManager(
             storage = defaultBrowserPromptStorage,
+            settings = { requireComponents.settings },
             promptToSetAsDefaultBrowser = {
                 requireContext().components.strictMode.allowViolation(StrictMode::allowThreadDiskReads) {
                     promptToSetAsDefaultBrowser()
@@ -298,7 +299,9 @@ class OnboardingFragment : Fragment() {
                     sequencePosition = pagesToDisplay.sequencePosition(it.type),
                 )
 
-                defaultBrowserPromptManager.maybePromptToSetAsDefaultBrowser(it)
+                if (FxNimbus.features.defaultBrowserPrompt.value().enabled) {
+                    defaultBrowserPromptManager.maybePromptToSetAsDefaultBrowser(it)
+                }
             },
             onboardingStore = onboardingStore,
             termsOfServiceEventHandler = termsOfServiceEventHandler,
