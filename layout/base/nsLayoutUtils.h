@@ -910,18 +910,17 @@ class nsLayoutUtils {
       const nsIFrame* aFrame, const nsRect& aRect, const nsIFrame* aAncestor,
       bool* aPreservesAxisAlignedRectangles = nullptr,
       mozilla::Maybe<Matrix4x4Flagged>* aMatrixCache = nullptr,
-      bool aStopAtStackingContextAndDisplayPortAndOOFFrame = false,
+      mozilla::TransformMatrixFlags aFlags = {},
       nsIFrame** aOutAncestor = nullptr) {
-    return TransformFrameRectToAncestor(
-        aFrame, aRect, RelativeTo{aAncestor}, aPreservesAxisAlignedRectangles,
-        aMatrixCache, aStopAtStackingContextAndDisplayPortAndOOFFrame,
-        aOutAncestor);
+    return TransformFrameRectToAncestor(aFrame, aRect, RelativeTo{aAncestor},
+                                        aPreservesAxisAlignedRectangles,
+                                        aMatrixCache, aFlags, aOutAncestor);
   }
   static nsRect TransformFrameRectToAncestor(
       const nsIFrame* aFrame, const nsRect& aRect, RelativeTo aAncestor,
       bool* aPreservesAxisAlignedRectangles = nullptr,
       mozilla::Maybe<Matrix4x4Flagged>* aMatrixCache = nullptr,
-      bool aStopAtStackingContextAndDisplayPortAndOOFFrame = false,
+      mozilla::TransformMatrixFlags aFlags = {},
       nsIFrame** aOutAncestor = nullptr);
 
   /**

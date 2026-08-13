@@ -2273,16 +2273,15 @@ static Rect TransformGfxRectToAncestor(
     RelativeTo aFrame, const Rect& aRect, RelativeTo aAncestor,
     bool* aPreservesAxisAlignedRectangles = nullptr,
     Maybe<Matrix4x4Flagged>* aMatrixCache = nullptr,
-    bool aStopAtStackingContextAndDisplayPortAndOOFFrame = false,
-    nsIFrame** aOutAncestor = nullptr) {
+    TransformMatrixFlags aFlags = {}, nsIFrame** aOutAncestor = nullptr) {
   Rect result;
   Matrix4x4Flagged ctm;
   if (SVGTextFrame* text = GetContainingSVGTextFrame(aFrame.mFrame)) {
     result = text->TransformFrameRectFromTextChild(aRect, aFrame.mFrame);
 
-    result = TransformGfxRectToAncestor(
-        RelativeTo{text}, result, aAncestor, nullptr, aMatrixCache,
-        aStopAtStackingContextAndDisplayPortAndOOFFrame, aOutAncestor);
+    result =
+        TransformGfxRectToAncestor(RelativeTo{text}, result, aAncestor, nullptr,
+                                   aMatrixCache, aFlags, aOutAncestor);
     if (aPreservesAxisAlignedRectangles) {
       // TransformFrameRectFromTextChild could involve any kind of transform, we
       // could drill down into it to get an answer out of it but we don't yet.
@@ -2295,11 +2294,7 @@ static Rect TransformGfxRectToAncestor(
     ctm = aMatrixCache->value();
   } else {
     // Else, compute it
-    TransformMatrixFlags flags;
-    if (aStopAtStackingContextAndDisplayPortAndOOFFrame) {
-      flags += TransformMatrixFlag::StopAtStackingContextAndDisplayPort;
-    }
-    ctm = nsLayoutUtils::GetTransformToAncestor(aFrame, aAncestor, flags,
+    ctm = nsLayoutUtils::GetTransformToAncestor(aFrame, aAncestor, aFlags,
                                                 aOutAncestor);
     if (aMatrixCache) {
       // and put it in the cache, if provided
@@ -2508,19 +2503,19 @@ nsRect nsLayoutUtils::TransformFrameRectToAncestor(
     const nsIFrame* aFrame, const nsRect& aRect, RelativeTo aAncestor,
     bool* aPreservesAxisAlignedRectangles /* = nullptr */,
     Maybe<Matrix4x4Flagged>* aMatrixCache /* = nullptr */,
-    bool aStopAtStackingContextAndDisplayPortAndOOFFrame /* = false */,
+    TransformMatrixFlags aFlags /* = {} */,
     nsIFrame** aOutAncestor /* = nullptr */) {
   MOZ_ASSERT(IsAncestorFrameCrossDocInProcess(aAncestor.mFrame, aFrame),
              "Fix the caller");
+  MOZ_ASSERT(!aFlags.contains(TransformMatrixFlag::InCSSUnits),
+             "TransformMatrixFlag::InCSSUnits is not supported here!");
+
   float srcAppUnitsPerDevPixel = aFrame->PresContext()->AppUnitsPerDevPixel();
-  Rect result(NSAppUnitsToFloatPixels(aRect.x, srcAppUnitsPerDevPixel),
-              NSAppUnitsToFloatPixels(aRect.y, srcAppUnitsPerDevPixel),
-              NSAppUnitsToFloatPixels(aRect.width, srcAppUnitsPerDevPixel),
-              NSAppUnitsToFloatPixels(aRect.height, srcAppUnitsPerDevPixel));
-  result = TransformGfxRectToAncestor(
-      RelativeTo{aFrame}, result, aAncestor, aPreservesAxisAlignedRectangles,
-      aMatrixCache, aStopAtStackingContextAndDisplayPortAndOOFFrame,
-      aOutAncestor);
+  Rect result = LayoutDeviceRect::FromAppUnits(aRect, srcAppUnitsPerDevPixel)
+                    .ToUnknownRect();
+  result = TransformGfxRectToAncestor(RelativeTo{aFrame}, result, aAncestor,
+                                      aPreservesAxisAlignedRectangles,
+                                      aMatrixCache, aFlags, aOutAncestor);
 
   return ScaleThenRoundGfxRectToAppRect(
       result, aAncestor.mFrame->PresContext()->AppUnitsPerDevPixel());
