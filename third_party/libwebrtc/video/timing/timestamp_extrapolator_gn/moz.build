@@ -35,7 +35,7 @@ LOCAL_INCLUDES += [
 ]
 
 UNIFIED_SOURCES += [
-    "/third_party/libwebrtc/modules/video_coding/timing/inter_frame_delay_variation_calculator.cc"
+    "/third_party/libwebrtc/video/timing/timestamp_extrapolator.cc"
 ]
 
 if not CONFIG["MOZ_DEBUG"]:
@@ -72,6 +72,10 @@ if CONFIG["OS_TARGET"] == "Darwin":
     DEFINES["WEBRTC_POSIX"] = True
     DEFINES["__STDC_CONSTANT_MACROS"] = True
     DEFINES["__STDC_FORMAT_MACROS"] = True
+
+    OS_LIBS += [
+        "-framework Foundation"
+    ]
 
 if CONFIG["OS_TARGET"] == "Linux":
 
@@ -127,6 +131,13 @@ if CONFIG["OS_TARGET"] == "WINNT":
     DEFINES["_WINDOWS"] = True
     DEFINES["_WINSOCK_DEPRECATED_NO_WARNINGS"] = True
     DEFINES["__STD_C"] = True
+
+    OS_LIBS += [
+        "crypt32",
+        "iphlpapi",
+        "secur32",
+        "winmm"
+    ]
 
 if CONFIG["TARGET_CPU"] == "aarch64":
 
@@ -212,4 +223,4 @@ if CONFIG["OS_TARGET"] == "Linux" and CONFIG["TARGET_CPU"] == "x86_64":
 
     DEFINES["_GNU_SOURCE"] = True
 
-Library("inter_frame_delay_variation_calculator_gn")
+Library("timestamp_extrapolator_gn")
