@@ -80,6 +80,10 @@ already_AddRefed<DOMMatrix> CSSTransformComponent::ToMatrix(ErrorResult& aRv) {
         return GetAsCSSRotate().ToMatrix(aRv);
       }
 
+      case TransformComponentType::Scale: {
+        return GetAsCSSScale().ToMatrix(aRv);
+      }
+
       default:
         aRv.Throw(NS_ERROR_NOT_IMPLEMENTED);
         return nullptr;
