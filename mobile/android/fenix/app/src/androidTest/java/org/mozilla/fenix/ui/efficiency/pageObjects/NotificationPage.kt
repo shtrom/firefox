@@ -96,6 +96,32 @@ class NotificationPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTes
         throw lastError ?: AssertionError("Could not click notification action button: ${selector.description}")
     }
 
+    /**
+     * Clicks a media-session notification transport control (Play / Pause), matched by content
+     * description. Mirrors the legacy NotificationRobot.clickMediaNotificationControlButton: a
+     * media-style notification shows its controls in the collapsed state, so unlike a download
+     * notification it needs no [expandNotification] step first.
+     */
+    fun clickMediaNotificationControlButton(action: String): NotificationPage {
+        val button = NotificationSelectors.MEDIA_NOTIFICATION_CONTROL_BUTTON(action)
+        // Wait for the transport control to render before clicking -- it can appear a beat after the
+        // notification's title. Mirrors the legacy waitForExists() + click() sequence.
+        mozVerify(button)
+        mozClick(button)
+        return this
+    }
+
+    /**
+     * Asserts the media notification's Play/Pause toggle is currently showing [action]. The single
+     * toggle button's content description flips between "Play" and "Pause" as playback is paused and
+     * resumed, so this doubles as a playback-state check. Mirrors legacy
+     * verifyMediaSystemNotificationButtonState.
+     */
+    fun verifyMediaNotificationButtonState(action: String): NotificationPage {
+        mozVerify(NotificationSelectors.MEDIA_NOTIFICATION_CONTROL_BUTTON(action))
+        return this
+    }
+
     fun verifyNotificationExists(selector: Selector): NotificationPage {
         mozVerify(selector)
         return this
