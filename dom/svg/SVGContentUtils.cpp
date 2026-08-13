@@ -589,9 +589,9 @@ gfx::Matrix SVGContentUtils::GetScreenCTM(SVGElement* aElement) {
   return GetCTMInternal(aElement, CTMType::Screen, false);
 }
 
-void SVGContentUtils::RectilinearGetStrokeBounds(
+Rect SVGContentUtils::RectilinearGetStrokeBounds(
     const Rect& aRect, const Matrix& aToBoundsSpace,
-    const Matrix& aToNonScalingStrokeSpace, float aStrokeWidth, Rect* aBounds) {
+    const Matrix& aToNonScalingStrokeSpace, float aStrokeWidth) {
   MOZ_ASSERT(aToBoundsSpace.IsRectilinear(),
              "aToBoundsSpace must be rectilinear");
   MOZ_ASSERT(aToNonScalingStrokeSpace.IsRectilinear(),
@@ -600,7 +600,7 @@ void SVGContentUtils::RectilinearGetStrokeBounds(
   Matrix nonScalingToSource = aToNonScalingStrokeSpace.Inverse();
   Matrix nonScalingToBounds = nonScalingToSource * aToBoundsSpace;
 
-  *aBounds = aToBoundsSpace.TransformBounds(aRect);
+  Rect bounds = aToBoundsSpace.TransformBounds(aRect);
 
   // Compute the amounts dx and dy that nonScalingToBounds scales a half-width
   // stroke in the x and y directions, and then inflate aBounds by those amounts
@@ -621,7 +621,8 @@ void SVGContentUtils::RectilinearGetStrokeBounds(
     dy = (aStrokeWidth / 2.0f) * std::abs(nonScalingToBounds._12);
   }
 
-  aBounds->Inflate(dx, dy);
+  bounds.Inflate(dx, dy);
+  return bounds;
 }
 
 double SVGContentUtils::ComputeNormalizedHypotenuse(double aWidth,

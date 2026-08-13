@@ -409,19 +409,17 @@ SVGBBox SVGGeometryFrame::GetBBoxContribution(const Matrix& aToBBoxUserspace,
     strokeOptions.mLineWidth = 0.f;
   }
 
-  Rect simpleBounds;
-  bool gotSimpleBounds = false;
+  Maybe<Rect> simpleBounds;
   if (getStroke && userToOuterSVG) {
     Matrix m = ToMatrix(*userToOuterSVG);
-    gotSimpleBounds = element->GetGeometryBounds(&simpleBounds, strokeOptions,
-                                                 aToBBoxUserspace, &m);
+    simpleBounds =
+        element->GetGeometryBounds(strokeOptions, aToBBoxUserspace, &m);
   } else if (getFill || getStroke) {
-    gotSimpleBounds = element->GetGeometryBounds(&simpleBounds, strokeOptions,
-                                                 aToBBoxUserspace);
+    simpleBounds = element->GetGeometryBounds(strokeOptions, aToBBoxUserspace);
   }
 
-  if (gotSimpleBounds) {
-    bbox = simpleBounds;
+  if (simpleBounds) {
+    bbox = *simpleBounds;
   } else {
     RefPtr<Path> pathInUserSpace;
     const FillRule fillRule = SVGUtils::ToFillRule(

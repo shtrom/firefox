@@ -101,16 +101,15 @@ class SVGGeometryElement : public SVGGeometryElementBase {
    * non-scaling-stroke space.  (When all transforms involved are rectilinear
    * the bounds of the image of |aBounds| in non-scaling-stroke space will be
    * tight, but if there are non-rectilinear transforms involved then that may
-   * be impossible and this method will return false).
+   * be impossible and this method will return Nothing()).
    *
    * If |aToNonScalingStrokeSpace| is non-null then |*aToNonScalingStrokeSpace|
    * must be non-singular.
    */
-  virtual bool GetGeometryBounds(
-      Rect* aBounds, const StrokeOptions& aStrokeOptions,
-      const Matrix& aToBoundsSpace,
+  virtual Maybe<Rect> GetGeometryBounds(
+      const StrokeOptions& aStrokeOptions, const Matrix& aToBoundsSpace,
       const Matrix* aToNonScalingStrokeSpace = nullptr) {
-    return false;
+    return Nothing();
   }
 
   /**
