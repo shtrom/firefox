@@ -314,7 +314,11 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
     }
 
     fun continueToHttpSite(): BrowserPage {
-        return clickPageContent("Continue to HTTP Site")
+        // The HTTPS-Only error page renders its buttons only once the HTTP->HTTPS upgrade has failed,
+        // which lands after navigateToPage() has already returned on engineView. mozClick does a single
+        // non-polling lookup, so wait for the button to render first, otherwise the click races it.
+        verifyPageContent(HTTPS_ERROR_CONTINUE)
+        return clickPageContent(HTTPS_ERROR_CONTINUE)
     }
 
     fun verifyOpenLinkInAppPrompt(appName: String): BrowserPage {
@@ -472,6 +476,7 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
 
     private companion object {
         const val HTTPS_ERROR_GO_BACK = "Go Back (Recommended)"
+        const val HTTPS_ERROR_CONTINUE = "Continue to HTTP Site"
         const val AUTOFILL_RETRY_COUNT = 3
         const val FONT_SIZE_STEP_SIZE = 5
         const val FONT_SIZE_MIN_VALUE = 50
