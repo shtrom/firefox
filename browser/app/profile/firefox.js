@@ -2385,6 +2385,10 @@ pref("browser.smartwindow.worldcup.timeoutMs", 2000);
 pref("browser.smartwindow.searchQuery.endpointURL", "https://mlpa-prod-prod-mozilla.freetls.fastly.net/v1/search");
 pref("browser.smartwindow.searchQuery.apiKey", "");
 
+// Smart Window: when true, search_the_web returns Exa snippets straight to the
+// main assistant instead of generating an answer from background page reads.
+pref("browser.smartwindow.searchTheWebFast", false);
+
 // Smart Window Logging
 pref("browser.smartwindow.chatHistory.loglevel", "Error");
 pref("browser.smartwindow.chatStore.loglevel", "Error");
