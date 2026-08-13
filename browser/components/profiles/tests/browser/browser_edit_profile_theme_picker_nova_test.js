@@ -600,3 +600,100 @@ add_task(async function test_device_appearance_changes_theme_swatch_colors() {
   await uninstallTheme();
   await SpecialPowers.popPrefEnv();
 });
+
+add_task(async function test_theme_picker_responds_to_external_theme_change() {
+  if (!AppConstants.MOZ_SELECTABLE_PROFILES) {
+    ok(true, "Skipping because !AppConstants.MOZ_SELECTABLE_PROFILES");
+    return;
+  }
+
+  await setup();
+
+  let uninstallSun = await installNovaTheme(NOVA_SUN_ID);
+
+  const { SelectableProfileService } = ChromeUtils.importESModule(
+    "resource:///modules/profiles/SelectableProfileService.sys.mjs"
+  );
+  let initialThemeFg = SelectableProfileService.currentProfile.theme.themeFg;
+  let initialThemeBg = SelectableProfileService.currentProfile.theme.themeBg;
+
+  await BrowserTestUtils.withNewTab(
+    {
+      gBrowser,
+      url: "about:editprofile",
+    },
+    async browser => {
+      await SpecialPowers.spawn(browser, [], async () => {
+        let editProfileCard =
+          content.document.querySelector("edit-profile-card").wrappedJSObject;
+
+        await ContentTaskUtils.waitForCondition(
+          () => editProfileCard.initialized,
+          "Waiting for edit-profile-card to be initialized"
+        );
+
+        let themePicker =
+          editProfileCard.shadowRoot.querySelector("theme-picker");
+        await ContentTaskUtils.waitForCondition(
+          () => themePicker?.themes?.length > 0,
+          "Waiting for theme picker to be populated"
+        );
+
+        Assert.equal(
+          themePicker.activeThemeId,
+          "default-theme@mozilla.org",
+          "Should start with default theme"
+        );
+      });
+
+      let sunAddon = await lazy.AddonManager.getAddonByID(NOVA_SUN_ID);
+      await sunAddon.enable();
+
+      await SpecialPowers.spawn(browser, [], async () => {
+        let editProfileCard =
+          content.document.querySelector("edit-profile-card").wrappedJSObject;
+        let themePicker =
+          editProfileCard.shadowRoot.querySelector("theme-picker");
+
+        await ContentTaskUtils.waitForCondition(
+          () => themePicker.activeThemeId === "nova-sun@mozilla.org",
+          "Waiting for theme picker to update to sun theme"
+        );
+
+        Assert.equal(
+          themePicker.activeThemeId,
+          "nova-sun@mozilla.org",
+          "Theme picker should update to sun theme"
+        );
+
+        let sunThemeItem = themePicker.shadowRoot.querySelector(
+          "moz-visual-picker-item[value='nova-sun@mozilla.org']"
+        );
+        Assert.ok(sunThemeItem.checked, "Sun theme should be checked");
+      });
+
+      await TestUtils.waitForCondition(
+        () =>
+          SelectableProfileService.currentProfile.theme.themeFg !==
+            initialThemeFg ||
+          SelectableProfileService.currentProfile.theme.themeBg !==
+            initialThemeBg,
+        "Waiting for profile theme colors to update"
+      );
+
+      Assert.notEqual(
+        SelectableProfileService.currentProfile.theme.themeFg,
+        initialThemeFg,
+        "Profile theme foreground color should change"
+      );
+      Assert.notEqual(
+        SelectableProfileService.currentProfile.theme.themeBg,
+        initialThemeBg,
+        "Profile theme background color should change"
+      );
+    }
+  );
+
+  await uninstallSun();
+  await SpecialPowers.popPrefEnv();
+});
