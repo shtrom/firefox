@@ -47,7 +47,7 @@ import:
             enabled: true
         - channel: release
           value:
-            enabled: false
+            enabled: true
 
 features:
   homescreen:
