@@ -269,6 +269,7 @@ class CrashInfo:
         self.remove_symbols = False
         self.brief_output = False
         self.keep = keep
+        self.use_debug_symbols = False
 
         if dump_save_path is None:
             dump_save_path = os.environ.get("MINIDUMP_SAVE_PATH", None)
@@ -292,6 +293,9 @@ class CrashInfo:
                 # output is a bit noisy and verbose for that use-case,
                 # so we should use the --brief output.
                 self.brief_output = True
+                # We can also probably rely on debug symbols found within
+                # locally-referenced files.
+                self.use_debug_symbols = True
 
         self.stackwalk_binary = stackwalk_binary
 
@@ -420,6 +424,9 @@ class CrashInfo:
             command.append(f"--cyborg={json_output}")
             if self.brief_output:
                 command.append("--brief")
+
+            if self.use_debug_symbols:
+                command.append("--use-local-debuginfo")
 
             # The minidump path and symbols_path values are positional and come last
             # (in practice the CLI parsers are more permissive, but best not to
