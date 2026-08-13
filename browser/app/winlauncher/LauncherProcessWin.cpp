@@ -12,20 +12,15 @@
 #include "mozilla/NativeNt.h"
 #include "mozilla/SafeMode.h"
 #include "mozilla/UniquePtr.h"
-#include "mozilla/Vector.h"
 #include "mozilla/WindowsConsole.h"
 #include "mozilla/WindowsProcessMitigations.h"
 #include "mozilla/WindowsVersion.h"
 #include "mozilla/WinHeaderOnlyUtils.h"
 #include "nsWindowsHelpers.h"
-#include "mozilla/mscom/ProcessRuntime.h"
 
 #include <windows.h>
 #include <processthreadsapi.h>
 #include <shlwapi.h>
-#include <appmodel.h>
-#include <wrl.h>
-#include <wrl/wrappers/corewrappers.h>
 
 #include "DllBlocklistInit.h"
 #include "ErrorHandler.h"
@@ -40,11 +35,6 @@
 
 #if defined(MOZ_SANDBOX)
 #  include "mozilla/sandboxing/SandboxInitialization.h"
-#endif
-
-#ifndef __MINGW32__
-#  include <windows.applicationmodel.h>
-#  include <windows.applicationmodel.activation.h>
 #endif
 
 namespace mozilla {
@@ -365,72 +355,6 @@ static mozilla::Maybe<bool> RunAsLauncherProcess(int& argc, wchar_t** argv) {
 
 namespace mozilla {
 
-#ifndef __MINGW32__
-/**
- * Find the kind of app activation that started this packaged app.
- * If there are problems getting this information, defaults to
- * ActivationKind_Launch.
- */
-static ABI::Windows::ApplicationModel::Activation::ActivationKind
-getPackagedAppActivationKind() {
-  using namespace ABI::Windows::ApplicationModel;
-  using namespace ABI::Windows::ApplicationModel::Activation;
-  using namespace ABI::Windows::Foundation;
-  using namespace Microsoft::WRL;
-  using namespace Microsoft::WRL::Wrappers;
-
-  ActivationKind result = ActivationKind_Launch;
-  mozilla::mscom::ProcessRuntime mscom(
-      mozilla::mscom::ProcessRuntime::ProcessCategory::
-          Launcher);  // We have a COM apartment to work in
-
-  if (!mscom) {
-    // COM initialization failed, so we can't ask the OS about the activation
-    // kind. Return the default value.
-    return result;
-  }
-  ComPtr<IAppInstanceStatics> appInstanceStatics;
-  HRESULT hr = GetActivationFactory(
-      HStringReference(RuntimeClass_Windows_ApplicationModel_AppInstance).Get(),
-      &appInstanceStatics);
-  if (SUCCEEDED(hr)) {
-    ComPtr<IActivatedEventArgs> activatedEventArgs;
-    hr = appInstanceStatics->GetActivatedEventArgs(&activatedEventArgs);
-    if (SUCCEEDED(hr)) {
-      ActivationKind kind;
-      hr = activatedEventArgs->get_Kind(&kind);
-      if (SUCCEEDED(hr)) {
-        result = kind;
-      }
-    }
-  }
-
-  return result;
-}
-#endif
-
-/**
- * For MSIX-packaged apps, we can ask the OS directly for the app's launch
- * method. This is good, because older versions of Windows 10 don't
- * support passing launch args as part of the launch-on-login command in
- * the manifest.
- */
-static bool IsPackagedAppAutostarted() {
-#ifndef __MINGW32__
-  UINT32 length = 0;
-
-  LONG rc = GetCurrentPackageFullName(&length, NULL);
-  if (rc != APPMODEL_ERROR_NO_PACKAGE) {
-    // There is a package name, so this is a packaged app. Check
-    // to see if it was a startup task.
-    using namespace ABI::Windows::ApplicationModel::Activation;
-    ActivationKind kind = getPackagedAppActivationKind();
-    return kind == ActivationKind_StartupTask;
-  }
-#endif
-  return false;
-}
-
 Maybe<int> LauncherMain(int& argc, wchar_t* argv[]) {
   EnsureBrowserCommandlineSafe(argc, argv);
 
@@ -442,9 +366,6 @@ Maybe<int> LauncherMain(int& argc, wchar_t* argv[]) {
     // A child process should not instantiate LauncherRegistryInfo.
     return Nothing();
   }
-  const bool hasAutostartArg =
-      mozilla::CheckArg(argc, argv, "os-autostart", nullptr,
-                        mozilla::CheckArgFlag::None) == mozilla::ARG_FOUND;
 
   // Called from the launcher process *and* the browser process.
   EnablePreferLoadFromSystem32IfCompatible();
@@ -478,9 +399,6 @@ Maybe<int> LauncherMain(int& argc, wchar_t* argv[]) {
 #endif
 
   mozilla::UseParentConsole();
-
-  const bool packagedAppAutostartedWithoutArg =
-      hasAutostartArg ? false : IsPackagedAppAutostarted();
 
   if (!SetArgv0ToFullBinaryPath(argv)) {
     HandleLauncherError(LAUNCHER_ERROR_GENERIC());
@@ -551,14 +469,9 @@ Maybe<int> LauncherMain(int& argc, wchar_t* argv[]) {
     return Nothing();
   }
 #endif  // defined(MOZ_LAUNCHER_PROCESS)
-  mozilla::Vector<const wchar_t*, 1> extraArgs;
-  if (packagedAppAutostartedWithoutArg) {
-    // This append won't fail, but the compiler enforces nodiscard.
-    MOZ_RELEASE_ASSERT(extraArgs.append(L"-os-autostart"));
-  }
+
   // Now proceed with setting up the parameters for process creation
-  UniquePtr<wchar_t[]> cmdLine(
-      MakeCommandLine(argc, argv, extraArgs.length(), extraArgs.begin()));
+  UniquePtr<wchar_t[]> cmdLine(MakeCommandLine(argc, argv));
   if (!cmdLine) {
     HandleLauncherError(LAUNCHER_ERROR_GENERIC());
     return Nothing();
