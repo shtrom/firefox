@@ -296,8 +296,7 @@ UniquePtr<MozFramebuffer> SurfacePoolWayland::CreateFramebufferForTexture(
     // framebuffer that shares it.
     if (auto buffer = GetDepthBufferForSharing(aProofOfLock, aGL, aSize)) {
       return MozFramebuffer::CreateForBackingWithSharedDepthAndStencil(
-          aSize, 0, LOCAL_GL_TEXTURE_2D, aTexture, buffer,
-          MozFramebuffer::ColorBackingOwnership::Borrowed);
+          aSize, 0, LOCAL_GL_TEXTURE_2D, aTexture, buffer);
     }
   }
 
@@ -306,7 +305,7 @@ UniquePtr<MozFramebuffer> SurfacePoolWayland::CreateFramebufferForTexture(
   // mDepthBuffers.
   UniquePtr<MozFramebuffer> fb = MozFramebuffer::CreateForBacking(
       aGL, aSize, 0, aNeedsDepthBuffer, aNeedsDepthBuffer, LOCAL_GL_TEXTURE_2D,
-      aTexture, MozFramebuffer::ColorBackingOwnership::Borrowed);
+      aTexture);
   if (fb && fb->GetDepthAndStencilBuffer()) {
     mDepthBuffers.AppendElement(
         DepthBufferEntry{aGL, aSize, fb->GetDepthAndStencilBuffer().get()});
