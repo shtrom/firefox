@@ -75,7 +75,7 @@ add_task(async function test_keywordOutcome() {
     await waitForCtaResolved(browser);
 
     is(action(SEARCH_CTA_ACTIONS.KEYWORDS), 1, "action=keywords recorded");
-    is(reason("ok"), 1, "reason=ok recorded");
+    is(reason("keywords_found"), 1, "reason=keywords_found recorded");
     is(shown(), 1, "shown recorded for a displayed CTA");
     is(action(SEARCH_CTA_ACTIONS.NONE), null, "action=none not recorded");
     // No dynamic labels means no url/keywords/host could leak as a label.

@@ -517,8 +517,8 @@ security.ui.neterror:
     type: labeled_counter
     description: >
       Why the online dnsNotFound Search CTA reached its action, recorded once
-      per eligible page load, paired with search_cta_action. "ok" is a keyword
-      query; no_path and no_meaningful_keywords fall back to the host;
+      per eligible page load, paired with search_cta_action. keywords_found is a
+      keyword query; no_path and no_meaningful_keywords fall back to the host;
       host_unusable and search_unavailable show no CTA. engine_not_general means
       a default search engine exists but is special-purpose (e.g. Wikipedia), so
       the CTA is not shown. connectivity_unconfirmed means we could not confirm
@@ -528,7 +528,7 @@ security.ui.neterror:
       thing and is counted by search_cta_click_aborted, not here. Records only
       the reason label, never content.
     labels:
-      - ok
+      - keywords_found
       - no_path
       - no_meaningful_keywords
       - host_unusable

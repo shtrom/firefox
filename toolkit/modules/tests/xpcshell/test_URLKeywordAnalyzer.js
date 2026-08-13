@@ -39,7 +39,7 @@ add_task(function test_descriptive_path_includes_host_tokens() {
   checkAnalyze("https://shop.wildernessgear.com/mountain-hiking-boots", {
     action: SEARCH_CTA_ACTIONS.KEYWORDS,
     query: "mountain hiking boots shop wildernessgear",
-    reason: SEARCH_CTA_REASONS.OK,
+    reason: SEARCH_CTA_REASONS.KEYWORDS_FOUND,
   });
 });
 
@@ -47,7 +47,7 @@ add_task(function test_www_is_stripped_from_host_tokens() {
   checkAnalyze("https://www.wildernessgear.com/tents", {
     action: SEARCH_CTA_ACTIONS.KEYWORDS,
     query: "tents wildernessgear",
-    reason: SEARCH_CTA_REASONS.OK,
+    reason: SEARCH_CTA_REASONS.KEYWORDS_FOUND,
   });
 });
 
@@ -59,7 +59,7 @@ add_task(function test_keyword_query_is_capped() {
     {
       action: SEARCH_CTA_ACTIONS.KEYWORDS,
       query: "alpha bravo charlie delta echo foxtrot golf hotel",
-      reason: SEARCH_CTA_REASONS.OK,
+      reason: SEARCH_CTA_REASONS.KEYWORDS_FOUND,
     }
   );
 });
@@ -93,7 +93,7 @@ add_task(function test_alphanumeric_tokens_strip_digits_in_place() {
   checkAnalyze("https://shop.wildernessgear.com/mp3-covid19-reviews", {
     action: SEARCH_CTA_ACTIONS.KEYWORDS,
     query: "mp covid reviews shop wildernessgear",
-    reason: SEARCH_CTA_REASONS.OK,
+    reason: SEARCH_CTA_REASONS.KEYWORDS_FOUND,
   });
 });
 
@@ -105,7 +105,7 @@ add_task(function test_query_string_and_fragment_never_tokenized() {
     {
       action: SEARCH_CTA_ACTIONS.KEYWORDS,
       query: "tents shop wildernessgear",
-      reason: SEARCH_CTA_REASONS.OK,
+      reason: SEARCH_CTA_REASONS.KEYWORDS_FOUND,
     }
   );
 });

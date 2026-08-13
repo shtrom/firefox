@@ -58,7 +58,7 @@ export const SEARCH_CTA_ACTIONS = Object.freeze({
  * converted to underscores.
  */
 export const SEARCH_CTA_REASONS = Object.freeze({
-  OK: "ok",
+  KEYWORDS_FOUND: "keywords-found",
   NO_PATH: "no-path",
   NO_MEANINGFUL_KEYWORDS: "no-meaningful-keywords",
   HOST_UNUSABLE: "host-unusable",
@@ -202,7 +202,7 @@ export function analyzeURL(
     return {
       action: SEARCH_CTA_ACTIONS.KEYWORDS,
       query: [...keywords].slice(0, MAX_SEARCH_KEYWORDS).join(" "),
-      reason: SEARCH_CTA_REASONS.OK,
+      reason: SEARCH_CTA_REASONS.KEYWORDS_FOUND,
     };
   }
 

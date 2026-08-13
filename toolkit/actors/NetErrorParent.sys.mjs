@@ -322,10 +322,8 @@ export class NetErrorParent extends EscapablePageParent {
   /**
    * Record the content-free decision outcome: one action count, one reason
    * count, and a shown count when a CTA is displayed. The query-derivation
-   * module owns keywords/host/none and ok/no-path/no-meaningful-keywords/
-   * host-unusable; the decision layer maps a usable host with no engine to
-   * none/search-unavailable, and adds connectivity-unconfirmed. The decision
-   * layer's own reasons live in DECISION_REASONS.
+   * module owns SEARCH_CTA_ACTIONS and SEARCH_CTA_REASONS. This layer maps a
+   * usable host with no engine onto NONE, and owns DECISION_REASONS.
    *
    * @param {string} action The action from the query-derivation module.
    * @param {string} reason The reason from the query-derivation module.
