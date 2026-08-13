@@ -169,6 +169,8 @@ class PerfProfile(RaptorProfiling):
             "record",
             "-a",  # Profile system-wide
             "-g",  # Record call graphs (stack traces)
+            "-k",  # Use monotonic clock, same clock as marker file and jitdump timestamps
+            "mono",
             "-F",  # Sampling frequency
             str(SAMPLING_FREQUENCY),  # Hz
             "-o",
