@@ -485,6 +485,32 @@ class MenuNavigationMiddlewareTest {
         }
 
     @Test
+    fun `GIVEN a custom tab WHEN showing the summarization popup THEN use the custom tab id`() =
+        runTest {
+            val customTab = createCustomTab(url = "https://www.mozilla.org")
+            val store = createStore(
+                scope = this,
+                menuState = MenuState(
+                    browserMenuState = BrowserMenuState(selectedTab = customTab),
+                ),
+            )
+
+            store.dispatch(MenuAction.Navigate.Summarizer)
+            testScheduler.advanceUntilIdle()
+
+            verify {
+                navController.navigate(
+                    MenuDialogFragmentDirections.actionMenuDialogFragmentToSummarizationFragment(
+                        sessionId = customTab.id,
+                    ),
+                    navOptions = NavOptions.Builder()
+                        .setPopUpTo(R.id.externalAppBrowserFragment, false)
+                        .build(),
+                )
+            }
+        }
+
+    @Test
     fun `WHEN navigate to share action is dispatched THEN share use case is invoked and onDismiss is called`() = runTest {
         val title = "Mozilla"
         val url = "https://mozilla.org"

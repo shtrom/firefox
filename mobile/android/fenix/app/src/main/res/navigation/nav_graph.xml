@@ -1665,6 +1665,11 @@
         android:id="@+id/summarizationFragment"
         android:name="org.mozilla.fenix.summarization.SummarizationFragment">
         <argument
+            android:name="sessionId"
+            android:defaultValue="@null"
+            app:nullable="true"
+            app:argType="string" />
+        <argument
             android:name="fromShake"
             android:defaultValue="false"
             app:nullable="false"

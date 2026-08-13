@@ -303,9 +303,11 @@ class MenuNavigationMiddleware(
                     navController.nav(
                         id = R.id.menuDialogFragment,
                         directions = MenuDialogFragmentDirections
-                            .actionMenuDialogFragmentToSummarizationFragment(),
+                            .actionMenuDialogFragmentToSummarizationFragment(
+                                sessionId = currentState.browserMenuState?.selectedTab?.id,
+                            ),
                         navOptions = NavOptions.Builder()
-                            .setPopUpTo(R.id.browserFragment, false)
+                            .setPopUpTo(currentState.browserDestinationId(), false)
                             .build(),
                     )
                 }

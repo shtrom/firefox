@@ -841,6 +841,15 @@ class MenuDialogFragment : BottomSheetDialogFragment() {
                                     },
                                     translationInfo = translationInfo,
                                     isReaderViewActive = isReaderViewActive,
+                                    summarizationMenuState = summarizationMenuState,
+                                    onSummarizePageMenuExposed = {
+                                        menuStore.dispatch(
+                                            MenuAction.OnSummarizationMenuExposed,
+                                        )
+                                    },
+                                    onSummarizePageClick = {
+                                        menuStore.dispatch(MenuAction.Navigate.Summarizer)
+                                    },
                                 )
                             }
                         }
