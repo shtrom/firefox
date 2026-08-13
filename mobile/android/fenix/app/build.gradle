@@ -473,6 +473,7 @@ dependencies {
     implementation project(':components:feature-addons')
     implementation project(':components:feature-app-links')
     implementation project(':components:feature-autofill')
+    implementation project(':components:feature-automotive')
     implementation project(':components:feature-awesomebar')
     implementation project(':components:feature-contextmenu')
     implementation project(':components:feature-customtabs')
