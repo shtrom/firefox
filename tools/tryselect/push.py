@@ -312,9 +312,8 @@ def push_to_try(
     if GIT_BACKING_ENABLED and _is_hg_try(remote) and vcs.name != "hg":
         # Push the source tree to the git-backing repo so tasks can clone from GitHub,
         # then inject the resulting git rev into the try_task_config parameters.
-        prefix = "try"
         metrics.mach_try.git_backing_push_duration.start()
-        backing_sha = push_to_git_backing(prefix=prefix)
+        backing_sha = push_to_git_backing(prefix="try")
         metrics.mach_try.git_backing_push_duration.stop()
 
         try_task_config = try_task_config or {}
@@ -322,7 +321,6 @@ def push_to_try(
         try_task_config.setdefault("parameters", {})
         try_task_config["parameters"]["head_git_repository"] = GIT_BACKING_REPO
         try_task_config["parameters"]["head_git_rev"] = backing_sha
-        try_task_config["parameters"]["head_git_ref"] = f"{prefix}/{backing_sha}"
 
     if try_task_config:
         changed_files["try_task_config.json"] = (

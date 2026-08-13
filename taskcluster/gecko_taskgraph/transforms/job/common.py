@@ -89,7 +89,7 @@ def _rewrite_repo_configs_for_git_mirror(config, repo_configs):
                 base_repository=config.params["head_git_repository"],
                 head_repository=config.params["head_git_repository"],
                 head_rev=config.params["head_git_rev"],
-                head_ref=config.params.get("head_git_ref"),
+                head_ref=None,
                 type="git",
                 ssh_secret_name=None,
             )
