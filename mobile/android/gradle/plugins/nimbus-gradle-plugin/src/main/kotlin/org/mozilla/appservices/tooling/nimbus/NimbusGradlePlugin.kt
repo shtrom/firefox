@@ -10,13 +10,15 @@ import com.android.build.gradle.LibraryPlugin
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
-import org.mozilla.conventions.isTruthy
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ValueSource
 import org.gradle.api.provider.ValueSourceParameters
+import org.gradle.api.tasks.TaskProvider
+import org.mozilla.conventions.isTruthy
 import java.io.File
 
 abstract class ApplicationServicesVersionSource : ValueSource<String, ApplicationServicesVersionSource.Parameters> {
@@ -162,8 +164,8 @@ class NimbusPlugin : Plugin<Project> {
 
     private fun setupAndroidVariants(
         project: Project,
-        validateTask: org.gradle.api.tasks.TaskProvider<NimbusValidateTask>,
-        configureGenerateTask: (org.gradle.api.tasks.TaskProvider<NimbusFeaturesTask>) -> Unit
+        validateTask: TaskProvider<NimbusValidateTask>,
+        configureGenerateTask: (TaskProvider<NimbusFeaturesTask>) -> Unit
     ) {
         project.plugins.withType(AppPlugin::class.java).configureEach {
             val androidComponents = project.extensions.getByType(AndroidComponentsExtension::class.java)
@@ -179,7 +181,7 @@ class NimbusPlugin : Plugin<Project> {
     private fun setupVariantsForComponents(
         androidComponents: AndroidComponentsExtension<*, *, *>,
         project: Project,
-        configureGenerateTask: (org.gradle.api.tasks.TaskProvider<NimbusFeaturesTask>) -> Unit
+        configureGenerateTask: (TaskProvider<NimbusFeaturesTask>) -> Unit
     ) {
         androidComponents.onVariants(androidComponents.selector().all()) { variant ->
             val generateTask = project.tasks.register(
@@ -215,13 +217,13 @@ class NimbusPlugin : Plugin<Project> {
     private fun getOrCreateAssembleToolsFmlBinary(
         rootProject: Project,
         applicationServicesDir: Property<String>
-    ): Provider<org.gradle.api.file.RegularFile> {
+    ): Provider<RegularFile> {
         val taskName = "assembleNimbusTools"
         val propertyName = "nimbus.fmlBinaryProvider"
 
         if (rootProject.extensions.extraProperties.has(propertyName)) {
             @Suppress("UNCHECKED_CAST")
-            return rootProject.extensions.extraProperties[propertyName] as Provider<org.gradle.api.file.RegularFile>
+            return rootProject.extensions.extraProperties[propertyName] as Provider<RegularFile>
         }
 
         val asVersionProvider = getProjectVersionProvider(rootProject)
@@ -319,7 +321,7 @@ class NimbusPlugin : Plugin<Project> {
         })
     }
 
-    private fun setupValidateTask(project: Project): org.gradle.api.tasks.TaskProvider<NimbusValidateTask> {
+    private fun setupValidateTask(project: Project): TaskProvider<NimbusValidateTask> {
         return project.tasks.register("nimbusValidate", NimbusValidateTask::class.java) {
             description = "Validate the Nimbus feature manifest for the app"
             group = "Nimbus"
