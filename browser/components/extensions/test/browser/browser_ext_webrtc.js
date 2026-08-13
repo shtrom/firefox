@@ -5,14 +5,8 @@ const { PermissionTestUtils } = ChromeUtils.importESModule(
 );
 
 add_setup(async function () {
-  // media.navigator.streams.fake avoids needing a real microphone, and is what
-  // makes WebRTCParent.checkOSPermission skip the macOS camera/microphone
-  // authorization check, which can never succeed in automation.
   await SpecialPowers.pushPrefEnv({
-    set: [
-      ["media.navigator.permission.fake", true],
-      ["media.navigator.streams.fake", true],
-    ],
+    set: [["media.navigator.permission.fake", true]],
   });
 });
 

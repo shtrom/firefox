@@ -23,14 +23,11 @@ let extData = {
   },
 
   background: function () {
-    browser.contextMenus.create(
-      {
-        id: "clickme-page",
-        title: "Click me!",
-        contexts: ["all"],
-      },
-      () => browser.test.sendMessage("menus-created")
-    );
+    browser.contextMenus.create({
+      id: "clickme-page",
+      title: "Click me!",
+      contexts: ["all"],
+    });
     browser.tabs.query({ active: true, currentWindow: true }, tabs => {
       const tabId = tabs[0].id;
 
@@ -61,7 +58,6 @@ if (AppConstants.platform == "macosx") {
 add_task(async function pageaction_popup_contextmenu() {
   let extension = ExtensionTestUtils.loadExtension(extData);
   await extension.startup();
-  await extension.awaitMessage("menus-created");
   await extension.awaitMessage("action-shown");
 
   await clickPageAction(extension, window);
@@ -80,7 +76,6 @@ add_task(async function pageaction_popup_contextmenu() {
 add_task(async function pageaction_popup_contextmenu_hidden_items() {
   let extension = ExtensionTestUtils.loadExtension(extData);
   await extension.startup();
-  await extension.awaitMessage("menus-created");
   await extension.awaitMessage("action-shown");
 
   await clickPageAction(extension, window);
@@ -112,7 +107,6 @@ add_task(async function pageaction_popup_contextmenu_hidden_items() {
 add_task(async function pageaction_popup_image_contextmenu() {
   let extension = ExtensionTestUtils.loadExtension(extData);
   await extension.startup();
-  await extension.awaitMessage("menus-created");
   await extension.awaitMessage("action-shown");
 
   await clickPageAction(extension, window);
