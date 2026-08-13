@@ -240,9 +240,6 @@ export const FEATURES = {
   "search-answer-generation": {
     engineId: "smart-openai",
   },
-  aitab: {
-    engineId: "aitab-engine",
-  },
 };
 
 /**

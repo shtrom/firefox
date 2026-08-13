@@ -22,9 +22,6 @@ import {
   WORLD_CUP_LIVE,
   WORLD_CUP_TOOLS,
   WORLD_CUP_PREF,
-  AITAB_PREF,
-  AITAB_TOOLS,
-  GENERATE_AITAB,
   ADD_MEMORY,
   SEARCH_THE_WEB,
   SEARCH_THE_WEB_FAST_PREF,
@@ -142,7 +139,6 @@ const FEATURE_GATED_HANDLERS = new Map([
   [WORLD_CUP_MATCHES, toolFns.worldCupMatches],
   [WORLD_CUP_LIVE, toolFns.worldCupLive],
   [SEARCH_THE_WEB, runSearchTheWeb],
-  [GENERATE_AITAB, toolFns.createAITab],
 ]);
 
 /**
@@ -173,9 +169,6 @@ function filterFeatureGatedTools(tools) {
         ? structuredClone(SEARCH_THE_WEB_TOOL_CONFIG_FAST)
         : t
     );
-  }
-  if (!Services.prefs.getBoolPref(AITAB_PREF, false)) {
-    filtered = filtered.filter(t => !AITAB_TOOLS.has(t.function?.name));
   }
   return filtered;
 }

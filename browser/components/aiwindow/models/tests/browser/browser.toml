@@ -1,6 +1,5 @@
 [DEFAULT]
 support-files = [
-  "aitab_viewer_stub.html",
   "head.js",
 ]
 prefs = [
@@ -9,9 +8,6 @@ prefs = [
 
 ["browser_MemoriesManager.js"]
 ["browser_MemoriesSchedulers.js"]
-["browser_aitab_generation.js"]
-["browser_aitab_schema_override.js"]
-["browser_aitab_validation.js"]
 ["browser_conversation.js"]
 ["browser_conversation_starters.js"]
 ["browser_conversation_stream.js"]
