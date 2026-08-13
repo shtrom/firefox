@@ -2491,7 +2491,7 @@ struct Expect {
 nsresult Validate(mozIStorageConnection& aConn) {
   QM_TRY_INSPECT(const int32_t& schemaVersion,
                  GetEffectiveSchemaVersion(aConn));
-  QM_TRY(OkIf(schemaVersion == kLatestSchemaVersion), NS_ERROR_FAILURE);
+  QM_TRY(OkIf(schemaVersion == kLatestSchemaVersion), NS_ERROR_FILE_CORRUPTED);
 
 #ifdef DEBUG
   // This is the schema we expect the database at the latest version to
