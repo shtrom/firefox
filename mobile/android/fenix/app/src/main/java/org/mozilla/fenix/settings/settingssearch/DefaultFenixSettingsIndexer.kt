@@ -44,7 +44,7 @@ class DefaultFenixSettingsIndexer(
         val newSettings = mutableListOf<SettingsSearchItem>()
 
         for (preferenceFileInformation in preferenceFileInformationList) {
-            val settingFileParser = getXmlParserForFile(preferenceFileInformation.xmlResourceId)
+            val settingFileParser = preferenceFileInformation.xmlResourceId?.let(::getXmlParserForFile)
             if (settingFileParser != null) {
                 parseXmlFile(settingFileParser, preferenceFileInformation, newSettings)
             }
@@ -86,7 +86,6 @@ class DefaultFenixSettingsIndexer(
 
     private fun getXmlParserForFile(xmlResourceId: Int): XmlResourceParser? {
         try {
-            if (xmlResourceId == 0) return null
             return context.resources.getXml(xmlResourceId)
         } catch (e: Resources.NotFoundException) {
             logger.error("Failed to find XML resource $xmlResourceId", e)
@@ -362,9 +361,6 @@ class DefaultFenixSettingsIndexer(
             PreferenceFileInformation.TabsPreferences,
             PreferenceFileInformation.TrackingProtectionPreferences,
             PreferenceFileInformation.SaveLoginsPreferences,
-            PreferenceFileInformation.DataChoicesPreferences,
-            PreferenceFileInformation.AIControlsPreferences,
-            PreferenceFileInformation.FirefoxLabsPreferences,
         )
 
         /**
