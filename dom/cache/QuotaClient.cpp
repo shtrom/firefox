@@ -13,6 +13,7 @@
 #include "mozilla/dom/quota/QuotaCommon.h"
 #include "mozilla/dom/quota/QuotaManager.h"
 #include "mozilla/dom/quota/UsageInfo.h"
+#include "mozilla/glean/DomCacheMetrics.h"
 #include "mozilla/ipc/BackgroundParent.h"
 #include "nsIFile.h"
 #include "nsThreadUtils.h"
@@ -90,7 +91,12 @@ Result<int64_t, nsresult> GetPaddingSizeFromDB(
       // Predicate.
       ([](const nsresult rv) { return !IsNonFatalSchemaError(rv); }),
       // Fallback.
-      ([](const nsresult) -> Result<Ok, nsresult> {
+      ([](const nsresult rv) -> Result<Ok, nsresult> {
+        if (rv == NS_ERROR_DOM_NOT_SUPPORTED_ERR) {
+          glean::cache::schema_init_error.Get("future_version"_ns).Add();
+        } else {
+          glean::cache::schema_init_error.Get("other"_ns).Add();
+        }
         return Err(NS_ERROR_FILE_CORRUPTED);
       })));
 
@@ -131,7 +137,12 @@ Result<int64_t, nsresult> GetTotalDiskUsageFromDB(
       // Predicate.
       ([](const nsresult rv) { return !IsNonFatalSchemaError(rv); }),
       // Fallback.
-      ([](const nsresult) -> Result<Ok, nsresult> {
+      ([](const nsresult rv) -> Result<Ok, nsresult> {
+        if (rv == NS_ERROR_DOM_NOT_SUPPORTED_ERR) {
+          glean::cache::schema_init_error.Get("future_version"_ns).Add();
+        } else {
+          glean::cache::schema_init_error.Get("other"_ns).Add();
+        }
         return Err(NS_ERROR_FILE_CORRUPTED);
       })));
 

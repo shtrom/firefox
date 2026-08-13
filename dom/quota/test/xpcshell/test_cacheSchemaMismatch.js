@@ -17,11 +17,14 @@ async function testSteps() {
   const cachesSQLitePath = cacheDirPath + "/caches.sqlite";
 
   Services.prefs.setBoolPref("dom.quotaManager.loadQuotaFromCache", false);
+  Services.fog.initializeFOG();
 
   let request = init();
   await requestFinished(request);
 
-  async function runScenario(schemaVersion, label) {
+  async function runScenario(schemaVersion, label, expectedLabel) {
+    Services.fog.testResetFOG();
+
     info("Creating origin and cache directory structure");
 
     let cacheDir = getRelativeFile(cacheDirPath);
@@ -49,17 +52,36 @@ async function testSteps() {
           `Got: ${e.resultName}`
       );
     }
+
+    if (expectedLabel) {
+      Assert.equal(
+        Glean.cache.schemaInitError[expectedLabel].testGetValue(),
+        1,
+        `Should record one ${expectedLabel} schema init error for ${label}`
+      );
+    } else {
+      Assert.equal(
+        Glean.cache.schemaInitError.future_version.testGetValue(),
+        undefined,
+        `Should not record future_version error for ${label}`
+      );
+      Assert.equal(
+        Glean.cache.schemaInitError.other.testGetValue(),
+        undefined,
+        `Should not record other error for ${label}`
+      );
+    }
   }
 
   const scenarios = [
-    [99, "future schema version (99)"],
-    [30, "old but valid schema version (30)"],
-    [0, "no schema (version 0)"],
+    [99, "future schema version (99)", "future_version"],
+    [30, "old but valid schema version (30)", "other"],
+    [0, "no schema (version 0)", null],
   ];
 
-  for (const [version, label] of scenarios) {
+  for (const [version, label, expectedLabel] of scenarios) {
     info(`Scenario: ${label}`);
-    await runScenario(version, label);
+    await runScenario(version, label, expectedLabel);
 
     info("Clearing for next scenario");
     request = clear();
