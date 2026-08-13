@@ -191,7 +191,6 @@ TEST(VideoFrameTest, CopyToNV12AlignedStride)
   const int32_t kYStride = GetAlignedStride<32>(kWidth, 1).value();
   const int32_t kUVStride = GetAlignedStride<32>(uvWidth, 2).value();
 
-
   const size_t yPlaneSize = kYStride * kHeight;
   const size_t uvPlaneSize = kUVStride * uvHeight;
   nsTArray<uint8_t> buf;
