@@ -268,7 +268,8 @@
          LTR title to the left edge in an RTL locale. */
       justify-self: start;
 
-      > .urlbarView-title-separator {
+      .urlbarView-row:not([sponsored]) & > .urlbarView-title-separator,
+      .urlbarView-row[sponsored]:is([selected], :hover) & > .urlbarView-title-separator {
         display: none;
       }
     }
