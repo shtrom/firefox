@@ -63,15 +63,6 @@ abstract class NimbusPluginExtension {
     abstract val channels: MapProperty<String, String>
 
     /**
-     * The filename of the manifest ingested by Experimenter.
-     *
-     * If this is a relative name, it is taken to be relative to the project's root directory.
-     *
-     * If missing, this defaults to `.experimenter.json`.
-     */
-    abstract val experimenterManifest: Property<String>
-
-    /**
      * The file(s) containing the version(s)/ref(s)/location(s) for additional repositories.
      *
      * This defaults to an empty list.
