@@ -1648,6 +1648,11 @@
         android:id="@+id/translationsDialogFragment"
         android:name="org.mozilla.fenix.translations.TranslationsDialogFragment">
         <argument
+            android:name="sessionId"
+            android:defaultValue="@null"
+            app:nullable="true"
+            app:argType="string" />
+        <argument
             android:name="translationsDialogAccessPoint"
             android:defaultValue="Translations"
             app:argType="org.mozilla.fenix.translations.TranslationsDialogAccessPoint" />

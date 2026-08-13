@@ -839,6 +839,8 @@ class MenuDialogFragment : BottomSheetDialogFragment() {
                                             },
                                         )
                                     },
+                                    translationInfo = translationInfo,
+                                    isReaderViewActive = isReaderViewActive,
                                 )
                             }
                         }
