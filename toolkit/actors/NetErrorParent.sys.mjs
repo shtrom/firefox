@@ -17,6 +17,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   HomePage: "resource:///modules/HomePage.sys.mjs",
   SearchService: "moz-src:///toolkit/components/search/SearchService.sys.mjs",
   SearchUIUtils: "moz-src:///browser/components/search/SearchUIUtils.sys.mjs",
+  analyzeURL: "resource://gre/modules/URLKeywordAnalyzer.sys.mjs",
 });
 
 // The search access point this page reports to search telemetry. The source is
@@ -236,33 +237,27 @@ export class NetErrorParent extends EscapablePageParent {
 
   /**
    * Resolve the data the online dnsNotFound Search CTA needs from the failed
-   * URL: the registrable domain shown in the page intro, the query the Search
-   * button would run, and whether a usable default search engine exists.
-   * Content-free and computed locally. Nothing is sent to the network here.
+   * URL: the derived search action/query/reason (from the query-derivation
+   * module), the registrable domain shown in the page intro, and whether a
+   * usable default search engine exists. Content-free and computed locally.
+   * Nothing is sent to the network here.
    *
    * @param {string} failedURL The address that failed to resolve.
-   * @returns {Promise<object>} { domain, query, hasEngine }
+   * @returns {Promise<object>} { action, query, reason, domain, hasEngine }
    */
   async getSearchCTAInfo(failedURL) {
-    // Both the intro and the query name the registrable domain, so
-    // "xyz.example.com" is shown and searched as "example.com". The query
-    // gains real keyword derivation in bug 2055651.
+    const { action, query, reason } = lazy.analyzeURL(failedURL);
+
+    // The intro names the registrable domain, so "xyz.example.com" is shown as
+    // "example.com", even when the derived query is keyword-based.
     let domain = null;
-    let query = null;
     try {
-      let uri = Services.io.newURI(failedURL);
-      try {
-        domain = Services.eTLD.getBaseDomainFromHost(uri.host);
-      } catch (e) {
-        // IP literal, single-label host, etc. Bug 2055637 keeps a minimal,
-        // working CTA by falling back to the host; host-viability blocking
-        // arrives with the query-derivation module in bug 2055651.
-        domain = uri.host || null;
-      }
-      query = domain;
+      domain = Services.eTLD.getBaseDomain(Services.io.newURI(failedURL));
     } catch (e) {
+      // Unparseable URL, IP literal, single-label host, and so on. Content
+      // falls back to the hostname it already has, and the analyzer blocks the
+      // CTA for these hosts anyway.
       domain = null;
-      query = null;
     }
 
     let hasEngine = false;
@@ -273,7 +268,7 @@ export class NetErrorParent extends EscapablePageParent {
       } catch (e) {}
     }
 
-    return { domain, query, hasEngine };
+    return { action, query, reason, domain, hasEngine };
   }
 
   /**

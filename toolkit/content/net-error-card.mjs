@@ -45,6 +45,11 @@ const SEARCH_CTA_ENABLED = RPMGetBoolPref(
   "browser.netError.searchCTA.enabled",
   false
 );
+// The only value of the parent's action vocabulary this page has to recognize,
+// meaning no CTA. It is duplicated rather than imported because the vocabulary
+// lives in URLKeywordAnalyzer, which is chrome-only, and this module runs in the
+// content process. It arrives as a string over IPC either way.
+const SEARCH_CTA_ACTION_NONE = "none";
 
 export class NetErrorCard extends MozLitElement {
   static properties = {
@@ -60,6 +65,7 @@ export class NetErrorCard extends MozLitElement {
     searchCTAHasEngine: { type: Boolean },
     searchCTADomain: { type: String },
     searchCTAQuery: { type: String },
+    searchCTAAction: { type: String },
   };
 
   static queries = {
@@ -142,6 +148,7 @@ export class NetErrorCard extends MozLitElement {
     this.searchCTAHasEngine = false;
     this.searchCTADomain = "";
     this.searchCTAQuery = "";
+    this.searchCTAAction = "";
   }
 
   async getUpdateComplete() {
@@ -306,7 +313,11 @@ export class NetErrorCard extends MozLitElement {
 
   // Whether the Search button itself will render, once the parent has answered.
   hasSearchCTAButton() {
-    return this.searchCTAResolved && this.searchCTAHasEngine;
+    return (
+      this.searchCTAResolved &&
+      this.searchCTAHasEngine &&
+      this.searchCTAAction !== SEARCH_CTA_ACTION_NONE
+    );
   }
 
   async requestSearchCTAInfo() {
@@ -315,6 +326,7 @@ export class NetErrorCard extends MozLitElement {
       const info = await RPMSendQuery("SearchCTA:GetInfo", { url: failedURL });
       this.searchCTADomain = info.domain ?? this.hostname;
       this.searchCTAQuery = info.query ?? "";
+      this.searchCTAAction = info.action ?? SEARCH_CTA_ACTION_NONE;
       this.searchCTAHasEngine = !!info.hasEngine;
     } catch (e) {
       // If the parent can't answer, fall back to a Reload-only page.
@@ -884,6 +896,8 @@ export class NetErrorCard extends MozLitElement {
       </div>`;
     }
 
+    // No engine, or the query-derivation module rejected the host: keep the
+    // page (with Reload) but render no Search button.
     if (!this.hasSearchCTAButton()) {
       return null;
     }
