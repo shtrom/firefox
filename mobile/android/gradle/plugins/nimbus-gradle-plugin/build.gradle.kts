@@ -4,7 +4,6 @@
 
 plugins {
     `kotlin-dsl`
-    `maven-publish`
 }
 
 gradlePlugin {
