@@ -1920,7 +1920,8 @@ HttpChannelChild::ConnectParent(uint32_t registrarId) {
     return NS_ERROR_FAILURE;
   }
 
-  ContentChild* cc = static_cast<ContentChild*>(gNeckoChild->Manager());
+  ContentChild* cc =
+      mozilla::ipc::ActorCast<ContentChild>(gNeckoChild->Manager());
   if (cc->IsShuttingDown()) {
     return NS_ERROR_FAILURE;
   }
@@ -2487,7 +2488,8 @@ nsresult HttpChannelChild::ContinueAsyncOpen() {
     return NS_ERROR_FAILURE;
   }
 
-  ContentChild* cc = static_cast<ContentChild*>(gNeckoChild->Manager());
+  ContentChild* cc =
+      mozilla::ipc::ActorCast<ContentChild>(gNeckoChild->Manager());
   if (cc->IsShuttingDown()) {
     return NS_ERROR_FAILURE;
   }
@@ -2890,7 +2892,8 @@ CacheEntryWriteHandleChild::OpenAlternativeOutputStream(
   if (!CanSend()) {
     return NS_ERROR_NOT_AVAILABLE;
   }
-  if (static_cast<ContentChild*>(gNeckoChild->Manager())->IsShuttingDown()) {
+  if (mozilla::ipc::ActorCast<ContentChild>(gNeckoChild->Manager())
+          ->IsShuttingDown()) {
     return NS_ERROR_NOT_AVAILABLE;
   }
 
@@ -2914,7 +2917,8 @@ HttpChannelChild::GetCacheEntryWriteHandle(nsICacheEntryWriteHandle** _retval) {
   if (!CanSend()) {
     return NS_ERROR_NOT_AVAILABLE;
   }
-  if (static_cast<ContentChild*>(gNeckoChild->Manager())->IsShuttingDown()) {
+  if (mozilla::ipc::ActorCast<ContentChild>(gNeckoChild->Manager())
+          ->IsShuttingDown()) {
     return NS_ERROR_NOT_AVAILABLE;
   }
 
@@ -2942,7 +2946,8 @@ HttpChannelChild::OpenAlternativeOutputStream(const nsACString& aType,
   if (!CanSend()) {
     return NS_ERROR_NOT_AVAILABLE;
   }
-  if (static_cast<ContentChild*>(gNeckoChild->Manager())->IsShuttingDown()) {
+  if (mozilla::ipc::ActorCast<ContentChild>(gNeckoChild->Manager())
+          ->IsShuttingDown()) {
     return NS_ERROR_NOT_AVAILABLE;
   }
 

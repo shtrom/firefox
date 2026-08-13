@@ -447,7 +447,7 @@ RemoteMediaManagerChild* RemoteMediaDataEncoder::GetManager() {
   if (!mChild->CanSend()) {
     return nullptr;
   }
-  return static_cast<RemoteMediaManagerChild*>(mChild->Manager());
+  return mozilla::ipc::ActorCast<RemoteMediaManagerChild>(mChild->Manager());
 }
 
 bool RemoteMediaDataEncoder::IsHardwareAccelerated(
