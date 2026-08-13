@@ -12,13 +12,6 @@
          note; the baseline itself still grandfathers the underlying findings. -->
     <issue id="LintBaseline" severity="ignore" />
 
-    <issue id="InvalidPackage">
-        <!-- Sentry uses one SDK for desktop and Android apps, so it compiles against parts of the Java
-             SDK that are absent from the Android SDK and silently skips those calls at runtime. -->
-        <ignore path="**/sentry*.jar" />
-        <ignore path="**/junit*.jar" />
-    </issue>
-
     <!-- Lints that don't apply to our translation process -->
     <issue id="MissingTranslation" severity="ignore" />
     <issue id="MissingQuantity" severity="ignore" />
@@ -39,7 +32,6 @@
     </issue>
     <issue id="BrandUsage" severity="error">
         <ignore path="**/values-*/strings.xml" />
-        <ignore path="**/values-*/*_strings.xml" />
         <ignore path="**/values/*_strings.xml" />
         <ignore path="**/values/app.xml" />
     </issue>
@@ -49,13 +41,11 @@
     <issue id="IncorrectStraightDoubleQuote" severity="error">
         <ignore path="**/values-*/strings.xml" />
         <ignore path="**/values/*_strings.xml" />
-        <ignore path="**/values/arrays.xml" />
     </issue>
     <issue id="IncorrectEllipsisCharacter" severity="error">
         <ignore path="**/values-*/strings.xml" />
     </issue>
     <issue id="BlankString" severity="error">
-        <ignore path="**/values-*/strings.xml" />
         <ignore path="**/values/*_strings.xml" />
         <ignore path="**/values/preference_keys.xml" />
     </issue>
@@ -107,8 +97,6 @@
     <issue id="UnpackedNativeCode" severity="informational" />
     <issue id="LogConditional" severity="informational" />
     <issue id="UseSparseArrays" severity="informational" /> <!-- hurts developer convenience of kotlin Map... -->
-    <issue id="TooDeepLayout" severity="warning" /> <!-- depth can be customized -->
-    <issue id="TooManyViews" severity="warning" /> <!-- view count can be customized -->
 
     <!-- Ignore due to baseline bloat and lack of actionability -->
     <issue id="VectorPath" severity="ignore" />
@@ -117,9 +105,4 @@
     <issue id="ModifierParameter" severity="error" />
     <issue id="PrivateResource" severity="error" />
 
-    <!-- Ignore support library lint bug: https://code.google.com/p/android/issues/detail?id=227098
-         (Present in 25.3.1, despite claims of being fixed in 23) -->
-    <issue id="InconsistentLayout">
-        <ignore path="**/appcompat-v7/**/res/layout/notification_template_custom_big.xml"/>
-    </issue>
 </lint>
