@@ -66,7 +66,6 @@ export class UrlbarView {
 
     this.resultMenu.addEventListener("click", this);
     this.resultMenu.addEventListener("showing", this);
-    this.resultMenu.addEventListener("hidden", this);
 
     this.input.toggleAttribute("noresults", true);
 
@@ -4550,10 +4549,6 @@ export class UrlbarView {
       ".urlbarView-splitbutton"
     );
 
-    this.resultMenu.lastAnchorNode
-      .closest(".urlbarView-row")
-      .toggleAttribute("menu-trigger", true);
-
     if (splitButton) {
       // Show the commands the are defined in its Split Button.
       let mainButton = splitButton.firstElementChild;
@@ -4584,7 +4579,7 @@ export class UrlbarView {
 
       // Set the context-menu-trigger attribute on the row so it can be styled
       // as if it were hovered while the context menu is open.
-      row.toggleAttribute("menu-trigger", true);
+      row.toggleAttribute("context-menu-trigger", true);
 
       // Disable the context menu if the result does not return url.
       let url = lazy.UrlbarUtils.getUrlFromResult(row.result, {
@@ -4600,17 +4595,11 @@ export class UrlbarView {
     }
   }
 
-  on_hidden() {
-    this.resultMenu.lastAnchorNode
-      .closest(".urlbarView-row")
-      .toggleAttribute("menu-trigger", false);
-  }
-
   on_popuphiding(event) {
     if (event.target.id == "urlbarView-context-menu") {
       event.target.triggerNode
         .closest(".urlbarView-row")
-        ?.toggleAttribute("menu-trigger", false);
+        ?.toggleAttribute("context-menu-trigger", false);
     }
   }
 
