@@ -138,11 +138,11 @@ def check_for_crashes(
             stackwalk_output.append("Process pid: {}".format(info.pid or "unknown"))
             if info.reason:
                 stackwalk_output.append(f"Mozilla crash reason: {info.reason}")
+            if info.stackwalk_stdout is not None:
+                stackwalk_output.append(info.stackwalk_stdout)
             if info.stackwalk_stderr:
                 stackwalk_output.append("stderr from minidump-stackwalk:")
                 stackwalk_output.append(info.stackwalk_stderr)
-            elif info.stackwalk_stdout is not None:
-                stackwalk_output.append(info.stackwalk_stdout)
             if info.stackwalk_retcode is not None and info.stackwalk_retcode != 0:
                 stackwalk_output.append(
                     f"minidump-stackwalk exited with return code {info.stackwalk_retcode}"
