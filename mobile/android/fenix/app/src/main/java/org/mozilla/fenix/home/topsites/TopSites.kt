@@ -106,6 +106,11 @@ internal fun TopSites(
     // Expansion only applies to the grid.
     val showExpandToggle = state.showExpandToggle && !isPager
 
+    // Expanded, the tile follows the last shortcut as it does in the shortcuts library. Collapsed,
+    // it is only shown when it fits within the truncated grid.
+    val showAddShortcut = state.isAddShortcutEnabled &&
+        (isExpanded || state.topSites.size < TOP_SITES_TO_SHOW)
+
     TopSites(
         topSites = state.topSites,
         topSiteColors = state.colors,
@@ -126,7 +131,7 @@ internal fun TopSites(
         onAddShortcutClicked = onAddShortcutClicked,
         onExpandToggleClick = { isExpanded = !isExpanded },
         isPager = isPager,
-        showAddShortcut = state.showAddShortcut,
+        showAddShortcut = showAddShortcut,
         showExpandToggle = showExpandToggle,
         isExpanded = isExpanded,
     )
