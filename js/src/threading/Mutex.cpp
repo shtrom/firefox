@@ -15,13 +15,13 @@ bool js::Mutex::Init() { return HeldMutexStack.init(); }
 
 void js::Mutex::lock() {
   preLockChecks();
-  impl_.lock();
+  MutexImpl::lock();
   postLockChecks();
 }
 
 bool js::Mutex::tryLock() {
   preLockChecks();
-  if (!impl_.tryLock()) {
+  if (!MutexImpl::tryLock()) {
     return false;
   }
 
@@ -53,7 +53,7 @@ void js::Mutex::postLockChecks() {
 
 void js::Mutex::unlock() {
   preUnlockChecks();
-  impl_.unlock();
+  MutexImpl::unlock();
 }
 
 void js::Mutex::preUnlockChecks() {

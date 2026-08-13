@@ -23,27 +23,12 @@ struct MutexId {
   uint32_t order;
 };
 
-// The Mutex class below wraps mozilla::detail::MutexImpl, but we don't want to
-// use public inheritance, and private inheritance is problematic because
-// Mutex's friends can access the private parent class as if it was public
-// inheritance.  So use a data member, but for Mutex to access the data member
-// we must override it and make Mutex a friend.
-class MutexImpl : public mozilla::detail::MutexImpl {
- protected:
-  MutexImpl() = default;
-
-  friend class Mutex;
-};
-
 // In debug builds, js::Mutex is a wrapper over MutexImpl that checks correct
 // locking order is observed.
 //
 // The class maintains a per-thread stack of currently-held mutexes to enable it
 // to check this.
-class Mutex {
- private:
-  MutexImpl impl_;
-
+class Mutex : private mozilla::detail::MutexImpl {
 #ifdef DEBUG
   const MutexId id_;
   Mutex* prev_ = nullptr;
@@ -63,15 +48,31 @@ class Mutex {
   void unlock();
   bool isOwnedByCurrentThread() const;
   void assertOwnedByCurrentThread() const;
+
+  // Call |func| which unlocks and re-locks the mutex, adding checks before and
+  // afterwards.
+  template <typename F>
+  void checkScopedUnlock(F&& func) {
+    preUnlockChecks();
+    func();
+    preLockChecks();
+    postLockChecks();
+  }
+
 #else
   static bool Init() { return true; }
 
   explicit Mutex(const MutexId& id) {}
 
-  void lock() { impl_.lock(); }
-  bool tryLock() { return impl_.tryLock(); }
-  void unlock() { impl_.unlock(); }
+  void lock() { MutexImpl::lock(); }
+  bool tryLock() { return MutexImpl::tryLock(); }
+  void unlock() { MutexImpl::unlock(); }
   void assertOwnedByCurrentThread() const {};
+
+  template <typename F>
+  void checkScopedUnlock(F&& func) {
+    func();
+  }
 #endif
 
  private:
