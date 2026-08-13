@@ -4,8 +4,10 @@
 
 package org.mozilla.fenix.ui.efficiency.selectors
 
+import org.mozilla.fenix.helpers.DataGenerationHelper.getStringResource
 import org.mozilla.fenix.ui.efficiency.helpers.Selector
 import org.mozilla.fenix.ui.efficiency.helpers.SelectorStrategy
+import mozilla.components.feature.downloads.R as downloadsR
 
 object NotificationSelectors {
 
@@ -25,14 +27,39 @@ object NotificationSelectors {
     // Everything below matches system UI rather than app UI, so the res-ids are raw "android:id/..."
     // values, not packageName-prefixed ones.
 
-    // A notification's action button (PAUSE / RESUME / CANCEL on a download). Every action button on a
-    // notification shares the res-id android:id/action0, so the label is what distinguishes them.
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
-    fun NOTIFICATION_ACTION_BUTTON(action: String = "") = Selector(
+    // A download notification's control buttons. Every action button on a notification shares the
+    // res-id android:id/action0, so the label distinguishes them. The labels come from the app strings
+    // and are title-case ("Pause"/"Resume"/"Cancel"); the shade matches button text case-sensitively,
+    // so the exact resource string must be used rather than an upper-cased literal.
+    val DOWNLOAD_NOTIFICATION_PAUSE_BUTTON = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_RAW_RES_ID_CONTAINING_TEXT,
         value = "android:id/action0",
-        secondaryValue = action,
-        description = "Notification action button: $action",
+        secondaryValue = getStringResource(downloadsR.string.mozac_feature_downloads_button_pause),
+        description = "Download notification Pause button",
+        groups = listOf(),
+    )
+
+    val DOWNLOAD_NOTIFICATION_RESUME_BUTTON = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR_WITH_RAW_RES_ID_CONTAINING_TEXT,
+        value = "android:id/action0",
+        secondaryValue = getStringResource(downloadsR.string.mozac_feature_downloads_button_resume),
+        description = "Download notification Resume button",
+        groups = listOf(),
+    )
+
+    val DOWNLOAD_NOTIFICATION_CANCEL_BUTTON = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR_WITH_RAW_RES_ID_CONTAINING_TEXT,
+        value = "android:id/action0",
+        secondaryValue = getStringResource(downloadsR.string.mozac_feature_downloads_button_cancel),
+        description = "Download notification Cancel button",
+        groups = listOf(),
+    )
+
+    // The "Download paused" line a download notification shows once it is paused.
+    val DOWNLOAD_PAUSED_NOTIFICATION = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR_WITH_TEXT_CONTAINS,
+        value = getStringResource(downloadsR.string.mozac_feature_downloads_paused_notification_text),
+        description = "Download paused notification text",
         groups = listOf(),
     )
 
@@ -57,7 +84,10 @@ object NotificationSelectors {
 
     val all = listOf(
         NOTIFICATION_SHADE,
-        NOTIFICATION_ACTION_BUTTON(),
+        DOWNLOAD_NOTIFICATION_PAUSE_BUTTON,
+        DOWNLOAD_NOTIFICATION_RESUME_BUTTON,
+        DOWNLOAD_NOTIFICATION_CANCEL_BUTTON,
+        DOWNLOAD_PAUSED_NOTIFICATION,
         SYSTEM_NOTIFICATION(),
         NOTIFICATION_TOP_LINE(),
     )
