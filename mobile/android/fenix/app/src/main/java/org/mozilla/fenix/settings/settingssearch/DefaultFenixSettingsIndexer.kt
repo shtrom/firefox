@@ -8,6 +8,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.Resources
 import android.content.res.XmlResourceParser
+import androidx.annotation.VisibleForTesting
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import mozilla.components.support.base.log.logger.Logger
@@ -83,6 +84,15 @@ class DefaultFenixSettingsIndexer(
             .distinctBy { it.preferenceKey }
         }
     }
+
+    /**
+     * Get every indexed setting, unfiltered by any query.
+     *
+     * @return List of all [SettingsSearchItem]s built by the last [indexAllSettings] call, or an
+     * empty list if it has not run yet.
+     */
+    @VisibleForTesting
+    internal fun indexedSettings(): List<SettingsSearchItem> = settings.get()
 
     private fun getXmlParserForFile(xmlResourceId: Int): XmlResourceParser? {
         try {
