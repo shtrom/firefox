@@ -26,8 +26,8 @@ const USER_ACTION_TYPES = {
 // earned moments; the longer, denser one is reserved for the count milestones
 // and the daily cap. Durations are tiered in _Privacy.scss.
 const CELEBRATION_TIERS = {
-  brief: { sparkleCount: 12, sparkleStaggerMs: 65 },
-  major: { sparkleCount: 24, sparkleStaggerMs: 60 },
+  brief: { sparkleCount: 5, sparkleStaggerMs: 65 },
+  major: { sparkleCount: 12, sparkleStaggerMs: 60 },
 };
 
 // Count-up duration. Slower than the 750ms prototype so the number is

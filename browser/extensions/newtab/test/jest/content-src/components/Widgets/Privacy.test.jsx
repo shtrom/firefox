@@ -601,7 +601,7 @@ describe("Privacy widget celebration", () => {
     ).toBeTruthy();
     expect(
       cap.container.querySelectorAll(".privacy-celebration-sparkle")
-    ).toHaveLength(24);
+    ).toHaveLength(12);
   });
 
   it("keeps the tier and ring it started with when the message changes mid-animation", () => {
@@ -622,7 +622,7 @@ describe("Privacy widget celebration", () => {
     );
     expect(
       container.querySelectorAll(".privacy-celebration-sparkle")
-    ).toHaveLength(24);
+    ).toHaveLength(12);
     expect(container.querySelector(".privacy-celebration-ring")).toBeTruthy();
 
     // A refresh swaps an ordinary tip in under the running animation. Same
@@ -642,7 +642,7 @@ describe("Privacy widget celebration", () => {
 
     expect(
       container.querySelectorAll(".privacy-celebration-sparkle")
-    ).toHaveLength(24);
+    ).toHaveLength(12);
     expect(container.querySelector(".privacy-celebration-ring")).toBeTruthy();
     expect(container.querySelector("article.privacy").className).toContain(
       "is-major-celebration"
@@ -872,7 +872,7 @@ describe("Privacy widget celebration tiers", () => {
       {},
       withCategory("milestoneMonth", "newtab-privacy-message-milestone-month")
     );
-    expect(sparkleCount(container)).toBe(24);
+    expect(sparkleCount(container)).toBe(12);
     expect(container.querySelector("article.privacy").className).toContain(
       "is-major-celebration"
     );
@@ -884,7 +884,7 @@ describe("Privacy widget celebration tiers", () => {
       {},
       withCategory("firstProtection", "newtab-privacy-message-first-protection")
     );
-    expect(sparkleCount(container)).toBe(12);
+    expect(sparkleCount(container)).toBe(5);
     expect(container.querySelector("article.privacy").className).not.toContain(
       "is-major-celebration"
     );
@@ -896,7 +896,7 @@ describe("Privacy widget celebration tiers", () => {
       {},
       withCategory("streak", "newtab-privacy-message-streak")
     );
-    expect(sparkleCount(container)).toBe(12);
+    expect(sparkleCount(container)).toBe(5);
   });
 
   it("still tilts the kit on the brief-tier earned moments", () => {
