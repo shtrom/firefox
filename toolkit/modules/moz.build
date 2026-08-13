@@ -214,6 +214,7 @@ EXTRA_JS_MODULES += [
     "Troubleshoot.sys.mjs",
     "UpdateUtils.sys.mjs",
     "URLKeywordAnalyzer.sys.mjs",
+    "URLKeywordStopWords.sys.mjs",
     "UrlUtils.sys.mjs",
     "WebChannel.sys.mjs",
 ]

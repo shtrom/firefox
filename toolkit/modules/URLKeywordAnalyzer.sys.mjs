@@ -19,17 +19,21 @@
  * Behavior:
  *   - Host viability is checked first: IP literals, single-label hosts, and
  *     reserved/special-use TLDs yield { none, null, host-unusable } (no CTA).
- *   - Keywords are extracted from the path with the in-tree CountVectorizer
- *     (tokenize + English stopword filtering). When the path yields keywords,
- *     the host's tokens (non-www subdomains kept, public suffix dropped) are
- *     appended so the query is anchored to the site, capped at
- *     MAX_SEARCH_KEYWORDS with the path first.
+ *   - Keywords are extracted from the path: the in-tree CountVectorizer does the
+ *     tokenizing only (lowercasing, digit stripping, Unicode-aware splitting)
+ *     with its stopword filtering disabled, and we apply our own stopword list
+ *     (SEARCH_CTA_STOP_WORDS, forked from the shared list; see bug 2057648).
+ *     When the path yields keywords, the host's tokens (non-www subdomains kept,
+ *     public suffix dropped) are appended so the query is anchored to the site,
+ *     capped at MAX_SEARCH_KEYWORDS with the path first.
  *   - When the path yields nothing meaningful, the query falls back to the
  *     registrable domain only ({ host, ... }); userinfo, port, query string,
  *     and fragment are never inspected.
  *
  * Uses the effective-TLD service, so this runs with chrome privileges.
  */
+
+import { SEARCH_CTA_STOP_WORDS } from "resource://gre/modules/URLKeywordStopWords.sys.mjs";
 
 const lazy = {};
 
@@ -78,20 +82,10 @@ const RESERVED_TLDS = new Set([
   "onion",
 ]);
 
-// URL-structure words dropped on top of CountVectorizer's English stopword
-// filtering: they describe page plumbing, not the page's topic.
-const URL_STRUCTURE_WORDS = new Set([
-  "blog",
-  "page",
-  "index",
-  "home",
-  "article",
-  "category",
-  "tag",
-  "www",
-  "http",
-  "https",
-]);
+// Everything removed from derived keywords: function words plus URL-structure
+// words, both carried by our forked list. Built once at load; the CTA
+// deliberately does not use CountVectorizer's shared stopwords (bug 2057648).
+const STOP_WORDS = new Set(SEARCH_CTA_STOP_WORDS);
 
 /**
  * Return the registrable domain for a usable host, or null when the host fails
@@ -117,19 +111,20 @@ function getRegistrableDomain(uri) {
 }
 
 /**
- * Tokenize a string into ordered, de-duplicated keywords using the in-tree
- * CountVectorizer (lowercasing, digit stripping, Unicode-aware splitting, and
- * English stopword filtering), then drop URL-structure words.
+ * Tokenize a string into ordered, de-duplicated keywords. CountVectorizer does
+ * the tokenizing only (lowercasing, digit stripping, Unicode-aware splitting)
+ * with its stopword filtering disabled; stopwords are then removed with our own
+ * STOP_WORDS list.
  *
  * @param {string} text The text to tokenize.
  * @returns {string[]} Keywords in first-appearance order.
  */
 function keywordsFrom(text) {
-  const cv = new lazy.CountVectorizer();
+  // Pass an empty stopword arg so CountVectorizer acts as a pure tokenizer; we
+  // own the stopword filtering (bug 2057648).
+  const cv = new lazy.CountVectorizer([]);
   cv.fit([text]);
-  return cv
-    .getFeatureNamesOut()
-    .filter(word => word && !URL_STRUCTURE_WORDS.has(word));
+  return cv.getFeatureNamesOut().filter(word => word && !STOP_WORDS.has(word));
 }
 
 /**
