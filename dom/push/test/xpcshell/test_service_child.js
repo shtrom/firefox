@@ -25,17 +25,21 @@ function generateKey() {
 }
 
 function run_test() {
-  do_get_profile();
+  if (isParent) {
+    do_get_profile();
+  }
   run_next_test();
 }
 
-add_test(function setUp() {
-  db = PushServiceWebSocket.newPushDB();
-  registerCleanupFunction(() => {
-    return db.drop().then(_ => db.close());
+if (isParent) {
+  add_test(function setUp() {
+    db = PushServiceWebSocket.newPushDB();
+    registerCleanupFunction(() => {
+      return db.drop().then(_ => db.close());
+    });
+    setUpServiceInParent(PushService, db).then(run_next_test, run_next_test);
   });
-  setUpServiceInParent(PushService, db).then(run_next_test, run_next_test);
-});
+}
 
 add_test(function test_subscribe_success() {
   do_test_pending();
@@ -341,6 +345,8 @@ add_test(function test_subscribe_missing_principal() {
   );
 });
 
-add_test(function tearDown() {
-  tearDownServiceInParent(db).then(run_next_test, run_next_test);
-});
+if (isParent) {
+  add_test(function tearDown() {
+    tearDownServiceInParent(db).then(run_next_test, run_next_test);
+  });
+}

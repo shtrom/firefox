@@ -7,12 +7,8 @@
 
 #include "mozilla/dom/MessageSender.h"
 
-class nsIDOMProcessParent;
-class nsIPrincipal;
-
 namespace mozilla::dom {
 
-class GlobalObject;
 class ParentProcessMessageManager;
 
 /**
@@ -47,8 +43,6 @@ class ProcessMessageManager final : public MessageSender {
   int32_t OsPid() const { return mPid; }
 
   bool IsInProcess() const { return mInProcess; }
-
-  nsIDOMProcessParent* ProcessParent();
 
  private:
   int32_t mPid;

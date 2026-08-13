@@ -130,6 +130,7 @@ Object.assign(PushServiceParent.prototype, {
     "Push:Register",
     "Push:Registration",
     "Push:Unregister",
+    "Push:Clear",
     "Push:ReportError",
   ],
 
@@ -232,7 +233,7 @@ Object.assign(PushServiceParent.prototype, {
     this.service.reportDeliveryError(messageId, reason);
   },
 
-  async receiveMessage(message) {
+  receiveMessage(message) {
     if (!this._isValidMessage(message)) {
       return;
     }
@@ -241,27 +242,22 @@ Object.assign(PushServiceParent.prototype, {
       this.reportDeliveryError(data.messageId, data.reason);
       return;
     }
-    try {
-      if (!target.processParent.validatePrincipal(data.principal)) {
-        throw new Error("Invalid principal");
-      }
-      ChromeUtils.validateServiceWorkerScope(
-        data.principal,
-        Services.io.newURI(data.scope)
-      );
-      const result = await this._handleRequest(name, data.principal, data);
-      target.sendAsyncMessage(this._getResponseName(name, "OK"), {
-        requestID: data.requestID,
-        result,
-      });
-    } catch (error) {
-      console.error(error);
-      target.sendAsyncMessage(this._getResponseName(name, "KO"), {
-        requestID: data.requestID,
-        result: error.result,
-        errorMessage: error.message,
-      });
-    }
+    this._handleRequest(name, data.principal, data)
+      .then(
+        result => {
+          target.sendAsyncMessage(this._getResponseName(name, "OK"), {
+            requestID: data.requestID,
+            result,
+          });
+        },
+        error => {
+          target.sendAsyncMessage(this._getResponseName(name, "KO"), {
+            requestID: data.requestID,
+            result: error.result,
+          });
+        }
+      )
+      .catch(console.error);
   },
 
   ensureReady() {
@@ -413,6 +409,14 @@ Object.assign(PushServiceContent.prototype, {
       scope,
       requestID,
       principal,
+    });
+  },
+
+  clearForDomain(domain, callback) {
+    let requestID = this._addRequest(callback);
+    this._mm.sendAsyncMessage("Push:Clear", {
+      domain,
+      requestID,
     });
   },
 
