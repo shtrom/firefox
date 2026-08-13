@@ -201,16 +201,16 @@ abstract class NimbusAssembleToolsTask : DefaultTask() {
         val binaryFile = fmlBinary.get().asFile
         val zipTree = archiveOperations.zipTree(archiveFileObj)
         val visitedFilePaths = mutableListOf<String>()
-        zipTree.matching { patterns ->
-            patterns.include(unzipSpec.includePatterns.get())
-        }.visit { details: FileVisitDetails ->
-            if (!details.isDirectory) {
+        zipTree.matching {
+            include(unzipSpec.includePatterns.get())
+        }.visit {
+            if (!isDirectory) {
                 if (visitedFilePaths.isEmpty()) {
                     binaryFile.parentFile?.mkdirs()
-                    details.copyTo(binaryFile)
+                    copyTo(binaryFile)
                     binaryFile.setExecutable(true)
                 }
-                visitedFilePaths.add(details.relativePath.toString())
+                visitedFilePaths.add(relativePath.toString())
             }
         }
 

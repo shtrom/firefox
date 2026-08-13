@@ -138,13 +138,13 @@ class NimbusPlugin : Plugin<Project> {
 
             // Configure the task with proper file type
             validateTask.configure {
-                it.fmlBinary.set(project.layout.file(fmlBinaryString.map({ s -> File(s) })))
+                fmlBinary.set(project.layout.file(fmlBinaryString.map { s -> File(s) }))
             }
 
             setupAndroidVariants(project, validateTask) { generateTask ->
                 generateTask.configure {
-                    it.fmlBinary.set(project.layout.file(fmlBinaryString.map({ s -> File(s) })))
-                    it.dependsOn(validateTask)
+                    fmlBinary.set(project.layout.file(fmlBinaryString.map { s -> File(s) }))
+                    dependsOn(validateTask)
                 }
             }
         } else {
@@ -155,13 +155,13 @@ class NimbusPlugin : Plugin<Project> {
                 // Gradle tracks the dependency on the `nimbus-fml` binary that the
                 // `assembleNimbusTools` task produces implicitly; we don't need an
                 // explicit `dependsOn` here.
-                it.fmlBinary.set(fmlBinaryProvider)
+                fmlBinary.set(fmlBinaryProvider)
             }
 
             setupAndroidVariants(project, validateTask) { generateTask ->
                 generateTask.configure {
-                    it.fmlBinary.set(fmlBinaryProvider)
-                    it.dependsOn(validateTask)
+                    fmlBinary.set(fmlBinaryProvider)
+                    dependsOn(validateTask)
                 }
             }
         }
@@ -192,26 +192,26 @@ class NimbusPlugin : Plugin<Project> {
             val generateTask = project.tasks.register(
                 "nimbusFeatures${variant.name.replaceFirstChar { it.uppercase() }}",
                 NimbusFeaturesTask::class.java
-            ) { task ->
-                task.description = "Generate Kotlin data classes for Nimbus enabled features"
-                task.group = "Nimbus"
+            ) {
+                description = "Generate Kotlin data classes for Nimbus enabled features"
+                group = "Nimbus"
 
-                task.doFirst {
-                    task.logger.info("Nimbus FML generating Kotlin")
-                    task.logger.info("manifest             {}", task.inputFile.get().asFile)
-                    task.logger.info("cache dir            {}", task.cacheDir.get().asFile)
-                    task.logger.info("repo file(s)         {}", task.repoFiles.files.joinToString())
-                    task.logger.info("channel              {}", task.channel.get())
+                doFirst {
+                    logger.info("Nimbus FML generating Kotlin")
+                    logger.info("manifest             {}", inputFile.get().asFile)
+                    logger.info("cache dir            {}", cacheDir.get().asFile)
+                    logger.info("repo file(s)         {}", repoFiles.files.joinToString())
+                    logger.info("channel              {}", channel.get())
                 }
 
-                task.doLast {
-                    task.logger.info("outputFile    {}", task.outputDir.get().asFile)
+                doLast {
+                    logger.info("outputFile    {}", outputDir.get().asFile)
                 }
 
-                configureCommonTaskProperties(task, project, "features${variant.name.replaceFirstChar { it.uppercase() }}")
+                configureCommonTaskProperties(this, project, "features${variant.name.replaceFirstChar { it.uppercase() }}")
                 val extension = project.extensions.getByType(NimbusPluginExtension::class.java)
-                task.channel.set(extension.channels.getting(variant.name).orElse(variant.name))
-                task.outputDir.set(project.layout.buildDirectory.dir("generated/source/nimbus/${variant.name}/kotlin"))
+                channel.set(extension.channels.getting(variant.name).orElse(variant.name))
+                outputDir.set(project.layout.buildDirectory.dir("generated/source/nimbus/${variant.name}/kotlin"))
             }
             configureGenerateTask(generateTask)
             variant.sources.java?.addGeneratedSourceDirectory(generateTask, NimbusFeaturesTask::outputDir)
@@ -240,9 +240,9 @@ class NimbusPlugin : Plugin<Project> {
         val rootBuildDir = rootProject.layout.buildDirectory
         val rootProjectLayout = rootProject.layout
 
-        val taskProvider = rootProject.tasks.register(taskName, NimbusAssembleToolsTask::class.java) { task ->
-            task.group = "Nimbus"
-            task.description = "Fetch the Nimbus FML tools from Application Services"
+        val taskProvider = rootProject.tasks.register(taskName, NimbusAssembleToolsTask::class.java) {
+            group = "Nimbus"
+            description = "Fetch the Nimbus FML tools from Application Services"
 
             val cacheDir = asVersionProvider.map { version: String ->
                 val absoluteCachePath = File(topsrcdir, ".gradle/caches/nimbus-fml/$version")
@@ -252,40 +252,40 @@ class NimbusPlugin : Plugin<Project> {
                 rootProjectLayout.projectDirectory.dir(relativeFromProject)
             }
 
-            task.archiveFile.set(cacheDir.map { it.file("nimbus-fml.zip") })
-            task.hashFile.set(cacheDir.map { it.file("nimbus-fml.sha256") })
-            task.fmlBinary.set(rootBuildDir.flatMap { buildDir ->
-                asVersionProvider.zip(task.platform) { version, plat ->
+            archiveFile.set(cacheDir.map { it.file("nimbus-fml.zip") })
+            hashFile.set(cacheDir.map { it.file("nimbus-fml.sha256") })
+            fmlBinary.set(rootBuildDir.flatMap { buildDir ->
+                asVersionProvider.zip(platform) { version, plat ->
                     buildDir.dir("bin/nimbus/$version").file(NimbusAssembleToolsTask.getBinaryName(plat))
                 }
             })
-            task.cacheRoot.set(File(topsrcdir, ".gradle/caches/nimbus-fml"))
+            cacheRoot.set(File(topsrcdir, ".gradle/caches/nimbus-fml"))
 
-            task.fetch { spec ->
+            fetch {
                 // Try archive.mozilla.org release first
-                spec.archive.set(asVersionProvider.map { asVersion ->
+                archive.set(asVersionProvider.map { asVersion ->
                     "https://archive.mozilla.org/pub/app-services/releases/$asVersion/nimbus-fml.zip"
                 })
-                spec.hash.set(asVersionProvider.map { asVersion ->
+                hash.set(asVersionProvider.map { asVersion ->
                     "https://archive.mozilla.org/pub/app-services/releases/$asVersion/nimbus-fml.sha256"
                 })
 
                 // Fall back to a nightly release
-                spec.fallback { fallbackSpec ->
-                    fallbackSpec.archive.set(asVersionProvider.map { asVersion ->
+                fallback {
+                    archive.set(asVersionProvider.map { asVersion ->
                         "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/project.application-services.v2.nimbus-fml.$asVersion/artifacts/public/build/nimbus-fml.zip"
                     })
-                    fallbackSpec.hash.set(asVersionProvider.map { asVersion ->
+                    hash.set(asVersionProvider.map { asVersion ->
                         "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/project.application-services.v2.nimbus-fml.$asVersion/artifacts/public/build/nimbus-fml.sha256"
                     })
                 }
             }
 
-            task.unzip { spec ->
-                spec.include("${task.platform.get()}*/release/nimbus-fml*")
+            unzip {
+                include("${platform.get()}*/release/nimbus-fml*")
             }
 
-            task.onlyIf("`applicationServicesDir` == null") {
+            onlyIf("`applicationServicesDir` == null") {
                 applicationServicesDir.orNull == null
             }
         }
@@ -307,9 +307,9 @@ class NimbusPlugin : Plugin<Project> {
             null
         }
 
-        return rootProject.providers.of(ApplicationServicesVersionSource::class.java) { spec ->
-            spec.parameters.topsrcdir.set(topsrcdir)
-            spec.parameters.localPropertiesVersion.set(localPropertiesVersion)
+        return rootProject.providers.of(ApplicationServicesVersionSource::class.java) {
+            parameters.topsrcdir.set(topsrcdir)
+            parameters.localPropertiesVersion.set(localPropertiesVersion)
         }
     }
 
@@ -328,24 +328,24 @@ class NimbusPlugin : Plugin<Project> {
     }
 
     private fun setupValidateTask(project: Project): org.gradle.api.tasks.TaskProvider<NimbusValidateTask> {
-        return project.tasks.register("nimbusValidate", NimbusValidateTask::class.java) { task ->
-            task.description = "Validate the Nimbus feature manifest for the app"
-            task.group = "Nimbus"
+        return project.tasks.register("nimbusValidate", NimbusValidateTask::class.java) {
+            description = "Validate the Nimbus feature manifest for the app"
+            group = "Nimbus"
 
-            task.doFirst {
-                task.logger.info("Nimbus FML: validating manifest")
-                task.logger.info("manifest             {}", task.inputFile.get().asFile)
-                task.logger.info("cache dir            {}", task.cacheDir.get().asFile)
-                task.logger.info("repo file(s)         {}", task.repoFiles.files.joinToString())
+            doFirst {
+                logger.info("Nimbus FML: validating manifest")
+                logger.info("manifest             {}", inputFile.get().asFile)
+                logger.info("cache dir            {}", cacheDir.get().asFile)
+                logger.info("repo file(s)         {}", repoFiles.files.joinToString())
             }
 
-            configureCommonTaskProperties(task, project, "validate")
+            configureCommonTaskProperties(this, project, "validate")
 
             // `nimbusValidate` doesn't have any outputs, so Gradle will always
             // run it, even if its inputs haven't changed. This predicate tells
             // Gradle to ignore the outputs, and only consider the inputs, for
             // up-to-date checks.
-            task.outputs.upToDateWhen { true }
+            outputs.upToDateWhen { true }
         }
     }
 }

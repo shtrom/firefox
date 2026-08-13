@@ -3,9 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 plugins {
-    kotlin("jvm") version embeddedKotlinVersion
+    `kotlin-dsl`
     `maven-publish`
-    `java-gradle-plugin`
 }
 
 gradlePlugin {
@@ -22,7 +21,6 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
 }
 
 dependencies {
-    implementation(gradleApi())
     compileOnly("org.mozilla:conventions")
     compileOnly(libs.android.gradle.plugin)
 }
