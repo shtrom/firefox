@@ -224,6 +224,11 @@ class SecretSettingsFragment : PreferenceFragmentCompat(), SystemInsetsPaddedFra
             onPreferenceChangeListener = SharedPreferenceUpdater()
         }
 
+        requirePreference<SwitchPreferenceCompat>(R.string.pref_key_show_more_shortcuts).apply {
+            isChecked = settings.showMoreShortcuts
+            onPreferenceChangeListener = SharedPreferenceUpdater()
+        }
+
         requirePreference<SwitchPreferenceCompat>(R.string.pref_key_enable_merino_client).apply {
             isChecked = settings.enableMerinoClient
             onPreferenceChangeListener = SharedPreferenceUpdater()
