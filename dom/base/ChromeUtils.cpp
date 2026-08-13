@@ -31,7 +31,6 @@
 #include "mozilla/FormAutofillNative.h"
 #include "mozilla/IntentionalCrash.h"
 #include "mozilla/KeySystemConfig.h"
-#include "mozilla/LookAndFeel.h"
 #include "mozilla/PerfStats.h"
 #include "mozilla/Preferences.h"
 #include "mozilla/ProcInfo.h"
@@ -2701,13 +2700,6 @@ bool ChromeUtils::IsDarkBackground(GlobalObject&, Element& aElement) {
   if (!f) {
     return false;
   }
-
-  // If color-scheme is explicitly specified, trust that rather than guessing.
-  // TODO(emilio): Maybe IsDarkBackground() should do this for us.
-  if (auto s = LookAndFeel::ExplicitColorSchemeForFrame(f)) {
-    return *s == ColorScheme::Dark;
-  }
-
   return nsNativeTheme::IsDarkBackground(f);
 }
 
