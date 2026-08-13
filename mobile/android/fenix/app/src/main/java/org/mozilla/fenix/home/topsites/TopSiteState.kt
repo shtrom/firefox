@@ -15,11 +15,13 @@ import org.mozilla.fenix.utils.Settings
  * @property topSites List of [TopSite] to display.
  * @property colors The color set defined by [TopSiteColors] used to style a top site.
  * @property showAddShortcut Whether to show the "Add shortcut" tile.
+ * @property showExpandToggle Whether to show the control that expands and collapses the section.
  */
 internal data class TopSiteState(
     val topSites: List<TopSite>,
     val colors: TopSiteColors,
     val showAddShortcut: Boolean = false,
+    val showExpandToggle: Boolean = false,
 ) {
 
     companion object {
@@ -44,6 +46,8 @@ internal data class TopSiteState(
                         colors = TopSiteColors.colors(wallpaperState = appState.wallpaperState),
                         showAddShortcut = settings.enableAddShortcutsImprovement &&
                             topSites.size < TOP_SITES_TO_SHOW,
+                        showExpandToggle = settings.showMoreShortcuts &&
+                            topSites.size > TOP_SITES_TO_SHOW,
                     )
                 }
         }
