@@ -140,6 +140,8 @@ support-files = [
 
 ["browser_aboutNetError_searchCTA_pbm.js"]
 
+["browser_aboutNetError_searchCTA_telemetry.js"]
+
 ["browser_aboutNetError_server_error.js"]
 support-files = [
   "http_error.sjs",

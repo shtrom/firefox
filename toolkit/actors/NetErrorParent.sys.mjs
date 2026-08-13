@@ -18,6 +18,15 @@ ChromeUtils.defineESModuleGetters(lazy, {
   SearchService: "moz-src:///toolkit/components/search/SearchService.sys.mjs",
   SearchUIUtils: "moz-src:///browser/components/search/SearchUIUtils.sys.mjs",
   analyzeURL: "resource://gre/modules/URLKeywordAnalyzer.sys.mjs",
+  SEARCH_CTA_ACTIONS: "resource://gre/modules/URLKeywordAnalyzer.sys.mjs",
+});
+
+// Reasons this decision layer adds on top of the ones URLKeywordAnalyzer can
+// reach on its own. These describe outcomes the analyzer cannot see, because
+// they depend on the search service rather than on the failed URL.
+const DECISION_REASONS = Object.freeze({
+  SEARCH_UNAVAILABLE: "search-unavailable",
+  ENGINE_NOT_GENERAL: "engine-not-general",
 });
 
 // The search access point this page reports to search telemetry. The source is
@@ -261,14 +270,60 @@ export class NetErrorParent extends EscapablePageParent {
     }
 
     let hasEngine = false;
+    let engineUnsupported = false;
     if (AppConstants.MOZ_BUILD_APP == "browser") {
       try {
         let engine = await this.getDefaultSearchEngine();
-        hasEngine = !!engine && this.isSupportedSearchEngine(engine);
+        if (engine && this.isSupportedSearchEngine(engine)) {
+          hasEngine = true;
+        } else if (engine) {
+          // A default exists but is special-purpose (e.g. Wikipedia); the CTA
+          // only searches general-purpose engines.
+          engineUnsupported = true;
+        }
       } catch (e) {}
     }
 
+    this.recordSearchCTADecision(action, reason, hasEngine, engineUnsupported);
+
     return { action, query, reason, domain, hasEngine };
+  }
+
+  /**
+   * Record the content-free decision outcome: one action count, one reason
+   * count, and a shown count when a CTA is displayed. The query-derivation
+   * module owns keywords/host/none and ok/no-path/no-meaningful-keywords/
+   * host-unusable; the decision layer maps a usable host with no engine to
+   * none/search-unavailable (connectivity-lost is added in bug 2055712).
+   *
+   * @param {string} action The action from the query-derivation module.
+   * @param {string} reason The reason from the query-derivation module.
+   * @param {boolean} hasEngine Whether a supported default search engine exists.
+   * @param {boolean} [engineUnsupported] Whether a default engine exists but is
+   *   not a general-purpose web search engine (e.g. Wikipedia).
+   */
+  recordSearchCTADecision(
+    action,
+    reason,
+    hasEngine,
+    engineUnsupported = false
+  ) {
+    let finalAction = action;
+    let finalReason = reason;
+    if (action !== lazy.SEARCH_CTA_ACTIONS.NONE && !hasEngine) {
+      finalAction = lazy.SEARCH_CTA_ACTIONS.NONE;
+      finalReason = engineUnsupported
+        ? DECISION_REASONS.ENGINE_NOT_GENERAL
+        : DECISION_REASONS.SEARCH_UNAVAILABLE;
+    }
+    Glean.securityUiNeterror.searchCtaAction[finalAction].add(1);
+    // Reasons are hyphenated, Glean labels are not.
+    Glean.securityUiNeterror.searchCtaReason[
+      finalReason.replace(/-/g, "_")
+    ].add(1);
+    if (finalAction !== lazy.SEARCH_CTA_ACTIONS.NONE) {
+      Glean.securityUiNeterror.searchCtaShown.add(1);
+    }
   }
 
   /**
@@ -282,6 +337,7 @@ export class NetErrorParent extends EscapablePageParent {
     if (AppConstants.MOZ_BUILD_APP != "browser" || !query) {
       return;
     }
+    Glean.securityUiNeterror.searchCtaClicked.add(1);
     let engine;
     try {
       engine = await this.getDefaultSearchEngine();
