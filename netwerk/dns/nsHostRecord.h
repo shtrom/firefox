@@ -123,8 +123,6 @@ class nsHostRecord : public mozilla::LinkedListElement<RefPtr<nsHostRecord>>,
     DNS_PRIORITY_HIGH,
   };
 
-  nsresult GetFromStaleCache(bool* aResult);
-
  protected:
   friend class nsHostResolver;
   friend class mozilla::net::HostRecordQueue;
