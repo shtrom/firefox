@@ -199,7 +199,6 @@
 .urlbarView-row-body-top-no-wrap {
   display: flex;
   align-items: baseline;
-  min-width: 0;
   max-width: 100%;
 }
 
