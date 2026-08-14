@@ -15,9 +15,8 @@ async function run_test() {
   gTestDirs = gTestDirsCompleteSuccess;
   preventDistributionFiles();
 
-  // Even if the test is running on an enterprise machine, we want to pretend
-  // it isn't to make the the command-line argument is present.
-  Services.env.set("MOZ_TEST_FORCE_ENTERPRISE", "0");
+  // We do _not_ want /DesktopLauncher.
+  Services.env.set("MOZ_TEST_FORCE_ENTERPRISE", "1");
 
   // The post update process invocation is `TestAUSHelper post-update-args`.
   await setupUpdaterTest(FILE_COMPLETE_MAR, true, "", true, {
@@ -28,8 +27,8 @@ async function run_test() {
 
   await checkPostUpdateAppLog({
     expectedContents: gIsServiceTest
-      ? "2: /DesktopLauncher\n3: /PostUpdateTarget:Installation\n2: /DesktopLauncher\n3: /PostUpdateTarget:CurrentUser\n"
-      : "2: /DesktopLauncher\n3: /PostUpdateTarget:Installation\n",
+      ? "2: /PostUpdateTarget:Installation\n2: /PostUpdateTarget:CurrentUser\n"
+      : "2: /PostUpdateTarget:Installation\n",
   });
 
   checkAppBundleModTime();

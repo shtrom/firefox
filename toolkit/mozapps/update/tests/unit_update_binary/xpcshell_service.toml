@@ -136,6 +136,9 @@ run-sequentially = ["true"] # Uses the Mozilla Maintenance Service.
 ["marPostUpdateDesktopLauncher.js"]
 run-sequentially = ["true"] # Uses the Mozilla Maintenance Service.
 
+["marPostUpdateTarget.js"]
+run-sequentially = ["true"] # Uses the Mozilla Maintenance Service.
+
 ["marRMRFDirFileInUseStageFailureComplete_win.js"]
 run-sequentially = ["true"] # Uses the Mozilla Maintenance Service.
 

@@ -248,6 +248,12 @@ run-if = [
 ]
 reason = "Post-update only supported  on Windows and macOS"
 
+["marPostUpdateTarget.js"]
+run-if = [
+  "os == 'win'",
+]
+reason = "Only Windows runs the post-updater twice"
+
 ["marRMRFDirFileInUseStageFailureComplete_win.js"]
 run-if = [
   "os == 'win'",

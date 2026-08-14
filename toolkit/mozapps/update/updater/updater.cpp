@@ -184,6 +184,26 @@ enum class UpdaterInvocation {
 };
 
 /**
+ * This enum is used to indicate on Windows why the post-updater is running.
+ *
+ * If the updater elevates, the post-updater runs twice: once as the system
+ * user, and once as the current user. There's some logic that we don't want to
+ * do in the second case; for an example, see bug 2004959.
+ *
+ * Notice that the CurrentUser case only runs in installations that elevate
+ * (via UAC or the Maintenance Service) to perform the update; therefore,
+ * nothing should run _only_ when the postupdate target is 'CurrentUser'.
+ * Ideally it would do nothing, see bug 2030813.
+ */
+enum class PostUpdateTarget {
+  // The post-updater is being run for the entire installation.
+  Installation,
+  // The post-updater has just finished the elevated update and is running as
+  // the user who prompted the update.
+  CurrentUser,
+};
+
+/**
  * Returns a human-readable representation of an `UpdaterInvocation`.
  */
 const char* getUpdaterInvocationString(UpdaterInvocation value) {
@@ -2555,10 +2575,12 @@ void PatchIfFile::Finish(int status) {
  *
  * @param  installationDir The path to the callback application binary.
  * @param  updateInfoDir   The directory where update info is stored.
+ * @param  target          Whether this post-update should update user-specific
+ *                         data or installation-specific data.
  * @return true if there was no error starting the process.
  */
 bool LaunchWinPostProcess(const WCHAR* installationDir,
-                          const WCHAR* updateInfoDir) {
+                          const WCHAR* updateInfoDir, PostUpdateTarget target) {
   WCHAR workingDirectory[MAX_PATH + 1] = {L'\0'};
   wcsncpy(workingDirectory, installationDir, MAX_PATH);
 
@@ -2652,18 +2674,27 @@ bool LaunchWinPostProcess(const WCHAR* installationDir,
     }
   }
 
-  WCHAR dummyArg[14] = {L'\0'};
-  wcsncpy(dummyArg, L"argv0ignored ",
-          sizeof(dummyArg) / sizeof(dummyArg[0]) - 1);
-
   const bool addDesktopLauncher{
       !EnterprisePoliciesFlagFile::Exists(gPatchDirPath)};
   if (addDesktopLauncher) {
     LOG(("Add /DesktopLauncher argument to helper.exe"));
   }
-  LPCWSTR desktopLauncherArg{addDesktopLauncher ? L" /DesktopLauncher" : L""};
-  size_t len{wcslen(exearg) + wcslen(dummyArg) + wcslen(desktopLauncherArg)};
-  WCHAR* cmdline = (WCHAR*)malloc((len + 1) * sizeof(WCHAR));
+
+  LPCWSTR args[] = {
+      L"argv0ignored ",
+      exearg,
+      addDesktopLauncher ? L" /DesktopLauncher" : L"",
+      target == PostUpdateTarget::Installation
+          ? L" /PostUpdateTarget:Installation"
+          : L" /PostUpdateTarget:CurrentUser",
+  };
+
+  size_t len = 0;
+  for (LPCWSTR arg : args) {
+    len += wcslen(arg);
+  }
+
+  WCHAR* cmdline = (WCHAR*)calloc(len + 1, sizeof(WCHAR));
   if (!cmdline) {
     LOG(
         ("LaunchWinPostProcess failed due to failure to allocate %zu wchars "
@@ -2672,9 +2703,9 @@ bool LaunchWinPostProcess(const WCHAR* installationDir,
     return false;
   }
 
-  wcsncpy(cmdline, dummyArg, len);
-  wcscat(cmdline, exearg);
-  wcscat(cmdline, desktopLauncherArg);
+  for (LPCWSTR arg : args) {
+    wcscat(cmdline, arg);
+  }
 
   // We want to launch the post update helper app to update the Windows
   // registry even if there is a failure with removing the uninstall.update
@@ -3485,7 +3516,8 @@ int LaunchCallbackAndPostProcessApps(int argc, NS_tchar** argv
 #if defined(XP_WIN)
     if (gSucceeded) {
       LOG(("Launching Windows post update process"));
-      if (!LaunchWinPostProcess(gInstallDirPath, gPatchDirPath)) {
+      if (!LaunchWinPostProcess(gInstallDirPath, gPatchDirPath,
+                                PostUpdateTarget::Installation)) {
         LOG(("The post update process was not launched successfully"));
       }
 
@@ -4561,7 +4593,8 @@ int NS_main(int argc, NS_tchar** argv) {
           if (IsSecureUpdateStatusSucceeded(updateStatusSucceeded) &&
               updateStatusSucceeded) {
             LOG(("Running LaunchWinPostProcess"));
-            if (!LaunchWinPostProcess(gInstallDirPath, gPatchDirPath)) {
+            if (!LaunchWinPostProcess(gInstallDirPath, gPatchDirPath,
+                                      PostUpdateTarget::CurrentUser)) {
               LOG(("Failed to run LaunchWinPostProcess"));
             }
           } else {
