@@ -30,6 +30,11 @@ user_pref("browser.preonboarding.enabled", false);
 // Tell the search service we are running in the US.  This also has the desired
 // side-effect of preventing our geoip lookup.
 user_pref("browser.search.region", "US");
+// The shipped doh-config dump enables the DoH rollout in the US, so without
+// this tests would run heuristics and possibly switch to TRR mode 2 midway.
+// This pref takes priority over the Remote Settings config. DoH's own tests
+// clear it and drive the config themselves.
+user_pref("doh-rollout.enabled", false);
 // disable infobar for tests
 user_pref("browser.search.removeEngineInfobar.enabled", false);
 // We do not wish to display datareporting policy notifications as it might
