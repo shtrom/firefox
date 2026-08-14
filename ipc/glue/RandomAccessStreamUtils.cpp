@@ -62,8 +62,7 @@ DeserializeRandomAccessStream(RandomAccessStreamParams& aStreamParams) {
         return Err(false);
       }
 
-      return WrapMovingNotNull(
-          nsCOMPtr<nsIRandomAccessStream>(rv.unwrap()));
+      return WrapMovingNotNull(nsCOMPtr<nsIRandomAccessStream>(rv.unwrap()));
     }
 
     default:
