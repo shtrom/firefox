@@ -117,8 +117,7 @@ bool gfxUserFontEntry::Matches(const nsTArray<gfxFontFaceSrc>& aFontFaceSrcList,
   }
   RefPtr map = GetCharacterMap();
   return (!aAttr.mUnicodeRanges && !map) ||
-      (aAttr.mUnicodeRanges && map &&
-       map->Equals(aAttr.mUnicodeRanges));
+         (aAttr.mUnicodeRanges && map && map->Equals(aAttr.mUnicodeRanges));
 }
 
 gfxFont* gfxUserFontEntry::CreateFontInstance(const gfxFontStyle* aFontStyle) {

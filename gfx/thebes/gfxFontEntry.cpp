@@ -8,8 +8,6 @@
 #include <chrono>
 #include <thread>
 
-#include "nsXULAppAPI.h"
-
 #include "COLRFonts.h"
 #include "ThebesRLBox.h"
 #include "gfxContext.h"
@@ -30,6 +28,7 @@
 #include "mozilla/MemoryReporting.h"
 #include "mozilla/ProfilerLabels.h"
 #include "mozilla/StaticPrefs_layout.h"
+#include "nsXULAppAPI.h"
 
 using namespace mozilla;
 using namespace mozilla::gfx;
