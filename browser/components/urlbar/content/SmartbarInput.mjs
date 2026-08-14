@@ -2510,7 +2510,7 @@ ${
         this.controller.switchToTab({
           url,
           searchString,
-          userContextId: result.payload.userContextId,
+          userContextId: result.payload.userContext?.id,
           tabGroup: result.payload.tabGroup,
           heuristic: result.heuristic,
         });
