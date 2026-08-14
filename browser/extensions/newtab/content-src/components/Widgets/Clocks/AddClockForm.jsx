@@ -9,13 +9,15 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { CLOCK_CITIES } from "./ClockCityRegistry.mjs";
 import {
+  buildClockSearchIndex,
   buildClockZone,
-  buildLocalizedTimeZoneMap,
   getCityFromTimeZone,
   getClockFormDerivedState,
   getRandomLabelColor,
 } from "./ClocksHelpers";
+import { useCuratedCityNames } from "./useCuratedCityNames";
 
 const MAX_NICKNAME_LENGTH = 11;
 
@@ -42,10 +44,8 @@ export function AddClockForm({
   onSave,
   onCancel,
 }) {
-  const localizedTimeZoneMap = useMemo(
-    () => buildLocalizedTimeZoneMap(supportedTimeZones, locale),
-    [supportedTimeZones, locale]
-  );
+  // Localized display name per curated city id; {} until resolved.
+  const curatedNames = useCuratedCityNames();
   const [searchQuery, setSearchQuery] = useState(
     initialClock
       ? initialClock.city || getCityFromTimeZone(initialClock.timeZone)
@@ -54,13 +54,32 @@ export function AddClockForm({
   const [selectedTimeZone, setSelectedTimeZone] = useState(
     initialClock?.timeZone || ""
   );
+  const [selectedCity, setSelectedCity] = useState(initialClock?.city || "");
+  const [selectedCityId, setSelectedCityId] = useState(
+    initialClock?.cityId || ""
+  );
   const [nickname, setNickname] = useState(initialClock?.label || "");
   const searchInputRef = useRef(null);
 
+  // One index for the whole search, rebuilt only when the zones or localized
+  // names change — not on every keystroke.
+  const searchIndex = useMemo(
+    () =>
+      buildClockSearchIndex({
+        supportedTimeZones,
+        curatedCities: CLOCK_CITIES,
+        curatedNames,
+        locale,
+      }),
+    [supportedTimeZones, curatedNames, locale]
+  );
+
   const {
     canAddSelectedClock,
-    filteredTimeZones,
+    filteredResults,
     resolvedClockTimeZone,
+    resolvedClockCity,
+    resolvedClockCityId,
     showLocationDropdown,
   } = useMemo(
     () =>
@@ -68,19 +87,34 @@ export function AddClockForm({
         canAddClock,
         clockSearchQuery: searchQuery,
         clockSelectedTimeZone: selectedTimeZone,
+        clockSelectedCity: selectedCity,
+        clockSelectedCityId: selectedCityId,
         isEditingClock: isEditing,
-        localizedTimeZoneMap,
-        supportedTimeZones,
+        searchIndex,
       }),
     [
       canAddClock,
       searchQuery,
       selectedTimeZone,
+      selectedCity,
+      selectedCityId,
       isEditing,
-      localizedTimeZoneMap,
-      supportedTimeZones,
+      searchIndex,
     ]
   );
+
+  // When editing a curated clock the persisted city may be in a stale locale;
+  // adopt the current localized name once it resolves, unless the user typed.
+  const initialCityId = initialClock?.cityId;
+  useEffect(() => {
+    const localized = initialCityId && curatedNames[initialCityId];
+    if (!localized) {
+      return;
+    }
+    const persisted = initialClock.city || "";
+    setSearchQuery(prev => (prev === persisted ? localized : prev));
+    setSelectedCity(prev => (prev === persisted ? localized : prev));
+  }, [curatedNames, initialCityId, initialClock]);
 
   // moz-input-search renders its inner input asynchronously, so focusing
   // the custom element host immediately can throw before inputEl exists.
@@ -104,9 +138,11 @@ export function AddClockForm({
     return () => cancelAnimationFrame(frameId);
   }, []);
 
-  const handleSelectLocation = useCallback(timeZone => {
-    setSearchQuery(getCityFromTimeZone(timeZone));
+  const handleSelectLocation = useCallback((timeZone, city, cityId = "") => {
+    setSearchQuery(city);
     setSelectedTimeZone(timeZone);
+    setSelectedCity(city);
+    setSelectedCityId(cityId);
   }, []);
 
   const handleNicknameInput = useCallback(e => {
@@ -119,12 +155,26 @@ export function AddClockForm({
     }
     const trimmed = nickname.trim();
     const label = trimmed ? trimmed.slice(0, MAX_NICKNAME_LENGTH) : null;
-    // Preserve existing labelColor when editing the same zone so an
-    // unchanged labeled clock keeps its color across edits.
+    // Same zone can now mean a different city (Los Angeles -> San Francisco),
+    // so always apply the resolved city/cityId while keeping the color. Only
+    // keep the existing cityId when the resolved city is unchanged; otherwise
+    // an inherited cityId would mislabel the new city.
+    const { cityId: previousCityId, ...editedClock } = initialClock ?? {};
+    const editedCityId =
+      resolvedClockCityId ||
+      (resolvedClockCity === initialClock?.city ? previousCityId : "");
     const baseZone =
       initialClock && initialClock.timeZone === resolvedClockTimeZone
-        ? { ...initialClock }
-        : buildClockZone(resolvedClockTimeZone);
+        ? {
+            ...editedClock,
+            city: resolvedClockCity,
+            ...(editedCityId ? { cityId: editedCityId } : {}),
+          }
+        : buildClockZone(
+            resolvedClockTimeZone,
+            resolvedClockCity,
+            resolvedClockCityId
+          );
     onSave({
       ...baseZone,
       label,
@@ -135,6 +185,8 @@ export function AddClockForm({
     nickname,
     initialClock,
     resolvedClockTimeZone,
+    resolvedClockCity,
+    resolvedClockCityId,
     onSave,
   ]);
 
@@ -169,19 +221,9 @@ export function AddClockForm({
       }}
     >
       <div className="clocks-location-wrapper">
+        {/* Results are a reachable listbox, not a combobox popup:
+            moz-input-search can't forward combobox ARIA to its input. */}
         <moz-input-search
-          role="combobox"
-          aria-haspopup="listbox"
-          aria-expanded={showLocationDropdown}
-          aria-controls="clocks-search-results"
-          aria-activedescendant={
-            showLocationDropdown &&
-            selectedTimeZone &&
-            filteredTimeZones.includes(selectedTimeZone)
-              ? `clocks-result-${filteredTimeZones.indexOf(selectedTimeZone)}`
-              : undefined
-          }
-          aria-autocomplete="list"
           className="clocks-search-location-input"
           data-l10n-id="newtab-clock-widget-search-location-input"
           id="clocks-location-input"
@@ -190,6 +232,8 @@ export function AddClockForm({
           onInput={e => {
             setSearchQuery(e.target.value);
             setSelectedTimeZone("");
+            setSelectedCity("");
+            setSelectedCityId("");
           }}
         />
         {showLocationDropdown && (
@@ -199,28 +243,41 @@ export function AddClockForm({
             role="listbox"
             data-l10n-id="newtab-clock-widget-search-results"
           >
-            {filteredTimeZones.length ? (
-              filteredTimeZones.map((timeZone, index) => (
+            {filteredResults.length ? (
+              filteredResults.map((result, index) => (
                 <div
                   id={`clocks-result-${index}`}
                   className="clocks-search-result"
-                  key={timeZone}
-                  onClick={() => handleSelectLocation(timeZone)}
+                  key={`${result.timeZone}-${result.city}`}
+                  onClick={() =>
+                    handleSelectLocation(
+                      result.timeZone,
+                      result.city,
+                      result.cityId
+                    )
+                  }
                   onKeyDown={e => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      handleSelectLocation(timeZone);
+                      handleSelectLocation(
+                        result.timeZone,
+                        result.city,
+                        result.cityId
+                      );
                     }
                   }}
                   role="option"
-                  aria-selected={timeZone === selectedTimeZone}
+                  aria-selected={
+                    result.timeZone === selectedTimeZone &&
+                    result.city === selectedCity
+                  }
                   tabIndex={0}
                 >
-                  <span className="clocks-search-result-city">
-                    {getCityFromTimeZone(timeZone)}
+                  <span className="clocks-search-result-city" dir="auto">
+                    {result.city}
                   </span>
-                  <span className="clocks-search-result-timezone">
-                    {localizedTimeZoneMap?.get(timeZone) || timeZone}
+                  <span className="clocks-search-result-timezone" dir="auto">
+                    {result.zoneName || result.timeZone}
                   </span>
                 </div>
               ))
