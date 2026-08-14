@@ -63,6 +63,8 @@ run-if = [
 
 ["test_basics.js"]
 
+["test_cacheSchemaMismatch.js"]
+
 ["test_clearStoragesForClient.js"]
 
 ["test_clearStoragesForOriginAttributesPattern.js"]
