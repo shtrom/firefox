@@ -74,6 +74,8 @@ in the add-on preferences, and GitHub needs your username. In the
 Bugzilla preferences, also enable *Count open needinfos too* so that
 needinfo requests are included in the badge.
 
+(getting-attention)=
+
 ## Getting attention
 
 We expect reviews to happen within a day or two, and most of them do.
