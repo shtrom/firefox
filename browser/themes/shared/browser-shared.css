@@ -181,7 +181,7 @@ body {
     --chrome-block-radius: 10px;
 
     &[uidensity="compact"] {
-      --chrome-window-gap: 0px;
+      --chrome-window-gap: 2px;
     }
 
     @media (-moz-platform: linux) {
