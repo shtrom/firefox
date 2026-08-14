@@ -325,22 +325,10 @@
 ; It does not make sense to consistently access HKCU or HKLM here, although
 ; some older code unfortunately does. Use SHCTX or $RegHive instead.
 Function PostUpdateInstallation
-  ${CreateShortcutsLog}
-
-  ; Remove registry entries for non-existent apps and for apps that point to our
-  ; install location in the Software\Mozilla key and uninstall registry entries
-  ; that point to our install location for both HKCU and HKLM.
-  SetShellVarContext current  ; Set SHCTX to the current user (e.g. HKCU)
-  ${RegCleanMain} "Software\Mozilla"
-  ${RegCleanUninstall}
-  ${UpdateProtocolHandlers}
-
-  ; setup the application model id registration value
-  ${InitHashAppModelId} "$INSTDIR" "Software\Mozilla\${AppName}\TaskBarIDs"
-
   ClearErrors
   WriteRegStr HKLM "Software\Mozilla" "${BrandShortName}InstallerTest" "Write Test"
   ${If} ${Errors}
+    SetShellVarContext current  ; Set SHCTX to the current user (e.g. HKCU)
     StrCpy $RegHive "HKCU"
     Call PostUpdateNonElevated
   ${Else}
@@ -349,6 +337,18 @@ Function PostUpdateInstallation
     StrCpy $RegHive "HKLM"
     Call PostUpdateElevated
   ${EndIf}
+
+  ${CreateShortcutsLog}
+
+  ; setup the application model id registration value
+  ${InitHashAppModelId} "$INSTDIR" "Software\Mozilla\${AppName}\TaskBarIDs"
+
+  ; Remove registry entries for non-existent apps and for apps that point to our
+  ; install location in the Software\Mozilla key and uninstall registry entries
+  ; that point to our install location.
+  ${RegCleanMain} "Software\Mozilla"
+  ${RegCleanUninstall}
+  ${UpdateProtocolHandlers}
 
   ${RemoveDeprecatedKeys}
   ${Set32to64DidMigrateReg}
@@ -368,21 +368,9 @@ Function PostUpdateInstallation
 
   ; Update the name/icon/AppModelID of our shortcuts as needed, then update the
   ; lastwritetime of the Start Menu shortcut to clear the tile icon cache.
-  ; Do this for both shell contexts in case the user has shortcuts in multiple
-  ; locations, then restore the previous context at the end.
-  SetShellVarContext all
   ${UpdateShortcutsBranding}
   ${TouchStartMenuShortcut}
   Call FixShortcutAppModelIDs
-  SetShellVarContext current
-  ${UpdateShortcutsBranding}
-  ${TouchStartMenuShortcut}
-  Call FixShortcutAppModelIDs
-  ${If} $RegHive == "HKLM"
-    SetShellVarContext all
-  ${ElseIf} $RegHive == "HKCU"
-    SetShellVarContext current
-  ${EndIf}
 
   ; Remove files that may be left behind by the application in the
   ; VirtualStore directory.
@@ -515,6 +503,10 @@ FunctionEnd
 ; run as admin. Use PostUpdateInstallation if at all possible.
 Function PostUpdateNonElevated
   ; RegHive=HKCU, ShellVarContext=current
+  ${UpdateShortcutsBranding}
+  ${TouchStartMenuShortcut}
+  Call FixShortcutAppModelIDs
+
 !ifdef MOZ_LAUNCHER_PROCESS
   ${ResetLauncherProcessDefaults}
 !endif
