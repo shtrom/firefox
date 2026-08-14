@@ -25,6 +25,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
 });
 
 XPCOMUtils.defineLazyServiceGetters(lazy, {
+  gfxInfo: ["@mozilla.org/gfx/info;1", Ci.nsIGfxInfo],
   ProtocolProxyService: [
     "@mozilla.org/network/protocol-proxy-service;1",
     Ci.nsIProtocolProxyService,
@@ -116,6 +117,21 @@ registerActors();
  * @class
  */
 export var BrowserTestUtils = {
+  /**
+   * Whether minimizing a window has any observable effect on this platform.
+   * Wayland offers no way to tell that a window was minimized, so neither a
+   * sizemodechange event nor the window's deactivation follows
+   * ``window.minimize()`` there. See bug 2063202.
+   *
+   * @returns {boolean}
+   */
+  get canMinimize() {
+    return !(
+      AppConstants.platform == "linux" &&
+      lazy.gfxInfo.windowProtocol == "wayland"
+    );
+  },
+
   // We define the function separately, rather than using an arrow function
   // inline due to https://github.com/jsdoc/jsdoc/issues/2143.
   /**
