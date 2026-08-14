@@ -12,6 +12,7 @@ import {
   formatTime,
   getCityAbbreviation,
   getCityFromTimeZone,
+  getClockCityDisplay,
   getClockFormDerivedState,
   getDefaultTimeZones,
   getLocalizedTimeZoneName,
@@ -535,6 +536,29 @@ describe("parseClockZonesPref", () => {
     ]);
   });
 
+  it("keeps a curated cityId and drops one that is not in the registry", () => {
+    const prefValue = JSON.stringify([
+      { timeZone: "Europe/Berlin", city: "Munich", cityId: "de-munich" },
+      { timeZone: "Europe/Berlin", city: "Munich", cityId: "de-retired" },
+    ]);
+
+    expect(parseClockZonesPref(prefValue)).toEqual([
+      {
+        timeZone: "Europe/Berlin",
+        cityId: "de-munich",
+        city: "Munich",
+        label: null,
+        labelColor: null,
+      },
+      {
+        timeZone: "Europe/Berlin",
+        city: "Munich",
+        label: null,
+        labelColor: null,
+      },
+    ]);
+  });
+
   it("accepts string time zone entries", () => {
     expect(parseClockZonesPref(JSON.stringify(["Europe/Berlin"]))).toEqual([
       {
@@ -663,6 +687,46 @@ describe("getCityAbbreviation", () => {
     expect(getCityAbbreviation("NY")).toBe("NY");
     expect(getCityAbbreviation("")).toBe("");
     expect(getCityAbbreviation(null)).toBe("");
+  });
+
+  it("prefers the registry cityId over a localized display name", () => {
+    // A localized name (e.g. München) must still map to the curated code via
+    // cityId rather than the first three localized characters (MÜN).
+    expect(getCityAbbreviation("München", "de-munich")).toBe("MUC");
+    expect(getCityAbbreviation("Munich", "de-munich")).toBe("MUC");
+  });
+});
+
+describe("getClockCityDisplay", () => {
+  it("prefers the localized curated name resolved from cityId", () => {
+    expect(
+      getClockCityDisplay(
+        { timeZone: "Europe/Berlin", city: "Munich", cityId: "de-munich" },
+        { "de-munich": "München" }
+      )
+    ).toBe("München");
+  });
+
+  it("falls back to the stored city, then the registry fallbackName", () => {
+    expect(
+      getClockCityDisplay({
+        timeZone: "Europe/Berlin",
+        city: "Munich",
+        cityId: "de-munich",
+      })
+    ).toBe("Munich");
+    expect(
+      getClockCityDisplay({ timeZone: "Europe/Berlin", cityId: "de-munich" })
+    ).toBe("Munich");
+  });
+
+  it("uses the stored city for custom clocks with no cityId", () => {
+    expect(
+      getClockCityDisplay({ timeZone: "America/Los_Angeles", city: "Tacoma" })
+    ).toBe("Tacoma");
+    expect(getClockCityDisplay({ timeZone: "America/Los_Angeles" })).toBe(
+      "Los Angeles"
+    );
   });
 });
 

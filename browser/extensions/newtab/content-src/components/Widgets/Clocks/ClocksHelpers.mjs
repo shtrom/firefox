@@ -2,6 +2,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
+import {
+  BASE_ZONE_IATA_CODES,
+  CLOCK_CITY_BY_ID,
+  CLOCK_CITY_BY_NAME,
+} from "./ClockCityRegistry.mjs";
+
 // Fixed-order palette; each name needs a matching `.clocks-chip-<name>` in
 // _Clocks.scss and drives isValidPaletteName's allow-list.
 const LABEL_PALETTE = [
@@ -41,67 +47,6 @@ const FIXED_DEFAULT_ZONES = [
   "America/Los_Angeles",
 ];
 export const MAX_CLOCK_COUNT = 4;
-
-// IATA city codes for cities where the code differs from slice(0,3).
-// Cities whose code matches that slice (e.g. Sydney -> SYD, Berlin ->
-// BER) are omitted; getCityAbbreviation falls back to the slice.
-// Both legacy and canonical spellings (Kiev/Kyiv, Calcutta/Kolkata,
-// Saigon/Ho Chi Minh) are present — the user's OS may report either,
-// depending on its tzdata version.
-const CITY_IATA_CODES = {
-  // North America
-  Detroit: "DTW",
-  Halifax: "YHZ",
-  Honolulu: "HNL",
-  "Los Angeles": "LAX",
-  "New York": "NYC",
-  Phoenix: "PHX",
-  "San Francisco": "SFO",
-  Toronto: "YTO",
-  Vancouver: "YVR",
-  // South America
-  Santiago: "SCL",
-  // Europe
-  Copenhagen: "CPH",
-  Geneva: "GVA",
-  Kiev: "IEV",
-  Kyiv: "IEV",
-  Moscow: "MOW",
-  Prague: "PRG",
-  Warsaw: "WAW",
-  Zurich: "ZRH",
-  // Asia
-  Bangkok: "BKK",
-  Beijing: "BJS",
-  Beirut: "BEY",
-  Calcutta: "CCU",
-  Kolkata: "CCU",
-  Colombo: "CMB",
-  Dhaka: "DAC",
-  Dubai: "DXB",
-  "Ho Chi Minh": "SGN",
-  "Hong Kong": "HKG",
-  Jakarta: "JKT",
-  Jerusalem: "JRS",
-  Karachi: "KHI",
-  "Kuala Lumpur": "KUL",
-  Manila: "MNL",
-  Riyadh: "RUH",
-  Saigon: "SGN",
-  Seoul: "SEL",
-  Taipei: "TPE",
-  Tehran: "THR",
-  "Tel Aviv": "TLV",
-  Tokyo: "TYO",
-  // Africa
-  Johannesburg: "JNB",
-  Lagos: "LOS",
-  Nairobi: "NBO",
-  // Australia & Pacific
-  Adelaide: "ADL",
-  Auckland: "AKL",
-  Brisbane: "BNE",
-};
 
 function is12HourLocale(locale) {
   try {
@@ -241,8 +186,16 @@ const normalizeClockZone = clock => {
     typeof normalizedClock.city === "string" && normalizedClock.city.trim()
       ? normalizedClock.city.trim()
       : undefined;
+  // Only a cityId still in the registry survives; a stale or hand-edited one
+  // is dropped so the clock falls back to its stored city or zone name.
+  const cityId =
+    typeof normalizedClock.cityId === "string" &&
+    CLOCK_CITY_BY_ID.has(normalizedClock.cityId.trim())
+      ? normalizedClock.cityId.trim()
+      : undefined;
   return {
     timeZone: normalizedClock.timeZone,
+    ...(cityId !== undefined && { cityId }),
     ...(city !== undefined && { city }),
     label,
     labelColor,
@@ -372,18 +325,37 @@ export const removeClockZoneAtIndex = (clockZones, indexToRemove) =>
   clockZones.filter((_, index) => index !== indexToRemove);
 
 /**
- * IATA code for known cities, else first 3 non-whitespace chars upcased.
- * Stripping whitespace avoids trailing space on multi-word names.
+ * Compact code for a clock. A curated clock's `cityId` gives a locale-proof
+ * code from the registry; otherwise fall back to the code for the display
+ * name (curated by fallbackName, then base-zone/legacy), else the first three
+ * non-whitespace characters upcased.
  */
-export function getCityAbbreviation(cityName) {
+export function getCityAbbreviation(cityName, cityId) {
+  const byId = cityId && CLOCK_CITY_BY_ID.get(cityId);
+  if (byId) {
+    return byId.iataCode;
+  }
   if (!cityName) {
     return "";
   }
-  if (CITY_IATA_CODES[cityName]) {
-    return CITY_IATA_CODES[cityName];
+  const byName = CLOCK_CITY_BY_NAME.get(cityName);
+  if (byName) {
+    return byName.iataCode;
+  }
+  if (BASE_ZONE_IATA_CODES[cityName]) {
+    return BASE_ZONE_IATA_CODES[cityName];
   }
   return cityName.replace(/\s/g, "").slice(0, 3).toUpperCase();
 }
+
+// Display name for a saved clock: curated clocks resolve the current localized
+// name from cityId (so they follow a locale switch); custom clocks use the
+// stored city, falling back to the zone-derived name.
+export const getClockCityDisplay = (clock, curatedNames = null) =>
+  curatedNames?.[clock.cityId] ||
+  clock.city ||
+  CLOCK_CITY_BY_ID.get(clock.cityId)?.fallbackName ||
+  getCityFromTimeZone(clock.timeZone);
 
 /**
  * Returns the short name for a time zone at a given moment, like "CET"
