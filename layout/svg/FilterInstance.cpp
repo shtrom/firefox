@@ -383,11 +383,10 @@ WrFiltersStatus FilterInstance::BuildWebRenderFiltersImpl(
     }
 
     if (!filterIsNoop) {
-      if (finalClip.isNothing()) {
+      if (!finalClip) {
         finalClip = Some(primitive.PrimitiveSubregion());
       } else {
-        finalClip =
-            Some(primitive.PrimitiveSubregion().Intersect(finalClip.value()));
+        finalClip = Some(primitive.PrimitiveSubregion().Intersect(*finalClip));
       }
     }
   }
@@ -398,7 +397,7 @@ WrFiltersStatus FilterInstance::BuildWebRenderFiltersImpl(
 
   if (finalClip) {
     aWrFilters.post_filters_clip =
-        Some(instance.FilterSpaceToFrameSpace(finalClip.value()));
+        Some(instance.FilterSpaceToFrameSpace(*finalClip));
   }
   return WrFiltersStatus::CHAIN;
 }

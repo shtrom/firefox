@@ -86,7 +86,7 @@ bool SVGGeometryElement::GeometryDependsOnCoordCtx() {
         static_cast<SVGEllipseElement*>(this)->HasCtxDependentLength();
   }
   if (hasCtxDependentLength) {
-    return hasCtxDependentLength.value();
+    return *hasCtxDependentLength;
   }
   // Check the SVGAnimatedLength attribute
   LengthAttributesInfo info =

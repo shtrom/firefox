@@ -428,7 +428,7 @@ SVGBBox SVGGeometryFrame::GetBBoxContribution(const Matrix& aToBBoxUserspace,
         // the path commands, in which case we know nothing gets rendered.
         return bbox;
       }
-      bbox = pathBBoxExtents.value();
+      bbox = *pathBBoxExtents;
     }
 
     if (getStroke) {
@@ -472,7 +472,7 @@ SVGBBox SVGGeometryFrame::GetBBoxContribution(const Matrix& aToBBoxUserspace,
           return bbox;
         }
         strokeBBoxExtents = Some(ToRect(SVGUtils::PathExtentsToMaxStrokeExtents(
-            ThebesRect(pathBBoxExtents.value()), this,
+            ThebesRect(*pathBBoxExtents), this,
             ThebesMatrix(aToBBoxUserspace))));
         if (!strokeBBoxExtents->IsFinite()) {
           return bbox;

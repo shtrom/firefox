@@ -366,7 +366,7 @@ nsRect SVGIntegrationUtils::ComputePostEffectsInkOverflowRect(
   }
 
   // Return overflowRect relative to aFrame, rather than "user space":
-  return overflowRect.value() -
+  return *overflowRect -
          (aFrame->GetOffsetTo(firstFrame) + firstFrameToBoundingBox);
 }
 
@@ -528,7 +528,7 @@ static MaskPaintResult CreateAndPaintMaskSurface(
 
   const LayoutDeviceRect& maskSurfaceRect =
       aParams.maskRect.valueOr(LayoutDeviceRect());
-  if (aParams.maskRect.isSome() && maskSurfaceRect.IsEmpty()) {
+  if (aParams.maskRect && maskSurfaceRect.IsEmpty()) {
     // XXX: Is this ever true?
     paintResult.transparentBlackMask = true;
     return paintResult;
