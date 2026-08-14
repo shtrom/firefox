@@ -6515,15 +6515,28 @@ bool BaselineCodeGen<Handler>::emitGeneratorResumePrologueBody() {
         Imm32(0),
         Address(scratch2, ObjectElements::offsetOfInitializedLength()));
 
-    Label loop, loopDone;
+    // Whether the zone needs a marking barrier cannot change while this loop
+    // runs, so test it once rather than once per slot. The barrier is only
+    // armed during an incremental GC, so the common case is the loop that has
+    // no barrier code in it at all.
+    Label loop, barrierLoop, loopDone;
     masm.branchTest32(Assembler::Zero, initLength, initLength, &loopDone);
+    masm.branchTestNeedsMarkingBarrierAnyZone(Assembler::NonZero, &barrierLoop,
+                                              scratch1);
     masm.bind(&loop);
     {
       masm.pushValue(Address(scratch2, 0));
-      emitGuardedCallPreBarrierAnyZone(Address(scratch2, 0), MIRType::Value,
-                                       scratch1);
       masm.addPtr(Imm32(sizeof(Value)), scratch2);
       masm.branchSub32(Assembler::NonZero, Imm32(1), initLength, &loop);
+    }
+    masm.jump(&loopDone);
+
+    masm.bind(&barrierLoop);
+    {
+      masm.pushValue(Address(scratch2, 0));
+      masm.unguardedCallPreBarrier(Address(scratch2, 0), MIRType::Value);
+      masm.addPtr(Imm32(sizeof(Value)), scratch2);
+      masm.branchSub32(Assembler::NonZero, Imm32(1), initLength, &barrierLoop);
     }
     masm.bind(&loopDone);
     regs.add(initLength);
