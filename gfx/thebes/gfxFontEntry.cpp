@@ -5,8 +5,6 @@
 #include "gfxFontEntry.h"
 
 #include <algorithm>
-#include <chrono>
-#include <thread>
 
 #include "COLRFonts.h"
 #include "ThebesRLBox.h"
@@ -28,7 +26,6 @@
 #include "mozilla/MemoryReporting.h"
 #include "mozilla/ProfilerLabels.h"
 #include "mozilla/StaticPrefs_layout.h"
-#include "nsXULAppAPI.h"
 
 using namespace mozilla;
 using namespace mozilla::gfx;
@@ -56,6 +53,7 @@ gfxFontEntry::gfxFontEntry(const nsACString& aName, bool aIsStandardFace)
       mIgnoreGSUB(false),
       mSkipDefaultFeatureSpaceCheck(false),
       mSVGInitialized(false),
+      mHasCmapTable(false),
       mGrFaceInitialized(false),
       mCheckedForColorGlyph(false),
       mCheckedForVariationAxes(false),
@@ -124,7 +122,7 @@ void gfxFontEntry::InitializeFrom(fontlist::Face* aFace,
   MOZ_PUSH_IGNORE_THREAD_SAFETY
   mFamilyName = aFamily->DisplayName().AsString(list);
   MOZ_POP_THREAD_SAFETY
-  TrySetShmemCharacterMap();
+  mHasCmapTable = TrySetShmemCharacterMap();
 }
 
 bool gfxFontEntry::TrySetShmemCharacterMap() {
@@ -143,24 +141,22 @@ bool gfxFontEntry::TrySetShmemCharacterMap() {
 }
 
 bool gfxFontEntry::TestCharacterMap(uint32_t aCh) {
-  if (!HasCharacterMap()) {
+  if (!mCharacterMap && !mShmemCharacterMap) {
     ReadCMAP();
-    MOZ_ASSERT(HasCharacterMap(), "failed to initialize character map");
+    MOZ_ASSERT(mCharacterMap || mShmemCharacterMap,
+               "failed to initialize character map");
   }
-  if (const auto* map = GetShmemCharacterMap()) {
-    return map->test(aCh);
-  }
-  AutoReadLock lock(mLock);
-  gfxCharacterMap* map = mCharacterMap;
-  return map ? map->test(aCh) : 0;
+  return mShmemCharacterMap ? GetShmemCharacterMap()->test(aCh)
+                            : GetCharacterMap()->test(aCh);
 }
 
 void gfxFontEntry::EnsureUVSMapInitialized() {
   // mUVSOffset will not be initialized
   // until cmap is initialized.
-  if (!HasCharacterMap()) {
+  if (!mCharacterMap && !mShmemCharacterMap) {
     ReadCMAP();
-    MOZ_ASSERT(HasCharacterMap(), "failed to initialize character map");
+    NS_ASSERTION(mCharacterMap || mShmemCharacterMap,
+                 "failed to initialize character map");
   }
 
   if (!mUVSOffset) {
@@ -214,7 +210,6 @@ bool gfxFontEntry::SupportsScriptInGSUB(const hb_tag_t* aScriptTags,
 
 nsresult gfxFontEntry::ReadCMAP(FontInfoData* aFontInfoData) {
   MOZ_ASSERT(false, "using default no-op implementation of ReadCMAP");
-  AutoWriteLock lock(mLock);
   RefPtr<gfxCharacterMap> cmap = new gfxCharacterMap(0);
   if (mCharacterMap.compareExchange(nullptr, cmap.get())) {
     cmap.forget().leak();  // mCharacterMap now owns the reference
@@ -1271,10 +1266,9 @@ void gfxFontEntry::AddSizeOfExcludingThis(MallocSizeOf aMallocSizeOf,
   aSizes->mFontListSize += mName.SizeOfExcludingThisIfUnshared(aMallocSizeOf);
 
   // cmaps are shared so only non-shared cmaps are included here
-  if (gfxCharacterMap* map = GetCharacterMap()) {
-    if (map->mBuildOnTheFly) {
-      aSizes->mCharMapsSize += map->SizeOfIncludingThis(aMallocSizeOf);
-    }
+  if (mCharacterMap && GetCharacterMap()->mBuildOnTheFly) {
+    aSizes->mCharMapsSize +=
+        GetCharacterMap()->SizeOfIncludingThis(aMallocSizeOf);
   }
 
   {

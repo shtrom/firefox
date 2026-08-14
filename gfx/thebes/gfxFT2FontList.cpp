@@ -380,7 +380,7 @@ FT2FontEntry* gfxFT2Font::GetFontEntry() {
 // properly.
 
 nsresult FT2FontEntry::ReadCMAP(FontInfoData* aFontInfoData) {
-  if (HasCharacterMap()) {
+  if (mCharacterMap || mShmemCharacterMap) {
     return NS_OK;
   }
 
@@ -454,12 +454,13 @@ nsresult FT2FontEntry::ReadCMAP(FontInfoData* aFontInfoData) {
     } else {
       charmap = pfl->FindCharMap(charmap);
     }
+    mHasCmapTable = true;
   } else {
     // if error occurred, initialize to null cmap
     charmap = new gfxCharacterMap(0);
+    mHasCmapTable = false;
   }
   if (setCharMap) {
-    AutoWriteLock lock(mLock);
     if (mCharacterMap.compareExchange(nullptr, charmap.get())) {
       // We forget rather than addref because we don't use the charmap below.
       charmap.forget().leak();

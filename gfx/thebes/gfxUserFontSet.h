@@ -643,7 +643,6 @@ class gfxUserFontEntry : public gfxFontEntry {
     auto* oldCmap = GetUnicodeRangeMap();
     if (oldCmap != aCharMap) {
       auto* newCmap = aCharMap.forget().take();
-      mozilla::AutoWriteLock lock(mLock);
       if (mCharacterMap.compareExchange(oldCmap, newCmap)) {
         NS_IF_RELEASE(oldCmap);
       } else {
