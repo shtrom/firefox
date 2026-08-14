@@ -20,7 +20,8 @@ Additionally, here are some etiquette tips to help when reaching out:
   - Most issues with setup have been experienced before, so there's a good possibility that your question has already been answered recently.
 
 We make changes to Firefox by writing patches, testing them and pushing them into "the tree", the
-term we use for all the code in Mozilla-Central. Let's get started.
+term we use for all the code in the
+[firefox repository](https://github.com/mozilla-firefox/firefox). Let's get started.
 
 Please see the {ref}`Firefox Contributors Quick Reference <firefox-contributors-quick-reference>` for simple check list.
 
@@ -35,14 +36,14 @@ commented that they're looking at fixing the issue.
 
 Once you have found something to work on, go ahead and comment! Let
 the bug submitter, reviewer, and component owner know that you'd like
-to work on the bug. You might receive some extra information, perhaps
-also made the assignee.
+to work on the bug. You might receive some extra information, and be
+made the assignee.
 
 (good-first-bug-guide)=
 
 ### Find a bug we've identified as a good fit for new contributors
 
-With millions bugs filed in Bugzilla, it can be hard to know
+With millions of bugs filed in Bugzilla, it can be hard to know
 where to start, so we've created these bug categories to make getting
 involved a little easier:
 
@@ -50,7 +51,7 @@ involved a little easier:
   finding bugs that are mentored, some are good first bugs, some are
   slightly harder. Your mentor will help guide you with the bug fix and
   through the submission and landing process.
-- [Good First Bugs](https://mzl.la/2yBg3zB)
+- [Good First Bugs](https://bugzilla.mozilla.org/buglist.cgi?keywords=good-first-bug&resolution=---)
   \- are the best way to take your first steps into the Mozilla
   ecosystem. They're all about small changes, sometimes as little as a
   few lines, but they're a great way to learn about setting up your
@@ -145,11 +146,6 @@ infrastructure so you can push to try and eventually land your own code.
 See {ref}`Levelling up`.
 
 ## More information
-
-We're in the process of improving information on this page for newcomers
-to the project. We'll be integrating some information from these pages
-soon, but until then you may find them interesting in their current
-form:
 
 - [A beginner's guide to SpiderMonkey, Mozilla's Javascript
   engine](https://wiki.mozilla.org/JavaScript:New_to_SpiderMonkey)
