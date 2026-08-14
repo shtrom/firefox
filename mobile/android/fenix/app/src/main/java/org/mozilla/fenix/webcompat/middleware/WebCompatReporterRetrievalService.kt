@@ -13,7 +13,7 @@ import org.json.JSONObject
 import kotlin.coroutines.resume
 
 /**
- * Service that handles the submission requests for the report broken site feature.
+ * Service that handles the WebCompat Info retrieval requests for the report broken site feature.
  */
 interface WebCompatReporterRetrievalService {
 
