@@ -2269,7 +2269,6 @@ add_task(
       action_position: ACTION_POSITION,
       value: {
         card_type: "spoc",
-        recommendation_id: undefined,
         tile_id: 448685088,
         shim: SHIM,
       },

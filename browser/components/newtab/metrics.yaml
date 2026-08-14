@@ -2022,11 +2022,6 @@ pocket:
       position: &pocket_position
         description: The position (0-index) of the pocket tile.
         type: quantity
-      recommendation_id: &recommendation_id
-        description: >
-          The id from the Pocket API response that returned the recommendation.
-          Like "{61934fe5-fbb0-4f4e-b9dd-7eab5f6ee9cd}".
-        type: string
       tile_id: &pocket_tile_id
         description: >
           A content identifier.
@@ -2111,7 +2106,6 @@ pocket:
       is_sponsored: *is_sponsored_pocket
       format: *format
       position: *pocket_position
-      recommendation_id: *recommendation_id
       tile_id: *pocket_tile_id
       scheduled_corpus_item_id: *scheduled_corpus_item_id
       corpus_item_id: *corpus_item_id
@@ -2167,7 +2161,6 @@ pocket:
       is_sponsored: *is_sponsored_pocket
       format: *format
       position: *pocket_position
-      recommendation_id: *recommendation_id
       tile_id: *pocket_tile_id
       scheduled_corpus_item_id: *scheduled_corpus_item_id
       corpus_item_id: *corpus_item_id
@@ -2221,7 +2214,6 @@ pocket:
       is_sponsored: *is_sponsored_pocket
       format: *format
       position: *pocket_position
-      recommendation_id: *recommendation_id
       tile_id: *pocket_tile_id
       scheduled_corpus_item_id: *scheduled_corpus_item_id
       corpus_item_id: *corpus_item_id
@@ -2517,7 +2509,6 @@ newtab_content:
       is_sponsored: *is_sponsored_pocket
       format: *format
       position: *pocket_position
-      recommendation_id: *recommendation_id
       tile_id: *pocket_tile_id
       scheduled_corpus_item_id: *scheduled_corpus_item_id
       corpus_item_id: *corpus_item_id
@@ -2564,7 +2555,6 @@ newtab_content:
       is_sponsored: *is_sponsored_pocket
       format: *format
       position: *pocket_position
-      recommendation_id: *recommendation_id
       tile_id: *pocket_tile_id
       scheduled_corpus_item_id: *scheduled_corpus_item_id
       corpus_item_id: *corpus_item_id
@@ -2616,7 +2606,6 @@ newtab_content:
       is_sponsored: *is_sponsored_pocket
       format: *format
       position: *pocket_position
-      recommendation_id: *recommendation_id
       tile_id: *pocket_tile_id
       scheduled_corpus_item_id: *scheduled_corpus_item_id
       corpus_item_id: *corpus_item_id

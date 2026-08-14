@@ -1091,7 +1091,6 @@ export class TelemetryFeed {
           layout_name,
           matches_selected_topic,
           received_rank,
-          recommendation_id,
           recommended_at,
           scheduled_corpus_item_id,
           section_position,
@@ -1145,9 +1144,7 @@ export class TelemetryFeed {
                   received_rank,
                   recommended_at,
                 }
-              : {
-                  recommendation_id,
-                }),
+              : {}),
           };
           if (this.trainhopClickOnlyEnabled) {
             this.transitionToPrivateSession();
@@ -2269,9 +2266,7 @@ export class TelemetryFeed {
                 received_rank: datum.received_rank,
                 recommended_at: datum.recommended_at,
               }
-            : {
-                recommendation_id: datum.recommendation_id,
-              }),
+            : {}),
         };
 
         if (this.trainhopClickOnlyEnabled) {
@@ -2387,9 +2382,7 @@ export class TelemetryFeed {
               received_rank: tile.received_rank,
               recommended_at: tile.recommended_at,
             }
-          : {
-              recommendation_id: tile.recommendation_id,
-            }),
+          : {}),
       };
       this.recordOrQueueEvent(
         "impression",
