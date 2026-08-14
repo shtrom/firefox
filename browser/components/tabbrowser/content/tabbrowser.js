@@ -6722,7 +6722,9 @@
     // another window's gBrowser is an instance of a different Tabbrowser class
     // and its private fields can't be read directly. These thin accessors run
     // in the owning window's realization, so callers can route through them
-    // (e.g. otherWindowGBrowser._getTabProgressListener(tab)).
+    // (e.g. otherWindowGBrowser._getTabProgressListener(tab)). Creating the
+    // listener there also keeps it in the realm of the window it belongs to,
+    // so it can't keep another window alive.
     _getTabProgressListener(aTab) {
       return this.#tabListeners.get(aTab);
     }
@@ -6731,8 +6733,10 @@
       return this.#tabFilters.get(aTab);
     }
 
-    _setTabProgressListener(aTab, aListener) {
-      this.#tabListeners.set(aTab, aListener);
+    _createTabProgressListener(aTab, aBrowser) {
+      let listener = new TabProgressListener(aTab, aBrowser, false, false);
+      this.#tabListeners.set(aTab, listener);
+      return listener;
     }
 
     swapBrowsers(aOurTab, aOtherTab) {
@@ -6749,13 +6753,10 @@
       this._swapBrowserDocShells(aOurTab, otherBrowser);
 
       // Restore the listeners for the swapped in tab.
-      tabListener = new otherTabBrowser.documentGlobal.TabProgressListener(
+      tabListener = otherTabBrowser._createTabProgressListener(
         aOtherTab,
-        otherBrowser,
-        false,
-        false
+        otherBrowser
       );
-      otherTabBrowser._setTabProgressListener(aOtherTab, tabListener);
 
       const notifyAll = Ci.nsIWebProgress.NOTIFY_ALL;
       filter.addProgressListener(tabListener, notifyAll);
