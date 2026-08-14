@@ -672,7 +672,7 @@ class AccessibilityTest : BaseSessionTest() {
 
     @Test fun testMoveByCharacter() {
         var nodeId = AccessibilityNodeProvider.HOST_VIEW_ID
-        mainSession.loadTestPath(LOREM_IPSUM_HTML_PATH)
+        mainSession.loadUri("data:text/html;charset=utf-8,<p>🤦‍♂️ Peanut</p>")
         waitForInitialFocus(true)
 
         sessionRule.waitUntilCalled(object : EventDelegate {
@@ -680,7 +680,7 @@ class AccessibilityTest : BaseSessionTest() {
             override fun onAccessibilityFocused(event: AccessibilityEvent) {
                 nodeId = getSourceId(event)
                 val node = createNodeInfo(nodeId)
-                assertThat("Accessibility focus on first text leaf", node.text as String, startsWith("Lorem ipsum"))
+                assertThat("Accessibility focus on first text leaf", node.text.toString(), startsWith("🤦‍♂️ Peanut"))
             }
         })
 
@@ -689,21 +689,21 @@ class AccessibilityTest : BaseSessionTest() {
             AccessibilityNodeInfo.ACTION_NEXT_AT_MOVEMENT_GRANULARITY,
             moveByGranularityArguments(AccessibilityNodeInfo.MOVEMENT_GRANULARITY_CHARACTER),
         )
-        waitUntilTextTraversed(0, 1, nodeId) // "L"
+        waitUntilTextTraversed(0, 5, nodeId) // "🤦‍♂️"
 
         provider.performAction(
             nodeId,
             AccessibilityNodeInfo.ACTION_NEXT_AT_MOVEMENT_GRANULARITY,
             moveByGranularityArguments(AccessibilityNodeInfo.MOVEMENT_GRANULARITY_CHARACTER),
         )
-        waitUntilTextTraversed(1, 2, nodeId) // "o"
+        waitUntilTextTraversed(5, 6, nodeId) // " "
 
         provider.performAction(
             nodeId,
             AccessibilityNodeInfo.ACTION_PREVIOUS_AT_MOVEMENT_GRANULARITY,
             moveByGranularityArguments(AccessibilityNodeInfo.MOVEMENT_GRANULARITY_CHARACTER),
         )
-        waitUntilTextTraversed(0, 1, nodeId) // "L"
+        waitUntilTextTraversed(0, 5, nodeId) // "🤦‍♂️"
     }
 
     @Test fun testMoveByWord() {
