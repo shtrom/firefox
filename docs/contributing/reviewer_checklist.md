@@ -1,3 +1,5 @@
+(reviewer-checklist)=
+
 # Reviewer Checklist
 
 Submitting patches to Mozilla source code needn't be complex. This
