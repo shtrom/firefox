@@ -3087,7 +3087,14 @@ nsresult QuotaManager::LoadQuota() {
           // doing that. We just need to use correct group and last access
           // time before initializing quota for the given origin.
 
-          if (fullOriginMetadata.mDirty) {
+          const bool needsRescan =
+#if defined(NIGHTLY_BUILD) || defined(DEBUG)
+              !fullOriginMetadata.CheckIfUsageIsConsistent(
+                  "LoadQuotaFromCache"_ns);
+#else
+              false;
+#endif
+          if (fullOriginMetadata.mDirty || needsRescan) {
             aDirtyOrigins.AppendElement(std::move(fullOriginMetadata));
           } else if (IsBestEffortPersistenceType(
                          /* Persistent origins are initialized separately */
@@ -3151,6 +3158,14 @@ nsresult QuotaManager::LoadQuota() {
       // We could not read the database.
       isCacheUseAllowed = false;
     } else if (!dirtyOrigins.IsEmpty()) {
+      // Make sure mUsageModificationDisabled is false, otherwise origin will
+      // not be processed in QuotaManager::InitQuotaForOrigin. After a shutdown
+      // and reinitialization cycle (e.g. when storage was cleared),
+      // RemoveQuota sets mUsageModificationDisabled to true.
+      // InitializeFlushTimer would also clear it, but it runs after this
+      // code path.
+      mUsageModificationDisabled.store(false);
+
       nsTArray<RenameAndInitInfo> renameAndInitInfos;
       nsTArray<FullOriginMetadata> failedOrigins;
       for (auto& dirtyOrigin : dirtyOrigins) {
@@ -4301,7 +4316,11 @@ Result<Ok, nsresult> QuotaManager::InitializeOriginDirectory(
 
     if (StaticPrefs::dom_quotaManager_loadQuotaFromSecondaryCache() &&
         IsInitializableQuotaVersion(metadata.mQuotaVersion) &&
-        !metadata.mAccessed) {
+        !metadata.mAccessed
+#if defined(NIGHTLY_BUILD) || defined(DEBUG)
+        && metadata.CheckIfUsageIsConsistent("InitializeOriginDirectory"_ns)
+#endif
+    ) {
       QM_LOG(("Initializing quota for: %s", metadata.mOrigin.get()));
       InitQuotaForOrigin(metadata, /* aDirectoryExists */ true, aCacheMap);
 
