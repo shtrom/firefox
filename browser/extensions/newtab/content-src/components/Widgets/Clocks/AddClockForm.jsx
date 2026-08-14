@@ -13,13 +13,18 @@ import { CLOCK_CITIES } from "./ClockCityRegistry.mjs";
 import {
   buildClockSearchIndex,
   buildClockZone,
+  filterCustomZoneResults,
+  formatCustomZoneLabel,
   getCityFromTimeZone,
   getClockFormDerivedState,
+  getDefaultTimeZones,
   getRandomLabelColor,
+  isValidTimeZone,
 } from "./ClocksHelpers";
 import { useCuratedCityNames } from "./useCuratedCityNames";
 
 const MAX_NICKNAME_LENGTH = 11;
+const MAX_CITY_LENGTH = 32;
 
 /**
  * Add/edit form for a single clock. Owns its own form state — the parent
@@ -59,9 +64,15 @@ export function AddClockForm({
     initialClock?.cityId || ""
   );
   const [nickname, setNickname] = useState(initialClock?.label || "");
-  const searchInputRef = useRef(null);
+  const [customMode, setCustomMode] = useState(false);
+  const [customCity, setCustomCity] = useState("");
+  const [customZone, setCustomZone] = useState("");
+  const [customZoneQuery, setCustomZoneQuery] = useState("");
 
-  // One index for the whole search, rebuilt only when the zones or localized
+  const searchInputRef = useRef(null);
+  const customCityRef = useRef(null);
+
+  // One index for both searches, rebuilt only when the zones or localized
   // names change — not on every keystroke.
   const searchIndex = useMemo(
     () =>
@@ -80,6 +91,7 @@ export function AddClockForm({
     resolvedClockTimeZone,
     resolvedClockCity,
     resolvedClockCityId,
+    hasExactMatch,
     showLocationDropdown,
   } = useMemo(
     () =>
@@ -103,6 +115,18 @@ export function AddClockForm({
     ]
   );
 
+  // The custom flow names the city by hand, so it only picks a zone.
+  const customZoneResults = useMemo(
+    () =>
+      customMode ? filterCustomZoneResults(searchIndex, customZoneQuery) : [],
+    [customMode, searchIndex, customZoneQuery]
+  );
+  // A picked zone wins; otherwise let a typed canonical IANA id resolve.
+  const effectiveCustomZone =
+    customZone ||
+    (isValidTimeZone(customZoneQuery.trim()) ? customZoneQuery.trim() : "");
+  const showCustomZoneDropdown = !!customZoneQuery.trim() && !customZone;
+
   // When editing a curated clock the persisted city may be in a stale locale;
   // adopt the current localized name once it resolves, unless the user typed.
   const initialCityId = initialClock?.cityId;
@@ -116,14 +140,17 @@ export function AddClockForm({
     setSelectedCity(prev => (prev === persisted ? localized : prev));
   }, [curatedNames, initialCityId, initialClock]);
 
-  // moz-input-search renders its inner input asynchronously, so focusing
-  // the custom element host immediately can throw before inputEl exists.
+  // Keep keyboard/AT focus on the active field when the form opens and when
+  // switching between city search and the custom-add view, so focus is never
+  // lost on a view change. moz-* inputs render their inner input async, so
+  // wait for inputEl, then fall back to focusing the host element.
   useEffect(() => {
     let frameId = 0;
     let remainingFrames = 5;
 
     const focusWhenReady = () => {
-      const input = searchInputRef.current?.inputEl;
+      const host = customMode ? customCityRef.current : searchInputRef.current;
+      const input = host?.inputEl;
       if (input) {
         input.focus();
         return;
@@ -131,12 +158,14 @@ export function AddClockForm({
       if (remainingFrames > 0) {
         remainingFrames -= 1;
         frameId = requestAnimationFrame(focusWhenReady);
+      } else if (typeof host?.focus === "function") {
+        host.focus();
       }
     };
 
     frameId = requestAnimationFrame(focusWhenReady);
     return () => cancelAnimationFrame(frameId);
-  }, []);
+  }, [customMode]);
 
   const handleSelectLocation = useCallback((timeZone, city, cityId = "") => {
     setSearchQuery(city);
@@ -190,6 +219,52 @@ export function AddClockForm({
     onSave,
   ]);
 
+  const enterCustomMode = useCallback(() => {
+    const localZone = getDefaultTimeZones()[0] || "";
+    setCustomMode(true);
+    setCustomCity(searchQuery.trim().slice(0, MAX_CITY_LENGTH));
+    setCustomZone(localZone);
+    setCustomZoneQuery(localZone ? formatCustomZoneLabel(localZone) : "");
+  }, [searchQuery]);
+
+  const handleZoneInput = useCallback(value => {
+    setCustomZoneQuery(value);
+    setCustomZone("");
+  }, []);
+
+  const handleZoneSelect = useCallback((timeZone, label) => {
+    setCustomZoneQuery(label);
+    setCustomZone(timeZone);
+  }, []);
+
+  const canAddCustom =
+    (isEditing || canAddClock) &&
+    !!customCity.trim() &&
+    isValidTimeZone(effectiveCustomZone);
+
+  const handleCustomSubmit = useCallback(() => {
+    if (!canAddCustom) {
+      return;
+    }
+    const trimmed = nickname.trim();
+    const label = trimmed ? trimmed.slice(0, MAX_NICKNAME_LENGTH) : null;
+    const base = buildClockZone(effectiveCustomZone, customCity.trim());
+    onSave({
+      ...base,
+      label,
+      labelColor: label
+        ? initialClock?.labelColor || getRandomLabelColor()
+        : null,
+    });
+  }, [
+    canAddCustom,
+    effectiveCustomZone,
+    customCity,
+    nickname,
+    initialClock,
+    onSave,
+  ]);
+
   return (
     <form
       className="clocks-panel clocks-add-form"
@@ -200,7 +275,11 @@ export function AddClockForm({
       }
       onSubmit={e => {
         e.preventDefault();
-        handleSubmit();
+        if (customMode) {
+          handleCustomSubmit();
+        } else {
+          handleSubmit();
+        }
       }}
       onKeyDown={e => {
         if (e.key === "Escape") {
@@ -211,7 +290,11 @@ export function AddClockForm({
           !e.target.closest("moz-button, button")
         ) {
           e.preventDefault();
-          handleSubmit();
+          if (customMode) {
+            handleCustomSubmit();
+          } else {
+            handleSubmit();
+          }
         }
       }}
       onBlur={e => {
@@ -220,103 +303,209 @@ export function AddClockForm({
         }
       }}
     >
-      <div className="clocks-location-wrapper">
-        {/* Results are a reachable listbox, not a combobox popup:
-            moz-input-search can't forward combobox ARIA to its input. */}
-        <moz-input-search
-          className="clocks-search-location-input"
-          data-l10n-id="newtab-clock-widget-search-location-input"
-          id="clocks-location-input"
-          ref={searchInputRef}
-          value={searchQuery}
-          onInput={e => {
-            setSearchQuery(e.target.value);
-            setSelectedTimeZone("");
-            setSelectedCity("");
-            setSelectedCityId("");
-          }}
-        />
-        {showLocationDropdown && (
-          <div
-            id="clocks-search-results"
-            className="clocks-search-results"
-            role="listbox"
-            data-l10n-id="newtab-clock-widget-search-results"
-          >
-            {filteredResults.length ? (
-              filteredResults.map((result, index) => (
-                <div
-                  id={`clocks-result-${index}`}
-                  className="clocks-search-result"
-                  key={`${result.timeZone}-${result.city}`}
-                  onClick={() =>
-                    handleSelectLocation(
-                      result.timeZone,
-                      result.city,
-                      result.cityId
-                    )
-                  }
-                  onKeyDown={e => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
+      {customMode ? (
+        <>
+          <moz-input-text
+            className="clocks-custom-city-input"
+            data-l10n-id="newtab-clock-widget-custom-city-input"
+            id="clocks-custom-city-input"
+            dir="auto"
+            ref={customCityRef}
+            value={customCity}
+            onInput={e =>
+              setCustomCity(e.target.value.slice(0, MAX_CITY_LENGTH))
+            }
+          />
+          <div className="clocks-location-wrapper">
+            {/* Results are a reachable listbox, not a combobox popup:
+                moz-input-search can't forward combobox ARIA to its input. */}
+            <moz-input-search
+              className="clocks-custom-timezone-input"
+              data-l10n-id="newtab-clock-widget-custom-timezone-input"
+              id="clocks-custom-timezone-input"
+              value={customZoneQuery}
+              onInput={e => handleZoneInput(e.target.value)}
+            />
+            {showCustomZoneDropdown && (
+              <div
+                id="clocks-custom-zone-results"
+                className="clocks-search-results"
+                role="listbox"
+                data-l10n-id="newtab-clock-widget-custom-zone-results"
+              >
+                {customZoneResults.map((result, index) => {
+                  const label = `${result.city} · ${result.offsetLabel}`;
+                  return (
+                    <div
+                      id={`clocks-custom-zone-result-${index}`}
+                      className="clocks-search-result"
+                      key={result.timeZone}
+                      onClick={() => handleZoneSelect(result.timeZone, label)}
+                      onKeyDown={e => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleZoneSelect(result.timeZone, label);
+                        }
+                      }}
+                      role="option"
+                      aria-selected={result.timeZone === customZone}
+                      tabIndex={0}
+                    >
+                      <span className="clocks-search-result-city" dir="auto">
+                        {result.city}
+                      </span>
+                      <span
+                        className="clocks-search-result-timezone"
+                        dir="auto"
+                      >
+                        {`${result.offsetLabel} · ${result.timeZone}`}
+                      </span>
+                    </div>
+                  );
+                })}
+                {!customZoneResults.length && (
+                  <div
+                    className="clocks-search-no-results"
+                    role="status"
+                    data-l10n-id="newtab-clock-widget-custom-zone-no-results"
+                  />
+                )}
+              </div>
+            )}
+          </div>
+          <moz-input-text
+            className="clocks-nickname-input"
+            data-l10n-id="newtab-clock-widget-input-nickname"
+            id="clocks-custom-nickname-input"
+            value={nickname}
+            onInput={handleNicknameInput}
+          />
+          <moz-button-group className="clocks-add-actions">
+            <moz-button
+              data-l10n-id="newtab-clock-widget-custom-back"
+              onClick={() => setCustomMode(false)}
+            />
+            <moz-button
+              className="clocks-form-submit"
+              data-l10n-id="newtab-clock-widget-button-add-clock"
+              disabled={!canAddCustom}
+              onClick={handleCustomSubmit}
+              type="primary"
+            />
+          </moz-button-group>
+        </>
+      ) : (
+        <>
+          <div className="clocks-location-wrapper">
+            {/* Reachable listbox, not a combobox popup (see custom-zone note). */}
+            <moz-input-search
+              className="clocks-search-location-input"
+              data-l10n-id="newtab-clock-widget-search-location-input"
+              id="clocks-location-input"
+              ref={searchInputRef}
+              value={searchQuery}
+              onInput={e => {
+                setSearchQuery(e.target.value);
+                setSelectedTimeZone("");
+                setSelectedCity("");
+                setSelectedCityId("");
+              }}
+            />
+            {showLocationDropdown && (
+              <div
+                id="clocks-search-results"
+                className="clocks-search-results"
+                role="listbox"
+                data-l10n-id="newtab-clock-widget-search-results"
+              >
+                {filteredResults.map((result, index) => (
+                  <div
+                    id={`clocks-result-${index}`}
+                    className="clocks-search-result"
+                    key={`${result.timeZone}-${result.city}`}
+                    onClick={() =>
                       handleSelectLocation(
                         result.timeZone,
                         result.city,
                         result.cityId
-                      );
+                      )
                     }
-                  }}
-                  role="option"
-                  aria-selected={
-                    result.timeZone === selectedTimeZone &&
-                    result.city === selectedCity
-                  }
-                  tabIndex={0}
-                >
-                  <span className="clocks-search-result-city" dir="auto">
-                    {result.city}
-                  </span>
-                  <span className="clocks-search-result-timezone" dir="auto">
-                    {result.zoneName || result.timeZone}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div
-                className="clocks-search-no-results"
-                role="option"
-                aria-disabled="true"
-                aria-selected="false"
-                data-l10n-id="newtab-clock-widget-search-no-results"
-              />
+                    onKeyDown={e => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleSelectLocation(
+                          result.timeZone,
+                          result.city,
+                          result.cityId
+                        );
+                      }
+                    }}
+                    role="option"
+                    aria-selected={
+                      result.timeZone === selectedTimeZone &&
+                      result.city === selectedCity
+                    }
+                    tabIndex={0}
+                  >
+                    <span className="clocks-search-result-city" dir="auto">
+                      {result.city}
+                    </span>
+                    <span className="clocks-search-result-timezone" dir="auto">
+                      {result.zoneName || result.timeZone}
+                    </span>
+                  </div>
+                ))}
+                {/* No exact match: the unmatched query becomes an actionable
+                    add, shown below any partial matches, not a dead end. */}
+                {!hasExactMatch && (
+                  <div
+                    id="clocks-add-custom-option"
+                    className="clocks-search-result clocks-add-custom"
+                    role="option"
+                    aria-selected="false"
+                    tabIndex={0}
+                    onClick={enterCustomMode}
+                    onKeyDown={e => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        enterCustomMode();
+                      }
+                    }}
+                    data-l10n-id="newtab-clock-widget-add-custom"
+                    data-l10n-args={JSON.stringify({
+                      city: searchQuery.trim(),
+                    })}
+                  />
+                )}
+              </div>
             )}
           </div>
-        )}
-      </div>
-      <moz-input-text
-        className="clocks-nickname-input"
-        data-l10n-id="newtab-clock-widget-input-nickname"
-        id="clocks-nickname-input"
-        value={nickname}
-        onInput={handleNicknameInput}
-      />
-      <moz-button-group className="clocks-add-actions">
-        <moz-button
-          data-l10n-id="newtab-clock-widget-button-cancel"
-          onClick={onCancel}
-        />
-        <moz-button
-          className="clocks-form-submit"
-          data-l10n-id={
-            isEditing
-              ? "newtab-clock-widget-button-save"
-              : "newtab-clock-widget-button-add-clock"
-          }
-          disabled={!canAddSelectedClock}
-          onClick={handleSubmit}
-          type="primary"
-        />
-      </moz-button-group>
+          <moz-input-text
+            className="clocks-nickname-input"
+            data-l10n-id="newtab-clock-widget-input-nickname"
+            id="clocks-nickname-input"
+            value={nickname}
+            onInput={handleNicknameInput}
+          />
+          <moz-button-group className="clocks-add-actions">
+            <moz-button
+              data-l10n-id="newtab-clock-widget-button-cancel"
+              onClick={onCancel}
+            />
+            <moz-button
+              className="clocks-form-submit"
+              data-l10n-id={
+                isEditing
+                  ? "newtab-clock-widget-button-save"
+                  : "newtab-clock-widget-button-add-clock"
+              }
+              disabled={!canAddSelectedClock}
+              onClick={handleSubmit}
+              type="primary"
+            />
+          </moz-button-group>
+        </>
+      )}
     </form>
   );
 }
