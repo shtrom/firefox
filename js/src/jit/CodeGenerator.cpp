@@ -339,7 +339,10 @@ void CodeGenerator::callVMInternal(VMFunctionId id, LInstruction* ins) {
     // disallowArbitraryCode_ flag so we can assert this VMFunction doesn't call
     // RunScript. Whitelist MInterruptCheck and MCheckOverRecursed because
     // interrupt callbacks can call JS (chrome JS or shell testing functions).
-    bool isWhitelisted = mir->isInterruptCheck() || mir->isCheckOverRecursed();
+    // MCheckOverRecursed for a generator resume doesn't check for interrupts.
+    bool isWhitelisted = mir->isInterruptCheck() ||
+                         (mir->isCheckOverRecursed() &&
+                          !mir->toCheckOverRecursed()->isResumingGenerator());
     if (!mir->hasDefaultAliasSet() && !isWhitelisted) {
       const void* addr = gen->jitRuntime()->addressOfDisallowArbitraryCode();
       masm.move32(Imm32(1), ReturnReg);
@@ -8278,15 +8281,25 @@ void CodeGenerator::visitCheckOverRecursed(LCheckOverRecursed* lir) {
     saveLive(lir);
 
     using Fn = bool (*)(JSContext*);
-    callVM<Fn, CheckOverRecursed>(lir);
+    if (lir->mir()->isResumingGenerator()) {
+      callVM<Fn, CheckOverRecursedResumingGenerator>(lir);
+    } else {
+      callVM<Fn, CheckOverRecursed>(lir);
+    }
 
     restoreLive(lir);
     masm.jump(ool.rejoin());
   });
   addOutOfLineCode(ool, lir->mir());
 
+  // When resuming a generator we check the no-interrupt limit, because the VM
+  // function must not handle interrupts for a half-initialized frame.
+  const void* limitAddr =
+      lir->mir()->isResumingGenerator()
+          ? gen->runtime->addressOfJitStackLimitNoInterrupt()
+          : gen->runtime->addressOfJitStackLimit();
+
   // Conditional forward (unlikely) branch to failure.
-  const void* limitAddr = gen->runtime->addressOfJitStackLimit();
   masm.branchStackPtrRhs(Assembler::AboveOrEqual, AbsoluteAddress(limitAddr),
                          ool->entry());
   masm.bind(ool->rejoin());

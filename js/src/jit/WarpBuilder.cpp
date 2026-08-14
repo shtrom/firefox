@@ -475,7 +475,8 @@ bool WarpBuilder::buildPrologue() {
   current->add(MStart::New(alloc()));
 
   // Guard against over-recursion.
-  MCheckOverRecursed* check = MCheckOverRecursed::New(alloc());
+  auto* check =
+      MCheckOverRecursed::New(alloc(), /* isResumingGenerator = */ false);
   current->add(check);
 
   if (!buildEnvironmentChain()) {

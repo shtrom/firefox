@@ -1729,8 +1729,12 @@
   result_type: Value
   generate_lir: true
 
-# Checks whether we need to fire the interrupt handler.
+# Guard against overrecursion. This may also fire the interrupt handler, unless
+# isResumingGenerator is set: interrupt callbacks can run JS/Debugger code and a
+# frame that's in the middle of resuming a generator is only half-initialized.
 - name: CheckOverRecursed
+  arguments:
+    isResumingGenerator: bool
   guard: true
   alias_set: none
   generate_lir: true
