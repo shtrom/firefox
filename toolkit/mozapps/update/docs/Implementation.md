@@ -148,14 +148,37 @@ The Windows process involves:
 
 Except when staging, there may be a post update process that is run before the
 updater exits. Currently, we only do this on Windows. The Windows post update
-process involves running the updated uninstaller binary with the `/PostUpdate`
-argument. Note that during an elevated Windows update, we run the post update
+process involves running the updated uninstaller binary, referred to by
+`ExeRelPath` in `updater.ini`, with the `/PostUpdate` argument (from `ExeArg`
+in `updater.ini`).
+
+Note that during an elevated Windows update, we run the post update
 process twice. Once with elevation and once without it. The reasons for the post
 update process are (a) so that we can do some things that the installer does
 (such as changing registry keys around to reflect our current configuration)
 without needing to have separate NSIS and C++ copies of that code and (b) so
 that we can run code from the updated version of Firefox, allowing the update
 process to perform actions that the old version of the updater wasn't aware of.
+
+In addition to the argument in `ExeArg`, the following command-line arguments
+might be added:
+
+* `/DesktopLauncher` if the user who originally ran the update doesn't appear
+  to be using an 'enterprise' installation, defined by a `distribution.json`
+  with a non-empty `policies` object, or policies other than
+  `ImportEnterpriseRoots` in the Registry.
+
+* `/PostUpdateTarget:Installation` if the update was not elevated, or it was
+  elevated and this update was run with elevation.
+
+* `/PostUpdateTarget:CurrentUser` if the update was elevated and this is the
+  run _without_ elevation. Notice that this only runs if the update required
+  elevation.
+
+For information on adding post-update tasks in Firefox, refer to the [helper
+tool](/browser/windows/installer/nsis/doc/Helper.md#PostUpdate) documentation.
+If you change `ExeRelPath` to a different executable, it needs to permit
+unknown command-line arguments in case more are added.
 
 When the update is complete (successfully or otherwise), Firefox is re-launched
 with its original arguments (which it passes to the update binary when invoking
