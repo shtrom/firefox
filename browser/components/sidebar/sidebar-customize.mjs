@@ -27,7 +27,6 @@ const VISIBILITY_SETTING_PREF = "sidebar.visibility";
 const EXPAND_ON_HOVER_PREF = "sidebar.expandOnHover";
 const POSITION_SETTING_PREF = "sidebar.position_start";
 const TAB_DIRECTION_SETTING_PREF = "sidebar.verticalTabs";
-const HOVER_PREVIEW_PREF = "sidebar.openTabsPanel.hoverPreview.enabled";
 
 export class SidebarCustomize extends SidebarPage {
   constructor() {
@@ -68,20 +67,10 @@ export class SidebarCustomize extends SidebarPage {
         this.expandOnHoverEnabled = newValue;
       }
     );
-    XPCOMUtils.defineLazyPreferenceGetter(
-      this.#prefValues,
-      "hoverPreviewEnabled",
-      HOVER_PREVIEW_PREF,
-      true,
-      (_aPreference, _previousValue, newValue) => {
-        this.hoverPreviewEnabled = newValue;
-      }
-    );
     this.visibility = this.#prefValues.visibility;
     this.isPositionStart = this.#prefValues.isPositionStart;
     this.verticalTabsEnabled = this.#prefValues.verticalTabsEnabled;
     this.expandOnHoverEnabled = this.#prefValues.expandOnHoverEnabled;
-    this.hoverPreviewEnabled = this.#prefValues.hoverPreviewEnabled;
     this.boundObserve = (...args) => this.observe(...args);
   }
 
@@ -92,7 +81,6 @@ export class SidebarCustomize extends SidebarPage {
     isPositionStart: { type: Boolean },
     verticalTabsEnabled: { type: Boolean },
     expandOnHoverEnabled: { type: Boolean },
-    hoverPreviewEnabled: { type: Boolean },
   };
 
   static queries = {
@@ -104,7 +92,6 @@ export class SidebarCustomize extends SidebarPage {
     verticalTabsInput: "#vertical-tabs",
     expandOnHoverInput: "#expand-on-hover",
     openToolsFromSidebarInput: "#open-tools-from-sidebar",
-    hoverPreviewInput: "#hover-preview",
   };
 
   connectedCallback() {
@@ -202,22 +189,7 @@ export class SidebarCustomize extends SidebarPage {
         label=${ifDefined(tool.tooltiptext)}
         @change=${e => this.onToggleToolInput(e, tool.commandID)}
         ?checked=${!tool.disabled}
-      >
-        ${when(
-          tool.view === "viewOpenTabsSidebar" && !tool.disabled,
-          () => html`
-            <moz-checkbox
-              slot="nested"
-              type="checkbox"
-              id="hover-preview"
-              name="hover-preview"
-              data-l10n-id="sidebar-show-preview-on-hover"
-              @change=${this.#toggleHoverPreview}
-              ?checked=${this.hoverPreviewEnabled}
-            ></moz-checkbox>
-          `
-        )}
-      </moz-checkbox>
+      ></moz-checkbox>
     `;
   }
 
@@ -397,11 +369,6 @@ export class SidebarCustomize extends SidebarPage {
     } else {
       Services.prefs.setStringPref("sidebar.visibility", "always-show");
     }
-  }
-
-  #toggleHoverPreview(e) {
-    e.stopPropagation();
-    Services.prefs.setBoolPref(HOVER_PREVIEW_PREF, e.target.checked);
   }
 
   #handleTabDirectionChange({ target: { checked } }) {
