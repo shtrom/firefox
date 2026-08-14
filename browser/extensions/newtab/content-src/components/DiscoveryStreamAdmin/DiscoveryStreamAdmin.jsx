@@ -57,13 +57,6 @@ const WIDGET_EXTRA_FEATURES = {
     },
   ],
   privacy: [{ pref: "widgets.privacy.showVpnMessages", label: "VPN messages" }],
-  sportsWidget: [
-    { pref: "widgets.sportsWidget.live.enabled", label: "Live scores" },
-    {
-      pref: "widgets.sportsWidget.celebrations.enabled",
-      label: "Celebrations",
-    },
-  ],
 };
 
 // Devtools-only copy, so not localized. A variant with no entry falls back to its
@@ -1255,7 +1248,7 @@ export class DiscoveryStreamAdminUI extends React.PureComponent {
             </moz-button>
           </div>
           <hr />
-          {WIDGET_REGISTRY.map(widget => (
+          {WIDGET_REGISTRY.filter(w => !w.retired).map(widget => (
             <React.Fragment key={widget.id}>
               <div className="toggle-wrapper">
                 <moz-toggle

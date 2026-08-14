@@ -2317,7 +2317,8 @@ const FEEDS_DATA = [
     name: "sportsfeed",
     factory: () => new lazy.SportsFeed(),
     title: "Handles persistent state for the Sports widget",
-    value: true,
+    // Bug 2063657: the sports widget is retired; removed in bug 2063656.
+    value: false,
   },
   {
     name: "privacyfeed",
