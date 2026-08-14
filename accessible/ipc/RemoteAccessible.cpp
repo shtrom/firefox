@@ -2736,20 +2736,28 @@ void RemoteAccessible::Language(nsAString& aLocale) {
   if (mDoc->RequestDomainsIfInactive(CacheDomain::Text)) {
     return;
   }
-
-  if (IsHyperText() || IsText()) {
-    for (RemoteAccessible* parent = this; parent;
-         parent = parent->RemoteParent()) {
-      // Climb up the tree to find where the nearest language attribute is.
-      if (RefPtr<const AccAttributes> attrs =
-              parent->GetCachedTextAttributes()) {
+  auto GetLanguage = [&aLocale](RemoteAccessible* aAcc) {
+    if (aAcc->IsHyperText() || aAcc->IsText()) {
+      if (RefPtr<const AccAttributes> attrs = aAcc->GetCachedTextAttributes()) {
         if (attrs->GetAttribute(nsGkAtoms::language, aLocale)) {
-          return;
+          return true;
         }
       }
+    } else if (aAcc->mCachedFields) {
+      if (aAcc->mCachedFields->GetAttribute(CacheKey::Language, aLocale)) {
+        return true;
+      }
     }
-  } else if (mCachedFields) {
-    mCachedFields->GetAttribute(CacheKey::Language, aLocale);
+
+    return false;
+  };
+
+  for (RemoteAccessible* parent = this; parent;
+       parent = parent->RemoteParent()) {
+    // Climb up the tree to find where the nearest language attribute is.
+    if (GetLanguage(parent)) {
+      return;
+    }
   }
 }
 
