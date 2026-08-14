@@ -18,13 +18,19 @@ on:
 env:
   ALLOWED_TEAM: lando-github-pilot
   ALLOWED_PATHS: |
+    .*.ftl$
+    browser/base/content/test/static
+    dom/animation
     gradle/
+    layout/
     mobile/android/android-components
     mobile/android/fenix
     mobile/android/focus-android
+    modules/libpref/init/StaticPrefList.yaml
+    servo
     taskcluster/config.yml
-    .*.ftl$
-    browser/base/content/test/static
+    testing/web-platform
+    xpcom/ds/StaticAtoms.py
 
   GH_REPO: ${{ github.repository }}
   PR: ${{ github.event.pull_request.number }}
