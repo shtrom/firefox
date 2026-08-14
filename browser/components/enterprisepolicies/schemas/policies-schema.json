@@ -2015,6 +2015,10 @@
           "SponsoredPocket": true,
           "SponsoredStories": true,
           "Snippets": true,
+          "Widgets": {
+            "Enabled": true,
+            "Blocked": ["crossword", "stocks"]
+          },
           "Locked": true
         }
       ],
@@ -2048,6 +2052,20 @@
         },
         "Snippets": {
           "type": "boolean"
+        },
+        "Widgets": {
+          "type": "object",
+          "properties": {
+            "Enabled": {
+              "type": "boolean"
+            },
+            "Blocked": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
         },
         "Locked": {
           "type": "boolean"
