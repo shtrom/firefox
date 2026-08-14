@@ -5860,7 +5860,7 @@ void BaselineCompilerCodeGen::emitTableSwitchJump(Register key,
                                                   Register scratch2) {
   // Jump to resumeEntries[firstResumeIndex + key].
 
-  // Note: BytecodeEmitter::allocateResumeIndex static_asserts
+  // Note: BytecodeEmitter::checkResumeIndexLimit static_asserts
   // |firstResumeIndex * sizeof(uintptr_t)| fits in int32_t.
   uint32_t firstResumeIndex =
       GET_RESUMEINDEX(handler.pc() + TableSwitchOpFirstResumeIndexOffset);
