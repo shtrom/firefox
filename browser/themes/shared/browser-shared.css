@@ -427,7 +427,7 @@ body {
   background-color: transparent;
   color: inherit;
 
-  @media not -moz-pref("sidebar.verticalTabs") {
+  @media (not -moz-pref("sidebar.verticalTabs")) or (-moz-pref("sidebar.verticalTabs") and -moz-pref("browser.nova.enabled")) {
     &:not(.browser-titlebar) {
       background-color: var(--toolbar-background-color);
       color: var(--toolbar-text-color);
@@ -661,14 +661,9 @@ body {
   padding-inline: var(--space-small);
 
   @media -moz-pref("browser.nova.enabled") {
-    :root:not([lwtheme]) & {
-      background-color: var(--toolbar-background-color);
-      color: var(--toolbar-text-color);
-
-      &:not([collapsed]) {
-        /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
-        border-top: 1px solid var(--chrome-content-separator-color);
-      }
+    :root:not([lwtheme]) &:not([collapsed]) {
+      /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
+      border-top: 1px solid var(--chrome-content-separator-color);
     }
   }
 
@@ -753,6 +748,11 @@ toolbarpaletteitem > #personal-bookmarks > #PlacesToolbar,
 #notifications-toolbar {
   min-height: 0;
   flex-direction: column;
+
+  @media -moz-pref("browser.nova.enabled") {
+    --info-bar-margin-block-start: 0;
+    --info-bar-margin-inline: 0;
+  }
 }
 
 .bookmark-item[cutting] {
