@@ -235,6 +235,12 @@ run-if = [
 ]
 reason = "Windows only test"
 
+["marPostUpdateDesktopLauncher.js"]
+run-if = [
+  "os == 'win'",
+]
+reason = "Desktop launcher isn't supported on non-Windows systems"
+
 ["marPostUpdateEnvironment.js"]
 run-if = [
   "os == 'mac'",

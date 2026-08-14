@@ -4223,8 +4223,16 @@ int NS_main(int argc, NS_tchar** argv) {
         LOG(("Successfully opened lock file"));
       }
 
-      if (EnterprisePolicies::InDistribution(gInstallDirPath) ||
-          EnterprisePolicies::InRegistry(L"" MOZ_APP_BASENAME)) {
+      bool isEnterprise = EnterprisePolicies::InDistribution(gInstallDirPath) ||
+                          EnterprisePolicies::InRegistry(L"" MOZ_APP_BASENAME);
+#  ifdef TEST_UPDATER
+      const wchar_t* forceEnvVar = _wgetenv(L"MOZ_TEST_FORCE_ENTERPRISE");
+      if (forceEnvVar) {
+        isEnterprise = wcscmp(forceEnvVar, L"1") == 0;
+      }
+#  endif
+
+      if (isEnterprise) {
         LOG(("Enterprise policies detected"));
         EnterprisePoliciesFlagFile::Add(gPatchDirPath);
       } else {
