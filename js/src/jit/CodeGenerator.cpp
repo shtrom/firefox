@@ -9701,9 +9701,15 @@ void CodeGenerator::visitCreateThis(LCreateThis* lir) {
 }
 
 void CodeGenerator::visitCreateArgumentsObject(LCreateArgumentsObject* lir) {
+#ifdef DEBUG
   // This should be getting constructed in the first block only, and not any OSR
-  // entry blocks.
-  MOZ_ASSERT(lir->mir()->block()->id() == 0);
+  // entry blocks. Warp builds it in block 0 except in a generator or async
+  // function, where block 0 forks between the fresh call and a resume.
+  MBasicBlock* block = lir->mir()->block();
+  JSScript* script = block->info().script();
+  MOZ_ASSERT(block != block->graph().osrBlock());
+  MOZ_ASSERT_IF(!script->isGenerator() && !script->isAsync(), block->id() == 0);
+#endif
 
   Register callObj = ToRegister(lir->callObject());
   Register temp0 = ToRegister(lir->temp0());

@@ -1991,6 +1991,14 @@ bool jit::FinishBailoutToBaseline(BaselineBailoutInfo* bailoutInfoArg) {
       action = BailoutAction::DisableIfFrequent;
       break;
 
+    case BailoutKind::UncompiledGeneratorResume:
+      // We're resuming a generator but didn't compile the AfterYield code. This
+      // can happen for yield/await in (or only reachable from) a catch-block.
+      // Fall back to running the generator in Baseline if this happens
+      // frequently.
+      action = BailoutAction::DisableIfFrequent;
+      break;
+
     case BailoutKind::LICM:
       // LICM may cause spurious bailouts by hoisting unreachable
       // guards past branches.  To prevent bailout loops, when an

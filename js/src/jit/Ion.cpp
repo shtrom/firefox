@@ -2389,6 +2389,7 @@ bool jit::IonCompileScriptForBaselineOSR(JSContext* cx, BaselineFrame* frame,
   MOZ_ASSERT(infoPtr);
   *infoPtr = nullptr;
 
+  MOZ_ASSERT(!frame->isResumingGenerator());
   MOZ_ASSERT(frame->debugFrameSize() == frameSize);
   MOZ_ASSERT(JSOp(*pc) == JSOp::LoopHead);
 
