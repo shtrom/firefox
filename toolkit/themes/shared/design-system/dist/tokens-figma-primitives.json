@@ -99,8 +99,6 @@
   "space/large": "{Primitives$dimension/relative/100}",
   "space/xlarge": "{Primitives$dimension/relative/150}",
   "space/xxlarge": "{Primitives$dimension/relative/200}",
-  "button/nova/border/width/split": 0,
-  "button/nova/gap/split": 0,
   "button/badge/size": 6,
   "button/border/radius": "{Primitives$border/radius/medium}",
   "button/border/width/split": "{Primitives$border/width}",
