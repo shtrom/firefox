@@ -211,6 +211,14 @@ object SettingsAutofillSelectors {
         groups = listOf("editCreditCard"),
     )
 
+    // The delete action in the editor's top app bar, distinct from the body DELETE_CREDIT_CARD_MENU_BUTTON.
+    val DELETE_CREDIT_CARD_TOOLBAR_BUTTON = Selector(
+        strategy = SelectorStrategy.COMPOSE_BY_TAG,
+        value = CreditCardEditorTestTags.TOPBAR_DELETE_BUTTON,
+        description = "Edit card screen: toolbar delete button",
+        groups = listOf("editCreditCard"),
+    )
+
     val DELETE_CREDIT_CARD_DIALOG_CANCEL_BUTTON = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_TAG,
         value = CreditCardEditorTestTags.DELETE_DIALOG_CANCEL_BUTTON,
@@ -251,6 +259,7 @@ object SettingsAutofillSelectors {
         CREDIT_CARD_NAME_FIELD,
         CREDIT_CARD_SAVE_BUTTON,
         DELETE_CREDIT_CARD_MENU_BUTTON,
+        DELETE_CREDIT_CARD_TOOLBAR_BUTTON,
         DELETE_CREDIT_CARD_DIALOG_CANCEL_BUTTON,
         DELETE_CREDIT_CARD_DIALOG_DELETE_BUTTON,
     )
