@@ -45,6 +45,14 @@ LBoxAllocation LIRGenerator::useBoxFixedAtStart(MDefinition* mir,
 #endif
 }
 
+LBoxAllocation LIRGenerator::useBoxFixed(MDefinition* mir, ValueOperand op) {
+#if defined(JS_NUNBOX32)
+  return useBoxFixed(mir, op.typeReg(), op.payloadReg(), false);
+#elif defined(JS_PUNBOX64)
+  return useBoxFixed(mir, op.valueReg(), op.scratchReg(), false);
+#endif
+}
+
 LBoxAllocation LIRGenerator::useBoxAtStart(MDefinition* mir,
                                            LUse::Policy policy) {
   return useBox(mir, policy, /* useAtStart = */ true);
@@ -7845,11 +7853,10 @@ void LIRGenerator::visitBuiltinObject(MBuiltinObject* ins) {
 }
 
 void LIRGenerator::visitReturn(MReturn* ret) {
-  return visitReturnImpl(ret->getOperand(0));
-}
+  MDefinition* opd = ret->getOperand(0);
+  MOZ_ASSERT(opd->type() == MIRType::Value);
 
-void LIRGenerator::visitGeneratorReturn(MGeneratorReturn* ret) {
-  return visitReturnImpl(ret->getOperand(0), true);
+  add(new (alloc()) LReturn(useBoxFixed(opd, JSReturnOperand)));
 }
 
 void LIRGenerator::visitSuperFunction(MSuperFunction* ins) {
@@ -9173,7 +9180,3 @@ void LIRGenerator::visitFuzzilliHashStore(MFuzzilliHashStore* ins) {
 
 static_assert(!std::is_polymorphic_v<LIRGenerator>,
               "LIRGenerator should not have any virtual methods");
-
-#ifdef JS_CODEGEN_NONE
-void LIRGenerator::visitReturnImpl(MDefinition*, bool) { MOZ_CRASH(); }
-#endif

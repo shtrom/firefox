@@ -3047,14 +3047,11 @@ bool WarpBuilder::buildSuspend(BytecodeLocation loc, MDefinition* gen,
   current->add(
       MPostWriteBarrier::New(alloc(), genObj, current->environmentChain()));
 
-  // GeneratorReturn will return from the method, however to support MIR
-  // generation isn't treated like the end of a block
-  MGeneratorReturn* ret = MGeneratorReturn::New(alloc(), retVal);
-  current->add(ret);
-
-  // The suspend returns, so terminate the block. The matching AfterYield will
-  // create a new block.
-  current->end(MUnreachable::New(alloc()));
+  // End the block with a Return. The AfterYield op will create a new block.
+  current->end(MReturn::New(alloc(), retVal));
+  if (!graph().addReturn(current)) {
+    return false;
+  }
   setTerminatedBlock();
   return true;
 }

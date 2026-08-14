@@ -676,20 +676,6 @@ class LConstructArrayNative : public LCallInstructionHelper<BOX_PIECES, 2, 3> {
   const LAllocation* getArgc() { return getOperand(0); }
 };
 
-// Returns from the function being compiled (not used in inlined frames). The
-// input must be a box.
-class LReturn : public LInstructionHelper<0, BOX_PIECES, 0> {
-  bool isGenerator_;
-
- public:
-  LIR_HEADER(Return)
-
-  explicit LReturn(bool isGenerator)
-      : LInstructionHelper(classOpcode), isGenerator_(isGenerator) {}
-
-  bool isGenerator() { return isGenerator_; }
-};
-
 class LHypot : public LCallInstructionHelper<1, 4, 0> {
   uint32_t numOperands_;
 

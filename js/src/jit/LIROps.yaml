@@ -979,7 +979,8 @@
   num_temps: 1
 
 - name: Return
-  gen_boilerplate: false
+  operands:
+    value: BoxedValue
 
 - name: MinMaxI
   result_type: WordSized

@@ -4073,10 +4073,7 @@ void CodeGenerator::visitReturn(LReturn* lir) {
 #endif
   // Don't emit a jump to the return label if this is the last block, as
   // it'll fall through to the epilogue.
-  //
-  // This is -not- true however for a Generator-return, which may appear in the
-  // middle of the last block, so we should always emit the jump there.
-  if (current->mir() != *gen->graph().poBegin() || lir->isGenerator()) {
+  if (current->mir() != *gen->graph().poBegin()) {
     masm.jump(&returnLabel_);
   }
 }
