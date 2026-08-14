@@ -5,6 +5,10 @@
 #include "gfxFontEntry.h"
 
 #include <algorithm>
+#include <chrono>
+#include <thread>
+
+#include "nsXULAppAPI.h"
 
 #include "COLRFonts.h"
 #include "ThebesRLBox.h"
@@ -140,22 +144,24 @@ bool gfxFontEntry::TrySetShmemCharacterMap() {
 }
 
 bool gfxFontEntry::TestCharacterMap(uint32_t aCh) {
-  if (!mCharacterMap && !mShmemCharacterMap) {
+  if (!HasCharacterMap()) {
     ReadCMAP();
-    MOZ_ASSERT(mCharacterMap || mShmemCharacterMap,
-               "failed to initialize character map");
+    MOZ_ASSERT(HasCharacterMap(), "failed to initialize character map");
   }
-  return mShmemCharacterMap ? GetShmemCharacterMap()->test(aCh)
-                            : GetCharacterMap()->test(aCh);
+  if (const auto* map = GetShmemCharacterMap()) {
+    return map->test(aCh);
+  }
+  AutoReadLock lock(mLock);
+  gfxCharacterMap* map = mCharacterMap;
+  return map ? map->test(aCh) : 0;
 }
 
 void gfxFontEntry::EnsureUVSMapInitialized() {
   // mUVSOffset will not be initialized
   // until cmap is initialized.
-  if (!mCharacterMap && !mShmemCharacterMap) {
+  if (!HasCharacterMap()) {
     ReadCMAP();
-    NS_ASSERTION(mCharacterMap || mShmemCharacterMap,
-                 "failed to initialize character map");
+    MOZ_ASSERT(HasCharacterMap(), "failed to initialize character map");
   }
 
   if (!mUVSOffset) {
@@ -209,6 +215,7 @@ bool gfxFontEntry::SupportsScriptInGSUB(const hb_tag_t* aScriptTags,
 
 nsresult gfxFontEntry::ReadCMAP(FontInfoData* aFontInfoData) {
   MOZ_ASSERT(false, "using default no-op implementation of ReadCMAP");
+  AutoWriteLock lock(mLock);
   RefPtr<gfxCharacterMap> cmap = new gfxCharacterMap(0);
   if (mCharacterMap.compareExchange(nullptr, cmap.get())) {
     cmap.forget().leak();  // mCharacterMap now owns the reference
@@ -1265,9 +1272,10 @@ void gfxFontEntry::AddSizeOfExcludingThis(MallocSizeOf aMallocSizeOf,
   aSizes->mFontListSize += mName.SizeOfExcludingThisIfUnshared(aMallocSizeOf);
 
   // cmaps are shared so only non-shared cmaps are included here
-  if (mCharacterMap && GetCharacterMap()->mBuildOnTheFly) {
-    aSizes->mCharMapsSize +=
-        GetCharacterMap()->SizeOfIncludingThis(aMallocSizeOf);
+  if (gfxCharacterMap* map = GetCharacterMap()) {
+    if (map->mBuildOnTheFly) {
+      aSizes->mCharMapsSize += map->SizeOfIncludingThis(aMallocSizeOf);
+    }
   }
 
   {

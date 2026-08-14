@@ -301,19 +301,22 @@ class gfxFontEntry {
     return flag == LazyFlag::Yes;
   }
 
-  inline bool HasCharacter(uint32_t ch) {
-    if (mShmemCharacterMap) {
-      return GetShmemCharacterMap()->test(ch);
+  inline bool HasCharacter(uint32_t ch) MOZ_EXCLUDES(mLock) {
+    if (const auto* map = GetShmemCharacterMap()) {
+      return map->test(ch);
     }
-    if (mCharacterMap) {
-      if (mShmemFace && TrySetShmemCharacterMap()) {
-        // Forget our temporary local copy, now we can use the shared cmap
-        auto* oldCmap = mCharacterMap.exchange(nullptr);
-        NS_IF_RELEASE(oldCmap);
-        return GetShmemCharacterMap()->test(ch);
-      }
-      if (GetCharacterMap()->test(ch)) {
-        return true;
+    {
+      mozilla::AutoReadLock lock(mLock);
+      if (gfxCharacterMap* map = GetCharacterMap()) {
+        if (mShmemFace && TrySetShmemCharacterMap()) {
+          // Forget our temporary local copy, now we can use the shared cmap
+          auto* oldCmap = mCharacterMap.exchange(nullptr);
+          NS_IF_RELEASE(oldCmap);
+          return GetShmemCharacterMap()->test(ch);
+        }
+        if (map->test(ch)) {
+          return true;
+        }
       }
     }
     return TestCharacterMap(ch);
@@ -573,8 +576,19 @@ class gfxFontEntry {
   mutable mozilla::RWLock mLock;
   mutable mozilla::Mutex mFeatureInfoLock;
 
-  mozilla::Atomic<gfxCharacterMap*> mCharacterMap;  // strong ref
-  gfxCharacterMap* GetCharacterMap() const { return mCharacterMap; }
+  mozilla::Atomic<gfxCharacterMap*> mCharacterMap MOZ_GUARDED_BY(mLock);  // strong ref
+  gfxCharacterMap* GetCharacterMap() const {
+    mozilla::AutoReadLock lock(mLock);
+    return mCharacterMap;
+  }
+
+  // Check for presence of either shmem or local charmap.
+  bool HasCharacterMap() const MOZ_NO_THREAD_SAFETY_ANALYSIS {
+    // Although mCharacterMap is MOZ_GUARDED_BY(mLock), we don't lock here
+    // as it is an atomic var, and we're not holding on to dereferencing it,
+    // just checking whether it's non-null.
+    return mShmemCharacterMap || mCharacterMap;
+  }
 
   mozilla::fontlist::Face* mShmemFace = nullptr;
   const mozilla::fontlist::Family* mShmemFamily = nullptr;
@@ -737,7 +751,7 @@ class gfxFontEntry {
       FontInfoData* aFontInfoData, uint32_t& aUVSOffset);
 
   // helper for HasCharacter(), which is what client code should call
-  virtual bool TestCharacterMap(uint32_t aCh);
+  virtual bool TestCharacterMap(uint32_t aCh) MOZ_EXCLUDES(mLock);
 
   // Try to set mShmemCharacterMap, based on the char map in mShmemFace;
   // return true if successful, false if it remains null (maybe the parent
