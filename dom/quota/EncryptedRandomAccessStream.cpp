@@ -609,21 +609,9 @@ NS_IMETHODIMP EncryptedRandomAccessStreamBase::SetEOF() {
   return NS_OK;
 }
 
-//////////////////////////////////////////
-// TODO: The below is NOT implemented yet.
-//////////////////////////////////////////
-
-// TODO: NOT IMPLEMENTED
-
-mozilla::ipc::RandomAccessStreamParams
-EncryptedRandomAccessStreamBase::Serialize(nsIInterfaceRequestor*) {
-  return {};
-}
-
-// TODO: NOT IMPLEMENTED
-
 bool EncryptedRandomAccessStreamBase::Deserialize(
     mozilla::ipc::RandomAccessStreamParams&) {
+  MOZ_ASSERT_UNREACHABLE("Use |CreateFromParams| for deserialization.");
   return false;
 }
 
