@@ -7,6 +7,7 @@ package org.mozilla.fenix.ui
 import mozilla.components.feature.sitepermissions.SitePermissionsRules
 import org.junit.Rule
 import org.junit.Test
+import org.mozilla.fenix.customannotations.Converted
 import org.mozilla.fenix.customannotations.SmokeTest
 import org.mozilla.fenix.helpers.FenixTestRule
 import org.mozilla.fenix.helpers.HomeActivityTestRule
@@ -54,6 +55,11 @@ class TextSelectionTest {
     val memoryLeaksRule = DetectMemoryLeaksRule(composeTestRule = { composeTestRule })
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2326832
+    @Converted(
+        replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.TextSelectionTest#verifySelectAllTextOptionTest"],
+        bug = 2063396,
+        since = "2026-08",
+    )
     @SmokeTest
     @Test
     fun verifySelectAllTextOptionTest() {
@@ -127,6 +133,11 @@ class TextSelectionTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2326831
+    @Converted(
+        replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.TextSelectionTest#verifyPrivateSearchTextTest"],
+        bug = 2063396,
+        since = "2026-08",
+    )
     @SmokeTest
     @Test
     fun verifyPrivateSearchTextTest() {
@@ -173,6 +184,11 @@ class TextSelectionTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/243839
+    @Converted(
+        replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.TextSelectionTest#verifyCopyPDFTextOptionTest"],
+        bug = 2063396,
+        since = "2026-08",
+    )
     @SmokeTest
     @Test
     fun verifyCopyPDFTextOptionTest() {
@@ -213,6 +229,11 @@ class TextSelectionTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2326836
+    @Converted(
+        replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.TextSelectionTest#verifySearchPDFTextOptionTest"],
+        bug = 2063396,
+        since = "2026-08",
+    )
     @SmokeTest
     @Test
     fun verifySearchPDFTextOptionTest() {

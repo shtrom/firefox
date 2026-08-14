@@ -12,6 +12,7 @@ import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onFirst
 import org.mozilla.fenix.helpers.HomeActivityIntentTestRule
+import org.mozilla.fenix.helpers.TestAssetHelper.waitingTimeShort
 import org.mozilla.fenix.ui.efficiency.helpers.BasePage
 import org.mozilla.fenix.ui.efficiency.helpers.Selector
 import org.mozilla.fenix.ui.efficiency.navigation.NavigationRegistry
@@ -98,5 +99,24 @@ class HomePage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule, *
      */
     fun visitWebsite(url: String) {
         throw UnsupportedOperationException("visitWebsite is not supported by ${this::class.simpleName}")
+    }
+
+    /**
+     * Switch the homepage into private browsing mode and confirm it took effect. The homepage
+     * private/normal button is a toggle, and the session may already be in either mode (state can
+     * leak from a prior test or run), so a single blind click can land back on the normal homepage.
+     * Click, and if the private homepage card is not shown, toggle once more, then assert it.
+     */
+    fun switchToPrivateBrowsingMode(): HomePage {
+        for (attempt in 1..2) {
+            mozClick(HomeSelectors.PRIVATE_BROWSING_BUTTON)
+            try {
+                mozVerify(HomeSelectors.PRIVATE_BROWSING_INFO_CARD_TITLE, timeout = waitingTimeShort)
+                return this
+            } catch (e: AssertionError) {
+                if (attempt == 2) throw e
+            }
+        }
+        return this
     }
 }

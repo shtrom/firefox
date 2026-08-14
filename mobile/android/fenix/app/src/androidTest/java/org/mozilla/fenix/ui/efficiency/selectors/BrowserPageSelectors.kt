@@ -109,6 +109,17 @@ object BrowserPageSelectors {
         groups = listOf(),
     )
 
+    // An item on the GeckoView text-selection floating action bar (and the app's paste popup),
+    // matched by exact visible text. Mirrors the legacy clickContextMenuItem, which located items
+    // with By.text(item) — covers "Select all", "Copy", "Search", "Private Search", "Paste".
+    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    fun TEXT_SELECTION_CONTEXT_MENU_ITEM(item: String = "") = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR2_BY_TEXT,
+        value = item,
+        description = "Text selection context menu item '$item'",
+        groups = listOf(),
+    )
+
     val TRANSLATION_SHEET = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR2_BY_RES,
         value = "design_bottom_sheet",
@@ -365,6 +376,7 @@ object BrowserPageSelectors {
         SNACKBAR_EDIT_BUTTON,
         STAY_IN_FIREFOX_PROMPT_BUTTON,
         SUBMIT_LOGIN_BUTTON,
+        TEXT_SELECTION_CONTEXT_MENU_ITEM(),
         SUGGESTED_LOGIN(),
         SUGGESTED_LOGINS_BAR,
         TAB_CRASH_REPORTER_CLOSE_BUTTON,

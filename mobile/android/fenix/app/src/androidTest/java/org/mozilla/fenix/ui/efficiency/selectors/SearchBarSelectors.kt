@@ -10,6 +10,7 @@ import org.mozilla.fenix.R
 import org.mozilla.fenix.helpers.DataGenerationHelper.getStringResource
 import org.mozilla.fenix.ui.efficiency.helpers.Selector
 import org.mozilla.fenix.ui.efficiency.helpers.SelectorStrategy
+import mozilla.components.browser.toolbar.R as toolbarR
 
 object SearchBarSelectors {
     val TOOLBAR_IN_EDIT_MODE = Selector(
@@ -66,6 +67,18 @@ object SearchBarSelectors {
         groups = listOf(),
     )
 
+    // Clear (X) button in the edit-mode toolbar. Content-description "Clear", keyed off the string
+    // resource so it survives localization (mirrors the legacy SearchRobot.clickClearButton).
+    // UiObject2 (By.descContains) rather than UiObject: UiObject.click() returns false on this button
+    // even when the tap lands (the framework then throws "Failed to click UiObject"); UiObject2.click()
+    // does not gate on that return value. Same gotcha as the applinks prompt buttons.
+    val CLEAR_BUTTON = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR2_BY_DESCRIPTION_CONTAINS,
+        value = getStringResource(toolbarR.string.mozac_clear_button_description),
+        description = "Search bar clear button",
+        groups = listOf(),
+    )
+
     val all = listOf(
         TOOLBAR_IN_EDIT_MODE,
         URL_TEXT,
@@ -73,5 +86,6 @@ object SearchBarSelectors {
         SEARCH_SELECTOR_MENU_ENGINE(),
         AWESOMEBAR_SUGGESTION,
         SEARCH_BAR_PLACEHOLDER,
+        CLEAR_BUTTON,
     )
 }

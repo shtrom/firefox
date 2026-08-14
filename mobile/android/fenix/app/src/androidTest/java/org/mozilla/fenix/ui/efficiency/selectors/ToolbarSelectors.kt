@@ -128,6 +128,17 @@ object ToolbarSelectors {
         groups = listOf(),
     )
 
+    // An item in the context menu shown after long-pressing the display-mode (browser) URL box, e.g.
+    // "Copy", "Paste", "Paste & Go". Mirrors the legacy clickDisplayModeToolbarContextMenuItem, which
+    // matched these by content description on the Compose toolbar.
+    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    fun DISPLAY_MODE_TOOLBAR_MENU_ITEM(contentDescription: String = "") = Selector(
+        strategy = SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION,
+        value = contentDescription,
+        description = "Display-mode toolbar context menu item '$contentDescription'",
+        groups = listOf(),
+    )
+
     @Suppress("ktlint:standard:function-naming", "FunctionName")
     fun SEARCH_ENGINE_SELECTOR_ICON(searchEngineName: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION,
@@ -176,6 +187,28 @@ object ToolbarSelectors {
         strategy = SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION,
         value = "Non-private Tabs Open: $openTabs. Tap to switch tabs.",
         description = "Tab strip tab counter showing $openTabs open tab(s)",
+        groups = listOf(),
+    )
+
+    // Compose (content-description) variants of the toolbar tab counter. Prefer these over the
+    // UIAUTOMATOR_WITH_DESCRIPTION_CONTAINS forms above when asserting a count that changes as a result
+    // of the action under test (e.g. a new tab opened by a text-selection Search): the UIAutomator
+    // accessibility tree lags the Compose tree by seconds for the counter, so a UIAutomator check can
+    // still read the old count while Compose already shows the new one. Mirrors the legacy
+    // BrowserRobot.verifyTabCounter, which read the counter via composeTestRule.onNodeWithContentDescription.
+    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    fun TAB_COUNTER_COMPOSE_WITH_COUNT(openTabs: String = "") = Selector(
+        strategy = SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION,
+        value = "Non-private Tabs Open: $openTabs. Tap to switch tabs.",
+        description = "Tab counter showing $openTabs open tab(s)",
+        groups = listOf(),
+    )
+
+    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    fun PRIVATE_TAB_COUNTER_COMPOSE_WITH_COUNT(openTabs: String = "") = Selector(
+        strategy = SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION,
+        value = "Private Tabs Open: $openTabs. Tap to switch tabs.",
+        description = "Private tab counter showing $openTabs open tab(s)",
         groups = listOf(),
     )
 
@@ -239,12 +272,15 @@ object ToolbarSelectors {
         EXPANDED_TOOLBAR_FORWARD_BUTTON,
         EXPANDED_TOOLBAR_REFRESH_BUTTON,
         SITE_INFO_BUTTON,
+        DISPLAY_MODE_TOOLBAR_MENU_ITEM(),
         READER_VIEW_BUTTON,
         READER_VIEW_CLOSE_BUTTON,
         SEARCH_ENGINE_SELECTOR_ICON(),
         TAB_COUNTER_WITH_COUNT(),
         PRIVATE_TAB_COUNTER_WITH_COUNT(),
         TAB_STRIP_TAB_COUNTER_WITH_COUNT(),
+        TAB_COUNTER_COMPOSE_WITH_COUNT(),
+        PRIVATE_TAB_COUNTER_COMPOSE_WITH_COUNT(),
         TAB_STRIP_TAB(),
         TAB_STRIP_CLOSE_TAB_BUTTON(),
         INSECURE_CONNECTION_INFORMATION_BUTTON,
