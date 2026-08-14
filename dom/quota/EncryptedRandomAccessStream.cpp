@@ -239,12 +239,6 @@ NS_IMETHODIMP EncryptedRandomAccessStreamBase::WriteSegments(
   // Fill any gap left by a seek past the end once, before the write loop, so
   // the loop below only ever loads/switches blocks and never deals with gaps.
   if (mLogicalPosition > mLogicalSize) {
-    if (mBlockDirty) {
-      const auto rv = SaveCurrentBlock();
-      if (NS_FAILED(rv)) {
-        return rv;
-      }
-    }
     const auto rv = ZeroExtendTo(mLogicalPosition);
     if (NS_FAILED(rv)) {
       return rv;
@@ -395,7 +389,7 @@ EncryptedRandomAccessStreamBase::BuildAad(
 
 /**
  * Note the followings:
- * - Loads the last block at the end.
+ * - At the end, the last block is loaded but not saved.
  * - Doesn't change |mLogicalPosition|, but changes |mLogicalSize|.
  */
 nsresult EncryptedRandomAccessStreamBase::ZeroExtendTo(
@@ -404,13 +398,14 @@ nsresult EncryptedRandomAccessStreamBase::ZeroExtendTo(
     return NS_OK;
   }
 
-  if (mTotalBlockCount == 0) {
+  if (mLogicalSize == 0) {
+    MOZ_ASSERT(!mBlockDirty);  // A dirty block implies mLogicalSize > 0.
     const auto rv = LoadNewBlockAtEnd();
     if (NS_FAILED(rv)) {
       return rv;
     }
   } else {
-    BlockIndexType lastBlockIndex = mTotalBlockCount - 1;
+    const BlockIndexType lastBlockIndex = (mLogicalSize - 1) / sMaxTextLength;
     if (lastBlockIndex != mCurrentBlockIndex || !mBlockLoaded) {
       if (mBlockDirty) {
         const auto rv = SaveCurrentBlock();
@@ -461,6 +456,9 @@ nsresult EncryptedRandomAccessStreamBase::ZeroExtendTo(
       }
     }
   }
+
+  // The last block is not saved. The caller decides when to save it.
+  MOZ_ASSERT(mBlockDirty);
 
   return NS_OK;
 }
