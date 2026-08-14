@@ -1847,6 +1847,14 @@ bool WarpBuilder::build_CloseIter(BytecodeLocation loc) {
   return buildIC(loc, CacheKind::CloseIter, {iter});
 }
 
+bool WarpBuilder::build_IsGenClosing(BytecodeLocation) {
+  MDefinition* def = current->peek(-1);
+  MInstruction* ins = MIsGenClosing::New(alloc(), def);
+  current->add(ins);
+  current->push(ins);
+  return true;
+}
+
 bool WarpBuilder::build_IsNoIter(BytecodeLocation) {
   MDefinition* def = current->peek(-1);
   MOZ_ASSERT(def->isIteratorMore());

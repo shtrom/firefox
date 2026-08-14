@@ -6724,6 +6724,11 @@ void LIRGenerator::visitIsObject(MIsObject* ins) {
   define(lir, ins);
 }
 
+void LIRGenerator::visitIsGenClosing(MIsGenClosing* ins) {
+  MOZ_ASSERT(ins->value()->type() == MIRType::Value);
+  define(new (alloc()) LIsGenClosing(useBoxAtStart(ins->value())), ins);
+}
+
 void LIRGenerator::visitIsSuspendedGenerator(MIsSuspendedGenerator* ins) {
   MOZ_ASSERT(ins->object()->type() == MIRType::Object);
 

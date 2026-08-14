@@ -19,30 +19,28 @@ namespace js {
 namespace jit {
 
 // JSOps not yet supported by WarpBuilder. See warning at the end of the list.
-#define WARP_UNSUPPORTED_OPCODE_LIST(_)  \
-  /* With */                             \
-  _(EnterWith)                           \
-  _(LeaveWith)                           \
-  /* Eval */                             \
-  _(Eval)                                \
-  _(StrictEval)                          \
-  _(SpreadEval)                          \
-  _(StrictSpreadEval)                    \
-  _(BindVar)                             \
-  /* Super */                            \
-  _(SetPropSuper)                        \
-  _(SetElemSuper)                        \
-  _(StrictSetPropSuper)                  \
-  _(StrictSetElemSuper)                  \
-  /* Generators / Async (bug 1317690) */ \
-  _(IsGenClosing)                        \
-  /* Misc */                             \
-  _(DelName)                             \
-  _(SetIntrinsic)                        \
-  /* Private Fields */                   \
-  _(GetAliasedDebugVar)                  \
-  /* Non-syntactic scope */              \
-  _(NonSyntacticGlobalThis)              \
+#define WARP_UNSUPPORTED_OPCODE_LIST(_) \
+  /* With */                            \
+  _(EnterWith)                          \
+  _(LeaveWith)                          \
+  /* Eval */                            \
+  _(Eval)                               \
+  _(StrictEval)                         \
+  _(SpreadEval)                         \
+  _(StrictSpreadEval)                   \
+  _(BindVar)                            \
+  /* Super */                           \
+  _(SetPropSuper)                       \
+  _(SetElemSuper)                       \
+  _(StrictSetPropSuper)                 \
+  _(StrictSetElemSuper)                 \
+  /* Misc */                            \
+  _(DelName)                            \
+  _(SetIntrinsic)                       \
+  /* Private Fields */                  \
+  _(GetAliasedDebugVar)                 \
+  /* Non-syntactic scope */             \
+  _(NonSyntacticGlobalThis)             \
   // === !! WARNING WARNING WARNING !! ===
   // Do you really want to sacrifice performance by not implementing this
   // operation in the optimizing compiler?
