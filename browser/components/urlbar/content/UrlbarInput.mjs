@@ -5025,7 +5025,8 @@ ${
    *
    * Since the placeholder was already initialized to the pre-saved engine
    * name by #initPlaceholderFromPref when this is called, the update is
-   * delayed to avoid confusing the user.
+   * delayed to avoid confusing the user. A placeholder that names an engine may
+   * be naming a stale one, so it's updated right away.
    */
   async #deferUpdatePlaceholder() {
     if (this.sapName == "smartbar") {
@@ -5033,6 +5034,12 @@ ${
     }
 
     if (!this.value) {
+      if (this.inputField.dataset.l10nId == "urlbar-placeholder-with-name") {
+        // The switcher icon has no pre-saved value that could be stale, so it
+        // still waits for the listener below.
+        this.updatePlaceholder();
+      }
+
       // Only delay if requested, and we're not displaying text in the URL bar
       // currently.
       // Delays changing the URL Bar placeholder and Unified Search Button icon
