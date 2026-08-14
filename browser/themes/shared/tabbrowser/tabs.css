@@ -1106,7 +1106,8 @@ tab-split-view-wrapper[dragtarget] {
   .tabbrowser-tab[usercontextid] > .tab-stack > .tab-background > .tab-context-line {
     height: 0;
     /* border-block guarantees it's snapped to device pixels */
-    border-block: 1px solid var(--identity-stroke-color);
+    border-block: 1px solid transparent;
+    background: var(--identity-stroke-color) border-box border-box;
     border-radius: var(--border-radius-xsmall);
     margin-block-start: var(--tab-context-line-block-offset);
     width: calc(100% - 2 * var(--tab-context-line-inline-offset));
@@ -1123,10 +1124,11 @@ tab-split-view-wrapper[dragtarget] {
     > .tab-stack
     > .tab-background
     > .tab-context-line {
-    mask-image: linear-gradient(to left, transparent, black var(--tab-label-mask-size));
+    background-color: transparent;
+    background-image: linear-gradient(to left, transparent, var(--identity-stroke-color) var(--tab-label-mask-size));
 
     &:-moz-locale-dir(rtl) {
-      mask-image: linear-gradient(to right, transparent, black var(--tab-label-mask-size));
+      background-image: linear-gradient(to right, transparent, var(--identity-stroke-color) var(--tab-label-mask-size));
     }
   }
 }
