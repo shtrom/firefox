@@ -6541,7 +6541,9 @@
 
       // Expedite the removal of the icon if it was already scheduled.
       if (aOtherTab._soundPlayingAttrRemovalTimer) {
-        clearTimeout(aOtherTab._soundPlayingAttrRemovalTimer);
+        aOtherTab.documentGlobal.clearTimeout(
+          aOtherTab._soundPlayingAttrRemovalTimer
+        );
         aOtherTab._soundPlayingAttrRemovalTimer = 0;
         aOtherTab.removeAttribute("soundplaying");
         remoteBrowser._tabAttrModified(aOtherTab, ["soundplaying"]);
