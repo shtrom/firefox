@@ -758,13 +758,6 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
-    "telemetry.privatePing.redactNewtabPing.enabled",
-    {
-      title: "Redacts content interaction ids from original New Tab ping",
-      value: false,
-    },
-  ],
-  [
     "telemetry.privatePing.inferredInterests.enabled",
     {
       title:

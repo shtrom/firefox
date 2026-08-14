@@ -30,8 +30,6 @@ const PREF_IMPRESSION_ID = "browser.newtabpage.activity-stream.impressionId";
 const PREF_TELEMETRY = "browser.newtabpage.activity-stream.telemetry";
 const PREF_PRIVATE_PING_ENABLED =
   "browser.newtabpage.activity-stream.telemetry.privatePing.enabled";
-const PREF_REDACT_NEWTAB_PING_ENABLED =
-  "browser.newtabpage.activity-stream.telemetry.privatePing.redactNewtabPing.enabled";
 const PREF_IS_MERINO_FEED_EXPERIMENT =
   "browser.newtabpage.activity-stream.discoverystream.merino-feed-experiment";
 const PREF_ENDPOINTS =
@@ -2084,7 +2082,6 @@ add_task(
         "top stories click"
     );
     Services.prefs.setBoolPref(PREF_PRIVATE_PING_ENABLED, false);
-    Services.prefs.setBoolPref(PREF_REDACT_NEWTAB_PING_ENABLED, false);
 
     let sandbox = sinon.createSandbox();
     let instance = new TelemetryFeed();
@@ -2112,79 +2109,11 @@ add_task(
       newtab_visit_id: SESSION_ID,
       is_sponsored: String(false),
       position: String(ACTION_POSITION),
-      corpus_item_id: "decaf-beef",
-      scheduled_corpus_item_id: "dead-beef",
-      tile_id: String(314623757745896),
+      content_redacted: String(true),
     });
 
     sandbox.restore();
     Services.prefs.clearUserPref(PREF_PRIVATE_PING_ENABLED);
-    Services.prefs.clearUserPref(PREF_REDACT_NEWTAB_PING_ENABLED);
-  }
-);
-
-add_task(
-  async function test_handleDiscoveryStreamUserEvent_private_ping_without_redactions_organic_top_stories_click() {
-    info(
-      "TelemetryFeed.handleDiscoveryStreamUserEvent instruments an organic " +
-        "top stories click with private ping fully enabled"
-    );
-
-    Services.prefs.setBoolPref(PREF_PRIVATE_PING_ENABLED, true);
-    Services.prefs.setBoolPref(PREF_REDACT_NEWTAB_PING_ENABLED, false);
-
-    let sandbox = sinon.createSandbox();
-    let instance = new TelemetryFeed();
-    Services.fog.testResetFOG();
-    const ACTION_POSITION = 42;
-    let action = actionCreators.DiscoveryStreamUserEvent({
-      event: "CLICK",
-      action_position: ACTION_POSITION,
-      value: {
-        card_type: "organic",
-        corpus_item_id: "decaf-beef",
-        scheduled_corpus_item_id: "dead-beef",
-        tile_id: 314623757745896,
-      },
-    });
-
-    const SESSION_ID = "decafc0ffee";
-    sandbox.stub(instance.sessions, "get").returns({ session_id: SESSION_ID });
-    sandbox.spy(instance.newtabContentPing, "recordEvent");
-
-    instance.handleDiscoveryStreamUserEvent(action);
-
-    let clicks = Glean.pocket.click.testGetValue();
-
-    Assert.equal(clicks.length, 1, "Recorded 1 content click");
-    Assert.equal(clicks.length, 1, "Recorded 1 private click");
-    Assert.deepEqual(clicks[0].extra, {
-      newtab_visit_id: SESSION_ID,
-      is_sponsored: String(false),
-      corpus_item_id: "decaf-beef",
-      scheduled_corpus_item_id: "dead-beef",
-      position: String(ACTION_POSITION),
-      tile_id: 314623757745896,
-    });
-
-    Assert.ok(
-      instance.newtabContentPing.recordEvent.calledWith(
-        "click",
-        sinon.match({
-          newtab_visit_id: SESSION_ID,
-          is_sponsored: false,
-          position: ACTION_POSITION,
-          tile_id: 314623757745896,
-          corpus_item_id: "decaf-beef",
-          scheduled_corpus_item_id: "dead-beef",
-        })
-      ),
-      "NewTabContentPing passed the expected arguments."
-    );
-
-    sandbox.restore();
-    Services.prefs.clearUserPref(PREF_PRIVATE_PING_ENABLED);
-    Services.prefs.clearUserPref(PREF_REDACT_NEWTAB_PING_ENABLED);
   }
 );
 
@@ -2196,7 +2125,6 @@ add_task(
     );
 
     Services.prefs.setBoolPref(PREF_PRIVATE_PING_ENABLED, true);
-    Services.prefs.setBoolPref(PREF_REDACT_NEWTAB_PING_ENABLED, true);
 
     let sandbox = sinon.createSandbox();
     let instance = new TelemetryFeed();
@@ -2248,7 +2176,6 @@ add_task(
 
     sandbox.restore();
     Services.prefs.clearUserPref(PREF_PRIVATE_PING_ENABLED);
-    Services.prefs.clearUserPref(PREF_REDACT_NEWTAB_PING_ENABLED);
   }
 );
 
@@ -2396,7 +2323,6 @@ add_task(
     );
 
     Services.prefs.setBoolPref(PREF_PRIVATE_PING_ENABLED, true);
-    Services.prefs.setBoolPref(PREF_REDACT_NEWTAB_PING_ENABLED, true);
 
     let sandbox = sinon.createSandbox();
     let instance = new TelemetryFeed();
@@ -2457,7 +2383,6 @@ add_task(
 
     sandbox.restore();
     Services.prefs.clearUserPref(PREF_PRIVATE_PING_ENABLED);
-    Services.prefs.clearUserPref(PREF_REDACT_NEWTAB_PING_ENABLED);
   }
 );
 

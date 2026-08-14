@@ -1362,13 +1362,6 @@ newtabPrivatePing:
         pref: browser.newtabpage.activity-stream.telemetry.privatePing.enabled
       description: >-
         Enables the private newtab-content ping sent through OHTTP
-    redactNewtabPing:
-      type: boolean
-      setPref:
-        branch: user
-        pref: browser.newtabpage.activity-stream.telemetry.privatePing.redactNewtabPing.enabled
-      description: >-
-        Provides an option to redact content ids of users from click, impression and related events in the NewTab ping. Should be enabled when data colection has shefted to the more private NewTab_content ping.
     includeInferredInterests:
       type: boolean
       setPref:
