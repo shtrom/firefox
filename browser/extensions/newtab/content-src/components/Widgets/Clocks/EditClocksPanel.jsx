@@ -88,7 +88,9 @@ export function EditClocksPanel({
               )}
             >
               <div className="clocks-edit-top-row">
-                <span className="clocks-edit-city">{city}</span>
+                <span className="clocks-edit-city" dir="auto">
+                  {city}
+                </span>
                 <div className="clocks-edit-item-actions">
                   <moz-button
                     className="clocks-edit-item-button clocks-edit-item-edit-button"

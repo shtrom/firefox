@@ -80,16 +80,23 @@ export function ClocksRow({
     >
       <div className="clocks-meta" aria-hidden="true">
         <div className="clocks-label">
-          <span className="clocks-city">{cityDisplay}</span>
-          <span className="clocks-timezone">{tzLabel}</span>
+          <span className="clocks-city" dir="auto">
+            {cityDisplay}
+          </span>
+          <span className="clocks-timezone" dir="auto">
+            {tzLabel}
+          </span>
         </div>
         {showLabel && !!clock.label && (
-          <span className={chipClassName}>{clock.label}</span>
+          <span className={chipClassName} dir="auto">
+            {clock.label}
+          </span>
         )}
       </div>
       <time
         className="clocks-time"
         aria-hidden="true"
+        dir="auto"
         dateTime={now ? formatDateTimeAttr(now, clock.timeZone) : undefined}
       >
         {timeDisplay}
